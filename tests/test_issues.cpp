@@ -19,7 +19,7 @@ protected:
 TEST_F(IssuesFixture, Issue52) {
     auto database_dir = issues_path + "/issue52";
 
-    EXPECT_THROW(quiver::Database::from_database(":memory:", database_dir), std::runtime_error);
+    EXPECT_THROW(quiver::Database::from_hub(":memory:", database_dir), std::runtime_error);
 }
 
 TEST_F(IssuesFixture, Issue161) {
@@ -27,6 +27,6 @@ TEST_F(IssuesFixture, Issue161) {
 
     quiver::DatabaseOptions options;
     options.read_only = true;
-    EXPECT_THROW(quiver::Database::from_database(":memory:", schemas_path, options), std::runtime_error);
+    EXPECT_THROW(quiver::Database::from_hub(":memory:", schemas_path, options), std::runtime_error);
     EXPECT_THROW(quiver::Database::from_schema(":memory:", schema_path, options), std::runtime_error);
 }

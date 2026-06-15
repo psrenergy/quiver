@@ -33,7 +33,7 @@ TEST_F(LuaRunnerTest, DescribeCollection) {
 }
 
 TEST_F(LuaRunnerTest, UiMetadataGettersReturnEmpty) {
-    // The Lua-provided db never went through from_database, so UI metadata is empty (in-memory
+    // The Lua-provided db never went through from_hub, so UI metadata is empty (in-memory
     // only). The getters are still bound for cross-layer uniformity and return "".
     auto db = open_collections();
     quiver::LuaRunner lua(db);

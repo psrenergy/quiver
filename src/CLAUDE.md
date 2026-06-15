@@ -134,11 +134,11 @@ Database& operator=(Database&&) = default;
 Static methods for database creation:
 ```cpp
 static Database from_schema(const std::string& db_path, const std::string& schema_path, const DatabaseOptions& options = {});
-static Database from_database(const std::string& db_path, const std::string& dir, const DatabaseOptions& options = {});
+static Database from_hub(const std::string& db_path, const std::string& hub, const DatabaseOptions& options = {});
 ```
-`schema_path` is a `.sql` file. `from_database`'s `dir` is a model directory that holds `dir/migrations`
+`schema_path` is a `.sql` file. `from_hub`'s `hub` is a hub directory that holds `hub/migrations`
 (a directory of numbered version subdirectories with `up.sql`/`down.sql`, applied via the private
-`migrate_up`) and an optional `dir/ui` (read into a `UiConfig` — see UI Config below). `from_database`
+`migrate_up`) and an optional `hub/ui` (read into a `UiConfig` — see UI Config below). `from_hub`
 is the only public entry point that applies migrations.
 
 ## UI Config
@@ -151,12 +151,12 @@ headers). Units are keyed by each file's top-level `id` (the canonical collectio
 be a localized sub-table or a bare string, resolved **English-first** by `pick_localized` (`unit.en`,
 else each declared localization, else any locale; empty strings count as absent). A missing `ui_dir`
 or `main.toml` yields an empty config (no throw); malformed TOML in a file that exists throws
-Pattern 3 with the path. `from_database` reads the UI **before** creating/migrating the db file (so a
-malformed ui/ leaves no partial db), then applies `dir/migrations` via the private `migrate_up`
+Pattern 3 with the path. `from_hub` reads the UI **before** creating/migrating the db file (so a
+malformed ui/ leaves no partial db), then applies `hub/migrations` via the private `migrate_up`
 (throwing "Migrations path not found" if absent).
-`Database::Impl` holds one `UiConfig ui;` (default-empty), populated only by `from_database`;
+`Database::Impl` holds one `UiConfig ui;` (default-empty), populated only by `from_hub`;
 `get_model_name()` / `get_attribute_unit()` delegate to it and return `""` when no UI was loaded. Not
-persisted to SQLite (root design decision) — only the in-process `from_database` instance carries it.
+persisted to SQLite (root design decision) — only the in-process `from_hub` instance carries it.
 
 ## Logging
 

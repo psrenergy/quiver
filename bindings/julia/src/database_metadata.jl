@@ -233,7 +233,7 @@ end
 """
     get_model_name(db::Database) -> String
 
-Return the model name from the UI metadata (`ui/main.toml`) loaded via `from_database`.
+Return the model name from the UI metadata (`ui/main.toml`) loaded via `from_hub`.
 Returns an empty string when no UI metadata is loaded.
 """
 function get_model_name(db::Database)
@@ -247,7 +247,7 @@ end
 """
     get_attribute_unit(db::Database, collection::AbstractString, attribute::AbstractString) -> String
 
-Return the English-first unit for an attribute from the UI metadata loaded via `from_database`.
+Return the English-first unit for an attribute from the UI metadata loaded via `from_hub`.
 Returns an empty string when the collection/attribute is unknown or the attribute has no unit.
 """
 function get_attribute_unit(db::Database, collection::AbstractString, attribute::AbstractString)

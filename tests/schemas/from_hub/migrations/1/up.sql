@@ -1,4 +1,4 @@
--- from_database fixture: minimal schema whose Material collection matches the ui/material.toml id
+-- from_hub fixture: minimal schema whose Material collection matches the ui/material.toml id
 PRAGMA user_version = 1;
 PRAGMA foreign_keys = ON;
 

@@ -7,7 +7,7 @@ import 'package:path/path.dart' as path;
 void main() {
   final testsPath = path.join(path.current, '..', '..', 'tests');
   final schemaPath = path.join(testsPath, 'schemas', 'valid', 'basic.sql');
-  final databaseDir = path.join(testsPath, 'schemas', 'from_database');
+  final hubDir = path.join(testsPath, 'schemas', 'from_hub');
 
   group('Database fromSchema', () {
     test('creates database from schema file', () {
@@ -58,12 +58,12 @@ void main() {
     });
   });
 
-  group('Database fromDatabase', () {
+  group('Database fromHub', () {
     test('applies migrations and loads UI metadata', () {
       final tempDir = Directory.systemTemp.createTempSync('quiver_test_');
       final dbPath = path.join(tempDir.path, 'test.db');
       try {
-        final db = Database.fromDatabase(dbPath, databaseDir);
+        final db = Database.fromHub(dbPath, hubDir);
         try {
           expect(db.currentVersion(), equals(1));
           expect(db.getModelName(), equals('demo_model'));
@@ -80,12 +80,12 @@ void main() {
 
     test('throws on invalid directory', () {
       expect(
-        () => Database.fromDatabase(':memory:', 'nonexistent/path'),
+        () => Database.fromHub(':memory:', 'nonexistent/path'),
         throwsA(isA<DatabaseException>()),
       );
     });
 
-    test('UI metadata is empty without fromDatabase', () {
+    test('UI metadata is empty without fromHub', () {
       final db = Database.fromSchema(':memory:', schemaPath);
       try {
         expect(db.getModelName(), equals(''));
@@ -147,7 +147,7 @@ void main() {
 
     test('returns migration count for a model directory', () {
       // schemas/ holds the shared 3-migration fixture under migrations/ (no ui/ -> empty UI).
-      final db = Database.fromDatabase(':memory:', path.join(testsPath, 'schemas'));
+      final db = Database.fromHub(':memory:', path.join(testsPath, 'schemas'));
       try {
         expect(db.currentVersion(), equals(3));
       } finally {

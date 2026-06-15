@@ -10,7 +10,7 @@ import { Database, QuiverError } from "../src/index.ts";
 import { getSymbols } from "../src/loader.ts";
 
 const SCHEMA_PATH = join(__dirname, "..", "..", "..", "tests", "schemas", "valid", "basic.sql");
-const DATABASE_DIR = join(__dirname, "..", "..", "..", "tests", "schemas", "from_database");
+const HUB_DIR = join(__dirname, "..", "..", "..", "tests", "schemas", "from_hub");
 
 describe("Database lifecycle", () => {
   const tempDirs: string[] = [];
@@ -59,10 +59,10 @@ describe("Database lifecycle", () => {
     }).toThrow(QuiverError);
   });
 
-  test("fromDatabase applies migrations and loads UI metadata", () => {
+  test("fromHub applies migrations and loads UI metadata", () => {
     const dir = makeTempDir();
     const dbPath = join(dir, "test.db");
-    const db = Database.fromDatabase(dbPath, DATABASE_DIR);
+    const db = Database.fromHub(dbPath, HUB_DIR);
     try {
       expect(db.currentVersion()).toEqual(1);
       expect(db.getModelName()).toEqual("demo_model");
@@ -74,13 +74,13 @@ describe("Database lifecycle", () => {
     }
   });
 
-  test("fromDatabase with invalid path throws QuiverError", () => {
+  test("fromHub with invalid path throws QuiverError", () => {
     expect(() => {
-      Database.fromDatabase(":memory:", "nonexistent/path");
+      Database.fromHub(":memory:", "nonexistent/path");
     }).toThrow(QuiverError);
   });
 
-  test("UI metadata is empty without fromDatabase", () => {
+  test("UI metadata is empty without fromHub", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       expect(db.getModelName()).toEqual("");

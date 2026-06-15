@@ -60,25 +60,25 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         return Database(out_db[0])
 
     @staticmethod
-    def from_database(
+    def from_hub(
         db_path: str,
-        dir: str,
+        hub: str,
         *,
         read_only: bool = False,
         console_level: int | None = None,
     ) -> Database:
-        """Create a database from a model directory containing migrations/ and ui/.
+        """Create a database from a hub directory containing migrations/ and ui/.
 
-        The versioned migrations under <dir>/migrations are applied; UI metadata
-        under <dir>/ui is loaded into the returned instance.
+        The versioned migrations under <hub>/migrations are applied; UI metadata
+        under <hub>/ui is loaded into the returned instance.
         """
         lib = get_lib()
         options = Database._make_options(read_only, console_level)
         out_db = ffi.new("quiver_database_t**")
         check(
-            lib.quiver_database_from_database(
+            lib.quiver_database_from_hub(
                 db_path.encode("utf-8"),
-                dir.encode("utf-8"),
+                hub.encode("utf-8"),
                 options,
                 out_db,
             )
@@ -199,7 +199,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
     # -- UI metadata ------------------------------------------------------------
 
     def get_model_name(self) -> str:
-        """Return the model name from the UI metadata loaded via from_database.
+        """Return the model name from the UI metadata loaded via from_hub.
 
         Returns an empty string when no UI metadata is loaded.
         """

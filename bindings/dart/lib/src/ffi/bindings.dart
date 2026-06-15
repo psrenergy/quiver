@@ -127,21 +127,21 @@ class QuiverDatabaseBindings {
         )
       >();
 
-  int quiver_database_from_database(
+  int quiver_database_from_hub(
     ffi.Pointer<ffi.Char> db_path,
-    ffi.Pointer<ffi.Char> dir,
+    ffi.Pointer<ffi.Char> hub,
     ffi.Pointer<quiver_database_options_t> options,
     ffi.Pointer<ffi.Pointer<quiver_database_t>> out_db,
   ) {
-    return _quiver_database_from_database(
+    return _quiver_database_from_hub(
       db_path,
-      dir,
+      hub,
       options,
       out_db,
     );
   }
 
-  late final _quiver_database_from_databasePtr =
+  late final _quiver_database_from_hubPtr =
       _lookup<
         ffi.NativeFunction<
           ffi.Int32 Function(
@@ -151,8 +151,8 @@ class QuiverDatabaseBindings {
             ffi.Pointer<ffi.Pointer<quiver_database_t>>,
           )
         >
-      >('quiver_database_from_database');
-  late final _quiver_database_from_database = _quiver_database_from_databasePtr
+      >('quiver_database_from_hub');
+  late final _quiver_database_from_hub = _quiver_database_from_hubPtr
       .asFunction<
         int Function(
           ffi.Pointer<ffi.Char>,

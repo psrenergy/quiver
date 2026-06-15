@@ -22,8 +22,8 @@ def test_from_schema_context_manager(valid_schema_path: Path, tmp_path: Path) ->
         db.path()
 
 
-def test_from_database_loads_ui_metadata(database_dir: Path, tmp_path: Path) -> None:
-    db = Database.from_database(str(tmp_path / "test.db"), str(database_dir))
+def test_from_hub_loads_ui_metadata(hub_dir: Path, tmp_path: Path) -> None:
+    db = Database.from_hub(str(tmp_path / "test.db"), str(hub_dir))
     try:
         assert db.current_version() == 1
         assert db.get_model_name() == "demo_model"
@@ -34,12 +34,12 @@ def test_from_database_loads_ui_metadata(database_dir: Path, tmp_path: Path) -> 
         db.close()
 
 
-def test_from_database_invalid_path(tmp_path: Path) -> None:
+def test_from_hub_invalid_path(tmp_path: Path) -> None:
     with pytest.raises(QuiverError):
-        Database.from_database(str(tmp_path / "test.db"), "nonexistent/path")
+        Database.from_hub(str(tmp_path / "test.db"), "nonexistent/path")
 
 
-def test_ui_metadata_empty_without_from_database(db: Database) -> None:
+def test_ui_metadata_empty_without_from_hub(db: Database) -> None:
     assert db.get_model_name() == ""
     assert db.get_attribute_unit("Material", "demand") == ""
 

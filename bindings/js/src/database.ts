@@ -29,14 +29,14 @@ export class Database {
     return new Database(readPtrOut(outDb));
   }
 
-  static fromDatabase(dbPath: string, dir: string, options?: DatabaseOptions): Database {
+  static fromHub(dbPath: string, hub: string, options?: DatabaseOptions): Database {
     const lib = getSymbols();
     const optionsBuf = makeDefaultOptions(options);
     const outDb = allocPtrOut();
     const dbPathBuf = toCString(dbPath);
-    const dirBuf = toCString(dir);
+    const hubBuf = toCString(hub);
 
-    check(lib.quiver_database_from_database(dbPathBuf.buf, dirBuf.buf, optionsBuf.buf, outDb.buf));
+    check(lib.quiver_database_from_hub(dbPathBuf.buf, hubBuf.buf, optionsBuf.buf, outDb.buf));
 
     return new Database(readPtrOut(outDb));
   }

@@ -41,10 +41,10 @@ ffi.cdef("""
                                                 const char* schema_path,
                                                 const quiver_database_options_t* options,
                                                 quiver_database_t** out_db);
-    quiver_error_t quiver_database_from_database(const char* db_path,
-                                                  const char* dir,
-                                                  const quiver_database_options_t* options,
-                                                  quiver_database_t** out_db);
+    quiver_error_t quiver_database_from_hub(const char* db_path,
+                                             const char* hub,
+                                             const quiver_database_options_t* options,
+                                             quiver_database_t** out_db);
     quiver_error_t quiver_database_close(quiver_database_t* db);
     quiver_error_t quiver_database_is_healthy(quiver_database_t* db, int* out_healthy);
     quiver_error_t quiver_database_path(quiver_database_t* db, const char** out_path);

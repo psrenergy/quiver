@@ -119,8 +119,8 @@ function quiver_database_from_schema(db_path, schema_path, options, out_db)
     @ccall libquiver_c.quiver_database_from_schema(db_path::Ptr{Cchar}, schema_path::Ptr{Cchar}, options::Ptr{quiver_database_options_t}, out_db::Ptr{Ptr{quiver_database_t}})::quiver_error_t
 end
 
-function quiver_database_from_database(db_path, dir, options, out_db)
-    @ccall libquiver_c.quiver_database_from_database(db_path::Ptr{Cchar}, dir::Ptr{Cchar}, options::Ptr{quiver_database_options_t}, out_db::Ptr{Ptr{quiver_database_t}})::quiver_error_t
+function quiver_database_from_hub(db_path, hub, options, out_db)
+    @ccall libquiver_c.quiver_database_from_hub(db_path::Ptr{Cchar}, hub::Ptr{Cchar}, options::Ptr{quiver_database_options_t}, out_db::Ptr{Ptr{quiver_database_t}})::quiver_error_t
 end
 
 function quiver_database_close(db)

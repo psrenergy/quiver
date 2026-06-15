@@ -29,7 +29,7 @@ struct Database::Impl {
     std::shared_ptr<spdlog::logger> logger;
     std::unique_ptr<Schema> schema;
     std::unique_ptr<TypeValidator> type_validator;
-    UiConfig ui;  // model name + per-attribute units; populated only by Database::from_database
+    UiConfig ui;  // model name + per-attribute units; populated only by Database::from_hub
 
     void require_schema(const char* operation) const {
         if (!schema) {

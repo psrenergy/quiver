@@ -85,18 +85,18 @@ QUIVER_C_API quiver_error_t quiver_database_from_schema(const char* db_path,
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_database_from_database(const char* db_path,
-                                                          const char* dir,
-                                                          const quiver_database_options_t* options,
-                                                          quiver_database_t** out_db) {
-    QUIVER_REQUIRE(db_path, dir, out_db);
+QUIVER_C_API quiver_error_t quiver_database_from_hub(const char* db_path,
+                                                     const char* hub,
+                                                     const quiver_database_options_t* options,
+                                                     quiver_database_t** out_db) {
+    QUIVER_REQUIRE(db_path, hub, out_db);
 
     try {
         if (options) {
-            auto db = quiver::Database::from_database(db_path, dir, convert_database_options(*options));
+            auto db = quiver::Database::from_hub(db_path, hub, convert_database_options(*options));
             *out_db = new quiver_database(std::move(db));
         } else {
-            auto db = quiver::Database::from_database(db_path, dir, quiver::DatabaseOptions{});
+            auto db = quiver::Database::from_hub(db_path, hub, quiver::DatabaseOptions{});
             *out_db = new quiver_database(std::move(db));
         }
         return QUIVER_OK;

@@ -239,24 +239,24 @@ const std::string& Database::path() const {
     return impl_->path;
 }
 
-Database Database::from_database(const std::string& db_path, const std::string& dir, const DatabaseOptions& options) {
+Database Database::from_hub(const std::string& db_path, const std::string& hub, const DatabaseOptions& options) {
     namespace fs = std::filesystem;
     if (options.read_only) {
-        throw std::runtime_error("Cannot from_database: read_only mode (use Database constructor to open existing)");
+        throw std::runtime_error("Cannot from_hub: read_only mode (use Database constructor to open existing)");
     }
-    if (!fs::exists(dir)) {
-        throw std::runtime_error("Database directory not found: " + dir);
+    if (!fs::exists(hub)) {
+        throw std::runtime_error("Hub directory not found: " + hub);
     }
-    if (!fs::is_directory(dir)) {
-        throw std::runtime_error("Cannot from_database: path is not a directory: " + dir);
+    if (!fs::is_directory(hub)) {
+        throw std::runtime_error("Cannot from_hub: path is not a directory: " + hub);
     }
-    const auto migrations_path = fs::path(dir) / "migrations";
+    const auto migrations_path = fs::path(hub) / "migrations";
     if (!fs::exists(migrations_path)) {
         throw std::runtime_error("Migrations path not found: " + migrations_path.string());
     }
     // Read the UI metadata before creating/migrating the database file, so a malformed ui/ fails the
     // factory without leaving a partially-initialized database on disk.
-    auto ui = UiConfig::from_directory((fs::path(dir) / "ui").string());
+    auto ui = UiConfig::from_directory((fs::path(hub) / "ui").string());
     auto db = Database(db_path, options);
     db.migrate_up(migrations_path.string());
     db.impl_->ui = std::move(ui);

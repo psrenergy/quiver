@@ -234,27 +234,27 @@ TEST_F(TempFileFixture, FromSchemaInvalidPath) {
 // From database (migrations/ + ui/) tests
 // ============================================================================
 
-TEST_F(TempFileFixture, FromDatabaseNullArgs) {
+TEST_F(TempFileFixture, FromHubNullArgs) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
-    EXPECT_EQ(quiver_database_from_database(nullptr, "dir/", &options, &db), QUIVER_ERROR);
-    EXPECT_EQ(quiver_database_from_database(":memory:", nullptr, &options, &db), QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_from_hub(nullptr, "dir/", &options, &db), QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_from_hub(":memory:", nullptr, &options, &db), QUIVER_ERROR);
 }
 
-TEST_F(TempFileFixture, FromDatabaseInvalidPath) {
+TEST_F(TempFileFixture, FromHubInvalidPath) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
-    EXPECT_NE(quiver_database_from_database(":memory:", "nonexistent/database/", &options, &db), QUIVER_OK);
+    EXPECT_NE(quiver_database_from_hub(":memory:", "nonexistent/database/", &options, &db), QUIVER_OK);
 }
 
-TEST_F(TempFileFixture, FromDatabaseLoadsUiMetadata) {
+TEST_F(TempFileFixture, FromHubLoadsUiMetadata) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
-    const auto dir = SCHEMA_PATH("schemas/from_database");
-    ASSERT_EQ(quiver_database_from_database(path.c_str(), dir.c_str(), &options, &db), QUIVER_OK);
+    const auto dir = SCHEMA_PATH("schemas/from_hub");
+    ASSERT_EQ(quiver_database_from_hub(path.c_str(), dir.c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
     int64_t version = 0;

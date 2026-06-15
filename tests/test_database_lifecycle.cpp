@@ -110,8 +110,8 @@ protected:
         path = (fs::temp_directory_path() / "quiver_test.db").string();
         migrations_path = (fs::path(__FILE__).parent_path() / "schemas" / "migrations").string();
         // Parent of migrations_path: its `migrations/` child is the shared 3-migration fixture, so
-        // from_database(database_dir) exercises the migration engine (no `ui/` here -> empty UI).
-        database_dir = (fs::path(__FILE__).parent_path() / "schemas").string();
+        // from_hub(hub_dir) exercises the migration engine (no `ui/` here -> empty UI).
+        hub_dir = (fs::path(__FILE__).parent_path() / "schemas").string();
     }
     void TearDown() override {
         if (fs::exists(path))
@@ -119,7 +119,7 @@ protected:
     }
     std::string path;
     std::string migrations_path;
-    std::string database_dir;
+    std::string hub_dir;
 };
 
 // ============================================================================
@@ -236,8 +236,8 @@ TEST_F(MigrationFixture, DatabaseCurrentVersion) {
     EXPECT_EQ(db.current_version(), 0);
 }
 
-TEST_F(MigrationFixture, FromDatabaseAppliesAllMigrations) {
-    auto db = quiver::Database::from_database(path, database_dir);
+TEST_F(MigrationFixture, FromHubAppliesAllMigrations) {
+    auto db = quiver::Database::from_hub(path, hub_dir);
 
     EXPECT_EQ(db.current_version(), 3);
     EXPECT_TRUE(db.is_healthy());
@@ -259,14 +259,14 @@ TEST_F(MigrationFixture, MigrationsPendingFromHigherVersion) {
 }
 
 // ============================================================================
-// from_database (migrations/ + ui/) tests
+// from_hub (migrations/ + ui/) tests
 // ============================================================================
 
-class DatabaseDirFixture : public ::testing::Test {
+class HubFixture : public ::testing::Test {
 protected:
     void SetUp() override {
-        path = (fs::temp_directory_path() / "quiver_from_database_test.db").string();
-        dir = (fs::path(__FILE__).parent_path() / "schemas" / "from_database").string();
+        path = (fs::temp_directory_path() / "quiver_from_hub_test.db").string();
+        dir = (fs::path(__FILE__).parent_path() / "schemas" / "from_hub").string();
         if (fs::exists(path))
             fs::remove(path);
     }
@@ -278,42 +278,42 @@ protected:
     std::string dir;
 };
 
-TEST_F(DatabaseDirFixture, FromDatabaseAppliesMigrations) {
-    auto db = quiver::Database::from_database(path, dir);
+TEST_F(HubFixture, FromHubAppliesMigrations) {
+    auto db = quiver::Database::from_hub(path, dir);
     EXPECT_EQ(db.current_version(), 1);
     EXPECT_TRUE(db.is_healthy());
 }
 
-TEST_F(DatabaseDirFixture, FromDatabaseLoadsUiMetadata) {
-    auto db = quiver::Database::from_database(path, dir);
+TEST_F(HubFixture, FromHubLoadsUiMetadata) {
+    auto db = quiver::Database::from_hub(path, dir);
     EXPECT_EQ(db.get_model_name(), "demo_model");
     EXPECT_EQ(db.get_attribute_unit("Material", "demand"), "unit/year");
     EXPECT_EQ(db.get_attribute_unit("Material", "label"), "");
     EXPECT_EQ(db.get_attribute_unit("Nonexistent", "x"), "");
 }
 
-TEST_F(DatabaseDirFixture, FromDatabaseRejectsReadOnly) {
+TEST_F(HubFixture, FromHubRejectsReadOnly) {
     quiver::DatabaseOptions options;
     options.read_only = true;
-    EXPECT_THROW(quiver::Database::from_database(path, dir, options), std::runtime_error);
+    EXPECT_THROW(quiver::Database::from_hub(path, dir, options), std::runtime_error);
 }
 
-TEST_F(DatabaseDirFixture, FromDatabaseInvalidPath) {
-    EXPECT_THROW(quiver::Database::from_database(path, "nonexistent/database/"), std::runtime_error);
+TEST_F(HubFixture, FromHubInvalidPath) {
+    EXPECT_THROW(quiver::Database::from_hub(path, "nonexistent/database/"), std::runtime_error);
 }
 
-TEST_F(DatabaseDirFixture, FromDatabaseMissingMigrationsThrows) {
+TEST_F(HubFixture, FromHubMissingMigrationsThrows) {
     // A directory that exists but has no migrations/ subfolder must fail fast ("Migrations path not
     // found"), not silently yield a schema-less version-0 database.
     const auto dir_without_migrations = (fs::path(__FILE__).parent_path() / "schemas" / "valid").string();
-    EXPECT_THROW(quiver::Database::from_database(path, dir_without_migrations), std::runtime_error);
+    EXPECT_THROW(quiver::Database::from_hub(path, dir_without_migrations), std::runtime_error);
     EXPECT_FALSE(fs::exists(path));
 }
 
-TEST_F(DatabaseDirFixture, FromDatabaseMalformedUiLeavesNoDatabaseFile) {
+TEST_F(HubFixture, FromHubMalformedUiLeavesNoDatabaseFile) {
     // UI is parsed before the db is created/migrated, so a malformed ui/ throws without leaving a
     // partially-initialized database on disk.
-    const auto tmp = fs::temp_directory_path() / "quiver_from_database_malformed_ui";
+    const auto tmp = fs::temp_directory_path() / "quiver_from_hub_malformed_ui";
     fs::remove_all(tmp);
     fs::create_directories(tmp / "migrations" / "1");
     {
@@ -327,13 +327,13 @@ TEST_F(DatabaseDirFixture, FromDatabaseMalformedUiLeavesNoDatabaseFile) {
         bad << "id = \"Material\"\nthis is not valid toml = =\n";
     }
 
-    EXPECT_THROW(quiver::Database::from_database(path, tmp.string()), std::runtime_error);
+    EXPECT_THROW(quiver::Database::from_hub(path, tmp.string()), std::runtime_error);
     EXPECT_FALSE(fs::exists(path));
 
     fs::remove_all(tmp);
 }
 
-TEST_F(TempFileFixture, UiMetadataEmptyWithoutFromDatabase) {
+TEST_F(TempFileFixture, UiMetadataEmptyWithoutFromHub) {
     auto db = quiver::Database::from_schema(path, VALID_SCHEMA("basic.sql"));
     EXPECT_EQ(db.get_model_name(), "");
     EXPECT_EQ(db.get_attribute_unit("Material", "demand"), "");
@@ -348,9 +348,9 @@ TEST_F(MigrationFixture, MigrationVersionZero) {
 }
 
 TEST_F(MigrationFixture, MigrationsWithPartialApplication) {
-    // Apply all migrations via from_database, then reopen and confirm the version persists.
+    // Apply all migrations via from_hub, then reopen and confirm the version persists.
     {
-        auto db = quiver::Database::from_database(path, database_dir);
+        auto db = quiver::Database::from_hub(path, hub_dir);
         EXPECT_EQ(db.current_version(), 3);
     }
 
@@ -374,8 +374,8 @@ TEST_F(MigrationFixture, MigrationGetByVersion) {
     }
 }
 
-TEST_F(MigrationFixture, FromDatabaseInMemory) {
-    auto db = quiver::Database::from_database(":memory:", database_dir);
+TEST_F(MigrationFixture, FromHubInMemory) {
+    auto db = quiver::Database::from_hub(":memory:", hub_dir);
 
     EXPECT_EQ(db.current_version(), 3);
     EXPECT_TRUE(db.is_healthy());
@@ -385,8 +385,8 @@ TEST_F(MigrationFixture, FromDatabaseInMemory) {
 // Schema loading after migrations tests
 // ============================================================================
 
-TEST_F(MigrationFixture, FromDatabaseLoadsSchemaMetadata) {
-    auto db = quiver::Database::from_database(":memory:", database_dir);
+TEST_F(MigrationFixture, FromHubLoadsSchemaMetadata) {
+    auto db = quiver::Database::from_hub(":memory:", hub_dir);
 
     // list_scalar_attributes requires schema to be loaded
     auto attributes = db.list_scalar_attributes("Test1");
@@ -407,8 +407,8 @@ TEST_F(MigrationFixture, FromDatabaseLoadsSchemaMetadata) {
     EXPECT_TRUE(has_name);
 }
 
-TEST_F(MigrationFixture, FromDatabaseAllowsCreateElement) {
-    auto db = quiver::Database::from_database(":memory:", database_dir);
+TEST_F(MigrationFixture, FromHubAllowsCreateElement) {
+    auto db = quiver::Database::from_hub(":memory:", hub_dir);
 
     // create_element requires schema and type_validator to be loaded
     auto id = db.create_element("Test1", quiver::Element().set("label", "item1").set("name", "Test Item"));
@@ -420,8 +420,8 @@ TEST_F(MigrationFixture, FromDatabaseAllowsCreateElement) {
     EXPECT_EQ(names[0], "Test Item");
 }
 
-TEST_F(MigrationFixture, FromDatabaseAllowsCreateElementInLaterMigration) {
-    auto db = quiver::Database::from_database(":memory:", database_dir);
+TEST_F(MigrationFixture, FromHubAllowsCreateElementInLaterMigration) {
+    auto db = quiver::Database::from_hub(":memory:", hub_dir);
 
     // Test3 is created in migration 3
     auto id = db.create_element("Test3", quiver::Element().set("label", "item1").set("capacity", int64_t{100}));
@@ -432,15 +432,15 @@ TEST_F(MigrationFixture, FromDatabaseAllowsCreateElementInLaterMigration) {
     EXPECT_EQ(capacities[0], 100);
 }
 
-TEST_F(MigrationFixture, FromDatabaseLoadsSchemaWhenAlreadyUpToDate) {
+TEST_F(MigrationFixture, FromHubLoadsSchemaWhenAlreadyUpToDate) {
     // First, apply all migrations
     {
-        auto db = quiver::Database::from_database(path, database_dir);
+        auto db = quiver::Database::from_hub(path, hub_dir);
         EXPECT_EQ(db.current_version(), 3);
     }
 
-    // Reopen with from_database again (no pending migrations)
-    auto db = quiver::Database::from_database(path, database_dir);
+    // Reopen with from_hub again (no pending migrations)
+    auto db = quiver::Database::from_hub(path, hub_dir);
 
     // Schema should be loaded even though no migrations were applied
     auto attributes = db.list_scalar_attributes("Test3");

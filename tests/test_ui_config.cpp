@@ -10,7 +10,7 @@ using quiver::UiConfig;
 
 namespace {
 std::string ui_dir() {
-    return SCHEMA_PATH("schemas/from_database/ui");
+    return SCHEMA_PATH("schemas/from_hub/ui");
 }
 }  // namespace
 
@@ -68,7 +68,7 @@ TEST(UiConfig, UnknownCollectionOrAttributeIsEmpty) {
 }
 
 TEST(UiConfig, MissingDirectoryYieldsEmptyConfig) {
-    const auto ui = UiConfig::from_directory(SCHEMA_PATH("schemas/from_database/does_not_exist"));
+    const auto ui = UiConfig::from_directory(SCHEMA_PATH("schemas/from_hub/does_not_exist"));
     EXPECT_EQ(ui.model_name(), "");
     EXPECT_EQ(ui.attribute_unit("Material", "demand"), "");
 }

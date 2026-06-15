@@ -63,17 +63,17 @@ end
 
     @testset "Migrations returns count" begin
         # schemas/ holds the shared 3-migration fixture under migrations/ (no ui/ -> empty UI).
-        db = Quiver.from_database(":memory:", joinpath(tests_path(), "schemas"))
+        db = Quiver.from_hub(":memory:", joinpath(tests_path(), "schemas"))
         @test Quiver.current_version(db) == 3
         Quiver.close!(db)
     end
 end
 
-@testset "from_database" begin
-    dir = joinpath(tests_path(), "schemas", "from_database")
+@testset "from_hub" begin
+    dir = joinpath(tests_path(), "schemas", "from_hub")
     mktempdir() do tmp
         db_path = joinpath(tmp, "test.db")
-        db = Quiver.from_database(db_path, dir)
+        db = Quiver.from_hub(db_path, dir)
         @test Quiver.current_version(db) == 1
         @test Quiver.is_healthy(db) == true
         @test Quiver.get_model_name(db) == "demo_model"
@@ -85,7 +85,7 @@ end
     end
 end
 
-@testset "UI metadata empty without from_database" begin
+@testset "UI metadata empty without from_hub" begin
     path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
     db = Quiver.from_schema(":memory:", path_schema)
     @test Quiver.get_model_name(db) == ""

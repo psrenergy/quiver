@@ -51,8 +51,8 @@ Settled questions — don't relitigate without the user; each was decided delibe
 
 - **Time-series group data is column-oriented** (`{column: [values]}`) in every binding — the
   canonical cross-binding shape. The C++ core keeps row-shaped `vector<map<string, Value>>`.
-- **UI metadata is read gradually, English-only, and in-memory only.** `from_database(db_path, dir)`
-  reads `dir/ui/main.toml` (model name) and each `dir/ui/<collection>.toml`'s `[[attribute]]` units
+- **UI metadata is read gradually, English-only, and in-memory only.** `from_hub(db_path, hub)`
+  reads `hub/ui/main.toml` (model name) and each `hub/ui/<collection>.toml`'s `[[attribute]]` units
   into a `UiConfig` (`include/quiver/ui_config.h`) held by the `Database`. This first slice exposes
   only `get_model_name()` + `get_attribute_unit()`; the rest of the UI files (enums, labels,
   tooltips, cards, queries, `[[attribute_query]]`) is deliberately ignored for now. Units are keyed
@@ -315,7 +315,7 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
 - **Examples:** `create_element`, `read_vector_floats_by_id`, `get_scalar_metadata`, `list_time_series_groups`
 
 ### Database Class
-- Factory methods: `from_schema()`, `from_database()` — `DatabaseOptions` (`read_only`, `console_level`) exposed as optional parameters in every binding. `from_database(db_path, dir)` points at a model directory holding a `migrations/` subfolder (its versioned migrations are applied) and an optional `ui/` subfolder (UI metadata read into the instance — see UI Metadata below and the design decision)
+- Factory methods: `from_schema()`, `from_hub()` — `DatabaseOptions` (`read_only`, `console_level`) exposed as optional parameters in every binding. `from_hub(db_path, hub)` points at a hub directory holding a `migrations/` subfolder (its versioned migrations are applied) and an optional `ui/` subfolder (UI metadata read into the instance — see UI Metadata below and the design decision)
 - Transaction control: `begin_transaction()`, `commit()`, `rollback()`, `in_transaction()`
 - CRUD: `create_element(collection, element)`, `update_element`, `delete_element`
 - Scalar/vector/set readers: `read_{scalar,vector,set}_{integers,floats,strings}(collection, attribute)` (+ `_by_id` variants)
@@ -326,7 +326,7 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
 - List groups: `list_scalar_attributes()`, `list_vector_groups()`, `list_set_groups()`, `list_time_series_groups()`
 - Query: `query_string/integer/float(sql, parameters = {})` - parameterized SQL with positional `?` placeholders
 - Schema inspection — human-readable **text reports** (all return `std::string`): `describe()` (whole-DB overview: every collection, element counts, attribute/group names); `describe_collection(c)` (one collection's structure); `summarize_collection(c)` (per-scalar null/non-null counts + low-cardinality integer value distributions, per-group empty/non-empty counts). CSV: `export_csv()`, `import_csv()` with optional enum/date formatting via `CSVOptions`
-- UI metadata (populated only via `from_database`): `get_model_name()` (model name from `ui/main.toml`) and `get_attribute_unit(collection, attribute)` (English-first unit, keyed by the collection's canonical UI `id`). Both return a plain string; `""` means unknown / unit-less / no UI loaded. See the design decision for the gradual-reading + in-memory-only policy
+- UI metadata (populated only via `from_hub`): `get_model_name()` (model name from `ui/main.toml`) and `get_attribute_unit(collection, attribute)` (English-first unit, keyed by the collection's canonical UI `id`). Both return a plain string; `""` means unknown / unit-less / no UI loaded. See the design decision for the gradual-reading + in-memory-only policy
 
 ### Element Class
 Builder for element creation with fluent API:
@@ -362,7 +362,7 @@ The rules are mechanical: given any C++ method name, you can derive the equivale
 | Category | C++ | C API | Julia | Dart | Lua |
 |----------|-----|-------|-------|------|-----|
 | Factory | `Database::from_schema()` | `quiver_database_from_schema()` | `from_schema()` | `Database.fromSchema()` | N/A |
-| Factory (dir) | `Database::from_database()` | `quiver_database_from_database()` | `from_database()` | `Database.fromDatabase()` | N/A |
+| Factory (hub) | `Database::from_hub()` | `quiver_database_from_hub()` | `from_hub()` | `Database.fromHub()` | N/A |
 | Open existing | `Database(path, options)` | `quiver_database_open()` | `open()` | `Database.open()` | N/A |
 | Transaction | `begin_transaction()` | `quiver_database_begin_transaction()` | `begin_transaction!()` | `beginTransaction()` | `begin_transaction()` |
 | Transaction | `commit()` | `quiver_database_commit()` | `commit!()` | `commit()` | `commit()` |
