@@ -40,42 +40,42 @@ SAMPLE_READBACK = {
 }
 
 
-# -- add_time_series_row tests -------------------------------------------------
+# -- upsert_time_series_row tests -------------------------------------------------
 
 
-class TestAddTimeSeriesRow:
-    def test_add_time_series_row_insert(self, collections_db: Database) -> None:
+class TestUpsertTimeSeriesRow:
+    def test_upsert_time_series_row_insert(self, collections_db: Database) -> None:
         """Insert one row via kwargs and read back to assert presence."""
         eid = _create_collection_element(collections_db, "Item1")
-        collections_db.add_time_series_row("Collection", "data", eid, date_time="2024-01-01", value=10.0)
+        collections_db.upsert_time_series_row("Collection", "data", eid, date_time="2024-01-01", value=10.0)
 
         result = collections_db.read_time_series_group("Collection", "data", eid)
         assert result["date_time"] == [_utc(2024, 1, 1)]
         assert result["value"] == [10.0]
 
-    def test_add_time_series_row_upsert(self, collections_db: Database) -> None:
+    def test_upsert_time_series_row_upsert(self, collections_db: Database) -> None:
         """Insert then call again with same dimension PK; value column is overwritten."""
         eid = _create_collection_element(collections_db, "Item1")
-        collections_db.add_time_series_row("Collection", "data", eid, date_time="2024-01-01", value=10.0)
-        collections_db.add_time_series_row("Collection", "data", eid, date_time="2024-01-01", value=99.0)
+        collections_db.upsert_time_series_row("Collection", "data", eid, date_time="2024-01-01", value=10.0)
+        collections_db.upsert_time_series_row("Collection", "data", eid, date_time="2024-01-01", value=99.0)
 
         result = collections_db.read_time_series_group("Collection", "data", eid)
         assert result["value"] == [99.0]
 
-    def test_add_time_series_row_dict_unpacking(self, collections_db: Database) -> None:
-        """Dict unpacking pattern works: db.add_time_series_row(..., **row_dict)."""
+    def test_upsert_time_series_row_dict_unpacking(self, collections_db: Database) -> None:
+        """Dict unpacking pattern works: db.upsert_time_series_row(..., **row_dict)."""
         eid = _create_collection_element(collections_db, "Item1")
         row_dict = {"date_time": "2024-02-01", "value": 7.5}
-        collections_db.add_time_series_row("Collection", "data", eid, **row_dict)
+        collections_db.upsert_time_series_row("Collection", "data", eid, **row_dict)
 
         result = collections_db.read_time_series_group("Collection", "data", eid)
         assert result["date_time"] == [_utc(2024, 2, 1)]
         assert result["value"] == [7.5]
 
-    def test_add_time_series_row_multi_dim(self, multi_dim_ts_db: Database) -> None:
+    def test_upsert_time_series_row_multi_dim(self, multi_dim_ts_db: Database) -> None:
         """Multi-dimension PK (date_time + block) round-trips through the Python wrapper."""
         eid = multi_dim_ts_db.create_element("Resource", label="R1")
-        multi_dim_ts_db.add_time_series_row(
+        multi_dim_ts_db.upsert_time_series_row(
             "Resource", "load", eid, date_time="2024-01-01", block=1, load=500.0, flag=0
         )
 

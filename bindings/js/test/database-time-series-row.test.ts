@@ -77,25 +77,25 @@ describe("readTimeSeriesRow", () => {
 });
 
 // ============================================================================
-// addTimeSeriesRow
+// upsertTimeSeriesRow
 // ============================================================================
 
-describe("addTimeSeriesRow", () => {
+describe("upsertTimeSeriesRow", () => {
   test("appends rows one at a time and upserts on the same date", () => {
     const db = Database.fromSchema(":memory:", COLLECTIONS_SCHEMA);
     try {
       const id = db.createElement("Collection", { label: "Item1" });
 
-      db.addTimeSeriesRow("Collection", "data", id, {
+      db.upsertTimeSeriesRow("Collection", "data", id, {
         date_time: "2024-01-01T00:00:00",
         value: 1.5,
       });
-      db.addTimeSeriesRow("Collection", "data", id, {
+      db.upsertTimeSeriesRow("Collection", "data", id, {
         date_time: "2024-01-02T00:00:00",
         value: 2.5,
       });
       // Upsert: same date overwrites the value
-      db.addTimeSeriesRow("Collection", "data", id, {
+      db.upsertTimeSeriesRow("Collection", "data", id, {
         date_time: "2024-01-02T00:00:00",
         value: 9.5,
       });

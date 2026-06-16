@@ -151,7 +151,7 @@ export class Database {
     id: number,
     data: TimeSeriesData,
   ) => void;
-  declare addTimeSeriesRow: (
+  declare upsertTimeSeriesRow: (
     collection: string,
     group: string,
     id: number,

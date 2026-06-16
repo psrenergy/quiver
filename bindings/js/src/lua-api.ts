@@ -166,7 +166,7 @@ Notes:
   \`{ x = nil }\` is identical to \`{}\`; an update/create table that ends up with no attributes
   **throws** (\`element must have at least one attribute\`). To leave a column unchanged, omit the
   key — you cannot set a scalar to NULL via the element table. (\`nil\` → NULL is only accepted by
-  \`add_time_series_row\` and \`update_time_series_files\`.)
+  \`upsert_time_series_row\` and \`update_time_series_files\`.)
 
 ---
 
@@ -274,7 +274,7 @@ db:update_time_series_group("Items", "data", id, ts)   -- write the whole group 
 \`\`\`
 
 **DO NOT pass an array of row tables** (\`{ { date_time = ..., value = ... }, ... }\`) — that is the
-\`add_time_series_row\` shape, not this one. Doing so raises
+\`upsert_time_series_row\` shape, not this one. Doing so raises
 \`stack index -1, expected string, received number\` (the integer array indices 1, 2, 3 are not
 column names). Each value of the top-level table must be an **array**, not a scalar.
 
@@ -293,13 +293,13 @@ column names). Each value of the top-level table must be an **array**, not a sca
 - Integer values are accepted for REAL columns (converted on insert). Booleans, functions, and
   other unsupported Lua types throw \`column '...' has unsupported Lua type\`.
 
-### Append/upsert a single row (\`add_time_series_row\` — ROW-oriented, the one exception)
+### Append/upsert a single row (\`upsert_time_series_row\` — ROW-oriented, the one exception)
 
 Unlike the column-oriented group update above, this takes **one row table of scalars** (dimension
 column + value column(s)), and upserts that single row:
 
 \`\`\`lua
-db:add_time_series_row("Items", "data", id, {
+db:upsert_time_series_row("Items", "data", id, {
     date_time = "2024-01-04T00:00:00",
     value     = 40.0,
 })

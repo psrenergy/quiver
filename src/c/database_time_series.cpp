@@ -322,14 +322,14 @@ QUIVER_C_API quiver_error_t quiver_database_update_time_series_group(quiver_data
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_database_add_time_series_row(quiver_database_t* db,
-                                                                const char* collection,
-                                                                const char* group,
-                                                                int64_t id,
-                                                                const char* const* column_names,
-                                                                const int* column_types,
-                                                                const void* const* column_data,
-                                                                size_t column_count) {
+QUIVER_C_API quiver_error_t quiver_database_upsert_time_series_row(quiver_database_t* db,
+                                                                   const char* collection,
+                                                                   const char* group,
+                                                                   int64_t id,
+                                                                   const char* const* column_names,
+                                                                   const int* column_types,
+                                                                   const void* const* column_data,
+                                                                   size_t column_count) {
     QUIVER_REQUIRE(db, collection, group);
     if (column_count > 0) {
         QUIVER_REQUIRE(column_names, column_types, column_data);
@@ -351,12 +351,12 @@ QUIVER_C_API quiver_error_t quiver_database_add_time_series_row(quiver_database_
                 row[col_name] = std::string(static_cast<const char* const*>(column_data[c])[0]);
                 break;
             default:
-                throw std::runtime_error("Cannot add_time_series_row: unknown column type " +
+                throw std::runtime_error("Cannot upsert_time_series_row: unknown column type " +
                                          std::to_string(column_types[c]));
             }
         }
 
-        db->db.add_time_series_row(collection, group, id, row);
+        db->db.upsert_time_series_row(collection, group, id, row);
         return QUIVER_OK;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());

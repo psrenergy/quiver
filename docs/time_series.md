@@ -120,7 +120,7 @@ It is also possible to insert (or upsert) a single row. Calling it again with th
 dimension values overwrites the value columns:
 
 ```julia
-Quiver.add_time_series_row!(
+Quiver.upsert_time_series_row!(
     db,
     "Resource",
     "group1",
@@ -161,11 +161,11 @@ values = Quiver.read_time_series_row(
 ## Updating data
 
 `update_time_series_group!` replaces **all** rows of the group for the element. To change a
-single row, use `add_time_series_row!` with the row's exact dimension values — existing
+single row, use `upsert_time_series_row!` with the row's exact dimension values — existing
 value columns at that dimension key are overwritten:
 
 ```julia
-Quiver.add_time_series_row!(
+Quiver.upsert_time_series_row!(
     db,
     "Resource",
     "group2",

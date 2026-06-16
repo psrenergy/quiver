@@ -10,7 +10,7 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   `read_element_ids`/`read_element_by_id` live in the `_scalar` file), `test_database_update.cpp`,
   `test_database_delete.cpp`, `test_database_query.cpp`,
   `test_database_time_series_{metadata,group,row,files}.cpp` (time series split by sub-concern:
-  `group` = group read/update + validation, `row` = `add_time_series_row`/`read_time_series_row`;
+  `group` = group read/update + validation, `row` = `upsert_time_series_row`/`read_time_series_row`;
   the C++ core has no `_nulls` file), `test_database_transaction.cpp`,
   `test_database_csv_export.cpp`, `test_database_csv_import.cpp`, `test_database_errors.cpp`
 - Supporting types: `test_element.cpp`, `test_row_result.cpp`, `test_migrations.cpp`,

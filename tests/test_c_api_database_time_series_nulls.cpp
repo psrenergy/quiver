@@ -35,7 +35,7 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupNullString) {
     int col_types[] = {QUIVER_DATA_TYPE_STRING};
     const char* date_times[] = {"2024-01-01T10:00:00"};
     const void* col_data[] = {date_times};
-    ASSERT_EQ(quiver_database_add_time_series_row(db, "Sensor", "readings", id, col_names, col_types, col_data, 1),
+    ASSERT_EQ(quiver_database_upsert_time_series_row(db, "Sensor", "readings", id, col_names, col_types, col_data, 1),
               QUIVER_OK);
 
     // NULL cells no longer fail the read: every column comes back with a per-cell
@@ -124,7 +124,8 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupNullNumerics) {
         const char* dts[] = {"2024-01-01"};
         double temps[] = {20.0};
         const void* data[] = {dts, temps};
-        ASSERT_EQ(quiver_database_add_time_series_row(db, "Sensor", "readings", id, names, types, data, 2), QUIVER_OK);
+        ASSERT_EQ(quiver_database_upsert_time_series_row(db, "Sensor", "readings", id, names, types, data, 2),
+                  QUIVER_OK);
     }
     {
         const char* names[] = {"date_time", "counter"};
@@ -132,7 +133,8 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupNullNumerics) {
         const char* dts[] = {"2024-01-02"};
         int64_t counters[] = {5};
         const void* data[] = {dts, counters};
-        ASSERT_EQ(quiver_database_add_time_series_row(db, "Sensor", "readings", id, names, types, data, 2), QUIVER_OK);
+        ASSERT_EQ(quiver_database_upsert_time_series_row(db, "Sensor", "readings", id, names, types, data, 2),
+                  QUIVER_OK);
     }
 
     char** out_col_names = nullptr;
@@ -189,7 +191,8 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupAllNullStringColumn) {
         int types[] = {QUIVER_DATA_TYPE_STRING};
         const char* dts[] = {dt};
         const void* data[] = {dts};
-        ASSERT_EQ(quiver_database_add_time_series_row(db, "Sensor", "readings", id, names, types, data, 1), QUIVER_OK);
+        ASSERT_EQ(quiver_database_upsert_time_series_row(db, "Sensor", "readings", id, names, types, data, 1),
+                  QUIVER_OK);
     }
 
     char** out_col_names = nullptr;

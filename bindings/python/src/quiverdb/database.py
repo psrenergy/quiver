@@ -1325,14 +1325,14 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
             )
         )
 
-    def add_time_series_row(self, collection: str, group: str, id: int, **kwargs) -> None:
+    def upsert_time_series_row(self, collection: str, group: str, id: int, **kwargs) -> None:
         """Insert or upsert a single time series row for an element.
 
         Keyword arguments map column names to values. The dimension column (e.g.
         date_time) and all value columns must be provided. Type dispatch uses
         isinstance: bool -> INTEGER (0/1), int -> INTEGER, float -> FLOAT, str ->
         STRING. No Int->Float coercion (per D-03: Python strict typing).
-        Dict unpacking is supported: db.add_time_series_row("Col", "grp", 1, **row_dict).
+        Dict unpacking is supported: db.upsert_time_series_row("Col", "grp", 1, **row_dict).
         """
         self._ensure_open()
         lib = get_lib()
@@ -1382,7 +1382,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
                 )
 
         check(
-            lib.quiver_database_add_time_series_row(
+            lib.quiver_database_upsert_time_series_row(
                 self._ptr, c_collection, c_group, id, c_col_names, c_col_types, c_col_data, col_count
             )
         )

@@ -16,7 +16,7 @@ void main() {
         db.createElement('Configuration', {'label': 'Test Config'});
         final id = db.createElement('Collection', {'label': 'Item 1'});
 
-        db.addTimeSeriesRow('Collection', 'data', id, {
+        db.upsertTimeSeriesRow('Collection', 'data', id, {
           'date_time': '2024-01-01T10:00:00',
           'value': 10.0,
         });
@@ -40,13 +40,13 @@ void main() {
         final id = db.createElement('Collection', {'label': 'Item 1'});
 
         // Initial insert
-        db.addTimeSeriesRow('Collection', 'data', id, {
+        db.upsertTimeSeriesRow('Collection', 'data', id, {
           'date_time': '2024-01-01T10:00:00',
           'value': 10.0,
         });
 
         // Upsert same date_time with new value
-        db.addTimeSeriesRow('Collection', 'data', id, {
+        db.upsertTimeSeriesRow('Collection', 'data', id, {
           'date_time': '2024-01-01T10:00:00',
           'value': 99.0,
         });
@@ -68,7 +68,7 @@ void main() {
         db.createElement('Configuration', {'label': 'Test Config'});
         final id = db.createElement('Resource', {'label': 'Resource 1'});
 
-        db.addTimeSeriesRow('Resource', 'load', id, {
+        db.upsertTimeSeriesRow('Resource', 'load', id, {
           'date_time': '2024-01-01T00:00:00',
           'block': 1,
           'load': 42.5,

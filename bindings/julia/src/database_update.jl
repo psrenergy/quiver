@@ -126,7 +126,7 @@ function update_time_series_group!(db::Database, collection::String, group::Stri
     return nothing
 end
 
-function add_time_series_row!(db::Database, collection::String, group::String, id::Int64; kwargs...)
+function upsert_time_series_row!(db::Database, collection::String, group::String, id::Int64; kwargs...)
     column_count = length(kwargs)
     col_names_strs = String[]
     col_types = Cint[]
@@ -182,7 +182,7 @@ function add_time_series_row!(db::Database, collection::String, group::String, i
 
     GC.@preserve refs begin
         check(
-            C.quiver_database_add_time_series_row(
+            C.quiver_database_upsert_time_series_row(
                 db.ptr, collection, group, id,
                 name_ptrs, col_types_arr, col_data_arr,
                 Csize_t(column_count),
