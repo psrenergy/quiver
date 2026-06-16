@@ -318,7 +318,7 @@ Database.prototype.updateTimeSeriesGroup = function (
   );
 };
 
-Database.prototype.addTimeSeriesRow = function (
+Database.prototype.upsertTimeSeriesRow = function (
   this: Database,
   collection: string,
   group: string,
@@ -366,7 +366,7 @@ Database.prototype.addTimeSeriesRow = function (
   keepalive.push(dataTable);
 
   check(
-    lib.quiver_database_add_time_series_row(
+    lib.quiver_database_upsert_time_series_row(
       this._handle,
       collBuf.buf,
       grpBuf.buf,

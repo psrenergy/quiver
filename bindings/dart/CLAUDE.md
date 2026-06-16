@@ -34,11 +34,11 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
 - **Marshaling idiom**: every method allocates through a `package:ffi` `Arena` and releases in
   `finally`. Typed time-series columns go through the shared private
   `_marshalTimeSeriesColumn(Arena, List<Object?>)` (used by `updateTimeSeriesGroup` and
-  `addTimeSeriesRow`); query parameters through `_marshalParams`.
+  `upsertTimeSeriesRow`); query parameters through `_marshalParams`.
 - **Time-series group NULLs**: `readTimeSeriesGroup`/`updateTimeSeriesGroup` use
   `Map<String, List<Object?>>` — a `null` cell is a SQL NULL. `_marshalTimeSeriesColumn` returns a
   `({int type, Pointer<Void> data, Pointer<Uint8> hasValue})` record (the per-cell mask;
-  `addTimeSeriesRow` ignores `hasValue`), dispatches on the first non-null element, and tags an
+  `upsertTimeSeriesRow` ignores `hasValue`), dispatches on the first non-null element, and tags an
   all-null/empty column FLOAT with a zeroed placeholder. Reads decode the mask out-param and never
   `toDartString` a masked-out (NULL) pointer.
 - **Query API shape**: `queryString`/`queryInteger`/`queryFloat`/`queryDateTime` take an optional

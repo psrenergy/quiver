@@ -16,7 +16,7 @@ include("fixture.jl")
             Quiver.create_element!(db, "Configuration"; label = "Test Config")
             id = Quiver.create_element!(db, "Collection"; label = "Item 1")
 
-            Quiver.add_time_series_row!(db, "Collection", "data", id;
+            Quiver.upsert_time_series_row!(db, "Collection", "data", id;
                 date_time = DateTime(2024, 1, 1),
                 value = 10.0,
             )
@@ -37,13 +37,13 @@ include("fixture.jl")
             Quiver.create_element!(db, "Configuration"; label = "Test Config")
             id = Quiver.create_element!(db, "Collection"; label = "Item 1")
 
-            Quiver.add_time_series_row!(db, "Collection", "data", id;
+            Quiver.upsert_time_series_row!(db, "Collection", "data", id;
                 date_time = DateTime(2024, 1, 1),
                 value = 10.0,
             )
 
             # Same date_time PK → should overwrite value
-            Quiver.add_time_series_row!(db, "Collection", "data", id;
+            Quiver.upsert_time_series_row!(db, "Collection", "data", id;
                 date_time = DateTime(2024, 1, 1),
                 value = 99.0,
             )
@@ -67,7 +67,7 @@ include("fixture.jl")
             # all value columns (load REAL, flag INTEGER) — mirrors the Dart
             # suite which also passes `flag` so both bindings exercise the
             # multi-value-column path.
-            Quiver.add_time_series_row!(db, "Resource", "load", id;
+            Quiver.upsert_time_series_row!(db, "Resource", "load", id;
                 date_time = DateTime(2024, 1, 1),
                 block = 1,
                 load = 100.0,
@@ -91,12 +91,12 @@ include("fixture.jl")
             Quiver.create_element!(db, "Configuration"; label = "Test Config")
             id = Quiver.create_element!(db, "Collection"; label = "Item 1")
 
-            # Omit date_time — C++ layer should surface "Cannot add_time_series_row: ..."
-            exc = @test_throws Quiver.DatabaseException Quiver.add_time_series_row!(
+            # Omit date_time — C++ layer should surface "Cannot upsert_time_series_row: ..."
+            exc = @test_throws Quiver.DatabaseException Quiver.upsert_time_series_row!(
                 db, "Collection", "data", id;
                 value = 10.0,
             )
-            @test occursin("Cannot add_time_series_row", exc.value.msg)
+            @test occursin("Cannot upsert_time_series_row", exc.value.msg)
 
             Quiver.close!(db)
         end

@@ -123,7 +123,7 @@ extension DatabaseUpdate on Database {
   /// Takes a Map of column names to scalar values.
   /// Supported value types: int, double, String, DateTime.
   /// Calling with the same dimension PK upserts (value columns overwritten).
-  void addTimeSeriesRow(
+  void upsertTimeSeriesRow(
     String collection,
     String group,
     int id,
@@ -148,7 +148,7 @@ extension DatabaseUpdate on Database {
       }
 
       check(
-        bindings.quiver_database_add_time_series_row(
+        bindings.quiver_database_upsert_time_series_row(
           _ptr,
           collection.toNativeUtf8(allocator: arena).cast(),
           group.toNativeUtf8(allocator: arena).cast(),

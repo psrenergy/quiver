@@ -15,7 +15,7 @@ std::map<std::string, DataType> time_series_schema_types(const TableDefinition& 
     return types;
 }
 
-// Shared validation for update_time_series_group / add_time_series_row: every
+// Shared validation for update_time_series_group / upsert_time_series_row: every
 // dimension column must be present, all caller columns must exist in the
 // schema, and values must match column types.
 void validate_time_series_row(const std::string& caller,
@@ -201,12 +201,12 @@ void Database::update_time_series_group(const std::string& collection,
     impl_->logger->info("Updated time series {}.{} for id {} with {} rows", collection, group, id, rows.size());
 }
 
-void Database::add_time_series_row(const std::string& collection,
-                                   const std::string& group,
-                                   int64_t id,
-                                   const std::map<std::string, Value>& row) {
-    impl_->logger->debug("Adding time series row {}.{} for id {} ({} columns)", collection, group, id, row.size());
-    impl_->require_collection(collection, "add_time_series_row");
+void Database::upsert_time_series_row(const std::string& collection,
+                                      const std::string& group,
+                                      int64_t id,
+                                      const std::map<std::string, Value>& row) {
+    impl_->logger->debug("Upserting time series row {}.{} for id {} ({} columns)", collection, group, id, row.size());
+    impl_->require_collection(collection, "upsert_time_series_row");
 
     auto ts_table = impl_->schema->find_time_series_table(collection, group);
     const auto* table_def = impl_->schema->get_table(ts_table);
@@ -218,7 +218,7 @@ void Database::add_time_series_row(const std::string& collection,
     auto dim_cols = internal::find_dimension_columns(*table_def);
 
     validate_time_series_row(
-        "add_time_series_row", time_series_schema_types(*table_def), dim_cols, collection, group, row);
+        "upsert_time_series_row", time_series_schema_types(*table_def), dim_cols, collection, group, row);
 
     Impl::TransactionGuard txn(*impl_);
 
@@ -241,7 +241,7 @@ void Database::add_time_series_row(const std::string& collection,
     execute(insert_sql, parameters);
 
     txn.commit();
-    impl_->logger->debug("Added time series row {}.{} for id {}", collection, group, id);
+    impl_->logger->debug("Upserted time series row {}.{} for id {}", collection, group, id);
 }
 
 std::vector<Value> Database::read_time_series_row(const std::string& collection,

@@ -121,7 +121,7 @@ TEST_F(LuaRunnerTest, UpdateTimeSeriesGroup) {
 }
 
 TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupScalarColumnThrows) {
-    // Negative path: passing scalars (the add_time_series_row shape) where the
+    // Negative path: passing scalars (the upsert_time_series_row shape) where the
     // column-oriented update expects arrays must throw instead of silently
     // transposing to zero rows and committing a no-op clear.
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
@@ -407,7 +407,7 @@ TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupMultiDimMissingBlockThrows) {
     expect_lua_error(lua, script, "missing dimension column 'block'");
 }
 
-TEST_F(LuaRunnerTest, AddTimeSeriesRowInsert) {
+TEST_F(LuaRunnerTest, UpsertTimeSeriesRowInsert) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element("Collection", quiver::Element().set("label", "Item 1"));
@@ -415,7 +415,7 @@ TEST_F(LuaRunnerTest, AddTimeSeriesRowInsert) {
     quiver::LuaRunner lua(db);
 
     std::string script = R"(
-        db:add_time_series_row("Collection", "data", )" +
+        db:upsert_time_series_row("Collection", "data", )" +
                          std::to_string(id) + R"(, { date_time = "2024-06-01", value = 10.0 })
     )";
     lua.run(script);
@@ -426,7 +426,7 @@ TEST_F(LuaRunnerTest, AddTimeSeriesRowInsert) {
     EXPECT_DOUBLE_EQ(std::get<double>(rows[0].at("value")), 10.0);
 }
 
-TEST_F(LuaRunnerTest, AddTimeSeriesRowUpsert) {
+TEST_F(LuaRunnerTest, UpsertTimeSeriesRowSamePK) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element("Collection", quiver::Element().set("label", "Item 1"));
@@ -434,13 +434,13 @@ TEST_F(LuaRunnerTest, AddTimeSeriesRowUpsert) {
     quiver::LuaRunner lua(db);
 
     std::string script_first = R"(
-        db:add_time_series_row("Collection", "data", )" +
+        db:upsert_time_series_row("Collection", "data", )" +
                                std::to_string(id) + R"(, { date_time = "2024-06-01", value = 10.0 })
     )";
     lua.run(script_first);
 
     std::string script_second = R"(
-        db:add_time_series_row("Collection", "data", )" +
+        db:upsert_time_series_row("Collection", "data", )" +
                                 std::to_string(id) + R"(, { date_time = "2024-06-01", value = 99.0 })
     )";
     lua.run(script_second);
@@ -451,7 +451,7 @@ TEST_F(LuaRunnerTest, AddTimeSeriesRowUpsert) {
     EXPECT_DOUBLE_EQ(std::get<double>(rows[0].at("value")), 99.0);
 }
 
-TEST_F(LuaRunnerTest, AddTimeSeriesRowMultiDim) {
+TEST_F(LuaRunnerTest, UpsertTimeSeriesRowMultiDim) {
     auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("multi_dim_time_series.sql"));
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element("Resource", quiver::Element().set("label", "Resource 1"));
@@ -459,7 +459,7 @@ TEST_F(LuaRunnerTest, AddTimeSeriesRowMultiDim) {
     quiver::LuaRunner lua(db);
 
     std::string script = R"(
-        db:add_time_series_row("Resource", "load", )" +
+        db:upsert_time_series_row("Resource", "load", )" +
                          std::to_string(id) + R"(, { date_time = "2024-06-01", block = 1, load = 42.5, flag = 1 })
     )";
     lua.run(script);
@@ -472,9 +472,9 @@ TEST_F(LuaRunnerTest, AddTimeSeriesRowMultiDim) {
     EXPECT_EQ(std::get<int64_t>(rows[0].at("flag")), 1);
 }
 
-TEST_F(LuaRunnerTest, AddTimeSeriesRowMissingDimErrors) {
+TEST_F(LuaRunnerTest, UpsertTimeSeriesRowMissingDimErrors) {
     // Negative path: omitting the required date_time dimension column must
-    // surface the C++ "Cannot add_time_series_row: row missing required ..."
+    // surface the C++ "Cannot upsert_time_series_row: row missing required ..."
     // error through sol2 -> LuaRunner::run -> std::runtime_error. Mirrors the
     // Julia / Dart / Python suites which all cover this case.
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
@@ -484,7 +484,7 @@ TEST_F(LuaRunnerTest, AddTimeSeriesRowMissingDimErrors) {
     quiver::LuaRunner lua(db);
 
     std::string script = R"(
-        db:add_time_series_row("Collection", "data", )" +
+        db:upsert_time_series_row("Collection", "data", )" +
                          std::to_string(id) + R"(, { value = 10.0 })
     )";
     EXPECT_THROW({ lua.run(script); }, std::runtime_error);
