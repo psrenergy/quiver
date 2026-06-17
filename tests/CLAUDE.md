@@ -14,7 +14,10 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   the C++ core has no `_nulls` file), `test_database_transaction.cpp`,
   `test_database_csv_export.cpp`, `test_database_csv_import.cpp`, `test_database_errors.cpp`
 - Supporting types: `test_element.cpp`, `test_row_result.cpp`, `test_migrations.cpp`,
-  `test_schema_validator.cpp`
+  `test_schema_validator.cpp`, `test_ui_config.cpp` (UiConfig reader: model name + per-attribute
+  units, English-first, empty-on-missing-dir — uses the `schemas/from_hub/ui` fixture).
+  The `from_hub` factory + `get_model_name`/`get_attribute_unit` end-to-end tests live in
+  `test_database_lifecycle.cpp`.
 - Lua: `test_lua_runner_*.cpp` — per-area split mirroring the database files (`_create`, `_read`,
   `_update`, `_delete`, `_query`, `_time_series`, `_transaction`, `_errors`, `_csv_export`,
   `_csv_import`, `_all_types`, `_fk`). The shared `LuaRunnerTest` and `LuaSandboxTest` fixtures,
@@ -73,6 +76,8 @@ never copy them into a binding.
   `label_not_null.sql`, `label_not_unique.sql`, `label_wrong_type.sql`, `no_configuration.sql`,
   `set_no_unique.sql`, `vector_no_index.sql`
 - `migrations/` — versioned `1/`, `2/`, `3/`, each with `up.sql`/`down.sql`
+- `from_hub/` — `from_hub` fixture: a self-contained hub dir with `migrations/1/` and a
+  `ui/` folder (`main.toml` + `material.toml`) exercising model-name + per-attribute-unit reads
 - `issues/` — regression migrations for specific issues (`issue52/`, `issue70/`)
 
 ## Other targets in `tests/CMakeLists.txt`
@@ -91,7 +96,7 @@ never copy them into a binding.
 5. JavaScript tests
 6. Python tests
 7. CLI smoke test — positive run (`--schema` + example Lua script → exit 0) and negative run
-   (`--schema` and `--migrations` together → exit 2)
+   (`--schema` and `--hub` together → exit 2)
 
 `scripts/build-all.bat` is also seven steps, but its step 1 is the build itself followed by the
 six suites — it does not run the CLI smoke test.

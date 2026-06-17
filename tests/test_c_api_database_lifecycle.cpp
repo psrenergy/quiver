@@ -231,29 +231,61 @@ TEST_F(TempFileFixture, FromSchemaInvalidPath) {
 }
 
 // ============================================================================
-// From migrations tests
+// From hub (migrations/ + ui/) tests
 // ============================================================================
 
-TEST_F(TempFileFixture, FromMigrationsNullDbPath) {
+TEST_F(TempFileFixture, FromHubNullArgs) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
-    EXPECT_EQ(quiver_database_from_migrations(nullptr, "migrations/", &options, &db), QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_from_hub(nullptr, "dir/", &options, &db), QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_from_hub(":memory:", nullptr, &options, &db), QUIVER_ERROR);
 }
 
-TEST_F(TempFileFixture, FromMigrationsNullMigrationsPath) {
+TEST_F(TempFileFixture, FromHubInvalidPath) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
-    EXPECT_EQ(quiver_database_from_migrations(":memory:", nullptr, &options, &db), QUIVER_ERROR);
+    EXPECT_NE(quiver_database_from_hub(":memory:", "nonexistent/database/", &options, &db), QUIVER_OK);
 }
 
-TEST_F(TempFileFixture, FromMigrationsInvalidPath) {
+TEST_F(TempFileFixture, FromHubLoadsUiMetadata) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
-    // Invalid migrations path returns error
-    EXPECT_NE(quiver_database_from_migrations(":memory:", "nonexistent/migrations/", &options, &db), QUIVER_OK);
+    const auto dir = SCHEMA_PATH("schemas/from_hub");
+    ASSERT_EQ(quiver_database_from_hub(path.c_str(), dir.c_str(), &options, &db), QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    int64_t version = 0;
+    EXPECT_EQ(quiver_database_current_version(db, &version), QUIVER_OK);
+    EXPECT_EQ(version, 1);
+
+    char* model = nullptr;
+    ASSERT_EQ(quiver_database_get_model_name(db, &model), QUIVER_OK);
+    ASSERT_NE(model, nullptr);
+    EXPECT_STREQ(model, "demo_model");
+    quiver_database_free_string(model);
+
+    char* unit = nullptr;
+    ASSERT_EQ(quiver_database_get_attribute_unit(db, "Material", "demand", &unit), QUIVER_OK);
+    ASSERT_NE(unit, nullptr);
+    EXPECT_STREQ(unit, "unit/year");
+    quiver_database_free_string(unit);
+
+    // Unknown attribute -> empty string (not an error).
+    char* missing = nullptr;
+    ASSERT_EQ(quiver_database_get_attribute_unit(db, "Material", "nope", &missing), QUIVER_OK);
+    ASSERT_NE(missing, nullptr);
+    EXPECT_STREQ(missing, "");
+    quiver_database_free_string(missing);
+
+    quiver_database_close(db);
+}
+
+TEST_F(TempFileFixture, GetModelNameNullArgs) {
+    char* out = nullptr;
+    EXPECT_EQ(quiver_database_get_model_name(nullptr, &out), QUIVER_ERROR);
 }
 
 // ============================================================================

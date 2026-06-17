@@ -20,6 +20,7 @@ set(QUIVER_SOURCES
     schema.cpp
     schema_validator.cpp
     type_validator.cpp
+    ui_config.cpp
     binary/binary_file.cpp
     binary/iteration.cpp
     binary/csv_converter.cpp

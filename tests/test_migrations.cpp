@@ -192,28 +192,28 @@ TEST_F(MigrationsTestFixture, MigrationsSelfAssignment) {
 // ============================================================================
 
 TEST_F(MigrationsTestFixture, DatabaseMigrationWithEmptyUpSql) {
-    // Create a migration directory with empty up.sql
-    fs::create_directories(fs::path(temp_dir) / "1");
-    std::ofstream up_file(fs::path(temp_dir) / "1" / "up.sql");
+    // Create a migrations/ subdirectory with an empty up.sql
+    fs::create_directories(fs::path(temp_dir) / "migrations" / "1");
+    std::ofstream up_file(fs::path(temp_dir) / "migrations" / "1" / "up.sql");
     up_file << "";  // Empty SQL
     up_file.close();
 
     // Empty up.sql should cause migration to fail
-    EXPECT_THROW(quiver::Database::from_migrations(
-                     ":memory:", temp_dir, {.read_only = false, .console_level = quiver::LogLevel::Off}),
-                 std::runtime_error);
+    EXPECT_THROW(
+        quiver::Database::from_hub(":memory:", temp_dir, {.read_only = false, .console_level = quiver::LogLevel::Off}),
+        std::runtime_error);
 }
 
 TEST_F(MigrationsTestFixture, DatabaseMigrationWithInvalidSQL) {
-    // Create a migration directory with invalid SQL
-    fs::create_directories(fs::path(temp_dir) / "1");
-    std::ofstream up_file(fs::path(temp_dir) / "1" / "up.sql");
+    // Create a migrations/ subdirectory with invalid SQL
+    fs::create_directories(fs::path(temp_dir) / "migrations" / "1");
+    std::ofstream up_file(fs::path(temp_dir) / "migrations" / "1" / "up.sql");
     up_file << "THIS IS NOT VALID SQL AT ALL;";
     up_file.close();
 
-    EXPECT_THROW(quiver::Database::from_migrations(
-                     ":memory:", temp_dir, {.read_only = false, .console_level = quiver::LogLevel::Off}),
-                 std::runtime_error);
+    EXPECT_THROW(
+        quiver::Database::from_hub(":memory:", temp_dir, {.read_only = false, .console_level = quiver::LogLevel::Off}),
+        std::runtime_error);
 }
 
 TEST_F(MigrationsTestFixture, MigrationsWithNonNumericDirectories) {

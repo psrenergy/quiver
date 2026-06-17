@@ -60,21 +60,25 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         return Database(out_db[0])
 
     @staticmethod
-    def from_migrations(
+    def from_hub(
         db_path: str,
-        migrations_path: str,
+        hub: str,
         *,
         read_only: bool = False,
         console_level: int | None = None,
     ) -> Database:
-        """Create a database using a migrations directory."""
+        """Create a database from a hub directory containing migrations/ and ui/.
+
+        The versioned migrations under <hub>/migrations are applied; UI metadata
+        under <hub>/ui is loaded into the returned instance.
+        """
         lib = get_lib()
         options = Database._make_options(read_only, console_level)
         out_db = ffi.new("quiver_database_t**")
         check(
-            lib.quiver_database_from_migrations(
+            lib.quiver_database_from_hub(
                 db_path.encode("utf-8"),
-                migrations_path.encode("utf-8"),
+                hub.encode("utf-8"),
                 options,
                 out_db,
             )
@@ -187,6 +191,44 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         lib = get_lib()
         out = ffi.new("char**")
         check(lib.quiver_database_summarize_collection(self._ptr, collection.encode("utf-8"), out))
+        try:
+            return ffi.string(out[0]).decode("utf-8")
+        finally:
+            lib.quiver_database_free_string(out[0])
+
+    # -- UI metadata ------------------------------------------------------------
+
+    def get_model_name(self) -> str:
+        """Return the model name from the UI metadata loaded via from_hub.
+
+        Returns an empty string when no UI metadata is loaded.
+        """
+        self._ensure_open()
+        lib = get_lib()
+        out = ffi.new("char**")
+        check(lib.quiver_database_get_model_name(self._ptr, out))
+        try:
+            return ffi.string(out[0]).decode("utf-8")
+        finally:
+            lib.quiver_database_free_string(out[0])
+
+    def get_attribute_unit(self, collection: str, attribute: str) -> str:
+        """Return the English-first unit for an attribute from the UI metadata.
+
+        Returns an empty string when the collection/attribute is unknown or the
+        attribute has no unit.
+        """
+        self._ensure_open()
+        lib = get_lib()
+        out = ffi.new("char**")
+        check(
+            lib.quiver_database_get_attribute_unit(
+                self._ptr,
+                collection.encode("utf-8"),
+                attribute.encode("utf-8"),
+                out,
+            )
+        )
         try:
             return ffi.string(out[0]).decode("utf-8")
         finally:

@@ -62,11 +62,35 @@ end
     end
 
     @testset "Migrations returns count" begin
-        path_migrations = joinpath(tests_path(), "schemas", "migrations")
-        db = Quiver.from_migrations(":memory:", path_migrations)
+        # schemas/ holds the shared 3-migration fixture under migrations/ (no ui/ -> empty UI).
+        db = Quiver.from_hub(":memory:", joinpath(tests_path(), "schemas"))
         @test Quiver.current_version(db) == 3
         Quiver.close!(db)
     end
+end
+
+@testset "from_hub" begin
+    dir = joinpath(tests_path(), "schemas", "from_hub")
+    mktempdir() do tmp
+        db_path = joinpath(tmp, "test.db")
+        db = Quiver.from_hub(db_path, dir)
+        @test Quiver.current_version(db) == 1
+        @test Quiver.is_healthy(db) == true
+        @test Quiver.get_model_name(db) == "demo_model"
+        @test Quiver.get_attribute_unit(db, "Material", "demand") == "unit/year"
+        @test Quiver.get_attribute_unit(db, "Material", "label") == ""
+        @test Quiver.get_attribute_unit(db, "Nonexistent", "x") == ""
+        Quiver.close!(db)
+        return nothing
+    end
+end
+
+@testset "UI metadata empty without from_hub" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+    db = Quiver.from_schema(":memory:", path_schema)
+    @test Quiver.get_model_name(db) == ""
+    @test Quiver.get_attribute_unit(db, "Material", "demand") == ""
+    Quiver.close!(db)
 end
 
 @testset "is_healthy" begin

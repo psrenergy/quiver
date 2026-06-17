@@ -92,41 +92,6 @@ class QuiverDatabaseBindings {
         )
       >();
 
-  int quiver_database_from_migrations(
-    ffi.Pointer<ffi.Char> db_path,
-    ffi.Pointer<ffi.Char> migrations_path,
-    ffi.Pointer<quiver_database_options_t> options,
-    ffi.Pointer<ffi.Pointer<quiver_database_t>> out_db,
-  ) {
-    return _quiver_database_from_migrations(
-      db_path,
-      migrations_path,
-      options,
-      out_db,
-    );
-  }
-
-  late final _quiver_database_from_migrationsPtr =
-      _lookup<
-        ffi.NativeFunction<
-          ffi.Int32 Function(
-            ffi.Pointer<ffi.Char>,
-            ffi.Pointer<ffi.Char>,
-            ffi.Pointer<quiver_database_options_t>,
-            ffi.Pointer<ffi.Pointer<quiver_database_t>>,
-          )
-        >
-      >('quiver_database_from_migrations');
-  late final _quiver_database_from_migrations = _quiver_database_from_migrationsPtr
-      .asFunction<
-        int Function(
-          ffi.Pointer<ffi.Char>,
-          ffi.Pointer<ffi.Char>,
-          ffi.Pointer<quiver_database_options_t>,
-          ffi.Pointer<ffi.Pointer<quiver_database_t>>,
-        )
-      >();
-
   int quiver_database_from_schema(
     ffi.Pointer<ffi.Char> db_path,
     ffi.Pointer<ffi.Char> schema_path,
@@ -153,6 +118,41 @@ class QuiverDatabaseBindings {
         >
       >('quiver_database_from_schema');
   late final _quiver_database_from_schema = _quiver_database_from_schemaPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<quiver_database_options_t>,
+          ffi.Pointer<ffi.Pointer<quiver_database_t>>,
+        )
+      >();
+
+  int quiver_database_from_hub(
+    ffi.Pointer<ffi.Char> db_path,
+    ffi.Pointer<ffi.Char> hub,
+    ffi.Pointer<quiver_database_options_t> options,
+    ffi.Pointer<ffi.Pointer<quiver_database_t>> out_db,
+  ) {
+    return _quiver_database_from_hub(
+      db_path,
+      hub,
+      options,
+      out_db,
+    );
+  }
+
+  late final _quiver_database_from_hubPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<quiver_database_options_t>,
+            ffi.Pointer<ffi.Pointer<quiver_database_t>>,
+          )
+        >
+      >('quiver_database_from_hub');
+  late final _quiver_database_from_hub = _quiver_database_from_hubPtr
       .asFunction<
         int Function(
           ffi.Pointer<ffi.Char>,
@@ -2428,6 +2428,58 @@ class QuiverDatabaseBindings {
   late final _quiver_database_summarize_collection = _quiver_database_summarize_collectionPtr
       .asFunction<
         int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Pointer<ffi.Char>>)
+      >();
+
+  int quiver_database_get_model_name(
+    ffi.Pointer<quiver_database_t> db,
+    ffi.Pointer<ffi.Pointer<ffi.Char>> out_name,
+  ) {
+    return _quiver_database_get_model_name(
+      db,
+      out_name,
+    );
+  }
+
+  late final _quiver_database_get_model_namePtr =
+      _lookup<
+        ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Pointer<ffi.Char>>)>
+      >('quiver_database_get_model_name');
+  late final _quiver_database_get_model_name = _quiver_database_get_model_namePtr
+      .asFunction<int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Pointer<ffi.Char>>)>();
+
+  int quiver_database_get_attribute_unit(
+    ffi.Pointer<quiver_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Char> attribute,
+    ffi.Pointer<ffi.Pointer<ffi.Char>> out_unit,
+  ) {
+    return _quiver_database_get_attribute_unit(
+      db,
+      collection,
+      attribute,
+      out_unit,
+    );
+  }
+
+  late final _quiver_database_get_attribute_unitPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Pointer<ffi.Char>>,
+          )
+        >
+      >('quiver_database_get_attribute_unit');
+  late final _quiver_database_get_attribute_unit = _quiver_database_get_attribute_unitPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Pointer<ffi.Char>>,
+        )
       >();
 
   int quiver_element_create(

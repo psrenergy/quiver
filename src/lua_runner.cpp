@@ -161,6 +161,12 @@ struct LuaRunner::Impl {
             return self.summarize_collection(collection);
         });
 
+        bind.set_function("get_model_name", [](Database& self) { return self.get_model_name(); });
+        bind.set_function("get_attribute_unit",
+                          [](Database& self, const std::string& collection, const std::string& attribute) {
+                              return self.get_attribute_unit(collection, attribute);
+                          });
+
         bind.set_function("query_string", &query_string_lua);
         bind.set_function("query_integer", &query_integer_lua);
         bind.set_function("query_float", &query_float_lua);

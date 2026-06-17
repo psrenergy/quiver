@@ -155,6 +155,11 @@ human-readable **text report** via a `char** out_report` out-param (freed by the
 `quiver_database_free_string`) — no structs. All three live in `database.cpp` as trivial
 `new_c_str(db->db.<fn>(...))` wrappers.
 
+`quiver_database_get_model_name` / `_get_attribute_unit` (also in `database.cpp`) follow the same
+string-out pattern (freed by `quiver_database_free_string`); they return `""` when no UI metadata is
+loaded. The `quiver_database_from_hub` factory follows the same shape as the other factories
+(NULL options → defaults). No new free function was added for any of these.
+
 ## Multi-Column Time Series
 
 The C API uses a columnar typed-arrays pattern for time series read and update, with a per-cell

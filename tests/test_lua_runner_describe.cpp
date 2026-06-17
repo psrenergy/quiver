@@ -32,6 +32,17 @@ TEST_F(LuaRunnerTest, DescribeCollection) {
     )LUA");
 }
 
+TEST_F(LuaRunnerTest, UiMetadataGettersReturnEmpty) {
+    // The Lua-provided db never went through from_hub, so UI metadata is empty (in-memory
+    // only). The getters are still bound for cross-layer uniformity and return "".
+    auto db = open_collections();
+    quiver::LuaRunner lua(db);
+    lua.run(R"LUA(
+        assert(db:get_model_name() == "", "model name should be empty")
+        assert(db:get_attribute_unit("Collection", "value") == "", "unit should be empty")
+    )LUA");
+}
+
 TEST_F(LuaRunnerTest, SummarizeCollection) {
     auto db = open_collections();
     db.create_element("Collection",

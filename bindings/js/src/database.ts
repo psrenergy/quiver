@@ -29,25 +29,14 @@ export class Database {
     return new Database(readPtrOut(outDb));
   }
 
-  static fromMigrations(
-    dbPath: string,
-    migrationsPath: string,
-    options?: DatabaseOptions,
-  ): Database {
+  static fromHub(dbPath: string, hub: string, options?: DatabaseOptions): Database {
     const lib = getSymbols();
     const optionsBuf = makeDefaultOptions(options);
     const outDb = allocPtrOut();
     const dbPathBuf = toCString(dbPath);
-    const migrPathBuf = toCString(migrationsPath);
+    const hubBuf = toCString(hub);
 
-    check(
-      lib.quiver_database_from_migrations(
-        dbPathBuf.buf,
-        migrPathBuf.buf,
-        optionsBuf.buf,
-        outDb.buf,
-      ),
-    );
+    check(lib.quiver_database_from_hub(dbPathBuf.buf, hubBuf.buf, optionsBuf.buf, outDb.buf));
 
     return new Database(readPtrOut(outDb));
   }
@@ -183,6 +172,8 @@ export class Database {
   declare describe: () => string;
   declare describeCollection: (collection: string) => string;
   declare summarizeCollection: (collection: string) => string;
+  declare getModelName: () => string;
+  declare getAttributeUnit: (collection: string, attribute: string) => string;
 
   // --- Composite helpers (implemented in composites.ts) ---
   declare readScalarsById: (

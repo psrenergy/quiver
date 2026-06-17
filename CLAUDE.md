@@ -51,6 +51,19 @@ Settled questions — don't relitigate without the user; each was decided delibe
 
 - **Time-series group data is column-oriented** (`{column: [values]}`) in every binding — the
   canonical cross-binding shape. The C++ core keeps row-shaped `vector<map<string, Value>>`.
+- **UI metadata is read gradually, English-only, and in-memory only.** `from_hub(db_path, hub)`
+  reads `hub/ui/main.toml` (model name) and each `hub/ui/<collection>.toml`'s `[[attribute]]` units
+  into a `UiConfig` (`include/quiver/ui_config.h`) held by the `Database`. This first slice exposes
+  only `get_model_name()` + `get_attribute_unit()`; the rest of the UI files (enums, labels,
+  tooltips, cards, queries, `[[attribute_query]]`) is deliberately ignored for now. Units are keyed
+  by the collection's canonical UI `id` (capitalized "Material" — matches the SQL table name), not
+  the file stem. Localized strings resolve **English-first** (`unit.en`, else each declared
+  localization in order, else any remaining locale; an empty string counts as absent, and a bare
+  non-localized `unit = "..."` string is accepted) — no locale plumbing across FFI, `""` is the
+  unknown sentinel. The
+  `UiConfig` is **not persisted into SQLite**: a database opened any other way (plain ctor / `open()`
+  / `from_schema`, or the Lua-provided `db`) returns `""` from the getters.
+  Persisting it is possible future work, intentionally out of scope here.
 - **`DatabaseOptions`** (`read_only`, `console_level`) is exposed as optional parameters on the
   open/factory methods of every binding.
 - **Binary + expression subsystems are exposed in Julia and Lua only.** Dart, Python, and JS
@@ -302,7 +315,7 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
 - **Examples:** `create_element`, `read_vector_floats_by_id`, `get_scalar_metadata`, `list_time_series_groups`
 
 ### Database Class
-- Factory methods: `from_schema()`, `from_migrations()` — `DatabaseOptions` (`read_only`, `console_level`) exposed as optional parameters in every binding
+- Factory methods: `from_schema()`, `from_hub()` — `DatabaseOptions` (`read_only`, `console_level`) exposed as optional parameters in every binding. `from_hub(db_path, hub)` points at a hub directory holding a `migrations/` subfolder (its versioned migrations are applied) and an optional `ui/` subfolder (UI metadata read into the instance — see UI Metadata below and the design decision)
 - Transaction control: `begin_transaction()`, `commit()`, `rollback()`, `in_transaction()`
 - CRUD: `create_element(collection, element)`, `update_element`, `delete_element`
 - Scalar/vector/set readers: `read_{scalar,vector,set}_{integers,floats,strings}(collection, attribute)` (+ `_by_id` variants)
@@ -313,6 +326,7 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
 - List groups: `list_scalar_attributes()`, `list_vector_groups()`, `list_set_groups()`, `list_time_series_groups()`
 - Query: `query_string/integer/float(sql, parameters = {})` - parameterized SQL with positional `?` placeholders
 - Schema inspection — human-readable **text reports** (all return `std::string`): `describe()` (whole-DB overview: every collection, element counts, attribute/group names); `describe_collection(c)` (one collection's structure); `summarize_collection(c)` (per-scalar null/non-null counts + low-cardinality integer value distributions, per-group empty/non-empty counts). CSV: `export_csv()`, `import_csv()` with optional enum/date formatting via `CSVOptions`
+- UI metadata (populated only via `from_hub`): `get_model_name()` (model name from `ui/main.toml`) and `get_attribute_unit(collection, attribute)` (English-first unit, keyed by the collection's canonical UI `id`). Both return a plain string; `""` means unknown / unit-less / no UI loaded. See the design decision for the gradual-reading + in-memory-only policy
 
 ### Element Class
 Builder for element creation with fluent API:
@@ -348,6 +362,7 @@ The rules are mechanical: given any C++ method name, you can derive the equivale
 | Category | C++ | C API | Julia | Dart | Lua |
 |----------|-----|-------|-------|------|-----|
 | Factory | `Database::from_schema()` | `quiver_database_from_schema()` | `from_schema()` | `Database.fromSchema()` | N/A |
+| Factory (hub) | `Database::from_hub()` | `quiver_database_from_hub()` | `from_hub()` | `Database.fromHub()` | N/A |
 | Open existing | `Database(path, options)` | `quiver_database_open()` | `open()` | `Database.open()` | N/A |
 | Transaction | `begin_transaction()` | `quiver_database_begin_transaction()` | `begin_transaction!()` | `beginTransaction()` | `begin_transaction()` |
 | Transaction | `commit()` | `quiver_database_commit()` | `commit!()` | `commit()` | `commit()` |
@@ -368,6 +383,8 @@ The rules are mechanical: given any C++ method name, you can derive the equivale
 | Describe (text) | `describe()` | `quiver_database_describe()` | `describe()` | `describe()` | `describe()` |
 | Describe collection | `describe_collection()` | `quiver_database_describe_collection()` | `describe_collection()` | `describeCollection()` | `describe_collection()` |
 | Summarize collection | `summarize_collection()` | `quiver_database_summarize_collection()` | `summarize_collection()` | `summarizeCollection()` | `summarize_collection()` |
+| UI model name | `get_model_name()` | `quiver_database_get_model_name()` | `get_model_name()` | `getModelName()` | `get_model_name()` |
+| UI attribute unit | `get_attribute_unit()` | `quiver_database_get_attribute_unit()` | `get_attribute_unit()` | `getAttributeUnit()` | `get_attribute_unit()` |
 
 **Binary cross-layer examples (Julia + Lua subsystem):**
 

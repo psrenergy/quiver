@@ -229,3 +229,31 @@ function summarize_collection(db::Database, collection::AbstractString)
     C.quiver_database_free_string(out_report[])
     return result
 end
+
+"""
+    get_model_name(db::Database) -> String
+
+Return the model name from the UI metadata (`ui/main.toml`) loaded via `from_hub`.
+Returns an empty string when no UI metadata is loaded.
+"""
+function get_model_name(db::Database)
+    out_name = Ref{Ptr{Cchar}}(C_NULL)
+    check(C.quiver_database_get_model_name(db.ptr, out_name))
+    result = unsafe_string(out_name[])
+    C.quiver_database_free_string(out_name[])
+    return result
+end
+
+"""
+    get_attribute_unit(db::Database, collection::AbstractString, attribute::AbstractString) -> String
+
+Return the English-first unit for an attribute from the UI metadata loaded via `from_hub`.
+Returns an empty string when the collection/attribute is unknown or the attribute has no unit.
+"""
+function get_attribute_unit(db::Database, collection::AbstractString, attribute::AbstractString)
+    out_unit = Ref{Ptr{Cchar}}(C_NULL)
+    check(C.quiver_database_get_attribute_unit(db.ptr, collection, attribute, out_unit))
+    result = unsafe_string(out_unit[])
+    C.quiver_database_free_string(out_unit[])
+    return result
+end

@@ -26,10 +26,10 @@ function from_schema(db_path::String, schema_path::String; kwargs...)
     return Database(out_db[])
 end
 
-function from_migrations(db_path::String, migrations_path::String; kwargs...)
+function from_hub(db_path::String, hub::String; kwargs...)
     options = build_quiver_database_options(; kwargs...)
     out_db = Ref{Ptr{C.quiver_database}}(C_NULL)
-    check(C.quiver_database_from_migrations(db_path, migrations_path, options, out_db))
+    check(C.quiver_database_from_hub(db_path, hub, options, out_db))
     return Database(out_db[])
 end
 

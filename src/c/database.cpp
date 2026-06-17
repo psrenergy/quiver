@@ -49,30 +49,6 @@ QUIVER_C_API quiver_error_t quiver_database_path(quiver_database_t* db, const ch
     return QUIVER_OK;
 }
 
-QUIVER_C_API quiver_error_t quiver_database_from_migrations(const char* db_path,
-                                                            const char* migrations_path,
-                                                            const quiver_database_options_t* options,
-                                                            quiver_database_t** out_db) {
-    QUIVER_REQUIRE(db_path, migrations_path, out_db);
-
-    try {
-        if (options) {
-            auto db = quiver::Database::from_migrations(db_path, migrations_path, convert_database_options(*options));
-            *out_db = new quiver_database(std::move(db));
-        } else {
-            auto db = quiver::Database::from_migrations(db_path, migrations_path, quiver::DatabaseOptions{});
-            *out_db = new quiver_database(std::move(db));
-        }
-        return QUIVER_OK;
-    } catch (const std::bad_alloc&) {
-        quiver_set_last_error("Memory allocation failed");
-        return QUIVER_ERROR;
-    } catch (const std::exception& e) {
-        quiver_set_last_error(e.what());
-        return QUIVER_ERROR;
-    }
-}
-
 QUIVER_C_API quiver_error_t quiver_database_current_version(quiver_database_t* db, int64_t* out_version) {
     QUIVER_REQUIRE(db, out_version);
 
@@ -97,6 +73,30 @@ QUIVER_C_API quiver_error_t quiver_database_from_schema(const char* db_path,
             *out_db = new quiver_database(std::move(db));
         } else {
             auto db = quiver::Database::from_schema(db_path, schema_path, quiver::DatabaseOptions{});
+            *out_db = new quiver_database(std::move(db));
+        }
+        return QUIVER_OK;
+    } catch (const std::bad_alloc&) {
+        quiver_set_last_error("Memory allocation failed");
+        return QUIVER_ERROR;
+    } catch (const std::exception& e) {
+        quiver_set_last_error(e.what());
+        return QUIVER_ERROR;
+    }
+}
+
+QUIVER_C_API quiver_error_t quiver_database_from_hub(const char* db_path,
+                                                     const char* hub,
+                                                     const quiver_database_options_t* options,
+                                                     quiver_database_t** out_db) {
+    QUIVER_REQUIRE(db_path, hub, out_db);
+
+    try {
+        if (options) {
+            auto db = quiver::Database::from_hub(db_path, hub, convert_database_options(*options));
+            *out_db = new quiver_database(std::move(db));
+        } else {
+            auto db = quiver::Database::from_hub(db_path, hub, quiver::DatabaseOptions{});
             *out_db = new quiver_database(std::move(db));
         }
         return QUIVER_OK;
@@ -144,6 +144,35 @@ QUIVER_C_API quiver_error_t quiver_database_summarize_collection(quiver_database
 
     try {
         *out_report = quiver::string::new_c_str(db->db.summarize_collection(collection));
+        return QUIVER_OK;
+    } catch (const std::exception& e) {
+        quiver_set_last_error(e.what());
+        return QUIVER_ERROR;
+    }
+}
+
+// UI metadata getters (English-first; empty string when unknown / no UI loaded).
+
+QUIVER_C_API quiver_error_t quiver_database_get_model_name(quiver_database_t* db, char** out_name) {
+    QUIVER_REQUIRE(db, out_name);
+
+    try {
+        *out_name = quiver::string::new_c_str(db->db.get_model_name());
+        return QUIVER_OK;
+    } catch (const std::exception& e) {
+        quiver_set_last_error(e.what());
+        return QUIVER_ERROR;
+    }
+}
+
+QUIVER_C_API quiver_error_t quiver_database_get_attribute_unit(quiver_database_t* db,
+                                                               const char* collection,
+                                                               const char* attribute,
+                                                               char** out_unit) {
+    QUIVER_REQUIRE(db, collection, attribute, out_unit);
+
+    try {
+        *out_unit = quiver::string::new_c_str(db->db.get_attribute_unit(collection, attribute));
         return QUIVER_OK;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());

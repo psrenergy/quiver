@@ -37,14 +37,14 @@ ffi.cdef("""
     quiver_error_t quiver_database_open(const char* path,
                                         const quiver_database_options_t* options,
                                         quiver_database_t** out_db);
-    quiver_error_t quiver_database_from_migrations(const char* db_path,
-                                                    const char* migrations_path,
-                                                    const quiver_database_options_t* options,
-                                                    quiver_database_t** out_db);
     quiver_error_t quiver_database_from_schema(const char* db_path,
                                                 const char* schema_path,
                                                 const quiver_database_options_t* options,
                                                 quiver_database_t** out_db);
+    quiver_error_t quiver_database_from_hub(const char* db_path,
+                                             const char* hub,
+                                             const quiver_database_options_t* options,
+                                             quiver_database_t** out_db);
     quiver_error_t quiver_database_close(quiver_database_t* db);
     quiver_error_t quiver_database_is_healthy(quiver_database_t* db, int* out_healthy);
     quiver_error_t quiver_database_path(quiver_database_t* db, const char** out_path);
@@ -239,6 +239,11 @@ ffi.cdef("""
         const char* collection, char** out_report);
     quiver_error_t quiver_database_summarize_collection(quiver_database_t* db,
         const char* collection, char** out_report);
+
+    // database.h - UI metadata (freed with quiver_database_free_string)
+    quiver_error_t quiver_database_get_model_name(quiver_database_t* db, char** out_name);
+    quiver_error_t quiver_database_get_attribute_unit(quiver_database_t* db,
+        const char* collection, const char* attribute, char** out_unit);
 
     // Update element
     quiver_error_t quiver_database_update_element(quiver_database_t* db,

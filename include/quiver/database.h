@@ -28,12 +28,14 @@ public:
     Database(Database&& other) noexcept;
     Database& operator=(Database&& other) noexcept;
 
-    static Database from_migrations(const std::string& db_path,
-                                    const std::string& migrations_path,
-                                    const DatabaseOptions& options = {});
-
     static Database
     from_schema(const std::string& db_path, const std::string& schema_path, const DatabaseOptions& options = {});
+
+    // Creates a database from a hub directory containing a `migrations/` subfolder (its versioned
+    // up.sql/down.sql migrations are applied) and an optional `ui/` subfolder (UI metadata loaded
+    // into the returned instance). The UI data lives only on this in-process object — reopening
+    // db_path later does not restore it.
+    static Database from_hub(const std::string& db_path, const std::string& hub, const DatabaseOptions& options = {});
     bool is_healthy() const;
 
     int64_t current_version() const;
@@ -145,6 +147,12 @@ public:
     // summarize_collection(): one collection's value statistics (null/non-null counts, low-cardinality
     // integer value distributions, per-group empty/non-empty counts).
     std::string summarize_collection(const std::string& collection) const;
+
+    // UI metadata (populated only via from_hub; "" otherwise).
+    // get_model_name(): the model name from ui/main.toml.
+    std::string get_model_name() const;
+    // get_attribute_unit(): English-first unit for an attribute; "" if unknown or unit-less.
+    std::string get_attribute_unit(const std::string& collection, const std::string& attribute) const;
 
     // CSV operations
     void export_csv(const std::string& collection,

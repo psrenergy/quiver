@@ -45,7 +45,7 @@ int main(int argc, char* argv[]) {
 
     program.add_argument("--schema").help("create database from schema file");
 
-    program.add_argument("--migrations").help("create database from migrations directory");
+    program.add_argument("--hub").help("create database from a hub directory (migrations/ + optional ui/)");
 
     program.add_argument("--read-only").help("open database in read-only mode").flag();
 
@@ -61,8 +61,8 @@ int main(int argc, char* argv[]) {
     }
 
     // Mutual exclusivity check
-    if (program.is_used("--schema") && program.is_used("--migrations")) {
-        std::cerr << "Cannot use --schema and --migrations together" << std::endl;
+    if (program.is_used("--schema") && program.is_used("--hub")) {
+        std::cerr << "Cannot use --schema and --hub together" << std::endl;
         return 2;
     }
 
@@ -92,8 +92,8 @@ int main(int argc, char* argv[]) {
             if (program.is_used("--schema")) {
                 return quiver::Database::from_schema(db_path, program.get<std::string>("--schema"), options);
             }
-            if (program.is_used("--migrations")) {
-                return quiver::Database::from_migrations(db_path, program.get<std::string>("--migrations"), options);
+            if (program.is_used("--hub")) {
+                return quiver::Database::from_hub(db_path, program.get<std::string>("--hub"), options);
             }
             return quiver::Database(db_path, options);
         }();

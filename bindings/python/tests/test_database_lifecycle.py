@@ -22,10 +22,26 @@ def test_from_schema_context_manager(valid_schema_path: Path, tmp_path: Path) ->
         db.path()
 
 
-def test_from_migrations_creates_database(migrations_path: Path, tmp_path: Path) -> None:
-    db = Database.from_migrations(str(tmp_path / "test.db"), str(migrations_path))
-    assert db is not None
-    db.close()
+def test_from_hub_loads_ui_metadata(hub_dir: Path, tmp_path: Path) -> None:
+    db = Database.from_hub(str(tmp_path / "test.db"), str(hub_dir))
+    try:
+        assert db.current_version() == 1
+        assert db.get_model_name() == "demo_model"
+        assert db.get_attribute_unit("Material", "demand") == "unit/year"
+        assert db.get_attribute_unit("Material", "label") == ""
+        assert db.get_attribute_unit("Nonexistent", "x") == ""
+    finally:
+        db.close()
+
+
+def test_from_hub_invalid_path(tmp_path: Path) -> None:
+    with pytest.raises(QuiverError):
+        Database.from_hub(str(tmp_path / "test.db"), "nonexistent/path")
+
+
+def test_ui_metadata_empty_without_from_hub(db: Database) -> None:
+    assert db.get_model_name() == ""
+    assert db.get_attribute_unit("Material", "demand") == ""
 
 
 def test_open_existing_database(valid_schema_path: Path, tmp_path: Path) -> None:

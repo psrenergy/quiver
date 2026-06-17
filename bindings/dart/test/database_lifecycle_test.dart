@@ -7,7 +7,7 @@ import 'package:path/path.dart' as path;
 void main() {
   final testsPath = path.join(path.current, '..', '..', 'tests');
   final schemaPath = path.join(testsPath, 'schemas', 'valid', 'basic.sql');
-  final migrationsPath = path.join(testsPath, 'schemas', 'migrations');
+  final hubDir = path.join(testsPath, 'schemas', 'from_hub');
 
   group('Database fromSchema', () {
     test('creates database from schema file', () {
@@ -58,45 +58,41 @@ void main() {
     });
   });
 
-  group('Database fromMigrations', () {
-    test('creates database with migrations applied', () {
-      // Migrations apply Test1, Test2 (dropped), Test3 - these are not Quiver collections
-      // so we just verify the database is created successfully
-      final db = Database.fromMigrations(':memory:', migrationsPath);
-      try {
-        // Database was created and migrations were applied
-      } finally {
-        db.close();
-      }
-    });
-
-    test('works with in-memory database', () {
-      final db = Database.fromMigrations(':memory:', migrationsPath);
-      try {
-        // Database was created successfully with all migrations applied
-      } finally {
-        db.close();
-      }
-    });
-
-    test('creates database file on disk', () {
+  group('Database fromHub', () {
+    test('applies migrations and loads UI metadata', () {
       final tempDir = Directory.systemTemp.createTempSync('quiver_test_');
       final dbPath = path.join(tempDir.path, 'test.db');
       try {
-        final db = Database.fromMigrations(dbPath, migrationsPath);
-        db.close();
-        expect(File(dbPath).existsSync(), isTrue);
+        final db = Database.fromHub(dbPath, hubDir);
+        try {
+          expect(db.currentVersion(), equals(1));
+          expect(db.getModelName(), equals('demo_model'));
+          expect(db.getAttributeUnit('Material', 'demand'), equals('unit/year'));
+          expect(db.getAttributeUnit('Material', 'label'), equals(''));
+          expect(db.getAttributeUnit('Nonexistent', 'x'), equals(''));
+        } finally {
+          db.close();
+        }
       } finally {
         tempDir.deleteSync(recursive: true);
       }
     });
 
-    test('throws on invalid migrations path', () {
-      // Invalid path should throw DatabaseException
+    test('throws on invalid directory', () {
       expect(
-        () => Database.fromMigrations(':memory:', 'nonexistent/path'),
+        () => Database.fromHub(':memory:', 'nonexistent/path'),
         throwsA(isA<DatabaseException>()),
       );
+    });
+
+    test('UI metadata is empty without fromHub', () {
+      final db = Database.fromSchema(':memory:', schemaPath);
+      try {
+        expect(db.getModelName(), equals(''));
+        expect(db.getAttributeUnit('Material', 'demand'), equals(''));
+      } finally {
+        db.close();
+      }
     });
   });
 
@@ -149,10 +145,10 @@ void main() {
       }
     });
 
-    test('returns migration count for migrations-based database', () {
-      final db = Database.fromMigrations(':memory:', migrationsPath);
+    test('returns migration count for a hub directory', () {
+      // schemas/ holds the shared 3-migration fixture under migrations/ (no ui/ -> empty UI).
+      final db = Database.fromHub(':memory:', path.join(testsPath, 'schemas'));
       try {
-        // Migrations folder has 3 migrations
         expect(db.currentVersion(), equals(3));
       } finally {
         db.close();

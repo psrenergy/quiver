@@ -63,7 +63,7 @@ bun run example.ts
 ### Lifecycle
 
 - `Database.fromSchema(dbPath, schemaPath)` -- Create database from SQL schema file
-- `Database.fromMigrations(dbPath, migrationsPath)` -- Create database from migrations directory
+- `Database.fromHub(dbPath, hub)` -- Create database from a hub directory (migrations/ + optional ui/)
 - `close()` -- Close the database connection
 
 ### Create / Delete

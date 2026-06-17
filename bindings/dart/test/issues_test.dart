@@ -9,7 +9,7 @@ void main() {
   group('Issue Regressions', () {
     test('issue 52', () {
       expect(
-        () => Database.fromMigrations(
+        () => Database.fromHub(
           ':memory:',
           path.join(issuesPath, 'issue52'),
         ),
@@ -24,7 +24,7 @@ void main() {
     });
 
     test('issue 70', () {
-      final db = Database.fromMigrations(
+      final db = Database.fromHub(
         ':memory:',
         path.join(issuesPath, 'issue70'),
       );

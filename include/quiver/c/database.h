@@ -26,14 +26,14 @@ typedef struct quiver_database quiver_database_t;
 QUIVER_C_API quiver_error_t quiver_database_open(const char* path,
                                                  const quiver_database_options_t* options,
                                                  quiver_database_t** out_db);
-QUIVER_C_API quiver_error_t quiver_database_from_migrations(const char* db_path,
-                                                            const char* migrations_path,
-                                                            const quiver_database_options_t* options,
-                                                            quiver_database_t** out_db);
 QUIVER_C_API quiver_error_t quiver_database_from_schema(const char* db_path,
                                                         const char* schema_path,
                                                         const quiver_database_options_t* options,
                                                         quiver_database_t** out_db);
+QUIVER_C_API quiver_error_t quiver_database_from_hub(const char* db_path,
+                                                     const char* hub,
+                                                     const quiver_database_options_t* options,
+                                                     quiver_database_t** out_db);
 QUIVER_C_API quiver_error_t quiver_database_close(quiver_database_t* db);
 QUIVER_C_API quiver_error_t quiver_database_is_healthy(quiver_database_t* db, int* out_healthy);
 QUIVER_C_API quiver_error_t quiver_database_path(quiver_database_t* db, const char** out_path);
@@ -457,6 +457,14 @@ QUIVER_C_API quiver_error_t quiver_database_describe_collection(quiver_database_
 QUIVER_C_API quiver_error_t quiver_database_summarize_collection(quiver_database_t* db,
                                                                  const char* collection,
                                                                  char** out_report);
+
+// UI metadata (populated only via quiver_database_from_hub; empty string otherwise). Each
+// returns a heap string via the out-parameter, freed with quiver_database_free_string.
+QUIVER_C_API quiver_error_t quiver_database_get_model_name(quiver_database_t* db, char** out_name);
+QUIVER_C_API quiver_error_t quiver_database_get_attribute_unit(quiver_database_t* db,
+                                                               const char* collection,
+                                                               const char* attribute,
+                                                               char** out_unit);
 
 #ifdef __cplusplus
 }
