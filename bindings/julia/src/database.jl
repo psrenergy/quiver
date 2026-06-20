@@ -8,13 +8,16 @@ mutable struct Database
     end
 end
 
-function build_quiver_database_options(; kwargs...)
+function build_quiver_database_options(;
+    read_only::Optional{Bool} = nothing,
+    console_level::Optional{C.quiver_log_level_t} = nothing,
+)
     options = Ref(C.quiver_database_options_default())
-    if haskey(kwargs, :read_only)
-        options[].read_only = kwargs[:read_only] ? 1 : 0
+    if !isnothing(read_only)
+        options[].read_only = read_only ? 1 : 0
     end
-    if haskey(kwargs, :console_level)
-        options[].console_level = kwargs[:console_level]
+    if !isnothing(console_level)
+        options[].console_level = console_level
     end
     return options
 end
