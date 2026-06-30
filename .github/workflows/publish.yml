@@ -19,7 +19,7 @@ jobs:
       version: ${{ steps.v.outputs.version }}
       sha: ${{ steps.v.outputs.sha }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.sha }}
       - id: v
@@ -53,7 +53,7 @@ jobs:
       contents: read
       actions: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.sha }}
       - name: Dispatch and watch publish-s3.yml
@@ -90,7 +90,7 @@ jobs:
       contents: read
       actions: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.sha }}
       - name: Dispatch and watch publish-julia.yml
@@ -109,7 +109,7 @@ jobs:
       contents: read
       actions: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.sha }}
       - name: Dispatch and watch publish-python.yml
@@ -128,7 +128,7 @@ jobs:
       contents: read
       actions: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.sha }}
       - name: Dispatch and watch publish-js.yml
