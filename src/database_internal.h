@@ -168,7 +168,10 @@ inline ScalarMetadata scalar_metadata_from_column(const ColumnDefinition& col) {
     ScalarMetadata meta;
     meta.name = col.name;
     meta.data_type = col.type;
-    meta.not_null = col.not_null;
+    // An INTEGER PRIMARY KEY is a rowid alias and is never NULL, even though SQLite's
+    // PRAGMA table_info reports notnull=0 for it. Report it as not_null for the public API.
+    // (The raw ColumnDefinition.not_null stays the PRAGMA value for csv_import / schema_validator.)
+    meta.not_null = col.not_null || (col.primary_key && col.type == DataType::Integer);
     meta.primary_key = col.primary_key;
     meta.default_value = col.default_value;
     return meta;

@@ -108,7 +108,10 @@ Settled questions — don't relitigate without the user; each was decided delibe
   type-inference instability to fix. **Julia is nullability-aware**: `read_scalar_{integers,floats,
   strings}` return a concrete `Vector{T}` for `NOT NULL` columns and `Vector{Optional{T}}` for
   nullable ones (decided by `get_scalar_metadata(...).not_null`, schema- not data-driven), so a
-  column that can never be NULL gives downstream code a concrete array. Scope of that Julia rule is
+  column that can never be NULL gives downstream code a concrete array. An `INTEGER PRIMARY KEY`
+  (e.g. `id`) is a rowid alias and is reported `not_null` by the C++ core
+  (`scalar_metadata_from_column`, even though SQLite's `PRAGMA table_info` leaves the flag unset),
+  so `id` reads are concrete `Vector{Int64}`. Scope of that Julia rule is
   the bulk scalar readers only (their optional comes solely from NULL cells); `_by_id`/`query_*`
   (optional also from missing-id / unknown result nullability) and the time-series readers stay
   optional — tracked in `bindings/julia/type_stability_followup.md`. Lua uses

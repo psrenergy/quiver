@@ -41,6 +41,9 @@ class TestGetScalarMetadata:
         assert meta.name == "id"
         assert meta.data_type == DataType.INTEGER
         assert meta.primary_key is True
+        # INTEGER PRIMARY KEY is a rowid alias (never NULL) -> reported not_null even though
+        # SQLite's PRAGMA table_info leaves the notnull flag unset.
+        assert meta.not_null is True
 
     def test_get_scalar_metadata_with_default(self, db: Database) -> None:
         # integer_attribute has DEFAULT 6 in basic.sql

@@ -38,7 +38,9 @@ Project.toml      # Deps: Artifacts, CEnum, Dates, Libdl; julia 1.11 compat
   reader's *inferred* type a 2-way `Union{Vector{T}, Vector{Optional{T}}}` (the choice is a runtime
   metadata lookup) — intended: accurate per-column types over `@inferred` purity; assert with `isa`
   on the result, not `@inferred` on the reader. Julia-only; the `_by_id`/`query_*`/time-series
-  readers are not yet converted — see `type_stability_followup.md`.
+  readers are not yet converted — see `type_stability_followup.md`. An `INTEGER PRIMARY KEY` (e.g.
+  `id`) is a rowid alias and is reported `not_null` by the C++ core (`scalar_metadata_from_column`),
+  so `read_scalar_integers(db, c, "id")` is a concrete `Vector{Int64}`.
 - **Time-series group NULLs**: `read_time_series_group` returns value columns as
   `Vector{Union{T, Nothing}}` **always** (type-stable, like the `Optional{String}` precedent in
   `read_time_series_row`) — a NULL cell is `nothing`; the dimension column stays a dense

@@ -408,6 +408,17 @@ TEST(Database, DateTimeAttributeMetadata) {
     EXPECT_FALSE(metadata.not_null);
 }
 
+TEST(Database, IntegerPrimaryKeyReportsNotNull) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    // An INTEGER PRIMARY KEY is a rowid alias and is never NULL, so the public metadata reports
+    // not_null=true even though SQLite's PRAGMA table_info leaves the notnull flag unset.
+    auto metadata = db.get_scalar_metadata("Configuration", "id");
+    EXPECT_TRUE(metadata.primary_key);
+    EXPECT_TRUE(metadata.not_null);
+}
+
 TEST(Database, DateTimeReadScalarString) {
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});

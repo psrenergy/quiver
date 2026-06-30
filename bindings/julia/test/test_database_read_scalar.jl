@@ -134,6 +134,10 @@ include("fixture.jl")
         # NOT NULL column (label is TEXT UNIQUE NOT NULL) -> concrete element type.
         @test Quiver.read_scalar_strings(db, "Configuration", "label") isa Vector{String}
 
+        # INTEGER PRIMARY KEY is a rowid alias (never NULL) -> concrete element type, even though
+        # SQLite's PRAGMA table_info leaves the notnull flag unset.
+        @test Quiver.read_scalar_integers(db, "Configuration", "id") isa Vector{Int64}
+
         # Nullable columns -> Optional element type, even when this read happens to have no NULLs.
         @test Quiver.read_scalar_integers(db, "Configuration", "integer_attribute") isa
               Vector{Union{Int64, Nothing}}

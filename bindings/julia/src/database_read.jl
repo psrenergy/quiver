@@ -1,5 +1,6 @@
 function read_scalar_integers(db::Database, collection::String, attribute::String)
-    # ponytail: one extra PRAGMA table_info per read; thread not_null out of the C read API if it ever matters.
+    # ponytail: one extra metadata FFI round-trip per read (cached-schema read, no SQL; struct
+    # alloc/free); thread not_null out of the C read API if it ever matters.
     not_null = get_scalar_metadata(db, collection, attribute).not_null
     out_values = Ref{Ptr{Int64}}(C_NULL)
     out_mask = Ref{Ptr{UInt8}}(C_NULL)
@@ -25,7 +26,8 @@ function read_scalar_integers(db::Database, collection::String, attribute::Strin
 end
 
 function read_scalar_floats(db::Database, collection::String, attribute::String)
-    # ponytail: one extra PRAGMA table_info per read; thread not_null out of the C read API if it ever matters.
+    # ponytail: one extra metadata FFI round-trip per read (cached-schema read, no SQL; struct
+    # alloc/free); thread not_null out of the C read API if it ever matters.
     not_null = get_scalar_metadata(db, collection, attribute).not_null
     out_values = Ref{Ptr{Float64}}(C_NULL)
     out_mask = Ref{Ptr{UInt8}}(C_NULL)
@@ -51,7 +53,8 @@ function read_scalar_floats(db::Database, collection::String, attribute::String)
 end
 
 function read_scalar_strings(db::Database, collection::String, attribute::String)
-    # ponytail: one extra PRAGMA table_info per read; thread not_null out of the C read API if it ever matters.
+    # ponytail: one extra metadata FFI round-trip per read (cached-schema read, no SQL; struct
+    # alloc/free); thread not_null out of the C read API if it ever matters.
     not_null = get_scalar_metadata(db, collection, attribute).not_null
     out_values = Ref{Ptr{Ptr{Cchar}}}(C_NULL)
     out_count = Ref{Csize_t}(0)
