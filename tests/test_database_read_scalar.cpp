@@ -140,9 +140,8 @@ TEST(Database, ReadScalarStringsPreservesNull) {
         "Configuration",
         quiver::Element().set("label", std::string("Config 3")).set("string_attribute", std::string("world")));
     // Empty string is a present value, NOT a NULL — it must round-trip distinct from index 1.
-    db.create_element(
-        "Configuration",
-        quiver::Element().set("label", std::string("Config 4")).set("string_attribute", std::string("")));
+    db.create_element("Configuration",
+                      quiver::Element().set("label", std::string("Config 4")).set("string_attribute", std::string("")));
 
     auto values = db.read_scalar_strings("Configuration", "string_attribute");
     ASSERT_EQ(values.size(), 4u);
