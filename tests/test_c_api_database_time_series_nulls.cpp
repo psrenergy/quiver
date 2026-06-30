@@ -9,8 +9,7 @@
 #include <vector>
 
 TEST(DatabaseCApi, ReadTimeSeriesGroupNullString) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("nullable_time_series.sql").c_str(), &options, &db),
               QUIVER_OK);
@@ -93,8 +92,7 @@ namespace {
 // Opens an in-memory nullable_time_series.sql database with one Configuration
 // and one Sensor element; returns the db and the sensor's id.
 quiver_database_t* open_nullable_ts_db(int64_t* out_sensor_id) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     EXPECT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("nullable_time_series.sql").c_str(), &options, &db),
               QUIVER_OK);

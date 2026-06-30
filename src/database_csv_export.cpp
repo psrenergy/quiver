@@ -189,16 +189,8 @@ void Database::export_csv(const std::string& collection,
         auto schema_result = execute("SELECT * FROM " + table_name + " LIMIT 0");
         const auto& all_group_columns = schema_result.columns();
 
-        // All group table columns become CSV columns
-        std::vector<std::string> group_data_columns;
-        group_data_columns.reserve(all_group_columns.size());
-        for (const auto& col : all_group_columns) {
-            group_data_columns.push_back(col);
-        }
-
-        // CSV headers: label first, then group data columns
-        std::vector<std::string> csv_columns;
-        csv_columns.insert(csv_columns.end(), group_data_columns.begin(), group_data_columns.end());
+        // All group table columns become CSV columns (label first, then group data columns)
+        std::vector<std::string> csv_columns(all_group_columns.begin(), all_group_columns.end());
 
         // Build DataType map from group metadata
         std::unordered_map<std::string, DataType> type_map;
@@ -226,7 +218,7 @@ void Database::export_csv(const std::string& collection,
 
         // Build SELECT query: C.label + group data columns with JOIN
         std::string select_cols = "C.label";
-        for (const auto& col : group_data_columns) {
+        for (const auto& col : csv_columns) {
             if (col == "id")
                 continue;
             select_cols += ", G." + col;

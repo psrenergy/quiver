@@ -5,8 +5,7 @@
 #include <quiver/c/element.h>
 
 TEST(DatabaseCApi, TransactionBeginMultipleWritesCommit) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
               QUIVER_OK);
@@ -54,8 +53,7 @@ TEST(DatabaseCApi, TransactionBeginMultipleWritesCommit) {
 }
 
 TEST(DatabaseCApi, TransactionRollbackDiscardsWrites) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
               QUIVER_OK);
@@ -92,8 +90,7 @@ TEST(DatabaseCApi, TransactionRollbackDiscardsWrites) {
 }
 
 TEST(DatabaseCApi, TransactionDoubleBeginReturnsError) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
@@ -110,8 +107,7 @@ TEST(DatabaseCApi, TransactionDoubleBeginReturnsError) {
 }
 
 TEST(DatabaseCApi, TransactionCommitWithoutBeginReturnsError) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
@@ -125,8 +121,7 @@ TEST(DatabaseCApi, TransactionCommitWithoutBeginReturnsError) {
 }
 
 TEST(DatabaseCApi, TransactionRollbackWithoutBeginReturnsError) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
@@ -140,8 +135,7 @@ TEST(DatabaseCApi, TransactionRollbackWithoutBeginReturnsError) {
 }
 
 TEST(DatabaseCApi, InTransactionReflectsState) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);

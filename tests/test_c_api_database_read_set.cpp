@@ -12,8 +12,7 @@
 // ============================================================================
 
 TEST(DatabaseCApi, ReadSetStrings) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
               QUIVER_OK);
@@ -70,8 +69,7 @@ TEST(DatabaseCApi, ReadSetStrings) {
 }
 
 TEST(DatabaseCApi, ReadSetEmpty) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
               QUIVER_OK);
@@ -98,8 +96,7 @@ TEST(DatabaseCApi, ReadSetEmpty) {
 }
 
 TEST(DatabaseCApi, ReadSetOnlyReturnsElementsWithData) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
               QUIVER_OK);
@@ -160,8 +157,7 @@ TEST(DatabaseCApi, ReadSetOnlyReturnsElementsWithData) {
 // ============================================================================
 
 TEST(DatabaseCApi, ReadSetStringById) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
               QUIVER_OK);
@@ -217,8 +213,7 @@ TEST(DatabaseCApi, ReadSetStringById) {
 }
 
 TEST(DatabaseCApi, ReadSetByIdEmpty) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
               QUIVER_OK);
@@ -262,8 +257,7 @@ TEST(DatabaseCApi, ReadSetIntegersNullDb) {
 }
 
 TEST(DatabaseCApi, ReadSetIntegersNullCollection) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
               QUIVER_OK);
@@ -279,8 +273,7 @@ TEST(DatabaseCApi, ReadSetIntegersNullCollection) {
 }
 
 TEST(DatabaseCApi, ReadSetIntegersNullOutput) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
               QUIVER_OK);
@@ -318,8 +311,7 @@ TEST(DatabaseCApi, ReadSetStringsNullDb) {
 }
 
 TEST(DatabaseCApi, ReadSetStringsNullCollection) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
               QUIVER_OK);
@@ -335,8 +327,7 @@ TEST(DatabaseCApi, ReadSetStringsNullCollection) {
 }
 
 TEST(DatabaseCApi, ReadSetStringsNullOutput) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
               QUIVER_OK);
@@ -383,8 +374,7 @@ TEST(DatabaseCApi, ReadSetStringsByIdNullDb) {
 }
 
 TEST(DatabaseCApi, ReadSetStringsByIdNullCollection) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
               QUIVER_OK);
@@ -399,8 +389,7 @@ TEST(DatabaseCApi, ReadSetStringsByIdNullCollection) {
 }
 
 TEST(DatabaseCApi, ReadSetStringsByIdNullOutput) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
               QUIVER_OK);
@@ -422,8 +411,7 @@ TEST(DatabaseCApi, ReadSetStringsByIdNullOutput) {
 // ============================================================================
 
 TEST(DatabaseCApi, ReadSetIntegersHappyPath) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("all_types.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
@@ -468,8 +456,7 @@ TEST(DatabaseCApi, ReadSetIntegersHappyPath) {
 }
 
 TEST(DatabaseCApi, ReadSetIntegersByIdHappyPath) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("all_types.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
@@ -515,8 +502,7 @@ TEST(DatabaseCApi, ReadSetIntegersByIdHappyPath) {
 // ============================================================================
 
 TEST(DatabaseCApi, ReadSetFloatsHappyPath) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("all_types.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
@@ -561,8 +547,7 @@ TEST(DatabaseCApi, ReadSetFloatsHappyPath) {
 }
 
 TEST(DatabaseCApi, ReadSetFloatsByIdHappyPath) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("all_types.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);

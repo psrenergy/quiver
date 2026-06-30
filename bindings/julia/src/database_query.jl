@@ -1,8 +1,3 @@
-const PARAM_TYPE_INTEGER = Cint(0)
-const PARAM_TYPE_FLOAT = Cint(1)
-const PARAM_TYPE_STRING = Cint(2)
-const PARAM_TYPE_NULL = Cint(4)
-
 """
 Marshal a Julia Vector of parameters into C arrays of types and value pointers.
 Returns (param_types, param_values, refs) where refs must be kept alive during the call.
@@ -17,22 +12,22 @@ function marshal_params(parameters::Vector)
     for i in 1:n
         p = parameters[i]
         if p === nothing
-            param_types[i] = PARAM_TYPE_NULL
+            param_types[i] = Cint(C.QUIVER_DATA_TYPE_NULL)
             param_values[i] = C_NULL
             refs[i] = nothing
         elseif p isa Integer
             ref = Ref{Int64}(Int64(p))
-            param_types[i] = PARAM_TYPE_INTEGER
+            param_types[i] = Cint(C.QUIVER_DATA_TYPE_INTEGER)
             param_values[i] = Base.unsafe_convert(Ptr{Cvoid}, Base.cconvert(Ref{Int64}, ref))
             refs[i] = ref
         elseif p isa AbstractFloat
             ref = Ref{Float64}(Float64(p))
-            param_types[i] = PARAM_TYPE_FLOAT
+            param_types[i] = Cint(C.QUIVER_DATA_TYPE_FLOAT)
             param_values[i] = Base.unsafe_convert(Ptr{Cvoid}, Base.cconvert(Ref{Float64}, ref))
             refs[i] = ref
         elseif p isa AbstractString
             cstr = Base.cconvert(Ptr{Cchar}, p)
-            param_types[i] = PARAM_TYPE_STRING
+            param_types[i] = Cint(C.QUIVER_DATA_TYPE_STRING)
             param_values[i] = Base.unsafe_convert(Ptr{Cvoid}, Base.unsafe_convert(Ptr{Cchar}, cstr))
             refs[i] = cstr
         else
