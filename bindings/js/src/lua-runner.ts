@@ -6,11 +6,9 @@ import { getSymbols } from "./loader.ts";
 
 export class LuaRunner {
   private _ptr: NativePointer;
-  private _db: Database;
   private _closed = false;
 
   constructor(db: Database) {
-    this._db = db;
     const lib = getSymbols();
     const outRunner = allocPtrOut();
     check(lib.quiver_lua_runner_new(db._handle, outRunner.buf));

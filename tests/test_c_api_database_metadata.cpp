@@ -9,8 +9,7 @@
 // ============================================================================
 
 TEST(DatabaseCApiMetadata, GetVectorMetadata) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
               QUIVER_OK);
@@ -28,8 +27,7 @@ TEST(DatabaseCApiMetadata, GetVectorMetadata) {
 }
 
 TEST(DatabaseCApiMetadata, GetSetMetadata) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
               QUIVER_OK);
@@ -47,8 +45,7 @@ TEST(DatabaseCApiMetadata, GetSetMetadata) {
 }
 
 TEST(DatabaseCApiMetadata, GetTimeSeriesMetadata) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
               QUIVER_OK);
@@ -70,8 +67,7 @@ TEST(DatabaseCApiMetadata, GetTimeSeriesMetadata) {
 // ============================================================================
 
 TEST(DatabaseCApiMetadata, ListVectorGroups) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
               QUIVER_OK);
@@ -88,8 +84,7 @@ TEST(DatabaseCApiMetadata, ListVectorGroups) {
 }
 
 TEST(DatabaseCApiMetadata, ListSetGroups) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
               QUIVER_OK);
@@ -106,8 +101,7 @@ TEST(DatabaseCApiMetadata, ListSetGroups) {
 }
 
 TEST(DatabaseCApiMetadata, ListTimeSeriesGroups) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
               QUIVER_OK);
@@ -124,8 +118,7 @@ TEST(DatabaseCApiMetadata, ListTimeSeriesGroups) {
 }
 
 TEST(DatabaseCApiMetadata, ListScalarAttributes) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
               QUIVER_OK);
@@ -147,8 +140,7 @@ TEST(DatabaseCApiMetadata, ListScalarAttributes) {
 
 namespace {
 quiver_database_t* open_collections() {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     EXPECT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
               QUIVER_OK);

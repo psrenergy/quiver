@@ -19,8 +19,9 @@ Composite actions in `.github/actions/`:
   includes a **toolchain fingerprint** (default CMake generator): FetchContent subbuilds pin the
   generator in their CMakeCache, so restoring a `_deps` cache built under a different default
   generator (e.g. windows-latest moving VS 17 → 18) fails configure.
-- `detect-version` — reads the version from CMakeLists.txt via `scripts/assert_version.py`
-  (which owns the version-file inventory) and checks the matching tag on origin.
+
+
+The publish workflows read the version by inlining `python3 scripts/assert_version.py` directly.
 
 ## Release Pipeline
 

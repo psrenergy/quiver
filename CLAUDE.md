@@ -193,7 +193,7 @@ JS has no generator — update the hand-written symbol table in `bindings/js/src
   drives the build (Python wheels) it defines the `SKBUILD` CMake variable, which forces
   C API ON and tests OFF.
 - **Presets** (`CMakePresets.json`): configure `dev` (Debug, tests+C API), `release`,
-  `windows-release` (VS 17 2022), `linux-release`, `all-bindings`; build presets for
+  `windows-release` (VS 17 2022), `linux-release`; build presets for
   dev/release/windows-release/linux-release; test presets for dev/windows-release/linux-release.
   Presets build into `build/<presetName>/`; the plain `build/` dir is the manual configure above.
 - **Dependencies** via FetchContent (`cmake/Dependencies.cmake`): sqlite3 v3.50.2

@@ -18,8 +18,7 @@ protected:
 };
 
 TEST_F(TempFileFixture, OpenAndClose) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_open(path.c_str(), &options, &db), QUIVER_OK);
 
@@ -32,8 +31,7 @@ TEST_F(TempFileFixture, OpenAndClose) {
 }
 
 TEST_F(TempFileFixture, OpenInMemory) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_open(":memory:", &options, &db), QUIVER_OK);
 
@@ -46,15 +44,13 @@ TEST_F(TempFileFixture, OpenInMemory) {
 }
 
 TEST_F(TempFileFixture, OpenNullPath) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     EXPECT_EQ(quiver_database_open(nullptr, &options, &db), QUIVER_ERROR);
 }
 
 TEST_F(TempFileFixture, DatabasePath) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_open(path.c_str(), &options, &db), QUIVER_OK);
 
@@ -67,8 +63,7 @@ TEST_F(TempFileFixture, DatabasePath) {
 }
 
 TEST_F(TempFileFixture, DatabasePathInMemory) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_open(":memory:", &options, &db), QUIVER_OK);
 
@@ -139,8 +134,7 @@ TEST_F(TempFileFixture, LogLevelError) {
 }
 
 TEST_F(TempFileFixture, CreatesFileOnDisk) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_open(path.c_str(), &options, &db), QUIVER_OK);
 
@@ -167,8 +161,7 @@ TEST_F(TempFileFixture, OpenWithNullOptions) {
 }
 
 TEST_F(TempFileFixture, OpenReadOnly) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_open(path.c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
@@ -192,8 +185,7 @@ TEST_F(TempFileFixture, CurrentVersionNullDb) {
 }
 
 TEST_F(TempFileFixture, CurrentVersionValid) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_open(":memory:", &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
@@ -210,22 +202,19 @@ TEST_F(TempFileFixture, CurrentVersionValid) {
 // ============================================================================
 
 TEST_F(TempFileFixture, FromSchemaNullDbPath) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     EXPECT_EQ(quiver_database_from_schema(nullptr, "schema.sql", &options, &db), QUIVER_ERROR);
 }
 
 TEST_F(TempFileFixture, FromSchemaNullSchemaPath) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     EXPECT_EQ(quiver_database_from_schema(":memory:", nullptr, &options, &db), QUIVER_ERROR);
 }
 
 TEST_F(TempFileFixture, FromSchemaInvalidPath) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     EXPECT_NE(quiver_database_from_schema(":memory:", "nonexistent/path/schema.sql", &options, &db), QUIVER_OK);
 }
@@ -235,22 +224,19 @@ TEST_F(TempFileFixture, FromSchemaInvalidPath) {
 // ============================================================================
 
 TEST_F(TempFileFixture, FromMigrationsNullDbPath) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     EXPECT_EQ(quiver_database_from_migrations(nullptr, "migrations/", &options, &db), QUIVER_ERROR);
 }
 
 TEST_F(TempFileFixture, FromMigrationsNullMigrationsPath) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     EXPECT_EQ(quiver_database_from_migrations(":memory:", nullptr, &options, &db), QUIVER_ERROR);
 }
 
 TEST_F(TempFileFixture, FromMigrationsInvalidPath) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     // Invalid migrations path returns error
     EXPECT_NE(quiver_database_from_migrations(":memory:", "nonexistent/migrations/", &options, &db), QUIVER_OK);
@@ -261,8 +247,7 @@ TEST_F(TempFileFixture, FromMigrationsInvalidPath) {
 // ============================================================================
 
 TEST_F(TempFileFixture, CreateElementInNonExistentCollection) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
@@ -279,8 +264,7 @@ TEST_F(TempFileFixture, CreateElementInNonExistentCollection) {
 }
 
 TEST_F(TempFileFixture, OpenReadOnlyNonExistentPath) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     options.read_only = 1;
 
     // Try to open non-existent file as read-only
@@ -292,8 +276,7 @@ TEST_F(TempFileFixture, OpenReadOnlyNonExistentPath) {
 }
 
 TEST_F(TempFileFixture, FromSchemaValidPath) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
 
@@ -317,8 +300,7 @@ TEST_F(TempFileFixture, ReadElementIdsNullDb) {
 }
 
 TEST_F(TempFileFixture, ReadElementIdsNullCollection) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
               QUIVER_OK);
@@ -333,8 +315,7 @@ TEST_F(TempFileFixture, ReadElementIdsNullCollection) {
 }
 
 TEST_F(TempFileFixture, ReadElementIdsNullOutput) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
               QUIVER_OK);
@@ -352,8 +333,7 @@ TEST_F(TempFileFixture, ReadElementIdsNullOutput) {
 }
 
 TEST_F(TempFileFixture, ReadElementIdsValid) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
               QUIVER_OK);
@@ -401,8 +381,7 @@ TEST_F(TempFileFixture, DeleteElementNullDb) {
 }
 
 TEST_F(TempFileFixture, DeleteElementNullCollection) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
               QUIVER_OK);
@@ -415,8 +394,7 @@ TEST_F(TempFileFixture, DeleteElementNullCollection) {
 }
 
 TEST_F(TempFileFixture, DeleteElementValid) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
               QUIVER_OK);
@@ -473,8 +451,7 @@ TEST_F(TempFileFixture, UpdateElementNullDb) {
 }
 
 TEST_F(TempFileFixture, UpdateElementNullCollection) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
               QUIVER_OK);
@@ -492,8 +469,7 @@ TEST_F(TempFileFixture, UpdateElementNullCollection) {
 }
 
 TEST_F(TempFileFixture, UpdateElementNullElement) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
               QUIVER_OK);
@@ -510,8 +486,7 @@ TEST_F(TempFileFixture, UpdateElementNullElement) {
 // ============================================================================
 
 TEST_F(TempFileFixture, DescribeDoesNotFail) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);

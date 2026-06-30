@@ -68,17 +68,6 @@
         "QUIVER_BUILD_TESTS": "ON",
         "QUIVER_BUILD_C_API": "ON"
       }
-    },
-    {
-      "name": "all-bindings",
-      "displayName": "All Bindings",
-      "description": "Build with all language bindings enabled",
-      "inherits": "base",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "QUIVER_BUILD_TESTS": "ON",
-        "QUIVER_BUILD_C_API": "ON"
-      }
     }
   ],
   "buildPresets": [

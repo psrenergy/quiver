@@ -12,8 +12,7 @@
 // ============================================================================
 
 TEST(DatabaseCApi, ReadScalarIntegers) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
@@ -52,8 +51,7 @@ TEST(DatabaseCApi, ReadScalarIntegers) {
 }
 
 TEST(DatabaseCApi, ReadScalarFloats) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
@@ -92,8 +90,7 @@ TEST(DatabaseCApi, ReadScalarFloats) {
 }
 
 TEST(DatabaseCApi, ReadScalarFloatsPreservesNull) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
@@ -136,8 +133,7 @@ TEST(DatabaseCApi, ReadScalarFloatsPreservesNull) {
 }
 
 TEST(DatabaseCApi, ReadScalarIntegersPreservesNull) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("all_types.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
@@ -177,8 +173,7 @@ TEST(DatabaseCApi, ReadScalarIntegersPreservesNull) {
 }
 
 TEST(DatabaseCApi, ReadScalarStringsPreservesNull) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
@@ -216,8 +211,7 @@ TEST(DatabaseCApi, ReadScalarStringsPreservesNull) {
 }
 
 TEST(DatabaseCApi, ReadScalarFloatsAllNull) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
@@ -248,8 +242,7 @@ TEST(DatabaseCApi, ReadScalarFloatsAllNull) {
 }
 
 TEST(DatabaseCApi, ReadScalarStrings) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
@@ -284,8 +277,7 @@ TEST(DatabaseCApi, ReadScalarStrings) {
 }
 
 TEST(DatabaseCApi, ReadScalarEmpty) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
               QUIVER_OK);
@@ -325,8 +317,7 @@ TEST(DatabaseCApi, ReadScalarEmpty) {
 // ============================================================================
 
 TEST(DatabaseCApi, ReadScalarIntegerById) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
@@ -365,8 +356,7 @@ TEST(DatabaseCApi, ReadScalarIntegerById) {
 }
 
 TEST(DatabaseCApi, ReadScalarFloatById) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
@@ -391,8 +381,7 @@ TEST(DatabaseCApi, ReadScalarFloatById) {
 }
 
 TEST(DatabaseCApi, ReadScalarStringById) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
@@ -419,8 +408,7 @@ TEST(DatabaseCApi, ReadScalarStringById) {
 }
 
 TEST(DatabaseCApi, ReadScalarByIdNotFound) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
@@ -449,8 +437,7 @@ TEST(DatabaseCApi, ReadScalarByIdNotFound) {
 // ============================================================================
 
 TEST(DatabaseCApi, ReadElementIds) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
@@ -494,8 +481,7 @@ TEST(DatabaseCApi, ReadElementIds) {
 }
 
 TEST(DatabaseCApi, ReadElementIdsEmpty) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
               QUIVER_OK);
@@ -534,8 +520,7 @@ TEST(DatabaseCApi, ReadScalarIntegersNullDb) {
 }
 
 TEST(DatabaseCApi, ReadScalarIntegersNullCollection) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
@@ -550,8 +535,7 @@ TEST(DatabaseCApi, ReadScalarIntegersNullCollection) {
 }
 
 TEST(DatabaseCApi, ReadScalarIntegersNullAttribute) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
@@ -566,8 +550,7 @@ TEST(DatabaseCApi, ReadScalarIntegersNullAttribute) {
 }
 
 TEST(DatabaseCApi, ReadScalarIntegersNullOutput) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
@@ -597,8 +580,7 @@ TEST(DatabaseCApi, ReadScalarFloatsNullDb) {
 }
 
 TEST(DatabaseCApi, ReadScalarFloatsNullCollection) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
@@ -613,8 +595,7 @@ TEST(DatabaseCApi, ReadScalarFloatsNullCollection) {
 }
 
 TEST(DatabaseCApi, ReadScalarFloatsNullOutput) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
@@ -643,8 +624,7 @@ TEST(DatabaseCApi, ReadScalarStringsNullDb) {
 }
 
 TEST(DatabaseCApi, ReadScalarStringsNullCollection) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
@@ -658,8 +638,7 @@ TEST(DatabaseCApi, ReadScalarStringsNullCollection) {
 }
 
 TEST(DatabaseCApi, ReadScalarStringsNullOutput) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
@@ -688,8 +667,7 @@ TEST(DatabaseCApi, ReadScalarIntegerByIdNullDb) {
 }
 
 TEST(DatabaseCApi, ReadScalarIntegerByIdNullCollection) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
@@ -703,8 +681,7 @@ TEST(DatabaseCApi, ReadScalarIntegerByIdNullCollection) {
 }
 
 TEST(DatabaseCApi, ReadScalarIntegerByIdNullOutput) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
@@ -730,8 +707,7 @@ TEST(DatabaseCApi, ReadScalarFloatByIdNullDb) {
 }
 
 TEST(DatabaseCApi, ReadScalarFloatByIdNullOutput) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
@@ -756,8 +732,7 @@ TEST(DatabaseCApi, ReadScalarStringByIdNullDb) {
 }
 
 TEST(DatabaseCApi, ReadScalarStringByIdNullOutput) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
@@ -786,8 +761,7 @@ TEST(DatabaseCApi, ReadElementIdsNullDb) {
 }
 
 TEST(DatabaseCApi, ReadElementIdsNullCollection) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
@@ -801,8 +775,7 @@ TEST(DatabaseCApi, ReadElementIdsNullCollection) {
 }
 
 TEST(DatabaseCApi, ReadElementIdsNullOutput) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
@@ -823,8 +796,7 @@ TEST(DatabaseCApi, ReadElementIdsNullOutput) {
 // ============================================================================
 
 TEST(DatabaseCApi, DateTimeAttributeMetadata) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
@@ -851,8 +823,7 @@ TEST(DatabaseCApi, DateTimeAttributeMetadata) {
 }
 
 TEST(DatabaseCApi, ScalarMetadataForeignKey) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("relations.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
@@ -871,8 +842,7 @@ TEST(DatabaseCApi, ScalarMetadataForeignKey) {
 }
 
 TEST(DatabaseCApi, ScalarMetadataNotForeignKey) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("relations.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
@@ -889,8 +859,7 @@ TEST(DatabaseCApi, ScalarMetadataNotForeignKey) {
 }
 
 TEST(DatabaseCApi, ListScalarAttributesForeignKeys) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("relations.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
@@ -924,8 +893,7 @@ TEST(DatabaseCApi, ListScalarAttributesForeignKeys) {
 }
 
 TEST(DatabaseCApi, DateTimeReadScalarString) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);

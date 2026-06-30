@@ -5,8 +5,7 @@
 #include <quiver/c/element.h>
 
 TEST(DatabaseCApi, DeleteElementById) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
@@ -41,8 +40,7 @@ TEST(DatabaseCApi, DeleteElementById) {
 }
 
 TEST(DatabaseCApi, DeleteElementByIdWithVectorData) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
               QUIVER_OK);
@@ -97,8 +95,7 @@ TEST(DatabaseCApi, DeleteElementByIdWithVectorData) {
 }
 
 TEST(DatabaseCApi, DeleteElementByIdWithSetData) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
               QUIVER_OK);
@@ -153,8 +150,7 @@ TEST(DatabaseCApi, DeleteElementByIdWithSetData) {
 }
 
 TEST(DatabaseCApi, DeleteElementByIdNonExistent) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
@@ -183,8 +179,7 @@ TEST(DatabaseCApi, DeleteElementByIdNonExistent) {
 }
 
 TEST(DatabaseCApi, DeleteElementByIdOtherElementsUnchanged) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
@@ -246,8 +241,7 @@ TEST(DatabaseCApi, DeleteElementByIdOtherElementsUnchanged) {
 }
 
 TEST(DatabaseCApi, DeleteElementByIdNullArguments) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);

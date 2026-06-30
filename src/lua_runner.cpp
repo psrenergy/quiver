@@ -427,67 +427,11 @@ struct LuaRunner::Impl {
         throw std::runtime_error("Cannot build expression: operand must be an expression or a binary file");
     }
 
-    static Expression apply_binop(BinOp op, const Expression& l, const Expression& r) {
-        switch (op) {
-        case BinOp::Add:
-            return l + r;
-        case BinOp::Subtract:
-            return l - r;
-        case BinOp::Multiply:
-            return l * r;
-        case BinOp::Divide:
-            return l / r;
-        case BinOp::Gt:
-            return l > r;
-        case BinOp::Lt:
-            return l < r;
-        case BinOp::Gte:
-            return l >= r;
-        case BinOp::Lte:
-            return l <= r;
-        case BinOp::Eq:
-            return l == r;
-        case BinOp::Neq:
-            return l != r;
-        case BinOp::And:
-            return l && r;
-        case BinOp::Or:
-            return l || r;
-        }
-        throw std::runtime_error("Cannot apply operator: unknown operation");
-    }
-
-    static Expression apply_binop(BinOp op, const Expression& l, double r) {
-        switch (op) {
-        case BinOp::Add:
-            return l + r;
-        case BinOp::Subtract:
-            return l - r;
-        case BinOp::Multiply:
-            return l * r;
-        case BinOp::Divide:
-            return l / r;
-        case BinOp::Gt:
-            return l > r;
-        case BinOp::Lt:
-            return l < r;
-        case BinOp::Gte:
-            return l >= r;
-        case BinOp::Lte:
-            return l <= r;
-        case BinOp::Eq:
-            return l == r;
-        case BinOp::Neq:
-            return l != r;
-        case BinOp::And:
-            return l && r;
-        case BinOp::Or:
-            return l || r;
-        }
-        throw std::runtime_error("Cannot apply operator: unknown operation");
-    }
-
-    static Expression apply_binop(BinOp op, double l, const Expression& r) {
+    // One body for all three operand combos (expr/expr, expr/double, double/expr); overload
+    // resolution on l/r picks the matching Expression operator per instantiation. double/double
+    // is never instantiated (binop_dispatch routes numbers through to_expression, which throws).
+    template <typename L, typename R>
+    static Expression apply_binop(BinOp op, const L& l, const R& r) {
         switch (op) {
         case BinOp::Add:
             return l + r;
