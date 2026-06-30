@@ -148,10 +148,15 @@ void main() {
           'label': 'Config 3',
           'string_attribute': 'world',
         });
+        // Empty string is a present value, not a NULL — it must stay distinct from null.
+        db.createElement('Configuration', {
+          'label': 'Config 4',
+          'string_attribute': '',
+        });
 
         expect(
           db.readScalarStrings('Configuration', 'string_attribute'),
-          equals(['hello', null, 'world']),
+          equals(['hello', null, 'world', '']),
         );
       } finally {
         db.close();

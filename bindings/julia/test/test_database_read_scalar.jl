@@ -84,8 +84,11 @@ include("fixture.jl")
         Quiver.create_element!(db, "Configuration"; label = "Config 1", string_attribute = "hello")
         Quiver.create_element!(db, "Configuration"; label = "Config 2")  # NULL string
         Quiver.create_element!(db, "Configuration"; label = "Config 3", string_attribute = "world")
+        # Empty string is a present value, not a NULL — it must stay distinct from `nothing`.
+        Quiver.create_element!(db, "Configuration"; label = "Config 4", string_attribute = "")
 
-        @test Quiver.read_scalar_strings(db, "Configuration", "string_attribute") == ["hello", nothing, "world"]
+        @test Quiver.read_scalar_strings(db, "Configuration", "string_attribute") ==
+              ["hello", nothing, "world", ""]
 
         Quiver.close!(db)
     end

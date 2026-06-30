@@ -1,4 +1,4 @@
-import { CString, type Pointer, read, toArrayBuffer } from "bun:ffi";
+import { CString, type Pointer, toArrayBuffer } from "bun:ffi";
 import { Database } from "./database.ts";
 import { check } from "./errors.ts";
 import {
@@ -107,13 +107,11 @@ Database.prototype.readScalarStrings = function (
   const count = readUint64Out(outCount);
   if (count === 0) return [];
   const arrPtr = readPtrOut(outValues);
-  // A NULL string is a NULL char* entry: read pointer-by-pointer and null-guard
-  // (decodeStringArray would construct a CString from a NULL pointer).
-  const result: (string | null)[] = new Array(count);
-  for (let i = 0; i < count; i++) {
-    const strPtr = read.ptr(arrPtr as Pointer, i * 8);
-    result[i] = strPtr === 0 ? null : new CString(strPtr as Pointer).toString();
-  }
+  // A NULL string is a NULL char* entry: decode the (null-guarded) pointer array and map
+  // NULL -> null (decodeStringArray would construct "" from a NULL pointer instead).
+  const result = decodePtrArray(arrPtr, count).map((p) =>
+    p === null ? null : new CString(p).toString(),
+  );
   lib.quiver_database_free_string_array(arrPtr, BigInt(count));
   return result;
 };

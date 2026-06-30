@@ -67,8 +67,10 @@ describe("readScalarIntegers / readScalarFloats / readScalarStrings", () => {
       db.createElement("AllTypes", { label: "Item1", some_text: "hello" });
       db.createElement("AllTypes", { label: "Item2" }); // some_text is NULL
       db.createElement("AllTypes", { label: "Item3", some_text: "world" });
+      // Empty string is a present value, not a NULL — it must stay distinct from null.
+      db.createElement("AllTypes", { label: "Item4", some_text: "" });
       const values = db.readScalarStrings("AllTypes", "some_text");
-      expect(values).toEqual(["hello", null, "world"]);
+      expect(values).toEqual(["hello", null, "world", ""]);
     } finally {
       db.close();
     }

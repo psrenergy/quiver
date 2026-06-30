@@ -106,6 +106,7 @@ TEST_F(LuaRunnerTest, ReadScalarStringsPreservesNulls) {
     db.create_element("AllTypes", quiver::Element().set("label", "a").set("some_text", "hello"));
     db.create_element("AllTypes", quiver::Element().set("label", "b"));  // NULL string
     db.create_element("AllTypes", quiver::Element().set("label", "c").set("some_text", "world"));
+    db.create_element("AllTypes", quiver::Element().set("label", "d").set("some_text", ""));  // empty, not NULL
 
     quiver::LuaRunner lua(db);
 
@@ -114,6 +115,7 @@ TEST_F(LuaRunnerTest, ReadScalarStringsPreservesNulls) {
         assert(texts[1] == "hello", "texts[1] should be hello")
         assert(texts[2] == nil, "texts[2] should be nil for the NULL element")
         assert(texts[3] == "world", "texts[3] should be world")
+        assert(texts[4] == "", "texts[4] should be an empty string, not nil")
     )");
 }
 

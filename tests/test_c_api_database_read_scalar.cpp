@@ -183,10 +183,11 @@ TEST(DatabaseCApi, ReadScalarStringsPreservesNull) {
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    // 3 elements; element 2 leaves string_attribute unset -> SQL NULL (a nullptr entry, no mask).
-    const char* labels[] = {"Config 1", "Config 2", "Config 3"};
-    const char* str_values[] = {"hello", nullptr, "world"};
-    for (int i = 0; i < 3; ++i) {
+    // 4 elements; element 2 leaves string_attribute unset -> SQL NULL (a nullptr entry, no mask).
+    // Element 4 stores an empty string -> a present, non-NULL value distinct from element 2.
+    const char* labels[] = {"Config 1", "Config 2", "Config 3", "Config 4"};
+    const char* str_values[] = {"hello", nullptr, "world", ""};
+    for (int i = 0; i < 4; ++i) {
         quiver_element_t* e = nullptr;
         ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
         quiver_element_set_string(e, "label", labels[i]);
@@ -203,10 +204,12 @@ TEST(DatabaseCApi, ReadScalarStringsPreservesNull) {
     auto err = quiver_database_read_scalar_strings(db, "Configuration", "string_attribute", &values, &count);
 
     EXPECT_EQ(err, QUIVER_OK);
-    ASSERT_EQ(count, 3u);
+    ASSERT_EQ(count, 4u);
     EXPECT_STREQ(values[0], "hello");
     EXPECT_EQ(values[1], nullptr);  // NULL string is a nullptr entry
     EXPECT_STREQ(values[2], "world");
+    ASSERT_NE(values[3], nullptr);  // empty string is present, not NULL
+    EXPECT_STREQ(values[3], "");
 
     quiver_database_free_string_array(values, count);
     quiver_database_close(db);
