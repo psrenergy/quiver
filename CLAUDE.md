@@ -103,8 +103,15 @@ Settled questions — don't relitigate without the user; each was decided delibe
   a SQL NULL is `nullopt`, aligned with `read_element_ids` by `ORDER BY rowid` — NULLs are never
   dropped. The C API numeric readers carry a parallel `uint8_t* out_mask` (`mask[i] == 0` = NULL,
   data slot is a 0/0.0 placeholder) freed by `quiver_database_free_mask`; the string reader needs
-  no mask — a NULL is a `nullptr` entry in the `char**`. FFI bindings always return the nullable
-  element type (`Vector{Union{T,Nothing}}` / `list[T|None]` / `List<T?>` / `(T|null)[]`). Lua uses
+  no mask — a NULL is a `nullptr` entry in the `char**`. Python/Dart/JS always return the nullable
+  element type (`list[T|None]` / `List<T?>` / `(T|null)[]`) — a static surface with no
+  type-inference instability to fix. **Julia is nullability-aware**: `read_scalar_{integers,floats,
+  strings}` return a concrete `Vector{T}` for `NOT NULL` columns and `Vector{Optional{T}}` for
+  nullable ones (decided by `get_scalar_metadata(...).not_null`, schema- not data-driven), so a
+  column that can never be NULL gives downstream code a concrete array. Scope of that Julia rule is
+  the bulk scalar readers only (their optional comes solely from NULL cells); `_by_id`/`query_*`
+  (optional also from missing-id / unknown result nullability) and the time-series readers stay
+  optional — tracked in `bindings/julia/type_stability_followup.md`. Lua uses
   `nil` holes (only `to_lua_table` changed; no C API mask) with `read_element_ids` as the
   count/position authority since `#t` is unreliable across holes. Scope is **scalars only** — the
   shared dense `read_column_values<T>` still serves vector/set `_by_id` and `read_element_ids`

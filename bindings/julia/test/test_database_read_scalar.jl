@@ -119,6 +119,70 @@ include("fixture.jl")
 
         Quiver.close!(db)
     end
+
+    @testset "Concrete vs Optional element types" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration";
+            label = "Config 1",
+            integer_attribute = 42,
+            float_attribute = 3.14,
+            string_attribute = "hello",
+        )
+
+        # NOT NULL column (label is TEXT UNIQUE NOT NULL) -> concrete element type.
+        @test Quiver.read_scalar_strings(db, "Configuration", "label") isa Vector{String}
+
+        # Nullable columns -> Optional element type, even when this read happens to have no NULLs.
+        @test Quiver.read_scalar_integers(db, "Configuration", "integer_attribute") isa
+              Vector{Union{Int64, Nothing}}
+        @test Quiver.read_scalar_floats(db, "Configuration", "float_attribute") isa
+              Vector{Union{Float64, Nothing}}
+        @test Quiver.read_scalar_strings(db, "Configuration", "string_attribute") isa
+              Vector{Union{String, Nothing}}
+
+        Quiver.close!(db)
+    end
+
+    @testset "Element type stable across empty and populated reads" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+
+        # Empty Collection: type is decided by the schema, not the data.
+        @test Quiver.read_scalar_strings(db, "Collection", "label") isa Vector{String}
+        @test Quiver.read_scalar_integers(db, "Collection", "some_integer") isa
+              Vector{Union{Int64, Nothing}}
+        @test Quiver.read_scalar_floats(db, "Collection", "some_float") isa
+              Vector{Union{Float64, Nothing}}
+
+        Quiver.create_element!(db, "Collection"; label = "Item 1", some_integer = 10, some_float = 1.5)
+
+        # Populated read of the same columns yields the identical element types.
+        @test Quiver.read_scalar_strings(db, "Collection", "label") isa Vector{String}
+        @test Quiver.read_scalar_integers(db, "Collection", "some_integer") isa
+              Vector{Union{Int64, Nothing}}
+        @test Quiver.read_scalar_floats(db, "Collection", "some_float") isa
+              Vector{Union{Float64, Nothing}}
+
+        Quiver.close!(db)
+    end
+
+    @testset "All-NULL nullable column stays full-length Optional" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Config 1")
+        Quiver.create_element!(db, "Configuration"; label = "Config 2")
+
+        result = Quiver.read_scalar_floats(db, "Configuration", "float_attribute")
+        @test result isa Vector{Union{Float64, Nothing}}
+        @test result == [nothing, nothing]
+
+        Quiver.close!(db)
+    end
     # Read by ID tests
 
     @testset "Scalar Integers by ID" begin

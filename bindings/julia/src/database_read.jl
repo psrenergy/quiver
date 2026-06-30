@@ -1,4 +1,6 @@
 function read_scalar_integers(db::Database, collection::String, attribute::String)
+    # ponytail: one extra PRAGMA table_info per read; thread not_null out of the C read API if it ever matters.
+    not_null = get_scalar_metadata(db, collection, attribute).not_null
     out_values = Ref{Ptr{Int64}}(C_NULL)
     out_mask = Ref{Ptr{UInt8}}(C_NULL)
     out_count = Ref{Csize_t}(0)
@@ -7,18 +9,24 @@ function read_scalar_integers(db::Database, collection::String, attribute::Strin
 
     count = out_count[]
     if count == 0 || out_values[] == C_NULL
-        return Optional{Int64}[]
+        return not_null ? Int64[] : Optional{Int64}[]
     end
 
     values = unsafe_wrap(Array, out_values[], count)
     mask = unsafe_wrap(Array, out_mask[], count)
-    result = Optional{Int64}[mask[i] != 0 ? values[i] : nothing for i in 1:count]
+    result = if not_null
+        Int64[values[i] for i in 1:count]
+    else
+        Optional{Int64}[mask[i] != 0 ? values[i] : nothing for i in 1:count]
+    end
     C.quiver_database_free_integer_array(out_values[])
     C.quiver_database_free_mask(out_mask[])
     return result
 end
 
 function read_scalar_floats(db::Database, collection::String, attribute::String)
+    # ponytail: one extra PRAGMA table_info per read; thread not_null out of the C read API if it ever matters.
+    not_null = get_scalar_metadata(db, collection, attribute).not_null
     out_values = Ref{Ptr{Float64}}(C_NULL)
     out_mask = Ref{Ptr{UInt8}}(C_NULL)
     out_count = Ref{Csize_t}(0)
@@ -27,18 +35,24 @@ function read_scalar_floats(db::Database, collection::String, attribute::String)
 
     count = out_count[]
     if count == 0 || out_values[] == C_NULL
-        return Optional{Float64}[]
+        return not_null ? Float64[] : Optional{Float64}[]
     end
 
     values = unsafe_wrap(Array, out_values[], count)
     mask = unsafe_wrap(Array, out_mask[], count)
-    result = Optional{Float64}[mask[i] != 0 ? values[i] : nothing for i in 1:count]
+    result = if not_null
+        Float64[values[i] for i in 1:count]
+    else
+        Optional{Float64}[mask[i] != 0 ? values[i] : nothing for i in 1:count]
+    end
     C.quiver_database_free_float_array(out_values[])
     C.quiver_database_free_mask(out_mask[])
     return result
 end
 
 function read_scalar_strings(db::Database, collection::String, attribute::String)
+    # ponytail: one extra PRAGMA table_info per read; thread not_null out of the C read API if it ever matters.
+    not_null = get_scalar_metadata(db, collection, attribute).not_null
     out_values = Ref{Ptr{Ptr{Cchar}}}(C_NULL)
     out_count = Ref{Csize_t}(0)
 
@@ -46,11 +60,15 @@ function read_scalar_strings(db::Database, collection::String, attribute::String
 
     count = out_count[]
     if count == 0 || out_values[] == C_NULL
-        return Optional{String}[]
+        return not_null ? String[] : Optional{String}[]
     end
 
     ptrs = unsafe_wrap(Array, out_values[], count)
-    result = Optional{String}[ptr == C_NULL ? nothing : unsafe_string(ptr) for ptr in ptrs]
+    result = if not_null
+        String[unsafe_string(ptr) for ptr in ptrs]
+    else
+        Optional{String}[ptr == C_NULL ? nothing : unsafe_string(ptr) for ptr in ptrs]
+    end
     C.quiver_database_free_string_array(out_values[], count)
     return result
 end
