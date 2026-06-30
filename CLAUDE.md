@@ -98,6 +98,17 @@ Settled questions — don't relitigate without the user; each was decided delibe
   (`#ts.<dimension>`), value columns may be short/sparse/empty (missing cells write NULL),
   longer-than-dimension errors, and the named-but-empty anti-silent-clear trap is preserved
   (`{}` clears).
+- **Scalar bulk reads preserve NULLs positionally (one entry per element).** `read_scalar_{integers,
+  floats,strings}` return `std::vector<std::optional<T>>` in C++ (mirroring the `_by_id` variants);
+  a SQL NULL is `nullopt`, aligned with `read_element_ids` by `ORDER BY rowid` — NULLs are never
+  dropped. The C API numeric readers carry a parallel `uint8_t* out_mask` (`mask[i] == 0` = NULL,
+  data slot is a 0/0.0 placeholder) freed by `quiver_database_free_mask`; the string reader needs
+  no mask — a NULL is a `nullptr` entry in the `char**`. FFI bindings always return the nullable
+  element type (`Vector{Union{T,Nothing}}` / `list[T|None]` / `List<T?>` / `(T|null)[]`). Lua uses
+  `nil` holes (only `to_lua_table` changed; no C API mask) with `read_element_ids` as the
+  count/position authority since `#t` is unreliable across holes. Scope is **scalars only** — the
+  shared dense `read_column_values<T>` still serves vector/set `_by_id` and `read_element_ids`
+  (NOT NULL / PK by convention); vector/set readers are unchanged.
 
 ## Do Not "Fix"
 
@@ -305,7 +316,7 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
 - Factory methods: `from_schema()`, `from_migrations()` — `DatabaseOptions` (`read_only`, `console_level`) exposed as optional parameters in every binding
 - Transaction control: `begin_transaction()`, `commit()`, `rollback()`, `in_transaction()`
 - CRUD: `create_element(collection, element)`, `update_element`, `delete_element`
-- Scalar/vector/set readers: `read_{scalar,vector,set}_{integers,floats,strings}(collection, attribute)` (+ `_by_id` variants)
+- Scalar/vector/set readers: `read_{scalar,vector,set}_{integers,floats,strings}(collection, attribute)` (+ `_by_id` variants). Scalar bulk readers return one entry per element with SQL NULLs preserved positionally (`std::optional` / `nothing`/`None`/`null`/`nil`); see the scalar-NULL design decision.
 - Time series: `read_time_series_group()`, `update_time_series_group()`, `upsert_time_series_row()` — group read/update use N typed value columns per group; `upsert_time_series_row` inserts or replaces a single row by its dimension key (`INSERT OR REPLACE`). All bindings expose group data **column-oriented** (`{column: [values]}`); updating with no data clears the group. Integer values are accepted for REAL columns (converted on insert). NULL cells round-trip through every layer: the C API carries a per-cell presence mask, the FFI bindings surface null-padded columns (`nothing`/`None`/`null`), and Lua uses plain `nil` holes with the row count taken from the dimension column(s) — see the design decision below.
 - Time series row: `read_time_series_row(collection, group, attribute, date_time)` — one value per element using "last non-null value at or before date_time" semantics; null Value for elements with no matching data (bindings surface `nothing`/`null`/`None`/`nil`).
 - Time series files: `has_time_series_files()`, `list_time_series_files_columns()`, `read_time_series_files()`, `update_time_series_files()`

@@ -1023,12 +1023,14 @@ TEST(DatabaseCApi, UpdateElementScalarFkLabel) {
 
     // Verify: parent_id resolved to Parent 2's ID (2)
     int64_t* parent_ids = nullptr;
+    uint8_t* mask = nullptr;
     size_t count = 0;
-    ASSERT_EQ(quiver_database_read_scalar_integers(db, "Child", "parent_id", &parent_ids, &count), QUIVER_OK);
+    ASSERT_EQ(quiver_database_read_scalar_integers(db, "Child", "parent_id", &parent_ids, &mask, &count), QUIVER_OK);
     ASSERT_EQ(count, 1);
     EXPECT_EQ(parent_ids[0], 2);
 
     quiver_database_free_integer_array(parent_ids);
+    quiver_database_free_mask(mask);
     quiver_database_close(db);
 }
 
@@ -1072,12 +1074,14 @@ TEST(DatabaseCApi, UpdateElementScalarFkInteger) {
 
     // Verify: parent_id updated to 2
     int64_t* parent_ids = nullptr;
+    uint8_t* mask = nullptr;
     size_t count = 0;
-    ASSERT_EQ(quiver_database_read_scalar_integers(db, "Child", "parent_id", &parent_ids, &count), QUIVER_OK);
+    ASSERT_EQ(quiver_database_read_scalar_integers(db, "Child", "parent_id", &parent_ids, &mask, &count), QUIVER_OK);
     ASSERT_EQ(count, 1);
     EXPECT_EQ(parent_ids[0], 2);
 
     quiver_database_free_integer_array(parent_ids);
+    quiver_database_free_mask(mask);
     quiver_database_close(db);
 }
 
@@ -1316,11 +1320,13 @@ TEST(DatabaseCApi, UpdateElementAllFkTypesInOneCall) {
 
     // Verify scalar FK: parent_id == 2
     int64_t* parent_ids = nullptr;
+    uint8_t* mask = nullptr;
     size_t count = 0;
-    ASSERT_EQ(quiver_database_read_scalar_integers(db, "Child", "parent_id", &parent_ids, &count), QUIVER_OK);
+    ASSERT_EQ(quiver_database_read_scalar_integers(db, "Child", "parent_id", &parent_ids, &mask, &count), QUIVER_OK);
     ASSERT_EQ(count, 1);
     EXPECT_EQ(parent_ids[0], 2);
     quiver_database_free_integer_array(parent_ids);
+    quiver_database_free_mask(mask);
 
     // Verify set FK: mentor_id == {2}
     int64_t* mentors = nullptr;
@@ -1456,12 +1462,14 @@ TEST(DatabaseCApi, UpdateElementFkResolutionFailurePreservesExisting) {
 
     // Verify: original value preserved (parent_id still points to Parent 1's ID)
     int64_t* parent_ids = nullptr;
+    uint8_t* mask = nullptr;
     size_t count = 0;
-    ASSERT_EQ(quiver_database_read_scalar_integers(db, "Child", "parent_id", &parent_ids, &count), QUIVER_OK);
+    ASSERT_EQ(quiver_database_read_scalar_integers(db, "Child", "parent_id", &parent_ids, &mask, &count), QUIVER_OK);
     ASSERT_EQ(count, 1);
     EXPECT_EQ(parent_ids[0], 1);
 
     quiver_database_free_integer_array(parent_ids);
+    quiver_database_free_mask(mask);
     quiver_database_close(db);
 }
 

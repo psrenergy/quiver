@@ -232,7 +232,7 @@ TEST_F(LuaRunnerTest, ScalarTypeCoercionPolicy) {
 
     auto floats = db.read_scalar_floats("Collection", "some_float");
     ASSERT_EQ(floats.size(), 1);
-    EXPECT_DOUBLE_EQ(floats[0], 7.0);
+    EXPECT_DOUBLE_EQ(*floats[0], 7.0);
 }
 
 TEST_F(LuaRunnerTest, ReadElementIdsFromNonExistentCollection) {

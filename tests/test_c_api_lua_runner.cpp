@@ -95,12 +95,14 @@ TEST_F(LuaRunnerCApiTest, CreateElement) {
 
     // Verify with C API read
     int64_t* values = nullptr;
+    uint8_t* mask = nullptr;
     size_t count = 0;
-    auto read_result = quiver_database_read_scalar_integers(db, "Collection", "some_integer", &values, &count);
+    auto read_result = quiver_database_read_scalar_integers(db, "Collection", "some_integer", &values, &mask, &count);
     EXPECT_EQ(read_result, QUIVER_OK);
     EXPECT_EQ(count, 1);
     EXPECT_EQ(values[0], 42);
     quiver_database_free_integer_array(values);
+    quiver_database_free_mask(mask);
 
     quiver_lua_runner_free(lua);
     quiver_database_close(db);

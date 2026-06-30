@@ -10,11 +10,13 @@ QUIVER_C_API quiver_error_t quiver_database_read_scalar_integers(quiver_database
                                                                  const char* collection,
                                                                  const char* attribute,
                                                                  int64_t** out_values,
+                                                                 uint8_t** out_mask,
                                                                  size_t* out_count) {
-    QUIVER_REQUIRE(db, collection, attribute, out_values, out_count);
+    QUIVER_REQUIRE(db, collection, attribute, out_values, out_mask, out_count);
 
     try {
-        return read_scalars_impl(db->db.read_scalar_integers(collection, attribute), out_values, out_count);
+        return read_scalars_masked_impl(
+            db->db.read_scalar_integers(collection, attribute), out_values, out_mask, out_count);
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
         return QUIVER_ERROR;
@@ -25,11 +27,13 @@ QUIVER_C_API quiver_error_t quiver_database_read_scalar_floats(quiver_database_t
                                                                const char* collection,
                                                                const char* attribute,
                                                                double** out_values,
+                                                               uint8_t** out_mask,
                                                                size_t* out_count) {
-    QUIVER_REQUIRE(db, collection, attribute, out_values, out_count);
+    QUIVER_REQUIRE(db, collection, attribute, out_values, out_mask, out_count);
 
     try {
-        return read_scalars_impl(db->db.read_scalar_floats(collection, attribute), out_values, out_count);
+        return read_scalars_masked_impl(
+            db->db.read_scalar_floats(collection, attribute), out_values, out_mask, out_count);
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
         return QUIVER_ERROR;
@@ -60,6 +64,11 @@ QUIVER_C_API quiver_error_t quiver_database_free_integer_array(int64_t* values) 
 
 QUIVER_C_API quiver_error_t quiver_database_free_float_array(double* values) {
     delete[] values;
+    return QUIVER_OK;
+}
+
+QUIVER_C_API quiver_error_t quiver_database_free_mask(uint8_t* mask) {
+    delete[] mask;
     return QUIVER_OK;
 }
 

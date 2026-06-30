@@ -41,6 +41,10 @@ ruff.toml         # Lint/format config (format.bat runs ruff)
   `__init__.py`; internal mixin classes are not exported.
 - **Per-method FFI boilerplate is the house style** — don't collapse it into
   closure-parameterized helpers (root "Do not 'fix'" list).
+- **Scalar bulk NULLs**: `read_scalar_integers`/`_floats` decode a parallel `uint8_t**` mask into
+  `list[T | None]` (`mask[i]` falsy → `None`); `read_scalar_strings` already returns `list[str | None]`
+  via the `ffi.NULL` guard. `_c_api.py` carries the mask out-param on the two numeric readers plus
+  `quiver_database_free_mask`.
 - **Time-series group NULLs**: `read_time_series_group` surfaces a SQL NULL cell as `None` in the
   column list (decoded via the per-cell `uint8_t**` mask out-param); the dimension column stays
   dense datetimes. `_marshal_time_series_columns` dispatches on the first non-`None` element, builds

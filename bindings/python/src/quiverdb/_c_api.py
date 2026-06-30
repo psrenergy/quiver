@@ -100,10 +100,10 @@ ffi.cdef("""
     // Read scalar attributes
     quiver_error_t quiver_database_read_scalar_integers(quiver_database_t* db,
         const char* collection, const char* attribute,
-        int64_t** out_values, size_t* out_count);
+        int64_t** out_values, uint8_t** out_mask, size_t* out_count);
     quiver_error_t quiver_database_read_scalar_floats(quiver_database_t* db,
         const char* collection, const char* attribute,
-        double** out_values, size_t* out_count);
+        double** out_values, uint8_t** out_mask, size_t* out_count);
     quiver_error_t quiver_database_read_scalar_strings(quiver_database_t* db,
         const char* collection, const char* attribute,
         char*** out_values, size_t* out_count);
@@ -170,6 +170,7 @@ ffi.cdef("""
     // Free functions for read results
     quiver_error_t quiver_database_free_integer_array(int64_t* values);
     quiver_error_t quiver_database_free_float_array(double* values);
+    quiver_error_t quiver_database_free_mask(uint8_t* mask);
     quiver_error_t quiver_database_free_string_array(char** values, size_t count);
     quiver_error_t quiver_database_free_integer_vectors(int64_t** vectors, size_t* sizes, size_t count);
     quiver_error_t quiver_database_free_float_vectors(double** vectors, size_t* sizes, size_t count);

@@ -426,11 +426,12 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
 
     # -- Scalar reads (bulk) --------------------------------------------------
 
-    def read_scalar_integers(self, collection: str, attribute: str) -> list[int]:
-        """Read all integer values for a scalar attribute across all elements."""
+    def read_scalar_integers(self, collection: str, attribute: str) -> list[int | None]:
+        """Read all integer values for a scalar attribute. One entry per element; NULL is None."""
         self._ensure_open()
         lib = get_lib()
         out_values = ffi.new("int64_t**")
+        out_mask = ffi.new("uint8_t**")
         out_count = ffi.new("size_t*")
         check(
             lib.quiver_database_read_scalar_integers(
@@ -438,6 +439,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
                 collection.encode("utf-8"),
                 attribute.encode("utf-8"),
                 out_values,
+                out_mask,
                 out_count,
             )
         )
@@ -445,15 +447,18 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         if count == 0 or out_values[0] == ffi.NULL:
             return []
         try:
-            return [out_values[0][i] for i in range(count)]
+            mask = out_mask[0]
+            return [out_values[0][i] if mask[i] else None for i in range(count)]
         finally:
             lib.quiver_database_free_integer_array(out_values[0])
+            lib.quiver_database_free_mask(out_mask[0])
 
-    def read_scalar_floats(self, collection: str, attribute: str) -> list[float]:
-        """Read all float values for a scalar attribute across all elements."""
+    def read_scalar_floats(self, collection: str, attribute: str) -> list[float | None]:
+        """Read all float values for a scalar attribute. One entry per element; NULL is None."""
         self._ensure_open()
         lib = get_lib()
         out_values = ffi.new("double**")
+        out_mask = ffi.new("uint8_t**")
         out_count = ffi.new("size_t*")
         check(
             lib.quiver_database_read_scalar_floats(
@@ -461,6 +466,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
                 collection.encode("utf-8"),
                 attribute.encode("utf-8"),
                 out_values,
+                out_mask,
                 out_count,
             )
         )
@@ -468,9 +474,11 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         if count == 0 or out_values[0] == ffi.NULL:
             return []
         try:
-            return [out_values[0][i] for i in range(count)]
+            mask = out_mask[0]
+            return [out_values[0][i] if mask[i] else None for i in range(count)]
         finally:
             lib.quiver_database_free_float_array(out_values[0])
+            lib.quiver_database_free_mask(out_mask[0])
 
     def read_scalar_strings(self, collection: str, attribute: str) -> list[str | None]:
         """Read all string values for a scalar attribute. NULL values become None."""

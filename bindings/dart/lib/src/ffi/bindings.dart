@@ -373,6 +373,7 @@ class QuiverDatabaseBindings {
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
     ffi.Pointer<ffi.Pointer<ffi.Int64>> out_values,
+    ffi.Pointer<ffi.Pointer<ffi.Uint8>> out_mask,
     ffi.Pointer<ffi.Size> out_count,
   ) {
     return _quiver_database_read_scalar_integers(
@@ -380,6 +381,7 @@ class QuiverDatabaseBindings {
       collection,
       attribute,
       out_values,
+      out_mask,
       out_count,
     );
   }
@@ -392,6 +394,7 @@ class QuiverDatabaseBindings {
             ffi.Pointer<ffi.Char>,
             ffi.Pointer<ffi.Char>,
             ffi.Pointer<ffi.Pointer<ffi.Int64>>,
+            ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
             ffi.Pointer<ffi.Size>,
           )
         >
@@ -403,6 +406,7 @@ class QuiverDatabaseBindings {
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Pointer<ffi.Int64>>,
+          ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
           ffi.Pointer<ffi.Size>,
         )
       >();
@@ -412,6 +416,7 @@ class QuiverDatabaseBindings {
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
     ffi.Pointer<ffi.Pointer<ffi.Double>> out_values,
+    ffi.Pointer<ffi.Pointer<ffi.Uint8>> out_mask,
     ffi.Pointer<ffi.Size> out_count,
   ) {
     return _quiver_database_read_scalar_floats(
@@ -419,6 +424,7 @@ class QuiverDatabaseBindings {
       collection,
       attribute,
       out_values,
+      out_mask,
       out_count,
     );
   }
@@ -431,6 +437,7 @@ class QuiverDatabaseBindings {
             ffi.Pointer<ffi.Char>,
             ffi.Pointer<ffi.Char>,
             ffi.Pointer<ffi.Pointer<ffi.Double>>,
+            ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
             ffi.Pointer<ffi.Size>,
           )
         >
@@ -442,6 +449,7 @@ class QuiverDatabaseBindings {
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Pointer<ffi.Double>>,
+          ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
           ffi.Pointer<ffi.Size>,
         )
       >();
@@ -1952,6 +1960,20 @@ class QuiverDatabaseBindings {
       _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<ffi.Double>)>>('quiver_database_free_float_array');
   late final _quiver_database_free_float_array = _quiver_database_free_float_arrayPtr
       .asFunction<int Function(ffi.Pointer<ffi.Double>)>();
+
+  int quiver_database_free_mask(
+    ffi.Pointer<ffi.Uint8> mask,
+  ) {
+    return _quiver_database_free_mask(
+      mask,
+    );
+  }
+
+  late final _quiver_database_free_maskPtr = _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<ffi.Uint8>)>>(
+    'quiver_database_free_mask',
+  );
+  late final _quiver_database_free_mask = _quiver_database_free_maskPtr
+      .asFunction<int Function(ffi.Pointer<ffi.Uint8>)>();
 
   int quiver_database_free_string_array(
     ffi.Pointer<ffi.Pointer<ffi.Char>> values,

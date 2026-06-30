@@ -35,6 +35,10 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   `finally`. Typed time-series columns go through the shared private
   `_marshalTimeSeriesColumn(Arena, List<Object?>)` (used by `updateTimeSeriesGroup` and
   `upsertTimeSeriesRow`); query parameters through `_marshalParams`.
+- **Scalar bulk NULLs**: `readScalarIntegers`/`readScalarFloats` decode a parallel `Pointer<Uint8>`
+  mask into `List<int?>`/`List<double?>` (mask 0 → `null`); `readScalarStrings` returns `List<String?>`,
+  null-guarding the pointer before `toDartString`. `bindings.dart` carries the mask arg +
+  `quiver_database_free_mask` (regenerate via ffigen; clear `.dart_tool` caches on C-API changes).
 - **Time-series group NULLs**: `readTimeSeriesGroup`/`updateTimeSeriesGroup` use
   `Map<String, List<Object?>>` — a `null` cell is a SQL NULL. `_marshalTimeSeriesColumn` returns a
   `({int type, Pointer<Void> data, Pointer<Uint8> hasValue})` record (the per-cell mask;

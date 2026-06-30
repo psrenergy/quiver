@@ -104,12 +104,10 @@ void main() {
           'float_attribute': 40.0,
         });
 
-        // One entry per element: the NULL must occupy a slot, not be dropped.
-        // (Statically typed return can't express the null slot yet; positional
-        // checks come with the fix.)
+        // One entry per element; the NULL occupies its slot positionally.
         expect(
-          db.readScalarFloats('Configuration', 'float_attribute').length,
-          4,
+          db.readScalarFloats('Configuration', 'float_attribute'),
+          equals([10.0, null, 30.0, 40.0]),
         );
       } finally {
         db.close();

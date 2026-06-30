@@ -6,7 +6,9 @@
 #include "quiver/database.h"
 #include "utils/string.h"
 
+#include <cstdint>
 #include <cstring>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -20,6 +22,33 @@ quiver_error_t read_scalars_impl(const std::vector<T>& values, T** out_values, s
     }
     *out_values = new T[values.size()];
     std::copy(values.begin(), values.end(), *out_values);
+    return QUIVER_OK;
+}
+
+// Helper for reading nullable numeric scalars into a value array + parallel presence mask.
+// mask[i] == 0 means SQL NULL; the data slot then holds a placeholder (0 / 0.0) to be ignored.
+template <typename T>
+quiver_error_t read_scalars_masked_impl(const std::vector<std::optional<T>>& values,
+                                        T** out_values,
+                                        uint8_t** out_mask,
+                                        size_t* out_count) {
+    *out_count = values.size();
+    if (values.empty()) {
+        *out_values = nullptr;
+        *out_mask = nullptr;
+        return QUIVER_OK;
+    }
+    *out_values = new T[values.size()];
+    *out_mask = new uint8_t[values.size()];
+    for (size_t i = 0; i < values.size(); ++i) {
+        if (values[i]) {
+            (*out_values)[i] = *values[i];
+            (*out_mask)[i] = 1;
+        } else {
+            (*out_values)[i] = T{};
+            (*out_mask)[i] = 0;
+        }
+    }
     return QUIVER_OK;
 }
 
@@ -95,6 +124,22 @@ inline quiver_error_t copy_strings_to_c(const std::vector<std::string>& values, 
     *out_values = new char*[values.size()];
     for (size_t i = 0; i < values.size(); ++i) {
         (*out_values)[i] = quiver::string::new_c_str(values[i]);
+    }
+    return QUIVER_OK;
+}
+
+// Overload for nullable scalar strings: a SQL NULL becomes a nullptr entry in the array
+// (no mask needed — a NULL char* is unambiguous). free_string_array tolerates nullptr slots.
+inline quiver_error_t
+copy_strings_to_c(const std::vector<std::optional<std::string>>& values, char*** out_values, size_t* out_count) {
+    *out_count = values.size();
+    if (values.empty()) {
+        *out_values = nullptr;
+        return QUIVER_OK;
+    }
+    *out_values = new char*[values.size()];
+    for (size_t i = 0; i < values.size(); ++i) {
+        (*out_values)[i] = values[i] ? quiver::string::new_c_str(*values[i]) : nullptr;
     }
     return QUIVER_OK;
 }

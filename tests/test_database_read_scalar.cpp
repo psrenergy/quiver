@@ -41,8 +41,8 @@ TEST(Database, ReadScalarFloats) {
 
     auto values = db.read_scalar_floats("Configuration", "float_attribute");
     EXPECT_EQ(values.size(), 2);
-    EXPECT_DOUBLE_EQ(values[0], 3.14);
-    EXPECT_DOUBLE_EQ(values[1], 2.71);
+    EXPECT_DOUBLE_EQ(*values[0], 3.14);
+    EXPECT_DOUBLE_EQ(*values[1], 2.71);
 }
 
 TEST(Database, ReadScalarStrings) {
@@ -85,23 +85,82 @@ TEST(Database, ReadScalarEmpty) {
 // NULL handling in bulk scalar reads (regression: NULLs must not be dropped)
 // ============================================================================
 
-TEST(Database, ReadScalarFloatsPreservesNullCount) {
+TEST(Database, ReadScalarFloatsPreservesNull) {
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
 
     // float_attribute has no default, so an unset value is SQL NULL.
-    db.create_element(
-        "Configuration", quiver::Element().set("label", std::string("Config 1")).set("float_attribute", 10.0));
+    db.create_element("Configuration",
+                      quiver::Element().set("label", std::string("Config 1")).set("float_attribute", 10.0));
     db.create_element("Configuration", quiver::Element().set("label", std::string("Config 2")));  // NULL float
-    db.create_element(
-        "Configuration", quiver::Element().set("label", std::string("Config 3")).set("float_attribute", 30.0));
-    db.create_element(
-        "Configuration", quiver::Element().set("label", std::string("Config 4")).set("float_attribute", 40.0));
+    db.create_element("Configuration",
+                      quiver::Element().set("label", std::string("Config 3")).set("float_attribute", 30.0));
+    db.create_element("Configuration",
+                      quiver::Element().set("label", std::string("Config 4")).set("float_attribute", 40.0));
 
     auto values = db.read_scalar_floats("Configuration", "float_attribute");
-    // One entry per element: the NULL must occupy a slot, not be silently dropped.
-    // (Statically typed return can't express the null slot yet; positional checks come with the fix.)
-    EXPECT_EQ(values.size(), 4u);
+    // One entry per element; the NULL occupies its slot positionally.
+    ASSERT_EQ(values.size(), 4u);
+    ASSERT_TRUE(values[0].has_value());
+    EXPECT_DOUBLE_EQ(*values[0], 10.0);
+    EXPECT_FALSE(values[1].has_value());
+    ASSERT_TRUE(values[2].has_value());
+    EXPECT_DOUBLE_EQ(*values[2], 30.0);
+    ASSERT_TRUE(values[3].has_value());
+    EXPECT_DOUBLE_EQ(*values[3], 40.0);
+}
+
+TEST(Database, ReadScalarIntegersPreservesNull) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("all_types.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    // AllTypes.some_integer has no default, so an unset value is SQL NULL.
+    db.create_element("AllTypes", quiver::Element().set("label", std::string("a")).set("some_integer", int64_t{10}));
+    db.create_element("AllTypes", quiver::Element().set("label", std::string("b")));  // NULL integer
+    db.create_element("AllTypes", quiver::Element().set("label", std::string("c")).set("some_integer", int64_t{30}));
+
+    auto values = db.read_scalar_integers("AllTypes", "some_integer");
+    ASSERT_EQ(values.size(), 3u);
+    ASSERT_TRUE(values[0].has_value());
+    EXPECT_EQ(*values[0], 10);
+    EXPECT_FALSE(values[1].has_value());
+    ASSERT_TRUE(values[2].has_value());
+    EXPECT_EQ(*values[2], 30);
+}
+
+TEST(Database, ReadScalarStringsPreservesNull) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    db.create_element(
+        "Configuration",
+        quiver::Element().set("label", std::string("Config 1")).set("string_attribute", std::string("hello")));
+    db.create_element("Configuration", quiver::Element().set("label", std::string("Config 2")));  // NULL string
+    db.create_element(
+        "Configuration",
+        quiver::Element().set("label", std::string("Config 3")).set("string_attribute", std::string("world")));
+
+    auto values = db.read_scalar_strings("Configuration", "string_attribute");
+    ASSERT_EQ(values.size(), 3u);
+    ASSERT_TRUE(values[0].has_value());
+    EXPECT_EQ(*values[0], "hello");
+    EXPECT_FALSE(values[1].has_value());
+    ASSERT_TRUE(values[2].has_value());
+    EXPECT_EQ(*values[2], "world");
+}
+
+TEST(Database, ReadScalarFloatsAllNull) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    db.create_element("Configuration", quiver::Element().set("label", std::string("Config 1")));
+    db.create_element("Configuration", quiver::Element().set("label", std::string("Config 2")));
+
+    auto values = db.read_scalar_floats("Configuration", "float_attribute");
+    // All-NULL column: full-length result, every slot empty (not an empty vector).
+    ASSERT_EQ(values.size(), 2u);
+    EXPECT_FALSE(values[0].has_value());
+    EXPECT_FALSE(values[1].has_value());
 }
 
 // ============================================================================
@@ -312,21 +371,21 @@ TEST(Database, ReadScalarOrderFollowsInsertionOrder) {
     EXPECT_EQ(ids_from_scalar_integers[0], 1);
     EXPECT_EQ(ids_from_read_element_ids[0], 1);
     EXPECT_EQ(integers[0], expected_integers[0]);
-    EXPECT_DOUBLE_EQ(floats[0], expected_floats[0]);
+    EXPECT_DOUBLE_EQ(*floats[0], expected_floats[0]);
 
     // tiger
     EXPECT_EQ(some_labels[5], "tiger");
     EXPECT_EQ(ids_from_scalar_integers[5], 6);
     EXPECT_EQ(ids_from_read_element_ids[5], 6);
     EXPECT_EQ(integers[5], expected_integers[5]);
-    EXPECT_DOUBLE_EQ(floats[5], expected_floats[5]);
+    EXPECT_DOUBLE_EQ(*floats[5], expected_floats[5]);
 
     // penguin
     EXPECT_EQ(some_labels[9], "penguin");
     EXPECT_EQ(ids_from_scalar_integers[9], 10);
     EXPECT_EQ(ids_from_read_element_ids[9], 10);
     EXPECT_EQ(integers[9], expected_integers[9]);
-    EXPECT_DOUBLE_EQ(floats[9], expected_floats[9]);
+    EXPECT_DOUBLE_EQ(*floats[9], expected_floats[9]);
 }
 
 // ============================================================================

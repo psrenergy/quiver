@@ -121,21 +121,26 @@ TEST(DatabaseCApiCSV, ImportCSV_Scalar_LabelOnThirdColumn) {
 
     // Verify statuses
     int64_t* statuses = nullptr;
+    uint8_t* status_mask = nullptr;
     size_t status_count = 0;
-    ASSERT_EQ(quiver_database_read_scalar_integers(db, "Items", "status", &statuses, &status_count), QUIVER_OK);
+    ASSERT_EQ(quiver_database_read_scalar_integers(db, "Items", "status", &statuses, &status_mask, &status_count),
+              QUIVER_OK);
     ASSERT_EQ(status_count, 2u);
     EXPECT_EQ(statuses[0], 1);
     EXPECT_EQ(statuses[1], 2);
     quiver_database_free_integer_array(statuses);
+    quiver_database_free_mask(status_mask);
 
     // Verify prices
     double* prices = nullptr;
+    uint8_t* price_mask = nullptr;
     size_t price_count = 0;
-    ASSERT_EQ(quiver_database_read_scalar_floats(db, "Items", "price", &prices, &price_count), QUIVER_OK);
+    ASSERT_EQ(quiver_database_read_scalar_floats(db, "Items", "price", &prices, &price_mask, &price_count), QUIVER_OK);
     ASSERT_EQ(price_count, 2u);
     EXPECT_NEAR(prices[0], 10.5, 0.001);
     EXPECT_NEAR(prices[1], 20.0, 0.001);
     quiver_database_free_float_array(prices);
+    quiver_database_free_mask(price_mask);
 
     fs::remove(csv_path);
     quiver_database_close(db);

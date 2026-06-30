@@ -1,32 +1,40 @@
 function read_scalar_integers(db::Database, collection::String, attribute::String)
     out_values = Ref{Ptr{Int64}}(C_NULL)
+    out_mask = Ref{Ptr{UInt8}}(C_NULL)
     out_count = Ref{Csize_t}(0)
 
-    check(C.quiver_database_read_scalar_integers(db.ptr, collection, attribute, out_values, out_count))
+    check(C.quiver_database_read_scalar_integers(db.ptr, collection, attribute, out_values, out_mask, out_count))
 
     count = out_count[]
     if count == 0 || out_values[] == C_NULL
-        return Int64[]
+        return Union{Int64, Nothing}[]
     end
 
-    result = unsafe_wrap(Array, out_values[], count) |> copy
+    values = unsafe_wrap(Array, out_values[], count)
+    mask = unsafe_wrap(Array, out_mask[], count)
+    result = Union{Int64, Nothing}[mask[i] != 0 ? values[i] : nothing for i in 1:count]
     C.quiver_database_free_integer_array(out_values[])
+    C.quiver_database_free_mask(out_mask[])
     return result
 end
 
 function read_scalar_floats(db::Database, collection::String, attribute::String)
     out_values = Ref{Ptr{Float64}}(C_NULL)
+    out_mask = Ref{Ptr{UInt8}}(C_NULL)
     out_count = Ref{Csize_t}(0)
 
-    check(C.quiver_database_read_scalar_floats(db.ptr, collection, attribute, out_values, out_count))
+    check(C.quiver_database_read_scalar_floats(db.ptr, collection, attribute, out_values, out_mask, out_count))
 
     count = out_count[]
     if count == 0 || out_values[] == C_NULL
-        return Float64[]
+        return Union{Float64, Nothing}[]
     end
 
-    result = unsafe_wrap(Array, out_values[], count) |> copy
+    values = unsafe_wrap(Array, out_values[], count)
+    mask = unsafe_wrap(Array, out_mask[], count)
+    result = Union{Float64, Nothing}[mask[i] != 0 ? values[i] : nothing for i in 1:count]
     C.quiver_database_free_float_array(out_values[])
+    C.quiver_database_free_mask(out_mask[])
     return result
 end
 
@@ -38,11 +46,11 @@ function read_scalar_strings(db::Database, collection::String, attribute::String
 
     count = out_count[]
     if count == 0 || out_values[] == C_NULL
-        return String[]
+        return Union{String, Nothing}[]
     end
 
     ptrs = unsafe_wrap(Array, out_values[], count)
-    result = [unsafe_string(ptr) for ptr in ptrs]
+    result = Union{String, Nothing}[ptr == C_NULL ? nothing : unsafe_string(ptr) for ptr in ptrs]
     C.quiver_database_free_string_array(out_values[], count)
     return result
 end

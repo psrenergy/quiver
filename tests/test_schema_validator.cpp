@@ -264,9 +264,10 @@ TEST_F(SchemaValidatorFixture, CollectionWithOptionalScalars) {
 
     EXPECT_GT(id, 0);
 
-    // Read back - optional scalars should be null
+    // Read back - the NULL occupies its slot positionally (one entry per element).
     auto integers = db.read_scalar_integers("Collection", "some_integer");
-    EXPECT_TRUE(integers.empty());  // NULL values are skipped
+    ASSERT_EQ(integers.size(), 1u);
+    EXPECT_FALSE(integers[0].has_value());
 }
 
 TEST_F(SchemaValidatorFixture, RelationsSchemaWithVectorFK) {
