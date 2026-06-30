@@ -581,7 +581,8 @@ function read_time_series_group(db::Database, collection::String, group::String,
                 result[col_name] = DateTime[string_to_date_time(unsafe_string(p)) for p in str_ptrs]
             else
                 # Never unsafe_string a masked-out (NULL) pointer.
-                result[col_name] = Optional{String}[mask[r] != 0 ? unsafe_string(str_ptrs[r]) : nothing for r in 1:row_count]
+                result[col_name] =
+                    Optional{String}[mask[r] != 0 ? unsafe_string(str_ptrs[r]) : nothing for r in 1:row_count]
             end
         else
             throw(ArgumentError("Unsupported data type $(col_type) for column '$col_name'"))

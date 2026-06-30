@@ -63,6 +63,46 @@ include("fixture.jl")
         Quiver.close!(db)
     end
 
+    @testset "Integer Null Preserves Position" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "all_types.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        # AllTypes.some_integer has no default, so an unset value is SQL NULL.
+        Quiver.create_element!(db, "AllTypes"; label = "a", some_integer = 10)
+        Quiver.create_element!(db, "AllTypes"; label = "b")  # NULL integer
+        Quiver.create_element!(db, "AllTypes"; label = "c", some_integer = 30)
+
+        @test Quiver.read_scalar_integers(db, "AllTypes", "some_integer") == [10, nothing, 30]
+
+        Quiver.close!(db)
+    end
+
+    @testset "String Null Preserves Position" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Config 1", string_attribute = "hello")
+        Quiver.create_element!(db, "Configuration"; label = "Config 2")  # NULL string
+        Quiver.create_element!(db, "Configuration"; label = "Config 3", string_attribute = "world")
+
+        @test Quiver.read_scalar_strings(db, "Configuration", "string_attribute") == ["hello", nothing, "world"]
+
+        Quiver.close!(db)
+    end
+
+    @testset "All Null Column" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Config 1")
+        Quiver.create_element!(db, "Configuration"; label = "Config 2")
+
+        # Full-length result, every slot nothing (not an empty vector).
+        @test Quiver.read_scalar_floats(db, "Configuration", "float_attribute") == [nothing, nothing]
+
+        Quiver.close!(db)
+    end
+
     @testset "Empty Result" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
         db = Quiver.from_schema(":memory:", path_schema)

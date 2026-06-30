@@ -113,6 +113,68 @@ void main() {
         db.close();
       }
     });
+
+    test('preserves a slot for NULL integer values', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'all_types.sql'),
+      );
+      try {
+        db.createElement('AllTypes', {'label': 'a', 'some_integer': 10});
+        db.createElement('AllTypes', {'label': 'b'}); // NULL integer
+        db.createElement('AllTypes', {'label': 'c', 'some_integer': 30});
+
+        expect(
+          db.readScalarIntegers('AllTypes', 'some_integer'),
+          equals([10, null, 30]),
+        );
+      } finally {
+        db.close();
+      }
+    });
+
+    test('preserves a slot for NULL string values', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {
+          'label': 'Config 1',
+          'string_attribute': 'hello',
+        });
+        db.createElement('Configuration', {'label': 'Config 2'}); // NULL string
+        db.createElement('Configuration', {
+          'label': 'Config 3',
+          'string_attribute': 'world',
+        });
+
+        expect(
+          db.readScalarStrings('Configuration', 'string_attribute'),
+          equals(['hello', null, 'world']),
+        );
+      } finally {
+        db.close();
+      }
+    });
+
+    test('returns all-null column as full-length nulls', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Config 1'});
+        db.createElement('Configuration', {'label': 'Config 2'});
+
+        expect(
+          db.readScalarFloats('Configuration', 'float_attribute'),
+          equals([null, null]),
+        );
+      } finally {
+        db.close();
+      }
+    });
   });
 
   group('Read From Collections', () {

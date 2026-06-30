@@ -29,6 +29,14 @@ class TestReadScalarIntegers:
         result = db.read_scalar_integers("Configuration", "integer_attribute")
         assert result == []
 
+    def test_read_scalar_integers_preserves_nulls(self, all_types_db: Database) -> None:
+        # AllTypes.some_integer has no default, so an unset value is SQL NULL.
+        all_types_db.create_element("AllTypes", label="a", some_integer=10)
+        all_types_db.create_element("AllTypes", label="b")  # some_integer is NULL
+        all_types_db.create_element("AllTypes", label="c", some_integer=30)
+        result = all_types_db.read_scalar_integers("AllTypes", "some_integer")
+        assert result == [10, None, 30]
+
 
 class TestReadScalarFloats:
     def test_read_scalar_floats(self, db: Database) -> None:
@@ -52,6 +60,13 @@ class TestReadScalarFloats:
     def test_read_scalar_floats_empty_collection(self, db: Database) -> None:
         result = db.read_scalar_floats("Configuration", "float_attribute")
         assert result == []
+
+    def test_read_scalar_floats_all_null(self, db: Database) -> None:
+        db.create_element("Configuration", label="item1")
+        db.create_element("Configuration", label="item2")
+        result = db.read_scalar_floats("Configuration", "float_attribute")
+        # Full-length result, every slot None (not an empty list).
+        assert result == [None, None]
 
 
 class TestReadScalarStrings:
