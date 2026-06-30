@@ -29,6 +29,14 @@ class TestReadScalarIntegers:
         result = db.read_scalar_integers("Configuration", "integer_attribute")
         assert result == []
 
+    def test_read_scalar_integers_preserves_nulls(self, all_types_db: Database) -> None:
+        # AllTypes.some_integer has no default, so an unset value is SQL NULL.
+        all_types_db.create_element("AllTypes", label="a", some_integer=10)
+        all_types_db.create_element("AllTypes", label="b")  # some_integer is NULL
+        all_types_db.create_element("AllTypes", label="c", some_integer=30)
+        result = all_types_db.read_scalar_integers("AllTypes", "some_integer")
+        assert result == [10, None, 30]
+
 
 class TestReadScalarFloats:
     def test_read_scalar_floats(self, db: Database) -> None:
@@ -39,9 +47,26 @@ class TestReadScalarFloats:
         assert abs(result[0] - 3.14) < 1e-9
         assert abs(result[1] - 2.71) < 1e-9
 
+    def test_read_scalar_floats_preserves_nulls(self, db: Database) -> None:
+        # float_attribute has no default, so an unset value is SQL NULL.
+        db.create_element("Configuration", label="item1", float_attribute=10.0)
+        db.create_element("Configuration", label="item2")  # float_attribute is NULL
+        db.create_element("Configuration", label="item3", float_attribute=30.0)
+        db.create_element("Configuration", label="item4", float_attribute=40.0)
+        result = db.read_scalar_floats("Configuration", "float_attribute")
+        # One entry per element; the NULL must occupy a slot (None), not be dropped.
+        assert result == [10.0, None, 30.0, 40.0]
+
     def test_read_scalar_floats_empty_collection(self, db: Database) -> None:
         result = db.read_scalar_floats("Configuration", "float_attribute")
         assert result == []
+
+    def test_read_scalar_floats_all_null(self, db: Database) -> None:
+        db.create_element("Configuration", label="item1")
+        db.create_element("Configuration", label="item2")
+        result = db.read_scalar_floats("Configuration", "float_attribute")
+        # Full-length result, every slot None (not an empty list).
+        assert result == [None, None]
 
 
 class TestReadScalarStrings:
@@ -51,12 +76,12 @@ class TestReadScalarStrings:
         result = db.read_scalar_strings("Configuration", "string_attribute")
         assert result == ["hello", "world"]
 
-    def test_read_scalar_strings_skips_nulls(self, db: Database) -> None:
-        # C++ bulk read filters out NULL values (only returns non-NULL strings)
+    def test_read_scalar_strings_preserves_nulls(self, db: Database) -> None:
+        # A NULL string must occupy a slot (None), not be silently dropped.
         db.create_element("Configuration", label="item1", string_attribute="hello")
         db.create_element("Configuration", label="item2")  # string_attribute is NULL
         result = db.read_scalar_strings("Configuration", "string_attribute")
-        assert result == ["hello"]
+        assert result == ["hello", None]
 
     def test_read_scalar_strings_empty_string_preserved(self, db: Database) -> None:
         db.create_element("Configuration", label="item1", string_attribute="")

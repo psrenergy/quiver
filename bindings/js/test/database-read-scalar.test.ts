@@ -32,6 +32,62 @@ describe("readScalarIntegers / readScalarFloats / readScalarStrings", () => {
     }
   });
 
+  test("preserves a slot for NULL float values", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      // some_float has no default, so an unset value is SQL NULL.
+      db.createElement("AllTypes", { label: "Item1", some_float: 10 });
+      db.createElement("AllTypes", { label: "Item2" }); // some_float is NULL
+      db.createElement("AllTypes", { label: "Item3", some_float: 30 });
+      db.createElement("AllTypes", { label: "Item4", some_float: 40 });
+      const values = db.readScalarFloats("AllTypes", "some_float");
+      // One entry per element; the NULL must occupy a slot (null), not be dropped.
+      expect(values).toEqual([10, null, 30, 40]);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("preserves a slot for NULL integer values", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      db.createElement("AllTypes", { label: "Item1", some_integer: 10 });
+      db.createElement("AllTypes", { label: "Item2" }); // some_integer is NULL
+      db.createElement("AllTypes", { label: "Item3", some_integer: 30 });
+      const values = db.readScalarIntegers("AllTypes", "some_integer");
+      expect(values).toEqual([10, null, 30]);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("preserves a slot for NULL string values", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      db.createElement("AllTypes", { label: "Item1", some_text: "hello" });
+      db.createElement("AllTypes", { label: "Item2" }); // some_text is NULL
+      db.createElement("AllTypes", { label: "Item3", some_text: "world" });
+      // Empty string is a present value, not a NULL — it must stay distinct from null.
+      db.createElement("AllTypes", { label: "Item4", some_text: "" });
+      const values = db.readScalarStrings("AllTypes", "some_text");
+      expect(values).toEqual(["hello", null, "world", ""]);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("returns all-null column as full-length nulls", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      db.createElement("AllTypes", { label: "Item1" });
+      db.createElement("AllTypes", { label: "Item2" });
+      const values = db.readScalarFloats("AllTypes", "some_float");
+      expect(values).toEqual([null, null]);
+    } finally {
+      db.close();
+    }
+  });
+
   test("reads string scalars from collection", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {

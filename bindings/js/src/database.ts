@@ -88,9 +88,9 @@ export class Database {
   declare deleteElement: (collection: string, id: number) => void;
 
   // --- Reads (implemented in read.ts) ---
-  declare readScalarIntegers: (collection: string, attribute: string) => number[];
-  declare readScalarFloats: (collection: string, attribute: string) => number[];
-  declare readScalarStrings: (collection: string, attribute: string) => string[];
+  declare readScalarIntegers: (collection: string, attribute: string) => (number | null)[];
+  declare readScalarFloats: (collection: string, attribute: string) => (number | null)[];
+  declare readScalarStrings: (collection: string, attribute: string) => (string | null)[];
   declare readScalarIntegerById: (
     collection: string,
     attribute: string,

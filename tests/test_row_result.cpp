@@ -221,10 +221,12 @@ TEST(RowResult, ReadScalarWithNullValues) {
     e2.set("label", std::string("Item 2")).set("some_integer", int64_t{42});
     db.create_element("Collection", e2);
 
-    // Read scalars - only non-null values are returned
+    // Read scalars - one entry per element; the NULL occupies its slot positionally.
     auto integers = db.read_scalar_integers("Collection", "some_integer");
-    EXPECT_EQ(integers.size(), 1u);
-    EXPECT_EQ(integers[0], 42);
+    ASSERT_EQ(integers.size(), 2u);
+    EXPECT_FALSE(integers[0].has_value());
+    ASSERT_TRUE(integers[1].has_value());
+    EXPECT_EQ(*integers[1], 42);
 }
 
 TEST(RowResult, ReadScalarByIdWithNull) {

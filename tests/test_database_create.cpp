@@ -628,7 +628,7 @@ TEST(Database, CreateElementNoFkColumnsUnchanged) {
     auto integers = db.read_scalar_integers("Configuration", "integer_attribute");
     EXPECT_EQ(integers[0], 42);
     auto floats = db.read_scalar_floats("Configuration", "float_attribute");
-    EXPECT_DOUBLE_EQ(floats[0], 3.14);
+    EXPECT_DOUBLE_EQ(*floats[0], 3.14);
 }
 
 TEST(Database, ScalarFkResolutionFailureCausesNoPartialWrites) {
@@ -663,5 +663,5 @@ TEST(Database, CreateScalarTypeCoercionPolicy) {
 
     auto floats = db.read_scalar_floats("Configuration", "float_attribute");
     ASSERT_EQ(floats.size(), 1);
-    EXPECT_DOUBLE_EQ(floats[0], 7.0);
+    EXPECT_DOUBLE_EQ(*floats[0], 7.0);
 }

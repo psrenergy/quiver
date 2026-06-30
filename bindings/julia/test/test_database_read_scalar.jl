@@ -47,6 +47,65 @@ include("fixture.jl")
         Quiver.close!(db)
     end
 
+    @testset "Null Values Preserve Position" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        # float_attribute has no default, so an unset value is SQL NULL.
+        Quiver.create_element!(db, "Configuration"; label = "Config 1", float_attribute = 10.0)
+        Quiver.create_element!(db, "Configuration"; label = "Config 2")  # NULL float
+        Quiver.create_element!(db, "Configuration"; label = "Config 3", float_attribute = 30.0)
+        Quiver.create_element!(db, "Configuration"; label = "Config 4", float_attribute = 40.0)
+
+        # One entry per element; the NULL must occupy a slot (nothing), not be dropped.
+        @test Quiver.read_scalar_floats(db, "Configuration", "float_attribute") == [10.0, nothing, 30.0, 40.0]
+
+        Quiver.close!(db)
+    end
+
+    @testset "Integer Null Preserves Position" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "all_types.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        # AllTypes.some_integer has no default, so an unset value is SQL NULL.
+        Quiver.create_element!(db, "AllTypes"; label = "a", some_integer = 10)
+        Quiver.create_element!(db, "AllTypes"; label = "b")  # NULL integer
+        Quiver.create_element!(db, "AllTypes"; label = "c", some_integer = 30)
+
+        @test Quiver.read_scalar_integers(db, "AllTypes", "some_integer") == [10, nothing, 30]
+
+        Quiver.close!(db)
+    end
+
+    @testset "String Null Preserves Position" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Config 1", string_attribute = "hello")
+        Quiver.create_element!(db, "Configuration"; label = "Config 2")  # NULL string
+        Quiver.create_element!(db, "Configuration"; label = "Config 3", string_attribute = "world")
+        # Empty string is a present value, not a NULL — it must stay distinct from `nothing`.
+        Quiver.create_element!(db, "Configuration"; label = "Config 4", string_attribute = "")
+
+        @test Quiver.read_scalar_strings(db, "Configuration", "string_attribute") ==
+              ["hello", nothing, "world", ""]
+
+        Quiver.close!(db)
+    end
+
+    @testset "All Null Column" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Config 1")
+        Quiver.create_element!(db, "Configuration"; label = "Config 2")
+
+        # Full-length result, every slot nothing (not an empty vector).
+        @test Quiver.read_scalar_floats(db, "Configuration", "float_attribute") == [nothing, nothing]
+
+        Quiver.close!(db)
+    end
+
     @testset "Empty Result" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
         db = Quiver.from_schema(":memory:", path_schema)
@@ -57,6 +116,74 @@ include("fixture.jl")
         @test Quiver.read_scalar_strings(db, "Collection", "label") == String[]
         @test Quiver.read_scalar_integers(db, "Collection", "some_integer") == Int64[]
         @test Quiver.read_scalar_floats(db, "Collection", "some_float") == Float64[]
+
+        Quiver.close!(db)
+    end
+
+    @testset "Concrete vs Optional element types" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration";
+            label = "Config 1",
+            integer_attribute = 42,
+            float_attribute = 3.14,
+            string_attribute = "hello",
+        )
+
+        # NOT NULL column (label is TEXT UNIQUE NOT NULL) -> concrete element type.
+        @test Quiver.read_scalar_strings(db, "Configuration", "label") isa Vector{String}
+
+        # INTEGER PRIMARY KEY is a rowid alias (never NULL) -> concrete element type, even though
+        # SQLite's PRAGMA table_info leaves the notnull flag unset.
+        @test Quiver.read_scalar_integers(db, "Configuration", "id") isa Vector{Int64}
+
+        # Nullable columns -> Optional element type, even when this read happens to have no NULLs.
+        @test Quiver.read_scalar_integers(db, "Configuration", "integer_attribute") isa
+              Vector{Union{Int64, Nothing}}
+        @test Quiver.read_scalar_floats(db, "Configuration", "float_attribute") isa
+              Vector{Union{Float64, Nothing}}
+        @test Quiver.read_scalar_strings(db, "Configuration", "string_attribute") isa
+              Vector{Union{String, Nothing}}
+
+        Quiver.close!(db)
+    end
+
+    @testset "Element type stable across empty and populated reads" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+
+        # Empty Collection: type is decided by the schema, not the data.
+        @test Quiver.read_scalar_strings(db, "Collection", "label") isa Vector{String}
+        @test Quiver.read_scalar_integers(db, "Collection", "some_integer") isa
+              Vector{Union{Int64, Nothing}}
+        @test Quiver.read_scalar_floats(db, "Collection", "some_float") isa
+              Vector{Union{Float64, Nothing}}
+
+        Quiver.create_element!(db, "Collection"; label = "Item 1", some_integer = 10, some_float = 1.5)
+
+        # Populated read of the same columns yields the identical element types.
+        @test Quiver.read_scalar_strings(db, "Collection", "label") isa Vector{String}
+        @test Quiver.read_scalar_integers(db, "Collection", "some_integer") isa
+              Vector{Union{Int64, Nothing}}
+        @test Quiver.read_scalar_floats(db, "Collection", "some_float") isa
+              Vector{Union{Float64, Nothing}}
+
+        Quiver.close!(db)
+    end
+
+    @testset "All-NULL nullable column stays full-length Optional" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Config 1")
+        Quiver.create_element!(db, "Configuration"; label = "Config 2")
+
+        result = Quiver.read_scalar_floats(db, "Configuration", "float_attribute")
+        @test result isa Vector{Union{Float64, Nothing}}
+        @test result == [nothing, nothing]
 
         Quiver.close!(db)
     end

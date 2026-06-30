@@ -59,19 +59,25 @@ QUIVER_C_API quiver_error_t quiver_database_update_element(quiver_database_t* db
                                                            const quiver_element_t* element);
 QUIVER_C_API quiver_error_t quiver_database_delete_element(quiver_database_t* db, const char* collection, int64_t id);
 
-// Read scalar attributes
+// Read scalar attributes. One entry per element (aligned with read_element_ids).
+// Numeric readers carry a parallel presence mask: out_mask[i] == 0 means SQL NULL and
+// out_values[i] is then a placeholder (0 / 0.0) to be ignored. Free out_values with the
+// matching free function and out_mask with quiver_database_free_mask.
 QUIVER_C_API quiver_error_t quiver_database_read_scalar_integers(quiver_database_t* db,
                                                                  const char* collection,
                                                                  const char* attribute,
                                                                  int64_t** out_values,
+                                                                 uint8_t** out_mask,
                                                                  size_t* out_count);
 
 QUIVER_C_API quiver_error_t quiver_database_read_scalar_floats(quiver_database_t* db,
                                                                const char* collection,
                                                                const char* attribute,
                                                                double** out_values,
+                                                               uint8_t** out_mask,
                                                                size_t* out_count);
 
+// A SQL NULL string is returned as a NULL entry in out_values (no mask).
 QUIVER_C_API quiver_error_t quiver_database_read_scalar_strings(quiver_database_t* db,
                                                                 const char* collection,
                                                                 const char* attribute,
@@ -384,6 +390,8 @@ QUIVER_C_API quiver_error_t quiver_database_free_time_series_files(char** column
 QUIVER_C_API quiver_error_t quiver_database_free_integer_array(int64_t* values);
 QUIVER_C_API quiver_error_t quiver_database_free_float_array(double* values);
 QUIVER_C_API quiver_error_t quiver_database_free_string_array(char** values, size_t count);
+// Memory cleanup for the presence mask returned by the integer/float scalar readers
+QUIVER_C_API quiver_error_t quiver_database_free_mask(uint8_t* mask);
 // Memory cleanup for single string returned by query/read-by-id operations
 QUIVER_C_API quiver_error_t quiver_database_free_string(char* str);
 

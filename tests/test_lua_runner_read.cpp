@@ -61,6 +61,84 @@ TEST_F(LuaRunnerTest, ReadScalarFloats) {
     )");
 }
 
+TEST_F(LuaRunnerTest, ReadScalarFloatsPreservesNulls) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+
+    // some_float has no default, so an unset value is SQL NULL.
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    db.create_element("Collection", quiver::Element().set("label", "Item 1").set("some_float", 1.5));
+    db.create_element("Collection", quiver::Element().set("label", "Item 2"));  // NULL float
+    db.create_element("Collection", quiver::Element().set("label", "Item 3").set("some_float", 3.5));
+
+    quiver::LuaRunner lua(db);
+
+    // One entry per element; the NULL must occupy a slot (nil), not be dropped.
+    // (# is unreliable on a table with nil holes, so assert by explicit index.)
+    lua.run(R"(
+        local floats = db:read_scalar_floats("Collection", "some_float")
+        assert(floats[1] == 1.5, "floats[1] should be 1.5")
+        assert(floats[2] == nil, "floats[2] should be nil for the NULL element")
+        assert(floats[3] == 3.5, "floats[3] should be 3.5")
+    )");
+}
+
+TEST_F(LuaRunnerTest, ReadScalarIntegersPreservesNulls) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    db.create_element("Collection", quiver::Element().set("label", "Item 1").set("some_integer", int64_t{10}));
+    db.create_element("Collection", quiver::Element().set("label", "Item 2"));  // NULL integer
+    db.create_element("Collection", quiver::Element().set("label", "Item 3").set("some_integer", int64_t{30}));
+
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(
+        local ints = db:read_scalar_integers("Collection", "some_integer")
+        assert(ints[1] == 10, "ints[1] should be 10")
+        assert(ints[2] == nil, "ints[2] should be nil for the NULL element")
+        assert(ints[3] == 30, "ints[3] should be 30")
+    )");
+}
+
+TEST_F(LuaRunnerTest, ReadScalarStringsPreservesNulls) {
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("all_types.sql"));
+
+    db.create_element("AllTypes", quiver::Element().set("label", "a").set("some_text", "hello"));
+    db.create_element("AllTypes", quiver::Element().set("label", "b"));  // NULL string
+    db.create_element("AllTypes", quiver::Element().set("label", "c").set("some_text", "world"));
+    db.create_element("AllTypes", quiver::Element().set("label", "d").set("some_text", ""));  // empty, not NULL
+
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(
+        local texts = db:read_scalar_strings("AllTypes", "some_text")
+        assert(texts[1] == "hello", "texts[1] should be hello")
+        assert(texts[2] == nil, "texts[2] should be nil for the NULL element")
+        assert(texts[3] == "world", "texts[3] should be world")
+        assert(texts[4] == "", "texts[4] should be an empty string, not nil")
+    )");
+}
+
+TEST_F(LuaRunnerTest, ReadScalarFloatsAllNull) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    db.create_element("Collection", quiver::Element().set("label", "Item 1"));
+    db.create_element("Collection", quiver::Element().set("label", "Item 2"));
+
+    quiver::LuaRunner lua(db);
+
+    // All-NULL column: every slot is nil. read_element_ids is the count authority
+    // (# is unreliable over an all-nil table).
+    lua.run(R"(
+        local ids = db:read_element_ids("Collection")
+        assert(#ids == 2, "expected 2 element ids")
+        local floats = db:read_scalar_floats("Collection", "some_float")
+        assert(floats[1] == nil, "floats[1] should be nil")
+        assert(floats[2] == nil, "floats[2] should be nil")
+    )");
+}
+
 TEST_F(LuaRunnerTest, ReadVectorIntegers) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 

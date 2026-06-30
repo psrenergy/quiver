@@ -474,12 +474,14 @@ TEST(DatabaseCApi, CreateElementScalarFkLabel) {
 
     // Verify via read_scalar_integers
     int64_t* values = nullptr;
+    uint8_t* mask = nullptr;
     size_t count = 0;
-    ASSERT_EQ(quiver_database_read_scalar_integers(db, "Child", "parent_id", &values, &count), QUIVER_OK);
+    ASSERT_EQ(quiver_database_read_scalar_integers(db, "Child", "parent_id", &values, &mask, &count), QUIVER_OK);
     ASSERT_EQ(count, 1);
     EXPECT_EQ(values[0], 1);
 
     quiver_database_free_integer_array(values);
+    quiver_database_free_mask(mask);
     quiver_database_close(db);
 }
 
@@ -508,12 +510,14 @@ TEST(DatabaseCApi, CreateElementScalarFkInteger) {
 
     // Verify via read_scalar_integers
     int64_t* values = nullptr;
+    uint8_t* mask = nullptr;
     size_t count = 0;
-    ASSERT_EQ(quiver_database_read_scalar_integers(db, "Child", "parent_id", &values, &count), QUIVER_OK);
+    ASSERT_EQ(quiver_database_read_scalar_integers(db, "Child", "parent_id", &values, &mask, &count), QUIVER_OK);
     ASSERT_EQ(count, 1);
     EXPECT_EQ(values[0], 1);
 
     quiver_database_free_integer_array(values);
+    quiver_database_free_mask(mask);
     quiver_database_close(db);
 }
 
@@ -669,11 +673,15 @@ TEST(DatabaseCApi, CreateElementAllFkTypesInOneCall) {
 
     // Verify scalar FK
     int64_t* scalar_values = nullptr;
+    uint8_t* scalar_mask = nullptr;
     size_t scalar_count = 0;
-    ASSERT_EQ(quiver_database_read_scalar_integers(db, "Child", "parent_id", &scalar_values, &scalar_count), QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_read_scalar_integers(db, "Child", "parent_id", &scalar_values, &scalar_mask, &scalar_count),
+        QUIVER_OK);
     ASSERT_EQ(scalar_count, 1);
     EXPECT_EQ(scalar_values[0], 1);
     quiver_database_free_integer_array(scalar_values);
+    quiver_database_free_mask(scalar_mask);
 
     // Verify set FK (mentor_id)
     int64_t* mentor_values = nullptr;
@@ -749,20 +757,26 @@ TEST(DatabaseCApi, CreateElementNoFkColumnsUnchanged) {
     quiver_database_free_string_array(str_values, str_count);
 
     int64_t* int_values = nullptr;
+    uint8_t* int_mask = nullptr;
     size_t int_count = 0;
-    ASSERT_EQ(quiver_database_read_scalar_integers(db, "Configuration", "integer_attribute", &int_values, &int_count),
+    ASSERT_EQ(quiver_database_read_scalar_integers(
+                  db, "Configuration", "integer_attribute", &int_values, &int_mask, &int_count),
               QUIVER_OK);
     ASSERT_EQ(int_count, 1);
     EXPECT_EQ(int_values[0], 42);
     quiver_database_free_integer_array(int_values);
+    quiver_database_free_mask(int_mask);
 
     double* float_values = nullptr;
+    uint8_t* float_mask = nullptr;
     size_t float_count = 0;
-    ASSERT_EQ(quiver_database_read_scalar_floats(db, "Configuration", "float_attribute", &float_values, &float_count),
+    ASSERT_EQ(quiver_database_read_scalar_floats(
+                  db, "Configuration", "float_attribute", &float_values, &float_mask, &float_count),
               QUIVER_OK);
     ASSERT_EQ(float_count, 1);
     EXPECT_DOUBLE_EQ(float_values[0], 3.14);
     quiver_database_free_float_array(float_values);
+    quiver_database_free_mask(float_mask);
 
     quiver_database_close(db);
 }

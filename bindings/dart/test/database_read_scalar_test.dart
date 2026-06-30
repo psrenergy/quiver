@@ -82,6 +82,104 @@ void main() {
         db.close();
       }
     });
+
+    test('preserves a slot for NULL float values', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        // float_attribute has no default, so an unset value is SQL NULL.
+        db.createElement('Configuration', {
+          'label': 'Config 1',
+          'float_attribute': 10.0,
+        });
+        db.createElement('Configuration', {'label': 'Config 2'}); // NULL float
+        db.createElement('Configuration', {
+          'label': 'Config 3',
+          'float_attribute': 30.0,
+        });
+        db.createElement('Configuration', {
+          'label': 'Config 4',
+          'float_attribute': 40.0,
+        });
+
+        // One entry per element; the NULL occupies its slot positionally.
+        expect(
+          db.readScalarFloats('Configuration', 'float_attribute'),
+          equals([10.0, null, 30.0, 40.0]),
+        );
+      } finally {
+        db.close();
+      }
+    });
+
+    test('preserves a slot for NULL integer values', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'all_types.sql'),
+      );
+      try {
+        db.createElement('AllTypes', {'label': 'a', 'some_integer': 10});
+        db.createElement('AllTypes', {'label': 'b'}); // NULL integer
+        db.createElement('AllTypes', {'label': 'c', 'some_integer': 30});
+
+        expect(
+          db.readScalarIntegers('AllTypes', 'some_integer'),
+          equals([10, null, 30]),
+        );
+      } finally {
+        db.close();
+      }
+    });
+
+    test('preserves a slot for NULL string values', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {
+          'label': 'Config 1',
+          'string_attribute': 'hello',
+        });
+        db.createElement('Configuration', {'label': 'Config 2'}); // NULL string
+        db.createElement('Configuration', {
+          'label': 'Config 3',
+          'string_attribute': 'world',
+        });
+        // Empty string is a present value, not a NULL — it must stay distinct from null.
+        db.createElement('Configuration', {
+          'label': 'Config 4',
+          'string_attribute': '',
+        });
+
+        expect(
+          db.readScalarStrings('Configuration', 'string_attribute'),
+          equals(['hello', null, 'world', '']),
+        );
+      } finally {
+        db.close();
+      }
+    });
+
+    test('returns all-null column as full-length nulls', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Config 1'});
+        db.createElement('Configuration', {'label': 'Config 2'});
+
+        expect(
+          db.readScalarFloats('Configuration', 'float_attribute'),
+          equals([null, null]),
+        );
+      } finally {
+        db.close();
+      }
+    });
   });
 
   group('Read From Collections', () {

@@ -35,15 +35,19 @@ TEST(DatabaseCApi, ReadScalarIntegers) {
     EXPECT_EQ(quiver_element_destroy(e2), QUIVER_OK);
 
     int64_t* values = nullptr;
+    uint8_t* mask = nullptr;
     size_t count = 0;
-    auto err = quiver_database_read_scalar_integers(db, "Configuration", "integer_attribute", &values, &count);
+    auto err = quiver_database_read_scalar_integers(db, "Configuration", "integer_attribute", &values, &mask, &count);
 
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(count, 2);
     EXPECT_EQ(values[0], 42);
     EXPECT_EQ(values[1], 100);
+    EXPECT_EQ(mask[0], 1);
+    EXPECT_EQ(mask[1], 1);
 
     quiver_database_free_integer_array(values);
+    quiver_database_free_mask(mask);
     quiver_database_close(db);
 }
 
@@ -71,15 +75,175 @@ TEST(DatabaseCApi, ReadScalarFloats) {
     EXPECT_EQ(quiver_element_destroy(e2), QUIVER_OK);
 
     double* values = nullptr;
+    uint8_t* mask = nullptr;
     size_t count = 0;
-    auto err = quiver_database_read_scalar_floats(db, "Configuration", "float_attribute", &values, &count);
+    auto err = quiver_database_read_scalar_floats(db, "Configuration", "float_attribute", &values, &mask, &count);
 
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(count, 2);
     EXPECT_DOUBLE_EQ(values[0], 3.14);
     EXPECT_DOUBLE_EQ(values[1], 2.71);
+    EXPECT_EQ(mask[0], 1);
+    EXPECT_EQ(mask[1], 1);
 
     quiver_database_free_float_array(values);
+    quiver_database_free_mask(mask);
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, ReadScalarFloatsPreservesNull) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    // 4 elements; element 2 leaves float_attribute (no default) unset -> SQL NULL.
+    const char* labels[] = {"Config 1", "Config 2", "Config 3", "Config 4"};
+    const double float_values[] = {10.0, 0.0, 30.0, 40.0};
+    const bool has_float[] = {true, false, true, true};
+    for (int i = 0; i < 4; ++i) {
+        quiver_element_t* e = nullptr;
+        ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
+        quiver_element_set_string(e, "label", labels[i]);
+        if (has_float[i]) {
+            quiver_element_set_float(e, "float_attribute", float_values[i]);
+        }
+        int64_t tmp_id = 0;
+        quiver_database_create_element(db, "Configuration", e, &tmp_id);
+        EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
+    }
+
+    double* values = nullptr;
+    uint8_t* mask = nullptr;
+    size_t count = 0;
+    auto err = quiver_database_read_scalar_floats(db, "Configuration", "float_attribute", &values, &mask, &count);
+
+    EXPECT_EQ(err, QUIVER_OK);
+    // One entry per element; the NULL occupies its slot positionally (mask[i] == 0).
+    ASSERT_EQ(count, 4u);
+    EXPECT_EQ(mask[0], 1);
+    EXPECT_DOUBLE_EQ(values[0], 10.0);
+    EXPECT_EQ(mask[1], 0);
+    EXPECT_EQ(mask[2], 1);
+    EXPECT_DOUBLE_EQ(values[2], 30.0);
+    EXPECT_EQ(mask[3], 1);
+    EXPECT_DOUBLE_EQ(values[3], 40.0);
+
+    quiver_database_free_float_array(values);
+    quiver_database_free_mask(mask);
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, ReadScalarIntegersPreservesNull) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("all_types.sql").c_str(), &options, &db), QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    // 3 AllTypes elements; element 2 leaves some_integer (no default) unset -> SQL NULL.
+    const char* labels[] = {"a", "b", "c"};
+    const int64_t int_values[] = {10, 0, 30};
+    const bool has_int[] = {true, false, true};
+    for (int i = 0; i < 3; ++i) {
+        quiver_element_t* e = nullptr;
+        ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
+        quiver_element_set_string(e, "label", labels[i]);
+        if (has_int[i]) {
+            quiver_element_set_integer(e, "some_integer", int_values[i]);
+        }
+        int64_t tmp_id = 0;
+        quiver_database_create_element(db, "AllTypes", e, &tmp_id);
+        EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
+    }
+
+    int64_t* values = nullptr;
+    uint8_t* mask = nullptr;
+    size_t count = 0;
+    auto err = quiver_database_read_scalar_integers(db, "AllTypes", "some_integer", &values, &mask, &count);
+
+    EXPECT_EQ(err, QUIVER_OK);
+    ASSERT_EQ(count, 3u);
+    EXPECT_EQ(mask[0], 1);
+    EXPECT_EQ(values[0], 10);
+    EXPECT_EQ(mask[1], 0);
+    EXPECT_EQ(mask[2], 1);
+    EXPECT_EQ(values[2], 30);
+
+    quiver_database_free_integer_array(values);
+    quiver_database_free_mask(mask);
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, ReadScalarStringsPreservesNull) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    // 4 elements; element 2 leaves string_attribute unset -> SQL NULL (a nullptr entry, no mask).
+    // Element 4 stores an empty string -> a present, non-NULL value distinct from element 2.
+    const char* labels[] = {"Config 1", "Config 2", "Config 3", "Config 4"};
+    const char* str_values[] = {"hello", nullptr, "world", ""};
+    for (int i = 0; i < 4; ++i) {
+        quiver_element_t* e = nullptr;
+        ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
+        quiver_element_set_string(e, "label", labels[i]);
+        if (str_values[i] != nullptr) {
+            quiver_element_set_string(e, "string_attribute", str_values[i]);
+        }
+        int64_t tmp_id = 0;
+        quiver_database_create_element(db, "Configuration", e, &tmp_id);
+        EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
+    }
+
+    char** values = nullptr;
+    size_t count = 0;
+    auto err = quiver_database_read_scalar_strings(db, "Configuration", "string_attribute", &values, &count);
+
+    EXPECT_EQ(err, QUIVER_OK);
+    ASSERT_EQ(count, 4u);
+    EXPECT_STREQ(values[0], "hello");
+    EXPECT_EQ(values[1], nullptr);  // NULL string is a nullptr entry
+    EXPECT_STREQ(values[2], "world");
+    ASSERT_NE(values[3], nullptr);  // empty string is present, not NULL
+    EXPECT_STREQ(values[3], "");
+
+    quiver_database_free_string_array(values, count);
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, ReadScalarFloatsAllNull) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    for (int i = 0; i < 2; ++i) {
+        quiver_element_t* e = nullptr;
+        ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
+        quiver_element_set_string(e, "label", i == 0 ? "Config 1" : "Config 2");
+        int64_t tmp_id = 0;
+        quiver_database_create_element(db, "Configuration", e, &tmp_id);
+        EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
+    }
+
+    double* values = nullptr;
+    uint8_t* mask = nullptr;
+    size_t count = 0;
+    auto err = quiver_database_read_scalar_floats(db, "Configuration", "float_attribute", &values, &mask, &count);
+
+    EXPECT_EQ(err, QUIVER_OK);
+    // All-NULL column: full-length result with every mask entry 0 (not an empty array).
+    ASSERT_EQ(count, 2u);
+    EXPECT_EQ(mask[0], 0);
+    EXPECT_EQ(mask[1], 0);
+
+    quiver_database_free_float_array(values);
+    quiver_database_free_mask(mask);
     quiver_database_close(db);
 }
 
@@ -135,18 +299,23 @@ TEST(DatabaseCApi, ReadScalarEmpty) {
     EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
 
     int64_t* integer_values = nullptr;
+    uint8_t* integer_mask = nullptr;
     size_t integer_count = 0;
-    auto err = quiver_database_read_scalar_integers(db, "Collection", "some_integer", &integer_values, &integer_count);
+    auto err = quiver_database_read_scalar_integers(
+        db, "Collection", "some_integer", &integer_values, &integer_mask, &integer_count);
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(integer_count, 0);
     EXPECT_EQ(integer_values, nullptr);
+    EXPECT_EQ(integer_mask, nullptr);
 
     double* float_values = nullptr;
+    uint8_t* float_mask = nullptr;
     size_t float_count = 0;
-    err = quiver_database_read_scalar_floats(db, "Collection", "some_float", &float_values, &float_count);
+    err = quiver_database_read_scalar_floats(db, "Collection", "some_float", &float_values, &float_mask, &float_count);
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(float_count, 0);
     EXPECT_EQ(float_values, nullptr);
+    EXPECT_EQ(float_mask, nullptr);
 
     quiver_database_close(db);
 }
@@ -357,8 +526,10 @@ TEST(DatabaseCApi, ReadElementIdsEmpty) {
 
 TEST(DatabaseCApi, ReadScalarIntegersNullDb) {
     int64_t* values = nullptr;
+    uint8_t* mask = nullptr;
     size_t count = 0;
-    auto err = quiver_database_read_scalar_integers(nullptr, "Configuration", "integer_attribute", &values, &count);
+    auto err =
+        quiver_database_read_scalar_integers(nullptr, "Configuration", "integer_attribute", &values, &mask, &count);
     EXPECT_EQ(err, QUIVER_ERROR);
 }
 
@@ -370,8 +541,9 @@ TEST(DatabaseCApi, ReadScalarIntegersNullCollection) {
     ASSERT_NE(db, nullptr);
 
     int64_t* values = nullptr;
+    uint8_t* mask = nullptr;
     size_t count = 0;
-    auto err = quiver_database_read_scalar_integers(db, nullptr, "integer_attribute", &values, &count);
+    auto err = quiver_database_read_scalar_integers(db, nullptr, "integer_attribute", &values, &mask, &count);
     EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
@@ -385,8 +557,9 @@ TEST(DatabaseCApi, ReadScalarIntegersNullAttribute) {
     ASSERT_NE(db, nullptr);
 
     int64_t* values = nullptr;
+    uint8_t* mask = nullptr;
     size_t count = 0;
-    auto err = quiver_database_read_scalar_integers(db, "Configuration", nullptr, &values, &count);
+    auto err = quiver_database_read_scalar_integers(db, "Configuration", nullptr, &values, &mask, &count);
     EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
@@ -399,12 +572,17 @@ TEST(DatabaseCApi, ReadScalarIntegersNullOutput) {
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
+    int64_t* values = nullptr;
+    uint8_t* mask = nullptr;
     size_t count = 0;
-    auto err = quiver_database_read_scalar_integers(db, "Configuration", "integer_attribute", nullptr, &count);
+
+    auto err = quiver_database_read_scalar_integers(db, "Configuration", "integer_attribute", nullptr, &mask, &count);
     EXPECT_EQ(err, QUIVER_ERROR);
 
-    int64_t* values = nullptr;
-    err = quiver_database_read_scalar_integers(db, "Configuration", "integer_attribute", &values, nullptr);
+    err = quiver_database_read_scalar_integers(db, "Configuration", "integer_attribute", &values, nullptr, &count);
+    EXPECT_EQ(err, QUIVER_ERROR);
+
+    err = quiver_database_read_scalar_integers(db, "Configuration", "integer_attribute", &values, &mask, nullptr);
     EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
@@ -412,8 +590,9 @@ TEST(DatabaseCApi, ReadScalarIntegersNullOutput) {
 
 TEST(DatabaseCApi, ReadScalarFloatsNullDb) {
     double* values = nullptr;
+    uint8_t* mask = nullptr;
     size_t count = 0;
-    auto err = quiver_database_read_scalar_floats(nullptr, "Configuration", "float_attribute", &values, &count);
+    auto err = quiver_database_read_scalar_floats(nullptr, "Configuration", "float_attribute", &values, &mask, &count);
     EXPECT_EQ(err, QUIVER_ERROR);
 }
 
@@ -425,8 +604,9 @@ TEST(DatabaseCApi, ReadScalarFloatsNullCollection) {
     ASSERT_NE(db, nullptr);
 
     double* values = nullptr;
+    uint8_t* mask = nullptr;
     size_t count = 0;
-    auto err = quiver_database_read_scalar_floats(db, nullptr, "float_attribute", &values, &count);
+    auto err = quiver_database_read_scalar_floats(db, nullptr, "float_attribute", &values, &mask, &count);
     EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
@@ -439,12 +619,17 @@ TEST(DatabaseCApi, ReadScalarFloatsNullOutput) {
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
+    double* values = nullptr;
+    uint8_t* mask = nullptr;
     size_t count = 0;
-    auto err = quiver_database_read_scalar_floats(db, "Configuration", "float_attribute", nullptr, &count);
+
+    auto err = quiver_database_read_scalar_floats(db, "Configuration", "float_attribute", nullptr, &mask, &count);
     EXPECT_EQ(err, QUIVER_ERROR);
 
-    double* values = nullptr;
-    err = quiver_database_read_scalar_floats(db, "Configuration", "float_attribute", &values, nullptr);
+    err = quiver_database_read_scalar_floats(db, "Configuration", "float_attribute", &values, nullptr, &count);
+    EXPECT_EQ(err, QUIVER_ERROR);
+
+    err = quiver_database_read_scalar_floats(db, "Configuration", "float_attribute", &values, &mask, nullptr);
     EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);

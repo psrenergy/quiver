@@ -41,9 +41,9 @@ describe("getScalarMetadata", () => {
       const meta = db.getScalarMetadata("Collection", "id");
       expect(meta.name).toEqual("id");
       expect(meta.primaryKey).toEqual(true);
-      // SQLite INTEGER PRIMARY KEY does not set the not_null PRAGMA flag
-      // even though the column is implicitly non-nullable
-      expect(typeof meta.notNull).toEqual("boolean");
+      // An INTEGER PRIMARY KEY is a rowid alias and is never NULL; the C++ core reports it
+      // as not_null even though SQLite's PRAGMA table_info leaves the notnull flag unset.
+      expect(meta.notNull).toEqual(true);
     } finally {
       db.close();
     }

@@ -175,6 +175,18 @@ impl_->logger->debug("Opening database: {}", path);
   in sync (root design decision).
 - **`update_element` / `delete_element` verify the id exists** (`SELECT 1 ... WHERE id = ?` via
   `execute`) and throw Pattern 2 `"Element not found: ..."` — no silent no-op.
+- **Two column readers in `database_internal.h`**: `read_column_values<T>` drops NULLs (dense —
+  used by vector/set `_by_id` and `read_element_ids`, whose columns are NOT NULL / PK by
+  convention); `read_column_values_nullable<T>` keeps them as `std::optional<T>` and backs only the
+  three `read_scalar_*` bulk readers (one entry per element, `ORDER BY rowid`). The Lua scalar
+  readers consume the optional vector directly via a `to_lua_table(vector<optional<T>>)` overload
+  that emits `nil` holes (root scalar-NULL design decision).
+- **`scalar_metadata_from_column` reports an INTEGER PRIMARY KEY as `not_null`**
+  (`database_internal.h`): a rowid-alias PK is never NULL, but SQLite's `PRAGMA table_info` leaves
+  the `notnull` flag unset, so the public `ScalarMetadata.not_null` ORs in `primary_key && type ==
+  Integer`. The raw `ColumnDefinition.not_null` stays the literal PRAGMA value — `csv_import`
+  (empty-cell rejection) and `schema_validator` read it directly and must not see PK flip. This is
+  what lets Julia's nullability-aware readers return a concrete `Vector{Int64}` for `id`.
 - **`execute` validates parameter count** (`database.cpp`): `sqlite3_bind_parameter_count` must
   equal `parameters.size()`, else it throws — the single guard for every `query_*` and internal
   parameterized statement.

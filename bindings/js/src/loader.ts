@@ -62,8 +62,8 @@ const crudSymbols = {
 } as const;
 
 const readSymbols = {
-  quiver_database_read_scalar_integers: { args: [P, BUF, BUF, P, P], returns: I32 },
-  quiver_database_read_scalar_floats: { args: [P, BUF, BUF, P, P], returns: I32 },
+  quiver_database_read_scalar_integers: { args: [P, BUF, BUF, P, P, P], returns: I32 },
+  quiver_database_read_scalar_floats: { args: [P, BUF, BUF, P, P, P], returns: I32 },
   quiver_database_read_scalar_strings: { args: [P, BUF, BUF, P, P], returns: I32 },
   quiver_database_read_scalar_integer_by_id: { args: [P, BUF, BUF, I64, P, P], returns: I32 },
   quiver_database_read_scalar_float_by_id: { args: [P, BUF, BUF, I64, P, P], returns: I32 },
@@ -123,7 +123,10 @@ const timeSeriesSymbols = {
     returns: I32,
   },
   quiver_database_read_time_series_row: { args: [P, BUF, BUF, BUF, BUF, P, P, P], returns: I32 },
-  quiver_database_upsert_time_series_row: { args: [P, BUF, BUF, I64, P, P, P, USIZE], returns: I32 },
+  quiver_database_upsert_time_series_row: {
+    args: [P, BUF, BUF, I64, P, P, P, USIZE],
+    returns: I32,
+  },
   quiver_database_update_time_series_group: {
     args: [P, BUF, BUF, I64, P, P, P, P, USIZE, USIZE],
     returns: I32,
@@ -144,6 +147,7 @@ const csvSymbols = {
 const freeSymbols = {
   quiver_database_free_integer_array: { args: [P], returns: I32 },
   quiver_database_free_float_array: { args: [P], returns: I32 },
+  quiver_database_free_mask: { args: [P], returns: I32 },
   quiver_database_free_string_array: { args: [P, USIZE], returns: I32 },
   quiver_database_free_string: { args: [P], returns: I32 },
   quiver_database_free_integer_vectors: { args: [P, P, USIZE], returns: I32 },

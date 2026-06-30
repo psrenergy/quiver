@@ -212,7 +212,10 @@ static std::unordered_map<std::string, int64_t> build_label_to_id_map(Database& 
     auto ids = db.read_scalar_integers(collection, "id");
     auto labels = db.read_scalar_strings(collection, "label");
     for (size_t i = 0; i < ids.size(); ++i) {
-        label_to_id[labels[i]] = ids[i];
+        // id (PK) and label (NOT NULL by schema convention) are always present; guard defensively.
+        if (ids[i] && labels[i]) {
+            label_to_id[*labels[i]] = *ids[i];
+        }
     }
     return label_to_id;
 }

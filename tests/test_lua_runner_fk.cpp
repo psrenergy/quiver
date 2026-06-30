@@ -201,7 +201,7 @@ TEST_F(LuaRunnerFkTest, CreateElementNoFkUnchanged) {
 
     auto floats = db.read_scalar_floats("Configuration", "float_attribute");
     ASSERT_EQ(floats.size(), 1);
-    EXPECT_DOUBLE_EQ(floats[0], 3.14);
+    EXPECT_DOUBLE_EQ(*floats[0], 3.14);
 }
 
 TEST_F(LuaRunnerFkTest, CreateElementFkResolutionNoPartialWrites) {

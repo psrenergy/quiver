@@ -629,6 +629,20 @@ struct LuaRunner::Impl {
         return t;
     }
 
+    // Scalar bulk reads: a SQL NULL becomes a nil hole, preserving positional index.
+    // #t over holes is unreliable — read_element_ids is the count/position authority.
+    template <typename T>
+    static sol::table to_lua_table(sol::state_view& lua, const std::vector<std::optional<T>>& values) {
+        auto t = lua.create_table();
+        for (size_t i = 0; i < values.size(); ++i) {
+            if (values[i]) {
+                t[i + 1] = *values[i];
+            }
+            // else: leave index i + 1 absent (nil).
+        }
+        return t;
+    }
+
     template <typename T>
     static sol::table to_lua_table(sol::state_view& lua, const std::vector<std::vector<T>>& values) {
         auto outer = lua.create_table();
