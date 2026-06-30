@@ -459,14 +459,14 @@ TEST_F(BinaryTempFileFixture, InitialDatetimeYear1960) {
     // computation and the write/read round-trip must handle pre-1970 dates, asserting the exact
     // value survives serialization to the .toml sidecar and back.
     auto md = BinaryMetadata::from_element(Element()
-                                              .set("version", "1")
-                                              .set("initial_datetime", "1960-01-01T00:00:00")
-                                              .set("unit", "MW")
-                                              .set("dimensions", {"stage", "block"})
-                                              .set("dimension_sizes", {4, 31})
-                                              .set("time_dimensions", {"stage", "block"})
-                                              .set("frequencies", {"monthly", "daily"})
-                                              .set("labels", {"plant_1", "plant_2"}));
+                                               .set("version", "1")
+                                               .set("initial_datetime", "1960-01-01T00:00:00")
+                                               .set("unit", "MW")
+                                               .set("dimensions", {"stage", "block"})
+                                               .set("dimension_sizes", {4, 31})
+                                               .set("time_dimensions", {"stage", "block"})
+                                               .set("frequencies", {"monthly", "daily"})
+                                               .set("labels", {"plant_1", "plant_2"}));
 
     {
         auto binary_file = BinaryFile::open_file(path, 'w', md);
