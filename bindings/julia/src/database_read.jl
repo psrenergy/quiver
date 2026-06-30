@@ -7,12 +7,12 @@ function read_scalar_integers(db::Database, collection::String, attribute::Strin
 
     count = out_count[]
     if count == 0 || out_values[] == C_NULL
-        return Union{Int64, Nothing}[]
+        return Optional{Int64}[]
     end
 
     values = unsafe_wrap(Array, out_values[], count)
     mask = unsafe_wrap(Array, out_mask[], count)
-    result = Union{Int64, Nothing}[mask[i] != 0 ? values[i] : nothing for i in 1:count]
+    result = Optional{Int64}[mask[i] != 0 ? values[i] : nothing for i in 1:count]
     C.quiver_database_free_integer_array(out_values[])
     C.quiver_database_free_mask(out_mask[])
     return result
@@ -27,12 +27,12 @@ function read_scalar_floats(db::Database, collection::String, attribute::String)
 
     count = out_count[]
     if count == 0 || out_values[] == C_NULL
-        return Union{Float64, Nothing}[]
+        return Optional{Float64}[]
     end
 
     values = unsafe_wrap(Array, out_values[], count)
     mask = unsafe_wrap(Array, out_mask[], count)
-    result = Union{Float64, Nothing}[mask[i] != 0 ? values[i] : nothing for i in 1:count]
+    result = Optional{Float64}[mask[i] != 0 ? values[i] : nothing for i in 1:count]
     C.quiver_database_free_float_array(out_values[])
     C.quiver_database_free_mask(out_mask[])
     return result
@@ -46,11 +46,11 @@ function read_scalar_strings(db::Database, collection::String, attribute::String
 
     count = out_count[]
     if count == 0 || out_values[] == C_NULL
-        return Union{String, Nothing}[]
+        return Optional{String}[]
     end
 
     ptrs = unsafe_wrap(Array, out_values[], count)
-    result = Union{String, Nothing}[ptr == C_NULL ? nothing : unsafe_string(ptr) for ptr in ptrs]
+    result = Optional{String}[ptr == C_NULL ? nothing : unsafe_string(ptr) for ptr in ptrs]
     C.quiver_database_free_string_array(out_values[], count)
     return result
 end
@@ -560,7 +560,7 @@ function read_time_series_group(db::Database, collection::String, group::String,
     data_ptrs = unsafe_wrap(Array, out_col_data[], col_count)
     mask_ptrs = unsafe_wrap(Array, out_col_has_value[], col_count)
 
-    # Value columns are typed Union{T, Nothing}: mask[r] == 0 surfaces as `nothing`. The
+    # Value columns are typed Optional{T}: mask[r] == 0 surfaces as `nothing`. The
     # dimension column's mask is always all 1, so it stays a dense Vector{DateTime}.
     result = Dict{String, Vector}()
     for i in 1:col_count
@@ -570,10 +570,10 @@ function read_time_series_group(db::Database, collection::String, group::String,
 
         if col_type == Cint(C.QUIVER_DATA_TYPE_INTEGER)
             int_arr = unsafe_wrap(Array, reinterpret(Ptr{Int64}, data_ptrs[i]), row_count)
-            result[col_name] = Union{Int64, Nothing}[mask[r] != 0 ? int_arr[r] : nothing for r in 1:row_count]
+            result[col_name] = Optional{Int64}[mask[r] != 0 ? int_arr[r] : nothing for r in 1:row_count]
         elseif col_type == Cint(C.QUIVER_DATA_TYPE_FLOAT)
             float_arr = unsafe_wrap(Array, reinterpret(Ptr{Float64}, data_ptrs[i]), row_count)
-            result[col_name] = Union{Float64, Nothing}[mask[r] != 0 ? float_arr[r] : nothing for r in 1:row_count]
+            result[col_name] = Optional{Float64}[mask[r] != 0 ? float_arr[r] : nothing for r in 1:row_count]
         elseif col_type == Cint(C.QUIVER_DATA_TYPE_STRING) || col_type == Cint(C.QUIVER_DATA_TYPE_DATE_TIME)
             str_ptr_ptr = reinterpret(Ptr{Ptr{Cchar}}, data_ptrs[i])
             str_ptrs = unsafe_wrap(Array, str_ptr_ptr, row_count)
@@ -581,8 +581,7 @@ function read_time_series_group(db::Database, collection::String, group::String,
                 result[col_name] = DateTime[string_to_date_time(unsafe_string(p)) for p in str_ptrs]
             else
                 # Never unsafe_string a masked-out (NULL) pointer.
-                result[col_name] =
-                    Union{String, Nothing}[mask[r] != 0 ? unsafe_string(str_ptrs[r]) : nothing for r in 1:row_count]
+                result[col_name] = Optional{String}[mask[r] != 0 ? unsafe_string(str_ptrs[r]) : nothing for r in 1:row_count]
             end
         else
             throw(ArgumentError("Unsupported data type $(col_type) for column '$col_name'"))
