@@ -82,6 +82,29 @@ TEST(Database, ReadScalarEmpty) {
 }
 
 // ============================================================================
+// NULL handling in bulk scalar reads (regression: NULLs must not be dropped)
+// ============================================================================
+
+TEST(Database, ReadScalarFloatsPreservesNullCount) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    // float_attribute has no default, so an unset value is SQL NULL.
+    db.create_element(
+        "Configuration", quiver::Element().set("label", std::string("Config 1")).set("float_attribute", 10.0));
+    db.create_element("Configuration", quiver::Element().set("label", std::string("Config 2")));  // NULL float
+    db.create_element(
+        "Configuration", quiver::Element().set("label", std::string("Config 3")).set("float_attribute", 30.0));
+    db.create_element(
+        "Configuration", quiver::Element().set("label", std::string("Config 4")).set("float_attribute", 40.0));
+
+    auto values = db.read_scalar_floats("Configuration", "float_attribute");
+    // One entry per element: the NULL must occupy a slot, not be silently dropped.
+    // (Statically typed return can't express the null slot yet; positional checks come with the fix.)
+    EXPECT_EQ(values.size(), 4u);
+}
+
+// ============================================================================
 // Read scalar by ID tests
 // ============================================================================
 

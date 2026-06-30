@@ -83,6 +83,41 @@ TEST(DatabaseCApi, ReadScalarFloats) {
     quiver_database_close(db);
 }
 
+TEST(DatabaseCApi, ReadScalarFloatsPreservesNullCount) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    // 4 elements; element 2 leaves float_attribute (no default) unset -> SQL NULL.
+    const char* labels[] = {"Config 1", "Config 2", "Config 3", "Config 4"};
+    const double float_values[] = {10.0, 0.0, 30.0, 40.0};
+    const bool has_float[] = {true, false, true, true};
+    for (int i = 0; i < 4; ++i) {
+        quiver_element_t* e = nullptr;
+        ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
+        quiver_element_set_string(e, "label", labels[i]);
+        if (has_float[i]) {
+            quiver_element_set_float(e, "float_attribute", float_values[i]);
+        }
+        int64_t tmp_id = 0;
+        quiver_database_create_element(db, "Configuration", e, &tmp_id);
+        EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
+    }
+
+    double* values = nullptr;
+    size_t count = 0;
+    auto err = quiver_database_read_scalar_floats(db, "Configuration", "float_attribute", &values, &count);
+
+    EXPECT_EQ(err, QUIVER_OK);
+    // One entry per element: the NULL must occupy a slot, not be silently dropped.
+    EXPECT_EQ(count, 4);
+
+    quiver_database_free_float_array(values);
+    quiver_database_close(db);
+}
+
 TEST(DatabaseCApi, ReadScalarStrings) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;

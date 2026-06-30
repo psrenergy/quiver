@@ -47,6 +47,22 @@ include("fixture.jl")
         Quiver.close!(db)
     end
 
+    @testset "Null Values Preserve Position" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        # float_attribute has no default, so an unset value is SQL NULL.
+        Quiver.create_element!(db, "Configuration"; label = "Config 1", float_attribute = 10.0)
+        Quiver.create_element!(db, "Configuration"; label = "Config 2")  # NULL float
+        Quiver.create_element!(db, "Configuration"; label = "Config 3", float_attribute = 30.0)
+        Quiver.create_element!(db, "Configuration"; label = "Config 4", float_attribute = 40.0)
+
+        # One entry per element; the NULL must occupy a slot (nothing), not be dropped.
+        @test Quiver.read_scalar_floats(db, "Configuration", "float_attribute") == [10.0, nothing, 30.0, 40.0]
+
+        Quiver.close!(db)
+    end
+
     @testset "Empty Result" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
         db = Quiver.from_schema(":memory:", path_schema)

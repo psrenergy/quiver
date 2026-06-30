@@ -82,6 +82,39 @@ void main() {
         db.close();
       }
     });
+
+    test('preserves a slot for NULL float values', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        // float_attribute has no default, so an unset value is SQL NULL.
+        db.createElement('Configuration', {
+          'label': 'Config 1',
+          'float_attribute': 10.0,
+        });
+        db.createElement('Configuration', {'label': 'Config 2'}); // NULL float
+        db.createElement('Configuration', {
+          'label': 'Config 3',
+          'float_attribute': 30.0,
+        });
+        db.createElement('Configuration', {
+          'label': 'Config 4',
+          'float_attribute': 40.0,
+        });
+
+        // One entry per element: the NULL must occupy a slot, not be dropped.
+        // (Statically typed return can't express the null slot yet; positional
+        // checks come with the fix.)
+        expect(
+          db.readScalarFloats('Configuration', 'float_attribute').length,
+          4,
+        );
+      } finally {
+        db.close();
+      }
+    });
   });
 
   group('Read From Collections', () {
