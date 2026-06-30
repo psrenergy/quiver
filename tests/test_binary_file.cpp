@@ -454,6 +454,45 @@ TEST_F(BinaryTempFileFixture, InvalidTimeDimensionCoordinates) {
     EXPECT_THROW(binary_file.write({1.0, 2.0}, {{"stage", 2}, {"block", 30}}), std::invalid_argument);
 }
 
+TEST_F(BinaryTempFileFixture, InitialDatetimeYear1960) {
+    // initial_datetime in 1960 is before the Unix epoch. The metadata's time-dimension
+    // computation and the write/read round-trip must handle pre-1970 dates, asserting the exact
+    // value survives serialization to the .toml sidecar and back.
+    auto md = BinaryMetadata::from_element(Element()
+                                               .set("version", "1")
+                                               .set("initial_datetime", "1960-01-01T00:00:00")
+                                               .set("unit", "MW")
+                                               .set("dimensions", {"stage", "block"})
+                                               .set("dimension_sizes", {4, 31})
+                                               .set("time_dimensions", {"stage", "block"})
+                                               .set("frequencies", {"monthly", "daily"})
+                                               .set("labels", {"plant_1", "plant_2"}));
+
+    {
+        auto binary_file = BinaryFile::open_file(path, 'w', md);
+        // stage=1 (Jan), block=1 and block=31 are valid (1960 is a leap year, Jan has 31 days).
+        binary_file.write({1.0, 2.0}, {{"stage", 1}, {"block", 1}});
+        binary_file.write({3.0, 4.0}, {{"stage", 1}, {"block", 31}});
+    }
+
+    auto reader = BinaryFile::open_file(path, 'r');
+    // The exact 1960 initial_datetime must round-trip — this is the assertion that catches the
+    // pre-epoch corruption (the bug produced 1969-12-31T23:59:59 instead of 1960-01-01).
+    auto expected = std::chrono::system_clock::time_point{
+        std::chrono::sys_days{std::chrono::year{1960} / std::chrono::January / 1}};
+    EXPECT_EQ(reader.get_metadata().initial_datetime, expected);
+    // ...and the serialized sidecar must read back the same string via to_toml().
+    EXPECT_NE(reader.get_metadata().to_toml().find("1960-01-01T00:00:00"), std::string::npos);
+
+    auto v1 = reader.read({{"stage", 1}, {"block", 1}});
+    EXPECT_DOUBLE_EQ(v1[0], 1.0);
+    EXPECT_DOUBLE_EQ(v1[1], 2.0);
+
+    auto v2 = reader.read({{"stage", 1}, {"block", 31}});
+    EXPECT_DOUBLE_EQ(v2[0], 3.0);
+    EXPECT_DOUBLE_EQ(v2[1], 4.0);
+}
+
 // ============================================================================
 // WriteRegistry
 // ============================================================================
