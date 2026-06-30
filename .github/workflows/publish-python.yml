@@ -33,7 +33,7 @@ jobs:
         with:
           ref: ${{ github.event.inputs.ref || github.sha }}
 
-      - uses: pypa/cibuildwheel@v4.0.0
+      - uses: pypa/cibuildwheel@v4.1.0
         with:
           package-dir: bindings/python
           output-dir: wheelhouse
