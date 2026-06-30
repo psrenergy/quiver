@@ -2,6 +2,7 @@
 #define QUIVER_DATETIME_H
 
 #include <chrono>
+#include <cstdio>
 #include <cstring>
 #include <ctime>
 #include <iomanip>
@@ -10,14 +11,17 @@
 
 namespace quiver::datetime {
 
-// Portable UTC mktime: converts a std::tm (interpreted as UTC) to time_t.
-// Uses _mkgmtime on Windows (MSVC and MinGW), timegm on POSIX.
-inline std::time_t mkgmtime_portable(std::tm* tm) {
-#ifdef _WIN32
-    return _mkgmtime(tm);
-#else
-    return timegm(tm);
-#endif
+// Convert a std::tm (interpreted as UTC) to a system_clock::time_point.
+//
+// Built on the C++20 <chrono> calendar, which supports the full proleptic Gregorian range
+// (including dates before the Unix epoch) and is locale/timezone-independent.
+inline std::chrono::system_clock::time_point tm_to_time_point(const std::tm& tm) {
+    std::chrono::year_month_day ymd{std::chrono::year{tm.tm_year + 1900},
+                                    std::chrono::month{static_cast<unsigned>(tm.tm_mon + 1)},
+                                    std::chrono::day{static_cast<unsigned>(tm.tm_mday)}};
+    auto days = std::chrono::sys_days{ymd};
+    return std::chrono::system_clock::time_point{days} + std::chrono::hours{tm.tm_hour} +
+           std::chrono::minutes{tm.tm_min} + std::chrono::seconds{tm.tm_sec};
 }
 
 // Cross-platform ISO 8601 parser using std::get_time (not strptime).
@@ -37,17 +41,24 @@ inline bool parse_iso8601(const std::string& datetime_str, std::tm& tm) {
 }
 
 // Format a system_clock::time_point as ISO 8601 string in UTC.
-// Uses gmtime to avoid locale/timezone-dependent std::format behavior.
+//
+// Decomposes via the C++20 <chrono> calendar, which supports the full proleptic Gregorian
+// range (including dates before the Unix epoch) and is locale/timezone-independent.
 inline std::string format_utc(const std::chrono::system_clock::time_point& tp) {
-    auto time_t_val = std::chrono::system_clock::to_time_t(tp);
-    std::tm tm{};
-#ifdef _WIN32
-    gmtime_s(&tm, &time_t_val);
-#else
-    gmtime_r(&time_t_val, &tm);
-#endif
+    auto days = std::chrono::floor<std::chrono::days>(tp);
+    std::chrono::year_month_day ymd{days};
+    std::chrono::hh_mm_ss<std::chrono::seconds> hms{std::chrono::duration_cast<std::chrono::seconds>(tp - days)};
+
     char buffer[32];
-    std::strftime(buffer, sizeof(buffer), "%Y-%m-%dT%H:%M:%S", &tm);
+    std::snprintf(buffer,
+                  sizeof(buffer),
+                  "%04d-%02u-%02uT%02d:%02d:%02d",
+                  static_cast<int>(ymd.year()),
+                  static_cast<unsigned>(ymd.month()),
+                  static_cast<unsigned>(ymd.day()),
+                  static_cast<int>(hms.hours().count()),
+                  static_cast<int>(hms.minutes().count()),
+                  static_cast<int>(hms.seconds().count()));
     return std::string(buffer);
 }
 
