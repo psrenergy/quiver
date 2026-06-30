@@ -361,12 +361,12 @@ function quiver_database_free_float_array(values)
     @ccall libquiver_c.quiver_database_free_float_array(values::Ptr{Cdouble})::quiver_error_t
 end
 
-function quiver_database_free_mask(mask)
-    @ccall libquiver_c.quiver_database_free_mask(mask::Ptr{UInt8})::quiver_error_t
-end
-
 function quiver_database_free_string_array(values, count)
     @ccall libquiver_c.quiver_database_free_string_array(values::Ptr{Ptr{Cchar}}, count::Csize_t)::quiver_error_t
+end
+
+function quiver_database_free_mask(mask)
+    @ccall libquiver_c.quiver_database_free_mask(mask::Ptr{UInt8})::quiver_error_t
 end
 
 function quiver_database_free_string(str)

@@ -1961,20 +1961,6 @@ class QuiverDatabaseBindings {
   late final _quiver_database_free_float_array = _quiver_database_free_float_arrayPtr
       .asFunction<int Function(ffi.Pointer<ffi.Double>)>();
 
-  int quiver_database_free_mask(
-    ffi.Pointer<ffi.Uint8> mask,
-  ) {
-    return _quiver_database_free_mask(
-      mask,
-    );
-  }
-
-  late final _quiver_database_free_maskPtr = _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<ffi.Uint8>)>>(
-    'quiver_database_free_mask',
-  );
-  late final _quiver_database_free_mask = _quiver_database_free_maskPtr
-      .asFunction<int Function(ffi.Pointer<ffi.Uint8>)>();
-
   int quiver_database_free_string_array(
     ffi.Pointer<ffi.Pointer<ffi.Char>> values,
     int count,
@@ -1991,6 +1977,20 @@ class QuiverDatabaseBindings {
       );
   late final _quiver_database_free_string_array = _quiver_database_free_string_arrayPtr
       .asFunction<int Function(ffi.Pointer<ffi.Pointer<ffi.Char>>, int)>();
+
+  int quiver_database_free_mask(
+    ffi.Pointer<ffi.Uint8> mask,
+  ) {
+    return _quiver_database_free_mask(
+      mask,
+    );
+  }
+
+  late final _quiver_database_free_maskPtr = _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<ffi.Uint8>)>>(
+    'quiver_database_free_mask',
+  );
+  late final _quiver_database_free_mask = _quiver_database_free_maskPtr
+      .asFunction<int Function(ffi.Pointer<ffi.Uint8>)>();
 
   int quiver_database_free_string(
     ffi.Pointer<ffi.Char> str,
