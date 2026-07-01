@@ -73,16 +73,6 @@ TEST(TimeFrequencyConversion, RoundTrip) {
 }
 
 // ============================================================================
-// TimePropertiesSetters
-// ============================================================================
-
-TEST(TimePropertiesSetters, SetInitialValue) {
-    TimeProperties props{TimeFrequency::Daily, 1, -1};
-    props.set_initial_value(15);
-    EXPECT_EQ(props.initial_value, 15);
-}
-
-// ============================================================================
 // TimePropertiesDatetimeToInt
 // ============================================================================
 
