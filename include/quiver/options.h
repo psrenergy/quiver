@@ -28,10 +28,6 @@ struct QUIVER_API CSVOptions {
     std::string date_time_format;  // strftime format string; empty = no formatting
 };
 
-inline CSVOptions default_csv_options() {
-    return {};
-}
-
 }  // namespace quiver
 
 #endif  // QUIVER_OPTIONS_H

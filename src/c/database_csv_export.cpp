@@ -17,7 +17,7 @@ QUIVER_C_API quiver_error_t quiver_database_export_csv(quiver_database_t* db,
 
     try {
         // NULL options means defaults, same convention as the lifecycle functions
-        auto cpp_options = options ? convert_csv_options(options) : quiver::default_csv_options();
+        auto cpp_options = options ? convert_csv_options(options) : quiver::CSVOptions{};
         db->db.export_csv(collection, group, path, cpp_options);
         return QUIVER_OK;
     } catch (const std::exception& e) {

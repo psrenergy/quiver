@@ -20,10 +20,8 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
 ## Rules and gotchas
 
 - **Regenerate after C API changes**: `generator/generator.bat` rewrites
-  `lib/src/ffi/bindings.dart`. The live ffigen config is the `ffigen:` block in
-  **pubspec.yaml** (plain `dart run ffigen` reads only that); the sibling `ffigen.yaml` is an
-  unused duplicate consulted only via an explicit `--config` flag — editing it alone changes
-  nothing.
+  `lib/src/ffi/bindings.dart`. The ffigen config is the `ffigen:` block in **pubspec.yaml**
+  (plain `dart run ffigen` reads only that).
 - **Native library resolution** (`lib/src/ffi/library_loader.dart`): searches the native-assets
   build output (`.dart_tool/hooks_runner/shared/quiverdb/build`) first — on Windows it pre-loads
   `libquiver.dll` from there so `libquiver_c.dll`'s dependency resolves — then falls back to
