@@ -36,10 +36,6 @@ TimeFrequency frequency_from_string(const std::string& str) {
     throw std::invalid_argument("Unknown frequency: " + str);
 }
 
-void TimeProperties::set_initial_value(int64_t initial_value) {
-    this->initial_value = initial_value;
-}
-
 int64_t TimeProperties::datetime_to_int(std::chrono::system_clock::time_point datetime) const {
     auto date = std::chrono::floor<std::chrono::days>(datetime);
     auto ymd = std::chrono::year_month_day{date};

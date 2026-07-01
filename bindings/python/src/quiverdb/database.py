@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from datetime import datetime, timezone
 
 from quiverdb._c_api import ffi, get_lib
@@ -277,10 +277,8 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
             yield self
             self.commit()
         except BaseException:
-            try:
+            with suppress(Exception):  # Best-effort rollback
                 self.rollback()
-            except Exception:
-                pass  # Best-effort rollback; swallow rollback errors
             raise
 
     # -- Query operations -------------------------------------------------------
@@ -1729,16 +1727,13 @@ def _marshal_time_series_columns(data: dict[str, list]) -> tuple:
             keepalive.append(arr)
             c_col_types[c] = DataType.FLOAT
             c_col_data[c] = ffi.cast("void*", arr)
-        elif isinstance(first, datetime):
-            encoded = [(v.strftime("%Y-%m-%dT%H:%M:%S").encode("utf-8") if v is not None else b"") for v in values]
-            c_strs = [ffi.new("char[]", e) for e in encoded]
-            keepalive.extend(c_strs)
-            c_arr = ffi.new("char*[]", [(s if v is not None else ffi.NULL) for s, v in zip(c_strs, values)])
-            keepalive.append(c_arr)
-            c_col_types[c] = DataType.STRING
-            c_col_data[c] = ffi.cast("void*", c_arr)
-        elif isinstance(first, str):
-            encoded = [(v.encode("utf-8") if v is not None else b"") for v in values]
+        elif isinstance(first, (datetime, str)):
+            encoded = [
+                (v.strftime("%Y-%m-%dT%H:%M:%S") if isinstance(v, datetime) else v).encode("utf-8")
+                if v is not None
+                else b""
+                for v in values
+            ]
             c_strs = [ffi.new("char[]", e) for e in encoded]
             keepalive.extend(c_strs)
             c_arr = ffi.new("char*[]", [(s if v is not None else ffi.NULL) for s, v in zip(c_strs, values)])

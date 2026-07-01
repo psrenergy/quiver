@@ -336,7 +336,7 @@ BinaryMetadata BinaryMetadata::from_toml_content(const std::string& content) {
         compute_time_dimension_initial_values(metadata.dimensions, metadata.initial_datetime);
     for (auto& dim : metadata.dimensions) {
         if (dim.is_time_dimension()) {
-            dim.time->set_initial_value(initial_values[time_dim_index]);
+            dim.time->initial_value = initial_values[time_dim_index];
             time_dim_index++;
         }
     }

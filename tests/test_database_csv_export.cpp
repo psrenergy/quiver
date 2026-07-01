@@ -486,7 +486,7 @@ TEST(DatabaseCSV, ExportCSV_DateTimeFormat_NonDateColumnsUnaffected) {
 // ============================================================================
 
 TEST(DatabaseCSV, ExportCSV_DefaultOptionsFactory) {
-    auto options = quiver::default_csv_options();
+    auto options = quiver::CSVOptions{};
     EXPECT_TRUE(options.enum_labels.empty());
     EXPECT_TRUE(options.date_time_format.empty());
 }
