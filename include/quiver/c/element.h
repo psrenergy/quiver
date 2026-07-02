@@ -21,19 +21,24 @@ QUIVER_C_API quiver_error_t quiver_element_set_float(quiver_element_t* element, 
 QUIVER_C_API quiver_error_t quiver_element_set_string(quiver_element_t* element, const char* name, const char* value);
 QUIVER_C_API quiver_error_t quiver_element_set_null(quiver_element_t* element, const char* name);
 
-// Array setters - C++ create_element routes these to vector/set tables based on schema
+// Array setters - C++ create_element routes these to vector/set tables based on schema.
+// has_value is an optional per-cell presence mask (NULL = dense, all values present);
+// has_value[i] == 0 stores SQL NULL for that cell and the data entry is never read.
 QUIVER_C_API quiver_error_t quiver_element_set_array_integer(quiver_element_t* element,
                                                              const char* name,
                                                              const int64_t* values,
-                                                             int32_t count);
+                                                             int32_t count,
+                                                             const uint8_t* has_value);
 QUIVER_C_API quiver_error_t quiver_element_set_array_float(quiver_element_t* element,
                                                            const char* name,
                                                            const double* values,
-                                                           int32_t count);
+                                                           int32_t count,
+                                                           const uint8_t* has_value);
 QUIVER_C_API quiver_error_t quiver_element_set_array_string(quiver_element_t* element,
                                                             const char* name,
                                                             const char* const* values,
-                                                            int32_t count);
+                                                            int32_t count,
+                                                            const uint8_t* has_value);
 
 // Accessors
 QUIVER_C_API quiver_error_t quiver_element_has_scalars(quiver_element_t* element, int* out_result);

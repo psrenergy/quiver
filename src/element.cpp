@@ -53,6 +53,11 @@ Element& Element::set_null(const std::string& name) {
     return *this;
 }
 
+Element& Element::set(const std::string& name, const std::vector<Value>& values) {
+    arrays_[name] = values;
+    return *this;
+}
+
 Element& Element::set(const std::string& name, const std::vector<int64_t>& values) {
     arrays_[name] = std::vector<Value>(values.begin(), values.end());
     return *this;

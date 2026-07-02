@@ -397,6 +397,52 @@ TEST(Database, CreateElementWithDatetime) {
     EXPECT_EQ(dates[0], "2024-03-15T14:30:45");
 }
 
+TEST(Database, CreateElementArrayWithNullCells) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element parent;
+    parent.set("label", std::string("Parent 1"));
+    db.create_element("Parent", parent);
+
+    // parent_ref is a nullable FK column in Child_vector_refs; null cells must round-trip
+    quiver::Element child;
+    child.set("label", std::string("Child 1"));
+    child.set("parent_ref", std::vector<quiver::Value>{int64_t{1}, nullptr});
+    db.create_element("Child", child);
+
+    auto total = db.query_integer("SELECT COUNT(*) FROM Child_vector_refs");
+    auto nulls = db.query_integer("SELECT COUNT(*) FROM Child_vector_refs WHERE parent_ref IS NULL");
+    EXPECT_EQ(total.value(), 2);
+    EXPECT_EQ(nulls.value(), 1);
+
+    // Row-aligned group read preserves the null cell positionally
+    auto rows = db.read_vector_group_by_id("Child", "refs", 1);
+    ASSERT_EQ(rows.size(), 2);
+    EXPECT_EQ(std::get<int64_t>(rows[0].at("parent_ref")), 1);
+    EXPECT_TRUE(std::holds_alternative<std::nullptr_t>(rows[1].at("parent_ref")));
+}
+
+TEST(Database, ReadSetGroupByIdWithNullCells) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element parent;
+    parent.set("label", std::string("Parent 1"));
+    db.create_element("Parent", parent);
+
+    quiver::Element child;
+    child.set("label", std::string("Child 1"));
+    child.set("parent_ref", std::vector<quiver::Value>{nullptr, int64_t{1}});
+    db.create_element("Child", child);
+
+    // parent_ref also lives in Child_set_parents; the set read must keep the null row
+    auto rows = db.read_set_group_by_id("Child", "parents", 1);
+    ASSERT_EQ(rows.size(), 2);
+    EXPECT_TRUE(std::holds_alternative<std::nullptr_t>(rows[0].at("parent_ref")));
+    EXPECT_EQ(std::get<int64_t>(rows[1].at("parent_ref")), 1);
+}
+
 // ============================================================================
 // FK label resolution (resolve_fk_label helper)
 // ============================================================================

@@ -29,7 +29,7 @@ TEST(DatabaseCApi, ReadVectorIntegers) {
     ASSERT_EQ(quiver_element_create(&e1), QUIVER_OK);
     quiver_element_set_string(e1, "label", "Item 1");
     int64_t values1[] = {1, 2, 3};
-    quiver_element_set_array_integer(e1, "value_int", values1, 3);
+    quiver_element_set_array_integer(e1, "value_int", values1, 3, nullptr);
     int64_t tmp_id2 = 0;
     quiver_database_create_element(db, "Collection", e1, &tmp_id2);
     EXPECT_EQ(quiver_element_destroy(e1), QUIVER_OK);
@@ -38,7 +38,7 @@ TEST(DatabaseCApi, ReadVectorIntegers) {
     ASSERT_EQ(quiver_element_create(&e2), QUIVER_OK);
     quiver_element_set_string(e2, "label", "Item 2");
     int64_t values2[] = {10, 20};
-    quiver_element_set_array_integer(e2, "value_int", values2, 2);
+    quiver_element_set_array_integer(e2, "value_int", values2, 2, nullptr);
     int64_t tmp_id3 = 0;
     quiver_database_create_element(db, "Collection", e2, &tmp_id3);
     EXPECT_EQ(quiver_element_destroy(e2), QUIVER_OK);
@@ -80,7 +80,7 @@ TEST(DatabaseCApi, ReadVectorFloats) {
     ASSERT_EQ(quiver_element_create(&e1), QUIVER_OK);
     quiver_element_set_string(e1, "label", "Item 1");
     double values1[] = {1.5, 2.5, 3.5};
-    quiver_element_set_array_float(e1, "value_float", values1, 3);
+    quiver_element_set_array_float(e1, "value_float", values1, 3, nullptr);
     int64_t tmp_id2 = 0;
     quiver_database_create_element(db, "Collection", e1, &tmp_id2);
     EXPECT_EQ(quiver_element_destroy(e1), QUIVER_OK);
@@ -89,7 +89,7 @@ TEST(DatabaseCApi, ReadVectorFloats) {
     ASSERT_EQ(quiver_element_create(&e2), QUIVER_OK);
     quiver_element_set_string(e2, "label", "Item 2");
     double values2[] = {10.5, 20.5};
-    quiver_element_set_array_float(e2, "value_float", values2, 2);
+    quiver_element_set_array_float(e2, "value_float", values2, 2, nullptr);
     int64_t tmp_id3 = 0;
     quiver_database_create_element(db, "Collection", e2, &tmp_id3);
     EXPECT_EQ(quiver_element_destroy(e2), QUIVER_OK);
@@ -169,7 +169,7 @@ TEST(DatabaseCApi, ReadVectorOnlyReturnsElementsWithData) {
     ASSERT_EQ(quiver_element_create(&e1), QUIVER_OK);
     quiver_element_set_string(e1, "label", "Item 1");
     int64_t values1[] = {1, 2, 3};
-    quiver_element_set_array_integer(e1, "value_int", values1, 3);
+    quiver_element_set_array_integer(e1, "value_int", values1, 3, nullptr);
     int64_t tmp_id2 = 0;
     quiver_database_create_element(db, "Collection", e1, &tmp_id2);
     EXPECT_EQ(quiver_element_destroy(e1), QUIVER_OK);
@@ -187,7 +187,7 @@ TEST(DatabaseCApi, ReadVectorOnlyReturnsElementsWithData) {
     ASSERT_EQ(quiver_element_create(&e3), QUIVER_OK);
     quiver_element_set_string(e3, "label", "Item 3");
     int64_t values3[] = {4, 5};
-    quiver_element_set_array_integer(e3, "value_int", values3, 2);
+    quiver_element_set_array_integer(e3, "value_int", values3, 2, nullptr);
     int64_t tmp_id4 = 0;
     quiver_database_create_element(db, "Collection", e3, &tmp_id4);
     EXPECT_EQ(quiver_element_destroy(e3), QUIVER_OK);
@@ -234,7 +234,7 @@ TEST(DatabaseCApi, ReadVectorIntegerById) {
     ASSERT_EQ(quiver_element_create(&e1), QUIVER_OK);
     quiver_element_set_string(e1, "label", "Item 1");
     int64_t values1[] = {1, 2, 3};
-    quiver_element_set_array_integer(e1, "value_int", values1, 3);
+    quiver_element_set_array_integer(e1, "value_int", values1, 3, nullptr);
     int64_t id1 = 0;
     quiver_database_create_element(db, "Collection", e1, &id1);
     EXPECT_EQ(quiver_element_destroy(e1), QUIVER_OK);
@@ -243,7 +243,7 @@ TEST(DatabaseCApi, ReadVectorIntegerById) {
     ASSERT_EQ(quiver_element_create(&e2), QUIVER_OK);
     quiver_element_set_string(e2, "label", "Item 2");
     int64_t values2[] = {10, 20};
-    quiver_element_set_array_integer(e2, "value_int", values2, 2);
+    quiver_element_set_array_integer(e2, "value_int", values2, 2, nullptr);
     int64_t id2 = 0;
     quiver_database_create_element(db, "Collection", e2, &id2);
     EXPECT_EQ(quiver_element_destroy(e2), QUIVER_OK);
@@ -287,7 +287,7 @@ TEST(DatabaseCApi, ReadVectorFloatById) {
     ASSERT_EQ(quiver_element_create(&e1), QUIVER_OK);
     quiver_element_set_string(e1, "label", "Item 1");
     double values1[] = {1.5, 2.5, 3.5};
-    quiver_element_set_array_float(e1, "value_float", values1, 3);
+    quiver_element_set_array_float(e1, "value_float", values1, 3, nullptr);
     int64_t id1 = 0;
     quiver_database_create_element(db, "Collection", e1, &id1);
     EXPECT_EQ(quiver_element_destroy(e1), QUIVER_OK);
@@ -529,7 +529,7 @@ TEST(DatabaseCApi, ReadVectorStringsHappyPath) {
     quiver_element_t* update = nullptr;
     ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
     const char* str_values[] = {"alpha", "beta", "gamma"};
-    quiver_element_set_array_string(update, "label_value", str_values, 3);
+    quiver_element_set_array_string(update, "label_value", str_values, 3, nullptr);
     ASSERT_EQ(quiver_database_update_element(db, "AllTypes", id, update), QUIVER_OK);
     EXPECT_EQ(quiver_element_destroy(update), QUIVER_OK);
 
@@ -571,7 +571,7 @@ TEST(DatabaseCApi, ReadVectorStringsByIdHappyPath) {
     quiver_element_t* update = nullptr;
     ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
     const char* str_values[] = {"hello", "world"};
-    quiver_element_set_array_string(update, "label_value", str_values, 2);
+    quiver_element_set_array_string(update, "label_value", str_values, 2, nullptr);
     ASSERT_EQ(quiver_database_update_element(db, "AllTypes", id, update), QUIVER_OK);
     EXPECT_EQ(quiver_element_destroy(update), QUIVER_OK);
 
@@ -584,5 +584,59 @@ TEST(DatabaseCApi, ReadVectorStringsByIdHappyPath) {
     EXPECT_STREQ(read_values[1], "world");
 
     quiver_database_free_string_array(read_values, count);
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, ReadVectorGroupByIdPreservesNullCells) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("relations.sql").c_str(), &options, &db), QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    quiver_element_t* parent = nullptr;
+    ASSERT_EQ(quiver_element_create(&parent), QUIVER_OK);
+    quiver_element_set_string(parent, "label", "Parent 1");
+    int64_t parent_id = 0;
+    quiver_database_create_element(db, "Parent", parent, &parent_id);
+    EXPECT_EQ(quiver_element_destroy(parent), QUIVER_OK);
+
+    quiver_element_t* child = nullptr;
+    ASSERT_EQ(quiver_element_create(&child), QUIVER_OK);
+    quiver_element_set_string(child, "label", "Child 1");
+    int64_t refs[] = {1, 0};
+    uint8_t refs_mask[] = {1, 0};
+    quiver_element_set_array_integer(child, "parent_ref", refs, 2, refs_mask);
+    int64_t child_id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Child", child, &child_id), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(child), QUIVER_OK);
+
+    char** column_names = nullptr;
+    int* column_types = nullptr;
+    void** column_data = nullptr;
+    uint8_t** column_has_value = nullptr;
+    size_t column_count = 0;
+    size_t row_count = 0;
+    ASSERT_EQ(quiver_database_read_vector_group_by_id(db,
+                                                      "Child",
+                                                      "refs",
+                                                      child_id,
+                                                      &column_names,
+                                                      &column_types,
+                                                      &column_data,
+                                                      &column_has_value,
+                                                      &column_count,
+                                                      &row_count),
+              QUIVER_OK);
+
+    ASSERT_EQ(column_count, 1);
+    ASSERT_EQ(row_count, 2);
+    EXPECT_STREQ(column_names[0], "parent_ref");
+    EXPECT_EQ(column_types[0], QUIVER_DATA_TYPE_INTEGER);
+    EXPECT_EQ(column_has_value[0][0], 1);
+    EXPECT_EQ(static_cast<int64_t*>(column_data[0])[0], 1);
+    EXPECT_EQ(column_has_value[0][1], 0);
+
+    quiver_database_free_time_series_data(
+        column_names, column_types, column_data, column_has_value, column_count, row_count);
     quiver_database_close(db);
 }

@@ -85,6 +85,13 @@ public:
     std::vector<std::string>
     read_set_strings_by_id(const std::string& collection, const std::string& attribute, int64_t id);
 
+    // Read a whole vector/set group (by element ID) - returns rows keyed by value column,
+    // positionally aligned with SQL NULL cells preserved as nullptr Values
+    std::vector<std::map<std::string, Value>>
+    read_vector_group_by_id(const std::string& collection, const std::string& group, int64_t id);
+    std::vector<std::map<std::string, Value>>
+    read_set_group_by_id(const std::string& collection, const std::string& group, int64_t id);
+
     // Read element Ids
     std::vector<int64_t> read_element_ids(const std::string& collection);
 

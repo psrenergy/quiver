@@ -47,5 +47,10 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   `toDartString` a masked-out (NULL) pointer.
 - **Query API shape**: `queryString`/`queryInteger`/`queryFloat`/`queryDateTime` take an optional
   positional `List<Object?>? parameters` (no separate `*Params` methods).
+- **Element array NULLs**: `Element.setArray{Integer,Float,String}` take `List<T?>` and pass the
+  per-cell `has_value` mask to the C setters; `Element.set` dispatches mixed lists on the first
+  non-null element, and an empty or all-null list is tagged integer (valid — type is irrelevant
+  when no value is read). Do not reintroduce the old "empty mixed list" rejection: an empty array
+  on `updateElement` is the clear-group path.
 - **Per-method FFI boilerplate is the house style** — don't collapse it into
   closure-parameterized helpers (root "Do not 'fix'" list).

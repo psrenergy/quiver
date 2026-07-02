@@ -8,23 +8,11 @@ ScalarMetadata Database::get_scalar_metadata(const std::string& collection, cons
 
     const auto* table_def = impl_->schema->get_table(collection);
 
-    const auto* col = table_def->get_column(attribute);
-    if (!col) {
+    if (!table_def->get_column(attribute)) {
         throw std::runtime_error("Scalar attribute not found: '" + attribute + "' in collection '" + collection + "'");
     }
 
-    auto metadata = internal::scalar_metadata_from_column(*col);
-
-    for (const auto& fk : table_def->foreign_keys) {
-        if (fk.from_column == attribute) {
-            metadata.is_foreign_key = true;
-            metadata.references_collection = fk.to_table;
-            metadata.references_column = fk.to_column;
-            break;
-        }
-    }
-
-    return metadata;
+    return internal::scalar_metadata_with_fk(*table_def, attribute);
 }
 
 GroupMetadata Database::get_vector_metadata(const std::string& collection, const std::string& group_name) const {
@@ -47,7 +35,7 @@ GroupMetadata Database::get_vector_metadata(const std::string& collection, const
             continue;
         }
 
-        metadata.value_columns.push_back(internal::scalar_metadata_from_column(table_def->columns.at(col_name)));
+        metadata.value_columns.push_back(internal::scalar_metadata_with_fk(*table_def, col_name));
     }
 
     return metadata;
@@ -73,7 +61,7 @@ GroupMetadata Database::get_set_metadata(const std::string& collection, const st
             continue;
         }
 
-        metadata.value_columns.push_back(internal::scalar_metadata_from_column(table_def->columns.at(col_name)));
+        metadata.value_columns.push_back(internal::scalar_metadata_with_fk(*table_def, col_name));
     }
 
     return metadata;
@@ -86,18 +74,7 @@ std::vector<ScalarMetadata> Database::list_scalar_attributes(const std::string& 
 
     std::vector<ScalarMetadata> result;
     for (const auto& col_name : table_def->column_order) {
-        auto metadata = internal::scalar_metadata_from_column(table_def->columns.at(col_name));
-
-        for (const auto& fk : table_def->foreign_keys) {
-            if (fk.from_column == col_name) {
-                metadata.is_foreign_key = true;
-                metadata.references_collection = fk.to_table;
-                metadata.references_column = fk.to_column;
-                break;
-            }
-        }
-
-        result.push_back(std::move(metadata));
+        result.push_back(internal::scalar_metadata_with_fk(*table_def, col_name));
     }
     return result;
 }

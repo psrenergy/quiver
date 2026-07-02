@@ -1,3 +1,4 @@
+#include <cstring>
 #include <gtest/gtest.h>
 #include <quiver/c/database.h>
 #include <quiver/c/element.h>
@@ -99,7 +100,7 @@ TEST(ElementCApi, SetArrayInt) {
     ASSERT_NE(element, nullptr);
 
     int64_t values[] = {10, 20, 30};
-    EXPECT_EQ(quiver_element_set_array_integer(element, "counts", values, 3), QUIVER_OK);
+    EXPECT_EQ(quiver_element_set_array_integer(element, "counts", values, 3, nullptr), QUIVER_OK);
     int has_arrays = 0;
     EXPECT_EQ(quiver_element_has_arrays(element, &has_arrays), QUIVER_OK);
     EXPECT_EQ(has_arrays, 1);
@@ -116,7 +117,7 @@ TEST(ElementCApi, SetArrayFloat) {
     ASSERT_NE(element, nullptr);
 
     double values[] = {1.5, 2.5, 3.5};
-    EXPECT_EQ(quiver_element_set_array_float(element, "costs", values, 3), QUIVER_OK);
+    EXPECT_EQ(quiver_element_set_array_float(element, "costs", values, 3, nullptr), QUIVER_OK);
     int has_arrays = 0;
     EXPECT_EQ(quiver_element_has_arrays(element, &has_arrays), QUIVER_OK);
     EXPECT_EQ(has_arrays, 1);
@@ -133,13 +134,31 @@ TEST(ElementCApi, SetArrayString) {
     ASSERT_NE(element, nullptr);
 
     const char* values[] = {"important", "urgent", "review"};
-    EXPECT_EQ(quiver_element_set_array_string(element, "tags", values, 3), QUIVER_OK);
+    EXPECT_EQ(quiver_element_set_array_string(element, "tags", values, 3, nullptr), QUIVER_OK);
     int has_arrays = 0;
     EXPECT_EQ(quiver_element_has_arrays(element, &has_arrays), QUIVER_OK);
     EXPECT_EQ(has_arrays, 1);
     size_t array_count = 0;
     EXPECT_EQ(quiver_element_array_count(element, &array_count), QUIVER_OK);
     EXPECT_EQ(array_count, 1);
+
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
+}
+
+TEST(ElementCApi, SetArrayWithNullMask) {
+    quiver_element_t* element = nullptr;
+    ASSERT_EQ(quiver_element_create(&element), QUIVER_OK);
+    ASSERT_NE(element, nullptr);
+
+    // has_value[i] == 0 stores SQL NULL for that cell; the data slot is a placeholder
+    int64_t values[] = {10, 0, 30};
+    uint8_t has_value[] = {1, 0, 1};
+    EXPECT_EQ(quiver_element_set_array_integer(element, "refs", values, 3, has_value), QUIVER_OK);
+
+    char* out_string = nullptr;
+    EXPECT_EQ(quiver_element_to_string(element, &out_string), QUIVER_OK);
+    EXPECT_NE(strstr(out_string, "[10, null, 30]"), nullptr);
+    quiver_database_free_string(out_string);
 
     EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
 }
@@ -151,7 +170,7 @@ TEST(ElementCApi, Clear) {
 
     quiver_element_set_integer(element, "id", 1);
     double values[] = {1.0, 2.0};
-    quiver_element_set_array_float(element, "data", values, 2);
+    quiver_element_set_array_float(element, "data", values, 2, nullptr);
 
     int has_scalars = 0;
     EXPECT_EQ(quiver_element_has_scalars(element, &has_scalars), QUIVER_OK);
@@ -230,7 +249,7 @@ TEST(ElementCApi, ToString) {
     quiver_element_set_float(element, "capacity", 50.0);
 
     double costs[] = {1.5, 2.5};
-    quiver_element_set_array_float(element, "costs", costs, 2);
+    quiver_element_set_array_float(element, "costs", costs, 2, nullptr);
 
     char* str = nullptr;
     ASSERT_EQ(quiver_element_to_string(element, &str), QUIVER_OK);
@@ -260,17 +279,17 @@ TEST(ElementCApi, ArrayNullErrors) {
     double float_values[] = {1.0, 2.0, 3.0};
     const char* string_values[] = {"a", "b", "c"};
 
-    EXPECT_EQ(quiver_element_set_array_integer(nullptr, "x", integer_values, 3), QUIVER_ERROR);
-    EXPECT_EQ(quiver_element_set_array_float(nullptr, "x", float_values, 3), QUIVER_ERROR);
-    EXPECT_EQ(quiver_element_set_array_string(nullptr, "x", string_values, 3), QUIVER_ERROR);
+    EXPECT_EQ(quiver_element_set_array_integer(nullptr, "x", integer_values, 3, nullptr), QUIVER_ERROR);
+    EXPECT_EQ(quiver_element_set_array_float(nullptr, "x", float_values, 3, nullptr), QUIVER_ERROR);
+    EXPECT_EQ(quiver_element_set_array_string(nullptr, "x", string_values, 3, nullptr), QUIVER_ERROR);
 
     quiver_element_t* element = nullptr;
     ASSERT_EQ(quiver_element_create(&element), QUIVER_OK);
-    EXPECT_EQ(quiver_element_set_array_integer(element, nullptr, integer_values, 3), QUIVER_ERROR);
-    EXPECT_EQ(quiver_element_set_array_float(element, nullptr, float_values, 3), QUIVER_ERROR);
-    EXPECT_EQ(quiver_element_set_array_string(element, nullptr, string_values, 3), QUIVER_ERROR);
-    EXPECT_EQ(quiver_element_set_array_integer(element, "x", nullptr, 3), QUIVER_ERROR);
-    EXPECT_EQ(quiver_element_set_array_float(element, "x", nullptr, 3), QUIVER_ERROR);
-    EXPECT_EQ(quiver_element_set_array_string(element, "x", nullptr, 3), QUIVER_ERROR);
+    EXPECT_EQ(quiver_element_set_array_integer(element, nullptr, integer_values, 3, nullptr), QUIVER_ERROR);
+    EXPECT_EQ(quiver_element_set_array_float(element, nullptr, float_values, 3, nullptr), QUIVER_ERROR);
+    EXPECT_EQ(quiver_element_set_array_string(element, nullptr, string_values, 3, nullptr), QUIVER_ERROR);
+    EXPECT_EQ(quiver_element_set_array_integer(element, "x", nullptr, 3, nullptr), QUIVER_ERROR);
+    EXPECT_EQ(quiver_element_set_array_float(element, "x", nullptr, 3, nullptr), QUIVER_ERROR);
+    EXPECT_EQ(quiver_element_set_array_string(element, "x", nullptr, 3, nullptr), QUIVER_ERROR);
     EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
 }

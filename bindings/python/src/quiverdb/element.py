@@ -59,7 +59,7 @@ class Element:
         lib = get_lib()
         if len(values) == 0:
             # Empty array -- type doesn't matter
-            check(lib.quiver_element_set_array_integer(self._ptr, name.encode("utf-8"), ffi.NULL, 0))
+            check(lib.quiver_element_set_array_integer(self._ptr, name.encode("utf-8"), ffi.NULL, 0, ffi.NULL))
             return
 
         first = values[0]
@@ -77,19 +77,19 @@ class Element:
     def _set_array_integer(self, name: str, values: list[int]) -> None:
         lib = get_lib()
         c_arr = ffi.new("int64_t[]", values)
-        check(lib.quiver_element_set_array_integer(self._ptr, name.encode("utf-8"), c_arr, len(values)))
+        check(lib.quiver_element_set_array_integer(self._ptr, name.encode("utf-8"), c_arr, len(values), ffi.NULL))
 
     def _set_array_float(self, name: str, values: list[float]) -> None:
         lib = get_lib()
         c_arr = ffi.new("double[]", values)
-        check(lib.quiver_element_set_array_float(self._ptr, name.encode("utf-8"), c_arr, len(values)))
+        check(lib.quiver_element_set_array_float(self._ptr, name.encode("utf-8"), c_arr, len(values), ffi.NULL))
 
     def _set_array_string(self, name: str, values: list[str]) -> None:
         lib = get_lib()
         encoded = [v.encode("utf-8") for v in values]
         c_strings = [ffi.new("char[]", e) for e in encoded]
         c_arr = ffi.new("const char*[]", c_strings)
-        check(lib.quiver_element_set_array_string(self._ptr, name.encode("utf-8"), c_arr, len(values)))
+        check(lib.quiver_element_set_array_string(self._ptr, name.encode("utf-8"), c_arr, len(values), ffi.NULL))
 
     def _ensure_valid(self) -> None:
         if self._destroyed:

@@ -50,9 +50,9 @@ const elementSymbols = {
   quiver_element_set_float: { args: [P, BUF, F64], returns: I32 },
   quiver_element_set_string: { args: [P, BUF, BUF], returns: I32 },
   quiver_element_set_null: { args: [P, BUF], returns: I32 },
-  quiver_element_set_array_integer: { args: [P, BUF, P, I32], returns: I32 },
-  quiver_element_set_array_float: { args: [P, BUF, P, I32], returns: I32 },
-  quiver_element_set_array_string: { args: [P, BUF, P, I32], returns: I32 },
+  quiver_element_set_array_integer: { args: [P, BUF, P, I32, P], returns: I32 },
+  quiver_element_set_array_float: { args: [P, BUF, P, I32, P], returns: I32 },
+  quiver_element_set_array_string: { args: [P, BUF, P, I32, P], returns: I32 },
 } as const;
 
 const crudSymbols = {

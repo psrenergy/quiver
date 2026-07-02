@@ -70,15 +70,18 @@ ffi.cdef("""
     quiver_error_t quiver_element_set_array_integer(quiver_element_t* element,
                                                      const char* name,
                                                      const int64_t* values,
-                                                     int32_t count);
+                                                     int32_t count,
+                                                     const uint8_t* has_value);
     quiver_error_t quiver_element_set_array_float(quiver_element_t* element,
                                                    const char* name,
                                                    const double* values,
-                                                   int32_t count);
+                                                   int32_t count,
+                                                   const uint8_t* has_value);
     quiver_error_t quiver_element_set_array_string(quiver_element_t* element,
                                                     const char* name,
                                                     const char* const* values,
-                                                    int32_t count);
+                                                    int32_t count,
+                                                    const uint8_t* has_value);
 
     quiver_error_t quiver_element_has_scalars(quiver_element_t* element, int* out_result);
     quiver_error_t quiver_element_has_arrays(quiver_element_t* element, int* out_result);

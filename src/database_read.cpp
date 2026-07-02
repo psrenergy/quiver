@@ -159,6 +159,56 @@ Database::read_set_strings_by_id(const std::string& collection, const std::strin
     return internal::read_column_values<std::string>(execute(sql, {id}));
 }
 
+namespace {
+
+std::string group_select_sql(const GroupMetadata& metadata, const std::string& table, const std::string& order_by) {
+    std::string sql = "SELECT ";
+    for (size_t i = 0; i < metadata.value_columns.size(); ++i) {
+        if (i > 0)
+            sql += ", ";
+        sql += metadata.value_columns[i].name;
+    }
+    sql += " FROM " + table + " WHERE id = ? ORDER BY " + order_by;
+    return sql;
+}
+
+std::vector<std::map<std::string, Value>> group_rows_from_result(const GroupMetadata& metadata, const Result& result) {
+    std::vector<std::map<std::string, Value>> rows;
+    rows.reserve(result.row_count());
+    for (size_t row_idx = 0; row_idx < result.row_count(); ++row_idx) {
+        std::map<std::string, Value> row;
+        for (size_t col_idx = 0; col_idx < metadata.value_columns.size(); ++col_idx) {
+            row[metadata.value_columns[col_idx].name] = result[row_idx][col_idx];
+        }
+        rows.push_back(std::move(row));
+    }
+    return rows;
+}
+
+}  // namespace
+
+std::vector<std::map<std::string, Value>>
+Database::read_vector_group_by_id(const std::string& collection, const std::string& group, int64_t id) {
+    impl_->require_collection(collection, "read_vector_group_by_id");
+    auto metadata = get_vector_metadata(collection, group);
+    if (metadata.value_columns.empty()) {
+        return {};
+    }
+    auto sql = group_select_sql(metadata, Schema::vector_table_name(collection, group), "vector_index");
+    return group_rows_from_result(metadata, execute(sql, {id}));
+}
+
+std::vector<std::map<std::string, Value>>
+Database::read_set_group_by_id(const std::string& collection, const std::string& group, int64_t id) {
+    impl_->require_collection(collection, "read_set_group_by_id");
+    auto metadata = get_set_metadata(collection, group);
+    if (metadata.value_columns.empty()) {
+        return {};
+    }
+    auto sql = group_select_sql(metadata, Schema::set_table_name(collection, group), "rowid");
+    return group_rows_from_result(metadata, execute(sql, {id}));
+}
+
 std::vector<int64_t> Database::read_element_ids(const std::string& collection) {
     impl_->require_collection(collection, "read_element_ids");
     auto sql = "SELECT id FROM " + collection + " ORDER BY rowid";
