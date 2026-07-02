@@ -161,7 +161,7 @@ TEST(DatabaseCApiCSV, ImportCSV_Vector_RoundTrip) {
     quiver_element_t* update = nullptr;
     ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
     double vec_values[] = {1.1, 2.2, 3.3};
-    quiver_element_set_array_float(update, "measurement", vec_values, 3);
+    quiver_element_set_array_float(update, "measurement", vec_values, 3, nullptr);
     ASSERT_EQ(quiver_database_update_element(db, "Items", id1, update), QUIVER_OK);
     quiver_element_destroy(update);
 
@@ -174,7 +174,7 @@ TEST(DatabaseCApiCSV, ImportCSV_Vector_RoundTrip) {
     // Clear vector data and re-import (parent element must exist for group import)
     quiver_element_t* clear_vec = nullptr;
     ASSERT_EQ(quiver_element_create(&clear_vec), QUIVER_OK);
-    quiver_element_set_array_float(clear_vec, "measurement", nullptr, 0);
+    quiver_element_set_array_float(clear_vec, "measurement", nullptr, 0, nullptr);
     ASSERT_EQ(quiver_database_update_element(db, "Items", id1, clear_vec), QUIVER_OK);
     quiver_element_destroy(clear_vec);
 
@@ -213,7 +213,7 @@ TEST(DatabaseCApiCSV, ImportCSV_Set_RoundTrip) {
     quiver_element_t* update = nullptr;
     ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
     const char* set_values[] = {"red", "green", "blue"};
-    quiver_element_set_array_string(update, "tag", set_values, 3);
+    quiver_element_set_array_string(update, "tag", set_values, 3, nullptr);
     ASSERT_EQ(quiver_database_update_element(db, "Items", id1, update), QUIVER_OK);
     quiver_element_destroy(update);
 
@@ -226,7 +226,7 @@ TEST(DatabaseCApiCSV, ImportCSV_Set_RoundTrip) {
     quiver_element_t* clear_set = nullptr;
     ASSERT_EQ(quiver_element_create(&clear_set), QUIVER_OK);
     const char* empty_set[] = {nullptr};
-    quiver_element_set_array_string(clear_set, "tag", empty_set, 0);
+    quiver_element_set_array_string(clear_set, "tag", empty_set, 0, nullptr);
     ASSERT_EQ(quiver_database_update_element(db, "Items", id1, clear_set), QUIVER_OK);
     quiver_element_destroy(clear_set);
 

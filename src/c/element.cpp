@@ -66,14 +66,23 @@ QUIVER_C_API quiver_error_t quiver_element_set_null(quiver_element_t* element, c
 QUIVER_C_API quiver_error_t quiver_element_set_array_integer(quiver_element_t* element,
                                                              const char* name,
                                                              const int64_t* values,
-                                                             int32_t count) {
+                                                             int32_t count,
+                                                             const uint8_t* has_value) {
     QUIVER_REQUIRE(element, name);
 
     if ((!values && count > 0) || count < 0) {
         quiver_set_last_error("Invalid values/count combination");
         return QUIVER_ERROR;
     }
-    std::vector<int64_t> arr(values, values + count);
+    std::vector<quiver::Value> arr;
+    arr.reserve(count);
+    for (int32_t i = 0; i < count; ++i) {
+        if (has_value && has_value[i] == 0) {
+            arr.emplace_back(nullptr);
+        } else {
+            arr.emplace_back(values[i]);
+        }
+    }
     element->element.set(name, arr);
     return QUIVER_OK;
 }
@@ -81,14 +90,23 @@ QUIVER_C_API quiver_error_t quiver_element_set_array_integer(quiver_element_t* e
 QUIVER_C_API quiver_error_t quiver_element_set_array_float(quiver_element_t* element,
                                                            const char* name,
                                                            const double* values,
-                                                           int32_t count) {
+                                                           int32_t count,
+                                                           const uint8_t* has_value) {
     QUIVER_REQUIRE(element, name);
 
     if ((!values && count > 0) || count < 0) {
         quiver_set_last_error("Invalid values/count combination");
         return QUIVER_ERROR;
     }
-    std::vector<double> arr(values, values + count);
+    std::vector<quiver::Value> arr;
+    arr.reserve(count);
+    for (int32_t i = 0; i < count; ++i) {
+        if (has_value && has_value[i] == 0) {
+            arr.emplace_back(nullptr);
+        } else {
+            arr.emplace_back(values[i]);
+        }
+    }
     element->element.set(name, arr);
     return QUIVER_OK;
 }
@@ -96,17 +114,22 @@ QUIVER_C_API quiver_error_t quiver_element_set_array_float(quiver_element_t* ele
 QUIVER_C_API quiver_error_t quiver_element_set_array_string(quiver_element_t* element,
                                                             const char* name,
                                                             const char* const* values,
-                                                            int32_t count) {
+                                                            int32_t count,
+                                                            const uint8_t* has_value) {
     QUIVER_REQUIRE(element, name);
 
     if ((!values && count > 0) || count < 0) {
         quiver_set_last_error("Invalid values/count combination");
         return QUIVER_ERROR;
     }
-    std::vector<std::string> arr;
+    std::vector<quiver::Value> arr;
     arr.reserve(count);
     for (int32_t i = 0; i < count; ++i) {
-        arr.emplace_back(values[i] ? values[i] : "");
+        if ((has_value && has_value[i] == 0) || !values[i]) {
+            arr.emplace_back(nullptr);
+        } else {
+            arr.emplace_back(std::string(values[i]));
+        }
     }
     element->element.set(name, arr);
     return QUIVER_OK;

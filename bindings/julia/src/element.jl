@@ -47,13 +47,13 @@ end
 function Base.setindex!(el::Element, value::Vector{<:Integer}, name::String)
     cname = Base.cconvert(Cstring, name)
     integer_values = Int64[Int64(v) for v in value]
-    return check(C.quiver_element_set_array_integer(el.ptr, cname, integer_values, Int32(length(integer_values))))
+    return check(C.quiver_element_set_array_integer(el.ptr, cname, integer_values, Int32(length(integer_values)), C_NULL))
 end
 
 function Base.setindex!(el::Element, value::Vector{<:Real}, name::String)
     cname = Base.cconvert(Cstring, name)
     float_values = Float64[Float64(v) for v in value]
-    return check(C.quiver_element_set_array_float(el.ptr, cname, float_values, Int32(length(value))))
+    return check(C.quiver_element_set_array_float(el.ptr, cname, float_values, Int32(length(value)), C_NULL))
 end
 
 function Base.setindex!(el::Element, value::Vector{<:AbstractString}, name::String)
@@ -62,7 +62,7 @@ function Base.setindex!(el::Element, value::Vector{<:AbstractString}, name::Stri
     cstrings = [Base.cconvert(Cstring, s) for s in value]
     ptrs = [Base.unsafe_convert(Cstring, cs) for cs in cstrings]
     GC.@preserve cstrings begin
-        check(C.quiver_element_set_array_string(el.ptr, cname, ptrs, Int32(length(value))))
+        check(C.quiver_element_set_array_string(el.ptr, cname, ptrs, Int32(length(value)), C_NULL))
     end
 end
 

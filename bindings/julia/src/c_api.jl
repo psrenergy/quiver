@@ -470,16 +470,16 @@ function quiver_element_set_null(element, name)
     @ccall libquiver_c.quiver_element_set_null(element::Ptr{quiver_element_t}, name::Ptr{Cchar})::quiver_error_t
 end
 
-function quiver_element_set_array_integer(element, name, values, count)
-    @ccall libquiver_c.quiver_element_set_array_integer(element::Ptr{quiver_element_t}, name::Ptr{Cchar}, values::Ptr{Int64}, count::Int32)::quiver_error_t
+function quiver_element_set_array_integer(element, name, values, count, has_value)
+    @ccall libquiver_c.quiver_element_set_array_integer(element::Ptr{quiver_element_t}, name::Ptr{Cchar}, values::Ptr{Int64}, count::Int32, has_value::Ptr{UInt8})::quiver_error_t
 end
 
-function quiver_element_set_array_float(element, name, values, count)
-    @ccall libquiver_c.quiver_element_set_array_float(element::Ptr{quiver_element_t}, name::Ptr{Cchar}, values::Ptr{Cdouble}, count::Int32)::quiver_error_t
+function quiver_element_set_array_float(element, name, values, count, has_value)
+    @ccall libquiver_c.quiver_element_set_array_float(element::Ptr{quiver_element_t}, name::Ptr{Cchar}, values::Ptr{Cdouble}, count::Int32, has_value::Ptr{UInt8})::quiver_error_t
 end
 
-function quiver_element_set_array_string(element, name, values, count)
-    @ccall libquiver_c.quiver_element_set_array_string(element::Ptr{quiver_element_t}, name::Ptr{Cchar}, values::Ptr{Ptr{Cchar}}, count::Int32)::quiver_error_t
+function quiver_element_set_array_string(element, name, values, count, has_value)
+    @ccall libquiver_c.quiver_element_set_array_string(element::Ptr{quiver_element_t}, name::Ptr{Cchar}, values::Ptr{Ptr{Cchar}}, count::Int32, has_value::Ptr{UInt8})::quiver_error_t
 end
 
 function quiver_element_has_scalars(element, out_result)

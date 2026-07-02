@@ -77,7 +77,7 @@ GroupMetadata Database::get_time_series_metadata(const std::string& collection, 
             continue;
         }
 
-        metadata.value_columns.push_back(internal::scalar_metadata_from_column(table_def->columns.at(col_name)));
+        metadata.value_columns.push_back(internal::scalar_metadata_with_fk(*table_def, col_name));
     }
 
     return metadata;

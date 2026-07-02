@@ -37,11 +37,11 @@ protected:
         quiver_element_set_string(el, "unit", "MW");
 
         const char* dims[] = {"row", "col"};
-        quiver_element_set_array_string(el, "dimensions", dims, 2);
+        quiver_element_set_array_string(el, "dimensions", dims, 2, nullptr);
         int64_t sizes[] = {3, 2};
-        quiver_element_set_array_integer(el, "dimension_sizes", sizes, 2);
+        quiver_element_set_array_integer(el, "dimension_sizes", sizes, 2, nullptr);
         const char* labels[] = {"val1", "val2"};
-        quiver_element_set_array_string(el, "labels", labels, 2);
+        quiver_element_set_array_string(el, "labels", labels, 2, nullptr);
 
         quiver_binary_metadata_t* md = nullptr;
         quiver_binary_metadata_from_element(el, &md);

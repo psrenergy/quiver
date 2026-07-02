@@ -224,6 +224,37 @@ void main() {
         db.close();
       }
     });
+
+    test('creates child with null cells in vector FK refs', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Parent', {'label': 'Parent 1'});
+        final id = db.createElement('Child', {
+          'label': 'Child 1',
+          'parent_ref': [1, null],
+        });
+        expect(id, greaterThan(0));
+
+        final total = db.queryInteger('SELECT COUNT(*) FROM Child_vector_refs');
+        final nulls = db.queryInteger(
+          'SELECT COUNT(*) FROM Child_vector_refs WHERE parent_ref IS NULL',
+        );
+        expect(total, equals(2));
+        expect(nulls, equals(1));
+
+        // Row-aligned group read preserves the null cell positionally
+        final rows = db.readVectorGroupById('Child', 'refs', id);
+        expect(rows.length, equals(2));
+        expect(rows[0]['parent_ref'], equals(1));
+        expect(rows[1]['parent_ref'], isNull);
+      } finally {
+        db.close();
+      }
+    });
   });
 
   // Edge case tests

@@ -14,6 +14,7 @@ add_executable(quiver_tests
     test_database_describe.cpp
     test_database_errors.cpp
     test_database_lifecycle.cpp
+    test_database_metadata.cpp
     test_database_query.cpp
     test_database_read_scalar.cpp
     test_database_read_set.cpp

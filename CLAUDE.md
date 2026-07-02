@@ -98,6 +98,15 @@ Settled questions — don't relitigate without the user; each was decided delibe
   (`#ts.<dimension>`), value columns may be short/sparse/empty (missing cells write NULL),
   longer-than-dimension errors, and the named-but-empty anti-silent-clear trap is preserved
   (`{}` clears).
+- **Element arrays accept NULL cells.** C++ `Element::set(name, std::vector<Value>)` stores null
+  cells directly (a nullable group column, e.g. an optional relation, can have empty cells per
+  row); `create_element`/`update_element` bind them as SQL NULL. The C API array setters
+  (`quiver_element_set_array_{integer,float,string}`) carry the same trailing `const uint8_t*
+  has_value` presence mask as the time-series writers (NULL mask = dense; `has_value[i] == 0` =
+  SQL NULL, data slot ignored; a NULL `char*` entry in a string array is also NULL). Dart's
+  `Element.set` accepts `List<T?>` with null cells and empty lists (an empty or all-null list is
+  tagged integer — the type is irrelevant when no value is read); Julia/Python/JS pass a dense
+  (NULL) mask and keep their non-null surfaces.
 - **Scalar bulk reads preserve NULLs positionally (one entry per element).** `read_scalar_{integers,
   floats,strings}` return `std::vector<std::optional<T>>` in C++ (mirroring the `_by_id` variants);
   a SQL NULL is `nullopt`, aligned with `read_element_ids` by `ORDER BY rowid` — NULLs are never
@@ -327,6 +336,13 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
 - Transaction control: `begin_transaction()`, `commit()`, `rollback()`, `in_transaction()`
 - CRUD: `create_element(collection, element)`, `update_element`, `delete_element`
 - Scalar/vector/set readers: `read_{scalar,vector,set}_{integers,floats,strings}(collection, attribute)` (+ `_by_id` variants). Scalar bulk readers return one entry per element with SQL NULLs preserved positionally (`std::optional` / `nothing`/`None`/`null`/`nil`); see the scalar-NULL design decision.
+- Whole-group readers: `read_vector_group_by_id()` / `read_set_group_by_id()` — row-shaped
+  `vector<map<string, Value>>` over all of a group's value columns, positionally aligned with SQL
+  NULL cells preserved (`Value{nullptr}`). Use these for multi-column group reads: the dense
+  per-column `_by_id` readers drop NULLs, so zipping them misaligns rows when a nullable column
+  (e.g. an `ON DELETE SET NULL` relation) has empty cells. C API mirrors
+  `read_time_series_group`'s columnar+mask shape (freed by `free_time_series_data`); Dart binds
+  them natively; Julia/Python still compose per-column reads (null-dropping caveat applies there).
 - Time series: `read_time_series_group()`, `update_time_series_group()`, `upsert_time_series_row()` — group read/update use N typed value columns per group; `upsert_time_series_row` inserts or replaces a single row by its dimension key (`INSERT OR REPLACE`). All bindings expose group data **column-oriented** (`{column: [values]}`); updating with no data clears the group. Integer values are accepted for REAL columns (converted on insert). NULL cells round-trip through every layer: the C API carries a per-cell presence mask, the FFI bindings surface null-padded columns (`nothing`/`None`/`null`), and Lua uses plain `nil` holes with the row count taken from the dimension column(s) — see the design decision below.
 - Time series row: `read_time_series_row(collection, group, attribute, date_time)` — one value per element using "last non-null value at or before date_time" semantics; null Value for elements with no matching data (bindings surface `nothing`/`null`/`None`/`nil`).
 - Time series files: `has_time_series_files()`, `list_time_series_files_columns()`, `read_time_series_files()`, `update_time_series_files()`
@@ -459,5 +475,5 @@ because only Julia consumers use it.
 
 | Julia | Dart | Python | Wraps |
 |-------|------|--------|-------|
-| `read_vector_group_by_id` | `readVectorGroupById` | `read_vector_group_by_id` | metadata + per-column vector reads |
-| `read_set_group_by_id` | `readSetGroupById` | `read_set_group_by_id` | metadata + per-column set reads |
+| `read_vector_group_by_id` | `readVectorGroupById` | `read_vector_group_by_id` | Julia/Python: metadata + per-column vector reads; Dart: native C++ `read_vector_group_by_id` (NULL-preserving) |
+| `read_set_group_by_id` | `readSetGroupById` | `read_set_group_by_id` | Julia/Python: metadata + per-column set reads; Dart: native C++ `read_set_group_by_id` (NULL-preserving) |

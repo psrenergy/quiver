@@ -20,6 +20,19 @@ TEST(Database, GetTimeSeriesMetadata) {
     EXPECT_EQ(metadata.value_columns[0].data_type, quiver::DataType::Real);
 }
 
+TEST(Database, GetTimeSeriesMetadataForeignKey) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    auto metadata = db.get_time_series_metadata("Child", "events");
+    EXPECT_EQ(metadata.dimension_column, "date_time");
+    ASSERT_EQ(metadata.value_columns.size(), 1);
+    EXPECT_EQ(metadata.value_columns[0].name, "sponsor_id");
+    EXPECT_TRUE(metadata.value_columns[0].is_foreign_key);
+    EXPECT_EQ(metadata.value_columns[0].references_collection, "Parent");
+    EXPECT_EQ(metadata.value_columns[0].references_column, "id");
+}
+
 TEST(Database, ListTimeSeriesGroups) {
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
