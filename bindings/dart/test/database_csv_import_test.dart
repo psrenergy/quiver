@@ -233,6 +233,28 @@ void main() {
       }
     });
 
+    test('semicolon with comma decimals round-trip', () {
+      // A comma-locale Excel writes ';' columns with ',' decimals. The decimal
+      // value must flow through intact, not truncate at the comma.
+      final db = Database.fromSchema(':memory:', schemaPath);
+      final csvPath = '${Directory.systemTemp.path}/quiver_dart_csv_import_comma_decimals.csv';
+      try {
+        File(csvPath).writeAsStringSync(
+          'sep=;\r\nlabel;name;status;price;date_created;notes\r\n'
+          'Item1;Alpha;1;1000,5;;\r\nItem2;Beta;2;800,75;;\r\n',
+        );
+
+        db.importCSV('Items', '', csvPath);
+
+        final prices = db.readScalarFloats('Items', 'price');
+        expect(prices, [1000.5, 800.75]);
+      } finally {
+        final f = File(csvPath);
+        if (f.existsSync()) f.deleteSync();
+        db.close();
+      }
+    });
+
     test('cannot open file throws', () {
       final db = Database.fromSchema(':memory:', schemaPath);
       try {

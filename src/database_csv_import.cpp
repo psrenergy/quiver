@@ -298,9 +298,7 @@ void Database::import_csv(const std::string& collection,
     // form (and leaves non-numbers untouched for the enum / text / datetime paths).
     const char decimal_sep = csv_format::decimal_separator_for_delimiter(csv.field_delimiter);
     const char grouping_sep = csv_format::grouping_separator_for_delimiter(csv.field_delimiter);
-    auto numeric = [&](const std::string& cell) {
-        return csv_format::normalize_number(cell, decimal_sep, grouping_sep);
-    };
+    const csv_format::NumberNormalizer numeric(decimal_sep, grouping_sep);
 
     auto csv_cols = get_csv_columns(doc);
     auto db_cols = get_db_columns(execute("SELECT * FROM " + table_name + " LIMIT 0"), group.empty() ? "id" : "");

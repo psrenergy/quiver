@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <charconv>
 #include <cstdio>
 #include <cstring>
 #include <ctime>
@@ -46,13 +47,17 @@ static std::string value_to_csv_string(const Value& value,
         return std::to_string(int_val);
     }
 
-    // Float: use snprintf with %g for clean output (no trailing zeros). Emit the
-    // locale decimal separator so a ',' locale writes "1,5" (paired with a ';'
-    // field delimiter), which Excel then reads back as a number.
+    // Float: shortest round-trippable representation in fixed notation (no
+    // exponent, no trailing zeros) via std::to_chars. Fixed notation is required
+    // so the value carries a single '.' decimal point and nothing else: a ','
+    // locale then swaps that point to ',' (paired with a ';' field delimiter) and
+    // import parses it back exactly. %g was lossy (6 significant digits) and, for
+    // magnitudes >= 1e6 or < 1e-4, emitted scientific notation whose 'e' mantissa
+    // separator the comma-swap corrupted into an unparseable "1,23457e+06".
     if (std::holds_alternative<double>(value)) {
-        char buf[64];
-        std::snprintf(buf, sizeof(buf), "%g", std::get<double>(value));
-        std::string formatted(buf);
+        char buf[512];
+        auto [ptr, ec] = std::to_chars(buf, buf + sizeof(buf), std::get<double>(value), std::chars_format::fixed);
+        std::string formatted(buf, ec == std::errc{} ? ptr : buf + sizeof(buf));
         if (decimal_separator == ',') {
             std::replace(formatted.begin(), formatted.end(), '.', ',');
         }

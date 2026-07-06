@@ -62,39 +62,52 @@ inline char grouping_separator_for_delimiter(char field_delimiter) {
     return field_delimiter == ';' ? '.' : ',';
 }
 
-// Converts a locale-formatted numeric string to a C-locale ('.' decimal, no
-// grouping) string that std::stod / std::stoll can parse. Tolerates optional
+// Converts locale-formatted numeric strings to a C-locale ('.' decimal, no
+// grouping) form that std::stod / std::stoll can parse. Tolerates optional
 // thousands separators in valid 3-digit groups (e.g. "1.234.567,89" -> "1234567.89"
 // when decimal_sep is ',' and grouping_sep is '.'). Anything that is not a
 // well-formed number (codes, dates, enum labels) is returned unchanged, so it can
 // flow on to the existing text / enum / datetime handling.
-inline std::string normalize_number(const std::string& text, char decimal_sep, char grouping_sep) {
-    if (text.empty()) {
-        return text;
+//
+// The separators are fixed for a whole import, so the matching regex is compiled
+// once at construction and reused for every cell (std::regex construction is
+// expensive; recompiling it per cell dominates a large numeric import).
+class NumberNormalizer {
+public:
+    NumberNormalizer(char decimal_sep, char grouping_sep)
+        : decimal_sep_(decimal_sep), grouping_sep_(grouping_sep), number_pattern_(build_pattern(decimal_sep,
+                                                                                                grouping_sep)) {}
+
+    std::string operator()(const std::string& text) const {
+        if (text.empty() || !std::regex_match(text, number_pattern_)) {
+            return text;
+        }
+
+        std::string normalized;
+        normalized.reserve(text.size());
+        for (char c : text) {
+            if (c == grouping_sep_) {
+                continue;  // strip thousands separators
+            }
+            normalized += (c == decimal_sep_) ? '.' : c;
+        }
+        return normalized;
     }
 
-    const std::string g =
-        std::regex_replace(std::string(1, grouping_sep), std::regex(R"([.^$|()\[\]{}*+?\\])"), R"(\$&)");
-    const std::string d =
-        std::regex_replace(std::string(1, decimal_sep), std::regex(R"([.^$|()\[\]{}*+?\\])"), R"(\$&)");
-
+private:
     // Optional sign; integer part either grouped in 3-digit blocks or ungrouped;
     // optional fractional part. Anything else (stray chars, bad grouping) is text.
-    const std::regex number_pattern("^-?(\\d{1,3}(" + g + "\\d{3})+|\\d+)(" + d + "\\d+)?$");
-    if (!std::regex_match(text, number_pattern)) {
-        return text;
+    static std::regex build_pattern(char decimal_sep, char grouping_sep) {
+        const std::regex escape(R"([.^$|()\[\]{}*+?\\])");
+        const std::string g = std::regex_replace(std::string(1, grouping_sep), escape, R"(\$&)");
+        const std::string d = std::regex_replace(std::string(1, decimal_sep), escape, R"(\$&)");
+        return std::regex("^-?(\\d{1,3}(" + g + "\\d{3})+|\\d+)(" + d + "\\d+)?$");
     }
 
-    std::string normalized;
-    normalized.reserve(text.size());
-    for (char c : text) {
-        if (c == grouping_sep) {
-            continue;  // strip thousands separators
-        }
-        normalized += (c == decimal_sep) ? '.' : c;
-    }
-    return normalized;
-}
+    char decimal_sep_;
+    char grouping_sep_;
+    std::regex number_pattern_;
+};
 
 }  // namespace quiver::csv_format
 

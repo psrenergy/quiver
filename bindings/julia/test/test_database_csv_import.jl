@@ -217,6 +217,30 @@ include("fixture.jl")
         end
     end
 
+    @testset "Semicolon with comma decimals round-trip" begin
+        # A comma-locale Excel writes ';' columns with ',' decimals; the decimal
+        # value must flow through intact, not truncate at the comma.
+        db = Quiver.from_schema(":memory:", path_schema)
+        csv_path = tempname() * ".csv"
+        try
+            open(csv_path, "w") do f
+                return write(f,
+                    "sep=;\r\nlabel;name;status;price;date_created;notes\r\n" *
+                    "Item1;Alpha;1;1000,5;;\r\nItem2;Beta;2;800,75;;\r\n")
+            end
+
+            Quiver.import_csv(db, "Items", "", csv_path)
+
+            prices = Quiver.read_scalar_floats(db, "Items", "price")
+            @test length(prices) == 2
+            @test prices[1] == 1000.5
+            @test prices[2] == 800.75
+        finally
+            isfile(csv_path) && rm(csv_path)
+            Quiver.close!(db)
+        end
+    end
+
     @testset "Cannot open file throws" begin
         db = Quiver.from_schema(":memory:", path_schema)
         try

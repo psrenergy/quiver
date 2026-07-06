@@ -242,6 +242,30 @@ describe("CSV import", () => {
       cleanup(csvPath, dbPath1, dbPath2);
     }
   });
+
+  test("import semicolon CSV with comma decimals", () => {
+    // A comma-locale Excel writes ';' columns with ',' decimals; the decimal
+    // value must flow through intact, not truncate at the comma.
+    const csvPath = tempCsv("comma_decimals");
+    const dbPath = tempCsv("comma_decimals_db") + ".db";
+    try {
+      writeFileSync(
+        csvPath,
+        "sep=;\r\nlabel;name;status;price;date_created;notes\r\n" +
+          "Item1;Alpha;1;1000,5;;\r\nItem2;Beta;2;800,75;;\r\n",
+      );
+
+      const db = Database.fromSchema(dbPath, SCHEMA_PATH);
+      db.importCsv("Items", "", csvPath);
+
+      const prices = db.readScalarFloats("Items", "price");
+      expect(prices).toEqual([1000.5, 800.75]);
+
+      db.close();
+    } finally {
+      cleanup(csvPath, dbPath);
+    }
+  });
 });
 
 // ============================================================================

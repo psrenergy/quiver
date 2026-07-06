@@ -1503,6 +1503,30 @@ TEST(DatabaseCSV, ImportCSV_Semicolon_ThousandsSeparators) {
     fs::remove(csv_path);
 }
 
+// Regression: a large/precise REAL must survive an export → import round-trip on
+// any locale. Export used "%g" (6 significant digits), which lost precision and,
+// for magnitudes >= 1e6, emitted scientific notation ("1.23457e+06"); on a comma
+// locale the '.'->',' swap then corrupted the 'e' mantissa separator and import
+// truncated the value to 1.0. Fixed-notation export (std::to_chars) round-trips
+// the exact value with no exponent for the comma-swap to break.
+TEST(DatabaseCSV, ImportCSV_LocaleRoundTrip_PreservesLargeDecimals) {
+    auto db = make_db();
+
+    quiver::Element e1;
+    e1.set("label", std::string("Big")).set("name", std::string("BigPlant")).set("price", 1234567.89);
+    db.create_element("Items", e1);
+
+    auto csv_path = temp_csv("ImportLocaleRoundTripLarge");
+    db.export_csv("Items", "", csv_path.string());
+
+    auto db2 = make_db();
+    db2.import_csv("Items", "", csv_path.string());
+
+    EXPECT_NEAR(db2.read_scalar_float_by_id("Items", "price", 1).value(), 1234567.89, 0.001);
+
+    fs::remove(csv_path);
+}
+
 // Regression: on a ';' file "1.234" means 1234, not 1.234 — the '.' is grouping.
 TEST(DatabaseCSV, ImportCSV_Semicolon_GroupedIntegerNotDecimal) {
     auto db = make_db();

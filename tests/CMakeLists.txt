@@ -24,6 +24,7 @@ add_executable(quiver_tests
     test_database_time_series_row.cpp
     test_database_transaction.cpp
     test_database_update.cpp
+    test_csv_format.cpp
     test_element.cpp
     test_issues.cpp
     test_lua_binary.cpp
@@ -53,6 +54,9 @@ target_link_libraries(quiver_tests
         GTest::gtest_main
         GTest::gmock
 )
+
+# test_csv_format.cpp unit-tests the header-only src/utils/csv_format.h directly.
+target_include_directories(quiver_tests PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
 gtest_discover_tests(quiver_tests
     WORKING_DIRECTORY $<TARGET_FILE_DIR:quiver_tests>
