@@ -560,6 +560,21 @@ include("fixture.jl")
 
         Quiver.close!(db)
     end
+
+    @testset "Scalar Type Coercion Policy" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        # A Float64 is rejected for an INTEGER column.
+        @test_throws Quiver.DatabaseException Quiver.create_element!(
+            db, "Configuration"; label = "Bad", integer_attribute = 42.0)
+
+        # An Int is accepted for a REAL column (coerced to real on insert).
+        id = Quiver.create_element!(db, "Configuration"; label = "Ok", float_attribute = 7)
+        @test Quiver.read_scalar_float_by_id(db, "Configuration", "float_attribute", id) == 7.0
+
+        Quiver.close!(db)
+    end
 end
 
 end

@@ -208,21 +208,31 @@ TEST_F(LuaRunnerTest, MultipleOperationsPartialFailure) {
     EXPECT_EQ(labels[0], "Item 1");
 }
 
-TEST_F(LuaRunnerTest, LuaTypeCoercionInteger) {
+TEST_F(LuaRunnerTest, ScalarTypeCoercionPolicy) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::LuaRunner lua(db);
 
+    lua.run(R"(db:create_element("Configuration", { label = "Config" }))");
+
+    // A Lua float (even a whole-valued one) is rejected for an INTEGER column.
+    expect_lua_error(lua,
+                     R"(
+        db:create_element("Collection", { label = "Bad", some_integer = 42.0 })
+    )",
+                     "got REAL");
+
+    // An integer is accepted for a REAL column (coerced to real on insert).
     lua.run(R"(
-        db:create_element("Configuration", { label = "Config" })
-        db:create_element("Collection", {
-            label = "Item 1",
-            some_integer = 42.0  -- Lua number that happens to be whole
-        })
+        db:create_element("Collection", { label = "Item 1", some_integer = 42, some_float = 7 })
     )");
 
     auto integers = db.read_scalar_integers("Collection", "some_integer");
-    EXPECT_EQ(integers.size(), 1);
+    ASSERT_EQ(integers.size(), 1);
     EXPECT_EQ(integers[0], 42);
+
+    auto floats = db.read_scalar_floats("Collection", "some_float");
+    ASSERT_EQ(floats.size(), 1);
+    EXPECT_DOUBLE_EQ(*floats[0], 7.0);
 }
 
 TEST_F(LuaRunnerTest, ReadElementIdsFromNonExistentCollection) {
@@ -248,6 +258,44 @@ TEST_F(LuaRunnerTest, LuaScriptWithUnicodeCharacters) {
 
     EXPECT_EQ(config_labels.size(), 1);
     EXPECT_EQ(collection_labels.size(), 1);
+}
+
+TEST_F(LuaRunnerTest, DofileAndLoadfileRemoved) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    quiver::LuaRunner lua(db);
+
+    // Scripts may not load Lua source from disk; string-form load() stays available.
+    lua.run(R"(
+        assert(dofile == nil, "dofile should be removed")
+        assert(loadfile == nil, "loadfile should be removed")
+        assert(load("return 1 + 1")() == 2, "string-form load should work")
+    )");
+}
+
+TEST_F(LuaRunnerTest, StandardLibrariesEnabled) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    quiver::LuaRunner lua(db);
+
+    // The pure-computation libraries (math/coroutine/utf8) are available.
+    lua.run(R"(
+        assert(math.floor(3.7) == 3, "math should be available")
+        assert(type(coroutine.create) == "function", "coroutine should be available")
+        assert(utf8.len("abc") == 3, "utf8 should be available")
+    )");
+}
+
+TEST_F(LuaRunnerTest, UnsafeLibrariesNotLoaded) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    quiver::LuaRunner lua(db);
+
+    // os/io/package/debug are never opened: no shell, process, env, filesystem, or module access.
+    lua.run(R"(
+        assert(os == nil, "os should not be loaded")
+        assert(io == nil, "io should not be loaded")
+        assert(package == nil, "package should not be loaded")
+        assert(require == nil, "require should not be loaded")
+        assert(debug == nil, "debug should not be loaded")
+    )");
 }
 
 TEST_F(LuaRunnerTest, QueryParameterUnsupportedTypeThrows) {

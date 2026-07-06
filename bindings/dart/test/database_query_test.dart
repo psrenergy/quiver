@@ -383,4 +383,37 @@ void main() {
       }
     });
   });
+
+  group('Query Parameter Count', () {
+    test('throws when parameter count does not match placeholders', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {
+          'label': 'Item1',
+          'integer_attribute': 1,
+        });
+
+        // Too few parameters for the single placeholder
+        expect(
+          () => db.queryString('SELECT label FROM Configuration WHERE id = ?', []),
+          throwsA(isA<DatabaseException>()),
+        );
+        // Too many parameters for the single placeholder
+        expect(
+          () => db.queryString('SELECT label FROM Configuration WHERE id = ?', [1, 2]),
+          throwsA(isA<DatabaseException>()),
+        );
+        // Exactly one parameter succeeds
+        expect(
+          db.queryString('SELECT label FROM Configuration WHERE id = ?', [1]),
+          equals('Item1'),
+        );
+      } finally {
+        db.close();
+      }
+    });
+  });
 }

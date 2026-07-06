@@ -297,3 +297,20 @@ class TestFKResolutionUpdate:
         # Verify original value preserved
         result = relations_db.read_scalar_integer_by_id("Child", "parent_id", 1)
         assert result == 1
+
+
+class TestUpdateNotFoundAndTyping:
+    def test_update_nonexistent_raises(self, db: Database) -> None:
+        db.create_element("Configuration", label="cfg")
+        with pytest.raises(QuiverError, match="Element not found"):
+            db.update_element("Configuration", 999, integer_attribute=5)
+
+    def test_float_rejected_for_integer_column(self, db: Database) -> None:
+        elem_id = db.create_element("Configuration", label="cfg")
+        with pytest.raises(QuiverError):
+            db.update_element("Configuration", elem_id, integer_attribute=42.0)
+
+    def test_integer_accepted_for_real_column(self, db: Database) -> None:
+        elem_id = db.create_element("Configuration", label="cfg")
+        db.update_element("Configuration", elem_id, float_attribute=7)
+        assert db.read_scalar_float_by_id("Configuration", "float_attribute", elem_id) == 7.0

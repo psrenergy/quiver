@@ -196,16 +196,68 @@ class Database {
     }
   }
 
+  /// Returns a human-readable overview of every collection in the database.
+  String describe() {
+    _ensureNotClosed();
+    final arena = Arena();
+    try {
+      final outReport = arena<Pointer<Char>>();
+      check(bindings.quiver_database_describe(_ptr, outReport));
+      final result = outReport.value.cast<Utf8>().toDartString();
+      bindings.quiver_database_free_string(outReport.value);
+      return result;
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
+  /// Returns a human-readable description (scalars, vectors, sets, time series)
+  /// of one collection.
+  String describeCollection(String collection) {
+    _ensureNotClosed();
+    final arena = Arena();
+    try {
+      final outReport = arena<Pointer<Char>>();
+      check(
+        bindings.quiver_database_describe_collection(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          outReport,
+        ),
+      );
+      final result = outReport.value.cast<Utf8>().toDartString();
+      bindings.quiver_database_free_string(outReport.value);
+      return result;
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
+  /// Returns a human-readable summary (value statistics) of one collection.
+  String summarizeCollection(String collection) {
+    _ensureNotClosed();
+    final arena = Arena();
+    try {
+      final outReport = arena<Pointer<Char>>();
+      check(
+        bindings.quiver_database_summarize_collection(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          outReport,
+        ),
+      );
+      final result = outReport.value.cast<Utf8>().toDartString();
+      bindings.quiver_database_free_string(outReport.value);
+      return result;
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
   /// Closes the database and frees native resources.
   void close() {
     if (_isClosed) return;
     bindings.quiver_database_close(_ptr);
     _isClosed = true;
-  }
-
-  /// Prints schema information to stdout.
-  void describe() {
-    _ensureNotClosed();
-    check(bindings.quiver_database_describe(_ptr));
   }
 }

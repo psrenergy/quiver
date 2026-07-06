@@ -10,3 +10,18 @@ updates:
     directory: "/bindings/python"
     schedule:
       interval: "monthly"
+
+  - package-ecosystem: "julia"
+    directory: "/bindings/julia"
+    schedule:
+      interval: "monthly"
+
+  - package-ecosystem: "pub"
+    directory: "/bindings/dart"
+    schedule:
+      interval: "monthly"
+
+  - package-ecosystem: "npm"
+    directory: "/bindings/js"
+    schedule:
+      interval: "monthly"

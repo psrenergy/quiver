@@ -253,3 +253,24 @@ TEST(DatabaseQuery, QueryWithNullParam) {
     ASSERT_TRUE(result.has_value());
     EXPECT_EQ(*result, 1);
 }
+
+TEST(DatabaseQuery, QueryParameterCountMismatch) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element e;
+    e.set("label", std::string("Test")).set("integer_attribute", int64_t{1});
+    db.create_element("Configuration", e);
+
+    // Too few parameters for the single placeholder
+    EXPECT_THROW(db.query_string("SELECT label FROM Configuration WHERE id = ?", {}), std::runtime_error);
+
+    // Too many parameters for the single placeholder
+    EXPECT_THROW(db.query_string("SELECT label FROM Configuration WHERE id = ?", {int64_t{1}, int64_t{2}}),
+                 std::runtime_error);
+
+    // Exactly one parameter succeeds
+    auto ok = db.query_string("SELECT label FROM Configuration WHERE id = ?", {int64_t{1}});
+    ASSERT_TRUE(ok.has_value());
+    EXPECT_EQ(*ok, "Test");
+}

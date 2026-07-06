@@ -199,3 +199,14 @@ TEST_F(LuaRunnerTest, UpdateSetStrings) {
     auto tags = db.read_set_strings_by_id("Collection", "tag", 1);
     EXPECT_EQ(tags.size(), 3);
 }
+
+TEST_F(LuaRunnerTest, UpdateElementByIdNonExistent) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    db.create_element("Collection", quiver::Element().set("label", "Item 1"));
+
+    quiver::LuaRunner lua(db);
+
+    // Updating a non-existent element throws "Element not found"
+    expect_lua_error(lua, R"(db:update_element("Collection", 999, { some_integer = 5 }))", "Element not found");
+}

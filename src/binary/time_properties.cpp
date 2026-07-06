@@ -5,8 +5,6 @@
 
 #include <stdexcept>
 
-namespace {}  // anonymous namespace
-
 namespace quiver {
 
 std::string frequency_to_string(TimeFrequency frequency) {
@@ -40,10 +38,6 @@ TimeFrequency frequency_from_string(const std::string& str) {
 
 void TimeProperties::set_initial_value(int64_t initial_value) {
     this->initial_value = initial_value;
-}
-
-void TimeProperties::set_parent_dimension_index(int64_t parent_dimension_index) {
-    this->parent_dimension_index = parent_dimension_index;
 }
 
 int64_t TimeProperties::datetime_to_int(std::chrono::system_clock::time_point datetime) const {

@@ -774,4 +774,40 @@ void main() {
       }
     });
   });
+
+  group('Scalar Type Coercion Policy', () {
+    test('rejects a double for an INTEGER column', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        expect(
+          () => db.createElement('Configuration', {
+            'label': 'Bad',
+            'integer_attribute': 42.0,
+          }),
+          throwsA(isA<DatabaseException>()),
+        );
+      } finally {
+        db.close();
+      }
+    });
+
+    test('accepts an int for a REAL column', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        final id = db.createElement('Configuration', {
+          'label': 'Ok',
+          'float_attribute': 7,
+        });
+        expect(db.readScalarFloatById('Configuration', 'float_attribute', id), equals(7.0));
+      } finally {
+        db.close();
+      }
+    });
+  });
 }

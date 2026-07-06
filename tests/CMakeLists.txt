@@ -11,20 +11,29 @@ add_executable(quiver_tests
     test_database_csv_export.cpp
     test_database_csv_import.cpp
     test_database_delete.cpp
+    test_database_describe.cpp
     test_database_errors.cpp
     test_database_lifecycle.cpp
     test_database_query.cpp
-    test_database_read.cpp
-    test_database_time_series.cpp
+    test_database_read_scalar.cpp
+    test_database_read_set.cpp
+    test_database_read_vector.cpp
+    test_database_time_series_files.cpp
+    test_database_time_series_group.cpp
+    test_database_time_series_metadata.cpp
+    test_database_time_series_row.cpp
     test_database_transaction.cpp
     test_database_update.cpp
     test_element.cpp
     test_issues.cpp
+    test_lua_binary.cpp
+    test_lua_expression.cpp
     test_lua_runner_all_types.cpp
     test_lua_runner_create.cpp
     test_lua_runner_csv_export.cpp
     test_lua_runner_csv_import.cpp
     test_lua_runner_delete.cpp
+    test_lua_runner_describe.cpp
     test_lua_runner_errors.cpp
     test_lua_runner_fk.cpp
     test_lua_runner_query.cpp
@@ -63,8 +72,14 @@ if(QUIVER_BUILD_C_API)
         test_c_api_database_lifecycle.cpp
         test_c_api_database_metadata.cpp
         test_c_api_database_query.cpp
-        test_c_api_database_read.cpp
-        test_c_api_database_time_series.cpp
+        test_c_api_database_read_scalar.cpp
+        test_c_api_database_read_set.cpp
+        test_c_api_database_read_vector.cpp
+        test_c_api_database_time_series_files.cpp
+        test_c_api_database_time_series_group.cpp
+        test_c_api_database_time_series_metadata.cpp
+        test_c_api_database_time_series_nulls.cpp
+        test_c_api_database_time_series_row.cpp
         test_c_api_database_transaction.cpp
         test_c_api_database_update.cpp
         test_c_api_element.cpp

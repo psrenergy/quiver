@@ -456,6 +456,23 @@ end
         @test occursin("2025-01-01", dt)
     end
 
+    @testset "Pre-epoch initial datetime (1960) round-trips" begin
+        # Regression guard: pre-1970 datetimes go through the C API's
+        # quiver_binary_metadata_set_initial_datetime, which on Windows used to corrupt them via
+        # _mkgmtime (1960-01-01 -> 1969-12-31T23:59:59). The C++ fix routes through the chrono
+        # calendar; assert the exact string survives the FFI round-trip.
+        md = Quiver.Binary.Metadata(;
+            initial_datetime = "1960-01-01T00:00:00",
+            unit = "MW",
+            labels = ["val1"],
+            dimensions = ["row"],
+            dimension_sizes = Int64[3],
+        )
+
+        @test Quiver.Binary.get_initial_datetime(md) == "1960-01-01T00:00:00"
+        @test occursin("1960-01-01T00:00:00", Quiver.Binary.to_toml(md))
+    end
+
     # ==========================================================================
     # Validation errors (via from_toml_content / constructor)
     # ==========================================================================

@@ -62,9 +62,9 @@ TEST(BinaryCApiMetadata, SetAndGetInitialDatetime) {
     char* datetime = nullptr;
     EXPECT_EQ(quiver_binary_metadata_get_initial_datetime(md, &datetime), QUIVER_OK);
     ASSERT_NE(datetime, nullptr);
-    // Verify it contains a valid ISO 8601 date (exact value may differ by timezone,
-    // matching C++ from_toml_content/to_toml behavior which uses mktime + std::format)
-    EXPECT_NE(std::string(datetime).find("2025-01-01"), std::string::npos);
+    // Verify it round-trips as an ISO 8601 UTC datetime (chrono-based, timezone-independent —
+    // see src/utils/datetime.h tm_to_time_point / format_utc).
+    EXPECT_NE(std::string(datetime).find("2025-01-01T00:00:00"), std::string::npos);
     quiver_binary_metadata_free_string(datetime);
 
     quiver_binary_metadata_free(md);

@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from quiverdb import Database
+import pytest
+
+from quiverdb import Database, QuiverError
 
 
 class TestDeleteElement:
@@ -44,3 +46,8 @@ class TestDeleteElement:
         collections_db.delete_element("Collection", elem_id)
         ids = collections_db.read_element_ids("Collection")
         assert elem_id not in ids
+
+    def test_delete_nonexistent_raises(self, db: Database) -> None:
+        db.create_element("Configuration", label="cfg")
+        with pytest.raises(QuiverError, match="Element not found"):
+            db.delete_element("Configuration", 999)

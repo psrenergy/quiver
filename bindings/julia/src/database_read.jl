@@ -1,36 +1,61 @@
 function read_scalar_integers(db::Database, collection::String, attribute::String)
+    # ponytail: one extra metadata FFI round-trip per read (cached-schema read, no SQL; struct
+    # alloc/free); thread not_null out of the C read API if it ever matters.
+    not_null = get_scalar_metadata(db, collection, attribute).not_null
     out_values = Ref{Ptr{Int64}}(C_NULL)
+    out_mask = Ref{Ptr{UInt8}}(C_NULL)
     out_count = Ref{Csize_t}(0)
 
-    check(C.quiver_database_read_scalar_integers(db.ptr, collection, attribute, out_values, out_count))
+    check(C.quiver_database_read_scalar_integers(db.ptr, collection, attribute, out_values, out_mask, out_count))
 
     count = out_count[]
     if count == 0 || out_values[] == C_NULL
-        return Int64[]
+        return not_null ? Int64[] : Optional{Int64}[]
     end
 
-    result = unsafe_wrap(Array, out_values[], count) |> copy
+    values = unsafe_wrap(Array, out_values[], count)
+    mask = unsafe_wrap(Array, out_mask[], count)
+    result = if not_null
+        Int64[values[i] for i in 1:count]
+    else
+        Optional{Int64}[mask[i] != 0 ? values[i] : nothing for i in 1:count]
+    end
     C.quiver_database_free_integer_array(out_values[])
+    C.quiver_database_free_mask(out_mask[])
     return result
 end
 
 function read_scalar_floats(db::Database, collection::String, attribute::String)
+    # ponytail: one extra metadata FFI round-trip per read (cached-schema read, no SQL; struct
+    # alloc/free); thread not_null out of the C read API if it ever matters.
+    not_null = get_scalar_metadata(db, collection, attribute).not_null
     out_values = Ref{Ptr{Float64}}(C_NULL)
+    out_mask = Ref{Ptr{UInt8}}(C_NULL)
     out_count = Ref{Csize_t}(0)
 
-    check(C.quiver_database_read_scalar_floats(db.ptr, collection, attribute, out_values, out_count))
+    check(C.quiver_database_read_scalar_floats(db.ptr, collection, attribute, out_values, out_mask, out_count))
 
     count = out_count[]
     if count == 0 || out_values[] == C_NULL
-        return Float64[]
+        return not_null ? Float64[] : Optional{Float64}[]
     end
 
-    result = unsafe_wrap(Array, out_values[], count) |> copy
+    values = unsafe_wrap(Array, out_values[], count)
+    mask = unsafe_wrap(Array, out_mask[], count)
+    result = if not_null
+        Float64[values[i] for i in 1:count]
+    else
+        Optional{Float64}[mask[i] != 0 ? values[i] : nothing for i in 1:count]
+    end
     C.quiver_database_free_float_array(out_values[])
+    C.quiver_database_free_mask(out_mask[])
     return result
 end
 
 function read_scalar_strings(db::Database, collection::String, attribute::String)
+    # ponytail: one extra metadata FFI round-trip per read (cached-schema read, no SQL; struct
+    # alloc/free); thread not_null out of the C read API if it ever matters.
+    not_null = get_scalar_metadata(db, collection, attribute).not_null
     out_values = Ref{Ptr{Ptr{Cchar}}}(C_NULL)
     out_count = Ref{Csize_t}(0)
 
@@ -38,11 +63,15 @@ function read_scalar_strings(db::Database, collection::String, attribute::String
 
     count = out_count[]
     if count == 0 || out_values[] == C_NULL
-        return String[]
+        return not_null ? String[] : Optional{String}[]
     end
 
     ptrs = unsafe_wrap(Array, out_values[], count)
-    result = [unsafe_string(ptr) for ptr in ptrs]
+    result = if not_null
+        String[unsafe_string(ptr) for ptr in ptrs]
+    else
+        Optional{String}[ptr == C_NULL ? nothing : unsafe_string(ptr) for ptr in ptrs]
+    end
     C.quiver_database_free_string_array(out_values[], count)
     return result
 end
@@ -524,13 +553,14 @@ function read_time_series_group(db::Database, collection::String, group::String,
     out_col_names = Ref{Ptr{Ptr{Cchar}}}(C_NULL)
     out_col_types = Ref{Ptr{Cint}}(C_NULL)
     out_col_data = Ref{Ptr{Ptr{Cvoid}}}(C_NULL)
+    out_col_has_value = Ref{Ptr{Ptr{UInt8}}}(C_NULL)
     out_col_count = Ref{Csize_t}(0)
     out_row_count = Ref{Csize_t}(0)
 
     check(
         C.quiver_database_read_time_series_group(
             db.ptr, collection, group, id,
-            out_col_names, out_col_types, out_col_data, out_col_count, out_row_count,
+            out_col_names, out_col_types, out_col_data, out_col_has_value, out_col_count, out_row_count,
         ),
     )
 
@@ -545,29 +575,35 @@ function read_time_series_group(db::Database, collection::String, group::String,
     metadata = get_time_series_metadata(db, collection, group)
     dim_col = metadata.dimension_column
 
-    # Unmarshal column names, types, data
+    # Unmarshal column names, types, data, and per-cell NULL masks
     name_ptrs = unsafe_wrap(Array, out_col_names[], col_count)
     type_vals = unsafe_wrap(Array, out_col_types[], col_count)
     data_ptrs = unsafe_wrap(Array, out_col_data[], col_count)
+    mask_ptrs = unsafe_wrap(Array, out_col_has_value[], col_count)
 
+    # Value columns are typed Optional{T}: mask[r] == 0 surfaces as `nothing`. The
+    # dimension column's mask is always all 1, so it stays a dense Vector{DateTime}.
     result = Dict{String, Vector}()
     for i in 1:col_count
         col_name = unsafe_string(name_ptrs[i])
         col_type = type_vals[i]
+        mask = unsafe_wrap(Array, mask_ptrs[i], row_count)
 
         if col_type == Cint(C.QUIVER_DATA_TYPE_INTEGER)
-            int_ptr = reinterpret(Ptr{Int64}, data_ptrs[i])
-            result[col_name] = copy(unsafe_wrap(Array, int_ptr, row_count))
+            int_arr = unsafe_wrap(Array, reinterpret(Ptr{Int64}, data_ptrs[i]), row_count)
+            result[col_name] = Optional{Int64}[mask[r] != 0 ? int_arr[r] : nothing for r in 1:row_count]
         elseif col_type == Cint(C.QUIVER_DATA_TYPE_FLOAT)
-            float_ptr = reinterpret(Ptr{Float64}, data_ptrs[i])
-            result[col_name] = copy(unsafe_wrap(Array, float_ptr, row_count))
+            float_arr = unsafe_wrap(Array, reinterpret(Ptr{Float64}, data_ptrs[i]), row_count)
+            result[col_name] = Optional{Float64}[mask[r] != 0 ? float_arr[r] : nothing for r in 1:row_count]
         elseif col_type == Cint(C.QUIVER_DATA_TYPE_STRING) || col_type == Cint(C.QUIVER_DATA_TYPE_DATE_TIME)
             str_ptr_ptr = reinterpret(Ptr{Ptr{Cchar}}, data_ptrs[i])
             str_ptrs = unsafe_wrap(Array, str_ptr_ptr, row_count)
             if col_name == dim_col
                 result[col_name] = DateTime[string_to_date_time(unsafe_string(p)) for p in str_ptrs]
             else
-                result[col_name] = String[unsafe_string(p) for p in str_ptrs]
+                # Never unsafe_string a masked-out (NULL) pointer.
+                result[col_name] =
+                    Optional{String}[mask[r] != 0 ? unsafe_string(str_ptrs[r]) : nothing for r in 1:row_count]
             end
         else
             throw(ArgumentError("Unsupported data type $(col_type) for column '$col_name'"))
@@ -576,7 +612,7 @@ function read_time_series_group(db::Database, collection::String, group::String,
 
     # Free C-allocated memory
     C.quiver_database_free_time_series_data(
-        out_col_names[], out_col_types[], out_col_data[],
+        out_col_names[], out_col_types[], out_col_data[], out_col_has_value[],
         Csize_t(col_count), Csize_t(row_count),
     )
 

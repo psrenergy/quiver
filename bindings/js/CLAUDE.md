@@ -48,6 +48,21 @@ biome.json        # Lint/format config
   element with `DataView.setBigInt64`, so `bigint` inputs (scalar or array) are preserved
   exactly, never coerced through `Number`. Read paths return `number` (converted via `Number()`
   after the FFI call) — the deliberately simple surface.
+- **`updateTimeSeriesGroup` validates before marshalling** (`src/time-series.ts`): rejects jagged
+  columns and named-but-empty columns (`rowCount === 0`) with a `QuiverError`. This is load-bearing
+  — an empty column would otherwise marshal a `null` data pointer that the C API dereferences
+  against the first column's `row_count`. Pass `{}` (no columns) to clear the group.
+- **Scalar bulk NULLs**: `readScalarIntegers`/`readScalarFloats` read a parallel `uint8_t*` mask
+  (`new Uint8Array(toArrayBuffer(...))`) and gate `mask[i] ? v : null` → `(number | null)[]` — never
+  `Number()` a masked slot (would turn NULL into 0). `readScalarStrings` reads pointer-by-pointer with
+  `read.ptr` + a NULL guard → `(string | null)[]` (not `decodeStringArray`). `loader.ts` carries the
+  mask arg on the two numeric symbols + `quiver_database_free_mask` (hand-maintained, no generator).
+- **Time-series NULL cells** (`TimeSeriesData = Record<string, (number | string | null)[]>`): a
+  `null` value marshals to a per-column `uint8_t` mask (0 = NULL) with a placeholder in the data
+  array; an all-`null` column is tagged FLOAT with a zeroed placeholder (the C API ignores the tag
+  for masked cells). Reads decode the mask and null-out cells; string columns use the null-guarded
+  pointer loop (never `decodeStringArray`, which constructs a `CString` from a NULL pointer). Masks
+  are built by direct `Uint8Array` indexing — never a `DataView` — per the TypedArray house rule.
 - **Test/lint/format**: `bun test test`, `bun run lint`, `bun run format` (biome, project-pinned
   version). No permission flags needed (Bun has none — don't carry over Deno habits). There is
   pre-existing lint debt in untouched files — fix only what your change orphans, don't drive-by

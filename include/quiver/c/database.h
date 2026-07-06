@@ -59,19 +59,25 @@ QUIVER_C_API quiver_error_t quiver_database_update_element(quiver_database_t* db
                                                            const quiver_element_t* element);
 QUIVER_C_API quiver_error_t quiver_database_delete_element(quiver_database_t* db, const char* collection, int64_t id);
 
-// Read scalar attributes
+// Read scalar attributes. One entry per element (aligned with read_element_ids).
+// Numeric readers carry a parallel presence mask: out_mask[i] == 0 means SQL NULL and
+// out_values[i] is then a placeholder (0 / 0.0) to be ignored. Free out_values with the
+// matching free function and out_mask with quiver_database_free_mask.
 QUIVER_C_API quiver_error_t quiver_database_read_scalar_integers(quiver_database_t* db,
                                                                  const char* collection,
                                                                  const char* attribute,
                                                                  int64_t** out_values,
+                                                                 uint8_t** out_mask,
                                                                  size_t* out_count);
 
 QUIVER_C_API quiver_error_t quiver_database_read_scalar_floats(quiver_database_t* db,
                                                                const char* collection,
                                                                const char* attribute,
                                                                double** out_values,
+                                                               uint8_t** out_mask,
                                                                size_t* out_count);
 
+// A SQL NULL string is returned as a NULL entry in out_values (no mask).
 QUIVER_C_API quiver_error_t quiver_database_read_scalar_strings(quiver_database_t* db,
                                                                 const char* collection,
                                                                 const char* attribute,
@@ -267,6 +273,12 @@ QUIVER_C_API quiver_error_t quiver_database_free_group_metadata_array(quiver_gro
 // Read time series group by element ID - returns multi-column typed data
 // Columns are returned in schema definition order (dimension first, then value columns)
 // Column data arrays are typed: INTEGER -> int64_t*, FLOAT -> double*, STRING/DATE_TIME -> char**
+// out_column_has_value[c][r]: 1 = value present, 0 = SQL NULL. A mask is returned for every
+// column, including the dimension column (whose mask is always all 1 - dimension columns are PK
+// members and cannot be NULL). For NULL cells the data entry is a placeholder and must be
+// ignored: INTEGER -> 0, FLOAT -> 0.0, STRING/DATE_TIME -> NULL char*.
+// Empty group: all out-arrays (including out_column_has_value) are NULL, counts 0
+// Free everything with quiver_database_free_time_series_data
 QUIVER_C_API quiver_error_t quiver_database_read_time_series_group(quiver_database_t* db,
                                                                    const char* collection,
                                                                    const char* group,
@@ -274,6 +286,7 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_group(quiver_databa
                                                                    char*** out_column_names,
                                                                    int** out_column_types,
                                                                    void*** out_column_data,
+                                                                   uint8_t*** out_column_has_value,
                                                                    size_t* out_column_count,
                                                                    size_t* out_row_count);
 
@@ -281,6 +294,11 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_group(quiver_databa
 // column_names[]: column names (including dimension column, any order)
 // column_types[]: quiver_data_type_t per column
 // column_data[]: typed array per column (int64_t* for INTEGER, double* for FLOAT, const char** for STRING/DATE_TIME)
+// column_has_value: optional per-cell NULL mask. NULL for the whole parameter, or NULL for an
+// individual column's entry, means every value in that scope is present (dense).
+// column_has_value[c][r] == 0 inserts SQL NULL for that cell; the cell's entry in column_data[c]
+// is never read (a NULL char* placeholder is fine for string columns). Masking out a
+// dimension-column cell inserts NULL into a PK column and fails with the SQLite constraint error
 // Pass column_count == 0 and row_count == 0 with NULL arrays to clear all rows
 QUIVER_C_API quiver_error_t quiver_database_update_time_series_group(quiver_database_t* db,
                                                                      const char* collection,
@@ -289,6 +307,7 @@ QUIVER_C_API quiver_error_t quiver_database_update_time_series_group(quiver_data
                                                                      const char* const* column_names,
                                                                      const int* column_types,
                                                                      const void* const* column_data,
+                                                                     const uint8_t* const* column_has_value,
                                                                      size_t column_count,
                                                                      size_t row_count);
 
@@ -297,16 +316,16 @@ QUIVER_C_API quiver_error_t quiver_database_update_time_series_group(quiver_data
 // column_types[]: quiver_data_type_t per column
 // column_data[c]: pointer to one typed value (int64_t* for INTEGER, double* for FLOAT, const char** for
 // STRING/DATE_TIME) Upserts on the time-series PK (id + every dimension column); calling twice with the same PK
-// overwrites value columns Errors surface canonical "Cannot add_time_series_row: ..." messages via
+// overwrites value columns Errors surface canonical "Cannot upsert_time_series_row: ..." messages via
 // quiver_get_last_error
-QUIVER_C_API quiver_error_t quiver_database_add_time_series_row(quiver_database_t* db,
-                                                                const char* collection,
-                                                                const char* group,
-                                                                int64_t id,
-                                                                const char* const* column_names,
-                                                                const int* column_types,
-                                                                const void* const* column_data,
-                                                                size_t column_count);
+QUIVER_C_API quiver_error_t quiver_database_upsert_time_series_row(quiver_database_t* db,
+                                                                   const char* collection,
+                                                                   const char* group,
+                                                                   int64_t id,
+                                                                   const char* const* column_names,
+                                                                   const int* column_types,
+                                                                   const void* const* column_data,
+                                                                   size_t column_count);
 
 // Read time series row - returns one value per element for a specific attribute at a given date_time
 // Uses "last non-null value at or before date_time" lookup semantics
@@ -328,10 +347,13 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_row(quiver_database
                                                                  size_t* out_count);
 
 // Free multi-column time series read results
-// Uses column_types to determine deallocation strategy per column
+// Uses column_types to determine deallocation strategy per column; masks are plain uint8_t
+// arrays freed unconditionally. NULL arrays (empty result) and NULL slots (partial failure)
+// are tolerated
 QUIVER_C_API quiver_error_t quiver_database_free_time_series_data(char** column_names,
                                                                   int* column_types,
                                                                   void** column_data,
+                                                                  uint8_t** column_has_value,
                                                                   size_t column_count,
                                                                   size_t row_count);
 
@@ -368,6 +390,8 @@ QUIVER_C_API quiver_error_t quiver_database_free_time_series_files(char** column
 QUIVER_C_API quiver_error_t quiver_database_free_integer_array(int64_t* values);
 QUIVER_C_API quiver_error_t quiver_database_free_float_array(double* values);
 QUIVER_C_API quiver_error_t quiver_database_free_string_array(char** values, size_t count);
+// Memory cleanup for the presence mask returned by the integer/float scalar readers
+QUIVER_C_API quiver_error_t quiver_database_free_mask(uint8_t* mask);
 // Memory cleanup for single string returned by query/read-by-id operations
 QUIVER_C_API quiver_error_t quiver_database_free_string(char* str);
 
@@ -432,8 +456,15 @@ QUIVER_C_API quiver_error_t quiver_database_query_float_params(quiver_database_t
                                                                double* out_value,
                                                                int* out_has_value);
 
-// Schema inspection
-QUIVER_C_API quiver_error_t quiver_database_describe(quiver_database_t* db);
+// Schema inspection — human-readable text reports. Each returns a heap string via *out_report,
+// freed with quiver_database_free_string.
+QUIVER_C_API quiver_error_t quiver_database_describe(quiver_database_t* db, char** out_report);
+QUIVER_C_API quiver_error_t quiver_database_describe_collection(quiver_database_t* db,
+                                                                const char* collection,
+                                                                char** out_report);
+QUIVER_C_API quiver_error_t quiver_database_summarize_collection(quiver_database_t* db,
+                                                                 const char* collection,
+                                                                 char** out_report);
 
 #ifdef __cplusplus
 }

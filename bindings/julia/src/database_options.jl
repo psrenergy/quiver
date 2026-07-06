@@ -1,5 +1,5 @@
 """
-    build_quiver_csv_options(kwargs...) -> (Ref{quiver_csv_options_t}, Vector{Any})
+    build_quiver_csv_options(; date_time_format::Optional{String}=nothing, enum_labels::Optional{Dict{String, Dict{String, Dict{String, Int}}}}=nothing) -> (Ref{quiver_csv_options_t}, Vector{Any})
 
 Build a C API `quiver_csv_options_t` from keyword arguments.
 Returns `(options_ref, temps)` where `temps` holds all temporary objects that must
@@ -10,15 +10,17 @@ Supported kwargs:
   - `date_time_format::String` — strftime format for DateTime columns
   - `enum_labels::Dict{String, Dict{String, Dict{String, Int}}}` — attribute → locale → (label → value)
 """
-function build_quiver_csv_options(; kwargs...)
+function build_quiver_csv_options(;
+    date_time_format::Optional{String} = nothing,
+    enum_labels::Optional{Dict{String, Dict{String, Dict{String, Int}}}} = nothing,
+)
     options = C.quiver_csv_options_default()
     temps = Any[]
 
     # Date-time format
     dtf_ptr = options.date_time_format
-    if haskey(kwargs, :date_time_format)
-        dtf_str = kwargs[:date_time_format]::String
-        dtf_buf = Vector{UInt8}([codeunits(dtf_str)..., 0x00])
+    if !isnothing(date_time_format)
+        dtf_buf = Vector{UInt8}([codeunits(date_time_format)..., 0x00])
         push!(temps, dtf_buf)
         dtf_ptr = pointer(dtf_buf)
     end
@@ -31,9 +33,8 @@ function build_quiver_csv_options(; kwargs...)
     values_ptr = options.enum_values
     group_count = options.enum_group_count
 
-    if haskey(kwargs, :enum_labels)
-        enum_map = kwargs[:enum_labels]::Dict{String, Dict{String, Dict{String, Int}}}
-        if !isempty(enum_map)
+    if !isnothing(enum_labels)
+        if !isempty(enum_labels)
             # Flatten attribute -> locale -> entries into groups
             c_attr_name_bufs = Vector{UInt8}[]
             c_locale_name_bufs = Vector{UInt8}[]
@@ -41,7 +42,7 @@ function build_quiver_csv_options(; kwargs...)
             c_label_bufs = Vector{UInt8}[]
             c_values = Int64[]
 
-            for (attr_name, locales) in enum_map
+            for (attr_name, locales) in enum_labels
                 for (locale_name, entries) in locales
                     push!(c_attr_name_bufs, Vector{UInt8}([codeunits(attr_name)..., 0x00]))
                     push!(c_locale_name_bufs, Vector{UInt8}([codeunits(locale_name)..., 0x00]))

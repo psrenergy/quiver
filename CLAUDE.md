@@ -22,7 +22,7 @@ scripts/                  # build-all/test-all/clean-all.bat, format.bat, tidy.b
                           # ci/{dispatch_workflow.sh, native_s3.sh}, julia/generate_artifacts.jl
 cmake/                    # CompilerOptions.cmake, Dependencies.cmake, Platform.cmake, quiverConfig.cmake.in
 example/                  # example1.lua + example1.bat — quiver_cli/Lua CRUD demo
-docs/                     # User-facing docs: introduction, rules, attributes, migrations, time_series, lua_api
+docs/                     # User-facing docs: introduction, rules, attributes, migrations, time_series
 assets/                   # logo.svg
 ```
 
@@ -41,7 +41,7 @@ Top-level configs: `CMakePresets.json`, `.clang-format`, `.clang-tidy`, `.clangd
 - **Homogeneity**: Binding interfaces must be consistent and intuitive. API surface should feel uniform across wrappers.
 - **Ownership**: RAII used strictly. Ownership of pointers/resources must be explicit and unambiguous.
 - **Constraint**: Be critical. If code is already optimal, state that clearly. Do not invent useless suggestions just to provide output.
-- All public C++ methods should be bound to C API, then to Julia/Dart/Python/JS/Lua (exception: the binary/expression subsystems are Julia-only by decision)
+- All public C++ methods should be bound to C API, then to Julia/Dart/Python/JS/Lua (exception: the binary/expression subsystems are exposed only in Julia and Lua by decision — not Dart/Python/JS)
 - All *.sql test schemas in `tests/schemas/`, bindings reference from there
 - **Self-Updating**: Keep the CLAUDE.md nearest to your change up to date (root + `src/`, `src/c/`, `bindings/{julia,dart,python,js}/`, `tests/`, `.github/`)
 
@@ -53,12 +53,32 @@ Settled questions — don't relitigate without the user; each was decided delibe
   canonical cross-binding shape. The C++ core keeps row-shaped `vector<map<string, Value>>`.
 - **`DatabaseOptions`** (`read_only`, `console_level`) is exposed as optional parameters on the
   open/factory methods of every binding.
-- **Binary + expression subsystems are Julia-only.** Dart, Python, and JS deliberately do not
-  expose them (no current consumer); the tests-at-every-layer rule has this one documented
-  exception. `helper_maps.jl` is a second documented Julia-only exception (see convenience
-  methods below).
-- **Int-for-REAL coercion lives in C++** (`value_matches_type` accepts int64 for REAL columns in
-  time-series writes); bindings never coerce schema-dependently.
+- **Binary + expression subsystems are exposed in Julia and Lua only.** Dart, Python, and JS
+  deliberately do not expose them (no FFI consumer); the tests-at-every-layer rule has this one
+  documented exception. Lua binds the C++ classes directly via sol2 (`src/lua_runner.cpp`) with
+  method syntax + string aggregation operations; pure-metadata builders live under a `quiver.*`
+  namespace while file I/O is db-scoped (see cross-layer table and the sandbox decision below).
+  `helper_maps.jl` is a second documented Julia-only exception (see convenience methods below).
+- **Lua file operations are db-scoped and sandboxed to the database directory.** Every
+  file-touching Lua operation (`db:open_file`, `db:bin_to_csv`, `db:csv_to_bin`, `db:export_csv`,
+  `db:import_csv`, `expr:save`) resolves relative paths against the directory containing the
+  database file and rejects — reads and writes alike — anything that escapes it (subdirectories
+  OK; checked via `weakly_canonical` with strict containment). In-memory databases (`:memory:`)
+  reject all file operations. `dofile`/`loadfile` are removed from the Lua environment
+  (string-form `load` stays). The enabled standard libraries are the pure-computation set
+  `base`/`string`/`table`/`math`/`coroutine`/`utf8`; `os`/`io`/`package`/`debug` stay unloaded.
+  Julia's standalone `open_file` is unaffected — this is LuaRunner policy (`resolve_sandboxed_path`
+  in `src/lua_runner.cpp`), not binary-subsystem policy.
+- **One scalar typing policy lives in C++**: an int64 is accepted for INTEGER and REAL columns
+  (int-for-REAL coercion), a double only for REAL (a float into an INTEGER column is rejected), a
+  string for TEXT / INTEGER-FK / DATE_TIME. `TypeValidator` (scalar create/update) and
+  `value_matches_type` (time-series writes) share this rule; bindings never coerce
+  schema-dependently.
+- **`update_element` / `delete_element` throw on a missing id** (`"Element not found: <id> in
+  collection '<c>'"`, Pattern 2) — not a silent no-op. The error surfaces through the C API error
+  channel and every binding.
+- **`query_*` validate parameter count**: `execute` rejects a mismatch between bound parameters and
+  `?` placeholders (too few or too many) instead of binding NULL / ignoring extras.
 - **Migration `down_sql` is a required feature** — do not remove the down path.
 - **`import_csv` refuses to run inside an open transaction** (`PRAGMA foreign_keys` is a no-op
   mid-transaction, so nesting is unsupportable) — Pattern 1 precondition, not a silent rollback.
@@ -69,6 +89,36 @@ Settled questions — don't relitigate without the user; each was decided delibe
 - **JS keeps a string-based datetime surface** — no DateTime wrappers.
 - **Binary `dims` parameter is the map-based form only** — indexed overloads were prototyped and
   deliberately dropped (perf rationale in `src/CLAUDE.md`).
+- **Time-series group NULLs round-trip via a per-cell presence mask.** The columnar C API
+  (`read`/`update`/`free_time_series_data`) carries a `uint8_t` mask parallel to the data arrays
+  (NULL mask = dense; `mask[c][r] == 0` = SQL NULL, data ignored — so an all-NULL column can be
+  FLOAT-tagged against any schema column). FFI bindings (Julia/Python/Dart/JS) read null-padded
+  columns and accept null cells on update; their existing equal-length validations stay. Lua is
+  mask- and sentinel-free: NULL is plain `nil`, the dimension column(s) are the row-count authority
+  (`#ts.<dimension>`), value columns may be short/sparse/empty (missing cells write NULL),
+  longer-than-dimension errors, and the named-but-empty anti-silent-clear trap is preserved
+  (`{}` clears).
+- **Scalar bulk reads preserve NULLs positionally (one entry per element).** `read_scalar_{integers,
+  floats,strings}` return `std::vector<std::optional<T>>` in C++ (mirroring the `_by_id` variants);
+  a SQL NULL is `nullopt`, aligned with `read_element_ids` by `ORDER BY rowid` — NULLs are never
+  dropped. The C API numeric readers carry a parallel `uint8_t* out_mask` (`mask[i] == 0` = NULL,
+  data slot is a 0/0.0 placeholder) freed by `quiver_database_free_mask`; the string reader needs
+  no mask — a NULL is a `nullptr` entry in the `char**`. Python/Dart/JS always return the nullable
+  element type (`list[T|None]` / `List<T?>` / `(T|null)[]`) — a static surface with no
+  type-inference instability to fix. **Julia is nullability-aware**: `read_scalar_{integers,floats,
+  strings}` return a concrete `Vector{T}` for `NOT NULL` columns and `Vector{Optional{T}}` for
+  nullable ones (decided by `get_scalar_metadata(...).not_null`, schema- not data-driven), so a
+  column that can never be NULL gives downstream code a concrete array. An `INTEGER PRIMARY KEY`
+  (e.g. `id`) is a rowid alias and is reported `not_null` by the C++ core
+  (`scalar_metadata_from_column`, even though SQLite's `PRAGMA table_info` leaves the flag unset),
+  so `id` reads are concrete `Vector{Int64}`. Scope of that Julia rule is
+  the bulk scalar readers only (their optional comes solely from NULL cells); `_by_id`/`query_*`
+  (optional also from missing-id / unknown result nullability) and the time-series readers stay
+  optional — tracked in `bindings/julia/type_stability_followup.md`. Lua uses
+  `nil` holes (only `to_lua_table` changed; no C API mask) with `read_element_ids` as the
+  count/position authority since `#t` is unreliable across holes. Scope is **scalars only** — the
+  shared dense `read_column_values<T>` still serves vector/set `_by_id` and `read_element_ids`
+  (NOT NULL / PK by convention); vector/set readers are unchanged.
 
 ## Do Not "Fix"
 
@@ -79,7 +129,6 @@ Reviewed adversarially and rejected — these are not improvements:
 - Deleting or "cleaning up" `tests/sandbox` — intentional scratch target.
 - "Simplifying" the documented Bun FFI workarounds (`bindings/js/CLAUDE.md`) or the binary
   hot-path decisions (`src/CLAUDE.md`) — load-bearing.
-- Reorganizing test files (issue-numbered tests, per-area splits) for tidiness.
 - Drive-by fixing pre-existing lint debt in untouched JS files.
 
 ## Build & Test
@@ -144,7 +193,7 @@ JS has no generator — update the hand-written symbol table in `bindings/js/src
   drives the build (Python wheels) it defines the `SKBUILD` CMake variable, which forces
   C API ON and tests OFF.
 - **Presets** (`CMakePresets.json`): configure `dev` (Debug, tests+C API), `release`,
-  `windows-release` (VS 17 2022), `linux-release`, `all-bindings`; build presets for
+  `windows-release` (VS 17 2022), `linux-release`; build presets for
   dev/release/windows-release/linux-release; test presets for dev/windows-release/linux-release.
   Presets build into `build/<presetName>/`; the plain `build/` dir is the manual configure above.
 - **Dependencies** via FetchContent (`cmake/Dependencies.cmake`): sqlite3 v3.50.2
@@ -268,7 +317,7 @@ Always use `ON DELETE CASCADE ON UPDATE CASCADE` for parent references.
 
 ### Naming Convention
 Public Database methods follow `verb_[category_]type[_by_id]`:
-- **Verbs:** create, read, update, delete, get, list, has, query, describe, export, import
+- **Verbs:** create, read, update, upsert, delete, get, list, has, query, describe, export, import
 - **`_by_id` suffix:** Only for reads where both "all elements" and "single element" variants exist
 - **Singular vs plural:** Type name matches return cardinality (`read_scalar_integers` returns vector, `read_scalar_integer_by_id` returns optional)
 - **Examples:** `create_element`, `read_vector_floats_by_id`, `get_scalar_metadata`, `list_time_series_groups`
@@ -277,14 +326,14 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
 - Factory methods: `from_schema()`, `from_migrations()` — `DatabaseOptions` (`read_only`, `console_level`) exposed as optional parameters in every binding
 - Transaction control: `begin_transaction()`, `commit()`, `rollback()`, `in_transaction()`
 - CRUD: `create_element(collection, element)`, `update_element`, `delete_element`
-- Scalar/vector/set readers: `read_{scalar,vector,set}_{integers,floats,strings}(collection, attribute)` (+ `_by_id` variants)
-- Time series: `read_time_series_group()`, `update_time_series_group()`, `add_time_series_row()` — group read/update use N typed value columns per group; `add_time_series_row` appends/upserts a single row. All bindings expose group data **column-oriented** (`{column: [values]}`); updating with no data clears the group. Integer values are accepted for REAL columns (converted on insert).
+- Scalar/vector/set readers: `read_{scalar,vector,set}_{integers,floats,strings}(collection, attribute)` (+ `_by_id` variants). Scalar bulk readers return one entry per element with SQL NULLs preserved positionally (`std::optional` / `nothing`/`None`/`null`/`nil`); see the scalar-NULL design decision.
+- Time series: `read_time_series_group()`, `update_time_series_group()`, `upsert_time_series_row()` — group read/update use N typed value columns per group; `upsert_time_series_row` inserts or replaces a single row by its dimension key (`INSERT OR REPLACE`). All bindings expose group data **column-oriented** (`{column: [values]}`); updating with no data clears the group. Integer values are accepted for REAL columns (converted on insert). NULL cells round-trip through every layer: the C API carries a per-cell presence mask, the FFI bindings surface null-padded columns (`nothing`/`None`/`null`), and Lua uses plain `nil` holes with the row count taken from the dimension column(s) — see the design decision below.
 - Time series row: `read_time_series_row(collection, group, attribute, date_time)` — one value per element using "last non-null value at or before date_time" semantics; null Value for elements with no matching data (bindings surface `nothing`/`null`/`None`/`nil`).
 - Time series files: `has_time_series_files()`, `list_time_series_files_columns()`, `read_time_series_files()`, `update_time_series_files()`
 - Metadata: `get_{scalar,vector,set,time_series}_metadata()` — group metadata is a unified `GroupMetadata` with `dimension_column` (populated for time series, empty for vectors/sets)
 - List groups: `list_scalar_attributes()`, `list_vector_groups()`, `list_set_groups()`, `list_time_series_groups()`
 - Query: `query_string/integer/float(sql, parameters = {})` - parameterized SQL with positional `?` placeholders
-- Schema inspection: `describe()` - prints schema info to stdout; CSV: `export_csv()`, `import_csv()` with optional enum/date formatting via `CSVOptions`
+- Schema inspection — human-readable **text reports** (all return `std::string`): `describe()` (whole-DB overview: every collection, element counts, attribute/group names); `describe_collection(c)` (one collection's structure); `summarize_collection(c)` (per-scalar null/non-null counts + low-cardinality integer value distributions, per-group empty/non-empty counts). CSV: `export_csv()`, `import_csv()` with optional enum/date formatting via `CSVOptions`
   - **Locale-aware separators** (`utils/csv_format.h`): export matches the OS locale decimal separator (on macOS read via CFLocale, since GUI-launched apps — e.g. Flutter — have no `LANG`/`LC_*` env vars; elsewhere via `std::locale("")`) — a `,` locale emits `,` decimals paired with a `;` field delimiter and a `sep=;` header (so Excel reads numbers correctly); a `.` locale emits the usual `,`-delimited `sep=,` file. Import resolves the delimiter from the `sep=` header (or infers it from the header line), parses with that delimiter directly (no `;`→`,` swap), auto-detects CRLF/LF/CR line endings, and normalizes locale numbers (thousands separators stripped, decimal comma → `.`) before parsing. Because export output is locale-dependent, byte-level CSV test assertions read through a `read_file_canonical`/`read_csv_canonical` helper that maps a `sep=;` file back to canonical comma/dot form.
   - **Label-identifier import preserves ids**: a scalar import omits the `id` column, so existing elements are matched by `label` and re-inserted with their original id (new labels get a fresh AUTOINCREMENT id above the preserved range). This keeps foreign keys in other tables pointing at the same element across a re-import.
 
@@ -294,11 +343,11 @@ Builder for element creation with fluent API:
 Element().set("label", "Item 1").set("value", 42).set("tags", {"a", "b"})
 ```
 
-### Binary & Expression Subsystems (Julia-only)
+### Binary & Expression Subsystems (Julia + Lua)
 `.qvr` binary file I/O with `.toml` metadata sidecars (`BinaryFile`, `CSVConverter`,
 `BinaryMetadata`) and lazy arithmetic expressions over them (`Expression` DAGs with
-broadcast, aggregation, and label projection, materialized via `save()`). Full reference:
-`src/CLAUDE.md`.
+broadcast, aggregation, and label projection, materialized via `save()`). Exposed in Julia
+(FFI) and Lua (sol2). Full reference: `src/CLAUDE.md`.
 
 ### LuaRunner Class
 Executes Lua scripts against a database; the `db` userdata exposes the same API surface
@@ -335,27 +384,43 @@ The rules are mechanical: given any C++ method name, you can derive the equivale
 | List groups | `list_vector_groups()` | `quiver_database_list_vector_groups()` | `list_vector_groups()` | `listVectorGroups()` | `list_vector_groups()` |
 | Time series read | `read_time_series_group()` | `quiver_database_read_time_series_group()` | `read_time_series_group()` | `readTimeSeriesGroup()` | `read_time_series_group()` |
 | Time series row | `read_time_series_row()` | `quiver_database_read_time_series_row()` | `read_time_series_row()` | `readTimeSeriesRow()` | `read_time_series_row()` |
-| Time series add row | `add_time_series_row()` | `quiver_database_add_time_series_row()` | `add_time_series_row!()` | `addTimeSeriesRow()` | `add_time_series_row()` |
+| Time series upsert row | `upsert_time_series_row()` | `quiver_database_upsert_time_series_row()` | `upsert_time_series_row!()` | `upsertTimeSeriesRow()` | `upsert_time_series_row()` |
 | Time series update | `update_time_series_group()` | `quiver_database_update_time_series_group()` | `update_time_series_group!()` | `updateTimeSeriesGroup()` | `update_time_series_group()` |
 | Query | `query_string()` | `quiver_database_query_string()` | `query_string()` | `queryString()` | `query_string()` |
 | CSV | `export_csv()` | `quiver_database_export_csv()` | `export_csv()` | `exportCSV()` | `export_csv()` |
-| Describe | `describe()` | `quiver_database_describe()` | `describe()` | `describe()` | `describe()` |
+| Describe (text) | `describe()` | `quiver_database_describe()` | `describe()` | `describe()` | `describe()` |
+| Describe collection | `describe_collection()` | `quiver_database_describe_collection()` | `describe_collection()` | `describeCollection()` | `describe_collection()` |
+| Summarize collection | `summarize_collection()` | `quiver_database_summarize_collection()` | `summarize_collection()` | `summarizeCollection()` | `summarize_collection()` |
 
-**Binary cross-layer examples (Julia-only subsystem):**
+**Binary cross-layer examples (Julia + Lua subsystem):**
 
-| Category | C++ | C API | Julia |
-|----------|-----|-------|-------|
-| Open file | `BinaryFile::open_file(path, mode, md?)` | `quiver_binary_file_open_file()` | `open_file(path; mode, metadata=nothing)` |
-| Close | (destructor) | `quiver_binary_file_close()` | `close!(file)` |
-| Read | `binary_file.read(dims)` | `quiver_binary_file_read()` | `read(file; dims...)` |
-| Write | `binary_file.write(data, dims)` | `quiver_binary_file_write()` | `write!(file; data=data, dims...)` |
-| Get metadata | `binary_file.get_metadata()` | `quiver_binary_file_get_metadata()` | `get_metadata(file)` |
-| Get file path | `binary_file.get_file_path()` | `quiver_binary_file_get_file_path()` | `get_file_path(file)` |
-| Bin to CSV | `CSVConverter::bin_to_csv()` | `quiver_csv_converter_bin_to_csv()` | `bin_to_csv()` |
-| CSV to bin | `CSVConverter::csv_to_bin()` | `quiver_csv_converter_csv_to_bin()` | `csv_to_bin()` |
-| Metadata builder | `BinaryMetadata{}` | `quiver_binary_metadata_create()` | `Metadata(; kwargs...)` |
-| Metadata from TOML | `BinaryMetadata::from_toml_content()` | `quiver_binary_metadata_from_toml()` | `from_toml_content()` |
-| Metadata from Element | `BinaryMetadata::from_element()` | `quiver_binary_metadata_from_element()` | `from_element()` |
+| Category | C++ | C API | Julia | Lua |
+|----------|-----|-------|-------|-----|
+| Open file | `BinaryFile::open_file(path, mode, md?)` | `quiver_binary_file_open_file()` | `open_file(path; mode, metadata=nothing)` | `db:open_file(path, mode, md?)` |
+| Close | (destructor) | `quiver_binary_file_close()` | `close!(file)` | `file:close()` |
+| Read | `binary_file.read(dims)` | `quiver_binary_file_read()` | `read(file; dims...)` | `file:read(dims, allow_nulls?)` |
+| Write | `binary_file.write(data, dims)` | `quiver_binary_file_write()` | `write!(file; data=data, dims...)` | `file:write(data, dims)` |
+| Get metadata | `binary_file.get_metadata()` | `quiver_binary_file_get_metadata()` | `get_metadata(file)` | `file:get_metadata()` |
+| Get file path | `binary_file.get_file_path()` | `quiver_binary_file_get_file_path()` | `get_file_path(file)` | `file:get_file_path()` |
+| Bin to CSV | `CSVConverter::bin_to_csv()` | `quiver_csv_converter_bin_to_csv()` | `bin_to_csv()` | `db:bin_to_csv(path, aggregate?)` |
+| CSV to bin | `CSVConverter::csv_to_bin()` | `quiver_csv_converter_csv_to_bin()` | `csv_to_bin()` | `db:csv_to_bin(path)` |
+| Metadata builder | `BinaryMetadata{}` | `quiver_binary_metadata_create()` | `Metadata(; kwargs...)` | `quiver.metadata{kwargs}` |
+| Metadata from TOML | `BinaryMetadata::from_toml_content()` | `quiver_binary_metadata_from_toml()` | `from_toml_content()` | `quiver.metadata_from_toml()` |
+| Metadata from Element | `BinaryMetadata::from_element()` | `quiver_binary_metadata_from_element()` | `from_element()` | `quiver.metadata_from_element()` |
+
+The Lua **expression** surface mirrors Julia's: build from a file with `quiver.expression(file)` (or
+operate on files directly), compose with the `+ - * /` operators and unary `-` (metamethods, with
+scalar-on-either-side and `file_a + file_b` both supported), unary math via `quiver.abs/sqrt/log/exp`,
+element-wise comparisons via `quiver.gt/lt/gte/lte/eq/neq` (free functions — Lua comparison
+metamethods can't return an `Expression`; produce `1.0`/`0.0`, NaN operand → NaN), boolean logic
+via the `&` / `|` / `~` operators (bitwise metamethods, since `and`/`or`/`not` are Lua keywords;
+nonzero is true, unitless result, NaN propagates), `quiver.ifelse(cond, then, else)`, and the
+methods `expr:aggregate(dim, op[, p])` /
+`expr:aggregate_agents(op[, p])` / `expr:select_agents(labels)` / `expr:rename_agents({old=new})` /
+`expr:save(path)` / `expr:metadata()`. Aggregation `op` is a **string**
+(`"sum"/"mean"/"min"/"max"/"percentile"`) — Lua has no enums, mirroring JS's string-based surface.
+Lua file I/O is db-scoped (`db:open_file`, `db:bin_to_csv`, `db:csv_to_bin`) and `expr:save` paths
+are sandboxed to the database directory (see Design Decisions).
 
 ### Binding-Only Convenience Methods
 

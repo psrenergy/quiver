@@ -260,8 +260,8 @@ TEST(DatabaseCSV, ImportCSV_Scalar_LabelOnThirdColumn) {
 
     auto prices = db.read_scalar_floats("Items", "price");
     ASSERT_EQ(prices.size(), 2);
-    EXPECT_NEAR(prices[0], 10.5, 0.001);
-    EXPECT_NEAR(prices[1], 20.0, 0.001);
+    EXPECT_NEAR(*prices[0], 10.5, 0.001);
+    EXPECT_NEAR(*prices[1], 20.0, 0.001);
 
     fs::remove(csv_path);
 }
@@ -1199,8 +1199,8 @@ TEST(DatabaseCSV, ImportCSV_Scalar_TrailingEmptyColumns) {
 
     auto prices = db.read_scalar_floats("Items", "price");
     ASSERT_EQ(prices.size(), 2);
-    EXPECT_NEAR(prices[0], 9.99, 0.001);
-    EXPECT_NEAR(prices[1], 19.5, 0.001);
+    EXPECT_NEAR(*prices[0], 9.99, 0.001);
+    EXPECT_NEAR(*prices[1], 19.5, 0.001);
 
     fs::remove(csv_path);
 }

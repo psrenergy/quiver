@@ -136,6 +136,14 @@ Result Database::execute(const std::string& sql, const std::vector<Value>& param
     }
     StmtPtr stmt(raw_stmt, sqlite3_finalize);
 
+    // Reject a parameter-count mismatch loudly: too few would bind NULL to the trailing
+    // placeholder, too many would silently ignore the extras.
+    const auto expected_parameters = static_cast<size_t>(sqlite3_bind_parameter_count(stmt.get()));
+    if (expected_parameters != parameters.size()) {
+        throw std::runtime_error("Failed to execute statement: expected " + std::to_string(expected_parameters) +
+                                 " bound parameter(s) but got " + std::to_string(parameters.size()));
+    }
+
     // Bind parameters
     for (size_t i = 0; i < parameters.size(); ++i) {
         const auto idx = static_cast<int>(i + 1);

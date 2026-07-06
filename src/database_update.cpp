@@ -13,6 +13,10 @@ void Database::update_element(const std::string& collection, int64_t id, const E
         throw std::runtime_error("Cannot update_element: element must have at least one attribute to update");
     }
 
+    if (execute("SELECT 1 FROM " + collection + " WHERE id = ?", {id}).empty()) {
+        throw std::runtime_error("Element not found: " + std::to_string(id) + " in collection '" + collection + "'");
+    }
+
     // Pre-resolve pass: resolve all FK labels before any writes
     auto resolved = impl_->resolve_element_fk_labels(collection, element, *this);
 

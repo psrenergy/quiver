@@ -137,6 +137,20 @@ def mixed_time_series_db(mixed_time_series_schema_path: Path, tmp_path: Path) ->
 
 
 @pytest.fixture
+def nullable_time_series_schema_path(schemas_path: Path) -> Path:
+    """Return the path to the nullable time series test schema (nullable value columns)."""
+    return schemas_path / "valid" / "nullable_time_series.sql"
+
+
+@pytest.fixture
+def nullable_time_series_db(nullable_time_series_schema_path: Path, tmp_path: Path) -> Generator[Database, None, None]:
+    """Create a test database with the nullable time series schema (REAL/INTEGER/TEXT nullable columns)."""
+    database = Database.from_schema(str(tmp_path / "nullable_ts.db"), str(nullable_time_series_schema_path))
+    yield database
+    database.close()
+
+
+@pytest.fixture
 def multi_dim_ts_schema_path(schemas_path: Path) -> Path:
     """Return the path to the multi-dim time series test schema."""
     return schemas_path / "valid" / "multi_dim_time_series.sql"

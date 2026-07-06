@@ -75,7 +75,7 @@ TEST_F(LuaRunnerTest, CreateElementMixedTypes) {
 
     auto floats = db.read_scalar_floats("Collection", "some_float");
     EXPECT_EQ(floats.size(), 1);
-    EXPECT_DOUBLE_EQ(floats[0], 3.14);
+    EXPECT_DOUBLE_EQ(*floats[0], 3.14);
 }
 
 TEST_F(LuaRunnerTest, CreateElementMissingLabel) {

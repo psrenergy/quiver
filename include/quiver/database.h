@@ -43,10 +43,13 @@ public:
     void update_element(const std::string& collection, int64_t id, const Element& element);
     void delete_element(const std::string& collection, int64_t id);
 
-    // Read scalar attributes (all elements)
-    std::vector<int64_t> read_scalar_integers(const std::string& collection, const std::string& attribute);
-    std::vector<double> read_scalar_floats(const std::string& collection, const std::string& attribute);
-    std::vector<std::string> read_scalar_strings(const std::string& collection, const std::string& attribute);
+    // Read scalar attributes (all elements). One entry per element, aligned with read_element_ids;
+    // a SQL NULL is std::nullopt (positional — never dropped).
+    std::vector<std::optional<int64_t>> read_scalar_integers(const std::string& collection,
+                                                             const std::string& attribute);
+    std::vector<std::optional<double>> read_scalar_floats(const std::string& collection, const std::string& attribute);
+    std::vector<std::optional<std::string>> read_scalar_strings(const std::string& collection,
+                                                                const std::string& attribute);
 
     // Read scalar attributes (by element ID)
     std::optional<int64_t>
@@ -121,12 +124,12 @@ public:
     // every dimension column from the schema PK; if a row with the same PK already
     // exists, value columns are overwritten. Validation matches update_time_series_group:
     // every dimension column must be present, unknown columns or type mismatches throw
-    // "Cannot add_time_series_row: ..." (canonical Pattern 1). Participates in the
+    // "Cannot upsert_time_series_row: ..." (canonical Pattern 1). Participates in the
     // existing nest-aware TransactionGuard.
-    void add_time_series_row(const std::string& collection,
-                             const std::string& group,
-                             int64_t id,
-                             const std::map<std::string, Value>& row);
+    void upsert_time_series_row(const std::string& collection,
+                                const std::string& group,
+                                int64_t id,
+                                const std::map<std::string, Value>& row);
 
     // Time series files - singleton table storing file paths for external time series data
     bool has_time_series_files(const std::string& collection) const;
@@ -137,8 +140,14 @@ public:
 
     const std::string& path() const;
 
-    // Schema inspection
-    void describe(std::ostream& out = std::cout) const;
+    // Schema inspection — human-readable text reports.
+    // describe(): whole-database overview (every collection, element counts, attribute/group names).
+    std::string describe() const;
+    // describe_collection(): one collection's structure (scalars, vector/set/time-series groups).
+    std::string describe_collection(const std::string& collection) const;
+    // summarize_collection(): one collection's value statistics (null/non-null counts, low-cardinality
+    // integer value distributions, per-group empty/non-empty counts).
+    std::string summarize_collection(const std::string& collection) const;
 
     // CSV operations
     void export_csv(const std::string& collection,

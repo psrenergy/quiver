@@ -1877,6 +1877,193 @@ end
             cleanup(path_a, path_out)
         end
     end
+
+    @testset "Comparison operators and named functions" begin
+        path_a, path_b, path_out = make_path("a"), make_path("b"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
+            write_fixture(path_b, (r, c, k) -> c * 10 + r + k)
+            va, vb = read_all_cells(path_a), read_all_cells(path_b)
+
+            # operator: a > b
+            with_expr(path_a) do a
+                with_expr(path_b) do b
+                    e = a > b
+                    Quiver.save(e, path_out)
+                    return Quiver.close!(e)
+                end
+            end
+            @test read_all_cells(path_out) == Float64.(va .> vb)
+            cleanup(path_out)
+
+            # named gt matches the operator
+            with_expr(path_a) do a
+                with_expr(path_b) do b
+                    e = Quiver.gt(a, b)
+                    Quiver.save(e, path_out)
+                    return Quiver.close!(e)
+                end
+            end
+            @test read_all_cells(path_out) == Float64.(va .> vb)
+            cleanup(path_out)
+
+            # named-only equality: neq
+            with_expr(path_a) do a
+                with_expr(path_b) do b
+                    e = Quiver.neq(a, b)
+                    Quiver.save(e, path_out)
+                    return Quiver.close!(e)
+                end
+            end
+            @test read_all_cells(path_out) == Float64.(va .!= vb)
+            cleanup(path_out)
+
+            # scalar on the right (operator) and on the left (named)
+            with_expr(path_a) do a
+                e = a >= 12.0
+                Quiver.save(e, path_out)
+                return Quiver.close!(e)
+            end
+            @test read_all_cells(path_out) == Float64.(va .>= 12.0)
+            cleanup(path_out)
+
+            with_expr(path_a) do a
+                e = Quiver.lt(12.0, a)  # 12 < a
+                Quiver.save(e, path_out)
+                return Quiver.close!(e)
+            end
+            @test read_all_cells(path_out) == Float64.(12.0 .< va)
+        finally
+            cleanup(path_a, path_b, path_out)
+        end
+    end
+
+    @testset "Comparison drives ifelse" begin
+        path_a, path_b, path_c, path_out = make_path("a"), make_path("b"), make_path("c"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r)  # 1, 2, 3 across rows
+            write_fixture(path_b, (r, c, k) -> 100)
+            write_fixture(path_c, (r, c, k) -> -100)
+            va = read_all_cells(path_a)
+            with_expr(path_a) do a
+                with_expr(path_b) do b
+                    with_expr(path_c) do c
+                        e = Base.ifelse(Quiver.gt(a, 1.5), b, c)
+                        Quiver.save(e, path_out)
+                        return Quiver.close!(e)
+                    end
+                end
+            end
+            @test read_all_cells(path_out) == [v > 1.5 ? 100.0 : -100.0 for v in va]
+        finally
+            cleanup(path_a, path_b, path_c, path_out)
+        end
+    end
+
+    @testset "Comparison propagates NaN" begin
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> k == 1 ? NaN : 5.0)
+            with_expr(path_a) do a
+                e = Quiver.gt(a, 3.0)
+                Quiver.save(e, path_out)
+                return Quiver.close!(e)
+            end
+            file = Quiver.Binary.open_file(path_out; mode = 'r')
+            try
+                cell = Quiver.Binary.read(file; allow_nulls = true, row = 1, col = 1)
+                @test isnan(cell[1])   # NaN operand propagates
+                @test cell[2] == 1.0   # 5 > 3 -> 1
+            finally
+                Quiver.Binary.close!(file)
+            end
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
+    @testset "Logical operators & | !" begin
+        path_a, path_b, path_out = make_path("a"), make_path("b"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r == 2 ? 0 : 3)  # false on row 2, true elsewhere
+            write_fixture(path_b, (r, c, k) -> c == 1 ? 0 : -2)  # false on col 1, true elsewhere
+            va, vb = read_all_cells(path_a), read_all_cells(path_b)
+
+            with_expr(path_a) do a
+                with_expr(path_b) do b
+                    e = a & b
+                    Quiver.save(e, path_out)
+                    return Quiver.close!(e)
+                end
+            end
+            @test read_all_cells(path_out) == Float64.((va .!= 0) .& (vb .!= 0))
+            cleanup(path_out)
+
+            with_expr(path_a) do a
+                with_expr(path_b) do b
+                    e = a | b
+                    Quiver.save(e, path_out)
+                    return Quiver.close!(e)
+                end
+            end
+            @test read_all_cells(path_out) == Float64.((va .!= 0) .| (vb .!= 0))
+            cleanup(path_out)
+
+            with_expr(path_a) do a
+                e = !a
+                Quiver.save(e, path_out)
+                return Quiver.close!(e)
+            end
+            @test read_all_cells(path_out) == Float64.(va .== 0)
+        finally
+            cleanup(path_a, path_b, path_out)
+        end
+    end
+
+    @testset "Logical is unitless across units" begin
+        path_a, path_b, path_out = make_path("a"), make_path("b"), make_path("out")
+        try
+            write_fixture_with_metadata(path_a, make_metadata(unit = "MW"), (r, c, k) -> r)
+            write_fixture_with_metadata(path_b, make_metadata(unit = "GWh"), (r, c, k) -> c)
+            with_expr(path_a) do a
+                with_expr(path_b) do b
+                    # comparisons on different-unit sources; `&` must not throw and is unitless
+                    e = Quiver.gt(a, 1.0) & Quiver.gt(b, 0.0)
+                    md = Quiver.get_metadata(e)
+                    @test Quiver.Binary.get_unit(md) == ""
+                    Quiver.save(e, path_out)
+                    return Quiver.close!(e)
+                end
+            end
+            @test isfile(path_out * ".qvr")
+        finally
+            cleanup(path_a, path_b, path_out)
+        end
+    end
+
+    @testset "Logical composes ifelse" begin
+        path_a, path_b, path_c, path_out = make_path("a"), make_path("b"), make_path("c"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r)  # 1, 2, 3 across rows
+            write_fixture(path_b, (r, c, k) -> 100)
+            write_fixture(path_c, (r, c, k) -> -100)
+            va = read_all_cells(path_a)
+            with_expr(path_a) do a
+                with_expr(path_b) do b
+                    with_expr(path_c) do c
+                        # (a > 1) and not(a > 2) -> only row 2
+                        cond = Quiver.gt(a, 1.0) & !Quiver.gt(a, 2.0)
+                        e = Base.ifelse(cond, b, c)
+                        Quiver.save(e, path_out)
+                        return Quiver.close!(e)
+                    end
+                end
+            end
+            @test read_all_cells(path_out) == [(v > 1 && !(v > 2)) ? 100.0 : -100.0 for v in va]
+        finally
+            cleanup(path_a, path_b, path_c, path_out)
+        end
+    end
 end
 
 end

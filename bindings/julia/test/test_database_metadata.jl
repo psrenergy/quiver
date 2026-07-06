@@ -36,6 +36,9 @@ include("fixture.jl")
         @test metadata.name == "id"
         @test metadata.data_type == Quiver.QUIVER_DATA_TYPE_INTEGER
         @test metadata.primary_key == true
+        # INTEGER PRIMARY KEY is a rowid alias (never NULL) -> reported not_null even though
+        # SQLite's PRAGMA table_info leaves the notnull flag unset.
+        @test metadata.not_null == true
 
         Quiver.close!(db)
     end

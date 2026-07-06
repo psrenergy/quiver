@@ -88,9 +88,9 @@ export class Database {
   declare deleteElement: (collection: string, id: number) => void;
 
   // --- Reads (implemented in read.ts) ---
-  declare readScalarIntegers: (collection: string, attribute: string) => number[];
-  declare readScalarFloats: (collection: string, attribute: string) => number[];
-  declare readScalarStrings: (collection: string, attribute: string) => string[];
+  declare readScalarIntegers: (collection: string, attribute: string) => (number | null)[];
+  declare readScalarFloats: (collection: string, attribute: string) => (number | null)[];
+  declare readScalarStrings: (collection: string, attribute: string) => (string | null)[];
   declare readScalarIntegerById: (
     collection: string,
     attribute: string,
@@ -151,7 +151,7 @@ export class Database {
     id: number,
     data: TimeSeriesData,
   ) => void;
-  declare addTimeSeriesRow: (
+  declare upsertTimeSeriesRow: (
     collection: string,
     group: string,
     id: number,
@@ -180,7 +180,9 @@ export class Database {
   declare isHealthy: () => boolean;
   declare currentVersion: () => number;
   declare path: () => string;
-  declare describe: () => void;
+  declare describe: () => string;
+  declare describeCollection: (collection: string) => string;
+  declare summarizeCollection: (collection: string) => string;
 
   // --- Composite helpers (implemented in composites.ts) ---
   declare readScalarsById: (

@@ -1,5 +1,6 @@
 #include "quiver/c/database.h"
 
+#include "database_helpers.h"
 #include "database_options.h"
 #include "internal.h"
 
@@ -108,13 +109,41 @@ QUIVER_C_API quiver_error_t quiver_database_from_schema(const char* db_path,
     }
 }
 
-// Schema inspection
+// Schema inspection — human-readable text reports.
 
-QUIVER_C_API quiver_error_t quiver_database_describe(quiver_database_t* db) {
-    QUIVER_REQUIRE(db);
+QUIVER_C_API quiver_error_t quiver_database_describe(quiver_database_t* db, char** out_report) {
+    QUIVER_REQUIRE(db, out_report);
 
     try {
-        db->db.describe();
+        *out_report = quiver::string::new_c_str(db->db.describe());
+        return QUIVER_OK;
+    } catch (const std::exception& e) {
+        quiver_set_last_error(e.what());
+        return QUIVER_ERROR;
+    }
+}
+
+QUIVER_C_API quiver_error_t quiver_database_describe_collection(quiver_database_t* db,
+                                                                const char* collection,
+                                                                char** out_report) {
+    QUIVER_REQUIRE(db, collection, out_report);
+
+    try {
+        *out_report = quiver::string::new_c_str(db->db.describe_collection(collection));
+        return QUIVER_OK;
+    } catch (const std::exception& e) {
+        quiver_set_last_error(e.what());
+        return QUIVER_ERROR;
+    }
+}
+
+QUIVER_C_API quiver_error_t quiver_database_summarize_collection(quiver_database_t* db,
+                                                                 const char* collection,
+                                                                 char** out_report) {
+    QUIVER_REQUIRE(db, collection, out_report);
+
+    try {
+        *out_report = quiver::string::new_c_str(db->db.summarize_collection(collection));
         return QUIVER_OK;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());

@@ -1,3 +1,4 @@
+import { CString, type Pointer, toArrayBuffer } from "bun:ffi";
 import { Database } from "./database.ts";
 import { check } from "./errors.ts";
 import {
@@ -21,11 +22,12 @@ Database.prototype.readScalarIntegers = function (
   this: Database,
   collection: string,
   attribute: string,
-): number[] {
+): (number | null)[] {
   const lib = getSymbols();
   const collBuf = toCString(collection);
   const attrBuf = toCString(attribute);
   const outValues = allocPtrOut();
+  const outMask = allocPtrOut();
   const outCount = allocUint64Out();
   check(
     lib.quiver_database_read_scalar_integers(
@@ -33,14 +35,20 @@ Database.prototype.readScalarIntegers = function (
       collBuf.buf,
       attrBuf.buf,
       outValues.buf,
+      outMask.buf,
       outCount.buf,
     ),
   );
   const count = readUint64Out(outCount);
   if (count === 0) return [];
   const arrPtr = readPtrOut(outValues);
-  const result = decodeInt64Array(arrPtr, count);
+  const maskPtr = readPtrOut(outMask);
+  const vals = decodeInt64Array(arrPtr, count);
+  // mask[i] === 0 means SQL NULL; gate to null (never Number(placeholder)).
+  const mask = new Uint8Array(toArrayBuffer(maskPtr as Pointer, 0, count));
+  const result = vals.map((v, i) => (mask[i] ? v : null));
   lib.quiver_database_free_integer_array(arrPtr);
+  lib.quiver_database_free_mask(maskPtr);
   return result;
 };
 
@@ -48,11 +56,12 @@ Database.prototype.readScalarFloats = function (
   this: Database,
   collection: string,
   attribute: string,
-): number[] {
+): (number | null)[] {
   const lib = getSymbols();
   const collBuf = toCString(collection);
   const attrBuf = toCString(attribute);
   const outValues = allocPtrOut();
+  const outMask = allocPtrOut();
   const outCount = allocUint64Out();
   check(
     lib.quiver_database_read_scalar_floats(
@@ -60,14 +69,19 @@ Database.prototype.readScalarFloats = function (
       collBuf.buf,
       attrBuf.buf,
       outValues.buf,
+      outMask.buf,
       outCount.buf,
     ),
   );
   const count = readUint64Out(outCount);
   if (count === 0) return [];
   const arrPtr = readPtrOut(outValues);
-  const result = decodeFloat64Array(arrPtr, count);
+  const maskPtr = readPtrOut(outMask);
+  const vals = decodeFloat64Array(arrPtr, count);
+  const mask = new Uint8Array(toArrayBuffer(maskPtr as Pointer, 0, count));
+  const result = vals.map((v, i) => (mask[i] ? v : null));
   lib.quiver_database_free_float_array(arrPtr);
+  lib.quiver_database_free_mask(maskPtr);
   return result;
 };
 
@@ -75,7 +89,7 @@ Database.prototype.readScalarStrings = function (
   this: Database,
   collection: string,
   attribute: string,
-): string[] {
+): (string | null)[] {
   const lib = getSymbols();
   const collBuf = toCString(collection);
   const attrBuf = toCString(attribute);
@@ -93,7 +107,11 @@ Database.prototype.readScalarStrings = function (
   const count = readUint64Out(outCount);
   if (count === 0) return [];
   const arrPtr = readPtrOut(outValues);
-  const result = decodeStringArray(arrPtr, count);
+  // A NULL string is a NULL char* entry: decode the (null-guarded) pointer array and map
+  // NULL -> null (decodeStringArray would construct "" from a NULL pointer instead).
+  const result = decodePtrArray(arrPtr, count).map((p) =>
+    p === null ? null : new CString(p).toString(),
+  );
   lib.quiver_database_free_string_array(arrPtr, BigInt(count));
   return result;
 };

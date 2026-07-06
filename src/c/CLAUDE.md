@@ -118,6 +118,12 @@ Conventions that keep the error paths safe:
   are zero-initialized (`new T*[n]()`) and out-parameters assigned as soon as each array is
   allocated, so error-path cleanup never sees uninitialized pointers. Single-shot allocations
   elsewhere use plain `new` (nothing can fail between alloc and return).
+- **Scalar bulk reads carry NULLs.** The numeric readers (`read_scalar_integers`/`_floats`) take a
+  parallel `uint8_t** out_mask` out-param (`mask[i] == 0` = SQL NULL, data slot is a 0/0.0
+  placeholder), allocated by `read_scalars_masked_impl` and freed by `quiver_database_free_mask`
+  (co-located in `database_read.cpp`). `read_scalar_strings` keeps its signature — a NULL is a
+  `nullptr` entry in the `char**` (via a `copy_strings_to_c(vector<optional<string>>, ...)`
+  overload), and `free_string_array` already tolerates NULL slots.
 - **Array/string free functions are NULL-tolerant** (freeing NULL, or an array slot left NULL, is
   a no-op). Struct free functions (`free_scalar_metadata`, `free_group_metadata`,
   `free_dimension`, `free_time_series_files`) `QUIVER_REQUIRE` a non-NULL handle.
@@ -148,15 +154,40 @@ quiver_database_free_group_metadata_array(quiver_group_metadata_t*, size_t)
 ```
 Internal helpers `convert_scalar_to_c`, `convert_group_to_c`, `free_scalar_fields`, `free_group_fields` in `database_helpers.h` avoid duplication.
 
+## Database Description / Statistics
+
+`quiver_database_describe` / `_describe_collection` / `_summarize_collection` each return a
+human-readable **text report** via a `char** out_report` out-param (freed by the existing
+`quiver_database_free_string`) — no structs. All three live in `database.cpp` as trivial
+`new_c_str(db->db.<fn>(...))` wrappers.
+
 ## Multi-Column Time Series
 
-The C API uses a columnar typed-arrays pattern for time series read and update:
-- `quiver_database_update_time_series_group()` accepts parallel arrays: `column_names[]`, `column_types[]`, `column_data[]`, `column_count`, `row_count`. Pass `column_count == 0` and `row_count == 0` with NULL arrays to clear all rows.
-- `quiver_database_read_time_series_group()` returns columnar typed arrays matching the schema. Column data arrays are typed: `INTEGER` -> `int64_t*`, `FLOAT` -> `double*`, `STRING`/`DATE_TIME` -> `char**`.
-- `quiver_database_free_time_series_data()` deallocates read results. String columns require per-element cleanup; numeric columns use a single `delete[]`.
+The C API uses a columnar typed-arrays pattern for time series read and update, with a per-cell
+NULL **presence mask** alongside the data arrays:
+- `quiver_database_update_time_series_group()` accepts parallel arrays: `column_names[]`,
+  `column_types[]`, `column_data[]`, `column_has_value[]`, `column_count`, `row_count`. The mask is
+  optional: a NULL `column_has_value`, or a NULL entry for an individual column, means that scope is
+  dense (all values present). `column_has_value[c][r] == 0` inserts SQL NULL for that cell and the
+  data entry is never read (a NULL `char*` placeholder is fine for string columns) — so an all-NULL
+  column can be tagged `FLOAT` with zeroed data regardless of the schema column's type. The row map
+  receives an explicit `Value{nullptr}` for masked cells in **every** row, keeping rows uniform (the
+  core builds the INSERT column list from `rows[0]`). Masking a dimension/PK cell surfaces as the
+  SQLite NOT NULL/constraint error. Pass `column_count == 0` and `row_count == 0` with NULL arrays
+  to clear all rows.
+- `quiver_database_read_time_series_group()` returns columnar typed arrays plus
+  `out_column_has_value` (a `uint8_t**`, one mask per column). Column data arrays are typed:
+  `INTEGER` -> `int64_t*`, `FLOAT` -> `double*`, `STRING`/`DATE_TIME` -> `char**`. For a NULL cell
+  (`mask[r] == 0`) the data is a placeholder to ignore: `INTEGER` 0, `FLOAT` 0.0, `STRING`/`DATE_TIME`
+  NULL `char*` — NULL strings no longer fail the read. The dimension column's mask is always all 1.
+- `quiver_database_free_time_series_data()` deallocates read results; it takes the mask array
+  (`column_has_value`) and frees it **before** the typed `column_data` dispatch so the unknown-type
+  throw cannot leak the masks. String columns require per-element cleanup; numeric columns and the
+  masks use a single `delete[]`. The masks follow the zero-initialized out-array convention.
 - `quiver_database_read_time_series_row()` returns a single `void*` array whose element type the
   caller dispatches on via `out_data_type`. Null entries are encoded per type: `FLOAT` → NaN,
-  `STRING`/`DATE_TIME` → NULL `char*`, `INTEGER` → 0.
+  `STRING`/`DATE_TIME` → NULL `char*`, `INTEGER` → 0. (The row API keeps its sentinel encoding; only
+  the columnar group API uses the presence mask.)
 
 This pattern mirrors the `convert_params()` approach from `database_query.cpp` for type-safe FFI marshaling across N typed columns.
 

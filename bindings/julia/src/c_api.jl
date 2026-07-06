@@ -171,12 +171,12 @@ function quiver_database_delete_element(db, collection, id)
     @ccall libquiver_c.quiver_database_delete_element(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, id::Int64)::quiver_error_t
 end
 
-function quiver_database_read_scalar_integers(db, collection, attribute, out_values, out_count)
-    @ccall libquiver_c.quiver_database_read_scalar_integers(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_values::Ptr{Ptr{Int64}}, out_count::Ptr{Csize_t})::quiver_error_t
+function quiver_database_read_scalar_integers(db, collection, attribute, out_values, out_mask, out_count)
+    @ccall libquiver_c.quiver_database_read_scalar_integers(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_values::Ptr{Ptr{Int64}}, out_mask::Ptr{Ptr{UInt8}}, out_count::Ptr{Csize_t})::quiver_error_t
 end
 
-function quiver_database_read_scalar_floats(db, collection, attribute, out_values, out_count)
-    @ccall libquiver_c.quiver_database_read_scalar_floats(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_values::Ptr{Ptr{Cdouble}}, out_count::Ptr{Csize_t})::quiver_error_t
+function quiver_database_read_scalar_floats(db, collection, attribute, out_values, out_mask, out_count)
+    @ccall libquiver_c.quiver_database_read_scalar_floats(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_values::Ptr{Ptr{Cdouble}}, out_mask::Ptr{Ptr{UInt8}}, out_count::Ptr{Csize_t})::quiver_error_t
 end
 
 function quiver_database_read_scalar_strings(db, collection, attribute, out_values, out_count)
@@ -313,24 +313,24 @@ function quiver_database_free_group_metadata_array(metadata, count)
     @ccall libquiver_c.quiver_database_free_group_metadata_array(metadata::Ptr{quiver_group_metadata_t}, count::Csize_t)::quiver_error_t
 end
 
-function quiver_database_read_time_series_group(db, collection, group, id, out_column_names, out_column_types, out_column_data, out_column_count, out_row_count)
-    @ccall libquiver_c.quiver_database_read_time_series_group(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, id::Int64, out_column_names::Ptr{Ptr{Ptr{Cchar}}}, out_column_types::Ptr{Ptr{Cint}}, out_column_data::Ptr{Ptr{Ptr{Cvoid}}}, out_column_count::Ptr{Csize_t}, out_row_count::Ptr{Csize_t})::quiver_error_t
+function quiver_database_read_time_series_group(db, collection, group, id, out_column_names, out_column_types, out_column_data, out_column_has_value, out_column_count, out_row_count)
+    @ccall libquiver_c.quiver_database_read_time_series_group(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, id::Int64, out_column_names::Ptr{Ptr{Ptr{Cchar}}}, out_column_types::Ptr{Ptr{Cint}}, out_column_data::Ptr{Ptr{Ptr{Cvoid}}}, out_column_has_value::Ptr{Ptr{Ptr{UInt8}}}, out_column_count::Ptr{Csize_t}, out_row_count::Ptr{Csize_t})::quiver_error_t
 end
 
-function quiver_database_update_time_series_group(db, collection, group, id, column_names, column_types, column_data, column_count, row_count)
-    @ccall libquiver_c.quiver_database_update_time_series_group(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, id::Int64, column_names::Ptr{Ptr{Cchar}}, column_types::Ptr{Cint}, column_data::Ptr{Ptr{Cvoid}}, column_count::Csize_t, row_count::Csize_t)::quiver_error_t
+function quiver_database_update_time_series_group(db, collection, group, id, column_names, column_types, column_data, column_has_value, column_count, row_count)
+    @ccall libquiver_c.quiver_database_update_time_series_group(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, id::Int64, column_names::Ptr{Ptr{Cchar}}, column_types::Ptr{Cint}, column_data::Ptr{Ptr{Cvoid}}, column_has_value::Ptr{Ptr{UInt8}}, column_count::Csize_t, row_count::Csize_t)::quiver_error_t
 end
 
-function quiver_database_add_time_series_row(db, collection, group, id, column_names, column_types, column_data, column_count)
-    @ccall libquiver_c.quiver_database_add_time_series_row(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, id::Int64, column_names::Ptr{Ptr{Cchar}}, column_types::Ptr{Cint}, column_data::Ptr{Ptr{Cvoid}}, column_count::Csize_t)::quiver_error_t
+function quiver_database_upsert_time_series_row(db, collection, group, id, column_names, column_types, column_data, column_count)
+    @ccall libquiver_c.quiver_database_upsert_time_series_row(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, id::Int64, column_names::Ptr{Ptr{Cchar}}, column_types::Ptr{Cint}, column_data::Ptr{Ptr{Cvoid}}, column_count::Csize_t)::quiver_error_t
 end
 
 function quiver_database_read_time_series_row(db, collection, group, attribute, date_time, out_data_type, out_values, out_count)
     @ccall libquiver_c.quiver_database_read_time_series_row(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, attribute::Ptr{Cchar}, date_time::Ptr{Cchar}, out_data_type::Ptr{Cint}, out_values::Ptr{Ptr{Cvoid}}, out_count::Ptr{Csize_t})::quiver_error_t
 end
 
-function quiver_database_free_time_series_data(column_names, column_types, column_data, column_count, row_count)
-    @ccall libquiver_c.quiver_database_free_time_series_data(column_names::Ptr{Ptr{Cchar}}, column_types::Ptr{Cint}, column_data::Ptr{Ptr{Cvoid}}, column_count::Csize_t, row_count::Csize_t)::quiver_error_t
+function quiver_database_free_time_series_data(column_names, column_types, column_data, column_has_value, column_count, row_count)
+    @ccall libquiver_c.quiver_database_free_time_series_data(column_names::Ptr{Ptr{Cchar}}, column_types::Ptr{Cint}, column_data::Ptr{Ptr{Cvoid}}, column_has_value::Ptr{Ptr{UInt8}}, column_count::Csize_t, row_count::Csize_t)::quiver_error_t
 end
 
 function quiver_database_has_time_series_files(db, collection, out_result)
@@ -363,6 +363,10 @@ end
 
 function quiver_database_free_string_array(values, count)
     @ccall libquiver_c.quiver_database_free_string_array(values::Ptr{Ptr{Cchar}}, count::Csize_t)::quiver_error_t
+end
+
+function quiver_database_free_mask(mask)
+    @ccall libquiver_c.quiver_database_free_mask(mask::Ptr{UInt8})::quiver_error_t
 end
 
 function quiver_database_free_string(str)
@@ -413,8 +417,16 @@ function quiver_database_query_float_params(db, sql, param_types, param_values, 
     @ccall libquiver_c.quiver_database_query_float_params(db::Ptr{quiver_database_t}, sql::Ptr{Cchar}, param_types::Ptr{Cint}, param_values::Ptr{Ptr{Cvoid}}, param_count::Csize_t, out_value::Ptr{Cdouble}, out_has_value::Ptr{Cint})::quiver_error_t
 end
 
-function quiver_database_describe(db)
-    @ccall libquiver_c.quiver_database_describe(db::Ptr{quiver_database_t})::quiver_error_t
+function quiver_database_describe(db, out_report)
+    @ccall libquiver_c.quiver_database_describe(db::Ptr{quiver_database_t}, out_report::Ptr{Ptr{Cchar}})::quiver_error_t
+end
+
+function quiver_database_describe_collection(db, collection, out_report)
+    @ccall libquiver_c.quiver_database_describe_collection(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, out_report::Ptr{Ptr{Cchar}})::quiver_error_t
+end
+
+function quiver_database_summarize_collection(db, collection, out_report)
+    @ccall libquiver_c.quiver_database_summarize_collection(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, out_report::Ptr{Ptr{Cchar}})::quiver_error_t
 end
 
 function quiver_element_create(out_element)
@@ -663,6 +675,14 @@ const quiver_expression_t = quiver_expression
     QUIVER_EXPRESSION_OPERATION_SUBTRACT = 1
     QUIVER_EXPRESSION_OPERATION_MULTIPLY = 2
     QUIVER_EXPRESSION_OPERATION_DIVIDE = 3
+    QUIVER_EXPRESSION_OPERATION_GT = 4
+    QUIVER_EXPRESSION_OPERATION_LT = 5
+    QUIVER_EXPRESSION_OPERATION_GTE = 6
+    QUIVER_EXPRESSION_OPERATION_LTE = 7
+    QUIVER_EXPRESSION_OPERATION_EQ = 8
+    QUIVER_EXPRESSION_OPERATION_NEQ = 9
+    QUIVER_EXPRESSION_OPERATION_AND = 10
+    QUIVER_EXPRESSION_OPERATION_OR = 11
 end
 
 @cenum quiver_expression_unary_operation_t::UInt32 begin
@@ -671,6 +691,7 @@ end
     QUIVER_EXPRESSION_UNARY_OPERATION_SQRT = 2
     QUIVER_EXPRESSION_UNARY_OPERATION_LOG = 3
     QUIVER_EXPRESSION_UNARY_OPERATION_EXP = 4
+    QUIVER_EXPRESSION_UNARY_OPERATION_NOT = 5
 end
 
 @cenum quiver_expression_ternary_operation_t::UInt32 begin

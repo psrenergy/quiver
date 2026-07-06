@@ -26,7 +26,7 @@ jobs:
     outputs:
       version: ${{ steps.v.outputs.version }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref || github.sha }}
       - id: v
@@ -44,7 +44,7 @@ jobs:
       fail-fast: true
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             platform_key: linux-x86_64
             lib_paths: |
               build/lib/libquiver.so
@@ -62,7 +62,7 @@ jobs:
               build/bin/Release/libquiver_c.dll
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref || github.sha }}
 
@@ -93,7 +93,7 @@ jobs:
     runs-on: [self-hosted, linux]
     needs: [build, version]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref || github.sha }}
 

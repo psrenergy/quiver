@@ -158,12 +158,39 @@ impl_->logger->debug("Opening database: {}", path);
   `_vector_` / `_set_` / `_time_series_` tables (`group_names` excludes `_time_series_files`).
   All list/metadata/describe call sites use them — never hand-roll prefix scans.
 - **Declaration order everywhere**: metadata and list functions iterate `column_order`
-  (declaration order), matching `describe()` and CSV export. Nothing reports alphabetical order.
+  (declaration order), matching the `describe(ostream&)` dump and CSV export. Nothing reports alphabetical order.
+- **`describe*` return text reports** (`database_describe.cpp`): `describe()` (whole-DB overview),
+  `describe_collection(c)` (one collection's structure), `summarize_collection(c)` (per-scalar
+  null/non-null counts + low-cardinality integer distributions [threshold `kMaxDistributionCardinality`]
+  + per-group empty/non-empty counts) all build an `std::ostringstream` and return `std::string`. These
+  const methods run their own read-only SQL via an anon-namespace `query_int_rows` helper that
+  prepares/steps directly on `impl_->db` (the `current_version() const` pattern — `execute()` is
+  non-const). All three are bound 1:1 across the C API and every binding as string getters.
 - **`TypeValidator` threads the caller's name** (`type_validator.cpp`): call sites pass
   `"create_element"` / `"update_element"` so messages read `"Cannot create_element: type
   mismatch for column ..."` (root Pattern 1).
-- **`value_matches_type`** (`database_internal.h`) accepts int64 for both `INTEGER` and `REAL`
-  columns — this is where int-for-REAL time-series coercion lives (root design decision).
+- **One scalar typing policy** shared by `value_matches_type` (`database_internal.h`, time-series
+  writes) and `TypeValidator::validate_value` (`type_validator.cpp`, scalar create/update): int64
+  matches `INTEGER` or `REAL` (int-for-REAL coercion), double matches `REAL` only (a float into an
+  `INTEGER` column is rejected), string matches `TEXT`/`INTEGER`(FK label)/`DATE_TIME`. Keep the two
+  in sync (root design decision).
+- **`update_element` / `delete_element` verify the id exists** (`SELECT 1 ... WHERE id = ?` via
+  `execute`) and throw Pattern 2 `"Element not found: ..."` — no silent no-op.
+- **Two column readers in `database_internal.h`**: `read_column_values<T>` drops NULLs (dense —
+  used by vector/set `_by_id` and `read_element_ids`, whose columns are NOT NULL / PK by
+  convention); `read_column_values_nullable<T>` keeps them as `std::optional<T>` and backs only the
+  three `read_scalar_*` bulk readers (one entry per element, `ORDER BY rowid`). The Lua scalar
+  readers consume the optional vector directly via a `to_lua_table(vector<optional<T>>)` overload
+  that emits `nil` holes (root scalar-NULL design decision).
+- **`scalar_metadata_from_column` reports an INTEGER PRIMARY KEY as `not_null`**
+  (`database_internal.h`): a rowid-alias PK is never NULL, but SQLite's `PRAGMA table_info` leaves
+  the `notnull` flag unset, so the public `ScalarMetadata.not_null` ORs in `primary_key && type ==
+  Integer`. The raw `ColumnDefinition.not_null` stays the literal PRAGMA value — `csv_import`
+  (empty-cell rejection) and `schema_validator` read it directly and must not see PK flip. This is
+  what lets Julia's nullability-aware readers return a concrete `Vector{Int64}` for `id`.
+- **`execute` validates parameter count** (`database.cpp`): `sqlite3_bind_parameter_count` must
+  equal `parameters.size()`, else it throws — the single guard for every `query_*` and internal
+  parameterized statement.
 - **Utilities**: `quiver::string::new_c_str` / `trim` in `src/utils/string.h`; ISO 8601
   (`YYYY-MM-DDTHH:MM:SS`) parse/format helpers in `src/utils/datetime.h`;
   use `is_date_time_column` (`data_type.h`) for `date_`-prefix checks (one legacy hand-rolled
@@ -182,17 +209,45 @@ lua.run(R"(
 ```
 
 Implementation conventions in `lua_runner.cpp`:
+- **Filesystem sandbox**: `resolve_sandboxed_path(db, operation, path)` is the single gate for
+  every file-touching Lua operation (`db:open_file`, `db:bin_to_csv`, `db:csv_to_bin`,
+  `db:export_csv`, `db:import_csv`, `expr:save`). It rejects `:memory:` databases, resolves
+  relative paths against the database file's directory (bare-filename db paths fall back to the
+  CWD at call time, mirroring `create_database_logger`), canonicalizes via `weakly_canonical`,
+  and requires strict containment (candidate == root is rejected — the binary subsystem appends
+  `.qvr`/`.toml` by string concatenation). The resolved absolute path is what's forwarded
+  downstream, so the process CWD is irrelevant to Lua file I/O. Pattern 1 messages thread the
+  public operation name. This is LuaRunner policy only — the C++/Julia surfaces stay unsandboxed.
+- **Enabled standard libraries**: `base`, `string`, `table`, `math`, `coroutine`, and `utf8`
+  (pure computation only). `os`, `io`, `package`/`require`, and `debug` stay unloaded — scripts
+  cannot reach the shell, the process, the environment, or the filesystem outside the db sandbox.
+- `dofile` and `loadfile` are nil'd out after `open_libraries` (no loading Lua source from disk);
+  string-form `load` stays available.
 - `parse_csv_options(table)` is the single CSVOptions parser shared by `export_csv`/`import_csv`.
 - `to_lua_table<T>` overloads (flat + nested) are the only vector→table marshalers.
+- `describe` / `describe_collection` / `summarize_collection` are bound as plain lambdas returning
+  the C++ `std::string` text report (`db:describe()` returns a string — it does not print).
 - Lua→C++ converters **throw on unsupported value types** (booleans, functions, ...) — never
   skip silently; a skipped positional query parameter would shift the rest and bind NULL to the
   trailing placeholder.
+- `update_time_series_group_lua` transpose: the **dimension column(s) are the row-count
+  authority**, discovered via public `get_time_series_metadata` (`dimension_column` plus any
+  `value_columns` with `primary_key` set — the multi-dim case; `Database` exposes no Schema
+  accessor so `internal::find_dimension_columns` is unreachable here). Dimension columns must be
+  present and dense; value columns may be shorter, sparse, or empty — missing indices become
+  `Value{nullptr}` (rows stay uniform: the core builds its INSERT list from `rows[0]`).
+  Longer-than-dimension throws; a non-array column or non-positive-integer key throws; named
+  columns with a zero-length dimension still throw — only a genuinely empty `{}` (no columns)
+  clears (the anti-silent-clear trap is preserved). Column extents come from a `pairs` walk, never
+  `sol::table::size()` (`lua_rawlen` returns an arbitrary border on a table with holes). The read
+  path emits NULL cells as `nil` holes (an all-NULL column is an empty table with the key present),
+  so read → modify → write round-trips; `#ts.<dimension>` is the trustworthy row count.
 - Script errors surface as `"Failed to run Lua script: ..."` (root Pattern 3).
 
 ## Binary Subsystem
 
 Standalone binary file I/O layer for `.qvr` files with `.toml` metadata sidecars.
-Bound in **Julia only** (root design decision).
+Bound in **Julia and Lua** (root design decision); Lua binds these C++ classes directly via sol2 in `src/lua_runner.cpp` (file I/O is db-scoped and sandboxed — `db:open_file`/`db:bin_to_csv`/`db:csv_to_bin`; metadata builders under `quiver.*`; method syntax + string aggregation ops).
 
 - `BinaryFile` class (Pimpl): `open_file(path, mode, metadata?)`, `read(dims, allow_nulls = false)`, `write(data, dims)`, `get_metadata()`, `get_file_path()`
 - `CSVConverter` class (composition, no Pimpl): `bin_to_csv(path, aggregate)`, `csv_to_bin(path)`
@@ -229,7 +284,7 @@ Profiled with 480×500×31 dimensions (~7.3M read/write calls). Main hot-path co
 
 ## Expression Subsystem
 
-Lazy expressions over `.qvr` binary files. Build a DAG using `+ - * /` operator overloads (binary and unary minus) and unary math free functions, materialize via `save()`. Bound in **Julia only** (root design decision).
+Lazy expressions over `.qvr` binary files. Build a DAG using `+ - * /` operator overloads (binary and unary minus) and unary math free functions, materialize via `save()`. Bound in **Julia and Lua** (root design decision); Lua binds these C++ classes directly via sol2 in `src/lua_runner.cpp` (`quiver.*` namespace + method syntax + string aggregation ops; `expr:save` paths are sandboxed to the database directory).
 
 ```cpp
 auto a = BinaryFile::open_file("a", 'r');
@@ -246,17 +301,19 @@ result.save("output");  // writes output.qvr + output.toml
   - Label-axis projection: `select_agents(labels)` keeps (and may reorder) a chosen subset of operand labels; `rename_agents(mapping)` rewrites labels in place via a partial `{old: new}` map. Both validate eagerly: `select_agents` throws if any requested label is absent; `rename_agents` throws on duplicate keys or unknown keys, and `BinaryMetadata::validate()` rejects renames that produce duplicate output labels.
 - Operator overloads (12 binary + 1 unary): `+ - * /` × {expr+expr, expr+double, double+expr}, plus unary `-expr`.
 - Free functions in `quiver::` for unary math: `abs(expr)`, `sqrt(expr)`, `log(expr)`, `exp(expr)`.
+- Comparison operators in `quiver::` (C++): `> < >= <= == !=`, each defined for all three combos {expr,expr | expr,double | double,expr} (explicit — the compiler does not synthesize C++20 reversed candidates for these non-bool-returning operators). `==`/`!=` return an elementwise mask `Expression`, not `bool` (Eigen-style). Produce `1.0`/`0.0` per element; **a NaN operand propagates as NaN** (so `ifelse(cmp, …)` yields NaN). They reuse `ExpressionBinary`, inheriting unit-match + shape validation and carrying the broadcast unit. **Per-language surface**: C++ uses the operators; Julia overloads `> < >= <=` and keeps `eq`/`neq` named (`==`/`!=` would break `Dict`/`Set`); Lua keeps `quiver.gt/lt/gte/lte/eq/neq` free functions (comparison metamethods coerce to bool).
+- Logical operators in `quiver::` (C++) on nonzero-is-true operands: `operator&&` / `operator||` (binary, three combos each) and `operator!` (unary). Produce `1.0`/`0.0`, **NaN propagates**, result is **unitless** — `&&`/`||` skip unit-match validation (only shapes must broadcast) so conditions on different-unit variables compose; `!` emits a unitless result too. Overloading `&&`/`||` drops short-circuit, which is irrelevant for a lazy DAG. **Per-language surface**: C++ `&& || !`; Julia `& | !` (`&&`/`||` are non-overloadable short-circuit syntax, so `&`/`|`; `!` is a real function); Lua `& | ~` (`and`/`or`/`not` are keywords → `__band`/`__bor`/`__bnot` metamethods on the Expression and BinaryFile usertypes).
 - Free function `ifelse(cond, then_value, else_value)` selects per-element: NaN cond → NaN; `cond != 0` → `then_value`; else → `else_value`. `then` and `else` units must match; `cond`'s unit is ignored.
 - `ExpressionNode` hierarchy (header `quiver/expression/expression_node.h`):
   - `ExpressionNode` (abstract): `metadata()`, `compute_row(dims, out)`, `collect_input_files(out)` (used by `save()` for the output-path collision check and input open/close lifecycle)
   - `ExpressionFile`: lazy reads from a `.qvr`. Caches an open `BinaryFile` and a reusable `unordered_map` across calls (mutable members; not thread-safe per instance).
   - `ExpressionScalar`: broadcasts a constant across the operand's label space.
-  - `ExpressionBinary`: combines two operands with `ExpressionBinary::Operation::{Add,Subtract,Multiply,Divide}` (nested enum). Constructor pre-computes broadcast metadata (`build_broadcast_metadata`) and one `BroadcastOperand` per operand (index translation tables + reusable buffers, built by `make_broadcast_operand` and driven per row by `compute_broadcast_operand_row` — both shared with `ExpressionTernary` via `expression_helpers.h`). The `apply(Operation, double, double)` operation-dispatch is a private static member.
-  - `ExpressionUnary`: applies a single-operand math function with `ExpressionUnary::Operation::{Negate,Abs,Sqrt,Log,Exp}` (nested enum). `metadata()` returns the operand's metadata unchanged (no dimensional analysis — `sqrt(MW)` stays as `MW`). Constructor pre-allocates a reusable `operand_row_buf_`. Lets IEEE-754 NaN/inf propagate naturally (`sqrt(-1) → NaN`, `log(0) → -inf`); no NaN special-casing. The `apply(Operation, double)` operation-dispatch is a private static member.
+  - `ExpressionBinary`: combines two operands with `ExpressionBinary::Operation::{Add,Subtract,Multiply,Divide,Gt,Lt,Gte,Lte,Eq,Neq,And,Or}` (nested enum). Arithmetic ops compute `lhs op rhs`; the six comparisons and the two logical ops (`And`/`Or`, nonzero-is-true) return `1.0`/`0.0` and propagate a NaN operand as NaN. Logical ops skip unit-match validation and emit a unitless result (a small `is_logical(op)` branch in the constructor); comparisons/arithmetic keep the full unit-match check. Constructor pre-computes broadcast metadata (`build_broadcast_metadata`) and one `BroadcastOperand` per operand (index translation tables + reusable buffers, built by `make_broadcast_operand` and driven per row by `compute_broadcast_operand_row` — both shared with `ExpressionTernary` via `expression_helpers.h`). The `apply(Operation, double, double)` operation-dispatch is a private static member.
+  - `ExpressionUnary`: applies a single-operand function with `ExpressionUnary::Operation::{Negate,Abs,Sqrt,Log,Exp,Not}` (nested enum). For the math ops `metadata()` returns the operand's metadata unchanged (no dimensional analysis — `sqrt(MW)` stays as `MW`); `Not` is logical negation (nonzero→0, 0→1, NaN propagates) and returns a **unitless** boolean via a dedicated `output_meta_` member. Constructor pre-allocates a reusable `operand_row_buf_`. Lets IEEE-754 NaN/inf propagate naturally (`sqrt(-1) → NaN`, `log(0) → -inf`); no NaN special-casing. The `apply(Operation, double)` operation-dispatch is a private static member.
   - `ExpressionTernary`: selects per-element across three operands. `Operation::{IfElse}` (nested enum). For `IfElse`: NaN in `condition` → NaN; `condition != 0` → `then_value`; else `else_value`. Constructor eagerly validates (`then` and `else` units must match; `condition`'s unit is ignored; shapes broadcast across all three pairs), pre-builds broadcast metadata via `build_ternary_broadcast_metadata` and one `BroadcastOperand` per operand (same shared machinery as `ExpressionBinary`). The `apply(Operation, double, double, double)` operation-dispatch is a private static member.
   - `ExpressionAggregate`: collapses a named dimension. `Operation::{Sum,Mean,Min,Max,Percentile}` (nested enum). Constructor eagerly removes the dim from output metadata, rewires child time-dim `parent_dimension_index` transitively (a time dim whose parent was removed re-points to the removed dim's grandparent, or `-1`), and pre-allocates index translation + reusable buffers. Skips NaN inputs during accumulation; all-NaN range yields NaN.
   - `ExpressionAggregateAgents`: collapses the label axis to a single entry named after the operation (e.g., `"sum"`, `"mean"`, `"percentile"`). Dimensions, `initial_datetime`, `unit` unchanged. Same NaN policy as `ExpressionAggregate`. Shares the accumulation templates in `expression_helpers.h` with `ExpressionAggregate`.
   - `ExpressionSelectAgents`: projects the operand onto a caller-supplied label list. Constructor pre-computes a `selected_indices_` table from operand-label → output-position, copies operand metadata with `labels` replaced, and calls `output_meta_.validate()` (which rejects duplicate output labels). Missing labels throw `"Cannot select_agents: label not found: '<name>'"`. `compute_row` reads the operand row into a reusable buffer and gathers selected columns into `out`.
   - `ExpressionRenameAgents`: rewrites operand labels via a partial `{old: new}` mapping. Constructor builds a rename map (duplicate keys throw), walks operand labels swapping matched names, verifies every key was used (unmatched keys throw), and calls `output_meta_.validate()` (rejects collisions like `val1→val2` when `val2` already exists). `compute_row` forwards directly to the operand — count and order are unchanged so no per-row reshuffle is needed.
 - Validation is **eager** at construction for `ExpressionBinary`, `ExpressionTernary`, `ExpressionAggregate`, `ExpressionAggregateAgents`, `ExpressionSelectAgents`, `ExpressionRenameAgents` (units/dim sizes/time-dim properties/label sizes/initial datetimes for binary and ternary; dim existence + op/parameter consistency + output metadata validity for aggregations; label existence + uniqueness for label-axis projections). `ExpressionUnary` has no inputs to cross-validate so its constructor just sizes the row buffer. Computation is **lazy**: no I/O until `save()`.
-- All operation enums are nested in their owning class: `ExpressionBinary::Operation`, `ExpressionUnary::Operation`, `ExpressionTernary::Operation`, `ExpressionAggregate::Operation`, `ExpressionAggregateAgents::Operation`. The two aggregation enums are parallel types with identical values (`Sum / Mean / Min / Max / Percentile`). Label-axis projection nodes (`ExpressionSelectAgents`, `ExpressionRenameAgents`) have no operation enum — their behavior is fully specified by the label list / rename map. The C API mirrors this with five parallel enums: `quiver_expression_operation_t`, `quiver_expression_unary_operation_t`, `quiver_expression_ternary_operation_t`, `quiver_expression_aggregate_operation_t`, `quiver_expression_aggregate_agents_operation_t`.
+- All operation enums are nested in their owning class: `ExpressionBinary::Operation`, `ExpressionUnary::Operation`, `ExpressionTernary::Operation`, `ExpressionAggregate::Operation`, `ExpressionAggregateAgents::Operation`. The two aggregation enums are parallel types with identical values (`Sum / Mean / Min / Max / Percentile`). Label-axis projection nodes (`ExpressionSelectAgents`, `ExpressionRenameAgents`) have no operation enum — their behavior is fully specified by the label list / rename map. The C API mirrors this with five parallel enums: `quiver_expression_operation_t` (now `ADD..DIVIDE`, the comparisons `GT/LT/GTE/LTE/EQ/NEQ`, and the logical `AND/OR`), `quiver_expression_unary_operation_t` (math ops plus `NOT`), `quiver_expression_ternary_operation_t`, `quiver_expression_aggregate_operation_t`, `quiver_expression_aggregate_agents_operation_t`. Comparisons and logical ops reuse the `quiver_expression_apply*` / `quiver_expression_apply_unary` entry points (no new C functions); the Julia FFI enum (`src/c_api.jl`) must carry the same values.

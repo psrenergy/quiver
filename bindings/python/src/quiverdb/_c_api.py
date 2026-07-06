@@ -49,7 +49,6 @@ ffi.cdef("""
     quiver_error_t quiver_database_is_healthy(quiver_database_t* db, int* out_healthy);
     quiver_error_t quiver_database_path(quiver_database_t* db, const char** out_path);
     quiver_error_t quiver_database_current_version(quiver_database_t* db, int64_t* out_version);
-    quiver_error_t quiver_database_describe(quiver_database_t* db);
 
     // database.h - element operations
     typedef struct quiver_element quiver_element_t;
@@ -101,10 +100,10 @@ ffi.cdef("""
     // Read scalar attributes
     quiver_error_t quiver_database_read_scalar_integers(quiver_database_t* db,
         const char* collection, const char* attribute,
-        int64_t** out_values, size_t* out_count);
+        int64_t** out_values, uint8_t** out_mask, size_t* out_count);
     quiver_error_t quiver_database_read_scalar_floats(quiver_database_t* db,
         const char* collection, const char* attribute,
-        double** out_values, size_t* out_count);
+        double** out_values, uint8_t** out_mask, size_t* out_count);
     quiver_error_t quiver_database_read_scalar_strings(quiver_database_t* db,
         const char* collection, const char* attribute,
         char*** out_values, size_t* out_count);
@@ -171,6 +170,7 @@ ffi.cdef("""
     // Free functions for read results
     quiver_error_t quiver_database_free_integer_array(int64_t* values);
     quiver_error_t quiver_database_free_float_array(double* values);
+    quiver_error_t quiver_database_free_mask(uint8_t* mask);
     quiver_error_t quiver_database_free_string_array(char** values, size_t count);
     quiver_error_t quiver_database_free_integer_vectors(int64_t** vectors, size_t* sizes, size_t count);
     quiver_error_t quiver_database_free_float_vectors(double** vectors, size_t* sizes, size_t count);
@@ -233,6 +233,14 @@ ffi.cdef("""
     quiver_error_t quiver_database_free_group_metadata_array(
         quiver_group_metadata_t* metadata, size_t count);
 
+    // Schema inspection - human-readable text reports. Each returns a heap string
+    // via *out_report, freed with quiver_database_free_string.
+    quiver_error_t quiver_database_describe(quiver_database_t* db, char** out_report);
+    quiver_error_t quiver_database_describe_collection(quiver_database_t* db,
+        const char* collection, char** out_report);
+    quiver_error_t quiver_database_summarize_collection(quiver_database_t* db,
+        const char* collection, char** out_report);
+
     // Update element
     quiver_error_t quiver_database_update_element(quiver_database_t* db,
         const char* collection, int64_t id, const quiver_element_t* element);
@@ -268,7 +276,8 @@ ffi.cdef("""
     quiver_error_t quiver_database_read_time_series_group(quiver_database_t* db,
         const char* collection, const char* group, int64_t id,
         char*** out_column_names, int** out_column_types,
-        void*** out_column_data, size_t* out_column_count, size_t* out_row_count);
+        void*** out_column_data, uint8_t*** out_column_has_value,
+        size_t* out_column_count, size_t* out_row_count);
 
     quiver_error_t quiver_database_read_time_series_row(quiver_database_t* db,
         const char* collection, const char* group, const char* attribute,
@@ -277,15 +286,16 @@ ffi.cdef("""
     quiver_error_t quiver_database_update_time_series_group(quiver_database_t* db,
         const char* collection, const char* group, int64_t id,
         const char* const* column_names, const int* column_types,
-        void** column_data, size_t column_count, size_t row_count);
+        void** column_data, const uint8_t* const* column_has_value,
+        size_t column_count, size_t row_count);
 
-    quiver_error_t quiver_database_add_time_series_row(quiver_database_t* db,
+    quiver_error_t quiver_database_upsert_time_series_row(quiver_database_t* db,
         const char* collection, const char* group, int64_t id,
         const char* const* column_names, const int* column_types,
         const void* const* column_data, size_t column_count);
 
     quiver_error_t quiver_database_free_time_series_data(char** column_names,
-        int* column_types, void** column_data,
+        int* column_types, void** column_data, uint8_t** column_has_value,
         size_t column_count, size_t row_count);
 
     // Time series files

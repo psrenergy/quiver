@@ -6,16 +6,26 @@ C++ core and C API suites live here; binding suites live in each binding's `test
 ## C++ core tests (`tests/test_*.cpp`, one file per functional area)
 
 - Database: `test_database_lifecycle.cpp` (open/close/move/options), `test_database_create.cpp`,
-  `test_database_read.cpp`, `test_database_update.cpp`, `test_database_delete.cpp`,
-  `test_database_query.cpp`, `test_database_time_series.cpp`, `test_database_transaction.cpp`,
+  `test_database_read_{scalar,vector,set}.cpp` (read split by attribute type; element-level reads
+  `read_element_ids`/`read_element_by_id` live in the `_scalar` file), `test_database_update.cpp`,
+  `test_database_delete.cpp`, `test_database_query.cpp`,
+  `test_database_time_series_{metadata,group,row,files}.cpp` (time series split by sub-concern:
+  `group` = group read/update + validation, `row` = `upsert_time_series_row`/`read_time_series_row`;
+  the C++ core has no `_nulls` file), `test_database_transaction.cpp`,
   `test_database_csv_export.cpp`, `test_database_csv_import.cpp`, `test_database_errors.cpp`
 - Supporting types: `test_element.cpp`, `test_row_result.cpp`, `test_migrations.cpp`,
   `test_schema_validator.cpp`
 - Lua: `test_lua_runner_*.cpp` — per-area split mirroring the database files (`_create`, `_read`,
   `_update`, `_delete`, `_query`, `_time_series`, `_transaction`, `_errors`, `_csv_export`,
-  `_csv_import`, `_all_types`, `_fk`). The shared `LuaRunnerTest` fixture and common include
+  `_csv_import`, `_all_types`, `_fk`). The shared `LuaRunnerTest` and `LuaSandboxTest` fixtures,
+  the `expect_lua_error` helper (throw + message-substring assert — plain `EXPECT_THROW` passes
+  vacuously when a removed function raises "attempt to call a nil value"), and the common include
   prelude live in `test_lua_runner.h`; the single-use `LuaRunnerAllTypesTest` / `LuaRunnerFkTest`
-  fixtures stay local to their files.
+  fixtures stay local to their files. Lua file operations are sandboxed to the database directory
+  (root design decision), so every file-touching Lua test uses `LuaSandboxTest`: a file-backed db
+  in a dedicated per-test temp dir, with scripts passing relative paths. The Lua binary/expression
+  subsystem bindings (and the sandbox itself) are covered by `test_lua_binary.cpp` and
+  `test_lua_expression.cpp`.
 - Binary subsystem: `test_binary_file.cpp`, `test_binary_metadata.cpp`,
   `test_binary_time_properties.cpp`, `test_csv_converter.cpp`, `test_iteration.cpp`
 - Expression subsystem: `test_expression.cpp`
@@ -27,7 +37,10 @@ Mirror the same areas with the `test_c_api_*` prefix (`test_c_api_database_*.cpp
 area — the file sets diverge slightly: the C API adds `test_c_api_database_metadata.cpp` and has
 no errors file) plus `test_c_api_element.cpp`, `test_c_api_lua_runner.cpp`,
 `test_c_api_expression.cpp`, and the binary trio `test_c_api_binary_file.cpp` /
-`test_c_api_binary_metadata.cpp` / `test_c_api_csv_converter.cpp`.
+`test_c_api_binary_metadata.cpp` / `test_c_api_csv_converter.cpp`. The same `read` →
+`{scalar,vector,set}` and `time_series` → `{metadata,group,row,files,nulls}` split applies; the
+C API time-series set additionally has `test_c_api_database_time_series_nulls.cpp` (per-cell
+NULL-mask round-trips), which the C++ core lacks.
 
 ## Binding suites
 
@@ -36,6 +49,15 @@ no errors file) plus `test_c_api_element.cpp`, `test_c_api_lua_runner.cpp`,
 the binary/expression subsystems (`test_binary_file.jl`, `test_binary_metadata.jl`,
 `test_csv_converter.jl`, `test_expression.jl`) and the relation-map helpers
 (`test_helper_maps.jl`).
+
+The `read` → `{scalar,vector,set}` and `time_series` → `{metadata,group,row,files,nulls}` split is
+mirrored in every binding using each idiom's file naming (Julia `test_database_read_scalar.jl`,
+Dart `database_read_scalar_test.dart`, JS `database-read-scalar.test.ts`, Python
+`test_database_read_scalar.py`). JS and Python have no `metadata` time-series file; the C++ core
+has no `nulls` file. JS Database-operation test files carry a `database-` prefix
+(`database-create.test.ts`, `database-lifecycle.test.ts`, …) to match the other bindings; the
+non-Database files (`composites.test.ts`, `introspection.test.ts`, `lua-runner.test.ts`) keep
+their bare names.
 
 ## Schemas (`tests/schemas/`)
 

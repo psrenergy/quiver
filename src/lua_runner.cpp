@@ -1,13 +1,27 @@
 #include "quiver/lua_runner.h"
 
+#include "quiver/binary/binary_file.h"
+#include "quiver/binary/binary_metadata.h"
+#include "quiver/binary/csv_converter.h"
+#include "quiver/binary/time_properties.h"
 #include "quiver/database.h"
 #include "quiver/element.h"
+#include "quiver/expression/expression.h"
 #include "quiver/options.h"
 #include "quiver/value.h"
+#include "utils/datetime.h"
 
+#include <algorithm>
+#include <chrono>
+#include <filesystem>
 #include <map>
+#include <memory>
+#include <optional>
 #include <sol/sol.hpp>
 #include <stdexcept>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
 namespace quiver {
 
@@ -16,8 +30,15 @@ struct LuaRunner::Impl {
     sol::state lua;
 
     explicit Impl(Database& database) : db(database) {
-        lua.open_libraries(sol::lib::base, sol::lib::string, sol::lib::table);
+        lua.open_libraries(
+            sol::lib::base, sol::lib::string, sol::lib::table, sol::lib::math, sol::lib::coroutine, sol::lib::utf8);
+        // Scripts may not load Lua source from disk; string-form load() stays available.
+        lua["dofile"] = sol::lua_nil;
+        lua["loadfile"] = sol::lua_nil;
+        lua.create_named_table("quiver");
         bind_database();
+        bind_binary();
+        bind_expression();
         lua["db"] = &db;
     }
 
@@ -28,8 +49,6 @@ struct LuaRunner::Impl {
             "Database",
             "delete_element",
             [](Database& self, const std::string& collection, int64_t id) { self.delete_element(collection, id); },
-            "describe",
-            [](Database& self) { self.describe(); },
             // Group 1: Database info
             "is_healthy",
             [](Database& self) { return self.is_healthy(); },
@@ -74,7 +93,10 @@ struct LuaRunner::Impl {
                const std::string& group,
                const std::string& path,
                sol::optional<sol::table> options_table) {
-                self.export_csv(collection, group, path, parse_csv_options(std::move(options_table)));
+                self.export_csv(collection,
+                                group,
+                                resolve_sandboxed_path(self, "export_csv", path),
+                                parse_csv_options(std::move(options_table)));
             },
             // Group 12: CSV import
             "import_csv",
@@ -83,7 +105,10 @@ struct LuaRunner::Impl {
                const std::string& group,
                const std::string& path,
                sol::optional<sol::table> options_table) {
-                self.import_csv(collection, group, path, parse_csv_options(std::move(options_table)));
+                self.import_csv(collection,
+                                group,
+                                resolve_sandboxed_path(self, "import_csv", path),
+                                parse_csv_options(std::move(options_table)));
             });
         // NOLINTEND(performance-unnecessary-value-parameter)
 
@@ -114,7 +139,7 @@ struct LuaRunner::Impl {
 
         bind.set_function("update_element", &update_element_lua);
         bind.set_function("update_time_series_group", &update_time_series_group_lua);
-        bind.set_function("add_time_series_row", &add_time_series_row_lua);
+        bind.set_function("upsert_time_series_row", &upsert_time_series_row_lua);
         bind.set_function("update_time_series_files", &update_time_series_files_lua);
 
         bind.set_function("get_scalar_metadata", &get_scalar_metadata_lua);
@@ -128,14 +153,392 @@ struct LuaRunner::Impl {
         bind.set_function("list_time_series_groups", &list_time_series_groups_lua);
         bind.set_function("list_time_series_files_columns", &list_time_series_files_columns_lua);
 
+        bind.set_function("describe", [](Database& self) { return self.describe(); });
+        bind.set_function("describe_collection", [](Database& self, const std::string& collection) {
+            return self.describe_collection(collection);
+        });
+        bind.set_function("summarize_collection", [](Database& self, const std::string& collection) {
+            return self.summarize_collection(collection);
+        });
+
         bind.set_function("query_string", &query_string_lua);
         bind.set_function("query_integer", &query_integer_lua);
         bind.set_function("query_float", &query_float_lua);
+
+        // Binary subsystem file I/O — db-scoped and sandboxed: paths resolve against the directory
+        // containing the database file and must stay inside it.
+        bind.set_function(
+            "open_file",
+            [](Database& self, const std::string& path, const std::string& mode, sol::optional<BinaryMetadata> metadata)
+                -> std::unique_ptr<BinaryFile> {
+                if (mode.size() != 1 || (mode[0] != 'r' && mode[0] != 'w')) {
+                    throw std::runtime_error("Cannot open_file: mode must be \"r\" or \"w\"");
+                }
+                const auto resolved = resolve_sandboxed_path(self, "open_file", path);
+                std::optional<BinaryMetadata> md = metadata ? std::optional<BinaryMetadata>(*metadata) : std::nullopt;
+                return std::make_unique<BinaryFile>(BinaryFile::open_file(resolved, mode[0], md));
+            });
+        bind.set_function("bin_to_csv", [](Database& self, const std::string& path, sol::optional<bool> aggregate) {
+            CSVConverter::bin_to_csv(resolve_sandboxed_path(self, "bin_to_csv", path), aggregate.value_or(true));
+        });
+        bind.set_function("csv_to_bin", [](Database& self, const std::string& path) {
+            CSVConverter::csv_to_bin(resolve_sandboxed_path(self, "csv_to_bin", path));
+        });
+    }
+
+    // ========================================================================
+    // Binary subsystem bindings (mirrors the Julia Binary.* surface)
+    // ========================================================================
+
+    void bind_binary() {
+        sol::table ns = lua["quiver"];
+
+        // NOLINTBEGIN(performance-unnecessary-value-parameter) sol2 lambda bindings require pass-by-value for type
+        // deduction
+        lua.new_usertype<BinaryMetadata>(
+            "BinaryMetadata",
+            sol::no_constructor,
+            "get_unit",
+            [](BinaryMetadata& self) -> std::string { return self.unit; },
+            "get_version",
+            [](BinaryMetadata& self) -> std::string { return self.version; },
+            "get_initial_datetime",
+            [](BinaryMetadata& self) -> std::string { return quiver::datetime::format_utc(self.initial_datetime); },
+            "get_labels",
+            [](BinaryMetadata& self, sol::this_state s) {
+                sol::state_view lua(s);
+                return to_lua_table(lua, self.labels);
+            },
+            "get_dimensions",
+            [](BinaryMetadata& self, sol::this_state s) {
+                sol::state_view lua(s);
+                auto t = lua.create_table();
+                for (size_t i = 0; i < self.dimensions.size(); ++i) {
+                    t[i + 1] = dimension_to_lua(lua, self.dimensions[i]);
+                }
+                return t;
+            },
+            "get_number_of_time_dimensions",
+            [](BinaryMetadata& self) { return self.number_of_time_dimensions(); },
+            "to_toml",
+            [](BinaryMetadata& self) -> std::string { return self.to_toml(); });
+
+        lua.new_usertype<BinaryFile>(
+            "BinaryFile",
+            sol::no_constructor,
+            "read",
+            [](BinaryFile& self, const sol::table& dims, sol::optional<bool> allow_nulls, sol::this_state s) {
+                sol::state_view lua(s);
+                auto data = self.read(lua_table_to_dim_map(dims), allow_nulls.value_or(false));
+                return to_lua_table(lua, data);
+            },
+            "write",
+            [](BinaryFile& self, const sol::table& data, const sol::table& dims) {
+                self.write(lua_table_to_double_vector(data), lua_table_to_dim_map(dims));
+            },
+            "close",
+            [](BinaryFile& self) { self.close(); },
+            "is_open",
+            [](BinaryFile& self) { return self.is_open(); },
+            "get_metadata",
+            [](BinaryFile& self) -> BinaryMetadata { return self.get_metadata(); },
+            "get_file_path",
+            [](BinaryFile& self) -> std::string { return self.get_file_path(); },
+            // Arithmetic on files mirrors Julia: file_a + file_b, -file, file * 2.0 (auto-wrap to Expression)
+            sol::meta_function::addition,
+            [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Add, a, b); },
+            sol::meta_function::subtraction,
+            [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Subtract, a, b); },
+            sol::meta_function::multiplication,
+            [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Multiply, a, b); },
+            sol::meta_function::division,
+            [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Divide, a, b); },
+            sol::meta_function::unary_minus,
+            [](sol::object a, sol::object) { return -to_expression(a); },
+            // Logical ops (nonzero = true, NaN propagates, unitless): `&` / `|` / `~`.
+            sol::meta_function::bitwise_and,
+            [](sol::object a, sol::object b) { return binop_dispatch(BinOp::And, a, b); },
+            sol::meta_function::bitwise_or,
+            [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Or, a, b); },
+            sol::meta_function::bitwise_not,
+            [](sol::object a, sol::object) { return !to_expression(a); });
+
+        ns.set_function("metadata", [](const sol::table& t) { return build_metadata_from_lua(t); });
+        ns.set_function("metadata_from_toml",
+                        [](const std::string& content) { return BinaryMetadata::from_toml_content(content); });
+        ns.set_function("metadata_from_element",
+                        [](const sol::table& t) { return BinaryMetadata::from_element(table_to_element(t)); });
+        // NOLINTEND(performance-unnecessary-value-parameter)
+    }
+
+    // ========================================================================
+    // Expression subsystem bindings (mirrors the Julia Expression surface)
+    // ========================================================================
+
+    void bind_expression() {
+        sol::table ns = lua["quiver"];
+
+        // NOLINTBEGIN(performance-unnecessary-value-parameter) sol2 lambda bindings require pass-by-value for type
+        // deduction
+        lua.new_usertype<Expression>(
+            "Expression",
+            sol::no_constructor,
+            "save",
+            [this](Expression& self, const std::string& path) { self.save(resolve_sandboxed_path(db, "save", path)); },
+            "metadata",
+            [](Expression& self) -> BinaryMetadata { return self.metadata(); },
+            "aggregate",
+            [](Expression& self, const std::string& dimension, const std::string& op, sol::optional<double> parameter) {
+                return self.aggregate(
+                    dimension, parse_aggregate_op(op), parameter ? std::optional<double>(*parameter) : std::nullopt);
+            },
+            "aggregate_agents",
+            [](Expression& self, const std::string& op, sol::optional<double> parameter) {
+                return self.aggregate_agents(parse_aggregate_agents_op(op),
+                                             parameter ? std::optional<double>(*parameter) : std::nullopt);
+            },
+            "select_agents",
+            [](Expression& self, const sol::table& labels) {
+                return self.select_agents(lua_table_to_string_vector(labels));
+            },
+            "rename_agents",
+            [](Expression& self, const sol::table& mapping) {
+                std::vector<std::pair<std::string, std::string>> pairs;
+                for (auto& kv : mapping) {
+                    pairs.emplace_back(kv.first.as<std::string>(), kv.second.as<std::string>());
+                }
+                return self.rename_agents(pairs);
+            },
+            sol::meta_function::addition,
+            [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Add, a, b); },
+            sol::meta_function::subtraction,
+            [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Subtract, a, b); },
+            sol::meta_function::multiplication,
+            [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Multiply, a, b); },
+            sol::meta_function::division,
+            [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Divide, a, b); },
+            sol::meta_function::unary_minus,
+            [](sol::object a, sol::object) { return -to_expression(a); },
+            // Logical ops (nonzero = true, NaN propagates, unitless): `&` / `|` / `~`.
+            sol::meta_function::bitwise_and,
+            [](sol::object a, sol::object b) { return binop_dispatch(BinOp::And, a, b); },
+            sol::meta_function::bitwise_or,
+            [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Or, a, b); },
+            sol::meta_function::bitwise_not,
+            [](sol::object a, sol::object) { return !to_expression(a); });
+
+        ns.set_function("expression", [](sol::object o) { return to_expression(o); });
+        ns.set_function("abs", [](sol::object o) { return quiver::abs(to_expression(o)); });
+        ns.set_function("sqrt", [](sol::object o) { return quiver::sqrt(to_expression(o)); });
+        ns.set_function("log", [](sol::object o) { return quiver::log(to_expression(o)); });
+        ns.set_function("exp", [](sol::object o) { return quiver::exp(to_expression(o)); });
+        ns.set_function("ifelse", [](sol::object c, sol::object t, sol::object e) {
+            return quiver::ifelse(to_expression(c), to_expression(t), to_expression(e));
+        });
+        // Comparisons produce 1.0/0.0 per element (NaN operand -> NaN). Free functions because Lua
+        // comparison metamethods are coerced to bool and cannot return an Expression.
+        ns.set_function("gt", [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Gt, a, b); });
+        ns.set_function("lt", [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Lt, a, b); });
+        ns.set_function("gte", [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Gte, a, b); });
+        ns.set_function("lte", [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Lte, a, b); });
+        ns.set_function("eq", [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Eq, a, b); });
+        ns.set_function("neq", [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Neq, a, b); });
+        // Logical ops on boolean-valued expressions are the `&` / `|` / `~` metamethods bound on the
+        // Expression and BinaryFile usertypes (`and`/`or`/`not` are Lua keywords, so no free functions).
+        // NOLINTEND(performance-unnecessary-value-parameter)
     }
 
     // ========================================================================
     // Conversion helpers
     // ========================================================================
+
+    static std::unordered_map<std::string, int64_t> lua_table_to_dim_map(const sol::table& t) {
+        std::unordered_map<std::string, int64_t> dims;
+        for (auto& pair : t) {
+            dims[pair.first.as<std::string>()] = pair.second.as<int64_t>();
+        }
+        return dims;
+    }
+
+    static std::string lua_opt_string(const sol::table& t, const char* key, const std::string& fallback) {
+        auto opt = t.get<sol::optional<std::string>>(key);
+        return opt ? *opt : fallback;
+    }
+
+    static std::vector<std::string> lua_opt_string_vector(const sol::table& t, const char* key) {
+        auto opt = t.get<sol::optional<sol::table>>(key);
+        return opt ? lua_table_to_string_vector(*opt) : std::vector<std::string>{};
+    }
+
+    static std::vector<int64_t> lua_opt_int64_vector(const sol::table& t, const char* key) {
+        auto opt = t.get<sol::optional<sol::table>>(key);
+        return opt ? lua_table_to_int64_vector(*opt) : std::vector<int64_t>{};
+    }
+
+    // Build BinaryMetadata from a Lua kwargs table, mirroring the Julia Metadata(; ...) constructor:
+    // assemble an Element and delegate to from_element (which computes time-dimension initial values).
+    static BinaryMetadata build_metadata_from_lua(const sol::table& t) {
+        Element el;
+        el.set("version", lua_opt_string(t, "version", "1"));
+        el.set("initial_datetime", lua_opt_string(t, "initial_datetime", ""));
+        el.set("unit", lua_opt_string(t, "unit", ""));
+        el.set("labels", lua_opt_string_vector(t, "labels"));
+        el.set("dimensions", lua_opt_string_vector(t, "dimensions"));
+        el.set("dimension_sizes", lua_opt_int64_vector(t, "dimension_sizes"));
+        el.set("time_dimensions", lua_opt_string_vector(t, "time_dimensions"));
+        el.set("frequencies", lua_opt_string_vector(t, "frequencies"));
+        return BinaryMetadata::from_element(el);
+    }
+
+    static sol::table dimension_to_lua(sol::state_view& lua, const Dimension& dim) {
+        auto t = lua.create_table();
+        t["name"] = dim.name;
+        t["size"] = dim.size;
+        t["is_time_dimension"] = dim.is_time_dimension();
+        if (dim.is_time_dimension()) {
+            t["frequency"] = frequency_to_string(dim.time->frequency);
+            t["initial_value"] = dim.time->initial_value;
+            t["parent_dimension_index"] = dim.time->parent_dimension_index;
+        } else {
+            t["frequency"] = sol::lua_nil;
+            t["initial_value"] = sol::lua_nil;
+            t["parent_dimension_index"] = sol::lua_nil;
+        }
+        return t;
+    }
+
+    // ------------------------------------------------------------------------
+    // Expression operator dispatch (shared by Expression and BinaryFile metamethods)
+    // ------------------------------------------------------------------------
+
+    enum class BinOp { Add, Subtract, Multiply, Divide, Gt, Lt, Gte, Lte, Eq, Neq, And, Or };
+
+    static bool is_number(const sol::object& o) { return o.get_type() == sol::type::number; }
+
+    // A Lua operand in arithmetic is either an Expression, a BinaryFile (auto-wrapped), or a number
+    // (handled by the scalar operator overloads). Numbers are rejected here on purpose.
+    static Expression to_expression(const sol::object& o) {
+        if (o.is<Expression>()) {
+            return o.as<Expression>();
+        }
+        if (o.is<BinaryFile>()) {
+            return Expression(o.as<BinaryFile&>());
+        }
+        throw std::runtime_error("Cannot build expression: operand must be an expression or a binary file");
+    }
+
+    // One body for all three operand combos (expr/expr, expr/double, double/expr); overload
+    // resolution on l/r picks the matching Expression operator per instantiation. double/double
+    // is never instantiated (binop_dispatch routes numbers through to_expression, which throws).
+    template <typename L, typename R>
+    static Expression apply_binop(BinOp op, const L& l, const R& r) {
+        switch (op) {
+        case BinOp::Add:
+            return l + r;
+        case BinOp::Subtract:
+            return l - r;
+        case BinOp::Multiply:
+            return l * r;
+        case BinOp::Divide:
+            return l / r;
+        case BinOp::Gt:
+            return l > r;
+        case BinOp::Lt:
+            return l < r;
+        case BinOp::Gte:
+            return l >= r;
+        case BinOp::Lte:
+            return l <= r;
+        case BinOp::Eq:
+            return l == r;
+        case BinOp::Neq:
+            return l != r;
+        case BinOp::And:
+            return l && r;
+        case BinOp::Or:
+            return l || r;
+        }
+        throw std::runtime_error("Cannot apply operator: unknown operation");
+    }
+
+    static Expression binop_dispatch(BinOp op, const sol::object& lhs, const sol::object& rhs) {
+        bool lnum = is_number(lhs);
+        bool rnum = is_number(rhs);
+        if (lnum && !rnum) {
+            return apply_binop(op, lhs.as<double>(), to_expression(rhs));
+        }
+        if (!lnum && rnum) {
+            return apply_binop(op, to_expression(lhs), rhs.as<double>());
+        }
+        return apply_binop(op, to_expression(lhs), to_expression(rhs));
+    }
+
+    static ExpressionAggregate::Operation parse_aggregate_op(const std::string& op) {
+        if (op == "sum")
+            return ExpressionAggregate::Operation::Sum;
+        if (op == "mean")
+            return ExpressionAggregate::Operation::Mean;
+        if (op == "min")
+            return ExpressionAggregate::Operation::Min;
+        if (op == "max")
+            return ExpressionAggregate::Operation::Max;
+        if (op == "percentile")
+            return ExpressionAggregate::Operation::Percentile;
+        throw std::runtime_error("Cannot aggregate: unknown operation '" + op + "'");
+    }
+
+    static ExpressionAggregateAgents::Operation parse_aggregate_agents_op(const std::string& op) {
+        if (op == "sum")
+            return ExpressionAggregateAgents::Operation::Sum;
+        if (op == "mean")
+            return ExpressionAggregateAgents::Operation::Mean;
+        if (op == "min")
+            return ExpressionAggregateAgents::Operation::Min;
+        if (op == "max")
+            return ExpressionAggregateAgents::Operation::Max;
+        if (op == "percentile")
+            return ExpressionAggregateAgents::Operation::Percentile;
+        throw std::runtime_error("Cannot aggregate_agents: unknown operation '" + op + "'");
+    }
+
+    // Resolves a script-supplied path against the database file's directory and enforces that the
+    // result stays strictly inside it (subdirectories allowed). Returns the resolved absolute path.
+    // `operation` is the public method name the user called (threaded into Pattern 1 messages).
+    static std::string
+    resolve_sandboxed_path(const Database& db, const std::string& operation, const std::string& path) {
+        namespace fs = std::filesystem;
+
+        const std::string& db_path = db.path();
+        if (db_path == ":memory:") {
+            throw std::runtime_error("Cannot " + operation +
+                                     ": database is in-memory, file operations are unavailable");
+        }
+
+        // Same root derivation as create_database_logger: a bare filename has an empty
+        // parent_path and resolves against the current working directory.
+        auto root = fs::path(db_path).parent_path();
+        if (root.empty()) {
+            root = fs::current_path();
+        }
+        root = fs::weakly_canonical(root);
+
+        auto candidate = fs::path(path);
+        if (candidate.is_relative()) {
+            candidate = root / candidate;
+        }
+        candidate = fs::weakly_canonical(candidate);
+
+        // Strict containment: candidate == root is rejected too — the binary subsystem appends
+        // ".qvr"/".toml" by string concatenation, so the root itself would yield "<root>.qvr"
+        // outside the sandbox.
+        const auto rel = candidate.lexically_relative(root);
+        if (rel.empty() || rel == "." || rel.begin()->string() == "..") {
+            throw std::runtime_error("Cannot " + operation + ": path '" + path + "' escapes the database directory '" +
+                                     root.string() + "'");
+        }
+
+        return candidate.string();
+    }
 
     static CSVOptions parse_csv_options(sol::optional<sol::table> options_table) {
         CSVOptions options;
@@ -166,6 +569,20 @@ struct LuaRunner::Impl {
         auto t = lua.create_table();
         for (size_t i = 0; i < values.size(); ++i) {
             t[i + 1] = values[i];
+        }
+        return t;
+    }
+
+    // Scalar bulk reads: a SQL NULL becomes a nil hole, preserving positional index.
+    // #t over holes is unreliable — read_element_ids is the count/position authority.
+    template <typename T>
+    static sol::table to_lua_table(sol::state_view& lua, const std::vector<std::optional<T>>& values) {
+        auto t = lua.create_table();
+        for (size_t i = 0; i < values.size(); ++i) {
+            if (values[i]) {
+                t[i + 1] = *values[i];
+            }
+            // else: leave index i + 1 absent (nil).
         }
         return t;
     }
@@ -752,49 +1169,153 @@ struct LuaRunner::Impl {
         return t;
     }
 
+    // One named column of the column-oriented update payload: its Lua table plus the extent
+    // (largest 1-based integer key; 0 when empty) and the number of non-nil cells. nil cells
+    // never appear during table iteration, so count < extent means the column has holes.
+    // Computed via iteration instead of sol::table::size() because lua_rawlen on a table with
+    // holes returns an arbitrary border.
+    struct TimeSeriesColumn {
+        std::string name;
+        sol::table values;
+        size_t extent = 0;
+        size_t count = 0;
+    };
+
+    static std::vector<TimeSeriesColumn> collect_time_series_columns(const sol::table& columns) {
+        std::vector<TimeSeriesColumn> result;
+        for (auto& pair : columns) {
+            auto name = pair.first.as<std::string>();
+            if (!pair.second.is<sol::table>()) {
+                throw std::runtime_error("Cannot update_time_series_group: column '" + name +
+                                         "' must be an array of values");
+            }
+            TimeSeriesColumn column{name, pair.second.as<sol::table>()};
+            for (auto& cell : column.values) {
+                if (!cell.first.is<int64_t>() || cell.first.as<int64_t>() < 1) {
+                    throw std::runtime_error("Cannot update_time_series_group: column '" + name +
+                                             "' must be an array of values");
+                }
+                column.extent = std::max(column.extent, static_cast<size_t>(cell.first.as<int64_t>()));
+                ++column.count;
+            }
+            result.push_back(std::move(column));
+        }
+        return result;
+    }
+
     static void update_time_series_group_lua(Database& db,
                                              const std::string& collection,
                                              const std::string& group,
                                              int64_t id,
                                              sol::table columns) {
-        // Column-oriented input: { name = {v1, v2, ...}, ... } transposed into
-        // the row maps the C++ API takes. An empty table clears all rows.
-        std::vector<std::map<std::string, Value>> cpp_rows;
-        bool first_column = true;
-        for (auto& pair : columns) {
-            auto name = pair.first.as<std::string>();
-            sol::table column = pair.second;
-            const size_t n = column.size();
-            if (first_column) {
-                cpp_rows.resize(n);
-                first_column = false;
-            } else if (n != cpp_rows.size()) {
-                throw std::runtime_error("Cannot update_time_series_group: column '" + name + "' has length " +
-                                         std::to_string(n) + " but expected " + std::to_string(cpp_rows.size()));
+        // Column-oriented input: { name = {v1, v2, ...}, ... } transposed into the row maps the
+        // C++ API takes. The dimension column(s) are the row count authority -- PK members are
+        // implicitly NOT NULL in STRICT tables, so they must be present and dense. Value columns
+        // may be shorter, sparse, or empty: every cell missing at a dimension index is written as
+        // NULL, which round-trips the nil holes that read_time_series_group produces. An empty
+        // table (no columns) clears all rows; named columns whose dimension transposes to zero
+        // rows still throw instead of silently clearing the group.
+        auto lua_columns = collect_time_series_columns(columns);
+        if (lua_columns.empty()) {
+            db.update_time_series_group(collection, group, id, {});
+            return;
+        }
+
+        // The date_ ordering column plus any extra PK dimensions (multi-dim groups, e.g.
+        // (date_time, block)): get_time_series_metadata reports the extras as value_columns
+        // with primary_key set.
+        auto metadata = db.get_time_series_metadata(collection, group);
+        std::vector<std::string> dimension_columns;
+        dimension_columns.push_back(metadata.dimension_column);
+        for (const auto& vc : metadata.value_columns) {
+            if (vc.primary_key) {
+                dimension_columns.push_back(vc.name);
             }
-            for (size_t i = 1; i <= n; ++i) {
-                sol::object val = column[i];
+        }
+
+        const auto find_column = [&](const std::string& name) -> const TimeSeriesColumn* {
+            for (const auto& column : lua_columns) {
+                if (column.name == name) {
+                    return &column;
+                }
+            }
+            return nullptr;
+        };
+
+        for (const auto& dim : dimension_columns) {
+            if (find_column(dim) == nullptr) {
+                throw std::runtime_error("Cannot update_time_series_group: missing dimension column '" + dim + "'");
+            }
+        }
+
+        const size_t row_count = find_column(dimension_columns.front())->extent;
+        for (const auto& dim : dimension_columns) {
+            const auto* column = find_column(dim);
+            if (column->extent != row_count) {
+                throw std::runtime_error("Cannot update_time_series_group: column '" + dim + "' has length " +
+                                         std::to_string(column->extent) + " but expected " + std::to_string(row_count));
+            }
+            if (column->count != column->extent) {
+                for (size_t i = 1; i <= column->extent; ++i) {
+                    if (!column->values[i].valid()) {
+                        throw std::runtime_error("Cannot update_time_series_group: dimension column '" + dim +
+                                                 "' has nil at index " + std::to_string(i));
+                    }
+                }
+            }
+        }
+
+        for (const auto& column : lua_columns) {
+            if (column.extent > row_count) {
+                throw std::runtime_error("Cannot update_time_series_group: column '" + column.name + "' has length " +
+                                         std::to_string(column.extent) + " but expected " + std::to_string(row_count));
+            }
+        }
+
+        if (row_count == 0) {
+            std::string joined;
+            for (size_t i = 0; i < lua_columns.size(); ++i) {
+                if (i > 0) {
+                    joined += ", ";
+                }
+                joined += lua_columns[i].name;
+            }
+            throw std::runtime_error("Cannot update_time_series_group: columns [" + joined +
+                                     "] contain no rows; pass an empty table {} to clear the group");
+        }
+
+        // Uniform rows: the C++ core derives the INSERT column list from rows[0], so every row
+        // carries every named column, with explicit NULL for the cells the caller left out.
+        std::vector<std::map<std::string, Value>> cpp_rows(row_count);
+        for (const auto& column : lua_columns) {
+            for (auto& row : cpp_rows) {
+                row[column.name] = nullptr;
+            }
+            for (auto& cell : column.values) {
+                const auto index = static_cast<size_t>(cell.first.as<int64_t>());
+                sol::object val = cell.second;
                 if (val.is<int64_t>()) {
-                    cpp_rows[i - 1][name] = val.as<int64_t>();
+                    cpp_rows[index - 1][column.name] = val.as<int64_t>();
                 } else if (val.is<double>()) {
-                    cpp_rows[i - 1][name] = val.as<double>();
+                    cpp_rows[index - 1][column.name] = val.as<double>();
                 } else if (val.is<std::string>()) {
-                    cpp_rows[i - 1][name] = val.as<std::string>();
+                    cpp_rows[index - 1][column.name] = val.as<std::string>();
                 } else {
-                    throw std::runtime_error("Cannot update_time_series_group: column '" + name +
+                    throw std::runtime_error("Cannot update_time_series_group: column '" + column.name +
                                              "' has unsupported Lua type");
                 }
             }
         }
+
         db.update_time_series_group(collection, group, id, cpp_rows);
     }
 
-    static void add_time_series_row_lua(Database& db,
-                                        const std::string& collection,
-                                        const std::string& group,
-                                        int64_t id,
-                                        sol::table row) {
-        db.add_time_series_row(collection, group, id, lua_table_to_value_map(row));
+    static void upsert_time_series_row_lua(Database& db,
+                                           const std::string& collection,
+                                           const std::string& group,
+                                           int64_t id,
+                                           sol::table row) {
+        db.upsert_time_series_row(collection, group, id, lua_table_to_value_map(row));
     }
 
     // ========================================================================

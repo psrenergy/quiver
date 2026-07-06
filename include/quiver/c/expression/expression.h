@@ -12,21 +12,31 @@ extern "C" {
 // Opaque handle type
 typedef struct quiver_expression quiver_expression_t;
 
-// Binary operation kind
+// Binary operation kind. Comparisons (GT..NEQ) produce 1.0/0.0 per element; a NaN operand
+// propagates as NaN.
 typedef enum {
     QUIVER_EXPRESSION_OPERATION_ADD = 0,
     QUIVER_EXPRESSION_OPERATION_SUBTRACT = 1,
     QUIVER_EXPRESSION_OPERATION_MULTIPLY = 2,
     QUIVER_EXPRESSION_OPERATION_DIVIDE = 3,
+    QUIVER_EXPRESSION_OPERATION_GT = 4,
+    QUIVER_EXPRESSION_OPERATION_LT = 5,
+    QUIVER_EXPRESSION_OPERATION_GTE = 6,
+    QUIVER_EXPRESSION_OPERATION_LTE = 7,
+    QUIVER_EXPRESSION_OPERATION_EQ = 8,
+    QUIVER_EXPRESSION_OPERATION_NEQ = 9,
+    QUIVER_EXPRESSION_OPERATION_AND = 10,
+    QUIVER_EXPRESSION_OPERATION_OR = 11,
 } quiver_expression_operation_t;
 
-// Unary operation kind
+// Unary operation kind. NOT is logical negation of a boolean-valued operand (nonzero -> 0, 0 -> 1).
 typedef enum {
     QUIVER_EXPRESSION_UNARY_OPERATION_NEGATE = 0,
     QUIVER_EXPRESSION_UNARY_OPERATION_ABS = 1,
     QUIVER_EXPRESSION_UNARY_OPERATION_SQRT = 2,
     QUIVER_EXPRESSION_UNARY_OPERATION_LOG = 3,
     QUIVER_EXPRESSION_UNARY_OPERATION_EXP = 4,
+    QUIVER_EXPRESSION_UNARY_OPERATION_NOT = 5,
 } quiver_expression_unary_operation_t;
 
 // Ternary operation kind

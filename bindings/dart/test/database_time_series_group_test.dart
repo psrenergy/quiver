@@ -6,55 +6,6 @@ void main() {
   // Path to central tests folder
   final testsPath = path.join(path.current, '..', '..', 'tests');
 
-  group('Time Series Metadata', () {
-    test('getTimeSeriesMetadata returns metadata for group', () {
-      final db = Database.fromSchema(
-        ':memory:',
-        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
-      );
-      try {
-        final metadata = db.getTimeSeriesMetadata('Collection', 'data');
-        expect(metadata.groupName, equals('data'));
-        expect(metadata.dimensionColumn, equals('date_time'));
-        expect(metadata.valueColumns.length, equals(1));
-        expect(metadata.valueColumns[0].name, equals('value'));
-      } finally {
-        db.close();
-      }
-    });
-
-    test('listTimeSeriesGroups returns all groups for collection', () {
-      final db = Database.fromSchema(
-        ':memory:',
-        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
-      );
-      try {
-        final groups = db.listTimeSeriesGroups('Collection');
-        expect(groups.length, equals(1));
-        expect(groups[0].groupName, equals('data'));
-        expect(groups[0].dimensionColumn, equals('date_time'));
-      } finally {
-        db.close();
-      }
-    });
-
-    test(
-      'listTimeSeriesGroups returns empty for collection without time series',
-      () {
-        final db = Database.fromSchema(
-          ':memory:',
-          path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
-        );
-        try {
-          final groups = db.listTimeSeriesGroups('Configuration');
-          expect(groups, isEmpty);
-        } finally {
-          db.close();
-        }
-      },
-    );
-  });
-
   group('Time Series Read', () {
     test('readTimeSeriesGroup returns ordered rows', () {
       final db = Database.fromSchema(
@@ -201,148 +152,6 @@ void main() {
     });
   });
 
-  group('Time Series Files', () {
-    test('hasTimeSeriesFiles returns true for collection with files table', () {
-      final db = Database.fromSchema(
-        ':memory:',
-        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
-      );
-      try {
-        expect(db.hasTimeSeriesFiles('Collection'), isTrue);
-        expect(db.hasTimeSeriesFiles('Configuration'), isFalse);
-      } finally {
-        db.close();
-      }
-    });
-
-    test('listTimeSeriesFilesColumns returns column names', () {
-      final db = Database.fromSchema(
-        ':memory:',
-        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
-      );
-      try {
-        final columns = db.listTimeSeriesFilesColumns('Collection');
-        expect(columns.length, equals(2));
-        expect(columns, contains('data_file'));
-        expect(columns, contains('metadata_file'));
-      } finally {
-        db.close();
-      }
-    });
-
-    test('readTimeSeriesFiles returns nulls for empty table', () {
-      final db = Database.fromSchema(
-        ':memory:',
-        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
-      );
-      try {
-        final paths = db.readTimeSeriesFiles('Collection');
-        expect(paths.length, equals(2));
-        expect(paths['data_file'], isNull);
-        expect(paths['metadata_file'], isNull);
-      } finally {
-        db.close();
-      }
-    });
-
-    test('updateTimeSeriesFiles and readTimeSeriesFiles roundtrip', () {
-      final db = Database.fromSchema(
-        ':memory:',
-        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
-      );
-      try {
-        db.updateTimeSeriesFiles('Collection', {
-          'data_file': '/path/to/data.csv',
-          'metadata_file': '/path/to/meta.json',
-        });
-
-        final paths = db.readTimeSeriesFiles('Collection');
-        expect(paths['data_file'], equals('/path/to/data.csv'));
-        expect(paths['metadata_file'], equals('/path/to/meta.json'));
-      } finally {
-        db.close();
-      }
-    });
-
-    test('updateTimeSeriesFiles supports null values', () {
-      final db = Database.fromSchema(
-        ':memory:',
-        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
-      );
-      try {
-        db.updateTimeSeriesFiles('Collection', {
-          'data_file': '/path/to/data.csv',
-          'metadata_file': null,
-        });
-
-        final paths = db.readTimeSeriesFiles('Collection');
-        expect(paths['data_file'], equals('/path/to/data.csv'));
-        expect(paths['metadata_file'], isNull);
-      } finally {
-        db.close();
-      }
-    });
-
-    test('updateTimeSeriesFiles replaces existing values', () {
-      final db = Database.fromSchema(
-        ':memory:',
-        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
-      );
-      try {
-        // First update
-        db.updateTimeSeriesFiles('Collection', {
-          'data_file': '/old/data.csv',
-          'metadata_file': '/old/meta.json',
-        });
-
-        // Second update replaces
-        db.updateTimeSeriesFiles('Collection', {
-          'data_file': '/new/data.csv',
-          'metadata_file': '/new/meta.json',
-        });
-
-        final paths = db.readTimeSeriesFiles('Collection');
-        expect(paths['data_file'], equals('/new/data.csv'));
-        expect(paths['metadata_file'], equals('/new/meta.json'));
-      } finally {
-        db.close();
-      }
-    });
-
-    test('readTimeSeriesFiles throws for collection without files table', () {
-      final db = Database.fromSchema(
-        ':memory:',
-        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
-      );
-      try {
-        expect(
-          () => db.readTimeSeriesFiles('Configuration'),
-          throwsA(isA<DatabaseException>()),
-        );
-      } finally {
-        db.close();
-      }
-    });
-
-    test(
-      'listTimeSeriesFilesColumns throws for collection without files table',
-      () {
-        final db = Database.fromSchema(
-          ':memory:',
-          path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
-        );
-        try {
-          expect(
-            () => db.listTimeSeriesFilesColumns('Configuration'),
-            throwsA(isA<DatabaseException>()),
-          );
-        } finally {
-          db.close();
-        }
-      },
-    );
-  });
-
   group('Multi-Column Time Series', () {
     test('multi-column update and read with mixed types', () {
       final db = Database.fromSchema(
@@ -368,20 +177,20 @@ void main() {
         expect(result['date_time']![1], equals(DateTime(2024, 1, 1, 11, 0, 0)));
         expect(result['date_time'], isA<List<DateTime>>());
 
-        // REAL column: double
+        // REAL column: double (nullable element type — a NULL cell is null)
         expect(result['temperature']![0], equals(20.5));
         expect(result['temperature']![1], equals(21.3));
-        expect(result['temperature'], isA<List<double>>());
+        expect(result['temperature'], isA<List<double?>>());
 
         // INTEGER column: int
         expect(result['humidity']![0], equals(45));
         expect(result['humidity']![1], equals(50));
-        expect(result['humidity'], isA<List<int>>());
+        expect(result['humidity'], isA<List<int?>>());
 
         // TEXT column: String
         expect(result['status']![0], equals('normal'));
         expect(result['status']![1], equals('high'));
-        expect(result['status'], isA<List<String>>());
+        expect(result['status'], isA<List<String?>>());
       } finally {
         db.close();
       }
@@ -576,137 +385,6 @@ void main() {
           }),
           throwsA(isA<ArgumentError>()),
         );
-      } finally {
-        db.close();
-      }
-    });
-  });
-
-  group('Add Time Series Row', () {
-    test('insert single row and read it back', () {
-      final db = Database.fromSchema(
-        ':memory:',
-        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
-      );
-      try {
-        db.createElement('Configuration', {'label': 'Test Config'});
-        final id = db.createElement('Collection', {'label': 'Item 1'});
-
-        db.addTimeSeriesRow('Collection', 'data', id, {
-          'date_time': '2024-01-01T10:00:00',
-          'value': 10.0,
-        });
-
-        final result = db.readTimeSeriesGroup('Collection', 'data', id);
-        expect(result['date_time']!.length, equals(1));
-        expect(result['date_time']![0], equals(DateTime(2024, 1, 1, 10, 0, 0)));
-        expect(result['value']![0], equals(10.0));
-      } finally {
-        db.close();
-      }
-    });
-
-    test('upsert overwrites value columns for same dimension PK', () {
-      final db = Database.fromSchema(
-        ':memory:',
-        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
-      );
-      try {
-        db.createElement('Configuration', {'label': 'Test Config'});
-        final id = db.createElement('Collection', {'label': 'Item 1'});
-
-        // Initial insert
-        db.addTimeSeriesRow('Collection', 'data', id, {
-          'date_time': '2024-01-01T10:00:00',
-          'value': 10.0,
-        });
-
-        // Upsert same date_time with new value
-        db.addTimeSeriesRow('Collection', 'data', id, {
-          'date_time': '2024-01-01T10:00:00',
-          'value': 99.0,
-        });
-
-        final result = db.readTimeSeriesGroup('Collection', 'data', id);
-        expect(result['date_time']!.length, equals(1));
-        expect(result['value']![0], equals(99.0));
-      } finally {
-        db.close();
-      }
-    });
-
-    test('multi-dim happy path with date_time and block composite PK', () {
-      final db = Database.fromSchema(
-        ':memory:',
-        path.join(testsPath, 'schemas', 'valid', 'multi_dim_time_series.sql'),
-      );
-      try {
-        db.createElement('Configuration', {'label': 'Test Config'});
-        final id = db.createElement('Resource', {'label': 'Resource 1'});
-
-        db.addTimeSeriesRow('Resource', 'load', id, {
-          'date_time': '2024-01-01T00:00:00',
-          'block': 1,
-          'load': 42.5,
-          'flag': 0,
-        });
-
-        final result = db.readTimeSeriesGroup('Resource', 'load', id);
-        expect(result['date_time']!.length, equals(1));
-        expect(result['date_time']![0], equals(DateTime(2024, 1, 1, 0, 0, 0)));
-        expect(result['block']![0], equals(1));
-        expect(result['load']![0], equals(42.5));
-        expect(result['flag']![0], equals(0));
-      } finally {
-        db.close();
-      }
-    });
-  });
-
-  group('Read Time Series Row', () {
-    test('readTimeSeriesRow returns one value per element', () {
-      final db = Database.fromSchema(
-        ':memory:',
-        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
-      );
-      try {
-        final id1 = db.createElement('Collection', {'label': 'Item 1'});
-        final id2 = db.createElement('Collection', {'label': 'Item 2'});
-
-        db.updateTimeSeriesGroup('Collection', 'data', id1, {
-          'date_time': ['2024-01-01T00:00:00', '2024-02-01T00:00:00'],
-          'value': [10.5, 20.5],
-        });
-        db.updateTimeSeriesGroup('Collection', 'data', id2, {
-          'date_time': ['2024-01-01T00:00:00'],
-          'value': [30.5],
-        });
-
-        final row = db.readTimeSeriesRow(
-          'Collection',
-          'data',
-          'value',
-          DateTime(2024, 1, 15),
-        );
-        expect(row, equals([10.5, 30.5]));
-      } finally {
-        db.close();
-      }
-    });
-
-    test('readTimeSeriesRow returns empty list without elements', () {
-      final db = Database.fromSchema(
-        ':memory:',
-        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
-      );
-      try {
-        final row = db.readTimeSeriesRow(
-          'Collection',
-          'data',
-          'value',
-          DateTime(2024, 1, 15),
-        );
-        expect(row, isEmpty);
       } finally {
         db.close();
       }

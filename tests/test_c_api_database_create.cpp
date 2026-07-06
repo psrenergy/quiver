@@ -7,8 +7,7 @@
 
 TEST(DatabaseCApi, CreateElementWithScalars) {
     // Test: Use C API to create element with schema
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
@@ -30,8 +29,7 @@ TEST(DatabaseCApi, CreateElementWithScalars) {
 
 TEST(DatabaseCApi, CreateElementWithVector) {
     // Test: Use C API to create element with array using schema
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
               QUIVER_OK);
@@ -76,8 +74,7 @@ TEST(DatabaseCApi, CreateElementNullDb) {
 }
 
 TEST(DatabaseCApi, CreateElementNullCollection) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_open(":memory:", &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
@@ -95,8 +92,7 @@ TEST(DatabaseCApi, CreateElementNullCollection) {
 }
 
 TEST(DatabaseCApi, CreateElementNullElement) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
+    auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_open(":memory:", &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
@@ -141,6 +137,7 @@ TEST(DatabaseCApi, CreateElementWithTimeSeries) {
     char** out_col_names = nullptr;
     int* out_col_types = nullptr;
     void** out_col_data = nullptr;
+    uint8_t** out_col_has_value = nullptr;
     size_t out_col_count = 0;
     size_t out_row_count = 0;
     ASSERT_EQ(quiver_database_read_time_series_group(db,
@@ -150,6 +147,7 @@ TEST(DatabaseCApi, CreateElementWithTimeSeries) {
                                                      &out_col_names,
                                                      &out_col_types,
                                                      &out_col_data,
+                                                     &out_col_has_value,
                                                      &out_col_count,
                                                      &out_row_count),
               QUIVER_OK);
@@ -165,7 +163,8 @@ TEST(DatabaseCApi, CreateElementWithTimeSeries) {
     EXPECT_DOUBLE_EQ(out_values[1], 2.5);
     EXPECT_DOUBLE_EQ(out_values[2], 3.5);
 
-    quiver_database_free_time_series_data(out_col_names, out_col_types, out_col_data, out_col_count, out_row_count);
+    quiver_database_free_time_series_data(
+        out_col_names, out_col_types, out_col_data, out_col_has_value, out_col_count, out_row_count);
     EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
     quiver_database_close(db);
 }
@@ -207,6 +206,7 @@ TEST(DatabaseCApi, CreateElementWithMultiTimeSeries) {
     char** out_temp_col_names = nullptr;
     int* out_temp_col_types = nullptr;
     void** out_temp_col_data = nullptr;
+    uint8_t** out_temp_col_has_value = nullptr;
     size_t out_temp_col_count = 0;
     size_t out_temp_row_count = 0;
     ASSERT_EQ(quiver_database_read_time_series_group(db,
@@ -216,6 +216,7 @@ TEST(DatabaseCApi, CreateElementWithMultiTimeSeries) {
                                                      &out_temp_col_names,
                                                      &out_temp_col_types,
                                                      &out_temp_col_data,
+                                                     &out_temp_col_has_value,
                                                      &out_temp_col_count,
                                                      &out_temp_row_count),
               QUIVER_OK);
@@ -229,13 +230,18 @@ TEST(DatabaseCApi, CreateElementWithMultiTimeSeries) {
     EXPECT_DOUBLE_EQ(out_temp_values[0], 20.0);
     EXPECT_DOUBLE_EQ(out_temp_values[1], 21.5);
     EXPECT_DOUBLE_EQ(out_temp_values[2], 22.0);
-    quiver_database_free_time_series_data(
-        out_temp_col_names, out_temp_col_types, out_temp_col_data, out_temp_col_count, out_temp_row_count);
+    quiver_database_free_time_series_data(out_temp_col_names,
+                                          out_temp_col_types,
+                                          out_temp_col_data,
+                                          out_temp_col_has_value,
+                                          out_temp_col_count,
+                                          out_temp_row_count);
 
     // Verify humidity group (multi-column)
     char** out_hum_col_names = nullptr;
     int* out_hum_col_types = nullptr;
     void** out_hum_col_data = nullptr;
+    uint8_t** out_hum_col_has_value = nullptr;
     size_t out_hum_col_count = 0;
     size_t out_hum_row_count = 0;
     ASSERT_EQ(quiver_database_read_time_series_group(db,
@@ -245,6 +251,7 @@ TEST(DatabaseCApi, CreateElementWithMultiTimeSeries) {
                                                      &out_hum_col_names,
                                                      &out_hum_col_types,
                                                      &out_hum_col_data,
+                                                     &out_hum_col_has_value,
                                                      &out_hum_col_count,
                                                      &out_hum_row_count),
               QUIVER_OK);
@@ -258,8 +265,12 @@ TEST(DatabaseCApi, CreateElementWithMultiTimeSeries) {
     EXPECT_DOUBLE_EQ(out_hum_values[0], 45.0);
     EXPECT_DOUBLE_EQ(out_hum_values[1], 50.0);
     EXPECT_DOUBLE_EQ(out_hum_values[2], 55.0);
-    quiver_database_free_time_series_data(
-        out_hum_col_names, out_hum_col_types, out_hum_col_data, out_hum_col_count, out_hum_row_count);
+    quiver_database_free_time_series_data(out_hum_col_names,
+                                          out_hum_col_types,
+                                          out_hum_col_data,
+                                          out_hum_col_has_value,
+                                          out_hum_col_count,
+                                          out_hum_row_count);
 
     EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
     quiver_database_close(db);
@@ -459,12 +470,14 @@ TEST(DatabaseCApi, CreateElementScalarFkLabel) {
 
     // Verify via read_scalar_integers
     int64_t* values = nullptr;
+    uint8_t* mask = nullptr;
     size_t count = 0;
-    ASSERT_EQ(quiver_database_read_scalar_integers(db, "Child", "parent_id", &values, &count), QUIVER_OK);
+    ASSERT_EQ(quiver_database_read_scalar_integers(db, "Child", "parent_id", &values, &mask, &count), QUIVER_OK);
     ASSERT_EQ(count, 1);
     EXPECT_EQ(values[0], 1);
 
     quiver_database_free_integer_array(values);
+    quiver_database_free_mask(mask);
     quiver_database_close(db);
 }
 
@@ -493,12 +506,14 @@ TEST(DatabaseCApi, CreateElementScalarFkInteger) {
 
     // Verify via read_scalar_integers
     int64_t* values = nullptr;
+    uint8_t* mask = nullptr;
     size_t count = 0;
-    ASSERT_EQ(quiver_database_read_scalar_integers(db, "Child", "parent_id", &values, &count), QUIVER_OK);
+    ASSERT_EQ(quiver_database_read_scalar_integers(db, "Child", "parent_id", &values, &mask, &count), QUIVER_OK);
     ASSERT_EQ(count, 1);
     EXPECT_EQ(values[0], 1);
 
     quiver_database_free_integer_array(values);
+    quiver_database_free_mask(mask);
     quiver_database_close(db);
 }
 
@@ -583,6 +598,7 @@ TEST(DatabaseCApi, CreateElementTimeSeriesFkLabels) {
     char** out_col_names = nullptr;
     int* out_col_types = nullptr;
     void** out_col_data = nullptr;
+    uint8_t** out_col_has_value = nullptr;
     size_t out_col_count = 0;
     size_t out_row_count = 0;
     ASSERT_EQ(quiver_database_read_time_series_group(db,
@@ -592,6 +608,7 @@ TEST(DatabaseCApi, CreateElementTimeSeriesFkLabels) {
                                                      &out_col_names,
                                                      &out_col_types,
                                                      &out_col_data,
+                                                     &out_col_has_value,
                                                      &out_col_count,
                                                      &out_row_count),
               QUIVER_OK);
@@ -603,7 +620,8 @@ TEST(DatabaseCApi, CreateElementTimeSeriesFkLabels) {
     EXPECT_EQ(sponsor_ids[0], 1);
     EXPECT_EQ(sponsor_ids[1], 2);
 
-    quiver_database_free_time_series_data(out_col_names, out_col_types, out_col_data, out_col_count, out_row_count);
+    quiver_database_free_time_series_data(
+        out_col_names, out_col_types, out_col_data, out_col_has_value, out_col_count, out_row_count);
     quiver_database_close(db);
 }
 
@@ -651,11 +669,15 @@ TEST(DatabaseCApi, CreateElementAllFkTypesInOneCall) {
 
     // Verify scalar FK
     int64_t* scalar_values = nullptr;
+    uint8_t* scalar_mask = nullptr;
     size_t scalar_count = 0;
-    ASSERT_EQ(quiver_database_read_scalar_integers(db, "Child", "parent_id", &scalar_values, &scalar_count), QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_read_scalar_integers(db, "Child", "parent_id", &scalar_values, &scalar_mask, &scalar_count),
+        QUIVER_OK);
     ASSERT_EQ(scalar_count, 1);
     EXPECT_EQ(scalar_values[0], 1);
     quiver_database_free_integer_array(scalar_values);
+    quiver_database_free_mask(scalar_mask);
 
     // Verify set FK (mentor_id)
     int64_t* mentor_values = nullptr;
@@ -681,6 +703,7 @@ TEST(DatabaseCApi, CreateElementAllFkTypesInOneCall) {
     char** out_col_names = nullptr;
     int* out_col_types = nullptr;
     void** out_col_data = nullptr;
+    uint8_t** out_col_has_value = nullptr;
     size_t out_col_count = 0;
     size_t out_row_count = 0;
     ASSERT_EQ(quiver_database_read_time_series_group(db,
@@ -690,6 +713,7 @@ TEST(DatabaseCApi, CreateElementAllFkTypesInOneCall) {
                                                      &out_col_names,
                                                      &out_col_types,
                                                      &out_col_data,
+                                                     &out_col_has_value,
                                                      &out_col_count,
                                                      &out_row_count),
               QUIVER_OK);
@@ -697,7 +721,8 @@ TEST(DatabaseCApi, CreateElementAllFkTypesInOneCall) {
     ASSERT_EQ(out_row_count, 1);
     auto* sponsor_ids = static_cast<int64_t*>(out_col_data[1]);
     EXPECT_EQ(sponsor_ids[0], 2);
-    quiver_database_free_time_series_data(out_col_names, out_col_types, out_col_data, out_col_count, out_row_count);
+    quiver_database_free_time_series_data(
+        out_col_names, out_col_types, out_col_data, out_col_has_value, out_col_count, out_row_count);
 
     quiver_database_close(db);
 }
@@ -728,20 +753,26 @@ TEST(DatabaseCApi, CreateElementNoFkColumnsUnchanged) {
     quiver_database_free_string_array(str_values, str_count);
 
     int64_t* int_values = nullptr;
+    uint8_t* int_mask = nullptr;
     size_t int_count = 0;
-    ASSERT_EQ(quiver_database_read_scalar_integers(db, "Configuration", "integer_attribute", &int_values, &int_count),
+    ASSERT_EQ(quiver_database_read_scalar_integers(
+                  db, "Configuration", "integer_attribute", &int_values, &int_mask, &int_count),
               QUIVER_OK);
     ASSERT_EQ(int_count, 1);
     EXPECT_EQ(int_values[0], 42);
     quiver_database_free_integer_array(int_values);
+    quiver_database_free_mask(int_mask);
 
     double* float_values = nullptr;
+    uint8_t* float_mask = nullptr;
     size_t float_count = 0;
-    ASSERT_EQ(quiver_database_read_scalar_floats(db, "Configuration", "float_attribute", &float_values, &float_count),
+    ASSERT_EQ(quiver_database_read_scalar_floats(
+                  db, "Configuration", "float_attribute", &float_values, &float_mask, &float_count),
               QUIVER_OK);
     ASSERT_EQ(float_count, 1);
     EXPECT_DOUBLE_EQ(float_values[0], 3.14);
     quiver_database_free_float_array(float_values);
+    quiver_database_free_mask(float_mask);
 
     quiver_database_close(db);
 }

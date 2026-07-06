@@ -10,7 +10,11 @@ from quiverdb.database_csv_export import DatabaseCSVExport
 from quiverdb.database_csv_import import DatabaseCSVImport
 from quiverdb.element import Element
 from quiverdb.exceptions import QuiverError
-from quiverdb.metadata import DataType, GroupMetadata, ScalarMetadata
+from quiverdb.metadata import (
+    DataType,
+    GroupMetadata,
+    ScalarMetadata,
+)
 
 
 class Database(DatabaseCSVExport, DatabaseCSVImport):
@@ -149,11 +153,44 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         check(lib.quiver_database_is_healthy(self._ptr, out))
         return bool(out[0])
 
-    def describe(self) -> None:
-        """Print schema inspection output to stdout."""
+    # -- Schema inspection ------------------------------------------------------
+
+    def describe(self) -> str:
+        """Return a human-readable report of every collection in the database."""
         self._ensure_open()
         lib = get_lib()
-        check(lib.quiver_database_describe(self._ptr))
+        out = ffi.new("char**")
+        check(lib.quiver_database_describe(self._ptr, out))
+        try:
+            return ffi.string(out[0]).decode("utf-8")
+        finally:
+            lib.quiver_database_free_string(out[0])
+
+    def describe_collection(self, collection: str) -> str:
+        """Return a human-readable report of a single collection's structure."""
+        self._ensure_open()
+        lib = get_lib()
+        out = ffi.new("char**")
+        check(lib.quiver_database_describe_collection(self._ptr, collection.encode("utf-8"), out))
+        try:
+            return ffi.string(out[0]).decode("utf-8")
+        finally:
+            lib.quiver_database_free_string(out[0])
+
+    def summarize_collection(self, collection: str) -> str:
+        """Return a human-readable value-statistics report for a single collection.
+
+        Reports per-scalar null/non-null counts and integer value distributions,
+        and per-group empty/non-empty element counts.
+        """
+        self._ensure_open()
+        lib = get_lib()
+        out = ffi.new("char**")
+        check(lib.quiver_database_summarize_collection(self._ptr, collection.encode("utf-8"), out))
+        try:
+            return ffi.string(out[0]).decode("utf-8")
+        finally:
+            lib.quiver_database_free_string(out[0])
 
     def create_element(self, collection: str, **kwargs: object) -> int:
         """Create a new element. Returns the new element ID."""
@@ -389,11 +426,12 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
 
     # -- Scalar reads (bulk) --------------------------------------------------
 
-    def read_scalar_integers(self, collection: str, attribute: str) -> list[int]:
-        """Read all integer values for a scalar attribute across all elements."""
+    def read_scalar_integers(self, collection: str, attribute: str) -> list[int | None]:
+        """Read all integer values for a scalar attribute. One entry per element; NULL is None."""
         self._ensure_open()
         lib = get_lib()
         out_values = ffi.new("int64_t**")
+        out_mask = ffi.new("uint8_t**")
         out_count = ffi.new("size_t*")
         check(
             lib.quiver_database_read_scalar_integers(
@@ -401,6 +439,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
                 collection.encode("utf-8"),
                 attribute.encode("utf-8"),
                 out_values,
+                out_mask,
                 out_count,
             )
         )
@@ -408,15 +447,18 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         if count == 0 or out_values[0] == ffi.NULL:
             return []
         try:
-            return [out_values[0][i] for i in range(count)]
+            mask = out_mask[0]
+            return [out_values[0][i] if mask[i] else None for i in range(count)]
         finally:
             lib.quiver_database_free_integer_array(out_values[0])
+            lib.quiver_database_free_mask(out_mask[0])
 
-    def read_scalar_floats(self, collection: str, attribute: str) -> list[float]:
-        """Read all float values for a scalar attribute across all elements."""
+    def read_scalar_floats(self, collection: str, attribute: str) -> list[float | None]:
+        """Read all float values for a scalar attribute. One entry per element; NULL is None."""
         self._ensure_open()
         lib = get_lib()
         out_values = ffi.new("double**")
+        out_mask = ffi.new("uint8_t**")
         out_count = ffi.new("size_t*")
         check(
             lib.quiver_database_read_scalar_floats(
@@ -424,6 +466,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
                 collection.encode("utf-8"),
                 attribute.encode("utf-8"),
                 out_values,
+                out_mask,
                 out_count,
             )
         )
@@ -431,9 +474,11 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         if count == 0 or out_values[0] == ffi.NULL:
             return []
         try:
-            return [out_values[0][i] for i in range(count)]
+            mask = out_mask[0]
+            return [out_values[0][i] if mask[i] else None for i in range(count)]
         finally:
             lib.quiver_database_free_float_array(out_values[0])
+            lib.quiver_database_free_mask(out_mask[0])
 
     def read_scalar_strings(self, collection: str, attribute: str) -> list[str | None]:
         """Read all string values for a scalar attribute. NULL values become None."""
@@ -1141,6 +1186,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         out_names = ffi.new("char***")
         out_types = ffi.new("int**")
         out_data = ffi.new("void***")
+        out_has_value = ffi.new("uint8_t***")
         out_col_count = ffi.new("size_t*")
         out_row_count = ffi.new("size_t*")
         check(
@@ -1152,6 +1198,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
                 out_names,
                 out_types,
                 out_data,
+                out_has_value,
                 out_col_count,
                 out_row_count,
             )
@@ -1163,23 +1210,34 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         try:
             dim_col = self.get_time_series_metadata(collection, group).dimension_column
 
+            # Per-cell NULL mask: mask[c][r] == 0 means SQL NULL, surfaced as None. The
+            # dimension column's mask is always all 1, so it stays dense.
             result: dict[str, list] = {}
             for c in range(col_count):
                 name = ffi.string(out_names[0][c]).decode("utf-8")
                 ctype = out_types[0][c]
+                mask = out_has_value[0][c]
                 if ctype == DataType.INTEGER:
                     int_ptr = ffi.cast("int64_t*", out_data[0][c])
-                    result[name] = [int_ptr[r] for r in range(row_count)]
+                    result[name] = [int_ptr[r] if mask[r] else None for r in range(row_count)]
                 elif ctype == DataType.FLOAT:
                     float_ptr = ffi.cast("double*", out_data[0][c])
-                    result[name] = [float_ptr[r] for r in range(row_count)]
+                    result[name] = [float_ptr[r] if mask[r] else None for r in range(row_count)]
                 else:  # STRING or DATE_TIME
                     str_ptr = ffi.cast("char**", out_data[0][c])
-                    strings = [ffi.string(str_ptr[r]).decode("utf-8") for r in range(row_count)]
-                    result[name] = [_parse_datetime(s) for s in strings] if name == dim_col else strings
+                    if name == dim_col:
+                        result[name] = [
+                            _parse_datetime(ffi.string(str_ptr[r]).decode("utf-8")) for r in range(row_count)
+                        ]
+                    else:
+                        result[name] = [
+                            ffi.string(str_ptr[r]).decode("utf-8") if mask[r] else None for r in range(row_count)
+                        ]
             return result
         finally:
-            lib.quiver_database_free_time_series_data(out_names[0], out_types[0], out_data[0], col_count, row_count)
+            lib.quiver_database_free_time_series_data(
+                out_names[0], out_types[0], out_data[0], out_has_value[0], col_count, row_count
+            )
 
     def read_time_series_row(
         self,
@@ -1252,26 +1310,37 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
             # Clear operation
             check(
                 lib.quiver_database_update_time_series_group(
-                    self._ptr, c_collection, c_group, id, ffi.NULL, ffi.NULL, ffi.NULL, 0, 0
+                    self._ptr, c_collection, c_group, id, ffi.NULL, ffi.NULL, ffi.NULL, ffi.NULL, 0, 0
                 )
             )
             return
 
-        keepalive, c_col_names, c_col_types, c_col_data, col_count, row_count = _marshal_time_series_columns(data)
+        keepalive, c_col_names, c_col_types, c_col_data, c_col_has_value, col_count, row_count = (
+            _marshal_time_series_columns(data)
+        )
         check(
             lib.quiver_database_update_time_series_group(
-                self._ptr, c_collection, c_group, id, c_col_names, c_col_types, c_col_data, col_count, row_count
+                self._ptr,
+                c_collection,
+                c_group,
+                id,
+                c_col_names,
+                c_col_types,
+                c_col_data,
+                c_col_has_value,
+                col_count,
+                row_count,
             )
         )
 
-    def add_time_series_row(self, collection: str, group: str, id: int, **kwargs) -> None:
+    def upsert_time_series_row(self, collection: str, group: str, id: int, **kwargs) -> None:
         """Insert or upsert a single time series row for an element.
 
         Keyword arguments map column names to values. The dimension column (e.g.
         date_time) and all value columns must be provided. Type dispatch uses
         isinstance: bool -> INTEGER (0/1), int -> INTEGER, float -> FLOAT, str ->
         STRING. No Int->Float coercion (per D-03: Python strict typing).
-        Dict unpacking is supported: db.add_time_series_row("Col", "grp", 1, **row_dict).
+        Dict unpacking is supported: db.upsert_time_series_row("Col", "grp", 1, **row_dict).
         """
         self._ensure_open()
         lib = get_lib()
@@ -1321,7 +1390,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
                 )
 
         check(
-            lib.quiver_database_add_time_series_row(
+            lib.quiver_database_upsert_time_series_row(
                 self._ptr, c_collection, c_group, id, c_col_names, c_col_types, c_col_data, col_count
             )
         )
@@ -1622,12 +1691,15 @@ def _marshal_params(parameters: list) -> tuple:
 def _marshal_time_series_columns(data: dict[str, list]) -> tuple:
     """Marshal column lists into parallel C arrays for the columnar time series API.
 
-    Column types are dispatched on the first element: datetime/str -> STRING,
-    bool/int -> INTEGER, float -> FLOAT. The C++ layer validates against the
-    schema and accepts integers for REAL columns.
+    Column types are dispatched on the first non-None element: datetime/str ->
+    STRING, bool/int -> INTEGER, float -> FLOAT. The C++ layer validates against
+    the schema and accepts integers for REAL columns. A None entry becomes a
+    per-cell NULL via the mask (with a placeholder in the data array); an all-None
+    column is tagged FLOAT with a zero-filled placeholder.
 
-    Returns (keepalive, c_col_names, c_col_types, c_col_data, col_count, row_count)
-    where keepalive must remain referenced until the C API call completes.
+    Returns (keepalive, c_col_names, c_col_types, c_col_data, c_col_has_value,
+    col_count, row_count) where keepalive must remain referenced until the C API
+    call completes.
     """
     col_count = len(data)
     row_count = len(next(iter(data.values())))
@@ -1639,43 +1711,54 @@ def _marshal_time_series_columns(data: dict[str, list]) -> tuple:
     c_col_names = ffi.new("const char*[]", col_count)
     c_col_types = ffi.new("int[]", col_count)
     c_col_data = ffi.new("void*[]", col_count)
+    c_col_has_value = ffi.new("uint8_t*[]", col_count)
 
     for c, (name, values) in enumerate(data.items()):
         name_buf = ffi.new("char[]", name.encode("utf-8"))
         keepalive.append(name_buf)
         c_col_names[c] = name_buf
 
-        first = values[0]
-        if isinstance(first, datetime):
-            encoded = [v.strftime("%Y-%m-%dT%H:%M:%S").encode("utf-8") for v in values]
+        mask = ffi.new("uint8_t[]", [0 if v is None else 1 for v in values])
+        keepalive.append(mask)
+        c_col_has_value[c] = mask
+
+        first = next((v for v in values if v is not None), None)
+        if first is None:
+            # All-null column: tag FLOAT with zeroed placeholder data; the mask is all zero.
+            arr = ffi.new("double[]", [0.0] * row_count)
+            keepalive.append(arr)
+            c_col_types[c] = DataType.FLOAT
+            c_col_data[c] = ffi.cast("void*", arr)
+        elif isinstance(first, datetime):
+            encoded = [(v.strftime("%Y-%m-%dT%H:%M:%S").encode("utf-8") if v is not None else b"") for v in values]
             c_strs = [ffi.new("char[]", e) for e in encoded]
             keepalive.extend(c_strs)
-            c_arr = ffi.new("char*[]", c_strs)
+            c_arr = ffi.new("char*[]", [(s if v is not None else ffi.NULL) for s, v in zip(c_strs, values)])
             keepalive.append(c_arr)
             c_col_types[c] = DataType.STRING
             c_col_data[c] = ffi.cast("void*", c_arr)
         elif isinstance(first, str):
-            encoded = [v.encode("utf-8") for v in values]
+            encoded = [(v.encode("utf-8") if v is not None else b"") for v in values]
             c_strs = [ffi.new("char[]", e) for e in encoded]
             keepalive.extend(c_strs)
-            c_arr = ffi.new("char*[]", c_strs)
+            c_arr = ffi.new("char*[]", [(s if v is not None else ffi.NULL) for s, v in zip(c_strs, values)])
             keepalive.append(c_arr)
             c_col_types[c] = DataType.STRING
             c_col_data[c] = ffi.cast("void*", c_arr)
         elif isinstance(first, bool) or isinstance(first, int):
-            arr = ffi.new("int64_t[]", [int(v) for v in values])
+            arr = ffi.new("int64_t[]", [int(v) if v is not None else 0 for v in values])
             keepalive.append(arr)
             c_col_types[c] = DataType.INTEGER
             c_col_data[c] = ffi.cast("void*", arr)
         elif isinstance(first, float):
-            arr = ffi.new("double[]", [float(v) for v in values])
+            arr = ffi.new("double[]", [float(v) if v is not None else 0.0 for v in values])
             keepalive.append(arr)
             c_col_types[c] = DataType.FLOAT
             c_col_data[c] = ffi.cast("void*", arr)
         else:
             raise TypeError(f"Unsupported value type for column '{name}': {type(first).__name__}")
 
-    return keepalive, c_col_names, c_col_types, c_col_data, col_count, row_count
+    return keepalive, c_col_names, c_col_types, c_col_data, c_col_has_value, col_count, row_count
 
 
 # -- Metadata parsing helpers (module-level) ---------------------------------

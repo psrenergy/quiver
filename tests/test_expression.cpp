@@ -2102,3 +2102,258 @@ TEST_F(ExpressionFixture, RenameAgentsSaveProducesReadableFile) {
     EXPECT_EQ(m.labels[0], "alpha");
     EXPECT_EQ(m.labels[1], "val2");
 }
+
+// ============================================================================
+// Comparison operations (gt / lt / gte / lte / eq / neq) -> 1.0 / 0.0 per cell
+// ============================================================================
+
+TEST_F(ExpressionFixture, ComparisonAllOpsTwoFiles) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] * 10 + dims[1] + static_cast<int64_t>(k));
+    });
+    write_qvr(path_b, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[1] * 10 + dims[0] + static_cast<int64_t>(k));
+    });
+    auto va = read_all_cells(path_a);
+    auto vb = read_all_cells(path_b);
+
+    struct Case {
+        std::function<Expression(const Expression&, const Expression&)> build;
+        std::function<bool(double, double)> ref;
+    };
+    const std::vector<Case> cases = {
+        {[](const Expression& x, const Expression& y) { return x > y; }, [](double x, double y) { return x > y; }},
+        {[](const Expression& x, const Expression& y) { return x < y; }, [](double x, double y) { return x < y; }},
+        {[](const Expression& x, const Expression& y) { return x >= y; }, [](double x, double y) { return x >= y; }},
+        {[](const Expression& x, const Expression& y) { return x <= y; }, [](double x, double y) { return x <= y; }},
+        {[](const Expression& x, const Expression& y) { return x == y; }, [](double x, double y) { return x == y; }},
+        {[](const Expression& x, const Expression& y) { return x != y; }, [](double x, double y) { return x != y; }},
+    };
+
+    for (const auto& c : cases) {
+        auto a = BinaryFile::open_file(path_a, 'r');
+        auto b = BinaryFile::open_file(path_b, 'r');
+        c.build(Expression(a), Expression(b)).save(path_out);
+        auto vo = read_all_cells(path_out);
+        ASSERT_EQ(vo.size(), va.size());
+        for (size_t i = 0; i < vo.size(); ++i) {
+            EXPECT_DOUBLE_EQ(vo[i], c.ref(va[i], vb[i]) ? 1.0 : 0.0) << " at index " << i;
+        }
+        // Clear only the output between ops; inputs stay written (readers above still hold them).
+        for (auto ext : {".qvr", ".toml"}) {
+            auto full = path_out + ext;
+            if (fs::exists(full))
+                fs::remove(full);
+        }
+    }
+}
+
+TEST_F(ExpressionFixture, ComparisonScalarBothSides) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] * 100 + dims[1] * 10 + static_cast<int64_t>(k));
+    });
+    auto va = read_all_cells(path_a);
+
+    {
+        auto a = BinaryFile::open_file(path_a, 'r');
+        (Expression(a) > 100.0).save(path_out);
+        auto vo = read_all_cells(path_out);
+        ASSERT_EQ(vo.size(), va.size());
+        for (size_t i = 0; i < vo.size(); ++i)
+            EXPECT_DOUBLE_EQ(vo[i], (va[i] > 100.0) ? 1.0 : 0.0);
+    }
+    cleanup();
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] * 100 + dims[1] * 10 + static_cast<int64_t>(k));
+    });
+    {
+        // scalar on the left: 100 < expr
+        auto a = BinaryFile::open_file(path_a, 'r');
+        (100.0 < Expression(a)).save(path_out2);
+        auto vo = read_all_cells(path_out2);
+        ASSERT_EQ(vo.size(), va.size());
+        for (size_t i = 0; i < vo.size(); ++i)
+            EXPECT_DOUBLE_EQ(vo[i], (100.0 < va[i]) ? 1.0 : 0.0);
+    }
+}
+
+TEST_F(ExpressionFixture, ComparisonPropagatesNaN) {
+    auto md = make_simple_metadata();
+    const double nan_v = std::numeric_limits<double>::quiet_NaN();
+    // NaN at (1,1), finite elsewhere
+    write_qvr(path_a, md, [&](const std::vector<int64_t>& dims, size_t /*k*/) {
+        return (dims[0] == 1 && dims[1] == 1) ? nan_v : 5.0;
+    });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    (Expression(a) > 3.0).save(path_out);
+    auto va = read_all_cells(path_a);
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(vo.size(), va.size());
+    for (size_t i = 0; i < vo.size(); ++i) {
+        if (std::isnan(va[i])) {
+            EXPECT_TRUE(std::isnan(vo[i])) << " at index " << i;
+        } else {
+            EXPECT_DOUBLE_EQ(vo[i], 1.0) << " at index " << i;  // 5.0 > 3.0
+        }
+    }
+}
+
+TEST_F(ExpressionFixture, ComparisonDrivesIfElse) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t /*k*/) {
+        return static_cast<double>(dims[0]);  // 1, 2, 3 across rows
+    });
+    write_qvr(path_b, md, [](const std::vector<int64_t>&, size_t) { return 100.0; });   // then
+    write_qvr(path_c, md, [](const std::vector<int64_t>&, size_t) { return -100.0; });  // else
+
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto then_v = BinaryFile::open_file(path_b, 'r');
+    auto else_v = BinaryFile::open_file(path_c, 'r');
+    // where a > 1.5 pick then(100) else else(-100)
+    ifelse(Expression(a) > 1.5, Expression(then_v), Expression(else_v)).save(path_out);
+
+    auto va = read_all_cells(path_a);
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(vo.size(), va.size());
+    for (size_t i = 0; i < vo.size(); ++i)
+        EXPECT_DOUBLE_EQ(vo[i], (va[i] > 1.5) ? 100.0 : -100.0) << " at index " << i;
+}
+
+TEST_F(ExpressionFixture, ComparisonUnitMismatchThrows) {
+    auto md_a = BinaryMetadata::from_element(Element()
+                                                 .set("version", "1")
+                                                 .set("initial_datetime", "2025-01-01T00:00:00")
+                                                 .set("unit", "MW")
+                                                 .set("dimensions", {"row"})
+                                                 .set("dimension_sizes", {2})
+                                                 .set("labels", {"v"}));
+    auto md_b = BinaryMetadata::from_element(Element()
+                                                 .set("version", "1")
+                                                 .set("initial_datetime", "2025-01-01T00:00:00")
+                                                 .set("unit", "GWh")
+                                                 .set("dimensions", {"row"})
+                                                 .set("dimension_sizes", {2})
+                                                 .set("labels", {"v"}));
+    write_qvr(path_a, md_a, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    write_qvr(path_b, md_b, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto b = BinaryFile::open_file(path_b, 'r');
+    EXPECT_THROW({ auto e = (Expression(a) == Expression(b)); }, std::runtime_error);
+}
+
+// ============================================================================
+// Logical operations (&& / || / !) on boolean-valued expressions
+// ============================================================================
+
+TEST_F(ExpressionFixture, LogicalAndOrTruthiness) {
+    auto md = make_simple_metadata();
+    // a is 0 on row 2, nonzero elsewhere; b is 0 on col 1, nonzero elsewhere. Distinct nonzero
+    // values exercise "nonzero is true", not just literal 1.0.
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t /*k*/) { return (dims[0] == 2) ? 0.0 : 3.0; });
+    write_qvr(path_b, md, [](const std::vector<int64_t>& dims, size_t /*k*/) { return (dims[1] == 1) ? 0.0 : -2.0; });
+    auto va = read_all_cells(path_a);
+    auto vb = read_all_cells(path_b);
+
+    {
+        auto a = BinaryFile::open_file(path_a, 'r');
+        auto b = BinaryFile::open_file(path_b, 'r');
+        (Expression(a) && Expression(b)).save(path_out);
+        auto vo = read_all_cells(path_out);
+        ASSERT_EQ(vo.size(), va.size());
+        for (size_t i = 0; i < vo.size(); ++i)
+            EXPECT_DOUBLE_EQ(vo[i], (va[i] != 0.0 && vb[i] != 0.0) ? 1.0 : 0.0) << " at index " << i;
+    }
+    for (auto ext : {".qvr", ".toml"}) {
+        auto f = path_out + ext;
+        if (fs::exists(f))
+            fs::remove(f);
+    }
+    {
+        auto a = BinaryFile::open_file(path_a, 'r');
+        auto b = BinaryFile::open_file(path_b, 'r');
+        (Expression(a) || Expression(b)).save(path_out);
+        auto vo = read_all_cells(path_out);
+        ASSERT_EQ(vo.size(), va.size());
+        for (size_t i = 0; i < vo.size(); ++i)
+            EXPECT_DOUBLE_EQ(vo[i], (va[i] != 0.0 || vb[i] != 0.0) ? 1.0 : 0.0) << " at index " << i;
+    }
+}
+
+TEST_F(ExpressionFixture, LogicalNotInverts) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t /*k*/) { return (dims[0] == 1) ? 5.0 : 0.0; });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    (!Expression(a)).save(path_out);
+    auto va = read_all_cells(path_a);
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(vo.size(), va.size());
+    for (size_t i = 0; i < vo.size(); ++i)
+        EXPECT_DOUBLE_EQ(vo[i], (va[i] == 0.0) ? 1.0 : 0.0) << " at index " << i;
+}
+
+TEST_F(ExpressionFixture, LogicalPropagatesNaN) {
+    auto md = make_simple_metadata();
+    const double nan_v = std::numeric_limits<double>::quiet_NaN();
+    write_qvr(path_a, md, [&](const std::vector<int64_t>& dims, size_t /*k*/) {
+        return (dims[0] == 1 && dims[1] == 1) ? nan_v : 1.0;
+    });
+    write_qvr(path_b, md, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto b = BinaryFile::open_file(path_b, 'r');
+    (Expression(a) && Expression(b)).save(path_out);
+    auto va = read_all_cells(path_a);
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(vo.size(), va.size());
+    for (size_t i = 0; i < vo.size(); ++i) {
+        if (std::isnan(va[i])) {
+            EXPECT_TRUE(std::isnan(vo[i])) << " at index " << i;
+        } else {
+            EXPECT_DOUBLE_EQ(vo[i], 1.0) << " at index " << i;
+        }
+    }
+}
+
+TEST_F(ExpressionFixture, LogicalIsUnitlessAcrossUnits) {
+    // Two comparisons whose source files have different units: && must NOT throw, and the result
+    // is unitless. (Comparisons keep their source unit; logical ops are unit-agnostic.)
+    auto md_mw = make_simple_metadata();  // unit MW
+    auto md_gwh = BinaryMetadata::from_element(Element()
+                                                   .set("version", "1")
+                                                   .set("initial_datetime", "2025-01-01T00:00:00")
+                                                   .set("unit", "GWh")
+                                                   .set("dimensions", {"row", "col"})
+                                                   .set("dimension_sizes", {3, 2})
+                                                   .set("labels", {"val1", "val2"}));
+    write_qvr(
+        path_a, md_mw, [](const std::vector<int64_t>& dims, size_t /*k*/) { return static_cast<double>(dims[0]); });
+    write_qvr(
+        path_b, md_gwh, [](const std::vector<int64_t>& dims, size_t /*k*/) { return static_cast<double>(dims[1]); });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto b = BinaryFile::open_file(path_b, 'r');
+    // (a > 1.0) is MW-tagged, (b > 0.0) is GWh-tagged; && combines them without a unit error.
+    Expression e = (Expression(a) > 1.0) && (Expression(b) > 0.0);
+    EXPECT_EQ(e.metadata().unit, "");
+    e.save(path_out);  // also exercises materialization
+    EXPECT_TRUE(fs::exists(path_out + ".qvr"));
+}
+
+TEST_F(ExpressionFixture, LogicalDrivesIfElse) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t /*k*/) {
+        return static_cast<double>(dims[0]);  // 1, 2, 3 across rows
+    });
+    write_qvr(path_b, md, [](const std::vector<int64_t>&, size_t) { return 100.0; });
+    write_qvr(path_c, md, [](const std::vector<int64_t>&, size_t) { return -100.0; });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto then_v = BinaryFile::open_file(path_b, 'r');
+    auto else_v = BinaryFile::open_file(path_c, 'r');
+    // (1 < a) AND (a < 3) -> only row 2 selects "then"
+    ifelse((Expression(a) > 1.0) && (Expression(a) < 3.0), Expression(then_v), Expression(else_v)).save(path_out);
+    auto va = read_all_cells(path_a);
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(vo.size(), va.size());
+    for (size_t i = 0; i < vo.size(); ++i)
+        EXPECT_DOUBLE_EQ(vo[i], (va[i] > 1.0 && va[i] < 3.0) ? 100.0 : -100.0) << " at index " << i;
+}

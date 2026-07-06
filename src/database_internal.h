@@ -53,7 +53,9 @@ std::vector<std::vector<T>> read_grouped_values_all(const Result& result) {
     return groups;
 }
 
-// Template for reading column 0 values from query results
+// Template for reading column 0 values from query results.
+// Drops NULLs — used by group readers (vector/set by id) and read_element_ids,
+// where the columns are NOT NULL / PK by schema convention so no NULL ever appears.
 template <typename T>
 std::vector<T> read_column_values(const Result& result) {
     std::vector<T> values;
@@ -63,6 +65,19 @@ std::vector<T> read_column_values(const Result& result) {
         if (val) {
             values.push_back(*val);
         }
+    }
+    return values;
+}
+
+// Template for reading column 0 values, preserving NULLs as std::nullopt.
+// One entry per result row (positional) — used only by the scalar bulk readers,
+// where ORDER BY rowid alignment with the element list must be preserved.
+template <typename T>
+std::vector<std::optional<T>> read_column_values_nullable(const Result& result) {
+    std::vector<std::optional<T>> values;
+    values.reserve(result.row_count());
+    for (size_t i = 0; i < result.row_count(); ++i) {
+        values.push_back(get_row_value(result[i], 0, static_cast<T*>(nullptr)));
     }
     return values;
 }
@@ -153,7 +168,10 @@ inline ScalarMetadata scalar_metadata_from_column(const ColumnDefinition& col) {
     ScalarMetadata meta;
     meta.name = col.name;
     meta.data_type = col.type;
-    meta.not_null = col.not_null;
+    // An INTEGER PRIMARY KEY is a rowid alias and is never NULL, even though SQLite's
+    // PRAGMA table_info reports notnull=0 for it. Report it as not_null for the public API.
+    // (The raw ColumnDefinition.not_null stays the PRAGMA value for csv_import / schema_validator.)
+    meta.not_null = col.not_null || (col.primary_key && col.type == DataType::Integer);
     meta.primary_key = col.primary_key;
     meta.default_value = col.default_value;
     return meta;

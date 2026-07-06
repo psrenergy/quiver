@@ -227,8 +227,9 @@ include("fixture.jl")
 
         Quiver.create_element!(db, "Configuration"; label = "Config 1", integer_attribute = 100)
 
-        # Update element that doesn't exist - should not throw but also should not affect anything
-        Quiver.update_element!(db, "Configuration", Int64(999); integer_attribute = 500)
+        # Updating an element that doesn't exist throws "Element not found"
+        @test_throws Quiver.DatabaseException Quiver.update_element!(
+            db, "Configuration", Int64(999); integer_attribute = 500)
 
         # Verify original element unchanged
         value = Quiver.read_scalar_integer_by_id(db, "Configuration", "integer_attribute", 1)
@@ -831,6 +832,27 @@ include("fixture.jl")
         # Verify original value preserved
         parent_ids = Quiver.read_scalar_integers(db, "Child", "parent_id")
         @test parent_ids == [1]
+
+        Quiver.close!(db)
+    end
+
+    @testset "Non-Existent Element And Typing" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        id = Quiver.create_element!(db, "Configuration"; label = "Config 1")
+
+        # Updating a non-existent element throws "Element not found"
+        @test_throws Quiver.DatabaseException Quiver.update_element!(
+            db, "Configuration", Int64(999); integer_attribute = 5)
+
+        # A Float64 is rejected for an INTEGER column.
+        @test_throws Quiver.DatabaseException Quiver.update_element!(
+            db, "Configuration", id; integer_attribute = 42.0)
+
+        # An Int is accepted for a REAL column.
+        Quiver.update_element!(db, "Configuration", id; float_attribute = 7)
+        @test Quiver.read_scalar_float_by_id(db, "Configuration", "float_attribute", id) == 7.0
 
         Quiver.close!(db)
     end

@@ -82,12 +82,6 @@ TEST(TimePropertiesSetters, SetInitialValue) {
     EXPECT_EQ(props.initial_value, 15);
 }
 
-TEST(TimePropertiesSetters, SetParentDimensionIndex) {
-    TimeProperties props{TimeFrequency::Daily, 1, -1};
-    props.set_parent_dimension_index(2);
-    EXPECT_EQ(props.parent_dimension_index, 2);
-}
-
 // ============================================================================
 // TimePropertiesDatetimeToInt
 // ============================================================================

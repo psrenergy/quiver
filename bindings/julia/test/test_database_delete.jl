@@ -102,14 +102,14 @@ include("fixture.jl")
         Quiver.close!(db)
     end
 
-    @testset "Non-Existent Element (Idempotent)" begin
+    @testset "Non-Existent Element Throws" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
         db = Quiver.from_schema(":memory:", path_schema)
 
         Quiver.create_element!(db, "Configuration"; label = "Config 1")
 
-        # Delete non-existent element should succeed (idempotent)
-        Quiver.delete_element!(db, "Configuration", Int64(999))
+        # Deleting a non-existent element throws "Element not found"
+        @test_throws Quiver.DatabaseException Quiver.delete_element!(db, "Configuration", Int64(999))
 
         # Verify original element still exists
         ids = Quiver.read_element_ids(db, "Configuration")
