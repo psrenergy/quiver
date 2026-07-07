@@ -1560,6 +1560,24 @@ TEST(DatabaseCSV, ImportCSV_Comma_QuotedThousandsSeparators) {
     fs::remove(csv_path);
 }
 
+// A signed decimal in a ';' file: the normalizer accepts an optional leading sign, so
+// "+1,5" is rewritten to "+1.5" and parsed as 1.5. Regression: a stricter regex left
+// the '+' in place and std::stod parsed only "+1", silently truncating it to 1.0.
+TEST(DatabaseCSV, ImportCSV_Semicolon_SignedDecimal) {
+    auto db = make_db();
+
+    auto csv_path = temp_csv("ImportSemicolonSignedDecimal");
+    write_csv_file(csv_path.string(),
+                   "sep=;\n"
+                   "label;name;status;price;date_created;notes\n"
+                   "Signed;Signed;0;+1,5;;\n");
+
+    db.import_csv("Items", "", csv_path.string());
+    EXPECT_NEAR(db.read_scalar_float_by_id("Items", "price", 1).value(), 1.5, 0.001);
+
+    fs::remove(csv_path);
+}
+
 // Two adjacent numeric columns in a group (temperature REAL, humidity INTEGER) on
 // a ';' file with a comma decimal — the case the old ';'->',' swap corrupted.
 TEST(DatabaseCSV, ImportCSV_Semicolon_TimeSeriesMultiColumn) {

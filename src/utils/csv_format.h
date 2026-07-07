@@ -101,7 +101,7 @@ private:
         const std::regex escape(R"([.^$|()\[\]{}*+?\\])");
         const std::string g = std::regex_replace(std::string(1, grouping_sep), escape, R"(\$&)");
         const std::string d = std::regex_replace(std::string(1, decimal_sep), escape, R"(\$&)");
-        return std::regex("^-?(\\d{1,3}(" + g + "\\d{3})+|\\d+)(" + d + "\\d+)?$");
+        return std::regex("^[-+]?(\\d{1,3}(" + g + "\\d{3})+|\\d+)(" + d + "\\d+)?$");
     }
 
     char decimal_sep_;
