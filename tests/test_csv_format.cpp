@@ -64,8 +64,8 @@ TEST(CsvFormat, NumberNormalizer_DotLocale) {
     EXPECT_EQ(n("9.99"), "9.99");
     EXPECT_EQ(n("1000.5"), "1000.5");
     EXPECT_EQ(n("-2000.25"), "-2000.25");
-    EXPECT_EQ(n("1,000.5"), "1000.5");        // thousands grouping stripped
-    EXPECT_EQ(n("1,234,567"), "1234567");     // grouped integer
+    EXPECT_EQ(n("1,000.5"), "1000.5");     // thousands grouping stripped
+    EXPECT_EQ(n("1,234,567"), "1234567");  // grouped integer
     EXPECT_EQ(n("1,234,567.89"), "1234567.89");
 }
 

@@ -75,8 +75,8 @@ inline char grouping_separator_for_delimiter(char field_delimiter) {
 class NumberNormalizer {
 public:
     NumberNormalizer(char decimal_sep, char grouping_sep)
-        : decimal_sep_(decimal_sep), grouping_sep_(grouping_sep), number_pattern_(build_pattern(decimal_sep,
-                                                                                                grouping_sep)) {}
+        : decimal_sep_(decimal_sep), grouping_sep_(grouping_sep),
+          number_pattern_(build_pattern(decimal_sep, grouping_sep)) {}
 
     std::string operator()(const std::string& text) const {
         if (text.empty() || !std::regex_match(text, number_pattern_)) {

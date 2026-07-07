@@ -55,8 +55,13 @@ target_link_libraries(quiver_tests
         GTest::gmock
 )
 
-# test_csv_format.cpp unit-tests the header-only src/utils/csv_format.h directly.
+# test_csv_format.cpp unit-tests the header-only src/utils/csv_format.h directly, so
+# it inlines the CFLocale calls into this target and needs CoreFoundation linked here
+# too (quiver links it PRIVATE, which does not propagate to consumers).
 target_include_directories(quiver_tests PRIVATE ${CMAKE_SOURCE_DIR}/src)
+if(APPLE)
+    target_link_libraries(quiver_tests PRIVATE "-framework CoreFoundation")
+endif()
 
 gtest_discover_tests(quiver_tests
     WORKING_DIRECTORY $<TARGET_FILE_DIR:quiver_tests>
