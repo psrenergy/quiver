@@ -48,11 +48,20 @@ Project.toml      # Deps: Artifacts, CEnum, Dates, Libdl; julia 1.11 compat
   `Base.nonnothingtype(eltype(v))` with the all-`nothing` branch (`Union{}`) first; it always passes
   a per-column `UInt8` mask (added to the `GC.@preserve` set). An all-`nothing` column marshals as a
   FLOAT tag + zeroed placeholder.
-- **Library loader** (`src/c_api.jl`, emitted from `generator/prologue.jl`) resolves `libquiver_c`
-  in three tiers: `QUIVER_LIB_DIR` env → S3 artifact (when an `Artifacts.toml` is present, i.e. the
-  published mirror) → in-tree `build/` (monorepo dev, the default here). Uses the runtime Artifacts
-  functional API (`find_artifacts_toml`/`artifact_hash`/`artifact_path`), NOT `@artifact_str`, so the
-  monorepo (which has no `Artifacts.toml`) still precompiles.
+- **Library loader** (`src/c_api.jl`, emitted from `generator/prologue.jl`) is **relocatable** —
+  this matters for downstream apps compiled with PackageCompiler (`create_app`), where a baked
+  absolute path would freeze the build machine's depot and fail on the target. Split design:
+  - at **precompile** time it resolves only the content-addressed artifact **hash**
+    (`const _quiver_artifact_hash = find_artifacts_toml(@__DIR__)` → `artifact_hash("quiver", …)`;
+    `nothing` in the monorepo, so precompilation still succeeds — this is why `@artifact_str` is
+    avoided). A `SHA1` is a value, not a path, so it survives baking + relocation.
+  - at **runtime** (`__init__`) `quiver_lib_dir()` picks the directory in three tiers:
+    `QUIVER_LIB_DIR` env → `artifact_path(_quiver_artifact_hash)` located against the *runtime*
+    `DEPOT_PATH` (published mirror, or the dir bundled into a compiled app) → in-tree `build/`
+    (monorepo dev, via `@__DIR__`). It then sets the typed global `libquiver_c::String` (used
+    verbatim by every `@ccall`) and pre-`dlopen`s the `libquiver` dependency from the same dir.
+  - **Never** move the directory/`libquiver_c` resolution back to module top level (a `const`
+    path) — that reintroduces the PackageCompiler relocation bug.
 - **Manifest conflicts**: delete `bindings/julia/Manifest.toml`, then
   `julia --project=bindings/julia -e "using Pkg; Pkg.instantiate()"`.
 - **Julia-only surfaces**: the binary/expression wrappers (`src/binary/`, expression functions)
