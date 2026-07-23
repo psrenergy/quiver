@@ -80,10 +80,21 @@ void main() {
       }
     });
 
-    test('rejects empty array', () {
+    test('accepts empty array', () {
       final element = Element();
       try {
-        expect(() => element.set('values', []), throwsA(isA<ArgumentError>()));
+        element.set('values', []);
+        expect(element.toString(), contains('values: []'));
+      } finally {
+        element.dispose();
+      }
+    });
+
+    test('sets array with null cells', () {
+      final element = Element();
+      try {
+        element.set('values', [1, null, 3]);
+        expect(element.toString(), contains('[1, null, 3]'));
       } finally {
         element.dispose();
       }

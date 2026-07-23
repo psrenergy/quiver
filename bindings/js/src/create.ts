@@ -22,7 +22,7 @@ function setElementArray(
   const nameBuf = toCString(name);
 
   if (values.length === 0) {
-    check(lib.quiver_element_set_array_integer(elemPtr, nameBuf.buf, null, 0));
+    check(lib.quiver_element_set_array_integer(elemPtr, nameBuf.buf, null, 0, null));
     return;
   }
 
@@ -30,7 +30,7 @@ function setElementArray(
 
   if (typeof first === "bigint") {
     const arr = allocNativeInt64(values as bigint[]);
-    check(lib.quiver_element_set_array_integer(elemPtr, nameBuf.buf, arr.buf, values.length));
+    check(lib.quiver_element_set_array_integer(elemPtr, nameBuf.buf, arr.buf, values.length, null));
     return;
   }
 
@@ -38,17 +38,17 @@ function setElementArray(
     const allIntegers = (values as number[]).every((v) => Number.isInteger(v));
     if (allIntegers) {
       const arr = allocNativeInt64(values as number[]);
-      check(lib.quiver_element_set_array_integer(elemPtr, nameBuf.buf, arr.buf, values.length));
+      check(lib.quiver_element_set_array_integer(elemPtr, nameBuf.buf, arr.buf, values.length, null));
     } else {
       const arr = allocNativeFloat64(values as number[]);
-      check(lib.quiver_element_set_array_float(elemPtr, nameBuf.buf, arr.buf, values.length));
+      check(lib.quiver_element_set_array_float(elemPtr, nameBuf.buf, arr.buf, values.length, null));
     }
     return;
   }
 
   if (typeof first === "string") {
     const { table, keepalive: _keepalive } = allocNativeStringArray(values as string[]);
-    check(lib.quiver_element_set_array_string(elemPtr, nameBuf.buf, table.buf, values.length));
+    check(lib.quiver_element_set_array_string(elemPtr, nameBuf.buf, table.buf, values.length, null));
     return;
   }
 

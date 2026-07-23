@@ -898,8 +898,9 @@ extension DatabaseRead on Database {
   }
 
   /// Reads a vector group for an element by Id, returning rows as maps.
-  /// Each row contains column names mapped to their values.
-  /// Useful for multi-column vector tables.
+  /// Each row contains column names mapped to their values; a SQL NULL cell
+  /// is `null` (rows stay positionally aligned). DATE_TIME columns are
+  /// parsed to DateTime.
   List<Map<String, Object?>> readVectorGroupById(
     String collection,
     String group,
@@ -907,53 +908,40 @@ extension DatabaseRead on Database {
   ) {
     _ensureNotClosed();
 
-    // Get metadata for this group
-    final metadata = getVectorMetadata(collection, group);
-    final columns = metadata.valueColumns;
+    final arena = Arena();
+    try {
+      final outColNames = arena<Pointer<Pointer<Char>>>();
+      final outColTypes = arena<Pointer<Int>>();
+      final outColData = arena<Pointer<Pointer<Void>>>();
+      final outColHasValue = arena<Pointer<Pointer<Uint8>>>();
+      final outColCount = arena<Size>();
+      final outRowCount = arena<Size>();
 
-    if (columns.isEmpty) return [];
+      check(
+        bindings.quiver_database_read_vector_group_by_id(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          group.toNativeUtf8(allocator: arena).cast(),
+          id,
+          outColNames,
+          outColTypes,
+          outColData,
+          outColHasValue,
+          outColCount,
+          outRowCount,
+        ),
+      );
 
-    // Read each column's data
-    final columnData = <String, List<Object>>{};
-    int rowCount = 0;
-
-    for (final col in columns) {
-      final name = col.name;
-      List<Object> values;
-
-      switch (col.dataType) {
-        case quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER:
-          values = readVectorIntegersById(collection, name, id);
-        case quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT:
-          values = readVectorFloatsById(collection, name, id);
-        case quiver_data_type_t.QUIVER_DATA_TYPE_STRING:
-          values = readVectorStringsById(collection, name, id);
-        case quiver_data_type_t.QUIVER_DATA_TYPE_DATE_TIME:
-          values = readVectorDateTimesById(collection, name, id);
-        default:
-          throw ArgumentError('Unknown data type: ${col.dataType}');
-      }
-
-      columnData[name] = values;
-      rowCount = values.length;
+      return _decodeGroupRows(outColNames, outColTypes, outColData, outColHasValue, outColCount, outRowCount);
+    } finally {
+      arena.releaseAll();
     }
-
-    // Transpose columns to rows
-    final rows = <Map<String, Object?>>[];
-    for (int i = 0; i < rowCount; i++) {
-      final row = <String, Object?>{};
-      for (final entry in columnData.entries) {
-        row[entry.key] = entry.value[i];
-      }
-      rows.add(row);
-    }
-
-    return rows;
   }
 
   /// Reads a set group for an element by Id, returning rows as maps.
-  /// Each row contains column names mapped to their values.
-  /// Useful for multi-column set tables.
+  /// Each row contains column names mapped to their values; a SQL NULL cell
+  /// is `null` (rows stay positionally aligned). DATE_TIME columns are
+  /// parsed to DateTime.
   List<Map<String, Object?>> readSetGroupById(
     String collection,
     String group,
@@ -961,46 +949,89 @@ extension DatabaseRead on Database {
   ) {
     _ensureNotClosed();
 
-    // Get metadata for this group
-    final metadata = getSetMetadata(collection, group);
-    final columns = metadata.valueColumns;
+    final arena = Arena();
+    try {
+      final outColNames = arena<Pointer<Pointer<Char>>>();
+      final outColTypes = arena<Pointer<Int>>();
+      final outColData = arena<Pointer<Pointer<Void>>>();
+      final outColHasValue = arena<Pointer<Pointer<Uint8>>>();
+      final outColCount = arena<Size>();
+      final outRowCount = arena<Size>();
 
-    if (columns.isEmpty) return [];
+      check(
+        bindings.quiver_database_read_set_group_by_id(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          group.toNativeUtf8(allocator: arena).cast(),
+          id,
+          outColNames,
+          outColTypes,
+          outColData,
+          outColHasValue,
+          outColCount,
+          outRowCount,
+        ),
+      );
 
-    // Read each column's data
-    final columnData = <String, List<Object>>{};
-    int rowCount = 0;
+      return _decodeGroupRows(outColNames, outColTypes, outColData, outColHasValue, outColCount, outRowCount);
+    } finally {
+      arena.releaseAll();
+    }
+  }
 
-    for (final col in columns) {
-      final name = col.name;
-      List<Object> values;
+  // Decodes the columnar typed-arrays + per-cell mask result of the group
+  // read C functions into row maps, then frees the C allocations.
+  List<Map<String, Object?>> _decodeGroupRows(
+    Pointer<Pointer<Pointer<Char>>> outColNames,
+    Pointer<Pointer<Int>> outColTypes,
+    Pointer<Pointer<Pointer<Void>>> outColData,
+    Pointer<Pointer<Pointer<Uint8>>> outColHasValue,
+    Pointer<Size> outColCount,
+    Pointer<Size> outRowCount,
+  ) {
+    final colCount = outColCount.value;
+    final rowCount = outRowCount.value;
 
-      switch (col.dataType) {
-        case quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER:
-          values = readSetIntegersById(collection, name, id);
-        case quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT:
-          values = readSetFloatsById(collection, name, id);
-        case quiver_data_type_t.QUIVER_DATA_TYPE_STRING:
-          values = readSetStringsById(collection, name, id);
-        case quiver_data_type_t.QUIVER_DATA_TYPE_DATE_TIME:
-          values = readSetDateTimesById(collection, name, id);
-        default:
-          throw ArgumentError('Unknown data type: ${col.dataType}');
+    if (colCount == 0 || rowCount == 0) return [];
+
+    final rows = List.generate(rowCount, (_) => <String, Object?>{});
+    for (var c = 0; c < colCount; c++) {
+      final colName = outColNames.value[c].cast<Utf8>().toDartString();
+      final colType = outColTypes.value[c];
+      final mask = outColHasValue.value[c];
+
+      if (colType == quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER) {
+        final ptr = outColData.value[c].cast<Int64>();
+        for (var r = 0; r < rowCount; r++) {
+          rows[r][colName] = mask[r] != 0 ? ptr[r] : null;
+        }
+      } else if (colType == quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT) {
+        final ptr = outColData.value[c].cast<Double>();
+        for (var r = 0; r < rowCount; r++) {
+          rows[r][colName] = mask[r] != 0 ? ptr[r] : null;
+        }
+      } else if (colType == quiver_data_type_t.QUIVER_DATA_TYPE_DATE_TIME) {
+        final ptr = outColData.value[c].cast<Pointer<Char>>();
+        for (var r = 0; r < rowCount; r++) {
+          // Never toDartString a masked-out (NULL) pointer.
+          rows[r][colName] = mask[r] != 0 ? stringToDateTime(ptr[r].cast<Utf8>().toDartString()) : null;
+        }
+      } else {
+        final ptr = outColData.value[c].cast<Pointer<Char>>();
+        for (var r = 0; r < rowCount; r++) {
+          rows[r][colName] = mask[r] != 0 ? ptr[r].cast<Utf8>().toDartString() : null;
+        }
       }
-
-      columnData[name] = values;
-      rowCount = values.length;
     }
 
-    // Transpose columns to rows
-    final rows = <Map<String, Object?>>[];
-    for (int i = 0; i < rowCount; i++) {
-      final row = <String, Object?>{};
-      for (final entry in columnData.entries) {
-        row[entry.key] = entry.value[i];
-      }
-      rows.add(row);
-    }
+    bindings.quiver_database_free_time_series_data(
+      outColNames.value,
+      outColTypes.value,
+      outColData.value,
+      outColHasValue.value,
+      colCount,
+      rowCount,
+    );
 
     return rows;
   }

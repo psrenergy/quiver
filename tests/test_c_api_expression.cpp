@@ -52,10 +52,10 @@ protected:
         quiver_element_set_string(el, "initial_datetime", "2025-01-01T00:00:00");
         quiver_element_set_string(el, "unit", unit);
         const char* dims[] = {"row", "col"};
-        quiver_element_set_array_string(el, "dimensions", dims, 2);
+        quiver_element_set_array_string(el, "dimensions", dims, 2, nullptr);
         int64_t sizes[] = {rows, cols};
-        quiver_element_set_array_integer(el, "dimension_sizes", sizes, 2);
-        quiver_element_set_array_string(el, "labels", labels.data(), static_cast<int32_t>(labels.size()));
+        quiver_element_set_array_integer(el, "dimension_sizes", sizes, 2, nullptr);
+        quiver_element_set_array_string(el, "labels", labels.data(), static_cast<int32_t>(labels.size()), nullptr);
 
         quiver_binary_metadata_t* md = nullptr;
         quiver_binary_metadata_from_element(el, &md);
@@ -137,15 +137,16 @@ protected:
         quiver_element_set_string(el, "version", "1");
         quiver_element_set_string(el, "initial_datetime", initial_datetime);
         quiver_element_set_string(el, "unit", unit);
-        quiver_element_set_array_string(el, "dimensions", dim_names.data(), static_cast<int32_t>(dim_names.size()));
+        quiver_element_set_array_string(
+            el, "dimensions", dim_names.data(), static_cast<int32_t>(dim_names.size()), nullptr);
         quiver_element_set_array_integer(
-            el, "dimension_sizes", dim_sizes.data(), static_cast<int32_t>(dim_sizes.size()));
-        quiver_element_set_array_string(el, "labels", labels.data(), static_cast<int32_t>(labels.size()));
+            el, "dimension_sizes", dim_sizes.data(), static_cast<int32_t>(dim_sizes.size()), nullptr);
+        quiver_element_set_array_string(el, "labels", labels.data(), static_cast<int32_t>(labels.size()), nullptr);
         if (!time_dimensions.empty()) {
             quiver_element_set_array_string(
-                el, "time_dimensions", time_dimensions.data(), static_cast<int32_t>(time_dimensions.size()));
+                el, "time_dimensions", time_dimensions.data(), static_cast<int32_t>(time_dimensions.size()), nullptr);
             quiver_element_set_array_string(
-                el, "frequencies", frequencies.data(), static_cast<int32_t>(frequencies.size()));
+                el, "frequencies", frequencies.data(), static_cast<int32_t>(frequencies.size()), nullptr);
         }
 
         quiver_binary_metadata_t* md = nullptr;

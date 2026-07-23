@@ -8,8 +8,12 @@
 
 #include <cstdint>
 #include <cstring>
+#include <map>
 #include <optional>
+#include <stdexcept>
 #include <string>
+#include <utility>
+#include <variant>
 #include <vector>
 
 // Helper template for reading numeric scalars
@@ -203,6 +207,124 @@ inline void free_group_fields(quiver_group_metadata_t& m) {
         }
         delete[] m.value_columns;
     }
+}
+
+// Marshals row-shaped group data (time series / vector / set) into the columnar
+// typed-arrays + per-cell presence-mask out-params shared by the group read C
+// functions. `columns` pairs each column name with its quiver_data_type_t value.
+// Results are freed by quiver_database_free_time_series_data.
+inline void marshal_group_rows_to_c(const char* caller,
+                                    const std::vector<std::pair<std::string, int>>& columns,
+                                    const std::vector<std::map<std::string, quiver::Value>>& rows,
+                                    char*** out_column_names,
+                                    int** out_column_types,
+                                    void*** out_column_data,
+                                    uint8_t*** out_column_has_value,
+                                    size_t* out_column_count,
+                                    size_t* out_row_count) {
+    if (rows.empty()) {
+        *out_column_names = nullptr;
+        *out_column_types = nullptr;
+        *out_column_data = nullptr;
+        *out_column_has_value = nullptr;
+        *out_column_count = 0;
+        *out_row_count = 0;
+        return;
+    }
+
+    size_t col_count = columns.size();
+    size_t row_count = rows.size();
+
+    // Allocate outer arrays, value-initialized to nullptr so the cleanup
+    // path below can safely free a partially-marshaled result
+    *out_column_names = new char*[col_count]();
+    *out_column_types = new int[col_count]();
+    *out_column_data = new void*[col_count]();
+    *out_column_has_value = new uint8_t*[col_count]();
+
+    try {
+        for (size_t c = 0; c < col_count; ++c) {
+            (*out_column_names)[c] = quiver::string::new_c_str(columns[c].first);
+            (*out_column_types)[c] = columns[c].second;
+
+            // Allocate the mask before the type switch so the unknown-type
+            // default branch leaves a freeable slot behind
+            auto* mask = new uint8_t[row_count];
+            (*out_column_has_value)[c] = mask;
+
+            switch (columns[c].second) {
+            case QUIVER_DATA_TYPE_INTEGER: {
+                auto* arr = new int64_t[row_count];
+                (*out_column_data)[c] = arr;
+                for (size_t r = 0; r < row_count; ++r) {
+                    auto& val = rows[r].at(columns[c].first);
+                    if (std::holds_alternative<int64_t>(val)) {
+                        arr[r] = std::get<int64_t>(val);
+                        mask[r] = 1;
+                    } else if (std::holds_alternative<double>(val)) {
+                        arr[r] = static_cast<int64_t>(std::get<double>(val));
+                        mask[r] = 1;
+                    } else {
+                        arr[r] = 0;
+                        mask[r] = 0;
+                    }
+                }
+                break;
+            }
+            case QUIVER_DATA_TYPE_FLOAT: {
+                auto* arr = new double[row_count];
+                (*out_column_data)[c] = arr;
+                for (size_t r = 0; r < row_count; ++r) {
+                    auto& val = rows[r].at(columns[c].first);
+                    if (std::holds_alternative<double>(val)) {
+                        arr[r] = std::get<double>(val);
+                        mask[r] = 1;
+                    } else if (std::holds_alternative<int64_t>(val)) {
+                        arr[r] = static_cast<double>(std::get<int64_t>(val));
+                        mask[r] = 1;
+                    } else {
+                        arr[r] = 0.0;
+                        mask[r] = 0;
+                    }
+                }
+                break;
+            }
+            case QUIVER_DATA_TYPE_STRING:
+            case QUIVER_DATA_TYPE_DATE_TIME: {
+                auto** arr = new char*[row_count]();
+                (*out_column_data)[c] = arr;
+                for (size_t r = 0; r < row_count; ++r) {
+                    auto& val = rows[r].at(columns[c].first);
+                    if (std::holds_alternative<std::string>(val)) {
+                        arr[r] = quiver::string::new_c_str(std::get<std::string>(val));
+                        mask[r] = 1;
+                    } else {
+                        arr[r] = nullptr;
+                        mask[r] = 0;
+                    }
+                }
+                break;
+            }
+            default:
+                throw std::runtime_error(std::string("Cannot ") + caller + ": unknown data type " +
+                                         std::to_string(columns[c].second));
+            }
+        }
+    } catch (...) {
+        // Clean up partially allocated results
+        quiver_database_free_time_series_data(
+            *out_column_names, *out_column_types, *out_column_data, *out_column_has_value, col_count, row_count);
+        *out_column_names = nullptr;
+        *out_column_types = nullptr;
+        *out_column_data = nullptr;
+        *out_column_has_value = nullptr;
+        *out_column_count = 0;
+        *out_row_count = 0;
+        throw;
+    }
+
+    *out_column_count = col_count;
+    *out_row_count = row_count;
 }
 
 #endif  // QUIVER_C_DATABASE_HELPERS_H

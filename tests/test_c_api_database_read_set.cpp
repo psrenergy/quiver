@@ -29,7 +29,7 @@ TEST(DatabaseCApi, ReadSetStrings) {
     ASSERT_EQ(quiver_element_create(&e1), QUIVER_OK);
     quiver_element_set_string(e1, "label", "Item 1");
     const char* tags1[] = {"important", "urgent"};
-    quiver_element_set_array_string(e1, "tag", tags1, 2);
+    quiver_element_set_array_string(e1, "tag", tags1, 2, nullptr);
     int64_t tmp_id2 = 0;
     quiver_database_create_element(db, "Collection", e1, &tmp_id2);
     EXPECT_EQ(quiver_element_destroy(e1), QUIVER_OK);
@@ -38,7 +38,7 @@ TEST(DatabaseCApi, ReadSetStrings) {
     ASSERT_EQ(quiver_element_create(&e2), QUIVER_OK);
     quiver_element_set_string(e2, "label", "Item 2");
     const char* tags2[] = {"review"};
-    quiver_element_set_array_string(e2, "tag", tags2, 1);
+    quiver_element_set_array_string(e2, "tag", tags2, 1, nullptr);
     int64_t tmp_id3 = 0;
     quiver_database_create_element(db, "Collection", e2, &tmp_id3);
     EXPECT_EQ(quiver_element_destroy(e2), QUIVER_OK);
@@ -114,7 +114,7 @@ TEST(DatabaseCApi, ReadSetOnlyReturnsElementsWithData) {
     ASSERT_EQ(quiver_element_create(&e1), QUIVER_OK);
     quiver_element_set_string(e1, "label", "Item 1");
     const char* tags1[] = {"important"};
-    quiver_element_set_array_string(e1, "tag", tags1, 1);
+    quiver_element_set_array_string(e1, "tag", tags1, 1, nullptr);
     int64_t tmp_id2 = 0;
     quiver_database_create_element(db, "Collection", e1, &tmp_id2);
     EXPECT_EQ(quiver_element_destroy(e1), QUIVER_OK);
@@ -132,7 +132,7 @@ TEST(DatabaseCApi, ReadSetOnlyReturnsElementsWithData) {
     ASSERT_EQ(quiver_element_create(&e3), QUIVER_OK);
     quiver_element_set_string(e3, "label", "Item 3");
     const char* tags3[] = {"urgent", "review"};
-    quiver_element_set_array_string(e3, "tag", tags3, 2);
+    quiver_element_set_array_string(e3, "tag", tags3, 2, nullptr);
     int64_t tmp_id4 = 0;
     quiver_database_create_element(db, "Collection", e3, &tmp_id4);
     EXPECT_EQ(quiver_element_destroy(e3), QUIVER_OK);
@@ -174,7 +174,7 @@ TEST(DatabaseCApi, ReadSetStringById) {
     ASSERT_EQ(quiver_element_create(&e1), QUIVER_OK);
     quiver_element_set_string(e1, "label", "Item 1");
     const char* tags1[] = {"important", "urgent"};
-    quiver_element_set_array_string(e1, "tag", tags1, 2);
+    quiver_element_set_array_string(e1, "tag", tags1, 2, nullptr);
     int64_t id1 = 0;
     quiver_database_create_element(db, "Collection", e1, &id1);
     EXPECT_EQ(quiver_element_destroy(e1), QUIVER_OK);
@@ -183,7 +183,7 @@ TEST(DatabaseCApi, ReadSetStringById) {
     ASSERT_EQ(quiver_element_create(&e2), QUIVER_OK);
     quiver_element_set_string(e2, "label", "Item 2");
     const char* tags2[] = {"review"};
-    quiver_element_set_array_string(e2, "tag", tags2, 1);
+    quiver_element_set_array_string(e2, "tag", tags2, 1, nullptr);
     int64_t id2 = 0;
     quiver_database_create_element(db, "Collection", e2, &id2);
     EXPECT_EQ(quiver_element_destroy(e2), QUIVER_OK);
@@ -433,7 +433,7 @@ TEST(DatabaseCApi, ReadSetIntegersHappyPath) {
     quiver_element_t* update = nullptr;
     ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
     int64_t int_values[] = {10, 20, 30};
-    quiver_element_set_array_integer(update, "code", int_values, 3);
+    quiver_element_set_array_integer(update, "code", int_values, 3, nullptr);
     ASSERT_EQ(quiver_database_update_element(db, "AllTypes", id, update), QUIVER_OK);
     EXPECT_EQ(quiver_element_destroy(update), QUIVER_OK);
 
@@ -478,7 +478,7 @@ TEST(DatabaseCApi, ReadSetIntegersByIdHappyPath) {
     quiver_element_t* update = nullptr;
     ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
     int64_t int_values[] = {100, 200};
-    quiver_element_set_array_integer(update, "code", int_values, 2);
+    quiver_element_set_array_integer(update, "code", int_values, 2, nullptr);
     ASSERT_EQ(quiver_database_update_element(db, "AllTypes", id, update), QUIVER_OK);
     EXPECT_EQ(quiver_element_destroy(update), QUIVER_OK);
 
@@ -524,7 +524,7 @@ TEST(DatabaseCApi, ReadSetFloatsHappyPath) {
     quiver_element_t* update = nullptr;
     ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
     double float_values[] = {1.1, 2.2, 3.3};
-    quiver_element_set_array_float(update, "weight", float_values, 3);
+    quiver_element_set_array_float(update, "weight", float_values, 3, nullptr);
     ASSERT_EQ(quiver_database_update_element(db, "AllTypes", id, update), QUIVER_OK);
     EXPECT_EQ(quiver_element_destroy(update), QUIVER_OK);
 
@@ -569,7 +569,7 @@ TEST(DatabaseCApi, ReadSetFloatsByIdHappyPath) {
     quiver_element_t* update = nullptr;
     ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
     double float_values[] = {9.9, 8.8};
-    quiver_element_set_array_float(update, "weight", float_values, 2);
+    quiver_element_set_array_float(update, "weight", float_values, 2, nullptr);
     ASSERT_EQ(quiver_database_update_element(db, "AllTypes", id, update), QUIVER_OK);
     EXPECT_EQ(quiver_element_destroy(update), QUIVER_OK);
 

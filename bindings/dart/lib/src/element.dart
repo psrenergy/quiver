@@ -49,10 +49,10 @@ class Element {
   /// - `double` - 64-bit floating point
   /// - `String` - UTF-8 string
   /// - `DateTime` - converted to ISO 8601 string
-  /// - `List<int>` - array of integers
-  /// - `List<double>` - array of floats
-  /// - `List<String>` - array of strings
-  /// - `List<DateTime>` - array of datetimes (converted to ISO 8601 strings)
+  /// - `List<int?>` - array of integers (a null cell is a SQL NULL)
+  /// - `List<double?>` - array of floats
+  /// - `List<String?>` - array of strings
+  /// - `List<DateTime?>` - array of datetimes (converted to ISO 8601 strings)
   /// - `Map<String, Object?>` - recursively sets each entry as a separate attribute
   void set(String name, Object? value) {
     _ensureNotDisposed();
@@ -80,8 +80,6 @@ class Element {
         for (final entry in v.entries) {
           set(entry.key, entry.value);
         }
-      case List v when v.isEmpty:
-        throw ArgumentError("Empty mixed list not allowed for '$name'");
       case List v:
         _setMixedList(name, v);
       default:
@@ -92,13 +90,22 @@ class Element {
   }
 
   void _setMixedList(String name, List<dynamic> values) {
-    final first = values.first;
-    if (first is int) {
-      setArrayInteger(name, values.cast<int>());
+    // Dispatch on the first non-null element; an empty or all-null list is
+    // tagged integer (the type is irrelevant when every cell is NULL).
+    final first = values.firstWhere((v) => v != null, orElse: () => null);
+    if (first == null) {
+      setArrayInteger(name, List<int?>.filled(values.length, null));
+    } else if (first is int) {
+      setArrayInteger(name, values.cast<int?>());
     } else if (first is double) {
-      setArrayFloat(name, values.cast<double>());
+      setArrayFloat(name, values.cast<double?>());
     } else if (first is String) {
-      setArrayString(name, values.cast<String>());
+      setArrayString(name, values.cast<String?>());
+    } else if (first is DateTime) {
+      setArrayString(
+        name,
+        values.cast<DateTime?>().map((v) => v == null ? null : dateTimeToString(v)).toList(),
+      );
     } else {
       throw ArgumentError(
         "Unsupported array element type ${first.runtimeType} for '$name'",
@@ -163,15 +170,17 @@ class Element {
     }
   }
 
-  /// Sets an array of integers.
-  void setArrayInteger(String name, List<int> values) {
+  /// Sets an array of integers. A null cell is stored as a SQL NULL.
+  void setArrayInteger(String name, List<int?> values) {
     _ensureNotDisposed();
     final namePtr = name.toNativeUtf8();
     final arrayPtr = malloc<Int64>(values.length);
+    final maskPtr = malloc<Uint8>(values.length);
 
     try {
       for (var i = 0; i < values.length; i++) {
-        arrayPtr[i] = values[i];
+        arrayPtr[i] = values[i] ?? 0;
+        maskPtr[i] = values[i] == null ? 0 : 1;
       }
       check(
         bindings.quiver_element_set_array_integer(
@@ -179,23 +188,27 @@ class Element {
           namePtr.cast(),
           arrayPtr,
           values.length,
+          maskPtr,
         ),
       );
     } finally {
       malloc.free(namePtr);
       malloc.free(arrayPtr);
+      malloc.free(maskPtr);
     }
   }
 
-  /// Sets an array of floats.
-  void setArrayFloat(String name, List<double> values) {
+  /// Sets an array of floats. A null cell is stored as a SQL NULL.
+  void setArrayFloat(String name, List<double?> values) {
     _ensureNotDisposed();
     final namePtr = name.toNativeUtf8();
     final arrayPtr = malloc<Double>(values.length);
+    final maskPtr = malloc<Uint8>(values.length);
 
     try {
       for (var i = 0; i < values.length; i++) {
-        arrayPtr[i] = values[i];
+        arrayPtr[i] = values[i] ?? 0.0;
+        maskPtr[i] = values[i] == null ? 0 : 1;
       }
       check(
         bindings.quiver_element_set_array_float(
@@ -203,26 +216,36 @@ class Element {
           namePtr.cast(),
           arrayPtr,
           values.length,
+          maskPtr,
         ),
       );
     } finally {
       malloc.free(namePtr);
       malloc.free(arrayPtr);
+      malloc.free(maskPtr);
     }
   }
 
-  /// Sets an array of strings.
-  void setArrayString(String name, List<String> values) {
+  /// Sets an array of strings. A null cell is stored as a SQL NULL.
+  void setArrayString(String name, List<String?> values) {
     _ensureNotDisposed();
     final namePtr = name.toNativeUtf8();
     final stringPtrs = <Pointer<Utf8>>[];
     final arrayPtr = malloc<Pointer<Char>>(values.length);
+    final maskPtr = malloc<Uint8>(values.length);
 
     try {
       for (var i = 0; i < values.length; i++) {
-        final strPtr = values[i].toNativeUtf8();
-        stringPtrs.add(strPtr);
-        arrayPtr[i] = strPtr.cast();
+        final value = values[i];
+        if (value == null) {
+          arrayPtr[i] = nullptr;
+          maskPtr[i] = 0;
+        } else {
+          final strPtr = value.toNativeUtf8();
+          stringPtrs.add(strPtr);
+          arrayPtr[i] = strPtr.cast();
+          maskPtr[i] = 1;
+        }
       }
       check(
         bindings.quiver_element_set_array_string(
@@ -230,6 +253,7 @@ class Element {
           namePtr.cast(),
           arrayPtr,
           values.length,
+          maskPtr,
         ),
       );
     } finally {
@@ -238,6 +262,7 @@ class Element {
         malloc.free(ptr);
       }
       malloc.free(arrayPtr);
+      malloc.free(maskPtr);
     }
   }
 

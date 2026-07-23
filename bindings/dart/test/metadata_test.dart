@@ -339,6 +339,35 @@ void main() {
       }
     });
 
+    test('returns FK info for group value columns', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
+      );
+      try {
+        final vectorMeta = db.getVectorMetadata('Child', 'refs');
+        final parentRef = vectorMeta.valueColumns.firstWhere(
+          (a) => a.name == 'parent_ref',
+        );
+        expect(parentRef.isForeignKey, isTrue);
+        expect(parentRef.referencesCollection, equals('Parent'));
+        expect(parentRef.referencesColumn, equals('id'));
+
+        final setMeta = db.getSetMetadata('Child', 'scores');
+        expect(setMeta.valueColumns[0].name, equals('score'));
+        expect(setMeta.valueColumns[0].isForeignKey, isFalse);
+
+        final tsMeta = db.getTimeSeriesMetadata('Child', 'events');
+        final sponsor = tsMeta.valueColumns.firstWhere(
+          (a) => a.name == 'sponsor_id',
+        );
+        expect(sponsor.isForeignKey, isTrue);
+        expect(sponsor.referencesCollection, equals('Parent'));
+      } finally {
+        db.close();
+      }
+    });
+
     test('list_scalar_attributes includes FK info', () {
       final db = Database.fromSchema(
         ':memory:',

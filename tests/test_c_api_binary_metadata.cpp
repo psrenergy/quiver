@@ -62,9 +62,9 @@ TEST(BinaryCApiMetadata, SetAndGetInitialDatetime) {
     char* datetime = nullptr;
     EXPECT_EQ(quiver_binary_metadata_get_initial_datetime(md, &datetime), QUIVER_OK);
     ASSERT_NE(datetime, nullptr);
-    // Verify it contains a valid ISO 8601 date (exact value may differ by timezone,
-    // matching C++ from_toml_content/to_toml behavior which uses mktime + std::format)
-    EXPECT_NE(std::string(datetime).find("2025-01-01"), std::string::npos);
+    // Verify it round-trips as an ISO 8601 UTC datetime (chrono-based, timezone-independent —
+    // see src/utils/datetime.h tm_to_time_point / format_utc).
+    EXPECT_NE(std::string(datetime).find("2025-01-01T00:00:00"), std::string::npos);
     quiver_binary_metadata_free_string(datetime);
 
     quiver_binary_metadata_free(md);
@@ -235,11 +235,11 @@ TEST(BinaryCApiMetadata, FromElement) {
     quiver_element_set_string(el, "unit", "MW");
 
     const char* dims[] = {"row", "col"};
-    quiver_element_set_array_string(el, "dimensions", dims, 2);
+    quiver_element_set_array_string(el, "dimensions", dims, 2, nullptr);
     int64_t sizes[] = {3, 2};
-    quiver_element_set_array_integer(el, "dimension_sizes", sizes, 2);
+    quiver_element_set_array_integer(el, "dimension_sizes", sizes, 2, nullptr);
     const char* labels[] = {"val1", "val2"};
-    quiver_element_set_array_string(el, "labels", labels, 2);
+    quiver_element_set_array_string(el, "labels", labels, 2, nullptr);
 
     quiver_binary_metadata_t* md = nullptr;
     ASSERT_EQ(quiver_binary_metadata_from_element(el, &md), QUIVER_OK);

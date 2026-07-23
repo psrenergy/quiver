@@ -51,7 +51,7 @@ TEST(DatabaseCApi, CreateElementWithVector) {
     quiver_element_set_string(element, "label", "Item 1");
 
     int64_t values[] = {1, 2, 3};
-    quiver_element_set_array_integer(element, "value_int", values, 3);
+    quiver_element_set_array_integer(element, "value_int", values, 3, nullptr);
 
     int64_t id = 0;
     EXPECT_EQ(quiver_database_create_element(db, "Collection", element, &id), QUIVER_OK);
@@ -124,10 +124,10 @@ TEST(DatabaseCApi, CreateElementWithTimeSeries) {
     quiver_element_set_string(element, "label", "Item 1");
 
     const char* date_times[] = {"2024-01-01T10:00:00", "2024-01-02T10:00:00", "2024-01-03T10:00:00"};
-    quiver_element_set_array_string(element, "date_time", date_times, 3);
+    quiver_element_set_array_string(element, "date_time", date_times, 3, nullptr);
 
     double values[] = {1.5, 2.5, 3.5};
-    quiver_element_set_array_float(element, "value", values, 3);
+    quiver_element_set_array_float(element, "value", values, 3, nullptr);
 
     int64_t id = 0;
     ASSERT_EQ(quiver_database_create_element(db, "Collection", element, &id), QUIVER_OK);
@@ -190,13 +190,13 @@ TEST(DatabaseCApi, CreateElementWithMultiTimeSeries) {
     quiver_element_set_string(element, "label", "Sensor 1");
 
     const char* date_times[] = {"2024-01-01T10:00:00", "2024-01-02T10:00:00", "2024-01-03T10:00:00"};
-    quiver_element_set_array_string(element, "date_time", date_times, 3);
+    quiver_element_set_array_string(element, "date_time", date_times, 3, nullptr);
 
     double temps[] = {20.0, 21.5, 22.0};
-    quiver_element_set_array_float(element, "temperature", temps, 3);
+    quiver_element_set_array_float(element, "temperature", temps, 3, nullptr);
 
     double hums[] = {45.0, 50.0, 55.0};
-    quiver_element_set_array_float(element, "humidity", hums, 3);
+    quiver_element_set_array_float(element, "humidity", hums, 3, nullptr);
 
     int64_t id = 0;
     ASSERT_EQ(quiver_database_create_element(db, "Sensor", element, &id), QUIVER_OK);
@@ -296,7 +296,7 @@ TEST(DatabaseCApi, CreateElementTrimsWhitespaceFromStrings) {
     ASSERT_EQ(quiver_element_create(&element), QUIVER_OK);
     quiver_element_set_string(element, "label", "  Item 1  ");
     const char* tags[] = {"  important  ", "\turgent\n", " review "};
-    quiver_element_set_array_string(element, "tag", tags, 3);
+    quiver_element_set_array_string(element, "tag", tags, 3, nullptr);
 
     int64_t id = 0;
     ASSERT_EQ(quiver_database_create_element(db, "Collection", element, &id), QUIVER_OK);
@@ -386,7 +386,7 @@ TEST(DatabaseCApi, ResolveFkLabelInSetCreate) {
     ASSERT_EQ(quiver_element_create(&child), QUIVER_OK);
     quiver_element_set_string(child, "label", "Child 1");
     const char* mentor_labels[] = {"Parent 1", "Parent 2"};
-    quiver_element_set_array_string(child, "mentor_id", mentor_labels, 2);
+    quiver_element_set_array_string(child, "mentor_id", mentor_labels, 2, nullptr);
 
     int64_t child_id = 0;
     ASSERT_EQ(quiver_database_create_element(db, "Child", child, &child_id), QUIVER_OK);
@@ -417,7 +417,7 @@ TEST(DatabaseCApi, ResolveFkLabelMissingTarget) {
     ASSERT_EQ(quiver_element_create(&child), QUIVER_OK);
     quiver_element_set_string(child, "label", "Child 1");
     const char* mentor_labels[] = {"Nonexistent Parent"};
-    quiver_element_set_array_string(child, "mentor_id", mentor_labels, 1);
+    quiver_element_set_array_string(child, "mentor_id", mentor_labels, 1, nullptr);
 
     int64_t child_id = 0;
     EXPECT_EQ(quiver_database_create_element(db, "Child", child, &child_id), QUIVER_ERROR);
@@ -436,7 +436,7 @@ TEST(DatabaseCApi, RejectStringForNonFkIntegerColumn) {
     ASSERT_EQ(quiver_element_create(&child), QUIVER_OK);
     quiver_element_set_string(child, "label", "Child 1");
     const char* score_labels[] = {"not_a_label"};
-    quiver_element_set_array_string(child, "score", score_labels, 1);
+    quiver_element_set_array_string(child, "score", score_labels, 1, nullptr);
 
     int64_t child_id = 0;
     EXPECT_EQ(quiver_database_create_element(db, "Child", child, &child_id), QUIVER_ERROR);
@@ -542,7 +542,7 @@ TEST(DatabaseCApi, CreateElementVectorFkLabels) {
     ASSERT_EQ(quiver_element_create(&child), QUIVER_OK);
     quiver_element_set_string(child, "label", "Child 1");
     const char* ref_labels[] = {"Parent 1", "Parent 2"};
-    quiver_element_set_array_string(child, "parent_ref", ref_labels, 2);
+    quiver_element_set_array_string(child, "parent_ref", ref_labels, 2, nullptr);
 
     int64_t child_id = 0;
     ASSERT_EQ(quiver_database_create_element(db, "Child", child, &child_id), QUIVER_OK);
@@ -586,9 +586,9 @@ TEST(DatabaseCApi, CreateElementTimeSeriesFkLabels) {
     ASSERT_EQ(quiver_element_create(&child), QUIVER_OK);
     quiver_element_set_string(child, "label", "Child 1");
     const char* date_times[] = {"2024-01-01", "2024-01-02"};
-    quiver_element_set_array_string(child, "date_time", date_times, 2);
+    quiver_element_set_array_string(child, "date_time", date_times, 2, nullptr);
     const char* sponsor_labels[] = {"Parent 1", "Parent 2"};
-    quiver_element_set_array_string(child, "sponsor_id", sponsor_labels, 2);
+    quiver_element_set_array_string(child, "sponsor_id", sponsor_labels, 2, nullptr);
 
     int64_t child_id = 0;
     ASSERT_EQ(quiver_database_create_element(db, "Child", child, &child_id), QUIVER_OK);
@@ -652,16 +652,16 @@ TEST(DatabaseCApi, CreateElementAllFkTypesInOneCall) {
     quiver_element_set_string(child, "parent_id", "Parent 1");  // scalar FK
 
     const char* mentor_labels[] = {"Parent 2"};
-    quiver_element_set_array_string(child, "mentor_id", mentor_labels, 1);  // set FK
+    quiver_element_set_array_string(child, "mentor_id", mentor_labels, 1, nullptr);  // set FK
 
     const char* ref_labels[] = {"Parent 1"};
-    quiver_element_set_array_string(child, "parent_ref", ref_labels, 1);  // vector+set FK
+    quiver_element_set_array_string(child, "parent_ref", ref_labels, 1, nullptr);  // vector+set FK
 
     const char* date_times[] = {"2024-01-01"};
-    quiver_element_set_array_string(child, "date_time", date_times, 1);  // time series dimension
+    quiver_element_set_array_string(child, "date_time", date_times, 1, nullptr);  // time series dimension
 
     const char* sponsor_labels[] = {"Parent 2"};
-    quiver_element_set_array_string(child, "sponsor_id", sponsor_labels, 1);  // time series FK
+    quiver_element_set_array_string(child, "sponsor_id", sponsor_labels, 1, nullptr);  // time series FK
 
     int64_t child_id = 0;
     ASSERT_EQ(quiver_database_create_element(db, "Child", child, &child_id), QUIVER_OK);

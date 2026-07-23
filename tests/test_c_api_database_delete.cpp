@@ -57,7 +57,7 @@ TEST(DatabaseCApi, DeleteElementByIdWithVectorData) {
     ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
     quiver_element_set_string(e, "label", "Item 1");
     int64_t values[] = {1, 2, 3};
-    quiver_element_set_array_integer(e, "value_int", values, 3);
+    quiver_element_set_array_integer(e, "value_int", values, 3, nullptr);
     int64_t id = 0;
     quiver_database_create_element(db, "Collection", e, &id);
     EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
@@ -112,7 +112,7 @@ TEST(DatabaseCApi, DeleteElementByIdWithSetData) {
     ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
     quiver_element_set_string(e, "label", "Item 1");
     const char* tags[] = {"important", "urgent"};
-    quiver_element_set_array_string(e, "tag", tags, 2);
+    quiver_element_set_array_string(e, "tag", tags, 2, nullptr);
     int64_t id = 0;
     quiver_database_create_element(db, "Collection", e, &id);
     EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);

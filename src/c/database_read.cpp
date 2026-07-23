@@ -393,6 +393,85 @@ QUIVER_C_API quiver_error_t quiver_database_read_set_strings_by_id(quiver_databa
     }
 }
 
+// Read whole vector/set groups by element ID (columnar arrays + presence mask,
+// same shape as read_time_series_group; freed by quiver_database_free_time_series_data)
+
+QUIVER_C_API quiver_error_t quiver_database_read_vector_group_by_id(quiver_database_t* db,
+                                                                    const char* collection,
+                                                                    const char* group,
+                                                                    int64_t id,
+                                                                    char*** out_column_names,
+                                                                    int** out_column_types,
+                                                                    void*** out_column_data,
+                                                                    uint8_t*** out_column_has_value,
+                                                                    size_t* out_column_count,
+                                                                    size_t* out_row_count) {
+    QUIVER_REQUIRE(db, collection, group, out_column_names, out_column_types);
+    QUIVER_REQUIRE(out_column_data, out_column_has_value, out_column_count, out_row_count);
+
+    try {
+        auto metadata = db->db.get_vector_metadata(collection, group);
+        auto rows = db->db.read_vector_group_by_id(collection, group, id);
+
+        std::vector<std::pair<std::string, int>> columns;
+        for (const auto& vc : metadata.value_columns) {
+            columns.push_back({vc.name, to_c_data_type(vc.data_type)});
+        }
+
+        marshal_group_rows_to_c("read_vector_group_by_id",
+                                columns,
+                                rows,
+                                out_column_names,
+                                out_column_types,
+                                out_column_data,
+                                out_column_has_value,
+                                out_column_count,
+                                out_row_count);
+        return QUIVER_OK;
+    } catch (const std::exception& e) {
+        quiver_set_last_error(e.what());
+        return QUIVER_ERROR;
+    }
+}
+
+QUIVER_C_API quiver_error_t quiver_database_read_set_group_by_id(quiver_database_t* db,
+                                                                 const char* collection,
+                                                                 const char* group,
+                                                                 int64_t id,
+                                                                 char*** out_column_names,
+                                                                 int** out_column_types,
+                                                                 void*** out_column_data,
+                                                                 uint8_t*** out_column_has_value,
+                                                                 size_t* out_column_count,
+                                                                 size_t* out_row_count) {
+    QUIVER_REQUIRE(db, collection, group, out_column_names, out_column_types);
+    QUIVER_REQUIRE(out_column_data, out_column_has_value, out_column_count, out_row_count);
+
+    try {
+        auto metadata = db->db.get_set_metadata(collection, group);
+        auto rows = db->db.read_set_group_by_id(collection, group, id);
+
+        std::vector<std::pair<std::string, int>> columns;
+        for (const auto& vc : metadata.value_columns) {
+            columns.push_back({vc.name, to_c_data_type(vc.data_type)});
+        }
+
+        marshal_group_rows_to_c("read_set_group_by_id",
+                                columns,
+                                rows,
+                                out_column_names,
+                                out_column_types,
+                                out_column_data,
+                                out_column_has_value,
+                                out_column_count,
+                                out_row_count);
+        return QUIVER_OK;
+    } catch (const std::exception& e) {
+        quiver_set_last_error(e.what());
+        return QUIVER_ERROR;
+    }
+}
+
 // Read element Ids
 
 QUIVER_C_API quiver_error_t quiver_database_read_element_ids(quiver_database_t* db,

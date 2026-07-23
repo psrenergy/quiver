@@ -79,6 +79,18 @@ TEST(Element, SetArrayString) {
     EXPECT_EQ(std::get<std::string>(arrays.at("tags")[1]), "urgent");
 }
 
+TEST(Element, SetArrayValueWithNulls) {
+    quiver::Element element;
+    element.set("refs", std::vector<quiver::Value>{int64_t{1}, nullptr, int64_t{3}});
+
+    EXPECT_TRUE(element.has_arrays());
+    const auto& arrays = element.arrays();
+    EXPECT_EQ(arrays.at("refs").size(), 3);
+    EXPECT_EQ(std::get<int64_t>(arrays.at("refs")[0]), 1);
+    EXPECT_TRUE(std::holds_alternative<std::nullptr_t>(arrays.at("refs")[1]));
+    EXPECT_EQ(std::get<int64_t>(arrays.at("refs")[2]), 3);
+}
+
 TEST(Element, FluentChaining) {
     quiver::Element element;
 

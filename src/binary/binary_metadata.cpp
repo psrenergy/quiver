@@ -310,7 +310,7 @@ BinaryMetadata BinaryMetadata::from_toml_content(const std::string& content) {
     if (!quiver::datetime::parse_iso8601(initial_datetime_str, tm)) {
         throw std::runtime_error("Failed to parse initial_datetime: " + initial_datetime_str);
     }
-    metadata.initial_datetime = std::chrono::system_clock::from_time_t(quiver::datetime::mkgmtime_portable(&tm));
+    metadata.initial_datetime = quiver::datetime::tm_to_time_point(tm);
 
     // Add dimensions to metadata
     int64_t time_dim_index = 0;

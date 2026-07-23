@@ -117,8 +117,7 @@ QUIVER_C_API quiver_error_t quiver_binary_metadata_set_initial_datetime(quiver_b
         if (!quiver::datetime::parse_iso8601(iso8601, tm)) {
             throw std::runtime_error(std::string("Failed to parse initial_datetime: ") + iso8601);
         }
-        md->metadata.initial_datetime =
-            std::chrono::system_clock::from_time_t(quiver::datetime::mkgmtime_portable(&tm));
+        md->metadata.initial_datetime = quiver::datetime::tm_to_time_point(tm);
         return QUIVER_OK;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());

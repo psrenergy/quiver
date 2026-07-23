@@ -194,6 +194,32 @@ QUIVER_C_API quiver_error_t quiver_database_read_set_strings_by_id(quiver_databa
                                                                    char*** out_values,
                                                                    size_t* out_count);
 
+// Read a whole vector/set group by element ID as columnar typed arrays with a per-cell
+// presence mask (same shape as quiver_database_read_time_series_group; rows are
+// positionally aligned and mask[c][r] == 0 means SQL NULL). Freed by
+// quiver_database_free_time_series_data.
+QUIVER_C_API quiver_error_t quiver_database_read_vector_group_by_id(quiver_database_t* db,
+                                                                    const char* collection,
+                                                                    const char* group,
+                                                                    int64_t id,
+                                                                    char*** out_column_names,
+                                                                    int** out_column_types,
+                                                                    void*** out_column_data,
+                                                                    uint8_t*** out_column_has_value,
+                                                                    size_t* out_column_count,
+                                                                    size_t* out_row_count);
+
+QUIVER_C_API quiver_error_t quiver_database_read_set_group_by_id(quiver_database_t* db,
+                                                                 const char* collection,
+                                                                 const char* group,
+                                                                 int64_t id,
+                                                                 char*** out_column_names,
+                                                                 int** out_column_types,
+                                                                 void*** out_column_data,
+                                                                 uint8_t*** out_column_has_value,
+                                                                 size_t* out_column_count,
+                                                                 size_t* out_row_count);
+
 // Read element Ids
 QUIVER_C_API quiver_error_t quiver_database_read_element_ids(quiver_database_t* db,
                                                              const char* collection,

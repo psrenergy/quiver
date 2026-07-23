@@ -62,6 +62,25 @@ TEST(DatabaseCApiMetadata, GetTimeSeriesMetadata) {
     quiver_database_close(db);
 }
 
+TEST(DatabaseCApiMetadata, GetVectorMetadataForeignKey) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("relations.sql").c_str(), &options, &db), QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    quiver_group_metadata_t metadata = {};
+    auto err = quiver_database_get_vector_metadata(db, "Child", "refs", &metadata);
+    EXPECT_EQ(err, QUIVER_OK);
+    ASSERT_EQ(metadata.value_column_count, 1);
+    EXPECT_STREQ(metadata.value_columns[0].name, "parent_ref");
+    EXPECT_EQ(metadata.value_columns[0].is_foreign_key, 1);
+    EXPECT_STREQ(metadata.value_columns[0].references_collection, "Parent");
+    EXPECT_STREQ(metadata.value_columns[0].references_column, "id");
+
+    quiver_database_free_group_metadata(&metadata);
+    quiver_database_close(db);
+}
+
 // ============================================================================
 // List groups/attributes tests
 // ============================================================================
