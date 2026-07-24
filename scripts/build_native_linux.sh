@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Build the portable Linux native libs (libquiver.so[.0], libquiver_c.so) with a glibc 2.17 floor,
-# inside the manylinux2014 image (CentOS 7 = glibc 2.17, GCC 10 -> GLIBCXX_3.4.28, dynamic libstdc++).
+# inside the manylinux2014 image (CentOS 7 = glibc 2.17, GCC 11 -> GLIBCXX_3.4.29, dynamic libstdc++).
 #
 # Runs IDENTICALLY locally and in CI -- it only needs Docker:
 #   - Locally (Windows Git Bash / macOS / Linux, with Docker running):  bash scripts/build_native_linux.sh
@@ -12,8 +12,8 @@
 set -euo pipefail
 
 # Pinned by digest so the toolchain / cmake / glibc floor can't drift. manylinux2014_x86_64 is always
-# the CentOS 7 (glibc 2.17) image and ships GCC 10 (-> GLIBCXX_3.4.28); CentOS 7's SCL caps at GCC 11,
-# so GLIBCXX can never exceed the 3.4.30 ceiling Julia's bundled libstdc++ provides.
+# the CentOS 7 (glibc 2.17) image; we build with GCC 11 (-> GLIBCXX_3.4.29), the newest toolset CentOS
+# 7's SCL offers, so GLIBCXX stays <= the 3.4.30 ceiling Julia's bundled libstdc++ provides.
 IMAGE="quay.io/pypa/manylinux2014_x86_64@sha256:0d25b049964b2549b83384036abdff06789a8c0b1e9ff003ec80f0d531f79e50"
 
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -27,7 +27,11 @@ MSYS_NO_PATHCONV=1 docker run --rm -i --platform linux/amd64 \
   --mount "type=bind,source=${host},target=/io" -w /io \
   "$IMAGE" bash -s <<'INNER'
 set -exo pipefail
-if [ -f /opt/rh/devtoolset-10/enable ]; then source /opt/rh/devtoolset-10/enable; fi
+# GCC 11 (not 10): the core uses the C++20 <chrono> calendar (year_month_day / hh_mm_ss / sys_days),
+# which GCC 10 lacks. Install-if-missing since the image's default toolset is GCC 10; devtoolset-11 is
+# the newest CentOS 7 SCL offers (-> GLIBCXX_3.4.29, still <= the 3.4.30 ceiling).
+if [ ! -f /opt/rh/devtoolset-11/enable ]; then yum install -y devtoolset-11-gcc-c++; fi
+source /opt/rh/devtoolset-11/enable
 gcc --version
 cmake --version
 
