@@ -6,7 +6,7 @@ repository = dirname(@__DIR__)
 project_path = joinpath(repository, "bindings", "julia", "Project.toml")
 project = TOML.parse(read(project_path, String))
 @show name = project["name"]
-@show version = project["version"]
+@show version = VersionNumber(project["version"])
 
 sources = [DirectorySource(repository)]
 
