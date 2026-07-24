@@ -26,16 +26,17 @@ Composite actions in `.github/actions/`:
 libs are NOT built via `build-cpp` on a bare `ubuntu-latest` runner — that binds `GLIBC_2.28`..`2.34`
 symbols (libm math, `stat`, the pthread/dlopen libc merge) and fails on old systems like Amazon
 Linux 1 = glibc 2.17 (Julia's own floor). Instead they are built inside the **manylinux2014** image
-(CentOS 7 → **glibc 2.17**, **GCC 10** → `GLIBCXX_3.4.28`) — the same image family the Python wheels
+(CentOS 7 → **glibc 2.17**, **GCC 11** → `GLIBCXX_3.4.29`) — the same image family the Python wheels
 build in — by **`scripts/build_native_linux.sh`**, a single script the CI job and a developer run
 identically (`bash scripts/build_native_linux.sh`; it only needs Docker, so it also works on a Windows
 dev box via Docker Desktop). It uses **`docker run`, not a job-level `container:`**: the runner's
 Node20 actions (`checkout`, `upload-artifact`) and the `docker` CLI run on the host, and Node20 can't
 start inside a glibc-2.17 image (`actions/checkout#1590`). The image is **pinned by digest** so the
-toolchain/cmake/glibc floor can't drift; CentOS 7's SCL caps at GCC 11, so GLIBCXX can never exceed the
-**3.4.30** ceiling Julia's bundled libstdc++ provides (this is a plain S3 artifact — no
-`CompilerSupportLibraries_jll` at load time, so libstdc++ is whatever Julia bundles; GCC 13 → `3.4.32`
-would fail to load). The script builds into `build/manylinux/`, runs `patchelf --set-rpath '$ORIGIN'`
+toolchain/cmake/glibc floor can't drift. **GCC 11 (devtoolset-11) is required**: the core uses C++20
+`<chrono>` calendar types (`year_month_day`/`hh_mm_ss`/`sys_days`) that GCC 10 lacks — and CentOS 7's
+SCL caps at GCC 11, which keeps GLIBCXX ≤ the **3.4.30** ceiling Julia's bundled libstdc++ provides
+(this is a plain S3 artifact — no `CompilerSupportLibraries_jll` at load time, so libstdc++ is whatever
+Julia bundles; GCC 13 → `3.4.32` would fail to load). The script builds into `build/manylinux/`, runs `patchelf --set-rpath '$ORIGIN'`
 on `libquiver_c.so` so it finds `libquiver.so.0` as a sibling in the flat ship layout, dereferences the
 version symlinks into real files (matching the old `cp -L`), and runs the portability gate
 in-container (fails unless glibc ≤ 2.17, GLIBCXX ≤ 3.4.30, both libs dynamically linked to
