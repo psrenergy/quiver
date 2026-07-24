@@ -19,6 +19,41 @@ Composite actions in `.github/actions/`:
   includes a **toolchain fingerprint** (default CMake generator): FetchContent subbuilds pin the
   generator in their CMakeCache, so restoring a `_deps` cache built under a different default
   generator (e.g. windows-latest moving VS 17 → 18) fails configure.
+  **Used by macOS/Windows only in `publish-s3.yml`** (`if: runner.os != 'Linux'`); `ci.yml` still
+  uses it for all three OSes.
+
+**glibc floor for the published Linux native libs (`publish-s3.yml`):** the `linux-x86_64` native
+libs are NOT built via `build-cpp` on a bare `ubuntu-latest` runner — that binds `GLIBC_2.28`..`2.34`
+symbols (libm math, `stat`, the pthread/dlopen libc merge) and fails on old systems like Amazon
+Linux 1 = glibc 2.17 (Julia's own floor). Instead they are built inside the **manylinux2014** image
+(CentOS 7 → **glibc 2.17**, **GCC 10** → `GLIBCXX_3.4.28`) — the same image family the Python wheels
+build in — by **`scripts/build_native_linux.sh`**, a single script the CI job and a developer run
+identically (`bash scripts/build_native_linux.sh`; it only needs Docker, so it also works on a Windows
+dev box via Docker Desktop). It uses **`docker run`, not a job-level `container:`**: the runner's
+Node20 actions (`checkout`, `upload-artifact`) and the `docker` CLI run on the host, and Node20 can't
+start inside a glibc-2.17 image (`actions/checkout#1590`). The image is **pinned by digest** so the
+toolchain/cmake/glibc floor can't drift; CentOS 7's SCL caps at GCC 11, so GLIBCXX can never exceed the
+**3.4.30** ceiling Julia's bundled libstdc++ provides (this is a plain S3 artifact — no
+`CompilerSupportLibraries_jll` at load time, so libstdc++ is whatever Julia bundles; GCC 13 → `3.4.32`
+would fail to load). The script builds into `build/manylinux/`, runs `patchelf --set-rpath '$ORIGIN'`
+on `libquiver_c.so` so it finds `libquiver.so.0` as a sibling in the flat ship layout, dereferences the
+version symlinks into real files (matching the old `cp -L`), and runs the portability gate
+in-container (fails unless glibc ≤ 2.17, GLIBCXX ≤ 3.4.30, both libs dynamically linked to
+`libstdc++.so.6`, and `libquiver_c.so` carries an `$ORIGIN` rpath). libstdc++ stays **dynamic** — never
+static-link (the C API catches C++-core exceptions by type across the `libquiver.so` →
+`libquiver_c.so` boundary, and two static copies under `-fvisibility=hidden` would break that; this
+also rules out zig/libc++ static toolchains). The three files land in `build/manylinux/lib/` exactly as
+the downstream `upload-s3` job + `scripts/ci/native_s3.sh` expect. Feeds both the Julia and JS/npm
+native libs (shared S3 staging). macOS/Windows still use `build-cpp` (gated `if: runner.os !=
+'Linux'`) — only Linux needs the old-glibc image.
+
+> **Why not the alternatives** (settled 2026-07-24): BinaryBuilder.jl also reaches 2.17 without Docker,
+> but pulls the whole Julia + compiler-shard stack and can't run on a Windows dev box (local
+> reproducibility was a requirement). A symbol-versioning `-include` CMake flag *cannot* reach 2.17 on
+> current runners: `stat`@2.33 and `__libc_single_threaded`@2.32 have no older symbol version to
+> redirect to, and the glibc-2.31 (ubuntu-20.04) hosted runners that used to dodge them are retired. A
+> self-built crosstool-NG toolchain just reimplements the cross-toolchain with more maintenance.
+> manylinux is the simplest robust option that also reproduces locally.
 
 
 The publish workflows read the version by inlining `python3 scripts/assert_version.py` directly.

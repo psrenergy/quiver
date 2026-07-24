@@ -44,12 +44,12 @@ jobs:
       fail-fast: true
       matrix:
         include:
-          - os: ubuntu-22.04
+          - os: ubuntu-latest
             platform_key: linux-x86_64
             lib_paths: |
-              build/lib/libquiver.so
-              build/lib/libquiver.so.0
-              build/lib/libquiver_c.so
+              build/manylinux/lib/libquiver.so
+              build/manylinux/lib/libquiver.so.0
+              build/manylinux/lib/libquiver_c.so
           - os: macos-latest
             platform_key: macos-aarch64
             lib_paths: |
@@ -66,16 +66,22 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.sha }}
 
+      # macOS + Windows keep the host composite (host toolchain + FetchContent/sccache caching)
       - uses: ./.github/actions/build-cpp
+        if: runner.os != 'Linux'
         with:
           build_type: Release
           build_tests: "OFF"
 
-      - name: Set RPATH for Linux
+      # Linux: build the glibc-2.17 native libs inside manylinux2014 (CentOS 7) via Docker. This is the
+      # SAME script a developer runs locally (`bash scripts/build_native_linux.sh`) — it only needs
+      # Docker, which the stock ubuntu-latest runner already provides. It builds + patchelfs the
+      # $ORIGIN rpath + runs the portability gate (glibc<=2.17, GLIBCXX<=3.4.30, dynamic libstdc++)
+      # in-container. Why manylinux/Docker and not BinaryBuilder / a job-level container: / a CMake
+      # flag: see .github/CLAUDE.md "glibc floor".
+      - name: Build + verify Linux libs (manylinux2014, glibc 2.17)
         if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update && sudo apt-get install -y patchelf
-          patchelf --set-rpath '$ORIGIN' build/lib/libquiver_c.so
+        run: bash scripts/build_native_linux.sh
 
       - name: Set RPATH for macOS
         if: runner.os == 'macOS'
