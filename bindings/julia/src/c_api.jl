@@ -164,6 +164,18 @@ function quiver_database_in_transaction(db, out_active)
     @ccall libquiver_c.quiver_database_in_transaction(db::Ptr{quiver_database_t}, out_active::Ptr{Cint})::quiver_error_t
 end
 
+function quiver_database_begin_dry_run(db)
+    @ccall libquiver_c.quiver_database_begin_dry_run(db::Ptr{quiver_database_t})::quiver_error_t
+end
+
+function quiver_database_end_dry_run(db)
+    @ccall libquiver_c.quiver_database_end_dry_run(db::Ptr{quiver_database_t})::quiver_error_t
+end
+
+function quiver_database_in_dry_run(db, out_active)
+    @ccall libquiver_c.quiver_database_in_dry_run(db::Ptr{quiver_database_t}, out_active::Ptr{Cint})::quiver_error_t
+end
+
 function quiver_database_current_version(db, out_version)
     @ccall libquiver_c.quiver_database_current_version(db::Ptr{quiver_database_t}, out_version::Ptr{Int64})::quiver_error_t
 end
@@ -254,6 +266,14 @@ end
 
 function quiver_database_read_set_strings_by_id(db, collection, attribute, id, out_values, out_count)
     @ccall libquiver_c.quiver_database_read_set_strings_by_id(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_values::Ptr{Ptr{Ptr{Cchar}}}, out_count::Ptr{Csize_t})::quiver_error_t
+end
+
+function quiver_database_read_vector_group_by_id(db, collection, group, id, out_column_names, out_column_types, out_column_data, out_column_has_value, out_column_count, out_row_count)
+    @ccall libquiver_c.quiver_database_read_vector_group_by_id(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, id::Int64, out_column_names::Ptr{Ptr{Ptr{Cchar}}}, out_column_types::Ptr{Ptr{Cint}}, out_column_data::Ptr{Ptr{Ptr{Cvoid}}}, out_column_has_value::Ptr{Ptr{Ptr{UInt8}}}, out_column_count::Ptr{Csize_t}, out_row_count::Ptr{Csize_t})::quiver_error_t
+end
+
+function quiver_database_read_set_group_by_id(db, collection, group, id, out_column_names, out_column_types, out_column_data, out_column_has_value, out_column_count, out_row_count)
+    @ccall libquiver_c.quiver_database_read_set_group_by_id(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, id::Int64, out_column_names::Ptr{Ptr{Ptr{Cchar}}}, out_column_types::Ptr{Ptr{Cint}}, out_column_data::Ptr{Ptr{Ptr{Cvoid}}}, out_column_has_value::Ptr{Ptr{Ptr{UInt8}}}, out_column_count::Ptr{Csize_t}, out_row_count::Ptr{Csize_t})::quiver_error_t
 end
 
 function quiver_database_read_element_ids(db, collection, out_ids, out_count)
@@ -514,8 +534,12 @@ function quiver_lua_runner_free(runner)
     @ccall libquiver_c.quiver_lua_runner_free(runner::Ptr{quiver_lua_runner_t})::quiver_error_t
 end
 
-function quiver_lua_runner_run(runner, script)
-    @ccall libquiver_c.quiver_lua_runner_run(runner::Ptr{quiver_lua_runner_t}, script::Ptr{Cchar})::quiver_error_t
+function quiver_lua_runner_run(runner, script, out_result)
+    @ccall libquiver_c.quiver_lua_runner_run(runner::Ptr{quiver_lua_runner_t}, script::Ptr{Cchar}, out_result::Ptr{Ptr{Cchar}})::quiver_error_t
+end
+
+function quiver_lua_runner_free_string(str)
+    @ccall libquiver_c.quiver_lua_runner_free_string(str::Ptr{Cchar})::quiver_error_t
 end
 
 @cenum quiver_time_frequency_t::UInt32 begin

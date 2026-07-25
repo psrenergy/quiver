@@ -92,3 +92,65 @@ describe("LuaRunner", () => {
     }
   });
 });
+
+describe("LuaRunner return values", () => {
+  test("returns the script's value as JSON", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    const runner = new LuaRunner(db);
+    try {
+      expect(runner.run("return { a = 1, b = { 2, 3 } }")).toBe('{"a":1,"b":[2,3]}');
+      expect(JSON.parse(runner.run("return db:read_element_ids('AllTypes')"))).toEqual([]);
+    } finally {
+      runner.close();
+      db.close();
+    }
+  });
+
+  test("returns an empty string when the script returns nothing", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    const runner = new LuaRunner(db);
+    try {
+      expect(runner.run("local x = 1")).toBe("");
+    } finally {
+      runner.close();
+      db.close();
+    }
+  });
+});
+
+describe("Database dry run", () => {
+  test("rolls back a script's writes", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    const runner = new LuaRunner(db);
+    try {
+      expect(db.inDryRun()).toBe(false);
+      db.beginDryRun();
+      expect(db.inDryRun()).toBe(true);
+
+      // db:transaction composes: the dry run absorbs the nested BEGIN/COMMIT.
+      const result = runner.run(`
+        db:transaction(function(db)
+          db:create_element("AllTypes", { label = "Preview" })
+        end)
+        return db:read_scalar_strings("AllTypes", "label")
+      `);
+      expect(JSON.parse(result)).toEqual(["Preview"]);
+
+      db.endDryRun();
+      expect(db.inDryRun()).toBe(false);
+      expect(db.readScalarStrings("AllTypes", "label")).toEqual([]);
+    } finally {
+      runner.close();
+      db.close();
+    }
+  });
+
+  test("endDryRun without a dry run throws", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      expect(() => db.endDryRun()).toThrow(QuiverError);
+    } finally {
+      db.close();
+    }
+  });
+});

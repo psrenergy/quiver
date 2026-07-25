@@ -46,4 +46,35 @@ QUIVER_C_API quiver_error_t quiver_database_in_transaction(quiver_database_t* db
     return QUIVER_OK;
 }
 
+QUIVER_C_API quiver_error_t quiver_database_begin_dry_run(quiver_database_t* db) {
+    QUIVER_REQUIRE(db);
+
+    try {
+        db->db.begin_dry_run();
+        return QUIVER_OK;
+    } catch (const std::exception& e) {
+        quiver_set_last_error(e.what());
+        return QUIVER_ERROR;
+    }
+}
+
+QUIVER_C_API quiver_error_t quiver_database_end_dry_run(quiver_database_t* db) {
+    QUIVER_REQUIRE(db);
+
+    try {
+        db->db.end_dry_run();
+        return QUIVER_OK;
+    } catch (const std::exception& e) {
+        quiver_set_last_error(e.what());
+        return QUIVER_ERROR;
+    }
+}
+
+QUIVER_C_API quiver_error_t quiver_database_in_dry_run(quiver_database_t* db, int* out_active) {
+    QUIVER_REQUIRE(db, out_active);
+
+    *out_active = db->db.in_dry_run() ? 1 : 0;
+    return QUIVER_OK;
+}
+
 }  // extern "C"

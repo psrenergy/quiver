@@ -28,6 +28,10 @@ struct Database::Impl {
     std::shared_ptr<spdlog::logger> logger;
     std::unique_ptr<Schema> schema;
     std::unique_ptr<TypeValidator> type_validator;
+    // A dry run holds one real transaction open and absorbs the public begin/commit/rollback so
+    // nested callers compose. TransactionGuard needs no flag - it already no-ops when a
+    // transaction is active.
+    bool dry_run = false;
 
     void require_schema(const char* operation) const {
         if (!schema) {

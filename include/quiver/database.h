@@ -177,6 +177,15 @@ public:
     void rollback();
     bool in_transaction() const;
 
+    // Dry runs - everything between begin_dry_run() and end_dry_run() happens inside a single
+    // transaction that is always rolled back. While one is active, begin_transaction/commit/
+    // rollback are absorbed (no-ops) so callers that manage their own transactions compose
+    // instead of erroring on a nested BEGIN. A nested rollback is therefore not partial: the
+    // dry run undoes everything at the end regardless. in_transaction() still reports true.
+    void begin_dry_run();
+    void end_dry_run();
+    bool in_dry_run() const;
+
 private:
     struct Impl;
     std::unique_ptr<Impl> impl_;

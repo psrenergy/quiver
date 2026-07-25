@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:quiverdb/quiverdb.dart';
 import 'package:test/test.dart';
 import 'package:path/path.dart' as path;
@@ -320,6 +322,76 @@ void main() {
         } finally {
           lua.dispose();
         }
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  group('LuaRunner return values', () {
+    test('returns the script value as JSON', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        final lua = LuaRunner(db);
+        try {
+          expect(lua.run('return { a = 1, b = { 2, 3 } }'), equals('{"a":1,"b":[2,3]}'));
+          expect(jsonDecode(lua.run('return db:read_element_ids("Collection")')), equals([]));
+          // Returning nothing is an empty string, distinct from returning nil.
+          expect(lua.run('local x = 1'), equals(''));
+          expect(lua.run('return nil'), equals('null'));
+        } finally {
+          lua.dispose();
+        }
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  group('Database dry run', () {
+    test('rolls back a script', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        final lua = LuaRunner(db);
+        try {
+          lua.run('db:create_element("Configuration", { label = "Config" })');
+
+          expect(db.inDryRun(), isFalse);
+          final preview = db.dryRun((db) {
+            expect(db.inDryRun(), isTrue);
+            // db:transaction composes: the dry run absorbs the nested BEGIN/COMMIT.
+            return lua.run('''
+              db:transaction(function(db)
+                db:create_element("Collection", { label = "Preview" })
+              end)
+              return db:read_scalar_strings("Collection", "label")
+            ''');
+          });
+
+          expect(jsonDecode(preview), equals(['Preview']));
+          expect(db.inDryRun(), isFalse);
+          expect(db.readScalarStrings('Collection', 'label'), isEmpty);
+        } finally {
+          lua.dispose();
+        }
+      } finally {
+        db.close();
+      }
+    });
+
+    test('endDryRun without a dry run throws', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        expect(() => db.endDryRun(), throwsA(isA<DatabaseException>()));
       } finally {
         db.close();
       }

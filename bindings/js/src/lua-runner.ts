@@ -1,6 +1,6 @@
 import type { Database } from "./database.ts";
 import { check, QuiverError } from "./errors.ts";
-import { allocPtrOut, readPtrOut, toCString } from "./ffi-helpers.ts";
+import { allocPtrOut, decodeStringFromBuf, readPtrOut, toCString } from "./ffi-helpers.ts";
 import type { NativePointer } from "./loader.ts";
 import { getSymbols } from "./loader.ts";
 
@@ -15,11 +15,21 @@ export class LuaRunner {
     this._ptr = readPtrOut(outRunner);
   }
 
-  run(script: string): void {
+  /**
+   * Runs a Lua script and returns its return value encoded as JSON, or "" if it returned nothing.
+   *
+   * To execute a script without keeping its writes, wrap the call in
+   * `db.beginDryRun()` / `db.endDryRun()`.
+   */
+  run(script: string): string {
     this.ensureOpen();
     const lib = getSymbols();
     const scriptBuf = toCString(script);
-    check(lib.quiver_lua_runner_run(this._ptr, scriptBuf.buf));
+    const outResult = allocPtrOut();
+    check(lib.quiver_lua_runner_run(this._ptr, scriptBuf.buf, outResult.buf));
+    const result = decodeStringFromBuf(outResult);
+    lib.quiver_lua_runner_free_string(readPtrOut(outResult));
+    return result;
   }
 
   close(): void {

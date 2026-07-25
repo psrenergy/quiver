@@ -255,6 +255,9 @@ ffi.cdef("""
     quiver_error_t quiver_database_commit(quiver_database_t* db);
     quiver_error_t quiver_database_rollback(quiver_database_t* db);
     quiver_error_t quiver_database_in_transaction(quiver_database_t* db, int* out_active);
+    quiver_error_t quiver_database_begin_dry_run(quiver_database_t* db);
+    quiver_error_t quiver_database_end_dry_run(quiver_database_t* db);
+    quiver_error_t quiver_database_in_dry_run(quiver_database_t* db, int* out_active);
 
     // Query methods - simple
     quiver_error_t quiver_database_query_string(quiver_database_t* db,
@@ -343,7 +346,8 @@ ffi.cdef("""
 
     quiver_error_t quiver_lua_runner_new(quiver_database_t* db, quiver_lua_runner_t** out_runner);
     quiver_error_t quiver_lua_runner_free(quiver_lua_runner_t* runner);
-    quiver_error_t quiver_lua_runner_run(quiver_lua_runner_t* runner, const char* script);
+    quiver_error_t quiver_lua_runner_run(quiver_lua_runner_t* runner, const char* script, char** out_result);
+    quiver_error_t quiver_lua_runner_free_string(char* str);
 """)
 
 _lib = None

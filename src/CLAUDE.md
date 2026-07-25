@@ -113,6 +113,16 @@ Internally, `Impl::TransactionGuard` is nest-aware RAII: if an explicit transact
 }
 ```
 
+**Dry runs** (`begin_dry_run` / `end_dry_run` / `in_dry_run`, `Impl::dry_run` flag) sit on top of
+the same machinery: `begin_dry_run` opens a real transaction and sets the flag; `end_dry_run`
+clears the flag and calls `impl_->rollback()` **directly** — the public `rollback()` is a no-op
+while the flag is set, so going through it would silently do nothing. The public
+`begin_transaction`/`commit`/`rollback` each start with a one-line `if (impl_->dry_run) return;`.
+`TransactionGuard` needs no flag awareness: it checks `sqlite3_get_autocommit` and already no-ops
+because the dry run holds a real transaction. `end_dry_run` guards its rollback on
+`sqlite3_get_autocommit` because a caller can end the transaction out from under it with a bare
+`COMMIT` through `query_*`. Rationale and the documented consequences: root design decisions.
+
 The one write path that cannot nest is `import_csv` (it toggles `PRAGMA foreign_keys`, which is a
 no-op inside a transaction) — it throws `"Cannot import_csv: transaction already active"` as a
 precondition instead of silently destroying the caller's transaction.
@@ -248,7 +258,18 @@ Implementation conventions in `lua_runner.cpp`:
   `sol::table::size()` (`lua_rawlen` returns an arbitrary border on a table with holes). The read
   path emits NULL cells as `nil` holes (an all-NULL column is an empty table with the key present),
   so read → modify → write round-trips; `#ts.<dimension>` is the trustworthy row count.
-- Script errors surface as `"Failed to run Lua script: ..."` (root Pattern 3).
+- **`run` returns the script's return value as JSON**, built by the anonymous-namespace
+  `append_json` / `append_json_string` / `append_json_double` / `append_json_table` at the top of
+  the file (`kMaxReturnDepth = 32` is both the nesting cap and the cycle guard). Two type checks
+  there use `get_type()` rather than `is<T>()` on purpose: sol2's `is<sol::table>()` also accepts
+  **userdata** (so `return db` would quietly encode as `{}`), and `is<bool>()` is likewise looser
+  than `lua_isboolean`. Everything else reuses the house `is<int64_t>()`-then-`is<double>()`
+  ordering. Object keys are collected into a `std::map` so output is deterministic — Lua's `pairs`
+  order is not, and the tests compare exact strings. Doubles go through `std::to_chars`
+  (shortest round-trip); non-finite becomes `null` since JSON has no NaN/Infinity literal.
+- Script errors surface as `"Failed to run Lua script: ..."` (root Pattern 3). Encoder failures
+  (unsupported type, unsupported table key, too deep) are Pattern 1 `"Cannot run: ..."` and are
+  **not** wrapped in that prefix — they happen after the script already succeeded.
 
 ## Binary Subsystem
 

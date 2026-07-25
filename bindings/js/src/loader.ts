@@ -97,6 +97,9 @@ const transactionSymbols = {
   quiver_database_commit: { args: [P], returns: I32 },
   quiver_database_rollback: { args: [P], returns: I32 },
   quiver_database_in_transaction: { args: [P, P], returns: I32 },
+  quiver_database_begin_dry_run: { args: [P], returns: I32 },
+  quiver_database_end_dry_run: { args: [P], returns: I32 },
+  quiver_database_in_dry_run: { args: [P, P], returns: I32 },
 } as const;
 
 const metadataSymbols = {
@@ -160,7 +163,8 @@ const freeSymbols = {
 const luaSymbols = {
   quiver_lua_runner_new: { args: [P, P], returns: I32 },
   quiver_lua_runner_free: { args: [P], returns: I32 },
-  quiver_lua_runner_run: { args: [P, BUF], returns: I32 },
+  quiver_lua_runner_run: { args: [P, BUF, BUF], returns: I32 },
+  quiver_lua_runner_free_string: { args: [P], returns: I32 },
 } as const;
 
 // Combined symbol map for dlopen.

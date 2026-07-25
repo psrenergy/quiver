@@ -12,18 +12,164 @@
 #include "utils/datetime.h"
 
 #include <algorithm>
+#include <array>
+#include <charconv>
 #include <chrono>
+#include <cmath>
+#include <cstdint>
 #include <filesystem>
 #include <map>
 #include <memory>
 #include <optional>
 #include <sol/sol.hpp>
+#include <sstream>
 #include <stdexcept>
+#include <string>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
 namespace quiver {
+
+namespace {
+
+// Depth cap for the return-value encoder. Doubles as the cycle guard: a self-referencing table
+// would otherwise recurse until the stack dies, and the script is untrusted input to a host.
+constexpr int kMaxReturnDepth = 32;
+
+void append_json(const sol::object& value, std::ostringstream& out, int depth);
+
+void append_json_string(const std::string& str, std::ostringstream& out) {
+    static constexpr char kHex[] = "0123456789abcdef";
+
+    out << '"';
+    for (const unsigned char ch : str) {
+        switch (ch) {
+        case '"':
+            out << "\\\"";
+            break;
+        case '\\':
+            out << "\\\\";
+            break;
+        case '\b':
+            out << "\\b";
+            break;
+        case '\f':
+            out << "\\f";
+            break;
+        case '\n':
+            out << "\\n";
+            break;
+        case '\r':
+            out << "\\r";
+            break;
+        case '\t':
+            out << "\\t";
+            break;
+        default:
+            if (ch < 0x20) {
+                out << "\\u00" << kHex[ch >> 4U] << kHex[ch & 0x0FU];
+            } else {
+                out << ch;
+            }
+        }
+    }
+    out << '"';
+}
+
+void append_json_double(double value, std::ostringstream& out) {
+    // JSON has no NaN/Infinity literals.
+    if (!std::isfinite(value)) {
+        out << "null";
+        return;
+    }
+    // Shortest round-trippable form: 0.1 stays "0.1" instead of "0.10000000000000001".
+    std::array<char, 32> buffer{};
+    const auto [end, ec] = std::to_chars(buffer.data(), buffer.data() + buffer.size(), value);
+    out << std::string_view(buffer.data(), static_cast<std::size_t>(end - buffer.data()));
+}
+
+void append_json_table(const sol::table& table, std::ostringstream& out, int depth) {
+    // Array iff the keys are exactly 1..n. Walked with pairs, never sol::table::size() --
+    // lua_rawlen returns an arbitrary border on a table with holes.
+    std::int64_t count = 0;
+    std::int64_t max_index = 0;
+    bool is_array = true;
+    for (auto& pair : table) {
+        ++count;
+        if (is_array && pair.first.is<std::int64_t>() && pair.first.as<std::int64_t>() >= 1) {
+            max_index = std::max(max_index, pair.first.as<std::int64_t>());
+        } else {
+            is_array = false;
+        }
+    }
+
+    if (is_array && count == max_index) {
+        out << '[';
+        for (std::int64_t i = 1; i <= count; ++i) {
+            if (i > 1) {
+                out << ',';
+            }
+            append_json(table[i], out, depth + 1);
+        }
+        out << ']';
+        return;
+    }
+
+    // Sorted keys so the output is deterministic (Lua's pairs order is not), matching the
+    // alphabetical-by-std::map convention of lua_table_to_value_map.
+    std::map<std::string, sol::object> entries;
+    for (auto& pair : table) {
+        if (pair.first.is<std::string>()) {
+            entries[pair.first.as<std::string>()] = pair.second;
+        } else if (pair.first.is<std::int64_t>()) {
+            entries[std::to_string(pair.first.as<std::int64_t>())] = pair.second;
+        } else {
+            throw std::runtime_error("Cannot run: script returned a table with an unsupported key type");
+        }
+    }
+
+    out << '{';
+    bool first = true;
+    for (const auto& [key, entry] : entries) {
+        if (!first) {
+            out << ',';
+        }
+        first = false;
+        append_json_string(key, out);
+        out << ':';
+        append_json(entry, out, depth + 1);
+    }
+    out << '}';
+}
+
+void append_json(const sol::object& value, std::ostringstream& out, int depth) {
+    if (depth > kMaxReturnDepth) {
+        throw std::runtime_error("Cannot run: script return value nests deeper than " +
+                                 std::to_string(kMaxReturnDepth) + " levels");
+    }
+
+    if (!value.valid() || value.is<sol::lua_nil_t>()) {
+        out << "null";
+    } else if (value.get_type() == sol::type::boolean) {
+        out << (value.as<bool>() ? "true" : "false");
+    } else if (value.is<std::int64_t>()) {
+        out << value.as<std::int64_t>();
+    } else if (value.is<double>()) {
+        append_json_double(value.as<double>(), out);
+    } else if (value.is<std::string>()) {
+        append_json_string(value.as<std::string>(), out);
+    } else if (value.get_type() == sol::type::table) {
+        // get_type, not is<sol::table>(): sol2's table check also accepts userdata, which would
+        // quietly encode the db global (or a BinaryFile) as an empty object.
+        append_json_table(value.as<sol::table>(), out, depth);
+    } else {
+        throw std::runtime_error("Cannot run: script returned an unsupported Lua type");
+    }
+}
+
+}  // namespace
 
 struct LuaRunner::Impl {
     Database& db;
@@ -81,6 +227,31 @@ struct LuaRunner::Impl {
                     throw std::runtime_error(err.what());
                 }
                 self.commit();
+                if (result.return_count() > 0) {
+                    return result.get<sol::object>(0);
+                }
+                return sol::make_object(result.lua_state(), sol::lua_nil);
+            },
+            // Group 10b: Dry runs
+            "begin_dry_run",
+            [](Database& self) { self.begin_dry_run(); },
+            "end_dry_run",
+            [](Database& self) { self.end_dry_run(); },
+            "in_dry_run",
+            [](Database& self) { return self.in_dry_run(); },
+            "dry_run",
+            [](Database& self, sol::protected_function fn) -> sol::object {
+                self.begin_dry_run();
+                auto result = fn(std::ref(self));
+                if (!result.valid()) {
+                    sol::error err = result;
+                    try {
+                        self.end_dry_run();
+                    } catch (...) {
+                    }
+                    throw std::runtime_error(err.what());
+                }
+                self.end_dry_run();
                 if (result.return_count() > 0) {
                     return result.get<sol::object>(0);
                 }
@@ -1365,12 +1536,20 @@ LuaRunner::LuaRunner(LuaRunner&&) noexcept = default;
 
 LuaRunner& LuaRunner::operator=(LuaRunner&&) noexcept = default;
 
-void LuaRunner::run(const std::string& script) {
+std::string LuaRunner::run(const std::string& script) {
     auto result = impl_->lua.safe_script(script, sol::script_pass_on_error);
     if (!result.valid()) {
         sol::error err = result;
         throw std::runtime_error(std::string("Failed to run Lua script: ") + err.what());
     }
+
+    if (result.return_count() == 0) {
+        return {};
+    }
+
+    std::ostringstream out;
+    append_json(result.get<sol::object>(0), out, 0);
+    return out.str();
 }
 
 }  // namespace quiver

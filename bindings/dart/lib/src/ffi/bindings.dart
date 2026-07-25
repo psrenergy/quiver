@@ -267,6 +267,53 @@ class QuiverDatabaseBindings {
   late final _quiver_database_in_transaction = _quiver_database_in_transactionPtr
       .asFunction<int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Int>)>();
 
+  int quiver_database_begin_dry_run(
+    ffi.Pointer<quiver_database_t> db,
+  ) {
+    return _quiver_database_begin_dry_run(
+      db,
+    );
+  }
+
+  late final _quiver_database_begin_dry_runPtr =
+      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<quiver_database_t>)>>(
+        'quiver_database_begin_dry_run',
+      );
+  late final _quiver_database_begin_dry_run = _quiver_database_begin_dry_runPtr
+      .asFunction<int Function(ffi.Pointer<quiver_database_t>)>();
+
+  int quiver_database_end_dry_run(
+    ffi.Pointer<quiver_database_t> db,
+  ) {
+    return _quiver_database_end_dry_run(
+      db,
+    );
+  }
+
+  late final _quiver_database_end_dry_runPtr =
+      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<quiver_database_t>)>>(
+        'quiver_database_end_dry_run',
+      );
+  late final _quiver_database_end_dry_run = _quiver_database_end_dry_runPtr
+      .asFunction<int Function(ffi.Pointer<quiver_database_t>)>();
+
+  int quiver_database_in_dry_run(
+    ffi.Pointer<quiver_database_t> db,
+    ffi.Pointer<ffi.Int> out_active,
+  ) {
+    return _quiver_database_in_dry_run(
+      db,
+      out_active,
+    );
+  }
+
+  late final _quiver_database_in_dry_runPtr =
+      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Int>)>>(
+        'quiver_database_in_dry_run',
+      );
+  late final _quiver_database_in_dry_run = _quiver_database_in_dry_runPtr
+      .asFunction<int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Int>)>();
+
   int quiver_database_current_version(
     ffi.Pointer<quiver_database_t> db,
     ffi.Pointer<ffi.Int64> out_version,
@@ -2925,19 +2972,48 @@ class QuiverDatabaseBindings {
   int quiver_lua_runner_run(
     ffi.Pointer<quiver_lua_runner_t> runner,
     ffi.Pointer<ffi.Char> script,
+    ffi.Pointer<ffi.Pointer<ffi.Char>> out_result,
   ) {
     return _quiver_lua_runner_run(
       runner,
       script,
+      out_result,
     );
   }
 
   late final _quiver_lua_runner_runPtr =
-      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<quiver_lua_runner_t>, ffi.Pointer<ffi.Char>)>>(
-        'quiver_lua_runner_run',
-      );
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_lua_runner_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Pointer<ffi.Char>>,
+          )
+        >
+      >('quiver_lua_runner_run');
   late final _quiver_lua_runner_run = _quiver_lua_runner_runPtr
-      .asFunction<int Function(ffi.Pointer<quiver_lua_runner_t>, ffi.Pointer<ffi.Char>)>();
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_lua_runner_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Pointer<ffi.Char>>,
+        )
+      >();
+
+  int quiver_lua_runner_free_string(
+    ffi.Pointer<ffi.Char> str,
+  ) {
+    return _quiver_lua_runner_free_string(
+      str,
+    );
+  }
+
+  late final _quiver_lua_runner_free_stringPtr =
+      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<ffi.Char>)>>(
+        'quiver_lua_runner_free_string',
+      );
+  late final _quiver_lua_runner_free_string = _quiver_lua_runner_free_stringPtr
+      .asFunction<int Function(ffi.Pointer<ffi.Char>)>();
 }
 
 abstract class quiver_error_t {

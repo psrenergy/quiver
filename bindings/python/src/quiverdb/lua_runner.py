@@ -4,7 +4,7 @@ import warnings
 from typing import TYPE_CHECKING
 
 from quiverdb._c_api import ffi, get_lib
-from quiverdb._helpers import check
+from quiverdb._helpers import check, decode_string
 from quiverdb.exceptions import QuiverError
 
 if TYPE_CHECKING:
@@ -39,14 +39,22 @@ class LuaRunner:
         if self._closed:
             raise QuiverError("LuaRunner is closed")
 
-    def run(self, script: str) -> None:
+    def run(self, script: str) -> str:
         """Execute a Lua script against the database.
+
+        Returns the script's return value encoded as JSON, or "" if it returned nothing.
+
+        To execute a script without keeping its writes, wrap the call in Database.dry_run().
 
         Raises QuiverError if the script fails (syntax or runtime error).
         """
         self._ensure_open()
         lib = get_lib()
-        check(lib.quiver_lua_runner_run(self._ptr, script.encode("utf-8")))
+        out_result = ffi.new("char**")
+        check(lib.quiver_lua_runner_run(self._ptr, script.encode("utf-8"), out_result))
+        result = decode_string(out_result[0])
+        lib.quiver_lua_runner_free_string(out_result[0])
+        return result
 
     def __enter__(self) -> LuaRunner:
         return self

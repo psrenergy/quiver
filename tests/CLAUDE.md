@@ -16,8 +16,10 @@ C++ core and C API suites live here; binding suites live in each binding's `test
 - Supporting types: `test_element.cpp`, `test_row_result.cpp`, `test_migrations.cpp`,
   `test_schema_validator.cpp`
 - Lua: `test_lua_runner_*.cpp` — per-area split mirroring the database files (`_create`, `_read`,
-  `_update`, `_delete`, `_query`, `_time_series`, `_transaction`, `_errors`, `_csv_export`,
-  `_csv_import`, `_all_types`, `_fk`). The shared `LuaRunnerTest` and `LuaSandboxTest` fixtures,
+  `_update`, `_delete`, `_query`, `_return`, `_time_series`, `_transaction`, `_errors`,
+  `_csv_export`, `_csv_import`, `_all_types`, `_fk`). `_return` covers the JSON encoding of a
+  script's return value; `_transaction` covers `db:dry_run` (the core-level dry run lives in
+  `test_database_transaction.cpp`). The shared `LuaRunnerTest` and `LuaSandboxTest` fixtures,
   the `expect_lua_error` helper (throw + message-substring assert — plain `EXPECT_THROW` passes
   vacuously when a removed function raises "attempt to call a nil value"), and the common include
   prelude live in `test_lua_runner.h`; the single-use `LuaRunnerAllTypesTest` / `LuaRunnerFkTest`

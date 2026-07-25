@@ -11,9 +11,21 @@ function LuaRunner(db::Database)
     return runner
 end
 
+"""
+    run!(runner::LuaRunner, script::String)
+
+Execute a Lua script against the database.
+
+Returns the script's return value encoded as JSON, or `""` if it returned nothing.
+
+To execute a script without keeping its writes, wrap the call in [`dry_run`](@ref).
+"""
 function run!(runner::LuaRunner, script::String)
-    check(C.quiver_lua_runner_run(runner.ptr, script))
-    return nothing
+    out_result = Ref{Ptr{Cchar}}(C_NULL)
+    check(C.quiver_lua_runner_run(runner.ptr, script, out_result))
+    result = unsafe_string(out_result[])
+    C.quiver_lua_runner_free_string(out_result[])
+    return result
 end
 
 function close!(runner::LuaRunner)

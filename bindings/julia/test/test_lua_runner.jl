@@ -242,6 +242,56 @@ include("fixture.jl")
         Quiver.close!(lua)
         Quiver.close!(db)
     end
+
+    @testset "Return Values" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        lua = Quiver.LuaRunner(db)
+
+        # A script hands one value back as JSON.
+        @test Quiver.run!(lua, "return { a = 1, b = { 2, 3 } }") == """{"a":1,"b":[2,3]}"""
+        @test Quiver.run!(lua, """return db:read_element_ids("Collection")""") == "[]"
+        # Returning nothing is an empty string, distinct from returning nil.
+        @test Quiver.run!(lua, "local x = 1") == ""
+        @test Quiver.run!(lua, "return nil") == "null"
+
+        Quiver.close!(lua)
+        Quiver.close!(db)
+    end
+
+    @testset "Dry Run" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        lua = Quiver.LuaRunner(db)
+        Quiver.run!(lua, """db:create_element("Configuration", { label = "Config" })""")
+
+        @test Quiver.in_dry_run(db) == false
+        result = Quiver.dry_run(db) do db
+            @test Quiver.in_dry_run(db) == true
+            # db:transaction composes: the dry run absorbs the nested BEGIN/COMMIT.
+            Quiver.run!(
+                lua,
+                """
+            db:transaction(function(db)
+                db:create_element("Collection", { label = "Preview" })
+            end)
+            return db:read_scalar_strings("Collection", "label")
+        """,
+            )
+        end
+
+        @test result == """["Preview"]"""
+        @test Quiver.in_dry_run(db) == false
+        @test isempty(Quiver.read_scalar_strings(db, "Collection", "label"))
+
+        # Ending one that was never started is an error.
+        @test_throws Quiver.DatabaseException Quiver.end_dry_run!(db)
+
+        Quiver.close!(lua)
+        Quiver.close!(db)
+    end
 end
 
 end

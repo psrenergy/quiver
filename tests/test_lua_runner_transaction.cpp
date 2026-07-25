@@ -152,3 +152,104 @@ TEST_F(LuaRunnerTest, TransactionBlockMultiOps) {
     EXPECT_TRUE(found100);
     EXPECT_TRUE(found20);
 }
+
+// ============================================================================
+// Dry runs
+// ============================================================================
+
+TEST_F(LuaRunnerTest, DryRunBlockRollsBack) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+
+    quiver::LuaRunner lua(db);
+
+    auto result = lua.run(R"(
+        local inside = db:dry_run(function(db)
+            db:create_element("Collection", { label = "Item 1", some_integer = 10 })
+            return #db:read_element_ids("Collection")
+        end)
+        return { inside = inside, after = #db:read_element_ids("Collection") }
+    )");
+
+    // The block's return value passes through, and nothing survived it.
+    EXPECT_EQ(result, R"({"after":0,"inside":1})");
+    EXPECT_TRUE(db.read_scalar_strings("Collection", "label").empty());
+}
+
+TEST_F(LuaRunnerTest, DryRunAbsorbsNestedTransaction) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+
+    quiver::LuaRunner lua(db);
+
+    // db:transaction is the pattern the Lua reference recommends; a dry run must not break it.
+    auto result = lua.run(R"(
+        return db:dry_run(function(db)
+            db:transaction(function(db)
+                db:create_element("Collection", { label = "Item 1", some_integer = 10 })
+            end)
+            return #db:read_element_ids("Collection")
+        end)
+    )");
+
+    EXPECT_EQ(result, "1");
+    EXPECT_TRUE(db.read_scalar_strings("Collection", "label").empty());
+}
+
+TEST_F(LuaRunnerTest, DryRunBlockRollsBackOnError) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(lua,
+                     R"(
+        db:dry_run(function(db)
+            db:create_element("Collection", { label = "Item 1", some_integer = 10 })
+            error("boom")
+        end)
+    )",
+                     "boom");
+
+    EXPECT_TRUE(db.read_scalar_strings("Collection", "label").empty());
+    EXPECT_FALSE(db.in_dry_run());
+    EXPECT_FALSE(db.in_transaction());
+}
+
+TEST_F(LuaRunnerTest, DryRunExplicitBeginEnd) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+
+    quiver::LuaRunner lua(db);
+
+    auto result = lua.run(R"(
+        db:begin_dry_run()
+        db:create_element("Collection", { label = "Item 1", some_integer = 10 })
+        local active = db:in_dry_run()
+        db:end_dry_run()
+        return { active = active, after = db:in_dry_run() }
+    )");
+
+    EXPECT_EQ(result, R"({"active":true,"after":false})");
+    EXPECT_TRUE(db.read_scalar_strings("Collection", "label").empty());
+}
+
+TEST_F(LuaRunnerTest, HostDryRunWrapsWholeScript) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+
+    quiver::LuaRunner lua(db);
+
+    // This is how a host previews a script it did not write.
+    db.begin_dry_run();
+    auto result = lua.run(R"(
+        db:transaction(function(db)
+            db:create_element("Collection", { label = "Item 1", some_integer = 10 })
+        end)
+        return db:read_element_ids("Collection")
+    )");
+    db.end_dry_run();
+
+    EXPECT_EQ(result, "[1]");
+    EXPECT_TRUE(db.read_scalar_strings("Collection", "label").empty());
+}
