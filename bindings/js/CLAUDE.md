@@ -12,6 +12,7 @@ mod.ts            # Package entry point (re-exports src/index.ts)
 src/              # Module per C API category: database.ts, create.ts, read.ts, metadata.ts,
                   # query.ts, time-series.ts, transaction.ts, csv.ts, introspection.ts,
                   # composites.ts, lua-runner.ts (index.ts re-exports the public surface)
+src/lua-api.ts    # LUA_DB_API_REFERENCE — agent-facing Lua `db:` API reference, as a string const
 src/loader.ts     # HAND-WRITTEN FFI symbol table + 3-tier library loader
 src/types.ts      # Central DATA_TYPE_* / LOG_LEVEL_* constants and DatabaseOptions type
 src/ffi-helpers.ts # Alloc helpers, makeDefaultOptions()
@@ -23,6 +24,17 @@ biome.json        # Lint/format config
 
 ## Rules and gotchas
 
+- **`LUA_DB_API_REFERENCE` (`src/lua-api.ts`) is shipped prompt payload, not just docs.** The
+  downstream consumer (`claw`) imports it from the package root and interpolates it verbatim into an
+  LLM system prompt, which is why it stays a plain `export const`: a string constant costs no FFI,
+  no file read, and no Bun loader feature, and `bun build --compile` inlines it into a consumer's
+  binary. Converting it to an imported `.md` was tried and deliberately reverted (see root
+  `CLAUDE.md` "Do Not Fix") — the escaped backticks are the accepted cost.
+  `test/lua-api-sync.test.ts` derives the bound surface from `src/lua_runner.cpp` and fails if a
+  `db:`/`quiver.*` name is undocumented, a documented name no longer exists, or the stdlib sentence
+  disagrees with `open_libraries` — that check is why the doc must keep the literal-token convention
+  and the canonical `Loaded standard libraries: ...` sentence. It cannot check arg order, arity,
+  types, or return shapes; those still need a hand re-diff.
 - **No generator** — when the C API changes, add the symbol to `src/loader.ts` by hand as
   `{ name: { args, returns } }`. This is the drift-prone spot: check it whenever a new C function
   exists in other bindings but not here.

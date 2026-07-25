@@ -222,6 +222,13 @@ Implementation conventions in `lua_runner.cpp`:
   cannot reach the shell, the process, the environment, or the filesystem outside the db sandbox.
 - `dofile` and `loadfile` are nil'd out after `open_libraries` (no loading Lua source from disk);
   string-form `load` stays available.
+- **The agent-facing Lua reference lives in `bindings/js/src/lua-api.ts`** (shipped on npm as
+  `LUA_DB_API_REFERENCE` and interpolated into an LLM system prompt downstream). Adding or removing
+  a `db:`/`quiver.*` binding, or changing the `open_libraries` list, requires updating it —
+  `bindings/js/test/lua-api-sync.test.ts` parses `lua_runner.cpp` and fails otherwise. That check
+  exists because the doc went stale two days after it was written: it said only
+  `base`/`string`/`table` were loaded and "there is NO `math`", and #210 added
+  `math`/`coroutine`/`utf8` here without touching it.
 - `parse_csv_options(table)` is the single CSVOptions parser shared by `export_csv`/`import_csv`.
 - `to_lua_table<T>` overloads (flat + nested) are the only vector→table marshalers.
 - `describe` / `describe_collection` / `summarize_collection` are bound as plain lambdas returning

@@ -139,6 +139,13 @@ Reviewed adversarially and rejected — these are not improvements:
 - "Simplifying" the documented Bun FFI workarounds (`bindings/js/CLAUDE.md`) or the binary
   hot-path decisions (`src/CLAUDE.md`) — load-bearing.
 - Drive-by fixing pre-existing lint debt in untouched JS files.
+- Relocating the agent-facing Lua reference (`bindings/js/src/lua-api.ts`, `LUA_DB_API_REFERENCE`).
+  Moving it into the C++ layer would turn a build-time constant into a runtime FFI call just to
+  assemble a system prompt, and would make a one-sentence docs fix a native republish across npm
+  libs, PyPI wheels, Julia artifacts, and S3 natives. Moving it to an imported `.md` was implemented,
+  verified, and reverted — editing ergonomics only, at the cost of a `files`-allowlist dependency
+  and a Bun text-loader floor. Neither fixes drift, which is what actually went wrong; the sync test
+  does. Rationale in `bindings/js/CLAUDE.md`.
 
 ## Build & Test
 

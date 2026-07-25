@@ -56,8 +56,14 @@ Dart `database_read_scalar_test.dart`, JS `database-read-scalar.test.ts`, Python
 `test_database_read_scalar.py`). JS and Python have no `metadata` time-series file; the C++ core
 has no `nulls` file. JS Database-operation test files carry a `database-` prefix
 (`database-create.test.ts`, `database-lifecycle.test.ts`, …) to match the other bindings; the
-non-Database files (`composites.test.ts`, `introspection.test.ts`, `lua-runner.test.ts`) keep
-their bare names.
+non-Database files (`composites.test.ts`, `introspection.test.ts`, `lua-runner.test.ts`,
+`lua-api-sync.test.ts`) keep their bare names.
+
+`bindings/js/test/lua-api-sync.test.ts` is the only JS test file that needs neither a database nor
+the native library: it parses `src/lua_runner.cpp` and asserts `bindings/js/src/lua-api.ts` documents
+every bound `db:`/`quiver.*` name and the exact `open_libraries` list. It imports the constant from
+`../src/lua-api.ts` directly rather than `../src/index.ts` specifically to avoid the FFI loader, so
+it still passes on a checkout with no `build/`.
 
 ## Schemas (`tests/schemas/`)
 

@@ -1,16 +1,21 @@
 // Agent-facing reference for the Lua `db` API available inside run_lua scripts.
 //
 // Authority: `src/lua_runner.cpp` `bind_database()` (this repo) — extracted by hand, NOT imported.
-// The shipped quiverdb native binding is the runtime truth; this is docs. Whenever the C++ Lua
-// binding changes, re-diff every signature below against `bind_database()` (names, arg order, arg
-// types, return shapes).
+// The shipped quiverdb native binding is the runtime truth; this is docs.
+//
+// SYNC: `test/lua-api-sync.test.ts` derives the bound surface from `src/lua_runner.cpp` and checks
+// it AUTOMATICALLY — every `db:`/`quiver.*` name is documented, no documented name has been
+// removed, and the stdlib sentence matches `open_libraries` exactly. What it CANNOT check, and you
+// must still re-diff by hand when the binding changes: arg order, arity, arg types, return shapes,
+// and whether the prose is semantically true.
 //
 // NOTE: the binary/expression subsystems are bound in the native binding and documented below.
 // File-touching operations (db:open_file, db:bin_to_csv, db:csv_to_bin, expr:save) are sandboxed
 // to the database file's directory; the pure-metadata builders stay under the quiver.* global.
 //
-// FORMAT CONVENTION: every db: method should appear at least once as the literal token
-// `db:<snake_case_name>` so coverage is greppable.
+// FORMAT CONVENTION: every db: method appears at least once as the literal token
+// `db:<snake_case_name>`, and every quiver.* function as `quiver.<name>`, so coverage is greppable
+// (the sync test relies on this).
 export const LUA_DB_API_REFERENCE = `
 # Quiver Lua API Reference
 
@@ -66,9 +71,10 @@ datetime surface — there are no DateTime wrapper helpers, unlike Julia/Dart/Py
 - **Errors abort the script.** Any error thrown by a \`db:\` call stops the script and surfaces as
   \`Failed to run Lua script: <message>\`. Validation failures roll back whatever the current
   transaction covered.
-- **Standard library.** Only the \`base\`, \`string\`, and \`table\` libraries are loaded — there is NO
-  \`math\` (use \`//\` for integer division), and no \`os\`, \`io\`, or \`require\`; \`dofile\` and
-  \`loadfile\` are removed (string-form \`load\` is available).
+- **Standard library.** Loaded standard libraries: base, string, table, math, coroutine, utf8.
+  That is the pure-computation set — there is no \`os\`, \`io\`, \`debug\`, or \`package\`/\`require\`,
+  and \`dofile\`/\`loadfile\` are removed (string-form \`load\` stays available). Integer division is
+  the Lua 5.4 \`//\` operator — a language operator, unrelated to \`math\`.
 - **Filesystem sandbox.** Every file-touching operation (\`db:export_csv\`, \`db:import_csv\`,
   \`db:open_file\`, \`db:bin_to_csv\`, \`db:csv_to_bin\`, \`expr:save\`) resolves relative paths against
   the directory containing the database file and rejects anything outside it (subdirectories are
@@ -164,8 +170,9 @@ Notes:
   type can't be inferred from an empty array), so it is silently dropped.
 - **No \`nil\` scalar attributes.** In Lua a key set to \`nil\` is dropped from the table, so
   \`{ x = nil }\` is identical to \`{}\`; an update/create table that ends up with no attributes
-  **throws** (\`element must have at least one attribute\`). To leave a column unchanged, omit the
-  key — you cannot set a scalar to NULL via the element table. (\`nil\` → NULL is only accepted by
+  **throws** (\`...must have at least one scalar attribute\` on create, \`...at least one attribute
+  to update\` on update). To leave a column unchanged, omit the key — you cannot set a scalar to
+  NULL via the element table. (\`nil\` → NULL is only accepted by
   \`upsert_time_series_row\` and \`update_time_series_files\`.)
 
 ---
@@ -489,7 +496,8 @@ db:csv_to_bin(path)
 
 local e = (quiver.expression(r) + 10.0) * 2.0        -- files auto-wrap; scalars either side
 e = quiver.abs(e); e = quiver.sqrt(e)                -- also quiver.log / quiver.exp
-local cond_e = quiver.gt(e, 3.0)                     -- gt/lt/gte/lte/eq/neq -> 1.0/0.0 (NaN -> NaN)
+local cond_e = quiver.gt(e, 3.0)                     -- also quiver.lt/quiver.gte/quiver.lte/quiver.eq/quiver.neq
+                                                     -- all -> 1.0/0.0 per element (NaN operand -> NaN)
 cond_e = cond_e & ~quiver.lt(e, 1.0)                 -- boolean logic via & | ~ operators (and/or/not are keywords)
 e = quiver.ifelse(cond_e, then_e, else_e)            -- build cond_e with comparison + logical operators
 e = e:aggregate("stage", "sum")                      -- sum/mean/min/max/percentile
