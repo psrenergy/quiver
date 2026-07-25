@@ -69,6 +69,10 @@ biome.json        # Lint/format config
   `Number()` a masked slot (would turn NULL into 0). `readScalarStrings` reads pointer-by-pointer with
   `read.ptr` + a NULL guard → `(string | null)[]` (not `decodeStringArray`). `loader.ts` carries the
   mask arg on the two numeric symbols + `quiver_database_free_mask` (hand-maintained, no generator).
+- **`LuaRunner.run` owns its result**: `quiver_lua_runner_run` takes a `char** out_result` and the
+  JSON string must be freed with `quiver_lua_runner_free_string` — *not* `quiver_database_free_string`
+  (both are in `loader.ts`, hand-maintained). `decodeStringFromBuf` returns `""` for a NULL pointer,
+  which is also what the C API leaves there on failure, and `check()` throws before the decode.
 - **Time-series NULL cells** (`TimeSeriesData = Record<string, (number | string | null)[]>`): a
   `null` value marshals to a per-column `uint8_t` mask (0 = NULL) with a placeholder in the data
   array; an all-`null` column is tagged FLOAT with a zeroed placeholder (the C API ignores the tag

@@ -61,12 +61,17 @@ rollback is therefore not partial -- everything is undone when the dry run ends.
 """
 function dry_run(fn, db::Database)
     begin_dry_run!(db)
-    try
-        return fn(db)
-    finally
+    result = try
+        fn(db)
+    catch
+        # Best-effort only while an exception is already in flight, mirroring `transaction`.
         try
             end_dry_run!(db)
         catch
         end
+        rethrow()
     end
+    # On the success path the rollback is the wrapper's whole promise -- let a failure surface.
+    end_dry_run!(db)
+    return result
 end

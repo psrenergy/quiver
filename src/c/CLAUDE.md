@@ -36,7 +36,9 @@ src/c/
   database_csv_export.cpp / database_csv_import.cpp
   element.cpp             # Element builder C API
   lua_runner.cpp          # LuaRunner C API (errors via quiver_get_last_error); run returns the
-                          # script's JSON result via char** out_result + its own free_string
+                          # script's JSON result via char** out_result (NULLed before anything can
+                          # fail, so a caller that frees unconditionally is safe) + its own
+                          # free_string
 src/c/binary/               # BinaryFile / CSVConverter / BinaryMetadata wrappers
 src/c/expression/           # Expression node constructors, save, free
 ```

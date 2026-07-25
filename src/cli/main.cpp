@@ -49,7 +49,9 @@ int main(int argc, char* argv[]) {
 
     program.add_argument("--read-only").help("open database in read-only mode").flag();
 
-    program.add_argument("--dry-run").help("run the script in a transaction and roll it back").flag();
+    program.add_argument("--dry-run")
+        .help("run the script in a transaction and roll it back (scopes to the script only)")
+        .flag();
 
     program.add_argument("--log-level")
         .help("set log verbosity (debug, info, warn, error, off)")
@@ -65,6 +67,13 @@ int main(int argc, char* argv[]) {
     // Mutual exclusivity check
     if (program.is_used("--schema") && program.is_used("--migrations")) {
         std::cerr << "Cannot use --schema and --migrations together" << std::endl;
+        return 2;
+    }
+
+    // --schema deletes and recreates the database file before the dry run's transaction opens, so
+    // the combination would destroy an existing database under a flag that promises the opposite.
+    if (program.is_used("--schema") && program.get<bool>("--dry-run")) {
+        std::cerr << "Cannot use --schema and --dry-run together: --schema recreates the database file" << std::endl;
         return 2;
     }
 

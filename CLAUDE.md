@@ -97,8 +97,12 @@ Settled questions — don't relitigate without the user; each was decided delibe
   parsing, so no binding gains a JSON dependency (Julia would have needed one). Only the first
   returned value is encoded; no `return` yields `""`, distinct from `return nil` → `"null"`.
   Non-finite numbers become `null`, a table keyed `1..n` is an array (`{}` → `[]`) and any other
-  table is a key-sorted object; a function/coroutine/userdata throws, as does nesting past 32
-  levels (that cap is the cycle guard).
+  table is a key-sorted object — so a nullable bulk read, which Lua represents as `nil` holes,
+  comes back as an object (`{"1":10,"3":30}`), not `[10,null,30]`. A function/coroutine/userdata
+  throws, as does nesting past 32 levels (the cycle guard), output past 64 MiB (the *size* cap —
+  depth alone does not bound a table that shares sub-tables), a string that is not valid UTF-8
+  (JSON must be UTF-8, a Lua string need not), and a table where an integer key and a string key
+  spell the same thing (two Lua keys, one JSON key — refused rather than silently dropped).
 - **`import_csv` refuses to run inside an open transaction** (`PRAGMA foreign_keys` is a no-op
   mid-transaction, so nesting is unsupportable) — Pattern 1 precondition, not a silent rollback.
 - **`BinaryMetadata::number_of_time_dimensions()` is derived** from `dimensions`, never stored.

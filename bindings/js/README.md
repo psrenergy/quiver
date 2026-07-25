@@ -130,6 +130,10 @@ Parameters are passed as an array of `number | string | null`.
 - `commit()` -- Commit current transaction
 - `rollback()` -- Rollback current transaction
 - `inTransaction()` -- Check if transaction is active
+- `beginDryRun()` -- Begin a dry run: a transaction `endDryRun()` always rolls back. While it is
+  active, `beginTransaction`/`commit`/`rollback` are absorbed (no-ops)
+- `endDryRun()` -- End the active dry run, rolling back everything it covered
+- `inDryRun()` -- Check if a dry run is active
 
 ### CSV
 
@@ -152,7 +156,8 @@ Parameters are passed as an array of `number | string | null`.
 ### Lua
 
 - `LuaRunner(db)` -- Create Lua script runner with database access
-- `run(script)` -- Execute a Lua script
+- `run(script)` -- Execute a Lua script; returns its return value as a JSON string, or `""` if it
+  returned nothing
 - `close()` -- Close the Lua runner
 
 ## Types
