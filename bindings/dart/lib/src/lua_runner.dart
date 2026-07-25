@@ -51,21 +51,30 @@ class LuaRunner {
   /// - `db:create_element(collection, values)` - Create an element
   /// - `db:read_scalar_strings(collection, attribute)` - Read string scalars
   ///
+  /// Returns the script's return value encoded as JSON, or `''` if it returned nothing.
+  /// To execute a script without keeping its writes, wrap the call in [Database.dryRun].
+  ///
   /// Throws [LuaException] if the script fails to execute.
-  void run(String script) {
+  String run(String script) {
     _ensureNotDisposed();
 
     final arena = Arena();
     try {
+      final outResult = arena<Pointer<Char>>();
       final err = bindings.quiver_lua_runner_run(
         _ptr,
         script.toNativeUtf8(allocator: arena).cast(),
+        outResult,
       );
 
       if (err != quiver_error_t.QUIVER_OK) {
         final detail = bindings.quiver_get_last_error().cast<Utf8>().toDartString();
         throw LuaException(detail);
       }
+
+      final result = outResult.value.cast<Utf8>().toDartString();
+      bindings.quiver_lua_runner_free_string(outResult.value);
+      return result;
     } finally {
       arena.releaseAll();
     }

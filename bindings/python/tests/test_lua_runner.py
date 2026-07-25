@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from quiverdb import Database, LuaRunner, QuiverError
@@ -103,3 +105,55 @@ class TestLuaRunnerLifecycle:
         lua = LuaRunner(collections_db)
         assert lua._db is collections_db
         lua.close()
+
+
+class TestLuaRunnerReturnValues:
+    """A script hands one value back to the caller as JSON."""
+
+    def test_returns_json(self, collections_db: Database) -> None:
+        lua = LuaRunner(collections_db)
+        assert lua.run("return { a = 1, b = { 2, 3 } }") == '{"a":1,"b":[2,3]}'
+        assert json.loads(lua.run('return db:read_element_ids("Collection")')) == []
+
+    def test_returns_empty_string_when_script_returns_nothing(self, collections_db: Database) -> None:
+        lua = LuaRunner(collections_db)
+        assert lua.run("local x = 1") == ""
+
+
+class TestDatabaseDryRun:
+    """A dry run executes writes and throws them away."""
+
+    def test_rolls_back_a_script(self, collections_db: Database) -> None:
+        lua = LuaRunner(collections_db)
+        lua.run('db:create_element("Configuration", { label = "default" })')
+
+        assert collections_db.in_dry_run() is False
+        with collections_db.dry_run():
+            assert collections_db.in_dry_run() is True
+            # db:transaction composes: the dry run absorbs the nested BEGIN/COMMIT.
+            result = lua.run("""
+                db:transaction(function(db)
+                    db:create_element("Collection", { label = "Preview" })
+                end)
+                return db:read_scalar_strings("Collection", "label")
+            """)
+            assert json.loads(result) == ["Preview"]
+
+        assert collections_db.in_dry_run() is False
+        assert collections_db.read_scalar_strings("Collection", "label") == []
+
+    def test_rolls_back_on_exception(self, collections_db: Database) -> None:
+        lua = LuaRunner(collections_db)
+        lua.run('db:create_element("Configuration", { label = "default" })')
+
+        with pytest.raises(ValueError):
+            with collections_db.dry_run():
+                lua.run('db:create_element("Collection", { label = "Preview" })')
+                raise ValueError("boom")
+
+        assert collections_db.read_scalar_strings("Collection", "label") == []
+        assert collections_db.in_dry_run() is False
+
+    def test_end_without_start_raises(self, collections_db: Database) -> None:
+        with pytest.raises(QuiverError, match="no active dry run"):
+            collections_db.end_dry_run()

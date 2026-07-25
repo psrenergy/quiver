@@ -287,6 +287,9 @@ void Database::set_version(int64_t version) {
 }
 
 void Database::begin_transaction() {
+    if (impl_->dry_run) {
+        return;  // absorbed: the dry run already owns the transaction
+    }
     if (!sqlite3_get_autocommit(impl_->db)) {
         throw std::runtime_error("Cannot begin_transaction: transaction already active");
     }
@@ -299,6 +302,9 @@ bool Database::in_transaction() const {
 }
 
 void Database::commit() {
+    if (impl_->dry_run) {
+        return;  // absorbed: end_dry_run decides, and it always rolls back
+    }
     if (sqlite3_get_autocommit(impl_->db)) {
         throw std::runtime_error("Cannot commit: no active transaction");
     }
@@ -307,11 +313,43 @@ void Database::commit() {
 }
 
 void Database::rollback() {
+    if (impl_->dry_run) {
+        return;  // absorbed: end_dry_run undoes everything anyway
+    }
     if (sqlite3_get_autocommit(impl_->db)) {
         throw std::runtime_error("Cannot rollback: no active transaction");
     }
     impl_->rollback();
     impl_->logger->debug("User transaction rolled back");
+}
+
+void Database::begin_dry_run() {
+    if (impl_->dry_run) {
+        throw std::runtime_error("Cannot begin_dry_run: dry run already active");
+    }
+    if (!sqlite3_get_autocommit(impl_->db)) {
+        throw std::runtime_error("Cannot begin_dry_run: transaction already active");
+    }
+    impl_->begin_transaction();
+    impl_->dry_run = true;
+    impl_->logger->debug("Dry run started");
+}
+
+void Database::end_dry_run() {
+    if (!impl_->dry_run) {
+        throw std::runtime_error("Cannot end_dry_run: no active dry run");
+    }
+    impl_->dry_run = false;
+    // Guarded: a caller can still end the transaction out from under us with a raw COMMIT
+    // through query_*.
+    if (!sqlite3_get_autocommit(impl_->db)) {
+        impl_->rollback();
+    }
+    impl_->logger->debug("Dry run rolled back");
+}
+
+bool Database::in_dry_run() const {
+    return impl_->dry_run;
 }
 
 void Database::execute_raw(const std::string& sql) {

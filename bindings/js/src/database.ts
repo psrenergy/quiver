@@ -126,6 +126,9 @@ export class Database {
   declare commit: () => void;
   declare rollback: () => void;
   declare inTransaction: () => boolean;
+  declare beginDryRun: () => void;
+  declare endDryRun: () => void;
+  declare inDryRun: () => boolean;
 
   // --- Metadata (implemented in metadata.ts) ---
   declare getScalarMetadata: (collection: string, attribute: string) => ScalarMetadata;

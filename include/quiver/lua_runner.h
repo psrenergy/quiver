@@ -24,7 +24,13 @@ public:
     LuaRunner& operator=(LuaRunner&&) noexcept;
 
     /// Runs a Lua script with access to the database as 'db'.
-    void run(const std::string& script);
+    ///
+    /// Returns the script's return value encoded as JSON, or an empty string if the script
+    /// returned nothing. Only the first returned value is encoded.
+    ///
+    /// To execute a script without keeping its writes, wrap the call in
+    /// Database::begin_dry_run / Database::end_dry_run.
+    std::string run(const std::string& script);
 
 private:
     struct Impl;

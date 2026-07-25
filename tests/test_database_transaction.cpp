@@ -221,3 +221,126 @@ TEST(DatabaseTransaction, InTransactionReflectsState) {
     db.rollback();
     EXPECT_FALSE(db.in_transaction());
 }
+
+// ============================================================================
+// Dry runs
+// ============================================================================
+
+namespace {
+
+quiver::Database dry_run_database() {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+    return db;
+}
+
+void create_collection(quiver::Database& db, const std::string& label) {
+    quiver::Element element;
+    element.set("label", label);
+    db.create_element("Collection", element);
+}
+
+}  // namespace
+
+TEST(DatabaseDryRun, WritesAreRolledBack) {
+    auto db = dry_run_database();
+
+    db.begin_dry_run();
+    create_collection(db, "Item 1");
+    create_collection(db, "Item 2");
+    EXPECT_EQ(db.read_scalar_strings("Collection", "label").size(), 2);
+    db.end_dry_run();
+
+    EXPECT_TRUE(db.read_scalar_strings("Collection", "label").empty());
+}
+
+TEST(DatabaseDryRun, ReflectsStateAndHoldsARealTransaction) {
+    auto db = dry_run_database();
+
+    EXPECT_FALSE(db.in_dry_run());
+    EXPECT_FALSE(db.in_transaction());
+
+    db.begin_dry_run();
+    EXPECT_TRUE(db.in_dry_run());
+    // A real transaction is open, and in_transaction() must keep saying so.
+    EXPECT_TRUE(db.in_transaction());
+
+    db.end_dry_run();
+    EXPECT_FALSE(db.in_dry_run());
+    EXPECT_FALSE(db.in_transaction());
+}
+
+TEST(DatabaseDryRun, AbsorbsNestedTransactionCalls) {
+    auto db = dry_run_database();
+
+    db.begin_dry_run();
+
+    // A nested begin/commit pair would normally throw "transaction already active".
+    db.begin_transaction();
+    create_collection(db, "Committed inside");
+    db.commit();
+
+    // A nested rollback is absorbed too: it does NOT partially undo.
+    db.begin_transaction();
+    create_collection(db, "Rolled back inside");
+    db.rollback();
+
+    EXPECT_EQ(db.read_scalar_strings("Collection", "label").size(), 2);
+
+    db.end_dry_run();
+
+    // The dry run undoes everything regardless of what the nested calls asked for.
+    EXPECT_TRUE(db.read_scalar_strings("Collection", "label").empty());
+}
+
+TEST(DatabaseDryRun, RejectsNestedDryRun) {
+    auto db = dry_run_database();
+
+    db.begin_dry_run();
+    try {
+        db.begin_dry_run();
+        FAIL() << "Expected std::runtime_error";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), "Cannot begin_dry_run: dry run already active");
+    }
+    db.end_dry_run();
+}
+
+TEST(DatabaseDryRun, RejectsStartWhileTransactionActive) {
+    auto db = dry_run_database();
+
+    db.begin_transaction();
+    try {
+        db.begin_dry_run();
+        FAIL() << "Expected std::runtime_error";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), "Cannot begin_dry_run: transaction already active");
+    }
+    db.rollback();
+}
+
+TEST(DatabaseDryRun, RejectsEndWithoutStart) {
+    auto db = dry_run_database();
+
+    try {
+        db.end_dry_run();
+        FAIL() << "Expected std::runtime_error";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), "Cannot end_dry_run: no active dry run");
+    }
+}
+
+TEST(DatabaseDryRun, ImportCsvStillRefusesToNest) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("csv_export.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    db.begin_dry_run();
+    // import_csv toggles PRAGMA foreign_keys, which is a no-op mid-transaction — the dry run's
+    // transaction is a real one, so the existing precondition still fires.
+    EXPECT_THROW(db.import_csv("Items", "", "does_not_matter.csv"), std::runtime_error);
+    db.end_dry_run();
+}

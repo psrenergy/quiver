@@ -81,10 +81,31 @@ datetime surface — there are no DateTime wrapper helpers, unlike Julia/Dart/Py
   fine; \`..\` escapes and outside absolute paths throw \`Cannot <op>: path '...' escapes the
   database directory ...\`). On an in-memory database these operations throw
   \`Cannot <op>: database is in-memory, file operations are unavailable\`.
-- **Output.** Scripts cannot return values to the tool — use \`print()\` for anything you need to
-  see (it is captured). Arrays are 1-indexed (iterate with \`ipairs\`); reading a NULL yields \`nil\`,
-  writing \`nil\` stores NULL where NULL is accepted (query params, ts rows, file columns — but NOT
-  element scalar attributes; see CRUD).
+- **Output.** A script can \`return\` one value and the host receives it as JSON — prefer this over
+  \`print()\` when you need structured data back (\`print()\` still works and is captured). Only the
+  **first** returned value is encoded. Arrays are 1-indexed (iterate with \`ipairs\`); reading a NULL
+  yields \`nil\`, writing \`nil\` stores NULL where NULL is accepted (query params, ts rows, file
+  columns — but NOT element scalar attributes; see CRUD).
+
+  \`\`\`lua
+  return { ids = db:read_element_ids("Collection"), total = 3 }
+  -- host receives: {"ids":[1,2,3],"total":3}
+  \`\`\`
+
+  | Returned                   | JSON                                                    |
+  | -------------------------- | ------------------------------------------------------- |
+  | nothing                    | \`""\` (empty — distinct from \`nil\`)                      |
+  | \`nil\`                      | \`null\`                                                  |
+  | integer / float / string   | the value; a float keeps its shortest round-trip form   |
+  | boolean                    | \`true\` / \`false\`                                        |
+  | NaN, \`math.huge\`           | \`null\` (JSON has no NaN/Infinity)                       |
+  | table keyed \`1..n\`         | array — an empty table \`{}\` encodes as \`[]\`             |
+  | any other table            | object, keys sorted; integer keys stringify              |
+
+  Returning a function, a coroutine, or a userdata (including \`db\` itself) raises
+  \`Cannot run: script returned an unsupported Lua type\`, and nesting deeper than 32 levels raises
+  \`Cannot run: script return value nests deeper than 32 levels\` (this is also what stops a
+  self-referencing table).
 - **Embedding harness may restrict further.** The library itself allows transactions and the
   (sandboxed) CSV/file operations below. A host that runs your script (e.g. a hosted \`run_lua\`
   tool) may disable some of them and report \`disabled in the run_lua sandbox\` — that limit comes
@@ -127,11 +148,47 @@ db:transaction(function(db)
 end)   -- both writes commit together; if either throws, both roll back
 \`\`\`
 
-**Caveat:** if the host already runs your script inside a transaction, an explicit
-\`db:begin_transaction()\` will error (\`cannot start a transaction within a transaction\`) and a
-mid-script \`db:commit()\` would prematurely end the host's transaction. When unsure whether a
-transaction is already open, check \`db:in_transaction()\` first, or just issue writes directly —
+**Caveat:** if the host already runs your script inside a plain transaction (not a dry run), an
+explicit \`db:begin_transaction()\` will error (\`cannot start a transaction within a transaction\`)
+and a mid-script \`db:commit()\` would prematurely end the host's transaction. When unsure whether
+a transaction is already open, check \`db:in_transaction()\` first, or just issue writes directly —
 each \`db:\` write is durable on its own.
+
+---
+
+## Dry runs
+
+A dry run executes writes and then throws them away. Use it to check that a sequence works — that
+the collections exist, the types match, the foreign keys resolve — before committing to it.
+
+\`\`\`lua
+db:dry_run(fn)           -- run fn(db), roll everything back, return fn's result
+db:begin_dry_run()       -- start one explicitly
+db:end_dry_run()         -- end it, rolling back everything it covered
+db:in_dry_run()          -- boolean: is a dry run currently active?
+\`\`\`
+
+\`\`\`lua
+local preview = db:dry_run(function(db)
+    db:create_element("Collection", { label = "Item 1", some_integer = 42 })
+    return db:read_element_ids("Collection")   -- reads see the uncommitted writes
+end)
+-- nothing was kept; preview holds what the reads saw
+\`\`\`
+
+Rules worth knowing:
+
+- **Nested transaction calls are absorbed.** Inside a dry run, \`db:begin_transaction\`,
+  \`db:commit\`, \`db:rollback\` and \`db:transaction\` become no-ops, so the \`db:transaction\`
+  pattern above composes instead of erroring. The flip side: a nested \`db:rollback\` does **not**
+  partially undo — everything is undone when the dry run ends, whatever the nested calls asked for.
+- \`db:in_transaction()\` still reports \`true\` during a dry run: a real transaction is open.
+- \`db:import_csv\` cannot run inside a dry run (it toggles a pragma that is a no-op mid-transaction)
+  and throws \`Cannot import_csv: transaction already active\`.
+- The host may have already opened a dry run around your whole script. \`db:begin_dry_run()\` then
+  errors with \`Cannot begin_dry_run: dry run already active\` — check \`db:in_dry_run()\` first.
+- For a rough sense of how much a run touched, \`db:query_integer("SELECT total_changes()")\` gives
+  the number of rows inserted, updated or deleted on this connection.
 
 ---
 

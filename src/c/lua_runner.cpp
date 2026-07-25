@@ -2,6 +2,7 @@
 
 #include "internal.h"
 #include "quiver/lua_runner.h"
+#include "utils/string.h"
 
 #include <new>
 
@@ -33,11 +34,11 @@ QUIVER_C_API quiver_error_t quiver_lua_runner_free(quiver_lua_runner_t* runner) 
     return QUIVER_OK;
 }
 
-QUIVER_C_API quiver_error_t quiver_lua_runner_run(quiver_lua_runner_t* runner, const char* script) {
-    QUIVER_REQUIRE(runner, script);
+QUIVER_C_API quiver_error_t quiver_lua_runner_run(quiver_lua_runner_t* runner, const char* script, char** out_result) {
+    QUIVER_REQUIRE(runner, script, out_result);
 
     try {
-        runner->runner.run(script);
+        *out_result = quiver::string::new_c_str(runner->runner.run(script));
         return QUIVER_OK;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
@@ -46,6 +47,11 @@ QUIVER_C_API quiver_error_t quiver_lua_runner_run(quiver_lua_runner_t* runner, c
         quiver_set_last_error("Unknown error running Lua script");
         return QUIVER_ERROR;
     }
+}
+
+QUIVER_C_API quiver_error_t quiver_lua_runner_free_string(char* str) {
+    delete[] str;
+    return QUIVER_OK;
 }
 
 }  // extern "C"

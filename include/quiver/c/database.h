@@ -44,6 +44,12 @@ QUIVER_C_API quiver_error_t quiver_database_commit(quiver_database_t* db);
 QUIVER_C_API quiver_error_t quiver_database_rollback(quiver_database_t* db);
 QUIVER_C_API quiver_error_t quiver_database_in_transaction(quiver_database_t* db, int* out_active);
 
+// Dry runs - everything until end_dry_run runs inside a transaction that is always rolled back.
+// While one is active, begin_transaction/commit/rollback are absorbed (no-ops).
+QUIVER_C_API quiver_error_t quiver_database_begin_dry_run(quiver_database_t* db);
+QUIVER_C_API quiver_error_t quiver_database_end_dry_run(quiver_database_t* db);
+QUIVER_C_API quiver_error_t quiver_database_in_dry_run(quiver_database_t* db, int* out_active);
+
 // Version
 QUIVER_C_API quiver_error_t quiver_database_current_version(quiver_database_t* db, int64_t* out_version);
 

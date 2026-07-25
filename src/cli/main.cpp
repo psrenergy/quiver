@@ -49,6 +49,8 @@ int main(int argc, char* argv[]) {
 
     program.add_argument("--read-only").help("open database in read-only mode").flag();
 
+    program.add_argument("--dry-run").help("run the script in a transaction and roll it back").flag();
+
     program.add_argument("--log-level")
         .help("set log verbosity (debug, info, warn, error, off)")
         .default_value(std::string("warn"));
@@ -100,8 +102,19 @@ int main(int argc, char* argv[]) {
 
         // Read and execute script
         auto script = read_script_file(*script_path);
+        if (program.get<bool>("--dry-run")) {
+            db.begin_dry_run();
+        }
+
         quiver::LuaRunner lua(db);
-        lua.run(script);
+        auto result = lua.run(script);
+
+        if (db.in_dry_run()) {
+            db.end_dry_run();
+        }
+        if (!result.empty()) {
+            std::cout << result << std::endl;
+        }
 
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;

@@ -283,6 +283,44 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
                 pass  # Best-effort rollback; swallow rollback errors
             raise
 
+    def begin_dry_run(self) -> None:
+        """Begin a dry run: a transaction that end_dry_run always rolls back."""
+        self._ensure_open()
+        lib = get_lib()
+        check(lib.quiver_database_begin_dry_run(self._ptr))
+
+    def end_dry_run(self) -> None:
+        """End the active dry run, rolling back everything it covered."""
+        self._ensure_open()
+        lib = get_lib()
+        check(lib.quiver_database_end_dry_run(self._ptr))
+
+    def in_dry_run(self) -> bool:
+        """Return True if a dry run is currently active."""
+        self._ensure_open()
+        lib = get_lib()
+        out = ffi.new("int*")
+        check(lib.quiver_database_in_dry_run(self._ptr, out))
+        return out[0] != 0
+
+    @contextmanager
+    def dry_run(self):
+        """Execute operations inside a transaction that is always rolled back.
+
+        While the dry run is active, begin_transaction/commit/rollback are absorbed (no-ops), so
+        code that manages its own transactions composes instead of erroring on a nested BEGIN. A
+        nested rollback is therefore not partial -- everything is undone when the dry run ends.
+        """
+        self._ensure_open()
+        self.begin_dry_run()
+        try:
+            yield self
+        finally:
+            try:
+                self.end_dry_run()
+            except Exception:
+                pass  # Best-effort; swallow so the original exception survives
+
     # -- Query operations -------------------------------------------------------
 
     def query_string(self, sql: str, *, parameters: list | None = None) -> str | None:

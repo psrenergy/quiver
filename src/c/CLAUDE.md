@@ -31,10 +31,12 @@ src/c/
   database_metadata.cpp   # Metadata get/list + co-located free functions
   database_query.cpp      # Query operations (plain and parameterized)
   database_time_series.cpp # Time series operations + co-located free functions
-  database_transaction.cpp # Transaction control (begin, commit, rollback, in_transaction)
+  database_transaction.cpp # Transaction control (begin, commit, rollback, in_transaction) +
+                           # dry runs (begin_dry_run, end_dry_run, in_dry_run)
   database_csv_export.cpp / database_csv_import.cpp
   element.cpp             # Element builder C API
-  lua_runner.cpp          # LuaRunner C API (errors via quiver_get_last_error)
+  lua_runner.cpp          # LuaRunner C API (errors via quiver_get_last_error); run returns the
+                          # script's JSON result via char** out_result + its own free_string
 src/c/binary/               # BinaryFile / CSVConverter / BinaryMetadata wrappers
 src/c/expression/           # Expression node constructors, save, free
 ```
@@ -100,6 +102,9 @@ quiver_database_free_string_array(char**, size_t)
 
 // Single string cleanup (strings returned by query/read-by-id/element operations)
 quiver_database_free_string(char*)
+
+// Lua script result (JSON returned by quiver_lua_runner_run)
+quiver_lua_runner_free_string(char*)
 
 // Binary metadata lifecycle
 quiver_binary_metadata_create/free

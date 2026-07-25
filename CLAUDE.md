@@ -80,6 +80,25 @@ Settled questions — don't relitigate without the user; each was decided delibe
 - **`query_*` validate parameter count**: `execute` rejects a mismatch between bound parameters and
   `?` placeholders (too few or too many) instead of binding NULL / ignoring extras.
 - **Migration `down_sql` is a required feature** — do not remove the down path.
+- **Dry runs live on `Database`, not on `LuaRunner`.** `begin_dry_run`/`end_dry_run`/`in_dry_run`
+  hold one transaction and always roll it back; while active, the public
+  `begin_transaction`/`commit`/`rollback` are absorbed (no-ops). Absorbing is the whole point —
+  without it a script using `db:transaction(fn)` (the pattern the Lua reference recommends) dies on
+  a nested `BEGIN`. A `dry_run(bool)` parameter on `LuaRunner::run` was implemented first and
+  rejected: it duplicated transaction semantics inside the Lua *binding* layer and gated the
+  feature behind Lua for no reason. Consequences, all documented rather than fixed: a nested
+  rollback is **not** partial (everything is undone at the end regardless); `in_transaction()`
+  still reports `true`; `import_csv` still throws its `transaction already active` precondition;
+  and a caller can escape via a raw `COMMIT` through `query_*` (so `end_dry_run` guards on
+  `sqlite3_get_autocommit` instead of throwing). A per-table changeset (SQLite session extension)
+  was skipped — a script that wants a change count already has `SELECT total_changes()`.
+- **`LuaRunner::run` returns the script's return value as a JSON string.** One encoder in C++
+  (`src/lua_runner.cpp`, anonymous namespace); every binding passes the string through without
+  parsing, so no binding gains a JSON dependency (Julia would have needed one). Only the first
+  returned value is encoded; no `return` yields `""`, distinct from `return nil` → `"null"`.
+  Non-finite numbers become `null`, a table keyed `1..n` is an array (`{}` → `[]`) and any other
+  table is a key-sorted object; a function/coroutine/userdata throws, as does nesting past 32
+  levels (that cap is the cycle guard).
 - **`import_csv` refuses to run inside an open transaction** (`PRAGMA foreign_keys` is a no-op
   mid-transaction, so nesting is unsupportable) — Pattern 1 precondition, not a silent rollback.
 - **`BinaryMetadata::number_of_time_dimensions()` is derived** from `dimensions`, never stored.
@@ -341,6 +360,7 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
 ### Database Class
 - Factory methods: `from_schema()`, `from_migrations()` — `DatabaseOptions` (`read_only`, `console_level`) exposed as optional parameters in every binding
 - Transaction control: `begin_transaction()`, `commit()`, `rollback()`, `in_transaction()`
+- Dry runs: `begin_dry_run()`, `end_dry_run()`, `in_dry_run()` — one transaction that is always rolled back; while active the three transaction methods above are absorbed (no-ops) so nested callers compose. See the design decision below.
 - CRUD: `create_element(collection, element)`, `update_element`, `delete_element`
 - Scalar/vector/set readers: `read_{scalar,vector,set}_{integers,floats,strings}(collection, attribute)` (+ `_by_id` variants). Scalar bulk readers return one entry per element with SQL NULLs preserved positionally (`std::optional` / `nothing`/`None`/`null`/`nil`); see the scalar-NULL design decision.
 - Whole-group readers: `read_vector_group_by_id()` / `read_set_group_by_id()` — row-shaped
@@ -372,7 +392,9 @@ broadcast, aggregation, and label projection, materialized via `save()`). Expose
 
 ### LuaRunner Class
 Executes Lua scripts against a database; the `db` userdata exposes the same API surface
-(see cross-layer tables below). Implementation notes: `src/CLAUDE.md`.
+(see cross-layer tables below). `run(script)` returns the script's return value encoded as
+**JSON** (empty string if it returned nothing) — every binding passes that string through
+verbatim. Implementation notes: `src/CLAUDE.md`.
 
 ## Cross-Layer Naming Conventions
 
@@ -397,6 +419,9 @@ The rules are mechanical: given any C++ method name, you can derive the equivale
 | Transaction | `commit()` | `quiver_database_commit()` | `commit!()` | `commit()` | `commit()` |
 | Transaction | `rollback()` | `quiver_database_rollback()` | `rollback!()` | `rollback()` | `rollback()` |
 | Transaction | `in_transaction()` | `quiver_database_in_transaction()` | `in_transaction()` | `inTransaction()` | `in_transaction()` |
+| Dry run | `begin_dry_run()` | `quiver_database_begin_dry_run()` | `begin_dry_run!()` | `beginDryRun()` | `begin_dry_run()` |
+| Dry run | `end_dry_run()` | `quiver_database_end_dry_run()` | `end_dry_run!()` | `endDryRun()` | `end_dry_run()` |
+| Dry run | `in_dry_run()` | `quiver_database_in_dry_run()` | `in_dry_run()` | `inDryRun()` | `in_dry_run()` |
 | Create | `create_element()` | `quiver_database_create_element()` | `create_element!()` | `createElement()` | `create_element()` |
 | Read scalar | `read_scalar_integers()` | `quiver_database_read_scalar_integers()` | `read_scalar_integers()` | `readScalarIntegers()` | `read_scalar_integers()` |
 | Read by Id | `read_scalar_integer_by_id()` | `quiver_database_read_scalar_integer_by_id()` | `read_scalar_integer_by_id()` | `readScalarIntegerById()` | N/A (use composites) |
@@ -477,6 +502,7 @@ because only Julia consumers use it.
 | Julia | Dart | Python | Lua | Wraps |
 |-------|------|--------|-----|-------|
 | `transaction(db) do db...end` | `db.transaction((db) {...})` | `with db.transaction():` | `db:transaction(function(db)...end)` | begin + fn + commit/rollback |
+| `dry_run(db) do db...end` | `db.dryRun((db) {...})` | `with db.dry_run():` | `db:dry_run(function(db)...end)` | begin_dry_run + fn + end_dry_run |
 
 **Multi-column group readers (Julia, Dart, and Python):**
 
