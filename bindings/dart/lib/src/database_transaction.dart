@@ -83,16 +83,20 @@ extension DatabaseTransaction on Database {
 
   /// Executes [fn] inside a transaction that is always rolled back, and returns its result.
   T dryRun<T>(T Function(Database) fn) {
-    _ensureNotClosed();
     beginDryRun();
+    final T result;
     try {
-      return fn(this);
-    } finally {
+      result = fn(this);
+    } catch (_) {
       try {
         endDryRun();
       } catch (_) {
-        // Best-effort; ignore so the original exception survives
+        // Best-effort only while an exception is already in flight, mirroring transaction()
       }
+      rethrow;
     }
+    // On the success path the rollback is this wrapper's whole promise -- let a failure surface.
+    endDryRun();
+    return result;
   }
 }

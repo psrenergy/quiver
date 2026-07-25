@@ -339,12 +339,17 @@ void Database::end_dry_run() {
     if (!impl_->dry_run) {
         throw std::runtime_error("Cannot end_dry_run: no active dry run");
     }
-    impl_->dry_run = false;
     // Guarded: a caller can still end the transaction out from under us with a raw COMMIT
     // through query_*.
     if (!sqlite3_get_autocommit(impl_->db)) {
-        impl_->rollback();
+        impl_->rollback();  // logs a failure instead of throwing, so verify it took effect
+        if (!sqlite3_get_autocommit(impl_->db)) {
+            // The flag stays set on purpose: begin/commit/rollback keep being absorbed (so nothing
+            // can commit what was meant to be discarded) and the caller can retry end_dry_run.
+            throw std::runtime_error("Failed to end_dry_run: rollback left the transaction open");
+        }
     }
+    impl_->dry_run = false;
     impl_->logger->debug("Dry run rolled back");
 }
 

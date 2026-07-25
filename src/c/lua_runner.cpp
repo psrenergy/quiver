@@ -36,6 +36,7 @@ QUIVER_C_API quiver_error_t quiver_lua_runner_free(quiver_lua_runner_t* runner) 
 
 QUIVER_C_API quiver_error_t quiver_lua_runner_run(quiver_lua_runner_t* runner, const char* script, char** out_result) {
     QUIVER_REQUIRE(runner, script, out_result);
+    *out_result = nullptr;  // so a caller that frees unconditionally never sees a stale pointer
 
     try {
         *out_result = quiver::string::new_c_str(runner->runner.run(script));

@@ -45,6 +45,11 @@ ruff.toml         # Lint/format config (format.bat runs ruff)
   `list[T | None]` (`mask[i]` falsy → `None`); `read_scalar_strings` already returns `list[str | None]`
   via the `ffi.NULL` guard. `_c_api.py` carries the mask out-param on the two numeric readers plus
   `quiver_database_free_mask`.
+- **`LuaRunner.run` owns its result**: `quiver_lua_runner_run` takes a `char** out_result` and the
+  JSON string must be freed with `quiver_lua_runner_free_string` — *not*
+  `quiver_database_free_string` (both are hand-declared in `_c_api.py`). The free sits in a
+  `finally` so a `decode_string` failure (the JSON is rejected as non-UTF-8 in C++, but be safe)
+  cannot leak the native buffer.
 - **Time-series group NULLs**: `read_time_series_group` surfaces a SQL NULL cell as `None` in the
   column list (decoded via the per-cell `uint8_t**` mask out-param); the dimension column stays
   dense datetimes. `_marshal_time_series_columns` dispatches on the first non-`None` element, builds

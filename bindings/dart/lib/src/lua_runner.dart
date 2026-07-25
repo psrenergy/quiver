@@ -72,9 +72,14 @@ class LuaRunner {
         throw LuaException(detail);
       }
 
-      final result = outResult.value.cast<Utf8>().toDartString();
-      bindings.quiver_lua_runner_free_string(outResult.value);
-      return result;
+      // The result is C-heap allocated, so the Arena cannot own it: free it in its own finally so
+      // a decode failure cannot leak it.
+      final resultPtr = outResult.value;
+      try {
+        return resultPtr.cast<Utf8>().toDartString();
+      } finally {
+        bindings.quiver_lua_runner_free_string(resultPtr);
+      }
     } finally {
       arena.releaseAll();
     }

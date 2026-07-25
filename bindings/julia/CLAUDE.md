@@ -41,6 +41,10 @@ Project.toml      # Deps: Artifacts, CEnum, Dates, Libdl; julia 1.11 compat
   readers are not yet converted — see `type_stability_followup.md`. An `INTEGER PRIMARY KEY` (e.g.
   `id`) is a rowid alias and is reported `not_null` by the C++ core (`scalar_metadata_from_column`),
   so `read_scalar_integers(db, c, "id")` is a concrete `Vector{Int64}`.
+- **`run!` owns its result**: `quiver_lua_runner_run` takes an `out_result::Ptr{Ptr{Cchar}}` and the
+  JSON string must be freed with `quiver_lua_runner_free_string` — *not*
+  `quiver_database_free_string`. `check` throws before the `unsafe_string`, and the C API leaves
+  `out_result` NULL on failure.
 - **Time-series group NULLs**: `read_time_series_group` returns value columns as
   `Vector{Union{T, Nothing}}` **always** (type-stable, like the `Optional{String}` precedent in
   `read_time_series_row`) — a NULL cell is `nothing`; the dimension column stays a dense

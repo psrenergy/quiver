@@ -102,10 +102,20 @@ datetime surface — there are no DateTime wrapper helpers, unlike Julia/Dart/Py
   | table keyed \`1..n\`         | array — an empty table \`{}\` encodes as \`[]\`             |
   | any other table            | object, keys sorted; integer keys stringify              |
 
+  **A table with holes is an object, not an array.** A bulk read of a nullable column returns
+  \`nil\` holes (see Reading), so \`return db:read_scalar_integers(c, a)\` encodes as
+  \`{"1":10,"3":30}\` — not \`[10,null,30]\` — and the keys sort as text (\`"1","11","2"\`). When the host
+  needs positional data, return the ids alongside and fill the holes yourself:
+  \`local v = db:read_scalar_integers(c, a); local out = {}; for i in ipairs(ids) do out[i] = v[i] or false end\`.
+
   Returning a function, a coroutine, or a userdata (including \`db\` itself) raises
-  \`Cannot run: script returned an unsupported Lua type\`, and nesting deeper than 32 levels raises
+  \`Cannot run: script returned an unsupported Lua type\`; nesting deeper than 32 levels raises
   \`Cannot run: script return value nests deeper than 32 levels\` (this is also what stops a
-  self-referencing table).
+  self-referencing table); a result over 64 MB raises
+  \`Cannot run: script return value exceeds ... bytes of JSON\`; a string holding bytes that are not
+  valid UTF-8 raises \`Cannot run: script return value contains a string that is not valid UTF-8\`;
+  and a table where an integer key and a string key spell the same thing (\`{[1] = 'a', ['1'] = 'b'}\`)
+  raises \`Cannot run: script returned a table with duplicate key '1'\`.
 - **Embedding harness may restrict further.** The library itself allows transactions and the
   (sandboxed) CSV/file operations below. A host that runs your script (e.g. a hosted \`run_lua\`
   tool) may disable some of them and report \`disabled in the run_lua sandbox\` — that limit comes
@@ -178,15 +188,19 @@ end)
 
 Rules worth knowing:
 
-- **Nested transaction calls are absorbed.** Inside a dry run, \`db:begin_transaction\`,
-  \`db:commit\`, \`db:rollback\` and \`db:transaction\` become no-ops, so the \`db:transaction\`
-  pattern above composes instead of erroring. The flip side: a nested \`db:rollback\` does **not**
-  partially undo — everything is undone when the dry run ends, whatever the nested calls asked for.
+- **Nested transaction control is absorbed.** Inside a dry run, \`db:begin_transaction\`,
+  \`db:commit\` and \`db:rollback\` become no-ops, so the \`db:transaction\` pattern above composes
+  instead of erroring — \`db:transaction(fn)\` still runs \`fn\` and still performs its writes, only
+  its BEGIN/COMMIT are absorbed. The flip side: a nested \`db:rollback\` does **not** partially
+  undo — everything is undone when the dry run ends, whatever the nested calls asked for.
 - \`db:in_transaction()\` still reports \`true\` during a dry run: a real transaction is open.
 - \`db:import_csv\` cannot run inside a dry run (it toggles a pragma that is a no-op mid-transaction)
   and throws \`Cannot import_csv: transaction already active\`.
-- The host may have already opened a dry run around your whole script. \`db:begin_dry_run()\` then
-  errors with \`Cannot begin_dry_run: dry run already active\` — check \`db:in_dry_run()\` first.
+- **Dry runs do not nest.** The host may have already opened one around your whole script, in which
+  case both \`db:begin_dry_run()\` and \`db:dry_run(fn)\` (which calls it internally) error with
+  \`Cannot begin_dry_run: dry run already active\` — check \`db:in_dry_run()\` first and skip the
+  wrapper when one is already active. Do **not** call \`db:end_dry_run()\` to get around it: that
+  ends the host's dry run, and everything you write afterwards is committed for real.
 - For a rough sense of how much a run touched, \`db:query_integer("SELECT total_changes()")\` gives
   the number of rows inserted, updated or deleted on this connection.
 

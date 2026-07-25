@@ -311,15 +311,17 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         code that manages its own transactions composes instead of erroring on a nested BEGIN. A
         nested rollback is therefore not partial -- everything is undone when the dry run ends.
         """
-        self._ensure_open()
         self.begin_dry_run()
         try:
             yield self
-        finally:
+        except BaseException:
             try:
                 self.end_dry_run()
             except Exception:
-                pass  # Best-effort; swallow so the original exception survives
+                pass  # Best-effort only while an exception is already in flight
+            raise
+        # On the success path the rollback is this wrapper's whole promise -- let a failure surface.
+        self.end_dry_run()
 
     # -- Query operations -------------------------------------------------------
 

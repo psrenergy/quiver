@@ -39,6 +39,10 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   mask into `List<int?>`/`List<double?>` (mask 0 → `null`); `readScalarStrings` returns `List<String?>`,
   null-guarding the pointer before `toDartString`. `bindings.dart` carries the mask arg +
   `quiver_database_free_mask` (regenerate via ffigen; clear `.dart_tool` caches on C-API changes).
+- **`LuaRunner.run` owns its result**: `quiver_lua_runner_run` takes a `char** out_result` whose JSON
+  string is C-heap allocated, so the `Arena` cannot own it — it is freed with
+  `quiver_lua_runner_free_string` (*not* `quiver_database_free_string`) in its own nested `finally`,
+  so a `toDartString` failure cannot leak it.
 - **Time-series group NULLs**: `readTimeSeriesGroup`/`updateTimeSeriesGroup` use
   `Map<String, List<Object?>>` — a `null` cell is a SQL NULL. `_marshalTimeSeriesColumn` returns a
   `({int type, Pointer<Void> data, Pointer<Uint8> hasValue})` record (the per-cell mask;

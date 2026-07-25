@@ -52,9 +52,11 @@ class LuaRunner:
         lib = get_lib()
         out_result = ffi.new("char**")
         check(lib.quiver_lua_runner_run(self._ptr, script.encode("utf-8"), out_result))
-        result = decode_string(out_result[0])
-        lib.quiver_lua_runner_free_string(out_result[0])
-        return result
+        try:
+            return decode_string(out_result[0])
+        finally:
+            # In a finally so a decode failure cannot leak the native JSON buffer.
+            lib.quiver_lua_runner_free_string(out_result[0])
 
     def __enter__(self) -> LuaRunner:
         return self

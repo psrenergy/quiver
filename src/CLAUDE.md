@@ -259,14 +259,34 @@ Implementation conventions in `lua_runner.cpp`:
   path emits NULL cells as `nil` holes (an all-NULL column is an empty table with the key present),
   so read → modify → write round-trips; `#ts.<dimension>` is the trustworthy row count.
 - **`run` returns the script's return value as JSON**, built by the anonymous-namespace
-  `append_json` / `append_json_string` / `append_json_double` / `append_json_table` at the top of
-  the file (`kMaxReturnDepth = 32` is both the nesting cap and the cycle guard). Two type checks
-  there use `get_type()` rather than `is<T>()` on purpose: sol2's `is<sol::table>()` also accepts
-  **userdata** (so `return db` would quietly encode as `{}`), and `is<bool>()` is likewise looser
-  than `lua_isboolean`. Everything else reuses the house `is<int64_t>()`-then-`is<double>()`
-  ordering. Object keys are collected into a `std::map` so output is deterministic — Lua's `pairs`
-  order is not, and the tests compare exact strings. Doubles go through `std::to_chars`
-  (shortest round-trip); non-finite becomes `null` since JSON has no NaN/Infinity literal.
+  `append_json` / `append_json_string` / `append_number` / `append_json_double` /
+  `append_json_table` at the top of the file. Two type checks there use `get_type()` rather than
+  `is<T>()` on purpose: sol2's `is<sol::table>()` also accepts **userdata** (so `return db` would
+  quietly encode as `{}`), and `is<bool>()` is likewise looser than `lua_isboolean`. Everything
+  else reuses the house `is<int64_t>()`-then-`is<double>()` ordering. Object keys are collected into
+  a `vector` and sorted so output is deterministic — Lua's `pairs` order is not, and the tests
+  compare exact strings; a `std::map` was used first and dropped (one tree node per entry on a
+  large return). Adjacent equal keys after the sort are **rejected**: an integer key and a string
+  key spelling the same text (`{[1] = 'a', ['1'] = 'b'}`) are two Lua keys but one JSON key.
+  Output accumulates into a plain **`std::string`**, never an `ostringstream`: no locale (`num_put`
+  would insert thousands separators into integers under a grouping global locale, producing invalid
+  JSON), no per-token sentry, no copy out of the stream, and no `badbit` swallowing a `bad_alloc`.
+  Numbers — integers and doubles alike — go through `std::to_chars` (shortest round-trip,
+  locale-independent); non-finite becomes `null` since JSON has no NaN/Infinity literal.
+  `append_json_string` appends runs of safe bytes whole and **validates UTF-8**: JSON must be UTF-8
+  (RFC 8259) but a Lua string is an arbitrary byte array, and this is the only layer that can
+  diagnose it (downstream, Python raises `UnicodeDecodeError`, Dart `FormatException`, and JS
+  silently substitutes U+FFFD).
+- **Two caps guard the encoder against untrusted scripts**, and both are needed:
+  `kMaxReturnDepth = 32` bounds nesting (and is the cycle guard — a self-referencing table would
+  otherwise recurse until the stack dies), while `kMaxReturnBytes = 64 MiB` bounds output. Depth
+  alone is not enough: a table that shares sub-tables (`local t = {1}; for _ = 1, 30 do t = {t, t}
+  end`) is only 31 levels deep but expands to 2^30 nodes.
+- **A table with holes encodes as an object, not an array.** The array branch requires keys exactly
+  `1..n`, so a bulk read of a nullable column — which the scalar-NULL design decision represents as
+  `nil` holes — comes back as `{"1":10,"3":30}` with text-sorted keys, not `[10,null,30]`. Recorded
+  in the agent-facing Lua reference; changing it is a design decision (array-with-nulls needs a
+  sparseness guard against `{[1e9] = 1}`).
 - Script errors surface as `"Failed to run Lua script: ..."` (root Pattern 3). Encoder failures
   (unsupported type, unsupported table key, too deep) are Pattern 1 `"Cannot run: ..."` and are
   **not** wrapped in that prefix — they happen after the script already succeeded.
