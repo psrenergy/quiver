@@ -166,6 +166,15 @@ class TestCSVOptionsDefaults:
 
 
 def _read_file(path: str) -> str:
-    """Read file as string with binary mode to preserve LF."""
+    """Read file as string with binary mode to preserve LF.
+
+    Canonicalizes to comma-delimited, '.'-decimal form so byte-level assertions
+    stay independent of the host locale: export_csv emits a ';'-delimited,
+    ','-decimal file on a comma-locale machine (matching Excel). Safe only for
+    values free of spaces and embedded commas, which holds for these tests.
+    """
     with open(path, "rb") as f:
-        return f.read().decode("utf-8")
+        content = f.read().decode("utf-8")
+    if content.startswith("sep=;"):
+        content = content.replace(",", ".").replace(";", ",")
+    return content

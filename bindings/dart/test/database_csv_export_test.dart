@@ -4,6 +4,18 @@ import 'package:quiverdb/src/database.dart';
 import 'package:test/test.dart';
 import 'package:path/path.dart' as path;
 
+// Read an exported CSV and canonicalize it to comma-delimited, '.'-decimal form so
+// byte-level assertions stay independent of the host locale: exportCSV emits a
+// ';'-delimited, ','-decimal file on a comma-locale machine (matching Excel). Safe
+// only for values free of spaces and embedded commas, which holds for these tests.
+String readCsvCanonical(String csvPath) {
+  var content = File(csvPath).readAsStringSync();
+  if (content.startsWith('sep=;')) {
+    content = content.replaceAll(',', '.').replaceAll(';', ',');
+  }
+  return content;
+}
+
 void main() {
   // Path to central tests folder
   final testsPath = path.join(path.current, '..', '..', 'tests');
@@ -33,7 +45,7 @@ void main() {
         });
 
         db.exportCSV('Items', '', csvPath);
-        final content = File(csvPath).readAsStringSync();
+        final content = readCsvCanonical(csvPath);
 
         expect(
           content,
@@ -74,7 +86,7 @@ void main() {
         });
 
         db.exportCSV('Items', 'measurements', csvPath);
-        final content = File(csvPath).readAsStringSync();
+        final content = readCsvCanonical(csvPath);
 
         expect(content, contains('sep=,\nid,vector_index,measurement\n'));
         expect(content, contains('Item1,1,1.1\n'));
@@ -114,7 +126,7 @@ void main() {
             },
           },
         );
-        final content = File(csvPath).readAsStringSync();
+        final content = readCsvCanonical(csvPath);
 
         expect(content, contains('Item1,Alpha,Active,'));
         expect(content, contains('Item2,Beta,Inactive,'));
@@ -140,7 +152,7 @@ void main() {
         });
 
         db.exportCSV('Items', '', csvPath, dateTimeFormat: '%Y/%m/%d');
-        final content = File(csvPath).readAsStringSync();
+        final content = readCsvCanonical(csvPath);
 
         expect(content, contains('2024/01/15'));
         // Raw ISO format should NOT appear
@@ -163,7 +175,7 @@ void main() {
         });
 
         db.exportCSV('Items', '', csvPath, dateTimeFormat: '%Y/%m/%d');
-        final content = File(csvPath).readAsStringSync();
+        final content = readCsvCanonical(csvPath);
 
         // Invalid datetime should be returned as-is
         expect(content, contains('not-a-date'));
@@ -202,7 +214,7 @@ void main() {
           },
           dateTimeFormat: '%Y/%m/%d',
         );
-        final content = File(csvPath).readAsStringSync();
+        final content = readCsvCanonical(csvPath);
 
         // Enum labels applied
         expect(content, contains('Item1,Alpha,Active,'));

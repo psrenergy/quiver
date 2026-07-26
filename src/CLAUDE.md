@@ -46,6 +46,7 @@ src/                      # C++ implementation
   element.cpp / row.cpp / result.cpp / migration.cpp / migrations.cpp
   lua_runner.cpp          # LuaRunner (sol2) - all Lua bindings
   cli/main.cpp            # quiver_cli CLI entry point
+  utils/csv_format.h      # locale-aware CSV number formatting (decimal/field separator, number normalization)
   utils/string.h          # String utilities: new_c_str, trim
   utils/datetime.h        # ISO 8601 parse/format helpers
 src/binary/                 # Binary C++ implementation

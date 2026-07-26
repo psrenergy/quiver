@@ -5,6 +5,19 @@ using Test
 
 include("fixture.jl")
 
+# Read an exported CSV and canonicalize it to comma-delimited, '.'-decimal form so
+# byte-level assertions stay independent of the host locale: export_csv emits a
+# ';'-delimited, ','-decimal file on a comma-locale machine (matching Excel). Safe
+# only for values free of spaces and embedded commas, which holds for these tests.
+function read_csv_canonical(path)
+    content = read(path, String)
+    if startswith(content, "sep=;")
+        content = replace(content, "," => ".")
+        content = replace(content, ";" => ",")
+    end
+    return content
+end
+
 @testset "CSV Export" begin
     path_schema = joinpath(tests_path(), "schemas", "valid", "csv_export.sql")
 
@@ -30,7 +43,7 @@ include("fixture.jl")
             )
 
             Quiver.export_csv(db, "Items", "", csv_path)
-            content = read(csv_path, String)
+            content = read_csv_canonical(csv_path)
 
             @test occursin("label,name,status,price,date_created,notes\n", content)
             @test occursin("Item1,Alpha,1,9.99,2024-01-15T10:30:00,first\n", content)
@@ -57,7 +70,7 @@ include("fixture.jl")
             Quiver.update_element!(db, "Items", id2; measurement = [4.4, 5.5])
 
             Quiver.export_csv(db, "Items", "measurements", csv_path)
-            content = read(csv_path, String)
+            content = read_csv_canonical(csv_path)
 
             @test occursin("sep=,\nid,vector_index,measurement\n", content)
             @test occursin("Item1,1,1.1\n", content)
@@ -89,7 +102,7 @@ include("fixture.jl")
             Quiver.export_csv(db, "Items", "", csv_path;
                 enum_labels = Dict("status" => Dict("en" => Dict("Active" => 1, "Inactive" => 2))),
             )
-            content = read(csv_path, String)
+            content = read_csv_canonical(csv_path)
 
             @test occursin("Item1,Alpha,Active,", content)
             @test occursin("Item2,Beta,Inactive,", content)
@@ -116,7 +129,7 @@ include("fixture.jl")
             Quiver.export_csv(db, "Items", "", csv_path;
                 date_time_format = "%Y/%m/%d",
             )
-            content = read(csv_path, String)
+            content = read_csv_canonical(csv_path)
 
             @test occursin("2024/01/15", content)
             # Raw ISO format should NOT appear
@@ -140,7 +153,7 @@ include("fixture.jl")
             Quiver.export_csv(db, "Items", "", csv_path;
                 date_time_format = "%Y/%m/%d",
             )
-            content = read(csv_path, String)
+            content = read_csv_canonical(csv_path)
 
             # Invalid datetime should be returned as-is
             @test occursin("not-a-date", content)
@@ -171,7 +184,7 @@ include("fixture.jl")
                 enum_labels = Dict("status" => Dict("en" => Dict("Active" => 1, "Inactive" => 2))),
                 date_time_format = "%Y/%m/%d",
             )
-            content = read(csv_path, String)
+            content = read_csv_canonical(csv_path)
 
             # Enum labels applied
             @test occursin("Item1,Alpha,Active,", content)

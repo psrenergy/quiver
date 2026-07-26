@@ -14,7 +14,9 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   the C++ core has no `_nulls` file), `test_database_transaction.cpp`,
   `test_database_csv_export.cpp`, `test_database_csv_import.cpp`, `test_database_errors.cpp`
 - Supporting types: `test_element.cpp`, `test_row_result.cpp`, `test_migrations.cpp`,
-  `test_schema_validator.cpp`
+  `test_schema_validator.cpp`, `test_csv_format.cpp` (unit tests for the header-only
+  `src/utils/csv_format.h` locale helpers + `NumberNormalizer`; `quiver_tests` adds `src/` to its
+  include path for this)
 - Lua: `test_lua_runner_*.cpp` — per-area split mirroring the database files (`_create`, `_read`,
   `_update`, `_delete`, `_query`, `_return`, `_time_series`, `_transaction`, `_errors`,
   `_csv_export`, `_csv_import`, `_all_types`, `_fk`). `_return` covers the JSON encoding of a

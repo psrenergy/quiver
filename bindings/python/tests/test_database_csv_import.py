@@ -80,6 +80,27 @@ class TestImportCSVLabelOnThirdColumn:
         assert prices == pytest.approx([10.5, 20.0])
 
 
+class TestImportCSVCommaDecimals:
+    """Test semicolon-delimited CSV with comma decimals (comma-locale Excel)."""
+
+    def test_semicolon_comma_decimals(self, csv_db: Database, tmp_path):
+        """A ';' file with ',' decimals imports the decimal value intact."""
+        csv_path = str(tmp_path / "comma_decimals.csv")
+        with open(csv_path, "w", newline="") as f:
+            f.write("sep=;\r\n")
+            f.write("label;name;status;price;date_created;notes\r\n")
+            f.write("Item1;Alpha;1;1000,5;;\r\n")
+            f.write("Item2;Beta;2;800,75;;\r\n")
+
+        csv_db.import_csv("Items", "", csv_path)
+
+        prices = csv_db.read_scalar_floats("Items", "price")
+        assert prices == pytest.approx([1000.5, 800.75])
+
+        statuses = csv_db.read_scalar_integers("Items", "status")
+        assert statuses == [1, 2]
+
+
 class TestImportCSVGroupRoundTrip:
     """Test group (vector) CSV import round-trip: export -> import -> verify."""
 

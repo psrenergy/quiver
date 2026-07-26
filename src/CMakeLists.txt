@@ -83,6 +83,12 @@ target_link_libraries(quiver
         ${CMAKE_DL_LIBS}
 )
 
+# utils/csv_format.h queries CFLocale on macOS (locale env vars are absent in
+# GUI launches, e.g. Flutter apps)
+if(APPLE)
+    target_link_libraries(quiver PRIVATE "-framework CoreFoundation")
+endif()
+
 # Set library properties
 set_target_properties(quiver PROPERTIES
     VERSION ${PROJECT_VERSION}

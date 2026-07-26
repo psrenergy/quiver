@@ -399,6 +399,38 @@ TEST(DatabaseCApiCSV, ImportCSV_SemicolonAutoDetect_RoundTrip) {
     quiver_database_close(db);
 }
 
+// A ';'-delimited file (what a comma-locale Excel writes) uses ',' decimals.
+// Verify the decimal value flows intact through the C API, not truncated at the
+// comma or corrupted by the adjacent integer column.
+TEST(DatabaseCApiCSV, ImportCSV_Semicolon_CommaDecimals) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+              QUIVER_OK);
+
+    auto csv_path = temp_csv("ImportSemicolonCommaDecimals");
+    write_csv_file(csv_path.string(),
+                   "sep=;\r\n"
+                   "label;name;status;price;date_created;notes\r\n"
+                   "Item1;Alpha;1;1000,5;;\r\n"
+                   "Item2;Beta;2;800,75;;\r\n");
+
+    auto import_options = quiver_csv_options_default();
+    ASSERT_EQ(quiver_database_import_csv(db, "Items", "", csv_path.string().c_str(), &import_options), QUIVER_OK);
+
+    double value = 0.0;
+    int has_value = 0;
+    ASSERT_EQ(quiver_database_read_scalar_float_by_id(db, "Items", "price", 1, &value, &has_value), QUIVER_OK);
+    EXPECT_EQ(has_value, 1);
+    EXPECT_DOUBLE_EQ(value, 1000.5);
+    ASSERT_EQ(quiver_database_read_scalar_float_by_id(db, "Items", "price", 2, &value, &has_value), QUIVER_OK);
+    EXPECT_EQ(has_value, 1);
+    EXPECT_DOUBLE_EQ(value, 800.75);
+
+    fs::remove(csv_path);
+    quiver_database_close(db);
+}
+
 // ============================================================================
 // CSV Import: Cannot open file
 // ============================================================================
