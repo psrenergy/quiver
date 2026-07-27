@@ -95,10 +95,7 @@ export function decodeStringArray(p: Pointer | null, count: number): string[] {
 
 /** Encode a JS string as a null-terminated C string buffer. */
 export function toCString(str: string): Allocation {
-  const encoded = encoder.encode(str + "\0");
-  const buf = new Uint8Array(encoded.length);
-  buf.set(encoded);
-  return { ptr: ptr(buf), buf };
+  return allocNativeString(str);
 }
 
 /** Allocate native memory for an array of int64 values. */
