@@ -12,13 +12,23 @@ function update_element!(db::Database, collection::String, id::Int64; kwargs...)
     return nothing
 end
 
-# Update time series functions
+# Group update functions (time series, vector, set)
 
-function update_time_series_group!(db::Database, collection::String, group::String, id::Int64; kwargs...)
-    # No kwargs = clear all rows for this element
+# Shared marshalling for the three column-oriented group writers: every column becomes a typed C
+# array plus a per-cell UInt8 mask where `nothing` is SQL NULL. `update` is the C entry point --
+# all three take the same parallel-array signature.
+function _update_group_columns(
+    db::Database,
+    update::Function,
+    collection::String,
+    group::String,
+    id::Int64,
+    kwargs,
+)
+    # No columns = clear all rows for this element
     if isempty(kwargs)
         check(
-            C.quiver_database_update_time_series_group(
+            update(
                 db.ptr, collection, group, id,
                 C_NULL, C_NULL, C_NULL, C_NULL, Csize_t(0), Csize_t(0),
             ),
@@ -116,7 +126,7 @@ function update_time_series_group!(db::Database, collection::String, group::Stri
 
     GC.@preserve refs begin
         check(
-            C.quiver_database_update_time_series_group(
+            update(
                 db.ptr, collection, group, id,
                 name_ptrs, col_types_arr, col_data_arr, col_mask_arr,
                 Csize_t(column_count), Csize_t(row_count),
@@ -124,6 +134,23 @@ function update_time_series_group!(db::Database, collection::String, group::Stri
         )
     end
     return nothing
+end
+
+function update_time_series_group!(db::Database, collection::String, group::String, id::Int64; kwargs...)
+    return _update_group_columns(db, C.quiver_database_update_time_series_group, collection, group, id, kwargs)
+end
+
+# Replace all of an element's rows in one *named* vector group. Pass no columns to clear it.
+# Prefer this over routing the group's columns through update_element! when a column name is
+# shared by two groups of the collection (legal for foreign keys): (collection, group) names
+# exactly one table, a column name alone does not.
+function update_vector_group!(db::Database, collection::String, group::String, id::Int64; kwargs...)
+    return _update_group_columns(db, C.quiver_database_update_vector_group, collection, group, id, kwargs)
+end
+
+# Set-group counterpart of update_vector_group!.
+function update_set_group!(db::Database, collection::String, group::String, id::Int64; kwargs...)
+    return _update_group_columns(db, C.quiver_database_update_set_group, collection, group, id, kwargs)
 end
 
 function upsert_time_series_row!(db::Database, collection::String, group::String, id::Int64; kwargs...)

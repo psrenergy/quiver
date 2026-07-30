@@ -1,5 +1,7 @@
 #include "database_impl.h"
 
+#include <set>
+
 namespace quiver {
 
 void Database::update_element(const std::string& collection, int64_t id, const Element& element) {
@@ -13,9 +15,7 @@ void Database::update_element(const std::string& collection, int64_t id, const E
         throw std::runtime_error("Cannot update_element: element must have at least one attribute to update");
     }
 
-    if (execute("SELECT 1 FROM " + collection + " WHERE id = ?", {id}).empty()) {
-        throw std::runtime_error("Element not found: " + std::to_string(id) + " in collection '" + collection + "'");
-    }
+    impl_->require_element(collection, id, *this);
 
     // Pre-resolve pass: resolve all FK labels before any writes
     auto resolved = impl_->resolve_element_fk_labels(collection, element, *this);
@@ -58,15 +58,14 @@ void Database::update_element(const std::string& collection, int64_t id, const E
 namespace {
 
 // Transpose row-shaped group data into the column-shaped form insert_rows_into_group_table
-// expects. The column set comes from the first row (mirroring update_time_series_group);
-// a cell missing from a later row becomes SQL NULL so every column stays the same length.
-std::map<std::string, std::vector<Value>> transpose_group_rows(const std::vector<std::map<std::string, Value>>& rows) {
+// expects. `names` is the union of every row's keys (already validated), so a column that appears
+// only in a later row is still written; a cell missing from a row becomes SQL NULL, which keeps
+// every column the same length.
+std::map<std::string, std::vector<Value>> transpose_group_rows(const std::vector<std::map<std::string, Value>>& rows,
+                                                               const std::set<std::string>& names) {
     std::map<std::string, std::vector<Value>> columns;
-    if (rows.empty()) {
-        return columns;
-    }
 
-    for (const auto& [col_name, _] : rows[0]) {
+    for (const auto& col_name : names) {
         auto& values = columns[col_name];
         values.reserve(rows.size());
         for (const auto& row : rows) {
@@ -88,21 +87,45 @@ void Database::Impl::update_group_rows(const char* caller,
                                        Database& db) {
     require_collection(collection, caller);
 
-    const auto table_name = type == GroupTableType::Vector ? Schema::vector_table_name(collection, group)
-                                                           : Schema::set_table_name(collection, group);
+    const auto is_vector = type == GroupTableType::Vector;
+    const auto table_name =
+        is_vector ? Schema::vector_table_name(collection, group) : Schema::set_table_name(collection, group);
     const auto* table_def = schema->get_table(table_name);
     if (!table_def) {
-        throw std::runtime_error(std::string(group_table_noun(type)) + " group not found: '" + group +
+        // Same wording as get_vector_metadata / get_set_metadata for the same condition (Pattern 2).
+        throw std::runtime_error(std::string(is_vector ? "Vector" : "Set") + " group not found: '" + group +
                                  "' in collection '" + collection + "'");
     }
+    require_element(collection, id, db);
 
-    // Resolve FK labels before any writes, so a failed lookup cannot leave a cleared group.
-    auto columns = transpose_group_rows(rows);
-    for (auto& [col_name, values] : columns) {
+    // Validate the union of every row's keys, not just rows[0]: a column named only in a later row
+    // must still be written, and an unknown one must still be rejected (update_time_series_group
+    // validates every row too). Validating here rather than over the transposed map is also what
+    // catches a named-but-empty column list - {"typo": []} transposes to nothing, so the checks
+    // below used to be skipped entirely while the DELETE still fired.
+    std::set<std::string> names;
+    for (const auto& row : rows) {
+        for (const auto& [col_name, _] : row) {
+            names.insert(col_name);
+        }
+    }
+    for (const auto& col_name : names) {
+        if (col_name == "id" || (is_vector && col_name == "vector_index")) {
+            // Both are derived (the element id and the row's position), and emitting one here
+            // would duplicate it in the INSERT column list - SQLite keeps the first occurrence,
+            // so the caller's value would vanish silently.
+            throw std::runtime_error(std::string("Cannot ") + caller + ": column '" + col_name +
+                                     "' is managed by the group table, not a value column");
+        }
         if (!table_def->has_column(col_name)) {
             throw std::runtime_error(std::string("Cannot ") + caller + ": column '" + col_name +
                                      "' not found in group '" + group + "' for collection '" + collection + "'");
         }
+    }
+
+    // Resolve FK labels before any writes, so a failed lookup cannot leave a cleared group.
+    auto columns = transpose_group_rows(rows, names);
+    for (auto& [col_name, values] : columns) {
         for (auto& value : values) {
             value = resolve_fk_label(*table_def, col_name, value, db);
         }

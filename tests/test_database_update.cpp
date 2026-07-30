@@ -1070,8 +1070,9 @@ struct SharedFkFixture {
     int64_t child;
 
     SharedFkFixture()
-        : db(quiver::Database::from_schema(
-              ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off})) {
+        : db(quiver::Database::from_schema(":memory:",
+                                           VALID_SCHEMA("relations.sql"),
+                                           {.read_only = false, .console_level = quiver::LogLevel::Off})) {
         db.create_element("Configuration", quiver::Element().set("label", std::string("Config")));
         parent_a = db.create_element("Parent", quiver::Element().set("label", std::string("Parent A")));
         parent_b = db.create_element("Parent", quiver::Element().set("label", std::string("Parent B")));
@@ -1163,8 +1164,10 @@ TEST(Database, UpdateGroupUnknownColumnThrows) {
 TEST(Database, UpdateGroupPreservesNullCells) {
     SharedFkFixture f;
 
-    f.db.update_vector_group(
-        "Child", "refs", f.child, {{{"parent_ref", f.parent_a}}, {{"parent_ref", nullptr}}, {{"parent_ref", f.parent_b}}});
+    f.db.update_vector_group("Child",
+                             "refs",
+                             f.child,
+                             {{{"parent_ref", f.parent_a}}, {{"parent_ref", nullptr}}, {{"parent_ref", f.parent_b}}});
 
     // read_vector_group_by_id keeps NULL cells positionally (the dense per-column reader drops them).
     auto rows = f.db.read_vector_group_by_id("Child", "refs", f.child);
@@ -1177,9 +1180,9 @@ TEST(Database, UpdateGroupPreservesNullCells) {
 // Characterization test for the hazard the group API exists to avoid: routing an array by
 // column name through update_element writes it into EVERY group table of the collection that
 // has a column with that name, so a write aimed at the vector group silently rewrites the set
-// group. This is long-standing behaviour that every binding's FK-label tests rely on, so it is
-// pinned here rather than changed; callers who need one group use update_vector_group /
-// update_set_group (see UpdateGroupDoesNotTouchSiblingGroupSharingAColumnName).
+// group. Long-standing behaviour, pinned here rather than changed (it now logs a warning);
+// callers who need one group use update_vector_group / update_set_group (see
+// UpdateGroupDoesNotTouchSiblingGroupSharingAColumnName).
 TEST(Database, UpdateElementSharedColumnNameWritesEveryMatchingGroup) {
     SharedFkFixture f;
     f.db.update_set_group("Child", "parents", f.child, {{{"parent_ref", f.parent_a}}});
@@ -1191,4 +1194,140 @@ TEST(Database, UpdateElementSharedColumnNameWritesEveryMatchingGroup) {
     EXPECT_EQ(f.db.read_vector_integers_by_id("Child", "parent_ref", f.child), (std::vector<int64_t>{f.parent_b}));
     // The set group was collateral damage - it now holds the vector's value, not parent_a.
     EXPECT_EQ(f.db.read_set_integers_by_id("Child", "parent_ref", f.child), (std::vector<int64_t>{f.parent_b}));
+}
+
+namespace {
+
+// A vector group and a set group whose value columns are more than one, so the core's
+// name-ordered column map has a first entry that is not the only entry.
+struct MultiColumnGroupFixture {
+    quiver::Database db;
+    int64_t item;
+
+    MultiColumnGroupFixture()
+        : db(quiver::Database::from_schema(":memory:",
+                                           VALID_SCHEMA("multi_column_groups.sql"),
+                                           {.read_only = false, .console_level = quiver::LogLevel::Off})) {
+        db.create_element("Configuration", quiver::Element().set("label", std::string("Config")));
+        item = db.create_element("Items", quiver::Element().set("label", std::string("Item 1")));
+    }
+};
+
+}  // namespace
+
+// The column map is name-sorted, so "amount" is visited first. An empty first column used to
+// leave the row count at 0 for "score" to overwrite, skipping the same-length check and then
+// indexing the empty vector - a heap read past the end, bound straight into SQLite.
+TEST(Database, UpdateElementEmptyFirstColumnOfMultiColumnGroupThrows) {
+    MultiColumnGroupFixture f;
+
+    quiver::Element e;
+    e.set("amount", std::vector<double>{});
+    e.set("score", std::vector<double>{1.0, 2.0, 3.0});
+    EXPECT_THROW(f.db.update_element("Items", f.item, e), std::runtime_error);
+
+    // Reversed roles: a non-empty first column with an empty second one was already caught.
+    quiver::Element e2;
+    e2.set("amount", std::vector<double>{1.0, 2.0, 3.0});
+    e2.set("score", std::vector<double>{});
+    EXPECT_THROW(f.db.update_element("Items", f.item, e2), std::runtime_error);
+}
+
+TEST(Database, UpdateGroupMultiColumnRoundTrips) {
+    MultiColumnGroupFixture f;
+
+    f.db.update_vector_group(
+        "Items", "readings", f.item, {{{"amount", 1.5}, {"score", 10.0}}, {{"amount", 2.5}, {"score", 20.0}}});
+
+    auto rows = f.db.read_vector_group_by_id("Items", "readings", f.item);
+    ASSERT_EQ(rows.size(), 2u);
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[0].at("amount")), 1.5);
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[1].at("score")), 20.0);
+}
+
+// A column named only in a later row used to be dropped silently: the column set came from
+// rows[0]. update_time_series_group validates (and keeps) every row's keys.
+TEST(Database, UpdateGroupKeepsColumnPresentOnlyInALaterRow) {
+    MultiColumnGroupFixture f;
+
+    f.db.update_vector_group("Items", "readings", f.item, {{{"amount", 1.5}}, {{"amount", 2.5}, {"score", 20.0}}});
+
+    auto rows = f.db.read_vector_group_by_id("Items", "readings", f.item);
+    ASSERT_EQ(rows.size(), 2u);
+    // The row that omitted "score" gets SQL NULL, not a dropped column.
+    EXPECT_TRUE(std::holds_alternative<std::nullptr_t>(rows[0].at("score")));
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[1].at("score")), 20.0);
+}
+
+TEST(Database, UpdateGroupUnknownColumnInALaterRowThrows) {
+    MultiColumnGroupFixture f;
+
+    EXPECT_THROW(f.db.update_vector_group("Items", "readings", f.item, {{{"amount", 1.5}}, {{"not_a_column", 2.5}}}),
+                 std::runtime_error);
+    // Nothing was written: validation runs before the DELETE and before any insert.
+    EXPECT_TRUE(f.db.read_vector_group_by_id("Items", "readings", f.item).empty());
+}
+
+// id and vector_index are derived (the element and the row's position). Passing either used to
+// duplicate it in the INSERT column list, where SQLite keeps the first occurrence - so the
+// caller's value was discarded and the call still reported success.
+TEST(Database, UpdateGroupRejectsStructuralColumns) {
+    MultiColumnGroupFixture f;
+
+    EXPECT_THROW(
+        f.db.update_vector_group("Items", "readings", f.item, {{{"amount", 1.5}, {"vector_index", int64_t{7}}}}),
+        std::runtime_error);
+    EXPECT_THROW(f.db.update_vector_group("Items", "readings", f.item, {{{"amount", 1.5}, {"id", int64_t{2}}}}),
+                 std::runtime_error);
+    EXPECT_THROW(f.db.update_set_group("Items", "codes", f.item, {{{"code", std::string("a")}, {"id", int64_t{2}}}}),
+                 std::runtime_error);
+}
+
+TEST(Database, UpdateGroupMissingElementThrowsNotFound) {
+    MultiColumnGroupFixture f;
+
+    EXPECT_THROW(f.db.update_vector_group("Items", "readings", 999, {{{"amount", 1.5}}}), std::runtime_error);
+    // The clear path used to succeed silently: the DELETE simply matched nothing.
+    EXPECT_THROW(f.db.update_vector_group("Items", "readings", 999, {}), std::runtime_error);
+    EXPECT_THROW(f.db.update_set_group("Items", "codes", 999, {}), std::runtime_error);
+
+    try {
+        f.db.update_vector_group("Items", "readings", 999, {{{"amount", 1.5}}});
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), "Element not found: 999 in collection 'Items'");
+    }
+}
+
+// Pattern 2 capitalizes the entity, and get_vector_metadata / read_vector_group_by_id already
+// report this exact condition that way.
+TEST(Database, UpdateGroupNotFoundMessageMatchesMetadata) {
+    MultiColumnGroupFixture f;
+
+    try {
+        f.db.update_vector_group("Items", "nope", f.item, {{{"amount", 1.5}}});
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), "Vector group not found: 'nope' in collection 'Items'");
+    }
+    try {
+        f.db.update_set_group("Items", "nope", f.item, {{{"code", std::string("a")}}});
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), "Set group not found: 'nope' in collection 'Items'");
+    }
+}
+
+// TransactionGuard no-ops while a transaction is already open, so a throw after the DELETE has
+// nothing to roll back. Validation must therefore precede the DELETE, not follow it.
+TEST(Database, UpdateGroupTypeErrorInsideDryRunKeepsExistingRows) {
+    MultiColumnGroupFixture f;
+    f.db.update_set_group("Items", "codes", f.item, {{{"code", std::string("keep")}}});
+
+    f.db.begin_dry_run();
+    EXPECT_THROW(f.db.update_set_group("Items", "codes", f.item, {{{"code", 1.5}}}), std::runtime_error);
+    auto rows = f.db.read_set_group_by_id("Items", "codes", f.item);
+    ASSERT_EQ(rows.size(), 1u);
+    EXPECT_EQ(std::get<std::string>(rows[0].at("code")), "keep");
+    f.db.end_dry_run();
 }

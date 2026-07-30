@@ -210,3 +210,97 @@ TEST_F(LuaRunnerTest, UpdateElementByIdNonExistent) {
     // Updating a non-existent element throws "Element not found"
     expect_lua_error(lua, R"(db:update_element("Collection", 999, { some_integer = 5 }))", "Element not found");
 }
+
+// ============================================================================
+// Vector / set group writers
+// ============================================================================
+
+namespace {
+
+// relations.sql gives Child a vector group and a set group that legally share the FK column name
+// "parent_ref" -- the case that makes routing an array by column name ambiguous.
+quiver::Database relations_db_with_child() {
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"));
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    db.create_element("Parent", quiver::Element().set("label", "Parent A"));
+    db.create_element("Parent", quiver::Element().set("label", "Parent B"));
+    db.create_element("Child", quiver::Element().set("label", "Child 1"));
+    return db;
+}
+
+}  // namespace
+
+TEST_F(LuaRunnerTest, UpdateVectorGroupReplacesAndClears) {
+    auto db = relations_db_with_child();
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(db:update_vector_group("Child", "refs", 1, { parent_ref = { 1, 2 } }))");
+    EXPECT_EQ(db.read_vector_integers_by_id("Child", "parent_ref", 1), (std::vector<int64_t>{1, 2}));
+
+    lua.run(R"(db:update_vector_group("Child", "refs", 1, {}))");
+    EXPECT_TRUE(db.read_vector_integers_by_id("Child", "parent_ref", 1).empty());
+}
+
+TEST_F(LuaRunnerTest, UpdateSetGroupLeavesSiblingSharingColumnNameUntouched) {
+    auto db = relations_db_with_child();
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(
+        db:update_set_group("Child", "parents", 1, { parent_ref = { 1 } })
+        db:update_vector_group("Child", "refs", 1, { parent_ref = { 2 } })
+        db:update_vector_group("Child", "refs", 1, {})
+    )");
+
+    EXPECT_TRUE(db.read_vector_integers_by_id("Child", "parent_ref", 1).empty());
+    EXPECT_EQ(db.read_set_integers_by_id("Child", "parent_ref", 1), (std::vector<int64_t>{1}));
+}
+
+TEST_F(LuaRunnerTest, UpdateGroupResolvesForeignKeyLabels) {
+    auto db = relations_db_with_child();
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(db:update_vector_group("Child", "refs", 1, { parent_ref = { "Parent B" } }))");
+    EXPECT_EQ(db.read_vector_integers_by_id("Child", "parent_ref", 1), (std::vector<int64_t>{2}));
+}
+
+// No dimension column here, so the row count is the largest index any column reaches; a nil hole
+// writes SQL NULL, which is how a read's nil holes round-trip.
+TEST_F(LuaRunnerTest, UpdateGroupSparseColumnWritesNulls) {
+    auto db = relations_db_with_child();
+    quiver::LuaRunner lua(db);
+
+    auto result = lua.run(R"(
+        db:update_vector_group("Child", "refs", 1, { parent_ref = { 1, nil, 2 } })
+        return {
+            rows = db:query_integer("SELECT COUNT(*) FROM Child_vector_refs WHERE id = 1"),
+            nulls = db:query_integer("SELECT COUNT(*) FROM Child_vector_refs WHERE id = 1 AND parent_ref IS NULL"),
+        }
+    )");
+    EXPECT_EQ(result, R"({"nulls":1,"rows":3})");
+}
+
+TEST_F(LuaRunnerTest, UpdateGroupErrors) {
+    auto db = relations_db_with_child();
+    quiver::LuaRunner lua(db);
+    lua.run(R"(db:update_vector_group("Child", "refs", 1, { parent_ref = { 1 } }))");
+
+    expect_lua_error(
+        lua, R"(db:update_vector_group("Child", "nope", 1, { parent_ref = { 1 } }))", "Vector group not found");
+    expect_lua_error(lua, R"(db:update_set_group("Child", "nope", 1, { parent_ref = { 1 } }))", "Set group not found");
+    expect_lua_error(
+        lua, R"(db:update_vector_group("Child", "refs", 1, { not_a_column = { 1 } }))", "not found in group");
+    expect_lua_error(lua,
+                     R"(db:update_vector_group("Child", "refs", 1, { parent_ref = { 1 }, vector_index = { 7 } }))",
+                     "managed by the group table");
+    expect_lua_error(
+        lua, R"(db:update_vector_group("Child", "refs", 999, { parent_ref = { 1 } }))", "Element not found");
+    // The clear path used to succeed silently: the DELETE simply matched nothing.
+    expect_lua_error(lua, R"(db:update_set_group("Child", "parents", 999, {}))", "Element not found");
+    // A named column with no cells is a caller mistake, not a clear -- {} clears.
+    expect_lua_error(lua, R"(db:update_vector_group("Child", "refs", 1, { parent_ref = {} }))", "contain no rows");
+    expect_lua_error(
+        lua, R"(db:update_set_group("Child", "parents", 1, { parent_ref = 5 }))", "must be an array of values");
+
+    // Every rejected call left the existing row alone.
+    EXPECT_EQ(db.read_vector_integers_by_id("Child", "parent_ref", 1), (std::vector<int64_t>{1}));
+}

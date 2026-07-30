@@ -8,6 +8,7 @@ import {
   readPtrOut,
   toCString,
 } from "./ffi-helpers.ts";
+import { type GroupColumns, updateGroupColumns } from "./group-columns.ts";
 import { getSymbols, type NativePointer } from "./loader.ts";
 import type { ElementData, Value } from "./types.ts";
 
@@ -38,7 +39,9 @@ function setElementArray(
     const allIntegers = (values as number[]).every((v) => Number.isInteger(v));
     if (allIntegers) {
       const arr = allocNativeInt64(values as number[]);
-      check(lib.quiver_element_set_array_integer(elemPtr, nameBuf.buf, arr.buf, values.length, null));
+      check(
+        lib.quiver_element_set_array_integer(elemPtr, nameBuf.buf, arr.buf, values.length, null),
+      );
     } else {
       const arr = allocNativeFloat64(values as number[]);
       check(lib.quiver_element_set_array_float(elemPtr, nameBuf.buf, arr.buf, values.length, null));
@@ -48,7 +51,9 @@ function setElementArray(
 
   if (typeof first === "string") {
     const { table, keepalive: _keepalive } = allocNativeStringArray(values as string[]);
-    check(lib.quiver_element_set_array_string(elemPtr, nameBuf.buf, table.buf, values.length, null));
+    check(
+      lib.quiver_element_set_array_string(elemPtr, nameBuf.buf, table.buf, values.length, null),
+    );
     return;
   }
 
@@ -147,4 +152,49 @@ Database.prototype.deleteElement = function (this: Database, collection: string,
   const lib = getSymbols();
   const collBuf = toCString(collection);
   check(lib.quiver_database_delete_element(this._handle, collBuf.buf, BigInt(id)));
+};
+
+/**
+ * Replace all of an element's rows in one *named* vector group, from column arrays keyed by name.
+ *
+ * Pass `{}` to clear the group. Prefer this over routing the group's columns through
+ * updateElement when a column name is shared by two groups of the collection (legal for foreign
+ * keys): (collection, group) names exactly one table, a column name alone does not, and
+ * updateElement writes an ambiguous column to every match.
+ */
+Database.prototype.updateVectorGroup = function (
+  this: Database,
+  collection: string,
+  group: string,
+  id: number,
+  data: GroupColumns,
+): void {
+  updateGroupColumns(
+    this._handle,
+    "updateVectorGroup",
+    getSymbols().quiver_database_update_vector_group,
+    collection,
+    group,
+    id,
+    data,
+  );
+};
+
+/** Set-group counterpart of updateVectorGroup. */
+Database.prototype.updateSetGroup = function (
+  this: Database,
+  collection: string,
+  group: string,
+  id: number,
+  data: GroupColumns,
+): void {
+  updateGroupColumns(
+    this._handle,
+    "updateSetGroup",
+    getSymbols().quiver_database_update_set_group,
+    collection,
+    group,
+    id,
+    data,
+  );
 };

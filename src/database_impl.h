@@ -26,28 +26,43 @@ struct Database::Impl {
     sqlite3* db = nullptr;
     std::string path;
     std::shared_ptr<spdlog::logger> logger;
-    std::unique_ptr<Schema> schema;
-    std::unique_ptr<TypeValidator> type_validator;
+    // Loaded lazily by require_schema: the Database(path, options) constructor opens an existing
+    // database without reading its schema, and every metadata/CRUD path goes through
+    // require_schema. mutable so the const readers (get_*_metadata, describe, ...) can trigger it.
+    mutable std::unique_ptr<Schema> schema;
+    mutable std::unique_ptr<TypeValidator> type_validator;
     // A dry run holds one real transaction open and absorbs the public begin/commit/rollback so
     // nested callers compose. TransactionGuard needs no flag - it already no-ops when a
     // transaction is active.
     bool dry_run = false;
 
-    void require_schema(const char* operation) const {
+    // Takes no operation name: reading an existing database's schema on first use is what makes
+    // open() usable, and a database that is not a quiver database throws the validator's own
+    // (already self-describing) reason from here rather than "Cannot <op>: no schema loaded".
+    void require_schema() const {
         if (!schema) {
-            throw std::runtime_error(std::string("Cannot ") + operation + ": no schema loaded");
+            load_schema_metadata();
         }
     }
 
     void require_collection(const std::string& collection, const char* operation) const {
-        require_schema(operation);
+        require_schema();
         if (!schema->has_table(collection)) {
             throw std::runtime_error(std::string("Cannot ") + operation + ": collection not found: " + collection);
         }
     }
 
+    // A missing id is Pattern 2 everywhere (root design decision), so every id-scoped write
+    // resolves it through here rather than letting SQLite report a foreign-key failure.
+    void require_element(const std::string& collection, int64_t id, Database& db) const {
+        if (db.execute("SELECT 1 FROM " + collection + " WHERE id = ?", {id}).empty()) {
+            throw std::runtime_error("Element not found: " + std::to_string(id) + " in collection '" + collection +
+                                     "'");
+        }
+    }
+
     void require_column(const std::string& table, const std::string& column, const char* operation) const {
-        require_schema(operation);
+        require_schema();
         const auto* table_def = schema->get_table(table);
         if (!table_def) {
             throw std::runtime_error(std::string("Cannot ") + operation + ": table not found: " + table);
@@ -164,22 +179,25 @@ struct Database::Impl {
                                       Database& db) {
         const char* noun = group_table_noun(type);
 
-        if (delete_existing) {
-            db.execute("DELETE FROM " + table_name + " WHERE id = ?", {element_id});
-        }
-
-        // Validate types and verify same-length arrays
-        size_t num_rows = 0;
+        // Validate types and verify same-length arrays *before* the DELETE: TransactionGuard
+        // no-ops inside a caller-owned transaction (or a dry run), so throwing after the DELETE
+        // would leave the group cleared with nothing to roll it back.
+        // num_rows is seeded from the first column rather than the first non-empty one: `columns`
+        // is name-sorted, so an empty alphabetically-first column used to leave it at 0 for a
+        // later column to set, skipping the check and indexing the empty vector below.
+        size_t num_rows = columns.empty() ? 0 : columns.begin()->second->size();
         for (const auto& [col_name, values_ptr] : columns) {
             if (!values_ptr->empty()) {
                 type_validator->validate_array(caller, table_name, col_name, *values_ptr);
             }
-            if (num_rows == 0) {
-                num_rows = values_ptr->size();
-            } else if (values_ptr->size() != num_rows) {
+            if (values_ptr->size() != num_rows) {
                 throw std::runtime_error(std::string("Cannot ") + caller + ": " + noun + " columns in table '" +
                                          table_name + "' must have the same length");
             }
+        }
+
+        if (delete_existing) {
+            db.execute("DELETE FROM " + table_name + " WHERE id = ?", {element_id});
         }
 
         // Insert rows (vector tables get a 1-based vector_index column)
@@ -263,11 +281,14 @@ struct Database::Impl {
         }
     }
 
-    void load_schema_metadata() {
-        schema = std::make_unique<Schema>(Schema::from_database(db));
-        SchemaValidator validator(*schema);
-        validator.validate();
-        type_validator = std::make_unique<TypeValidator>(*schema);
+    // Nothing is published until validation passes: a half-loaded state (schema set,
+    // type_validator null) would survive a failed lazy load and crash the next call.
+    void load_schema_metadata() const {
+        auto loaded = std::make_unique<Schema>(Schema::from_database(db));
+        SchemaValidator(*loaded).validate();
+        // TypeValidator holds a reference to the Schema; moving the unique_ptr keeps the pointee.
+        type_validator = std::make_unique<TypeValidator>(*loaded);
+        schema = std::move(loaded);
     }
 
     ~Impl() {

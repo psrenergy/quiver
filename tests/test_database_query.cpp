@@ -294,3 +294,26 @@ TEST(Database, QueryFloatWidensIntegerResults) {
     // A genuine NULL is still "no value".
     EXPECT_FALSE(db.query_float("SELECT NULL").has_value());
 }
+
+// Row::get_float is the single extractor behind every float read, so the int64-for-REAL rule
+// applies to the bulk and by-id readers too, not just query_float. An integer stored in a REAL
+// column stays INTEGER in SQLite, and these used to report "no value" for it.
+TEST(Database, ReadFloatsWidenIntegerValuesInRealColumns) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    db.create_element("Configuration", quiver::Element().set("label", std::string("Config")));
+    auto id = db.create_element("Collection",
+                                quiver::Element()
+                                    .set("label", std::string("Item 1"))
+                                    .set("some_float", int64_t{7})
+                                    .set("value_float", std::vector<int64_t>{1, 2}));
+
+    EXPECT_EQ(db.read_scalar_floats("Collection", "some_float"), (std::vector<std::optional<double>>{7.0}));
+
+    auto by_id = db.read_scalar_float_by_id("Collection", "some_float", id);
+    ASSERT_TRUE(by_id.has_value());
+    EXPECT_DOUBLE_EQ(*by_id, 7.0);
+
+    EXPECT_EQ(db.read_vector_floats_by_id("Collection", "value_float", id), (std::vector<double>{1.0, 2.0}));
+}

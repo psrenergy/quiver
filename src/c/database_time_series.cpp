@@ -186,40 +186,13 @@ QUIVER_C_API quiver_error_t quiver_database_update_time_series_group(quiver_data
     }
 
     try {
-        std::vector<std::map<std::string, quiver::Value>> rows;
-        rows.reserve(row_count);
-
-        for (size_t r = 0; r < row_count; ++r) {
-            std::map<std::string, quiver::Value> row;
-            for (size_t c = 0; c < column_count; ++c) {
-                std::string col_name(column_names[c]);
-                // Masked-out cell: explicit NULL in every row (the core builds its
-                // INSERT column list from rows[0], so rows must stay uniform); the
-                // data entry is intentionally never read
-                const uint8_t* mask = column_has_value ? column_has_value[c] : nullptr;
-                if (mask && mask[r] == 0) {
-                    row[col_name] = nullptr;
-                    continue;
-                }
-                switch (column_types[c]) {
-                case QUIVER_DATA_TYPE_INTEGER:
-                    row[col_name] = static_cast<const int64_t*>(column_data[c])[r];
-                    break;
-                case QUIVER_DATA_TYPE_FLOAT:
-                    row[col_name] = static_cast<const double*>(column_data[c])[r];
-                    break;
-                case QUIVER_DATA_TYPE_STRING:
-                case QUIVER_DATA_TYPE_DATE_TIME:
-                    row[col_name] = std::string(static_cast<const char* const*>(column_data[c])[r]);
-                    break;
-                default:
-                    throw std::runtime_error("Cannot update_time_series_group: unknown column type " +
-                                             std::to_string(column_types[c]));
-                }
-            }
-            rows.push_back(std::move(row));
-        }
-
+        auto rows = unmarshal_group_columns_to_rows("update_time_series_group",
+                                                    column_names,
+                                                    column_types,
+                                                    column_data,
+                                                    column_has_value,
+                                                    column_count,
+                                                    row_count);
         db->db.update_time_series_group(collection, group, id, rows);
         return QUIVER_OK;
     } catch (const std::exception& e) {

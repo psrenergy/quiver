@@ -13,6 +13,7 @@ src/              # Module per C API category: database.ts, create.ts, read.ts, 
                   # query.ts, time-series.ts, transaction.ts, csv.ts, introspection.ts,
                   # composites.ts, lua-runner.ts (index.ts re-exports the public surface)
 src/lua-api.ts    # LUA_DB_API_REFERENCE — agent-facing Lua `db:` API reference, as a string const
+src/group-columns.ts # Shared columnar marshaller for the three group writers
 src/loader.ts     # HAND-WRITTEN FFI symbol table + 3-tier library loader
 src/types.ts      # Central DATA_TYPE_* / LOG_LEVEL_* constants and DatabaseOptions type
 src/ffi-helpers.ts # Alloc helpers, makeDefaultOptions()
@@ -60,10 +61,13 @@ biome.json        # Lint/format config
   element with `DataView.setBigInt64`, so `bigint` inputs (scalar or array) are preserved
   exactly, never coerced through `Number`. Read paths return `number` (converted via `Number()`
   after the FFI call) — the deliberately simple surface.
-- **`updateTimeSeriesGroup` validates before marshalling** (`src/time-series.ts`): rejects jagged
-  columns and named-but-empty columns (`rowCount === 0`) with a `QuiverError`. This is load-bearing
-  — an empty column would otherwise marshal a `null` data pointer that the C API dereferences
-  against the first column's `row_count`. Pass `{}` (no columns) to clear the group.
+- **`src/group-columns.ts` is the one columnar marshaller** for `updateTimeSeriesGroup`,
+  `updateVectorGroup` and `updateSetGroup` (`updateGroupColumns(handle, caller, cFn, ...)`) — the
+  three differ only in which C entry point they pass, so don't re-inline it per method. It validates
+  before marshalling: jagged columns and named-but-empty columns (`rowCount === 0`) throw a
+  `QuiverError` naming the column. Load-bearing — an empty column would otherwise marshal a `null`
+  data pointer that the C API dereferences against the first column's `row_count`. Pass `{}` (no
+  columns) to clear the group. The C API rejects both cases too; failing here names the column.
 - **Scalar bulk NULLs**: `readScalarIntegers`/`readScalarFloats` read a parallel `uint8_t*` mask
   (`new Uint8Array(toArrayBuffer(...))`) and gate `mask[i] ? v : null` → `(number | null)[]` — never
   `Number()` a masked slot (would turn NULL into 0). `readScalarStrings` reads pointer-by-pointer with

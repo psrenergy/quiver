@@ -23,16 +23,8 @@ std::optional<double> Database::query_float(const std::string& sql, const std::v
     if (result.empty()) {
         return std::nullopt;
     }
-    if (auto value = result[0].get_float(0)) {
-        return value;
-    }
-    // Widen an INTEGER result, matching the one scalar typing policy (an int64 is accepted
-    // wherever a REAL is expected). Without this, COUNT(*)/SUM(int_col) - which SQLite returns
-    // as INTEGER - would silently read back as "no value".
-    if (auto value = result[0].get_integer(0)) {
-        return static_cast<double>(*value);
-    }
-    return std::nullopt;
+    // Row::get_float widens an INTEGER result (the one scalar typing policy) - see src/row.cpp.
+    return result[0].get_float(0);
 }
 
 }  // namespace quiver

@@ -314,3 +314,107 @@ class TestUpdateNotFoundAndTyping:
         elem_id = db.create_element("Configuration", label="cfg")
         db.update_element("Configuration", elem_id, float_attribute=7)
         assert db.read_scalar_float_by_id("Configuration", "float_attribute", elem_id) == 7.0
+
+
+class TestUpdateVectorSetGroup:
+    """relations.sql gives Child a vector group and a set group that legally share the FK column
+    name "parent_ref" - the case that makes routing an array by column name ambiguous."""
+
+    @staticmethod
+    def _seed(db: Database) -> int:
+        db.create_element("Configuration", label="Config")
+        db.create_element("Parent", label="Parent A")
+        db.create_element("Parent", label="Parent B")
+        return db.create_element("Child", label="Child 1")
+
+    def test_replaces_rows_and_clears_on_empty_dict(self, relations_db: Database) -> None:
+        child = self._seed(relations_db)
+
+        relations_db.update_vector_group("Child", "refs", child, {"parent_ref": [1, 2]})
+        assert relations_db.read_vector_integers_by_id("Child", "parent_ref", child) == [1, 2]
+
+        relations_db.update_vector_group("Child", "refs", child, {"parent_ref": [2]})
+        assert relations_db.read_vector_integers_by_id("Child", "parent_ref", child) == [2]
+
+        relations_db.update_vector_group("Child", "refs", child, {})
+        assert relations_db.read_vector_integers_by_id("Child", "parent_ref", child) == []
+
+    def test_leaves_sibling_group_sharing_a_column_name_untouched(self, relations_db: Database) -> None:
+        child = self._seed(relations_db)
+
+        relations_db.update_set_group("Child", "parents", child, {"parent_ref": [1]})
+        relations_db.update_vector_group("Child", "refs", child, {"parent_ref": [2]})
+
+        assert relations_db.read_set_integers_by_id("Child", "parent_ref", child) == [1]
+        assert relations_db.read_vector_integers_by_id("Child", "parent_ref", child) == [2]
+
+        relations_db.update_vector_group("Child", "refs", child, {})
+        assert relations_db.read_set_integers_by_id("Child", "parent_ref", child) == [1]
+
+    def test_resolves_foreign_key_labels(self, relations_db: Database) -> None:
+        child = self._seed(relations_db)
+
+        relations_db.update_vector_group("Child", "refs", child, {"parent_ref": ["Parent B"]})
+        assert relations_db.read_vector_integers_by_id("Child", "parent_ref", child) == [2]
+
+    def test_accepts_null_cells(self, relations_db: Database) -> None:
+        child = self._seed(relations_db)
+
+        relations_db.update_vector_group("Child", "refs", child, {"parent_ref": [1, None, 2]})
+
+        # Asserted in SQL, not through read_vector_group_by_id: Python composes that from
+        # per-column reads, which drop NULL cells (the documented null-dropping caveat - only
+        # Dart binds the NULL-preserving native reader).
+        assert (
+            relations_db.query_integer("SELECT COUNT(*) FROM Child_vector_refs WHERE id = ?", parameters=[child]) == 3
+        )
+        assert (
+            relations_db.query_integer(
+                "SELECT COUNT(*) FROM Child_vector_refs WHERE id = ? AND parent_ref IS NULL", parameters=[child]
+            )
+            == 1
+        )
+
+    def test_unknown_group_or_column_raises(self, relations_db: Database) -> None:
+        child = self._seed(relations_db)
+
+        with pytest.raises(QuiverError, match="Vector group not found"):
+            relations_db.update_vector_group("Child", "nope", child, {"parent_ref": [1]})
+        with pytest.raises(QuiverError, match="Set group not found"):
+            relations_db.update_set_group("Child", "nope", child, {"parent_ref": [1]})
+        with pytest.raises(QuiverError, match="not found in group"):
+            relations_db.update_vector_group("Child", "refs", child, {"not_a_column": [1]})
+
+    def test_structural_columns_rejected(self, relations_db: Database) -> None:
+        child = self._seed(relations_db)
+
+        # Both are derived (the element and the row's position); accepting them silently dropped
+        # the caller's value, because SQLite keeps the first of a duplicated INSERT column.
+        with pytest.raises(QuiverError, match="managed by the group table"):
+            relations_db.update_vector_group("Child", "refs", child, {"parent_ref": [1], "vector_index": [7]})
+        with pytest.raises(QuiverError, match="managed by the group table"):
+            relations_db.update_set_group("Child", "parents", child, {"parent_ref": [1], "id": [2]})
+
+    def test_named_but_empty_column_raises_instead_of_clearing(self, relations_db: Database) -> None:
+        child = self._seed(relations_db)
+        relations_db.update_vector_group("Child", "refs", child, {"parent_ref": [1]})
+
+        # A typo'd column name must not destroy data: clearing is spelled {}.
+        with pytest.raises(QuiverError, match="contain no rows"):
+            relations_db.update_vector_group("Child", "refs", child, {"parent_ref": []})
+        assert relations_db.read_vector_integers_by_id("Child", "parent_ref", child) == [1]
+
+    def test_missing_element_raises_not_found(self, relations_db: Database) -> None:
+        self._seed(relations_db)
+
+        with pytest.raises(QuiverError, match="Element not found"):
+            relations_db.update_vector_group("Child", "refs", 999, {"parent_ref": [1]})
+        # The clear path used to succeed silently: the DELETE simply matched nothing.
+        with pytest.raises(QuiverError, match="Element not found"):
+            relations_db.update_set_group("Child", "parents", 999, {})
+
+    def test_jagged_columns_rejected(self, relations_db: Database) -> None:
+        child = self._seed(relations_db)
+
+        with pytest.raises(ValueError, match="same length"):
+            relations_db.update_vector_group("Child", "refs", child, {"parent_ref": [1, 2], "id": [1]})

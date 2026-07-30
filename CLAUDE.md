@@ -54,6 +54,21 @@ Settled questions — don't relitigate without the user; each was decided delibe
   canonical cross-binding shape. The C++ core keeps row-shaped `vector<map<string, Value>>`.
 - **`DatabaseOptions`** (`read_only`, `console_level`) is exposed as optional parameters on the
   open/factory methods of every binding.
+- **Schema metadata loads lazily, on first use** (`Impl::require_schema`, `src/database_impl.h`).
+  `Database(path, options)` — the only implementation behind `quiver_database_open` and every
+  binding's `open()` — opens the file without reading the schema, so eager loading would have to
+  live in the constructor, where it would validate a half-migrated database before `migrate_up`
+  ran. Loading on first `require_schema` instead makes `open()` usable everywhere (it previously
+  yielded a handle whose every metadata/CRUD call threw "no schema loaded") while
+  `from_schema`/`from_migrations` keep validating eagerly at construction. `schema` and
+  `type_validator` are `mutable` so the const readers can trigger it, and `load_schema_metadata`
+  publishes neither until validation passes — a half-loaded state would survive a failed lazy load
+  and crash the next call. A non-quiver database now reports the validator's actual reason.
+- **The group writers are column-oriented while the group readers are row-oriented** in Dart and
+  Python (`read_vector_group_by_id` returns rows; Python even adds a synthetic 0-based
+  `vector_index`). The only asymmetric reader/writer pair in those bindings, and deliberate for now:
+  the columnar shape is the canonical cross-binding one for group *writes* (it is what the C API
+  takes), and changing either side is a breaking API change, not a fix.
 - **Binary + expression subsystems are exposed in Julia and Lua only.** Dart, Python, and JS
   deliberately do not expose them (no FFI consumer); the tests-at-every-layer rule has this one
   documented exception. Lua binds the C++ classes directly via sol2 (`src/lua_runner.cpp`) with
@@ -382,20 +397,36 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
   share a column name (legal — `validate_no_duplicate_attributes` exempts FK columns) the array is
   written to *every* matching table, silently rewriting groups the caller never named. That
   fan-out is pinned by `UpdateElementSharedColumnNameWritesEveryMatchingGroup` and now logs a
-  warning; it was not made an error because every binding's FK-label tests rely on it
-  (`tests/schemas/valid/relations.sql` shares `parent_ref` across a vector and a set group).
-  Prefer the group writers whenever one group is meant. Bound in C++, the C API (columnar + per-cell
-  mask, same shape as `update_time_series_group`), and Dart — **Julia/Python/JS/Lua parity is still
-  outstanding.**
+  warning (`tests/schemas/valid/relations.sql` shares `parent_ref` across a vector and a set group).
+  Prefer the group writers whenever one group is meant. Bound in **every layer**: C++, the C API
+  (columnar + per-cell mask, same shape as `update_time_series_group`), Julia, Dart, Python, JS,
+  and Lua. Validation lives in the C++ core and is shared by all of them: the caller's columns are
+  checked against the group (the **union** of every row's keys, so a column named only in a later
+  row is written and an unknown one still throws), `id` / `vector_index` are rejected as
+  caller-supplied columns (they are derived, and emitting one would duplicate it in the INSERT
+  where SQLite keeps the first occurrence — silently discarding the caller's value), the element id
+  must exist (Pattern 2 `Element not found`), and validation precedes the DELETE so a rejected
+  write cannot leave a cleared group even when `TransactionGuard` owns no transaction (inside a dry
+  run or a caller-owned transaction). A **named column with no rows is an error, not a clear** —
+  clearing is "no columns" — so a typo'd column name cannot destroy data; that guard sits in the C
+  API decoder (the last layer where column names still exist) and in Lua, and covers
+  `update_time_series_group` too.
+  *Not yet fixed:* the deep fix for the array fan-out — rejecting `matches.size() > 1` when
+  `delete_existing` — is still open. Only `bindings/julia/test/test_helper_maps.jl` depends on the
+  fan-out, and via `create_element!` (the non-destructive half), so nothing blocks it; it is a
+  breaking behaviour change rather than a bug fix.
 - Time series: `read_time_series_group()`, `update_time_series_group()`, `upsert_time_series_row()` — group read/update use N typed value columns per group; `upsert_time_series_row` inserts or replaces a single row by its dimension key (`INSERT OR REPLACE`). All bindings expose group data **column-oriented** (`{column: [values]}`); updating with no data clears the group. Integer values are accepted for REAL columns (converted on insert). NULL cells round-trip through every layer: the C API carries a per-cell presence mask, the FFI bindings surface null-padded columns (`nothing`/`None`/`null`), and Lua uses plain `nil` holes with the row count taken from the dimension column(s) — see the design decision below.
 - Time series row: `read_time_series_row(collection, group, attribute, date_time)` — one value per element using "last non-null value at or before date_time" semantics; null Value for elements with no matching data (bindings surface `nothing`/`null`/`None`/`nil`).
 - Time series files: `has_time_series_files()`, `list_time_series_files_columns()`, `read_time_series_files()`, `update_time_series_files()`
 - Metadata: `get_{scalar,vector,set,time_series}_metadata()` — group metadata is a unified `GroupMetadata` with `dimension_column` (populated for time series, empty for vectors/sets)
 - List groups: `list_scalar_attributes()`, `list_vector_groups()`, `list_set_groups()`, `list_time_series_groups()`
 - Query: `query_string/integer/float(sql, parameters = {})` - parameterized SQL with positional `?`
-  placeholders. `query_float` widens an INTEGER result (the same int64-for-REAL rule as the scalar
-  typing policy) — otherwise `SELECT COUNT(*)` / `SUM(int_col)`, which SQLite answers as INTEGER,
-  read back as "no value". `query_integer` does **not** narrow a REAL; that direction is lossy.
+  placeholders. **`Row::get_float` widens an INTEGER value** (the same int64-for-REAL rule as the
+  scalar typing policy), so it applies to every float read — `query_float`, `read_scalar_floats`,
+  `read_scalar_float_by_id`, `read_vector_floats_by_id`, `read_set_floats_by_id` — not just queries.
+  Otherwise `SELECT COUNT(*)` / `SUM(int_col)`, which SQLite answers as INTEGER, and an integer
+  stored in a REAL column, all read back as "no value". `query_integer` does **not** narrow a REAL;
+  that direction is lossy.
 - Schema inspection — human-readable **text reports** (all return `std::string`): `describe()` (whole-DB overview: every collection, element counts, attribute/group names); `describe_collection(c)` (one collection's structure); `summarize_collection(c)` (per-scalar null/non-null counts + low-cardinality integer value distributions, per-group empty/non-empty counts). CSV: `export_csv()`, `import_csv()` with optional enum/date formatting via `CSVOptions`.
   **Export and import are symmetric on foreign keys**: a FK column is written as the referenced
   element's `label` and read back by label (self-references are excluded on both sides, since the
@@ -458,8 +489,8 @@ The rules are mechanical: given any C++ method name, you can derive the equivale
 | Time series row | `read_time_series_row()` | `quiver_database_read_time_series_row()` | `read_time_series_row()` | `readTimeSeriesRow()` | `read_time_series_row()` |
 | Time series upsert row | `upsert_time_series_row()` | `quiver_database_upsert_time_series_row()` | `upsert_time_series_row!()` | `upsertTimeSeriesRow()` | `upsert_time_series_row()` |
 | Time series update | `update_time_series_group()` | `quiver_database_update_time_series_group()` | `update_time_series_group!()` | `updateTimeSeriesGroup()` | `update_time_series_group()` |
-| Vector group update | `update_vector_group()` | `quiver_database_update_vector_group()` | _(pending)_ | `updateVectorGroup()` | _(pending)_ |
-| Set group update | `update_set_group()` | `quiver_database_update_set_group()` | _(pending)_ | `updateSetGroup()` | _(pending)_ |
+| Vector group update | `update_vector_group()` | `quiver_database_update_vector_group()` | `update_vector_group!()` | `updateVectorGroup()` | `update_vector_group()` |
+| Set group update | `update_set_group()` | `quiver_database_update_set_group()` | `update_set_group!()` | `updateSetGroup()` | `update_set_group()` |
 | Query | `query_string()` | `quiver_database_query_string()` | `query_string()` | `queryString()` | `query_string()` |
 | CSV | `export_csv()` | `quiver_database_export_csv()` | `export_csv()` | `exportCSV()` | `export_csv()` |
 | Describe (text) | `describe()` | `quiver_database_describe()` | `describe()` | `describe()` | `describe()` |

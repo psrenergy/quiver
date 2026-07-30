@@ -284,6 +284,36 @@ db:read_set_strings(collection, attribute)
 
 ---
 
+## Replace a whole vector or set group (column-oriented)
+
+\`update_vector_group\` / \`update_set_group\` replace **all** of one element's rows in one *named*
+group, taking the same column-oriented shape as the time-series writer:
+
+\`\`\`lua
+db:update_vector_group("Child", "refs", id, { parent_ref = { 1, 2, 3 } })
+db:update_set_group("Child", "parents", id, { parent_ref = { 1, 2 } })
+
+db:update_vector_group("Child", "refs", id, {})   -- clears the group
+\`\`\`
+
+Use these instead of routing a group's columns through \`update_element\` whenever a column name is
+shared by two groups of the collection (legal for foreign-key columns): \`update_element\` routes an
+array **by column name**, so it writes to *every* group table that has that column — silently
+rewriting groups you never named. \`(collection, group)\` names exactly one table.
+
+Rules:
+- **Row count is the largest index any column reaches.** Shorter or sparse columns write NULL in
+  the gaps, so \`nil\` holes from a read round-trip.
+- **\`{}\` (no columns) clears the group.** Naming a column whose array is empty is an error, not a
+  clear — a typo'd column name must not destroy data.
+- **\`id\` and \`vector_index\` are managed by the group** (the element and the row's position) and
+  are rejected if passed.
+- **Foreign-key columns accept a label string** and resolve it to the referenced id, exactly as in
+  \`create_element\` / \`update_element\`.
+- The element id must exist, same as \`update_element\` / \`delete_element\`.
+
+---
+
 ## Composite by-id reads (Lua convenience helpers)
 
 \`\`\`lua

@@ -209,6 +209,71 @@ inline void free_group_fields(quiver_group_metadata_t& m) {
     }
 }
 
+// Decodes the columnar typed-arrays + per-cell mask form into the row-shaped data the C++ core
+// takes - the inverse of marshal_group_rows_to_c, shared by every group update C function
+// (time series, vector, set). A NULL mask (for the whole parameter or for one column) means dense,
+// and a NULL cell becomes an explicit Value{nullptr} in every row so rows stay uniform (the core
+// builds its INSERT column list from rows[0]).
+inline std::vector<std::map<std::string, quiver::Value>>
+unmarshal_group_columns_to_rows(const char* caller,
+                                const char* const* column_names,
+                                const int* column_types,
+                                const void* const* column_data,
+                                const uint8_t* const* column_has_value,
+                                size_t column_count,
+                                size_t row_count) {
+    // Named columns with no rows are a caller mistake, and the last layer that can say so: the
+    // row-shaped result below carries no column names at all, so the core would see an empty
+    // update and clear the group - a typo'd column name silently destroying data. Clearing is
+    // spelled column_count == 0 (the same anti-silent-clear trap Lua and JS already enforce).
+    if (column_count > 0 && row_count == 0) {
+        std::string names;
+        for (size_t c = 0; c < column_count; ++c) {
+            names += (names.empty() ? "" : ", ") + std::string(column_names[c]);
+        }
+        throw std::runtime_error(std::string("Cannot ") + caller + ": columns [" + names +
+                                 "] contain no rows; pass no columns to clear the group");
+    }
+
+    std::vector<std::map<std::string, quiver::Value>> rows;
+    rows.reserve(row_count);
+
+    for (size_t r = 0; r < row_count; ++r) {
+        std::map<std::string, quiver::Value> row;
+        for (size_t c = 0; c < column_count; ++c) {
+            std::string col_name(column_names[c]);
+            // A masked-out cell, an absent column array, or (for strings) a NULL entry are all
+            // SQL NULL - the same contract the element array setters document. The read direction
+            // emits exactly that for a NULL STRING cell, so a caller round-tripping a read result
+            // with the mask stripped must not land in undefined behaviour.
+            const uint8_t* mask = column_has_value ? column_has_value[c] : nullptr;
+            if ((mask && mask[r] == 0) || !column_data[c]) {
+                row[col_name] = nullptr;
+                continue;
+            }
+            switch (column_types[c]) {
+            case QUIVER_DATA_TYPE_INTEGER:
+                row[col_name] = static_cast<const int64_t*>(column_data[c])[r];
+                break;
+            case QUIVER_DATA_TYPE_FLOAT:
+                row[col_name] = static_cast<const double*>(column_data[c])[r];
+                break;
+            case QUIVER_DATA_TYPE_STRING:
+            case QUIVER_DATA_TYPE_DATE_TIME: {
+                const char* cell = static_cast<const char* const*>(column_data[c])[r];
+                row[col_name] = cell ? quiver::Value(std::string(cell)) : quiver::Value(nullptr);
+                break;
+            }
+            default:
+                throw std::runtime_error(std::string("Cannot ") + caller + ": unknown column type " +
+                                         std::to_string(column_types[c]));
+            }
+        }
+        rows.push_back(std::move(row));
+    }
+    return rows;
+}
+
 // Marshals row-shaped group data (time series / vector / set) into the columnar
 // typed-arrays + per-cell presence-mask out-params shared by the group read C
 // functions. `columns` pairs each column name with its quiver_data_type_t value.

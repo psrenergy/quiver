@@ -665,7 +665,7 @@ function read_time_series_row(db::Database, collection::String, group::String, a
         return result
     end
 
-    throw(ArgumentError("Unsupported data type $(data_type) for attribute '$attribute'"))
+    return throw(ArgumentError("Unsupported data type $(data_type) for attribute '$attribute'"))
 end
 
 function read_time_series_files(db::Database, collection::String)
