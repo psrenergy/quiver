@@ -96,3 +96,158 @@ describe("updateElement", () => {
     }
   });
 });
+
+const RELATIONS_SCHEMA_PATH = join(
+  __dirname,
+  "..",
+  "..",
+  "..",
+  "tests",
+  "schemas",
+  "valid",
+  "relations.sql",
+);
+
+// relations.sql gives Child a vector group and a set group that legally share the FK column name
+// "parent_ref" -- the case that makes routing an array by column name ambiguous.
+describe("updateVectorGroup / updateSetGroup", () => {
+  function openRelations(): { db: Database; parentA: number; parentB: number; child: number } {
+    const db = Database.fromSchema(":memory:", RELATIONS_SCHEMA_PATH);
+    db.createElement("Configuration", { label: "Config" });
+    const parentA = db.createElement("Parent", { label: "Parent A" });
+    const parentB = db.createElement("Parent", { label: "Parent B" });
+    const child = db.createElement("Child", { label: "Child 1" });
+    return { db, parentA, parentB, child };
+  }
+
+  test("replaces rows and clears on an empty object", () => {
+    const { db, parentA, parentB, child } = openRelations();
+    try {
+      db.updateVectorGroup("Child", "refs", child, { parent_ref: [parentA, parentB] });
+      expect(db.readVectorIntegersById("Child", "parent_ref", child)).toEqual([parentA, parentB]);
+
+      db.updateVectorGroup("Child", "refs", child, { parent_ref: [parentB] });
+      expect(db.readVectorIntegersById("Child", "parent_ref", child)).toEqual([parentB]);
+
+      db.updateVectorGroup("Child", "refs", child, {});
+      expect(db.readVectorIntegersById("Child", "parent_ref", child)).toEqual([]);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("leaves a sibling group sharing a column name untouched", () => {
+    const { db, parentA, parentB, child } = openRelations();
+    try {
+      db.updateSetGroup("Child", "parents", child, { parent_ref: [parentA] });
+      db.updateVectorGroup("Child", "refs", child, { parent_ref: [parentB] });
+
+      expect(db.readSetIntegersById("Child", "parent_ref", child)).toEqual([parentA]);
+      expect(db.readVectorIntegersById("Child", "parent_ref", child)).toEqual([parentB]);
+
+      db.updateVectorGroup("Child", "refs", child, {});
+      expect(db.readSetIntegersById("Child", "parent_ref", child)).toEqual([parentA]);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("resolves foreign key labels", () => {
+    const { db, parentB, child } = openRelations();
+    try {
+      db.updateVectorGroup("Child", "refs", child, { parent_ref: ["Parent B"] });
+      expect(db.readVectorIntegersById("Child", "parent_ref", child)).toEqual([parentB]);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("writes null cells as SQL NULL", () => {
+    const { db, parentA, parentB, child } = openRelations();
+    try {
+      db.updateVectorGroup("Child", "refs", child, { parent_ref: [parentA, null, parentB] });
+      // Asserted in SQL: the per-column reader drops NULL cells.
+      expect(
+        db.queryInteger("SELECT COUNT(*) FROM Child_vector_refs WHERE id = ?", [child]),
+      ).toEqual(3);
+      expect(
+        db.queryInteger(
+          "SELECT COUNT(*) FROM Child_vector_refs WHERE id = ? AND parent_ref IS NULL",
+          [child],
+        ),
+      ).toEqual(1);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("throws on an unknown group or column", () => {
+    const { db, parentA, child } = openRelations();
+    try {
+      expect(() => db.updateVectorGroup("Child", "nope", child, { parent_ref: [parentA] })).toThrow(
+        /Vector group not found/,
+      );
+      expect(() => db.updateSetGroup("Child", "nope", child, { parent_ref: [parentA] })).toThrow(
+        /Set group not found/,
+      );
+      expect(() => db.updateVectorGroup("Child", "refs", child, { not_a_column: [1] })).toThrow(
+        /not found in group/,
+      );
+    } finally {
+      db.close();
+    }
+  });
+
+  test("rejects the columns the group manages itself", () => {
+    const { db, parentA, child } = openRelations();
+    try {
+      // Accepting these silently dropped the caller's value: SQLite keeps the first of a
+      // duplicated INSERT column.
+      expect(() =>
+        db.updateVectorGroup("Child", "refs", child, { parent_ref: [parentA], vector_index: [7] }),
+      ).toThrow(/managed by the group table/);
+      expect(() =>
+        db.updateSetGroup("Child", "parents", child, { parent_ref: [parentA], id: [2] }),
+      ).toThrow(/managed by the group table/);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("rejects a named-but-empty column instead of clearing", () => {
+    const { db, parentA, child } = openRelations();
+    try {
+      db.updateVectorGroup("Child", "refs", child, { parent_ref: [parentA] });
+      expect(() => db.updateVectorGroup("Child", "refs", child, { parent_ref: [] })).toThrow(
+        /contain no rows/,
+      );
+      expect(db.readVectorIntegersById("Child", "parent_ref", child)).toEqual([parentA]);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("throws Element not found for a missing id", () => {
+    const { db, parentA } = openRelations();
+    try {
+      expect(() => db.updateVectorGroup("Child", "refs", 999, { parent_ref: [parentA] })).toThrow(
+        /Element not found/,
+      );
+      // The clear path used to succeed silently: the DELETE simply matched nothing.
+      expect(() => db.updateSetGroup("Child", "parents", 999, {})).toThrow(/Element not found/);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("rejects jagged columns", () => {
+    const { db, parentA, child } = openRelations();
+    try {
+      expect(() =>
+        db.updateVectorGroup("Child", "refs", child, { parent_ref: [parentA, parentA], id: [1] }),
+      ).toThrow(/has length 1 but expected 2/);
+    } finally {
+      db.close();
+    }
+  });
+});

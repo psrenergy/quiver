@@ -52,9 +52,15 @@ ruff.toml         # Lint/format config (format.bat runs ruff)
   cannot leak the native buffer.
 - **Time-series group NULLs**: `read_time_series_group` surfaces a SQL NULL cell as `None` in the
   column list (decoded via the per-cell `uint8_t**` mask out-param); the dimension column stays
-  dense datetimes. `_marshal_time_series_columns` dispatches on the first non-`None` element, builds
+  dense datetimes. `_marshal_group_columns` dispatches on the first non-`None` element, builds
   a per-column mask, and substitutes `0`/`0.0`/`ffi.NULL` placeholders for `None` cells; an all-`None`
   column is tagged FLOAT with a zeroed placeholder.
+- **`_marshal_group_columns` serves all three columnar group writers** (time series, vector, set) —
+  same name as Dart's `_marshalGroupColumn`. It raises `ValueError` for jagged column lists (a
+  pre-FFI marshalling error, the documented exception to "messages come from C++"); everything else
+  is validated in the core and surfaces as `QuiverError`. Note that the group *writers* take columns
+  while `read_vector_group_by_id` returns rows, and that reader composes per-column reads, so it
+  **drops NULL cells** — assert a NULL-cell write in SQL, not through it.
 
 ## Packaging
 

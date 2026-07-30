@@ -134,6 +134,14 @@ const timeSeriesSymbols = {
     args: [P, BUF, BUF, I64, P, P, P, P, USIZE, USIZE],
     returns: I32,
   },
+  quiver_database_update_vector_group: {
+    args: [P, BUF, BUF, I64, P, P, P, P, USIZE, USIZE],
+    returns: I32,
+  },
+  quiver_database_update_set_group: {
+    args: [P, BUF, BUF, I64, P, P, P, P, USIZE, USIZE],
+    returns: I32,
+  },
   quiver_database_free_time_series_data: { args: [P, P, P, P, USIZE, USIZE], returns: I32 },
   quiver_database_has_time_series_files: { args: [P, BUF, P], returns: I32 },
   quiver_database_list_time_series_files_columns: { args: [P, BUF, P, P], returns: I32 },

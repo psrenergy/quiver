@@ -46,7 +46,7 @@ void validate_time_series_row(const std::string& caller,
 }  // namespace
 
 std::vector<GroupMetadata> Database::list_time_series_groups(const std::string& collection) const {
-    impl_->require_schema("list_time_series_groups");
+    impl_->require_schema();
 
     std::vector<GroupMetadata> result;
     for (const auto& group_name : impl_->schema->group_names(collection, GroupTableType::TimeSeries)) {
@@ -323,7 +323,9 @@ std::map<std::string, std::optional<std::string>> Database::read_time_series_fil
         throw std::runtime_error("Time series files table not found: " + tsf);
     }
 
-    // Build column list in declaration order (see list_time_series_files_columns)
+    // Declaration order for the SELECT only - the std::map return re-sorts the keys, so the
+    // observable order of this function is alphabetical either way (unlike
+    // list_time_series_files_columns, which does report declaration order).
     const auto& columns = table_def->column_order;
 
     if (columns.empty()) {

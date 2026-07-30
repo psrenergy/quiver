@@ -161,7 +161,21 @@ impl_->logger->debug("Opening database: {}", path);
 - **Group inserts are unified** (`database_impl.h`): one `insert_rows_into_group_table(caller,
   table, type, columns, id, delete_existing, db)` helper serves vector, set, and time-series
   writes; a single routing map (`table_name -> {type, columns}`) classifies an element's array
-  attributes. Don't re-grow per-type copies.
+  attributes. Don't re-grow per-type copies. Two load-bearing details: validation (types +
+  same-length) runs **before** the DELETE, because `TransactionGuard` no-ops when a transaction is
+  already open (dry run, caller-owned) and a throw after the DELETE would leave the group cleared
+  with nothing to roll back; and `num_rows` is seeded from the **first** column rather than the
+  first non-empty one, because `columns` is name-sorted and an empty alphabetically-first column
+  otherwise left it at 0 for a later column to overwrite — skipping the check and indexing past the
+  end of the empty vector.
+- **`Impl::update_group_rows`** (`database_update.cpp`) is the shared body of
+  `update_vector_group`/`update_set_group`. It validates the **union of every row's keys** (not
+  `rows[0]`, which dropped later-row-only columns and skipped validating them) against the group
+  table, rejects the derived `id`/`vector_index`, and calls `require_element` — all before
+  `transpose_group_rows`, so a named-but-empty column list cannot fall through to the DELETE.
+- **`Impl::require_element`** (`database_impl.h`) is the single `SELECT 1 ... WHERE id = ?` guard
+  behind the Pattern 2 `"Element not found: ..."` message, shared by `update_element`,
+  `delete_element`, and both group writers.
 - **Table classification has one source** (`schema.cpp`): `Schema::group_names(collection,
   GroupTableType)` and `is_group_table(table, type)` are the only way to enumerate/classify
   `_vector_` / `_set_` / `_time_series_` tables (`group_names` excludes `_time_series_files`).
@@ -183,8 +197,18 @@ impl_->logger->debug("Opening database: {}", path);
   matches `INTEGER` or `REAL` (int-for-REAL coercion), double matches `REAL` only (a float into an
   `INTEGER` column is rejected), string matches `TEXT`/`INTEGER`(FK label)/`DATE_TIME`. Keep the two
   in sync (root design decision).
-- **`update_element` / `delete_element` verify the id exists** (`SELECT 1 ... WHERE id = ?` via
-  `execute`) and throw Pattern 2 `"Element not found: ..."` — no silent no-op.
+- **`update_element` / `delete_element` / the group writers verify the id exists** (via
+  `Impl::require_element`) and throw Pattern 2 `"Element not found: ..."` — no silent no-op.
+- **Schema metadata loads lazily** (`Impl::require_schema`): the `Database(path, options)`
+  constructor does not read it, so the first metadata/CRUD call does. `schema` and `type_validator`
+  are `mutable` (const readers trigger the load) and `load_schema_metadata()` is `const` and
+  publishes **neither** member until `SchemaValidator::validate()` passes — assigning `schema`
+  first would leave a half-loaded state (schema set, `type_validator` null) alive after a failed
+  lazy load, crashing the next call. Rationale in the root design decisions.
+- **`Row::get_float` widens an int64** (`row.cpp`): the one place the int64-for-REAL policy is
+  implemented for reads, since `read_column_values<double>`,
+  `read_column_values_nullable<double>`, `read_single_value<double>` and `query_float` all funnel
+  through it. Don't re-add a widening branch at a call site.
 - **Two column readers in `database_internal.h`**: `read_column_values<T>` drops NULLs (dense —
   used by vector/set `_by_id` and `read_element_ids`, whose columns are NOT NULL / PK by
   convention); `read_column_values_nullable<T>` keeps them as `std::optional<T>` and backs only the

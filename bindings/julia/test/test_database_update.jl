@@ -856,6 +856,58 @@ include("fixture.jl")
 
         Quiver.close!(db)
     end
+    # relations.sql gives Child a vector group and a set group that legally share the FK column
+    # name "parent_ref" -- the case that makes routing an array by column name ambiguous.
+    @testset "Vector And Set Group Writers" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "relations.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Config")
+        parent_a = Quiver.create_element!(db, "Parent"; label = "Parent A")
+        parent_b = Quiver.create_element!(db, "Parent"; label = "Parent B")
+        child = Quiver.create_element!(db, "Child"; label = "Child 1")
+
+        # Replaces rather than appends, and no columns clears.
+        Quiver.update_vector_group!(db, "Child", "refs", child; parent_ref = [parent_a, parent_b])
+        @test Quiver.read_vector_integers_by_id(db, "Child", "parent_ref", child) == [parent_a, parent_b]
+        Quiver.update_vector_group!(db, "Child", "refs", child; parent_ref = [parent_b])
+        @test Quiver.read_vector_integers_by_id(db, "Child", "parent_ref", child) == [parent_b]
+
+        # A sibling group sharing the column name is untouched: (collection, group) names one table.
+        Quiver.update_set_group!(db, "Child", "parents", child; parent_ref = [parent_a])
+        Quiver.update_vector_group!(db, "Child", "refs", child)
+        @test isempty(Quiver.read_vector_integers_by_id(db, "Child", "parent_ref", child))
+        @test Quiver.read_set_integers_by_id(db, "Child", "parent_ref", child) == [parent_a]
+
+        # Foreign-key labels resolve, exactly as in create_element! / update_element!.
+        Quiver.update_vector_group!(db, "Child", "refs", child; parent_ref = ["Parent B"])
+        @test Quiver.read_vector_integers_by_id(db, "Child", "parent_ref", child) == [parent_b]
+
+        # `nothing` cells become SQL NULL (asserted in SQL: the per-column reader drops NULLs).
+        Quiver.update_vector_group!(db, "Child", "refs", child; parent_ref = [parent_a, nothing, parent_b])
+        @test Quiver.query_integer(db, "SELECT COUNT(*) FROM Child_vector_refs WHERE id = ?", [child]) == 3
+        @test Quiver.query_integer(
+            db, "SELECT COUNT(*) FROM Child_vector_refs WHERE id = ? AND parent_ref IS NULL", [child]) == 1
+
+        # Unknown group / column, structural columns, a missing id, and a named-but-empty column
+        # (which must not silently clear) all throw.
+        @test_throws Quiver.DatabaseException Quiver.update_vector_group!(
+            db, "Child", "nope", child; parent_ref = [parent_a])
+        @test_throws Quiver.DatabaseException Quiver.update_set_group!(
+            db, "Child", "nope", child; parent_ref = [parent_a])
+        @test_throws Quiver.DatabaseException Quiver.update_vector_group!(
+            db, "Child", "refs", child; not_a_column = [1])
+        @test_throws Quiver.DatabaseException Quiver.update_vector_group!(
+            db, "Child", "refs", child; parent_ref = [parent_a], vector_index = [7])
+        @test_throws Quiver.DatabaseException Quiver.update_vector_group!(
+            db, "Child", "refs", Int64(999); parent_ref = [parent_a])
+        @test_throws Quiver.DatabaseException Quiver.update_set_group!(db, "Child", "parents", Int64(999))
+        @test_throws Quiver.DatabaseException Quiver.update_vector_group!(
+            db, "Child", "refs", child; parent_ref = Int64[])
+        @test Quiver.query_integer(db, "SELECT COUNT(*) FROM Child_vector_refs WHERE id = ?", [child]) == 3
+
+        Quiver.close!(db)
+    end
 end
 
 end

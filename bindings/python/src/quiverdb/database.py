@@ -1355,8 +1355,8 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
             )
             return
 
-        keepalive, c_col_names, c_col_types, c_col_data, c_col_has_value, col_count, row_count = (
-            _marshal_time_series_columns(data)
+        keepalive, c_col_names, c_col_types, c_col_data, c_col_has_value, col_count, row_count = _marshal_group_columns(
+            data
         )
         check(
             lib.quiver_database_update_time_series_group(
@@ -1400,8 +1400,8 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
             )
             return
 
-        keepalive, c_col_names, c_col_types, c_col_data, c_col_has_value, col_count, row_count = (
-            _marshal_time_series_columns(data)
+        keepalive, c_col_names, c_col_types, c_col_data, c_col_has_value, col_count, row_count = _marshal_group_columns(
+            data
         )
         check(
             lib.quiver_database_update_vector_group(
@@ -1443,8 +1443,8 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
             )
             return
 
-        keepalive, c_col_names, c_col_types, c_col_data, c_col_has_value, col_count, row_count = (
-            _marshal_time_series_columns(data)
+        keepalive, c_col_names, c_col_types, c_col_data, c_col_has_value, col_count, row_count = _marshal_group_columns(
+            data
         )
         check(
             lib.quiver_database_update_set_group(
@@ -1816,7 +1816,7 @@ def _marshal_params(parameters: list) -> tuple:
     return keepalive, c_types, c_values
 
 
-def _marshal_time_series_columns(data: dict[str, list]) -> tuple:
+def _marshal_group_columns(data: dict[str, list]) -> tuple:
     """Marshal column lists into parallel C arrays for the columnar time series API.
 
     Column types are dispatched on the first non-None element: datetime/str ->

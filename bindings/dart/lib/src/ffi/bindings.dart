@@ -3126,10 +3126,9 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_lua_runner_free_stringPtr =
-      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<ffi.Char>)>>(
-        'quiver_lua_runner_free_string',
-      );
+  late final _quiver_lua_runner_free_stringPtr = _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<ffi.Char>)>>(
+    'quiver_lua_runner_free_string',
+  );
   late final _quiver_lua_runner_free_string = _quiver_lua_runner_free_stringPtr
       .asFunction<int Function(ffi.Pointer<ffi.Char>)>();
 }

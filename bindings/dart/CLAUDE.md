@@ -40,9 +40,11 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   `.dart_tool/lib/` to force a fresh DLL rebuild — otherwise tests run against the old layout and
   fail in confusing ways.
 - **Marshaling idiom**: every method allocates through a `package:ffi` `Arena` and releases in
-  `finally`. Typed time-series columns go through the shared private
-  `_marshalTimeSeriesColumn(Arena, List<Object?>)` (used by `updateTimeSeriesGroup` and
-  `upsertTimeSeriesRow`); query parameters through `_marshalParams`.
+  `finally`. Typed columns go through the shared private `_marshalGroupColumn(Arena, List<Object?>)`
+  (used by `updateTimeSeriesGroup`, `upsertTimeSeriesRow`, `updateVectorGroup` and
+  `updateSetGroup`); query parameters through `_marshalParams`.
+- **The group writers take columns while the group readers return rows** (`readVectorGroupById`).
+  The only asymmetric reader/writer pair here — deliberate, see the root design decisions.
 - **Scalar bulk NULLs**: `readScalarIntegers`/`readScalarFloats` decode a parallel `Pointer<Uint8>`
   mask into `List<int?>`/`List<double?>` (mask 0 → `null`); `readScalarStrings` returns `List<String?>`,
   null-guarding the pointer before `toDartString`. `bindings.dart` carries the mask arg +
@@ -52,7 +54,7 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   `quiver_lua_runner_free_string` (*not* `quiver_database_free_string`) in its own nested `finally`,
   so a `toDartString` failure cannot leak it.
 - **Time-series group NULLs**: `readTimeSeriesGroup`/`updateTimeSeriesGroup` use
-  `Map<String, List<Object?>>` — a `null` cell is a SQL NULL. `_marshalTimeSeriesColumn` returns a
+  `Map<String, List<Object?>>` — a `null` cell is a SQL NULL. `_marshalGroupColumn` returns a
   `({int type, Pointer<Void> data, Pointer<Uint8> hasValue})` record (the per-cell mask;
   `upsertTimeSeriesRow` ignores `hasValue`), dispatches on the first non-null element, and tags an
   all-null/empty column FLOAT with a zeroed placeholder. Reads decode the mask out-param and never

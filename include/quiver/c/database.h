@@ -229,10 +229,14 @@ QUIVER_C_API quiver_error_t quiver_database_read_set_group_by_id(quiver_database
 // Update a whole vector/set group by element ID - replaces all of that element's rows.
 // Columnar typed arrays with a per-cell presence mask, same contract as
 // quiver_database_update_time_series_group (NULL mask = dense; mask[c][r] == 0 inserts SQL NULL
-// and the data entry is never read). Pass column_count == 0 and row_count == 0 with NULL arrays
-// to clear the group. Prefer these over passing arrays through quiver_database_update_element
-// when a column name is shared by two groups of the same collection (legal for foreign keys):
-// (collection, group) names exactly one table, a column name alone does not.
+// and the data entry is never read; a NULL char* entry in a string column is also SQL NULL).
+// Pass column_count == 0 and row_count == 0 with NULL arrays to clear the group - naming a column
+// with row_count == 0 is an ERROR, not a clear, so a typo'd column name cannot wipe the group.
+// The element id must exist, "id" and "vector_index" are rejected (both are derived), and a
+// foreign-key column accepts a label string. Prefer these over passing arrays through
+// quiver_database_update_element when a column name is shared by two groups of the same collection
+// (legal for foreign keys): (collection, group) names exactly one table, a column name alone
+// does not.
 QUIVER_C_API quiver_error_t quiver_database_update_vector_group(quiver_database_t* db,
                                                                 const char* collection,
                                                                 const char* group,

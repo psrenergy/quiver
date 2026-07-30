@@ -6,7 +6,6 @@
 #include <algorithm>
 #include <cctype>
 #include <charconv>
-#include <cstdio>
 #include <cstring>
 #include <ctime>
 #include <filesystem>
@@ -18,23 +17,11 @@
 
 namespace quiver {
 
-// column -> referenced id -> that element's label, for the foreign-key columns import
-// resolves by label.
-using FkLabelMaps = std::unordered_map<std::string, std::unordered_map<int64_t, std::string>>;
-
-// Build the id -> label map for one referenced collection.
-static std::unordered_map<int64_t, std::string> build_id_to_label_map(Database& db, const std::string& collection) {
-    std::unordered_map<int64_t, std::string> id_to_label;
-    auto ids = db.read_scalar_integers(collection, "id");
-    auto labels = db.read_scalar_strings(collection, "label");
-    for (size_t i = 0; i < ids.size(); ++i) {
-        // id (PK) and label (NOT NULL by schema convention) are always present; guard defensively.
-        if (ids[i] && labels[i]) {
-            id_to_label[*ids[i]] = *labels[i];
-        }
-    }
-    return id_to_label;
-}
+// referenced id -> that element's label, for one target collection.
+using IdLabelMap = std::unordered_map<int64_t, std::string>;
+// column -> the map its target collection owns, for the foreign-key columns import resolves by
+// label. Borrowed, not owned: several columns can reference the same collection.
+using FkLabelMaps = std::unordered_map<std::string, const IdLabelMap*>;
 
 // Convert a Value to its CSV string representation.
 // NULL -> empty string, foreign keys resolve to the referenced label, other integers check
@@ -57,7 +44,7 @@ static std::string value_to_csv_string(const Value& value,
         // never consults enum_labels for it, so writing the raw id here would produce a CSV
         // that import rejects ("Could not find an existing element ... with label 3").
         if (auto fk_it = fk_labels.find(column_name); fk_it != fk_labels.end()) {
-            if (auto label_it = fk_it->second.find(int_val); label_it != fk_it->second.end()) {
+            if (auto label_it = fk_it->second->find(int_val); label_it != fk_it->second->end()) {
                 return label_it->second;
             }
         }
@@ -77,10 +64,8 @@ static std::string value_to_csv_string(const Value& value,
     // an export -> edit -> import cycle lost precision (1234567.89 came back as 1.23457e+06).
     if (std::holds_alternative<double>(value)) {
         char buf[64];
-        auto [end, ec] = std::to_chars(buf, buf + sizeof(buf), std::get<double>(value));
-        if (ec != std::errc{}) {
-            return "";
-        }
+        // Cannot fail: 64 bytes is more than the longest shortest-round-trip double.
+        auto* end = std::to_chars(buf, buf + sizeof(buf), std::get<double>(value)).ptr;
         return std::string(buf, end);
     }
 
@@ -163,6 +148,29 @@ void Database::export_csv(const std::string& collection,
         fs::create_directories(parent);
     }
 
+    // id -> label per referenced collection, built on demand and memoized: scanning the whole
+    // target table is the cost here, and a collection can be the target of several foreign-key
+    // columns. std::unordered_map never invalidates references to existing elements, so the
+    // pointers FkLabelMaps borrows stay valid as more targets are cached.
+    std::unordered_map<std::string, IdLabelMap> label_cache;
+    auto id_to_label_map = [&](const std::string& to_table) -> const IdLabelMap& {
+        if (auto it = label_cache.find(to_table); it != label_cache.end()) {
+            return it->second;
+        }
+
+        IdLabelMap id_to_label;
+        // One query, not two full-column reads. id (PK) and label (NOT NULL by schema convention)
+        // are always present, so the guards are defensive only.
+        for (const auto& row : execute("SELECT id, label FROM " + to_table)) {
+            auto id = row.get_integer(0);
+            auto label = row.get_string(1);
+            if (id && label) {
+                id_to_label[*id] = *label;
+            }
+        }
+        return label_cache.emplace(to_table, std::move(id_to_label)).first->second;
+    };
+
     if (group.empty()) {
         // Scalar export
         impl_->require_collection(collection, "export_csv");
@@ -194,14 +202,13 @@ void Database::export_csv(const std::string& collection,
             select_cols += csv_columns[i];
         }
 
-        // Foreign keys are written as the referenced element's label, mirroring import_csv.
-        // Self-references are excluded for the same reason import excludes them: the target
-        // rows are the ones being rewritten, so their labels are not a stable key.
+        // Foreign keys are written as the referenced element's label, which is what import_csv
+        // resolves them by - self-references included: import does not skip those, it defers them
+        // to a second pass and looks them up by label there too, so writing the raw id made the
+        // exporter's own output unimportable.
         FkLabelMaps fk_labels;
         for (const auto& fk : impl_->schema->get_table(collection)->foreign_keys) {
-            if (fk.to_table != collection) {
-                fk_labels[fk.from_column] = build_id_to_label_map(*this, fk.to_table);
-            }
+            fk_labels[fk.from_column] = &id_to_label_map(fk.to_table);
         }
 
         auto data_result = execute("SELECT " + select_cols + " FROM " + collection + " ORDER BY rowid");
@@ -289,7 +296,7 @@ void Database::export_csv(const std::string& collection,
         FkLabelMaps fk_labels;
         for (const auto& fk : impl_->schema->get_table(table_name)->foreign_keys) {
             if (fk.from_column != "id") {
-                fk_labels[fk.from_column] = build_id_to_label_map(*this, fk.to_table);
+                fk_labels[fk.from_column] = &id_to_label_map(fk.to_table);
             }
         }
 

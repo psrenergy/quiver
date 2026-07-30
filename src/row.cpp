@@ -37,6 +37,13 @@ std::optional<double> Row::get_float(size_t index) const {
     if (const auto* val = std::get_if<double>(&values_[index])) {
         return *val;
     }
+    // An int64 is accepted wherever a REAL is expected (the one scalar typing policy), and this is
+    // the single extractor behind every float read: query_float, the bulk/by-id scalar, vector and
+    // set readers. SQLite answers COUNT(*)/SUM(int_col) as INTEGER, and an integer stored in a REAL
+    // column stays INTEGER, so without this they all read back as "no value".
+    if (const auto* val = std::get_if<int64_t>(&values_[index])) {
+        return static_cast<double>(*val);
+    }
     return std::nullopt;
 }
 

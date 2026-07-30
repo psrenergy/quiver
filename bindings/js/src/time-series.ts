@@ -17,6 +17,7 @@ import {
   readUint64Out,
   toCString,
 } from "./ffi-helpers.ts";
+import { updateGroupColumns } from "./group-columns.ts";
 import { getSymbols } from "./loader.ts";
 import {
   type Allocation,
@@ -188,133 +189,14 @@ Database.prototype.updateTimeSeriesGroup = function (
   id: number,
   data: TimeSeriesData,
 ): void {
-  const lib = getSymbols();
-  const collBuf = toCString(collection);
-  const grpBuf = toCString(group);
-  const entries = Object.entries(data);
-
-  if (entries.length === 0) {
-    check(
-      lib.quiver_database_update_time_series_group(
-        this._handle,
-        collBuf.buf,
-        grpBuf.buf,
-        BigInt(id),
-        null,
-        null,
-        null,
-        null,
-        0n,
-        0n,
-      ),
-    );
-    return;
-  }
-
-  const columnCount = entries.length;
-  const rowCount = entries[0][1].length;
-
-  // Validate before marshalling: a jagged column would desync the parallel
-  // arrays the C API reads against row_count, and a zero-length column (with
-  // columns present) would otherwise marshal a null data pointer that the C API
-  // dereferences. Named-but-empty columns are a caller mistake -- pass {} to
-  // clear the group instead.
-  for (const [name, values] of entries) {
-    if (values.length !== rowCount) {
-      throw new QuiverError(
-        `Cannot updateTimeSeriesGroup: column '${name}' has length ${values.length} but expected ${rowCount}`,
-      );
-    }
-  }
-  if (rowCount === 0) {
-    const names = entries.map(([name]) => name).join(", ");
-    throw new QuiverError(
-      `Cannot updateTimeSeriesGroup: columns [${names}] contain no rows; pass {} to clear the group`,
-    );
-  }
-
-  const keepalive: Allocation[] = [];
-
-  // Build column names as native string array
-  const colNames = entries.map(([name]) => name);
-  const { table: namesTable, keepalive: namesPtrs } = allocNativeStringArray(colNames);
-  keepalive.push(namesTable, ...namesPtrs);
-
-  // Build column types, data, and per-cell NULL masks. A null cell becomes
-  // mask 0 + a placeholder in the data array (the C API never reads it). An
-  // all-null column is tagged FLOAT with zeroed data — the type tag is ignored
-  // for masked-out cells.
-  const typesBuf = new Uint8Array(columnCount * 4);
-  const typesDv = new DataView(typesBuf.buffer);
-  const dataPtrs: (Pointer | null)[] = [];
-  const maskPtrs: (Pointer | null)[] = [];
-
-  for (let c = 0; c < columnCount; c++) {
-    const [colName, values] = entries[c];
-    const first = values.find((v) => v !== null);
-
-    // Mask via direct indexing — never a DataView, to avoid the documented
-    // .buffer-materialization pitfall between ptr() and the FFI call.
-    const maskBuf = new Uint8Array(rowCount);
-    for (let r = 0; r < rowCount; r++) maskBuf[r] = values[r] === null ? 0 : 1;
-    const maskAlloc: Allocation = { ptr: ptr(maskBuf), buf: maskBuf };
-    keepalive.push(maskAlloc);
-    maskPtrs.push(maskAlloc.ptr);
-
-    if (first === undefined) {
-      // All-null column
-      typesDv.setInt32(c * 4, DATA_TYPE_FLOAT, true);
-      const p = allocNativeFloat64(new Array(rowCount).fill(0));
-      keepalive.push(p);
-      dataPtrs.push(p.ptr);
-    } else if (typeof first === "string") {
-      typesDv.setInt32(c * 4, DATA_TYPE_STRING, true);
-      const { table, keepalive: strPtrs } = allocNativeStringArray(
-        values.map((v) => (v === null ? null : (v as string))),
-      );
-      keepalive.push(table, ...strPtrs);
-      dataPtrs.push(table.ptr);
-    } else if (typeof first === "number") {
-      const nonNull = values.filter((v) => v !== null) as number[];
-      const sanitized = values.map((v) => (v === null ? 0 : (v as number)));
-      if (nonNull.every((v) => Number.isInteger(v))) {
-        typesDv.setInt32(c * 4, DATA_TYPE_INTEGER, true);
-        const p = allocNativeInt64(sanitized);
-        keepalive.push(p);
-        dataPtrs.push(p.ptr);
-      } else {
-        typesDv.setInt32(c * 4, DATA_TYPE_FLOAT, true);
-        const p = allocNativeFloat64(sanitized);
-        keepalive.push(p);
-        dataPtrs.push(p.ptr);
-      }
-    } else {
-      throw new QuiverError(
-        `Cannot updateTimeSeriesGroup: column '${colName}' has unsupported value type ${typeof first}`,
-      );
-    }
-  }
-
-  const typesAlloc: Allocation = { ptr: ptr(typesBuf), buf: typesBuf };
-  keepalive.push(typesAlloc);
-  const dataTable = allocNativePtrTable(dataPtrs);
-  keepalive.push(dataTable);
-  const maskTable = allocNativePtrTable(maskPtrs);
-  keepalive.push(maskTable);
-
-  check(
-    lib.quiver_database_update_time_series_group(
-      this._handle,
-      collBuf.buf,
-      grpBuf.buf,
-      BigInt(id),
-      namesTable.buf,
-      typesAlloc.buf,
-      dataTable.buf,
-      maskTable.buf,
-      BigInt(columnCount),
-      BigInt(rowCount),
-    ),
+  updateGroupColumns(
+    this._handle,
+    "updateTimeSeriesGroup",
+    getSymbols().quiver_database_update_time_series_group,
+    collection,
+    group,
+    id,
+    data,
   );
 };
 

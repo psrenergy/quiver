@@ -52,6 +52,10 @@ Project.toml      # Deps: Artifacts, CEnum, Dates, Libdl; julia 1.11 compat
   `Base.nonnothingtype(eltype(v))` with the all-`nothing` branch (`Union{}`) first; it always passes
   a per-column `UInt8` mask (added to the `GC.@preserve` set). An all-`nothing` column marshals as a
   FLOAT tag + zeroed placeholder.
+- **One marshaller for all three group writers**: `_update_group_columns(db, update, ...)`
+  (`src/database_update.jl`) takes the C entry point as an argument, so `update_time_series_group!`,
+  `update_vector_group!` and `update_set_group!` are one-line wrappers over it. Don't copy the
+  `GC.@preserve` body per writer.
 - **Library loader** (`src/c_api.jl`, emitted from `generator/prologue.jl`) is **relocatable** —
   this matters for downstream apps compiled with PackageCompiler (`create_app`), where a baked
   absolute path would freeze the build machine's depot and fail on the target. Split design:

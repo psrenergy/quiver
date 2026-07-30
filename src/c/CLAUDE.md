@@ -198,6 +198,19 @@ NULL **presence mask** alongside the data arrays:
 
 This pattern mirrors the `convert_params()` approach from `database_query.cpp` for type-safe FFI marshaling across N typed columns.
 
+**One decoder for every group update.** `unmarshal_group_columns_to_rows` (`database_helpers.h`) is
+the inverse of `marshal_group_rows_to_c` and is shared by `quiver_database_update_time_series_group`,
+`_update_vector_group`, and `_update_set_group` — the decoder was duplicated once and must not be
+again. It owns three contracts the row-shaped C++ API cannot express:
+- **A NULL cell is NULL however it is spelled**: masked out, a NULL per-column data pointer, or (for
+  string columns) a NULL `char*` entry under a dense mask. That last case is what the read direction
+  emits for a NULL STRING cell, so feeding a read result back with the mask stripped must not be UB.
+- **`column_count > 0` with `row_count == 0` is rejected.** The row-shaped result carries no column
+  names, so the core would see an empty update and clear the group — a typo'd column name would
+  destroy data and report success. Clearing is `column_count == 0`.
+- Masked cells become an explicit `Value{nullptr}` in **every** row, keeping rows uniform (the core
+  builds its INSERT column list from `rows[0]`).
+
 ## Parameterized Queries
 
 `_params` variants use parallel arrays for typed parameters:

@@ -131,7 +131,7 @@ void write_collection_section(std::ostream& out, const Schema& schema, const std
 }  // namespace
 
 std::string Database::describe() const {
-    impl_->require_schema("describe");
+    impl_->require_schema();
 
     std::ostringstream out;
     out << "Database: " << impl_->path << "\n";

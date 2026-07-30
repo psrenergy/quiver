@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <gtest/gtest.h>
 #include <quiver/database.h>
+#include <quiver/element.h>
 #include <quiver/migration.h>
 #include <quiver/migrations.h>
 #include <sstream>
@@ -498,4 +499,52 @@ TEST_F(TempFileFixture, DescribeNoCategoryHeaderWhenEmpty) {
     EXPECT_EQ(output.find("Time Series:"), std::string::npos)
         << "Time Series: header should not appear when no time series exist. Output:\n"
         << output;
+}
+
+// The constructor - the only implementation behind quiver_database_open and every binding's
+// open() - does not read the schema; require_schema loads it on first use. Without that, an
+// opened database answered every metadata and CRUD call with "no schema loaded".
+TEST_F(TempFileFixture, OpenExistingDatabaseLoadsSchemaOnFirstUse) {
+    {
+        auto created = quiver::Database::from_schema(
+            path, VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        created.create_element("Configuration", quiver::Element().set("label", std::string("Config")));
+        created.create_element("Collection",
+                               quiver::Element().set("label", std::string("Item 1")).set("some_integer", int64_t{42}));
+    }
+
+    quiver::Database db(path, {.read_only = false, .console_level = quiver::LogLevel::Off});
+    EXPECT_EQ(db.read_scalar_integers("Collection", "some_integer"), (std::vector<std::optional<int64_t>>{42}));
+    EXPECT_FALSE(db.list_vector_groups("Collection").empty());
+    EXPECT_NO_THROW(db.create_element("Collection", quiver::Element().set("label", std::string("Item 2"))));
+}
+
+// Read-only open must reach the same schema (Schema::from_database is read-only SQL), and fail
+// the write for the right reason rather than for a missing schema.
+TEST_F(TempFileFixture, OpenReadOnlyLoadsSchemaOnFirstUse) {
+    {
+        auto created = quiver::Database::from_schema(
+            path, VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        created.create_element("Configuration", quiver::Element().set("label", std::string("Config")));
+    }
+
+    quiver::Database db(path, {.read_only = true, .console_level = quiver::LogLevel::Off});
+    EXPECT_EQ(db.list_scalar_attributes("Configuration").size(), 2u);
+    EXPECT_THROW(db.create_element("Configuration", quiver::Element().set("label", std::string("Nope"))),
+                 std::runtime_error);
+}
+
+// A directory with no versioned subdirectories is not an error: Migrations() reports empty and
+// from_migrations returns a usable handle. Loading (and validating) the schema eagerly here would
+// turn an empty database into a "Schema must have a 'Configuration' table" throw at open.
+TEST_F(TempFileFixture, FromMigrationsWithNoVersionsReturnsHandle) {
+    auto empty_dir = fs::temp_directory_path() / "quiver_empty_migrations";
+    fs::create_directories(empty_dir);
+
+    auto db = quiver::Database::from_migrations(
+        path, empty_dir.string(), {.read_only = false, .console_level = quiver::LogLevel::Off});
+    EXPECT_TRUE(db.is_healthy());
+    EXPECT_EQ(db.current_version(), 0);
+
+    fs::remove_all(empty_dir);
 }

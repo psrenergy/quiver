@@ -635,3 +635,51 @@ TEST(DatabaseCSV, ExportImportCSV_ForeignKeyColumnRoundTrips) {
 
     EXPECT_EQ(db.read_scalar_integer_by_id("Child", "parent_id", child), std::optional<int64_t>{1});
 }
+
+// Export used to skip self-referencing foreign keys and write the raw id, but import does not
+// skip them either - it defers them to a second pass and looks them up by label there, so the
+// exporter's own output was unimportable for any table with a self-relation.
+TEST(DatabaseCSV, ExportImportCSV_SelfForeignKeyRoundTrips) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    db.create_element("Configuration", quiver::Element().set("label", std::string("Config")));
+    auto child1 = db.create_element("Child", quiver::Element().set("label", std::string("Child 1")));
+    auto child2 = db.create_element(
+        "Child", quiver::Element().set("label", std::string("Child 2")).set("sibling_id", std::string("Child 1")));
+
+    auto path = (fs::temp_directory_path() / "quiver_self_fk_roundtrip.csv").string();
+    db.export_csv("Child", "", path);
+    auto content = read_file(path);
+    // The cell holds the sibling's label, not its id.
+    EXPECT_NE(content.find("Child 1"), std::string::npos) << content;
+
+    db.import_csv("Child", "", path);
+    fs::remove(path);
+
+    EXPECT_EQ(db.read_scalar_integer_by_id("Child", "sibling_id", child2), std::optional<int64_t>{child1});
+}
+
+// The group branch resolves its own foreign keys by label too (minus the parent id column, which
+// the JOIN already emits as C.label).
+TEST(DatabaseCSV, ExportCSV_GroupForeignKeyWritesLabel) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    db.create_element("Configuration", quiver::Element().set("label", std::string("Config")));
+    db.create_element("Parent", quiver::Element().set("label", std::string("Parent A")));
+    auto child = db.create_element("Child", quiver::Element().set("label", std::string("Child 1")));
+    db.update_vector_group("Child", "refs", child, {{{"parent_ref", std::string("Parent A")}}});
+
+    auto path = (fs::temp_directory_path() / "quiver_group_fk_export.csv").string();
+    db.export_csv("Child", "refs", path);
+    auto content = read_file(path);
+    EXPECT_NE(content.find("Parent A"), std::string::npos) << content;
+
+    // And the label the export wrote is what import reads back.
+    db.update_vector_group("Child", "refs", child, {});
+    db.import_csv("Child", "refs", path);
+    fs::remove(path);
+
+    EXPECT_EQ(db.read_vector_integers_by_id("Child", "parent_ref", child), (std::vector<int64_t>{1}));
+}

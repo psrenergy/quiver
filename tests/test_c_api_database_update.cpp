@@ -1686,9 +1686,8 @@ TEST(DatabaseCApi, UpdateVectorGroupAndSetGroupStayIndependent) {
     quiver_database_free_integer_array(out);
 
     // Clearing takes NULL arrays with zero counts, same as the time series group API.
-    ASSERT_EQ(
-        quiver_database_update_vector_group(db, "Child", "refs", child, nullptr, nullptr, nullptr, nullptr, 0, 0),
-        QUIVER_OK);
+    ASSERT_EQ(quiver_database_update_vector_group(db, "Child", "refs", child, nullptr, nullptr, nullptr, nullptr, 0, 0),
+              QUIVER_OK);
     ASSERT_EQ(quiver_database_read_vector_integers_by_id(db, "Child", "parent_ref", child, &out, &count), QUIVER_OK);
     EXPECT_EQ(count, 0u);
 
@@ -1744,10 +1743,106 @@ TEST(DatabaseCApi, UpdateGroupNullArgumentsRejected) {
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("relations.sql").c_str(), &options, &db), QUIVER_OK);
 
-    EXPECT_EQ(quiver_database_update_vector_group(nullptr, "Child", "refs", 1, nullptr, nullptr, nullptr, nullptr, 0, 0),
-              QUIVER_ERROR);
+    EXPECT_EQ(
+        quiver_database_update_vector_group(nullptr, "Child", "refs", 1, nullptr, nullptr, nullptr, nullptr, 0, 0),
+        QUIVER_ERROR);
     EXPECT_EQ(quiver_database_update_set_group(db, nullptr, "parents", 1, nullptr, nullptr, nullptr, nullptr, 0, 0),
               QUIVER_ERROR);
+
+    // The column-array guard only applies when there are columns: passing column_count == 0 (as
+    // both calls above do) takes the clear path and never reaches it.
+    const char* names[] = {"parent_ref"};
+    const int types[] = {QUIVER_DATA_TYPE_INTEGER};
+    int64_t values[] = {1};
+    const void* data[] = {values};
+    EXPECT_EQ(quiver_database_update_vector_group(db, "Child", "refs", 1, nullptr, types, data, nullptr, 1, 1),
+              QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_update_vector_group(db, "Child", "refs", 1, names, nullptr, data, nullptr, 1, 1),
+              QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_update_vector_group(db, "Child", "refs", 1, names, types, nullptr, nullptr, 1, 1),
+              QUIVER_ERROR);
+
+    EXPECT_EQ(quiver_database_close(db), QUIVER_OK);
+}
+
+// A named column with no rows carries no data to write, and the row-shaped form the core takes
+// cannot express it - it would arrive as an empty update and clear the group, so a typo'd column
+// name would destroy data and report success. Clearing is column_count == 0.
+TEST(DatabaseCApi, UpdateGroupNamedColumnWithNoRowsRejected) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("relations.sql").c_str(), &options, &db), QUIVER_OK);
+
+    const auto make = [&](const char* collection, const char* label) {
+        quiver_element_t* e = nullptr;
+        EXPECT_EQ(quiver_element_create(&e), QUIVER_OK);
+        quiver_element_set_string(e, "label", label);
+        int64_t id = 0;
+        EXPECT_EQ(quiver_database_create_element(db, collection, e, &id), QUIVER_OK);
+        EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
+        return id;
+    };
+    make("Configuration", "Config");
+    const int64_t parent_a = make("Parent", "Parent A");
+    const int64_t child = make("Child", "Child 1");
+
+    const char* names[] = {"parent_ref"};
+    const int types[] = {QUIVER_DATA_TYPE_INTEGER};
+    int64_t values[] = {parent_a};
+    const void* data[] = {values};
+    ASSERT_EQ(quiver_database_update_vector_group(db, "Child", "refs", child, names, types, data, nullptr, 1, 1),
+              QUIVER_OK);
+
+    // row_count == 0 with a column named: rejected, and the existing row survives.
+    EXPECT_EQ(quiver_database_update_vector_group(db, "Child", "refs", child, names, types, data, nullptr, 1, 0),
+              QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_update_set_group(db, "Child", "parents", child, names, types, data, nullptr, 1, 0),
+              QUIVER_ERROR);
+
+    int64_t* out = nullptr;
+    size_t count = 0;
+    ASSERT_EQ(quiver_database_read_vector_integers_by_id(db, "Child", "parent_ref", child, &out, &count), QUIVER_OK);
+    EXPECT_EQ(count, 1u);
+    quiver_database_free_integer_array(out);
+
+    EXPECT_EQ(quiver_database_close(db), QUIVER_OK);
+}
+
+// A NULL char* entry is SQL NULL even with a dense (NULL) mask - the read direction emits exactly
+// that for a NULL STRING cell, so round-tripping a read result with the mask stripped must not be
+// undefined behaviour.
+TEST(DatabaseCApi, UpdateGroupNullStringEntryIsNull) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("multi_column_groups.sql").c_str(), &options, &db),
+              QUIVER_OK);
+
+    const auto make = [&](const char* collection, const char* label) {
+        quiver_element_t* e = nullptr;
+        EXPECT_EQ(quiver_element_create(&e), QUIVER_OK);
+        quiver_element_set_string(e, "label", label);
+        int64_t id = 0;
+        EXPECT_EQ(quiver_database_create_element(db, collection, e, &id), QUIVER_OK);
+        EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
+        return id;
+    };
+    make("Configuration", "Config");
+    const int64_t item = make("Items", "Item 1");
+
+    const char* names[] = {"code"};
+    const int types[] = {QUIVER_DATA_TYPE_STRING};
+    const char* strings[] = {"first", nullptr};
+    const void* data[] = {strings};
+    ASSERT_EQ(quiver_database_update_set_group(db, "Items", "codes", item, names, types, data, nullptr, 1, 2),
+              QUIVER_OK);
+
+    // The dense per-column reader drops the NULL: two rows written, one readable value.
+    char** out = nullptr;
+    size_t count = 0;
+    ASSERT_EQ(quiver_database_read_set_strings_by_id(db, "Items", "code", item, &out, &count), QUIVER_OK);
+    ASSERT_EQ(count, 1u);
+    EXPECT_STREQ(out[0], "first");
+    quiver_database_free_string_array(out, count);
 
     EXPECT_EQ(quiver_database_close(db), QUIVER_OK);
 }

@@ -118,7 +118,33 @@ void main() {
       }
     });
 
-    test('readOnly open rejects writes', () {
+    // open() does not read the schema; the first metadata or CRUD call loads it. Without that,
+    // an opened database answered every one of them with "no schema loaded".
+    test('reopened database can read and write', () {
+      final tempDir = Directory.systemTemp.createTempSync('quiver_test_');
+      final dbPath = path.join(tempDir.path, 'test.db');
+      try {
+        final created = Database.fromSchema(dbPath, schemaPath);
+        created.createElement('Configuration', {'label': 'Config'});
+        created.close();
+
+        final reopened = Database.open(dbPath);
+        try {
+          expect(reopened.readScalarStrings('Configuration', 'label'), equals(['Config']));
+          expect(reopened.listScalarAttributes('Configuration'), isNotEmpty);
+          expect(
+            reopened.createElement('Configuration', {'label': 'Config 2'}),
+            equals(2),
+          );
+        } finally {
+          reopened.close();
+        }
+      } finally {
+        tempDir.deleteSync(recursive: true);
+      }
+    });
+
+    test('readOnly open reads the schema but rejects writes', () {
       final tempDir = Directory.systemTemp.createTempSync('quiver_test_');
       final dbPath = path.join(tempDir.path, 'test.db');
       try {
@@ -126,6 +152,8 @@ void main() {
 
         final reopened = Database.open(dbPath, readOnly: true);
         try {
+          // Reached the schema (so the write below fails for the right reason).
+          expect(reopened.listScalarAttributes('Configuration'), isNotEmpty);
           expect(
             () => reopened.createElement('Configuration', {'label': 'nope'}),
             throwsA(isA<DatabaseException>()),

@@ -74,8 +74,13 @@ never copy them into a binding.
 
 - `valid/` — `all_types.sql`, `basic.sql`, `collections.sql`, `composite_helpers.sql`,
   `csv_export.sql`, `describe_multi_group.sql`, `mixed_time_series.sql`,
-  `multi_dim_time_series.sql`, `multi_time_series.sql`, `nullable_time_series.sql`,
-  `relations.sql`
+  `multi_column_groups.sql`, `multi_dim_time_series.sql`, `multi_time_series.sql`,
+  `nullable_time_series.sql`, `relations.sql`
+  - `multi_column_groups.sql` is the vector/set counterpart of the multi-column time-series
+    schemas: `Items_vector_readings` (`amount`, `score`) and `Items_set_codes` (`code`, `weight`),
+    both nullable, with the value columns deliberately named so the alphabetically-first one is
+    not the only one — that ordering is what exposed the group-insert row-count bug. Note every
+    set value column must be part of the UNIQUE constraint.
 - `invalid/` — schemas the validator must reject: `duplicate_attribute_time_series.sql`,
   `duplicate_attribute_vector.sql`, `fk_actions.sql`, `fk_not_null_set_null.sql`,
   `label_not_null.sql`, `label_not_unique.sql`, `label_wrong_type.sql`, `no_configuration.sql`,

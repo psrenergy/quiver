@@ -1,6 +1,7 @@
 import type { CsvOptions } from "./csv.ts";
 import { check, QuiverError } from "./errors.ts";
 import { allocPtrOut, makeDefaultOptions, readPtrOut, toCString } from "./ffi-helpers.ts";
+import type { GroupColumns } from "./group-columns.ts";
 import type { NativePointer } from "./loader.ts";
 import { getSymbols } from "./loader.ts";
 import type { GroupMetadata, ScalarMetadata } from "./metadata.ts";
@@ -153,6 +154,18 @@ export class Database {
     group: string,
     id: number,
     data: TimeSeriesData,
+  ) => void;
+  declare updateVectorGroup: (
+    collection: string,
+    group: string,
+    id: number,
+    data: GroupColumns,
+  ) => void;
+  declare updateSetGroup: (
+    collection: string,
+    group: string,
+    id: number,
+    data: GroupColumns,
   ) => void;
   declare upsertTimeSeriesRow: (
     collection: string,

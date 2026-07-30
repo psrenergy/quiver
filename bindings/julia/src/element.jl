@@ -47,7 +47,9 @@ end
 function Base.setindex!(el::Element, value::Vector{<:Integer}, name::String)
     cname = Base.cconvert(Cstring, name)
     integer_values = Int64[Int64(v) for v in value]
-    return check(C.quiver_element_set_array_integer(el.ptr, cname, integer_values, Int32(length(integer_values)), C_NULL))
+    return check(
+        C.quiver_element_set_array_integer(el.ptr, cname, integer_values, Int32(length(integer_values)), C_NULL),
+    )
 end
 
 function Base.setindex!(el::Element, value::Vector{<:Real}, name::String)

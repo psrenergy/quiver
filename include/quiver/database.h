@@ -97,6 +97,10 @@ public:
     // group-scoped alternative to passing arrays through update_element: a column name alone
     // is ambiguous when two groups of a collection share it (legal for foreign-key columns),
     // whereas (collection, group) names exactly one table. An empty row list clears the group.
+    // Columns are taken from the union of every row's keys and validated against the group; a
+    // cell missing from a row is SQL NULL. Throws if the element does not exist ("Element not
+    // found"), if a column is unknown, or if a column is "id"/"vector_index" - both are derived
+    // (the element and the row's position), so accepting one would silently discard the value.
     void update_vector_group(const std::string& collection,
                              const std::string& group,
                              int64_t id,
