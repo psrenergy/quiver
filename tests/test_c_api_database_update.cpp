@@ -1634,3 +1634,120 @@ TEST(DatabaseCApi, ScalarTypeCoercionPolicy) {
 
     quiver_database_close(db);
 }
+
+// ============================================================================
+// Group update tests (quiver_database_update_vector_group / _update_set_group)
+// ============================================================================
+
+TEST(DatabaseCApi, UpdateVectorGroupAndSetGroupStayIndependent) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("relations.sql").c_str(), &options, &db), QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    const auto make = [&](const char* collection, const char* label) {
+        quiver_element_t* e = nullptr;
+        EXPECT_EQ(quiver_element_create(&e), QUIVER_OK);
+        quiver_element_set_string(e, "label", label);
+        int64_t id = 0;
+        EXPECT_EQ(quiver_database_create_element(db, collection, e, &id), QUIVER_OK);
+        EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
+        return id;
+    };
+    make("Configuration", "Config");
+    const int64_t parent_a = make("Parent", "Parent A");
+    const int64_t parent_b = make("Parent", "Parent B");
+    const int64_t child = make("Child", "Child 1");
+
+    // Child_vector_refs and Child_set_parents both have a "parent_ref" column.
+    const char* names[] = {"parent_ref"};
+    const int types[] = {QUIVER_DATA_TYPE_INTEGER};
+
+    int64_t set_values[] = {parent_a};
+    const void* set_data[] = {set_values};
+    ASSERT_EQ(quiver_database_update_set_group(db, "Child", "parents", child, names, types, set_data, nullptr, 1, 1),
+              QUIVER_OK);
+
+    int64_t vec_values[] = {parent_b};
+    const void* vec_data[] = {vec_values};
+    ASSERT_EQ(quiver_database_update_vector_group(db, "Child", "refs", child, names, types, vec_data, nullptr, 1, 1),
+              QUIVER_OK);
+
+    int64_t* out = nullptr;
+    size_t count = 0;
+    ASSERT_EQ(quiver_database_read_set_integers_by_id(db, "Child", "parent_ref", child, &out, &count), QUIVER_OK);
+    ASSERT_EQ(count, 1u);
+    EXPECT_EQ(out[0], parent_a);
+    quiver_database_free_integer_array(out);
+
+    ASSERT_EQ(quiver_database_read_vector_integers_by_id(db, "Child", "parent_ref", child, &out, &count), QUIVER_OK);
+    ASSERT_EQ(count, 1u);
+    EXPECT_EQ(out[0], parent_b);
+    quiver_database_free_integer_array(out);
+
+    // Clearing takes NULL arrays with zero counts, same as the time series group API.
+    ASSERT_EQ(
+        quiver_database_update_vector_group(db, "Child", "refs", child, nullptr, nullptr, nullptr, nullptr, 0, 0),
+        QUIVER_OK);
+    ASSERT_EQ(quiver_database_read_vector_integers_by_id(db, "Child", "parent_ref", child, &out, &count), QUIVER_OK);
+    EXPECT_EQ(count, 0u);
+
+    // The set group survived the clear.
+    ASSERT_EQ(quiver_database_read_set_integers_by_id(db, "Child", "parent_ref", child, &out, &count), QUIVER_OK);
+    ASSERT_EQ(count, 1u);
+    EXPECT_EQ(out[0], parent_a);
+    quiver_database_free_integer_array(out);
+
+    EXPECT_EQ(quiver_database_close(db), QUIVER_OK);
+}
+
+TEST(DatabaseCApi, UpdateVectorGroupHonoursNullMask) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("relations.sql").c_str(), &options, &db), QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    const auto make = [&](const char* collection, const char* label) {
+        quiver_element_t* e = nullptr;
+        EXPECT_EQ(quiver_element_create(&e), QUIVER_OK);
+        quiver_element_set_string(e, "label", label);
+        int64_t id = 0;
+        EXPECT_EQ(quiver_database_create_element(db, collection, e, &id), QUIVER_OK);
+        EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
+        return id;
+    };
+    make("Configuration", "Config");
+    const int64_t parent_a = make("Parent", "Parent A");
+    const int64_t child = make("Child", "Child 1");
+
+    const char* names[] = {"parent_ref"};
+    const int types[] = {QUIVER_DATA_TYPE_INTEGER};
+    int64_t values[] = {parent_a, 0, parent_a};
+    const uint8_t mask[] = {1, 0, 1};
+    const void* data[] = {values};
+    const uint8_t* masks[] = {mask};
+    ASSERT_EQ(quiver_database_update_vector_group(db, "Child", "refs", child, names, types, data, masks, 1, 3),
+              QUIVER_OK);
+
+    // The dense per-column reader drops the NULL, so three rows read back as two values.
+    int64_t* out = nullptr;
+    size_t count = 0;
+    ASSERT_EQ(quiver_database_read_vector_integers_by_id(db, "Child", "parent_ref", child, &out, &count), QUIVER_OK);
+    ASSERT_EQ(count, 2u);
+    quiver_database_free_integer_array(out);
+
+    EXPECT_EQ(quiver_database_close(db), QUIVER_OK);
+}
+
+TEST(DatabaseCApi, UpdateGroupNullArgumentsRejected) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("relations.sql").c_str(), &options, &db), QUIVER_OK);
+
+    EXPECT_EQ(quiver_database_update_vector_group(nullptr, "Child", "refs", 1, nullptr, nullptr, nullptr, nullptr, 0, 0),
+              QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_update_set_group(db, nullptr, "parents", 1, nullptr, nullptr, nullptr, nullptr, 0, 0),
+              QUIVER_ERROR);
+
+    EXPECT_EQ(quiver_database_close(db), QUIVER_OK);
+}

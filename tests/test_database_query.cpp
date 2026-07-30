@@ -274,3 +274,23 @@ TEST(DatabaseQuery, QueryParameterCountMismatch) {
     ASSERT_TRUE(ok.has_value());
     EXPECT_EQ(*ok, "Test");
 }
+
+TEST(Database, QueryFloatWidensIntegerResults) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    db.create_element("Configuration", quiver::Element().set("label", std::string("Config 1")));
+    db.create_element("Configuration", quiver::Element().set("label", std::string("Config 2")));
+
+    // COUNT/SUM come back from SQLite as INTEGER; a caller asking for a float still gets one.
+    auto count = db.query_float("SELECT COUNT(*) FROM Configuration");
+    ASSERT_TRUE(count.has_value());
+    EXPECT_DOUBLE_EQ(*count, 2.0);
+
+    auto literal = db.query_float("SELECT 7");
+    ASSERT_TRUE(literal.has_value());
+    EXPECT_DOUBLE_EQ(*literal, 7.0);
+
+    // A genuine NULL is still "no value".
+    EXPECT_FALSE(db.query_float("SELECT NULL").has_value());
+}

@@ -37,6 +37,167 @@ extension DatabaseUpdate on Database {
   }
 
   // ==========================================================================
+  // Update vector / set groups
+  // ==========================================================================
+
+  /// Updates a vector group by element ID (replaces all rows).
+  /// Takes a Map of column names to typed Lists; a `null` cell is a SQL NULL.
+  /// Supported value types: int, double, String, DateTime.
+  /// An empty Map clears all rows for that element.
+  ///
+  /// Prefer this over passing the group's columns through [updateElement] when a
+  /// column name is shared by two groups of the same collection (legal for foreign
+  /// keys): `(collection, group)` names exactly one table, a column name alone does not.
+  void updateVectorGroup(
+    String collection,
+    String group,
+    int id,
+    Map<String, List<Object?>> data,
+  ) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      if (data.isEmpty) {
+        check(
+          bindings.quiver_database_update_vector_group(
+            _ptr,
+            collection.toNativeUtf8(allocator: arena).cast(),
+            group.toNativeUtf8(allocator: arena).cast(),
+            id,
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            0,
+            0,
+          ),
+        );
+        return;
+      }
+
+      // Validate equal lengths
+      final rowCount = data.values.first.length;
+      for (final entry in data.entries) {
+        if (entry.value.length != rowCount) {
+          throw ArgumentError('All column lists must have the same length');
+        }
+      }
+
+      final columnCount = data.length;
+      final columnNames = arena<Pointer<Char>>(columnCount);
+      final columnTypes = arena<Int>(columnCount);
+      final columnData = arena<Pointer<Void>>(columnCount);
+      final columnHasValue = arena<Pointer<Uint8>>(columnCount);
+
+      var i = 0;
+      for (final entry in data.entries) {
+        columnNames[i] = entry.key.toNativeUtf8(allocator: arena).cast();
+        final column = _marshalGroupColumn(arena, entry.value);
+        columnTypes[i] = column.type;
+        columnData[i] = column.data;
+        columnHasValue[i] = column.hasValue;
+        i++;
+      }
+
+      check(
+        bindings.quiver_database_update_vector_group(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          group.toNativeUtf8(allocator: arena).cast(),
+          id,
+          columnNames,
+          columnTypes,
+          columnData,
+          columnHasValue,
+          columnCount,
+          rowCount,
+        ),
+      );
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
+  /// Updates a set group by element ID (replaces all rows).
+  /// Takes a Map of column names to typed Lists; a `null` cell is a SQL NULL.
+  /// Supported value types: int, double, String, DateTime.
+  /// An empty Map clears all rows for that element.
+  ///
+  /// See [updateVectorGroup] for why this is preferred over [updateElement] for
+  /// groups whose column names are shared across the collection.
+  void updateSetGroup(
+    String collection,
+    String group,
+    int id,
+    Map<String, List<Object?>> data,
+  ) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      if (data.isEmpty) {
+        check(
+          bindings.quiver_database_update_set_group(
+            _ptr,
+            collection.toNativeUtf8(allocator: arena).cast(),
+            group.toNativeUtf8(allocator: arena).cast(),
+            id,
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            0,
+            0,
+          ),
+        );
+        return;
+      }
+
+      // Validate equal lengths
+      final rowCount = data.values.first.length;
+      for (final entry in data.entries) {
+        if (entry.value.length != rowCount) {
+          throw ArgumentError('All column lists must have the same length');
+        }
+      }
+
+      final columnCount = data.length;
+      final columnNames = arena<Pointer<Char>>(columnCount);
+      final columnTypes = arena<Int>(columnCount);
+      final columnData = arena<Pointer<Void>>(columnCount);
+      final columnHasValue = arena<Pointer<Uint8>>(columnCount);
+
+      var i = 0;
+      for (final entry in data.entries) {
+        columnNames[i] = entry.key.toNativeUtf8(allocator: arena).cast();
+        final column = _marshalGroupColumn(arena, entry.value);
+        columnTypes[i] = column.type;
+        columnData[i] = column.data;
+        columnHasValue[i] = column.hasValue;
+        i++;
+      }
+
+      check(
+        bindings.quiver_database_update_set_group(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          group.toNativeUtf8(allocator: arena).cast(),
+          id,
+          columnNames,
+          columnTypes,
+          columnData,
+          columnHasValue,
+          columnCount,
+          rowCount,
+        ),
+      );
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
+  // ==========================================================================
   // Update time series attributes
   // ==========================================================================
 
@@ -89,7 +250,7 @@ extension DatabaseUpdate on Database {
       var i = 0;
       for (final entry in data.entries) {
         columnNames[i] = entry.key.toNativeUtf8(allocator: arena).cast();
-        final column = _marshalTimeSeriesColumn(arena, entry.value);
+        final column = _marshalGroupColumn(arena, entry.value);
         columnTypes[i] = column.type;
         columnData[i] = column.data;
         columnHasValue[i] = column.hasValue;
@@ -141,7 +302,7 @@ extension DatabaseUpdate on Database {
       var i = 0;
       for (final entry in row.entries) {
         columnNames[i] = entry.key.toNativeUtf8(allocator: arena).cast();
-        final column = _marshalTimeSeriesColumn(arena, [entry.value]);
+        final column = _marshalGroupColumn(arena, [entry.value]);
         columnTypes[i] = column.type;
         columnData[i] = column.data;
         i++;
@@ -209,13 +370,13 @@ extension DatabaseUpdate on Database {
     }
   }
 
-  /// Marshals one time series column into arena-allocated typed + mask arrays,
+  /// Marshals one vector/set/time-series column into arena-allocated typed + mask arrays,
   /// returning its quiver_data_type_t tag, data pointer, and per-cell NULL mask.
   /// Supported value types: int, double, String, DateTime; a `null` entry becomes
   /// a SQL NULL (mask 0) with a placeholder in the data array. An all-null (or
   /// empty) column is tagged FLOAT with a zeroed placeholder — the C API ignores
   /// the type tag and data for masked-out cells.
-  ({int type, Pointer<Void> data, Pointer<Uint8> hasValue}) _marshalTimeSeriesColumn(
+  ({int type, Pointer<Void> data, Pointer<Uint8> hasValue}) _marshalGroupColumn(
     Arena arena,
     List<Object?> values,
   ) {

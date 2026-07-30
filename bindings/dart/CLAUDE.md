@@ -24,6 +24,14 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   **pubspec.yaml** (plain `dart run ffigen` reads only that); the sibling `ffigen.yaml` is an
   unused duplicate consulted only via an explicit `--config` flag — editing it alone changes
   nothing.
+- **The checked-in `bindings.dart` predates the pinned ffigen (20.1.1).** Regenerating today
+  rewrites the whole file and turns `quiver_data_type_t` / `quiver_error_t` / `quiver_log_level_t`
+  from `abstract class` int constants into real Dart `enum`s (and the native return type from
+  `Int32` to `UnsignedInt`). That is a breaking change for every downstream `== quiver_data_type_t.X`
+  comparison — notably hub's `lib/models/database.dart`. The `update_vector_group` /
+  `update_set_group` entries were therefore hand-added in the file's existing style. Take the
+  generator upgrade as its own deliberate change (regenerate, then fix the enum call sites here and
+  in hub) rather than as a side effect of adding a C function.
 - **Native library resolution** (`lib/src/ffi/library_loader.dart`): searches the native-assets
   build output (`.dart_tool/hooks_runner/shared/quiverdb/build`) first — on Windows it pre-loads
   `libquiver.dll` from there so `libquiver_c.dll`'s dependency resolves — then falls back to

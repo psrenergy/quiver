@@ -226,6 +226,35 @@ QUIVER_C_API quiver_error_t quiver_database_read_set_group_by_id(quiver_database
                                                                  size_t* out_column_count,
                                                                  size_t* out_row_count);
 
+// Update a whole vector/set group by element ID - replaces all of that element's rows.
+// Columnar typed arrays with a per-cell presence mask, same contract as
+// quiver_database_update_time_series_group (NULL mask = dense; mask[c][r] == 0 inserts SQL NULL
+// and the data entry is never read). Pass column_count == 0 and row_count == 0 with NULL arrays
+// to clear the group. Prefer these over passing arrays through quiver_database_update_element
+// when a column name is shared by two groups of the same collection (legal for foreign keys):
+// (collection, group) names exactly one table, a column name alone does not.
+QUIVER_C_API quiver_error_t quiver_database_update_vector_group(quiver_database_t* db,
+                                                                const char* collection,
+                                                                const char* group,
+                                                                int64_t id,
+                                                                const char* const* column_names,
+                                                                const int* column_types,
+                                                                const void* const* column_data,
+                                                                const uint8_t* const* column_has_value,
+                                                                size_t column_count,
+                                                                size_t row_count);
+
+QUIVER_C_API quiver_error_t quiver_database_update_set_group(quiver_database_t* db,
+                                                             const char* collection,
+                                                             const char* group,
+                                                             int64_t id,
+                                                             const char* const* column_names,
+                                                             const int* column_types,
+                                                             const void* const* column_data,
+                                                             const uint8_t* const* column_has_value,
+                                                             size_t column_count,
+                                                             size_t row_count);
+
 // Read element Ids
 QUIVER_C_API quiver_error_t quiver_database_read_element_ids(quiver_database_t* db,
                                                              const char* collection,

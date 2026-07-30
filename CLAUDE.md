@@ -374,6 +374,18 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
   (e.g. an `ON DELETE SET NULL` relation) has empty cells. C API mirrors
   `read_time_series_group`'s columnar+mask shape (freed by `free_time_series_data`); Dart binds
   them natively; Julia/Python still compose per-column reads (null-dropping caveat applies there).
+- Whole-group writers: `update_vector_group()` / `update_set_group()` — replace all of an element's
+  rows in one **named** group; an empty row list clears it. The write counterpart of the readers
+  above, and the unambiguous alternative to passing arrays through `update_element` /
+  `create_element`: those route an array **by column name**, so when two groups of a collection
+  share a column name (legal — `validate_no_duplicate_attributes` exempts FK columns) the array is
+  written to *every* matching table, silently rewriting groups the caller never named. That
+  fan-out is pinned by `UpdateElementSharedColumnNameWritesEveryMatchingGroup` and now logs a
+  warning; it was not made an error because every binding's FK-label tests rely on it
+  (`tests/schemas/valid/relations.sql` shares `parent_ref` across a vector and a set group).
+  Prefer the group writers whenever one group is meant. Bound in C++, the C API (columnar + per-cell
+  mask, same shape as `update_time_series_group`), and Dart — **Julia/Python/JS/Lua parity is still
+  outstanding.**
 - Time series: `read_time_series_group()`, `update_time_series_group()`, `upsert_time_series_row()` — group read/update use N typed value columns per group; `upsert_time_series_row` inserts or replaces a single row by its dimension key (`INSERT OR REPLACE`). All bindings expose group data **column-oriented** (`{column: [values]}`); updating with no data clears the group. Integer values are accepted for REAL columns (converted on insert). NULL cells round-trip through every layer: the C API carries a per-cell presence mask, the FFI bindings surface null-padded columns (`nothing`/`None`/`null`), and Lua uses plain `nil` holes with the row count taken from the dimension column(s) — see the design decision below.
 - Time series row: `read_time_series_row(collection, group, attribute, date_time)` — one value per element using "last non-null value at or before date_time" semantics; null Value for elements with no matching data (bindings surface `nothing`/`null`/`None`/`nil`).
 - Time series files: `has_time_series_files()`, `list_time_series_files_columns()`, `read_time_series_files()`, `update_time_series_files()`
@@ -436,6 +448,8 @@ The rules are mechanical: given any C++ method name, you can derive the equivale
 | Time series row | `read_time_series_row()` | `quiver_database_read_time_series_row()` | `read_time_series_row()` | `readTimeSeriesRow()` | `read_time_series_row()` |
 | Time series upsert row | `upsert_time_series_row()` | `quiver_database_upsert_time_series_row()` | `upsert_time_series_row!()` | `upsertTimeSeriesRow()` | `upsert_time_series_row()` |
 | Time series update | `update_time_series_group()` | `quiver_database_update_time_series_group()` | `update_time_series_group!()` | `updateTimeSeriesGroup()` | `update_time_series_group()` |
+| Vector group update | `update_vector_group()` | `quiver_database_update_vector_group()` | _(pending)_ | `updateVectorGroup()` | _(pending)_ |
+| Set group update | `update_set_group()` | `quiver_database_update_set_group()` | _(pending)_ | `updateSetGroup()` | _(pending)_ |
 | Query | `query_string()` | `quiver_database_query_string()` | `query_string()` | `queryString()` | `query_string()` |
 | CSV | `export_csv()` | `quiver_database_export_csv()` | `export_csv()` | `exportCSV()` | `export_csv()` |
 | Describe (text) | `describe()` | `quiver_database_describe()` | `describe()` | `describe()` | `describe()` |

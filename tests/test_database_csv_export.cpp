@@ -1,5 +1,6 @@
 #include "test_utils.h"
 
+#include <charconv>
 #include <filesystem>
 #include <fstream>
 #include <gtest/gtest.h>
@@ -566,4 +567,54 @@ TEST(DatabaseCSV, ExportCSV_CannotOpenFile_Throws) {
         std::runtime_error);
 
     fs::remove_all(dir_path);
+}
+
+TEST(DatabaseCSV, ExportCSV_FloatsRoundTripExactly) {
+    auto db = make_db();
+
+    quiver::Element config;
+    config.set("label", std::string("Config"));
+    db.create_element("Configuration", config);
+
+    // Values that "%g" (6 significant digits) would have mangled.
+    const std::vector<double> prices{1234567.89, 0.1234567890123, 3.141592653589793};
+    for (size_t i = 0; i < prices.size(); ++i) {
+        quiver::Element e;
+        e.set("label", std::string("Item") + std::to_string(i))
+            .set("name", std::string("Name"))
+            .set("price", prices[i]);
+        db.create_element("Items", e);
+    }
+
+    auto path = (fs::temp_directory_path() / "quiver_float_precision.csv").string();
+    db.export_csv("Items", "", path);
+    auto content = read_file(path);
+    fs::remove(path);
+
+    for (const auto price : prices) {
+        char buf[64];
+        auto [end, ec] = std::to_chars(buf, buf + sizeof(buf), price);
+        ASSERT_EQ(ec, std::errc{});
+        EXPECT_NE(content.find(std::string(buf, end)), std::string::npos)
+            << "exported CSV lost precision for " << price << "\n"
+            << content;
+    }
+}
+
+TEST(DatabaseCSV, ExportImportCSV_FloatRoundTripPreservesValue) {
+    auto db = make_db();
+    db.create_element("Configuration", quiver::Element().set("label", std::string("Config")));
+
+    quiver::Element e;
+    e.set("label", std::string("Item1")).set("name", std::string("Name")).set("price", 1234567.89);
+    auto id = db.create_element("Items", e);
+
+    auto path = (fs::temp_directory_path() / "quiver_float_roundtrip.csv").string();
+    db.export_csv("Items", "", path);
+    db.import_csv("Items", "", path);
+    fs::remove(path);
+
+    auto price = db.read_scalar_float_by_id("Items", "price", id);
+    ASSERT_TRUE(price.has_value());
+    EXPECT_DOUBLE_EQ(*price, 1234567.89);
 }

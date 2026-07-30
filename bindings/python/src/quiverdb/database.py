@@ -1373,6 +1373,94 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
             )
         )
 
+    def update_vector_group(
+        self,
+        collection: str,
+        group: str,
+        id: int,
+        data: dict[str, list],
+    ) -> None:
+        """Replace all of an element's rows in one vector group, from column lists keyed by name.
+
+        Pass an empty dict to clear the group. Prefer this over passing the group's columns
+        through update_element when a column name is shared by two groups of the collection
+        (legal for foreign keys): (collection, group) names exactly one table, a column name
+        alone does not, and update_element writes an ambiguous column to every match.
+        """
+        self._ensure_open()
+        lib = get_lib()
+        c_collection = collection.encode("utf-8")
+        c_group = group.encode("utf-8")
+
+        if not data:
+            check(
+                lib.quiver_database_update_vector_group(
+                    self._ptr, c_collection, c_group, id, ffi.NULL, ffi.NULL, ffi.NULL, ffi.NULL, 0, 0
+                )
+            )
+            return
+
+        keepalive, c_col_names, c_col_types, c_col_data, c_col_has_value, col_count, row_count = (
+            _marshal_time_series_columns(data)
+        )
+        check(
+            lib.quiver_database_update_vector_group(
+                self._ptr,
+                c_collection,
+                c_group,
+                id,
+                c_col_names,
+                c_col_types,
+                c_col_data,
+                c_col_has_value,
+                col_count,
+                row_count,
+            )
+        )
+
+    def update_set_group(
+        self,
+        collection: str,
+        group: str,
+        id: int,
+        data: dict[str, list],
+    ) -> None:
+        """Replace all of an element's rows in one set group, from column lists keyed by name.
+
+        Pass an empty dict to clear the group. See update_vector_group for why this is
+        preferred over update_element for groups whose column names are shared.
+        """
+        self._ensure_open()
+        lib = get_lib()
+        c_collection = collection.encode("utf-8")
+        c_group = group.encode("utf-8")
+
+        if not data:
+            check(
+                lib.quiver_database_update_set_group(
+                    self._ptr, c_collection, c_group, id, ffi.NULL, ffi.NULL, ffi.NULL, ffi.NULL, 0, 0
+                )
+            )
+            return
+
+        keepalive, c_col_names, c_col_types, c_col_data, c_col_has_value, col_count, row_count = (
+            _marshal_time_series_columns(data)
+        )
+        check(
+            lib.quiver_database_update_set_group(
+                self._ptr,
+                c_collection,
+                c_group,
+                id,
+                c_col_names,
+                c_col_types,
+                c_col_data,
+                c_col_has_value,
+                col_count,
+                row_count,
+            )
+        )
+
     def upsert_time_series_row(self, collection: str, group: str, id: int, **kwargs) -> None:
         """Insert or upsert a single time series row for an element.
 

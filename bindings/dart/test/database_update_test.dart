@@ -1551,4 +1551,126 @@ void main() {
       }
     });
   });
+
+  group('Update Vector/Set Group', () {
+    // relations.sql gives Child a vector group and a set group that legally share the FK
+    // column name "parent_ref", the case that makes routing by column name ambiguous.
+    Database openRelations() {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
+      );
+      db.createElement('Configuration', {'label': 'Config'});
+      db.createElement('Parent', {'label': 'Parent A'});
+      db.createElement('Parent', {'label': 'Parent B'});
+      db.createElement('Child', {'label': 'Child 1'});
+      return db;
+    }
+
+    test('replaces rows and clears on an empty map', () {
+      final db = openRelations();
+      try {
+        db.updateVectorGroup('Child', 'refs', 1, {
+          'parent_ref': [1, 2],
+        });
+        expect(
+          db.readVectorIntegersById('Child', 'parent_ref', 1),
+          equals([1, 2]),
+        );
+
+        db.updateVectorGroup('Child', 'refs', 1, {
+          'parent_ref': [2],
+        });
+        expect(db.readVectorIntegersById('Child', 'parent_ref', 1), equals([2]));
+
+        db.updateVectorGroup('Child', 'refs', 1, {});
+        expect(db.readVectorIntegersById('Child', 'parent_ref', 1), isEmpty);
+      } finally {
+        db.close();
+      }
+    });
+
+    test('leaves a sibling group sharing a column name untouched', () {
+      final db = openRelations();
+      try {
+        db.updateSetGroup('Child', 'parents', 1, {
+          'parent_ref': [1],
+        });
+        db.updateVectorGroup('Child', 'refs', 1, {
+          'parent_ref': [2],
+        });
+
+        expect(db.readSetIntegersById('Child', 'parent_ref', 1), equals([1]));
+        expect(db.readVectorIntegersById('Child', 'parent_ref', 1), equals([2]));
+
+        db.updateVectorGroup('Child', 'refs', 1, {});
+        expect(db.readSetIntegersById('Child', 'parent_ref', 1), equals([1]));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('resolves foreign key labels', () {
+      final db = openRelations();
+      try {
+        db.updateVectorGroup('Child', 'refs', 1, {
+          'parent_ref': ['Parent B'],
+        });
+        expect(db.readVectorIntegersById('Child', 'parent_ref', 1), equals([2]));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('keeps null cells positionally', () {
+      final db = openRelations();
+      try {
+        db.updateVectorGroup('Child', 'refs', 1, {
+          'parent_ref': [1, null, 2],
+        });
+        final rows = db.readVectorGroupById('Child', 'refs', 1);
+        expect(rows.length, equals(3));
+        expect(rows[0]['parent_ref'], equals(1));
+        expect(rows[1]['parent_ref'], isNull);
+        expect(rows[2]['parent_ref'], equals(2));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('throws on an unknown group or column', () {
+      final db = openRelations();
+      try {
+        expect(
+          () => db.updateVectorGroup('Child', 'nope', 1, {
+            'parent_ref': [1],
+          }),
+          throwsA(isA<DatabaseException>()),
+        );
+        expect(
+          () => db.updateSetGroup('Child', 'parents', 1, {
+            'not_a_column': [1],
+          }),
+          throwsA(isA<DatabaseException>()),
+        );
+      } finally {
+        db.close();
+      }
+    });
+
+    test('rejects columns of differing length', () {
+      final db = openRelations();
+      try {
+        expect(
+          () => db.updateVectorGroup('Child', 'refs', 1, {
+            'parent_ref': [1, 2],
+            'vector_index': [1],
+          }),
+          throwsA(isA<ArgumentError>()),
+        );
+      } finally {
+        db.close();
+      }
+    });
+  });
 }
