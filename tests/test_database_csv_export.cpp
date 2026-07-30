@@ -618,3 +618,20 @@ TEST(DatabaseCSV, ExportImportCSV_FloatRoundTripPreservesValue) {
     ASSERT_TRUE(price.has_value());
     EXPECT_DOUBLE_EQ(*price, 1234567.89);
 }
+
+TEST(DatabaseCSV, ExportImportCSV_ForeignKeyColumnRoundTrips) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    db.create_element("Configuration", quiver::Element().set("label", std::string("Config")));
+    db.create_element("Parent", quiver::Element().set("label", std::string("Parent A")));
+    auto child = db.create_element(
+        "Child", quiver::Element().set("label", std::string("Child 1")).set("parent_id", std::string("Parent A")));
+
+    auto path = (fs::temp_directory_path() / "quiver_fk_roundtrip.csv").string();
+    db.export_csv("Child", "", path);
+    db.import_csv("Child", "", path);
+    fs::remove(path);
+
+    EXPECT_EQ(db.read_scalar_integer_by_id("Child", "parent_id", child), std::optional<int64_t>{1});
+}

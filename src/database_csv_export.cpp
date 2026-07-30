@@ -18,12 +18,33 @@
 
 namespace quiver {
 
+// column -> referenced id -> that element's label, for the foreign-key columns import
+// resolves by label.
+using FkLabelMaps = std::unordered_map<std::string, std::unordered_map<int64_t, std::string>>;
+
+// Build the id -> label map for one referenced collection.
+static std::unordered_map<int64_t, std::string> build_id_to_label_map(Database& db, const std::string& collection) {
+    std::unordered_map<int64_t, std::string> id_to_label;
+    auto ids = db.read_scalar_integers(collection, "id");
+    auto labels = db.read_scalar_strings(collection, "label");
+    for (size_t i = 0; i < ids.size(); ++i) {
+        // id (PK) and label (NOT NULL by schema convention) are always present; guard defensively.
+        if (ids[i] && labels[i]) {
+            id_to_label[*ids[i]] = *labels[i];
+        }
+    }
+    return id_to_label;
+}
+
 // Convert a Value to its CSV string representation.
-// NULL -> empty string, integers check enum_labels,
-// floats use %g for clean output, strings apply DateTime formatting.
+// NULL -> empty string, foreign keys resolve to the referenced label, other integers check
+// enum_labels, floats round-trip exactly, strings apply DateTime formatting.
 // rapidcsv handles CSV escaping/quoting via auto-quote.
-static std::string
-value_to_csv_string(const Value& value, const std::string& column_name, DataType data_type, const CSVOptions& options) {
+static std::string value_to_csv_string(const Value& value,
+                                       const std::string& column_name,
+                                       DataType data_type,
+                                       const CSVOptions& options,
+                                       const FkLabelMaps& fk_labels) {
     // NULL -> empty field
     if (std::holds_alternative<std::nullptr_t>(value)) {
         return "";
@@ -32,6 +53,14 @@ value_to_csv_string(const Value& value, const std::string& column_name, DataType
     // Integer with possible enum resolution (reverse search: find label whose value matches)
     if (std::holds_alternative<int64_t>(value)) {
         auto int_val = std::get<int64_t>(value);
+        // Foreign key first, and before enums: import_csv resolves an FK column by label and
+        // never consults enum_labels for it, so writing the raw id here would produce a CSV
+        // that import rejects ("Could not find an existing element ... with label 3").
+        if (auto fk_it = fk_labels.find(column_name); fk_it != fk_labels.end()) {
+            if (auto label_it = fk_it->second.find(int_val); label_it != fk_it->second.end()) {
+                return label_it->second;
+            }
+        }
         if (auto attr_it = options.enum_labels.find(column_name); attr_it != options.enum_labels.end()) {
             for (const auto& [locale, labels] : attr_it->second) {
                 for (const auto& [label, val] : labels) {
@@ -94,6 +123,7 @@ static void write_csv(const Result& data_result,
                       const std::vector<std::string>& csv_columns,
                       const std::unordered_map<std::string, DataType>& type_map,
                       const CSVOptions& options,
+                      const FkLabelMaps& fk_labels,
                       const std::string& path) {
     auto doc = make_csv_document();
 
@@ -112,7 +142,8 @@ static void write_csv(const Result& data_result,
     size_t row_idx = 0;
     for (const auto& row : data_result) {
         for (size_t i = 0; i < csv_columns.size(); ++i) {
-            doc.SetCell<std::string>(i, row_idx, value_to_csv_string(row[i], csv_columns[i], col_types[i], options));
+            doc.SetCell<std::string>(
+                i, row_idx, value_to_csv_string(row[i], csv_columns[i], col_types[i], options, fk_labels));
         }
         ++row_idx;
     }
@@ -163,8 +194,18 @@ void Database::export_csv(const std::string& collection,
             select_cols += csv_columns[i];
         }
 
+        // Foreign keys are written as the referenced element's label, mirroring import_csv.
+        // Self-references are excluded for the same reason import excludes them: the target
+        // rows are the ones being rewritten, so their labels are not a stable key.
+        FkLabelMaps fk_labels;
+        for (const auto& fk : impl_->schema->get_table(collection)->foreign_keys) {
+            if (fk.to_table != collection) {
+                fk_labels[fk.from_column] = build_id_to_label_map(*this, fk.to_table);
+            }
+        }
+
         auto data_result = execute("SELECT " + select_cols + " FROM " + collection + " ORDER BY rowid");
-        write_csv(data_result, csv_columns, type_map, options, path);
+        write_csv(data_result, csv_columns, type_map, options, fk_labels, path);
     } else {
         // Group export
         impl_->require_collection(collection, "export_csv");
@@ -243,8 +284,17 @@ void Database::export_csv(const std::string& collection,
         std::string query = "SELECT " + select_cols + " FROM " + table_name + " G JOIN " + collection +
                             " C ON C.id = G.id " + order_clause;
 
+        // Same as the scalar branch, minus the parent "id" column: it is already selected as
+        // C.label by the JOIN above, and import resolves it against the parent collection.
+        FkLabelMaps fk_labels;
+        for (const auto& fk : impl_->schema->get_table(table_name)->foreign_keys) {
+            if (fk.from_column != "id") {
+                fk_labels[fk.from_column] = build_id_to_label_map(*this, fk.to_table);
+            }
+        }
+
         auto data_result = execute(query);
-        write_csv(data_result, csv_columns, type_map, options, path);
+        write_csv(data_result, csv_columns, type_map, options, fk_labels, path);
     }
 }
 
