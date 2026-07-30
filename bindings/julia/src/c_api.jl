@@ -276,6 +276,14 @@ function quiver_database_read_set_group_by_id(db, collection, group, id, out_col
     @ccall libquiver_c.quiver_database_read_set_group_by_id(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, id::Int64, out_column_names::Ptr{Ptr{Ptr{Cchar}}}, out_column_types::Ptr{Ptr{Cint}}, out_column_data::Ptr{Ptr{Ptr{Cvoid}}}, out_column_has_value::Ptr{Ptr{Ptr{UInt8}}}, out_column_count::Ptr{Csize_t}, out_row_count::Ptr{Csize_t})::quiver_error_t
 end
 
+function quiver_database_update_vector_group(db, collection, group, id, column_names, column_types, column_data, column_has_value, column_count, row_count)
+    @ccall libquiver_c.quiver_database_update_vector_group(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, id::Int64, column_names::Ptr{Ptr{Cchar}}, column_types::Ptr{Cint}, column_data::Ptr{Ptr{Cvoid}}, column_has_value::Ptr{Ptr{UInt8}}, column_count::Csize_t, row_count::Csize_t)::quiver_error_t
+end
+
+function quiver_database_update_set_group(db, collection, group, id, column_names, column_types, column_data, column_has_value, column_count, row_count)
+    @ccall libquiver_c.quiver_database_update_set_group(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, id::Int64, column_names::Ptr{Ptr{Cchar}}, column_types::Ptr{Cint}, column_data::Ptr{Ptr{Cvoid}}, column_has_value::Ptr{Ptr{UInt8}}, column_count::Csize_t, row_count::Csize_t)::quiver_error_t
+end
+
 function quiver_database_read_element_ids(db, collection, out_ids, out_count)
     @ccall libquiver_c.quiver_database_read_element_ids(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, out_ids::Ptr{Ptr{Int64}}, out_count::Ptr{Csize_t})::quiver_error_t
 end
