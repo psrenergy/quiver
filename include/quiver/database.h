@@ -92,6 +92,20 @@ public:
     std::vector<std::map<std::string, Value>>
     read_set_group_by_id(const std::string& collection, const std::string& group, int64_t id);
 
+    // Update a whole vector/set group (by element ID) - replaces all rows for the element.
+    // The write counterpart of read_vector_group_by_id / read_set_group_by_id, and the
+    // group-scoped alternative to passing arrays through update_element: a column name alone
+    // is ambiguous when two groups of a collection share it (legal for foreign-key columns),
+    // whereas (collection, group) names exactly one table. An empty row list clears the group.
+    void update_vector_group(const std::string& collection,
+                             const std::string& group,
+                             int64_t id,
+                             const std::vector<std::map<std::string, Value>>& rows);
+    void update_set_group(const std::string& collection,
+                          const std::string& group,
+                          int64_t id,
+                          const std::vector<std::map<std::string, Value>>& rows);
+
     // Read element Ids
     std::vector<int64_t> read_element_ids(const std::string& collection);
 

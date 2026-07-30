@@ -308,12 +308,9 @@ std::vector<std::string> Database::list_time_series_files_columns(const std::str
         throw std::runtime_error("Time series files table not found: " + tsf);
     }
 
-    std::vector<std::string> columns;
-    columns.reserve(table_def->columns.size());
-    for (const auto& [col_name, _] : table_def->columns) {
-        columns.push_back(col_name);
-    }
-    return columns;
+    // column_order, not the `columns` map: everything else in the library reports declaration
+    // order, and the map would hand callers (and their UIs) an alphabetical list instead.
+    return table_def->column_order;
 }
 
 std::map<std::string, std::optional<std::string>> Database::read_time_series_files(const std::string& collection) {
@@ -326,12 +323,8 @@ std::map<std::string, std::optional<std::string>> Database::read_time_series_fil
         throw std::runtime_error("Time series files table not found: " + tsf);
     }
 
-    // Build column list
-    std::vector<std::string> columns;
-    columns.reserve(table_def->columns.size());
-    for (const auto& [col_name, _] : table_def->columns) {
-        columns.push_back(col_name);
-    }
+    // Build column list in declaration order (see list_time_series_files_columns)
+    const auto& columns = table_def->column_order;
 
     if (columns.empty()) {
         return {};

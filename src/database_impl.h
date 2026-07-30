@@ -144,6 +144,17 @@ struct Database::Impl {
         }
     }
 
+    // Shared body of update_vector_group / update_set_group (defined in database_update.cpp):
+    // resolves (collection, group) to exactly one table, validates and FK-resolves the rows,
+    // then replaces the element's rows in that table.
+    void update_group_rows(const char* caller,
+                           const std::string& collection,
+                           const std::string& group,
+                           GroupTableType type,
+                           int64_t id,
+                           const std::vector<std::map<std::string, Value>>& rows,
+                           Database& db);
+
     void insert_rows_into_group_table(const char* caller,
                                       const std::string& table_name,
                                       GroupTableType type,
@@ -219,6 +230,24 @@ struct Database::Impl {
                 throw std::runtime_error(std::string("Cannot ") + caller + ": array '" + array_name +
                                          "' does not match any vector, set, or time series table in collection '" +
                                          collection + "'");
+            }
+
+            // A column name shared by several group tables (legal for FK columns, which
+            // validate_no_duplicate_attributes exempts) cannot say which group was meant, so the
+            // array lands in all of them - rewriting groups the caller never named. Kept for
+            // compatibility, but say so: update_vector_group / update_set_group take
+            // (collection, group) and name exactly one table.
+            if (matches.size() > 1) {
+                std::string table_list;
+                for (const auto& match : matches) {
+                    table_list += (table_list.empty() ? "" : ", ") + match.table_name;
+                }
+                logger->warn("{}: array '{}' matches {} group tables ({}) and will be written to all of "
+                             "them; use update_vector_group/update_set_group to target one group",
+                             caller,
+                             array_name,
+                             matches.size(),
+                             table_list);
             }
 
             for (const auto& match : matches) {

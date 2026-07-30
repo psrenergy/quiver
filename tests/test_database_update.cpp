@@ -1053,3 +1053,142 @@ TEST(Database, UpdateScalarTypeCoercionPolicy) {
     ASSERT_TRUE(val.has_value());
     EXPECT_DOUBLE_EQ(*val, 7.0);
 }
+
+// ============================================================================
+// Group update tests (update_vector_group / update_set_group)
+// ============================================================================
+
+namespace {
+
+// relations.sql gives Child both a vector group and a set group that legally share the
+// FK column name "parent_ref" (validate_no_duplicate_attributes exempts FK columns), which
+// is exactly the shape that makes routing an array by column name alone ambiguous.
+struct SharedFkFixture {
+    quiver::Database db;
+    int64_t parent_a;
+    int64_t parent_b;
+    int64_t child;
+
+    SharedFkFixture()
+        : db(quiver::Database::from_schema(
+              ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off})) {
+        db.create_element("Configuration", quiver::Element().set("label", std::string("Config")));
+        parent_a = db.create_element("Parent", quiver::Element().set("label", std::string("Parent A")));
+        parent_b = db.create_element("Parent", quiver::Element().set("label", std::string("Parent B")));
+        child = db.create_element("Child", quiver::Element().set("label", std::string("Child 1")));
+    }
+};
+
+}  // namespace
+
+TEST(Database, UpdateVectorGroupReplacesRows) {
+    SharedFkFixture f;
+
+    f.db.update_vector_group("Child", "refs", f.child, {{{"parent_ref", f.parent_a}}, {{"parent_ref", f.parent_b}}});
+    EXPECT_EQ(f.db.read_vector_integers_by_id("Child", "parent_ref", f.child),
+              (std::vector<int64_t>{f.parent_a, f.parent_b}));
+
+    // A second call replaces rather than appends.
+    f.db.update_vector_group("Child", "refs", f.child, {{{"parent_ref", f.parent_b}}});
+    EXPECT_EQ(f.db.read_vector_integers_by_id("Child", "parent_ref", f.child), (std::vector<int64_t>{f.parent_b}));
+}
+
+TEST(Database, UpdateVectorGroupEmptyClearsRows) {
+    SharedFkFixture f;
+
+    f.db.update_vector_group("Child", "refs", f.child, {{{"parent_ref", f.parent_a}}});
+    f.db.update_vector_group("Child", "refs", f.child, {});
+    EXPECT_TRUE(f.db.read_vector_integers_by_id("Child", "parent_ref", f.child).empty());
+}
+
+TEST(Database, UpdateSetGroupReplacesRows) {
+    SharedFkFixture f;
+
+    f.db.update_set_group("Child", "parents", f.child, {{{"parent_ref", f.parent_a}}, {{"parent_ref", f.parent_b}}});
+    EXPECT_EQ(f.db.read_set_integers_by_id("Child", "parent_ref", f.child),
+              (std::vector<int64_t>{f.parent_a, f.parent_b}));
+
+    f.db.update_set_group("Child", "parents", f.child, {});
+    EXPECT_TRUE(f.db.read_set_integers_by_id("Child", "parent_ref", f.child).empty());
+}
+
+TEST(Database, UpdateGroupDoesNotTouchSiblingGroupSharingAColumnName) {
+    SharedFkFixture f;
+
+    f.db.update_set_group("Child", "parents", f.child, {{{"parent_ref", f.parent_a}}});
+    f.db.update_vector_group("Child", "refs", f.child, {{{"parent_ref", f.parent_b}}});
+
+    // Each group keeps its own rows: (collection, group) names exactly one table.
+    EXPECT_EQ(f.db.read_set_integers_by_id("Child", "parent_ref", f.child), (std::vector<int64_t>{f.parent_a}));
+    EXPECT_EQ(f.db.read_vector_integers_by_id("Child", "parent_ref", f.child), (std::vector<int64_t>{f.parent_b}));
+
+    // Clearing one group leaves the other intact.
+    f.db.update_vector_group("Child", "refs", f.child, {});
+    EXPECT_EQ(f.db.read_set_integers_by_id("Child", "parent_ref", f.child), (std::vector<int64_t>{f.parent_a}));
+}
+
+TEST(Database, UpdateGroupResolvesFkLabels) {
+    SharedFkFixture f;
+
+    f.db.update_vector_group("Child", "refs", f.child, {{{"parent_ref", std::string("Parent B")}}});
+    EXPECT_EQ(f.db.read_vector_integers_by_id("Child", "parent_ref", f.child), (std::vector<int64_t>{f.parent_b}));
+}
+
+TEST(Database, UpdateGroupFkResolutionFailurePreservesExistingRows) {
+    SharedFkFixture f;
+
+    f.db.update_vector_group("Child", "refs", f.child, {{{"parent_ref", f.parent_a}}});
+    EXPECT_THROW(f.db.update_vector_group("Child", "refs", f.child, {{{"parent_ref", std::string("No Such Parent")}}}),
+                 std::runtime_error);
+
+    // The failed lookup happens before the DELETE, so the group is untouched.
+    EXPECT_EQ(f.db.read_vector_integers_by_id("Child", "parent_ref", f.child), (std::vector<int64_t>{f.parent_a}));
+}
+
+TEST(Database, UpdateGroupUnknownGroupThrows) {
+    SharedFkFixture f;
+
+    EXPECT_THROW(f.db.update_vector_group("Child", "nope", f.child, {{{"parent_ref", f.parent_a}}}),
+                 std::runtime_error);
+    EXPECT_THROW(f.db.update_set_group("Child", "nope", f.child, {{{"parent_ref", f.parent_a}}}), std::runtime_error);
+}
+
+TEST(Database, UpdateGroupUnknownColumnThrows) {
+    SharedFkFixture f;
+
+    EXPECT_THROW(f.db.update_vector_group("Child", "refs", f.child, {{{"not_a_column", int64_t{1}}}}),
+                 std::runtime_error);
+}
+
+TEST(Database, UpdateGroupPreservesNullCells) {
+    SharedFkFixture f;
+
+    f.db.update_vector_group(
+        "Child", "refs", f.child, {{{"parent_ref", f.parent_a}}, {{"parent_ref", nullptr}}, {{"parent_ref", f.parent_b}}});
+
+    // read_vector_group_by_id keeps NULL cells positionally (the dense per-column reader drops them).
+    auto rows = f.db.read_vector_group_by_id("Child", "refs", f.child);
+    ASSERT_EQ(rows.size(), 3u);
+    EXPECT_EQ(std::get<int64_t>(rows[0].at("parent_ref")), f.parent_a);
+    EXPECT_TRUE(std::holds_alternative<std::nullptr_t>(rows[1].at("parent_ref")));
+    EXPECT_EQ(std::get<int64_t>(rows[2].at("parent_ref")), f.parent_b);
+}
+
+// Characterization test for the hazard the group API exists to avoid: routing an array by
+// column name through update_element writes it into EVERY group table of the collection that
+// has a column with that name, so a write aimed at the vector group silently rewrites the set
+// group. This is long-standing behaviour that every binding's FK-label tests rely on, so it is
+// pinned here rather than changed; callers who need one group use update_vector_group /
+// update_set_group (see UpdateGroupDoesNotTouchSiblingGroupSharingAColumnName).
+TEST(Database, UpdateElementSharedColumnNameWritesEveryMatchingGroup) {
+    SharedFkFixture f;
+    f.db.update_set_group("Child", "parents", f.child, {{{"parent_ref", f.parent_a}}});
+
+    quiver::Element e;
+    e.set("parent_ref", std::vector<int64_t>{f.parent_b});
+    f.db.update_element("Child", f.child, e);
+
+    EXPECT_EQ(f.db.read_vector_integers_by_id("Child", "parent_ref", f.child), (std::vector<int64_t>{f.parent_b}));
+    // The set group was collateral damage - it now holds the vector's value, not parent_a.
+    EXPECT_EQ(f.db.read_set_integers_by_id("Child", "parent_ref", f.child), (std::vector<int64_t>{f.parent_b}));
+}

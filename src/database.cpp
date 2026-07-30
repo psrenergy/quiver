@@ -371,6 +371,11 @@ void Database::migrate_up(const std::string& migrations_path) {
     const auto migrations = Migrations(migrations_path);
     if (migrations.empty()) {
         impl_->logger->debug("No migrations found in {}", migrations_path);
+        // An already-populated database opened against an empty migrations directory still
+        // needs its schema metadata, or every later metadata call fails with "schema not loaded".
+        if (!impl_->schema) {
+            impl_->load_schema_metadata();
+        }
         return;
     }
 

@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <charconv>
 #include <cstdio>
 #include <cstring>
 #include <ctime>
@@ -42,11 +43,16 @@ value_to_csv_string(const Value& value, const std::string& column_name, DataType
         return std::to_string(int_val);
     }
 
-    // Float: use snprintf with %g for clean output (no trailing zeros)
+    // Float: shortest representation that round-trips exactly (std::to_chars, the house idiom
+    // for numbers). "%g" was used here first and silently truncated to 6 significant digits, so
+    // an export -> edit -> import cycle lost precision (1234567.89 came back as 1.23457e+06).
     if (std::holds_alternative<double>(value)) {
         char buf[64];
-        std::snprintf(buf, sizeof(buf), "%g", std::get<double>(value));
-        return std::string(buf);
+        auto [end, ec] = std::to_chars(buf, buf + sizeof(buf), std::get<double>(value));
+        if (ec != std::errc{}) {
+            return "";
+        }
+        return std::string(buf, end);
     }
 
     // String (may be DateTime)
