@@ -44,6 +44,7 @@ Top-level configs: `CMakePresets.json`, `.clang-format`, `.clang-tidy`, `.clangd
 - All public C++ methods should be bound to C API, then to Julia/Dart/Python/JS/Lua (exception: the binary/expression subsystems are exposed only in Julia and Lua by decision — not Dart/Python/JS)
 - All *.sql test schemas in `tests/schemas/`, bindings reference from there
 - **Self-Updating**: Keep the CLAUDE.md nearest to your change up to date (root + `src/`, `src/c/`, `bindings/{julia,dart,python,js}/`, `tests/`, `.github/`)
+- **Changelog**: user-visible changes get an entry in `CHANGELOG.md` under the current unreleased version section. Prefix a breaking one **BREAKING** and say what a caller must do about it. A `0.x` **minor** bump signals breaking changes, a **patch** bump does not — bump accordingly (all five manifests, see Versioning)
 
 ## Design Decisions
 
