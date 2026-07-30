@@ -391,8 +391,17 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
 - Time series files: `has_time_series_files()`, `list_time_series_files_columns()`, `read_time_series_files()`, `update_time_series_files()`
 - Metadata: `get_{scalar,vector,set,time_series}_metadata()` — group metadata is a unified `GroupMetadata` with `dimension_column` (populated for time series, empty for vectors/sets)
 - List groups: `list_scalar_attributes()`, `list_vector_groups()`, `list_set_groups()`, `list_time_series_groups()`
-- Query: `query_string/integer/float(sql, parameters = {})` - parameterized SQL with positional `?` placeholders
-- Schema inspection — human-readable **text reports** (all return `std::string`): `describe()` (whole-DB overview: every collection, element counts, attribute/group names); `describe_collection(c)` (one collection's structure); `summarize_collection(c)` (per-scalar null/non-null counts + low-cardinality integer value distributions, per-group empty/non-empty counts). CSV: `export_csv()`, `import_csv()` with optional enum/date formatting via `CSVOptions`
+- Query: `query_string/integer/float(sql, parameters = {})` - parameterized SQL with positional `?`
+  placeholders. `query_float` widens an INTEGER result (the same int64-for-REAL rule as the scalar
+  typing policy) — otherwise `SELECT COUNT(*)` / `SUM(int_col)`, which SQLite answers as INTEGER,
+  read back as "no value". `query_integer` does **not** narrow a REAL; that direction is lossy.
+- Schema inspection — human-readable **text reports** (all return `std::string`): `describe()` (whole-DB overview: every collection, element counts, attribute/group names); `describe_collection(c)` (one collection's structure); `summarize_collection(c)` (per-scalar null/non-null counts + low-cardinality integer value distributions, per-group empty/non-empty counts). CSV: `export_csv()`, `import_csv()` with optional enum/date formatting via `CSVOptions`.
+  **Export and import are symmetric on foreign keys**: a FK column is written as the referenced
+  element's `label` and read back by label (self-references are excluded on both sides, since the
+  target rows are the ones being rewritten). Export used to emit the raw integer id, which import
+  then rejected — so any table with a relation could not round-trip. Floats are written with
+  `std::to_chars` (shortest exact round-trip); `%g` was used first and silently truncated to 6
+  significant digits.
 
 ### Element Class
 Builder for element creation with fluent API:
