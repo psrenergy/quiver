@@ -168,6 +168,10 @@ human-readable **text report** via a `char** out_report` out-param (freed by the
 `quiver_database_free_string`) — no structs. All three live in `database.cpp` as trivial
 `new_c_str(db->db.<fn>(...))` wrappers.
 
+`quiver_database_number_of_elements` lives in `database_count.cpp` as the scalar element-count
+counterpart to the C++ operation. It writes the `int64_t` result into caller-owned `out_count`,
+allocates nothing, and needs no free function.
+
 ## Multi-Column Time Series
 
 The C API uses a columnar typed-arrays pattern for time series read and update, with a per-cell

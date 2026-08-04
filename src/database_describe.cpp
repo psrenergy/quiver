@@ -48,10 +48,11 @@ std::string group_table_name(const std::string& collection, const std::string& g
     }
 }
 
-// Run a read-only query that yields integer columns and collect the rows. describe()/
-// summarize_collection() are const, but Database::execute() is not; this mirrors current_version()'s
-// direct prepare/step on impl_->db so the const methods can issue their own counting/aggregate SQL.
+// Run a read-only query that yields integer columns and collect the rows.
+// summarize_collection() is const, but Database::execute() is not; this mirrors current_version()'s
+// direct prepare/step on impl_->db so the const method can issue its own counting/aggregate SQL.
 // Only integer parameters are needed (LIMIT bounds), and every column read is an int64.
+// Plain element counts go through the public number_of_elements() instead.
 std::vector<std::vector<int64_t>>
 query_int_rows(sqlite3* db, const std::string& sql, const std::vector<int64_t>& parameters = {}) {
     sqlite3_stmt* raw_stmt = nullptr;
@@ -79,11 +80,6 @@ query_int_rows(sqlite3* db, const std::string& sql, const std::vector<int64_t>& 
         throw std::runtime_error("Failed to execute statement: " + std::string(sqlite3_errmsg(db)));
     }
     return rows;
-}
-
-// COUNT(*) of a quoted identifier table.
-int64_t element_count_of(sqlite3* db, const std::string& collection) {
-    return query_int_rows(db, "SELECT COUNT(*) FROM \"" + collection + "\"")[0][0];
 }
 
 const char* plural(int64_t n) {
@@ -139,7 +135,7 @@ std::string Database::describe() const {
 
     for (const auto& collection : impl_->schema->collection_names()) {
         out << "\n";
-        write_collection_section(out, *impl_->schema, collection, element_count_of(impl_->db, collection));
+        write_collection_section(out, *impl_->schema, collection, number_of_elements(collection));
     }
 
     return out.str();
@@ -149,14 +145,14 @@ std::string Database::describe_collection(const std::string& collection) const {
     impl_->require_collection(collection, "describe_collection");
 
     std::ostringstream out;
-    write_collection_section(out, *impl_->schema, collection, element_count_of(impl_->db, collection));
+    write_collection_section(out, *impl_->schema, collection, number_of_elements(collection));
     return out.str();
 }
 
 std::string Database::summarize_collection(const std::string& collection) const {
     impl_->require_collection(collection, "summarize_collection");
 
-    const int64_t element_count = element_count_of(impl_->db, collection);
+    const int64_t element_count = number_of_elements(collection);
     const std::string quoted_collection = "\"" + collection + "\"";
 
     std::ostringstream out;

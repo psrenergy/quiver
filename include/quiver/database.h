@@ -42,6 +42,8 @@ public:
     int64_t create_element(const std::string& collection, const Element& element);
     void update_element(const std::string& collection, int64_t id, const Element& element);
     void delete_element(const std::string& collection, int64_t id);
+    // Current number of elements in a collection.
+    int64_t number_of_elements(const std::string& collection) const;
 
     // Read scalar attributes (all elements). One entry per element, aligned with read_element_ids;
     // a SQL NULL is std::nullopt (positional — never dropped).

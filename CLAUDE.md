@@ -382,6 +382,8 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
 - Transaction control: `begin_transaction()`, `commit()`, `rollback()`, `in_transaction()`
 - Dry runs: `begin_dry_run()`, `end_dry_run()`, `in_dry_run()` — one transaction that is always rolled back; while active the three transaction methods above are absorbed (no-ops) so nested callers compose. See the design decision below.
 - CRUD: `create_element(collection, element)`, `update_element`, `delete_element`
+- Element count: `number_of_elements(collection)` returns the current row count from the
+  collection's main table (`COUNT(*)`), not its maximum ID or group-row count.
 - Scalar/vector/set readers: `read_{scalar,vector,set}_{integers,floats,strings}(collection, attribute)` (+ `_by_id` variants). Scalar bulk readers return one entry per element with SQL NULLs preserved positionally (`std::optional` / `nothing`/`None`/`null`/`nil`); see the scalar-NULL design decision.
 - Whole-group readers: `read_vector_group_by_id()` / `read_set_group_by_id()` — row-shaped
   `vector<map<string, Value>>` over all of a group's value columns, positionally aligned with SQL
