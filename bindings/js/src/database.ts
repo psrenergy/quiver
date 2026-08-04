@@ -199,6 +199,7 @@ export class Database {
   declare describe: () => string;
   declare describeCollection: (collection: string) => string;
   declare summarizeCollection: (collection: string) => string;
+  declare numberOfElements: (collection: string) => number;
 
   // --- Composite helpers (implemented in composites.ts) ---
   declare readScalarsById: (

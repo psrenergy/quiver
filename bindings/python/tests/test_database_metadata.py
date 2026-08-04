@@ -1,5 +1,6 @@
 """Tests for metadata get and list operations, plus schema-inspection
-methods (describe / describe_collection / summarize_collection)."""
+methods (describe / describe_collection / summarize_collection /
+number_of_elements)."""
 
 from __future__ import annotations
 
@@ -232,3 +233,24 @@ class TestSummarizeCollection:
     def test_raises_on_unknown_collection(self, collections_db: Database) -> None:
         with pytest.raises(QuiverError):
             collections_db.summarize_collection("DoesNotExist")
+
+
+class TestNumberOfElements:
+    def test_empty_collection_is_zero(self, collections_db: Database) -> None:
+        count = collections_db.number_of_elements("Collection")
+        assert isinstance(count, int)
+        assert count == 0
+
+    def test_counts_current_rows_not_maximum_id(self, collections_db: Database) -> None:
+        collections_db.create_element("Collection", label="Item 1")
+        middle_id = collections_db.create_element("Collection", label="Item 2")
+        collections_db.create_element("Collection", label="Item 3")
+        assert collections_db.number_of_elements("Collection") == 3
+
+        # Deleting the middle id leaves a gap: the count drops, the maximum id does not.
+        collections_db.delete_element("Collection", middle_id)
+        assert collections_db.number_of_elements("Collection") == 2
+
+    def test_raises_on_unknown_collection(self, collections_db: Database) -> None:
+        with pytest.raises(QuiverError):
+            collections_db.number_of_elements("DoesNotExist")

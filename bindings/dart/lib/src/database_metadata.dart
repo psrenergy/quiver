@@ -207,6 +207,28 @@ extension DatabaseMetadata on Database {
     }
   }
 
+  /// Returns the current number of elements in collection.
+  int numberOfElements(String collection) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      final outCount = arena<Int64>();
+
+      check(
+        bindings.quiver_database_number_of_elements(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          outCount,
+        ),
+      );
+
+      return outCount.value;
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
   /// Returns metadata for a time series group, including all value columns in the group.
   GroupMetadata getTimeSeriesMetadata(String collection, String groupName) {
     _ensureNotClosed();

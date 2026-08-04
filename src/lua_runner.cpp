@@ -270,6 +270,8 @@ struct LuaRunner::Impl {
             [](Database& self) { return self.current_version(); },
             "path",
             [](Database& self) -> const std::string& { return self.path(); },
+            "number_of_elements",
+            [](Database& self, const std::string& collection) { return self.number_of_elements(collection); },
             // Group 9: Time series files
             "has_time_series_files",
             [](Database& self, const std::string& collection) { return self.has_time_series_files(collection); },

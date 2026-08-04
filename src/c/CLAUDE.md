@@ -169,8 +169,7 @@ human-readable **text report** via a `char** out_report` out-param (freed by the
 `new_c_str(db->db.<fn>(...))` wrappers.
 
 `quiver_database_number_of_elements` lives in `database_count.cpp` as the scalar element-count
-counterpart to the C++ operation. It writes the `int64_t` result into caller-owned `out_count`,
-allocates nothing, and needs no free function.
+counterpart to the C++ operation.
 
 ## Multi-Column Time Series
 

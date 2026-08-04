@@ -185,6 +185,17 @@ function list_time_series_files_columns(db::Database, collection::String)
     return result
 end
 
+"""
+    number_of_elements(db::Database, collection::AbstractString) -> Int64
+
+Return the current number of elements in `collection`.
+"""
+function number_of_elements(db::Database, collection::AbstractString)
+    out_count = Ref{Int64}(0)
+    check(C.quiver_database_number_of_elements(db.ptr, collection, out_count))
+    return out_count[]
+end
+
 # -----------------------------------------------------------------------------
 # Schema inspection — human-readable text reports
 # (describe / describe_collection / summarize_collection)
