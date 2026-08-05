@@ -131,3 +131,110 @@ TEST(Database, DeleteElementByIdOtherElementsUnchanged) {
     EXPECT_TRUE(val3.has_value());
     EXPECT_EQ(*val3, 200);
 }
+
+// ============================================================================
+// Delete by label tests
+// ============================================================================
+
+TEST(Database, DeleteElementByLabel) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element e;
+    e.set("label", std::string("Item 1")).set("tag", std::vector<std::string>{"important", "urgent"});
+    db.create_element("Collection", e);
+
+    db.delete_element("Collection", "Item 1");
+
+    // Verify element is gone
+    auto ids = db.read_element_ids("Collection");
+    EXPECT_TRUE(ids.empty());
+
+    // CASCADE still applies - the label form delegates to the id form, it does not re-implement it
+    auto all_sets = db.read_set_strings("Collection", "tag");
+    EXPECT_TRUE(all_sets.empty());
+}
+
+TEST(Database, DeleteElementByLabelMatchesIdForm) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element e1;
+    e1.set("label", std::string("Item 1"));
+    int64_t id1 = db.create_element("Collection", e1);
+
+    quiver::Element e2;
+    e2.set("label", std::string("Item 2"));
+    db.create_element("Collection", e2);
+
+    quiver::Element e3;
+    e3.set("label", std::string("Item 3"));
+    int64_t id3 = db.create_element("Collection", e3);
+
+    // One deleted by id, one by label - same outcome
+    db.delete_element("Collection", id1);
+    db.delete_element("Collection", "Item 2");
+
+    auto ids = db.read_element_ids("Collection");
+    EXPECT_EQ(ids.size(), 1);
+    EXPECT_EQ(ids[0], id3);
+}
+
+TEST(Database, DeleteElementByLabelNonExistent) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element e;
+    e.set("label", std::string("Item 1"));
+    db.create_element("Collection", e);
+
+    // Deleting an unresolvable label throws "Element not found" rather than silently no-op'ing
+    try {
+        db.delete_element("Collection", "No Such Item");
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), "Element not found: label 'No Such Item' in collection 'Collection'");
+    }
+
+    // Verify original element still exists
+    auto ids = db.read_element_ids("Collection");
+    EXPECT_EQ(ids.size(), 1);
+}
+
+// A label is unique per collection, not per database: one naming an element of another
+// collection must not resolve here.
+TEST(Database, DeleteElementByLabelDoesNotResolveAcrossCollections) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element e;
+    e.set("label", std::string("Item 1"));
+    db.create_element("Collection", e);
+
+    try {
+        db.delete_element("Collection", "Test Config");
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), "Element not found: label 'Test Config' in collection 'Collection'");
+    }
+
+    // Both elements survive
+    EXPECT_EQ(db.read_element_ids("Configuration").size(), 1);
+    EXPECT_EQ(db.read_element_ids("Collection").size(), 1);
+}

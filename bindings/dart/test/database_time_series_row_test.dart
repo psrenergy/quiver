@@ -85,6 +85,56 @@ void main() {
         db.close();
       }
     });
+
+    test('addresses the element by label', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        final id = db.createElement('Collection', {'label': 'Item 1'});
+
+        db.upsertTimeSeriesRowByLabel('Collection', 'data', 'Item 1', {
+          'date_time': '2024-01-01T10:00:00',
+          'value': 10.0,
+        });
+
+        // Upsert the same dimension PK by label again, exercising the overwrite path
+        // through the label entry point itself.
+        db.upsertTimeSeriesRowByLabel('Collection', 'data', 'Item 1', {
+          'date_time': '2024-01-01T10:00:00',
+          'value': 99.0,
+        });
+
+        final result = db.readTimeSeriesGroup('Collection', 'data', id);
+        expect(result['date_time']!.length, equals(1));
+        expect(result['value']![0], equals(99.0));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('throws for a nonexistent label', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Collection', {'label': 'Item 1'});
+
+        expect(
+          () => db.upsertTimeSeriesRowByLabel('Collection', 'data', 'Nonexistent', {
+            'date_time': '2024-01-01T10:00:00',
+            'value': 10.0,
+          }),
+          throwsA(isA<DatabaseException>()),
+        );
+      } finally {
+        db.close();
+      }
+    });
   });
 
   group('Read Time Series Row', () {

@@ -20,11 +20,35 @@ describe("updateElement", () => {
     }
   });
 
+  test("updates a scalar addressed by label", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      const id = db.createElement("AllTypes", { label: "Item1", some_integer: 42 });
+      db.updateElementByLabel("AllTypes", "Item1", { some_integer: 99 });
+      const value = db.readScalarIntegerById("AllTypes", "some_integer", id);
+      expect(value).toEqual(99);
+    } finally {
+      db.close();
+    }
+  });
+
   test("throws on non-existent ID", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       db.createElement("AllTypes", { label: "Item1" });
       expect(() => db.updateElement("AllTypes", 999, { some_integer: 5 })).toThrow(QuiverError);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("throws on a non-existent label", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      db.createElement("AllTypes", { label: "Item1" });
+      expect(() => db.updateElementByLabel("AllTypes", "missing", { some_integer: 5 })).toThrow(
+        /Element not found/,
+      );
     } finally {
       db.close();
     }
@@ -136,6 +160,19 @@ describe("updateVectorGroup / updateSetGroup", () => {
     }
   });
 
+  test("addresses a group by label", () => {
+    const { db, parentA, parentB, child } = openRelations();
+    try {
+      db.updateVectorGroupByLabel("Child", "refs", "Child 1", { parent_ref: [parentA, parentB] });
+      expect(db.readVectorIntegersById("Child", "parent_ref", child)).toEqual([parentA, parentB]);
+
+      db.updateVectorGroupByLabel("Child", "refs", "Child 1", {});
+      expect(db.readVectorIntegersById("Child", "parent_ref", child)).toEqual([]);
+    } finally {
+      db.close();
+    }
+  });
+
   test("leaves a sibling group sharing a column name untouched", () => {
     const { db, parentA, parentB, child } = openRelations();
     try {
@@ -235,6 +272,20 @@ describe("updateVectorGroup / updateSetGroup", () => {
       );
       // The clear path used to succeed silently: the DELETE simply matched nothing.
       expect(() => db.updateSetGroup("Child", "parents", 999, {})).toThrow(/Element not found/);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("throws Element not found for a missing label", () => {
+    const { db, parentA } = openRelations();
+    try {
+      expect(() =>
+        db.updateVectorGroupByLabel("Child", "refs", "missing", { parent_ref: [parentA] }),
+      ).toThrow(/Element not found/);
+      expect(() => db.updateSetGroupByLabel("Child", "parents", "missing", {})).toThrow(
+        /Element not found/,
+      );
     } finally {
       db.close();
     }

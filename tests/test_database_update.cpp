@@ -1331,3 +1331,138 @@ TEST(Database, UpdateGroupTypeErrorInsideDryRunKeepsExistingRows) {
     EXPECT_EQ(std::get<std::string>(rows[0].at("code")), "keep");
     f.db.end_dry_run();
 }
+
+// ============================================================================
+// By-label writers (update_element / update_vector_group / update_set_group)
+// ============================================================================
+
+namespace {
+
+// Every collection has a UNIQUE NOT NULL label by schema convention, which is what makes the
+// label form addressable. Two elements, so a test can address one by id and the other by label
+// and compare the resulting state.
+struct LabelFixture {
+    quiver::Database db;
+    int64_t item_1;
+    int64_t item_2;
+
+    LabelFixture()
+        : db(quiver::Database::from_schema(":memory:",
+                                           VALID_SCHEMA("collections.sql"),
+                                           {.read_only = false, .console_level = quiver::LogLevel::Off})) {
+        db.create_element("Configuration", quiver::Element().set("label", std::string("Config")));
+        item_1 = db.create_element("Collection", quiver::Element().set("label", std::string("Item 1")));
+        item_2 = db.create_element("Collection", quiver::Element().set("label", std::string("Item 2")));
+    }
+};
+
+}  // namespace
+
+TEST(Database, UpdateElementByLabel) {
+    LabelFixture f;
+
+    f.db.update_element("Collection", "Item 1", quiver::Element().set("some_integer", int64_t{42}));
+
+    auto value = f.db.read_scalar_integer_by_id("Collection", "some_integer", f.item_1);
+    ASSERT_TRUE(value.has_value());
+    EXPECT_EQ(*value, 42);
+}
+
+TEST(Database, UpdateElementByLabelMatchesIdForm) {
+    LabelFixture f;
+
+    // Item 1 addressed by id, Item 2 by label - same payload, same resulting state.
+    f.db.update_element(
+        "Collection", f.item_1, quiver::Element().set("some_integer", int64_t{7}).set("some_float", 1.5));
+    f.db.update_element(
+        "Collection", "Item 2", quiver::Element().set("some_integer", int64_t{7}).set("some_float", 1.5));
+
+    auto integer = f.db.read_scalar_integer_by_id("Collection", "some_integer", f.item_2);
+    ASSERT_TRUE(integer.has_value());
+    EXPECT_EQ(*integer, 7);
+    EXPECT_EQ(f.db.read_scalar_integer_by_id("Collection", "some_integer", f.item_1), integer);
+    EXPECT_EQ(f.db.read_scalar_float_by_id("Collection", "some_float", f.item_1),
+              f.db.read_scalar_float_by_id("Collection", "some_float", f.item_2));
+}
+
+TEST(Database, UpdateElementByLabelNonExistent) {
+    LabelFixture f;
+
+    try {
+        f.db.update_element("Collection", "No Such Item", quiver::Element().set("some_integer", int64_t{1}));
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), "Element not found: label 'No Such Item' in collection 'Collection'");
+    }
+}
+
+// A label is unique per collection, not per database: one that names an element of a different
+// collection must not resolve here.
+TEST(Database, UpdateElementByLabelDoesNotResolveAcrossCollections) {
+    LabelFixture f;
+
+    // "Config" is the fixture's Configuration element.
+    try {
+        f.db.update_element("Collection", "Config", quiver::Element().set("some_integer", int64_t{1}));
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), "Element not found: label 'Config' in collection 'Collection'");
+    }
+}
+
+TEST(Database, UpdateVectorGroupByLabel) {
+    LabelFixture f;
+
+    f.db.update_vector_group(
+        "Collection", "values", "Item 1", {{{"value_int", int64_t{10}}}, {{"value_int", int64_t{20}}}});
+    EXPECT_EQ(f.db.read_vector_integers_by_id("Collection", "value_int", f.item_1), (std::vector<int64_t>{10, 20}));
+
+    // The clear path resolves the label too, so a typo cannot silently no-op.
+    f.db.update_vector_group("Collection", "values", "Item 1", {});
+    EXPECT_TRUE(f.db.read_vector_integers_by_id("Collection", "value_int", f.item_1).empty());
+}
+
+TEST(Database, UpdateSetGroupByLabel) {
+    LabelFixture f;
+
+    f.db.update_set_group("Collection", "tags", "Item 1", {{{"tag", std::string("a")}}, {{"tag", std::string("b")}}});
+
+    EXPECT_EQ(f.db.read_set_strings_by_id("Collection", "tag", f.item_1), (std::vector<std::string>{"a", "b"}));
+}
+
+TEST(Database, UpdateGroupByLabelMatchesIdForm) {
+    LabelFixture f;
+
+    const std::vector<std::map<std::string, quiver::Value>> vector_rows = {{{"value_int", int64_t{1}}},
+                                                                           {{"value_int", int64_t{2}}}};
+    const std::vector<std::map<std::string, quiver::Value>> set_rows = {{{"tag", std::string("x")}}};
+
+    // Item 1 addressed by id, Item 2 by label - same payload, same resulting state.
+    f.db.update_vector_group("Collection", "values", f.item_1, vector_rows);
+    f.db.update_vector_group("Collection", "values", "Item 2", vector_rows);
+    f.db.update_set_group("Collection", "tags", f.item_1, set_rows);
+    f.db.update_set_group("Collection", "tags", "Item 2", set_rows);
+
+    EXPECT_EQ(f.db.read_vector_integers_by_id("Collection", "value_int", f.item_2), (std::vector<int64_t>{1, 2}));
+    EXPECT_EQ(f.db.read_vector_integers_by_id("Collection", "value_int", f.item_1),
+              f.db.read_vector_integers_by_id("Collection", "value_int", f.item_2));
+    EXPECT_EQ(f.db.read_set_strings_by_id("Collection", "tag", f.item_2), (std::vector<std::string>{"x"}));
+    EXPECT_EQ(f.db.read_set_strings_by_id("Collection", "tag", f.item_1),
+              f.db.read_set_strings_by_id("Collection", "tag", f.item_2));
+}
+
+TEST(Database, UpdateGroupByLabelMissingElementThrowsNotFound) {
+    LabelFixture f;
+    f.db.update_vector_group("Collection", "values", f.item_1, {{{"value_int", int64_t{10}}}});
+
+    try {
+        f.db.update_vector_group("Collection", "values", "Nope", {{{"value_int", int64_t{1}}}});
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), "Element not found: label 'Nope' in collection 'Collection'");
+    }
+    EXPECT_THROW(f.db.update_set_group("Collection", "tags", "Nope", {}), std::runtime_error);
+
+    // The resolution failure precedes the DELETE, so the real element's rows survive.
+    EXPECT_EQ(f.db.read_vector_integers_by_id("Collection", "value_int", f.item_1), (std::vector<int64_t>{10}));
+}

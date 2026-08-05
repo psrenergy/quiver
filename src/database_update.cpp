@@ -55,6 +55,10 @@ void Database::update_element(const std::string& collection, int64_t id, const E
     impl_->logger->info("Updated element {} in {}", id, collection);
 }
 
+void Database::update_element(const std::string& collection, const std::string& label, const Element& element) {
+    update_element(collection, impl_->resolve_label(collection, label, "update_element", *this), element);
+}
+
 namespace {
 
 // Transpose row-shaped group data into the column-shaped form insert_rows_into_group_table
@@ -150,6 +154,13 @@ void Database::update_vector_group(const std::string& collection,
     impl_->logger->info("Updated vector {}.{} for id {} with {} rows", collection, group, id, rows.size());
 }
 
+void Database::update_vector_group(const std::string& collection,
+                                   const std::string& group,
+                                   const std::string& label,
+                                   const std::vector<std::map<std::string, Value>>& rows) {
+    update_vector_group(collection, group, impl_->resolve_label(collection, label, "update_vector_group", *this), rows);
+}
+
 void Database::update_set_group(const std::string& collection,
                                 const std::string& group,
                                 int64_t id,
@@ -157,6 +168,13 @@ void Database::update_set_group(const std::string& collection,
     impl_->logger->debug("Updating set {}.{} for id {} with {} rows", collection, group, id, rows.size());
     impl_->update_group_rows("update_set_group", collection, group, GroupTableType::Set, id, rows, *this);
     impl_->logger->info("Updated set {}.{} for id {} with {} rows", collection, group, id, rows.size());
+}
+
+void Database::update_set_group(const std::string& collection,
+                                const std::string& group,
+                                const std::string& label,
+                                const std::vector<std::map<std::string, Value>>& rows) {
+    update_set_group(collection, group, impl_->resolve_label(collection, label, "update_set_group", *this), rows);
 }
 
 }  // namespace quiver

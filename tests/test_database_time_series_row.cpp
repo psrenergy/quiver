@@ -607,3 +607,86 @@ TEST(Database, UpsertTimeSeriesRowTransactionCommitAndStandalone) {
     auto rows2 = db.read_time_series_group("Collection", "data", id);
     EXPECT_EQ(rows2.size(), 3);  // prior 2 (from Phase A) + 1 (Phase B)
 }
+
+// ============================================================================
+// Upsert time series row by label
+// ============================================================================
+
+TEST(Database, UpsertTimeSeriesRowByLabel) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element item1;
+    item1.set("label", std::string("Item 1"));
+    auto id1 = db.create_element("Collection", item1);
+
+    quiver::Element item2;
+    item2.set("label", std::string("Item 2"));
+    auto id2 = db.create_element("Collection", item2);
+
+    // Item 1 addressed by id, Item 2 by label - same payload, same resulting state
+    std::map<std::string, quiver::Value> row = {{"date_time", std::string("2024-01-01T10:00:00")}, {"value", 1.5}};
+    db.upsert_time_series_row("Collection", "data", id1, row);
+    db.upsert_time_series_row("Collection", "data", "Item 2", row);
+
+    auto by_label = db.read_time_series_group("Collection", "data", id2);
+    ASSERT_EQ(by_label.size(), 1);
+    EXPECT_EQ(std::get<std::string>(by_label[0]["date_time"]), "2024-01-01T10:00:00");
+    EXPECT_DOUBLE_EQ(std::get<double>(by_label[0]["value"]), 1.5);
+
+    auto by_id = db.read_time_series_group("Collection", "data", id1);
+    ASSERT_EQ(by_id.size(), 1);
+    EXPECT_DOUBLE_EQ(std::get<double>(by_id[0]["value"]), std::get<double>(by_label[0]["value"]));
+}
+
+TEST(Database, UpsertTimeSeriesRowByLabelSamePK) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element item;
+    item.set("label", std::string("Item 1"));
+    auto id = db.create_element("Collection", item);
+
+    // Upsert semantics survive the delegation: same PK by label replaces rather than appends
+    db.upsert_time_series_row(
+        "Collection", "data", "Item 1", {{"date_time", std::string("2024-01-01T10:00:00")}, {"value", 1.0}});
+    db.upsert_time_series_row(
+        "Collection", "data", "Item 1", {{"date_time", std::string("2024-01-01T10:00:00")}, {"value", 99.0}});
+
+    auto rows = db.read_time_series_group("Collection", "data", id);
+    ASSERT_EQ(rows.size(), 1);  // upsert: NOT 2 rows
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[0]["value"]), 99.0);
+}
+
+TEST(Database, UpsertTimeSeriesRowByLabelNonExistent) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element item;
+    item.set("label", std::string("Item 1"));
+    db.create_element("Collection", item);
+
+    std::map<std::string, quiver::Value> row = {{"date_time", std::string("2024-01-01T10:00:00")}, {"value", 1.0}};
+
+    try {
+        db.upsert_time_series_row("Collection", "data", "No Such Item", row);
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), "Element not found: label 'No Such Item' in collection 'Collection'");
+    }
+
+    // A label from another collection does not resolve either
+    EXPECT_THROW(db.upsert_time_series_row("Collection", "data", "Test Config", row), std::runtime_error);
+}

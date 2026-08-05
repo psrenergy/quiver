@@ -28,6 +28,7 @@
 #include <string_view>
 #include <unordered_map>
 #include <utility>
+#include <variant>
 #include <vector>
 
 namespace quiver {
@@ -262,7 +263,10 @@ struct LuaRunner::Impl {
         auto bind = lua.new_usertype<Database>(
             "Database",
             "delete_element",
-            [](Database& self, const std::string& collection, int64_t id) { self.delete_element(collection, id); },
+            [](Database& self, const std::string& collection, sol::object element_key) {
+                std::visit([&](const auto& key) { self.delete_element(collection, key); },
+                           parse_element_key("delete_element", element_key));
+            },
             // Group 1: Database info
             "is_healthy",
             [](Database& self) { return self.is_healthy(); },
@@ -901,6 +905,24 @@ struct LuaRunner::Impl {
         return result;
     }
 
+    // An element key from Lua. The id-addressed writers each have a label overload in C++ and Lua has
+    // no overloading, so one argument carries either. get_type() rather than is<int64_t>(): Lua
+    // converts freely between numbers and strings, and a label that looks like a number ("1") must
+    // resolve as a label, not as id 1 -- the same reason append_json checks get_type() for booleans
+    // and tables.
+    using ElementKey = std::variant<int64_t, std::string>;
+
+    static ElementKey parse_element_key(const char* caller, const sol::object& element_key) {
+        if (element_key.get_type() == sol::type::number) {
+            return element_key.as<int64_t>();
+        }
+        if (element_key.get_type() == sol::type::string) {
+            return element_key.as<std::string>();
+        }
+        throw std::runtime_error(std::string("Cannot ") + caller +
+                                 ": element must be addressed by an integer id or a string label");
+    }
+
     static Element table_to_element(const sol::table& values) {
         Element element;
         for (const auto& pair : values) {
@@ -945,9 +967,11 @@ struct LuaRunner::Impl {
         return db.create_element(collection, element);
     }
 
-    static void update_element_lua(Database& db, const std::string& collection, int64_t id, const sol::table& values) {
+    static void
+    update_element_lua(Database& db, const std::string& collection, sol::object element_key, const sol::table& values) {
         auto element = table_to_element(values);
-        db.update_element(collection, id, element);
+        std::visit([&](const auto& key) { db.update_element(collection, key, element); },
+                   parse_element_key("update_element", element_key));
     }
 
     static sol::table read_scalar_strings_lua(Database& db,
@@ -1490,7 +1514,7 @@ struct LuaRunner::Impl {
                                  GroupTableType type,
                                  const std::string& collection,
                                  const std::string& group,
-                                 int64_t id,
+                                 const ElementKey& key,
                                  const sol::table& columns) {
         auto lua_columns = collect_group_columns(caller, columns);
 
@@ -1509,33 +1533,47 @@ struct LuaRunner::Impl {
         }
 
         if (type == GroupTableType::Vector) {
-            db.update_vector_group(collection, group, id, cpp_rows);
+            std::visit([&](const auto& k) { db.update_vector_group(collection, group, k, cpp_rows); }, key);
         } else {
-            db.update_set_group(collection, group, id, cpp_rows);
+            std::visit([&](const auto& k) { db.update_set_group(collection, group, k, cpp_rows); }, key);
         }
     }
 
     static void update_vector_group_lua(Database& db,
                                         const std::string& collection,
                                         const std::string& group,
-                                        int64_t id,
+                                        sol::object element_key,
                                         sol::table columns) {
-        update_group_lua(db, "update_vector_group", GroupTableType::Vector, collection, group, id, columns);
+        update_group_lua(db,
+                         "update_vector_group",
+                         GroupTableType::Vector,
+                         collection,
+                         group,
+                         parse_element_key("update_vector_group", element_key),
+                         columns);
     }
 
     static void update_set_group_lua(Database& db,
                                      const std::string& collection,
                                      const std::string& group,
-                                     int64_t id,
+                                     sol::object element_key,
                                      sol::table columns) {
-        update_group_lua(db, "update_set_group", GroupTableType::Set, collection, group, id, columns);
+        update_group_lua(db,
+                         "update_set_group",
+                         GroupTableType::Set,
+                         collection,
+                         group,
+                         parse_element_key("update_set_group", element_key),
+                         columns);
     }
 
     static void update_time_series_group_lua(Database& db,
                                              const std::string& collection,
                                              const std::string& group,
-                                             int64_t id,
+                                             sol::object element_key,
                                              sol::table columns) {
+        auto key = parse_element_key("update_time_series_group", element_key);
+
         // Column-oriented input: { name = {v1, v2, ...}, ... } transposed into the row maps the
         // C++ API takes. The dimension column(s) are the row count authority -- PK members are
         // implicitly NOT NULL in STRICT tables, so they must be present and dense. Value columns
@@ -1545,7 +1583,7 @@ struct LuaRunner::Impl {
         // rows still throw instead of silently clearing the group.
         auto lua_columns = collect_group_columns("update_time_series_group", columns);
         if (lua_columns.empty()) {
-            db.update_time_series_group(collection, group, id, {});
+            std::visit([&](const auto& k) { db.update_time_series_group(collection, group, k, {}); }, key);
             return;
         }
 
@@ -1605,16 +1643,21 @@ struct LuaRunner::Impl {
                                      "] contain no rows; pass an empty table {} to clear the group");
         }
 
-        db.update_time_series_group(
-            collection, group, id, columns_to_cpp_rows("update_time_series_group", lua_columns, row_count));
+        std::visit(
+            [&](const auto& k) {
+                db.update_time_series_group(
+                    collection, group, k, columns_to_cpp_rows("update_time_series_group", lua_columns, row_count));
+            },
+            key);
     }
 
     static void upsert_time_series_row_lua(Database& db,
                                            const std::string& collection,
                                            const std::string& group,
-                                           int64_t id,
+                                           sol::object element_key,
                                            sol::table row) {
-        db.upsert_time_series_row(collection, group, id, lua_table_to_value_map(row));
+        std::visit([&](const auto& k) { db.upsert_time_series_row(collection, group, k, lua_table_to_value_map(row)); },
+                   parse_element_key("upsert_time_series_row", element_key));
     }
 
     // ========================================================================

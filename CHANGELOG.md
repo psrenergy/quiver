@@ -9,6 +9,21 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ### Added
 
+- **Address the writers by label, not just by id.** Every collection has a
+  `label TEXT UNIQUE NOT NULL` by schema convention, and callers usually hold that rather than an
+  id — so code around Quiver kept re-implementing the same `SELECT id FROM <c> WHERE label = ?`
+  before every write. All six id-addressed writers now take a label in place of the id:
+  `update_element`, `delete_element`, `update_vector_group`, `update_set_group`,
+  `update_time_series_group`, `upsert_time_series_row`. In C++ it is an overload taking
+  `const std::string& label`; the C API, which has no overloading, gets the same six with a
+  `_by_label` suffix and otherwise identical signatures. Behaviour matches the id form in every
+  other respect; a label matching no element in the collection throws
+  `Element not found: label '<label>' in collection '<collection>'`.
+
+  The id-addressed **readers** deliberately keep taking ids only. Wired into every binding: Julia
+  (multiple dispatch), Dart/Python/JS (a `...ByLabel`/`_by_label` suffix per writer), and Lua (same
+  method names, id or label).
+
 - **Whole-group writers: `update_vector_group()` / `update_set_group()`.** Replace all of an
   element's rows in one *named* group; passing no columns clears the group. These are the write
   counterpart of `read_vector_group_by_id()` / `read_set_group_by_id()`, and the unambiguous

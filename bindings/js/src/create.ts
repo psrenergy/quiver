@@ -148,10 +148,56 @@ Database.prototype.updateElement = function (
   }
 };
 
+/** Label-addressed counterpart of updateElement. */
+Database.prototype.updateElementByLabel = function (
+  this: Database,
+  collection: string,
+  label: string,
+  data: ElementData,
+): void {
+  const lib = getSymbols();
+  const handle = this._handle;
+
+  const outElem = allocPtrOut();
+  check(lib.quiver_element_create(outElem.buf));
+  const elemPtr = readPtrOut(outElem);
+
+  try {
+    for (const [key, value] of Object.entries(data)) {
+      if (value === undefined) continue;
+      setElementField(lib, elemPtr, key, value);
+    }
+    const collBuf = toCString(collection);
+    check(
+      lib.quiver_database_update_element_by_label(
+        handle,
+        collBuf.buf,
+        toCString(label).buf,
+        elemPtr,
+      ),
+    );
+  } finally {
+    lib.quiver_element_destroy(elemPtr);
+  }
+};
+
 Database.prototype.deleteElement = function (this: Database, collection: string, id: number): void {
   const lib = getSymbols();
   const collBuf = toCString(collection);
   check(lib.quiver_database_delete_element(this._handle, collBuf.buf, BigInt(id)));
+};
+
+/** Label-addressed counterpart of deleteElement. */
+Database.prototype.deleteElementByLabel = function (
+  this: Database,
+  collection: string,
+  label: string,
+): void {
+  const lib = getSymbols();
+  const collBuf = toCString(collection);
+  check(
+    lib.quiver_database_delete_element_by_label(this._handle, collBuf.buf, toCString(label).buf),
+  );
 };
 
 /**
@@ -175,7 +221,26 @@ Database.prototype.updateVectorGroup = function (
     getSymbols().quiver_database_update_vector_group,
     collection,
     group,
-    id,
+    BigInt(id),
+    data,
+  );
+};
+
+/** Label-addressed counterpart of updateVectorGroup. */
+Database.prototype.updateVectorGroupByLabel = function (
+  this: Database,
+  collection: string,
+  group: string,
+  label: string,
+  data: GroupColumns,
+): void {
+  updateGroupColumns(
+    this._handle,
+    "updateVectorGroupByLabel",
+    getSymbols().quiver_database_update_vector_group_by_label,
+    collection,
+    group,
+    toCString(label).buf,
     data,
   );
 };
@@ -194,7 +259,26 @@ Database.prototype.updateSetGroup = function (
     getSymbols().quiver_database_update_set_group,
     collection,
     group,
-    id,
+    BigInt(id),
+    data,
+  );
+};
+
+/** Label-addressed counterpart of updateSetGroup. */
+Database.prototype.updateSetGroupByLabel = function (
+  this: Database,
+  collection: string,
+  group: string,
+  label: string,
+  data: GroupColumns,
+): void {
+  updateGroupColumns(
+    this._handle,
+    "updateSetGroupByLabel",
+    getSymbols().quiver_database_update_set_group_by_label,
+    collection,
+    group,
+    toCString(label).buf,
     data,
   );
 };

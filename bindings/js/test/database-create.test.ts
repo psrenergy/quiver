@@ -211,11 +211,31 @@ describe("deleteElement", () => {
     }
   });
 
+  test("deletes element by label", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      db.createElement("AllTypes", { label: "Item1" });
+      db.deleteElementByLabel("AllTypes", "Item1");
+    } finally {
+      db.close();
+    }
+  });
+
   test("throws on non-existent ID", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       db.createElement("AllTypes", { label: "Item1" });
       expect(() => db.deleteElement("AllTypes", 999)).toThrow(QuiverError);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("throws on a non-existent label", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      db.createElement("AllTypes", { label: "Item1" });
+      expect(() => db.deleteElementByLabel("AllTypes", "missing")).toThrow(/Element not found/);
     } finally {
       db.close();
     }

@@ -61,6 +61,20 @@ struct Database::Impl {
         }
     }
 
+    // The single gate behind every by-label writer: the label overloads in database.h resolve
+    // here and then delegate to their id counterpart, so the write logic and its validation stay
+    // in one place.
+    int64_t
+    resolve_label(const std::string& collection, const std::string& label, const char* operation, Database& db) const {
+        require_collection(collection, operation);
+
+        auto result = db.execute("SELECT id FROM " + collection + " WHERE label = ?", {label});
+        if (result.empty() || !result[0].get_integer(0)) {
+            throw std::runtime_error("Element not found: label '" + label + "' in collection '" + collection + "'");
+        }
+        return result[0].get_integer(0).value();
+    }
+
     void require_column(const std::string& table, const std::string& column, const char* operation) const {
         require_schema();
         const auto* table_def = schema->get_table(table);

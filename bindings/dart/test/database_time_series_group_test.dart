@@ -150,6 +150,49 @@ void main() {
         db.close();
       }
     });
+
+    test('addresses the element by label', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        final id = db.createElement('Collection', {'label': 'Item 1'});
+
+        db.updateTimeSeriesGroupByLabel('Collection', 'data', 'Item 1', {
+          'date_time': ['2024-01-01T10:00:00'],
+          'value': [1.0],
+        });
+
+        final result = db.readTimeSeriesGroup('Collection', 'data', id);
+        expect(result['date_time']!.length, equals(1));
+        expect(result['value']![0], equals(1.0));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('throws for a nonexistent label', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Collection', {'label': 'Item 1'});
+
+        expect(
+          () => db.updateTimeSeriesGroupByLabel('Collection', 'data', 'Nonexistent', {
+            'date_time': ['2024-01-01T10:00:00'],
+            'value': [1.0],
+          }),
+          throwsA(isA<DatabaseException>()),
+        );
+      } finally {
+        db.close();
+      }
+    });
   });
 
   group('Multi-Column Time Series', () {

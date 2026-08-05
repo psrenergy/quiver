@@ -14,4 +14,8 @@ void Database::delete_element(const std::string& collection, int64_t id) {
     impl_->logger->info("Deleted element {} from {}", id, collection);
 }
 
+void Database::delete_element(const std::string& collection, const std::string& label) {
+    delete_element(collection, impl_->resolve_label(collection, label, "delete_element", *this));
+}
+
 }  // namespace quiver

@@ -197,8 +197,15 @@ impl_->logger->debug("Opening database: {}", path);
   matches `INTEGER` or `REAL` (int-for-REAL coercion), double matches `REAL` only (a float into an
   `INTEGER` column is rejected), string matches `TEXT`/`INTEGER`(FK label)/`DATE_TIME`. Keep the two
   in sync (root design decision).
-- **`update_element` / `delete_element` / the group writers verify the id exists** (via
-  `Impl::require_element`) and throw Pattern 2 `"Element not found: ..."` — no silent no-op.
+- **`update_element` / `delete_element` / the vector+set group writers verify the id exists** (via
+  `Impl::require_element`) and throw Pattern 2 `"Element not found: ..."` — no silent no-op. The two
+  **time-series** writers (`update_time_series_group`, `upsert_time_series_row`) deliberately do
+  not.
+- **`Impl::resolve_label`** (`database_impl.h`, beside `require_element`) is the single gate behind
+  every by-label writer: `require_collection`, then `SELECT id FROM <collection> WHERE label = ?`
+  (collection interpolated, label bound). No match throws Pattern 2
+  `"Element not found: label '<label>' in collection '<collection>'"`. It returns a plain `int64_t`
+  — no `std::optional`, no silent no-op — so each label overload stays one line: resolve, delegate.
 - **Schema metadata loads lazily** (`Impl::require_schema`): the `Database(path, options)`
   constructor does not read it, so the first metadata/CRUD call does. `schema` and `type_validator`
   are `mutable` (const readers trigger the load) and `load_schema_metadata()` is `const` and
@@ -314,6 +321,9 @@ Implementation conventions in `lua_runner.cpp`:
 - Script errors surface as `"Failed to run Lua script: ..."` (root Pattern 3). Encoder failures
   (unsupported type, unsupported table key, too deep) are Pattern 1 `"Cannot run: ..."` and are
   **not** wrapped in that prefix — they happen after the script already succeeded.
+- **The six id-addressed writers take an id or a label in the same argument.** `parse_element_key`
+  dispatches on `get_type()`, not `is<int64_t>()` — a label that looks like a number (`"1"`) must
+  still resolve as a label; `std::visit` at each call site then picks the matching C++ overload.
 
 ## Binary Subsystem
 

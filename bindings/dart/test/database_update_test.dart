@@ -285,6 +285,92 @@ void main() {
     });
   });
 
+  group('Update By Label', () {
+    test('updates a scalar by label', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {
+          'label': 'Config 1',
+          'integer_attribute': 100,
+        });
+
+        db.updateElementByLabel('Configuration', 'Config 1', {
+          'integer_attribute': 999,
+        });
+
+        final value = db.readScalarIntegerById(
+          'Configuration',
+          'integer_attribute',
+          1,
+        );
+        expect(value, equals(999));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('updates using Element builder by label', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {
+          'label': 'Config 1',
+          'integer_attribute': 100,
+        });
+
+        final element = Element();
+        try {
+          element.set('integer_attribute', 777);
+          db.updateElementFromBuilderByLabel('Configuration', 'Config 1', element);
+        } finally {
+          element.dispose();
+        }
+
+        final value = db.readScalarIntegerById(
+          'Configuration',
+          'integer_attribute',
+          1,
+        );
+        expect(value, equals(777));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('throws for a nonexistent label', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {
+          'label': 'Config 1',
+          'integer_attribute': 100,
+        });
+
+        expect(
+          () => db.updateElementByLabel('Configuration', 'Nonexistent', {
+            'integer_attribute': 999,
+          }),
+          throwsA(
+            isA<DatabaseException>().having(
+              (e) => e.message,
+              'message',
+              contains('Element not found'),
+            ),
+          ),
+        );
+      } finally {
+        db.close();
+      }
+    });
+  });
+
   // Error handling tests
 
   group('Update Invalid Collection', () {
@@ -1667,6 +1753,42 @@ void main() {
             'vector_index': [1],
           }),
           throwsA(isA<ArgumentError>()),
+        );
+      } finally {
+        db.close();
+      }
+    });
+
+    test('addresses a group by label', () {
+      final db = openRelations();
+      try {
+        db.updateVectorGroupByLabel('Child', 'refs', 'Child 1', {
+          'parent_ref': [1, 2],
+        });
+        expect(
+          db.readVectorIntegersById('Child', 'parent_ref', 1),
+          equals([1, 2]),
+        );
+
+        db.updateVectorGroupByLabel('Child', 'refs', 'Child 1', {});
+        expect(db.readVectorIntegersById('Child', 'parent_ref', 1), isEmpty);
+      } finally {
+        db.close();
+      }
+    });
+
+    test('throws for a nonexistent label', () {
+      final db = openRelations();
+      try {
+        expect(
+          () => db.updateVectorGroupByLabel('Child', 'refs', 'Nonexistent', {
+            'parent_ref': [1],
+          }),
+          throwsA(isA<DatabaseException>()),
+        );
+        expect(
+          () => db.updateSetGroupByLabel('Child', 'parents', 'Nonexistent', {}),
+          throwsA(isA<DatabaseException>()),
         );
       } finally {
         db.close();

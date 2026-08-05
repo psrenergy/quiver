@@ -61,9 +61,10 @@ biome.json        # Lint/format config
   element with `DataView.setBigInt64`, so `bigint` inputs (scalar or array) are preserved
   exactly, never coerced through `Number`. Read paths return `number` (converted via `Number()`
   after the FFI call) — the deliberately simple surface.
-- **`src/group-columns.ts` is the one columnar marshaller** for `updateTimeSeriesGroup`,
-  `updateVectorGroup` and `updateSetGroup` (`updateGroupColumns(handle, caller, cFn, ...)`) — the
-  three differ only in which C entry point they pass, so don't re-inline it per method. It validates
+- **`src/group-columns.ts` is the one columnar marshaller** for the six group writers—the three id
+  forms plus the three `…ByLabel` forms—(`updateGroupColumns(handle, caller, cFn, ...)`), so the
+  element arrives pre-marshalled from the call site as a `bigint` id or label C string; the
+  functions differ only in which C entry point they pass, so don't re-inline it per method. It validates
   before marshalling: jagged columns and named-but-empty columns (`rowCount === 0`) throw a
   `QuiverError` naming the column. Load-bearing — an empty column would otherwise marshal a `null`
   data pointer that the C API dereferences against the first column's `row_count`. Pass `{}` (no

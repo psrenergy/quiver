@@ -325,6 +325,32 @@ include("fixture.jl")
 
         Quiver.close!(db)
     end
+
+    @testset "Update By Label" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+        id = Quiver.create_element!(db, "Collection"; label = "Item 1")
+
+        Quiver.update_time_series_group!(db, "Collection", "data", "Item 1";
+            date_time = ["2024-01-01T10:00:00"],
+            value = [1.5],
+        )
+
+        result = Quiver.read_time_series_group(db, "Collection", "data", id)
+        @test result["date_time"][1] == DateTime(2024, 1, 1, 10, 0, 0)
+        @test result["value"][1] == 1.5
+
+        # An unresolvable label throws "Element not found"
+        @test_throws Quiver.DatabaseException Quiver.update_time_series_group!(
+            db, "Collection", "data", "Nonexistent";
+            date_time = ["2024-01-01T10:00:00"],
+            value = [1.5],
+        )
+
+        Quiver.close!(db)
+    end
 end
 
 end

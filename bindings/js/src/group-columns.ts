@@ -15,13 +15,14 @@ export type GroupColumns = Record<string, (number | string | null)[]>;
 
 /**
  * The parallel-array signature every columnar group update C function shares
- * (quiver_database_update_{time_series,vector,set}_group).
+ * (quiver_database_update_{time_series,vector,set}_group), including the _by_label forms where
+ * the element is a label C string.
  */
 type ColumnUpdateFn = (
   db: NativePointer,
   collection: Uint8Array,
   group: Uint8Array,
-  id: bigint,
+  element: bigint | Uint8Array,
   names: Uint8Array | null,
   types: Uint8Array | null,
   data: Uint8Array | null,
@@ -43,7 +44,7 @@ export function updateGroupColumns(
   update: ColumnUpdateFn,
   collection: string,
   group: string,
-  id: number,
+  element: bigint | Uint8Array,
   data: GroupColumns,
 ): void {
   const collBuf = toCString(collection);
@@ -51,7 +52,7 @@ export function updateGroupColumns(
   const entries = Object.entries(data);
 
   if (entries.length === 0) {
-    check(update(handle, collBuf.buf, grpBuf.buf, BigInt(id), null, null, null, null, 0n, 0n));
+    check(update(handle, collBuf.buf, grpBuf.buf, element, null, null, null, null, 0n, 0n));
     return;
   }
 
@@ -149,7 +150,7 @@ export function updateGroupColumns(
       handle,
       collBuf.buf,
       grpBuf.buf,
-      BigInt(id),
+      element,
       namesTable.buf,
       typesAlloc.buf,
       dataTable.buf,

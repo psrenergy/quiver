@@ -107,4 +107,45 @@ describe("upsertTimeSeriesRow", () => {
       db.close();
     }
   });
+
+  test("addresses the element by label", () => {
+    const db = Database.fromSchema(":memory:", COLLECTIONS_SCHEMA);
+    try {
+      const id = db.createElement("Collection", { label: "Item1" });
+
+      db.upsertTimeSeriesRowByLabel("Collection", "data", "Item1", {
+        date_time: "2024-01-01T00:00:00",
+        value: 1.5,
+      });
+      db.upsertTimeSeriesRowByLabel("Collection", "data", "Item1", {
+        date_time: "2024-01-02T00:00:00",
+        value: 2.5,
+      });
+      db.upsertTimeSeriesRowByLabel("Collection", "data", "Item1", {
+        date_time: "2024-01-02T00:00:00",
+        value: 9.5,
+      });
+
+      const result = db.readTimeSeriesGroup("Collection", "data", id);
+      expect(result.date_time).toEqual(["2024-01-01T00:00:00", "2024-01-02T00:00:00"]);
+      expect(result.value).toEqual([1.5, 9.5]);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("throws on a non-existent label", () => {
+    const db = Database.fromSchema(":memory:", COLLECTIONS_SCHEMA);
+    try {
+      db.createElement("Collection", { label: "Item1" });
+      expect(() =>
+        db.upsertTimeSeriesRowByLabel("Collection", "data", "missing", {
+          date_time: "2024-01-01T00:00:00",
+          value: 1.5,
+        }),
+      ).toThrow(/Element not found/);
+    } finally {
+      db.close();
+    }
+  });
 });

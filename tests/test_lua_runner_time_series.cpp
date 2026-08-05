@@ -120,6 +120,28 @@ TEST_F(LuaRunnerTest, UpdateTimeSeriesGroup) {
     EXPECT_DOUBLE_EQ(std::get<double>(rows[2].at("value")), 30.0);
 }
 
+TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupByLabel) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    db.create_element("Collection", quiver::Element().set("label", "Item 1"));
+
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(
+        db:update_time_series_group("Collection", "data", "Item 1", {
+            date_time = { "2024-06-01", "2024-06-02", "2024-06-03" },
+            value = { 10.0, 20.0, 30.0 },
+        })
+    )");
+
+    auto rows = db.read_time_series_group("Collection", "data", 1);
+    EXPECT_EQ(rows.size(), 3);
+    EXPECT_EQ(std::get<std::string>(rows[0].at("date_time")), "2024-06-01");
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[0].at("value")), 10.0);
+    EXPECT_EQ(std::get<std::string>(rows[2].at("date_time")), "2024-06-03");
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[2].at("value")), 30.0);
+}
+
 TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupScalarColumnThrows) {
     // Negative path: passing scalars (the upsert_time_series_row shape) where the
     // column-oriented update expects arrays must throw instead of silently
@@ -449,6 +471,47 @@ TEST_F(LuaRunnerTest, UpsertTimeSeriesRowSamePK) {
     EXPECT_EQ(rows.size(), 1);
     EXPECT_EQ(std::get<std::string>(rows[0].at("date_time")), "2024-06-01");
     EXPECT_DOUBLE_EQ(std::get<double>(rows[0].at("value")), 99.0);
+}
+
+TEST_F(LuaRunnerTest, UpsertTimeSeriesRowByLabel) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    db.create_element("Collection", quiver::Element().set("label", "Item 1"));
+
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(db:upsert_time_series_row("Collection", "data", "Item 1", { date_time = "2024-06-01", value = 10.0 }))");
+
+    auto rows = db.read_time_series_group("Collection", "data", 1);
+    EXPECT_EQ(rows.size(), 1);
+    EXPECT_EQ(std::get<std::string>(rows[0].at("date_time")), "2024-06-01");
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[0].at("value")), 10.0);
+
+    lua.run(R"(db:upsert_time_series_row("Collection", "data", "Item 1", { date_time = "2024-06-01", value = 99.0 }))");
+
+    rows = db.read_time_series_group("Collection", "data", 1);
+    EXPECT_EQ(rows.size(), 1);
+    EXPECT_EQ(std::get<std::string>(rows[0].at("date_time")), "2024-06-01");
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[0].at("value")), 99.0);
+}
+
+TEST_F(LuaRunnerTest, TimeSeriesWritersByLabelNonExistentThrow) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    db.create_element("Collection", quiver::Element().set("label", "Item 1"));
+
+    quiver::LuaRunner lua(db);
+
+    // Both time-series writers' id forms deliberately skip require_element (root design decision);
+    // the label form necessarily throws, since resolving the label is how it addresses the element.
+    expect_lua_error(
+        lua,
+        R"(db:update_time_series_group("Collection", "data", "Nope", { date_time = { "2024-06-01" }, value = { 10.0 } }))",
+        "Element not found");
+    expect_lua_error(
+        lua,
+        R"(db:upsert_time_series_row("Collection", "data", "Nope", { date_time = "2024-06-01", value = 10.0 }))",
+        "Element not found");
 }
 
 TEST_F(LuaRunnerTest, UpsertTimeSeriesRowMultiDim) {

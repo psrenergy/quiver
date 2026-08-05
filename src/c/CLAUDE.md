@@ -25,8 +25,8 @@ src/c/
   database.cpp            # Lifecycle: open, close, factory methods, describe
   database_options.h      # Option converters: convert_database_options, convert_csv_options
   database_create.cpp     # quiver_database_create_element
-  database_update.cpp     # quiver_database_update_element
-  database_delete.cpp     # quiver_database_delete_element
+  database_update.cpp     # quiver_database_update_element + group updates (+ their _by_label forms)
+  database_delete.cpp     # quiver_database_delete_element (+ _by_label)
   database_read.cpp       # All read operations + co-located free functions
   database_metadata.cpp   # Metadata get/list + co-located free functions
   database_query.cpp      # Query operations (plain and parameterized)
@@ -200,8 +200,9 @@ This pattern mirrors the `convert_params()` approach from `database_query.cpp` f
 
 **One decoder for every group update.** `unmarshal_group_columns_to_rows` (`database_helpers.h`) is
 the inverse of `marshal_group_rows_to_c` and is shared by `quiver_database_update_time_series_group`,
-`_update_vector_group`, and `_update_set_group` — the decoder was duplicated once and must not be
-again. It owns three contracts the row-shaped C++ API cannot express:
+`_update_vector_group`, `_update_set_group` **and their three `_by_label` counterparts** — the
+decoder was duplicated once and must not be again. It owns three contracts the row-shaped C++ API
+cannot express:
 - **A NULL cell is NULL however it is spelled**: masked out, a NULL per-column data pointer, or (for
   string columns) a NULL `char*` entry under a dense mask. That last case is what the read direction
   emits for a NULL STRING cell, so feeding a read result back with the mask stripped must not be UB.
@@ -210,6 +211,19 @@ again. It owns three contracts the row-shaped C++ API cannot express:
   destroy data and report success. Clearing is `column_count == 0`.
 - Masked cells become an explicit `Value{nullptr}` in **every** row, keeping rows uniform (the core
   builds its INSERT column list from `rows[0]`).
+
+Its single-row sibling is **`unmarshal_single_row`** (same header), shared by
+`quiver_database_upsert_time_series_row` and its `_by_label` form: one value per `column_data[c]`,
+so no mask and no `row_count` — an omitted column is simply absent from the row and the core leaves
+it at its DEFAULT.
+
+## By-Label Writers
+
+C has no overloading, so each C++ label overload is a separate `_by_label` symbol taking a
+`const char* label` where the id was, signature otherwise identical (same columnar arrays, same
+per-cell mask, same clearing rule). Each is a thin passthrough to the C++ overload — no resolution,
+no validation, no message of its own; an unresolvable label surfaces the core's Pattern 2 error
+through `quiver_get_last_error`, and there are no new error codes.
 
 ## Parameterized Queries
 
