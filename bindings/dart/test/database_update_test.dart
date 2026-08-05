@@ -1787,7 +1787,7 @@ void main() {
           throwsA(isA<DatabaseException>()),
         );
         expect(
-          () => db.updateVectorGroupByLabel('Child', 'refs', 'Nonexistent', {}),
+          () => db.updateSetGroupByLabel('Child', 'parents', 'Nonexistent', {}),
           throwsA(isA<DatabaseException>()),
         );
       } finally {
