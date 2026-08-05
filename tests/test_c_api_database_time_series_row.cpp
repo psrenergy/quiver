@@ -1160,3 +1160,125 @@ TEST(DatabaseCApi, ReadTimeSeriesRowGroupNotFound) {
 
     quiver_database_close(db);
 }
+
+// ============================================================================
+// Upsert time series row by label (quiver_database_upsert_time_series_row_by_label)
+// ============================================================================
+
+TEST(DatabaseCApi, UpsertTimeSeriesRowByLabel) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    quiver_element_t* config = nullptr;
+    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
+    quiver_element_set_string(config, "label", "Test Config");
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", config, &tmp_id);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
+
+    quiver_element_t* item = nullptr;
+    ASSERT_EQ(quiver_element_create(&item), QUIVER_OK);
+    quiver_element_set_string(item, "label", "Item 1");
+    int64_t id = 0;
+    quiver_database_create_element(db, "Collection", item, &id);
+    EXPECT_EQ(quiver_element_destroy(item), QUIVER_OK);
+
+    const char* col_names[] = {"date_time", "value"};
+    int col_types[] = {QUIVER_DATA_TYPE_STRING, QUIVER_DATA_TYPE_FLOAT};
+    const char* dt_buf[] = {"2024-01-01T10:00:00"};
+    double val_first[] = {1.5};
+    const void* col_data_first[] = {dt_buf, val_first};
+    auto err = quiver_database_upsert_time_series_row_by_label(
+        db, "Collection", "data", "Item 1", col_names, col_types, col_data_first, 2);
+    EXPECT_EQ(err, QUIVER_OK);
+
+    // Upsert semantics survive the label form: same PK replaces rather than appends
+    double val_second[] = {99.0};
+    const void* col_data_second[] = {dt_buf, val_second};
+    err = quiver_database_upsert_time_series_row_by_label(
+        db, "Collection", "data", "Item 1", col_names, col_types, col_data_second, 2);
+    EXPECT_EQ(err, QUIVER_OK);
+
+    char** out_col_names = nullptr;
+    int* out_col_types = nullptr;
+    void** out_col_data = nullptr;
+    uint8_t** out_col_has_value = nullptr;
+    size_t col_count = 0;
+    size_t row_count = 0;
+    err = quiver_database_read_time_series_group(db,
+                                                 "Collection",
+                                                 "data",
+                                                 id,
+                                                 &out_col_names,
+                                                 &out_col_types,
+                                                 &out_col_data,
+                                                 &out_col_has_value,
+                                                 &col_count,
+                                                 &row_count);
+    EXPECT_EQ(err, QUIVER_OK);
+    ASSERT_EQ(row_count, 1);  // upsert: NOT 2 rows
+    EXPECT_DOUBLE_EQ(static_cast<double*>(out_col_data[1])[0], 99.0);
+
+    quiver_database_free_time_series_data(
+        out_col_names, out_col_types, out_col_data, out_col_has_value, col_count, row_count);
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, UpsertTimeSeriesRowByLabelNonExistent) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    quiver_element_t* config = nullptr;
+    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
+    quiver_element_set_string(config, "label", "Test Config");
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", config, &tmp_id);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
+
+    const char* col_names[] = {"date_time", "value"};
+    int col_types[] = {QUIVER_DATA_TYPE_STRING, QUIVER_DATA_TYPE_FLOAT};
+    const char* dt_buf[] = {"2024-01-01T10:00:00"};
+    double val_buf[] = {1.5};
+    const void* col_data[] = {dt_buf, val_buf};
+    auto err = quiver_database_upsert_time_series_row_by_label(
+        db, "Collection", "data", "No Such Item", col_names, col_types, col_data, 2);
+    EXPECT_EQ(err, QUIVER_ERROR);
+    std::string msg = quiver_get_last_error();
+    EXPECT_EQ(msg, "Element not found: label 'No Such Item' in collection 'Collection'") << "Actual: " << msg;
+
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, UpsertTimeSeriesRowByLabelNullArguments) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    const char* col_names[] = {"date_time"};
+    int col_types[] = {QUIVER_DATA_TYPE_STRING};
+    const char* dt_buf[] = {"2024-01-01T10:00:00"};
+    const void* col_data[] = {dt_buf};
+
+    EXPECT_EQ(quiver_database_upsert_time_series_row_by_label(
+                  nullptr, "Collection", "data", "Item 1", col_names, col_types, col_data, 1),
+              QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_upsert_time_series_row_by_label(
+                  db, nullptr, "data", "Item 1", col_names, col_types, col_data, 1),
+              QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_upsert_time_series_row_by_label(
+                  db, "Collection", nullptr, "Item 1", col_names, col_types, col_data, 1),
+              QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_upsert_time_series_row_by_label(
+                  db, "Collection", "data", nullptr, col_names, col_types, col_data, 1),
+              QUIVER_ERROR);
+
+    quiver_database_close(db);
+}

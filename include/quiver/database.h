@@ -39,9 +39,13 @@ public:
     int64_t current_version() const;
 
     // Element operations
+    // Every id-addressed writer also has a label overload: it resolves the label to an id (each
+    // collection has a UNIQUE NOT NULL label by convention) and delegates to the id overload.
     int64_t create_element(const std::string& collection, const Element& element);
     void update_element(const std::string& collection, int64_t id, const Element& element);
+    void update_element(const std::string& collection, const std::string& label, const Element& element);
     void delete_element(const std::string& collection, int64_t id);
+    void delete_element(const std::string& collection, const std::string& label);
 
     // Read scalar attributes (all elements). One entry per element, aligned with read_element_ids;
     // a SQL NULL is std::nullopt (positional — never dropped).
@@ -105,9 +109,17 @@ public:
                              const std::string& group,
                              int64_t id,
                              const std::vector<std::map<std::string, Value>>& rows);
+    void update_vector_group(const std::string& collection,
+                             const std::string& group,
+                             const std::string& label,
+                             const std::vector<std::map<std::string, Value>>& rows);
     void update_set_group(const std::string& collection,
                           const std::string& group,
                           int64_t id,
+                          const std::vector<std::map<std::string, Value>>& rows);
+    void update_set_group(const std::string& collection,
+                          const std::string& group,
+                          const std::string& label,
                           const std::vector<std::map<std::string, Value>>& rows);
 
     // Read element Ids
@@ -139,10 +151,15 @@ public:
                                             const std::string& attribute,
                                             const std::string& date_time);
 
-    // Update time series group - replaces all rows for element
+    // Update time series group - replaces all rows for element.
+    // An unknown id is not checked: with rows it fails the foreign key, with none it does nothing.
     void update_time_series_group(const std::string& collection,
                                   const std::string& group,
                                   int64_t id,
+                                  const std::vector<std::map<std::string, Value>>& rows);
+    void update_time_series_group(const std::string& collection,
+                                  const std::string& group,
+                                  const std::string& label,
                                   const std::vector<std::map<std::string, Value>>& rows);
 
     // Add (or upsert) a single time series row. Inserts a new row identified by id +
@@ -154,6 +171,10 @@ public:
     void upsert_time_series_row(const std::string& collection,
                                 const std::string& group,
                                 int64_t id,
+                                const std::map<std::string, Value>& row);
+    void upsert_time_series_row(const std::string& collection,
+                                const std::string& group,
+                                const std::string& label,
                                 const std::map<std::string, Value>& row);
 
     // Time series files - singleton table storing file paths for external time series data

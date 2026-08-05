@@ -406,3 +406,92 @@ TEST(Database, UpdateTimeSeriesGroupMissingBlockInLaterRow) {
     auto result = db.read_time_series_group("Resource", "load", id);
     EXPECT_TRUE(result.empty());
 }
+
+// ============================================================================
+// Update time series group by label
+// ============================================================================
+
+TEST(Database, UpdateTimeSeriesGroupByLabel) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element e1;
+    e1.set("label", std::string("Item 1"));
+    auto id1 = db.create_element("Collection", e1);
+
+    quiver::Element e2;
+    e2.set("label", std::string("Item 2"));
+    auto id2 = db.create_element("Collection", e2);
+
+    std::vector<std::map<std::string, quiver::Value>> rows = {
+        {{"date_time", std::string("2024-01-01T10:00:00")}, {"value", 1.0}},
+        {{"date_time", std::string("2024-01-02T10:00:00")}, {"value", 2.0}}};
+
+    // Item 1 addressed by id, Item 2 by label - same payload, same resulting state
+    db.update_time_series_group("Collection", "data", id1, rows);
+    db.update_time_series_group("Collection", "data", "Item 2", rows);
+
+    auto by_label = db.read_time_series_group("Collection", "data", id2);
+    ASSERT_EQ(by_label.size(), 2);
+    EXPECT_EQ(std::get<std::string>(by_label[0]["date_time"]), "2024-01-01T10:00:00");
+    EXPECT_DOUBLE_EQ(std::get<double>(by_label[1]["value"]), 2.0);
+
+    auto by_id = db.read_time_series_group("Collection", "data", id1);
+    ASSERT_EQ(by_id.size(), by_label.size());
+    EXPECT_EQ(std::get<std::string>(by_id[0]["date_time"]), std::get<std::string>(by_label[0]["date_time"]));
+    EXPECT_DOUBLE_EQ(std::get<double>(by_id[1]["value"]), std::get<double>(by_label[1]["value"]));
+}
+
+TEST(Database, UpdateTimeSeriesGroupByLabelEmpty) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element e1;
+    e1.set("label", std::string("Item 1"));
+    auto id = db.create_element("Collection", e1);
+
+    std::vector<std::map<std::string, quiver::Value>> rows = {
+        {{"date_time", std::string("2024-01-01T10:00:00")}, {"value", 1.0}}};
+    db.update_time_series_group("Collection", "data", id, rows);
+
+    // Clear by label
+    std::vector<std::map<std::string, quiver::Value>> empty_rows;
+    db.update_time_series_group("Collection", "data", "Item 1", empty_rows);
+
+    auto result = db.read_time_series_group("Collection", "data", id);
+    EXPECT_TRUE(result.empty());
+}
+
+TEST(Database, UpdateTimeSeriesGroupByLabelNonExistent) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element e1;
+    e1.set("label", std::string("Item 1"));
+    db.create_element("Collection", e1);
+
+    std::vector<std::map<std::string, quiver::Value>> rows = {
+        {{"date_time", std::string("2024-01-01T10:00:00")}, {"value", 1.0}}};
+
+    try {
+        db.update_time_series_group("Collection", "data", "No Such Item", rows);
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), "Element not found: label 'No Such Item' in collection 'Collection'");
+    }
+
+    // A label from another collection does not resolve either
+    EXPECT_THROW(db.update_time_series_group("Collection", "data", "Test Config", rows), std::runtime_error);
+}

@@ -274,6 +274,37 @@ unmarshal_group_columns_to_rows(const char* caller,
     return rows;
 }
 
+// Decodes the single-row typed-pointer form into the row-shaped map the C++ core takes, shared by
+// quiver_database_upsert_time_series_row and its _by_label counterpart. Each column_data[c]
+// points at a single value, so there is no mask and no row_count - a cell is either supplied or
+// its column is simply absent (the core leaves the column at its DEFAULT).
+inline std::map<std::string, quiver::Value> unmarshal_single_row(const char* caller,
+                                                                 const char* const* column_names,
+                                                                 const int* column_types,
+                                                                 const void* const* column_data,
+                                                                 size_t column_count) {
+    std::map<std::string, quiver::Value> row;
+    for (size_t c = 0; c < column_count; ++c) {
+        std::string col_name(column_names[c]);
+        switch (column_types[c]) {
+        case QUIVER_DATA_TYPE_INTEGER:
+            row[col_name] = static_cast<const int64_t*>(column_data[c])[0];
+            break;
+        case QUIVER_DATA_TYPE_FLOAT:
+            row[col_name] = static_cast<const double*>(column_data[c])[0];
+            break;
+        case QUIVER_DATA_TYPE_STRING:
+        case QUIVER_DATA_TYPE_DATE_TIME:
+            row[col_name] = std::string(static_cast<const char* const*>(column_data[c])[0]);
+            break;
+        default:
+            throw std::runtime_error(std::string("Cannot ") + caller + ": unknown column type " +
+                                     std::to_string(column_types[c]));
+        }
+    }
+    return row;
+}
+
 // Marshals row-shaped group data (time series / vector / set) into the columnar
 // typed-arrays + per-cell presence-mask out-params shared by the group read C
 // functions. `columns` pairs each column name with its quiver_data_type_t value.

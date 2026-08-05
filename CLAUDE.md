@@ -90,9 +90,27 @@ Settled questions — don't relitigate without the user; each was decided delibe
   string for TEXT / INTEGER-FK / DATE_TIME. `TypeValidator` (scalar create/update) and
   `value_matches_type` (time-series writes) share this rule; bindings never coerce
   schema-dependently.
-- **`update_element` / `delete_element` throw on a missing id** (`"Element not found: <id> in
-  collection '<c>'"`, Pattern 2) — not a silent no-op. The error surfaces through the C API error
-  channel and every binding.
+- **A missing element id is Pattern 2 `"Element not found: <id> in collection '<c>'"`, not a silent
+  no-op.** `update_element` / `delete_element` / `update_vector_group` / `update_set_group` check it
+  through `Impl::require_element`; the error surfaces through the C API error channel and every
+  binding. The two time-series writers deliberately do not check: an unknown id fails the foreign
+  key when there are rows to insert, and a clear matches nothing. Adding `require_element` there was
+  rejected — it buys a nicer message for a case SQLite already blocks, at the cost of a `SELECT` per
+  row in the ingestion loops `upsert_time_series_row` exists for. Every label form throws, since
+  resolving the label is how it addresses the element.
+- **The id-addressed writers also accept a label; the id-addressed readers do not.** Every
+  collection has a `label TEXT UNIQUE NOT NULL` by convention and callers usually hold that, so all
+  six writers gained a label form (`Impl::resolve_label` in `src/database_impl.h`, then delegate to
+  the id overload — one write path, one validation path). Extending it to `read_*_by_id` was
+  rejected: the readers are the bulk/hot surface. Resolution lives in C++ so no binding invents the
+  message — an unresolvable label is Pattern 2
+  `"Element not found: label '<label>' in collection '<c>'"`.
+- **The two time-series writers do not pre-check the element id.** `update_time_series_group` /
+  `upsert_time_series_row` skip `require_element`, unlike the other four writers: an unknown id
+  fails the foreign key when there are rows to insert and does nothing when clearing. Adding the
+  check was proposed during the by-label review and declined — a behaviour change to existing
+  methods, out of scope for adding the label forms. Every label form necessarily throws, since
+  resolving the label is how it addresses the element.
 - **`query_*` validate parameter count**: `execute` rejects a mismatch between bound parameters and
   `?` placeholders (too few or too many) instead of binding NULL / ignoring extras.
 - **Migration `down_sql` is a required feature** — do not remove the down path.
@@ -174,6 +192,9 @@ Reviewed adversarially and rejected — these are not improvements:
 
 - Collapsing per-method FFI boilerplate in Dart/Python into closure-parameterized helpers — the
   expanded style is the de facto convention; helpers add pointer-type indirection for marginal gain.
+  Same verdict for the C API's `QUIVER_REQUIRE` + try/catch shell (including the six `_by_label`
+  functions): the *marshaling* is shared (`unmarshal_group_columns_to_rows`, `unmarshal_single_row`),
+  the wrapper stays written out per function.
 - Deleting or "cleaning up" `tests/sandbox` — intentional scratch target.
 - "Simplifying" the documented Bun FFI workarounds (`bindings/js/CLAUDE.md`) or the binary
   hot-path decisions (`src/CLAUDE.md`) — load-bearing.
@@ -382,6 +403,8 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
 - Transaction control: `begin_transaction()`, `commit()`, `rollback()`, `in_transaction()`
 - Dry runs: `begin_dry_run()`, `end_dry_run()`, `in_dry_run()` — one transaction that is always rolled back; while active the three transaction methods above are absorbed (no-ops) so nested callers compose. See the design decision below.
 - CRUD: `create_element(collection, element)`, `update_element`, `delete_element`
+- **By-label writers**: every id-addressed writer also takes a `label` in place of the id (a C++
+  overload, a `_by_label` symbol in the C API); the id-addressed readers stay id-only.
 - Scalar/vector/set readers: `read_{scalar,vector,set}_{integers,floats,strings}(collection, attribute)` (+ `_by_id` variants). Scalar bulk readers return one entry per element with SQL NULLs preserved positionally (`std::optional` / `nothing`/`None`/`null`/`nil`); see the scalar-NULL design decision.
 - Whole-group readers: `read_vector_group_by_id()` / `read_set_group_by_id()` — row-shaped
   `vector<map<string, Value>>` over all of a group's value columns, positionally aligned with SQL
@@ -457,7 +480,7 @@ verbatim. Implementation notes: `src/CLAUDE.md`.
 
 ### Transformation Rules
 
-- **C++ to C API:** Prefix `quiver_database_` to the C++ method name. Example: `create_element` -> `quiver_database_create_element`
+- **C++ to C API:** Prefix `quiver_database_` to the C++ method name. Example: `create_element` -> `quiver_database_create_element`. C has no overloading, so a C++ *label* overload additionally takes a `_by_label` suffix: `update_element(collection, label, element)` -> `quiver_database_update_element_by_label`
 - **C++ to Julia:** Same name. Add `!` suffix for mutating operations (create, update, delete). Example: `create_element` -> `create_element!`
 - **C++ to Dart:** Convert `snake_case` to `camelCase`. Factory methods use named constructors: `from_schema` -> `Database.fromSchema()`
 - **C++ to Python:** Same `snake_case` name. Factory methods are `@staticmethod`. Properties are regular methods (not `@property`). Create/update use `**kwargs`: `create_element("Collection", label="x")`.

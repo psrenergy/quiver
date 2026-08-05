@@ -197,8 +197,15 @@ impl_->logger->debug("Opening database: {}", path);
   matches `INTEGER` or `REAL` (int-for-REAL coercion), double matches `REAL` only (a float into an
   `INTEGER` column is rejected), string matches `TEXT`/`INTEGER`(FK label)/`DATE_TIME`. Keep the two
   in sync (root design decision).
-- **`update_element` / `delete_element` / the group writers verify the id exists** (via
-  `Impl::require_element`) and throw Pattern 2 `"Element not found: ..."` — no silent no-op.
+- **`update_element` / `delete_element` / the vector+set group writers verify the id exists** (via
+  `Impl::require_element`) and throw Pattern 2 `"Element not found: ..."` — no silent no-op. The two
+  **time-series** writers (`update_time_series_group`, `upsert_time_series_row`) deliberately do
+  not.
+- **`Impl::resolve_label`** (`database_impl.h`, beside `require_element`) is the single gate behind
+  every by-label writer: `require_collection`, then `SELECT id FROM <collection> WHERE label = ?`
+  (collection interpolated, label bound). No match throws Pattern 2
+  `"Element not found: label '<label>' in collection '<collection>'"`. It returns a plain `int64_t`
+  — no `std::optional`, no silent no-op — so each label overload stays one line: resolve, delegate.
 - **Schema metadata loads lazily** (`Impl::require_schema`): the `Database(path, options)`
   constructor does not read it, so the first metadata/CRUD call does. `schema` and `type_validator`
   are `mutable` (const readers trigger the load) and `load_schema_metadata()` is `const` and

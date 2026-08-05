@@ -1846,3 +1846,175 @@ TEST(DatabaseCApi, UpdateGroupNullStringEntryIsNull) {
 
     EXPECT_EQ(quiver_database_close(db), QUIVER_OK);
 }
+
+// ============================================================================
+// By-label writers (quiver_database_update_element_by_label /
+// _update_vector_group_by_label / _update_set_group_by_label)
+// ============================================================================
+
+TEST(DatabaseCApi, UpdateElementByLabel) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    quiver_element_t* config = nullptr;
+    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
+    quiver_element_set_string(config, "label", "Test Config");
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", config, &tmp_id);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
+
+    quiver_element_t* e = nullptr;
+    ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
+    quiver_element_set_string(e, "label", "Item 1");
+    int64_t id = 0;
+    quiver_database_create_element(db, "Collection", e, &id);
+    EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
+
+    quiver_element_t* update = nullptr;
+    ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
+    quiver_element_set_integer(update, "some_integer", 42);
+    EXPECT_EQ(quiver_database_update_element_by_label(db, "Collection", "Item 1", update), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(update), QUIVER_OK);
+
+    int64_t value = 0;
+    int has_value = 0;
+    EXPECT_EQ(quiver_database_read_scalar_integer_by_id(db, "Collection", "some_integer", id, &value, &has_value),
+              QUIVER_OK);
+    EXPECT_EQ(has_value, 1);
+    EXPECT_EQ(value, 42);
+
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, UpdateElementByLabelNonExistent) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    quiver_element_t* config = nullptr;
+    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
+    quiver_element_set_string(config, "label", "Test Config");
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", config, &tmp_id);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
+
+    quiver_element_t* update = nullptr;
+    ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
+    quiver_element_set_integer(update, "some_integer", 42);
+
+    // The C++ core owns the message; the C layer only routes it to quiver_get_last_error.
+    EXPECT_EQ(quiver_database_update_element_by_label(db, "Collection", "No Such Item", update), QUIVER_ERROR);
+    std::string msg = quiver_get_last_error();
+    EXPECT_EQ(msg, "Element not found: label 'No Such Item' in collection 'Collection'") << "Actual: " << msg;
+
+    // A label from another collection does not resolve here either.
+    EXPECT_EQ(quiver_database_update_element_by_label(db, "Collection", "Test Config", update), QUIVER_ERROR);
+    msg = quiver_get_last_error();
+    EXPECT_EQ(msg, "Element not found: label 'Test Config' in collection 'Collection'") << "Actual: " << msg;
+
+    EXPECT_EQ(quiver_element_destroy(update), QUIVER_OK);
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, UpdateVectorGroupAndSetGroupByLabel) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    quiver_element_t* config = nullptr;
+    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
+    quiver_element_set_string(config, "label", "Test Config");
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", config, &tmp_id);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
+
+    quiver_element_t* e = nullptr;
+    ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
+    quiver_element_set_string(e, "label", "Item 1");
+    int64_t id = 0;
+    quiver_database_create_element(db, "Collection", e, &id);
+    EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
+
+    const char* vec_names[] = {"value_int"};
+    int vec_types[] = {QUIVER_DATA_TYPE_INTEGER};
+    int64_t vec_values[] = {10, 20};
+    const void* vec_data[] = {vec_values};
+    ASSERT_EQ(quiver_database_update_vector_group_by_label(
+                  db, "Collection", "values", "Item 1", vec_names, vec_types, vec_data, nullptr, 1, 2),
+              QUIVER_OK);
+
+    const char* set_names[] = {"tag"};
+    int set_types[] = {QUIVER_DATA_TYPE_STRING};
+    const char* set_values[] = {"a", "b"};
+    const void* set_data[] = {set_values};
+    ASSERT_EQ(quiver_database_update_set_group_by_label(
+                  db, "Collection", "tags", "Item 1", set_names, set_types, set_data, nullptr, 1, 2),
+              QUIVER_OK);
+
+    int64_t* out = nullptr;
+    size_t count = 0;
+    ASSERT_EQ(quiver_database_read_vector_integers_by_id(db, "Collection", "value_int", id, &out, &count), QUIVER_OK);
+    ASSERT_EQ(count, 2u);
+    EXPECT_EQ(out[0], 10);
+    EXPECT_EQ(out[1], 20);
+    quiver_database_free_integer_array(out);
+
+    char** tags = nullptr;
+    size_t tag_count = 0;
+    ASSERT_EQ(quiver_database_read_set_strings_by_id(db, "Collection", "tag", id, &tags, &tag_count), QUIVER_OK);
+    ASSERT_EQ(tag_count, 2u);
+    EXPECT_STREQ(tags[0], "a");
+    quiver_database_free_string_array(tags, tag_count);
+
+    // Clearing by label: no columns, no rows
+    ASSERT_EQ(quiver_database_update_vector_group_by_label(
+                  db, "Collection", "values", "Item 1", nullptr, nullptr, nullptr, nullptr, 0, 0),
+              QUIVER_OK);
+    ASSERT_EQ(quiver_database_read_vector_integers_by_id(db, "Collection", "value_int", id, &out, &count), QUIVER_OK);
+    EXPECT_EQ(count, 0u);
+
+    // An unresolvable label errors through the shared channel
+    EXPECT_EQ(quiver_database_update_set_group_by_label(
+                  db, "Collection", "tags", "No Such Item", set_names, set_types, set_data, nullptr, 1, 2),
+              QUIVER_ERROR);
+    std::string msg = quiver_get_last_error();
+    EXPECT_EQ(msg, "Element not found: label 'No Such Item' in collection 'Collection'") << "Actual: " << msg;
+
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, UpdateByLabelNullArgumentsRejected) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    quiver_element_t* e = nullptr;
+    ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
+    quiver_element_set_integer(e, "some_integer", 42);
+
+    EXPECT_EQ(quiver_database_update_element_by_label(nullptr, "Collection", "Item 1", e), QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_update_element_by_label(db, nullptr, "Item 1", e), QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_update_element_by_label(db, "Collection", nullptr, e), QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_update_element_by_label(db, "Collection", "Item 1", nullptr), QUIVER_ERROR);
+    EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
+
+    // The group writers take the clear path at column_count == 0, so these reach the label guard
+    // without needing column arrays.
+    EXPECT_EQ(quiver_database_update_vector_group_by_label(
+                  db, "Collection", "values", nullptr, nullptr, nullptr, nullptr, nullptr, 0, 0),
+              QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_update_set_group_by_label(
+                  db, "Collection", "tags", nullptr, nullptr, nullptr, nullptr, nullptr, 0, 0),
+              QUIVER_ERROR);
+
+    quiver_database_close(db);
+}

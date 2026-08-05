@@ -65,6 +65,16 @@ QUIVER_C_API quiver_error_t quiver_database_update_element(quiver_database_t* db
                                                            const quiver_element_t* element);
 QUIVER_C_API quiver_error_t quiver_database_delete_element(quiver_database_t* db, const char* collection, int64_t id);
 
+// Label-addressed counterparts of the id-addressed writers. A label that matches no element in the
+// collection reports "Element not found: label '<label>' in collection '<collection>'".
+QUIVER_C_API quiver_error_t quiver_database_update_element_by_label(quiver_database_t* db,
+                                                                    const char* collection,
+                                                                    const char* label,
+                                                                    const quiver_element_t* element);
+QUIVER_C_API quiver_error_t quiver_database_delete_element_by_label(quiver_database_t* db,
+                                                                    const char* collection,
+                                                                    const char* label);
+
 // Read scalar attributes. One entry per element (aligned with read_element_ids).
 // Numeric readers carry a parallel presence mask: out_mask[i] == 0 means SQL NULL and
 // out_values[i] is then a placeholder (0 / 0.0) to be ignored. Free out_values with the
@@ -259,6 +269,30 @@ QUIVER_C_API quiver_error_t quiver_database_update_set_group(quiver_database_t* 
                                                              size_t column_count,
                                                              size_t row_count);
 
+// Label-addressed counterparts - identical column/mask contract, the element named by label
+// instead of id.
+QUIVER_C_API quiver_error_t quiver_database_update_vector_group_by_label(quiver_database_t* db,
+                                                                         const char* collection,
+                                                                         const char* group,
+                                                                         const char* label,
+                                                                         const char* const* column_names,
+                                                                         const int* column_types,
+                                                                         const void* const* column_data,
+                                                                         const uint8_t* const* column_has_value,
+                                                                         size_t column_count,
+                                                                         size_t row_count);
+
+QUIVER_C_API quiver_error_t quiver_database_update_set_group_by_label(quiver_database_t* db,
+                                                                      const char* collection,
+                                                                      const char* group,
+                                                                      const char* label,
+                                                                      const char* const* column_names,
+                                                                      const int* column_types,
+                                                                      const void* const* column_data,
+                                                                      const uint8_t* const* column_has_value,
+                                                                      size_t column_count,
+                                                                      size_t row_count);
+
 // Read element Ids
 QUIVER_C_API quiver_error_t quiver_database_read_element_ids(quiver_database_t* db,
                                                              const char* collection,
@@ -391,6 +425,28 @@ QUIVER_C_API quiver_error_t quiver_database_upsert_time_series_row(quiver_databa
                                                                    const int* column_types,
                                                                    const void* const* column_data,
                                                                    size_t column_count);
+
+// Label-addressed counterparts - identical column/mask contract, the element named by label
+// instead of id.
+QUIVER_C_API quiver_error_t quiver_database_update_time_series_group_by_label(quiver_database_t* db,
+                                                                              const char* collection,
+                                                                              const char* group,
+                                                                              const char* label,
+                                                                              const char* const* column_names,
+                                                                              const int* column_types,
+                                                                              const void* const* column_data,
+                                                                              const uint8_t* const* column_has_value,
+                                                                              size_t column_count,
+                                                                              size_t row_count);
+
+QUIVER_C_API quiver_error_t quiver_database_upsert_time_series_row_by_label(quiver_database_t* db,
+                                                                            const char* collection,
+                                                                            const char* group,
+                                                                            const char* label,
+                                                                            const char* const* column_names,
+                                                                            const int* column_types,
+                                                                            const void* const* column_data,
+                                                                            size_t column_count);
 
 // Read time series row - returns one value per element for a specific attribute at a given date_time
 // Uses "last non-null value at or before date_time" lookup semantics

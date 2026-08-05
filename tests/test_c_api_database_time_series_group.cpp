@@ -1012,3 +1012,126 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupMultiColumnEmpty) {
 
     quiver_database_close(db);
 }
+
+// ============================================================================
+// Update time series group by label (quiver_database_update_time_series_group_by_label)
+// ============================================================================
+
+TEST(DatabaseCApi, UpdateTimeSeriesGroupByLabel) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    // Create config
+    quiver_element_t* config = nullptr;
+    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
+    quiver_element_set_string(config, "label", "Test Config");
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", config, &tmp_id);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
+
+    // Create element
+    quiver_element_t* e1 = nullptr;
+    ASSERT_EQ(quiver_element_create(&e1), QUIVER_OK);
+    quiver_element_set_string(e1, "label", "Item 1");
+    int64_t id = 0;
+    quiver_database_create_element(db, "Collection", e1, &id);
+    EXPECT_EQ(quiver_element_destroy(e1), QUIVER_OK);
+
+    // Write by label - same columnar + mask contract as the id form
+    const char* col_names[] = {"date_time", "value"};
+    int col_types[] = {QUIVER_DATA_TYPE_STRING, QUIVER_DATA_TYPE_FLOAT};
+    const char* date_times[] = {"2024-01-01T10:00:00", "2024-01-01T11:00:00"};
+    double values[] = {1.5, 2.5};
+    const void* col_data[] = {date_times, values};
+    auto err = quiver_database_update_time_series_group_by_label(
+        db, "Collection", "data", "Item 1", col_names, col_types, col_data, nullptr, 2, 2);
+    EXPECT_EQ(err, QUIVER_OK);
+
+    // Read back by id - the label named the same element
+    char** out_col_names = nullptr;
+    int* out_col_types = nullptr;
+    void** out_col_data = nullptr;
+    uint8_t** out_col_has_value = nullptr;
+    size_t col_count = 0;
+    size_t row_count = 0;
+    err = quiver_database_read_time_series_group(db,
+                                                 "Collection",
+                                                 "data",
+                                                 id,
+                                                 &out_col_names,
+                                                 &out_col_types,
+                                                 &out_col_data,
+                                                 &out_col_has_value,
+                                                 &col_count,
+                                                 &row_count);
+    EXPECT_EQ(err, QUIVER_OK);
+    ASSERT_EQ(row_count, 2);
+    ASSERT_EQ(col_count, 2);
+    EXPECT_STREQ(static_cast<char**>(out_col_data[0])[0], "2024-01-01T10:00:00");
+    EXPECT_DOUBLE_EQ(static_cast<double*>(out_col_data[1])[1], 2.5);
+
+    quiver_database_free_time_series_data(
+        out_col_names, out_col_types, out_col_data, out_col_has_value, col_count, row_count);
+
+    // Clearing by label: no columns, no rows
+    err = quiver_database_update_time_series_group_by_label(
+        db, "Collection", "data", "Item 1", nullptr, nullptr, nullptr, nullptr, 0, 0);
+    EXPECT_EQ(err, QUIVER_OK);
+
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, UpdateTimeSeriesGroupByLabelNonExistent) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    quiver_element_t* config = nullptr;
+    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
+    quiver_element_set_string(config, "label", "Test Config");
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", config, &tmp_id);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
+
+    const char* col_names[] = {"date_time", "value"};
+    int col_types[] = {QUIVER_DATA_TYPE_STRING, QUIVER_DATA_TYPE_FLOAT};
+    const char* date_times[] = {"2024-01-01T10:00:00"};
+    double values[] = {1.5};
+    const void* col_data[] = {date_times, values};
+    auto err = quiver_database_update_time_series_group_by_label(
+        db, "Collection", "data", "No Such Item", col_names, col_types, col_data, nullptr, 2, 1);
+    EXPECT_EQ(err, QUIVER_ERROR);
+    std::string msg = quiver_get_last_error();
+    EXPECT_EQ(msg, "Element not found: label 'No Such Item' in collection 'Collection'") << "Actual: " << msg;
+
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, UpdateTimeSeriesGroupByLabelNullArguments) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    // column_count == 0 takes the clear path, so these reach the label guard without column arrays.
+    EXPECT_EQ(quiver_database_update_time_series_group_by_label(
+                  nullptr, "Collection", "data", "Item 1", nullptr, nullptr, nullptr, nullptr, 0, 0),
+              QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_update_time_series_group_by_label(
+                  db, nullptr, "data", "Item 1", nullptr, nullptr, nullptr, nullptr, 0, 0),
+              QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_update_time_series_group_by_label(
+                  db, "Collection", nullptr, "Item 1", nullptr, nullptr, nullptr, nullptr, 0, 0),
+              QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_update_time_series_group_by_label(
+                  db, "Collection", "data", nullptr, nullptr, nullptr, nullptr, nullptr, 0, 0),
+              QUIVER_ERROR);
+
+    quiver_database_close(db);
+}
