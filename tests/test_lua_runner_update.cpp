@@ -29,6 +29,33 @@ TEST_F(LuaRunnerTest, UpdateElementSingleScalar) {
     EXPECT_EQ(*label, "Item 1");
 }
 
+TEST_F(LuaRunnerTest, UpdateElementByLabel) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    db.create_element("Collection", quiver::Element().set("label", "Item 1").set("some_integer", int64_t{100}));
+    db.create_element("Collection", quiver::Element().set("label", "Item 2").set("some_integer", int64_t{200}));
+
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(
+        db:update_element("Collection", "Item 1", { some_integer = 999 })
+
+        local scalars = db:read_scalars_by_id("Collection", 1)
+        assert(scalars.some_integer == 999, "Expected 999, got " .. tostring(scalars.some_integer))
+        assert(scalars.label == "Item 1", "Label should be unchanged")
+    )");
+
+    // Verify from C++ side
+    auto value = db.read_scalar_integer_by_id("Collection", "some_integer", 1);
+    EXPECT_TRUE(value.has_value());
+    EXPECT_EQ(*value, 999);
+
+    auto label = db.read_scalar_string_by_id("Collection", "label", 1);
+    EXPECT_TRUE(label.has_value());
+    EXPECT_EQ(*label, "Item 1");
+}
+
 TEST_F(LuaRunnerTest, UpdateElementMultipleScalars) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
@@ -211,6 +238,38 @@ TEST_F(LuaRunnerTest, UpdateElementByIdNonExistent) {
     expect_lua_error(lua, R"(db:update_element("Collection", 999, { some_integer = 5 }))", "Element not found");
 }
 
+TEST_F(LuaRunnerTest, UpdateElementByLabelErrors) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    db.create_element("Collection", quiver::Element().set("label", "Item 1"));
+
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(lua, R"(db:update_element("Collection", "Nope", { some_integer = 5 }))", "label 'Nope'");
+    expect_lua_error(
+        lua, R"(db:update_element("Collection", {}, { some_integer = 5 }))", "an integer id or a string label");
+    expect_lua_error(lua,
+                     R"(db:update_vector_group("Collection", "values", {}, { value_int = { 1 } }))",
+                     "an integer id or a string label");
+}
+
+TEST_F(LuaRunnerTest, UpdateElementByNumericLabel) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    db.create_element("Collection", quiver::Element().set("label", "Item 1").set("some_integer", int64_t{1}));
+    db.create_element("Collection", quiver::Element().set("label", "1").set("some_integer", int64_t{2}));
+
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(
+        db:update_element("Collection", "1", { some_integer = 999 })
+        db:update_element("Collection", 1, { some_integer = 111 })
+    )");
+
+    EXPECT_EQ(*db.read_scalar_integer_by_id("Collection", "some_integer", 1), 111);
+    EXPECT_EQ(*db.read_scalar_integer_by_id("Collection", "some_integer", 2), 999);
+}
+
 // ============================================================================
 // Vector / set group writers
 // ============================================================================
@@ -239,6 +298,20 @@ TEST_F(LuaRunnerTest, UpdateVectorGroupReplacesAndClears) {
 
     lua.run(R"(db:update_vector_group("Child", "refs", 1, {}))");
     EXPECT_TRUE(db.read_vector_integers_by_id("Child", "parent_ref", 1).empty());
+}
+
+TEST_F(LuaRunnerTest, UpdateGroupByLabel) {
+    auto db = relations_db_with_child();
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(db:update_vector_group("Child", "refs", "Child 1", { parent_ref = { 1, 2 } }))");
+    EXPECT_EQ(db.read_vector_integers_by_id("Child", "parent_ref", 1), (std::vector<int64_t>{1, 2}));
+
+    lua.run(R"(db:update_vector_group("Child", "refs", "Child 1", {}))");
+    EXPECT_TRUE(db.read_vector_integers_by_id("Child", "parent_ref", 1).empty());
+
+    lua.run(R"(db:update_set_group("Child", "parents", "Child 1", { parent_ref = { 1 } }))");
+    EXPECT_EQ(db.read_set_integers_by_id("Child", "parent_ref", 1), (std::vector<int64_t>{1}));
 }
 
 TEST_F(LuaRunnerTest, UpdateSetGroupLeavesSiblingSharingColumnNameUntouched) {
@@ -300,6 +373,19 @@ TEST_F(LuaRunnerTest, UpdateGroupErrors) {
     expect_lua_error(lua, R"(db:update_vector_group("Child", "refs", 1, { parent_ref = {} }))", "contain no rows");
     expect_lua_error(
         lua, R"(db:update_set_group("Child", "parents", 1, { parent_ref = 5 }))", "must be an array of values");
+
+    // Every rejected call left the existing row alone.
+    EXPECT_EQ(db.read_vector_integers_by_id("Child", "parent_ref", 1), (std::vector<int64_t>{1}));
+}
+
+TEST_F(LuaRunnerTest, UpdateGroupByLabelErrors) {
+    auto db = relations_db_with_child();
+    quiver::LuaRunner lua(db);
+    lua.run(R"(db:update_vector_group("Child", "refs", "Child 1", { parent_ref = { 1 } }))");
+
+    expect_lua_error(
+        lua, R"(db:update_vector_group("Child", "refs", "Nope", { parent_ref = { 1 } }))", "Element not found");
+    expect_lua_error(lua, R"(db:update_set_group("Child", "parents", "Nope", {}))", "Element not found");
 
     // Every rejected call left the existing row alone.
     EXPECT_EQ(db.read_vector_integers_by_id("Child", "parent_ref", 1), (std::vector<int64_t>{1}));

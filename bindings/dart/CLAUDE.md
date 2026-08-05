@@ -42,7 +42,9 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
 - **Marshaling idiom**: every method allocates through a `package:ffi` `Arena` and releases in
   `finally`. Typed columns go through the shared private `_marshalGroupColumn(Arena, List<Object?>)`
   (used by `updateTimeSeriesGroup`, `upsertTimeSeriesRow`, `updateVectorGroup` and
-  `updateSetGroup`); query parameters through `_marshalParams`.
+  `updateSetGroup`); query parameters through `_marshalParams`. `_marshalColumnArrays`/
+  `_marshalRowArrays` wrap that per-column loop into full argument arrays, shared by those four
+  writers and their `…ByLabel` counterparts — each writer still keeps its own written-out FFI call.
 - **The group writers take columns while the group readers return rows** (`readVectorGroupById`).
   The only asymmetric reader/writer pair here — deliberate, see the root design decisions.
 - **Scalar bulk NULLs**: `readScalarIntegers`/`readScalarFloats` decode a parallel `Pointer<Uint8>`

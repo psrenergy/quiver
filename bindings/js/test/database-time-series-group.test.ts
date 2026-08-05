@@ -58,6 +58,40 @@ describe("readTimeSeriesGroup / updateTimeSeriesGroup (single-column)", () => {
     }
   });
 
+  test("addresses a group by label", () => {
+    const db = Database.fromSchema(":memory:", COLLECTIONS_SCHEMA);
+    try {
+      const id = db.createElement("Collection", { label: "Item1" });
+
+      db.updateTimeSeriesGroupByLabel("Collection", "data", "Item1", {
+        date_time: ["2024-01-01", "2024-01-02"],
+        value: [1.5, 2.5],
+      });
+
+      const result = db.readTimeSeriesGroup("Collection", "data", id);
+
+      expect(result.date_time).toEqual(["2024-01-01", "2024-01-02"]);
+      expect(result.value).toEqual([1.5, 2.5]);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("throws on a non-existent label", () => {
+    const db = Database.fromSchema(":memory:", COLLECTIONS_SCHEMA);
+    try {
+      db.createElement("Collection", { label: "Item1" });
+      expect(() =>
+        db.updateTimeSeriesGroupByLabel("Collection", "data", "missing", {
+          date_time: ["2024-01-01"],
+          value: [1.5],
+        }),
+      ).toThrow(/Element not found/);
+    } finally {
+      db.close();
+    }
+  });
+
   test("returns empty object when element has no time series data", () => {
     const db = Database.fromSchema(":memory:", COLLECTIONS_SCHEMA);
     try {

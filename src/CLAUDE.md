@@ -321,6 +321,9 @@ Implementation conventions in `lua_runner.cpp`:
 - Script errors surface as `"Failed to run Lua script: ..."` (root Pattern 3). Encoder failures
   (unsupported type, unsupported table key, too deep) are Pattern 1 `"Cannot run: ..."` and are
   **not** wrapped in that prefix — they happen after the script already succeeded.
+- **The six id-addressed writers take an id or a label in the same argument.** `parse_element_key`
+  dispatches on `get_type()`, not `is<int64_t>()` — a label that looks like a number (`"1"`) must
+  still resolve as a label; `std::visit` at each call site then picks the matching C++ overload.
 
 ## Binary Subsystem
 

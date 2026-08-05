@@ -72,6 +72,23 @@ class TestUpsertTimeSeriesRow:
         assert result["date_time"] == [_utc(2024, 2, 1)]
         assert result["value"] == [7.5]
 
+    def test_upsert_time_series_row_by_label(self, collections_db: Database) -> None:
+        """Insert one row by label and read back by id to assert presence."""
+        eid = _create_collection_element(collections_db, "Item1")
+        collections_db.upsert_time_series_row_by_label(
+            "Collection", "data", "Item1", date_time="2024-01-01", value=10.0
+        )
+
+        result = collections_db.read_time_series_group("Collection", "data", eid)
+        assert result["date_time"] == [_utc(2024, 1, 1)]
+        assert result["value"] == [10.0]
+
+    def test_upsert_time_series_row_by_label_nonexistent_raises(self, collections_db: Database) -> None:
+        with pytest.raises(QuiverError, match="Element not found"):
+            collections_db.upsert_time_series_row_by_label(
+                "Collection", "data", "nope", date_time="2024-01-01", value=10.0
+            )
+
     def test_upsert_time_series_row_multi_dim(self, multi_dim_ts_db: Database) -> None:
         """Multi-dimension PK (date_time + block) round-trips through the Python wrapper."""
         eid = multi_dim_ts_db.create_element("Resource", label="R1")

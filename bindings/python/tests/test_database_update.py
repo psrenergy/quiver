@@ -418,3 +418,50 @@ class TestUpdateVectorSetGroup:
 
         with pytest.raises(ValueError, match="same length"):
             relations_db.update_vector_group("Child", "refs", child, {"parent_ref": [1, 2], "id": [1]})
+
+
+class TestUpdateByLabel:
+    def test_update_element_by_label(self, collections_db: Database) -> None:
+        collections_db.create_element("Configuration", label="cfg")
+        elem_id = collections_db.create_element("Collection", label="Item1", some_integer=10)
+        collections_db.update_element_by_label("Collection", "Item1", some_integer=99)
+        value = collections_db.read_scalar_integer_by_id("Collection", "some_integer", elem_id)
+        assert value == 99
+
+    def test_update_element_by_label_nonexistent_raises(self, db: Database) -> None:
+        db.create_element("Configuration", label="cfg")
+        with pytest.raises(QuiverError, match="Element not found"):
+            db.update_element_by_label("Configuration", "nope", integer_attribute=5)
+
+    @staticmethod
+    def _seed(db: Database) -> int:
+        db.create_element("Configuration", label="Config")
+        db.create_element("Parent", label="Parent A")
+        db.create_element("Parent", label="Parent B")
+        return db.create_element("Child", label="Child 1")
+
+    def test_update_vector_group_by_label(self, relations_db: Database) -> None:
+        child = self._seed(relations_db)
+
+        relations_db.update_vector_group_by_label("Child", "refs", "Child 1", {"parent_ref": [1, 2]})
+        assert relations_db.read_vector_integers_by_id("Child", "parent_ref", child) == [1, 2]
+
+        relations_db.update_vector_group_by_label("Child", "refs", "Child 1", {})
+        assert relations_db.read_vector_integers_by_id("Child", "parent_ref", child) == []
+
+    def test_update_set_group_by_label(self, relations_db: Database) -> None:
+        child = self._seed(relations_db)
+
+        relations_db.update_set_group_by_label("Child", "parents", "Child 1", {"parent_ref": [1]})
+        assert relations_db.read_set_integers_by_id("Child", "parent_ref", child) == [1]
+
+        relations_db.update_set_group_by_label("Child", "parents", "Child 1", {})
+        assert relations_db.read_set_integers_by_id("Child", "parent_ref", child) == []
+
+    def test_update_group_by_label_nonexistent_raises(self, relations_db: Database) -> None:
+        self._seed(relations_db)
+
+        with pytest.raises(QuiverError, match="Element not found"):
+            relations_db.update_vector_group_by_label("Child", "refs", "nope", {"parent_ref": [1]})
+        with pytest.raises(QuiverError, match="Element not found"):
+            relations_db.update_set_group_by_label("Child", "parents", "nope", {})

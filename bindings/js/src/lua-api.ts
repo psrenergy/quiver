@@ -210,8 +210,8 @@ Rules worth knowing:
 
 \`\`\`lua
 local id = db:create_element(collection, element_table)   -- returns new integer id
-db:update_element(collection, id, element_table)
-db:delete_element(collection, id)
+db:update_element(collection, id_or_label, element_table)
+db:delete_element(collection, id_or_label)
 \`\`\`
 
 The element table holds scalar attributes as \`key = value\`, and vector/set attributes as
@@ -237,6 +237,13 @@ Notes:
 - **\`update_element\` / \`delete_element\` require an existing id.** Targeting an id that does not
   exist throws \`Element not found: <id> in collection '<collection>'\` (no silent no-op). Use
   \`read_element_ids\` to get valid ids.
+- **The six id-addressed writers take an id or a label.** \`update_element\`, \`delete_element\`,
+  \`update_vector_group\`, \`update_set_group\`, \`update_time_series_group\` and
+  \`upsert_time_series_row\` accept the element's label string in place of the integer id, throwing
+  \`Element not found: label '<label>' in collection '<collection>'\` if no element carries it. Pass
+  whichever you already hold — an id costs nothing, a label costs one indexed lookup per call — and
+  reach for the label instead of scanning a collection's labels to find an id yourself. Do not
+  invent an id you have not read: ids are database-assigned and id 1 need not exist.
 - **Empty arrays are skipped.** An attribute whose value is \`{}\` writes no vector/set (the element
   type can't be inferred from an empty array), so it is silently dropped.
 - **No \`nil\` scalar attributes.** In Lua a key set to \`nil\` is dropped from the table, so

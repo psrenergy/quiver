@@ -119,6 +119,31 @@ include("fixture.jl")
         Quiver.close!(db)
     end
 
+    @testset "Element By Label" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        # Create elements
+        Quiver.create_element!(db, "Configuration"; label = "Config 1")
+        Quiver.create_element!(db, "Configuration"; label = "Config 2")
+        Quiver.create_element!(db, "Configuration"; label = "Config 3")
+
+        # Delete element by label
+        Quiver.delete_element!(db, "Configuration", "Config 2")
+
+        # Verify element is deleted
+        ids = Quiver.read_element_ids(db, "Configuration")
+        @test length(ids) == 2
+        @test 2 ∉ ids
+        @test 1 ∈ ids
+        @test 3 ∈ ids
+
+        # Deleting an unresolvable label throws "Element not found"
+        @test_throws Quiver.DatabaseException Quiver.delete_element!(db, "Configuration", "Nonexistent")
+
+        Quiver.close!(db)
+    end
+
     @testset "Does Not Affect Other Elements" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
         db = Quiver.from_schema(":memory:", path_schema)

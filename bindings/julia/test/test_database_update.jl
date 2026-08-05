@@ -203,6 +203,32 @@ include("fixture.jl")
         Quiver.close!(db)
     end
 
+    @testset "Element By Label" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Config 1", integer_attribute = 100)
+
+        # Update by label using kwargs
+        Quiver.update_element!(db, "Configuration", "Config 1"; integer_attribute = 999)
+        value = Quiver.read_scalar_integer_by_id(db, "Configuration", "integer_attribute", 1)
+        @test value == 999
+
+        # Update by label using an Element builder
+        e = Quiver.Element()
+        e["integer_attribute"] = Int64(777)
+        Quiver.update_element!(db, "Configuration", "Config 1", e)
+        value = Quiver.read_scalar_integer_by_id(db, "Configuration", "integer_attribute", 1)
+        @test value == 777
+
+        # An unresolvable label throws "Element not found"
+        @test_throws Quiver.DatabaseException Quiver.update_element!(
+            db, "Configuration", "Nonexistent"; integer_attribute = 1)
+        @test_throws Quiver.DatabaseException Quiver.update_element!(db, "Configuration", "Nonexistent", e)
+
+        Quiver.close!(db)
+    end
+
     # Error handling tests
 
     @testset "Invalid Collection" begin
@@ -905,6 +931,34 @@ include("fixture.jl")
         @test_throws Quiver.DatabaseException Quiver.update_vector_group!(
             db, "Child", "refs", child; parent_ref = Int64[])
         @test Quiver.query_integer(db, "SELECT COUNT(*) FROM Child_vector_refs WHERE id = ?", [child]) == 3
+
+        Quiver.close!(db)
+    end
+
+    @testset "Vector And Set Group Writers By Label" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "relations.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Config")
+        parent_a = Quiver.create_element!(db, "Parent"; label = "Parent A")
+        parent_b = Quiver.create_element!(db, "Parent"; label = "Parent B")
+        child = Quiver.create_element!(db, "Child"; label = "Child 1")
+
+        # Write both groups by the child's label.
+        Quiver.update_vector_group!(db, "Child", "refs", "Child 1"; parent_ref = [parent_a, parent_b])
+        @test Quiver.read_vector_integers_by_id(db, "Child", "parent_ref", child) == [parent_a, parent_b]
+        Quiver.update_set_group!(db, "Child", "parents", "Child 1"; parent_ref = [parent_a])
+        @test Quiver.read_set_integers_by_id(db, "Child", "parent_ref", child) == [parent_a]
+
+        # Clearing by label works.
+        Quiver.update_vector_group!(db, "Child", "refs", "Child 1")
+        @test isempty(Quiver.read_vector_integers_by_id(db, "Child", "parent_ref", child))
+
+        # An unresolvable label throws "Element not found"
+        @test_throws Quiver.DatabaseException Quiver.update_vector_group!(
+            db, "Child", "refs", "Nonexistent"; parent_ref = [parent_a])
+        @test_throws Quiver.DatabaseException Quiver.update_set_group!(
+            db, "Child", "parents", "Nonexistent"; parent_ref = [parent_a])
 
         Quiver.close!(db)
     end

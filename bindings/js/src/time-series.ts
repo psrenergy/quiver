@@ -195,21 +195,31 @@ Database.prototype.updateTimeSeriesGroup = function (
     getSymbols().quiver_database_update_time_series_group,
     collection,
     group,
-    id,
+    BigInt(id),
     data,
   );
 };
 
-Database.prototype.upsertTimeSeriesRow = function (
+/** Label-addressed counterpart of updateTimeSeriesGroup. */
+Database.prototype.updateTimeSeriesGroupByLabel = function (
   this: Database,
   collection: string,
   group: string,
-  id: number,
-  row: Record<string, number | bigint | string>,
+  label: string,
+  data: TimeSeriesData,
 ): void {
-  const lib = getSymbols();
-  const collBuf = toCString(collection);
-  const grpBuf = toCString(group);
+  updateGroupColumns(
+    this._handle,
+    "updateTimeSeriesGroupByLabel",
+    getSymbols().quiver_database_update_time_series_group_by_label,
+    collection,
+    group,
+    toCString(label).buf,
+    data,
+  );
+};
+
+function marshalRowColumns(row: Record<string, number | bigint | string>) {
   const entries = Object.entries(row);
   const columnCount = entries.length;
   const keepalive: Allocation[] = [];
@@ -247,16 +257,58 @@ Database.prototype.upsertTimeSeriesRow = function (
   const dataTable = allocNativePtrTable(dataPtrs);
   keepalive.push(dataTable);
 
+  return { keepalive, namesTable, typesAlloc, dataTable, columnCount };
+}
+
+Database.prototype.upsertTimeSeriesRow = function (
+  this: Database,
+  collection: string,
+  group: string,
+  id: number,
+  row: Record<string, number | bigint | string>,
+): void {
+  const lib = getSymbols();
+  const collBuf = toCString(collection);
+  const grpBuf = toCString(group);
+  const marshalled = marshalRowColumns(row);
+
   check(
     lib.quiver_database_upsert_time_series_row(
       this._handle,
       collBuf.buf,
       grpBuf.buf,
       BigInt(id),
-      namesTable.buf,
-      typesAlloc.buf,
-      dataTable.buf,
-      BigInt(columnCount),
+      marshalled.namesTable.buf,
+      marshalled.typesAlloc.buf,
+      marshalled.dataTable.buf,
+      BigInt(marshalled.columnCount),
+    ),
+  );
+};
+
+/** Label-addressed counterpart of upsertTimeSeriesRow. */
+Database.prototype.upsertTimeSeriesRowByLabel = function (
+  this: Database,
+  collection: string,
+  group: string,
+  label: string,
+  row: Record<string, number | bigint | string>,
+): void {
+  const lib = getSymbols();
+  const collBuf = toCString(collection);
+  const grpBuf = toCString(group);
+  const marshalled = marshalRowColumns(row);
+
+  check(
+    lib.quiver_database_upsert_time_series_row_by_label(
+      this._handle,
+      collBuf.buf,
+      grpBuf.buf,
+      toCString(label).buf,
+      marshalled.namesTable.buf,
+      marshalled.typesAlloc.buf,
+      marshalled.dataTable.buf,
+      BigInt(marshalled.columnCount),
     ),
   );
 };

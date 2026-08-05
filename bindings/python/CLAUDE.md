@@ -60,7 +60,9 @@ ruff.toml         # Lint/format config (format.bat runs ruff)
   pre-FFI marshalling error, the documented exception to "messages come from C++"); everything else
   is validated in the core and surfaces as `QuiverError`. Note that the group *writers* take columns
   while `read_vector_group_by_id` returns rows, and that reader composes per-column reads, so it
-  **drops NULL cells** — assert a NULL-cell write in SQL, not through it.
+  **drops NULL cells** — assert a NULL-cell write in SQL, not through it. It and the module-level
+  `_marshal_single_row` (the same extraction for `upsert_time_series_row`) also serve the six
+  `_by_label` writers.
 
 ## Packaging
 

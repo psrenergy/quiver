@@ -392,9 +392,13 @@ Always use `ON DELETE CASCADE ON UPDATE CASCADE` for parent references.
 ## Core API
 
 ### Naming Convention
-Public Database methods follow `verb_[category_]type[_by_id]`:
+Public Database methods follow `verb_[category_]type[_by_id|_by_label]`:
 - **Verbs:** create, read, update, upsert, delete, get, list, has, query, describe, export, import
 - **`_by_id` suffix:** Only for reads where both "all elements" and "single element" variants exist
+- **`_by_label` suffix:** The two suffixes answer different questions. `_by_id` marks *cardinality*
+  on a reader (one element instead of all); `_by_label` marks the *addressing key* on a writer,
+  whose unsuffixed name takes the id — a writer is always single, so there is no `_by_id` writer.
+  The sets are disjoint: every `_by_id` is a reader, every `_by_label` is a writer
 - **Singular vs plural:** Type name matches return cardinality (`read_scalar_integers` returns vector, `read_scalar_integer_by_id` returns optional)
 - **Examples:** `create_element`, `read_vector_floats_by_id`, `get_scalar_metadata`, `list_time_series_groups`
 
@@ -404,7 +408,11 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
 - Dry runs: `begin_dry_run()`, `end_dry_run()`, `in_dry_run()` — one transaction that is always rolled back; while active the three transaction methods above are absorbed (no-ops) so nested callers compose. See the design decision below.
 - CRUD: `create_element(collection, element)`, `update_element`, `delete_element`
 - **By-label writers**: every id-addressed writer also takes a `label` in place of the id (a C++
-  overload, a `_by_label` symbol in the C API); the id-addressed readers stay id-only.
+  overload, a `_by_label` symbol in the C API); the id-addressed readers stay id-only. Per binding:
+  Julia keeps the same names via multiple dispatch (`label::String` methods); Dart, Python, and JS
+  add a `...ByLabel`/`_by_label`-suffixed method per writer, since none can widen the id parameter
+  without weakening its static contract; Lua keeps the same names, taking either an integer id or a
+  string label in the same argument.
 - Scalar/vector/set readers: `read_{scalar,vector,set}_{integers,floats,strings}(collection, attribute)` (+ `_by_id` variants). Scalar bulk readers return one entry per element with SQL NULLs preserved positionally (`std::optional` / `nothing`/`None`/`null`/`nil`); see the scalar-NULL design decision.
 - Whole-group readers: `read_vector_group_by_id()` / `read_set_group_by_id()` — row-shaped
   `vector<map<string, Value>>` over all of a group's value columns, positionally aligned with SQL

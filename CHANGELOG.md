@@ -20,8 +20,9 @@ callers to change something are prefixed **BREAKING** and say what to do.
   other respect; a label matching no element in the collection throws
   `Element not found: label '<label>' in collection '<collection>'`.
 
-  The id-addressed **readers** deliberately keep taking ids only. **Bindings are not wired yet** —
-  Julia, Dart, Python, JS and Lua still expose the id forms only; they follow in a later change.
+  The id-addressed **readers** deliberately keep taking ids only. Wired into every binding: Julia
+  (multiple dispatch), Dart/Python/JS (a `...ByLabel`/`_by_label` suffix per writer), and Lua (same
+  method names, id or label).
 
 - **Whole-group writers: `update_vector_group()` / `update_set_group()`.** Replace all of an
   element's rows in one *named* group; passing no columns clears the group. These are the write

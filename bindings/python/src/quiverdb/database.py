@@ -240,6 +240,31 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         lib = get_lib()
         check(lib.quiver_database_delete_element(self._ptr, collection.encode("utf-8"), id))
 
+    def update_element_by_label(self, collection: str, label: str, **kwargs: object) -> None:
+        """Label-addressed counterpart of update_element."""
+        self._ensure_open()
+        elem = Element()
+        try:
+            for name, value in kwargs.items():
+                elem.set(name, value)
+            lib = get_lib()
+            check(
+                lib.quiver_database_update_element_by_label(
+                    self._ptr,
+                    collection.encode("utf-8"),
+                    label.encode("utf-8"),
+                    elem._ptr,
+                )
+            )
+        finally:
+            elem.destroy()
+
+    def delete_element_by_label(self, collection: str, label: str) -> None:
+        """Label-addressed counterpart of delete_element."""
+        self._ensure_open()
+        lib = get_lib()
+        check(lib.quiver_database_delete_element_by_label(self._ptr, collection.encode("utf-8"), label.encode("utf-8")))
+
     # -- Transaction control ----------------------------------------------------
 
     def begin_transaction(self) -> None:
@@ -1373,6 +1398,46 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
             )
         )
 
+    def update_time_series_group_by_label(
+        self,
+        collection: str,
+        group: str,
+        label: str,
+        data: dict[str, list],
+    ) -> None:
+        """Label-addressed counterpart of update_time_series_group."""
+        self._ensure_open()
+        lib = get_lib()
+        c_collection = collection.encode("utf-8")
+        c_group = group.encode("utf-8")
+        c_label = label.encode("utf-8")
+
+        if not data:
+            check(
+                lib.quiver_database_update_time_series_group_by_label(
+                    self._ptr, c_collection, c_group, c_label, ffi.NULL, ffi.NULL, ffi.NULL, ffi.NULL, 0, 0
+                )
+            )
+            return
+
+        keepalive, c_col_names, c_col_types, c_col_data, c_col_has_value, col_count, row_count = _marshal_group_columns(
+            data
+        )
+        check(
+            lib.quiver_database_update_time_series_group_by_label(
+                self._ptr,
+                c_collection,
+                c_group,
+                c_label,
+                c_col_names,
+                c_col_types,
+                c_col_data,
+                c_col_has_value,
+                col_count,
+                row_count,
+            )
+        )
+
     def update_vector_group(
         self,
         collection: str,
@@ -1409,6 +1474,46 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
                 c_collection,
                 c_group,
                 id,
+                c_col_names,
+                c_col_types,
+                c_col_data,
+                c_col_has_value,
+                col_count,
+                row_count,
+            )
+        )
+
+    def update_vector_group_by_label(
+        self,
+        collection: str,
+        group: str,
+        label: str,
+        data: dict[str, list],
+    ) -> None:
+        """Label-addressed counterpart of update_vector_group."""
+        self._ensure_open()
+        lib = get_lib()
+        c_collection = collection.encode("utf-8")
+        c_group = group.encode("utf-8")
+        c_label = label.encode("utf-8")
+
+        if not data:
+            check(
+                lib.quiver_database_update_vector_group_by_label(
+                    self._ptr, c_collection, c_group, c_label, ffi.NULL, ffi.NULL, ffi.NULL, ffi.NULL, 0, 0
+                )
+            )
+            return
+
+        keepalive, c_col_names, c_col_types, c_col_data, c_col_has_value, col_count, row_count = _marshal_group_columns(
+            data
+        )
+        check(
+            lib.quiver_database_update_vector_group_by_label(
+                self._ptr,
+                c_collection,
+                c_group,
+                c_label,
                 c_col_names,
                 c_col_types,
                 c_col_data,
@@ -1461,6 +1566,46 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
             )
         )
 
+    def update_set_group_by_label(
+        self,
+        collection: str,
+        group: str,
+        label: str,
+        data: dict[str, list],
+    ) -> None:
+        """Label-addressed counterpart of update_set_group."""
+        self._ensure_open()
+        lib = get_lib()
+        c_collection = collection.encode("utf-8")
+        c_group = group.encode("utf-8")
+        c_label = label.encode("utf-8")
+
+        if not data:
+            check(
+                lib.quiver_database_update_set_group_by_label(
+                    self._ptr, c_collection, c_group, c_label, ffi.NULL, ffi.NULL, ffi.NULL, ffi.NULL, 0, 0
+                )
+            )
+            return
+
+        keepalive, c_col_names, c_col_types, c_col_data, c_col_has_value, col_count, row_count = _marshal_group_columns(
+            data
+        )
+        check(
+            lib.quiver_database_update_set_group_by_label(
+                self._ptr,
+                c_collection,
+                c_group,
+                c_label,
+                c_col_names,
+                c_col_types,
+                c_col_data,
+                c_col_has_value,
+                col_count,
+                row_count,
+            )
+        )
+
     def upsert_time_series_row(self, collection: str, group: str, id: int, **kwargs) -> None:
         """Insert or upsert a single time series row for an element.
 
@@ -1475,51 +1620,25 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         c_collection = collection.encode("utf-8")
         c_group = group.encode("utf-8")
 
-        col_count = len(kwargs)
-        keepalive: list = []
-
-        c_col_names = ffi.new("const char*[]", col_count)
-        c_col_types = ffi.new("int[]", col_count)
-        c_col_data = ffi.new("void*[]", col_count)
-
-        for i, (name, v) in enumerate(kwargs.items()):
-            name_buf = ffi.new("char[]", name.encode("utf-8"))
-            keepalive.append(name_buf)
-            c_col_names[i] = name_buf
-
-            # bool is a subclass of int; test it explicitly first so True/False
-            # marshal as INTEGER 1/0 rather than being rejected by the `is int`
-            # check. Mirrors `_marshal_params` policy in this same file.
-            if isinstance(v, bool):
-                arr = ffi.new("int64_t[]", [int(v)])
-                keepalive.append(arr)
-                c_col_types[i] = DataType.INTEGER
-                c_col_data[i] = ffi.cast("void*", arr)
-            elif isinstance(v, int):
-                arr = ffi.new("int64_t[]", [v])
-                keepalive.append(arr)
-                c_col_types[i] = DataType.INTEGER
-                c_col_data[i] = ffi.cast("void*", arr)
-            elif isinstance(v, float):
-                arr = ffi.new("double[]", [v])
-                keepalive.append(arr)
-                c_col_types[i] = DataType.FLOAT
-                c_col_data[i] = ffi.cast("void*", arr)
-            elif isinstance(v, str):
-                str_buf = ffi.new("char[]", v.encode("utf-8"))
-                keepalive.append(str_buf)
-                c_str_arr = ffi.new("char*[]", [str_buf])
-                keepalive.append(c_str_arr)
-                c_col_types[i] = DataType.STRING
-                c_col_data[i] = ffi.cast("void*", c_str_arr)
-            else:
-                raise TypeError(
-                    f"Column '{name}' value has unsupported type {type(v).__name__}; expected int, float, or str"
-                )
-
+        keepalive, c_col_names, c_col_types, c_col_data, col_count = _marshal_single_row(kwargs)
         check(
             lib.quiver_database_upsert_time_series_row(
                 self._ptr, c_collection, c_group, id, c_col_names, c_col_types, c_col_data, col_count
+            )
+        )
+
+    def upsert_time_series_row_by_label(self, collection: str, group: str, label: str, **kwargs) -> None:
+        """Label-addressed counterpart of upsert_time_series_row."""
+        self._ensure_open()
+        lib = get_lib()
+        c_collection = collection.encode("utf-8")
+        c_group = group.encode("utf-8")
+        c_label = label.encode("utf-8")
+
+        keepalive, c_col_names, c_col_types, c_col_data, col_count = _marshal_single_row(kwargs)
+        check(
+            lib.quiver_database_upsert_time_series_row_by_label(
+                self._ptr, c_collection, c_group, c_label, c_col_names, c_col_types, c_col_data, col_count
             )
         )
 
@@ -1887,6 +2006,60 @@ def _marshal_group_columns(data: dict[str, list]) -> tuple:
             raise TypeError(f"Unsupported value type for column '{name}': {type(first).__name__}")
 
     return keepalive, c_col_names, c_col_types, c_col_data, c_col_has_value, col_count, row_count
+
+
+def _marshal_single_row(kwargs: dict[str, object]) -> tuple:
+    """Marshal a single row's keyword columns into parallel C arrays for upsert_time_series_row.
+
+    Type dispatch uses isinstance: bool -> INTEGER (0/1), int -> INTEGER, float ->
+    FLOAT, str -> STRING. No Int->Float coercion (per D-03: Python strict typing).
+
+    Returns (keepalive, c_col_names, c_col_types, c_col_data, col_count) where
+    keepalive must remain referenced until the C API call completes.
+    """
+    col_count = len(kwargs)
+    keepalive: list = []
+
+    c_col_names = ffi.new("const char*[]", col_count)
+    c_col_types = ffi.new("int[]", col_count)
+    c_col_data = ffi.new("void*[]", col_count)
+
+    for i, (name, v) in enumerate(kwargs.items()):
+        name_buf = ffi.new("char[]", name.encode("utf-8"))
+        keepalive.append(name_buf)
+        c_col_names[i] = name_buf
+
+        # bool is a subclass of int; test it explicitly first so True/False
+        # marshal as INTEGER 1/0 rather than being rejected by the `is int`
+        # check. Mirrors `_marshal_params` policy in this same file.
+        if isinstance(v, bool):
+            arr = ffi.new("int64_t[]", [int(v)])
+            keepalive.append(arr)
+            c_col_types[i] = DataType.INTEGER
+            c_col_data[i] = ffi.cast("void*", arr)
+        elif isinstance(v, int):
+            arr = ffi.new("int64_t[]", [v])
+            keepalive.append(arr)
+            c_col_types[i] = DataType.INTEGER
+            c_col_data[i] = ffi.cast("void*", arr)
+        elif isinstance(v, float):
+            arr = ffi.new("double[]", [v])
+            keepalive.append(arr)
+            c_col_types[i] = DataType.FLOAT
+            c_col_data[i] = ffi.cast("void*", arr)
+        elif isinstance(v, str):
+            str_buf = ffi.new("char[]", v.encode("utf-8"))
+            keepalive.append(str_buf)
+            c_str_arr = ffi.new("char*[]", [str_buf])
+            keepalive.append(c_str_arr)
+            c_col_types[i] = DataType.STRING
+            c_col_data[i] = ffi.cast("void*", c_str_arr)
+        else:
+            raise TypeError(
+                f"Column '{name}' value has unsupported type {type(v).__name__}; expected int, float, or str"
+            )
+
+    return keepalive, c_col_names, c_col_types, c_col_data, col_count
 
 
 # -- Metadata parsing helpers (module-level) ---------------------------------
