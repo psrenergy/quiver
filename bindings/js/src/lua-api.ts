@@ -211,6 +211,7 @@ Rules worth knowing:
 \`\`\`lua
 local id = db:create_element(collection, element_table)   -- returns new integer id
 db:update_element(collection, id_or_label, element_table)
+db:update_relation(collection_from, collection_to, relation_type, id_or_label, target_label)
 db:delete_element(collection, id_or_label)
 \`\`\`
 
@@ -237,13 +238,18 @@ Notes:
 - **\`update_element\` / \`delete_element\` require an existing id.** Targeting an id that does not
   exist throws \`Element not found: <id> in collection '<collection>'\` (no silent no-op). Use
   \`read_element_ids\` to get valid ids.
-- **The six id-addressed writers take an id or a label.** \`update_element\`, \`delete_element\`,
-  \`update_vector_group\`, \`update_set_group\`, \`update_time_series_group\` and
+- **The seven id-addressed writers take an id or a label.** \`update_element\`, \`update_relation\`,
+  \`delete_element\`, \`update_vector_group\`, \`update_set_group\`, \`update_time_series_group\` and
   \`upsert_time_series_row\` accept the element's label string in place of the integer id, throwing
   \`Element not found: label '<label>' in collection '<collection>'\` if no element carries it. Pass
   whichever you already hold — an id costs nothing, a label costs one indexed lookup per call — and
   reach for the label instead of scanning a collection's labels to find an id yourself. Do not
   invent an id you have not read: ids are database-assigned and id 1 need not exist.
+- **\`update_relation\` sets or clears one scalar foreign-key column.** The column is derived as
+  \`lowercase(collection_to) .. "_" .. relation_type\` and must be a foreign key to \`collection_to\`.
+  \`target_label\` is always a label, never an id: a string sets the relation and \`nil\` clears it,
+  while any other type — including the target's id — is rejected. A relation living in a vector or
+  set group needs \`db:update_vector_group\` / \`db:update_set_group\` instead.
 - **Empty arrays are skipped.** An attribute whose value is \`{}\` writes no vector/set (the element
   type can't be inferred from an empty array), so it is silently dropped.
 - **No \`nil\` scalar attributes.** In Lua a key set to \`nil\` is dropped from the table, so

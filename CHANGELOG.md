@@ -32,6 +32,10 @@ callers to change something are prefixed **BREAKING** and say what to do.
   API exposes `quiver_database_update_relation` and
   `quiver_database_update_relation_by_label`.
 
+  Wired into every binding, addressing the source element by id or by label: Julia (multiple
+  dispatch), Dart/Python/JS (a `...ByLabel`/`_by_label` counterpart), and Lua (same method name,
+  id or label). Clear the relation with that language's absent value — `nothing`/`null`/`None`/`nil`.
+
 - **Whole-group writers: `update_vector_group()` / `update_set_group()`.** Replace all of an
   element's rows in one *named* group; passing no columns clears the group. These are the write
   counterpart of `read_vector_group_by_id()` / `read_set_group_by_id()`, and the unambiguous

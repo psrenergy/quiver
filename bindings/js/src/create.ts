@@ -201,6 +201,57 @@ Database.prototype.deleteElementByLabel = function (
 };
 
 /**
+ * Set or clear one scalar foreign-key column on an existing element.
+ *
+ * The column is derived from `(collectionTo, relationType)` as
+ * `lowercase(collectionTo) + "_" + relationType` and must be a foreign key to `collectionTo`.
+ * `targetLabel` is always a label, never an id; pass `null` to clear the relation.
+ * For a relation in a vector or set group, use updateVectorGroup / updateSetGroup.
+ */
+Database.prototype.updateRelation = function (
+  this: Database,
+  collectionFrom: string,
+  collectionTo: string,
+  relationType: string,
+  id: number,
+  targetLabel: string | null,
+): void {
+  const lib = getSymbols();
+  check(
+    lib.quiver_database_update_relation(
+      this._handle,
+      toCString(collectionFrom).buf,
+      toCString(collectionTo).buf,
+      toCString(relationType).buf,
+      BigInt(id),
+      targetLabel === null ? null : toCString(targetLabel).buf,
+    ),
+  );
+};
+
+/** Label-addressed counterpart of updateRelation. */
+Database.prototype.updateRelationByLabel = function (
+  this: Database,
+  collectionFrom: string,
+  collectionTo: string,
+  relationType: string,
+  label: string,
+  targetLabel: string | null,
+): void {
+  const lib = getSymbols();
+  check(
+    lib.quiver_database_update_relation_by_label(
+      this._handle,
+      toCString(collectionFrom).buf,
+      toCString(collectionTo).buf,
+      toCString(relationType).buf,
+      toCString(label).buf,
+      targetLabel === null ? null : toCString(targetLabel).buf,
+    ),
+  );
+};
+
+/**
  * Replace all of an element's rows in one *named* vector group, from column arrays keyed by name.
  *
  * Pass `{}` to clear the group. Prefer this over routing the group's columns through

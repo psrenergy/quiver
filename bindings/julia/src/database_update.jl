@@ -26,6 +26,44 @@ function update_element!(db::Database, collection::String, label::String; kwargs
     return nothing
 end
 
+# Sets or clears one scalar foreign-key column on an existing element: the column is derived from
+# (collection_to, relation_type) and must be a foreign key to collection_to. target_label is always
+# a label, never an id; `nothing` clears the relation. For a relation in a vector or set group, use
+# update_vector_group! / update_set_group!.
+function update_relation!(
+    db::Database,
+    collection_from::String,
+    collection_to::String,
+    relation_type::String,
+    id::Int64,
+    target_label::Optional{String},
+)
+    check(
+        C.quiver_database_update_relation(
+            db.ptr, collection_from, collection_to, relation_type, id,
+            isnothing(target_label) ? C_NULL : target_label,
+        ),
+    )
+    return nothing
+end
+
+function update_relation!(
+    db::Database,
+    collection_from::String,
+    collection_to::String,
+    relation_type::String,
+    label::String,
+    target_label::Optional{String},
+)
+    check(
+        C.quiver_database_update_relation_by_label(
+            db.ptr, collection_from, collection_to, relation_type, label,
+            isnothing(target_label) ? C_NULL : target_label,
+        ),
+    )
+    return nothing
+end
+
 # Group update functions (time series, vector, set)
 
 # Shared marshalling for the three column-oriented group writers: every column becomes a typed C

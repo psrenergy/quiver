@@ -302,3 +302,86 @@ describe("updateVectorGroup / updateSetGroup", () => {
     }
   });
 });
+
+describe("updateRelation", () => {
+  function openRelations(): { db: Database; parentA: number; parentB: number; child: number } {
+    const db = Database.fromSchema(":memory:", RELATIONS_SCHEMA_PATH);
+    db.createElement("Configuration", { label: "Config" });
+    const parentA = db.createElement("Parent", { label: "Parent A" });
+    const parentB = db.createElement("Parent", { label: "Parent B" });
+    const child = db.createElement("Child", { label: "Child 1" });
+    return { db, parentA, parentB, child };
+  }
+
+  test("sets the foreign key by id and re-points it", () => {
+    const { db, parentA, parentB, child } = openRelations();
+    try {
+      db.updateRelation("Child", "Parent", "id", child, "Parent A");
+      expect(db.readScalarIntegerById("Child", "parent_id", child)).toEqual(parentA);
+
+      db.updateRelation("Child", "Parent", "id", child, "Parent B");
+      expect(db.readScalarIntegerById("Child", "parent_id", child)).toEqual(parentB);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("clears the foreign key with a null target label", () => {
+    const { db, parentA, child } = openRelations();
+    try {
+      db.updateRelation("Child", "Parent", "id", child, "Parent A");
+      expect(db.readScalarIntegerById("Child", "parent_id", child)).toEqual(parentA);
+
+      db.updateRelation("Child", "Parent", "id", child, null);
+      expect(db.readScalarIntegerById("Child", "parent_id", child)).toEqual(null);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("addresses the source element by label, including the clear case", () => {
+    const { db, parentA, child } = openRelations();
+    try {
+      db.updateRelationByLabel("Child", "Parent", "id", "Child 1", "Parent A");
+      expect(db.readScalarIntegerById("Child", "parent_id", child)).toEqual(parentA);
+
+      db.updateRelationByLabel("Child", "Parent", "id", "Child 1", null);
+      expect(db.readScalarIntegerById("Child", "parent_id", child)).toEqual(null);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("surfaces the C++ error for a relation type that derives an unknown column", () => {
+    const { db, child } = openRelations();
+    try {
+      expect(() => db.updateRelation("Child", "Parent", "owner", child, "Parent A")).toThrow(
+        /relation column 'parent_owner' not found in collection 'Child'/,
+      );
+    } finally {
+      db.close();
+    }
+  });
+
+  test("throws on an unknown target label", () => {
+    const { db, child } = openRelations();
+    try {
+      expect(() => db.updateRelation("Child", "Parent", "id", child, "No Such Parent")).toThrow(
+        QuiverError,
+      );
+    } finally {
+      db.close();
+    }
+  });
+
+  test("throws Element not found for an unresolvable source label", () => {
+    const { db } = openRelations();
+    try {
+      expect(() =>
+        db.updateRelationByLabel("Child", "Parent", "id", "missing", "Parent A"),
+      ).toThrow(/Element not found/);
+    } finally {
+      db.close();
+    }
+  });
+});

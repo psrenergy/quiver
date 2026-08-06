@@ -265,6 +265,56 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         lib = get_lib()
         check(lib.quiver_database_delete_element_by_label(self._ptr, collection.encode("utf-8"), label.encode("utf-8")))
 
+    def update_relation(
+        self,
+        collection_from: str,
+        collection_to: str,
+        relation_type: str,
+        id: int,
+        target_label: str | None,
+    ) -> None:
+        """Set or clear one scalar foreign-key relation on an existing element.
+
+        The column is derived from (collection_to, relation_type) as
+        lowercase(collection_to) + "_" + relation_type and must be a foreign key to
+        collection_to. target_label is always a label, never an id; None clears the relation.
+        For a relation in a vector or set group, use update_vector_group / update_set_group.
+        """
+        self._ensure_open()
+        lib = get_lib()
+        check(
+            lib.quiver_database_update_relation(
+                self._ptr,
+                collection_from.encode("utf-8"),
+                collection_to.encode("utf-8"),
+                relation_type.encode("utf-8"),
+                id,
+                ffi.NULL if target_label is None else target_label.encode("utf-8"),
+            )
+        )
+
+    def update_relation_by_label(
+        self,
+        collection_from: str,
+        collection_to: str,
+        relation_type: str,
+        label: str,
+        target_label: str | None,
+    ) -> None:
+        """Label-addressed counterpart of update_relation."""
+        self._ensure_open()
+        lib = get_lib()
+        check(
+            lib.quiver_database_update_relation_by_label(
+                self._ptr,
+                collection_from.encode("utf-8"),
+                collection_to.encode("utf-8"),
+                relation_type.encode("utf-8"),
+                label.encode("utf-8"),
+                ffi.NULL if target_label is None else target_label.encode("utf-8"),
+            )
+        )
+
     # -- Transaction control ----------------------------------------------------
 
     def begin_transaction(self) -> None:

@@ -528,7 +528,7 @@ The rules are mechanical: given any C++ method name, you can derive the equivale
 | Time series update | `update_time_series_group()` | `quiver_database_update_time_series_group()` | `update_time_series_group!()` | `updateTimeSeriesGroup()` | `update_time_series_group()` |
 | Vector group update | `update_vector_group()` | `quiver_database_update_vector_group()` | `update_vector_group!()` | `updateVectorGroup()` | `update_vector_group()` |
 | Set group update | `update_set_group()` | `quiver_database_update_set_group()` | `update_set_group!()` | `updateSetGroup()` | `update_set_group()` |
-| Relation update | `update_relation()` | `quiver_database_update_relation()` |  |  |  |
+| Relation update | `update_relation()` | `quiver_database_update_relation()` | `update_relation!()` | `updateRelation()` | `update_relation()` |
 | Query | `query_string()` | `quiver_database_query_string()` | `query_string()` | `queryString()` | `query_string()` |
 | CSV | `export_csv()` | `quiver_database_export_csv()` | `export_csv()` | `exportCSV()` | `export_csv()` |
 | Describe (text) | `describe()` | `quiver_database_describe()` | `describe()` | `describe()` | `describe()` |

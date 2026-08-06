@@ -390,3 +390,51 @@ TEST_F(LuaRunnerTest, UpdateGroupByLabelErrors) {
     // Every rejected call left the existing row alone.
     EXPECT_EQ(db.read_vector_integers_by_id("Child", "parent_ref", 1), (std::vector<int64_t>{1}));
 }
+
+TEST_F(LuaRunnerTest, UpdateRelation) {
+    auto db = relations_db_with_child();
+    quiver::LuaRunner lua(db);
+
+    // By id: set, re-point, then clear with an explicit nil.
+    lua.run(R"(db:update_relation("Child", "Parent", "id", 1, "Parent A"))");
+    EXPECT_EQ(db.read_scalar_integer_by_id("Child", "parent_id", 1), 1);
+
+    lua.run(R"(db:update_relation("Child", "Parent", "id", 1, "Parent B"))");
+    EXPECT_EQ(db.read_scalar_integer_by_id("Child", "parent_id", 1), 2);
+
+    lua.run(R"(db:update_relation("Child", "Parent", "id", 1, nil))");
+    EXPECT_EQ(db.read_scalar_integer_by_id("Child", "parent_id", 1), std::nullopt);
+
+    // By label: same set/clear pair, resolved through the source label.
+    lua.run(R"(db:update_relation("Child", "Parent", "id", "Child 1", "Parent A"))");
+    EXPECT_EQ(db.read_scalar_integer_by_id("Child", "parent_id", 1), 1);
+
+    lua.run(R"(db:update_relation("Child", "Parent", "id", "Child 1", nil))");
+    EXPECT_EQ(db.read_scalar_integer_by_id("Child", "parent_id", 1), std::nullopt);
+}
+
+TEST_F(LuaRunnerTest, UpdateRelationErrors) {
+    auto db = relations_db_with_child();
+    quiver::LuaRunner lua(db);
+
+    // "owner" derives column "parent_owner", which does not exist on Child.
+    expect_lua_error(lua,
+                     R"(db:update_relation("Child", "Parent", "owner", 1, "Parent A"))",
+                     "relation column 'parent_owner' not found in collection 'Child'");
+    expect_lua_error(
+        lua, R"(db:update_relation("Child", "Parent", "id", 1, "Nope"))", "Failed to resolve label 'Nope'");
+    expect_lua_error(
+        lua, R"(db:update_relation("Child", "Parent", "id", "Nope", "Parent A"))", "Element not found");
+    expect_lua_error(lua,
+                     R"(db:update_relation("Child", "Parent", "id", true, "Parent A"))",
+                     "element must be addressed by an integer id or a string label");
+
+    // A non-string target is a caller mistake, not a clear -- nil clears.
+    lua.run(R"(db:update_relation("Child", "Parent", "id", 1, "Parent A"))");
+    expect_lua_error(lua, R"(db:update_relation("Child", "Parent", "id", 1, 2))", "must be a string label or nil");
+    expect_lua_error(lua, R"(db:update_relation("Child", "Parent", "id", 1, true))", "must be a string label or nil");
+    expect_lua_error(lua, R"(db:update_relation("Child", "Parent", "id", 1, {}))", "must be a string label or nil");
+
+    // Every rejected call left the existing relation alone.
+    EXPECT_EQ(db.read_scalar_integer_by_id("Child", "parent_id", 1), 1);
+}

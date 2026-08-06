@@ -335,9 +335,13 @@ Implementation conventions in `lua_runner.cpp`:
 - Script errors surface as `"Failed to run Lua script: ..."` (root Pattern 3). Encoder failures
   (unsupported type, unsupported table key, too deep) are Pattern 1 `"Cannot run: ..."` and are
   **not** wrapped in that prefix — they happen after the script already succeeded.
-- **The six id-addressed writers take an id or a label in the same argument.** `parse_element_key`
+- **The seven id-addressed writers take an id or a label in the same argument.** `parse_element_key`
   dispatches on `get_type()`, not `is<int64_t>()` — a label that looks like a number (`"1"`) must
   still resolve as a label; `std::visit` at each call site then picks the matching C++ overload.
+  `update_relation`'s nullable `target_label` takes a `sol::object` for the same reason: a
+  `sol::optional<std::string>` reads a wrong type as an empty optional, which there means "clear the
+  relation". The other `sol::optional` parameters are fine as they are — each mirrors a C++ default
+  argument whose default is a non-destructive read.
 
 ## Binary Subsystem
 

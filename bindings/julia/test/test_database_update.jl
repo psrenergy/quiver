@@ -962,6 +962,61 @@ include("fixture.jl")
 
         Quiver.close!(db)
     end
+
+    @testset "Update Relation" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "relations.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Config")
+        parent_a = Quiver.create_element!(db, "Parent"; label = "Parent A")
+        parent_b = Quiver.create_element!(db, "Parent"; label = "Parent B")
+        child = Quiver.create_element!(db, "Child"; label = "Child 1")
+
+        # Set the relation by source id.
+        Quiver.update_relation!(db, "Child", "Parent", "id", child, "Parent A")
+        @test Quiver.read_scalar_integer_by_id(db, "Child", "parent_id", child) == parent_a
+
+        # Re-point it to a second parent.
+        Quiver.update_relation!(db, "Child", "Parent", "id", child, "Parent B")
+        @test Quiver.read_scalar_integer_by_id(db, "Child", "parent_id", child) == parent_b
+
+        # Clear it with `nothing`.
+        Quiver.update_relation!(db, "Child", "Parent", "id", child, nothing)
+        @test Quiver.read_scalar_integer_by_id(db, "Child", "parent_id", child) === nothing
+
+        # A wrong relation_type derives a column that does not exist.
+        @test_throws Quiver.DatabaseException Quiver.update_relation!(
+            db, "Child", "Parent", "owner", child, "Parent A")
+
+        # An unknown target label throws.
+        @test_throws Quiver.DatabaseException Quiver.update_relation!(
+            db, "Child", "Parent", "id", child, "Nonexistent Parent")
+
+        Quiver.close!(db)
+    end
+
+    @testset "Update Relation By Label" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "relations.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Config")
+        parent_a = Quiver.create_element!(db, "Parent"; label = "Parent A")
+        child = Quiver.create_element!(db, "Child"; label = "Child 1")
+
+        # Set the relation addressing the source Child by its label.
+        Quiver.update_relation!(db, "Child", "Parent", "id", "Child 1", "Parent A")
+        @test Quiver.read_scalar_integer_by_id(db, "Child", "parent_id", child) == parent_a
+
+        # Clear it by label with `nothing`.
+        Quiver.update_relation!(db, "Child", "Parent", "id", "Child 1", nothing)
+        @test Quiver.read_scalar_integer_by_id(db, "Child", "parent_id", child) === nothing
+
+        # An unresolvable source label throws "Element not found".
+        @test_throws Quiver.DatabaseException Quiver.update_relation!(
+            db, "Child", "Parent", "id", "Nonexistent", "Parent A")
+
+        Quiver.close!(db)
+    end
 end
 
 end

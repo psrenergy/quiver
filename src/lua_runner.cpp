@@ -381,6 +381,7 @@ struct LuaRunner::Impl {
         bind.set_function("read_element_by_id", &read_element_by_id_lua);
 
         bind.set_function("update_element", &update_element_lua);
+        bind.set_function("update_relation", &update_relation_lua);
         bind.set_function("update_time_series_group", &update_time_series_group_lua);
         bind.set_function("update_vector_group", &update_vector_group_lua);
         bind.set_function("update_set_group", &update_set_group_lua);
@@ -972,6 +973,26 @@ struct LuaRunner::Impl {
         auto element = table_to_element(values);
         std::visit([&](const auto& key) { db.update_element(collection, key, element); },
                    parse_element_key("update_element", element_key));
+    }
+
+    // target_label is a sol::object for the reason parse_element_key gives above: a
+    // sol::optional<std::string> reports a number or a table as an empty optional rather than an
+    // error, which would silently clear the relation. An omitted argument reads as nil.
+    static void update_relation_lua(Database& db,
+                                    const std::string& collection_from,
+                                    const std::string& collection_to,
+                                    const std::string& relation_type,
+                                    sol::object element_key,
+                                    sol::object target_label) {
+        std::optional<std::string> target;
+        if (target_label.get_type() == sol::type::string) {
+            target = target_label.as<std::string>();
+        } else if (target_label.get_type() != sol::type::lua_nil) {
+            throw std::runtime_error("Cannot update_relation: target_label must be a string label or nil");
+        }
+        std::visit(
+            [&](const auto& key) { db.update_relation(collection_from, collection_to, relation_type, key, target); },
+            parse_element_key("update_relation", element_key));
     }
 
     static sol::table read_scalar_strings_lua(Database& db,
