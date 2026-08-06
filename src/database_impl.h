@@ -95,17 +95,16 @@ struct Database::Impl {
 
         const auto& str_val = std::get<std::string>(value);
 
-        // Check if column is a foreign key
-        for (const auto& fk : table_def.foreign_keys) {
-            if (fk.from_column == column) {
-                auto lookup_sql = "SELECT id FROM " + fk.to_table + " WHERE label = ?";
-                auto lookup_result = db.execute(lookup_sql, {str_val});
-                if (lookup_result.empty() || !lookup_result[0].get_integer(0)) {
-                    throw std::runtime_error("Failed to resolve label '" + str_val + "' to ID in table '" +
-                                             fk.to_table + "'");
-                }
-                return lookup_result[0].get_integer(0).value();
+        // A string on a foreign key column is the target element's label
+        const auto* fk = table_def.get_foreign_key(column);
+        if (fk != nullptr) {
+            auto lookup_sql = "SELECT id FROM " + fk->to_table + " WHERE label = ?";
+            auto lookup_result = db.execute(lookup_sql, {str_val});
+            if (lookup_result.empty() || !lookup_result[0].get_integer(0)) {
+                throw std::runtime_error("Failed to resolve label '" + str_val + "' to ID in table '" + fk->to_table +
+                                         "'");
             }
+            return lookup_result[0].get_integer(0).value();
         }
 
         // String value on a non-FK INTEGER column is an error

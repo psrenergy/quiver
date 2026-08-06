@@ -180,13 +180,11 @@ inline ScalarMetadata scalar_metadata_from_column(const ColumnDefinition& col) {
 // Convert a column to ScalarMetadata, populating foreign key info from the table definition
 inline ScalarMetadata scalar_metadata_with_fk(const TableDefinition& table_def, const std::string& col_name) {
     auto meta = scalar_metadata_from_column(table_def.columns.at(col_name));
-    for (const auto& fk : table_def.foreign_keys) {
-        if (fk.from_column == col_name) {
-            meta.is_foreign_key = true;
-            meta.references_collection = fk.to_table;
-            meta.references_column = fk.to_column;
-            break;
-        }
+    const auto* fk = table_def.get_foreign_key(col_name);
+    if (fk != nullptr) {
+        meta.is_foreign_key = true;
+        meta.references_collection = fk->to_table;
+        meta.references_column = fk->to_column;
     }
     return meta;
 }

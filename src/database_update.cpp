@@ -80,13 +80,7 @@ void Database::update_relation(const std::string& collection_from,
                                  collection_from + "'");
     }
 
-    const ForeignKey* relation = nullptr;
-    for (const auto& fk : table->foreign_keys) {
-        if (fk.from_column == column) {
-            relation = &fk;
-            break;
-        }
-    }
+    const auto* relation = table->get_foreign_key(column);
     if (relation == nullptr) {
         throw std::runtime_error("Cannot update_relation: relation column '" + column + "' in collection '" +
                                  collection_from + "' is not a foreign key");
