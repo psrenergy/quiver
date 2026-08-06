@@ -1082,6 +1082,99 @@ struct SharedFkFixture {
 
 }  // namespace
 
+// ============================================================================
+// Relation update tests
+// ============================================================================
+
+TEST(Database, UpdateRelationSetsForeignKeyById) {
+    SharedFkFixture f;
+
+    f.db.update_relation("Child", "Parent", "id", f.child, std::string("Parent A"));
+
+    EXPECT_EQ(f.db.read_scalar_integer_by_id("Child", "parent_id", f.child), f.parent_a);
+}
+
+TEST(Database, UpdateRelationResolvesSourceByLabel) {
+    SharedFkFixture f;
+
+    f.db.update_relation("Child", "Parent", "id", "Child 1", std::string("Parent B"));
+
+    EXPECT_EQ(f.db.read_scalar_integer_by_id("Child", "parent_id", f.child), f.parent_b);
+}
+
+TEST(Database, UpdateRelationClearsForeignKey) {
+    SharedFkFixture f;
+    f.db.update_relation("Child", "Parent", "id", f.child, std::string("Parent A"));
+
+    f.db.update_relation("Child", "Parent", "id", f.child, std::nullopt);
+
+    EXPECT_FALSE(f.db.read_scalar_integer_by_id("Child", "parent_id", f.child).has_value());
+}
+
+TEST(Database, UpdateRelationRejectsUnknownDerivedColumn) {
+    SharedFkFixture f;
+
+    try {
+        f.db.update_relation("Child", "Parent", "owner", f.child, std::string("Parent A"));
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(),
+                     "Cannot update_relation: relation column 'parent_owner' not found in collection 'Child'");
+    }
+}
+
+// Standalone: relations.sql has no plain non-foreign-key INTEGER column, so this uses all_types.sql
+// instead. AllTypes.some_integer is a plain INTEGER, so ("AllTypes", "Some", "integer") derives
+// the existing column "some_integer", which is not a foreign key.
+TEST(Database, UpdateRelationRejectsNonForeignKeyColumn) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("all_types.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+    auto id = db.create_element("AllTypes", quiver::Element().set("label", std::string("Item 1")));
+
+    try {
+        db.update_relation("AllTypes", "Some", "integer", id, std::string("whatever"));
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(),
+                     "Cannot update_relation: relation column 'some_integer' in collection 'AllTypes' is not a "
+                     "foreign key");
+    }
+}
+
+TEST(Database, UpdateRelationRejectsForeignKeyTargetingWrongCollection) {
+    SharedFkFixture f;
+
+    // "sibling_id" exists, but it points at Child rather than the requested Sibling collection.
+    try {
+        f.db.update_relation("Child", "Sibling", "id", f.child, std::string("Child 2"));
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(),
+                     "Cannot update_relation: relation column 'sibling_id' in collection 'Child' is a foreign key to "
+                     "collection 'Child', not to 'Sibling'");
+    }
+}
+
+TEST(Database, UpdateRelationRejectsUnknownTargetLabel) {
+    SharedFkFixture f;
+
+    EXPECT_THROW(f.db.update_relation("Child", "Parent", "id", f.child, std::string("No Such Parent")),
+                 std::runtime_error);
+}
+
+TEST(Database, UpdateRelationRejectsUnknownSourceId) {
+    SharedFkFixture f;
+
+    EXPECT_THROW(f.db.update_relation("Child", "Parent", "id", 999, std::string("Parent A")), std::runtime_error);
+}
+
+TEST(Database, UpdateRelationRejectsUnknownSourceLabel) {
+    SharedFkFixture f;
+
+    EXPECT_THROW(f.db.update_relation("Child", "Parent", "id", "No Such Child", std::string("Parent A")),
+                 std::runtime_error);
+}
+
 TEST(Database, UpdateVectorGroupReplacesRows) {
     SharedFkFixture f;
 

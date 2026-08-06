@@ -206,6 +206,13 @@ impl_->logger->debug("Opening database: {}", path);
   (collection interpolated, label bound). No match throws Pattern 2
   `"Element not found: label '<label>' in collection '<collection>'"`. It returns a plain `int64_t`
   — no `std::optional`, no silent no-op — so each label overload stays one line: resolve, delegate.
+- **`update_relation` derives the relation column, then validates it in three steps**
+  (`database_update.cpp`): build `lowercase(collection_to) + "_" + relation_type`, then require that
+  the column exists on `collection_from`, that it has a `foreign_keys` entry (`from_column` matches),
+  and that entry's `to_table` is `collection_to` — three distinct Pattern 1 messages for three
+  distinct caller mistakes (typo'd `relation_type`, a plain non-FK column, a FK to the wrong
+  collection). Only then delegate to `update_element`, preserving its target-label foreign-key
+  resolution and SQL-NULL clear path.
 - **Schema metadata loads lazily** (`Impl::require_schema`): the `Database(path, options)`
   constructor does not read it, so the first metadata/CRUD call does. `schema` and `type_validator`
   are `mutable` (const readers trigger the load) and `load_schema_metadata()` is `const` and

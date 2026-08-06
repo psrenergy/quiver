@@ -24,6 +24,14 @@ callers to change something are prefixed **BREAKING** and say what to do.
   (multiple dispatch), Dart/Python/JS (a `...ByLabel`/`_by_label` suffix per writer), and Lua (same
   method names, id or label).
 
+- **Relation updates: `update_relation()`.** Set or clear one scalar relation without constructing
+  an `Element`: provide the source collection, target collection, relation type, source id (or
+  label), and target label. The relation column is derived as
+  `lowercase(collection_to) + "_" + relation_type` and must be a foreign key to the target
+  collection. Pass `std::nullopt` in C++, or `NULL` through the C API, to clear the relation. The C
+  API exposes `quiver_database_update_relation` and
+  `quiver_database_update_relation_by_label`.
+
 - **Whole-group writers: `update_vector_group()` / `update_set_group()`.** Replace all of an
   element's rows in one *named* group; passing no columns clears the group. These are the write
   counterpart of `read_vector_group_by_id()` / `read_set_group_by_id()`, and the unambiguous

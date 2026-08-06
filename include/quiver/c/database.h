@@ -75,6 +75,21 @@ QUIVER_C_API quiver_error_t quiver_database_delete_element_by_label(quiver_datab
                                                                     const char* collection,
                                                                     const char* label);
 
+// Update one scalar foreign-key relation. target_label may be NULL to clear the relation.
+// _by_label addresses the source element; the target is always a label.
+QUIVER_C_API quiver_error_t quiver_database_update_relation(quiver_database_t* db,
+                                                            const char* collection_from,
+                                                            const char* collection_to,
+                                                            const char* relation_type,
+                                                            int64_t id,
+                                                            const char* target_label);
+QUIVER_C_API quiver_error_t quiver_database_update_relation_by_label(quiver_database_t* db,
+                                                                     const char* collection_from,
+                                                                     const char* collection_to,
+                                                                     const char* relation_type,
+                                                                     const char* label,
+                                                                     const char* target_label);
+
 // Read scalar attributes. One entry per element (aligned with read_element_ids).
 // Numeric readers carry a parallel presence mask: out_mask[i] == 0 means SQL NULL and
 // out_values[i] is then a placeholder (0 / 0.0) to be ignored. Free out_values with the

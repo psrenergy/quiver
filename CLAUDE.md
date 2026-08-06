@@ -407,6 +407,12 @@ Public Database methods follow `verb_[category_]type[_by_id|_by_label]`:
 - Transaction control: `begin_transaction()`, `commit()`, `rollback()`, `in_transaction()`
 - Dry runs: `begin_dry_run()`, `end_dry_run()`, `in_dry_run()` — one transaction that is always rolled back; while active the three transaction methods above are absorbed (no-ops) so nested callers compose. See the design decision below.
 - CRUD: `create_element(collection, element)`, `update_element`, `delete_element`
+- Relation updates: `update_relation(collection_from, collection_to, relation_type, id|label, target_label)`
+  derives the relation column as `lowercase(collection_to) + "_" + relation_type`, verifies that it
+  is a foreign key to `collection_to`, and writes the target label; `std::nullopt` clears the
+  relation. To write a relation that lives in a vector or set group, use `update_vector_group` or
+  `update_set_group`: a group relation needs a group name, which `(collection_to, relation_type)`
+  does not supply.
 - **By-label writers**: every id-addressed writer also takes a `label` in place of the id (a C++
   overload, a `_by_label` symbol in the C API); the id-addressed readers stay id-only. Per binding:
   Julia keeps the same names via multiple dispatch (`label::String` methods); Dart, Python, and JS
@@ -522,6 +528,7 @@ The rules are mechanical: given any C++ method name, you can derive the equivale
 | Time series update | `update_time_series_group()` | `quiver_database_update_time_series_group()` | `update_time_series_group!()` | `updateTimeSeriesGroup()` | `update_time_series_group()` |
 | Vector group update | `update_vector_group()` | `quiver_database_update_vector_group()` | `update_vector_group!()` | `updateVectorGroup()` | `update_vector_group()` |
 | Set group update | `update_set_group()` | `quiver_database_update_set_group()` | `update_set_group!()` | `updateSetGroup()` | `update_set_group()` |
+| Relation update | `update_relation()` | `quiver_database_update_relation()` |  |  |  |
 | Query | `query_string()` | `quiver_database_query_string()` | `query_string()` | `queryString()` | `query_string()` |
 | CSV | `export_csv()` | `quiver_database_export_csv()` | `export_csv()` | `exportCSV()` | `export_csv()` |
 | Describe (text) | `describe()` | `quiver_database_describe()` | `describe()` | `describe()` | `describe()` |

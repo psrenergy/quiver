@@ -47,6 +47,22 @@ public:
     void delete_element(const std::string& collection, int64_t id);
     void delete_element(const std::string& collection, const std::string& label);
 
+    // Update one scalar foreign-key relation. The column is derived as
+    // lowercase(collection_to) + "_" + relation_type and must be a foreign key from
+    // collection_from to collection_to. To write a relation that lives in a vector or set group,
+    // use update_vector_group or update_set_group: a group relation needs a group name, which
+    // (collection_to, relation_type) does not supply.
+    void update_relation(const std::string& collection_from,
+                         const std::string& collection_to,
+                         const std::string& relation_type,
+                         int64_t id,
+                         const std::optional<std::string>& target_label);
+    void update_relation(const std::string& collection_from,
+                         const std::string& collection_to,
+                         const std::string& relation_type,
+                         const std::string& label,
+                         const std::optional<std::string>& target_label);
+
     // Read scalar attributes (all elements). One entry per element, aligned with read_element_ids;
     // a SQL NULL is std::nullopt (positional — never dropped).
     std::vector<std::optional<int64_t>> read_scalar_integers(const std::string& collection,
