@@ -47,6 +47,8 @@ struct TableDefinition {
     std::optional<DataType> get_data_type(const std::string& column) const;
     bool has_column(const std::string& column) const;
     const ColumnDefinition* get_column(const std::string& column) const;
+    // The foreign key that starts at `column`, or nullptr if the column is not a foreign key.
+    const ForeignKey* get_foreign_key(const std::string& column) const;
 };
 
 class QUIVER_API Schema {

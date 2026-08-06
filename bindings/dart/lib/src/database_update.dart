@@ -69,6 +69,68 @@ extension DatabaseUpdate on Database {
   }
 
   // ==========================================================================
+  // Update relations
+  // ==========================================================================
+
+  /// Sets or clears a scalar foreign-key relation on an element addressed by ID.
+  /// The column is derived from `(collectionTo, relationType)` as
+  /// `lowercase(collectionTo) + "_" + relationType` and must be a foreign key to
+  /// [collectionTo]. [targetLabel] is always a label, never an id; passing `null`
+  /// clears the relation.
+  ///
+  /// For a relation in a vector or set group, use [updateVectorGroup] or [updateSetGroup].
+  void updateRelation(
+    String collectionFrom,
+    String collectionTo,
+    String relationType,
+    int id,
+    String? targetLabel,
+  ) {
+    _ensureNotClosed();
+    final arena = Arena();
+    try {
+      check(
+        bindings.quiver_database_update_relation(
+          _ptr,
+          collectionFrom.toNativeUtf8(allocator: arena).cast(),
+          collectionTo.toNativeUtf8(allocator: arena).cast(),
+          relationType.toNativeUtf8(allocator: arena).cast(),
+          id,
+          targetLabel == null ? nullptr : targetLabel.toNativeUtf8(allocator: arena).cast(),
+        ),
+      );
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
+  /// Label-addressed counterpart of [updateRelation].
+  void updateRelationByLabel(
+    String collectionFrom,
+    String collectionTo,
+    String relationType,
+    String label,
+    String? targetLabel,
+  ) {
+    _ensureNotClosed();
+    final arena = Arena();
+    try {
+      check(
+        bindings.quiver_database_update_relation_by_label(
+          _ptr,
+          collectionFrom.toNativeUtf8(allocator: arena).cast(),
+          collectionTo.toNativeUtf8(allocator: arena).cast(),
+          relationType.toNativeUtf8(allocator: arena).cast(),
+          label.toNativeUtf8(allocator: arena).cast(),
+          targetLabel == null ? nullptr : targetLabel.toNativeUtf8(allocator: arena).cast(),
+        ),
+      );
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
+  // ==========================================================================
   // Update vector / set groups
   // ==========================================================================
 

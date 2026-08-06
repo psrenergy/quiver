@@ -2018,3 +2018,172 @@ TEST(DatabaseCApi, UpdateByLabelNullArgumentsRejected) {
 
     quiver_database_close(db);
 }
+
+TEST(DatabaseCApi, UpdateRelationSetsForeignKeyById) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("relations.sql").c_str(), &options, &db), QUIVER_OK);
+
+    quiver_element_t* parent = nullptr;
+    ASSERT_EQ(quiver_element_create(&parent), QUIVER_OK);
+    quiver_element_set_string(parent, "label", "Parent A");
+    int64_t parent_a = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Parent", parent, &parent_a), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(parent), QUIVER_OK);
+
+    quiver_element_t* child = nullptr;
+    ASSERT_EQ(quiver_element_create(&child), QUIVER_OK);
+    quiver_element_set_string(child, "label", "Child 1");
+    int64_t child_id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Child", child, &child_id), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(child), QUIVER_OK);
+
+    ASSERT_EQ(quiver_database_update_relation(db, "Child", "Parent", "id", child_id, "Parent A"), QUIVER_OK);
+
+    int64_t value = 0;
+    int has_value = 0;
+    ASSERT_EQ(quiver_database_read_scalar_integer_by_id(db, "Child", "parent_id", child_id, &value, &has_value),
+              QUIVER_OK);
+    EXPECT_EQ(has_value, 1);
+    EXPECT_EQ(value, parent_a);
+
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, UpdateRelationResolvesSourceByLabel) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("relations.sql").c_str(), &options, &db), QUIVER_OK);
+
+    quiver_element_t* parent = nullptr;
+    ASSERT_EQ(quiver_element_create(&parent), QUIVER_OK);
+    quiver_element_set_string(parent, "label", "Parent B");
+    int64_t parent_b = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Parent", parent, &parent_b), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(parent), QUIVER_OK);
+
+    quiver_element_t* child = nullptr;
+    ASSERT_EQ(quiver_element_create(&child), QUIVER_OK);
+    quiver_element_set_string(child, "label", "Child 1");
+    int64_t child_id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Child", child, &child_id), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(child), QUIVER_OK);
+
+    ASSERT_EQ(quiver_database_update_relation_by_label(db, "Child", "Parent", "id", "Child 1", "Parent B"), QUIVER_OK);
+
+    int64_t value = 0;
+    int has_value = 0;
+    ASSERT_EQ(quiver_database_read_scalar_integer_by_id(db, "Child", "parent_id", child_id, &value, &has_value),
+              QUIVER_OK);
+    EXPECT_EQ(has_value, 1);
+    EXPECT_EQ(value, parent_b);
+
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, UpdateRelationClearsForeignKeyWithNullTargetLabel) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("relations.sql").c_str(), &options, &db), QUIVER_OK);
+
+    quiver_element_t* parent = nullptr;
+    ASSERT_EQ(quiver_element_create(&parent), QUIVER_OK);
+    quiver_element_set_string(parent, "label", "Parent A");
+    int64_t parent_a = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Parent", parent, &parent_a), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(parent), QUIVER_OK);
+
+    quiver_element_t* child = nullptr;
+    ASSERT_EQ(quiver_element_create(&child), QUIVER_OK);
+    quiver_element_set_string(child, "label", "Child 1");
+    int64_t child_id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Child", child, &child_id), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(child), QUIVER_OK);
+
+    ASSERT_EQ(quiver_database_update_relation(db, "Child", "Parent", "id", child_id, "Parent A"), QUIVER_OK);
+    ASSERT_EQ(quiver_database_update_relation(db, "Child", "Parent", "id", child_id, nullptr), QUIVER_OK);
+
+    int64_t value = 0;
+    int has_value = 1;
+    ASSERT_EQ(quiver_database_read_scalar_integer_by_id(db, "Child", "parent_id", child_id, &value, &has_value),
+              QUIVER_OK);
+    EXPECT_EQ(has_value, 0);
+
+    // The _by_label symbol clears the same way - only the source argument differs.
+    ASSERT_EQ(quiver_database_update_relation_by_label(db, "Child", "Parent", "id", "Child 1", "Parent A"), QUIVER_OK);
+    ASSERT_EQ(quiver_database_update_relation_by_label(db, "Child", "Parent", "id", "Child 1", nullptr), QUIVER_OK);
+
+    has_value = 1;
+    ASSERT_EQ(quiver_database_read_scalar_integer_by_id(db, "Child", "parent_id", child_id, &value, &has_value),
+              QUIVER_OK);
+    EXPECT_EQ(has_value, 0);
+
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, UpdateRelationSurfacesCppError) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("relations.sql").c_str(), &options, &db), QUIVER_OK);
+
+    quiver_element_t* child = nullptr;
+    ASSERT_EQ(quiver_element_create(&child), QUIVER_OK);
+    quiver_element_set_string(child, "label", "Child 1");
+    int64_t child_id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Child", child, &child_id), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(child), QUIVER_OK);
+
+    // No Parent element is needed - the derived column is validated before the target label is
+    // resolved, so "Parent A" is never looked up.
+    EXPECT_EQ(quiver_database_update_relation(db, "Child", "Parent", "owner", child_id, "Parent A"), QUIVER_ERROR);
+    EXPECT_STREQ(quiver_get_last_error(),
+                 "Cannot update_relation: relation column 'parent_owner' not found in collection 'Child'");
+
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, UpdateRelationNullArgumentsRejected) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("relations.sql").c_str(), &options, &db), QUIVER_OK);
+
+    quiver_element_t* parent = nullptr;
+    ASSERT_EQ(quiver_element_create(&parent), QUIVER_OK);
+    quiver_element_set_string(parent, "label", "Parent A");
+    int64_t parent_a = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Parent", parent, &parent_a), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(parent), QUIVER_OK);
+
+    quiver_element_t* child = nullptr;
+    ASSERT_EQ(quiver_element_create(&child), QUIVER_OK);
+    quiver_element_set_string(child, "label", "Child 1");
+    int64_t child_id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Child", child, &child_id), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(child), QUIVER_OK);
+
+    // Null db, collection_from, collection_to, or relation_type
+    EXPECT_EQ(quiver_database_update_relation(nullptr, "Child", "Parent", "id", child_id, "Parent A"), QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_update_relation(db, nullptr, "Parent", "id", child_id, "Parent A"), QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_update_relation(db, "Child", nullptr, "id", child_id, "Parent A"), QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_update_relation(db, "Child", "Parent", nullptr, child_id, "Parent A"), QUIVER_ERROR);
+
+    EXPECT_EQ(quiver_database_update_relation_by_label(nullptr, "Child", "Parent", "id", "Child 1", "Parent A"),
+              QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_update_relation_by_label(db, nullptr, "Parent", "id", "Child 1", "Parent A"),
+              QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_update_relation_by_label(db, "Child", nullptr, "id", "Child 1", "Parent A"),
+              QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_update_relation_by_label(db, "Child", "Parent", nullptr, "Child 1", "Parent A"),
+              QUIVER_ERROR);
+
+    // Null label, for the _by_label symbol
+    EXPECT_EQ(quiver_database_update_relation_by_label(db, "Child", "Parent", "id", nullptr, "Parent A"),
+              QUIVER_ERROR);
+
+    // A NULL target_label is a deliberate clear, not a rejected argument - unlike
+    // quiver_element_set_string, which rejects a NULL value and requires quiver_element_set_null.
+    ASSERT_EQ(quiver_database_update_relation(db, "Child", "Parent", "id", child_id, nullptr), QUIVER_OK);
+    ASSERT_EQ(quiver_database_update_relation_by_label(db, "Child", "Parent", "id", "Child 1", nullptr), QUIVER_OK);
+
+    quiver_database_close(db);
+}

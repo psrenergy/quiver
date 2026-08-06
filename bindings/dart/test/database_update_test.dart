@@ -1795,4 +1795,99 @@ void main() {
       }
     });
   });
+
+  group('Update Relation', () {
+    Database openRelations() {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
+      );
+      db.createElement('Configuration', {'label': 'Config'});
+      db.createElement('Parent', {'label': 'Parent A'});
+      db.createElement('Parent', {'label': 'Parent B'});
+      db.createElement('Child', {'label': 'Child 1'});
+      return db;
+    }
+
+    test('sets the foreign key by id and re-points it', () {
+      final db = openRelations();
+      try {
+        db.updateRelation('Child', 'Parent', 'id', 1, 'Parent A');
+        expect(db.readScalarIntegerById('Child', 'parent_id', 1), equals(1));
+
+        db.updateRelation('Child', 'Parent', 'id', 1, 'Parent B');
+        expect(db.readScalarIntegerById('Child', 'parent_id', 1), equals(2));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('clears the foreign key with a null target label', () {
+      final db = openRelations();
+      try {
+        db.updateRelation('Child', 'Parent', 'id', 1, 'Parent A');
+        expect(db.readScalarIntegerById('Child', 'parent_id', 1), equals(1));
+
+        db.updateRelation('Child', 'Parent', 'id', 1, null);
+        expect(db.readScalarIntegerById('Child', 'parent_id', 1), isNull);
+      } finally {
+        db.close();
+      }
+    });
+
+    test('sets and clears the foreign key addressed by label', () {
+      final db = openRelations();
+      try {
+        db.updateRelationByLabel('Child', 'Parent', 'id', 'Child 1', 'Parent A');
+        expect(db.readScalarIntegerById('Child', 'parent_id', 1), equals(1));
+
+        db.updateRelationByLabel('Child', 'Parent', 'id', 'Child 1', null);
+        expect(db.readScalarIntegerById('Child', 'parent_id', 1), isNull);
+      } finally {
+        db.close();
+      }
+    });
+
+    test('surfaces the C++ error for a wrong relation type', () {
+      final db = openRelations();
+      try {
+        expect(
+          () => db.updateRelation('Child', 'Parent', 'owner', 1, 'Parent A'),
+          throwsA(
+            isA<DatabaseException>().having(
+              (e) => e.message,
+              'message',
+              contains("Cannot update_relation: relation column 'parent_owner' not found in collection 'Child'"),
+            ),
+          ),
+        );
+      } finally {
+        db.close();
+      }
+    });
+
+    test('throws for an unknown target label', () {
+      final db = openRelations();
+      try {
+        expect(
+          () => db.updateRelation('Child', 'Parent', 'id', 1, 'Nonexistent'),
+          throwsA(isA<DatabaseException>()),
+        );
+      } finally {
+        db.close();
+      }
+    });
+
+    test('throws for an unresolvable source label on the by-label form', () {
+      final db = openRelations();
+      try {
+        expect(
+          () => db.updateRelationByLabel('Child', 'Parent', 'id', 'Nonexistent', 'Parent A'),
+          throwsA(isA<DatabaseException>()),
+        );
+      } finally {
+        db.close();
+      }
+    });
+  });
 }

@@ -1,5 +1,7 @@
 #include "database_impl.h"
 
+#include <algorithm>
+#include <cctype>
 #include <set>
 
 namespace quiver {
@@ -57,6 +59,57 @@ void Database::update_element(const std::string& collection, int64_t id, const E
 
 void Database::update_element(const std::string& collection, const std::string& label, const Element& element) {
     update_element(collection, impl_->resolve_label(collection, label, "update_element", *this), element);
+}
+
+void Database::update_relation(const std::string& collection_from,
+                               const std::string& collection_to,
+                               const std::string& relation_type,
+                               int64_t id,
+                               const std::optional<std::string>& target_label) {
+    impl_->logger->debug("Updating relation {}.{} for id {}", collection_from, relation_type, id);
+    impl_->require_collection(collection_from, "update_relation");
+
+    std::string column = collection_to;
+    std::transform(column.begin(), column.end(), column.begin(), [](unsigned char c) { return std::tolower(c); });
+    column += "_" + relation_type;
+
+    const auto* table = impl_->schema->get_table(collection_from);
+
+    if (!table->has_column(column)) {
+        throw std::runtime_error("Cannot update_relation: relation column '" + column + "' not found in collection '" +
+                                 collection_from + "'");
+    }
+
+    const auto* relation = table->get_foreign_key(column);
+    if (relation == nullptr) {
+        throw std::runtime_error("Cannot update_relation: relation column '" + column + "' in collection '" +
+                                 collection_from + "' is not a foreign key");
+    }
+    if (relation->to_table != collection_to) {
+        throw std::runtime_error("Cannot update_relation: relation column '" + column + "' in collection '" +
+                                 collection_from + "' is a foreign key to collection '" + relation->to_table +
+                                 "', not to '" + collection_to + "'");
+    }
+
+    Element element;
+    if (target_label) {
+        element.set(column, *target_label);
+    } else {
+        element.set_null(column);
+    }
+    update_element(collection_from, id, element);
+}
+
+void Database::update_relation(const std::string& collection_from,
+                               const std::string& collection_to,
+                               const std::string& relation_type,
+                               const std::string& label,
+                               const std::optional<std::string>& target_label) {
+    update_relation(collection_from,
+                    collection_to,
+                    relation_type,
+                    impl_->resolve_label(collection_from, label, "update_relation", *this),
+                    target_label);
 }
 
 namespace {

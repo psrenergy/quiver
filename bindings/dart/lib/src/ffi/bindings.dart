@@ -471,6 +471,92 @@ class QuiverDatabaseBindings {
   late final _quiver_database_delete_element_by_label = _quiver_database_delete_element_by_labelPtr
       .asFunction<int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>)>();
 
+  int quiver_database_update_relation(
+    ffi.Pointer<quiver_database_t> db,
+    ffi.Pointer<ffi.Char> collection_from,
+    ffi.Pointer<ffi.Char> collection_to,
+    ffi.Pointer<ffi.Char> relation_type,
+    int id,
+    ffi.Pointer<ffi.Char> target_label,
+  ) {
+    return _quiver_database_update_relation(
+      db,
+      collection_from,
+      collection_to,
+      relation_type,
+      id,
+      target_label,
+    );
+  }
+
+  late final _quiver_database_update_relationPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Int64,
+            ffi.Pointer<ffi.Char>,
+          )
+        >
+      >('quiver_database_update_relation');
+  late final _quiver_database_update_relation = _quiver_database_update_relationPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          int,
+          ffi.Pointer<ffi.Char>,
+        )
+      >();
+
+  int quiver_database_update_relation_by_label(
+    ffi.Pointer<quiver_database_t> db,
+    ffi.Pointer<ffi.Char> collection_from,
+    ffi.Pointer<ffi.Char> collection_to,
+    ffi.Pointer<ffi.Char> relation_type,
+    ffi.Pointer<ffi.Char> label,
+    ffi.Pointer<ffi.Char> target_label,
+  ) {
+    return _quiver_database_update_relation_by_label(
+      db,
+      collection_from,
+      collection_to,
+      relation_type,
+      label,
+      target_label,
+    );
+  }
+
+  late final _quiver_database_update_relation_by_labelPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+          )
+        >
+      >('quiver_database_update_relation_by_label');
+  late final _quiver_database_update_relation_by_label = _quiver_database_update_relation_by_labelPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+        )
+      >();
+
   int quiver_database_read_scalar_integers(
     ffi.Pointer<quiver_database_t> db,
     ffi.Pointer<ffi.Char> collection,

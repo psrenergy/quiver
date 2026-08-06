@@ -465,3 +465,60 @@ class TestUpdateByLabel:
             relations_db.update_vector_group_by_label("Child", "refs", "nope", {"parent_ref": [1]})
         with pytest.raises(QuiverError, match="Element not found"):
             relations_db.update_set_group_by_label("Child", "parents", "nope", {})
+
+
+class TestUpdateRelation:
+    """relations.sql gives Child.parent_id -> Parent, addressed via update_relation as
+    (collection_to="Parent", relation_type="id") deriving the column "parent_id"."""
+
+    @staticmethod
+    def _seed(db: Database) -> int:
+        db.create_element("Configuration", label="Config")
+        db.create_element("Parent", label="Parent A")
+        db.create_element("Parent", label="Parent B")
+        return db.create_element("Child", label="Child 1")
+
+    def test_sets_foreign_key_by_id(self, relations_db: Database) -> None:
+        child = self._seed(relations_db)
+
+        relations_db.update_relation("Child", "Parent", "id", child, "Parent A")
+        assert relations_db.read_scalar_integer_by_id("Child", "parent_id", child) == 1
+
+        relations_db.update_relation("Child", "Parent", "id", child, "Parent B")
+        assert relations_db.read_scalar_integer_by_id("Child", "parent_id", child) == 2
+
+    def test_clears_foreign_key_with_none_target_label(self, relations_db: Database) -> None:
+        child = self._seed(relations_db)
+
+        relations_db.update_relation("Child", "Parent", "id", child, "Parent A")
+        assert relations_db.read_scalar_integer_by_id("Child", "parent_id", child) == 1
+
+        relations_db.update_relation("Child", "Parent", "id", child, None)
+        assert relations_db.read_scalar_integer_by_id("Child", "parent_id", child) is None
+
+    def test_by_label_sets_and_clears(self, relations_db: Database) -> None:
+        child = self._seed(relations_db)
+
+        relations_db.update_relation_by_label("Child", "Parent", "id", "Child 1", "Parent A")
+        assert relations_db.read_scalar_integer_by_id("Child", "parent_id", child) == 1
+
+        relations_db.update_relation_by_label("Child", "Parent", "id", "Child 1", None)
+        assert relations_db.read_scalar_integer_by_id("Child", "parent_id", child) is None
+
+    def test_wrong_relation_type_surfaces_cpp_error(self, relations_db: Database) -> None:
+        child = self._seed(relations_db)
+
+        with pytest.raises(QuiverError, match="relation column 'parent_owner' not found in collection 'Child'"):
+            relations_db.update_relation("Child", "Parent", "owner", child, "Parent A")
+
+    def test_unknown_target_label_raises(self, relations_db: Database) -> None:
+        child = self._seed(relations_db)
+
+        with pytest.raises(QuiverError):
+            relations_db.update_relation("Child", "Parent", "id", child, "Nonexistent Parent")
+
+    def test_unresolvable_source_label_raises(self, relations_db: Database) -> None:
+        self._seed(relations_db)
+
+        with pytest.raises(QuiverError, match="Element not found"):
+            relations_db.update_relation_by_label("Child", "Parent", "id", "nope", "Parent A")

@@ -206,6 +206,20 @@ impl_->logger->debug("Opening database: {}", path);
   (collection interpolated, label bound). No match throws Pattern 2
   `"Element not found: label '<label>' in collection '<collection>'"`. It returns a plain `int64_t`
   — no `std::optional`, no silent no-op — so each label overload stays one line: resolve, delegate.
+- **Foreign-key-by-column lookup has one source**: `TableDefinition::get_foreign_key(column)`
+  (`schema.h` / `schema.cpp`, beside `get_column`) returns the `ForeignKey` starting at `column`, or
+  `nullptr`. Its three callers — `Impl::resolve_fk_label`, `internal::scalar_metadata_with_fk`, and
+  `update_relation` — each hand-rolled the same scan before. Never re-hand-roll it. The remaining
+  `foreign_keys` loops (`database_csv_export.cpp`, `database_csv_import.cpp`, `schema_validator.cpp`)
+  iterate **all** of a table's foreign keys and are not searches, so they stay as they are.
+- **`update_relation` derives the relation column, then validates it in three steps**
+  (`database_update.cpp`): build `lowercase(collection_to) + "_" + relation_type`, then require that
+  the column exists on `collection_from`, that `get_foreign_key` finds an entry for it, and that the
+  entry's `to_table` is `collection_to` — three distinct Pattern 1 messages for three distinct caller
+  mistakes (typo'd `relation_type`, a plain non-FK column, a FK to the wrong collection). The first
+  check is message quality, not safety: a foreign key's `from_column` always exists, so a missing
+  column would otherwise be reported as "is not a foreign key". Only then delegate to
+  `update_element`, preserving its target-label foreign-key resolution and SQL-NULL clear path.
 - **Schema metadata loads lazily** (`Impl::require_schema`): the `Database(path, options)`
   constructor does not read it, so the first metadata/CRUD call does. `schema` and `type_validator`
   are `mutable` (const readers trigger the load) and `load_schema_metadata()` is `const` and
@@ -321,9 +335,13 @@ Implementation conventions in `lua_runner.cpp`:
 - Script errors surface as `"Failed to run Lua script: ..."` (root Pattern 3). Encoder failures
   (unsupported type, unsupported table key, too deep) are Pattern 1 `"Cannot run: ..."` and are
   **not** wrapped in that prefix — they happen after the script already succeeded.
-- **The six id-addressed writers take an id or a label in the same argument.** `parse_element_key`
+- **The seven id-addressed writers take an id or a label in the same argument.** `parse_element_key`
   dispatches on `get_type()`, not `is<int64_t>()` — a label that looks like a number (`"1"`) must
   still resolve as a label; `std::visit` at each call site then picks the matching C++ overload.
+  `update_relation`'s nullable `target_label` takes a `sol::object` for the same reason: a
+  `sol::optional<std::string>` reads a wrong type as an empty optional, which there means "clear the
+  relation". The other `sol::optional` parameters are fine as they are — each mirrors a C++ default
+  argument whose default is a non-destructive read.
 
 ## Binary Subsystem
 
