@@ -192,7 +192,7 @@ Reviewed adversarially and rejected — these are not improvements:
 
 - Collapsing per-method FFI boilerplate in Dart/Python into closure-parameterized helpers — the
   expanded style is the de facto convention; helpers add pointer-type indirection for marginal gain.
-  Same verdict for the C API's `QUIVER_REQUIRE` + try/catch shell (including the six `_by_label`
+  Same verdict for the C API's `QUIVER_REQUIRE` + try/catch shell (including the seven `_by_label`
   functions): the *marshaling* is shared (`unmarshal_group_columns_to_rows`, `unmarshal_single_row`),
   the wrapper stays written out per function.
 - Deleting or "cleaning up" `tests/sandbox` — intentional scratch target.
