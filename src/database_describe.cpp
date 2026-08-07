@@ -101,7 +101,7 @@ std::string Database::describe() const {
 
     for (const auto& collection : impl_->schema->collection_names()) {
         out << "\n";
-        write_collection_section(out, *impl_->schema, collection, number_of_elements(collection));
+        write_collection_section(out, *impl_->schema, collection, read_element_count(collection));
     }
 
     return out.str();
@@ -111,14 +111,14 @@ std::string Database::describe_collection(const std::string& collection) const {
     impl_->require_collection(collection, "describe_collection");
 
     std::ostringstream out;
-    write_collection_section(out, *impl_->schema, collection, number_of_elements(collection));
+    write_collection_section(out, *impl_->schema, collection, read_element_count(collection));
     return out.str();
 }
 
 std::string Database::summarize_collection(const std::string& collection) const {
     impl_->require_collection(collection, "summarize_collection");
 
-    const int64_t element_count = number_of_elements(collection);
+    const int64_t element_count = read_element_count(collection);
     const std::string quoted_collection = "\"" + collection + "\"";
 
     std::ostringstream out;

@@ -382,7 +382,7 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
 - Transaction control: `begin_transaction()`, `commit()`, `rollback()`, `in_transaction()`
 - Dry runs: `begin_dry_run()`, `end_dry_run()`, `in_dry_run()` — one transaction that is always rolled back; while active the three transaction methods above are absorbed (no-ops) so nested callers compose. See the design decision below.
 - CRUD: `create_element(collection, element)`, `update_element`, `delete_element`
-- Element count: `number_of_elements(collection)` returns the current row count from the
+- Element count: `read_element_count(collection)` returns the current row count from the
   collection's main table (`COUNT(*)`), not its maximum ID or group-row count. Any table in the
   schema is accepted, so naming a group table reports that table's own row count.
 - Scalar/vector/set readers: `read_{scalar,vector,set}_{integers,floats,strings}(collection, attribute)` (+ `_by_id` variants). Scalar bulk readers return one entry per element with SQL NULLs preserved positionally (`std::optional` / `nothing`/`None`/`null`/`nil`); see the scalar-NULL design decision.
@@ -486,7 +486,7 @@ The rules are mechanical: given any C++ method name, you can derive the equivale
 | Read scalar | `read_scalar_integers()` | `quiver_database_read_scalar_integers()` | `read_scalar_integers()` | `readScalarIntegers()` | `read_scalar_integers()` |
 | Read by Id | `read_scalar_integer_by_id()` | `quiver_database_read_scalar_integer_by_id()` | `read_scalar_integer_by_id()` | `readScalarIntegerById()` | N/A (use composites) |
 | Delete | `delete_element()` | `quiver_database_delete_element()` | `delete_element!()` | `deleteElement()` | `delete_element()` |
-| Element count | `number_of_elements()` | `quiver_database_number_of_elements()` | `number_of_elements()` | `numberOfElements()` | `number_of_elements()` |
+| Element count | `read_element_count()` | `quiver_database_read_element_count()` | `read_element_count()` | `readElementCount()` | `read_element_count()` |
 | Metadata | `get_scalar_metadata()` | `quiver_database_get_scalar_metadata()` | `get_scalar_metadata()` | `getScalarMetadata()` | `get_scalar_metadata()` |
 | List groups | `list_vector_groups()` | `quiver_database_list_vector_groups()` | `list_vector_groups()` | `listVectorGroups()` | `list_vector_groups()` |
 | Time series read | `read_time_series_group()` | `quiver_database_read_time_series_group()` | `read_time_series_group()` | `readTimeSeriesGroup()` | `read_time_series_group()` |

@@ -1338,25 +1338,25 @@ class QuiverDatabaseBindings {
         )
       >();
 
-  int quiver_database_number_of_elements(
+  int quiver_database_read_element_count(
     ffi.Pointer<quiver_database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Int64> out_count,
   ) {
-    return _quiver_database_number_of_elements(
+    return _quiver_database_read_element_count(
       db,
       collection,
       out_count,
     );
   }
 
-  late final _quiver_database_number_of_elementsPtr =
+  late final _quiver_database_read_element_countPtr =
       _lookup<
         ffi.NativeFunction<
           ffi.Int32 Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Int64>)
         >
-      >('quiver_database_number_of_elements');
-  late final _quiver_database_number_of_elements = _quiver_database_number_of_elementsPtr
+      >('quiver_database_read_element_count');
+  late final _quiver_database_read_element_count = _quiver_database_read_element_countPtr
       .asFunction<int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Int64>)>();
 
   int quiver_database_get_scalar_metadata(

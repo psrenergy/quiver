@@ -211,11 +211,11 @@ Database.prototype.readElementIds = function (this: Database, collection: string
   return result;
 };
 
-Database.prototype.numberOfElements = function (this: Database, collection: string): number {
+Database.prototype.readElementCount = function (this: Database, collection: string): number {
   const lib = getSymbols();
   const collBuf = toCString(collection);
   const outBuf = new Uint8Array(8);
-  check(lib.quiver_database_number_of_elements(this._handle, collBuf.buf, outBuf));
+  check(lib.quiver_database_read_element_count(this._handle, collBuf.buf, outBuf));
   return Number(new DataView(outBuf.buffer).getBigInt64(0, true));
 };
 

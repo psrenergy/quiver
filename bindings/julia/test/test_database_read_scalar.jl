@@ -305,31 +305,31 @@ include("fixture.jl")
         Quiver.close!(db)
     end
 
-    @testset "Number Of Elements" begin
+    @testset "Read Element Count" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
         db = Quiver.from_schema(":memory:", path_schema)
 
-        count = Quiver.number_of_elements(db, "Collection")
+        count = Quiver.read_element_count(db, "Collection")
         @test count isa Int64
         @test count == 0
 
         Quiver.create_element!(db, "Collection"; label = "Item 1")
         middle_id = Quiver.create_element!(db, "Collection"; label = "Item 2")
         Quiver.create_element!(db, "Collection"; label = "Item 3")
-        @test Quiver.number_of_elements(db, "Collection") == 3
+        @test Quiver.read_element_count(db, "Collection") == 3
 
         # Deleting the middle id leaves a gap: the count drops, the maximum id does not.
         Quiver.delete_element!(db, "Collection", middle_id)
-        @test Quiver.number_of_elements(db, "Collection") == 2
+        @test Quiver.read_element_count(db, "Collection") == 2
 
         Quiver.close!(db)
     end
 
-    @testset "Number Of Elements Unknown Collection" begin
+    @testset "Read Element Count Unknown Collection" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
         db = Quiver.from_schema(":memory:", path_schema)
 
-        @test_throws Quiver.DatabaseException Quiver.number_of_elements(db, "NonExistent")
+        @test_throws Quiver.DatabaseException Quiver.read_element_count(db, "NonExistent")
 
         Quiver.close!(db)
     end

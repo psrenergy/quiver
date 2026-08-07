@@ -42,8 +42,6 @@ public:
     int64_t create_element(const std::string& collection, const Element& element);
     void update_element(const std::string& collection, int64_t id, const Element& element);
     void delete_element(const std::string& collection, int64_t id);
-    // Current number of elements in a collection.
-    int64_t number_of_elements(const std::string& collection) const;
 
     // Read scalar attributes (all elements). One entry per element, aligned with read_element_ids;
     // a SQL NULL is std::nullopt (positional — never dropped).
@@ -114,6 +112,9 @@ public:
 
     // Read element Ids
     std::vector<int64_t> read_element_ids(const std::string& collection);
+
+    // Current number of elements in a collection.
+    int64_t read_element_count(const std::string& collection) const;
 
     // Attribute metadata queries
     ScalarMetadata get_scalar_metadata(const std::string& collection, const std::string& attribute) const;

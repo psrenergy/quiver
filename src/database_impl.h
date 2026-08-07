@@ -19,7 +19,7 @@ using StmtPtr = std::unique_ptr<sqlite3_stmt, decltype(&sqlite3_finalize)>;
 
 // Run a read-only query that yields integer columns and collect the rows. Prepares/steps
 // directly on the raw sqlite3* rather than through Database::execute(), which is non-const and
-// unusable from const methods (number_of_elements, current_version, describe/summarize_collection).
+// unusable from const methods (read_element_count, current_version, describe/summarize_collection).
 // Only integer parameters are needed (LIMIT bounds, ids), and every column read is an int64.
 inline std::vector<std::vector<int64_t>>
 query_int_rows(sqlite3* db, const std::string& sql, const std::vector<int64_t>& parameters = {}) {
