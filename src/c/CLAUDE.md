@@ -27,6 +27,7 @@ src/c/
   database_create.cpp     # quiver_database_create_element
   database_update.cpp     # quiver_database_update_element
   database_delete.cpp     # quiver_database_delete_element
+  database_count.cpp      # quiver_database_number_of_elements
   database_read.cpp       # All read operations + co-located free functions
   database_metadata.cpp   # Metadata get/list + co-located free functions
   database_query.cpp      # Query operations (plain and parameterized)

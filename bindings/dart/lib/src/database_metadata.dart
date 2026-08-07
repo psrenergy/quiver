@@ -207,7 +207,7 @@ extension DatabaseMetadata on Database {
     }
   }
 
-  /// Returns the current number of elements in collection.
+  /// Returns the current number of elements in a collection.
   int numberOfElements(String collection) {
     _ensureNotClosed();
 

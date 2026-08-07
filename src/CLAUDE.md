@@ -38,6 +38,7 @@ src/                      # C++ implementation
   database_impl.h         # Database::Impl - schema/type validators, FK resolution, group inserts, TransactionGuard
   database_internal.h     # internal:: helpers - read templates, value_matches_type, metadata converters
   database_create.cpp / database_read.cpp / database_update.cpp / database_delete.cpp
+  database_count.cpp     # number_of_elements
   database_metadata.cpp / database_query.cpp / database_time_series.cpp / database_describe.cpp
   database_csv_export.cpp / database_csv_import.cpp
   schema.cpp              # Schema introspection (from_database), table classification, group_names
