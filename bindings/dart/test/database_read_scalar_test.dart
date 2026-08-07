@@ -452,25 +452,25 @@ void main() {
     });
   });
 
-  group('Read Element Count', () {
+  group('Number Of Elements', () {
     test('counts current rows, not maximum id', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       try {
-        final empty = db.readElementCount('Collection');
+        final empty = db.numberOfElements('Collection');
         expect(empty, isA<int>());
         expect(empty, equals(0));
 
         db.createElement('Collection', {'label': 'Item 1'});
         final middleId = db.createElement('Collection', {'label': 'Item 2'});
         db.createElement('Collection', {'label': 'Item 3'});
-        expect(db.readElementCount('Collection'), equals(3));
+        expect(db.numberOfElements('Collection'), equals(3));
 
         // Deleting the middle id leaves a gap in the ids; the count still drops.
         db.deleteElement('Collection', middleId);
-        expect(db.readElementCount('Collection'), equals(2));
+        expect(db.numberOfElements('Collection'), equals(2));
       } finally {
         db.close();
       }
@@ -483,7 +483,7 @@ void main() {
       );
       try {
         expect(
-          () => db.readElementCount('DoesNotExist'),
+          () => db.numberOfElements('DoesNotExist'),
           throwsA(isA<DatabaseException>()),
         );
       } finally {

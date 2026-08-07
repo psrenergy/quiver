@@ -129,7 +129,7 @@ datetime surface — there are no DateTime wrapper helpers, unlike Julia/Dart/Py
 db:is_healthy()                    -- boolean
 db:current_version()               -- integer (current migration version)
 db:path()                          -- string (database file path)
-db:read_element_count(collection)  -- integer: how many elements the collection holds right now
+db:number_of_elements(collection)  -- integer: how many elements the collection holds right now
 db:describe()                      -- string: whole-DB text report (returns it, does NOT print)
 db:describe_collection(collection) -- string: one collection's structure (text report)
 db:summarize_collection(collection)-- string: per-scalar null/non-null counts, low-cardinality

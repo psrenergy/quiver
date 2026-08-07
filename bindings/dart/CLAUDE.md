@@ -30,7 +30,7 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   `Int32` to `UnsignedInt`). That is a breaking change for every downstream `== quiver_data_type_t.X`
   comparison — notably hub's `lib/models/database.dart`. The `update_vector_group` /
   `update_set_group` entries were therefore hand-added in the file's existing style, and
-  `quiver_database_read_element_count` likewise (hand-added right after
+  `quiver_database_number_of_elements` likewise (hand-added right after
   `quiver_database_read_element_ids`, matching the C API's declaration order). Take the generator
   upgrade as its own deliberate change (regenerate, then fix the enum call sites here and in hub)
   rather than as a side effect of adding a C function.

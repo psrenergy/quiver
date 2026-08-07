@@ -196,8 +196,8 @@ function quiver_database_delete_element(db, collection, id)
     @ccall libquiver_c.quiver_database_delete_element(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, id::Int64)::quiver_error_t
 end
 
-function quiver_database_read_element_count(db, collection, out_count)
-    @ccall libquiver_c.quiver_database_read_element_count(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, out_count::Ptr{Int64})::quiver_error_t
+function quiver_database_number_of_elements(db, collection, out_count)
+    @ccall libquiver_c.quiver_database_number_of_elements(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, out_count::Ptr{Int64})::quiver_error_t
 end
 
 function quiver_database_read_scalar_integers(db, collection, attribute, out_values, out_mask, out_count)

@@ -805,7 +805,7 @@ extension DatabaseRead on Database {
   }
 
   /// Returns the current number of elements in a collection.
-  int readElementCount(String collection) {
+  int numberOfElements(String collection) {
     _ensureNotClosed();
 
     final arena = Arena();
@@ -813,7 +813,7 @@ extension DatabaseRead on Database {
       final outCount = arena<Int64>();
 
       check(
-        bindings.quiver_database_read_element_count(
+        bindings.quiver_database_number_of_elements(
           _ptr,
           collection.toNativeUtf8(allocator: arena).cast(),
           outCount,

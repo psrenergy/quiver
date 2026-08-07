@@ -215,8 +215,8 @@ std::vector<int64_t> Database::read_element_ids(const std::string& collection) {
     return internal::read_column_values<int64_t>(execute(sql));
 }
 
-int64_t Database::read_element_count(const std::string& collection) const {
-    impl_->require_collection(collection, "read_element_count");
+int64_t Database::number_of_elements(const std::string& collection) const {
+    impl_->require_collection(collection, "number_of_elements");
     return query_int_rows(impl_->db, "SELECT COUNT(*) FROM \"" + collection + "\"")[0][0];
 }
 

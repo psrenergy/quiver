@@ -182,8 +182,8 @@ impl_->logger->debug("Opening database: {}", path);
   All list/metadata/describe call sites use them — never hand-roll prefix scans.
 - **Declaration order everywhere**: metadata and list functions iterate `column_order`
   (declaration order), matching the `describe(ostream&)` dump and CSV export. Nothing reports alphabetical order.
-- **`read_element_count` lives in `database_read.cpp`** alongside the other element-level reads
-  (`read_element_ids`). `read_element_count(c)
+- **`number_of_elements` lives in `database_read.cpp`** alongside the other element-level reads
+  (`read_element_ids`). `number_of_elements(c)
   const` validates through `Impl::require_collection` and directly executes `SELECT COUNT(*)`
   against the quoted collection. The value is queried on demand and is not cached. `describe()`,
   `describe_collection(c)`, and `summarize_collection(c)` reuse the public operation; the

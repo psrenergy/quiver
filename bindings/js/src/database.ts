@@ -104,7 +104,7 @@ export class Database {
     id: number,
   ) => string | null;
   declare readElementIds: (collection: string) => number[];
-  declare readElementCount: (collection: string) => number;
+  declare numberOfElements: (collection: string) => number;
   declare readVectorIntegers: (collection: string, attribute: string) => number[][];
   declare readVectorFloats: (collection: string, attribute: string) => number[][];
   declare readVectorStrings: (collection: string, attribute: string) => string[][];

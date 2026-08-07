@@ -159,9 +159,9 @@ class TestReadElementIds:
         assert ids == []
 
 
-class TestReadElementCount:
+class TestNumberOfElements:
     def test_empty_collection_is_zero(self, collections_db: Database) -> None:
-        count = collections_db.read_element_count("Collection")
+        count = collections_db.number_of_elements("Collection")
         assert isinstance(count, int)
         assert count == 0
 
@@ -169,15 +169,15 @@ class TestReadElementCount:
         collections_db.create_element("Collection", label="Item 1")
         middle_id = collections_db.create_element("Collection", label="Item 2")
         collections_db.create_element("Collection", label="Item 3")
-        assert collections_db.read_element_count("Collection") == 3
+        assert collections_db.number_of_elements("Collection") == 3
 
         # Deleting the middle id leaves a gap: the count drops, the maximum id does not.
         collections_db.delete_element("Collection", middle_id)
-        assert collections_db.read_element_count("Collection") == 2
+        assert collections_db.number_of_elements("Collection") == 2
 
     def test_raises_on_unknown_collection(self, collections_db: Database) -> None:
         with pytest.raises(QuiverError):
-            collections_db.read_element_count("DoesNotExist")
+            collections_db.number_of_elements("DoesNotExist")
 
 
 # -- DateTime scalar reads ---------------------------------------------------

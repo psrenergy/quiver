@@ -217,22 +217,22 @@ describe("readElementIds", () => {
   });
 });
 
-describe("readElementCount", () => {
+describe("numberOfElements", () => {
   test("counts current rows, not maximum id", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
-      const empty = db.readElementCount("AllTypes");
+      const empty = db.numberOfElements("AllTypes");
       expect(typeof empty).toEqual("number");
       expect(empty).toEqual(0);
 
       db.createElement("AllTypes", { label: "Item 1" });
       const middleId = db.createElement("AllTypes", { label: "Item 2" });
       db.createElement("AllTypes", { label: "Item 3" });
-      expect(db.readElementCount("AllTypes")).toEqual(3);
+      expect(db.numberOfElements("AllTypes")).toEqual(3);
 
       // Deleting the middle id leaves a gap in the ids; the count still drops.
       db.deleteElement("AllTypes", middleId);
-      expect(db.readElementCount("AllTypes")).toEqual(2);
+      expect(db.numberOfElements("AllTypes")).toEqual(2);
     } finally {
       db.close();
     }
@@ -241,7 +241,7 @@ describe("readElementCount", () => {
   test("throws on unknown collection", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
-      expect(() => db.readElementCount("DoesNotExist")).toThrow(QuiverError);
+      expect(() => db.numberOfElements("DoesNotExist")).toThrow(QuiverError);
     } finally {
       db.close();
     }

@@ -289,35 +289,35 @@ TEST(Database, ReadElementIdsEmpty) {
 }
 
 // ============================================================================
-// Element count tests
+// Number of elements tests
 // ============================================================================
 
-TEST(Database, ReadElementCountTracksCurrentRows) {
+TEST(Database, NumberOfElementsTracksCurrentRows) {
     auto db = quiver::Database::from_schema(":memory:",
                                             VALID_SCHEMA("describe_multi_group.sql"),
                                             {.read_only = false, .console_level = quiver::LogLevel::Off});
     const auto& const_db = db;
 
-    EXPECT_EQ(const_db.read_element_count("Items"), 0);
+    EXPECT_EQ(const_db.number_of_elements("Items"), 0);
 
     db.create_element("Items", quiver::Element().set("label", std::string("a")));
     const int64_t middle_id = db.create_element("Items", quiver::Element().set("label", std::string("b")));
     db.create_element("Items", quiver::Element().set("label", std::string("c")));
 
-    EXPECT_EQ(const_db.read_element_count("Items"), 3);
+    EXPECT_EQ(const_db.number_of_elements("Items"), 3);
 
     db.delete_element("Items", middle_id);
-    EXPECT_EQ(const_db.read_element_count("Items"), 2);
+    EXPECT_EQ(const_db.number_of_elements("Items"), 2);
 
     db.begin_transaction();
     db.create_element("Items", quiver::Element().set("label", std::string("d")));
-    EXPECT_EQ(const_db.read_element_count("Items"), 3);
+    EXPECT_EQ(const_db.number_of_elements("Items"), 3);
     db.rollback();
 
-    EXPECT_EQ(const_db.read_element_count("Items"), 2);
+    EXPECT_EQ(const_db.number_of_elements("Items"), 2);
 }
 
-TEST(Database, ReadElementCountIgnoresGroupRows) {
+TEST(Database, NumberOfElementsIgnoresGroupRows) {
     auto db = quiver::Database::from_schema(":memory:",
                                             VALID_SCHEMA("describe_multi_group.sql"),
                                             {.read_only = false, .console_level = quiver::LogLevel::Off});
@@ -336,10 +336,10 @@ TEST(Database, ReadElementCountIgnoresGroupRows) {
     EXPECT_EQ(db.query_integer("SELECT COUNT(*) FROM Items_set_tags"), 2);
 
     // The main table's row count, even though these two elements own 5 group rows between them.
-    EXPECT_EQ(const_db.read_element_count("Items"), 2);
+    EXPECT_EQ(const_db.number_of_elements("Items"), 2);
 }
 
-TEST(Database, ReadElementCountCountsGroupTables) {
+TEST(Database, NumberOfElementsCountsGroupTables) {
     auto db = quiver::Database::from_schema(":memory:",
                                             VALID_SCHEMA("describe_multi_group.sql"),
                                             {.read_only = false, .console_level = quiver::LogLevel::Off});
@@ -352,23 +352,23 @@ TEST(Database, ReadElementCountCountsGroupTables) {
                           .set("tag", std::vector<std::string>{"x", "y"}));
 
     // Vector and set tables are compatible with this method: each reports its own row count.
-    EXPECT_EQ(const_db.read_element_count("Items_vector_values"), 3);
-    EXPECT_EQ(const_db.read_element_count("Items_set_tags"), 2);
+    EXPECT_EQ(const_db.number_of_elements("Items_vector_values"), 3);
+    EXPECT_EQ(const_db.number_of_elements("Items_set_tags"), 2);
 
     // Acceptance follows the schema, not the data: an untouched group table is 0, not an error.
-    EXPECT_EQ(const_db.read_element_count("Items_vector_scores"), 0);
+    EXPECT_EQ(const_db.number_of_elements("Items_vector_scores"), 0);
 }
 
-TEST(Database, ReadElementCountNotFound) {
+TEST(Database, NumberOfElementsNotFound) {
     auto db = quiver::Database::from_schema(":memory:",
                                             VALID_SCHEMA("describe_multi_group.sql"),
                                             {.read_only = false, .console_level = quiver::LogLevel::Off});
 
     try {
-        (void)db.read_element_count("Nope");
-        FAIL() << "Expected read_element_count to reject an unknown collection";
+        (void)db.number_of_elements("Nope");
+        FAIL() << "Expected number_of_elements to reject an unknown collection";
     } catch (const std::runtime_error& e) {
-        EXPECT_STREQ(e.what(), "Cannot read_element_count: collection not found: Nope");
+        EXPECT_STREQ(e.what(), "Cannot number_of_elements: collection not found: Nope");
     }
 }
 
