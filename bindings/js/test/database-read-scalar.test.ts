@@ -216,3 +216,34 @@ describe("readElementIds", () => {
     }
   });
 });
+
+describe("numberOfElements", () => {
+  test("counts current rows, not maximum id", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      const empty = db.numberOfElements("AllTypes");
+      expect(typeof empty).toEqual("number");
+      expect(empty).toEqual(0);
+
+      db.createElement("AllTypes", { label: "Item 1" });
+      const middleId = db.createElement("AllTypes", { label: "Item 2" });
+      db.createElement("AllTypes", { label: "Item 3" });
+      expect(db.numberOfElements("AllTypes")).toEqual(3);
+
+      // Deleting the middle id leaves a gap in the ids; the count still drops.
+      db.deleteElement("AllTypes", middleId);
+      expect(db.numberOfElements("AllTypes")).toEqual(2);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("throws on unknown collection", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      expect(() => db.numberOfElements("DoesNotExist")).toThrow(QuiverError);
+    } finally {
+      db.close();
+    }
+  });
+});

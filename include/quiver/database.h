@@ -113,6 +113,9 @@ public:
     // Read element Ids
     std::vector<int64_t> read_element_ids(const std::string& collection);
 
+    // Current number of elements in a collection.
+    int64_t number_of_elements(const std::string& collection) const;
+
     // Attribute metadata queries
     ScalarMetadata get_scalar_metadata(const std::string& collection, const std::string& attribute) const;
     GroupMetadata get_vector_metadata(const std::string& collection, const std::string& group_name) const;

@@ -494,3 +494,32 @@ TEST_F(LuaRunnerTest, ReadElementById) {
     )";
     lua.run(script);
 }
+
+TEST_F(LuaRunnerTest, NumberOfElements) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(
+        local empty = db:number_of_elements("Collection")
+        assert(type(empty) == "number", "Expected a number, got " .. type(empty))
+        assert(empty == 0, "Expected 0 for an empty collection, got " .. empty)
+
+        db:create_element("Collection", { label = "Item 1" })
+        local middle_id = db:create_element("Collection", { label = "Item 2" })
+        db:create_element("Collection", { label = "Item 3" })
+        assert(db:number_of_elements("Collection") == 3, "Expected 3 after three inserts")
+
+        -- Deleting the middle id leaves a gap in the ids; the count still drops.
+        db:delete_element("Collection", middle_id)
+        assert(db:number_of_elements("Collection") == 2, "Expected 2 after deleting the middle id")
+    )");
+}
+
+TEST_F(LuaRunnerTest, NumberOfElementsUnknownCollection) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(lua, R"(db:number_of_elements("Nope"))", "Cannot number_of_elements: collection not found: Nope");
+}

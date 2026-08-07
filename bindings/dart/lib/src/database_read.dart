@@ -804,6 +804,28 @@ extension DatabaseRead on Database {
     }
   }
 
+  /// Returns the current number of elements in a collection.
+  int numberOfElements(String collection) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      final outCount = arena<Int64>();
+
+      check(
+        bindings.quiver_database_number_of_elements(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          outCount,
+        ),
+      );
+
+      return outCount.value;
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
   // ==========================================================================
   // Read all attributes by Id (convenience methods)
   // ==========================================================================
