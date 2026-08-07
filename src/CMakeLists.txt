@@ -5,7 +5,7 @@ set(QUIVER_SOURCES
     database_read.cpp
     database_update.cpp
     database_delete.cpp
-    database_count.cpp
+    database_helpers.cpp
     database_metadata.cpp
     database_time_series.cpp
     database_query.cpp
@@ -119,7 +119,7 @@ if(QUIVER_BUILD_C_API)
         c/database_csv_import.cpp
         c/database_create.cpp
         c/database_delete.cpp
-        c/database_count.cpp
+        c/database_helpers.cpp
         c/database_read.cpp
         c/database_update.cpp
         c/database_metadata.cpp

@@ -27,7 +27,7 @@ src/c/
   database_create.cpp     # quiver_database_create_element
   database_update.cpp     # quiver_database_update_element
   database_delete.cpp     # quiver_database_delete_element
-  database_count.cpp      # quiver_database_number_of_elements
+  database_helpers.cpp    # quiver_database_number_of_elements (generic home, mirrors src/database_helpers.cpp)
   database_read.cpp       # All read operations + co-located free functions
   database_metadata.cpp   # Metadata get/list + co-located free functions
   database_query.cpp      # Query operations (plain and parameterized)
@@ -169,8 +169,10 @@ human-readable **text report** via a `char** out_report` out-param (freed by the
 `quiver_database_free_string`) — no structs. All three live in `database.cpp` as trivial
 `new_c_str(db->db.<fn>(...))` wrappers.
 
-`quiver_database_number_of_elements` lives in `database_count.cpp` as the scalar element-count
-counterpart to the C++ operation.
+`quiver_database_number_of_elements` lives in `database_helpers.cpp` — a catch-all for small,
+single-purpose C API wrappers that don't warrant their own file, mirroring `database_helpers.cpp`
+on the C++ core side (`src/CLAUDE.md`). Its basename collides with the unrelated
+`database_helpers.h` marshaling header below — a known naming clash, not yet resolved.
 
 ## Multi-Column Time Series
 

@@ -7,7 +7,7 @@ add_executable(quiver_tests
     test_iteration.cpp
     test_binary_time_properties.cpp
     test_expression.cpp
-    test_database_count.cpp
+    test_database_helpers.cpp
     test_database_create.cpp
     test_database_csv_export.cpp
     test_database_csv_import.cpp
@@ -68,7 +68,7 @@ if(QUIVER_BUILD_C_API)
         test_c_api_csv_converter.cpp
         test_c_api_binary_metadata.cpp
         test_c_api_expression.cpp
-        test_c_api_database_count.cpp
+        test_c_api_database_helpers.cpp
         test_c_api_database_create.cpp
         test_c_api_database_csv_export.cpp
         test_c_api_database_csv_import.cpp
