@@ -48,40 +48,6 @@ std::string group_table_name(const std::string& collection, const std::string& g
     }
 }
 
-// Run a read-only query that yields integer columns and collect the rows.
-// summarize_collection() is const, but Database::execute() is not; this mirrors current_version()'s
-// direct prepare/step on impl_->db so the const method can issue its own counting/aggregate SQL.
-// Only integer parameters are needed (LIMIT bounds), and every column read is an int64.
-// Plain element counts go through the public number_of_elements() instead.
-std::vector<std::vector<int64_t>>
-query_int_rows(sqlite3* db, const std::string& sql, const std::vector<int64_t>& parameters = {}) {
-    sqlite3_stmt* raw_stmt = nullptr;
-    if (sqlite3_prepare_v2(db, sql.c_str(), -1, &raw_stmt, nullptr) != SQLITE_OK) {
-        throw std::runtime_error("Failed to prepare statement: " + std::string(sqlite3_errmsg(db)));
-    }
-    StmtPtr stmt(raw_stmt, sqlite3_finalize);
-
-    for (size_t i = 0; i < parameters.size(); ++i) {
-        sqlite3_bind_int64(stmt.get(), static_cast<int>(i + 1), parameters[i]);
-    }
-
-    const int col_count = sqlite3_column_count(stmt.get());
-    std::vector<std::vector<int64_t>> rows;
-    int rc = 0;
-    while ((rc = sqlite3_step(stmt.get())) == SQLITE_ROW) {
-        std::vector<int64_t> row;
-        row.reserve(col_count);
-        for (int c = 0; c < col_count; ++c) {
-            row.push_back(sqlite3_column_int64(stmt.get(), c));
-        }
-        rows.push_back(std::move(row));
-    }
-    if (rc != SQLITE_DONE) {
-        throw std::runtime_error("Failed to execute statement: " + std::string(sqlite3_errmsg(db)));
-    }
-    return rows;
-}
-
 const char* plural(int64_t n) {
     return n == 1 ? "" : "s";
 }
