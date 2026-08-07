@@ -267,8 +267,8 @@ QUIVER_C_API quiver_error_t quiver_database_read_element_ids(quiver_database_t* 
 
 // Current number of elements in a collection.
 QUIVER_C_API quiver_error_t quiver_database_read_element_count(quiver_database_t* db,
-                                                                const char* collection,
-                                                                int64_t* out_count);
+                                                               const char* collection,
+                                                               int64_t* out_count);
 
 // Attribute metadata types
 typedef struct {
