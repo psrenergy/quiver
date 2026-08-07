@@ -215,34 +215,4 @@ end
     Quiver.close!(db)
 end
 
-@testset "Number Of Elements" begin
-    @testset "Counts current rows, not maximum id" begin
-        path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
-        db = Quiver.from_schema(":memory:", path_schema)
-
-        count = Quiver.number_of_elements(db, "Collection")
-        @test count isa Int64
-        @test count == 0
-
-        Quiver.create_element!(db, "Collection"; label = "Item 1")
-        middle_id = Quiver.create_element!(db, "Collection"; label = "Item 2")
-        Quiver.create_element!(db, "Collection"; label = "Item 3")
-        @test Quiver.number_of_elements(db, "Collection") == 3
-
-        # Deleting the middle id leaves a gap: the count drops, the maximum id does not.
-        Quiver.delete_element!(db, "Collection", middle_id)
-        @test Quiver.number_of_elements(db, "Collection") == 2
-
-        Quiver.close!(db)
-    end
-
-    @testset "Unknown collection throws" begin
-        path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
-        db = Quiver.from_schema(":memory:", path_schema)
-
-        @test_throws Quiver.DatabaseException Quiver.number_of_elements(db, "NonExistent")
-
-        Quiver.close!(db)
-    end
-end
 end # module

@@ -104,6 +104,7 @@ export class Database {
     id: number,
   ) => string | null;
   declare readElementIds: (collection: string) => number[];
+  declare numberOfElements: (collection: string) => number;
   declare readVectorIntegers: (collection: string, attribute: string) => number[][];
   declare readVectorFloats: (collection: string, attribute: string) => number[][];
   declare readVectorStrings: (collection: string, attribute: string) => string[][];
@@ -199,7 +200,6 @@ export class Database {
   declare describe: () => string;
   declare describeCollection: (collection: string) => string;
   declare summarizeCollection: (collection: string) => string;
-  declare numberOfElements: (collection: string) => number;
 
   // --- Composite helpers (implemented in composites.ts) ---
   declare readScalarsById: (

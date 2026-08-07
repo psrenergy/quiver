@@ -7,8 +7,8 @@ C++ core and C API suites live here; binding suites live in each binding's `test
 
 - Database: `test_database_lifecycle.cpp` (open/close/move/options), `test_database_create.cpp`,
   `test_database_read_{scalar,vector,set}.cpp` (read split by attribute type; element-level reads
-  `read_element_ids`/`read_element_by_id` live in the `_scalar` file), `test_database_update.cpp`,
-  `test_database_delete.cpp`, `test_database_helpers.cpp`, `test_database_describe.cpp`, `test_database_query.cpp`,
+  `read_element_ids`/`read_element_by_id`/`number_of_elements` live in the `_scalar` file),
+  `test_database_update.cpp`, `test_database_delete.cpp`, `test_database_describe.cpp`, `test_database_query.cpp`,
   `test_database_time_series_{metadata,group,row,files}.cpp` (time series split by sub-concern:
   `group` = group read/update + validation, `row` = `upsert_time_series_row`/`read_time_series_row`;
   the C++ core has no `_nulls` file), `test_database_transaction.cpp`,

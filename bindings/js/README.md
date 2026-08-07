@@ -99,6 +99,7 @@ bun run example.ts
 ### Read (IDs)
 
 - `readElementIds(collection)` -- Read all element IDs in a collection
+- `numberOfElements(collection)` -- Current number of elements in a collection
 
 ### Metadata
 
@@ -152,7 +153,6 @@ Parameters are passed as an array of `number | string | null`.
 - `isHealthy()` -- Check database health
 - `path()` -- Get database file path
 - `currentVersion()` -- Get current schema version
-- `numberOfElements(collection)` -- Current number of elements in a collection
 
 ### Lua
 

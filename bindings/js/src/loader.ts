@@ -81,6 +81,7 @@ const readSymbols = {
   quiver_database_read_set_floats_by_id: { args: [P, BUF, BUF, I64, P, P], returns: I32 },
   quiver_database_read_set_strings_by_id: { args: [P, BUF, BUF, I64, P, P], returns: I32 },
   quiver_database_read_element_ids: { args: [P, BUF, P, P], returns: I32 },
+  quiver_database_number_of_elements: { args: [P, BUF, P], returns: I32 },
 } as const;
 
 const querySymbols = {
@@ -118,7 +119,6 @@ const metadataSymbols = {
 const describeSymbols = {
   quiver_database_describe_collection: { args: [P, BUF, P], returns: I32 },
   quiver_database_summarize_collection: { args: [P, BUF, P], returns: I32 },
-  quiver_database_number_of_elements: { args: [P, BUF, P], returns: I32 },
 } as const;
 
 const timeSeriesSymbols = {

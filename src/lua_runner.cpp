@@ -270,8 +270,6 @@ struct LuaRunner::Impl {
             [](Database& self) { return self.current_version(); },
             "path",
             [](Database& self) -> const std::string& { return self.path(); },
-            "number_of_elements",
-            [](Database& self, const std::string& collection) { return self.number_of_elements(collection); },
             // Group 9: Time series files
             "has_time_series_files",
             [](Database& self, const std::string& collection) { return self.has_time_series_files(collection); },
@@ -356,6 +354,9 @@ struct LuaRunner::Impl {
         bind.set_function("create_element", &create_element_lua);
 
         bind.set_function("read_element_ids", &read_element_ids_lua);
+        bind.set_function("number_of_elements", [](Database& self, const std::string& collection) {
+            return self.number_of_elements(collection);
+        });
 
         bind.set_function("read_scalar_strings", &read_scalar_strings_lua);
         bind.set_function("read_scalar_integers", &read_scalar_integers_lua);
