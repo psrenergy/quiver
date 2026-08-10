@@ -9,17 +9,6 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ### Added
 
-- **`number_of_elements(collection)`.** Returns the current number of rows in a
-  collection's main table with `COUNT(*)`, without materializing and transferring every element
-  ID. An empty collection returns `0`; deleting any element decreases the count regardless of ID
-  gaps. The C API symbol is `quiver_database_number_of_elements` and writes an `int64_t` scalar to
-  caller-owned storage.
-
-  Available in **every layer**: C++, the C API, Julia (`number_of_elements`), Dart
-  (`numberOfElements`), Python (`number_of_elements`), JS (`numberOfElements`), and Lua
-  (`db:number_of_elements`). Every binding calls the scalar C entry point directly, so the count
-  never travels as an array of ids.
-
 - **Address the writers by label, not just by id.** Every collection has a
   `label TEXT UNIQUE NOT NULL` by schema convention, and callers usually hold that rather than an
   id — so code around Quiver kept re-implementing the same `SELECT id FROM <c> WHERE label = ?`
@@ -34,6 +23,17 @@ callers to change something are prefixed **BREAKING** and say what to do.
   The id-addressed **readers** deliberately keep taking ids only. Wired into every binding: Julia
   (multiple dispatch), Dart/Python/JS (a `...ByLabel`/`_by_label` suffix per writer), and Lua (same
   method names, id or label).
+
+- **`number_of_elements(collection)`.** Returns the current number of rows in a
+  collection's main table with `COUNT(*)`, without materializing and transferring every element
+  ID. An empty collection returns `0`; deleting any element decreases the count regardless of ID
+  gaps. The C API symbol is `quiver_database_number_of_elements` and writes an `int64_t` scalar to
+  caller-owned storage.
+
+  Available in **every layer**: C++, the C API, Julia (`number_of_elements`), Dart
+  (`numberOfElements`), Python (`number_of_elements`), JS (`numberOfElements`), and Lua
+  (`db:number_of_elements`). Every binding calls the scalar C entry point directly, so the count
+  never travels as an array of ids.
 
 - **Whole-group writers: `update_vector_group()` / `update_set_group()`.** Replace all of an
   element's rows in one *named* group; passing no columns clears the group. These are the write
