@@ -93,7 +93,8 @@ Settled questions — don't relitigate without the user; each was decided delibe
 - **A missing element id is Pattern 2 `"Element not found: <id> in collection '<c>'"`, not a silent
   no-op.** `update_element` / `delete_element` / `update_vector_group` / `update_set_group` check it
   through `Impl::require_element`; the error surfaces through the C API error channel and every
-  binding. The two time-series writers deliberately do not check: an unknown id fails the foreign
+  binding. `update_relation` gets the same check for free, since it delegates to `update_element`
+  for the actual write. The two time-series writers deliberately do not check: an unknown id fails the foreign
   key when there are rows to insert, and a clear matches nothing. Adding `require_element` there was
   rejected — it buys a nicer message for a case SQLite already blocks, at the cost of a `SELECT` per
   row in the ingestion loops `upsert_time_series_row` exists for. Every label form throws, since

@@ -198,9 +198,9 @@ impl_->logger->debug("Opening database: {}", path);
   `INTEGER` column is rejected), string matches `TEXT`/`INTEGER`(FK label)/`DATE_TIME`. Keep the two
   in sync (root design decision).
 - **`update_element` / `delete_element` / the vector+set group writers verify the id exists** (via
-  `Impl::require_element`) and throw Pattern 2 `"Element not found: ..."` — no silent no-op. The two
-  **time-series** writers (`update_time_series_group`, `upsert_time_series_row`) deliberately do
-  not.
+  `Impl::require_element`) and throw Pattern 2 `"Element not found: ..."` — no silent no-op.
+  `update_relation` gets this for free by delegating to `update_element`. The two **time-series**
+  writers (`update_time_series_group`, `upsert_time_series_row`) deliberately do not.
 - **`Impl::resolve_label`** (`database_impl.h`, beside `require_element`) is the single gate behind
   every by-label writer: `require_collection`, then `SELECT id FROM <collection> WHERE label = ?`
   (collection interpolated, label bound). No match throws Pattern 2
@@ -209,9 +209,7 @@ impl_->logger->debug("Opening database: {}", path);
 - **Foreign-key-by-column lookup has one source**: `TableDefinition::get_foreign_key(column)`
   (`schema.h` / `schema.cpp`, beside `get_column`) returns the `ForeignKey` starting at `column`, or
   `nullptr`. Its three callers — `Impl::resolve_fk_label`, `internal::scalar_metadata_with_fk`, and
-  `update_relation` — each hand-rolled the same scan before. Never re-hand-roll it. The remaining
-  `foreign_keys` loops (`database_csv_export.cpp`, `database_csv_import.cpp`, `schema_validator.cpp`)
-  iterate **all** of a table's foreign keys and are not searches, so they stay as they are.
+  `update_relation` — each hand-rolled the same scan before. Never re-hand-roll it.
 - **`update_relation` derives the relation column, then validates it in three steps**
   (`database_update.cpp`): build `lowercase(collection_to) + "_" + relation_type`, then require that
   the column exists on `collection_from`, that `get_foreign_key` finds an entry for it, and that the

@@ -66,7 +66,7 @@ void Database::update_relation(const std::string& collection_from,
                                const std::string& relation_type,
                                int64_t id,
                                const std::optional<std::string>& target_label) {
-    impl_->logger->debug("Updating relation {}.{} for id {}", collection_from, relation_type, id);
+    impl_->logger->debug("Updating relation {}.{} ({}) for id {}", collection_from, collection_to, relation_type, id);
     impl_->require_collection(collection_from, "update_relation");
 
     std::string column = collection_to;
