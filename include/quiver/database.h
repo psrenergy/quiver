@@ -34,6 +34,7 @@ public:
 
     static Database
     from_schema(const std::string& db_path, const std::string& schema_path, const DatabaseOptions& options = {});
+    static void test_migrations(const std::string& migrations_path);
     bool is_healthy() const;
 
     int64_t current_version() const;
@@ -220,6 +221,7 @@ private:
     // Internal methods
     void set_version(int64_t version);
     void migrate_up(const std::string& migration_path);
+    void migrate_down(const std::string& migrations_path);
     void apply_schema(const std::string& schema_path);
 };
 

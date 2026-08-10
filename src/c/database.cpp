@@ -73,6 +73,21 @@ QUIVER_C_API quiver_error_t quiver_database_from_migrations(const char* db_path,
     }
 }
 
+QUIVER_C_API quiver_error_t quiver_database_test_migrations(const char* migrations_path) {
+    QUIVER_REQUIRE(migrations_path);
+
+    try {
+        quiver::Database::test_migrations(migrations_path);
+        return QUIVER_OK;
+    } catch (const std::bad_alloc&) {
+        quiver_set_last_error("Memory allocation failed");
+        return QUIVER_ERROR;
+    } catch (const std::exception& e) {
+        quiver_set_last_error(e.what());
+        return QUIVER_ERROR;
+    }
+}
+
 QUIVER_C_API quiver_error_t quiver_database_current_version(quiver_database_t* db, int64_t* out_version) {
     QUIVER_REQUIRE(db, out_version);
 

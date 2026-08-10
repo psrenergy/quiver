@@ -139,13 +139,16 @@ Database& operator=(Database&&) = default;
 
 ## Factory Methods
 
-Static methods for database creation:
+Static methods for database creation and migration validation:
 ```cpp
 static Database from_schema(const std::string& db_path, const std::string& schema_path, const DatabaseOptions& options = {});
 static Database from_migrations(const std::string& db_path, const std::string& migrations_path, const DatabaseOptions& options = {});
+static void test_migrations(const std::string& migrations_path);
 ```
 `schema_path` is a `.sql` file; `migrations_path` is a directory of numbered version
 subdirectories with `up.sql`/`down.sql`.
+`test_migrations` validates that directory in an in-memory database by executing every up migration
+and then every down migration; the direction-specific execution helpers remain private.
 
 ## Logging
 
@@ -251,8 +254,8 @@ lua.run(R"(
 Implementation conventions in `lua_runner.cpp`:
 - **Filesystem sandbox**: `resolve_sandboxed_path(db, operation, path)` is the single gate for
   every file-touching Lua operation (`db:open_file`, `db:bin_to_csv`, `db:csv_to_bin`,
-  `db:export_csv`, `db:import_csv`, `expr:save`). It rejects `:memory:` databases, resolves
-  relative paths against the database file's directory (bare-filename db paths fall back to the
+  `db:export_csv`, `db:import_csv`, `db:test_migrations`, `expr:save`). It rejects `:memory:`
+  databases, resolves relative paths against the database file's directory (bare-filename db paths fall back to the
   CWD at call time, mirroring `create_database_logger`), canonicalizes via `weakly_canonical`,
   and requires strict containment (candidate == root is rejected — the binary subsystem appends
   `.qvr`/`.toml` by string concatenation). The resolved absolute path is what's forwarded

@@ -17,9 +17,10 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   `test_schema_validator.cpp`
 - Lua: `test_lua_runner_*.cpp` — per-area split mirroring the database files (`_create`, `_read`,
   `_update`, `_delete`, `_query`, `_return`, `_time_series`, `_transaction`, `_errors`,
-  `_csv_export`, `_csv_import`, `_all_types`, `_fk`). `_return` covers the JSON encoding of a
-  script's return value; `_transaction` covers `db:dry_run` (the core-level dry run lives in
-  `test_database_transaction.cpp`). The shared `LuaRunnerTest` and `LuaSandboxTest` fixtures,
+  `_csv_export`, `_csv_import`, `_all_types`, `_fk`, `_migrations`). `_return` covers the JSON
+  encoding of a script's return value; `_transaction` covers `db:dry_run` (the core-level dry run
+  lives in `test_database_transaction.cpp`); `_migrations` covers `db:test_migrations` (sandboxed
+  like the other file-touching Lua operations). The shared `LuaRunnerTest` and `LuaSandboxTest` fixtures,
   the `expect_lua_error` helper (throw + message-substring assert — plain `EXPECT_THROW` passes
   vacuously when a removed function raises "attempt to call a nil value"), and the common include
   prelude live in `test_lua_runner.h`; the single-use `LuaRunnerAllTypesTest` / `LuaRunnerFkTest`
@@ -32,6 +33,9 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   `test_binary_time_properties.cpp`, `test_csv_converter.cpp`, `test_iteration.cpp`
 - Expression subsystem: `test_expression.cpp`
 - `test_issues.cpp` - issue-numbered regression tests
+- `test_migrations.cpp` also covers the in-memory `test_migrations` up-then-down round trip;
+  `test_c_api_database_lifecycle.cpp` covers its C API success and error propagation;
+  `test_lua_runner_migrations.cpp` covers the sandboxed `db:test_migrations` Lua binding.
 
 ## C API tests
 

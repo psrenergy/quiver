@@ -216,6 +216,77 @@ TEST_F(MigrationsTestFixture, DatabaseMigrationWithInvalidSQL) {
                  std::runtime_error);
 }
 
+// ============================================================================
+// Migration round-trip tests
+// ============================================================================
+
+TEST_F(MigrationsTestFixture, TestMigrationsAppliesAndRevertsSharedFixture) {
+    EXPECT_NO_THROW(quiver::Database::test_migrations(migrations_path));
+}
+
+TEST_F(MigrationsTestFixture, TestMigrationsExecutesDownSql) {
+    fs::create_directories(fs::path(temp_dir) / "1");
+    std::ofstream(fs::path(temp_dir) / "1" / "up.sql")
+        << "CREATE TABLE Configuration (id INTEGER PRIMARY KEY, label TEXT UNIQUE NOT NULL) STRICT;"
+           "CREATE TABLE Test (id INTEGER PRIMARY KEY, label TEXT UNIQUE NOT NULL) STRICT;";
+    std::ofstream(fs::path(temp_dir) / "1" / "down.sql") << "THIS IS NOT VALID SQL;";
+
+    try {
+        quiver::Database::test_migrations(temp_dir);
+        FAIL() << "Expected test_migrations to throw";
+    } catch (const std::runtime_error& error) {
+        const std::string message = error.what();
+        EXPECT_NE(message.find("Failed to test_migrations: down phase:"), std::string::npos);
+        EXPECT_NE(message.find("Failed to migrate_down: migration 1:"), std::string::npos);
+        EXPECT_NE(message.find("Failed to execute SQL:"), std::string::npos);
+    }
+}
+
+TEST_F(MigrationsTestFixture, TestMigrationsRequiresDownSql) {
+    fs::create_directories(fs::path(temp_dir) / "1");
+    std::ofstream(fs::path(temp_dir) / "1" / "up.sql")
+        << "CREATE TABLE Configuration (id INTEGER PRIMARY KEY, label TEXT UNIQUE NOT NULL) STRICT;"
+           "CREATE TABLE Test (id INTEGER PRIMARY KEY, label TEXT UNIQUE NOT NULL) STRICT;";
+
+    try {
+        quiver::Database::test_migrations(temp_dir);
+        FAIL() << "Expected test_migrations to throw";
+    } catch (const std::runtime_error& error) {
+        EXPECT_STREQ(error.what(),
+                     "Failed to test_migrations: down phase: Cannot migrate_down: migration 1 has no down.sql file");
+    }
+}
+
+TEST_F(MigrationsTestFixture, TestMigrationsValidatesPath) {
+    const auto nonexistent_path = (fs::path(temp_dir) / "missing").string();
+    EXPECT_THROW(
+        {
+            try {
+                quiver::Database::test_migrations(nonexistent_path);
+            } catch (const std::runtime_error& error) {
+                EXPECT_EQ(std::string(error.what()),
+                          "Cannot test_migrations: migrations path not found: " + nonexistent_path);
+                throw;
+            }
+        },
+        std::runtime_error);
+
+    fs::create_directories(temp_dir);
+    const auto file_path = fs::path(temp_dir) / "not_a_directory.sql";
+    std::ofstream(file_path) << "SELECT 1;";
+    EXPECT_THROW(
+        {
+            try {
+                quiver::Database::test_migrations(file_path.string());
+            } catch (const std::runtime_error& error) {
+                EXPECT_EQ(std::string(error.what()),
+                          "Cannot test_migrations: path is not a directory: " + file_path.string());
+                throw;
+            }
+        },
+        std::runtime_error);
+}
+
 TEST_F(MigrationsTestFixture, MigrationsWithNonNumericDirectories) {
     // Create directories with non-numeric names
     fs::create_directories(fs::path(temp_dir) / "abc");
