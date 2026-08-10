@@ -69,6 +69,19 @@ end
     end
 end
 
+@testset "Test Migrations" begin
+    @testset "Success" begin
+        path_migrations = joinpath(tests_path(), "schemas", "migrations")
+        @test Quiver.test_migrations(path_migrations) === nothing
+    end
+
+    @testset "Path validation" begin
+        path = joinpath(tests_path(), "schemas", "does_not_exist")
+        exc = @test_throws Quiver.DatabaseException Quiver.test_migrations(path)
+        @test exc.value.msg == "Cannot test_migrations: migrations path not found: " * path
+    end
+end
+
 @testset "is_healthy" begin
     path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
     db = Quiver.from_schema(":memory:", path_schema)

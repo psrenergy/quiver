@@ -86,6 +86,24 @@ describe("Database lifecycle", () => {
     }).toThrow(QuiverError);
   });
 
+  test("testMigrations succeeds for a valid migrations directory", () => {
+    // Should not throw
+    Database.testMigrations(MIGRATIONS_PATH);
+  });
+
+  test("testMigrations with invalid path throws QuiverError", () => {
+    const badPath = join("nonexistent", "path");
+    try {
+      Database.testMigrations(badPath);
+      throw new Error("Should have thrown");
+    } catch (e) {
+      expect(e).toBeInstanceOf(QuiverError);
+      expect((e as QuiverError).message).toEqual(
+        `Cannot test_migrations: migrations path not found: ${badPath}`,
+      );
+    }
+  });
+
   test("open reopens an existing database file", () => {
     const dir = makeTempDir();
     const dbPath = join(dir, "test.db");

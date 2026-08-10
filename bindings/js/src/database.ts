@@ -64,6 +64,14 @@ export class Database {
     return new Database(readPtrOut(outDb));
   }
 
+  /** Applies every migration's up.sql in order, then every down.sql in reverse. Throws on failure. */
+  static testMigrations(migrationsPath: string): void {
+    const lib = getSymbols();
+    const migrPathBuf = toCString(migrationsPath);
+
+    check(lib.quiver_database_test_migrations(migrPathBuf.buf));
+  }
+
   close(): void {
     if (this._closed) return;
     const lib = getSymbols();

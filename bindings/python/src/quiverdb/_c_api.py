@@ -41,6 +41,7 @@ ffi.cdef("""
                                                     const char* migrations_path,
                                                     const quiver_database_options_t* options,
                                                     quiver_database_t** out_db);
+    quiver_error_t quiver_database_test_migrations(const char* migrations_path);
     quiver_error_t quiver_database_from_schema(const char* db_path,
                                                 const char* schema_path,
                                                 const quiver_database_options_t* options,
