@@ -28,25 +28,26 @@ inline std::optional<std::string> get_row_value(const Row& row, size_t index, st
     return row.get_string(index);
 }
 
-// Template for reading grouped values (vectors or sets) for all elements
+// One output entry per element of a collection, holding that element's values from a vector/set
+// table. Expects the LEFT JOIN the bulk readers build: column 0 is the collection's own id — the
+// left side of the join, so every element has a row even with no values — and column 1 is the
+// value. Each change of column 0 starts a new entry, so entries stay aligned with
+// read_element_ids' rowid order; an element with no values joins to one NULL row, which the value
+// check below skips, leaving its entry empty.
 template <typename T>
 std::vector<std::vector<T>> read_grouped_values_all(const Result& result) {
     std::vector<std::vector<T>> groups;
     int64_t current_id = -1;
 
     for (size_t i = 0; i < result.row_count(); ++i) {
-        auto id = result[i].get_integer(0);
-        auto val = get_row_value(result[i], 1, static_cast<T*>(nullptr));
-
-        if (!id)
-            continue;
-
-        if (*id != current_id) {
+        // Column 0 is the collection's INTEGER PRIMARY KEY, so it is never NULL.
+        auto id = *result[i].get_integer(0);
+        if (id != current_id) {
             groups.emplace_back();
-            current_id = *id;
+            current_id = id;
         }
 
-        if (val) {
+        if (auto val = get_row_value(result[i], 1, static_cast<T*>(nullptr))) {
             groups.back().push_back(*val);
         }
     }

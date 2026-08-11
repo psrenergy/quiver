@@ -90,7 +90,8 @@ QUIVER_C_API quiver_error_t quiver_database_read_scalar_strings(quiver_database_
                                                                 char*** out_values,
                                                                 size_t* out_count);
 
-// Read vector attributes
+// Read vector attributes. One entry per element (aligned with quiver_database_read_element_ids), so
+// out_count is the element count. Values are dense — NULL cells are dropped.
 QUIVER_C_API quiver_error_t quiver_database_read_vector_integers(quiver_database_t* db,
                                                                  const char* collection,
                                                                  const char* attribute,
@@ -112,7 +113,7 @@ QUIVER_C_API quiver_error_t quiver_database_read_vector_strings(quiver_database_
                                                                 size_t** out_sizes,
                                                                 size_t* out_count);
 
-// Read set attributes (same structure as vectors, uses same free functions)
+// Read set attributes. Same contract as the vector readers above, and the same free functions.
 QUIVER_C_API quiver_error_t quiver_database_read_set_integers(quiver_database_t* db,
                                                               const char* collection,
                                                               const char* attribute,
