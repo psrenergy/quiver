@@ -58,6 +58,7 @@ void main() {
         equals([
           [false, true],
           [true, false],
+          <bool>[],
         ]),
       );
       expect(
@@ -74,6 +75,7 @@ void main() {
         equals([
           [false, true],
           [true],
+          <bool>[],
         ]),
       );
       expect(

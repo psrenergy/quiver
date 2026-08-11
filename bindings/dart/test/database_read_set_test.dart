@@ -70,20 +70,21 @@ void main() {
         db.createElement('AllTypes', {'label': 'No set'});
 
         final result = db.readSetDateTimes('AllTypes', 'tag');
-        expect(result.length, equals(2));
+        expect(result.length, equals(3));
         expect(
           result[0]..sort(),
           equals([DateTime(2024, 1, 15, 10, 30), DateTime(2024, 1, 16)]),
         );
         expect(result[1], equals([DateTime(2024, 6, 20, 14, 45, 30)]));
+        expect(result[2], isEmpty);
       } finally {
         db.close();
       }
     });
   });
 
-  group('Read Set Only Returns Elements With Data', () {
-    test('only returns sets for elements with data', () {
+  group('Read Set Includes Elements With No Rows', () {
+    test('returns one entry per element, empty for elements with no rows', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
@@ -103,9 +104,12 @@ void main() {
           'tag': ['urgent', 'review'],
         });
 
-        // Only elements with set data are returned
+        // One entry per element: the element with no rows is an empty list, not a gap
         final result = db.readSetStrings('Collection', 'tag');
-        expect(result.length, equals(2));
+        expect(result.length, equals(3));
+        expect(result[0], equals(['important']));
+        expect(result[1], isEmpty);
+        expect(result[2], equals(['urgent', 'review']));
       } finally {
         db.close();
       }

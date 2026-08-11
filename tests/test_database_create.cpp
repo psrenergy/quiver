@@ -226,12 +226,14 @@ TEST(Database, CreateElementWithNoOptionalAttributes) {
     int64_t id = db.create_element("Collection", element);
     EXPECT_EQ(id, 1);
 
-    // Verify vector attributes are empty
+    // Verify vector attributes are empty - one entry per element, empty for this one
     auto vectors = db.read_vector_integers("Collection", "value_int");
-    EXPECT_TRUE(vectors.empty());
+    ASSERT_EQ(vectors.size(), 1);
+    EXPECT_TRUE(vectors[0].empty());
 
     auto sets = db.read_set_strings("Collection", "tag");
-    EXPECT_TRUE(sets.empty());
+    ASSERT_EQ(sets.size(), 1);
+    EXPECT_TRUE(sets[0].empty());
 }
 
 TEST(Database, CreateElementWithTimeSeries) {

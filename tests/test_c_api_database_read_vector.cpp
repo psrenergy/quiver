@@ -150,7 +150,7 @@ TEST(DatabaseCApi, ReadVectorEmpty) {
     quiver_database_close(db);
 }
 
-TEST(DatabaseCApi, ReadVectorOnlyReturnsElementsWithData) {
+TEST(DatabaseCApi, ReadVectorIncludesElementsWithNoRows) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
@@ -197,16 +197,17 @@ TEST(DatabaseCApi, ReadVectorOnlyReturnsElementsWithData) {
     size_t count = 0;
     auto err = quiver_database_read_vector_integers(db, "Collection", "value_int", &vectors, &sizes, &count);
 
-    // Only elements with vector data are returned
-    EXPECT_EQ(err, QUIVER_OK);
-    EXPECT_EQ(count, 2);
-    EXPECT_EQ(sizes[0], 3);
-    EXPECT_EQ(sizes[1], 2);
+    // One entry per element: the element with no rows has size 0, not a gap
+    ASSERT_EQ(err, QUIVER_OK);
+    ASSERT_EQ(count, 3);
+    ASSERT_EQ(sizes[0], 3);
+    ASSERT_EQ(sizes[1], 0);
+    ASSERT_EQ(sizes[2], 2);
     EXPECT_EQ(vectors[0][0], 1);
     EXPECT_EQ(vectors[0][1], 2);
     EXPECT_EQ(vectors[0][2], 3);
-    EXPECT_EQ(vectors[1][0], 4);
-    EXPECT_EQ(vectors[1][1], 5);
+    EXPECT_EQ(vectors[2][0], 4);
+    EXPECT_EQ(vectors[2][1], 5);
 
     quiver_database_free_integer_vectors(vectors, sizes, count);
     quiver_database_close(db);

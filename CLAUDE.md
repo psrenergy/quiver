@@ -176,9 +176,9 @@ Settled questions — don't relitigate without the user; each was decided delibe
   because `Bool <: Integer` and `bool` is an `int` subclass respectively — which makes the
   behaviour dispatch-order-dependent and worth a test rather than an assumption.
   `db:update_relation` is the one deliberate refusal: only `nil` may clear a relation.
-  The scalar readers preserve NULLs positionally; the **vector/set readers do not** — they inherit
-  `read_grouped_values_all`'s dropping of NULL cells and of ids that own no rows, so they are not
-  aligned with `read_element_ids`.
+  All of them return one entry per element, aligned with `read_element_ids`. The scalar readers
+  additionally preserve NULLs positionally; the **vector/set readers do not** — they inherit
+  `read_grouped_values_all`'s dropping of NULL *cells*, so an inner list is dense.
 - **Binary `dims` parameter is the map-based form only** — indexed overloads were prototyped and
   deliberately dropped (perf rationale in `src/CLAUDE.md`).
 - **Time-series group NULLs round-trip via a per-cell presence mask.** The columnar C API
@@ -700,9 +700,10 @@ parser is wider than it in a different direction (Julia fills missing trailing c
 `fromisoformat` and Dart's `DateTime.parse` take `Z`/offset forms, and Dart additionally rolls an
 out-of-range field over rather than rejecting it). The write gate only fires on `date_`-prefixed
 columns, so a plain `TEXT` column is the path by which a non-conforming value reaches a reader.
-Like the boolean family, the scalar readers preserve NULLs positionally while the **vector/set
-readers do not** — they inherit `read_grouped_values_all`'s dropping of NULL cells and of ids that
-own no rows, so they are not aligned with `read_element_ids`.
+Like the boolean family, all of them return one entry per element, aligned with
+`read_element_ids`; the scalar readers additionally preserve NULLs positionally while the
+**vector/set readers do not** — they inherit `read_grouped_values_all`'s dropping of NULL *cells*,
+so an inner list is dense.
 
 **Boolean wrappers (Julia, Dart, Python, and JS):**
 

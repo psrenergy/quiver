@@ -59,6 +59,24 @@ describe("readSetIntegers / readSetFloats / readSetStrings", () => {
       db.close();
     }
   });
+
+  test("returns one entry per element, aligned with readElementIds across an empty element", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      db.createElement("AllTypes", { label: "Item1", tag: ["a", "b"] });
+      db.createElement("AllTypes", { label: "Item2" }); // no set rows
+      db.createElement("AllTypes", { label: "Item3", tag: ["c"] });
+
+      const ids = db.readElementIds("AllTypes");
+      const values = db.readSetStrings("AllTypes", "tag");
+
+      expect(values.length).toEqual(ids.length);
+      // One entry per element: the element with no rows is an empty list, not a gap
+      expect(values).toEqual([["a", "b"], [], ["c"]]);
+    } finally {
+      db.close();
+    }
+  });
 });
 
 describe("readSetIntegersById / readSetFloatsById / readSetStringsById", () => {
