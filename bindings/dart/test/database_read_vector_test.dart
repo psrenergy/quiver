@@ -81,8 +81,8 @@ void main() {
     });
   });
 
-  group('Read Vector Only Returns Elements With Data', () {
-    test('only returns vectors for elements with data', () {
+  group('Read Vector Includes Elements With No Rows', () {
+    test('returns one entry per element, empty for elements with no rows', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
@@ -102,11 +102,12 @@ void main() {
           'value_int': [4, 5],
         });
 
-        // Only elements with vector data are returned
+        // One entry per element: the element with no rows is an empty list, not a gap
         final result = db.readVectorIntegers('Collection', 'value_int');
-        expect(result.length, equals(2));
+        expect(result.length, equals(3));
         expect(result[0], equals([1, 2, 3]));
-        expect(result[1], equals([4, 5]));
+        expect(result[1], isEmpty);
+        expect(result[2], equals([4, 5]));
       } finally {
         db.close();
       }

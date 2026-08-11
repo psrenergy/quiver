@@ -56,6 +56,23 @@ describe("readVectorIntegers / readVectorFloats / readVectorStrings", () => {
       db.close();
     }
   });
+
+  test("returns one entry per element, aligned with readElementIds across an empty element", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      db.createElement("AllTypes", { label: "Item1", count_value: [10, 20] });
+      db.createElement("AllTypes", { label: "Item2" }); // no vector rows
+      db.createElement("AllTypes", { label: "Item3", count_value: [30] });
+
+      const ids = db.readElementIds("AllTypes");
+      const values = db.readVectorIntegers("AllTypes", "count_value");
+
+      expect(values.length).toEqual(ids.length);
+      expect(values).toEqual([[10, 20], [], [30]]);
+    } finally {
+      db.close();
+    }
+  });
 });
 
 describe("readVectorIntegersById / readVectorFloatsById / readVectorStringsById", () => {

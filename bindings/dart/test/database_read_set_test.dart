@@ -50,8 +50,8 @@ void main() {
     });
   });
 
-  group('Read Set Only Returns Elements With Data', () {
-    test('only returns sets for elements with data', () {
+  group('Read Set Includes Elements With No Rows', () {
+    test('returns one entry per element, empty for elements with no rows', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
@@ -71,9 +71,12 @@ void main() {
           'tag': ['urgent', 'review'],
         });
 
-        // Only elements with set data are returned
+        // One entry per element: the element with no rows is an empty list, not a gap
         final result = db.readSetStrings('Collection', 'tag');
-        expect(result.length, equals(2));
+        expect(result.length, equals(3));
+        expect(result[0], equals(['important']));
+        expect(result[1], isEmpty);
+        expect(result[2], equals(['urgent', 'review']));
       } finally {
         db.close();
       }
