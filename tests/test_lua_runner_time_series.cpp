@@ -472,6 +472,29 @@ TEST_F(LuaRunnerTest, UpsertTimeSeriesRowMultiDim) {
     EXPECT_EQ(std::get<int64_t>(rows[0].at("flag")), 1);
 }
 
+TEST_F(LuaRunnerTest, UpsertTimeSeriesRowConflictPatchPreservesUnnamedColumn) {
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("multi_dim_time_series.sql"));
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    int64_t id = db.create_element("Resource", quiver::Element().set("label", "Resource 1"));
+
+    quiver::LuaRunner lua(db);
+
+    std::string script = R"(
+        db:upsert_time_series_row("Resource", "load", )" +
+                         std::to_string(id) + R"(, { date_time = "2024-06-01", block = 1, load = 42.5, flag = 1 })
+
+        -- Conflict on the same PK, naming only `load` — `flag` must survive, not become NULL.
+        db:upsert_time_series_row("Resource", "load", )" +
+                         std::to_string(id) + R"(, { date_time = "2024-06-01", block = 1, load = 99.0 })
+    )";
+    lua.run(script);
+
+    auto rows = db.read_time_series_group("Resource", "load", id);
+    ASSERT_EQ(rows.size(), 1);
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[0].at("load")), 99.0);
+    EXPECT_EQ(std::get<int64_t>(rows[0].at("flag")), 1);
+}
+
 TEST_F(LuaRunnerTest, UpsertTimeSeriesRowMissingDimErrors) {
     // Negative path: omitting the required date_time dimension column must
     // surface the C++ "Cannot upsert_time_series_row: row missing required ..."
@@ -557,6 +580,33 @@ TEST_F(LuaRunnerTest, UpdateTimeSeriesFiles) {
     auto files = db.read_time_series_files("Collection");
     EXPECT_EQ(files["data_file"].value(), "/path/to/data.csv");
     EXPECT_EQ(files["metadata_file"].value(), "/path/to/meta.json");
+}
+
+TEST_F(LuaRunnerTest, UpdateTimeSeriesFilesPatchPreservesUnnamedColumn) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(
+        db:update_time_series_files("Collection", {
+            data_file = "/old/data.csv",
+            metadata_file = "/old/meta.json"
+        })
+
+        -- Only naming data_file must not wipe metadata_file.
+        db:update_time_series_files("Collection", {
+            data_file = "/new/data.csv"
+        })
+
+        local files = db:read_time_series_files("Collection")
+        assert(files.data_file == "/new/data.csv", "Expected data_file '/new/data.csv', got " .. tostring(files.data_file))
+        assert(files.metadata_file == "/old/meta.json", "Expected metadata_file to be preserved, got " .. tostring(files.metadata_file))
+    )");
+
+    auto files = db.read_time_series_files("Collection");
+    EXPECT_EQ(files["data_file"].value(), "/new/data.csv");
+    EXPECT_EQ(files["metadata_file"].value(), "/old/meta.json");
 }
 
 TEST_F(LuaRunnerTest, MultiColumnTimeSeriesUpdateAndRead) {

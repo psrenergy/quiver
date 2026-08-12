@@ -489,6 +489,98 @@ TEST(Database, UpsertTimeSeriesRowPartialValueColumns) {
     EXPECT_EQ(std::get<int64_t>(rows[1]["flag"]), 5);
 }
 
+TEST(Database, UpsertTimeSeriesRowConflictPatchPreservesUnnamedColumn) {
+    auto db = quiver::Database::from_schema(":memory:",
+                                            VALID_SCHEMA("multi_dim_time_series.sql"),
+                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element resource;
+    resource.set("label", std::string("Resource 1"));
+    auto id = db.create_element("Resource", resource);
+
+    db.upsert_time_series_row(
+        "Resource",
+        "load",
+        id,
+        {{"date_time", std::string("2024-01-01")}, {"block", int64_t{1}}, {"load", 10.0}, {"flag", int64_t{1}}});
+
+    // Conflict on the same PK, naming only `load` — `flag` must survive, not become NULL.
+    db.upsert_time_series_row(
+        "Resource", "load", id, {{"date_time", std::string("2024-01-01")}, {"block", int64_t{1}}, {"load", 99.0}});
+
+    auto rows = db.read_time_series_group("Resource", "load", id);
+    ASSERT_EQ(rows.size(), 1);
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[0]["load"]), 99.0);
+    EXPECT_EQ(std::get<int64_t>(rows[0]["flag"]), 1);
+}
+
+TEST(Database, UpsertTimeSeriesRowConflictExplicitNullClearsNamedColumn) {
+    auto db = quiver::Database::from_schema(":memory:",
+                                            VALID_SCHEMA("multi_dim_time_series.sql"),
+                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element resource;
+    resource.set("label", std::string("Resource 1"));
+    auto id = db.create_element("Resource", resource);
+
+    db.upsert_time_series_row(
+        "Resource",
+        "load",
+        id,
+        {{"date_time", std::string("2024-01-01")}, {"block", int64_t{1}}, {"load", 10.0}, {"flag", int64_t{1}}});
+
+    // Conflict on the same PK, naming `flag` with an explicit NULL — `load` (unnamed) survives,
+    // `flag` (named) is cleared.
+    db.upsert_time_series_row(
+        "Resource",
+        "load",
+        id,
+        {{"date_time", std::string("2024-01-01")}, {"block", int64_t{1}}, {"flag", quiver::Value{nullptr}}});
+
+    auto rows = db.read_time_series_group("Resource", "load", id);
+    ASSERT_EQ(rows.size(), 1);
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[0]["load"]), 10.0);
+    EXPECT_TRUE(std::holds_alternative<std::nullptr_t>(rows[0]["flag"]));
+}
+
+TEST(Database, UpsertTimeSeriesRowConflictDimensionOnlyIsNoOp) {
+    auto db = quiver::Database::from_schema(":memory:",
+                                            VALID_SCHEMA("multi_dim_time_series.sql"),
+                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element resource;
+    resource.set("label", std::string("Resource 1"));
+    auto id = db.create_element("Resource", resource);
+
+    db.upsert_time_series_row(
+        "Resource",
+        "load",
+        id,
+        {{"date_time", std::string("2024-01-01")}, {"block", int64_t{1}}, {"load", 10.0}, {"flag", int64_t{1}}});
+
+    // Conflict naming only dimension columns (both value columns unnamed) — DO UPDATE SET would
+    // be empty, so this must be a harmless no-op, not an invalid-SQL throw.
+    db.upsert_time_series_row(
+        "Resource", "load", id, {{"date_time", std::string("2024-01-01")}, {"block", int64_t{1}}});
+
+    auto rows = db.read_time_series_group("Resource", "load", id);
+    ASSERT_EQ(rows.size(), 1);
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[0]["load"]), 10.0);
+    EXPECT_EQ(std::get<int64_t>(rows[0]["flag"]), 1);
+}
+
 TEST(Database, UpsertTimeSeriesRowErrors) {
     auto db = quiver::Database::from_schema(":memory:",
                                             VALID_SCHEMA("multi_dim_time_series.sql"),

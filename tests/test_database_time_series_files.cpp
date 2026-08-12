@@ -91,6 +91,61 @@ TEST(Database, UpdateTimeSeriesFilesReplace) {
     EXPECT_EQ(result["metadata_file"].value(), "/new/meta.json");
 }
 
+TEST(Database, UpdateTimeSeriesFilesPatchPreservesUnnamedColumn) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    std::map<std::string, std::optional<std::string>> paths1;
+    paths1["data_file"] = "/old/data.csv";
+    paths1["metadata_file"] = "/old/meta.json";
+    db.update_time_series_files("Collection", paths1);
+
+    // Only naming data_file must not wipe metadata_file.
+    std::map<std::string, std::optional<std::string>> paths2;
+    paths2["data_file"] = "/new/data.csv";
+    db.update_time_series_files("Collection", paths2);
+
+    auto result = db.read_time_series_files("Collection");
+    EXPECT_EQ(result["data_file"].value(), "/new/data.csv");
+    ASSERT_TRUE(result["metadata_file"].has_value());
+    EXPECT_EQ(result["metadata_file"].value(), "/old/meta.json");
+}
+
+TEST(Database, UpdateTimeSeriesFilesPatchExplicitNullClearsNamedColumn) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    std::map<std::string, std::optional<std::string>> paths1;
+    paths1["data_file"] = "/old/data.csv";
+    paths1["metadata_file"] = "/old/meta.json";
+    db.update_time_series_files("Collection", paths1);
+
+    // Naming metadata_file with nullopt explicitly clears it, while data_file (unnamed) survives.
+    std::map<std::string, std::optional<std::string>> paths2;
+    paths2["metadata_file"] = std::nullopt;
+    db.update_time_series_files("Collection", paths2);
+
+    auto result = db.read_time_series_files("Collection");
+    ASSERT_TRUE(result["data_file"].has_value());
+    EXPECT_EQ(result["data_file"].value(), "/old/data.csv");
+    EXPECT_FALSE(result["metadata_file"].has_value());
+}
+
+TEST(Database, UpdateTimeSeriesFilesPatchNoExistingRowInsertsWithUnnamedNull) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    // No row exists yet - unnamed columns become NULL (nothing to preserve).
+    std::map<std::string, std::optional<std::string>> paths;
+    paths["data_file"] = "/only/data.csv";
+    db.update_time_series_files("Collection", paths);
+
+    auto result = db.read_time_series_files("Collection");
+    ASSERT_TRUE(result["data_file"].has_value());
+    EXPECT_EQ(result["data_file"].value(), "/only/data.csv");
+    EXPECT_FALSE(result["metadata_file"].has_value());
+}
+
 TEST(Database, TimeSeriesFilesNotFound) {
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});

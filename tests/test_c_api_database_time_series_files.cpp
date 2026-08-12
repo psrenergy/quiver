@@ -187,6 +187,42 @@ TEST(DatabaseCApi, UpdateTimeSeriesFilesReplace) {
     quiver_database_close(db);
 }
 
+TEST(DatabaseCApi, UpdateTimeSeriesFilesPatchPreservesUnnamedColumn) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    const char* columns1[] = {"data_file", "metadata_file"};
+    const char* paths1[] = {"/old/data.csv", "/old/meta.json"};
+    auto err = quiver_database_update_time_series_files(db, "Collection", columns1, paths1, 2);
+    EXPECT_EQ(err, QUIVER_OK);
+
+    // Only naming data_file must not wipe metadata_file.
+    const char* columns2[] = {"data_file"};
+    const char* paths2[] = {"/new/data.csv"};
+    err = quiver_database_update_time_series_files(db, "Collection", columns2, paths2, 1);
+    EXPECT_EQ(err, QUIVER_OK);
+
+    char** out_columns = nullptr;
+    char** out_paths = nullptr;
+    size_t out_count = 0;
+    err = quiver_database_read_time_series_files(db, "Collection", &out_columns, &out_paths, &out_count);
+    EXPECT_EQ(err, QUIVER_OK);
+
+    for (size_t i = 0; i < out_count; ++i) {
+        if (std::string(out_columns[i]) == "data_file") {
+            EXPECT_STREQ(out_paths[i], "/new/data.csv");
+        } else if (std::string(out_columns[i]) == "metadata_file") {
+            EXPECT_STREQ(out_paths[i], "/old/meta.json");
+        }
+    }
+
+    quiver_database_free_time_series_files(out_columns, out_paths, out_count);
+    quiver_database_close(db);
+}
+
 TEST(DatabaseCApi, TimeSeriesFilesNotFound) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
