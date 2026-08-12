@@ -168,6 +168,14 @@ impl_->logger->debug("Opening database: {}", path);
   first non-empty one, because `columns` is name-sorted and an empty alphabetically-first column
   otherwise left it at 0 for a later column to overwrite — skipping the check and indexing past the
   end of the empty vector.
+- **`upsert_time_series_row` uses native upsert** (`database_time_series.cpp`): `INSERT … ON
+  CONFLICT(id, <dims…>) DO UPDATE SET col = excluded.col` over the caller's non-dimension columns,
+  `DO NOTHING` when only dimension columns are named (an empty `SET` list is invalid SQL). It
+  replaced `INSERT OR REPLACE`, which rebuilt the row and so nulled every column the caller
+  omitted. One narrowing that comes with it: `OR REPLACE` fired on *any* uniqueness conflict, the
+  `ON CONFLICT` target only on the primary key. `update_time_series_files` follows the same rule
+  through a `SELECT 1 … LIMIT 1` probe: UPDATE the singleton row if it exists, INSERT if it does
+  not, mentioning only the named columns either way.
 - **`Impl::update_group_rows`** (`database_update.cpp`) is the shared body of
   `update_vector_group`/`update_set_group`. It validates the **union of every row's keys** (not
   `rows[0]`, which dropped later-row-only columns and skipped validating them) against the group

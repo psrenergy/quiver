@@ -385,9 +385,12 @@ QUIVER_C_API quiver_error_t quiver_database_update_time_series_group(quiver_data
 // column_names[]: column names (must include every dimension column from the schema PK)
 // column_types[]: quiver_data_type_t per column
 // column_data[c]: pointer to one typed value (int64_t* for INTEGER, double* for FLOAT, const char** for
-// STRING/DATE_TIME) Upserts on the time-series PK (id + every dimension column); calling twice with the same PK
-// overwrites value columns Errors surface canonical "Cannot upsert_time_series_row: ..." messages via
-// quiver_get_last_error
+// STRING/DATE_TIME). A NULL column_data[c] means SQL NULL, as does an inner NULL char* for STRING/DATE_TIME
+// Upserts on the time-series PK (id + every dimension column). On a conflict only the named columns are
+// written: an unnamed column keeps its existing value, a named one always takes the caller's value
+// (explicit NULL included), and naming only dimension columns is a no-op. A new row has nothing to
+// preserve, so its unnamed columns are NULL
+// Errors surface canonical "Cannot upsert_time_series_row: ..." messages via quiver_get_last_error
 QUIVER_C_API quiver_error_t quiver_database_upsert_time_series_row(quiver_database_t* db,
                                                                    const char* collection,
                                                                    const char* group,

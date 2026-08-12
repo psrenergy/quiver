@@ -46,6 +46,25 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ### Changed
 
+- **BREAKING — an unnamed column is no longer a written column.** `update_time_series_files()` and
+  `upsert_time_series_row()` each rebuilt the whole unit they addressed, so a column the caller did
+  not mention was silently reset to NULL: updating only `data_file` wiped `metadata_file`, and
+  upserting a row on an existing dimension key nulled its other value columns. Both now write only
+  the columns you name and leave the rest untouched. A *named* column still takes the value you give
+  it, explicit NULL included; when there is nothing to preserve — no existing row — the unnamed
+  columns are NULL as before.
+
+  *Adapt:* if you relied on omission to clear a column, name it explicitly with a null value
+  (`nothing` / `None` / `null` / a NULL `column_data` pointer through the C API). **Lua cannot do
+  this**: `{ x = nil }` is `{}` in Lua, so omission is the only signal it has and it now means
+  *preserve* — the same limitation Lua already had on `create_element` / `update_element` scalars.
+  Lua writers keyed by *position* are unaffected; a `nil` cell in a group column still writes NULL.
+
+- **`upsert_time_series_row()` now handles primary-key conflicts only.** It uses
+  `INSERT … ON CONFLICT(id, <dimensions…>) DO UPDATE` instead of `INSERT OR REPLACE`, which fired on
+  *any* uniqueness conflict. A second UNIQUE constraint on a time-series table (unusual, and not
+  required by the schema rules) now raises instead of replacing.
+
 - **BREAKING — `export_csv()` writes foreign keys as labels, not ids.** A foreign-key column is
   now exported as the referenced element's `label`, **including self-references** — `import_csv()`
   does not skip those either, it defers them to a second pass and looks them up by label there too.

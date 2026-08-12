@@ -128,6 +128,22 @@ Settled questions — don't relitigate without the user; each was decided delibe
 - **JS keeps a string-based datetime surface** — no DateTime wrappers.
 - **Binary `dims` parameter is the map-based form only** — indexed overloads were prototyped and
   deliberately dropped (perf rationale in `src/CLAUDE.md`).
+- **An unnamed column is not a written column.** `update_time_series_files` and
+  `upsert_time_series_row` each address a unit (a singleton row, a keyed row) and used to rebuild
+  that whole unit, so a column the caller did not mention was silently reset to NULL. Both now write
+  only the columns the caller names and leave the rest alone; a *named* column always takes the
+  caller's value, explicit NULL included. Corollary: when there is nothing to preserve — no existing
+  row — the unnamed columns are NULL, because that is the column DEFAULT and not a decision.
+  Consequences, each deliberate:
+  - **Lua cannot write NULL through these two name-keyed writers.** `{ x = nil }` is `{}` in Lua, so
+    "omit the key" is the only signal available and it now means *preserve*. This matches the
+    limitation Lua already has on `create_element`/`update_element` scalars, and the read side
+    already collapses the two (`read_time_series_files` returns `nil` for both a NULL and an absent
+    column) — a write-only sentinel would be a value the library itself could never emit. Writers
+    keyed by *position* are unaffected: a `nil` cell in a group column still writes NULL.
+  - **`upsert_time_series_row` handles only PK conflicts.** `INSERT OR REPLACE` replaced on any
+    uniqueness conflict; `ON CONFLICT(id, <dims…>)` covers the primary key only, so a second UNIQUE
+    constraint on a time-series table would now raise instead of replacing.
 - **Time-series group NULLs round-trip via a per-cell presence mask.** The columnar C API
   (`read`/`update`/`free_time_series_data`) carries a `uint8_t` mask parallel to the data arrays
   (NULL mask = dense; `mask[c][r] == 0` = SQL NULL, data ignored — so an all-NULL column can be
@@ -423,7 +439,7 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
   `delete_existing` — is still open. Only `bindings/julia/test/test_helper_maps.jl` depends on the
   fan-out, and via `create_element!` (the non-destructive half), so nothing blocks it; it is a
   breaking behaviour change rather than a bug fix.
-- Time series: `read_time_series_group()`, `update_time_series_group()`, `upsert_time_series_row()` — group read/update use N typed value columns per group; `upsert_time_series_row` inserts or replaces a single row by its dimension key (`INSERT OR REPLACE`). All bindings expose group data **column-oriented** (`{column: [values]}`); updating with no data clears the group. Integer values are accepted for REAL columns (converted on insert). NULL cells round-trip through every layer: the C API carries a per-cell presence mask, the FFI bindings surface null-padded columns (`nothing`/`None`/`null`), and Lua uses plain `nil` holes with the row count taken from the dimension column(s) — see the design decision below.
+- Time series: `read_time_series_group()`, `update_time_series_group()`, `upsert_time_series_row()` — group read/update use N typed value columns per group; `upsert_time_series_row` inserts or patches a single row by its dimension key (`INSERT … ON CONFLICT DO UPDATE`, see the patch-semantics decision below). All bindings expose group data **column-oriented** (`{column: [values]}`); updating with no data clears the group. Integer values are accepted for REAL columns (converted on insert). NULL cells round-trip through every layer: the C API carries a per-cell presence mask, the FFI bindings surface null-padded columns (`nothing`/`None`/`null`), and Lua uses plain `nil` holes with the row count taken from the dimension column(s) — see the design decision below.
 - Time series row: `read_time_series_row(collection, group, attribute, date_time)` — one value per element using "last non-null value at or before date_time" semantics; null Value for elements with no matching data (bindings surface `nothing`/`null`/`None`/`nil`).
 - Time series files: `has_time_series_files()`, `list_time_series_files_columns()`, `read_time_series_files()`, `update_time_series_files()`
 - Metadata: `get_{scalar,vector,set,time_series}_metadata()` — group metadata is a unified `GroupMetadata` with `dimension_column` (populated for time series, empty for vectors/sets)

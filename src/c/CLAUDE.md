@@ -215,6 +215,13 @@ again. It owns three contracts the row-shaped C++ API cannot express:
 - Masked cells become an explicit `Value{nullptr}` in **every** row, keeping rows uniform (the core
   builds its INSERT column list from `rows[0]`).
 
+**`quiver_database_upsert_time_series_row` spells NULL the same way**, without a mask: a NULL
+`column_data[c]` means SQL NULL for that column, as does a NULL `char*` entry under a non-NULL
+pointer for `STRING`/`DATE_TIME`. It used to dereference either one. The distinction now matters
+because the core only writes the columns the caller names (root design decision): omitting a column
+preserves it, so an *explicit* NULL is the only way to clear one — and this sentinel is that way for
+every FFI binding. Nothing changed in the ABI, so no generator re-run.
+
 ## Parameterized Queries
 
 `_params` variants use parallel arrays for typed parameters:

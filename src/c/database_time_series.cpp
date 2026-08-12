@@ -218,6 +218,12 @@ QUIVER_C_API quiver_error_t quiver_database_upsert_time_series_row(quiver_databa
         std::map<std::string, quiver::Value> row;
         for (size_t c = 0; c < column_count; ++c) {
             std::string col_name(column_names[c]);
+            // A NULL column_data[c] means SQL NULL, as does an inner NULL char* for
+            // STRING/DATE_TIME - the group-write decoder's convention (src/c/CLAUDE.md).
+            if (!column_data[c]) {
+                row[col_name] = nullptr;
+                continue;
+            }
             switch (column_types[c]) {
             case QUIVER_DATA_TYPE_INTEGER:
                 row[col_name] = static_cast<const int64_t*>(column_data[c])[0];
@@ -226,9 +232,11 @@ QUIVER_C_API quiver_error_t quiver_database_upsert_time_series_row(quiver_databa
                 row[col_name] = static_cast<const double*>(column_data[c])[0];
                 break;
             case QUIVER_DATA_TYPE_STRING:
-            case QUIVER_DATA_TYPE_DATE_TIME:
-                row[col_name] = std::string(static_cast<const char* const*>(column_data[c])[0]);
+            case QUIVER_DATA_TYPE_DATE_TIME: {
+                const char* cell = static_cast<const char* const*>(column_data[c])[0];
+                row[col_name] = cell ? quiver::Value(std::string(cell)) : quiver::Value(nullptr);
                 break;
+            }
             default:
                 throw std::runtime_error("Cannot upsert_time_series_row: unknown column type " +
                                          std::to_string(column_types[c]));

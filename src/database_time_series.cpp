@@ -1,6 +1,8 @@
 #include "database_impl.h"
 #include "database_internal.h"
 
+#include <algorithm>
+
 namespace quiver {
 
 namespace {
@@ -222,11 +224,10 @@ void Database::upsert_time_series_row(const std::string& collection,
 
     Impl::TransactionGuard txn(*impl_);
 
-    // INSERT OR REPLACE: if the PK already matches an existing row, REPLACE
-    // deletes it and inserts the new one (upsert semantic). Any value column
-    // omitted from the caller's row is not listed in the INSERT, so SQLite
-    // leaves it as the column DEFAULT (NULL for nullable value columns).
-    std::string insert_sql = "INSERT OR REPLACE INTO " + ts_table + " (id";
+    // Native upsert: on a PK conflict, DO UPDATE writes only the caller's named non-dimension
+    // columns - an unnamed column is not a written column and keeps its existing value. On the
+    // insert path there is nothing to preserve, so unnamed columns take the DEFAULT (NULL).
+    std::string insert_sql = "INSERT INTO " + ts_table + " (id";
     std::string placeholders = "?";
     std::vector<Value> parameters;
     parameters.emplace_back(id);
@@ -237,6 +238,38 @@ void Database::upsert_time_series_row(const std::string& collection,
         parameters.emplace_back(value);
     }
     insert_sql += ") VALUES (" + placeholders + ")";
+
+    insert_sql += " ON CONFLICT(id";
+    for (const auto& dim_col : dim_cols) {
+        insert_sql += ", " + dim_col;
+    }
+    insert_sql += ") DO ";
+
+    // Naming only dimension columns leaves nothing to write, and DO UPDATE SET cannot be empty.
+    bool has_non_dim_column = false;
+    for (const auto& [col_name, value] : row) {
+        if (std::find(dim_cols.begin(), dim_cols.end(), col_name) == dim_cols.end()) {
+            has_non_dim_column = true;
+            break;
+        }
+    }
+
+    if (has_non_dim_column) {
+        insert_sql += "UPDATE SET ";
+        bool first = true;
+        for (const auto& [col_name, value] : row) {
+            if (std::find(dim_cols.begin(), dim_cols.end(), col_name) != dim_cols.end()) {
+                continue;
+            }
+            if (!first) {
+                insert_sql += ", ";
+            }
+            insert_sql += col_name + " = excluded." + col_name;
+            first = false;
+        }
+    } else {
+        insert_sql += "NOTHING";
+    }
 
     execute(insert_sql, parameters);
 
@@ -384,33 +417,42 @@ void Database::update_time_series_files(const std::string& collection,
 
     Impl::TransactionGuard txn(*impl_);
 
-    // Delete existing row (singleton table)
-    auto delete_sql = "DELETE FROM " + tsf;
-    execute(delete_sql);
+    // An unnamed column is not a written column, so it survives untouched; a named column takes
+    // the caller's value, nullopt included. Whether a row already exists decides INSERT vs UPDATE
+    // - either way only the named columns are mentioned.
+    auto existing = execute("SELECT 1 FROM " + tsf + " LIMIT 1");
 
-    // Build INSERT SQL
-    std::string insert_sql = "INSERT INTO " + tsf + " (";
-    std::string placeholders;
     std::vector<Value> parameters;
-
-    bool first = true;
-    for (const auto& [col_name, path] : paths) {
-        if (!first) {
-            insert_sql += ", ";
-            placeholders += ", ";
+    std::string sql;
+    if (existing.empty()) {
+        sql = "INSERT INTO " + tsf + " (";
+        std::string placeholders;
+        bool first = true;
+        for (const auto& [col_name, path] : paths) {
+            if (!first) {
+                sql += ", ";
+                placeholders += ", ";
+            }
+            sql += col_name;
+            placeholders += "?";
+            parameters.emplace_back(path ? Value(*path) : Value(nullptr));
+            first = false;
         }
-        insert_sql += col_name;
-        placeholders += "?";
-        if (path) {
-            parameters.emplace_back(*path);
-        } else {
-            parameters.emplace_back(nullptr);
+        sql += ") VALUES (" + placeholders + ")";
+    } else {
+        sql = "UPDATE " + tsf + " SET ";
+        bool first = true;
+        for (const auto& [col_name, path] : paths) {
+            if (!first) {
+                sql += ", ";
+            }
+            sql += col_name + " = ?";
+            parameters.emplace_back(path ? Value(*path) : Value(nullptr));
+            first = false;
         }
-        first = false;
     }
-    insert_sql += ") VALUES (" + placeholders + ")";
 
-    execute(insert_sql, parameters);
+    execute(sql, parameters);
 
     txn.commit();
     impl_->logger->info("Updated time series files for collection: {}", collection);

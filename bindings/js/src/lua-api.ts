@@ -244,8 +244,10 @@ Notes:
   \`{ x = nil }\` is identical to \`{}\`; an update/create table that ends up with no attributes
   **throws** (\`...must have at least one scalar attribute\` on create, \`...at least one attribute
   to update\` on update). To leave a column unchanged, omit the key — you cannot set a scalar to
-  NULL via the element table. (\`nil\` → NULL is only accepted by
-  \`upsert_time_series_row\` and \`update_time_series_files\`.)
+  NULL via the element table. The same holds for the two other writers keyed by column *name*,
+  \`upsert_time_series_row\` and \`update_time_series_files\`: an omitted column keeps its current
+  value, so NULL cannot be written through them either. Writers keyed by *position* — the group
+  writers below — are unaffected: there a \`nil\` cell does write NULL.
 
 ---
 
@@ -414,6 +416,12 @@ db:upsert_time_series_row("Items", "data", id, {
 })
 \`\`\`
 
+Only the columns you name are written. If a row with the same dimension key already exists, its
+other value columns keep their current values (naming nothing but the dimension columns is a
+no-op); if it does not, the unnamed columns are NULL because there is nothing to keep. Since
+\`{ x = nil }\` is \`{}\` in Lua, a column cannot be set to NULL through this call — rewrite the
+group with \`update_time_series_group\`, where a \`nil\` cell does write NULL.
+
 ---
 
 ## Time series files
@@ -425,10 +433,14 @@ singleton table):
 db:has_time_series_files(collection)              -- boolean
 db:list_time_series_files_columns(collection)     -- { "data_file", "metadata_file", ... }
 db:read_time_series_files(collection)             -- { data_file = "path", metadata_file = nil, ... }
-db:update_time_series_files(collection, { data_file = "path/to/data.bin", metadata_file = nil })
+db:update_time_series_files(collection, { data_file = "path/to/data.bin" })
 \`\`\`
 
-In \`update_time_series_files\`, a \`nil\` value clears that column.
+Only the columns you name are written; an omitted column keeps its current value, so the call above
+leaves \`metadata_file\` alone. A column cannot be set to NULL from Lua here: \`{ x = nil }\` is
+\`{}\`, so writing \`metadata_file = nil\` names nothing at all. On the read side a NULL column and
+an absent one are likewise the same \`nil\`, which is why feeding a
+\`read_time_series_files\` result straight back into this call is a no-op.
 
 ---
 
