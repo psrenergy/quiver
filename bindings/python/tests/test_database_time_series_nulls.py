@@ -96,3 +96,25 @@ class TestTimeSeriesGroupNulls:
         nullable_time_series_db.update_time_series_group("Sensor", "readings", eid, ts)
         result = nullable_time_series_db.read_time_series_group("Sensor", "readings", eid)
         assert result["temperature"] == [99.0, None]
+
+    def test_upsert_row_none_clears_named_column(self, nullable_time_series_db: Database) -> None:
+        """None names a column with an explicit NULL; an unnamed column keeps its value."""
+        eid = _create_sensor(nullable_time_series_db, "S1")
+        nullable_time_series_db.upsert_time_series_row(
+            "Sensor",
+            "readings",
+            eid,
+            date_time="2024-01-01T00:00:00",
+            temperature=10.5,
+            counter=7,
+        )
+        nullable_time_series_db.upsert_time_series_row(
+            "Sensor",
+            "readings",
+            eid,
+            date_time="2024-01-01T00:00:00",
+            temperature=None,
+        )
+        result = nullable_time_series_db.read_time_series_group("Sensor", "readings", eid)
+        assert result["temperature"] == [None]
+        assert result["counter"] == [7]

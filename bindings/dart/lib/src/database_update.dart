@@ -281,14 +281,14 @@ extension DatabaseUpdate on Database {
   // ==========================================================================
 
   /// Adds or updates a single time series row by element ID.
-  /// Takes a Map of column names to scalar values.
+  /// Takes a Map of column names to scalar values; a `null` value is a SQL NULL.
   /// Supported value types: int, double, String, DateTime.
   /// Calling with the same dimension PK upserts (value columns overwritten).
   void upsertTimeSeriesRow(
     String collection,
     String group,
     int id,
-    Map<String, Object> row,
+    Map<String, Object?> row,
   ) {
     _ensureNotClosed();
 
@@ -302,9 +302,17 @@ extension DatabaseUpdate on Database {
       var i = 0;
       for (final entry in row.entries) {
         columnNames[i] = entry.key.toNativeUtf8(allocator: arena).cast();
-        final column = _marshalGroupColumn(arena, [entry.value]);
-        columnTypes[i] = column.type;
-        columnData[i] = column.data;
+        if (entry.value == null) {
+          // A NULL data pointer is the C API's SQL-NULL sentinel for this writer (no mask), so
+          // _marshalGroupColumn's zeroed placeholder would write a value instead of NULL. Since
+          // no value is read, the type tag is free; FLOAT matches its all-null convention.
+          columnTypes[i] = quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT;
+          columnData[i] = nullptr;
+        } else {
+          final column = _marshalGroupColumn(arena, [entry.value]);
+          columnTypes[i] = column.type;
+          columnData[i] = column.data;
+        }
         i++;
       }
 

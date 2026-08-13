@@ -73,6 +73,31 @@ include("fixture.jl")
 
         Quiver.close!(db)
     end
+
+    @testset "NULL clears a named column on upsert" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "nullable_time_series.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+        Quiver.create_element!(db, "Configuration"; label = "Config")
+        id = Quiver.create_element!(db, "Sensor"; label = "Sensor 1")
+
+        Quiver.upsert_time_series_row!(
+            db, "Sensor", "readings", id;
+            date_time = DateTime(2024, 1, 1), temperature = 10.5, counter = 7,
+        )
+
+        # `nothing` names temperature with an explicit NULL, which clears it; counter is unnamed,
+        # so it keeps its value.
+        Quiver.upsert_time_series_row!(
+            db, "Sensor", "readings", id;
+            date_time = DateTime(2024, 1, 1), temperature = nothing,
+        )
+
+        result = Quiver.read_time_series_group(db, "Sensor", "readings", id)
+        @test result["temperature"] == [nothing]
+        @test result["counter"] == [7]
+
+        Quiver.close!(db)
+    end
 end
 
 end

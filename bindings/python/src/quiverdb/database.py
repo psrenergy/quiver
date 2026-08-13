@@ -1495,10 +1495,16 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
             keepalive.append(name_buf)
             c_col_names[i] = name_buf
 
+            # A NULL data pointer is the C API's SQL-NULL sentinel for this writer (no mask).
+            # Since no value is read, the type tag is free; FLOAT matches the all-`None`
+            # column convention in _marshal_group_columns.
+            if v is None:
+                c_col_types[i] = DataType.FLOAT
+                c_col_data[i] = ffi.NULL
             # bool is a subclass of int; test it explicitly first so True/False
             # marshal as INTEGER 1/0 rather than being rejected by the `is int`
             # check. Mirrors `_marshal_params` policy in this same file.
-            if isinstance(v, bool):
+            elif isinstance(v, bool):
                 arr = ffi.new("int64_t[]", [int(v)])
                 keepalive.append(arr)
                 c_col_types[i] = DataType.INTEGER
@@ -1522,7 +1528,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
                 c_col_data[i] = ffi.cast("void*", c_str_arr)
             else:
                 raise TypeError(
-                    f"Column '{name}' value has unsupported type {type(v).__name__}; expected int, float, or str"
+                    f"Column '{name}' value has unsupported type {type(v).__name__}; expected int, float, str, or None"
                 )
 
         check(

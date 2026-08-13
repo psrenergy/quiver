@@ -172,7 +172,7 @@ export class Database {
     collection: string,
     group: string,
     id: number,
-    row: Record<string, number | bigint | string>,
+    row: Record<string, number | bigint | string | null>,
   ) => void;
   declare hasTimeSeriesFiles: (collection: string) => boolean;
   declare listTimeSeriesFilesColumns: (collection: string) => string[];

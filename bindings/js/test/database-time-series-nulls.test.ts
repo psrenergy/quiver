@@ -101,4 +101,29 @@ describe("readTimeSeriesGroup / updateTimeSeriesGroup (NULL cells)", () => {
       db.close();
     }
   });
+
+  test("null names a column with an explicit NULL on upsert", () => {
+    const db = Database.fromSchema(":memory:", NULLABLE_TS_SCHEMA);
+    try {
+      const id = db.createElement("Sensor", { label: "Sensor1" });
+
+      db.upsertTimeSeriesRow("Sensor", "readings", id, {
+        date_time: "2024-01-01",
+        temperature: 10.5,
+        counter: 7,
+      });
+
+      // null clears temperature; counter is unnamed, so it keeps its value.
+      db.upsertTimeSeriesRow("Sensor", "readings", id, {
+        date_time: "2024-01-01",
+        temperature: null,
+      });
+
+      const result = db.readTimeSeriesGroup("Sensor", "readings", id);
+      expect(result.temperature).toEqual([null]);
+      expect(result.counter).toEqual([7]);
+    } finally {
+      db.close();
+    }
+  });
 });

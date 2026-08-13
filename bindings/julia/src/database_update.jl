@@ -164,7 +164,13 @@ function upsert_time_series_row!(db::Database, collection::String, group::String
         col_name = String(k)
         push!(col_names_strs, col_name)
 
-        if v isa DateTime
+        if isnothing(v)
+            # A NULL data pointer is the C API's SQL-NULL sentinel for this writer (no mask).
+            # Since no value is read, the type tag is free; FLOAT matches the all-`nothing`
+            # column convention in _update_group_columns.
+            push!(col_types, Cint(C.QUIVER_DATA_TYPE_FLOAT))
+            push!(col_data_ptrs, C_NULL)
+        elseif v isa DateTime
             # DateTime scalar -> format to string, build 1-element Cstring array
             str_val = date_time_to_string(v)
             cstr = Base.cconvert(Cstring, str_val)

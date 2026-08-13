@@ -69,5 +69,29 @@ void main() {
         db.close();
       }
     });
+
+    test('null names a column with an explicit NULL on upsert', () {
+      final db = openNullable();
+      try {
+        final id = db.createElement('Sensor', {'label': 'S1'});
+        db.upsertTimeSeriesRow('Sensor', 'readings', id, {
+          'date_time': '2024-01-01',
+          'temperature': 10.5,
+          'counter': 7,
+        });
+
+        // null clears temperature; counter is unnamed, so it keeps its value.
+        db.upsertTimeSeriesRow('Sensor', 'readings', id, {
+          'date_time': '2024-01-01',
+          'temperature': null,
+        });
+
+        final result = db.readTimeSeriesGroup('Sensor', 'readings', id);
+        expect(result['temperature'], equals([null]));
+        expect(result['counter'], equals([7]));
+      } finally {
+        db.close();
+      }
+    });
   });
 }

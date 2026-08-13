@@ -205,7 +205,7 @@ Database.prototype.upsertTimeSeriesRow = function (
   collection: string,
   group: string,
   id: number,
-  row: Record<string, number | bigint | string>,
+  row: Record<string, number | bigint | string | null>,
 ): void {
   const lib = getSymbols();
   const collBuf = toCString(collection);
@@ -224,7 +224,13 @@ Database.prototype.upsertTimeSeriesRow = function (
 
   for (let c = 0; c < columnCount; c++) {
     const value = entries[c][1];
-    if (typeof value === "string") {
+    if (value === null) {
+      // A NULL data pointer is the C API's SQL-NULL sentinel for this writer (no mask). Since no
+      // value is read, the type tag is free; FLOAT matches the all-null column convention in
+      // group-columns.ts.
+      typesDv.setInt32(c * 4, DATA_TYPE_FLOAT, true);
+      dataPtrs.push(null);
+    } else if (typeof value === "string") {
       typesDv.setInt32(c * 4, DATA_TYPE_STRING, true);
       const { table, keepalive: strPtrs } = allocNativeStringArray([value]);
       keepalive.push(table, ...strPtrs);
