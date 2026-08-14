@@ -1472,9 +1472,10 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
     def upsert_time_series_row(self, collection: str, group: str, id: int, **kwargs) -> None:
         """Insert or upsert a single time series row for an element.
 
-        Keyword arguments map column names to values. The dimension column (e.g.
-        date_time) and all value columns must be provided. Type dispatch uses
-        isinstance: bool -> INTEGER (0/1), int -> INTEGER, float -> FLOAT, str ->
+        Keyword arguments map column names to values; the dimension column (e.g.
+        date_time) must be provided. On conflict, only named value columns are
+        written (None clears one) - an unnamed column keeps its value. Type dispatch
+        uses isinstance: bool -> INTEGER (0/1), int -> INTEGER, float -> FLOAT, str ->
         STRING. No Int->Float coercion (per D-03: Python strict typing).
         Dict unpacking is supported: db.upsert_time_series_row("Col", "grp", 1, **row_dict).
         """
@@ -1598,7 +1599,8 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         collection: str,
         data: dict[str, str | None],
     ) -> None:
-        """Update time series file paths. Pass None for a path to clear it."""
+        """Update time series file paths. Only named columns are written: None clears
+        one, an omitted column keeps its current value."""
         self._ensure_open()
         lib = get_lib()
         count = len(data)

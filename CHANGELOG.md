@@ -46,19 +46,25 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ### Changed
 
-- **BREAKING — an unnamed column is no longer a written column.** `update_time_series_files()` and
-  `upsert_time_series_row()` each rebuilt the whole unit they addressed, so a column the caller did
-  not mention was silently reset to NULL: updating only `data_file` wiped `metadata_file`, and
-  upserting a row on an existing dimension key nulled its other value columns. Both now write only
-  the columns you name and leave the rest untouched. A *named* column still takes the value you give
-  it, explicit NULL included; when there is nothing to preserve — no existing row — the unnamed
-  columns are NULL as before.
+- **BREAKING — an unnamed column is no longer a written column for `update_time_series_files()`
+  and `upsert_time_series_row()`.** Both each rebuilt the whole unit they addressed, so a column
+  the caller did not mention was silently reset to NULL: updating only `data_file` wiped
+  `metadata_file`, and upserting a row on an existing dimension key nulled its other value columns.
+  Both now write only the columns you name and leave the rest untouched. A *named* column still
+  takes the value you give it, explicit NULL included; when there is nothing to preserve — no
+  existing row — the unnamed columns are NULL as before.
 
   *Adapt:* if you relied on omission to clear a column, name it explicitly with a null value
   (`nothing` / `None` / `null` / a NULL `column_data` pointer through the C API). **Lua cannot do
   this**: `{ x = nil }` is `{}` in Lua, so omission is the only signal it has and it now means
   *preserve* — the same limitation Lua already had on `create_element` / `update_element` scalars.
   Lua writers keyed by *position* are unaffected; a `nil` cell in a group column still writes NULL.
+
+  *Everything else is unaffected:* `create_element` / `update_element` still route array
+  attributes into their group table by a delete-and-reinsert, so naming one column of a
+  multi-column group still nulls the others, and `update_vector_group` / `update_set_group` still
+  write NULL wherever a column or cell across the caller's rows is unnamed. Partial, patch-style
+  group writes are not supported anywhere else.
 
 - **`upsert_time_series_row()` now handles primary-key conflicts only.** It uses
   `INSERT … ON CONFLICT(id, <dimensions…>) DO UPDATE` instead of `INSERT OR REPLACE`, which fired on

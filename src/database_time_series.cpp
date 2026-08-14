@@ -246,30 +246,18 @@ void Database::upsert_time_series_row(const std::string& collection,
     insert_sql += ") DO ";
 
     // Naming only dimension columns leaves nothing to write, and DO UPDATE SET cannot be empty.
-    bool has_non_dim_column = false;
+    std::string set_clause;
     for (const auto& [col_name, value] : row) {
-        if (std::find(dim_cols.begin(), dim_cols.end(), col_name) == dim_cols.end()) {
-            has_non_dim_column = true;
-            break;
+        if (std::find(dim_cols.begin(), dim_cols.end(), col_name) != dim_cols.end()) {
+            continue;
         }
+        if (!set_clause.empty()) {
+            set_clause += ", ";
+        }
+        set_clause += col_name + " = excluded." + col_name;
     }
 
-    if (has_non_dim_column) {
-        insert_sql += "UPDATE SET ";
-        bool first = true;
-        for (const auto& [col_name, value] : row) {
-            if (std::find(dim_cols.begin(), dim_cols.end(), col_name) != dim_cols.end()) {
-                continue;
-            }
-            if (!first) {
-                insert_sql += ", ";
-            }
-            insert_sql += col_name + " = excluded." + col_name;
-            first = false;
-        }
-    } else {
-        insert_sql += "NOTHING";
-    }
+    insert_sql += set_clause.empty() ? "NOTHING" : "UPDATE SET " + set_clause;
 
     execute(insert_sql, parameters);
 
@@ -423,6 +411,10 @@ void Database::update_time_series_files(const std::string& collection,
     auto existing = execute("SELECT 1 FROM " + tsf + " LIMIT 1");
 
     std::vector<Value> parameters;
+    for (const auto& [col_name, path] : paths) {
+        parameters.emplace_back(path ? Value(*path) : Value(nullptr));
+    }
+
     std::string sql;
     if (existing.empty()) {
         sql = "INSERT INTO " + tsf + " (";
@@ -435,7 +427,6 @@ void Database::update_time_series_files(const std::string& collection,
             }
             sql += col_name;
             placeholders += "?";
-            parameters.emplace_back(path ? Value(*path) : Value(nullptr));
             first = false;
         }
         sql += ") VALUES (" + placeholders + ")";
@@ -447,7 +438,6 @@ void Database::update_time_series_files(const std::string& collection,
                 sql += ", ";
             }
             sql += col_name + " = ?";
-            parameters.emplace_back(path ? Value(*path) : Value(nullptr));
             first = false;
         }
     }

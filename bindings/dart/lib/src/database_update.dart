@@ -283,7 +283,8 @@ extension DatabaseUpdate on Database {
   /// Adds or updates a single time series row by element ID.
   /// Takes a Map of column names to scalar values; a `null` value is a SQL NULL.
   /// Supported value types: int, double, String, DateTime.
-  /// Calling with the same dimension PK upserts (value columns overwritten).
+  /// Calling with the same dimension PK upserts: only the columns named in `row` are written,
+  /// an explicit `null` clears one, and any value column left out of `row` keeps its current value.
   void upsertTimeSeriesRow(
     String collection,
     String group,

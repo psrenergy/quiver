@@ -150,7 +150,8 @@ public:
 
     // Add (or upsert) a single time series row. Inserts a new row identified by id +
     // every dimension column from the schema PK; if a row with the same PK already
-    // exists, value columns are overwritten. Validation matches update_time_series_group:
+    // exists, only the named value columns are overwritten (explicit NULL clears one) -
+    // an unnamed column keeps its current value. Validation matches update_time_series_group:
     // every dimension column must be present, unknown columns or type mismatches throw
     // "Cannot upsert_time_series_row: ..." (canonical Pattern 1). Participates in the
     // existing nest-aware TransactionGuard.
@@ -163,6 +164,7 @@ public:
     bool has_time_series_files(const std::string& collection) const;
     std::vector<std::string> list_time_series_files_columns(const std::string& collection) const;
     std::map<std::string, std::optional<std::string>> read_time_series_files(const std::string& collection);
+    // Writes only the named columns (nullopt clears one); an unnamed column keeps its value.
     void update_time_series_files(const std::string& collection,
                                   const std::map<std::string, std::optional<std::string>>& paths);
 

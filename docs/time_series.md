@@ -117,7 +117,8 @@ Quiver.update_time_series_group!(
 ```
 
 It is also possible to insert (or upsert) a single row. Calling it again with the same
-dimension values overwrites the value columns:
+dimension values patches the row: only the value columns you name are overwritten (an explicit
+`nothing` clears one), and any value column you leave out keeps its current value:
 
 ```julia
 Quiver.upsert_time_series_row!(
@@ -161,8 +162,9 @@ values = Quiver.read_time_series_row(
 ## Updating data
 
 `update_time_series_group!` replaces **all** rows of the group for the element. To change a
-single row, use `upsert_time_series_row!` with the row's exact dimension values — existing
-value columns at that dimension key are overwritten:
+single row, use `upsert_time_series_row!` with the row's exact dimension values — only the value
+columns you name at that dimension key are overwritten (explicit `nothing` clears one); any value
+column you don't name keeps its current value:
 
 ```julia
 Quiver.upsert_time_series_row!(

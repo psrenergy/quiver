@@ -215,33 +215,16 @@ QUIVER_C_API quiver_error_t quiver_database_upsert_time_series_row(quiver_databa
     }
 
     try {
-        std::map<std::string, quiver::Value> row;
-        for (size_t c = 0; c < column_count; ++c) {
-            std::string col_name(column_names[c]);
-            // A NULL column_data[c] means SQL NULL, as does an inner NULL char* for
-            // STRING/DATE_TIME - the group-write decoder's convention (src/c/CLAUDE.md).
-            if (!column_data[c]) {
-                row[col_name] = nullptr;
-                continue;
-            }
-            switch (column_types[c]) {
-            case QUIVER_DATA_TYPE_INTEGER:
-                row[col_name] = static_cast<const int64_t*>(column_data[c])[0];
-                break;
-            case QUIVER_DATA_TYPE_FLOAT:
-                row[col_name] = static_cast<const double*>(column_data[c])[0];
-                break;
-            case QUIVER_DATA_TYPE_STRING:
-            case QUIVER_DATA_TYPE_DATE_TIME: {
-                const char* cell = static_cast<const char* const*>(column_data[c])[0];
-                row[col_name] = cell ? quiver::Value(std::string(cell)) : quiver::Value(nullptr);
-                break;
-            }
-            default:
-                throw std::runtime_error("Cannot upsert_time_series_row: unknown column type " +
-                                         std::to_string(column_types[c]));
-            }
-        }
+        // Same NULL/type decode as the group writers (a NULL column_data[c], or a NULL char* for
+        // STRING/DATE_TIME, means SQL NULL) - reuse the shared decoder with a single dense row
+        // instead of re-deriving it here. row_count is always 1: with column_count == 0 the
+        // decoder's inner per-column loop never dereferences column_names/column_types/column_data
+        // (all may be NULL then), so it still returns one row - an empty map - and the shared
+        // anti-silent-clear guard (column_count > 0 && row_count == 0) never applies to this
+        // single-row caller.
+        auto rows = unmarshal_group_columns_to_rows(
+            "upsert_time_series_row", column_names, column_types, column_data, nullptr, column_count, 1);
+        auto row = std::move(rows[0]);
 
         db->db.upsert_time_series_row(collection, group, id, row);
         return QUIVER_OK;

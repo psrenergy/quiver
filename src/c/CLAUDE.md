@@ -204,8 +204,8 @@ This pattern mirrors the `convert_params()` approach from `database_query.cpp` f
 
 **One decoder for every group update.** `unmarshal_group_columns_to_rows` (`database_helpers.h`) is
 the inverse of `marshal_group_rows_to_c` and is shared by `quiver_database_update_time_series_group`,
-`_update_vector_group`, and `_update_set_group` — the decoder was duplicated once and must not be
-again. It owns three contracts the row-shaped C++ API cannot express:
+`_update_vector_group`, `_update_set_group`, and `_upsert_time_series_row` — the decoder was
+duplicated once and must not be again. It owns three contracts the row-shaped C++ API cannot express:
 - **A NULL cell is NULL however it is spelled**: masked out, a NULL per-column data pointer, or (for
   string columns) a NULL `char*` entry under a dense mask. That last case is what the read direction
   emits for a NULL STRING cell, so feeding a read result back with the mask stripped must not be UB.
@@ -215,12 +215,16 @@ again. It owns three contracts the row-shaped C++ API cannot express:
 - Masked cells become an explicit `Value{nullptr}` in **every** row, keeping rows uniform (the core
   builds its INSERT column list from `rows[0]`).
 
-**`quiver_database_upsert_time_series_row` spells NULL the same way**, without a mask: a NULL
-`column_data[c]` means SQL NULL for that column, as does a NULL `char*` entry under a non-NULL
-pointer for `STRING`/`DATE_TIME`. It used to dereference either one. The distinction now matters
-because the core only writes the columns the caller names (root design decision): omitting a column
-preserves it, so an *explicit* NULL is the only way to clear one — and this sentinel is that way for
-every FFI binding. Nothing changed in the ABI, so no generator re-run.
+**`quiver_database_upsert_time_series_row` is the one caller with no mask and exactly one row**: it
+passes `column_has_value = nullptr` (its C ABI has no mask parameter — a NULL `column_data[c]`, or a
+NULL `char*` entry under `STRING`/`DATE_TIME`, is the only way to spell SQL NULL) and a literal
+`row_count = 1`, never a real row count. That `1` is safe even when `column_count == 0`: the
+decoder's per-column loop then never runs, so `column_names`/`column_types`/`column_data` are never
+dereferenced and the anti-silent-clear guard (which only fires for `column_count > 0`) is moot for
+this caller — `rows[0]` always exists. The distinction between an omitted and an explicit-NULL
+column matters because the core only writes the columns the caller names (root design decision):
+omitting a column preserves it, so an *explicit* NULL is the only way to clear one — and this
+sentinel is that way for every FFI binding. Nothing changed in the ABI, so no generator re-run.
 
 ## Parameterized Queries
 
