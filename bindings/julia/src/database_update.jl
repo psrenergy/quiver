@@ -158,18 +158,26 @@ function upsert_time_series_row!(db::Database, collection::String, group::String
     col_names_strs = String[]
     col_types = Cint[]
     col_data_ptrs = Ptr{Cvoid}[]
+    col_mask_ptrs = Ptr{UInt8}[]
     refs = Any[]  # Keep references alive for GC.@preserve
 
     for (k, v) in kwargs
         col_name = String(k)
         push!(col_names_strs, col_name)
 
+        # Per-cell NULL mask, one cell per column: `nothing` becomes SQL NULL. Always passed
+        # (present values get an all-ones mask), as in _update_group_columns.
+        mask = UInt8[isnothing(v) ? 0x0 : 0x1]
+        push!(refs, mask)
+        push!(col_mask_ptrs, pointer(mask))
+
         if isnothing(v)
-            # A NULL data pointer is the C API's SQL-NULL sentinel for this writer (no mask).
-            # Since no value is read, the type tag is free; FLOAT matches the all-`nothing`
-            # column convention in _update_group_columns.
+            # The C API ignores type/data for a masked cell; FLOAT with a zeroed placeholder
+            # matches the all-`nothing` column convention in _update_group_columns.
+            float_arr = Float64[0.0]
+            push!(refs, float_arr)
             push!(col_types, Cint(C.QUIVER_DATA_TYPE_FLOAT))
-            push!(col_data_ptrs, C_NULL)
+            push!(col_data_ptrs, pointer(float_arr))
         elseif v isa DateTime
             # DateTime scalar -> format to string, build 1-element Cstring array
             str_val = date_time_to_string(v)
@@ -207,17 +215,19 @@ function upsert_time_series_row!(db::Database, collection::String, group::String
     push!(refs, name_cstrs)
     push!(refs, name_ptrs)
 
-    # Build column_types and column_data arrays
+    # Build column_types, column_data, and column_has_value arrays
     col_types_arr = Cint[t for t in col_types]
     col_data_arr = Ptr{Cvoid}[p for p in col_data_ptrs]
+    col_mask_arr = Ptr{UInt8}[p for p in col_mask_ptrs]
     push!(refs, col_types_arr)
     push!(refs, col_data_arr)
+    push!(refs, col_mask_arr)
 
     GC.@preserve refs begin
         check(
             C.quiver_database_upsert_time_series_row(
                 db.ptr, collection, group, id,
-                name_ptrs, col_types_arr, col_data_arr,
+                name_ptrs, col_types_arr, col_data_arr, col_mask_arr,
                 Csize_t(column_count),
             ),
         )

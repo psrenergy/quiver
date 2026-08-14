@@ -128,7 +128,7 @@ const timeSeriesSymbols = {
   },
   quiver_database_read_time_series_row: { args: [P, BUF, BUF, BUF, BUF, P, P, P], returns: I32 },
   quiver_database_upsert_time_series_row: {
-    args: [P, BUF, BUF, I64, P, P, P, USIZE],
+    args: [P, BUF, BUF, I64, P, P, P, P, USIZE],
     returns: I32,
   },
   quiver_database_update_time_series_group: {

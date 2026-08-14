@@ -215,16 +215,13 @@ duplicated once and must not be again. It owns three contracts the row-shaped C+
 - Masked cells become an explicit `Value{nullptr}` in **every** row, keeping rows uniform (the core
   builds its INSERT column list from `rows[0]`).
 
-**`quiver_database_upsert_time_series_row` is the one caller with no mask and exactly one row**: it
-passes `column_has_value = nullptr` (its C ABI has no mask parameter — a NULL `column_data[c]`, or a
-NULL `char*` entry under `STRING`/`DATE_TIME`, is the only way to spell SQL NULL) and a literal
-`row_count = 1`, never a real row count. That `1` is safe even when `column_count == 0`: the
-decoder's per-column loop then never runs, so `column_names`/`column_types`/`column_data` are never
-dereferenced and the anti-silent-clear guard (which only fires for `column_count > 0`) is moot for
-this caller — `rows[0]` always exists. The distinction between an omitted and an explicit-NULL
-column matters because the core only writes the columns the caller names (root design decision):
-omitting a column preserves it, so an *explicit* NULL is the only way to clear one — and this
-sentinel is that way for every FFI binding. Nothing changed in the ABI, so no generator re-run.
+**`quiver_database_upsert_time_series_row` is the one caller with exactly one row**: it forwards the
+caller's `column_has_value` unchanged and passes a literal `row_count = 1`, never a real row count —
+which is also why only index `0` of each mask entry is ever read. That `1` is safe even when
+`column_count == 0`: the decoder's per-column loop then never runs, so
+`column_names`/`column_types`/`column_data` are never dereferenced, the anti-silent-clear guard
+(`column_count > 0` only) cannot fire, and `rows[0]` always exists. It grew the mask parameter late,
+which is why the two pointer spellings of NULL survive alongside it.
 
 ## Parameterized Queries
 

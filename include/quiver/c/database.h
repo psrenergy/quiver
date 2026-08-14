@@ -385,7 +385,11 @@ QUIVER_C_API quiver_error_t quiver_database_update_time_series_group(quiver_data
 // column_names[]: column names (must include every dimension column from the schema PK)
 // column_types[]: quiver_data_type_t per column
 // column_data[c]: pointer to one typed value (int64_t* for INTEGER, double* for FLOAT, const char** for
-// STRING/DATE_TIME). A NULL column_data[c] means SQL NULL, as does an inner NULL char* for STRING/DATE_TIME
+// STRING/DATE_TIME)
+// column_has_value: optional per-cell NULL mask, same contract as
+// quiver_database_update_time_series_group (NULL mask = dense; mask[c][0] == 0 writes SQL NULL and the
+// data entry is never read). Only index 0 of each column's entry is read - this writer has exactly one
+// row. A NULL column_data[c], and an inner NULL char* for STRING/DATE_TIME, also mean SQL NULL
 // Upserts on the time-series PK (id + every dimension column). On a conflict only the named columns are
 // written: an unnamed column keeps its existing value, a named one always takes the caller's value
 // (explicit NULL included), and naming only dimension columns is a no-op. A new row has nothing to
@@ -398,6 +402,7 @@ QUIVER_C_API quiver_error_t quiver_database_upsert_time_series_row(quiver_databa
                                                                    const char* const* column_names,
                                                                    const int* column_types,
                                                                    const void* const* column_data,
+                                                                   const uint8_t* const* column_has_value,
                                                                    size_t column_count);
 
 // Read time series row - returns one value per element for a specific attribute at a given date_time

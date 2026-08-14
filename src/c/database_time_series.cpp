@@ -208,6 +208,7 @@ QUIVER_C_API quiver_error_t quiver_database_upsert_time_series_row(quiver_databa
                                                                    const char* const* column_names,
                                                                    const int* column_types,
                                                                    const void* const* column_data,
+                                                                   const uint8_t* const* column_has_value,
                                                                    size_t column_count) {
     QUIVER_REQUIRE(db, collection, group);
     if (column_count > 0) {
@@ -215,15 +216,11 @@ QUIVER_C_API quiver_error_t quiver_database_upsert_time_series_row(quiver_databa
     }
 
     try {
-        // Same NULL/type decode as the group writers (a NULL column_data[c], or a NULL char* for
-        // STRING/DATE_TIME, means SQL NULL) - reuse the shared decoder with a single dense row
-        // instead of re-deriving it here. row_count is always 1: with column_count == 0 the
-        // decoder's inner per-column loop never dereferences column_names/column_types/column_data
-        // (all may be NULL then), so it still returns one row - an empty map - and the shared
-        // anti-silent-clear guard (column_count > 0 && row_count == 0) never applies to this
-        // single-row caller.
+        // Same NULL/type decode as the group writers - reuse the shared decoder instead of
+        // re-deriving it here. row_count is a literal 1 (one row by construction); with
+        // column_count == 0 the decoder's per-column loop never runs, so rows[0] still exists.
         auto rows = unmarshal_group_columns_to_rows(
-            "upsert_time_series_row", column_names, column_types, column_data, nullptr, column_count, 1);
+            "upsert_time_series_row", column_names, column_types, column_data, column_has_value, column_count, 1);
         auto row = std::move(rows[0]);
 
         db->db.upsert_time_series_row(collection, group, id, row);

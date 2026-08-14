@@ -71,6 +71,16 @@ callers to change something are prefixed **BREAKING** and say what to do.
   *any* uniqueness conflict. A second UNIQUE constraint on a time-series table (unusual, and not
   required by the schema rules) now raises instead of replacing.
 
+- **BREAKING — `quiver_database_upsert_time_series_row()` takes a per-cell NULL mask.** A
+  `const uint8_t* const* column_has_value` parameter now sits between `column_data` and
+  `column_count`, in the same position and shape as
+  `quiver_database_update_{time_series,vector,set}_group`.
+
+  *Adapt:* C and FFI callers must pass the new argument. `NULL` for the whole parameter, or for an
+  individual column's entry, means that scope is present and behaves exactly as before; the two
+  pointer spellings of NULL stay valid — a NULL `column_data[c]`, and a NULL `char*` entry for a
+  STRING/DATE_TIME column. No language binding's public surface changed.
+
 - **BREAKING — `export_csv()` writes foreign keys as labels, not ids.** A foreign-key column is
   now exported as the referenced element's `label`, **including self-references** — `import_csv()`
   does not skip those either, it defers them to a second pass and looks them up by label there too.

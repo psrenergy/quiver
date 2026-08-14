@@ -299,21 +299,15 @@ extension DatabaseUpdate on Database {
       final columnNames = arena<Pointer<Char>>(columnCount);
       final columnTypes = arena<Int>(columnCount);
       final columnData = arena<Pointer<Void>>(columnCount);
+      final columnHasValue = arena<Pointer<Uint8>>(columnCount);
 
       var i = 0;
       for (final entry in row.entries) {
         columnNames[i] = entry.key.toNativeUtf8(allocator: arena).cast();
-        if (entry.value == null) {
-          // A NULL data pointer is the C API's SQL-NULL sentinel for this writer (no mask), so
-          // _marshalGroupColumn's zeroed placeholder would write a value instead of NULL. Since
-          // no value is read, the type tag is free; FLOAT matches its all-null convention.
-          columnTypes[i] = quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT;
-          columnData[i] = nullptr;
-        } else {
-          final column = _marshalGroupColumn(arena, [entry.value]);
-          columnTypes[i] = column.type;
-          columnData[i] = column.data;
-        }
+        final column = _marshalGroupColumn(arena, [entry.value]);
+        columnTypes[i] = column.type;
+        columnData[i] = column.data;
+        columnHasValue[i] = column.hasValue;
         i++;
       }
 
@@ -326,6 +320,7 @@ extension DatabaseUpdate on Database {
           columnNames,
           columnTypes,
           columnData,
+          columnHasValue,
           columnCount,
         ),
       );

@@ -408,39 +408,25 @@ void Database::update_time_series_files(const std::string& collection,
     // An unnamed column is not a written column, so it survives untouched; a named column takes
     // the caller's value, nullopt included. Whether a row already exists decides INSERT vs UPDATE
     // - either way only the named columns are mentioned.
-    auto existing = execute("SELECT 1 FROM " + tsf + " LIMIT 1");
-
+    std::string columns;
+    std::string placeholders;
+    std::string set_clause;
     std::vector<Value> parameters;
     for (const auto& [col_name, path] : paths) {
+        if (!columns.empty()) {
+            columns += ", ";
+            placeholders += ", ";
+            set_clause += ", ";
+        }
+        columns += col_name;
+        placeholders += "?";
+        set_clause += col_name + " = ?";
         parameters.emplace_back(path ? Value(*path) : Value(nullptr));
     }
 
-    std::string sql;
-    if (existing.empty()) {
-        sql = "INSERT INTO " + tsf + " (";
-        std::string placeholders;
-        bool first = true;
-        for (const auto& [col_name, path] : paths) {
-            if (!first) {
-                sql += ", ";
-                placeholders += ", ";
-            }
-            sql += col_name;
-            placeholders += "?";
-            first = false;
-        }
-        sql += ") VALUES (" + placeholders + ")";
-    } else {
-        sql = "UPDATE " + tsf + " SET ";
-        bool first = true;
-        for (const auto& [col_name, path] : paths) {
-            if (!first) {
-                sql += ", ";
-            }
-            sql += col_name + " = ?";
-            first = false;
-        }
-    }
+    auto existing = execute("SELECT 1 FROM " + tsf + " LIMIT 1");
+    auto sql = existing.empty() ? "INSERT INTO " + tsf + " (" + columns + ") VALUES (" + placeholders + ")"
+                                : "UPDATE " + tsf + " SET " + set_clause;
 
     execute(sql, parameters);
 

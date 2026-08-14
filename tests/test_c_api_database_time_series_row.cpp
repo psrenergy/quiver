@@ -38,7 +38,8 @@ TEST(DatabaseCApi, UpsertTimeSeriesRowInsert) {
     const char* dt_buf[] = {"2024-01-01T10:00:00"};
     double val_buf[] = {1.5};
     const void* col_data[] = {dt_buf, val_buf};
-    auto err = quiver_database_upsert_time_series_row(db, "Collection", "data", id, col_names, col_types, col_data, 2);
+    auto err = quiver_database_upsert_time_series_row(
+        db, "Collection", "data", id, col_names, col_types, col_data, nullptr, 2);
     EXPECT_EQ(err, QUIVER_OK);
 
     char** out_col_names = nullptr;
@@ -102,14 +103,14 @@ TEST(DatabaseCApi, UpsertTimeSeriesRowSamePK) {
     const char* dt_buf[] = {"2024-01-01T10:00:00"};
     double val_first[] = {1.0};
     const void* col_data_first[] = {dt_buf, val_first};
-    auto err =
-        quiver_database_upsert_time_series_row(db, "Collection", "data", id, col_names, col_types, col_data_first, 2);
+    auto err = quiver_database_upsert_time_series_row(
+        db, "Collection", "data", id, col_names, col_types, col_data_first, nullptr, 2);
     EXPECT_EQ(err, QUIVER_OK);
 
     double val_second[] = {99.0};
     const void* col_data_second[] = {dt_buf, val_second};
-    err =
-        quiver_database_upsert_time_series_row(db, "Collection", "data", id, col_names, col_types, col_data_second, 2);
+    err = quiver_database_upsert_time_series_row(
+        db, "Collection", "data", id, col_names, col_types, col_data_second, nullptr, 2);
     EXPECT_EQ(err, QUIVER_OK);
 
     char** out_col_names = nullptr;
@@ -184,8 +185,8 @@ TEST(DatabaseCApi, UpsertTimeSeriesRowMultiDimInsert) {
         double load_buf[] = {r.load};
         int64_t flag_buf[] = {r.flag};
         const void* col_data[] = {dt_buf, block_buf, load_buf, flag_buf};
-        auto err =
-            quiver_database_upsert_time_series_row(db, "Resource", "load", id, col_names, col_types, col_data, 4);
+        auto err = quiver_database_upsert_time_series_row(
+            db, "Resource", "load", id, col_names, col_types, col_data, nullptr, 4);
         EXPECT_EQ(err, QUIVER_OK);
     }
 
@@ -293,7 +294,8 @@ TEST(DatabaseCApi, UpsertTimeSeriesRowMultiDimUpsert) {
         double load_buf[] = {10.0};
         int64_t flag_buf[] = {1};
         const void* col_data[] = {dt_buf, block_buf, load_buf, flag_buf};
-        EXPECT_EQ(quiver_database_upsert_time_series_row(db, "Resource", "load", id, col_names, col_types, col_data, 4),
+        EXPECT_EQ(quiver_database_upsert_time_series_row(
+                      db, "Resource", "load", id, col_names, col_types, col_data, nullptr, 4),
                   QUIVER_OK);
     }
     // Upsert same (date_time, block) — must overwrite.
@@ -303,7 +305,8 @@ TEST(DatabaseCApi, UpsertTimeSeriesRowMultiDimUpsert) {
         double load_buf[] = {99.0};
         int64_t flag_buf[] = {0};
         const void* col_data[] = {dt_buf, block_buf, load_buf, flag_buf};
-        EXPECT_EQ(quiver_database_upsert_time_series_row(db, "Resource", "load", id, col_names, col_types, col_data, 4),
+        EXPECT_EQ(quiver_database_upsert_time_series_row(
+                      db, "Resource", "load", id, col_names, col_types, col_data, nullptr, 4),
                   QUIVER_OK);
     }
     // Different block at same date_time — must be a new row.
@@ -313,7 +316,8 @@ TEST(DatabaseCApi, UpsertTimeSeriesRowMultiDimUpsert) {
         double load_buf[] = {20.0};
         int64_t flag_buf[] = {1};
         const void* col_data[] = {dt_buf, block_buf, load_buf, flag_buf};
-        EXPECT_EQ(quiver_database_upsert_time_series_row(db, "Resource", "load", id, col_names, col_types, col_data, 4),
+        EXPECT_EQ(quiver_database_upsert_time_series_row(
+                      db, "Resource", "load", id, col_names, col_types, col_data, nullptr, 4),
                   QUIVER_OK);
     }
 
@@ -402,7 +406,8 @@ TEST(DatabaseCApi, UpsertTimeSeriesRowPartialValueColumns) {
         int64_t block_buf[] = {1};
         double load_buf[] = {10.0};
         const void* col_data[] = {dt_buf, block_buf, load_buf};
-        EXPECT_EQ(quiver_database_upsert_time_series_row(db, "Resource", "load", id, col_names, col_types, col_data, 3),
+        EXPECT_EQ(quiver_database_upsert_time_series_row(
+                      db, "Resource", "load", id, col_names, col_types, col_data, nullptr, 3),
                   QUIVER_OK);
     }
 
@@ -414,7 +419,8 @@ TEST(DatabaseCApi, UpsertTimeSeriesRowPartialValueColumns) {
         int64_t block_buf[] = {2};
         int64_t flag_buf[] = {5};
         const void* col_data[] = {dt_buf, block_buf, flag_buf};
-        EXPECT_EQ(quiver_database_upsert_time_series_row(db, "Resource", "load", id, col_names, col_types, col_data, 3),
+        EXPECT_EQ(quiver_database_upsert_time_series_row(
+                      db, "Resource", "load", id, col_names, col_types, col_data, nullptr, 3),
                   QUIVER_OK);
     }
 
@@ -504,9 +510,9 @@ TEST(DatabaseCApi, UpsertTimeSeriesRowConflictPatchPreservesUnnamedColumn) {
         double load_buf[] = {10.0};
         int64_t flag_buf[] = {1};
         const void* col_data[] = {dt_buf, block_buf, load_buf, flag_buf};
-        EXPECT_EQ(
-            quiver_database_upsert_time_series_row(db, "Resource", "load", id, col_names4, col_types4, col_data, 4),
-            QUIVER_OK);
+        EXPECT_EQ(quiver_database_upsert_time_series_row(
+                      db, "Resource", "load", id, col_names4, col_types4, col_data, nullptr, 4),
+                  QUIVER_OK);
     }
 
     // Conflict on the same PK, naming only `load` — `flag` must survive, not become NULL.
@@ -517,7 +523,8 @@ TEST(DatabaseCApi, UpsertTimeSeriesRowConflictPatchPreservesUnnamedColumn) {
         int64_t block_buf[] = {1};
         double load_buf[] = {99.0};
         const void* col_data[] = {dt_buf, block_buf, load_buf};
-        EXPECT_EQ(quiver_database_upsert_time_series_row(db, "Resource", "load", id, col_names, col_types, col_data, 3),
+        EXPECT_EQ(quiver_database_upsert_time_series_row(
+                      db, "Resource", "load", id, col_names, col_types, col_data, nullptr, 3),
                   QUIVER_OK);
     }
 
@@ -589,9 +596,9 @@ TEST(DatabaseCApi, UpsertTimeSeriesRowConflictNullPointerSentinelClearsNamedColu
         double load_buf[] = {10.0};
         int64_t flag_buf[] = {1};
         const void* col_data[] = {dt_buf, block_buf, load_buf, flag_buf};
-        EXPECT_EQ(
-            quiver_database_upsert_time_series_row(db, "Resource", "load", id, col_names4, col_types4, col_data, 4),
-            QUIVER_OK);
+        EXPECT_EQ(quiver_database_upsert_time_series_row(
+                      db, "Resource", "load", id, col_names4, col_types4, col_data, nullptr, 4),
+                  QUIVER_OK);
     }
 
     // Conflict naming `flag` with a NULL column_data pointer — the sentinel for SQL NULL.
@@ -602,7 +609,8 @@ TEST(DatabaseCApi, UpsertTimeSeriesRowConflictNullPointerSentinelClearsNamedColu
         const char* dt_buf[] = {"2024-01-01"};
         int64_t block_buf[] = {1};
         const void* col_data[] = {dt_buf, block_buf, nullptr};
-        EXPECT_EQ(quiver_database_upsert_time_series_row(db, "Resource", "load", id, col_names, col_types, col_data, 3),
+        EXPECT_EQ(quiver_database_upsert_time_series_row(
+                      db, "Resource", "load", id, col_names, col_types, col_data, nullptr, 3),
                   QUIVER_OK);
     }
 
@@ -672,9 +680,252 @@ TEST(DatabaseCApi, UpsertTimeSeriesRowNullStringPointerSentinelIsNull) {
     const char* dt_buf[] = {"2024-01-01T00:00:00"};
     double value_buf[] = {1.5};
     const void* col_data[] = {dt_buf, value_buf};
-    EXPECT_EQ(quiver_database_upsert_time_series_row(db, "Collection", "data", id, col_names, col_types, col_data, 2),
+    EXPECT_EQ(quiver_database_upsert_time_series_row(
+                  db, "Collection", "data", id, col_names, col_types, col_data, nullptr, 2),
               QUIVER_OK);
 
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, UpsertTimeSeriesRowConflictMaskClearsNamedColumn) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("multi_dim_time_series.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    quiver_element_t* config = nullptr;
+    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
+    quiver_element_set_string(config, "label", "Test Config");
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", config, &tmp_id);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
+
+    quiver_element_t* resource = nullptr;
+    ASSERT_EQ(quiver_element_create(&resource), QUIVER_OK);
+    quiver_element_set_string(resource, "label", "Resource 1");
+    int64_t id = 0;
+    quiver_database_create_element(db, "Resource", resource, &id);
+    EXPECT_EQ(quiver_element_destroy(resource), QUIVER_OK);
+
+    const char* col_names4[] = {"date_time", "block", "load", "flag"};
+    int col_types4[] = {
+        QUIVER_DATA_TYPE_STRING, QUIVER_DATA_TYPE_INTEGER, QUIVER_DATA_TYPE_FLOAT, QUIVER_DATA_TYPE_INTEGER};
+    {
+        const char* dt_buf[] = {"2024-01-01"};
+        int64_t block_buf[] = {1};
+        double load_buf[] = {10.0};
+        int64_t flag_buf[] = {1};
+        const void* col_data[] = {dt_buf, block_buf, load_buf, flag_buf};
+        EXPECT_EQ(quiver_database_upsert_time_series_row(
+                      db, "Resource", "load", id, col_names4, col_types4, col_data, nullptr, 4),
+                  QUIVER_OK);
+    }
+
+    // Conflict naming `flag` with a masked-out cell — the data slot holds a real value that must
+    // never be read. `load` (unnamed) survives; `flag` (named, masked out) is cleared.
+    {
+        const char* col_names[] = {"date_time", "block", "flag"};
+        int col_types[] = {QUIVER_DATA_TYPE_STRING, QUIVER_DATA_TYPE_INTEGER, QUIVER_DATA_TYPE_INTEGER};
+        const char* dt_buf[] = {"2024-01-01"};
+        int64_t block_buf[] = {1};
+        int64_t flag_buf[] = {99};
+        const void* col_data[] = {dt_buf, block_buf, flag_buf};
+        const uint8_t absent[] = {0};
+        const uint8_t* col_has_value[] = {nullptr, nullptr, absent};
+        EXPECT_EQ(quiver_database_upsert_time_series_row(
+                      db, "Resource", "load", id, col_names, col_types, col_data, col_has_value, 3),
+                  QUIVER_OK);
+    }
+
+    char** out_col_names = nullptr;
+    int* out_col_types = nullptr;
+    void** out_col_data = nullptr;
+    uint8_t** out_col_has_value = nullptr;
+    size_t col_count = 0;
+    size_t row_count = 0;
+    auto err = quiver_database_read_time_series_group(db,
+                                                      "Resource",
+                                                      "load",
+                                                      id,
+                                                      &out_col_names,
+                                                      &out_col_types,
+                                                      &out_col_data,
+                                                      &out_col_has_value,
+                                                      &col_count,
+                                                      &row_count);
+    EXPECT_EQ(err, QUIVER_OK);
+    ASSERT_EQ(row_count, 1u);
+
+    int load_idx = -1, flag_idx = -1;
+    for (size_t c = 0; c < col_count; ++c) {
+        std::string n = out_col_names[c];
+        if (n == "load")
+            load_idx = static_cast<int>(c);
+        else if (n == "flag")
+            flag_idx = static_cast<int>(c);
+    }
+    ASSERT_NE(load_idx, -1);
+    ASSERT_NE(flag_idx, -1);
+
+    EXPECT_DOUBLE_EQ(static_cast<double*>(out_col_data[load_idx])[0], 10.0);
+    EXPECT_EQ(out_col_has_value[flag_idx][0], 0);
+
+    quiver_database_free_time_series_data(
+        out_col_names, out_col_types, out_col_data, out_col_has_value, col_count, row_count);
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, UpsertTimeSeriesRowDenseMaskWritesValue) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("multi_dim_time_series.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    quiver_element_t* config = nullptr;
+    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
+    quiver_element_set_string(config, "label", "Test Config");
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", config, &tmp_id);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
+
+    quiver_element_t* resource = nullptr;
+    ASSERT_EQ(quiver_element_create(&resource), QUIVER_OK);
+    quiver_element_set_string(resource, "label", "Resource 1");
+    int64_t id = 0;
+    quiver_database_create_element(db, "Resource", resource, &id);
+    EXPECT_EQ(quiver_element_destroy(resource), QUIVER_OK);
+
+    const uint8_t present[] = {1};
+
+    // Insert with a mask that is present everywhere — the dimension columns spell it as a NULL
+    // per-column entry (dense), the value columns as an explicit 1.
+    {
+        const char* col_names[] = {"date_time", "block", "load", "flag"};
+        int col_types[] = {
+            QUIVER_DATA_TYPE_STRING, QUIVER_DATA_TYPE_INTEGER, QUIVER_DATA_TYPE_FLOAT, QUIVER_DATA_TYPE_INTEGER};
+        const char* dt_buf[] = {"2024-01-01"};
+        int64_t block_buf[] = {1};
+        double load_buf[] = {10.0};
+        int64_t flag_buf[] = {1};
+        const void* col_data[] = {dt_buf, block_buf, load_buf, flag_buf};
+        const uint8_t* col_has_value[] = {nullptr, nullptr, present, present};
+        EXPECT_EQ(quiver_database_upsert_time_series_row(
+                      db, "Resource", "load", id, col_names, col_types, col_data, col_has_value, 4),
+                  QUIVER_OK);
+    }
+
+    // Conflict naming `load` with a present mask — writes the new value, `flag` (unnamed) survives.
+    {
+        const char* col_names[] = {"date_time", "block", "load"};
+        int col_types[] = {QUIVER_DATA_TYPE_STRING, QUIVER_DATA_TYPE_INTEGER, QUIVER_DATA_TYPE_FLOAT};
+        const char* dt_buf[] = {"2024-01-01"};
+        int64_t block_buf[] = {1};
+        double load_buf[] = {20.0};
+        const void* col_data[] = {dt_buf, block_buf, load_buf};
+        const uint8_t* col_has_value[] = {present, present, present};
+        EXPECT_EQ(quiver_database_upsert_time_series_row(
+                      db, "Resource", "load", id, col_names, col_types, col_data, col_has_value, 3),
+                  QUIVER_OK);
+    }
+
+    char** out_col_names = nullptr;
+    int* out_col_types = nullptr;
+    void** out_col_data = nullptr;
+    uint8_t** out_col_has_value = nullptr;
+    size_t col_count = 0;
+    size_t row_count = 0;
+    auto err = quiver_database_read_time_series_group(db,
+                                                      "Resource",
+                                                      "load",
+                                                      id,
+                                                      &out_col_names,
+                                                      &out_col_types,
+                                                      &out_col_data,
+                                                      &out_col_has_value,
+                                                      &col_count,
+                                                      &row_count);
+    EXPECT_EQ(err, QUIVER_OK);
+    ASSERT_EQ(row_count, 1u);
+
+    int load_idx = -1, flag_idx = -1;
+    for (size_t c = 0; c < col_count; ++c) {
+        std::string n = out_col_names[c];
+        if (n == "load")
+            load_idx = static_cast<int>(c);
+        else if (n == "flag")
+            flag_idx = static_cast<int>(c);
+    }
+    ASSERT_NE(load_idx, -1);
+    ASSERT_NE(flag_idx, -1);
+
+    EXPECT_EQ(out_col_has_value[load_idx][0], 1);
+    EXPECT_DOUBLE_EQ(static_cast<double*>(out_col_data[load_idx])[0], 20.0);
+    EXPECT_EQ(out_col_has_value[flag_idx][0], 1);
+    EXPECT_EQ(static_cast<int64_t*>(out_col_data[flag_idx])[0], 1);
+
+    quiver_database_free_time_series_data(
+        out_col_names, out_col_types, out_col_data, out_col_has_value, col_count, row_count);
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, UpsertTimeSeriesRowNullMaskParameterIsDense) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    quiver_element_t* config = nullptr;
+    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
+    quiver_element_set_string(config, "label", "Test Config");
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", config, &tmp_id);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
+
+    quiver_element_t* item = nullptr;
+    ASSERT_EQ(quiver_element_create(&item), QUIVER_OK);
+    quiver_element_set_string(item, "label", "Item 1");
+    int64_t id = 0;
+    quiver_database_create_element(db, "Collection", item, &id);
+    EXPECT_EQ(quiver_element_destroy(item), QUIVER_OK);
+
+    // No mask at all: every cell is present, exactly as before the parameter existed.
+    const char* col_names[] = {"date_time", "value"};
+    int col_types[] = {QUIVER_DATA_TYPE_STRING, QUIVER_DATA_TYPE_FLOAT};
+    const char* dt_buf[] = {"2024-01-01T00:00:00"};
+    double value_buf[] = {1.5};
+    const void* col_data[] = {dt_buf, value_buf};
+    EXPECT_EQ(quiver_database_upsert_time_series_row(
+                  db, "Collection", "data", id, col_names, col_types, col_data, nullptr, 2),
+              QUIVER_OK);
+
+    char** out_col_names = nullptr;
+    int* out_col_types = nullptr;
+    void** out_col_data = nullptr;
+    uint8_t** out_col_has_value = nullptr;
+    size_t col_count = 0;
+    size_t row_count = 0;
+    auto err = quiver_database_read_time_series_group(db,
+                                                      "Collection",
+                                                      "data",
+                                                      id,
+                                                      &out_col_names,
+                                                      &out_col_types,
+                                                      &out_col_data,
+                                                      &out_col_has_value,
+                                                      &col_count,
+                                                      &row_count);
+    EXPECT_EQ(err, QUIVER_OK);
+    ASSERT_EQ(row_count, 1u);
+    ASSERT_EQ(col_count, 2u);
+
+    EXPECT_EQ(out_col_has_value[1][0], 1);
+    EXPECT_DOUBLE_EQ(static_cast<double*>(out_col_data[1])[0], 1.5);
+
+    quiver_database_free_time_series_data(
+        out_col_names, out_col_types, out_col_data, out_col_has_value, col_count, row_count);
     quiver_database_close(db);
 }
 
@@ -708,9 +959,9 @@ TEST(DatabaseCApi, UpsertTimeSeriesRowConflictDimensionOnlyIsNoOp) {
         double load_buf[] = {10.0};
         int64_t flag_buf[] = {1};
         const void* col_data[] = {dt_buf, block_buf, load_buf, flag_buf};
-        EXPECT_EQ(
-            quiver_database_upsert_time_series_row(db, "Resource", "load", id, col_names4, col_types4, col_data, 4),
-            QUIVER_OK);
+        EXPECT_EQ(quiver_database_upsert_time_series_row(
+                      db, "Resource", "load", id, col_names4, col_types4, col_data, nullptr, 4),
+                  QUIVER_OK);
     }
 
     // Conflict naming only dimension columns — DO UPDATE SET would be empty, must be a no-op.
@@ -720,7 +971,8 @@ TEST(DatabaseCApi, UpsertTimeSeriesRowConflictDimensionOnlyIsNoOp) {
         const char* dt_buf[] = {"2024-01-01"};
         int64_t block_buf[] = {1};
         const void* col_data[] = {dt_buf, block_buf};
-        EXPECT_EQ(quiver_database_upsert_time_series_row(db, "Resource", "load", id, col_names, col_types, col_data, 2),
+        EXPECT_EQ(quiver_database_upsert_time_series_row(
+                      db, "Resource", "load", id, col_names, col_types, col_data, nullptr, 2),
                   QUIVER_OK);
     }
 
@@ -790,8 +1042,8 @@ TEST(DatabaseCApi, UpsertTimeSeriesRowMissingDimension) {
         const char* dt_buf[] = {"2024-01-01"};
         double load_buf[] = {1.0};
         const void* col_data[] = {dt_buf, load_buf};
-        auto err =
-            quiver_database_upsert_time_series_row(db, "Resource", "load", id, col_names, col_types, col_data, 2);
+        auto err = quiver_database_upsert_time_series_row(
+            db, "Resource", "load", id, col_names, col_types, col_data, nullptr, 2);
         EXPECT_EQ(err, QUIVER_ERROR);
         std::string msg = quiver_get_last_error();
         EXPECT_NE(msg.find("Cannot upsert_time_series_row: row missing required 'block' column"), std::string::npos)
@@ -805,8 +1057,8 @@ TEST(DatabaseCApi, UpsertTimeSeriesRowMissingDimension) {
         int64_t block_buf[] = {1};
         double load_buf[] = {1.0};
         const void* col_data[] = {block_buf, load_buf};
-        auto err =
-            quiver_database_upsert_time_series_row(db, "Resource", "load", id, col_names, col_types, col_data, 2);
+        auto err = quiver_database_upsert_time_series_row(
+            db, "Resource", "load", id, col_names, col_types, col_data, nullptr, 2);
         EXPECT_EQ(err, QUIVER_ERROR);
         std::string msg = quiver_get_last_error();
         EXPECT_NE(msg.find("Cannot upsert_time_series_row: row missing required 'date_time' column"), std::string::npos)
@@ -846,7 +1098,8 @@ TEST(DatabaseCApi, UpsertTimeSeriesRowUnknownColumn) {
     double load_buf[] = {1.0};
     double pressure_buf[] = {1013.25};
     const void* col_data[] = {dt_buf, block_buf, load_buf, pressure_buf};
-    auto err = quiver_database_upsert_time_series_row(db, "Resource", "load", id, col_names, col_types, col_data, 4);
+    auto err =
+        quiver_database_upsert_time_series_row(db, "Resource", "load", id, col_names, col_types, col_data, nullptr, 4);
     EXPECT_EQ(err, QUIVER_ERROR);
     std::string msg = quiver_get_last_error();
     EXPECT_NE(msg.find("Cannot upsert_time_series_row: column 'pressure' not found in group 'load'"), std::string::npos)
@@ -884,8 +1137,8 @@ TEST(DatabaseCApi, UpsertTimeSeriesRowTypeMismatch) {
         int64_t block_buf[] = {1};
         int64_t load_buf[] = {42};
         const void* col_data[] = {dt_buf, block_buf, load_buf};
-        auto err =
-            quiver_database_upsert_time_series_row(db, "Resource", "load", id, col_names, col_types, col_data, 3);
+        auto err = quiver_database_upsert_time_series_row(
+            db, "Resource", "load", id, col_names, col_types, col_data, nullptr, 3);
         EXPECT_EQ(err, QUIVER_OK);
     }
 
@@ -897,8 +1150,8 @@ TEST(DatabaseCApi, UpsertTimeSeriesRowTypeMismatch) {
         double block_buf[] = {1.5};
         double load_buf[] = {1.0};
         const void* col_data[] = {dt_buf, block_buf, load_buf};
-        auto err =
-            quiver_database_upsert_time_series_row(db, "Resource", "load", id, col_names, col_types, col_data, 3);
+        auto err = quiver_database_upsert_time_series_row(
+            db, "Resource", "load", id, col_names, col_types, col_data, nullptr, 3);
         EXPECT_EQ(err, QUIVER_ERROR);
         std::string msg = quiver_get_last_error();
         EXPECT_NE(msg.find("Cannot upsert_time_series_row: column"), std::string::npos) << "Actual: " << msg;
@@ -943,8 +1196,8 @@ TEST(DatabaseCApi, UpsertTimeSeriesRowTransactionMatrix) {
         const char* dt_buf[] = {"2024-01-01T10:00:00"};
         double val_buf[] = {1.0};
         const void* col_data[] = {dt_buf, val_buf};
-        auto err =
-            quiver_database_upsert_time_series_row(db, "Collection", "data", id, col_names, col_types, col_data, 2);
+        auto err = quiver_database_upsert_time_series_row(
+            db, "Collection", "data", id, col_names, col_types, col_data, nullptr, 2);
         EXPECT_EQ(err, QUIVER_OK);
     }
 
@@ -984,17 +1237,17 @@ TEST(DatabaseCApi, UpsertTimeSeriesRowTransactionMatrix) {
         const char* dt_buf[] = {"2024-01-01T10:00:00"};
         double val_buf[] = {1.0};
         const void* col_data[] = {dt_buf, val_buf};
-        EXPECT_EQ(
-            quiver_database_upsert_time_series_row(db, "Collection", "data", id, col_names, col_types, col_data, 2),
-            QUIVER_OK);
+        EXPECT_EQ(quiver_database_upsert_time_series_row(
+                      db, "Collection", "data", id, col_names, col_types, col_data, nullptr, 2),
+                  QUIVER_OK);
     }
     {
         const char* dt_buf[] = {"2024-01-02T10:00:00"};
         double val_buf[] = {2.0};
         const void* col_data[] = {dt_buf, val_buf};
-        EXPECT_EQ(
-            quiver_database_upsert_time_series_row(db, "Collection", "data", id, col_names, col_types, col_data, 2),
-            QUIVER_OK);
+        EXPECT_EQ(quiver_database_upsert_time_series_row(
+                      db, "Collection", "data", id, col_names, col_types, col_data, nullptr, 2),
+                  QUIVER_OK);
     }
     EXPECT_EQ(quiver_database_commit(db), QUIVER_OK);
 
@@ -1028,9 +1281,9 @@ TEST(DatabaseCApi, UpsertTimeSeriesRowTransactionMatrix) {
         const char* dt_buf[] = {"2024-01-03T10:00:00"};
         double val_buf[] = {3.0};
         const void* col_data[] = {dt_buf, val_buf};
-        EXPECT_EQ(
-            quiver_database_upsert_time_series_row(db, "Collection", "data", id, col_names, col_types, col_data, 2),
-            QUIVER_OK);
+        EXPECT_EQ(quiver_database_upsert_time_series_row(
+                      db, "Collection", "data", id, col_names, col_types, col_data, nullptr, 2),
+                  QUIVER_OK);
     }
     EXPECT_EQ(quiver_database_in_transaction(db, &in_txn), QUIVER_OK);
     EXPECT_EQ(in_txn, 0);  // returned to autocommit
@@ -1075,24 +1328,26 @@ TEST(DatabaseCApi, UpsertTimeSeriesRowNullArguments) {
     const void* col_data[] = {dt_buf, val_buf};
 
     // a. Null db.
-    EXPECT_EQ(
-        quiver_database_upsert_time_series_row(nullptr, "Collection", "data", 1, col_names, col_types, col_data, 2),
-        QUIVER_ERROR);
-    {
-        std::string msg = quiver_get_last_error();
-        EXPECT_NE(msg.find("Null argument"), std::string::npos) << "Actual: " << msg;
-    }
-
-    // b. Null collection.
-    EXPECT_EQ(quiver_database_upsert_time_series_row(db, nullptr, "data", 1, col_names, col_types, col_data, 2),
+    EXPECT_EQ(quiver_database_upsert_time_series_row(
+                  nullptr, "Collection", "data", 1, col_names, col_types, col_data, nullptr, 2),
               QUIVER_ERROR);
     {
         std::string msg = quiver_get_last_error();
         EXPECT_NE(msg.find("Null argument"), std::string::npos) << "Actual: " << msg;
     }
 
+    // b. Null collection.
+    EXPECT_EQ(
+        quiver_database_upsert_time_series_row(db, nullptr, "data", 1, col_names, col_types, col_data, nullptr, 2),
+        QUIVER_ERROR);
+    {
+        std::string msg = quiver_get_last_error();
+        EXPECT_NE(msg.find("Null argument"), std::string::npos) << "Actual: " << msg;
+    }
+
     // c. Null group.
-    EXPECT_EQ(quiver_database_upsert_time_series_row(db, "Collection", nullptr, 1, col_names, col_types, col_data, 2),
+    EXPECT_EQ(quiver_database_upsert_time_series_row(
+                  db, "Collection", nullptr, 1, col_names, col_types, col_data, nullptr, 2),
               QUIVER_ERROR);
     {
         std::string msg = quiver_get_last_error();
@@ -1129,7 +1384,8 @@ TEST(DatabaseCApi, UpsertTimeSeriesRowUnknownColumnType) {
     int64_t block_buf[] = {1};
     double load_buf[] = {10.0};
     const void* col_data[] = {dt_buf, block_buf, load_buf};
-    auto err = quiver_database_upsert_time_series_row(db, "Resource", "load", id, col_names, col_types, col_data, 3);
+    auto err =
+        quiver_database_upsert_time_series_row(db, "Resource", "load", id, col_names, col_types, col_data, nullptr, 3);
     EXPECT_EQ(err, QUIVER_ERROR);
     std::string msg = quiver_get_last_error();
     EXPECT_NE(msg.find("Cannot upsert_time_series_row: unknown column type"), std::string::npos) << "Actual: " << msg;
@@ -1152,6 +1408,7 @@ TEST(DatabaseCApi, UpsertTimeSeriesRowNullColumnArraysWithCount) {
                                                       /*column_names=*/nullptr,
                                                       /*column_types=*/nullptr,
                                                       /*column_data=*/nullptr,
+                                                      /*column_has_value=*/nullptr,
                                                       /*column_count=*/3);
     EXPECT_EQ(err, QUIVER_ERROR);
     std::string msg = quiver_get_last_error();

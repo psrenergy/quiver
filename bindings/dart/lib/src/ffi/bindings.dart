@@ -1947,6 +1947,7 @@ class QuiverDatabaseBindings {
     ffi.Pointer<ffi.Pointer<ffi.Char>> column_names,
     ffi.Pointer<ffi.Int> column_types,
     ffi.Pointer<ffi.Pointer<ffi.Void>> column_data,
+    ffi.Pointer<ffi.Pointer<ffi.Uint8>> column_has_value,
     int column_count,
   ) {
     return _quiver_database_upsert_time_series_row(
@@ -1957,6 +1958,7 @@ class QuiverDatabaseBindings {
       column_names,
       column_types,
       column_data,
+      column_has_value,
       column_count,
     );
   }
@@ -1972,6 +1974,7 @@ class QuiverDatabaseBindings {
             ffi.Pointer<ffi.Pointer<ffi.Char>>,
             ffi.Pointer<ffi.Int>,
             ffi.Pointer<ffi.Pointer<ffi.Void>>,
+            ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
             ffi.Size,
           )
         >
@@ -1986,6 +1989,7 @@ class QuiverDatabaseBindings {
           ffi.Pointer<ffi.Pointer<ffi.Char>>,
           ffi.Pointer<ffi.Int>,
           ffi.Pointer<ffi.Pointer<ffi.Void>>,
+          ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
           int,
         )
       >();

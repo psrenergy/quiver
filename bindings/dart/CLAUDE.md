@@ -57,12 +57,10 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   so a `toDartString` failure cannot leak it.
 - **Time-series group NULLs**: `readTimeSeriesGroup`/`updateTimeSeriesGroup` use
   `Map<String, List<Object?>>` — a `null` cell is a SQL NULL. `_marshalGroupColumn` returns a
-  `({int type, Pointer<Void> data, Pointer<Uint8> hasValue})` record (the per-cell mask;
-  `upsertTimeSeriesRow` ignores `hasValue`), dispatches on the first non-null element, and tags an
-  all-null/empty column FLOAT with a zeroed placeholder. `upsertTimeSeriesRow` bypasses the
-  marshaller for a `null` value: that writer's SQL-NULL sentinel is a NULL data pointer, so the
-  zeroed placeholder would write a value instead of NULL. Reads decode the mask out-param and never
-  `toDartString` a masked-out (NULL) pointer.
+  `({int type, Pointer<Void> data, Pointer<Uint8> hasValue})` record (the per-cell mask),
+  dispatches on the first non-null element, and tags an all-null/empty column FLOAT with a zeroed
+  placeholder; `upsertTimeSeriesRow` marshals its one-cell columns through it too. Reads decode the
+  mask out-param and never `toDartString` a masked-out (NULL) pointer.
 - **Query API shape**: `queryString`/`queryInteger`/`queryFloat`/`queryDateTime` take an optional
   positional `List<Object?>? parameters` (no separate `*Params` methods).
 - **Element array NULLs**: `Element.setArray{Integer,Float,String}` take `List<T?>` and pass the

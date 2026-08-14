@@ -145,9 +145,10 @@ Settled questions — don't relitigate without the user; each was decided delibe
     uniqueness conflict; `ON CONFLICT(id, <dims…>)` covers the primary key only, so a second UNIQUE
     constraint on a time-series table would now raise instead of replacing.
 - **Time-series group NULLs round-trip via a per-cell presence mask.** The columnar C API
-  (`read`/`update`/`free_time_series_data`) carries a `uint8_t` mask parallel to the data arrays
-  (NULL mask = dense; `mask[c][r] == 0` = SQL NULL, data ignored — so an all-NULL column can be
-  FLOAT-tagged against any schema column). FFI bindings (Julia/Python/Dart/JS) read null-padded
+  (`read`/`update`/`upsert_row`/`free_time_series_data`) carries a `uint8_t` mask parallel to the
+  data arrays (NULL mask = dense; `mask[c][r] == 0` = SQL NULL, data ignored — so an all-NULL column
+  can be FLOAT-tagged against any schema column). `upsert_time_series_row` carries the same mask
+  over its single row. FFI bindings (Julia/Python/Dart/JS) read null-padded
   columns and accept null cells on update; their existing equal-length validations stay. Lua is
   mask- and sentinel-free: NULL is plain `nil`, the dimension column(s) are the row-count authority
   (`#ts.<dimension>`), value columns may be short/sparse/empty (missing cells write NULL),

@@ -1490,18 +1490,25 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         c_col_names = ffi.new("const char*[]", col_count)
         c_col_types = ffi.new("int[]", col_count)
         c_col_data = ffi.new("void*[]", col_count)
+        c_col_has_value = ffi.new("uint8_t*[]", col_count)
 
         for i, (name, v) in enumerate(kwargs.items()):
             name_buf = ffi.new("char[]", name.encode("utf-8"))
             keepalive.append(name_buf)
             c_col_names[i] = name_buf
 
-            # A NULL data pointer is the C API's SQL-NULL sentinel for this writer (no mask).
-            # Since no value is read, the type tag is free; FLOAT matches the all-`None`
-            # column convention in _marshal_group_columns.
+            # Per-cell NULL mask, one cell per column, as in _marshal_group_columns.
+            mask = ffi.new("uint8_t[]", [0 if v is None else 1])
+            keepalive.append(mask)
+            c_col_has_value[i] = mask
+
+            # The C API ignores type/data for a masked cell; FLOAT with a zeroed placeholder
+            # matches the all-`None` column convention in _marshal_group_columns.
             if v is None:
+                arr = ffi.new("double[]", [0.0])
+                keepalive.append(arr)
                 c_col_types[i] = DataType.FLOAT
-                c_col_data[i] = ffi.NULL
+                c_col_data[i] = ffi.cast("void*", arr)
             # bool is a subclass of int; test it explicitly first so True/False
             # marshal as INTEGER 1/0 rather than being rejected by the `is int`
             # check. Mirrors `_marshal_params` policy in this same file.
@@ -1534,7 +1541,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
 
         check(
             lib.quiver_database_upsert_time_series_row(
-                self._ptr, c_collection, c_group, id, c_col_names, c_col_types, c_col_data, col_count
+                self._ptr, c_collection, c_group, id, c_col_names, c_col_types, c_col_data, c_col_has_value, col_count
             )
         )
 

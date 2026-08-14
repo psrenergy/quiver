@@ -221,15 +221,26 @@ Database.prototype.upsertTimeSeriesRow = function (
   const typesBuf = new Uint8Array(columnCount * 4);
   const typesDv = new DataView(typesBuf.buffer);
   const dataPtrs: (Pointer | null)[] = [];
+  const maskPtrs: (Pointer | null)[] = [];
 
   for (let c = 0; c < columnCount; c++) {
     const value = entries[c][1];
+
+    // Per-cell NULL mask, one cell per column. Built by direct indexing — never a DataView,
+    // per the TypedArray house rule in group-columns.ts.
+    const maskBuf = new Uint8Array(1);
+    maskBuf[0] = value === null ? 0 : 1;
+    const maskAlloc: Allocation = { ptr: ptr(maskBuf), buf: maskBuf };
+    keepalive.push(maskAlloc);
+    maskPtrs.push(maskAlloc.ptr);
+
     if (value === null) {
-      // A NULL data pointer is the C API's SQL-NULL sentinel for this writer (no mask). Since no
-      // value is read, the type tag is free; FLOAT matches the all-null column convention in
-      // group-columns.ts.
+      // The C API ignores type/data for a masked cell; FLOAT with a zeroed placeholder matches
+      // the all-null column convention in group-columns.ts.
       typesDv.setInt32(c * 4, DATA_TYPE_FLOAT, true);
-      dataPtrs.push(null);
+      const p = allocNativeFloat64([0]);
+      keepalive.push(p);
+      dataPtrs.push(p.ptr);
     } else if (typeof value === "string") {
       typesDv.setInt32(c * 4, DATA_TYPE_STRING, true);
       const { table, keepalive: strPtrs } = allocNativeStringArray([value]);
@@ -252,6 +263,8 @@ Database.prototype.upsertTimeSeriesRow = function (
   keepalive.push(typesAlloc);
   const dataTable = allocNativePtrTable(dataPtrs);
   keepalive.push(dataTable);
+  const maskTable = allocNativePtrTable(maskPtrs);
+  keepalive.push(maskTable);
 
   check(
     lib.quiver_database_upsert_time_series_row(
@@ -262,6 +275,7 @@ Database.prototype.upsertTimeSeriesRow = function (
       namesTable.buf,
       typesAlloc.buf,
       dataTable.buf,
+      maskTable.buf,
       BigInt(columnCount),
     ),
   );
