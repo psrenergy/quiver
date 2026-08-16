@@ -137,6 +137,15 @@ Settled questions — don't relitigate without the user; each was decided delibe
   (`#ts.<dimension>`), value columns may be short/sparse/empty (missing cells write NULL),
   longer-than-dimension errors, and the named-but-empty anti-silent-clear trap is preserved
   (`{}` clears).
+- **`read_time_series_row` reports absence with a mask, never a sentinel.** The C API carries a flat
+  `uint8_t** out_mask` (`mask[i] == 0` = the element has no value at or before `date_time`, data
+  slot is a 0/0.0 placeholder), freed by `quiver_database_free_mask`; TEXT columns get a NULL mask
+  because absence is already a `nullptr` entry in the `char**`. It used to substitute `0` for
+  INTEGER and NaN for FLOAT, which a legitimately stored `0` is indistinguishable from. Absence is a
+  property of the *query*, not of the column — an element whose first row is after `date_time` is
+  absent even from a `NOT NULL` column — so **Julia returns `Vector{Optional{T}}` unconditionally**
+  here; the bulk-scalar `not_null` fast path does not apply. Python/Dart/JS already declared a
+  nullable element type. Lua bypasses the C layer and always returned `nil`.
 - **Element arrays accept NULL cells.** C++ `Element::set(name, std::vector<Value>)` stores null
   cells directly (a nullable group column, e.g. an optional relation, can have empty cells per
   row); `create_element`/`update_element` bind them as SQL NULL. The C API array setters

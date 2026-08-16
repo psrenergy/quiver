@@ -89,6 +89,23 @@ callers to change something are prefixed **BREAKING** and say what to do.
   binding was not consumable from a Flutter app. This one *removes* a restriction rather than
   adding one.
 
+- **BREAKING — `read_time_series_row()` reports absence as null, not as a sentinel.** An element
+  with no value at or before `date_time` used to come back as `0` for an INTEGER attribute and
+  `NaN` for a REAL one, so a legitimately stored `0` was indistinguishable from "no data". The C
+  API gained a `uint8_t** out_mask` parameter before `out_count` (`mask[i] == 0` = absent, data slot
+  is a placeholder; freed with `quiver_database_free_mask`); TEXT columns get a NULL mask because
+  absence is already a NULL `char*` entry. C++, Lua and the schema are unchanged — the C++ core
+  always returned a null `Value`, and Lua always returned `nil`.
+
+  *Adapt:* **Julia** — `read_time_series_row` now returns `Vector{Optional{Int64}}` /
+  `Vector{Optional{Float64}}` instead of a concrete `Vector{Int64}` / `Vector{Float64}`; replace
+  `isnan(v)` absence checks with `isnothing(v)` and handle `nothing` where a concrete element type
+  was assumed. Absence is a property of the query, not of the column, so this holds for `NOT NULL`
+  columns too and there is no concrete-vector fast path. **Python, Dart and JS** already declared a
+  nullable element type (`list`, `List<Object?>`, `(number | string | null)[]`) and now actually
+  produce `None`/`null` where they previously produced the sentinel. Direct C API callers must pass
+  the extra argument.
+
 ### Fixed
 
 - **`open()` on an existing database now works.** `Database(path)` / `quiver_database_open` — and

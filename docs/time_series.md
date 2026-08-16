@@ -146,7 +146,9 @@ data = Quiver.read_time_series_group(db, "Resource", "group1", id)
 ### Reading a single row
 
 `read_time_series_row` returns one value per element of the collection (ordered by element
-id) using the "last non-null value at or before `date_time`" rule described above:
+id) using the "last non-null value at or before `date_time`" rule described above. Absence is
+always the language's null (`nothing` in Julia, so the result is `Vector{Optional{T}}` whatever the
+column's `NOT NULL` status) — never a `0` or `NaN` sentinel:
 
 ```julia
 values = Quiver.read_time_series_row(

@@ -3,12 +3,33 @@
 #include "quiver/c/database.h"
 #include "quiver/data_type.h"
 
-#include <limits>
 #include <map>
+#include <memory>
 #include <optional>
 #include <string>
 #include <variant>
 #include <vector>
+
+namespace {
+
+// Marshals a numeric time-series-row result into a fresh C array plus a parallel presence mask.
+// An element with no value at or before the queried date_time is masked out (0) and its data slot
+// holds a zero placeholder the caller must ignore. Both arrays are owned by unique_ptr until the
+// last thing that can throw is done, so a failed allocation cannot leak the other one.
+template <typename T>
+void marshal_row_values_masked(const std::vector<quiver::Value>& values, void** out_values, uint8_t** out_mask) {
+    auto data = std::make_unique<T[]>(values.size());
+    auto mask = std::make_unique<uint8_t[]>(values.size());
+    for (size_t i = 0; i < values.size(); ++i) {
+        const bool present = std::holds_alternative<T>(values[i]);
+        data[i] = present ? std::get<T>(values[i]) : T{};
+        mask[i] = present ? 1 : 0;
+    }
+    *out_values = data.release();
+    *out_mask = mask.release();
+}
+
+}  // namespace
 
 extern "C" {
 
@@ -62,8 +83,9 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_row(quiver_database
                                                                  const char* date_time,
                                                                  int* out_data_type,
                                                                  void** out_values,
+                                                                 uint8_t** out_mask,
                                                                  size_t* out_count) {
-    QUIVER_REQUIRE(db, collection, group, attribute, date_time, out_data_type, out_values, out_count);
+    QUIVER_REQUIRE(db, collection, group, attribute, date_time, out_data_type, out_values, out_mask, out_count);
 
     try {
         // The C++ layer validates collection/group/attribute and throws the
@@ -81,6 +103,9 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_row(quiver_database
 
         *out_count = values.size();
         *out_data_type = to_c_data_type(attr_type);
+        // Default for every type: only the numeric branches below allocate a mask. STRING/DATE_TIME
+        // encode absence as a NULL char* entry, and an empty result has nothing to mask.
+        *out_mask = nullptr;
 
         if (values.empty()) {
             *out_values = nullptr;
@@ -88,23 +113,12 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_row(quiver_database
         }
 
         switch (*out_data_type) {
-        case QUIVER_DATA_TYPE_INTEGER: {
-            auto* arr = new int64_t[values.size()];
-            for (size_t i = 0; i < values.size(); ++i) {
-                arr[i] = std::holds_alternative<int64_t>(values[i]) ? std::get<int64_t>(values[i]) : 0;
-            }
-            *out_values = arr;
+        case QUIVER_DATA_TYPE_INTEGER:
+            marshal_row_values_masked<int64_t>(values, out_values, out_mask);
             break;
-        }
-        case QUIVER_DATA_TYPE_FLOAT: {
-            auto* arr = new double[values.size()];
-            for (size_t i = 0; i < values.size(); ++i) {
-                arr[i] = std::holds_alternative<double>(values[i]) ? std::get<double>(values[i])
-                                                                   : std::numeric_limits<double>::quiet_NaN();
-            }
-            *out_values = arr;
+        case QUIVER_DATA_TYPE_FLOAT:
+            marshal_row_values_masked<double>(values, out_values, out_mask);
             break;
-        }
         case QUIVER_DATA_TYPE_STRING:
         case QUIVER_DATA_TYPE_DATE_TIME: {
             auto** arr = new char*[values.size()];
