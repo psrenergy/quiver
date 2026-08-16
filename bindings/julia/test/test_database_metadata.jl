@@ -214,4 +214,5 @@ end
 
     Quiver.close!(db)
 end
+
 end # module

@@ -18,7 +18,7 @@ tests/                    # C++/C API suites + shared SQL schemas               
 .github/                  # CI + release/publish workflows, composite actions    -> .github/CLAUDE.md
 scripts/                  # build-all/test-all/clean-all.bat, format.bat, tidy.bat,
                           # generator.bat (runs all three FFI generators),
-                          # assert_version.py, validate_wheel*.py + test-wheel*.bat,
+                          # assert_version.py (check + bump), validate_wheel*.py + test-wheel*.bat,
                           # ci/{dispatch_workflow.sh, native_s3.sh}, julia/generate_artifacts.jl
 cmake/                    # CompilerOptions.cmake, Dependencies.cmake, Platform.cmake, quiverConfig.cmake.in
 example/                  # example1.lua + example1.bat — quiver_cli/Lua CRUD demo
@@ -286,7 +286,12 @@ JS has no generator — update the hand-written symbol table in `bindings/js/src
 `CMakeLists.txt` `project(... VERSION x.y.z)` is the single source of truth.
 `scripts/assert_version.py` asserts that `bindings/python/pyproject.toml`,
 `bindings/js/package.json`, `bindings/dart/pubspec.yaml`, and `bindings/julia/Project.toml`
-all agree — bump all five together. Release flow: `.github/CLAUDE.md`.
+all agree — bump all five together. The same script also writes them:
+`scripts/assert_version.py bump major|minor|patch` rewrites all five and prints the new version,
+refusing to run from a state where they already disagree. Normally you dispatch the **Bump
+Version** workflow instead, which runs exactly that and opens the PR. `CHANGELOG.md` carries the
+version too (`## [x.y.z] — unreleased` plus its compare link) but is edited by hand — the
+release ritual for that file is not settled. Release flow: `.github/CLAUDE.md`.
 
 ## Code Style Tooling
 
@@ -414,6 +419,9 @@ Public Database methods follow `verb_[category_]type[_by_id|_by_label]`:
   relation. To write a relation that lives in a vector or set group, use `update_vector_group` or
   `update_set_group`: a group relation needs a group name, which `(collection_to, relation_type)`
   does not supply.
+- Element count: `number_of_elements(collection)` returns the current row count from the
+  collection's main table (`COUNT(*)`), not its maximum ID or group-row count. Any table in the
+  schema is accepted, so naming a group table reports that table's own row count.
 - **By-label writers**: every id-addressed writer also takes a `label` in place of the id (a C++
   overload, a `_by_label` symbol in the C API); the id-addressed readers stay id-only. Per binding:
   Julia keeps the same names via multiple dispatch (`label::String` methods); Dart, Python, and JS
@@ -521,6 +529,7 @@ The rules are mechanical: given any C++ method name, you can derive the equivale
 | Read scalar | `read_scalar_integers()` | `quiver_database_read_scalar_integers()` | `read_scalar_integers()` | `readScalarIntegers()` | `read_scalar_integers()` |
 | Read by Id | `read_scalar_integer_by_id()` | `quiver_database_read_scalar_integer_by_id()` | `read_scalar_integer_by_id()` | `readScalarIntegerById()` | N/A (use composites) |
 | Delete | `delete_element()` | `quiver_database_delete_element()` | `delete_element!()` | `deleteElement()` | `delete_element()` |
+| Element count | `number_of_elements()` | `quiver_database_number_of_elements()` | `number_of_elements()` | `numberOfElements()` | `number_of_elements()` |
 | Metadata | `get_scalar_metadata()` | `quiver_database_get_scalar_metadata()` | `get_scalar_metadata()` | `getScalarMetadata()` | `get_scalar_metadata()` |
 | List groups | `list_vector_groups()` | `quiver_database_list_vector_groups()` | `list_vector_groups()` | `listVectorGroups()` | `list_vector_groups()` |
 | Time series read | `read_time_series_group()` | `quiver_database_read_time_series_group()` | `read_time_series_group()` | `readTimeSeriesGroup()` | `read_time_series_group()` |

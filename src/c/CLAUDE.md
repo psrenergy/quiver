@@ -27,7 +27,7 @@ src/c/
   database_create.cpp     # quiver_database_create_element
   database_update.cpp     # quiver_database_update_element + update_relation + group updates (+ their _by_label forms)
   database_delete.cpp     # quiver_database_delete_element (+ _by_label)
-  database_read.cpp       # All read operations + co-located free functions
+  database_read.cpp       # All read operations + quiver_database_number_of_elements, + co-located free functions
   database_metadata.cpp   # Metadata get/list + co-located free functions
   database_query.cpp      # Query operations (plain and parameterized)
   database_time_series.cpp # Time series operations + co-located free functions
@@ -167,6 +167,10 @@ Internal helpers `convert_scalar_to_c`, `convert_group_to_c`, `free_scalar_field
 human-readable **text report** via a `char** out_report` out-param (freed by the existing
 `quiver_database_free_string`) — no structs. All three live in `database.cpp` as trivial
 `new_c_str(db->db.<fn>(...))` wrappers.
+
+`quiver_database_number_of_elements` lives in `database_read.cpp` alongside the other read
+operations — it is a read, not a dedicated concern, mirroring `number_of_elements`'s home in
+`database_read.cpp` on the C++ core side (`src/CLAUDE.md`).
 
 ## Multi-Column Time Series
 

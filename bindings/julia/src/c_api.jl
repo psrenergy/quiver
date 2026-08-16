@@ -312,6 +312,10 @@ function quiver_database_read_element_ids(db, collection, out_ids, out_count)
     @ccall libquiver_c.quiver_database_read_element_ids(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, out_ids::Ptr{Ptr{Int64}}, out_count::Ptr{Csize_t})::quiver_error_t
 end
 
+function quiver_database_number_of_elements(db, collection, out_count)
+    @ccall libquiver_c.quiver_database_number_of_elements(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, out_count::Ptr{Int64})::quiver_error_t
+end
+
 struct quiver_scalar_metadata_t
     name::Ptr{Cchar}
     data_type::quiver_data_type_t

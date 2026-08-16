@@ -8,6 +8,7 @@ five manifests) lives in the root `CLAUDE.md`.
 | Workflow | Trigger | Purpose |
 |---|---|---|
 | `ci.yml` | push/PR to master | Build matrix (ubuntu/windows/macos × Release/Debug) + ctest + artifact upload; four coverage jobs uploading to Codecov with flags `cpp`, `julia`, `dart`, `python`; plus `clang-format` check, `actionlint`, and a `bun-test` matrix (ubuntu+windows) |
+| `bump-version.yml` | `workflow_dispatch` (`part`: major/minor/patch) | Runs `scripts/assert_version.py bump <part>` and opens a PR with the five manifests rewritten (see below) |
 | `publish.yml` | `workflow_dispatch` | Release orchestrator (see below) |
 | `publish-s3.yml` | `workflow_dispatch` (usually from publish.yml) | Builds native libs for `linux-x86_64`, `macos-aarch64`, `windows-x86_64` (via `scripts/ci/native_s3.sh`) and stages them on S3 |
 | `publish-julia.yml` | `workflow_dispatch` | Mirrors `bindings/julia` into psrenergy/Quiver.jl (see below) |
@@ -57,10 +58,27 @@ native libs (shared S3 staging). macOS/Windows still use `build-cpp` (gated `if:
 > manylinux is the simplest robust option that also reproduces locally.
 
 
-The publish workflows read the version by inlining `python3 scripts/assert_version.py` directly.
+The publish workflows read the version by inlining `python3 scripts/assert_version.py` directly, and
+`bump-version.yml` writes it with `scripts/assert_version.py bump <part>`. Only `main()` in that
+script prints to stdout, so both the no-arg and the `bump` form emit the bare version and nothing
+else — everything the callers `$( )` depend on.
 
 ## Release Pipeline
 
+The order is **bump, merge, publish** — two deliberate dispatches, never chained:
+
+- `bump-version.yml` (`workflow_dispatch`, `part` = `major`/`minor`/`patch`; patch is the hotfix
+  case) runs `python3 scripts/assert_version.py bump <part>` on master and opens a
+  `bump-version/<version>` PR via `peter-evans/create-pull-request` on the default `GITHUB_TOKEN`.
+  It rewrites only the five manifests `assert_version.py` owns — `CHANGELOG.md`'s
+  `## [x.y.z] — unreleased` heading and compare link stay manual. It guards on the resolved
+  version's shape and refuses a version whose tag already exists (the same collision `publish.yml`
+  would otherwise reject at release time). Deliberately does **not** dispatch `publish.yml`.
+  Two prerequisites that live in repo settings, not YAML: *Allow GitHub Actions to create and
+  approve pull requests* must be enabled (Settings → Actions → General) or the PR step 403s, and a
+  `GITHUB_TOKEN`-authored PR cannot trigger `ci.yml`'s `pull_request` run, so the bump PR arrives
+  with no checks (fine for a five-string diff; a PAT in `token:` is the only fix if master ever
+  requires status checks).
 - `publish.yml` (`workflow_dispatch` with no inputs — every checkout pins `github.sha`, and there
   is no version input: the tag must equal what the source declares) orchestrates a full release: resolve version via
   `scripts/assert_version.py` + assert tag `v<version>` is absent or already at the release sha →

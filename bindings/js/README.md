@@ -99,6 +99,7 @@ bun run example.ts
 ### Read (IDs)
 
 - `readElementIds(collection)` -- Read all element IDs in a collection
+- `numberOfElements(collection)` -- Current number of elements in a collection
 
 ### Metadata
 

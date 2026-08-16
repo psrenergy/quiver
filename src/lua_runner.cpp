@@ -358,6 +358,9 @@ struct LuaRunner::Impl {
         bind.set_function("create_element", &create_element_lua);
 
         bind.set_function("read_element_ids", &read_element_ids_lua);
+        bind.set_function("number_of_elements", [](Database& self, const std::string& collection) {
+            return self.number_of_elements(collection);
+        });
 
         bind.set_function("read_scalar_strings", &read_scalar_strings_lua);
         bind.set_function("read_scalar_integers", &read_scalar_integers_lua);

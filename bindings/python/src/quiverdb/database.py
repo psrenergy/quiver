@@ -729,6 +729,14 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         finally:
             lib.quiver_database_free_integer_array(out_ids[0])
 
+    def number_of_elements(self, collection: str) -> int:
+        """Return the current number of elements in a collection."""
+        self._ensure_open()
+        lib = get_lib()
+        out = ffi.new("int64_t*")
+        check(lib.quiver_database_number_of_elements(self._ptr, collection.encode("utf-8"), out))
+        return out[0]
+
     # -- Vector reads (bulk) -----------------------------------------------------
 
     def read_vector_integers(self, collection: str, attribute: str) -> list[list[int]]:
