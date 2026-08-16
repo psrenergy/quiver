@@ -135,5 +135,44 @@ void main() {
         db.close();
       }
     });
+
+    test('readTimeSeriesRow yields null for elements with no data', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'nullable_time_series.sql'),
+      );
+      try {
+        final id1 = db.createElement('Sensor', {'label': 'Sensor 1'});
+        db.createElement('Sensor', {'label': 'Sensor 2'}); // no data
+
+        db.updateTimeSeriesGroup('Sensor', 'readings', id1, {
+          'date_time': ['2024-01-02T00:00:00'],
+          'temperature': [10.5],
+          'counter': [0],
+        });
+
+        // Before any row: absence, never a NaN or 0 sentinel
+        expect(
+          db.readTimeSeriesRow(
+            'Sensor',
+            'readings',
+            'temperature',
+            DateTime(2024, 1, 1),
+          ),
+          equals([null, null]),
+        );
+        expect(
+          db.readTimeSeriesRow(
+            'Sensor',
+            'readings',
+            'counter',
+            DateTime(2024, 1, 2),
+          ),
+          equals([0, null]),
+        );
+      } finally {
+        db.close();
+      }
+    });
   });
 }

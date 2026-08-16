@@ -74,6 +74,31 @@ describe("readTimeSeriesRow", () => {
       db.close();
     }
   });
+
+  test("yields null for elements with no value at or before the date", () => {
+    const db = Database.fromSchema(":memory:", NULLABLE_TS_SCHEMA);
+    try {
+      const id1 = db.createElement("Sensor", { label: "S1" });
+      db.createElement("Sensor", { label: "S2" }); // no data
+
+      db.updateTimeSeriesGroup("Sensor", "readings", id1, {
+        date_time: ["2024-01-02T00:00:00"],
+        temperature: [10.5],
+        counter: [0],
+      });
+
+      // Absence is null - never a NaN or 0 sentinel
+      expect(
+        db.readTimeSeriesRow("Sensor", "readings", "temperature", "2024-01-01T00:00:00"),
+      ).toEqual([null, null]);
+      expect(db.readTimeSeriesRow("Sensor", "readings", "counter", "2024-01-02T00:00:00")).toEqual([
+        0,
+        null,
+      ]);
+    } finally {
+      db.close();
+    }
+  });
 });
 
 // ============================================================================

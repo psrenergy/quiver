@@ -370,8 +370,8 @@ function quiver_database_upsert_time_series_row(db, collection, group, id, colum
     @ccall libquiver_c.quiver_database_upsert_time_series_row(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, id::Int64, column_names::Ptr{Ptr{Cchar}}, column_types::Ptr{Cint}, column_data::Ptr{Ptr{Cvoid}}, column_count::Csize_t)::quiver_error_t
 end
 
-function quiver_database_read_time_series_row(db, collection, group, attribute, date_time, out_data_type, out_values, out_count)
-    @ccall libquiver_c.quiver_database_read_time_series_row(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, attribute::Ptr{Cchar}, date_time::Ptr{Cchar}, out_data_type::Ptr{Cint}, out_values::Ptr{Ptr{Cvoid}}, out_count::Ptr{Csize_t})::quiver_error_t
+function quiver_database_read_time_series_row(db, collection, group, attribute, date_time, out_data_type, out_values, out_mask, out_count)
+    @ccall libquiver_c.quiver_database_read_time_series_row(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, attribute::Ptr{Cchar}, date_time::Ptr{Cchar}, out_data_type::Ptr{Cint}, out_values::Ptr{Ptr{Cvoid}}, out_mask::Ptr{Ptr{UInt8}}, out_count::Ptr{Csize_t})::quiver_error_t
 end
 
 function quiver_database_free_time_series_data(column_names, column_types, column_data, column_has_value, column_count, row_count)

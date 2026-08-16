@@ -138,6 +138,7 @@ Database.prototype.readTimeSeriesRow = function (
   const dtBuf = toCString(dateTime);
   const outDataType = new Uint8Array(4);
   const outValues = allocPtrOut();
+  const outMask = allocPtrOut();
   const outCount = allocUint64Out();
 
   check(
@@ -149,6 +150,7 @@ Database.prototype.readTimeSeriesRow = function (
       dtBuf.buf,
       outDataType,
       outValues.buf,
+      outMask.buf,
       outCount.buf,
     ),
   );
@@ -159,14 +161,22 @@ Database.prototype.readTimeSeriesRow = function (
 
   const dataType = new DataView(outDataType.buffer).getInt32(0, true);
   switch (dataType) {
+    // Numeric types carry a presence mask; mask[i] === 0 means the element has no
+    // value at or before dateTime and the data slot is a placeholder.
     case DATA_TYPE_INTEGER: {
-      const result = decodeInt64Array(valuesPtr, count);
+      const maskPtr = readPtrOut(outMask);
+      const mask = new Uint8Array(toArrayBuffer(maskPtr as Pointer, 0, count));
+      const result = decodeInt64Array(valuesPtr, count).map((v, i) => (mask[i] ? v : null));
       lib.quiver_database_free_integer_array(valuesPtr);
+      lib.quiver_database_free_mask(maskPtr);
       return result;
     }
     case DATA_TYPE_FLOAT: {
-      const result = decodeFloat64Array(valuesPtr, count);
+      const maskPtr = readPtrOut(outMask);
+      const mask = new Uint8Array(toArrayBuffer(maskPtr as Pointer, 0, count));
+      const result = decodeFloat64Array(valuesPtr, count).map((v, i) => (mask[i] ? v : null));
       lib.quiver_database_free_float_array(valuesPtr);
+      lib.quiver_database_free_mask(maskPtr);
       return result;
     }
     default: {

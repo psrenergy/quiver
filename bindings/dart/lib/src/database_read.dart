@@ -1172,6 +1172,7 @@ extension DatabaseRead on Database {
     try {
       final outDataType = arena<Int>();
       final outValues = arena<Pointer<Void>>();
+      final outMask = arena<Pointer<Uint8>>();
       final outCount = arena<Size>();
 
       check(
@@ -1183,6 +1184,7 @@ extension DatabaseRead on Database {
           dateTimeToString(dateTime).toNativeUtf8(allocator: arena).cast(),
           outDataType,
           outValues,
+          outMask,
           outCount,
         ),
       );
@@ -1193,15 +1195,26 @@ extension DatabaseRead on Database {
       }
 
       switch (outDataType.value) {
+        // Numeric types carry a presence mask; a masked-out slot is a placeholder.
         case quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER:
           final ptr = outValues.value.cast<Int64>();
-          final result = List<Object?>.generate(count, (i) => ptr[i]);
+          final mask = outMask.value;
+          final result = List<Object?>.generate(
+            count,
+            (i) => mask[i] == 0 ? null : ptr[i],
+          );
           bindings.quiver_database_free_integer_array(ptr);
+          bindings.quiver_database_free_mask(mask);
           return result;
         case quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT:
           final ptr = outValues.value.cast<Double>();
-          final result = List<Object?>.generate(count, (i) => ptr[i]);
+          final mask = outMask.value;
+          final result = List<Object?>.generate(
+            count,
+            (i) => mask[i] == 0 ? null : ptr[i],
+          );
           bindings.quiver_database_free_float_array(ptr);
+          bindings.quiver_database_free_mask(mask);
           return result;
         default:
           // STRING or DATE_TIME; NULL entries mark elements with no data

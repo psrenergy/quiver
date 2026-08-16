@@ -28,16 +28,13 @@ Note the cross-binding decision (root `CLAUDE.md`): time-series group data is co
 group reads currently return `Vector{Union{T,Nothing}}` always — update that design note if this
 lands, and keep Python/Dart/JS on their static nullable surface.
 
-### `read_time_series_row` — fix the real instability (different bug)
+### `read_time_series_row`
 
-`read_time_series_row` (~line 601) is the genuinely unstable reader: it returns `Vector{Int64}`,
-`Vector{Float64}`, `Vector{Optional{String}}`, or even `Vector{Any}` depending on the runtime
-`data_type` and whether data is present. Its optional is **inherent** — semantics are "last
-non-null value at or before `date_time`; `nothing` for elements with no matching data" — so it
-can't become a concrete `Vector{T}`. The fix is *consistency*: always return a stable
-`Vector{Optional{T}}` whose `T` is keyed on the group column's data type from metadata (never
-`Vector{Any}`, never a bare concrete vector). This is about removing the eltype-by-data branch,
-not about nullability.
+It used to return `Vector{Int64}` / `Vector{Float64}` / `Vector{Optional{String}}` depending on the
+runtime `data_type`, because the C API substituted `0`/NaN sentinels for absence. It now returns
+`Vector{Optional{T}}` for every type, keyed on the group column's data type. Its optional is
+**inherent** — absence is a property of the query ("last non-null value at or before `date_time`"),
+not of the column — so there is no `not_null` fast path to add here.
 
 ### `read_scalar_*_by_id` — leave optional (contract)
 
