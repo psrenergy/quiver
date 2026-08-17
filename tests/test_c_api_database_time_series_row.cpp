@@ -1,7 +1,6 @@
 #include "test_utils.h"
 
 #include <algorithm>
-#include <cmath>
 #include <gtest/gtest.h>
 #include <quiver/c/database.h>
 #include <quiver/c/element.h>
@@ -1005,7 +1004,7 @@ TEST(DatabaseCApi, ReadTimeSeriesRowBeforeAllData) {
     auto* floats = static_cast<double*>(out_values);
     ASSERT_NE(out_mask, nullptr);
     EXPECT_EQ(out_mask[0], 0);
-    EXPECT_FALSE(std::isnan(floats[0]));
+    EXPECT_DOUBLE_EQ(floats[0], 0.0);  // the documented placeholder, not a NaN sentinel
 
     quiver_database_free_float_array(floats);
     quiver_database_free_mask(out_mask);

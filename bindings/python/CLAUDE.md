@@ -48,8 +48,7 @@ ruff.toml         # Lint/format config (format.bat runs ruff)
 - **`read_time_series_row` absence mask**: the row reader uses the same `uint8_t**` protocol —
   `mask[i]` falsy means the element has no value at or before `date_time` and the numeric slot is a
   placeholder. STRING/DATE_TIME get a NULL mask (absence is already an `ffi.NULL` entry), so only
-  the two numeric branches call `quiver_database_free_mask`. Its `_c_api.py` cdecl is the **third**
-  one carrying a mask out-param.
+  the two numeric branches call `quiver_database_free_mask`.
 - **`LuaRunner.run` owns its result**: `quiver_lua_runner_run` takes a `char** out_result` and the
   JSON string must be freed with `quiver_lua_runner_free_string` — *not*
   `quiver_database_free_string` (both are hand-declared in `_c_api.py`). The free sits in a

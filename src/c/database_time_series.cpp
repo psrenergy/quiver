@@ -4,32 +4,10 @@
 #include "quiver/data_type.h"
 
 #include <map>
-#include <memory>
 #include <optional>
 #include <string>
 #include <variant>
 #include <vector>
-
-namespace {
-
-// Marshals a numeric time-series-row result into a fresh C array plus a parallel presence mask.
-// An element with no value at or before the queried date_time is masked out (0) and its data slot
-// holds a zero placeholder the caller must ignore. Both arrays are owned by unique_ptr until the
-// last thing that can throw is done, so a failed allocation cannot leak the other one.
-template <typename T>
-void marshal_row_values_masked(const std::vector<quiver::Value>& values, void** out_values, uint8_t** out_mask) {
-    auto data = std::make_unique<T[]>(values.size());
-    auto mask = std::make_unique<uint8_t[]>(values.size());
-    for (size_t i = 0; i < values.size(); ++i) {
-        const bool present = std::holds_alternative<T>(values[i]);
-        data[i] = present ? std::get<T>(values[i]) : T{};
-        mask[i] = present ? 1 : 0;
-    }
-    *out_values = data.release();
-    *out_mask = mask.release();
-}
-
-}  // namespace
 
 extern "C" {
 

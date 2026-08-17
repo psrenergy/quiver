@@ -54,10 +54,9 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
 - **`readTimeSeriesRow` absence mask**: the row reader consumes the same `Pointer<Uint8>` protocol —
   `mask[i] == 0` means the element has no value at or before `dateTime` and the numeric slot is a
   placeholder. STRING/DATE_TIME get a `nullptr` mask (absence is already a `nullptr` entry), so only
-  the two numeric branches call `quiver_database_free_mask`. Its `out_mask` parameter was
-  **hand-added** to `bindings.dart` in the file's existing style, for the same
-  don't-regenerate-yet reason as `update_vector_group` / `number_of_elements` above — all three
-  spots (wrapper, `NativeFunction` typedef, `asFunction` typedef) must be edited together.
+  the two numeric branches call `quiver_database_free_mask`. Its `out_mask` parameter is another
+  hand-add to `bindings.dart` (same reason as above): all three spots — wrapper, `NativeFunction`
+  typedef, `asFunction` typedef — must be edited together.
 - **`LuaRunner.run` owns its result**: `quiver_lua_runner_run` takes a `char** out_result` whose JSON
   string is C-heap allocated, so the `Arena` cannot own it — it is freed with
   `quiver_lua_runner_free_string` (*not* `quiver_database_free_string`) in its own nested `finally`,

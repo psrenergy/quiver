@@ -46,6 +46,20 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ### Changed
 
+- **BREAKING — `read_time_series_row()` reports absence as null, not as a sentinel.** An element
+  with no value at or before `date_time` used to come back as `0` for an INTEGER attribute and
+  `NaN` for a REAL one, so a legitimately stored `0` was indistinguishable from "no data". Absence
+  now travels out of band, as a presence mask alongside the values. C++ and Lua are unchanged — the
+  core always returned a null `Value`, and Lua always returned `nil`.
+
+  *Adapt:* **Julia** — `read_time_series_row` returns `Vector{Optional{Int64}}` /
+  `Vector{Optional{Float64}}` instead of a concrete `Vector{Int64}` / `Vector{Float64}`; replace
+  `isnan(v)` absence checks with `isnothing(v)`. Absence is a property of the query, not of the
+  column, so this holds for `NOT NULL` columns too and there is no concrete-vector fast path.
+  **Python, Dart and JS** keep their return types and now produce `None`/`null` where they
+  previously produced the sentinel. **Direct C API callers** must pass the new `uint8_t** out_mask`
+  argument and free it with `quiver_database_free_mask`.
+
 - **BREAKING — `export_csv()` writes foreign keys as labels, not ids.** A foreign-key column is
   now exported as the referenced element's `label`, **including self-references** — `import_csv()`
   does not skip those either, it defers them to a second pass and looks them up by label there too.
@@ -88,23 +102,6 @@ callers to change something are prefixed **BREAKING** and say what to do.
   `meta ^1.19.0`, which cannot resolve against the `meta` version the Flutter SDK pins — the
   binding was not consumable from a Flutter app. This one *removes* a restriction rather than
   adding one.
-
-- **BREAKING — `read_time_series_row()` reports absence as null, not as a sentinel.** An element
-  with no value at or before `date_time` used to come back as `0` for an INTEGER attribute and
-  `NaN` for a REAL one, so a legitimately stored `0` was indistinguishable from "no data". The C
-  API gained a `uint8_t** out_mask` parameter before `out_count` (`mask[i] == 0` = absent, data slot
-  is a placeholder; freed with `quiver_database_free_mask`); TEXT columns get a NULL mask because
-  absence is already a NULL `char*` entry. C++, Lua and the schema are unchanged — the C++ core
-  always returned a null `Value`, and Lua always returned `nil`.
-
-  *Adapt:* **Julia** — `read_time_series_row` now returns `Vector{Optional{Int64}}` /
-  `Vector{Optional{Float64}}` instead of a concrete `Vector{Int64}` / `Vector{Float64}`; replace
-  `isnan(v)` absence checks with `isnothing(v)` and handle `nothing` where a concrete element type
-  was assumed. Absence is a property of the query, not of the column, so this holds for `NOT NULL`
-  columns too and there is no concrete-vector fast path. **Python, Dart and JS** already declared a
-  nullable element type (`list`, `List<Object?>`, `(number | string | null)[]`) and now actually
-  produce `None`/`null` where they previously produced the sentinel. Direct C API callers must pass
-  the extra argument.
 
 ### Fixed
 

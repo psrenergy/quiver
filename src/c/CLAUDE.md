@@ -200,10 +200,8 @@ NULL **presence mask** alongside the data arrays:
   caller dispatches on via `out_data_type`, plus a flat `uint8_t** out_mask` (`mask[i] == 0` = the
   element has no value at or before `date_time`; the data slot is a 0/0.0 placeholder), freed by
   `quiver_database_free_mask`. `STRING`/`DATE_TIME` get `*out_mask = nullptr` — absence is already a
-  NULL `char*` entry, mirroring `read_scalar_strings`. It previously substituted in-band sentinels
-  (`INTEGER` → `0`, `FLOAT` → NaN); a legitimately stored `0` is indistinguishable from the INTEGER
-  one, so the out-of-band mask replaced both rather than leaving the two numeric types on different
-  absence protocols.
+  NULL `char*` entry, mirroring `read_scalar_strings` — and so does an empty result, which has
+  nothing to mask. Why out-of-band rather than the old in-band sentinels: root design decisions.
 
 This pattern mirrors the `convert_params()` approach from `database_query.cpp` for type-safe FFI marshaling across N typed columns.
 

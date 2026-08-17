@@ -402,9 +402,10 @@ QUIVER_C_API quiver_error_t quiver_database_upsert_time_series_row(quiver_databa
 // out_data_type: attribute's data type (QUIVER_DATA_TYPE_*)
 // out_values: typed array (int64_t* for INTEGER, double* for FLOAT, char** for STRING/DATE_TIME)
 // out_mask[i]: 1 = value present, 0 = the element has no value at or before date_time and the data
-// slot holds a placeholder (INTEGER -> 0, FLOAT -> 0.0) that must be ignored. NULL for
-// STRING/DATE_TIME columns and for an empty result: absence is already a NULL char* entry in
-// out_values, mirroring quiver_database_read_scalar_strings. Free with quiver_database_free_mask
+// slot holds a placeholder (INTEGER -> 0, FLOAT -> 0.0) that must be ignored. Free with
+// quiver_database_free_mask. NULL for STRING/DATE_TIME columns, where absence is already a NULL
+// char* entry in out_values (mirroring quiver_database_read_scalar_strings), and NULL for an
+// empty result, which has nothing to mask
 // out_count: number of elements in the collection
 // Free out_values with the typed free function matching *out_data_type:
 //   INTEGER -> quiver_database_free_integer_array

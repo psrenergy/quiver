@@ -76,9 +76,7 @@ biome.json        # Lint/format config
 - **`readTimeSeriesRow` absence mask**: the row reader consumes the same `uint8_t*` protocol —
   `mask[i] === 0` means the element has no value at or before `dateTime` and the numeric slot is a
   placeholder, so gate on the mask and never `Number()` it. `STRING`/`DATE_TIME` get a NULL mask
-  (absence is already a NULL `char*`), so only the two numeric branches free it. That makes
-  `read_time_series_row` the **third** `loader.ts` symbol carrying a mask arg — keep it in sync by
-  hand when the C API adds more.
+  (absence is already a NULL `char*`), so only the two numeric branches free it.
 - **`LuaRunner.run` owns its result**: `quiver_lua_runner_run` takes a `char** out_result` and the
   JSON string must be freed with `quiver_lua_runner_free_string` — *not* `quiver_database_free_string`
   (both are in `loader.ts`, hand-maintained). `decodeStringFromBuf` returns `""` for a NULL pointer,
