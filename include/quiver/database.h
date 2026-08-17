@@ -41,6 +41,9 @@ public:
     // Element operations
     int64_t create_element(const std::string& collection, const Element& element);
     void update_element(const std::string& collection, int64_t id, const Element& element);
+    // Resolves the label within `collection` (unique per collection, not per database), then
+    // delegates to update_element.
+    void update_element_by_label(const std::string& collection, const std::string& label, const Element& element);
     void delete_element(const std::string& collection, int64_t id);
     // Resolves the label within `collection` (unique per collection, not per database), then
     // delegates to delete_element.

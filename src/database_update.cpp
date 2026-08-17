@@ -55,6 +55,12 @@ void Database::update_element(const std::string& collection, int64_t id, const E
     impl_->logger->info("Updated element {} in {}", id, collection);
 }
 
+void Database::update_element_by_label(const std::string& collection,
+                                       const std::string& label,
+                                       const Element& element) {
+    update_element(collection, impl_->resolve_label(collection, label, "update_element_by_label", *this), element);
+}
+
 namespace {
 
 // Transpose row-shaped group data into the column-shaped form insert_rows_into_group_table
