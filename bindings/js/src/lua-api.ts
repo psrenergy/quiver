@@ -239,11 +239,9 @@ Notes:
 - **\`update_element\` / \`delete_element\` require an existing id.** Targeting an id that does not
   exist throws \`Element not found: <id> in collection '<collection>'\` (no silent no-op). Use
   \`read_element_ids\` to get valid ids.
-- **\`delete_element_by_label\` requires an existing label**, and a label is unique *per collection*,
-  not per database — one naming an element of another collection does not resolve. A miss throws
-  \`Element not found: label '<label>' in collection '<collection>'\` and deletes nothing. It
-  resolves the label to an id and then does exactly what \`delete_element\` does, so CASCADE
-  cleanup of vector/set/time-series rows is identical.
+- **\`delete_element_by_label\` requires an existing label**, unique *per collection*, not per
+  database — one naming an element of another collection does not resolve. A miss throws
+  \`Element not found: label '<label>' in collection '<collection>'\` and deletes nothing.
 - **Empty arrays are skipped.** An attribute whose value is \`{}\` writes no vector/set (the element
   type can't be inferred from an empty array), so it is silently dropped.
 - **No \`nil\` scalar attributes.** In Lua a key set to \`nil\` is dropped from the table, so

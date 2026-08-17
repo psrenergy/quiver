@@ -95,9 +95,7 @@ struct Database::Impl {
         }
     }
 
-    // The one label -> id lookup, shared by resolve_label (by-label writers) and resolve_fk_label
-    // (CSV import / FK columns). Those two report a miss differently -- Pattern 2 vs Pattern 3 --
-    // so the throw stays with each caller and only the query lives here.
+    // The one label -> id lookup; callers own the throw (Pattern 2 vs Pattern 3).
     static std::optional<int64_t> lookup_id_by_label(const std::string& table, const std::string& label, Database& db) {
         auto result = db.execute("SELECT id FROM " + table + " WHERE label = ?", {label});
         if (result.empty()) {
@@ -106,9 +104,6 @@ struct Database::Impl {
         return result[0].get_integer(0);
     }
 
-    // The single gate behind by-label addressing: delete_element_by_label resolves here and then
-    // delegates to its id counterpart, so the write logic and its validation stay in one place.
-    // Any future by-label entry point should do the same rather than re-implementing the lookup.
     int64_t
     resolve_label(const std::string& collection, const std::string& label, const char* operation, Database& db) const {
         require_collection(collection, operation);
