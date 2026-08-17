@@ -23,6 +23,21 @@ QUIVER_C_API quiver_error_t quiver_database_update_element(quiver_database_t* db
     }
 }
 
+QUIVER_C_API quiver_error_t quiver_database_update_element_by_label(quiver_database_t* db,
+                                                                    const char* collection,
+                                                                    const char* label,
+                                                                    const quiver_element_t* element) {
+    QUIVER_REQUIRE(db, collection, label, element);
+
+    try {
+        db->db.update_element(collection, std::string(label), element->element);
+        return QUIVER_OK;
+    } catch (const std::exception& e) {
+        quiver_set_last_error(e.what());
+        return QUIVER_ERROR;
+    }
+}
+
 QUIVER_C_API quiver_error_t quiver_database_update_vector_group(quiver_database_t* db,
                                                                 const char* collection,
                                                                 const char* group,
