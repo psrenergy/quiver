@@ -5,7 +5,7 @@ All notable changes to Quiver are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entries that require
 callers to change something are prefixed **BREAKING** and say what to do.
 
-## [0.10.0] — unreleased
+## [0.10.2] — unreleased
 
 ### Added
 
@@ -19,6 +19,10 @@ callers to change something are prefixed **BREAKING** and say what to do.
   '<c>'` and deletes nothing (no silent no-op, matching `delete_element` / `update_element`).
   Naming a table with no `label` column throws `Cannot delete_element_by_label: column 'label' not
   found in table '<t>'`.
+
+## [0.10.0] — unreleased
+
+### Added
 
 - **`number_of_elements(collection)`.** Returns the current number of rows in a
   collection's main table with `COUNT(*)`, without materializing and transferring every element
