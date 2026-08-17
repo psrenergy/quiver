@@ -240,6 +240,18 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         lib = get_lib()
         check(lib.quiver_database_delete_element(self._ptr, collection.encode("utf-8"), id))
 
+    def delete_element_by_label(self, collection: str, label: str) -> None:
+        """Delete an element by label."""
+        self._ensure_open()
+        lib = get_lib()
+        check(
+            lib.quiver_database_delete_element_by_label(
+                self._ptr,
+                collection.encode("utf-8"),
+                label.encode("utf-8"),
+            )
+        )
+
     # -- Transaction control ----------------------------------------------------
 
     def begin_transaction(self) -> None:

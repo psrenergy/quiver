@@ -155,7 +155,7 @@ TEST(Database, DeleteElementByLabel) {
     other.set("label", std::string("Item 2")).set("tag", std::vector<std::string>{"keep"});
     int64_t other_id = db.create_element("Collection", other);
 
-    db.delete_element("Collection", "Item 1");
+    db.delete_element_by_label("Collection", "Item 1");
 
     // Only the labelled element is gone
     auto ids = db.read_element_ids("Collection");
@@ -197,7 +197,7 @@ TEST(Database, DeleteElementByLabelMatchesIdForm) {
 
     // One deleted by id, one by label - same outcome
     db.delete_element("Collection", id1);
-    db.delete_element("Collection", "Item 2");
+    db.delete_element_by_label("Collection", "Item 2");
 
     auto ids = db.read_element_ids("Collection");
     EXPECT_EQ(ids.size(), 1);
@@ -218,7 +218,7 @@ TEST(Database, DeleteElementByLabelNonExistent) {
 
     // Deleting an unresolvable label throws "Element not found" rather than silently no-op'ing
     try {
-        db.delete_element("Collection", "No Such Item");
+        db.delete_element_by_label("Collection", "No Such Item");
         FAIL() << "expected a throw";
     } catch (const std::runtime_error& e) {
         EXPECT_STREQ(e.what(), "Element not found: label 'No Such Item' in collection 'Collection'");
@@ -244,7 +244,7 @@ TEST(Database, DeleteElementByLabelDoesNotResolveAcrossCollections) {
     db.create_element("Collection", e);
 
     try {
-        db.delete_element("Collection", "Test Config");
+        db.delete_element_by_label("Collection", "Test Config");
         FAIL() << "expected a throw";
     } catch (const std::runtime_error& e) {
         EXPECT_STREQ(e.what(), "Element not found: label 'Test Config' in collection 'Collection'");
@@ -253,4 +253,24 @@ TEST(Database, DeleteElementByLabelDoesNotResolveAcrossCollections) {
     // Both elements survive
     EXPECT_EQ(db.read_element_ids("Configuration").size(), 1);
     EXPECT_EQ(db.read_element_ids("Collection").size(), 1);
+}
+
+// require_collection only checks has_table, so a group table reaches resolve_label. The explicit
+// require_column("label") is what stops it there instead of letting the SELECT leak a raw
+// "no such column: label" prepare error -- and the message must name the public method called.
+TEST(Database, DeleteElementByLabelOnTableWithoutLabelColumn) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    try {
+        db.delete_element_by_label("Collection_set_tags", "anything");
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(),
+                     "Cannot delete_element_by_label: column 'label' not found in table 'Collection_set_tags'");
+    }
 }

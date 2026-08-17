@@ -236,6 +236,52 @@ describe("deleteElement", () => {
   });
 });
 
+describe("deleteElementByLabel", () => {
+  test("deletes only the labelled element", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      const id1 = db.createElement("AllTypes", { label: "Item1" });
+      const id2 = db.createElement("AllTypes", { label: "Item2" });
+      const id3 = db.createElement("AllTypes", { label: "Item3" });
+
+      db.deleteElementByLabel("AllTypes", "Item2");
+
+      const ids = db.readElementIds("AllTypes");
+      expect(ids).toEqual([id1, id3]);
+      expect(ids).not.toContain(id2);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("throws on non-existent label and deletes nothing", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      db.createElement("AllTypes", { label: "Item1" });
+
+      expect(() => db.deleteElementByLabel("AllTypes", "Nope")).toThrow(QuiverError);
+
+      try {
+        db.deleteElementByLabel("AllTypes", "Nope");
+      } catch (e) {
+        expect((e as QuiverError).message).toContain("Element not found");
+      }
+
+      expect(db.readElementIds("AllTypes")).toHaveLength(1);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("throws on closed database", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    db.close();
+    expect(() => {
+      db.deleteElementByLabel("AllTypes", "Item1");
+    }).toThrow(QuiverError);
+  });
+});
+
 describe("scalar type coercion policy", () => {
   test("accepts a whole number for a REAL column", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);

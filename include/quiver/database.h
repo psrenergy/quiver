@@ -46,7 +46,11 @@ public:
 
     // Delete operations
     void delete_element(const std::string& collection, int64_t id);
-    void delete_element(const std::string& collection, const std::string& label);
+    // Label-addressed counterpart: resolves the label within `collection` and delegates to the id
+    // form, so CASCADE and the "Element not found" contract are the id form's, not a second copy.
+    // A label is unique per collection, not per database — one naming an element of another
+    // collection does not resolve here.
+    void delete_element_by_label(const std::string& collection, const std::string& label);
 
     // Read scalar attributes (all elements). One entry per element, aligned with read_element_ids;
     // a SQL NULL is std::nullopt (positional — never dropped).
