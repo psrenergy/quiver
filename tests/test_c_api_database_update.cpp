@@ -1799,6 +1799,24 @@ TEST(DatabaseCApi, UpdateGroupNamedColumnWithNoRowsRejected) {
     EXPECT_EQ(quiver_database_update_set_group(db, "Child", "parents", child, names, types, data, nullptr, 1, 0),
               QUIVER_ERROR);
 
+    // The guard lives in the C decoder, ahead of the passthrough, so it must hold on the _by_label
+    // entry points too - they reach the same decoder but through a different symbol.
+    EXPECT_EQ(
+        quiver_database_update_vector_group_by_label(db, "Child", "refs", "Child 1", names, types, data, nullptr, 1, 0),
+        QUIVER_ERROR);
+    std::string msg = quiver_get_last_error();
+    EXPECT_EQ(msg,
+              "Cannot update_vector_group: columns [parent_ref] contain no rows; pass no columns to clear the "
+              "group")
+        << "Actual: " << msg;
+
+    EXPECT_EQ(
+        quiver_database_update_set_group_by_label(db, "Child", "parents", "Child 1", names, types, data, nullptr, 1, 0),
+        QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_update_time_series_group_by_label(
+                  db, "Child", "events", "Child 1", names, types, data, nullptr, 1, 0),
+              QUIVER_ERROR);
+
     int64_t* out = nullptr;
     size_t count = 0;
     ASSERT_EQ(quiver_database_read_vector_integers_by_id(db, "Child", "parent_ref", child, &out, &count), QUIVER_OK);

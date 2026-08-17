@@ -421,6 +421,13 @@ class TestUpdateVectorSetGroup:
 
 
 class TestUpdateByLabel:
+    """Every collection here holds TWO elements on purpose.
+
+    With a single element, a binding that dropped the label entirely (a mis-bound symbol resolving
+    to the id form, an argument in the wrong slot) still writes to "the only element" and every
+    assertion passes. The second element is what makes these tests able to fail.
+    """
+
     def test_update_element_by_label(self, collections_db: Database) -> None:
         collections_db.create_element("Configuration", label="cfg")
         elem_id = collections_db.create_element("Collection", label="Item1", some_integer=10)
@@ -447,29 +454,38 @@ class TestUpdateByLabel:
             db.update_element_by_label("Configuration", "nope", integer_attribute=5)
 
     @staticmethod
-    def _seed(db: Database) -> int:
+    def _seed(db: Database) -> tuple[int, int]:
+        """Returns (target, other) -- two Child elements, so the label has to select one."""
         db.create_element("Configuration", label="Config")
         db.create_element("Parent", label="Parent A")
         db.create_element("Parent", label="Parent B")
-        return db.create_element("Child", label="Child 1")
+        target = db.create_element("Child", label="Child 1")
+        other = db.create_element("Child", label="Child 2")
+        return target, other
 
     def test_update_vector_group_by_label(self, relations_db: Database) -> None:
-        child = self._seed(relations_db)
+        child, other = self._seed(relations_db)
+        relations_db.update_vector_group("Child", "refs", other, {"parent_ref": [2]})
 
         relations_db.update_vector_group_by_label("Child", "refs", "Child 1", {"parent_ref": [1, 2]})
         assert relations_db.read_vector_integers_by_id("Child", "parent_ref", child) == [1, 2]
+        assert relations_db.read_vector_integers_by_id("Child", "parent_ref", other) == [2]
 
         relations_db.update_vector_group_by_label("Child", "refs", "Child 1", {})
         assert relations_db.read_vector_integers_by_id("Child", "parent_ref", child) == []
+        assert relations_db.read_vector_integers_by_id("Child", "parent_ref", other) == [2]
 
     def test_update_set_group_by_label(self, relations_db: Database) -> None:
-        child = self._seed(relations_db)
+        child, other = self._seed(relations_db)
+        relations_db.update_set_group("Child", "parents", other, {"parent_ref": [2]})
 
         relations_db.update_set_group_by_label("Child", "parents", "Child 1", {"parent_ref": [1]})
         assert relations_db.read_set_integers_by_id("Child", "parent_ref", child) == [1]
+        assert relations_db.read_set_integers_by_id("Child", "parent_ref", other) == [2]
 
         relations_db.update_set_group_by_label("Child", "parents", "Child 1", {})
         assert relations_db.read_set_integers_by_id("Child", "parent_ref", child) == []
+        assert relations_db.read_set_integers_by_id("Child", "parent_ref", other) == [2]
 
     def test_update_group_by_label_nonexistent_raises(self, relations_db: Database) -> None:
         self._seed(relations_db)
@@ -478,3 +494,16 @@ class TestUpdateByLabel:
             relations_db.update_vector_group_by_label("Child", "refs", "nope", {"parent_ref": [1]})
         with pytest.raises(QuiverError, match="Element not found"):
             relations_db.update_set_group_by_label("Child", "parents", "nope", {})
+
+    def test_update_group_with_none_raises_instead_of_clearing(self, relations_db: Database) -> None:
+        # `d.get("refs")` on a missing key yields None; clearing the group on it would destroy data
+        # and report success. Only an empty dict clears.
+        child, _ = self._seed(relations_db)
+        relations_db.update_vector_group("Child", "refs", child, {"parent_ref": [1, 2]})
+
+        with pytest.raises(TypeError):
+            relations_db.update_vector_group("Child", "refs", child, None)  # type: ignore[arg-type]
+        with pytest.raises(TypeError):
+            relations_db.update_vector_group_by_label("Child", "refs", "Child 1", None)  # type: ignore[arg-type]
+
+        assert relations_db.read_vector_integers_by_id("Child", "parent_ref", child) == [1, 2]

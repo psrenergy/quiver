@@ -151,7 +151,9 @@ void main() {
       }
     });
 
-    test('addresses the element by label', () {
+    // Two elements on purpose: with one, a binding that dropped the label would still write to
+    // "the only element" and this test would pass anyway.
+    test('addresses the element by label, leaving the other element alone', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
@@ -159,15 +161,18 @@ void main() {
       try {
         db.createElement('Configuration', {'label': 'Test Config'});
         final id = db.createElement('Collection', {'label': 'Item 1'});
+        final other = db.createElement('Collection', {'label': 'Item 2'});
 
-        db.updateTimeSeriesGroupByLabel('Collection', 'data', 'Item 1', {
+        db.updateTimeSeriesGroupByLabel('Collection', 'data', 'Item 2', {
           'date_time': ['2024-01-01T10:00:00'],
           'value': [1.0],
         });
 
-        final result = db.readTimeSeriesGroup('Collection', 'data', id);
+        final result = db.readTimeSeriesGroup('Collection', 'data', other);
         expect(result['date_time']!.length, equals(1));
         expect(result['value']![0], equals(1.0));
+
+        expect(db.readTimeSeriesGroup('Collection', 'data', id), isEmpty);
       } finally {
         db.close();
       }

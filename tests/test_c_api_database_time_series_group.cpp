@@ -1081,6 +1081,30 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupByLabel) {
         db, "Collection", "data", "Item 1", nullptr, nullptr, nullptr, nullptr, 0, 0);
     EXPECT_EQ(err, QUIVER_OK);
 
+    // Read back - QUIVER_OK alone would also be returned by a clear that resolved the label and
+    // then silently did nothing (e.g. a column_count == 0 short-circuit ahead of the DELETE).
+    out_col_names = nullptr;
+    out_col_types = nullptr;
+    out_col_data = nullptr;
+    out_col_has_value = nullptr;
+    col_count = 0;
+    row_count = 0;
+    err = quiver_database_read_time_series_group(db,
+                                                 "Collection",
+                                                 "data",
+                                                 id,
+                                                 &out_col_names,
+                                                 &out_col_types,
+                                                 &out_col_data,
+                                                 &out_col_has_value,
+                                                 &col_count,
+                                                 &row_count);
+    EXPECT_EQ(err, QUIVER_OK);
+    EXPECT_EQ(row_count, 0);
+
+    quiver_database_free_time_series_data(
+        out_col_names, out_col_types, out_col_data, out_col_has_value, col_count, row_count);
+
     quiver_database_close(db);
 }
 

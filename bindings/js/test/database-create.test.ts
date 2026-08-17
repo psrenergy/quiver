@@ -214,8 +214,15 @@ describe("deleteElement", () => {
   test("deletes element by label", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
-      db.createElement("AllTypes", { label: "Item1" });
+      const id = db.createElement("AllTypes", { label: "Item1" });
+      const other = db.createElement("AllTypes", { label: "Item2" });
+
       db.deleteElementByLabel("AllTypes", "Item1");
+
+      // Two elements, and the surviving id is asserted: deleting the only element would pass
+      // even if the label were ignored entirely.
+      expect(db.readElementIds("AllTypes")).toEqual([other]);
+      expect(db.readElementIds("AllTypes")).not.toContain(id);
     } finally {
       db.close();
     }

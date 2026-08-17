@@ -203,23 +203,28 @@ include("fixture.jl")
         Quiver.close!(db)
     end
 
+    # Two elements on purpose: with one, a binding that dispatched to the id form (or dropped the
+    # label) would still write to "the only element" and every assertion here would pass.
     @testset "Element By Label" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
         db = Quiver.from_schema(":memory:", path_schema)
 
-        Quiver.create_element!(db, "Configuration"; label = "Config 1", integer_attribute = 100)
+        first_id =
+            Quiver.create_element!(db, "Configuration"; label = "Config 1", integer_attribute = 100)
+        second_id =
+            Quiver.create_element!(db, "Configuration"; label = "Config 2", integer_attribute = 100)
 
         # Update by label using kwargs
-        Quiver.update_element!(db, "Configuration", "Config 1"; integer_attribute = 999)
-        value = Quiver.read_scalar_integer_by_id(db, "Configuration", "integer_attribute", 1)
-        @test value == 999
+        Quiver.update_element!(db, "Configuration", "Config 2"; integer_attribute = 999)
+        @test Quiver.read_scalar_integer_by_id(db, "Configuration", "integer_attribute", second_id) == 999
+        @test Quiver.read_scalar_integer_by_id(db, "Configuration", "integer_attribute", first_id) == 100
 
         # Update by label using an Element builder
         e = Quiver.Element()
         e["integer_attribute"] = Int64(777)
-        Quiver.update_element!(db, "Configuration", "Config 1", e)
-        value = Quiver.read_scalar_integer_by_id(db, "Configuration", "integer_attribute", 1)
-        @test value == 777
+        Quiver.update_element!(db, "Configuration", "Config 2", e)
+        @test Quiver.read_scalar_integer_by_id(db, "Configuration", "integer_attribute", second_id) == 777
+        @test Quiver.read_scalar_integer_by_id(db, "Configuration", "integer_attribute", first_id) == 100
 
         # An unresolvable label throws "Element not found"
         @test_throws Quiver.DatabaseException Quiver.update_element!(
@@ -943,16 +948,23 @@ include("fixture.jl")
         parent_a = Quiver.create_element!(db, "Parent"; label = "Parent A")
         parent_b = Quiver.create_element!(db, "Parent"; label = "Parent B")
         child = Quiver.create_element!(db, "Child"; label = "Child 1")
+        # A second child on purpose: with one, a call that dispatched to the id form would still
+        # write to "the only element" and every assertion below would pass.
+        other = Quiver.create_element!(db, "Child"; label = "Child 2")
+        Quiver.update_vector_group!(db, "Child", "refs", other; parent_ref = [parent_b])
 
         # Write both groups by the child's label.
         Quiver.update_vector_group!(db, "Child", "refs", "Child 1"; parent_ref = [parent_a, parent_b])
         @test Quiver.read_vector_integers_by_id(db, "Child", "parent_ref", child) == [parent_a, parent_b]
+        @test Quiver.read_vector_integers_by_id(db, "Child", "parent_ref", other) == [parent_b]
         Quiver.update_set_group!(db, "Child", "parents", "Child 1"; parent_ref = [parent_a])
         @test Quiver.read_set_integers_by_id(db, "Child", "parent_ref", child) == [parent_a]
+        @test isempty(Quiver.read_set_integers_by_id(db, "Child", "parent_ref", other))
 
-        # Clearing by label works.
+        # Clearing by label works, and only for the labelled element.
         Quiver.update_vector_group!(db, "Child", "refs", "Child 1")
         @test isempty(Quiver.read_vector_integers_by_id(db, "Child", "parent_ref", child))
+        @test Quiver.read_vector_integers_by_id(db, "Child", "parent_ref", other) == [parent_b]
 
         # An unresolvable label throws "Element not found"
         @test_throws Quiver.DatabaseException Quiver.update_vector_group!(

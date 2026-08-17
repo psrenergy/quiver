@@ -284,20 +284,47 @@ TEST(DatabaseCApi, DeleteElementByLabel) {
     quiver_database_create_element(db, "Collection", e, &id);
     EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
 
+    // A second element so nothing below passes vacuously: with only one element, "the set table is
+    // empty" holds whether or not the cascade fired, and a delete that ignored the label would
+    // still hit the right row.
+    quiver_element_t* other = nullptr;
+    ASSERT_EQ(quiver_element_create(&other), QUIVER_OK);
+    quiver_element_set_string(other, "label", "Item 2");
+    const char* other_tags[] = {"keep"};
+    quiver_element_set_array_string(other, "tag", other_tags, 1, nullptr);
+    int64_t other_id = 0;
+    quiver_database_create_element(db, "Collection", other, &other_id);
+    EXPECT_EQ(quiver_element_destroy(other), QUIVER_OK);
+
     EXPECT_EQ(quiver_database_delete_element_by_label(db, "Collection", "Item 1"), QUIVER_OK);
 
-    // Verify element is gone
+    // Only the labelled element is gone
     int64_t* ids = nullptr;
     size_t count = 0;
     EXPECT_EQ(quiver_database_read_element_ids(db, "Collection", &ids, &count), QUIVER_OK);
-    EXPECT_EQ(count, 0);
+    ASSERT_EQ(count, 1);
+    EXPECT_EQ(ids[0], other_id);
+    quiver_database_free_integer_array(ids);
 
-    // CASCADE still applies - the label form delegates to the id form
-    char*** out_tags = nullptr;
-    size_t* sizes = nullptr;
-    size_t set_count = 0;
-    EXPECT_EQ(quiver_database_read_set_strings(db, "Collection", "tag", &out_tags, &sizes, &set_count), QUIVER_OK);
-    EXPECT_EQ(set_count, 0);
+    // CASCADE still applies - the label form delegates to the id form. Counted in SQL:
+    // read_set_strings reports one entry per *surviving* element, so it cannot see orphaned rows
+    // left behind by a delete that ran with foreign keys off.
+    int64_t orphans = -1;
+    int has_orphans = 0;
+    EXPECT_EQ(quiver_database_query_integer(
+                  db,
+                  "SELECT COUNT(*) FROM Collection_set_tags WHERE id NOT IN (SELECT id FROM Collection)",
+                  &orphans,
+                  &has_orphans),
+              QUIVER_OK);
+    EXPECT_EQ(has_orphans, 1);
+    EXPECT_EQ(orphans, 0);
+
+    int64_t remaining = -1;
+    int has_remaining = 0;
+    EXPECT_EQ(quiver_database_query_integer(db, "SELECT COUNT(*) FROM Collection_set_tags", &remaining, &has_remaining),
+              QUIVER_OK);
+    EXPECT_EQ(remaining, 1);  // only Item 2's "keep"
 
     quiver_database_close(db);
 }

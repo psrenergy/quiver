@@ -108,27 +108,53 @@ describe("upsertTimeSeriesRow", () => {
     }
   });
 
-  test("addresses the element by label", () => {
+  // Two elements on purpose: with one, a binding that dropped the label would still write to
+  // "the only element" and this test would pass anyway.
+  test("addresses the element by label, leaving the other element alone", () => {
     const db = Database.fromSchema(":memory:", COLLECTIONS_SCHEMA);
     try {
       const id = db.createElement("Collection", { label: "Item1" });
+      const other = db.createElement("Collection", { label: "Item2" });
 
-      db.upsertTimeSeriesRowByLabel("Collection", "data", "Item1", {
+      db.upsertTimeSeriesRowByLabel("Collection", "data", "Item2", {
         date_time: "2024-01-01T00:00:00",
         value: 1.5,
       });
-      db.upsertTimeSeriesRowByLabel("Collection", "data", "Item1", {
+      db.upsertTimeSeriesRowByLabel("Collection", "data", "Item2", {
         date_time: "2024-01-02T00:00:00",
         value: 2.5,
       });
-      db.upsertTimeSeriesRowByLabel("Collection", "data", "Item1", {
+      db.upsertTimeSeriesRowByLabel("Collection", "data", "Item2", {
         date_time: "2024-01-02T00:00:00",
         value: 9.5,
       });
 
-      const result = db.readTimeSeriesGroup("Collection", "data", id);
+      const result = db.readTimeSeriesGroup("Collection", "data", other);
       expect(result.date_time).toEqual(["2024-01-01T00:00:00", "2024-01-02T00:00:00"]);
       expect(result.value).toEqual([1.5, 9.5]);
+
+      expect(db.readTimeSeriesGroup("Collection", "data", id)).toEqual({});
+    } finally {
+      db.close();
+    }
+  });
+
+  // The single-row C entry point carries no presence mask, so a null cell is inexpressible and
+  // must fail loudly rather than land as a real 0.0.
+  test("rejects a null cell instead of writing 0.0", () => {
+    const db = Database.fromSchema(":memory:", COLLECTIONS_SCHEMA);
+    try {
+      const id = db.createElement("Collection", { label: "Item1" });
+
+      expect(() =>
+        db.upsertTimeSeriesRow("Collection", "data", id, {
+          date_time: "2024-01-01T00:00:00",
+          // biome-ignore lint/suspicious/noExplicitAny: exercising the runtime guard, not the type
+          value: null as any,
+        }),
+      ).toThrow(/unsupported value type null/);
+
+      expect(db.readTimeSeriesGroup("Collection", "data", id)).toEqual({});
     } finally {
       db.close();
     }

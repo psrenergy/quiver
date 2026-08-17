@@ -58,20 +58,24 @@ describe("readTimeSeriesGroup / updateTimeSeriesGroup (single-column)", () => {
     }
   });
 
-  test("addresses a group by label", () => {
+  // Two elements on purpose: with one, a binding that dropped the label would still write to
+  // "the only element" and this test would pass anyway.
+  test("addresses a group by label, leaving the other element alone", () => {
     const db = Database.fromSchema(":memory:", COLLECTIONS_SCHEMA);
     try {
       const id = db.createElement("Collection", { label: "Item1" });
+      const other = db.createElement("Collection", { label: "Item2" });
 
-      db.updateTimeSeriesGroupByLabel("Collection", "data", "Item1", {
+      db.updateTimeSeriesGroupByLabel("Collection", "data", "Item2", {
         date_time: ["2024-01-01", "2024-01-02"],
         value: [1.5, 2.5],
       });
 
-      const result = db.readTimeSeriesGroup("Collection", "data", id);
-
+      const result = db.readTimeSeriesGroup("Collection", "data", other);
       expect(result.date_time).toEqual(["2024-01-01", "2024-01-02"]);
       expect(result.value).toEqual([1.5, 2.5]);
+
+      expect(db.readTimeSeriesGroup("Collection", "data", id)).toEqual({});
     } finally {
       db.close();
     }

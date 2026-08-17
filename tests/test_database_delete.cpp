@@ -148,15 +148,31 @@ TEST(Database, DeleteElementByLabel) {
     e.set("label", std::string("Item 1")).set("tag", std::vector<std::string>{"important", "urgent"});
     db.create_element("Collection", e);
 
+    // A second element so the assertions below cannot pass vacuously: with only one element,
+    // "the set table is empty" holds whether or not the cascade fired, and a delete that ignored
+    // the label entirely would still hit the right row.
+    quiver::Element other;
+    other.set("label", std::string("Item 2")).set("tag", std::vector<std::string>{"keep"});
+    int64_t other_id = db.create_element("Collection", other);
+
     db.delete_element("Collection", "Item 1");
 
-    // Verify element is gone
+    // Only the labelled element is gone
     auto ids = db.read_element_ids("Collection");
-    EXPECT_TRUE(ids.empty());
+    ASSERT_EQ(ids.size(), 1u);
+    EXPECT_EQ(ids[0], other_id);
 
-    // CASCADE still applies - the label form delegates to the id form, it does not re-implement it
-    auto all_sets = db.read_set_strings("Collection", "tag");
-    EXPECT_TRUE(all_sets.empty());
+    // CASCADE still applies - the label form delegates to the id form, it does not re-implement it.
+    // Counted in SQL: read_set_strings reports one entry per *surviving* element, so it cannot see
+    // orphaned rows left behind by a delete that ran with foreign keys off.
+    auto orphans =
+        db.query_integer("SELECT COUNT(*) FROM Collection_set_tags WHERE id NOT IN (SELECT id FROM Collection)");
+    ASSERT_TRUE(orphans.has_value());
+    EXPECT_EQ(*orphans, 0);
+
+    auto remaining = db.query_integer("SELECT COUNT(*) FROM Collection_set_tags");
+    ASSERT_TRUE(remaining.has_value());
+    EXPECT_EQ(*remaining, 1);  // only Item 2's "keep"
 }
 
 TEST(Database, DeleteElementByLabelMatchesIdForm) {

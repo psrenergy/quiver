@@ -124,12 +124,17 @@ class TestUpdateTimeSeriesGroup:
         assert result == SAMPLE_READBACK
 
     def test_update_time_series_group_by_label(self, mixed_time_series_db: Database) -> None:
-        """Write columns by label, read back by id, assert exact match."""
-        eid = _create_sensor(mixed_time_series_db, "S1")
-        mixed_time_series_db.update_time_series_group_by_label("Sensor", "readings", "S1", SAMPLE_DATA)
+        """Write columns by label, read back by id, assert exact match.
 
-        result = mixed_time_series_db.read_time_series_group("Sensor", "readings", eid)
-        assert result == SAMPLE_READBACK
+        Two sensors on purpose: with one, a binding that ignored the label would still write to
+        "the only element" and pass.
+        """
+        eid = _create_sensor(mixed_time_series_db, "S1")
+        other = _create_sensor(mixed_time_series_db, "S2")
+        mixed_time_series_db.update_time_series_group_by_label("Sensor", "readings", "S2", SAMPLE_DATA)
+
+        assert mixed_time_series_db.read_time_series_group("Sensor", "readings", other) == SAMPLE_READBACK
+        assert mixed_time_series_db.read_time_series_group("Sensor", "readings", eid) == {}
 
     def test_update_time_series_group_by_label_nonexistent_raises(self, mixed_time_series_db: Database) -> None:
         with pytest.raises(QuiverError, match="Element not found"):

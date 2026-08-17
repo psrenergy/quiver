@@ -286,57 +286,72 @@ void main() {
   });
 
   group('Update By Label', () {
-    test('updates a scalar by label', () {
+    // Two elements on purpose, and the ids come from createElement rather than being assumed
+    // to be 1: with a single element a binding that dropped the label would still write to
+    // "the only element" and every assertion here would pass.
+    test('updates a scalar by label, leaving the other element alone', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
       );
       try {
-        db.createElement('Configuration', {
+        final first = db.createElement('Configuration', {
           'label': 'Config 1',
           'integer_attribute': 100,
         });
+        final second = db.createElement('Configuration', {
+          'label': 'Config 2',
+          'integer_attribute': 100,
+        });
 
-        db.updateElementByLabel('Configuration', 'Config 1', {
+        db.updateElementByLabel('Configuration', 'Config 2', {
           'integer_attribute': 999,
         });
 
-        final value = db.readScalarIntegerById(
-          'Configuration',
-          'integer_attribute',
-          1,
+        expect(
+          db.readScalarIntegerById('Configuration', 'integer_attribute', second),
+          equals(999),
         );
-        expect(value, equals(999));
+        expect(
+          db.readScalarIntegerById('Configuration', 'integer_attribute', first),
+          equals(100),
+        );
       } finally {
         db.close();
       }
     });
 
-    test('updates using Element builder by label', () {
+    test('updates using Element builder by label, leaving the other element alone', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
       );
       try {
-        db.createElement('Configuration', {
+        final first = db.createElement('Configuration', {
           'label': 'Config 1',
+          'integer_attribute': 100,
+        });
+        final second = db.createElement('Configuration', {
+          'label': 'Config 2',
           'integer_attribute': 100,
         });
 
         final element = Element();
         try {
           element.set('integer_attribute', 777);
-          db.updateElementFromBuilderByLabel('Configuration', 'Config 1', element);
+          db.updateElementFromBuilderByLabel('Configuration', 'Config 2', element);
         } finally {
           element.dispose();
         }
 
-        final value = db.readScalarIntegerById(
-          'Configuration',
-          'integer_attribute',
-          1,
+        expect(
+          db.readScalarIntegerById('Configuration', 'integer_attribute', second),
+          equals(777),
         );
-        expect(value, equals(777));
+        expect(
+          db.readScalarIntegerById('Configuration', 'integer_attribute', first),
+          equals(100),
+        );
       } finally {
         db.close();
       }
@@ -1759,19 +1774,36 @@ void main() {
       }
     });
 
-    test('addresses a group by label', () {
+    // Two children, and the ids come from createElement rather than being assumed: with a single
+    // element a binding that dropped the label would still write to "the only element" and this
+    // test would pass anyway.
+    test('addresses a group by label, leaving the other element alone', () {
       final db = openRelations();
       try {
+        final child = db.readElementIds('Child').first;
+        final other = db.createElement('Child', {'label': 'Child 2'});
+        db.updateVectorGroup('Child', 'refs', other, {
+          'parent_ref': [2],
+        });
+
         db.updateVectorGroupByLabel('Child', 'refs', 'Child 1', {
           'parent_ref': [1, 2],
         });
         expect(
-          db.readVectorIntegersById('Child', 'parent_ref', 1),
+          db.readVectorIntegersById('Child', 'parent_ref', child),
           equals([1, 2]),
+        );
+        expect(
+          db.readVectorIntegersById('Child', 'parent_ref', other),
+          equals([2]),
         );
 
         db.updateVectorGroupByLabel('Child', 'refs', 'Child 1', {});
-        expect(db.readVectorIntegersById('Child', 'parent_ref', 1), isEmpty);
+        expect(db.readVectorIntegersById('Child', 'parent_ref', child), isEmpty);
+        expect(
+          db.readVectorIntegersById('Child', 'parent_ref', other),
+          equals([2]),
+        );
       } finally {
         db.close();
       }

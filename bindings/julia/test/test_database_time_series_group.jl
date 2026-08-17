@@ -332,15 +332,19 @@ include("fixture.jl")
 
         Quiver.create_element!(db, "Configuration"; label = "Test Config")
         id = Quiver.create_element!(db, "Collection"; label = "Item 1")
+        # A second element on purpose: with one, a call that dispatched to the id form would still
+        # write to "the only element" and every assertion below would pass.
+        other = Quiver.create_element!(db, "Collection"; label = "Item 2")
 
-        Quiver.update_time_series_group!(db, "Collection", "data", "Item 1";
+        Quiver.update_time_series_group!(db, "Collection", "data", "Item 2";
             date_time = ["2024-01-01T10:00:00"],
             value = [1.5],
         )
 
-        result = Quiver.read_time_series_group(db, "Collection", "data", id)
+        result = Quiver.read_time_series_group(db, "Collection", "data", other)
         @test result["date_time"][1] == DateTime(2024, 1, 1, 10, 0, 0)
         @test result["value"][1] == 1.5
+        @test isempty(Quiver.read_time_series_group(db, "Collection", "data", id))
 
         # An unresolvable label throws "Element not found"
         @test_throws Quiver.DatabaseException Quiver.update_time_series_group!(

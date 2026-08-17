@@ -20,13 +20,18 @@ describe("updateElement", () => {
     }
   });
 
-  test("updates a scalar addressed by label", () => {
+  // Two elements on purpose: with one, a binding that dropped the label entirely would still
+  // write to "the only element" and this test would pass anyway.
+  test("updates a scalar addressed by label, leaving the other element alone", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const id = db.createElement("AllTypes", { label: "Item1", some_integer: 42 });
-      db.updateElementByLabel("AllTypes", "Item1", { some_integer: 99 });
-      const value = db.readScalarIntegerById("AllTypes", "some_integer", id);
-      expect(value).toEqual(99);
+      const other = db.createElement("AllTypes", { label: "Item2", some_integer: 42 });
+
+      db.updateElementByLabel("AllTypes", "Item2", { some_integer: 99 });
+
+      expect(db.readScalarIntegerById("AllTypes", "some_integer", other)).toEqual(99);
+      expect(db.readScalarIntegerById("AllTypes", "some_integer", id)).toEqual(42);
     } finally {
       db.close();
     }
@@ -135,13 +140,21 @@ const RELATIONS_SCHEMA_PATH = join(
 // relations.sql gives Child a vector group and a set group that legally share the FK column name
 // "parent_ref" -- the case that makes routing an array by column name ambiguous.
 describe("updateVectorGroup / updateSetGroup", () => {
-  function openRelations(): { db: Database; parentA: number; parentB: number; child: number } {
+  function openRelations(): {
+    db: Database;
+    parentA: number;
+    parentB: number;
+    child: number;
+    otherChild: number;
+  } {
     const db = Database.fromSchema(":memory:", RELATIONS_SCHEMA_PATH);
     db.createElement("Configuration", { label: "Config" });
     const parentA = db.createElement("Parent", { label: "Parent A" });
     const parentB = db.createElement("Parent", { label: "Parent B" });
     const child = db.createElement("Child", { label: "Child 1" });
-    return { db, parentA, parentB, child };
+    // A second child so the by-label tests cannot pass by hitting "the only element".
+    const otherChild = db.createElement("Child", { label: "Child 2" });
+    return { db, parentA, parentB, child, otherChild };
   }
 
   test("replaces rows and clears on an empty object", () => {
@@ -160,14 +173,18 @@ describe("updateVectorGroup / updateSetGroup", () => {
     }
   });
 
-  test("addresses a group by label", () => {
-    const { db, parentA, parentB, child } = openRelations();
+  test("addresses a group by label, leaving the other element's group alone", () => {
+    const { db, parentA, parentB, child, otherChild } = openRelations();
     try {
+      db.updateVectorGroup("Child", "refs", otherChild, { parent_ref: [parentB] });
+
       db.updateVectorGroupByLabel("Child", "refs", "Child 1", { parent_ref: [parentA, parentB] });
       expect(db.readVectorIntegersById("Child", "parent_ref", child)).toEqual([parentA, parentB]);
+      expect(db.readVectorIntegersById("Child", "parent_ref", otherChild)).toEqual([parentB]);
 
       db.updateVectorGroupByLabel("Child", "refs", "Child 1", {});
       expect(db.readVectorIntegersById("Child", "parent_ref", child)).toEqual([]);
+      expect(db.readVectorIntegersById("Child", "parent_ref", otherChild)).toEqual([parentB]);
     } finally {
       db.close();
     }

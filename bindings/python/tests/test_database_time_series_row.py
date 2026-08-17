@@ -73,15 +73,21 @@ class TestUpsertTimeSeriesRow:
         assert result["value"] == [7.5]
 
     def test_upsert_time_series_row_by_label(self, collections_db: Database) -> None:
-        """Insert one row by label and read back by id to assert presence."""
+        """Insert one row by label and read back by id to assert presence.
+
+        Two elements on purpose: with one, a binding that ignored the label would still write to
+        "the only element" and pass.
+        """
         eid = _create_collection_element(collections_db, "Item1")
+        other = _create_collection_element(collections_db, "Item2")
         collections_db.upsert_time_series_row_by_label(
-            "Collection", "data", "Item1", date_time="2024-01-01", value=10.0
+            "Collection", "data", "Item2", date_time="2024-01-01", value=10.0
         )
 
-        result = collections_db.read_time_series_group("Collection", "data", eid)
+        result = collections_db.read_time_series_group("Collection", "data", other)
         assert result["date_time"] == [_utc(2024, 1, 1)]
         assert result["value"] == [10.0]
+        assert collections_db.read_time_series_group("Collection", "data", eid) == {}
 
     def test_upsert_time_series_row_by_label_nonexistent_raises(self, collections_db: Database) -> None:
         with pytest.raises(QuiverError, match="Element not found"):
