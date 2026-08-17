@@ -170,4 +170,49 @@ void main() {
       }
     });
   });
+
+  group('Delete Element By Label', () {
+    test('deletes element by label', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Config 1'});
+        db.createElement('Configuration', {'label': 'Config 2'});
+        db.createElement('Configuration', {'label': 'Config 3'});
+
+        db.deleteElementByLabel('Configuration', 'Config 2');
+
+        final ids = db.readElementIds('Configuration');
+        expect(ids.length, equals(2));
+        expect(ids.contains(2), isFalse);
+        expect(ids.contains(1), isTrue);
+        expect(ids.contains(3), isTrue);
+      } finally {
+        db.close();
+      }
+    });
+
+    test('throws for a non-existent label', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Config 1'});
+
+        expect(
+          () => db.deleteElementByLabel('Configuration', 'Nonexistent'),
+          throwsA(isA<DatabaseException>()),
+        );
+
+        final ids = db.readElementIds('Configuration');
+        expect(ids.length, equals(1));
+        expect(ids[0], equals(1));
+      } finally {
+        db.close();
+      }
+    });
+  });
 }
