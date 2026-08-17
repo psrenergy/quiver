@@ -43,7 +43,6 @@ public:
 
     // Update operations
     void update_element(const std::string& collection, int64_t id, const Element& element);
-    void update_element(const std::string& collection, const std::string& label, const Element& element);
 
     // Delete operations
     void delete_element(const std::string& collection, int64_t id);
