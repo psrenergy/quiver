@@ -38,18 +38,12 @@ public:
 
     int64_t current_version() const;
 
-    // Create operations
+    // Element operations
     int64_t create_element(const std::string& collection, const Element& element);
-
-    // Update operations
     void update_element(const std::string& collection, int64_t id, const Element& element);
-
-    // Delete operations
     void delete_element(const std::string& collection, int64_t id);
-    // Label-addressed counterpart: resolves the label within `collection` and delegates to the id
-    // form, so CASCADE and the "Element not found" contract are the id form's, not a second copy.
-    // A label is unique per collection, not per database — one naming an element of another
-    // collection does not resolve here.
+    // Resolves the label within `collection` (unique per collection, not per database), then
+    // delegates to delete_element.
     void delete_element_by_label(const std::string& collection, const std::string& label);
 
     // Read scalar attributes (all elements). One entry per element, aligned with read_element_ids;
