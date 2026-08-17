@@ -1331,3 +1331,257 @@ TEST(Database, UpdateGroupTypeErrorInsideDryRunKeepsExistingRows) {
     EXPECT_EQ(std::get<std::string>(rows[0].at("code")), "keep");
     f.db.end_dry_run();
 }
+
+// ============================================================================
+// Update by label tests
+// ============================================================================
+
+TEST(Database, UpdateElementByLabel) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element e;
+    e.set("label", std::string("Item 1")).set("some_integer", int64_t{100});
+    int64_t id = db.create_element("Collection", e);
+
+    // A second element so the assertions below cannot pass vacuously: with only one element an
+    // update that ignored the label entirely would still hit the right row.
+    quiver::Element other;
+    other.set("label", std::string("Item 2")).set("some_integer", int64_t{200});
+    int64_t other_id = db.create_element("Collection", other);
+
+    quiver::Element update;
+    update.set("some_integer", int64_t{999});
+    db.update_element_by_label("Collection", "Item 1", update);
+
+    auto value = db.read_scalar_integer_by_id("Collection", "some_integer", id);
+    ASSERT_TRUE(value.has_value());
+    EXPECT_EQ(*value, 999);
+
+    // Only the labelled element changed
+    auto other_value = db.read_scalar_integer_by_id("Collection", "some_integer", other_id);
+    ASSERT_TRUE(other_value.has_value());
+    EXPECT_EQ(*other_value, 200);
+
+    // An update that does not name the label leaves it alone
+    auto label = db.read_scalar_string_by_id("Collection", "label", id);
+    ASSERT_TRUE(label.has_value());
+    EXPECT_EQ(*label, "Item 1");
+}
+
+TEST(Database, UpdateElementByLabelMatchesIdForm) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element e1;
+    e1.set("label", std::string("Item 1"));
+    int64_t id1 = db.create_element("Collection", e1);
+
+    quiver::Element e2;
+    e2.set("label", std::string("Item 2"));
+    int64_t id2 = db.create_element("Collection", e2);
+
+    // One updated by id, one by label - same outcome
+    quiver::Element by_id;
+    by_id.set("some_integer", int64_t{111});
+    db.update_element("Collection", id1, by_id);
+
+    quiver::Element by_label;
+    by_label.set("some_integer", int64_t{222});
+    db.update_element_by_label("Collection", "Item 2", by_label);
+
+    EXPECT_EQ(*db.read_scalar_integer_by_id("Collection", "some_integer", id1), 111);
+    EXPECT_EQ(*db.read_scalar_integer_by_id("Collection", "some_integer", id2), 222);
+}
+
+// The label form delegates rather than re-implementing the write, so array attributes route to
+// their group tables exactly as they do by id - including replace-on-update.
+TEST(Database, UpdateElementByLabelWithArrays) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element e;
+    e.set("label", std::string("Item 1")).set("tag", std::vector<std::string>{"old"});
+    int64_t id = db.create_element("Collection", e);
+
+    quiver::Element other;
+    other.set("label", std::string("Item 2")).set("tag", std::vector<std::string>{"keep"});
+    int64_t other_id = db.create_element("Collection", other);
+
+    quiver::Element update;
+    update.set("tag", std::vector<std::string>{"alpha", "beta"});
+    db.update_element_by_label("Collection", "Item 1", update);
+
+    auto tags = db.read_set_strings_by_id("Collection", "tag", id);
+    std::sort(tags.begin(), tags.end());
+    EXPECT_EQ(tags, (std::vector<std::string>{"alpha", "beta"}));
+
+    // The other element's rows are untouched
+    EXPECT_EQ(db.read_set_strings_by_id("Collection", "tag", other_id), (std::vector<std::string>{"keep"}));
+}
+
+// The label is an ordinary scalar, so a rename resolves against the old value and then writes the
+// new one - after which only the new label resolves.
+TEST(Database, UpdateElementByLabelRenames) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element e;
+    e.set("label", std::string("Item 1"));
+    int64_t id = db.create_element("Collection", e);
+
+    quiver::Element rename;
+    rename.set("label", std::string("Renamed"));
+    db.update_element_by_label("Collection", "Item 1", rename);
+
+    auto label = db.read_scalar_string_by_id("Collection", "label", id);
+    ASSERT_TRUE(label.has_value());
+    EXPECT_EQ(*label, "Renamed");
+
+    // The old label no longer resolves
+    try {
+        db.update_element_by_label("Collection", "Item 1", rename);
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), "Element not found: label 'Item 1' in collection 'Collection'");
+    }
+
+    // ...and the new one does
+    quiver::Element update;
+    update.set("some_integer", int64_t{7});
+    db.update_element_by_label("Collection", "Renamed", update);
+    EXPECT_EQ(*db.read_scalar_integer_by_id("Collection", "some_integer", id), 7);
+}
+
+TEST(Database, UpdateElementByLabelNonExistent) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element e;
+    e.set("label", std::string("Item 1")).set("some_integer", int64_t{100});
+    int64_t id = db.create_element("Collection", e);
+
+    quiver::Element update;
+    update.set("some_integer", int64_t{999});
+
+    // Updating an unresolvable label throws "Element not found" rather than silently no-op'ing
+    try {
+        db.update_element_by_label("Collection", "No Such Item", update);
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), "Element not found: label 'No Such Item' in collection 'Collection'");
+    }
+
+    // Nothing was written
+    EXPECT_EQ(*db.read_scalar_integer_by_id("Collection", "some_integer", id), 100);
+}
+
+// A label is unique per collection, not per database: one naming an element of another
+// collection must not resolve here.
+TEST(Database, UpdateElementByLabelDoesNotResolveAcrossCollections) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element e;
+    e.set("label", std::string("Item 1"));
+    db.create_element("Collection", e);
+
+    quiver::Element update;
+    update.set("some_integer", int64_t{999});
+
+    try {
+        db.update_element_by_label("Collection", "Test Config", update);
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), "Element not found: label 'Test Config' in collection 'Collection'");
+    }
+}
+
+// require_collection only checks has_table, so a group table reaches resolve_label. The explicit
+// require_column("label") is what stops it there instead of letting the SELECT leak a raw
+// "no such column: label" prepare error -- and the message must name the public method called.
+TEST(Database, UpdateElementByLabelOnTableWithoutLabelColumn) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element update;
+    update.set("some_integer", int64_t{999});
+
+    try {
+        db.update_element_by_label("Collection_set_tags", "anything", update);
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(),
+                     "Cannot update_element_by_label: column 'label' not found in table 'Collection_set_tags'");
+    }
+}
+
+// The label form is a one-line delegation (the root _by_label rule), so everything downstream of
+// label resolution reports update_element - the operation that actually validated. Deliberate:
+// threading the caller's name through would mean re-shaping the id form.
+TEST(Database, UpdateElementByLabelValidationNamesTheIdForm) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element e;
+    e.set("label", std::string("Item 1"));
+    db.create_element("Collection", e);
+
+    try {
+        db.update_element_by_label("Collection", "Item 1", quiver::Element{});
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), "Cannot update_element: element must have at least one attribute to update");
+    }
+
+    quiver::Element bad_type;
+    bad_type.set("some_integer", 1.5);
+    try {
+        db.update_element_by_label("Collection", "Item 1", bad_type);
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        std::string msg = e.what();
+        EXPECT_TRUE(msg.find("Cannot update_element: type mismatch") != std::string::npos) << "Actual: " << msg;
+    }
+
+    // Only resolve_label's own messages name the by-label form; it is the one step the label
+    // form performs itself.
+    try {
+        db.update_element_by_label("Collection", "Nope", bad_type);
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), "Element not found: label 'Nope' in collection 'Collection'");
+    }
+}
