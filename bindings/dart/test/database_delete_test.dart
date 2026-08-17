@@ -184,11 +184,7 @@ void main() {
 
         db.deleteElementByLabel('Configuration', 'Config 2');
 
-        final ids = db.readElementIds('Configuration');
-        expect(ids.length, equals(2));
-        expect(ids.contains(2), isFalse);
-        expect(ids.contains(1), isTrue);
-        expect(ids.contains(3), isTrue);
+        expect(db.readElementIds('Configuration'), equals([1, 3]));
       } finally {
         db.close();
       }

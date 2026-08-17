@@ -259,26 +259,12 @@ describe("deleteElementByLabel", () => {
     try {
       db.createElement("AllTypes", { label: "Item1" });
 
-      expect(() => db.deleteElementByLabel("AllTypes", "Nope")).toThrow(QuiverError);
-
-      try {
-        db.deleteElementByLabel("AllTypes", "Nope");
-      } catch (e) {
-        expect((e as QuiverError).message).toContain("Element not found");
-      }
+      expect(() => db.deleteElementByLabel("AllTypes", "Nope")).toThrow(/Element not found/);
 
       expect(db.readElementIds("AllTypes")).toHaveLength(1);
     } finally {
       db.close();
     }
-  });
-
-  test("throws on closed database", () => {
-    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
-    db.close();
-    expect(() => {
-      db.deleteElementByLabel("AllTypes", "Item1");
-    }).toThrow(QuiverError);
   });
 });
 

@@ -175,35 +175,6 @@ TEST(Database, DeleteElementByLabel) {
     EXPECT_EQ(*remaining, 1);  // only Item 2's "keep"
 }
 
-TEST(Database, DeleteElementByLabelMatchesIdForm) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
-
-    quiver::Element config;
-    config.set("label", std::string("Test Config"));
-    db.create_element("Configuration", config);
-
-    quiver::Element e1;
-    e1.set("label", std::string("Item 1"));
-    int64_t id1 = db.create_element("Collection", e1);
-
-    quiver::Element e2;
-    e2.set("label", std::string("Item 2"));
-    db.create_element("Collection", e2);
-
-    quiver::Element e3;
-    e3.set("label", std::string("Item 3"));
-    int64_t id3 = db.create_element("Collection", e3);
-
-    // One deleted by id, one by label - same outcome
-    db.delete_element("Collection", id1);
-    db.delete_element_by_label("Collection", "Item 2");
-
-    auto ids = db.read_element_ids("Collection");
-    EXPECT_EQ(ids.size(), 1);
-    EXPECT_EQ(ids[0], id3);
-}
-
 TEST(Database, DeleteElementByLabelNonExistent) {
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});

@@ -177,16 +177,13 @@ impl_->logger->debug("Opening database: {}", path);
   behind the Pattern 2 `"Element not found: ..."` message, shared by `update_element`,
   `delete_element`, and both group writers.
 - **Label→id resolution has one query** (`database_impl.h`): `Impl::lookup_id_by_label(table,
-  label, db)` is the only `SELECT id ... WHERE label = ?`, shared by two callers that report a miss
-  differently — `Impl::resolve_label` (Pattern 2 `"Element not found: label '<l>' in collection
-  '<c>'"`) and `Impl::resolve_fk_label` (Pattern 3), so the throw stays with each caller.
-  `resolve_label` is the gate behind by-label addressing (today only `delete_element_by_label`,
-  which resolves and then delegates to `delete_element`); it calls `require_column(collection,
-  "label")` because `require_collection` only checks `has_table`, so a group table would otherwise
-  reach the SELECT and leak a raw `no such column: label` prepare error. It takes the operation
-  name so the message reports the public method the caller invoked, not the delegate's.
-  CSV import does **not** use it — `database_csv_import.cpp` builds bulk label→id maps
-  (`build_label_to_id_map`) instead of per-row lookups.
+  label, db)` is the only `SELECT id ... WHERE label = ?`, shared by `Impl::resolve_label`
+  (Pattern 2, backs `delete_element_by_label`) and `Impl::resolve_fk_label` (Pattern 3) — the two
+  report a miss differently, so the throw stays with each caller. `resolve_label` calls
+  `require_column(collection, "label")` because `require_collection` only checks `has_table`, so a
+  group table would otherwise reach the SELECT and leak a raw `no such column: label` prepare
+  error; it takes the operation name so the message reports the caller's public method, not the
+  delegate's.
 - **Table classification has one source** (`schema.cpp`): `Schema::group_names(collection,
   GroupTableType)` and `is_group_table(table, type)` are the only way to enumerate/classify
   `_vector_` / `_set_` / `_time_series_` tables (`group_names` excludes `_time_series_files`).

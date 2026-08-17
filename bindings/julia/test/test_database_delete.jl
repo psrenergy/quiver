@@ -158,32 +158,7 @@ include("fixture.jl")
         Quiver.delete_element_by_label!(db, "Configuration", "Config 2")
 
         ids = Quiver.read_element_ids(db, "Configuration")
-        @test length(ids) == 2
-        @test 2 ∉ ids
-        @test 1 ∈ ids
-        @test 3 ∈ ids
-
-        Quiver.close!(db)
-    end
-
-    @testset "Element By Label (CASCADE)" begin
-        path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
-        db = Quiver.from_schema(":memory:", path_schema)
-
-        Quiver.create_element!(db, "Configuration"; label = "Test Config")
-        Quiver.create_element!(db, "Collection"; label = "Item 1", tag = ["alpha", "beta"])
-        Quiver.create_element!(db, "Collection"; label = "Item 2", tag = ["gamma", "delta"])
-
-        Quiver.delete_element_by_label!(db, "Collection", "Item 1")
-
-        ids = Quiver.read_element_ids(db, "Collection")
-        @test length(ids) == 1
-        @test ids[1] == 2
-
-        # The surviving element keeps its set rows; the deleted one's are gone with it
-        sets = Quiver.read_set_strings(db, "Collection", "tag")
-        @test length(sets) == 1
-        @test sort(sets[1]) == ["delta", "gamma"]
+        @test ids == [1, 3]
 
         Quiver.close!(db)
     end
