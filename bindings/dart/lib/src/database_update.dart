@@ -90,24 +90,6 @@ extension DatabaseUpdate on Database {
 
     final arena = Arena();
     try {
-      if (data.isEmpty) {
-        check(
-          bindings.quiver_database_update_vector_group(
-            _ptr,
-            collection.toNativeUtf8(allocator: arena).cast(),
-            group.toNativeUtf8(allocator: arena).cast(),
-            id,
-            nullptr,
-            nullptr,
-            nullptr,
-            nullptr,
-            0,
-            0,
-          ),
-        );
-        return;
-      }
-
       final columns = _marshalColumnArrays(arena, data);
 
       check(
@@ -140,24 +122,6 @@ extension DatabaseUpdate on Database {
 
     final arena = Arena();
     try {
-      if (data.isEmpty) {
-        check(
-          bindings.quiver_database_update_vector_group_by_label(
-            _ptr,
-            collection.toNativeUtf8(allocator: arena).cast(),
-            group.toNativeUtf8(allocator: arena).cast(),
-            label.toNativeUtf8(allocator: arena).cast(),
-            nullptr,
-            nullptr,
-            nullptr,
-            nullptr,
-            0,
-            0,
-          ),
-        );
-        return;
-      }
-
       final columns = _marshalColumnArrays(arena, data);
 
       check(
@@ -196,24 +160,6 @@ extension DatabaseUpdate on Database {
 
     final arena = Arena();
     try {
-      if (data.isEmpty) {
-        check(
-          bindings.quiver_database_update_set_group(
-            _ptr,
-            collection.toNativeUtf8(allocator: arena).cast(),
-            group.toNativeUtf8(allocator: arena).cast(),
-            id,
-            nullptr,
-            nullptr,
-            nullptr,
-            nullptr,
-            0,
-            0,
-          ),
-        );
-        return;
-      }
-
       final columns = _marshalColumnArrays(arena, data);
 
       check(
@@ -246,24 +192,6 @@ extension DatabaseUpdate on Database {
 
     final arena = Arena();
     try {
-      if (data.isEmpty) {
-        check(
-          bindings.quiver_database_update_set_group_by_label(
-            _ptr,
-            collection.toNativeUtf8(allocator: arena).cast(),
-            group.toNativeUtf8(allocator: arena).cast(),
-            label.toNativeUtf8(allocator: arena).cast(),
-            nullptr,
-            nullptr,
-            nullptr,
-            nullptr,
-            0,
-            0,
-          ),
-        );
-        return;
-      }
-
       final columns = _marshalColumnArrays(arena, data);
 
       check(
@@ -303,24 +231,6 @@ extension DatabaseUpdate on Database {
 
     final arena = Arena();
     try {
-      if (data.isEmpty) {
-        check(
-          bindings.quiver_database_update_time_series_group(
-            _ptr,
-            collection.toNativeUtf8(allocator: arena).cast(),
-            group.toNativeUtf8(allocator: arena).cast(),
-            id,
-            nullptr,
-            nullptr,
-            nullptr,
-            nullptr,
-            0,
-            0,
-          ),
-        );
-        return;
-      }
-
       final columns = _marshalColumnArrays(arena, data);
 
       check(
@@ -353,24 +263,6 @@ extension DatabaseUpdate on Database {
 
     final arena = Arena();
     try {
-      if (data.isEmpty) {
-        check(
-          bindings.quiver_database_update_time_series_group_by_label(
-            _ptr,
-            collection.toNativeUtf8(allocator: arena).cast(),
-            group.toNativeUtf8(allocator: arena).cast(),
-            label.toNativeUtf8(allocator: arena).cast(),
-            nullptr,
-            nullptr,
-            nullptr,
-            nullptr,
-            0,
-            0,
-          ),
-        );
-        return;
-      }
-
       final columns = _marshalColumnArrays(arena, data);
 
       check(
@@ -507,6 +399,9 @@ extension DatabaseUpdate on Database {
   /// Marshals a vector/set/time-series group's columns into arena-allocated typed +
   /// mask arrays via [_marshalGroupColumn], validating that every column has the same
   /// length first.
+  ///
+  /// An empty Map marshals to the C API's clearing form (null arrays, no columns, no
+  /// rows), so every group writer forwards unconditionally instead of branching itself.
   ({
     Pointer<Pointer<Char>> names,
     Pointer<Int> types,
@@ -516,6 +411,10 @@ extension DatabaseUpdate on Database {
     int rowCount,
   })
   _marshalColumnArrays(Arena arena, Map<String, List<Object?>> data) {
+    if (data.isEmpty) {
+      return (names: nullptr, types: nullptr, data: nullptr, hasValue: nullptr, columnCount: 0, rowCount: 0);
+    }
+
     final rowCount = data.values.first.length;
     for (final entry in data.entries) {
       if (entry.value.length != rowCount) {

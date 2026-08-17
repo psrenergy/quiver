@@ -96,14 +96,12 @@ function setElementField(lib: Symbols, elemPtr: NativePointer, name: string, val
   throw new QuiverError(`Unsupported value type for '${name}': ${typeof value}`);
 }
 
-Database.prototype.createElement = function (
-  this: Database,
-  collection: string,
-  data: ElementData,
-): number {
-  const lib = getSymbols();
-  const handle = this._handle;
-
+/**
+ * Build a native element from `data`, hand it to `fn`, and destroy it — the create/populate/
+ * `finally destroy` shell shared by createElement, updateElement and updateElementByLabel.
+ * An `undefined` field is skipped (omitting a key and passing undefined mean the same thing).
+ */
+function withElement<T>(lib: Symbols, data: ElementData, fn: (elemPtr: NativePointer) => T): T {
   const outElem = allocPtrOut();
   check(lib.quiver_element_create(outElem.buf));
   const elemPtr = readPtrOut(outElem);
@@ -113,14 +111,26 @@ Database.prototype.createElement = function (
       if (value === undefined) continue;
       setElementField(lib, elemPtr, key, value);
     }
+    return fn(elemPtr);
+  } finally {
+    lib.quiver_element_destroy(elemPtr);
+  }
+}
 
+Database.prototype.createElement = function (
+  this: Database,
+  collection: string,
+  data: ElementData,
+): number {
+  const lib = getSymbols();
+  const handle = this._handle;
+
+  return withElement(lib, data, (elemPtr) => {
     const outIdBuf = new Uint8Array(8);
     const collBuf = toCString(collection);
     check(lib.quiver_database_create_element(handle, collBuf.buf, elemPtr, outIdBuf));
     return Number(new DataView(outIdBuf.buffer).getBigInt64(0, true));
-  } finally {
-    lib.quiver_element_destroy(elemPtr);
-  }
+  });
 };
 
 Database.prototype.updateElement = function (
@@ -132,20 +142,10 @@ Database.prototype.updateElement = function (
   const lib = getSymbols();
   const handle = this._handle;
 
-  const outElem = allocPtrOut();
-  check(lib.quiver_element_create(outElem.buf));
-  const elemPtr = readPtrOut(outElem);
-
-  try {
-    for (const [key, value] of Object.entries(data)) {
-      if (value === undefined) continue;
-      setElementField(lib, elemPtr, key, value);
-    }
+  withElement(lib, data, (elemPtr) => {
     const collBuf = toCString(collection);
     check(lib.quiver_database_update_element(handle, collBuf.buf, BigInt(id), elemPtr));
-  } finally {
-    lib.quiver_element_destroy(elemPtr);
-  }
+  });
 };
 
 /** Label-addressed counterpart of updateElement. */
@@ -158,15 +158,7 @@ Database.prototype.updateElementByLabel = function (
   const lib = getSymbols();
   const handle = this._handle;
 
-  const outElem = allocPtrOut();
-  check(lib.quiver_element_create(outElem.buf));
-  const elemPtr = readPtrOut(outElem);
-
-  try {
-    for (const [key, value] of Object.entries(data)) {
-      if (value === undefined) continue;
-      setElementField(lib, elemPtr, key, value);
-    }
+  withElement(lib, data, (elemPtr) => {
     const collBuf = toCString(collection);
     check(
       lib.quiver_database_update_element_by_label(
@@ -176,9 +168,7 @@ Database.prototype.updateElementByLabel = function (
         elemPtr,
       ),
     );
-  } finally {
-    lib.quiver_element_destroy(elemPtr);
-  }
+  });
 };
 
 Database.prototype.deleteElement = function (this: Database, collection: string, id: number): void {

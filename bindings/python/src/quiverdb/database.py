@@ -1387,15 +1387,6 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         c_collection = collection.encode("utf-8")
         c_group = group.encode("utf-8")
 
-        if not data:
-            # Clear operation
-            check(
-                lib.quiver_database_update_time_series_group(
-                    self._ptr, c_collection, c_group, id, ffi.NULL, ffi.NULL, ffi.NULL, ffi.NULL, 0, 0
-                )
-            )
-            return
-
         keepalive, c_col_names, c_col_types, c_col_data, c_col_has_value, col_count, row_count = _marshal_group_columns(
             data
         )
@@ -1427,14 +1418,6 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         c_collection = collection.encode("utf-8")
         c_group = group.encode("utf-8")
         c_label = label.encode("utf-8")
-
-        if not data:
-            check(
-                lib.quiver_database_update_time_series_group_by_label(
-                    self._ptr, c_collection, c_group, c_label, ffi.NULL, ffi.NULL, ffi.NULL, ffi.NULL, 0, 0
-                )
-            )
-            return
 
         keepalive, c_col_names, c_col_types, c_col_data, c_col_has_value, col_count, row_count = _marshal_group_columns(
             data
@@ -1473,14 +1456,6 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         c_collection = collection.encode("utf-8")
         c_group = group.encode("utf-8")
 
-        if not data:
-            check(
-                lib.quiver_database_update_vector_group(
-                    self._ptr, c_collection, c_group, id, ffi.NULL, ffi.NULL, ffi.NULL, ffi.NULL, 0, 0
-                )
-            )
-            return
-
         keepalive, c_col_names, c_col_types, c_col_data, c_col_has_value, col_count, row_count = _marshal_group_columns(
             data
         )
@@ -1512,14 +1487,6 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         c_collection = collection.encode("utf-8")
         c_group = group.encode("utf-8")
         c_label = label.encode("utf-8")
-
-        if not data:
-            check(
-                lib.quiver_database_update_vector_group_by_label(
-                    self._ptr, c_collection, c_group, c_label, ffi.NULL, ffi.NULL, ffi.NULL, ffi.NULL, 0, 0
-                )
-            )
-            return
 
         keepalive, c_col_names, c_col_types, c_col_data, c_col_has_value, col_count, row_count = _marshal_group_columns(
             data
@@ -1556,14 +1523,6 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         c_collection = collection.encode("utf-8")
         c_group = group.encode("utf-8")
 
-        if not data:
-            check(
-                lib.quiver_database_update_set_group(
-                    self._ptr, c_collection, c_group, id, ffi.NULL, ffi.NULL, ffi.NULL, ffi.NULL, 0, 0
-                )
-            )
-            return
-
         keepalive, c_col_names, c_col_types, c_col_data, c_col_has_value, col_count, row_count = _marshal_group_columns(
             data
         )
@@ -1595,14 +1554,6 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         c_collection = collection.encode("utf-8")
         c_group = group.encode("utf-8")
         c_label = label.encode("utf-8")
-
-        if not data:
-            check(
-                lib.quiver_database_update_set_group_by_label(
-                    self._ptr, c_collection, c_group, c_label, ffi.NULL, ffi.NULL, ffi.NULL, ffi.NULL, 0, 0
-                )
-            )
-            return
 
         keepalive, c_col_names, c_col_types, c_col_data, c_col_has_value, col_count, row_count = _marshal_group_columns(
             data
@@ -1966,7 +1917,15 @@ def _marshal_group_columns(data: dict[str, list]) -> tuple:
     Returns (keepalive, c_col_names, c_col_types, c_col_data, c_col_has_value,
     col_count, row_count) where keepalive must remain referenced until the C API
     call completes.
+
+    An empty dict marshals to the C API's clearing form (no columns, no rows), so
+    every group writer forwards unconditionally instead of branching itself. `len`
+    rather than a truthiness test on purpose: `None` is a caller mistake and must
+    raise, not silently clear the group.
     """
+    if len(data) == 0:
+        return [], ffi.NULL, ffi.NULL, ffi.NULL, ffi.NULL, 0, 0
+
     col_count = len(data)
     row_count = len(next(iter(data.values())))
     for name, values in data.items():
