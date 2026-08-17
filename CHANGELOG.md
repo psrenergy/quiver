@@ -20,7 +20,14 @@ callers to change something are prefixed **BREAKING** and say what to do.
   Naming a table with no `label` column throws `Cannot delete_element_by_label: column 'label' not
   found in table '<t>'`.
 
-## [0.10.0] — unreleased
+## [0.10.1] — 2026-08-14
+
+No library changes — release tooling only: the **Bump Version** workflow
+(`.github/workflows/bump-version.yml`) plus `scripts/assert_version.py bump major|minor|patch`,
+and the PyPI publish action pinned to `pypa/gh-action-pypi-publish@v1.14.2`. Published artifacts
+are functionally identical to 0.10.0.
+
+## [0.10.0] — 2026-08-14
 
 ### Added
 
@@ -145,4 +152,6 @@ callers to change something are prefixed **BREAKING** and say what to do.
   `read_time_series_group` emits for a NULL STRING cell — so feeding a read result back with the
   mask stripped was UB. A NULL entry, or a NULL per-column data pointer, is now SQL NULL.
 
+[0.10.2]: https://github.com/psrenergy/quiver/compare/v0.10.1...v0.10.2
+[0.10.1]: https://github.com/psrenergy/quiver/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/psrenergy/quiver/compare/v0.9.16...v0.10.0
