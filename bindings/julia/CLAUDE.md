@@ -58,11 +58,21 @@ Project.toml      # Deps: Artifacts, CEnum, Dates, Libdl; julia 1.11 compat
   `GC.@preserve` body per writer.
 - **`upsert_time_series_row!` carries the same per-cell NULL mask** as the three group writers above
   (an unnamed column keeps its current value; `nothing` marshals as an explicit NULL) but is *not* a
-  fourth `_update_group_columns` call site: `quiver_database_upsert_time_series_row` has no
-  `row_count` parameter (it is always one row), so it cannot be passed through unmodified, and the
-  scalar-per-column shape differs from the vector-per-column shape `_update_group_columns` expects.
-  Its mask/type-dispatch chain is hand-rolled in parallel — keep it in sync by hand if either
-  changes.
+  fourth `_update_group_columns` call site: that helper is factored per *call* — it owns `row_count`,
+  the empty-payload clear and the `ccall` — while `quiver_database_upsert_time_series_row` has no
+  `row_count` (always one row) and takes one scalar per column. The obstacle is therefore where this
+  binding put the seam, not the C signature: Dart splits at the *column* (`_marshalGroupColumn`) and
+  reuses it for both shapes by wrapping each cell in a one-element list, and the C API itself routes
+  `quiver_database_upsert_time_series_row` through the shared `unmarshal_group_columns_to_rows` with
+  `row_count` as a literal 1. **Reviewed, and convergence on Dart's split is the decided direction**
+  — deferred to its own PR only because the PR that documented this (#251) had just rewritten these
+  dispatch chains in four bindings, and a four-binding refactor stacked on that is unreviewable in
+  one diff. Two rules until then: the mask/type-dispatch chain here is a parallel implementation that
+  has to be changed in both places at once; and **do not converge this binding alone** — the four
+  move together or not at all, because four bindings each embodying a different idea about the
+  arrangement is worse than four consistent copies. Treat "keep them in sync by hand" as a
+  known-weak safeguard rather than a guarantee: the Python copy has already drifted (it rejects the
+  `datetime` its own group writer accepts).
 - **Library loader** (`src/c_api.jl`, emitted from `generator/prologue.jl`) is **relocatable** —
   this matters for downstream apps compiled with PackageCompiler (`create_app`), where a baked
   absolute path would freeze the build machine's depot and fail on the target. Split design:

@@ -655,7 +655,7 @@ TEST(DatabaseCApi, UpsertTimeSeriesRowConflictNullPointerSentinelClearsNamedColu
 TEST(DatabaseCApi, UpsertTimeSeriesRowNullStringPointerSentinelIsNull) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("nullable_time_series.sql").c_str(), &options, &db),
               QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
@@ -666,24 +666,56 @@ TEST(DatabaseCApi, UpsertTimeSeriesRowNullStringPointerSentinelIsNull) {
     quiver_database_create_element(db, "Configuration", config, &tmp_id);
     EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
 
-    quiver_element_t* item = nullptr;
-    ASSERT_EQ(quiver_element_create(&item), QUIVER_OK);
-    quiver_element_set_string(item, "label", "Item 1");
+    quiver_element_t* sensor = nullptr;
+    ASSERT_EQ(quiver_element_create(&sensor), QUIVER_OK);
+    quiver_element_set_string(sensor, "label", "Sensor 1");
     int64_t id = 0;
-    quiver_database_create_element(db, "Collection", item, &id);
-    EXPECT_EQ(quiver_element_destroy(item), QUIVER_OK);
+    quiver_database_create_element(db, "Sensor", sensor, &id);
+    EXPECT_EQ(quiver_element_destroy(sensor), QUIVER_OK);
 
-    // A string/date_time column can also spell NULL as an inner NULL char* under a non-NULL
-    // column_data pointer.
-    const char* col_names[] = {"date_time", "value"};
-    int col_types[] = {QUIVER_DATA_TYPE_STRING, QUIVER_DATA_TYPE_FLOAT};
+    // A STRING column can also spell NULL as an inner NULL char* under a non-NULL column_data
+    // pointer and a dense (NULL) mask - the shape the read direction emits for a NULL STRING
+    // cell, so a read result fed straight back must land on SQL NULL, not on undefined behaviour.
+    const char* col_names[] = {"date_time", "status"};
+    int col_types[] = {QUIVER_DATA_TYPE_STRING, QUIVER_DATA_TYPE_STRING};
     const char* dt_buf[] = {"2024-01-01T00:00:00"};
-    double value_buf[] = {1.5};
-    const void* col_data[] = {dt_buf, value_buf};
+    const char* status_buf[] = {nullptr};
+    const void* col_data[] = {dt_buf, status_buf};
     EXPECT_EQ(quiver_database_upsert_time_series_row(
-                  db, "Collection", "data", id, col_names, col_types, col_data, nullptr, 2),
+                  db, "Sensor", "readings", id, col_names, col_types, col_data, nullptr, 2),
               QUIVER_OK);
 
+    char** out_col_names = nullptr;
+    int* out_col_types = nullptr;
+    void** out_col_data = nullptr;
+    uint8_t** out_col_has_value = nullptr;
+    size_t col_count = 0;
+    size_t row_count = 0;
+    auto err = quiver_database_read_time_series_group(db,
+                                                      "Sensor",
+                                                      "readings",
+                                                      id,
+                                                      &out_col_names,
+                                                      &out_col_types,
+                                                      &out_col_data,
+                                                      &out_col_has_value,
+                                                      &col_count,
+                                                      &row_count);
+    EXPECT_EQ(err, QUIVER_OK);
+    ASSERT_EQ(row_count, 1u);
+
+    int status_idx = -1;
+    for (size_t c = 0; c < col_count; ++c) {
+        if (std::string(out_col_names[c]) == "status") {
+            status_idx = static_cast<int>(c);
+        }
+    }
+    ASSERT_NE(status_idx, -1);
+    EXPECT_EQ(out_col_has_value[status_idx][0], 0);
+    EXPECT_EQ(static_cast<char**>(out_col_data[status_idx])[0], nullptr);
+
+    quiver_database_free_time_series_data(
+        out_col_names, out_col_types, out_col_data, out_col_has_value, col_count, row_count);
     quiver_database_close(db);
 }
 

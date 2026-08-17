@@ -1645,15 +1645,13 @@ struct LuaRunner::Impl {
     }
 
     static void update_time_series_files_lua(Database& db, const std::string& collection, const sol::table& paths) {
+        // A Lua table iteration never yields a nil value (`{ x = nil }` is `{}`), so there is no
+        // nullopt branch to write here: an omitted column is an unnamed one, which the core now
+        // preserves. Lua therefore cannot spell an explicit NULL through this writer - documented
+        // in the root design decisions and in the agent-facing Lua reference.
         std::map<std::string, std::optional<std::string>> cpp_paths;
         for (auto& pair : paths) {
-            auto key = pair.first.as<std::string>();
-            sol::object val = pair.second;
-            if (val.is<sol::lua_nil_t>()) {
-                cpp_paths[key] = std::nullopt;
-            } else {
-                cpp_paths[key] = val.as<std::string>();
-            }
+            cpp_paths[pair.first.as<std::string>()] = pair.second.as<std::string>();
         }
         db.update_time_series_files(collection, cpp_paths);
     }

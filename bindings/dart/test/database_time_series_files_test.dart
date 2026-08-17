@@ -114,6 +114,33 @@ void main() {
       }
     });
 
+    test('updateTimeSeriesFiles leaves an unnamed column alone', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.updateTimeSeriesFiles('Collection', {
+          'data_file': '/old/data.csv',
+          'metadata_file': '/old/meta.json',
+        });
+
+        // metadata_file is unnamed here, so it must survive.
+        db.updateTimeSeriesFiles('Collection', {'data_file': '/new/data.csv'});
+        var paths = db.readTimeSeriesFiles('Collection');
+        expect(paths['data_file'], equals('/new/data.csv'));
+        expect(paths['metadata_file'], equals('/old/meta.json'));
+
+        // Naming it with null clears it, while data_file (now unnamed) survives.
+        db.updateTimeSeriesFiles('Collection', {'metadata_file': null});
+        paths = db.readTimeSeriesFiles('Collection');
+        expect(paths['data_file'], equals('/new/data.csv'));
+        expect(paths['metadata_file'], isNull);
+      } finally {
+        db.close();
+      }
+    });
+
     test('readTimeSeriesFiles throws for collection without files table', () {
       final db = Database.fromSchema(
         ':memory:',

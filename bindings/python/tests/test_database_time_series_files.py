@@ -98,3 +98,21 @@ class TestUpdateTimeSeriesFiles:
 
         result = collections_db.read_time_series_files("Collection")
         assert result == data2
+
+    def test_update_time_series_files_unnamed_column_is_preserved(self, collections_db: Database) -> None:
+        """An unnamed column keeps its value; a named None clears one."""
+        collections_db.update_time_series_files(
+            "Collection", {"data_file": "/old/data.csv", "metadata_file": "/old/meta.json"}
+        )
+
+        # metadata_file is unnamed here, so it must survive.
+        collections_db.update_time_series_files("Collection", {"data_file": "/new/data.csv"})
+        result = collections_db.read_time_series_files("Collection")
+        assert result["data_file"] == "/new/data.csv"
+        assert result["metadata_file"] == "/old/meta.json"
+
+        # Naming it with None clears it, while data_file (now unnamed) survives.
+        collections_db.update_time_series_files("Collection", {"metadata_file": None})
+        result = collections_db.read_time_series_files("Collection")
+        assert result["data_file"] == "/new/data.csv"
+        assert result["metadata_file"] is None

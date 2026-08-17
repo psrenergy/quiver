@@ -403,35 +403,38 @@ void Database::update_time_series_files(const std::string& collection,
 
     // An unnamed column is not a written column, so it survives untouched; a named column takes
     // the caller's value, nullopt included. Whether a row already exists decides INSERT vs UPDATE
-    // - either way only the named columns are mentioned. The probe runs first so only the SQL the
-    // chosen branch needs gets built (INSERT wants columns+placeholders, UPDATE wants set_clause).
-    auto existing = execute("SELECT 1 FROM " + tsf + " LIMIT 1");
+    // - either way only the named columns are mentioned. The probe reads the *rowid* the reader
+    // will see (read_time_series_files is a LIMIT 1), so the UPDATE addresses exactly that one
+    // singleton row: the DELETE this replaced used to collapse the table to a single row, and an
+    // unqualified UPDATE would instead fan out over every row a non-singleton table happens to
+    // hold while the reader still reports only the first.
+    auto existing = execute("SELECT rowid FROM " + tsf + " LIMIT 1");
+
+    // One pass builds both spellings of the caller's columns - the two branches bind the same
+    // parameters in the same order, so the value loop must not be written twice.
+    std::string columns;
+    std::string placeholders;
+    std::string set_clause;
+    std::vector<Value> parameters;
+    parameters.reserve(paths.size() + 1);
+    for (const auto& [col_name, path] : paths) {
+        if (!columns.empty()) {
+            columns += ", ";
+            placeholders += ", ";
+            set_clause += ", ";
+        }
+        columns += col_name;
+        placeholders += "?";
+        set_clause += col_name + " = ?";
+        parameters.emplace_back(path ? Value(*path) : Value(nullptr));
+    }
 
     std::string sql;
-    std::vector<Value> parameters;
     if (existing.empty()) {
-        std::string columns;
-        std::string placeholders;
-        for (const auto& [col_name, path] : paths) {
-            if (!columns.empty()) {
-                columns += ", ";
-                placeholders += ", ";
-            }
-            columns += col_name;
-            placeholders += "?";
-            parameters.emplace_back(path ? Value(*path) : Value(nullptr));
-        }
         sql = "INSERT INTO " + tsf + " (" + columns + ") VALUES (" + placeholders + ")";
     } else {
-        std::string set_clause;
-        for (const auto& [col_name, path] : paths) {
-            if (!set_clause.empty()) {
-                set_clause += ", ";
-            }
-            set_clause += col_name + " = ?";
-            parameters.emplace_back(path ? Value(*path) : Value(nullptr));
-        }
-        sql = "UPDATE " + tsf + " SET " + set_clause;
+        sql = "UPDATE " + tsf + " SET " + set_clause + " WHERE rowid = ?";
+        parameters.emplace_back(existing[0].get_integer(0).value());
     }
 
     execute(sql, parameters);

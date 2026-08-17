@@ -63,9 +63,23 @@ ruff.toml         # Lint/format config (format.bat runs ruff)
   **drops NULL cells** — assert a NULL-cell write in SQL, not through it.
 - **`upsert_time_series_row` carries the same per-cell NULL mask** as the group writers above (an
   unnamed kwarg keeps its current value; `None` marshals as an explicit NULL) but does not go through
-  `_marshal_group_columns` — `quiver_database_upsert_time_series_row` takes one scalar per column
-  (no `row_count`), not `_marshal_group_columns`'s list-per-column shape, so its mask/type-dispatch
-  chain is a hand-rolled parallel implementation. Keep it in sync by hand if either changes.
+  `_marshal_group_columns`: that helper is factored per *call* (it owns `row_count`, the empty-payload
+  clear and the array build) while `quiver_database_upsert_time_series_row` has no `row_count` and
+  takes one scalar per column. The obstacle is where this binding put the seam, not the C signature —
+  Dart splits at the *column* (`_marshalGroupColumn`) and reuses it for both shapes by wrapping each
+  cell in a one-element list, and the C API routes the upsert through the shared
+  `unmarshal_group_columns_to_rows` with `row_count` as a literal 1.
+  **The two chains here have already drifted**: `_marshal_group_columns` accepts `datetime` (and
+  `read_time_series_group` returns the dimension column as `datetime`), but `upsert_time_series_row`'s
+  dispatch has no `datetime` branch and raises `TypeError: Column '<c>' value has unsupported type
+  datetime; expected int, float, str, or None` — so read → modify → write through the upsert fails on
+  the dimension column. **Do not patch that branch by hand**: it writes the dispatch a third time and
+  leaves the split in place. **Reviewed, and convergence on Dart's split is the decided direction**,
+  carrying this gap with it — deferred to its own PR only because the PR that documented this (#251)
+  had just rewritten these chains in four bindings, and stacking the refactor on that is
+  unreviewable in one diff. The four bindings move together or not at all: converging Python alone
+  leaves each binding embodying a different idea about the arrangement, which is worse than four
+  consistent copies.
 
 ## Packaging
 

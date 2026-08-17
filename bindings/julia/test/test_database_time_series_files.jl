@@ -112,6 +112,44 @@ include("fixture.jl")
         Quiver.close!(db)
     end
 
+    @testset "Time Series Files - unnamed column is preserved" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.update_time_series_files!(
+            db,
+            "Collection",
+            Dict{String, Quiver.Optional{String}}(
+                "data_file" => "/old/data.csv",
+                "metadata_file" => "/old/meta.json",
+            ),
+        )
+
+        # metadata_file is unnamed here, so it must survive.
+        Quiver.update_time_series_files!(
+            db,
+            "Collection",
+            Dict{String, Quiver.Optional{String}}("data_file" => "/new/data.csv"),
+        )
+
+        paths = Quiver.read_time_series_files(db, "Collection")
+        @test paths["data_file"] == "/new/data.csv"
+        @test paths["metadata_file"] == "/old/meta.json"
+
+        # Naming it with `nothing` clears it, while data_file (now unnamed) survives.
+        Quiver.update_time_series_files!(
+            db,
+            "Collection",
+            Dict{String, Quiver.Optional{String}}("metadata_file" => nothing),
+        )
+
+        paths = Quiver.read_time_series_files(db, "Collection")
+        @test paths["data_file"] == "/new/data.csv"
+        @test paths["metadata_file"] === nothing
+
+        Quiver.close!(db)
+    end
+
     @testset "Time Series Files - not found" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
         db = Quiver.from_schema(":memory:", path_schema)

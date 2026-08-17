@@ -174,8 +174,11 @@ impl_->logger->debug("Opening database: {}", path);
   replaced `INSERT OR REPLACE`, which rebuilt the row and so nulled every column the caller
   omitted. One narrowing that comes with it: `OR REPLACE` fired on *any* uniqueness conflict, the
   `ON CONFLICT` target only on the primary key. `update_time_series_files` follows the same rule
-  through a `SELECT 1 … LIMIT 1` probe: UPDATE the singleton row if it exists, INSERT if it does
-  not, mentioning only the named columns either way.
+  through a `SELECT rowid … LIMIT 1` probe: UPDATE that one row if it exists, INSERT if it does
+  not, mentioning only the named columns either way. The probe reads the **rowid**, not a bare
+  `1`, so the UPDATE carries `WHERE rowid = ?` — the `DELETE FROM` it replaced collapsed the table
+  to a single row, and an unqualified UPDATE would fan out over every row a table that somehow
+  holds more than one has, while `read_time_series_files` still reports only the first.
 - **`Impl::update_group_rows`** (`database_update.cpp`) is the shared body of
   `update_vector_group`/`update_set_group`. It validates the **union of every row's keys** (not
   `rows[0]`, which dropped later-row-only columns and skipped validating them) against the group

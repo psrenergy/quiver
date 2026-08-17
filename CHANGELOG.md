@@ -71,6 +71,11 @@ callers to change something are prefixed **BREAKING** and say what to do.
   *any* uniqueness conflict. A second UNIQUE constraint on a time-series table (unusual, and not
   required by the schema rules) now raises instead of replacing.
 
+  A row that names *only* dimension columns also changes behaviour: there is nothing left to write,
+  so the statement becomes `DO NOTHING` and the call now succeeds without touching the row, where
+  `INSERT OR REPLACE` used to replace it and raise a NOT NULL constraint error. Name at least one
+  value column if you mean to write something.
+
 - **BREAKING — `quiver_database_upsert_time_series_row()` takes a per-cell NULL mask.** A
   `const uint8_t* const* column_has_value` parameter now sits between `column_data` and
   `column_count`, in the same position and shape as
@@ -79,7 +84,9 @@ callers to change something are prefixed **BREAKING** and say what to do.
   *Adapt:* C and FFI callers must pass the new argument. `NULL` for the whole parameter, or for an
   individual column's entry, means that scope is present and behaves exactly as before; the two
   pointer spellings of NULL stay valid — a NULL `column_data[c]`, and a NULL `char*` entry for a
-  STRING/DATE_TIME column. No language binding's public surface changed.
+  STRING/DATE_TIME column. Every language binding's signature only *widens* to admit a null cell
+  (Dart `Map<String, Object>` → `Map<String, Object?>`, JS `row` gains `| null`, Python/Julia
+  accept `None`/`nothing`), so existing calls keep compiling.
 
 - **BREAKING — `export_csv()` writes foreign keys as labels, not ids.** A foreign-key column is
   now exported as the referenced element's `label`, **including self-references** — `import_csv()`

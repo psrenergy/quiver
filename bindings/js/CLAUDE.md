@@ -68,6 +68,21 @@ biome.json        # Lint/format config
   `QuiverError` naming the column. Load-bearing — an empty column would otherwise marshal a `null`
   data pointer that the C API dereferences against the first column's `row_count`. Pass `{}` (no
   columns) to clear the group. The C API rejects both cases too; failing here names the column.
+- **`upsertTimeSeriesRow` does *not* go through `group-columns.ts`** — `src/time-series.ts` hand-rolls
+  the same mask + type dispatch, because `quiver_database_upsert_time_series_row` has no `row_count`
+  and takes one scalar per column, which the per-*call* `updateGroupColumns` cannot express. Two
+  consequences to know before editing either: `GroupColumns` is `(number | string | null)[]` while
+  `upsertTimeSeriesRow` also accepts `bigint`, so the same value is legal in one writer and rejected
+  by the other; and the upsert's dispatch ends in an **unguarded `else`** that marshals
+  `value as number` as FLOAT, so it silently coerces the types its sibling throws
+  ``Cannot ${caller}: column '<c>' has unsupported value type <t>`` on. Dart avoids the split by
+  seaming at the *column* (`_marshalGroupColumn`), and the C API routes its upsert through the shared
+  `unmarshal_group_columns_to_rows`. **Reviewed, and convergence on Dart's split is the decided
+  direction**, carrying both gaps above with it — deferred to its own PR only because the PR that
+  documented this (#251) had just rewritten these chains in four bindings, and stacking the refactor
+  on that is unreviewable in one diff. **Do not converge JS alone, and do not paper over either gap
+  here**: the four bindings move together or not at all, since each one embodying a different idea
+  about the arrangement is worse than four consistent copies.
 - **Scalar bulk NULLs**: `readScalarIntegers`/`readScalarFloats` read a parallel `uint8_t*` mask
   (`new Uint8Array(toArrayBuffer(...))`) and gate `mask[i] ? v : null` → `(number | null)[]` — never
   `Number()` a masked slot (would turn NULL into 0). `readScalarStrings` reads pointer-by-pointer with
