@@ -213,6 +213,7 @@ Rules worth knowing:
 local id = db:create_element(collection, element_table)   -- returns new integer id
 db:update_element(collection, id, element_table)
 db:delete_element(collection, id)
+db:delete_element_by_label(collection, label)             -- same delete, addressed by label
 \`\`\`
 
 The element table holds scalar attributes as \`key = value\`, and vector/set attributes as
@@ -238,6 +239,9 @@ Notes:
 - **\`update_element\` / \`delete_element\` require an existing id.** Targeting an id that does not
   exist throws \`Element not found: <id> in collection '<collection>'\` (no silent no-op). Use
   \`read_element_ids\` to get valid ids.
+- **\`delete_element_by_label\` requires an existing label**, unique *per collection*, not per
+  database — one naming an element of another collection does not resolve. A miss throws
+  \`Element not found: label '<label>' in collection '<collection>'\` and deletes nothing.
 - **Empty arrays are skipped.** An attribute whose value is \`{}\` writes no vector/set (the element
   type can't be inferred from an empty array), so it is silently dropped.
 - **No \`nil\` scalar attributes.** In Lua a key set to \`nil\` is dropped from the table, so

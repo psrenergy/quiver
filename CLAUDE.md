@@ -396,6 +396,9 @@ Always use `ON DELETE CASCADE ON UPDATE CASCADE` for parent references.
 Public Database methods follow `verb_[category_]type[_by_id]`:
 - **Verbs:** create, read, update, upsert, delete, get, list, has, query, describe, export, import
 - **`_by_id` suffix:** Only for reads where both "all elements" and "single element" variants exist
+- **`_by_label` suffix:** Label-addressed counterpart of an id-addressed write. Spelled out in
+  **every** layer including the ones that could overload (C++, Julia, Lua) — one name everywhere,
+  no type dispatch. The label form resolves and delegates to the id form; it never re-implements it.
 - **Singular vs plural:** Type name matches return cardinality (`read_scalar_integers` returns vector, `read_scalar_integer_by_id` returns optional)
 - **Examples:** `create_element`, `read_vector_floats_by_id`, `get_scalar_metadata`, `list_time_series_groups`
 
@@ -403,7 +406,10 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
 - Factory methods: `from_schema()`, `from_migrations()` — `DatabaseOptions` (`read_only`, `console_level`) exposed as optional parameters in every binding
 - Transaction control: `begin_transaction()`, `commit()`, `rollback()`, `in_transaction()`
 - Dry runs: `begin_dry_run()`, `end_dry_run()`, `in_dry_run()` — one transaction that is always rolled back; while active the three transaction methods above are absorbed (no-ops) so nested callers compose. See the design decision below.
-- CRUD: `create_element(collection, element)`, `update_element`, `delete_element`
+- CRUD: `create_element(collection, element)`, `update_element`, `delete_element`,
+  `delete_element_by_label(collection, label)` — the label form resolves the label within the
+  collection (`Impl::resolve_label`) and delegates to `delete_element`, so CASCADE and the
+  Pattern 2 miss are the id form's. A label is unique per collection, not per database.
 - Element count: `number_of_elements(collection)` returns the current row count from the
   collection's main table (`COUNT(*)`), not its maximum ID or group-row count. Any table in the
   schema is accepted, so naming a group table reports that table's own row count.
@@ -508,6 +514,7 @@ The rules are mechanical: given any C++ method name, you can derive the equivale
 | Read scalar | `read_scalar_integers()` | `quiver_database_read_scalar_integers()` | `read_scalar_integers()` | `readScalarIntegers()` | `read_scalar_integers()` |
 | Read by Id | `read_scalar_integer_by_id()` | `quiver_database_read_scalar_integer_by_id()` | `read_scalar_integer_by_id()` | `readScalarIntegerById()` | N/A (use composites) |
 | Delete | `delete_element()` | `quiver_database_delete_element()` | `delete_element!()` | `deleteElement()` | `delete_element()` |
+| Delete by label | `delete_element_by_label()` | `quiver_database_delete_element_by_label()` | `delete_element_by_label!()` | `deleteElementByLabel()` | `delete_element_by_label()` |
 | Element count | `number_of_elements()` | `quiver_database_number_of_elements()` | `number_of_elements()` | `numberOfElements()` | `number_of_elements()` |
 | Metadata | `get_scalar_metadata()` | `quiver_database_get_scalar_metadata()` | `get_scalar_metadata()` | `getScalarMetadata()` | `get_scalar_metadata()` |
 | List groups | `list_vector_groups()` | `quiver_database_list_vector_groups()` | `list_vector_groups()` | `listVectorGroups()` | `list_vector_groups()` |

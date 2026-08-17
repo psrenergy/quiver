@@ -35,7 +35,7 @@ include/quiver/expression/  # Expression subsystem headers (lazy expressions on 
   expression_node.h           # ExpressionNode base + concrete node classes + BroadcastOperand
 src/                      # C++ implementation
   database.cpp            # Lifecycle, factories, transactions, execute, migrate_up
-  database_impl.h         # Database::Impl - schema/type validators, FK resolution, group inserts, TransactionGuard
+  database_impl.h         # Database::Impl - schema/type validators, label + FK resolution, group inserts, TransactionGuard
   database_internal.h     # internal:: helpers - read templates, value_matches_type, metadata converters
   database_create.cpp / database_read.cpp / database_update.cpp / database_delete.cpp
   database_metadata.cpp / database_query.cpp / database_time_series.cpp / database_describe.cpp
@@ -187,6 +187,14 @@ impl_->logger->debug("Opening database: {}", path);
 - **`Impl::require_element`** (`database_impl.h`) is the single `SELECT 1 ... WHERE id = ?` guard
   behind the Pattern 2 `"Element not found: ..."` message, shared by `update_element`,
   `delete_element`, and both group writers.
+- **Label→id resolution has one query** (`database_impl.h`): `Impl::lookup_id_by_label(table,
+  label, db)` is the only `SELECT id ... WHERE label = ?`, shared by `Impl::resolve_label`
+  (Pattern 2, backs `delete_element_by_label`) and `Impl::resolve_fk_label` (Pattern 3) — the two
+  report a miss differently, so the throw stays with each caller. `resolve_label` calls
+  `require_column(collection, "label")` because `require_collection` only checks `has_table`, so a
+  group table would otherwise reach the SELECT and leak a raw `no such column: label` prepare
+  error; it takes the operation name so the message reports the caller's public method, not the
+  delegate's.
 - **Table classification has one source** (`schema.cpp`): `Schema::group_names(collection,
   GroupTableType)` and `is_group_table(table, type)` are the only way to enumerate/classify
   `_vector_` / `_set_` / `_time_series_` tables (`group_names` excludes `_time_series_files`).
@@ -217,6 +225,7 @@ impl_->logger->debug("Opening database: {}", path);
   in sync (root design decision).
 - **`update_element` / `delete_element` / the group writers verify the id exists** (via
   `Impl::require_element`) and throw Pattern 2 `"Element not found: ..."` — no silent no-op.
+  `delete_element_by_label` does the same for a label via `Impl::resolve_label`.
 - **Schema metadata loads lazily** (`Impl::require_schema`): the `Database(path, options)`
   constructor does not read it, so the first metadata/CRUD call does. `schema` and `type_validator`
   are `mutable` (const readers trigger the load) and `load_schema_metadata()` is `const` and
