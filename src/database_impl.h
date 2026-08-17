@@ -106,9 +106,9 @@ struct Database::Impl {
         return result[0].get_integer(0);
     }
 
-    // The single gate behind every by-label writer: the label overloads in database.h resolve
-    // here and then delegate to their id counterpart, so the write logic and its validation stay
-    // in one place.
+    // The single gate behind by-label addressing: delete_element_by_label resolves here and then
+    // delegates to its id counterpart, so the write logic and its validation stay in one place.
+    // Any future by-label entry point should do the same rather than re-implementing the lookup.
     int64_t
     resolve_label(const std::string& collection, const std::string& label, const char* operation, Database& db) const {
         require_collection(collection, operation);

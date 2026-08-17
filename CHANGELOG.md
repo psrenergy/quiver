@@ -9,6 +9,23 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ### Added
 
+- **`delete_element_by_label(collection, label)`.** Deletes an element addressed by its `label`
+  instead of its id, for callers that already know the name and would otherwise round-trip through
+  a query to find the id. The label is resolved within the named collection and the call then does
+  exactly what `delete_element` does, so `ON DELETE CASCADE` cleanup of vector, set and time-series
+  rows is identical — it delegates rather than re-implementing the delete.
+
+  A label is unique **per collection, not per database**: one naming an element of a different
+  collection does not resolve. A miss throws `Element not found: label '<label>' in collection
+  '<c>'` and deletes nothing (no silent no-op, matching `delete_element` / `update_element`).
+  Naming a collection with no `label` column — a vector/set/time-series group table, say — throws
+  `Cannot delete_element_by_label: column 'label' not found in table '<t>'`.
+
+  Available in **every layer**: C++, the C API (`quiver_database_delete_element_by_label`), Julia
+  (`delete_element_by_label!`), Dart (`deleteElementByLabel`), Python
+  (`delete_element_by_label`), JS (`deleteElementByLabel`), and Lua
+  (`db:delete_element_by_label`).
+
 - **`number_of_elements(collection)`.** Returns the current number of rows in a
   collection's main table with `COUNT(*)`, without materializing and transferring every element
   ID. An empty collection returns `0`; deleting any element decreases the count regardless of ID

@@ -146,6 +146,64 @@ include("fixture.jl")
 
         Quiver.close!(db)
     end
+
+    @testset "Element By Label" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Config 1")
+        Quiver.create_element!(db, "Configuration"; label = "Config 2")
+        Quiver.create_element!(db, "Configuration"; label = "Config 3")
+
+        Quiver.delete_element_by_label!(db, "Configuration", "Config 2")
+
+        ids = Quiver.read_element_ids(db, "Configuration")
+        @test length(ids) == 2
+        @test 2 ∉ ids
+        @test 1 ∈ ids
+        @test 3 ∈ ids
+
+        Quiver.close!(db)
+    end
+
+    @testset "Element By Label (CASCADE)" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+        Quiver.create_element!(db, "Collection"; label = "Item 1", tag = ["alpha", "beta"])
+        Quiver.create_element!(db, "Collection"; label = "Item 2", tag = ["gamma", "delta"])
+
+        Quiver.delete_element_by_label!(db, "Collection", "Item 1")
+
+        ids = Quiver.read_element_ids(db, "Collection")
+        @test length(ids) == 1
+        @test ids[1] == 2
+
+        # The surviving element keeps its set rows; the deleted one's are gone with it
+        sets = Quiver.read_set_strings(db, "Collection", "tag")
+        @test length(sets) == 1
+        @test sort(sets[1]) == ["delta", "gamma"]
+
+        Quiver.close!(db)
+    end
+
+    @testset "Non-Existent Label Throws" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Config 1")
+
+        @test_throws Quiver.DatabaseException Quiver.delete_element_by_label!(
+            db, "Configuration", "Nonexistent")
+
+        # Nothing was deleted
+        ids = Quiver.read_element_ids(db, "Configuration")
+        @test length(ids) == 1
+        @test ids[1] == 1
+
+        Quiver.close!(db)
+    end
 end
 
 end

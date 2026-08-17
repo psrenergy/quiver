@@ -162,9 +162,8 @@ Database.prototype.deleteElementByLabel = function (
 ): void {
   const lib = getSymbols();
   const collBuf = toCString(collection);
-  check(
-    lib.quiver_database_delete_element_by_label(this._handle, collBuf.buf, toCString(label).buf),
-  );
+  const labelBuf = toCString(label);
+  check(lib.quiver_database_delete_element_by_label(this._handle, collBuf.buf, labelBuf.buf));
 };
 
 /**

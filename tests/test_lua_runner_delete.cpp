@@ -43,7 +43,7 @@ TEST_F(LuaRunnerTest, DeleteElementByLabel) {
         local ids = db:read_element_ids("Collection")
         assert(#ids == 3, "Expected 3 elements before delete")
 
-        db:delete_element("Collection", "Item 2")
+        db:delete_element_by_label("Collection", "Item 2")
 
         ids = db:read_element_ids("Collection")
         assert(#ids == 2, "Expected 2 elements after delete")
@@ -108,7 +108,7 @@ TEST_F(LuaRunnerTest, DeleteElementByLabelNonExistent) {
     quiver::LuaRunner lua(db);
 
     // Deleting a non-existent label throws "Element not found"
-    expect_lua_error(lua, R"(db:delete_element("Collection", "Nope"))", "Element not found");
+    expect_lua_error(lua, R"(db:delete_element_by_label("Collection", "Nope"))", "Element not found");
 
     // Original element is untouched
     lua.run(R"(

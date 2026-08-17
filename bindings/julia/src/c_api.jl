@@ -196,6 +196,10 @@ function quiver_database_delete_element(db, collection, id)
     @ccall libquiver_c.quiver_database_delete_element(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, id::Int64)::quiver_error_t
 end
 
+function quiver_database_delete_element_by_label(db, collection, label)
+    @ccall libquiver_c.quiver_database_delete_element_by_label(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, label::Ptr{Cchar})::quiver_error_t
+end
+
 function quiver_database_number_of_elements(db, collection, out_count)
     @ccall libquiver_c.quiver_database_number_of_elements(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, out_count::Ptr{Int64})::quiver_error_t
 end
