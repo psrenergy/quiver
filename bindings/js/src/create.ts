@@ -154,6 +154,19 @@ Database.prototype.deleteElement = function (this: Database, collection: string,
   check(lib.quiver_database_delete_element(this._handle, collBuf.buf, BigInt(id)));
 };
 
+/** Label-addressed counterpart of deleteElement. */
+Database.prototype.deleteElementByLabel = function (
+  this: Database,
+  collection: string,
+  label: string,
+): void {
+  const lib = getSymbols();
+  const collBuf = toCString(collection);
+  check(
+    lib.quiver_database_delete_element_by_label(this._handle, collBuf.buf, toCString(label).buf),
+  );
+};
+
 /**
  * Replace all of an element's rows in one *named* vector group, from column arrays keyed by name.
  *
