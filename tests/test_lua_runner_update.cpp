@@ -423,8 +423,7 @@ TEST_F(LuaRunnerTest, UpdateRelationErrors) {
                      "relation column 'parent_owner' not found in collection 'Child'");
     expect_lua_error(
         lua, R"(db:update_relation("Child", "Parent", "id", 1, "Nope"))", "Failed to resolve label 'Nope'");
-    expect_lua_error(
-        lua, R"(db:update_relation("Child", "Parent", "id", "Nope", "Parent A"))", "Element not found");
+    expect_lua_error(lua, R"(db:update_relation("Child", "Parent", "id", "Nope", "Parent A"))", "Element not found");
     expect_lua_error(lua,
                      R"(db:update_relation("Child", "Parent", "id", true, "Parent A"))",
                      "element must be addressed by an integer id or a string label");

@@ -2177,8 +2177,7 @@ TEST(DatabaseCApi, UpdateRelationNullArgumentsRejected) {
               QUIVER_ERROR);
 
     // Null label, for the _by_label symbol
-    EXPECT_EQ(quiver_database_update_relation_by_label(db, "Child", "Parent", "id", nullptr, "Parent A"),
-              QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_update_relation_by_label(db, "Child", "Parent", "id", nullptr, "Parent A"), QUIVER_ERROR);
 
     // A NULL target_label is a deliberate clear, not a rejected argument - unlike
     // quiver_element_set_string, which rejects a NULL value and requires quiver_element_set_null.
