@@ -93,24 +93,23 @@ Settled questions — don't relitigate without the user; each was decided delibe
 - **A missing element id is Pattern 2 `"Element not found: <id> in collection '<c>'"`, not a silent
   no-op.** `update_element` / `delete_element` / `update_vector_group` / `update_set_group` check it
   through `Impl::require_element`; the error surfaces through the C API error channel and every
-  binding. The two time-series writers deliberately do not check: an unknown id fails the foreign
-  key when there are rows to insert, and a clear matches nothing. Adding `require_element` there was
-  rejected — it buys a nicer message for a case SQLite already blocks, at the cost of a `SELECT` per
-  row in the ingestion loops `upsert_time_series_row` exists for. Every label form throws, since
-  resolving the label is how it addresses the element.
+  binding. The two time-series writers (`update_time_series_group` / `upsert_time_series_row`)
+  deliberately do not check: an unknown id fails the foreign key when there are rows to insert, and
+  a clear matches nothing. Adding `require_element` there was rejected twice — it buys a nicer
+  message for a case SQLite already blocks, at the cost of a `SELECT` per row in the ingestion loops
+  `upsert_time_series_row` exists for, and when re-proposed during the by-label review it was
+  declined again as a behaviour change to existing methods, out of scope for adding the label forms.
+  Every label form throws, since resolving the label is how it addresses the element — so the two
+  time-series writers are asymmetric: a stale id is a no-op, a stale label raises.
 - **The id-addressed writers also accept a label; the id-addressed readers do not.** Every
   collection has a `label TEXT UNIQUE NOT NULL` by convention and callers usually hold that, so all
   six writers gained a label form (`Impl::resolve_label` in `src/database_impl.h`, then delegate to
   the id overload — one write path, one validation path). Extending it to `read_*_by_id` was
   rejected: the readers are the bulk/hot surface. Resolution lives in C++ so no binding invents the
   message — an unresolvable label is Pattern 2
-  `"Element not found: label '<label>' in collection '<c>'"`.
-- **The two time-series writers do not pre-check the element id.** `update_time_series_group` /
-  `upsert_time_series_row` skip `require_element`, unlike the other four writers: an unknown id
-  fails the foreign key when there are rows to insert and does nothing when clearing. Adding the
-  check was proposed during the by-label review and declined — a behaviour change to existing
-  methods, out of scope for adding the label forms. Every label form necessarily throws, since
-  resolving the label is how it addresses the element.
+  `"Element not found: label '<label>' in collection '<c>'"`, and a table with no `label` column at
+  all (a group table — `require_collection` accepts any table) is Pattern 1 from `require_column`,
+  never a raw SQLite prepare error.
 - **`query_*` validate parameter count**: `execute` rejects a mismatch between bound parameters and
   `?` placeholders (too few or too many) instead of binding NULL / ignoring extras.
 - **Migration `down_sql` is a required feature** — do not remove the down path.

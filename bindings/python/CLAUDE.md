@@ -55,8 +55,18 @@ ruff.toml         # Lint/format config (format.bat runs ruff)
   dense datetimes. `_marshal_group_columns` dispatches on the first non-`None` element, builds
   a per-column mask, and substitutes `0`/`0.0`/`ffi.NULL` placeholders for `None` cells; an all-`None`
   column is tagged FLOAT with a zeroed placeholder.
+- **The addressing parameters of the kwargs methods are positional-only** (`/` after `collection`,
+  `id`/`label`, `group` on `create_element`, `update_element`, `update_element_by_label`,
+  `upsert_time_series_row`, `upsert_time_series_row_by_label`). Without it a column named `label`
+  collides with the parameter, so `update_element_by_label("Items", "old", label="new")` — renaming
+  by label, the obvious use — raised `TypeError` before reaching the FFI. Keep the marker when
+  adding a kwargs method.
 - **`_marshal_group_columns` serves all three columnar group writers** (time series, vector, set) —
-  same name as Dart's `_marshalGroupColumn`. It raises `ValueError` for jagged column lists (a
+  same name as Dart's `_marshalGroupColumn`. It also owns the **clearing** form: an empty dict
+  returns `ffi.NULL` arrays with `0, 0` counts, so the six writers forward unconditionally rather
+  than each carrying an `if not data:` branch. The guard is `len(data) == 0`, never truthiness —
+  `None` is a caller mistake (`d.get("refs")` on a missing key) and must raise, not silently clear
+  the group. It raises `ValueError` for jagged column lists (a
   pre-FFI marshalling error, the documented exception to "messages come from C++"); everything else
   is validated in the core and surfaces as `QuiverError`. Note that the group *writers* take columns
   while `read_vector_group_by_id` returns rows, and that reader composes per-column reads, so it

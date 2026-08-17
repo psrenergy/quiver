@@ -176,6 +176,37 @@ Quiver.upsert_time_series_row!(
 )
 ```
 
+### Addressing the element by label
+
+Both writers take the element's `label` in place of its id, so you do not have to look the id up
+first:
+
+```julia
+Quiver.upsert_time_series_row!(
+    db,
+    "Resource",
+    "group1",
+    "Resource 1";          # label instead of id
+    date_time = DateTime(2000),
+    some_vector1 = 10.0,
+)
+
+Quiver.update_time_series_group!(
+    db,
+    "Resource",
+    "group1",
+    "Resource 1";
+    date_time = [DateTime(2000), DateTime(2001)],
+    some_vector1 = [10.0, 11.0],
+    some_vector2 = [20.0, 21.0],
+)
+```
+
+A label that matches no element throws `Element not found: label '<label>' in collection
+'<collection>'`. Note the asymmetry: the *id* forms of these two writers do not pre-check that the
+element exists, so clearing a deleted element by id quietly does nothing, while the label form
+always raises.
+
 ## Deleting data
 
 Updating a group with no data clears every row of that group for the element:

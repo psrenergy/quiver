@@ -219,7 +219,9 @@ cannot express:
 Its single-row sibling is **`unmarshal_single_row`** (same header), shared by
 `quiver_database_upsert_time_series_row` and its `_by_label` form: one value per `column_data[c]`,
 so no mask and no `row_count` — an omitted column is simply absent from the row and the core leaves
-it at its DEFAULT.
+it at its DEFAULT. It tolerates the same NULL spellings the columnar decoder does (a NULL column
+pointer, or a NULL `char*` entry for a string column) — the read direction emits exactly that for a
+NULL STRING cell, so feeding a read result back through it must not be UB.
 
 ## By-Label Writers
 

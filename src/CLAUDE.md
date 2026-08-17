@@ -209,10 +209,17 @@ impl_->logger->debug("Opening database: {}", path);
   **time-series** writers (`update_time_series_group`, `upsert_time_series_row`) deliberately do
   not.
 - **`Impl::resolve_label`** (`database_impl.h`, beside `require_element`) is the single gate behind
-  every by-label writer: `require_collection`, then `SELECT id FROM <collection> WHERE label = ?`
-  (collection interpolated, label bound). No match throws Pattern 2
-  `"Element not found: label '<label>' in collection '<collection>'"`. It returns a plain `int64_t`
-  — no `std::optional`, no silent no-op — so each label overload stays one line: resolve, delegate.
+  every by-label writer: `require_collection`, then `require_column(collection, "label")` — needed
+  because `require_collection` accepts *any* table, so a group table would otherwise reach the
+  SELECT and leak a raw `no such column: label` prepare error — then `lookup_id_by_label`. No match
+  throws Pattern 2 `"Element not found: label '<label>' in collection '<collection>'"`. It returns a
+  plain `int64_t` — no `std::optional`, no silent no-op — so each label overload stays one line:
+  resolve, delegate.
+- **`Impl::lookup_id_by_label`** is the one `SELECT id FROM <table> WHERE label = ?` (table
+  interpolated, label bound), shared by `resolve_label` and `resolve_fk_label`. It returns
+  `std::optional<int64_t>` and never throws: the two callers report a miss differently (Pattern 2
+  "Element not found" for a by-label write, Pattern 3 "Failed to resolve label" for a CSV-import FK),
+  so only the query is shared. Don't re-inline it — that is how the two drifted apart.
 - **Schema metadata loads lazily** (`Impl::require_schema`): the `Database(path, options)`
   constructor does not read it, so the first metadata/CRUD call does. `schema` and `type_validator`
   are `mutable` (const readers trigger the load) and `load_schema_metadata()` is `const` and

@@ -64,7 +64,11 @@ biome.json        # Lint/format config
 - **`src/group-columns.ts` is the one columnar marshaller** for the six group writers—the three id
   forms plus the three `…ByLabel` forms—(`updateGroupColumns(handle, caller, cFn, ...)`), so the
   element arrives pre-marshalled from the call site as a `bigint` id or label C string; the
-  functions differ only in which C entry point they pass, so don't re-inline it per method. It validates
+  functions differ only in which C entry point they pass, so don't re-inline it per method. It is
+  **generic in the element type** (`updateGroupColumns<E extends bigint | Uint8Array>`) so an id
+  symbol can only take a `bigint` and a `_by_label` symbol only a label buffer — don't widen it back
+  to a union, which makes `BigInt(id)` on a `_by_label` symbol type-check and segfault in the C API
+  (`std::string(label)` on address `<id>`) instead of throwing. It validates
   before marshalling: jagged columns and named-but-empty columns (`rowCount === 0`) throw a
   `QuiverError` naming the column. Load-bearing — an empty column would otherwise marshal a `null`
   data pointer that the C API dereferences against the first column's `row_count`. Pass `{}` (no
@@ -78,6 +82,14 @@ biome.json        # Lint/format config
   JSON string must be freed with `quiver_lua_runner_free_string` — *not* `quiver_database_free_string`
   (both are in `loader.ts`, hand-maintained). `decodeStringFromBuf` returns `""` for a NULL pointer,
   which is also what the C API leaves there on failure, and `check()` throws before the decode.
+- **`upsertTimeSeriesRow` rejects a non-number where the group writers accept `null`.** The
+  single-row C entry point carries no presence mask, so a NULL cell is inexpressible there;
+  `marshalRowColumns` throws a `QuiverError` naming the column rather than falling through to FLOAT
+  (which would store a real `0.0` for `null` and NaN for `undefined`). Use `updateTimeSeriesGroup`,
+  which does carry a mask, to write NULL.
+- **`src/create.ts` builds elements through `withElement(lib, data, fn)`** — the
+  `quiver_element_create` → populate → `finally destroy` shell, shared by `createElement`,
+  `updateElement` and `updateElementByLabel`. Don't re-inline it per method.
 - **Time-series NULL cells** (`TimeSeriesData = Record<string, (number | string | null)[]>`): a
   `null` value marshals to a per-column `uint8_t` mask (0 = NULL) with a placeholder in the data
   array; an all-`null` column is tagged FLOAT with a zeroed placeholder (the C API ignores the tag

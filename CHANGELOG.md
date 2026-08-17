@@ -16,9 +16,14 @@ callers to change something are prefixed **BREAKING** and say what to do.
   `update_element`, `delete_element`, `update_vector_group`, `update_set_group`,
   `update_time_series_group`, `upsert_time_series_row`. In C++ it is an overload taking
   `const std::string& label`; the C API, which has no overloading, gets the same six with a
-  `_by_label` suffix and otherwise identical signatures. Behaviour matches the id form in every
-  other respect; a label matching no element in the collection throws
-  `Element not found: label '<label>' in collection '<collection>'`.
+  `_by_label` suffix and otherwise identical signatures. A label matching no element in the
+  collection throws `Element not found: label '<label>' in collection '<collection>'`.
+
+  Behaviour matches the id form in every other respect, with one exception:
+  `update_time_series_group` and `upsert_time_series_row` deliberately do not pre-check the id, so
+  addressing a deleted element by id is a tolerated no-op, while the label form always throws —
+  resolving the label *is* how it finds the element. If you migrate an idempotent cleanup loop from
+  ids to labels, expect it to start raising on elements that are already gone.
 
   The id-addressed **readers** deliberately keep taking ids only. Wired into every binding: Julia
   (multiple dispatch), Dart/Python/JS (a `...ByLabel`/`_by_label` suffix per writer), and Lua (same

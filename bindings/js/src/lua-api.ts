@@ -235,16 +235,18 @@ db:update_element("Collection", id, { some_integer = 999 })
 \`\`\`
 
 Notes:
-- **\`update_element\` / \`delete_element\` require an existing id.** Targeting an id that does not
-  exist throws \`Element not found: <id> in collection '<collection>'\` (no silent no-op). Use
-  \`read_element_ids\` to get valid ids.
-- **The six id-addressed writers take an id or a label.** \`update_element\`, \`delete_element\`,
-  \`update_vector_group\`, \`update_set_group\`, \`update_time_series_group\` and
-  \`upsert_time_series_row\` accept the element's label string in place of the integer id, throwing
-  \`Element not found: label '<label>' in collection '<collection>'\` if no element carries it. Pass
-  whichever you already hold — an id costs nothing, a label costs one indexed lookup per call — and
-  reach for the label instead of scanning a collection's labels to find an id yourself. Do not
-  invent an id you have not read: ids are database-assigned and id 1 need not exist.
+- **The six id-addressed writers take an id or a label, and the element must exist.**
+  \`update_element\`, \`delete_element\`, \`update_vector_group\`, \`update_set_group\`,
+  \`update_time_series_group\` and \`upsert_time_series_row\` accept the element's label string in
+  place of the integer id. Either way there is no silent no-op: an unknown id throws
+  \`Element not found: <id> in collection '<collection>'\` and an unknown label throws
+  \`Element not found: label '<label>' in collection '<collection>'\`. (The two time-series writers
+  are the exception on the *id* path only — they do not pre-check it, so clearing with a stale id
+  quietly does nothing; a stale label still throws, because resolving it is how they find the
+  element.) Pass whichever you already hold — an id costs nothing, a label costs one indexed lookup
+  per call — and reach for the label instead of scanning a collection's labels to find an id
+  yourself. Use \`read_element_ids\` to get valid ids; do not invent one you have not read, since
+  ids are database-assigned and id 1 need not exist.
 - **Empty arrays are skipped.** An attribute whose value is \`{}\` writes no vector/set (the element
   type can't be inferred from an empty array), so it is silently dropped.
 - **No \`nil\` scalar attributes.** In Lua a key set to \`nil\` is dropped from the table, so
