@@ -61,6 +61,11 @@ ruff.toml         # Lint/format config (format.bat runs ruff)
   is validated in the core and surfaces as `QuiverError`. Note that the group *writers* take columns
   while `read_vector_group_by_id` returns rows, and that reader composes per-column reads, so it
   **drops NULL cells** — assert a NULL-cell write in SQL, not through it.
+- **`upsert_time_series_row` carries the same per-cell NULL mask** as the group writers above (an
+  unnamed kwarg keeps its current value; `None` marshals as an explicit NULL) but does not go through
+  `_marshal_group_columns` — `quiver_database_upsert_time_series_row` takes one scalar per column
+  (no `row_count`), not `_marshal_group_columns`'s list-per-column shape, so its mask/type-dispatch
+  chain is a hand-rolled parallel implementation. Keep it in sync by hand if either changes.
 
 ## Packaging
 

@@ -334,7 +334,8 @@ extension DatabaseUpdate on Database {
   // ==========================================================================
 
   /// Updates time series files paths for a collection.
-  /// Takes a map of column name to file path (null to clear the path).
+  /// Takes a map of column name to file path; only the named columns are written - a `null`
+  /// value clears that column, and any column left out of the map keeps its current value.
   void updateTimeSeriesFiles(String collection, Map<String, String?> paths) {
     _ensureNotClosed();
 

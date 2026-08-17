@@ -227,8 +227,10 @@ void Database::upsert_time_series_row(const std::string& collection,
     // Native upsert: on a PK conflict, DO UPDATE writes only the caller's named non-dimension
     // columns - an unnamed column is not a written column and keeps its existing value. On the
     // insert path there is nothing to preserve, so unnamed columns take the DEFAULT (NULL).
+    // Naming only dimension columns leaves nothing to write, and DO UPDATE SET cannot be empty.
     std::string insert_sql = "INSERT INTO " + ts_table + " (id";
     std::string placeholders = "?";
+    std::string set_clause;
     std::vector<Value> parameters;
     parameters.emplace_back(id);
 
@@ -236,6 +238,13 @@ void Database::upsert_time_series_row(const std::string& collection,
         insert_sql += ", " + col_name;
         placeholders += ", ?";
         parameters.emplace_back(value);
+
+        if (std::find(dim_cols.begin(), dim_cols.end(), col_name) == dim_cols.end()) {
+            if (!set_clause.empty()) {
+                set_clause += ", ";
+            }
+            set_clause += col_name + " = excluded." + col_name;
+        }
     }
     insert_sql += ") VALUES (" + placeholders + ")";
 
@@ -244,19 +253,6 @@ void Database::upsert_time_series_row(const std::string& collection,
         insert_sql += ", " + dim_col;
     }
     insert_sql += ") DO ";
-
-    // Naming only dimension columns leaves nothing to write, and DO UPDATE SET cannot be empty.
-    std::string set_clause;
-    for (const auto& [col_name, value] : row) {
-        if (std::find(dim_cols.begin(), dim_cols.end(), col_name) != dim_cols.end()) {
-            continue;
-        }
-        if (!set_clause.empty()) {
-            set_clause += ", ";
-        }
-        set_clause += col_name + " = excluded." + col_name;
-    }
-
     insert_sql += set_clause.empty() ? "NOTHING" : "UPDATE SET " + set_clause;
 
     execute(insert_sql, parameters);
@@ -407,26 +403,36 @@ void Database::update_time_series_files(const std::string& collection,
 
     // An unnamed column is not a written column, so it survives untouched; a named column takes
     // the caller's value, nullopt included. Whether a row already exists decides INSERT vs UPDATE
-    // - either way only the named columns are mentioned.
-    std::string columns;
-    std::string placeholders;
-    std::string set_clause;
-    std::vector<Value> parameters;
-    for (const auto& [col_name, path] : paths) {
-        if (!columns.empty()) {
-            columns += ", ";
-            placeholders += ", ";
-            set_clause += ", ";
-        }
-        columns += col_name;
-        placeholders += "?";
-        set_clause += col_name + " = ?";
-        parameters.emplace_back(path ? Value(*path) : Value(nullptr));
-    }
-
+    // - either way only the named columns are mentioned. The probe runs first so only the SQL the
+    // chosen branch needs gets built (INSERT wants columns+placeholders, UPDATE wants set_clause).
     auto existing = execute("SELECT 1 FROM " + tsf + " LIMIT 1");
-    auto sql = existing.empty() ? "INSERT INTO " + tsf + " (" + columns + ") VALUES (" + placeholders + ")"
-                                : "UPDATE " + tsf + " SET " + set_clause;
+
+    std::string sql;
+    std::vector<Value> parameters;
+    if (existing.empty()) {
+        std::string columns;
+        std::string placeholders;
+        for (const auto& [col_name, path] : paths) {
+            if (!columns.empty()) {
+                columns += ", ";
+                placeholders += ", ";
+            }
+            columns += col_name;
+            placeholders += "?";
+            parameters.emplace_back(path ? Value(*path) : Value(nullptr));
+        }
+        sql = "INSERT INTO " + tsf + " (" + columns + ") VALUES (" + placeholders + ")";
+    } else {
+        std::string set_clause;
+        for (const auto& [col_name, path] : paths) {
+            if (!set_clause.empty()) {
+                set_clause += ", ";
+            }
+            set_clause += col_name + " = ?";
+            parameters.emplace_back(path ? Value(*path) : Value(nullptr));
+        }
+        sql = "UPDATE " + tsf + " SET " + set_clause;
+    }
 
     execute(sql, parameters);
 

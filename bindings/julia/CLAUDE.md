@@ -56,6 +56,13 @@ Project.toml      # Deps: Artifacts, CEnum, Dates, Libdl; julia 1.11 compat
   (`src/database_update.jl`) takes the C entry point as an argument, so `update_time_series_group!`,
   `update_vector_group!` and `update_set_group!` are one-line wrappers over it. Don't copy the
   `GC.@preserve` body per writer.
+- **`upsert_time_series_row!` carries the same per-cell NULL mask** as the three group writers above
+  (an unnamed column keeps its current value; `nothing` marshals as an explicit NULL) but is *not* a
+  fourth `_update_group_columns` call site: `quiver_database_upsert_time_series_row` has no
+  `row_count` parameter (it is always one row), so it cannot be passed through unmodified, and the
+  scalar-per-column shape differs from the vector-per-column shape `_update_group_columns` expects.
+  Its mask/type-dispatch chain is hand-rolled in parallel — keep it in sync by hand if either
+  changes.
 - **Library loader** (`src/c_api.jl`, emitted from `generator/prologue.jl`) is **relocatable** —
   this matters for downstream apps compiled with PackageCompiler (`create_app`), where a baked
   absolute path would freeze the build machine's depot and fail on the target. Split design:
