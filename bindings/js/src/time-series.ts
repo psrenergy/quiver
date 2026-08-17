@@ -219,7 +219,7 @@ Database.prototype.updateTimeSeriesGroupByLabel = function (
   );
 };
 
-function marshalRowColumns(row: Record<string, number | bigint | string>) {
+function marshalRowColumns(caller: string, row: Record<string, number | bigint | string>) {
   const entries = Object.entries(row);
   const columnCount = entries.length;
   const keepalive: Allocation[] = [];
@@ -244,9 +244,19 @@ function marshalRowColumns(row: Record<string, number | bigint | string>) {
       const p = allocNativeInt64([value]);
       keepalive.push(p);
       dataPtrs.push(p.ptr);
+    } else if (typeof value !== "number") {
+      // Not a fallthrough to FLOAT: the single-row C entry point carries no presence mask, so a
+      // null cell is genuinely inexpressible. Coercing it would store a real 0.0 (and undefined a
+      // NaN) where the caller meant "no value" -- pass the column through
+      // updateTimeSeriesGroup, which does carry a mask, to write NULL.
+      throw new QuiverError(
+        `Cannot ${caller}: column '${entries[c][0]}' has unsupported value type ${
+          value === null ? "null" : typeof value
+        }`,
+      );
     } else {
       typesDv.setInt32(c * 4, DATA_TYPE_FLOAT, true);
-      const p = allocNativeFloat64([value as number]);
+      const p = allocNativeFloat64([value]);
       keepalive.push(p);
       dataPtrs.push(p.ptr);
     }
@@ -270,7 +280,7 @@ Database.prototype.upsertTimeSeriesRow = function (
   const lib = getSymbols();
   const collBuf = toCString(collection);
   const grpBuf = toCString(group);
-  const marshalled = marshalRowColumns(row);
+  const marshalled = marshalRowColumns("upsertTimeSeriesRow", row);
 
   check(
     lib.quiver_database_upsert_time_series_row(
@@ -297,7 +307,7 @@ Database.prototype.upsertTimeSeriesRowByLabel = function (
   const lib = getSymbols();
   const collBuf = toCString(collection);
   const grpBuf = toCString(group);
-  const marshalled = marshalRowColumns(row);
+  const marshalled = marshalRowColumns("upsertTimeSeriesRowByLabel", row);
 
   check(
     lib.quiver_database_upsert_time_series_row_by_label(

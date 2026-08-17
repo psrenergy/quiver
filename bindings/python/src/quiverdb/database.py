@@ -192,8 +192,12 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         finally:
             lib.quiver_database_free_string(out[0])
 
-    def create_element(self, collection: str, **kwargs: object) -> int:
-        """Create a new element. Returns the new element ID."""
+    def create_element(self, collection: str, /, **kwargs: object) -> int:
+        """Create a new element. Returns the new element ID.
+
+        `collection` is positional-only, so every keyword goes to the element -- a column named
+        `collection` is passable.
+        """
         self._ensure_open()
         elem = Element()
         try:
@@ -215,7 +219,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
 
     # -- Write operations -------------------------------------------------------
 
-    def update_element(self, collection: str, id: int, **kwargs: object) -> None:
+    def update_element(self, collection: str, id: int, /, **kwargs: object) -> None:
         """Update an existing element's attributes."""
         self._ensure_open()
         elem = Element()
@@ -240,8 +244,12 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         lib = get_lib()
         check(lib.quiver_database_delete_element(self._ptr, collection.encode("utf-8"), id))
 
-    def update_element_by_label(self, collection: str, label: str, **kwargs: object) -> None:
-        """Label-addressed counterpart of update_element."""
+    def update_element_by_label(self, collection: str, label: str, /, **kwargs: object) -> None:
+        """Label-addressed counterpart of update_element.
+
+        `label` is positional-only, so `update_element_by_label("Items", "old", label="new")`
+        renames the element instead of colliding with the addressing parameter.
+        """
         self._ensure_open()
         elem = Element()
         try:
@@ -1614,7 +1622,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
             )
         )
 
-    def upsert_time_series_row(self, collection: str, group: str, id: int, **kwargs) -> None:
+    def upsert_time_series_row(self, collection: str, group: str, id: int, /, **kwargs) -> None:
         """Insert or upsert a single time series row for an element.
 
         Keyword arguments map column names to values. The dimension column (e.g.
@@ -1635,8 +1643,11 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
             )
         )
 
-    def upsert_time_series_row_by_label(self, collection: str, group: str, label: str, **kwargs) -> None:
-        """Label-addressed counterpart of upsert_time_series_row."""
+    def upsert_time_series_row_by_label(self, collection: str, group: str, label: str, /, **kwargs) -> None:
+        """Label-addressed counterpart of upsert_time_series_row.
+
+        The addressing parameters are positional-only so every keyword reaches the row.
+        """
         self._ensure_open()
         lib = get_lib()
         c_collection = collection.encode("utf-8")

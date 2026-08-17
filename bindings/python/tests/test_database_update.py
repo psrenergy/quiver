@@ -424,9 +424,22 @@ class TestUpdateByLabel:
     def test_update_element_by_label(self, collections_db: Database) -> None:
         collections_db.create_element("Configuration", label="cfg")
         elem_id = collections_db.create_element("Collection", label="Item1", some_integer=10)
-        collections_db.update_element_by_label("Collection", "Item1", some_integer=99)
-        value = collections_db.read_scalar_integer_by_id("Collection", "some_integer", elem_id)
-        assert value == 99
+        other_id = collections_db.create_element("Collection", label="Item2", some_integer=10)
+
+        collections_db.update_element_by_label("Collection", "Item2", some_integer=99)
+
+        assert collections_db.read_scalar_integer_by_id("Collection", "some_integer", other_id) == 99
+        assert collections_db.read_scalar_integer_by_id("Collection", "some_integer", elem_id) == 10
+
+    def test_update_element_by_label_can_set_the_label_column(self, collections_db: Database) -> None:
+        # `label` is a real column, so it must reach **kwargs rather than colliding with the
+        # addressing parameter -- renaming is the most natural use of an update-by-label.
+        collections_db.create_element("Configuration", label="cfg")
+        elem_id = collections_db.create_element("Collection", label="Old Name", some_integer=1)
+
+        collections_db.update_element_by_label("Collection", "Old Name", label="New Name")
+
+        assert collections_db.read_scalar_string_by_id("Collection", "label", elem_id) == "New Name"
 
     def test_update_element_by_label_nonexistent_raises(self, db: Database) -> None:
         db.create_element("Configuration", label="cfg")

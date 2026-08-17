@@ -1410,6 +1410,28 @@ TEST(Database, UpdateElementByLabelDoesNotResolveAcrossCollections) {
     }
 }
 
+// require_collection only checks that the table exists, and every table in the schema is accepted
+// (number_of_elements relies on that). A table with no `label` column must therefore be rejected
+// before the SELECT, or SQLite's raw "no such column: label" prepare error leaks through the C API
+// and every binding instead of the documented Pattern 1 message.
+TEST(Database, UpdateElementByLabelOnTableWithoutLabelColumn) {
+    LabelFixture f;
+
+    try {
+        f.db.update_element("Collection_vector_values", "Item 1", quiver::Element().set("value_int", int64_t{1}));
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), "Cannot update_element: column 'label' not found in table 'Collection_vector_values'");
+    }
+
+    try {
+        f.db.delete_element("Collection_vector_values", "Item 1");
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), "Cannot delete_element: column 'label' not found in table 'Collection_vector_values'");
+    }
+}
+
 TEST(Database, UpdateVectorGroupByLabel) {
     LabelFixture f;
 
