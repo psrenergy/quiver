@@ -65,8 +65,8 @@ QUIVER_C_API quiver_error_t quiver_database_update_element(quiver_database_t* db
                                                            const quiver_element_t* element);
 QUIVER_C_API quiver_error_t quiver_database_delete_element(quiver_database_t* db, const char* collection, int64_t id);
 QUIVER_C_API quiver_error_t quiver_database_delete_element_by_label(quiver_database_t* db,
-                                                                   const char* collection,
-                                                                   const char* label);
+                                                                    const char* collection,
+                                                                    const char* label);
 
 // Read scalar attributes. One entry per element (aligned with read_element_ids).
 // Numeric readers carry a parallel presence mask: out_mask[i] == 0 means SQL NULL and
