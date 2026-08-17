@@ -38,10 +38,16 @@ public:
 
     int64_t current_version() const;
 
-    // Element operations
+    // Create operations
     int64_t create_element(const std::string& collection, const Element& element);
+
+    // Update operations
     void update_element(const std::string& collection, int64_t id, const Element& element);
+    void update_element(const std::string& collection, const std::string& label, const Element& element);
+
+    // Delete operations
     void delete_element(const std::string& collection, int64_t id);
+    void delete_element(const std::string& collection, const std::string& label);
 
     // Read scalar attributes (all elements). One entry per element, aligned with read_element_ids;
     // a SQL NULL is std::nullopt (positional — never dropped).
