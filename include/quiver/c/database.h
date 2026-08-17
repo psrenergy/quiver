@@ -67,7 +67,6 @@ QUIVER_C_API quiver_error_t quiver_database_update_element(quiver_database_t* db
 
 QUIVER_C_API quiver_error_t quiver_database_delete_element(quiver_database_t* db, const char* collection, int64_t id);
 
-
 QUIVER_C_API quiver_error_t quiver_database_delete_element_by_label(quiver_database_t* db,
                                                                     const char* collection,
                                                                     const char* label);
