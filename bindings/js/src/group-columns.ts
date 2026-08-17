@@ -17,12 +17,17 @@ export type GroupColumns = Record<string, (number | string | null)[]>;
  * The parallel-array signature every columnar group update C function shares
  * (quiver_database_update_{time_series,vector,set}_group), including the _by_label forms where
  * the element is a label C string.
+ *
+ * Generic in the element type on purpose: an id symbol takes a `bigint` and a `_by_label` symbol
+ * takes a label buffer, and the two must not be mixed. A widened `bigint | Uint8Array` would let a
+ * caller pass `BigInt(id)` to a `_by_label` symbol, which Bun hands to a `pointer` slot — the C API
+ * then runs `std::string(label)` on address `<id>` and segfaults instead of throwing a QuiverError.
  */
-type ColumnUpdateFn = (
+type ColumnUpdateFn<E extends bigint | Uint8Array> = (
   db: NativePointer,
   collection: Uint8Array,
   group: Uint8Array,
-  element: bigint | Uint8Array,
+  element: E,
   names: Uint8Array | null,
   types: Uint8Array | null,
   data: Uint8Array | null,
@@ -38,13 +43,13 @@ type ColumnUpdateFn = (
  *
  * Pass `{}` (no columns) to clear the group.
  */
-export function updateGroupColumns(
+export function updateGroupColumns<E extends bigint | Uint8Array>(
   handle: NativePointer,
   caller: string,
-  update: ColumnUpdateFn,
+  update: ColumnUpdateFn<E>,
   collection: string,
   group: string,
-  element: bigint | Uint8Array,
+  element: E,
   data: GroupColumns,
 ): void {
   const collBuf = toCString(collection);

@@ -29,17 +29,24 @@ end
 # Group update functions (time series, vector, set)
 
 # Shared marshalling for the three column-oriented group writers: every column becomes a typed C
-# array plus a per-cell UInt8 mask where `nothing` is SQL NULL. `update` is the C entry point --
-# all three take the same parallel-array signature. `element` is the id or label overload's C
-# entry point argument (Int64 id or String label).
+# array plus a per-cell UInt8 mask where `nothing` is SQL NULL. All six C entry points take the
+# same parallel-array signature.
+#
+# Both entry points are passed in and this function picks between them by the element's type, so an
+# Int64 can never reach a `_by_label` symbol. That pairing is not merely a tidiness concern: Julia
+# converts an Integer to `Ptr{Cchar}` without complaint, so a mis-paired id would be handed to the
+# C API as a pointer to address `<id>` and `std::string(label)` would read arbitrary memory. The
+# reverse mis-pairing fails cleanly with a MethodError, so only this direction needs guarding.
 function _update_group_columns(
     db::Database,
-    update::Function,
+    update_by_id::Function,
+    update_by_label::Function,
     collection::String,
     group::String,
     element::Union{Int64, String},
     kwargs,
 )
+    update = element isa Int64 ? update_by_id : update_by_label
     # No columns = clear all rows for this element
     if isempty(kwargs)
         check(
@@ -151,17 +158,22 @@ function _update_group_columns(
     return nothing
 end
 
-function update_time_series_group!(db::Database, collection::String, group::String, id::Int64; kwargs...)
-    return _update_group_columns(db, C.quiver_database_update_time_series_group, collection, group, id, kwargs)
-end
-
-function update_time_series_group!(db::Database, collection::String, group::String, label::String; kwargs...)
+# The element is addressed by Int64 id or String label; _update_group_columns picks the matching
+# C entry point from the pair.
+function update_time_series_group!(
+    db::Database,
+    collection::String,
+    group::String,
+    element::Union{Int64, String};
+    kwargs...,
+)
     return _update_group_columns(
         db,
+        C.quiver_database_update_time_series_group,
         C.quiver_database_update_time_series_group_by_label,
         collection,
         group,
-        label,
+        element,
         kwargs,
     )
 end
@@ -170,33 +182,44 @@ end
 # Prefer this over routing the group's columns through update_element! when a column name is
 # shared by two groups of the collection (legal for foreign keys): (collection, group) names
 # exactly one table, a column name alone does not.
-function update_vector_group!(db::Database, collection::String, group::String, id::Int64; kwargs...)
-    return _update_group_columns(db, C.quiver_database_update_vector_group, collection, group, id, kwargs)
-end
-
-function update_vector_group!(db::Database, collection::String, group::String, label::String; kwargs...)
-    return _update_group_columns(db, C.quiver_database_update_vector_group_by_label, collection, group, label, kwargs)
+function update_vector_group!(db::Database, collection::String, group::String, element::Union{Int64, String}; kwargs...)
+    return _update_group_columns(
+        db,
+        C.quiver_database_update_vector_group,
+        C.quiver_database_update_vector_group_by_label,
+        collection,
+        group,
+        element,
+        kwargs,
+    )
 end
 
 # Set-group counterpart of update_vector_group!.
-function update_set_group!(db::Database, collection::String, group::String, id::Int64; kwargs...)
-    return _update_group_columns(db, C.quiver_database_update_set_group, collection, group, id, kwargs)
+function update_set_group!(db::Database, collection::String, group::String, element::Union{Int64, String}; kwargs...)
+    return _update_group_columns(
+        db,
+        C.quiver_database_update_set_group,
+        C.quiver_database_update_set_group_by_label,
+        collection,
+        group,
+        element,
+        kwargs,
+    )
 end
 
-function update_set_group!(db::Database, collection::String, group::String, label::String; kwargs...)
-    return _update_group_columns(db, C.quiver_database_update_set_group_by_label, collection, group, label, kwargs)
-end
-
-# Shared marshalling for upsert_time_series_row!'s scalar-per-column row. `upsert` is the C entry
-# point; `element` is the id or label overload's C entry point argument (Int64 id or String label).
+# Shared marshalling for upsert_time_series_row!'s scalar-per-column row. Both C entry points are
+# passed in and the element's type picks between them -- see _update_group_columns for why the
+# pairing must not be left to the call site.
 function _upsert_time_series_row(
     db::Database,
-    upsert::Function,
+    upsert_by_id::Function,
+    upsert_by_label::Function,
     collection::String,
     group::String,
     element::Union{Int64, String},
     kwargs,
 )
+    upsert = element isa Int64 ? upsert_by_id : upsert_by_label
     column_count = length(kwargs)
     col_names_strs = String[]
     col_types = Cint[]
@@ -262,17 +285,20 @@ function _upsert_time_series_row(
     return nothing
 end
 
-function upsert_time_series_row!(db::Database, collection::String, group::String, id::Int64; kwargs...)
-    return _upsert_time_series_row(db, C.quiver_database_upsert_time_series_row, collection, group, id, kwargs)
-end
-
-function upsert_time_series_row!(db::Database, collection::String, group::String, label::String; kwargs...)
+function upsert_time_series_row!(
+    db::Database,
+    collection::String,
+    group::String,
+    element::Union{Int64, String};
+    kwargs...,
+)
     return _upsert_time_series_row(
         db,
+        C.quiver_database_upsert_time_series_row,
         C.quiver_database_upsert_time_series_row_by_label,
         collection,
         group,
-        label,
+        element,
         kwargs,
     )
 end
