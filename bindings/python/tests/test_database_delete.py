@@ -51,3 +51,21 @@ class TestDeleteElement:
         db.create_element("Configuration", label="cfg")
         with pytest.raises(QuiverError, match="Element not found"):
             db.delete_element("Configuration", 999)
+
+
+class TestDeleteElementByLabel:
+    def test_delete_element_by_label(self, collections_db: Database) -> None:
+        collections_db.create_element("Configuration", label="cfg")
+        id1 = collections_db.create_element("Collection", label="Item1")
+        id2 = collections_db.create_element("Collection", label="Item2")
+        collections_db.delete_element_by_label("Collection", "Item1")
+        ids = collections_db.read_element_ids("Collection")
+        assert id1 not in ids
+        assert id2 in ids
+
+    def test_delete_nonexistent_label_raises(self, db: Database) -> None:
+        db.create_element("Configuration", label="cfg")
+        with pytest.raises(QuiverError, match="Element not found"):
+            db.delete_element_by_label("Configuration", "nope")
+        # Nothing was deleted
+        assert len(db.read_element_ids("Configuration")) == 1

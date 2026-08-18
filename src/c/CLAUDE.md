@@ -25,8 +25,8 @@ src/c/
   database.cpp            # Lifecycle: open, close, factory methods, describe
   database_options.h      # Option converters: convert_database_options, convert_csv_options
   database_create.cpp     # quiver_database_create_element
-  database_update.cpp     # quiver_database_update_element
-  database_delete.cpp     # quiver_database_delete_element
+  database_update.cpp     # quiver_database_update_element, quiver_database_update_element_by_label
+  database_delete.cpp     # quiver_database_delete_element, quiver_database_delete_element_by_label
   database_read.cpp       # All read operations + quiver_database_number_of_elements, + co-located free functions
   database_metadata.cpp   # Metadata get/list + co-located free functions
   database_query.cpp      # Query operations (plain and parameterized)

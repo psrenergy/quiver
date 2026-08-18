@@ -146,6 +146,39 @@ include("fixture.jl")
 
         Quiver.close!(db)
     end
+
+    @testset "Element By Label" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Config 1")
+        Quiver.create_element!(db, "Configuration"; label = "Config 2")
+        Quiver.create_element!(db, "Configuration"; label = "Config 3")
+
+        Quiver.delete_element_by_label!(db, "Configuration", "Config 2")
+
+        ids = Quiver.read_element_ids(db, "Configuration")
+        @test ids == [1, 3]
+
+        Quiver.close!(db)
+    end
+
+    @testset "Non-Existent Label Throws" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Config 1")
+
+        @test_throws Quiver.DatabaseException Quiver.delete_element_by_label!(
+            db, "Configuration", "Nonexistent")
+
+        # Nothing was deleted
+        ids = Quiver.read_element_ids(db, "Configuration")
+        @test length(ids) == 1
+        @test ids[1] == 1
+
+        Quiver.close!(db)
+    end
 end
 
 end

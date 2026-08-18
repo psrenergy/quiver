@@ -29,6 +29,33 @@ TEST_F(LuaRunnerTest, DeleteElementById) {
     EXPECT_EQ(ids[1], 3);
 }
 
+TEST_F(LuaRunnerTest, DeleteElementByLabel) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    db.create_element("Collection", quiver::Element().set("label", "Item 1"));
+    db.create_element("Collection", quiver::Element().set("label", "Item 2"));
+    db.create_element("Collection", quiver::Element().set("label", "Item 3"));
+
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(
+        local ids = db:read_element_ids("Collection")
+        assert(#ids == 3, "Expected 3 elements before delete")
+
+        db:delete_element_by_label("Collection", "Item 2")
+
+        ids = db:read_element_ids("Collection")
+        assert(#ids == 2, "Expected 2 elements after delete")
+    )");
+
+    // Verify from C++ side
+    auto ids = db.read_element_ids("Collection");
+    EXPECT_EQ(ids.size(), 2);
+    EXPECT_EQ(ids[0], 1);
+    EXPECT_EQ(ids[1], 3);
+}
+
 TEST_F(LuaRunnerTest, DeleteElementByIdWithVectorData) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
@@ -64,6 +91,24 @@ TEST_F(LuaRunnerTest, DeleteElementByIdNonExistent) {
 
     // Deleting a non-existent element throws "Element not found"
     expect_lua_error(lua, R"(db:delete_element("Collection", 999))", "Element not found");
+
+    // Original element is untouched
+    lua.run(R"(
+        local ids = db:read_element_ids("Collection")
+        assert(#ids == 1, "Original element should still exist")
+    )");
+}
+
+TEST_F(LuaRunnerTest, DeleteElementByLabelNonExistent) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    db.create_element("Collection", quiver::Element().set("label", "Item 1"));
+
+    quiver::LuaRunner lua(db);
+
+    // Deleting a non-existent label throws "Element not found"
+    expect_lua_error(lua, R"(db:delete_element_by_label("Collection", "Nope"))", "Element not found");
 
     // Original element is untouched
     lua.run(R"(
