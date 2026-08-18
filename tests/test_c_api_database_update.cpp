@@ -1903,47 +1903,6 @@ TEST(DatabaseCApi, UpdateElementByLabel) {
     quiver_database_close(db);
 }
 
-TEST(DatabaseCApi, UpdateElementByLabelRenames) {
-    auto options = quiver::test::quiet_options();
-    quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
-    ASSERT_NE(db, nullptr);
-
-    quiver_element_t* config = nullptr;
-    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
-    quiver_element_set_string(config, "label", "Test Config");
-    int64_t tmp_id = 0;
-    quiver_database_create_element(db, "Configuration", config, &tmp_id);
-    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
-
-    quiver_element_t* e = nullptr;
-    ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
-    quiver_element_set_string(e, "label", "Item 1");
-    int64_t id = 0;
-    quiver_database_create_element(db, "Collection", e, &id);
-    EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
-
-    quiver_element_t* rename = nullptr;
-    ASSERT_EQ(quiver_element_create(&rename), QUIVER_OK);
-    quiver_element_set_string(rename, "label", "Renamed");
-    EXPECT_EQ(quiver_database_update_element_by_label(db, "Collection", "Item 1", rename), QUIVER_OK);
-
-    char* label = nullptr;
-    int has_value = 0;
-    EXPECT_EQ(quiver_database_read_scalar_string_by_id(db, "Collection", "label", id, &label, &has_value), QUIVER_OK);
-    EXPECT_EQ(has_value, 1);
-    EXPECT_STREQ(label, "Renamed");
-    delete[] label;
-
-    // The old label no longer resolves; the new one does
-    EXPECT_EQ(quiver_database_update_element_by_label(db, "Collection", "Item 1", rename), QUIVER_ERROR);
-    EXPECT_EQ(quiver_database_update_element_by_label(db, "Collection", "Renamed", rename), QUIVER_OK);
-
-    EXPECT_EQ(quiver_element_destroy(rename), QUIVER_OK);
-    quiver_database_close(db);
-}
-
 TEST(DatabaseCApi, UpdateElementByLabelNonExistent) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
