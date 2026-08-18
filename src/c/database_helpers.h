@@ -60,7 +60,6 @@ quiver_error_t read_scalars_masked_impl(const std::vector<std::optional<T>>& val
 // The same value + presence-mask form for a time-series-row result, whose values arrive as a
 // Value variant rather than an optional: an element with no value at or before the queried
 // date_time is masked out. Untyped out-param because the caller dispatches on out_data_type.
-// The arrays are released only after the fill loop, so neither leaks if the other throws.
 template <typename T>
 void marshal_row_values_masked(const std::vector<quiver::Value>& values, void** out_values, uint8_t** out_mask) {
     auto data = std::make_unique<T[]>(values.size());

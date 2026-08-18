@@ -658,7 +658,7 @@ function read_time_series_row(db::Database, collection::String, group::String, a
         elseif data_type == Cint(C.QUIVER_DATA_TYPE_STRING) || data_type == Cint(C.QUIVER_DATA_TYPE_DATE_TIME)
             return Optional{String}[]
         end
-        return Any[]
+        throw(ArgumentError("Unsupported data type $(data_type) for attribute '$attribute'"))
     end
 
     if data_type == Cint(C.QUIVER_DATA_TYPE_INTEGER)

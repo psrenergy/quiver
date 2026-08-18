@@ -5,7 +5,7 @@ All notable changes to Quiver are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entries that require
 callers to change something are prefixed **BREAKING** and say what to do.
 
-## [0.10.2] — unreleased
+## [0.11.0] — unreleased
 
 ### Added
 
@@ -19,6 +19,22 @@ callers to change something are prefixed **BREAKING** and say what to do.
   '<c>'` and deletes nothing (no silent no-op, matching `delete_element` / `update_element`).
   Naming a table with no `label` column throws `Cannot delete_element_by_label: column 'label' not
   found in table '<t>'`.
+
+### Changed
+
+- **BREAKING — `read_time_series_row()` reports absence as null, not as a sentinel.** An element
+  with no value at or before `date_time` used to come back as `0` for an INTEGER attribute and
+  `NaN` for a REAL one, so a legitimately stored `0` was indistinguishable from "no data". Absence
+  now travels out of band, as a presence mask alongside the values. C++ and Lua are unchanged — the
+  core always returned a null `Value`, and Lua always returned `nil`.
+
+  *Adapt:* **Julia** — `read_time_series_row` returns `Vector{Optional{Int64}}` /
+  `Vector{Optional{Float64}}` instead of a concrete `Vector{Int64}` / `Vector{Float64}`; replace
+  `isnan(v)` absence checks with `isnothing(v)`. Absence is a property of the query, not of the
+  column, so this holds for `NOT NULL` columns too and there is no concrete-vector fast path.
+  **Python, Dart and JS** keep their return types and now produce `None`/`null` where they
+  previously produced the sentinel. **Direct C API callers** must pass the new `uint8_t** out_mask`
+  argument and free it with `quiver_database_free_mask`.
 
 ## [0.10.1] — 2026-08-14
 
@@ -67,20 +83,6 @@ are functionally identical to 0.10.0.
   factory constructors document were previously not reachable from outside the package.
 
 ### Changed
-
-- **BREAKING — `read_time_series_row()` reports absence as null, not as a sentinel.** An element
-  with no value at or before `date_time` used to come back as `0` for an INTEGER attribute and
-  `NaN` for a REAL one, so a legitimately stored `0` was indistinguishable from "no data". Absence
-  now travels out of band, as a presence mask alongside the values. C++ and Lua are unchanged — the
-  core always returned a null `Value`, and Lua always returned `nil`.
-
-  *Adapt:* **Julia** — `read_time_series_row` returns `Vector{Optional{Int64}}` /
-  `Vector{Optional{Float64}}` instead of a concrete `Vector{Int64}` / `Vector{Float64}`; replace
-  `isnan(v)` absence checks with `isnothing(v)`. Absence is a property of the query, not of the
-  column, so this holds for `NOT NULL` columns too and there is no concrete-vector fast path.
-  **Python, Dart and JS** keep their return types and now produce `None`/`null` where they
-  previously produced the sentinel. **Direct C API callers** must pass the new `uint8_t** out_mask`
-  argument and free it with `quiver_database_free_mask`.
 
 - **BREAKING — `export_csv()` writes foreign keys as labels, not ids.** A foreign-key column is
   now exported as the referenced element's `label`, **including self-references** — `import_csv()`
@@ -166,6 +168,6 @@ are functionally identical to 0.10.0.
   `read_time_series_group` emits for a NULL STRING cell — so feeding a read result back with the
   mask stripped was UB. A NULL entry, or a NULL per-column data pointer, is now SQL NULL.
 
-[0.10.2]: https://github.com/psrenergy/quiver/compare/v0.10.1...v0.10.2
+[0.11.0]: https://github.com/psrenergy/quiver/compare/v0.10.1...v0.11.0
 [0.10.1]: https://github.com/psrenergy/quiver/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/psrenergy/quiver/compare/v0.9.16...v0.10.0
