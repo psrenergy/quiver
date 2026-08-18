@@ -1478,9 +1478,8 @@ TEST(Database, UpdateElementByLabelOnTableWithoutLabelColumn) {
     }
 }
 
-// The label form is a one-line delegation (the root _by_label rule), so everything downstream of
-// label resolution reports update_element - the operation that actually validated. Deliberate:
-// threading the caller's name through would mean re-shaping the id form.
+// resolve_label owns the lookup; everything past it is update_element's, so the element
+// validation reports "Cannot update_element" - the operation that validated.
 TEST(Database, UpdateElementByLabelValidationNamesTheIdForm) {
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
