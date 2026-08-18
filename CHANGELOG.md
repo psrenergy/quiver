@@ -9,6 +9,24 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ### Added
 
+- **`update_element_by_label(collection, label, element)`.** Updates an element addressed by its
+  `label` instead of its id, the label-addressed counterpart of `update_element`. It resolves the
+  label and then delegates to `update_element`, so the attributes written, the FK-label
+  resolution, and the group-replacement semantics are identical. Available in **every layer**:
+  `update_element_by_label` (C++, Python, Lua),
+  `quiver_database_update_element_by_label` (C API), `update_element_by_label!` (Julia),
+  `updateElementByLabel` / `updateElementFromBuilderByLabel` (Dart), `updateElementByLabel` (JS).
+
+  Passing `label` among the attributes **renames** the element, after which only the new label
+  resolves. A label is unique **per collection, not per database**: one naming an element of a
+  different collection does not resolve. A miss throws `Element not found: label '<label>' in
+  collection '<c>'` and writes nothing; naming a table with no `label` column throws `Cannot
+  update_element_by_label: column 'label' not found in table '<t>'`. Because the label form
+  delegates, failures that validate the *element* (an empty element, a type mismatch) report
+  `Cannot update_element: ...` — the operation that actually validated. Python's `collection` and
+  `label` are positional-only (`/`) so that `label=` in `**kwargs` renames rather than colliding
+  with the parameter.
+
 - **`delete_element_by_label(collection, label)`.** Deletes an element addressed by its `label`
   instead of its id, for callers that already know the name and would otherwise round-trip through
   a query to find it. It resolves the label and then delegates to `delete_element`, so `ON DELETE

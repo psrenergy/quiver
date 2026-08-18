@@ -12,6 +12,20 @@ function update_element!(db::Database, collection::String, id::Int64; kwargs...)
     return nothing
 end
 
+function update_element_by_label!(db::Database, collection::String, label::String, e::Element)
+    check(C.quiver_database_update_element_by_label(db.ptr, collection, label, e.ptr))
+    return nothing
+end
+
+function update_element_by_label!(db::Database, collection::String, label::String; kwargs...)
+    e = Element()
+    for (k, v) in kwargs
+        e[String(k)] = v
+    end
+    update_element_by_label!(db, collection, label, e)
+    return nothing
+end
+
 # Group update functions (time series, vector, set)
 
 # Shared marshalling for the three column-oriented group writers: every column becomes a typed C

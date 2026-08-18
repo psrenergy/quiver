@@ -42,6 +42,33 @@ class TestUpdateElement:
         assert abs(float_val - 2.5) < 1e-9
 
 
+class TestUpdateElementByLabel:
+    def test_update_element_by_label(self, collections_db: Database) -> None:
+        collections_db.create_element("Configuration", label="cfg")
+        id1 = collections_db.create_element("Collection", label="Item1", some_integer=10)
+        id2 = collections_db.create_element("Collection", label="Item2", some_integer=20)
+        collections_db.update_element_by_label("Collection", "Item1", some_integer=99)
+        assert collections_db.read_scalar_integer_by_id("Collection", "some_integer", id1) == 99
+        # The sibling element is untouched
+        assert collections_db.read_scalar_integer_by_id("Collection", "some_integer", id2) == 20
+
+    def test_rename_through_the_label_form(self, collections_db: Database) -> None:
+        """`label=` in kwargs renames; the positional-only marker keeps it from colliding."""
+        collections_db.create_element("Configuration", label="cfg")
+        elem_id = collections_db.create_element("Collection", label="Item1")
+        collections_db.update_element_by_label("Collection", "Item1", label="Renamed")
+        assert collections_db.read_scalar_string_by_id("Collection", "label", elem_id) == "Renamed"
+        # The old label no longer resolves; the new one does
+        with pytest.raises(QuiverError, match="Element not found"):
+            collections_db.update_element_by_label("Collection", "Item1", some_integer=5)
+        collections_db.update_element_by_label("Collection", "Renamed", some_integer=5)
+
+    def test_update_nonexistent_label_raises(self, collections_db: Database) -> None:
+        collections_db.create_element("Configuration", label="cfg")
+        with pytest.raises(QuiverError, match="Element not found"):
+            collections_db.update_element_by_label("Collection", "nope", some_integer=5)
+
+
 class TestUpdateVector:
     def test_update_vector_integers(self, collections_db: Database) -> None:
         collections_db.create_element("Configuration", label="cfg")

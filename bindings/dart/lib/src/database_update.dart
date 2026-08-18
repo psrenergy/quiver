@@ -36,6 +36,38 @@ extension DatabaseUpdate on Database {
     }
   }
 
+  /// Label-addressed counterpart of [updateElement].
+  void updateElementByLabel(String collection, String label, Map<String, Object?> values) {
+    _ensureNotClosed();
+    final element = Element();
+    try {
+      for (final entry in values.entries) {
+        element.set(entry.key, entry.value);
+      }
+      updateElementFromBuilderByLabel(collection, label, element);
+    } finally {
+      element.dispose();
+    }
+  }
+
+  /// Label-addressed counterpart of [updateElementFromBuilder].
+  void updateElementFromBuilderByLabel(String collection, String label, Element element) {
+    _ensureNotClosed();
+    final arena = Arena();
+    try {
+      check(
+        bindings.quiver_database_update_element_by_label(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          label.toNativeUtf8(allocator: arena).cast(),
+          element.ptr.cast(),
+        ),
+      );
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
   // ==========================================================================
   // Update vector / set groups
   // ==========================================================================

@@ -503,6 +503,8 @@ The rules are mechanical: given any C++ method name, you can derive the equivale
 | Create | `create_element()` | `quiver_database_create_element()` | `create_element!()` | `createElement()` | `create_element()` |
 | Read scalar | `read_scalar_integers()` | `quiver_database_read_scalar_integers()` | `read_scalar_integers()` | `readScalarIntegers()` | `read_scalar_integers()` |
 | Read by Id | `read_scalar_integer_by_id()` | `quiver_database_read_scalar_integer_by_id()` | `read_scalar_integer_by_id()` | `readScalarIntegerById()` | N/A (use composites) |
+| Update | `update_element()` | `quiver_database_update_element()` | `update_element!()` | `updateElement()` | `update_element()` |
+| Update by label | `update_element_by_label()` | `quiver_database_update_element_by_label()` | `update_element_by_label!()` | `updateElementByLabel()` | `update_element_by_label()` |
 | Delete | `delete_element()` | `quiver_database_delete_element()` | `delete_element!()` | `deleteElement()` | `delete_element()` |
 | Delete by label | `delete_element_by_label()` | `quiver_database_delete_element_by_label()` | `delete_element_by_label!()` | `deleteElementByLabel()` | `delete_element_by_label()` |
 | Element count | `number_of_elements()` | `quiver_database_number_of_elements()` | `number_of_elements()` | `numberOfElements()` | `number_of_elements()` |

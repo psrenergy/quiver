@@ -396,6 +396,41 @@ class QuiverDatabaseBindings {
         int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, int, ffi.Pointer<quiver_element_t>)
       >();
 
+  int quiver_database_update_element_by_label(
+    ffi.Pointer<quiver_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Char> label,
+    ffi.Pointer<quiver_element_t> element,
+  ) {
+    return _quiver_database_update_element_by_label(
+      db,
+      collection,
+      label,
+      element,
+    );
+  }
+
+  late final _quiver_database_update_element_by_labelPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<quiver_element_t>,
+          )
+        >
+      >('quiver_database_update_element_by_label');
+  late final _quiver_database_update_element_by_label = _quiver_database_update_element_by_labelPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<quiver_element_t>,
+        )
+      >();
+
   int quiver_database_delete_element(
     ffi.Pointer<quiver_database_t> db,
     ffi.Pointer<ffi.Char> collection,

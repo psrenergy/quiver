@@ -203,6 +203,51 @@ include("fixture.jl")
         Quiver.close!(db)
     end
 
+    @testset "Element By Label" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Config 1", integer_attribute = 100)
+        Quiver.create_element!(db, "Configuration"; label = "Config 2", integer_attribute = 200)
+
+        # The positional label addresses the row, a `label` kwarg writes the attribute - so this renames.
+        Quiver.update_element_by_label!(db, "Configuration", "Config 1"; integer_attribute = 999, label = "Renamed")
+
+        @test Quiver.read_scalar_integer_by_id(db, "Configuration", "integer_attribute", 1) == 999
+        @test Quiver.read_scalar_string_by_id(db, "Configuration", "label", 1) == "Renamed"
+        # The sibling element is untouched
+        @test Quiver.read_scalar_integer_by_id(db, "Configuration", "integer_attribute", 2) == 200
+
+        Quiver.close!(db)
+    end
+
+    @testset "Element By Label Using Element Builder" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Config 1", integer_attribute = 100)
+
+        e = Quiver.Element()
+        e["integer_attribute"] = Int64(777)
+        Quiver.update_element_by_label!(db, "Configuration", "Config 1", e)
+
+        @test Quiver.read_scalar_integer_by_id(db, "Configuration", "integer_attribute", 1) == 777
+
+        Quiver.close!(db)
+    end
+
+    @testset "Element By Label Non-Existent" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Config 1")
+
+        @test_throws Quiver.DatabaseException Quiver.update_element_by_label!(
+            db, "Configuration", "Nonexistent"; integer_attribute = 5)
+
+        Quiver.close!(db)
+    end
+
     # Error handling tests
 
     @testset "Invalid Collection" begin

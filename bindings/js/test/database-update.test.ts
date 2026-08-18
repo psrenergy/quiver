@@ -97,6 +97,41 @@ describe("updateElement", () => {
   });
 });
 
+describe("updateElementByLabel", () => {
+  test("updates by label and leaves siblings alone", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      const id1 = db.createElement("AllTypes", { label: "Item1", some_integer: 42 });
+      const id2 = db.createElement("AllTypes", { label: "Item2", some_integer: 7 });
+      db.updateElementByLabel("AllTypes", "Item1", { some_integer: 99 });
+      expect(db.readScalarIntegerById("AllTypes", "some_integer", id1)).toEqual(99);
+      expect(db.readScalarIntegerById("AllTypes", "some_integer", id2)).toEqual(7);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("throws on non-existent label", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      db.createElement("AllTypes", { label: "Item1", some_integer: 42 });
+      expect(() => db.updateElementByLabel("AllTypes", "Nope", { some_integer: 5 })).toThrow(
+        /Element not found/,
+      );
+    } finally {
+      db.close();
+    }
+  });
+
+  test("throws on closed database", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    db.close();
+    expect(() => db.updateElementByLabel("AllTypes", "Item1", { some_integer: 42 })).toThrow(
+      QuiverError,
+    );
+  });
+});
+
 const RELATIONS_SCHEMA_PATH = join(
   __dirname,
   "..",

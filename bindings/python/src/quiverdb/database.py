@@ -234,6 +234,29 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         finally:
             elem.destroy()
 
+    def update_element_by_label(self, collection: str, label: str, /, **kwargs: object) -> None:
+        """Update an existing element's attributes, addressed by label.
+
+        `collection` and `label` are positional-only so that `label="New"` in kwargs
+        renames the element instead of colliding with this parameter.
+        """
+        self._ensure_open()
+        elem = Element()
+        try:
+            for name, value in kwargs.items():
+                elem.set(name, value)
+            lib = get_lib()
+            check(
+                lib.quiver_database_update_element_by_label(
+                    self._ptr,
+                    collection.encode("utf-8"),
+                    label.encode("utf-8"),
+                    elem._ptr,
+                )
+            )
+        finally:
+            elem.destroy()
+
     def delete_element(self, collection: str, id: int) -> None:
         """Delete an element by ID."""
         self._ensure_open()

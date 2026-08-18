@@ -58,6 +58,7 @@ const elementSymbols = {
 const crudSymbols = {
   quiver_database_create_element: { args: [P, BUF, P, P], returns: I32 },
   quiver_database_update_element: { args: [P, BUF, I64, P], returns: I32 },
+  quiver_database_update_element_by_label: { args: [P, BUF, BUF, P], returns: I32 },
   quiver_database_delete_element: { args: [P, BUF, I64], returns: I32 },
   quiver_database_delete_element_by_label: { args: [P, BUF, BUF], returns: I32 },
 } as const;

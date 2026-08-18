@@ -86,6 +86,7 @@ export class Database {
   // --- Element CRUD (implemented in create.ts) ---
   declare createElement: (collection: string, data: ElementData) => number;
   declare updateElement: (collection: string, id: number, data: ElementData) => void;
+  declare updateElementByLabel: (collection: string, label: string, data: ElementData) => void;
   declare deleteElement: (collection: string, id: number) => void;
   declare deleteElementByLabel: (collection: string, label: string) => void;
 
