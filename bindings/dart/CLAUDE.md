@@ -51,12 +51,9 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   mask into `List<int?>`/`List<double?>` (mask 0 → `null`); `readScalarStrings` returns `List<String?>`,
   null-guarding the pointer before `toDartString`. `bindings.dart` carries the mask arg +
   `quiver_database_free_mask` (regenerate via ffigen; clear `.dart_tool` caches on C-API changes).
-- **`readTimeSeriesRow` absence mask**: the row reader consumes the same `Pointer<Uint8>` protocol —
-  `mask[i] == 0` means the element has no value at or before `dateTime` and the numeric slot is a
-  placeholder. STRING/DATE_TIME get a `nullptr` mask (absence is already a `nullptr` entry), so only
-  the two numeric branches call `quiver_database_free_mask`. Its `out_mask` parameter is another
-  hand-add to `bindings.dart` (same reason as above): all three spots — wrapper, `NativeFunction`
-  typedef, `asFunction` typedef — must be edited together.
+- **`readTimeSeriesRow` absence mask**: same `Pointer<Uint8>` protocol as above, numeric columns
+  only — STRING/DATE_TIME get a `nullptr` mask, so only those two branches free it. ffigen carries
+  the `out_mask` arg into `bindings.dart`.
 - **`LuaRunner.run` owns its result**: `quiver_lua_runner_run` takes a `char** out_result` whose JSON
   string is C-heap allocated, so the `Arena` cannot own it — it is freed with
   `quiver_lua_runner_free_string` (*not* `quiver_database_free_string`) in its own nested `finally`,

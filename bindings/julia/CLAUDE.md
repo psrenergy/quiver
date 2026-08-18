@@ -52,10 +52,9 @@ Project.toml      # Deps: Artifacts, CEnum, Dates, Libdl; julia 1.11 compat
   `Base.nonnothingtype(eltype(v))` with the all-`nothing` branch (`Union{}`) first; it always passes
   a per-column `UInt8` mask (added to the `GC.@preserve` set). An all-`nothing` column marshals as a
   FLOAT tag + zeroed placeholder.
-- **`read_time_series_row` is `Vector{Optional{T}}` for every type** — numeric absence comes from a
-  flat `Ptr{UInt8}` mask (freed with `quiver_database_free_mask`), strings from a `C_NULL` guard.
-  Do **not** add the bulk-scalar `not_null` fast path: absence here is a property of the query, not
-  of the column (root design decision).
+- **`read_time_series_row` is `Vector{Optional{T}}` for every type** — numeric absence from a flat
+  `Ptr{UInt8}` mask, strings from a `C_NULL` guard. Do **not** add the bulk-scalar `not_null` fast
+  path: absence here is a property of the query, not of the column (root design decision).
 - **One marshaller for all three group writers**: `_update_group_columns(db, update, ...)`
   (`src/database_update.jl`) takes the C entry point as an argument, so `update_time_series_group!`,
   `update_vector_group!` and `update_set_group!` are one-line wrappers over it. Don't copy the

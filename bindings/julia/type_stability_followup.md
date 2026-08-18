@@ -28,14 +28,6 @@ Note the cross-binding decision (root `CLAUDE.md`): time-series group data is co
 group reads currently return `Vector{Union{T,Nothing}}` always — update that design note if this
 lands, and keep Python/Dart/JS on their static nullable surface.
 
-### `read_time_series_row`
-
-It used to return `Vector{Int64}` / `Vector{Float64}` / `Vector{Optional{String}}` depending on the
-runtime `data_type`, because the C API substituted `0`/NaN sentinels for absence. It now returns
-`Vector{Optional{T}}` for every type, keyed on the group column's data type. Its optional is
-**inherent** — absence is a property of the query ("last non-null value at or before `date_time`"),
-not of the column — so there is no `not_null` fast path to add here.
-
 ### `read_scalar_*_by_id` — leave optional (contract)
 
 `read_scalar_integer_by_id` / `_float_by_id` / `_string_by_id` / `_date_time_by_id` return

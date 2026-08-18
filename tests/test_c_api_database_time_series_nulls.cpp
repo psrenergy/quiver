@@ -473,6 +473,16 @@ TEST(DatabaseCApi, ReadTimeSeriesRowNumericAbsenceMask) {
     const void* data[] = {dts, temps};
     ASSERT_EQ(quiver_database_upsert_time_series_row(db, "Sensor", "readings", id1, names, types, data, 2), QUIVER_OK);
 
+    // A later row stores a literal 0 - the value the old INTEGER sentinel used for absence
+    const char* counter_names[] = {"date_time", "counter"};
+    int counter_types[] = {QUIVER_DATA_TYPE_STRING, QUIVER_DATA_TYPE_INTEGER};
+    const char* counter_dts[] = {"2024-01-02"};
+    int64_t counters[] = {0};
+    const void* counter_data[] = {counter_dts, counters};
+    ASSERT_EQ(quiver_database_upsert_time_series_row(
+                  db, "Sensor", "readings", id1, counter_names, counter_types, counter_data, 2),
+              QUIVER_OK);
+
     int out_type = 0;
     void* out_values = nullptr;
     uint8_t* out_mask = nullptr;
@@ -500,6 +510,19 @@ TEST(DatabaseCApi, ReadTimeSeriesRowNumericAbsenceMask) {
     ASSERT_NE(out_mask, nullptr);
     EXPECT_EQ(out_mask[0], 0);
     EXPECT_EQ(out_mask[1], 0);
+    quiver_database_free_integer_array(static_cast<int64_t*>(out_values));
+    quiver_database_free_mask(out_mask);
+
+    // counter at the row that stores 0: present for Sensor 1, still absent for Sensor 2. A stored
+    // 0 and absence share the data slot, so only the mask separates them.
+    ASSERT_EQ(quiver_database_read_time_series_row(
+                  db, "Sensor", "readings", "counter", "2024-01-02", &out_type, &out_values, &out_mask, &out_count),
+              QUIVER_OK);
+    ASSERT_EQ(out_count, 2);
+    ASSERT_NE(out_mask, nullptr);
+    EXPECT_EQ(out_mask[0], 1);
+    EXPECT_EQ(out_mask[1], 0);
+    EXPECT_EQ(static_cast<int64_t*>(out_values)[0], 0);
     quiver_database_free_integer_array(static_cast<int64_t*>(out_values));
     quiver_database_free_mask(out_mask);
 

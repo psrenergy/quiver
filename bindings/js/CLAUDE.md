@@ -73,10 +73,9 @@ biome.json        # Lint/format config
   `Number()` a masked slot (would turn NULL into 0). `readScalarStrings` reads pointer-by-pointer with
   `read.ptr` + a NULL guard → `(string | null)[]` (not `decodeStringArray`). `loader.ts` carries the
   mask arg on the two numeric symbols + `quiver_database_free_mask` (hand-maintained, no generator).
-- **`readTimeSeriesRow` absence mask**: the row reader consumes the same `uint8_t*` protocol —
-  `mask[i] === 0` means the element has no value at or before `dateTime` and the numeric slot is a
-  placeholder, so gate on the mask and never `Number()` it. `STRING`/`DATE_TIME` get a NULL mask
-  (absence is already a NULL `char*`), so only the two numeric branches free it.
+- **`readTimeSeriesRow` absence mask**: same `uint8_t*` protocol as above, numeric columns only —
+  gate on the mask, never `Number()` a placeholder slot. `STRING`/`DATE_TIME` get a NULL mask, so
+  only those two branches free it.
 - **`LuaRunner.run` owns its result**: `quiver_lua_runner_run` takes a `char** out_result` and the
   JSON string must be freed with `quiver_lua_runner_free_string` — *not* `quiver_database_free_string`
   (both are in `loader.ts`, hand-maintained). `decodeStringFromBuf` returns `""` for a NULL pointer,
