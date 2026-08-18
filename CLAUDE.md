@@ -390,9 +390,16 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
 - Transaction control: `begin_transaction()`, `commit()`, `rollback()`, `in_transaction()`
 - Dry runs: `begin_dry_run()`, `end_dry_run()`, `in_dry_run()` — one transaction that is always rolled back; while active the three transaction methods above are absorbed (no-ops) so nested callers compose. See the design decision below.
 - CRUD: `create_element(collection, element)`, `update_element`, `delete_element`,
-  `delete_element_by_label(collection, label)` — the label form resolves the label within the
-  collection (`Impl::resolve_label`) and delegates to `delete_element`, so CASCADE and the
-  Pattern 2 miss are the id form's. A label is unique per collection, not per database.
+  `update_element_by_label(collection, label, element)`,
+  `delete_element_by_label(collection, label)`
+- Label-addressed writes: each `_by_label` form resolves the label within the collection
+  (`Impl::resolve_label`) and delegates to its id counterpart, so everything past the lookup —
+  CASCADE, the attribute writes, the validation — is the id form's. A label is unique per
+  collection, not per database. Errors name the step that raised them: the lookup owns the
+  Pattern 2 miss (`Element not found: label 'x' in collection 'C'`), while the delegated write
+  names the id form (`Cannot update_element: ...`). Passing `label` among the attributes to
+  `update_element_by_label` renames the element; the lookup has already run, so the write lands
+  on the resolved id.
 - Element count: `number_of_elements(collection)` returns the current row count from the
   collection's main table (`COUNT(*)`), not its maximum ID or group-row count. Any table in the
   schema is accepted, so naming a group table reports that table's own row count.

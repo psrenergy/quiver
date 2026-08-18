@@ -1345,17 +1345,19 @@ TEST(Database, UpdateElementByLabel) {
     db.create_element("Configuration", config);
 
     quiver::Element e;
-    e.set("label", std::string("Item 1")).set("some_integer", int64_t{100});
+    e.set("label", std::string("Item 1")).set("some_integer", int64_t{100}).set("tag", std::vector<std::string>{"old"});
     int64_t id = db.create_element("Collection", e);
 
     // A second element so the assertions below cannot pass vacuously: with only one element an
     // update that ignored the label entirely would still hit the right row.
     quiver::Element other;
-    other.set("label", std::string("Item 2")).set("some_integer", int64_t{200});
+    other.set("label", std::string("Item 2"))
+        .set("some_integer", int64_t{200})
+        .set("tag", std::vector<std::string>{"keep"});
     int64_t other_id = db.create_element("Collection", other);
 
     quiver::Element update;
-    update.set("some_integer", int64_t{999});
+    update.set("some_integer", int64_t{999}).set("tag", std::vector<std::string>{"alpha", "beta"});
     db.update_element_by_label("Collection", "Item 1", update);
 
     auto value = db.read_scalar_integer_by_id("Collection", "some_integer", id);
@@ -1371,64 +1373,12 @@ TEST(Database, UpdateElementByLabel) {
     auto label = db.read_scalar_string_by_id("Collection", "label", id);
     ASSERT_TRUE(label.has_value());
     EXPECT_EQ(*label, "Item 1");
-}
 
-TEST(Database, UpdateElementByLabelMatchesIdForm) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
-
-    quiver::Element config;
-    config.set("label", std::string("Test Config"));
-    db.create_element("Configuration", config);
-
-    quiver::Element e1;
-    e1.set("label", std::string("Item 1"));
-    int64_t id1 = db.create_element("Collection", e1);
-
-    quiver::Element e2;
-    e2.set("label", std::string("Item 2"));
-    int64_t id2 = db.create_element("Collection", e2);
-
-    // One updated by id, one by label - same outcome
-    quiver::Element by_id;
-    by_id.set("some_integer", int64_t{111});
-    db.update_element("Collection", id1, by_id);
-
-    quiver::Element by_label;
-    by_label.set("some_integer", int64_t{222});
-    db.update_element_by_label("Collection", "Item 2", by_label);
-
-    EXPECT_EQ(*db.read_scalar_integer_by_id("Collection", "some_integer", id1), 111);
-    EXPECT_EQ(*db.read_scalar_integer_by_id("Collection", "some_integer", id2), 222);
-}
-
-// The label form delegates rather than re-implementing the write, so array attributes route to
-// their group tables exactly as they do by id - including replace-on-update.
-TEST(Database, UpdateElementByLabelWithArrays) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
-
-    quiver::Element config;
-    config.set("label", std::string("Test Config"));
-    db.create_element("Configuration", config);
-
-    quiver::Element e;
-    e.set("label", std::string("Item 1")).set("tag", std::vector<std::string>{"old"});
-    int64_t id = db.create_element("Collection", e);
-
-    quiver::Element other;
-    other.set("label", std::string("Item 2")).set("tag", std::vector<std::string>{"keep"});
-    int64_t other_id = db.create_element("Collection", other);
-
-    quiver::Element update;
-    update.set("tag", std::vector<std::string>{"alpha", "beta"});
-    db.update_element_by_label("Collection", "Item 1", update);
-
+    // Arrays route to their group tables through the delegation, replacing the existing rows -
+    // and only the labelled element's.
     auto tags = db.read_set_strings_by_id("Collection", "tag", id);
     std::sort(tags.begin(), tags.end());
     EXPECT_EQ(tags, (std::vector<std::string>{"alpha", "beta"}));
-
-    // The other element's rows are untouched
     EXPECT_EQ(db.read_set_strings_by_id("Collection", "tag", other_id), (std::vector<std::string>{"keep"}));
 }
 
@@ -1494,25 +1444,9 @@ TEST(Database, UpdateElementByLabelNonExistent) {
 
     // Nothing was written
     EXPECT_EQ(*db.read_scalar_integer_by_id("Collection", "some_integer", id), 100);
-}
 
-// A label is unique per collection, not per database: one naming an element of another
-// collection must not resolve here.
-TEST(Database, UpdateElementByLabelDoesNotResolveAcrossCollections) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
-
-    quiver::Element config;
-    config.set("label", std::string("Test Config"));
-    db.create_element("Configuration", config);
-
-    quiver::Element e;
-    e.set("label", std::string("Item 1"));
-    db.create_element("Collection", e);
-
-    quiver::Element update;
-    update.set("some_integer", int64_t{999});
-
+    // A label is unique per collection, not per database: one naming an element of another
+    // collection must not resolve here.
     try {
         db.update_element_by_label("Collection", "Test Config", update);
         FAIL() << "expected a throw";
@@ -1574,14 +1508,5 @@ TEST(Database, UpdateElementByLabelValidationNamesTheIdForm) {
     } catch (const std::runtime_error& e) {
         std::string msg = e.what();
         EXPECT_TRUE(msg.find("Cannot update_element: type mismatch") != std::string::npos) << "Actual: " << msg;
-    }
-
-    // Only resolve_label's own messages name the by-label form; it is the one step the label
-    // form performs itself.
-    try {
-        db.update_element_by_label("Collection", "Nope", bad_type);
-        FAIL() << "expected a throw";
-    } catch (const std::runtime_error& e) {
-        EXPECT_STREQ(e.what(), "Element not found: label 'Nope' in collection 'Collection'");
     }
 }
