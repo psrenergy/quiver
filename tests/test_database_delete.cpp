@@ -131,3 +131,117 @@ TEST(Database, DeleteElementByIdOtherElementsUnchanged) {
     EXPECT_TRUE(val3.has_value());
     EXPECT_EQ(*val3, 200);
 }
+
+// ============================================================================
+// Delete by label tests
+// ============================================================================
+
+TEST(Database, DeleteElementByLabel) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element e;
+    e.set("label", std::string("Item 1")).set("tag", std::vector<std::string>{"important", "urgent"});
+    db.create_element("Collection", e);
+
+    // A second element so the assertions below cannot pass vacuously: with only one element,
+    // "the set table is empty" holds whether or not the cascade fired, and a delete that ignored
+    // the label entirely would still hit the right row.
+    quiver::Element other;
+    other.set("label", std::string("Item 2")).set("tag", std::vector<std::string>{"keep"});
+    int64_t other_id = db.create_element("Collection", other);
+
+    db.delete_element_by_label("Collection", "Item 1");
+
+    // Only the labelled element is gone
+    auto ids = db.read_element_ids("Collection");
+    ASSERT_EQ(ids.size(), 1u);
+    EXPECT_EQ(ids[0], other_id);
+
+    // CASCADE still applies - the label form delegates to the id form, it does not re-implement it.
+    // Counted in SQL: read_set_strings reports one entry per *surviving* element, so it cannot see
+    // orphaned rows left behind by a delete that ran with foreign keys off.
+    auto orphans =
+        db.query_integer("SELECT COUNT(*) FROM Collection_set_tags WHERE id NOT IN (SELECT id FROM Collection)");
+    ASSERT_TRUE(orphans.has_value());
+    EXPECT_EQ(*orphans, 0);
+
+    auto remaining = db.query_integer("SELECT COUNT(*) FROM Collection_set_tags");
+    ASSERT_TRUE(remaining.has_value());
+    EXPECT_EQ(*remaining, 1);  // only Item 2's "keep"
+}
+
+TEST(Database, DeleteElementByLabelNonExistent) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element e;
+    e.set("label", std::string("Item 1"));
+    db.create_element("Collection", e);
+
+    // Deleting an unresolvable label throws "Element not found" rather than silently no-op'ing
+    try {
+        db.delete_element_by_label("Collection", "No Such Item");
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), "Element not found: label 'No Such Item' in collection 'Collection'");
+    }
+
+    // Verify original element still exists
+    auto ids = db.read_element_ids("Collection");
+    EXPECT_EQ(ids.size(), 1);
+}
+
+// A label is unique per collection, not per database: one naming an element of another
+// collection must not resolve here.
+TEST(Database, DeleteElementByLabelDoesNotResolveAcrossCollections) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element e;
+    e.set("label", std::string("Item 1"));
+    db.create_element("Collection", e);
+
+    try {
+        db.delete_element_by_label("Collection", "Test Config");
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), "Element not found: label 'Test Config' in collection 'Collection'");
+    }
+
+    // Both elements survive
+    EXPECT_EQ(db.read_element_ids("Configuration").size(), 1);
+    EXPECT_EQ(db.read_element_ids("Collection").size(), 1);
+}
+
+// require_collection only checks has_table, so a group table reaches resolve_label. The explicit
+// require_column("label") is what stops it there instead of letting the SELECT leak a raw
+// "no such column: label" prepare error -- and the message must name the public method called.
+TEST(Database, DeleteElementByLabelOnTableWithoutLabelColumn) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    try {
+        db.delete_element_by_label("Collection_set_tags", "anything");
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(),
+                     "Cannot delete_element_by_label: column 'label' not found in table 'Collection_set_tags'");
+    }
+}

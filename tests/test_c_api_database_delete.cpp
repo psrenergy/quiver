@@ -256,3 +256,107 @@ TEST(DatabaseCApi, DeleteElementByIdNullArguments) {
 
     quiver_database_close(db);
 }
+
+// ============================================================================
+// Delete by label tests (quiver_database_delete_element_by_label)
+// ============================================================================
+
+TEST(DatabaseCApi, DeleteElementByLabel) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    quiver_element_t* config = nullptr;
+    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
+    quiver_element_set_string(config, "label", "Test Config");
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", config, &tmp_id);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
+
+    quiver_element_t* e = nullptr;
+    ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
+    quiver_element_set_string(e, "label", "Item 1");
+    int64_t id = 0;
+    quiver_database_create_element(db, "Collection", e, &id);
+    EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
+
+    // A second element so the assertion below cannot pass vacuously: with only one element, a
+    // delete that ignored the label entirely would still hit the right row.
+    quiver_element_t* other = nullptr;
+    ASSERT_EQ(quiver_element_create(&other), QUIVER_OK);
+    quiver_element_set_string(other, "label", "Item 2");
+    int64_t other_id = 0;
+    quiver_database_create_element(db, "Collection", other, &other_id);
+    EXPECT_EQ(quiver_element_destroy(other), QUIVER_OK);
+
+    EXPECT_EQ(quiver_database_delete_element_by_label(db, "Collection", "Item 1"), QUIVER_OK);
+
+    // Only the labelled element is gone (CASCADE is the id form's, covered in test_database_delete)
+    int64_t* ids = nullptr;
+    size_t count = 0;
+    EXPECT_EQ(quiver_database_read_element_ids(db, "Collection", &ids, &count), QUIVER_OK);
+    ASSERT_EQ(count, 1);
+    EXPECT_EQ(ids[0], other_id);
+    quiver_database_free_integer_array(ids);
+
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, DeleteElementByLabelNonExistent) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    quiver_element_t* config = nullptr;
+    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
+    quiver_element_set_string(config, "label", "Test Config");
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", config, &tmp_id);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
+
+    quiver_element_t* e = nullptr;
+    ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
+    quiver_element_set_string(e, "label", "Item 1");
+    int64_t id = 0;
+    quiver_database_create_element(db, "Collection", e, &id);
+    EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
+
+    EXPECT_EQ(quiver_database_delete_element_by_label(db, "Collection", "No Such Item"), QUIVER_ERROR);
+    std::string msg = quiver_get_last_error();
+    EXPECT_EQ(msg, "Element not found: label 'No Such Item' in collection 'Collection'") << "Actual: " << msg;
+
+    // Nothing was deleted
+    int64_t* ids = nullptr;
+    size_t count = 0;
+    EXPECT_EQ(quiver_database_read_element_ids(db, "Collection", &ids, &count), QUIVER_OK);
+    EXPECT_EQ(count, 1);
+    quiver_database_free_integer_array(ids);
+
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, DeleteElementByLabelNullArguments) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    // Null db
+    auto err = quiver_database_delete_element_by_label(nullptr, "Collection", "Item 1");
+    EXPECT_EQ(err, QUIVER_ERROR);
+
+    // Null collection
+    err = quiver_database_delete_element_by_label(db, nullptr, "Item 1");
+    EXPECT_EQ(err, QUIVER_ERROR);
+
+    // Null label
+    err = quiver_database_delete_element_by_label(db, "Collection", nullptr);
+    EXPECT_EQ(err, QUIVER_ERROR);
+
+    quiver_database_close(db);
+}

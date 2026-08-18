@@ -8,6 +8,7 @@
 
 #include <map>
 #include <memory>
+#include <optional>
 #include <spdlog/spdlog.h>
 #include <sqlite3.h>
 #include <string>
@@ -94,6 +95,29 @@ struct Database::Impl {
         }
     }
 
+    // The one label -> id lookup; callers own the throw (Pattern 2 vs Pattern 3).
+    static std::optional<int64_t> lookup_id_by_label(const std::string& table, const std::string& label, Database& db) {
+        auto result = db.execute("SELECT id FROM " + table + " WHERE label = ?", {label});
+        if (result.empty()) {
+            return std::nullopt;
+        }
+        return result[0].get_integer(0);
+    }
+
+    int64_t
+    resolve_label(const std::string& collection, const std::string& label, const char* operation, Database& db) const {
+        require_collection(collection, operation);
+        // Any table is accepted by require_collection (it only checks has_table), so a group table
+        // would otherwise reach the SELECT and leak a raw "no such column: label" prepare error.
+        require_column(collection, "label", operation);
+
+        auto id = lookup_id_by_label(collection, label, db);
+        if (!id) {
+            throw std::runtime_error("Element not found: label '" + label + "' in collection '" + collection + "'");
+        }
+        return *id;
+    }
+
     void require_column(const std::string& table, const std::string& column, const char* operation) const {
         require_schema();
         const auto* table_def = schema->get_table(table);
@@ -117,13 +141,12 @@ struct Database::Impl {
         // Check if column is a foreign key
         for (const auto& fk : table_def.foreign_keys) {
             if (fk.from_column == column) {
-                auto lookup_sql = "SELECT id FROM " + fk.to_table + " WHERE label = ?";
-                auto lookup_result = db.execute(lookup_sql, {str_val});
-                if (lookup_result.empty() || !lookup_result[0].get_integer(0)) {
+                auto id = lookup_id_by_label(fk.to_table, str_val, db);
+                if (!id) {
                     throw std::runtime_error("Failed to resolve label '" + str_val + "' to ID in table '" +
                                              fk.to_table + "'");
                 }
-                return lookup_result[0].get_integer(0).value();
+                return *id;
             }
         }
 

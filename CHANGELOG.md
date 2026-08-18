@@ -5,7 +5,29 @@ All notable changes to Quiver are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entries that require
 callers to change something are prefixed **BREAKING** and say what to do.
 
-## [0.10.0] — unreleased
+## [0.10.2] — unreleased
+
+### Added
+
+- **`delete_element_by_label(collection, label)`.** Deletes an element addressed by its `label`
+  instead of its id, for callers that already know the name and would otherwise round-trip through
+  a query to find it. It resolves the label and then delegates to `delete_element`, so `ON DELETE
+  CASCADE` cleanup is identical. Available in every layer, under the usual per-layer spelling.
+
+  A label is unique **per collection, not per database**: one naming an element of a different
+  collection does not resolve. A miss throws `Element not found: label '<label>' in collection
+  '<c>'` and deletes nothing (no silent no-op, matching `delete_element` / `update_element`).
+  Naming a table with no `label` column throws `Cannot delete_element_by_label: column 'label' not
+  found in table '<t>'`.
+
+## [0.10.1] — 2026-08-14
+
+No library changes — release tooling only: the **Bump Version** workflow
+(`.github/workflows/bump-version.yml`) plus `scripts/assert_version.py bump major|minor|patch`,
+and the PyPI publish action pinned to `pypa/gh-action-pypi-publish@v1.14.2`. Published artifacts
+are functionally identical to 0.10.0.
+
+## [0.10.0] — 2026-08-14
 
 ### Added
 
@@ -137,4 +159,6 @@ callers to change something are prefixed **BREAKING** and say what to do.
   `read_time_series_group` emits for a NULL STRING cell — so feeding a read result back with the
   mask stripped was UB. A NULL entry, or a NULL per-column data pointer, is now SQL NULL.
 
+[0.10.2]: https://github.com/psrenergy/quiver/compare/v0.10.1...v0.10.2
+[0.10.1]: https://github.com/psrenergy/quiver/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/psrenergy/quiver/compare/v0.9.16...v0.10.0

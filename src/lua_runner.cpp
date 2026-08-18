@@ -263,6 +263,10 @@ struct LuaRunner::Impl {
             "Database",
             "delete_element",
             [](Database& self, const std::string& collection, int64_t id) { self.delete_element(collection, id); },
+            "delete_element_by_label",
+            [](Database& self, const std::string& collection, const std::string& label) {
+                self.delete_element_by_label(collection, label);
+            },
             // Group 1: Database info
             "is_healthy",
             [](Database& self) { return self.is_healthy(); },

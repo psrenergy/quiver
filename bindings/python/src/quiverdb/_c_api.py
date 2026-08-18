@@ -254,6 +254,8 @@ ffi.cdef("""
         const char* collection, int64_t id, const quiver_element_t* element);
     quiver_error_t quiver_database_delete_element(quiver_database_t* db,
         const char* collection, int64_t id);
+    quiver_error_t quiver_database_delete_element_by_label(quiver_database_t* db,
+        const char* collection, const char* label);
 
     // Transaction control
     quiver_error_t quiver_database_begin_transaction(quiver_database_t* db);

@@ -20,4 +20,22 @@ extension DatabaseDelete on Database {
       arena.releaseAll();
     }
   }
+
+  /// Label-addressed counterpart of [deleteElement].
+  void deleteElementByLabel(String collection, String label) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      check(
+        bindings.quiver_database_delete_element_by_label(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          label.toNativeUtf8(allocator: arena).cast(),
+        ),
+      );
+    } finally {
+      arena.releaseAll();
+    }
+  }
 }

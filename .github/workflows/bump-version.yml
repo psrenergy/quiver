@@ -1,0 +1,68 @@
+name: Bump Version
+
+on:
+  workflow_dispatch:
+    inputs:
+      part:
+        description: "Version part to bump (patch = hotfix)"
+        type: choice
+        default: patch
+        options: [major, minor, patch]
+
+concurrency:
+  group: bump-version
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  bump:
+    name: Open version bump PR
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: master
+
+      - name: Bump version
+        id: bump
+        env:
+          PART: ${{ inputs.part }}
+        run: |
+          v="$(python3 scripts/assert_version.py bump "$PART")"
+          # assert_version.py writes only the new version to stdout; anything else here means
+          # the script leaked diagnostics into it and $v would poison the tag name below.
+          if ! [[ "$v" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::bump produced '$v', expected X.Y.Z"
+            exit 1
+          fi
+          # publish.yml refuses to release onto a tag sitting at another commit. Catch a version
+          # that already shipped now, not after this PR is merged. A failed lookup must not read
+          # as "tag absent", so the two outcomes are kept apart.
+          if ! tags="$(git ls-remote origin "refs/tags/v$v")"; then
+            echo "::error::git ls-remote origin failed; cannot verify tag v$v"
+            exit 1
+          fi
+          if [ -n "$tags" ]; then
+            echo "::error::tag v$v already exists — that version shipped; pick another bump"
+            exit 1
+          fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+
+      - uses: peter-evans/create-pull-request@v8
+        with:
+          branch: bump-version/${{ steps.bump.outputs.version }}
+          base: master
+          commit-message: "chore: bump version to ${{ steps.bump.outputs.version }}"
+          title: "Bump version to ${{ steps.bump.outputs.version }}"
+          body: |
+            `${{ inputs.part }}` bump to **${{ steps.bump.outputs.version }}** across the five
+            manifests `scripts/assert_version.py` checks.
+
+            Merge, then dispatch **Publish** to tag and release `v${{ steps.bump.outputs.version }}`.
+          delete-branch: true
