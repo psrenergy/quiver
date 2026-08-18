@@ -231,13 +231,9 @@ impl_->logger->debug("Opening database: {}", path);
   three `read_scalar_*` bulk readers (one entry per element, `ORDER BY rowid`). The Lua scalar
   readers consume the optional vector directly via a `to_lua_table(vector<optional<T>>)` overload
   that emits `nil` holes (root scalar-NULL design decision).
-- **`read_grouped_values_all<T>`** (`database_internal.h`) backs the six bulk vector/set readers
-  and expects the LEFT-JOIN shape their SQL builds: column 0 the collection's `id` (one row per
-  element even with no group rows), column 1 the value. A new group starts on every change of
-  column 0, so there is **one group per element**, aligned with `read_element_ids`; an element with
-  no rows joins to a single all-NULL row that the dense value check skips, leaving that group
-  empty. Don't "simplify" the SQL back to `SELECT id, value FROM <group_table>` — that is exactly
-  the shape that skipped elements.
+- **`read_grouped_values_all<T>`** (`database_internal.h`) backs the six bulk vector/set readers and
+  requires the LEFT JOIN their SQL builds. Don't "simplify" the SQL back to
+  `SELECT id, value FROM <group_table>` — that is the shape that skipped elements.
 - **`scalar_metadata_from_column` reports an INTEGER PRIMARY KEY as `not_null`**
   (`database_internal.h`): a rowid-alias PK is never NULL, but SQLite's `PRAGMA table_info` leaves
   the `notnull` flag unset, so the public `ScalarMetadata.not_null` ORs in `primary_key && type ==

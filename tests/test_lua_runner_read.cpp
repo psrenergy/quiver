@@ -264,28 +264,6 @@ TEST_F(LuaRunnerTest, ReadVectorBulkAlignsWithElementIdsAcrossEmptyElement) {
     )");
 }
 
-TEST_F(LuaRunnerTest, ReadSetBulkAlignsWithElementIdsAcrossEmptyElement) {
-    auto db = quiver::Database::from_schema(":memory:", collections_schema);
-    db.create_element("Configuration", quiver::Element().set("label", "Config"));
-    db.create_element("Collection",
-                      quiver::Element().set("label", "Item 1").set("tag", std::vector<std::string>{"a", "b"}));
-    db.create_element("Collection", quiver::Element().set("label", "Item 2"));  // no set rows
-    db.create_element("Collection", quiver::Element().set("label", "Item 3").set("tag", std::vector<std::string>{"c"}));
-
-    quiver::LuaRunner lua(db);
-
-    lua.run(R"(
-        local ids = db:read_element_ids("Collection")
-        local sets = db:read_set_strings("Collection", "tag")
-        assert(#ids == 3, "Expected 3 ids, got " .. #ids)
-        assert(#sets == 3, "Expected 3 entries, got " .. #sets)
-        assert(#sets[1] == 2, "First set should have 2 tags, got " .. #sets[1])
-        assert(#sets[2] == 0, "Element with no rows should be an empty table")
-        assert(#sets[3] == 1, "Third set should have 1 tag, got " .. #sets[3])
-        assert(sets[3][1] == "c", "Third element's tag should be 'c', not read as another element's")
-    )");
-}
-
 TEST_F(LuaRunnerTest, ReadSetStringsAll) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));

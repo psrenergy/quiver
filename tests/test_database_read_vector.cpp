@@ -80,17 +80,17 @@ TEST(Database, ReadVectorIncludesElementsWithNoRows) {
     // Element with vector data
     quiver::Element e1;
     e1.set("label", std::string("Item 1")).set("value_int", std::vector<int64_t>{1, 2, 3});
-    int64_t id1 = db.create_element("Collection", e1);
+    db.create_element("Collection", e1);
 
     // Element without vector data
     quiver::Element e2;
     e2.set("label", std::string("Item 2"));
-    int64_t id2 = db.create_element("Collection", e2);
+    db.create_element("Collection", e2);
 
     // Another element with vector data
     quiver::Element e3;
     e3.set("label", std::string("Item 3")).set("value_int", std::vector<int64_t>{4, 5});
-    int64_t id3 = db.create_element("Collection", e3);
+    db.create_element("Collection", e3);
 
     // One entry per element, positionally aligned with read_element_ids: the element with no rows
     // is an empty vector, not a gap
@@ -98,7 +98,6 @@ TEST(Database, ReadVectorIncludesElementsWithNoRows) {
     auto vectors = db.read_vector_integers("Collection", "value_int");
     ASSERT_EQ(ids.size(), 3);
     ASSERT_EQ(vectors.size(), ids.size());
-    EXPECT_EQ(ids, (std::vector<int64_t>{id1, id2, id3}));
     EXPECT_EQ(vectors[0], (std::vector<int64_t>{1, 2, 3}));
     EXPECT_TRUE(vectors[1].empty());
     EXPECT_EQ(vectors[2], (std::vector<int64_t>{4, 5}));

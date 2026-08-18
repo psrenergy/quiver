@@ -167,25 +167,18 @@ Settled questions — don't relitigate without the user; each was decided delibe
   count/position authority since `#t` is unreliable across holes. Scope is **scalars only** — the
   shared dense `read_column_values<T>` still serves vector/set `_by_id` and `read_element_ids`
   (NOT NULL / PK by convention); vector/set cell NULLs are still dropped, see the next decision.
-- **Bulk reads of one collection are positionally aligned with each other.** `read_element_ids`,
-  `read_scalar_*` and the six vector/set bulk readers all order by the collection's `rowid`, so
-  entry *i* is the same element in every one of them. That convention is what makes reading several
-  attributes and zipping them per element correct, and it is what the vector/set readers used to
-  break. It holds *between* calls, so it is only trustworthy while the element set is unchanged — a
-  caller reading several attributes alongside a concurrent writer needs a read transaction around
-  the whole group of reads. Don't make a reader self-sufficient by calling `read_element_ids` inside
-  it: two statements are two snapshots, the same race moved inside the library, which is precisely
-  what the single LEFT JOIN avoids.
-- **Vector/set bulk reads are element-aligned, but still cell-dense**. The six bulk readers return
-  **one entry per element**, aligned with `read_element_ids` — an element with no rows is an empty
-  inner vector instead of being skipped, which used to re-index every entry after the gap so one
-  element's values were read as another's. Alignment comes from the SQL: the bulk queries LEFT JOIN
-  the group table onto the collection and order by `c.rowid`, exactly `read_element_ids`' order; an
-  element with no rows joins to a single all-NULL row that the dense value check skips. No
-  signature changed in any layer, so the bindings inherit the fix for free. Values stay dense
-  (`[0.10, NULL, 0.30]` reads back as `[0.10, 0.30]`) — preserving cell NULLs needs a per-cell mask
-  across the C ABI and is not done. For multi-column group reads prefer `read_vector_group_by_id` /
-  `read_set_group_by_id`, which are row- and NULL-correct.
+- **Bulk reads of one collection are positionally aligned, but still cell-dense.** `read_element_ids`,
+  `read_scalar_*` and the six vector/set bulk readers all order by the collection's `rowid`, so entry
+  *i* is the same element in every one of them — the convention that makes zipping several attributes
+  per element correct. The vector/set readers used to break it by skipping elements with no group
+  rows; they now LEFT JOIN the group table onto the collection, so such an element is an empty inner
+  vector (no signature changed, so the bindings inherited the fix). Alignment holds *between* calls,
+  so a caller reading several attributes alongside a concurrent writer needs a read transaction
+  around the whole group. Don't make a reader self-sufficient by calling `read_element_ids` inside
+  it: two statements are two snapshots, the same race moved inside the library. **Cell** NULLs are a
+  separate matter, still dropped by vector/set reads (`[0.10, NULL, 0.30]` → `[0.10, 0.30]`) —
+  preserving them needs a per-cell mask across the C ABI, so for multi-column group reads prefer
+  `read_vector_group_by_id` / `read_set_group_by_id`, which are row- and NULL-correct.
 - **A set group's rows come back in `rowid` order, and that order is not a promise.** All the set
   readers (`read_set_*`, `read_set_*_by_id`, `read_set_group_by_id`) `ORDER BY rowid`. The `_by_id`
   readers had no `ORDER BY` at all, so each took the order of whichever index SQLite picked for it:

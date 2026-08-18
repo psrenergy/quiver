@@ -5,9 +5,28 @@ All notable changes to Quiver are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entries that require
 callers to change something are prefixed **BREAKING** and say what to do.
 
-## [0.10.2] — unreleased
+## [0.11.0] — unreleased
 
 ### Added
+
+- **BREAKING — vector and set bulk reads return one entry per element.** The six bulk readers
+  (`read_vector_{integers,floats,strings}`, `read_set_{integers,floats,strings}`, and their C API
+  and binding equivalents) skipped elements that had no group rows, re-indexing every entry after
+  the gap so one element's values were read as another's. They now return one entry per element,
+  positionally aligned with `read_element_ids()` and empty where an element has no rows. No
+  signature changed in any layer; the outer length and the position of every entry did.
+
+  *Adapt:* callers that zipped a bulk read against `read_element_ids()` were misaligned and are now
+  correct; callers that read the outer length as "elements with data" must skip empty entries.
+
+- **BREAKING — a set group's rows read back in one consistent order.**
+  `read_set_{integers,floats,strings}_by_id` had no `ORDER BY`, so each took the order of whichever
+  index SQLite chose for it — reading two columns of one set group could return their rows in
+  different orders and pair the wrong values together. Every set reader now orders by `rowid`,
+  matching `read_set_group_by_id`.
+
+  *Adapt:* a set's rows are no longer sorted by value; they come back in the order they were
+  written. Treat the order as unspecified but consistent across every reader of the group.
 
 - **`delete_element_by_label(collection, label)`.** Deletes an element addressed by its `label`
   instead of its id, for callers that already know the name and would otherwise round-trip through
@@ -92,25 +111,6 @@ are functionally identical to 0.10.0.
 
   *Adapt:* only positional consumers of the returned list are affected; lookups by name are not.
 
-- **BREAKING — vector and set bulk reads return one entry per element.** The six bulk readers
-  (`read_vector_{integers,floats,strings}`, `read_set_{integers,floats,strings}`, and their C API
-  and binding equivalents) skipped elements that had no group rows, re-indexing every entry after
-  the gap so one element's values were read as another's. They now return one entry per element,
-  positionally aligned with `read_element_ids()` and empty where an element has no rows. No
-  signature changed in any layer; the outer length and the position of every entry did.
-
-  *Adapt:* callers that zipped a bulk read against `read_element_ids()` were misaligned and are now
-  correct; callers that read the outer length as "elements with data" must skip empty entries.
-
-- **BREAKING — a set group's rows read back in one consistent order.**
-  `read_set_{integers,floats,strings}_by_id` had no `ORDER BY`, so each took the order of whichever
-  index SQLite chose for it — reading two columns of one set group could return their rows in
-  different orders and pair the wrong values together. Every set reader now orders by `rowid`,
-  matching `read_set_group_by_id`.
-
-  *Adapt:* a set's rows are no longer sorted by value; they come back in the order they were
-  written. Treat the order as unspecified but consistent across every reader of the group.
-
 - **Every float read widens INTEGER values.** The int64-for-REAL typing policy now lives in
   `Row::get_float`, the single extractor behind `query_float()`, `read_scalar_floats()`,
   `read_scalar_float_by_id()`, `read_vector_floats_by_id()` and `read_set_floats_by_id()`, so all of
@@ -171,6 +171,6 @@ are functionally identical to 0.10.0.
   `read_time_series_group` emits for a NULL STRING cell — so feeding a read result back with the
   mask stripped was UB. A NULL entry, or a NULL per-column data pointer, is now SQL NULL.
 
-[0.10.2]: https://github.com/psrenergy/quiver/compare/v0.10.1...v0.10.2
+[0.11.0]: https://github.com/psrenergy/quiver/compare/v0.10.1...v0.11.0
 [0.10.1]: https://github.com/psrenergy/quiver/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/psrenergy/quiver/compare/v0.9.16...v0.10.0
