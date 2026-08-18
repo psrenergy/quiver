@@ -9,6 +9,16 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ### Added
 
+- **Migration round-trip validation: `Database::test_migrations()` / `quiver_database_test_migrations()`.** Validates a migrations directory in an in-memory database by applying every up migration, then every down migration.
+
+  Available in **every layer**: C++, the C API, Julia (`test_migrations`), Dart
+  (`Database.testMigrations`), Python (`Database.test_migrations`), JS (`Database.testMigrations`),
+  and Lua (`db:test_migrations`) — the Lua binding is db-scoped and sandboxed to the database
+  directory, like the other file-touching Lua operations.
+
+  A directory with no numbered migration subdirectories throws `Cannot test_migrations: no
+  migrations found in <path>` rather than passing vacuously.
+
 - **`delete_element_by_label(collection, label)`.** Deletes an element addressed by its `label`
   instead of its id, for callers that already know the name and would otherwise round-trip through
   a query to find it. It resolves the label and then delegates to `delete_element`, so `ON DELETE
@@ -41,13 +51,6 @@ are functionally identical to 0.10.0.
   (`numberOfElements`), Python (`number_of_elements`), JS (`numberOfElements`), and Lua
   (`db:number_of_elements`). Every binding calls the scalar C entry point directly, so the count
   never travels as an array of ids.
-
-- **Migration round-trip validation: `Database::test_migrations()` / `quiver_database_test_migrations()`.** Validates a migrations directory in an in-memory database by applying every up migration, then every down migration.
-
-  Available in **every layer**: C++, the C API, Julia (`test_migrations`), Dart
-  (`Database.testMigrations`), Python (`Database.test_migrations`), JS (`Database.testMigrations`),
-  and Lua (`db:test_migrations`) — the Lua binding is db-scoped and sandboxed to the database
-  directory, like the other file-touching Lua operations.
 
 - **Whole-group writers: `update_vector_group()` / `update_set_group()`.** Replace all of an
   element's rows in one *named* group; passing no columns clears the group. These are the write

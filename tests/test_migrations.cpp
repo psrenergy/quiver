@@ -224,6 +224,21 @@ TEST_F(MigrationsTestFixture, TestMigrationsAppliesAndRevertsSharedFixture) {
     EXPECT_NO_THROW(quiver::Database::test_migrations(migrations_path));
 }
 
+TEST_F(MigrationsTestFixture, TestMigrationsExecutesUpSql) {
+    fs::create_directories(fs::path(temp_dir) / "1");
+    std::ofstream(fs::path(temp_dir) / "1" / "up.sql") << "THIS IS NOT VALID SQL;";
+    std::ofstream(fs::path(temp_dir) / "1" / "down.sql") << "DROP TABLE Test;";
+
+    try {
+        quiver::Database::test_migrations(temp_dir);
+        FAIL() << "Expected test_migrations to throw";
+    } catch (const std::runtime_error& error) {
+        const std::string message = error.what();
+        EXPECT_NE(message.find("Failed to migrate_up: migration 1:"), std::string::npos);
+        EXPECT_NE(message.find("Failed to execute SQL:"), std::string::npos);
+    }
+}
+
 TEST_F(MigrationsTestFixture, TestMigrationsExecutesDownSql) {
     fs::create_directories(fs::path(temp_dir) / "1");
     std::ofstream(fs::path(temp_dir) / "1" / "up.sql")
@@ -236,7 +251,6 @@ TEST_F(MigrationsTestFixture, TestMigrationsExecutesDownSql) {
         FAIL() << "Expected test_migrations to throw";
     } catch (const std::runtime_error& error) {
         const std::string message = error.what();
-        EXPECT_NE(message.find("Failed to test_migrations: down phase:"), std::string::npos);
         EXPECT_NE(message.find("Failed to migrate_down: migration 1:"), std::string::npos);
         EXPECT_NE(message.find("Failed to execute SQL:"), std::string::npos);
     }
@@ -252,39 +266,40 @@ TEST_F(MigrationsTestFixture, TestMigrationsRequiresDownSql) {
         quiver::Database::test_migrations(temp_dir);
         FAIL() << "Expected test_migrations to throw";
     } catch (const std::runtime_error& error) {
-        EXPECT_STREQ(error.what(),
-                     "Failed to test_migrations: down phase: Cannot migrate_down: migration 1 has no down.sql file");
+        EXPECT_STREQ(error.what(), "Cannot migrate_down: migration 1 has no down.sql file");
     }
 }
 
 TEST_F(MigrationsTestFixture, TestMigrationsValidatesPath) {
     const auto nonexistent_path = (fs::path(temp_dir) / "missing").string();
-    EXPECT_THROW(
-        {
-            try {
-                quiver::Database::test_migrations(nonexistent_path);
-            } catch (const std::runtime_error& error) {
-                EXPECT_EQ(std::string(error.what()),
-                          "Cannot test_migrations: migrations path not found: " + nonexistent_path);
-                throw;
-            }
-        },
-        std::runtime_error);
+    try {
+        quiver::Database::test_migrations(nonexistent_path);
+        FAIL() << "Expected test_migrations to throw";
+    } catch (const std::runtime_error& error) {
+        EXPECT_EQ(std::string(error.what()), "Cannot test_migrations: migrations path not found: " + nonexistent_path);
+    }
 
     fs::create_directories(temp_dir);
     const auto file_path = fs::path(temp_dir) / "not_a_directory.sql";
     std::ofstream(file_path) << "SELECT 1;";
-    EXPECT_THROW(
-        {
-            try {
-                quiver::Database::test_migrations(file_path.string());
-            } catch (const std::runtime_error& error) {
-                EXPECT_EQ(std::string(error.what()),
-                          "Cannot test_migrations: path is not a directory: " + file_path.string());
-                throw;
-            }
-        },
-        std::runtime_error);
+    try {
+        quiver::Database::test_migrations(file_path.string());
+        FAIL() << "Expected test_migrations to throw";
+    } catch (const std::runtime_error& error) {
+        EXPECT_EQ(std::string(error.what()), "Cannot test_migrations: path is not a directory: " + file_path.string());
+    }
+}
+
+TEST_F(MigrationsTestFixture, TestMigrationsRequiresMigrations) {
+    // A real directory holding no numeric migration subdirectories is a path mistake, not a pass:
+    // pointing at "<migrations>/1" instead of "<migrations>" would otherwise succeed vacuously.
+    fs::create_directories(temp_dir);
+    try {
+        quiver::Database::test_migrations(temp_dir);
+        FAIL() << "Expected test_migrations to throw";
+    } catch (const std::runtime_error& error) {
+        EXPECT_EQ(std::string(error.what()), "Cannot test_migrations: no migrations found in " + temp_dir);
+    }
 }
 
 TEST_F(MigrationsTestFixture, MigrationsWithNonNumericDirectories) {

@@ -265,18 +265,13 @@ void Database::test_migrations(const std::string& migrations_path) {
     if (!fs::is_directory(migrations_path)) {
         throw std::runtime_error("Cannot test_migrations: path is not a directory: " + migrations_path);
     }
+    if (Migrations(migrations_path).empty()) {
+        throw std::runtime_error("Cannot test_migrations: no migrations found in " + migrations_path);
+    }
 
     Database db(":memory:", {.console_level = LogLevel::Off});
-    try {
-        db.migrate_up(migrations_path);
-    } catch (const std::exception& e) {
-        throw std::runtime_error("Failed to test_migrations: up phase: " + std::string(e.what()));
-    }
-    try {
-        db.migrate_down(migrations_path);
-    } catch (const std::exception& e) {
-        throw std::runtime_error("Failed to test_migrations: down phase: " + std::string(e.what()));
-    }
+    db.migrate_up(migrations_path);
+    db.migrate_down(migrations_path);
 }
 
 Database

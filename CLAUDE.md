@@ -389,7 +389,8 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
 - Factory methods: `from_schema()`, `from_migrations()` — `DatabaseOptions` (`read_only`, `console_level`) exposed as optional parameters in every binding
 - `test_migrations(migrations_path)` — validates a migrations directory (up then down) against a
   throwaway in-memory database; no out-parameter, returns nothing. Bound in every layer, including
-  Lua (`db:test_migrations`, db-scoped and sandboxed — see the design decision above).
+  Lua (`db:test_migrations`, db-scoped and sandboxed — see the design decision above). A directory
+  with no numbered migration subdirectories is an error here.
 - Transaction control: `begin_transaction()`, `commit()`, `rollback()`, `in_transaction()`
 - Dry runs: `begin_dry_run()`, `end_dry_run()`, `in_dry_run()` — one transaction that is always rolled back; while active the three transaction methods above are absorbed (no-ops) so nested callers compose. See the design decision below.
 - CRUD: `create_element(collection, element)`, `update_element`, `delete_element`,
