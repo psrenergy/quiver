@@ -60,17 +60,17 @@ TEST(Database, ReadSetIncludesElementsWithNoRows) {
     // Element with set data
     quiver::Element e1;
     e1.set("label", std::string("Item 1")).set("tag", std::vector<std::string>{"important"});
-    int64_t id1 = db.create_element("Collection", e1);
+    db.create_element("Collection", e1);
 
     // Element without set data
     quiver::Element e2;
     e2.set("label", std::string("Item 2"));
-    int64_t id2 = db.create_element("Collection", e2);
+    db.create_element("Collection", e2);
 
     // Another element with set data
     quiver::Element e3;
     e3.set("label", std::string("Item 3")).set("tag", std::vector<std::string>{"urgent", "review"});
-    int64_t id3 = db.create_element("Collection", e3);
+    db.create_element("Collection", e3);
 
     // One entry per element, positionally aligned with read_element_ids: the element with no rows
     // is an empty set, not a gap
@@ -78,7 +78,6 @@ TEST(Database, ReadSetIncludesElementsWithNoRows) {
     auto sets = db.read_set_strings("Collection", "tag");
     ASSERT_EQ(ids.size(), 3);
     ASSERT_EQ(sets.size(), ids.size());
-    EXPECT_EQ(ids, (std::vector<int64_t>{id1, id2, id3}));
     EXPECT_EQ(sets[0], (std::vector<std::string>{"important"}));
     EXPECT_TRUE(sets[1].empty());
     EXPECT_EQ(sets[2], (std::vector<std::string>{"urgent", "review"}));

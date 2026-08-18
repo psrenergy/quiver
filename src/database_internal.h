@@ -28,12 +28,9 @@ inline std::optional<std::string> get_row_value(const Row& row, size_t index, st
     return row.get_string(index);
 }
 
-// One output entry per element of a collection, holding that element's values from a vector/set
-// table. Expects the LEFT JOIN the bulk readers build: column 0 is the collection's own id — the
-// left side of the join, so every element has a row even with no values — and column 1 is the
-// value. Each change of column 0 starts a new entry, so entries stay aligned with
-// read_element_ids' rowid order; an element with no values joins to one NULL row, which the value
-// check below skips, leaving its entry empty.
+// One output entry per element, aligned with read_element_ids. Expects the LEFT JOIN the bulk
+// readers build: column 0 the collection's id (never NULL), column 1 the value. An element with no
+// values joins to one NULL row, which the value check skips, leaving its entry empty.
 template <typename T>
 std::vector<std::vector<T>> read_grouped_values_all(const Result& result) {
     std::vector<std::vector<T>> groups;
