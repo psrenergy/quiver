@@ -219,9 +219,7 @@ impl_->logger->debug("Opening database: {}", path);
   `Impl::resolve_label`. Both by-label forms are one-line delegations to their id counterpart (the
   root `_by_label` rule), so `update_element_by_label`'s *element* validation — the empty-element
   throw, `TypeValidator`, `insert_group_data` — reports `Cannot update_element: ...`, naming the
-  operation that actually validated. Deliberate, and pinned by
-  `UpdateElementByLabelValidationNamesTheIdForm`; threading the caller's name through would mean
-  re-shaping the id form, which the delegation rule exists to prevent.
+  operation that validated.
 - **Schema metadata loads lazily** (`Impl::require_schema`): the `Database(path, options)`
   constructor does not read it, so the first metadata/CRUD call does. `schema` and `type_validator`
   are `mutable` (const readers trigger the load) and `load_schema_metadata()` is `const` and
