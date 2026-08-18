@@ -285,6 +285,87 @@ void main() {
     });
   });
 
+  group('Update Element By Label', () {
+    test('updates by label and leaves siblings alone', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {
+          'label': 'Config 1',
+          'integer_attribute': 100,
+        });
+        db.createElement('Configuration', {
+          'label': 'Config 2',
+          'integer_attribute': 200,
+        });
+
+        db.updateElementByLabel('Configuration', 'Config 1', {
+          'integer_attribute': 999,
+        });
+
+        expect(
+          db.readScalarIntegerById('Configuration', 'integer_attribute', 1),
+          equals(999),
+        );
+        expect(
+          db.readScalarIntegerById('Configuration', 'integer_attribute', 2),
+          equals(200),
+        );
+      } finally {
+        db.close();
+      }
+    });
+
+    test('updates by label using an Element builder', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {
+          'label': 'Config 1',
+          'integer_attribute': 100,
+        });
+
+        final element = Element();
+        try {
+          element.set('integer_attribute', 777);
+          db.updateElementFromBuilderByLabel('Configuration', 'Config 1', element);
+        } finally {
+          element.dispose();
+        }
+
+        expect(
+          db.readScalarIntegerById('Configuration', 'integer_attribute', 1),
+          equals(777),
+        );
+      } finally {
+        db.close();
+      }
+    });
+
+    test('throws for a non-existent label', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Config 1'});
+
+        expect(
+          () => db.updateElementByLabel('Configuration', 'Nonexistent', {
+            'integer_attribute': 5,
+          }),
+          throwsA(isA<DatabaseException>()),
+        );
+      } finally {
+        db.close();
+      }
+    });
+  });
+
   // Error handling tests
 
   group('Update Invalid Collection', () {

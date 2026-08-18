@@ -39,6 +39,14 @@ ruff.toml         # Lint/format config (format.bat runs ruff)
   `db.create_element("Collection", **my_dict)`); the `Element` class is internal. Properties are
   regular methods, not `@property` (design decision). `LogLevel` is an `IntEnum` exported from
   `__init__.py`; internal mixin classes are not exported.
+- **A parameter that shadows a column name needs a `/`.** Any method that addresses a row
+  positionally *and* takes attributes as `**kwargs` must mark the positional parameters
+  positional-only, or the kwarg binds to the parameter and raises `TypeError: got multiple values
+  for argument '<name>'` before the FFI call. `update_element_by_label(collection, label, /,
+  **kwargs)` is the acute case — renaming via `label=` is the point of the method, and every
+  collection has a `label` column by convention. `create_element` / `update_element` /
+  `upsert_time_series_row` carry the same latent collision on `collection` / `group` / `id` and
+  should get the `/` too.
 - **Per-method FFI boilerplate is the house style** — don't collapse it into
   closure-parameterized helpers (root "Do not 'fix'" list).
 - **Scalar bulk NULLs**: `read_scalar_integers`/`_floats` decode a parallel `uint8_t**` mask into

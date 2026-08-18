@@ -211,6 +211,50 @@ TEST_F(LuaRunnerTest, UpdateElementByIdNonExistent) {
     expect_lua_error(lua, R"(db:update_element("Collection", 999, { some_integer = 5 }))", "Element not found");
 }
 
+TEST_F(LuaRunnerTest, UpdateElementByLabel) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    db.create_element("Collection", quiver::Element().set("label", "Item 1").set("some_integer", int64_t{100}));
+    db.create_element("Collection", quiver::Element().set("label", "Item 2").set("some_integer", int64_t{200}));
+
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(
+        db:update_element_by_label("Collection", "Item 1", { some_integer = 999 })
+
+        local scalars = db:read_scalars_by_id("Collection", 1)
+        assert(scalars.some_integer == 999, "Expected 999, got " .. tostring(scalars.some_integer))
+    )");
+
+    // Verify from C++ side
+    auto value = db.read_scalar_integer_by_id("Collection", "some_integer", 1);
+    EXPECT_TRUE(value.has_value());
+    EXPECT_EQ(*value, 999);
+
+    // The sibling element is untouched.
+    auto other = db.read_scalar_integer_by_id("Collection", "some_integer", 2);
+    EXPECT_TRUE(other.has_value());
+    EXPECT_EQ(*other, 200);
+}
+
+TEST_F(LuaRunnerTest, UpdateElementByLabelNonExistent) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    db.create_element("Collection", quiver::Element().set("label", "Item 1").set("some_integer", int64_t{100}));
+
+    quiver::LuaRunner lua(db);
+
+    // Updating a non-existent label throws "Element not found"
+    expect_lua_error(
+        lua, R"(db:update_element_by_label("Collection", "Nope", { some_integer = 5 }))", "Element not found");
+
+    // Nothing was written.
+    auto value = db.read_scalar_integer_by_id("Collection", "some_integer", 1);
+    EXPECT_TRUE(value.has_value());
+    EXPECT_EQ(*value, 100);
+}
+
 // ============================================================================
 // Vector / set group writers
 // ============================================================================

@@ -212,6 +212,7 @@ Rules worth knowing:
 \`\`\`lua
 local id = db:create_element(collection, element_table)   -- returns new integer id
 db:update_element(collection, id, element_table)
+db:update_element_by_label(collection, label, element_table)  -- same update, addressed by label
 db:delete_element(collection, id)
 db:delete_element_by_label(collection, label)             -- same delete, addressed by label
 \`\`\`
@@ -239,9 +240,13 @@ Notes:
 - **\`update_element\` / \`delete_element\` require an existing id.** Targeting an id that does not
   exist throws \`Element not found: <id> in collection '<collection>'\` (no silent no-op). Use
   \`read_element_ids\` to get valid ids.
-- **\`delete_element_by_label\` requires an existing label**, unique *per collection*, not per
-  database — one naming an element of another collection does not resolve. A miss throws
-  \`Element not found: label '<label>' in collection '<collection>'\` and deletes nothing.
+- **\`update_element_by_label\` / \`delete_element_by_label\` require an existing label**, unique
+  *per collection*, not per database — one naming an element of another collection does not
+  resolve. A miss throws \`Element not found: label '<label>' in collection '<collection>'\` and
+  changes nothing. Passing \`label = "New name"\` in the element table renames the element, after
+  which only the new label resolves. Because the label form delegates to the id form, failures
+  that validate the *element* (an empty table, a type mismatch) report
+  \`Cannot update_element: ...\`.
 - **Empty arrays are skipped.** An attribute whose value is \`{}\` writes no vector/set (the element
   type can't be inferred from an empty array), so it is silently dropped.
 - **No \`nil\` scalar attributes.** In Lua a key set to \`nil\` is dropped from the table, so

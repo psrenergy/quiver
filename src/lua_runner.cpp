@@ -384,6 +384,7 @@ struct LuaRunner::Impl {
         bind.set_function("read_element_by_id", &read_element_by_id_lua);
 
         bind.set_function("update_element", &update_element_lua);
+        bind.set_function("update_element_by_label", &update_element_by_label_lua);
         bind.set_function("update_time_series_group", &update_time_series_group_lua);
         bind.set_function("update_vector_group", &update_vector_group_lua);
         bind.set_function("update_set_group", &update_set_group_lua);
@@ -955,6 +956,14 @@ struct LuaRunner::Impl {
     static void update_element_lua(Database& db, const std::string& collection, int64_t id, const sol::table& values) {
         auto element = table_to_element(values);
         db.update_element(collection, id, element);
+    }
+
+    static void update_element_by_label_lua(Database& db,
+                                            const std::string& collection,
+                                            const std::string& label,
+                                            const sol::table& values) {
+        auto element = table_to_element(values);
+        db.update_element_by_label(collection, label, element);
     }
 
     static sol::table read_scalar_strings_lua(Database& db,
