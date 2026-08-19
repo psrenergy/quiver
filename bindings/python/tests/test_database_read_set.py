@@ -50,12 +50,13 @@ class TestReadSetStringsBulk:
         assert result == []
 
     def test_read_set_strings_with_empty_set(self, collections_db: Database) -> None:
-        # C++ bulk read skips elements with no set data (same as scalar NULL skipping)
+        # One entry per element: an element with no set data reads back as an empty list
         collections_db.create_element("Collection", label="item1", some_integer=10, tag=["alpha"])
         collections_db.create_element("Collection", label="item2", some_integer=20)
         result = collections_db.read_set_strings("Collection", "tag")
-        assert len(result) == 1
+        assert len(result) == 2
         assert result[0] == ["alpha"]
+        assert result[1] == []
 
 
 # -- Convenience set reads ---------------------------------------------------

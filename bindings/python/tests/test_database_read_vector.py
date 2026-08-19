@@ -59,12 +59,13 @@ class TestReadVectorIntegersBulk:
         assert result == []
 
     def test_read_vector_integers_with_empty_vector(self, collections_db: Database) -> None:
-        # C++ bulk read skips elements with no vector data (same as scalar NULL skipping)
+        # One entry per element: an element with no vector data reads back as an empty list
         collections_db.create_element("Collection", label="item1", some_integer=10, value_int=[1, 2])
         collections_db.create_element("Collection", label="item2", some_integer=20)
         result = collections_db.read_vector_integers("Collection", "value_int")
-        assert len(result) == 1
+        assert len(result) == 2
         assert result[0] == [1, 2]
+        assert result[1] == []
 
 
 class TestReadVectorFloatsBulk:

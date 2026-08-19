@@ -65,7 +65,8 @@ public:
     std::optional<std::string>
     read_scalar_string_by_id(const std::string& collection, const std::string& attribute, int64_t id);
 
-    // Read vector attributes (all elements)
+    // Read vector attributes (all elements). One entry per element, aligned with read_element_ids.
+    // Values are dense — NULL cells are dropped.
     std::vector<std::vector<int64_t>> read_vector_integers(const std::string& collection, const std::string& attribute);
     std::vector<std::vector<double>> read_vector_floats(const std::string& collection, const std::string& attribute);
     std::vector<std::vector<std::string>> read_vector_strings(const std::string& collection,
@@ -79,7 +80,7 @@ public:
     std::vector<std::string>
     read_vector_strings_by_id(const std::string& collection, const std::string& attribute, int64_t id);
 
-    // Read set attributes (all elements)
+    // Read set attributes (all elements). Same contract as the vector readers above.
     std::vector<std::vector<int64_t>> read_set_integers(const std::string& collection, const std::string& attribute);
     std::vector<std::vector<double>> read_set_floats(const std::string& collection, const std::string& attribute);
     std::vector<std::vector<std::string>> read_set_strings(const std::string& collection, const std::string& attribute);

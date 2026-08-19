@@ -166,7 +166,28 @@ Settled questions — don't relitigate without the user; each was decided delibe
   `nil` holes (only `to_lua_table` changed; no C API mask) with `read_element_ids` as the
   count/position authority since `#t` is unreliable across holes. Scope is **scalars only** — the
   shared dense `read_column_values<T>` still serves vector/set `_by_id` and `read_element_ids`
-  (NOT NULL / PK by convention); vector/set readers are unchanged.
+  (NOT NULL / PK by convention); vector/set cell NULLs are still dropped, see the next decision.
+- **Bulk reads of one collection are positionally aligned, but still cell-dense.** `read_element_ids`,
+  `read_scalar_*` and the six vector/set bulk readers all order by the collection's `rowid`, so entry
+  *i* is the same element in every one of them — the convention that makes zipping several attributes
+  per element correct. The vector/set readers used to break it by skipping elements with no group
+  rows; they now LEFT JOIN the group table onto the collection, so such an element is an empty inner
+  vector (no signature changed, so the bindings inherited the fix). Alignment holds *between* calls,
+  so a caller reading several attributes alongside a concurrent writer needs a read transaction
+  around the whole group. Don't make a reader self-sufficient by calling `read_element_ids` inside
+  it: two statements are two snapshots, the same race moved inside the library. **Cell** NULLs are a
+  separate matter, still dropped by vector/set reads (`[0.10, NULL, 0.30]` → `[0.10, 0.30]`) —
+  preserving them needs a per-cell mask across the C ABI, so for multi-column group reads prefer
+  `read_vector_group_by_id` / `read_set_group_by_id`, which are row- and NULL-correct.
+- **A set group's rows come back in `rowid` order, and that order is not a promise.** All the set
+  readers (`read_set_*`, `read_set_*_by_id`, `read_set_group_by_id`) `ORDER BY rowid`. The `_by_id`
+  readers had no `ORDER BY` at all, so each took the order of whichever index SQLite picked for it:
+  a set table with two UNIQUE constraints is legal (`validate_set_table` checks their union), and
+  there two per-column reads of one group came back in different orders and paired the wrong values
+  together. `rowid` is also the only stable row identity a set table has — SQLite's UNIQUE treats
+  each NULL as distinct, so once cells can be NULL no value-based order is total. Document it as
+  *consistent across every reader of the group, otherwise unspecified*: it happens to equal write
+  order (the group writers delete and re-insert), and that coincidence must not become a contract.
 
 ## Do Not "Fix"
 
@@ -403,7 +424,7 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
 - Element count: `number_of_elements(collection)` returns the current row count from the
   collection's main table (`COUNT(*)`), not its maximum ID or group-row count. Any table in the
   schema is accepted, so naming a group table reports that table's own row count.
-- Scalar/vector/set readers: `read_{scalar,vector,set}_{integers,floats,strings}(collection, attribute)` (+ `_by_id` variants). Scalar bulk readers return one entry per element with SQL NULLs preserved positionally (`std::optional` / `nothing`/`None`/`null`/`nil`); see the scalar-NULL design decision.
+- Scalar/vector/set readers: `read_{scalar,vector,set}_{integers,floats,strings}(collection, attribute)` (+ `_by_id` variants). All the bulk readers return one entry per element, aligned with `read_element_ids` — an element with no group rows is an empty inner vector, never skipped. Scalar reads also preserve SQL NULLs positionally (`std::optional` / `nothing`/`None`/`null`/`nil`); vector/set reads still drop NULL cells. See the two NULL design decisions.
 - Whole-group readers: `read_vector_group_by_id()` / `read_set_group_by_id()` — row-shaped
   `vector<map<string, Value>>` over all of a group's value columns, positionally aligned with SQL
   NULL cells preserved (`Value{nullptr}`). Use these for multi-column group reads: the dense

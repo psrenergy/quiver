@@ -49,7 +49,7 @@ TEST(Database, ReadSetEmpty) {
     EXPECT_TRUE(sets.empty());
 }
 
-TEST(Database, ReadSetOnlyReturnsElementsWithData) {
+TEST(Database, ReadSetIncludesElementsWithNoRows) {
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
 
@@ -72,14 +72,94 @@ TEST(Database, ReadSetOnlyReturnsElementsWithData) {
     e3.set("label", std::string("Item 3")).set("tag", std::vector<std::string>{"urgent", "review"});
     db.create_element("Collection", e3);
 
-    // Only elements with set data are returned
+    // One entry per element, positionally aligned with read_element_ids: the element with no rows
+    // is an empty set, not a gap
+    auto ids = db.read_element_ids("Collection");
     auto sets = db.read_set_strings("Collection", "tag");
-    EXPECT_EQ(sets.size(), 2);
+    ASSERT_EQ(ids.size(), 3);
+    ASSERT_EQ(sets.size(), ids.size());
+    EXPECT_EQ(sets[0], (std::vector<std::string>{"important"}));
+    EXPECT_TRUE(sets[1].empty());
+    EXPECT_EQ(sets[2], (std::vector<std::string>{"urgent", "review"}));
 }
 
 // ============================================================================
 // Read set by ID tests
 // ============================================================================
+
+// A set group's row order is unspecified, but every reader of the group must agree on it (all of
+// them ORDER BY rowid) - otherwise pairing two per-column reads by position pairs values from
+// different rows. Assert that agreement and the content, never a literal order.
+TEST(Database, ReadSetByIdOrderMatchesGroupReader) {
+    auto db = quiver::Database::from_schema(":memory:",
+                                            VALID_SCHEMA("multi_column_groups.sql"),
+                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element e;
+    e.set("label", std::string("Item 1"));
+    int64_t id = db.create_element("Items", e);
+
+    // Written in an order that matches neither column's sort order, so a reader ordering by value
+    // would disagree with the others
+    db.update_set_group("Items",
+                        "codes",
+                        id,
+                        {{{"code", std::string("zeta")}, {"weight", 2.5}},
+                         {{"code", std::string("alpha")}, {"weight", 3.5}},
+                         {{"code", std::string("mu")}, {"weight", 1.5}}});
+
+    auto codes = db.read_set_strings_by_id("Items", "code", id);
+    auto weights = db.read_set_floats_by_id("Items", "weight", id);
+    auto rows = db.read_set_group_by_id("Items", "codes", id);
+
+    ASSERT_EQ(rows.size(), 3);
+    ASSERT_EQ(codes.size(), rows.size());
+    ASSERT_EQ(weights.size(), rows.size());
+
+    // Every reader returns the group's rows in the same order, so position i is one row everywhere
+    for (size_t i = 0; i < rows.size(); ++i) {
+        EXPECT_EQ(codes[i], std::get<std::string>(rows[i].at("code")));
+        EXPECT_DOUBLE_EQ(weights[i], std::get<double>(rows[i].at("weight")));
+    }
+
+    // Content is pinned independently of order
+    std::sort(codes.begin(), codes.end());
+    std::sort(weights.begin(), weights.end());
+    EXPECT_EQ(codes, (std::vector<std::string>{"alpha", "mu", "zeta"}));
+    EXPECT_EQ(weights, (std::vector<double>{1.5, 2.5, 3.5}));
+}
+
+TEST(Database, ReadSetIntegersByIdOrderMatchesGroupReader) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("all_types.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element e;
+    e.set("label", std::string("Item 1"));
+    int64_t id = db.create_element("AllTypes", e);
+    quiver::Element update;
+    update.set("code", std::vector<int64_t>{30, 10, 20});
+    db.update_element("AllTypes", id, update);
+
+    auto codes = db.read_set_integers_by_id("AllTypes", "code", id);
+    auto rows = db.read_set_group_by_id("AllTypes", "codes", id);
+
+    ASSERT_EQ(rows.size(), 3);
+    ASSERT_EQ(codes.size(), rows.size());
+    for (size_t i = 0; i < rows.size(); ++i) {
+        EXPECT_EQ(codes[i], std::get<int64_t>(rows[i].at("code")));
+    }
+
+    std::sort(codes.begin(), codes.end());
+    EXPECT_EQ(codes, (std::vector<int64_t>{10, 20, 30}));
+}
 
 TEST(Database, ReadSetStringById) {
     auto db = quiver::Database::from_schema(
