@@ -44,7 +44,8 @@ std::vector<std::vector<T>> read_grouped_values_all(const Result& result) {
             current_id = id;
         }
 
-        if (auto val = get_row_value(result[i], 1, static_cast<T*>(nullptr))) {
+        auto val = get_row_value(result[i], 1, static_cast<T*>(nullptr));
+        if (val) {
             groups.back().push_back(*val);
         }
     }
