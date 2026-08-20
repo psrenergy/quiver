@@ -1509,3 +1509,80 @@ TEST(Database, UpdateElementByLabelValidationNamesTheIdForm) {
         EXPECT_TRUE(msg.find("Cannot update_element: type mismatch") != std::string::npos) << "Actual: " << msg;
     }
 }
+
+TEST(Database, UpdateVectorGroupByLabel) {
+    SharedFkFixture f;
+
+    // A second child so the assertions cannot pass vacuously: with only one element an update that
+    // ignored the label entirely would still hit the right row.
+    int64_t other = f.db.create_element("Child", quiver::Element().set("label", std::string("Child 2")));
+    f.db.update_vector_group("Child", "refs", other, {{{"parent_ref", f.parent_a}}});
+
+    f.db.update_vector_group_by_label(
+        "Child", "refs", "Child 1", {{{"parent_ref", f.parent_a}}, {{"parent_ref", f.parent_b}}});
+    EXPECT_EQ(f.db.read_vector_integers_by_id("Child", "parent_ref", f.child),
+              (std::vector<int64_t>{f.parent_a, f.parent_b}));
+    EXPECT_EQ(f.db.read_vector_integers_by_id("Child", "parent_ref", other), (std::vector<int64_t>{f.parent_a}));
+
+    // A second call replaces rather than appends, and an empty row list clears.
+    f.db.update_vector_group_by_label("Child", "refs", "Child 1", {{{"parent_ref", f.parent_b}}});
+    EXPECT_EQ(f.db.read_vector_integers_by_id("Child", "parent_ref", f.child), (std::vector<int64_t>{f.parent_b}));
+
+    f.db.update_vector_group_by_label("Child", "refs", "Child 1", {});
+    EXPECT_TRUE(f.db.read_vector_integers_by_id("Child", "parent_ref", f.child).empty());
+    EXPECT_EQ(f.db.read_vector_integers_by_id("Child", "parent_ref", other), (std::vector<int64_t>{f.parent_a}));
+}
+
+TEST(Database, UpdateVectorGroupByLabelNonExistent) {
+    SharedFkFixture f;
+
+    f.db.update_vector_group("Child", "refs", f.child, {{{"parent_ref", f.parent_a}}});
+
+    try {
+        f.db.update_vector_group_by_label("Child", "refs", "No Such Child", {{{"parent_ref", f.parent_b}}});
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), "Element not found: label 'No Such Child' in collection 'Child'");
+    }
+
+    // Nothing was written - the lookup throws before the group is cleared.
+    EXPECT_EQ(f.db.read_vector_integers_by_id("Child", "parent_ref", f.child), (std::vector<int64_t>{f.parent_a}));
+
+    // A label is unique per collection, not per database: one naming an element of another
+    // collection must not resolve here.
+    try {
+        f.db.update_vector_group_by_label("Child", "refs", "Parent A", {});
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), "Element not found: label 'Parent A' in collection 'Child'");
+    }
+}
+
+// require_collection only checks has_table, so a group table reaches resolve_label. The explicit
+// require_column("label") is what stops it there instead of letting the SELECT leak a raw
+// "no such column: label" prepare error -- and the message must name the public method called.
+TEST(Database, UpdateVectorGroupByLabelOnTableWithoutLabelColumn) {
+    SharedFkFixture f;
+
+    try {
+        f.db.update_vector_group_by_label("Child_vector_refs", "refs", "anything", {});
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(),
+                     "Cannot update_vector_group_by_label: column 'label' not found in table 'Child_vector_refs'");
+    }
+}
+
+// resolve_label owns the lookup; everything past it is update_vector_group's, so the column
+// validation reports "Cannot update_vector_group" - the operation that validated.
+TEST(Database, UpdateVectorGroupByLabelValidationNamesTheIdForm) {
+    SharedFkFixture f;
+
+    try {
+        f.db.update_vector_group_by_label("Child", "refs", "Child 1", {{{"nope", int64_t{1}}}});
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        std::string msg = e.what();
+        EXPECT_TRUE(msg.find("Cannot update_vector_group:") != std::string::npos) << "Actual: " << msg;
+    }
+}

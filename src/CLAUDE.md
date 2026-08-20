@@ -178,7 +178,8 @@ impl_->logger->debug("Opening database: {}", path);
   `delete_element`, and both group writers.
 - **Label→id resolution has one query** (`database_impl.h`): `Impl::lookup_id_by_label(table,
   label, db)` is the only `SELECT id ... WHERE label = ?`, shared by `Impl::resolve_label`
-  (Pattern 2, backs `delete_element_by_label` and `update_element_by_label`) and
+  (Pattern 2, backs `delete_element_by_label`, `update_element_by_label`, and
+  `update_vector_group_by_label`) and
   `Impl::resolve_fk_label` (Pattern 3) — the two
   report a miss differently, so the throw stays with each caller. `resolve_label` calls
   `require_column(collection, "label")` because `require_collection` only checks `has_table`, so a
@@ -215,11 +216,12 @@ impl_->logger->debug("Opening database: {}", path);
   in sync (root design decision).
 - **`update_element` / `delete_element` / the group writers verify the id exists** (via
   `Impl::require_element`) and throw Pattern 2 `"Element not found: ..."` — no silent no-op.
-  `delete_element_by_label` / `update_element_by_label` do the same for a label via
-  `Impl::resolve_label`. Both by-label forms are one-line delegations to their id counterpart (the
-  root `_by_label` rule), so `update_element_by_label`'s *element* validation — the empty-element
-  throw, `TypeValidator`, `insert_group_data` — reports `Cannot update_element: ...`, naming the
-  operation that validated.
+  `delete_element_by_label` / `update_element_by_label` / `update_vector_group_by_label` do the same
+  for a label via `Impl::resolve_label`. Every by-label form is a one-line delegation to its id
+  counterpart (the root `_by_label` rule), so `update_element_by_label`'s *element* validation — the
+  empty-element throw, `TypeValidator`, `insert_group_data` — reports `Cannot update_element: ...`,
+  and `update_vector_group_by_label`'s column validation reports `Cannot update_vector_group: ...`,
+  naming the operation that validated.
 - **Schema metadata loads lazily** (`Impl::require_schema`): the `Database(path, options)`
   constructor does not read it, so the first metadata/CRUD call does. `schema` and `type_validator`
   are `mutable` (const readers trigger the load) and `load_schema_metadata()` is `const` and
