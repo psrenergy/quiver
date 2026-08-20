@@ -2066,9 +2066,9 @@ TEST(DatabaseCApi, UpdateVectorGroupByLabelNullArguments) {
     EXPECT_EQ(quiver_database_update_vector_group_by_label(
                   db, "Child", nullptr, "Child 1", nullptr, nullptr, nullptr, nullptr, 0, 0),
               QUIVER_ERROR);
-    EXPECT_EQ(
-        quiver_database_update_vector_group_by_label(db, "Child", "refs", nullptr, nullptr, nullptr, nullptr, nullptr, 0, 0),
-        QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_update_vector_group_by_label(
+                  db, "Child", "refs", nullptr, nullptr, nullptr, nullptr, nullptr, 0, 0),
+              QUIVER_ERROR);
 
     quiver_database_close(db);
 }
