@@ -178,9 +178,7 @@ impl_->logger->debug("Opening database: {}", path);
   `delete_element`, and both group writers.
 - **Label→id resolution has one query** (`database_impl.h`): `Impl::lookup_id_by_label(table,
   label, db)` is the only `SELECT id ... WHERE label = ?`, shared by `Impl::resolve_label`
-  (Pattern 2, backs `delete_element_by_label`, `update_element_by_label`, and
-  `update_vector_group_by_label`) and
-  `Impl::resolve_fk_label` (Pattern 3) — the two
+  (Pattern 2, backs every `_by_label` form) and `Impl::resolve_fk_label` (Pattern 3) — the two
   report a miss differently, so the throw stays with each caller. `resolve_label` calls
   `require_column(collection, "label")` because `require_collection` only checks `has_table`, so a
   group table would otherwise reach the SELECT and leak a raw `no such column: label` prepare
@@ -220,7 +218,6 @@ impl_->logger->debug("Opening database: {}", path);
   for a label via `Impl::resolve_label`. Every by-label form is a one-line delegation to its id
   counterpart (the root `_by_label` rule), so `update_element_by_label`'s *element* validation — the
   empty-element throw, `TypeValidator`, `insert_group_data` — reports `Cannot update_element: ...`,
-  and `update_vector_group_by_label`'s column validation reports `Cannot update_vector_group: ...`,
   naming the operation that validated.
 - **Schema metadata loads lazily** (`Impl::require_schema`): the `Database(path, options)`
   constructor does not read it, so the first metadata/CRUD call does. `schema` and `type_validator`

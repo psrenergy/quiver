@@ -25,8 +25,7 @@ src/c/
   database.cpp            # Lifecycle: open, close, factory methods, describe
   database_options.h      # Option converters: convert_database_options, convert_csv_options
   database_create.cpp     # quiver_database_create_element
-  database_update.cpp     # quiver_database_update_element + _by_label, the vector/set group
-                          # writers + quiver_database_update_vector_group_by_label
+  database_update.cpp     # quiver_database_update_* (element, group writers, _by_label forms)
   database_delete.cpp     # quiver_database_delete_element, quiver_database_delete_element_by_label
   database_read.cpp       # All read operations + quiver_database_number_of_elements, + co-located free functions
   database_metadata.cpp   # Metadata get/list + co-located free functions
@@ -204,9 +203,8 @@ NULL **presence mask** alongside the data arrays:
 This pattern mirrors the `convert_params()` approach from `database_query.cpp` for type-safe FFI marshaling across N typed columns.
 
 **One decoder for every group update.** `unmarshal_group_columns_to_rows` (`database_helpers.h`) is
-the inverse of `marshal_group_rows_to_c` and is shared by `quiver_database_update_time_series_group`,
-`_update_vector_group`, `_update_set_group`, and `_update_vector_group_by_label` — the decoder was
-duplicated once and must not be again. It owns three contracts the row-shaped C++ API cannot express:
+the inverse of `marshal_group_rows_to_c` and is shared by every group-update entry point — the
+decoder was duplicated once and must not be again. It owns three contracts the row-shaped C++ API cannot express:
 - **A NULL cell is NULL however it is spelled**: masked out, a NULL per-column data pointer, or (for
   string columns) a NULL `char*` entry under a dense mask. That last case is what the read direction
   emits for a NULL STRING cell, so feeding a read result back with the mask stripped must not be UB.
