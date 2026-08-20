@@ -392,10 +392,9 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
 - CRUD: `create_element(collection, element)`, `update_element`, `delete_element`,
   `update_element_by_label(collection, label, element)`,
   `delete_element_by_label(collection, label)`
-- Label-addressed writes: `update_element_by_label`, `delete_element_by_label`, and
-  `update_vector_group_by_label(collection, group, label, rows)`. Each resolves the label within
-  the collection (`Impl::resolve_label`) and delegates to its id counterpart, so everything past
-  the lookup — CASCADE, the attribute writes, the validation — is the id form's. A label is unique per
+- Label-addressed writes: each `_by_label` form resolves the label within the collection
+  (`Impl::resolve_label`) and delegates to its id counterpart, so everything past the lookup —
+  CASCADE, the attribute writes, the validation — is the id form's. A label is unique per
   collection, not per database. Errors name the step that raised them: the lookup owns the
   Pattern 2 miss (`Element not found: label 'x' in collection 'C'`), while the delegated write
   names the id form (`Cannot update_element: ...`). Passing `label` among the attributes to
