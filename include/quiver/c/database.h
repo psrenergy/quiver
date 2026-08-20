@@ -243,7 +243,8 @@ QUIVER_C_API quiver_error_t quiver_database_read_set_group_by_id(quiver_database
 // foreign-key column accepts a label string. Prefer these over passing arrays through
 // quiver_database_update_element when a column name is shared by two groups of the same collection
 // (legal for foreign keys): (collection, group) names exactly one table, a column name alone
-// does not.
+// does not. The _by_label form takes a label in place of the id and reports
+// "Element not found: label '...' in collection '...'" on a miss.
 QUIVER_C_API quiver_error_t quiver_database_update_vector_group(quiver_database_t* db,
                                                                 const char* collection,
                                                                 const char* group,
@@ -254,6 +255,17 @@ QUIVER_C_API quiver_error_t quiver_database_update_vector_group(quiver_database_
                                                                 const uint8_t* const* column_has_value,
                                                                 size_t column_count,
                                                                 size_t row_count);
+
+QUIVER_C_API quiver_error_t quiver_database_update_vector_group_by_label(quiver_database_t* db,
+                                                                         const char* collection,
+                                                                         const char* group,
+                                                                         const char* label,
+                                                                         const char* const* column_names,
+                                                                         const int* column_types,
+                                                                         const void* const* column_data,
+                                                                         const uint8_t* const* column_has_value,
+                                                                         size_t column_count,
+                                                                         size_t row_count);
 
 QUIVER_C_API quiver_error_t quiver_database_update_set_group(quiver_database_t* db,
                                                              const char* collection,
