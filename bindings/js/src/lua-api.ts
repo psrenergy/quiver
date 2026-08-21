@@ -322,10 +322,8 @@ Rules:
   are rejected if passed.
 - **Foreign-key columns accept a label string** and resolve it to the referenced id, exactly as in
   \`create_element\` / \`update_element\`.
-- The element id must exist, same as \`update_element\` / \`delete_element\`.
-- **\`update_vector_group_by_label\` takes a label in place of the id**, resolved per collection
-  like \`update_element_by_label\`; a miss throws \`Element not found: label '<label>' in collection
-  '<collection>'\`.
+- The element id must exist, same as \`update_element\` / \`delete_element\`; the \`_by_label\` form
+  takes a label in its place, with \`update_element_by_label\`'s resolution and miss semantics.
 
 ---
 

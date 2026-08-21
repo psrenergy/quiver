@@ -34,8 +34,7 @@ type ColumnUpdateFn = (
 /**
  * Marshal a column-oriented payload and forward it to one of the columnar group update C
  * functions. Shared by updateTimeSeriesGroup / updateVectorGroup / updateSetGroup and their
- * _by_label counterparts: they differ only in which C entry point they call and whether `key`
- * is an element id or a label.
+ * _by_label counterparts: they differ only in which C entry point they call.
  *
  * Pass `{}` (no columns) to clear the group.
  */
