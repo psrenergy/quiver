@@ -148,7 +148,8 @@ static void test_migrations(const std::string& migrations_path);
 `schema_path` is a `.sql` file; `migrations_path` is a directory of numbered version
 subdirectories with `up.sql`/`down.sql`.
 `test_migrations` validates that directory in an in-memory database by executing every up migration
-and then every down migration; the direction-specific execution helpers remain private.
+and then every down migration, and finally rejects any table left behind; the direction-specific
+execution helpers remain private.
 
 ## Logging
 

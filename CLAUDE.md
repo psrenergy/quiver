@@ -390,7 +390,8 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
 - `test_migrations(migrations_path)` — validates a migrations directory (up then down) against a
   throwaway in-memory database; no out-parameter, returns nothing. Bound in every layer, including
   Lua (`db:test_migrations`, db-scoped and sandboxed — see the design decision above). A directory
-  with no numbered migration subdirectories is an error here.
+  with no numbered migration subdirectories is an error here, and so is a round trip that ends with
+  tables still standing.
 - Transaction control: `begin_transaction()`, `commit()`, `rollback()`, `in_transaction()`
 - Dry runs: `begin_dry_run()`, `end_dry_run()`, `in_dry_run()` — one transaction that is always rolled back; while active the three transaction methods above are absorbed (no-ops) so nested callers compose. See the design decision below.
 - CRUD: `create_element(collection, element)`, `update_element`, `delete_element`,

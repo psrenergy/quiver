@@ -141,7 +141,8 @@ db:test_migrations(path)           -- validate a migrations dir (up then down) i
 All three \`describe*\`/\`summarize*\` methods **return** a string — \`print()\` it to see it.
 
 \`db:test_migrations(path)\` applies every \`up.sql\` in version order, then every \`down.sql\` in
-reverse, against a throwaway in-memory database — nothing in \`db\` itself is touched.
+reverse, against a throwaway in-memory database — nothing in \`db\` itself is touched. The round trip
+must end with an empty database; leftover tables are named in the error.
 
 ---
 

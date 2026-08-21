@@ -272,6 +272,15 @@ void Database::test_migrations(const std::string& migrations_path) {
     Database db(":memory:", {.console_level = LogLevel::Off});
     db.migrate_up(migrations_path);
     db.migrate_down(migrations_path);
+
+    const auto leftovers = Schema::from_database(db.impl_->db).table_names();
+    if (!leftovers.empty()) {
+        std::string names;
+        for (const auto& table : leftovers) {
+            names += (names.empty() ? "" : ", ") + table;
+        }
+        throw std::runtime_error("Failed to test_migrations: down migrations left tables behind: " + names);
+    }
 }
 
 Database

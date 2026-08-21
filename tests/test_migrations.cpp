@@ -256,6 +256,25 @@ TEST_F(MigrationsTestFixture, TestMigrationsExecutesDownSql) {
     }
 }
 
+TEST_F(MigrationsTestFixture, TestMigrationsRejectsLeftoverTables) {
+    // Test is AUTOINCREMENT on purpose: dropping it leaves sqlite_sequence behind for good, which
+    // is not a leftover and must stay out of the message.
+    fs::create_directories(fs::path(temp_dir) / "1");
+    std::ofstream(fs::path(temp_dir) / "1" / "up.sql")
+        << "CREATE TABLE Configuration (id INTEGER PRIMARY KEY, label TEXT UNIQUE NOT NULL) STRICT;"
+           "CREATE TABLE Test (id INTEGER PRIMARY KEY AUTOINCREMENT, label TEXT UNIQUE NOT NULL) STRICT;"
+           "CREATE TABLE Extra (id INTEGER PRIMARY KEY, label TEXT UNIQUE NOT NULL) STRICT;";
+    std::ofstream(fs::path(temp_dir) / "1" / "down.sql") << "DROP TABLE Test;";
+
+    try {
+        quiver::Database::test_migrations(temp_dir);
+        FAIL() << "Expected test_migrations to throw";
+    } catch (const std::runtime_error& error) {
+        EXPECT_STREQ(error.what(),
+                     "Failed to test_migrations: down migrations left tables behind: Configuration, Extra");
+    }
+}
+
 TEST_F(MigrationsTestFixture, TestMigrationsRequiresDownSql) {
     fs::create_directories(fs::path(temp_dir) / "1");
     std::ofstream(fs::path(temp_dir) / "1" / "up.sql")

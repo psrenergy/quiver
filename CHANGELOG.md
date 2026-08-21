@@ -9,7 +9,7 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ### Added
 
-- **Migration round-trip validation: `Database::test_migrations()` / `quiver_database_test_migrations()`.** Validates a migrations directory in an in-memory database by applying every up migration, then every down migration.
+- **Migration round-trip validation: `Database::test_migrations()` / `quiver_database_test_migrations()`.** Validates a migrations directory in an in-memory database by applying every up migration, then every down migration, and finally checking that no table survives.
 
   Available in **every layer**: C++, the C API, Julia (`test_migrations`), Dart
   (`Database.testMigrations`), Python (`Database.test_migrations`), JS (`Database.testMigrations`),
@@ -17,7 +17,8 @@ callers to change something are prefixed **BREAKING** and say what to do.
   directory, like the other file-touching Lua operations.
 
   A directory with no numbered migration subdirectories throws `Cannot test_migrations: no
-  migrations found in <path>` rather than passing vacuously.
+  migrations found in <path>` rather than passing vacuously. A `down.sql` that runs but forgets a
+  `DROP` throws `Failed to test_migrations: down migrations left tables behind: <names>`.
 
 - **`delete_element_by_label(collection, label)`.** Deletes an element addressed by its `label`
   instead of its id, for callers that already know the name and would otherwise round-trip through

@@ -108,6 +108,7 @@ class Database {
 
   /// Validates a migrations directory by applying every `up.sql` in order,
   /// then every `down.sql` in reverse order, against an in-memory database.
+  /// Throws if the round trip leaves any table behind.
   static void testMigrations(String migrationsPath) {
     final arena = Arena();
     try {
