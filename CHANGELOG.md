@@ -13,7 +13,8 @@ callers to change something are prefixed **BREAKING** and say what to do.
   rows in one named vector group, addressed by `label` instead of id — the label-addressed
   counterpart of `update_vector_group`. It resolves the label and then delegates, so the column
   validation, the FK-label resolution, the NULL cells, and "no columns clears the group" are
-  identical. Label resolution and its miss semantics are `update_element_by_label`'s, below.
+  identical. Available in every layer, under the usual per-layer spelling. Label resolution and
+  its miss semantics are `update_element_by_label`'s, below.
 
 - **`update_element_by_label(collection, label, element)`.** Updates an element addressed by its
   `label` instead of its id, the label-addressed counterpart of `update_element`. It resolves the
