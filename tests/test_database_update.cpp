@@ -1515,7 +1515,7 @@ TEST(Database, UpdateVectorGroupByLabel) {
 
     // A second child so the assertions cannot pass vacuously: with only one element an update that
     // ignored the label entirely would still hit the right row.
-    int64_t other = f.db.create_element("Child", quiver::Element().set("label", std::string("Child 2")));
+    auto other = f.db.create_element("Child", quiver::Element().set("label", std::string("Child 2")));
     f.db.update_vector_group("Child", "refs", other, {{{"parent_ref", f.parent_a}}});
 
     f.db.update_vector_group_by_label(
