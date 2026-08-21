@@ -8,7 +8,6 @@
 #include "quiver/element.h"
 #include "quiver/expression/expression.h"
 #include "quiver/options.h"
-#include "quiver/schema.h"
 #include "quiver/value.h"
 #include "utils/datetime.h"
 
@@ -387,6 +386,7 @@ struct LuaRunner::Impl {
         bind.set_function("update_element_by_label", &update_element_by_label_lua);
         bind.set_function("update_time_series_group", &update_time_series_group_lua);
         bind.set_function("update_vector_group", &update_vector_group_lua);
+        bind.set_function("update_vector_group_by_label", &update_vector_group_by_label_lua);
         bind.set_function("update_set_group", &update_set_group_lua);
         bind.set_function("upsert_time_series_row", &upsert_time_series_row_lua);
         bind.set_function("update_time_series_files", &update_time_series_files_lua);
@@ -1501,34 +1501,22 @@ struct LuaRunner::Impl {
     // column reaches; shorter or sparse columns write NULL in the gaps, mirroring the time series
     // writer's treatment of value columns. Named columns that reach no index at all throw instead
     // of silently clearing the group; an empty table {} clears.
-    static void update_group_lua(Database& db,
-                                 const char* caller,
-                                 GroupTableType type,
-                                 const std::string& collection,
-                                 const std::string& group,
-                                 int64_t id,
-                                 const sol::table& columns) {
+    static std::vector<std::map<std::string, Value>> group_rows_from_lua(const char* caller,
+                                                                         const sol::table& columns) {
         auto lua_columns = collect_group_columns(caller, columns);
-
-        std::vector<std::map<std::string, Value>> cpp_rows;
-        if (!lua_columns.empty()) {
-            size_t row_count = 0;
-            for (const auto& column : lua_columns) {
-                row_count = std::max(row_count, column.extent);
-            }
-            if (row_count == 0) {
-                throw std::runtime_error(std::string("Cannot ") + caller + ": columns [" +
-                                         join_column_names(lua_columns) +
-                                         "] contain no rows; pass an empty table {} to clear the group");
-            }
-            cpp_rows = columns_to_cpp_rows(caller, lua_columns, row_count);
+        if (lua_columns.empty()) {
+            return {};
         }
 
-        if (type == GroupTableType::Vector) {
-            db.update_vector_group(collection, group, id, cpp_rows);
-        } else {
-            db.update_set_group(collection, group, id, cpp_rows);
+        size_t row_count = 0;
+        for (const auto& column : lua_columns) {
+            row_count = std::max(row_count, column.extent);
         }
+        if (row_count == 0) {
+            throw std::runtime_error(std::string("Cannot ") + caller + ": columns [" + join_column_names(lua_columns) +
+                                     "] contain no rows; pass an empty table {} to clear the group");
+        }
+        return columns_to_cpp_rows(caller, lua_columns, row_count);
     }
 
     static void update_vector_group_lua(Database& db,
@@ -1536,7 +1524,16 @@ struct LuaRunner::Impl {
                                         const std::string& group,
                                         int64_t id,
                                         sol::table columns) {
-        update_group_lua(db, "update_vector_group", GroupTableType::Vector, collection, group, id, columns);
+        db.update_vector_group(collection, group, id, group_rows_from_lua("update_vector_group", columns));
+    }
+
+    static void update_vector_group_by_label_lua(Database& db,
+                                                 const std::string& collection,
+                                                 const std::string& group,
+                                                 const std::string& label,
+                                                 sol::table columns) {
+        db.update_vector_group_by_label(
+            collection, group, label, group_rows_from_lua("update_vector_group_by_label", columns));
     }
 
     static void update_set_group_lua(Database& db,
@@ -1544,7 +1541,7 @@ struct LuaRunner::Impl {
                                      const std::string& group,
                                      int64_t id,
                                      sol::table columns) {
-        update_group_lua(db, "update_set_group", GroupTableType::Set, collection, group, id, columns);
+        db.update_set_group(collection, group, id, group_rows_from_lua("update_set_group", columns));
     }
 
     static void update_time_series_group_lua(Database& db,

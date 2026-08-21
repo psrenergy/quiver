@@ -285,4 +285,35 @@ describe("updateVectorGroup / updateSetGroup", () => {
       db.close();
     }
   });
+
+  test("updateVectorGroupByLabel writes and clears only the labelled element", () => {
+    const { db, parentA, parentB, child } = openRelations();
+    try {
+      const other = db.createElement("Child", { label: "Child 2" });
+
+      db.updateVectorGroupByLabel("Child", "refs", "Child 2", { parent_ref: [parentA] });
+      db.updateVectorGroupByLabel("Child", "refs", "Child 1", { parent_ref: [parentA, parentB] });
+      expect(db.readVectorIntegersById("Child", "parent_ref", child)).toEqual([parentA, parentB]);
+
+      db.updateVectorGroupByLabel("Child", "refs", "Child 1", {});
+      expect(db.readVectorIntegersById("Child", "parent_ref", child)).toEqual([]);
+      expect(db.readVectorIntegersById("Child", "parent_ref", other)).toEqual([parentA]);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("updateVectorGroupByLabel throws on an unresolvable label", () => {
+    const { db, parentA, child } = openRelations();
+    try {
+      db.updateVectorGroup("Child", "refs", child, { parent_ref: [parentA] });
+
+      expect(() =>
+        db.updateVectorGroupByLabel("Child", "refs", "Nope", { parent_ref: [parentA] }),
+      ).toThrow(/Element not found: label 'Nope' in collection 'Child'/);
+      expect(db.readVectorIntegersById("Child", "parent_ref", child)).toEqual([parentA]);
+    } finally {
+      db.close();
+    }
+  });
 });

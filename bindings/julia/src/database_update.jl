@@ -28,22 +28,23 @@ end
 
 # Group update functions (time series, vector, set)
 
-# Shared marshalling for the three column-oriented group writers: every column becomes a typed C
-# array plus a per-cell UInt8 mask where `nothing` is SQL NULL. `update` is the C entry point --
-# all three take the same parallel-array signature.
+# Shared marshalling for the column-oriented group writers: every column becomes a typed C array
+# plus a per-cell UInt8 mask where `nothing` is SQL NULL. `update` is the C entry point -- all of
+# them take the same parallel-array signature, differing only in whether `key` is an element id or
+# a label (the @ccall in c_api.jl annotates that argument per function).
 function _update_group_columns(
     db::Database,
     update::Function,
     collection::String,
     group::String,
-    id::Int64,
+    key::Union{Int64, String},
     kwargs,
 )
     # No columns = clear all rows for this element
     if isempty(kwargs)
         check(
             update(
-                db.ptr, collection, group, id,
+                db.ptr, collection, group, key,
                 C_NULL, C_NULL, C_NULL, C_NULL, Csize_t(0), Csize_t(0),
             ),
         )
@@ -141,7 +142,7 @@ function _update_group_columns(
     GC.@preserve refs begin
         check(
             update(
-                db.ptr, collection, group, id,
+                db.ptr, collection, group, key,
                 name_ptrs, col_types_arr, col_data_arr, col_mask_arr,
                 Csize_t(column_count), Csize_t(row_count),
             ),
@@ -160,6 +161,11 @@ end
 # exactly one table, a column name alone does not.
 function update_vector_group!(db::Database, collection::String, group::String, id::Int64; kwargs...)
     return _update_group_columns(db, C.quiver_database_update_vector_group, collection, group, id, kwargs)
+end
+
+# Label-addressed counterpart of update_vector_group!.
+function update_vector_group_by_label!(db::Database, collection::String, group::String, label::String; kwargs...)
+    return _update_group_columns(db, C.quiver_database_update_vector_group_by_label, collection, group, label, kwargs)
 end
 
 # Set-group counterpart of update_vector_group!.

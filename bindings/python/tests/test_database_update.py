@@ -445,3 +445,22 @@ class TestUpdateVectorSetGroup:
 
         with pytest.raises(ValueError, match="same length"):
             relations_db.update_vector_group("Child", "refs", child, {"parent_ref": [1, 2], "id": [1]})
+
+    def test_update_vector_group_by_label(self, relations_db: Database) -> None:
+        child = self._seed(relations_db)
+        other = relations_db.create_element("Child", label="Child 2")
+
+        relations_db.update_vector_group_by_label("Child", "refs", "Child 2", {"parent_ref": [1]})
+        relations_db.update_vector_group_by_label("Child", "refs", "Child 1", {"parent_ref": ["Parent A", "Parent B"]})
+        assert relations_db.read_vector_integers_by_id("Child", "parent_ref", child) == [1, 2]
+
+        # An empty dict clears, and only the labelled element's group.
+        relations_db.update_vector_group_by_label("Child", "refs", "Child 1", {})
+        assert relations_db.read_vector_integers_by_id("Child", "parent_ref", child) == []
+        assert relations_db.read_vector_integers_by_id("Child", "parent_ref", other) == [1]
+
+    def test_update_vector_group_by_label_unresolvable_label_raises(self, relations_db: Database) -> None:
+        self._seed(relations_db)
+
+        with pytest.raises(QuiverError, match="Element not found"):
+            relations_db.update_vector_group_by_label("Child", "refs", "Nope", {"parent_ref": [1]})

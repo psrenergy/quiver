@@ -219,6 +219,25 @@ Database.prototype.updateVectorGroup = function (
   );
 };
 
+/** Label-addressed counterpart of updateVectorGroup. */
+Database.prototype.updateVectorGroupByLabel = function (
+  this: Database,
+  collection: string,
+  group: string,
+  label: string,
+  data: GroupColumns,
+): void {
+  updateGroupColumns(
+    this._handle,
+    "updateVectorGroupByLabel",
+    getSymbols().quiver_database_update_vector_group_by_label,
+    collection,
+    group,
+    label,
+    data,
+  );
+};
+
 /** Set-group counterpart of updateVectorGroup. */
 Database.prototype.updateSetGroup = function (
   this: Database,
