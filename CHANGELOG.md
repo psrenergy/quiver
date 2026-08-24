@@ -16,6 +16,10 @@ callers to change something are prefixed **BREAKING** and say what to do.
   identical. Available in every layer, under the usual per-layer spelling. Label resolution and
   its miss semantics are `update_element_by_label`'s, below.
 
+- **`update_set_group_by_label(collection, group, label, rows)`.** The same, for a set group — the
+  label-addressed counterpart of `update_set_group`. In C++ and the C API; Lua and the other
+  bindings follow.
+
 - **`update_element_by_label(collection, label, element)`.** Updates an element addressed by its
   `label` instead of its id, the label-addressed counterpart of `update_element`. It resolves the
   label and then delegates to `update_element`, so the attributes written, the FK-label

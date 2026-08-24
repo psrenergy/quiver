@@ -1848,7 +1848,7 @@ TEST(DatabaseCApi, UpdateGroupNullStringEntryIsNull) {
 }
 
 // ============================================================================
-// Update by label tests (quiver_database_update_element_by_label / _update_vector_group_by_label)
+// Update by label tests (quiver_database_update_element_by_label / the group writers' _by_label forms)
 // ============================================================================
 
 TEST(DatabaseCApi, UpdateElementByLabel) {
@@ -2093,6 +2093,125 @@ TEST(DatabaseCApi, UpdateVectorGroupByLabelNamedColumnWithNoRowsRejected) {
     std::string msg = quiver_get_last_error();
     EXPECT_TRUE(msg.find("Cannot update_vector_group_by_label: columns [parent_ref] contain no rows") !=
                 std::string::npos)
+        << "Actual: " << msg;
+
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, UpdateSetGroupByLabel) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("relations.sql").c_str(), &options, &db), QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    const auto make = [&](const char* collection, const char* label) {
+        quiver_element_t* e = nullptr;
+        EXPECT_EQ(quiver_element_create(&e), QUIVER_OK);
+        quiver_element_set_string(e, "label", label);
+        int64_t id = 0;
+        EXPECT_EQ(quiver_database_create_element(db, collection, e, &id), QUIVER_OK);
+        EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
+        return id;
+    };
+    make("Configuration", "Config");
+    const int64_t parent_a = make("Parent", "Parent A");
+    const int64_t parent_b = make("Parent", "Parent B");
+    const int64_t child = make("Child", "Child 1");
+    // A second child so nothing below passes vacuously.
+    const int64_t other_child = make("Child", "Child 2");
+
+    const char* names[] = {"parent_ref"};
+    const int types[] = {QUIVER_DATA_TYPE_INTEGER};
+    int64_t values[] = {parent_a, parent_b};
+    const void* data[] = {values};
+
+    ASSERT_EQ(
+        quiver_database_update_set_group_by_label(db, "Child", "parents", "Child 2", names, types, data, nullptr, 1, 1),
+        QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_update_set_group_by_label(db, "Child", "parents", "Child 1", names, types, data, nullptr, 1, 2),
+        QUIVER_OK);
+
+    int64_t* out = nullptr;
+    size_t count = 0;
+    ASSERT_EQ(quiver_database_read_set_integers_by_id(db, "Child", "parent_ref", child, &out, &count), QUIVER_OK);
+    ASSERT_EQ(count, 2u);
+    EXPECT_EQ(out[0], parent_a);
+    EXPECT_EQ(out[1], parent_b);
+    quiver_database_free_integer_array(out);
+
+    // Clearing takes NULL arrays with zero counts, same as the id form.
+    ASSERT_EQ(quiver_database_update_set_group_by_label(
+                  db, "Child", "parents", "Child 1", nullptr, nullptr, nullptr, nullptr, 0, 0),
+              QUIVER_OK);
+    ASSERT_EQ(quiver_database_read_set_integers_by_id(db, "Child", "parent_ref", child, &out, &count), QUIVER_OK);
+    EXPECT_EQ(count, 0u);
+
+    // The other child's group survived both writes.
+    ASSERT_EQ(quiver_database_read_set_integers_by_id(db, "Child", "parent_ref", other_child, &out, &count), QUIVER_OK);
+    ASSERT_EQ(count, 1u);
+    EXPECT_EQ(out[0], parent_a);
+    quiver_database_free_integer_array(out);
+
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, UpdateSetGroupByLabelNonExistent) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("relations.sql").c_str(), &options, &db), QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    EXPECT_EQ(quiver_database_update_set_group_by_label(
+                  db, "Child", "parents", "No Such Child", nullptr, nullptr, nullptr, nullptr, 0, 0),
+              QUIVER_ERROR);
+    std::string msg = quiver_get_last_error();
+    EXPECT_EQ(msg, "Element not found: label 'No Such Child' in collection 'Child'") << "Actual: " << msg;
+
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, UpdateSetGroupByLabelNullArguments) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("relations.sql").c_str(), &options, &db), QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    EXPECT_EQ(quiver_database_update_set_group_by_label(
+                  nullptr, "Child", "parents", "Child 1", nullptr, nullptr, nullptr, nullptr, 0, 0),
+              QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_update_set_group_by_label(
+                  db, nullptr, "parents", "Child 1", nullptr, nullptr, nullptr, nullptr, 0, 0),
+              QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_update_set_group_by_label(
+                  db, "Child", nullptr, "Child 1", nullptr, nullptr, nullptr, nullptr, 0, 0),
+              QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_update_set_group_by_label(
+                  db, "Child", "parents", nullptr, nullptr, nullptr, nullptr, nullptr, 0, 0),
+              QUIVER_ERROR);
+
+    quiver_database_close(db);
+}
+
+// The decoder runs inside the by-label wrapper, so it names itself - and it runs before the label
+// is resolved, so no element has to exist. Errors from the delegated core write name
+// update_set_group instead.
+TEST(DatabaseCApi, UpdateSetGroupByLabelNamedColumnWithNoRowsRejected) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("relations.sql").c_str(), &options, &db), QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    const char* names[] = {"parent_ref"};
+    const int types[] = {QUIVER_DATA_TYPE_INTEGER};
+    int64_t values[] = {1};
+    const void* data[] = {values};
+
+    EXPECT_EQ(
+        quiver_database_update_set_group_by_label(db, "Child", "parents", "Child 1", names, types, data, nullptr, 1, 0),
+        QUIVER_ERROR);
+    std::string msg = quiver_get_last_error();
+    EXPECT_TRUE(msg.find("Cannot update_set_group_by_label: columns [parent_ref] contain no rows") != std::string::npos)
         << "Actual: " << msg;
 
     quiver_database_close(db);
