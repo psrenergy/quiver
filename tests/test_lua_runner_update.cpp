@@ -379,3 +379,34 @@ TEST_F(LuaRunnerTest, UpdateVectorGroupByLabelErrors) {
 
     EXPECT_EQ(db.read_vector_integers_by_id("Child", "parent_ref", 1), (std::vector<int64_t>{1}));
 }
+
+TEST_F(LuaRunnerTest, UpdateSetGroupByLabel) {
+    auto db = relations_db_with_child();
+    db.create_element("Child", quiver::Element().set("label", "Child 2"));
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(
+        db:update_set_group_by_label("Child", "parents", "Child 2", { parent_ref = { 1 } })
+        db:update_set_group_by_label("Child", "parents", "Child 1", { parent_ref = { 1, "Parent B" } })
+    )");
+    EXPECT_EQ(db.read_set_integers_by_id("Child", "parent_ref", 1), (std::vector<int64_t>{1, 2}));
+
+    lua.run(R"(db:update_set_group_by_label("Child", "parents", "Child 1", {}))");
+    EXPECT_TRUE(db.read_set_integers_by_id("Child", "parent_ref", 1).empty());
+    EXPECT_EQ(db.read_set_integers_by_id("Child", "parent_ref", 2), (std::vector<int64_t>{1}));
+}
+
+TEST_F(LuaRunnerTest, UpdateSetGroupByLabelErrors) {
+    auto db = relations_db_with_child();
+    quiver::LuaRunner lua(db);
+    lua.run(R"(db:update_set_group_by_label("Child", "parents", "Child 1", { parent_ref = { 1 } }))");
+
+    expect_lua_error(lua,
+                     R"(db:update_set_group_by_label("Child", "parents", "Nope", { parent_ref = { 1 } }))",
+                     "Element not found");
+    // The named-but-empty column trap fires before the label is even resolved.
+    expect_lua_error(
+        lua, R"(db:update_set_group_by_label("Child", "parents", "Nope", { parent_ref = {} }))", "contain no rows");
+
+    EXPECT_EQ(db.read_set_integers_by_id("Child", "parent_ref", 1), (std::vector<int64_t>{1}));
+}

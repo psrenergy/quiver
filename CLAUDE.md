@@ -421,8 +421,8 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
   warning (`tests/schemas/valid/relations.sql` shares `parent_ref` across a vector and a set group).
   Prefer the group writers whenever one group is meant. Bound in **every layer**: C++, the C API
   (columnar + per-cell mask, same shape as `update_time_series_group`), Julia, Dart, Python, JS,
-  and Lua; `update_vector_group_by_label` is the label-addressed form of the vector writer.
-  Validation lives in the C++ core and is shared by all of them: the caller's columns are
+  and Lua; `update_vector_group_by_label` / `update_set_group_by_label` are their label-addressed
+  forms. Validation lives in the C++ core and is shared by all of them: the caller's columns are
   checked against the group (the **union** of every row's keys, so a column named only in a later
   row is written and an unknown one still throws), `id` / `vector_index` are rejected as
   caller-supplied columns (they are derived, and emitting one would duplicate it in the INSERT
@@ -518,6 +518,7 @@ The rules are mechanical: given any C++ method name, you can derive the equivale
 | Vector group update | `update_vector_group()` | `quiver_database_update_vector_group()` | `update_vector_group!()` | `updateVectorGroup()` | `update_vector_group()` |
 | Vector group update by label | `update_vector_group_by_label()` | `quiver_database_update_vector_group_by_label()` | `update_vector_group_by_label!()` | `updateVectorGroupByLabel()` | `update_vector_group_by_label()` |
 | Set group update | `update_set_group()` | `quiver_database_update_set_group()` | `update_set_group!()` | `updateSetGroup()` | `update_set_group()` |
+| Set group update by label | `update_set_group_by_label()` | `quiver_database_update_set_group_by_label()` | `update_set_group_by_label!()` | `updateSetGroupByLabel()` | `update_set_group_by_label()` |
 | Query | `query_string()` | `quiver_database_query_string()` | `query_string()` | `queryString()` | `query_string()` |
 | CSV | `export_csv()` | `quiver_database_export_csv()` | `export_csv()` | `exportCSV()` | `export_csv()` |
 | Describe (text) | `describe()` | `quiver_database_describe()` | `describe()` | `describe()` | `describe()` |

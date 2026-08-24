@@ -980,6 +980,33 @@ include("fixture.jl")
 
         Quiver.close!(db)
     end
+
+    @testset "Set Group Writer By Label" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "relations.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Config")
+        parent_a = Quiver.create_element!(db, "Parent"; label = "Parent A")
+        parent_b = Quiver.create_element!(db, "Parent"; label = "Parent B")
+        child = Quiver.create_element!(db, "Child"; label = "Child 1")
+        other = Quiver.create_element!(db, "Child"; label = "Child 2")
+
+        Quiver.update_set_group_by_label!(db, "Child", "parents", "Child 2"; parent_ref = [parent_a])
+        Quiver.update_set_group_by_label!(db, "Child", "parents", "Child 1"; parent_ref = [parent_a, parent_b])
+        @test Quiver.read_set_integers_by_id(db, "Child", "parent_ref", child) == [parent_a, parent_b]
+
+        # No columns clears, and only the labelled element's group.
+        Quiver.update_set_group_by_label!(db, "Child", "parents", "Child 1")
+        @test isempty(Quiver.read_set_integers_by_id(db, "Child", "parent_ref", child))
+        @test Quiver.read_set_integers_by_id(db, "Child", "parent_ref", other) == [parent_a]
+
+        # An unresolvable label throws instead of clearing.
+        @test_throws Quiver.DatabaseException Quiver.update_set_group_by_label!(
+            db, "Child", "parents", "Nope"; parent_ref = [parent_a])
+        @test Quiver.read_set_integers_by_id(db, "Child", "parent_ref", other) == [parent_a]
+
+        Quiver.close!(db)
+    end
 end
 
 end

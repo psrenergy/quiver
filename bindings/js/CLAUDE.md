@@ -62,7 +62,7 @@ biome.json        # Lint/format config
   exactly, never coerced through `Number`. Read paths return `number` (converted via `Number()`
   after the FFI call) — the deliberately simple surface.
 - **`src/group-columns.ts` is the one columnar marshaller** for `updateTimeSeriesGroup`,
-  `updateVectorGroup`, `updateSetGroup` and `updateVectorGroupByLabel`. They differ only in which C
+  `updateVectorGroup`, `updateSetGroup` and their `ByLabel` counterparts. They differ only in which C
   entry point they pass to `updateGroupColumns(handle, caller, cFn, ...)` and whether `key` is a
   `number` id (a `bigint`) or a `string` label (a `Uint8Array`), so don't re-inline it per method.
   It validates before marshalling: jagged columns and named-but-empty columns (`rowCount === 0`)

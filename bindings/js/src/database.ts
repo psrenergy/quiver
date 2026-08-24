@@ -176,6 +176,12 @@ export class Database {
     id: number,
     data: GroupColumns,
   ) => void;
+  declare updateSetGroupByLabel: (
+    collection: string,
+    group: string,
+    label: string,
+    data: GroupColumns,
+  ) => void;
   declare upsertTimeSeriesRow: (
     collection: string,
     group: string,
