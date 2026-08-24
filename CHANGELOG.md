@@ -9,16 +9,13 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ### Added
 
-- **`update_vector_group_by_label(collection, group, label, rows)`.** Replaces all of an element's
-  rows in one named vector group, addressed by `label` instead of id — the label-addressed
-  counterpart of `update_vector_group`. It resolves the label and then delegates, so the column
-  validation, the FK-label resolution, the NULL cells, and "no columns clears the group" are
-  identical. Available in every layer, under the usual per-layer spelling. Label resolution and
-  its miss semantics are `update_element_by_label`'s, below.
-
-- **`update_set_group_by_label(collection, group, label, rows)`.** The same, for a set group — the
-  label-addressed counterpart of `update_set_group`. In C++ and the C API; Lua and the other
-  bindings follow.
+- **`update_vector_group_by_label` / `update_set_group_by_label(collection, group, label, rows)`.**
+  Replaces all of an element's rows in one named vector or set group, addressed by `label` instead
+  of id — the label-addressed counterpart of `update_vector_group` / `update_set_group`. Each
+  resolves the label and then delegates, so the column validation, the FK-label resolution, the
+  NULL cells, and "no columns clears the group" are identical. Available in every layer, under the
+  usual per-layer spelling (`update_set_group_by_label` in C++ and the C API so far; the bindings
+  follow). Label resolution and its miss semantics are `update_element_by_label`'s, below.
 
 - **`update_element_by_label(collection, label, element)`.** Updates an element addressed by its
   `label` instead of its id, the label-addressed counterpart of `update_element`. It resolves the
