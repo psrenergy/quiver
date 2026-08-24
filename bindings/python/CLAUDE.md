@@ -61,12 +61,12 @@ ruff.toml         # Lint/format config (format.bat runs ruff)
   dense datetimes. `_marshal_group_columns` dispatches on the first non-`None` element, builds
   a per-column mask, and substitutes `0`/`0.0`/`ffi.NULL` placeholders for `None` cells; an all-`None`
   column is tagged FLOAT with a zeroed placeholder.
-- **`_marshal_group_columns` serves all three columnar group writers** (time series, vector, set) —
-  same name as Dart's `_marshalGroupColumn`. It raises `ValueError` for jagged column lists (a
-  pre-FFI marshalling error, the documented exception to "messages come from C++"); everything else
-  is validated in the core and surfaces as `QuiverError`. Note that the group *writers* take columns
-  while `read_vector_group_by_id` returns rows, and that reader composes per-column reads, so it
-  **drops NULL cells** — assert a NULL-cell write in SQL, not through it.
+- **`_marshal_group_columns` serves every columnar group writer** (time series, vector, set, by id
+  and by label) — same name as Dart's `_marshalGroupColumn`. It raises `ValueError` for jagged
+  column lists (a pre-FFI marshalling error, the documented exception to "messages come from C++");
+  everything else is validated in the core and surfaces as `QuiverError`. Note that the group
+  *writers* take columns while `read_vector_group_by_id` returns rows, and that reader composes
+  per-column reads, so it **drops NULL cells** — assert a NULL-cell write in SQL, not through it.
 
 ## Packaging
 

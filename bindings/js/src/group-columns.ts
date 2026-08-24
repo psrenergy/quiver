@@ -15,13 +15,14 @@ export type GroupColumns = Record<string, (number | string | null)[]>;
 
 /**
  * The parallel-array signature every columnar group update C function shares
- * (quiver_database_update_{time_series,vector,set}_group).
+ * (quiver_database_update_{time_series,vector,set}_group and their _by_label forms). The 4th
+ * argument addresses the element: an id for the by-id forms, a NUL-terminated label otherwise.
  */
 type ColumnUpdateFn = (
   db: NativePointer,
   collection: Uint8Array,
   group: Uint8Array,
-  id: bigint,
+  key: bigint | Uint8Array,
   names: Uint8Array | null,
   types: Uint8Array | null,
   data: Uint8Array | null,
@@ -32,8 +33,8 @@ type ColumnUpdateFn = (
 
 /**
  * Marshal a column-oriented payload and forward it to one of the columnar group update C
- * functions. Shared by updateTimeSeriesGroup / updateVectorGroup / updateSetGroup: the three
- * differ only in which C entry point they call.
+ * functions. Shared by updateTimeSeriesGroup / updateVectorGroup / updateSetGroup and their
+ * _by_label counterparts: they differ only in which C entry point they call.
  *
  * Pass `{}` (no columns) to clear the group.
  */
@@ -43,15 +44,16 @@ export function updateGroupColumns(
   update: ColumnUpdateFn,
   collection: string,
   group: string,
-  id: number,
+  key: number | string,
   data: GroupColumns,
 ): void {
   const collBuf = toCString(collection);
   const grpBuf = toCString(group);
+  const keyArg = typeof key === "string" ? toCString(key).buf : BigInt(key);
   const entries = Object.entries(data);
 
   if (entries.length === 0) {
-    check(update(handle, collBuf.buf, grpBuf.buf, BigInt(id), null, null, null, null, 0n, 0n));
+    check(update(handle, collBuf.buf, grpBuf.buf, keyArg, null, null, null, null, 0n, 0n));
     return;
   }
 
@@ -149,7 +151,7 @@ export function updateGroupColumns(
       handle,
       collBuf.buf,
       grpBuf.buf,
-      BigInt(id),
+      keyArg,
       namesTable.buf,
       typesAlloc.buf,
       dataTable.buf,

@@ -1753,5 +1753,42 @@ void main() {
         db.close();
       }
     });
+
+    test('updateVectorGroupByLabel writes and clears only that element', () {
+      final db = openRelations();
+      try {
+        db.createElement('Child', {'label': 'Child 2'});
+        db.updateVectorGroupByLabel('Child', 'refs', 'Child 2', {
+          'parent_ref': [1],
+        });
+        db.updateVectorGroupByLabel('Child', 'refs', 'Child 1', {
+          'parent_ref': ['Parent A', 'Parent B'],
+        });
+        expect(
+          db.readVectorIntegersById('Child', 'parent_ref', 1),
+          equals([1, 2]),
+        );
+
+        db.updateVectorGroupByLabel('Child', 'refs', 'Child 1', {});
+        expect(db.readVectorIntegersById('Child', 'parent_ref', 1), isEmpty);
+        expect(db.readVectorIntegersById('Child', 'parent_ref', 2), equals([1]));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('updateVectorGroupByLabel throws on an unresolvable label', () {
+      final db = openRelations();
+      try {
+        expect(
+          () => db.updateVectorGroupByLabel('Child', 'refs', 'Nope', {
+            'parent_ref': [1],
+          }),
+          throwsA(isA<DatabaseException>()),
+        );
+      } finally {
+        db.close();
+      }
+    });
   });
 }

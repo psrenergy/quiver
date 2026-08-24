@@ -141,6 +141,10 @@ const timeSeriesSymbols = {
     args: [P, BUF, BUF, I64, P, P, P, P, USIZE, USIZE],
     returns: I32,
   },
+  quiver_database_update_vector_group_by_label: {
+    args: [P, BUF, BUF, BUF, P, P, P, P, USIZE, USIZE],
+    returns: I32,
+  },
   quiver_database_update_set_group: {
     args: [P, BUF, BUF, I64, P, P, P, P, USIZE, USIZE],
     returns: I32,

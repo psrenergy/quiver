@@ -164,6 +164,12 @@ export class Database {
     id: number,
     data: GroupColumns,
   ) => void;
+  declare updateVectorGroupByLabel: (
+    collection: string,
+    group: string,
+    label: string,
+    data: GroupColumns,
+  ) => void;
   declare updateSetGroup: (
     collection: string,
     group: string,

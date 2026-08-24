@@ -304,6 +304,8 @@ db:update_vector_group("Child", "refs", id, { parent_ref = { 1, 2, 3 } })
 db:update_set_group("Child", "parents", id, { parent_ref = { 1, 2 } })
 
 db:update_vector_group("Child", "refs", id, {})   -- clears the group
+
+db:update_vector_group_by_label("Child", "refs", "Child 1", { parent_ref = { 1, 2 } })
 \`\`\`
 
 Use these instead of routing a group's columns through \`update_element\` whenever a column name is
@@ -320,7 +322,8 @@ Rules:
   are rejected if passed.
 - **Foreign-key columns accept a label string** and resolve it to the referenced id, exactly as in
   \`create_element\` / \`update_element\`.
-- The element id must exist, same as \`update_element\` / \`delete_element\`.
+- The element id must exist, same as \`update_element\` / \`delete_element\`; the \`_by_label\` form
+  takes a label in its place, with \`update_element_by_label\`'s resolution and miss semantics.
 
 ---
 
