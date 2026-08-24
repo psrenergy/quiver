@@ -115,12 +115,16 @@ public:
                           const std::string& group,
                           int64_t id,
                           const std::vector<std::map<std::string, Value>>& rows);
-    // Resolves the label within `collection` (unique per collection, not per database), then
-    // delegates to update_vector_group.
+    // Resolve the label within `collection` (unique per collection, not per database), then
+    // delegate to the id form above.
     void update_vector_group_by_label(const std::string& collection,
                                       const std::string& group,
                                       const std::string& label,
                                       const std::vector<std::map<std::string, Value>>& rows);
+    void update_set_group_by_label(const std::string& collection,
+                                   const std::string& group,
+                                   const std::string& label,
+                                   const std::vector<std::map<std::string, Value>>& rows);
 
     // Read element Ids
     std::vector<int64_t> read_element_ids(const std::string& collection);

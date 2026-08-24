@@ -173,4 +173,12 @@ void Database::update_set_group(const std::string& collection,
     impl_->logger->info("Updated set {}.{} for id {} with {} rows", collection, group, id, rows.size());
 }
 
+void Database::update_set_group_by_label(const std::string& collection,
+                                         const std::string& group,
+                                         const std::string& label,
+                                         const std::vector<std::map<std::string, Value>>& rows) {
+    update_set_group(
+        collection, group, impl_->resolve_label(collection, label, "update_set_group_by_label", *this), rows);
+}
+
 }  // namespace quiver

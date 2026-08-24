@@ -1586,3 +1586,80 @@ TEST(Database, UpdateVectorGroupByLabelValidationNamesTheIdForm) {
         EXPECT_TRUE(msg.find("Cannot update_vector_group:") != std::string::npos) << "Actual: " << msg;
     }
 }
+
+TEST(Database, UpdateSetGroupByLabel) {
+    SharedFkFixture f;
+
+    // A second child so the assertions cannot pass vacuously: with only one element an update that
+    // ignored the label entirely would still hit the right row.
+    auto other = f.db.create_element("Child", quiver::Element().set("label", std::string("Child 2")));
+    f.db.update_set_group("Child", "parents", other, {{{"parent_ref", f.parent_a}}});
+
+    f.db.update_set_group_by_label(
+        "Child", "parents", "Child 1", {{{"parent_ref", f.parent_a}}, {{"parent_ref", f.parent_b}}});
+    EXPECT_EQ(f.db.read_set_integers_by_id("Child", "parent_ref", f.child),
+              (std::vector<int64_t>{f.parent_a, f.parent_b}));
+    EXPECT_EQ(f.db.read_set_integers_by_id("Child", "parent_ref", other), (std::vector<int64_t>{f.parent_a}));
+
+    // A second call replaces rather than appends, and an empty row list clears.
+    f.db.update_set_group_by_label("Child", "parents", "Child 1", {{{"parent_ref", f.parent_b}}});
+    EXPECT_EQ(f.db.read_set_integers_by_id("Child", "parent_ref", f.child), (std::vector<int64_t>{f.parent_b}));
+
+    f.db.update_set_group_by_label("Child", "parents", "Child 1", {});
+    EXPECT_TRUE(f.db.read_set_integers_by_id("Child", "parent_ref", f.child).empty());
+    EXPECT_EQ(f.db.read_set_integers_by_id("Child", "parent_ref", other), (std::vector<int64_t>{f.parent_a}));
+}
+
+TEST(Database, UpdateSetGroupByLabelNonExistent) {
+    SharedFkFixture f;
+
+    f.db.update_set_group("Child", "parents", f.child, {{{"parent_ref", f.parent_a}}});
+
+    try {
+        f.db.update_set_group_by_label("Child", "parents", "No Such Child", {{{"parent_ref", f.parent_b}}});
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), "Element not found: label 'No Such Child' in collection 'Child'");
+    }
+
+    // Nothing was written - the lookup throws before the group is cleared.
+    EXPECT_EQ(f.db.read_set_integers_by_id("Child", "parent_ref", f.child), (std::vector<int64_t>{f.parent_a}));
+
+    // A label is unique per collection, not per database: one naming an element of another
+    // collection must not resolve here.
+    try {
+        f.db.update_set_group_by_label("Child", "parents", "Parent A", {});
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), "Element not found: label 'Parent A' in collection 'Child'");
+    }
+}
+
+// require_collection only checks has_table, so a group table reaches resolve_label. The explicit
+// require_column("label") is what stops it there instead of letting the SELECT leak a raw
+// "no such column: label" prepare error -- and the message must name the public method called.
+TEST(Database, UpdateSetGroupByLabelOnTableWithoutLabelColumn) {
+    SharedFkFixture f;
+
+    try {
+        f.db.update_set_group_by_label("Child_set_parents", "parents", "anything", {});
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(),
+                     "Cannot update_set_group_by_label: column 'label' not found in table 'Child_set_parents'");
+    }
+}
+
+// resolve_label owns the lookup; everything past it is update_set_group's, so the column validation
+// reports "Cannot update_set_group" - the operation that validated.
+TEST(Database, UpdateSetGroupByLabelValidationNamesTheIdForm) {
+    SharedFkFixture f;
+
+    try {
+        f.db.update_set_group_by_label("Child", "parents", "Child 1", {{{"nope", int64_t{1}}}});
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        std::string msg = e.what();
+        EXPECT_TRUE(msg.find("Cannot update_set_group:") != std::string::npos) << "Actual: " << msg;
+    }
+}
