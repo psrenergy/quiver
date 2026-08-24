@@ -1777,6 +1777,20 @@ void main() {
       }
     });
 
+    test('updateVectorGroupByLabel throws on an unresolvable label', () {
+      final db = openRelations();
+      try {
+        expect(
+          () => db.updateVectorGroupByLabel('Child', 'refs', 'Nope', {
+            'parent_ref': [1],
+          }),
+          throwsA(isA<DatabaseException>()),
+        );
+      } finally {
+        db.close();
+      }
+    });
+
     test('updateSetGroupByLabel writes and clears only that element', () {
       final db = openRelations();
       try {
@@ -1802,20 +1816,6 @@ void main() {
       try {
         expect(
           () => db.updateSetGroupByLabel('Child', 'parents', 'Nope', {
-            'parent_ref': [1],
-          }),
-          throwsA(isA<DatabaseException>()),
-        );
-      } finally {
-        db.close();
-      }
-    });
-
-    test('updateVectorGroupByLabel throws on an unresolvable label', () {
-      final db = openRelations();
-      try {
-        expect(
-          () => db.updateVectorGroupByLabel('Child', 'refs', 'Nope', {
             'parent_ref': [1],
           }),
           throwsA(isA<DatabaseException>()),
