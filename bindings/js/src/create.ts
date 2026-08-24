@@ -256,3 +256,22 @@ Database.prototype.updateSetGroup = function (
     data,
   );
 };
+
+/** Label-addressed counterpart of updateSetGroup. */
+Database.prototype.updateSetGroupByLabel = function (
+  this: Database,
+  collection: string,
+  group: string,
+  label: string,
+  data: GroupColumns,
+): void {
+  updateGroupColumns(
+    this._handle,
+    "updateSetGroupByLabel",
+    getSymbols().quiver_database_update_set_group_by_label,
+    collection,
+    group,
+    label,
+    data,
+  );
+};

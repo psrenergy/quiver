@@ -388,6 +388,7 @@ struct LuaRunner::Impl {
         bind.set_function("update_vector_group", &update_vector_group_lua);
         bind.set_function("update_vector_group_by_label", &update_vector_group_by_label_lua);
         bind.set_function("update_set_group", &update_set_group_lua);
+        bind.set_function("update_set_group_by_label", &update_set_group_by_label_lua);
         bind.set_function("upsert_time_series_row", &upsert_time_series_row_lua);
         bind.set_function("update_time_series_files", &update_time_series_files_lua);
 
@@ -1542,6 +1543,15 @@ struct LuaRunner::Impl {
                                      int64_t id,
                                      sol::table columns) {
         db.update_set_group(collection, group, id, group_rows_from_lua("update_set_group", columns));
+    }
+
+    static void update_set_group_by_label_lua(Database& db,
+                                              const std::string& collection,
+                                              const std::string& group,
+                                              const std::string& label,
+                                              sol::table columns) {
+        db.update_set_group_by_label(
+            collection, group, label, group_rows_from_lua("update_set_group_by_label", columns));
     }
 
     static void update_time_series_group_lua(Database& db,

@@ -301,6 +301,78 @@ extension DatabaseUpdate on Database {
     }
   }
 
+  /// Label-addressed counterpart of [updateSetGroup].
+  void updateSetGroupByLabel(
+    String collection,
+    String group,
+    String label,
+    Map<String, List<Object?>> data,
+  ) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      if (data.isEmpty) {
+        check(
+          bindings.quiver_database_update_set_group_by_label(
+            _ptr,
+            collection.toNativeUtf8(allocator: arena).cast(),
+            group.toNativeUtf8(allocator: arena).cast(),
+            label.toNativeUtf8(allocator: arena).cast(),
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            0,
+            0,
+          ),
+        );
+        return;
+      }
+
+      // Validate equal lengths
+      final rowCount = data.values.first.length;
+      for (final entry in data.entries) {
+        if (entry.value.length != rowCount) {
+          throw ArgumentError('All column lists must have the same length');
+        }
+      }
+
+      final columnCount = data.length;
+      final columnNames = arena<Pointer<Char>>(columnCount);
+      final columnTypes = arena<Int>(columnCount);
+      final columnData = arena<Pointer<Void>>(columnCount);
+      final columnHasValue = arena<Pointer<Uint8>>(columnCount);
+
+      var i = 0;
+      for (final entry in data.entries) {
+        columnNames[i] = entry.key.toNativeUtf8(allocator: arena).cast();
+        final column = _marshalGroupColumn(arena, entry.value);
+        columnTypes[i] = column.type;
+        columnData[i] = column.data;
+        columnHasValue[i] = column.hasValue;
+        i++;
+      }
+
+      check(
+        bindings.quiver_database_update_set_group_by_label(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          group.toNativeUtf8(allocator: arena).cast(),
+          label.toNativeUtf8(allocator: arena).cast(),
+          columnNames,
+          columnTypes,
+          columnData,
+          columnHasValue,
+          columnCount,
+          rowCount,
+        ),
+      );
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
   // ==========================================================================
   // Update time series attributes
   // ==========================================================================

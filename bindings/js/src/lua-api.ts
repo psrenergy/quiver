@@ -306,6 +306,7 @@ db:update_set_group("Child", "parents", id, { parent_ref = { 1, 2 } })
 db:update_vector_group("Child", "refs", id, {})   -- clears the group
 
 db:update_vector_group_by_label("Child", "refs", "Child 1", { parent_ref = { 1, 2 } })
+db:update_set_group_by_label("Child", "parents", "Child 1", { parent_ref = { 1, 2 } })
 \`\`\`
 
 Use these instead of routing a group's columns through \`update_element\` whenever a column name is

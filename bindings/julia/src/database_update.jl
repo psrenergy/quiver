@@ -173,6 +173,11 @@ function update_set_group!(db::Database, collection::String, group::String, id::
     return _update_group_columns(db, C.quiver_database_update_set_group, collection, group, id, kwargs)
 end
 
+# Label-addressed counterpart of update_set_group!.
+function update_set_group_by_label!(db::Database, collection::String, group::String, label::String; kwargs...)
+    return _update_group_columns(db, C.quiver_database_update_set_group_by_label, collection, group, label, kwargs)
+end
+
 function upsert_time_series_row!(db::Database, collection::String, group::String, id::Int64; kwargs...)
     column_count = length(kwargs)
     col_names_strs = String[]
