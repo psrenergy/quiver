@@ -30,8 +30,7 @@ src/c/
   database_read.cpp       # All read operations + quiver_database_number_of_elements, + co-located free functions
   database_metadata.cpp   # Metadata get/list + co-located free functions
   database_query.cpp      # Query operations (plain and parameterized)
-  database_time_series.cpp # Time series operations (incl. update_time_series_group_by_label)
-                           # + co-located free functions
+  database_time_series.cpp # Time series operations + co-located free functions
   database_transaction.cpp # Transaction control (begin, commit, rollback, in_transaction) +
                            # dry runs (begin_dry_run, end_dry_run, in_dry_run)
   database_csv_export.cpp / database_csv_import.cpp

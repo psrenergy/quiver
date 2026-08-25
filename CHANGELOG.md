@@ -11,12 +11,10 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 - **`update_time_series_group_by_label(collection, group, label, rows)`.** Replaces all of an
   element's rows in one named time-series group, addressed by `label` instead of id — the
-  label-addressed counterpart of `update_time_series_group`, and the last group writer to gain
-  one. It resolves the label and then delegates, so the dimension-column rules, the type
-  validation, the NULL cells, and "no columns clears the group" are identical. Label resolution
-  and its miss semantics are `update_element_by_label`'s, below. The id form is unchanged: it does
-  not check that the id exists, so a bad id still clears nothing and fails at the foreign key,
-  whereas a bad *label* reports `Element not found: label '...' in collection '...'`.
+  label-addressed counterpart of `update_time_series_group`. It resolves the label and then
+  delegates, so the dimension-column rules, the type validation, the NULL cells, and "no columns
+  clears the group" are identical. Label resolution and its miss semantics are
+  `update_element_by_label`'s, below.
 
 - **`update_vector_group_by_label` / `update_set_group_by_label(collection, group, label, rows)`.**
   Replaces all of an element's rows in one named vector or set group, addressed by `label` instead

@@ -1063,16 +1063,13 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupByLabel) {
 
     const char* names[] = {"date_time", "value"};
     const int types[] = {QUIVER_DATA_TYPE_STRING, QUIVER_DATA_TYPE_FLOAT};
-    const char* seed_dates[] = {"2024-01-01T10:00:00"};
-    double seed_values[] = {99.0};
-    const void* seed_data[] = {seed_dates, seed_values};
-    ASSERT_EQ(quiver_database_update_time_series_group(
-                  db, "Collection", "data", item2, names, types, seed_data, nullptr, 2, 1),
-              QUIVER_OK);
-
     const char* dates[] = {"2024-02-01T10:00:00", "2024-02-01T11:00:00"};
     double values[] = {10.0, 20.0};
     const void* data[] = {dates, values};
+
+    ASSERT_EQ(quiver_database_update_time_series_group_by_label(
+                  db, "Collection", "data", "Item 2", names, types, data, nullptr, 2, 1),
+              QUIVER_OK);
     ASSERT_EQ(quiver_database_update_time_series_group_by_label(
                   db, "Collection", "data", "Item 1", names, types, data, nullptr, 2, 2),
               QUIVER_OK);

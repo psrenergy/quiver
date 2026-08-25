@@ -215,7 +215,7 @@ impl_->logger->debug("Opening database: {}", path);
 - **`update_element` / `delete_element` / the vector+set group writers verify the id exists** (via
   `Impl::require_element`) and throw Pattern 2 `"Element not found: ..."` — no silent no-op.
   `update_time_series_group` is the one writer that does not: a bad id clears nothing and fails at
-  the foreign key (a bad id with no rows is a no-op), documented as unchanged in `CHANGELOG.md`.
+  the foreign key (a bad id with no rows is a no-op).
   Every `_by_label` form resolves the label via `Impl::resolve_label`, and is a one-line
   delegation to its id counterpart (the root `_by_label` rule), so `update_element_by_label`'s
   *element* validation — the empty-element throw, `TypeValidator`, `insert_group_data` — reports
@@ -292,8 +292,11 @@ Implementation conventions in `lua_runner.cpp`:
 - Lua→C++ converters **throw on unsupported value types** (booleans, functions, ...) — never
   skip silently; a skipped positional query parameter would shift the rest and bind NULL to the
   trailing placeholder.
-- `update_time_series_group_lua` transpose: the **dimension column(s) are the row-count
-  authority**, discovered via public `get_time_series_metadata` (`dimension_column` plus any
+- `time_series_rows_from_lua` transpose, shared by `update_time_series_group_lua` and
+  `update_time_series_group_by_label_lua` (both one-liners over it). Mirrors `group_rows_from_lua`
+  but takes `db`, since the dimension columns come from metadata, and takes `caller` so each entry
+  point's errors name it. The **dimension
+  column(s) are the row-count authority**, discovered via public `get_time_series_metadata` (`dimension_column` plus any
   `value_columns` with `primary_key` set — the multi-dim case; `Database` exposes no Schema
   accessor so `internal::find_dimension_columns` is unreachable here). Dimension columns must be
   present and dense; value columns may be shorter, sparse, or empty — missing indices become
