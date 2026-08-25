@@ -1440,19 +1440,17 @@ struct LuaRunner::Impl {
         size_t count = 0;
     };
 
-    static std::vector<GroupColumn> collect_group_columns(const char* caller, const sol::table& columns) {
+    static std::vector<GroupColumn> collect_group_columns(const std::string& caller, const sol::table& columns) {
         std::vector<GroupColumn> result;
         for (auto& pair : columns) {
             auto name = pair.first.as<std::string>();
             if (!pair.second.is<sol::table>()) {
-                throw std::runtime_error(std::string("Cannot ") + caller + ": column '" + name +
-                                         "' must be an array of values");
+                throw std::runtime_error("Cannot " + caller + ": column '" + name + "' must be an array of values");
             }
             GroupColumn column{name, pair.second.as<sol::table>()};
             for (auto& cell : column.values) {
                 if (!cell.first.is<int64_t>() || cell.first.as<int64_t>() < 1) {
-                    throw std::runtime_error(std::string("Cannot ") + caller + ": column '" + name +
-                                             "' must be an array of values");
+                    throw std::runtime_error("Cannot " + caller + ": column '" + name + "' must be an array of values");
                 }
                 column.extent = std::max(column.extent, static_cast<size_t>(cell.first.as<int64_t>()));
                 ++column.count;
@@ -1466,7 +1464,7 @@ struct LuaRunner::Impl {
     // column list from rows[0], so every row carries every named column, with explicit NULL for
     // the cells the caller left out (which is how nil holes from a read round-trip).
     static std::vector<std::map<std::string, Value>>
-    columns_to_cpp_rows(const char* caller, const std::vector<GroupColumn>& lua_columns, size_t row_count) {
+    columns_to_cpp_rows(const std::string& caller, const std::vector<GroupColumn>& lua_columns, size_t row_count) {
         std::vector<std::map<std::string, Value>> cpp_rows(row_count);
         for (const auto& column : lua_columns) {
             for (auto& row : cpp_rows) {
@@ -1482,7 +1480,7 @@ struct LuaRunner::Impl {
                 } else if (val.is<std::string>()) {
                     cpp_rows[index - 1][column.name] = val.as<std::string>();
                 } else {
-                    throw std::runtime_error(std::string("Cannot ") + caller + ": column '" + column.name +
+                    throw std::runtime_error("Cannot " + caller + ": column '" + column.name +
                                              "' has unsupported Lua type");
                 }
             }
@@ -1503,7 +1501,7 @@ struct LuaRunner::Impl {
     // column reaches; shorter or sparse columns write NULL in the gaps, mirroring the time series
     // writer's treatment of value columns. Named columns that reach no index at all throw instead
     // of silently clearing the group; an empty table {} clears.
-    static std::vector<std::map<std::string, Value>> group_rows_from_lua(const char* caller,
+    static std::vector<std::map<std::string, Value>> group_rows_from_lua(const std::string& caller,
                                                                          const sol::table& columns) {
         auto lua_columns = collect_group_columns(caller, columns);
         if (lua_columns.empty()) {
@@ -1515,7 +1513,7 @@ struct LuaRunner::Impl {
             row_count = std::max(row_count, column.extent);
         }
         if (row_count == 0) {
-            throw std::runtime_error(std::string("Cannot ") + caller + ": columns [" + join_column_names(lua_columns) +
+            throw std::runtime_error("Cannot " + caller + ": columns [" + join_column_names(lua_columns) +
                                      "] contain no rows; pass an empty table {} to clear the group");
         }
         return columns_to_cpp_rows(caller, lua_columns, row_count);
@@ -1564,7 +1562,7 @@ struct LuaRunner::Impl {
     // rows still throw instead of silently clearing the group.
     // Takes `db` (unlike group_rows_from_lua) because the dimension column(s) come from metadata.
     static std::vector<std::map<std::string, Value>> time_series_rows_from_lua(Database& db,
-                                                                               const char* caller,
+                                                                               const std::string& caller,
                                                                                const std::string& collection,
                                                                                const std::string& group,
                                                                                const sol::table& columns) {
@@ -1596,7 +1594,7 @@ struct LuaRunner::Impl {
 
         for (const auto& dim : dimension_columns) {
             if (find_column(dim) == nullptr) {
-                throw std::runtime_error(std::string("Cannot ") + caller + ": missing dimension column '" + dim + "'");
+                throw std::runtime_error("Cannot " + caller + ": missing dimension column '" + dim + "'");
             }
         }
 
@@ -1604,13 +1602,13 @@ struct LuaRunner::Impl {
         for (const auto& dim : dimension_columns) {
             const auto* column = find_column(dim);
             if (column->extent != row_count) {
-                throw std::runtime_error(std::string("Cannot ") + caller + ": column '" + dim + "' has length " +
+                throw std::runtime_error("Cannot " + caller + ": column '" + dim + "' has length " +
                                          std::to_string(column->extent) + " but expected " + std::to_string(row_count));
             }
             if (column->count != column->extent) {
                 for (size_t i = 1; i <= column->extent; ++i) {
                     if (!column->values[i].valid()) {
-                        throw std::runtime_error(std::string("Cannot ") + caller + ": dimension column '" + dim +
+                        throw std::runtime_error("Cannot " + caller + ": dimension column '" + dim +
                                                  "' has nil at index " + std::to_string(i));
                     }
                 }
@@ -1619,14 +1617,13 @@ struct LuaRunner::Impl {
 
         for (const auto& column : lua_columns) {
             if (column.extent > row_count) {
-                throw std::runtime_error(std::string("Cannot ") + caller + ": column '" + column.name +
-                                         "' has length " + std::to_string(column.extent) + " but expected " +
-                                         std::to_string(row_count));
+                throw std::runtime_error("Cannot " + caller + ": column '" + column.name + "' has length " +
+                                         std::to_string(column.extent) + " but expected " + std::to_string(row_count));
             }
         }
 
         if (row_count == 0) {
-            throw std::runtime_error(std::string("Cannot ") + caller + ": columns [" + join_column_names(lua_columns) +
+            throw std::runtime_error("Cannot " + caller + ": columns [" + join_column_names(lua_columns) +
                                      "] contain no rows; pass an empty table {} to clear the group");
         }
 
