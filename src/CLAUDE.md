@@ -292,11 +292,8 @@ Implementation conventions in `lua_runner.cpp`:
 - Lua→C++ converters **throw on unsupported value types** (booleans, functions, ...) — never
   skip silently; a skipped positional query parameter would shift the rest and bind NULL to the
   trailing placeholder.
-- `time_series_rows_from_lua` transpose, shared by `update_time_series_group_lua` and
-  `update_time_series_group_by_label_lua` (both one-liners over it). Mirrors `group_rows_from_lua`
-  but takes `db`, since the dimension columns come from metadata, and takes `caller` so each entry
-  point's errors name it. The **dimension
-  column(s) are the row-count authority**, discovered via public `get_time_series_metadata` (`dimension_column` plus any
+- `update_time_series_group_lua` transpose: the **dimension column(s) are the row-count
+  authority**, discovered via public `get_time_series_metadata` (`dimension_column` plus any
   `value_columns` with `primary_key` set — the multi-dim case; `Database` exposes no Schema
   accessor so `internal::find_dimension_columns` is unreachable here). Dimension columns must be
   present and dense; value columns may be shorter, sparse, or empty — missing indices become
