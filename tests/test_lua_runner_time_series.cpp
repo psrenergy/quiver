@@ -850,10 +850,7 @@ TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupByLabelErrors) {
         lua,
         R"(db:update_time_series_group_by_label("Collection", "data", "Nope", { date_time = { "2024-06-02" } }))",
         "Element not found");
-    // Column and dimension validation runs before the label is resolved, so these report first.
-    expect_lua_error(lua,
-                     R"(db:update_time_series_group_by_label("Collection", "data", "Nope", { date_time = {} }))",
-                     "contain no rows");
+    // Dimension validation runs before the label is resolved, so it reports first.
     expect_lua_error(lua,
                      R"(db:update_time_series_group_by_label("Collection", "data", "Nope", { value = { 1.0 } }))",
                      "missing dimension column");

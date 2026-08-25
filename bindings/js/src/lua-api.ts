@@ -386,10 +386,7 @@ db:update_time_series_group("Items", "data", id, {
 
 db:update_time_series_group("Items", "data", id, {})   -- clears the group
 
-db:update_time_series_group_by_label("Items", "data", "Item 1", {
-    date_time = { "2024-01-01T00:00:00" },
-    value     = { 10.5 },
-})
+db:update_time_series_group_by_label("Items", "data", "Item 1", { date_time = { "2024-01-01T00:00:00" }, value = { 10.5 } })
 \`\`\`
 
 A read-modify-write looks like this:

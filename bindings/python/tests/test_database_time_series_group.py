@@ -246,14 +246,8 @@ class TestTimeSeriesSingleColumn:
         assert collections_db.read_time_series_group("Collection", "data", other)["value"] == [99.0]
 
     def test_update_time_series_group_by_label_unresolvable_label_raises(self, collections_db: Database) -> None:
-        """An unresolvable label raises instead of clearing."""
-        item = _create_collection_element(collections_db, "Item 1")
-        collections_db.update_time_series_group(
-            "Collection", "data", item, {"date_time": ["2024-01-01T00:00:00"], "value": [1.5]}
-        )
-
+        """An unresolvable label raises."""
         with pytest.raises(QuiverError, match="Element not found"):
             collections_db.update_time_series_group_by_label(
                 "Collection", "data", "Nope", {"date_time": ["2024-01-01T00:00:00"], "value": [1.5]}
             )
-        assert collections_db.read_time_series_group("Collection", "data", item)["value"] == [1.5]

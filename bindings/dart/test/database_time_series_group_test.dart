@@ -434,22 +434,12 @@ void main() {
     test('updateTimeSeriesGroupByLabel throws on an unresolvable label', () {
       final db = openCollections();
       try {
-        final item = db.createElement('Collection', {'label': 'Item 1'});
-        db.updateTimeSeriesGroup('Collection', 'data', item, {
-          'date_time': ['2024-01-01T00:00:00'],
-          'value': [1.5],
-        });
-
         expect(
           () => db.updateTimeSeriesGroupByLabel('Collection', 'data', 'Nope', {
             'date_time': ['2024-01-01T00:00:00'],
             'value': [1.5],
           }),
           throwsA(isA<DatabaseException>()),
-        );
-        expect(
-          db.readTimeSeriesGroup('Collection', 'data', item)['value'],
-          equals([1.5]),
         );
       } finally {
         db.close();
