@@ -349,24 +349,10 @@ include("fixture.jl")
         @test isempty(Quiver.read_time_series_group(db, "Collection", "data", item))
         @test Quiver.read_time_series_group(db, "Collection", "data", other)["value"] == [99.0]
 
-        Quiver.close!(db)
-    end
-
-    @testset "Update By Label Unresolvable" begin
-        path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
-        db = Quiver.from_schema(":memory:", path_schema)
-
-        Quiver.create_element!(db, "Configuration"; label = "Test Config")
-        item = Quiver.create_element!(db, "Collection"; label = "Item 1")
-        Quiver.update_time_series_group!(db, "Collection", "data", item;
-            date_time = ["2024-01-01T00:00:00"],
-            value = [1.5],
-        )
-
         # An unresolvable label throws instead of clearing.
         @test_throws Quiver.DatabaseException Quiver.update_time_series_group_by_label!(
             db, "Collection", "data", "Nope"; date_time = ["2024-01-01T00:00:00"], value = [1.5])
-        @test Quiver.read_time_series_group(db, "Collection", "data", item)["value"] == [1.5]
+        @test Quiver.read_time_series_group(db, "Collection", "data", other)["value"] == [99.0]
 
         Quiver.close!(db)
     end

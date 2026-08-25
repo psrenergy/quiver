@@ -802,8 +802,6 @@ TEST_F(LuaRunnerTest, ReadTimeSeriesRow) {
     )");
 }
 
-// --- update_time_series_group_by_label ---
-
 TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupByLabel) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
