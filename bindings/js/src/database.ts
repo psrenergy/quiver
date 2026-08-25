@@ -158,6 +158,12 @@ export class Database {
     id: number,
     data: TimeSeriesData,
   ) => void;
+  declare updateTimeSeriesGroupByLabel: (
+    collection: string,
+    group: string,
+    label: string,
+    data: TimeSeriesData,
+  ) => void;
   declare updateVectorGroup: (
     collection: string,
     group: string,

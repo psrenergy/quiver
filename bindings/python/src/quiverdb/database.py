@@ -1416,6 +1416,46 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
             )
         )
 
+    def update_time_series_group_by_label(
+        self,
+        collection: str,
+        group: str,
+        label: str,
+        data: dict[str, list],
+    ) -> None:
+        """Label-addressed counterpart of update_time_series_group."""
+        self._ensure_open()
+        lib = get_lib()
+        c_collection = collection.encode("utf-8")
+        c_group = group.encode("utf-8")
+        c_label = label.encode("utf-8")
+
+        if not data:
+            check(
+                lib.quiver_database_update_time_series_group_by_label(
+                    self._ptr, c_collection, c_group, c_label, ffi.NULL, ffi.NULL, ffi.NULL, ffi.NULL, 0, 0
+                )
+            )
+            return
+
+        keepalive, c_col_names, c_col_types, c_col_data, c_col_has_value, col_count, row_count = _marshal_group_columns(
+            data
+        )
+        check(
+            lib.quiver_database_update_time_series_group_by_label(
+                self._ptr,
+                c_collection,
+                c_group,
+                c_label,
+                c_col_names,
+                c_col_types,
+                c_col_data,
+                c_col_has_value,
+                col_count,
+                row_count,
+            )
+        )
+
     def update_vector_group(
         self,
         collection: str,
