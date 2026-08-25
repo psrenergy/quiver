@@ -201,6 +201,37 @@ QUIVER_C_API quiver_error_t quiver_database_update_time_series_group(quiver_data
     }
 }
 
+QUIVER_C_API quiver_error_t quiver_database_update_time_series_group_by_label(quiver_database_t* db,
+                                                                              const char* collection,
+                                                                              const char* group,
+                                                                              const char* label,
+                                                                              const char* const* column_names,
+                                                                              const int* column_types,
+                                                                              const void* const* column_data,
+                                                                              const uint8_t* const* column_has_value,
+                                                                              size_t column_count,
+                                                                              size_t row_count) {
+    QUIVER_REQUIRE(db, collection, group, label);
+    if (column_count > 0) {
+        QUIVER_REQUIRE(column_names, column_types, column_data);
+    }
+
+    try {
+        auto rows = unmarshal_group_columns_to_rows("update_time_series_group_by_label",
+                                                    column_names,
+                                                    column_types,
+                                                    column_data,
+                                                    column_has_value,
+                                                    column_count,
+                                                    row_count);
+        db->db.update_time_series_group_by_label(collection, group, label, rows);
+        return QUIVER_OK;
+    } catch (const std::exception& e) {
+        quiver_set_last_error(e.what());
+        return QUIVER_ERROR;
+    }
+}
+
 QUIVER_C_API quiver_error_t quiver_database_upsert_time_series_row(quiver_database_t* db,
                                                                    const char* collection,
                                                                    const char* group,

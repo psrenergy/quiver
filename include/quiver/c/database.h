@@ -400,6 +400,8 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_group(quiver_databa
 // is never read (a NULL char* placeholder is fine for string columns). Masking out a
 // dimension-column cell inserts NULL into a PK column and fails with the SQLite constraint error
 // Pass column_count == 0 and row_count == 0 with NULL arrays to clear all rows
+// The _by_label form takes a label in place of the id and reports
+// "Element not found: label '...' in collection '...'" on a miss.
 QUIVER_C_API quiver_error_t quiver_database_update_time_series_group(quiver_database_t* db,
                                                                      const char* collection,
                                                                      const char* group,
@@ -410,6 +412,17 @@ QUIVER_C_API quiver_error_t quiver_database_update_time_series_group(quiver_data
                                                                      const uint8_t* const* column_has_value,
                                                                      size_t column_count,
                                                                      size_t row_count);
+
+QUIVER_C_API quiver_error_t quiver_database_update_time_series_group_by_label(quiver_database_t* db,
+                                                                              const char* collection,
+                                                                              const char* group,
+                                                                              const char* label,
+                                                                              const char* const* column_names,
+                                                                              const int* column_types,
+                                                                              const void* const* column_data,
+                                                                              const uint8_t* const* column_has_value,
+                                                                              size_t column_count,
+                                                                              size_t row_count);
 
 // Add (or upsert) a single time series row with multi-column typed data
 // column_names[]: column names (must include every dimension column from the schema PK)

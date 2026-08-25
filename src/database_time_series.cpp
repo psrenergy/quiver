@@ -201,6 +201,14 @@ void Database::update_time_series_group(const std::string& collection,
     impl_->logger->info("Updated time series {}.{} for id {} with {} rows", collection, group, id, rows.size());
 }
 
+void Database::update_time_series_group_by_label(const std::string& collection,
+                                                 const std::string& group,
+                                                 const std::string& label,
+                                                 const std::vector<std::map<std::string, Value>>& rows) {
+    update_time_series_group(
+        collection, group, impl_->resolve_label(collection, label, "update_time_series_group_by_label", *this), rows);
+}
+
 void Database::upsert_time_series_row(const std::string& collection,
                                       const std::string& group,
                                       int64_t id,
