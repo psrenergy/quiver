@@ -5,7 +5,48 @@ All notable changes to Quiver are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entries that require
 callers to change something are prefixed **BREAKING** and say what to do.
 
-## [0.10.2] — unreleased
+## [0.11.0] — unreleased
+
+### Changed
+
+- **BREAKING — a `DATE_TIME` value is validated when it is written.** A string bound to a
+  `date_`-prefixed column must be ISO 8601: `YYYY-MM-DD`, optionally followed by `THH:MM:SS` or
+  ` HH:MM:SS`. Anything else now throws `Cannot <operation>: invalid DATE_TIME value for column
+  '<c>': '<value>' (expected YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)`. The value is still stored
+  verbatim — the core validates, it never normalizes.
+
+  Previously the only requirement was *being a string*, so `date_initial = "2005-01"` was accepted
+  and then failed on the read, deep inside a binding's date parser, with an error naming neither
+  the write nor the column. Because the composite readers (`read_scalars_by_id`,
+  `read_element_by_id`, `read_vector_group_by_id`, …) all funnel through that parser, one bad cell
+  made the whole element unreadable.
+
+  Rejected: `"2005"`, `"2005-01"`, `"not-a-date"`, `""`, an impossible calendar day
+  (`"2024-02-31"`), and trailing garbage (`"2024-01-15junk"`). The accepted band is the
+  intersection of what Python's `fromisoformat`, Julia's `DateTime` and Dart's `DateTime.parse`
+  handle, so a value the core stores is a value every binding can read. Applies to
+  `create_element`, `update_element`, the vector/set/time-series group writers,
+  `upsert_time_series_row`, their `_by_label` forms, and every binding and Lua.
+
+  *Adapt:* write a full calendar date. `"2005-01"` becomes `"2005-01-01"`. To put a
+  non-conforming value in a date column deliberately — reproducing legacy data in a test, say —
+  use raw SQL through `query_string`/`query_integer`; the readers' lenient fallbacks are unchanged.
+
+- **`parse_iso8601` accepts a date-only value, and now requires the whole string.** The core's one
+  ISO 8601 parser (`src/utils/datetime.h`) previously demanded the time part, which had two
+  consequences beyond the validation above:
+
+  - **`import_csv` now accepts a date-only cell** when no `date_time_format` is given, storing it
+    canonicalized as `<date>T00:00:00`. This fixes a round-trip bug: `export_csv` writes the stored
+    value verbatim, so a database holding `"2024-01-01"` exported a file its own importer rejected
+    with `Cannot import_csv: Timestamp 2024-01-01 is not valid`.
+  - **`export_csv` with `date_time_format` set now formats a date-only value** instead of passing
+    it through raw, and `BinaryMetadata`'s `initial_datetime` accepts a date-only value (read back
+    as midnight UTC, re-serialized in full `T` form).
+
+  The whole-string requirement is a tightening: `"2024-01-15T10:30:00.123"`, `"…Z"` and any other
+  trailing text used to parse (the parser stopped as soon as the format was satisfied) and are now
+  rejected everywhere `parse_iso8601` is used.
 
 ### Added
 
@@ -181,6 +222,6 @@ are functionally identical to 0.10.0.
   `read_time_series_group` emits for a NULL STRING cell — so feeding a read result back with the
   mask stripped was UB. A NULL entry, or a NULL per-column data pointer, is now SQL NULL.
 
-[0.10.2]: https://github.com/psrenergy/quiver/compare/v0.10.1...v0.10.2
+[0.11.0]: https://github.com/psrenergy/quiver/compare/v0.10.1...v0.11.0
 [0.10.1]: https://github.com/psrenergy/quiver/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/psrenergy/quiver/compare/v0.9.16...v0.10.0

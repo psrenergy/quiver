@@ -313,3 +313,18 @@ TEST_F(LuaRunnerTest, QueryParameterUnsupportedTypeThrows) {
             << e.what();
     }
 }
+
+TEST_F(LuaRunnerTest, InvalidDateTimeValueThrows) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    db.create_element("Collection", quiver::Element().set("label", "Item 1"));
+
+    quiver::LuaRunner lua(db);
+
+    // The core validates DATE_TIME content on write; Lua has no datetime type, so a bad string is
+    // the only way in. Full grammar is covered in test_database_create.cpp.
+    expect_lua_error(
+        lua,
+        R"(db:update_time_series_group("Collection", "data", 1, { date_time = { "2005-01" }, value = { 1.0 } }))",
+        "Cannot update_time_series_group: invalid DATE_TIME value for column 'date_time'");
+}

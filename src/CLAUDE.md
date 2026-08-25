@@ -212,6 +212,15 @@ impl_->logger->debug("Opening database: {}", path);
   matches `INTEGER` or `REAL` (int-for-REAL coercion), double matches `REAL` only (a float into an
   `INTEGER` column is rejected), string matches `TEXT`/`INTEGER`(FK label)/`DATE_TIME`. Keep the two
   in sync (root design decision).
+- **DATE_TIME content is checked by both halves of that policy, through one predicate**:
+  `datetime::is_valid_iso8601` (`utils/datetime.h`). `TypeValidator::validate_value` calls it in its
+  string branch (covering scalar create/update and every vector/set array write, so it inherits the
+  validate-before-DELETE ordering below); `validate_time_series_row` (`database_time_series.cpp`)
+  calls it in a **separate** guard next to `value_matches_type`. Do not "restore symmetry" by moving
+  the check into `value_matches_type`: that function decides the *variant's shape*, and TEXT into a
+  DATE_TIME column is the correct shape — routing a content failure through its `bool` would emit
+  `column 'date_time' has type DATE_TIME but received TEXT`, which is a lie. The two guards phrase
+  their own messages; the rule itself lives in exactly one function.
 - **`update_element` / `delete_element` / the vector+set group writers verify the id exists** (via
   `Impl::require_element`) and throw Pattern 2 `"Element not found: ..."` — no silent no-op.
   `update_time_series_group` is the one writer that does not: a bad id clears nothing and fails at
@@ -247,7 +256,11 @@ impl_->logger->debug("Opening database: {}", path);
   equal `parameters.size()`, else it throws — the single guard for every `query_*` and internal
   parameterized statement.
 - **Utilities**: `quiver::string::new_c_str` / `trim` in `src/utils/string.h`; ISO 8601
-  (`YYYY-MM-DDTHH:MM:SS`) parse/format helpers in `src/utils/datetime.h`;
+  parse/format helpers in `src/utils/datetime.h` — `parse_iso8601` accepts `YYYY-MM-DD` with an
+  optional `THH:MM:SS`/` HH:MM:SS` and requires the whole string to be consumed (date and time are
+  two `get_time` passes with the separator matched by hand, because a literal space in a `get_time`
+  format means *skip zero or more spaces*, which would also accept `2024-01-0110:30:00`);
+  `format_utc` always writes the full `T` form;
   use `is_date_time_column` (`data_type.h`) for `date_`-prefix checks (one legacy hand-rolled
   `starts_with("date_")` remains in `schema_validator.cpp`).
 

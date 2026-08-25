@@ -11,33 +11,61 @@
 
 namespace quiver::datetime {
 
+// Build the C++20 calendar date a std::tm denotes. Shared by tm_to_time_point and by
+// parse_iso8601's validity check.
+inline std::chrono::year_month_day tm_to_year_month_day(const std::tm& tm) {
+    return std::chrono::year_month_day{std::chrono::year{tm.tm_year + 1900},
+                                       std::chrono::month{static_cast<unsigned>(tm.tm_mon + 1)},
+                                       std::chrono::day{static_cast<unsigned>(tm.tm_mday)}};
+}
+
 // Convert a std::tm (interpreted as UTC) to a system_clock::time_point.
 //
 // Built on the C++20 <chrono> calendar, which supports the full proleptic Gregorian range
 // (including dates before the Unix epoch) and is locale/timezone-independent.
 inline std::chrono::system_clock::time_point tm_to_time_point(const std::tm& tm) {
-    std::chrono::year_month_day ymd{std::chrono::year{tm.tm_year + 1900},
-                                    std::chrono::month{static_cast<unsigned>(tm.tm_mon + 1)},
-                                    std::chrono::day{static_cast<unsigned>(tm.tm_mday)}};
-    auto days = std::chrono::sys_days{ymd};
+    auto days = std::chrono::sys_days{tm_to_year_month_day(tm)};
     return std::chrono::system_clock::time_point{days} + std::chrono::hours{tm.tm_hour} +
            std::chrono::minutes{tm.tm_min} + std::chrono::seconds{tm.tm_sec};
 }
 
-// Cross-platform ISO 8601 parser using std::get_time (not strptime).
-// Tries "YYYY-MM-DDTHH:MM:SS" first, then "YYYY-MM-DD HH:MM:SS".
+// The single definition of "valid ISO 8601" in the core: "YYYY-MM-DD", optionally followed by
+// "THH:MM:SS" or " HH:MM:SS". Cross-platform via std::get_time (not strptime).
+//
+// The whole string must be consumed, so "2005", "2005-01" and "2024-01-01xyz" are all rejected.
+// Date and time are two separate get_time passes with the separator matched by hand: a literal
+// space in a get_time format means "skip zero or more spaces", so a single "%Y-%m-%d %H:%M:%S"
+// pass would also accept "2024-01-0110:30:00".
 inline bool parse_iso8601(const std::string& datetime_str, std::tm& tm) {
     std::memset(&tm, 0, sizeof(tm));
     std::istringstream ss(datetime_str);
-    ss >> std::get_time(&tm, "%Y-%m-%dT%H:%M:%S");
-    if (!ss.fail() && tm.tm_mday >= 1) {
-        return true;
+    // libstdc++'s get_time skips leading whitespace, MSVC's does not. Unset skipws so they agree.
+    ss.unsetf(std::ios_base::skipws);
+
+    ss >> std::get_time(&tm, "%Y-%m-%d");
+    // get_time range-checks %m (1-12) and %d (1-31) and sets failbit when the input ends
+    // mid-format; tm_mday guards a laxer implementation, and the calendar rejects the month/day
+    // pairs get_time cannot see on its own (2024-02-31).
+    if (ss.fail() || tm.tm_mday < 1 || !tm_to_year_month_day(tm).ok()) {
+        return false;
     }
-    std::memset(&tm, 0, sizeof(tm));
-    ss.clear();
-    ss.str(datetime_str);
-    ss >> std::get_time(&tm, "%Y-%m-%d %H:%M:%S");
-    return !ss.fail() && tm.tm_mday >= 1;
+    if (ss.peek() == std::char_traits<char>::eof()) {
+        return true;  // date only: "2024-01-01"
+    }
+    const auto separator = ss.get();
+    if (separator != 'T' && separator != ' ') {
+        return false;
+    }
+    ss >> std::get_time(&tm, "%H:%M:%S");  // no memset: the date fields must survive
+    return !ss.fail() && ss.peek() == std::char_traits<char>::eof();
+}
+
+// Write-side gate for DATE_TIME columns: the parsed fields are discarded, only validity matters.
+// Shared by TypeValidator::validate_value (scalar + array writes) and validate_time_series_row
+// (time-series writes) - the two halves of the one scalar typing policy.
+inline bool is_valid_iso8601(const std::string& datetime_str) {
+    std::tm tm{};
+    return parse_iso8601(datetime_str, tm);
 }
 
 // Format a system_clock::time_point as ISO 8601 string in UTC.

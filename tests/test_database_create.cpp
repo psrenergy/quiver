@@ -711,3 +711,46 @@ TEST(Database, CreateScalarTypeCoercionPolicy) {
     ASSERT_EQ(floats.size(), 1);
     EXPECT_DOUBLE_EQ(*floats[0], 7.0);
 }
+
+// The whole DATE_TIME grammar lives here; every other layer only needs one representative
+// rejection. A value that survives this write must be readable by every binding's date parser.
+TEST(Database, CreateScalarDateTimeGrammar) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    const std::vector<std::string> accepted = {"2024-01-15", "2024-01-15T10:30:00", "2024-01-15 10:30:00"};
+    for (size_t i = 0; i < accepted.size(); ++i) {
+        quiver::Element element;
+        element.set("label", std::string("Ok ") + std::to_string(i)).set("date_attribute", accepted[i]);
+        EXPECT_NO_THROW(db.create_element("Configuration", element)) << "should accept " << accepted[i];
+    }
+
+    // Stored verbatim - the core validates, it never normalizes.
+    auto stored = db.read_scalar_strings("Configuration", "date_attribute");
+    ASSERT_EQ(stored.size(), accepted.size());
+    EXPECT_EQ(*stored[0], "2024-01-15");
+
+    const std::vector<std::string> rejected = {
+        "",                            // empty
+        "2005",                        // year only
+        "2005-01",                     // year-month: the reported bug
+        "not-a-date",                  // no date at all
+        "2024-13-01",                  // month out of range
+        "2024-02-31",                  // impossible calendar day
+        "2024-01-15junk",              // trailing garbage after a date
+        "2024-01-15T10:30:00 garbage"  // trailing garbage after a time
+    };
+    for (const auto& value : rejected) {
+        quiver::Element element;
+        element.set("label", std::string("Bad ") + value).set("date_attribute", value);
+        try {
+            db.create_element("Configuration", element);
+            ADD_FAILURE() << "should reject '" << value << "'";
+        } catch (const std::runtime_error& e) {
+            EXPECT_NE(std::string(e.what()).find("Cannot create_element: invalid DATE_TIME value for column "
+                                                 "'date_attribute'"),
+                      std::string::npos)
+                << "wrong message for '" << value << "': " << e.what();
+        }
+    }
+}

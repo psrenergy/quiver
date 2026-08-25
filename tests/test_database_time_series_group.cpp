@@ -294,6 +294,33 @@ TEST(Database, TimeSeriesTypeMismatchStringToReal) {
     EXPECT_NE(msg.find("column 'temperature' has type REAL but received TEXT"), std::string::npos) << "Actual: " << msg;
 }
 
+TEST(Database, TimeSeriesInvalidDateTimeDimension) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element e1;
+    e1.set("label", std::string("Item 1"));
+    auto id = db.create_element("Collection", e1);
+
+    std::vector<std::map<std::string, quiver::Value>> good = {
+        {{"date_time", std::string("2024-01-01")}, {"value", 1.0}}};
+    db.update_time_series_group("Collection", "data", id, good);
+
+    std::vector<std::map<std::string, quiver::Value>> rows = {{{"date_time", std::string("2005-01")}, {"value", 1.0}}};
+    auto msg = capture_update_error(db, "Collection", "data", id, rows);
+    EXPECT_NE(msg.find("Cannot update_time_series_group: invalid DATE_TIME value for column 'date_time': '2005-01'"),
+              std::string::npos)
+        << "Actual: " << msg;
+
+    // Validation runs before the DELETE, so the rejected write left the existing rows alone.
+    auto data = db.read_time_series_group("Collection", "data", id);
+    EXPECT_EQ(data.size(), 1);
+}
+
 TEST(Database, TimeSeriesNullValue) {
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});

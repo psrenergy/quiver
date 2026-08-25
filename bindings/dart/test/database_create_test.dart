@@ -841,4 +841,35 @@ void main() {
       }
     });
   });
+
+  group('Scalar DateTime Validation', () {
+    test('rejects an unparseable DATE_TIME string', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        // A DateTime value is formatted by the binding and always valid; a raw String is the only
+        // way to write a bad one. Full grammar lives in the C++ suite.
+        expect(
+          () => db.createElement('Configuration', {
+            'label': 'Bad',
+            'date_attribute': '2005-01',
+          }),
+          throwsA(isA<DatabaseException>()),
+        );
+
+        final id = db.createElement('Configuration', {
+          'label': 'Ok',
+          'date_attribute': '2005-01-01',
+        });
+        expect(
+          db.readScalarDateTimeById('Configuration', 'date_attribute', id),
+          equals(DateTime(2005, 1, 1)),
+        );
+      } finally {
+        db.close();
+      }
+    });
+  });
 }

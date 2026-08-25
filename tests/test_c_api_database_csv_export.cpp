@@ -616,7 +616,7 @@ TEST(DatabaseCApiCSV, ExportCSV_DateTimeFormat_FormatsDateColumns) {
     quiver_database_close(db);
 }
 
-TEST(DatabaseCApiCSV, ExportCSV_DateTimeFormat_InvalidDateReturnsRaw) {
+TEST(DatabaseCApiCSV, ExportCSV_DateTimeFormat_LegacyInvalidDateReturnsRaw) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
@@ -627,10 +627,20 @@ TEST(DatabaseCApiCSV, ExportCSV_DateTimeFormat_InvalidDateReturnsRaw) {
     ASSERT_EQ(quiver_element_create(&e1), QUIVER_OK);
     quiver_element_set_string(e1, "label", "Item1");
     quiver_element_set_string(e1, "name", "Alpha");
-    quiver_element_set_string(e1, "date_created", "not-a-date");  // invalid ISO 8601
+    quiver_element_set_string(e1, "date_created", "2024-01-15T10:30:00");
     int64_t id1 = 0;
     ASSERT_EQ(quiver_database_create_element(db, "Items", e1, &id1), QUIVER_OK);
     quiver_element_destroy(e1);
+
+    // create_element rejects an unparseable DATE_TIME value, so a bad date can only reach the
+    // column through raw SQL or a database written before that validation existed - which is
+    // exactly what format_datetime's raw-value fallback exists for.
+    int64_t ignored = 0;
+    int ignored_has_value = 0;
+    ASSERT_EQ(
+        quiver_database_query_integer(
+            db, "UPDATE Items SET date_created = 'not-a-date' WHERE label = 'Item1'", &ignored, &ignored_has_value),
+        QUIVER_OK);
 
     quiver_csv_options_t csv_options = {};
     csv_options.date_time_format = "%Y/%m/%d";

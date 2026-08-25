@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 import pytest
 
 from quiverdb import Database, QuiverError
@@ -247,3 +249,19 @@ class TestCreateScalarTypeCoercion:
     def test_integer_accepted_for_real_column(self, db: Database) -> None:
         elem_id = db.create_element("Configuration", label="cfg", float_attribute=7)
         assert db.read_scalar_float_by_id("Configuration", "float_attribute", elem_id) == 7.0
+
+
+class TestCreateScalarDateTime:
+    def test_partial_date_rejected_on_write(self, db: Database) -> None:
+        # A year-month string used to be stored happily and then blew up on the read, inside
+        # datetime.fromisoformat. The core rejects it at the write now. Full grammar lives in the
+        # C++ suite (tests/test_database_create.cpp).
+        with pytest.raises(QuiverError, match="invalid DATE_TIME value for column 'date_attribute'"):
+            db.create_element("Configuration", label="cfg", date_attribute="2005-01")
+
+    def test_date_only_accepted_and_reads_back(self, db: Database) -> None:
+        elem_id = db.create_element("Configuration", label="cfg", date_attribute="2005-01-01")
+        assert db.read_scalar_string_by_id("Configuration", "date_attribute", elem_id) == "2005-01-01"
+        assert db.read_scalar_date_time_by_id("Configuration", "date_attribute", elem_id) == datetime(
+            2005, 1, 1, tzinfo=timezone.utc
+        )

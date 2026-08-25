@@ -551,6 +551,15 @@ TEST(Database, UpsertTimeSeriesRowErrors) {
                   std::string::npos)
             << "Actual: " << msg;
     }
+
+    // f. Unparseable dimension value: the right shape (TEXT), the wrong content.
+    {
+        auto msg = capture_add_row_error(
+            db, "Resource", "load", id, {{"date_time", std::string("2005-01")}, {"block", int64_t{1}}, {"load", 1.0}});
+        EXPECT_NE(msg.find("Cannot upsert_time_series_row: invalid DATE_TIME value for column 'date_time': '2005-01'"),
+                  std::string::npos)
+            << "Actual: " << msg;
+    }
 }
 
 TEST(Database, UpsertTimeSeriesRowTransactionRollback) {

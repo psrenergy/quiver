@@ -542,6 +542,30 @@ TEST(DatabaseCSV, ImportCSV_Scalar_BadDateTime_Throws) {
     fs::remove(csv_path);
 }
 
+// export_csv writes a date-only value verbatim, so import has to accept it back or a database
+// holding one cannot round-trip. Import canonicalizes to midnight - that is the importer's job,
+// and it is what makes the round-trip land on a value the write validator also accepts.
+TEST(DatabaseCSV, ImportCSV_Scalar_DateOnly_RoundTrips) {
+    auto db = make_db();
+
+    quiver::Element e1;
+    e1.set("label", std::string("Item1"))
+        .set("name", std::string("Alpha"))
+        .set("date_created", std::string("2024-01-15"));
+    db.create_element("Items", e1);
+
+    auto csv_path = temp_csv("ImportDateOnlyRoundTrip");
+    db.export_csv("Items", "", csv_path.string());  // writes the stored value verbatim
+
+    auto fresh = make_db();
+    fresh.import_csv("Items", "", csv_path.string());
+    auto dates = fresh.read_scalar_strings("Items", "date_created");
+    ASSERT_EQ(dates.size(), 1);
+    EXPECT_EQ(*dates[0], "2024-01-15T00:00:00");
+
+    fs::remove(csv_path);
+}
+
 TEST(DatabaseCSV, ImportCSV_Scalar_DuplicateEntries_Throws) {
     auto db = make_db();
     auto csv_path = temp_csv("ImportDuplicates");
