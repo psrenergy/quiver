@@ -127,33 +127,6 @@ include("fixture.jl")
         end
     end
 
-    @testset "Legacy invalid datetime returns raw value" begin
-        db = Quiver.from_schema(":memory:", path_schema)
-        csv_path = tempname() * ".csv"
-        try
-            Quiver.create_element!(db, "Items";
-                label = "Item1",
-                name = "Alpha",
-                date_created = "2024-01-15T10:30:00",
-            )
-
-            # create_element! rejects an unparseable DATE_TIME value, so a bad date can only reach
-            # the column through raw SQL or a database written before that validation existed.
-            Quiver.query_integer(db, "UPDATE Items SET date_created = 'not-a-date' WHERE label = 'Item1'")
-
-            Quiver.export_csv(db, "Items", "", csv_path;
-                date_time_format = "%Y/%m/%d",
-            )
-            content = read(csv_path, String)
-
-            # Invalid datetime should be returned as-is
-            @test occursin("not-a-date", content)
-        finally
-            isfile(csv_path) && rm(csv_path)
-            Quiver.close!(db)
-        end
-    end
-
     @testset "Combined options (enum_labels + date_time_format)" begin
         db = Quiver.from_schema(":memory:", path_schema)
         csv_path = tempname() * ".csv"

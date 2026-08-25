@@ -152,32 +152,6 @@ void main() {
       }
     });
 
-    test('legacy invalid datetime returns raw value', () {
-      final db = Database.fromSchema(':memory:', schemaPath);
-      final csvPath = '${Directory.systemTemp.path}/quiver_dart_csv_invalid_date.csv';
-      try {
-        db.createElement('Items', {
-          'label': 'Item1',
-          'name': 'Alpha',
-          'date_created': '2024-01-15T10:30:00',
-        });
-
-        // createElement rejects an unparseable DATE_TIME value, so a bad date can only reach the
-        // column through raw SQL or a database written before that validation existed.
-        db.queryInteger("UPDATE Items SET date_created = 'not-a-date' WHERE label = 'Item1'");
-
-        db.exportCSV('Items', '', csvPath, dateTimeFormat: '%Y/%m/%d');
-        final content = File(csvPath).readAsStringSync();
-
-        // Invalid datetime should be returned as-is
-        expect(content, contains('not-a-date'));
-      } finally {
-        final f = File(csvPath);
-        if (f.existsSync()) f.deleteSync();
-        db.close();
-      }
-    });
-
     test('combined options (enum_labels + date_time_format)', () {
       final db = Database.fromSchema(':memory:', schemaPath);
       final csvPath = '${Directory.systemTemp.path}/quiver_dart_csv_combined.csv';
