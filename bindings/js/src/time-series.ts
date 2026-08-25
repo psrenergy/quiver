@@ -200,6 +200,25 @@ Database.prototype.updateTimeSeriesGroup = function (
   );
 };
 
+/** Label-addressed counterpart of updateTimeSeriesGroup. */
+Database.prototype.updateTimeSeriesGroupByLabel = function (
+  this: Database,
+  collection: string,
+  group: string,
+  label: string,
+  data: TimeSeriesData,
+): void {
+  updateGroupColumns(
+    this._handle,
+    "updateTimeSeriesGroupByLabel",
+    getSymbols().quiver_database_update_time_series_group_by_label,
+    collection,
+    group,
+    label,
+    data,
+  );
+};
+
 Database.prototype.upsertTimeSeriesRow = function (
   this: Database,
   collection: string,

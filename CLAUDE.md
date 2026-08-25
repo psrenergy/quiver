@@ -515,6 +515,7 @@ The rules are mechanical: given any C++ method name, you can derive the equivale
 | Time series row | `read_time_series_row()` | `quiver_database_read_time_series_row()` | `read_time_series_row()` | `readTimeSeriesRow()` | `read_time_series_row()` |
 | Time series upsert row | `upsert_time_series_row()` | `quiver_database_upsert_time_series_row()` | `upsert_time_series_row!()` | `upsertTimeSeriesRow()` | `upsert_time_series_row()` |
 | Time series update | `update_time_series_group()` | `quiver_database_update_time_series_group()` | `update_time_series_group!()` | `updateTimeSeriesGroup()` | `update_time_series_group()` |
+| Time series group update by label | `update_time_series_group_by_label()` | `quiver_database_update_time_series_group_by_label()` | `update_time_series_group_by_label!()` | `updateTimeSeriesGroupByLabel()` | `update_time_series_group_by_label()` |
 | Vector group update | `update_vector_group()` | `quiver_database_update_vector_group()` | `update_vector_group!()` | `updateVectorGroup()` | `update_vector_group()` |
 | Vector group update by label | `update_vector_group_by_label()` | `quiver_database_update_vector_group_by_label()` | `update_vector_group_by_label!()` | `updateVectorGroupByLabel()` | `update_vector_group_by_label()` |
 | Set group update | `update_set_group()` | `quiver_database_update_set_group()` | `update_set_group!()` | `updateSetGroup()` | `update_set_group()` |

@@ -155,6 +155,18 @@ function update_time_series_group!(db::Database, collection::String, group::Stri
     return _update_group_columns(db, C.quiver_database_update_time_series_group, collection, group, id, kwargs)
 end
 
+# Label-addressed counterpart of update_time_series_group!.
+function update_time_series_group_by_label!(db::Database, collection::String, group::String, label::String; kwargs...)
+    return _update_group_columns(
+        db,
+        C.quiver_database_update_time_series_group_by_label,
+        collection,
+        group,
+        label,
+        kwargs,
+    )
+end
+
 # Replace all of an element's rows in one *named* vector group. Pass no columns to clear it.
 # Prefer this over routing the group's columns through update_element! when a column name is
 # shared by two groups of the collection (legal for foreign keys): (collection, group) names

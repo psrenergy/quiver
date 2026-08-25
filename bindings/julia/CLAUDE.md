@@ -54,7 +54,7 @@ Project.toml      # Deps: Artifacts, CEnum, Dates, Libdl; julia 1.11 compat
   FLOAT tag + zeroed placeholder.
 - **One marshaller for every group writer**: `_update_group_columns(db, update, ...)`
   (`src/database_update.jl`) takes the C entry point as an argument, so `update_time_series_group!`,
-  `update_vector_group!`, `update_set_group!` and the vector/set `_by_label!` forms are one-line
+  `update_vector_group!`, `update_set_group!` and their `_by_label!` forms are one-line
   wrappers over it. Its `key` is a `Union{Int64, String}` — the `@ccall` in `c_api.jl` annotates
   that argument per function, so an id and a label both marshal correctly. Don't copy the
   `GC.@preserve` body per writer.

@@ -13,8 +13,8 @@ callers to change something are prefixed **BREAKING** and say what to do.
   element's rows in one named time-series group, addressed by `label` instead of id — the
   label-addressed counterpart of `update_time_series_group`. It resolves the label and then
   delegates, so the dimension-column rules, the type validation, the NULL cells, and "no columns
-  clears the group" are identical. Label resolution and its miss semantics are
-  `update_element_by_label`'s, below.
+  clears the group" are identical. Available in every layer, under the usual per-layer spelling.
+  Label resolution and its miss semantics are `update_element_by_label`'s, below.
 
 - **`update_vector_group_by_label` / `update_set_group_by_label(collection, group, label, rows)`.**
   Replaces all of an element's rows in one named vector or set group, addressed by `label` instead
