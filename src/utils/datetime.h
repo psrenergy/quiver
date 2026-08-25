@@ -1,12 +1,12 @@
 #ifndef QUIVER_DATETIME_H
 #define QUIVER_DATETIME_H
 
+#include "utils/string.h"
+
 #include <chrono>
+#include <cstddef>
 #include <cstdio>
-#include <cstring>
 #include <ctime>
-#include <iomanip>
-#include <sstream>
 #include <string>
 
 namespace quiver::datetime {
@@ -29,43 +29,111 @@ inline std::chrono::system_clock::time_point tm_to_time_point(const std::tm& tm)
            std::chrono::minutes{tm.tm_min} + std::chrono::seconds{tm.tm_sec};
 }
 
-// The single definition of "valid ISO 8601" in the core: "YYYY-MM-DD", optionally followed by
-// "THH:MM:SS" or " HH:MM:SS". Cross-platform via std::get_time (not strptime).
-//
-// The whole string must be consumed, so "2005", "2005-01" and "2024-01-01xyz" are all rejected.
-// Date and time are two separate get_time passes with the separator matched by hand: a literal
-// space in a get_time format means "skip zero or more spaces", so a single "%Y-%m-%d %H:%M:%S"
-// pass would also accept "2024-01-0110:30:00".
-inline bool parse_iso8601(const std::string& datetime_str, std::tm& tm) {
-    std::memset(&tm, 0, sizeof(tm));
-    std::istringstream ss(datetime_str);
-    // libstdc++'s get_time skips leading whitespace, MSVC's does not. Unset skipws so they agree.
-    ss.unsetf(std::ios_base::skipws);
+namespace detail {
 
-    ss >> std::get_time(&tm, "%Y-%m-%d");
-    // get_time range-checks %m (1-12) and %d (1-31) and sets failbit when the input ends
-    // mid-format; tm_mday guards a laxer implementation, and the calendar rejects the month/day
-    // pairs get_time cannot see on its own (2024-02-31).
-    if (ss.fail() || tm.tm_mday < 1 || !tm_to_year_month_day(tm).ok()) {
+// Read exactly `count` ASCII digits at `pos`, advancing it. Fixed width is the whole point:
+// std::get_time treats a field width as a *maximum*, so "%Y-%m-%d" also matches "2024-1-5" and
+// "24-01-15", and "%H:%M:%S" also matches "T1:30:00" and (on MSVC, which does not set failbit when
+// the input ends mid-format) "T10:30". Every one of those is rejected by Python's fromisoformat
+// and Dart's DateTime.parse, so get_time cannot express the grammar this parser must enforce.
+inline bool read_digits(const std::string& s, std::size_t& pos, std::size_t count, int& out) {
+    if (pos + count > s.size()) {
         return false;
     }
-    if (ss.peek() == std::char_traits<char>::eof()) {
+    int value = 0;
+    for (std::size_t i = 0; i < count; ++i) {
+        const char c = s[pos + i];
+        if (c < '0' || c > '9') {
+            return false;
+        }
+        value = value * 10 + (c - '0');
+    }
+    pos += count;
+    out = value;
+    return true;
+}
+
+inline bool read_char(const std::string& s, std::size_t& pos, char expected) {
+    if (pos >= s.size() || s[pos] != expected) {
+        return false;
+    }
+    ++pos;
+    return true;
+}
+
+}  // namespace detail
+
+// The single definition of "valid ISO 8601" in the core: "YYYY-MM-DD", optionally followed by
+// "THH:MM:SS" or " HH:MM:SS". Every field is fixed-width and zero-padded, the year is 0001-9999,
+// the calendar day must exist (2024-02-31 is rejected), a leap second is not accepted, and the
+// whole string must be consumed - so "2005", "2005-01", "2024-1-5", "2024-01-15T10:30" and
+// "2024-01-01xyz" are all rejected. That band is the intersection of what Python's
+// `fromisoformat`, Julia's `DateTime` and Dart's `DateTime.parse` accept; keep it that way, since
+// the write-side gate below is what promises a stored value is readable by every binding.
+//
+// Hand-rolled rather than std::get_time: get_time's widths are maxima (see detail::read_digits),
+// it is locale- and platform-sensitive, and a literal space in its format means "skip zero or more
+// spaces", which would also accept "2024-01-0110:30:00".
+inline bool parse_iso8601(const std::string& datetime_str, std::tm& tm) {
+    tm = std::tm{};
+    std::size_t pos = 0;
+    int year = 0;
+    int month = 0;
+    int day = 0;
+    if (!detail::read_digits(datetime_str, pos, 4, year) || !detail::read_char(datetime_str, pos, '-') ||
+        !detail::read_digits(datetime_str, pos, 2, month) || !detail::read_char(datetime_str, pos, '-') ||
+        !detail::read_digits(datetime_str, pos, 2, day)) {
+        return false;
+    }
+    tm.tm_year = year - 1900;
+    tm.tm_mon = month - 1;
+    tm.tm_mday = day;
+    // year 0 is rejected because Python's datetime starts at year 1; ok() covers month/day.
+    const auto ymd = tm_to_year_month_day(tm);
+    if (year < 1 || !ymd.ok()) {
+        return false;
+    }
+    // strftime reads tm_wday/tm_yday for %a/%A/%j/%U/%W/%w, and nothing else fills them, so
+    // format_datetime would otherwise report every date as a Sunday on day 001.
+    const auto sys_day = std::chrono::sys_days{ymd};
+    tm.tm_wday = static_cast<int>(std::chrono::weekday{sys_day}.c_encoding());
+    tm.tm_yday = static_cast<int>((sys_day - std::chrono::sys_days{ymd.year() / std::chrono::January / 1}).count());
+
+    if (pos == datetime_str.size()) {
         return true;  // date only: "2024-01-01"
     }
-    const auto separator = ss.get();
+    const char separator = datetime_str[pos++];
     if (separator != 'T' && separator != ' ') {
         return false;
     }
-    ss >> std::get_time(&tm, "%H:%M:%S");  // no memset: the date fields must survive
-    return !ss.fail() && ss.peek() == std::char_traits<char>::eof();
+    int hour = 0;
+    int minute = 0;
+    int second = 0;
+    if (!detail::read_digits(datetime_str, pos, 2, hour) || !detail::read_char(datetime_str, pos, ':') ||
+        !detail::read_digits(datetime_str, pos, 2, minute) || !detail::read_char(datetime_str, pos, ':') ||
+        !detail::read_digits(datetime_str, pos, 2, second)) {
+        return false;
+    }
+    // 60 would be a leap second: Python and Julia throw on it, Dart silently rolls the clock to the
+    // next minute. No agreement, so it is not in the intersection.
+    if (hour > 23 || minute > 59 || second > 59) {
+        return false;
+    }
+    tm.tm_hour = hour;
+    tm.tm_min = minute;
+    tm.tm_sec = second;
+    return pos == datetime_str.size();
 }
 
 // Write-side gate for DATE_TIME columns: the parsed fields are discarded, only validity matters.
 // Shared by TypeValidator::validate_value (scalar + array writes) and validate_time_series_row
 // (time-series writes) - the two halves of the one scalar typing policy.
+//
+// Trims first because Database::execute trims every bound string, so the value that reaches SQLite
+// is the trimmed one; validating the raw string would reject " 2024-01-15", which stores fine.
 inline bool is_valid_iso8601(const std::string& datetime_str) {
     std::tm tm{};
-    return parse_iso8601(datetime_str, tm);
+    return parse_iso8601(quiver::string::trim(datetime_str), tm);
 }
 
 // Format a system_clock::time_point as ISO 8601 string in UTC.

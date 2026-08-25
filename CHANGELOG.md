@@ -21,16 +21,31 @@ callers to change something are prefixed **BREAKING** and say what to do.
   `read_element_by_id`, `read_vector_group_by_id`, …) all funnel through that parser, one bad cell
   made the whole element unreadable.
 
-  Rejected: `"2005"`, `"2005-01"`, `"not-a-date"`, `""`, an impossible calendar day
-  (`"2024-02-31"`), and trailing garbage (`"2024-01-15junk"`). The accepted band is the
-  intersection of what Python's `fromisoformat`, Julia's `DateTime` and Dart's `DateTime.parse`
-  handle, so a value the core stores is a value every binding can read. Applies to
-  `create_element`, `update_element`, the vector/set/time-series group writers,
-  `upsert_time_series_row`, their `_by_label` forms, and every binding and Lua.
+  Every field is fixed-width and zero-padded, the year is `0001`-`9999`, and the calendar day must
+  exist. Rejected: `"2005"`, `"2005-01"`, `"not-a-date"`, `""`, an impossible calendar day
+  (`"2024-02-31"`), trailing garbage (`"2024-01-15junk"`), an unpadded or short field
+  (`"2024-1-5"`, `"24-01-15"`, `"2024-01-15T1:30:00"`), a truncated time (`"2024-01-15T10:30"`),
+  and a leap second (`"2024-01-15T10:30:60"`). Leading and trailing whitespace is trimmed before
+  validating, matching what actually gets stored. The accepted band is the intersection of what
+  Python's `fromisoformat`, Julia's `DateTime` and Dart's `DateTime.parse` handle, so a value the
+  core stores is a value every binding can read. Applies to `create_element`, `update_element`,
+  the vector/set/time-series group writers, `upsert_time_series_row`, their `_by_label` forms,
+  `import_csv`, and every binding and Lua.
 
   *Adapt:* write a full calendar date. `"2005-01"` becomes `"2005-01-01"`. To put a
   non-conforming value in a date column deliberately — reproducing legacy data in a test, say —
   use raw SQL through `query_string`/`query_integer`; the readers' lenient fallbacks are unchanged.
+
+- **BREAKING — `import_csv` rejects a timestamp it cannot canonicalize.** Import writes through a
+  raw `INSERT` and never reaches the validator above, and with a `date_time_format` set it parsed
+  the cell with the caller's format — which range-checks month and day separately and so cannot see
+  that February has no 31st. `date_time_format = "%d/%m/%Y"` on a cell `31/02/2024` stored
+  `"2024-02-31T00:00:00"`, a value `create_element` refuses and no binding's date parser can read.
+  Import now validates the canonical string it produces, so it is held to the same grammar as every
+  other writer.
+
+  *Adapt:* fix the offending cell. An import that used to "succeed" on such a row was writing data
+  you could not read back.
 
 - **`parse_iso8601` accepts a date-only value, and now requires the whole string.** The core's one
   ISO 8601 parser (`src/utils/datetime.h`) previously demanded the time part, which had two
@@ -46,7 +61,22 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
   The whole-string requirement is a tightening: `"2024-01-15T10:30:00.123"`, `"…Z"` and any other
   trailing text used to parse (the parser stopped as soon as the format was satisfied) and are now
-  rejected everywhere `parse_iso8601` is used.
+  rejected everywhere `parse_iso8601` is used — which includes two *ingest* paths with no lenient
+  fallback. `import_csv` with no `date_time_format` now fails on a cell carrying a `Z` or
+  fractional seconds (the shape most external exporters write), and `BinaryMetadata`'s
+  `initial_datetime` now fails on a `.toml` sidecar carrying one, making the `.qvr` unopenable.
+  `export_csv` with `date_time_format` passes such a legacy cell through raw instead of formatting
+  it.
+
+  *Adapt:* rewrite the offending cell to `YYYY-MM-DDTHH:MM:SS`, or pass a matching
+  `date_time_format` to `import_csv`.
+
+  The parser is now a hand-rolled fixed-width scan rather than `std::get_time`. get_time's field
+  widths are maxima, so it also accepted `"2024-1-5"`, `"24-01-15"` and `"+2024-01-15"`, and on
+  MSVC it did not fail on a truncated time — so `"2024-01-15T10:30"` validated on Windows and would
+  not on Linux. It also left `tm_wday`/`tm_yday` unset, so `export_csv` with a `date_time_format`
+  containing `%a`/`%A`/`%j`/`%U`/`%W` reported every date as a Sunday on day 001; those now
+  format correctly.
 
 ### Added
 

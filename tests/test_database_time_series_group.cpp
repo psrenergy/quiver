@@ -311,14 +311,19 @@ TEST(Database, TimeSeriesInvalidDateTimeDimension) {
     db.update_time_series_group("Collection", "data", id, good);
 
     std::vector<std::map<std::string, quiver::Value>> rows = {{{"date_time", std::string("2005-01")}, {"value", 1.0}}};
+
+    // Inside a dry run TransactionGuard no-ops, so a throw after the DELETE would have nothing to
+    // roll back - that is what makes the row count below assert validation-before-DELETE rather
+    // than the guard's rollback. Same idiom as UpdateGroupTypeErrorInsideDryRunKeepsExistingRows.
+    db.begin_dry_run();
     auto msg = capture_update_error(db, "Collection", "data", id, rows);
     EXPECT_NE(msg.find("Cannot update_time_series_group: invalid DATE_TIME value for column 'date_time': '2005-01'"),
               std::string::npos)
         << "Actual: " << msg;
 
-    // Validation runs before the DELETE, so the rejected write left the existing rows alone.
     auto data = db.read_time_series_group("Collection", "data", id);
     EXPECT_EQ(data.size(), 1);
+    db.end_dry_run();
 }
 
 TEST(Database, TimeSeriesNullValue) {

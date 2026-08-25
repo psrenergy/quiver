@@ -91,17 +91,23 @@ Settled questions — don't relitigate without the user; each was decided delibe
   `value_matches_type` (time-series writes) share this rule; bindings never coerce
   schema-dependently.
 - **A DATE_TIME string is validated on write, and stored verbatim.** The accepted grammar is
-  `YYYY-MM-DD`, optionally followed by `THH:MM:SS` or ` HH:MM:SS`; anything else (`2005`,
-  `2005-01`, `not-a-date`, an impossible calendar day, trailing garbage) is a Pattern 1 rejection
-  naming the column. That band is the intersection of what Python's `fromisoformat`, Julia's
-  `DateTime` and Dart's `DateTime.parse` all accept — a value the core stores is a value every
-  binding can read. Being TEXT was previously the *only* requirement, so an unreadable date landed
-  in the column and detonated later in whichever binding first parsed it, on a read naming neither
-  the write nor the column. One predicate, `datetime::is_valid_iso8601` (`src/utils/datetime.h`),
-  is called from both halves of the typing policy above. The core never normalizes — padding a
-  partial date to midnight would make `read_scalar_string_by_id` return something the caller never
-  wrote. `import_csv` is the deliberate exception: it *parses* a cell, so it canonicalizes to
-  `YYYY-MM-DDTHH:MM:SS` (which is what lets an exported date-only value round-trip).
+  `YYYY-MM-DD`, optionally followed by `THH:MM:SS` or ` HH:MM:SS`, every field fixed-width and
+  zero-padded, year `0001`-`9999`, the calendar day must exist, no leap second; anything else
+  (`2005`, `2005-01`, `not-a-date`, `2024-02-31`, `2024-1-5`, `2024-01-15T10:30`, trailing garbage)
+  is a Pattern 1 rejection naming the column. That band is the intersection of what Python's
+  `fromisoformat`, Julia's `DateTime` and Dart's `DateTime.parse` all accept — a value the core
+  stores is a value every binding can read, and that is the whole point of the gate, so any change
+  that widens the grammar has to be checked against all three. Being TEXT was previously the *only*
+  requirement, so an unreadable date landed in the column and detonated later in whichever binding
+  first parsed it, on a read naming neither the write nor the column. One predicate,
+  `datetime::is_valid_iso8601` (`src/utils/datetime.h`), is called from both halves of the typing
+  policy above. The core never normalizes — padding a partial date to midnight would make
+  `read_scalar_string_by_id` return something the caller never wrote (leading/trailing whitespace
+  is the exception: `Database::execute` trims every bound string, so the predicate trims too and
+  the gate judges what is actually stored). `import_csv` is the deliberate exception to
+  "no normalizing": it *parses* a cell, so it canonicalizes to `YYYY-MM-DDTHH:MM:SS` (which is what
+  lets an exported date-only value round-trip) — and then runs the same predicate over the
+  canonical string, because import writes through a raw `INSERT` that `TypeValidator` never sees.
 - **`update_element` / `delete_element` throw on a missing id** (`"Element not found: <id> in
   collection '<c>'"`, Pattern 2) — not a silent no-op. The error surfaces through the C API error
   channel and every binding.

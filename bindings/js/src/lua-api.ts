@@ -60,8 +60,9 @@ shift every later parameter and bind NULL to the trailing placeholder, so this i
 
 Dates are plain strings in ISO 8601 format: \`YYYY-MM-DDTHH:MM:SS\`. (Lua keeps a string-based
 datetime surface — there are no DateTime wrapper helpers, unlike Julia/Dart/Python.) The time part
-is optional, so \`"2024-01-15"\` is also valid, and a space may replace the \`T\`. Anything shorter
-or malformed — \`"2005"\`, \`"2005-01"\`, \`"2024-02-31"\` — is **rejected when you write it**, not
+is optional, so \`"2024-01-15"\` is also valid, and a space may replace the \`T\`. Every field is
+fixed-width and zero-padded. Anything shorter or malformed — \`"2005"\`, \`"2005-01"\`,
+\`"2024-02-31"\`, \`"2024-1-5"\`, \`"2024-01-15T10:30"\` — is **rejected when you write it**, not
 silently stored. The value is stored exactly as written; a date-only value is not padded to
 midnight.
 

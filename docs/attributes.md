@@ -18,7 +18,7 @@ CREATE TABLE ThermalPlant(
 
 If an attribute name starts with `date_` it should be stored as a `TEXT` and indicates a date that will be mapped to a DateTime object.
 
-The value must be ISO 8601: `YYYY-MM-DD`, optionally followed by `THH:MM:SS` or ` HH:MM:SS`. Anything else — a year-month such as `2005-01`, or an impossible day such as `2024-02-31` — is rejected when the element is written, rather than being stored and failing later on the read. The string is stored exactly as given; Quiver does not pad a date-only value to midnight.
+The value must be ISO 8601: `YYYY-MM-DD`, optionally followed by `THH:MM:SS` or ` HH:MM:SS`. Every field is fixed-width and zero-padded. Anything else — a year-month such as `2005-01`, an impossible day such as `2024-02-31`, an unpadded field such as `2024-1-5`, or a truncated time such as `2024-01-15T10:30` — is rejected when the element is written, rather than being stored and failing later on the read. The string is stored exactly as given (bar surrounding whitespace, which is trimmed); Quiver does not pad a date-only value to midnight.
 
 Example:
 

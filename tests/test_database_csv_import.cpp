@@ -31,6 +31,13 @@ static void write_csv_file(const std::string& path, const std::string& content) 
     f << content;
 }
 
+static std::string read_csv_file(const std::string& path) {
+    std::ifstream f(path, std::ios::binary);
+    std::ostringstream ss;
+    ss << f.rdbuf();
+    return ss.str();
+}
+
 // Helper: create a database from the relations schema (has FK)
 static quiver::Database make_relations_db() {
     return quiver::Database::from_schema(
@@ -556,12 +563,31 @@ TEST(DatabaseCSV, ImportCSV_Scalar_DateOnly_RoundTrips) {
 
     auto csv_path = temp_csv("ImportDateOnlyRoundTrip");
     db.export_csv("Items", "", csv_path.string());  // writes the stored value verbatim
+    // Pin the premise: if export ever starts canonicalizing, the assert below would still pass and
+    // the asymmetry this test guards would silently come back.
+    EXPECT_NE(read_csv_file(csv_path.string()).find(",2024-01-15,"), std::string::npos);
 
     auto fresh = make_db();
     fresh.import_csv("Items", "", csv_path.string());
     auto dates = fresh.read_scalar_strings("Items", "date_created");
     ASSERT_EQ(dates.size(), 1);
     EXPECT_EQ(*dates[0], "2024-01-15T00:00:00");
+
+    fs::remove(csv_path);
+}
+
+// import_csv writes through a raw INSERT, so it is the one write path TypeValidator never sees.
+// std::get_time range-checks %m and %d independently but cannot see that February has no 31st, so
+// without the canonical-form check this stored a date no binding can read.
+TEST(DatabaseCSV, ImportCSV_Scalar_CustomFormatImpossibleDay_Throws) {
+    auto db = make_db();
+    auto csv_path = temp_csv("ImportCustomFormatImpossibleDay");
+    write_csv_file(csv_path.string(), "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,,,31/02/2024,\n");
+
+    quiver::CSVOptions options;
+    options.date_time_format = "%d/%m/%Y";
+    EXPECT_THROW(db.import_csv("Items", "", csv_path.string(), options), std::runtime_error);
+    EXPECT_EQ(db.number_of_elements("Items"), 0);
 
     fs::remove(csv_path);
 }
