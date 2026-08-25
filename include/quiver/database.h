@@ -164,6 +164,13 @@ public:
                                   int64_t id,
                                   const std::vector<std::map<std::string, Value>>& rows);
 
+    // Resolve the label within `collection` (unique per collection, not per database), then
+    // delegate to the id form above.
+    void update_time_series_group_by_label(const std::string& collection,
+                                           const std::string& group,
+                                           const std::string& label,
+                                           const std::vector<std::map<std::string, Value>>& rows);
+
     // Add (or upsert) a single time series row. Inserts a new row identified by id +
     // every dimension column from the schema PK; if a row with the same PK already
     // exists, value columns are overwritten. Validation matches update_time_series_group:
