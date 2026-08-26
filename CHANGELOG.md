@@ -9,6 +9,12 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ### Added
 
+- **`upsert_time_series_row_by_label(collection, group, label, row)`.** Inserts or replaces a
+  single time-series row addressed by `label` instead of id — the label-addressed counterpart of
+  `upsert_time_series_row`. It resolves the label and then delegates, so the dimension-column
+  rules, the type validation, and the upsert-on-PK semantics are identical. Label resolution and
+  its miss semantics are `update_element_by_label`'s, below.
+
 - **`update_time_series_group_by_label(collection, group, label, rows)`.** Replaces all of an
   element's rows in one named time-series group, addressed by `label` instead of id — the
   label-addressed counterpart of `update_time_series_group`. It resolves the label and then
@@ -48,6 +54,12 @@ callers to change something are prefixed **BREAKING** and say what to do.
   '<c>'` and deletes nothing (no silent no-op, matching `delete_element` / `update_element`).
   Naming a table with no `label` column throws `Cannot delete_element_by_label: column 'label' not
   found in table '<t>'`.
+
+### Fixed
+
+- `quiver_database_upsert_time_series_row` now writes SQL NULL for a NULL `column_data[c]` or a
+  NULL `char*` cell instead of dereferencing it — it shares the group writers' decoder. Reachable
+  only from direct C API callers (every binding rejects a null cell before the FFI call).
 
 ## [0.10.1] — 2026-08-14
 

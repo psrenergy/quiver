@@ -182,6 +182,13 @@ public:
                                 int64_t id,
                                 const std::map<std::string, Value>& row);
 
+    // Resolve the label within `collection` (unique per collection, not per database), then
+    // delegate to the id form above.
+    void upsert_time_series_row_by_label(const std::string& collection,
+                                         const std::string& group,
+                                         const std::string& label,
+                                         const std::map<std::string, Value>& row);
+
     // Time series files - singleton table storing file paths for external time series data
     bool has_time_series_files(const std::string& collection) const;
     std::vector<std::string> list_time_series_files_columns(const std::string& collection) const;
