@@ -214,13 +214,15 @@ impl_->logger->debug("Opening database: {}", path);
   in sync (root design decision).
 - **`update_element` / `delete_element` / the vector+set group writers verify the id exists** (via
   `Impl::require_element`) and throw Pattern 2 `"Element not found: ..."` — no silent no-op.
-  `update_time_series_group` is the one writer that does not: a bad id clears nothing and fails at
-  the foreign key (a bad id with no rows is a no-op).
+  The two time-series writers do not: `upsert_time_series_row` always writes one row, so a bad id
+  always fails at the foreign key; `update_time_series_group` fails there too when it has rows to
+  write, but with no rows it deletes nothing and returns silently.
   Every `_by_label` form resolves the label via `Impl::resolve_label`, and is a one-line
   delegation to its id counterpart (the root `_by_label` rule), so `update_element_by_label`'s
   *element* validation — the empty-element throw, `TypeValidator`, `insert_group_data` — reports
-  `Cannot update_element: ...` and the group writers' column validation reports
-  `Cannot update_{vector,set,time_series}_group: ...`, naming the operation that validated.
+  `Cannot update_element: ...` and the group/row writers' column validation reports
+  `Cannot update_{vector,set,time_series}_group: ...` / `Cannot upsert_time_series_row: ...`,
+  naming the operation that validated.
 - **Schema metadata loads lazily** (`Impl::require_schema`): the `Database(path, options)`
   constructor does not read it, so the first metadata/CRUD call does. `schema` and `type_validator`
   are `mutable` (const readers trigger the load) and `load_schema_metadata()` is `const` and
