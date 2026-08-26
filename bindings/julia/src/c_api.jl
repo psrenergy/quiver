@@ -390,6 +390,10 @@ function quiver_database_upsert_time_series_row(db, collection, group, id, colum
     @ccall libquiver_c.quiver_database_upsert_time_series_row(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, id::Int64, column_names::Ptr{Ptr{Cchar}}, column_types::Ptr{Cint}, column_data::Ptr{Ptr{Cvoid}}, column_count::Csize_t)::quiver_error_t
 end
 
+function quiver_database_upsert_time_series_row_by_label(db, collection, group, label, column_names, column_types, column_data, column_count)
+    @ccall libquiver_c.quiver_database_upsert_time_series_row_by_label(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, label::Ptr{Cchar}, column_names::Ptr{Ptr{Cchar}}, column_types::Ptr{Cint}, column_data::Ptr{Ptr{Cvoid}}, column_count::Csize_t)::quiver_error_t
+end
+
 function quiver_database_read_time_series_row(db, collection, group, attribute, date_time, out_data_type, out_values, out_count)
     @ccall libquiver_c.quiver_database_read_time_series_row(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, attribute::Ptr{Cchar}, date_time::Ptr{Cchar}, out_data_type::Ptr{Cint}, out_values::Ptr{Ptr{Cvoid}}, out_count::Ptr{Csize_t})::quiver_error_t
 end

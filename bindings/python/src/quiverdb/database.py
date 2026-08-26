@@ -1686,6 +1686,62 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
             )
         )
 
+    def upsert_time_series_row_by_label(self, collection: str, group: str, label: str, **kwargs) -> None:
+        """Label-addressed counterpart of upsert_time_series_row."""
+        self._ensure_open()
+        lib = get_lib()
+        c_collection = collection.encode("utf-8")
+        c_group = group.encode("utf-8")
+        c_label = label.encode("utf-8")
+
+        col_count = len(kwargs)
+        keepalive: list = []
+
+        c_col_names = ffi.new("const char*[]", col_count)
+        c_col_types = ffi.new("int[]", col_count)
+        c_col_data = ffi.new("void*[]", col_count)
+
+        for i, (name, v) in enumerate(kwargs.items()):
+            name_buf = ffi.new("char[]", name.encode("utf-8"))
+            keepalive.append(name_buf)
+            c_col_names[i] = name_buf
+
+            # bool is a subclass of int; test it explicitly first so True/False
+            # marshal as INTEGER 1/0 rather than being rejected by the `is int`
+            # check. Mirrors `_marshal_params` policy in this same file.
+            if isinstance(v, bool):
+                arr = ffi.new("int64_t[]", [int(v)])
+                keepalive.append(arr)
+                c_col_types[i] = DataType.INTEGER
+                c_col_data[i] = ffi.cast("void*", arr)
+            elif isinstance(v, int):
+                arr = ffi.new("int64_t[]", [v])
+                keepalive.append(arr)
+                c_col_types[i] = DataType.INTEGER
+                c_col_data[i] = ffi.cast("void*", arr)
+            elif isinstance(v, float):
+                arr = ffi.new("double[]", [v])
+                keepalive.append(arr)
+                c_col_types[i] = DataType.FLOAT
+                c_col_data[i] = ffi.cast("void*", arr)
+            elif isinstance(v, str):
+                str_buf = ffi.new("char[]", v.encode("utf-8"))
+                keepalive.append(str_buf)
+                c_str_arr = ffi.new("char*[]", [str_buf])
+                keepalive.append(c_str_arr)
+                c_col_types[i] = DataType.STRING
+                c_col_data[i] = ffi.cast("void*", c_str_arr)
+            else:
+                raise TypeError(
+                    f"Column '{name}' value has unsupported type {type(v).__name__}; expected int, float, or str"
+                )
+
+        check(
+            lib.quiver_database_upsert_time_series_row_by_label(
+                self._ptr, c_collection, c_group, c_label, c_col_names, c_col_types, c_col_data, col_count
+            )
+        )
+
     # -- Time series files ------------------------------------------------------
 
     def has_time_series_files(self, collection: str) -> bool:

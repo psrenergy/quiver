@@ -573,6 +573,49 @@ extension DatabaseUpdate on Database {
     }
   }
 
+  /// Adds or updates a single time series row, addressed by label.
+  /// Label-addressed counterpart of [upsertTimeSeriesRow].
+  void upsertTimeSeriesRowByLabel(
+    String collection,
+    String group,
+    String label,
+    Map<String, Object> row,
+  ) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      final columnCount = row.length;
+      final columnNames = arena<Pointer<Char>>(columnCount);
+      final columnTypes = arena<Int>(columnCount);
+      final columnData = arena<Pointer<Void>>(columnCount);
+
+      var i = 0;
+      for (final entry in row.entries) {
+        columnNames[i] = entry.key.toNativeUtf8(allocator: arena).cast();
+        final column = _marshalGroupColumn(arena, [entry.value]);
+        columnTypes[i] = column.type;
+        columnData[i] = column.data;
+        i++;
+      }
+
+      check(
+        bindings.quiver_database_upsert_time_series_row_by_label(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          group.toNativeUtf8(allocator: arena).cast(),
+          label.toNativeUtf8(allocator: arena).cast(),
+          columnNames,
+          columnTypes,
+          columnData,
+          columnCount,
+        ),
+      );
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
   // ==========================================================================
   // Update time series files
   // ==========================================================================

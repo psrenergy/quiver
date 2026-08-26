@@ -429,7 +429,15 @@ db:upsert_time_series_row("Items", "data", id, {
     date_time = "2024-01-04T00:00:00",
     value     = 40.0,
 })
+
+db:upsert_time_series_row_by_label("Items", "data", "Item 1", {
+    date_time = "2024-01-04T00:00:00",
+    value     = 40.0,
+})
 \`\`\`
+
+The element id must exist; the \`_by_label\` form takes a label in its place, with
+\`update_element_by_label\`'s resolution and miss semantics.
 
 ---
 
