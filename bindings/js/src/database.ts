@@ -194,6 +194,12 @@ export class Database {
     id: number,
     row: Record<string, number | bigint | string>,
   ) => void;
+  declare upsertTimeSeriesRowByLabel: (
+    collection: string,
+    group: string,
+    label: string,
+    row: Record<string, number | bigint | string>,
+  ) => void;
   declare hasTimeSeriesFiles: (collection: string) => boolean;
   declare listTimeSeriesFilesColumns: (collection: string) => string[];
   declare readTimeSeriesFiles: (collection: string) => Record<string, string | null>;

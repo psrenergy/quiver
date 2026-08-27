@@ -67,6 +67,11 @@ ruff.toml         # Lint/format config (format.bat runs ruff)
   everything else is validated in the core and surfaces as `QuiverError`. Note that the group
   *writers* take columns while `read_vector_group_by_id` returns rows, and that reader composes
   per-column reads, so it **drops NULL cells** — assert a NULL-cell write in SQL, not through it.
+- **`_marshal_row_columns` is its row-shaped sibling**, serving `upsert_time_series_row` and its
+  `_by_label` form — each kwarg is a scalar wrapped in a 1-element typed array. Kept separate
+  because the row-upsert C signature carries no per-cell mask: the group marshaller's zeroed
+  placeholder for a `None` cell would be written as data instead of NULL (a `None` kwarg raises
+  `TypeError` here).
 
 ## Packaging
 

@@ -391,6 +391,7 @@ struct LuaRunner::Impl {
         bind.set_function("update_set_group", &update_set_group_lua);
         bind.set_function("update_set_group_by_label", &update_set_group_by_label_lua);
         bind.set_function("upsert_time_series_row", &upsert_time_series_row_lua);
+        bind.set_function("upsert_time_series_row_by_label", &upsert_time_series_row_by_label_lua);
         bind.set_function("update_time_series_files", &update_time_series_files_lua);
 
         bind.set_function("get_scalar_metadata", &get_scalar_metadata_lua);
@@ -1660,6 +1661,14 @@ struct LuaRunner::Impl {
                                            int64_t id,
                                            sol::table row) {
         db.upsert_time_series_row(collection, group, id, lua_table_to_value_map(row));
+    }
+
+    static void upsert_time_series_row_by_label_lua(Database& db,
+                                                    const std::string& collection,
+                                                    const std::string& group,
+                                                    const std::string& label,
+                                                    sol::table row) {
+        db.upsert_time_series_row_by_label(collection, group, label, lua_table_to_value_map(row));
     }
 
     // ========================================================================

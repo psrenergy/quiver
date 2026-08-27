@@ -12,8 +12,9 @@ callers to change something are prefixed **BREAKING** and say what to do.
 - **`upsert_time_series_row_by_label(collection, group, label, row)`.** Inserts or replaces a
   single time-series row addressed by `label` instead of id — the label-addressed counterpart of
   `upsert_time_series_row`. It resolves the label and then delegates, so the dimension-column
-  rules, the type validation, and the upsert-on-PK semantics are identical. Label resolution and
-  its miss semantics are `update_element_by_label`'s, below.
+  rules, the type validation, and the upsert-on-PK semantics are identical. Available in every layer,
+  under the usual per-layer spelling. Label resolution and its miss semantics are
+  `update_element_by_label`'s, below.
 
 - **`update_time_series_group_by_label(collection, group, label, rows)`.** Replaces all of an
   element's rows in one named time-series group, addressed by `label` instead of id — the
