@@ -202,9 +202,12 @@ NULL **presence mask** alongside the data arrays:
 
 This pattern mirrors the `convert_params()` approach from `database_query.cpp` for type-safe FFI marshaling across N typed columns.
 
-**One decoder for every group update.** `unmarshal_group_columns_to_rows` (`database_helpers.h`) is
-the inverse of `marshal_group_rows_to_c` and is shared by every group-update entry point — the
-decoder was duplicated once and must not be again. It owns three contracts the row-shaped C++ API cannot express:
+**One decoder for every group and row write.** `unmarshal_group_columns_to_rows`
+(`database_helpers.h`) is the inverse of `marshal_group_rows_to_c` and is shared by every
+group-update entry point — the decoder was duplicated once and must not be again. It also decodes
+the single-row upserts (`quiver_database_upsert_time_series_row[_by_label]`): a row is the group
+shape with `row_count = 1` and a dense (NULL) mask, take `rows[0]`. So both upsert entry points
+inherit the group decoder's NULL contract. It owns three contracts the row-shaped C++ API cannot express:
 - **A NULL cell is NULL however it is spelled**: masked out, a NULL per-column data pointer, or (for
   string columns) a NULL `char*` entry under a dense mask. That last case is what the read direction
   emits for a NULL STRING cell, so feeding a read result back with the mask stripped must not be UB.

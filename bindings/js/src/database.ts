@@ -158,6 +158,12 @@ export class Database {
     id: number,
     data: TimeSeriesData,
   ) => void;
+  declare updateTimeSeriesGroupByLabel: (
+    collection: string,
+    group: string,
+    label: string,
+    data: TimeSeriesData,
+  ) => void;
   declare updateVectorGroup: (
     collection: string,
     group: string,
@@ -186,6 +192,12 @@ export class Database {
     collection: string,
     group: string,
     id: number,
+    row: Record<string, number | bigint | string>,
+  ) => void;
+  declare upsertTimeSeriesRowByLabel: (
+    collection: string,
+    group: string,
+    label: string,
     row: Record<string, number | bigint | string>,
   ) => void;
   declare hasTimeSeriesFiles: (collection: string) => boolean;
