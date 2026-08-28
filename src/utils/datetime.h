@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <ctime>
 #include <string>
+#include <string_view>
 
 namespace quiver::datetime {
 
@@ -29,68 +30,46 @@ inline std::chrono::system_clock::time_point tm_to_time_point(const std::tm& tm)
            std::chrono::minutes{tm.tm_min} + std::chrono::seconds{tm.tm_sec};
 }
 
-namespace detail {
-
-// Read exactly `count` ASCII digits at `pos`, advancing it. Fixed width is the whole point:
-// std::get_time treats a field width as a *maximum*, so "%Y-%m-%d" also matches "2024-1-5" and
-// "24-01-15", and "%H:%M:%S" also matches "T1:30:00" and (on MSVC, which does not set failbit when
-// the input ends mid-format) "T10:30". Every one of those is rejected by Python's fromisoformat
-// and Dart's DateTime.parse, so get_time cannot express the grammar this parser must enforce.
-inline bool read_digits(const std::string& s, std::size_t& pos, std::size_t count, int& out) {
-    if (pos + count > s.size()) {
+// The single definition of "valid ISO 8601" in the core: "YYYY-MM-DD", optionally followed by
+// "THH:MM:SS" or " HH:MM:SS", matched against the shape mask below - 'd' is a digit, 'T' is 'T' or
+// a space, everything else is a literal. The length check is what forbids a partial or trailing
+// anything, so "2005", "2024-01-15T10:30", "+2024-01-15" and "2024-01-01xyz" never reach the mask.
+// Hand-rolled rather than std::get_time, whose field widths are maxima; rationale in src/CLAUDE.md.
+inline bool parse_iso8601(const std::string& datetime_str, std::tm& tm) {
+    static constexpr std::string_view kMask = "dddd-dd-ddTdd:dd:dd";
+    if (datetime_str.size() != 10 && datetime_str.size() != kMask.size()) {
         return false;
     }
-    int value = 0;
-    for (std::size_t i = 0; i < count; ++i) {
-        const char c = s[pos + i];
-        if (c < '0' || c > '9') {
+    for (std::size_t i = 0; i < datetime_str.size(); ++i) {
+        const char c = datetime_str[i];
+        const bool matches = kMask[i] == 'd'   ? (c >= '0' && c <= '9')
+                             : kMask[i] == 'T' ? (c == 'T' || c == ' ')
+                                               : (c == kMask[i]);
+        if (!matches) {
             return false;
         }
-        value = value * 10 + (c - '0');
     }
-    pos += count;
-    out = value;
-    return true;
-}
-
-inline bool read_char(const std::string& s, std::size_t& pos, char expected) {
-    if (pos >= s.size() || s[pos] != expected) {
-        return false;
-    }
-    ++pos;
-    return true;
-}
-
-}  // namespace detail
-
-// The single definition of "valid ISO 8601" in the core: "YYYY-MM-DD", optionally followed by
-// "THH:MM:SS" or " HH:MM:SS". Every field is fixed-width and zero-padded, the year is 0001-9999,
-// the calendar day must exist (2024-02-31 is rejected), a leap second is not accepted, and the
-// whole string must be consumed - so "2005", "2005-01", "2024-1-5", "2024-01-15T10:30" and
-// "2024-01-01xyz" are all rejected. That band is the intersection of what Python's
-// `fromisoformat`, Julia's `DateTime` and Dart's `DateTime.parse` accept; keep it that way, since
-// the write-side gate below is what promises a stored value is readable by every binding.
-//
-// Hand-rolled rather than std::get_time: get_time's widths are maxima (see detail::read_digits),
-// it is locale- and platform-sensitive, and a literal space in its format means "skip zero or more
-// spaces", which would also accept "2024-01-0110:30:00".
-inline bool parse_iso8601(const std::string& datetime_str, std::tm& tm) {
+    const auto num = [&datetime_str](std::size_t at, std::size_t count) {
+        int value = 0;
+        for (std::size_t i = at; i < at + count; ++i) {
+            value = value * 10 + (datetime_str[i] - '0');
+        }
+        return value;
+    };
     tm = std::tm{};
-    std::size_t pos = 0;
-    int year = 0;
-    int month = 0;
-    int day = 0;
-    if (!detail::read_digits(datetime_str, pos, 4, year) || !detail::read_char(datetime_str, pos, '-') ||
-        !detail::read_digits(datetime_str, pos, 2, month) || !detail::read_char(datetime_str, pos, '-') ||
-        !detail::read_digits(datetime_str, pos, 2, day)) {
-        return false;
+    tm.tm_year = num(0, 4) - 1900;
+    tm.tm_mon = num(5, 2) - 1;
+    tm.tm_mday = num(8, 2);
+    if (datetime_str.size() > 10) {
+        tm.tm_hour = num(11, 2);
+        tm.tm_min = num(14, 2);
+        tm.tm_sec = num(17, 2);
     }
-    tm.tm_year = year - 1900;
-    tm.tm_mon = month - 1;
-    tm.tm_mday = day;
-    // year 0 is rejected because Python's datetime starts at year 1; ok() covers month/day.
+    // Year 0 is below Python's MINYEAR; ok() covers month/day. 60 seconds would be a leap second:
+    // Python and Julia throw on it, Dart silently rolls the clock to the next minute. No agreement,
+    // so it is not in the intersection.
     const auto ymd = tm_to_year_month_day(tm);
-    if (year < 1 || !ymd.ok()) {
+    if (num(0, 4) < 1 || !ymd.ok() || tm.tm_hour > 23 || tm.tm_min > 59 || tm.tm_sec > 59) {
         return false;
     }
     // strftime reads tm_wday/tm_yday for %a/%A/%j/%U/%W/%w, and nothing else fills them, so
@@ -98,31 +77,7 @@ inline bool parse_iso8601(const std::string& datetime_str, std::tm& tm) {
     const auto sys_day = std::chrono::sys_days{ymd};
     tm.tm_wday = static_cast<int>(std::chrono::weekday{sys_day}.c_encoding());
     tm.tm_yday = static_cast<int>((sys_day - std::chrono::sys_days{ymd.year() / std::chrono::January / 1}).count());
-
-    if (pos == datetime_str.size()) {
-        return true;  // date only: "2024-01-01"
-    }
-    const char separator = datetime_str[pos++];
-    if (separator != 'T' && separator != ' ') {
-        return false;
-    }
-    int hour = 0;
-    int minute = 0;
-    int second = 0;
-    if (!detail::read_digits(datetime_str, pos, 2, hour) || !detail::read_char(datetime_str, pos, ':') ||
-        !detail::read_digits(datetime_str, pos, 2, minute) || !detail::read_char(datetime_str, pos, ':') ||
-        !detail::read_digits(datetime_str, pos, 2, second)) {
-        return false;
-    }
-    // 60 would be a leap second: Python and Julia throw on it, Dart silently rolls the clock to the
-    // next minute. No agreement, so it is not in the intersection.
-    if (hour > 23 || minute > 59 || second > 59) {
-        return false;
-    }
-    tm.tm_hour = hour;
-    tm.tm_min = minute;
-    tm.tm_sec = second;
-    return pos == datetime_str.size();
+    return true;
 }
 
 // Write-side gate for DATE_TIME columns: the parsed fields are discarded, only validity matters.

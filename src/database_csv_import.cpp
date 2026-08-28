@@ -119,41 +119,30 @@ static rapidcsv::Document read_csv_file(const std::string& path) {
 // If format is empty, validates the input is already ISO 8601.
 // If format is non-empty, parses with that format and reformats to ISO 8601.
 static std::string parse_datetime_import(const std::string& raw_value, const std::string& format) {
-    const auto invalid = [&] {
-        return std::runtime_error("Cannot import_csv: Timestamp " + raw_value +
-                                  " is not valid. Please provide a valid timestamp with format " +
-                                  (format.empty() ? std::string("%Y-%m-%dT%H:%M:%S") : format) + ".");
-    };
-
     std::tm tm{};
+    bool parsed = false;
     if (format.empty()) {
-        // Assume input is already ISO 8601; validate
-        if (!datetime::parse_iso8601(raw_value, tm)) {
-            throw invalid();
-        }
+        parsed = datetime::parse_iso8601(raw_value, tm);
     } else {
-        // Parse with the caller's format
         std::istringstream ss(raw_value);
-        ss >> std::get_time(&tm, format.c_str());
-        if (ss.fail() || tm.tm_mday < 1) {
-            throw invalid();
-        }
+        parsed = !(ss >> std::get_time(&tm, format.c_str())).fail();
     }
 
-    // Reformat to canonical form
-    char buffer[64];
-    std::strftime(buffer, sizeof(buffer), "%Y-%m-%dT%H:%M:%S", &tm);
-    auto canonical = std::string(buffer);
-
-    // Import writes through a raw INSERT and never reaches TypeValidator, so this is the only place
-    // it can be held to the same grammar as create_element/update_element. get_time on its own does
-    // not reject an impossible calendar day, so `date_time_format = "%d/%m/%Y"` on a cell
-    // "31/02/2024" otherwise stored "2024-02-31T00:00:00" - a value the core's own writers refuse
-    // and no binding's date parser can read.
-    if (!datetime::is_valid_iso8601(canonical)) {
-        throw invalid();
+    char buffer[64] = {};
+    if (parsed) {
+        std::strftime(buffer, sizeof(buffer), "%Y-%m-%dT%H:%M:%S", &tm);
     }
-    return canonical;
+    // Import writes through a raw INSERT and never reaches TypeValidator, so the canonical form is
+    // re-checked here to hold it to the same grammar as create_element/update_element. get_time on
+    // its own does not reject an impossible calendar day, so `date_time_format = "%d/%m/%Y"` on a
+    // cell "31/02/2024" otherwise stored "2024-02-31T00:00:00" - a value the core's own writers
+    // refuse and no binding's date parser can read.
+    if (!parsed || !datetime::is_valid_iso8601(buffer)) {
+        throw std::runtime_error("Cannot import_csv: Timestamp " + raw_value +
+                                 " is not valid. Please provide a valid timestamp with format " +
+                                 (format.empty() ? std::string("%Y-%m-%dT%H:%M:%S") : format) + ".");
+    }
+    return buffer;
 }
 
 // Resolve an enum text label back to its integer value.

@@ -33,9 +33,7 @@ static void write_csv_file(const std::string& path, const std::string& content) 
 
 static std::string read_csv_file(const std::string& path) {
     std::ifstream f(path, std::ios::binary);
-    std::ostringstream ss;
-    ss << f.rdbuf();
-    return ss.str();
+    return {std::istreambuf_iterator<char>(f), {}};
 }
 
 // Helper: create a database from the relations schema (has FK)

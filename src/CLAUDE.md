@@ -264,7 +264,10 @@ impl_->logger->debug("Opening database: {}", path);
   parse/format helpers in `src/utils/datetime.h` — `parse_iso8601` accepts `YYYY-MM-DD` with an
   optional `THH:MM:SS`/` HH:MM:SS`, every field fixed-width and zero-padded, year `0001`-`9999`,
   the calendar day must exist, no leap second, and the whole string must be consumed. It is a
-  **hand-rolled digit scan, deliberately not `std::get_time`**: get_time's field widths are
+  **hand-rolled shape-mask match, deliberately not `std::get_time`** — the accepted length is 10 or
+  19 and every character is checked against `"dddd-dd-ddTdd:dd:dd"` (`d` = digit, `T` = `T` or a
+  space, everything else literal), so the length check alone is what forbids a partial or trailing
+  anything. get_time instead: its field widths are
   *maxima*, so it also matches `2024-1-5`, `24-01-15` and `T1:30:00`, and on MSVC it does not set
   failbit when the input ends mid-format, so `T10:30` passed on Windows and failed on Linux. Every
   one of those is rejected by Python's `fromisoformat` or Dart's `DateTime.parse`, i.e. get_time
