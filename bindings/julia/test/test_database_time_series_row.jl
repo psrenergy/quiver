@@ -100,6 +100,56 @@ include("fixture.jl")
 
             Quiver.close!(db)
         end
+
+        # Test 5 — label-addressed upsert: resolves the label, then delegates to the id form
+        @testset "Upsert By Label" begin
+            path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+            db = Quiver.from_schema(":memory:", path_schema)
+
+            Quiver.create_element!(db, "Configuration"; label = "Test Config")
+            item = Quiver.create_element!(db, "Collection"; label = "Item 1")
+            other = Quiver.create_element!(db, "Collection"; label = "Item 2")
+
+            Quiver.upsert_time_series_row_by_label!(db, "Collection", "data", "Item 2";
+                date_time = DateTime(2024, 1, 1),
+                value = 99.0,
+            )
+            Quiver.upsert_time_series_row_by_label!(db, "Collection", "data", "Item 1";
+                date_time = DateTime(2024, 1, 1),
+                value = 10.0,
+            )
+            # Same date_time PK → overwrites, still one row
+            Quiver.upsert_time_series_row_by_label!(db, "Collection", "data", "Item 1";
+                date_time = DateTime(2024, 1, 1),
+                value = 20.0,
+            )
+
+            result = Quiver.read_time_series_group(db, "Collection", "data", item)
+            @test length(result["date_time"]) == 1
+            @test result["value"][1] == 20.0
+            @test Quiver.read_time_series_group(db, "Collection", "data", other)["value"] == [99.0]
+
+            Quiver.close!(db)
+        end
+
+        # Test 6 — unresolvable label throws and writes nothing
+        @testset "Upsert By Label Not Found" begin
+            path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+            db = Quiver.from_schema(":memory:", path_schema)
+
+            Quiver.create_element!(db, "Configuration"; label = "Test Config")
+            id = Quiver.create_element!(db, "Collection"; label = "Item 1")
+
+            exc = @test_throws Quiver.DatabaseException Quiver.upsert_time_series_row_by_label!(
+                db, "Collection", "data", "Nope";
+                date_time = DateTime(2024, 1, 1),
+                value = 10.0,
+            )
+            @test occursin("Element not found: label 'Nope' in collection 'Collection'", exc.value.msg)
+            @test isempty(Quiver.read_time_series_group(db, "Collection", "data", id))
+
+            Quiver.close!(db)
+        end
     end
     @testset "Read Time Series Row" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")

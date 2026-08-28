@@ -155,6 +155,12 @@ function update_time_series_group!(db::Database, collection::String, group::Stri
     return _update_group_columns(db, C.quiver_database_update_time_series_group, collection, group, id, kwargs)
 end
 
+# Label-addressed counterpart of update_time_series_group!.
+function update_time_series_group_by_label!(db::Database, collection::String, group::String, label::String; kwargs...)
+    return _update_group_columns(
+        db, C.quiver_database_update_time_series_group_by_label, collection, group, label, kwargs)
+end
+
 # Replace all of an element's rows in one *named* vector group. Pass no columns to clear it.
 # Prefer this over routing the group's columns through update_element! when a column name is
 # shared by two groups of the collection (legal for foreign keys): (collection, group) names
@@ -178,7 +184,17 @@ function update_set_group_by_label!(db::Database, collection::String, group::Str
     return _update_group_columns(db, C.quiver_database_update_set_group_by_label, collection, group, label, kwargs)
 end
 
-function upsert_time_series_row!(db::Database, collection::String, group::String, id::Int64; kwargs...)
+# Shared marshalling for the row-oriented time-series upserts: each kwarg is a scalar wrapped in
+# a 1-element typed C array. `upsert` is the C entry point. Separate from _update_group_columns:
+# this signature has no NULL mask, and that helper would zero-fill a masked cell instead of NULL.
+function _upsert_row_columns(
+    db::Database,
+    upsert::Function,
+    collection::String,
+    group::String,
+    key::Union{Int64, String},
+    kwargs,
+)
     column_count = length(kwargs)
     col_names_strs = String[]
     col_types = Cint[]
@@ -234,14 +250,24 @@ function upsert_time_series_row!(db::Database, collection::String, group::String
 
     GC.@preserve refs begin
         check(
-            C.quiver_database_upsert_time_series_row(
-                db.ptr, collection, group, id,
+            upsert(
+                db.ptr, collection, group, key,
                 name_ptrs, col_types_arr, col_data_arr,
                 Csize_t(column_count),
             ),
         )
     end
     return nothing
+end
+
+function upsert_time_series_row!(db::Database, collection::String, group::String, id::Int64; kwargs...)
+    return _upsert_row_columns(db, C.quiver_database_upsert_time_series_row, collection, group, id, kwargs)
+end
+
+# Label-addressed counterpart of upsert_time_series_row!.
+function upsert_time_series_row_by_label!(db::Database, collection::String, group::String, label::String; kwargs...)
+    return _upsert_row_columns(
+        db, C.quiver_database_upsert_time_series_row_by_label, collection, group, label, kwargs)
 end
 
 function update_time_series_files!(db::Database, collection::String, paths::AbstractDict{String, <:Optional{String}})

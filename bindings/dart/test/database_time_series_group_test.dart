@@ -390,4 +390,60 @@ void main() {
       }
     });
   });
+
+  group('Time Series Update By Label', () {
+    Database openCollections() {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      db.createElement('Configuration', {'label': 'Test Config'});
+      return db;
+    }
+
+    test('updateTimeSeriesGroupByLabel writes and clears only that element', () {
+      final db = openCollections();
+      try {
+        final item = db.createElement('Collection', {'label': 'Item 1'});
+        final other = db.createElement('Collection', {'label': 'Item 2'});
+
+        db.updateTimeSeriesGroupByLabel('Collection', 'data', 'Item 2', {
+          'date_time': ['2024-01-01T00:00:00'],
+          'value': [99.0],
+        });
+        db.updateTimeSeriesGroupByLabel('Collection', 'data', 'Item 1', {
+          'date_time': ['2024-01-01T00:00:00', '2024-01-02T00:00:00'],
+          'value': [1.5, 2.5],
+        });
+        expect(
+          db.readTimeSeriesGroup('Collection', 'data', item)['value'],
+          equals([1.5, 2.5]),
+        );
+
+        db.updateTimeSeriesGroupByLabel('Collection', 'data', 'Item 1', {});
+        expect(db.readTimeSeriesGroup('Collection', 'data', item), isEmpty);
+        expect(
+          db.readTimeSeriesGroup('Collection', 'data', other)['value'],
+          equals([99.0]),
+        );
+      } finally {
+        db.close();
+      }
+    });
+
+    test('updateTimeSeriesGroupByLabel throws on an unresolvable label', () {
+      final db = openCollections();
+      try {
+        expect(
+          () => db.updateTimeSeriesGroupByLabel('Collection', 'data', 'Nope', {
+            'date_time': ['2024-01-01T00:00:00'],
+            'value': [1.5],
+          }),
+          throwsA(isA<DatabaseException>()),
+        );
+      } finally {
+        db.close();
+      }
+    });
+  });
 }

@@ -107,4 +107,50 @@ describe("upsertTimeSeriesRow", () => {
       db.close();
     }
   });
+
+  test("upsertTimeSeriesRowByLabel writes only the labelled element", () => {
+    const db = Database.fromSchema(":memory:", COLLECTIONS_SCHEMA);
+    try {
+      const item = db.createElement("Collection", { label: "Item1" });
+      const other = db.createElement("Collection", { label: "Item2" });
+
+      db.upsertTimeSeriesRowByLabel("Collection", "data", "Item2", {
+        date_time: "2024-01-01T00:00:00",
+        value: 99.0,
+      });
+      db.upsertTimeSeriesRowByLabel("Collection", "data", "Item1", {
+        date_time: "2024-01-01T00:00:00",
+        value: 1.5,
+      });
+      // Same dimension PK upserts rather than appending
+      db.upsertTimeSeriesRowByLabel("Collection", "data", "Item1", {
+        date_time: "2024-01-01T00:00:00",
+        value: 9.5,
+      });
+
+      const result = db.readTimeSeriesGroup("Collection", "data", item);
+      expect(result.date_time).toEqual(["2024-01-01T00:00:00"]);
+      expect(result.value).toEqual([9.5]);
+      expect(db.readTimeSeriesGroup("Collection", "data", other).value).toEqual([99.0]);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("upsertTimeSeriesRowByLabel throws on an unresolvable label", () => {
+    const db = Database.fromSchema(":memory:", COLLECTIONS_SCHEMA);
+    try {
+      const id = db.createElement("Collection", { label: "Item1" });
+
+      expect(() =>
+        db.upsertTimeSeriesRowByLabel("Collection", "data", "Nope", {
+          date_time: "2024-01-01T00:00:00",
+          value: 1.5,
+        }),
+      ).toThrow(/Element not found: label 'Nope' in collection 'Collection'/);
+      expect(db.readTimeSeriesGroup("Collection", "data", id)).toEqual({});
+    } finally {
+      db.close();
+    }
+  });
 });

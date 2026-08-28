@@ -303,8 +303,19 @@ ffi.cdef("""
         void** column_data, const uint8_t* const* column_has_value,
         size_t column_count, size_t row_count);
 
+    quiver_error_t quiver_database_update_time_series_group_by_label(quiver_database_t* db,
+        const char* collection, const char* group, const char* label,
+        const char* const* column_names, const int* column_types,
+        void** column_data, const uint8_t* const* column_has_value,
+        size_t column_count, size_t row_count);
+
     quiver_error_t quiver_database_upsert_time_series_row(quiver_database_t* db,
         const char* collection, const char* group, int64_t id,
+        const char* const* column_names, const int* column_types,
+        const void* const* column_data, size_t column_count);
+
+    quiver_error_t quiver_database_upsert_time_series_row_by_label(quiver_database_t* db,
+        const char* collection, const char* group, const char* label,
         const char* const* column_names, const int* column_types,
         const void* const* column_data, size_t column_count);
 

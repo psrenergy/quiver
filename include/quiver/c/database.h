@@ -431,6 +431,9 @@ QUIVER_C_API quiver_error_t quiver_database_update_time_series_group_by_label(qu
 // STRING/DATE_TIME) Upserts on the time-series PK (id + every dimension column); calling twice with the same PK
 // overwrites value columns Errors surface canonical "Cannot upsert_time_series_row: ..." messages via
 // quiver_get_last_error
+// A NULL column_data[c], or a NULL char* entry for a string column, inserts SQL NULL
+// The _by_label form takes a label in place of the id and reports
+// "Element not found: label '...' in collection '...'" on a miss.
 QUIVER_C_API quiver_error_t quiver_database_upsert_time_series_row(quiver_database_t* db,
                                                                    const char* collection,
                                                                    const char* group,
@@ -439,6 +442,15 @@ QUIVER_C_API quiver_error_t quiver_database_upsert_time_series_row(quiver_databa
                                                                    const int* column_types,
                                                                    const void* const* column_data,
                                                                    size_t column_count);
+
+QUIVER_C_API quiver_error_t quiver_database_upsert_time_series_row_by_label(quiver_database_t* db,
+                                                                            const char* collection,
+                                                                            const char* group,
+                                                                            const char* label,
+                                                                            const char* const* column_names,
+                                                                            const int* column_types,
+                                                                            const void* const* column_data,
+                                                                            size_t column_count);
 
 // Read time series row - returns one value per element for a specific attribute at a given date_time
 // Uses "last non-null value at or before date_time" lookup semantics

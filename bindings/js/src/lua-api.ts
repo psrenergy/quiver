@@ -391,6 +391,8 @@ db:update_time_series_group("Items", "data", id, {
 })
 
 db:update_time_series_group("Items", "data", id, {})   -- clears the group
+
+db:update_time_series_group_by_label("Items", "data", "Item 1", { date_time = { "2024-01-01T00:00:00" }, value = { 10.5 } })
 \`\`\`
 
 A read-modify-write looks like this:
@@ -420,6 +422,8 @@ column names). Each value of the top-level table must be an **array**, not a sca
   table {} to clear the group\`) — only a bare \`{}\` clears.
 - Integer values are accepted for REAL columns (converted on insert). Booleans, functions, and
   other unsupported Lua types throw \`column '...' has unsupported Lua type\`.
+- The element id must exist; the \`_by_label\` form takes a label in its place, with
+  \`update_element_by_label\`'s resolution and miss semantics. Every rule above applies to both.
 
 ### Append/upsert a single row (\`upsert_time_series_row\` — ROW-oriented, the one exception)
 
@@ -431,7 +435,15 @@ db:upsert_time_series_row("Items", "data", id, {
     date_time = "2024-01-04T00:00:00",
     value     = 40.0,
 })
+
+db:upsert_time_series_row_by_label("Items", "data", "Item 1", {
+    date_time = "2024-01-04T00:00:00",
+    value     = 40.0,
+})
 \`\`\`
+
+The element id must exist; the \`_by_label\` form takes a label in its place, with
+\`update_element_by_label\`'s resolution and miss semantics.
 
 ---
 

@@ -228,13 +228,15 @@ impl_->logger->debug("Opening database: {}", path);
   the string it canonicalizes, so import is held to the same grammar as the other writers.
 - **`update_element` / `delete_element` / the vector+set group writers verify the id exists** (via
   `Impl::require_element`) and throw Pattern 2 `"Element not found: ..."` — no silent no-op.
-  `update_time_series_group` is the one writer that does not: a bad id clears nothing and fails at
-  the foreign key (a bad id with no rows is a no-op).
+  The two time-series writers do not: `upsert_time_series_row` always writes one row, so a bad id
+  always fails at the foreign key; `update_time_series_group` fails there too when it has rows to
+  write, but with no rows it deletes nothing and returns silently.
   Every `_by_label` form resolves the label via `Impl::resolve_label`, and is a one-line
   delegation to its id counterpart (the root `_by_label` rule), so `update_element_by_label`'s
   *element* validation — the empty-element throw, `TypeValidator`, `insert_group_data` — reports
-  `Cannot update_element: ...` and the group writers' column validation reports
-  `Cannot update_{vector,set,time_series}_group: ...`, naming the operation that validated.
+  `Cannot update_element: ...` and the group/row writers' column validation reports
+  `Cannot update_{vector,set,time_series}_group: ...` / `Cannot upsert_time_series_row: ...`,
+  naming the operation that validated.
 - **Schema metadata loads lazily** (`Impl::require_schema`): the `Database(path, options)`
   constructor does not read it, so the first metadata/CRUD call does. `schema` and `type_validator`
   are `mutable` (const readers trigger the load) and `load_schema_metadata()` is `const` and
@@ -322,11 +324,13 @@ Implementation conventions in `lua_runner.cpp`:
 - Lua→C++ converters **throw on unsupported value types** (booleans, functions, ...) — never
   skip silently; a skipped positional query parameter would shift the rest and bind NULL to the
   trailing placeholder.
-- `update_time_series_group_lua` transpose: the **dimension column(s) are the row-count
-  authority**, discovered via public `get_time_series_metadata` (`dimension_column` plus any
-  `value_columns` with `primary_key` set — the multi-dim case; `Database` exposes no Schema
-  accessor so `internal::find_dimension_columns` is unreachable here). Dimension columns must be
-  present and dense; value columns may be shorter, sparse, or empty — missing indices become
+- `time_series_rows_from_lua` transpose, shared by `update_time_series_group_lua` and
+  `update_time_series_group_by_label_lua` (both one-liners over it). Mirrors `group_rows_from_lua`
+  but takes `db`, since the dimension columns come from metadata. The **dimension column(s) are
+  the row-count authority**, discovered via public `get_time_series_metadata` (`dimension_column`
+  plus any `value_columns` with `primary_key` set — the multi-dim case; `Database` exposes no
+  Schema accessor so `internal::find_dimension_columns` is unreachable here). Dimension columns
+  must be present and dense; value columns may be shorter, sparse, or empty — missing indices become
   `Value{nullptr}` (rows stay uniform: the core builds its INSERT list from `rows[0]`).
   Longer-than-dimension throws; a non-array column or non-positive-integer key throws; named
   columns with a zero-length dimension still throw — only a genuinely empty `{}` (no columns)

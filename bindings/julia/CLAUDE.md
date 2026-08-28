@@ -54,10 +54,16 @@ Project.toml      # Deps: Artifacts, CEnum, Dates, Libdl; julia 1.11 compat
   FLOAT tag + zeroed placeholder.
 - **One marshaller for every group writer**: `_update_group_columns(db, update, ...)`
   (`src/database_update.jl`) takes the C entry point as an argument, so `update_time_series_group!`,
-  `update_vector_group!`, `update_set_group!` and the vector/set `_by_label!` forms are one-line
+  `update_vector_group!`, `update_set_group!` and their `_by_label!` forms are one-line
   wrappers over it. Its `key` is a `Union{Int64, String}` — the `@ccall` in `c_api.jl` annotates
   that argument per function, so an id and a label both marshal correctly. Don't copy the
   `GC.@preserve` body per writer.
+- **One marshaller for every row upsert**: `_upsert_row_columns(db, upsert, ...)`
+  (`src/database_update.jl`) is its row-shaped sibling — every kwarg is a scalar wrapped in a
+  1-element typed array — so `upsert_time_series_row!` and `upsert_time_series_row_by_label!` are
+  one-line wrappers over it, with the same `key::Union{Int64, String}` note. Kept separate from
+  `_update_group_columns` because the row-upsert C signature carries no per-cell NULL mask, and
+  that helper writes a zeroed placeholder for a masked cell.
 - **Library loader** (`src/c_api.jl`, emitted from `generator/prologue.jl`) is **relocatable** —
   this matters for downstream apps compiled with PackageCompiler (`create_app`), where a baked
   absolute path would freeze the build machine's depot and fail on the target. Split design:

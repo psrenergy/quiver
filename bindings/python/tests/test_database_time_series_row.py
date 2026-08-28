@@ -85,6 +85,37 @@ class TestUpsertTimeSeriesRow:
         assert result["load"] == [500.0]
         assert result["flag"] == [0]
 
+    def test_upsert_time_series_row_by_label(self, collections_db: Database) -> None:
+        """Label-addressed upsert writes only the labelled element; same PK overwrites."""
+        item = _create_collection_element(collections_db, "Item1")
+        other = _create_collection_element(collections_db, "Item2")
+
+        collections_db.upsert_time_series_row_by_label(
+            "Collection", "data", "Item2", date_time="2024-01-01", value=99.0
+        )
+        collections_db.upsert_time_series_row_by_label(
+            "Collection", "data", "Item1", date_time="2024-01-01", value=10.0
+        )
+        collections_db.upsert_time_series_row_by_label(
+            "Collection", "data", "Item1", date_time="2024-01-01", value=20.0
+        )
+
+        result = collections_db.read_time_series_group("Collection", "data", item)
+        assert result["date_time"] == [_utc(2024, 1, 1)]
+        assert result["value"] == [20.0]
+        assert collections_db.read_time_series_group("Collection", "data", other)["value"] == [99.0]
+
+    def test_upsert_time_series_row_by_label_not_found(self, collections_db: Database) -> None:
+        """An unresolvable label raises and writes nothing."""
+        eid = _create_collection_element(collections_db, "Item1")
+
+        with pytest.raises(QuiverError, match="Element not found: label 'Nope' in collection 'Collection'"):
+            collections_db.upsert_time_series_row_by_label(
+                "Collection", "data", "Nope", date_time="2024-01-01", value=10.0
+            )
+
+        assert collections_db.read_time_series_group("Collection", "data", eid) == {}
+
 
 class TestReadTimeSeriesRow:
     def test_read_time_series_row_returns_one_value_per_element(self, collections_db: Database) -> None:
