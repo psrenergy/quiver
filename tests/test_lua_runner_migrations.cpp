@@ -19,7 +19,8 @@ TEST_F(LuaRunner_Migrations, PathNotFoundThrows) {
     auto db = quiver::Database::from_schema(db_path(), VALID_SCHEMA("collections.sql"));
     quiver::LuaRunner lua(db);
 
-    expect_lua_error(lua, R"(db:validate_migrations("missing"))", "Cannot validate_migrations: migrations path not found:");
+    expect_lua_error(
+        lua, R"(db:validate_migrations("missing"))", "Cannot validate_migrations: migrations path not found:");
 }
 
 TEST_F(LuaRunner_Migrations, EscapeThrows) {

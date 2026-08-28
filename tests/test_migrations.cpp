@@ -295,7 +295,8 @@ TEST_F(MigrationsTestFixture, ValidateMigrationsValidatesPath) {
         quiver::Database::validate_migrations(nonexistent_path);
         FAIL() << "Expected validate_migrations to throw";
     } catch (const std::runtime_error& error) {
-        EXPECT_EQ(std::string(error.what()), "Cannot validate_migrations: migrations path not found: " + nonexistent_path);
+        EXPECT_EQ(std::string(error.what()),
+                  "Cannot validate_migrations: migrations path not found: " + nonexistent_path);
     }
 
     fs::create_directories(temp_dir);
@@ -305,7 +306,8 @@ TEST_F(MigrationsTestFixture, ValidateMigrationsValidatesPath) {
         quiver::Database::validate_migrations(file_path.string());
         FAIL() << "Expected validate_migrations to throw";
     } catch (const std::runtime_error& error) {
-        EXPECT_EQ(std::string(error.what()), "Cannot validate_migrations: path is not a directory: " + file_path.string());
+        EXPECT_EQ(std::string(error.what()),
+                  "Cannot validate_migrations: path is not a directory: " + file_path.string());
     }
 }
 

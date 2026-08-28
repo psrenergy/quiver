@@ -252,7 +252,8 @@ TEST_F(TempFileFixture, ValidateMigrationsSucceeds) {
 
 TEST_F(TempFileFixture, ValidateMigrationsPropagatesFailure) {
     EXPECT_EQ(quiver_database_validate_migrations("nonexistent/migrations"), QUIVER_ERROR);
-    EXPECT_STREQ(quiver_get_last_error(), "Cannot validate_migrations: migrations path not found: nonexistent/migrations");
+    EXPECT_STREQ(quiver_get_last_error(),
+                 "Cannot validate_migrations: migrations path not found: nonexistent/migrations");
 }
 
 TEST_F(TempFileFixture, ValidateMigrationsRejectsNullPath) {
