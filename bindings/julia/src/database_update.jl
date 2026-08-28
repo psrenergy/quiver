@@ -12,24 +12,39 @@ function update_element!(db::Database, collection::String, id::Int64; kwargs...)
     return nothing
 end
 
+function update_element_by_label!(db::Database, collection::String, label::String, e::Element)
+    check(C.quiver_database_update_element_by_label(db.ptr, collection, label, e.ptr))
+    return nothing
+end
+
+function update_element_by_label!(db::Database, collection::String, label::String; kwargs...)
+    e = Element()
+    for (k, v) in kwargs
+        e[String(k)] = v
+    end
+    update_element_by_label!(db, collection, label, e)
+    return nothing
+end
+
 # Group update functions (time series, vector, set)
 
-# Shared marshalling for the three column-oriented group writers: every column becomes a typed C
-# array plus a per-cell UInt8 mask where `nothing` is SQL NULL. `update` is the C entry point --
-# all three take the same parallel-array signature.
+# Shared marshalling for the column-oriented group writers: every column becomes a typed C array
+# plus a per-cell UInt8 mask where `nothing` is SQL NULL. `update` is the C entry point -- all of
+# them take the same parallel-array signature, differing only in whether `key` is an element id or
+# a label (the @ccall in c_api.jl annotates that argument per function).
 function _update_group_columns(
     db::Database,
     update::Function,
     collection::String,
     group::String,
-    id::Int64,
+    key::Union{Int64, String},
     kwargs,
 )
     # No columns = clear all rows for this element
     if isempty(kwargs)
         check(
             update(
-                db.ptr, collection, group, id,
+                db.ptr, collection, group, key,
                 C_NULL, C_NULL, C_NULL, C_NULL, Csize_t(0), Csize_t(0),
             ),
         )
@@ -127,7 +142,7 @@ function _update_group_columns(
     GC.@preserve refs begin
         check(
             update(
-                db.ptr, collection, group, id,
+                db.ptr, collection, group, key,
                 name_ptrs, col_types_arr, col_data_arr, col_mask_arr,
                 Csize_t(column_count), Csize_t(row_count),
             ),
@@ -140,6 +155,12 @@ function update_time_series_group!(db::Database, collection::String, group::Stri
     return _update_group_columns(db, C.quiver_database_update_time_series_group, collection, group, id, kwargs)
 end
 
+# Label-addressed counterpart of update_time_series_group!.
+function update_time_series_group_by_label!(db::Database, collection::String, group::String, label::String; kwargs...)
+    return _update_group_columns(
+        db, C.quiver_database_update_time_series_group_by_label, collection, group, label, kwargs)
+end
+
 # Replace all of an element's rows in one *named* vector group. Pass no columns to clear it.
 # Prefer this over routing the group's columns through update_element! when a column name is
 # shared by two groups of the collection (legal for foreign keys): (collection, group) names
@@ -148,12 +169,32 @@ function update_vector_group!(db::Database, collection::String, group::String, i
     return _update_group_columns(db, C.quiver_database_update_vector_group, collection, group, id, kwargs)
 end
 
+# Label-addressed counterpart of update_vector_group!.
+function update_vector_group_by_label!(db::Database, collection::String, group::String, label::String; kwargs...)
+    return _update_group_columns(db, C.quiver_database_update_vector_group_by_label, collection, group, label, kwargs)
+end
+
 # Set-group counterpart of update_vector_group!.
 function update_set_group!(db::Database, collection::String, group::String, id::Int64; kwargs...)
     return _update_group_columns(db, C.quiver_database_update_set_group, collection, group, id, kwargs)
 end
 
-function upsert_time_series_row!(db::Database, collection::String, group::String, id::Int64; kwargs...)
+# Label-addressed counterpart of update_set_group!.
+function update_set_group_by_label!(db::Database, collection::String, group::String, label::String; kwargs...)
+    return _update_group_columns(db, C.quiver_database_update_set_group_by_label, collection, group, label, kwargs)
+end
+
+# Shared marshalling for the row-oriented time-series upserts: each kwarg is a scalar wrapped in
+# a 1-element typed C array. `upsert` is the C entry point. Separate from _update_group_columns:
+# this signature has no NULL mask, and that helper would zero-fill a masked cell instead of NULL.
+function _upsert_row_columns(
+    db::Database,
+    upsert::Function,
+    collection::String,
+    group::String,
+    key::Union{Int64, String},
+    kwargs,
+)
     column_count = length(kwargs)
     col_names_strs = String[]
     col_types = Cint[]
@@ -209,14 +250,24 @@ function upsert_time_series_row!(db::Database, collection::String, group::String
 
     GC.@preserve refs begin
         check(
-            C.quiver_database_upsert_time_series_row(
-                db.ptr, collection, group, id,
+            upsert(
+                db.ptr, collection, group, key,
                 name_ptrs, col_types_arr, col_data_arr,
                 Csize_t(column_count),
             ),
         )
     end
     return nothing
+end
+
+function upsert_time_series_row!(db::Database, collection::String, group::String, id::Int64; kwargs...)
+    return _upsert_row_columns(db, C.quiver_database_upsert_time_series_row, collection, group, id, kwargs)
+end
+
+# Label-addressed counterpart of upsert_time_series_row!.
+function upsert_time_series_row_by_label!(db::Database, collection::String, group::String, label::String; kwargs...)
+    return _upsert_row_columns(
+        db, C.quiver_database_upsert_time_series_row_by_label, collection, group, label, kwargs)
 end
 
 function update_time_series_files!(db::Database, collection::String, paths::AbstractDict{String, <:Optional{String}})

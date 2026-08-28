@@ -59,6 +59,7 @@ const elementSymbols = {
 const crudSymbols = {
   quiver_database_create_element: { args: [P, BUF, P, P], returns: I32 },
   quiver_database_update_element: { args: [P, BUF, I64, P], returns: I32 },
+  quiver_database_update_element_by_label: { args: [P, BUF, BUF, P], returns: I32 },
   quiver_database_delete_element: { args: [P, BUF, I64], returns: I32 },
   quiver_database_delete_element_by_label: { args: [P, BUF, BUF], returns: I32 },
 } as const;
@@ -133,16 +134,32 @@ const timeSeriesSymbols = {
     args: [P, BUF, BUF, I64, P, P, P, USIZE],
     returns: I32,
   },
+  quiver_database_upsert_time_series_row_by_label: {
+    args: [P, BUF, BUF, BUF, P, P, P, USIZE],
+    returns: I32,
+  },
   quiver_database_update_time_series_group: {
     args: [P, BUF, BUF, I64, P, P, P, P, USIZE, USIZE],
+    returns: I32,
+  },
+  quiver_database_update_time_series_group_by_label: {
+    args: [P, BUF, BUF, BUF, P, P, P, P, USIZE, USIZE],
     returns: I32,
   },
   quiver_database_update_vector_group: {
     args: [P, BUF, BUF, I64, P, P, P, P, USIZE, USIZE],
     returns: I32,
   },
+  quiver_database_update_vector_group_by_label: {
+    args: [P, BUF, BUF, BUF, P, P, P, P, USIZE, USIZE],
+    returns: I32,
+  },
   quiver_database_update_set_group: {
     args: [P, BUF, BUF, I64, P, P, P, P, USIZE, USIZE],
+    returns: I32,
+  },
+  quiver_database_update_set_group_by_label: {
+    args: [P, BUF, BUF, BUF, P, P, P, P, USIZE, USIZE],
     returns: I32,
   },
   quiver_database_free_time_series_data: { args: [P, P, P, P, USIZE, USIZE], returns: I32 },

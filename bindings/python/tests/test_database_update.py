@@ -42,6 +42,33 @@ class TestUpdateElement:
         assert abs(float_val - 2.5) < 1e-9
 
 
+class TestUpdateElementByLabel:
+    def test_update_element_by_label(self, collections_db: Database) -> None:
+        collections_db.create_element("Configuration", label="cfg")
+        id1 = collections_db.create_element("Collection", label="Item1", some_integer=10)
+        id2 = collections_db.create_element("Collection", label="Item2", some_integer=20)
+        collections_db.update_element_by_label("Collection", "Item1", some_integer=99)
+        assert collections_db.read_scalar_integer_by_id("Collection", "some_integer", id1) == 99
+        # The sibling element is untouched
+        assert collections_db.read_scalar_integer_by_id("Collection", "some_integer", id2) == 20
+
+    def test_rename_through_the_label_form(self, collections_db: Database) -> None:
+        """`label=` in kwargs renames; the positional-only marker keeps it from colliding."""
+        collections_db.create_element("Configuration", label="cfg")
+        elem_id = collections_db.create_element("Collection", label="Item1")
+        collections_db.update_element_by_label("Collection", "Item1", label="Renamed")
+        assert collections_db.read_scalar_string_by_id("Collection", "label", elem_id) == "Renamed"
+        # The old label no longer resolves; the new one does
+        with pytest.raises(QuiverError, match="Element not found"):
+            collections_db.update_element_by_label("Collection", "Item1", some_integer=5)
+        collections_db.update_element_by_label("Collection", "Renamed", some_integer=5)
+
+    def test_update_nonexistent_label_raises(self, collections_db: Database) -> None:
+        collections_db.create_element("Configuration", label="cfg")
+        with pytest.raises(QuiverError, match="Element not found"):
+            collections_db.update_element_by_label("Collection", "nope", some_integer=5)
+
+
 class TestUpdateVector:
     def test_update_vector_integers(self, collections_db: Database) -> None:
         collections_db.create_element("Configuration", label="cfg")
@@ -418,3 +445,41 @@ class TestUpdateVectorSetGroup:
 
         with pytest.raises(ValueError, match="same length"):
             relations_db.update_vector_group("Child", "refs", child, {"parent_ref": [1, 2], "id": [1]})
+
+    def test_update_vector_group_by_label(self, relations_db: Database) -> None:
+        child = self._seed(relations_db)
+        other = relations_db.create_element("Child", label="Child 2")
+
+        relations_db.update_vector_group_by_label("Child", "refs", "Child 2", {"parent_ref": [1]})
+        relations_db.update_vector_group_by_label("Child", "refs", "Child 1", {"parent_ref": ["Parent A", "Parent B"]})
+        assert relations_db.read_vector_integers_by_id("Child", "parent_ref", child) == [1, 2]
+
+        # An empty dict clears, and only the labelled element's group.
+        relations_db.update_vector_group_by_label("Child", "refs", "Child 1", {})
+        assert relations_db.read_vector_integers_by_id("Child", "parent_ref", child) == []
+        assert relations_db.read_vector_integers_by_id("Child", "parent_ref", other) == [1]
+
+    def test_update_vector_group_by_label_unresolvable_label_raises(self, relations_db: Database) -> None:
+        self._seed(relations_db)
+
+        with pytest.raises(QuiverError, match="Element not found"):
+            relations_db.update_vector_group_by_label("Child", "refs", "Nope", {"parent_ref": [1]})
+
+    def test_update_set_group_by_label(self, relations_db: Database) -> None:
+        child = self._seed(relations_db)
+        other = relations_db.create_element("Child", label="Child 2")
+
+        relations_db.update_set_group_by_label("Child", "parents", "Child 2", {"parent_ref": [1]})
+        relations_db.update_set_group_by_label("Child", "parents", "Child 1", {"parent_ref": ["Parent A", "Parent B"]})
+        assert relations_db.read_set_integers_by_id("Child", "parent_ref", child) == [1, 2]
+
+        # An empty dict clears, and only the labelled element's group.
+        relations_db.update_set_group_by_label("Child", "parents", "Child 1", {})
+        assert relations_db.read_set_integers_by_id("Child", "parent_ref", child) == []
+        assert relations_db.read_set_integers_by_id("Child", "parent_ref", other) == [1]
+
+    def test_update_set_group_by_label_unresolvable_label_raises(self, relations_db: Database) -> None:
+        self._seed(relations_db)
+
+        with pytest.raises(QuiverError, match="Element not found"):
+            relations_db.update_set_group_by_label("Child", "parents", "Nope", {"parent_ref": [1]})

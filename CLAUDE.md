@@ -395,9 +395,16 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
 - Transaction control: `begin_transaction()`, `commit()`, `rollback()`, `in_transaction()`
 - Dry runs: `begin_dry_run()`, `end_dry_run()`, `in_dry_run()` — one transaction that is always rolled back; while active the three transaction methods above are absorbed (no-ops) so nested callers compose. See the design decision below.
 - CRUD: `create_element(collection, element)`, `update_element`, `delete_element`,
-  `delete_element_by_label(collection, label)` — the label form resolves the label within the
-  collection (`Impl::resolve_label`) and delegates to `delete_element`, so CASCADE and the
-  Pattern 2 miss are the id form's. A label is unique per collection, not per database.
+  `update_element_by_label(collection, label, element)`,
+  `delete_element_by_label(collection, label)`
+- Label-addressed writes: each `_by_label` form resolves the label within the collection
+  (`Impl::resolve_label`) and delegates to its id counterpart, so everything past the lookup —
+  CASCADE, the attribute writes, the validation — is the id form's. A label is unique per
+  collection, not per database. Errors name the step that raised them: the lookup owns the
+  Pattern 2 miss (`Element not found: label 'x' in collection 'C'`), while the delegated write
+  names the id form (`Cannot update_element: ...`). Passing `label` among the attributes to
+  `update_element_by_label` renames the element; the lookup has already run, so the write lands
+  on the resolved id.
 - Element count: `number_of_elements(collection)` returns the current row count from the
   collection's main table (`COUNT(*)`), not its maximum ID or group-row count. Any table in the
   schema is accepted, so naming a group table reports that table's own row count.
@@ -419,7 +426,8 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
   warning (`tests/schemas/valid/relations.sql` shares `parent_ref` across a vector and a set group).
   Prefer the group writers whenever one group is meant. Bound in **every layer**: C++, the C API
   (columnar + per-cell mask, same shape as `update_time_series_group`), Julia, Dart, Python, JS,
-  and Lua. Validation lives in the C++ core and is shared by all of them: the caller's columns are
+  and Lua; `update_vector_group_by_label` / `update_set_group_by_label` are their label-addressed
+  forms. Validation lives in the C++ core and is shared by all of them: the caller's columns are
   checked against the group (the **union** of every row's keys, so a column named only in a later
   row is written and an unknown one still throws), `id` / `vector_index` are rejected as
   caller-supplied columns (they are derived, and emitting one would duplicate it in the INSERT
@@ -434,7 +442,7 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
   `delete_existing` — is still open. Only `bindings/julia/test/test_helper_maps.jl` depends on the
   fan-out, and via `create_element!` (the non-destructive half), so nothing blocks it; it is a
   breaking behaviour change rather than a bug fix.
-- Time series: `read_time_series_group()`, `update_time_series_group()`, `upsert_time_series_row()` — group read/update use N typed value columns per group; `upsert_time_series_row` inserts or replaces a single row by its dimension key (`INSERT OR REPLACE`). All bindings expose group data **column-oriented** (`{column: [values]}`); updating with no data clears the group. Integer values are accepted for REAL columns (converted on insert). NULL cells round-trip through every layer: the C API carries a per-cell presence mask, the FFI bindings surface null-padded columns (`nothing`/`None`/`null`), and Lua uses plain `nil` holes with the row count taken from the dimension column(s) — see the design decision below.
+- Time series: `read_time_series_group()`, `update_time_series_group()`, `update_time_series_group_by_label()`, `upsert_time_series_row()`, `upsert_time_series_row_by_label()` — group read/update use N typed value columns per group; `upsert_time_series_row` inserts or replaces a single row by its dimension key (`INSERT OR REPLACE`). All bindings expose group data **column-oriented** (`{column: [values]}`); updating with no data clears the group. Integer values are accepted for REAL columns (converted on insert). NULL cells round-trip through every layer: the C API carries a per-cell presence mask, the FFI bindings surface null-padded columns (`nothing`/`None`/`null`), and Lua uses plain `nil` holes with the row count taken from the dimension column(s) — see the design decision below.
 - Time series row: `read_time_series_row(collection, group, attribute, date_time)` — one value per element using "last non-null value at or before date_time" semantics; null Value for elements with no matching data (bindings surface `nothing`/`null`/`None`/`nil`).
 - Time series files: `has_time_series_files()`, `list_time_series_files_columns()`, `read_time_series_files()`, `update_time_series_files()`
 - Metadata: `get_{scalar,vector,set,time_series}_metadata()` — group metadata is a unified `GroupMetadata` with `dimension_column` (populated for time series, empty for vectors/sets)
@@ -502,6 +510,8 @@ The rules are mechanical: given any C++ method name, you can derive the equivale
 | Create | `create_element()` | `quiver_database_create_element()` | `create_element!()` | `createElement()` | `create_element()` |
 | Read scalar | `read_scalar_integers()` | `quiver_database_read_scalar_integers()` | `read_scalar_integers()` | `readScalarIntegers()` | `read_scalar_integers()` |
 | Read by Id | `read_scalar_integer_by_id()` | `quiver_database_read_scalar_integer_by_id()` | `read_scalar_integer_by_id()` | `readScalarIntegerById()` | N/A (use composites) |
+| Update | `update_element()` | `quiver_database_update_element()` | `update_element!()` | `updateElement()` | `update_element()` |
+| Update by label | `update_element_by_label()` | `quiver_database_update_element_by_label()` | `update_element_by_label!()` | `updateElementByLabel()` | `update_element_by_label()` |
 | Delete | `delete_element()` | `quiver_database_delete_element()` | `delete_element!()` | `deleteElement()` | `delete_element()` |
 | Delete by label | `delete_element_by_label()` | `quiver_database_delete_element_by_label()` | `delete_element_by_label!()` | `deleteElementByLabel()` | `delete_element_by_label()` |
 | Element count | `number_of_elements()` | `quiver_database_number_of_elements()` | `number_of_elements()` | `numberOfElements()` | `number_of_elements()` |
@@ -510,9 +520,13 @@ The rules are mechanical: given any C++ method name, you can derive the equivale
 | Time series read | `read_time_series_group()` | `quiver_database_read_time_series_group()` | `read_time_series_group()` | `readTimeSeriesGroup()` | `read_time_series_group()` |
 | Time series row | `read_time_series_row()` | `quiver_database_read_time_series_row()` | `read_time_series_row()` | `readTimeSeriesRow()` | `read_time_series_row()` |
 | Time series upsert row | `upsert_time_series_row()` | `quiver_database_upsert_time_series_row()` | `upsert_time_series_row!()` | `upsertTimeSeriesRow()` | `upsert_time_series_row()` |
+| Time series upsert row by label | `upsert_time_series_row_by_label()` | `quiver_database_upsert_time_series_row_by_label()` | `upsert_time_series_row_by_label!()` | `upsertTimeSeriesRowByLabel()` | `upsert_time_series_row_by_label()` |
 | Time series update | `update_time_series_group()` | `quiver_database_update_time_series_group()` | `update_time_series_group!()` | `updateTimeSeriesGroup()` | `update_time_series_group()` |
+| Time series group update by label | `update_time_series_group_by_label()` | `quiver_database_update_time_series_group_by_label()` | `update_time_series_group_by_label!()` | `updateTimeSeriesGroupByLabel()` | `update_time_series_group_by_label()` |
 | Vector group update | `update_vector_group()` | `quiver_database_update_vector_group()` | `update_vector_group!()` | `updateVectorGroup()` | `update_vector_group()` |
+| Vector group update by label | `update_vector_group_by_label()` | `quiver_database_update_vector_group_by_label()` | `update_vector_group_by_label!()` | `updateVectorGroupByLabel()` | `update_vector_group_by_label()` |
 | Set group update | `update_set_group()` | `quiver_database_update_set_group()` | `update_set_group!()` | `updateSetGroup()` | `update_set_group()` |
+| Set group update by label | `update_set_group_by_label()` | `quiver_database_update_set_group_by_label()` | `update_set_group_by_label!()` | `updateSetGroupByLabel()` | `update_set_group_by_label()` |
 | Query | `query_string()` | `quiver_database_query_string()` | `query_string()` | `queryString()` | `query_string()` |
 | CSV | `export_csv()` | `quiver_database_export_csv()` | `export_csv()` | `exportCSV()` | `export_csv()` |
 | Describe (text) | `describe()` | `quiver_database_describe()` | `describe()` | `describe()` | `describe()` |

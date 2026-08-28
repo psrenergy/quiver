@@ -218,6 +218,7 @@ Rules worth knowing:
 \`\`\`lua
 local id = db:create_element(collection, element_table)   -- returns new integer id
 db:update_element(collection, id, element_table)
+db:update_element_by_label(collection, label, element_table)  -- same update, addressed by label
 db:delete_element(collection, id)
 db:delete_element_by_label(collection, label)             -- same delete, addressed by label
 \`\`\`
@@ -245,9 +246,13 @@ Notes:
 - **\`update_element\` / \`delete_element\` require an existing id.** Targeting an id that does not
   exist throws \`Element not found: <id> in collection '<collection>'\` (no silent no-op). Use
   \`read_element_ids\` to get valid ids.
-- **\`delete_element_by_label\` requires an existing label**, unique *per collection*, not per
-  database — one naming an element of another collection does not resolve. A miss throws
-  \`Element not found: label '<label>' in collection '<collection>'\` and deletes nothing.
+- **\`update_element_by_label\` / \`delete_element_by_label\` require an existing label**, unique
+  *per collection*, not per database — one naming an element of another collection does not
+  resolve. A miss throws \`Element not found: label '<label>' in collection '<collection>'\` and
+  changes nothing. Passing \`label = "New name"\` in the element table renames the element, after
+  which only the new label resolves. Because the label form delegates to the id form, failures
+  that validate the *element* (an empty table, a type mismatch) report
+  \`Cannot update_element: ...\`.
 - **Empty arrays are skipped.** An attribute whose value is \`{}\` writes no vector/set (the element
   type can't be inferred from an empty array), so it is silently dropped.
 - **No \`nil\` scalar attributes.** In Lua a key set to \`nil\` is dropped from the table, so
@@ -305,6 +310,9 @@ db:update_vector_group("Child", "refs", id, { parent_ref = { 1, 2, 3 } })
 db:update_set_group("Child", "parents", id, { parent_ref = { 1, 2 } })
 
 db:update_vector_group("Child", "refs", id, {})   -- clears the group
+
+db:update_vector_group_by_label("Child", "refs", "Child 1", { parent_ref = { 1, 2 } })
+db:update_set_group_by_label("Child", "parents", "Child 1", { parent_ref = { 1, 2 } })
 \`\`\`
 
 Use these instead of routing a group's columns through \`update_element\` whenever a column name is
@@ -321,7 +329,8 @@ Rules:
   are rejected if passed.
 - **Foreign-key columns accept a label string** and resolve it to the referenced id, exactly as in
   \`create_element\` / \`update_element\`.
-- The element id must exist, same as \`update_element\` / \`delete_element\`.
+- The element id must exist, same as \`update_element\` / \`delete_element\`; the \`_by_label\` form
+  takes a label in its place, with \`update_element_by_label\`'s resolution and miss semantics.
 
 ---
 
@@ -382,6 +391,8 @@ db:update_time_series_group("Items", "data", id, {
 })
 
 db:update_time_series_group("Items", "data", id, {})   -- clears the group
+
+db:update_time_series_group_by_label("Items", "data", "Item 1", { date_time = { "2024-01-01T00:00:00" }, value = { 10.5 } })
 \`\`\`
 
 A read-modify-write looks like this:
@@ -411,6 +422,8 @@ column names). Each value of the top-level table must be an **array**, not a sca
   table {} to clear the group\`) — only a bare \`{}\` clears.
 - Integer values are accepted for REAL columns (converted on insert). Booleans, functions, and
   other unsupported Lua types throw \`column '...' has unsupported Lua type\`.
+- The element id must exist; the \`_by_label\` form takes a label in its place, with
+  \`update_element_by_label\`'s resolution and miss semantics. Every rule above applies to both.
 
 ### Append/upsert a single row (\`upsert_time_series_row\` — ROW-oriented, the one exception)
 
@@ -422,7 +435,15 @@ db:upsert_time_series_row("Items", "data", id, {
     date_time = "2024-01-04T00:00:00",
     value     = 40.0,
 })
+
+db:upsert_time_series_row_by_label("Items", "data", "Item 1", {
+    date_time = "2024-01-04T00:00:00",
+    value     = 40.0,
+})
 \`\`\`
+
+The element id must exist; the \`_by_label\` form takes a label in its place, with
+\`update_element_by_label\`'s resolution and miss semantics.
 
 ---
 

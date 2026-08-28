@@ -97,6 +97,41 @@ describe("updateElement", () => {
   });
 });
 
+describe("updateElementByLabel", () => {
+  test("updates by label and leaves siblings alone", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      const id1 = db.createElement("AllTypes", { label: "Item1", some_integer: 42 });
+      const id2 = db.createElement("AllTypes", { label: "Item2", some_integer: 7 });
+      db.updateElementByLabel("AllTypes", "Item1", { some_integer: 99 });
+      expect(db.readScalarIntegerById("AllTypes", "some_integer", id1)).toEqual(99);
+      expect(db.readScalarIntegerById("AllTypes", "some_integer", id2)).toEqual(7);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("throws on non-existent label", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      db.createElement("AllTypes", { label: "Item1", some_integer: 42 });
+      expect(() => db.updateElementByLabel("AllTypes", "Nope", { some_integer: 5 })).toThrow(
+        /Element not found/,
+      );
+    } finally {
+      db.close();
+    }
+  });
+
+  test("throws on closed database", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    db.close();
+    expect(() => db.updateElementByLabel("AllTypes", "Item1", { some_integer: 42 })).toThrow(
+      QuiverError,
+    );
+  });
+});
+
 const RELATIONS_SCHEMA_PATH = join(
   __dirname,
   "..",
@@ -246,6 +281,68 @@ describe("updateVectorGroup / updateSetGroup", () => {
       expect(() =>
         db.updateVectorGroup("Child", "refs", child, { parent_ref: [parentA, parentA], id: [1] }),
       ).toThrow(/has length 1 but expected 2/);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("updateVectorGroupByLabel writes and clears only the labelled element", () => {
+    const { db, parentA, parentB, child } = openRelations();
+    try {
+      const other = db.createElement("Child", { label: "Child 2" });
+
+      db.updateVectorGroupByLabel("Child", "refs", "Child 2", { parent_ref: [parentA] });
+      db.updateVectorGroupByLabel("Child", "refs", "Child 1", { parent_ref: [parentA, parentB] });
+      expect(db.readVectorIntegersById("Child", "parent_ref", child)).toEqual([parentA, parentB]);
+
+      db.updateVectorGroupByLabel("Child", "refs", "Child 1", {});
+      expect(db.readVectorIntegersById("Child", "parent_ref", child)).toEqual([]);
+      expect(db.readVectorIntegersById("Child", "parent_ref", other)).toEqual([parentA]);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("updateVectorGroupByLabel throws on an unresolvable label", () => {
+    const { db, parentA, child } = openRelations();
+    try {
+      db.updateVectorGroup("Child", "refs", child, { parent_ref: [parentA] });
+
+      expect(() =>
+        db.updateVectorGroupByLabel("Child", "refs", "Nope", { parent_ref: [parentA] }),
+      ).toThrow(/Element not found: label 'Nope' in collection 'Child'/);
+      expect(db.readVectorIntegersById("Child", "parent_ref", child)).toEqual([parentA]);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("updateSetGroupByLabel writes and clears only the labelled element", () => {
+    const { db, parentA, parentB, child } = openRelations();
+    try {
+      const other = db.createElement("Child", { label: "Child 2" });
+
+      db.updateSetGroupByLabel("Child", "parents", "Child 2", { parent_ref: [parentA] });
+      db.updateSetGroupByLabel("Child", "parents", "Child 1", { parent_ref: [parentA, parentB] });
+      expect(db.readSetIntegersById("Child", "parent_ref", child)).toEqual([parentA, parentB]);
+
+      db.updateSetGroupByLabel("Child", "parents", "Child 1", {});
+      expect(db.readSetIntegersById("Child", "parent_ref", child)).toEqual([]);
+      expect(db.readSetIntegersById("Child", "parent_ref", other)).toEqual([parentA]);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("updateSetGroupByLabel throws on an unresolvable label", () => {
+    const { db, parentA, child } = openRelations();
+    try {
+      db.updateSetGroup("Child", "parents", child, { parent_ref: [parentA] });
+
+      expect(() =>
+        db.updateSetGroupByLabel("Child", "parents", "Nope", { parent_ref: [parentA] }),
+      ).toThrow(/Element not found: label 'Nope' in collection 'Child'/);
+      expect(db.readSetIntegersById("Child", "parent_ref", child)).toEqual([parentA]);
     } finally {
       db.close();
     }

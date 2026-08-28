@@ -31,9 +31,11 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   comparison — notably hub's `lib/models/database.dart`. The `update_vector_group` /
   `update_set_group` entries were therefore hand-added in the file's existing style, and
   `quiver_database_number_of_elements` likewise (hand-added right after
-  `quiver_database_read_element_ids`, matching the C API's declaration order). Take the generator
-  upgrade as its own deliberate change (regenerate, then fix the enum call sites here and in hub)
-  rather than as a side effect of adding a C function.
+  `quiver_database_read_element_ids`, matching the C API's declaration order), as were
+  `quiver_database_update_element_by_label`, the three group writers' `_by_label` forms, and
+  `quiver_database_upsert_time_series_row` plus its `_by_label` form.
+  Take the generator upgrade as its own deliberate change (regenerate, then fix the enum call
+  sites here and in hub) rather than as a side effect of adding a C function.
 - **Native library resolution** (`lib/src/ffi/library_loader.dart`): searches the native-assets
   build output (`.dart_tool/hooks_runner/shared/quiverdb/build`) first — on Windows it pre-loads
   `libquiver.dll` from there so `libquiver_c.dll`'s dependency resolves — then falls back to
@@ -43,8 +45,9 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   fail in confusing ways.
 - **Marshaling idiom**: every method allocates through a `package:ffi` `Arena` and releases in
   `finally`. Typed columns go through the shared private `_marshalGroupColumn(Arena, List<Object?>)`
-  (used by `updateTimeSeriesGroup`, `upsertTimeSeriesRow`, `updateVectorGroup` and
-  `updateSetGroup`); query parameters through `_marshalParams`.
+  (used by `updateTimeSeriesGroup`, `upsertTimeSeriesRow`, `upsertTimeSeriesRowByLabel`,
+  `updateVectorGroup`, `updateSetGroup` and the group writers' `ByLabel` forms); query parameters
+  through `_marshalParams`.
 - **The group writers take columns while the group readers return rows** (`readVectorGroupById`).
   The only asymmetric reader/writer pair here — deliberate, see the root design decisions.
 - **Scalar bulk NULLs**: `readScalarIntegers`/`readScalarFloats` decode a parallel `Pointer<Uint8>`
@@ -58,9 +61,9 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
 - **Time-series group NULLs**: `readTimeSeriesGroup`/`updateTimeSeriesGroup` use
   `Map<String, List<Object?>>` — a `null` cell is a SQL NULL. `_marshalGroupColumn` returns a
   `({int type, Pointer<Void> data, Pointer<Uint8> hasValue})` record (the per-cell mask;
-  `upsertTimeSeriesRow` ignores `hasValue`), dispatches on the first non-null element, and tags an
-  all-null/empty column FLOAT with a zeroed placeholder. Reads decode the mask out-param and never
-  `toDartString` a masked-out (NULL) pointer.
+  `upsertTimeSeriesRow` and `upsertTimeSeriesRowByLabel` ignore `hasValue`), dispatches on the
+  first non-null element, and tags an all-null/empty column FLOAT with a zeroed placeholder. Reads
+  decode the mask out-param and never `toDartString` a masked-out (NULL) pointer.
 - **Query API shape**: `queryString`/`queryInteger`/`queryFloat`/`queryDateTime` take an optional
   positional `List<Object?>? parameters` (no separate `*Params` methods).
 - **Element array NULLs**: `Element.setArray{Integer,Float,String}` take `List<T?>` and pass the

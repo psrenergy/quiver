@@ -42,6 +42,9 @@ public:
     // Element operations
     int64_t create_element(const std::string& collection, const Element& element);
     void update_element(const std::string& collection, int64_t id, const Element& element);
+    // Resolves the label within `collection` (unique per collection, not per database), then
+    // delegates to update_element.
+    void update_element_by_label(const std::string& collection, const std::string& label, const Element& element);
     void delete_element(const std::string& collection, int64_t id);
     // Resolves the label within `collection` (unique per collection, not per database), then
     // delegates to delete_element.
@@ -113,6 +116,16 @@ public:
                           const std::string& group,
                           int64_t id,
                           const std::vector<std::map<std::string, Value>>& rows);
+    // Resolve the label within `collection` (unique per collection, not per database), then
+    // delegate to the id form above.
+    void update_vector_group_by_label(const std::string& collection,
+                                      const std::string& group,
+                                      const std::string& label,
+                                      const std::vector<std::map<std::string, Value>>& rows);
+    void update_set_group_by_label(const std::string& collection,
+                                   const std::string& group,
+                                   const std::string& label,
+                                   const std::vector<std::map<std::string, Value>>& rows);
 
     // Read element Ids
     std::vector<int64_t> read_element_ids(const std::string& collection);
@@ -152,6 +165,13 @@ public:
                                   int64_t id,
                                   const std::vector<std::map<std::string, Value>>& rows);
 
+    // Resolve the label within `collection` (unique per collection, not per database), then
+    // delegate to the id form above.
+    void update_time_series_group_by_label(const std::string& collection,
+                                           const std::string& group,
+                                           const std::string& label,
+                                           const std::vector<std::map<std::string, Value>>& rows);
+
     // Add (or upsert) a single time series row. Inserts a new row identified by id +
     // every dimension column from the schema PK; if a row with the same PK already
     // exists, value columns are overwritten. Validation matches update_time_series_group:
@@ -162,6 +182,13 @@ public:
                                 const std::string& group,
                                 int64_t id,
                                 const std::map<std::string, Value>& row);
+
+    // Resolve the label within `collection` (unique per collection, not per database), then
+    // delegate to the id form above.
+    void upsert_time_series_row_by_label(const std::string& collection,
+                                         const std::string& group,
+                                         const std::string& label,
+                                         const std::map<std::string, Value>& row);
 
     // Time series files - singleton table storing file paths for external time series data
     bool has_time_series_files(const std::string& collection) const;

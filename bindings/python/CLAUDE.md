@@ -39,6 +39,12 @@ ruff.toml         # Lint/format config (format.bat runs ruff)
   `db.create_element("Collection", **my_dict)`); the `Element` class is internal. Properties are
   regular methods, not `@property` (design decision). `LogLevel` is an `IntEnum` exported from
   `__init__.py`; internal mixin classes are not exported.
+- **A parameter that shadows a column name needs a `/`.** A method that addresses a row
+  positionally *and* takes attributes as `**kwargs` must mark the positional parameters
+  positional-only, or the kwarg binds to the parameter and raises `TypeError: got multiple values
+  for argument '<name>'` before the FFI call. `update_element_by_label(collection, label, /,
+  **kwargs)` is the acute case — renaming via `label=` is the point of the method, and every
+  collection has a `label` column by convention.
 - **Per-method FFI boilerplate is the house style** — don't collapse it into
   closure-parameterized helpers (root "Do not 'fix'" list).
 - **Scalar bulk NULLs**: `read_scalar_integers`/`_floats` decode a parallel `uint8_t**` mask into
@@ -55,12 +61,17 @@ ruff.toml         # Lint/format config (format.bat runs ruff)
   dense datetimes. `_marshal_group_columns` dispatches on the first non-`None` element, builds
   a per-column mask, and substitutes `0`/`0.0`/`ffi.NULL` placeholders for `None` cells; an all-`None`
   column is tagged FLOAT with a zeroed placeholder.
-- **`_marshal_group_columns` serves all three columnar group writers** (time series, vector, set) —
-  same name as Dart's `_marshalGroupColumn`. It raises `ValueError` for jagged column lists (a
-  pre-FFI marshalling error, the documented exception to "messages come from C++"); everything else
-  is validated in the core and surfaces as `QuiverError`. Note that the group *writers* take columns
-  while `read_vector_group_by_id` returns rows, and that reader composes per-column reads, so it
-  **drops NULL cells** — assert a NULL-cell write in SQL, not through it.
+- **`_marshal_group_columns` serves every columnar group writer** (time series, vector, set, by id
+  and by label) — same name as Dart's `_marshalGroupColumn`. It raises `ValueError` for jagged
+  column lists (a pre-FFI marshalling error, the documented exception to "messages come from C++");
+  everything else is validated in the core and surfaces as `QuiverError`. Note that the group
+  *writers* take columns while `read_vector_group_by_id` returns rows, and that reader composes
+  per-column reads, so it **drops NULL cells** — assert a NULL-cell write in SQL, not through it.
+- **`_marshal_row_columns` is its row-shaped sibling**, serving `upsert_time_series_row` and its
+  `_by_label` form — each kwarg is a scalar wrapped in a 1-element typed array. Kept separate
+  because the row-upsert C signature carries no per-cell mask: the group marshaller's zeroed
+  placeholder for a `None` cell would be written as data instead of NULL (a `None` kwarg raises
+  `TypeError` here).
 
 ## Packaging
 

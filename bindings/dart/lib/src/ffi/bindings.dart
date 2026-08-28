@@ -411,6 +411,41 @@ class QuiverDatabaseBindings {
         int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, int, ffi.Pointer<quiver_element_t>)
       >();
 
+  int quiver_database_update_element_by_label(
+    ffi.Pointer<quiver_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Char> label,
+    ffi.Pointer<quiver_element_t> element,
+  ) {
+    return _quiver_database_update_element_by_label(
+      db,
+      collection,
+      label,
+      element,
+    );
+  }
+
+  late final _quiver_database_update_element_by_labelPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<quiver_element_t>,
+          )
+        >
+      >('quiver_database_update_element_by_label');
+  late final _quiver_database_update_element_by_label = _quiver_database_update_element_by_labelPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<quiver_element_t>,
+        )
+      >();
+
   int quiver_database_delete_element(
     ffi.Pointer<quiver_database_t> db,
     ffi.Pointer<ffi.Char> collection,
@@ -1857,6 +1892,65 @@ class QuiverDatabaseBindings {
         )
       >();
 
+  int quiver_database_update_vector_group_by_label(
+    ffi.Pointer<quiver_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Char> group,
+    ffi.Pointer<ffi.Char> label,
+    ffi.Pointer<ffi.Pointer<ffi.Char>> column_names,
+    ffi.Pointer<ffi.Int> column_types,
+    ffi.Pointer<ffi.Pointer<ffi.Void>> column_data,
+    ffi.Pointer<ffi.Pointer<ffi.Uint8>> column_has_value,
+    int column_count,
+    int row_count,
+  ) {
+    return _quiver_database_update_vector_group_by_label(
+      db,
+      collection,
+      group,
+      label,
+      column_names,
+      column_types,
+      column_data,
+      column_has_value,
+      column_count,
+      row_count,
+    );
+  }
+
+  late final _quiver_database_update_vector_group_by_labelPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Pointer<ffi.Char>>,
+            ffi.Pointer<ffi.Int>,
+            ffi.Pointer<ffi.Pointer<ffi.Void>>,
+            ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
+            ffi.Size,
+            ffi.Size,
+          )
+        >
+      >('quiver_database_update_vector_group_by_label');
+  late final _quiver_database_update_vector_group_by_label = _quiver_database_update_vector_group_by_labelPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Pointer<ffi.Char>>,
+          ffi.Pointer<ffi.Int>,
+          ffi.Pointer<ffi.Pointer<ffi.Void>>,
+          ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
+          int,
+          int,
+        )
+      >();
+
   int quiver_database_update_set_group(
     ffi.Pointer<quiver_database_t> db,
     ffi.Pointer<ffi.Char> collection,
@@ -1907,6 +2001,65 @@ class QuiverDatabaseBindings {
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Char>,
           int,
+          ffi.Pointer<ffi.Pointer<ffi.Char>>,
+          ffi.Pointer<ffi.Int>,
+          ffi.Pointer<ffi.Pointer<ffi.Void>>,
+          ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
+          int,
+          int,
+        )
+      >();
+
+  int quiver_database_update_set_group_by_label(
+    ffi.Pointer<quiver_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Char> group,
+    ffi.Pointer<ffi.Char> label,
+    ffi.Pointer<ffi.Pointer<ffi.Char>> column_names,
+    ffi.Pointer<ffi.Int> column_types,
+    ffi.Pointer<ffi.Pointer<ffi.Void>> column_data,
+    ffi.Pointer<ffi.Pointer<ffi.Uint8>> column_has_value,
+    int column_count,
+    int row_count,
+  ) {
+    return _quiver_database_update_set_group_by_label(
+      db,
+      collection,
+      group,
+      label,
+      column_names,
+      column_types,
+      column_data,
+      column_has_value,
+      column_count,
+      row_count,
+    );
+  }
+
+  late final _quiver_database_update_set_group_by_labelPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Pointer<ffi.Char>>,
+            ffi.Pointer<ffi.Int>,
+            ffi.Pointer<ffi.Pointer<ffi.Void>>,
+            ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
+            ffi.Size,
+            ffi.Size,
+          )
+        >
+      >('quiver_database_update_set_group_by_label');
+  late final _quiver_database_update_set_group_by_label = _quiver_database_update_set_group_by_labelPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Pointer<ffi.Char>>,
           ffi.Pointer<ffi.Int>,
           ffi.Pointer<ffi.Pointer<ffi.Void>>,
@@ -1975,6 +2128,65 @@ class QuiverDatabaseBindings {
         )
       >();
 
+  int quiver_database_update_time_series_group_by_label(
+    ffi.Pointer<quiver_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Char> group,
+    ffi.Pointer<ffi.Char> label,
+    ffi.Pointer<ffi.Pointer<ffi.Char>> column_names,
+    ffi.Pointer<ffi.Int> column_types,
+    ffi.Pointer<ffi.Pointer<ffi.Void>> column_data,
+    ffi.Pointer<ffi.Pointer<ffi.Uint8>> column_has_value,
+    int column_count,
+    int row_count,
+  ) {
+    return _quiver_database_update_time_series_group_by_label(
+      db,
+      collection,
+      group,
+      label,
+      column_names,
+      column_types,
+      column_data,
+      column_has_value,
+      column_count,
+      row_count,
+    );
+  }
+
+  late final _quiver_database_update_time_series_group_by_labelPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Pointer<ffi.Char>>,
+            ffi.Pointer<ffi.Int>,
+            ffi.Pointer<ffi.Pointer<ffi.Void>>,
+            ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
+            ffi.Size,
+            ffi.Size,
+          )
+        >
+      >('quiver_database_update_time_series_group_by_label');
+  late final _quiver_database_update_time_series_group_by_label = _quiver_database_update_time_series_group_by_labelPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Pointer<ffi.Char>>,
+          ffi.Pointer<ffi.Int>,
+          ffi.Pointer<ffi.Pointer<ffi.Void>>,
+          ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
+          int,
+          int,
+        )
+      >();
+
   int quiver_database_upsert_time_series_row(
     ffi.Pointer<quiver_database_t> db,
     ffi.Pointer<ffi.Char> collection,
@@ -2019,6 +2231,57 @@ class QuiverDatabaseBindings {
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Char>,
           int,
+          ffi.Pointer<ffi.Pointer<ffi.Char>>,
+          ffi.Pointer<ffi.Int>,
+          ffi.Pointer<ffi.Pointer<ffi.Void>>,
+          int,
+        )
+      >();
+
+  int quiver_database_upsert_time_series_row_by_label(
+    ffi.Pointer<quiver_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Char> group,
+    ffi.Pointer<ffi.Char> label,
+    ffi.Pointer<ffi.Pointer<ffi.Char>> column_names,
+    ffi.Pointer<ffi.Int> column_types,
+    ffi.Pointer<ffi.Pointer<ffi.Void>> column_data,
+    int column_count,
+  ) {
+    return _quiver_database_upsert_time_series_row_by_label(
+      db,
+      collection,
+      group,
+      label,
+      column_names,
+      column_types,
+      column_data,
+      column_count,
+    );
+  }
+
+  late final _quiver_database_upsert_time_series_row_by_labelPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Pointer<ffi.Char>>,
+            ffi.Pointer<ffi.Int>,
+            ffi.Pointer<ffi.Pointer<ffi.Void>>,
+            ffi.Size,
+          )
+        >
+      >('quiver_database_upsert_time_series_row_by_label');
+  late final _quiver_database_upsert_time_series_row_by_label = _quiver_database_upsert_time_series_row_by_labelPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Pointer<ffi.Char>>,
           ffi.Pointer<ffi.Int>,
           ffi.Pointer<ffi.Pointer<ffi.Void>>,

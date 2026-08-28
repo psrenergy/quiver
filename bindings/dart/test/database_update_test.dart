@@ -285,6 +285,87 @@ void main() {
     });
   });
 
+  group('Update Element By Label', () {
+    test('updates by label and leaves siblings alone', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {
+          'label': 'Config 1',
+          'integer_attribute': 100,
+        });
+        db.createElement('Configuration', {
+          'label': 'Config 2',
+          'integer_attribute': 200,
+        });
+
+        db.updateElementByLabel('Configuration', 'Config 1', {
+          'integer_attribute': 999,
+        });
+
+        expect(
+          db.readScalarIntegerById('Configuration', 'integer_attribute', 1),
+          equals(999),
+        );
+        expect(
+          db.readScalarIntegerById('Configuration', 'integer_attribute', 2),
+          equals(200),
+        );
+      } finally {
+        db.close();
+      }
+    });
+
+    test('updates by label using an Element builder', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {
+          'label': 'Config 1',
+          'integer_attribute': 100,
+        });
+
+        final element = Element();
+        try {
+          element.set('integer_attribute', 777);
+          db.updateElementFromBuilderByLabel('Configuration', 'Config 1', element);
+        } finally {
+          element.dispose();
+        }
+
+        expect(
+          db.readScalarIntegerById('Configuration', 'integer_attribute', 1),
+          equals(777),
+        );
+      } finally {
+        db.close();
+      }
+    });
+
+    test('throws for a non-existent label', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Config 1'});
+
+        expect(
+          () => db.updateElementByLabel('Configuration', 'Nonexistent', {
+            'integer_attribute': 5,
+          }),
+          throwsA(isA<DatabaseException>()),
+        );
+      } finally {
+        db.close();
+      }
+    });
+  });
+
   // Error handling tests
 
   group('Update Invalid Collection', () {
@@ -1667,6 +1748,77 @@ void main() {
             'vector_index': [1],
           }),
           throwsA(isA<ArgumentError>()),
+        );
+      } finally {
+        db.close();
+      }
+    });
+
+    test('updateVectorGroupByLabel writes and clears only that element', () {
+      final db = openRelations();
+      try {
+        db.createElement('Child', {'label': 'Child 2'});
+        db.updateVectorGroupByLabel('Child', 'refs', 'Child 2', {
+          'parent_ref': [1],
+        });
+        db.updateVectorGroupByLabel('Child', 'refs', 'Child 1', {
+          'parent_ref': ['Parent A', 'Parent B'],
+        });
+        expect(
+          db.readVectorIntegersById('Child', 'parent_ref', 1),
+          equals([1, 2]),
+        );
+
+        db.updateVectorGroupByLabel('Child', 'refs', 'Child 1', {});
+        expect(db.readVectorIntegersById('Child', 'parent_ref', 1), isEmpty);
+        expect(db.readVectorIntegersById('Child', 'parent_ref', 2), equals([1]));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('updateVectorGroupByLabel throws on an unresolvable label', () {
+      final db = openRelations();
+      try {
+        expect(
+          () => db.updateVectorGroupByLabel('Child', 'refs', 'Nope', {
+            'parent_ref': [1],
+          }),
+          throwsA(isA<DatabaseException>()),
+        );
+      } finally {
+        db.close();
+      }
+    });
+
+    test('updateSetGroupByLabel writes and clears only that element', () {
+      final db = openRelations();
+      try {
+        db.createElement('Child', {'label': 'Child 2'});
+        db.updateSetGroupByLabel('Child', 'parents', 'Child 2', {
+          'parent_ref': [1],
+        });
+        db.updateSetGroupByLabel('Child', 'parents', 'Child 1', {
+          'parent_ref': ['Parent A', 'Parent B'],
+        });
+        expect(db.readSetIntegersById('Child', 'parent_ref', 1), equals([1, 2]));
+
+        db.updateSetGroupByLabel('Child', 'parents', 'Child 1', {});
+        expect(db.readSetIntegersById('Child', 'parent_ref', 1), isEmpty);
+        expect(db.readSetIntegersById('Child', 'parent_ref', 2), equals([1]));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('updateSetGroupByLabel throws on an unresolvable label', () {
+      final db = openRelations();
+      try {
+        expect(
+          () => db.updateSetGroupByLabel('Child', 'parents', 'Nope', {
+            'parent_ref': [1],
+          }),
+          throwsA(isA<DatabaseException>()),
         );
       } finally {
         db.close();

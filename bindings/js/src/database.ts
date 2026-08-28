@@ -97,6 +97,7 @@ export class Database {
   // --- Element CRUD (implemented in create.ts) ---
   declare createElement: (collection: string, data: ElementData) => number;
   declare updateElement: (collection: string, id: number, data: ElementData) => void;
+  declare updateElementByLabel: (collection: string, label: string, data: ElementData) => void;
   declare deleteElement: (collection: string, id: number) => void;
   declare deleteElementByLabel: (collection: string, label: string) => void;
 
@@ -168,10 +169,22 @@ export class Database {
     id: number,
     data: TimeSeriesData,
   ) => void;
+  declare updateTimeSeriesGroupByLabel: (
+    collection: string,
+    group: string,
+    label: string,
+    data: TimeSeriesData,
+  ) => void;
   declare updateVectorGroup: (
     collection: string,
     group: string,
     id: number,
+    data: GroupColumns,
+  ) => void;
+  declare updateVectorGroupByLabel: (
+    collection: string,
+    group: string,
+    label: string,
     data: GroupColumns,
   ) => void;
   declare updateSetGroup: (
@@ -180,10 +193,22 @@ export class Database {
     id: number,
     data: GroupColumns,
   ) => void;
+  declare updateSetGroupByLabel: (
+    collection: string,
+    group: string,
+    label: string,
+    data: GroupColumns,
+  ) => void;
   declare upsertTimeSeriesRow: (
     collection: string,
     group: string,
     id: number,
+    row: Record<string, number | bigint | string>,
+  ) => void;
+  declare upsertTimeSeriesRowByLabel: (
+    collection: string,
+    group: string,
+    label: string,
     row: Record<string, number | bigint | string>,
   ) => void;
   declare hasTimeSeriesFiles: (collection: string) => boolean;

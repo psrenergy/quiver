@@ -72,6 +72,7 @@ bun run example.ts
 - `createElement(collection, data)` -- Create element, returns numeric ID
 - `updateElement(collection, id, data)` -- Update element by ID
 - `deleteElement(collection, id)` -- Delete element by ID
+- `updateElementByLabel(collection, label, data)` -- Update element by label
 - `deleteElementByLabel(collection, label)` -- Delete element by label
 
 ### Read (bulk)

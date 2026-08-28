@@ -490,6 +490,48 @@ TEST_F(LuaRunnerTest, UpsertTimeSeriesRowMissingDimErrors) {
     EXPECT_THROW({ lua.run(script); }, std::runtime_error);
 }
 
+TEST_F(LuaRunnerTest, UpsertTimeSeriesRowByLabel) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    int64_t id1 = db.create_element("Collection", quiver::Element().set("label", "Item 1"));
+    int64_t id2 = db.create_element("Collection", quiver::Element().set("label", "Item 2"));
+
+    quiver::LuaRunner lua(db);
+
+    // Item 2 is written first so the assertions on Item 1 cannot pass vacuously.
+    lua.run(R"(
+        db:upsert_time_series_row_by_label("Collection", "data", "Item 2", { date_time = "2024-06-01", value = 99.0 })
+        db:upsert_time_series_row_by_label("Collection", "data", "Item 1", { date_time = "2024-06-01", value = 10.0 })
+        db:upsert_time_series_row_by_label("Collection", "data", "Item 1", { date_time = "2024-06-01", value = 20.0 })
+    )");
+
+    // Same dimension PK upserts rather than appending.
+    auto rows = db.read_time_series_group("Collection", "data", id1);
+    ASSERT_EQ(rows.size(), 1);
+    EXPECT_EQ(std::get<std::string>(rows[0].at("date_time")), "2024-06-01");
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[0].at("value")), 20.0);
+
+    auto other = db.read_time_series_group("Collection", "data", id2);
+    ASSERT_EQ(other.size(), 1);
+    EXPECT_DOUBLE_EQ(std::get<double>(other[0].at("value")), 99.0);
+}
+
+TEST_F(LuaRunnerTest, UpsertTimeSeriesRowByLabelErrors) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    int64_t id = db.create_element("Collection", quiver::Element().set("label", "Item 1"));
+
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(
+        lua,
+        R"(db:upsert_time_series_row_by_label("Collection", "data", "Nope", { date_time = "2024-06-01", value = 1.0 }))",
+        "Element not found");
+
+    // Nothing was written by the failure.
+    EXPECT_TRUE(db.read_time_series_group("Collection", "data", id).empty());
+}
+
 TEST_F(LuaRunnerTest, HasTimeSeriesFiles) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
@@ -800,4 +842,61 @@ TEST_F(LuaRunnerTest, ReadTimeSeriesRow) {
         assert(row[1] == 10.5, "expected 10.5, got " .. tostring(row[1]))
         assert(row[2] == 30.5, "expected 30.5, got " .. tostring(row[2]))
     )");
+}
+
+TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupByLabel) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    int64_t id1 = db.create_element("Collection", quiver::Element().set("label", "Item 1"));
+    int64_t id2 = db.create_element("Collection", quiver::Element().set("label", "Item 2"));
+
+    quiver::LuaRunner lua(db);
+
+    // Item 2 is written first so the assertions on Item 1 cannot pass vacuously.
+    lua.run(R"(
+        db:update_time_series_group_by_label("Collection", "data", "Item 2", {
+            date_time = { "2024-01-01" },
+            value = { 99.0 },
+        })
+        db:update_time_series_group_by_label("Collection", "data", "Item 1", {
+            date_time = { "2024-06-01", "2024-06-02" },
+            value = { 10.0, 20.0 },
+        })
+    )");
+
+    auto rows = db.read_time_series_group("Collection", "data", id1);
+    ASSERT_EQ(rows.size(), 2);
+    EXPECT_EQ(std::get<std::string>(rows[0].at("date_time")), "2024-06-01");
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[1].at("value")), 20.0);
+
+    // An empty table clears only the labelled element.
+    lua.run(R"(db:update_time_series_group_by_label("Collection", "data", "Item 1", {}))");
+    EXPECT_TRUE(db.read_time_series_group("Collection", "data", id1).empty());
+    EXPECT_EQ(db.read_time_series_group("Collection", "data", id2).size(), 1);
+}
+
+TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupByLabelErrors) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    int64_t id = db.create_element("Collection", quiver::Element().set("label", "Item 1"));
+
+    quiver::LuaRunner lua(db);
+    lua.run(R"(
+        db:update_time_series_group_by_label("Collection", "data", "Item 1", {
+            date_time = { "2024-06-01" },
+            value = { 10.0 },
+        })
+    )");
+
+    expect_lua_error(
+        lua,
+        R"(db:update_time_series_group_by_label("Collection", "data", "Nope", { date_time = { "2024-06-02" } }))",
+        "Element not found");
+    // Dimension validation runs before the label is resolved, so it reports first.
+    expect_lua_error(lua,
+                     R"(db:update_time_series_group_by_label("Collection", "data", "Nope", { value = { 1.0 } }))",
+                     "missing dimension column");
+
+    // Nothing was written by any of the failures.
+    EXPECT_EQ(db.read_time_series_group("Collection", "data", id).size(), 1);
 }

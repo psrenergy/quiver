@@ -201,6 +201,14 @@ void Database::update_time_series_group(const std::string& collection,
     impl_->logger->info("Updated time series {}.{} for id {} with {} rows", collection, group, id, rows.size());
 }
 
+void Database::update_time_series_group_by_label(const std::string& collection,
+                                                 const std::string& group,
+                                                 const std::string& label,
+                                                 const std::vector<std::map<std::string, Value>>& rows) {
+    update_time_series_group(
+        collection, group, impl_->resolve_label(collection, label, "update_time_series_group_by_label", *this), rows);
+}
+
 void Database::upsert_time_series_row(const std::string& collection,
                                       const std::string& group,
                                       int64_t id,
@@ -242,6 +250,14 @@ void Database::upsert_time_series_row(const std::string& collection,
 
     txn.commit();
     impl_->logger->debug("Upserted time series row {}.{} for id {}", collection, group, id);
+}
+
+void Database::upsert_time_series_row_by_label(const std::string& collection,
+                                               const std::string& group,
+                                               const std::string& label,
+                                               const std::map<std::string, Value>& row) {
+    upsert_time_series_row(
+        collection, group, impl_->resolve_label(collection, label, "upsert_time_series_row_by_label", *this), row);
 }
 
 std::vector<Value> Database::read_time_series_row(const std::string& collection,

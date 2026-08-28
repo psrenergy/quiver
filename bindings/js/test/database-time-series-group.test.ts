@@ -179,3 +179,50 @@ describe("readTimeSeriesGroup / updateTimeSeriesGroup (multi-column)", () => {
     }
   });
 });
+
+describe("updateTimeSeriesGroupByLabel", () => {
+  test("writes and clears only the labelled element", () => {
+    const db = Database.fromSchema(":memory:", COLLECTIONS_SCHEMA);
+    try {
+      const item = db.createElement("Collection", { label: "Item 1" });
+      const other = db.createElement("Collection", { label: "Item 2" });
+
+      db.updateTimeSeriesGroupByLabel("Collection", "data", "Item 2", {
+        date_time: ["2024-01-01T00:00:00"],
+        value: [99.0],
+      });
+      db.updateTimeSeriesGroupByLabel("Collection", "data", "Item 1", {
+        date_time: ["2024-01-01T00:00:00", "2024-01-02T00:00:00"],
+        value: [1.5, 2.5],
+      });
+      expect(db.readTimeSeriesGroup("Collection", "data", item).value).toEqual([1.5, 2.5]);
+
+      db.updateTimeSeriesGroupByLabel("Collection", "data", "Item 1", {});
+      expect(db.readTimeSeriesGroup("Collection", "data", item)).toEqual({});
+      expect(db.readTimeSeriesGroup("Collection", "data", other).value).toEqual([99.0]);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("throws on an unresolvable label", () => {
+    const db = Database.fromSchema(":memory:", COLLECTIONS_SCHEMA);
+    try {
+      const item = db.createElement("Collection", { label: "Item 1" });
+      db.updateTimeSeriesGroup("Collection", "data", item, {
+        date_time: ["2024-01-01T00:00:00"],
+        value: [1.5],
+      });
+
+      expect(() =>
+        db.updateTimeSeriesGroupByLabel("Collection", "data", "Nope", {
+          date_time: ["2024-01-01T00:00:00"],
+          value: [1.5],
+        }),
+      ).toThrow(/Element not found: label 'Nope' in collection 'Collection'/);
+      expect(db.readTimeSeriesGroup("Collection", "data", item).value).toEqual([1.5]);
+    } finally {
+      db.close();
+    }
+  });
+});
