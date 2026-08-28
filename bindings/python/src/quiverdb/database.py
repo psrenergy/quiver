@@ -82,6 +82,15 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         return Database(out_db[0])
 
     @staticmethod
+    def validate_migrations(migrations_path: str) -> None:
+        """Apply every up.sql then every down.sql in a migrations directory, in-memory.
+
+        Raises if the round trip leaves any table behind.
+        """
+        lib = get_lib()
+        check(lib.quiver_database_validate_migrations(migrations_path.encode("utf-8")))
+
+    @staticmethod
     def open(
         db_path: str,
         *,

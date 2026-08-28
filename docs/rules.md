@@ -194,3 +194,7 @@ by the function `Quiver.set_migrations_folder` and after that you can create a n
 ### Running migrations
 
 To run migrations you need to use the function `Quiver.apply_migrations!`. There are various versions of this function, each one tailored to make something easier for the user.
+
+### Validating migrations
+
+Only the `up` migrations run when a database is created or updated, so a broken `down.sql` stays invisible until someone needs to revert it. The function `validate_migrations` validates a migrations directory by running the whole round trip — every `up.sql` in version order, then every `down.sql` in reverse — against a throwaway in-memory database, throwing on the first failure. Nothing on disk is touched, and every migration must have a `down.sql`. The round trip must also end with an empty database; leftover tables are named in the error.

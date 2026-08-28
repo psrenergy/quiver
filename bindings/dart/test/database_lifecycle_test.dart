@@ -100,6 +100,29 @@ void main() {
     });
   });
 
+  group('Database validateMigrations', () {
+    test('succeeds for a valid migrations directory', () {
+      expect(
+        () => Database.validateMigrations(migrationsPath),
+        returnsNormally,
+      );
+    });
+
+    test('throws on nonexistent migrations path', () {
+      final badPath = path.join('nonexistent', 'path');
+      expect(
+        () => Database.validateMigrations(badPath),
+        throwsA(
+          isA<DatabaseException>().having(
+            (e) => e.message,
+            'message',
+            equals('Cannot validate_migrations: migrations path not found: $badPath'),
+          ),
+        ),
+      );
+    });
+  });
+
   group('Database open', () {
     test('reopens existing database file', () {
       final tempDir = Directory.systemTemp.createTempSync('quiver_test_');

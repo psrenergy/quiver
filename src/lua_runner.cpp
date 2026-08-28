@@ -417,6 +417,11 @@ struct LuaRunner::Impl {
         bind.set_function("query_integer", &query_integer_lua);
         bind.set_function("query_float", &query_float_lua);
 
+        // Migration round-trip validation — db-scoped and sandboxed like the file I/O below.
+        bind.set_function("validate_migrations", [](Database& self, const std::string& path) {
+            Database::validate_migrations(resolve_sandboxed_path(self, "validate_migrations", path));
+        });
+
         // Binary subsystem file I/O — db-scoped and sandboxed: paths resolve against the directory
         // containing the database file and must stay inside it.
         bind.set_function(

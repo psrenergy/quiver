@@ -216,6 +216,113 @@ TEST_F(MigrationsTestFixture, DatabaseMigrationWithInvalidSQL) {
                  std::runtime_error);
 }
 
+// ============================================================================
+// Migration round-trip tests
+// ============================================================================
+
+TEST_F(MigrationsTestFixture, ValidateMigrationsAppliesAndRevertsSharedFixture) {
+    EXPECT_NO_THROW(quiver::Database::validate_migrations(migrations_path));
+}
+
+TEST_F(MigrationsTestFixture, ValidateMigrationsExecutesUpSql) {
+    fs::create_directories(fs::path(temp_dir) / "1");
+    std::ofstream(fs::path(temp_dir) / "1" / "up.sql") << "THIS IS NOT VALID SQL;";
+    std::ofstream(fs::path(temp_dir) / "1" / "down.sql") << "DROP TABLE Test;";
+
+    try {
+        quiver::Database::validate_migrations(temp_dir);
+        FAIL() << "Expected validate_migrations to throw";
+    } catch (const std::runtime_error& error) {
+        const std::string message = error.what();
+        EXPECT_NE(message.find("Failed to migrate_up: migration 1:"), std::string::npos);
+        EXPECT_NE(message.find("Failed to execute SQL:"), std::string::npos);
+    }
+}
+
+TEST_F(MigrationsTestFixture, ValidateMigrationsExecutesDownSql) {
+    fs::create_directories(fs::path(temp_dir) / "1");
+    std::ofstream(fs::path(temp_dir) / "1" / "up.sql")
+        << "CREATE TABLE Configuration (id INTEGER PRIMARY KEY, label TEXT UNIQUE NOT NULL) STRICT;"
+           "CREATE TABLE Test (id INTEGER PRIMARY KEY, label TEXT UNIQUE NOT NULL) STRICT;";
+    std::ofstream(fs::path(temp_dir) / "1" / "down.sql") << "THIS IS NOT VALID SQL;";
+
+    try {
+        quiver::Database::validate_migrations(temp_dir);
+        FAIL() << "Expected validate_migrations to throw";
+    } catch (const std::runtime_error& error) {
+        const std::string message = error.what();
+        EXPECT_NE(message.find("Failed to migrate_down: migration 1:"), std::string::npos);
+        EXPECT_NE(message.find("Failed to execute SQL:"), std::string::npos);
+    }
+}
+
+TEST_F(MigrationsTestFixture, ValidateMigrationsRejectsLeftoverTables) {
+    // Test is AUTOINCREMENT on purpose: dropping it leaves sqlite_sequence behind for good, which
+    // is not a leftover and must stay out of the message.
+    fs::create_directories(fs::path(temp_dir) / "1");
+    std::ofstream(fs::path(temp_dir) / "1" / "up.sql")
+        << "CREATE TABLE Configuration (id INTEGER PRIMARY KEY, label TEXT UNIQUE NOT NULL) STRICT;"
+           "CREATE TABLE Test (id INTEGER PRIMARY KEY AUTOINCREMENT, label TEXT UNIQUE NOT NULL) STRICT;"
+           "CREATE TABLE Extra (id INTEGER PRIMARY KEY, label TEXT UNIQUE NOT NULL) STRICT;";
+    std::ofstream(fs::path(temp_dir) / "1" / "down.sql") << "DROP TABLE Test;";
+
+    try {
+        quiver::Database::validate_migrations(temp_dir);
+        FAIL() << "Expected validate_migrations to throw";
+    } catch (const std::runtime_error& error) {
+        EXPECT_STREQ(error.what(),
+                     "Failed to validate_migrations: down migrations left tables behind: Configuration, Extra");
+    }
+}
+
+TEST_F(MigrationsTestFixture, ValidateMigrationsRequiresDownSql) {
+    fs::create_directories(fs::path(temp_dir) / "1");
+    std::ofstream(fs::path(temp_dir) / "1" / "up.sql")
+        << "CREATE TABLE Configuration (id INTEGER PRIMARY KEY, label TEXT UNIQUE NOT NULL) STRICT;"
+           "CREATE TABLE Test (id INTEGER PRIMARY KEY, label TEXT UNIQUE NOT NULL) STRICT;";
+
+    try {
+        quiver::Database::validate_migrations(temp_dir);
+        FAIL() << "Expected validate_migrations to throw";
+    } catch (const std::runtime_error& error) {
+        EXPECT_STREQ(error.what(), "Cannot migrate_down: migration 1 has no down.sql file");
+    }
+}
+
+TEST_F(MigrationsTestFixture, ValidateMigrationsValidatesPath) {
+    const auto nonexistent_path = (fs::path(temp_dir) / "missing").string();
+    try {
+        quiver::Database::validate_migrations(nonexistent_path);
+        FAIL() << "Expected validate_migrations to throw";
+    } catch (const std::runtime_error& error) {
+        EXPECT_EQ(std::string(error.what()),
+                  "Cannot validate_migrations: migrations path not found: " + nonexistent_path);
+    }
+
+    fs::create_directories(temp_dir);
+    const auto file_path = fs::path(temp_dir) / "not_a_directory.sql";
+    std::ofstream(file_path) << "SELECT 1;";
+    try {
+        quiver::Database::validate_migrations(file_path.string());
+        FAIL() << "Expected validate_migrations to throw";
+    } catch (const std::runtime_error& error) {
+        EXPECT_EQ(std::string(error.what()),
+                  "Cannot validate_migrations: path is not a directory: " + file_path.string());
+    }
+}
+
+TEST_F(MigrationsTestFixture, ValidateMigrationsRequiresMigrations) {
+    // A real directory holding no numeric migration subdirectories is a path mistake, not a pass:
+    // pointing at "<migrations>/1" instead of "<migrations>" would otherwise succeed vacuously.
+    fs::create_directories(temp_dir);
+    try {
+        quiver::Database::validate_migrations(temp_dir);
+        FAIL() << "Expected validate_migrations to throw";
+    } catch (const std::runtime_error& error) {
+        EXPECT_EQ(std::string(error.what()), "Cannot validate_migrations: no migrations found in " + temp_dir);
+    }
+}
+
 TEST_F(MigrationsTestFixture, MigrationsWithNonNumericDirectories) {
     // Create directories with non-numeric names
     fs::create_directories(fs::path(temp_dir) / "abc");

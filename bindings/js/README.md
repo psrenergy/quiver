@@ -64,6 +64,7 @@ bun run example.ts
 
 - `Database.fromSchema(dbPath, schemaPath)` -- Create database from SQL schema file
 - `Database.fromMigrations(dbPath, migrationsPath)` -- Create database from migrations directory
+- `Database.validateMigrations(migrationsPath)` -- Validate a migrations directory (every `up.sql`, then every `down.sql`, ending with no table left behind) in-memory; throws on failure
 - `close()` -- Close the database connection
 
 ### Create / Delete

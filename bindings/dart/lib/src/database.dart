@@ -106,6 +106,22 @@ class Database {
     }
   }
 
+  /// Validates a migrations directory by applying every `up.sql` in order,
+  /// then every `down.sql` in reverse order, against an in-memory database.
+  /// Throws if the round trip leaves any table behind.
+  static void validateMigrations(String migrationsPath) {
+    final arena = Arena();
+    try {
+      check(
+        bindings.quiver_database_validate_migrations(
+          migrationsPath.toNativeUtf8(allocator: arena).cast(),
+        ),
+      );
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
   /// Opens an existing database file.
   factory Database.open(
     String dbPath, {

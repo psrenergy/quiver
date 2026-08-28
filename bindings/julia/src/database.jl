@@ -36,6 +36,11 @@ function from_migrations(db_path::String, migrations_path::String; kwargs...)
     return Database(out_db[])
 end
 
+function validate_migrations(migrations_path::String)
+    check(C.quiver_database_validate_migrations(migrations_path))
+    return nothing
+end
+
 function open(db_path::String; kwargs...)
     options = build_quiver_database_options(; kwargs...)
     out_db = Ref{Ptr{C.quiver_database}}(C_NULL)

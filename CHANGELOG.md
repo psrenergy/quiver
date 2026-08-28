@@ -9,6 +9,17 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ### Added
 
+- **Migration round-trip validation: `Database::validate_migrations()` / `quiver_database_validate_migrations()`.** Validates a migrations directory in an in-memory database by applying every up migration, then every down migration, and finally checking that no table survives.
+
+  Available in **every layer**: C++, the C API, Julia (`validate_migrations`), Dart
+  (`Database.validateMigrations`), Python (`Database.validate_migrations`), JS (`Database.validateMigrations`),
+  and Lua (`db:validate_migrations`) — the Lua binding is db-scoped and sandboxed to the database
+  directory, like the other file-touching Lua operations.
+
+  A directory with no numbered migration subdirectories throws `Cannot validate_migrations: no
+  migrations found in <path>` rather than passing vacuously. A `down.sql` that runs but forgets a
+  `DROP` throws `Failed to validate_migrations: down migrations left tables behind: <names>`.
+
 - **`upsert_time_series_row_by_label(collection, group, label, row)`.** Inserts or replaces a
   single time-series row addressed by `label` instead of id — the label-addressed counterpart of
   `upsert_time_series_row`. It resolves the label and then delegates, so the dimension-column

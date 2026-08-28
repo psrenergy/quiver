@@ -10,8 +10,9 @@
 // and whether the prose is semantically true.
 //
 // NOTE: the binary/expression subsystems are bound in the native binding and documented below.
-// File-touching operations (db:open_file, db:bin_to_csv, db:csv_to_bin, expr:save) are sandboxed
-// to the database file's directory; the pure-metadata builders stay under the quiver.* global.
+// File-touching operations (db:open_file, db:bin_to_csv, db:csv_to_bin, db:validate_migrations,
+// expr:save) are sandboxed to the database file's directory; the pure-metadata builders stay under
+// the quiver.* global.
 //
 // FORMAT CONVENTION: every db: method appears at least once as the literal token
 // `db:<snake_case_name>`, and every quiver.* function as `quiver.<name>`, so coverage is greppable
@@ -76,9 +77,9 @@ datetime surface — there are no DateTime wrapper helpers, unlike Julia/Dart/Py
   and \`dofile\`/\`loadfile\` are removed (string-form \`load\` stays available). Integer division is
   the Lua 5.4 \`//\` operator — a language operator, unrelated to \`math\`.
 - **Filesystem sandbox.** Every file-touching operation (\`db:export_csv\`, \`db:import_csv\`,
-  \`db:open_file\`, \`db:bin_to_csv\`, \`db:csv_to_bin\`, \`expr:save\`) resolves relative paths against
-  the directory containing the database file and rejects anything outside it (subdirectories are
-  fine; \`..\` escapes and outside absolute paths throw \`Cannot <op>: path '...' escapes the
+  \`db:open_file\`, \`db:bin_to_csv\`, \`db:csv_to_bin\`, \`db:validate_migrations\`, \`expr:save\`) resolves
+  relative paths against the directory containing the database file and rejects anything outside it
+  (subdirectories are fine; \`..\` escapes and outside absolute paths throw \`Cannot <op>: path '...' escapes the
   database directory ...\`). On an in-memory database these operations throw
   \`Cannot <op>: database is in-memory, file operations are unavailable\`.
 - **Output.** A script can \`return\` one value and the host receives it as JSON — prefer this over
@@ -134,9 +135,14 @@ db:describe()                      -- string: whole-DB text report (returns it, 
 db:describe_collection(collection) -- string: one collection's structure (text report)
 db:summarize_collection(collection)-- string: per-scalar null/non-null counts, low-cardinality
                                    --         integer value distributions, per-group sizes
+db:validate_migrations(path)       -- validate a migrations dir (up then down) in-memory; no return
 \`\`\`
 
 All three \`describe*\`/\`summarize*\` methods **return** a string — \`print()\` it to see it.
+
+\`db:validate_migrations(path)\` applies every \`up.sql\` in version order, then every \`down.sql\` in
+reverse, against a throwaway in-memory database — nothing in \`db\` itself is touched. The round trip
+must end with an empty database; leftover tables are named in the error.
 
 ---
 
