@@ -405,6 +405,13 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
   names the id form (`Cannot update_element: ...`). Passing `label` among the attributes to
   `update_element_by_label` renames the element; the lookup has already run, so the write lands
   on the resolved id.
+- Relation updates: `update_relation(collection_from, collection_to, relation_type, id,
+  target_label)` and `update_relation_by_label(..., label, target_label)` derive the relation
+  column as `lowercase(collection_to) + "_" + relation_type`, verify that it is a foreign key to
+  `collection_to`, and write the target label; `std::nullopt` clears the relation. The write
+  delegates to `update_element`, so the FK-label resolution and the Pattern 2 missing-id check are
+  that method's. This is the scalar-relation writer: a relation that lives in a vector, set, or
+  time-series group is a list of targets, so it is written by the group writer that owns it.
 - Element count: `number_of_elements(collection)` returns the current row count from the
   collection's main table (`COUNT(*)`), not its maximum ID or group-row count. Any table in the
   schema is accepted, so naming a group table reports that table's own row count.

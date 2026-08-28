@@ -5,7 +5,21 @@ All notable changes to Quiver are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entries that require
 callers to change something are prefixed **BREAKING** and say what to do.
 
-## [0.10.2] — unreleased
+## [0.10.3] — unreleased
+
+### Added
+
+- **`update_relation(collection_from, collection_to, relation_type, id, target_label)` and
+  `update_relation_by_label(..., label, target_label)`.** Points one element's scalar foreign-key
+  relation at another element, named by the target's `label`; no target label clears it. The
+  column is derived by the naming convention — `lowercase(collection_to) + "_" + relation_type`,
+  so `update_relation("Child", "Parent", "id", child, "Parent A")` writes `Child.parent_id` — and
+  must be a foreign key to `collection_to`, otherwise Pattern 1 `Cannot update_relation: ...`. The
+  write delegates to `update_element`, so the target-label resolution and the missing-source-id
+  check are that method's. A relation that lives in a group needs the matching group writer
+  instead. C++ and C API in this release; the bindings follow separately.
+
+## [0.10.2] — 2026-08-27
 
 ### Added
 
@@ -205,6 +219,7 @@ are functionally identical to 0.10.0.
   `read_time_series_group` emits for a NULL STRING cell — so feeding a read result back with the
   mask stripped was UB. A NULL entry, or a NULL per-column data pointer, is now SQL NULL.
 
+[0.10.3]: https://github.com/psrenergy/quiver/compare/v0.10.2...v0.10.3
 [0.10.2]: https://github.com/psrenergy/quiver/compare/v0.10.1...v0.10.2
 [0.10.1]: https://github.com/psrenergy/quiver/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/psrenergy/quiver/compare/v0.9.16...v0.10.0

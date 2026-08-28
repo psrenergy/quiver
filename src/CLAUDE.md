@@ -227,6 +227,13 @@ impl_->logger->debug("Opening database: {}", path);
   `Cannot update_element: ...` and the group/row writers' column validation reports
   `Cannot update_{vector,set,time_series}_group: ...` / `Cannot upsert_time_series_row: ...`,
   naming the operation that validated.
+- **`update_relation` is a validated `update_element`** (`database_update.cpp`): the derived column
+  is checked against the schema through the `TableDefinition::get_foreign_key` accessor added for
+  it in `schema.cpp`, then written as a one-attribute `Element` (`std::nullopt` becomes
+  `Element::set_null`). It resolves no label of its own — binding the target label to an INTEGER FK
+  column is already `Impl::resolve_fk_label`'s job, and the missing-id check is `require_element`'s
+  — so failures past the derivation report `Cannot update_element: ...`.
+
 - **Schema metadata loads lazily** (`Impl::require_schema`): the `Database(path, options)`
   constructor does not read it, so the first metadata/CRUD call does. `schema` and `type_validator`
   are `mutable` (const readers trigger the load) and `load_schema_metadata()` is `const` and
