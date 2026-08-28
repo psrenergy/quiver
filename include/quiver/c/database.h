@@ -30,7 +30,7 @@ QUIVER_C_API quiver_error_t quiver_database_from_migrations(const char* db_path,
                                                             const char* migrations_path,
                                                             const quiver_database_options_t* options,
                                                             quiver_database_t** out_db);
-QUIVER_C_API quiver_error_t quiver_database_test_migrations(const char* migrations_path);
+QUIVER_C_API quiver_error_t quiver_database_validate_migrations(const char* migrations_path);
 QUIVER_C_API quiver_error_t quiver_database_from_schema(const char* db_path,
                                                         const char* schema_path,
                                                         const quiver_database_options_t* options,

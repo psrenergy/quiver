@@ -246,17 +246,17 @@ TEST_F(TempFileFixture, FromMigrationsInvalidPath) {
 // Migration round-trip tests
 // ============================================================================
 
-TEST_F(TempFileFixture, TestMigrationsSucceeds) {
-    EXPECT_EQ(quiver_database_test_migrations(SCHEMA_PATH("schemas/migrations").c_str()), QUIVER_OK);
+TEST_F(TempFileFixture, ValidateMigrationsSucceeds) {
+    EXPECT_EQ(quiver_database_validate_migrations(SCHEMA_PATH("schemas/migrations").c_str()), QUIVER_OK);
 }
 
-TEST_F(TempFileFixture, TestMigrationsPropagatesFailure) {
-    EXPECT_EQ(quiver_database_test_migrations("nonexistent/migrations"), QUIVER_ERROR);
-    EXPECT_STREQ(quiver_get_last_error(), "Cannot test_migrations: migrations path not found: nonexistent/migrations");
+TEST_F(TempFileFixture, ValidateMigrationsPropagatesFailure) {
+    EXPECT_EQ(quiver_database_validate_migrations("nonexistent/migrations"), QUIVER_ERROR);
+    EXPECT_STREQ(quiver_get_last_error(), "Cannot validate_migrations: migrations path not found: nonexistent/migrations");
 }
 
-TEST_F(TempFileFixture, TestMigrationsRejectsNullPath) {
-    EXPECT_EQ(quiver_database_test_migrations(nullptr), QUIVER_ERROR);
+TEST_F(TempFileFixture, ValidateMigrationsRejectsNullPath) {
+    EXPECT_EQ(quiver_database_validate_migrations(nullptr), QUIVER_ERROR);
     EXPECT_STREQ(quiver_get_last_error(), "Null argument: migrations_path");
 }
 

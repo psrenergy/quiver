@@ -9,16 +9,16 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ### Added
 
-- **Migration round-trip validation: `Database::test_migrations()` / `quiver_database_test_migrations()`.** Validates a migrations directory in an in-memory database by applying every up migration, then every down migration, and finally checking that no table survives.
+- **Migration round-trip validation: `Database::validate_migrations()` / `quiver_database_validate_migrations()`.** Validates a migrations directory in an in-memory database by applying every up migration, then every down migration, and finally checking that no table survives.
 
-  Available in **every layer**: C++, the C API, Julia (`test_migrations`), Dart
-  (`Database.testMigrations`), Python (`Database.test_migrations`), JS (`Database.testMigrations`),
-  and Lua (`db:test_migrations`) — the Lua binding is db-scoped and sandboxed to the database
+  Available in **every layer**: C++, the C API, Julia (`validate_migrations`), Dart
+  (`Database.validateMigrations`), Python (`Database.validate_migrations`), JS (`Database.validateMigrations`),
+  and Lua (`db:validate_migrations`) — the Lua binding is db-scoped and sandboxed to the database
   directory, like the other file-touching Lua operations.
 
-  A directory with no numbered migration subdirectories throws `Cannot test_migrations: no
+  A directory with no numbered migration subdirectories throws `Cannot validate_migrations: no
   migrations found in <path>` rather than passing vacuously. A `down.sql` that runs but forgets a
-  `DROP` throws `Failed to test_migrations: down migrations left tables behind: <names>`.
+  `DROP` throws `Failed to validate_migrations: down migrations left tables behind: <names>`.
 
 - **`delete_element_by_label(collection, label)`.** Deletes an element addressed by its `label`
   instead of its id, for callers that already know the name and would otherwise round-trip through

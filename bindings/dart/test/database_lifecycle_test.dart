@@ -100,10 +100,10 @@ void main() {
     });
   });
 
-  group('Database testMigrations', () {
+  group('Database validateMigrations', () {
     test('succeeds for a valid migrations directory', () {
       expect(
-        () => Database.testMigrations(migrationsPath),
+        () => Database.validateMigrations(migrationsPath),
         returnsNormally,
       );
     });
@@ -111,12 +111,12 @@ void main() {
     test('throws on nonexistent migrations path', () {
       final badPath = path.join('nonexistent', 'path');
       expect(
-        () => Database.testMigrations(badPath),
+        () => Database.validateMigrations(badPath),
         throwsA(
           isA<DatabaseException>().having(
             (e) => e.message,
             'message',
-            equals('Cannot test_migrations: migrations path not found: $badPath'),
+            equals('Cannot validate_migrations: migrations path not found: $badPath'),
           ),
         ),
       );

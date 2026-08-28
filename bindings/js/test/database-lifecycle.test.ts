@@ -86,20 +86,20 @@ describe("Database lifecycle", () => {
     }).toThrow(QuiverError);
   });
 
-  test("testMigrations succeeds for a valid migrations directory", () => {
+  test("validateMigrations succeeds for a valid migrations directory", () => {
     // Should not throw
-    Database.testMigrations(MIGRATIONS_PATH);
+    Database.validateMigrations(MIGRATIONS_PATH);
   });
 
-  test("testMigrations with invalid path throws QuiverError", () => {
+  test("validateMigrations with invalid path throws QuiverError", () => {
     const badPath = join("nonexistent", "path");
     try {
-      Database.testMigrations(badPath);
+      Database.validateMigrations(badPath);
       throw new Error("Should have thrown");
     } catch (e) {
       expect(e).toBeInstanceOf(QuiverError);
       expect((e as QuiverError).message).toEqual(
-        `Cannot test_migrations: migrations path not found: ${badPath}`,
+        `Cannot validate_migrations: migrations path not found: ${badPath}`,
       );
     }
   });

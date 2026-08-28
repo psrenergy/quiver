@@ -34,7 +34,7 @@ public:
 
     static Database
     from_schema(const std::string& db_path, const std::string& schema_path, const DatabaseOptions& options = {});
-    static void test_migrations(const std::string& migrations_path);
+    static void validate_migrations(const std::string& migrations_path);
     bool is_healthy() const;
 
     int64_t current_version() const;

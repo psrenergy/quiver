@@ -36,8 +36,8 @@ function from_migrations(db_path::String, migrations_path::String; kwargs...)
     return Database(out_db[])
 end
 
-function test_migrations(migrations_path::String)
-    check(C.quiver_database_test_migrations(migrations_path))
+function validate_migrations(migrations_path::String)
+    check(C.quiver_database_validate_migrations(migrations_path))
     return nothing
 end
 

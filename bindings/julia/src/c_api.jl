@@ -132,8 +132,8 @@ function quiver_database_from_migrations(db_path, migrations_path, options, out_
     @ccall libquiver_c.quiver_database_from_migrations(db_path::Ptr{Cchar}, migrations_path::Ptr{Cchar}, options::Ptr{quiver_database_options_t}, out_db::Ptr{Ptr{quiver_database_t}})::quiver_error_t
 end
 
-function quiver_database_test_migrations(migrations_path)
-    @ccall libquiver_c.quiver_database_test_migrations(migrations_path::Ptr{Cchar})::quiver_error_t
+function quiver_database_validate_migrations(migrations_path)
+    @ccall libquiver_c.quiver_database_validate_migrations(migrations_path::Ptr{Cchar})::quiver_error_t
 end
 
 function quiver_database_from_schema(db_path, schema_path, options, out_db)
@@ -202,10 +202,6 @@ end
 
 function quiver_database_delete_element_by_label(db, collection, label)
     @ccall libquiver_c.quiver_database_delete_element_by_label(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, label::Ptr{Cchar})::quiver_error_t
-end
-
-function quiver_database_number_of_elements(db, collection, out_count)
-    @ccall libquiver_c.quiver_database_number_of_elements(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, out_count::Ptr{Int64})::quiver_error_t
 end
 
 function quiver_database_read_scalar_integers(db, collection, attribute, out_values, out_mask, out_count)
@@ -298,6 +294,10 @@ end
 
 function quiver_database_read_element_ids(db, collection, out_ids, out_count)
     @ccall libquiver_c.quiver_database_read_element_ids(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, out_ids::Ptr{Ptr{Int64}}, out_count::Ptr{Csize_t})::quiver_error_t
+end
+
+function quiver_database_number_of_elements(db, collection, out_count)
+    @ccall libquiver_c.quiver_database_number_of_elements(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, out_count::Ptr{Int64})::quiver_error_t
 end
 
 struct quiver_scalar_metadata_t

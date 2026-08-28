@@ -68,11 +68,11 @@ export class Database {
    * Applies every migration's up.sql in order, then every down.sql in reverse.
    * Throws on failure, including a round trip that leaves any table behind.
    */
-  static testMigrations(migrationsPath: string): void {
+  static validateMigrations(migrationsPath: string): void {
     const lib = getSymbols();
     const migrPathBuf = toCString(migrationsPath);
 
-    check(lib.quiver_database_test_migrations(migrPathBuf.buf));
+    check(lib.quiver_database_validate_migrations(migrPathBuf.buf));
   }
 
   close(): void {

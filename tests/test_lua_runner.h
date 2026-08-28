@@ -18,7 +18,7 @@ protected:
 
 // File-backed database in a dedicated per-test temp directory — the sandbox root for the
 // db-scoped Lua file operations (db:open_file, db:bin_to_csv, db:csv_to_bin, db:export_csv,
-// db:import_csv, db:test_migrations, expr:save). TearDown removes the directory wholesale (database, log file,
+// db:import_csv, db:validate_migrations, expr:save). TearDown removes the directory wholesale (database, log file,
 // and any .qvr/.toml/.csv outputs); test-local Database objects are destroyed before TearDown.
 class LuaSandboxTest : public ::testing::Test {
 protected:

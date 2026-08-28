@@ -257,16 +257,16 @@ Database Database::from_migrations(const std::string& db_path,
     return db;
 }
 
-void Database::test_migrations(const std::string& migrations_path) {
+void Database::validate_migrations(const std::string& migrations_path) {
     namespace fs = std::filesystem;
     if (!fs::exists(migrations_path)) {
-        throw std::runtime_error("Cannot test_migrations: migrations path not found: " + migrations_path);
+        throw std::runtime_error("Cannot validate_migrations: migrations path not found: " + migrations_path);
     }
     if (!fs::is_directory(migrations_path)) {
-        throw std::runtime_error("Cannot test_migrations: path is not a directory: " + migrations_path);
+        throw std::runtime_error("Cannot validate_migrations: path is not a directory: " + migrations_path);
     }
     if (Migrations(migrations_path).empty()) {
-        throw std::runtime_error("Cannot test_migrations: no migrations found in " + migrations_path);
+        throw std::runtime_error("Cannot validate_migrations: no migrations found in " + migrations_path);
     }
 
     Database db(":memory:", {.console_level = LogLevel::Off});
@@ -279,7 +279,7 @@ void Database::test_migrations(const std::string& migrations_path) {
         for (const auto& table : leftovers) {
             names += (names.empty() ? "" : ", ") + table;
         }
-        throw std::runtime_error("Failed to test_migrations: down migrations left tables behind: " + names);
+        throw std::runtime_error("Failed to validate_migrations: down migrations left tables behind: " + names);
     }
 }
 

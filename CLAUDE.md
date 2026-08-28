@@ -77,7 +77,7 @@ Settled questions — don't relitigate without the user; each was decided delibe
   `helper_maps.jl` is a second documented Julia-only exception (see convenience methods below).
 - **Lua file operations are db-scoped and sandboxed to the database directory.** Every
   file-touching Lua operation (`db:open_file`, `db:bin_to_csv`, `db:csv_to_bin`, `db:export_csv`,
-  `db:import_csv`, `db:test_migrations`, `expr:save`) resolves relative paths against the directory
+  `db:import_csv`, `db:validate_migrations`, `expr:save`) resolves relative paths against the directory
   containing the database file and rejects — reads and writes alike — anything that escapes it
   (subdirectories OK; checked via `weakly_canonical` with strict containment). In-memory databases
   (`:memory:`) reject all file operations. `dofile`/`loadfile` are removed from the Lua environment
@@ -387,9 +387,9 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
 
 ### Database Class
 - Factory methods: `from_schema()`, `from_migrations()` — `DatabaseOptions` (`read_only`, `console_level`) exposed as optional parameters in every binding
-- `test_migrations(migrations_path)` — validates a migrations directory (up then down) against a
+- `validate_migrations(migrations_path)` — validates a migrations directory (up then down) against a
   throwaway in-memory database; no out-parameter, returns nothing. Bound in every layer, including
-  Lua (`db:test_migrations`, db-scoped and sandboxed — see the design decision above). A directory
+  Lua (`db:validate_migrations`, db-scoped and sandboxed — see the design decision above). A directory
   with no numbered migration subdirectories is an error here, and so is a round trip that ends with
   tables still standing.
 - Transaction control: `begin_transaction()`, `commit()`, `rollback()`, `in_transaction()`
@@ -491,7 +491,7 @@ The rules are mechanical: given any C++ method name, you can derive the equivale
 |----------|-----|-------|-------|------|-----|
 | Factory | `Database::from_schema()` | `quiver_database_from_schema()` | `from_schema()` | `Database.fromSchema()` | N/A |
 | Open existing | `Database(path, options)` | `quiver_database_open()` | `open()` | `Database.open()` | N/A |
-| Test migrations | `Database::test_migrations()` | `quiver_database_test_migrations()` | `test_migrations()` | `Database.testMigrations()` | `db:test_migrations()` |
+| Validate migrations | `Database::validate_migrations()` | `quiver_database_validate_migrations()` | `validate_migrations()` | `Database.validateMigrations()` | `db:validate_migrations()` |
 | Transaction | `begin_transaction()` | `quiver_database_begin_transaction()` | `begin_transaction!()` | `beginTransaction()` | `begin_transaction()` |
 | Transaction | `commit()` | `quiver_database_commit()` | `commit!()` | `commit()` | `commit()` |
 | Transaction | `rollback()` | `quiver_database_rollback()` | `rollback!()` | `rollback()` | `rollback()` |

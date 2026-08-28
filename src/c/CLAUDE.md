@@ -22,7 +22,7 @@ src/c/
   internal.h              # Shared structs (quiver_database, quiver_element, quiver_binary_file, quiver_binary_metadata, quiver_expression), QUIVER_REQUIRE macro
   database_helpers.h      # Marshaling templates, string array copiers, metadata converters
   options.cpp             # Option defaults: quiver_database_options_default, quiver_csv_options_default
-  database.cpp            # Lifecycle: open, close, factory methods, test_migrations, describe
+  database.cpp            # Lifecycle: open, close, factory methods, validate_migrations, describe
   database_options.h      # Option converters: convert_database_options, convert_csv_options
   database_create.cpp     # quiver_database_create_element
   database_update.cpp     # quiver_database_update_element
