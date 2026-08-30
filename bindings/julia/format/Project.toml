@@ -1,5 +1,8 @@
 [deps]
-JuliaFormatter = "98e50ef6-434e-11e9-1051-2b60c6c9e899"
+Style = "dd40c01a-6b55-4ace-b2f4-4b880f6e5019"
+
+[sources]
+Style = { url = "https://github.com/psrenergy/Style.jl" }
 
 [compat]
-JuliaFormatter = "2"
+Style = "=0.1.0"
