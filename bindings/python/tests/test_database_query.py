@@ -166,7 +166,11 @@ class TestQueryDateTime:
         assert result.month == 1
 
     def test_query_date_time_invalid_format_raises_valueerror(self, db: Database) -> None:
-        db.create_element("Configuration", label="item1", date_attribute="not-a-date")
+        # create_element rejects an unparseable DATE_TIME value, so a bad date can only reach the
+        # column through raw SQL or a database written before that validation existed. The reader
+        # still has to cope with it.
+        db.create_element("Configuration", label="item1", date_attribute="2025-06-15T10:30:00")
+        db.query_string("UPDATE Configuration SET date_attribute = 'not-a-date' WHERE label = 'item1'")
         with pytest.raises(ValueError):
             db.query_date_time("SELECT date_attribute FROM Configuration WHERE label = 'item1'")
 

@@ -290,4 +290,24 @@ describe("scalar type coercion policy", () => {
       db.close();
     }
   });
+
+  // all_types.sql has no date_ column; basic.sql is the one with a DATE_TIME scalar.
+  test("rejects an unparseable DATE_TIME value", () => {
+    const basicSchema = join(__dirname, "..", "..", "..", "tests", "schemas", "valid", "basic.sql");
+    const db = Database.fromSchema(":memory:", basicSchema);
+    try {
+      // JS keeps a string-based datetime surface, so the core is the only thing checking the
+      // format. Full grammar lives in the C++ suite.
+      expect(() =>
+        db.createElement("Configuration", { label: "Bad", date_attribute: "2005-01" }),
+      ).toThrow(QuiverError);
+
+      db.createElement("Configuration", { label: "Ok", date_attribute: "2005-01-01" });
+      expect(db.queryString("SELECT date_attribute FROM Configuration WHERE label = 'Ok'")).toEqual(
+        "2005-01-01",
+      );
+    } finally {
+      db.close();
+    }
+  });
 });

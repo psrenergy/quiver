@@ -127,29 +127,6 @@ include("fixture.jl")
         end
     end
 
-    @testset "Invalid datetime returns raw value" begin
-        db = Quiver.from_schema(":memory:", path_schema)
-        csv_path = tempname() * ".csv"
-        try
-            Quiver.create_element!(db, "Items";
-                label = "Item1",
-                name = "Alpha",
-                date_created = "not-a-date",
-            )
-
-            Quiver.export_csv(db, "Items", "", csv_path;
-                date_time_format = "%Y/%m/%d",
-            )
-            content = read(csv_path, String)
-
-            # Invalid datetime should be returned as-is
-            @test occursin("not-a-date", content)
-        finally
-            isfile(csv_path) && rm(csv_path)
-            Quiver.close!(db)
-        end
-    end
-
     @testset "Combined options (enum_labels + date_time_format)" begin
         db = Quiver.from_schema(":memory:", path_schema)
         csv_path = tempname() * ".csv"

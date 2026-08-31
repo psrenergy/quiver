@@ -357,6 +357,29 @@ TEST(DatabaseCApi, CreateElementWithDatetime) {
     quiver_database_close(db);
 }
 
+TEST(DatabaseCApi, CreateElementWithInvalidDatetime) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    quiver_element_t* element = nullptr;
+    ASSERT_EQ(quiver_element_create(&element), QUIVER_OK);
+    quiver_element_set_string(element, "label", "Config 1");
+    quiver_element_set_string(element, "date_attribute", "2005-01");
+
+    // The core's rejection reaches the C API through the one error channel; the full grammar is
+    // covered in the C++ suite.
+    int64_t id = 0;
+    EXPECT_EQ(quiver_database_create_element(db, "Configuration", element, &id), QUIVER_ERROR);
+    std::string err = quiver_get_last_error();
+    EXPECT_NE(err.find("Cannot create_element: invalid DATE_TIME value for column 'date_attribute'"), std::string::npos)
+        << err;
+
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
+    quiver_database_close(db);
+}
+
 // ============================================================================
 // FK label resolution in create_element
 // ============================================================================

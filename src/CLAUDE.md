@@ -216,6 +216,20 @@ impl_->logger->debug("Opening database: {}", path);
   matches `INTEGER` or `REAL` (int-for-REAL coercion), double matches `REAL` only (a float into an
   `INTEGER` column is rejected), string matches `TEXT`/`INTEGER`(FK label)/`DATE_TIME`. Keep the two
   in sync (root design decision).
+- **DATE_TIME content is checked by both halves of that policy, through one predicate**:
+  `datetime::is_valid_iso8601` (`utils/datetime.h`). `TypeValidator::validate_value` calls it in its
+  string branch (covering scalar create/update and every vector/set array write, so it inherits the
+  validate-before-DELETE ordering below); `validate_time_series_row` (`database_time_series.cpp`)
+  calls it in a **separate** guard next to `value_matches_type`. Do not "restore symmetry" by moving
+  the check into `value_matches_type`: that function decides the *variant's shape*, and TEXT into a
+  DATE_TIME column is the correct shape — routing a content failure through its `bool` would emit
+  `column 'date_time' has type DATE_TIME but received TEXT`, which is a lie. The two guards phrase
+  their own messages; the rule itself lives in exactly one function.
+  `parse_datetime_import` (`database_csv_import.cpp`) is the **third** gate and needs to exist:
+  `import_csv` writes through a raw `INSERT` and never reaches `TypeValidator`, and its
+  custom-`date_time_format` branch parses with the caller's `get_time` format, which cannot see an
+  impossible calendar day (`"%d/%m/%Y"` on `31/02/2024`). It therefore runs `is_valid_iso8601` on
+  the string it canonicalizes, so import is held to the same grammar as the other writers.
 - **`update_element` / `delete_element` / the vector+set group writers verify the id exists** (via
   `Impl::require_element`) and throw Pattern 2 `"Element not found: ..."` — no silent no-op.
   The two time-series writers do not: `upsert_time_series_row` always writes one row, so a bad id
@@ -253,7 +267,23 @@ impl_->logger->debug("Opening database: {}", path);
   equal `parameters.size()`, else it throws — the single guard for every `query_*` and internal
   parameterized statement.
 - **Utilities**: `quiver::string::new_c_str` / `trim` in `src/utils/string.h`; ISO 8601
-  (`YYYY-MM-DDTHH:MM:SS`) parse/format helpers in `src/utils/datetime.h`;
+  parse/format helpers in `src/utils/datetime.h` — `parse_iso8601` accepts `YYYY-MM-DD` with an
+  optional `THH:MM:SS`/` HH:MM:SS`, every field fixed-width and zero-padded, year `0001`-`9999`,
+  the calendar day must exist, no leap second, and the whole string must be consumed. It is a
+  **hand-rolled shape-mask match, deliberately not `std::get_time`** — the accepted length is 10 or
+  19 and every character is checked against `"dddd-dd-ddTdd:dd:dd"` (`d` = digit, `T` = `T` or a
+  space, everything else literal), so the length check alone is what forbids a partial or trailing
+  anything. get_time instead: its field widths are
+  *maxima*, so it also matches `2024-1-5`, `24-01-15` and `T1:30:00`, and on MSVC it does not set
+  failbit when the input ends mid-format, so `T10:30` passed on Windows and failed on Linux. Every
+  one of those is rejected by Python's `fromisoformat` or Dart's `DateTime.parse`, i.e. get_time
+  cannot express the intersection band the write gate promises. (It was also locale-sensitive, and
+  a literal space in its format means *skip zero or more spaces*, which accepts
+  `2024-01-0110:30:00`.) `parse_iso8601` fills `tm_wday`/`tm_yday` too — nothing else does, and
+  `format_datetime` feeds the `tm` to `strftime`, so `%a`/`%A`/`%j`/`%U`/`%W` would otherwise
+  report every date as a Sunday on day 001. `is_valid_iso8601` trims before parsing, because
+  `Database::execute` trims every bound string and the gate must judge the value that is stored.
+  `format_utc` always writes the full `T` form;
   use `is_date_time_column` (`data_type.h`) for `date_`-prefix checks (one legacy hand-rolled
   `starts_with("date_")` remains in `schema_validator.cpp`).
 

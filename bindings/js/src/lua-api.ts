@@ -60,15 +60,21 @@ attributes, time-series rows, and query parameters. A skipped positional query p
 shift every later parameter and bind NULL to the trailing placeholder, so this is rejected loudly.
 
 Dates are plain strings in ISO 8601 format: \`YYYY-MM-DDTHH:MM:SS\`. (Lua keeps a string-based
-datetime surface — there are no DateTime wrapper helpers, unlike Julia/Dart/Python.)
+datetime surface — there are no DateTime wrapper helpers, unlike Julia/Dart/Python.) The time part
+is optional, so \`"2024-01-15"\` is also valid, and a space may replace the \`T\`. Every field is
+fixed-width and zero-padded. Anything shorter or malformed — \`"2005"\`, \`"2005-01"\`,
+\`"2024-02-31"\`, \`"2024-1-5"\`, \`"2024-01-15T10:30"\` — is **rejected when you write it**, not
+silently stored. The value is stored exactly as written; a date-only value is not padded to
+midnight.
 
 ---
 
 ## Critical rules
 
 - **Type coercion.** An integer is accepted for a REAL column (coerced to real on insert); a float
-  is rejected for an INTEGER column. Other type mismatches raise a validation error and roll the
-  whole script back.
+  is rejected for an INTEGER column. A string bound to a \`date_*\` column must parse as ISO 8601
+  (\`YYYY-MM-DD\`, optionally \`THH:MM:SS\` or \` HH:MM:SS\`). Other type mismatches raise a
+  validation error and roll the whole script back.
 - **Errors abort the script.** Any error thrown by a \`db:\` call stops the script and surfaces as
   \`Failed to run Lua script: <message>\`. Validation failures roll back whatever the current
   transaction covered.
