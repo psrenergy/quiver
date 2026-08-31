@@ -7,7 +7,6 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdio>
-#include <cstring>
 #include <ctime>
 #include <filesystem>
 #include <fstream>
@@ -129,7 +128,7 @@ static std::string parse_datetime_import(const std::string& raw_value, const std
     }
 
     char buffer[64] = {};
-    if (parsed) {
+    if (parsed && tm.tm_mday >= 1) {
         std::strftime(buffer, sizeof(buffer), "%Y-%m-%dT%H:%M:%S", &tm);
     }
     // Import writes through a raw INSERT and never reaches TypeValidator, so the canonical form is

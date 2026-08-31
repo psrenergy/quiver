@@ -590,6 +590,21 @@ TEST(DatabaseCSV, ImportCSV_Scalar_CustomFormatImpossibleDay_Throws) {
     fs::remove(csv_path);
 }
 
+// A format without %d leaves tm_mday at 0, which strftime is not allowed to format - MSVC kills the
+// process rather than returning. Must be a plain error like any other unparsable timestamp.
+TEST(DatabaseCSV, ImportCSV_Scalar_CustomFormatWithoutDay_Throws) {
+    auto db = make_db();
+    auto csv_path = temp_csv("ImportCustomFormatWithoutDay");
+    write_csv_file(csv_path.string(), "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,,,2024-01,\n");
+
+    quiver::CSVOptions options;
+    options.date_time_format = "%Y-%m";
+    EXPECT_THROW(db.import_csv("Items", "", csv_path.string(), options), std::runtime_error);
+    EXPECT_EQ(db.number_of_elements("Items"), 0);
+
+    fs::remove(csv_path);
+}
+
 TEST(DatabaseCSV, ImportCSV_Scalar_DuplicateEntries_Throws) {
     auto db = make_db();
     auto csv_path = temp_csv("ImportDuplicates");
