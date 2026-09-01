@@ -711,3 +711,80 @@ TEST(Database, CreateScalarTypeCoercionPolicy) {
     ASSERT_EQ(floats.size(), 1);
     EXPECT_DOUBLE_EQ(*floats[0], 7.0);
 }
+
+// The whole DATE_TIME grammar lives here; every other layer only needs one representative
+// rejection. A value that survives this write must be readable by every binding's date parser.
+TEST(Database, CreateScalarDateTimeGrammar) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    // The last entry is padded: Database::execute trims every bound string, so the validator has to
+    // judge the trimmed value or it would reject a write that stores perfectly well.
+    const std::vector<std::string> accepted = {
+        "2024-01-15", "2024-01-15T10:30:00", "2024-01-15 10:30:00", "  2024-02-29T23:59:59  "};
+    for (size_t i = 0; i < accepted.size(); ++i) {
+        quiver::Element element;
+        element.set("label", std::string("Ok ") + std::to_string(i)).set("date_attribute", accepted[i]);
+        EXPECT_NO_THROW(db.create_element("Configuration", element)) << "should accept " << accepted[i];
+    }
+
+    // Stored verbatim - the core validates, it never normalizes (bar execute's trim).
+    auto stored = db.read_scalar_strings("Configuration", "date_attribute");
+    ASSERT_EQ(stored.size(), accepted.size());
+    EXPECT_EQ(*stored[0], "2024-01-15");
+    EXPECT_EQ(*stored[3], "2024-02-29T23:59:59");
+
+    // Every entry below is rejected by at least one of Python's fromisoformat, Julia's DateTime and
+    // Dart's DateTime.parse, which is the band this validator has to hold: a value the core stores
+    // must be readable by every binding.
+    const std::vector<std::string> rejected = {
+        "",                             // empty
+        "2005",                         // year only
+        "2005-01",                      // year-month: the reported bug
+        "not-a-date",                   // no date at all
+        "2024-13-01",                   // month out of range
+        "2024-02-31",                   // impossible calendar day
+        "2023-02-29",                   // leap day in a non-leap year
+        "2024-01-15junk",               // trailing garbage after a date
+        "2024-01-15T10:30:00 garbage",  // trailing garbage after a time
+        // Fields are fixed-width and zero-padded. std::get_time treats a width as a maximum, so
+        // these all used to pass while Python and Dart reject them.
+        "2024-1-5",            // unpadded month and day
+        "2024-01-5",           // unpadded day
+        "24-01-15",            // two-digit year (Julia silently reads it as year 24)
+        "999-01-15",           // three-digit year
+        "0000-01-01",          // year 0: below Python's MINYEAR
+        "+2024-01-15",         // signed year (accepted by MSVC's get_time, not by libstdc++'s)
+        "2024-01-15T1:30:00",  // unpadded hour
+        "2024-01-15T10:3:00",  // unpadded minute
+        "2024-01-15T10:30:0",  // unpadded second
+        // A truncated time part used to be accepted on MSVC and rejected on libstdc++.
+        "2024-01-15T10:30",
+        "2024-01-15T10",
+        // Out-of-range time fields. A leap second is not portable: Python and Julia throw on it,
+        // Dart silently rolls the clock to the next minute.
+        "2024-01-15T24:00:00",
+        "2024-01-15T10:60:00",
+        "2024-01-15T10:30:60",
+        // The whole-string tightening: trailing text used to parse and no longer does.
+        "2024-01-15T10:30:00.123",
+        "2024-01-15T10:30:00Z",
+        "2024-01-15T10:30:00+03:00",
+        // Not the separators we accept.
+        "20240115",
+        "2024/01/15",
+        "2024-01-15\t10:30:00"};
+    for (const auto& value : rejected) {
+        quiver::Element element;
+        element.set("label", std::string("Bad ") + value).set("date_attribute", value);
+        try {
+            db.create_element("Configuration", element);
+            ADD_FAILURE() << "should reject '" << value << "'";
+        } catch (const std::runtime_error& e) {
+            EXPECT_NE(std::string(e.what()).find("Cannot create_element: invalid DATE_TIME value for column "
+                                                 "'date_attribute'"),
+                      std::string::npos)
+                << "wrong message for '" << value << "': " << e.what();
+        }
+    }
+}

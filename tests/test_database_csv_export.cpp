@@ -423,14 +423,19 @@ TEST(DatabaseCSV, ExportCSV_DateTimeFormat_FormatsDateColumns) {
     fs::remove(csv_path);
 }
 
-TEST(DatabaseCSV, ExportCSV_DateTimeFormat_InvalidDateReturnsRaw) {
+TEST(DatabaseCSV, ExportCSV_DateTimeFormat_LegacyInvalidDateReturnsRaw) {
     auto db = make_db();
 
     quiver::Element e1;
     e1.set("label", std::string("Item1"))
         .set("name", std::string("Alpha"))
-        .set("date_created", std::string("not-a-date"));  // invalid ISO 8601
+        .set("date_created", std::string("2024-01-15T10:30:00"));
     db.create_element("Items", e1);
+
+    // create_element rejects an unparseable DATE_TIME value, so a bad date can only reach the
+    // column through raw SQL or a database written before that validation existed - which is
+    // exactly what format_datetime's raw-value fallback exists for.
+    db.query_integer("UPDATE Items SET date_created = 'not-a-date' WHERE label = 'Item1'");
 
     quiver::CSVOptions options;
     options.date_time_format = "%Y/%m/%d";

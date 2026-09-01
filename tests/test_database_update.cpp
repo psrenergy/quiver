@@ -970,6 +970,58 @@ TEST(Database, UpdateElementTypeMismatchTextSetWithIntegers) {
     }
 }
 
+// The scalar path threads the caller's name; the array path names the offending index. The full
+// grammar is covered once, in test_database_create.cpp.
+TEST(Database, UpdateElementInvalidDateTimeScalar) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element element;
+    element.set("label", std::string("Config 1")).set("date_attribute", std::string("2024-01-15T10:30:00"));
+    int64_t id = db.create_element("Configuration", element);
+
+    quiver::Element update;
+    update.set("date_attribute", std::string("2005-01"));
+    try {
+        db.update_element("Configuration", id, update);
+        FAIL() << "Expected std::runtime_error for an invalid DATE_TIME value";
+    } catch (const std::runtime_error& e) {
+        std::string msg = e.what();
+        EXPECT_TRUE(msg.find("Cannot update_element: invalid DATE_TIME value for column 'date_attribute'") !=
+                    std::string::npos)
+            << "Expected an invalid DATE_TIME error, got: " << msg;
+    }
+
+    // The rejected write left the stored value alone.
+    auto stored = db.read_scalar_string_by_id("Configuration", "date_attribute", id);
+    ASSERT_TRUE(stored.has_value());
+    EXPECT_EQ(*stored, "2024-01-15T10:30:00");
+}
+
+TEST(Database, UpdateElementInvalidDateTimeArray) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element element;
+    element.set("label", std::string("Item 1"));
+    int64_t id = db.create_element("Collection", element);
+
+    // The time-series dimension column is the only date_-prefixed array column in the schemas.
+    quiver::Element update;
+    update.set("date_time", std::vector<std::string>{"2024-01-01", "2005-01"});
+    update.set("value", std::vector<double>{1.0, 2.0});
+
+    try {
+        db.update_element("Collection", id, update);
+        FAIL() << "Expected std::runtime_error for an invalid DATE_TIME value";
+    } catch (const std::runtime_error& e) {
+        std::string msg = e.what();
+        EXPECT_TRUE(msg.find("Cannot update_element: invalid DATE_TIME value for array 'date_time' index 1") !=
+                    std::string::npos)
+            << "Expected an invalid DATE_TIME error naming the index, got: " << msg;
+    }
+}
+
 // ============================================================================
 // Empty array behavior tests
 // ============================================================================

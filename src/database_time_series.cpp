@@ -1,5 +1,6 @@
 #include "database_impl.h"
 #include "database_internal.h"
+#include "utils/datetime.h"
 
 namespace quiver {
 
@@ -39,6 +40,14 @@ void validate_time_series_row(const std::string& caller,
             throw std::runtime_error("Cannot " + caller + ": column '" + col_name + "' has type " +
                                      data_type_to_string(it->second) + " but received " +
                                      internal::value_type_name(value));
+        }
+        // Content check for DATE_TIME, sharing datetime::is_valid_iso8601 with
+        // TypeValidator::validate_value: value_matches_type only decides the variant's shape, and
+        // "TEXT into a DATE_TIME column" is the correct shape. A NULL cell stays legal.
+        if (it->second == DataType::DateTime && std::holds_alternative<std::string>(value) &&
+            !datetime::is_valid_iso8601(std::get<std::string>(value))) {
+            throw std::runtime_error("Cannot " + caller + ": invalid DATE_TIME value for column '" + col_name + "': '" +
+                                     std::get<std::string>(value) + "' (expected YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)");
         }
     }
 }

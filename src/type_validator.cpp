@@ -1,5 +1,7 @@
 #include "quiver/type_validator.h"
 
+#include "utils/datetime.h"
+
 #include <stdexcept>
 
 namespace quiver {
@@ -56,6 +58,13 @@ void TypeValidator::validate_value(const std::string& caller,
                     expected_type != DataType::DateTime) {
                     throw std::runtime_error("Cannot " + caller + ": type mismatch for " + context + ": expected " +
                                              data_type_to_string(expected_type) + ", got TEXT");
+                }
+                // A DATE_TIME column is TEXT that every binding parses back into a date, so an
+                // unparseable value is rejected here rather than detonating in whichever binding
+                // reads it. Same predicate in validate_time_series_row (the time-series writers).
+                if (expected_type == DataType::DateTime && !datetime::is_valid_iso8601(arg)) {
+                    throw std::runtime_error("Cannot " + caller + ": invalid DATE_TIME value for " + context + ": '" +
+                                             arg + "' (expected YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)");
                 }
             }
         },
