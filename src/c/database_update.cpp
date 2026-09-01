@@ -3,6 +3,7 @@
 #include "quiver/c/database.h"
 
 #include <map>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -31,6 +32,50 @@ QUIVER_C_API quiver_error_t quiver_database_update_element_by_label(quiver_datab
 
     try {
         db->db.update_element_by_label(collection, label, element->element);
+        return QUIVER_OK;
+    } catch (const std::exception& e) {
+        quiver_set_last_error(e.what());
+        return QUIVER_ERROR;
+    }
+}
+
+// A NULL target_label clears the relation (std::nullopt in the core).
+QUIVER_C_API quiver_error_t quiver_database_update_relation(quiver_database_t* db,
+                                                            const char* collection_from,
+                                                            const char* collection_to,
+                                                            const char* relation_type,
+                                                            int64_t id,
+                                                            const char* target_label) {
+    QUIVER_REQUIRE(db, collection_from, collection_to, relation_type);
+
+    try {
+        db->db.update_relation(collection_from,
+                               collection_to,
+                               relation_type,
+                               id,
+                               target_label == nullptr ? std::nullopt : std::optional<std::string>(target_label));
+        return QUIVER_OK;
+    } catch (const std::exception& e) {
+        quiver_set_last_error(e.what());
+        return QUIVER_ERROR;
+    }
+}
+
+QUIVER_C_API quiver_error_t quiver_database_update_relation_by_label(quiver_database_t* db,
+                                                                     const char* collection_from,
+                                                                     const char* collection_to,
+                                                                     const char* relation_type,
+                                                                     const char* label,
+                                                                     const char* target_label) {
+    QUIVER_REQUIRE(db, collection_from, collection_to, relation_type, label);
+
+    try {
+        db->db.update_relation_by_label(collection_from,
+                                        collection_to,
+                                        relation_type,
+                                        label,
+                                        target_label == nullptr ? std::nullopt
+                                                                : std::optional<std::string>(target_label));
         return QUIVER_OK;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());

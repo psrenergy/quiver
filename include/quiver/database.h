@@ -50,6 +50,23 @@ public:
     // delegates to delete_element.
     void delete_element_by_label(const std::string& collection, const std::string& label);
 
+    // Update one scalar foreign-key relation. The column is derived as
+    // lowercase(collection_to) + "_" + relation_type and must be a foreign key from
+    // collection_from to collection_to; std::nullopt clears it. A group relation is a list of
+    // targets, so it is written by the group writer that owns the group.
+    void update_relation(const std::string& collection_from,
+                         const std::string& collection_to,
+                         const std::string& relation_type,
+                         int64_t id,
+                         const std::optional<std::string>& target_label);
+    // Resolves the label within `collection_from` (unique per collection, not per database), then
+    // delegates to update_relation.
+    void update_relation_by_label(const std::string& collection_from,
+                                  const std::string& collection_to,
+                                  const std::string& relation_type,
+                                  const std::string& label,
+                                  const std::optional<std::string>& target_label);
+
     // Read scalar attributes (all elements). One entry per element, aligned with read_element_ids;
     // a SQL NULL is std::nullopt (positional — never dropped).
     std::vector<std::optional<int64_t>> read_scalar_integers(const std::string& collection,
