@@ -26,6 +26,43 @@ function update_element_by_label!(db::Database, collection::String, label::Strin
     return nothing
 end
 
+# Point one scalar foreign-key relation at another element, named by the target's label; `nothing`
+# clears it. The column is derived as lowercase(collection_to) * "_" * relation_type.
+function update_relation!(
+    db::Database,
+    collection_from::String,
+    collection_to::String,
+    relation_type::String,
+    id::Int64,
+    target_label::Optional{String},
+)
+    check(
+        C.quiver_database_update_relation(
+            db.ptr, collection_from, collection_to, relation_type, id,
+            isnothing(target_label) ? Ptr{Cchar}(C_NULL) : target_label,
+        ),
+    )
+    return nothing
+end
+
+# Label-addressed counterpart of update_relation!.
+function update_relation_by_label!(
+    db::Database,
+    collection_from::String,
+    collection_to::String,
+    relation_type::String,
+    label::String,
+    target_label::Optional{String},
+)
+    check(
+        C.quiver_database_update_relation_by_label(
+            db.ptr, collection_from, collection_to, relation_type, label,
+            isnothing(target_label) ? Ptr{Cchar}(C_NULL) : target_label,
+        ),
+    )
+    return nothing
+end
+
 # Group update functions (time series, vector, set)
 
 # Shared marshalling for the column-oriented group writers: every column becomes a typed C array

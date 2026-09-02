@@ -100,6 +100,20 @@ export class Database {
   declare updateElementByLabel: (collection: string, label: string, data: ElementData) => void;
   declare deleteElement: (collection: string, id: number) => void;
   declare deleteElementByLabel: (collection: string, label: string) => void;
+  declare updateRelation: (
+    collectionFrom: string,
+    collectionTo: string,
+    relationType: string,
+    id: number,
+    targetLabel: string | null,
+  ) => void;
+  declare updateRelationByLabel: (
+    collectionFrom: string,
+    collectionTo: string,
+    relationType: string,
+    label: string,
+    targetLabel: string | null,
+  ) => void;
 
   // --- Reads (implemented in read.ts) ---
   declare readScalarIntegers: (collection: string, attribute: string) => (number | null)[];

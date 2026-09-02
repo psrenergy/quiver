@@ -64,6 +64,10 @@ Project.toml      # Deps: Artifacts, CEnum, Dates, Libdl; julia 1.11 compat
   one-line wrappers over it, with the same `key::Union{Int64, String}` note. Kept separate from
   `_update_group_columns` because the row-upsert C signature carries no per-cell NULL mask, and
   that helper writes a zeroed placeholder for a masked cell.
+- **A nullable scalar string argument passes `Ptr{Cchar}(C_NULL)`, never `""`**
+  (`update_relation!`/`update_relation_by_label!`) — the C API reads NULL as "clear the relation"
+  and an empty string as a label to look up. The `GC.@preserve` rule above does not apply: there
+  are no `Ref`s, and `@ccall` pins a `String` argument itself for the duration of the call.
 - **Library loader** (`src/c_api.jl`, emitted from `generator/prologue.jl`) is **relocatable** —
   this matters for downstream apps compiled with PackageCompiler (`create_app`), where a baked
   absolute path would freeze the build machine's depot and fail on the target. Split design:

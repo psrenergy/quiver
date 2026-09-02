@@ -384,6 +384,8 @@ struct LuaRunner::Impl {
 
         bind.set_function("update_element", &update_element_lua);
         bind.set_function("update_element_by_label", &update_element_by_label_lua);
+        bind.set_function("update_relation", &update_relation_lua);
+        bind.set_function("update_relation_by_label", &update_relation_by_label_lua);
         bind.set_function("update_time_series_group", &update_time_series_group_lua);
         bind.set_function("update_time_series_group_by_label", &update_time_series_group_by_label_lua);
         bind.set_function("update_vector_group", &update_vector_group_lua);
@@ -972,6 +974,44 @@ struct LuaRunner::Impl {
                                             const sol::table& values) {
         auto element = table_to_element(values);
         db.update_element_by_label(collection, label, element);
+    }
+
+    // nil/missing clears; sol::object (not sol::optional) so a wrong type still throws.
+    static std::optional<std::string> relation_target_from_lua(const sol::object& target_label,
+                                                               const std::string& operation) {
+        if (!target_label.valid() || target_label.get_type() == sol::type::lua_nil) {
+            return std::nullopt;
+        }
+        if (target_label.get_type() != sol::type::string) {
+            throw std::runtime_error("Cannot " + operation + ": target_label has unsupported Lua type");
+        }
+        return target_label.as<std::string>();
+    }
+
+    static void update_relation_lua(Database& db,
+                                    const std::string& collection_from,
+                                    const std::string& collection_to,
+                                    const std::string& relation_type,
+                                    int64_t id,
+                                    const sol::object& target_label) {
+        db.update_relation(collection_from,
+                           collection_to,
+                           relation_type,
+                           id,
+                           relation_target_from_lua(target_label, "update_relation"));
+    }
+
+    static void update_relation_by_label_lua(Database& db,
+                                             const std::string& collection_from,
+                                             const std::string& collection_to,
+                                             const std::string& relation_type,
+                                             const std::string& label,
+                                             const sol::object& target_label) {
+        db.update_relation_by_label(collection_from,
+                                    collection_to,
+                                    relation_type,
+                                    label,
+                                    relation_target_from_lua(target_label, "update_relation_by_label"));
     }
 
     static sol::table read_scalar_strings_lua(Database& db,

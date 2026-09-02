@@ -51,7 +51,7 @@ Lua values map to Quiver column values as follows:
 | integer            | INTEGER      | Also accepted for REAL columns (coerced to real). |
 | number (float)     | REAL         | A float is rejected for an INTEGER column.     |
 | string             | TEXT         | Also used for \`date_time\` columns (ISO 8601).  |
-| \`nil\`              | NULL         | In query params, file paths, and ts rows.      |
+| \`nil\`              | NULL         | In query params, file paths, ts rows, relations.|
 | table (1-indexed)  | array        | Used for vectors/sets and column-oriented data.|
 
 **Unsupported types throw.** Passing a boolean, a function, or a nested table where a scalar is
@@ -92,7 +92,7 @@ midnight.
   \`print()\` when you need structured data back (\`print()\` still works and is captured). Only the
   **first** returned value is encoded. Arrays are 1-indexed (iterate with \`ipairs\`); reading a NULL
   yields \`nil\`, writing \`nil\` stores NULL where NULL is accepted (query params, ts rows, file
-  columns — but NOT element scalar attributes; see CRUD).
+  columns, relation targets — but NOT element scalar attributes; see CRUD).
 
   \`\`\`lua
   return { ids = db:read_element_ids("Collection"), total = 3 }
@@ -227,6 +227,9 @@ db:update_element(collection, id, element_table)
 db:update_element_by_label(collection, label, element_table)  -- same update, addressed by label
 db:delete_element(collection, id)
 db:delete_element_by_label(collection, label)             -- same delete, addressed by label
+
+db:update_relation(collection_from, collection_to, relation_type, id, target_label)
+db:update_relation_by_label(collection_from, collection_to, relation_type, label, target_label)
 \`\`\`
 
 The element table holds scalar attributes as \`key = value\`, and vector/set attributes as
@@ -266,7 +269,18 @@ Notes:
   **throws** (\`...must have at least one scalar attribute\` on create, \`...at least one attribute
   to update\` on update). To leave a column unchanged, omit the key — you cannot set a scalar to
   NULL via the element table. (\`nil\` → NULL is only accepted by
-  \`upsert_time_series_row\` and \`update_time_series_files\`.)
+  \`upsert_time_series_row\`, \`update_time_series_files\` and \`update_relation\`.)
+- **\`update_relation\` points one scalar foreign-key relation at another element**, named by the
+  target's label. The column is derived from the naming convention —
+  \`lowercase(collection_to) .. "_" .. relation_type\`, so
+  \`db:update_relation("Child", "Parent", "id", id, "Parent A")\` writes \`Child.parent_id\`. A
+  \`nil\` or omitted \`target_label\` clears the relation; anything that is not a string throws
+  (\`target_label has unsupported Lua type\`). The derived column must exist and be a
+  foreign key to \`collection_to\`, otherwise \`Cannot update_relation: ...\`. The write delegates
+  to \`update_element\`, so a missing id reports that method's error;
+  \`update_relation_by_label\` takes a label in place of the id, with
+  \`update_element_by_label\`'s resolution and miss semantics. A relation living in a vector, set
+  or time-series group is a list of targets — use that group's writer instead.
 
 ---
 

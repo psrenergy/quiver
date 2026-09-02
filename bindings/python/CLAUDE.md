@@ -45,6 +45,9 @@ ruff.toml         # Lint/format config (format.bat runs ruff)
   for argument '<name>'` before the FFI call. `update_element_by_label(collection, label, /,
   **kwargs)` is the acute case — renaming via `label=` is the point of the method, and every
   collection has a `label` column by convention.
+- **A nullable scalar string argument passes `ffi.NULL`, never `b""`** (`update_relation` /
+  `update_relation_by_label`) — the C API reads NULL as "clear the relation" and an empty string
+  as a label to look up.
 - **Per-method FFI boilerplate is the house style** — don't collapse it into
   closure-parameterized helpers (root "Do not 'fix'" list).
 - **Scalar bulk NULLs**: `read_scalar_integers`/`_floats` decode a parallel `uint8_t**` mask into

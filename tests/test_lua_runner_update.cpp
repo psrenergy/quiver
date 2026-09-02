@@ -410,3 +410,44 @@ TEST_F(LuaRunnerTest, UpdateSetGroupByLabelErrors) {
 
     EXPECT_EQ(db.read_set_integers_by_id("Child", "parent_ref", 1), (std::vector<int64_t>{1}));
 }
+
+TEST_F(LuaRunnerTest, UpdateRelationSetsAndClears) {
+    auto db = relations_db_with_child();
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(db:update_relation("Child", "Parent", "id", 1, "Parent A"))");
+    EXPECT_EQ(db.read_scalar_integer_by_id("Child", "parent_id", 1), 1);
+
+    lua.run(R"(db:update_relation_by_label("Child", "Parent", "id", "Child 1", "Parent B"))");
+    EXPECT_EQ(db.read_scalar_integer_by_id("Child", "parent_id", 1), 2);
+
+    // A nil target_label clears it; so does omitting the argument entirely.
+    lua.run(R"(db:update_relation("Child", "Parent", "id", 1, nil))");
+    EXPECT_FALSE(db.read_scalar_integer_by_id("Child", "parent_id", 1).has_value());
+
+    lua.run(R"(db:update_relation_by_label("Child", "Parent", "id", "Child 1", "Parent A"))");
+    lua.run(R"(db:update_relation_by_label("Child", "Parent", "id", "Child 1"))");
+    EXPECT_FALSE(db.read_scalar_integer_by_id("Child", "parent_id", 1).has_value());
+}
+
+TEST_F(LuaRunnerTest, UpdateRelationErrors) {
+    auto db = relations_db_with_child();
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(lua,
+                     R"(db:update_relation("Child", "Parent", "owner", 1, "Parent A"))",
+                     "relation column 'parent_owner' not found in collection 'Child'");
+    expect_lua_error(
+        lua, R"(db:update_relation_by_label("Child", "Parent", "id", "Nope", "Parent A"))", "Element not found");
+
+    // A non-string target_label must throw, not clear: silently treating it as nil would let a
+    // stray boolean/number wipe the relation.
+    lua.run(R"(db:update_relation("Child", "Parent", "id", 1, "Parent A"))");
+    expect_lua_error(lua,
+                     R"(db:update_relation("Child", "Parent", "id", 1, false))",
+                     "Cannot update_relation: target_label has unsupported Lua type");
+    expect_lua_error(lua,
+                     R"(db:update_relation_by_label("Child", "Parent", "id", "Child 1", 42))",
+                     "Cannot update_relation_by_label: target_label has unsupported Lua type");
+    EXPECT_EQ(db.read_scalar_integer_by_id("Child", "parent_id", 1), 1);
+}

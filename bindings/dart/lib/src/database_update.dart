@@ -68,6 +68,60 @@ extension DatabaseUpdate on Database {
     }
   }
 
+  /// Points one scalar foreign-key relation at the element whose label is [targetLabel];
+  /// null clears the relation.
+  /// The column is derived as `collectionTo.toLowerCase() + '_' + relationType`.
+  void updateRelation(
+    String collectionFrom,
+    String collectionTo,
+    String relationType,
+    int id,
+    String? targetLabel,
+  ) {
+    _ensureNotClosed();
+    final arena = Arena();
+    try {
+      check(
+        bindings.quiver_database_update_relation(
+          _ptr,
+          collectionFrom.toNativeUtf8(allocator: arena).cast(),
+          collectionTo.toNativeUtf8(allocator: arena).cast(),
+          relationType.toNativeUtf8(allocator: arena).cast(),
+          id,
+          targetLabel == null ? nullptr : targetLabel.toNativeUtf8(allocator: arena).cast(),
+        ),
+      );
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
+  /// Label-addressed counterpart of [updateRelation].
+  void updateRelationByLabel(
+    String collectionFrom,
+    String collectionTo,
+    String relationType,
+    String label,
+    String? targetLabel,
+  ) {
+    _ensureNotClosed();
+    final arena = Arena();
+    try {
+      check(
+        bindings.quiver_database_update_relation_by_label(
+          _ptr,
+          collectionFrom.toNativeUtf8(allocator: arena).cast(),
+          collectionTo.toNativeUtf8(allocator: arena).cast(),
+          relationType.toNativeUtf8(allocator: arena).cast(),
+          label.toNativeUtf8(allocator: arena).cast(),
+          targetLabel == null ? nullptr : targetLabel.toNativeUtf8(allocator: arena).cast(),
+        ),
+      );
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
   // ==========================================================================
   // Update vector / set groups
   // ==========================================================================

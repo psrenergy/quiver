@@ -175,6 +175,53 @@ Database.prototype.updateElementByLabel = function (
   }
 };
 
+/**
+ * Points one scalar foreign-key relation at the element labeled `targetLabel`; `null` clears it.
+ * The column is derived as `collectionTo.toLowerCase() + "_" + relationType`.
+ */
+Database.prototype.updateRelation = function (
+  this: Database,
+  collectionFrom: string,
+  collectionTo: string,
+  relationType: string,
+  id: number,
+  targetLabel: string | null,
+): void {
+  const lib = getSymbols();
+  check(
+    lib.quiver_database_update_relation(
+      this._handle,
+      toCString(collectionFrom).buf,
+      toCString(collectionTo).buf,
+      toCString(relationType).buf,
+      BigInt(id),
+      targetLabel === null ? null : toCString(targetLabel).buf,
+    ),
+  );
+};
+
+/** Label-addressed counterpart of updateRelation. */
+Database.prototype.updateRelationByLabel = function (
+  this: Database,
+  collectionFrom: string,
+  collectionTo: string,
+  relationType: string,
+  label: string,
+  targetLabel: string | null,
+): void {
+  const lib = getSymbols();
+  check(
+    lib.quiver_database_update_relation_by_label(
+      this._handle,
+      toCString(collectionFrom).buf,
+      toCString(collectionTo).buf,
+      toCString(relationType).buf,
+      toCString(label).buf,
+      targetLabel === null ? null : toCString(targetLabel).buf,
+    ),
+  );
+};
+
 Database.prototype.deleteElement = function (this: Database, collection: string, id: number): void {
   const lib = getSymbols();
   const collBuf = toCString(collection);

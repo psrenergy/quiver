@@ -483,3 +483,41 @@ class TestUpdateVectorSetGroup:
 
         with pytest.raises(QuiverError, match="Element not found"):
             relations_db.update_set_group_by_label("Child", "parents", "Nope", {"parent_ref": [1]})
+
+
+class TestUpdateRelation:
+    @staticmethod
+    def _seed(db: Database) -> int:
+        db.create_element("Configuration", label="Config")
+        db.create_element("Parent", label="Parent A")
+        db.create_element("Parent", label="Parent B")
+        return db.create_element("Child", label="Child 1")
+
+    def test_sets_derived_foreign_key_by_id(self, relations_db: Database) -> None:
+        child = self._seed(relations_db)
+
+        relations_db.update_relation("Child", "Parent", "id", child, "Parent A")
+        assert relations_db.read_scalar_integer_by_id("Child", "parent_id", child) == 1
+
+    def test_by_label_resolves_the_source_element(self, relations_db: Database) -> None:
+        child = self._seed(relations_db)
+
+        relations_db.update_relation_by_label("Child", "Parent", "id", "Child 1", "Parent B")
+        assert relations_db.read_scalar_integer_by_id("Child", "parent_id", child) == 2
+
+    def test_none_clears_through_either_form(self, relations_db: Database) -> None:
+        child = self._seed(relations_db)
+
+        relations_db.update_relation("Child", "Parent", "id", child, "Parent A")
+        relations_db.update_relation("Child", "Parent", "id", child, None)
+        assert relations_db.read_scalar_integer_by_id("Child", "parent_id", child) is None
+
+        relations_db.update_relation_by_label("Child", "Parent", "id", "Child 1", "Parent A")
+        relations_db.update_relation_by_label("Child", "Parent", "id", "Child 1", None)
+        assert relations_db.read_scalar_integer_by_id("Child", "parent_id", child) is None
+
+    def test_unknown_derived_column_raises(self, relations_db: Database) -> None:
+        child = self._seed(relations_db)
+
+        with pytest.raises(QuiverError, match="relation column 'parent_owner' not found"):
+            relations_db.update_relation("Child", "Parent", "owner", child, "Parent A")

@@ -69,6 +69,10 @@ biome.json        # Lint/format config
   throw a `QuiverError` naming the column. Load-bearing — an empty column would otherwise marshal a
   `null` data pointer that the C API dereferences against the first column's `row_count`. Pass `{}`
   (no columns) to clear the group. The C API rejects both cases too; failing here names the column.
+- **A nullable scalar string argument passes literal `null`, never `""`**
+  (`updateRelation`/`updateRelationByLabel`) — Bun turns `null` into a NULL pointer for a
+  `"pointer"` slot, the same way `group-columns.ts` passes `null` for the array pointers when
+  clearing. The C API reads NULL as "clear the relation" and an empty string as a label to look up.
 - **Scalar bulk NULLs**: `readScalarIntegers`/`readScalarFloats` read a parallel `uint8_t*` mask
   (`new Uint8Array(toArrayBuffer(...))`) and gate `mask[i] ? v : null` → `(number | null)[]` — never
   `Number()` a masked slot (would turn NULL into 0). `readScalarStrings` reads pointer-by-pointer with

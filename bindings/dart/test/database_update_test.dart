@@ -1825,4 +1825,77 @@ void main() {
       }
     });
   });
+
+  // ==========================================================================
+  // Update relation
+  // ==========================================================================
+
+  group('Update Relation', () {
+    Database openRelations() {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
+      );
+      db.createElement('Configuration', {'label': 'Config'});
+      db.createElement('Parent', {'label': 'Parent A'});
+      db.createElement('Parent', {'label': 'Parent B'});
+      db.createElement('Child', {'label': 'Child 1'});
+      return db;
+    }
+
+    test('sets the derived foreign key by id', () {
+      final db = openRelations();
+      try {
+        db.updateRelation('Child', 'Parent', 'id', 1, 'Parent A');
+        expect(db.readScalarIntegerById('Child', 'parent_id', 1), equals(1));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('by label resolves the source element', () {
+      final db = openRelations();
+      try {
+        db.updateRelationByLabel('Child', 'Parent', 'id', 'Child 1', 'Parent B');
+        expect(db.readScalarIntegerById('Child', 'parent_id', 1), equals(2));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('a null target label clears the relation, through either form', () {
+      final db = openRelations();
+      try {
+        db.updateRelation('Child', 'Parent', 'id', 1, 'Parent A');
+        db.updateRelation('Child', 'Parent', 'id', 1, null);
+        expect(db.readScalarIntegerById('Child', 'parent_id', 1), isNull);
+
+        db.updateRelationByLabel('Child', 'Parent', 'id', 'Child 1', 'Parent A');
+        db.updateRelationByLabel('Child', 'Parent', 'id', 'Child 1', null);
+        expect(db.readScalarIntegerById('Child', 'parent_id', 1), isNull);
+      } finally {
+        db.close();
+      }
+    });
+
+    test('throws when the relation type derives no such column', () {
+      final db = openRelations();
+      try {
+        expect(
+          () => db.updateRelation('Child', 'Parent', 'owner', 1, 'Parent A'),
+          throwsA(
+            isA<DatabaseException>().having(
+              (e) => e.message,
+              'message',
+              contains(
+                "relation column 'parent_owner' not found in collection 'Child'",
+              ),
+            ),
+          ),
+        );
+      } finally {
+        db.close();
+      }
+    });
+  });
 }
