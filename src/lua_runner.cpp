@@ -978,12 +978,12 @@ struct LuaRunner::Impl {
 
     // nil/missing clears; sol::object (not sol::optional) so a wrong type still throws.
     static std::optional<std::string> relation_target_from_lua(const sol::object& target_label,
-                                                               const std::string& operation) {
+                                                               const std::string& caller) {
         if (!target_label.valid() || target_label.get_type() == sol::type::lua_nil) {
             return std::nullopt;
         }
         if (target_label.get_type() != sol::type::string) {
-            throw std::runtime_error("Cannot " + operation + ": target_label has unsupported Lua type");
+            throw std::runtime_error("Cannot " + caller + ": target_label has unsupported Lua type");
         }
         return target_label.as<std::string>();
     }

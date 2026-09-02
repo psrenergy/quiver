@@ -331,8 +331,8 @@ Implementation conventions in `lua_runner.cpp`:
 - **A nullable argument whose absence *means* something takes `sol::object`, not
   `sol::optional<T>`**: `sol::optional<T>` yields `nullopt` for a wrong type just as it does for
   `nil`, so `db:update_relation(..., false)` silently cleared the relation.
-  `relation_target_from_lua(object, operation)` distinguishes the two — nil/missing clears,
-  a non-string throws `Cannot <operation>: target_label has unsupported Lua type`. Both
+  `relation_target_from_lua(object, caller)` distinguishes the two — nil/missing clears,
+  a non-string throws `Cannot <caller>: target_label has unsupported Lua type`. Both
   `db:update_relation(..., nil)` and omitting the argument clear; that affordance is sol2's and
   Lua-only (the FFI bindings all require the parameter and take their language's null).
 - `parse_csv_options(table)` is the single CSVOptions parser shared by `export_csv`/`import_csv`.
