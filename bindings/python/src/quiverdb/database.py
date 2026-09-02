@@ -266,6 +266,54 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         finally:
             elem.destroy()
 
+    def update_relation(
+        self,
+        collection_from: str,
+        collection_to: str,
+        relation_type: str,
+        id: int,
+        target_label: str | None,
+    ) -> None:
+        """Point one scalar foreign-key relation at the element labeled `target_label`.
+
+        The column is derived as `collection_to.lower() + "_" + relation_type`.
+        `None` clears the relation.
+        """
+        self._ensure_open()
+        lib = get_lib()
+        check(
+            lib.quiver_database_update_relation(
+                self._ptr,
+                collection_from.encode("utf-8"),
+                collection_to.encode("utf-8"),
+                relation_type.encode("utf-8"),
+                id,
+                ffi.NULL if target_label is None else target_label.encode("utf-8"),
+            )
+        )
+
+    def update_relation_by_label(
+        self,
+        collection_from: str,
+        collection_to: str,
+        relation_type: str,
+        label: str,
+        target_label: str | None,
+    ) -> None:
+        """Label-addressed counterpart of update_relation."""
+        self._ensure_open()
+        lib = get_lib()
+        check(
+            lib.quiver_database_update_relation_by_label(
+                self._ptr,
+                collection_from.encode("utf-8"),
+                collection_to.encode("utf-8"),
+                relation_type.encode("utf-8"),
+                label.encode("utf-8"),
+                ffi.NULL if target_label is None else target_label.encode("utf-8"),
+            )
+        )
+
     def delete_element(self, collection: str, id: int) -> None:
         """Delete an element by ID."""
         self._ensure_open()

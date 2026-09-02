@@ -430,6 +430,8 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
   delegates to `update_element`, so the FK-label resolution and the Pattern 2 missing-id check are
   that method's. This is the scalar-relation writer: a relation that lives in a vector, set, or
   time-series group is a list of targets, so it is written by the group writer that owns it.
+  Bound in **every layer**: C++, the C API (a NULL `target_label` clears), Julia, Dart, Python, JS,
+  and Lua — where a missing argument also clears, and a non-string one throws.
 - Element count: `number_of_elements(collection)` returns the current row count from the
   collection's main table (`COUNT(*)`), not its maximum ID or group-row count. Any table in the
   schema is accepted, so naming a group table reports that table's own row count.
@@ -539,6 +541,8 @@ The rules are mechanical: given any C++ method name, you can derive the equivale
 | Update by label | `update_element_by_label()` | `quiver_database_update_element_by_label()` | `update_element_by_label!()` | `updateElementByLabel()` | `update_element_by_label()` |
 | Delete | `delete_element()` | `quiver_database_delete_element()` | `delete_element!()` | `deleteElement()` | `delete_element()` |
 | Delete by label | `delete_element_by_label()` | `quiver_database_delete_element_by_label()` | `delete_element_by_label!()` | `deleteElementByLabel()` | `delete_element_by_label()` |
+| Update relation | `update_relation()` | `quiver_database_update_relation()` | `update_relation!()` | `updateRelation()` | `update_relation()` |
+| Update relation by label | `update_relation_by_label()` | `quiver_database_update_relation_by_label()` | `update_relation_by_label!()` | `updateRelationByLabel()` | `update_relation_by_label()` |
 | Element count | `number_of_elements()` | `quiver_database_number_of_elements()` | `number_of_elements()` | `numberOfElements()` | `number_of_elements()` |
 | Metadata | `get_scalar_metadata()` | `quiver_database_get_scalar_metadata()` | `get_scalar_metadata()` | `getScalarMetadata()` | `get_scalar_metadata()` |
 | List groups | `list_vector_groups()` | `quiver_database_list_vector_groups()` | `list_vector_groups()` | `listVectorGroups()` | `list_vector_groups()` |

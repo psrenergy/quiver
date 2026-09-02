@@ -259,6 +259,14 @@ ffi.cdef("""
     quiver_error_t quiver_database_delete_element_by_label(quiver_database_t* db,
         const char* collection, const char* label);
 
+    // Update relation (a NULL target_label clears it)
+    quiver_error_t quiver_database_update_relation(quiver_database_t* db,
+        const char* collection_from, const char* collection_to,
+        const char* relation_type, int64_t id, const char* target_label);
+    quiver_error_t quiver_database_update_relation_by_label(quiver_database_t* db,
+        const char* collection_from, const char* collection_to,
+        const char* relation_type, const char* label, const char* target_label);
+
     // Transaction control
     quiver_error_t quiver_database_begin_transaction(quiver_database_t* db);
     quiver_error_t quiver_database_commit(quiver_database_t* db);

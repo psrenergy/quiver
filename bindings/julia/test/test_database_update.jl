@@ -1007,6 +1007,36 @@ include("fixture.jl")
 
         Quiver.close!(db)
     end
+
+    @testset "Relation Writer" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "relations.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Config")
+        parent_a = Quiver.create_element!(db, "Parent"; label = "Parent A")
+        parent_b = Quiver.create_element!(db, "Parent"; label = "Parent B")
+        child = Quiver.create_element!(db, "Child"; label = "Child 1")
+
+        Quiver.update_relation!(db, "Child", "Parent", "id", child, "Parent A")
+        @test Quiver.read_scalar_integer_by_id(db, "Child", "parent_id", child) == parent_a
+
+        Quiver.update_relation_by_label!(db, "Child", "Parent", "id", "Child 1", "Parent B")
+        @test Quiver.read_scalar_integer_by_id(db, "Child", "parent_id", child) == parent_b
+
+        # `nothing` clears, through either form.
+        Quiver.update_relation!(db, "Child", "Parent", "id", child, nothing)
+        @test isnothing(Quiver.read_scalar_integer_by_id(db, "Child", "parent_id", child))
+
+        Quiver.update_relation_by_label!(db, "Child", "Parent", "id", "Child 1", "Parent A")
+        Quiver.update_relation_by_label!(db, "Child", "Parent", "id", "Child 1", nothing)
+        @test isnothing(Quiver.read_scalar_integer_by_id(db, "Child", "parent_id", child))
+
+        # A relation_type that derives no such column is rejected by the core.
+        @test_throws Quiver.DatabaseException Quiver.update_relation!(
+            db, "Child", "Parent", "owner", child, "Parent A")
+
+        Quiver.close!(db)
+    end
 end
 
 end

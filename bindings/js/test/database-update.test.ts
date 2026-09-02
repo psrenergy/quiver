@@ -348,3 +348,60 @@ describe("updateVectorGroup / updateSetGroup", () => {
     }
   });
 });
+
+describe("updateRelation", () => {
+  function openRelations(): { db: Database; parentA: number; parentB: number; child: number } {
+    const db = Database.fromSchema(":memory:", RELATIONS_SCHEMA_PATH);
+    db.createElement("Configuration", { label: "Config" });
+    const parentA = db.createElement("Parent", { label: "Parent A" });
+    const parentB = db.createElement("Parent", { label: "Parent B" });
+    const child = db.createElement("Child", { label: "Child 1" });
+    return { db, parentA, parentB, child };
+  }
+
+  test("sets the derived foreign key by id", () => {
+    const { db, parentA, child } = openRelations();
+    try {
+      db.updateRelation("Child", "Parent", "id", child, "Parent A");
+      expect(db.readScalarIntegerById("Child", "parent_id", child)).toEqual(parentA);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("updateRelationByLabel resolves the source element", () => {
+    const { db, parentB, child } = openRelations();
+    try {
+      db.updateRelationByLabel("Child", "Parent", "id", "Child 1", "Parent B");
+      expect(db.readScalarIntegerById("Child", "parent_id", child)).toEqual(parentB);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("a null target label clears the relation, through either form", () => {
+    const { db, child } = openRelations();
+    try {
+      db.updateRelation("Child", "Parent", "id", child, "Parent A");
+      db.updateRelation("Child", "Parent", "id", child, null);
+      expect(db.readScalarIntegerById("Child", "parent_id", child)).toBeNull();
+
+      db.updateRelationByLabel("Child", "Parent", "id", "Child 1", "Parent A");
+      db.updateRelationByLabel("Child", "Parent", "id", "Child 1", null);
+      expect(db.readScalarIntegerById("Child", "parent_id", child)).toBeNull();
+    } finally {
+      db.close();
+    }
+  });
+
+  test("throws when the relation type derives no such column", () => {
+    const { db, child } = openRelations();
+    try {
+      expect(() => db.updateRelation("Child", "Parent", "owner", child, "Parent A")).toThrow(
+        /relation column 'parent_owner' not found in collection 'Child'/,
+      );
+    } finally {
+      db.close();
+    }
+  });
+});

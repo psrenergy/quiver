@@ -88,7 +88,13 @@ callers to change something are prefixed **BREAKING** and say what to do.
   must be a foreign key to `collection_to`, otherwise Pattern 1 `Cannot update_relation: ...`. The
   write delegates to `update_element`, so the target-label resolution and the missing-source-id
   check are that method's. A relation that lives in a group needs the matching group writer
-  instead. C++ and C API in this release; the bindings follow separately.
+  instead.
+
+  Available in **every layer**: C++, the C API, Julia (`update_relation!`), Dart
+  (`updateRelation`), Python (`update_relation`), JS (`updateRelation`), and Lua
+  (`db:update_relation`), each with its `_by_label` form. `target_label` is a required parameter
+  that accepts the language's null (`nothing`/`null`/`None`) to clear the relation; in Lua a `nil`
+  or omitted argument clears it.
 
 - **Migration round-trip validation: `Database::validate_migrations()` / `quiver_database_validate_migrations()`.** Validates a migrations directory in an in-memory database by applying every up migration, then every down migration, and finally checking that no table survives.
 

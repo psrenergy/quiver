@@ -328,6 +328,13 @@ Implementation conventions in `lua_runner.cpp`:
   exists because the doc went stale two days after it was written: it said only
   `base`/`string`/`table` were loaded and "there is NO `math`", and #210 added
   `math`/`coroutine`/`utf8` here without touching it.
+- **A nullable argument whose absence *means* something takes `sol::object`, not
+  `sol::optional<T>`**: `sol::optional<T>` yields `nullopt` for a wrong type just as it does for
+  `nil`, so `db:update_relation(..., false)` silently cleared the relation.
+  `relation_target_from_lua(object, caller)` distinguishes the two — nil/missing clears,
+  a non-string throws `Cannot <caller>: target_label has unsupported Lua type`. Both
+  `db:update_relation(..., nil)` and omitting the argument clear; that affordance is sol2's and
+  Lua-only (the FFI bindings all require the parameter and take their language's null).
 - `parse_csv_options(table)` is the single CSVOptions parser shared by `export_csv`/`import_csv`.
 - `to_lua_table<T>` overloads (flat + nested) are the only vector→table marshalers.
 - `describe` / `describe_collection` / `summarize_collection` are bound as plain lambdas returning
