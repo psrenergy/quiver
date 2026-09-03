@@ -27,7 +27,7 @@ Project.toml      # Deps: Artifacts, CEnum, Dates, Libdl; julia 1.11 compat
 - **Always `GC.@preserve`**: refs produced by `marshal_params` (and any `Ref`s passed as pointers)
   must stay inside a `GC.@preserve refs ...` block spanning the ccall — the GC may otherwise
   collect them mid-call.
-- **Scalar bulk NULLs (nullability-aware element type)**: `read_scalar_{integers,floats,strings,booleans}`
+- **Scalar bulk NULLs (nullability-aware element type)**: `read_scalar_{integers,floats,strings}`
   first read `get_scalar_metadata(db, collection, attribute).not_null`, then return a **concrete
   `Vector{T}`** for `NOT NULL` columns and a **`Vector{Optional{T}}`** for nullable columns — for
   both the empty and the populated path, so the element type is decided by the schema, not by the
@@ -37,9 +37,11 @@ Project.toml      # Deps: Artifacts, CEnum, Dates, Libdl; julia 1.11 compat
   arg + `quiver_database_free_mask` (regenerate, don't hand-edit long-term). This makes the public
   reader's *inferred* type a 2-way `Union{Vector{T}, Vector{Optional{T}}}` (the choice is a runtime
   metadata lookup) — intended: accurate per-column types over `@inferred` purity; assert with `isa`
-  on the result, not `@inferred` on the reader. `read_scalar_booleans` preserves the same
-  concrete-vs-optional shape while strictly converting the integer values. Julia-only; the
-  `_by_id`/`query_*`/time-series
+  on the result, not `@inferred` on the reader. `read_scalar_booleans` keeps the same
+  concrete-vs-optional shape but does **not** re-read the metadata: it recovers the schema's
+  nullability from `read_scalar_integers`' container type (`values isa Vector{Int64}`), so it adds
+  no FFI round-trip — if that delegate's container type ever changes, this branch changes with it.
+  Julia-only; the `_by_id`/`query_*`/time-series
   readers are not yet converted — see `type_stability_followup.md`. An `INTEGER PRIMARY KEY` (e.g.
   `id`) is a rowid alias and is reported `not_null` by the C++ core (`scalar_metadata_from_column`),
   so `read_scalar_integers(db, c, "id")` is a concrete `Vector{Int64}`.

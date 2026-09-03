@@ -27,10 +27,9 @@ end
 
 function read_scalar_booleans(db::Database, collection::String, attribute::String)
     values = read_scalar_integers(db, collection, attribute)
-    if values isa Vector{Int64}
-        return Bool[_integer_to_boolean(value) for value in values]
-    end
-    return Optional{Bool}[_integer_to_boolean(value) for value in values]
+    # The delegate's container type carries the schema's nullability, so no second metadata read.
+    T = values isa Vector{Int64} ? Bool : Optional{Bool}
+    return T[_integer_to_boolean(value, collection, attribute) for value in values]
 end
 
 function read_scalar_floats(db::Database, collection::String, attribute::String)
@@ -110,10 +109,12 @@ function read_vector_integers(db::Database, collection::String, attribute::Strin
     return result
 end
 
+# NULL cells are dropped and only ids that own rows are returned (`read_grouped_values_all`,
+# `src/database_internal.h`), so the result is not positionally aligned with `read_element_ids`.
 function read_vector_booleans(db::Database, collection::String, attribute::String)
-    return [
-        [_integer_to_boolean(value) for value in values] for values in
-                                                             read_vector_integers(db, collection, attribute)
+    vectors = read_vector_integers(db, collection, attribute)
+    return Vector{Bool}[
+        [_integer_to_boolean(value, collection, attribute) for value in values] for values in vectors
     ]
 end
 
@@ -196,9 +197,12 @@ function read_set_integers(db::Database, collection::String, attribute::String)
     return result
 end
 
+# Same alignment caveat as `read_vector_booleans`: NULL cells dropped, only ids that own rows.
 function read_set_booleans(db::Database, collection::String, attribute::String)
-    return [[_integer_to_boolean(value) for value in values] for values in
-                                                                 read_set_integers(db, collection, attribute)]
+    sets = read_set_integers(db, collection, attribute)
+    return Vector{Bool}[
+        [_integer_to_boolean(value, collection, attribute) for value in values] for values in sets
+    ]
 end
 
 function read_set_floats(db::Database, collection::String, attribute::String)
@@ -267,7 +271,7 @@ function read_scalar_integer_by_id(db::Database, collection::String, attribute::
 end
 
 function read_scalar_boolean_by_id(db::Database, collection::String, attribute::String, id::Int64)
-    return _integer_to_boolean(read_scalar_integer_by_id(db, collection, attribute, id))
+    return _integer_to_boolean(read_scalar_integer_by_id(db, collection, attribute, id), collection, attribute)
 end
 
 function read_scalar_float_by_id(db::Database, collection::String, attribute::String, id::Int64)
@@ -321,7 +325,8 @@ function read_vector_integers_by_id(db::Database, collection::String, attribute:
 end
 
 function read_vector_booleans_by_id(db::Database, collection::String, attribute::String, id::Int64)
-    return [_integer_to_boolean(value) for value in read_vector_integers_by_id(db, collection, attribute, id)]
+    values = read_vector_integers_by_id(db, collection, attribute, id)
+    return Bool[_integer_to_boolean(value, collection, attribute) for value in values]
 end
 
 function read_vector_floats_by_id(db::Database, collection::String, attribute::String, id::Int64)
@@ -378,7 +383,8 @@ function read_set_integers_by_id(db::Database, collection::String, attribute::St
 end
 
 function read_set_booleans_by_id(db::Database, collection::String, attribute::String, id::Int64)
-    return [_integer_to_boolean(value) for value in read_set_integers_by_id(db, collection, attribute, id)]
+    values = read_set_integers_by_id(db, collection, attribute, id)
+    return Bool[_integer_to_boolean(value, collection, attribute) for value in values]
 end
 
 function read_set_floats_by_id(db::Database, collection::String, attribute::String, id::Int64)

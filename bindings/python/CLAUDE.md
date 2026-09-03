@@ -54,6 +54,13 @@ ruff.toml         # Lint/format config (format.bat runs ruff)
   `list[T | None]` (`mask[i]` falsy → `None`); `read_scalar_strings` already returns `list[str | None]`
   via the `ffi.NULL` guard. `_c_api.py` carries the mask out-param on the two numeric readers plus
   `quiver_database_free_mask`.
+- **`_integer_to_boolean` raises `ValueError`, not `QuiverError`** — the second documented
+  exception to "messages come from C++", alongside `_marshal_group_columns`' jagged-column check.
+  The boolean readers are a binding-only convenience with no C++ counterpart, so the core cannot
+  diagnose a stray `2`; the message names the offending `collection.attribute` (nothing to name for
+  `query_boolean`). The `@overload` triple mirrors `bindings/js/src/boolean.ts` — keep the
+  `(int) -> bool` variant, or the vector/set readers' comprehensions widen to `list[bool | None]`
+  against their declared `list[list[bool]]`.
 - **`LuaRunner.run` owns its result**: `quiver_lua_runner_run` takes a `char** out_result` and the
   JSON string must be freed with `quiver_lua_runner_free_string` — *not*
   `quiver_database_free_string` (both are hand-declared in `_c_api.py`). The free sits in a

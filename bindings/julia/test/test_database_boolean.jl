@@ -13,6 +13,9 @@ include("fixture.jl")
     @test Quiver.read_vector_booleans(db, "AllTypes", "count_value") == Vector{Bool}[]
     @test Quiver.read_set_booleans(db, "AllTypes", "code") == Vector{Bool}[]
 
+    # An INTEGER PRIMARY KEY is reported not_null by the core, so `id` takes the concrete branch.
+    @test Quiver.read_scalar_booleans(db, "AllTypes", "id") isa Vector{Bool}
+
     id_false = Quiver.create_element!(db, "AllTypes";
         label = "False",
         some_integer = 0,
@@ -44,9 +47,19 @@ include("fixture.jl")
     @test Quiver.query_boolean(db, "SELECT some_integer FROM AllTypes WHERE id = ?", [id_true]) === true
     @test Quiver.query_boolean(db, "SELECT some_integer FROM AllTypes WHERE id = -1") === nothing
 
-    Quiver.create_element!(db, "AllTypes"; label = "Invalid", some_integer = 2)
-    @test_throws InexactError Quiver.read_scalar_booleans(db, "AllTypes", "some_integer")
-    @test_throws InexactError Quiver.query_boolean(db, "SELECT 2")
+    id_invalid = Quiver.create_element!(db, "AllTypes";
+        label = "Invalid",
+        some_integer = 2,
+        count_value = [0, 2],
+        code = [2],
+    )
+    @test_throws ArgumentError Quiver.read_scalar_booleans(db, "AllTypes", "some_integer")
+    @test_throws ArgumentError Quiver.read_scalar_boolean_by_id(db, "AllTypes", "some_integer", id_invalid)
+    @test_throws ArgumentError Quiver.read_vector_booleans(db, "AllTypes", "count_value")
+    @test_throws ArgumentError Quiver.read_vector_booleans_by_id(db, "AllTypes", "count_value", id_invalid)
+    @test_throws ArgumentError Quiver.read_set_booleans(db, "AllTypes", "code")
+    @test_throws ArgumentError Quiver.read_set_booleans_by_id(db, "AllTypes", "code", id_invalid)
+    @test_throws ArgumentError Quiver.query_boolean(db, "SELECT 2")
 
     Quiver.close!(db)
 end

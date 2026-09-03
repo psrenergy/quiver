@@ -51,10 +51,31 @@ def test_boolean_convenience_methods(all_types_db: Database) -> None:
 
 
 def test_boolean_conversion_rejects_non_binary_integer(all_types_db: Database) -> None:
-    all_types_db.create_element("AllTypes", label="Invalid", some_integer=2)
+    id_invalid = all_types_db.create_element(
+        "AllTypes",
+        label="Invalid",
+        some_integer=2,
+        count_value=[0, 2],
+        code=[2],
+    )
 
-    with pytest.raises(ValueError, match="expected 0 or 1"):
+    with pytest.raises(ValueError, match="AllTypes.some_integer.*expected 0 or 1"):
         all_types_db.read_scalar_booleans("AllTypes", "some_integer")
+
+    with pytest.raises(ValueError, match="AllTypes.some_integer.*expected 0 or 1"):
+        all_types_db.read_scalar_boolean_by_id("AllTypes", "some_integer", id_invalid)
+
+    with pytest.raises(ValueError, match="AllTypes.count_value.*expected 0 or 1"):
+        all_types_db.read_vector_booleans("AllTypes", "count_value")
+
+    with pytest.raises(ValueError, match="AllTypes.count_value.*expected 0 or 1"):
+        all_types_db.read_vector_booleans_by_id("AllTypes", "count_value", id_invalid)
+
+    with pytest.raises(ValueError, match="AllTypes.code.*expected 0 or 1"):
+        all_types_db.read_set_booleans("AllTypes", "code")
+
+    with pytest.raises(ValueError, match="AllTypes.code.*expected 0 or 1"):
+        all_types_db.read_set_booleans_by_id("AllTypes", "code", id_invalid)
 
     with pytest.raises(ValueError, match="expected 0 or 1"):
         all_types_db.query_boolean("SELECT 2")
