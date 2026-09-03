@@ -12,7 +12,12 @@ end
 function cleanup_binary_file(path)
     for ext in [".qvr", ".toml", ".csv"]
         f = path * ext
-        isfile(f) && rm(f)
+        # Best-effort: a still-open writer makes `rm` throw on Windows, and this runs from
+        # `finally` -- that IOError would replace the assertion failure that got us here.
+        try
+            isfile(f) && rm(f)
+        catch
+        end
     end
 end
 
@@ -70,6 +75,61 @@ end
         finally
             cleanup_binary_file(path)
         end
+    end
+
+    @testset "Scoped open returns callback result and closes" begin
+        path = make_binary_file_path()
+        try
+            md = make_simple_metadata()
+            captured_file = Ref{Union{Nothing, Quiver.Binary.File}}(nothing)
+            result = Quiver.Binary.open_file(path; mode = 'w', metadata = md) do file
+                captured_file[] = file
+                Quiver.Binary.write!(file; data = [1.0, 2.0], row = 1, col = 1)
+                return :written
+            end
+
+            @test result === :written
+            @test captured_file[].ptr == C_NULL
+
+            # The scoped cleanup flushed the write -- both files exist even with no write
+            # at all (see "Write mode creates files"), so only a read-back proves it.
+            Quiver.Binary.open_file(path; mode = 'r') do file
+                data = Quiver.Binary.read(file; row = 1, col = 1)
+                @test data[1] ≈ 1.0
+                @test data[2] ≈ 2.0
+            end
+        finally
+            cleanup_binary_file(path)
+        end
+    end
+
+    @testset "Scoped open closes after callback error" begin
+        path = make_binary_file_path()
+        try
+            md = make_simple_metadata()
+            captured_file = Ref{Union{Nothing, Quiver.Binary.File}}(nothing)
+            exception = @test_throws ErrorException begin
+                Quiver.Binary.open_file(path; mode = 'w', metadata = md) do file
+                    captured_file[] = file
+                    error("scoped callback failed")
+                end
+            end
+
+            @test exception.value.msg == "scoped callback failed"
+            @test captured_file[].ptr == C_NULL
+
+            # The scoped cleanup releases the writer registry entry.
+            @test Quiver.Binary.open_file(path; mode = 'r') do file
+                Quiver.Binary.get_file_path(file) == path
+            end
+        finally
+            cleanup_binary_file(path)
+        end
+    end
+
+    @testset "Scoped open rejects a non-callable first argument" begin
+        # Untyped `fn` would capture an arity slip and open the file anyway.
+        @test_throws MethodError Quiver.Binary.open_file("a.qvr", "b.qvr"; mode = 'w')
     end
 
     @testset "Read mode on missing file" begin

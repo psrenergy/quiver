@@ -80,6 +80,14 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ### Added
 
+- **Julia scoped resource factories.** `open`, `from_schema`, `from_migrations`, and
+  `Binary.open_file` take a callback-first argument, so Julia `do` syntax releases the handle at the
+  block's `end` on both the normal and the exceptional exit, and returns the callback's result. The
+  finalizer already released eventually — what is new is *prompt, deterministic* release, which is
+  what frees an OS file handle on Windows. Caveat: a `LuaRunner` built inside the block must not
+  outlive it (it borrows the database), and an uncommitted transaction still open at the block's
+  `end` is rolled back — use `transaction(db) do db ... end` inside.
+
 - **Boolean convenience readers for INTEGER-backed values.** Julia, Python, Dart, and JavaScript
   now expose scalar, vector, and set boolean readers in both bulk and by-id forms, plus a boolean
   query helper. They compose the existing integer APIs, preserve scalar NULLs, and convert only

@@ -56,6 +56,26 @@ function close!(db::Database)
     return nothing
 end
 
+function _with_database(fn, db::Database)
+    try
+        return fn(db)
+    finally
+        close!(db)
+    end
+end
+
+function from_schema(fn::Function, db_path::String, schema_path::String; kwargs...)
+    return _with_database(fn, from_schema(db_path, schema_path; kwargs...))
+end
+
+function from_migrations(fn::Function, db_path::String, migrations_path::String; kwargs...)
+    return _with_database(fn, from_migrations(db_path, migrations_path; kwargs...))
+end
+
+function open(fn::Function, db_path::String; kwargs...)
+    return _with_database(fn, open(db_path; kwargs...))
+end
+
 function current_version(db::Database)
     out_version = Ref{Int64}(0)
     check(C.quiver_database_current_version(db.ptr, out_version))
