@@ -1,4 +1,5 @@
 import { CString, type Pointer, toArrayBuffer } from "bun:ffi";
+import { integerToBoolean } from "./boolean.ts";
 import { Database } from "./database.ts";
 import { check } from "./errors.ts";
 import {
@@ -50,6 +51,16 @@ Database.prototype.readScalarIntegers = function (
   lib.quiver_database_free_integer_array(arrPtr);
   lib.quiver_database_free_mask(maskPtr);
   return result;
+};
+
+Database.prototype.readScalarBooleans = function (
+  this: Database,
+  collection: string,
+  attribute: string,
+): (boolean | null)[] {
+  return this.readScalarIntegers(collection, attribute).map((value) =>
+    integerToBoolean(value, collection, attribute),
+  );
 };
 
 Database.prototype.readScalarFloats = function (
@@ -141,6 +152,19 @@ Database.prototype.readScalarIntegerById = function (
   );
   if (new DataView(outHasBuf.buffer).getInt32(0, true) === 0) return null;
   return Number(new DataView(outValBuf.buffer).getBigInt64(0, true));
+};
+
+Database.prototype.readScalarBooleanById = function (
+  this: Database,
+  collection: string,
+  attribute: string,
+  id: number,
+): boolean | null {
+  return integerToBoolean(
+    this.readScalarIntegerById(collection, attribute, id),
+    collection,
+    attribute,
+  );
 };
 
 Database.prototype.readScalarFloatById = function (
@@ -342,6 +366,19 @@ Database.prototype.readVectorIntegers = function (
     attribute,
   );
 };
+/**
+ * NULL cells are dropped and only elements that own rows are returned, so the result is not
+ * positionally aligned with `readElementIds` (unlike `readScalarBooleans`).
+ */
+Database.prototype.readVectorBooleans = function (
+  this: Database,
+  collection: string,
+  attribute: string,
+): boolean[][] {
+  return this.readVectorIntegers(collection, attribute).map((values) =>
+    values.map((value) => integerToBoolean(value, collection, attribute)),
+  );
+};
 Database.prototype.readVectorFloats = function (
   this: Database,
   collection: string,
@@ -379,6 +416,16 @@ Database.prototype.readSetIntegers = function (
     "quiver_database_read_set_integers",
     collection,
     attribute,
+  );
+};
+/** Same alignment caveat as `readVectorBooleans`: NULL cells dropped, only ids that own rows. */
+Database.prototype.readSetBooleans = function (
+  this: Database,
+  collection: string,
+  attribute: string,
+): boolean[][] {
+  return this.readSetIntegers(collection, attribute).map((values) =>
+    values.map((value) => integerToBoolean(value, collection, attribute)),
   );
 };
 Database.prototype.readSetFloats = function (
@@ -515,6 +562,16 @@ Database.prototype.readVectorIntegersById = function (
     id,
   );
 };
+Database.prototype.readVectorBooleansById = function (
+  this: Database,
+  collection: string,
+  attribute: string,
+  id: number,
+): boolean[] {
+  return this.readVectorIntegersById(collection, attribute, id).map((value) =>
+    integerToBoolean(value, collection, attribute),
+  );
+};
 Database.prototype.readVectorFloatsById = function (
   this: Database,
   collection: string,
@@ -558,6 +615,16 @@ Database.prototype.readSetIntegersById = function (
     collection,
     attribute,
     id,
+  );
+};
+Database.prototype.readSetBooleansById = function (
+  this: Database,
+  collection: string,
+  attribute: string,
+  id: number,
+): boolean[] {
+  return this.readSetIntegersById(collection, attribute, id).map((value) =>
+    integerToBoolean(value, collection, attribute),
   );
 };
 Database.prototype.readSetFloatsById = function (

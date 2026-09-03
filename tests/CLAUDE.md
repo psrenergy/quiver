@@ -56,6 +56,12 @@ the binary/expression subsystems (`test_binary_file.jl`, `test_binary_metadata.j
 `test_csv_converter.jl`, `test_expression.jl`) and the relation-map helpers
 (`test_helper_maps.jl`).
 
+The boolean convenience readers have one file per binding — `test_database_boolean.jl`,
+`database_boolean_test.dart`, `test_database_boolean.py`, `database-boolean.test.ts` — all over
+`valid/all_types.sql` (`some_integer` scalar, `count_value` vector, `code` set). There is no C++/C
+counterpart: the wrappers are binding-only, and Lua is deliberately excluded (root design
+decisions).
+
 The `read` → `{scalar,vector,set}` and `time_series` → `{metadata,group,row,files,nulls}` split is
 mirrored in every binding using each idiom's file naming (Julia `test_database_read_scalar.jl`,
 Dart `database_read_scalar_test.dart`, JS `database-read-scalar.test.ts`, Python

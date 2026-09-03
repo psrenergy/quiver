@@ -117,6 +117,7 @@ export class Database {
 
   // --- Reads (implemented in read.ts) ---
   declare readScalarIntegers: (collection: string, attribute: string) => (number | null)[];
+  declare readScalarBooleans: (collection: string, attribute: string) => (boolean | null)[];
   declare readScalarFloats: (collection: string, attribute: string) => (number | null)[];
   declare readScalarStrings: (collection: string, attribute: string) => (string | null)[];
   declare readScalarIntegerById: (
@@ -124,6 +125,11 @@ export class Database {
     attribute: string,
     id: number,
   ) => number | null;
+  declare readScalarBooleanById: (
+    collection: string,
+    attribute: string,
+    id: number,
+  ) => boolean | null;
   declare readScalarFloatById: (collection: string, attribute: string, id: number) => number | null;
   declare readScalarStringById: (
     collection: string,
@@ -133,21 +139,26 @@ export class Database {
   declare readElementIds: (collection: string) => number[];
   declare numberOfElements: (collection: string) => number;
   declare readVectorIntegers: (collection: string, attribute: string) => number[][];
+  declare readVectorBooleans: (collection: string, attribute: string) => boolean[][];
   declare readVectorFloats: (collection: string, attribute: string) => number[][];
   declare readVectorStrings: (collection: string, attribute: string) => string[][];
   declare readVectorIntegersById: (collection: string, attribute: string, id: number) => number[];
+  declare readVectorBooleansById: (collection: string, attribute: string, id: number) => boolean[];
   declare readVectorFloatsById: (collection: string, attribute: string, id: number) => number[];
   declare readVectorStringsById: (collection: string, attribute: string, id: number) => string[];
   declare readSetIntegers: (collection: string, attribute: string) => number[][];
+  declare readSetBooleans: (collection: string, attribute: string) => boolean[][];
   declare readSetFloats: (collection: string, attribute: string) => number[][];
   declare readSetStrings: (collection: string, attribute: string) => string[][];
   declare readSetIntegersById: (collection: string, attribute: string, id: number) => number[];
+  declare readSetBooleansById: (collection: string, attribute: string, id: number) => boolean[];
   declare readSetFloatsById: (collection: string, attribute: string, id: number) => number[];
   declare readSetStringsById: (collection: string, attribute: string, id: number) => string[];
 
   // --- Queries (implemented in query.ts) ---
   declare queryString: (sql: string, parameters?: QueryParam[]) => string | null;
   declare queryInteger: (sql: string, parameters?: QueryParam[]) => number | null;
+  declare queryBoolean: (sql: string, parameters?: QueryParam[]) => boolean | null;
   declare queryFloat: (sql: string, parameters?: QueryParam[]) => number | null;
 
   // --- Transactions (implemented in transaction.ts) ---

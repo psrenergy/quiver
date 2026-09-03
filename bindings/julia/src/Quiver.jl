@@ -6,6 +6,7 @@ include("c_api.jl")
 import .C
 
 include("optional.jl")
+include("boolean.jl")
 include("exceptions.jl")
 include("date_time.jl")
 include("element.jl")

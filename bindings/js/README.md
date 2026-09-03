@@ -78,24 +78,30 @@ bun run example.ts
 ### Read (bulk)
 
 - `readScalarIntegers(collection, attribute)` -- Read all integer scalars
+- `readScalarBooleans(collection, attribute)` -- Read INTEGER-backed boolean scalars
 - `readScalarFloats(collection, attribute)` -- Read all float scalars
 - `readScalarStrings(collection, attribute)` -- Read all string scalars
 - `readVectorIntegers(collection, attribute)` -- Read all integer vectors
+- `readVectorBooleans(collection, attribute)` -- Read INTEGER-backed boolean vectors
 - `readVectorFloats(collection, attribute)` -- Read all float vectors
 - `readVectorStrings(collection, attribute)` -- Read all string vectors
 - `readSetIntegers(collection, attribute)` -- Read all integer sets
+- `readSetBooleans(collection, attribute)` -- Read INTEGER-backed boolean sets
 - `readSetFloats(collection, attribute)` -- Read all float sets
 - `readSetStrings(collection, attribute)` -- Read all string sets
 
 ### Read (by ID)
 
 - `readScalarIntegerById(collection, attribute, id)` -- Read integer or null
+- `readScalarBooleanById(collection, attribute, id)` -- Read INTEGER-backed boolean or null
 - `readScalarFloatById(collection, attribute, id)` -- Read float or null
 - `readScalarStringById(collection, attribute, id)` -- Read string or null
 - `readVectorIntegersById(collection, attribute, id)` -- Read integer vector
+- `readVectorBooleansById(collection, attribute, id)` -- Read INTEGER-backed boolean vector
 - `readVectorFloatsById(collection, attribute, id)` -- Read float vector
 - `readVectorStringsById(collection, attribute, id)` -- Read string vector
 - `readSetIntegersById(collection, attribute, id)` -- Read integer set
+- `readSetBooleansById(collection, attribute, id)` -- Read INTEGER-backed boolean set
 - `readSetFloatsById(collection, attribute, id)` -- Read float set
 - `readSetStringsById(collection, attribute, id)` -- Read string set
 
@@ -124,9 +130,11 @@ bun run example.ts
 
 - `queryString(sql, parameters?)` -- Query returning string or null
 - `queryInteger(sql, parameters?)` -- Query returning integer or null
+- `queryBoolean(sql, parameters?)` -- Query returning an INTEGER-backed boolean or null
 - `queryFloat(sql, parameters?)` -- Query returning float or null
 
-Parameters are passed as an array of `number | string | null`.
+Parameters are passed as an array of `number | boolean | string | null` (a `boolean` binds as the
+INTEGER 1 or 0).
 
 ### Transaction
 

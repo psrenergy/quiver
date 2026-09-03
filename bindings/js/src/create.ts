@@ -35,6 +35,12 @@ function setElementArray(
     return;
   }
 
+  if (typeof first === "boolean") {
+    const arr = allocNativeInt64((values as boolean[]).map((v) => (v ? 1 : 0)));
+    check(lib.quiver_element_set_array_integer(elemPtr, nameBuf.buf, arr.buf, values.length, null));
+    return;
+  }
+
   if (typeof first === "number") {
     const allIntegers = (values as number[]).every((v) => Number.isInteger(v));
     if (allIntegers) {
@@ -70,6 +76,11 @@ function setElementField(lib: Symbols, elemPtr: NativePointer, name: string, val
 
   if (typeof value === "bigint") {
     check(lib.quiver_element_set_integer(elemPtr, nameBuf.buf, value));
+    return;
+  }
+
+  if (typeof value === "boolean") {
+    check(lib.quiver_element_set_integer(elemPtr, nameBuf.buf, value ? 1n : 0n));
     return;
   }
 

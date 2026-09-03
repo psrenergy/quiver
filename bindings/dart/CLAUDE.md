@@ -65,8 +65,15 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   `upsertTimeSeriesRow` and `upsertTimeSeriesRowByLabel` ignore `hasValue`), dispatches on the
   first non-null element, and tags an all-null/empty column FLOAT with a zeroed placeholder. Reads
   decode the mask out-param and never `toDartString` a masked-out (NULL) pointer.
-- **Query API shape**: `queryString`/`queryInteger`/`queryFloat`/`queryDateTime` take an optional
-  positional `List<Object?>? parameters` (no separate `*Params` methods).
+- **Query API shape**: `queryString`/`queryInteger`/`queryBoolean`/`queryFloat`/`queryDateTime`
+  take an optional positional `List<Object?>? parameters` (no separate `*Params` methods).
+- **Booleans are INTEGER 0/1 in both directions.** `_integerToBoolean` (nullable) and
+  `_integerToBooleanNonNull` (group cells, which are never null) live in `database.dart` so the
+  `part` files share them; both take the `collection`/`attribute` so the rejection message names
+  the offending column. They throw `ArgumentError` — a locally-crafted message is unavoidable
+  here, since these readers are a binding-only convenience the core never sees. On writes,
+  `Element.set` maps `bool` to `setInteger` (and a `List<bool?>` through `_setMixedList`), and
+  `_marshalParams` binds a `bool` parameter as INTEGER.
 - **Element array NULLs**: `Element.setArray{Integer,Float,String}` take `List<T?>` and pass the
   per-cell `has_value` mask to the C setters; `Element.set` dispatches mixed lists on the first
   non-null element, and an empty or all-null list is tagged integer (valid — type is irrelevant

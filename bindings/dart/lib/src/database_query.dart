@@ -4,7 +4,7 @@ part of 'database.dart';
 extension DatabaseQuery on Database {
   /// Executes a SQL query and returns the first column of the first row as a String.
   /// Returns null if the query returns no rows.
-  /// Optional positional [parameters] bind to `?` placeholders (int, double, String, or null).
+  /// Optional positional [parameters] bind to `?` placeholders (int, bool, double, String, or null).
   String? queryString(String sql, [List<Object?>? parameters]) {
     _ensureNotClosed();
 
@@ -51,7 +51,7 @@ extension DatabaseQuery on Database {
 
   /// Executes a SQL query and returns the first column of the first row as an int.
   /// Returns null if the query returns no rows.
-  /// Optional positional [parameters] bind to `?` placeholders (int, double, String, or null).
+  /// Optional positional [parameters] bind to `?` placeholders (int, bool, double, String, or null).
   int? queryInteger(String sql, [List<Object?>? parameters]) {
     _ensureNotClosed();
 
@@ -94,9 +94,15 @@ extension DatabaseQuery on Database {
     }
   }
 
+  /// Executes a SQL query and converts its integer result to a boolean.
+  /// Returns null if the query returns no rows.
+  bool? queryBoolean(String sql, [List<Object?>? parameters]) {
+    return _integerToBoolean(queryInteger(sql, parameters));
+  }
+
   /// Executes a SQL query and returns the first column of the first row as a double.
   /// Returns null if the query returns no rows.
-  /// Optional positional [parameters] bind to `?` placeholders (int, double, String, or null).
+  /// Optional positional [parameters] bind to `?` placeholders (int, bool, double, String, or null).
   double? queryFloat(String sql, [List<Object?>? parameters]) {
     _ensureNotClosed();
 
@@ -141,7 +147,7 @@ extension DatabaseQuery on Database {
 
   /// Executes a SQL query and returns the first column of the first row as a DateTime.
   /// Returns null if the query returns no rows.
-  /// Optional positional [parameters] bind to `?` placeholders (int, double, String, or null).
+  /// Optional positional [parameters] bind to `?` placeholders (int, bool, double, String, or null).
   DateTime? queryDateTime(String sql, [List<Object?>? parameters]) {
     final result = queryString(sql, parameters);
     if (result == null) return null;

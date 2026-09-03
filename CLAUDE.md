@@ -144,6 +144,20 @@ Settled questions — don't relitigate without the user; each was decided delibe
   `quiver_get_last_error`; no per-handle error channels.
 - **Python's `Element` is internal**; users pass `**kwargs` to create/update.
 - **JS keeps a string-based datetime surface** — no DateTime wrappers.
+- **Boolean wrappers are Julia/Dart/Python/JS only; Lua is deliberately excluded.** SQLite has no
+  boolean type, so a boolean lives in an INTEGER column as 0/1 and the wrappers are a
+  strict-conversion convenience with no C++ or C API counterpart (the third documented per-binding
+  omission, alongside JS-datetime and binary/expression). Lua needs none: it has a native boolean,
+  and a script that wants one writes `read_scalar_integers(...)[i] ~= 0` — adding seven sol2
+  lambdas would only move that expression. The conversion is **strict**: only 0 and 1 convert; any
+  other integer raises the binding's native conversion error (`ArgumentError` in Julia and Dart,
+  `ValueError` in Python, `RangeError` in JS) naming the offending `collection.attribute`. This is
+  one of the few locally-crafted messages — the core never sees these readers, so it cannot
+  diagnose a stray `2`. On the write side a boolean is accepted wherever an integer is: every
+  binding maps it to INTEGER 1/0 on `create_element`/`update_element` and as a query parameter.
+  The scalar readers preserve NULLs positionally; the **vector/set readers do not** — they inherit
+  `read_grouped_values_all`'s dropping of NULL cells and of ids that own no rows, so they are not
+  aligned with `read_element_ids`.
 - **Binary `dims` parameter is the map-based form only** — indexed overloads were prototyped and
   deliberately dropped (perf rationale in `src/CLAUDE.md`).
 - **Time-series group NULLs round-trip via a per-cell presence mask.** The columnar C API
@@ -604,6 +618,18 @@ The bindings provide additional convenience methods that compose core operations
 | `read_vector_date_time_by_id` | `readVectorDateTimesById` | `read_vector_date_time_by_id` | string vector read + date parsing |
 | `read_set_date_time_by_id`    | `readSetDateTimesById`    | `read_set_date_time_by_id`    | string set read + date parsing    |
 | `query_date_time`             | `queryDateTime`           | `query_date_time`             | string query + date parsing       |
+
+**Boolean wrappers (Julia, Dart, Python, and JS):**
+
+| Julia | Dart | Python | JS | Wraps |
+|-------|------|--------|----|-------|
+| `read_scalar_booleans` | `readScalarBooleans` | `read_scalar_booleans` | `readScalarBooleans` | integer scalar bulk read + strict 0/1 conversion |
+| `read_scalar_boolean_by_id` | `readScalarBooleanById` | `read_scalar_boolean_by_id` | `readScalarBooleanById` | integer scalar by-id read + strict 0/1 conversion |
+| `read_vector_booleans` | `readVectorBooleans` | `read_vector_booleans` | `readVectorBooleans` | integer vector bulk read + strict 0/1 conversion |
+| `read_vector_booleans_by_id` | `readVectorBooleansById` | `read_vector_booleans_by_id` | `readVectorBooleansById` | integer vector by-id read + strict 0/1 conversion |
+| `read_set_booleans` | `readSetBooleans` | `read_set_booleans` | `readSetBooleans` | integer set bulk read + strict 0/1 conversion |
+| `read_set_booleans_by_id` | `readSetBooleansById` | `read_set_booleans_by_id` | `readSetBooleansById` | integer set by-id read + strict 0/1 conversion |
+| `query_boolean` | `queryBoolean` | `query_boolean` | `queryBoolean` | integer query + strict 0/1 conversion |
 
 **Composite read helpers (all five bindings):**
 
