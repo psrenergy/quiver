@@ -9,10 +9,6 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ### Changed
 
-- Julia's `open`, `from_schema`, `from_migrations`, and `Binary.open_file` now accept `do` blocks
-  that return the callback result and close the database or binary file on both normal and
-  exceptional exits.
-
 - **BREAKING — a `DATE_TIME` value is validated when it is written.** A string bound to a
   `date_`-prefixed column must be ISO 8601: `YYYY-MM-DD`, optionally followed by `THH:MM:SS` or
   ` HH:MM:SS`. Anything else now throws `Cannot <operation>: invalid DATE_TIME value for column
@@ -83,6 +79,14 @@ callers to change something are prefixed **BREAKING** and say what to do.
   format correctly.
 
 ### Added
+
+- **Julia scoped resource factories.** `open`, `from_schema`, `from_migrations`, and
+  `Binary.open_file` take a callback-first argument, so Julia `do` syntax releases the handle at the
+  block's `end` on both the normal and the exceptional exit, and returns the callback's result. The
+  finalizer already released eventually — what is new is *prompt, deterministic* release, which is
+  what frees an OS file handle on Windows. Caveat: a `LuaRunner` built inside the block must not
+  outlive it (it borrows the database), and an uncommitted transaction still open at the block's
+  `end` is rolled back — use `transaction(db) do db ... end` inside.
 
 - **`update_relation(collection_from, collection_to, relation_type, id, target_label)` and
   `update_relation_by_label(..., label, target_label)`.** Points one element's scalar foreign-key

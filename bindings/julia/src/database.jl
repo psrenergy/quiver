@@ -64,15 +64,15 @@ function _with_database(fn, db::Database)
     end
 end
 
-function from_schema(fn, db_path::String, schema_path::String; kwargs...)
+function from_schema(fn::Function, db_path::String, schema_path::String; kwargs...)
     return _with_database(fn, from_schema(db_path, schema_path; kwargs...))
 end
 
-function from_migrations(fn, db_path::String, migrations_path::String; kwargs...)
+function from_migrations(fn::Function, db_path::String, migrations_path::String; kwargs...)
     return _with_database(fn, from_migrations(db_path, migrations_path; kwargs...))
 end
 
-function open(fn, db_path::String; kwargs...)
+function open(fn::Function, db_path::String; kwargs...)
     return _with_database(fn, open(db_path; kwargs...))
 end
 

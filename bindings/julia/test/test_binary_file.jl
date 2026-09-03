@@ -12,7 +12,12 @@ end
 function cleanup_binary_file(path)
     for ext in [".qvr", ".toml", ".csv"]
         f = path * ext
-        isfile(f) && rm(f)
+        # Best-effort: a still-open writer makes `rm` throw on Windows, and this runs from
+        # `finally` -- that IOError would replace the assertion failure that got us here.
+        try
+            isfile(f) && rm(f)
+        catch
+        end
     end
 end
 
@@ -85,8 +90,14 @@ end
 
             @test result === :written
             @test captured_file[].ptr == C_NULL
-            @test isfile(path * ".qvr")
-            @test isfile(path * ".toml")
+
+            # The scoped cleanup flushed the write -- both files exist even with no write
+            # at all (see "Write mode creates files"), so only a read-back proves it.
+            Quiver.Binary.open_file(path; mode = 'r') do file
+                data = Quiver.Binary.read(file; row = 1, col = 1)
+                @test data[1] ≈ 1.0
+                @test data[2] ≈ 2.0
+            end
         finally
             cleanup_binary_file(path)
         end
@@ -108,13 +119,17 @@ end
             @test captured_file[].ptr == C_NULL
 
             # The scoped cleanup releases the writer registry entry.
-            Quiver.Binary.open_file(path; mode = 'r') do file
-                @test Quiver.Binary.get_file_path(file) == path
-                Quiver.Binary.close!(file)
+            @test Quiver.Binary.open_file(path; mode = 'r') do file
+                Quiver.Binary.get_file_path(file) == path
             end
         finally
             cleanup_binary_file(path)
         end
+    end
+
+    @testset "Scoped open rejects a non-callable first argument" begin
+        # Untyped `fn` would capture an arity slip and open the file anyway.
+        @test_throws MethodError Quiver.Binary.open_file("a.qvr", "b.qvr"; mode = 'w')
     end
 
     @testset "Read mode on missing file" begin

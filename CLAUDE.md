@@ -628,6 +628,14 @@ because only Julia consumers use it.
 | `transaction(db) do db...end` | `db.transaction((db) {...})` | `with db.transaction():` | `db:transaction(function(db)...end)` | begin + fn + commit/rollback |
 | `dry_run(db) do db...end` | `db.dryRun((db) {...})` | `with db.dry_run():` | `db:dry_run(function(db)...end)` | begin_dry_run + fn + end_dry_run |
 
+**Scoped resource factories (Julia and Python — no Dart/JS equivalent):** the four bindings sit in
+three shapes and the divergence is not yet resolved. Julia has callback-first overloads for `do`
+syntax on `Database` (`open`, `from_schema`, `from_migrations`) and `Binary.File` (`open_file`);
+Python has `with` on `Database` and `LuaRunner`; Dart and JS have neither. All of them wrap
+`open + fn + close`. Two caveats hold wherever a scoped form exists: a `LuaRunner` borrows its
+`Database` (raw `Database&` in `src/lua_runner.cpp`) and must not outlive the block, and an
+uncommitted transaction still open at the block's exit is rolled back by the close.
+
 **Multi-column group readers (Julia, Dart, and Python):**
 
 | Julia | Dart | Python | Wraps |
