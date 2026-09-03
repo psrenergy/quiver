@@ -1,6 +1,7 @@
 #include "test_utils.h"
 
 #include <algorithm>
+#include <cmath>
 #include <gtest/gtest.h>
 #include <quiver/c/database.h>
 #include <quiver/c/element.h>
