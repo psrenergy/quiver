@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from quiverdb import Database
+import pytest
 
+from quiverdb import Database
 
 # -- Set reads by ID ----------------------------------------------------------
 
@@ -56,6 +57,40 @@ class TestReadSetStringsBulk:
         result = collections_db.read_set_strings("Collection", "tag")
         assert len(result) == 1
         assert result[0] == ["alpha"]
+
+
+class TestReadSetDateTimesBulk:
+    def test_read_set_date_times(self, all_types_db: Database) -> None:
+        assert all_types_db.read_set_date_times("AllTypes", "tag") == []
+
+        all_types_db.create_element(
+            "AllTypes",
+            label="item1",
+            tag=["2024-01-15T10:30:00", "2024-01-16"],
+        )
+        all_types_db.create_element(
+            "AllTypes",
+            label="item2",
+            tag=["2024-06-20 14:45:30"],
+        )
+        all_types_db.create_element("AllTypes", label="no set")
+
+        result = all_types_db.read_set_date_times("AllTypes", "tag")
+        assert len(result) == 2
+        assert sorted(result[0]) == [
+            datetime(2024, 1, 15, 10, 30, tzinfo=timezone.utc),
+            datetime(2024, 1, 16, tzinfo=timezone.utc),
+        ]
+        assert result[1] == [datetime(2024, 6, 20, 14, 45, 30, tzinfo=timezone.utc)]
+
+    def test_rejects_a_malformed_cell_naming_the_column(self, all_types_db: Database) -> None:
+        all_types_db.create_element("AllTypes", label="item1", tag=["2024-01-15", "20240115"])
+
+        with pytest.raises(ValueError, match=r"AllTypes\.tag.*expected a valid YYYY-MM-DD"):
+            all_types_db.read_set_date_times("AllTypes", "tag")
+
+        with pytest.raises(ValueError, match=r"AllTypes\.tag"):
+            all_types_db.read_set_date_time_by_id("AllTypes", "tag", 1)
 
 
 # -- Convenience set reads ---------------------------------------------------

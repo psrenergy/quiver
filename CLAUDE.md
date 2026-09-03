@@ -614,10 +614,26 @@ The bindings provide additional convenience methods that compose core operations
 
 |             Julia             |           Dart            |             Python            |               Wraps               |
 | ----------------------------- | ------------------------- | ----------------------------- | --------------------------------- |
+| `read_scalar_date_times`      | `readScalarDateTimes`     | `read_scalar_date_times`      | string scalar bulk read + date parsing |
 | `read_scalar_date_time_by_id` | `readScalarDateTimeById`  | `read_scalar_date_time_by_id` | string read + date parsing        |
+| `read_vector_date_times`      | `readVectorDateTimes`     | `read_vector_date_times`      | string vector bulk read + date parsing |
 | `read_vector_date_time_by_id` | `readVectorDateTimesById` | `read_vector_date_time_by_id` | string vector read + date parsing |
+| `read_set_date_times`         | `readSetDateTimes`        | `read_set_date_times`         | string set bulk read + date parsing |
 | `read_set_date_time_by_id`    | `readSetDateTimesById`    | `read_set_date_time_by_id`    | string set read + date parsing    |
 | `query_date_time`             | `queryDateTime`           | `query_date_time`             | string query + date parsing       |
+
+The three parsers (`string_to_date_time`, `stringToDateTime`, `_parse_datetime`) each gate their
+input to the core's DATE_TIME grammar — `YYYY-MM-DD` optionally plus `THH:MM:SS` or ` HH:MM:SS`,
+fixed-width, year `0001`-`9999`, a real calendar day — and reject anything else with a locally
+crafted message naming `collection.attribute`, the boolean-wrapper rule. **They must accept exactly
+the same set**: that intersection is what the core's write gate exists to guarantee, and each host
+parser is wider than it in a different direction (Julia fills missing trailing components, Python's
+`fromisoformat` and Dart's `DateTime.parse` take `Z`/offset forms, and Dart additionally rolls an
+out-of-range field over rather than rejecting it). The write gate only fires on `date_`-prefixed
+columns, so a plain `TEXT` column is the path by which a non-conforming value reaches a reader.
+Like the boolean family, the scalar readers preserve NULLs positionally while the **vector/set
+readers do not** — they inherit `read_grouped_values_all`'s dropping of NULL cells and of ids that
+own no rows, so they are not aligned with `read_element_ids`.
 
 **Boolean wrappers (Julia, Dart, Python, and JS):**
 

@@ -133,6 +133,16 @@ extension DatabaseRead on Database {
     }
   }
 
+  /// Reads all DateTime values for a scalar attribute. One entry per element;
+  /// a SQL NULL is `null`.
+  List<DateTime?> readScalarDateTimes(String collection, String attribute) {
+    return readScalarStrings(collection, attribute)
+        .map(
+          (value) => value == null ? null : stringToDateTime(value, collection, attribute),
+        )
+        .toList();
+  }
+
   /// Reads all int vectors for a vector attribute from a collection.
   List<List<int>> readVectorIntegers(String collection, String attribute) {
     _ensureNotClosed();
@@ -290,6 +300,22 @@ extension DatabaseRead on Database {
     }
   }
 
+  /// Reads all DateTime vectors for a vector attribute from a collection.
+  ///
+  /// NULL cells are dropped and only elements that own rows are returned, so the
+  /// result is not positionally aligned with [readElementIds] (unlike
+  /// [readScalarDateTimes]).
+  List<List<DateTime>> readVectorDateTimes(
+    String collection,
+    String attribute,
+  ) {
+    return readVectorStrings(collection, attribute)
+        .map(
+          (values) => values.map((value) => stringToDateTime(value, collection, attribute)).toList(),
+        )
+        .toList();
+  }
+
   /// Reads all int sets for a set attribute from a collection.
   List<List<int>> readSetIntegers(String collection, String attribute) {
     _ensureNotClosed();
@@ -444,6 +470,18 @@ extension DatabaseRead on Database {
     }
   }
 
+  /// Reads all DateTime sets for a set attribute from a collection.
+  ///
+  /// Same alignment caveat as [readVectorDateTimes]: NULL cells are dropped and
+  /// only elements that own rows are returned.
+  List<List<DateTime>> readSetDateTimes(String collection, String attribute) {
+    return readSetStrings(collection, attribute)
+        .map(
+          (values) => values.map((value) => stringToDateTime(value, collection, attribute)).toList(),
+        )
+        .toList();
+  }
+
   // ==========================================================================
   // Read scalar by Id
   // ==========================================================================
@@ -554,7 +592,7 @@ extension DatabaseRead on Database {
     int id,
   ) {
     final strValue = readScalarStringById(collection, attribute, id);
-    return strValue == null ? null : stringToDateTime(strValue);
+    return strValue == null ? null : stringToDateTime(strValue, collection, attribute);
   }
 
   // ==========================================================================
@@ -694,7 +732,7 @@ extension DatabaseRead on Database {
       collection,
       attribute,
       id,
-    ).map((s) => stringToDateTime(s)).toList();
+    ).map((s) => stringToDateTime(s, collection, attribute)).toList();
   }
 
   // ==========================================================================
@@ -822,7 +860,7 @@ extension DatabaseRead on Database {
       collection,
       attribute,
       id,
-    ).map((s) => stringToDateTime(s)).toList();
+    ).map((s) => stringToDateTime(s, collection, attribute)).toList();
   }
 
   // ==========================================================================
@@ -1010,7 +1048,15 @@ extension DatabaseRead on Database {
         ),
       );
 
-      return _decodeGroupRows(outColNames, outColTypes, outColData, outColHasValue, outColCount, outRowCount);
+      return _decodeGroupRows(
+        collection,
+        outColNames,
+        outColTypes,
+        outColData,
+        outColHasValue,
+        outColCount,
+        outRowCount,
+      );
     } finally {
       arena.releaseAll();
     }
@@ -1051,7 +1097,15 @@ extension DatabaseRead on Database {
         ),
       );
 
-      return _decodeGroupRows(outColNames, outColTypes, outColData, outColHasValue, outColCount, outRowCount);
+      return _decodeGroupRows(
+        collection,
+        outColNames,
+        outColTypes,
+        outColData,
+        outColHasValue,
+        outColCount,
+        outRowCount,
+      );
     } finally {
       arena.releaseAll();
     }
@@ -1060,6 +1114,7 @@ extension DatabaseRead on Database {
   // Decodes the columnar typed-arrays + per-cell mask result of the group
   // read C functions into row maps, then frees the C allocations.
   List<Map<String, Object?>> _decodeGroupRows(
+    String collection,
     Pointer<Pointer<Pointer<Char>>> outColNames,
     Pointer<Pointer<Int>> outColTypes,
     Pointer<Pointer<Pointer<Void>>> outColData,
@@ -1092,7 +1147,13 @@ extension DatabaseRead on Database {
         final ptr = outColData.value[c].cast<Pointer<Char>>();
         for (var r = 0; r < rowCount; r++) {
           // Never toDartString a masked-out (NULL) pointer.
-          rows[r][colName] = mask[r] != 0 ? stringToDateTime(ptr[r].cast<Utf8>().toDartString()) : null;
+          rows[r][colName] = mask[r] != 0
+              ? stringToDateTime(
+                  ptr[r].cast<Utf8>().toDartString(),
+                  collection,
+                  colName,
+                )
+              : null;
         }
       } else {
         final ptr = outColData.value[c].cast<Pointer<Char>>();
@@ -1183,7 +1244,11 @@ extension DatabaseRead on Database {
           if (colName == dimCol) {
             result[colName] = List<DateTime>.generate(
               rowCount,
-              (r) => stringToDateTime(ptr[r].cast<Utf8>().toDartString()),
+              (r) => stringToDateTime(
+                ptr[r].cast<Utf8>().toDartString(),
+                collection,
+                colName,
+              ),
             );
           } else {
             // Never toDartString a masked-out (NULL) pointer.

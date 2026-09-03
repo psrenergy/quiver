@@ -3,8 +3,9 @@
 The bulk scalar readers (`read_scalar_integers` / `read_scalar_floats` / `read_scalar_strings`)
 are nullability-aware: a `NOT NULL` column returns a concrete `Vector{T}`, a nullable column
 returns `Vector{Optional{T}}` (`Optional{T} = Union{Nothing, T}`), decided from
-`get_scalar_metadata(...).not_null`. `read_scalar_booleans` inherits the same shape without a
-second metadata read — it branches on `read_scalar_integers`' container type. This document tracks
+`get_scalar_metadata(...).not_null`. Two derivative wrappers inherit the same shape without a
+second metadata read, by branching on the delegate's container type: `read_scalar_booleans`
+(on `read_scalar_integers`) and `read_scalar_date_times` (on `read_scalar_strings`). This document tracks
 the readers that were deliberately left out of that change and what (if anything) should happen to
 them.
 

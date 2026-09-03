@@ -53,8 +53,9 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   The only asymmetric reader/writer pair here — deliberate, see the root design decisions.
 - **Scalar bulk NULLs**: `readScalarIntegers`/`readScalarFloats` decode a parallel `Pointer<Uint8>`
   mask into `List<int?>`/`List<double?>` (mask 0 → `null`); `readScalarStrings` returns `List<String?>`,
-  null-guarding the pointer before `toDartString`. `bindings.dart` carries the mask arg +
-  `quiver_database_free_mask` (regenerate via ffigen; clear `.dart_tool` caches on C-API changes).
+  null-guarding the pointer before `toDartString`; `readScalarDateTimes` maps that list while
+  preserving its null slots. `bindings.dart` carries the mask arg + `quiver_database_free_mask`
+  (regenerate via ffigen; clear `.dart_tool` caches on C-API changes).
 - **`LuaRunner.run` owns its result**: `quiver_lua_runner_run` takes a `char** out_result` whose JSON
   string is C-heap allocated, so the `Arena` cannot own it — it is freed with
   `quiver_lua_runner_free_string` (*not* `quiver_database_free_string`) in its own nested `finally`,
@@ -67,6 +68,17 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   decode the mask out-param and never `toDartString` a masked-out (NULL) pointer.
 - **Query API shape**: `queryString`/`queryInteger`/`queryBoolean`/`queryFloat`/`queryDateTime`
   take an optional positional `List<Object?>? parameters` (no separate `*Params` methods).
+- **`stringToDateTime` gates the shape, then re-serializes to catch a rolled-over field.**
+  `DateTime.parse` is wider than the core's DATE_TIME grammar (it takes `"20240115"`, a `Z` suffix,
+  a UTC offset) *and* it silently rolls an out-of-range field over instead of rejecting it —
+  `"2024-02-31"` reads as March 2, `"2024-13-01"` as 2025-01-01, hour 25 as the next day — where
+  Julia and Python both throw. So the regex alone is not enough: the parsed value is fed back
+  through `dateTimeToString` and compared, and only a value the parse left untouched is accepted.
+  Rejecting the offset forms also keeps every returned `DateTime` at `isUtc == false`, which
+  matters because Dart's `==` compares `isUtc` as well as the instant: a list mixing the two has
+  same-moment values comparing unequal, deduping to two in a `Set`, and colliding as distinct `Map`
+  keys, while `compareTo` reads 0 and hides it. Keep this parser accepting exactly the same set as
+  Julia's `string_to_date_time` and Python's `_parse_datetime`.
 - **Booleans are INTEGER 0/1 in both directions.** `_integerToBoolean` (nullable) and
   `_integerToBooleanNonNull` (group cells, which are never null) live in `database.dart` so the
   `part` files share them; both take the `collection`/`attribute` so the rejection message names

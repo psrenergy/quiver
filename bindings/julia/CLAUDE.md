@@ -41,10 +41,24 @@ Project.toml      # Deps: Artifacts, CEnum, Dates, Libdl; julia 1.11 compat
   concrete-vs-optional shape but does **not** re-read the metadata: it recovers the schema's
   nullability from `read_scalar_integers`' container type (`values isa Vector{Int64}`), so it adds
   no FFI round-trip — if that delegate's container type ever changes, this branch changes with it.
+  `read_scalar_date_times` is the second wrapper on that mechanism (it branches on
+  `values isa Vector{String}`), so both are deliberately **outside** the brace list above.
   Julia-only; the `_by_id`/`query_*`/time-series
   readers are not yet converted — see `type_stability_followup.md`. An `INTEGER PRIMARY KEY` (e.g.
   `id`) is a rowid alias and is reported `not_null` by the C++ core (`scalar_metadata_from_column`),
   so `read_scalar_integers(db, c, "id")` is a concrete `Vector{Int64}`.
+- **One date-time grammar, gated in `string_to_date_time`** (`src/date_time.jl`). Julia's
+  `dateformat` treats field widths as **maxima** and fills missing trailing components, so it used
+  to fabricate a date from truncated input: `"2024"` and `"2024-01"` both read as 2024-01-01 and
+  `"20240115"` as **year 20240115**, all without an error, where Python and Dart reject or read
+  those differently. `QUIVER_DATE_TIME_PATTERN` now gates the shape to the core's own band
+  (`datetime::is_valid_iso8601`) before parsing, and an out-of-range field that clears the regex
+  (`"2024-02-31"`) falls through to the same rejection, so the message always names the column.
+  Keep the three parsers (here, `_parse_datetime` in Python, `stringToDateTime` in Dart) accepting
+  exactly the same set — that intersection is the whole point of the core's write gate. Also note
+  `replace(s, ' ' => 'T'; count = 1)`: replacing *every* space turned `"Config 1"` into
+  `"ConfigT1"` and quoted that in the error. `string_to_date_time(::Nothing)` returns `nothing`
+  (the `_integer_to_boolean` precedent), which is why no caller hand-rolls a null guard.
 - **`run!` owns its result**: `quiver_lua_runner_run` takes an `out_result::Ptr{Ptr{Cchar}}` and the
   JSON string must be freed with `quiver_lua_runner_free_string` — *not*
   `quiver_database_free_string`. `check` throws before the `unsafe_string`, and the C API leaves
