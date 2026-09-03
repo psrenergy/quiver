@@ -46,10 +46,12 @@ class Element {
   /// Supported types:
   /// - `null` - sets a null value
   /// - `int` - 64-bit integer
+  /// - `bool` - stored as the integer 1 or 0
   /// - `double` - 64-bit floating point
   /// - `String` - UTF-8 string
   /// - `DateTime` - converted to ISO 8601 string
   /// - `List<int?>` - array of integers (a null cell is a SQL NULL)
+  /// - `List<bool?>` - array of booleans (stored as integers)
   /// - `List<double?>` - array of floats
   /// - `List<String?>` - array of strings
   /// - `List<DateTime?>` - array of datetimes (converted to ISO 8601 strings)
@@ -60,6 +62,8 @@ class Element {
     switch (value) {
       case null:
         setNull(name);
+      case bool v:
+        setInteger(name, v ? 1 : 0);
       case int v:
         setInteger(name, v);
       case double v:
@@ -70,6 +74,10 @@ class Element {
         setDateTime(name, v);
       case List<int> v:
         setArrayInteger(name, v);
+      // A List<bool> cannot go through _setMixedList: its firstWhere orElse
+      // returns null, which a non-nullable element type rejects at runtime.
+      case List<bool> v:
+        setArrayInteger(name, v.map((b) => b ? 1 : 0).toList());
       case List<double> v:
         setArrayFloat(name, v);
       case List<String> v:
@@ -95,6 +103,8 @@ class Element {
     final first = values.firstWhere((v) => v != null, orElse: () => null);
     if (first == null) {
       setArrayInteger(name, List<int?>.filled(values.length, null));
+    } else if (first is bool) {
+      setArrayInteger(name, values.cast<bool?>().map((v) => v == null ? null : (v ? 1 : 0)).toList());
     } else if (first is int) {
       setArrayInteger(name, values.cast<int?>());
     } else if (first is double) {

@@ -17,6 +17,7 @@ src/group-columns.ts # Shared columnar marshaller for the group writers (by id a
 src/loader.ts     # HAND-WRITTEN FFI symbol table + 3-tier library loader
 src/types.ts      # Central DATA_TYPE_* / LOG_LEVEL_* constants and DatabaseOptions type
 src/ffi-helpers.ts # Alloc helpers, makeDefaultOptions()
+src/boolean.ts    # integerToBoolean — strict 0/1 conversion for the boolean convenience readers
 src/errors.ts     # QuiverError (always thrown; message from quiver_get_last_error)
 test/             # bun:test suite (*.test.ts per area) + test.bat
 package.json      # Version must match CMakeLists.txt; scripts: test/lint/format (biome)
@@ -88,6 +89,13 @@ biome.json        # Lint/format config
   for masked cells). Reads decode the mask and null-out cells; string columns use the null-guarded
   pointer loop (never `decodeStringArray`, which constructs a `CString` from a NULL pointer). Masks
   are built by direct `Uint8Array` indexing — never a `DataView` — per the TypedArray house rule.
+- **`integerToBoolean` throws `RangeError`, not `QuiverError`** — the one exception to the
+  "always `QuiverError`" rule above, and deliberate: that message comes from
+  `quiver_get_last_error`, while this one is crafted here (the boolean readers are a binding-only
+  convenience the core never sees). It names the offending `collection.attribute`; `queryBoolean`
+  has no column to name. On writes a `boolean` is an INTEGER 1/0 — `setElementField`,
+  `setElementArray`, and `marshalParams` each carry a `typeof === "boolean"` branch, and
+  `ScalarValue`/`ArrayValue`/`QueryParam` include it.
 - **Test/lint/format**: `bun test test`, `bun run lint`, `bun run format` (biome, project-pinned
   version). No permission flags needed (Bun has none — don't carry over Deno habits). There is
   pre-existing lint debt in untouched files — fix only what your change orphans, don't drive-by

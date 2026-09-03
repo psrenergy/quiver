@@ -90,8 +90,19 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 - **Boolean convenience readers for INTEGER-backed values.** Julia, Python, Dart, and JavaScript
   now expose scalar, vector, and set boolean readers in both bulk and by-id forms, plus a boolean
-  query helper. They compose the existing integer APIs, preserve scalar NULLs, and convert only
-  `0`/`1` to `false`/`true`; any other integer raises the binding's native conversion error.
+  query helper. They compose the existing integer APIs and convert only `0`/`1` to
+  `false`/`true`; any other integer raises the binding's native conversion error
+  (`ArgumentError` in Julia and Dart, `ValueError` in Python, `RangeError` in JavaScript), naming
+  the offending `collection.attribute`. The scalar readers preserve NULLs positionally, one entry
+  per element; the vector and set readers do not — like every other group reader they drop NULL
+  cells and omit elements that own no rows, so they are not aligned with `read_element_ids`.
+  Lua is deliberately excluded (it has a native boolean; see the design decisions).
+
+- **Dart and JavaScript accept a `bool` wherever an integer is accepted.** `createElement` /
+  `updateElement` (scalars and arrays) and query parameters now take a boolean and store it as
+  INTEGER `1`/`0`, matching Julia and Python. Previously they threw `Unsupported type bool`, so a
+  value read through the new boolean readers could not be written back. JavaScript's
+  `ScalarValue`, `ArrayValue` and `QueryParam` were widened accordingly.
 
 - **`update_relation(collection_from, collection_to, relation_type, id, target_label)` and
   `update_relation_by_label(..., label, target_label)`.** Points one element's scalar foreign-key

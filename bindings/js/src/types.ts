@@ -21,11 +21,12 @@ export type DatabaseOptions = {
   consoleLevel?: number;
 };
 
-export type ScalarValue = number | bigint | string | null;
-export type ArrayValue = number[] | bigint[] | string[];
+/** A `boolean` is stored as the INTEGER 1 or 0 (see `readScalarBooleans` for the read side). */
+export type ScalarValue = number | bigint | boolean | string | null;
+export type ArrayValue = number[] | bigint[] | boolean[] | string[];
 export type Value = ScalarValue | ArrayValue;
 export type ElementData = Record<string, Value | undefined>;
-export type QueryParam = number | string | null;
+export type QueryParam = number | boolean | string | null;
 
 /** Native memory allocation result. Callers MUST hold `buf` in scope to prevent GC. */
 export type Allocation = {

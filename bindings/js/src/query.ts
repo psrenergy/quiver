@@ -39,6 +39,11 @@ function marshalParams(parameters: QueryParam[]): {
     if (p === null) {
       typesDv.setInt32(i * 4, DATA_TYPE_NULL, true);
       valuesDv.setBigInt64(i * 8, 0n, true);
+    } else if (typeof p === "boolean") {
+      typesDv.setInt32(i * 4, DATA_TYPE_INTEGER, true);
+      const native = allocNativeInt64([p ? 1 : 0]);
+      keepalive.push(native);
+      valuesDv.setBigInt64(i * 8, nativeAddress(native.ptr), true);
     } else if (typeof p === "number") {
       if (Number.isInteger(p)) {
         typesDv.setInt32(i * 4, DATA_TYPE_INTEGER, true);

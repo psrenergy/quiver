@@ -3,15 +3,8 @@ import 'package:quiverdb/quiverdb.dart';
 import 'package:test/test.dart';
 
 void main() {
-  final schemaPath = path.join(
-    path.current,
-    '..',
-    '..',
-    'tests',
-    'schemas',
-    'valid',
-    'all_types.sql',
-  );
+  final testsPath = path.join(path.current, '..', '..', 'tests');
+  final schemaPath = path.join(testsPath, 'schemas', 'valid', 'all_types.sql');
 
   group('Boolean convenience methods', () {
     late Database db;
@@ -106,13 +99,41 @@ void main() {
       );
     });
 
+    test('writes booleans as integers', () {
+      final id = db.createElement('AllTypes', {
+        'label': 'Written',
+        'some_integer': true,
+        'count_value': [true, false],
+        'code': [true],
+      });
+
+      expect(db.readScalarBooleanById('AllTypes', 'some_integer', id), isTrue);
+      expect(db.readVectorBooleansById('AllTypes', 'count_value', id), equals([true, false]));
+      expect(db.readSetBooleansById('AllTypes', 'code', id), equals([true]));
+
+      db.updateElement('AllTypes', id, {'some_integer': false});
+      expect(db.readScalarBooleanById('AllTypes', 'some_integer', id), isFalse);
+
+      expect(db.queryBoolean('SELECT some_integer FROM AllTypes WHERE some_integer = ?', [false]), isFalse);
+    });
+
     test('rejects non-binary integers', () {
-      db.createElement('AllTypes', {'label': 'Invalid', 'some_integer': 2});
+      final id = db.createElement('AllTypes', {
+        'label': 'Invalid',
+        'some_integer': 2,
+        'count_value': [0, 2],
+        'code': [2],
+      });
 
       expect(
         () => db.readScalarBooleans('AllTypes', 'some_integer'),
-        throwsArgumentError,
+        throwsA(isArgumentError.having((e) => e.toString(), 'message', contains('AllTypes.some_integer'))),
       );
+      expect(() => db.readScalarBooleanById('AllTypes', 'some_integer', id), throwsArgumentError);
+      expect(() => db.readVectorBooleans('AllTypes', 'count_value'), throwsArgumentError);
+      expect(() => db.readVectorBooleansById('AllTypes', 'count_value', id), throwsArgumentError);
+      expect(() => db.readSetBooleans('AllTypes', 'code'), throwsArgumentError);
+      expect(() => db.readSetBooleansById('AllTypes', 'code', id), throwsArgumentError);
       expect(() => db.queryBoolean('SELECT 2'), throwsArgumentError);
     });
   });

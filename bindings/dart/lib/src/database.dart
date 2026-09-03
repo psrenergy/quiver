@@ -20,11 +20,18 @@ part 'database_query.dart';
 part 'database_read.dart';
 part 'database_update.dart';
 
-bool? _integerToBoolean(int? value) {
+bool? _integerToBoolean(int? value, [String collection = '', String attribute = '']) {
   if (value == null) return null;
+  return _integerToBooleanNonNull(value, collection, attribute);
+}
+
+/// The non-nullable sibling, for group readers whose cells are never null.
+/// Keeping it separate avoids `_integerToBoolean(...)!` at the call sites.
+bool _integerToBooleanNonNull(int value, [String collection = '', String attribute = '']) {
   if (value == 0) return false;
   if (value == 1) return true;
-  throw ArgumentError.value(value, 'value', 'Expected 0 or 1');
+  final source = collection.isEmpty ? '' : " in '$collection.$attribute'";
+  throw ArgumentError.value(value, 'value', 'Cannot convert integer to boolean$source: expected 0 or 1');
 }
 
 /// A wrapper for the Quiver database.
@@ -172,10 +179,10 @@ class Database {
       if (p == null) {
         types[i] = quiver_data_type_t.QUIVER_DATA_TYPE_NULL;
         values[i] = nullptr;
-      } else if (p is int) {
+      } else if (p is int || p is bool) {
         types[i] = quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER;
         final ptr = arena<Int64>();
-        ptr.value = p;
+        ptr.value = p is bool ? (p ? 1 : 0) : p as int;
         values[i] = ptr.cast();
       } else if (p is double) {
         types[i] = quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT;

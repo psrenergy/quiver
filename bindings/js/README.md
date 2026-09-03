@@ -133,7 +133,8 @@ bun run example.ts
 - `queryBoolean(sql, parameters?)` -- Query returning an INTEGER-backed boolean or null
 - `queryFloat(sql, parameters?)` -- Query returning float or null
 
-Parameters are passed as an array of `number | string | null`.
+Parameters are passed as an array of `number | boolean | string | null` (a `boolean` binds as the
+INTEGER 1 or 0).
 
 ### Transaction
 

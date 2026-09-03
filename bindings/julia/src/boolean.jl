@@ -4,5 +4,5 @@ function _integer_to_boolean(value::Integer, collection::String = "", attribute:
     value == 0 && return false
     value == 1 && return true
     source = isempty(collection) ? "" : " in '$collection.$attribute'"
-    throw(ArgumentError("Cannot convert integer $value to boolean$source: expected 0 or 1"))
+    return throw(ArgumentError("Cannot convert integer $value to boolean$source: expected 0 or 1"))
 end

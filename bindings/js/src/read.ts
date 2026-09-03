@@ -58,7 +58,9 @@ Database.prototype.readScalarBooleans = function (
   collection: string,
   attribute: string,
 ): (boolean | null)[] {
-  return this.readScalarIntegers(collection, attribute).map((value) => integerToBoolean(value));
+  return this.readScalarIntegers(collection, attribute).map((value) =>
+    integerToBoolean(value, collection, attribute),
+  );
 };
 
 Database.prototype.readScalarFloats = function (
@@ -158,7 +160,11 @@ Database.prototype.readScalarBooleanById = function (
   attribute: string,
   id: number,
 ): boolean | null {
-  return integerToBoolean(this.readScalarIntegerById(collection, attribute, id));
+  return integerToBoolean(
+    this.readScalarIntegerById(collection, attribute, id),
+    collection,
+    attribute,
+  );
 };
 
 Database.prototype.readScalarFloatById = function (
@@ -360,13 +366,17 @@ Database.prototype.readVectorIntegers = function (
     attribute,
   );
 };
+/**
+ * NULL cells are dropped and only elements that own rows are returned, so the result is not
+ * positionally aligned with `readElementIds` (unlike `readScalarBooleans`).
+ */
 Database.prototype.readVectorBooleans = function (
   this: Database,
   collection: string,
   attribute: string,
 ): boolean[][] {
   return this.readVectorIntegers(collection, attribute).map((values) =>
-    values.map((value) => integerToBoolean(value)),
+    values.map((value) => integerToBoolean(value, collection, attribute)),
   );
 };
 Database.prototype.readVectorFloats = function (
@@ -408,13 +418,14 @@ Database.prototype.readSetIntegers = function (
     attribute,
   );
 };
+/** Same alignment caveat as `readVectorBooleans`: NULL cells dropped, only ids that own rows. */
 Database.prototype.readSetBooleans = function (
   this: Database,
   collection: string,
   attribute: string,
 ): boolean[][] {
   return this.readSetIntegers(collection, attribute).map((values) =>
-    values.map((value) => integerToBoolean(value)),
+    values.map((value) => integerToBoolean(value, collection, attribute)),
   );
 };
 Database.prototype.readSetFloats = function (
@@ -558,7 +569,7 @@ Database.prototype.readVectorBooleansById = function (
   id: number,
 ): boolean[] {
   return this.readVectorIntegersById(collection, attribute, id).map((value) =>
-    integerToBoolean(value),
+    integerToBoolean(value, collection, attribute),
   );
 };
 Database.prototype.readVectorFloatsById = function (
@@ -613,7 +624,7 @@ Database.prototype.readSetBooleansById = function (
   id: number,
 ): boolean[] {
   return this.readSetIntegersById(collection, attribute, id).map((value) =>
-    integerToBoolean(value),
+    integerToBoolean(value, collection, attribute),
   );
 };
 Database.prototype.readSetFloatsById = function (

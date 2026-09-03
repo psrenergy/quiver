@@ -81,18 +81,19 @@ describe("createElement", () => {
     }
   });
 
-  test("throws on unsupported type (boolean)", () => {
+  // A boolean IS supported (INTEGER 1/0) — see database-boolean.test.ts.
+  test("throws on unsupported type (object)", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       expect(() => {
-        db.createElement("AllTypes", { label: "Item1", some_integer: true as unknown as Value });
+        db.createElement("AllTypes", { label: "Item1", some_integer: {} as unknown as Value });
       }).toThrow(QuiverError);
 
       try {
-        db.createElement("AllTypes", { label: "Item1", some_integer: true as unknown as Value });
+        db.createElement("AllTypes", { label: "Item1", some_integer: {} as unknown as Value });
       } catch (e) {
         expect((e as QuiverError).message).toContain(
-          "Unsupported value type for 'some_integer': boolean",
+          "Unsupported value type for 'some_integer': object",
         );
       }
     } finally {
