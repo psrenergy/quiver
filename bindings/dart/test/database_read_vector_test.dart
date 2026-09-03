@@ -392,4 +392,36 @@ void main() {
       }
     });
   });
+
+  group('Read Vector DateTimes Rejects A Malformed Cell', () {
+    test('rejects and names the column', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'all_types.sql'),
+      );
+      try {
+        db.createElement('AllTypes', {
+          'label': 'Item 1',
+          'label_value': ['2024-01-15', '2024-01'],
+        });
+
+        expect(
+          () => db.readVectorDateTimes('AllTypes', 'label_value'),
+          throwsA(
+            isArgumentError.having(
+              (e) => e.toString(),
+              'message',
+              contains('AllTypes.label_value'),
+            ),
+          ),
+        );
+        expect(
+          () => db.readVectorDateTimesById('AllTypes', 'label_value', 1),
+          throwsArgumentError,
+        );
+      } finally {
+        db.close();
+      }
+    });
+  });
 }

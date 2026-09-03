@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import warnings
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -541,7 +542,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         id: int,
     ) -> datetime | None:
         """Read a datetime scalar attribute. Returns timezone-aware UTC datetime or None."""
-        return _parse_datetime(self.read_scalar_string_by_id(collection, attribute, id))
+        return _parse_datetime(self.read_scalar_string_by_id(collection, attribute, id), collection, attribute)
 
     def read_vector_date_time_by_id(
         self,
@@ -550,7 +551,9 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         id: int,
     ) -> list[datetime]:
         """Read datetime values from a vector. Returns list of timezone-aware UTC datetimes."""
-        return [_parse_datetime(s) for s in self.read_vector_strings_by_id(collection, attribute, id)]
+        return [
+            _parse_datetime(s, collection, attribute) for s in self.read_vector_strings_by_id(collection, attribute, id)
+        ]
 
     def read_set_date_time_by_id(
         self,
@@ -559,7 +562,9 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         id: int,
     ) -> list[datetime]:
         """Read datetime values from a set. Returns list of timezone-aware UTC datetimes."""
-        return [_parse_datetime(s) for s in self.read_set_strings_by_id(collection, attribute, id)]
+        return [
+            _parse_datetime(s, collection, attribute) for s in self.read_set_strings_by_id(collection, attribute, id)
+        ]
 
     # -- Scalar reads (bulk) --------------------------------------------------
 
@@ -656,7 +661,9 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
 
     def read_scalar_date_times(self, collection: str, attribute: str) -> list[datetime | None]:
         """Read all datetime scalar values. SQL NULL values become None."""
-        return [_parse_datetime(value) for value in self.read_scalar_strings(collection, attribute)]
+        return [
+            _parse_datetime(value, collection, attribute) for value in self.read_scalar_strings(collection, attribute)
+        ]
 
     # -- Scalar reads (by ID) -------------------------------------------------
 
@@ -889,9 +896,14 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
             lib.quiver_database_free_string_vectors(out_vectors[0], out_sizes[0], count)
 
     def read_vector_date_times(self, collection: str, attribute: str) -> list[list[datetime]]:
-        """Read datetime vectors for all elements in a collection."""
+        """Read datetime vectors stored as string vectors.
+
+        NULL cells are dropped and only elements that own rows are returned, so the result is
+        not positionally aligned with read_element_ids (unlike read_scalar_date_times).
+        """
         return [
-            [_parse_datetime(value) for value in values] for values in self.read_vector_strings(collection, attribute)
+            [_parse_datetime(value, collection, attribute) for value in values]
+            for values in self.read_vector_strings(collection, attribute)
         ]
 
     # -- Vector reads (by ID) ----------------------------------------------------
@@ -1105,8 +1117,15 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
             lib.quiver_database_free_string_vectors(out_sets[0], out_sizes[0], count)
 
     def read_set_date_times(self, collection: str, attribute: str) -> list[list[datetime]]:
-        """Read datetime sets for all elements in a collection."""
-        return [[_parse_datetime(value) for value in values] for values in self.read_set_strings(collection, attribute)]
+        """Read datetime sets stored as string sets.
+
+        Same alignment caveat as read_vector_date_times: NULL cells are dropped and only elements
+        that own rows are returned.
+        """
+        return [
+            [_parse_datetime(value, collection, attribute) for value in values]
+            for values in self.read_set_strings(collection, attribute)
+        ]
 
     # -- Set reads (by ID) -------------------------------------------------------
 
@@ -1448,7 +1467,8 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
                     str_ptr = ffi.cast("char**", out_data[0][c])
                     if name == dim_col:
                         result[name] = [
-                            _parse_datetime(ffi.string(str_ptr[r]).decode("utf-8")) for r in range(row_count)
+                            _parse_datetime(ffi.string(str_ptr[r]).decode("utf-8"), collection, name)
+                            for r in range(row_count)
                         ]
                     else:
                         result[name] = [
@@ -2041,27 +2061,44 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
 # -- DateTime parsing helper (module-level) ----------------------------------
 
 
-@overload
-def _parse_datetime(s: str) -> datetime: ...
+# The core's DATE_TIME grammar (datetime::is_valid_iso8601, src/utils/datetime.h): YYYY-MM-DD
+# optionally followed by THH:MM:SS or ' HH:MM:SS', every field fixed-width and zero-padded, year
+# 0001-9999. fromisoformat is wider than that -- it accepts 'YYYYMMDD', a 'Z' suffix and a UTC
+# offset, none of which Julia's parser reads -- so gate the shape before parsing. Rejecting the
+# offset forms is also what makes the replace(tzinfo=utc) below correct: everything reaching it is
+# naive, so there is no offset to convert away.
+_DATE_TIME_PATTERN = re.compile(r"(?!0000)\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}:\d{2})?")
 
 
 @overload
-def _parse_datetime(s: None) -> None: ...
+def _parse_datetime(s: str, collection: str = ..., attribute: str = ...) -> datetime: ...
 
 
 @overload
-def _parse_datetime(s: str | None) -> datetime | None: ...
+def _parse_datetime(s: None, collection: str = ..., attribute: str = ...) -> None: ...
 
 
-def _parse_datetime(s: str | None) -> datetime | None:
+@overload
+def _parse_datetime(s: str | None, collection: str = ..., attribute: str = ...) -> datetime | None: ...
+
+
+def _parse_datetime(s: str | None, collection: str = "", attribute: str = "") -> datetime | None:
     """Parse an ISO 8601 datetime string to timezone-aware UTC datetime.
 
-    Returns None if input is None. Raises ValueError on malformed input.
-    Both 'YYYY-MM-DDTHH:MM:SS' and 'YYYY-MM-DD HH:MM:SS' formats are supported.
+    Returns None if input is None. Raises ValueError on malformed input, naming the offending
+    column when one is given. Both 'YYYY-MM-DDTHH:MM:SS' and 'YYYY-MM-DD HH:MM:SS' are supported.
     """
     if s is None:
         return None
-    return datetime.fromisoformat(s).replace(tzinfo=timezone.utc)
+    if _DATE_TIME_PATTERN.fullmatch(s):
+        try:
+            return datetime.fromisoformat(s).replace(tzinfo=timezone.utc)
+        except ValueError:
+            # An out-of-range field ("2024-02-31", hour 25) has the right shape but no valid date;
+            # fall through so the rejection still names the column.
+            pass
+    source = f" in '{collection}.{attribute}'" if collection else ""
+    raise ValueError(f'Cannot convert "{s}" to a date time{source}: expected a valid YYYY-MM-DD[THH:MM:SS]')
 
 
 @overload

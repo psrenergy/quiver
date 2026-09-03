@@ -287,6 +287,11 @@ include("fixture.jl")
         Quiver.close!(db)
     end
 
+    # No NOT NULL scalar DATE_TIME column exists under `tests/schemas/valid` (every `date_*
+    # TEXT NOT NULL` there is a time-series *dimension* column, which this reader cannot read), and
+    # any NOT NULL TEXT column exercises the branch just as well. Do not "fix" this to
+    # `date_attribute` -- that column is nullable, which silently flips the assertion to
+    # `Vector{Union{DateTime, Nothing}}` and leaves the concrete branch uncovered.
     @testset "DateTime bulk read preserves a concrete NOT NULL type" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
         db = Quiver.from_schema(":memory:", path_schema)
@@ -297,6 +302,50 @@ include("fixture.jl")
         result = Quiver.read_scalar_date_times(db, "Configuration", "label")
         @test result isa Vector{DateTime}
         @test result == [DateTime(2024, 1, 15)]
+
+        Quiver.close!(db)
+    end
+
+    # The core's DATE_TIME write gate only fires on `date_`-prefixed columns, so a plain TEXT
+    # column is the reachable path for a value outside the grammar. Every binding's parser must
+    # reject the same set, or the same stored bytes read back differently per language.
+    @testset "DateTime readers reject a value outside the core's grammar" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        bad_values = [
+            "2024-01",                     # truncated: Julia used to fill this in as 2024-01-01
+            "20240115",                    # used to read as year 20240115
+            "2024-01-15T10:30:00+03:00",   # offset: Python used to stamp it as 10:30Z
+            "2024-02-31",                  # right shape, no such day: Dart used to roll to March 2
+            "2024-01-15  10:30:00",        # interior space
+            "not a date",                  # free text, with spaces
+        ]
+        for (i, bad) in enumerate(bad_values)
+            Quiver.create_element!(db, "Configuration"; label = "Config $i", string_attribute = bad)
+        end
+
+        # Every reader that reaches the parser rejects, per value.
+        for i in eachindex(bad_values)
+            @test_throws ArgumentError Quiver.read_scalar_date_time_by_id(db, "Configuration", "string_attribute", i)
+        end
+        @test_throws ArgumentError Quiver.read_scalar_date_times(db, "Configuration", "string_attribute")
+        @test_throws ArgumentError Quiver.query_date_time(db, "SELECT '2024-01'")
+
+        # The rejection names the offending column ...
+        @test_throws "Configuration.string_attribute" Quiver.read_scalar_date_times(
+            db, "Configuration", "string_attribute",
+        )
+        # ... and quotes the value verbatim: every interior space used to become a `T`, so a
+        # free-text cell was reported as something the caller never stored.
+        @test_throws "\"not a date\"" Quiver.read_scalar_date_time_by_id(
+            db, "Configuration", "string_attribute", 6,
+        )
+
+        # A conforming value in the same plain TEXT column still reads.
+        Quiver.create_element!(db, "Configuration"; label = "Good", string_attribute = "2024-01-15 10:30:00")
+        @test Quiver.read_scalar_date_time_by_id(db, "Configuration", "string_attribute", 7) ==
+              DateTime(2024, 1, 15, 10, 30, 0)
 
         Quiver.close!(db)
     end

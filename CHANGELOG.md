@@ -34,7 +34,37 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
   *Adapt:* write a full calendar date. `"2005-01"` becomes `"2005-01-01"`. To put a
   non-conforming value in a date column deliberately — reproducing legacy data in a test, say —
-  use raw SQL through `query_string`/`query_integer`; the readers' lenient fallbacks are unchanged.
+  use raw SQL through `query_string`/`query_integer`, and read it back as a string: the native
+  DateTime readers now hold the same grammar (see the next entry).
+
+- **BREAKING — the native DateTime readers hold the same grammar as the write gate.**
+  `read_scalar_date_times` / `read_vector_date_times` / `read_set_date_times`, their `_by_id`
+  forms, `query_date_time`, and the DATE_TIME cells of the group readers now reject any value
+  outside `YYYY-MM-DD[THH:MM:SS | ' HH:MM:SS']` (fixed-width, year `0001`-`9999`, a real calendar
+  day) with a message naming the offending column: `Cannot convert "<value>" to a date time in
+  '<collection>.<attribute>': expected a valid YYYY-MM-DD[THH:MM:SS]`. `ArgumentError` in Julia and
+  Dart, `ValueError` in Python — the same exception types the boolean wrappers raise.
+
+  Each host parser was wider than the core's grammar in a *different* direction, so the same stored
+  bytes read back three different ways. Julia's `dateformat` treats field widths as maxima and fills
+  missing trailing components, so it silently fabricated dates: `"2024"` and `"2024-01"` both read
+  as 2024-01-01, and `"20240115"` as **year 20240115**. Python's `_parse_datetime` stamped
+  `tzinfo=utc` onto an already-offset value instead of converting it, so
+  `"2024-01-15T10:30:00+03:00"` came back as `10:30Z` — three hours wrong, no error. Dart's
+  `DateTime.parse` rolled an out-of-range field over rather than rejecting it (`"2024-02-31"` read
+  as March 2), and returned `isUtc = true` for `Z`/offset forms, so one list could mix flags — and
+  Dart's `==` compares `isUtc` as well as the instant, making same-moment values compare unequal
+  and dedupe to two in a `Set` while `compareTo` read 0 and hid it.
+
+  This is only reachable through a column the write gate does not cover: it fires on
+  `date_`-prefixed columns, so a plain `TEXT` column was the way in. `read_scalar_date_times` on a
+  `TEXT` column holding `"20240115"` returned year 20240115 in Julia and 2024-01-15 in
+  Python/Dart, neither of them erroring.
+
+  *Adapt:* nothing, if your dates go through a `date_`-prefixed column — the write gate already
+  guaranteed conforming values there. If you point a DateTime reader at a plain `TEXT` column
+  holding something else, read it with the string reader (`read_scalar_strings` and friends) and
+  parse it yourself.
 
 - **BREAKING — `import_csv` rejects a timestamp it cannot canonicalize.** Import writes through a
   raw `INSERT` and never reaches the validator above, and with a `date_time_format` set it parsed

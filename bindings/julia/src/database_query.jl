@@ -210,11 +210,7 @@ Execute a SQL query and return the first column of the first row as a DateTime.
 Returns `nothing` if the query returns no rows.
 """
 function query_date_time(db::Database, sql::String)
-    result = query_string(db, sql)
-    if result === nothing
-        return nothing
-    end
-    return string_to_date_time(result)
+    return string_to_date_time(query_string(db, sql))
 end
 
 """
@@ -224,9 +220,5 @@ Execute a parameterized SQL query and return the first column of the first row a
 Returns `nothing` if the query returns no rows.
 """
 function query_date_time(db::Database, sql::String, parameters::Vector)
-    result = query_string(db, sql, parameters)
-    if result === nothing
-        return nothing
-    end
-    return string_to_date_time(result)
+    return string_to_date_time(query_string(db, sql, parameters))
 end

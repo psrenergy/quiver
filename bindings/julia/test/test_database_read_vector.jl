@@ -164,6 +164,22 @@ include("fixture.jl")
         Quiver.close!(db)
     end
 
+    # The core's DATE_TIME write gate only fires on `date_`-prefixed columns, so a plain TEXT
+    # column is the reachable path for a value outside the grammar. Every binding's parser must
+    # reject the same set, or the same stored bytes read back differently per language.
+    @testset "Read Vector DateTimes Rejects A Malformed Cell" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "all_types.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "AllTypes"; label = "Item 1", label_value = ["2024-01-15", "2024-01"])
+
+        @test_throws ArgumentError Quiver.read_vector_date_times(db, "AllTypes", "label_value")
+        @test_throws "AllTypes.label_value" Quiver.read_vector_date_times(db, "AllTypes", "label_value")
+        @test_throws ArgumentError Quiver.read_vector_date_time_by_id(db, "AllTypes", "label_value", 1)
+
+        Quiver.close!(db)
+    end
+
     @testset "Read Vector Strings By ID" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "all_types.sql")
         db = Quiver.from_schema(":memory:", path_schema)

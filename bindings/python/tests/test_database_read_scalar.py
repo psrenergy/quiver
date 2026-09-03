@@ -197,6 +197,34 @@ class TestReadScalarDateTimes:
         ]
 
 
+# The core's DATE_TIME write gate only fires on `date_`-prefixed columns, so a plain TEXT column is
+# the reachable path for a value outside the grammar. Every binding's parser must reject the same
+# set, or the same stored bytes read back differently per language.
+class TestDateTimeReadersRejectOutsideGrammar:
+    @pytest.mark.parametrize(
+        "bad",
+        ["2024-01", "20240115", "2024-01-15T10:30:00+03:00", "2024-02-31", "not-a-date"],
+    )
+    def test_rejects_and_names_the_column(self, db: Database, bad: str) -> None:
+        db.create_element("Configuration", label="item1", string_attribute=bad)
+
+        with pytest.raises(ValueError, match=r"Configuration\.string_attribute.*expected a valid YYYY-MM-DD"):
+            db.read_scalar_date_times("Configuration", "string_attribute")
+
+        with pytest.raises(ValueError, match=r"Configuration\.string_attribute"):
+            db.read_scalar_date_time_by_id("Configuration", "string_attribute", 1)
+
+    def test_query_date_time_rejects(self, db: Database) -> None:
+        with pytest.raises(ValueError, match="expected a valid YYYY-MM-DD"):
+            db.query_date_time("SELECT '2024-01'")
+
+    def test_conforming_value_in_a_plain_text_column_still_reads(self, db: Database) -> None:
+        db.create_element("Configuration", label="item1", string_attribute="2024-01-15 10:30:00")
+        assert db.read_scalar_date_times("Configuration", "string_attribute") == [
+            datetime(2024, 1, 15, 10, 30, tzinfo=timezone.utc),
+        ]
+
+
 class TestReadScalarDateTimeById:
     def test_read_scalar_date_time_by_id(self, db: Database) -> None:
         id1 = db.create_element(

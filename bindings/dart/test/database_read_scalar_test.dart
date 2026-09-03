@@ -716,4 +716,63 @@ void main() {
       }
     });
   });
+
+  // The core's DATE_TIME write gate only fires on `date_`-prefixed columns, so a plain TEXT column
+  // is the reachable path for a value outside the grammar. Every binding's parser must reject the
+  // same set, or the same stored bytes read back differently per language.
+  group('DateTime Readers Reject Outside The Grammar', () {
+    test('rejects malformed values and names the column', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        const bad = [
+          '2024-01',
+          '20240115',
+          '2024-01-15T10:30:00+03:00',
+          '2024-02-31',
+          'not-a-date',
+        ];
+        for (var i = 0; i < bad.length; i++) {
+          final id = db.createElement('Configuration', {
+            'label': 'Config $i',
+            'string_attribute': bad[i],
+          });
+          expect(
+            () => db.readScalarDateTimes('Configuration', 'string_attribute'),
+            throwsA(
+              isArgumentError.having(
+                (e) => e.toString(),
+                'message',
+                allOf(
+                  contains('Configuration.string_attribute'),
+                  contains(bad[i]),
+                ),
+              ),
+            ),
+            reason: bad[i],
+          );
+          db.deleteElement('Configuration', id);
+        }
+
+        expect(
+          () => db.queryDateTime("SELECT '2024-01'"),
+          throwsArgumentError,
+        );
+
+        // A conforming value in the same plain TEXT column still reads.
+        db.createElement('Configuration', {
+          'label': 'Good',
+          'string_attribute': '2024-01-15 10:30:00',
+        });
+        expect(
+          db.readScalarDateTimes('Configuration', 'string_attribute'),
+          equals([DateTime(2024, 1, 15, 10, 30)]),
+        );
+      } finally {
+        db.close();
+      }
+    });
+  });
 }

@@ -55,6 +55,20 @@ ruff.toml         # Lint/format config (format.bat runs ruff)
   via the `ffi.NULL` guard, and `read_scalar_date_times` maps that list while preserving its `None`
   slots. `_c_api.py` carries the mask out-param on the two numeric readers plus
   `quiver_database_free_mask`.
+- **`_parse_datetime` gates on `_DATE_TIME_PATTERN` before calling `fromisoformat`.**
+  `fromisoformat` is *wider* than the core's DATE_TIME grammar — it accepts `"20240115"`, a `Z`
+  suffix and a UTC offset, none of which Julia's parser reads — so without the gate the same stored
+  bytes read differently per binding. The gate is also what makes the trailing
+  `.replace(tzinfo=timezone.utc)` correct: it used to **overwrite** an offset rather than convert
+  it, so `"...T10:30:00+03:00"` came back as `10:30Z`, three hours off, with no error. Everything
+  reaching that line is now naive. An out-of-range field that clears the regex (`"2024-02-31"`)
+  falls through to the same rejection so the message still names the column. Keep this parser
+  accepting exactly the same set as Julia's `string_to_date_time` and Dart's `stringToDateTime`.
+  Its `@overload` triple mirrors `_integer_to_boolean`'s — keep the `(str) -> datetime` variant, or
+  the vector/set readers' comprehensions widen to `list[list[datetime | None]]` against their
+  declared `list[list[datetime]]`. Nothing typechecks this repo (`ruff.toml` is `select = ["I"]`,
+  isort only; no mypy/pyright in CI, `pyproject.toml`, or the pre-commit hooks), so that note is
+  the only guard against a "remove the redundant overloads" cleanup.
 - **`_integer_to_boolean` raises `ValueError`, not `QuiverError`** — the second documented
   exception to "messages come from C++", alongside `_marshal_group_columns`' jagged-column check.
   The boolean readers are a binding-only convenience with no C++ counterpart, so the core cannot

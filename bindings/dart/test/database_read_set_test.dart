@@ -309,4 +309,36 @@ void main() {
       }
     });
   });
+
+  group('Read Set DateTimes Rejects A Malformed Cell', () {
+    test('rejects and names the column', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'all_types.sql'),
+      );
+      try {
+        db.createElement('AllTypes', {
+          'label': 'Item 1',
+          'tag': ['2024-01-15', '20240115'],
+        });
+
+        expect(
+          () => db.readSetDateTimes('AllTypes', 'tag'),
+          throwsA(
+            isArgumentError.having(
+              (e) => e.toString(),
+              'message',
+              contains('AllTypes.tag'),
+            ),
+          ),
+        );
+        expect(
+          () => db.readSetDateTimesById('AllTypes', 'tag', 1),
+          throwsArgumentError,
+        );
+      } finally {
+        db.close();
+      }
+    });
+  });
 }

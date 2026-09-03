@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+import pytest
+
 from quiverdb import Database
 
 # -- Vector reads by ID -------------------------------------------------------
@@ -162,6 +164,15 @@ class TestReadVectorDateTimesBulk:
             ],
             [datetime(2024, 6, 20, 14, 45, 30, tzinfo=timezone.utc)],
         ]
+
+    def test_rejects_a_malformed_cell_naming_the_column(self, all_types_db: Database) -> None:
+        all_types_db.create_element("AllTypes", label="item1", label_value=["2024-01-15", "2024-01"])
+
+        with pytest.raises(ValueError, match=r"AllTypes\.label_value.*expected a valid YYYY-MM-DD"):
+            all_types_db.read_vector_date_times("AllTypes", "label_value")
+
+        with pytest.raises(ValueError, match=r"AllTypes\.label_value"):
+            all_types_db.read_vector_date_time_by_id("AllTypes", "label_value", 1)
 
 
 class TestReadVectorStringsById:
