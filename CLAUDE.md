@@ -605,6 +605,18 @@ The bindings provide additional convenience methods that compose core operations
 | `read_set_date_time_by_id`    | `readSetDateTimesById`    | `read_set_date_time_by_id`    | string set read + date parsing    |
 | `query_date_time`             | `queryDateTime`           | `query_date_time`             | string query + date parsing       |
 
+**Boolean wrappers (Julia, Dart, Python, and JS):**
+
+| Julia | Dart | Python | JS | Wraps |
+|-------|------|--------|----|-------|
+| `read_scalar_booleans` | `readScalarBooleans` | `read_scalar_booleans` | `readScalarBooleans` | integer scalar bulk read + strict 0/1 conversion |
+| `read_scalar_boolean_by_id` | `readScalarBooleanById` | `read_scalar_boolean_by_id` | `readScalarBooleanById` | integer scalar by-id read + strict 0/1 conversion |
+| `read_vector_booleans` | `readVectorBooleans` | `read_vector_booleans` | `readVectorBooleans` | integer vector bulk read + strict 0/1 conversion |
+| `read_vector_booleans_by_id` | `readVectorBooleansById` | `read_vector_booleans_by_id` | `readVectorBooleansById` | integer vector by-id read + strict 0/1 conversion |
+| `read_set_booleans` | `readSetBooleans` | `read_set_booleans` | `readSetBooleans` | integer set bulk read + strict 0/1 conversion |
+| `read_set_booleans_by_id` | `readSetBooleansById` | `read_set_booleans_by_id` | `readSetBooleansById` | integer set by-id read + strict 0/1 conversion |
+| `query_boolean` | `queryBoolean` | `query_boolean` | `queryBoolean` | integer query + strict 0/1 conversion |
+
 **Composite read helpers (all five bindings):**
 
 |        Julia         |       Dart        |        Python        |         Lua          |        JS         |                 Wraps                  |

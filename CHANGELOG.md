@@ -80,6 +80,11 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ### Added
 
+- **Boolean convenience readers for INTEGER-backed values.** Julia, Python, Dart, and JavaScript
+  now expose scalar, vector, and set boolean readers in both bulk and by-id forms, plus a boolean
+  query helper. They compose the existing integer APIs, preserve scalar NULLs, and convert only
+  `0`/`1` to `false`/`true`; any other integer raises the binding's native conversion error.
+
 - **`update_relation(collection_from, collection_to, relation_type, id, target_label)` and
   `update_relation_by_label(..., label, target_label)`.** Points one element's scalar foreign-key
   relation at another element, named by the target's `label`; no target label clears it. The

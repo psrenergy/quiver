@@ -1,4 +1,5 @@
 import { ptr } from "bun:ffi";
+import { integerToBoolean } from "./boolean.ts";
 import { Database } from "./database.ts";
 import { check, QuiverError } from "./errors.ts";
 import {
@@ -128,6 +129,14 @@ Database.prototype.queryInteger = function (
 
   if (new DataView(outHasValue.buffer).getInt32(0, true) === 0) return null;
   return Number(new DataView(outValue.buffer).getBigInt64(0, true));
+};
+
+Database.prototype.queryBoolean = function (
+  this: Database,
+  sql: string,
+  parameters?: QueryParam[],
+): boolean | null {
+  return integerToBoolean(this.queryInteger(sql, parameters));
 };
 
 Database.prototype.queryFloat = function (

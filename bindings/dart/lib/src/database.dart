@@ -20,6 +20,13 @@ part 'database_query.dart';
 part 'database_read.dart';
 part 'database_update.dart';
 
+bool? _integerToBoolean(int? value) {
+  if (value == null) return null;
+  if (value == 0) return false;
+  if (value == 1) return true;
+  throw ArgumentError.value(value, 'value', 'Expected 0 or 1');
+}
+
 /// A wrapper for the Quiver database.
 ///
 /// Use [Database.fromSchema] to create a new database from a SQL schema file.

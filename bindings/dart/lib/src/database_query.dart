@@ -94,6 +94,12 @@ extension DatabaseQuery on Database {
     }
   }
 
+  /// Executes a SQL query and converts its integer result to a boolean.
+  /// Returns null if the query returns no rows.
+  bool? queryBoolean(String sql, [List<Object?>? parameters]) {
+    return _integerToBoolean(queryInteger(sql, parameters));
+  }
+
   /// Executes a SQL query and returns the first column of the first row as a double.
   /// Returns null if the query returns no rows.
   /// Optional positional [parameters] bind to `?` placeholders (int, double, String, or null).

@@ -1,6 +1,7 @@
 # Julia type-stability / nullability follow-up
 
-The bulk scalar readers (`read_scalar_integers` / `read_scalar_floats` / `read_scalar_strings`)
+The bulk scalar readers (`read_scalar_integers` / `read_scalar_floats` / `read_scalar_strings` /
+`read_scalar_booleans`)
 are nullability-aware: a `NOT NULL` column returns a concrete `Vector{T}`, a nullable column
 returns `Vector{Optional{T}}` (`Optional{T} = Union{Nothing, T}`), decided from
 `get_scalar_metadata(...).not_null`. This document tracks the readers that were deliberately left

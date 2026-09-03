@@ -3,6 +3,7 @@ from __future__ import annotations
 import warnings
 from contextlib import contextmanager
 from datetime import datetime, timezone
+from typing import overload
 
 from quiverdb._c_api import ffi, get_lib
 from quiverdb._helpers import check, decode_string, decode_string_or_none
@@ -488,6 +489,10 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
             return None
         return out_value[0]
 
+    def query_boolean(self, sql: str, *, parameters: list | None = None) -> bool | None:
+        """Execute SQL and convert the first integer result to bool, or return None."""
+        return _integer_to_boolean(self.query_integer(sql, parameters=parameters))
+
     def query_float(self, sql: str, *, parameters: list | None = None) -> float | None:
         """Execute SQL and return the first column of the first row as float, or None."""
         self._ensure_open()
@@ -585,6 +590,10 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
             lib.quiver_database_free_integer_array(out_values[0])
             lib.quiver_database_free_mask(out_mask[0])
 
+    def read_scalar_booleans(self, collection: str, attribute: str) -> list[bool | None]:
+        """Read boolean values stored as integer scalars. SQL NULL values become None."""
+        return [_integer_to_boolean(value) for value in self.read_scalar_integers(collection, attribute)]
+
     def read_scalar_floats(self, collection: str, attribute: str) -> list[float | None]:
         """Read all float values for a scalar attribute. One entry per element; NULL is None."""
         self._ensure_open()
@@ -668,6 +677,15 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         if out_has[0] == 0:
             return None
         return out_value[0]
+
+    def read_scalar_boolean_by_id(
+        self,
+        collection: str,
+        attribute: str,
+        id: int,
+    ) -> bool | None:
+        """Read a boolean stored as an integer scalar. Returns None if absent."""
+        return _integer_to_boolean(self.read_scalar_integer_by_id(collection, attribute, id))
 
     def read_scalar_float_by_id(
         self,
@@ -788,6 +806,13 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         finally:
             lib.quiver_database_free_integer_vectors(out_vectors[0], out_sizes[0], count)
 
+    def read_vector_booleans(self, collection: str, attribute: str) -> list[list[bool]]:
+        """Read boolean vectors stored as integer vectors."""
+        return [
+            [_integer_to_boolean(value) for value in values]
+            for values in self.read_vector_integers(collection, attribute)
+        ]
+
     def read_vector_floats(self, collection: str, attribute: str) -> list[list[float]]:
         """Read float vectors for all elements in a collection."""
         self._ensure_open()
@@ -883,6 +908,15 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         finally:
             lib.quiver_database_free_integer_array(out_values[0])
 
+    def read_vector_booleans_by_id(
+        self,
+        collection: str,
+        attribute: str,
+        id: int,
+    ) -> list[bool]:
+        """Read a boolean vector stored as integers for one element."""
+        return [_integer_to_boolean(value) for value in self.read_vector_integers_by_id(collection, attribute, id)]
+
     def read_vector_floats_by_id(
         self,
         collection: str,
@@ -974,6 +1008,12 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
             return result
         finally:
             lib.quiver_database_free_integer_vectors(out_sets[0], out_sizes[0], count)
+
+    def read_set_booleans(self, collection: str, attribute: str) -> list[list[bool]]:
+        """Read boolean sets stored as integer sets."""
+        return [
+            [_integer_to_boolean(value) for value in values] for values in self.read_set_integers(collection, attribute)
+        ]
 
     def read_set_floats(self, collection: str, attribute: str) -> list[list[float]]:
         """Read float sets for all elements in a collection."""
@@ -1069,6 +1109,15 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
             return [out_values[0][i] for i in range(count)]
         finally:
             lib.quiver_database_free_integer_array(out_values[0])
+
+    def read_set_booleans_by_id(
+        self,
+        collection: str,
+        attribute: str,
+        id: int,
+    ) -> list[bool]:
+        """Read a boolean set stored as integers for one element."""
+        return [_integer_to_boolean(value) for value in self.read_set_integers_by_id(collection, attribute, id)]
 
     def read_set_floats_by_id(
         self,
@@ -1969,6 +2018,24 @@ def _parse_datetime(s: str | None) -> datetime | None:
     if s is None:
         return None
     return datetime.fromisoformat(s).replace(tzinfo=timezone.utc)
+
+
+@overload
+def _integer_to_boolean(value: int) -> bool: ...
+
+
+@overload
+def _integer_to_boolean(value: None) -> None: ...
+
+
+def _integer_to_boolean(value: int | None) -> bool | None:
+    if value is None:
+        return None
+    if value == 0:
+        return False
+    if value == 1:
+        return True
+    raise ValueError(f"Cannot convert integer {value} to boolean: expected 0 or 1")
 
 
 # -- Parameter marshaling helpers (module-level) -----------------------------
