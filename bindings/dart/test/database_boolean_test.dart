@@ -117,6 +117,42 @@ void main() {
       expect(db.queryBoolean('SELECT some_integer FROM AllTypes WHERE some_integer = ?', [false]), isFalse);
     });
 
+    test('writes booleans as integers through the group writers', () {
+      final id = db.createElement('AllTypes', {'label': 'Grouped'});
+
+      // updateVectorGroup, updateSetGroup, updateTimeSeriesGroup, upsertTimeSeriesRow and every
+      // ByLabel form share one marshaller, so this covers the whole family.
+      db.updateVectorGroup('AllTypes', 'counts', id, {
+        'count_value': [true, false, true],
+      });
+      db.updateSetGroup('AllTypes', 'codes', id, {
+        'code': [true, false],
+      });
+
+      expect(db.readVectorBooleansById('AllTypes', 'count_value', id), equals([true, false, true]));
+      // A set has no insertion order.
+      expect(db.readSetBooleansById('AllTypes', 'code', id), unorderedEquals([true, false]));
+    });
+
+    test('group writer rejection names the offending column', () {
+      final id = db.createElement('AllTypes', {'label': 'Bad'});
+
+      expect(
+        () => db.updateVectorGroup('AllTypes', 'counts', id, {
+          'count_value': [
+            <int>[1],
+          ],
+        }),
+        throwsA(
+          isA<ArgumentError>().having(
+            (e) => e.message,
+            'message',
+            allOf(contains('count_value'), contains('Unsupported value type')),
+          ),
+        ),
+      );
+    });
+
     test('rejects non-binary integers', () {
       final id = db.createElement('AllTypes', {
         'label': 'Invalid',

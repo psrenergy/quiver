@@ -59,8 +59,23 @@ the binary/expression subsystems (`test_binary_file.jl`, `test_binary_metadata.j
 The boolean convenience readers have one file per binding — `test_database_boolean.jl`,
 `database_boolean_test.dart`, `test_database_boolean.py`, `database-boolean.test.ts` — all over
 `valid/all_types.sql` (`some_integer` scalar, `count_value` vector, `code` set). There is no C++/C
-counterpart: the wrappers are binding-only, and Lua is deliberately excluded (root design
-decisions).
+counterpart for the **readers**: those wrappers are binding-only, and Lua is deliberately excluded
+(root design decisions).
+
+Boolean **input** is a different matter and is tested in every layer, including C++: a native
+boolean is INTEGER 1/0 on every write path. The Lua side lives in `test_lua_runner_create.cpp`
+(scalar, array, mixed integer/boolean array, update, group writer, row upsert) with the query
+parameter in `test_lua_runner_errors.cpp`, over `valid/collections.sql`; the four bindings extend
+their own boolean files. Two things to keep in mind when touching these:
+
+- **The unsupported-type tests use a function (`print`), not a boolean** — in
+  `test_lua_runner_create.cpp`, `test_lua_runner_errors.cpp` and `test_c_api_lua_runner.cpp`. They
+  asserted a boolean rejection before booleans were accepted; a function is the value that still
+  has no SQL counterpart. `test_lua_runner_update.cpp` keeps its boolean rejection for
+  `db:update_relation`, where only `nil` may clear a relation.
+- **`CreateElementMixedIntegerAndBooleanArray` is release-sensitive.** It covers a bug that only
+  manifested with `SOL_SAFE_GETTER` off, so a Debug-only run cannot prove the fix — build Release
+  and run `--gtest_filter='LuaRunner*'` when touching the Lua array converters.
 
 The native-DateTime bindings (Julia, Dart, and Python) cover bulk scalar, vector, and set
 convenience readers in the corresponding `read` test files. Scalar coverage includes positional

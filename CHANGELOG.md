@@ -5,7 +5,45 @@ All notable changes to Quiver are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entries that require
 callers to change something are prefixed **BREAKING** and say what to do.
 
-## [0.10.3] — unreleased
+## [0.10.4] — unreleased
+
+### Changed
+
+### Added
+
+- **Booleans are accepted on every write path, in every layer.** A native boolean now maps to
+  INTEGER 1/0 wherever an integer is accepted — element scalars and arrays on
+  `create_element`/`update_element`, query parameters, the vector/set/time-series group writers,
+  and `upsert_time_series_row` — so it also reaches a REAL column through the existing
+  int-for-REAL coercion. Previously **Lua rejected a boolean everywhere**
+  (`Cannot table_to_element: attribute 'flag' has unsupported Lua type`, and its siblings for
+  arrays, query parameters, group cells, and row upserts), forcing scripts to write
+  `flag = true and 1 or 0`; and Dart and JavaScript rejected one in the **group and row writers**
+  while accepting it on the element and query paths. Julia and Python already accepted booleans
+  throughout (`Bool <: Integer`; `bool` is an `int` subclass) and gain test coverage that pins it.
+  `db:update_relation` still refuses a boolean by design — only `nil` may clear a relation.
+
+  Booleans are **not** readable as booleans from Lua: a stored flag comes back as `0`/`1` from
+  `read_scalar_integers`, and the boolean readers remain a Julia/Dart/Python/JS convenience. Note
+  `nil ~= 0` is `true` in Lua, so compare a possibly-NULL flag with `== 1`, not `~= 0`.
+
+### Fixed
+
+- **JavaScript: `upsertTimeSeriesRow` wrote a boolean as FLOAT into an INTEGER column.**
+  `Number.isInteger(true)` is `false`, so a boolean fell through to the float branch and was
+  coerced to `1.0` with no error — the core then rejected the row for a type mismatch, or a REAL
+  column silently received a float where an integer was intended. Booleans now take the INTEGER
+  branch. Only callers passing booleans to that method were affected.
+- **Dart: the group writers' unsupported-type error named neither the column nor the type's
+  context.** `_marshalGroupColumn` threw `Unsupported value type: <T>`; it now reports
+  `Unsupported value type <T> for column '<name>'`, per the rule that a pre-FFI marshalling error
+  names the offending column. Affects every unsupported type, not just booleans.
+- **Lua: a mixed integer/boolean array silently stored 0 in release builds.** `{1, true}`
+  dispatched on the first cell as an integer and then read later cells through an unchecked sol2
+  getter, which throws only when `SOL_SAFE_GETTER` is enabled (debug) and yielded `0` in release.
+  Cells are now coerced individually.
+
+## [0.10.3] — 2026-09-03
 
 ### Changed
 
@@ -358,7 +396,8 @@ are functionally identical to 0.10.0.
   `read_time_series_group` emits for a NULL STRING cell — so feeding a read result back with the
   mask stripped was UB. A NULL entry, or a NULL per-column data pointer, is now SQL NULL.
 
-[0.10.3]: https://github.com/psrenergy/quiver/compare/v0.10.2...v0.11.0
+[0.10.4]: https://github.com/psrenergy/quiver/compare/v0.10.3...v0.11.0
+[0.10.3]: https://github.com/psrenergy/quiver/compare/v0.10.2...v0.10.3
 [0.10.2]: https://github.com/psrenergy/quiver/compare/v0.10.1...v0.10.2
 [0.10.1]: https://github.com/psrenergy/quiver/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/psrenergy/quiver/compare/v0.9.16...v0.10.0

@@ -855,10 +855,22 @@ struct LuaRunner::Impl {
         return outer;
     }
 
+    // A boolean cell is INTEGER 1/0, matching the scalar policy. Coercing per cell (not just at the
+    // dispatch that picked this helper) is load-bearing twice over: a `{true, false}` array reaches
+    // here after dispatching on cell 1, and a mixed `{1, true}` array used to dispatch as integer
+    // and then read the boolean through the unchecked get<int64_t> below — which throws only while
+    // SOL_SAFE_GETTER is on (debug) and silently yielded 0 in release, since no SOL_* macro is set.
+    static int64_t lua_cell_to_int64(const sol::object& cell) {
+        if (cell.get_type() == sol::type::boolean) {
+            return cell.as<bool>() ? 1 : 0;
+        }
+        return cell.as<int64_t>();
+    }
+
     static std::vector<int64_t> lua_table_to_int64_vector(const sol::table& t) {
         std::vector<int64_t> result;
         for (size_t i = 1; i <= t.size(); ++i) {
-            result.push_back(t.get<int64_t>(i));
+            result.push_back(lua_cell_to_int64(t.get<sol::object>(i)));
         }
         return result;
     }
@@ -902,6 +914,8 @@ struct LuaRunner::Impl {
             sol::object val = pair.second;
             if (val.is<sol::lua_nil_t>()) {
                 result[key] = nullptr;
+            } else if (val.get_type() == sol::type::boolean) {
+                result[key] = val.as<bool>() ? int64_t{1} : int64_t{0};
             } else if (val.is<int64_t>()) {
                 result[key] = val.as<int64_t>();
             } else if (val.is<double>()) {
@@ -930,7 +944,8 @@ struct LuaRunner::Impl {
                 auto arr = val.as<sol::table>();
                 if (arr.size() > 0) {
                     sol::object first = arr[1];
-                    if (first.is<int64_t>()) {
+                    // A boolean array is an INTEGER array; lua_cell_to_int64 coerces each cell.
+                    if (first.get_type() == sol::type::boolean || first.is<int64_t>()) {
                         element.set(k, lua_table_to_int64_vector(arr));
                     } else if (first.is<double>()) {
                         element.set(k, lua_table_to_double_vector(arr));
@@ -943,6 +958,10 @@ struct LuaRunner::Impl {
                                                  "' has unsupported element type");
                     }
                 }
+            } else if (val.get_type() == sol::type::boolean) {
+                // A boolean is INTEGER 1/0, the same policy as every other layer. get_type() rather
+                // than is<bool>(), which sol2 makes looser than lua_isboolean (see src/CLAUDE.md).
+                element.set(k, val.as<bool>() ? int64_t{1} : int64_t{0});
             } else if (val.is<int64_t>()) {
                 element.set(k, val.as<int64_t>());
             } else if (val.is<double>()) {
@@ -950,7 +969,7 @@ struct LuaRunner::Impl {
             } else if (val.is<std::string>()) {
                 element.set(k, val.as<std::string>());
             } else {
-                // Surface typos / booleans / nested structures loudly instead of
+                // Surface typos / functions / nested structures loudly instead of
                 // silently dropping the attribute (same policy as lua_table_to_value_map)
                 throw std::runtime_error("Cannot table_to_element: attribute '" + k + "' has unsupported Lua type");
             }
@@ -1203,6 +1222,8 @@ struct LuaRunner::Impl {
             sol::object val = parameters[i];
             if (val.is<sol::lua_nil_t>()) {
                 values.emplace_back(nullptr);
+            } else if (val.get_type() == sol::type::boolean) {
+                values.emplace_back(val.as<bool>() ? int64_t{1} : int64_t{0});
             } else if (val.is<int64_t>()) {
                 values.emplace_back(val.as<int64_t>());
             } else if (val.is<double>()) {
@@ -1519,7 +1540,9 @@ struct LuaRunner::Impl {
             for (auto& cell : column.values) {
                 const auto index = static_cast<size_t>(cell.first.as<int64_t>());
                 sol::object val = cell.second;
-                if (val.is<int64_t>()) {
+                if (val.get_type() == sol::type::boolean) {
+                    cpp_rows[index - 1][column.name] = val.as<bool>() ? int64_t{1} : int64_t{0};
+                } else if (val.is<int64_t>()) {
                     cpp_rows[index - 1][column.name] = val.as<int64_t>();
                 } else if (val.is<double>()) {
                     cpp_rows[index - 1][column.name] = val.as<double>();

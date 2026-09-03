@@ -108,6 +108,27 @@ describe("upsertTimeSeriesRow", () => {
     }
   });
 
+  test("writes a boolean as INTEGER, not FLOAT", () => {
+    const db = Database.fromSchema(":memory:", MIXED_TS_SCHEMA);
+    try {
+      const id = db.createElement("Sensor", { label: "S1" });
+
+      // humidity is INTEGER: Number.isInteger(true) is false, so a boolean used to fall through to
+      // the FLOAT branch and the core rejected a double for an INTEGER column.
+      db.upsertTimeSeriesRow("Sensor", "readings", id, {
+        date_time: "2024-01-01T00:00:00",
+        temperature: 21.5,
+        humidity: true,
+        status: "ok",
+      });
+
+      const result = db.readTimeSeriesGroup("Sensor", "readings", id);
+      expect(result.humidity).toEqual([1]);
+    } finally {
+      db.close();
+    }
+  });
+
   test("upsertTimeSeriesRowByLabel writes only the labelled element", () => {
     const db = Database.fromSchema(":memory:", COLLECTIONS_SCHEMA);
     try {

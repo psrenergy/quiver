@@ -84,8 +84,13 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   `part` files share them; both take the `collection`/`attribute` so the rejection message names
   the offending column. They throw `ArgumentError` — a locally-crafted message is unavoidable
   here, since these readers are a binding-only convenience the core never sees. On writes,
-  `Element.set` maps `bool` to `setInteger` (and a `List<bool?>` through `_setMixedList`), and
-  `_marshalParams` binds a `bool` parameter as INTEGER.
+  `Element.set` maps `bool` to `setInteger` (and a `List<bool?>` through `_setMixedList`),
+  `_marshalParams` binds a `bool` parameter as INTEGER, and `_marshalGroupColumn`
+  (`database_update.dart`) carries a `case bool` before `case int` — a Dart `bool` is not an
+  `int`, so without it the group writers threw. That one branch covers all eight call sites
+  (`updateVectorGroup`/`updateSetGroup`/`updateTimeSeriesGroup`/`upsertTimeSeriesRow` and every
+  `ByLabel` form), which is why it takes the column name: its unsupported-type `ArgumentError`
+  has to name the offending column per the root marshalling-error rule.
 - **Element array NULLs**: `Element.setArray{Integer,Float,String}` take `List<T?>` and pass the
   per-cell `has_value` mask to the C setters; `Element.set` dispatches mixed lists on the first
   non-null element, and an empty or all-null list is tagged integer (valid — type is irrelevant

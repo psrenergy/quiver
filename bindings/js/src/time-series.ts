@@ -17,7 +17,7 @@ import {
   readUint64Out,
   toCString,
 } from "./ffi-helpers.ts";
-import { updateGroupColumns } from "./group-columns.ts";
+import { type GroupColumns, updateGroupColumns } from "./group-columns.ts";
 import { getSymbols, type NativePointer } from "./loader.ts";
 import {
   type Allocation,
@@ -187,7 +187,7 @@ Database.prototype.updateTimeSeriesGroup = function (
   collection: string,
   group: string,
   id: number,
-  data: TimeSeriesData,
+  data: GroupColumns,
 ): void {
   updateGroupColumns(
     this._handle,
@@ -206,7 +206,7 @@ Database.prototype.updateTimeSeriesGroupByLabel = function (
   collection: string,
   group: string,
   label: string,
-  data: TimeSeriesData,
+  data: GroupColumns,
 ): void {
   updateGroupColumns(
     this._handle,
@@ -246,7 +246,7 @@ function upsertRowColumns(
   collection: string,
   group: string,
   key: number | string,
-  row: Record<string, number | bigint | string>,
+  row: Record<string, number | bigint | string | boolean>,
 ): void {
   const collBuf = toCString(collection);
   const grpBuf = toCString(group);
@@ -270,9 +270,12 @@ function upsertRowColumns(
       const { table, keepalive: strPtrs } = allocNativeStringArray([value]);
       keepalive.push(table, ...strPtrs);
       dataPtrs.push(table.ptr);
-    } else if (typeof value === "bigint" || Number.isInteger(value)) {
+      // A boolean belongs here, not in the FLOAT fallback below: Number.isInteger(true) is false,
+      // so a boolean used to reach allocNativeFloat64 and land in the column as FLOAT 1.0 —
+      // silently the wrong type, with no error. SQLite has no boolean type, so it is INTEGER 1/0.
+    } else if (typeof value === "boolean" || typeof value === "bigint" || Number.isInteger(value)) {
       typesDv.setInt32(c * 4, DATA_TYPE_INTEGER, true);
-      const p = allocNativeInt64([value]);
+      const p = allocNativeInt64([typeof value === "boolean" ? (value ? 1 : 0) : value]);
       keepalive.push(p);
       dataPtrs.push(p.ptr);
     } else {
@@ -307,7 +310,7 @@ Database.prototype.upsertTimeSeriesRow = function (
   collection: string,
   group: string,
   id: number,
-  row: Record<string, number | bigint | string>,
+  row: Record<string, number | bigint | string | boolean>,
 ): void {
   upsertRowColumns(
     this._handle,
@@ -325,7 +328,7 @@ Database.prototype.upsertTimeSeriesRowByLabel = function (
   collection: string,
   group: string,
   label: string,
-  row: Record<string, number | bigint | string>,
+  row: Record<string, number | bigint | string | boolean>,
 ): void {
   upsertRowColumns(
     this._handle,

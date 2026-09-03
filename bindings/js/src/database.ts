@@ -192,13 +192,13 @@ export class Database {
     collection: string,
     group: string,
     id: number,
-    data: TimeSeriesData,
+    data: GroupColumns,
   ) => void;
   declare updateTimeSeriesGroupByLabel: (
     collection: string,
     group: string,
     label: string,
-    data: TimeSeriesData,
+    data: GroupColumns,
   ) => void;
   declare updateVectorGroup: (
     collection: string,
@@ -228,13 +228,13 @@ export class Database {
     collection: string,
     group: string,
     id: number,
-    row: Record<string, number | bigint | string>,
+    row: Record<string, number | bigint | string | boolean>,
   ) => void;
   declare upsertTimeSeriesRowByLabel: (
     collection: string,
     group: string,
     label: string,
-    row: Record<string, number | bigint | string>,
+    row: Record<string, number | bigint | string | boolean>,
   ) => void;
   declare hasTimeSeriesFiles: (collection: string) => boolean;
   declare listTimeSeriesFilesColumns: (collection: string) => string[];

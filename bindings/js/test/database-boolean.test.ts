@@ -80,6 +80,24 @@ describe("boolean convenience methods", () => {
     }
   });
 
+  test("writes booleans as integers through the group writers", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      const id = db.createElement("AllTypes", { label: "Grouped" });
+
+      // updateGroupColumns is shared by updateVectorGroup / updateSetGroup /
+      // updateTimeSeriesGroup and their ByLabel forms.
+      db.updateVectorGroup("AllTypes", "counts", id, { count_value: [true, false, true] });
+      db.updateSetGroup("AllTypes", "codes", id, { code: [true, false] });
+
+      expect(db.readVectorBooleansById("AllTypes", "count_value", id)).toEqual([true, false, true]);
+      // A set has no insertion order, so compare unordered.
+      expect(db.readSetBooleansById("AllTypes", "code", id).toSorted()).toEqual([false, true]);
+    } finally {
+      db.close();
+    }
+  });
+
   test("rejects non-binary integers", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {

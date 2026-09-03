@@ -179,7 +179,7 @@ extension DatabaseUpdate on Database {
       var i = 0;
       for (final entry in data.entries) {
         columnNames[i] = entry.key.toNativeUtf8(allocator: arena).cast();
-        final column = _marshalGroupColumn(arena, entry.value);
+        final column = _marshalGroupColumn(arena, entry.key, entry.value);
         columnTypes[i] = column.type;
         columnData[i] = column.data;
         columnHasValue[i] = column.hasValue;
@@ -251,7 +251,7 @@ extension DatabaseUpdate on Database {
       var i = 0;
       for (final entry in data.entries) {
         columnNames[i] = entry.key.toNativeUtf8(allocator: arena).cast();
-        final column = _marshalGroupColumn(arena, entry.value);
+        final column = _marshalGroupColumn(arena, entry.key, entry.value);
         columnTypes[i] = column.type;
         columnData[i] = column.data;
         columnHasValue[i] = column.hasValue;
@@ -329,7 +329,7 @@ extension DatabaseUpdate on Database {
       var i = 0;
       for (final entry in data.entries) {
         columnNames[i] = entry.key.toNativeUtf8(allocator: arena).cast();
-        final column = _marshalGroupColumn(arena, entry.value);
+        final column = _marshalGroupColumn(arena, entry.key, entry.value);
         columnTypes[i] = column.type;
         columnData[i] = column.data;
         columnHasValue[i] = column.hasValue;
@@ -401,7 +401,7 @@ extension DatabaseUpdate on Database {
       var i = 0;
       for (final entry in data.entries) {
         columnNames[i] = entry.key.toNativeUtf8(allocator: arena).cast();
-        final column = _marshalGroupColumn(arena, entry.value);
+        final column = _marshalGroupColumn(arena, entry.key, entry.value);
         columnTypes[i] = column.type;
         columnData[i] = column.data;
         columnHasValue[i] = column.hasValue;
@@ -480,7 +480,7 @@ extension DatabaseUpdate on Database {
       var i = 0;
       for (final entry in data.entries) {
         columnNames[i] = entry.key.toNativeUtf8(allocator: arena).cast();
-        final column = _marshalGroupColumn(arena, entry.value);
+        final column = _marshalGroupColumn(arena, entry.key, entry.value);
         columnTypes[i] = column.type;
         columnData[i] = column.data;
         columnHasValue[i] = column.hasValue;
@@ -552,7 +552,7 @@ extension DatabaseUpdate on Database {
       var i = 0;
       for (final entry in data.entries) {
         columnNames[i] = entry.key.toNativeUtf8(allocator: arena).cast();
-        final column = _marshalGroupColumn(arena, entry.value);
+        final column = _marshalGroupColumn(arena, entry.key, entry.value);
         columnTypes[i] = column.type;
         columnData[i] = column.data;
         columnHasValue[i] = column.hasValue;
@@ -604,7 +604,7 @@ extension DatabaseUpdate on Database {
       var i = 0;
       for (final entry in row.entries) {
         columnNames[i] = entry.key.toNativeUtf8(allocator: arena).cast();
-        final column = _marshalGroupColumn(arena, [entry.value]);
+        final column = _marshalGroupColumn(arena, entry.key, [entry.value]);
         columnTypes[i] = column.type;
         columnData[i] = column.data;
         i++;
@@ -647,7 +647,7 @@ extension DatabaseUpdate on Database {
       var i = 0;
       for (final entry in row.entries) {
         columnNames[i] = entry.key.toNativeUtf8(allocator: arena).cast();
-        final column = _marshalGroupColumn(arena, [entry.value]);
+        final column = _marshalGroupColumn(arena, entry.key, [entry.value]);
         columnTypes[i] = column.type;
         columnData[i] = column.data;
         i++;
@@ -723,6 +723,7 @@ extension DatabaseUpdate on Database {
   /// the type tag and data for masked-out cells.
   ({int type, Pointer<Void> data, Pointer<Uint8> hasValue}) _marshalGroupColumn(
     Arena arena,
+    String column,
     List<Object?> values,
   ) {
     final mask = arena<Uint8>(values.length);
@@ -746,6 +747,19 @@ extension DatabaseUpdate on Database {
       }
       return (
         type: quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT,
+        data: arr.cast(),
+        hasValue: mask,
+      );
+    }
+    // SQLite has no boolean type: a bool is INTEGER 1/0, the same as on Element.set and the query
+    // parameters. Checked before int because a Dart bool is not an int.
+    if (first is bool) {
+      final arr = arena<Int64>(values.length);
+      for (var r = 0; r < values.length; r++) {
+        arr[r] = values[r] == null ? 0 : ((values[r] as bool) ? 1 : 0);
+      }
+      return (
+        type: quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER,
         data: arr.cast(),
         hasValue: mask,
       );
@@ -798,6 +812,6 @@ extension DatabaseUpdate on Database {
         hasValue: mask,
       );
     }
-    throw ArgumentError('Unsupported value type: ${first.runtimeType}');
+    throw ArgumentError("Unsupported value type ${first.runtimeType} for column '$column'");
   }
 }

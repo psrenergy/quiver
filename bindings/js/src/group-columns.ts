@@ -11,7 +11,7 @@ import type { NativePointer } from "./loader.ts";
 import { DATA_TYPE_FLOAT, DATA_TYPE_INTEGER, DATA_TYPE_STRING, type Allocation } from "./types.ts";
 
 /** Column-oriented group payload: one array of cells per column name, `null` for SQL NULL. */
-export type GroupColumns = Record<string, (number | string | null)[]>;
+export type GroupColumns = Record<string, (number | string | boolean | null)[]>;
 
 /**
  * The parallel-array signature every columnar group update C function shares
@@ -118,6 +118,13 @@ export function updateGroupColumns(
       );
       keepalive.push(table, ...strPtrs);
       dataPtrs.push(table.ptr);
+    } else if (typeof first === "boolean") {
+      // SQLite has no boolean type: a boolean is INTEGER 1/0, as in setElementField and
+      // marshalParams. A null cell keeps its 0 placeholder and is masked out above.
+      typesDv.setInt32(c * 4, DATA_TYPE_INTEGER, true);
+      const p = allocNativeInt64(values.map((v) => (v ? 1 : 0)));
+      keepalive.push(p);
+      dataPtrs.push(p.ptr);
     } else if (typeof first === "number") {
       const nonNull = values.filter((v) => v !== null) as number[];
       const sanitized = values.map((v) => (v === null ? 0 : (v as number)));

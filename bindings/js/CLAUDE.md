@@ -94,8 +94,15 @@ biome.json        # Lint/format config
   `quiver_get_last_error`, while this one is crafted here (the boolean readers are a binding-only
   convenience the core never sees). It names the offending `collection.attribute`; `queryBoolean`
   has no column to name. On writes a `boolean` is an INTEGER 1/0 — `setElementField`,
-  `setElementArray`, and `marshalParams` each carry a `typeof === "boolean"` branch, and
-  `ScalarValue`/`ArrayValue`/`QueryParam` include it.
+  `setElementArray`, `marshalParams`, `updateGroupColumns` (`group-columns.ts`) and
+  `upsertRowColumns` (`time-series.ts`) each carry a `typeof === "boolean"` branch, and
+  `ScalarValue`/`ArrayValue`/`QueryParam`/`GroupColumns` include it. In `upsertRowColumns` the
+  branch is **folded into the INTEGER condition** rather than added after it, because
+  `Number.isInteger(true)` is `false`: a boolean previously fell through to the FLOAT fallback and
+  landed in the column as FLOAT 1.0 with no error. **`GroupColumns` is the write type and
+  `TimeSeriesData` the read type** — they are otherwise identical, but only the former admits
+  `boolean`, since `readTimeSeriesGroup` never produces one and its return type should not claim
+  it. The four `updateTimeSeriesGroup*`/group writers therefore take `GroupColumns`.
 - **Test/lint/format**: `bun test test`, `bun run lint`, `bun run format` (biome, project-pinned
   version). No permission flags needed (Bun has none — don't carry over Deno habits). There is
   pre-existing lint debt in untouched files — fix only what your change orphans, don't drive-by

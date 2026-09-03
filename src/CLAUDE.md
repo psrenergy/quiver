@@ -339,9 +339,21 @@ Implementation conventions in `lua_runner.cpp`:
 - `to_lua_table<T>` overloads (flat + nested) are the only vector→table marshalers.
 - `describe` / `describe_collection` / `summarize_collection` are bound as plain lambdas returning
   the C++ `std::string` text report (`db:describe()` returns a string — it does not print).
-- Lua→C++ converters **throw on unsupported value types** (booleans, functions, ...) — never
+- Lua→C++ converters **throw on unsupported value types** (functions, nested tables, ...) — never
   skip silently; a skipped positional query parameter would shift the rest and bind NULL to the
   trailing placeholder.
+- **A Lua boolean is INTEGER 1/0 on every write path**, matching the cross-layer policy in the root
+  `CLAUDE.md`. Five converters carry the branch — `table_to_element` (scalars *and* the array
+  dispatch), `lua_table_to_value_map` (row upsert), `lua_table_to_values` (query parameters) and
+  `columns_to_cpp_rows` (group cells) — plus `lua_cell_to_int64`, which coerces **per cell** inside
+  `lua_table_to_int64_vector`. That per-cell coercion is not redundant with the array dispatch: a
+  mixed `{1, true}` dispatches on cell 1 as integer and then read the boolean through an unchecked
+  `t.get<int64_t>`, which throws only while `SOL_SAFE_GETTER` is on (debug) and silently yielded 0
+  in release, since no `SOL_*` macro is set in `CMakeLists.txt` or `cmake/Dependencies.cmake`.
+  Use `get_type() == sol::type::boolean`, **never `is<bool>()`** — see the `append_json` note below
+  for why sol2's is looser than `lua_isboolean`. `relation_target_from_lua` is the deliberate
+  exception: only `nil` may clear a relation, so a boolean still throws there.
+  Lua has no boolean *readers* (root design decision), so this is a write-side-only asymmetry.
 - `time_series_rows_from_lua` transpose, shared by `update_time_series_group_lua` and
   `update_time_series_group_by_label_lua` (both one-liners over it). Mirrors `group_rows_from_lua`
   but takes `db`, since the dimension columns come from metadata. The **dimension column(s) are
