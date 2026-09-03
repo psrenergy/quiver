@@ -54,6 +54,8 @@ ruff.toml         # Lint/format config (format.bat runs ruff)
   `list[T | None]` (`mask[i]` falsy → `None`); `read_scalar_strings` already returns `list[str | None]`
   via the `ffi.NULL` guard. `_c_api.py` carries the mask out-param on the two numeric readers plus
   `quiver_database_free_mask`.
+- **`read_time_series_row` absence mask**: same `uint8_t**` protocol as above, numeric columns only —
+  STRING/DATE_TIME get a NULL mask, so only the numeric branches call `quiver_database_free_mask`.
 - **`_integer_to_boolean` raises `ValueError`, not `QuiverError`** — the second documented
   exception to "messages come from C++", alongside `_marshal_group_columns`' jagged-column check.
   The boolean readers are a binding-only convenience with no C++ counterpart, so the core cannot

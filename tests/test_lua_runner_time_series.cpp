@@ -844,6 +844,36 @@ TEST_F(LuaRunnerTest, ReadTimeSeriesRow) {
     )");
 }
 
+// Lua bypasses the C API's presence mask: an element with no value at or before the date is a
+// plain `nil` hole. `#row` is unreliable across holes, so read_element_ids is the count authority.
+TEST_F(LuaRunnerTest, ReadTimeSeriesRowAbsenceIsNil) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(
+        db:create_element("Configuration", { label = "Config" })
+        db:create_element("Collection", { label = "Item 1" })
+        db:create_element("Collection", { label = "Item 2" })
+        db:update_time_series_group("Collection", "data", 1, {
+            date_time = { "2024-02-01T00:00:00" },
+            value = { 10.5 },
+        })
+
+        local ids = db:read_element_ids("Collection")
+        assert(#ids == 2, "expected 2 elements, got " .. #ids)
+
+        -- Before every stored row: both elements are absent
+        local before = db:read_time_series_row("Collection", "data", "value", "2024-01-01T00:00:00")
+        assert(before[1] == nil, "expected nil, got " .. tostring(before[1]))
+        assert(before[2] == nil, "expected nil, got " .. tostring(before[2]))
+
+        -- Item 1 has a row, Item 2 never got one
+        local after = db:read_time_series_row("Collection", "data", "value", "2024-02-15T00:00:00")
+        assert(after[1] == 10.5, "expected 10.5, got " .. tostring(after[1]))
+        assert(after[2] == nil, "expected nil, got " .. tostring(after[2]))
+    )");
+}
+
 TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupByLabel) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));

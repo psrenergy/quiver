@@ -5,7 +5,7 @@ All notable changes to Quiver are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entries that require
 callers to change something are prefixed **BREAKING** and say what to do.
 
-## [0.10.3] — unreleased
+## [0.11.0] — unreleased
 
 ### Changed
 
@@ -77,6 +77,20 @@ callers to change something are prefixed **BREAKING** and say what to do.
   not on Linux. It also left `tm_wday`/`tm_yday` unset, so `export_csv` with a `date_time_format`
   containing `%a`/`%A`/`%j`/`%U`/`%W` reported every date as a Sunday on day 001; those now
   format correctly.
+
+- **BREAKING — `read_time_series_row()` reports absence as null, not as a sentinel.** An element
+  with no value at or before `date_time` used to come back as `0` for an INTEGER attribute and
+  `NaN` for a REAL one, so a legitimately stored `0` was indistinguishable from "no data". Absence
+  now travels out of band, as a presence mask alongside the values. C++ and Lua are unchanged — the
+  core always returned a null `Value`, and Lua always returned `nil`.
+
+  *Adapt:* **Julia** — `read_time_series_row` returns `Vector{Optional{Int64}}` /
+  `Vector{Optional{Float64}}` instead of a concrete `Vector{Int64}` / `Vector{Float64}`; replace
+  `isnan(v)` absence checks with `isnothing(v)`. Absence is a property of the query, not of the
+  column, so this holds for `NOT NULL` columns too and there is no concrete-vector fast path.
+  **Python, Dart and JS** keep their return types and now produce `None`/`null` where they
+  previously produced the sentinel. **Direct C API callers** must pass the new `uint8_t** out_mask`
+  argument and free it with `quiver_database_free_mask`.
 
 ### Added
 
@@ -320,7 +334,7 @@ are functionally identical to 0.10.0.
   `read_time_series_group` emits for a NULL STRING cell — so feeding a read result back with the
   mask stripped was UB. A NULL entry, or a NULL per-column data pointer, is now SQL NULL.
 
-[0.10.3]: https://github.com/psrenergy/quiver/compare/v0.10.2...v0.11.0
+[0.11.0]: https://github.com/psrenergy/quiver/compare/v0.10.2...v0.11.0
 [0.10.2]: https://github.com/psrenergy/quiver/compare/v0.10.1...v0.10.2
 [0.10.1]: https://github.com/psrenergy/quiver/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/psrenergy/quiver/compare/v0.9.16...v0.10.0

@@ -30,17 +30,6 @@ Note the cross-binding decision (root `CLAUDE.md`): time-series group data is co
 group reads currently return `Vector{Union{T,Nothing}}` always — update that design note if this
 lands, and keep Python/Dart/JS on their static nullable surface.
 
-### `read_time_series_row` — fix the real instability (different bug)
-
-`read_time_series_row` (~line 601) is the genuinely unstable reader: it returns `Vector{Int64}`,
-`Vector{Float64}`, `Vector{Optional{String}}`, or even `Vector{Any}` depending on the runtime
-`data_type` and whether data is present. Its optional is **inherent** — semantics are "last
-non-null value at or before `date_time`; `nothing` for elements with no matching data" — so it
-can't become a concrete `Vector{T}`. The fix is *consistency*: always return a stable
-`Vector{Optional{T}}` whose `T` is keyed on the group column's data type from metadata (never
-`Vector{Any}`, never a bare concrete vector). This is about removing the eltype-by-data branch,
-not about nullability.
-
 ### `read_scalar_*_by_id` — leave optional (contract)
 
 `read_scalar_integer_by_id` / `_float_by_id` / `_string_by_id` / `_date_time_by_id` return

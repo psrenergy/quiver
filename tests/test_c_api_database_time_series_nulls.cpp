@@ -449,6 +449,98 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupAllNullColumnFloatTag) {
     quiver_database_close(db);
 }
 
+// ============================================================================
+// Time series row read NULL handling (read_time_series_row)
+// ============================================================================
+
+TEST(DatabaseCApi, ReadTimeSeriesRowNumericAbsenceMask) {
+    int64_t id1 = 0;
+    quiver_database_t* db = open_nullable_ts_db(&id1);
+
+    // A second sensor with no rows at all - absent for every attribute
+    quiver_element_t* sensor2 = nullptr;
+    quiver_element_create(&sensor2);
+    quiver_element_set_string(sensor2, "label", "Sensor 2");
+    int64_t id2 = 0;
+    quiver_database_create_element(db, "Sensor", sensor2, &id2);
+    quiver_element_destroy(sensor2);
+
+    // Sensor 1 has a temperature but leaves counter and status NULL
+    const char* names[] = {"date_time", "temperature"};
+    int types[] = {QUIVER_DATA_TYPE_STRING, QUIVER_DATA_TYPE_FLOAT};
+    const char* dts[] = {"2024-01-01"};
+    double temps[] = {1.5};
+    const void* data[] = {dts, temps};
+    ASSERT_EQ(quiver_database_upsert_time_series_row(db, "Sensor", "readings", id1, names, types, data, 2), QUIVER_OK);
+
+    // A later row stores a literal 0 - the value the old INTEGER sentinel used for absence
+    const char* counter_names[] = {"date_time", "counter"};
+    int counter_types[] = {QUIVER_DATA_TYPE_STRING, QUIVER_DATA_TYPE_INTEGER};
+    const char* counter_dts[] = {"2024-01-02"};
+    int64_t counters[] = {0};
+    const void* counter_data[] = {counter_dts, counters};
+    ASSERT_EQ(quiver_database_upsert_time_series_row(
+                  db, "Sensor", "readings", id1, counter_names, counter_types, counter_data, 2),
+              QUIVER_OK);
+
+    int out_type = 0;
+    void* out_values = nullptr;
+    uint8_t* out_mask = nullptr;
+    size_t out_count = 0;
+
+    // temperature: present for Sensor 1, absent for Sensor 2
+    ASSERT_EQ(quiver_database_read_time_series_row(
+                  db, "Sensor", "readings", "temperature", "2024-01-01", &out_type, &out_values, &out_mask, &out_count),
+              QUIVER_OK);
+    EXPECT_EQ(out_type, QUIVER_DATA_TYPE_FLOAT);
+    ASSERT_EQ(out_count, 2);
+    ASSERT_NE(out_mask, nullptr);
+    EXPECT_EQ(out_mask[0], 1);
+    EXPECT_EQ(out_mask[1], 0);
+    EXPECT_DOUBLE_EQ(static_cast<double*>(out_values)[0], 1.5);
+    quiver_database_free_float_array(static_cast<double*>(out_values));
+    quiver_database_free_mask(out_mask);
+
+    // counter (INTEGER): NULL cell for Sensor 1, no row at all for Sensor 2 - both absent
+    ASSERT_EQ(quiver_database_read_time_series_row(
+                  db, "Sensor", "readings", "counter", "2024-01-01", &out_type, &out_values, &out_mask, &out_count),
+              QUIVER_OK);
+    EXPECT_EQ(out_type, QUIVER_DATA_TYPE_INTEGER);
+    ASSERT_EQ(out_count, 2);
+    ASSERT_NE(out_mask, nullptr);
+    EXPECT_EQ(out_mask[0], 0);
+    EXPECT_EQ(out_mask[1], 0);
+    quiver_database_free_integer_array(static_cast<int64_t*>(out_values));
+    quiver_database_free_mask(out_mask);
+
+    // counter at the row that stores 0: present for Sensor 1, still absent for Sensor 2. A stored
+    // 0 and absence share the data slot, so only the mask separates them.
+    ASSERT_EQ(quiver_database_read_time_series_row(
+                  db, "Sensor", "readings", "counter", "2024-01-02", &out_type, &out_values, &out_mask, &out_count),
+              QUIVER_OK);
+    ASSERT_EQ(out_count, 2);
+    ASSERT_NE(out_mask, nullptr);
+    EXPECT_EQ(out_mask[0], 1);
+    EXPECT_EQ(out_mask[1], 0);
+    EXPECT_EQ(static_cast<int64_t*>(out_values)[0], 0);
+    quiver_database_free_integer_array(static_cast<int64_t*>(out_values));
+    quiver_database_free_mask(out_mask);
+
+    // status (TEXT): no mask - absence is a NULL char* entry
+    ASSERT_EQ(quiver_database_read_time_series_row(
+                  db, "Sensor", "readings", "status", "2024-01-01", &out_type, &out_values, &out_mask, &out_count),
+              QUIVER_OK);
+    EXPECT_EQ(out_type, QUIVER_DATA_TYPE_STRING);
+    ASSERT_EQ(out_count, 2);
+    EXPECT_EQ(out_mask, nullptr);
+    auto** strings = static_cast<char**>(out_values);
+    EXPECT_EQ(strings[0], nullptr);
+    EXPECT_EQ(strings[1], nullptr);
+    quiver_database_free_string_array(strings, out_count);
+
+    quiver_database_close(db);
+}
+
 // The upsert row entry point decodes through the shared group decoder, whose STRING branch treats a
 // NULL char* as SQL NULL. The read direction emits exactly that for a NULL STRING cell, so feeding
 // a read result back with the mask stripped must not dereference it.

@@ -170,7 +170,7 @@ include("fixture.jl")
 
         # Query at 2024-01-02: Item 1 -> 2.0, Item 2 -> 20.0
         result = Quiver.read_time_series_row(db, "Collection", "data", "value"; date_time = DateTime(2024, 1, 2))
-        @test result isa Vector{Float64}
+        @test result isa Vector{Quiver.Optional{Float64}}
         @test length(result) == 2
         @test result[1] == 2.0
         @test result[2] == 20.0
@@ -202,7 +202,7 @@ include("fixture.jl")
 
         # Query at 2024-01-02: Item 1 -> 2.0, Item 2 -> 10.0
         result = Quiver.read_time_series_row(db, "Collection", "data", "value"; date_time = DateTime(2024, 1, 2))
-        @test result isa Vector{Float64}
+        @test result isa Vector{Quiver.Optional{Float64}}
         @test length(result) == 2
         @test result[1] == 2.0
         @test result[2] == 10.0
@@ -227,10 +227,10 @@ include("fixture.jl")
             value = [1.0],
         )
 
-        # Query before any data: should return NaN for the float attribute
+        # Query before any data: absence is `nothing`, never a NaN sentinel
         result = Quiver.read_time_series_row(db, "Collection", "data", "value"; date_time = DateTime(2024, 1, 1))
         @test length(result) == 1
-        @test isnan(result[1])
+        @test result[1] === nothing
 
         Quiver.close!(db)
     end
@@ -243,7 +243,7 @@ include("fixture.jl")
 
         result = Quiver.read_time_series_row(db, "Collection", "data", "value"; date_time = DateTime(2024, 1, 1))
         @test isempty(result)
-        @test result isa Vector{Float64}
+        @test result isa Vector{Quiver.Optional{Float64}}
 
         Quiver.close!(db)
     end
@@ -261,11 +261,11 @@ include("fixture.jl")
             value = [5.0],
         )
 
-        # Item 1 has data, Item 2 doesn't (NaN sentinel)
+        # Item 1 has data, Item 2 doesn't
         result = Quiver.read_time_series_row(db, "Collection", "data", "value"; date_time = DateTime(2024, 1, 1))
         @test length(result) == 2
         @test result[1] == 5.0
-        @test isnan(result[2])
+        @test result[2] === nothing
 
         Quiver.close!(db)
     end
@@ -286,7 +286,7 @@ include("fixture.jl")
 
         # Read humidity (INTEGER type)
         humids = Quiver.read_time_series_row(db, "Sensor", "readings", "humidity"; date_time = DateTime(2024, 1, 2))
-        @test humids isa Vector{Int64}
+        @test humids isa Vector{Quiver.Optional{Int64}}
         @test humids[1] == 70
 
         # Read status (STRING type)
@@ -296,7 +296,7 @@ include("fixture.jl")
 
         # Read temperature (FLOAT type)
         temps = Quiver.read_time_series_row(db, "Sensor", "readings", "temperature"; date_time = DateTime(2024, 1, 2))
-        @test temps isa Vector{Float64}
+        @test temps isa Vector{Quiver.Optional{Float64}}
         @test temps[1] == 21.0
 
         Quiver.close!(db)
@@ -344,6 +344,29 @@ include("fixture.jl")
         @test result isa Vector{Quiver.Optional{String}}
         @test length(result) == 2
         @test result[1] == ""
+        @test result[2] === nothing
+
+        Quiver.close!(db)
+    end
+
+    @testset "Read Time Series Row - Integer Zero Distinguished From Absence" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "nullable_time_series.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+        id1 = Quiver.create_element!(db, "Sensor"; label = "Sensor 1")
+        Quiver.create_element!(db, "Sensor"; label = "Sensor 2")  # no data
+
+        Quiver.update_time_series_group!(db, "Sensor", "readings", id1;
+            date_time = ["2024-01-01T00:00:00"],
+            counter = [0],
+        )
+
+        # Sensor 1 stores 0, Sensor 2 has no row: 0 must not read as absence
+        result = Quiver.read_time_series_row(db, "Sensor", "readings", "counter"; date_time = DateTime(2024, 1, 1))
+        @test result isa Vector{Quiver.Optional{Int64}}
+        @test length(result) == 2
+        @test result[1] == 0
         @test result[2] === nothing
 
         Quiver.close!(db)

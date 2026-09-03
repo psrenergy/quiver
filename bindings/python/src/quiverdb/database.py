@@ -1463,6 +1463,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         lib = get_lib()
         out_data_type = ffi.new("int*")
         out_values = ffi.new("void**")
+        out_mask = ffi.new("uint8_t**")
         out_count = ffi.new("size_t*")
         check(
             lib.quiver_database_read_time_series_row(
@@ -1473,6 +1474,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
                 date_time.strftime("%Y-%m-%dT%H:%M:%S").encode("utf-8"),
                 out_data_type,
                 out_values,
+                out_mask,
                 out_count,
             )
         )
@@ -1480,15 +1482,20 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         if count == 0 or out_values[0] == ffi.NULL:
             return []
         data_type = out_data_type[0]
+        # Numeric types carry a presence mask; a masked-out slot is a placeholder, not a value.
         if data_type == DataType.INTEGER:
             int_ptr = ffi.cast("int64_t*", out_values[0])
-            result: list = [int_ptr[i] for i in range(count)]
+            mask = out_mask[0]
+            result: list = [int_ptr[i] if mask[i] else None for i in range(count)]
             lib.quiver_database_free_integer_array(int_ptr)
+            lib.quiver_database_free_mask(mask)
             return result
         if data_type == DataType.FLOAT:
             float_ptr = ffi.cast("double*", out_values[0])
-            result = [float_ptr[i] for i in range(count)]
+            mask = out_mask[0]
+            result = [float_ptr[i] if mask[i] else None for i in range(count)]
             lib.quiver_database_free_float_array(float_ptr)
+            lib.quiver_database_free_mask(mask)
             return result
         # STRING or DATE_TIME; NULL entries mark elements with no data
         str_ptr = ffi.cast("char**", out_values[0])

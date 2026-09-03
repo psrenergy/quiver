@@ -668,9 +668,12 @@ function read_time_series_group(db::Database, collection::String, group::String,
     return result
 end
 
+# Always returns an Optional element type: absence is a property of the query (an element with no
+# row at or before date_time), not of the column, so a NOT NULL column proves nothing here.
 function read_time_series_row(db::Database, collection::String, group::String, attribute::String; date_time::DateTime)
     out_data_type = Ref{Cint}(0)
     out_values = Ref{Ptr{Cvoid}}(C_NULL)
+    out_mask = Ref{Ptr{UInt8}}(C_NULL)
     out_count = Ref{Csize_t}(0)
 
     dt_str = date_time_to_string(date_time)
@@ -678,7 +681,7 @@ function read_time_series_row(db::Database, collection::String, group::String, a
     check(
         C.quiver_database_read_time_series_row(
             db.ptr, collection, group, attribute, dt_str,
-            out_data_type, out_values, out_count,
+            out_data_type, out_values, out_mask, out_count,
         ),
     )
 
@@ -687,24 +690,30 @@ function read_time_series_row(db::Database, collection::String, group::String, a
 
     if count == 0 || out_values[] == C_NULL
         if data_type == Cint(C.QUIVER_DATA_TYPE_INTEGER)
-            return Int64[]
+            return Optional{Int64}[]
         elseif data_type == Cint(C.QUIVER_DATA_TYPE_FLOAT)
-            return Float64[]
+            return Optional{Float64}[]
         elseif data_type == Cint(C.QUIVER_DATA_TYPE_STRING) || data_type == Cint(C.QUIVER_DATA_TYPE_DATE_TIME)
             return Optional{String}[]
         end
-        return Any[]
+        throw(ArgumentError("Unsupported data type $(data_type) for attribute '$attribute'"))
     end
 
     if data_type == Cint(C.QUIVER_DATA_TYPE_INTEGER)
         int_ptr = reinterpret(Ptr{Int64}, out_values[])
-        result = copy(unsafe_wrap(Array, int_ptr, count))
+        values = unsafe_wrap(Array, int_ptr, count)
+        mask = unsafe_wrap(Array, out_mask[], count)
+        result = Optional{Int64}[mask[i] != 0 ? values[i] : nothing for i in 1:count]
         C.quiver_database_free_integer_array(int_ptr)
+        C.quiver_database_free_mask(out_mask[])
         return result
     elseif data_type == Cint(C.QUIVER_DATA_TYPE_FLOAT)
         float_ptr = reinterpret(Ptr{Float64}, out_values[])
-        result = copy(unsafe_wrap(Array, float_ptr, count))
+        values = unsafe_wrap(Array, float_ptr, count)
+        mask = unsafe_wrap(Array, out_mask[], count)
+        result = Optional{Float64}[mask[i] != 0 ? values[i] : nothing for i in 1:count]
         C.quiver_database_free_float_array(float_ptr)
+        C.quiver_database_free_mask(out_mask[])
         return result
     elseif data_type == Cint(C.QUIVER_DATA_TYPE_STRING) || data_type == Cint(C.QUIVER_DATA_TYPE_DATE_TIME)
         str_ptr_ptr = reinterpret(Ptr{Ptr{Cchar}}, out_values[])

@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <cstring>
 #include <map>
+#include <memory>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -54,6 +55,22 @@ quiver_error_t read_scalars_masked_impl(const std::vector<std::optional<T>>& val
         }
     }
     return QUIVER_OK;
+}
+
+// The same value + presence-mask form for a time-series-row result, whose values arrive as a
+// Value variant rather than an optional: an element with no value at or before the queried
+// date_time is masked out. Untyped out-param because the caller dispatches on out_data_type.
+template <typename T>
+void marshal_row_values_masked(const std::vector<quiver::Value>& values, void** out_values, uint8_t** out_mask) {
+    auto data = std::make_unique<T[]>(values.size());
+    auto mask = std::make_unique<uint8_t[]>(values.size());
+    for (size_t i = 0; i < values.size(); ++i) {
+        const bool present = std::holds_alternative<T>(values[i]);
+        data[i] = present ? std::get<T>(values[i]) : T{};
+        mask[i] = present ? 1 : 0;
+    }
+    *out_values = data.release();
+    *out_mask = mask.release();
 }
 
 // Helper template for reading numeric vectors

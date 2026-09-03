@@ -96,3 +96,39 @@ class TestTimeSeriesGroupNulls:
         nullable_time_series_db.update_time_series_group("Sensor", "readings", eid, ts)
         result = nullable_time_series_db.read_time_series_group("Sensor", "readings", eid)
         assert result["temperature"] == [99.0, None]
+
+
+class TestTimeSeriesRowNulls:
+    def test_absent_value_is_none(self, nullable_time_series_db: Database) -> None:
+        """An element with no row at or before the date reads as None, never a sentinel."""
+        eid = _create_sensor(nullable_time_series_db, "S1")
+        _create_sensor(nullable_time_series_db, "S2")  # no data at all
+        nullable_time_series_db.update_time_series_group(
+            "Sensor",
+            "readings",
+            eid,
+            {"date_time": ["2024-01-02T00:00:00"], "temperature": [10.5]},
+        )
+
+        assert nullable_time_series_db.read_time_series_row(
+            "Sensor", "readings", "temperature", datetime(2024, 1, 1)
+        ) == [None, None]
+        assert nullable_time_series_db.read_time_series_row(
+            "Sensor", "readings", "temperature", datetime(2024, 1, 2)
+        ) == [10.5, None]
+
+    def test_integer_zero_is_not_absence(self, nullable_time_series_db: Database) -> None:
+        """A stored 0 is a value; only a missing row reads as None."""
+        eid = _create_sensor(nullable_time_series_db, "S1")
+        _create_sensor(nullable_time_series_db, "S2")  # no data at all
+        nullable_time_series_db.update_time_series_group(
+            "Sensor",
+            "readings",
+            eid,
+            {"date_time": ["2024-01-01T00:00:00"], "counter": [0]},
+        )
+
+        assert nullable_time_series_db.read_time_series_row("Sensor", "readings", "counter", datetime(2024, 1, 1)) == [
+            0,
+            None,
+        ]

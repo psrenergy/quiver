@@ -46,7 +46,7 @@ no errors file) plus `test_c_api_element.cpp`, `test_c_api_lua_runner.cpp`,
 `test_c_api_binary_metadata.cpp` / `test_c_api_csv_converter.cpp`. The same `read` →
 `{scalar,vector,set}` and `time_series` → `{metadata,group,row,files,nulls}` split applies; the
 C API time-series set additionally has `test_c_api_database_time_series_nulls.cpp` (per-cell
-NULL-mask round-trips), which the C++ core lacks.
+NULL-mask round-trips plus `read_time_series_row`'s absence mask), which the C++ core lacks.
 
 ## Binding suites
 

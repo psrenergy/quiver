@@ -128,7 +128,8 @@ Conventions that keep the error paths safe:
 - **Scalar bulk reads carry NULLs.** The numeric readers (`read_scalar_integers`/`_floats`) take a
   parallel `uint8_t** out_mask` out-param (`mask[i] == 0` = SQL NULL, data slot is a 0/0.0
   placeholder), allocated by `read_scalars_masked_impl` and freed by `quiver_database_free_mask`
-  (co-located in `database_read.cpp`). `read_scalar_strings` keeps its signature — a NULL is a
+  (co-located in `database_read.cpp`; `quiver_database_read_time_series_row` uses the same free).
+  `read_scalar_strings` keeps its signature — a NULL is a
   `nullptr` entry in the `char**` (via a `copy_strings_to_c(vector<optional<string>>, ...)`
   overload), and `free_string_array` already tolerates NULL slots.
 - **Array/string free functions are NULL-tolerant** (freeing NULL, or an array slot left NULL, is
@@ -196,9 +197,11 @@ NULL **presence mask** alongside the data arrays:
   throw cannot leak the masks. String columns require per-element cleanup; numeric columns and the
   masks use a single `delete[]`. The masks follow the zero-initialized out-array convention.
 - `quiver_database_read_time_series_row()` returns a single `void*` array whose element type the
-  caller dispatches on via `out_data_type`. Null entries are encoded per type: `FLOAT` → NaN,
-  `STRING`/`DATE_TIME` → NULL `char*`, `INTEGER` → 0. (The row API keeps its sentinel encoding; only
-  the columnar group API uses the presence mask.)
+  caller dispatches on via `out_data_type`, plus a flat `uint8_t** out_mask` (`mask[i] == 0` = the
+  element has no value at or before `date_time`; the data slot is a 0/0.0 placeholder), freed by
+  `quiver_database_free_mask`. `STRING`/`DATE_TIME` get `*out_mask = nullptr` — absence is already a
+  NULL `char*` entry, mirroring `read_scalar_strings` — and so does an empty result, which has
+  nothing to mask. Why out-of-band rather than the old in-band sentinels: root design decisions.
 
 This pattern mirrors the `convert_params()` approach from `database_query.cpp` for type-safe FFI marshaling across N typed columns.
 
