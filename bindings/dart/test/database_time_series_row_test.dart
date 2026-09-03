@@ -85,6 +85,64 @@ void main() {
         db.close();
       }
     });
+
+    test('upsertTimeSeriesRowByLabel writes only the labelled element', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        final item = db.createElement('Collection', {'label': 'Item 1'});
+        final other = db.createElement('Collection', {'label': 'Item 2'});
+
+        db.upsertTimeSeriesRowByLabel('Collection', 'data', 'Item 2', {
+          'date_time': '2024-01-01T10:00:00',
+          'value': 99.0,
+        });
+        db.upsertTimeSeriesRowByLabel('Collection', 'data', 'Item 1', {
+          'date_time': '2024-01-01T10:00:00',
+          'value': 10.0,
+        });
+        // Same dimension PK upserts rather than appending.
+        db.upsertTimeSeriesRowByLabel('Collection', 'data', 'Item 1', {
+          'date_time': '2024-01-01T10:00:00',
+          'value': 20.0,
+        });
+
+        final result = db.readTimeSeriesGroup('Collection', 'data', item);
+        expect(result['date_time']!.length, equals(1));
+        expect(result['value']![0], equals(20.0));
+        expect(
+          db.readTimeSeriesGroup('Collection', 'data', other)['value'],
+          equals([99.0]),
+        );
+      } finally {
+        db.close();
+      }
+    });
+
+    test('upsertTimeSeriesRowByLabel throws on an unresolvable label', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        final id = db.createElement('Collection', {'label': 'Item 1'});
+
+        expect(
+          () => db.upsertTimeSeriesRowByLabel('Collection', 'data', 'Nope', {
+            'date_time': '2024-01-01T10:00:00',
+            'value': 10.0,
+          }),
+          throwsA(isA<DatabaseException>()),
+        );
+        expect(db.readTimeSeriesGroup('Collection', 'data', id), isEmpty);
+      } finally {
+        db.close();
+      }
+    });
   });
 
   group('Read Time Series Row', () {

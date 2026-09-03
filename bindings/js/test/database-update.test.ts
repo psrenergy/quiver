@@ -97,6 +97,41 @@ describe("updateElement", () => {
   });
 });
 
+describe("updateElementByLabel", () => {
+  test("updates by label and leaves siblings alone", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      const id1 = db.createElement("AllTypes", { label: "Item1", some_integer: 42 });
+      const id2 = db.createElement("AllTypes", { label: "Item2", some_integer: 7 });
+      db.updateElementByLabel("AllTypes", "Item1", { some_integer: 99 });
+      expect(db.readScalarIntegerById("AllTypes", "some_integer", id1)).toEqual(99);
+      expect(db.readScalarIntegerById("AllTypes", "some_integer", id2)).toEqual(7);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("throws on non-existent label", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      db.createElement("AllTypes", { label: "Item1", some_integer: 42 });
+      expect(() => db.updateElementByLabel("AllTypes", "Nope", { some_integer: 5 })).toThrow(
+        /Element not found/,
+      );
+    } finally {
+      db.close();
+    }
+  });
+
+  test("throws on closed database", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    db.close();
+    expect(() => db.updateElementByLabel("AllTypes", "Item1", { some_integer: 42 })).toThrow(
+      QuiverError,
+    );
+  });
+});
+
 const RELATIONS_SCHEMA_PATH = join(
   __dirname,
   "..",
@@ -246,6 +281,125 @@ describe("updateVectorGroup / updateSetGroup", () => {
       expect(() =>
         db.updateVectorGroup("Child", "refs", child, { parent_ref: [parentA, parentA], id: [1] }),
       ).toThrow(/has length 1 but expected 2/);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("updateVectorGroupByLabel writes and clears only the labelled element", () => {
+    const { db, parentA, parentB, child } = openRelations();
+    try {
+      const other = db.createElement("Child", { label: "Child 2" });
+
+      db.updateVectorGroupByLabel("Child", "refs", "Child 2", { parent_ref: [parentA] });
+      db.updateVectorGroupByLabel("Child", "refs", "Child 1", { parent_ref: [parentA, parentB] });
+      expect(db.readVectorIntegersById("Child", "parent_ref", child)).toEqual([parentA, parentB]);
+
+      db.updateVectorGroupByLabel("Child", "refs", "Child 1", {});
+      expect(db.readVectorIntegersById("Child", "parent_ref", child)).toEqual([]);
+      expect(db.readVectorIntegersById("Child", "parent_ref", other)).toEqual([parentA]);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("updateVectorGroupByLabel throws on an unresolvable label", () => {
+    const { db, parentA, child } = openRelations();
+    try {
+      db.updateVectorGroup("Child", "refs", child, { parent_ref: [parentA] });
+
+      expect(() =>
+        db.updateVectorGroupByLabel("Child", "refs", "Nope", { parent_ref: [parentA] }),
+      ).toThrow(/Element not found: label 'Nope' in collection 'Child'/);
+      expect(db.readVectorIntegersById("Child", "parent_ref", child)).toEqual([parentA]);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("updateSetGroupByLabel writes and clears only the labelled element", () => {
+    const { db, parentA, parentB, child } = openRelations();
+    try {
+      const other = db.createElement("Child", { label: "Child 2" });
+
+      db.updateSetGroupByLabel("Child", "parents", "Child 2", { parent_ref: [parentA] });
+      db.updateSetGroupByLabel("Child", "parents", "Child 1", { parent_ref: [parentA, parentB] });
+      expect(db.readSetIntegersById("Child", "parent_ref", child)).toEqual([parentA, parentB]);
+
+      db.updateSetGroupByLabel("Child", "parents", "Child 1", {});
+      expect(db.readSetIntegersById("Child", "parent_ref", child)).toEqual([]);
+      expect(db.readSetIntegersById("Child", "parent_ref", other)).toEqual([parentA]);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("updateSetGroupByLabel throws on an unresolvable label", () => {
+    const { db, parentA, child } = openRelations();
+    try {
+      db.updateSetGroup("Child", "parents", child, { parent_ref: [parentA] });
+
+      expect(() =>
+        db.updateSetGroupByLabel("Child", "parents", "Nope", { parent_ref: [parentA] }),
+      ).toThrow(/Element not found: label 'Nope' in collection 'Child'/);
+      expect(db.readSetIntegersById("Child", "parent_ref", child)).toEqual([parentA]);
+    } finally {
+      db.close();
+    }
+  });
+});
+
+describe("updateRelation", () => {
+  function openRelations(): { db: Database; parentA: number; parentB: number; child: number } {
+    const db = Database.fromSchema(":memory:", RELATIONS_SCHEMA_PATH);
+    db.createElement("Configuration", { label: "Config" });
+    const parentA = db.createElement("Parent", { label: "Parent A" });
+    const parentB = db.createElement("Parent", { label: "Parent B" });
+    const child = db.createElement("Child", { label: "Child 1" });
+    return { db, parentA, parentB, child };
+  }
+
+  test("sets the derived foreign key by id", () => {
+    const { db, parentA, child } = openRelations();
+    try {
+      db.updateRelation("Child", "Parent", "id", child, "Parent A");
+      expect(db.readScalarIntegerById("Child", "parent_id", child)).toEqual(parentA);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("updateRelationByLabel resolves the source element", () => {
+    const { db, parentB, child } = openRelations();
+    try {
+      db.updateRelationByLabel("Child", "Parent", "id", "Child 1", "Parent B");
+      expect(db.readScalarIntegerById("Child", "parent_id", child)).toEqual(parentB);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("a null target label clears the relation, through either form", () => {
+    const { db, child } = openRelations();
+    try {
+      db.updateRelation("Child", "Parent", "id", child, "Parent A");
+      db.updateRelation("Child", "Parent", "id", child, null);
+      expect(db.readScalarIntegerById("Child", "parent_id", child)).toBeNull();
+
+      db.updateRelationByLabel("Child", "Parent", "id", "Child 1", "Parent A");
+      db.updateRelationByLabel("Child", "Parent", "id", "Child 1", null);
+      expect(db.readScalarIntegerById("Child", "parent_id", child)).toBeNull();
+    } finally {
+      db.close();
+    }
+  });
+
+  test("throws when the relation type derives no such column", () => {
+    const { db, child } = openRelations();
+    try {
+      expect(() => db.updateRelation("Child", "Parent", "owner", child, "Parent A")).toThrow(
+        /relation column 'parent_owner' not found in collection 'Child'/,
+      );
     } finally {
       db.close();
     }

@@ -1,4 +1,5 @@
 import { ptr } from "bun:ffi";
+import { integerToBoolean } from "./boolean.ts";
 import { Database } from "./database.ts";
 import { check, QuiverError } from "./errors.ts";
 import {
@@ -38,6 +39,11 @@ function marshalParams(parameters: QueryParam[]): {
     if (p === null) {
       typesDv.setInt32(i * 4, DATA_TYPE_NULL, true);
       valuesDv.setBigInt64(i * 8, 0n, true);
+    } else if (typeof p === "boolean") {
+      typesDv.setInt32(i * 4, DATA_TYPE_INTEGER, true);
+      const native = allocNativeInt64([p ? 1 : 0]);
+      keepalive.push(native);
+      valuesDv.setBigInt64(i * 8, nativeAddress(native.ptr), true);
     } else if (typeof p === "number") {
       if (Number.isInteger(p)) {
         typesDv.setInt32(i * 4, DATA_TYPE_INTEGER, true);
@@ -128,6 +134,14 @@ Database.prototype.queryInteger = function (
 
   if (new DataView(outHasValue.buffer).getInt32(0, true) === 0) return null;
   return Number(new DataView(outValue.buffer).getBigInt64(0, true));
+};
+
+Database.prototype.queryBoolean = function (
+  this: Database,
+  sql: string,
+  parameters?: QueryParam[],
+): boolean | null {
+  return integerToBoolean(this.queryInteger(sql, parameters));
 };
 
 Database.prototype.queryFloat = function (

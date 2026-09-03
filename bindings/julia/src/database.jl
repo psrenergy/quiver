@@ -36,6 +36,11 @@ function from_migrations(db_path::String, migrations_path::String; kwargs...)
     return Database(out_db[])
 end
 
+function validate_migrations(migrations_path::String)
+    check(C.quiver_database_validate_migrations(migrations_path))
+    return nothing
+end
+
 function open(db_path::String; kwargs...)
     options = build_quiver_database_options(; kwargs...)
     out_db = Ref{Ptr{C.quiver_database}}(C_NULL)
@@ -49,6 +54,26 @@ function close!(db::Database)
         db.ptr = C_NULL
     end
     return nothing
+end
+
+function _with_database(fn, db::Database)
+    try
+        return fn(db)
+    finally
+        close!(db)
+    end
+end
+
+function from_schema(fn::Function, db_path::String, schema_path::String; kwargs...)
+    return _with_database(fn, from_schema(db_path, schema_path; kwargs...))
+end
+
+function from_migrations(fn::Function, db_path::String, migrations_path::String; kwargs...)
+    return _with_database(fn, from_migrations(db_path, migrations_path; kwargs...))
+end
+
+function open(fn::Function, db_path::String; kwargs...)
+    return _with_database(fn, open(db_path; kwargs...))
 end
 
 function current_version(db::Database)

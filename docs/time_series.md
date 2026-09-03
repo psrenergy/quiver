@@ -25,6 +25,10 @@ dimension column whose name starts with `date_` (usually `date_time`), stored as
 text (`YYYY-MM-DDTHH:MM:SS`). The bindings convert their native datetime types to and from
 this format automatically.
 
+The time part is optional — a bare `YYYY-MM-DD` is accepted, as is a space in place of the `T` —
+but nothing shorter is. `update_time_series_group` and `upsert_time_series_row` reject a dimension
+value that does not parse, so a group can never hold a date the readers cannot return.
+
 Notice that in this example, there are two value columns `some_vector1` and `some_vector2`. You can have as many value columns as you want. You can also separate the time series data into different tables, by creating a table `Resource_time_series_group2` for example.
 
 It is also possible to add more dimensions to your time series, such as `block` and `scenario`.

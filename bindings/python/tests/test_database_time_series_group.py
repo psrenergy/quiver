@@ -224,3 +224,30 @@ class TestTimeSeriesSingleColumn:
             "date_time": [_utc(2024, 1, 1), _utc(2024, 1, 2)],
             "value": [3.14, 2.72],
         }
+
+    def test_update_time_series_group_by_label(self, collections_db: Database) -> None:
+        """Write by label; an empty dict clears only the labelled element's group."""
+        item = _create_collection_element(collections_db, "Item 1")
+        other = _create_collection_element(collections_db, "Item 2")
+
+        collections_db.update_time_series_group_by_label(
+            "Collection", "data", "Item 2", {"date_time": ["2024-01-01T00:00:00"], "value": [99.0]}
+        )
+        collections_db.update_time_series_group_by_label(
+            "Collection",
+            "data",
+            "Item 1",
+            {"date_time": ["2024-01-01T00:00:00", "2024-01-02T00:00:00"], "value": [1.5, 2.5]},
+        )
+        assert collections_db.read_time_series_group("Collection", "data", item)["value"] == [1.5, 2.5]
+
+        collections_db.update_time_series_group_by_label("Collection", "data", "Item 1", {})
+        assert collections_db.read_time_series_group("Collection", "data", item) == {}
+        assert collections_db.read_time_series_group("Collection", "data", other)["value"] == [99.0]
+
+    def test_update_time_series_group_by_label_unresolvable_label_raises(self, collections_db: Database) -> None:
+        """An unresolvable label raises."""
+        with pytest.raises(QuiverError, match="Element not found"):
+            collections_db.update_time_series_group_by_label(
+                "Collection", "data", "Nope", {"date_time": ["2024-01-01T00:00:00"], "value": [1.5]}
+            )

@@ -47,6 +47,15 @@ extension DatabaseRead on Database {
     }
   }
 
+  /// Reads all boolean values stored as integer scalar attributes.
+  /// One entry is returned per element; a SQL NULL is `null`.
+  List<bool?> readScalarBooleans(String collection, String attribute) {
+    return readScalarIntegers(
+      collection,
+      attribute,
+    ).map((value) => _integerToBoolean(value, collection, attribute)).toList();
+  }
+
   /// Reads all float values for a scalar attribute. One entry per element;
   /// a SQL NULL is `null`.
   List<double?> readScalarFloats(String collection, String attribute) {
@@ -168,6 +177,18 @@ extension DatabaseRead on Database {
     } finally {
       arena.releaseAll();
     }
+  }
+
+  /// Reads all boolean vectors stored as integer vector attributes.
+  ///
+  /// NULL cells are dropped and only elements that own rows are returned, so the
+  /// result is not positionally aligned with [readElementIds] (unlike
+  /// [readScalarBooleans]).
+  List<List<bool>> readVectorBooleans(String collection, String attribute) {
+    return readVectorIntegers(
+      collection,
+      attribute,
+    ).map((values) => values.map((value) => _integerToBooleanNonNull(value, collection, attribute)).toList()).toList();
   }
 
   /// Reads all float vectors for a vector attribute from a collection.
@@ -315,6 +336,17 @@ extension DatabaseRead on Database {
     }
   }
 
+  /// Reads all boolean sets stored as integer set attributes.
+  ///
+  /// Same alignment caveat as [readVectorBooleans]: NULL cells are dropped and
+  /// only elements that own rows are returned.
+  List<List<bool>> readSetBooleans(String collection, String attribute) {
+    return readSetIntegers(
+      collection,
+      attribute,
+    ).map((values) => values.map((value) => _integerToBooleanNonNull(value, collection, attribute)).toList()).toList();
+  }
+
   /// Reads all float sets for a set attribute from a collection.
   List<List<double>> readSetFloats(String collection, String attribute) {
     _ensureNotClosed();
@@ -446,6 +478,12 @@ extension DatabaseRead on Database {
     }
   }
 
+  /// Reads a boolean stored as an integer scalar attribute by element Id.
+  /// Returns null if the element or value is absent.
+  bool? readScalarBooleanById(String collection, String attribute, int id) {
+    return _integerToBoolean(readScalarIntegerById(collection, attribute, id), collection, attribute);
+  }
+
   /// Reads a float value for a scalar attribute by element Id.
   /// Returns null if the element is not found.
   double? readScalarFloatById(String collection, String attribute, int id) {
@@ -558,6 +596,15 @@ extension DatabaseRead on Database {
     } finally {
       arena.releaseAll();
     }
+  }
+
+  /// Reads a boolean vector stored as an integer vector attribute by element Id.
+  List<bool> readVectorBooleansById(String collection, String attribute, int id) {
+    return readVectorIntegersById(
+      collection,
+      attribute,
+      id,
+    ).map((value) => _integerToBooleanNonNull(value, collection, attribute)).toList();
   }
 
   /// Reads float vector for a vector attribute by element Id.
@@ -685,6 +732,15 @@ extension DatabaseRead on Database {
     } finally {
       arena.releaseAll();
     }
+  }
+
+  /// Reads a boolean set stored as an integer set attribute by element Id.
+  List<bool> readSetBooleansById(String collection, String attribute, int id) {
+    return readSetIntegersById(
+      collection,
+      attribute,
+      id,
+    ).map((value) => _integerToBooleanNonNull(value, collection, attribute)).toList();
   }
 
   /// Reads float set for a set attribute by element Id.

@@ -139,13 +139,17 @@ Database& operator=(Database&&) = default;
 
 ## Factory Methods
 
-Static methods for database creation:
+Static methods for database creation and migration validation:
 ```cpp
 static Database from_schema(const std::string& db_path, const std::string& schema_path, const DatabaseOptions& options = {});
 static Database from_migrations(const std::string& db_path, const std::string& migrations_path, const DatabaseOptions& options = {});
+static void validate_migrations(const std::string& migrations_path);
 ```
 `schema_path` is a `.sql` file; `migrations_path` is a directory of numbered version
 subdirectories with `up.sql`/`down.sql`.
+`validate_migrations` validates that directory in an in-memory database by executing every up migration
+and then every down migration, and finally rejects any table left behind; the direction-specific
+execution helpers remain private.
 
 ## Logging
 
@@ -178,8 +182,7 @@ impl_->logger->debug("Opening database: {}", path);
   `delete_element`, and both group writers.
 - **Label→id resolution has one query** (`database_impl.h`): `Impl::lookup_id_by_label(table,
   label, db)` is the only `SELECT id ... WHERE label = ?`, shared by `Impl::resolve_label`
-  (Pattern 2, backs `delete_element_by_label` and `update_element_by_label`) and
-  `Impl::resolve_fk_label` (Pattern 3) — the two
+  (Pattern 2, backs every `_by_label` form) and `Impl::resolve_fk_label` (Pattern 3) — the two
   report a miss differently, so the throw stays with each caller. `resolve_label` calls
   `require_column(collection, "label")` because `require_collection` only checks `has_table`, so a
   group table would otherwise reach the SELECT and leak a raw `no such column: label` prepare
@@ -213,13 +216,38 @@ impl_->logger->debug("Opening database: {}", path);
   matches `INTEGER` or `REAL` (int-for-REAL coercion), double matches `REAL` only (a float into an
   `INTEGER` column is rejected), string matches `TEXT`/`INTEGER`(FK label)/`DATE_TIME`. Keep the two
   in sync (root design decision).
-- **`update_element` / `delete_element` / the group writers verify the id exists** (via
+- **DATE_TIME content is checked by both halves of that policy, through one predicate**:
+  `datetime::is_valid_iso8601` (`utils/datetime.h`). `TypeValidator::validate_value` calls it in its
+  string branch (covering scalar create/update and every vector/set array write, so it inherits the
+  validate-before-DELETE ordering below); `validate_time_series_row` (`database_time_series.cpp`)
+  calls it in a **separate** guard next to `value_matches_type`. Do not "restore symmetry" by moving
+  the check into `value_matches_type`: that function decides the *variant's shape*, and TEXT into a
+  DATE_TIME column is the correct shape — routing a content failure through its `bool` would emit
+  `column 'date_time' has type DATE_TIME but received TEXT`, which is a lie. The two guards phrase
+  their own messages; the rule itself lives in exactly one function.
+  `parse_datetime_import` (`database_csv_import.cpp`) is the **third** gate and needs to exist:
+  `import_csv` writes through a raw `INSERT` and never reaches `TypeValidator`, and its
+  custom-`date_time_format` branch parses with the caller's `get_time` format, which cannot see an
+  impossible calendar day (`"%d/%m/%Y"` on `31/02/2024`). It therefore runs `is_valid_iso8601` on
+  the string it canonicalizes, so import is held to the same grammar as the other writers.
+- **`update_element` / `delete_element` / the vector+set group writers verify the id exists** (via
   `Impl::require_element`) and throw Pattern 2 `"Element not found: ..."` — no silent no-op.
-  `delete_element_by_label` / `update_element_by_label` do the same for a label via
-  `Impl::resolve_label`. Both by-label forms are one-line delegations to their id counterpart (the
-  root `_by_label` rule), so `update_element_by_label`'s *element* validation — the empty-element
-  throw, `TypeValidator`, `insert_group_data` — reports `Cannot update_element: ...`, naming the
-  operation that validated.
+  The two time-series writers do not: `upsert_time_series_row` always writes one row, so a bad id
+  always fails at the foreign key; `update_time_series_group` fails there too when it has rows to
+  write, but with no rows it deletes nothing and returns silently.
+  Every `_by_label` form resolves the label via `Impl::resolve_label`, and is a one-line
+  delegation to its id counterpart (the root `_by_label` rule), so `update_element_by_label`'s
+  *element* validation — the empty-element throw, `TypeValidator`, `insert_group_data` — reports
+  `Cannot update_element: ...` and the group/row writers' column validation reports
+  `Cannot update_{vector,set,time_series}_group: ...` / `Cannot upsert_time_series_row: ...`,
+  naming the operation that validated.
+- **`update_relation` is a validated `update_element`** (`database_update.cpp`): the derived column
+  is checked against the schema through the `TableDefinition::get_foreign_key` accessor added for
+  it in `schema.cpp`, then written as a one-attribute `Element` (`std::nullopt` becomes
+  `Element::set_null`). It resolves no label of its own — binding the target label to an INTEGER FK
+  column is already `Impl::resolve_fk_label`'s job, and the missing-id check is `require_element`'s
+  — so failures past the derivation report `Cannot update_element: ...`.
+
 - **Schema metadata loads lazily** (`Impl::require_schema`): the `Database(path, options)`
   constructor does not read it, so the first metadata/CRUD call does. `schema` and `type_validator`
   are `mutable` (const readers trigger the load) and `load_schema_metadata()` is `const` and
@@ -246,7 +274,23 @@ impl_->logger->debug("Opening database: {}", path);
   equal `parameters.size()`, else it throws — the single guard for every `query_*` and internal
   parameterized statement.
 - **Utilities**: `quiver::string::new_c_str` / `trim` in `src/utils/string.h`; ISO 8601
-  (`YYYY-MM-DDTHH:MM:SS`) parse/format helpers in `src/utils/datetime.h`;
+  parse/format helpers in `src/utils/datetime.h` — `parse_iso8601` accepts `YYYY-MM-DD` with an
+  optional `THH:MM:SS`/` HH:MM:SS`, every field fixed-width and zero-padded, year `0001`-`9999`,
+  the calendar day must exist, no leap second, and the whole string must be consumed. It is a
+  **hand-rolled shape-mask match, deliberately not `std::get_time`** — the accepted length is 10 or
+  19 and every character is checked against `"dddd-dd-ddTdd:dd:dd"` (`d` = digit, `T` = `T` or a
+  space, everything else literal), so the length check alone is what forbids a partial or trailing
+  anything. get_time instead: its field widths are
+  *maxima*, so it also matches `2024-1-5`, `24-01-15` and `T1:30:00`, and on MSVC it does not set
+  failbit when the input ends mid-format, so `T10:30` passed on Windows and failed on Linux. Every
+  one of those is rejected by Python's `fromisoformat` or Dart's `DateTime.parse`, i.e. get_time
+  cannot express the intersection band the write gate promises. (It was also locale-sensitive, and
+  a literal space in its format means *skip zero or more spaces*, which accepts
+  `2024-01-0110:30:00`.) `parse_iso8601` fills `tm_wday`/`tm_yday` too — nothing else does, and
+  `format_datetime` feeds the `tm` to `strftime`, so `%a`/`%A`/`%j`/`%U`/`%W` would otherwise
+  report every date as a Sunday on day 001. `is_valid_iso8601` trims before parsing, because
+  `Database::execute` trims every bound string and the gate must judge the value that is stored.
+  `format_utc` always writes the full `T` form;
   use `is_date_time_column` (`data_type.h`) for `date_`-prefix checks (one legacy hand-rolled
   `starts_with("date_")` remains in `schema_validator.cpp`).
 
@@ -265,8 +309,8 @@ lua.run(R"(
 Implementation conventions in `lua_runner.cpp`:
 - **Filesystem sandbox**: `resolve_sandboxed_path(db, operation, path)` is the single gate for
   every file-touching Lua operation (`db:open_file`, `db:bin_to_csv`, `db:csv_to_bin`,
-  `db:export_csv`, `db:import_csv`, `expr:save`). It rejects `:memory:` databases, resolves
-  relative paths against the database file's directory (bare-filename db paths fall back to the
+  `db:export_csv`, `db:import_csv`, `db:validate_migrations`, `expr:save`). It rejects `:memory:`
+  databases, resolves relative paths against the database file's directory (bare-filename db paths fall back to the
   CWD at call time, mirroring `create_database_logger`), canonicalizes via `weakly_canonical`,
   and requires strict containment (candidate == root is rejected — the binary subsystem appends
   `.qvr`/`.toml` by string concatenation). The resolved absolute path is what's forwarded
@@ -284,6 +328,13 @@ Implementation conventions in `lua_runner.cpp`:
   exists because the doc went stale two days after it was written: it said only
   `base`/`string`/`table` were loaded and "there is NO `math`", and #210 added
   `math`/`coroutine`/`utf8` here without touching it.
+- **A nullable argument whose absence *means* something takes `sol::object`, not
+  `sol::optional<T>`**: `sol::optional<T>` yields `nullopt` for a wrong type just as it does for
+  `nil`, so `db:update_relation(..., false)` silently cleared the relation.
+  `relation_target_from_lua(object, caller)` distinguishes the two — nil/missing clears,
+  a non-string throws `Cannot <caller>: target_label has unsupported Lua type`. Both
+  `db:update_relation(..., nil)` and omitting the argument clear; that affordance is sol2's and
+  Lua-only (the FFI bindings all require the parameter and take their language's null).
 - `parse_csv_options(table)` is the single CSVOptions parser shared by `export_csv`/`import_csv`.
 - `to_lua_table<T>` overloads (flat + nested) are the only vector→table marshalers.
 - `describe` / `describe_collection` / `summarize_collection` are bound as plain lambdas returning
@@ -291,11 +342,13 @@ Implementation conventions in `lua_runner.cpp`:
 - Lua→C++ converters **throw on unsupported value types** (booleans, functions, ...) — never
   skip silently; a skipped positional query parameter would shift the rest and bind NULL to the
   trailing placeholder.
-- `update_time_series_group_lua` transpose: the **dimension column(s) are the row-count
-  authority**, discovered via public `get_time_series_metadata` (`dimension_column` plus any
-  `value_columns` with `primary_key` set — the multi-dim case; `Database` exposes no Schema
-  accessor so `internal::find_dimension_columns` is unreachable here). Dimension columns must be
-  present and dense; value columns may be shorter, sparse, or empty — missing indices become
+- `time_series_rows_from_lua` transpose, shared by `update_time_series_group_lua` and
+  `update_time_series_group_by_label_lua` (both one-liners over it). Mirrors `group_rows_from_lua`
+  but takes `db`, since the dimension columns come from metadata. The **dimension column(s) are
+  the row-count authority**, discovered via public `get_time_series_metadata` (`dimension_column`
+  plus any `value_columns` with `primary_key` set — the multi-dim case; `Database` exposes no
+  Schema accessor so `internal::find_dimension_columns` is unreachable here). Dimension columns
+  must be present and dense; value columns may be shorter, sparse, or empty — missing indices become
   `Value{nullptr}` (rows stay uniform: the core builds its INSERT list from `rows[0]`).
   Longer-than-dimension throws; a non-array column or non-positive-integer key throws; named
   columns with a zero-length dimension still throw — only a genuinely empty `{}` (no columns)

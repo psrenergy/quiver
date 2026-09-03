@@ -37,6 +37,15 @@ const ColumnDefinition* TableDefinition::get_column(const std::string& column) c
     return nullptr;
 }
 
+const ForeignKey* TableDefinition::get_foreign_key(const std::string& column) const {
+    for (const auto& fk : foreign_keys) {
+        if (fk.from_column == column) {
+            return &fk;
+        }
+    }
+    return nullptr;
+}
+
 // Schema factory
 
 Schema Schema::from_database(sqlite3* db) {

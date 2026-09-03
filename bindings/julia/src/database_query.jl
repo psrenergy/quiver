@@ -77,6 +77,16 @@ function query_integer(db::Database, sql::String)
 end
 
 """
+    query_boolean(db::Database, sql::String) -> Optional{Bool}
+
+Execute a SQL query and return the first column of the first row as a Bool.
+Returns `nothing` if the query returns no rows.
+"""
+function query_boolean(db::Database, sql::String)
+    return _integer_to_boolean(query_integer(db, sql))
+end
+
+"""
     query_float(db::Database, sql::String) -> Optional{Float64}
 
 Execute a SQL query and return the first column of the first row as a Float64.
@@ -152,6 +162,16 @@ function query_integer(db::Database, sql::String, parameters::Vector)
         return nothing
     end
     return out_value[]
+end
+
+"""
+    query_boolean(db::Database, sql::String, parameters::Vector) -> Optional{Bool}
+
+Execute a parameterized SQL query and return the first column of the first row as a Bool.
+Returns `nothing` if the query returns no rows.
+"""
+function query_boolean(db::Database, sql::String, parameters::Vector)
+    return _integer_to_boolean(query_integer(db, sql, parameters))
 end
 
 """

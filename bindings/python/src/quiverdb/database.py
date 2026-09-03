@@ -3,6 +3,7 @@ from __future__ import annotations
 import warnings
 from contextlib import contextmanager
 from datetime import datetime, timezone
+from typing import overload
 
 from quiverdb._c_api import ffi, get_lib
 from quiverdb._helpers import check, decode_string, decode_string_or_none
@@ -80,6 +81,15 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
             )
         )
         return Database(out_db[0])
+
+    @staticmethod
+    def validate_migrations(migrations_path: str) -> None:
+        """Apply every up.sql then every down.sql in a migrations directory, in-memory.
+
+        Raises if the round trip leaves any table behind.
+        """
+        lib = get_lib()
+        check(lib.quiver_database_validate_migrations(migrations_path.encode("utf-8")))
 
     @staticmethod
     def open(
@@ -233,6 +243,77 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
             )
         finally:
             elem.destroy()
+
+    def update_element_by_label(self, collection: str, label: str, /, **kwargs: object) -> None:
+        """Update an existing element's attributes, addressed by label.
+
+        `collection` and `label` are positional-only so that `label="New"` in kwargs
+        renames the element instead of colliding with this parameter.
+        """
+        self._ensure_open()
+        elem = Element()
+        try:
+            for name, value in kwargs.items():
+                elem.set(name, value)
+            lib = get_lib()
+            check(
+                lib.quiver_database_update_element_by_label(
+                    self._ptr,
+                    collection.encode("utf-8"),
+                    label.encode("utf-8"),
+                    elem._ptr,
+                )
+            )
+        finally:
+            elem.destroy()
+
+    def update_relation(
+        self,
+        collection_from: str,
+        collection_to: str,
+        relation_type: str,
+        id: int,
+        target_label: str | None,
+    ) -> None:
+        """Point one scalar foreign-key relation at the element labeled `target_label`.
+
+        The column is derived as `collection_to.lower() + "_" + relation_type`.
+        `None` clears the relation.
+        """
+        self._ensure_open()
+        lib = get_lib()
+        check(
+            lib.quiver_database_update_relation(
+                self._ptr,
+                collection_from.encode("utf-8"),
+                collection_to.encode("utf-8"),
+                relation_type.encode("utf-8"),
+                id,
+                ffi.NULL if target_label is None else target_label.encode("utf-8"),
+            )
+        )
+
+    def update_relation_by_label(
+        self,
+        collection_from: str,
+        collection_to: str,
+        relation_type: str,
+        label: str,
+        target_label: str | None,
+    ) -> None:
+        """Label-addressed counterpart of update_relation."""
+        self._ensure_open()
+        lib = get_lib()
+        check(
+            lib.quiver_database_update_relation_by_label(
+                self._ptr,
+                collection_from.encode("utf-8"),
+                collection_to.encode("utf-8"),
+                relation_type.encode("utf-8"),
+                label.encode("utf-8"),
+                ffi.NULL if target_label is None else target_label.encode("utf-8"),
+            )
+        )
 
     def delete_element(self, collection: str, id: int) -> None:
         """Delete an element by ID."""
@@ -408,6 +489,10 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
             return None
         return out_value[0]
 
+    def query_boolean(self, sql: str, *, parameters: list | None = None) -> bool | None:
+        """Execute SQL and convert the first integer result to bool, or return None."""
+        return _integer_to_boolean(self.query_integer(sql, parameters=parameters))
+
     def query_float(self, sql: str, *, parameters: list | None = None) -> float | None:
         """Execute SQL and return the first column of the first row as float, or None."""
         self._ensure_open()
@@ -505,6 +590,13 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
             lib.quiver_database_free_integer_array(out_values[0])
             lib.quiver_database_free_mask(out_mask[0])
 
+    def read_scalar_booleans(self, collection: str, attribute: str) -> list[bool | None]:
+        """Read boolean values stored as integer scalars. SQL NULL values become None."""
+        return [
+            _integer_to_boolean(value, collection, attribute)
+            for value in self.read_scalar_integers(collection, attribute)
+        ]
+
     def read_scalar_floats(self, collection: str, attribute: str) -> list[float | None]:
         """Read all float values for a scalar attribute. One entry per element; NULL is None."""
         self._ensure_open()
@@ -588,6 +680,15 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         if out_has[0] == 0:
             return None
         return out_value[0]
+
+    def read_scalar_boolean_by_id(
+        self,
+        collection: str,
+        attribute: str,
+        id: int,
+    ) -> bool | None:
+        """Read a boolean stored as an integer scalar. Returns None if absent."""
+        return _integer_to_boolean(self.read_scalar_integer_by_id(collection, attribute, id), collection, attribute)
 
     def read_scalar_float_by_id(
         self,
@@ -708,6 +809,17 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         finally:
             lib.quiver_database_free_integer_vectors(out_vectors[0], out_sizes[0], count)
 
+    def read_vector_booleans(self, collection: str, attribute: str) -> list[list[bool]]:
+        """Read boolean vectors stored as integer vectors.
+
+        NULL cells are dropped and only elements that own rows are returned, so the result is
+        not positionally aligned with read_element_ids (unlike read_scalar_booleans).
+        """
+        return [
+            [_integer_to_boolean(value, collection, attribute) for value in values]
+            for values in self.read_vector_integers(collection, attribute)
+        ]
+
     def read_vector_floats(self, collection: str, attribute: str) -> list[list[float]]:
         """Read float vectors for all elements in a collection."""
         self._ensure_open()
@@ -803,6 +915,18 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         finally:
             lib.quiver_database_free_integer_array(out_values[0])
 
+    def read_vector_booleans_by_id(
+        self,
+        collection: str,
+        attribute: str,
+        id: int,
+    ) -> list[bool]:
+        """Read a boolean vector stored as integers for one element."""
+        return [
+            _integer_to_boolean(value, collection, attribute)
+            for value in self.read_vector_integers_by_id(collection, attribute, id)
+        ]
+
     def read_vector_floats_by_id(
         self,
         collection: str,
@@ -894,6 +1018,17 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
             return result
         finally:
             lib.quiver_database_free_integer_vectors(out_sets[0], out_sizes[0], count)
+
+    def read_set_booleans(self, collection: str, attribute: str) -> list[list[bool]]:
+        """Read boolean sets stored as integer sets.
+
+        Same alignment caveat as read_vector_booleans: NULL cells are dropped and only elements
+        that own rows are returned.
+        """
+        return [
+            [_integer_to_boolean(value, collection, attribute) for value in values]
+            for values in self.read_set_integers(collection, attribute)
+        ]
 
     def read_set_floats(self, collection: str, attribute: str) -> list[list[float]]:
         """Read float sets for all elements in a collection."""
@@ -989,6 +1124,18 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
             return [out_values[0][i] for i in range(count)]
         finally:
             lib.quiver_database_free_integer_array(out_values[0])
+
+    def read_set_booleans_by_id(
+        self,
+        collection: str,
+        attribute: str,
+        id: int,
+    ) -> list[bool]:
+        """Read a boolean set stored as integers for one element."""
+        return [
+            _integer_to_boolean(value, collection, attribute)
+            for value in self.read_set_integers_by_id(collection, attribute, id)
+        ]
 
     def read_set_floats_by_id(
         self,
@@ -1400,6 +1547,46 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
             )
         )
 
+    def update_time_series_group_by_label(
+        self,
+        collection: str,
+        group: str,
+        label: str,
+        data: dict[str, list],
+    ) -> None:
+        """Label-addressed counterpart of update_time_series_group."""
+        self._ensure_open()
+        lib = get_lib()
+        c_collection = collection.encode("utf-8")
+        c_group = group.encode("utf-8")
+        c_label = label.encode("utf-8")
+
+        if not data:
+            check(
+                lib.quiver_database_update_time_series_group_by_label(
+                    self._ptr, c_collection, c_group, c_label, ffi.NULL, ffi.NULL, ffi.NULL, ffi.NULL, 0, 0
+                )
+            )
+            return
+
+        keepalive, c_col_names, c_col_types, c_col_data, c_col_has_value, col_count, row_count = _marshal_group_columns(
+            data
+        )
+        check(
+            lib.quiver_database_update_time_series_group_by_label(
+                self._ptr,
+                c_collection,
+                c_group,
+                c_label,
+                c_col_names,
+                c_col_types,
+                c_col_data,
+                c_col_has_value,
+                col_count,
+                row_count,
+            )
+        )
+
     def update_vector_group(
         self,
         collection: str,
@@ -1436,6 +1623,46 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
                 c_collection,
                 c_group,
                 id,
+                c_col_names,
+                c_col_types,
+                c_col_data,
+                c_col_has_value,
+                col_count,
+                row_count,
+            )
+        )
+
+    def update_vector_group_by_label(
+        self,
+        collection: str,
+        group: str,
+        label: str,
+        data: dict[str, list],
+    ) -> None:
+        """Label-addressed counterpart of update_vector_group."""
+        self._ensure_open()
+        lib = get_lib()
+        c_collection = collection.encode("utf-8")
+        c_group = group.encode("utf-8")
+        c_label = label.encode("utf-8")
+
+        if not data:
+            check(
+                lib.quiver_database_update_vector_group_by_label(
+                    self._ptr, c_collection, c_group, c_label, ffi.NULL, ffi.NULL, ffi.NULL, ffi.NULL, 0, 0
+                )
+            )
+            return
+
+        keepalive, c_col_names, c_col_types, c_col_data, c_col_has_value, col_count, row_count = _marshal_group_columns(
+            data
+        )
+        check(
+            lib.quiver_database_update_vector_group_by_label(
+                self._ptr,
+                c_collection,
+                c_group,
+                c_label,
                 c_col_names,
                 c_col_types,
                 c_col_data,
@@ -1488,6 +1715,46 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
             )
         )
 
+    def update_set_group_by_label(
+        self,
+        collection: str,
+        group: str,
+        label: str,
+        data: dict[str, list],
+    ) -> None:
+        """Label-addressed counterpart of update_set_group."""
+        self._ensure_open()
+        lib = get_lib()
+        c_collection = collection.encode("utf-8")
+        c_group = group.encode("utf-8")
+        c_label = label.encode("utf-8")
+
+        if not data:
+            check(
+                lib.quiver_database_update_set_group_by_label(
+                    self._ptr, c_collection, c_group, c_label, ffi.NULL, ffi.NULL, ffi.NULL, ffi.NULL, 0, 0
+                )
+            )
+            return
+
+        keepalive, c_col_names, c_col_types, c_col_data, c_col_has_value, col_count, row_count = _marshal_group_columns(
+            data
+        )
+        check(
+            lib.quiver_database_update_set_group_by_label(
+                self._ptr,
+                c_collection,
+                c_group,
+                c_label,
+                c_col_names,
+                c_col_types,
+                c_col_data,
+                c_col_has_value,
+                col_count,
+                row_count,
+            )
+        )
+
     def upsert_time_series_row(self, collection: str, group: str, id: int, **kwargs) -> None:
         """Insert or upsert a single time series row for an element.
 
@@ -1502,51 +1769,25 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         c_collection = collection.encode("utf-8")
         c_group = group.encode("utf-8")
 
-        col_count = len(kwargs)
-        keepalive: list = []
-
-        c_col_names = ffi.new("const char*[]", col_count)
-        c_col_types = ffi.new("int[]", col_count)
-        c_col_data = ffi.new("void*[]", col_count)
-
-        for i, (name, v) in enumerate(kwargs.items()):
-            name_buf = ffi.new("char[]", name.encode("utf-8"))
-            keepalive.append(name_buf)
-            c_col_names[i] = name_buf
-
-            # bool is a subclass of int; test it explicitly first so True/False
-            # marshal as INTEGER 1/0 rather than being rejected by the `is int`
-            # check. Mirrors `_marshal_params` policy in this same file.
-            if isinstance(v, bool):
-                arr = ffi.new("int64_t[]", [int(v)])
-                keepalive.append(arr)
-                c_col_types[i] = DataType.INTEGER
-                c_col_data[i] = ffi.cast("void*", arr)
-            elif isinstance(v, int):
-                arr = ffi.new("int64_t[]", [v])
-                keepalive.append(arr)
-                c_col_types[i] = DataType.INTEGER
-                c_col_data[i] = ffi.cast("void*", arr)
-            elif isinstance(v, float):
-                arr = ffi.new("double[]", [v])
-                keepalive.append(arr)
-                c_col_types[i] = DataType.FLOAT
-                c_col_data[i] = ffi.cast("void*", arr)
-            elif isinstance(v, str):
-                str_buf = ffi.new("char[]", v.encode("utf-8"))
-                keepalive.append(str_buf)
-                c_str_arr = ffi.new("char*[]", [str_buf])
-                keepalive.append(c_str_arr)
-                c_col_types[i] = DataType.STRING
-                c_col_data[i] = ffi.cast("void*", c_str_arr)
-            else:
-                raise TypeError(
-                    f"Column '{name}' value has unsupported type {type(v).__name__}; expected int, float, or str"
-                )
-
+        keepalive, c_col_names, c_col_types, c_col_data, col_count = _marshal_row_columns(kwargs)
         check(
             lib.quiver_database_upsert_time_series_row(
                 self._ptr, c_collection, c_group, id, c_col_names, c_col_types, c_col_data, col_count
+            )
+        )
+
+    def upsert_time_series_row_by_label(self, collection: str, group: str, label: str, **kwargs) -> None:
+        """Label-addressed counterpart of upsert_time_series_row."""
+        self._ensure_open()
+        lib = get_lib()
+        c_collection = collection.encode("utf-8")
+        c_group = group.encode("utf-8")
+        c_label = label.encode("utf-8")
+
+        keepalive, c_col_names, c_col_types, c_col_data, col_count = _marshal_row_columns(kwargs)
+        check(
+            lib.quiver_database_upsert_time_series_row_by_label(
+                self._ptr, c_collection, c_group, c_label, c_col_names, c_col_types, c_col_data, col_count
             )
         )
 
@@ -1804,6 +2045,29 @@ def _parse_datetime(s: str | None) -> datetime | None:
     return datetime.fromisoformat(s).replace(tzinfo=timezone.utc)
 
 
+@overload
+def _integer_to_boolean(value: int, collection: str = ..., attribute: str = ...) -> bool: ...
+
+
+@overload
+def _integer_to_boolean(value: None, collection: str = ..., attribute: str = ...) -> None: ...
+
+
+@overload
+def _integer_to_boolean(value: int | None, collection: str = ..., attribute: str = ...) -> bool | None: ...
+
+
+def _integer_to_boolean(value: int | None, collection: str = "", attribute: str = "") -> bool | None:
+    if value is None:
+        return None
+    if value == 0:
+        return False
+    if value == 1:
+        return True
+    source = f" in '{collection}.{attribute}'" if collection else ""
+    raise ValueError(f"Cannot convert integer {value} to boolean{source}: expected 0 or 1")
+
+
 # -- Parameter marshaling helpers (module-level) -----------------------------
 
 
@@ -1914,6 +2178,61 @@ def _marshal_group_columns(data: dict[str, list]) -> tuple:
             raise TypeError(f"Unsupported value type for column '{name}': {type(first).__name__}")
 
     return keepalive, c_col_names, c_col_types, c_col_data, c_col_has_value, col_count, row_count
+
+
+def _marshal_row_columns(kwargs: dict) -> tuple:
+    """Marshal one row of scalars into parallel C arrays for the row-oriented upsert API.
+
+    Each value is wrapped in a 1-element typed array. Not `_marshal_group_columns`: the
+    row-upsert C signature carries no per-cell mask, so a None cell would be written as that
+    helper's zeroed placeholder instead of NULL.
+
+    Returns (keepalive, c_col_names, c_col_types, c_col_data, col_count) where keepalive must
+    remain referenced until the C API call completes.
+    """
+    col_count = len(kwargs)
+    keepalive: list = []
+
+    c_col_names = ffi.new("const char*[]", col_count)
+    c_col_types = ffi.new("int[]", col_count)
+    c_col_data = ffi.new("void*[]", col_count)
+
+    for i, (name, v) in enumerate(kwargs.items()):
+        name_buf = ffi.new("char[]", name.encode("utf-8"))
+        keepalive.append(name_buf)
+        c_col_names[i] = name_buf
+
+        # bool is a subclass of int; test it explicitly first so True/False
+        # marshal as INTEGER 1/0 rather than being rejected by the `is int`
+        # check. Mirrors `_marshal_params` policy in this same file.
+        if isinstance(v, bool):
+            arr = ffi.new("int64_t[]", [int(v)])
+            keepalive.append(arr)
+            c_col_types[i] = DataType.INTEGER
+            c_col_data[i] = ffi.cast("void*", arr)
+        elif isinstance(v, int):
+            arr = ffi.new("int64_t[]", [v])
+            keepalive.append(arr)
+            c_col_types[i] = DataType.INTEGER
+            c_col_data[i] = ffi.cast("void*", arr)
+        elif isinstance(v, float):
+            arr = ffi.new("double[]", [v])
+            keepalive.append(arr)
+            c_col_types[i] = DataType.FLOAT
+            c_col_data[i] = ffi.cast("void*", arr)
+        elif isinstance(v, str):
+            str_buf = ffi.new("char[]", v.encode("utf-8"))
+            keepalive.append(str_buf)
+            c_str_arr = ffi.new("char*[]", [str_buf])
+            keepalive.append(c_str_arr)
+            c_col_types[i] = DataType.STRING
+            c_col_data[i] = ffi.cast("void*", c_str_arr)
+        else:
+            raise TypeError(
+                f"Column '{name}' value has unsupported type {type(v).__name__}; expected int, float, or str"
+            )
+
+    return keepalive, c_col_names, c_col_types, c_col_data, col_count
 
 
 # -- Metadata parsing helpers (module-level) ---------------------------------

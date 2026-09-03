@@ -132,6 +132,10 @@ function quiver_database_from_migrations(db_path, migrations_path, options, out_
     @ccall libquiver_c.quiver_database_from_migrations(db_path::Ptr{Cchar}, migrations_path::Ptr{Cchar}, options::Ptr{quiver_database_options_t}, out_db::Ptr{Ptr{quiver_database_t}})::quiver_error_t
 end
 
+function quiver_database_validate_migrations(migrations_path)
+    @ccall libquiver_c.quiver_database_validate_migrations(migrations_path::Ptr{Cchar})::quiver_error_t
+end
+
 function quiver_database_from_schema(db_path, schema_path, options, out_db)
     @ccall libquiver_c.quiver_database_from_schema(db_path::Ptr{Cchar}, schema_path::Ptr{Cchar}, options::Ptr{quiver_database_options_t}, out_db::Ptr{Ptr{quiver_database_t}})::quiver_error_t
 end
@@ -192,12 +196,24 @@ function quiver_database_update_element(db, collection, id, element)
     @ccall libquiver_c.quiver_database_update_element(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, id::Int64, element::Ptr{quiver_element_t})::quiver_error_t
 end
 
+function quiver_database_update_element_by_label(db, collection, label, element)
+    @ccall libquiver_c.quiver_database_update_element_by_label(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, label::Ptr{Cchar}, element::Ptr{quiver_element_t})::quiver_error_t
+end
+
 function quiver_database_delete_element(db, collection, id)
     @ccall libquiver_c.quiver_database_delete_element(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, id::Int64)::quiver_error_t
 end
 
 function quiver_database_delete_element_by_label(db, collection, label)
     @ccall libquiver_c.quiver_database_delete_element_by_label(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, label::Ptr{Cchar})::quiver_error_t
+end
+
+function quiver_database_update_relation(db, collection_from, collection_to, relation_type, id, target_label)
+    @ccall libquiver_c.quiver_database_update_relation(db::Ptr{quiver_database_t}, collection_from::Ptr{Cchar}, collection_to::Ptr{Cchar}, relation_type::Ptr{Cchar}, id::Int64, target_label::Ptr{Cchar})::quiver_error_t
+end
+
+function quiver_database_update_relation_by_label(db, collection_from, collection_to, relation_type, label, target_label)
+    @ccall libquiver_c.quiver_database_update_relation_by_label(db::Ptr{quiver_database_t}, collection_from::Ptr{Cchar}, collection_to::Ptr{Cchar}, relation_type::Ptr{Cchar}, label::Ptr{Cchar}, target_label::Ptr{Cchar})::quiver_error_t
 end
 
 function quiver_database_read_scalar_integers(db, collection, attribute, out_values, out_mask, out_count)
@@ -284,8 +300,16 @@ function quiver_database_update_vector_group(db, collection, group, id, column_n
     @ccall libquiver_c.quiver_database_update_vector_group(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, id::Int64, column_names::Ptr{Ptr{Cchar}}, column_types::Ptr{Cint}, column_data::Ptr{Ptr{Cvoid}}, column_has_value::Ptr{Ptr{UInt8}}, column_count::Csize_t, row_count::Csize_t)::quiver_error_t
 end
 
+function quiver_database_update_vector_group_by_label(db, collection, group, label, column_names, column_types, column_data, column_has_value, column_count, row_count)
+    @ccall libquiver_c.quiver_database_update_vector_group_by_label(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, label::Ptr{Cchar}, column_names::Ptr{Ptr{Cchar}}, column_types::Ptr{Cint}, column_data::Ptr{Ptr{Cvoid}}, column_has_value::Ptr{Ptr{UInt8}}, column_count::Csize_t, row_count::Csize_t)::quiver_error_t
+end
+
 function quiver_database_update_set_group(db, collection, group, id, column_names, column_types, column_data, column_has_value, column_count, row_count)
     @ccall libquiver_c.quiver_database_update_set_group(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, id::Int64, column_names::Ptr{Ptr{Cchar}}, column_types::Ptr{Cint}, column_data::Ptr{Ptr{Cvoid}}, column_has_value::Ptr{Ptr{UInt8}}, column_count::Csize_t, row_count::Csize_t)::quiver_error_t
+end
+
+function quiver_database_update_set_group_by_label(db, collection, group, label, column_names, column_types, column_data, column_has_value, column_count, row_count)
+    @ccall libquiver_c.quiver_database_update_set_group_by_label(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, label::Ptr{Cchar}, column_names::Ptr{Ptr{Cchar}}, column_types::Ptr{Cint}, column_data::Ptr{Ptr{Cvoid}}, column_has_value::Ptr{Ptr{UInt8}}, column_count::Csize_t, row_count::Csize_t)::quiver_error_t
 end
 
 function quiver_database_read_element_ids(db, collection, out_ids, out_count)
@@ -370,8 +394,16 @@ function quiver_database_update_time_series_group(db, collection, group, id, col
     @ccall libquiver_c.quiver_database_update_time_series_group(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, id::Int64, column_names::Ptr{Ptr{Cchar}}, column_types::Ptr{Cint}, column_data::Ptr{Ptr{Cvoid}}, column_has_value::Ptr{Ptr{UInt8}}, column_count::Csize_t, row_count::Csize_t)::quiver_error_t
 end
 
+function quiver_database_update_time_series_group_by_label(db, collection, group, label, column_names, column_types, column_data, column_has_value, column_count, row_count)
+    @ccall libquiver_c.quiver_database_update_time_series_group_by_label(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, label::Ptr{Cchar}, column_names::Ptr{Ptr{Cchar}}, column_types::Ptr{Cint}, column_data::Ptr{Ptr{Cvoid}}, column_has_value::Ptr{Ptr{UInt8}}, column_count::Csize_t, row_count::Csize_t)::quiver_error_t
+end
+
 function quiver_database_upsert_time_series_row(db, collection, group, id, column_names, column_types, column_data, column_count)
     @ccall libquiver_c.quiver_database_upsert_time_series_row(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, id::Int64, column_names::Ptr{Ptr{Cchar}}, column_types::Ptr{Cint}, column_data::Ptr{Ptr{Cvoid}}, column_count::Csize_t)::quiver_error_t
+end
+
+function quiver_database_upsert_time_series_row_by_label(db, collection, group, label, column_names, column_types, column_data, column_count)
+    @ccall libquiver_c.quiver_database_upsert_time_series_row_by_label(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, label::Ptr{Cchar}, column_names::Ptr{Ptr{Cchar}}, column_types::Ptr{Cint}, column_data::Ptr{Ptr{Cvoid}}, column_count::Csize_t)::quiver_error_t
 end
 
 function quiver_database_read_time_series_row(db, collection, group, attribute, date_time, out_data_type, out_values, out_mask, out_count)

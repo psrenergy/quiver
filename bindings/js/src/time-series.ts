@@ -18,7 +18,7 @@ import {
   toCString,
 } from "./ffi-helpers.ts";
 import { updateGroupColumns } from "./group-columns.ts";
-import { getSymbols } from "./loader.ts";
+import { getSymbols, type NativePointer } from "./loader.ts";
 import {
   type Allocation,
   DATA_TYPE_DATE_TIME,
@@ -210,16 +210,57 @@ Database.prototype.updateTimeSeriesGroup = function (
   );
 };
 
-Database.prototype.upsertTimeSeriesRow = function (
+/** Label-addressed counterpart of updateTimeSeriesGroup. */
+Database.prototype.updateTimeSeriesGroupByLabel = function (
   this: Database,
   collection: string,
   group: string,
-  id: number,
+  label: string,
+  data: TimeSeriesData,
+): void {
+  updateGroupColumns(
+    this._handle,
+    "updateTimeSeriesGroupByLabel",
+    getSymbols().quiver_database_update_time_series_group_by_label,
+    collection,
+    group,
+    label,
+    data,
+  );
+};
+
+/**
+ * The parallel-array signature both row-oriented time-series upsert C functions share
+ * (quiver_database_upsert_time_series_row and its _by_label form). `key` is an id for the by-id
+ * form, a NUL-terminated label otherwise.
+ */
+type UpsertRowFn = (
+  db: NativePointer,
+  collection: Uint8Array,
+  group: Uint8Array,
+  key: bigint | Uint8Array,
+  names: Uint8Array | null,
+  types: Uint8Array | null,
+  data: Uint8Array | null,
+  columnCount: bigint,
+) => number;
+
+/**
+ * Marshal a single row of scalars and forward it to one of the row-oriented time-series upsert
+ * C functions. Shared by upsertTimeSeriesRow / upsertTimeSeriesRowByLabel: they differ only in
+ * which C entry point they call and whether `key` is an id or a label.
+ */
+function upsertRowColumns(
+  handle: NativePointer,
+  upsert: UpsertRowFn,
+  collection: string,
+  group: string,
+  key: number | string,
   row: Record<string, number | bigint | string>,
 ): void {
-  const lib = getSymbols();
   const collBuf = toCString(collection);
   const grpBuf = toCString(group);
+  const keyArg = typeof key === "string" ? toCString(key).buf : BigInt(key);
   const entries = Object.entries(row);
   const columnCount = entries.length;
   const keepalive: Allocation[] = [];
@@ -258,16 +299,51 @@ Database.prototype.upsertTimeSeriesRow = function (
   keepalive.push(dataTable);
 
   check(
-    lib.quiver_database_upsert_time_series_row(
-      this._handle,
+    upsert(
+      handle,
       collBuf.buf,
       grpBuf.buf,
-      BigInt(id),
+      keyArg,
       namesTable.buf,
       typesAlloc.buf,
       dataTable.buf,
       BigInt(columnCount),
     ),
+  );
+}
+
+Database.prototype.upsertTimeSeriesRow = function (
+  this: Database,
+  collection: string,
+  group: string,
+  id: number,
+  row: Record<string, number | bigint | string>,
+): void {
+  upsertRowColumns(
+    this._handle,
+    getSymbols().quiver_database_upsert_time_series_row,
+    collection,
+    group,
+    id,
+    row,
+  );
+};
+
+/** Label-addressed counterpart of upsertTimeSeriesRow. */
+Database.prototype.upsertTimeSeriesRowByLabel = function (
+  this: Database,
+  collection: string,
+  group: string,
+  label: string,
+  row: Record<string, number | bigint | string>,
+): void {
+  upsertRowColumns(
+    this._handle,
+    getSymbols().quiver_database_upsert_time_series_row_by_label,
+    collection,
+    group,
+    label,
+    row,
   );
 };
 

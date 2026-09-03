@@ -77,10 +77,10 @@ Settled questions — don't relitigate without the user; each was decided delibe
   `helper_maps.jl` is a second documented Julia-only exception (see convenience methods below).
 - **Lua file operations are db-scoped and sandboxed to the database directory.** Every
   file-touching Lua operation (`db:open_file`, `db:bin_to_csv`, `db:csv_to_bin`, `db:export_csv`,
-  `db:import_csv`, `expr:save`) resolves relative paths against the directory containing the
-  database file and rejects — reads and writes alike — anything that escapes it (subdirectories
-  OK; checked via `weakly_canonical` with strict containment). In-memory databases (`:memory:`)
-  reject all file operations. `dofile`/`loadfile` are removed from the Lua environment
+  `db:import_csv`, `db:validate_migrations`, `expr:save`) resolves relative paths against the directory
+  containing the database file and rejects — reads and writes alike — anything that escapes it
+  (subdirectories OK; checked via `weakly_canonical` with strict containment). In-memory databases
+  (`:memory:`) reject all file operations. `dofile`/`loadfile` are removed from the Lua environment
   (string-form `load` stays). The enabled standard libraries are the pure-computation set
   `base`/`string`/`table`/`math`/`coroutine`/`utf8`; `os`/`io`/`package`/`debug` stay unloaded.
   Julia's standalone `open_file` is unaffected — this is LuaRunner policy (`resolve_sandboxed_path`
@@ -90,6 +90,24 @@ Settled questions — don't relitigate without the user; each was decided delibe
   string for TEXT / INTEGER-FK / DATE_TIME. `TypeValidator` (scalar create/update) and
   `value_matches_type` (time-series writes) share this rule; bindings never coerce
   schema-dependently.
+- **A DATE_TIME string is validated on write, and stored verbatim.** The accepted grammar is
+  `YYYY-MM-DD`, optionally followed by `THH:MM:SS` or ` HH:MM:SS`, every field fixed-width and
+  zero-padded, year `0001`-`9999`, the calendar day must exist, no leap second; anything else
+  (`2005`, `2005-01`, `not-a-date`, `2024-02-31`, `2024-1-5`, `2024-01-15T10:30`, trailing garbage)
+  is a Pattern 1 rejection naming the column. That band is the intersection of what Python's
+  `fromisoformat`, Julia's `DateTime` and Dart's `DateTime.parse` all accept — a value the core
+  stores is a value every binding can read, and that is the whole point of the gate, so any change
+  that widens the grammar has to be checked against all three. Being TEXT was previously the *only*
+  requirement, so an unreadable date landed in the column and detonated later in whichever binding
+  first parsed it, on a read naming neither the write nor the column. One predicate,
+  `datetime::is_valid_iso8601` (`src/utils/datetime.h`), is called from both halves of the typing
+  policy above. The core never normalizes — padding a partial date to midnight would make
+  `read_scalar_string_by_id` return something the caller never wrote (leading/trailing whitespace
+  is the exception: `Database::execute` trims every bound string, so the predicate trims too and
+  the gate judges what is actually stored). `import_csv` is the deliberate exception to
+  "no normalizing": it *parses* a cell, so it canonicalizes to `YYYY-MM-DDTHH:MM:SS` (which is what
+  lets an exported date-only value round-trip) — and then runs the same predicate over the
+  canonical string, because import writes through a raw `INSERT` that `TypeValidator` never sees.
 - **`update_element` / `delete_element` throw on a missing id** (`"Element not found: <id> in
   collection '<c>'"`, Pattern 2) — not a silent no-op. The error surfaces through the C API error
   channel and every binding.
@@ -126,6 +144,20 @@ Settled questions — don't relitigate without the user; each was decided delibe
   `quiver_get_last_error`; no per-handle error channels.
 - **Python's `Element` is internal**; users pass `**kwargs` to create/update.
 - **JS keeps a string-based datetime surface** — no DateTime wrappers.
+- **Boolean wrappers are Julia/Dart/Python/JS only; Lua is deliberately excluded.** SQLite has no
+  boolean type, so a boolean lives in an INTEGER column as 0/1 and the wrappers are a
+  strict-conversion convenience with no C++ or C API counterpart (the third documented per-binding
+  omission, alongside JS-datetime and binary/expression). Lua needs none: it has a native boolean,
+  and a script that wants one writes `read_scalar_integers(...)[i] ~= 0` — adding seven sol2
+  lambdas would only move that expression. The conversion is **strict**: only 0 and 1 convert; any
+  other integer raises the binding's native conversion error (`ArgumentError` in Julia and Dart,
+  `ValueError` in Python, `RangeError` in JS) naming the offending `collection.attribute`. This is
+  one of the few locally-crafted messages — the core never sees these readers, so it cannot
+  diagnose a stray `2`. On the write side a boolean is accepted wherever an integer is: every
+  binding maps it to INTEGER 1/0 on `create_element`/`update_element` and as a query parameter.
+  The scalar readers preserve NULLs positionally; the **vector/set readers do not** — they inherit
+  `read_grouped_values_all`'s dropping of NULL cells and of ids that own no rows, so they are not
+  aligned with `read_element_ids`.
 - **Binary `dims` parameter is the map-based form only** — indexed overloads were prototyped and
   deliberately dropped (perf rationale in `src/CLAUDE.md`).
 - **Time-series group NULLs round-trip via a per-cell presence mask.** The columnar C API
@@ -395,6 +427,11 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
 
 ### Database Class
 - Factory methods: `from_schema()`, `from_migrations()` — `DatabaseOptions` (`read_only`, `console_level`) exposed as optional parameters in every binding
+- `validate_migrations(migrations_path)` — validates a migrations directory (up then down) against a
+  throwaway in-memory database; no out-parameter, returns nothing. Bound in every layer, including
+  Lua (`db:validate_migrations`, db-scoped and sandboxed — see the design decision above). A directory
+  with no numbered migration subdirectories is an error here, and so is a round trip that ends with
+  tables still standing.
 - Transaction control: `begin_transaction()`, `commit()`, `rollback()`, `in_transaction()`
 - Dry runs: `begin_dry_run()`, `end_dry_run()`, `in_dry_run()` — one transaction that is always rolled back; while active the three transaction methods above are absorbed (no-ops) so nested callers compose. See the design decision below.
 - CRUD: `create_element(collection, element)`, `update_element`, `delete_element`,
@@ -408,6 +445,15 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
   names the id form (`Cannot update_element: ...`). Passing `label` among the attributes to
   `update_element_by_label` renames the element; the lookup has already run, so the write lands
   on the resolved id.
+- Relation updates: `update_relation(collection_from, collection_to, relation_type, id,
+  target_label)` and `update_relation_by_label(..., label, target_label)` derive the relation
+  column as `lowercase(collection_to) + "_" + relation_type`, verify that it is a foreign key to
+  `collection_to`, and write the target label; `std::nullopt` clears the relation. The write
+  delegates to `update_element`, so the FK-label resolution and the Pattern 2 missing-id check are
+  that method's. This is the scalar-relation writer: a relation that lives in a vector, set, or
+  time-series group is a list of targets, so it is written by the group writer that owns it.
+  Bound in **every layer**: C++, the C API (a NULL `target_label` clears), Julia, Dart, Python, JS,
+  and Lua — where a missing argument also clears, and a non-string one throws.
 - Element count: `number_of_elements(collection)` returns the current row count from the
   collection's main table (`COUNT(*)`), not its maximum ID or group-row count. Any table in the
   schema is accepted, so naming a group table reports that table's own row count.
@@ -429,7 +475,8 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
   warning (`tests/schemas/valid/relations.sql` shares `parent_ref` across a vector and a set group).
   Prefer the group writers whenever one group is meant. Bound in **every layer**: C++, the C API
   (columnar + per-cell mask, same shape as `update_time_series_group`), Julia, Dart, Python, JS,
-  and Lua. Validation lives in the C++ core and is shared by all of them: the caller's columns are
+  and Lua; `update_vector_group_by_label` / `update_set_group_by_label` are their label-addressed
+  forms. Validation lives in the C++ core and is shared by all of them: the caller's columns are
   checked against the group (the **union** of every row's keys, so a column named only in a later
   row is written and an unknown one still throws), `id` / `vector_index` are rejected as
   caller-supplied columns (they are derived, and emitting one would duplicate it in the INSERT
@@ -444,7 +491,7 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
   `delete_existing` — is still open. Only `bindings/julia/test/test_helper_maps.jl` depends on the
   fan-out, and via `create_element!` (the non-destructive half), so nothing blocks it; it is a
   breaking behaviour change rather than a bug fix.
-- Time series: `read_time_series_group()`, `update_time_series_group()`, `upsert_time_series_row()` — group read/update use N typed value columns per group; `upsert_time_series_row` inserts or replaces a single row by its dimension key (`INSERT OR REPLACE`). All bindings expose group data **column-oriented** (`{column: [values]}`); updating with no data clears the group. Integer values are accepted for REAL columns (converted on insert). NULL cells round-trip through every layer: the C API carries a per-cell presence mask, the FFI bindings surface null-padded columns (`nothing`/`None`/`null`), and Lua uses plain `nil` holes with the row count taken from the dimension column(s) — see the design decision below.
+- Time series: `read_time_series_group()`, `update_time_series_group()`, `update_time_series_group_by_label()`, `upsert_time_series_row()`, `upsert_time_series_row_by_label()` — group read/update use N typed value columns per group; `upsert_time_series_row` inserts or replaces a single row by its dimension key (`INSERT OR REPLACE`). All bindings expose group data **column-oriented** (`{column: [values]}`); updating with no data clears the group. Integer values are accepted for REAL columns (converted on insert). NULL cells round-trip through every layer: the C API carries a per-cell presence mask, the FFI bindings surface null-padded columns (`nothing`/`None`/`null`), and Lua uses plain `nil` holes with the row count taken from the dimension column(s) — see the design decision below.
 - Time series row: `read_time_series_row(collection, group, attribute, date_time)` — one value per element using "last non-null value at or before date_time" semantics; null Value for elements with no matching data (bindings surface `nothing`/`null`/`None`/`nil`).
 - Time series files: `has_time_series_files()`, `list_time_series_files_columns()`, `read_time_series_files()`, `update_time_series_files()`
 - Metadata: `get_{scalar,vector,set,time_series}_metadata()` — group metadata is a unified `GroupMetadata` with `dimension_column` (populated for time series, empty for vectors/sets)
@@ -501,6 +548,7 @@ The rules are mechanical: given any C++ method name, you can derive the equivale
 |----------|-----|-------|-------|------|-----|
 | Factory | `Database::from_schema()` | `quiver_database_from_schema()` | `from_schema()` | `Database.fromSchema()` | N/A |
 | Open existing | `Database(path, options)` | `quiver_database_open()` | `open()` | `Database.open()` | N/A |
+| Validate migrations | `Database::validate_migrations()` | `quiver_database_validate_migrations()` | `validate_migrations()` | `Database.validateMigrations()` | `db:validate_migrations()` |
 | Transaction | `begin_transaction()` | `quiver_database_begin_transaction()` | `begin_transaction!()` | `beginTransaction()` | `begin_transaction()` |
 | Transaction | `commit()` | `quiver_database_commit()` | `commit!()` | `commit()` | `commit()` |
 | Transaction | `rollback()` | `quiver_database_rollback()` | `rollback!()` | `rollback()` | `rollback()` |
@@ -511,17 +559,25 @@ The rules are mechanical: given any C++ method name, you can derive the equivale
 | Create | `create_element()` | `quiver_database_create_element()` | `create_element!()` | `createElement()` | `create_element()` |
 | Read scalar | `read_scalar_integers()` | `quiver_database_read_scalar_integers()` | `read_scalar_integers()` | `readScalarIntegers()` | `read_scalar_integers()` |
 | Read by Id | `read_scalar_integer_by_id()` | `quiver_database_read_scalar_integer_by_id()` | `read_scalar_integer_by_id()` | `readScalarIntegerById()` | N/A (use composites) |
+| Update | `update_element()` | `quiver_database_update_element()` | `update_element!()` | `updateElement()` | `update_element()` |
+| Update by label | `update_element_by_label()` | `quiver_database_update_element_by_label()` | `update_element_by_label!()` | `updateElementByLabel()` | `update_element_by_label()` |
 | Delete | `delete_element()` | `quiver_database_delete_element()` | `delete_element!()` | `deleteElement()` | `delete_element()` |
 | Delete by label | `delete_element_by_label()` | `quiver_database_delete_element_by_label()` | `delete_element_by_label!()` | `deleteElementByLabel()` | `delete_element_by_label()` |
+| Update relation | `update_relation()` | `quiver_database_update_relation()` | `update_relation!()` | `updateRelation()` | `update_relation()` |
+| Update relation by label | `update_relation_by_label()` | `quiver_database_update_relation_by_label()` | `update_relation_by_label!()` | `updateRelationByLabel()` | `update_relation_by_label()` |
 | Element count | `number_of_elements()` | `quiver_database_number_of_elements()` | `number_of_elements()` | `numberOfElements()` | `number_of_elements()` |
 | Metadata | `get_scalar_metadata()` | `quiver_database_get_scalar_metadata()` | `get_scalar_metadata()` | `getScalarMetadata()` | `get_scalar_metadata()` |
 | List groups | `list_vector_groups()` | `quiver_database_list_vector_groups()` | `list_vector_groups()` | `listVectorGroups()` | `list_vector_groups()` |
 | Time series read | `read_time_series_group()` | `quiver_database_read_time_series_group()` | `read_time_series_group()` | `readTimeSeriesGroup()` | `read_time_series_group()` |
 | Time series row | `read_time_series_row()` | `quiver_database_read_time_series_row()` | `read_time_series_row()` | `readTimeSeriesRow()` | `read_time_series_row()` |
 | Time series upsert row | `upsert_time_series_row()` | `quiver_database_upsert_time_series_row()` | `upsert_time_series_row!()` | `upsertTimeSeriesRow()` | `upsert_time_series_row()` |
+| Time series upsert row by label | `upsert_time_series_row_by_label()` | `quiver_database_upsert_time_series_row_by_label()` | `upsert_time_series_row_by_label!()` | `upsertTimeSeriesRowByLabel()` | `upsert_time_series_row_by_label()` |
 | Time series update | `update_time_series_group()` | `quiver_database_update_time_series_group()` | `update_time_series_group!()` | `updateTimeSeriesGroup()` | `update_time_series_group()` |
+| Time series group update by label | `update_time_series_group_by_label()` | `quiver_database_update_time_series_group_by_label()` | `update_time_series_group_by_label!()` | `updateTimeSeriesGroupByLabel()` | `update_time_series_group_by_label()` |
 | Vector group update | `update_vector_group()` | `quiver_database_update_vector_group()` | `update_vector_group!()` | `updateVectorGroup()` | `update_vector_group()` |
+| Vector group update by label | `update_vector_group_by_label()` | `quiver_database_update_vector_group_by_label()` | `update_vector_group_by_label!()` | `updateVectorGroupByLabel()` | `update_vector_group_by_label()` |
 | Set group update | `update_set_group()` | `quiver_database_update_set_group()` | `update_set_group!()` | `updateSetGroup()` | `update_set_group()` |
+| Set group update by label | `update_set_group_by_label()` | `quiver_database_update_set_group_by_label()` | `update_set_group_by_label!()` | `updateSetGroupByLabel()` | `update_set_group_by_label()` |
 | Query | `query_string()` | `quiver_database_query_string()` | `query_string()` | `queryString()` | `query_string()` |
 | CSV | `export_csv()` | `quiver_database_export_csv()` | `export_csv()` | `exportCSV()` | `export_csv()` |
 | Describe (text) | `describe()` | `quiver_database_describe()` | `describe()` | `describe()` | `describe()` |
@@ -571,6 +627,18 @@ The bindings provide additional convenience methods that compose core operations
 | `read_set_date_time_by_id`    | `readSetDateTimesById`    | `read_set_date_time_by_id`    | string set read + date parsing    |
 | `query_date_time`             | `queryDateTime`           | `query_date_time`             | string query + date parsing       |
 
+**Boolean wrappers (Julia, Dart, Python, and JS):**
+
+| Julia | Dart | Python | JS | Wraps |
+|-------|------|--------|----|-------|
+| `read_scalar_booleans` | `readScalarBooleans` | `read_scalar_booleans` | `readScalarBooleans` | integer scalar bulk read + strict 0/1 conversion |
+| `read_scalar_boolean_by_id` | `readScalarBooleanById` | `read_scalar_boolean_by_id` | `readScalarBooleanById` | integer scalar by-id read + strict 0/1 conversion |
+| `read_vector_booleans` | `readVectorBooleans` | `read_vector_booleans` | `readVectorBooleans` | integer vector bulk read + strict 0/1 conversion |
+| `read_vector_booleans_by_id` | `readVectorBooleansById` | `read_vector_booleans_by_id` | `readVectorBooleansById` | integer vector by-id read + strict 0/1 conversion |
+| `read_set_booleans` | `readSetBooleans` | `read_set_booleans` | `readSetBooleans` | integer set bulk read + strict 0/1 conversion |
+| `read_set_booleans_by_id` | `readSetBooleansById` | `read_set_booleans_by_id` | `readSetBooleansById` | integer set by-id read + strict 0/1 conversion |
+| `query_boolean` | `queryBoolean` | `query_boolean` | `queryBoolean` | integer query + strict 0/1 conversion |
+
 **Composite read helpers (all five bindings):**
 
 |        Julia         |       Dart        |        Python        |         Lua          |        JS         |                 Wraps                  |
@@ -593,6 +661,14 @@ because only Julia consumers use it.
 |-------|------|--------|-----|-------|
 | `transaction(db) do db...end` | `db.transaction((db) {...})` | `with db.transaction():` | `db:transaction(function(db)...end)` | begin + fn + commit/rollback |
 | `dry_run(db) do db...end` | `db.dryRun((db) {...})` | `with db.dry_run():` | `db:dry_run(function(db)...end)` | begin_dry_run + fn + end_dry_run |
+
+**Scoped resource factories (Julia and Python — no Dart/JS equivalent):** the four bindings sit in
+three shapes and the divergence is not yet resolved. Julia has callback-first overloads for `do`
+syntax on `Database` (`open`, `from_schema`, `from_migrations`) and `Binary.File` (`open_file`);
+Python has `with` on `Database` and `LuaRunner`; Dart and JS have neither. All of them wrap
+`open + fn + close`. Two caveats hold wherever a scoped form exists: a `LuaRunner` borrows its
+`Database` (raw `Database&` in `src/lua_runner.cpp`) and must not outlive the block, and an
+uncommitted transaction still open at the block's exit is rolled back by the close.
 
 **Multi-column group readers (Julia, Dart, and Python):**
 

@@ -41,6 +41,7 @@ ffi.cdef("""
                                                     const char* migrations_path,
                                                     const quiver_database_options_t* options,
                                                     quiver_database_t** out_db);
+    quiver_error_t quiver_database_validate_migrations(const char* migrations_path);
     quiver_error_t quiver_database_from_schema(const char* db_path,
                                                 const char* schema_path,
                                                 const quiver_database_options_t* options,
@@ -251,10 +252,20 @@ ffi.cdef("""
     // Update element
     quiver_error_t quiver_database_update_element(quiver_database_t* db,
         const char* collection, int64_t id, const quiver_element_t* element);
+    quiver_error_t quiver_database_update_element_by_label(quiver_database_t* db,
+        const char* collection, const char* label, const quiver_element_t* element);
     quiver_error_t quiver_database_delete_element(quiver_database_t* db,
         const char* collection, int64_t id);
     quiver_error_t quiver_database_delete_element_by_label(quiver_database_t* db,
         const char* collection, const char* label);
+
+    // Update relation (a NULL target_label clears it)
+    quiver_error_t quiver_database_update_relation(quiver_database_t* db,
+        const char* collection_from, const char* collection_to,
+        const char* relation_type, int64_t id, const char* target_label);
+    quiver_error_t quiver_database_update_relation_by_label(quiver_database_t* db,
+        const char* collection_from, const char* collection_to,
+        const char* relation_type, const char* label, const char* target_label);
 
     // Transaction control
     quiver_error_t quiver_database_begin_transaction(quiver_database_t* db);
@@ -302,8 +313,19 @@ ffi.cdef("""
         void** column_data, const uint8_t* const* column_has_value,
         size_t column_count, size_t row_count);
 
+    quiver_error_t quiver_database_update_time_series_group_by_label(quiver_database_t* db,
+        const char* collection, const char* group, const char* label,
+        const char* const* column_names, const int* column_types,
+        void** column_data, const uint8_t* const* column_has_value,
+        size_t column_count, size_t row_count);
+
     quiver_error_t quiver_database_upsert_time_series_row(quiver_database_t* db,
         const char* collection, const char* group, int64_t id,
+        const char* const* column_names, const int* column_types,
+        const void* const* column_data, size_t column_count);
+
+    quiver_error_t quiver_database_upsert_time_series_row_by_label(quiver_database_t* db,
+        const char* collection, const char* group, const char* label,
         const char* const* column_names, const int* column_types,
         const void* const* column_data, size_t column_count);
 
@@ -313,8 +335,20 @@ ffi.cdef("""
         void** column_data, const uint8_t* const* column_has_value,
         size_t column_count, size_t row_count);
 
+    quiver_error_t quiver_database_update_vector_group_by_label(quiver_database_t* db,
+        const char* collection, const char* group, const char* label,
+        const char* const* column_names, const int* column_types,
+        void** column_data, const uint8_t* const* column_has_value,
+        size_t column_count, size_t row_count);
+
     quiver_error_t quiver_database_update_set_group(quiver_database_t* db,
         const char* collection, const char* group, int64_t id,
+        const char* const* column_names, const int* column_types,
+        void** column_data, const uint8_t* const* column_has_value,
+        size_t column_count, size_t row_count);
+
+    quiver_error_t quiver_database_update_set_group_by_label(quiver_database_t* db,
+        const char* collection, const char* group, const char* label,
         const char* const* column_names, const int* column_types,
         void** column_data, const uint8_t* const* column_has_value,
         size_t column_count, size_t row_count);

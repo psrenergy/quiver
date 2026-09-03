@@ -10,8 +10,9 @@
 // and whether the prose is semantically true.
 //
 // NOTE: the binary/expression subsystems are bound in the native binding and documented below.
-// File-touching operations (db:open_file, db:bin_to_csv, db:csv_to_bin, expr:save) are sandboxed
-// to the database file's directory; the pure-metadata builders stay under the quiver.* global.
+// File-touching operations (db:open_file, db:bin_to_csv, db:csv_to_bin, db:validate_migrations,
+// expr:save) are sandboxed to the database file's directory; the pure-metadata builders stay under
+// the quiver.* global.
 //
 // FORMAT CONVENTION: every db: method appears at least once as the literal token
 // `db:<snake_case_name>`, and every quiver.* function as `quiver.<name>`, so coverage is greppable
@@ -50,7 +51,7 @@ Lua values map to Quiver column values as follows:
 | integer            | INTEGER      | Also accepted for REAL columns (coerced to real). |
 | number (float)     | REAL         | A float is rejected for an INTEGER column.     |
 | string             | TEXT         | Also used for \`date_time\` columns (ISO 8601).  |
-| \`nil\`              | NULL         | In query params, file paths, and ts rows.      |
+| \`nil\`              | NULL         | In query params, file paths, ts rows, relations.|
 | table (1-indexed)  | array        | Used for vectors/sets and column-oriented data.|
 
 **Unsupported types throw.** Passing a boolean, a function, or a nested table where a scalar is
@@ -59,15 +60,21 @@ attributes, time-series rows, and query parameters. A skipped positional query p
 shift every later parameter and bind NULL to the trailing placeholder, so this is rejected loudly.
 
 Dates are plain strings in ISO 8601 format: \`YYYY-MM-DDTHH:MM:SS\`. (Lua keeps a string-based
-datetime surface — there are no DateTime wrapper helpers, unlike Julia/Dart/Python.)
+datetime surface — there are no DateTime wrapper helpers, unlike Julia/Dart/Python.) The time part
+is optional, so \`"2024-01-15"\` is also valid, and a space may replace the \`T\`. Every field is
+fixed-width and zero-padded. Anything shorter or malformed — \`"2005"\`, \`"2005-01"\`,
+\`"2024-02-31"\`, \`"2024-1-5"\`, \`"2024-01-15T10:30"\` — is **rejected when you write it**, not
+silently stored. The value is stored exactly as written; a date-only value is not padded to
+midnight.
 
 ---
 
 ## Critical rules
 
 - **Type coercion.** An integer is accepted for a REAL column (coerced to real on insert); a float
-  is rejected for an INTEGER column. Other type mismatches raise a validation error and roll the
-  whole script back.
+  is rejected for an INTEGER column. A string bound to a \`date_*\` column must parse as ISO 8601
+  (\`YYYY-MM-DD\`, optionally \`THH:MM:SS\` or \` HH:MM:SS\`). Other type mismatches raise a
+  validation error and roll the whole script back.
 - **Errors abort the script.** Any error thrown by a \`db:\` call stops the script and surfaces as
   \`Failed to run Lua script: <message>\`. Validation failures roll back whatever the current
   transaction covered.
@@ -76,16 +83,16 @@ datetime surface — there are no DateTime wrapper helpers, unlike Julia/Dart/Py
   and \`dofile\`/\`loadfile\` are removed (string-form \`load\` stays available). Integer division is
   the Lua 5.4 \`//\` operator — a language operator, unrelated to \`math\`.
 - **Filesystem sandbox.** Every file-touching operation (\`db:export_csv\`, \`db:import_csv\`,
-  \`db:open_file\`, \`db:bin_to_csv\`, \`db:csv_to_bin\`, \`expr:save\`) resolves relative paths against
-  the directory containing the database file and rejects anything outside it (subdirectories are
-  fine; \`..\` escapes and outside absolute paths throw \`Cannot <op>: path '...' escapes the
+  \`db:open_file\`, \`db:bin_to_csv\`, \`db:csv_to_bin\`, \`db:validate_migrations\`, \`expr:save\`) resolves
+  relative paths against the directory containing the database file and rejects anything outside it
+  (subdirectories are fine; \`..\` escapes and outside absolute paths throw \`Cannot <op>: path '...' escapes the
   database directory ...\`). On an in-memory database these operations throw
   \`Cannot <op>: database is in-memory, file operations are unavailable\`.
 - **Output.** A script can \`return\` one value and the host receives it as JSON — prefer this over
   \`print()\` when you need structured data back (\`print()\` still works and is captured). Only the
   **first** returned value is encoded. Arrays are 1-indexed (iterate with \`ipairs\`); reading a NULL
   yields \`nil\`, writing \`nil\` stores NULL where NULL is accepted (query params, ts rows, file
-  columns — but NOT element scalar attributes; see CRUD).
+  columns, relation targets — but NOT element scalar attributes; see CRUD).
 
   \`\`\`lua
   return { ids = db:read_element_ids("Collection"), total = 3 }
@@ -134,9 +141,14 @@ db:describe()                      -- string: whole-DB text report (returns it, 
 db:describe_collection(collection) -- string: one collection's structure (text report)
 db:summarize_collection(collection)-- string: per-scalar null/non-null counts, low-cardinality
                                    --         integer value distributions, per-group sizes
+db:validate_migrations(path)       -- validate a migrations dir (up then down) in-memory; no return
 \`\`\`
 
 All three \`describe*\`/\`summarize*\` methods **return** a string — \`print()\` it to see it.
+
+\`db:validate_migrations(path)\` applies every \`up.sql\` in version order, then every \`down.sql\` in
+reverse, against a throwaway in-memory database — nothing in \`db\` itself is touched. The round trip
+must end with an empty database; leftover tables are named in the error.
 
 ---
 
@@ -212,8 +224,12 @@ Rules worth knowing:
 \`\`\`lua
 local id = db:create_element(collection, element_table)   -- returns new integer id
 db:update_element(collection, id, element_table)
+db:update_element_by_label(collection, label, element_table)  -- same update, addressed by label
 db:delete_element(collection, id)
 db:delete_element_by_label(collection, label)             -- same delete, addressed by label
+
+db:update_relation(collection_from, collection_to, relation_type, id, target_label)
+db:update_relation_by_label(collection_from, collection_to, relation_type, label, target_label)
 \`\`\`
 
 The element table holds scalar attributes as \`key = value\`, and vector/set attributes as
@@ -239,9 +255,13 @@ Notes:
 - **\`update_element\` / \`delete_element\` require an existing id.** Targeting an id that does not
   exist throws \`Element not found: <id> in collection '<collection>'\` (no silent no-op). Use
   \`read_element_ids\` to get valid ids.
-- **\`delete_element_by_label\` requires an existing label**, unique *per collection*, not per
-  database — one naming an element of another collection does not resolve. A miss throws
-  \`Element not found: label '<label>' in collection '<collection>'\` and deletes nothing.
+- **\`update_element_by_label\` / \`delete_element_by_label\` require an existing label**, unique
+  *per collection*, not per database — one naming an element of another collection does not
+  resolve. A miss throws \`Element not found: label '<label>' in collection '<collection>'\` and
+  changes nothing. Passing \`label = "New name"\` in the element table renames the element, after
+  which only the new label resolves. Because the label form delegates to the id form, failures
+  that validate the *element* (an empty table, a type mismatch) report
+  \`Cannot update_element: ...\`.
 - **Empty arrays are skipped.** An attribute whose value is \`{}\` writes no vector/set (the element
   type can't be inferred from an empty array), so it is silently dropped.
 - **No \`nil\` scalar attributes.** In Lua a key set to \`nil\` is dropped from the table, so
@@ -249,7 +269,18 @@ Notes:
   **throws** (\`...must have at least one scalar attribute\` on create, \`...at least one attribute
   to update\` on update). To leave a column unchanged, omit the key — you cannot set a scalar to
   NULL via the element table. (\`nil\` → NULL is only accepted by
-  \`upsert_time_series_row\` and \`update_time_series_files\`.)
+  \`upsert_time_series_row\`, \`update_time_series_files\` and \`update_relation\`.)
+- **\`update_relation\` points one scalar foreign-key relation at another element**, named by the
+  target's label. The column is derived from the naming convention —
+  \`lowercase(collection_to) .. "_" .. relation_type\`, so
+  \`db:update_relation("Child", "Parent", "id", id, "Parent A")\` writes \`Child.parent_id\`. A
+  \`nil\` or omitted \`target_label\` clears the relation; anything that is not a string throws
+  (\`target_label has unsupported Lua type\`). The derived column must exist and be a
+  foreign key to \`collection_to\`, otherwise \`Cannot update_relation: ...\`. The write delegates
+  to \`update_element\`, so a missing id reports that method's error;
+  \`update_relation_by_label\` takes a label in place of the id, with
+  \`update_element_by_label\`'s resolution and miss semantics. A relation living in a vector, set
+  or time-series group is a list of targets — use that group's writer instead.
 
 ---
 
@@ -299,6 +330,9 @@ db:update_vector_group("Child", "refs", id, { parent_ref = { 1, 2, 3 } })
 db:update_set_group("Child", "parents", id, { parent_ref = { 1, 2 } })
 
 db:update_vector_group("Child", "refs", id, {})   -- clears the group
+
+db:update_vector_group_by_label("Child", "refs", "Child 1", { parent_ref = { 1, 2 } })
+db:update_set_group_by_label("Child", "parents", "Child 1", { parent_ref = { 1, 2 } })
 \`\`\`
 
 Use these instead of routing a group's columns through \`update_element\` whenever a column name is
@@ -315,7 +349,8 @@ Rules:
   are rejected if passed.
 - **Foreign-key columns accept a label string** and resolve it to the referenced id, exactly as in
   \`create_element\` / \`update_element\`.
-- The element id must exist, same as \`update_element\` / \`delete_element\`.
+- The element id must exist, same as \`update_element\` / \`delete_element\`; the \`_by_label\` form
+  takes a label in its place, with \`update_element_by_label\`'s resolution and miss semantics.
 
 ---
 
@@ -379,6 +414,8 @@ db:update_time_series_group("Items", "data", id, {
 })
 
 db:update_time_series_group("Items", "data", id, {})   -- clears the group
+
+db:update_time_series_group_by_label("Items", "data", "Item 1", { date_time = { "2024-01-01T00:00:00" }, value = { 10.5 } })
 \`\`\`
 
 A read-modify-write looks like this:
@@ -408,6 +445,8 @@ column names). Each value of the top-level table must be an **array**, not a sca
   table {} to clear the group\`) — only a bare \`{}\` clears.
 - Integer values are accepted for REAL columns (converted on insert). Booleans, functions, and
   other unsupported Lua types throw \`column '...' has unsupported Lua type\`.
+- The element id must exist; the \`_by_label\` form takes a label in its place, with
+  \`update_element_by_label\`'s resolution and miss semantics. Every rule above applies to both.
 
 ### Append/upsert a single row (\`upsert_time_series_row\` — ROW-oriented, the one exception)
 
@@ -419,7 +458,15 @@ db:upsert_time_series_row("Items", "data", id, {
     date_time = "2024-01-04T00:00:00",
     value     = 40.0,
 })
+
+db:upsert_time_series_row_by_label("Items", "data", "Item 1", {
+    date_time = "2024-01-04T00:00:00",
+    value     = 40.0,
+})
 \`\`\`
+
+The element id must exist; the \`_by_label\` form takes a label in its place, with
+\`update_element_by_label\`'s resolution and miss semantics.
 
 ---
 

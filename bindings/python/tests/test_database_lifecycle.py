@@ -28,6 +28,17 @@ def test_from_migrations_creates_database(migrations_path: Path, tmp_path: Path)
     db.close()
 
 
+def test_validate_migrations_succeeds(migrations_path: Path) -> None:
+    assert Database.validate_migrations(str(migrations_path)) is None
+
+
+def test_validate_migrations_missing_path_raises(tmp_path: Path) -> None:
+    bad_path = tmp_path / "does_not_exist"
+    with pytest.raises(QuiverError) as exc_info:
+        Database.validate_migrations(str(bad_path))
+    assert str(exc_info.value) == f"Cannot validate_migrations: migrations path not found: {bad_path}"
+
+
 def test_open_existing_database(valid_schema_path: Path, tmp_path: Path) -> None:
     db_path = str(tmp_path / "test.db")
     Database.from_schema(db_path, str(valid_schema_path)).close()

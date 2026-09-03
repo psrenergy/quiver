@@ -7,20 +7,76 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ## [0.11.0] — unreleased
 
-### Added
-
-- **`delete_element_by_label(collection, label)`.** Deletes an element addressed by its `label`
-  instead of its id, for callers that already know the name and would otherwise round-trip through
-  a query to find it. It resolves the label and then delegates to `delete_element`, so `ON DELETE
-  CASCADE` cleanup is identical. Available in every layer, under the usual per-layer spelling.
-
-  A label is unique **per collection, not per database**: one naming an element of a different
-  collection does not resolve. A miss throws `Element not found: label '<label>' in collection
-  '<c>'` and deletes nothing (no silent no-op, matching `delete_element` / `update_element`).
-  Naming a table with no `label` column throws `Cannot delete_element_by_label: column 'label' not
-  found in table '<t>'`.
-
 ### Changed
+
+- **BREAKING — a `DATE_TIME` value is validated when it is written.** A string bound to a
+  `date_`-prefixed column must be ISO 8601: `YYYY-MM-DD`, optionally followed by `THH:MM:SS` or
+  ` HH:MM:SS`. Anything else now throws `Cannot <operation>: invalid DATE_TIME value for column
+  '<c>': '<value>' (expected YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)`. The value is still stored
+  verbatim — the core validates, it never normalizes.
+
+  Previously the only requirement was *being a string*, so `date_initial = "2005-01"` was accepted
+  and then failed on the read, deep inside a binding's date parser, with an error naming neither
+  the write nor the column. Because the composite readers (`read_scalars_by_id`,
+  `read_element_by_id`, `read_vector_group_by_id`, …) all funnel through that parser, one bad cell
+  made the whole element unreadable.
+
+  Every field is fixed-width and zero-padded, the year is `0001`-`9999`, and the calendar day must
+  exist. Rejected: `"2005"`, `"2005-01"`, `"not-a-date"`, `""`, an impossible calendar day
+  (`"2024-02-31"`), trailing garbage (`"2024-01-15junk"`), an unpadded or short field
+  (`"2024-1-5"`, `"24-01-15"`, `"2024-01-15T1:30:00"`), a truncated time (`"2024-01-15T10:30"`),
+  and a leap second (`"2024-01-15T10:30:60"`). Leading and trailing whitespace is trimmed before
+  validating, matching what actually gets stored. The accepted band is the intersection of what
+  Python's `fromisoformat`, Julia's `DateTime` and Dart's `DateTime.parse` handle, so a value the
+  core stores is a value every binding can read. Applies to `create_element`, `update_element`,
+  the vector/set/time-series group writers, `upsert_time_series_row`, their `_by_label` forms,
+  `import_csv`, and every binding and Lua.
+
+  *Adapt:* write a full calendar date. `"2005-01"` becomes `"2005-01-01"`. To put a
+  non-conforming value in a date column deliberately — reproducing legacy data in a test, say —
+  use raw SQL through `query_string`/`query_integer`; the readers' lenient fallbacks are unchanged.
+
+- **BREAKING — `import_csv` rejects a timestamp it cannot canonicalize.** Import writes through a
+  raw `INSERT` and never reaches the validator above, and with a `date_time_format` set it parsed
+  the cell with the caller's format — which range-checks month and day separately and so cannot see
+  that February has no 31st. `date_time_format = "%d/%m/%Y"` on a cell `31/02/2024` stored
+  `"2024-02-31T00:00:00"`, a value `create_element` refuses and no binding's date parser can read.
+  Import now validates the canonical string it produces, so it is held to the same grammar as every
+  other writer.
+
+  *Adapt:* fix the offending cell. An import that used to "succeed" on such a row was writing data
+  you could not read back.
+
+- **`parse_iso8601` accepts a date-only value, and now requires the whole string.** The core's one
+  ISO 8601 parser (`src/utils/datetime.h`) previously demanded the time part, which had two
+  consequences beyond the validation above:
+
+  - **`import_csv` now accepts a date-only cell** when no `date_time_format` is given, storing it
+    canonicalized as `<date>T00:00:00`. This fixes a round-trip bug: `export_csv` writes the stored
+    value verbatim, so a database holding `"2024-01-01"` exported a file its own importer rejected
+    with `Cannot import_csv: Timestamp 2024-01-01 is not valid`.
+  - **`export_csv` with `date_time_format` set now formats a date-only value** instead of passing
+    it through raw, and `BinaryMetadata`'s `initial_datetime` accepts a date-only value (read back
+    as midnight UTC, re-serialized in full `T` form).
+
+  The whole-string requirement is a tightening: `"2024-01-15T10:30:00.123"`, `"…Z"` and any other
+  trailing text used to parse (the parser stopped as soon as the format was satisfied) and are now
+  rejected everywhere `parse_iso8601` is used — which includes two *ingest* paths with no lenient
+  fallback. `import_csv` with no `date_time_format` now fails on a cell carrying a `Z` or
+  fractional seconds (the shape most external exporters write), and `BinaryMetadata`'s
+  `initial_datetime` now fails on a `.toml` sidecar carrying one, making the `.qvr` unopenable.
+  `export_csv` with `date_time_format` passes such a legacy cell through raw instead of formatting
+  it.
+
+  *Adapt:* rewrite the offending cell to `YYYY-MM-DDTHH:MM:SS`, or pass a matching
+  `date_time_format` to `import_csv`.
+
+  The parser is now a hand-rolled fixed-width scan rather than `std::get_time`. get_time's field
+  widths are maxima, so it also accepted `"2024-1-5"`, `"24-01-15"` and `"+2024-01-15"`, and on
+  MSVC it did not fail on a truncated time — so `"2024-01-15T10:30"` validated on Windows and would
+  not on Linux. It also left `tm_wday`/`tm_yday` unset, so `export_csv` with a `date_time_format`
+  containing `%a`/`%A`/`%j`/`%U`/`%W` reported every date as a Sunday on day 001; those now
+  format correctly.
 
 - **BREAKING — `read_time_series_row()` reports absence as null, not as a sentinel.** An element
   with no value at or before `date_time` used to come back as `0` for an INTEGER attribute and
@@ -35,6 +91,116 @@ callers to change something are prefixed **BREAKING** and say what to do.
   **Python, Dart and JS** keep their return types and now produce `None`/`null` where they
   previously produced the sentinel. **Direct C API callers** must pass the new `uint8_t** out_mask`
   argument and free it with `quiver_database_free_mask`.
+
+### Added
+
+- **Julia scoped resource factories.** `open`, `from_schema`, `from_migrations`, and
+  `Binary.open_file` take a callback-first argument, so Julia `do` syntax releases the handle at the
+  block's `end` on both the normal and the exceptional exit, and returns the callback's result. The
+  finalizer already released eventually — what is new is *prompt, deterministic* release, which is
+  what frees an OS file handle on Windows. Caveat: a `LuaRunner` built inside the block must not
+  outlive it (it borrows the database), and an uncommitted transaction still open at the block's
+  `end` is rolled back — use `transaction(db) do db ... end` inside.
+
+- **Boolean convenience readers for INTEGER-backed values.** Julia, Python, Dart, and JavaScript
+  now expose scalar, vector, and set boolean readers in both bulk and by-id forms, plus a boolean
+  query helper. They compose the existing integer APIs and convert only `0`/`1` to
+  `false`/`true`; any other integer raises the binding's native conversion error
+  (`ArgumentError` in Julia and Dart, `ValueError` in Python, `RangeError` in JavaScript), naming
+  the offending `collection.attribute`. The scalar readers preserve NULLs positionally, one entry
+  per element; the vector and set readers do not — like every other group reader they drop NULL
+  cells and omit elements that own no rows, so they are not aligned with `read_element_ids`.
+  Lua is deliberately excluded (it has a native boolean; see the design decisions).
+
+- **Dart and JavaScript accept a `bool` wherever an integer is accepted.** `createElement` /
+  `updateElement` (scalars and arrays) and query parameters now take a boolean and store it as
+  INTEGER `1`/`0`, matching Julia and Python. Previously they threw `Unsupported type bool`, so a
+  value read through the new boolean readers could not be written back. JavaScript's
+  `ScalarValue`, `ArrayValue` and `QueryParam` were widened accordingly.
+
+- **`update_relation(collection_from, collection_to, relation_type, id, target_label)` and
+  `update_relation_by_label(..., label, target_label)`.** Points one element's scalar foreign-key
+  relation at another element, named by the target's `label`; no target label clears it. The
+  column is derived by the naming convention — `lowercase(collection_to) + "_" + relation_type`,
+  so `update_relation("Child", "Parent", "id", child, "Parent A")` writes `Child.parent_id` — and
+  must be a foreign key to `collection_to`, otherwise Pattern 1 `Cannot update_relation: ...`. The
+  write delegates to `update_element`, so the target-label resolution and the missing-source-id
+  check are that method's. A relation that lives in a group needs the matching group writer
+  instead.
+
+  Available in **every layer**: C++, the C API, Julia (`update_relation!`), Dart
+  (`updateRelation`), Python (`update_relation`), JS (`updateRelation`), and Lua
+  (`db:update_relation`), each with its `_by_label` form. `target_label` is a required parameter
+  that accepts the language's null (`nothing`/`null`/`None`) to clear the relation; in Lua a `nil`
+  or omitted argument clears it.
+
+- **Migration round-trip validation: `Database::validate_migrations()` / `quiver_database_validate_migrations()`.** Validates a migrations directory in an in-memory database by applying every up migration, then every down migration, and finally checking that no table survives.
+
+  Available in **every layer**: C++, the C API, Julia (`validate_migrations`), Dart
+  (`Database.validateMigrations`), Python (`Database.validate_migrations`), JS (`Database.validateMigrations`),
+  and Lua (`db:validate_migrations`) — the Lua binding is db-scoped and sandboxed to the database
+  directory, like the other file-touching Lua operations.
+
+  A directory with no numbered migration subdirectories throws `Cannot validate_migrations: no
+  migrations found in <path>` rather than passing vacuously. A `down.sql` that runs but forgets a
+  `DROP` throws `Failed to validate_migrations: down migrations left tables behind: <names>`.
+
+## [0.10.2] — 2026-08-27
+
+### Added
+
+- **`upsert_time_series_row_by_label(collection, group, label, row)`.** Inserts or replaces a
+  single time-series row addressed by `label` instead of id — the label-addressed counterpart of
+  `upsert_time_series_row`. It resolves the label and then delegates, so the dimension-column
+  rules, the type validation, and the upsert-on-PK semantics are identical. Available in every layer,
+  under the usual per-layer spelling. Label resolution and its miss semantics are
+  `update_element_by_label`'s, below.
+
+- **`update_time_series_group_by_label(collection, group, label, rows)`.** Replaces all of an
+  element's rows in one named time-series group, addressed by `label` instead of id — the
+  label-addressed counterpart of `update_time_series_group`. It resolves the label and then
+  delegates, so the dimension-column rules, the type validation, the NULL cells, and "no columns
+  clears the group" are identical. Available in every layer, under the usual per-layer spelling.
+  Label resolution and its miss semantics are `update_element_by_label`'s, below.
+
+- **`update_vector_group_by_label` / `update_set_group_by_label(collection, group, label, rows)`.**
+  Replaces all of an element's rows in one named vector or set group, addressed by `label` instead
+  of id — the label-addressed counterpart of `update_vector_group` / `update_set_group`. Each
+  resolves the label and then delegates, so the column validation, the FK-label resolution, the
+  NULL cells, and "no columns clears the group" are identical. Available in every layer, under the
+  usual per-layer spelling. Label resolution and its miss semantics are
+  `update_element_by_label`'s, below.
+
+- **`update_element_by_label(collection, label, element)`.** Updates an element addressed by its
+  `label` instead of its id, the label-addressed counterpart of `update_element`. It resolves the
+  label and then delegates to `update_element`, so the attributes written, the FK-label
+  resolution, and the group-replacement semantics are identical. Available in every layer, under
+  the usual per-layer spelling.
+
+  Label resolution and its miss semantics are `delete_element_by_label`'s, below — with the
+  messages naming `update_element_by_label`. Passing `label` among the attributes **renames** the
+  element, after which only the new label resolves. Because the label form delegates, failures
+  that validate the *element* (an empty element, a type mismatch) report `Cannot update_element:
+  ...` — the operation that actually validated. Python's `collection` and `label` are
+  positional-only (`/`) so that `label=` in `**kwargs` renames rather than colliding with the
+  parameter.
+
+- **`delete_element_by_label(collection, label)`.** Deletes an element addressed by its `label`
+  instead of its id, for callers that already know the name and would otherwise round-trip through
+  a query to find it. It resolves the label and then delegates to `delete_element`, so `ON DELETE
+  CASCADE` cleanup is identical. Available in every layer, under the usual per-layer spelling.
+
+  A label is unique **per collection, not per database**: one naming an element of a different
+  collection does not resolve. A miss throws `Element not found: label '<label>' in collection
+  '<c>'` and deletes nothing (no silent no-op, matching `delete_element` / `update_element`).
+  Naming a table with no `label` column throws `Cannot delete_element_by_label: column 'label' not
+  found in table '<t>'`.
+
+### Fixed
+
+- `quiver_database_upsert_time_series_row` now writes SQL NULL for a NULL `column_data[c]` or a
+  NULL `char*` cell instead of dereferencing it — it shares the group writers' decoder. Reachable
+  only from direct C API callers (every binding rejects a null cell before the FFI call).
 
 ## [0.10.1] — 2026-08-14
 
@@ -168,6 +334,7 @@ are functionally identical to 0.10.0.
   `read_time_series_group` emits for a NULL STRING cell — so feeding a read result back with the
   mask stripped was UB. A NULL entry, or a NULL per-column data pointer, is now SQL NULL.
 
-[0.11.0]: https://github.com/psrenergy/quiver/compare/v0.10.1...v0.11.0
+[0.11.0]: https://github.com/psrenergy/quiver/compare/v0.10.2...v0.11.0
+[0.10.2]: https://github.com/psrenergy/quiver/compare/v0.10.1...v0.10.2
 [0.10.1]: https://github.com/psrenergy/quiver/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/psrenergy/quiver/compare/v0.9.16...v0.10.0

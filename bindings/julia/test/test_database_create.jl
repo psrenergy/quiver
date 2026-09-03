@@ -575,6 +575,22 @@ include("fixture.jl")
 
         Quiver.close!(db)
     end
+
+    @testset "Invalid DateTime String Rejected" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        # A DateTime kwarg is formatted by the binding and always valid; a raw String is the only
+        # way to write a bad one. Full grammar lives in the C++ suite.
+        @test_throws Quiver.DatabaseException Quiver.create_element!(
+            db, "Configuration"; label = "Bad", date_attribute = "2005-01")
+
+        id = Quiver.create_element!(db, "Configuration"; label = "Ok", date_attribute = "2005-01-01")
+        @test Quiver.read_scalar_date_time_by_id(db, "Configuration", "date_attribute", id) ==
+              DateTime(2005, 1, 1)
+
+        Quiver.close!(db)
+    end
 end
 
 end

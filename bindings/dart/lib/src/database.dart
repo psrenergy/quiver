@@ -20,6 +20,20 @@ part 'database_query.dart';
 part 'database_read.dart';
 part 'database_update.dart';
 
+bool? _integerToBoolean(int? value, [String collection = '', String attribute = '']) {
+  if (value == null) return null;
+  return _integerToBooleanNonNull(value, collection, attribute);
+}
+
+/// The non-nullable sibling, for group readers whose cells are never null.
+/// Keeping it separate avoids `_integerToBoolean(...)!` at the call sites.
+bool _integerToBooleanNonNull(int value, [String collection = '', String attribute = '']) {
+  if (value == 0) return false;
+  if (value == 1) return true;
+  final source = collection.isEmpty ? '' : " in '$collection.$attribute'";
+  throw ArgumentError.value(value, 'value', 'Cannot convert integer to boolean$source: expected 0 or 1');
+}
+
 /// A wrapper for the Quiver database.
 ///
 /// Use [Database.fromSchema] to create a new database from a SQL schema file.
@@ -106,6 +120,22 @@ class Database {
     }
   }
 
+  /// Validates a migrations directory by applying every `up.sql` in order,
+  /// then every `down.sql` in reverse order, against an in-memory database.
+  /// Throws if the round trip leaves any table behind.
+  static void validateMigrations(String migrationsPath) {
+    final arena = Arena();
+    try {
+      check(
+        bindings.quiver_database_validate_migrations(
+          migrationsPath.toNativeUtf8(allocator: arena).cast(),
+        ),
+      );
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
   /// Opens an existing database file.
   factory Database.open(
     String dbPath, {
@@ -149,10 +179,10 @@ class Database {
       if (p == null) {
         types[i] = quiver_data_type_t.QUIVER_DATA_TYPE_NULL;
         values[i] = nullptr;
-      } else if (p is int) {
+      } else if (p is int || p is bool) {
         types[i] = quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER;
         final ptr = arena<Int64>();
-        ptr.value = p;
+        ptr.value = p is bool ? (p ? 1 : 0) : p as int;
         values[i] = ptr.cast();
       } else if (p is double) {
         types[i] = quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT;

@@ -541,6 +541,48 @@ TEST(DatabaseCApi, ReadTimeSeriesRowNumericAbsenceMask) {
     quiver_database_close(db);
 }
 
+// The upsert row entry point decodes through the shared group decoder, whose STRING branch treats a
+// NULL char* as SQL NULL. The read direction emits exactly that for a NULL STRING cell, so feeding
+// a read result back with the mask stripped must not dereference it.
+TEST(DatabaseCApi, UpsertTimeSeriesRowNullStringCell) {
+    int64_t id = 0;
+    quiver_database_t* db = open_nullable_ts_db(&id);
+
+    const char* names[] = {"date_time", "status"};
+    int types[] = {QUIVER_DATA_TYPE_STRING, QUIVER_DATA_TYPE_STRING};
+    const char* dts[] = {"2024-01-01"};
+    const char* statuses[] = {nullptr};  // NULL char* == SQL NULL, not a dereference
+    const void* data[] = {dts, statuses};
+    ASSERT_EQ(quiver_database_upsert_time_series_row(db, "Sensor", "readings", id, names, types, data, 2), QUIVER_OK);
+
+    char** out_col_names = nullptr;
+    int* out_col_types = nullptr;
+    void** out_col_data = nullptr;
+    uint8_t** out_col_has_value = nullptr;
+    size_t col_count = 0;
+    size_t row_count = 0;
+    ASSERT_EQ(quiver_database_read_time_series_group(db,
+                                                     "Sensor",
+                                                     "readings",
+                                                     id,
+                                                     &out_col_names,
+                                                     &out_col_types,
+                                                     &out_col_data,
+                                                     &out_col_has_value,
+                                                     &col_count,
+                                                     &row_count),
+              QUIVER_OK);
+    ASSERT_EQ(row_count, 1);
+    ASSERT_EQ(col_count, 4);
+    // status (col 3) round-trips as NULL
+    EXPECT_EQ(out_col_has_value[3][0], 0);
+    EXPECT_EQ(static_cast<char**>(out_col_data[3])[0], nullptr);
+
+    quiver_database_free_time_series_data(
+        out_col_names, out_col_types, out_col_data, out_col_has_value, col_count, row_count);
+    quiver_database_close(db);
+}
+
 TEST(DatabaseCApi, FreeTimeSeriesDataNull) {
     // Free with all NULLs and 0 counts - should succeed without crashing
     auto err = quiver_database_free_time_series_data(nullptr, nullptr, nullptr, nullptr, 0, 0);

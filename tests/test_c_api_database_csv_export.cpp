@@ -616,43 +616,6 @@ TEST(DatabaseCApiCSV, ExportCSV_DateTimeFormat_FormatsDateColumns) {
     quiver_database_close(db);
 }
 
-TEST(DatabaseCApiCSV, ExportCSV_DateTimeFormat_InvalidDateReturnsRaw) {
-    auto options = quiver::test::quiet_options();
-    quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
-              QUIVER_OK);
-    ASSERT_NE(db, nullptr);
-
-    quiver_element_t* e1 = nullptr;
-    ASSERT_EQ(quiver_element_create(&e1), QUIVER_OK);
-    quiver_element_set_string(e1, "label", "Item1");
-    quiver_element_set_string(e1, "name", "Alpha");
-    quiver_element_set_string(e1, "date_created", "not-a-date");  // invalid ISO 8601
-    int64_t id1 = 0;
-    ASSERT_EQ(quiver_database_create_element(db, "Items", e1, &id1), QUIVER_OK);
-    quiver_element_destroy(e1);
-
-    quiver_csv_options_t csv_options = {};
-    csv_options.date_time_format = "%Y/%m/%d";
-    csv_options.enum_attribute_names = nullptr;
-    csv_options.enum_locale_names = nullptr;
-    csv_options.enum_entry_counts = nullptr;
-    csv_options.enum_labels = nullptr;
-    csv_options.enum_values = nullptr;
-    csv_options.enum_group_count = 0;
-
-    auto csv_path = temp_csv("InvalidDateRaw");
-    ASSERT_EQ(quiver_database_export_csv(db, "Items", "", csv_path.string().c_str(), &csv_options), QUIVER_OK);
-
-    auto content = read_file(csv_path.string());
-
-    // Invalid datetime should be returned as-is (raw value)
-    EXPECT_NE(content.find("not-a-date"), std::string::npos);
-
-    fs::remove(csv_path);
-    quiver_database_close(db);
-}
-
 TEST(DatabaseCApiCSV, ExportCSV_DateTimeFormat_NonDateColumnsUnaffected) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;

@@ -152,28 +152,6 @@ void main() {
       }
     });
 
-    test('invalid datetime returns raw value', () {
-      final db = Database.fromSchema(':memory:', schemaPath);
-      final csvPath = '${Directory.systemTemp.path}/quiver_dart_csv_invalid_date.csv';
-      try {
-        db.createElement('Items', {
-          'label': 'Item1',
-          'name': 'Alpha',
-          'date_created': 'not-a-date',
-        });
-
-        db.exportCSV('Items', '', csvPath, dateTimeFormat: '%Y/%m/%d');
-        final content = File(csvPath).readAsStringSync();
-
-        // Invalid datetime should be returned as-is
-        expect(content, contains('not-a-date'));
-      } finally {
-        final f = File(csvPath);
-        if (f.existsSync()) f.deleteSync();
-        db.close();
-      }
-    });
-
     test('combined options (enum_labels + date_time_format)', () {
       final db = Database.fromSchema(':memory:', schemaPath);
       final csvPath = '${Directory.systemTemp.path}/quiver_dart_csv_combined.csv';

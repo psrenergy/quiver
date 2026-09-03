@@ -35,6 +35,12 @@ function setElementArray(
     return;
   }
 
+  if (typeof first === "boolean") {
+    const arr = allocNativeInt64((values as boolean[]).map((v) => (v ? 1 : 0)));
+    check(lib.quiver_element_set_array_integer(elemPtr, nameBuf.buf, arr.buf, values.length, null));
+    return;
+  }
+
   if (typeof first === "number") {
     const allIntegers = (values as number[]).every((v) => Number.isInteger(v));
     if (allIntegers) {
@@ -70,6 +76,11 @@ function setElementField(lib: Symbols, elemPtr: NativePointer, name: string, val
 
   if (typeof value === "bigint") {
     check(lib.quiver_element_set_integer(elemPtr, nameBuf.buf, value));
+    return;
+  }
+
+  if (typeof value === "boolean") {
+    check(lib.quiver_element_set_integer(elemPtr, nameBuf.buf, value ? 1n : 0n));
     return;
   }
 
@@ -148,6 +159,80 @@ Database.prototype.updateElement = function (
   }
 };
 
+/** Label-addressed counterpart of updateElement. */
+Database.prototype.updateElementByLabel = function (
+  this: Database,
+  collection: string,
+  label: string,
+  data: ElementData,
+): void {
+  const lib = getSymbols();
+  const handle = this._handle;
+
+  const outElem = allocPtrOut();
+  check(lib.quiver_element_create(outElem.buf));
+  const elemPtr = readPtrOut(outElem);
+
+  try {
+    for (const [key, value] of Object.entries(data)) {
+      if (value === undefined) continue;
+      setElementField(lib, elemPtr, key, value);
+    }
+    const collBuf = toCString(collection);
+    const labelBuf = toCString(label);
+    check(lib.quiver_database_update_element_by_label(handle, collBuf.buf, labelBuf.buf, elemPtr));
+  } finally {
+    lib.quiver_element_destroy(elemPtr);
+  }
+};
+
+/**
+ * Points one scalar foreign-key relation at the element labeled `targetLabel`; `null` clears it.
+ * The column is derived as `collectionTo.toLowerCase() + "_" + relationType`.
+ */
+Database.prototype.updateRelation = function (
+  this: Database,
+  collectionFrom: string,
+  collectionTo: string,
+  relationType: string,
+  id: number,
+  targetLabel: string | null,
+): void {
+  const lib = getSymbols();
+  check(
+    lib.quiver_database_update_relation(
+      this._handle,
+      toCString(collectionFrom).buf,
+      toCString(collectionTo).buf,
+      toCString(relationType).buf,
+      BigInt(id),
+      targetLabel === null ? null : toCString(targetLabel).buf,
+    ),
+  );
+};
+
+/** Label-addressed counterpart of updateRelation. */
+Database.prototype.updateRelationByLabel = function (
+  this: Database,
+  collectionFrom: string,
+  collectionTo: string,
+  relationType: string,
+  label: string,
+  targetLabel: string | null,
+): void {
+  const lib = getSymbols();
+  check(
+    lib.quiver_database_update_relation_by_label(
+      this._handle,
+      toCString(collectionFrom).buf,
+      toCString(collectionTo).buf,
+      toCString(relationType).buf,
+      toCString(label).buf,
+      targetLabel === null ? null : toCString(targetLabel).buf,
+    ),
+  );
+};
+
 Database.prototype.deleteElement = function (this: Database, collection: string, id: number): void {
   const lib = getSymbols();
   const collBuf = toCString(collection);
@@ -192,6 +277,25 @@ Database.prototype.updateVectorGroup = function (
   );
 };
 
+/** Label-addressed counterpart of updateVectorGroup. */
+Database.prototype.updateVectorGroupByLabel = function (
+  this: Database,
+  collection: string,
+  group: string,
+  label: string,
+  data: GroupColumns,
+): void {
+  updateGroupColumns(
+    this._handle,
+    "updateVectorGroupByLabel",
+    getSymbols().quiver_database_update_vector_group_by_label,
+    collection,
+    group,
+    label,
+    data,
+  );
+};
+
 /** Set-group counterpart of updateVectorGroup. */
 Database.prototype.updateSetGroup = function (
   this: Database,
@@ -207,6 +311,25 @@ Database.prototype.updateSetGroup = function (
     collection,
     group,
     id,
+    data,
+  );
+};
+
+/** Label-addressed counterpart of updateSetGroup. */
+Database.prototype.updateSetGroupByLabel = function (
+  this: Database,
+  collection: string,
+  group: string,
+  label: string,
+  data: GroupColumns,
+): void {
+  updateGroupColumns(
+    this._handle,
+    "updateSetGroupByLabel",
+    getSymbols().quiver_database_update_set_group_by_label,
+    collection,
+    group,
+    label,
     data,
   );
 };

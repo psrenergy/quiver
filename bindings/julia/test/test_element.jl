@@ -63,9 +63,10 @@ include("fixture.jl")
         @test true
     end
 
-    @testset "Empty Array Rejected" begin
+    @testset "Vector{Any} Rejected" begin
         el = Quiver.Element()
-        @test_throws ArgumentError el["values"] = Any[]
+        @test_throws MethodError el["values"] = Any[]
+        @test_throws MethodError el["values"] = Any[1, 2, 3]
     end
 
     @testset "Clear Element" begin

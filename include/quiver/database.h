@@ -34,6 +34,7 @@ public:
 
     static Database
     from_schema(const std::string& db_path, const std::string& schema_path, const DatabaseOptions& options = {});
+    static void validate_migrations(const std::string& migrations_path);
     bool is_healthy() const;
 
     int64_t current_version() const;
@@ -48,6 +49,23 @@ public:
     // Resolves the label within `collection` (unique per collection, not per database), then
     // delegates to delete_element.
     void delete_element_by_label(const std::string& collection, const std::string& label);
+
+    // Update one scalar foreign-key relation. The column is derived as
+    // lowercase(collection_to) + "_" + relation_type and must be a foreign key from
+    // collection_from to collection_to; std::nullopt clears it. A group relation is a list of
+    // targets, so it is written by the group writer that owns the group.
+    void update_relation(const std::string& collection_from,
+                         const std::string& collection_to,
+                         const std::string& relation_type,
+                         int64_t id,
+                         const std::optional<std::string>& target_label);
+    // Resolves the label within `collection_from` (unique per collection, not per database), then
+    // delegates to update_relation.
+    void update_relation_by_label(const std::string& collection_from,
+                                  const std::string& collection_to,
+                                  const std::string& relation_type,
+                                  const std::string& label,
+                                  const std::optional<std::string>& target_label);
 
     // Read scalar attributes (all elements). One entry per element, aligned with read_element_ids;
     // a SQL NULL is std::nullopt (positional — never dropped).
@@ -115,6 +133,16 @@ public:
                           const std::string& group,
                           int64_t id,
                           const std::vector<std::map<std::string, Value>>& rows);
+    // Resolve the label within `collection` (unique per collection, not per database), then
+    // delegate to the id form above.
+    void update_vector_group_by_label(const std::string& collection,
+                                      const std::string& group,
+                                      const std::string& label,
+                                      const std::vector<std::map<std::string, Value>>& rows);
+    void update_set_group_by_label(const std::string& collection,
+                                   const std::string& group,
+                                   const std::string& label,
+                                   const std::vector<std::map<std::string, Value>>& rows);
 
     // Read element Ids
     std::vector<int64_t> read_element_ids(const std::string& collection);
@@ -154,6 +182,13 @@ public:
                                   int64_t id,
                                   const std::vector<std::map<std::string, Value>>& rows);
 
+    // Resolve the label within `collection` (unique per collection, not per database), then
+    // delegate to the id form above.
+    void update_time_series_group_by_label(const std::string& collection,
+                                           const std::string& group,
+                                           const std::string& label,
+                                           const std::vector<std::map<std::string, Value>>& rows);
+
     // Add (or upsert) a single time series row. Inserts a new row identified by id +
     // every dimension column from the schema PK; if a row with the same PK already
     // exists, value columns are overwritten. Validation matches update_time_series_group:
@@ -164,6 +199,13 @@ public:
                                 const std::string& group,
                                 int64_t id,
                                 const std::map<std::string, Value>& row);
+
+    // Resolve the label within `collection` (unique per collection, not per database), then
+    // delegate to the id form above.
+    void upsert_time_series_row_by_label(const std::string& collection,
+                                         const std::string& group,
+                                         const std::string& label,
+                                         const std::map<std::string, Value>& row);
 
     // Time series files - singleton table storing file paths for external time series data
     bool has_time_series_files(const std::string& collection) const;
@@ -226,6 +268,7 @@ private:
     // Internal methods
     void set_version(int64_t version);
     void migrate_up(const std::string& migration_path);
+    void migrate_down(const std::string& migrations_path);
     void apply_schema(const std::string& schema_path);
 };
 

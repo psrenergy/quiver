@@ -68,22 +68,6 @@ function Base.setindex!(el::Element, value::Vector{<:AbstractString}, name::Stri
     end
 end
 
-function Base.setindex!(el::Element, value::Vector{Any}, name::String)
-    if isempty(value)
-        throw(ArgumentError("Cannot determine array element type for '$name': array is empty"))
-    end
-    first_val = first(value)
-    if first_val isa Integer
-        el[name] = Int64[Int64(v) for v in value]
-    elseif first_val isa AbstractFloat
-        el[name] = Float64[Float64(v) for v in value]
-    elseif first_val isa AbstractString
-        el[name] = String[String(v) for v in value]
-    else
-        throw(ArgumentError("Unsupported array element type for '$name': $(typeof(first_val))"))
-    end
-end
-
 function Base.show(io::IO, e::Element)
     out_string = Ref{Ptr{Cchar}}(C_NULL)
     err = C.quiver_element_to_string(e.ptr, out_string)

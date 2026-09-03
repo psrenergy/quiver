@@ -970,6 +970,58 @@ TEST(Database, UpdateElementTypeMismatchTextSetWithIntegers) {
     }
 }
 
+// The scalar path threads the caller's name; the array path names the offending index. The full
+// grammar is covered once, in test_database_create.cpp.
+TEST(Database, UpdateElementInvalidDateTimeScalar) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element element;
+    element.set("label", std::string("Config 1")).set("date_attribute", std::string("2024-01-15T10:30:00"));
+    int64_t id = db.create_element("Configuration", element);
+
+    quiver::Element update;
+    update.set("date_attribute", std::string("2005-01"));
+    try {
+        db.update_element("Configuration", id, update);
+        FAIL() << "Expected std::runtime_error for an invalid DATE_TIME value";
+    } catch (const std::runtime_error& e) {
+        std::string msg = e.what();
+        EXPECT_TRUE(msg.find("Cannot update_element: invalid DATE_TIME value for column 'date_attribute'") !=
+                    std::string::npos)
+            << "Expected an invalid DATE_TIME error, got: " << msg;
+    }
+
+    // The rejected write left the stored value alone.
+    auto stored = db.read_scalar_string_by_id("Configuration", "date_attribute", id);
+    ASSERT_TRUE(stored.has_value());
+    EXPECT_EQ(*stored, "2024-01-15T10:30:00");
+}
+
+TEST(Database, UpdateElementInvalidDateTimeArray) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element element;
+    element.set("label", std::string("Item 1"));
+    int64_t id = db.create_element("Collection", element);
+
+    // The time-series dimension column is the only date_-prefixed array column in the schemas.
+    quiver::Element update;
+    update.set("date_time", std::vector<std::string>{"2024-01-01", "2005-01"});
+    update.set("value", std::vector<double>{1.0, 2.0});
+
+    try {
+        db.update_element("Collection", id, update);
+        FAIL() << "Expected std::runtime_error for an invalid DATE_TIME value";
+    } catch (const std::runtime_error& e) {
+        std::string msg = e.what();
+        EXPECT_TRUE(msg.find("Cannot update_element: invalid DATE_TIME value for array 'date_time' index 1") !=
+                    std::string::npos)
+            << "Expected an invalid DATE_TIME error naming the index, got: " << msg;
+    }
+}
+
 // ============================================================================
 // Empty array behavior tests
 // ============================================================================
@@ -1507,5 +1559,260 @@ TEST(Database, UpdateElementByLabelValidationNamesTheIdForm) {
     } catch (const std::runtime_error& e) {
         std::string msg = e.what();
         EXPECT_TRUE(msg.find("Cannot update_element: type mismatch") != std::string::npos) << "Actual: " << msg;
+    }
+}
+
+TEST(Database, UpdateVectorGroupByLabel) {
+    SharedFkFixture f;
+
+    // A second child so the assertions cannot pass vacuously: with only one element an update that
+    // ignored the label entirely would still hit the right row.
+    auto other = f.db.create_element("Child", quiver::Element().set("label", std::string("Child 2")));
+    f.db.update_vector_group("Child", "refs", other, {{{"parent_ref", f.parent_a}}});
+
+    f.db.update_vector_group_by_label(
+        "Child", "refs", "Child 1", {{{"parent_ref", f.parent_a}}, {{"parent_ref", f.parent_b}}});
+    EXPECT_EQ(f.db.read_vector_integers_by_id("Child", "parent_ref", f.child),
+              (std::vector<int64_t>{f.parent_a, f.parent_b}));
+    EXPECT_EQ(f.db.read_vector_integers_by_id("Child", "parent_ref", other), (std::vector<int64_t>{f.parent_a}));
+
+    // A second call replaces rather than appends, and an empty row list clears.
+    f.db.update_vector_group_by_label("Child", "refs", "Child 1", {{{"parent_ref", f.parent_b}}});
+    EXPECT_EQ(f.db.read_vector_integers_by_id("Child", "parent_ref", f.child), (std::vector<int64_t>{f.parent_b}));
+
+    f.db.update_vector_group_by_label("Child", "refs", "Child 1", {});
+    EXPECT_TRUE(f.db.read_vector_integers_by_id("Child", "parent_ref", f.child).empty());
+    EXPECT_EQ(f.db.read_vector_integers_by_id("Child", "parent_ref", other), (std::vector<int64_t>{f.parent_a}));
+}
+
+TEST(Database, UpdateVectorGroupByLabelNonExistent) {
+    SharedFkFixture f;
+
+    f.db.update_vector_group("Child", "refs", f.child, {{{"parent_ref", f.parent_a}}});
+
+    try {
+        f.db.update_vector_group_by_label("Child", "refs", "No Such Child", {{{"parent_ref", f.parent_b}}});
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), "Element not found: label 'No Such Child' in collection 'Child'");
+    }
+
+    // Nothing was written - the lookup throws before the group is cleared.
+    EXPECT_EQ(f.db.read_vector_integers_by_id("Child", "parent_ref", f.child), (std::vector<int64_t>{f.parent_a}));
+
+    // A label is unique per collection, not per database: one naming an element of another
+    // collection must not resolve here.
+    try {
+        f.db.update_vector_group_by_label("Child", "refs", "Parent A", {});
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), "Element not found: label 'Parent A' in collection 'Child'");
+    }
+}
+
+// require_collection only checks has_table, so a group table reaches resolve_label. The explicit
+// require_column("label") is what stops it there instead of letting the SELECT leak a raw
+// "no such column: label" prepare error -- and the message must name the public method called.
+TEST(Database, UpdateVectorGroupByLabelOnTableWithoutLabelColumn) {
+    SharedFkFixture f;
+
+    try {
+        f.db.update_vector_group_by_label("Child_vector_refs", "refs", "anything", {});
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(),
+                     "Cannot update_vector_group_by_label: column 'label' not found in table 'Child_vector_refs'");
+    }
+}
+
+// resolve_label owns the lookup; everything past it is update_vector_group's, so the column
+// validation reports "Cannot update_vector_group" - the operation that validated.
+TEST(Database, UpdateVectorGroupByLabelValidationNamesTheIdForm) {
+    SharedFkFixture f;
+
+    try {
+        f.db.update_vector_group_by_label("Child", "refs", "Child 1", {{{"nope", int64_t{1}}}});
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        std::string msg = e.what();
+        EXPECT_TRUE(msg.find("Cannot update_vector_group:") != std::string::npos) << "Actual: " << msg;
+    }
+}
+
+TEST(Database, UpdateSetGroupByLabel) {
+    SharedFkFixture f;
+
+    // A second child so the assertions cannot pass vacuously: with only one element an update that
+    // ignored the label entirely would still hit the right row.
+    auto other = f.db.create_element("Child", quiver::Element().set("label", std::string("Child 2")));
+    f.db.update_set_group("Child", "parents", other, {{{"parent_ref", f.parent_a}}});
+
+    f.db.update_set_group_by_label(
+        "Child", "parents", "Child 1", {{{"parent_ref", f.parent_a}}, {{"parent_ref", f.parent_b}}});
+    EXPECT_EQ(f.db.read_set_integers_by_id("Child", "parent_ref", f.child),
+              (std::vector<int64_t>{f.parent_a, f.parent_b}));
+    EXPECT_EQ(f.db.read_set_integers_by_id("Child", "parent_ref", other), (std::vector<int64_t>{f.parent_a}));
+
+    // A second call replaces rather than appends, and an empty row list clears.
+    f.db.update_set_group_by_label("Child", "parents", "Child 1", {{{"parent_ref", f.parent_b}}});
+    EXPECT_EQ(f.db.read_set_integers_by_id("Child", "parent_ref", f.child), (std::vector<int64_t>{f.parent_b}));
+
+    f.db.update_set_group_by_label("Child", "parents", "Child 1", {});
+    EXPECT_TRUE(f.db.read_set_integers_by_id("Child", "parent_ref", f.child).empty());
+    EXPECT_EQ(f.db.read_set_integers_by_id("Child", "parent_ref", other), (std::vector<int64_t>{f.parent_a}));
+}
+
+TEST(Database, UpdateSetGroupByLabelNonExistent) {
+    SharedFkFixture f;
+
+    f.db.update_set_group("Child", "parents", f.child, {{{"parent_ref", f.parent_a}}});
+
+    try {
+        f.db.update_set_group_by_label("Child", "parents", "No Such Child", {{{"parent_ref", f.parent_b}}});
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), "Element not found: label 'No Such Child' in collection 'Child'");
+    }
+
+    // Nothing was written - the lookup throws before the group is cleared.
+    EXPECT_EQ(f.db.read_set_integers_by_id("Child", "parent_ref", f.child), (std::vector<int64_t>{f.parent_a}));
+
+    // A label is unique per collection, not per database: one naming an element of another
+    // collection must not resolve here.
+    try {
+        f.db.update_set_group_by_label("Child", "parents", "Parent A", {});
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), "Element not found: label 'Parent A' in collection 'Child'");
+    }
+}
+
+// require_collection only checks has_table, so a group table reaches resolve_label. The explicit
+// require_column("label") is what stops it there instead of letting the SELECT leak a raw
+// "no such column: label" prepare error -- and the message must name the public method called.
+TEST(Database, UpdateSetGroupByLabelOnTableWithoutLabelColumn) {
+    SharedFkFixture f;
+
+    try {
+        f.db.update_set_group_by_label("Child_set_parents", "parents", "anything", {});
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(),
+                     "Cannot update_set_group_by_label: column 'label' not found in table 'Child_set_parents'");
+    }
+}
+
+// resolve_label owns the lookup; everything past it is update_set_group's, so the column validation
+// reports "Cannot update_set_group" - the operation that validated.
+TEST(Database, UpdateSetGroupByLabelValidationNamesTheIdForm) {
+    SharedFkFixture f;
+
+    try {
+        f.db.update_set_group_by_label("Child", "parents", "Child 1", {{{"nope", int64_t{1}}}});
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        std::string msg = e.what();
+        EXPECT_TRUE(msg.find("Cannot update_set_group:") != std::string::npos) << "Actual: " << msg;
+    }
+}
+
+// ============================================================================
+// Relation update tests (update_relation / update_relation_by_label)
+// ============================================================================
+
+TEST(Database, UpdateRelationSetsForeignKeyById) {
+    SharedFkFixture f;
+
+    f.db.update_relation("Child", "Parent", "id", f.child, std::string("Parent A"));
+
+    EXPECT_EQ(f.db.read_scalar_integer_by_id("Child", "parent_id", f.child), f.parent_a);
+}
+
+TEST(Database, UpdateRelationByLabelResolvesSource) {
+    SharedFkFixture f;
+
+    f.db.update_relation_by_label("Child", "Parent", "id", "Child 1", std::string("Parent B"));
+
+    EXPECT_EQ(f.db.read_scalar_integer_by_id("Child", "parent_id", f.child), f.parent_b);
+}
+
+TEST(Database, UpdateRelationClearsForeignKey) {
+    SharedFkFixture f;
+    f.db.update_relation("Child", "Parent", "id", f.child, std::string("Parent A"));
+
+    f.db.update_relation("Child", "Parent", "id", f.child, std::nullopt);
+
+    EXPECT_FALSE(f.db.read_scalar_integer_by_id("Child", "parent_id", f.child).has_value());
+}
+
+TEST(Database, UpdateRelationRejectsUnknownDerivedColumn) {
+    SharedFkFixture f;
+
+    try {
+        f.db.update_relation("Child", "Parent", "owner", f.child, std::string("Parent A"));
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(),
+                     "Cannot update_relation: relation column 'parent_owner' not found in collection 'Child'");
+    }
+}
+
+// Standalone: relations.sql has no plain non-foreign-key INTEGER column, so this uses all_types.sql
+// instead. AllTypes.some_integer is a plain INTEGER, so ("AllTypes", "Some", "integer") derives
+// the existing column "some_integer", which is not a foreign key.
+TEST(Database, UpdateRelationRejectsNonForeignKeyColumn) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("all_types.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+    auto id = db.create_element("AllTypes", quiver::Element().set("label", std::string("Item 1")));
+
+    try {
+        db.update_relation("AllTypes", "Some", "integer", id, std::string("whatever"));
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(),
+                     "Cannot update_relation: relation column 'some_integer' in collection 'AllTypes' is not a "
+                     "foreign key");
+    }
+}
+
+TEST(Database, UpdateRelationRejectsForeignKeyTargetingWrongCollection) {
+    SharedFkFixture f;
+
+    // "sibling_id" exists, but it points at Child rather than the requested Sibling collection.
+    try {
+        f.db.update_relation("Child", "Sibling", "id", f.child, std::string("Child 2"));
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(),
+                     "Cannot update_relation: relation column 'sibling_id' in collection 'Child' is a foreign key to "
+                     "collection 'Child', not to 'Sibling'");
+    }
+}
+
+TEST(Database, UpdateRelationRejectsUnknownCollection) {
+    SharedFkFixture f;
+
+    EXPECT_THROW(f.db.update_relation("NoSuchCollection", "Parent", "id", f.child, std::string("Parent A")),
+                 std::runtime_error);
+}
+
+// Everything past the derivation is update_element's: the target label is resolved by
+// resolve_fk_label and the source id is checked by require_element.
+TEST(Database, UpdateRelationDelegatesValidationToUpdateElement) {
+    SharedFkFixture f;
+
+    EXPECT_THROW(f.db.update_relation("Child", "Parent", "id", f.child, std::string("No Such Parent")),
+                 std::runtime_error);
+    EXPECT_THROW(f.db.update_relation("Child", "Parent", "id", 999, std::string("Parent A")), std::runtime_error);
+}
+
+TEST(Database, UpdateRelationByLabelRejectsUnknownSourceLabel) {
+    SharedFkFixture f;
+
+    try {
+        f.db.update_relation_by_label("Child", "Parent", "id", "No Such Child", std::string("Parent A"));
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), "Element not found: label 'No Such Child' in collection 'Child'");
     }
 }

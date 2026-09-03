@@ -257,6 +257,32 @@ Database Database::from_migrations(const std::string& db_path,
     return db;
 }
 
+void Database::validate_migrations(const std::string& migrations_path) {
+    namespace fs = std::filesystem;
+    if (!fs::exists(migrations_path)) {
+        throw std::runtime_error("Cannot validate_migrations: migrations path not found: " + migrations_path);
+    }
+    if (!fs::is_directory(migrations_path)) {
+        throw std::runtime_error("Cannot validate_migrations: path is not a directory: " + migrations_path);
+    }
+    if (Migrations(migrations_path).empty()) {
+        throw std::runtime_error("Cannot validate_migrations: no migrations found in " + migrations_path);
+    }
+
+    Database db(":memory:", {.console_level = LogLevel::Off});
+    db.migrate_up(migrations_path);
+    db.migrate_down(migrations_path);
+
+    const auto leftovers = Schema::from_database(db.impl_->db).table_names();
+    if (!leftovers.empty()) {
+        std::string names;
+        for (const auto& table : leftovers) {
+            names += (names.empty() ? "" : ", ") + table;
+        }
+        throw std::runtime_error("Failed to validate_migrations: down migrations left tables behind: " + names);
+    }
+}
+
 Database
 Database::from_schema(const std::string& db_path, const std::string& schema_path, const DatabaseOptions& options) {
     namespace fs = std::filesystem;
@@ -410,6 +436,41 @@ void Database::migrate_up(const std::string& migrations_path) {
 
     impl_->load_schema_metadata();
     impl_->logger->info("All migrations applied successfully. Database now at version {}", current_version());
+}
+
+void Database::migrate_down(const std::string& migrations_path) {
+    const auto migrations = Migrations(migrations_path);
+    if (migrations.empty()) {
+        impl_->logger->debug("No migrations found in {}", migrations_path);
+        return;
+    }
+
+    const auto& all = migrations.all();
+    impl_->logger->info("Reverting {} migration(s) from version {} to 0", all.size(), migrations.latest_version());
+
+    for (auto it = all.rbegin(); it != all.rend(); ++it) {
+        impl_->logger->info("Reverting migration {}", it->version());
+
+        const auto down_sql = it->down_sql();
+        if (down_sql.empty()) {
+            throw std::runtime_error("Cannot migrate_down: migration " + std::to_string(it->version()) +
+                                     " has no down.sql file");
+        }
+
+        const auto preceding_version = it + 1 == all.rend() ? 0 : (it + 1)->version();
+        impl_->begin_transaction();
+        try {
+            execute_raw(down_sql);
+            set_version(preceding_version);
+            impl_->commit();
+            impl_->logger->info("Migration {} reverted successfully", it->version());
+        } catch (const std::exception& e) {
+            impl_->rollback();
+            impl_->logger->error("Migration {} failed: {}", it->version(), e.what());
+            throw std::runtime_error("Failed to migrate_down: migration " + std::to_string(it->version()) + ": " +
+                                     e.what());
+        }
+    }
 }
 
 void Database::apply_schema(const std::string& schema_path) {

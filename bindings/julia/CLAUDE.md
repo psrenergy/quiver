@@ -37,7 +37,11 @@ Project.toml      # Deps: Artifacts, CEnum, Dates, Libdl; julia 1.11 compat
   arg + `quiver_database_free_mask` (regenerate, don't hand-edit long-term). This makes the public
   reader's *inferred* type a 2-way `Union{Vector{T}, Vector{Optional{T}}}` (the choice is a runtime
   metadata lookup) — intended: accurate per-column types over `@inferred` purity; assert with `isa`
-  on the result, not `@inferred` on the reader. Julia-only; the `_by_id`/`query_*`/time-series
+  on the result, not `@inferred` on the reader. `read_scalar_booleans` keeps the same
+  concrete-vs-optional shape but does **not** re-read the metadata: it recovers the schema's
+  nullability from `read_scalar_integers`' container type (`values isa Vector{Int64}`), so it adds
+  no FFI round-trip — if that delegate's container type ever changes, this branch changes with it.
+  Julia-only; the `_by_id`/`query_*`/time-series
   readers are not yet converted — see `type_stability_followup.md`. An `INTEGER PRIMARY KEY` (e.g.
   `id`) is a rowid alias and is reported `not_null` by the C++ core (`scalar_metadata_from_column`),
   so `read_scalar_integers(db, c, "id")` is a concrete `Vector{Int64}`.
@@ -55,10 +59,22 @@ Project.toml      # Deps: Artifacts, CEnum, Dates, Libdl; julia 1.11 compat
 - **`read_time_series_row` is `Vector{Optional{T}}` for every type** — numeric absence from a flat
   `Ptr{UInt8}` mask, strings from a `C_NULL` guard. Do **not** add the bulk-scalar `not_null` fast
   path: absence here is a property of the query, not of the column (root design decision).
-- **One marshaller for all three group writers**: `_update_group_columns(db, update, ...)`
+- **One marshaller for every group writer**: `_update_group_columns(db, update, ...)`
   (`src/database_update.jl`) takes the C entry point as an argument, so `update_time_series_group!`,
-  `update_vector_group!` and `update_set_group!` are one-line wrappers over it. Don't copy the
+  `update_vector_group!`, `update_set_group!` and their `_by_label!` forms are one-line
+  wrappers over it. Its `key` is a `Union{Int64, String}` — the `@ccall` in `c_api.jl` annotates
+  that argument per function, so an id and a label both marshal correctly. Don't copy the
   `GC.@preserve` body per writer.
+- **One marshaller for every row upsert**: `_upsert_row_columns(db, upsert, ...)`
+  (`src/database_update.jl`) is its row-shaped sibling — every kwarg is a scalar wrapped in a
+  1-element typed array — so `upsert_time_series_row!` and `upsert_time_series_row_by_label!` are
+  one-line wrappers over it, with the same `key::Union{Int64, String}` note. Kept separate from
+  `_update_group_columns` because the row-upsert C signature carries no per-cell NULL mask, and
+  that helper writes a zeroed placeholder for a masked cell.
+- **A nullable scalar string argument passes `Ptr{Cchar}(C_NULL)`, never `""`**
+  (`update_relation!`/`update_relation_by_label!`) — the C API reads NULL as "clear the relation"
+  and an empty string as a label to look up. The `GC.@preserve` rule above does not apply: there
+  are no `Ref`s, and `@ccall` pins a `String` argument itself for the duration of the call.
 - **Library loader** (`src/c_api.jl`, emitted from `generator/prologue.jl`) is **relocatable** —
   this matters for downstream apps compiled with PackageCompiler (`create_app`), where a baked
   absolute path would freeze the build machine's depot and fail on the target. Split design:
@@ -80,6 +96,19 @@ Project.toml      # Deps: Artifacts, CEnum, Dates, Libdl; julia 1.11 compat
   FK column derived from the naming convention, mapping each element to the positional index of
   its related element) exist only in this binding — documented exceptions in the root design
   decisions.
+- **Scoped resource factories**: `open`, `from_schema`, `from_migrations`, and
+  `Binary.open_file` have callback-first overloads for Julia `do` syntax. They return the
+  callback result and call the existing idempotent `close!` from `finally`, so both normal and
+  exceptional exits release the resource. The callback is typed **`fn::Function`** — with it
+  untyped, an arity slip (`from_schema("a.db", "b.db", "schema.sql")`) dispatches here and the
+  factory *runs* before the `MethodError`, and `from_schema` starts with `fs::remove(db_path)`
+  while a plain `open` creates the file. The overloads forward `kwargs...` rather than restating
+  the base method's keywords, so a keyword added later reaches the `do` form too. Two caveats a
+  caller has to know: a `LuaRunner` borrows a raw `Database&` (`src/lua_runner.cpp`), so one built
+  inside the block dangles after it (`.ptr` stays non-NULL — no error, just freed memory; the real
+  guard belongs in the C API, since Python's `with` has the same hole), and an uncommitted
+  transaction open at the block's exit is rolled back by the close — nest
+  `transaction(db) do db ... end`.
 - **No schemas live in this binding**: `test/fixture.jl` resolves the schema directory at
   runtime, preferring repo-root `tests/schemas/`; the publish workflow copies those schemas
   into the mirror's `test/schemas/`.

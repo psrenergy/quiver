@@ -13,10 +13,11 @@ src/              # Module per C API category: database.ts, create.ts, read.ts, 
                   # query.ts, time-series.ts, transaction.ts, csv.ts, introspection.ts,
                   # composites.ts, lua-runner.ts (index.ts re-exports the public surface)
 src/lua-api.ts    # LUA_DB_API_REFERENCE — agent-facing Lua `db:` API reference, as a string const
-src/group-columns.ts # Shared columnar marshaller for the three group writers
+src/group-columns.ts # Shared columnar marshaller for the group writers (by id and by label)
 src/loader.ts     # HAND-WRITTEN FFI symbol table + 3-tier library loader
 src/types.ts      # Central DATA_TYPE_* / LOG_LEVEL_* constants and DatabaseOptions type
 src/ffi-helpers.ts # Alloc helpers, makeDefaultOptions()
+src/boolean.ts    # integerToBoolean — strict 0/1 conversion for the boolean convenience readers
 src/errors.ts     # QuiverError (always thrown; message from quiver_get_last_error)
 test/             # bun:test suite (*.test.ts per area) + test.bat
 package.json      # Version must match CMakeLists.txt; scripts: test/lint/format (biome)
@@ -62,12 +63,17 @@ biome.json        # Lint/format config
   exactly, never coerced through `Number`. Read paths return `number` (converted via `Number()`
   after the FFI call) — the deliberately simple surface.
 - **`src/group-columns.ts` is the one columnar marshaller** for `updateTimeSeriesGroup`,
-  `updateVectorGroup` and `updateSetGroup` (`updateGroupColumns(handle, caller, cFn, ...)`) — the
-  three differ only in which C entry point they pass, so don't re-inline it per method. It validates
-  before marshalling: jagged columns and named-but-empty columns (`rowCount === 0`) throw a
-  `QuiverError` naming the column. Load-bearing — an empty column would otherwise marshal a `null`
-  data pointer that the C API dereferences against the first column's `row_count`. Pass `{}` (no
-  columns) to clear the group. The C API rejects both cases too; failing here names the column.
+  `updateVectorGroup`, `updateSetGroup` and their `ByLabel` forms. They differ only in which C
+  entry point they pass to `updateGroupColumns(handle, caller, cFn, ...)` and whether `key` is a
+  `number` id (a `bigint`) or a `string` label (a `Uint8Array`), so don't re-inline it per method.
+  It validates before marshalling: jagged columns and named-but-empty columns (`rowCount === 0`)
+  throw a `QuiverError` naming the column. Load-bearing — an empty column would otherwise marshal a
+  `null` data pointer that the C API dereferences against the first column's `row_count`. Pass `{}`
+  (no columns) to clear the group. The C API rejects both cases too; failing here names the column.
+- **A nullable scalar string argument passes literal `null`, never `""`**
+  (`updateRelation`/`updateRelationByLabel`) — Bun turns `null` into a NULL pointer for a
+  `"pointer"` slot, the same way `group-columns.ts` passes `null` for the array pointers when
+  clearing. The C API reads NULL as "clear the relation" and an empty string as a label to look up.
 - **Scalar bulk NULLs**: `readScalarIntegers`/`readScalarFloats` read a parallel `uint8_t*` mask
   (`new Uint8Array(toArrayBuffer(...))`) and gate `mask[i] ? v : null` → `(number | null)[]` — never
   `Number()` a masked slot (would turn NULL into 0). `readScalarStrings` reads pointer-by-pointer with
@@ -86,6 +92,13 @@ biome.json        # Lint/format config
   for masked cells). Reads decode the mask and null-out cells; string columns use the null-guarded
   pointer loop (never `decodeStringArray`, which constructs a `CString` from a NULL pointer). Masks
   are built by direct `Uint8Array` indexing — never a `DataView` — per the TypedArray house rule.
+- **`integerToBoolean` throws `RangeError`, not `QuiverError`** — the one exception to the
+  "always `QuiverError`" rule above, and deliberate: that message comes from
+  `quiver_get_last_error`, while this one is crafted here (the boolean readers are a binding-only
+  convenience the core never sees). It names the offending `collection.attribute`; `queryBoolean`
+  has no column to name. On writes a `boolean` is an INTEGER 1/0 — `setElementField`,
+  `setElementArray`, and `marshalParams` each carry a `typeof === "boolean"` branch, and
+  `ScalarValue`/`ArrayValue`/`QueryParam` include it.
 - **Test/lint/format**: `bun test test`, `bun run lint`, `bun run format` (biome, project-pinned
   version). No permission flags needed (Bun has none — don't carry over Deno habits). There is
   pre-existing lint debt in untouched files — fix only what your change orphans, don't drive-by

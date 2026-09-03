@@ -64,6 +64,17 @@ export class Database {
     return new Database(readPtrOut(outDb));
   }
 
+  /**
+   * Applies every migration's up.sql in order, then every down.sql in reverse.
+   * Throws on failure, including a round trip that leaves any table behind.
+   */
+  static validateMigrations(migrationsPath: string): void {
+    const lib = getSymbols();
+    const migrPathBuf = toCString(migrationsPath);
+
+    check(lib.quiver_database_validate_migrations(migrPathBuf.buf));
+  }
+
   close(): void {
     if (this._closed) return;
     const lib = getSymbols();
@@ -86,11 +97,27 @@ export class Database {
   // --- Element CRUD (implemented in create.ts) ---
   declare createElement: (collection: string, data: ElementData) => number;
   declare updateElement: (collection: string, id: number, data: ElementData) => void;
+  declare updateElementByLabel: (collection: string, label: string, data: ElementData) => void;
   declare deleteElement: (collection: string, id: number) => void;
   declare deleteElementByLabel: (collection: string, label: string) => void;
+  declare updateRelation: (
+    collectionFrom: string,
+    collectionTo: string,
+    relationType: string,
+    id: number,
+    targetLabel: string | null,
+  ) => void;
+  declare updateRelationByLabel: (
+    collectionFrom: string,
+    collectionTo: string,
+    relationType: string,
+    label: string,
+    targetLabel: string | null,
+  ) => void;
 
   // --- Reads (implemented in read.ts) ---
   declare readScalarIntegers: (collection: string, attribute: string) => (number | null)[];
+  declare readScalarBooleans: (collection: string, attribute: string) => (boolean | null)[];
   declare readScalarFloats: (collection: string, attribute: string) => (number | null)[];
   declare readScalarStrings: (collection: string, attribute: string) => (string | null)[];
   declare readScalarIntegerById: (
@@ -98,6 +125,11 @@ export class Database {
     attribute: string,
     id: number,
   ) => number | null;
+  declare readScalarBooleanById: (
+    collection: string,
+    attribute: string,
+    id: number,
+  ) => boolean | null;
   declare readScalarFloatById: (collection: string, attribute: string, id: number) => number | null;
   declare readScalarStringById: (
     collection: string,
@@ -107,21 +139,26 @@ export class Database {
   declare readElementIds: (collection: string) => number[];
   declare numberOfElements: (collection: string) => number;
   declare readVectorIntegers: (collection: string, attribute: string) => number[][];
+  declare readVectorBooleans: (collection: string, attribute: string) => boolean[][];
   declare readVectorFloats: (collection: string, attribute: string) => number[][];
   declare readVectorStrings: (collection: string, attribute: string) => string[][];
   declare readVectorIntegersById: (collection: string, attribute: string, id: number) => number[];
+  declare readVectorBooleansById: (collection: string, attribute: string, id: number) => boolean[];
   declare readVectorFloatsById: (collection: string, attribute: string, id: number) => number[];
   declare readVectorStringsById: (collection: string, attribute: string, id: number) => string[];
   declare readSetIntegers: (collection: string, attribute: string) => number[][];
+  declare readSetBooleans: (collection: string, attribute: string) => boolean[][];
   declare readSetFloats: (collection: string, attribute: string) => number[][];
   declare readSetStrings: (collection: string, attribute: string) => string[][];
   declare readSetIntegersById: (collection: string, attribute: string, id: number) => number[];
+  declare readSetBooleansById: (collection: string, attribute: string, id: number) => boolean[];
   declare readSetFloatsById: (collection: string, attribute: string, id: number) => number[];
   declare readSetStringsById: (collection: string, attribute: string, id: number) => string[];
 
   // --- Queries (implemented in query.ts) ---
   declare queryString: (sql: string, parameters?: QueryParam[]) => string | null;
   declare queryInteger: (sql: string, parameters?: QueryParam[]) => number | null;
+  declare queryBoolean: (sql: string, parameters?: QueryParam[]) => boolean | null;
   declare queryFloat: (sql: string, parameters?: QueryParam[]) => number | null;
 
   // --- Transactions (implemented in transaction.ts) ---
@@ -157,10 +194,22 @@ export class Database {
     id: number,
     data: TimeSeriesData,
   ) => void;
+  declare updateTimeSeriesGroupByLabel: (
+    collection: string,
+    group: string,
+    label: string,
+    data: TimeSeriesData,
+  ) => void;
   declare updateVectorGroup: (
     collection: string,
     group: string,
     id: number,
+    data: GroupColumns,
+  ) => void;
+  declare updateVectorGroupByLabel: (
+    collection: string,
+    group: string,
+    label: string,
     data: GroupColumns,
   ) => void;
   declare updateSetGroup: (
@@ -169,10 +218,22 @@ export class Database {
     id: number,
     data: GroupColumns,
   ) => void;
+  declare updateSetGroupByLabel: (
+    collection: string,
+    group: string,
+    label: string,
+    data: GroupColumns,
+  ) => void;
   declare upsertTimeSeriesRow: (
     collection: string,
     group: string,
     id: number,
+    row: Record<string, number | bigint | string>,
+  ) => void;
+  declare upsertTimeSeriesRowByLabel: (
+    collection: string,
+    group: string,
+    label: string,
     row: Record<string, number | bigint | string>,
   ) => void;
   declare hasTimeSeriesFiles: (collection: string) => boolean;

@@ -872,6 +872,156 @@ TEST(DatabaseCApi, UpsertTimeSeriesRowNullColumnArraysWithCount) {
 }
 
 // ============================================================================
+// upsert_time_series_row_by_label tests
+// ============================================================================
+
+TEST(DatabaseCApi, UpsertTimeSeriesRowByLabel) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    const auto make = [&](const char* collection, const char* label) {
+        quiver_element_t* e = nullptr;
+        EXPECT_EQ(quiver_element_create(&e), QUIVER_OK);
+        quiver_element_set_string(e, "label", label);
+        int64_t id = 0;
+        EXPECT_EQ(quiver_database_create_element(db, collection, e, &id), QUIVER_OK);
+        EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
+        return id;
+    };
+    make("Configuration", "Test Config");
+    const int64_t item1 = make("Collection", "Item 1");
+    // A second element so nothing below passes vacuously.
+    const int64_t item2 = make("Collection", "Item 2");
+
+    // Both writes share a dimension key, so a mis-resolved label shows up as the wrong value.
+    const char* col_names[] = {"date_time", "value"};
+    int col_types[] = {QUIVER_DATA_TYPE_STRING, QUIVER_DATA_TYPE_FLOAT};
+    const char* dt_buf[] = {"2024-01-01T10:00:00"};
+    double val_other[] = {99.0};
+    const void* col_data_other[] = {dt_buf, val_other};
+    ASSERT_EQ(quiver_database_upsert_time_series_row_by_label(
+                  db, "Collection", "data", "Item 2", col_names, col_types, col_data_other, 2),
+              QUIVER_OK);
+
+    double val_first[] = {1.5};
+    const void* col_data_first[] = {dt_buf, val_first};
+    ASSERT_EQ(quiver_database_upsert_time_series_row_by_label(
+                  db, "Collection", "data", "Item 1", col_names, col_types, col_data_first, 2),
+              QUIVER_OK);
+
+    // The FLOAT value column of one element's single row, read through the columnar C API.
+    const auto value_of = [&](int64_t id) {
+        char** out_col_names = nullptr;
+        int* out_col_types = nullptr;
+        void** out_col_data = nullptr;
+        uint8_t** out_col_has_value = nullptr;
+        size_t col_count = 0;
+        size_t row_count = 0;
+        EXPECT_EQ(quiver_database_read_time_series_group(db,
+                                                         "Collection",
+                                                         "data",
+                                                         id,
+                                                         &out_col_names,
+                                                         &out_col_types,
+                                                         &out_col_data,
+                                                         &out_col_has_value,
+                                                         &col_count,
+                                                         &row_count),
+                  QUIVER_OK);
+        EXPECT_EQ(row_count, 1u);
+        EXPECT_EQ(col_count, 2u);
+        const double value = row_count == 1 ? static_cast<double*>(out_col_data[1])[0] : NAN;
+        quiver_database_free_time_series_data(
+            out_col_names, out_col_types, out_col_data, out_col_has_value, col_count, row_count);
+        return value;
+    };
+
+    EXPECT_DOUBLE_EQ(value_of(item1), 1.5);
+    // Item 2 kept its own value — the second write resolved to Item 1, not to every element.
+    EXPECT_DOUBLE_EQ(value_of(item2), 99.0);
+
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, UpsertTimeSeriesRowByLabelNonExistent) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    const char* col_names[] = {"date_time", "value"};
+    int col_types[] = {QUIVER_DATA_TYPE_STRING, QUIVER_DATA_TYPE_FLOAT};
+    const char* dt_buf[] = {"2024-01-01T10:00:00"};
+    double val_buf[] = {1.0};
+    const void* col_data[] = {dt_buf, val_buf};
+
+    EXPECT_EQ(quiver_database_upsert_time_series_row_by_label(
+                  db, "Collection", "data", "No Such Item", col_names, col_types, col_data, 2),
+              QUIVER_ERROR);
+    std::string msg = quiver_get_last_error();
+    EXPECT_EQ(msg, "Element not found: label 'No Such Item' in collection 'Collection'") << "Actual: " << msg;
+
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, UpsertTimeSeriesRowByLabelNullArguments) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    const char* col_names[] = {"date_time", "value"};
+    int col_types[] = {QUIVER_DATA_TYPE_STRING, QUIVER_DATA_TYPE_FLOAT};
+    const char* dt_buf[] = {"2024-01-01T10:00:00"};
+    double val_buf[] = {1.0};
+    const void* col_data[] = {dt_buf, val_buf};
+
+    EXPECT_EQ(quiver_database_upsert_time_series_row_by_label(
+                  nullptr, "Collection", "data", "Item 1", col_names, col_types, col_data, 2),
+              QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_upsert_time_series_row_by_label(
+                  db, nullptr, "data", "Item 1", col_names, col_types, col_data, 2),
+              QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_upsert_time_series_row_by_label(
+                  db, "Collection", nullptr, "Item 1", col_names, col_types, col_data, 2),
+              QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_upsert_time_series_row_by_label(
+                  db, "Collection", "data", nullptr, col_names, col_types, col_data, 2),
+              QUIVER_ERROR);
+
+    quiver_database_close(db);
+}
+
+// The shared decoder runs inside the by-label wrapper, so it names itself - and it runs before the
+// label is resolved, so no element has to exist.
+TEST(DatabaseCApi, UpsertTimeSeriesRowByLabelUnknownColumnType) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    const char* col_names[] = {"date_time", "value"};
+    int col_types[] = {QUIVER_DATA_TYPE_STRING, 99};  // 99 is bogus
+    const char* dt_buf[] = {"2024-01-01T10:00:00"};
+    double val_buf[] = {1.0};
+    const void* col_data[] = {dt_buf, val_buf};
+
+    EXPECT_EQ(quiver_database_upsert_time_series_row_by_label(
+                  db, "Collection", "data", "No Such Item", col_names, col_types, col_data, 2),
+              QUIVER_ERROR);
+    std::string msg = quiver_get_last_error();
+    EXPECT_EQ(msg, "Cannot upsert_time_series_row_by_label: unknown column type 99") << "Actual: " << msg;
+
+    quiver_database_close(db);
+}
+
+// ============================================================================
 // Time series row read tests (read_time_series_row)
 // ============================================================================
 

@@ -30,6 +30,7 @@ QUIVER_C_API quiver_error_t quiver_database_from_migrations(const char* db_path,
                                                             const char* migrations_path,
                                                             const quiver_database_options_t* options,
                                                             quiver_database_t** out_db);
+QUIVER_C_API quiver_error_t quiver_database_validate_migrations(const char* migrations_path);
 QUIVER_C_API quiver_error_t quiver_database_from_schema(const char* db_path,
                                                         const char* schema_path,
                                                         const quiver_database_options_t* options,
@@ -71,6 +72,21 @@ QUIVER_C_API quiver_error_t quiver_database_delete_element(quiver_database_t* db
 QUIVER_C_API quiver_error_t quiver_database_delete_element_by_label(quiver_database_t* db,
                                                                     const char* collection,
                                                                     const char* label);
+
+// Update one scalar foreign-key relation. The column is derived as
+// lowercase(collection_to) + "_" + relation_type; a NULL target_label clears it.
+QUIVER_C_API quiver_error_t quiver_database_update_relation(quiver_database_t* db,
+                                                            const char* collection_from,
+                                                            const char* collection_to,
+                                                            const char* relation_type,
+                                                            int64_t id,
+                                                            const char* target_label);
+QUIVER_C_API quiver_error_t quiver_database_update_relation_by_label(quiver_database_t* db,
+                                                                     const char* collection_from,
+                                                                     const char* collection_to,
+                                                                     const char* relation_type,
+                                                                     const char* label,
+                                                                     const char* target_label);
 
 // Read scalar attributes. One entry per element (aligned with read_element_ids).
 // Numeric readers carry a parallel presence mask: out_mask[i] == 0 means SQL NULL and
@@ -243,7 +259,8 @@ QUIVER_C_API quiver_error_t quiver_database_read_set_group_by_id(quiver_database
 // foreign-key column accepts a label string. Prefer these over passing arrays through
 // quiver_database_update_element when a column name is shared by two groups of the same collection
 // (legal for foreign keys): (collection, group) names exactly one table, a column name alone
-// does not.
+// does not. The _by_label forms take a label in place of the id and report
+// "Element not found: label '...' in collection '...'" on a miss.
 QUIVER_C_API quiver_error_t quiver_database_update_vector_group(quiver_database_t* db,
                                                                 const char* collection,
                                                                 const char* group,
@@ -255,6 +272,17 @@ QUIVER_C_API quiver_error_t quiver_database_update_vector_group(quiver_database_
                                                                 size_t column_count,
                                                                 size_t row_count);
 
+QUIVER_C_API quiver_error_t quiver_database_update_vector_group_by_label(quiver_database_t* db,
+                                                                         const char* collection,
+                                                                         const char* group,
+                                                                         const char* label,
+                                                                         const char* const* column_names,
+                                                                         const int* column_types,
+                                                                         const void* const* column_data,
+                                                                         const uint8_t* const* column_has_value,
+                                                                         size_t column_count,
+                                                                         size_t row_count);
+
 QUIVER_C_API quiver_error_t quiver_database_update_set_group(quiver_database_t* db,
                                                              const char* collection,
                                                              const char* group,
@@ -265,6 +293,17 @@ QUIVER_C_API quiver_error_t quiver_database_update_set_group(quiver_database_t* 
                                                              const uint8_t* const* column_has_value,
                                                              size_t column_count,
                                                              size_t row_count);
+
+QUIVER_C_API quiver_error_t quiver_database_update_set_group_by_label(quiver_database_t* db,
+                                                                      const char* collection,
+                                                                      const char* group,
+                                                                      const char* label,
+                                                                      const char* const* column_names,
+                                                                      const int* column_types,
+                                                                      const void* const* column_data,
+                                                                      const uint8_t* const* column_has_value,
+                                                                      size_t column_count,
+                                                                      size_t row_count);
 
 // Read element Ids
 QUIVER_C_API quiver_error_t quiver_database_read_element_ids(quiver_database_t* db,
@@ -377,6 +416,8 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_group(quiver_databa
 // is never read (a NULL char* placeholder is fine for string columns). Masking out a
 // dimension-column cell inserts NULL into a PK column and fails with the SQLite constraint error
 // Pass column_count == 0 and row_count == 0 with NULL arrays to clear all rows
+// The _by_label form takes a label in place of the id and reports
+// "Element not found: label '...' in collection '...'" on a miss.
 QUIVER_C_API quiver_error_t quiver_database_update_time_series_group(quiver_database_t* db,
                                                                      const char* collection,
                                                                      const char* group,
@@ -388,6 +429,17 @@ QUIVER_C_API quiver_error_t quiver_database_update_time_series_group(quiver_data
                                                                      size_t column_count,
                                                                      size_t row_count);
 
+QUIVER_C_API quiver_error_t quiver_database_update_time_series_group_by_label(quiver_database_t* db,
+                                                                              const char* collection,
+                                                                              const char* group,
+                                                                              const char* label,
+                                                                              const char* const* column_names,
+                                                                              const int* column_types,
+                                                                              const void* const* column_data,
+                                                                              const uint8_t* const* column_has_value,
+                                                                              size_t column_count,
+                                                                              size_t row_count);
+
 // Add (or upsert) a single time series row with multi-column typed data
 // column_names[]: column names (must include every dimension column from the schema PK)
 // column_types[]: quiver_data_type_t per column
@@ -395,6 +447,9 @@ QUIVER_C_API quiver_error_t quiver_database_update_time_series_group(quiver_data
 // STRING/DATE_TIME) Upserts on the time-series PK (id + every dimension column); calling twice with the same PK
 // overwrites value columns Errors surface canonical "Cannot upsert_time_series_row: ..." messages via
 // quiver_get_last_error
+// A NULL column_data[c], or a NULL char* entry for a string column, inserts SQL NULL
+// The _by_label form takes a label in place of the id and reports
+// "Element not found: label '...' in collection '...'" on a miss.
 QUIVER_C_API quiver_error_t quiver_database_upsert_time_series_row(quiver_database_t* db,
                                                                    const char* collection,
                                                                    const char* group,
@@ -403,6 +458,15 @@ QUIVER_C_API quiver_error_t quiver_database_upsert_time_series_row(quiver_databa
                                                                    const int* column_types,
                                                                    const void* const* column_data,
                                                                    size_t column_count);
+
+QUIVER_C_API quiver_error_t quiver_database_upsert_time_series_row_by_label(quiver_database_t* db,
+                                                                            const char* collection,
+                                                                            const char* group,
+                                                                            const char* label,
+                                                                            const char* const* column_names,
+                                                                            const int* column_types,
+                                                                            const void* const* column_data,
+                                                                            size_t column_count);
 
 // Read time series row - returns one value per element for a specific attribute at a given date_time
 // Uses "last non-null value at or before date_time" lookup semantics

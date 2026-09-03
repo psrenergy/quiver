@@ -54,7 +54,7 @@ CREATE TABLE ThermalPlant(
 ) STRICT;
 ```
 
-If an attribute name starts with `date` it should be stored as a `TEXT` and indicates a date that will be mapped to a DateTime object.
+If an attribute name starts with `date_` it should be stored as a `TEXT` and indicates a date that will be mapped to a DateTime object. Its value must be ISO 8601 — `YYYY-MM-DD`, optionally followed by `THH:MM:SS` or ` HH:MM:SS` — and is rejected at write time otherwise.
 
 Example:
 ```sql
@@ -140,7 +140,7 @@ CREATE TABLE HydroPlant_set_gaugingstations(
 - Time Series stored in the database should be stored in a table with the name of the Collection followed by `_time_series_` and the name of the attribute group, such a `COLLECTION_time_series_GROUP_OF_ATTRIBUTES`.
 
 - The table must contain a Column named `id`.
-- A mandatory column named `date_time` should be created to store the date of the time series data. The date_time column should be of type `TEXT` and have the `NOT NULL` constraint.
+- A mandatory column named `date_time` should be created to store the date of the time series data. The date_time column should be of type `TEXT` and have the `NOT NULL` constraint. Its values must be ISO 8601 (`YYYY-MM-DD`, optionally followed by `THH:MM:SS` or ` HH:MM:SS`); a value that does not parse is rejected when the row is written.
 
 Example:
 
@@ -194,3 +194,7 @@ by the function `Quiver.set_migrations_folder` and after that you can create a n
 ### Running migrations
 
 To run migrations you need to use the function `Quiver.apply_migrations!`. There are various versions of this function, each one tailored to make something easier for the user.
+
+### Validating migrations
+
+Only the `up` migrations run when a database is created or updated, so a broken `down.sql` stays invisible until someone needs to revert it. The function `validate_migrations` validates a migrations directory by running the whole round trip — every `up.sql` in version order, then every `down.sql` in reverse — against a throwaway in-memory database, throwing on the first failure. Nothing on disk is touched, and every migration must have a `down.sql`. The round trip must also end with an empty database; leftover tables are named in the error.
