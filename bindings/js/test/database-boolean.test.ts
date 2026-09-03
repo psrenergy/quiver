@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
 
-import { Database } from "../src/index.ts";
+import { Database, QuiverError } from "../src/index.ts";
 
 const SCHEMA_PATH = join(
   import.meta.dir,
@@ -67,8 +67,8 @@ describe("boolean convenience methods", () => {
     try {
       db.createElement("AllTypes", { label: "Invalid", some_integer: 2 });
 
-      expect(() => db.readScalarBooleans("AllTypes", "some_integer")).toThrow(RangeError);
-      expect(() => db.queryBoolean("SELECT 2")).toThrow(RangeError);
+      expect(() => db.readScalarBooleans("AllTypes", "some_integer")).toThrow(QuiverError);
+      expect(() => db.queryBoolean("SELECT 2")).toThrow(QuiverError);
     } finally {
       db.close();
     }
