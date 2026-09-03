@@ -42,6 +42,60 @@ end
     end
 end
 
+@testset "Scoped database factories" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+    path_migrations = joinpath(tests_path(), "schemas", "migrations")
+
+    schema_db = Ref{Union{Nothing, Quiver.Database}}(nothing)
+    schema_result = Quiver.from_schema(":memory:", path_schema) do db
+        schema_db[] = db
+        @test Quiver.is_healthy(db)
+        return :schema_result
+    end
+    @test schema_result === :schema_result
+    @test schema_db[].ptr == C_NULL
+
+    migrations_db = Ref{Union{Nothing, Quiver.Database}}(nothing)
+    migrations_result = Quiver.from_migrations(":memory:", path_migrations) do db
+        migrations_db[] = db
+        @test Quiver.current_version(db) == 3
+        return :migrations_result
+    end
+    @test migrations_result === :migrations_result
+    @test migrations_db[].ptr == C_NULL
+
+    mktempdir() do dir
+        db_path = joinpath(dir, "test.db")
+        Quiver.from_schema(db_path, path_schema) do db
+            @test Quiver.is_healthy(db)
+        end
+
+        opened_db = Ref{Union{Nothing, Quiver.Database}}(nothing)
+        open_result = Quiver.open(db_path; read_only = true) do db
+            opened_db[] = db
+            @test Quiver.is_healthy(db)
+            return :open_result
+        end
+        @test open_result === :open_result
+        @test opened_db[].ptr == C_NULL
+        return nothing
+    end
+end
+
+@testset "Scoped database factory closes after callback error" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+    captured_db = Ref{Union{Nothing, Quiver.Database}}(nothing)
+
+    exception = @test_throws ErrorException begin
+        Quiver.from_schema(":memory:", path_schema) do db
+            captured_db[] = db
+            error("scoped callback failed")
+        end
+    end
+    @test exception.value.msg == "scoped callback failed"
+    @test captured_db[].ptr == C_NULL
+end
+
 @testset "Describe" begin
     path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
     db = Quiver.from_schema(":memory:", path_schema)

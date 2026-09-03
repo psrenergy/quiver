@@ -72,6 +72,51 @@ end
         end
     end
 
+    @testset "Scoped open returns callback result and closes" begin
+        path = make_binary_file_path()
+        try
+            md = make_simple_metadata()
+            captured_file = Ref{Union{Nothing, Quiver.Binary.File}}(nothing)
+            result = Quiver.Binary.open_file(path; mode = 'w', metadata = md) do file
+                captured_file[] = file
+                Quiver.Binary.write!(file; data = [1.0, 2.0], row = 1, col = 1)
+                return :written
+            end
+
+            @test result === :written
+            @test captured_file[].ptr == C_NULL
+            @test isfile(path * ".qvr")
+            @test isfile(path * ".toml")
+        finally
+            cleanup_binary_file(path)
+        end
+    end
+
+    @testset "Scoped open closes after callback error" begin
+        path = make_binary_file_path()
+        try
+            md = make_simple_metadata()
+            captured_file = Ref{Union{Nothing, Quiver.Binary.File}}(nothing)
+            exception = @test_throws ErrorException begin
+                Quiver.Binary.open_file(path; mode = 'w', metadata = md) do file
+                    captured_file[] = file
+                    error("scoped callback failed")
+                end
+            end
+
+            @test exception.value.msg == "scoped callback failed"
+            @test captured_file[].ptr == C_NULL
+
+            # The scoped cleanup releases the writer registry entry.
+            Quiver.Binary.open_file(path; mode = 'r') do file
+                @test Quiver.Binary.get_file_path(file) == path
+                Quiver.Binary.close!(file)
+            end
+        finally
+            cleanup_binary_file(path)
+        end
+    end
+
     @testset "Read mode on missing file" begin
         path = make_binary_file_path()
         cleanup_binary_file(path)

@@ -35,6 +35,20 @@ function close!(file::File)
     return nothing
 end
 
+function open_file(
+    fn,
+    path::String;
+    mode::Char,
+    metadata::Optional{Metadata} = nothing,
+)
+    file = open_file(path; mode, metadata)
+    try
+        return fn(file)
+    finally
+        close!(file)
+    end
+end
+
 function read(file::File; allow_nulls::Bool = false, dims...)
     dim_names_str = [String(k) for (k, _) in dims]
     dim_values = Int64[Int64(v) for (_, v) in dims]

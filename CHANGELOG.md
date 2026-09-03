@@ -9,6 +9,10 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ### Changed
 
+- Julia's `open`, `from_schema`, `from_migrations`, and `Binary.open_file` now accept `do` blocks
+  that return the callback result and close the database or binary file on both normal and
+  exceptional exits.
+
 - **BREAKING — a `DATE_TIME` value is validated when it is written.** A string bound to a
   `date_`-prefixed column must be ISO 8601: `YYYY-MM-DD`, optionally followed by `THH:MM:SS` or
   ` HH:MM:SS`. Anything else now throws `Cannot <operation>: invalid DATE_TIME value for column

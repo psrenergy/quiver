@@ -89,6 +89,10 @@ Project.toml      # Deps: Artifacts, CEnum, Dates, Libdl; julia 1.11 compat
   FK column derived from the naming convention, mapping each element to the positional index of
   its related element) exist only in this binding — documented exceptions in the root design
   decisions.
+- **Scoped resource factories**: `open`, `from_schema`, `from_migrations`, and
+  `Binary.open_file` have callback-first overloads for Julia `do` syntax. They return the
+  callback result and call the existing idempotent `close!` from `finally`, so both normal and
+  exceptional exits release the resource.
 - **No schemas live in this binding**: `test/fixture.jl` resolves the schema directory at
   runtime, preferring repo-root `tests/schemas/`; the publish workflow copies those schemas
   into the mirror's `test/schemas/`.
