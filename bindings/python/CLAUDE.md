@@ -52,7 +52,8 @@ ruff.toml         # Lint/format config (format.bat runs ruff)
   closure-parameterized helpers (root "Do not 'fix'" list).
 - **Scalar bulk NULLs**: `read_scalar_integers`/`_floats` decode a parallel `uint8_t**` mask into
   `list[T | None]` (`mask[i]` falsy → `None`); `read_scalar_strings` already returns `list[str | None]`
-  via the `ffi.NULL` guard. `_c_api.py` carries the mask out-param on the two numeric readers plus
+  via the `ffi.NULL` guard, and `read_scalar_date_times` maps that list while preserving its `None`
+  slots. `_c_api.py` carries the mask out-param on the two numeric readers plus
   `quiver_database_free_mask`.
 - **`_integer_to_boolean` raises `ValueError`, not `QuiverError`** — the second documented
   exception to "messages come from C++", alongside `_marshal_group_columns`' jagged-column check.

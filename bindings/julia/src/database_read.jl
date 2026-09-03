@@ -83,6 +83,13 @@ function read_scalar_strings(db::Database, collection::String, attribute::String
     return result
 end
 
+function read_scalar_date_times(db::Database, collection::String, attribute::String)
+    values = read_scalar_strings(db, collection, attribute)
+    # Preserve the delegate's schema-derived concrete-vs-optional element type.
+    T = values isa Vector{String} ? DateTime : Optional{DateTime}
+    return T[isnothing(value) ? nothing : string_to_date_time(value) for value in values]
+end
+
 function read_vector_integers(db::Database, collection::String, attribute::String)
     out_vectors = Ref{Ptr{Ptr{Int64}}}(C_NULL)
     out_sizes = Ref{Ptr{Csize_t}}(C_NULL)
@@ -171,6 +178,13 @@ function read_vector_strings(db::Database, collection::String, attribute::String
     return result
 end
 
+function read_vector_date_times(db::Database, collection::String, attribute::String)
+    return Vector{DateTime}[
+        [string_to_date_time(value) for value in values] for
+        values in read_vector_strings(db, collection, attribute)
+    ]
+end
+
 function read_set_integers(db::Database, collection::String, attribute::String)
     out_sets = Ref{Ptr{Ptr{Int64}}}(C_NULL)
     out_sizes = Ref{Ptr{Csize_t}}(C_NULL)
@@ -256,6 +270,13 @@ function read_set_strings(db::Database, collection::String, attribute::String)
     end
     C.quiver_database_free_string_vectors(out_sets[], out_sizes[], count)
     return result
+end
+
+function read_set_date_times(db::Database, collection::String, attribute::String)
+    return Vector{DateTime}[
+        [string_to_date_time(value) for value in values] for
+        values in read_set_strings(db, collection, attribute)
+    ]
 end
 
 function read_scalar_integer_by_id(db::Database, collection::String, attribute::String, id::Int64)

@@ -340,19 +340,33 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
       );
       try {
+        expect(
+          db.readScalarDateTimes('Configuration', 'date_attribute'),
+          isEmpty,
+        );
         db.createElement('Configuration', {
           'label': 'Config 1',
           'date_attribute': '2024-01-15T10:30:00',
         });
         db.createElement('Configuration', {
           'label': 'Config 2',
-          'date_attribute': '2024-06-20T14:45:30',
+          'date_attribute': '2024-06-20 14:45:30',
         });
+        db.createElement('Configuration', {'label': 'Config 3'});
 
         final dates = db.readScalarStrings('Configuration', 'date_attribute');
-        expect(dates.length, equals(2));
+        expect(dates.length, equals(3));
         expect(dates[0], equals('2024-01-15T10:30:00'));
-        expect(dates[1], equals('2024-06-20T14:45:30'));
+        expect(dates[1], equals('2024-06-20 14:45:30'));
+        expect(dates[2], isNull);
+        expect(
+          db.readScalarDateTimes('Configuration', 'date_attribute'),
+          equals([
+            DateTime(2024, 1, 15, 10, 30),
+            DateTime(2024, 6, 20, 14, 45, 30),
+            null,
+          ]),
+        );
       } finally {
         db.close();
       }

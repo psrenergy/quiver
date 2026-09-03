@@ -233,20 +233,33 @@ include("fixture.jl")
         path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
         db = Quiver.from_schema(":memory:", path_schema)
 
+        @test Quiver.read_scalar_date_times(db, "Configuration", "date_attribute") isa
+              Vector{Union{DateTime, Nothing}}
+
         Quiver.create_element!(db, "Configuration";
             label = "Config 1",
             date_attribute = "2024-01-15T10:30:00",
         )
         Quiver.create_element!(db, "Configuration";
             label = "Config 2",
-            date_attribute = "2024-06-20T14:45:30",
+            date_attribute = "2024-06-20 14:45:30",
         )
+        Quiver.create_element!(db, "Configuration"; label = "Config 3")
 
         # Read all DateTime values
         dates = Quiver.read_scalar_strings(db, "Configuration", "date_attribute")
-        @test length(dates) == 2
+        @test length(dates) == 3
         @test dates[1] == "2024-01-15T10:30:00"
-        @test dates[2] == "2024-06-20T14:45:30"
+        @test dates[2] == "2024-06-20 14:45:30"
+        @test dates[3] === nothing
+
+        native_dates = Quiver.read_scalar_date_times(db, "Configuration", "date_attribute")
+        @test native_dates isa Vector{Union{DateTime, Nothing}}
+        @test native_dates == [
+            DateTime(2024, 1, 15, 10, 30, 0),
+            DateTime(2024, 6, 20, 14, 45, 30),
+            nothing,
+        ]
 
         # Read DateTime by ID
         date = Quiver.read_scalar_string_by_id(db, "Configuration", "date_attribute", 1)
@@ -270,6 +283,20 @@ include("fixture.jl")
         @test haskey(scalars, "date_attribute")
         @test scalars["date_attribute"] isa DateTime
         @test scalars["date_attribute"] == DateTime(2024, 1, 15, 10, 30, 0)
+
+        Quiver.close!(db)
+    end
+
+    @testset "DateTime bulk read preserves a concrete NOT NULL type" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        @test Quiver.read_scalar_date_times(db, "Configuration", "label") isa Vector{DateTime}
+
+        Quiver.create_element!(db, "Configuration"; label = "2024-01-15")
+        result = Quiver.read_scalar_date_times(db, "Configuration", "label")
+        @test result isa Vector{DateTime}
+        @test result == [DateTime(2024, 1, 15)]
 
         Quiver.close!(db)
     end

@@ -80,6 +80,14 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ### Added
 
+- **Bulk DateTime convenience readers.** Julia, Python, and Dart now expose native-DateTime
+  readers for scalar, vector, and set attributes (`read_scalar_date_times` /
+  `readScalarDateTimes`, and their vector/set counterparts). They compose the existing string
+  readers and parsers. Scalar reads preserve SQL NULLs positionally; vector and set reads retain
+  the existing group-reader behavior of omitting NULL cells and elements that own no rows.
+  JavaScript remains deliberately string-based, and the core, C API, and Lua surfaces are
+  unchanged.
+
 - **Julia scoped resource factories.** `open`, `from_schema`, `from_migrations`, and
   `Binary.open_file` take a callback-first argument, so Julia `do` syntax releases the handle at the
   block's `end` on both the normal and the exceptional exit, and returns the callback's result. The

@@ -62,6 +62,10 @@ The boolean convenience readers have one file per binding — `test_database_boo
 counterpart: the wrappers are binding-only, and Lua is deliberately excluded (root design
 decisions).
 
+The native-DateTime bindings (Julia, Dart, and Python) cover bulk scalar, vector, and set
+convenience readers in the corresponding `read` test files. Scalar coverage includes positional
+NULLs; vector/set coverage includes empty reads and omission of elements without group rows.
+
 The `read` → `{scalar,vector,set}` and `time_series` → `{metadata,group,row,files,nulls}` split is
 mirrored in every binding using each idiom's file naming (Julia `test_database_read_scalar.jl`,
 Dart `database_read_scalar_test.dart`, JS `database-read-scalar.test.ts`, Python

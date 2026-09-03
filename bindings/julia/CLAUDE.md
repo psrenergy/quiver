@@ -27,7 +27,7 @@ Project.toml      # Deps: Artifacts, CEnum, Dates, Libdl; julia 1.11 compat
 - **Always `GC.@preserve`**: refs produced by `marshal_params` (and any `Ref`s passed as pointers)
   must stay inside a `GC.@preserve refs ...` block spanning the ccall — the GC may otherwise
   collect them mid-call.
-- **Scalar bulk NULLs (nullability-aware element type)**: `read_scalar_{integers,floats,strings}`
+- **Scalar bulk NULLs (nullability-aware element type)**: `read_scalar_{integers,floats,strings,date_times}`
   first read `get_scalar_metadata(db, collection, attribute).not_null`, then return a **concrete
   `Vector{T}`** for `NOT NULL` columns and a **`Vector{Optional{T}}`** for nullable columns — for
   both the empty and the populated path, so the element type is decided by the schema, not by the
@@ -44,7 +44,9 @@ Project.toml      # Deps: Artifacts, CEnum, Dates, Libdl; julia 1.11 compat
   Julia-only; the `_by_id`/`query_*`/time-series
   readers are not yet converted — see `type_stability_followup.md`. An `INTEGER PRIMARY KEY` (e.g.
   `id`) is a rowid alias and is reported `not_null` by the C++ core (`scalar_metadata_from_column`),
-  so `read_scalar_integers(db, c, "id")` is a concrete `Vector{Int64}`.
+  so `read_scalar_integers(db, c, "id")` is a concrete `Vector{Int64}`. Like the boolean wrapper,
+  `read_scalar_date_times` recovers nullability from the delegated string container and adds no
+  metadata round-trip.
 - **`run!` owns its result**: `quiver_lua_runner_run` takes an `out_result::Ptr{Ptr{Cchar}}` and the
   JSON string must be freed with `quiver_lua_runner_free_string` — *not*
   `quiver_database_free_string`. `check` throws before the `unsafe_string`, and the C API leaves

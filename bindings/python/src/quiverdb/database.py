@@ -654,6 +654,10 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         finally:
             lib.quiver_database_free_string_array(out_values[0], count)
 
+    def read_scalar_date_times(self, collection: str, attribute: str) -> list[datetime | None]:
+        """Read all datetime scalar values. SQL NULL values become None."""
+        return [_parse_datetime(value) for value in self.read_scalar_strings(collection, attribute)]
+
     # -- Scalar reads (by ID) -------------------------------------------------
 
     def read_scalar_integer_by_id(
@@ -884,6 +888,12 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         finally:
             lib.quiver_database_free_string_vectors(out_vectors[0], out_sizes[0], count)
 
+    def read_vector_date_times(self, collection: str, attribute: str) -> list[list[datetime]]:
+        """Read datetime vectors for all elements in a collection."""
+        return [
+            [_parse_datetime(value) for value in values] for values in self.read_vector_strings(collection, attribute)
+        ]
+
     # -- Vector reads (by ID) ----------------------------------------------------
 
     def read_vector_integers_by_id(
@@ -1093,6 +1103,10 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
             return result
         finally:
             lib.quiver_database_free_string_vectors(out_sets[0], out_sizes[0], count)
+
+    def read_set_date_times(self, collection: str, attribute: str) -> list[list[datetime]]:
+        """Read datetime sets for all elements in a collection."""
+        return [[_parse_datetime(value) for value in values] for values in self.read_set_strings(collection, attribute)]
 
     # -- Set reads (by ID) -------------------------------------------------------
 
@@ -2025,6 +2039,18 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
 
 
 # -- DateTime parsing helper (module-level) ----------------------------------
+
+
+@overload
+def _parse_datetime(s: str) -> datetime: ...
+
+
+@overload
+def _parse_datetime(s: None) -> None: ...
+
+
+@overload
+def _parse_datetime(s: str | None) -> datetime | None: ...
 
 
 def _parse_datetime(s: str | None) -> datetime | None:

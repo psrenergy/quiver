@@ -50,6 +50,38 @@ void main() {
     });
   });
 
+  group('Read Set DateTimes', () {
+    test('reads DateTime sets in bulk', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'all_types.sql'),
+      );
+      try {
+        expect(db.readSetDateTimes('AllTypes', 'tag'), isEmpty);
+
+        db.createElement('AllTypes', {
+          'label': 'Item 1',
+          'tag': ['2024-01-15T10:30:00', '2024-01-16'],
+        });
+        db.createElement('AllTypes', {
+          'label': 'Item 2',
+          'tag': ['2024-06-20 14:45:30'],
+        });
+        db.createElement('AllTypes', {'label': 'No set'});
+
+        final result = db.readSetDateTimes('AllTypes', 'tag');
+        expect(result.length, equals(2));
+        expect(
+          result[0]..sort(),
+          equals([DateTime(2024, 1, 15, 10, 30), DateTime(2024, 1, 16)]),
+        );
+        expect(result[1], equals([DateTime(2024, 6, 20, 14, 45, 30)]));
+      } finally {
+        db.close();
+      }
+    });
+  });
+
   group('Read Set Only Returns Elements With Data', () {
     test('only returns sets for elements with data', () {
       final db = Database.fromSchema(

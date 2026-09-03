@@ -133,6 +133,15 @@ extension DatabaseRead on Database {
     }
   }
 
+  /// Reads all DateTime values for a scalar attribute. One entry per element;
+  /// a SQL NULL is `null`.
+  List<DateTime?> readScalarDateTimes(String collection, String attribute) {
+    return readScalarStrings(
+      collection,
+      attribute,
+    ).map((value) => value == null ? null : stringToDateTime(value)).toList();
+  }
+
   /// Reads all int vectors for a vector attribute from a collection.
   List<List<int>> readVectorIntegers(String collection, String attribute) {
     _ensureNotClosed();
@@ -290,6 +299,17 @@ extension DatabaseRead on Database {
     }
   }
 
+  /// Reads all DateTime vectors for a vector attribute from a collection.
+  List<List<DateTime>> readVectorDateTimes(
+    String collection,
+    String attribute,
+  ) {
+    return readVectorStrings(
+      collection,
+      attribute,
+    ).map((values) => values.map(stringToDateTime).toList()).toList();
+  }
+
   /// Reads all int sets for a set attribute from a collection.
   List<List<int>> readSetIntegers(String collection, String attribute) {
     _ensureNotClosed();
@@ -442,6 +462,14 @@ extension DatabaseRead on Database {
     } finally {
       arena.releaseAll();
     }
+  }
+
+  /// Reads all DateTime sets for a set attribute from a collection.
+  List<List<DateTime>> readSetDateTimes(String collection, String attribute) {
+    return readSetStrings(
+      collection,
+      attribute,
+    ).map((values) => values.map(stringToDateTime).toList()).toList();
   }
 
   // ==========================================================================

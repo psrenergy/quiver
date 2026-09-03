@@ -6,7 +6,6 @@ from datetime import datetime, timezone
 
 from quiverdb import Database
 
-
 # -- Set reads by ID ----------------------------------------------------------
 
 
@@ -56,6 +55,31 @@ class TestReadSetStringsBulk:
         result = collections_db.read_set_strings("Collection", "tag")
         assert len(result) == 1
         assert result[0] == ["alpha"]
+
+
+class TestReadSetDateTimesBulk:
+    def test_read_set_date_times(self, all_types_db: Database) -> None:
+        assert all_types_db.read_set_date_times("AllTypes", "tag") == []
+
+        all_types_db.create_element(
+            "AllTypes",
+            label="item1",
+            tag=["2024-01-15T10:30:00", "2024-01-16"],
+        )
+        all_types_db.create_element(
+            "AllTypes",
+            label="item2",
+            tag=["2024-06-20 14:45:30"],
+        )
+        all_types_db.create_element("AllTypes", label="no set")
+
+        result = all_types_db.read_set_date_times("AllTypes", "tag")
+        assert len(result) == 2
+        assert sorted(result[0]) == [
+            datetime(2024, 1, 15, 10, 30, tzinfo=timezone.utc),
+            datetime(2024, 1, 16, tzinfo=timezone.utc),
+        ]
+        assert result[1] == [datetime(2024, 6, 20, 14, 45, 30, tzinfo=timezone.utc)]
 
 
 # -- Convenience set reads ---------------------------------------------------

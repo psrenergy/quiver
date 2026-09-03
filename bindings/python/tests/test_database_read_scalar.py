@@ -8,7 +8,6 @@ import pytest
 
 from quiverdb import Database, QuiverError
 
-
 # -- Bulk scalar reads ---------------------------------------------------------
 
 
@@ -181,6 +180,21 @@ class TestNumberOfElements:
 
 
 # -- DateTime scalar reads ---------------------------------------------------
+
+
+class TestReadScalarDateTimes:
+    def test_read_scalar_date_times(self, db: Database) -> None:
+        assert db.read_scalar_date_times("Configuration", "date_attribute") == []
+
+        db.create_element("Configuration", label="item1", date_attribute="2024-01-15T10:30:00")
+        db.create_element("Configuration", label="item2", date_attribute="2024-06-20 14:45:30")
+        db.create_element("Configuration", label="item3")
+
+        assert db.read_scalar_date_times("Configuration", "date_attribute") == [
+            datetime(2024, 1, 15, 10, 30, tzinfo=timezone.utc),
+            datetime(2024, 6, 20, 14, 45, 30, tzinfo=timezone.utc),
+            None,
+        ]
 
 
 class TestReadScalarDateTimeById:

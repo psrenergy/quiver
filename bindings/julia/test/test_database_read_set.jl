@@ -144,6 +144,31 @@ include("fixture.jl")
 
         Quiver.close!(db)
     end
+
+    @testset "Read Set DateTimes Bulk" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "all_types.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        @test Quiver.read_set_date_times(db, "AllTypes", "tag") == Vector{DateTime}[]
+
+        Quiver.create_element!(db, "AllTypes";
+            label = "Item 1",
+            tag = ["2024-01-15T10:30:00", "2024-01-16"],
+        )
+        Quiver.create_element!(db, "AllTypes";
+            label = "Item 2",
+            tag = ["2024-06-20 14:45:30"],
+        )
+        Quiver.create_element!(db, "AllTypes"; label = "No set")
+
+        result = Quiver.read_set_date_times(db, "AllTypes", "tag")
+        @test length(result) == 2
+        @test sort(result[1]) == [DateTime(2024, 1, 15, 10, 30, 0), DateTime(2024, 1, 16)]
+        @test result[2] == [DateTime(2024, 6, 20, 14, 45, 30)]
+
+        Quiver.close!(db)
+    end
+
     @testset "Read Set Integers By ID Empty" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "all_types.sql")
         db = Quiver.from_schema(":memory:", path_schema)
