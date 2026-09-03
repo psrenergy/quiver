@@ -1,6 +1,8 @@
 mutable struct LuaRunner
     ptr::Ptr{C.quiver_lua_runner}
-    db::Database  # Keep reference to prevent GC
+    # Keeps the Database from being GC'd. Does NOT protect against an explicit `close!` -- the
+    # C++ runner borrows a raw `Database&`, so a runner must not outlive its database.
+    db::Database
 end
 
 function LuaRunner(db::Database)
