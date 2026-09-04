@@ -59,8 +59,29 @@ the binary/expression subsystems (`test_binary_file.jl`, `test_binary_metadata.j
 The boolean convenience readers have one file per binding — `test_database_boolean.jl`,
 `database_boolean_test.dart`, `test_database_boolean.py`, `database-boolean.test.ts` — all over
 `valid/all_types.sql` (`some_integer` scalar, `count_value` vector, `code` set). There is no C++/C
-counterpart: the wrappers are binding-only, and Lua is deliberately excluded (root design
-decisions).
+counterpart for the **readers**: those wrappers are binding-only, and Lua is deliberately excluded
+(root design decisions).
+
+Boolean **input** is a different matter: a native boolean is INTEGER 1/0 on every write path, and
+that is tested in the Lua layer and in all four bindings. There is no C++-core or C API test,
+because there is no such write path to test — `Element::set` has `int64_t`/`double` overloads and
+no `bool` one, and the C API has no boolean setter (root design decision); each binding converts
+before the FFI call. The Lua side lives in `test_lua_runner_create.cpp` (scalar, array, mixed
+integer/boolean array, mixed float/boolean array, cell-type mismatch, update, group writer, row
+upsert) with the query parameter in `test_lua_runner_errors.cpp`, over `valid/collections.sql`;
+the four bindings extend their own boolean files. Two things to keep in mind when touching these:
+
+- **The unsupported-type tests use a function (`print`), not a boolean** — in
+  `test_lua_runner_create.cpp`, `test_lua_runner_errors.cpp` and `test_c_api_lua_runner.cpp`. They
+  asserted a boolean rejection before booleans were accepted; a function is the value that still
+  has no SQL counterpart. `test_lua_runner_update.cpp` keeps its boolean rejection for
+  `db:update_relation`, where only `nil` may clear a relation.
+- **The three mixed-array tests are release-sensitive.**
+  `CreateElementMixedIntegerAndBooleanArray`, `CreateElementMixedFloatAndBooleanArray` and
+  `CreateElementArrayCellTypeMismatchThrows` cover bugs that only manifested with
+  `SOL_SAFE_GETTER` off (silent 0 / 0.0 / `""` instead of a throw), and `SOL_SAFE_GETTER` is on by
+  default in Debug — so a Debug-only run cannot prove the fix. Build Release and run
+  `--gtest_filter='LuaRunner*'` when touching `lua_table_to_vector`.
 
 The native-DateTime bindings (Julia, Dart, and Python) cover bulk scalar, vector, and set
 convenience readers in the corresponding `read` test files. Scalar coverage includes positional

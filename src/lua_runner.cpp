@@ -25,6 +25,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -488,12 +489,12 @@ struct LuaRunner::Impl {
             "read",
             [](BinaryFile& self, const sol::table& dims, sol::optional<bool> allow_nulls, sol::this_state s) {
                 sol::state_view lua(s);
-                auto data = self.read(lua_table_to_dim_map(dims), allow_nulls.value_or(false));
+                auto data = self.read(lua_table_to_dim_map(dims, "read"), allow_nulls.value_or(false));
                 return to_lua_table(lua, data);
             },
             "write",
             [](BinaryFile& self, const sol::table& data, const sol::table& dims) {
-                self.write(lua_table_to_double_vector(data), lua_table_to_dim_map(dims));
+                self.write(lua_table_to_vector<double>(data, "write"), lua_table_to_dim_map(dims, "write"));
             },
             "close",
             [](BinaryFile& self) { self.close(); },
@@ -558,7 +559,7 @@ struct LuaRunner::Impl {
             },
             "select_agents",
             [](Expression& self, const sol::table& labels) {
-                return self.select_agents(lua_table_to_string_vector(labels));
+                return self.select_agents(lua_table_to_vector<std::string>(labels, "select_agents"));
             },
             "rename_agents",
             [](Expression& self, const sol::table& mapping) {
@@ -611,10 +612,12 @@ struct LuaRunner::Impl {
     // Conversion helpers
     // ========================================================================
 
-    static std::unordered_map<std::string, int64_t> lua_table_to_dim_map(const sol::table& t) {
+    static std::unordered_map<std::string, int64_t> lua_table_to_dim_map(const sol::table& t,
+                                                                         const std::string& caller) {
         std::unordered_map<std::string, int64_t> dims;
         for (auto& pair : t) {
-            dims[pair.first.as<std::string>()] = pair.second.as<int64_t>();
+            auto key = pair.first.as<std::string>();
+            dims[key] = lua_cell_as<int64_t>(pair.second, caller, "dimension '" + key + "'");
         }
         return dims;
     }
@@ -626,12 +629,14 @@ struct LuaRunner::Impl {
 
     static std::vector<std::string> lua_opt_string_vector(const sol::table& t, const char* key) {
         auto opt = t.get<sol::optional<sol::table>>(key);
-        return opt ? lua_table_to_string_vector(*opt) : std::vector<std::string>{};
+        return opt ? lua_table_to_vector<std::string>(*opt, std::string("metadata: field '") + key + "'")
+                   : std::vector<std::string>{};
     }
 
     static std::vector<int64_t> lua_opt_int64_vector(const sol::table& t, const char* key) {
         auto opt = t.get<sol::optional<sol::table>>(key);
-        return opt ? lua_table_to_int64_vector(*opt) : std::vector<int64_t>{};
+        return opt ? lua_table_to_vector<int64_t>(*opt, std::string("metadata: field '") + key + "'")
+                   : std::vector<int64_t>{};
     }
 
     // Build BinaryMetadata from a Lua kwargs table, mirroring the Julia Metadata(; ...) constructor:
@@ -855,26 +860,40 @@ struct LuaRunner::Impl {
         return outer;
     }
 
-    static std::vector<int64_t> lua_table_to_int64_vector(const sol::table& t) {
-        std::vector<int64_t> result;
-        for (size_t i = 1; i <= t.size(); ++i) {
-            result.push_back(t.get<int64_t>(i));
+    // Every boolean test in this file goes through this one predicate, so the rule lives in one
+    // place rather than in a comment repeated at each site.
+    static bool is_lua_boolean(const sol::object& v) { return v.get_type() == sol::type::boolean; }
+
+    // The one checked Lua-value→T conversion, shared by every converter below. Load-bearing:
+    // sol2's plain `get<T>` is unchecked whenever SOL_SAFE_GETTER is off — which is every release
+    // build (`src/CMakeLists.txt` sets SOL_SAFE_NUMERICS and SOL_SAFE_FUNCTION, not
+    // SOL_SAFE_GETTER), where a mismatched value silently yields 0 / 0.0 / "" while a Debug build
+    // aborts on a sol2 panic, so the two disagree on the same script. A boolean is INTEGER 1/0 for
+    // a numeric `T`, matching the scalar policy; anything that does not fit `T` is a Pattern 1
+    // rejection. `what` names the offending slot ("cell #3", "dimension 'stage'").
+    template <typename T>
+    static T lua_cell_as(const sol::object& cell, const std::string& caller, const std::string& what) {
+        if constexpr (std::is_arithmetic_v<T>) {
+            if (is_lua_boolean(cell)) {
+                return static_cast<T>(cell.as<bool>() ? 1 : 0);
+            }
         }
-        return result;
+        auto value = cell.as<sol::optional<T>>();
+        if (!value) {
+            throw std::runtime_error("Cannot " + caller + ": " + what + " has unsupported Lua type");
+        }
+        return std::move(*value);
     }
 
-    static std::vector<double> lua_table_to_double_vector(const sol::table& t) {
-        std::vector<double> result;
-        for (size_t i = 1; i <= t.size(); ++i) {
-            result.push_back(t.get<double>(i));
-        }
-        return result;
-    }
-
-    static std::vector<std::string> lua_table_to_string_vector(const sol::table& t) {
-        std::vector<std::string> result;
-        for (size_t i = 1; i <= t.size(); ++i) {
-            result.push_back(t.get<std::string>(i));
+    // The only table→vector converter. Every cell goes through `lua_cell_as`, which
+    // `table_to_element`'s array dispatch depends on: it picks the element type from cell 1 alone.
+    template <typename T>
+    static std::vector<T> lua_table_to_vector(const sol::table& t, const std::string& caller) {
+        const size_t count = t.size();
+        std::vector<T> result;
+        result.reserve(count);
+        for (size_t i = 1; i <= count; ++i) {
+            result.push_back(lua_cell_as<T>(t.get<sol::object>(i), caller, "cell #" + std::to_string(i)));
         }
         return result;
     }
@@ -902,6 +921,8 @@ struct LuaRunner::Impl {
             sol::object val = pair.second;
             if (val.is<sol::lua_nil_t>()) {
                 result[key] = nullptr;
+            } else if (is_lua_boolean(val)) {
+                result[key] = val.as<bool>() ? int64_t{1} : int64_t{0};
             } else if (val.is<int64_t>()) {
                 result[key] = val.as<int64_t>();
             } else if (val.is<double>()) {
@@ -930,12 +951,15 @@ struct LuaRunner::Impl {
                 auto arr = val.as<sol::table>();
                 if (arr.size() > 0) {
                     sol::object first = arr[1];
-                    if (first.is<int64_t>()) {
-                        element.set(k, lua_table_to_int64_vector(arr));
+                    // Cell 1 only picks the element type; lua_table_to_vector checks the rest.
+                    // A boolean array is an INTEGER array.
+                    const std::string array_caller = "table_to_element: array '" + k + "'";
+                    if (is_lua_boolean(first) || first.is<int64_t>()) {
+                        element.set(k, lua_table_to_vector<int64_t>(arr, array_caller));
                     } else if (first.is<double>()) {
-                        element.set(k, lua_table_to_double_vector(arr));
+                        element.set(k, lua_table_to_vector<double>(arr, array_caller));
                     } else if (first.is<std::string>()) {
-                        element.set(k, lua_table_to_string_vector(arr));
+                        element.set(k, lua_table_to_vector<std::string>(arr, array_caller));
                     } else {
                         // Surface unsupported element types loudly instead of silently
                         // dropping the attribute (same policy as lua_table_to_value_map)
@@ -943,6 +967,9 @@ struct LuaRunner::Impl {
                                                  "' has unsupported element type");
                     }
                 }
+            } else if (is_lua_boolean(val)) {
+                // A boolean is INTEGER 1/0, the same policy as every other layer.
+                element.set(k, val.as<bool>() ? int64_t{1} : int64_t{0});
             } else if (val.is<int64_t>()) {
                 element.set(k, val.as<int64_t>());
             } else if (val.is<double>()) {
@@ -950,7 +977,7 @@ struct LuaRunner::Impl {
             } else if (val.is<std::string>()) {
                 element.set(k, val.as<std::string>());
             } else {
-                // Surface typos / booleans / nested structures loudly instead of
+                // Surface typos / functions / nested structures loudly instead of
                 // silently dropping the attribute (same policy as lua_table_to_value_map)
                 throw std::runtime_error("Cannot table_to_element: attribute '" + k + "' has unsupported Lua type");
             }
@@ -1203,6 +1230,8 @@ struct LuaRunner::Impl {
             sol::object val = parameters[i];
             if (val.is<sol::lua_nil_t>()) {
                 values.emplace_back(nullptr);
+            } else if (is_lua_boolean(val)) {
+                values.emplace_back(val.as<bool>() ? int64_t{1} : int64_t{0});
             } else if (val.is<int64_t>()) {
                 values.emplace_back(val.as<int64_t>());
             } else if (val.is<double>()) {
@@ -1519,7 +1548,9 @@ struct LuaRunner::Impl {
             for (auto& cell : column.values) {
                 const auto index = static_cast<size_t>(cell.first.as<int64_t>());
                 sol::object val = cell.second;
-                if (val.is<int64_t>()) {
+                if (is_lua_boolean(val)) {
+                    cpp_rows[index - 1][column.name] = val.as<bool>() ? int64_t{1} : int64_t{0};
+                } else if (val.is<int64_t>()) {
                     cpp_rows[index - 1][column.name] = val.as<int64_t>();
                 } else if (val.is<double>()) {
                     cpp_rows[index - 1][column.name] = val.as<double>();
@@ -1748,7 +1779,7 @@ struct LuaRunner::Impl {
             if (val.is<sol::lua_nil_t>()) {
                 cpp_paths[key] = std::nullopt;
             } else {
-                cpp_paths[key] = val.as<std::string>();
+                cpp_paths[key] = lua_cell_as<std::string>(val, "update_time_series_files", "path '" + key + "'");
             }
         }
         db.update_time_series_files(collection, cpp_paths);

@@ -601,6 +601,21 @@ TEST_F(LuaRunnerTest, UpdateTimeSeriesFiles) {
     EXPECT_EQ(files["metadata_file"].value(), "/path/to/meta.json");
 }
 
+TEST_F(LuaRunnerTest, UpdateTimeSeriesFilesRejectsNonStringPath) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+
+    quiver::LuaRunner lua(db);
+
+    // This was the last unchecked sol2 getter on a Lua write path: a boolean stored an empty path
+    // in a release build and aborted on a raw sol2 panic in a debug one.
+    expect_lua_error(lua,
+                     R"(db:update_time_series_files("Collection", { data_file = true }))",
+                     "path 'data_file' has unsupported Lua type");
+
+    EXPECT_FALSE(db.read_time_series_files("Collection")["data_file"].has_value());
+}
+
 TEST_F(LuaRunnerTest, MultiColumnTimeSeriesUpdateAndRead) {
     auto db = quiver::Database::from_schema(":memory:",
                                             VALID_SCHEMA("mixed_time_series.sql"),

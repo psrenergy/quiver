@@ -17,7 +17,7 @@ import {
   readUint64Out,
   toCString,
 } from "./ffi-helpers.ts";
-import { updateGroupColumns } from "./group-columns.ts";
+import { type GroupColumns, updateGroupColumns } from "./group-columns.ts";
 import { getSymbols, type NativePointer } from "./loader.ts";
 import {
   type Allocation,
@@ -187,7 +187,7 @@ Database.prototype.updateTimeSeriesGroup = function (
   collection: string,
   group: string,
   id: number,
-  data: TimeSeriesData,
+  data: GroupColumns,
 ): void {
   updateGroupColumns(
     this._handle,
@@ -206,7 +206,7 @@ Database.prototype.updateTimeSeriesGroupByLabel = function (
   collection: string,
   group: string,
   label: string,
-  data: TimeSeriesData,
+  data: GroupColumns,
 ): void {
   updateGroupColumns(
     this._handle,
@@ -242,11 +242,12 @@ type UpsertRowFn = (
  */
 function upsertRowColumns(
   handle: NativePointer,
+  caller: string,
   upsert: UpsertRowFn,
   collection: string,
   group: string,
   key: number | string,
-  row: Record<string, number | bigint | string>,
+  row: Record<string, number | bigint | string | boolean>,
 ): void {
   const collBuf = toCString(collection);
   const grpBuf = toCString(group);
@@ -264,7 +265,11 @@ function upsertRowColumns(
   const dataPtrs: (Pointer | null)[] = [];
 
   for (let c = 0; c < columnCount; c++) {
-    const value = entries[c][1];
+    const [colName, raw] = entries[c];
+    // SQLite has no boolean type: a boolean is INTEGER 1/0. Normalized here rather than tested in
+    // the INTEGER condition below, because Number.isInteger(true) is false — a boolean otherwise
+    // reaches allocNativeFloat64 and lands in the column as FLOAT 1.0, silently the wrong type.
+    const value = typeof raw === "boolean" ? (raw ? 1 : 0) : raw;
     if (typeof value === "string") {
       typesDv.setInt32(c * 4, DATA_TYPE_STRING, true);
       const { table, keepalive: strPtrs } = allocNativeStringArray([value]);
@@ -275,11 +280,17 @@ function upsertRowColumns(
       const p = allocNativeInt64([value]);
       keepalive.push(p);
       dataPtrs.push(p.ptr);
-    } else {
+    } else if (typeof value === "number") {
       typesDv.setInt32(c * 4, DATA_TYPE_FLOAT, true);
-      const p = allocNativeFloat64([value as number]);
+      const p = allocNativeFloat64([value]);
       keepalive.push(p);
       dataPtrs.push(p.ptr);
+    } else {
+      // Mirrors updateGroupColumns: never let null/undefined/an object fall through to the FLOAT
+      // branch, where Number(null) is 0 and anything else is NaN — both written with no error.
+      throw new QuiverError(
+        `Cannot ${caller}: column '${colName}' has unsupported value type ${typeof value}`,
+      );
     }
   }
 
@@ -307,10 +318,11 @@ Database.prototype.upsertTimeSeriesRow = function (
   collection: string,
   group: string,
   id: number,
-  row: Record<string, number | bigint | string>,
+  row: Record<string, number | bigint | string | boolean>,
 ): void {
   upsertRowColumns(
     this._handle,
+    "upsertTimeSeriesRow",
     getSymbols().quiver_database_upsert_time_series_row,
     collection,
     group,
@@ -325,10 +337,11 @@ Database.prototype.upsertTimeSeriesRowByLabel = function (
   collection: string,
   group: string,
   label: string,
-  row: Record<string, number | bigint | string>,
+  row: Record<string, number | bigint | string | boolean>,
 ): void {
   upsertRowColumns(
     this._handle,
+    "upsertTimeSeriesRowByLabel",
     getSymbols().quiver_database_upsert_time_series_row_by_label,
     collection,
     group,

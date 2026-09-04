@@ -64,4 +64,42 @@ include("fixture.jl")
     Quiver.close!(db)
 end
 
+# A native Bool on the write side. Julia needs no explicit Bool method: Bool <: Integer, and the
+# Integer setindex! is strictly more specific than the Real one, so a Bool marshals as INTEGER 1/0
+# through every entry point. These pin that — the dispatch is implicit and easy to break.
+@testset "Boolean input" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "all_types.sql")
+    db = Quiver.from_schema(":memory:", path_schema)
+
+    id = Quiver.create_element!(db, "AllTypes";
+        label = "Written",
+        some_integer = true,
+        count_value = [true, false],
+        code = [true],
+    )
+
+    @test Quiver.read_scalar_boolean_by_id(db, "AllTypes", "some_integer", id) === true
+    @test Quiver.read_vector_booleans_by_id(db, "AllTypes", "count_value", id) == [true, false]
+    @test Quiver.read_set_booleans_by_id(db, "AllTypes", "code", id) == [true]
+
+    Quiver.update_element!(db, "AllTypes", id; some_integer = false)
+    @test Quiver.read_scalar_boolean_by_id(db, "AllTypes", "some_integer", id) === false
+
+    Quiver.update_element_by_label!(db, "AllTypes", "Written"; some_integer = true)
+    @test Quiver.read_scalar_boolean_by_id(db, "AllTypes", "some_integer", id) === true
+
+    # A query parameter: marshal_params tests Integer before AbstractFloat, so a Bool binds INTEGER.
+    @test Quiver.query_boolean(db, "SELECT some_integer FROM AllTypes WHERE some_integer = ?", [true]) === true
+
+    # The group writers dispatch on nonnothingtype(eltype(v)), so Vector{Bool} and a nullable
+    # Vector{Union{Bool, Nothing}} both take the Integer branch; a nothing cell writes SQL NULL.
+    Quiver.update_vector_group!(db, "AllTypes", "counts", id; count_value = [true, false, true])
+    @test Quiver.read_vector_booleans_by_id(db, "AllTypes", "count_value", id) == [true, false, true]
+
+    Quiver.update_set_group!(db, "AllTypes", "codes", id; code = [true, false])
+    @test sort(Quiver.read_set_booleans_by_id(db, "AllTypes", "code", id)) == [false, true]
+
+    Quiver.close!(db)
+end
+
 end

@@ -51,13 +51,25 @@ Lua values map to Quiver column values as follows:
 | integer            | INTEGER      | Also accepted for REAL columns (coerced to real). |
 | number (float)     | REAL         | A float is rejected for an INTEGER column.     |
 | string             | TEXT         | Also used for \`date_time\` columns (ISO 8601).  |
+| boolean            | INTEGER 1/0  | SQLite has no boolean type; \`true\` writes 1, \`false\` 0. |
 | \`nil\`              | NULL         | In query params, file paths, ts rows, relations.|
 | table (1-indexed)  | array        | Used for vectors/sets and column-oriented data.|
 
-**Unsupported types throw.** Passing a boolean, a function, or a nested table where a scalar is
-expected raises an error rather than silently dropping the value. This applies to element
-attributes, time-series rows, and query parameters. A skipped positional query parameter would
-shift every later parameter and bind NULL to the trailing placeholder, so this is rejected loudly.
+A boolean is accepted **wherever an integer is** — element scalars and arrays, query parameters,
+the group writers, and \`upsert_time_series_row\` — so it also reaches a REAL column through the
+usual int-for-REAL coercion. Reading is the asymmetric half: there are no boolean readers in Lua
+(unlike Julia/Dart/Python/JS), so a stored flag comes back as \`0\`/\`1\` from
+\`read_scalar_integers\`. Compare against 0 rather than truth-testing —
+\`read_scalar_integers(c, a)[i] == 1\` — because in Lua a \`nil\` from a NULL cell is *not* equal to
+0 and \`nil ~= 0\` evaluates to \`true\`.
+
+The one place a boolean is deliberately refused is \`db:update_relation\`, where the argument is a
+target label and only \`nil\` (or omitting it) may clear the relation.
+
+**Unsupported types throw.** Passing a function or a nested table where a scalar is expected raises
+an error rather than silently dropping the value. This applies to element attributes, time-series
+rows, and query parameters. A skipped positional query parameter would shift every later parameter
+and bind NULL to the trailing placeholder, so this is rejected loudly.
 
 Dates are plain strings in ISO 8601 format: \`YYYY-MM-DDTHH:MM:SS\`. (Lua keeps a string-based
 datetime surface — there are no DateTime wrapper helpers, unlike Julia/Dart/Python.) The time part
@@ -367,6 +379,13 @@ db:read_element_by_id(collection, id)            -- scalars + vectors + sets mer
 
 \`read_element_by_id\` merges every scalar, vector, and set for the element into a single table.
 Scalar attributes with no value come back as \`nil\`.
+
+**Group columns are returned densely, with NULL cells dropped.** \`read_vectors_by_id\` and
+\`read_sets_by_id\` read each column independently, and a column read skips its NULL cells — so two
+columns of the same group are **not** positionally aligned with each other whenever one is
+nullable (e.g. an \`ON DELETE SET NULL\` relation). Do not zip them into rows. There is no
+row-aligned group read in Lua; if you need per-row alignment across a nullable group, do that read
+in the host binding instead.
 
 ---
 
@@ -681,7 +700,9 @@ and \`unit\` default to \`""\`; \`labels\`, \`dimensions\`, \`dimension_sizes\`,
 
 ## What Lua does *not* expose
 
-DateTime wrapper helpers (Lua uses ISO 8601 strings) and \`_by_id\` single-scalar variants (use the
-composite by-id readers or the bulk readers instead). Everything else the native binding exposes —
-CRUD, reads, time series, metadata, query, CSV, and the binary/expression subsystems — is
-documented above and callable.`;
+DateTime wrapper helpers (Lua uses ISO 8601 strings), boolean *reader* helpers (a stored flag reads
+back as \`0\`/\`1\` — writing a boolean is supported), \`_by_id\` single-scalar variants (use the
+composite by-id readers or the bulk readers instead), and the row-aligned whole-group readers the
+other bindings have (hence the null-dropping caveat under composite by-id reads). Everything else
+the native binding exposes — CRUD, reads, time series, metadata, query, CSV, and the
+binary/expression subsystems — is documented above and callable.`;

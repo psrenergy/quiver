@@ -144,17 +144,38 @@ Settled questions — don't relitigate without the user; each was decided delibe
   `quiver_get_last_error`; no per-handle error channels.
 - **Python's `Element` is internal**; users pass `**kwargs` to create/update.
 - **JS keeps a string-based datetime surface** — no DateTime wrappers.
+- **Lua has no row-aligned whole-group readers.** `read_vector_group_by_id` /
+  `read_set_group_by_id` are not bound; `db:read_vectors_by_id` / `db:read_sets_by_id` read each
+  column independently through the null-dropping per-column readers, so two columns of the same
+  group are **not** positionally aligned whenever one is nullable. A script that needs per-row
+  alignment across a nullable group does that read in the host binding. Recorded in the
+  agent-facing Lua reference (`bindings/js/src/lua-api.ts`).
 - **Boolean wrappers are Julia/Dart/Python/JS only; Lua is deliberately excluded.** SQLite has no
   boolean type, so a boolean lives in an INTEGER column as 0/1 and the wrappers are a
-  strict-conversion convenience with no C++ or C API counterpart (the third documented per-binding
-  omission, alongside JS-datetime and binary/expression). Lua needs none: it has a native boolean,
-  and a script that wants one writes `read_scalar_integers(...)[i] ~= 0` — adding seven sol2
-  lambdas would only move that expression. The conversion is **strict**: only 0 and 1 convert; any
+  strict-conversion convenience with no C++ or C API counterpart (the fourth documented per-binding
+  omission, alongside JS-datetime, binary/expression, and the Lua whole-group readers above).
+  The exclusion is **read-side only** — see the write-side policy below, which every layer
+  including Lua now honours. Lua needs no readers: it has a native boolean, and a script that wants
+  one writes `read_scalar_integers(...)[i] == 1`. What it gives up is the strict-conversion gate
+  below, not just sugar: `== 1` maps a stray `2` to `false` rather than raising, and a `nil` from a
+  NULL cell is not equal to 0 (`nil ~= 0` is `true` in Lua), so the tempting `~= 0` spelling reads
+  a NULL as `true`. If a column's 0/1-ness has to be enforced, a `CHECK (col IN (0, 1))` in the
+  schema does it at write time for every layer and for raw SQL alike, which is where that belongs.
+  The conversion is **strict**: only 0 and 1 convert; any
   other integer raises the binding's native conversion error (`ArgumentError` in Julia and Dart,
   `ValueError` in Python, `RangeError` in JS) naming the offending `collection.attribute`. This is
   one of the few locally-crafted messages — the core never sees these readers, so it cannot
-  diagnose a stray `2`. On the write side a boolean is accepted wherever an integer is: every
-  binding maps it to INTEGER 1/0 on `create_element`/`update_element` and as a query parameter.
+  diagnose a stray `2`. **On the write side a boolean is accepted wherever an integer is, in every
+  layer including Lua**: `create_element`/`update_element` (scalars and arrays), query parameters,
+  the vector/set/time-series group writers, and `upsert_time_series_row` — all mapping it to
+  INTEGER 1/0, which therefore also reaches a REAL column through the int-for-REAL coercion. There
+  is no boolean setter in the C API and none is needed: each binding converts before the FFI call
+  (`Element.set` in Dart, `element.py`'s `isinstance(value, bool)` branch, `setElementField` /
+  `setElementArray` / `marshalParams` / `updateGroupColumns` / `upsertRowColumns` in JS, the five
+  sol2 converters in `src/lua_runner.cpp`). Julia and Python need no explicit branch on most paths
+  because `Bool <: Integer` and `bool` is an `int` subclass respectively — which makes the
+  behaviour dispatch-order-dependent and worth a test rather than an assumption.
+  `db:update_relation` is the one deliberate refusal: only `nil` may clear a relation.
   The scalar readers preserve NULLs positionally; the **vector/set readers do not** — they inherit
   `read_grouped_values_all`'s dropping of NULL cells and of ids that own no rows, so they are not
   aligned with `read_element_ids`.

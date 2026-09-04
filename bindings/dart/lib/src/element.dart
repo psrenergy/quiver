@@ -74,10 +74,6 @@ class Element {
         setDateTime(name, v);
       case List<int> v:
         setArrayInteger(name, v);
-      // A List<bool> cannot go through _setMixedList: its firstWhere orElse
-      // returns null, which a non-nullable element type rejects at runtime.
-      case List<bool> v:
-        setArrayInteger(name, v.map((b) => b ? 1 : 0).toList());
       case List<double> v:
         setArrayFloat(name, v);
       case List<String> v:
@@ -99,23 +95,66 @@ class Element {
 
   void _setMixedList(String name, List<dynamic> values) {
     // Dispatch on the first non-null element; an empty or all-null list is
-    // tagged integer (the type is irrelevant when every cell is NULL).
-    final first = values.firstWhere((v) => v != null, orElse: () => null);
+    // tagged integer (the type is irrelevant when every cell is NULL). Each branch then converts
+    // per cell rather than `cast`ing the list, which defers the check to iteration and throws a
+    // raw TypeError naming neither the attribute nor the cell. A bool is INTEGER 1/0 and an int
+    // reaches a REAL column by the int-for-REAL coercion — the rules `_marshalGroupColumn` applies.
+    Object? first;
+    for (final v in values) {
+      if (v != null) {
+        first = v;
+        break;
+      }
+    }
     if (first == null) {
       setArrayInteger(name, List<int?>.filled(values.length, null));
-    } else if (first is bool) {
-      setArrayInteger(name, values.cast<bool?>().map((v) => v == null ? null : (v ? 1 : 0)).toList());
-    } else if (first is int) {
-      setArrayInteger(name, values.cast<int?>());
+    } else if (first is bool || first is int) {
+      setArrayInteger(name, [
+        for (var i = 0; i < values.length; i++)
+          switch (values[i]) {
+            null => null,
+            final bool b => b ? 1 : 0,
+            final int v => v,
+            final v => throw ArgumentError(
+              "Unsupported value type ${v.runtimeType} in cell $i of '$name'",
+            ),
+          },
+      ]);
     } else if (first is double) {
-      setArrayFloat(name, values.cast<double?>());
+      setArrayFloat(name, [
+        for (var i = 0; i < values.length; i++)
+          switch (values[i]) {
+            null => null,
+            final double d => d,
+            final int v => v.toDouble(),
+            final bool b => b ? 1.0 : 0.0,
+            final v => throw ArgumentError(
+              "Unsupported value type ${v.runtimeType} in cell $i of '$name'",
+            ),
+          },
+      ]);
     } else if (first is String) {
-      setArrayString(name, values.cast<String?>());
+      setArrayString(name, [
+        for (var i = 0; i < values.length; i++)
+          switch (values[i]) {
+            null => null,
+            final String t => t,
+            final v => throw ArgumentError(
+              "Unsupported value type ${v.runtimeType} in cell $i of '$name'",
+            ),
+          },
+      ]);
     } else if (first is DateTime) {
-      setArrayString(
-        name,
-        values.cast<DateTime?>().map((v) => v == null ? null : dateTimeToString(v)).toList(),
-      );
+      setArrayString(name, [
+        for (var i = 0; i < values.length; i++)
+          switch (values[i]) {
+            null => null,
+            final DateTime d => dateTimeToString(d),
+            final v => throw ArgumentError(
+              "Unsupported value type ${v.runtimeType} in cell $i of '$name'",
+            ),
+          },
+      ]);
     } else {
       throw ArgumentError(
         "Unsupported array element type ${first.runtimeType} for '$name'",

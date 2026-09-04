@@ -122,6 +122,25 @@ TEST_F(LuaBinaryTest, ReadNullWithoutAllowThrows) {
     EXPECT_THROW(lua.run("local r = db:open_file('bin_a', 'r')\nr:read({row=2})\n"), std::exception);
 }
 
+TEST_F(LuaBinaryTest, ReadRejectsNonIntegerDimension) {
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+    lua.run(md1() + R"(
+        local f = db:open_file('bin_a', 'w', md)
+        f:write({42.0}, {row=1})
+        f:close()
+    )");
+    // An unchecked dimension getter silently rounded in a release build and panicked on a raw
+    // sol2 error in a debug one, so a bad dimension returned the wrong slice instead of failing.
+    // (A boolean is not tested here: it coerces to 1 like every other numeric slot.)
+    expect_lua_error(lua,
+                     R"(
+        local r = db:open_file('bin_a', 'r')
+        r:read({row=1.5})
+    )",
+                     "dimension 'row' has unsupported Lua type");
+}
+
 TEST_F(LuaBinaryTest, TimeDimensionWriteRead) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::LuaRunner lua(db);
