@@ -616,6 +616,32 @@ TEST_F(LuaRunnerTest, UpdateTimeSeriesFilesRejectsNonStringPath) {
     EXPECT_FALSE(db.read_time_series_files("Collection")["data_file"].has_value());
 }
 
+TEST_F(LuaRunnerTest, UpdateTimeSeriesFilesPatchPreservesUnnamedColumn) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+
+    quiver::LuaRunner lua(db);
+
+    // `{ metadata_file = nil }` is `{}` in Lua, so omission is the only signal Lua has - and it
+    // now means preserve. Lua cannot write an explicit NULL through this writer.
+    lua.run(R"(
+        db:update_time_series_files("Collection", {
+            data_file = "/old/data.csv",
+            metadata_file = "/old/meta.json"
+        })
+
+        db:update_time_series_files("Collection", { data_file = "/new/data.csv" })
+
+        local files = db:read_time_series_files("Collection")
+        assert(files.data_file == "/new/data.csv", "Expected data_file '/new/data.csv', got " .. tostring(files.data_file))
+        assert(files.metadata_file == "/old/meta.json", "Expected metadata_file to be preserved, got " .. tostring(files.metadata_file))
+    )");
+
+    auto files = db.read_time_series_files("Collection");
+    EXPECT_EQ(files["data_file"].value(), "/new/data.csv");
+    EXPECT_EQ(files["metadata_file"].value(), "/old/meta.json");
+}
+
 TEST_F(LuaRunnerTest, MultiColumnTimeSeriesUpdateAndRead) {
     auto db = quiver::Database::from_schema(":memory:",
                                             VALID_SCHEMA("mixed_time_series.sql"),

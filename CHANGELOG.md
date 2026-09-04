@@ -9,6 +9,16 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ### Changed
 
+- **BREAKING — `update_time_series_files()` writes only the columns you name.** It rebuilt the
+  whole singleton row (DELETE then INSERT), so an unnamed column was silently reset to NULL —
+  updating only `data_file` wiped `metadata_file`. A named column still takes the value you give
+  it, explicit NULL included; an unnamed one keeps what it has. No other writer patches.
+
+  *Adapt:* to clear a column, name it with a null value (`nothing` / `None` / `null` / a NULL
+  `paths[i]` through the C API). **Lua cannot**: `{ x = nil }` is `{}`, so omission is its only
+  signal and it now means *preserve* — the limitation it already had on `create_element` /
+  `update_element` scalars.
+
 ### Added
 
 - **Booleans are accepted on every write path, in every layer.** A native boolean now maps to

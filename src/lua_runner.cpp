@@ -1772,15 +1772,12 @@ struct LuaRunner::Impl {
     }
 
     static void update_time_series_files_lua(Database& db, const std::string& collection, const sol::table& paths) {
+        // A table iteration never yields a nil value, so Lua cannot name a column with an explicit
+        // NULL here; omission is its only signal, and an unnamed column is preserved.
         std::map<std::string, std::optional<std::string>> cpp_paths;
         for (auto& pair : paths) {
             auto key = pair.first.as<std::string>();
-            sol::object val = pair.second;
-            if (val.is<sol::lua_nil_t>()) {
-                cpp_paths[key] = std::nullopt;
-            } else {
-                cpp_paths[key] = lua_cell_as<std::string>(val, "update_time_series_files", "path '" + key + "'");
-            }
+            cpp_paths[key] = lua_cell_as<std::string>(pair.second, "update_time_series_files", "path '" + key + "'");
         }
         db.update_time_series_files(collection, cpp_paths);
     }
