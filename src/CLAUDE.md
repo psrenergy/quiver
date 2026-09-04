@@ -172,6 +172,17 @@ impl_->logger->debug("Opening database: {}", path);
   first non-empty one, because `columns` is name-sorted and an empty alphabetically-first column
   otherwise left it at 0 for a later column to overwrite — skipping the check and indexing past the
   end of the empty vector.
+- **`update_time_series_files` patches through a rowid probe** (`database_time_series.cpp`):
+  `SELECT rowid FROM <tsf> LIMIT 1` decides UPDATE vs INSERT, and either statement mentions only
+  the caller's columns — so an unnamed column keeps its value instead of being reset to NULL by
+  the DELETE-then-INSERT rebuild this replaced. There is no upsert form to use here: a
+  `_time_series_files` table has no PK or UNIQUE constraint, so SQLite has no `ON CONFLICT` target.
+  The probe reads the **rowid**, not a bare `1`, so the UPDATE carries `WHERE rowid = ?` — the
+  `DELETE FROM` it replaced collapsed the table to a single row, and an unqualified UPDATE would
+  fan out over every row a table that somehow holds more than one has, while
+  `read_time_series_files` still reports only the first. Both spellings of the caller's columns
+  (`(cols) VALUES (?, …)` and `SET col = ?, …`) are built in one pass, because the two branches
+  bind the same parameters in the same order.
 - **`Impl::update_group_rows`** (`database_update.cpp`) is the shared body of
   `update_vector_group`/`update_set_group`. It validates the **union of every row's keys** (not
   `rows[0]`, which dropped later-row-only columns and skipped validating them) against the group

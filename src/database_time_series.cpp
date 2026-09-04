@@ -409,23 +409,33 @@ void Database::update_time_series_files(const std::string& collection,
 
     Impl::TransactionGuard txn(*impl_);
 
-    // Delete existing row (singleton table)
-    auto delete_sql = "DELETE FROM " + tsf;
-    execute(delete_sql);
+    // An unnamed column is not a written column: it keeps its current value. A named column takes
+    // the caller's value, nullopt included. Whether the singleton row already exists decides
+    // UPDATE vs INSERT - either way only the named columns are mentioned. The probe reads the
+    // *rowid* the reader will see (read_time_series_files is a LIMIT 1), so the UPDATE addresses
+    // exactly that one row: the DELETE this replaced collapsed the table to a single row, and an
+    // unqualified UPDATE would instead fan out over every row a non-singleton table happens to
+    // hold while the reader still reports only the first.
+    auto existing = execute("SELECT rowid FROM " + tsf + " LIMIT 1");
 
-    // Build INSERT SQL
-    std::string insert_sql = "INSERT INTO " + tsf + " (";
+    // One pass builds both spellings of the caller's columns - the two branches bind the same
+    // parameters in the same order, so the value loop must not be written twice.
+    std::string columns;
     std::string placeholders;
+    std::string set_clause;
     std::vector<Value> parameters;
+    parameters.reserve(paths.size() + 1);
 
     bool first = true;
     for (const auto& [col_name, path] : paths) {
         if (!first) {
-            insert_sql += ", ";
+            columns += ", ";
             placeholders += ", ";
+            set_clause += ", ";
         }
-        insert_sql += col_name;
+        columns += col_name;
         placeholders += "?";
+        set_clause += col_name + " = ?";
         if (path) {
             parameters.emplace_back(*path);
         } else {
@@ -433,9 +443,16 @@ void Database::update_time_series_files(const std::string& collection,
         }
         first = false;
     }
-    insert_sql += ") VALUES (" + placeholders + ")";
 
-    execute(insert_sql, parameters);
+    std::string sql;
+    if (existing.empty()) {
+        sql = "INSERT INTO " + tsf + " (" + columns + ") VALUES (" + placeholders + ")";
+    } else {
+        sql = "UPDATE " + tsf + " SET " + set_clause + " WHERE rowid = ?";
+        parameters.emplace_back(existing[0].get_integer(0).value());
+    }
+
+    execute(sql, parameters);
 
     txn.commit();
     impl_->logger->info("Updated time series files for collection: {}", collection);

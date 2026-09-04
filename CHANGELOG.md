@@ -9,6 +9,25 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ### Changed
 
+- **BREAKING — an unnamed column is no longer a written column for `update_time_series_files()`.**
+  It rebuilt the whole singleton row it addresses (DELETE then INSERT), so a column the caller did
+  not mention was silently reset to NULL: updating only `data_file` wiped `metadata_file`, and
+  feeding a `read_time_series_files()` result back in was the only safe way to touch one column.
+  It now writes only the columns you name and leaves the rest untouched. A *named* column still
+  takes the value you give it, explicit NULL included; when there is nothing to preserve — no
+  existing row — the unnamed columns are NULL as before.
+
+  *Adapt:* if you relied on omission to clear a column, name it explicitly with a null value
+  (`nothing` / `None` / `null` / a NULL `paths[i]` pointer through the C API). **Lua cannot do
+  this**: `{ x = nil }` is `{}` in Lua, so omission is the only signal it has and it now means
+  *preserve* — the same limitation Lua already had on `create_element` / `update_element` scalars.
+
+  *Everything else is unaffected:* `upsert_time_series_row` still replaces the whole row it
+  addresses, `create_element` / `update_element` still route array attributes into their group
+  table by a delete-and-reinsert, and `update_vector_group` / `update_set_group` /
+  `update_time_series_group` still write NULL wherever a column or cell is unnamed. Partial,
+  patch-style writes are not supported anywhere else.
+
 ### Added
 
 - **Booleans are accepted on every write path, in every layer.** A native boolean now maps to
@@ -46,6 +65,25 @@ callers to change something are prefixed **BREAKING** and say what to do.
 ## [0.10.3] — 2026-09-03
 
 ### Changed
+
+- **BREAKING — an unnamed column is no longer a written column for `update_time_series_files()`.**
+  It rebuilt the whole singleton row it addresses (DELETE then INSERT), so a column the caller did
+  not mention was silently reset to NULL: updating only `data_file` wiped `metadata_file`, and
+  feeding a `read_time_series_files()` result back in was the only safe way to touch one column.
+  It now writes only the columns you name and leaves the rest untouched. A *named* column still
+  takes the value you give it, explicit NULL included; when there is nothing to preserve — no
+  existing row — the unnamed columns are NULL as before.
+
+  *Adapt:* if you relied on omission to clear a column, name it explicitly with a null value
+  (`nothing` / `None` / `null` / a NULL `paths[i]` pointer through the C API). **Lua cannot do
+  this**: `{ x = nil }` is `{}` in Lua, so omission is the only signal it has and it now means
+  *preserve* — the same limitation Lua already had on `create_element` / `update_element` scalars.
+
+  *Everything else is unaffected:* `upsert_time_series_row` still replaces the whole row it
+  addresses, `create_element` / `update_element` still route array attributes into their group
+  table by a delete-and-reinsert, and `update_vector_group` / `update_set_group` /
+  `update_time_series_group` still write NULL wherever a column or cell is unnamed. Partial,
+  patch-style writes are not supported anywhere else.
 
 - **BREAKING — a `DATE_TIME` value is validated when it is written.** A string bound to a
   `date_`-prefixed column must be ISO 8601: `YYYY-MM-DD`, optionally followed by `THH:MM:SS` or

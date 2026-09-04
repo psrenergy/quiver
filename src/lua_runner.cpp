@@ -1772,15 +1772,15 @@ struct LuaRunner::Impl {
     }
 
     static void update_time_series_files_lua(Database& db, const std::string& collection, const sol::table& paths) {
+        // A Lua table iteration never yields a nil value (`{ x = nil }` is `{}`), so the nullopt
+        // branch that used to live here was dead - and with the core preserving unnamed columns,
+        // omission now means *preserve*. Lua therefore cannot spell an explicit NULL through this
+        // writer, the same limitation it already has on create_element/update_element scalars;
+        // documented in the root design decisions and the agent-facing Lua reference.
         std::map<std::string, std::optional<std::string>> cpp_paths;
         for (auto& pair : paths) {
             auto key = pair.first.as<std::string>();
-            sol::object val = pair.second;
-            if (val.is<sol::lua_nil_t>()) {
-                cpp_paths[key] = std::nullopt;
-            } else {
-                cpp_paths[key] = lua_cell_as<std::string>(val, "update_time_series_files", "path '" + key + "'");
-            }
+            cpp_paths[key] = lua_cell_as<std::string>(pair.second, "update_time_series_files", "path '" + key + "'");
         }
         db.update_time_series_files(collection, cpp_paths);
     }
