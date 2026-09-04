@@ -409,17 +409,12 @@ void Database::update_time_series_files(const std::string& collection,
 
     Impl::TransactionGuard txn(*impl_);
 
-    // An unnamed column is not a written column: it keeps its current value. A named column takes
-    // the caller's value, nullopt included. Whether the singleton row already exists decides
-    // UPDATE vs INSERT - either way only the named columns are mentioned. The probe reads the
-    // *rowid* the reader will see (read_time_series_files is a LIMIT 1), so the UPDATE addresses
-    // exactly that one row: the DELETE this replaced collapsed the table to a single row, and an
-    // unqualified UPDATE would instead fan out over every row a non-singleton table happens to
-    // hold while the reader still reports only the first.
+    // Only the named columns are written, so an existing row is UPDATEd rather than rebuilt. Not an
+    // upsert because the table has no PK or UNIQUE constraint for ON CONFLICT to target; the rowid
+    // keeps the UPDATE on the one row read_time_series_files reads.
     auto existing = execute("SELECT rowid FROM " + tsf + " LIMIT 1");
 
-    // One pass builds both spellings of the caller's columns - the two branches bind the same
-    // parameters in the same order, so the value loop must not be written twice.
+    // Both spellings of the caller's columns; the two branches bind the same parameters in order.
     std::string columns;
     std::string placeholders;
     std::string set_clause;

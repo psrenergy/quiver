@@ -280,11 +280,10 @@ Notes:
   \`{ x = nil }\` is identical to \`{}\`; an update/create table that ends up with no attributes
   **throws** (\`...must have at least one scalar attribute\` on create, \`...at least one attribute
   to update\` on update). To leave a column unchanged, omit the key — you cannot set a scalar to
-  NULL via the element table. The same holds for \`update_time_series_files\`, which is also keyed
-  by column *name*: an omitted column keeps its current value, so NULL cannot be written through it
-  either. Writers keyed by *position* — the group writers — are unaffected: there a \`nil\` cell
-  does write NULL. (\`nil\` → NULL is still accepted by \`upsert_time_series_row\` and
-  \`update_relation\`.)
+  NULL via the element table — nor via \`update_time_series_files\`, keyed by column name too,
+  where an omitted column now keeps its current value. Elsewhere \`nil\` still reaches NULL: a
+  \`nil\` cell in a group writer, an omitted column in \`upsert_time_series_row\`, and a
+  \`nil\` \`target_label\` on \`update_relation\`.
 - **\`update_relation\` points one scalar foreign-key relation at another element**, named by the
   target's label. The column is derived from the naming convention —
   \`lowercase(collection_to) .. "_" .. relation_type\`, so
@@ -501,11 +500,9 @@ db:read_time_series_files(collection)             -- { data_file = "path", metad
 db:update_time_series_files(collection, { data_file = "path/to/data.bin" })
 \`\`\`
 
-Only the columns you name are written; an omitted column keeps its current value, so the call above
-leaves \`metadata_file\` alone. A column cannot be set to NULL from Lua here: \`{ x = nil }\` is
-\`{}\`, so writing \`metadata_file = nil\` names nothing at all. On the read side a NULL column and
-an absent one are likewise the same \`nil\`, which is why feeding a \`read_time_series_files\`
-result straight back into this call is a no-op.
+Only the columns you name are written, so the call above leaves \`metadata_file\` alone. A column
+cannot be cleared from Lua here: \`{ metadata_file = nil }\` is \`{}\`, which names nothing — so
+feeding a \`read_time_series_files\` result straight back in is a no-op.
 
 ---
 

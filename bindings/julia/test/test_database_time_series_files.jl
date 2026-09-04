@@ -127,7 +127,10 @@ include("fixture.jl")
 
         # metadata_file is unnamed here, so it survives.
         Quiver.update_time_series_files!(
-            db, "Collection", Dict{String, Quiver.Optional{String}}("data_file" => "/new/data.csv"))
+            db,
+            "Collection",
+            Dict{String, Quiver.Optional{String}}("data_file" => "/new/data.csv"),
+        )
 
         paths = Quiver.read_time_series_files(db, "Collection")
         @test paths["data_file"] == "/new/data.csv"
@@ -135,7 +138,10 @@ include("fixture.jl")
 
         # Naming it with `nothing` clears it, while data_file (now unnamed) survives.
         Quiver.update_time_series_files!(
-            db, "Collection", Dict{String, Quiver.Optional{String}}("metadata_file" => nothing))
+            db,
+            "Collection",
+            Dict{String, Quiver.Optional{String}}("metadata_file" => nothing),
+        )
 
         paths = Quiver.read_time_series_files(db, "Collection")
         @test paths["data_file"] == "/new/data.csv"

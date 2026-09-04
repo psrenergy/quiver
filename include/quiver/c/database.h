@@ -518,7 +518,7 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_files(quiver_databa
                                                                    size_t* out_count);
 
 // Update time series files - writes only the named columns: a NULL paths[i] clears that column and
-// an unnamed column keeps its current value. With no existing row the unnamed columns are NULL
+// an unnamed column keeps its current value (its schema DEFAULT when no row exists yet)
 QUIVER_C_API quiver_error_t quiver_database_update_time_series_files(quiver_database_t* db,
                                                                      const char* collection,
                                                                      const char* const* columns,

@@ -212,7 +212,7 @@ public:
     std::vector<std::string> list_time_series_files_columns(const std::string& collection) const;
     std::map<std::string, std::optional<std::string>> read_time_series_files(const std::string& collection);
     // Writes only the named columns (nullopt clears one); an unnamed column keeps its value. With
-    // no existing row the unnamed columns are NULL - the column DEFAULT, nothing to preserve.
+    // no existing row there is nothing to keep, so an unnamed column takes its schema DEFAULT.
     void update_time_series_files(const std::string& collection,
                                   const std::map<std::string, std::optional<std::string>>& paths);
 
