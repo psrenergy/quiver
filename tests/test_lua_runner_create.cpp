@@ -253,3 +253,36 @@ TEST_F(LuaRunnerTest, UpsertTimeSeriesRowBooleanStoresInteger) {
     ASSERT_EQ(rows.size(), 1);
     EXPECT_EQ(std::get<double>(rows[0].at("value")), 1.0);
 }
+
+TEST_F(LuaRunnerTest, CreateElementMixedFloatAndBooleanArray) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+
+    quiver::LuaRunner lua(db);
+
+    // The float sibling of CreateElementMixedIntegerAndBooleanArray: dispatch picks the double
+    // helper from cell 1, and every later boolean cell must still coerce (int-for-REAL coercion).
+    lua.run(R"(db:create_element("Collection", { label = "Item", value_float = { 1.5, true, false } }))");
+
+    auto id = db.read_element_ids("Collection")[0];
+    EXPECT_EQ(db.read_vector_floats_by_id("Collection", "value_float", id), (std::vector<double>{1.5, 1.0, 0.0}));
+}
+
+TEST_F(LuaRunnerTest, CreateElementArrayCellTypeMismatchThrows) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+
+    quiver::LuaRunner lua(db);
+
+    // A cell that fits no element type is a Pattern 1 rejection naming the array and the cell —
+    // not a raw sol2 message, and never a silent placeholder (the unchecked sol2 getters are only
+    // checked while SOL_SAFE_GETTER is on, i.e. debug builds).
+    for (const char* script : {R"(db:create_element("Collection", { label = "I", tag = { "a", true } }))",
+                               R"(db:create_element("Collection", { label = "I", tag = { "a", 1 } }))",
+                               R"(db:create_element("Collection", { label = "I", value_int = { 1, "zz" } }))"}) {
+        try {
+            lua.run(script);
+            FAIL() << "expected a mismatched array cell to throw: " << script;
+        } catch (const std::runtime_error& e) {
+            EXPECT_NE(std::string(e.what()).find("cell #2 has unsupported Lua type"), std::string::npos) << e.what();
+        }
+    }
+}

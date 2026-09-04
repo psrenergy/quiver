@@ -98,6 +98,21 @@ describe("boolean convenience methods", () => {
     }
   });
 
+  test("a mixed boolean/integer group column keeps its integer cells", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      const id = db.createElement("AllTypes", { label: "Mixed" });
+
+      // Booleans are normalized per cell, not by truthiness-mapping the whole column: a column
+      // dispatched on a leading boolean used to write 1 for every non-zero cell, destroying the 5.
+      db.updateVectorGroup("AllTypes", "counts", id, { count_value: [true, 5, false, 7] });
+
+      expect(db.readVectorIntegersById("AllTypes", "count_value", id)).toEqual([1, 5, 0, 7]);
+    } finally {
+      db.close();
+    }
+  });
+
   test("rejects non-binary integers", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {

@@ -129,6 +129,25 @@ describe("upsertTimeSeriesRow", () => {
     }
   });
 
+  test("rejects a cell that is neither string, number, bigint nor boolean", () => {
+    const db = Database.fromSchema(":memory:", MIXED_TS_SCHEMA);
+    try {
+      const id = db.createElement("Sensor", { label: "S1" });
+
+      // The FLOAT branch used to be an untyped fallback: Number(null) is 0 and anything else is
+      // NaN, both written with no error. JS callers reach this even though the types forbid it.
+      expect(() =>
+        db.upsertTimeSeriesRow("Sensor", "readings", id, {
+          date_time: "2024-01-01T00:00:00",
+          // biome-ignore lint/suspicious/noExplicitAny: exercising the untyped JS-caller path
+          humidity: null as any,
+        }),
+      ).toThrow(/column 'humidity' has unsupported value type/);
+    } finally {
+      db.close();
+    }
+  });
+
   test("upsertTimeSeriesRowByLabel writes only the labelled element", () => {
     const db = Database.fromSchema(":memory:", COLLECTIONS_SCHEMA);
     try {

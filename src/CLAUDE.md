@@ -343,17 +343,39 @@ Implementation conventions in `lua_runner.cpp`:
   skip silently; a skipped positional query parameter would shift the rest and bind NULL to the
   trailing placeholder.
 - **A Lua boolean is INTEGER 1/0 on every write path**, matching the cross-layer policy in the root
-  `CLAUDE.md`. Five converters carry the branch — `table_to_element` (scalars *and* the array
-  dispatch), `lua_table_to_value_map` (row upsert), `lua_table_to_values` (query parameters) and
-  `columns_to_cpp_rows` (group cells) — plus `lua_cell_to_int64`, which coerces **per cell** inside
-  `lua_table_to_int64_vector`. That per-cell coercion is not redundant with the array dispatch: a
-  mixed `{1, true}` dispatches on cell 1 as integer and then read the boolean through an unchecked
-  `t.get<int64_t>`, which throws only while `SOL_SAFE_GETTER` is on (debug) and silently yielded 0
-  in release, since no `SOL_*` macro is set in `CMakeLists.txt` or `cmake/Dependencies.cmake`.
-  Use `get_type() == sol::type::boolean`, **never `is<bool>()`** — see the `append_json` note below
-  for why sol2's is looser than `lua_isboolean`. `relation_target_from_lua` is the deliberate
-  exception: only `nil` may clear a relation, so a boolean still throws there.
-  Lua has no boolean *readers* (root design decision), so this is a write-side-only asymmetry.
+  `CLAUDE.md`. Every boolean test goes through the one predicate `is_lua_boolean`, used by
+  `table_to_element` (scalars *and* the array dispatch), `lua_table_to_value_map` (row upsert),
+  `lua_table_to_values` (query parameters), `columns_to_cpp_rows` (group cells), and
+  `lua_table_to_vector` (per array cell). `relation_target_from_lua` is the deliberate exception:
+  only `nil` may clear a relation, so a boolean still throws there. Lua has no boolean *readers*
+  (root design decision), so this is a write-side-only asymmetry.
+- **`lua_cell_as<T>(object, caller, what)` is the one checked Lua-value→C++ conversion**, and
+  every converter routes through it: `lua_table_to_vector` (per array cell),
+  `lua_table_to_dim_map` (per binary dimension) and `update_time_series_files_lua` (per path).
+  `what` names the offending slot in the Pattern 1 message — `cell #3`, `dimension 'stage'`,
+  `path 'data_file'` — so one rule and one message shape cover all three.
+- **`lua_table_to_vector<T>(table, caller)` is the only table→vector converter**, and it converts
+  and checks **every cell**, not just the one the caller dispatched on. Both halves are
+  load-bearing. `table_to_element` picks an array's element type from cell 1 alone, and sol2's
+  plain `get<T>` is unchecked whenever `SOL_SAFE_GETTER` is off — which is every **release** build:
+  `src/CMakeLists.txt` sets `SOL_SAFE_NUMERICS=1` and `SOL_SAFE_FUNCTION=1`, but `SOL_SAFE_GETTER`
+  is left at sol2's default (on in debug, off in release). So a mixed `{1, true}` used to store 0
+  and `{"a", true}` an empty string, silently, in release only — a class of bug Debug CI cannot
+  see. The converter now coerces a boolean cell to 1/0 for a numeric `T` and raises a Pattern 1
+  `"Cannot <caller>: cell #N has unsupported Lua type"` for anything that does not fit, so both the
+  int and the float/string paths are covered. Two known limits, both pre-existing: the loop is
+  bounded by `t.size()` (`lua_rawlen`), so a table with `nil` holes truncates — unlike
+  `collect_group_columns`, which walks `pairs` for exactly that reason; and the element type still
+  comes from cell 1, so `{1, 2.5}` into a REAL column is rejected rather than widened (JS scans the
+  whole column and accepts it). One consequence worth knowing: `lua_opt_int64_vector` routes
+  through it too, so `quiver.metadata{dimension_sizes = {true}}` coerces to a size-1 dimension
+  rather than erroring. That is consistent with the cross-layer boolean policy, and
+  `BinaryMetadata::validate()` still rejects a non-positive size, so `{false}` throws.
+- **`SOL_SAFE_NUMERICS=1` (`src/CMakeLists.txt`) is load-bearing for the whole file.** It turns on
+  sol2's `SOL_NUMBER_PRECISION_CHECKS`, which is what makes `is<int64_t>()` false for a Lua float.
+  Without it that check degrades to "is a number" in release, and the file-wide
+  `is<int64_t>()`-before-`is<double>()` ordering would route every float into the integer branch
+  and store `llround(x)`. Do not drop or move those definitions.
 - `time_series_rows_from_lua` transpose, shared by `update_time_series_group_lua` and
   `update_time_series_group_by_label_lua` (both one-liners over it). Mirrors `group_rows_from_lua`
   but takes `db`, since the dimension columns come from metadata. The **dimension column(s) are
@@ -370,9 +392,11 @@ Implementation conventions in `lua_runner.cpp`:
   so read → modify → write round-trips; `#ts.<dimension>` is the trustworthy row count.
 - **`run` returns the script's return value as JSON**, built by the anonymous-namespace
   `append_json` / `append_json_string` / `append_number` / `append_json_double` /
-  `append_json_table` at the top of the file. Two type checks there use `get_type()` rather than
-  `is<T>()` on purpose: sol2's `is<sol::table>()` also accepts **userdata** (so `return db` would
-  quietly encode as `{}`), and `is<bool>()` is likewise looser than `lua_isboolean`. Everything
+  `append_json_table` at the top of the file. The table check uses `get_type()` rather than
+  `is<T>()` on purpose: sol2's `is<sol::table>()` also accepts **userdata**, so `return db` would
+  quietly encode as `{}`. The boolean check spells `get_type()` for consistency with
+  `is_lua_boolean` in `Impl`, not out of necessity — sol2's `check<bool>` *is* `lua_isboolean`
+  (`stack_check_unqualified.hpp`), so `is<bool>()` would be equivalent here. Everything
   else reuses the house `is<int64_t>()`-then-`is<double>()` ordering. Object keys are collected into
   a `vector` and sorted so output is deterministic — Lua's `pairs` order is not, and the tests
   compare exact strings; a `std::map` was used first and dropped (one tree node per entry on a

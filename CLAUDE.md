@@ -144,6 +144,12 @@ Settled questions — don't relitigate without the user; each was decided delibe
   `quiver_get_last_error`; no per-handle error channels.
 - **Python's `Element` is internal**; users pass `**kwargs` to create/update.
 - **JS keeps a string-based datetime surface** — no DateTime wrappers.
+- **Lua has no row-aligned whole-group readers.** `read_vector_group_by_id` /
+  `read_set_group_by_id` are not bound; `db:read_vectors_by_id` / `db:read_sets_by_id` read each
+  column independently through the null-dropping per-column readers, so two columns of the same
+  group are **not** positionally aligned whenever one is nullable. A script that needs per-row
+  alignment across a nullable group does that read in the host binding. Recorded in the
+  agent-facing Lua reference (`bindings/js/src/lua-api.ts`).
 - **Boolean wrappers are Julia/Dart/Python/JS only; Lua is deliberately excluded.** SQLite has no
   boolean type, so a boolean lives in an INTEGER column as 0/1 and the wrappers are a
   strict-conversion convenience with no C++ or C API counterpart (the fourth documented per-binding

@@ -94,12 +94,18 @@ biome.json        # Lint/format config
   `quiver_get_last_error`, while this one is crafted here (the boolean readers are a binding-only
   convenience the core never sees). It names the offending `collection.attribute`; `queryBoolean`
   has no column to name. On writes a `boolean` is an INTEGER 1/0 — `setElementField`,
-  `setElementArray`, `marshalParams`, `updateGroupColumns` (`group-columns.ts`) and
-  `upsertRowColumns` (`time-series.ts`) each carry a `typeof === "boolean"` branch, and
-  `ScalarValue`/`ArrayValue`/`QueryParam`/`GroupColumns` include it. In `upsertRowColumns` the
-  branch is **folded into the INTEGER condition** rather than added after it, because
-  `Number.isInteger(true)` is `false`: a boolean previously fell through to the FLOAT fallback and
-  landed in the column as FLOAT 1.0 with no error. **`GroupColumns` is the write type and
+  `setElementArray` and `marshalParams` each carry a `typeof === "boolean"` branch, and
+  `ScalarValue`/`ArrayValue`/`QueryParam`/`GroupColumns` include it. The two group/row marshallers
+  instead **normalize per cell before the type dispatch** — `updateGroupColumns`
+  (`group-columns.ts`) and `upsertRowColumns` (`time-series.ts`) both map `boolean → 1/0` first, so
+  no boolean branch is needed at all. Both halves of that are load-bearing: *before* the dispatch,
+  because `Number.isInteger(true)` is `false` and a boolean otherwise falls through to the FLOAT
+  fallback and lands in the column as FLOAT 1.0 with no error; *per cell*, because a boolean branch
+  chosen from the first cell would truthiness-map the rest and silently rewrite a mixed
+  `[true, 5]` column to `[1, 1]`. `updateGroupColumns` skips the normalization for a string column,
+  so it cannot change what a mixed `['a', true]` column already wrote. `upsertRowColumns`'s last
+  branch is `typeof value === "number"`, not an untyped `else` — `Number(null)` is 0 and anything
+  else is NaN, both of which used to be written with no error. **`GroupColumns` is the write type and
   `TimeSeriesData` the read type** — they are otherwise identical, but only the former admits
   `boolean`, since `readTimeSeriesGroup` never produces one and its return type should not claim
   it. The four `updateTimeSeriesGroup*`/group writers therefore take `GroupColumns`.

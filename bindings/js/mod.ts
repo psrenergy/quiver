@@ -15,6 +15,7 @@ export type {
   ArrayValue,
   CsvOptions,
   ElementData,
+  GroupColumns,
   GroupMetadata,
   QueryParam,
   ScalarMetadata,

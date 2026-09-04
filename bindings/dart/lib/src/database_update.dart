@@ -128,7 +128,7 @@ extension DatabaseUpdate on Database {
 
   /// Updates a vector group by element ID (replaces all rows).
   /// Takes a Map of column names to typed Lists; a `null` cell is a SQL NULL.
-  /// Supported value types: int, double, String, DateTime.
+  /// Supported value types: int, bool (INTEGER 1/0), double, String, DateTime.
   /// An empty Map clears all rows for that element.
   ///
   /// Prefer this over passing the group's columns through [updateElement] when a
@@ -279,7 +279,7 @@ extension DatabaseUpdate on Database {
 
   /// Updates a set group by element ID (replaces all rows).
   /// Takes a Map of column names to typed Lists; a `null` cell is a SQL NULL.
-  /// Supported value types: int, double, String, DateTime.
+  /// Supported value types: int, bool (INTEGER 1/0), double, String, DateTime.
   /// An empty Map clears all rows for that element.
   ///
   /// See [updateVectorGroup] for why this is preferred over [updateElement] for
@@ -433,7 +433,7 @@ extension DatabaseUpdate on Database {
 
   /// Updates a time series group by element ID (replaces all rows).
   /// Takes a Map of column names to typed Lists.
-  /// Supported value types: int, double, String, DateTime.
+  /// Supported value types: int, bool (INTEGER 1/0), double, String, DateTime.
   /// An empty Map clears all rows for that element.
   void updateTimeSeriesGroup(
     String collection,
@@ -584,7 +584,7 @@ extension DatabaseUpdate on Database {
 
   /// Adds or updates a single time series row by element ID.
   /// Takes a Map of column names to scalar values.
-  /// Supported value types: int, double, String, DateTime.
+  /// Supported value types: int, bool (INTEGER 1/0), double, String, DateTime.
   /// Calling with the same dimension PK upserts (value columns overwritten).
   void upsertTimeSeriesRow(
     String collection,
@@ -717,7 +717,7 @@ extension DatabaseUpdate on Database {
 
   /// Marshals one vector/set/time-series column into arena-allocated typed + mask arrays,
   /// returning its quiver_data_type_t tag, data pointer, and per-cell NULL mask.
-  /// Supported value types: int, double, String, DateTime; a `null` entry becomes
+  /// Supported value types: int, bool (INTEGER 1/0), double, String, DateTime; a `null` entry becomes
   /// a SQL NULL (mask 0) with a placeholder in the data array. An all-null (or
   /// empty) column is tagged FLOAT with a zeroed placeholder — the C API ignores
   /// the type tag and data for masked-out cells.
@@ -752,11 +752,21 @@ extension DatabaseUpdate on Database {
       );
     }
     // SQLite has no boolean type: a bool is INTEGER 1/0, the same as on Element.set and the query
-    // parameters. Checked before int because a Dart bool is not an int.
-    if (first is bool) {
+    // parameters. Folded into the int branch (checked first — a Dart bool is not an int) and
+    // converted per cell, so a mixed [true, 1] column writes 1 and 1 rather than throwing a raw
+    // TypeError that names no column. Matches Python's per-cell `int(v)` and JS's normalization.
+    if (first is bool || first is int) {
       final arr = arena<Int64>(values.length);
       for (var r = 0; r < values.length; r++) {
-        arr[r] = values[r] == null ? 0 : ((values[r] as bool) ? 1 : 0);
+        final v = values[r];
+        arr[r] = switch (v) {
+          null => 0,
+          final bool b => b ? 1 : 0,
+          final int i => i,
+          _ => throw ArgumentError(
+            "Unsupported value type ${v.runtimeType} in cell $r of column '$column'",
+          ),
+        };
       }
       return (
         type: quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER,
@@ -764,21 +774,21 @@ extension DatabaseUpdate on Database {
         hasValue: mask,
       );
     }
-    if (first is int) {
-      final arr = arena<Int64>(values.length);
-      for (var r = 0; r < values.length; r++) {
-        arr[r] = values[r] == null ? 0 : values[r] as int;
-      }
-      return (
-        type: quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER,
-        data: arr.cast(),
-        hasValue: mask,
-      );
-    }
+    // An int in a REAL column is the documented int-for-REAL coercion, and a bool reaches REAL
+    // through it; converted per cell so a mixed column reports the cell rather than raw-casting.
     if (first is double) {
       final arr = arena<Double>(values.length);
       for (var r = 0; r < values.length; r++) {
-        arr[r] = values[r] == null ? 0.0 : values[r] as double;
+        final v = values[r];
+        arr[r] = switch (v) {
+          null => 0.0,
+          final double d => d,
+          final int i => i.toDouble(),
+          final bool b => b ? 1.0 : 0.0,
+          _ => throw ArgumentError(
+            "Unsupported value type ${v.runtimeType} in cell $r of column '$column'",
+          ),
+        };
       }
       return (
         type: quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT,
@@ -789,7 +799,14 @@ extension DatabaseUpdate on Database {
     if (first is String) {
       final arr = arena<Pointer<Char>>(values.length);
       for (var r = 0; r < values.length; r++) {
-        arr[r] = values[r] == null ? nullptr : (values[r] as String).toNativeUtf8(allocator: arena).cast();
+        final v = values[r];
+        arr[r] = switch (v) {
+          null => nullptr,
+          final String t => t.toNativeUtf8(allocator: arena).cast(),
+          _ => throw ArgumentError(
+            "Unsupported value type ${v.runtimeType} in cell $r of column '$column'",
+          ),
+        };
       }
       return (
         type: quiver_data_type_t.QUIVER_DATA_TYPE_STRING,
@@ -800,11 +817,14 @@ extension DatabaseUpdate on Database {
     if (first is DateTime) {
       final arr = arena<Pointer<Char>>(values.length);
       for (var r = 0; r < values.length; r++) {
-        arr[r] = values[r] == null
-            ? nullptr
-            : dateTimeToString(
-                values[r] as DateTime,
-              ).toNativeUtf8(allocator: arena).cast();
+        final v = values[r];
+        arr[r] = switch (v) {
+          null => nullptr,
+          final DateTime d => dateTimeToString(d).toNativeUtf8(allocator: arena).cast(),
+          _ => throw ArgumentError(
+            "Unsupported value type ${v.runtimeType} in cell $r of column '$column'",
+          ),
+        };
       }
       return (
         type: quiver_data_type_t.QUIVER_DATA_TYPE_STRING,

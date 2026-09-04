@@ -45,10 +45,16 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   `.dart_tool/lib/` to force a fresh DLL rebuild — otherwise tests run against the old layout and
   fail in confusing ways.
 - **Marshaling idiom**: every method allocates through a `package:ffi` `Arena` and releases in
-  `finally`. Typed columns go through the shared private `_marshalGroupColumn(Arena, List<Object?>)`
+  `finally`. Typed columns go through the shared private `_marshalGroupColumn(Arena, String, List<Object?>)`
   (used by `updateTimeSeriesGroup`, `upsertTimeSeriesRow`, `upsertTimeSeriesRowByLabel`,
   `updateVectorGroup`, `updateSetGroup` and the group writers' `ByLabel` forms); query parameters
-  through `_marshalParams`.
+  through `_marshalParams`. Both `_marshalGroupColumn` and `Element._setMixedList` dispatch on the
+  first non-null cell and then convert **every** cell individually — never `as`/`cast` the rest to
+  the dispatched type, which defers the check to iteration and throws a raw `TypeError` naming
+  neither the column nor the cell. An `int` (and a `bool`) is accepted into a REAL column by the
+  int-for-REAL coercion. Find the dispatch cell with a plain loop, not `firstWhere(..., orElse: ()
+  => null)`: `orElse` must return the list's *runtime* element type, so it throws on every
+  non-nullable list — which is what a mixed literal like `[1.5, 2]` infers.
 - **The group writers take columns while the group readers return rows** (`readVectorGroupById`).
   The only asymmetric reader/writer pair here — deliberate, see the root design decisions.
 - **Scalar bulk NULLs**: `readScalarIntegers`/`readScalarFloats` decode a parallel `Pointer<Uint8>`
@@ -86,8 +92,11 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   here, since these readers are a binding-only convenience the core never sees. On writes,
   `Element.set` maps `bool` to `setInteger` (and a `List<bool?>` through `_setMixedList`),
   `_marshalParams` binds a `bool` parameter as INTEGER, and `_marshalGroupColumn`
-  (`database_update.dart`) carries a `case bool` before `case int` — a Dart `bool` is not an
-  `int`, so without it the group writers threw. That one branch covers all eight call sites
+  (`database_update.dart`) dispatches on `first is bool || first is int` — a Dart `bool` is not an
+  `int`, so without the `bool` half the group writers threw. The two are **one branch converting
+  per cell**, not two branches each casting `as` their own type: dispatch reads only the first
+  non-null cell, so a mixed `[true, 1]` column would otherwise throw a raw `TypeError` naming
+  nothing. That branch covers all eight call sites
   (`updateVectorGroup`/`updateSetGroup`/`updateTimeSeriesGroup`/`upsertTimeSeriesRow` and every
   `ByLabel` form), which is why it takes the column name: its unsupported-type `ArgumentError`
   has to name the offending column per the root marshalling-error rule.

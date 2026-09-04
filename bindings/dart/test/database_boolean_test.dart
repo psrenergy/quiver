@@ -134,6 +134,58 @@ void main() {
       expect(db.readSetBooleansById('AllTypes', 'code', id), unorderedEquals([true, false]));
     });
 
+    test('a mixed boolean/integer group column keeps its integer cells', () {
+      final id = db.createElement('AllTypes', {'label': 'Mixed'});
+
+      // Cells are converted individually: dispatching on a leading bool and then casting every
+      // cell `as bool` threw a raw TypeError naming no column.
+      db.updateVectorGroup('AllTypes', 'counts', id, {
+        'count_value': [true, 5, false, 7],
+      });
+
+      expect(db.readVectorIntegersById('AllTypes', 'count_value', id), equals([1, 5, 0, 7]));
+    });
+
+    test('a REAL group column takes ints and bools by the int-for-REAL rule', () {
+      final id = db.createElement('AllTypes', {'label': 'Reals'});
+
+      // Dispatched on the leading double, the float branch cast every cell `as double`, so an int
+      // in a REAL column threw a raw TypeError — the one layer refusing the int-for-REAL rule.
+      db.updateVectorGroup('AllTypes', 'scores', id, {
+        'score': [1.5, 2, true],
+      });
+
+      expect(db.readVectorFloatsById('AllTypes', 'score', id), equals([1.5, 2.0, 1.0]));
+    });
+
+    test('an element array takes the same mixed cells', () {
+      // Element.set marshals arrays itself; it used to `cast<double?>` the list, so the failure
+      // surfaced as a raw TypeError from inside setArrayFloat naming neither attribute nor cell.
+      final id = db.createElement('AllTypes', {
+        'label': 'ElementReals',
+        'score': [1.5, 2, true],
+      });
+
+      expect(db.readVectorFloatsById('AllTypes', 'score', id), equals([1.5, 2.0, 1.0]));
+
+      expect(
+        () => db.createElement('AllTypes', {
+          'label': 'ElementBad',
+          'score': [
+            1.5,
+            <int>[1],
+          ],
+        }),
+        throwsA(
+          isA<ArgumentError>().having(
+            (e) => e.message,
+            'message',
+            allOf(contains('score'), contains('cell 1')),
+          ),
+        ),
+      );
+    });
+
     test('group writer rejection names the offending column', () {
       final id = db.createElement('AllTypes', {'label': 'Bad'});
 

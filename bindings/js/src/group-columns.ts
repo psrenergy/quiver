@@ -94,7 +94,16 @@ export function updateGroupColumns(
   const maskPtrs: (Pointer | null)[] = [];
 
   for (let c = 0; c < columnCount; c++) {
-    const [colName, values] = entries[c];
+    const [colName, rawValues] = entries[c];
+    // SQLite has no boolean type: a boolean is INTEGER 1/0, as in setElementField and
+    // marshalParams. Normalizing per cell before the dispatch (rather than adding a boolean
+    // branch after it) is what makes a mixed [true, 5] column write 1 and 5 instead of
+    // truthiness-mapping every cell, and matches Python's per-cell `int(v)`. A string column is
+    // left alone so normalizing cannot change what a mixed ['a', true] column already wrote.
+    const isStringColumn = typeof rawValues.find((v) => v !== null) === "string";
+    const values = isStringColumn
+      ? rawValues
+      : rawValues.map((v) => (typeof v === "boolean" ? (v ? 1 : 0) : v));
     const first = values.find((v) => v !== null);
 
     // Mask via direct indexing — never a DataView, to avoid the documented
@@ -118,13 +127,6 @@ export function updateGroupColumns(
       );
       keepalive.push(table, ...strPtrs);
       dataPtrs.push(table.ptr);
-    } else if (typeof first === "boolean") {
-      // SQLite has no boolean type: a boolean is INTEGER 1/0, as in setElementField and
-      // marshalParams. A null cell keeps its 0 placeholder and is masked out above.
-      typesDv.setInt32(c * 4, DATA_TYPE_INTEGER, true);
-      const p = allocNativeInt64(values.map((v) => (v ? 1 : 0)));
-      keepalive.push(p);
-      dataPtrs.push(p.ptr);
     } else if (typeof first === "number") {
       const nonNull = values.filter((v) => v !== null) as number[];
       const sanitized = values.map((v) => (v === null ? 0 : (v as number)));
