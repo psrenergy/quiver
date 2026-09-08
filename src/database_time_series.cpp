@@ -410,16 +410,16 @@ void Database::update_time_series_files(const std::string& collection,
     Impl::TransactionGuard txn(*impl_);
 
     // Only the named columns are written, so an existing row is UPDATEd rather than rebuilt. Not an
-    // upsert because the table has no PK or UNIQUE constraint for ON CONFLICT to target; the rowid
-    // keeps the UPDATE on the one row read_time_series_files reads.
-    auto existing = execute("SELECT rowid FROM " + tsf + " LIMIT 1");
+    // ON CONFLICT upsert because the table has no PK or UNIQUE constraint to target; it is a
+    // singleton, so the UPDATE addresses its one row without a WHERE clause.
+    auto existing = execute("SELECT 1 FROM " + tsf + " LIMIT 1");
 
-    // Both spellings of the caller's columns; the two branches bind the same parameters in order.
+    // Both spellings of the caller's columns; the two branches bind the same parameters.
     std::string columns;
     std::string placeholders;
     std::string set_clause;
     std::vector<Value> parameters;
-    parameters.reserve(paths.size() + 1);
+    parameters.reserve(paths.size());
 
     bool first = true;
     for (const auto& [col_name, path] : paths) {
@@ -443,8 +443,7 @@ void Database::update_time_series_files(const std::string& collection,
     if (existing.empty()) {
         sql = "INSERT INTO " + tsf + " (" + columns + ") VALUES (" + placeholders + ")";
     } else {
-        sql = "UPDATE " + tsf + " SET " + set_clause + " WHERE rowid = ?";
-        parameters.emplace_back(existing[0].get_integer(0).value());
+        sql = "UPDATE " + tsf + " SET " + set_clause;
     }
 
     execute(sql, parameters);
