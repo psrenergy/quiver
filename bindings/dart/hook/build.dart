@@ -52,6 +52,14 @@ void main(List<String> args) async {
         if (targetOS == OS.macOS) ...{
           'CMAKE_MACOSX_BUNDLE': 'OFF',
           'ENABLE_STRICT_TRY_COMPILE': 'ON',
+          //  3. It defaults DEPLOYMENT_TARGET to 13 (native_toolchain_cmake passes
+          //     -DDEPLOYMENT_TARGET=13), but database_csv_export.cpp calls the
+          //     floating-point std::to_chars, which libc++ marks unavailable before
+          //     macOS 13.3. Raise the floor to the first version that has it. Set
+          //     DEPLOYMENT_TARGET, not CMAKE_OSX_DEPLOYMENT_TARGET -- the iOS toolchain
+          //     file derives the latter from the former, so setting it directly is
+          //     silently overwritten.
+          'DEPLOYMENT_TARGET': '13.3',
         },
         // Pre-set try_run results for cross-compilation mode on Linux
         // GNU strerror_r returns char* (not int), so the test succeeds (exit code 0)
