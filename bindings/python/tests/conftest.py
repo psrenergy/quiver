@@ -123,6 +123,20 @@ def composite_helpers_db(composite_helpers_schema_path: Path, tmp_path: Path) ->
 
 
 @pytest.fixture
+def multi_column_groups_schema_path(schemas_path: Path) -> Path:
+    """Return the path to the multi-column groups test schema."""
+    return schemas_path / "valid" / "multi_column_groups.sql"
+
+
+@pytest.fixture
+def multi_column_groups_db(multi_column_groups_schema_path: Path, tmp_path: Path) -> Generator[Database, None, None]:
+    """Create a test database with the multi-column groups schema."""
+    database = Database.from_schema(str(tmp_path / "multi_column_groups.db"), str(multi_column_groups_schema_path))
+    yield database
+    database.close()
+
+
+@pytest.fixture
 def mixed_time_series_schema_path(schemas_path: Path) -> Path:
     """Return the path to the mixed time series test schema."""
     return schemas_path / "valid" / "mixed_time_series.sql"

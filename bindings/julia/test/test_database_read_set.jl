@@ -240,6 +240,28 @@ include("fixture.jl")
 
         Quiver.close!(db)
     end
+
+    @testset "Set Group Columns Pair By Row" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "multi_column_groups.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+        id = Quiver.create_element!(db, "Items"; label = "Item 1")
+        # Unsorted in both columns on purpose: a value-ordered reader would pair the wrong rows
+        Quiver.update_set_group!(db, "Items", "codes", id;
+            code = ["zeta", "alpha", "mu"],
+            weight = [2.5, 3.5, 1.5],
+        )
+
+        codes = Quiver.read_set_strings_by_id(db, "Items", "code", id)
+        weights = Quiver.read_set_floats_by_id(db, "Items", "weight", id)
+
+        @test length(codes) == 3
+        @test length(weights) == length(codes)
+        @test sort(collect(zip(codes, weights))) == [("alpha", 3.5), ("mu", 1.5), ("zeta", 2.5)]
+
+        Quiver.close!(db)
+    end
 end
 
 end

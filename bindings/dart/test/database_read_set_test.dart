@@ -345,4 +345,34 @@ void main() {
       }
     });
   });
+
+  group('Read Set Group Columns Pair By Row', () {
+    test('two per-column reads of one set group pair by row', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'multi_column_groups.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        final id = db.createElement('Items', {'label': 'Item 1'});
+        // Unsorted in both columns on purpose: a value-ordered reader would pair the wrong rows
+        db.updateSetGroup('Items', 'codes', id, {
+          'code': ['zeta', 'alpha', 'mu'],
+          'weight': [2.5, 3.5, 1.5],
+        });
+
+        final codes = db.readSetStringsById('Items', 'code', id);
+        final weights = db.readSetFloatsById('Items', 'weight', id);
+
+        expect(codes.length, equals(3));
+        expect(weights.length, equals(codes.length));
+        final pairs = {
+          for (var i = 0; i < codes.length; i++) codes[i]: weights[i],
+        };
+        expect(pairs, equals({'alpha': 3.5, 'mu': 1.5, 'zeta': 2.5}));
+      } finally {
+        db.close();
+      }
+    });
+  });
 }

@@ -259,3 +259,26 @@ class TestReadElementById:
         assert all(isinstance(v, int) for v in result["code"])
         assert all(isinstance(v, float) for v in result["weight"])
         assert all(isinstance(v, str) for v in result["tag"])
+
+
+# -- Set group column pairing -------------------------------------------------
+
+
+class TestReadSetGroupColumnsPairByRow:
+    def test_two_per_column_reads_pair_by_row(self, multi_column_groups_db: Database) -> None:
+        multi_column_groups_db.create_element("Configuration", label="Config")
+        element_id = multi_column_groups_db.create_element("Items", label="item1")
+        # Unsorted in both columns on purpose: a value-ordered reader would pair the wrong rows
+        multi_column_groups_db.update_set_group(
+            "Items",
+            "codes",
+            element_id,
+            {"code": ["zeta", "alpha", "mu"], "weight": [2.5, 3.5, 1.5]},
+        )
+
+        codes = multi_column_groups_db.read_set_strings_by_id("Items", "code", element_id)
+        weights = multi_column_groups_db.read_set_floats_by_id("Items", "weight", element_id)
+
+        assert len(codes) == 3
+        assert len(weights) == len(codes)
+        assert sorted(zip(codes, weights)) == [("alpha", 3.5), ("mu", 1.5), ("zeta", 2.5)]
