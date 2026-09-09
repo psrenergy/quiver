@@ -84,16 +84,13 @@ target_link_libraries(quiver
 )
 
 # Set library properties
+# QUIVER_LIB_VERSION is VERSION/SOVERSION, or empty when QUIVER_UNVERSIONED_SHARED is on
+# (set next to the option in the root CMakeLists.txt).
 set_target_properties(quiver PROPERTIES
+    ${QUIVER_LIB_VERSION}
     OUTPUT_NAME quiver
     PREFIX "lib"
 )
-if(NOT QUIVER_UNVERSIONED_SHARED)
-    set_target_properties(quiver PROPERTIES
-        VERSION ${PROJECT_VERSION}
-        SOVERSION ${PROJECT_VERSION_MAJOR}
-    )
-endif()
 
 # Alias for use in subdirectories
 add_library(quiver::database ALIAS quiver)
@@ -155,14 +152,9 @@ if(QUIVER_BUILD_C_API)
     )
 
     set_target_properties(quiver_c PROPERTIES
+        ${QUIVER_LIB_VERSION}
         PREFIX "lib"
     )
-    if(NOT QUIVER_UNVERSIONED_SHARED)
-        set_target_properties(quiver_c PROPERTIES
-            VERSION ${PROJECT_VERSION}
-            SOVERSION ${PROJECT_VERSION_MAJOR}
-        )
-    endif()
 
     add_library(quiver::database_c ALIAS quiver_c)
 

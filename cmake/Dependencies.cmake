@@ -24,9 +24,20 @@ FetchContent_MakeAvailable(spdlog)
 # Lua 5.4.8 via lua-cmake wrapper
 # NOTE: lua-cmake v5.4.8.0 has no switch to skip the lua/luac binaries. The
 # LUA_BUILD_INTERPRETER and LUA_BUILD_COMPILER options previously set here do not exist
-# upstream and were silently doing nothing. Those targets are simply never built, because
-# this project only ever asks CMake for the `quiver` and `quiver_c` targets.
+# upstream and were silently doing nothing. Its lua_bin/luac_bin are unconditional
+# add_executable()s in the `all` target, so a plain `cmake --build build` DOES build two
+# binaries this project never uses (~550 KB) -- only the Dart hook escapes that, by asking for
+# the `quiver`/`quiver_c` targets explicitly. Do not "fix" that with
+# `set_target_properties(lua_bin luac_bin PROPERTIES EXCLUDE_FROM_ALL YES)`: lua-cmake installs
+# both unconditionally, so `cmake --install` then dies with "file INSTALL cannot find .../lua"
+# and takes the scikit-build-core wheel build with it (which is also why pyproject.toml's
+# `wheel.exclude = ["bin", "lib", "include", "share"]` is load-bearing -- those are the four
+# directories lua-cmake writes into). Excluding them properly needs
+# `FetchContent_Declare(... EXCLUDE_FROM_ALL)`, which is CMake >= 3.28; the project floor is 3.26.
 set(LUA_TESTS "None" CACHE STRING "" FORCE)
+# Skips the find_package(Readline)/find_package(Editline) probes, which exist only to give
+# lua_bin a line editor. Unlike the two options above, this one does exist upstream.
+set(LUA_LINE_EDITOR "None" CACHE STRING "" FORCE)
 FetchContent_Declare(lua
     GIT_REPOSITORY https://gitlab.com/codelibre/lua/lua-cmake.git
     GIT_TAG lua-cmake/v5.4.8.0

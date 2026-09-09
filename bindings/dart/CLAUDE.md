@@ -37,13 +37,45 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   `quiver_database_update_relation` plus its `_by_label` form.
   Take the generator upgrade as its own deliberate change (regenerate, then fix the enum call
   sites here and in hub) rather than as a side effect of adding a C function.
-- **Native library resolution** (`lib/src/ffi/library_loader.dart`): searches the native-assets
-  build output (`.dart_tool/hooks_runner/shared/quiverdb/build`) first — on Windows it pre-loads
-  `libquiver.dll` from there so `libquiver_c.dll`'s dependency resolves — then falls back to
-  system PATH. In the normal dev/test flow nothing needs to be on PATH.
+- **Native library resolution** (`lib/src/ffi/library_loader.dart`), three tiers in order:
+  (1) the native-assets build output (`.dart_tool/hooks_runner/shared/quiverdb/build`) — on
+  Windows it pre-loads `libquiver.dll` from there so `libquiver_c.dll`'s dependency resolves;
+  (2) on macOS `@rpath/quiver_c.framework/quiver_c`, for a packaged Flutter `.app`, where there
+  is no `.dart_tool` tree (flutter_tools repackages each code asset as `<name>.framework` with
+  the `lib` prefix and `.dylib` suffix stripped, and rewrites the inter-asset dependency to
+  `@rpath/quiver.framework/quiver`, so no core pre-open is needed there);
+  (3) system PATH. In the normal dev/test flow nothing needs to be on PATH.
+  Tier 1 returns **every** name match, newest first, and tries each: the build root holds one
+  subtree per build config and a universal macOS build leaves an x86_64 tree beside the arm64
+  one, so the first match is not necessarily loadable. It scans with `followLinks: false` to
+  match the hook's own scanner. If all three tiers fail the error reports the *first* failure,
+  not just the PATH one — a bundle whose framework exists but whose dependency is missing would
+  otherwise be reported as a missing `libquiver_c.dylib`.
+- **The macOS build hook carries four load-bearing workarounds** (`hook/build.dart`), because
+  native_toolchain_cmake drives macOS through its bundled **iOS** toolchain file:
+  `QUIVER_UNVERSIONED_SHARED=ON` (without it `findAndAddCodeAssets` — `followLinks: false`,
+  unversioned-name match — registers **zero** assets and the hook still exits 0);
+  `CMAKE_MACOSX_BUNDLE=OFF` (the toolchain's `if(NOT DEFINED ...) set(... YES)` inherits into
+  FetchContent, and lua-cmake's `lua_bin` bundle + RUNTIME-only `install()` then aborts
+  configure); `appleArgs: AppleBuilderArgs(enableStrictTryCompile: true)` (otherwise
+  `CMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY` makes every `check_function_exists` report
+  success, including Linux-only `posix_fallocate`, which breaks `sqlite3.c` on Darwin); and
+  `DEPLOYMENT_TARGET` floored at 13.3 (libc++ marks the floating-point `std::to_chars` used by
+  `database_csv_export.cpp` / `lua_runner.cpp` unavailable below it — `cmake/Platform.cmake`
+  carries the same floor for every other macOS build). Do not "simplify" these. The
+  `HAVE_GNU_STRERROR_R_EXITCODE` seed is load-bearing on macOS too, and its **value** is
+  per-platform: CMake hard-errors on `try_run` in cross-compiling mode without it (the iOS
+  toolchain file sets `CMAKE_SYSTEM_NAME`, so macOS is in that mode), but the GNU answer is only
+  right for glibc — seeding `0` on Darwin defines `STRERROR_R_CHAR_P` and makes `sqlite3.c`
+  assign an `int` return to a `char*`.
+  Note **no CI job runs this hook on any OS** — Dart is built and published by hand.
 - **Stale native cache**: when C API struct layouts change, clear `.dart_tool/hooks_runner/` and
   `.dart_tool/lib/` to force a fresh DLL rebuild — otherwise tests run against the old layout and
-  fail in confusing ways.
+  fail in confusing ways. Clear it after a **build-configuration** change too, not just an ABI
+  one: the hook reuses one CMake build dir per config checksum, and that checksum does not cover
+  the hook's own defines. `check_function_exists` results are cached even by a *failed* configure
+  and are then skipped forever, and flipping `QUIVER_UNVERSIONED_SHARED` does not force a relink,
+  so the previous build's symlinks survive and the asset scan finds nothing.
 - **Marshaling idiom**: every method allocates through a `package:ffi` `Arena` and releases in
   `finally`. Typed columns go through the shared private `_marshalGroupColumn(Arena, String, List<Object?>)`
   (used by `updateTimeSeriesGroup`, `upsertTimeSeriesRow`, `upsertTimeSeriesRowByLabel`,

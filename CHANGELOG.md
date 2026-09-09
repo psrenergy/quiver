@@ -9,6 +9,21 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ### Changed
 
+- **The Dart binding's native build now works on macOS.** `quiverdb`'s native-assets hook
+  previously could not configure, compile, or register its libraries there.
+- **macOS builds now target macOS 13.3 as their minimum, deterministically.** libc++ marks the
+  floating-point `std::to_chars` (used by `database_csv_export.cpp` and `lua_runner.cpp`)
+  unavailable below 13.3, so that is the core's real floor and `cmake/Platform.cmake` now sets
+  it for every macOS build. Previously no build path set one, so clang stamped the *builder's*
+  OS version into the shipped dylibs and the published Julia/JS/S3 natives silently required
+  whatever macOS the CI runner image was — usually much newer than 13.3. A higher explicit
+  `CMAKE_OSX_DEPLOYMENT_TARGET` is respected; a lower one is raised to 13.3, which is what the
+  code actually requires.
+- **New CMake option `QUIVER_UNVERSIONED_SHARED` (default OFF).** Turning it on builds the
+  shared libraries as plain `libquiver.dylib` / `libquiver.so` real files instead of a versioned
+  real file plus unversioned symlinks. Only the Dart hook sets it — the published Julia, JS and
+  Python natives keep their versioned install names, so nothing else changes.
+
 ### Added
 
 - **Booleans are accepted on every write path, in every layer.** A native boolean now maps to
