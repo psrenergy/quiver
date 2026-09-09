@@ -15,6 +15,12 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 option(QUIVER_BUILD_SHARED "Build shared library" ON)
 option(QUIVER_BUILD_TESTS "Build test suite" ON)
 option(QUIVER_BUILD_C_API "Build C API wrapper" OFF)
+# Omit VERSION/SOVERSION on shared libraries, so the built files carry their plain
+# names (libquiver.dylib) instead of a version infix plus unversioned symlinks.
+# Default OFF: the JS/Julia/Python artifacts depend on the libquiver.0.dylib install
+# name. Turned ON by the Dart hook, whose asset scanner skips symlinks and matches
+# only the unversioned name.
+option(QUIVER_UNVERSIONED_SHARED "Omit VERSION/SOVERSION on shared libraries" OFF)
 
 # --- Python wheel packaging (scikit-build-core) ---
 # When building via scikit-build-core (pip wheel / python -m build),

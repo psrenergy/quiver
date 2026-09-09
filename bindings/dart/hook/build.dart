@@ -30,6 +30,12 @@ void main(List<String> args) async {
         'QUIVER_BUILD_C_API': 'ON',
         'QUIVER_BUILD_TESTS': 'OFF',
         'QUIVER_BUILD_SHARED': 'ON',
+        // findAndAddCodeAssets walks the build dir with followLinks:false, skips
+        // non-File entities, and matches a path ending in the unversioned library name
+        // (add_assets.dart:107-112). With VERSION/SOVERSION set, the real files carry a
+        // version infix and the unversioned names are symlinks, so NOTHING registers and
+        // the hook silently reports zero assets. Drop the versioning for this build.
+        'QUIVER_UNVERSIONED_SHARED': 'ON',
         // native_toolchain_cmake drives macOS through its *iOS* toolchain file, which is
         // wrong for a host-native macOS build in two ways. Both are fixed with -D cache
         // entries: they exist before the toolchain file is read, and the last -D wins.

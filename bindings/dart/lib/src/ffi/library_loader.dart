@@ -47,6 +47,24 @@ DynamicLibrary get library {
     return _cachedLibrary!;
   }
 
+  // Inside a macOS .app there is no .dart_tool tree, so the scan above returns null.
+  // flutter_tools repackages every code asset into its own framework and rewrites the
+  // install name to @rpath/<name>.framework/<name>, where <name> is the file name with
+  // the `lib` prefix and `.dylib` suffix stripped -- so libquiver_c.dylib is loaded as
+  // quiver_c.framework/quiver_c. The framework is internally versioned
+  // (Versions/A/quiver_c) but carries a top-level symlink, so this path resolves. The
+  // dependency on libquiver is rewritten to its own framework at the same time and is
+  // resolved by dyld through the app's @executable_path/../Frameworks rpath, so there is
+  // no need to pre-open the core library the way Windows does above.
+  if (Platform.isMacOS) {
+    try {
+      _cachedLibrary = DynamicLibrary.open('@rpath/quiver_c.framework/quiver_c');
+      return _cachedLibrary!;
+    } catch (_) {
+      // Not running from an app bundle - fall through to the bare library name.
+    }
+  }
+
   // Fallback to system PATH
   _cachedLibrary = DynamicLibrary.open(_libraryName);
   return _cachedLibrary!;
