@@ -15,6 +15,20 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 option(QUIVER_BUILD_SHARED "Build shared library" ON)
 option(QUIVER_BUILD_TESTS "Build test suite" ON)
 option(QUIVER_BUILD_C_API "Build C API wrapper" OFF)
+# Omit VERSION/SOVERSION on shared libraries, so the built files carry their plain
+# names (libquiver.dylib) instead of a version infix plus unversioned symlinks.
+# Default OFF: the shipped natives are addressed by their versioned names --
+# bindings/julia/src/c_api.jl hardcodes libquiver.0.dylib, and scripts/ci/native_s3.sh,
+# publish-s3.yml and publish-js.yml ship libquiver.0.dylib / libquiver.so.0 by name.
+# Turned ON by the Dart hook, whose asset scanner skips symlinks and matches only the
+# unversioned name. CMAKE_PLATFORM_NO_VERSIONED_SONAME is NOT a substitute: under the Xcode
+# generator that hook selects, it drops the symlinks but keeps the versioned file name,
+# leaving libquiver.0.10.5.dylib with an @rpath/libquiver.dylib install name that the
+# scanner still matches nothing against.
+option(QUIVER_UNVERSIONED_SHARED "Omit VERSION/SOVERSION on shared libraries" OFF)
+if(NOT QUIVER_UNVERSIONED_SHARED)
+    set(QUIVER_LIB_VERSION VERSION ${PROJECT_VERSION} SOVERSION ${PROJECT_VERSION_MAJOR})
+endif()
 
 # --- Python wheel packaging (scikit-build-core) ---
 # When building via scikit-build-core (pip wheel / python -m build),

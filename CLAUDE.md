@@ -297,17 +297,37 @@ JS has no generator — update the hand-written symbol table in `bindings/js/src
 ## Build System
 
 - **CMake ≥ 3.26, C++20.** Options: `QUIVER_BUILD_SHARED` (ON), `QUIVER_BUILD_TESTS` (ON),
-  `QUIVER_BUILD_C_API` (OFF — the configure line above turns it on). When scikit-build-core
-  drives the build (Python wheels) it defines the `SKBUILD` CMake variable, which forces
-  C API ON and tests OFF.
+  `QUIVER_BUILD_C_API` (OFF — the configure line above turns it on), `QUIVER_UNVERSIONED_SHARED`
+  (OFF). When scikit-build-core drives the build (Python wheels) it defines the `SKBUILD` CMake
+  variable, which forces C API ON and tests OFF.
+- **`QUIVER_UNVERSIONED_SHARED` omits VERSION/SOVERSION**, so the shared libraries are built as
+  plain `libquiver.dylib` / `libquiver.so` real files instead of a versioned real file plus
+  unversioned symlinks. **Only the Dart hook sets it** (`bindings/dart/hook/build.dart`), because
+  `findAndAddCodeAssets` walks with `followLinks: false` and matches the unversioned name — so
+  with versioning on it registers *nothing* and reports success. Leave it OFF everywhere else:
+  Julia hardcodes `libquiver.0.dylib` and `scripts/ci/native_s3.sh`, `publish-s3.yml` and
+  `publish-js.yml` ship the versioned names by name. `CMAKE_PLATFORM_NO_VERSIONED_SONAME` is not
+  a substitute — under the Xcode generator the hook uses, it drops the symlinks but keeps the
+  versioned file name. No CI job exercises the ON configuration.
+- **macOS builds are floored at deployment target 13.3** (`cmake/Platform.cmake`): libc++ marks
+  the floating-point `std::to_chars` used by `database_csv_export.cpp` and `lua_runner.cpp`
+  unavailable below it, so that is the **core's** floor, not one binding's. A higher explicit
+  `CMAKE_OSX_DEPLOYMENT_TARGET` is respected; a lower one is raised. Do not remove it: with no
+  floor, clang stamps the builder's own OS version into every dylib, which is how the published
+  Julia/JS/S3 natives ended up requiring whatever macOS the CI runner image was. The Dart hook
+  passes its own `DEPLOYMENT_TARGET` as well, because native_toolchain_cmake's iOS toolchain
+  file force-derives `CMAKE_OSX_DEPLOYMENT_TARGET` from it before `Platform.cmake` is read.
 - **Presets** (`CMakePresets.json`): configure `dev` (Debug, tests+C API), `release`,
   `windows-release` (VS 17 2022), `linux-release`; build presets for
   dev/release/windows-release/linux-release; test presets for dev/windows-release/linux-release.
   Presets build into `build/<presetName>/`; the plain `build/` dir is the manual configure above.
 - **Dependencies** via FetchContent (`cmake/Dependencies.cmake`): sqlite3 v3.50.2
-  (sjinks/sqlite3-cmake), tomlplusplus v3.4.0, spdlog v1.17.0, lua v5.4.8 (lua-cmake wrapper,
-  interpreter/compiler off), sol2 v3.5.0, rapidcsv v8.92, argparse v3.2, googletest v1.17.0
-  (tests only).
+  (sjinks/sqlite3-cmake), tomlplusplus v3.4.0, spdlog v1.17.0, lua v5.4.8 (lua-cmake wrapper —
+  its `lua_bin`/`luac_bin` are unconditional `add_executable`s in `all`, so a plain
+  `cmake --build build` does build two binaries this project never uses; lua-cmake has **no**
+  switch for them, so the `LUA_BUILD_INTERPRETER`/`LUA_BUILD_COMPILER` once set here were
+  no-ops, and `EXCLUDE_FROM_ALL` is not a fix either — see the note in `cmake/Dependencies.cmake`),
+  sol2 v3.5.0, rapidcsv v8.92, argparse v3.2, googletest v1.17.0 (tests only).
 - **Targets**: `quiver` (core, alias `quiver::database`), `quiver_c` (alias
   `quiver::database_c`), `quiver_cli`, `quiver_tests`, `quiver_c_tests`, `quiver_benchmark`,
   `quiver_sandbox`. Outputs: executables/DLLs → `build/bin/`, libs → `build/lib/`.
