@@ -22,8 +22,10 @@ FetchContent_Declare(spdlog
 FetchContent_MakeAvailable(spdlog)
 
 # Lua 5.4.8 via lua-cmake wrapper
-set(LUA_BUILD_INTERPRETER OFF CACHE BOOL "" FORCE)
-set(LUA_BUILD_COMPILER OFF CACHE BOOL "" FORCE)
+# NOTE: lua-cmake v5.4.8.0 has no switch to skip the lua/luac binaries. The
+# LUA_BUILD_INTERPRETER and LUA_BUILD_COMPILER options previously set here do not exist
+# upstream and were silently doing nothing. Those targets are simply never built, because
+# this project only ever asks CMake for the `quiver` and `quiver_c` targets.
 set(LUA_TESTS "None" CACHE STRING "" FORCE)
 FetchContent_Declare(lua
     GIT_REPOSITORY https://gitlab.com/codelibre/lua/lua-cmake.git

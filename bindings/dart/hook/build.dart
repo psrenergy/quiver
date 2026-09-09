@@ -30,6 +30,23 @@ void main(List<String> args) async {
         'QUIVER_BUILD_C_API': 'ON',
         'QUIVER_BUILD_TESTS': 'OFF',
         'QUIVER_BUILD_SHARED': 'ON',
+        // native_toolchain_cmake drives macOS through its *iOS* toolchain file, which is
+        // wrong for a host-native macOS build in two ways. Both are fixed with -D cache
+        // entries: they exist before the toolchain file is read, and the last -D wins.
+        //  1. It does `if (NOT DEFINED CMAKE_MACOSX_BUNDLE) set(CMAKE_MACOSX_BUNDLE YES)`
+        //     (ios.toolchain.cmake:790-792) as a plain directory-scope variable, so it
+        //     inherits into every add_subdirectory including FetchContent's. lua-cmake then
+        //     makes lua_bin/luac_bin app bundles and their RUNTIME-only install() aborts
+        //     configure. We build shared libraries for FFI here, never an app bundle.
+        //  2. It sets CMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY unless strict try_compile
+        //     is on (ios.toolchain.cmake:786-787), so check_function_exists only compiles and
+        //     never links. Because it declares the symbol itself, it then reports EVERY
+        //     function as present -- including Linux-only posix_fallocate, which makes
+        //     sqlite3.c fail to compile on Darwin. Linking works fine for a native build.
+        if (targetOS == OS.macOS) ...{
+          'CMAKE_MACOSX_BUNDLE': 'OFF',
+          'ENABLE_STRICT_TRY_COMPILE': 'ON',
+        },
         // Pre-set try_run results for cross-compilation mode on Linux
         // GNU strerror_r returns char* (not int), so the test succeeds (exit code 0)
         'HAVE_GNU_STRERROR_R_EXITCODE': '0',
