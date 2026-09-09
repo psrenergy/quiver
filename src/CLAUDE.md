@@ -172,6 +172,10 @@ impl_->logger->debug("Opening database: {}", path);
   first non-empty one, because `columns` is name-sorted and an empty alphabetically-first column
   otherwise left it at 0 for a later column to overwrite — skipping the check and indexing past the
   end of the empty vector.
+- **`update_time_series_files` patches** (`database_time_series.cpp`): `SELECT 1 FROM <tsf> LIMIT 1`
+  decides UPDATE vs INSERT, and either statement mentions only the caller's columns, so an unnamed
+  column keeps its value. Not an `ON CONFLICT` upsert because the table has no PK or UNIQUE
+  constraint to target; the table is a singleton, so the UPDATE needs no `WHERE` clause.
 - **`Impl::update_group_rows`** (`database_update.cpp`) is the shared body of
   `update_vector_group`/`update_set_group`. It validates the **union of every row's keys** (not
   `rows[0]`, which dropped later-row-only columns and skipped validating them) against the group

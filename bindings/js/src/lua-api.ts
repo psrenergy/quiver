@@ -280,8 +280,10 @@ Notes:
   \`{ x = nil }\` is identical to \`{}\`; an update/create table that ends up with no attributes
   **throws** (\`...must have at least one scalar attribute\` on create, \`...at least one attribute
   to update\` on update). To leave a column unchanged, omit the key — you cannot set a scalar to
-  NULL via the element table. (\`nil\` → NULL is only accepted by
-  \`upsert_time_series_row\`, \`update_time_series_files\` and \`update_relation\`.)
+  NULL via the element table — nor via \`update_time_series_files\`, keyed by column name too,
+  where an omitted column now keeps its current value. Elsewhere \`nil\` still reaches NULL: a
+  \`nil\` cell in a group writer, an omitted column in \`upsert_time_series_row\`, and a
+  \`nil\` \`target_label\` on \`update_relation\`.
 - **\`update_relation\` points one scalar foreign-key relation at another element**, named by the
   target's label. The column is derived from the naming convention —
   \`lowercase(collection_to) .. "_" .. relation_type\`, so
@@ -495,10 +497,12 @@ singleton table):
 db:has_time_series_files(collection)              -- boolean
 db:list_time_series_files_columns(collection)     -- { "data_file", "metadata_file", ... }
 db:read_time_series_files(collection)             -- { data_file = "path", metadata_file = nil, ... }
-db:update_time_series_files(collection, { data_file = "path/to/data.bin", metadata_file = nil })
+db:update_time_series_files(collection, { data_file = "path/to/data.bin" })
 \`\`\`
 
-In \`update_time_series_files\`, a \`nil\` value clears that column.
+Only the columns you name are written, so the call above leaves \`metadata_file\` alone. A column
+cannot be cleared from Lua here: \`{ metadata_file = nil }\` is \`{}\`, which names nothing — so
+feeding a \`read_time_series_files\` result straight back in is a no-op.
 
 ---
 

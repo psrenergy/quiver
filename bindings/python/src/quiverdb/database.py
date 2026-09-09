@@ -1879,7 +1879,11 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         collection: str,
         data: dict[str, str | None],
     ) -> None:
-        """Update time series file paths. Pass None for a path to clear it."""
+        """Update time series file paths.
+
+        Only the named columns are written: pass None for a path to clear that column, and leave a
+        column out of `data` to keep its current value.
+        """
         self._ensure_open()
         lib = get_lib()
         count = len(data)

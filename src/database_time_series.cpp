@@ -409,23 +409,28 @@ void Database::update_time_series_files(const std::string& collection,
 
     Impl::TransactionGuard txn(*impl_);
 
-    // Delete existing row (singleton table)
-    auto delete_sql = "DELETE FROM " + tsf;
-    execute(delete_sql);
+    // Only the named columns are written, so an existing row is UPDATEd rather than rebuilt. Not an
+    // ON CONFLICT upsert because the table has no PK or UNIQUE constraint to target; it is a
+    // singleton, so the UPDATE addresses its one row without a WHERE clause.
+    auto existing = execute("SELECT 1 FROM " + tsf + " LIMIT 1");
 
-    // Build INSERT SQL
-    std::string insert_sql = "INSERT INTO " + tsf + " (";
+    // Both spellings of the caller's columns; the two branches bind the same parameters.
+    std::string columns;
     std::string placeholders;
+    std::string set_clause;
     std::vector<Value> parameters;
+    parameters.reserve(paths.size());
 
     bool first = true;
     for (const auto& [col_name, path] : paths) {
         if (!first) {
-            insert_sql += ", ";
+            columns += ", ";
             placeholders += ", ";
+            set_clause += ", ";
         }
-        insert_sql += col_name;
+        columns += col_name;
         placeholders += "?";
+        set_clause += col_name + " = ?";
         if (path) {
             parameters.emplace_back(*path);
         } else {
@@ -433,9 +438,15 @@ void Database::update_time_series_files(const std::string& collection,
         }
         first = false;
     }
-    insert_sql += ") VALUES (" + placeholders + ")";
 
-    execute(insert_sql, parameters);
+    std::string sql;
+    if (existing.empty()) {
+        sql = "INSERT INTO " + tsf + " (" + columns + ") VALUES (" + placeholders + ")";
+    } else {
+        sql = "UPDATE " + tsf + " SET " + set_clause;
+    }
+
+    execute(sql, parameters);
 
     txn.commit();
     impl_->logger->info("Updated time series files for collection: {}", collection);
