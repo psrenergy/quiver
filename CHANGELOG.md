@@ -44,6 +44,17 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ### Fixed
 
+- **Dart: every DateTime reader threw on valid values whose local wall-clock time the platform
+  considers nonexistent.** `stringToDateTime` validated by re-serializing a *local*
+  `DateTime.parse` and comparing it with the input, so a value inside a DST gap — on Windows the
+  historical Brazilian rules put one at midnight of 2019-01-01 — came back shifted by an hour and
+  was rejected as `Cannot convert "2019-01-01T00:00:00" to a date time in
+  'Consumption.date_time': expected a valid YYYY-MM-DD[THH:MM:SS]`, taking down
+  `readTimeSeriesGroup`, `readScalarDateTimes`, `queryDateTime` and the rest with it. The
+  fields are now range-checked in UTC (which has no gaps) and the local `DateTime` built from
+  them; the accepted grammar is unchanged and now pinned by `test/date_time_test.dart`. A value
+  inside a real DST gap still reads an hour later, since that local time does not exist — but it
+  reads.
 - **JavaScript: `upsertTimeSeriesRow` wrote a boolean as FLOAT into an INTEGER column.**
   `Number.isInteger(true)` is `false`, so a boolean fell through to the float branch and was
   coerced to `1.0` with no error — the core then rejected the row for a type mismatch, or a REAL
