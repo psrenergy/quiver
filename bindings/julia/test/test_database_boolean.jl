@@ -35,11 +35,11 @@ include("fixture.jl")
     @test Quiver.read_scalar_boolean_by_id(db, "AllTypes", "some_integer", id_true) === true
     @test Quiver.read_scalar_boolean_by_id(db, "AllTypes", "some_integer", id_null) === nothing
 
-    @test Quiver.read_vector_booleans(db, "AllTypes", "count_value") == [[false, true], [true, false]]
+    @test Quiver.read_vector_booleans(db, "AllTypes", "count_value") == [[false, true], [true, false], []]
     @test Quiver.read_vector_booleans_by_id(db, "AllTypes", "count_value", id_false) == [false, true]
     @test Quiver.read_vector_booleans_by_id(db, "AllTypes", "count_value", id_null) == Bool[]
 
-    @test Quiver.read_set_booleans(db, "AllTypes", "code") == [[false, true], [true]]
+    @test Quiver.read_set_booleans(db, "AllTypes", "code") == [[false, true], [true], []]
     @test Quiver.read_set_booleans_by_id(db, "AllTypes", "code", id_false) == [false, true]
     @test Quiver.read_set_booleans_by_id(db, "AllTypes", "code", id_null) == Bool[]
 

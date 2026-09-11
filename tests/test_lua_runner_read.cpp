@@ -195,10 +195,11 @@ TEST_F(LuaRunnerTest, ReadEmptyVector) {
 
     quiver::LuaRunner lua(db);
 
-    // Reading vectors from elements that don't have vector data should return empty
+    // One entry per element: an element without vector data reads back as an empty table
     lua.run(R"(
         local vectors = db:read_vector_integers("Collection", "value_int")
-        assert(#vectors == 0, "Expected 0 vectors for elements without vector data")
+        assert(#vectors == 1, "Expected 1 entry, got " .. #vectors)
+        assert(#vectors[1] == 0, "Element without vector data should be an empty table")
     )");
 }
 
@@ -236,6 +237,30 @@ TEST_F(LuaRunnerTest, ReadVectorIntegersEmpty) {
     lua.run(R"(
         local vectors = db:read_vector_integers("Collection", "value_int")
         assert(#vectors == 0, "Expected empty table, got " .. #vectors .. " items")
+    )");
+}
+
+TEST_F(LuaRunnerTest, ReadVectorBulkAlignsWithElementIdsAcrossEmptyElement) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    db.create_element("Collection",
+                      quiver::Element().set("label", "Item 1").set("value_int", std::vector<int64_t>{1, 2}));
+    db.create_element("Collection", quiver::Element().set("label", "Item 2"));  // no vector rows
+    db.create_element("Collection", quiver::Element().set("label", "Item 3").set("value_int", std::vector<int64_t>{7}));
+
+    quiver::LuaRunner lua(db);
+
+    // The empty element is an empty table, not a nil hole, so #vectors stays reliable
+    // (unlike the scalar readers) and the positions line up with read_element_ids.
+    lua.run(R"(
+        local ids = db:read_element_ids("Collection")
+        local vectors = db:read_vector_integers("Collection", "value_int")
+        assert(#ids == 3, "Expected 3 ids, got " .. #ids)
+        assert(#vectors == 3, "Expected 3 entries, got " .. #vectors)
+        assert(#vectors[1] == 2, "First vector should have 2 values, got " .. #vectors[1])
+        assert(#vectors[2] == 0, "Element with no rows should be an empty table")
+        assert(#vectors[3] == 1, "Third vector should have 1 value, got " .. #vectors[3])
+        assert(vectors[3][1] == 7, "Third element's value should be 7, not read as another element's")
     )");
 }
 

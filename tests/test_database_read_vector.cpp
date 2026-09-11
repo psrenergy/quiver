@@ -69,7 +69,7 @@ TEST(Database, ReadVectorEmpty) {
     EXPECT_TRUE(float_vectors.empty());
 }
 
-TEST(Database, ReadVectorOnlyReturnsElementsWithData) {
+TEST(Database, ReadVectorIncludesElementsWithNoRows) {
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
 
@@ -92,11 +92,15 @@ TEST(Database, ReadVectorOnlyReturnsElementsWithData) {
     e3.set("label", std::string("Item 3")).set("value_int", std::vector<int64_t>{4, 5});
     db.create_element("Collection", e3);
 
-    // Only elements with vector data are returned
+    // One entry per element, positionally aligned with read_element_ids: the element with no rows
+    // is an empty vector, not a gap
+    auto ids = db.read_element_ids("Collection");
     auto vectors = db.read_vector_integers("Collection", "value_int");
-    EXPECT_EQ(vectors.size(), 2);
+    ASSERT_EQ(ids.size(), 3);
+    ASSERT_EQ(vectors.size(), ids.size());
     EXPECT_EQ(vectors[0], (std::vector<int64_t>{1, 2, 3}));
-    EXPECT_EQ(vectors[1], (std::vector<int64_t>{4, 5}));
+    EXPECT_TRUE(vectors[1].empty());
+    EXPECT_EQ(vectors[2], (std::vector<int64_t>{4, 5}));
 }
 
 // ============================================================================

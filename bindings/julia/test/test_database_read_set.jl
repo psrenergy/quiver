@@ -36,7 +36,7 @@ include("fixture.jl")
         Quiver.close!(db)
     end
 
-    @testset "Set Only Returns Elements With Data" begin
+    @testset "Set Includes Elements With No Rows" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
         db = Quiver.from_schema(":memory:", path_schema)
 
@@ -49,9 +49,12 @@ include("fixture.jl")
         # Create another element with set data
         Quiver.create_element!(db, "Collection"; label = "Item 3", tag = ["urgent", "review"])
 
-        # Only elements with set data are returned
+        # One entry per element: the element with no rows is an empty vector, not a gap
         result = Quiver.read_set_strings(db, "Collection", "tag")
-        @test length(result) == 2
+        @test length(result) == 3
+        @test result[1] == ["important"]
+        @test isempty(result[2])
+        @test result[3] == ["urgent", "review"]
 
         Quiver.close!(db)
     end
@@ -162,9 +165,10 @@ include("fixture.jl")
         Quiver.create_element!(db, "AllTypes"; label = "No set")
 
         result = Quiver.read_set_date_times(db, "AllTypes", "tag")
-        @test length(result) == 2
+        @test length(result) == 3
         @test sort(result[1]) == [DateTime(2024, 1, 15, 10, 30, 0), DateTime(2024, 1, 16)]
         @test result[2] == [DateTime(2024, 6, 20, 14, 45, 30)]
+        @test isempty(result[3])
 
         Quiver.close!(db)
     end
@@ -233,6 +237,28 @@ include("fixture.jl")
         @test all(v -> v isa Int64, result["code"])
         @test all(v -> v isa Float64, result["weight"])
         @test all(v -> v isa String, result["tag"])
+
+        Quiver.close!(db)
+    end
+
+    @testset "Set Group Columns Pair By Row" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "multi_column_groups.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+        id = Quiver.create_element!(db, "Items"; label = "Item 1")
+        # Unsorted in both columns on purpose: a value-ordered reader would pair the wrong rows
+        Quiver.update_set_group!(db, "Items", "codes", id;
+            code = ["zeta", "alpha", "mu"],
+            weight = [2.5, 3.5, 1.5],
+        )
+
+        codes = Quiver.read_set_strings_by_id(db, "Items", "code", id)
+        weights = Quiver.read_set_floats_by_id(db, "Items", "weight", id)
+
+        @test length(codes) == 3
+        @test length(weights) == length(codes)
+        @test sort(collect(zip(codes, weights))) == [("alpha", 3.5), ("mu", 1.5), ("zeta", 2.5)]
 
         Quiver.close!(db)
     end

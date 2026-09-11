@@ -46,7 +46,7 @@ include("fixture.jl")
         Quiver.close!(db)
     end
 
-    @testset "Vector Only Returns Elements With Data" begin
+    @testset "Vector Includes Elements With No Rows" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
         db = Quiver.from_schema(":memory:", path_schema)
 
@@ -59,11 +59,12 @@ include("fixture.jl")
         # Create another element with vectors
         Quiver.create_element!(db, "Collection"; label = "Item 3", value_int = [4, 5])
 
-        # Only elements with vector data are returned
+        # One entry per element: the element with no rows is an empty vector, not a gap
         result = Quiver.read_vector_integers(db, "Collection", "value_int")
-        @test length(result) == 2
+        @test length(result) == 3
         @test result[1] == [1, 2, 3]
-        @test result[2] == [4, 5]
+        @test isempty(result[2])
+        @test result[3] == [4, 5]
 
         Quiver.close!(db)
     end
@@ -159,6 +160,7 @@ include("fixture.jl")
         @test Quiver.read_vector_date_times(db, "AllTypes", "label_value") == [
             [DateTime(2024, 1, 15, 10, 30, 0), DateTime(2024, 1, 16)],
             [DateTime(2024, 6, 20, 14, 45, 30)],
+            [],
         ]
 
         Quiver.close!(db)
