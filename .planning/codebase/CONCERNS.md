@@ -61,7 +61,7 @@
 - Impact: Each C API addition must be manually added to the symbol map; easy to forget, has caused drift in the past
 - Context: Julia, Dart, Python all have generators (`bindings/*/generator/generator.bat`). JS alone does not. Root cause: Bun FFI is niche and has no existing binding generator ecosystem
 - Mitigation: `bindings/js/test/lua-api-sync.test.ts` provides a sync check for Lua bindings, but does not cover C API symbol coverage
-- Note: Documented as intentional in root `CLAUDE.md` "Do Not Fix" section
+- Note: NOT covered by the root `CLAUDE.md` "Do Not Fix" list (which covers Dart/Python FFI boilerplate style, `tests/sandbox`, the Bun FFI workarounds, JS lint debt, and the location of the Lua reference). `bindings/js/CLAUDE.md` calls this "the drift-prone spot: check it whenever a new C function exists in other bindings but not here" - acknowledged as a hazard, not blessed.
 
 ## Duplicated CSV Parsing
 
