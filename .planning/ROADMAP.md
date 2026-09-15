@@ -45,10 +45,12 @@ arriving as a string and every path resolved against the database directory
      subdirectory is accepted
   5. A file using a non-`,` separator reads correctly once the separator option is given, and the
      option defaults to `,`
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 01-01: TBD
+- [ ] 01-01-PLAN.md — Tracer: csv-parser wired in, both Lua entry points over one reader, sandboxed
+- [ ] 01-02-PLAN.md — The `separator` option, strictly decoded, on both entry points
+- [ ] 01-03-PLAN.md — Sandbox negatives + full error catalogue proven, plus house paperwork
 
 Notes:
 - DOC-01 lands here because `bindings/js/test/lua-api-sync.test.ts` parses `src/lua_runner.cpp` and
@@ -125,7 +127,7 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. A Lua script reads a CSV file | 0/TBD | Not started | - |
+| 1. A Lua script reads a CSV file | 0/3 | Planned | - |
 | 2. The dirty files parse correctly | 0/TBD | Not started | - |
 | 3. The agent reads instead of transcribing | 0/TBD | Not started | - |
 
