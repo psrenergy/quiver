@@ -10,6 +10,7 @@ set(QUIVER_SOURCES
     database_query.cpp
     database_csv_export.cpp
     database_csv_import.cpp
+    csv_read.cpp
     database_describe.cpp
     element.cpp
     lua_runner.cpp
@@ -80,6 +81,7 @@ target_link_libraries(quiver
         lua_library
         sol2
         rapidcsv
+        csv
         ${CMAKE_DL_LIBS}
 )
 

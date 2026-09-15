@@ -1,5 +1,6 @@
 #include "quiver/lua_runner.h"
 
+#include "csv_read.h"
 #include "quiver/binary/binary_file.h"
 #include "quiver/binary/binary_metadata.h"
 #include "quiver/binary/csv_converter.h"
@@ -443,6 +444,32 @@ struct LuaRunner::Impl {
         });
         bind.set_function("csv_to_bin", [](Database& self, const std::string& path) {
             CSVConverter::csv_to_bin(resolve_sandboxed_path(self, "csv_to_bin", path));
+        });
+
+        // CSV file reading -- db-scoped and sandboxed like the file I/O above. Both entry points
+        // construct the same csv_read::Reader and drive it through header()/for_each_row(), so
+        // they cannot diverge on any input (LUA-03).
+        bind.set_function("read_csv", [](Database& self, const std::string& path, sol::this_state s) -> sol::table {
+            sol::state_view lua(s);
+            csv_read::Reader reader(resolve_sandboxed_path(self, "read_csv", path), path, "read_csv");
+
+            std::vector<std::vector<std::string>> rows;
+            reader.for_each_row([&rows](std::vector<std::string>&& cells, int64_t /*index*/) {
+                rows.push_back(std::move(cells));
+                return true;
+            });
+
+            auto result = lua.create_table();
+            // `header` is absent (not an empty table) when the file has no header -- Phase 2's
+            // "no header" declaration reuses this same falsy sentinel, so the two must not
+            // collide (D-01). header_row(0) always designates a header for a non-empty file
+            // today; the guard is forward-looking.
+            const auto& header = reader.header();
+            if (!header.empty()) {
+                result["header"] = to_lua_table(lua, header);
+            }
+            result["rows"] = to_lua_table(lua, rows);
+            return result;
         });
     }
 

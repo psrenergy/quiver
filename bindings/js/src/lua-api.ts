@@ -95,7 +95,8 @@ midnight.
   and \`dofile\`/\`loadfile\` are removed (string-form \`load\` stays available). Integer division is
   the Lua 5.4 \`//\` operator — a language operator, unrelated to \`math\`.
 - **Filesystem sandbox.** Every file-touching operation (\`db:export_csv\`, \`db:import_csv\`,
-  \`db:open_file\`, \`db:bin_to_csv\`, \`db:csv_to_bin\`, \`db:validate_migrations\`, \`expr:save\`) resolves
+  \`db:open_file\`, \`db:bin_to_csv\`, \`db:csv_to_bin\`, \`db:validate_migrations\`, \`db:read_csv\`,
+  \`expr:save\`) resolves
   relative paths against the directory containing the database file and rejects anything outside it
   (subdirectories are fine; \`..\` escapes and outside absolute paths throw \`Cannot <op>: path '...' escapes the
   database directory ...\`). On an in-memory database these operations throw
@@ -609,6 +610,25 @@ The optional \`options\` table has two keys:
 **Precondition:** \`db:import_csv\` cannot run inside an open transaction (it toggles
 \`PRAGMA foreign_keys\`, a no-op mid-transaction) — it throws \`Cannot import_csv: transaction already
 active\`. Call it outside any \`db:transaction\` / \`db:begin_transaction\` block.
+
+---
+
+## CSV file reading
+
+Read a CSV file from disk directly into Lua — the only way to get file data into a script, since
+\`io\` is deliberately absent from the sandbox. \`path\` is sandboxed the same way as every other
+file-touching operation (see Critical rules).
+
+\`\`\`lua
+local csv = db:read_csv(path)          -- { header = {...}, rows = {{...}, ...} }
+\`\`\`
+
+Every cell arrives as a **string**, with no numeric or date inference — \`"0012"\` stays \`"0012"\`
+and a date stays text. \`csv.header\` is a 1-based array of the file's column names in file order;
+\`csv.rows\` is a 1-based array of rows, each a 1-based array of strings, addressed positionally
+(\`csv.rows[1][1]\`). Rows are never padded to header width — a short row stays short and a field
+past its end is \`nil\`. A 0-byte file throws \`Cannot read_csv: file '<path>' is empty\`; a
+header-only file returns a populated \`header\` and an empty \`rows\`.
 
 ---
 

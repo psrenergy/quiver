@@ -40,6 +40,7 @@ add_executable(quiver_tests
     test_lua_runner_migrations.cpp
     test_lua_runner_query.cpp
     test_lua_runner_read.cpp
+    test_lua_runner_read_csv.cpp
     test_lua_runner_return.cpp
     test_lua_runner_time_series.cpp
     test_lua_runner_transaction.cpp
