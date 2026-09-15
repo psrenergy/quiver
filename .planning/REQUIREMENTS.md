@@ -10,7 +10,7 @@ agent, and secondarily anyone scripting a Quiver database by hand.
 
 ### Parser
 
-- [ ] **PARSE-01**: The core can parse a CSV incrementally, yielding rows without holding the whole file in memory, so a multi-GB file does not have to fit in RAM
+- [x] **PARSE-01**: The core can parse a CSV incrementally, yielding rows without holding the whole file in memory, so a multi-GB file does not have to fit in RAM
 - [ ] **PARSE-02**: A field quoted with `"` may contain the separator, and is returned as one field (`"May 1, 2014",33` is two fields, not three)
 - [ ] **PARSE-03**: A quoted field may contain a newline, and the record is not split at it
 - [ ] **PARSE-04**: A doubled quote inside a quoted field is unescaped to a single quote
@@ -18,22 +18,22 @@ agent, and secondarily anyone scripting a Quiver database by hand.
 - [ ] **PARSE-06**: CRLF and LF line endings both parse, and no cell retains a trailing `\r`
 - [ ] **PARSE-07**: Rows with differing field counts parse without throwing or silently truncating
 - [ ] **PARSE-08**: The field separator is configurable at runtime, defaulting to `,`
-- [ ] **PARSE-09**: Parsing never uses more memory than a bounded window regardless of file size, and that window is not tied to the host's CPU count
+- [x] **PARSE-09**: Parsing never uses more memory than a bounded window regardless of file size, and that window is not tied to the host's CPU count
 
 ### Lua surface
 
-- [ ] **LUA-01**: A script can read a whole CSV file into memory with `db:read_csv(path)`, addressing columns positionally and reading the header names separately
-- [ ] **LUA-02**: A script can stream a CSV row by row with `db:read_csv_stream(path, on_row)`, holding bounded memory regardless of file size
-- [ ] **LUA-03**: Both forms run on the same parser, so they cannot diverge in how they handle any input
-- [ ] **LUA-04**: Both forms resolve `path` against the database file's directory and refuse anything outside it, and both refuse to run on an in-memory database — identical to every other file-touching Lua operation
+- [x] **LUA-01**: A script can read a whole CSV file into memory with `db:read_csv(path)`, addressing columns positionally and reading the header names separately
+- [x] **LUA-02**: A script can stream a CSV row by row with `db:read_csv_stream(path, on_row)`, holding bounded memory regardless of file size
+- [x] **LUA-03**: Both forms run on the same parser, so they cannot diverge in how they handle any input
+- [x] **LUA-04**: Both forms resolve `path` against the database file's directory and refuse anything outside it, and both refuse to run on an in-memory database — identical to every other file-touching Lua operation
 - [ ] **LUA-05**: A script can name which row is the header, or declare that there is none, so files with junk rows above the header are readable
 - [ ] **LUA-06**: A file whose header names repeat or are blank is fully readable — no column is unreachable and none silently shadows another
-- [ ] **LUA-07**: Every cell reaches Lua as a string, with no numeric or date inference, so nothing is silently coerced
+- [x] **LUA-07**: Every cell reaches Lua as a string, with no numeric or date inference, so nothing is silently coerced
 - [ ] **LUA-08**: A missing file, an unreadable path, a bad option value, or a header row past the end of the file each raise a `Cannot read_csv: ...` error naming the problem, rather than surfacing a parser or stream error
 
 ### Agent guidance
 
-- [ ] **DOC-01**: `bindings/js/src/lua-api.ts` documents both entry points, their options, and the string-cell rule, in the house literal-token format the sync test checks
+- [x] **DOC-01**: `bindings/js/src/lua-api.ts` documents both entry points, their options, and the string-cell rule, in the house literal-token format the sync test checks
 - [ ] **DOC-02**: The reference tells the model to read data files rather than transcribe them into the script, placed where the model is currently told it has no filesystem access
 - [ ] **DOC-03**: The reference carries a worked example over a realistically dirty file, including the `tonumber`/`gsub` parenthesis trap that silently returns `nil`
 - [ ] **DOC-04**: The `CLAUDE.md` nearest each change is updated, and a changelog entry is added
@@ -84,7 +84,7 @@ Which phases cover which requirements.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PARSE-01 | Phase 1 | Pending |
+| PARSE-01 | Phase 1 | Complete |
 | PARSE-02 | Phase 2 | Pending |
 | PARSE-03 | Phase 2 | Pending |
 | PARSE-04 | Phase 2 | Pending |
@@ -92,16 +92,16 @@ Which phases cover which requirements.
 | PARSE-06 | Phase 2 | Pending |
 | PARSE-07 | Phase 2 | Pending |
 | PARSE-08 | Phase 1 | Pending |
-| PARSE-09 | Phase 1 | Pending |
-| LUA-01 | Phase 1 | Pending |
-| LUA-02 | Phase 1 | Pending |
-| LUA-03 | Phase 1 | Pending |
-| LUA-04 | Phase 1 | Pending |
+| PARSE-09 | Phase 1 | Complete |
+| LUA-01 | Phase 1 | Complete |
+| LUA-02 | Phase 1 | Complete |
+| LUA-03 | Phase 1 | Complete |
+| LUA-04 | Phase 1 | Complete |
 | LUA-05 | Phase 2 | Pending |
 | LUA-06 | Phase 2 | Pending |
-| LUA-07 | Phase 1 | Pending |
+| LUA-07 | Phase 1 | Complete |
 | LUA-08 | Phase 1 | Pending |
-| DOC-01 | Phase 1 | Pending |
+| DOC-01 | Phase 1 | Complete |
 | DOC-02 | Phase 3 | Pending |
 | DOC-03 | Phase 3 | Pending |
 | DOC-04 | Phase 3 | Pending |
@@ -112,11 +112,13 @@ Which phases cover which requirements.
 | TEST-05 | Phase 3 | Pending |
 
 **Coverage:**
+
 - v1 requirements: 26 total
 - Mapped to phases: 26 ✓
 - Unmapped: 0
 
 **Per phase:**
+
 - Phase 1 — A Lua script reads a CSV file: 11 requirements (PARSE-01, PARSE-08, PARSE-09, LUA-01, LUA-02, LUA-03, LUA-04, LUA-07, LUA-08, TEST-03, DOC-01)
 - Phase 2 — The dirty files parse correctly: 11 requirements (PARSE-02 … PARSE-07, LUA-05, LUA-06, TEST-01, TEST-02, TEST-04)
 - Phase 3 — The agent reads instead of transcribing: 4 requirements (DOC-02, DOC-03, DOC-04, TEST-05)

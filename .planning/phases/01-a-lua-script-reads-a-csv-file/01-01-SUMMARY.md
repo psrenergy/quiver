@@ -263,6 +263,11 @@ None - no external service configuration required.
 - No blockers. `cmake/Dependencies.cmake`'s csv-parser block, once fetched, is cached in
   `build/_deps/csv_parser-*` for subsequent configures.
 
+## Self-Check: PASSED
+
+All created/modified files verified present on disk; all task and summary commit hashes
+(`0873047`, `969ffa3`, `cf0f35c`) verified present in `git log --oneline --all`.
+
 ---
 *Phase: 01-a-lua-script-reads-a-csv-file*
 *Completed: 2026-09-15*
