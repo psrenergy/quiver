@@ -620,7 +620,7 @@ Read a CSV file from disk directly into Lua — the only way to get file data in
 file-touching operation (see Critical rules).
 
 \`\`\`lua
-local csv = db:read_csv(path)          -- { header = {...}, rows = {{...}, ...} }
+local csv = db:read_csv(path, { separator = "," })   -- { header = {...}, rows = {{...}, ...} }
 \`\`\`
 
 Every cell arrives as a **string**, with no numeric or date inference — \`"0012"\` stays \`"0012"\`
@@ -629,6 +629,10 @@ and a date stays text. \`csv.header\` is a 1-based array of the file's column na
 (\`csv.rows[1][1]\`). Rows are never padded to header width — a short row stays short and a field
 past its end is \`nil\`. A 0-byte file throws \`Cannot read_csv: file '<path>' is empty\`; a
 header-only file returns a populated \`header\` and an empty \`rows\`.
+
+The options table is optional and \`separator\` is its only key — passing the separator positionally
+(\`db:read_csv(path, ";")\`) throws \`Cannot read_csv: options must be a table\` instead of silently
+parsing with a comma; an unknown key or a separator that isn't a single character also throws.
 
 \`db:read_csv_stream\` reads the same file through the same parser, row by row, so the process holds
 a bounded window instead of the whole file:
@@ -640,7 +644,7 @@ local n = db:read_csv_stream(path, function(row, index, header)
     -- header: the same array db:read_csv returns, reachable here so a column can be found by
     -- name before processing row 1.
     return row[1] ~= ""     -- returning false stops the read early; a bare comparison as the
-end)                         -- last statement can silently truncate the stream this way
+end, { separator = "," })   -- last statement can silently truncate the stream this way
 -- n counts rows FED to the callback, not rows it kept -- a filtering callback logging n as
 -- "imported" would be wrong.
 \`\`\`

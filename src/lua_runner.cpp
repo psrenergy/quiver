@@ -449,58 +449,68 @@ struct LuaRunner::Impl {
         // CSV file reading -- db-scoped and sandboxed like the file I/O above. Both entry points
         // below construct the same csv_read reader and drive it through header()/for_each_row(),
         // so they cannot diverge on any input (LUA-03).
-        bind.set_function("read_csv", [](Database& self, const std::string& path, sol::this_state s) -> sol::table {
-            sol::state_view lua(s);
-            csv_read::Reader reader(resolve_sandboxed_path(self, "read_csv", path), path, "read_csv");
-
-            std::vector<std::vector<std::string>> rows;
-            reader.for_each_row([&rows](std::vector<std::string>&& cells, int64_t /*index*/) {
-                rows.push_back(std::move(cells));
-                return true;
-            });
-
-            auto result = lua.create_table();
-            // `header` is absent (not an empty table) when the file has no header -- Phase 2's
-            // "no header" declaration reuses this same falsy sentinel, so the two must not
-            // collide (D-01). header_row(0) always designates a header for a non-empty file
-            // today; the guard is forward-looking.
-            const auto& header = reader.header();
-            if (!header.empty()) {
-                result["header"] = to_lua_table(lua, header);
-            }
-            result["rows"] = to_lua_table(lua, rows);
-            return result;
-        });
         bind.set_function(
-            "read_csv_stream",
-            [](Database& self, const std::string& path, sol::protected_function on_row, sol::this_state s) -> int64_t {
+            "read_csv",
+            [](Database& self, const std::string& path, sol::object options, sol::this_state s) -> sol::table {
                 sol::state_view lua(s);
-                csv_read::Reader reader(resolve_sandboxed_path(self, "read_csv_stream", path), path, "read_csv_stream");
+                auto csv_options = read_csv_options_from_lua(options, "read_csv");
+                csv_read::Reader reader(resolve_sandboxed_path(self, "read_csv", path), path, "read_csv", csv_options);
 
-                // Built once, before the loop, and passed by reference into every callback
-                // invocation -- reachable during the stream so a script can find a column by
-                // name before processing row 1 (D-05).
-                const auto header_table = to_lua_table(lua, reader.header());
-
-                return reader.for_each_row([&](std::vector<std::string>&& cells, int64_t index) -> bool {
-                    const auto row_table = to_lua_table(lua, cells);
-                    auto result = on_row(row_table, index, header_table);
-                    if (!result.valid()) {
-                        // Propagate the Lua error verbatim and unwrapped (D-08): the reader is a
-                        // stack local and ~CSVReader() joins its scheduler during normal C++
-                        // unwinding, so no manual cleanup is needed here.
-                        sol::error err = result;
-                        throw std::runtime_error(err.what());
-                    }
-                    // sol::optional<bool> is a strict LUA_TBOOLEAN check, Debug/Release-identical.
-                    // Only an exact `false` stops the read (D-06) -- get<bool>() would be
-                    // lua_toboolean truthiness and misread a no-return callback's nil as "stop".
-                    if (result.return_count() > 0 && result.get<sol::optional<bool>>(0) == false) {
-                        return false;
-                    }
+                std::vector<std::vector<std::string>> rows;
+                reader.for_each_row([&rows](std::vector<std::string>&& cells, int64_t /*index*/) {
+                    rows.push_back(std::move(cells));
                     return true;
                 });
+
+                auto result = lua.create_table();
+                // `header` is absent (not an empty table) when the file has no header -- Phase 2's
+                // "no header" declaration reuses this same falsy sentinel, so the two must not
+                // collide (D-01). header_row(0) always designates a header for a non-empty file
+                // today; the guard is forward-looking.
+                const auto& header = reader.header();
+                if (!header.empty()) {
+                    result["header"] = to_lua_table(lua, header);
+                }
+                result["rows"] = to_lua_table(lua, rows);
+                return result;
             });
+        bind.set_function("read_csv_stream",
+                          [](Database& self,
+                             const std::string& path,
+                             sol::protected_function on_row,
+                             sol::object options,
+                             sol::this_state s) -> int64_t {
+                              sol::state_view lua(s);
+                              auto csv_options = read_csv_options_from_lua(options, "read_csv_stream");
+                              csv_read::Reader reader(resolve_sandboxed_path(self, "read_csv_stream", path),
+                                                      path,
+                                                      "read_csv_stream",
+                                                      csv_options);
+
+                              // Built once, before the loop, and passed by reference into every callback
+                              // invocation -- reachable during the stream so a script can find a column by
+                              // name before processing row 1 (D-05).
+                              const auto header_table = to_lua_table(lua, reader.header());
+
+                              return reader.for_each_row([&](std::vector<std::string>&& cells, int64_t index) -> bool {
+                                  const auto row_table = to_lua_table(lua, cells);
+                                  auto result = on_row(row_table, index, header_table);
+                                  if (!result.valid()) {
+                                      // Propagate the Lua error verbatim and unwrapped (D-08): the reader is a
+                                      // stack local and ~CSVReader() joins its scheduler during normal C++
+                                      // unwinding, so no manual cleanup is needed here.
+                                      sol::error err = result;
+                                      throw std::runtime_error(err.what());
+                                  }
+                                  // sol::optional<bool> is a strict LUA_TBOOLEAN check, Debug/Release-identical.
+                                  // Only an exact `false` stops the read (D-06) -- get<bool>() would be
+                                  // lua_toboolean truthiness and misread a no-return callback's nil as "stop".
+                                  if (result.return_count() > 0 && result.get<sol::optional<bool>>(0) == false) {
+                                      return false;
+                                  }
+                                  return true;
+                              });
+                          });
     }
 
     // ========================================================================
@@ -883,6 +893,55 @@ struct LuaRunner::Impl {
             });
         }
         return options;
+    }
+
+    // Shared strict decoder for db:read_csv / db:read_csv_stream's trailing options table
+    // (D-14/D-15/D-16/D-17, LUA-03 -- one decoder so the two entry points cannot diverge on any
+    // option). `options` is `sol::object`, **not** the optional-table style `parse_csv_options`
+    // above uses: sol2's optional checker never raises on a type mismatch on its own (see
+    // relation_target_from_lua below, the pattern this copies), so a wrong type
+    // would otherwise silently fall through to defaults instead of throwing. `operation` is the
+    // caller's own method name ("read_csv" / "read_csv_stream"), so the same bad table reports
+    // whichever entry point the script actually called (D-19).
+    static csv_read::Options read_csv_options_from_lua(const sol::object& options, const std::string& operation) {
+        csv_read::Options result;
+        if (!options.valid() || options.get_type() == sol::type::lua_nil) {
+            // Missing parameter or explicit nil -- same as an empty table, both valid (D-14).
+            return result;
+        }
+        if (options.get_type() != sol::type::table) {
+            throw std::runtime_error("Cannot " + operation + ": options must be a table");
+        }
+
+        // Collect entries first, then validate: throwing out of sol2's for_each abandons the
+        // traversal mid-stack (D-17).
+        std::vector<std::pair<std::string, sol::object>> entries;
+        options.as<sol::table>().for_each(
+            [&](sol::object key, sol::object value) { entries.emplace_back(key.as<std::string>(), std::move(value)); });
+
+        std::optional<sol::object> separator_value;
+        for (auto& entry : entries) {
+            if (entry.first != "separator") {
+                throw std::runtime_error("Cannot " + operation + ": unknown option '" + entry.first + "'");
+            }
+            separator_value = entry.second;
+        }
+
+        if (separator_value) {
+            // Check the Lua type explicitly rather than routing through lua_cell_as: that helper
+            // surfaces sol2's own stack-index message, which is neither Pattern 1 nor stable
+            // across build types (LUA-08).
+            if (separator_value->get_type() != sol::type::string) {
+                throw std::runtime_error("Cannot " + operation + ": option 'separator' must be a string");
+            }
+            auto separator = separator_value->as<std::string>();
+            if (separator.size() != 1) {
+                throw std::runtime_error("Cannot " + operation + ": option 'separator' must be a single character");
+            }
+            result.separator = separator[0];
+        }
+
+        return result;
     }
 
     template <typename T>

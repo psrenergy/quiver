@@ -274,3 +274,81 @@ TEST_F(LuaRunner_ReadCsv, StreamAndWholeFileReadYieldSameRows) {
         end
     )");
 }
+
+// --- options table: separator (D-14 through D-18) ---
+
+TEST_F(LuaRunner_ReadCsv, SemicolonSeparatorReadsCorrectly) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    write_lua_csv_file(sandbox / "semi.csv", "a;b\n1;2\n");
+
+    lua.run(R"(
+        local csv = db:read_csv("semi.csv", { separator = ";" })
+        assert(csv.header[1] == "a", "expected header[1] == a, got " .. tostring(csv.header[1]))
+        assert(csv.header[2] == "b", "expected header[2] == b, got " .. tostring(csv.header[2]))
+        assert(#csv.rows == 1, "expected 1 row, got " .. #csv.rows)
+        assert(csv.rows[1][1] == "1", "expected '1', got " .. tostring(csv.rows[1][1]))
+        assert(csv.rows[1][2] == "2", "expected '2', got " .. tostring(csv.rows[1][2]))
+    )");
+}
+
+TEST_F(LuaRunner_ReadCsv, StreamSemicolonSeparatorYieldsSameRowsAsWholeFileRead) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    write_lua_csv_file(sandbox / "semi.csv", "a;b\n1;2\n3;4\n");
+
+    lua.run(R"(
+        local whole = db:read_csv("semi.csv", { separator = ";" })
+        local streamed = {}
+        db:read_csv_stream("semi.csv", function(row)
+            streamed[#streamed + 1] = row
+        end, { separator = ";" })
+        assert(#whole.rows == #streamed, "row counts differ")
+        for i = 1, #whole.rows do
+            for j = 1, #whole.rows[i] do
+                assert(whole.rows[i][j] == streamed[i][j], "cell mismatch at " .. i .. "," .. j)
+            end
+        end
+    )");
+}
+
+TEST_F(LuaRunner_ReadCsv, DefaultSeparatorMatchesEmptyOptionsTable) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    write_lua_csv_file(sandbox / "comma.csv", "a,b\n1,2\n3,4\n");
+
+    lua.run(R"(
+        local no_opts = db:read_csv("comma.csv")
+        local empty_opts = db:read_csv("comma.csv", {})
+        assert(no_opts.header[1] == empty_opts.header[1] and no_opts.header[2] == empty_opts.header[2],
+            "header mismatch between no-options and empty-options reads")
+        assert(#no_opts.rows == #empty_opts.rows, "row count mismatch")
+        for i = 1, #no_opts.rows do
+            for j = 1, #no_opts.rows[i] do
+                assert(no_opts.rows[i][j] == empty_opts.rows[i][j], "cell mismatch at " .. i .. "," .. j)
+            end
+        end
+    )");
+}
+
+TEST_F(LuaRunner_ReadCsv, TabSeparatorProvesOptionIsNotSpecialCased) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    write_lua_csv_file(sandbox / "tab.csv", "a\tb\n1\t2\n");
+
+    lua.run(R"(
+        local csv = db:read_csv("tab.csv", { separator = "\t" })
+        assert(csv.header[1] == "a", "expected header[1] == a, got " .. tostring(csv.header[1]))
+        assert(csv.header[2] == "b", "expected header[2] == b, got " .. tostring(csv.header[2]))
+        assert(csv.rows[1][1] == "1", "expected '1', got " .. tostring(csv.rows[1][1]))
+        assert(csv.rows[1][2] == "2", "expected '2', got " .. tostring(csv.rows[1][2]))
+    )");
+}
