@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 01
 current_phase_name: a-lua-script-reads-a-csv-file
 status: executing
-stopped_at: Completed 01-01-PLAN.md
-last_updated: "2026-09-15T15:01:16.192Z"
+stopped_at: Completed 01-02-PLAN.md
+last_updated: "2026-09-15T15:22:23.699Z"
 last_activity: 2026-09-15
 last_activity_desc: Phase 01 execution started
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-09-14)
 ## Current Position
 
 Phase: 01 (a-lua-script-reads-a-csv-file) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-09-15 — Phase 01 execution started
 
-Progress: [███░░░░░░░] 33%
+Progress: [███████░░░] 67%
 
 ## Performance Metrics
 
@@ -59,6 +59,7 @@ Progress: [███░░░░░░░] 33%
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | Phase 01 P01 | 20min | 2 tasks | 8 files |
+| Phase 01 P02 | 25min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -75,6 +76,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Affecting current work:
 - Writing parsed rows into the database stays the script's job
 - Core CSV handling (`import_csv`/`export_csv`, still on rapidcsv) is not unified in this milestone
 - [Phase ?]: csv-parser 5.3.0 wired in (threads/SIMD forced off); db:read_csv and db:read_csv_stream share one internal csv_read::Reader (no public header)
+- [Phase ?]: D-22 evaluation order fix: db:read_csv/db:read_csv_stream now resolve the sandboxed path before decoding the options table, matching the locked catalogue order
 
 ### Pending Todos
 
@@ -104,6 +106,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-09-15T15:01:16.174Z
-Stopped at: Completed 01-01-PLAN.md
+Last session: 2026-09-15T15:22:23.667Z
+Stopped at: Completed 01-02-PLAN.md
 Resume file: None

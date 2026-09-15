@@ -17,7 +17,7 @@ agent, and secondarily anyone scripting a Quiver database by hand.
 - [ ] **PARSE-05**: A leading UTF-8 BOM is stripped and never appears in the first header name or cell
 - [ ] **PARSE-06**: CRLF and LF line endings both parse, and no cell retains a trailing `\r`
 - [ ] **PARSE-07**: Rows with differing field counts parse without throwing or silently truncating
-- [ ] **PARSE-08**: The field separator is configurable at runtime, defaulting to `,`
+- [x] **PARSE-08**: The field separator is configurable at runtime, defaulting to `,`
 - [x] **PARSE-09**: Parsing never uses more memory than a bounded window regardless of file size, and that window is not tied to the host's CPU count
 
 ### Lua surface
@@ -29,7 +29,7 @@ agent, and secondarily anyone scripting a Quiver database by hand.
 - [ ] **LUA-05**: A script can name which row is the header, or declare that there is none, so files with junk rows above the header are readable
 - [ ] **LUA-06**: A file whose header names repeat or are blank is fully readable — no column is unreachable and none silently shadows another
 - [x] **LUA-07**: Every cell reaches Lua as a string, with no numeric or date inference, so nothing is silently coerced
-- [ ] **LUA-08**: A missing file, an unreadable path, a bad option value, or a header row past the end of the file each raise a `Cannot read_csv: ...` error naming the problem, rather than surfacing a parser or stream error
+- [x] **LUA-08**: A missing file, an unreadable path, a bad option value, or a header row past the end of the file each raise a `Cannot read_csv: ...` error naming the problem, rather than surfacing a parser or stream error
 
 ### Agent guidance
 
@@ -91,7 +91,7 @@ Which phases cover which requirements.
 | PARSE-05 | Phase 2 | Pending |
 | PARSE-06 | Phase 2 | Pending |
 | PARSE-07 | Phase 2 | Pending |
-| PARSE-08 | Phase 1 | Pending |
+| PARSE-08 | Phase 1 | Complete |
 | PARSE-09 | Phase 1 | Complete |
 | LUA-01 | Phase 1 | Complete |
 | LUA-02 | Phase 1 | Complete |
@@ -100,7 +100,7 @@ Which phases cover which requirements.
 | LUA-05 | Phase 2 | Pending |
 | LUA-06 | Phase 2 | Pending |
 | LUA-07 | Phase 1 | Complete |
-| LUA-08 | Phase 1 | Pending |
+| LUA-08 | Phase 1 | Complete |
 | DOC-01 | Phase 1 | Complete |
 | DOC-02 | Phase 3 | Pending |
 | DOC-03 | Phase 3 | Pending |

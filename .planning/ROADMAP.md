@@ -52,7 +52,7 @@ arriving as a string and every path resolved against the database directory
 
   5. A file using a non-`,` separator reads correctly once the separator option is given, and the
      option defaults to `,`
-**Plans**: 1/3 plans executed
+**Plans**: 2/3 plans executed
 
 Plans:
 **Wave 1**
@@ -61,7 +61,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 01-02-PLAN.md — The `separator` option, strictly decoded, on both entry points
+- [x] 01-02-PLAN.md — The `separator` option, strictly decoded, on both entry points
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -165,7 +165,7 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. A Lua script reads a CSV file | 1/3 | In Progress|  |
+| 1. A Lua script reads a CSV file | 2/3 | In Progress|  |
 | 2. The dirty files parse correctly | 0/TBD | Not started | - |
 | 3. The agent reads instead of transcribing | 0/TBD | Not started | - |
 
