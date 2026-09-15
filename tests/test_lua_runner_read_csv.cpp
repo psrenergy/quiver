@@ -1,13 +1,44 @@
 #include "test_lua_runner.h"
 
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
+#include <vector>
 
 namespace {
 
 void write_lua_csv_file(const std::filesystem::path& path, const std::string& content) {
     std::ofstream f(path, std::ios::binary);
     f << content;
+}
+
+// std::fstream accepts forward slashes on Windows; using them avoids escaping backslashes inside
+// embedded Lua string literals (mirrors LuaBinaryTest::lp in test_lua_binary.cpp).
+std::string lp(const std::string& p) {
+    std::string r = p;
+    std::replace(r.begin(), r.end(), '\\', '/');
+    return r;
+}
+
+// Runs `script` and asserts it throws with a message starting with either entry point's own
+// Pattern 1 prefix -- the blanket rule behind LUA-08/D-20: no csv-parser, std::filesystem or sol2
+// message may reach a script unwrapped.
+void expect_prefixed_error(quiver::LuaRunner& lua, const std::string& script) {
+    try {
+        lua.run(script);
+        FAIL() << "expected script to throw: " << script;
+    } catch (const std::exception& e) {
+        // lua.run() wraps every script error in the root Pattern 3 "Failed to run Lua script: "
+        // envelope; strip it to check the Pattern 1 message the binding itself raised.
+        static const std::string kWrapper = "Failed to run Lua script: ";
+        std::string msg = e.what();
+        if (msg.rfind(kWrapper, 0) == 0) {
+            msg.erase(0, kWrapper.size());
+        }
+        EXPECT_TRUE(msg.rfind("Cannot read_csv: ", 0) == 0 || msg.rfind("Cannot read_csv_stream: ", 0) == 0)
+            << "message did not start with the expected prefix: " << msg;
+    }
 }
 
 }  // namespace
@@ -494,4 +525,243 @@ TEST_F(LuaRunner_ReadCsv, BothFormsAgreeOnAValidTableAndNeitherLeavesTheFileOpen
     )");
 
     EXPECT_TRUE(std::filesystem::remove(csv_path));
+}
+
+// --- TEST-03: the five sandbox negatives, for both entry points, plus the subdirectory positive
+// control. Every negative pins the full `Cannot <op>: ...` prefix plus the distinguishing text --
+// never a lone keyword -- per the TEST-03 prohibition: a test that only asserts "it threw" goes
+// green when the call fails for an unrelated reason and certifies containment it never exercised.
+//
+// LuaSandboxTest's per-test temp directory (named after the current suite + test name) is what
+// keeps these negatives from colliding with each other or with the other CSV suites when the
+// binary is re-run (TEST-03/concurrency) -- see test_lua_runner.h.
+
+TEST_F(LuaRunner_ReadCsv, EscapingPathThrowsForReadCsv) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(lua,
+                     R"(db:read_csv("../outside.csv"))",
+                     "Cannot read_csv: path '../outside.csv' escapes the database directory");
+
+    const std::string outside =
+        lp((std::filesystem::temp_directory_path() / "quiver_lua_read_csv_outside" / "x.csv").string());
+    expect_lua_error(lua,
+                     "db:read_csv('" + outside + "')",
+                     "Cannot read_csv: path '" + outside + "' escapes the database directory");
+}
+
+TEST_F(LuaRunner_ReadCsv, EscapingPathThrowsForReadCsvStream) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(lua,
+                     R"(db:read_csv_stream("../outside.csv", function() end))",
+                     "Cannot read_csv_stream: path '../outside.csv' escapes the database directory");
+
+    const std::string outside =
+        lp((std::filesystem::temp_directory_path() / "quiver_lua_read_csv_outside" / "x.csv").string());
+    expect_lua_error(lua,
+                     "db:read_csv_stream('" + outside + "', function() end)",
+                     "Cannot read_csv_stream: path '" + outside + "' escapes the database directory");
+}
+
+TEST_F(LuaRunner_ReadCsv, InMemoryDatabaseThrowsForReadCsv) {
+    // A separate in-memory Database + LuaRunner -- cannot share the sandbox fixture's file-backed
+    // database, since an in-memory db has no directory to sandbox against.
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(":memory:", schema);
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(lua,
+                     R"(db:read_csv("anything.csv"))",
+                     "Cannot read_csv: database is in-memory, file operations are unavailable");
+}
+
+TEST_F(LuaRunner_ReadCsv, InMemoryDatabaseThrowsForReadCsvStream) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(":memory:", schema);
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(lua,
+                     R"(db:read_csv_stream("anything.csv", function() end))",
+                     "Cannot read_csv_stream: database is in-memory, file operations are unavailable");
+}
+
+TEST_F(LuaRunner_ReadCsv, MissingFileThrowsForReadCsv) {
+    // The case resolve_sandboxed_path does not catch on its own: weakly_canonical tolerates a
+    // missing path, so a green here is the evidence the separate existence check is present.
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(lua, R"(db:read_csv("missing.csv"))", "Cannot read_csv: file not found: missing.csv");
+}
+
+TEST_F(LuaRunner_ReadCsv, MissingFileThrowsForReadCsvStream) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(lua,
+                     R"(db:read_csv_stream("missing.csv", function() end))",
+                     "Cannot read_csv_stream: file not found: missing.csv");
+}
+
+TEST_F(LuaRunner_ReadCsv, DirectoryAsPathThrowsForReadCsv) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    std::filesystem::create_directories(sandbox / "adir");
+    expect_lua_error(lua, R"(db:read_csv("adir"))", "Cannot read_csv: path is a directory: adir");
+    EXPECT_TRUE(std::filesystem::remove(sandbox / "adir"));
+}
+
+TEST_F(LuaRunner_ReadCsv, DirectoryAsPathThrowsForReadCsvStream) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    std::filesystem::create_directories(sandbox / "adir");
+    expect_lua_error(
+        lua, R"(db:read_csv_stream("adir", function() end))", "Cannot read_csv_stream: path is a directory: adir");
+    EXPECT_TRUE(std::filesystem::remove(sandbox / "adir"));
+}
+
+TEST_F(LuaRunner_ReadCsv, SubdirectoryPathReadsSuccessfullyForBothEntryPoints) {
+    // The positive control: without this, the four negatives above would all pass equally well
+    // against an implementation that rejects every path.
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    std::filesystem::create_directories(sandbox / "sub");
+    write_lua_csv_file(sandbox / "sub" / "data.csv", "a,b\n1,2\n");
+
+    lua.run(R"(
+        local whole = db:read_csv("sub/data.csv")
+        assert(whole.header[1] == "a" and whole.header[2] == "b", "header mismatch")
+        assert(#whole.rows == 1, "expected 1 row, got " .. #whole.rows)
+        assert(whole.rows[1][1] == "1" and whole.rows[1][2] == "2", "row mismatch")
+
+        local streamed = {}
+        local n = db:read_csv_stream("sub/data.csv", function(row)
+            streamed[#streamed + 1] = row
+        end)
+        assert(n == 1, "expected 1 streamed row, got " .. tostring(n))
+        assert(streamed[1][1] == "1" and streamed[1][2] == "2", "streamed row mismatch")
+    )");
+}
+
+// --- the remaining D-22 catalogue entries: empty file (extended to the stream form) and the
+// csv-parser wrapper ---
+
+TEST_F(LuaRunner_ReadCsv, EmptyFileThrowsForReadCsvStream) {
+    // EmptyFileThrows (above) covers db:read_csv; extend to db:read_csv_stream so both forms
+    // agree on an empty file rather than one throwing and the other reporting zero rows.
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    write_lua_csv_file(sandbox / "empty_stream.csv", "");
+
+    expect_lua_error(lua,
+                     R"(db:read_csv_stream("empty_stream.csv", function() end))",
+                     "Cannot read_csv_stream: file 'empty_stream.csv' is empty");
+    EXPECT_TRUE(std::filesystem::remove(sandbox / "empty_stream.csv"));
+}
+
+TEST_F(LuaRunner_ReadCsv, ParserWrapperMessageExistsInSource) {
+    // D-22 entry 10 (the csv-parser wrapper: "cannot read file '<p>': <reason>") has no reliably
+    // reproducible runtime trigger in this environment: Reader's constructor already intercepts
+    // not-found/directory/empty before csv::CSVReader is ever constructed, and
+    // std::filesystem::permissions has no effect on read access on Windows (only the write bit is
+    // honored), so there is no portable way to make an existing, non-empty, non-directory file
+    // fail to open. Per the plan's sanctioned fallback, assert the wrapper is actually present at
+    // the source level instead of silently dropping the requirement -- both the construction-time
+    // and the mid-iteration catch in csv_read.cpp route through it (LUA-08/concurrency).
+    std::ifstream src(quiver::test::path_from(__FILE__, "../src/csv_read.cpp"));
+    ASSERT_TRUE(src.is_open());
+    const std::string contents((std::istreambuf_iterator<char>(src)), std::istreambuf_iterator<char>());
+    EXPECT_NE(contents.find("cannot read file '"), std::string::npos);
+}
+
+// --- catalogue ordering + adjacency ---
+
+TEST_F(LuaRunner_ReadCsv, InMemoryDatabaseReportsBeforeBadOptions) {
+    // Two conditions trip at once (in-memory db, a positionally-passed separator): the earlier
+    // catalogue entry (in-memory, #1) must be the one reported, not the options error (#3).
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(":memory:", schema);
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(
+        lua, R"(db:read_csv("x.csv", ";"))", "Cannot read_csv: database is in-memory, file operations are unavailable");
+}
+
+TEST_F(LuaRunner_ReadCsv, EscapingPathReportsBeforeMissingFile) {
+    // The path both escapes the sandbox AND does not exist: the escape error (#2) must win over
+    // file-not-found (#7).
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(lua,
+                     R"(db:read_csv("../does_not_exist.csv"))",
+                     "Cannot read_csv: path '../does_not_exist.csv' escapes the database directory");
+}
+
+TEST_F(LuaRunner_ReadCsv, UnknownKeyReportsBeforeBadSeparatorValue) {
+    // Both problems present at once: an unknown key and a non-string separator. Unknown-key
+    // (D-22 #4) must be reported ahead of separator-type (D-22 #5), regardless of the table's
+    // iteration order.
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(
+        lua, R"(db:read_csv("f.csv", { delim = ";", separator = 59 }))", "Cannot read_csv: unknown option 'delim'");
+}
+
+// --- the blanket rule: no unwrapped csv-parser / std::filesystem / sol2 message reaches Lua ---
+
+TEST_F(LuaRunner_ReadCsv, EveryNegativeCaseStartsWithItsOwnEntryPointPrefix) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    std::filesystem::create_directories(sandbox / "adir");
+    write_lua_csv_file(sandbox / "blank.csv", "");
+
+    const std::vector<std::string> negatives = {
+        R"(db:read_csv("../outside.csv"))",
+        R"(db:read_csv_stream("../outside.csv", function() end))",
+        R"(db:read_csv("missing.csv"))",
+        R"(db:read_csv_stream("missing.csv", function() end))",
+        R"(db:read_csv("adir"))",
+        R"(db:read_csv_stream("adir", function() end))",
+        R"(db:read_csv("blank.csv"))",
+        R"(db:read_csv_stream("blank.csv", function() end))",
+        R"(db:read_csv("f.csv", ";"))",
+        R"(db:read_csv_stream("f.csv", function() end, ";"))",
+        R"(db:read_csv("f.csv", { delim = ";" }))",
+        R"(db:read_csv_stream("f.csv", function() end, { delim = ";" }))",
+        R"(db:read_csv("f.csv", { separator = 59 }))",
+        R"(db:read_csv("f.csv", { separator = "" }))",
+        R"(db:read_csv("f.csv", { separator = ";;" }))",
+    };
+    for (const auto& script : negatives) {
+        expect_prefixed_error(lua, script);
+    }
+
+    auto mem_db = quiver::Database::from_schema(":memory:", schema);
+    quiver::LuaRunner mem_lua(mem_db);
+    expect_prefixed_error(mem_lua, R"(db:read_csv("x.csv"))");
+    expect_prefixed_error(mem_lua, R"(db:read_csv_stream("x.csv", function() end))");
+
+    EXPECT_TRUE(std::filesystem::remove_all(sandbox / "adir"));
+    EXPECT_TRUE(std::filesystem::remove(sandbox / "blank.csv"));
 }
