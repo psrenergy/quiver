@@ -447,8 +447,8 @@ struct LuaRunner::Impl {
         });
 
         // CSV file reading -- db-scoped and sandboxed like the file I/O above. Both entry points
-        // construct the same csv_read::Reader and drive it through header()/for_each_row(), so
-        // they cannot diverge on any input (LUA-03).
+        // below construct the same csv_read reader and drive it through header()/for_each_row(),
+        // so they cannot diverge on any input (LUA-03).
         bind.set_function("read_csv", [](Database& self, const std::string& path, sol::this_state s) -> sol::table {
             sol::state_view lua(s);
             csv_read::Reader reader(resolve_sandboxed_path(self, "read_csv", path), path, "read_csv");
@@ -471,6 +471,36 @@ struct LuaRunner::Impl {
             result["rows"] = to_lua_table(lua, rows);
             return result;
         });
+        bind.set_function(
+            "read_csv_stream",
+            [](Database& self, const std::string& path, sol::protected_function on_row, sol::this_state s) -> int64_t {
+                sol::state_view lua(s);
+                csv_read::Reader reader(resolve_sandboxed_path(self, "read_csv_stream", path), path, "read_csv_stream");
+
+                // Built once, before the loop, and passed by reference into every callback
+                // invocation -- reachable during the stream so a script can find a column by
+                // name before processing row 1 (D-05).
+                const auto header_table = to_lua_table(lua, reader.header());
+
+                return reader.for_each_row([&](std::vector<std::string>&& cells, int64_t index) -> bool {
+                    const auto row_table = to_lua_table(lua, cells);
+                    auto result = on_row(row_table, index, header_table);
+                    if (!result.valid()) {
+                        // Propagate the Lua error verbatim and unwrapped (D-08): the reader is a
+                        // stack local and ~CSVReader() joins its scheduler during normal C++
+                        // unwinding, so no manual cleanup is needed here.
+                        sol::error err = result;
+                        throw std::runtime_error(err.what());
+                    }
+                    // sol::optional<bool> is a strict LUA_TBOOLEAN check, Debug/Release-identical.
+                    // Only an exact `false` stops the read (D-06) -- get<bool>() would be
+                    // lua_toboolean truthiness and misread a no-return callback's nil as "stop".
+                    if (result.return_count() > 0 && result.get<sol::optional<bool>>(0) == false) {
+                        return false;
+                    }
+                    return true;
+                });
+            });
     }
 
     // ========================================================================

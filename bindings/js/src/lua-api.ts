@@ -96,7 +96,7 @@ midnight.
   the Lua 5.4 \`//\` operator — a language operator, unrelated to \`math\`.
 - **Filesystem sandbox.** Every file-touching operation (\`db:export_csv\`, \`db:import_csv\`,
   \`db:open_file\`, \`db:bin_to_csv\`, \`db:csv_to_bin\`, \`db:validate_migrations\`, \`db:read_csv\`,
-  \`expr:save\`) resolves
+  \`db:read_csv_stream\`, \`expr:save\`) resolves
   relative paths against the directory containing the database file and rejects anything outside it
   (subdirectories are fine; \`..\` escapes and outside absolute paths throw \`Cannot <op>: path '...' escapes the
   database directory ...\`). On an in-memory database these operations throw
@@ -629,6 +629,23 @@ and a date stays text. \`csv.header\` is a 1-based array of the file's column na
 (\`csv.rows[1][1]\`). Rows are never padded to header width — a short row stays short and a field
 past its end is \`nil\`. A 0-byte file throws \`Cannot read_csv: file '<path>' is empty\`; a
 header-only file returns a populated \`header\` and an empty \`rows\`.
+
+\`db:read_csv_stream\` reads the same file through the same parser, row by row, so the process holds
+a bounded window instead of the whole file:
+
+\`\`\`lua
+local n = db:read_csv_stream(path, function(row, index, header)
+    -- row: same shape as db:read_csv's rows; index: the 1-based ordinal of this DATA row (the
+    -- header row is not counted, so skipping index 1 to "skip a header" drops a real record);
+    -- header: the same array db:read_csv returns, reachable here so a column can be found by
+    -- name before processing row 1.
+    return row[1] ~= ""     -- returning false stops the read early; a bare comparison as the
+end)                         -- last statement can silently truncate the stream this way
+-- n counts rows FED to the callback, not rows it kept -- a filtering callback logging n as
+-- "imported" would be wrong.
+\`\`\`
+
+A Lua error raised inside the callback propagates to the host verbatim, and the file is closed.
 
 ---
 

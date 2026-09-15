@@ -160,3 +160,117 @@ TEST_F(LuaRunner_ReadCsv, TwoConsecutiveReadsReturnIdenticalContents) {
         assert(first.header[1] == second.header[1] and first.header[2] == second.header[2], "header mismatch")
     )");
 }
+
+// --- db:read_csv_stream ---
+
+TEST_F(LuaRunner_ReadCsv, StreamFiresOncePerRowWithIndexAndHeader) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    write_lua_csv_file(sandbox / "three_rows.csv", "a,b\n1,2\n3,4\n5,6\n");
+
+    auto json = lua.run(R"(
+        local seen = {}
+        local n = db:read_csv_stream("three_rows.csv", function(row, index, header)
+            assert(header[1] == "a", "expected header[1] == a, got " .. tostring(header[1]))
+            assert(header[2] == "b", "expected header[2] == b, got " .. tostring(header[2]))
+            seen[#seen + 1] = { index, row[1], row[2] }
+        end)
+        assert(n == 3, "expected 3 rows fed, got " .. tostring(n))
+        return seen
+    )");
+    EXPECT_EQ(json, R"([[1,"1","2"],[2,"3","4"],[3,"5","6"]])");
+}
+
+TEST_F(LuaRunner_ReadCsv, StreamEarlyStopReturnsPartialCount) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    write_lua_csv_file(sandbox / "three_rows.csv", "a,b\n1,2\n3,4\n5,6\n");
+
+    lua.run(R"(
+        local seen = 0
+        local n = db:read_csv_stream("three_rows.csv", function(row, index, header)
+            seen = seen + 1
+            if index == 2 then
+                return false
+            end
+        end)
+        assert(n == 2, "expected early stop to return 2, got " .. tostring(n))
+        assert(seen == 2, "expected the third row to never be delivered, got " .. tostring(seen))
+    )");
+}
+
+TEST_F(LuaRunner_ReadCsv, StreamCallbackReturningNothingRunsToCompletion) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    write_lua_csv_file(sandbox / "three_rows.csv", "a,b\n1,2\n3,4\n5,6\n");
+
+    lua.run(R"(
+        local n = db:read_csv_stream("three_rows.csv", function(row, index, header)
+            if index == 999 then
+                return false
+            end
+        end)
+        assert(n == 3, "expected a no-return callback to process every row, got " .. tostring(n))
+    )");
+}
+
+TEST_F(LuaRunner_ReadCsv, StreamComparisonAsLastStatementTruncates) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    write_lua_csv_file(sandbox / "three_rows.csv", "a,b\n1,2\n3,4\n5,6\n");
+
+    // The documented hazard: a callback whose last statement is a plain comparison that
+    // evaluates false truncates the stream, exactly as `return false` would.
+    lua.run(R"(
+        local n = db:read_csv_stream("three_rows.csv", function(row, index, header)
+            return row[1] ~= "3"
+        end)
+        assert(n == 2, "expected the false comparison on row 2 to truncate the stream, got " .. tostring(n))
+    )");
+}
+
+TEST_F(LuaRunner_ReadCsv, StreamCallbackErrorPropagatesAndClosesFile) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    auto csv_path = sandbox / "erroring.csv";
+    write_lua_csv_file(csv_path, "a,b\n1,2\n3,4\n");
+
+    expect_lua_error(
+        lua, R"(db:read_csv_stream("erroring.csv", function(row, index, header) error("boom") end))", "boom");
+
+    // On Windows an open reader (a lingering CSVReader from a sol::function/longjmp regression)
+    // would block the delete -- this assertion is what fails if that regression is reintroduced.
+    EXPECT_TRUE(std::filesystem::remove(csv_path));
+}
+
+TEST_F(LuaRunner_ReadCsv, StreamAndWholeFileReadYieldSameRows) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    write_lua_csv_file(sandbox / "compare.csv", "a,b\n1,2\n3,4\n5,6\n");
+
+    lua.run(R"(
+        local whole = db:read_csv("compare.csv")
+        local streamed = {}
+        db:read_csv_stream("compare.csv", function(row)
+            streamed[#streamed + 1] = row
+        end)
+        assert(#whole.rows == #streamed, "row counts differ")
+        for i = 1, #whole.rows do
+            for j = 1, #whole.rows[i] do
+                assert(whole.rows[i][j] == streamed[i][j], "cell mismatch at " .. i .. "," .. j)
+            end
+        end
+    )");
+}
