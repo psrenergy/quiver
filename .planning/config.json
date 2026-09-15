@@ -46,7 +46,11 @@
     "post_planning_gaps": true,
     "security_enforcement": true,
     "security_asvs_level": 1,
-    "security_block_on": "high"
+    "security_block_on": "high",
+    "_auto_chain_active": false,
+    "build_command": "cmake --build build --config Debug",
+    "test_command": "./build/bin/quiver_tests.exe && ./build/bin/quiver_c_tests.exe",
+    "test_gate_timeout": 900
   },
   "ship": {
     "pr_body_sections": [
