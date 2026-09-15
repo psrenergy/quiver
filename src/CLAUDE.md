@@ -45,6 +45,8 @@ src/                      # C++ implementation
   type_validator.cpp      # Scalar/array type validation (caller-threaded Pattern 1 messages)
   element.cpp / row.cpp / result.cpp / migration.cpp / migrations.cpp
   lua_runner.cpp          # LuaRunner (sol2) - all Lua bindings
+  csv_read.h / csv_read.cpp  # Internal CSV reader (csv-parser, Pimpl'd) behind db:read_csv /
+                              # db:read_csv_stream -- no include/quiver/ counterpart (see below)
   cli/main.cpp            # quiver_cli CLI entry point
   utils/string.h          # String utilities: new_c_str, trim
   utils/datetime.h        # ISO 8601 parse/format helpers
@@ -68,6 +70,22 @@ src/expression/             # Expression C++ implementation
   expression_select_agents.cpp     # ExpressionSelectAgents (label-axis projection)
   expression_rename_agents.cpp     # ExpressionRenameAgents (label-axis rename)
 ```
+
+`csv_read.h`/`csv_read.cpp` is the first `.cpp` in `src/` with no `include/quiver/` public
+counterpart — every other internal helper here (`utils/string.h`, `database_internal.h`,
+`binary/binary_utils.h`) is header-only inline, and every other `QUIVER_SOURCES` entry implements
+a public header. It stays internal because there is no FFI consumer for it (Julia/Dart/Python/JS
+already have native CSV libraries; Lua needs this precisely because `io` is deliberately absent),
+so the root CLAUDE.md rule "bind every public method down to every binding" never fires — no
+documented exception needed. `Reader` is Pimpl'd specifically so csv-parser's headers never have
+to be included by `lua_runner.cpp`, which already needs `/bigobj` on MSVC for sol2's template
+depth. Three `csv::CSVFormat` settings are pinned in exactly one place (`make_format`, in
+`csv_read.cpp`) because every one of the library defaults is wrong for this reader:
+`variable_columns(KEEP_NON_EMPTY)` (the default `IGNORE_ROW` silently discards any row whose field
+count differs from the header), `header_row(0)` (with no header pinned, csv-parser guesses one and
+pops every record up to the guessed index — silently eating a one-cell title line above the real
+header), and never calling `chunk_size(...)` (with `CSV_ENABLE_THREADS` forced off, the read window
+is csv-parser's own fixed default, unmultiplied by worker count).
 
 ## Pimpl vs Value Types
 
@@ -309,7 +327,8 @@ lua.run(R"(
 Implementation conventions in `lua_runner.cpp`:
 - **Filesystem sandbox**: `resolve_sandboxed_path(db, operation, path)` is the single gate for
   every file-touching Lua operation (`db:open_file`, `db:bin_to_csv`, `db:csv_to_bin`,
-  `db:export_csv`, `db:import_csv`, `db:validate_migrations`, `expr:save`). It rejects `:memory:`
+  `db:export_csv`, `db:import_csv`, `db:validate_migrations`, `db:read_csv`, `db:read_csv_stream`,
+  `expr:save`). It rejects `:memory:`
   databases, resolves relative paths against the database file's directory (bare-filename db paths fall back to the
   CWD at call time, mirroring `create_database_logger`), canonicalizes via `weakly_canonical`,
   and requires strict containment (candidate == root is rejected — the binary subsystem appends

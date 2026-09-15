@@ -36,6 +36,11 @@ C++ core and C API suites live here; binding suites live in each binding's `test
 - `test_migrations.cpp` also covers the in-memory `validate_migrations` up-then-down round trip;
   `test_c_api_database_lifecycle.cpp` covers its C API success and error propagation;
   `test_lua_runner_migrations.cpp` covers the sandboxed `db:validate_migrations` Lua binding.
+- `test_lua_runner_read_csv.cpp` covers the Lua-only `db:read_csv`/`db:read_csv_stream` bindings
+  (parsing, the `separator` option, and the sandbox/error-catalogue negatives) — there is no C++
+  core, C API, or other-binding counterpart to mirror (root design decision), so this suite has no
+  sibling elsewhere. Its CSV fixtures are written at runtime into the `LuaSandboxTest` sandbox
+  rather than committed under `tests/schemas/`, since they exist only to be read back once.
 
 ## C API tests
 

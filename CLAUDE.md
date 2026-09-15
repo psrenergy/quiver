@@ -77,8 +77,9 @@ Settled questions — don't relitigate without the user; each was decided delibe
   `helper_maps.jl` is a second documented Julia-only exception (see convenience methods below).
 - **Lua file operations are db-scoped and sandboxed to the database directory.** Every
   file-touching Lua operation (`db:open_file`, `db:bin_to_csv`, `db:csv_to_bin`, `db:export_csv`,
-  `db:import_csv`, `db:validate_migrations`, `expr:save`) resolves relative paths against the directory
-  containing the database file and rejects — reads and writes alike — anything that escapes it
+  `db:import_csv`, `db:validate_migrations`, `db:read_csv`, `db:read_csv_stream`, `expr:save`)
+  resolves relative paths against the directory containing the database file and rejects — reads
+  and writes alike — anything that escapes it
   (subdirectories OK; checked via `weakly_canonical` with strict containment). In-memory databases
   (`:memory:`) reject all file operations. `dofile`/`loadfile` are removed from the Lua environment
   (string-form `load` stays). The enabled standard libraries are the pure-computation set
@@ -220,6 +221,19 @@ Settled questions — don't relitigate without the user; each was decided delibe
   count/position authority since `#t` is unreliable across holes. Scope is **scalars only** — the
   shared dense `read_column_values<T>` still serves vector/set `_by_id` and `read_element_ids`
   (NOT NULL / PK by convention); vector/set readers are unchanged.
+- **`db:read_csv(path, opts)` / `db:read_csv_stream(path, on_row, opts)` are Lua-only, with no
+  counterpart anywhere else** — no public C++ header, no C API, no Julia/Dart/Python/JS binding.
+  The first `db:` methods with no counterpart in any other layer, and the newest member of the
+  documented per-binding omission list alongside JS-datetime, the binary/expression subsystems,
+  and the Lua whole-group readers above. The reason is the one the requirements give: every other
+  host already has a native CSV library, and Lua needs this precisely because `io` is deliberately
+  absent from its sandbox. Both forms are mounted on one internal reader
+  (`quiver::csv_read::Reader`, `src/csv_read.h`/`.cpp`, no public header) so they cannot diverge on
+  any input; every cell arrives as a string with no numeric or date inference; `separator` is the
+  only option today, a single-character string defaulting to `,`. Reading is the only direction —
+  writing (`db:write_csv`) is not exposed; a script's parsed rows go through the existing group
+  writers. Both names are sandboxed like every other Lua file operation (see the sandbox decision
+  above).
 
 ## Do Not "Fix"
 

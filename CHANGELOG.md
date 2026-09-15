@@ -26,6 +26,13 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ### Added
 
+- **A Lua script can now read a CSV file off disk.** `db:read_csv(path, opts)` reads the whole
+  file and returns `{ header = {...}, rows = {{...}, ...} }`, with every cell arriving as a string
+  and no numeric or date inference; `db:read_csv_stream(path, on_row, opts)` reads the same file
+  row by row through the same parser, so a large file can be processed with bounded memory. Both
+  are sandboxed to the database directory like every other Lua file operation, and both take the
+  same optional options table — `separator` (a single-character string, defaulting to `,`) is the
+  only key today. This is Lua-only: reading is the only direction, `db:write_csv` is not exposed.
 - **Booleans are accepted on every write path, in every layer.** A native boolean now maps to
   INTEGER 1/0 wherever an integer is accepted — element scalars and arrays on
   `create_element`/`update_element`, query parameters, the vector/set/time-series group writers,
