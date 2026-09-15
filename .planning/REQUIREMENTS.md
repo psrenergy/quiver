@@ -80,20 +80,47 @@ Deferred. Tracked but not in this roadmap.
 
 ## Traceability
 
-Which phases cover which requirements. Filled during roadmap creation.
+Which phases cover which requirements.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PARSE-01 … PARSE-09 | TBD | Pending |
-| LUA-01 … LUA-08 | TBD | Pending |
-| DOC-01 … DOC-04 | TBD | Pending |
-| TEST-01 … TEST-05 | TBD | Pending |
+| PARSE-01 | Phase 1 | Pending |
+| PARSE-02 | Phase 2 | Pending |
+| PARSE-03 | Phase 2 | Pending |
+| PARSE-04 | Phase 2 | Pending |
+| PARSE-05 | Phase 2 | Pending |
+| PARSE-06 | Phase 2 | Pending |
+| PARSE-07 | Phase 2 | Pending |
+| PARSE-08 | Phase 1 | Pending |
+| PARSE-09 | Phase 1 | Pending |
+| LUA-01 | Phase 1 | Pending |
+| LUA-02 | Phase 1 | Pending |
+| LUA-03 | Phase 1 | Pending |
+| LUA-04 | Phase 1 | Pending |
+| LUA-05 | Phase 2 | Pending |
+| LUA-06 | Phase 2 | Pending |
+| LUA-07 | Phase 1 | Pending |
+| LUA-08 | Phase 1 | Pending |
+| DOC-01 | Phase 1 | Pending |
+| DOC-02 | Phase 3 | Pending |
+| DOC-03 | Phase 3 | Pending |
+| DOC-04 | Phase 3 | Pending |
+| TEST-01 | Phase 2 | Pending |
+| TEST-02 | Phase 2 | Pending |
+| TEST-03 | Phase 1 | Pending |
+| TEST-04 | Phase 2 | Pending |
+| TEST-05 | Phase 3 | Pending |
 
 **Coverage:**
 - v1 requirements: 26 total
-- Mapped to phases: 0
-- Unmapped: 26 ⚠️ (roadmap not yet created)
+- Mapped to phases: 26 ✓
+- Unmapped: 0
+
+**Per phase:**
+- Phase 1 — A Lua script reads a CSV file: 11 requirements (PARSE-01, PARSE-08, PARSE-09, LUA-01, LUA-02, LUA-03, LUA-04, LUA-07, LUA-08, TEST-03, DOC-01)
+- Phase 2 — The dirty files parse correctly: 11 requirements (PARSE-02 … PARSE-07, LUA-05, LUA-06, TEST-01, TEST-02, TEST-04)
+- Phase 3 — The agent reads instead of transcribing: 4 requirements (DOC-02, DOC-03, DOC-04, TEST-05)
 
 ---
 *Requirements defined: 2026-09-14*
-*Last updated: 2026-09-14 after initialization*
+*Last updated: 2026-09-14 after roadmap creation*
