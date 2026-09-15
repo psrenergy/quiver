@@ -453,8 +453,11 @@ struct LuaRunner::Impl {
             "read_csv",
             [](Database& self, const std::string& path, sol::object options, sol::this_state s) -> sol::table {
                 sol::state_view lua(s);
+                // D-22 evaluation order: sandbox checks (in-memory db, path escape) before the
+                // options table, so a bad separator never masks an escaping path.
+                const auto resolved = resolve_sandboxed_path(self, "read_csv", path);
                 auto csv_options = read_csv_options_from_lua(options, "read_csv");
-                csv_read::Reader reader(resolve_sandboxed_path(self, "read_csv", path), path, "read_csv", csv_options);
+                csv_read::Reader reader(resolved, path, "read_csv", csv_options);
 
                 std::vector<std::vector<std::string>> rows;
                 reader.for_each_row([&rows](std::vector<std::string>&& cells, int64_t /*index*/) {
@@ -481,11 +484,10 @@ struct LuaRunner::Impl {
                              sol::object options,
                              sol::this_state s) -> int64_t {
                               sol::state_view lua(s);
+                              // D-22 evaluation order: sandbox checks before the options table.
+                              const auto resolved = resolve_sandboxed_path(self, "read_csv_stream", path);
                               auto csv_options = read_csv_options_from_lua(options, "read_csv_stream");
-                              csv_read::Reader reader(resolve_sandboxed_path(self, "read_csv_stream", path),
-                                                      path,
-                                                      "read_csv_stream",
-                                                      csv_options);
+                              csv_read::Reader reader(resolved, path, "read_csv_stream", csv_options);
 
                               // Built once, before the loop, and passed by reference into every callback
                               // invocation -- reachable during the stream so a script can find a column by

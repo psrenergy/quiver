@@ -352,3 +352,146 @@ TEST_F(LuaRunner_ReadCsv, TabSeparatorProvesOptionIsNotSpecialCased) {
         assert(csv.rows[1][2] == "2", "expected '2', got " .. tostring(csv.rows[1][2]))
     )");
 }
+
+// --- options table: the rejection matrix (D-22 entries 3 through 6) ---
+//
+// Every case here asserts the call throws. `f.csv` deliberately does not exist on disk in most
+// of these -- options are decoded before the file is ever opened (D-22 evaluation order), so a
+// bad options table throws before a missing-file check could otherwise mask the real failure.
+
+TEST_F(LuaRunner_ReadCsv, PositionalSeparatorStringThrowsOptionsMustBeATable) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    // The likeliest user mistake: a separator passed positionally instead of in a table.
+    expect_lua_error(lua, R"(db:read_csv("f.csv", ";"))", "Cannot read_csv: options must be a table");
+}
+
+TEST_F(LuaRunner_ReadCsv, NumberInOptionsSlotThrowsOptionsMustBeATable) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(lua, R"(db:read_csv("f.csv", 59))", "Cannot read_csv: options must be a table");
+}
+
+TEST_F(LuaRunner_ReadCsv, BooleanInOptionsSlotThrowsOptionsMustBeATable) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(lua, R"(db:read_csv("f.csv", true))", "Cannot read_csv: options must be a table");
+}
+
+TEST_F(LuaRunner_ReadCsv, UnknownOptionKeyThrowsNamingTheKey) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    // The plausible abbreviation a script might try instead of `separator`.
+    expect_lua_error(lua, R"(db:read_csv("f.csv", { delim = ";" }))", "Cannot read_csv: unknown option 'delim'");
+}
+
+TEST_F(LuaRunner_ReadCsv, FutureHeaderKeyIsAnUnknownOptionToday) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    // A key Phase 2 will legitimately add -- today it must throw, so that change is a deliberate
+    // edit rather than a silent behaviour surprise.
+    expect_lua_error(lua, R"(db:read_csv("f.csv", { header = false }))", "Cannot read_csv: unknown option 'header'");
+}
+
+TEST_F(LuaRunner_ReadCsv, ValidKeyDoesNotExcuseAnInvalidSibling) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(
+        lua, R"(db:read_csv("f.csv", { separator = ";", delim = ";" }))", "Cannot read_csv: unknown option 'delim'");
+}
+
+TEST_F(LuaRunner_ReadCsv, SeparatorAsNumberThrowsMustBeAString) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(
+        lua, R"(db:read_csv("f.csv", { separator = 59 }))", "Cannot read_csv: option 'separator' must be a string");
+}
+
+TEST_F(LuaRunner_ReadCsv, SeparatorAsBooleanThrowsMustBeAString) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(
+        lua, R"(db:read_csv("f.csv", { separator = true }))", "Cannot read_csv: option 'separator' must be a string");
+}
+
+TEST_F(LuaRunner_ReadCsv, EmptySeparatorThrowsMustBeASingleCharacter) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(lua,
+                     R"(db:read_csv("f.csv", { separator = "" }))",
+                     "Cannot read_csv: option 'separator' must be a single character");
+}
+
+TEST_F(LuaRunner_ReadCsv, TwoCharacterSeparatorThrowsMustBeASingleCharacter) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(lua,
+                     R"(db:read_csv("f.csv", { separator = ";;" }))",
+                     "Cannot read_csv: option 'separator' must be a single character");
+}
+
+TEST_F(LuaRunner_ReadCsv, StreamUnknownOptionKeyNamesTheStreamEntryPoint) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    // Same bad table, but through db:read_csv_stream -- the operation name must follow the entry
+    // point the script actually called (D-19), not a single shared literal.
+    expect_lua_error(lua,
+                     R"(db:read_csv_stream("f.csv", function() end, { delim = ";" }))",
+                     "Cannot read_csv_stream: unknown option 'delim'");
+}
+
+TEST_F(LuaRunner_ReadCsv, StreamPositionalSeparatorStringThrowsOptionsMustBeATable) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(
+        lua, R"(db:read_csv_stream("f.csv", function() end, ";"))", "Cannot read_csv_stream: options must be a table");
+}
+
+TEST_F(LuaRunner_ReadCsv, BothFormsAgreeOnAValidTableAndNeitherLeavesTheFileOpen) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    auto csv_path = sandbox / "agree.csv";
+    write_lua_csv_file(csv_path, "a;b\n1;2\n3;4\n");
+
+    lua.run(R"(
+        local whole = db:read_csv("agree.csv", { separator = ";" })
+        local streamed = {}
+        db:read_csv_stream("agree.csv", function(row)
+            streamed[#streamed + 1] = row
+        end, { separator = ";" })
+        assert(#whole.rows == #streamed, "row counts differ")
+        for i = 1, #whole.rows do
+            for j = 1, #whole.rows[i] do
+                assert(whole.rows[i][j] == streamed[i][j], "cell mismatch at " .. i .. "," .. j)
+            end
+        end
+    )");
+
+    EXPECT_TRUE(std::filesystem::remove(csv_path));
+}
