@@ -1,6 +1,7 @@
 #include "test_lua_runner.h"
 
 #include <algorithm>
+#include <filesystem>
 #include <string>
 
 namespace {
@@ -11,6 +12,31 @@ std::string lp(const std::string& p) {
     std::string r = p;
     std::replace(r.begin(), r.end(), '\\', '/');
     return r;
+}
+
+// TEST-12: adapted from test_lua_runner_read_csv.cpp's own expect_prefixed_error. Strips the
+// root Pattern 3 "Failed to run Lua script: " envelope, then asserts the Pattern 1 PREFIX and a
+// reason substring SEPARATELY -- never one bare substring check, so a write_csv message can never
+// satisfy a write_row assertion (or vice versa) and a matching prefix with the wrong reason still
+// fails.
+void expect_prefixed_error(quiver::LuaRunner& lua,
+                           const std::string& script,
+                           const std::string& expected_prefix,
+                           const std::string& reason_substring) {
+    try {
+        lua.run(script);
+        FAIL() << "expected script to throw: " << script;
+    } catch (const std::exception& e) {
+        static const std::string kWrapper = "Failed to run Lua script: ";
+        std::string msg = e.what();
+        if (msg.rfind(kWrapper, 0) == 0) {
+            msg.erase(0, kWrapper.size());
+        }
+        EXPECT_TRUE(msg.rfind(expected_prefix, 0) == 0)
+            << "message did not start with expected prefix '" << expected_prefix << "': " << msg;
+        EXPECT_NE(msg.find(reason_substring), std::string::npos)
+            << "message missing reason substring '" << reason_substring << "': " << msg;
+    }
 }
 
 }  // namespace
@@ -541,5 +567,155 @@ TEST_F(LuaRunner_WriteCsv, ReopeningSamePathTruncatesExistingContent) {
             path + R"(", { header_row = 0 })
         assert(#csv.rows == 1, "expected 1 row after truncate-at-open, got " .. #csv.rows)
         assert(csv.rows[1][1] == "3", "expected '3', got " .. tostring(csv.rows[1][1]))
+    )");
+}
+
+// TEST-12: the catalogue suite. Every assertion below checks a Pattern 1 PREFIX and a reason
+// substring separately (expect_prefixed_error above) -- never a bare substring -- so a write_csv
+// message can never satisfy a write_row assertion and vice versa.
+class LuaRunner_WriteCsvErrors : public LuaSandboxTest {};
+
+TEST_F(LuaRunner_WriteCsvErrors, NonFiniteNumberCellIsPrefixedWriteRowError) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    const auto path = lp((sandbox / "catalogue_nan.csv").string());
+
+    expect_prefixed_error(lua,
+                          R"(
+        local w = db:write_csv(")" +
+                              path + R"(")
+        w:write_row({ 0 / 0 })
+    )",
+                          "Cannot write_row: ",
+                          "is not a finite number");
+}
+
+TEST_F(LuaRunner_WriteCsvErrors, TableCellIsPrefixedWriteRowError) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    const auto path = lp((sandbox / "catalogue_table.csv").string());
+
+    expect_prefixed_error(lua,
+                          R"(
+        local w = db:write_csv(")" +
+                              path + R"(")
+        w:write_row({ {} })
+    )",
+                          "Cannot write_row: ",
+                          "has unsupported Lua type");
+}
+
+TEST_F(LuaRunner_WriteCsvErrors, WriteAfterCloseIsPrefixedWriteRowError) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    const auto path = lp((sandbox / "catalogue_after_close.csv").string());
+
+    expect_prefixed_error(lua,
+                          R"(
+        local w = db:write_csv(")" +
+                              path + R"(")
+        w:close()
+        w:write_row({ "x" })
+    )",
+                          "Cannot write_row: ",
+                          "already closed");
+}
+
+TEST_F(LuaRunner_WriteCsvErrors, EscapingPathIsPrefixedWriteCsvError) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    expect_prefixed_error(
+        lua, R"(db:write_csv("../escape.csv"))", "Cannot write_csv: ", "escapes the database directory");
+}
+
+TEST_F(LuaRunner_WriteCsvErrors, InMemoryDatabaseIsPrefixedWriteCsvError) {
+    // A separate in-memory Database + LuaRunner -- an in-memory db has no directory to sandbox
+    // against, so this cannot share the fixture's file-backed database (mirrors
+    // test_lua_runner_read_csv.cpp's InMemoryDatabaseThrowsForReadCsv).
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(":memory:", schema);
+    quiver::LuaRunner lua(db);
+
+    expect_prefixed_error(lua,
+                          R"(db:write_csv("anything.csv"))",
+                          "Cannot write_csv: ",
+                          "database is in-memory, file operations are unavailable");
+}
+
+TEST_F(LuaRunner_WriteCsvErrors, DoubleCloseIsIdempotentNotAnError) {
+    // Asserted separately from WriteAfterCloseIsPrefixedWriteRowError above, so a single
+    // over-broad "already closed" guard covering both write_row and close cannot satisfy both
+    // tests at once: this one asserts NO throw, not merely the absence of one particular message.
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    const auto path = lp((sandbox / "catalogue_double_close.csv").string());
+
+    EXPECT_NO_THROW(lua.run(R"(
+        local w = db:write_csv(")" +
+                            path + R"(")
+        w:write_row({ "x" })
+        w:close()
+        w:close()
+    )"));
+}
+
+// LUA-10: a call passing BOTH an escaping path and an invalid separator receives the path error,
+// not the separator error, because the sandbox resolves before the options table is decoded. Both
+// bad inputs are present on purpose -- do not "simplify" this fixture down to one bad input, or
+// the ordering guarantee this test exists to pin silently stops being checked.
+TEST_F(LuaRunner_WriteCsvErrors, EscapingPathBeatsInvalidSeparator) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    expect_prefixed_error(lua,
+                          R"(db:write_csv("../escape.csv", { separator = ";;" }))",
+                          "Cannot write_csv: ",
+                          "escapes the database directory");
+}
+
+// FMT-05 + the file-intact guarantee, asserted as a single script (not merely a row count, which
+// would pass even if the write had never thrown): two good rows, a pcall-caught non-finite third
+// row asserting BOTH the failed pcall and its "Cannot write_row:" prefix, then w:close() and a
+// db:read_csv read-back asserting exactly 2 rows.
+//
+// w:close() here is load-bearing, not ceremony: close() is this phase's only flush (the
+// sol::state on LuaRunner::Impl persists across run() calls and nothing calls lua_close), so a
+// writer abandoned by an uncaught throw is never finalized and a second-run() read-back would hit
+// the reader's empty-file error instead of returning 2 rows. The flush at run()'s return is Phase
+// 5's WRITE-06 -- do not delete this w:close() as "redundant" or the test starts failing for a
+// reason that has nothing to do with the writer.
+TEST_F(LuaRunner_WriteCsvErrors, RejectedRowLeavesFileIntactProvenBothHalves) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    const auto path = lp((sandbox / "catalogue_intact.csv").string());
+
+    lua.run(R"(
+        local w = db:write_csv(")" +
+            path + R"(")
+        w:write_row({ "row1" })
+        w:write_row({ "row2" })
+        local ok, err = pcall(function() w:write_row({ 0 / 0 }) end)
+        assert(ok == false, "expected the third write_row to fail")
+        assert(err:find("Cannot write_row:", 1, true) ~= nil, "expected Cannot write_row: prefix, got " .. tostring(err))
+        w:close()  -- load-bearing: this phase's only flush (WRITE-06 is Phase 5's), see comment above
+
+        local csv = db:read_csv(")" +
+            path + R"(", { header_row = 0 })
+        assert(#csv.rows == 2, "expected exactly 2 rows after the rejected third, got " .. #csv.rows)
+        assert(csv.rows[1][1] == "row1", "expected row1, got " .. tostring(csv.rows[1][1]))
+        assert(csv.rows[2][1] == "row2", "expected row2, got " .. tostring(csv.rows[2][1]))
     )");
 }
