@@ -24,12 +24,12 @@ promoted here unchanged.
       escape it; an in-memory (`:memory:`) database rejects `write_csv` outright. Inherited policy —
       the requirement is that the writer uses it, not that new machinery is built
 
-- [ ] **WRITE-05**: `w:write_row` after `w:close` is a Pattern 1 error; `w:close` is idempotent
+- [x] **WRITE-05**: `w:write_row` after `w:close` is a Pattern 1 error; `w:close` is idempotent
 - [ ] **WRITE-06**: A writer still open when `LuaRunner::run` returns is flushed to disk, so the file
       is complete even if the script never called `close()`. No warning is emitted — this is the
       flush alone, not the diagnostic
 
-- [ ] **WRITE-07**: A missing parent directory is not created; the open fails and says so
+- [x] **WRITE-07**: A missing parent directory is not created; the open fails and says so
 - [x] **WRITE-08**: `write_csv` truncates an existing target at open — stated behaviour, not a guard
 
 ### Cell formatting and RFC 4180
@@ -48,7 +48,7 @@ promoted here unchanged.
       `append_number` helper (`src/lua_runner.cpp:128-135`). Lua 5.4's integer subtype is preserved,
       and an int64 never routes through `double` first
 
-- [ ] **FMT-05**: A non-finite float is a Pattern 1 error naming the row ordinal and cell index. No
+- [x] **FMT-05**: A non-finite float is a Pattern 1 error naming the row ordinal and cell index. No
       `inf` / `nan` text ever reaches a cell — MSVC and libstdc++ render those differently, so
       verbatim output would make the platform natives disagree on the same data
 
@@ -92,7 +92,7 @@ promoted here unchanged.
 - [ ] **TEST-11**: A script that returns without calling `close()` leaves a complete, re-readable
       file, asserted after `run()` returns without destroying the `LuaRunner`
 
-- [ ] **TEST-12**: A non-finite value, a table cell, a write after close, an out-of-sandbox path, and
+- [x] **TEST-12**: A non-finite value, a table cell, a write after close, an out-of-sandbox path, and
       an in-memory database each produce their Pattern 1 error
 
 ### Agent guidance
@@ -161,15 +161,15 @@ Which phases cover which requirements. Filled during roadmap creation.
 | WRITE-02 | Phase 4 | Complete |
 | WRITE-03 | Phase 4 | Complete |
 | WRITE-04 | Phase 4 | Complete |
-| WRITE-05 | Phase 4 | Pending |
+| WRITE-05 | Phase 4 | Complete |
 | WRITE-06 | Phase 5 | Pending |
-| WRITE-07 | Phase 4 | Pending |
+| WRITE-07 | Phase 4 | Complete |
 | WRITE-08 | Phase 4 | Complete |
 | FMT-01 | Phase 4 | Complete |
 | FMT-02 | Phase 4 | Complete |
 | FMT-03 | Phase 4 | Complete |
 | FMT-04 | Phase 4 | Complete |
-| FMT-05 | Phase 4 | Pending |
+| FMT-05 | Phase 4 | Complete |
 | FMT-06 | Phase 4 | Complete |
 | FMT-07 | Phase 5 | Pending |
 | FMT-08 | Phase 4 | Complete |
@@ -183,7 +183,7 @@ Which phases cover which requirements. Filled during roadmap creation.
 | TEST-09 | Phase 4 | Complete |
 | TEST-10 | Phase 5 | Pending |
 | TEST-11 | Phase 5 | Pending |
-| TEST-12 | Phase 4 | Pending |
+| TEST-12 | Phase 4 | Complete |
 | DOC-05 | Phase 4 | Complete |
 | DOC-06 | Phase 5 | Pending |
 

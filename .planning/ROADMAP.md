@@ -66,14 +66,14 @@ what the script wrote
      the truncate-at-open behaviour, and a worked example that runs verbatim — and the lua-api sync
      gate passes with the binding
 
-**Plans**: 1/3 plans executed
+**Plans**: 2/3 plans executed
 
 Plans:
 
 - [x] 04-01-PLAN.md — Tracer: the writer, its sandboxed `db:write_csv` handle, the cell formatting
       rules, and the DOC-05 reference entry that must ship in the same commit (wave 1)
 
-- [ ] 04-02-PLAN.md — The error catalogue: the finiteness guard, the closed-writer guard, the
+- [x] 04-02-PLAN.md — The error catalogue: the finiteness guard, the closed-writer guard, the
       missing-parent-directory failure, and the TEST-12 assertions (wave 2)
 
 - [ ] 04-03-PLAN.md — Round trips through `db:read_csv`: dirty cells, the int64 path, the worked
@@ -158,7 +158,7 @@ Phases execute in numeric order: 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 4. A Lua script writes a CSV file | 1/3 | In Progress|  |
+| 4. A Lua script writes a CSV file | 2/3 | In Progress|  |
 | 5. Ragged rows and forgotten closes | 0/? | Not started | - |
 
 ## Requirement Coverage

@@ -5,15 +5,15 @@ milestone_name: CSV writing for the Lua runner
 current_phase: 04
 current_phase_name: a-lua-script-writes-a-csv-file
 status: executing
-stopped_at: Completed 04-01-PLAN.md
-last_updated: "2026-09-16T21:52:47.057Z"
+stopped_at: Completed 04-02-PLAN.md
+last_updated: "2026-09-16T22:13:51.704Z"
 last_activity: 2026-09-16
 last_activity_desc: v1.1 roadmap created (2 phases, 29/29 requirements mapped)
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-09-16)
 ## Current Position
 
 Phase: 04 (a-lua-script-writes-a-csv-file) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-09-16 — Phase 04 execution started
 
@@ -70,6 +70,7 @@ Last activity: 2026-09-16 — Phase 04 execution started
 | Phase 03 P01 | 25min | 2 tasks | 1 files |
 | Phase 03 P02 | 40min | 2 tasks | 3 files |
 | Phase 04 P01 | 50min | 3 tasks | 11 files |
+| Phase 04 P02 | 55min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -122,6 +123,8 @@ Carried from v1.0:
 
 - [Phase ?]: WRITE-07 (parent-dir-missing precondition) implemented in csv_write::Writer's constructor per the plan's task 1 action text, though absent from this plan's requirements frontmatter
 - [Phase ?]: Task 1 (tracer) deliberately implemented only nil/string cell dispatch and zero recognized write_csv option keys, so task 2's TDD RED phase produced 9 genuinely failing tests before implementation
+- [Phase ?]: FMT-05/WRITE-05/WRITE-07 catalogue complete: closed-writer and missing-parent-directory checks were already correct from 04-01; 04-02 added the isfinite guard and fixed a cell-formatted-before-closed-check ordering bug
+- [Phase ?]: Executed the std::to_chars non-finite spot-check on MSVC 19.51.36256: 0.0/0.0 spells -nan(ind) (9 bytes), its negation spells nan (3 bytes), 1.0/0.0 spells inf, -1.0/0.0 spells -inf -- all errc=0
 
 ### Pending Todos
 
@@ -159,6 +162,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-09-16T21:52:47.040Z
-Stopped at: Completed 04-01-PLAN.md
+Last session: 2026-09-16T22:13:51.679Z
+Stopped at: Completed 04-02-PLAN.md
 Resume file: None
