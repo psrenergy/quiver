@@ -158,11 +158,17 @@ feature is verified and documented well enough to release
 
   4. The `CLAUDE.md` nearest each change describes the new surface, and `CHANGELOG.md` carries an
      entry under the current unreleased version
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
 
-- [ ] 03-01: TBD
+**Wave 1**
+
+- [ ] 03-01-PLAN.md — The read-don't-transcribe instruction and the worked dirty-file example, run against the real fixtures before shipping
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 03-02-PLAN.md — House paperwork (nearest CLAUDE.md files + changelog) and the Release gate over the finished tree
 
 Notes:
 
@@ -181,7 +187,7 @@ Phases execute in numeric order: 1 → 2 → 3
 |-------|----------------|--------|-----------|
 | 1. A Lua script reads a CSV file | 3/3 | Complete    | 2026-09-16 |
 | 2. The dirty files parse correctly | 4/4 | Complete    | 2026-09-16 |
-| 3. The agent reads instead of transcribing | 0/TBD | Not started | - |
+| 3. The agent reads instead of transcribing | 0/2 | Not started | - |
 
 ## Requirement Coverage
 
