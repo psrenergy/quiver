@@ -4,16 +4,16 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 02
 current_phase_name: the-dirty-files-parse-correctly
-status: executing
-stopped_at: Completed 02-03-PLAN.md
-last_updated: "2026-09-16T09:55:04.644Z"
+status: verifying
+stopped_at: Completed 02-04-PLAN.md
+last_updated: "2026-09-16T10:09:07.219Z"
 last_activity: 2026-09-16
 last_activity_desc: Phase 01 complete, transitioned to Phase 2
 progress:
   total_phases: 2
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 7
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 # Project State
@@ -29,10 +29,10 @@ See: .planning/PROJECT.md (updated 2026-09-14)
 
 Phase: 02 (the-dirty-files-parse-correctly) — EXECUTING
 Plan: 4 of 4
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-09-16 — Phase 02 execution started
 
-Progress: [█████████░] 86%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -64,6 +64,7 @@ Progress: [█████████░] 86%
 | Phase 02 P01 | 45min | 3 tasks | 6 files |
 | Phase 02 P02 | 25min | 3 tasks | 1 files |
 | Phase 02 P03 | ~35min | 3 tasks | 4 files |
+| Phase 02 P04 | 20min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -88,6 +89,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Affecting current work:
 - [Phase ?]: 02-02: PARSE-02..07/LUA-06/TEST-04 discharged by test-only fixtures; two plan-listed items (last-line header test, stale comment fix) were already satisfied by 02-01, not duplicated.
 - [Phase ?]: gitattributes exemption for tests/fixtures/*.csv committed before staging the fixtures (D-24) -- verified against the committed git blob, not the working tree
 - [Phase ?]: R"LUA(...)LUA" custom raw-string delimiter required whenever an embedded Lua pattern literal ends in the two-char sequence )" that would otherwise terminate a default R"(...)" C++ raw string early
+- [Phase ?]: TEST-05: Release build (fresh tree, QUIVER_BUILD_TESTS=ON, not the release preset) confirms LuaRunner* is safe with SOL_SAFE_GETTER off -- 291/291 pass, matching Debug
+- [Phase ?]: DOC-04: src/CLAUDE.md and CHANGELOG.md header_row docs were already complete from plan 02-01; only tests/CLAUDE.md needed the tests/fixtures/ and release-preset-trap additions
 
 ### Pending Todos
 
@@ -117,6 +120,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-09-16T09:55:04.622Z
-Stopped at: Completed 02-03-PLAN.md
+Last session: 2026-09-16T10:08:53.803Z
+Stopped at: Completed 02-04-PLAN.md
 Resume file: None

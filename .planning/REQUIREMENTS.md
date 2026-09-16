@@ -44,7 +44,7 @@ agent, and secondarily anyone scripting a Quiver database by hand.
 - [x] **TEST-02**: A regression test reads the two real Maranhão CSVs and asserts the values match what the transcribed script produced
 - [x] **TEST-03**: The sandbox negatives are covered — escaping path, in-memory database, missing file, directory-as-path, subdirectory allowed
 - [x] **TEST-04**: Option validation is covered, each case asserting the call *throws* rather than silently falling back to a default
-- [ ] **TEST-05**: Tests pass in a Release build as well as Debug, since `SOL_SAFE_GETTER` is off in Release and that has hidden Lua marshalling bugs before
+- [x] **TEST-05**: Tests pass in a Release build as well as Debug, since `SOL_SAFE_GETTER` is off in Release and that has hidden Lua marshalling bugs before
 
 ## v2 Requirements
 
@@ -109,7 +109,7 @@ Which phases cover which requirements.
 | TEST-02 | Phase 2 | Complete |
 | TEST-03 | Phase 1 | Complete |
 | TEST-04 | Phase 2 | Complete |
-| TEST-05 | Phase 3 | Pending |
+| TEST-05 | Phase 3 | Complete |
 
 **Coverage:**
 
