@@ -11,12 +11,12 @@ agent, and secondarily anyone scripting a Quiver database by hand.
 ### Parser
 
 - [x] **PARSE-01**: The core can parse a CSV incrementally, yielding rows without holding the whole file in memory, so a multi-GB file does not have to fit in RAM
-- [ ] **PARSE-02**: A field quoted with `"` may contain the separator, and is returned as one field (`"May 1, 2014",33` is two fields, not three)
-- [ ] **PARSE-03**: A quoted field may contain a newline, and the record is not split at it
-- [ ] **PARSE-04**: A doubled quote inside a quoted field is unescaped to a single quote
-- [ ] **PARSE-05**: A leading UTF-8 BOM is stripped and never appears in the first header name or cell
-- [ ] **PARSE-06**: CRLF and LF line endings both parse, and no cell retains a trailing `\r`
-- [ ] **PARSE-07**: Rows with differing field counts parse without throwing or silently truncating
+- [x] **PARSE-02**: A field quoted with `"` may contain the separator, and is returned as one field (`"May 1, 2014",33` is two fields, not three)
+- [x] **PARSE-03**: A quoted field may contain a newline, and the record is not split at it
+- [x] **PARSE-04**: A doubled quote inside a quoted field is unescaped to a single quote
+- [x] **PARSE-05**: A leading UTF-8 BOM is stripped and never appears in the first header name or cell
+- [x] **PARSE-06**: CRLF and LF line endings both parse, and no cell retains a trailing `\r`
+- [x] **PARSE-07**: Rows with differing field counts parse without throwing or silently truncating
 - [x] **PARSE-08**: The field separator is configurable at runtime, defaulting to `,`
 - [x] **PARSE-09**: Parsing never uses more memory than a bounded window regardless of file size, and that window is not tied to the host's CPU count
 
@@ -27,7 +27,7 @@ agent, and secondarily anyone scripting a Quiver database by hand.
 - [x] **LUA-03**: Both forms run on the same parser, so they cannot diverge in how they handle any input
 - [x] **LUA-04**: Both forms resolve `path` against the database file's directory and refuse anything outside it, and both refuse to run on an in-memory database — identical to every other file-touching Lua operation
 - [x] **LUA-05**: A script can name which row is the header, or declare that there is none, so files with junk rows above the header are readable
-- [ ] **LUA-06**: A file whose header names repeat or are blank is fully readable — no column is unreachable and none silently shadows another
+- [x] **LUA-06**: A file whose header names repeat or are blank is fully readable — no column is unreachable and none silently shadows another
 - [x] **LUA-07**: Every cell reaches Lua as a string, with no numeric or date inference, so nothing is silently coerced
 - [x] **LUA-08**: A missing file, an unreadable path, a bad option value, or a header row past the end of the file each raise a `Cannot read_csv: ...` error naming the problem, rather than surfacing a parser or stream error
 
@@ -40,10 +40,10 @@ agent, and secondarily anyone scripting a Quiver database by hand.
 
 ### Verification
 
-- [ ] **TEST-01**: Automated tests cover every parser requirement above, using small hand-written fixtures
+- [x] **TEST-01**: Automated tests cover every parser requirement above, using small hand-written fixtures
 - [ ] **TEST-02**: A regression test reads the two real Maranhão CSVs and asserts the values match what the transcribed script produced
 - [x] **TEST-03**: The sandbox negatives are covered — escaping path, in-memory database, missing file, directory-as-path, subdirectory allowed
-- [ ] **TEST-04**: Option validation is covered, each case asserting the call *throws* rather than silently falling back to a default
+- [x] **TEST-04**: Option validation is covered, each case asserting the call *throws* rather than silently falling back to a default
 - [ ] **TEST-05**: Tests pass in a Release build as well as Debug, since `SOL_SAFE_GETTER` is off in Release and that has hidden Lua marshalling bugs before
 
 ## v2 Requirements
@@ -85,12 +85,12 @@ Which phases cover which requirements.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | PARSE-01 | Phase 1 | Complete |
-| PARSE-02 | Phase 2 | Pending |
-| PARSE-03 | Phase 2 | Pending |
-| PARSE-04 | Phase 2 | Pending |
-| PARSE-05 | Phase 2 | Pending |
-| PARSE-06 | Phase 2 | Pending |
-| PARSE-07 | Phase 2 | Pending |
+| PARSE-02 | Phase 2 | Complete |
+| PARSE-03 | Phase 2 | Complete |
+| PARSE-04 | Phase 2 | Complete |
+| PARSE-05 | Phase 2 | Complete |
+| PARSE-06 | Phase 2 | Complete |
+| PARSE-07 | Phase 2 | Complete |
 | PARSE-08 | Phase 1 | Complete |
 | PARSE-09 | Phase 1 | Complete |
 | LUA-01 | Phase 1 | Complete |
@@ -98,17 +98,17 @@ Which phases cover which requirements.
 | LUA-03 | Phase 1 | Complete |
 | LUA-04 | Phase 1 | Complete |
 | LUA-05 | Phase 2 | Complete |
-| LUA-06 | Phase 2 | Pending |
+| LUA-06 | Phase 2 | Complete |
 | LUA-07 | Phase 1 | Complete |
 | LUA-08 | Phase 1 | Complete |
 | DOC-01 | Phase 1 | Complete |
 | DOC-02 | Phase 3 | Pending |
 | DOC-03 | Phase 3 | Pending |
 | DOC-04 | Phase 3 | Pending |
-| TEST-01 | Phase 2 | Pending |
+| TEST-01 | Phase 2 | Complete |
 | TEST-02 | Phase 2 | Pending |
 | TEST-03 | Phase 1 | Complete |
-| TEST-04 | Phase 2 | Pending |
+| TEST-04 | Phase 2 | Complete |
 | TEST-05 | Phase 3 | Pending |
 
 **Coverage:**

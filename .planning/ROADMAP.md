@@ -103,7 +103,7 @@ real Maranhão files currently transcribed into scripts by hand
 
   5. Reading the two real Maranhão CSVs yields the same values the hand-transcribed script hard-coded
 
-**Plans**: 1/4 plans executed
+**Plans**: 2/4 plans executed
 
 Plans:
 
@@ -113,7 +113,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 02-02-PLAN.md — The dirty-file matrix, repeated/blank header names, and the option negatives
+- [x] 02-02-PLAN.md — The dirty-file matrix, repeated/blank header names, and the option negatives
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -180,7 +180,7 @@ Phases execute in numeric order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. A Lua script reads a CSV file | 3/3 | Complete    | 2026-09-16 |
-| 2. The dirty files parse correctly | 1/4 | In Progress|  |
+| 2. The dirty files parse correctly | 2/4 | In Progress|  |
 | 3. The agent reads instead of transcribing | 0/TBD | Not started | - |
 
 ## Requirement Coverage

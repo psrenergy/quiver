@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 02
 current_phase_name: the-dirty-files-parse-correctly
 status: executing
-stopped_at: Completed 02-01-PLAN.md
-last_updated: "2026-09-16T09:13:15.115Z"
+stopped_at: Completed 02-02-PLAN.md
+last_updated: "2026-09-16T09:32:46.647Z"
 last_activity: 2026-09-16
 last_activity_desc: Phase 01 complete, transitioned to Phase 2
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 7
-  completed_plans: 4
+  completed_plans: 5
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-09-14)
 ## Current Position
 
 Phase: 02 (the-dirty-files-parse-correctly) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-09-16 — Phase 02 execution started
 
-Progress: [██████░░░░] 57%
+Progress: [███████░░░] 71%
 
 ## Performance Metrics
 
@@ -62,6 +62,7 @@ Progress: [██████░░░░] 57%
 | Phase 01 P02 | 25min | 2 tasks | 3 files |
 | Phase 01 P03 | 45min | 2 tasks | 5 files |
 | Phase 02 P01 | 45min | 3 tasks | 6 files |
+| Phase 02 P02 | 25min | 3 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -83,6 +84,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Affecting current work:
 - [Phase ?]: Phase 01 (a-lua-script-reads-a-csv-file) fully executed: all three plans complete, TEST-03/LUA-04/LUA-08 sandbox and error-catalogue coverage proven end to end
 - [Phase ?]: header_row is 1-based at the Lua boundary, 0 = no header, default 1 (D-20); make_format sets header mode before variable_columns(KEEP_NON_EMPTY) since csv-parser's header_row(row<0) silently resets the policy to KEEP
 - [Phase ?]: Reader synthesizes the past-EOF header error itself (options.header_row != 0 && header.empty()), since csv-parser silently succeeds with an empty header and zero rows
+- [Phase ?]: 02-02: PARSE-02..07/LUA-06/TEST-04 discharged by test-only fixtures; two plan-listed items (last-line header test, stale comment fix) were already satisfied by 02-01, not duplicated.
 
 ### Pending Todos
 
@@ -112,6 +114,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-09-16T09:13:15.098Z
-Stopped at: Completed 02-01-PLAN.md
+Last session: 2026-09-16T09:32:46.629Z
+Stopped at: Completed 02-02-PLAN.md
 Resume file: None
