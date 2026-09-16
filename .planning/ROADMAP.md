@@ -30,7 +30,7 @@ export-side tests that never re-import — and a writer suite built the same way
 
 ### Phases
 
-- [ ] **Phase 4: A Lua script writes a CSV file** - The writer, its sandboxed Lua handle, and the agent reference
+- [x] **Phase 4: A Lua script writes a CSV file** - The writer, its sandboxed Lua handle, and the agent reference (completed 2026-09-16)
 - [ ] **Phase 5: Ragged rows and forgotten closes** - The header as width authority, and the flush at `run()`'s return
 
 ## Phase Details
@@ -158,7 +158,7 @@ Phases execute in numeric order: 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 4. A Lua script writes a CSV file | 3/3 | In Progress|  |
+| 4. A Lua script writes a CSV file | 3/3 | Complete    | 2026-09-16 |
 | 5. Ragged rows and forgotten closes | 0/? | Not started | - |
 
 ## Requirement Coverage
