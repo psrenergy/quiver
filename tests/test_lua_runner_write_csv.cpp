@@ -389,6 +389,133 @@ TEST_F(LuaRunner_WriteCsv, HeaderIsWrittenAheadOfDataAndQuotedLikeARow) {
     )");
 }
 
+// FMT-05: a non-finite number cell (NaN or +/-infinity) is a Pattern 1 error naming write_row,
+// the 1-based data-row ordinal, and the 1-based cell index -- never a platform-specific token
+// (MSVC's "-nan(ind)"/"nan"/"inf" vs. glibc's "nan"/"inf") reaching the file.
+TEST_F(LuaRunner_WriteCsv, NonFiniteNumberCellThrowsNamingWriteRowAndRowOrdinal) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    const auto path = lp((sandbox / "nan_row.csv").string());
+
+    expect_lua_error(lua,
+                     R"(
+        local w = db:write_csv(")" +
+                         path + R"(")
+        w:write_row({ "a" })
+        w:write_row({ "b" })
+        w:write_row({ 0 / 0 })
+    )",
+                     "Cannot write_row:");
+
+    // Re-run in a fresh script so the row-ordinal/cell-index assertion is isolated from the
+    // pcall/file-intact proof below.
+    const auto path2 = lp((sandbox / "inf_row.csv").string());
+    try {
+        lua.run(R"(
+            local w = db:write_csv(")" +
+                path2 + R"(")
+            w:write_row({ "a" })
+            w:write_row({ "b" })
+            w:write_row({ 1 / 0 })
+        )");
+        FAIL() << "expected script to throw";
+    } catch (const std::exception& e) {
+        const std::string msg = e.what();
+        EXPECT_NE(msg.find("3"), std::string::npos) << "expected row ordinal 3 in: " << msg;
+        EXPECT_NE(msg.find("#1"), std::string::npos) << "expected cell index 1 in: " << msg;
+    }
+}
+
+// FMT-05 + the file-intact guarantee: the record is assembled into a buffer first, so a rejected
+// row leaves the file exactly as it was before the failing w:write_row call. The explicit
+// w:close() after the pcall is load-bearing -- close() is this phase's only flush (WRITE-06 is
+// Phase 5's), so an abandoned writer's data would still be sitting in the ofstream buffer and the
+// read-back would hit the reader's empty-file error instead of returning 2 rows.
+TEST_F(LuaRunner_WriteCsv, RejectedNonFiniteRowLeavesFileIntactAfterPcallAndClose) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    const auto path = lp((sandbox / "intact.csv").string());
+
+    lua.run(R"(
+        local w = db:write_csv(")" +
+            path + R"(")
+        w:write_row({ "row1" })
+        w:write_row({ "row2" })
+        local ok, err = pcall(function() w:write_row({ 0 / 0 }) end)
+        assert(ok == false, "expected the third write_row to fail")
+        assert(err:find("Cannot write_row:", 1, true) ~= nil, "expected Cannot write_row: prefix, got " .. tostring(err))
+        w:close()
+
+        local csv = db:read_csv(")" +
+            path + R"(", { header_row = 0 })
+        assert(#csv.rows == 2, "expected exactly 2 rows after the rejected third, got " .. #csv.rows)
+        assert(csv.rows[1][1] == "row1", "expected row1, got " .. tostring(csv.rows[1][1]))
+        assert(csv.rows[2][1] == "row2", "expected row2, got " .. tostring(csv.rows[2][1]))
+    )");
+}
+
+// WRITE-05: write_row after close is a Pattern 1 error naming write_row; close is idempotent.
+TEST_F(LuaRunner_WriteCsv, WriteRowAfterCloseThrowsNamingWriteRow) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    const auto path = lp((sandbox / "after_close.csv").string());
+
+    expect_lua_error(lua,
+                     R"(
+        local w = db:write_csv(")" +
+                         path + R"(")
+        w:close()
+        w:write_row({ "x" })
+    )",
+                     "Cannot write_row:");
+}
+
+TEST_F(LuaRunner_WriteCsv, CloseCalledTwiceDoesNotThrow) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    const auto path = lp((sandbox / "double_close.csv").string());
+
+    lua.run(R"(
+        local w = db:write_csv(")" +
+            path + R"(")
+        w:write_row({ "x" })
+        w:close()
+        w:close()
+    )");
+}
+
+// WRITE-07: a missing parent directory fails the open with a Pattern 1 error naming write_csv and
+// the caller's own path spelling; the directory is not created.
+TEST_F(LuaRunner_WriteCsv, MissingParentDirectoryThrowsAndDoesNotCreateIt) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    const auto missing_dir = sandbox / "does_not_exist";
+    const auto path = lp((missing_dir / "nested.csv").string());
+
+    expect_lua_error(lua, R"(db:write_csv(")" + path + R"("))", "Cannot write_csv:");
+    ASSERT_FALSE(std::filesystem::exists(missing_dir)) << "constructor must not create the missing directory";
+}
+
+// LUA-10: a path escaping the database directory takes precedence over an invalid separator --
+// the sandbox resolves before the options table is decoded, so the path error is the one raised.
+TEST_F(LuaRunner_WriteCsv, EscapingPathTakesPrecedenceOverInvalidSeparator) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(lua, R"(db:write_csv("../escape.csv", { separator = ";;" }))", "escapes the database directory");
+}
+
 // WRITE-08: db:write_csv truncates an existing target at open. Two rows written and closed, then
 // the SAME path reopened and one row written, reads back as exactly one row.
 TEST_F(LuaRunner_WriteCsv, ReopeningSamePathTruncatesExistingContent) {
