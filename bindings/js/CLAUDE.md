@@ -36,7 +36,12 @@ biome.json        # Lint/format config
   `db:`/`quiver.*` name is undocumented, a documented name no longer exists, or the stdlib sentence
   disagrees with `open_libraries` — that check is why the doc must keep the literal-token convention
   and the canonical `Loaded standard libraries: ...` sentence. It cannot check arg order, arity,
-  types, or return shapes; those still need a hand re-diff.
+  types, or return shapes; those still need a hand re-diff. The `## CSV file reading` section's
+  worked example is exactly this uncheckable half: its Lua is real, lifted verbatim from
+  `test_lua_runner_read_csv.cpp`'s regression tests and run once against `tests/fixtures/
+  ma_energia_residencial.csv` / `ma_gd_data.csv` through `quiver_cli` before it shipped — but
+  **nothing in CI re-runs it**, so an edit to that example has to be re-verified by hand the same
+  way (a throwaway file-backed database plus the fixtures, driven through `quiver_cli`).
 - **No generator** — when the C API changes, add the symbol to `src/loader.ts` by hand as
   `{ name: { args, returns } }`. This is the drift-prone spot: check it whenever a new C function
   exists in other bindings but not here.

@@ -229,11 +229,12 @@ Settled questions — don't relitigate without the user; each was decided delibe
   host already has a native CSV library, and Lua needs this precisely because `io` is deliberately
   absent from its sandbox. Both forms are mounted on one internal reader
   (`quiver::csv_read::Reader`, `src/csv_read.h`/`.cpp`, no public header) so they cannot diverge on
-  any input; every cell arrives as a string with no numeric or date inference; `separator` is the
-  only option today, a single-character string defaulting to `,`. Reading is the only direction —
-  writing (`db:write_csv`) is not exposed; a script's parsed rows go through the existing group
-  writers. Both names are sandboxed like every other Lua file operation (see the sandbox decision
-  above).
+  any input; every cell arrives as a string with no numeric or date inference; the options table
+  takes two keys — `separator` (a single-character string, defaulting to `,`) and `header_row`
+  (1-based, defaulting to `1`; `0` declares the file has no header at all). Reading is the only
+  direction — writing (`db:write_csv`) is not exposed; a script's parsed rows go through the
+  existing group writers. Both names are sandboxed like every other Lua file operation (see the
+  sandbox decision above).
 
 ## Do Not "Fix"
 
@@ -630,6 +631,7 @@ The rules are mechanical: given any C++ method name, you can derive the equivale
 | Describe (text) | `describe()` | `quiver_database_describe()` | `describe()` | `describe()` | `describe()` |
 | Describe collection | `describe_collection()` | `quiver_database_describe_collection()` | `describe_collection()` | `describeCollection()` | `describe_collection()` |
 | Summarize collection | `summarize_collection()` | `quiver_database_summarize_collection()` | `summarize_collection()` | `summarizeCollection()` | `summarize_collection()` |
+| CSV file read | N/A | N/A | N/A | N/A | `db:read_csv()` / `db:read_csv_stream()` |
 
 **Binary cross-layer examples (Julia + Lua subsystem):**
 

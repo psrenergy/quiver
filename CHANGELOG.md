@@ -5,7 +5,70 @@ All notable changes to Quiver are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entries that require
 callers to change something are prefixed **BREAKING** and say what to do.
 
-## [0.10.4] — unreleased
+## [0.10.7] — unreleased
+
+### Changed
+
+- **The agent-facing Lua API reference now redirects a model to the file, instead of only telling
+  it what it lacks.** `LUA_DB_API_REFERENCE`'s `Standard library` bullet used to state only that
+  the Lua sandbox has no `io`, which correctly told a model it cannot open a file — and then led it
+  to conclude it must paste the file's contents into the script as literals. The correction sits at
+  that exact sentence: no `io`, but data files are read with `db:read_csv` / `db:read_csv_stream`.
+  The `CSV file reading` section also gained one worked example covering both real, dirty Maranhão
+  fixture shapes (a junk title row and units row around the header, apostrophe thousands
+  separators, quoted commas, English month names), including the `tonumber`/`gsub` parenthesis
+  trap: `gsub` returns two values, so `tonumber(v:gsub("'", ""))` silently passes the replacement
+  count as `tonumber`'s base argument and returns `nil`; the fix is `tonumber((v:gsub(...)))`.
+
+### Added
+
+- **A Lua script can now read a CSV file off disk.** `db:read_csv(path, opts)` reads the whole
+  file and returns `{ header = {...}, rows = {{...}, ...} }`, with every cell arriving as a string
+  and no numeric or date inference; `db:read_csv_stream(path, on_row, opts)` reads the same file
+  row by row through the same parser, so a large file can be processed with bounded memory. Both
+  are sandboxed to the database directory like every other Lua file operation, and both take the
+  same optional options table — `separator` (a single-character string, defaulting to `,`) and
+  `header_row` (see below) are its two keys today. This is Lua-only: reading is the only
+  direction, `db:write_csv` is not exposed.
+- **`db:read_csv`/`db:read_csv_stream` accept a `header_row` option** naming which line is the
+  header, 1-based, defaulting to `1`. `header_row = 0` declares the file has no header at all:
+  `csv.header` is absent (`nil`) and `csv.rows[1]` is the file's first line — useful for a file
+  with a junk title row and/or a units row around the real header. A `header_row` past the end of
+  the file throws, as does a value that isn't a non-negative integer.
+
+### Fixed
+
+- **Lua: a path the OS refuses to resolve reached scripts as a raw `std::filesystem` message.**
+  Every file-touching Lua operation — `db:read_csv`, `db:read_csv_stream`, `db:open_file`,
+  `db:bin_to_csv`, `db:csv_to_bin`, `db:export_csv`, `db:import_csv`, `db:validate_migrations`
+  and `expr:save` — resolves its path through one shared gate, and that gate used throwing
+  `std::filesystem` overloads without catching them. Any OS failure that is not a plain "does not
+  exist" therefore surfaced unprefixed: on Windows, `db:read_csv("NUL")` (or any reserved device
+  name, in any case, in any directory) raised
+  `weakly_canonical: The parameter is incorrect.: "..."` instead of a `Cannot read_csv: ...`
+  message, breaking the guarantee that no standard-library text reaches a script unwrapped. Such
+  a failure is now reported as `Cannot <operation>: cannot resolve path '<path>': <reason>`. The
+  three CSV precondition checks were hardened the same way and now report
+  `Cannot <operation>: cannot access file '<path>': <reason>` when the OS refuses the query,
+  keeping the existing not-found / is-a-directory / is-empty messages unchanged.
+
+## [0.10.6] — 2026-09-11
+
+### Fixed
+
+- **Dart: every DateTime reader threw on valid values whose local wall-clock time the platform
+  considers nonexistent.** `stringToDateTime` validated by re-serializing a *local*
+  `DateTime.parse` and comparing it with the input, so a value inside a DST gap — on Windows the
+  historical Brazilian rules put one at midnight of 2019-01-01 — came back shifted by an hour and
+  was rejected as `Cannot convert "2019-01-01T00:00:00" to a date time in
+  'Consumption.date_time': expected a valid YYYY-MM-DD[THH:MM:SS]`, taking down
+  `readTimeSeriesGroup`, `readScalarDateTimes`, `queryDateTime` and the rest with it. The
+  fields are now range-checked in UTC (which has no gaps) and the local `DateTime` built from
+  them; the accepted grammar is unchanged and now pinned by `test/date_time_test.dart`. A value
+  inside a real DST gap still reads an hour later, since that local time does not exist — but it
+  reads.
+
+## [0.10.5] — 2026-09-09
 
 ### Changed
 
@@ -24,21 +87,10 @@ callers to change something are prefixed **BREAKING** and say what to do.
   real file plus unversioned symlinks. Only the Dart hook sets it — the published Julia, JS and
   Python natives keep their versioned install names, so nothing else changes.
 
+## [0.10.4] — 2026-09-04
+
 ### Added
 
-- **A Lua script can now read a CSV file off disk.** `db:read_csv(path, opts)` reads the whole
-  file and returns `{ header = {...}, rows = {{...}, ...} }`, with every cell arriving as a string
-  and no numeric or date inference; `db:read_csv_stream(path, on_row, opts)` reads the same file
-  row by row through the same parser, so a large file can be processed with bounded memory. Both
-  are sandboxed to the database directory like every other Lua file operation, and both take the
-  same optional options table — `separator` (a single-character string, defaulting to `,`) and
-  `header_row` (see below) are its two keys today. This is Lua-only: reading is the only
-  direction, `db:write_csv` is not exposed.
-- **`db:read_csv`/`db:read_csv_stream` accept a `header_row` option** naming which line is the
-  header, 1-based, defaulting to `1`. `header_row = 0` declares the file has no header at all:
-  `csv.header` is absent (`nil`) and `csv.rows[1]` is the file's first line — useful for a file
-  with a junk title row and/or a units row around the real header. A `header_row` past the end of
-  the file throws, as does a value that isn't a non-negative integer.
 - **Booleans are accepted on every write path, in every layer.** A native boolean now maps to
   INTEGER 1/0 wherever an integer is accepted — element scalars and arrays on
   `create_element`/`update_element`, query parameters, the vector/set/time-series group writers,
@@ -57,31 +109,6 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ### Fixed
 
-- **Lua: a path the OS refuses to resolve reached scripts as a raw `std::filesystem` message.**
-  Every file-touching Lua operation — `db:read_csv`, `db:read_csv_stream`, `db:open_file`,
-  `db:bin_to_csv`, `db:csv_to_bin`, `db:export_csv`, `db:import_csv`, `db:validate_migrations`
-  and `expr:save` — resolves its path through one shared gate, and that gate used throwing
-  `std::filesystem` overloads without catching them. Any OS failure that is not a plain "does not
-  exist" therefore surfaced unprefixed: on Windows, `db:read_csv("NUL")` (or any reserved device
-  name, in any case, in any directory) raised
-  `weakly_canonical: The parameter is incorrect.: "..."` instead of a `Cannot read_csv: ...`
-  message, breaking the guarantee that no standard-library text reaches a script unwrapped. Such
-  a failure is now reported as `Cannot <operation>: cannot resolve path '<path>': <reason>`. The
-  three CSV precondition checks were hardened the same way and now report
-  `Cannot <operation>: cannot access file '<path>': <reason>` when the OS refuses the query,
-  keeping the existing not-found / is-a-directory / is-empty messages unchanged.
-
-- **Dart: every DateTime reader threw on valid values whose local wall-clock time the platform
-  considers nonexistent.** `stringToDateTime` validated by re-serializing a *local*
-  `DateTime.parse` and comparing it with the input, so a value inside a DST gap — on Windows the
-  historical Brazilian rules put one at midnight of 2019-01-01 — came back shifted by an hour and
-  was rejected as `Cannot convert "2019-01-01T00:00:00" to a date time in
-  'Consumption.date_time': expected a valid YYYY-MM-DD[THH:MM:SS]`, taking down
-  `readTimeSeriesGroup`, `readScalarDateTimes`, `queryDateTime` and the rest with it. The
-  fields are now range-checked in UTC (which has no gaps) and the local `DateTime` built from
-  them; the accepted grammar is unchanged and now pinned by `test/date_time_test.dart`. A value
-  inside a real DST gap still reads an hour later, since that local time does not exist — but it
-  reads.
 - **JavaScript: `upsertTimeSeriesRow` wrote a boolean as FLOAT into an INTEGER column.**
   `Number.isInteger(true)` is `false`, so a boolean fell through to the float branch and was
   coerced to `1.0` with no error — the core then rejected the row for a type mismatch, or a REAL
@@ -449,7 +476,10 @@ are functionally identical to 0.10.0.
   `read_time_series_group` emits for a NULL STRING cell — so feeding a read result back with the
   mask stripped was UB. A NULL entry, or a NULL per-column data pointer, is now SQL NULL.
 
-[0.10.4]: https://github.com/psrenergy/quiver/compare/v0.10.3...v0.11.0
+[0.10.7]: https://github.com/psrenergy/quiver/compare/v0.10.6...HEAD
+[0.10.6]: https://github.com/psrenergy/quiver/compare/v0.10.5...v0.10.6
+[0.10.5]: https://github.com/psrenergy/quiver/compare/v0.10.4...v0.10.5
+[0.10.4]: https://github.com/psrenergy/quiver/compare/v0.10.3...v0.10.4
 [0.10.3]: https://github.com/psrenergy/quiver/compare/v0.10.2...v0.10.3
 [0.10.2]: https://github.com/psrenergy/quiver/compare/v0.10.1...v0.10.2
 [0.10.1]: https://github.com/psrenergy/quiver/compare/v0.10.0...v0.10.1
