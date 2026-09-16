@@ -66,13 +66,16 @@ what the script wrote
      the truncate-at-open behaviour, and a worked example that runs verbatim — and the lua-api sync
      gate passes with the binding
 
-**Plans**: 3 plans
+**Plans**: 1/3 plans executed
 
 Plans:
-- [ ] 04-01-PLAN.md — Tracer: the writer, its sandboxed `db:write_csv` handle, the cell formatting
+
+- [x] 04-01-PLAN.md — Tracer: the writer, its sandboxed `db:write_csv` handle, the cell formatting
       rules, and the DOC-05 reference entry that must ship in the same commit (wave 1)
+
 - [ ] 04-02-PLAN.md — The error catalogue: the finiteness guard, the closed-writer guard, the
       missing-parent-directory failure, and the TEST-12 assertions (wave 2)
+
 - [ ] 04-03-PLAN.md — Round trips through `db:read_csv`: dirty cells, the int64 path, the worked
       example executed from the reference file, and the Release build (wave 3)
 
@@ -155,7 +158,7 @@ Phases execute in numeric order: 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 4. A Lua script writes a CSV file | 0/3 | Not started | - |
+| 4. A Lua script writes a CSV file | 1/3 | In Progress|  |
 | 5. Ragged rows and forgotten closes | 0/? | Not started | - |
 
 ## Requirement Coverage
@@ -199,6 +202,7 @@ Phases execute in numeric order: 4 → 5
 - Integer phases (1, 2, 3): planned milestone work.
 - Decimal phases (2.1, 2.2): inserted after the roadmap is written, when work is discovered
   mid-milestone.
+
 - Numbering continues across milestones: v1.0 ended at Phase 3, so v1.1 starts at Phase 4.
 
 ---

@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: CSV writing for the Lua runner
-current_phase: 4
-current_phase_name: A Lua script writes a CSV file
-status: roadmapped
-stopped_at: Phase 4 context gathered
-last_updated: "2026-09-16T19:39:35.409Z"
+current_phase: 04
+current_phase_name: a-lua-script-writes-a-csv-file
+status: executing
+stopped_at: Completed 04-01-PLAN.md
+last_updated: "2026-09-16T21:52:47.057Z"
 last_activity: 2026-09-16
 last_activity_desc: v1.1 roadmap created (2 phases, 29/29 requirements mapped)
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 3
-  completed_plans: 0
+  completed_plans: 1
 ---
 
 # Project State
@@ -23,14 +23,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-09-16)
 
 **Core value:** Every layer — C++, C, Julia, Dart, Python, JS and Lua — sees the same data under the same rules, because all the logic lives in the C++ core and the bindings stay thin.
-**Current focus:** Phase 4 — A Lua script writes a CSV file
+**Current focus:** Phase 04 — a-lua-script-writes-a-csv-file
 
 ## Current Position
 
-Phase: 4 — A Lua script writes a CSV file (not started)
-Plan: —
-Status: Roadmap written, awaiting `/gsd-plan-phase 4`
-Last activity: 2026-09-16 — v1.1 roadmap created (2 phases, 29/29 requirements mapped)
+Phase: 04 (a-lua-script-writes-a-csv-file) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
+Last activity: 2026-09-16 — Phase 04 execution started
 
 ## Performance Metrics
 
@@ -69,6 +69,7 @@ Last activity: 2026-09-16 — v1.1 roadmap created (2 phases, 29/29 requirements
 | Phase 02 P04 | 20min | 2 tasks | 1 files |
 | Phase 03 P01 | 25min | 2 tasks | 1 files |
 | Phase 03 P02 | 40min | 2 tasks | 3 files |
+| Phase 04 P01 | 50min | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -119,6 +120,9 @@ Carried from v1.0:
 - Release build must be exercised separately: `SOL_SAFE_GETTER` is off in Release and has hidden
   Lua marshalling bugs before
 
+- [Phase ?]: WRITE-07 (parent-dir-missing precondition) implemented in csv_write::Writer's constructor per the plan's task 1 action text, though absent from this plan's requirements frontmatter
+- [Phase ?]: Task 1 (tracer) deliberately implemented only nil/string cell dispatch and zero recognized write_csv option keys, so task 2's TDD RED phase produced 9 genuinely failing tests before implementation
+
 ### Pending Todos
 
 None yet.
@@ -155,6 +159,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-09-16T17:21:27.951Z
-Stopped at: Phase 4 context gathered
-Resume file: .planning/phases/04-a-lua-script-writes-a-csv-file/04-CONTEXT.md
+Last session: 2026-09-16T21:52:47.040Z
+Stopped at: Completed 04-01-PLAN.md
+Resume file: None
