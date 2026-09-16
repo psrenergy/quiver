@@ -68,7 +68,11 @@ TEST_F(LuaRunner_WriteCsv, WriteRowThenReadCsvRoundTripsPlainStrings) {
 }
 
 // FMT-04 / TEST-07: an int64 reaches append_number's std::int64_t overload directly, never routed
-// through double first, so a value past double's 53-bit mantissa survives exactly.
+// through double first, so a value past double's 53-bit mantissa survives exactly. This is the
+// single value that distinguishes the integer path from the double path: 9007199254740993 is the
+// first odd integer that cannot be represented as a double, so a regression that routes it through
+// the double branch produces the digit string one lower, "9007199254740992" (the digit that
+// disappears the moment an int64 is coerced through a double's 53-bit mantissa).
 TEST_F(LuaRunner_WriteCsv, IntegerCellRoundTripsExactDigitString) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
@@ -85,6 +89,73 @@ TEST_F(LuaRunner_WriteCsv, IntegerCellRoundTripsExactDigitString) {
         local csv = db:read_csv(")" +
             path + R"(", { header_row = 0 })
         assert(csv.rows[1][1] == "9007199254740993", "expected exact digit string, got " .. tostring(csv.rows[1][1]))
+    )");
+}
+
+// TEST-07: INT64_MIN/INT64_MAX -- the buffer-size boundary for append_number's 32-byte array --
+// spelled via math.mininteger/math.maxinteger, the robust way to reach them from Lua source (a
+// bare -9223372036854775808 literal is unary minus applied to a positive literal that itself
+// overflows int64, which Lua would instead read as a float).
+TEST_F(LuaRunner_WriteCsv, MinIntegerAndMaxIntegerRoundTripExactDecimalText) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    const auto path = lp((sandbox / "int_bounds.csv").string());
+
+    lua.run(R"(
+        local w = db:write_csv(")" +
+            path + R"(")
+        w:write_row({ math.mininteger, math.maxinteger })
+        w:close()
+
+        local csv = db:read_csv(")" +
+            path + R"(", { header_row = 0 })
+        assert(csv.rows[1][1] == "-9223372036854775808",
+            "expected INT64_MIN exact text, got " .. tostring(csv.rows[1][1]))
+        assert(csv.rows[1][2] == "9223372036854775807",
+            "expected INT64_MAX exact text, got " .. tostring(csv.rows[1][2]))
+    )");
+}
+
+// TEST-07: a float re-write identity check. Write a float, read the cell back as a string, write
+// THAT string as a second file's cell, read it back, and assert the two read-back strings are
+// identical. This catches a 5-decimal truncation or a 6-significant-digit cut without the test
+// needing to know append_number's exact output text -- that contract belongs to
+// src/utils/number.h, not to this test.
+TEST_F(LuaRunner_WriteCsv, FloatReWriteIdentityRoundTripsForManySignificantDigitValues) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    const auto path1 = lp((sandbox / "float_identity_1.csv").string());
+    const auto path2 = lp((sandbox / "float_identity_2.csv").string());
+
+    lua.run(R"(
+        local function reWriteIdentity(value)
+            local w1 = db:write_csv(")" +
+            path1 + R"(")
+            w1:write_row({ value })
+            w1:close()
+            local first = db:read_csv(")" +
+            path1 + R"(", { header_row = 0 }).rows[1][1]
+
+            local w2 = db:write_csv(")" +
+            path2 + R"(")
+            w2:write_row({ first })
+            w2:close()
+            local second = db:read_csv(")" +
+            path2 + R"(", { header_row = 0 }).rows[1][1]
+
+            assert(first == second, "re-write identity failed for " .. tostring(value) ..
+                ": " .. tostring(first) .. " vs " .. tostring(second))
+        end
+
+        -- 0.1 (not exactly representable in binary), 1e-7 (tiny magnitude), and the largest finite
+        -- double (DBL_MAX) -- the widest spread of significant-digit shapes this writer can see.
+        reWriteIdentity(0.1)
+        reWriteIdentity(1e-7)
+        reWriteIdentity(1.7976931348623157e308)
     )");
 }
 
