@@ -78,13 +78,13 @@ promoted here unchanged.
 
 ### Verification
 
-- [ ] **TEST-06**: A round trip through `db:read_csv` recovers, byte-identically, a cell containing
+- [x] **TEST-06**: A round trip through `db:read_csv` recovers, byte-identically, a cell containing
       the separator, a bare quote, CR, LF, and all four combined in one cell
 
-- [ ] **TEST-07**: `w:write_row({9007199254740993})` reads back `9007199254740993`, not `...992` —
+- [x] **TEST-07**: `w:write_row({9007199254740993})` reads back `9007199254740993`, not `...992` —
       the only case that distinguishes the int64 path from the double path
 
-- [ ] **TEST-08**: A field that is exactly one `"` serializes to four quote characters
+- [x] **TEST-08**: A field that is exactly one `"` serializes to four quote characters
 - [x] **TEST-09**: A single-column file whose cells are `nil` or `""` round-trips with every row
       present — the FMT-02 regression, invisible to any multi-column fixture
 
@@ -177,9 +177,9 @@ Which phases cover which requirements. Filled during roadmap creation.
 | LUA-09 | Phase 4 | Complete |
 | LUA-10 | Phase 4 | Complete |
 | LUA-11 | Phase 4 | Complete |
-| TEST-06 | Phase 4 | Pending |
-| TEST-07 | Phase 4 | Pending |
-| TEST-08 | Phase 4 | Pending |
+| TEST-06 | Phase 4 | Complete |
+| TEST-07 | Phase 4 | Complete |
+| TEST-08 | Phase 4 | Complete |
 | TEST-09 | Phase 4 | Complete |
 | TEST-10 | Phase 5 | Pending |
 | TEST-11 | Phase 5 | Pending |
