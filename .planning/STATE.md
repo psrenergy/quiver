@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 3
-current_phase_name: The agent reads instead of transcribing
-status: planning
-stopped_at: Completed 02-04-PLAN.md
-last_updated: "2026-09-16T10:44:39.976Z"
+current_phase: 03
+current_phase_name: the-agent-reads-instead-of-transcribing
+status: executing
+stopped_at: Completed 03-01-PLAN.md
+last_updated: "2026-09-16T14:02:26.623Z"
 last_activity: 2026-09-16
 last_activity_desc: Phase 01 complete, transitioned to Phase 2
 progress:
-  total_phases: 2
+  total_phases: 3
   completed_phases: 2
-  total_plans: 7
-  completed_plans: 7
+  total_plans: 9
+  completed_plans: 8
 ---
 
 # Project State
@@ -23,16 +23,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-09-14)
 
 **Core value:** Every layer — C++, C, Julia, Dart, Python, JS and Lua — sees the same data under the same rules, because all the logic lives in the C++ core and the bindings stay thin.
-**Current focus:** Phase 02 — the-dirty-files-parse-correctly
+**Current focus:** Phase 03 — the-agent-reads-instead-of-transcribing
 
 ## Current Position
 
-Phase: 3 — The agent reads instead of transcribing
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-09-16 — Phase 02 complete, transitioned to Phase 3
+Phase: 03 (the-agent-reads-instead-of-transcribing) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
+Last activity: 2026-09-16 — Phase 03 execution started
 
-Progress: [██████████] 100%
+Progress: [█████████░] 89%
 
 ## Performance Metrics
 
@@ -66,6 +66,7 @@ Progress: [██████████] 100%
 | Phase 02 P02 | 25min | 3 tasks | 1 files |
 | Phase 02 P03 | ~35min | 3 tasks | 4 files |
 | Phase 02 P04 | 20min | 2 tasks | 1 files |
+| Phase 03 P01 | 25min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -92,6 +93,7 @@ Decisions are logged in PROJECT.md Key Decisions table. Affecting current work:
 - [Phase ?]: R"LUA(...)LUA" custom raw-string delimiter required whenever an embedded Lua pattern literal ends in the two-char sequence )" that would otherwise terminate a default R"(...)" C++ raw string early
 - [Phase ?]: TEST-05: Release build (fresh tree, QUIVER_BUILD_TESTS=ON, not the release preset) confirms LuaRunner* is safe with SOL_SAFE_GETTER off -- 291/291 pass, matching Debug
 - [Phase ?]: DOC-04: src/CLAUDE.md and CHANGELOG.md header_row docs were already complete from plan 02-01; only tests/CLAUDE.md needed the tests/fixtures/ and release-preset-trap additions
+- [Phase ?]: D-30/D-31 applied verbatim: read-don't-transcribe instruction added once at the Standard library bullet; full ~35-line worked example added over both real fixtures, verified executable via quiver_cli before commit
 
 ### Pending Todos
 
@@ -121,6 +123,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-09-16T10:08:53.803Z
-Stopped at: Completed 02-04-PLAN.md
+Last session: 2026-09-16T14:02:26.551Z
+Stopped at: Completed 03-01-PLAN.md
 Resume file: None

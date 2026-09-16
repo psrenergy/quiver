@@ -158,13 +158,13 @@ feature is verified and documented well enough to release
 
   4. The `CLAUDE.md` nearest each change describes the new surface, and `CHANGELOG.md` carries an
      entry under the current unreleased version
-**Plans**: 2 plans
+**Plans**: 1/2 plans executed
 
 Plans:
 
 **Wave 1**
 
-- [ ] 03-01-PLAN.md — The read-don't-transcribe instruction and the worked dirty-file example, run against the real fixtures before shipping
+- [x] 03-01-PLAN.md — The read-don't-transcribe instruction and the worked dirty-file example, run against the real fixtures before shipping
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -187,7 +187,7 @@ Phases execute in numeric order: 1 → 2 → 3
 |-------|----------------|--------|-----------|
 | 1. A Lua script reads a CSV file | 3/3 | Complete    | 2026-09-16 |
 | 2. The dirty files parse correctly | 4/4 | Complete    | 2026-09-16 |
-| 3. The agent reads instead of transcribing | 0/2 | Not started | - |
+| 3. The agent reads instead of transcribing | 1/2 | In Progress|  |
 
 ## Requirement Coverage
 

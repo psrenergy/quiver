@@ -34,8 +34,8 @@ agent, and secondarily anyone scripting a Quiver database by hand.
 ### Agent guidance
 
 - [x] **DOC-01**: `bindings/js/src/lua-api.ts` documents both entry points, their options, and the string-cell rule, in the house literal-token format the sync test checks
-- [ ] **DOC-02**: The reference tells the model to read data files rather than transcribe them into the script, placed where the model is currently told it has no filesystem access
-- [ ] **DOC-03**: The reference carries a worked example over a realistically dirty file, including the `tonumber`/`gsub` parenthesis trap that silently returns `nil`
+- [x] **DOC-02**: The reference tells the model to read data files rather than transcribe them into the script, placed where the model is currently told it has no filesystem access
+- [x] **DOC-03**: The reference carries a worked example over a realistically dirty file, including the `tonumber`/`gsub` parenthesis trap that silently returns `nil`
 - [ ] **DOC-04**: The `CLAUDE.md` nearest each change is updated, and a changelog entry is added
 
 ### Verification
@@ -102,8 +102,8 @@ Which phases cover which requirements.
 | LUA-07 | Phase 1 | Complete |
 | LUA-08 | Phase 1 | Complete |
 | DOC-01 | Phase 1 | Complete |
-| DOC-02 | Phase 3 | Pending |
-| DOC-03 | Phase 3 | Pending |
+| DOC-02 | Phase 3 | Complete |
+| DOC-03 | Phase 3 | Complete |
 | DOC-04 | Phase 3 | Pending |
 | TEST-01 | Phase 2 | Complete |
 | TEST-02 | Phase 2 | Complete |

@@ -146,3 +146,9 @@ plan's specific wording beyond the file being in its final state.
 ---
 *Phase: 03-the-agent-reads-instead-of-transcribing*
 *Completed: 2026-09-16*
+
+## Self-Check: PASSED
+- FOUND: bindings/js/src/lua-api.ts
+- FOUND: .planning/phases/03-the-agent-reads-instead-of-transcribing/03-01-SUMMARY.md
+- FOUND: commit 834dc4e
+- FOUND: commit ff5699b
