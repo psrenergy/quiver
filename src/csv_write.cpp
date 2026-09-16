@@ -5,6 +5,41 @@
 #include <system_error>
 #include <utility>
 
+// TEST-12 message catalogue (D-36: {operation} is always the public Lua method the script called).
+// Every throw the db:write_csv / w:write_row / w:close feature can raise, wherever it lives -- do
+// NOT reword any of these without updating tests/test_lua_runner_write_csv.cpp in the same change.
+//
+// Raised here, in Writer's constructor (operation is always "write_csv"):
+//   "Cannot write_csv: cannot access directory for '<original_path>': <os reason>"
+//   "Cannot write_csv: parent directory does not exist for '<original_path>'"                (WRITE-07)
+//   "Cannot write_csv: failed to open file '<original_path>'"
+//   "Cannot write_csv: failed to write to file '<original_path>'"      (header record write failure)
+//
+// Raised here, in Writer::write_row (operation is always "write_row"):
+//   "Cannot write_row: writer for '<original_path>' is already closed"                        (WRITE-05)
+//   "Cannot write_row: failed to write to file '<original_path>'"          (data record write failure)
+//
+// Raised here, in Writer::close (operation is always "close"):
+//   "Cannot close: failed to flush file '<original_path>'"
+//
+// Raised in src/lua_runner.cpp's cell formatter and row/option decoders (operation is always the
+// Lua method that received the bad value -- "write_row" for a cell/row problem, "write_csv" for
+// an options-table problem):
+//   "Cannot write_row: row <N> cell #<M> is not a finite number"                               (FMT-05)
+//   "Cannot write_row: cell #<M> has unsupported Lua type"                    (table/function/userdata)
+//   "Cannot write_row: row key must be a positive integer"
+//   "Cannot write_csv: unknown option '<name>'"
+//   "Cannot write_csv: options must be a table"
+//   "Cannot write_csv: option 'separator' must be a string"
+//   "Cannot write_csv: option 'separator' must be a single character"
+//   "Cannot write_csv: option 'header' must be a table"
+//   "Cannot write_csv: option 'header' entry must be a string"
+//
+// The sandbox (in-memory database, an escaping path) raises through the shared
+// resolve_sandboxed_path choke point, unchanged by this feature -- see its own messages in
+// src/lua_runner.cpp; write_csv is simply one more caller of it, always evaluated before the
+// options table (LUA-10).
+
 namespace quiver::csv_write {
 
 namespace fs = std::filesystem;

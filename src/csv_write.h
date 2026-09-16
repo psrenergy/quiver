@@ -16,6 +16,11 @@
 // an empty-string cell are the same empty cell (D-40), so all Lua type dispatch (string / integer
 // / float / boolean / nil / rejected) happens in src/lua_runner.cpp and this class never sees a
 // sol2 type.
+//
+// The full Pattern 1 message catalogue for this feature (this header/cpp plus the write_row cell
+// formatter it feeds from src/lua_runner.cpp) is pinned as a comment block at the top of
+// src/csv_write.cpp -- TEST-12 matches on those exact strings; do not reword any of them without
+// updating that comment and the tests together.
 
 #include <fstream>
 #include <string>

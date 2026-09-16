@@ -253,6 +253,12 @@ struct LuaRunner::Impl {
     // same ownership pattern BinaryFile uses below.
     struct CsvWriter {
         quiver::csv_write::Writer writer;
+        // 1-based ordinal of the NEXT data row to attempt, so the FMT-05 non-finite-number error
+        // can name which w:write_row call failed (a row of forty cells with one bad value is
+        // otherwise unfindable). Incremented only after a row is accepted -- a rejected row keeps
+        // the ordinal unchanged, so a script that retries the same logical row after a pcall sees
+        // the same number.
+        std::int64_t next_row_index = 1;
 
         explicit CsvWriter(quiver::csv_write::Writer w) : writer(std::move(w)) {}
     };
@@ -264,7 +270,8 @@ struct LuaRunner::Impl {
     // append_json_table's array-detection walk above. A missing key reads back as Lua nil, which
     // csv_cell_to_string below turns into an empty cell -- so an interior nil and an absent key are
     // structurally identical (D-40), exactly as they are in Lua itself.
-    static std::vector<std::string> csv_row_cells_from_lua(const sol::table& row, const std::string& operation) {
+    static std::vector<std::string>
+    csv_row_cells_from_lua(const sol::table& row, const std::string& operation, std::int64_t row_index) {
         std::int64_t max_index = 0;
         for (auto& pair : row) {
             if (!pair.first.is<std::int64_t>() || pair.first.as<std::int64_t>() < 1) {
@@ -275,7 +282,7 @@ struct LuaRunner::Impl {
 
         std::vector<std::string> cells(static_cast<std::size_t>(max_index));
         for (std::int64_t i = 1; i <= max_index; ++i) {
-            cells[static_cast<std::size_t>(i - 1)] = csv_cell_to_string(row[i], operation, i);
+            cells[static_cast<std::size_t>(i - 1)] = csv_cell_to_string(row[i], operation, i, row_index);
         }
         return cells;
     }
@@ -291,7 +298,10 @@ struct LuaRunner::Impl {
     // it does NOT apply Lua's own string<->number coercion the way the as<>() family would.
     // Verified by compiling and running this exact dispatch against this repo's own sol2/Lua
     // build (04-SOL2-DISPATCH-PROBE.md); do not add a get_type() guard here and do not reorder it.
-    static std::string csv_cell_to_string(const sol::object& cell, const std::string& operation, std::int64_t index) {
+    static std::string csv_cell_to_string(const sol::object& cell,
+                                          const std::string& operation,
+                                          std::int64_t index,
+                                          std::int64_t row_index) {
         if (!cell.valid() || cell.is<sol::lua_nil_t>()) {
             return {};
         }
@@ -308,11 +318,19 @@ struct LuaRunner::Impl {
             return out;
         }
         if (cell.is<double>()) {
+            const double value = cell.as<double>();
+            // FMT-05: reject BEFORE append_number/to_chars is reached, so no platform-specific
+            // non-finite spelling (MSVC's "-nan(ind)"/"nan"/"inf" vs. glibc's "nan"/"inf" --
+            // 04-02-SUMMARY.md's spot-check) can ever reach a cell. Both the row and the cell are
+            // named: a row of many cells with one bad value is otherwise unfindable.
+            if (!std::isfinite(value)) {
+                throw std::runtime_error("Cannot " + operation + ": row " + std::to_string(row_index) + " cell #" +
+                                         std::to_string(index) + " is not a finite number");
+            }
             // D-34: to_chars' shortest round-trip form, with no synthetic decimal point -- a whole
-            // float and the equal integer produce identical text. The non-finite guard (FMT-05) is
-            // plan 04-02's; this task's numeric path is finite values only.
+            // float and the equal integer produce identical text.
             std::string out;
-            quiver::utils::append_number(cell.as<double>(), out);
+            quiver::utils::append_number(value, out);
             return out;
         }
         if (cell.is<std::string>()) {
@@ -686,7 +704,19 @@ struct LuaRunner::Impl {
             sol::no_constructor,
             "write_row",
             [](CsvWriter& self, const sol::table& row) {
-                self.writer.write_row(csv_row_cells_from_lua(row, "write_row"), "write_row");
+                // WRITE-05: check the closed state BEFORE formatting a single cell -- cells were
+                // previously formatted as csv_write::Writer::write_row's argument, evaluated before
+                // the call, so a write after close on a bad row raised the wrong error. Delegating
+                // to Writer with an empty vector reuses its own closed-writer message verbatim
+                // (never reached: Writer checks closed_ before touching cells) instead of
+                // duplicating the text here.
+                if (self.writer.is_closed()) {
+                    self.writer.write_row({}, "write_row");
+                    return;
+                }
+                const auto row_index = self.next_row_index;
+                self.writer.write_row(csv_row_cells_from_lua(row, "write_row", row_index), "write_row");
+                ++self.next_row_index;
             },
             "close",
             [](CsvWriter& self) { self.writer.close("close"); });
