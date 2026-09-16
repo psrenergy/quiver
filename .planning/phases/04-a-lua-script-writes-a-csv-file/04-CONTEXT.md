@@ -97,8 +97,8 @@ beyond `separator` / `header`. All five are argued down individually in
   `csv_read`.
   — **Reversibility:** reversible — file organization only; nothing outside `src/` sees either shape.
 
-- **D-38: `append_number` moves to `src/utils/number.h` as `quiver::utils::append_number`, and both
-  callers use it from there.** FMT-04 requires reuse, and the helper is currently a static in
+- **D-38: `append_number` moves to `src/utils/number.h` as `quiver::utils::append_number` — and both callers use it from there.**
+  FMT-04 requires reuse, and the helper is currently a static in
   `lua_runner.cpp`'s anonymous namespace (`:128-135`), unreachable from another TU. The alternatives
   are worse: duplicating it is exactly the divergence this project guards against everywhere, and
   templating the writer over a formatter is machinery for one call site. `src/utils/` already holds
@@ -110,8 +110,8 @@ beyond `separator` / `header`. All five are argued down individually in
 
 ### The agent reference (DOC-05)
 
-- **D-39: The worked example is the COMPACT form — roughly 10-12 lines — not Phase 3's full ~35-line
-  shape.** This is a deliberate departure from the immediately preceding precedent, and the reason
+- **D-39: The worked example is the COMPACT form — roughly 10-12 lines — not Phase 3's full ~35-line shape.**
+  This is a deliberate departure from the immediately preceding precedent, and the reason
   is that Phase 3's precedent was justified by something the write side does not have. That example
   earned ~1000 permanent tokens per `claw` session because *reading* has a trap catalogue a model
   gets wrong unaided: BOM, CRLF, a junk row above the header and a units row below it, `header_row`
@@ -135,8 +135,8 @@ beyond `separator` / `header`. All five are argued down individually in
   not an implementation detail. Equally, do not shrink it below a complete open-write-close shape.
   — **Reversibility:** reversible — prose, though the token cost of growing it is permanent.
 
-- **D-40: `nil` and `""` are structurally indistinguishable after a round trip — state it, do not
-  try to fix it.** Both write an empty cell; both read back as `""`, because `db:read_csv` returns
+- **D-40: `nil` and `""` are structurally indistinguishable after a round trip — state it, do not try to fix it.**
+  Both write an empty cell; both read back as `""`, because `db:read_csv` returns
   strings. The research called this unfixable and it is: CSV has no null. One clause in the
   reference next to the `nil` rule, and a line in `src/CLAUDE.md`. No sentinel, no option.
   — **Reversibility:** reversible.
