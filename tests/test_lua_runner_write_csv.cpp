@@ -2,6 +2,9 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <fstream>
+#include <sstream>
+#include <stdexcept>
 #include <string>
 
 namespace {
@@ -12,6 +15,57 @@ std::string lp(const std::string& p) {
     std::string r = p;
     std::replace(r.begin(), r.end(), '\\', '/');
     return r;
+}
+
+// Reads bindings/js/src/lua-api.ts (via quiver::test::path_from) and extracts the fenced ```lua
+// block that follows a given `## heading` -- the same drift-proof technique
+// bindings/js/test/lua-api-sync.test.ts uses on src/lua_runner.cpp, applied here in the other
+// direction (parsing the reference instead of parsing the binding). LUA_DB_API_REFERENCE is a
+// TypeScript template literal, so every backtick in it is backslash-escaped in the source (the
+// fence markers included) to keep it from terminating the surrounding `...` literal; this function
+// un-escapes that before returning. Throws -- loudly, naming the heading -- if the heading, the
+// opening fence, the closing fence, or a non-empty block cannot be found, so a reformat of the
+// reference cannot make the caller's test pass vacuously.
+std::string extract_lua_example(const std::string& file_contents, const std::string& heading) {
+    const auto heading_pos = file_contents.find(heading);
+    if (heading_pos == std::string::npos) {
+        throw std::runtime_error("extract_lua_example: heading not found: " + heading);
+    }
+
+    // The literal bytes in the .ts source are backslash + backtick, repeated three times, then
+    // "lua" -- NOT a raw ``` sequence, which never appears unescaped inside the template literal.
+    const std::string open_fence = "\\`\\`\\`lua";
+    const auto fence_start = file_contents.find(open_fence, heading_pos);
+    if (fence_start == std::string::npos) {
+        throw std::runtime_error("extract_lua_example: opening ```lua fence not found after heading: " + heading);
+    }
+
+    const auto block_start = fence_start + open_fence.size();
+    const std::string close_fence = "\\`\\`\\`";
+    const auto block_end = file_contents.find(close_fence, block_start);
+    if (block_end == std::string::npos) {
+        throw std::runtime_error("extract_lua_example: closing ``` fence not found for heading: " + heading);
+    }
+
+    const std::string block = file_contents.substr(block_start, block_end - block_start);
+    if (block.find_first_not_of(" \t\r\n") == std::string::npos) {
+        throw std::runtime_error("extract_lua_example: extracted block is empty for heading: " + heading);
+    }
+
+    // Undo the template-literal escaping: every "\`" becomes "`". No other escape sequence (e.g.
+    // "\${") appears in this section, but the loop only ever touches a backslash-backtick pair, so
+    // it cannot mangle anything else even if one were added later.
+    std::string unescaped;
+    unescaped.reserve(block.size());
+    for (std::size_t i = 0; i < block.size(); ++i) {
+        if (block[i] == '\\' && i + 1 < block.size() && block[i + 1] == '`') {
+            unescaped += '`';
+            ++i;
+        } else {
+            unescaped += block[i];
+        }
+    }
+    return unescaped;
 }
 
 // TEST-12: adapted from test_lua_runner_read_csv.cpp's own expect_prefixed_error. Strips the
@@ -844,6 +898,59 @@ TEST_F(LuaRunner_WriteCsv, ReopeningSamePathTruncatesExistingContent) {
         assert(#csv.rows == 1, "expected 1 row after truncate-at-open, got " .. #csv.rows)
         assert(csv.rows[1][1] == "3", "expected '3', got " .. tostring(csv.rows[1][1]))
     )");
+}
+
+// D-39/DOC-05: the worked example shipped in bindings/js/src/lua-api.ts's "## CSV file writing"
+// section is EXTRACTED FROM THE REFERENCE FILE AT TEST TIME and executed, never transcribed into
+// this test -- a pasted copy is a second copy that drifts, exactly what lua-api-sync.test.ts
+// exists to prevent on the binding side. The example itself supplies no `path` variable (it is
+// meant to be read as prose over a caller-supplied path), so this test defines one before running
+// the extracted body. Assertions below are positional against the example's OWN data table
+// (Alpha/first/true/42, Beta/nil/false/3.5): the Beta row's nil is INTERIOR (04-01 task 3 pins
+// this), so it must round-trip as an empty cell at FULL row width, not a shortened row -- a future
+// edit that moves the nil to the end must make this assertion fail (FMT-08), not be accommodated.
+TEST_F(LuaRunner_WriteCsv, ReferenceWorkedExampleRunsAndRoundTripsItsOwnData) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    const std::string reference_path = quiver::test::path_from(__FILE__, "../bindings/js/src/lua-api.ts");
+    std::ifstream reference_file(reference_path, std::ios::binary);
+    ASSERT_TRUE(reference_file.is_open()) << "could not open reference file: " << reference_path;
+    std::ostringstream buffer;
+    buffer << reference_file.rdbuf();
+    const std::string reference_contents = buffer.str();
+
+    const std::string example = extract_lua_example(reference_contents, "## CSV file writing");
+
+    const auto path = lp((sandbox / "reference_example.csv").string());
+    const std::string script = "local path = \"" + path + "\"\n" + example + R"(
+        local csv = db:read_csv(path, { header_row = 0 })
+        assert(#csv.rows == 3, "expected a header record plus 2 data rows, got " .. #csv.rows)
+
+        -- record 1: the header, written because the example passes `header` -- nothing else here
+        -- would notice a header that was decoded and never actually written.
+        assert(csv.rows[1][1] == "name", "expected header col1 'name', got " .. tostring(csv.rows[1][1]))
+        assert(csv.rows[1][2] == "note", "expected header col2 'note', got " .. tostring(csv.rows[1][2]))
+        assert(csv.rows[1][3] == "active", "expected header col3 'active', got " .. tostring(csv.rows[1][3]))
+        assert(csv.rows[1][4] == "score", "expected header col4 'score', got " .. tostring(csv.rows[1][4]))
+
+        -- record 2: { "Alpha", "first", true, 42 }
+        assert(csv.rows[2][1] == "Alpha", "expected Alpha, got " .. tostring(csv.rows[2][1]))
+        assert(csv.rows[2][2] == "first", "expected first, got " .. tostring(csv.rows[2][2]))
+        assert(csv.rows[2][3] == "1", "expected boolean true written as '1', got " .. tostring(csv.rows[2][3]))
+        assert(csv.rows[2][4] == "42", "expected 42, got " .. tostring(csv.rows[2][4]))
+
+        -- record 3: { "Beta", nil, false, 3.5 } -- the INTERIOR nil at position 2 must produce an
+        -- empty cell at FULL row width (4 cells), not a row shortened to 3 (FMT-08).
+        assert(#csv.rows[3] == 4, "expected the Beta row at full width (4 cells), got " .. #csv.rows[3])
+        assert(csv.rows[3][1] == "Beta", "expected Beta, got " .. tostring(csv.rows[3][1]))
+        assert(csv.rows[3][2] == "", "expected the interior nil to round-trip as an empty cell, got " ..
+            tostring(csv.rows[3][2]))
+        assert(csv.rows[3][3] == "0", "expected boolean false written as '0', got " .. tostring(csv.rows[3][3]))
+        assert(csv.rows[3][4] == "3.5", "expected 3.5, got " .. tostring(csv.rows[3][4]))
+    )";
+    lua.run(script);
 }
 
 // TEST-12: the catalogue suite. Every assertion below checks a Pattern 1 PREFIX and a reason
