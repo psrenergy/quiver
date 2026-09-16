@@ -58,6 +58,8 @@ with numbers that round-trip exactly.
 - ✓ Parsing is correct on genuinely dirty input — UTF-8 BOM, CRLF, a separator inside a quoted field, a newline inside a quoted field, doubled-quote escapes, ragged rows, junk rows above the header, duplicate and empty header names, configurable separator — validated in Milestone v1.0 (Phase 2)
 - ✓ The agent-facing Lua reference (`bindings/js/src/lua-api.ts`) tells the model to read data files rather than transcribe them into the script — validated in Milestone v1.0 (Phase 3)
 - ✓ Small-fixture tests covering every dirty case above, including a regression over the two real Maranhão CSVs — validated in Milestone v1.0 (Phase 2)
+- ✓ A Lua script can create a CSV file in the database directory and write string / number / boolean / `nil` cells to it, streaming, RFC 4180-quoted, with `db:read_csv` returning exactly what was written — validated in Phase 4: A Lua script writes a CSV file
+- ✓ Numbers round-trip exactly: an int64 past double’s 53-bit mantissa survives, a float re-writes to identical text, and a non-finite value is a Pattern 1 error rather than `inf`/`nan` text in a cell — validated in Phase 4: A Lua script writes a CSV file
 
 ### Active
 
@@ -186,4 +188,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-16 — Milestone v1.1 started (CSV writing for the Lua runner); v1.0 shipped (CSV reading); software version 0.10.6, changes unreleased under 0.10.7*
+*Last updated: 2026-09-16 — Phase 4 complete (the CSV writer, its sandboxed Lua handle, and the DOC-05 reference); milestone v1.1 in progress, Phase 5 next; software version 0.10.6, changes unreleased under 0.10.7*
