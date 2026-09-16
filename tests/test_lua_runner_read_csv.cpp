@@ -324,6 +324,43 @@ TEST_F(LuaRunner_ReadCsv, HeaderRowPastEndOfFileThrowsExactMessage) {
                      "Cannot read_csv: header row 99 not found in file 'three.csv'");
 }
 
+// Pins that an enormous header_row produces the ordinary past-EOF error rather than anything
+// stranger -- both at INT_MAX and beyond it.
+//
+// It does NOT cover the INT_MAX clamp in make_format(), and cannot: verified by deleting the clamp
+// and re-running, which still passes. Without the clamp, `header_row - 1` truncates to a negative
+// int and takes the no_header() path, but the past-EOF guard keys off the caller's ORIGINAL
+// options.header_row rather than the translated index, so the same error fires either way and the
+// downgraded variable_column_policy never becomes observable -- the read always errors before any
+// row is returned. The clamp is therefore defense-in-depth against a future caller of
+// make_format() that does not error out first, and is unreachable from the Lua surface today.
+// Do not "fix" this test to cover it; there is nothing observable to assert.
+TEST_F(LuaRunner_ReadCsv, HeaderRowAtAndBeyondIntMaxClampsToPastEndOfFile) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    write_lua_csv_file(sandbox / "clamp.csv", "a,b\n1,2\n");
+
+    // 2147483647 == INT_MAX; 9007199254740992 == 2^53, the largest integer a Lua number holds
+    // exactly, so the literal reaching the decoder is the one written here.
+    expect_lua_error(lua,
+                     R"(db:read_csv("clamp.csv", { header_row = 2147483647 }))",
+                     "Cannot read_csv: header row 2147483647 not found in file 'clamp.csv'");
+    expect_lua_error(lua,
+                     R"(db:read_csv("clamp.csv", { header_row = 9007199254740992 }))",
+                     "Cannot read_csv: header row 9007199254740992 not found in file 'clamp.csv'");
+
+    // The blank-line guarantee (D-13) under the no-header path, which IS the case the call-order
+    // fix in make_format() protects: header mode is set before variable_columns(KEEP_NON_EMPTY),
+    // so no_header()'s policy reset cannot win. Reorder those two lines and this assertion fails.
+    write_lua_csv_file(sandbox / "clamp_blank.csv", "1,2\n\n3,4\n");
+    lua.run(R"LUA(
+        local csv = db:read_csv("clamp_blank.csv", { header_row = 0 })
+        assert(#csv.rows == 2, "blank line must not become a row, got " .. #csv.rows)
+    )LUA");
+}
+
 TEST_F(LuaRunner_ReadCsv, StreamHeaderRowPastEndOfFileNamesTheStreamEntryPoint) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
