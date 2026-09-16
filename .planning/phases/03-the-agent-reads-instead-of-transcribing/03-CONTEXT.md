@@ -85,6 +85,47 @@ Use the real fixtures' actual structure (`tests/fixtures/ma_energia_residencial.
 `GdRegressionQuotedCommaAndEnglishMonthNames`) — lift the shape from the tests, which are known to
 work, rather than writing fresh Lua that has never run.
 
+### D-33: The changelog is three releases stale — repair it, backfilled from git
+
+**User decision, chosen over both leaving it and a heading-only rename.** Correcting this file's
+own earlier claim that "`0.10.4` (already the unreleased section) is the right target" — that was
+read off the stale heading and is wrong.
+
+**The actual state:** all five manifests read `0.10.6`; tags `v0.10.4`, `v0.10.5` and `v0.10.6`
+all exist; yet `CHANGELOG.md`'s top heading is still `## [0.10.4] — unreleased` and there are no
+sections for 0.10.5 or 0.10.6. So the current "unreleased" section is a **mixture** of three
+shipped releases' content and this session's genuinely-unreleased work.
+
+This is redistribution of entries that already exist, not invention. Each maps to exactly one
+release by the files its commit touched — verified, not inferred:
+
+| Release | Date | Commit | Entries to move there |
+|---|---|---|---|
+| **0.10.4** | 2026-09-04 | `311d9d3` *accept booleans on every write path* (24 files, incl. `src/lua_runner.cpp`, `bindings/js/src/time-series.ts`, `bindings/dart/lib/src/database_update.dart`) | **Added:** "Booleans are accepted on every write path, in every layer". **Fixed:** "JavaScript: `upsertTimeSeriesRow` wrote a boolean as FLOAT"; "Dart: the group writers' unsupported-type error"; "Lua: a mixed integer/boolean array silently stored 0 in release builds" |
+| **0.10.5** | 2026-09-09 | `c571577` *make the macOS native-assets build work* (`hook/build.dart`, `cmake/Platform.cmake`, `src/CMakeLists.txt`) | **Changed:** "The Dart binding's native build now works on macOS"; "macOS builds now target macOS 13.3"; "New CMake option `QUIVER_UNVERSIONED_SHARED`" |
+| **0.10.6** | 2026-09-11 | `2a0ebed` *Fix date time convertion in dart* (`lib/src/date_time.dart`) | **Fixed:** "Dart: every DateTime reader threw on valid values whose local wall-clock time the platform considers nonexistent" |
+| **0.10.7** | unreleased | this milestone | **Added:** "A Lua script can now read a CSV file off disk"; "`db:read_csv`/`db:read_csv_stream` accept a `header_row` option". **Fixed:** "Lua: a path the OS refuses to resolve reached scripts as a raw `std::filesystem` message". Plus phase 3's own agent-reference entry. |
+
+Every heading gets its tag date; only `0.10.7` stays `— unreleased`.
+
+**No version bump.** The manifests already agree at `0.10.6` and this milestone is purely additive,
+so `0.10.7` is the correct *next* number for unreleased work. Do not run
+`scripts/assert_version.py bump` — the manifests move at release time, not here.
+
+**The compare links at the file's foot are also wrong and are part of this repair.** `[0.10.4]`
+currently points at `v0.10.3...v0.11.0` — a tag that does not exist. Correct set:
+
+```
+[0.10.7]: https://github.com/psrenergy/quiver/compare/v0.10.6...HEAD
+[0.10.6]: https://github.com/psrenergy/quiver/compare/v0.10.5...v0.10.6
+[0.10.5]: https://github.com/psrenergy/quiver/compare/v0.10.4...v0.10.5
+[0.10.4]: https://github.com/psrenergy/quiver/compare/v0.10.3...v0.10.4
+```
+
+**Do not invent entries.** Every backfilled line already exists in the file — this is a move, not a
+rewrite. If something in the current section maps to none of the three commits above, it belongs to
+0.10.7; say so in the SUMMARY rather than guessing a home for it.
+
 ### D-32: TEST-05 is already discharged; this phase re-runs it as a release gate
 
 `REQUIREMENTS.md` already marks TEST-05 `[x]` — phase 2's plan 02-04 ran it (291/291 `LuaRunner*`
@@ -133,10 +174,8 @@ gitignored.
   Lift the transformations from the two passing regression tests rather than composing new ones.
   Worth actually running the finished example once against the committed fixtures — a wrong example
   in a system prompt teaches the wrong thing on every session forever.
-- Version bump: this milestone's user-visible surface is new Lua bindings and a new option. Per
-  root `CLAUDE.md`, a `0.x` **minor** bump signals breaking changes and a **patch** bump does not —
-  this is purely additive, so `0.10.4` (already the unreleased section) is the right target. All
-  five manifests must agree; `scripts/assert_version.py` checks and can bump them.
+- Version: superseded by D-33 — the unreleased section is `0.10.7`, not `0.10.4`, and no manifest
+  bump happens in this phase. (The original note here said `0.10.4`, read off the stale heading.)
 - One correction inherited from phase 2, worth not repeating: an earlier draft claimed
   `lua-api-sync.test.ts` fails the build on an undocumented option key. It does not — it matches
   bound names only. Do not plan work around a gate that will not fire.
