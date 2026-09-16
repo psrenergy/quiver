@@ -51,13 +51,38 @@ Reader::Reader(std::string resolved_path, std::string original_path, std::string
     // parser is ever constructed, and all quoting the caller's own path spelling, not the
     // resolved one. resolve_sandboxed_path's weakly_canonical does not require the path to
     // exist, so these three checks cannot be skipped.
-    if (!fs::exists(resolved_path)) {
+    // Non-throwing overloads throughout: the throwing ones raise std::filesystem_error on any OS
+    // failure that is not a plain "does not exist" (a permission or I/O error, a malformed path),
+    // and these three calls sit outside the try below -- so such an error would reach Lua with no
+    // Pattern 1 prefix at all, breaking LUA-08. An error_code lets "not found" and "the OS refused
+    // the query" be told apart and reported separately. The three messages below are pinned by the
+    // D-22 catalogue; do not reword them.
+    std::error_code ec;
+
+    const bool exists = fs::exists(resolved_path, ec);
+    if (ec) {
+        throw std::runtime_error("Cannot " + operation + ": cannot access file '" + original_path +
+                                 "': " + ec.message());
+    }
+    if (!exists) {
         throw std::runtime_error("Cannot " + operation + ": file not found: " + original_path);
     }
-    if (fs::is_directory(resolved_path)) {
+
+    const bool is_directory = fs::is_directory(resolved_path, ec);
+    if (ec) {
+        throw std::runtime_error("Cannot " + operation + ": cannot access file '" + original_path +
+                                 "': " + ec.message());
+    }
+    if (is_directory) {
         throw std::runtime_error("Cannot " + operation + ": path is a directory: " + original_path);
     }
-    if (fs::file_size(resolved_path) == 0) {
+
+    const auto size = fs::file_size(resolved_path, ec);
+    if (ec) {
+        throw std::runtime_error("Cannot " + operation + ": cannot access file '" + original_path +
+                                 "': " + ec.message());
+    }
+    if (size == 0) {
         throw std::runtime_error("Cannot " + operation + ": file '" + original_path + "' is empty");
     }
 

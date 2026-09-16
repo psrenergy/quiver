@@ -3,8 +3,17 @@
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
-#include <iterator>
+#include <system_error>
 #include <vector>
+
+// UnreadableFileReportsParserFailure makes an existing, non-empty file impossible to open: an
+// exclusive lock on Windows, chmod 000 on POSIX (where mode bits, unlike on Windows, do gate reads).
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <sys/stat.h>
+#include <unistd.h>
+#endif
 
 namespace {
 
@@ -674,20 +683,75 @@ TEST_F(LuaRunner_ReadCsv, EmptyFileThrowsForReadCsvStream) {
     EXPECT_TRUE(std::filesystem::remove(sandbox / "empty_stream.csv"));
 }
 
-TEST_F(LuaRunner_ReadCsv, ParserWrapperMessageExistsInSource) {
-    // D-22 entry 10 (the csv-parser wrapper: "cannot read file '<p>': <reason>") has no reliably
-    // reproducible runtime trigger in this environment: Reader's constructor already intercepts
-    // not-found/directory/empty before csv::CSVReader is ever constructed, and
-    // std::filesystem::permissions has no effect on read access on Windows (only the write bit is
-    // honored), so there is no portable way to make an existing, non-empty, non-directory file
-    // fail to open. Per the plan's sanctioned fallback, assert the wrapper is actually present at
-    // the source level instead of silently dropping the requirement -- both the construction-time
-    // and the mid-iteration catch in csv_read.cpp route through it (LUA-08/concurrency).
-    std::ifstream src(quiver::test::path_from(__FILE__, "../src/csv_read.cpp"));
-    ASSERT_TRUE(src.is_open());
-    const std::string contents((std::istreambuf_iterator<char>(src)), std::istreambuf_iterator<char>());
-    EXPECT_NE(contents.find("cannot read file '"), std::string::npos);
+// D-22 entry 10 (the csv-parser wrapper: "cannot read file '<p>': <reason>") fires when a file
+// passes all three preconditions -- it exists, is not a directory, is non-empty -- but still cannot
+// be opened. An exclusive lock produces exactly that: the metadata queries below are answered from
+// the directory entry and succeed, while opening the file for reading fails. No elevation and no
+// second process needed, so this runs anywhere the suite runs.
+//
+// The two platforms need different levers, because they disagree about what an ACL protects:
+// on Windows a DENY ACE blocks the open but NOT the metadata queries, and chmod is a no-op for
+// read access; on POSIX chmod 000 blocks the open while stat still succeeds. Both land in the same
+// place. (POSIX skips the check when running as root, for whom mode bits are advisory.)
+TEST_F(LuaRunner_ReadCsv, UnreadableFileReportsParserFailure) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    const auto target = sandbox / "unreadable.csv";
+    write_lua_csv_file(target, "a,b\n1,2\n");
+
+#ifdef _WIN32
+    // dwShareMode 0 == no sharing: every later open fails with ERROR_SHARING_VIOLATION.
+    HANDLE lock =
+        CreateFileW(target.wstring().c_str(), GENERIC_READ, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    ASSERT_NE(lock, INVALID_HANDLE_VALUE) << "could not take an exclusive lock (GetLastError=" << GetLastError() << ")";
+#else
+    if (::geteuid() == 0) {
+        GTEST_SKIP() << "running as root: mode bits do not restrict access";
+    }
+    ASSERT_EQ(::chmod(target.c_str(), 0), 0);
+#endif
+
+    // Guard against a false positive: the preconditions must genuinely still pass, or this test
+    // would be asserting one of the three earlier catalogue messages instead of entry 10.
+    std::error_code ec;
+    EXPECT_TRUE(std::filesystem::exists(target, ec)) << ec.message();
+    EXPECT_FALSE(std::filesystem::is_directory(target, ec)) << ec.message();
+    EXPECT_GT(std::filesystem::file_size(target, ec), 0U) << ec.message();
+
+    expect_lua_error(lua, R"(db:read_csv("unreadable.csv"))", "Cannot read_csv: cannot read file 'unreadable.csv': ");
+    expect_lua_error(lua,
+                     R"(db:read_csv_stream("unreadable.csv", function() end))",
+                     "Cannot read_csv_stream: cannot read file 'unreadable.csv': ");
+
+#ifdef _WIN32
+    CloseHandle(lock);
+#else
+    ASSERT_EQ(::chmod(target.c_str(), 0600), 0);  // restore so TearDown can delete it
+#endif
 }
+
+#ifdef _WIN32
+// A Windows device name ("NUL", "CON", "COM1", in any case, in any directory) is not a filesystem
+// path, and weakly_canonical throws std::filesystem_error on it rather than reporting a missing
+// file. That call lives in resolve_sandboxed_path -- the choke point every file-touching Lua
+// operation shares -- so before it was wrapped, a script got the raw
+// "weakly_canonical: The parameter is incorrect.: ..." with no Pattern 1 prefix, breaking LUA-08.
+// Guarded to _WIN32 because no POSIX path is reserved this way.
+TEST_F(LuaRunner_ReadCsv, DeviceNamePathIsReportedWithPrefix) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    // Lowercase "nul" too: the reservation is case-insensitive, and only the spellings that reach
+    // weakly_canonical exercise the wrapped path.
+    for (const char* device : {"NUL", "nul"}) {
+        expect_prefixed_error(lua, std::string(R"(db:read_csv(")") + device + R"("))");
+        expect_prefixed_error(lua, std::string(R"(db:read_csv_stream(")") + device + R"(", function() end))");
+    }
+}
+#endif
 
 // --- catalogue ordering + adjacency ---
 

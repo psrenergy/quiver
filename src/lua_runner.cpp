@@ -847,19 +847,35 @@ struct LuaRunner::Impl {
                                      ": database is in-memory, file operations are unavailable");
         }
 
-        // Same root derivation as create_database_logger: a bare filename has an empty
-        // parent_path and resolves against the current working directory.
-        auto root = fs::path(db_path).parent_path();
-        if (root.empty()) {
-            root = fs::current_path();
-        }
-        root = fs::weakly_canonical(root);
+        // Every filesystem call below uses a throwing overload, and each can fail for an OS reason
+        // that is not "does not exist" -- a Windows device name ("NUL", "nul") makes
+        // weakly_canonical throw outright, and a permission or I/O error can do the same. Left
+        // unwrapped, that std::filesystem_error reaches the script verbatim
+        // ("weakly_canonical: The parameter is incorrect.: ..."), violating LUA-08's rule that no
+        // standard-library message may surface unprefixed. This is the one choke point every
+        // file-touching Lua operation routes through, so wrapping it here covers all of them.
+        fs::path root;
+        fs::path candidate;
+        try {
+            // Same root derivation as create_database_logger: a bare filename has an empty
+            // parent_path and resolves against the current working directory.
+            root = fs::path(db_path).parent_path();
+            if (root.empty()) {
+                root = fs::current_path();
+            }
+            root = fs::weakly_canonical(root);
 
-        auto candidate = fs::path(path);
-        if (candidate.is_relative()) {
-            candidate = root / candidate;
+            candidate = fs::path(path);
+            if (candidate.is_relative()) {
+                candidate = root / candidate;
+            }
+            candidate = fs::weakly_canonical(candidate);
+        } catch (const fs::filesystem_error& e) {
+            // e.code().message() is the bare OS reason; e.what() would repeat the paths already
+            // named here and lead with the failing std function's name.
+            throw std::runtime_error("Cannot " + operation + ": cannot resolve path '" + path +
+                                     "': " + e.code().message());
         }
-        candidate = fs::weakly_canonical(candidate);
 
         // Strict containment: candidate == root is rejected too — the binary subsystem appends
         // ".qvr"/".toml" by string concatenation, so the root itself would yield "<root>.qvr"
