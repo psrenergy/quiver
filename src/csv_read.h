@@ -20,6 +20,9 @@ namespace quiver::csv_read {
 
 struct Options {
     char separator = ',';
+    // 1-based; 0 means "this file has no header" (D-20). Default 1 matches the previous hardcoded
+    // header_row(0) (csv-parser is 0-based) exactly, so an unspecified option changes nothing.
+    int64_t header_row = 1;
 };
 
 // Invoked once per data row with that row's cells (moved-from -- the caller owns them) and the

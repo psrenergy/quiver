@@ -938,11 +938,15 @@ struct LuaRunner::Impl {
             [&](sol::object key, sol::object value) { entries.emplace_back(key.as<std::string>(), std::move(value)); });
 
         std::optional<sol::object> separator_value;
+        std::optional<sol::object> header_row_value;
         for (auto& entry : entries) {
-            if (entry.first != "separator") {
+            if (entry.first == "separator") {
+                separator_value = entry.second;
+            } else if (entry.first == "header_row") {
+                header_row_value = entry.second;
+            } else {
                 throw std::runtime_error("Cannot " + operation + ": unknown option '" + entry.first + "'");
             }
-            separator_value = entry.second;
         }
 
         if (separator_value) {
@@ -957,6 +961,29 @@ struct LuaRunner::Impl {
                 throw std::runtime_error("Cannot " + operation + ": option 'separator' must be a single character");
             }
             result.separator = separator[0];
+        }
+
+        if (header_row_value) {
+            // Same rationale as separator above: explicit get_type() rather than lua_cell_as
+            // (LUA-08). This also rules out a quoted "2", which Lua's own string->number
+            // coercion would otherwise let through.
+            if (header_row_value->get_type() != sol::type::number) {
+                throw std::runtime_error("Cannot " + operation + ": option 'header_row' must be an integer");
+            }
+            // .is<int64_t>() rejects a fractional number (e.g. 2.5) -- the house idiom already
+            // used for group-column indices (see collect_group_columns' cell.first.is<int64_t>()
+            // check). SOL_SAFE_NUMERICS=1 is set unconditionally in src/CMakeLists.txt (not gated
+            // on build type), so this precision check holds in Release too.
+            if (!header_row_value->is<int64_t>()) {
+                throw std::runtime_error("Cannot " + operation + ": option 'header_row' must be an integer");
+            }
+            const auto header_row = header_row_value->as<int64_t>();
+            if (header_row < 0) {
+                // A separate message from the type check above: "-1" IS an integer, so telling
+                // the caller otherwise would be a lie.
+                throw std::runtime_error("Cannot " + operation + ": option 'header_row' must not be negative");
+            }
+            result.header_row = header_row;
         }
 
         return result;

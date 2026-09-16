@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <internal/csv_reader.hpp>
+#include <limits>
 #include <optional>
 #include <stdexcept>
 #include <string_view>
@@ -36,11 +37,28 @@ namespace {
 // window is csv-parser's own fixed default, unmultiplied by worker count -- exactly what
 // PARSE-09 requires, and no caller (Lua or C++) can move it. If CSV_ENABLE_THREADS is ever
 // turned back on, add format.threading(false) here to preserve that guarantee.
+//
+// Call order below is not cosmetic: CSVFormat::header_row(int row), when row < 0 (which
+// no_header() -- header_row's no-header path -- always passes), overwrites variable_column_policy
+// to plain KEEP as a side effect (build/_deps/csv_parser-src/include/internal/csv_format.cpp:44).
+// Header mode MUST therefore be set FIRST and variable_columns(KEEP_NON_EMPTY) LAST, so the
+// explicit pin always wins regardless of which header mode was requested -- reordering these two
+// silently reintroduces phantom blank-line rows for every no-header read (D-13's guarantee).
 csv::CSVFormat make_format(const Options& options) {
     csv::CSVFormat format;
     format.delimiter(options.separator);
+    if (options.header_row == 0) {
+        format.no_header();
+    } else {
+        // Clamp into int range before the subtract-and-cast: a caller-supplied value at/above
+        // INT_MAX would otherwise truncate into a negative int, tripping the same header_row(row
+        // < 0) side effect no_header() triggers above. Any such row index is already past the end
+        // of every real file, so it falls through to Reader's own past-EOF check instead.
+        const int64_t zero_based = options.header_row - 1;
+        constexpr int64_t kMaxRow = std::numeric_limits<int>::max();
+        format.header_row(static_cast<int>(zero_based > kMaxRow ? kMaxRow : zero_based));
+    }
     format.variable_columns(csv::VariableColumnPolicy::KEEP_NON_EMPTY);
-    format.header_row(0);
     return format;
 }
 

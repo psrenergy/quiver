@@ -620,7 +620,7 @@ Read a CSV file from disk directly into Lua — the only way to get file data in
 file-touching operation (see Critical rules).
 
 \`\`\`lua
-local csv = db:read_csv(path, { separator = "," })   -- { header = {...}, rows = {{...}, ...} }
+local csv = db:read_csv(path, { separator = ",", header_row = 1 })   -- { header = {...}, rows = {{...}, ...} }
 \`\`\`
 
 Every cell arrives as a **string**, with no numeric or date inference — \`"0012"\` stays \`"0012"\`
@@ -630,9 +630,15 @@ and a date stays text. \`csv.header\` is a 1-based array of the file's column na
 past its end is \`nil\`. A 0-byte file throws \`Cannot read_csv: file '<path>' is empty\`; a
 header-only file returns a populated \`header\` and an empty \`rows\`.
 
-The options table is optional and \`separator\` is its only key — passing the separator positionally
-(\`db:read_csv(path, ";")\`) throws \`Cannot read_csv: options must be a table\` instead of silently
-parsing with a comma; an unknown key or a separator that isn't a single character also throws.
+The options table is optional; its two keys are \`separator\` and \`header_row\`. \`header_row\` is
+1-based (like every other index here) and defaults to \`1\`; \`header_row = 0\` declares the file has
+no header at all, so \`csv.header\` is absent (\`nil\`, not an empty table) and \`csv.rows[1]\` is the
+file's first line — useful for a file with a junk title row and/or a units row around the real
+header (skip them by naming the header row and slicing \`csv.rows\` in the script). A \`header_row\`
+past the end of the file throws. Passing the separator positionally (\`db:read_csv(path, ";")\`)
+throws \`Cannot read_csv: options must be a table\` instead of silently parsing with a comma; an
+unknown key, a separator that isn't a single character, or a \`header_row\` that isn't a
+non-negative integer also throws.
 
 \`db:read_csv_stream\` reads the same file through the same parser, row by row, so the process holds
 a bounded window instead of the whole file:

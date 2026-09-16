@@ -120,6 +120,36 @@ TEST_F(LuaRunner_ReadCsv, PreambleLineNotEaten) {
     )");
 }
 
+// --- header_row option (LUA-05, D-20) ---
+
+TEST_F(LuaRunner_ReadCsv, HeaderRowSelectsNamedLineOverJunkAndUnits) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    // Line 1: junk above the header. Line 2: the real header. Line 3: a units row, below the
+    // header. Lines 4+: data. Mirrors the real Maranhao Energia file's shape (D-22).
+    write_lua_csv_file(sandbox / "junk_header_units.csv", "Title Only\nname,value\nunit,unit\nAlpha,1\nBeta,2\n");
+
+    auto json = lua.run(R"(return db:read_csv("junk_header_units.csv", { header_row = 2 }))");
+    EXPECT_EQ(json, R"({"header":["name","value"],"rows":[["unit","unit"],["Alpha","1"],["Beta","2"]]})")
+        << "junk line 1 must appear nowhere in the result";
+}
+
+TEST_F(LuaRunner_ReadCsv, HeaderRowOneMatchesNoOptionsDefault) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    write_lua_csv_file(sandbox / "junk_header_units.csv", "Title Only\nname,value\nunit,unit\nAlpha,1\nBeta,2\n");
+
+    // Default is header_row = 1 (D-20) -- explicitly asking for it must be byte-identical to
+    // omitting the option entirely (the junk line becomes the header, same as PreambleLineNotEaten).
+    auto explicit_json = lua.run(R"(return db:read_csv("junk_header_units.csv", { header_row = 1 }))");
+    auto implicit_json = lua.run(R"(return db:read_csv("junk_header_units.csv"))");
+    EXPECT_EQ(explicit_json, implicit_json);
+}
+
 TEST_F(LuaRunner_ReadCsv, StringCellsNoInference) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
@@ -438,8 +468,9 @@ TEST_F(LuaRunner_ReadCsv, FutureHeaderKeyIsAnUnknownOptionToday) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::LuaRunner lua(db);
 
-    // A key Phase 2 will legitimately add -- today it must throw, so that change is a deliberate
-    // edit rather than a silent behaviour surprise.
+    // Phase 2 legitimately added `header_row`, not `header` -- this key stays unknown forever.
+    // Kept as its own test rather than folded into the sibling below so a future reader isn't
+    // misled into thinking `header_row`'s arrival would make it obsolete.
     expect_lua_error(lua, R"(db:read_csv("f.csv", { header = false }))", "Cannot read_csv: unknown option 'header'");
 }
 
