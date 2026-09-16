@@ -29,11 +29,11 @@ because all the logic lives in the C++ core and the bindings stay thin.
 - ✓ Binary `.qvr` file I/O and a lazy expression DAG over it (Julia and Lua only, by decision) — existing
 - ✓ Migrations with up/down paths and round-trip validation — existing
 - ✓ Six test suites plus a CLI smoke test, over one shared schema set — existing
+- ✓ A Lua script can read a CSV file from disk, sandboxed to the database directory like every other Lua file operation — validated in Phase 1: A Lua script reads a CSV file
+- ✓ Two entry points over one parser: a whole-file form for the common case, and a row-streaming form that holds bounded memory on a large file — validated in Phase 1: A Lua script reads a CSV file
 
 ### Active
 
-- [ ] A Lua script can read a CSV file from disk, sandboxed to the database directory like every other Lua file operation
-- [ ] Two entry points over one parser: a whole-file form for the common case, and a row-streaming form that holds bounded memory on a large file
 - [ ] Parsing is correct on genuinely dirty input — UTF-8 BOM, CRLF, a separator inside a quoted field, a newline inside a quoted field, doubled-quote escapes, ragged rows, junk rows above the header, duplicate and empty header names, configurable separator
 - [ ] The agent-facing Lua reference (`bindings/js/src/lua-api.ts`) tells the model to read data files rather than transcribe them into the script
 - [ ] Small-fixture tests covering every dirty case above, including a regression over the two real Maranhão CSVs
@@ -119,4 +119,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-14 after initialization*
+*Last updated: 2026-09-16 after Phase 1 — Lua reads CSV off disk, both entry points over one parser, sandboxed*
