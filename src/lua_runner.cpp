@@ -492,7 +492,17 @@ struct LuaRunner::Impl {
                               // Built once, before the loop, and passed by reference into every callback
                               // invocation -- reachable during the stream so a script can find a column by
                               // name before processing row 1 (D-05).
-                              const auto header_table = to_lua_table(lua, reader.header());
+                              //
+                              // Nil, not an empty table, when there is no header -- exactly the guard
+                              // db:read_csv uses above for its `header` key (D-01). The two forms must not
+                              // diverge on the same input (LUA-03), and here that is behavioural rather
+                              // than cosmetic: `{}` is truthy in Lua and `nil` is falsy, so a script
+                              // written as `if header then ... end` would take opposite branches between
+                              // the whole-file and streaming forms of the same file under header_row = 0.
+                              const auto& header_names = reader.header();
+                              const sol::object header_table = header_names.empty()
+                                                                   ? sol::object(sol::nil)
+                                                                   : sol::object(to_lua_table(lua, header_names));
 
                               return reader.for_each_row([&](std::vector<std::string>&& cells, int64_t index) -> bool {
                                   const auto row_table = to_lua_table(lua, cells);

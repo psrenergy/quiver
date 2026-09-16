@@ -392,6 +392,46 @@ TEST_F(LuaRunner_ReadCsv, HeaderRowZeroBlankLineMidFileIsNotAPhantomRow) {
     )");
 }
 
+// LUA-03: the two forms must not diverge on the same input, and the header argument is the one
+// place they could. `db:read_csv` omits its `header` key when there is none (D-01), so the stream's
+// third callback argument has to be nil there too -- not an empty table. The difference is
+// behavioural, not cosmetic: `{}` is truthy in Lua and `nil` is falsy, so a script written as
+// `if header then ... end` would take opposite branches between the two forms reading the same
+// file. Both spellings are asserted here so a regression on either side fails.
+TEST_F(LuaRunner_ReadCsv, StreamHeaderIsNilWhenWholeFileHeaderIsAbsent) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    write_lua_csv_file(sandbox / "parity.csv", "1,2\n3,4\n");
+
+    lua.run(R"LUA(
+        local whole = db:read_csv("parity.csv", { header_row = 0 })
+        assert(whole.header == nil, "whole-file header should be nil, got " .. type(whole.header))
+
+        local seen_type, calls = "never-called", 0
+        db:read_csv_stream("parity.csv", function(row, i, header)
+            calls = calls + 1
+            if calls == 1 then seen_type = type(header) end
+            -- The truthiness check is the actual user-visible symptom, so assert it directly.
+            assert(not header, "stream header should be falsy under header_row = 0")
+        end, { header_row = 0 })
+
+        assert(calls == 2, "expected 2 rows, got " .. calls)
+        assert(seen_type == "nil", "stream header should be nil, got " .. seen_type)
+    )LUA");
+
+    // And the positive control: with a real header, both forms still deliver one.
+    write_lua_csv_file(sandbox / "withhdr.csv", "a,b\n1,2\n");
+    lua.run(R"LUA(
+        local whole = db:read_csv("withhdr.csv")
+        assert(whole.header[1] == "a", "whole-file header missing")
+        db:read_csv_stream("withhdr.csv", function(row, i, header)
+            assert(header ~= nil and header[1] == "a", "stream header missing")
+        end)
+    )LUA");
+}
+
 TEST_F(LuaRunner_ReadCsv, StreamHeaderRowZeroBlankLineAgreesWithWholeFileRead) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
