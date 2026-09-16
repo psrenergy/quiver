@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: CSV writing for the Lua runner
-status: planning
-last_updated: "2026-09-16T15:44:25.968Z"
+status: roadmapped
+last_updated: "2026-09-16T00:00:00.000Z"
 last_activity: 2026-09-16
 progress:
-  total_phases: 0
+  total_phases: 2
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,17 +17,17 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-09-14)
+See: .planning/PROJECT.md (updated 2026-09-16)
 
 **Core value:** Every layer — C++, C, Julia, Dart, Python, JS and Lua — sees the same data under the same rules, because all the logic lives in the C++ core and the bindings stay thin.
-**Current focus:** Phase 03 — the-agent-reads-instead-of-transcribing
+**Current focus:** Phase 4 — A Lua script writes a CSV file
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 4 — A Lua script writes a CSV file (not started)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-09-16 — Milestone v1.1 started
+Status: Roadmap written, awaiting `/gsd-plan-phase 4`
+Last activity: 2026-09-16 — v1.1 roadmap created (2 phases, 29/29 requirements mapped)
 
 ## Performance Metrics
 
@@ -44,6 +44,8 @@ Last activity: 2026-09-16 — Milestone v1.1 started
 | 01 | 3 | - | - |
 | 02 | 4 | - | - |
 | 03 | 2 | - | - |
+| 04 | — | - | - |
+| 05 | — | - | - |
 
 **Recent Trend:**
 
@@ -69,30 +71,41 @@ Last activity: 2026-09-16 — Milestone v1.1 started
 
 ### Decisions
 
-Decisions are logged in PROJECT.md Key Decisions table. Affecting current work:
+Decisions are logged in PROJECT.md Key Decisions table. Affecting current work (v1.1):
+
+- The writer is **hand-rolled**, ~90 lines of RFC-4180 emission over `std::ofstream`. No new
+  dependency. csv-parser's `DelimWriter` was read and rejected: compile-time delimiter/quote
+  template parameters (`csv_writer.hpp:254`) cannot serve a runtime `separator`, and its float
+  `to_string` truncates at `DECIMAL_PLACES = 5` (`:25`)
+- Writing is **streaming-only** — `db:write_csv` → handle, `w:write_row`, `w:close`. No whole-file
+  form; a second code path is a second thing that can diverge
+- **Two options and no more**: `separator` and `header`. `LUA_DB_API_REFERENCE` is system-prompt
+  payload interpolated into every `claw` session, so every knob costs tokens forever
+- **Ownership is settled as Position A** (`unique_ptr`, `sol::no_constructor`, default `__gc`,
+  mirroring `db:open_file`). The research left A-vs-B open only because of the unclosed-writer
+  warning; that warning was declined, so no `weak_ptr` registry and no `Database::log_warning`
+- **No overwrite guard** (declined; WRITE-08 documents truncate-at-open instead) and **no unclosed-
+  writer warning** (declined; WRITE-06 keeps the flush, which is the part that mattered)
+- **Lua only** — no public C++ header, no C API, no FFI binding work. `db:write_csv` rides inside
+  the already-bound generic `LuaRunner::run` path
+- Numbers are formatted by Quiver with `std::to_chars` shortest round-trip, reusing `append_number`
+  (`src/lua_runner.cpp:128-135`); a non-finite float throws rather than emitting `inf`/`nan`
+
+Carried from v1.0:
 
 - Parser is `vincentlaucsb/csv-parser` 5.3.0 via FetchContent, speculative-parallel and SIMD off
-  (its default window is `chunk_size × worker_count` and parallel parsing auto-enables above 50 MB —
-  PARSE-09 exists because of that)
-
 - Two Lua entry points over one parser, so whole-file and streaming cannot diverge
-- Read only; CSV writing deferred to v2
 - Writing parsed rows into the database stays the script's job
 - Core CSV handling (`import_csv`/`export_csv`, still on rapidcsv) is not unified in this milestone
-- [Phase ?]: csv-parser 5.3.0 wired in (threads/SIMD forced off); db:read_csv and db:read_csv_stream share one internal csv_read::Reader (no public header)
-- [Phase ?]: D-22 evaluation order fix: db:read_csv/db:read_csv_stream now resolve the sandboxed path before decoding the options table, matching the locked catalogue order
-- [Phase ?]: D-22 entry 10 (csv-parser wrapper) has no portable runtime trigger on Windows; proven via a source-level assertion instead, flagged for human review
-- [Phase ?]: Phase 01 (a-lua-script-reads-a-csv-file) fully executed: all three plans complete, TEST-03/LUA-04/LUA-08 sandbox and error-catalogue coverage proven end to end
-- [Phase ?]: header_row is 1-based at the Lua boundary, 0 = no header, default 1 (D-20); make_format sets header mode before variable_columns(KEEP_NON_EMPTY) since csv-parser's header_row(row<0) silently resets the policy to KEEP
-- [Phase ?]: Reader synthesizes the past-EOF header error itself (options.header_row != 0 && header.empty()), since csv-parser silently succeeds with an empty header and zero rows
-- [Phase ?]: 02-02: PARSE-02..07/LUA-06/TEST-04 discharged by test-only fixtures; two plan-listed items (last-line header test, stale comment fix) were already satisfied by 02-01, not duplicated.
-- [Phase ?]: gitattributes exemption for tests/fixtures/*.csv committed before staging the fixtures (D-24) -- verified against the committed git blob, not the working tree
-- [Phase ?]: R"LUA(...)LUA" custom raw-string delimiter required whenever an embedded Lua pattern literal ends in the two-char sequence )" that would otherwise terminate a default R"(...)" C++ raw string early
-- [Phase ?]: TEST-05: Release build (fresh tree, QUIVER_BUILD_TESTS=ON, not the release preset) confirms LuaRunner* is safe with SOL_SAFE_GETTER off -- 291/291 pass, matching Debug
-- [Phase ?]: DOC-04: src/CLAUDE.md and CHANGELOG.md header_row docs were already complete from plan 02-01; only tests/CLAUDE.md needed the tests/fixtures/ and release-preset-trap additions
-- [Phase ?]: D-30/D-31 applied verbatim: read-don't-transcribe instruction added once at the Standard library bullet; full ~35-line worked example added over both real fixtures, verified executable via quiver_cli before commit
-- [Phase ?]: DOC-04: CHANGELOG.md's 3-release-stale unreleased section repaired per D-33 (0.10.4/0.10.5/0.10.6 backfilled from tags, 0.10.7 carries the new agent-reference entry); root CLAUDE.md's stale read_csv separator-only claim corrected
-- [Phase ?]: TEST-05: Release gate re-run over the finished tree (explicit -DQUIVER_BUILD_TESTS=ON configure) confirms quiver_tests 1179/1179, quiver_c_tests 557/557, LuaRunner* 293/293
+- csv-parser 5.3.0 wired in (threads/SIMD forced off); `db:read_csv` and `db:read_csv_stream` share
+  one internal `csv_read::Reader` (no public header)
+- D-22 evaluation order: the sandboxed path resolves *before* the options table is decoded
+- `header_row` is 1-based at the Lua boundary, 0 = no header, default 1 (D-20); `make_format` sets
+  header mode before `variable_columns(KEEP_NON_EMPTY)`
+- `R"LUA(...)LUA"` custom raw-string delimiter is required whenever an embedded Lua pattern literal
+  ends in the two-char sequence `)"`
+- Release build must be exercised separately: `SOL_SAFE_GETTER` is off in Release and has hidden
+  Lua marshalling bugs before
 
 ### Pending Todos
 
@@ -102,26 +115,34 @@ None yet.
 
 - `bindings/js/test/lua-api-sync.test.ts` is a hard build gate: it parses `src/lua_runner.cpp` and
   fails until every newly bound `db:` name is a literal token in `bindings/js/src/lua-api.ts`.
-  Phase 1 must land DOC-01 alongside the binding, not after it.
+  **Phase 4 must land DOC-05 alongside the binding, not after it.** Its usertype-method check runs
+  over a hardcoded `["BinaryFile", "BinaryMetadata", "Expression"]` array, so `w:write_row` /
+  `w:close` are *not* gated by it — DOC-05 is the real guarantee.
 
-- `lua_runner.cpp` already needs `/bigobj` on MSVC for sol2's template depth; a header-only parser
-  landing in that translation unit is a concrete build-size risk.
+- The weak-test trap, for the third time: `export_csv` has 118 export-side string-search tests that
+  never re-import. Every v1.1 verification criterion is a round trip through `db:read_csv` instead.
 
-- TEST-02's two real Maranhão CSVs live outside the repo and must be copied into `tests/` as
-  fixtures during Phase 2.
+- `std::to_chars` on a non-finite double is the one MEDIUM-confidence research claim — verified
+  against standards text, never executed. Spot-check `0.0/0.0` and `1.0/0.0` before relying on it
+  (FMT-05 throws either way, so the guard is required regardless of what it renders).
+
+- `lua_runner.cpp` already needs `/bigobj` on MSVC for sol2's template depth. Nothing
+  template-heavy is being added, so this is a watch item, not a risk here.
 
 - Pre-existing and out of scope, but noted: `import_csv`'s global `;`→`,` replace and
   quote-unaware trailing-comma stripper are live data-corruption paths; `CHANGELOG.md`'s unreleased
-  heading says `0.10.4` while all five manifests say `0.10.6`.
+  section is `0.10.7` while all five manifests say `0.10.6`.
 
 ## Deferred Items
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
-| *(none)* | | | |
+| TOML | `TOML-01`/`TOML-02` — a Lua TOML reader and writer (toml++ already vendored) | v2 | v1.1 requirements |
+| Core unification | `UNIFY-01..03` — `import_csv` onto the shared parser, `separator` in `CSVOptions`, import-side quoting tests | v2 | v1.1 requirements |
+| Write throughput | `PERF-01`/`PERF-02` — one prepared statement per group insert, a bounded-memory append path | v2 | v1.1 requirements |
 
 ## Session Continuity
 
-Last session: 2026-09-16T14:20:07.436Z
-Stopped at: Completed 03-02-PLAN.md
+Last session: 2026-09-16
+Stopped at: v1.1 roadmap created (Phases 4 and 5)
 Resume file: None
