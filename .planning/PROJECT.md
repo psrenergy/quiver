@@ -29,9 +29,12 @@ with numbers that round-trip exactly.
   first row). Every option is permanent `LUA_DB_API_REFERENCE` payload.
 - Cell values: string, number, boolean (→ `1`/`0`, the project-wide write policy), `nil` (→ empty
   cell). A table, function, or userdata in a row is a Pattern 1 error naming the cell index.
-- Strict row width against the header — a mismatch throws, naming the row ordinal and both counts.
-- Numbers written with `std::to_chars` shortest round-trip; Lua 5.4's integer subtype preserved.
-- A writer still open when the script ends is flushed and closed, with a warning logged.
+- The header is the row-width authority: a shorter row pads with empty cells, a longer one throws
+  naming the row ordinal and both counts. With no `header` given, no width check is performed.
+- Numbers written with `std::to_chars` shortest round-trip; Lua 5.4's integer subtype preserved. A
+  non-finite float is a Pattern 1 error — never `inf`/`nan` text in a cell.
+- An empty cell that is a row's only cell is written quoted, so the row is not a blank line.
+- A writer still open when `LuaRunner::run` returns is flushed to disk. No warning is emitted.
 - Lua only — no public C++ header, no C API, no FFI binding. Same rationale as `db:read_csv`.
 - The agent-facing reference (`bindings/js/src/lua-api.ts`) updated in the same phase as the
   binding, since `lua-api-sync.test.ts` is a hard build gate.
@@ -67,6 +70,10 @@ Milestone v1.1 — CSV writing for the Lua runner. Requirements are scoped in
   `db:read_csv`/`db:write_csv` applies (Lua has no `io`, and a case folder holds `.toml` sidecars),
   and toml++ 3.4.0 is already a FetchContent dependency that `BinaryMetadata::from_toml_content`
   already uses, so the cost is small. Out of scope here only to keep this milestone to one format.
+- **A destructive-overwrite guard** — declined; see the Key Decisions row. `WRITE-08` documents the
+  truncate-at-open behaviour instead of guarding against it.
+- **A warning when a writer is left unclosed** — declined in exchange for the simple `unique_ptr` +
+  default `__gc` lifetime. The *flush* is kept (`WRITE-06`); only the diagnostic is gone.
 - **A whole-file `db:write_csv` form** — writing is streaming-only by decision. Reading has both
   forms because a whole-file read is the common case and the shape an LLM gets right first try; a
   write is naturally incremental, and a second code path is a second thing that can diverge.
@@ -92,9 +99,11 @@ template parameters, so a runtime `separator` needs a switch over instantiations
 writer; and its numeric `to_string` truncates floats at 5 decimal places. Whichever way the first
 is settled, numeric formatting stays Quiver's.
 
-**An open edge for planning.** `nil` → empty cell makes `#t` unreliable on a row table with holes,
-so row width has to come from the declared `header`. What determines width when no `header` is
-given is not yet settled.
+**Settled after research.** `nil` → empty cell makes `#t` unreliable on a row table with holes, so a
+row's cell count comes from a single pass over integer keys and is checked against the declared
+`header`; with no `header`, no width check runs at all. The scope was reviewed and trimmed after
+research: the overwrite guard and the unclosed-writer warning were both declined, and the writer is
+a hand-rolled ~90 lines with no new dependency.
 
 **What prompted v1.0.** `claw` drives Quiver's Lua runner to build and edit energy-modeling study
 databases. Because Lua has no `io`, the only way to get an input CSV into a database has been for
@@ -148,9 +157,12 @@ TypeScript import tool with a configuration DSL.
 | **v1.1** — Writing is streaming-only: a handle with `w:write_row` / `w:close`, no whole-file form | A write is naturally incremental, and a second code path is a second thing that can diverge from the first | — Pending |
 | **v1.1** — Numbers formatted by Quiver with `std::to_chars`, never by csv-parser | csv-parser's writer truncates floats at 5 decimal places (`DECIMAL_PLACES = 5`, hand-rolled `pow10`/`modf`) — the same bug class `database_csv_export.cpp` already hit with `%g` | — Pending |
 | **v1.1** — Two options only: `separator` and `header` | `LUA_DB_API_REFERENCE` is system-prompt payload interpolated into every `claw` session; `append` and `line_ending` did not earn permanent token cost | — Pending |
-| **v1.1** — Strict row width against the header | Catches an LLM-authored loop that drops a field at the row that dropped it, not later in whichever tool consumes the file | — Pending |
+| **v1.1** — The header is the row-width authority; short rows pad, long rows throw | A nullable read (`read_scalar_strings` yields `nil` for NULL) makes short rows the common case, not a mistake. Only padding produces a file `db:read_csv` reads back aligned — its pinned `KEEP_NON_EMPTY` policy never pads and never drops, so a ragged row returns silently misaligned against its own header | — Pending |
 | **v1.1** — Cell values: `nil` → empty, boolean → `1`/`0`, table/function/userdata → error | The boolean mapping matches the project-wide write policy; erroring beats writing `table: 0x...` into a data file | — Pending |
-| **v1.1** — An unclosed writer flushes, closes, and logs a warning | A script that errored for an unrelated reason still leaves its partial output on disk, while the missing `close()` stays visible to the agent and the human | — Pending |
+| **v1.1** — A non-finite float throws rather than writing `inf`/`nan` | MSVC's `<charconv>` renders indefinite NaN as `-nan(ind)`, libstdc++/libc++ as `-nan`. Verbatim output would make the platform natives write different bytes for the same script and the same data, and silently un-number a column for every downstream reader | — Pending |
+| **v1.1** — An empty cell that is a row's only cell is quoted | Unquoted it is a blank line, and this project's own reader deletes it (`src/csv_read.cpp` pins `KEEP_NON_EMPTY`; `csv_reader.cpp:107` discards a zero-field row). Probed: write 500 rows, read back 487, no error. Python's `csv` does the same thing | — Pending |
+| **v1.1** — An unclosed writer is flushed at `run()`'s return, with no warning | `sol::state` is a member of `LuaRunner::Impl`, so an unclosed writer is unreachable-but-uncollected when `run()` returns and its buffer is never flushed — the file is zero bytes. One `collect_garbage()` at `run()`'s end fixes that. The *warning* was dropped deliberately: emitting it needs a `weak_ptr` registry plus a new `Database::log_warning`, since `LuaRunner` has no logger at all | — Pending |
+| **v1.1** — No destructive-overwrite guard | Declined. A script can truncate the live `.db`, a `.qvr`, or a migration `.sql` inside the sandbox. Verified silent on Windows as well as POSIX — SQLite opens `FILE_SHARE_READ\|FILE_SHARE_WRITE`, MSVC's `ofstream` uses `_SH_DENYNO`, so an 8192-byte database truncates to 13 bytes and later queries fail `file is not a database`. Accepted because `db:open_file('w')` already has the same hole and the project assumes callers obey contracts | — Pending |
 | **v1.1** — Lua only, exactly like `db:read_csv` | Every other host has a native CSV library; Lua needs this specifically because `io` is deliberately absent from its sandbox | — Pending |
 | **v1.1** — Defer a TOML reader/writer to a later milestone | Same justification as CSV, and toml++ is already vendored — but one format per milestone | — Pending |
 | Reject libcsv on licence | LGPL 2.1 against a repo that distributes prebuilt binaries to four registries | ✓ Good |
