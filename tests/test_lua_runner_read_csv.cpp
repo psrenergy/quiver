@@ -120,6 +120,103 @@ TEST_F(LuaRunner_ReadCsv, PreambleLineNotEaten) {
     )");
 }
 
+// --- the dirty-file matrix: PARSE-02 through PARSE-07, through the Lua boundary (TEST-01) ---
+//
+// PARSE-02..07 already pass against the Phase 1 reader with zero production code (verified
+// empirically before this phase was scoped, 02-CONTEXT.md); these are fixtures, not features.
+
+TEST_F(LuaRunner_ReadCsv, DirtyFileParsesEveryParserRequirement) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    // The composite fixture from 02-CONTEXT.md's verified probe: a UTF-8 BOM, CRLF endings, a
+    // quoted comma, a doubled quote, an embedded newline, and a short final row -- all six
+    // properties in one file. The BOM is built as its own std::string: "\xEF\xBB\xBF" immediately
+    // followed by an alphanumeric INSIDE THE SAME literal would have the hex escape swallow that
+    // character too (\xBF followed by 'a', a valid hex digit, would parse as \xBFa).
+    const std::string bom = "\xEF\xBB\xBF";
+    write_lua_csv_file(sandbox / "dirty.csv",
+                       bom + "a,b,c\r\n"
+                             "\"May 1, 2014\",33,x\r\n"
+                             "\"say \"\"hi\"\"\",2,y\r\n"
+                             "\"line1\nline2\",3,z\r\n"
+                             "short\r\n");
+
+    // One EXPECT_EQ pins all six properties at once (ExactJsonRoundTrip's style).
+    auto json = lua.run(R"(return db:read_csv("dirty.csv"))");
+    EXPECT_EQ(json,
+              R"({"header":["a","b","c"],)"
+              R"("rows":[["May 1, 2014","33","x"],)"
+              R"(["say \"hi\"","2","y"],)"
+              R"(["line1\nline2","3","z"],)"
+              R"(["short"]]})");
+
+    // Per-requirement asserts so a failure names which property broke, not just a JSON diff.
+    lua.run(R"(
+        local csv = db:read_csv("dirty.csv")
+        assert(csv.header[1] == "a", "PARSE-05: BOM leaked into header[1], got " .. tostring(csv.header[1]))
+        assert(csv.rows[1][1] == "May 1, 2014", "PARSE-02: quoted separator split the field")
+        assert(csv.rows[2][1] == "say \"hi\"", "PARSE-04: doubled quote did not unescape to one quote")
+        assert(csv.rows[3][1] == "line1\nline2", "PARSE-03: embedded newline split the record")
+        assert(not csv.rows[1][1]:find("\r"), "PARSE-06: cell retained a trailing carriage return")
+        assert(#csv.rows[4] == 1 and csv.rows[4][1] == "short", "PARSE-07: ragged short row was padded or dropped")
+    )");
+}
+
+TEST_F(LuaRunner_ReadCsv, LfAndCrlfEndingsParseIdentically) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    // Same content as DirtyFileParsesEveryParserRequirement, LF instead of CRLF line endings.
+    // PARSE-06's second half: both must parse, and no cell may carry a trailing \r either way.
+    const std::string bom = "\xEF\xBB\xBF";
+    write_lua_csv_file(sandbox / "dirty_crlf.csv",
+                       bom + "a,b,c\r\n"
+                             "\"May 1, 2014\",33,x\r\n"
+                             "\"say \"\"hi\"\"\",2,y\r\n"
+                             "\"line1\nline2\",3,z\r\n"
+                             "short\r\n");
+    write_lua_csv_file(sandbox / "dirty_lf.csv",
+                       bom + "a,b,c\n"
+                             "\"May 1, 2014\",33,x\n"
+                             "\"say \"\"hi\"\"\",2,y\n"
+                             "\"line1\nline2\",3,z\n"
+                             "short\n");
+
+    auto crlf_json = lua.run(R"(return db:read_csv("dirty_crlf.csv"))");
+    auto lf_json = lua.run(R"(return db:read_csv("dirty_lf.csv"))");
+    EXPECT_EQ(crlf_json, lf_json) << "PARSE-06: CRLF and LF variants of the same content must parse identically";
+}
+
+TEST_F(LuaRunner_ReadCsv, BomStrippedUnderExplicitHeaderRowAndNoHeader) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    // BOM + a junk title line above the real header, mirroring the real Maranhao file's shape
+    // (D-22). PARSE-05 must hold under header_row = 2 (explicit header) and header_row = 0 (no
+    // header) alike -- csv-parser strips the BOM once on the raw byte stream, independent of
+    // header-row resolution (02-RESEARCH.md Finding 4).
+    const std::string bom = "\xEF\xBB\xBF";
+    write_lua_csv_file(sandbox / "bom_junk.csv", bom + "junk\na,b,c\n1,2,3\n");
+
+    lua.run(R"(
+        local csv = db:read_csv("bom_junk.csv", { header_row = 2 })
+        assert(csv.header[1] == "a", "PARSE-05: expected clean 'a', got " .. tostring(csv.header[1]))
+        -- Asserted by length too, so an invisible 3-byte BOM prefix cannot pass a visual-only check.
+        assert(#csv.header[1] == 1, "PARSE-05: header[1] carried extra bytes (BOM?), length " .. #csv.header[1])
+    )");
+
+    lua.run(R"(
+        local csv = db:read_csv("bom_junk.csv", { header_row = 0 })
+        assert(csv.header == nil, "expected no header key under header_row = 0")
+        assert(csv.rows[1][1] == "junk", "PARSE-05: expected clean 'junk', got " .. tostring(csv.rows[1][1]))
+        assert(#csv.rows[1][1] == 4, "PARSE-05: rows[1][1] carried extra bytes (BOM?), length " .. #csv.rows[1][1])
+    )");
+}
+
 // --- header_row option (LUA-05, D-20) ---
 
 TEST_F(LuaRunner_ReadCsv, HeaderRowSelectsNamedLineOverJunkAndUnits) {
