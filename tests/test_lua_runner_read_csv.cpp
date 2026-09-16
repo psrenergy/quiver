@@ -343,6 +343,9 @@ TEST_F(LuaRunner_ReadCsv, HeaderRowOnLastLineSucceedsWithEmptyRows) {
 
     // The header row is found (non-empty) with zero data rows following it -- a legitimate
     // header-only file, distinct from Finding 1's genuinely-not-found case (LUA-08 research).
+    // This is also 02-02-PLAN.md Task 2's "header on the last line" case (the boundary between
+    // "header found, no data after it" and "header not found") -- already covered here verbatim,
+    // so that plan does not duplicate it.
     write_lua_csv_file(sandbox / "headerlast.csv", "1,2\n3,4\na,b\n");
 
     lua.run(R"(
@@ -421,6 +424,46 @@ TEST_F(LuaRunner_ReadCsv, TwoConsecutiveReadsReturnIdenticalContents) {
             end
         end
         assert(first.header[1] == second.header[1] and first.header[2] == second.header[2], "header mismatch")
+    )");
+}
+
+// --- LUA-06: repeated and blank header names remain fully reachable (D-21) ---
+//
+// No code discharges this requirement -- Phase 1's positional header/rows shape (D-01) already
+// has nothing for a duplicate name to shadow and a blank name is just an empty string at its
+// index. This test states that property against the real adversarial header rather than a
+// synthetic one.
+
+TEST_F(LuaRunner_ReadCsv, RepeatedAndBlankHeaderNamesAllReachable) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    // The real Maranhao Energia header (D-21): two ANO columns, two Residencial columns (one
+    // space-padded), and five blank names. 11 fields (10 separators) -- counted from this exact
+    // line, not the "twelve" an earlier planning draft said before 02-CONTEXT.md corrected it.
+    write_lua_csv_file(sandbox / "dupheader.csv",
+                       "ANO,Residencial,,ANO,MÊS, Residencial ,,,,,\n"
+                       "v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11\n");
+
+    lua.run(R"(
+        local csv = db:read_csv("dupheader.csv")
+        assert(#csv.header == 11, "LUA-06: expected 11 header columns, got " .. #csv.header)
+        assert(csv.header[1] == "ANO" and csv.header[4] == "ANO",
+            "LUA-06: both ANO positions must hold their verbatim name")
+        assert(csv.header[2] == "Residencial", "LUA-06: header[2] must be verbatim 'Residencial'")
+        assert(csv.header[5] == "MÊS", "unexpected header[5], got " .. tostring(csv.header[5]))
+        assert(csv.header[6] == " Residencial ",
+            "LUA-06: header[6] must keep its surrounding spaces verbatim, got '" .. tostring(csv.header[6]) .. "'")
+        for _, i in ipairs({3, 7, 8, 9, 10, 11}) do
+            assert(csv.header[i] == "",
+                "LUA-06: header[" .. i .. "] must be an empty string, not absent, got " .. tostring(csv.header[i]))
+        end
+        -- No value may be reachable only once, and no index may be missing: every data column
+        -- readable at its own index, regardless of what its header name is or shares.
+        for i = 1, 11 do
+            assert(csv.rows[1][i] == "v" .. i, "LUA-06: column " .. i .. " must be reachable at its own index")
+        end
     )");
 }
 
