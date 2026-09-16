@@ -467,6 +467,55 @@ TEST_F(LuaRunner_ReadCsv, RepeatedAndBlankHeaderNamesAllReachable) {
     )");
 }
 
+// --- TEST-02: the real Maranhao files replace the transcribed script (D-23) ---
+//
+// The committed fixtures are copied into the LuaSandboxTest sandbox first: db:read_csv resolves
+// a relative path against the database directory, not the source tree (02-RESEARCH.md). The
+// scripts below transform each row exactly as script.lua (the file being replaced) did, and
+// assert its hard-coded final values -- not raw bytes -- because the phase's claim is that the
+// file can replace the transcription, not merely that the reader is faithful to it.
+
+TEST_F(LuaRunner_ReadCsv, EnergiaRegressionJunkRowAboveUnitsRowBelowHeader) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    // Binary copy: db:read_csv's BOM/CRLF handling is exactly what this test exercises, so the
+    // fixture's bytes must reach the sandbox unmodified.
+    std::filesystem::copy_file(quiver::test::path_from(__FILE__, "fixtures/ma_energia_residencial.csv"),
+                               sandbox / "ma_energia_residencial.csv");
+
+    // Custom delimiter (matches test_lua_runner_describe.cpp/test_lua_runner_errors.cpp): the
+    // date-pattern literal below ends in ")" -- with the default R"(...)" delimiter that exact
+    // two-character sequence would terminate the C++ raw string early.
+    lua.run(R"LUA(
+        local csv = db:read_csv("ma_energia_residencial.csv", { header_row = 2 })
+
+        -- The header must come from line 2 (the real column names), not line 1 (the block-title
+        -- junk row) -- a header_row regression would otherwise produce plausible-looking values
+        -- read from the wrong columns.
+        assert(csv.header[1] == "ANO", "header did not come from line 2, got header[1]=" .. tostring(csv.header[1]))
+        assert(csv.header[2] == "Residencial", "unexpected header[2], got " .. tostring(csv.header[2]))
+
+        -- rows[1] is the units row (line 3), skipped -- not a reader concern, D-22.
+        local results = {}
+        for i = 2, #csv.rows do
+            local row = csv.rows[i]
+            local dd, mm, yyyy = row[5]:match("(%d%d)/(%d%d)/(%d%d%d%d)")
+            local date_key = yyyy .. "-" .. mm
+            -- gsub returns TWO values (string, count), so passing its result straight to tonumber
+            -- would hand over the replacement count as tonumber's base argument and silently
+            -- return nil -- D-23's documented trap. The extra parens truncate it to one value.
+            local n = tonumber((row[6]:gsub("['%s]", "")))
+            assert(dd == "01", "every date in this file has day '01', got " .. tostring(dd))
+            results[i] = date_key .. " " .. tostring(n)
+        end
+
+        assert(results[2] == "2005-01 93943", "expected the first data row '2005-01 93943', got " .. tostring(results[2]))
+        assert(results[224] == "2023-07 386433", "expected '2023-07 386433' at rows[224], got " .. tostring(results[224]))
+    )LUA");
+}
+
 // --- db:read_csv_stream ---
 
 TEST_F(LuaRunner_ReadCsv, StreamFiresOncePerRowWithIndexAndHeader) {
