@@ -2,15 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: CSV writing for the Lua runner
+current_phase: 4
+current_phase_name: A Lua script writes a CSV file
 status: roadmapped
-last_updated: "2026-09-16T00:00:00.000Z"
+stopped_at: Phase 4 context gathered
+last_updated: "2026-09-16T17:21:27.967Z"
 last_activity: 2026-09-16
+last_activity_desc: v1.1 roadmap created (2 phases, 29/29 requirements mapped)
 progress:
-  total_phases: 2
+  total_phases: 1
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
-  percent: 0
 ---
 
 # Project State
@@ -77,17 +80,23 @@ Decisions are logged in PROJECT.md Key Decisions table. Affecting current work (
   dependency. csv-parser's `DelimWriter` was read and rejected: compile-time delimiter/quote
   template parameters (`csv_writer.hpp:254`) cannot serve a runtime `separator`, and its float
   `to_string` truncates at `DECIMAL_PLACES = 5` (`:25`)
+
 - Writing is **streaming-only** — `db:write_csv` → handle, `w:write_row`, `w:close`. No whole-file
   form; a second code path is a second thing that can diverge
+
 - **Two options and no more**: `separator` and `header`. `LUA_DB_API_REFERENCE` is system-prompt
   payload interpolated into every `claw` session, so every knob costs tokens forever
+
 - **Ownership is settled as Position A** (`unique_ptr`, `sol::no_constructor`, default `__gc`,
   mirroring `db:open_file`). The research left A-vs-B open only because of the unclosed-writer
   warning; that warning was declined, so no `weak_ptr` registry and no `Database::log_warning`
+
 - **No overwrite guard** (declined; WRITE-08 documents truncate-at-open instead) and **no unclosed-
   writer warning** (declined; WRITE-06 keeps the flush, which is the part that mattered)
+
 - **Lua only** — no public C++ header, no C API, no FFI binding work. `db:write_csv` rides inside
   the already-bound generic `LuaRunner::run` path
+
 - Numbers are formatted by Quiver with `std::to_chars` shortest round-trip, reusing `append_number`
   (`src/lua_runner.cpp:128-135`); a non-finite float throws rather than emitting `inf`/`nan`
 
@@ -99,11 +108,14 @@ Carried from v1.0:
 - Core CSV handling (`import_csv`/`export_csv`, still on rapidcsv) is not unified in this milestone
 - csv-parser 5.3.0 wired in (threads/SIMD forced off); `db:read_csv` and `db:read_csv_stream` share
   one internal `csv_read::Reader` (no public header)
+
 - D-22 evaluation order: the sandboxed path resolves *before* the options table is decoded
 - `header_row` is 1-based at the Lua boundary, 0 = no header, default 1 (D-20); `make_format` sets
   header mode before `variable_columns(KEEP_NON_EMPTY)`
+
 - `R"LUA(...)LUA"` custom raw-string delimiter is required whenever an embedded Lua pattern literal
   ends in the two-char sequence `)"`
+
 - Release build must be exercised separately: `SOL_SAFE_GETTER` is off in Release and has hidden
   Lua marshalling bugs before
 
@@ -143,6 +155,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-09-16
-Stopped at: v1.1 roadmap created (Phases 4 and 5)
-Resume file: None
+Last session: 2026-09-16T17:21:27.951Z
+Stopped at: Phase 4 context gathered
+Resume file: .planning/phases/04-a-lua-script-writes-a-csv-file/04-CONTEXT.md
