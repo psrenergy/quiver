@@ -104,14 +104,31 @@ Reader::Reader(std::string resolved_path, std::string original_path, std::string
         throw std::runtime_error("Cannot " + operation + ": file '" + original_path + "' is empty");
     }
 
+    // The try below is scoped to the CSVReader construction ONLY -- the past-EOF check after it
+    // must not be caught and re-wrapped by this same catch, which would double-prefix the message
+    // into "Cannot read_csv: cannot read file '...': Cannot read_csv: header row ...".
+    std::optional<csv::CSVReader> reader_opt;
     try {
-        csv::CSVReader reader(resolved_path, make_format(options));
-        auto header = reader.get_col_names();
-        impl_ = std::make_unique<Impl>(operation, original_path, std::move(header), std::move(reader));
+        reader_opt.emplace(resolved_path, make_format(options));
     } catch (const std::exception& e) {
         // No csv-parser or standard-library message may reach Lua unwrapped (LUA-08).
         throw std::runtime_error("Cannot " + operation + ": cannot read file '" + original_path + "': " + e.what());
     }
+    csv::CSVReader& reader = *reader_opt;
+
+    auto header = reader.get_col_names();
+    // csv-parser does not throw when the requested header row is past the end of the file (or is
+    // itself a fully blank line) -- it silently returns with an empty header and zero data rows
+    // (build/_deps/csv_parser-src/include/internal/csv_reader.cpp:74-83, trim_header). Gate on the
+    // caller's ORIGINAL request (options.header_row, pre-translation) rather than header emptiness
+    // alone: header_row = 0 ("no header", D-20) also produces an empty header by design, and that
+    // is not an error. This is the tenth entry in this constructor's Pattern 1 catalogue (D-22).
+    if (options.header_row != 0 && header.empty()) {
+        throw std::runtime_error("Cannot " + operation + ": header row " + std::to_string(options.header_row) +
+                                 " not found in file '" + original_path + "'");
+    }
+
+    impl_ = std::make_unique<Impl>(operation, original_path, std::move(header), std::move(reader));
 }
 
 Reader::~Reader() = default;

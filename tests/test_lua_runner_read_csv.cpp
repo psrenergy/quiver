@@ -211,6 +211,51 @@ TEST_F(LuaRunner_ReadCsv, HeaderOnlyFileYieldsEmptyRows) {
     EXPECT_EQ(json, "[]");
 }
 
+// --- header_row past the end of the file (LUA-08) ---
+
+TEST_F(LuaRunner_ReadCsv, HeaderRowPastEndOfFileThrowsExactMessage) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    write_lua_csv_file(sandbox / "three.csv", "a,b\n1,2\n3,4\n");
+
+    // Asserted in full: csv-parser's actual past-EOF behavior is a SUCCESSFUL read with an empty
+    // header and zero rows, which "looks like" a valid empty result under a loose substring check.
+    expect_lua_error(lua,
+                     R"(db:read_csv("three.csv", { header_row = 99 }))",
+                     "Cannot read_csv: header row 99 not found in file 'three.csv'");
+}
+
+TEST_F(LuaRunner_ReadCsv, StreamHeaderRowPastEndOfFileNamesTheStreamEntryPoint) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    write_lua_csv_file(sandbox / "three.csv", "a,b\n1,2\n3,4\n");
+
+    expect_lua_error(lua,
+                     R"(db:read_csv_stream("three.csv", function() end, { header_row = 99 }))",
+                     "Cannot read_csv_stream: header row 99 not found in file 'three.csv'");
+}
+
+TEST_F(LuaRunner_ReadCsv, HeaderRowOnLastLineSucceedsWithEmptyRows) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    // The header row is found (non-empty) with zero data rows following it -- a legitimate
+    // header-only file, distinct from Finding 1's genuinely-not-found case (LUA-08 research).
+    write_lua_csv_file(sandbox / "headerlast.csv", "1,2\n3,4\na,b\n");
+
+    lua.run(R"(
+        local csv = db:read_csv("headerlast.csv", { header_row = 3 })
+        assert(#csv.header == 2, "expected 2 header columns, got " .. #csv.header)
+        assert(csv.header[1] == "a" and csv.header[2] == "b", "unexpected header contents")
+        assert(#csv.rows == 0, "expected 0 rows, got " .. #csv.rows)
+    )");
+}
+
 TEST_F(LuaRunner_ReadCsv, TwoConsecutiveReadsReturnIdenticalContents) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
