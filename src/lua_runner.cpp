@@ -1,6 +1,7 @@
 #include "quiver/lua_runner.h"
 
 #include "csv_read.h"
+#include "csv_write.h"
 #include "quiver/binary/binary_file.h"
 #include "quiver/binary/binary_metadata.h"
 #include "quiver/binary/csv_converter.h"
@@ -11,10 +12,9 @@
 #include "quiver/options.h"
 #include "quiver/value.h"
 #include "utils/datetime.h"
+#include "utils/number.h"
 
 #include <algorithm>
-#include <array>
-#include <charconv>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
@@ -125,22 +125,13 @@ void append_json_string(std::string_view str, std::string& out) {
     out += '"';
 }
 
-template <typename T>
-void append_number(T value, std::string& out) {
-    // Shortest round-trippable form, locale-independent: 0.1 stays "0.1" instead of
-    // "0.10000000000000001", and 1000000 never becomes "1,000,000".
-    std::array<char, 32> buffer{};
-    const auto [end, ec] = std::to_chars(buffer.data(), buffer.data() + buffer.size(), value);
-    out.append(buffer.data(), static_cast<std::size_t>(end - buffer.data()));
-}
-
 void append_json_double(double value, std::string& out) {
     // JSON has no NaN/Infinity literals.
     if (!std::isfinite(value)) {
         out += "null";
         return;
     }
-    append_number(value, out);
+    quiver::utils::append_number(value, out);
 }
 
 void append_json_table(const sol::table& table, std::string& out, int depth) {
@@ -224,7 +215,7 @@ void append_json(const sol::object& value, std::string& out, int depth) {
     } else if (value.get_type() == sol::type::boolean) {
         out += (value.as<bool>() ? "true" : "false");
     } else if (value.is<std::int64_t>()) {
-        append_number(value.as<std::int64_t>(), out);
+        quiver::utils::append_number(value.as<std::int64_t>(), out);
     } else if (value.is<double>()) {
         append_json_double(value.as<double>(), out);
     } else if (value.is<std::string>()) {
@@ -255,6 +246,78 @@ struct LuaRunner::Impl {
         bind_binary();
         bind_expression();
         lua["db"] = &db;
+    }
+
+    // Lua-visible handle behind db:write_csv (LUA-11, D-35). Wraps the internal writer; sol2 owns
+    // it via std::unique_ptr, registered with sol::no_constructor and no explicit finalizer -- the
+    // same ownership pattern BinaryFile uses below.
+    struct CsvWriter {
+        quiver::csv_write::Writer writer;
+
+        explicit CsvWriter(quiver::csv_write::Writer w) : writer(std::move(w)) {}
+    };
+
+    // Converts one Lua row table to the ordered std::vector<std::string> quiver::csv_write::Writer
+    // takes. Row width is the MAXIMUM integer key present, never sol::table::size()/lua_rawlen
+    // (FMT-08): an interior hole is exactly the shape a nullable db:read_csv result produces, and
+    // must become an empty cell rather than collapse the row. Walked with pairs, mirroring
+    // append_json_table's array-detection walk above. A missing key reads back as Lua nil, which
+    // csv_cell_to_string below turns into an empty cell -- so an interior nil and an absent key are
+    // structurally identical (D-40), exactly as they are in Lua itself.
+    static std::vector<std::string> csv_row_cells_from_lua(const sol::table& row, const std::string& operation) {
+        std::int64_t max_index = 0;
+        for (auto& pair : row) {
+            if (!pair.first.is<std::int64_t>() || pair.first.as<std::int64_t>() < 1) {
+                throw std::runtime_error("Cannot " + operation + ": row key must be a positive integer");
+            }
+            max_index = std::max(max_index, pair.first.as<std::int64_t>());
+        }
+
+        std::vector<std::string> cells(static_cast<std::size_t>(max_index));
+        for (std::int64_t i = 1; i <= max_index; ++i) {
+            cells[static_cast<std::size_t>(i - 1)] = csv_cell_to_string(row[i], operation, i);
+        }
+        return cells;
+    }
+
+    // One sol::object cell -> the std::string quiver::csv_write::Writer takes. nil (including a
+    // hole from csv_row_cells_from_lua above) yields an empty cell (D-40); a string is copied
+    // verbatim. Plan 04-01 task 2 adds boolean/integer/float branches (FMT-04/FMT-06) in the same
+    // dispatch order table_to_element uses; until then any other Lua type is rejected.
+    static std::string csv_cell_to_string(const sol::object& cell, const std::string& operation, std::int64_t index) {
+        if (!cell.valid() || cell.is<sol::lua_nil_t>()) {
+            return {};
+        }
+        if (cell.is<std::string>()) {
+            return cell.as<std::string>();
+        }
+        throw std::runtime_error("Cannot " + operation + ": cell #" + std::to_string(index) +
+                                 " has unsupported Lua type");
+    }
+
+    // Shared strict decoder for db:write_csv's trailing options table (LUA-09): collects every
+    // entry before validating any of them, so a mid-traversal throw cannot abandon sol2's
+    // traversal state (same rationale as read_csv_options_from_lua below). No option key is
+    // recognized yet -- plan 04-01 task 2 adds `separator` and `header`.
+    static csv_write::Options write_csv_options_from_lua(const sol::object& options, const std::string& operation) {
+        csv_write::Options result;
+        if (!options.valid() || options.get_type() == sol::type::lua_nil) {
+            // Missing parameter or explicit nil -- same as an empty table, both valid (D-14).
+            return result;
+        }
+        if (options.get_type() != sol::type::table) {
+            throw std::runtime_error("Cannot " + operation + ": options must be a table");
+        }
+
+        std::vector<std::pair<std::string, sol::object>> entries;
+        options.as<sol::table>().for_each(
+            [&](sol::object key, sol::object value) { entries.emplace_back(key.as<std::string>(), std::move(value)); });
+
+        for (auto& entry : entries) {
+            throw std::runtime_error("Cannot " + operation + ": unknown option '" + entry.first + "'");
+        }
+
+        return result;
     }
 
     void bind_database() {
@@ -446,9 +509,10 @@ struct LuaRunner::Impl {
             CSVConverter::csv_to_bin(resolve_sandboxed_path(self, "csv_to_bin", path));
         });
 
-        // CSV file reading -- db-scoped and sandboxed like the file I/O above. Both entry points
-        // below construct the same csv_read reader and drive it through header()/for_each_row(),
-        // so they cannot diverge on any input (LUA-03).
+        // CSV file reading/writing -- db-scoped and sandboxed like the file I/O above. The two
+        // reading entry points below construct the same csv_read reader and drive it through
+        // header()/for_each_row(), so they cannot diverge on any input (LUA-03). Writing
+        // (db:write_csv) is streaming-only -- there is no whole-file counterpart, by decision.
         bind.set_function(
             "read_csv",
             [](Database& self, const std::string& path, sol::object options, sol::this_state s) -> sol::table {
@@ -523,6 +587,28 @@ struct LuaRunner::Impl {
                                   return true;
                               });
                           });
+        bind.set_function(
+            "write_csv",
+            [](Database& self, const std::string& path, sol::object options) -> std::unique_ptr<CsvWriter> {
+                // D-22/LUA-10 evaluation order: sandbox checks (in-memory db, path escape) before
+                // the options table, so a bad separator never masks an escaping path.
+                const auto resolved = resolve_sandboxed_path(self, "write_csv", path);
+                auto csv_options = write_csv_options_from_lua(options, "write_csv");
+                return std::make_unique<CsvWriter>(
+                    quiver::csv_write::Writer(resolved, path, "write_csv", csv_options));
+            });
+
+        // LUA-11: sol::no_constructor + std::unique_ptr return (above), no explicit finalizer --
+        // the same ownership pattern as BinaryFile below.
+        lua.new_usertype<CsvWriter>(
+            "CsvWriter",
+            sol::no_constructor,
+            "write_row",
+            [](CsvWriter& self, const sol::table& row) {
+                self.writer.write_row(csv_row_cells_from_lua(row, "write_row"), "write_row");
+            },
+            "close",
+            [](CsvWriter& self) { self.writer.close("close"); });
     }
 
     // ========================================================================

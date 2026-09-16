@@ -698,6 +698,20 @@ end
 
 ---
 
+## CSV file writing
+
+Write a CSV file to disk — the only way to get data out of a script onto disk, since \`io\` is
+deliberately absent from the sandbox. Streaming only, with no whole-file counterpart:
+\`db:write_csv\` returns a handle, \`w:write_row({...})\` appends one row, \`w:close()\` finishes it.
+
+\`\`\`lua
+local w = db:write_csv(path, { separator = ",", header = { "a", "b" } })
+w:write_row({ "1", "2" })
+w:close()
+\`\`\`
+
+---
+
 ## Complete example
 
 \`\`\`lua
