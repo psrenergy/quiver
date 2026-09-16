@@ -31,12 +31,15 @@ because all the logic lives in the C++ core and the bindings stay thin.
 - ✓ Six test suites plus a CLI smoke test, over one shared schema set — existing
 - ✓ A Lua script can read a CSV file from disk, sandboxed to the database directory like every other Lua file operation — validated in Phase 1: A Lua script reads a CSV file
 - ✓ Two entry points over one parser: a whole-file form for the common case, and a row-streaming form that holds bounded memory on a large file — validated in Phase 1: A Lua script reads a CSV file
+- ✓ Parsing is correct on genuinely dirty input — UTF-8 BOM, CRLF, a separator inside a quoted field, a newline inside a quoted field, doubled-quote escapes, ragged rows, junk rows above the header, duplicate and empty header names, configurable separator — validated in Milestone v1.0 (Phase 2)
+- ✓ The agent-facing Lua reference (`bindings/js/src/lua-api.ts`) tells the model to read data files rather than transcribe them into the script — validated in Milestone v1.0 (Phase 3)
+- ✓ Small-fixture tests covering every dirty case above, including a regression over the two real Maranhão CSVs — validated in Milestone v1.0 (Phase 2)
 
 ### Active
 
-- [ ] Parsing is correct on genuinely dirty input — UTF-8 BOM, CRLF, a separator inside a quoted field, a newline inside a quoted field, doubled-quote escapes, ragged rows, junk rows above the header, duplicate and empty header names, configurable separator
-- [ ] The agent-facing Lua reference (`bindings/js/src/lua-api.ts`) tells the model to read data files rather than transcribe them into the script
-- [ ] Small-fixture tests covering every dirty case above, including a regression over the two real Maranhão CSVs
+None — Milestone v1.0 is complete and every requirement it carried is validated above.
+Run `/gsd-new-milestone` to define the next set. Carried forward as deferred: **CSV writing**
+(`db:write_csv`), listed under Out of Scope below.
 
 ### Out of Scope
 
@@ -119,4 +122,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-16 after Phase 1 — Lua reads CSV off disk, both entry points over one parser, sandboxed*
+*Last updated: 2026-09-16 — Milestone v1.0 shipped (CSV reading for the Lua runner); software version 0.10.6, milestone changes unreleased under 0.10.7*
