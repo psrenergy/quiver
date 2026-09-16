@@ -335,6 +335,17 @@ Implementation conventions in `lua_runner.cpp`:
   `.qvr`/`.toml` by string concatenation). The resolved absolute path is what's forwarded
   downstream, so the process CWD is irrelevant to Lua file I/O. Pattern 1 messages thread the
   public operation name. This is LuaRunner policy only — the C++/Julia surfaces stay unsandboxed.
+  **The `current_path`/`weakly_canonical` block is wrapped in a `try`/`catch` that re-throws as
+  `"Cannot <op>: cannot resolve path '<p>': <os reason>"`** — those throwing overloads raise
+  `std::filesystem_error` for any OS failure that is not a plain "does not exist", and a Windows
+  device name (`NUL`, `nul`, any case, any directory) is exactly such a case. Unwrapped, the raw
+  `weakly_canonical: The parameter is incorrect.: ...` reached the script with no Pattern 1 prefix
+  at all, breaking LUA-08 for **every** operation in the list above, not just the one it was found
+  through. Because this is the single gate they all share, the guard belongs here and nowhere else;
+  the deliberate `:memory:` and containment throws stay outside the `try` so they are not
+  double-wrapped. Covered by `LuaRunner_ReadCsv.DeviceNamePathIsReportedWithPrefix` and
+  `LuaBinaryTest.DeviceNamePathIsReportedWithPrefix` (the latter spanning `open_file`/`bin_to_csv`/
+  `csv_to_bin`, so the shared fix cannot regress to a per-caller patch).
 - **Enabled standard libraries**: `base`, `string`, `table`, `math`, `coroutine`, and `utf8`
   (pure computation only). `os`, `io`, `package`/`require`, and `debug` stay unloaded — scripts
   cannot reach the shell, the process, the environment, or the filesystem outside the db sandbox.

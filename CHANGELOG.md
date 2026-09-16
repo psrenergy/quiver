@@ -51,6 +51,20 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ### Fixed
 
+- **Lua: a path the OS refuses to resolve reached scripts as a raw `std::filesystem` message.**
+  Every file-touching Lua operation — `db:read_csv`, `db:read_csv_stream`, `db:open_file`,
+  `db:bin_to_csv`, `db:csv_to_bin`, `db:export_csv`, `db:import_csv`, `db:validate_migrations`
+  and `expr:save` — resolves its path through one shared gate, and that gate used throwing
+  `std::filesystem` overloads without catching them. Any OS failure that is not a plain "does not
+  exist" therefore surfaced unprefixed: on Windows, `db:read_csv("NUL")` (or any reserved device
+  name, in any case, in any directory) raised
+  `weakly_canonical: The parameter is incorrect.: "..."` instead of a `Cannot read_csv: ...`
+  message, breaking the guarantee that no standard-library text reaches a script unwrapped. Such
+  a failure is now reported as `Cannot <operation>: cannot resolve path '<path>': <reason>`. The
+  three CSV precondition checks were hardened the same way and now report
+  `Cannot <operation>: cannot access file '<path>': <reason>` when the OS refuses the query,
+  keeping the existing not-found / is-a-directory / is-empty messages unchanged.
+
 - **Dart: every DateTime reader threw on valid values whose local wall-clock time the platform
   considers nonexistent.** `stringToDateTime` validated by re-serializing a *local*
   `DateTime.parse` and comparing it with the input, so a value inside a DST gap — on Windows the

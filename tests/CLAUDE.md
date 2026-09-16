@@ -41,6 +41,17 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   core, C API, or other-binding counterpart to mirror (root design decision), so this suite has no
   sibling elsewhere. Its CSV fixtures are written at runtime into the `LuaSandboxTest` sandbox
   rather than committed under `tests/schemas/`, since they exist only to be read back once.
+  Two of its negatives need an OS-level lever rather than a fixture, and the two platforms
+  disagree about which one works. `UnreadableFileReportsParserFailure` needs a file that passes
+  exists/not-a-directory/non-empty but still cannot be opened, so the csv-parser wrapper is the
+  message under test: Windows takes an exclusive lock (`CreateFileW` with `dwShareMode` 0, since a
+  DENY ACE there blocks the open but *not* the metadata queries, and `chmod` is a no-op for read
+  access), POSIX uses `chmod 000` (which blocks the open while `stat` still succeeds) and skips
+  under root. It asserts the three preconditions still pass before reading, so it cannot silently
+  degrade into re-testing an earlier catalogue message. `DeviceNamePathIsReportedWithPrefix` (here
+  and in `test_lua_binary.cpp`) is `_WIN32`-only because no POSIX path is reserved the way `NUL`
+  is; the `test_lua_binary.cpp` copy spans `open_file`/`bin_to_csv`/`csv_to_bin` on purpose, so the
+  fix stays in the shared `resolve_sandboxed_path` gate instead of regressing to a per-caller patch.
 
 ## C API tests
 
