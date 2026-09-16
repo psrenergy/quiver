@@ -256,6 +256,57 @@ TEST_F(LuaRunner_ReadCsv, HeaderRowOnLastLineSucceedsWithEmptyRows) {
     )");
 }
 
+// --- header_row = 0: no header at all (D-20) ---
+
+TEST_F(LuaRunner_ReadCsv, HeaderRowZeroYieldsNoHeaderAndAllLinesAsRows) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    write_lua_csv_file(sandbox / "noheader.csv", "a,b\n1,2\n");
+
+    // Pins header's absence (nil, not {}) at the JSON encoder level too, matching header_row(0)'s
+    // existing "no header" sentinel (D-01).
+    auto json = lua.run(R"(return db:read_csv("noheader.csv", { header_row = 0 }))");
+    EXPECT_EQ(json, R"({"rows":[["a","b"],["1","2"]]})");
+}
+
+TEST_F(LuaRunner_ReadCsv, HeaderRowZeroBlankLineMidFileIsNotAPhantomRow) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    // Permanent guard on make_format()'s call order (Finding 2): CSVFormat::header_row(-1) (what
+    // no_header() calls) resets variable_column_policy to plain KEEP unless variable_columns() is
+    // called AFTER it. Under KEEP a blank line becomes a phantom zero-length row; under the pinned
+    // KEEP_NON_EMPTY it is discarded (Phase 1 D-13). No prior test in this file exercises a blank
+    // line under header_row = 0, since the option did not exist before this plan.
+    write_lua_csv_file(sandbox / "blankmid.csv", "a,b\n\n1,2\n");
+
+    lua.run(R"(
+        local csv = db:read_csv("blankmid.csv", { header_row = 0 })
+        assert(csv.header == nil, "expected no header key")
+        assert(#csv.rows == 2, "expected 2 rows (blank line dropped), got " .. #csv.rows)
+        assert(csv.rows[1][1] == "a" and csv.rows[1][2] == "b", "row 1 mismatch")
+        assert(csv.rows[2][1] == "1" and csv.rows[2][2] == "2", "row 2 mismatch")
+    )");
+}
+
+TEST_F(LuaRunner_ReadCsv, StreamHeaderRowZeroBlankLineAgreesWithWholeFileRead) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    write_lua_csv_file(sandbox / "blankmid.csv", "a,b\n\n1,2\n");
+
+    // Same fixture, same option, through the streaming entry point -- both must agree on the row
+    // count so the ordering fix cannot regress just one of the two (LUA-03).
+    lua.run(R"(
+        local n = db:read_csv_stream("blankmid.csv", function(row, index, header) return true end, { header_row = 0 })
+        assert(n == 2, "expected stream row count 2, got " .. tostring(n))
+    )");
+}
+
 TEST_F(LuaRunner_ReadCsv, TwoConsecutiveReadsReturnIdenticalContents) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
