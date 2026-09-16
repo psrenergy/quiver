@@ -26,7 +26,7 @@ agent, and secondarily anyone scripting a Quiver database by hand.
 - [x] **LUA-02**: A script can stream a CSV row by row with `db:read_csv_stream(path, on_row)`, holding bounded memory regardless of file size
 - [x] **LUA-03**: Both forms run on the same parser, so they cannot diverge in how they handle any input
 - [x] **LUA-04**: Both forms resolve `path` against the database file's directory and refuse anything outside it, and both refuse to run on an in-memory database — identical to every other file-touching Lua operation
-- [ ] **LUA-05**: A script can name which row is the header, or declare that there is none, so files with junk rows above the header are readable
+- [x] **LUA-05**: A script can name which row is the header, or declare that there is none, so files with junk rows above the header are readable
 - [ ] **LUA-06**: A file whose header names repeat or are blank is fully readable — no column is unreachable and none silently shadows another
 - [x] **LUA-07**: Every cell reaches Lua as a string, with no numeric or date inference, so nothing is silently coerced
 - [x] **LUA-08**: A missing file, an unreadable path, a bad option value, or a header row past the end of the file each raise a `Cannot read_csv: ...` error naming the problem, rather than surfacing a parser or stream error
@@ -97,7 +97,7 @@ Which phases cover which requirements.
 | LUA-02 | Phase 1 | Complete |
 | LUA-03 | Phase 1 | Complete |
 | LUA-04 | Phase 1 | Complete |
-| LUA-05 | Phase 2 | Pending |
+| LUA-05 | Phase 2 | Complete |
 | LUA-06 | Phase 2 | Pending |
 | LUA-07 | Phase 1 | Complete |
 | LUA-08 | Phase 1 | Complete |

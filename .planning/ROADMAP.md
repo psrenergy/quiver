@@ -103,13 +103,13 @@ real Maranhão files currently transcribed into scripts by hand
 
   5. Reading the two real Maranhão CSVs yields the same values the hand-transcribed script hard-coded
 
-**Plans**: 4 plans
+**Plans**: 1/4 plans executed
 
 Plans:
 
 **Wave 1**
 
-- [ ] 02-01-PLAN.md — Tracer: the `header_row` option end-to-end, with both csv-parser traps handled
+- [x] 02-01-PLAN.md — Tracer: the `header_row` option end-to-end, with both csv-parser traps handled
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -180,7 +180,7 @@ Phases execute in numeric order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. A Lua script reads a CSV file | 3/3 | Complete    | 2026-09-16 |
-| 2. The dirty files parse correctly | 0/4 | Not started | - |
+| 2. The dirty files parse correctly | 1/4 | In Progress|  |
 | 3. The agent reads instead of transcribing | 0/TBD | Not started | - |
 
 ## Requirement Coverage

@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 2
-current_phase_name: The dirty files parse correctly
-status: planning
-stopped_at: Completed 01-03-PLAN.md
-last_updated: "2026-09-16T03:16:00.803Z"
+current_phase: 02
+current_phase_name: the-dirty-files-parse-correctly
+status: executing
+stopped_at: Completed 02-01-PLAN.md
+last_updated: "2026-09-16T09:13:15.115Z"
 last_activity: 2026-09-16
 last_activity_desc: Phase 01 complete, transitioned to Phase 2
 progress:
-  total_phases: 1
+  total_phases: 2
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  total_plans: 7
+  completed_plans: 4
 ---
 
 # Project State
@@ -23,16 +23,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-09-14)
 
 **Core value:** Every layer — C++, C, Julia, Dart, Python, JS and Lua — sees the same data under the same rules, because all the logic lives in the C++ core and the bindings stay thin.
-**Current focus:** Phase 01 — a-lua-script-reads-a-csv-file
+**Current focus:** Phase 02 — the-dirty-files-parse-correctly
 
 ## Current Position
 
-Phase: 2 — The dirty files parse correctly
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-09-16 — Phase 01 complete, transitioned to Phase 2
+Phase: 02 (the-dirty-files-parse-correctly) — EXECUTING
+Plan: 2 of 4
+Status: Ready to execute
+Last activity: 2026-09-16 — Phase 02 execution started
 
-Progress: [██████████] 100%
+Progress: [██████░░░░] 57%
 
 ## Performance Metrics
 
@@ -61,6 +61,7 @@ Progress: [██████████] 100%
 | Phase 01 P01 | 20min | 2 tasks | 8 files |
 | Phase 01 P02 | 25min | 2 tasks | 3 files |
 | Phase 01 P03 | 45min | 2 tasks | 5 files |
+| Phase 02 P01 | 45min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -80,6 +81,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Affecting current work:
 - [Phase ?]: D-22 evaluation order fix: db:read_csv/db:read_csv_stream now resolve the sandboxed path before decoding the options table, matching the locked catalogue order
 - [Phase ?]: D-22 entry 10 (csv-parser wrapper) has no portable runtime trigger on Windows; proven via a source-level assertion instead, flagged for human review
 - [Phase ?]: Phase 01 (a-lua-script-reads-a-csv-file) fully executed: all three plans complete, TEST-03/LUA-04/LUA-08 sandbox and error-catalogue coverage proven end to end
+- [Phase ?]: header_row is 1-based at the Lua boundary, 0 = no header, default 1 (D-20); make_format sets header mode before variable_columns(KEEP_NON_EMPTY) since csv-parser's header_row(row<0) silently resets the policy to KEEP
+- [Phase ?]: Reader synthesizes the past-EOF header error itself (options.header_row != 0 && header.empty()), since csv-parser silently succeeds with an empty header and zero rows
 
 ### Pending Todos
 
@@ -109,6 +112,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-09-15T15:52:28.890Z
-Stopped at: Completed 01-03-PLAN.md
+Last session: 2026-09-16T09:13:15.098Z
+Stopped at: Completed 02-01-PLAN.md
 Resume file: None
