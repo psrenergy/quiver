@@ -82,10 +82,20 @@ to be included by `lua_runner.cpp`, which already needs `/bigobj` on MSVC for so
 depth. Three `csv::CSVFormat` settings are pinned in exactly one place (`make_format`, in
 `csv_read.cpp`) because every one of the library defaults is wrong for this reader:
 `variable_columns(KEEP_NON_EMPTY)` (the default `IGNORE_ROW` silently discards any row whose field
-count differs from the header), `header_row(0)` (with no header pinned, csv-parser guesses one and
+count differs from the header), the header row (with no header pinned, csv-parser guesses one and
 pops every record up to the guessed index — silently eating a one-cell title line above the real
-header), and never calling `chunk_size(...)` (with `CSV_ENABLE_THREADS` forced off, the read window
-is csv-parser's own fixed default, unmultiplied by worker count).
+header; driven by `Options.header_row`, 1-based at the Lua boundary, `0` = `no_header()`, default
+`1` — Phase 2's `header_row` option, D-20), and never calling `chunk_size(...)` (with
+`CSV_ENABLE_THREADS` forced off, the read window is csv-parser's own fixed default, unmultiplied by
+worker count). **Call order in `make_format` is load-bearing**: the header mode must be set before
+`variable_columns()`, because `CSVFormat::header_row(row < 0)` (i.e. `no_header()`) overwrites
+`variable_column_policy` to plain `KEEP` as a side effect
+(`build/_deps/csv_parser-src/include/internal/csv_format.cpp:44`) — reordering silently
+reintroduces phantom blank-line rows for every no-header read. `Reader`'s constructor also
+synthesizes the "header row not found" error csv-parser never raises itself: a header row past EOF
+returns an empty header with zero rows in total silence, so the check is gated on the caller's
+original request (`header_row != 0`) rather than header emptiness alone, since `header_row = 0`
+also yields an empty header by design.
 
 ## Pimpl vs Value Types
 
