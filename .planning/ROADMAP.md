@@ -103,11 +103,25 @@ real Maranhão files currently transcribed into scripts by hand
 
   5. Reading the two real Maranhão CSVs yields the same values the hand-transcribed script hard-coded
 
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
 
-- [ ] 02-01: TBD
+**Wave 1**
+
+- [ ] 02-01-PLAN.md — Tracer: the `header_row` option end-to-end, with both csv-parser traps handled
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 02-02-PLAN.md — The dirty-file matrix, repeated/blank header names, and the option negatives
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 02-03-PLAN.md — The two real Maranhão files committed as fixtures, and their regression tests
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 02-04-PLAN.md — Release-build run, plus the nearest-CLAUDE.md and changelog paperwork
 
 Notes:
 
@@ -166,7 +180,7 @@ Phases execute in numeric order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. A Lua script reads a CSV file | 3/3 | Complete    | 2026-09-16 |
-| 2. The dirty files parse correctly | 0/TBD | Not started | - |
+| 2. The dirty files parse correctly | 0/4 | Not started | - |
 | 3. The agent reads instead of transcribing | 0/TBD | Not started | - |
 
 ## Requirement Coverage
