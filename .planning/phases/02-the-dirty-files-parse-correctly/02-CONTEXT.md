@@ -83,8 +83,10 @@ verbatim, and `rows` are positional arrays. There is no name→value map anywher
 nothing for a duplicate name to shadow, and a blank name is just an empty string at its index.
 
 The real header row — `ANO,Residencial,,ANO,MÊS, Residencial ,,,,,` — has `ANO` twice,
-`Residencial` twice (once space-padded as ` Residencial `), and six blank names. All twelve columns
-are reachable as `row[1]`..`row[12]` regardless.
+`Residencial` twice (once space-padded as ` Residencial `), and blank names. It carries **11**
+fields (10 separators), reachable as `row[1]`..`row[11]` regardless. (An earlier draft of this file
+said twelve; counted wrong. Assert against the count the fixture actually produces rather than
+either number written here.)
 
 **Do not add a name→index map, a de-duplicating renamer, or a `columns` lookup table.** Any of
 those would *create* the shadowing problem LUA-06 exists to prevent. LUA-06 is discharged by tests.
@@ -143,9 +145,19 @@ non-ASCII path is a cross-platform liability in git, CMake and CI for a property
 asks for.
 
 **Content must be copied byte-for-byte** — the BOM and the CRLF endings *are* the test (PARSE-05,
-PARSE-06). Copy in binary; do not let an editor or a unix tool normalize line endings. Note
-`.gitattributes` enforces LF for `.cpp/.h/.dart/.jl/.py` but not `.csv`; verify the committed bytes
-still contain `\r\n` and the leading `EF BB BF` after checkout.
+PARSE-06). Copy in binary; do not let an editor or a unix tool normalize line endings.
+
+**`.gitattributes` WILL destroy this fixture unless exempted first — verified, must-fix.** An
+earlier draft of this file said `.csv` was unaffected because the per-extension rules name only
+`.cpp/.h/.dart/.jl/.py`. That was wrong: line 1 is `* text=auto`, and this machine has
+`core.autocrlf=true`. Staging the fixture as-is rewrites its CRLF to LF **in the index** — the
+working-tree copy still looks right on Windows and the tests still pass locally, so PARSE-06's
+real-file evidence disappears invisibly, including for Linux CI.
+
+Stage a `tests/fixtures/*.csv -text` exemption **before** adding the fixtures, and verify what was
+actually committed with `git show :tests/fixtures/ma_energia_residencial.csv | xxd | head -1`
+(expect `EF BB BF`) and a `\r\n` check on the same stream — not by looking at the working-tree file,
+which cannot tell you what git stored.
 
 Source (outside the repo, not a build dependency — copied once):
 `C:/Development/Claw/claw-experiments/Foresight/.claw/case-ma-2.foresight/a20a2fd08893/runs/run-007/`
@@ -166,9 +178,14 @@ Source (outside the repo, not a build dependency — copied once):
   rejection-matrix section is the pattern for TEST-04's new option cases.
 - **`tests/CMakeLists.txt`** — new test files are registered explicitly (no glob). `tests/fixtures/`
   does not exist yet; committed fixtures currently live only under `tests/schemas/`.
-- **`bindings/js/src/lua-api.ts`** — `bindings/js/test/lua-api-sync.test.ts` parses
-  `src/lua_runner.cpp` and **fails the build** until every bound name and the documented option set
-  match. Adding `header_row` without documenting it breaks the JS suite.
+- **`bindings/js/src/lua-api.ts`** — must be updated, but **not** because of a build gate.
+  Correcting an error in an earlier draft of this file: `bindings/js/test/lua-api-sync.test.ts`
+  matches bound *names* only (`bind.set_function("x")`, usertype method names, and the
+  `open_libraries` stdlib list — see its passes at lines 19, 39, 85-88, 95-97). It does **not**
+  parse option keys, so an undocumented `header_row` will NOT fail the JS suite. Update the file
+  anyway: its current text asserts that `separator` is the *only* key, which becomes false the
+  moment this option ships. That is a correctness fix to a published agent-facing document, not a
+  gate to satisfy. Do not waste time chasing a sync-test failure that will never fire.
 </code_context>
 
 <specifics>
