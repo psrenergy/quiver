@@ -516,6 +516,44 @@ TEST_F(LuaRunner_ReadCsv, EnergiaRegressionJunkRowAboveUnitsRowBelowHeader) {
     )LUA");
 }
 
+TEST_F(LuaRunner_ReadCsv, GdRegressionQuotedCommaAndEnglishMonthNames) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    std::filesystem::copy_file(quiver::test::path_from(__FILE__, "fixtures/ma_gd_data.csv"),
+                               sandbox / "ma_gd_data.csv");
+
+    // Custom delimiter: the month/day/year pattern literal below ends in ")".
+    lua.run(R"LUA(
+        -- The Lua sandbox has os unloaded (root design decision), so an English month name has no
+        -- date library to lean on -- this table is script-side work by design (LUA-07).
+        local MONTHS = {
+          January = 1, February = 2, March = 3, April = 4, May = 5, June = 6,
+          July = 7, August = 8, September = 9, October = 10, November = 11, December = 12,
+        }
+
+        -- No header_row option: this file's header is line 1, D-20's default, so this also
+        -- proves the default survived plan 02-01's change.
+        local csv = db:read_csv("ma_gd_data.csv")
+
+        local results = {}
+        for i = 1, #csv.rows do
+            local row = csv.rows[i]
+            -- PARSE-02 in production form: the quoted date contains a comma. If quoting were
+            -- mishandled, the date would split into two fields and shift the value column.
+            assert(#row == 2, "row " .. i .. " has " .. #row .. " fields, expected 2 (quoted comma mishandled)")
+            local month_name, _, year = row[1]:match("(%a+) (%d+), (%d+)")
+            local date_key = string.format("%d-%02d", tonumber(year), MONTHS[month_name])
+            local value = tonumber(row[2])  -- already a plain decimal string, no cleanup needed
+            results[i] = date_key .. " " .. tostring(value)
+        end
+
+        assert(results[1] == "2014-05 33", "expected '2014-05 33', got " .. tostring(results[1]))
+        assert(results[71] == "2021-07 51818.33", "expected '2021-07 51818.33' at rows[71], got " .. tostring(results[71]))
+    )LUA");
+}
+
 // --- db:read_csv_stream ---
 
 TEST_F(LuaRunner_ReadCsv, StreamFiresOncePerRowWithIndexAndHeader) {
