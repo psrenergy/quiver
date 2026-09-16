@@ -28,11 +28,13 @@ TEST_F(LuaRunner_WriteCsv, WriteRowThenReadCsvRoundTripsPlainStrings) {
     const auto path = lp((sandbox / "out.csv").string());
 
     lua.run(R"(
-        local w = db:write_csv(")" + path + R"(")
+        local w = db:write_csv(")" +
+            path + R"(")
         w:write_row({ "Alpha", "Beta" })
         w:close()
 
-        local csv = db:read_csv(")" + path + R"(", { header_row = 0 })
+        local csv = db:read_csv(")" +
+            path + R"(", { header_row = 0 })
         assert(#csv.rows == 1, "expected 1 row, got " .. #csv.rows)
         assert(csv.rows[1][1] == "Alpha", "expected Alpha, got " .. tostring(csv.rows[1][1]))
         assert(csv.rows[1][2] == "Beta", "expected Beta, got " .. tostring(csv.rows[1][2]))
@@ -49,11 +51,13 @@ TEST_F(LuaRunner_WriteCsv, IntegerCellRoundTripsExactDigitString) {
     const auto path = lp((sandbox / "int.csv").string());
 
     lua.run(R"(
-        local w = db:write_csv(")" + path + R"(")
+        local w = db:write_csv(")" +
+            path + R"(")
         w:write_row({ 9007199254740993 })
         w:close()
 
-        local csv = db:read_csv(")" + path + R"(", { header_row = 0 })
+        local csv = db:read_csv(")" +
+            path + R"(", { header_row = 0 })
         assert(csv.rows[1][1] == "9007199254740993", "expected exact digit string, got " .. tostring(csv.rows[1][1]))
     )");
 }
@@ -68,12 +72,14 @@ TEST_F(LuaRunner_WriteCsv, WholeFloatAndEqualIntegerProduceSameCellText) {
     const auto path = lp((sandbox / "float.csv").string());
 
     lua.run(R"(
-        local w = db:write_csv(")" + path + R"(")
+        local w = db:write_csv(")" +
+            path + R"(")
         w:write_row({ 2014.0 })
         w:write_row({ 2014 })
         w:close()
 
-        local csv = db:read_csv(")" + path + R"(", { header_row = 0 })
+        local csv = db:read_csv(")" +
+            path + R"(", { header_row = 0 })
         assert(csv.rows[1][1] == csv.rows[2][1],
             "expected equal text, got " .. tostring(csv.rows[1][1]) .. " vs " .. tostring(csv.rows[2][1]))
         assert(csv.rows[1][1] == "2014", "expected no synthetic decimal point, got " .. tostring(csv.rows[1][1]))
@@ -90,11 +96,13 @@ TEST_F(LuaRunner_WriteCsv, BooleanCellWritesOneOrZero) {
     const auto path = lp((sandbox / "bool.csv").string());
 
     lua.run(R"(
-        local w = db:write_csv(")" + path + R"(")
+        local w = db:write_csv(")" +
+            path + R"(")
         w:write_row({ true, false })
         w:close()
 
-        local csv = db:read_csv(")" + path + R"(", { header_row = 0 })
+        local csv = db:read_csv(")" +
+            path + R"(", { header_row = 0 })
         assert(csv.rows[1][1] == "1", "expected '1', got " .. tostring(csv.rows[1][1]))
         assert(csv.rows[1][2] == "0", "expected '0', got " .. tostring(csv.rows[1][2]))
     )");
@@ -110,11 +118,12 @@ TEST_F(LuaRunner_WriteCsv, TableCellThrowsNamingWriteRowAndCellIndex) {
     const auto path = lp((sandbox / "bad_cell.csv").string());
 
     expect_lua_error(lua,
-                      R"(
-        local w = db:write_csv(")" + path + R"(")
+                     R"(
+        local w = db:write_csv(")" +
+                         path + R"(")
         w:write_row({ "ok", {} })
     )",
-                      "Cannot write_row: cell #2 has unsupported Lua type");
+                     "Cannot write_row: cell #2 has unsupported Lua type");
 }
 
 TEST_F(LuaRunner_WriteCsv, FunctionCellThrowsNamingWriteRowAndCellIndex) {
@@ -125,11 +134,12 @@ TEST_F(LuaRunner_WriteCsv, FunctionCellThrowsNamingWriteRowAndCellIndex) {
     const auto path = lp((sandbox / "bad_cell_fn.csv").string());
 
     expect_lua_error(lua,
-                      R"(
-        local w = db:write_csv(")" + path + R"(")
+                     R"(
+        local w = db:write_csv(")" +
+                         path + R"(")
         w:write_row({ print })
     )",
-                      "Cannot write_row: cell #1 has unsupported Lua type");
+                     "Cannot write_row: cell #1 has unsupported Lua type");
 }
 
 // FMT-08: row width is the MAXIMUM integer key, not the count of present keys -- an interior hole
@@ -142,11 +152,13 @@ TEST_F(LuaRunner_WriteCsv, RowWidthComesFromMaxIntegerKeyNotKeyCount) {
     const auto path = lp((sandbox / "hole.csv").string());
 
     lua.run(R"(
-        local w = db:write_csv(")" + path + R"(")
+        local w = db:write_csv(")" +
+            path + R"(")
         w:write_row({ [1] = "a", [3] = "c" })
         w:close()
 
-        local csv = db:read_csv(")" + path + R"(", { header_row = 0 })
+        local csv = db:read_csv(")" +
+            path + R"(", { header_row = 0 })
         assert(csv.rows[1][1] == "a", "expected a, got " .. tostring(csv.rows[1][1]))
         assert(csv.rows[1][2] == "", "expected empty middle cell, got " .. tostring(csv.rows[1][2]))
         assert(csv.rows[1][3] == "c", "expected c, got " .. tostring(csv.rows[1][3]))
@@ -164,11 +176,13 @@ TEST_F(LuaRunner_WriteCsv, RowWithZeroIntegerKeysWritesOneQuotedEmptyCell) {
     const auto path = lp((sandbox / "empty_row.csv").string());
 
     lua.run(R"(
-        local w = db:write_csv(")" + path + R"(")
+        local w = db:write_csv(")" +
+            path + R"(")
         w:write_row({})
         w:close()
 
-        local csv = db:read_csv(")" + path + R"(", { header_row = 0 })
+        local csv = db:read_csv(")" +
+            path + R"(", { header_row = 0 })
         assert(#csv.rows == 1, "expected 1 row, got " .. #csv.rows)
         assert(csv.rows[1][1] == "", "expected one empty cell, got " .. tostring(csv.rows[1][1]))
     )");
@@ -184,11 +198,12 @@ TEST_F(LuaRunner_WriteCsv, NonIntegerRowKeyThrows) {
     const auto path = lp((sandbox / "bad_key.csv").string());
 
     expect_lua_error(lua,
-                      R"(
-        local w = db:write_csv(")" + path + R"(")
+                     R"(
+        local w = db:write_csv(")" +
+                         path + R"(")
         w:write_row({ x = "y" })
     )",
-                      "Cannot write_row:");
+                     "Cannot write_row:");
 }
 
 TEST_F(LuaRunner_WriteCsv, SubOneIntegerRowKeyThrows) {
@@ -199,11 +214,12 @@ TEST_F(LuaRunner_WriteCsv, SubOneIntegerRowKeyThrows) {
     const auto path = lp((sandbox / "bad_key_zero.csv").string());
 
     expect_lua_error(lua,
-                      R"(
-        local w = db:write_csv(")" + path + R"(")
+                     R"(
+        local w = db:write_csv(")" +
+                         path + R"(")
         w:write_row({ [0] = "y" })
     )",
-                      "Cannot write_row:");
+                     "Cannot write_row:");
 }
 
 // FMT-02 is narrow by design: a multi-column row with an empty middle field stays unquoted and its
@@ -216,11 +232,13 @@ TEST_F(LuaRunner_WriteCsv, MultiColumnRowWithEmptyMiddleFieldLeavesNeighborsInta
     const auto path = lp((sandbox / "empty_middle.csv").string());
 
     lua.run(R"(
-        local w = db:write_csv(")" + path + R"(")
+        local w = db:write_csv(")" +
+            path + R"(")
         w:write_row({ "a", "", "b" })
         w:close()
 
-        local csv = db:read_csv(")" + path + R"(", { header_row = 0 })
+        local csv = db:read_csv(")" +
+            path + R"(", { header_row = 0 })
         assert(csv.rows[1][1] == "a", "expected a, got " .. tostring(csv.rows[1][1]))
         assert(csv.rows[1][2] == "", "expected empty, got " .. tostring(csv.rows[1][2]))
         assert(csv.rows[1][3] == "b", "expected b, got " .. tostring(csv.rows[1][3]))
@@ -239,13 +257,15 @@ TEST_F(LuaRunner_WriteCsv, SingleColumnFileWithNilAndEmptyCellsRoundTripsEveryRo
     const auto path = lp((sandbox / "single_column.csv").string());
 
     lua.run(R"(
-        local w = db:write_csv(")" + path + R"(")
+        local w = db:write_csv(")" +
+            path + R"(")
         w:write_row({})
         w:write_row({ "" })
         w:write_row({})
         w:close()
 
-        local csv = db:read_csv(")" + path + R"(", { header_row = 0 })
+        local csv = db:read_csv(")" +
+            path + R"(", { header_row = 0 })
         assert(#csv.rows == 3, "expected 3 rows, got " .. #csv.rows)
         assert(csv.rows[1][1] == "", "expected empty first row, got " .. tostring(csv.rows[1][1]))
         assert(csv.rows[2][1] == "", "expected empty middle row, got " .. tostring(csv.rows[2][1]))
@@ -262,9 +282,7 @@ TEST_F(LuaRunner_WriteCsv, UnknownOptionKeyThrows) {
 
     const auto path = lp((sandbox / "unknown_opt.csv").string());
 
-    expect_lua_error(lua,
-                      R"(db:write_csv(")" + path + R"(", { foo = 1 }))",
-                      "Cannot write_csv: unknown option");
+    expect_lua_error(lua, R"(db:write_csv(")" + path + R"(", { foo = 1 }))", "Cannot write_csv: unknown option");
 }
 
 TEST_F(LuaRunner_WriteCsv, NonStringSeparatorThrows) {
@@ -275,8 +293,8 @@ TEST_F(LuaRunner_WriteCsv, NonStringSeparatorThrows) {
     const auto path = lp((sandbox / "bad_sep_type.csv").string());
 
     expect_lua_error(lua,
-                      R"(db:write_csv(")" + path + R"(", { separator = 5 }))",
-                      "Cannot write_csv: option 'separator' must be a string");
+                     R"(db:write_csv(")" + path + R"(", { separator = 5 }))",
+                     "Cannot write_csv: option 'separator' must be a string");
 }
 
 TEST_F(LuaRunner_WriteCsv, MultiCharacterSeparatorThrows) {
@@ -287,8 +305,8 @@ TEST_F(LuaRunner_WriteCsv, MultiCharacterSeparatorThrows) {
     const auto path = lp((sandbox / "bad_sep.csv").string());
 
     expect_lua_error(lua,
-                      R"(db:write_csv(")" + path + R"(", { separator = ";;" }))",
-                      "option 'separator' must be a single character");
+                     R"(db:write_csv(")" + path + R"(", { separator = ";;" }))",
+                     "option 'separator' must be a single character");
 }
 
 TEST_F(LuaRunner_WriteCsv, NonTableHeaderThrows) {
@@ -299,8 +317,8 @@ TEST_F(LuaRunner_WriteCsv, NonTableHeaderThrows) {
     const auto path = lp((sandbox / "bad_header_type.csv").string());
 
     expect_lua_error(lua,
-                      R"(db:write_csv(")" + path + R"(", { header = "x" }))",
-                      "Cannot write_csv: option 'header' must be a table");
+                     R"(db:write_csv(")" + path + R"(", { header = "x" }))",
+                     "Cannot write_csv: option 'header' must be a table");
 }
 
 TEST_F(LuaRunner_WriteCsv, NonStringHeaderEntryThrows) {
@@ -311,8 +329,8 @@ TEST_F(LuaRunner_WriteCsv, NonStringHeaderEntryThrows) {
     const auto path = lp((sandbox / "bad_header_entry.csv").string());
 
     expect_lua_error(lua,
-                      R"(db:write_csv(")" + path + R"(", { header = { 1, 2 } }))",
-                      "Cannot write_csv: option 'header' entry must be a string");
+                     R"(db:write_csv(")" + path + R"(", { header = { 1, 2 } }))",
+                     "Cannot write_csv: option 'header' entry must be a string");
 }
 
 // D-14/D-20-style defaults: an absent options argument, an explicit nil, an empty table, and
@@ -326,11 +344,13 @@ TEST_F(LuaRunner_WriteCsv, AbsentNilAndEmptyOptionsAllMeanDefaults) {
 
     lua.run(R"(
         local function check(opts)
-            local w = db:write_csv(")" + path + R"(", opts)
+            local w = db:write_csv(")" +
+            path + R"(", opts)
             w:write_row({ "a", "b" })
             w:close()
 
-            local csv = db:read_csv(")" + path + R"(", { header_row = 0 })
+            local csv = db:read_csv(")" +
+            path + R"(", { header_row = 0 })
             assert(csv.header == nil, "expected no header")
             assert(#csv.rows == 1, "expected 1 row, got " .. #csv.rows)
             assert(csv.rows[1][1] == "a" and csv.rows[1][2] == "b", "expected default comma separator")
@@ -354,11 +374,13 @@ TEST_F(LuaRunner_WriteCsv, HeaderIsWrittenAheadOfDataAndQuotedLikeARow) {
     const auto path = lp((sandbox / "header.csv").string());
 
     lua.run(R"(
-        local w = db:write_csv(")" + path + R"(", { separator = ";", header = { "a;b", "c" } })
+        local w = db:write_csv(")" +
+            path + R"(", { separator = ";", header = { "a;b", "c" } })
         w:write_row({ "1", "2" })
         w:close()
 
-        local csv = db:read_csv(")" + path + R"(", { header_row = 0, separator = ";" })
+        local csv = db:read_csv(")" +
+            path + R"(", { header_row = 0, separator = ";" })
         assert(#csv.rows == 2, "expected 2 rows (header + data), got " .. #csv.rows)
         assert(csv.rows[1][1] == "a;b", "expected header col 1 intact, got " .. tostring(csv.rows[1][1]))
         assert(csv.rows[1][2] == "c", "expected header col 2, got " .. tostring(csv.rows[1][2]))
@@ -377,16 +399,19 @@ TEST_F(LuaRunner_WriteCsv, ReopeningSamePathTruncatesExistingContent) {
     const auto path = lp((sandbox / "truncate.csv").string());
 
     lua.run(R"(
-        local w1 = db:write_csv(")" + path + R"(")
+        local w1 = db:write_csv(")" +
+            path + R"(")
         w1:write_row({ "1" })
         w1:write_row({ "2" })
         w1:close()
 
-        local w2 = db:write_csv(")" + path + R"(")
+        local w2 = db:write_csv(")" +
+            path + R"(")
         w2:write_row({ "3" })
         w2:close()
 
-        local csv = db:read_csv(")" + path + R"(", { header_row = 0 })
+        local csv = db:read_csv(")" +
+            path + R"(", { header_row = 0 })
         assert(#csv.rows == 1, "expected 1 row after truncate-at-open, got " .. #csv.rows)
         assert(csv.rows[1][1] == "3", "expected '3', got " .. tostring(csv.rows[1][1]))
     )");

@@ -326,8 +326,7 @@ struct LuaRunner::Impl {
     // integer-key max-index walk csv_row_cells_from_lua uses above (FMT-08) -- never
     // sol::table::size()/lua_rawlen. Every present entry must be a string; an empty table (zero
     // integer keys) yields an empty result, which csv_write::Options treats as no header row.
-    static std::vector<std::string>
-    csv_header_from_lua(const sol::table& header, const std::string& operation) {
+    static std::vector<std::string> csv_header_from_lua(const sol::table& header, const std::string& operation) {
         std::int64_t max_index = 0;
         for (auto& pair : header) {
             if (!pair.first.is<std::int64_t>() || pair.first.as<std::int64_t>() < 1) {
@@ -677,8 +676,7 @@ struct LuaRunner::Impl {
                 // the options table, so a bad separator never masks an escaping path.
                 const auto resolved = resolve_sandboxed_path(self, "write_csv", path);
                 auto csv_options = write_csv_options_from_lua(options, "write_csv");
-                return std::make_unique<CsvWriter>(
-                    quiver::csv_write::Writer(resolved, path, "write_csv", csv_options));
+                return std::make_unique<CsvWriter>(quiver::csv_write::Writer(resolved, path, "write_csv", csv_options));
             });
 
         // LUA-11: sol::no_constructor + std::unique_ptr return (above), no explicit finalizer --

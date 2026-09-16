@@ -28,8 +28,8 @@ void append_record(const std::vector<std::string>& cells, char separator, std::s
         }
         const std::string& cell = cells[i];
         const bool needs_quotes = lone_empty_cell || cell.find(separator) != std::string::npos ||
-                                   cell.find('"') != std::string::npos || cell.find('\r') != std::string::npos ||
-                                   cell.find('\n') != std::string::npos;
+                                  cell.find('"') != std::string::npos || cell.find('\r') != std::string::npos ||
+                                  cell.find('\n') != std::string::npos;
         if (!needs_quotes) {
             out += cell;
             continue;

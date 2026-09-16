@@ -701,14 +701,43 @@ end
 ## CSV file writing
 
 Write a CSV file to disk — the only way to get data out of a script onto disk, since \`io\` is
-deliberately absent from the sandbox. Streaming only, with no whole-file counterpart:
-\`db:write_csv\` returns a handle, \`w:write_row({...})\` appends one row, \`w:close()\` finishes it.
+deliberately absent from the sandbox. Streaming only, with no whole-file counterpart: \`db:write_csv\`
+returns a handle, \`w:write_row({...})\` appends one row, \`w:close()\` finishes it. \`path\` is
+sandboxed the same way as every other file-touching operation (see Critical rules).
 
 \`\`\`lua
-local w = db:write_csv(path, { separator = ",", header = { "a", "b" } })
-w:write_row({ "1", "2" })
+local w = db:write_csv(path, { separator = ",", header = { "name", "note", "active", "score" } })
+local rows = {
+    { "Alpha", "first", true, 42 },
+    { "Beta", nil, false, 3.5 },     -- nil is INTERIOR, not the row's last cell: a TRAILING nil
+                                      -- would shorten the row instead of writing an empty cell.
+}
+for _, row in ipairs(rows) do
+    w:write_row(row)
+end
 w:close()
 \`\`\`
+
+The options table is optional; its only two keys are \`separator\` (a single character, default
+\`,\`) and \`header\` (column names written as the first record, default none — no header row).
+
+Opening \`db:write_csv\` **truncates** an existing file at the target path — there is no overwrite
+guard, so a script can destroy an existing file in the case folder (including the database file
+itself) by writing to its path. This is documented behaviour, not a bug: reopening the same path
+always starts a fresh file.
+
+\`write_row\` after \`close\` throws; \`close\` is idempotent (a second call is a no-op, not an error).
+
+A number is written in its shortest round-trip form (\`std::to_chars\`, no synthetic decimal point),
+so a whole float like \`2014.0\` and the integer \`2014\` write identical text — a script that needs
+a decimal point writes the cell as a string. A boolean writes \`1\`/\`0\`, matching the project-wide
+boolean-is-INTEGER write policy.
+
+\`nil\` and an empty string are not always the same thing here. An INTERIOR \`nil\` cell (not a row's
+last cell, like \`"Beta"\`'s note above) writes an empty cell, indistinguishable from \`""\` after the
+round trip — CSV has no null. A TRAILING \`nil\`, however, is not a cell at all: Lua stores no key
+for it, so the row's maximum integer key is lower and the row comes back **one column narrower** —
+a script that needs a trailing empty column must write an empty string there, not \`nil\`.
 
 ---
 

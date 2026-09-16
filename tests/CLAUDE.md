@@ -60,6 +60,12 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   and in `test_lua_binary.cpp`) is `_WIN32`-only because no POSIX path is reserved the way `NUL`
   is; the `test_lua_binary.cpp` copy spans `open_file`/`bin_to_csv`/`csv_to_bin` on purpose, so the
   fix stays in the shared `resolve_sandboxed_path` gate instead of regressing to a per-caller patch.
+- `test_lua_runner_write_csv.cpp` covers the Lua-only `db:write_csv`/`w:write_row`/`w:close`
+  binding (cell-type dispatch, the `separator`/`header` options, the max-integer-key row walk, and
+  the WRITE-08 truncate-at-open behaviour) — same no-other-layer-counterpart situation as
+  `test_lua_runner_read_csv.cpp` above. Every correctness assertion in it round-trips the written
+  file back through `db:read_csv` rather than reading the raw bytes, for the same reason
+  `export_csv`'s export-only string-search tests were a trap this project hit twice already.
 
 ## C API tests
 

@@ -47,9 +47,12 @@ src/                      # C++ implementation
   lua_runner.cpp          # LuaRunner (sol2) - all Lua bindings
   csv_read.h / csv_read.cpp  # Internal CSV reader (csv-parser, Pimpl'd) behind db:read_csv /
                               # db:read_csv_stream -- no include/quiver/ counterpart (see below)
+  csv_write.h / csv_write.cpp  # Internal CSV writer (hand-rolled, NOT Pimpl'd) behind db:write_csv
+                                # -- same no-include/quiver/-counterpart posture as csv_read
   cli/main.cpp            # quiver_cli CLI entry point
   utils/string.h          # String utilities: new_c_str, trim
   utils/datetime.h        # ISO 8601 parse/format helpers
+  utils/number.h          # quiver::utils::append_number -- std::to_chars shortest round-trip
 src/binary/                 # Binary C++ implementation
   binary_file.cpp             # BinaryFile class (Pimpl impl) + write registry
   binary_utils.h              # Shared file-extension constants
@@ -96,6 +99,16 @@ synthesizes the "header row not found" error csv-parser never raises itself: a h
 returns an empty header with zero rows in total silence, so the check is gated on the caller's
 original request (`header_row != 0`) rather than header emptiness alone, since `header_row = 0`
 also yields an empty header by design.
+
+`csv_write.h`/`csv_write.cpp` is `csv_read`'s deliberate non-Pimpl counterpart (D-37): it depends
+on nothing that must be kept out of the sol2 translation unit (no csv-parser, no third-party
+headers), so hiding its `std::ofstream` member behind a Pimpl the way `Reader` hides csv-parser
+would be cargo cult. It backs `db:write_csv` alone, with the same no-`include/quiver/`-header,
+no-`QUIVER_API`, no-C-API posture as `csv_read`. Numeric cell formatting reuses
+`quiver::utils::append_number` (`src/utils/number.h`) via `std::to_chars`'s shortest round-trip
+form with no synthetic decimal point, so a whole float and the equal integer write identical text
+(D-34); a `nil` cell and an empty-string cell are structurally indistinguishable after a CSV round
+trip and that is stated, not fixed — CSV has no null (D-40).
 
 ## Pimpl vs Value Types
 
@@ -431,8 +444,9 @@ Implementation conventions in `lua_runner.cpp`:
   path emits NULL cells as `nil` holes (an all-NULL column is an empty table with the key present),
   so read → modify → write round-trips; `#ts.<dimension>` is the trustworthy row count.
 - **`run` returns the script's return value as JSON**, built by the anonymous-namespace
-  `append_json` / `append_json_string` / `append_number` / `append_json_double` /
-  `append_json_table` at the top of the file. The table check uses `get_type()` rather than
+  `append_json` / `append_json_string` / `append_json_double` / `append_json_table` at the top of
+  the file, plus `quiver::utils::append_number` (`src/utils/number.h` — moved out of this file,
+  D-38; `db:write_csv`'s cell formatter is its third caller). The table check uses `get_type()` rather than
   `is<T>()` on purpose: sol2's `is<sol::table>()` also accepts **userdata**, so `return db` would
   quietly encode as `{}`. The boolean check spells `get_type()` for consistency with
   `is_lua_boolean` in `Impl`, not out of necessity — sol2's `check<bool>` *is* `lua_isboolean`
