@@ -15,6 +15,27 @@ edits a study database, and it deliberately has no `io` library, so a script can
 Every layer — C++, C, Julia, Dart, Python, JS and Lua — sees the same data under the same rules,
 because all the logic lives in the C++ core and the bindings stay thin.
 
+## Current Milestone: v1.1 CSV writing for the Lua runner
+
+**Goal:** A Lua script can write a CSV file into the case folder — streaming, correctly quoted,
+with numbers that round-trip exactly.
+
+**Target features:**
+- `db:write_csv(path, opts)` returns a writer handle; `w:write_row({...})` appends a row;
+  `w:close()` finishes the file. **Streaming only** — no whole-file counterpart to `db:read_csv`.
+- Sandboxed to the database directory like every other Lua file operation; in-memory databases
+  reject it outright.
+- Two options and no more: `separator` (default `,`) and `header` (column names, written as the
+  first row). Every option is permanent `LUA_DB_API_REFERENCE` payload.
+- Cell values: string, number, boolean (→ `1`/`0`, the project-wide write policy), `nil` (→ empty
+  cell). A table, function, or userdata in a row is a Pattern 1 error naming the cell index.
+- Strict row width against the header — a mismatch throws, naming the row ordinal and both counts.
+- Numbers written with `std::to_chars` shortest round-trip; Lua 5.4's integer subtype preserved.
+- A writer still open when the script ends is flushed and closed, with a warning logged.
+- Lua only — no public C++ header, no C API, no FFI binding. Same rationale as `db:read_csv`.
+- The agent-facing reference (`bindings/js/src/lua-api.ts`) updated in the same phase as the
+  binding, since `lua-api-sync.test.ts` is a hard build gate.
+
 ## Requirements
 
 ### Validated
@@ -37,14 +58,20 @@ because all the logic lives in the C++ core and the bindings stay thin.
 
 ### Active
 
-None — Milestone v1.0 is complete and every requirement it carried is validated above.
-Run `/gsd-new-milestone` to define the next set. Carried forward as deferred: **CSV writing**
-(`db:write_csv`), listed under Out of Scope below.
+Milestone v1.1 — CSV writing for the Lua runner. Requirements are scoped in
+`.planning/REQUIREMENTS.md`; the shape is in Current Milestone above.
 
 ### Out of Scope
 
-- **Writing CSV from Lua (`db:write_csv`)** — no concrete case yet, and a script's return value is already JSON-encoded back to the host, so there is an existing channel for structured output. Revisit the first time a script genuinely needs to emit a file.
-- **Getting parsed data into the database** — that is the script's job. The reader hands over rows; the existing group writers take them.
+- **A TOML reader and writer for Lua** — deferred, not rejected. The same argument that justifies
+  `db:read_csv`/`db:write_csv` applies (Lua has no `io`, and a case folder holds `.toml` sidecars),
+  and toml++ 3.4.0 is already a FetchContent dependency that `BinaryMetadata::from_toml_content`
+  already uses, so the cost is small. Out of scope here only to keep this milestone to one format.
+- **A whole-file `db:write_csv` form** — writing is streaming-only by decision. Reading has both
+  forms because a whole-file read is the common case and the shape an LLM gets right first try; a
+  write is naturally incremental, and a second code path is a second thing that can diverge.
+- **Getting data out of the database and into the rows** — that is the script's job, symmetric with
+  the reader. `db:write_csv` takes whatever rows the script assembled.
 - **The GB-scale write path** — `Database::execute` prepares and finalizes a statement on every call, and the group-insert loop rebuilds identical SQL per row, so even the bulk writers do one prepare per row and need every row in memory. Real, pre-existing, affects every caller, and deserves its own milestone rather than riding along with the reader.
 - **Migrating `import_csv`/`export_csv` off rapidcsv** — staged separately. `import_csv` is a destructive path (`DELETE FROM` before insert) with zero import-side quoting tests today, and `export_csv` gains nothing from streaming because `Result` is already a fully materialized `std::vector<Row>` before the CSV layer is reached.
 - **Replacing the binary subsystem's `CSVConverter` parser** — it reads a fixed-shape numeric format it generates itself, with its own NaN-sentinel routing. No user-facing quoting bug class there.
@@ -52,7 +79,24 @@ Run `/gsd-new-milestone` to define the next set. Carried forward as deferred: **
 
 ## Context
 
-**What prompted this.** `claw` drives Quiver's Lua runner to build and edit energy-modeling study
+**What prompted v1.1.** v1.0 gave a Lua script a way to read a file; it still has no way to write
+one. A script that assembles an input file for another tool, or dumps intermediate state for
+inspection, has nowhere to put it — the only channel out of a script is `LuaRunner::run`'s
+JSON-encoded return value, which goes back to the model, not onto disk. v1.0 deferred writing for
+want of a concrete case; building input files in the case folder is that case.
+
+**What the writer cannot reuse.** csv-parser is already vendored and its quoting state machine is
+correct (RFC 4180, doubles internal quotes), but two things in `csv_writer.hpp` do not fit:
+`DelimWriter<OutputStream, Delim, Quote>` takes the delimiter and quote character as *compile-time*
+template parameters, so a runtime `separator` needs a switch over instantiations or a hand-rolled
+writer; and its numeric `to_string` truncates floats at 5 decimal places. Whichever way the first
+is settled, numeric formatting stays Quiver's.
+
+**An open edge for planning.** `nil` → empty cell makes `#t` unreliable on a row table with holes,
+so row width has to come from the declared `header`. What determines width when no `header` is
+given is not yet settled.
+
+**What prompted v1.0.** `claw` drives Quiver's Lua runner to build and edit energy-modeling study
 databases. Because Lua has no `io`, the only way to get an input CSV into a database has been for
 the model to retype the file into the script as a string literal. In the `case-ma-2.foresight`
 case that is **360 lines of transcribed data in a 500-line script**, re-emitted verbatim in every
@@ -101,6 +145,14 @@ TypeScript import tool with a configuration DSL.
 | Writing into the database stays the script's job | Correct separation of concerns — the reader yields rows, the existing group writers consume them | — Pending |
 | Do not unify the core's CSV handling in this milestone | `import_csv` is destructive and has no import-side quoting tests to migrate against; `export_csv` cannot benefit from streaming while `Result` is fully materialized | — Pending |
 | Verify with small dirty fixtures rather than a multi-GB file | The dirty cases are where correctness lives; a GB fixture costs more and proves less | — Pending |
+| **v1.1** — Writing is streaming-only: a handle with `w:write_row` / `w:close`, no whole-file form | A write is naturally incremental, and a second code path is a second thing that can diverge from the first | — Pending |
+| **v1.1** — Numbers formatted by Quiver with `std::to_chars`, never by csv-parser | csv-parser's writer truncates floats at 5 decimal places (`DECIMAL_PLACES = 5`, hand-rolled `pow10`/`modf`) — the same bug class `database_csv_export.cpp` already hit with `%g` | — Pending |
+| **v1.1** — Two options only: `separator` and `header` | `LUA_DB_API_REFERENCE` is system-prompt payload interpolated into every `claw` session; `append` and `line_ending` did not earn permanent token cost | — Pending |
+| **v1.1** — Strict row width against the header | Catches an LLM-authored loop that drops a field at the row that dropped it, not later in whichever tool consumes the file | — Pending |
+| **v1.1** — Cell values: `nil` → empty, boolean → `1`/`0`, table/function/userdata → error | The boolean mapping matches the project-wide write policy; erroring beats writing `table: 0x...` into a data file | — Pending |
+| **v1.1** — An unclosed writer flushes, closes, and logs a warning | A script that errored for an unrelated reason still leaves its partial output on disk, while the missing `close()` stays visible to the agent and the human | — Pending |
+| **v1.1** — Lua only, exactly like `db:read_csv` | Every other host has a native CSV library; Lua needs this specifically because `io` is deliberately absent from its sandbox | — Pending |
+| **v1.1** — Defer a TOML reader/writer to a later milestone | Same justification as CSV, and toml++ is already vendored — but one format per milestone | — Pending |
 | Reject libcsv on licence | LGPL 2.1 against a repo that distributes prebuilt binaries to four registries | ✓ Good |
 | Reject `p-ranav/csv2` and `ben-strasser/fast-cpp-csv-parser` | csv2 splits a record on a newline inside a quoted field; fast-cpp-csv-parser takes the column count as a template parameter and Quiver's column count is only known at runtime | ✓ Good |
 
@@ -122,4 +174,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-16 — Milestone v1.0 shipped (CSV reading for the Lua runner); software version 0.10.6, milestone changes unreleased under 0.10.7*
+*Last updated: 2026-09-16 — Milestone v1.1 started (CSV writing for the Lua runner); v1.0 shipped (CSV reading); software version 0.10.6, changes unreleased under 0.10.7*
