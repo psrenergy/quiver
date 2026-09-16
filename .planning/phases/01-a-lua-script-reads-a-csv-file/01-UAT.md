@@ -1,5 +1,5 @@
 ---
-status: passed
+status: complete
 phase: 01-a-lua-script-reads-a-csv-file
 source: [01-VERIFICATION.md]
 started: 2026-09-15T14:20:00Z
@@ -18,13 +18,13 @@ awaiting: nothing
 
 ### 1. WR-01 — filesystem precondition checks outside the try/catch
 expected: Decide whether to fix now (move the three checks inside the try, or wrap them in their own try/catch re-throwing through the same "Cannot <op>: " prefix) or accept as documented low-likelihood debt. The four required sandbox/file negatives are unaffected; LUA-08's blanket "no unwrapped message" guarantee is not airtight for permission-denied / broken-symlink inputs.
-why_human: No portable way to trigger this on Windows — std::filesystem::permissions does not block owner read access. Whether it warrants a CI job on a different OS/permission model, or a preemptive fix, is a risk-tolerance call.
 result: pass
+why_human: No portable way to trigger this on Windows — std::filesystem::permissions does not block owner read access. Whether it warrants a CI job on a different OS/permission model, or a preemptive fix, is a risk-tolerance call.
 
 ### 2. D-22 catalogue entry 10 — parser-construction-failure wrapper never fires at runtime
 expected: Confirm (in CI on Linux/macOS, or via a manufactured permission-denied file) that the try/catch around csv::CSVReader construction (src/csv_read.cpp:64-71) actually produces "Cannot <op>: cannot read file '<p>': <reason>" when the parser fails to open a file that passed the three precondition checks. Today tests/test_lua_runner_read_csv.cpp#ParserWrapperMessageExistsInSource only asserts the wrapper text exists in source, not that it fires.
-why_human: Flagged by the phase's own SUMMARY (01-03-SUMMARY.md, coverage id D7) as human_judgment: true — no portable trigger exists in the current environment, so the catch block was proven present by static inspection only.
 result: pass
+why_human: Flagged by the phase's own SUMMARY (01-03-SUMMARY.md, coverage id D7) as human_judgment: true — no portable trigger exists in the current environment, so the catch block was proven present by static inspection only.
 
 ## Summary
 
@@ -43,7 +43,7 @@ Both items are closed by executable tests. Neither needed human judgement — th
 "no portable trigger on Windows" premise behind both was wrong, and was disproven
 empirically before any code was changed.
 
-### 1. WR-01 — resolved, and the real bug was broader than reported
+### WR-01 — resolved, and the real bug was broader than reported
 
 The code review located this in `src/csv_read.cpp`. Probing found that file's three
 `fs::` calls are in practice unreachable with an OS error through the Lua boundary —
@@ -75,7 +75,7 @@ the fix cannot regress into a per-caller patch.
 `weakly_canonical:` message; with it restored, green. A test that passes either way
 would have proven nothing.
 
-### 2. D-22 catalogue entry 10 — resolved
+### D-22 catalogue entry 10 — resolved
 
 Fires at runtime. An exclusive lock (`CreateFileW`, `dwShareMode` 0) leaves a file that
 passes all three preconditions — `exists=1, is_directory=0, file_size=8` — but cannot be
