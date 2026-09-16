@@ -93,7 +93,10 @@ midnight.
 - **Standard library.** Loaded standard libraries: base, string, table, math, coroutine, utf8.
   That is the pure-computation set — there is no \`os\`, \`io\`, \`debug\`, or \`package\`/\`require\`,
   and \`dofile\`/\`loadfile\` are removed (string-form \`load\` stays available). Integer division is
-  the Lua 5.4 \`//\` operator — a language operator, unrelated to \`math\`.
+  the Lua 5.4 \`//\` operator — a language operator, unrelated to \`math\`. No \`io\` does **not** mean
+  a data file on disk is out of reach: read it with \`db:read_csv\` / \`db:read_csv_stream\` (see
+  the CSV file reading section below). Never copy, paste, or re-type a data file's contents into
+  the script as literals — read the file.
 - **Filesystem sandbox.** Every file-touching operation (\`db:export_csv\`, \`db:import_csv\`,
   \`db:open_file\`, \`db:bin_to_csv\`, \`db:csv_to_bin\`, \`db:validate_migrations\`, \`db:read_csv\`,
   \`db:read_csv_stream\`, \`expr:save\`) resolves
@@ -656,6 +659,25 @@ end, { separator = "," })   -- last statement can silently truncate the stream t
 \`\`\`
 
 A Lua error raised inside the callback propagates to the host verbatim, and the file is closed.
+
+**Worked example**, over a real file that used to be hand-transcribed into scripts instead of read
+from disk: BOM + CRLF, a junk title row above the header, a units row below it, apostrophe
+thousands separators, and a DD/MM/YYYY date.
+
+\`\`\`lua
+local csv = db:read_csv("ma_energia_residencial.csv", { header_row = 2 })
+-- header_row = 2 skips the block-title junk row (line 1). rows[1] is the units row that sits
+-- BELOW the header (line 3) -- not a reader concern -- so real data starts at rows[2].
+for i = 2, #csv.rows do
+    local row = csv.rows[i]
+    local dd, mm, yyyy = row[5]:match("(%d%d)/(%d%d)/(%d%d%d%d)")
+    local date_key = yyyy .. "-" .. mm
+    -- gsub returns TWO values (string, replacement count). tonumber(row[6]:gsub("['%s]", ""))
+    -- would hand the count to tonumber as its BASE argument and silently return nil, no error.
+    -- The parentheses below truncate the call to one value -- this is the correct form.
+    local value = tonumber((row[6]:gsub("['%s]", "")))
+end
+\`\`\`
 
 ---
 
