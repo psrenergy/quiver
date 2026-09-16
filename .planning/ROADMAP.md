@@ -22,7 +22,7 @@ example over a dirty one, verified in a Release build.
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: A Lua script reads a CSV file** - Parser wired into the core, both Lua entry points over it, sandboxed (completed 2026-09-16)
-- [ ] **Phase 2: The dirty files parse correctly** - BOM, CRLF, quoting, ragged rows, junk headers, repeated names — proven on the real files
+- [x] **Phase 2: The dirty files parse correctly** - BOM, CRLF, quoting, ragged rows, junk headers, repeated names — proven on the real files (completed 2026-09-16)
 - [ ] **Phase 3: The agent reads instead of transcribing** - Shipped reference redirects the model to the file; Release-verified and documented
 
 ## Phase Details
@@ -180,7 +180,7 @@ Phases execute in numeric order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. A Lua script reads a CSV file | 3/3 | Complete    | 2026-09-16 |
-| 2. The dirty files parse correctly | 4/4 | In Progress|  |
+| 2. The dirty files parse correctly | 4/4 | Complete    | 2026-09-16 |
 | 3. The agent reads instead of transcribing | 0/TBD | Not started | - |
 
 ## Requirement Coverage
