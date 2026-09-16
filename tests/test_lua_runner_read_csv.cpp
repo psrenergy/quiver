@@ -757,6 +757,63 @@ TEST_F(LuaRunner_ReadCsv, TwoCharacterSeparatorThrowsMustBeASingleCharacter) {
                      "Cannot read_csv: option 'separator' must be a single character");
 }
 
+// --- options table: header_row negatives (TEST-04) -- every one a throw, none a fallback ---
+//
+// A header_row that quietly reverted to a default would still return a well-formed
+// {header=, rows=} table, which a loose assertion would accept as success -- so every case here
+// asserts the exact Pattern 1 message, naming the option.
+
+TEST_F(LuaRunner_ReadCsv, HeaderRowAsStringThrowsMustBeAnInteger) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    // A quoted "2" must not silently coerce via Lua's own string->number rules.
+    expect_lua_error(lua,
+                     R"(db:read_csv("f.csv", { header_row = "2" }))",
+                     "Cannot read_csv: option 'header_row' must be an integer");
+}
+
+TEST_F(LuaRunner_ReadCsv, HeaderRowAsFractionThrowsMustBeAnInteger) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    // A number, but not a whole one -- same message as the wrong-type case above.
+    expect_lua_error(lua,
+                     R"(db:read_csv("f.csv", { header_row = 2.5 }))",
+                     "Cannot read_csv: option 'header_row' must be an integer");
+}
+
+TEST_F(LuaRunner_ReadCsv, NegativeHeaderRowThrowsMustNotBeNegative) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    // A genuine integer that's merely out of range gets its own message -- "-1" IS an integer,
+    // so the wrong-type message above would be a lie.
+    expect_lua_error(lua,
+                     R"(db:read_csv("f.csv", { header_row = -1 }))",
+                     "Cannot read_csv: option 'header_row' must not be negative");
+}
+
+TEST_F(LuaRunner_ReadCsv, StreamNegativeHeaderRowNamesTheStreamEntryPoint) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    // Same bad value, but through db:read_csv_stream -- the shared decoder must not regress into
+    // naming a single hardcoded operation (D-19).
+    expect_lua_error(lua,
+                     R"(db:read_csv_stream("f.csv", function() end, { header_row = -1 }))",
+                     "Cannot read_csv_stream: option 'header_row' must not be negative");
+}
+
+// The fourth requirement-named negative -- a header row past the end of the file -- is raised by
+// the Reader itself, not this decoder; it's covered by HeaderRowPastEndOfFileThrowsExactMessage
+// and StreamHeaderRowPastEndOfFileNamesTheStreamEntryPoint above (added in plan 02-01), so the
+// four-negative TEST-04 set reads as complete from either location.
+
 TEST_F(LuaRunner_ReadCsv, StreamUnknownOptionKeyNamesTheStreamEntryPoint) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
@@ -1083,6 +1140,10 @@ TEST_F(LuaRunner_ReadCsv, EveryNegativeCaseStartsWithItsOwnEntryPointPrefix) {
         R"(db:read_csv("f.csv", { separator = 59 }))",
         R"(db:read_csv("f.csv", { separator = "" }))",
         R"(db:read_csv("f.csv", { separator = ";;" }))",
+        R"(db:read_csv("f.csv", { header_row = "2" }))",
+        R"(db:read_csv("f.csv", { header_row = 2.5 }))",
+        R"(db:read_csv("f.csv", { header_row = -1 }))",
+        R"(db:read_csv_stream("f.csv", function() end, { header_row = -1 }))",
     };
     for (const auto& script : negatives) {
         expect_prefixed_error(lua, script);
