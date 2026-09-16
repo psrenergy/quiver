@@ -660,11 +660,12 @@ end, { separator = "," })   -- last statement can silently truncate the stream t
 
 A Lua error raised inside the callback propagates to the host verbatim, and the file is closed.
 
-**Worked example**, over a real file that used to be hand-transcribed into scripts instead of read
-from disk: BOM + CRLF, a junk title row above the header, a units row below it, apostrophe
-thousands separators, and a DD/MM/YYYY date.
+**Worked example**, over two real files that used to be hand-transcribed into scripts instead of
+read from disk:
 
 \`\`\`lua
+-- File 1: BOM + CRLF, a junk title row above the header, a units row below it, apostrophe
+-- thousands separators, and a DD/MM/YYYY date.
 local csv = db:read_csv("ma_energia_residencial.csv", { header_row = 2 })
 -- header_row = 2 skips the block-title junk row (line 1). rows[1] is the units row that sits
 -- BELOW the header (line 3) -- not a reader concern -- so real data starts at rows[2].
@@ -676,6 +677,22 @@ for i = 2, #csv.rows do
     -- would hand the count to tonumber as its BASE argument and silently return nil, no error.
     -- The parentheses below truncate the call to one value -- this is the correct form.
     local value = tonumber((row[6]:gsub("['%s]", "")))
+end
+
+-- File 2: header is line 1 (the default, no header_row needed), a quoted field containing a
+-- comma, and English month names -- os is unloaded, so there is no date library to lean on.
+local MONTHS = {
+    January = 1, February = 2, March = 3, April = 4, May = 5, June = 6,
+    July = 7, August = 8, September = 9, October = 10, November = 11, December = 12,
+}
+local gd = db:read_csv("ma_gd_data.csv")
+for i = 1, #gd.rows do
+    local row = gd.rows[i]
+    -- The date cell is a quoted field containing a comma ("May 1, 2014"); the row still has
+    -- exactly 2 fields -- mishandled quoting would have split the date and shifted this value.
+    local month_name, _, year = row[1]:match("(%a+) (%d+), (%d+)")
+    local date_key = string.format("%d-%02d", tonumber(year), MONTHS[month_name])
+    local value = tonumber(row[2])  -- already a plain decimal string, no cleanup needed
 end
 \`\`\`
 
