@@ -31,8 +31,14 @@ callers to change something are prefixed **BREAKING** and say what to do.
   and no numeric or date inference; `db:read_csv_stream(path, on_row, opts)` reads the same file
   row by row through the same parser, so a large file can be processed with bounded memory. Both
   are sandboxed to the database directory like every other Lua file operation, and both take the
-  same optional options table — `separator` (a single-character string, defaulting to `,`) is the
-  only key today. This is Lua-only: reading is the only direction, `db:write_csv` is not exposed.
+  same optional options table — `separator` (a single-character string, defaulting to `,`) and
+  `header_row` (see below) are its two keys today. This is Lua-only: reading is the only
+  direction, `db:write_csv` is not exposed.
+- **`db:read_csv`/`db:read_csv_stream` accept a `header_row` option** naming which line is the
+  header, 1-based, defaulting to `1`. `header_row = 0` declares the file has no header at all:
+  `csv.header` is absent (`nil`) and `csv.rows[1]` is the file's first line — useful for a file
+  with a junk title row and/or a units row around the real header. A `header_row` past the end of
+  the file throws, as does a value that isn't a non-negative integer.
 - **Booleans are accepted on every write path, in every layer.** A native boolean now maps to
   INTEGER 1/0 wherever an integer is accepted — element scalars and arrays on
   `create_element`/`update_element`, query parameters, the vector/set/time-series group writers,
