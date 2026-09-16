@@ -280,13 +280,40 @@ struct LuaRunner::Impl {
         return cells;
     }
 
-    // One sol::object cell -> the std::string quiver::csv_write::Writer takes. nil (including a
-    // hole from csv_row_cells_from_lua above) yields an empty cell (D-40); a string is copied
-    // verbatim. Plan 04-01 task 2 adds boolean/integer/float branches (FMT-04/FMT-06) in the same
-    // dispatch order table_to_element uses; until then any other Lua type is rejected.
+    // One sol::object cell -> the std::string quiver::csv_write::Writer takes. Dispatch order is
+    // nil first (D-40: a hole from csv_row_cells_from_lua above is an empty cell), then the same
+    // order table_to_element uses -- boolean, int64, double, string -- else a Pattern 1 rejection
+    // naming write_row and the 1-based cell index.
+    //
+    // This project compiles with SOL_SAFE_NUMERICS=1 (src/CMakeLists.txt), which is what makes
+    // is<>() safe here: under it a numeric-looking Lua STRING (e.g. "0012") answers false to
+    // is<std::int64_t>()/is<double>() and falls through to the string branch, written verbatim --
+    // it does NOT apply Lua's own string<->number coercion the way the as<>() family would.
+    // Verified by compiling and running this exact dispatch against this repo's own sol2/Lua
+    // build (04-SOL2-DISPATCH-PROBE.md); do not add a get_type() guard here and do not reorder it.
     static std::string csv_cell_to_string(const sol::object& cell, const std::string& operation, std::int64_t index) {
         if (!cell.valid() || cell.is<sol::lua_nil_t>()) {
             return {};
+        }
+        if (is_lua_boolean(cell)) {
+            // FMT-06 / the project-wide boolean-is-INTEGER-1/0 write policy: text "1" or "0", not
+            // "true"/"false".
+            return cell.as<bool>() ? "1" : "0";
+        }
+        if (cell.is<std::int64_t>()) {
+            // FMT-04: the int64_t overload directly, never routed through double first, so a Lua
+            // integer past double's 53-bit mantissa survives exactly (TEST-07).
+            std::string out;
+            quiver::utils::append_number(cell.as<std::int64_t>(), out);
+            return out;
+        }
+        if (cell.is<double>()) {
+            // D-34: to_chars' shortest round-trip form, with no synthetic decimal point -- a whole
+            // float and the equal integer produce identical text. The non-finite guard (FMT-05) is
+            // plan 04-02's; this task's numeric path is finite values only.
+            std::string out;
+            quiver::utils::append_number(cell.as<double>(), out);
+            return out;
         }
         if (cell.is<std::string>()) {
             return cell.as<std::string>();
@@ -295,10 +322,35 @@ struct LuaRunner::Impl {
                                  " has unsupported Lua type");
     }
 
+    // Converts a `header` option table to an ordered list of column names, with the same
+    // integer-key max-index walk csv_row_cells_from_lua uses above (FMT-08) -- never
+    // sol::table::size()/lua_rawlen. Every present entry must be a string; an empty table (zero
+    // integer keys) yields an empty result, which csv_write::Options treats as no header row.
+    static std::vector<std::string>
+    csv_header_from_lua(const sol::table& header, const std::string& operation) {
+        std::int64_t max_index = 0;
+        for (auto& pair : header) {
+            if (!pair.first.is<std::int64_t>() || pair.first.as<std::int64_t>() < 1) {
+                throw std::runtime_error("Cannot " + operation + ": option 'header' entry must be a string");
+            }
+            max_index = std::max(max_index, pair.first.as<std::int64_t>());
+        }
+
+        std::vector<std::string> names(static_cast<std::size_t>(max_index));
+        for (std::int64_t i = 1; i <= max_index; ++i) {
+            const sol::object cell = header[i];
+            if (!cell.is<std::string>()) {
+                throw std::runtime_error("Cannot " + operation + ": option 'header' entry must be a string");
+            }
+            names[static_cast<std::size_t>(i - 1)] = cell.as<std::string>();
+        }
+        return names;
+    }
+
     // Shared strict decoder for db:write_csv's trailing options table (LUA-09): collects every
     // entry before validating any of them, so a mid-traversal throw cannot abandon sol2's
-    // traversal state (same rationale as read_csv_options_from_lua below). No option key is
-    // recognized yet -- plan 04-01 task 2 adds `separator` and `header`.
+    // traversal state (same rationale as read_csv_options_from_lua below). `separator`'s
+    // validation mirrors read_csv_options_from_lua's own branch almost verbatim.
     static csv_write::Options write_csv_options_from_lua(const sol::object& options, const std::string& operation) {
         csv_write::Options result;
         if (!options.valid() || options.get_type() == sol::type::lua_nil) {
@@ -313,8 +365,39 @@ struct LuaRunner::Impl {
         options.as<sol::table>().for_each(
             [&](sol::object key, sol::object value) { entries.emplace_back(key.as<std::string>(), std::move(value)); });
 
+        std::optional<sol::object> separator_value;
+        std::optional<sol::object> header_value;
         for (auto& entry : entries) {
-            throw std::runtime_error("Cannot " + operation + ": unknown option '" + entry.first + "'");
+            if (entry.first == "separator") {
+                separator_value = entry.second;
+            } else if (entry.first == "header") {
+                header_value = entry.second;
+            } else {
+                throw std::runtime_error("Cannot " + operation + ": unknown option '" + entry.first + "'");
+            }
+        }
+
+        if (separator_value) {
+            // Check the Lua type explicitly rather than routing through the checked-conversion
+            // helper every other converter uses: that helper surfaces sol2's own stack-index
+            // message, which is neither Pattern 1 nor stable across build types (LUA-08).
+            if (separator_value->get_type() != sol::type::string) {
+                throw std::runtime_error("Cannot " + operation + ": option 'separator' must be a string");
+            }
+            auto separator = separator_value->as<std::string>();
+            // Measured in BYTES, exactly as read_csv_options_from_lua's own separator check does
+            // -- a multi-byte UTF-8 character is rejected as multi-character.
+            if (separator.size() != 1) {
+                throw std::runtime_error("Cannot " + operation + ": option 'separator' must be a single character");
+            }
+            result.separator = separator[0];
+        }
+
+        if (header_value) {
+            if (header_value->get_type() != sol::type::table) {
+                throw std::runtime_error("Cannot " + operation + ": option 'header' must be a table");
+            }
+            result.header = csv_header_from_lua(header_value->as<sol::table>(), operation);
         }
 
         return result;
