@@ -300,6 +300,211 @@ TEST_F(LuaRunner_WriteCsv, SingleColumnFileWithNilAndEmptyCellsRoundTripsEveryRo
     )");
 }
 
+// TEST-06 dirty-cell suite. Every fixture below writes with db:write_csv/w:write_row/w:close, then
+// reads the SAME path back with db:read_csv in the same script and compares cells positionally --
+// never by opening the file with an ifstream or searching it for a quote character, which would
+// prove the emitter emitted, not that the file is readable (this project's third encounter with
+// that trap; see export_csv's 118 export-only tests).
+
+// A single cell carrying all four quote-trigger bytes at once: the configured separator, a bare
+// quote character, a CR and an LF. A regression that mishandles any one of them corrupts this
+// cell.
+TEST_F(LuaRunner_WriteCsv, CellWithSeparatorQuoteCrAndLfTogetherRoundTrips) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    const auto path = lp((sandbox / "dirty_cell.csv").string());
+
+    lua.run(R"(
+        local dirty = ',' .. '"' .. '\r' .. '\n'
+        local w = db:write_csv(")" +
+            path + R"(")
+        w:write_row({ dirty })
+        w:close()
+
+        local csv = db:read_csv(")" +
+            path + R"(", { header_row = 0 })
+        assert(#csv.rows == 1, "expected 1 row, got " .. #csv.rows)
+        assert(csv.rows[1][1] == dirty, "dirty cell did not round-trip byte-identically")
+    )");
+}
+
+// Same fixture as above, repeated under a non-comma separator, so the quote trigger tracks the
+// CONFIGURED separator rather than a hardcoded comma.
+TEST_F(LuaRunner_WriteCsv, CellWithSeparatorQuoteCrAndLfTogetherRoundTripsWithSemicolonSeparator) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    const auto path = lp((sandbox / "dirty_cell_semicolon.csv").string());
+
+    lua.run(R"(
+        local dirty = ';' .. '"' .. '\r' .. '\n'
+        local w = db:write_csv(")" +
+            path + R"(", { separator = ";" })
+        w:write_row({ dirty })
+        w:close()
+
+        local csv = db:read_csv(")" +
+            path + R"(", { header_row = 0, separator = ";" })
+        assert(#csv.rows == 1, "expected 1 row, got " .. #csv.rows)
+        assert(csv.rows[1][1] == dirty, "dirty cell did not round-trip byte-identically under ';'")
+    )");
+}
+
+// TEST-08: a field that is exactly one quote character serializes to four quote characters and
+// round-trips as a one-character string.
+TEST_F(LuaRunner_WriteCsv, LoneQuoteCharacterCellRoundTripsAsLengthOne) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    const auto path = lp((sandbox / "lone_quote.csv").string());
+
+    lua.run(R"(
+        local w = db:write_csv(")" +
+            path + R"(")
+        w:write_row({ '"' })
+        w:close()
+
+        local csv = db:read_csv(")" +
+            path + R"(", { header_row = 0 })
+        assert(#csv.rows[1][1] == 1, "expected length 1, got " .. #csv.rows[1][1])
+        assert(csv.rows[1][1] == '"', "expected a single quote character, got " .. tostring(csv.rows[1][1]))
+    )");
+}
+
+// TEST-08: a field that is exactly two quote characters serializes to six quote characters and
+// round-trips as a two-character string.
+TEST_F(LuaRunner_WriteCsv, TwoQuoteCharacterCellRoundTripsAsLengthTwo) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    const auto path = lp((sandbox / "two_quotes.csv").string());
+
+    lua.run(R"(
+        local w = db:write_csv(")" +
+            path + R"(")
+        w:write_row({ '""' })
+        w:close()
+
+        local csv = db:read_csv(")" +
+            path + R"(", { header_row = 0 })
+        assert(#csv.rows[1][1] == 2, "expected length 2, got " .. #csv.rows[1][1])
+        assert(csv.rows[1][1] == '""', "expected two quote characters, got " .. tostring(csv.rows[1][1]))
+    )");
+}
+
+// A cell whose FIRST byte is the separator, a cell whose LAST byte is the separator, and a cell
+// that is NOTHING BUT the separator -- three separate cells in one row, so an off-by-one in the
+// quote-trigger scan cannot hide behind only one of the three shapes.
+TEST_F(LuaRunner_WriteCsv, LeadingTrailingAndSeparatorOnlyCellsRoundTripPositionally) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    const auto path = lp((sandbox / "separator_positions.csv").string());
+
+    lua.run(R"(
+        local leading = ',lead'
+        local trailing = 'trail,'
+        local sep_only = ','
+        local w = db:write_csv(")" +
+            path + R"(")
+        w:write_row({ leading, trailing, sep_only })
+        w:close()
+
+        local csv = db:read_csv(")" +
+            path + R"(", { header_row = 0 })
+        assert(csv.rows[1][1] == leading, "expected leading-separator cell intact, got " .. tostring(csv.rows[1][1]))
+        assert(csv.rows[1][2] == trailing, "expected trailing-separator cell intact, got " .. tostring(csv.rows[1][2]))
+        assert(csv.rows[1][3] == sep_only, "expected separator-only cell intact, got " .. tostring(csv.rows[1][3]))
+    )");
+}
+
+// A cell containing CR immediately followed by LF round-trips as that exact two-byte sequence --
+// neither collapsed to one byte, nor merged with the record terminator, nor split into two rows.
+// Neighbouring rows prove the row count: a regression that treats the embedded CRLF as a record
+// terminator would turn this into 4 rows instead of 3.
+TEST_F(LuaRunner_WriteCsv, CrThenLfCellRoundTripsAsTwoByteSequenceWithoutSplittingRows) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    const auto path = lp((sandbox / "cr_then_lf.csv").string());
+
+    lua.run(R"(
+        local w = db:write_csv(")" +
+            path + R"(")
+        w:write_row({ "before" })
+        w:write_row({ "\r\n" })
+        w:write_row({ "after" })
+        w:close()
+
+        local csv = db:read_csv(")" +
+            path + R"(", { header_row = 0 })
+        assert(#csv.rows == 3, "expected exactly 3 rows, got " .. #csv.rows)
+        assert(csv.rows[1][1] == "before", "expected 'before', got " .. tostring(csv.rows[1][1]))
+        assert(#csv.rows[2][1] == 2, "expected the CR-LF cell to keep length 2, got " .. #csv.rows[2][1])
+        assert(csv.rows[2][1] == "\r\n", "expected the exact two-byte CR-LF sequence, got " .. tostring(csv.rows[2][1]))
+        assert(csv.rows[3][1] == "after", "expected 'after', got " .. tostring(csv.rows[3][1]))
+    )");
+}
+
+// FMT-02's narrowness: an empty cell sitting next to a cell that DOES need quoting (because it
+// contains the separator) still round-trips as empty and does not disturb its neighbours --
+// asserting the presence AND the boundary, not merely that SOME empty cell survives somewhere.
+TEST_F(LuaRunner_WriteCsv, EmptyCellAdjacentToAQuotedCellRoundTripsWithNeighborsIntact) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    const auto path = lp((sandbox / "empty_next_to_quoted.csv").string());
+
+    lua.run(R"(
+        local w = db:write_csv(")" +
+            path + R"(")
+        w:write_row({ "a,b", "", "c" })
+        w:close()
+
+        local csv = db:read_csv(")" +
+            path + R"(", { header_row = 0 })
+        assert(csv.rows[1][1] == "a,b", "expected the comma-carrying cell intact, got " .. tostring(csv.rows[1][1]))
+        assert(csv.rows[1][2] == "", "expected the adjacent cell empty, got " .. tostring(csv.rows[1][2]))
+        assert(csv.rows[1][3] == "c", "expected the trailing neighbour intact, got " .. tostring(csv.rows[1][3]))
+    )");
+}
+
+// A multi-byte UTF-8 cell containing no quote byte (no 0x22 anywhere in it) round-trips
+// byte-identically and unmodified. Built via string.char so the assertion never depends on this
+// .cpp file's own source encoding -- compared against the same Lua variable that was written, not
+// a C++ string literal.
+TEST_F(LuaRunner_WriteCsv, MultiByteUtf8CellWithNoQuoteByteRoundTripsUnmodified) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    const auto path = lp((sandbox / "utf8_cell.csv").string());
+
+    lua.run(R"(
+        -- "caf" .. U+00E9 ('e' with acute accent, UTF-8 bytes 0xC3 0xA9) .. U+65E5 U+672C U+8A9E
+        -- (the three UTF-8-encoded kanji of "Japanese", bytes 0xE6 0x97 0xA5 0xE6 0x9C 0xAC 0xE8
+        -- 0xAA 0x9E) -- none of these bytes is 0x22 (the ASCII quote byte).
+        local original = "caf" .. string.char(0xC3, 0xA9) .. " " ..
+            string.char(0xE6, 0x97, 0xA5, 0xE6, 0x9C, 0xAC, 0xE8, 0xAA, 0x9E)
+        local w = db:write_csv(")" +
+            path + R"(")
+        w:write_row({ original })
+        w:close()
+
+        local csv = db:read_csv(")" +
+            path + R"(", { header_row = 0 })
+        assert(csv.rows[1][1] == original, "expected the UTF-8 cell unmodified, got " .. tostring(csv.rows[1][1]))
+    )");
+}
+
 // LUA-09: separator and header are the only accepted option keys.
 TEST_F(LuaRunner_WriteCsv, UnknownOptionKeyThrows) {
     auto schema = VALID_SCHEMA("basic.sql");
