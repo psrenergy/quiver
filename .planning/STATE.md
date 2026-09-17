@@ -4,16 +4,16 @@ milestone: v1.1
 milestone_name: CSV writing for the Lua runner
 current_phase: 5
 current_phase_name: Ragged rows and forgotten closes
-status: planning
-stopped_at: Completed 04-03-PLAN.md
-last_updated: "2026-09-16T23:06:56.507Z"
+status: executing
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-09-17T13:10:25.873Z"
 last_activity: 2026-09-16
 last_activity_desc: v1.1 roadmap created (2 phases, 29/29 requirements mapped)
 progress:
-  total_phases: 1
+  total_phases: 2
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  total_plans: 6
+  completed_plans: 4
 ---
 
 # Project State
@@ -28,8 +28,8 @@ See: .planning/PROJECT.md (updated 2026-09-16)
 ## Current Position
 
 Phase: 5 — Ragged rows and forgotten closes
-Plan: Not started
-Status: Ready to plan
+Plan: 2 of 3
+Status: Ready to execute
 Last activity: 2026-09-16 — Phase 04 complete, transitioned to Phase 5
 
 ## Performance Metrics
@@ -72,6 +72,7 @@ Last activity: 2026-09-16 — Phase 04 complete, transitioned to Phase 5
 | Phase 04 P01 | 50min | 3 tasks | 11 files |
 | Phase 04 P02 | 55min | 3 tasks | 4 files |
 | Phase 04 P03 | 45min | 3 tasks | 2 files |
+| Phase 05 P01 | 25min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -127,6 +128,9 @@ Carried from v1.0:
 - [Phase ?]: FMT-05/WRITE-05/WRITE-07 catalogue complete: closed-writer and missing-parent-directory checks were already correct from 04-01; 04-02 added the isfinite guard and fixed a cell-formatted-before-closed-check ordering bug
 - [Phase ?]: Executed the std::to_chars non-finite spot-check on MSVC 19.51.36256: 0.0/0.0 spells -nan(ind) (9 bytes), its negation spells nan (3 bytes), 1.0/0.0 spells inf, -1.0/0.0 spells -inf -- all errc=0
 - [Phase ?]: 04-03: TEST-06/07/08 dirty-cell, quote-doubling, and int64/float numeric round trips proven, plus the DOC-05 worked example executed by extraction from the reference file; Release build (1224/1224, 557/557) confirms no SOL_SAFE_GETTER-off regression
+- [Phase ?]: 05-01: header_width is a std::size_t on CsvWriter seeded once from csv_options.header.size(); the decoded header vector itself is discarded (D-42)
+- [Phase ?]: 05-01: the row-too-wide reject branch sits ahead of the pad branch in one if (header_width != 0) guard; a long row is never truncated
+- [Phase ?]: 05-01: the pinned FMT-07 message and its csv_write.cpp catalogue comment landed in the same commit as the throw, per that file's own no-reword-without-updating-the-test rule (D-45)
 
 ### Pending Todos
 
@@ -164,6 +168,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-09-16T22:41:58.592Z
-Stopped at: Completed 04-03-PLAN.md
+Last session: 2026-09-17T13:10:09.048Z
+Stopped at: Completed 05-01-PLAN.md
 Resume file: None

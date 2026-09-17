@@ -55,7 +55,7 @@ promoted here unchanged.
 - [x] **FMT-06**: A boolean writes as `1`/`0`; a `nil` writes as an empty cell; a table, function or
       userdata is a Pattern 1 error naming the cell index
 
-- [ ] **FMT-07**: With a `header`, the header's length is the row width — a shorter row pads with
+- [x] **FMT-07**: With a `header`, the header's length is the row width — a shorter row pads with
       empty cells, a longer one throws naming the row ordinal and both counts. With no `header`, no
       width check is performed
 
@@ -88,7 +88,7 @@ promoted here unchanged.
 - [x] **TEST-09**: A single-column file whose cells are `nil` or `""` round-trips with every row
       present — the FMT-02 regression, invisible to any multi-column fixture
 
-- [ ] **TEST-10**: A short row against a multi-column header round-trips aligned; a longer row throws
+- [x] **TEST-10**: A short row against a multi-column header round-trips aligned; a longer row throws
 - [ ] **TEST-11**: A script that returns without calling `close()` leaves a complete, re-readable
       file, asserted after `run()` returns without destroying the `LuaRunner`
 
@@ -171,7 +171,7 @@ Which phases cover which requirements. Filled during roadmap creation.
 | FMT-04 | Phase 4 | Complete |
 | FMT-05 | Phase 4 | Complete |
 | FMT-06 | Phase 4 | Complete |
-| FMT-07 | Phase 5 | Pending |
+| FMT-07 | Phase 5 | Complete |
 | FMT-08 | Phase 4 | Complete |
 | FMT-09 | Phase 4 | Complete |
 | LUA-09 | Phase 4 | Complete |
@@ -181,7 +181,7 @@ Which phases cover which requirements. Filled during roadmap creation.
 | TEST-07 | Phase 4 | Complete |
 | TEST-08 | Phase 4 | Complete |
 | TEST-09 | Phase 4 | Complete |
-| TEST-10 | Phase 5 | Pending |
+| TEST-10 | Phase 5 | Complete |
 | TEST-11 | Phase 5 | Pending |
 | TEST-12 | Phase 4 | Complete |
 | DOC-05 | Phase 4 | Complete |

@@ -128,11 +128,11 @@ that never calls `close()` — still reads back complete and aligned
   5. `src/CLAUDE.md`, the root `CLAUDE.md` and `CHANGELOG.md` record the writer and its design
      decisions
 
-**Plans**: 3 plans
+**Plans**: 1/3 plans executed
 
 Plans:
 
-- [ ] 05-01-PLAN.md — FMT-07: the header as row-width authority (pad short, throw long), the
+- [x] 05-01-PLAN.md — FMT-07: the header as row-width authority (pad short, throw long), the
       pinned Pattern 1 message and its catalogue line, and the TEST-10 boundary round trips
       (wave 1, leads with the tracer slice)
 
@@ -173,7 +173,7 @@ Phases execute in numeric order: 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 4. A Lua script writes a CSV file | 3/3 | Complete    | 2026-09-16 |
-| 5. Ragged rows and forgotten closes | 0/3 | Planned      | - |
+| 5. Ragged rows and forgotten closes | 1/3 | In Progress|  |
 
 ## Requirement Coverage
 
