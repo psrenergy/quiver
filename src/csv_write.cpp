@@ -1,5 +1,6 @@
 #include "csv_write.h"
 
+#include <algorithm>
 #include <filesystem>
 #include <stdexcept>
 #include <system_error>
@@ -25,15 +26,21 @@
 // Raised in src/lua_runner.cpp's cell formatter and row/option decoders (operation is always the
 // Lua method that received the bad value -- "write_row" for a cell/row problem, "write_csv" for
 // an options-table problem):
+//   "Cannot write_row: row must be a table"                (sol2's table check also lets userdata in)
 //   "Cannot write_row: row <N> cell #<M> is not a finite number"                               (FMT-05)
 //   "Cannot write_row: cell #<M> has unsupported Lua type"                    (table/function/userdata)
 //   "Cannot write_row: row key must be a positive integer"
+//   "Cannot write_row: row key <N> exceeds the maximum width of 1000000"
 //   "Cannot write_row: row <N> has <M> cells but header declares <W>"                            (FMT-07)
 //   "Cannot write_csv: unknown option '<name>'"
+//   "Cannot write_csv: option key must be a string"
 //   "Cannot write_csv: options must be a table"
 //   "Cannot write_csv: option 'separator' must be a string"
 //   "Cannot write_csv: option 'separator' must be a single character"
+//   "Cannot write_csv: option 'separator' must not be a quote, carriage return, newline or NUL"
 //   "Cannot write_csv: option 'header' must be a table"
+//   "Cannot write_csv: option 'header' key must be a positive integer"
+//   "Cannot write_csv: option 'header' key <N> exceeds the maximum width of 1000000"
 //   "Cannot write_csv: option 'header' entry must be a string"
 //
 // The sandbox (in-memory database, an escaping path) raises through the shared
@@ -63,9 +70,11 @@ void append_record(const std::vector<std::string>& cells, char separator, std::s
             out += separator;
         }
         const std::string& cell = cells[i];
-        const bool needs_quotes = lone_empty_cell || cell.find(separator) != std::string::npos ||
-                                  cell.find('"') != std::string::npos || cell.find('\r') != std::string::npos ||
-                                  cell.find('\n') != std::string::npos;
+        // One pass over the cell, short-circuiting on the first special byte, rather than four
+        // separate find() scans that each run to the end for the common (no-quoting) case.
+        const bool needs_quotes = lone_empty_cell || std::any_of(cell.begin(), cell.end(), [separator](char c) {
+                                      return c == separator || c == '"' || c == '\r' || c == '\n';
+                                  });
         if (!needs_quotes) {
             out += cell;
             continue;
@@ -152,12 +161,17 @@ void Writer::close(const std::string& operation) {
     if (closed_) {
         return;
     }
+    // One-shot: mark closed and release the handle BEFORE reporting a flush failure. Throwing with
+    // closed_ still false left the writer permanently un-closeable -- every later close() raised
+    // the same error instead of the documented no-op, and write_row reported "failed to write"
+    // rather than "already closed".
+    closed_ = true;
     out_.flush();
-    if (out_.fail()) {
+    const bool failed = out_.fail();
+    out_.close();
+    if (failed) {
         throw std::runtime_error("Cannot " + operation + ": failed to flush file '" + original_path_ + "'");
     }
-    out_.close();
-    closed_ = true;
 }
 
 bool Writer::is_closed() const {

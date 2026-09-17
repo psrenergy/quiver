@@ -46,10 +46,13 @@ public:
     Reader(std::string resolved_path, std::string original_path, std::string operation, Options options = {});
     ~Reader();
 
+    // Non-movable as well as non-copyable: both Lua entry points construct a Reader as a stack
+    // local and never move it, and a moved-from Reader's impl_ is null, so header() would be a
+    // null deref. Nothing needs the contract, so nothing declares it.
     Reader(const Reader&) = delete;
     Reader& operator=(const Reader&) = delete;
-    Reader(Reader&&) noexcept;
-    Reader& operator=(Reader&&) noexcept;
+    Reader(Reader&&) = delete;
+    Reader& operator=(Reader&&) = delete;
 
     // Raw column names, in file order, verbatim (duplicates/blanks/surrounding spaces preserved).
     const std::vector<std::string>& header() const;

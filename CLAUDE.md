@@ -77,7 +77,8 @@ Settled questions — don't relitigate without the user; each was decided delibe
   `helper_maps.jl` is a second documented Julia-only exception (see convenience methods below).
 - **Lua file operations are db-scoped and sandboxed to the database directory.** Every
   file-touching Lua operation (`db:open_file`, `db:bin_to_csv`, `db:csv_to_bin`, `db:export_csv`,
-  `db:import_csv`, `db:validate_migrations`, `db:read_csv`, `db:read_csv_stream`, `expr:save`)
+  `db:import_csv`, `db:validate_migrations`, `db:read_csv`, `db:read_csv_stream`, `db:write_csv`,
+  `expr:save`)
   resolves relative paths against the directory containing the database file and rejects — reads
   and writes alike — anything that escapes it
   (subdirectories OK; checked via `weakly_canonical` with strict containment). In-memory databases
@@ -243,9 +244,12 @@ Settled questions — don't relitigate without the user; each was decided delibe
   trip, since CSV has no null. With a `header`, its length is the row width: `write_row` pads a
   shorter row with empty cells and throws a Pattern 1 error naming the row ordinal and both counts
   for a longer one; omitting `header` disables the check entirely. A writer still open when the
-  calling `LuaRunner::run` returns is flushed by one `collect_garbage()` call at `run()`'s scope
-  exit — covering the throw path too — so the file is complete and re-readable even if the script
-  never called `w:close()`, with no warning emitted.
+  calling `LuaRunner::run` returns is closed at `run()`'s scope exit — covering the throw path too
+  — so the file is complete and re-readable even if the script never called `w:close()`, with no
+  warning emitted. That close goes through a `weak_ptr` registry of every writer the run handed
+  out, **not** through the GC: `collect_garbage()` alone only finalizes writers the script made
+  unreachable, so a writer held in a Lua global left a 0-byte file (see `src/CLAUDE.md`). A writer
+  does not outlive its `run()`.
 
 ## Do Not "Fix"
 
@@ -353,7 +357,11 @@ JS has no generator — update the hand-written symbol table in `bindings/js/src
   `cmake --build build` does build two binaries this project never uses; lua-cmake has **no**
   switch for them, so the `LUA_BUILD_INTERPRETER`/`LUA_BUILD_COMPILER` once set here were
   no-ops, and `EXCLUDE_FROM_ALL` is not a fix either — see the note in `cmake/Dependencies.cmake`),
-  sol2 v3.5.0, rapidcsv v8.92, argparse v3.2, googletest v1.17.0 (tests only).
+  sol2 v3.5.0, rapidcsv v8.92, csv-parser v5.3.0 (`csv` target, Lua `db:read_csv` only — fetched
+  `GIT_SHALLOW`, and `CSV_NO_SIMD`/`CSV_ENABLE_THREADS`/`CSV_BUILD_PROGRAMS`/`CSV_BUILD_TESTS` are
+  all FORCEd; the `CSV_NO_SIMD` pin is load-bearing — without it a PUBLIC `/arch:AVX2` propagates
+  into `quiver` and SIGILLs on pre-AVX2 x86 for every shipped wheel/native), argparse v3.2,
+  googletest v1.17.0 (tests only).
 - **Targets**: `quiver` (core, alias `quiver::database`), `quiver_c` (alias
   `quiver::database_c`), `quiver_cli`, `quiver_tests`, `quiver_c_tests`, `quiver_benchmark`,
   `quiver_sandbox`. Outputs: executables/DLLs → `build/bin/`, libs → `build/lib/`.
@@ -378,7 +386,10 @@ release ritual for that file is not settled. Release flow: `.github/CLAUDE.md`.
   `-fno-keep-inline-dllexport` flag first; skips `src/binary`).
 - `.pre-commit-config.yaml` — trailing-whitespace, end-of-file, yaml/json checks, merge-conflict
   markers, large files (>1 MB), LF line endings, clang-format, cppcheck, cmake-format.
-- `.gitattributes` enforces LF for `.cpp/.h/.dart/.jl/.py`. **Caution:** working-tree `.bat`
+- `.gitattributes` enforces LF for `.cpp/.h/.dart/.jl/.py`, and marks `tests/fixtures/*.csv`
+  `-text` so their exact bytes (BOM, CRLF) are never normalized — `.pre-commit-config.yaml`
+  excludes the same directory from `trailing-whitespace`/`end-of-file-fixer`/`mixed-line-ending`,
+  since `-text` only stops git's own conversion, not a hook's. **Caution:** working-tree `.bat`
   files are CRLF — unix tools (sed et al.) silently convert them to LF and can break them;
   restore CRLF if touched.
 

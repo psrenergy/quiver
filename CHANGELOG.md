@@ -49,9 +49,54 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ### Fixed
 
+- **Lua: a CSV writer held in a global was never flushed, leaving a 0-byte file.** The promise
+  that a writer the script never closed is still complete when `run()` returns was implemented as
+  a forced garbage collection, which only finalizes objects the script made *unreachable*.
+  `w = db:write_csv(path)` without `local` — Lua's default spelling — is a GC root, so its rows
+  stayed in the stream buffer and the file was empty (or truncated mid-record) for the host and
+  for any later `run()`. `LuaRunner::run` now closes every writer the run handed out, explicitly
+  and regardless of reachability. A writer does not outlive its `run()`: reusing the handle from a
+  later script reports `Cannot write_row: writer for '...' is already closed`.
+- **Lua: `w:close()` left the writer un-closeable after a flush failure.** It threw before marking
+  the writer closed and before releasing the handle, so every later `close()` raised the same
+  error instead of the documented no-op, and `w:write_row` then reported "failed to write" rather
+  than "already closed".
+- **BREAKING — Lua: `separator` no longer accepts a quote, CR, LF or NUL** in `db:read_csv`,
+  `db:read_csv_stream` or `db:write_csv`. They are one byte but cannot be delimiters, and
+  `db:write_csv(path, { separator = '"' })` silently produced a file `db:read_csv` refused to
+  open. They are now rejected up front:
+  `Cannot <op>: option 'separator' must not be a quote, carriage return, newline or NUL`. Callers
+  passing one of those four bytes must pick a real delimiter.
+- **Lua: a sparse row or `header` key allocated without bound.** `w:write_row({[1e9] = "x"})` and
+  `db:write_csv(p, { header = {[1e9] = "x"} })` build a dense vector up to the largest integer
+  key, so a single stray key asked for tens of gigabytes and surfaced as a raw `bad allocation`
+  with no `Cannot ...:` prefix. A key past 1,000,000 is now a precondition failure naming it.
+- **Lua: a non-string key in a CSV options table surfaced as a raw Lua value.**
+  `db:read_csv(p, { [true] = 1 })` (and the `db:write_csv` equivalent) converted the key
+  unchecked, so the script received a bare `true`/table as the error in Release and a sol2 panic
+  in Debug. Now `Cannot <op>: option key must be a string`.
+- **BREAKING — Lua: two `db:write_csv` writers open on the same path at once are now refused**
+  (`Cannot write_csv: file is already open for writing: <path>`). Each opened with truncation and
+  wrote from offset 0, so the second silently discarded everything the first had buffered — only
+  the second writer's rows survived, with no error. Close the first writer before reopening its
+  path; reopening a *closed* path still truncates, unchanged.
+- **Lua: a non-function `on_row` reached `db:read_csv_stream`'s caller as a raw sol2 message.**
+  `db:read_csv_stream(p, "oops")` reported `stack index 3, expected function, received string`
+  (and, for some argument types, escaped `pcall` entirely). Now
+  `Cannot read_csv_stream: on_row must be a function`.
+- **Lua: `w:write_row(<userdata>)` wrote a spurious empty record.** sol2's table check for the row
+  parameter also admits userdata, so `w:write_row(db)` appended `""` instead of throwing; the
+  argument's type is now checked (`Cannot write_row: row must be a table`), which also replaces
+  sol2's raw "stack index 2, expected table" for a string/number/nil argument.
+- **Lua: a `header` table with a bad key blamed the value.** `{ header = { name = "a" } }` reported
+  `option 'header' entry must be a string` although every entry was one; a bad key now reports
+  `option 'header' key must be a positive integer`.
+- **Lua: a csv-parser failure raised while fetching the first data row reached scripts unwrapped.**
+  `for_each_row` wrapped `++it` but not the initial `begin()`, which parses too.
 - **Lua: a path the OS refuses to resolve reached scripts as a raw `std::filesystem` message.**
-  Every file-touching Lua operation — `db:read_csv`, `db:read_csv_stream`, `db:open_file`,
-  `db:bin_to_csv`, `db:csv_to_bin`, `db:export_csv`, `db:import_csv`, `db:validate_migrations`
+  Every file-touching Lua operation — `db:read_csv`, `db:read_csv_stream`, `db:write_csv`,
+  `db:open_file`, `db:bin_to_csv`, `db:csv_to_bin`, `db:export_csv`, `db:import_csv`,
+  `db:validate_migrations`
   and `expr:save` — resolves its path through one shared gate, and that gate used throwing
   `std::filesystem` overloads without catching them. Any OS failure that is not a plain "does not
   exist" therefore surfaced unprefixed: on Windows, `db:read_csv("NUL")` (or any reserved device

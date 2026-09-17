@@ -115,6 +115,36 @@ state and no signature change for it, and padding happens before the cell vector
 `write_row`/`append_record`, so `append_record`'s `lone_empty_cell` predicate sees the final,
 already-padded cell count.
 
+Three guards in the Lua layer's decoders (`src/lua_runner.cpp`) exist because a script is
+untrusted input, in the same spirit as the JSON encoder's two caps below:
+- `csv_max_integer_key` is the single max-integer-key walk behind both `csv_row_cells_from_lua`
+  and `csv_header_from_lua` (so the key rule and its message live once), and it caps the result at
+  1,000,000. Both callers materialize a **dense** vector up to that key, so `{[1e9] = "x"}` — the
+  same sparseness hazard the encoder note below names — allocated tens of gigabytes, or reached
+  the script as a raw `std::bad_alloc` with no Pattern 1 prefix.
+- `csv_options_entries` checks each option key's Lua *type* before converting it. sol2's
+  `std::string` getter is `lua_tolstring`, which answers `nullptr` for a boolean/table/function
+  key: unchecked in Release (`SOL_SAFE_GETTER` is off there) and a raw sol2 panic in Debug, so
+  `{ [true] = 1 }` reached the script as a bare Lua value rather than a message.
+- `csv_separator_from_lua` rejects `"`, CR, LF and NUL in addition to the multi-byte check. They
+  are one byte but cannot be delimiters: csv-parser refuses a delimiter that overlaps its quote
+  character, so `db:write_csv` with `separator = '"'` silently produced a file `db:read_csv`
+  could not open.
+`w:write_row` also checks its argument is a table: sol2's check for a `const sol::table&`
+parameter is a loose one that accepts **userdata** too, and iterating a userdata yields no keys,
+so `w:write_row(db)` appended a spurious empty record instead of throwing. For the same reason
+`db:read_csv_stream`'s `on_row` is a `sol::object` with an explicit `sol::type::function` check
+rather than a typed `sol::protected_function` parameter — the typed one surfaced sol2's own
+"stack index 3, expected function" text.
+
+`Impl::open_writers` is also the concurrency guard: it records each writer's **resolved** path, and
+`db:write_csv` refuses a path some live, unclosed writer already holds (Pattern 1, mirroring
+`db:open_file`'s process-global write registry in `src/binary/binary_file.cpp`). Two writers on one
+path each open with `ios::trunc` and write from offset 0, so the second silently discarded
+everything the first had buffered. Reopening a path whose previous writer was **closed** is still
+the documented truncate (WRITE-08) — the guard checks `is_closed()`, which is what keeps
+`ReopeningSamePathTruncatesExistingContent` green.
+
 ## Pimpl vs Value Types
 
 Pimpl is used only for classes that hide private dependencies (e.g., `Database`, `LuaRunner` hide sqlite3/lua headers):
@@ -356,7 +386,7 @@ Implementation conventions in `lua_runner.cpp`:
 - **Filesystem sandbox**: `resolve_sandboxed_path(db, operation, path)` is the single gate for
   every file-touching Lua operation (`db:open_file`, `db:bin_to_csv`, `db:csv_to_bin`,
   `db:export_csv`, `db:import_csv`, `db:validate_migrations`, `db:read_csv`, `db:read_csv_stream`,
-  `expr:save`). It rejects `:memory:`
+  `db:write_csv`, `expr:save`). It rejects `:memory:`
   databases, resolves relative paths against the database file's directory (bare-filename db paths fall back to the
   CWD at call time, mirroring `create_database_logger`), canonicalizes via `weakly_canonical`,
   and requires strict containment (candidate == root is rejected — the binary subsystem appends
@@ -484,14 +514,23 @@ Implementation conventions in `lua_runner.cpp`:
   (unsupported type, unsupported table key, too deep) are Pattern 1 `"Cannot run: ..."` and are
   **not** wrapped in that prefix — they happen after the script already succeeded.
 - **A writer left open when the script returns is still flushed.** `LuaRunner::run` declares one
-  function-local RAII guard (`GcGuard`) before calling `safe_script`, whose destructor calls
-  `impl_->lua.collect_garbage()` exactly once at `run()`'s scope exit — covering the normal-return,
-  empty-return, and throw-unwinding paths alike. The guard is declared *before* `result`, so C++'s
-  reverse-declaration-order destruction runs `collect_garbage()` *after* `result`'s Lua stack
-  reference is released. This is what flushes a `CsvWriter`/`csv_write::Writer` (or any other
-  sol2-owned resource) the script never explicitly closed. One call was proven sufficient by an
-  executed probe against this repo's own vendored sol2/Lua build (RESEARCH.md Q1) — it must not be
-  "hardened" into a loop.
+  function-local RAII guard (`GcGuard`) before calling `safe_script`, whose destructor runs
+  `Impl::close_open_writers()` and then `impl_->lua.collect_garbage()` exactly once at `run()`'s
+  scope exit — covering the normal-return, empty-return, and throw-unwinding paths alike. The
+  guard is declared *before* `result`, so C++'s reverse-declaration-order destruction runs both
+  *after* `result`'s Lua stack reference is released.
+  **The explicit close is the load-bearing half, not the collection.** `collect_garbage()` only
+  finalizes *unreachable* objects, so a writer the script assigned to a global
+  (`w = db:write_csv(...)` — no `local`, Lua's default spelling) is a GC root and was never
+  flushed: the file stayed at 0 bytes, which
+  `LuaRunner_WriteCsv.UnclosedWriterHeldInAGlobalIsAlsoFlushedWhenRunReturns` pins. `db:write_csv`
+  therefore hands out a `std::shared_ptr<csv_write::Writer>` and records a `weak_ptr` in
+  `Impl::open_writers`; `close_open_writers()` locks each one still alive, closes it (swallowing a
+  flush failure — a scope-exit guard has no caller to report to, exactly as `~Writer` did), and
+  clears the list. A writer therefore does not outlive its `run()`. The `collect_garbage()` call
+  stays for every other sol2-owned resource; one call was proven sufficient by an executed probe
+  against this repo's own vendored sol2/Lua build (RESEARCH.md Q1) — it must not be "hardened"
+  into a loop.
 
 ## Binary Subsystem
 

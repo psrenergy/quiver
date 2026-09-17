@@ -1308,6 +1308,19 @@ TEST_F(LuaRunner_ReadCsv, EveryNegativeCaseStartsWithItsOwnEntryPointPrefix) {
         R"(db:read_csv("f.csv", { header_row = 2.5 }))",
         R"(db:read_csv("f.csv", { header_row = -1 }))",
         R"(db:read_csv_stream("f.csv", function() end, { header_row = -1 }))",
+        // A non-string option key: sol2's std::string getter is lua_tolstring, which answers
+        // nullptr for these, so the key used to reach the script as a bare Lua value.
+        R"(db:read_csv("f.csv", { [true] = 1 }))",
+        R"(db:read_csv("f.csv", { [{}] = 1 }))",
+        R"(db:read_csv("f.csv", { "positional" }))",
+        // A separator that is one byte but cannot be a delimiter.
+        R"(db:read_csv("f.csv", { separator = '"' }))",
+        R"(db:read_csv("f.csv", { separator = "\n" }))",
+        // A non-function on_row: a typed sol::protected_function parameter surfaced sol2's own
+        // "stack index 3, expected function" text instead of a Pattern 1 message.
+        R"(db:read_csv_stream("f.csv"))",
+        R"(db:read_csv_stream("f.csv", "notafunction"))",
+        R"(db:read_csv_stream("f.csv", {}))",
     };
     for (const auto& script : negatives) {
         expect_prefixed_error(lua, script);

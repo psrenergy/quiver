@@ -47,7 +47,10 @@ namespace {
 csv::CSVFormat make_format(const Options& options) {
     csv::CSVFormat format;
     format.delimiter(options.separator);
-    if (options.header_row == 0) {
+    if (options.header_row <= 0) {
+        // <= 0, not == 0: a negative value would otherwise reach format.header_row(negative),
+        // which silently means no_header AND resets the variable-column policy. Only the Lua
+        // decoder rejects negatives today; a second C++ caller of Options would not.
         format.no_header();
     } else {
         // Clamp into int range before the subtract-and-cast: a caller-supplied value at/above
@@ -133,17 +136,22 @@ Reader::Reader(std::string resolved_path, std::string original_path, std::string
 
 Reader::~Reader() = default;
 
-Reader::Reader(Reader&&) noexcept = default;
-
-Reader& Reader::operator=(Reader&&) noexcept = default;
-
 const std::vector<std::string>& Reader::header() const {
     return impl_->header;
 }
 
 int64_t Reader::for_each_row(const RowSink& sink) {
     int64_t index = 0;
-    auto it = impl_->reader.begin();
+    // begin() itself parses -- it calls read_row(), which can raise the same csv-parser failures
+    // ++it can -- so it is wrapped exactly like the loop body below; unwrapped, a first-chunk
+    // parse/IO failure reached Lua with no Pattern 1 prefix (LUA-08).
+    csv::CSVReader::iterator it;
+    try {
+        it = impl_->reader.begin();
+    } catch (const std::exception& e) {
+        throw std::runtime_error("Cannot " + impl_->operation + ": cannot read file '" + impl_->original_path +
+                                 "': " + e.what());
+    }
     const auto end = impl_->reader.end();
 
     while (true) {
@@ -152,32 +160,33 @@ int64_t Reader::for_each_row(const RowSink& sink) {
         // db:read_csv_stream's sink runs untrusted Lua and may itself throw a std::runtime_error
         // (a Lua error re-thrown verbatim, per D-08) that must propagate unwrapped, not get
         // relabeled as a parser failure.
-        std::optional<std::vector<std::string>> cells;
+        std::vector<std::string> cells;
+        bool at_end = false;
         try {
             if (it == end) {
-                break;
+                at_end = true;
+            } else {
+                csv::CSVRow& row = *it;
+                cells.reserve(row.size());
+                // Copy every field into an owned string inside this loop, then let `row` (and
+                // `it`'s old position) die here -- retaining a csv::CSVRow pins the reader's whole
+                // mapped chunk via a shared_ptr<void> and silently defeats the bounded-memory
+                // guarantee.
+                for (csv::CSVField& field : row) {
+                    cells.emplace_back(field.get<std::string_view>());
+                }
+                ++it;
             }
-            csv::CSVRow& row = *it;
-            std::vector<std::string> row_cells;
-            row_cells.reserve(row.size());
-            // Copy every field into an owned string inside this loop, then let `row` (and `it`'s
-            // old position) die here -- retaining a csv::CSVRow pins the reader's whole mapped
-            // chunk via a shared_ptr<void> and silently defeats the bounded-memory guarantee.
-            for (csv::CSVField& field : row) {
-                row_cells.emplace_back(field.get<std::string_view>());
-            }
-            ++it;
-            cells = std::move(row_cells);
         } catch (const std::exception& e) {
             throw std::runtime_error("Cannot " + impl_->operation + ": cannot read file '" + impl_->original_path +
                                      "': " + e.what());
         }
 
-        if (!cells) {
+        if (at_end) {
             break;
         }
         ++index;
-        if (!sink(std::move(*cells), index)) {
+        if (!sink(std::move(cells), index)) {
             break;
         }
     }

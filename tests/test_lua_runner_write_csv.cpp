@@ -1228,6 +1228,29 @@ TEST_F(LuaRunner_WriteCsvErrors, WriteAfterCloseIsPrefixedWriteRowError) {
                           "already closed");
 }
 
+// Two writers open on one path each open with ios::trunc and write from offset 0, so the second
+// silently discarded everything the first had buffered (proven: only the second writer's row
+// survived). Refused now, the way db:open_file's write registry already refuses it. Reopening a
+// path whose previous writer was CLOSED stays legal -- that is WRITE-08, pinned by
+// ReopeningSamePathTruncatesExistingContent, which is why this guard checks is_closed().
+TEST_F(LuaRunner_WriteCsvErrors, SecondWriterOnAnAlreadyOpenPathIsRefused) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    const auto path = lp((sandbox / "concurrent.csv").string());
+
+    expect_prefixed_error(lua,
+                          R"(
+        local a = db:write_csv(")" +
+                              path + R"(")
+        local b = db:write_csv(")" +
+                              path + R"(")
+    )",
+                          "Cannot write_csv: ",
+                          "file is already open for writing");
+}
+
 TEST_F(LuaRunner_WriteCsvErrors, EscapingPathIsPrefixedWriteCsvError) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
@@ -1361,6 +1384,42 @@ TEST_F(LuaRunner_WriteCsv, UnclosedWriterIsFlushedWhenRunReturns) {
                   "implemented): "
                << e.what() << " -- observed on-disk file size after the first run() returned: " << observed_bytes
                << " bytes";
+    }
+}
+
+// WRITE-06, the reachable-writer half: the same two-run() shape as above, but the script assigns
+// the writer to a GLOBAL (`w = ...`, with no `local` -- Lua's default spelling and the most common
+// slip). A global is a GC root, so a flush that relies on collect_garbage() finalizing an
+// unreachable object cannot fire here and the file stays at 0 bytes; only an explicit close of
+// every writer run() handed out covers it. Deliberately the same tiny payload as the `local` case,
+// so the buffer never spills on its own.
+TEST_F(LuaRunner_WriteCsv, UnclosedWriterHeldInAGlobalIsAlsoFlushedWhenRunReturns) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    const auto path = lp((sandbox / "unclosed_global.csv").string());
+
+    lua.run(R"(
+        w = db:write_csv(")" +
+            path + R"(", { header = { "a" } })
+        w:write_row({ "x" })
+        -- no `local`, and deliberately no w:close(): w is still reachable from _G when run() returns
+    )");
+
+    const auto observed_bytes =
+        std::filesystem::exists(path) ? std::filesystem::file_size(path) : static_cast<std::uintmax_t>(0);
+
+    try {
+        lua.run(R"(
+            local csv = db:read_csv(")" +
+                path + R"(")
+            assert(#csv.rows == 1, "expected 1 flushed row, got " .. #csv.rows)
+            assert(csv.rows[1][1] == "x", "expected 'x', got " .. tostring(csv.rows[1][1]))
+        )");
+    } catch (const std::exception& e) {
+        FAIL() << "a writer left reachable in a Lua global was not flushed when run() returned: " << e.what()
+               << " -- observed on-disk file size after the first run() returned: " << observed_bytes << " bytes";
     }
 }
 

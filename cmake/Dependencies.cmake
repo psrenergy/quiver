@@ -69,9 +69,12 @@ FetchContent_MakeAvailable(rapidcsv)
 #     option that would propagate into `quiver` itself and SIGILL on pre-AVX2 x86 for every
 #     shipped PyPI wheel, npm native, Julia artifact and S3 binary. Do not turn this back on.
 #   CSV_BUILD_PROGRAMS=OFF / CSV_BUILD_TESTS=OFF -- this project only needs the library target.
+# GIT_SHALLOW (used by no other dependency here) because this checkout is by far the largest:
+# 230 MB, of which 69 MB is history nothing reads. GIT_TAG is a tag, so the shallow fetch resolves.
 FetchContent_Declare(csv_parser
     GIT_REPOSITORY https://github.com/vincentlaucsb/csv-parser.git
     GIT_TAG 5.3.0
+    GIT_SHALLOW TRUE
 )
 set(CSV_ENABLE_THREADS OFF CACHE BOOL "" FORCE)
 set(CSV_NO_SIMD ON CACHE BOOL "" FORCE)

@@ -46,10 +46,14 @@ public:
     Writer(std::string resolved_path, std::string original_path, std::string operation, Options options = {});
     ~Writer();
 
+    // Non-movable as well as non-copyable: the sole owner (LuaRunner::Impl::CsvWriter) holds a
+    // shared_ptr and constructs in place, so nothing moves a Writer. A defaulted move would have
+    // to claim `noexcept` over std::ofstream's move (which is not noexcept, so a throw would
+    // terminate) and would leave the moved-from source with closed_ == false.
     Writer(const Writer&) = delete;
     Writer& operator=(const Writer&) = delete;
-    Writer(Writer&&) noexcept = default;
-    Writer& operator=(Writer&&) noexcept = default;
+    Writer(Writer&&) = delete;
+    Writer& operator=(Writer&&) = delete;
 
     // Writes one record. `operation` is the calling Lua method's own name ("write_row"), per
     // D-36: each Writer method threads its own operation string rather than one baked in at

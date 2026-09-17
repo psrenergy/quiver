@@ -99,7 +99,7 @@ midnight.
   the script as literals — read the file.
 - **Filesystem sandbox.** Every file-touching operation (\`db:export_csv\`, \`db:import_csv\`,
   \`db:open_file\`, \`db:bin_to_csv\`, \`db:csv_to_bin\`, \`db:validate_migrations\`, \`db:read_csv\`,
-  \`db:read_csv_stream\`, \`expr:save\`) resolves
+  \`db:read_csv_stream\`, \`db:write_csv\`, \`expr:save\`) resolves
   relative paths against the directory containing the database file and rejects anything outside it
   (subdirectories are fine; \`..\` escapes and outside absolute paths throw \`Cannot <op>: path '...' escapes the
   database directory ...\`). On an in-memory database these operations throw
@@ -640,8 +640,14 @@ file's first line — useful for a file with a junk title row and/or a units row
 header (skip them by naming the header row and slicing \`csv.rows\` in the script). A \`header_row\`
 past the end of the file throws. Passing the separator positionally (\`db:read_csv(path, ";")\`)
 throws \`Cannot read_csv: options must be a table\` instead of silently parsing with a comma; an
-unknown key, a separator that isn't a single character, or a \`header_row\` that isn't a
+unknown key, a separator that isn't a single character (or is a quote, CR, LF or NUL — none of
+those can be a delimiter), a non-string option key, or a \`header_row\` that isn't a
 non-negative integer also throws.
+
+**Reading a file \`db:export_csv\` wrote:** \`export_csv\` emits an Excel-style \`sep=,\` preamble as
+line 1, so its real header is line 2 — read it with \`{ header_row = 2 }\`. With the default
+\`header_row = 1\` the preamble itself becomes a two-column header and the column names come back
+as \`rows[1]\`.
 
 \`db:read_csv_stream\` reads the same file through the same parser, row by row, so the process holds
 a bounded window instead of the whole file:
@@ -719,12 +725,16 @@ w:close()
 \`\`\`
 
 The options table is optional; its only two keys are \`separator\` (a single character, default
-\`,\`) and \`header\` (column names written as the first record, default none — no header row).
+\`,\`) and \`header\` (column names written as the first record, default none — no header row). A
+quote, CR, LF or NUL is rejected as a separator: none of them can be a delimiter, and a file
+written with one could not be read back.
 
 Opening \`db:write_csv\` **truncates** an existing file at the target path — there is no overwrite
 guard, so a script can destroy an existing file in the case folder (including the database file
 itself) by writing to its path. This is documented behaviour, not a bug: reopening the same path
-always starts a fresh file.
+always starts a fresh file. Two writers open on the *same* path at once is refused, though
+(\`Cannot write_csv: file is already open for writing: ...\`) — the second would truncate what the
+first is still buffering. Close the first writer before reopening its path.
 
 \`write_row\` after \`close\` throws; \`close\` is idempotent (a second call is a no-op, not an error).
 
@@ -736,15 +746,20 @@ boolean-is-INTEGER write policy.
 \`nil\` and an empty string are not always the same thing here. An INTERIOR \`nil\` cell (not a row's
 last cell, like \`"Beta"\`'s note above) writes an empty cell, indistinguishable from \`""\` after the
 round trip — CSV has no null. A TRAILING \`nil\`, however, is not a cell at all: Lua stores no key
-for it, so the row's maximum integer key is lower and the row comes back **one column narrower** —
-a script that needs a trailing empty column must write an empty string there, not \`nil\`.
+for it, so the row's maximum integer key is lower. **With no \`header\`** that makes the row come
+back **one column narrower**, and a script that needs a trailing empty column must write an empty
+string there, not \`nil\`. **With a \`header\`** the padding rule below fills the gap, so the row is
+header-width either way.
 
 With a \`header\`, its length is the row width: a \`write_row\` shorter than the header pads with
 empty cells, and a longer one throws, naming the row's ordinal and both counts. Omitting \`header\`
 disables the check entirely — rows of any length are written as-is.
 
-A writer never explicitly closed is still flushed when the script's \`run()\` call returns, so the
-file is complete and re-readable even without a \`w:close()\` call — no warning is emitted.
+A writer never explicitly closed is still flushed and closed when the script's \`run()\` call
+returns — whether or not the script still holds it (a \`local\` that went out of scope and a global
+alike) — so the file is complete and re-readable even without a \`w:close()\` call, and no warning
+is emitted. The writer does not survive that \`run()\`: using the same handle from a later
+\`run()\` throws \`Cannot write_row: writer for '...' is already closed\`.
 
 ---
 
