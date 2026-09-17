@@ -28,13 +28,24 @@ callers to change something are prefixed **BREAKING** and say what to do.
   row by row through the same parser, so a large file can be processed with bounded memory. Both
   are sandboxed to the database directory like every other Lua file operation, and both take the
   same optional options table — `separator` (a single-character string, defaulting to `,`) and
-  `header_row` (see below) are its two keys today. This is Lua-only: reading is the only
-  direction, `db:write_csv` is not exposed.
+  `header_row` (see below) are its two keys today. This is Lua-only, with no C++/C API/FFI
+  counterpart.
 - **`db:read_csv`/`db:read_csv_stream` accept a `header_row` option** naming which line is the
   header, 1-based, defaulting to `1`. `header_row = 0` declares the file has no header at all:
   `csv.header` is absent (`nil`) and `csv.rows[1]` is the file's first line — useful for a file
   with a junk title row and/or a units row around the real header. A `header_row` past the end of
   the file throws, as does a value that isn't a non-negative integer.
+- **A Lua script can now write a CSV file to disk.** `db:write_csv(path, opts)` returns a handle;
+  `w:write_row(row)` appends one row and `w:close()` finishes it — streaming-only, with no
+  whole-file form. The same two options as the reader, `separator` and `header`, are all it takes.
+  Opening `db:write_csv` truncates an existing file at the target path (no overwrite guard). The
+  writer is hand-rolled RFC-4180 emission over `std::ofstream`, with no new dependency; numbers are
+  formatted via `std::to_chars`'s shortest round-trip form, and a `nil` cell and an empty-string
+  cell are indistinguishable after the round trip since CSV has no null. With a `header`, its
+  length is the row width: a shorter `write_row` pads with empty cells and a longer one throws,
+  naming the row's ordinal and both counts; omitting `header` disables the check. A writer still
+  open when the script's `run()` call returns is flushed automatically, so the file is complete
+  and re-readable even without an explicit `w:close()`.
 
 ### Fixed
 

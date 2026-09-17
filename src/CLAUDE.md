@@ -108,7 +108,12 @@ no-`QUIVER_API`, no-C-API posture as `csv_read`. Numeric cell formatting reuses
 `quiver::utils::append_number` (`src/utils/number.h`) via `std::to_chars`'s shortest round-trip
 form with no synthetic decimal point, so a whole float and the equal integer write identical text
 (D-34); a `nil` cell and an empty-string cell are structurally indistinguishable after a CSV round
-trip and that is stated, not fixed — CSV has no null (D-40).
+trip and that is stated, not fixed — CSV has no null (D-40). FMT-07's row-width enforcement (a
+short `write_row` pads to the header's length, a long one throws) lives entirely in the Lua-layer
+`CsvWriter` wrapper in `src/lua_runner.cpp`, not here: this file's `Writer` gained no header-width
+state and no signature change for it, and padding happens before the cell vector ever reaches
+`write_row`/`append_record`, so `append_record`'s `lone_empty_cell` predicate sees the final,
+already-padded cell count.
 
 ## Pimpl vs Value Types
 
@@ -478,6 +483,15 @@ Implementation conventions in `lua_runner.cpp`:
 - Script errors surface as `"Failed to run Lua script: ..."` (root Pattern 3). Encoder failures
   (unsupported type, unsupported table key, too deep) are Pattern 1 `"Cannot run: ..."` and are
   **not** wrapped in that prefix — they happen after the script already succeeded.
+- **A writer left open when the script returns is still flushed.** `LuaRunner::run` declares one
+  function-local RAII guard (`GcGuard`) before calling `safe_script`, whose destructor calls
+  `impl_->lua.collect_garbage()` exactly once at `run()`'s scope exit — covering the normal-return,
+  empty-return, and throw-unwinding paths alike. The guard is declared *before* `result`, so C++'s
+  reverse-declaration-order destruction runs `collect_garbage()` *after* `result`'s Lua stack
+  reference is released. This is what flushes a `CsvWriter`/`csv_write::Writer` (or any other
+  sol2-owned resource) the script never explicitly closed. One call was proven sufficient by an
+  executed probe against this repo's own vendored sol2/Lua build (RESEARCH.md Q1) — it must not be
+  "hardened" into a loop.
 
 ## Binary Subsystem
 

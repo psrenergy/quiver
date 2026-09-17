@@ -739,6 +739,13 @@ round trip — CSV has no null. A TRAILING \`nil\`, however, is not a cell at al
 for it, so the row's maximum integer key is lower and the row comes back **one column narrower** —
 a script that needs a trailing empty column must write an empty string there, not \`nil\`.
 
+With a \`header\`, its length is the row width: a \`write_row\` shorter than the header pads with
+empty cells, and a longer one throws, naming the row's ordinal and both counts. Omitting \`header\`
+disables the check entirely — rows of any length are written as-is.
+
+A writer never explicitly closed is still flushed when the script's \`run()\` call returns, so the
+file is complete and re-readable even without a \`w:close()\` call — no warning is emitted.
+
 ---
 
 ## Complete example

@@ -231,10 +231,21 @@ Settled questions — don't relitigate without the user; each was decided delibe
   (`quiver::csv_read::Reader`, `src/csv_read.h`/`.cpp`, no public header) so they cannot diverge on
   any input; every cell arrives as a string with no numeric or date inference; the options table
   takes two keys — `separator` (a single-character string, defaulting to `,`) and `header_row`
-  (1-based, defaulting to `1`; `0` declares the file has no header at all). Reading is the only
-  direction — writing (`db:write_csv`) is not exposed; a script's parsed rows go through the
-  existing group writers. Both names are sandboxed like every other Lua file operation (see the
-  sandbox decision above).
+  (1-based, defaulting to `1`; `0` declares the file has no header at all). Both names are
+  sandboxed like every other Lua file operation (see the sandbox decision above). Writing is
+  exposed too, symmetric in kind but streaming-only: `db:write_csv(path, opts)` returns a handle,
+  `w:write_row(row)` appends one row, and `w:close()` finishes it — no whole-file form, since a
+  second code path is a second thing that can diverge. Like the reader, the writer is Lua-only
+  with no C++ header, no C API, and no FFI binding; it shares the same `resolve_sandboxed_path`
+  gate, truncates an existing file at open with no overwrite guard, takes the same two options
+  (`separator` and `header`) and no more, and formats numbers via `std::to_chars`'s shortest
+  round-trip form — a `nil` cell and an empty-string cell are indistinguishable after the round
+  trip, since CSV has no null. With a `header`, its length is the row width: `write_row` pads a
+  shorter row with empty cells and throws a Pattern 1 error naming the row ordinal and both counts
+  for a longer one; omitting `header` disables the check entirely. A writer still open when the
+  calling `LuaRunner::run` returns is flushed by one `collect_garbage()` call at `run()`'s scope
+  exit — covering the throw path too — so the file is complete and re-readable even if the script
+  never called `w:close()`, with no warning emitted.
 
 ## Do Not "Fix"
 
@@ -632,6 +643,7 @@ The rules are mechanical: given any C++ method name, you can derive the equivale
 | Describe collection | `describe_collection()` | `quiver_database_describe_collection()` | `describe_collection()` | `describeCollection()` | `describe_collection()` |
 | Summarize collection | `summarize_collection()` | `quiver_database_summarize_collection()` | `summarize_collection()` | `summarizeCollection()` | `summarize_collection()` |
 | CSV file read | N/A | N/A | N/A | N/A | `db:read_csv()` / `db:read_csv_stream()` |
+| CSV file write | N/A | N/A | N/A | N/A | `db:write_csv()` / `w:write_row()` / `w:close()` |
 
 **Binary cross-layer examples (Julia + Lua subsystem):**
 
