@@ -101,7 +101,7 @@ promoted here unchanged.
       two options, the strict-width rule, that the target is truncated at open, and a worked example
       verified to run. Lands in the same commit as the binding
 
-- [ ] **DOC-06**: `src/CLAUDE.md`, root `CLAUDE.md` and `CHANGELOG.md` record the writer and its
+- [x] **DOC-06**: `src/CLAUDE.md`, root `CLAUDE.md` and `CHANGELOG.md` record the writer and its
       design decisions
 
 ## v2 Requirements
@@ -185,7 +185,7 @@ Which phases cover which requirements. Filled during roadmap creation.
 | TEST-11 | Phase 5 | Complete |
 | TEST-12 | Phase 4 | Complete |
 | DOC-05 | Phase 4 | Complete |
-| DOC-06 | Phase 5 | Pending |
+| DOC-06 | Phase 5 | Complete |
 
 **Coverage:**
 

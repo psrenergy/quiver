@@ -4,16 +4,16 @@ milestone: v1.1
 milestone_name: CSV writing for the Lua runner
 current_phase: 5
 current_phase_name: Ragged rows and forgotten closes
-status: executing
-stopped_at: Completed 05-02-PLAN.md
-last_updated: "2026-09-17T13:23:11.816Z"
+status: verifying
+stopped_at: Completed 05-03-PLAN.md (Phase 5 complete)
+last_updated: "2026-09-17T13:35:05.134Z"
 last_activity: 2026-09-16
 last_activity_desc: v1.1 roadmap created (2 phases, 29/29 requirements mapped)
 progress:
   total_phases: 2
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 6
-  completed_plans: 5
+  completed_plans: 6
 ---
 
 # Project State
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-09-16)
 
 Phase: 5 — Ragged rows and forgotten closes
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-09-16 — Phase 04 complete, transitioned to Phase 5
 
 ## Performance Metrics
@@ -74,6 +74,7 @@ Last activity: 2026-09-16 — Phase 04 complete, transitioned to Phase 5
 | Phase 04 P03 | 45min | 3 tasks | 2 files |
 | Phase 05 P01 | 25min | 2 tasks | 3 files |
 | Phase 05 P02 | 12min | 2 tasks | 2 files |
+| Phase 05 P03 | 25min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -134,6 +135,8 @@ Carried from v1.0:
 - [Phase ?]: 05-01: the pinned FMT-07 message and its csv_write.cpp catalogue comment landed in the same commit as the throw, per that file's own no-reword-without-updating-the-test rule (D-45)
 - [Phase ?]: 05-02: GcGuard declared before safe_script so reverse-declaration-order destruction runs collect_garbage() after result's Lua stack reference is released (D-46)
 - [Phase ?]: 05-02: TEST-11 observed genuinely RED with 0-byte files on both fixtures before the fix, confirming the ROADMAP's claim rather than repeating it (D-49)
+- [Phase ?]: 05-03: root CLAUDE.md's db:read_csv bullet extended in place (D-53) to record the writer, FMT-07, and WRITE-06; CSV file write row added to the cross-layer table beside CSV file read (D-52)
+- [Phase ?]: 05-03: Release build (SOL_SAFE_GETTER off) in a dedicated build-release/ tree confirms quiver_tests 1234/1234 and quiver_c_tests 557/557, up from 04-03's 1224/1224 -- no shrinkage
 
 ### Pending Todos
 
@@ -171,6 +174,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-09-17T13:23:11.799Z
-Stopped at: Completed 05-02-PLAN.md
+Last session: 2026-09-17T13:35:05.119Z
+Stopped at: Completed 05-03-PLAN.md (Phase 5 complete)
 Resume file: None
