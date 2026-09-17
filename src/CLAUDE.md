@@ -464,6 +464,19 @@ Implementation conventions in `lua_runner.cpp`:
   Without it that check degrades to "is a number" in release, and the file-wide
   `is<int64_t>()`-before-`is<double>()` ordering would route every float into the integer branch
   and store `llround(x)`. Do not drop or move those definitions.
+- **`SOL_NO_NIL=1` (`src/CMakeLists.txt`) is a portability guard, not a preference.** sol2 does not
+  define `sol::nil` on Apple platforms at all: `version.hpp` turns `SOL_NIL` off whenever
+  `__MAC_OS_X_VERSION_MAX_ALLOWED`, `__OBJC__` or a `nil` macro is visible, because Objective-C
+  already claims the name. `sol::lua_nil` is always defined and is literally the same object of the
+  same type (`types.hpp`: `using nil_t = lua_nil_t; inline constexpr const nil_t& nil = lua_nil;`),
+  so the two spellings are interchangeable everywhere `sol::nil` exists. Without this define the
+  difference is invisible on Windows and Linux and only surfaces as a macOS CI compile error —
+  which is exactly how one `sol::nil` in `db:read_csv_stream`'s header argument reddened both macOS
+  jobs for three runs while every other platform stayed green. Setting it makes the portable
+  spelling the only one that compiles anywhere, so the mistake fails on the developer's own
+  machine. `PRIVATE` on `quiver` is full coverage: `lua_runner.cpp` is the only translation unit in
+  the repo that includes sol2 (no test includes `<sol/sol.hpp>`). Use `sol::lua_nil` and
+  `sol::type::lua_nil`, never `sol::nil` / `sol::type::nil`.
 - `time_series_rows_from_lua` transpose, shared by `update_time_series_group_lua` and
   `update_time_series_group_by_label_lua` (both one-liners over it). Mirrors `group_rows_from_lua`
   but takes `db`, since the dimension columns come from metadata. The **dimension column(s) are

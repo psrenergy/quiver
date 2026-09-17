@@ -61,6 +61,7 @@ target_include_directories(quiver
 target_compile_definitions(quiver PRIVATE
     SOL_SAFE_NUMERICS=1
     SOL_SAFE_FUNCTION=1
+    SOL_NO_NIL=1
 )
 
 # MSVC needs /bigobj for sol2 heavy template instantiations

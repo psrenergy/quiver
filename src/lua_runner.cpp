@@ -775,7 +775,7 @@ struct LuaRunner::Impl {
                 // the whole-file and streaming forms of the same file under header_row = 0.
                 const auto& header_names = reader.header();
                 const sol::object header_table =
-                    header_names.empty() ? sol::object(sol::nil) : sol::object(to_lua_table(lua, header_names));
+                    header_names.empty() ? sol::object(sol::lua_nil) : sol::object(to_lua_table(lua, header_names));
 
                 return reader.for_each_row([&](std::vector<std::string>&& cells, int64_t index) -> bool {
                     const auto row_table = to_lua_table(lua, cells);
