@@ -5,8 +5,8 @@ milestone_name: CSV writing for the Lua runner
 current_phase: 5
 current_phase_name: Ragged rows and forgotten closes
 status: verifying
-stopped_at: Completed 05-03-PLAN.md (Phase 5 complete)
-last_updated: "2026-09-17T13:35:05.134Z"
+stopped_at: Phase 5 verified (5/5) — milestone v1.1 phases complete
+last_updated: "2026-09-17T13:52:14.991Z"
 last_activity: 2026-09-16
 last_activity_desc: v1.1 roadmap created (2 phases, 29/29 requirements mapped)
 progress:
@@ -174,6 +174,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-09-17T13:35:05.119Z
-Stopped at: Completed 05-03-PLAN.md (Phase 5 complete)
-Resume file: None
+Last session: 2026-09-17T13:52:14.973Z
+Stopped at: Phase 5 verified (5/5) — milestone v1.1 phases complete
+Resume file: .planning/phases/05-ragged-rows-and-forgotten-closes/05-VERIFICATION.md

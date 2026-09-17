@@ -31,7 +31,7 @@ export-side tests that never re-import — and a writer suite built the same way
 ### Phases
 
 - [x] **Phase 4: A Lua script writes a CSV file** - The writer, its sandboxed Lua handle, and the agent reference (completed 2026-09-16)
-- [ ] **Phase 5: Ragged rows and forgotten closes** - The header as width authority, and the flush at `run()`'s return
+- [x] **Phase 5: Ragged rows and forgotten closes** - The header as width authority, and the flush at `run()`'s return (completed 2026-09-17)
 
 ## Phase Details
 
@@ -128,7 +128,7 @@ that never calls `close()` — still reads back complete and aligned
   5. `src/CLAUDE.md`, the root `CLAUDE.md` and `CHANGELOG.md` record the writer and its design
      decisions
 
-**Plans**: 3/3 plans executed
+**Plans**: 3/3 plans complete
 
 Plans:
 
@@ -173,7 +173,7 @@ Phases execute in numeric order: 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 4. A Lua script writes a CSV file | 3/3 | Complete    | 2026-09-16 |
-| 5. Ragged rows and forgotten closes | 3/3 | In Progress|  |
+| 5. Ragged rows and forgotten closes | 3/3 | Complete   | 2026-09-17 |
 
 ## Requirement Coverage
 
