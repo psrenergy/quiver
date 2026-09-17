@@ -15,7 +15,29 @@ edits a study database, and it deliberately has no `io` library, so a script can
 Every layer — C++, C, Julia, Dart, Python, JS and Lua — sees the same data under the same rules,
 because all the logic lives in the C++ core and the bindings stay thin.
 
-## Current Milestone: v1.1 CSV writing for the Lua runner
+## Current State
+
+**Shipped: v1.1 — CSV writing for the Lua runner** (2026-09-17). 2 phases, 6 plans, 29/29
+requirements, audit passed. A Lua script writes a CSV file into the case folder, and a file written
+by an imperfect script — a ragged row, a forgotten `close()` — still reads back complete and
+aligned. Full record: [`milestones/v1.1-ROADMAP.md`](milestones/v1.1-ROADMAP.md) ·
+[`v1.1-MILESTONE-AUDIT.md`](v1.1-MILESTONE-AUDIT.md).
+
+Together with v1.0 this closes the round trip the Lua sandbox was missing: `db:read_csv` /
+`db:read_csv_stream` in, `db:write_csv` out, both sandboxed to the database directory, both
+Lua-only because every other host already has a native CSV library.
+
+**Software version:** 0.10.6 across all five manifests. Both milestones' changes remain unreleased
+under `CHANGELOG.md`'s `0.10.7` section — deliberately, per D-33/D-51; the version bump is the Bump
+Version workflow's job at release time.
+
+**Next milestone goals:** none defined. Run `/gsd-new-milestone`. The standing candidates carried
+out of v1.1 are `TOML-01/02` (a Lua TOML reader and writer — toml++ is already vendored),
+`UNIFY-01..03` (moving `import_csv` onto the shared parser, which also closes its live
+`;`→`,` and trailing-comma data-corruption paths), and `PERF-01/02` (write throughput).
+
+<details>
+<summary>v1.1 milestone definition (shipped — kept for reference)</summary>
 
 **Goal:** A Lua script can write a CSV file into the case folder — streaming, correctly quoted,
 with numbers that round-trip exactly.
@@ -38,6 +60,12 @@ with numbers that round-trip exactly.
 - Lua only — no public C++ header, no C API, no FFI binding. Same rationale as `db:read_csv`.
 - The agent-facing reference (`bindings/js/src/lua-api.ts`) updated in the same phase as the
   binding, since `lua-api-sync.test.ts` is a hard build gate.
+
+All of the above shipped as specified. Two details are worth carrying forward: the width check
+lives in the Lua layer rather than `csv_write::Writer` (the row ordinal was already there), and the
+unclosed-writer flush is one RAII guard in `LuaRunner::run` that also covers the throw path.
+
+</details>
 
 ## Requirements
 
@@ -188,4 +216,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-16 — Phase 4 complete (the CSV writer, its sandboxed Lua handle, and the DOC-05 reference); milestone v1.1 in progress, Phase 5 next; software version 0.10.6, changes unreleased under 0.10.7*
+*Last updated: 2026-09-17 — milestone v1.1 complete and archived (2 phases, 6 plans, 29/29 requirements, audit passed); no current milestone — run `/gsd-new-milestone`; software version 0.10.6, v1.0+v1.1 changes unreleased under 0.10.7*
