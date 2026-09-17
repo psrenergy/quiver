@@ -259,8 +259,14 @@ struct LuaRunner::Impl {
         // the ordinal unchanged, so a script that retries the same logical row after a pcall sees
         // the same number.
         std::int64_t next_row_index = 1;
+        // FMT-07: width of the header this writer was opened with (write_csv's decoded
+        // csv_options.header.size()); 0 means no header was given and therefore no width
+        // enforcement (D-42) -- header = {} already means "no header row", so 0 is unambiguous.
+        // Stored once at construction; the header vector itself is never read again.
+        std::size_t header_width = 0;
 
-        explicit CsvWriter(quiver::csv_write::Writer w) : writer(std::move(w)) {}
+        CsvWriter(quiver::csv_write::Writer w, std::size_t header_width_)
+            : writer(std::move(w)), header_width(header_width_) {}
     };
 
     // Converts one Lua row table to the ordered std::vector<std::string> quiver::csv_write::Writer
@@ -694,7 +700,9 @@ struct LuaRunner::Impl {
                 // the options table, so a bad separator never masks an escaping path.
                 const auto resolved = resolve_sandboxed_path(self, "write_csv", path);
                 auto csv_options = write_csv_options_from_lua(options, "write_csv");
-                return std::make_unique<CsvWriter>(quiver::csv_write::Writer(resolved, path, "write_csv", csv_options));
+                const auto header_width = csv_options.header.size();
+                return std::make_unique<CsvWriter>(quiver::csv_write::Writer(resolved, path, "write_csv", csv_options),
+                                                     header_width);
             });
 
         // LUA-11: sol::no_constructor + std::unique_ptr return (above), no explicit finalizer --
@@ -715,7 +723,15 @@ struct LuaRunner::Impl {
                     return;
                 }
                 const auto row_index = self.next_row_index;
-                self.writer.write_row(csv_row_cells_from_lua(row, "write_row", row_index), "write_row");
+                auto cells = csv_row_cells_from_lua(row, "write_row", row_index);
+                // FMT-07: pad a short row to the header width BEFORE Writer::write_row ever sees
+                // it -- append_record is a pure function of the vector it receives, so padding
+                // after the call would be too late (Pitfall 3). header_width == 0 means no header
+                // was given, so no enforcement applies.
+                if (self.header_width != 0 && cells.size() < self.header_width) {
+                    cells.resize(self.header_width);
+                }
+                self.writer.write_row(cells, "write_row");
                 ++self.next_row_index;
             },
             "close",

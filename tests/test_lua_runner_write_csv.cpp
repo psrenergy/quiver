@@ -745,6 +745,35 @@ TEST_F(LuaRunner_WriteCsv, HeaderIsWrittenAheadOfDataAndQuotedLikeARow) {
     )");
 }
 
+// FMT-07 / ROADMAP criterion 1: a row shorter than a 3-name header pads with empty cells before
+// Writer::write_row ever sees it, so the file round-trips through db:read_csv (header_row = 1, so
+// csv.header names the columns) with 3 fields per row, the script's two values under the columns
+// it meant and the third an empty string.
+TEST_F(LuaRunner_WriteCsv, ShortRowPadsToHeaderWidthAndRoundTripsAligned) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    const auto path = lp((sandbox / "short_row.csv").string());
+
+    lua.run(R"(
+        local w = db:write_csv(")" +
+            path + R"(", { header = { "a", "b", "c" } })
+        w:write_row({ "1", "2" })
+        w:close()
+
+        local csv = db:read_csv(")" +
+            path + R"(")
+        assert(#csv.header == 3, "expected 3 header columns, got " .. #csv.header)
+        assert(csv.header[1] == "a" and csv.header[2] == "b" and csv.header[3] == "c",
+            "unexpected header contents")
+        assert(#csv.rows == 1, "expected 1 data row, got " .. #csv.rows)
+        assert(csv.rows[1][1] == "1", "expected col a == 1, got " .. tostring(csv.rows[1][1]))
+        assert(csv.rows[1][2] == "2", "expected col b == 2, got " .. tostring(csv.rows[1][2]))
+        assert(csv.rows[1][3] == "", "expected col c padded to empty, got " .. tostring(csv.rows[1][3]))
+    )");
+}
+
 // FMT-05: a non-finite number cell (NaN or +/-infinity) is a Pattern 1 error naming write_row,
 // the 1-based data-row ordinal, and the 1-based cell index -- never a platform-specific token
 // (MSVC's "-nan(ind)"/"nan"/"inf" vs. glibc's "nan"/"inf") reaching the file.
