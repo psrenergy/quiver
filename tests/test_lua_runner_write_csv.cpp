@@ -1318,3 +1318,84 @@ TEST_F(LuaRunner_WriteCsvErrors, RejectedRowLeavesFileIntactProvenBothHalves) {
         assert(csv.rows[2][1] == "row2", "expected row2, got " .. tostring(csv.rows[2][1]))
     )");
 }
+
+// WRITE-06 / TEST-11 (ROADMAP criterion 4): a script that returns without calling w:close() still
+// leaves a complete, re-readable file. This is the two-separate-lua.run()-calls shape RESEARCH.md
+// Q4 confirms has no precedent in this suite -- the second run() proves the flush happened BETWEEN
+// script executions, with the LuaRunner never destroyed, moved from, or reset in between (the
+// ROADMAP criterion 4 trap). The fixture is deliberately tiny (one column, one short row) per
+// Pitfall 2: a payload large enough to spill std::filebuf's own buffer would put bytes on disk
+// without the fix and make the RED accidental. The byte count below is diagnostic evidence
+// attached to the FAIL() message only (D-49) -- the pass/fail decision is always the db:read_csv
+// round trip in the second run(), never a raw-byte assertion.
+TEST_F(LuaRunner_WriteCsv, UnclosedWriterIsFlushedWhenRunReturns) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    const auto path = lp((sandbox / "unclosed.csv").string());
+
+    lua.run(R"(
+        local w = db:write_csv(")" +
+            path + R"(", { header = { "a" } })
+        w:write_row({ "x" })
+        -- deliberately no w:close() -- WRITE-06 must flush this when run() returns
+    )");
+
+    // Diagnostic only (D-49): the actual observed byte count, not the ROADMAP's unverified "zero
+    // bytes" claim. Streamed into the failure message below; never the assertion itself.
+    const auto observed_bytes =
+        std::filesystem::exists(path) ? std::filesystem::file_size(path) : static_cast<std::uintmax_t>(0);
+
+    try {
+        lua.run(R"(
+            local csv = db:read_csv(")" +
+            path + R"(")
+            assert(#csv.rows == 1, "expected 1 flushed row, got " .. #csv.rows)
+            assert(csv.rows[1][1] == "x", "expected 'x', got " .. tostring(csv.rows[1][1]))
+        )");
+    } catch (const std::exception& e) {
+        FAIL() << "unclosed writer was not readable back through db:read_csv (WRITE-06 not yet "
+                  "implemented): "
+               << e.what() << " -- observed on-disk file size after the first run() returned: " << observed_bytes
+               << " bytes";
+    }
+}
+
+// WRITE-06 / TEST-11, the error-path half (D-47): a script that raises mid-write, with the writer
+// still open, still leaves the rows written before the error on disk and readable -- the flush
+// must fire during stack unwinding too, not only on a normal return. Same tiny-fixture and
+// diagnostic-byte-count discipline as the case above.
+TEST_F(LuaRunner_WriteCsv, ScriptErrorMidWriteStillLeavesEarlierRowsReadable) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    const auto path = lp((sandbox / "error_mid_write.csv").string());
+
+    EXPECT_THROW(lua.run(R"(
+        local w = db:write_csv(")" +
+                                  path + R"(", { header = { "a" } })
+        w:write_row({ "x" })
+        error("boom")
+        -- deliberately no w:close() -- WRITE-06's flush must fire during unwinding too (D-47)
+    )"),
+                 std::exception);
+
+    const auto observed_bytes =
+        std::filesystem::exists(path) ? std::filesystem::file_size(path) : static_cast<std::uintmax_t>(0);
+
+    try {
+        lua.run(R"(
+            local csv = db:read_csv(")" +
+            path + R"(")
+            assert(#csv.rows == 1, "expected the pre-error row to survive, got " .. #csv.rows)
+            assert(csv.rows[1][1] == "x", "expected 'x', got " .. tostring(csv.rows[1][1]))
+        )");
+    } catch (const std::exception& e) {
+        FAIL() << "pre-error row was not readable back through db:read_csv (WRITE-06 not yet "
+                  "implemented for the throw path): "
+               << e.what() << " -- observed on-disk file size after the throwing run() unwound: " << observed_bytes
+               << " bytes";
+    }
+}
