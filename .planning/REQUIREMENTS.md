@@ -25,7 +25,7 @@ promoted here unchanged.
       the requirement is that the writer uses it, not that new machinery is built
 
 - [x] **WRITE-05**: `w:write_row` after `w:close` is a Pattern 1 error; `w:close` is idempotent
-- [ ] **WRITE-06**: A writer still open when `LuaRunner::run` returns is flushed to disk, so the file
+- [x] **WRITE-06**: A writer still open when `LuaRunner::run` returns is flushed to disk, so the file
       is complete even if the script never called `close()`. No warning is emitted — this is the
       flush alone, not the diagnostic
 
@@ -89,7 +89,7 @@ promoted here unchanged.
       present — the FMT-02 regression, invisible to any multi-column fixture
 
 - [x] **TEST-10**: A short row against a multi-column header round-trips aligned; a longer row throws
-- [ ] **TEST-11**: A script that returns without calling `close()` leaves a complete, re-readable
+- [x] **TEST-11**: A script that returns without calling `close()` leaves a complete, re-readable
       file, asserted after `run()` returns without destroying the `LuaRunner`
 
 - [x] **TEST-12**: A non-finite value, a table cell, a write after close, an out-of-sandbox path, and
@@ -162,7 +162,7 @@ Which phases cover which requirements. Filled during roadmap creation.
 | WRITE-03 | Phase 4 | Complete |
 | WRITE-04 | Phase 4 | Complete |
 | WRITE-05 | Phase 4 | Complete |
-| WRITE-06 | Phase 5 | Pending |
+| WRITE-06 | Phase 5 | Complete |
 | WRITE-07 | Phase 4 | Complete |
 | WRITE-08 | Phase 4 | Complete |
 | FMT-01 | Phase 4 | Complete |
@@ -182,7 +182,7 @@ Which phases cover which requirements. Filled during roadmap creation.
 | TEST-08 | Phase 4 | Complete |
 | TEST-09 | Phase 4 | Complete |
 | TEST-10 | Phase 5 | Complete |
-| TEST-11 | Phase 5 | Pending |
+| TEST-11 | Phase 5 | Complete |
 | TEST-12 | Phase 4 | Complete |
 | DOC-05 | Phase 4 | Complete |
 | DOC-06 | Phase 5 | Pending |

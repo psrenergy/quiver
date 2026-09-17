@@ -5,15 +5,15 @@ milestone_name: CSV writing for the Lua runner
 current_phase: 5
 current_phase_name: Ragged rows and forgotten closes
 status: executing
-stopped_at: Completed 05-01-PLAN.md
-last_updated: "2026-09-17T13:10:25.873Z"
+stopped_at: Completed 05-02-PLAN.md
+last_updated: "2026-09-17T13:23:11.816Z"
 last_activity: 2026-09-16
 last_activity_desc: v1.1 roadmap created (2 phases, 29/29 requirements mapped)
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 6
-  completed_plans: 4
+  completed_plans: 5
 ---
 
 # Project State
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-09-16)
 ## Current Position
 
 Phase: 5 — Ragged rows and forgotten closes
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-09-16 — Phase 04 complete, transitioned to Phase 5
 
@@ -73,6 +73,7 @@ Last activity: 2026-09-16 — Phase 04 complete, transitioned to Phase 5
 | Phase 04 P02 | 55min | 3 tasks | 4 files |
 | Phase 04 P03 | 45min | 3 tasks | 2 files |
 | Phase 05 P01 | 25min | 2 tasks | 3 files |
+| Phase 05 P02 | 12min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -131,6 +132,8 @@ Carried from v1.0:
 - [Phase ?]: 05-01: header_width is a std::size_t on CsvWriter seeded once from csv_options.header.size(); the decoded header vector itself is discarded (D-42)
 - [Phase ?]: 05-01: the row-too-wide reject branch sits ahead of the pad branch in one if (header_width != 0) guard; a long row is never truncated
 - [Phase ?]: 05-01: the pinned FMT-07 message and its csv_write.cpp catalogue comment landed in the same commit as the throw, per that file's own no-reword-without-updating-the-test rule (D-45)
+- [Phase ?]: 05-02: GcGuard declared before safe_script so reverse-declaration-order destruction runs collect_garbage() after result's Lua stack reference is released (D-46)
+- [Phase ?]: 05-02: TEST-11 observed genuinely RED with 0-byte files on both fixtures before the fix, confirming the ROADMAP's claim rather than repeating it (D-49)
 
 ### Pending Todos
 
@@ -168,6 +171,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-09-17T13:10:09.048Z
-Stopped at: Completed 05-01-PLAN.md
+Last session: 2026-09-17T13:23:11.799Z
+Stopped at: Completed 05-02-PLAN.md
 Resume file: None

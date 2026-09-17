@@ -128,7 +128,7 @@ that never calls `close()` — still reads back complete and aligned
   5. `src/CLAUDE.md`, the root `CLAUDE.md` and `CHANGELOG.md` record the writer and its design
      decisions
 
-**Plans**: 1/3 plans executed
+**Plans**: 2/3 plans executed
 
 Plans:
 
@@ -136,7 +136,7 @@ Plans:
       pinned Pattern 1 message and its catalogue line, and the TEST-10 boundary round trips
       (wave 1, leads with the tracer slice)
 
-- [ ] 05-02-PLAN.md — WRITE-06: TEST-11 written and observed RED first with the actual byte count
+- [x] 05-02-PLAN.md — WRITE-06: TEST-11 written and observed RED first with the actual byte count
       recorded, then the one-`collect_garbage()` scope guard in `LuaRunner::run` covering both
       returns and the throw path (wave 2)
 
@@ -173,7 +173,7 @@ Phases execute in numeric order: 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 4. A Lua script writes a CSV file | 3/3 | Complete    | 2026-09-16 |
-| 5. Ragged rows and forgotten closes | 1/3 | In Progress|  |
+| 5. Ragged rows and forgotten closes | 2/3 | In Progress|  |
 
 ## Requirement Coverage
 

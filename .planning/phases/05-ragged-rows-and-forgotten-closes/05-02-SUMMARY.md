@@ -124,6 +124,15 @@ None - no external service configuration required.
 - 05-03 (DOC-06: `src/CLAUDE.md`, root `CLAUDE.md`, `CHANGELOG.md`, and `bindings/js/src/lua-api.ts` per D-50) can now document FMT-07's pad/throw rule and WRITE-06's flush-without-close guarantee against fully-shipped, fully-tested behavior.
 - Whole-suite regressions confirmed clean: `quiver_tests.exe` 1234/1234 passed, `quiver_c_tests.exe` 557/557 passed.
 
+## Self-Check: PASSED
+
+- `tests/test_lua_runner_write_csv.cpp` — FOUND
+- `src/lua_runner.cpp` — FOUND
+- `.planning/phases/05-ragged-rows-and-forgotten-closes/05-02-SUMMARY.md` — FOUND
+- Commit `3f06f41` (test: TEST-11 RED) — FOUND
+- Commit `8ec252d` (feat: GcGuard) — FOUND
+- Commit `5fab64e` (docs: plan summary) — FOUND
+
 ---
 *Phase: 05-ragged-rows-and-forgotten-closes*
 *Completed: 2026-09-17*
