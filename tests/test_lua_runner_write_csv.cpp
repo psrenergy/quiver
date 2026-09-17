@@ -774,6 +774,193 @@ TEST_F(LuaRunner_WriteCsv, ShortRowPadsToHeaderWidthAndRoundTripsAligned) {
     )");
 }
 
+// FMT-07 / ROADMAP criterion 2: a row wider than the header throws a Pattern 1 error naming the
+// 1-based data-row ordinal and both counts. Two good rows precede the bad one, so the ordinal is 3.
+TEST_F(LuaRunner_WriteCsv, RowLongerThanHeaderThrowsNamingOrdinalAndCounts) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    const auto path = lp((sandbox / "too_long.csv").string());
+
+    expect_prefixed_error(lua,
+                          R"(
+        local w = db:write_csv(")" +
+                              path + R"(", { header = { "a", "b", "c" } })
+        w:write_row({ "1", "2", "3" })
+        w:write_row({ "4", "5", "6" })
+        w:write_row({ "7", "8", "9", "10" })
+    )",
+                          "Cannot write_row: ",
+                          "row 3 has 4 cells but header declares 3");
+}
+
+// FMT-07 / ROADMAP criterion 2's second clause: the rows written before the rejected long row are
+// still on disk and readable through db:read_csv -- the throw does not truncate or corrupt what
+// was already flushed. Same pcall + w:close() shape as RejectedNonFiniteRowLeavesFileIntact... below.
+TEST_F(LuaRunner_WriteCsv, RejectedLongRowLeavesEarlierRowsOnDisk) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    const auto path = lp((sandbox / "too_long_intact.csv").string());
+
+    lua.run(R"(
+        local w = db:write_csv(")" +
+            path + R"(", { header = { "a", "b", "c" } })
+        w:write_row({ "1", "2", "3" })
+        w:write_row({ "4", "5", "6" })
+        local ok, err = pcall(function() w:write_row({ "7", "8", "9", "10" }) end)
+        assert(ok == false, "expected the too-long third write_row to fail")
+        assert(err:find("Cannot write_row:", 1, true) ~= nil, "expected Cannot write_row: prefix, got " .. tostring(err))
+        w:close()
+
+        local csv = db:read_csv(")" +
+            path + R"(")
+        assert(#csv.rows == 2, "expected exactly 2 data rows after the rejected third, got " .. #csv.rows)
+        assert(csv.rows[1][1] == "1" and csv.rows[1][2] == "2" and csv.rows[1][3] == "3", "expected row1 intact")
+        assert(csv.rows[2][1] == "4" and csv.rows[2][2] == "5" and csv.rows[2][3] == "6", "expected row2 intact")
+    )");
+}
+
+// TEST-10 boundary: against one N=3 header, N-1 pads (covered above), N passes through
+// byte-identical, N+1 throws (covered above) -- this test is the exact-width middle case.
+TEST_F(LuaRunner_WriteCsv, ExactWidthRowPassesThroughUnchanged) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    const auto path = lp((sandbox / "exact_width.csv").string());
+
+    lua.run(R"(
+        local w = db:write_csv(")" +
+            path + R"(", { header = { "a", "b", "c" } })
+        w:write_row({ "x", "y", "z" })
+        w:close()
+
+        local csv = db:read_csv(")" +
+            path + R"(")
+        assert(#csv.rows == 1, "expected 1 data row, got " .. #csv.rows)
+        assert(csv.rows[1][1] == "x" and csv.rows[1][2] == "y" and csv.rows[1][3] == "z",
+            "expected the exact-width row unchanged")
+    )");
+}
+
+// D-44 / EDGE FMT-07/empty: w:write_row{} under a 3-name header pads to 3 empty cells, emitted as
+// 2 bare separators -- a legitimate 3-field row, NOT FMT-02's quoted empty-string spelling -- and
+// db:read_csv returns 3 empty cells for it.
+TEST_F(LuaRunner_WriteCsv, EmptyRowPadsToMultiColumnHeaderWidth) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    const auto path = lp((sandbox / "empty_multi.csv").string());
+
+    lua.run(R"(
+        local w = db:write_csv(")" +
+            path + R"(", { header = { "a", "b", "c" } })
+        w:write_row({})
+        w:close()
+
+        local csv = db:read_csv(")" +
+            path + R"(")
+        assert(#csv.rows == 1, "expected 1 data row, got " .. #csv.rows)
+        assert(csv.rows[1][1] == "" and csv.rows[1][2] == "" and csv.rows[1][3] == "",
+            "expected 3 empty cells, got " .. tostring(csv.rows[1][1]) .. "/" ..
+            tostring(csv.rows[1][2]) .. "/" .. tostring(csv.rows[1][3]))
+    )");
+}
+
+// D-44 / EDGE FMT-07/empty, the 1-column half: the same w:write_row{} call under a 1-name header
+// pads to exactly 1 empty cell -- still the TEST-09 shape (FMT-02's blank-line defence still
+// applies) -- and still round-trips as one present row, not zero.
+TEST_F(LuaRunner_WriteCsv, EmptyRowUnderSingleColumnHeaderStillRoundTrips) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    const auto path = lp((sandbox / "empty_single.csv").string());
+
+    lua.run(R"(
+        local w = db:write_csv(")" +
+            path + R"(", { header = { "only" } })
+        w:write_row({})
+        w:close()
+
+        local csv = db:read_csv(")" +
+            path + R"(")
+        assert(#csv.rows == 1, "expected exactly 1 present row, got " .. #csv.rows)
+        assert(csv.rows[1][1] == "", "expected 1 empty cell, got " .. tostring(csv.rows[1][1]))
+    )");
+}
+
+// ROADMAP criterion 3 / D-42: with no header given -- option omitted entirely, and separately
+// header = {} -- rows of differing widths (1, 2, 3 cells) are written as-is and no width error is
+// raised (header_width == 0 means no enforcement).
+TEST_F(LuaRunner_WriteCsv, NoHeaderMeansNoWidthCheck) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    const auto path1 = lp((sandbox / "no_header_omitted.csv").string());
+    const auto path2 = lp((sandbox / "no_header_empty_table.csv").string());
+
+    lua.run(R"(
+        local function check(path, opts)
+            local w = db:write_csv(path, opts)
+            w:write_row({ "1" })
+            w:write_row({ "1", "2" })
+            w:write_row({ "1", "2", "3" })
+            w:close()
+
+            local csv = db:read_csv(path, { header_row = 0 })
+            assert(#csv.rows == 3, "expected 3 rows, got " .. #csv.rows)
+            assert(#csv.rows[1] == 1, "expected row 1 to have 1 cell, got " .. #csv.rows[1])
+            assert(#csv.rows[2] == 2, "expected row 2 to have 2 cells, got " .. #csv.rows[2])
+            assert(#csv.rows[3] == 3, "expected row 3 to have 3 cells, got " .. #csv.rows[3])
+        end
+
+        check(")" + path1 + R"(", nil)
+        check(")" + path2 + R"(", { header = {} })
+    )");
+}
+
+// EDGE FMT-07/encoding: the width comparison counts CELLS, never characters or bytes -- a 3-name
+// header whose names and whose row values are multi-byte UTF-8 still pads a 2-cell row to 3 and
+// still rejects a 4-cell row, with the reported counts unchanged by the encoding.
+TEST_F(LuaRunner_WriteCsv, MultiByteUtf8CellsDoNotChangeCellCounts) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    const auto pad_path = lp((sandbox / "utf8_pad.csv").string());
+
+    lua.run(R"(
+        local w = db:write_csv(")" +
+            pad_path + R"(", { header = { "名前", "値", "c" } })
+        w:write_row({ "アルファ", "42" })
+        w:close()
+
+        local csv = db:read_csv(")" +
+            pad_path + R"(")
+        assert(#csv.header == 3, "expected 3 header columns, got " .. #csv.header)
+        assert(#csv.rows == 1, "expected 1 data row, got " .. #csv.rows)
+        assert(csv.rows[1][1] == "アルファ", "expected multi-byte cell 1 intact")
+        assert(csv.rows[1][2] == "42", "expected cell 2 intact")
+        assert(csv.rows[1][3] == "", "expected padded cell 3 to be empty")
+    )");
+
+    const auto reject_path = lp((sandbox / "utf8_reject.csv").string());
+    expect_prefixed_error(lua,
+                          R"(
+        local w = db:write_csv(")" +
+                              reject_path + R"(", { header = { "名前", "値", "c" } })
+        w:write_row({ "アルファ", "42", "余分", "余分2" })
+    )",
+                          "Cannot write_row: ",
+                          "row 1 has 4 cells but header declares 3");
+}
+
 // FMT-05: a non-finite number cell (NaN or +/-infinity) is a Pattern 1 error naming write_row,
 // the 1-based data-row ordinal, and the 1-based cell index -- never a platform-specific token
 // (MSVC's "-nan(ind)"/"nan"/"inf" vs. glibc's "nan"/"inf") reaching the file.

@@ -28,6 +28,7 @@
 //   "Cannot write_row: row <N> cell #<M> is not a finite number"                               (FMT-05)
 //   "Cannot write_row: cell #<M> has unsupported Lua type"                    (table/function/userdata)
 //   "Cannot write_row: row key must be a positive integer"
+//   "Cannot write_row: row <N> has <M> cells but header declares <W>"                            (FMT-07)
 //   "Cannot write_csv: unknown option '<name>'"
 //   "Cannot write_csv: options must be a table"
 //   "Cannot write_csv: option 'separator' must be a string"

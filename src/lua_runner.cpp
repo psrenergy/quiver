@@ -724,12 +724,21 @@ struct LuaRunner::Impl {
                 }
                 const auto row_index = self.next_row_index;
                 auto cells = csv_row_cells_from_lua(row, "write_row", row_index);
-                // FMT-07: pad a short row to the header width BEFORE Writer::write_row ever sees
-                // it -- append_record is a pure function of the vector it receives, so padding
-                // after the call would be too late (Pitfall 3). header_width == 0 means no header
-                // was given, so no enforcement applies.
-                if (self.header_width != 0 && cells.size() < self.header_width) {
-                    cells.resize(self.header_width);
+                // FMT-07: header_width == 0 means no header was given, so no enforcement applies.
+                // A row wider than the header is never truncated -- it throws, naming the 1-based
+                // data-row ordinal and both counts (D-43, D-45; pinned in src/csv_write.cpp's
+                // TEST-12 catalogue comment -- reword both together). A short row is padded BEFORE
+                // Writer::write_row ever sees it -- append_record is a pure function of the vector
+                // it receives, so padding after the call would be too late (Pitfall 3).
+                if (self.header_width != 0) {
+                    if (cells.size() > self.header_width) {
+                        throw std::runtime_error("Cannot write_row: row " + std::to_string(row_index) + " has " +
+                                                 std::to_string(cells.size()) + " cells but header declares " +
+                                                 std::to_string(self.header_width));
+                    }
+                    if (cells.size() < self.header_width) {
+                        cells.resize(self.header_width);
+                    }
                 }
                 self.writer.write_row(cells, "write_row");
                 ++self.next_row_index;
