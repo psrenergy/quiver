@@ -2188,6 +2188,22 @@ LuaRunner::LuaRunner(LuaRunner&&) noexcept = default;
 LuaRunner& LuaRunner::operator=(LuaRunner&&) noexcept = default;
 
 std::string LuaRunner::run(const std::string& script) {
+    // WRITE-06: a writer (or any other unique_ptr + sol::no_constructor usertype, e.g. CsvWriter)
+    // the script leaves unreachable at run()'s return is never collected on its own -- sol::state
+    // is a long-lived member of Impl, so nothing forces a GC cycle between script executions.
+    // GcGuard's destructor runs one full collection, unconditionally, on every exit path (normal
+    // return, the empty-return, and exception unwinding alike), which synchronously finalizes any
+    // such object and therefore flushes/closes its underlying resource (D-46/D-48; RESEARCH.md Q1
+    // executed this exact one-call-suffices claim against this repo's own vendored sol2/Lua build).
+    // Declared BEFORE `result`: C++ destroys stack locals in reverse declaration order, so this
+    // guard (declared first) is destroyed AFTER `result` (declared second) -- releasing
+    // `result`'s Lua stack reference before the collection below runs. Declaring the guard after
+    // `result` would collect while a live stack reference still anchors the script's userdata (D-46).
+    struct GcGuard {
+        sol::state& lua;
+        ~GcGuard() { lua.collect_garbage(); }
+    } gc_guard{impl_->lua};
+
     auto result = impl_->lua.safe_script(script, sol::script_pass_on_error);
     if (!result.valid()) {
         sol::error err = result;
