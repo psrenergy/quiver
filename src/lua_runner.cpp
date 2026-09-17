@@ -702,7 +702,7 @@ struct LuaRunner::Impl {
                 auto csv_options = write_csv_options_from_lua(options, "write_csv");
                 const auto header_width = csv_options.header.size();
                 return std::make_unique<CsvWriter>(quiver::csv_write::Writer(resolved, path, "write_csv", csv_options),
-                                                     header_width);
+                                                   header_width);
             });
 
         // LUA-11: sol::no_constructor + std::unique_ptr return (above), no explicit finalizer --

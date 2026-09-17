@@ -920,8 +920,10 @@ TEST_F(LuaRunner_WriteCsv, NoHeaderMeansNoWidthCheck) {
             assert(#csv.rows[3] == 3, "expected row 3 to have 3 cells, got " .. #csv.rows[3])
         end
 
-        check(")" + path1 + R"(", nil)
-        check(")" + path2 + R"(", { header = {} })
+        check(")" +
+            path1 + R"(", nil)
+        check(")" +
+            path2 + R"(", { header = {} })
     )");
 }
 
@@ -1350,7 +1352,7 @@ TEST_F(LuaRunner_WriteCsv, UnclosedWriterIsFlushedWhenRunReturns) {
     try {
         lua.run(R"(
             local csv = db:read_csv(")" +
-            path + R"(")
+                path + R"(")
             assert(#csv.rows == 1, "expected 1 flushed row, got " .. #csv.rows)
             assert(csv.rows[1][1] == "x", "expected 'x', got " .. tostring(csv.rows[1][1]))
         )");
@@ -1375,7 +1377,7 @@ TEST_F(LuaRunner_WriteCsv, ScriptErrorMidWriteStillLeavesEarlierRowsReadable) {
 
     EXPECT_THROW(lua.run(R"(
         local w = db:write_csv(")" +
-                                  path + R"(", { header = { "a" } })
+                         path + R"(", { header = { "a" } })
         w:write_row({ "x" })
         error("boom")
         -- deliberately no w:close() -- WRITE-06's flush must fire during unwinding too (D-47)
@@ -1388,7 +1390,7 @@ TEST_F(LuaRunner_WriteCsv, ScriptErrorMidWriteStillLeavesEarlierRowsReadable) {
     try {
         lua.run(R"(
             local csv = db:read_csv(")" +
-            path + R"(")
+                path + R"(")
             assert(#csv.rows == 1, "expected the pre-error row to survive, got " .. #csv.rows)
             assert(csv.rows[1][1] == "x", "expected 'x', got " .. tostring(csv.rows[1][1]))
         )");
