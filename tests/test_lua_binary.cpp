@@ -251,6 +251,22 @@ TEST_F(LuaBinaryTest, RootItselfRejected) {
     expect_lua_error(lua, md1() + "db:open_file('.', 'w', md)\n", "escapes the database directory");
 }
 
+#ifdef _WIN32
+// resolve_sandboxed_path is the single gate every file-touching Lua operation shares, so the
+// Pattern 1 guarantee it makes has to hold for all of them, not just the one where the hole was
+// found (db:read_csv -- see LuaRunner_ReadCsv.DeviceNamePathIsReportedWithPrefix). A Windows
+// device name makes weakly_canonical throw rather than report a missing file; unwrapped, the raw
+// "weakly_canonical: The parameter is incorrect.: ..." reached the script. Guarded to _WIN32
+// because no POSIX path is reserved this way.
+TEST_F(LuaBinaryTest, DeviceNamePathIsReportedWithPrefix) {
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+    expect_lua_error(lua, md1() + "db:open_file('NUL', 'w', md)\n", "Cannot open_file: cannot resolve path 'NUL': ");
+    expect_lua_error(lua, "db:bin_to_csv('NUL')\n", "Cannot bin_to_csv: cannot resolve path 'NUL': ");
+    expect_lua_error(lua, "db:csv_to_bin('NUL')\n", "Cannot csv_to_bin: cannot resolve path 'NUL': ");
+}
+#endif
+
 TEST_F(LuaBinaryTest, ConverterEscapeThrows) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::LuaRunner lua(db);
