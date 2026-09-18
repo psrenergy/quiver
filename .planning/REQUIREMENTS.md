@@ -138,20 +138,72 @@ Which phases cover which requirements. Populated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PARSE-01 … PARSE-12 | TBD | Pending |
-| DESC-01 … DESC-07 | TBD | Pending |
-| OPT-01 … OPT-06 | TBD | Pending |
-| SAFE-01 … SAFE-03 | TBD | Pending |
-| META-01 … META-06 | TBD | Pending |
-| GROUP-01 … GROUP-05 | TBD | Pending |
-| VALID-01 … VALID-08 | TBD | Pending |
-| CORPUS-01 … CORPUS-03 | TBD | Pending |
+| PARSE-01 | Phase 1 | Pending |
+| PARSE-02 | Phase 1 | Pending |
+| PARSE-03 | Phase 1 | Pending |
+| PARSE-04 | Phase 1 | Pending |
+| PARSE-05 | Phase 1 | Pending |
+| PARSE-06 | Phase 1 | Pending |
+| PARSE-07 | Phase 1 | Pending |
+| PARSE-08 | Phase 1 | Pending |
+| PARSE-09 | Phase 1 | Pending |
+| PARSE-10 | Phase 1 | Pending |
+| PARSE-11 | Phase 1 | Pending |
+| PARSE-12 | Phase 1 | Pending |
+| DESC-01 | Phase 1 | Pending |
+| DESC-02 | Phase 1 | Pending |
+| DESC-03 | Phase 1 | Pending |
+| DESC-04 | Phase 1 | Pending |
+| DESC-05 | Phase 1 | Pending |
+| DESC-06 | Phase 1 | Pending |
+| DESC-07 | Phase 1 | Pending |
+| CORPUS-01 | Phase 1 | Pending |
+| CORPUS-02 | Phase 1 | Pending |
+| CORPUS-03 | Phase 1 | Pending |
+| OPT-01 | Phase 2 | Pending |
+| OPT-02 | Phase 2 | Pending |
+| OPT-03 | Phase 2 | Pending |
+| OPT-04 | Phase 2 | Pending |
+| OPT-05 | Phase 2 | Pending |
+| OPT-06 | Phase 2 | Pending |
+| SAFE-01 | Phase 2 | Pending |
+| SAFE-02 | Phase 2 | Pending |
+| SAFE-03 | Phase 2 | Pending |
+| META-01 | Phase 3 | Pending |
+| META-02 | Phase 3 | Pending |
+| META-03 | Phase 3 | Pending |
+| META-04 | Phase 3 | Pending |
+| META-05 | Phase 3 | Pending |
+| META-06 | Phase 3 | Pending |
+| GROUP-01 | Phase 4 | Pending |
+| GROUP-02 | Phase 4 | Pending |
+| GROUP-03 | Phase 4 | Pending |
+| GROUP-04 | Phase 4 | Pending |
+| GROUP-05 | Phase 4 | Pending |
+| VALID-01 | Phase 5 | Pending |
+| VALID-02 | Phase 5 | Pending |
+| VALID-03 | Phase 5 | Pending |
+| VALID-04 | Phase 5 | Pending |
+| VALID-05 | Phase 5 | Pending |
+| VALID-06 | Phase 5 | Pending |
+| VALID-07 | Phase 5 | Pending |
+| VALID-08 | Phase 5 | Pending |
 
 **Coverage:**
 - v1 requirements: 50 total
-- Mapped to phases: 0
-- Unmapped: 50 ⚠️ (roadmap not yet created)
+- Mapped to phases: 50 ✓
+- Unmapped: 0
+
+**By phase:**
+
+| Phase | Name | Requirements | Count |
+|-------|------|--------------|-------|
+| 1 | Enum Labels in Describe | PARSE-01…12, DESC-01…07, CORPUS-01…03 | 22 |
+| 2 | Config Path, Locale and Struct-Size Safety | OPT-01…06, SAFE-01…03 | 9 |
+| 3 | Structured Attribute Metadata | META-01…06 | 6 |
+| 4 | Collection and Attribute-Group Metadata | GROUP-01…05 | 5 |
+| 5 | `validate_ui_config()` and Milestone Release | VALID-01…08 | 8 |
 
 ---
 *Requirements defined: 2026-09-17*
-*Last updated: 2026-09-17 after initialization*
+*Last updated: 2026-09-17 after roadmap creation*
