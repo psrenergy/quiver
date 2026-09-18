@@ -45,6 +45,7 @@ Everything else in this milestone is elaboration. If only that ships, the milest
 - [ ] Collection-level UI metadata (label, icon, help, `main.collections` display order) is exposed
 - [ ] `[[attribute_group]]` metadata is exposed, absorbing both spellings of the time-series dimension column
 - [ ] `validate_ui_config()` cross-checks the sidecar against the live SQL schema and reports drift (advisory, ships last)
+- [ ] The C API exposes struct size accessors, and every binding asserts its hardcoded layout constants against the native value at load
 
 ### Out of Scope
 
@@ -241,6 +242,8 @@ rejected: it would have blocked claw indefinitely.
 | Parser written against Hub's Dart source, not `toml-schema.md` | The only written spec is already wrong about group membership | — Pending |
 | Descriptive, never enforcing | Contradicts the settled boolean decision: `CHECK (col IN (0,1))` in the schema is where domain enforcement belongs | — Pending |
 | The enum-in-describe fix ships first, on convention, with no ABI change | `describe*` already returns a `std::string` through the C API, so it reaches all five bindings and Lua for free. Ships as a patch. If the milestone stalls there, the triggering defect is still closed | — Pending |
+| Enum rendering shows the code **and** the label — `{0: 8 (Disabled)}` | The agent keeps the raw code, so it can cross-check a suspicious label against the Julia `@enumx` and can still write a query. Partial mitigation for the inversion window above, at zero cost | — Pending |
+| The C API gains struct size accessors and every binding asserts its layout constants at load | Turns the whole silent-corruption class (JS out-buffers, Python CFFI cdef, stale Dart cache) into a loud startup error instead of memory corruption with no compile error. Covers the pre-existing hazards, not just the new struct | — Pending |
 
 ## Evolution
 
