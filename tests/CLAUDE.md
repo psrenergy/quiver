@@ -49,6 +49,36 @@ C++ core and C API suites live here; binding suites live in each binding's `test
 - `test_migrations.cpp` also covers the in-memory `validate_migrations` up-then-down round trip;
   `test_c_api_database_lifecycle.cpp` covers its C API success and error propagation;
   `test_lua_runner_migrations.cpp` covers the sandboxed `db:validate_migrations` Lua binding.
+- `test_lua_runner_read_csv.cpp` covers the Lua-only `db:read_csv`/`db:read_csv_stream` bindings
+  (parsing, the `separator`/`header_row` options, and the sandbox/error-catalogue negatives) —
+  there is no C++ core, C API, or other-binding counterpart to mirror (root design decision), so
+  this suite has no sibling elsewhere. Most of its CSV fixtures are still written at runtime into
+  the `LuaSandboxTest` sandbox, since they exist only to be read back once. **`tests/fixtures/`**
+  is the one exception: `ma_energia_residencial.csv` and `ma_gd_data.csv` are two real Maranhão
+  utility files committed byte-exact (Phase 2, TEST-02), copied into the sandbox by the tests that
+  read them rather than generated inline. They are committed rather than hand-written because
+  their exact bytes are themselves what two of the parser requirements assert — a leading UTF-8
+  BOM and CRLF line endings on the Energia file, neither on the GD file — and a fixture built by a
+  test-writer's editor cannot be trusted to reproduce that. `.gitattributes` marks both `-text` so
+  git's line-ending normalization never touches them (D-24); like `tests/schemas/`, the directory
+  needs no CMake registration since both tests locate it from the compiled-in source path.
+  Two of its negatives need an OS-level lever rather than a fixture, and the two platforms
+  disagree about which one works. `UnreadableFileReportsParserFailure` needs a file that passes
+  exists/not-a-directory/non-empty but still cannot be opened, so the csv-parser wrapper is the
+  message under test: Windows takes an exclusive lock (`CreateFileW` with `dwShareMode` 0, since a
+  DENY ACE there blocks the open but *not* the metadata queries, and `chmod` is a no-op for read
+  access), POSIX uses `chmod 000` (which blocks the open while `stat` still succeeds) and skips
+  under root. It asserts the three preconditions still pass before reading, so it cannot silently
+  degrade into re-testing an earlier catalogue message. `DeviceNamePathIsReportedWithPrefix` (here
+  and in `test_lua_binary.cpp`) is `_WIN32`-only because no POSIX path is reserved the way `NUL`
+  is; the `test_lua_binary.cpp` copy spans `open_file`/`bin_to_csv`/`csv_to_bin` on purpose, so the
+  fix stays in the shared `resolve_sandboxed_path` gate instead of regressing to a per-caller patch.
+- `test_lua_runner_write_csv.cpp` covers the Lua-only `db:write_csv`/`w:write_row`/`w:close`
+  binding (cell-type dispatch, the `separator`/`header` options, the max-integer-key row walk, and
+  the WRITE-08 truncate-at-open behaviour) — same no-other-layer-counterpart situation as
+  `test_lua_runner_read_csv.cpp` above. Every correctness assertion in it round-trips the written
+  file back through `db:read_csv` rather than reading the raw bytes, for the same reason
+  `export_csv`'s export-only string-search tests were a trap this project hit twice already.
 
 ## C API tests
 
@@ -94,7 +124,14 @@ the four bindings extend their own boolean files. Two things to keep in mind whe
   `CreateElementArrayCellTypeMismatchThrows` cover bugs that only manifested with
   `SOL_SAFE_GETTER` off (silent 0 / 0.0 / `""` instead of a throw), and `SOL_SAFE_GETTER` is on by
   default in Debug — so a Debug-only run cannot prove the fix. Build Release and run
-  `--gtest_filter='LuaRunner*'` when touching `lua_table_to_vector`.
+  `--gtest_filter='LuaRunner*'` when touching `lua_table_to_vector`. **Do not use the plain
+  `release` CMake preset for this** — it sets `QUIVER_BUILD_TESTS=OFF`, so it produces a Release
+  tree with no test binary at all and would report success while testing nothing. Configure a
+  separate tree explicitly: `cmake -S . -B build-release -G Ninja -DCMAKE_BUILD_TYPE=Release
+  -DQUIVER_BUILD_TESTS=ON -DQUIVER_BUILD_C_API=ON`, build it, then run the filter against
+  `build-release/bin/quiver_tests.exe`. Phase 2's `header_row` decoder (a new `sol::object` type
+  check) was verified this way (TEST-05): 291/291 `LuaRunner*` tests passed in both Debug and
+  Release, with no divergence.
 
 The native-DateTime bindings (Julia, Dart, and Python) cover bulk scalar, vector, and set
 convenience readers in the corresponding `read` test files. Scalar coverage includes positional

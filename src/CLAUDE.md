@@ -46,9 +46,14 @@ src/                      # C++ implementation
   element.cpp / row.cpp / result.cpp / migration.cpp / migrations.cpp
   ui_config.h / ui_config.cpp  # UIConfigSet - private PSR database/ui/ TOML sidecar parser
   lua_runner.cpp          # LuaRunner (sol2) - all Lua bindings
+  csv_read.h / csv_read.cpp  # Internal CSV reader (csv-parser, Pimpl'd) behind db:read_csv /
+                              # db:read_csv_stream -- no include/quiver/ counterpart (see below)
+  csv_write.h / csv_write.cpp  # Internal CSV writer (hand-rolled, NOT Pimpl'd) behind db:write_csv
+                                # -- same no-include/quiver/-counterpart posture as csv_read
   cli/main.cpp            # quiver_cli CLI entry point
   utils/string.h          # String utilities: new_c_str, trim
   utils/datetime.h        # ISO 8601 parse/format helpers
+  utils/number.h          # quiver::utils::append_number -- std::to_chars shortest round-trip
 src/binary/                 # Binary C++ implementation
   binary_file.cpp             # BinaryFile class (Pimpl impl) + write registry
   binary_utils.h              # Shared file-extension constants
@@ -69,6 +74,77 @@ src/expression/             # Expression C++ implementation
   expression_select_agents.cpp     # ExpressionSelectAgents (label-axis projection)
   expression_rename_agents.cpp     # ExpressionRenameAgents (label-axis rename)
 ```
+
+`csv_read.h`/`csv_read.cpp` is the first `.cpp` in `src/` with no `include/quiver/` public
+counterpart — every other internal helper here (`utils/string.h`, `database_internal.h`,
+`binary/binary_utils.h`) is header-only inline, and every other `QUIVER_SOURCES` entry implements
+a public header. It stays internal because there is no FFI consumer for it (Julia/Dart/Python/JS
+already have native CSV libraries; Lua needs this precisely because `io` is deliberately absent),
+so the root CLAUDE.md rule "bind every public method down to every binding" never fires — no
+documented exception needed. `Reader` is Pimpl'd specifically so csv-parser's headers never have
+to be included by `lua_runner.cpp`, which already needs `/bigobj` on MSVC for sol2's template
+depth. Three `csv::CSVFormat` settings are pinned in exactly one place (`make_format`, in
+`csv_read.cpp`) because every one of the library defaults is wrong for this reader:
+`variable_columns(KEEP_NON_EMPTY)` (the default `IGNORE_ROW` silently discards any row whose field
+count differs from the header), the header row (with no header pinned, csv-parser guesses one and
+pops every record up to the guessed index — silently eating a one-cell title line above the real
+header; driven by `Options.header_row`, 1-based at the Lua boundary, `0` = `no_header()`, default
+`1` — Phase 2's `header_row` option, D-20), and never calling `chunk_size(...)` (with
+`CSV_ENABLE_THREADS` forced off, the read window is csv-parser's own fixed default, unmultiplied by
+worker count). **Call order in `make_format` is load-bearing**: the header mode must be set before
+`variable_columns()`, because `CSVFormat::header_row(row < 0)` (i.e. `no_header()`) overwrites
+`variable_column_policy` to plain `KEEP` as a side effect
+(`build/_deps/csv_parser-src/include/internal/csv_format.cpp:44`) — reordering silently
+reintroduces phantom blank-line rows for every no-header read. `Reader`'s constructor also
+synthesizes the "header row not found" error csv-parser never raises itself: a header row past EOF
+returns an empty header with zero rows in total silence, so the check is gated on the caller's
+original request (`header_row != 0`) rather than header emptiness alone, since `header_row = 0`
+also yields an empty header by design.
+
+`csv_write.h`/`csv_write.cpp` is `csv_read`'s deliberate non-Pimpl counterpart (D-37): it depends
+on nothing that must be kept out of the sol2 translation unit (no csv-parser, no third-party
+headers), so hiding its `std::ofstream` member behind a Pimpl the way `Reader` hides csv-parser
+would be cargo cult. It backs `db:write_csv` alone, with the same no-`include/quiver/`-header,
+no-`QUIVER_API`, no-C-API posture as `csv_read`. Numeric cell formatting reuses
+`quiver::utils::append_number` (`src/utils/number.h`) via `std::to_chars`'s shortest round-trip
+form with no synthetic decimal point, so a whole float and the equal integer write identical text
+(D-34); a `nil` cell and an empty-string cell are structurally indistinguishable after a CSV round
+trip and that is stated, not fixed — CSV has no null (D-40). FMT-07's row-width enforcement (a
+short `write_row` pads to the header's length, a long one throws) lives entirely in the Lua-layer
+`CsvWriter` wrapper in `src/lua_runner.cpp`, not here: this file's `Writer` gained no header-width
+state and no signature change for it, and padding happens before the cell vector ever reaches
+`write_row`/`append_record`, so `append_record`'s `lone_empty_cell` predicate sees the final,
+already-padded cell count.
+
+Three guards in the Lua layer's decoders (`src/lua_runner.cpp`) exist because a script is
+untrusted input, in the same spirit as the JSON encoder's two caps below:
+- `csv_max_integer_key` is the single max-integer-key walk behind both `csv_row_cells_from_lua`
+  and `csv_header_from_lua` (so the key rule and its message live once), and it caps the result at
+  1,000,000. Both callers materialize a **dense** vector up to that key, so `{[1e9] = "x"}` — the
+  same sparseness hazard the encoder note below names — allocated tens of gigabytes, or reached
+  the script as a raw `std::bad_alloc` with no Pattern 1 prefix.
+- `csv_options_entries` checks each option key's Lua *type* before converting it. sol2's
+  `std::string` getter is `lua_tolstring`, which answers `nullptr` for a boolean/table/function
+  key: unchecked in Release (`SOL_SAFE_GETTER` is off there) and a raw sol2 panic in Debug, so
+  `{ [true] = 1 }` reached the script as a bare Lua value rather than a message.
+- `csv_separator_from_lua` rejects `"`, CR, LF and NUL in addition to the multi-byte check. They
+  are one byte but cannot be delimiters: csv-parser refuses a delimiter that overlaps its quote
+  character, so `db:write_csv` with `separator = '"'` silently produced a file `db:read_csv`
+  could not open.
+`w:write_row` also checks its argument is a table: sol2's check for a `const sol::table&`
+parameter is a loose one that accepts **userdata** too, and iterating a userdata yields no keys,
+so `w:write_row(db)` appended a spurious empty record instead of throwing. For the same reason
+`db:read_csv_stream`'s `on_row` is a `sol::object` with an explicit `sol::type::function` check
+rather than a typed `sol::protected_function` parameter — the typed one surfaced sol2's own
+"stack index 3, expected function" text.
+
+`Impl::open_writers` is also the concurrency guard: it records each writer's **resolved** path, and
+`db:write_csv` refuses a path some live, unclosed writer already holds (Pattern 1, mirroring
+`db:open_file`'s process-global write registry in `src/binary/binary_file.cpp`). Two writers on one
+path each open with `ios::trunc` and write from offset 0, so the second silently discarded
+everything the first had buffered. Reopening a path whose previous writer was **closed** is still
+the documented truncate (WRITE-08) — the guard checks `is_closed()`, which is what keeps
+`ReopeningSamePathTruncatesExistingContent` green.
 
 ## Pimpl vs Value Types
 
@@ -380,13 +456,25 @@ lua.run(R"(
 Implementation conventions in `lua_runner.cpp`:
 - **Filesystem sandbox**: `resolve_sandboxed_path(db, operation, path)` is the single gate for
   every file-touching Lua operation (`db:open_file`, `db:bin_to_csv`, `db:csv_to_bin`,
-  `db:export_csv`, `db:import_csv`, `db:validate_migrations`, `expr:save`). It rejects `:memory:`
+  `db:export_csv`, `db:import_csv`, `db:validate_migrations`, `db:read_csv`, `db:read_csv_stream`,
+  `db:write_csv`, `expr:save`). It rejects `:memory:`
   databases, resolves relative paths against the database file's directory (bare-filename db paths fall back to the
   CWD at call time, mirroring `create_database_logger`), canonicalizes via `weakly_canonical`,
   and requires strict containment (candidate == root is rejected — the binary subsystem appends
   `.qvr`/`.toml` by string concatenation). The resolved absolute path is what's forwarded
   downstream, so the process CWD is irrelevant to Lua file I/O. Pattern 1 messages thread the
   public operation name. This is LuaRunner policy only — the C++/Julia surfaces stay unsandboxed.
+  **The `current_path`/`weakly_canonical` block is wrapped in a `try`/`catch` that re-throws as
+  `"Cannot <op>: cannot resolve path '<p>': <os reason>"`** — those throwing overloads raise
+  `std::filesystem_error` for any OS failure that is not a plain "does not exist", and a Windows
+  device name (`NUL`, `nul`, any case, any directory) is exactly such a case. Unwrapped, the raw
+  `weakly_canonical: The parameter is incorrect.: ...` reached the script with no Pattern 1 prefix
+  at all, breaking LUA-08 for **every** operation in the list above, not just the one it was found
+  through. Because this is the single gate they all share, the guard belongs here and nowhere else;
+  the deliberate `:memory:` and containment throws stay outside the `try` so they are not
+  double-wrapped. Covered by `LuaRunner_ReadCsv.DeviceNamePathIsReportedWithPrefix` and
+  `LuaBinaryTest.DeviceNamePathIsReportedWithPrefix` (the latter spanning `open_file`/`bin_to_csv`/
+  `csv_to_bin`, so the shared fix cannot regress to a per-caller patch).
 - **Enabled standard libraries**: `base`, `string`, `table`, `math`, `coroutine`, and `utf8`
   (pure computation only). `os`, `io`, `package`/`require`, and `debug` stay unloaded — scripts
   cannot reach the shell, the process, the environment, or the filesystem outside the db sandbox.
@@ -448,6 +536,19 @@ Implementation conventions in `lua_runner.cpp`:
   Without it that check degrades to "is a number" in release, and the file-wide
   `is<int64_t>()`-before-`is<double>()` ordering would route every float into the integer branch
   and store `llround(x)`. Do not drop or move those definitions.
+- **`SOL_NO_NIL=1` (`src/CMakeLists.txt`) is a portability guard, not a preference.** sol2 does not
+  define `sol::nil` on Apple platforms at all: `version.hpp` turns `SOL_NIL` off whenever
+  `__MAC_OS_X_VERSION_MAX_ALLOWED`, `__OBJC__` or a `nil` macro is visible, because Objective-C
+  already claims the name. `sol::lua_nil` is always defined and is literally the same object of the
+  same type (`types.hpp`: `using nil_t = lua_nil_t; inline constexpr const nil_t& nil = lua_nil;`),
+  so the two spellings are interchangeable everywhere `sol::nil` exists. Without this define the
+  difference is invisible on Windows and Linux and only surfaces as a macOS CI compile error —
+  which is exactly how one `sol::nil` in `db:read_csv_stream`'s header argument reddened both macOS
+  jobs for three runs while every other platform stayed green. Setting it makes the portable
+  spelling the only one that compiles anywhere, so the mistake fails on the developer's own
+  machine. `PRIVATE` on `quiver` is full coverage: `lua_runner.cpp` is the only translation unit in
+  the repo that includes sol2 (no test includes `<sol/sol.hpp>`). Use `sol::lua_nil` and
+  `sol::type::lua_nil`, never `sol::nil` / `sol::type::nil`.
 - `time_series_rows_from_lua` transpose, shared by `update_time_series_group_lua` and
   `update_time_series_group_by_label_lua` (both one-liners over it). Mirrors `group_rows_from_lua`
   but takes `db`, since the dimension columns come from metadata. The **dimension column(s) are
@@ -463,8 +564,9 @@ Implementation conventions in `lua_runner.cpp`:
   path emits NULL cells as `nil` holes (an all-NULL column is an empty table with the key present),
   so read → modify → write round-trips; `#ts.<dimension>` is the trustworthy row count.
 - **`run` returns the script's return value as JSON**, built by the anonymous-namespace
-  `append_json` / `append_json_string` / `append_number` / `append_json_double` /
-  `append_json_table` at the top of the file. The table check uses `get_type()` rather than
+  `append_json` / `append_json_string` / `append_json_double` / `append_json_table` at the top of
+  the file, plus `quiver::utils::append_number` (`src/utils/number.h` — moved out of this file,
+  D-38; `db:write_csv`'s cell formatter is its third caller). The table check uses `get_type()` rather than
   `is<T>()` on purpose: sol2's `is<sol::table>()` also accepts **userdata**, so `return db` would
   quietly encode as `{}`. The boolean check spells `get_type()` for consistency with
   `is_lua_boolean` in `Impl`, not out of necessity — sol2's `check<bool>` *is* `lua_isboolean`
@@ -496,6 +598,24 @@ Implementation conventions in `lua_runner.cpp`:
 - Script errors surface as `"Failed to run Lua script: ..."` (root Pattern 3). Encoder failures
   (unsupported type, unsupported table key, too deep) are Pattern 1 `"Cannot run: ..."` and are
   **not** wrapped in that prefix — they happen after the script already succeeded.
+- **A writer left open when the script returns is still flushed.** `LuaRunner::run` declares one
+  function-local RAII guard (`GcGuard`) before calling `safe_script`, whose destructor runs
+  `Impl::close_open_writers()` and then `impl_->lua.collect_garbage()` exactly once at `run()`'s
+  scope exit — covering the normal-return, empty-return, and throw-unwinding paths alike. The
+  guard is declared *before* `result`, so C++'s reverse-declaration-order destruction runs both
+  *after* `result`'s Lua stack reference is released.
+  **The explicit close is the load-bearing half, not the collection.** `collect_garbage()` only
+  finalizes *unreachable* objects, so a writer the script assigned to a global
+  (`w = db:write_csv(...)` — no `local`, Lua's default spelling) is a GC root and was never
+  flushed: the file stayed at 0 bytes, which
+  `LuaRunner_WriteCsv.UnclosedWriterHeldInAGlobalIsAlsoFlushedWhenRunReturns` pins. `db:write_csv`
+  therefore hands out a `std::shared_ptr<csv_write::Writer>` and records a `weak_ptr` in
+  `Impl::open_writers`; `close_open_writers()` locks each one still alive, closes it (swallowing a
+  flush failure — a scope-exit guard has no caller to report to, exactly as `~Writer` did), and
+  clears the list. A writer therefore does not outlive its `run()`. The `collect_garbage()` call
+  stays for every other sol2-owned resource; one call was proven sufficient by an executed probe
+  against this repo's own vendored sol2/Lua build (RESEARCH.md Q1) — it must not be "hardened"
+  into a loop.
 
 ## Binary Subsystem
 

@@ -2,10 +2,10 @@
 #include "quiver/options.h"
 #include "quiver/schema.h"
 #include "utils/datetime.h"
+#include "utils/number.h"
 
 #include <algorithm>
 #include <cctype>
-#include <charconv>
 #include <cstring>
 #include <ctime>
 #include <filesystem>
@@ -59,14 +59,14 @@ static std::string value_to_csv_string(const Value& value,
         return std::to_string(int_val);
     }
 
-    // Float: shortest representation that round-trips exactly (std::to_chars, the house idiom
-    // for numbers). "%g" was used here first and silently truncated to 6 significant digits, so
-    // an export -> edit -> import cycle lost precision (1234567.89 came back as 1.23457e+06).
+    // Float: shortest representation that round-trips exactly, via utils::append_number (the one
+    // house idiom for numbers, shared with the Lua JSON encoder and db:write_csv's cell formatter).
+    // "%g" was used here first and silently truncated to 6 significant digits, so an export ->
+    // edit -> import cycle lost precision (1234567.89 came back as 1.23457e+06).
     if (std::holds_alternative<double>(value)) {
-        char buf[64];
-        // Cannot fail: 64 bytes is more than the longest shortest-round-trip double.
-        auto* end = std::to_chars(buf, buf + sizeof(buf), std::get<double>(value)).ptr;
-        return std::string(buf, end);
+        std::string out;
+        utils::append_number(std::get<double>(value), out);
+        return out;
     }
 
     // String (may be DateTime)

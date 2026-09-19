@@ -156,8 +156,6 @@ end
 mutable struct quiver_database_options_t
     read_only::Cint
     console_level::quiver_log_level_t
-    ui_config_dir::Ptr{Cchar}
-    ui_locale::Ptr{Cchar}
 end
 
 mutable struct quiver_csv_options_t

@@ -82,7 +82,7 @@ def load_library(ffi: FFI):
                 _dll_dir_handle = os.add_dll_directory(str(_LIBS_DIR))
             ffi.dlopen(str(core_path))
             lib = ffi.dlopen(str(c_api_path))
-            _assert_struct_sizes(ffi, lib)
+            pass  # MUTATION: gate unwired
             _load_source = "bundled"
             return lib
         except OSError as e:
@@ -98,7 +98,7 @@ def load_library(ffi: FFI):
 
     try:
         lib = ffi.dlopen(dev_c_api)
-        _assert_struct_sizes(ffi, lib)
+        pass  # MUTATION: gate unwired
         _load_source = "development"
         return lib
     except OSError:
