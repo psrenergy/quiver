@@ -39,36 +39,52 @@ export const CSV_OPTIONS_OFFSET_ENUM_GROUP_COUNT = 48;
 export const CSV_OPTIONS_SIZE = 56;
 
 /**
- * Construct the 24-byte quiver_database_options_t struct as an Allocation, plus a keepalive
- * array of every child string allocation (ui_config_dir / ui_locale point into separately
- * allocated buffers that must outlive the native call -- copied from buildCsvOptionsBuffer in
- * csv.ts, the in-repo precedent for exactly this shape).
+ * Construct the 24-byte quiver_database_options_t struct as a SINGLE self-contained Allocation,
+ * with any present option strings copied into the buffer's own tail rather than into separate
+ * child allocations. There is no second array of child allocations to hold alive here (contrast
+ * `buildCsvOptionsBuffer` in `csv.ts`, which genuinely needs child pointer tables and returns its
+ * own second array for exactly that purpose): that pattern only exists to guard against the
+ * garbage collector reclaiming a *second* allocation before the FFI call runs -- eliminating the
+ * second allocation eliminates the hazard, it does not just paper over it. The struct header and
+ * both option strings live in one `Uint8Array`, so nothing reachable only from a local variable
+ * can be collected out from under the pointer fields.
  *
  * An absent or empty-string option leaves its pointer slot's eight zero bytes (NULL), which the
- * C converter maps to "not specified" -- matching 02-01's single NULL/empty rule. No child
- * string is allocated for that case.
+ * C converter maps to "not specified" -- matching 02-01's single NULL/empty rule. No tail bytes
+ * are reserved for that option.
+ *
+ * `OPTIONS_SIZE` stays a pinned literal validated once at library load (`assertNativeStructSizes`
+ * in `loader.ts`), not re-read from the accessor on every call: `getSymbols()` provably precedes
+ * `makeDefaultOptions` at all three `database.ts` call sites, so no options buffer can be built
+ * before the accessor has already confirmed 24. Reading the accessor per allocation was
+ * considered and rejected -- it would add an FFI call to every database open for zero additional
+ * safety over the load-time gate that already runs first.
  */
-export function makeDefaultOptions(options?: DatabaseOptions): [Allocation, Allocation[]] {
-  const buf = new Uint8Array(OPTIONS_SIZE);
+export function makeDefaultOptions(options?: DatabaseOptions): Allocation {
+  const dirBytes = options?.uiConfigDir ? encoder.encode(`${options.uiConfigDir}\0`) : null;
+  const localeBytes = options?.uiLocale ? encoder.encode(`${options.uiLocale}\0`) : null;
+
+  const buf = new Uint8Array(OPTIONS_SIZE + (dirBytes?.length ?? 0) + (localeBytes?.length ?? 0));
   const dv = new DataView(buf.buffer);
-  const keepalive: Allocation[] = [];
 
   dv.setInt32(OPTIONS_OFFSET_READ_ONLY, options?.readOnly ? 1 : 0, true);
   dv.setInt32(OPTIONS_OFFSET_CONSOLE_LEVEL, options?.consoleLevel ?? LOG_LEVEL_INFO, true);
 
-  if (options?.uiConfigDir) {
-    const dirStr = allocNativeString(options.uiConfigDir);
-    keepalive.push(dirStr);
-    dv.setBigUint64(OPTIONS_OFFSET_UI_CONFIG_DIR, nativeAddress(dirStr.ptr), true);
+  let tailOffset = OPTIONS_SIZE;
+
+  if (dirBytes) {
+    buf.set(dirBytes, tailOffset);
+    dv.setBigUint64(OPTIONS_OFFSET_UI_CONFIG_DIR, nativeAddress(ptr(buf, tailOffset)), true);
+    tailOffset += dirBytes.length;
   }
 
-  if (options?.uiLocale) {
-    const localeStr = allocNativeString(options.uiLocale);
-    keepalive.push(localeStr);
-    dv.setBigUint64(OPTIONS_OFFSET_UI_LOCALE, nativeAddress(localeStr.ptr), true);
+  if (localeBytes) {
+    buf.set(localeBytes, tailOffset);
+    dv.setBigUint64(OPTIONS_OFFSET_UI_LOCALE, nativeAddress(ptr(buf, tailOffset)), true);
+    tailOffset += localeBytes.length;
   }
 
-  return [{ ptr: ptr(buf), buf }, keepalive];
+  return { ptr: ptr(buf), buf };
 }
 
 /** Allocate an 8-byte buffer for a pointer out-parameter. */
