@@ -1,5 +1,7 @@
 #include "database_impl.h"
+#include "ui_config.h"
 
+#include <algorithm>
 #include <ostream>
 #include <sstream>
 #include <string>
@@ -117,6 +119,7 @@ std::string Database::describe_collection(const std::string& collection) const {
 
 std::string Database::summarize_collection(const std::string& collection) const {
     impl_->require_collection(collection, "summarize_collection");
+    impl_->require_ui_config();
 
     const int64_t element_count = number_of_elements(collection);
     const std::string quoted_collection = "\"" + collection + "\"";
@@ -148,12 +151,36 @@ std::string Database::summarize_collection(const std::string& collection) const 
                     query_int_rows(impl_->db,
                                    "SELECT " + quoted_col + ", COUNT(*) FROM " + quoted_collection + " WHERE " +
                                        quoted_col + " IS NOT NULL GROUP BY " + quoted_col + " ORDER BY " + quoted_col);
+
+                // Enum label lookup (DESC-04): resolved only when a sidecar loaded, the attribute
+                // binds a non-empty vocabulary name, and that vocabulary is itself known. Any of
+                // those being false leaves `vocabulary` null and the loop below emits nothing
+                // extra -- the no-sidecar output is unchanged by construction, not by care.
+                const std::vector<UIEnumEntry>* vocabulary = nullptr;
+                if (impl_->ui_config) {
+                    if (const auto* attribute = find_attribute(*impl_->ui_config, collection, scalar.name);
+                        attribute && !attribute->vocabulary.empty()) {
+                        vocabulary = find_vocabulary(*impl_->ui_config, attribute->vocabulary);
+                    }
+                }
+
                 out << "; values {";
                 for (size_t i = 0; i < rows.size(); ++i) {
                     if (i != 0) {
                         out << ", ";
                     }
-                    out << rows[i][0] << ": " << rows[i][1];
+                    const auto code = rows[i][0];
+                    out << code << ": " << rows[i][1];
+                    if (vocabulary) {
+                        auto entry = std::find_if(vocabulary->begin(), vocabulary->end(), [code](const UIEnumEntry& e) {
+                            return e.code == code;
+                        });
+                        if (entry != vocabulary->end()) {
+                            out << " (" << entry->label << ")";
+                        } else {
+                            out << " (undeclared)";
+                        }
+                    }
                 }
                 out << "}";
             }

@@ -11,6 +11,7 @@ set(QUIVER_SOURCES
     database_csv_export.cpp
     database_csv_import.cpp
     database_describe.cpp
+    ui_config.cpp
     element.cpp
     lua_runner.cpp
     migration.cpp

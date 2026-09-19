@@ -5,6 +5,7 @@
 #include "quiver/schema.h"
 #include "quiver/schema_validator.h"
 #include "quiver/type_validator.h"
+#include "ui_config.h"
 
 #include <map>
 #include <memory>
@@ -65,6 +66,12 @@ struct Database::Impl {
     // require_schema. mutable so the const readers (get_*_metadata, describe, ...) can trigger it.
     mutable std::unique_ptr<Schema> schema;
     mutable std::unique_ptr<TypeValidator> type_validator;
+    // Loaded lazily by require_ui_config: absence is the normal case (every non-PSR database),
+    // so a separate "already tried" flag avoids re-walking the directory on every describe* call.
+    // Kept apart from require_schema/schema on purpose (D-21): a malformed sidecar must never
+    // turn a good database into a throwing one.
+    mutable std::optional<UIConfigSet> ui_config;
+    mutable bool ui_load_attempted = false;
     // A dry run holds one real transaction open and absorbs the public begin/commit/rollback so
     // nested callers compose. TransactionGuard needs no flag - it already no-ops when a
     // transaction is active.
@@ -78,6 +85,11 @@ struct Database::Impl {
             load_schema_metadata();
         }
     }
+
+    // Defined in ui_config.cpp (the one non-inline Impl method) -- lazy, publish-nothing-until-
+    // valid, and separate from require_schema (D-21/D-25: a malformed sidecar must never surface
+    // as an exception from describe()/describe_collection()/summarize_collection()).
+    void require_ui_config() const;
 
     void require_collection(const std::string& collection, const char* operation) const {
         require_schema();

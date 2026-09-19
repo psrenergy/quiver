@@ -1,0 +1,22 @@
+id = "Storage"
+label = "Storage Units"
+
+[[attribute]]
+id = "has_commitment"
+type = "enum"
+enum = "bool"
+label = "Has Commitment"
+
+[[attribute]]
+id = "max_generation"
+unit = "MW"
+label = "Maximum Generation"
+
+[[attribute]]
+id = "internal_code"
+hide = true
+label = "Internal Code"
+
+[[attribute]]
+id = "notes"
+label = ""
