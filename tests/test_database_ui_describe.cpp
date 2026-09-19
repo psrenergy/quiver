@@ -59,6 +59,37 @@ void write_file(const std::filesystem::path& path, const std::string& content) {
     out << content;
 }
 
+// A scratch schema + ui/ sidecar written under a fresh directory relative to the test binary's
+// cwd (build/bin -- gtest_discover_tests's WORKING_DIRECTORY) and removed in the destructor.
+// Task 3 is scoped to this test file only (no fixture corpus edit), and no fixture under
+// tests/schemas/ui/ isolates "unit present, label absent" (every unit-bearing attribute there
+// also carries a label) -- so that one clause combination is proven here instead of against the
+// tracked corpus.
+class ScratchSidecarDir {
+public:
+    explicit ScratchSidecarDir(const std::string& name) : dir_(name) {
+        std::filesystem::remove_all(dir_);
+        std::filesystem::create_directories(dir_ / "ui");
+    }
+    ~ScratchSidecarDir() { std::filesystem::remove_all(dir_); }
+
+    ScratchSidecarDir(const ScratchSidecarDir&) = delete;
+    ScratchSidecarDir& operator=(const ScratchSidecarDir&) = delete;
+
+    void write_schema(const std::string& content) const { write_file(dir_ / "schema.sql", content); }
+    void write_ui_file(const std::string& filename, const std::string& content) const {
+        write_file(dir_ / "ui" / filename, content);
+    }
+
+    quiver::Database open(const std::string& stem) const {
+        return quiver::Database::from_schema((dir_ / (stem + ".sqlite")).string(), (dir_ / "schema.sql").string(),
+                                             {.read_only = false, .console_level = quiver::LogLevel::Off});
+    }
+
+private:
+    std::filesystem::path dir_;
+};
+
 }  // namespace
 
 // The tracer slice's canonical output: a TOML sidecar on disk reaches
@@ -216,6 +247,137 @@ TEST(DatabaseUiDescribe, MalformedDirectoryLogsAtWarn) {
     db.has_ui_config();
     const auto output = testing::internal::GetCapturedStderr();
     EXPECT_FALSE(output.empty());
+}
+
+// DESC-02/03/04 adjacency edge: unit/label/vocabulary are each independently optional -- every
+// combination renders as exactly one well-formed line, with no doubled or trailing separator.
+// Four of the five combinations (unit only, label only, both, neither) are proven against a
+// scratch sidecar (see ScratchSidecarDir); the corpus has no attribute isolating "unit present,
+// label absent" alone.
+TEST(DatabaseUiDescribe, ClauseCombinationsHaveNoDoubledOrTrailingSeparator) {
+    ScratchSidecarDir scratch("cpp_combinations_scratch");
+    scratch.write_schema(R"(PRAGMA foreign_keys = ON;
+
+CREATE TABLE Configuration (
+    id INTEGER PRIMARY KEY,
+    label TEXT UNIQUE NOT NULL
+) STRICT;
+
+CREATE TABLE Storage (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    label TEXT UNIQUE NOT NULL,
+    unit_only REAL,
+    label_only REAL,
+    both_present REAL,
+    neither_present REAL
+) STRICT;
+)");
+    scratch.write_ui_file("main.toml", "model = \"Combinations\"\ncollections = [\"storage\"]\n");
+    scratch.write_ui_file("storage.toml", R"(id = "Storage"
+
+[[attribute]]
+id = "unit_only"
+unit = "MW"
+
+[[attribute]]
+id = "label_only"
+label = "Label Only"
+
+[[attribute]]
+id = "both_present"
+unit = "MW"
+label = "Both Present"
+
+[[attribute]]
+id = "neither_present"
+)");
+
+    auto db = scratch.open("db");
+    const auto lines = split_lines(db.describe_collection("Storage"));
+
+    EXPECT_EQ("    - unit_only (REAL) [MW]", find_line(lines, "    - unit_only"));
+    EXPECT_EQ("    - label_only (REAL) " + kEmDash + " \"Label Only\"", find_line(lines, "    - label_only"));
+    EXPECT_EQ("    - both_present (REAL) [MW] " + kEmDash + " \"Both Present\"", find_line(lines, "    - both_present"));
+    EXPECT_EQ("    - neither_present (REAL)", find_line(lines, "    - neither_present"));
+}
+
+// Fifth combination: a resolved vocabulary (htd_like's has_commitment, which also carries a
+// label) versus an unresolved one (no_enum's has_commitment, same shape) -- exact full lines.
+TEST(DatabaseUiDescribe, VocabularyPresentWithAndWithoutResolution) {
+    auto htd_db = quiver::test::open_ui_fixture(__FILE__, "htd_like", "cpp_combinations_vocab_resolved");
+    const auto htd_lines = split_lines(htd_db.describe_collection("HydroPlant"));
+    const std::string htd_expected =
+        "    - has_commitment (INTEGER) " + kEmDash + " \"Unit Commitment\" enum bool {0: Disable, 1: Enable}";
+    EXPECT_EQ(htd_expected, find_line(htd_lines, "    - has_commitment"));
+
+    auto no_enum_db = quiver::test::open_ui_fixture(__FILE__, "no_enum", "cpp_combinations_vocab_unresolved");
+    const auto no_enum_lines = split_lines(no_enum_db.describe_collection("Storage"));
+    const std::string no_enum_expected =
+        "    - has_commitment (INTEGER) " + kEmDash + " \"Has Commitment\" enum bool (undeclared vocabulary)";
+    EXPECT_EQ(no_enum_expected, find_line(no_enum_lines, "    - has_commitment"));
+}
+
+// Cardinality boundary: kMaxDistributionCardinality (64) gates the histogram, and the new label
+// clause lives inside that branch. At exactly 64 distinct values the histogram (and its labels)
+// still renders.
+TEST(DatabaseUiDescribe, CardinalityAt64RendersLabels) {
+    auto db = quiver::test::open_ui_fixture(__FILE__, "enum_basic", "cpp_card_64");
+    for (int64_t i = 0; i < 64; ++i) {
+        db.create_element(
+            "Storage", quiver::Element().set("label", "card64_" + std::to_string(i)).set("has_commitment", i));
+    }
+
+    const auto report = db.summarize_collection("Storage");
+    EXPECT_TRUE(contains(report, "values {")) << report;
+    EXPECT_TRUE(contains(report, "(Disabled)")) << report;
+    EXPECT_TRUE(contains(report, "(undeclared)")) << report;
+}
+
+// At 65 distinct values the histogram (and therefore its labels) is suppressed entirely, while
+// describe_collection() still lists the full declared vocabulary -- the declared list is
+// independent of the data.
+TEST(DatabaseUiDescribe, CardinalityAt65SuppressesHistogram) {
+    auto db = quiver::test::open_ui_fixture(__FILE__, "enum_basic", "cpp_card_65");
+    for (int64_t i = 0; i < 65; ++i) {
+        db.create_element(
+            "Storage", quiver::Element().set("label", "card65_" + std::to_string(i)).set("has_commitment", i));
+    }
+
+    const auto summarize_report = db.summarize_collection("Storage");
+    EXPECT_FALSE(contains(summarize_report, "values {")) << summarize_report;
+
+    const auto describe_report = db.describe_collection("Storage");
+    EXPECT_TRUE(contains(describe_report, "enum bool {0: Disabled, 1: Enabled}")) << describe_report;
+}
+
+// DESC-05, re-asserted at the end of the render work: a database with no ui/ sidecar renders
+// byte-identical to the pre-change golden baselines, so a render regression from this plan's own
+// work surfaces here rather than in a later plan.
+TEST(DatabaseUiDescribe, NoSidecarOutputStillMatchesGolden) {
+    auto db = quiver::test::open_ui_fixture_at(__FILE__, "ui_golden", "cpp_no_sidecar_still_golden");
+    db.create_element(
+        "Items",
+        quiver::Element().set("label", std::string("a")).set("priority", static_cast<int64_t>(1)).set("weight", 1.5));
+    db.create_element(
+        "Items",
+        quiver::Element().set("label", std::string("b")).set("priority", static_cast<int64_t>(2)).set("weight", 2.5));
+
+    std::ifstream describe_collection_in(SCHEMA_PATH("schemas/ui_golden/describe_collection.txt"), std::ios::binary);
+    std::string describe_collection_golden((std::istreambuf_iterator<char>(describe_collection_in)),
+                                           std::istreambuf_iterator<char>());
+    EXPECT_EQ(db.describe_collection("Items"), describe_collection_golden);
+
+    std::ifstream summarize_collection_in(SCHEMA_PATH("schemas/ui_golden/summarize_collection.txt"), std::ios::binary);
+    std::string summarize_collection_golden((std::istreambuf_iterator<char>(summarize_collection_in)),
+                                            std::istreambuf_iterator<char>());
+    EXPECT_EQ(db.summarize_collection("Items"), summarize_collection_golden);
+
+    std::ifstream describe_in(SCHEMA_PATH("schemas/ui_golden/describe.txt"), std::ios::binary);
+    std::string golden_describe((std::istreambuf_iterator<char>(describe_in)), std::istreambuf_iterator<char>());
+    const auto file_backed_describe = db.describe();
+    const auto golden_rest = golden_describe.substr(golden_describe.find('\n') + 1);
+    const auto file_backed_rest = file_backed_describe.substr(file_backed_describe.find('\n') + 1);
+    EXPECT_EQ(file_backed_rest, golden_rest);
 }
 
 // D-05/D-06: all three reports carry `UI config: <path> (locale: en)` when a sidecar loaded --
