@@ -51,12 +51,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. Shared fixtures under `tests/schemas/ui/`, distilled from BESSOperation (all-bare-string), Foresight (mixed en/es/pt) and HydroThermalDispatch (plain `date_time` attribute), pin every parser tolerance individually — bare and dotted localizable values in one file, absent and zero-byte `enum.toml`, an unknown key logged not thrown, 1-based and gapped vocabularies, an unlisted orphan collection file that stays unloaded, `format` as a 4-key table, interleaved `[[attribute]]`/`[[attribute_group]]` blocks, and `degradation` as both an attribute id and a group id — and the enum rendering is asserted on **exact strings** from the C++ suite, the Lua suite and all five binding suites against those same fixtures, never a copy.
   5. The phase ships as a **patch**: `git diff` shows no file under `bindings/` changed, and `CHANGELOG.md` heads the version `CMakeLists.txt` actually carries (0.10.6) before any bump is dispatched.
 
-**Plans**: 6 plans in 4 waves
+**Plans**: 1/6 plans executed in 4 waves
 
 Plans:
 **Wave 1**
 
-- [ ] 01-01-PLAN.md — Tracer: one TOML sidecar reaches `summarize_collection`'s histogram end to end (parser, `Impl` wiring, `has_ui_config()`, golden baseline)
+- [x] 01-01-PLAN.md — Tracer: one TOML sidecar reaches `summarize_collection`'s histogram end to end (parser, `Impl` wiring, `has_ui_config()`, golden baseline)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -227,7 +227,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Enum Labels in Describe | 0/6 | Planned | - |
+| 1. Enum Labels in Describe | 1/6 | In Progress|  |
 | 2. Config Path, Locale and Struct-Size Safety | 0/TBD | Not started | - |
 | 3. Structured Attribute Metadata | 0/TBD | Not started | - |
 | 4. Collection and Attribute-Group Metadata | 0/TBD | Not started | - |

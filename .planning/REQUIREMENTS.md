@@ -13,29 +13,29 @@ The C++ reader for the PSR `database/ui/` TOML sidecar. Written against Hub's Da
 behaviour (`C:/Development/Hub/hub1/lib/models/configuration/*.dart`), **not** against
 `toml-schema.md`, which is already wrong about group membership.
 
-- [ ] **PARSE-01**: Quiver parses `main.toml` and loads collection files **only** from its `collections` array, never by scanning the directory (SCE ships a fully-formed orphan `agent.toml` that must stay unloaded)
-- [ ] **PARSE-02**: Quiver parses each collection TOML's `[[attribute]]` entries, keyed by the attribute's `id` (the SQL column name), into a flat per-collection map
-- [ ] **PARSE-03**: Quiver parses `enum.toml` into named vocabularies, each an ordered list of `{id: int64, label}` entries, accepting arbitrary and gapped integer ids
-- [ ] **PARSE-04**: Quiver resolves a localizable field that is either a bare string or a `{locale: string}` table, mixed within the same file, to a single string using Hub's fallback chain (exact locale → `en` → first key)
+- [x] **PARSE-01**: Quiver parses `main.toml` and loads collection files **only** from its `collections` array, never by scanning the directory (SCE ships a fully-formed orphan `agent.toml` that must stay unloaded)
+- [x] **PARSE-02**: Quiver parses each collection TOML's `[[attribute]]` entries, keyed by the attribute's `id` (the SQL column name), into a flat per-collection map
+- [x] **PARSE-03**: Quiver parses `enum.toml` into named vocabularies, each an ordered list of `{id: int64, label}` entries, accepting arbitrary and gapped integer ids
+- [x] **PARSE-04**: Quiver resolves a localizable field that is either a bare string or a `{locale: string}` table, mixed within the same file, to a single string using Hub's fallback chain (exact locale → `en` → first key)
 - [ ] **PARSE-05**: Quiver ignores unknown keys rather than rejecting them, so a TOML written for a newer Hub still loads
 - [ ] **PARSE-06**: Quiver accepts `format` as either a string or the 4-key table form (`element_view` / `collection_view` / `edit` / `data`), even though no file in the corpus uses the table form today
 - [ ] **PARSE-07**: Quiver treats attribute ids and `[[attribute_group]]` ids as separate namespaces (`BESSOperation/storage.toml` uses `degradation` for both)
 - [ ] **PARSE-08**: Quiver accepts `[[attribute]]` and `[[attribute_group]]` interleaved in any order and flattens them correctly (15 files in the corpus interleave)
 - [ ] **PARSE-09**: Quiver tolerates an absent or zero-byte `enum.toml` and an absent `themes/` directory without error
 - [ ] **PARSE-10**: Quiver maps a collection TOML's PascalCase `id` (the SQL table name) to the snake_case filename listed in `main.collections`
-- [ ] **PARSE-11**: A missing or malformed `ui/` directory degrades silently — a warning is logged, `open()` still succeeds, and `has_ui_config()` returns false
-- [ ] **PARSE-12**: A parsed UI config is published only after it validates, honouring `load_schema_metadata`'s publish-nothing-until-valid invariant
+- [x] **PARSE-11**: A missing or malformed `ui/` directory degrades silently — a warning is logged, `open()` still succeeds, and `has_ui_config()` returns false
+- [x] **PARSE-12**: A parsed UI config is published only after it validates, honouring `load_schema_metadata`'s publish-nothing-until-valid invariant
 
 ### Describe Rendering (DESC)
 
 The agent-facing surface. Reaches all five bindings and Lua with no ABI change, because
 `describe*` already returns a `std::string` through the existing C API string wrappers.
 
-- [ ] **DESC-01**: `summarize_collection` renders enum labels beside the codes in its value histogram — `values {0: 8 (Disabled), 1: 4 (Enabled)}`
+- [x] **DESC-01**: `summarize_collection` renders enum labels beside the codes in its value histogram — `values {0: 8 (Disabled), 1: 4 (Enabled)}`
 - [ ] **DESC-02**: `describe_collection` renders each scalar's UI label and unit after its type — `- max_generation (REAL) [MW] — "Maximum Generation"`
 - [ ] **DESC-03**: `describe_collection` names an enum attribute's vocabulary and its full value list, including codes with zero rows in the data
 - [ ] **DESC-04**: `describe` renders each collection's UI label and a header line naming the loaded UI config path and resolved locale
-- [ ] **DESC-05**: With no UI config present, the output of `describe`, `describe_collection` and `summarize_collection` is **byte-identical** to the current output
+- [x] **DESC-05**: With no UI config present, the output of `describe`, `describe_collection` and `summarize_collection` is **byte-identical** to the current output
 - [ ] **DESC-06**: A `hide = true` attribute still appears in describe output, tagged `[hidden]` — hiding is a GUI affordance, and an agent reading the schema wants it
 - [ ] **DESC-07**: The enum rendering is exercised from Lua and from all five bindings by tests that assert on exact strings, not merely that a String was returned
 
@@ -138,23 +138,23 @@ Which phases cover which requirements. Populated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PARSE-01 | Phase 1 | Pending |
-| PARSE-02 | Phase 1 | Pending |
-| PARSE-03 | Phase 1 | Pending |
-| PARSE-04 | Phase 1 | Pending |
+| PARSE-01 | Phase 1 | Complete |
+| PARSE-02 | Phase 1 | Complete |
+| PARSE-03 | Phase 1 | Complete |
+| PARSE-04 | Phase 1 | Complete |
 | PARSE-05 | Phase 1 | Pending |
 | PARSE-06 | Phase 1 | Pending |
 | PARSE-07 | Phase 1 | Pending |
 | PARSE-08 | Phase 1 | Pending |
 | PARSE-09 | Phase 1 | Pending |
 | PARSE-10 | Phase 1 | Pending |
-| PARSE-11 | Phase 1 | Pending |
-| PARSE-12 | Phase 1 | Pending |
-| DESC-01 | Phase 1 | Pending |
+| PARSE-11 | Phase 1 | Complete |
+| PARSE-12 | Phase 1 | Complete |
+| DESC-01 | Phase 1 | Complete |
 | DESC-02 | Phase 1 | Pending |
 | DESC-03 | Phase 1 | Pending |
 | DESC-04 | Phase 1 | Pending |
-| DESC-05 | Phase 1 | Pending |
+| DESC-05 | Phase 1 | Complete |
 | DESC-06 | Phase 1 | Pending |
 | DESC-07 | Phase 1 | Pending |
 | CORPUS-01 | Phase 1 | Pending |
@@ -190,6 +190,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | VALID-08 | Phase 5 | Pending |
 
 **Coverage:**
+
 - v1 requirements: 50 total
 - Mapped to phases: 50 ✓
 - Unmapped: 0
