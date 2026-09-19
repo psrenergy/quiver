@@ -50,7 +50,26 @@ biome.json        # Lint/format config
   `libs/{os}-{arch}/` (shipped in the npm package) → dev `build/bin` walk-up → system PATH. On
   Windows, `ensureCoreOnPath` prepends the lib dir to `process.env.PATH` so the OS loader finds
   the sibling `libquiver.dll` (Bun's `dlopen` cannot preload the core lib — it rejects an empty
-  symbol map).
+  symbol map). `openLibrary(dir, symbols)` and `initLibrary(symbols)` both take the symbol map as
+  a parameter rather than closing over `allSymbols`, so `resolveLibrary(symbols)` can drive the
+  same three tiers with a different map — see the version-skew diagnosis below.
+  - **Version-skew diagnosis**: `resolveLibrary(symbols)` runs `initLibrary(symbols)`; on failure
+    it re-runs the same three tiers with `PROBE_SYMBOLS` (one symbol,
+    `quiver_get_last_error`, that has existed since before this milestone). A successful probe
+    means a Quiver native library is present and loadable but does not export the newer
+    `*_sizeof` accessors this milestone introduces — a native predating Phase 2 has the full
+    Phase 1 surface but none of them, which is the only version skew a published native can
+    currently produce — so the throw names all four accessors
+    (`SIZEOF_ACCESSOR_NAMES`) and says the native predates this release of the JS binding, instead
+    of the generic "Cannot load native library" text. If the probe also fails, no native is
+    loadable at all, so the original error is rethrown **unchanged** — a genuine not-found still
+    reads exactly as it does today. Catching `initLibrary`'s failure and annotating it in place
+    was considered and rejected: `initLibrary` already collapses three distinct failure paths
+    into one `lastError`, so an annotated message could only ever guess "maybe your native is
+    stale" and would guess it just as loudly when no native exists at all — the probe is a
+    determination, not a guess. `loadLibrary()` calls `resolveLibrary(allSymbols)`, so the
+    struct-size gate below must not move inside `openLibrary()`, any `initLibrary()` tier, or
+    `resolveLibrary`'s own `try`/`catch` either.
 - **Bun FFI gotchas (load-bearing — do not "fix"):**
   - `FFIType.buffer` is rejected as an argument ABI type → buffer/string params are declared
     `"pointer"` and call sites pass the `Uint8Array` (`alloc.buf`) directly; Bun pins the
@@ -70,14 +89,27 @@ biome.json        # Lint/format config
     over `8` in this file is itself the historical bug this guards against; `allocPtrOut` and
     `allocUint64Out` in the same file allocate 8 bytes each for unrelated reasons — a pointer-out
     and a u64-out parameter — and are pinned unchanged by `test/ffi-helpers.test.ts`).
-    `makeDefaultOptions` returns `[Allocation, Allocation[]]` — the struct plus every child
-    string allocation for `uiConfigDir`/`uiLocale` — copying `buildCsvOptionsBuffer`'s shape in
-    `csv.ts` exactly. **Every call site MUST destructure and bind the keepalive in the same scope
-    as the FFI call** (all three in `database.ts`); dropping it is a use-after-free, since the
-    struct's two pointer fields point into separately allocated buffers Bun's GC can otherwise
-    collect before the native call reads them. An absent or empty-string option leaves its
-    pointer slot's eight zero bytes (NULL), allocating no child string — the C converter maps
-    that to "not specified".
+    `makeDefaultOptions` returns a single self-contained `Allocation` — **not** a
+    `[Allocation, Allocation[]]` tuple. Any present `uiConfigDir`/`uiLocale` string is copied into
+    the *tail* of the same buffer that holds the struct header, and each pointer field is computed
+    with `ptr(buf, tailOffset)` into that shared buffer. This is a deliberate, intentional
+    **asymmetry** with `buildCsvOptionsBuffer` in `csv.ts`, which keeps its own
+    `[Allocation, Allocation[]]` tuple and its own array of child pointer-table allocations —
+    it genuinely needs them (a variable number of enum label/locale/value tables), and cannot
+    collapse them into one buffer the way a fixed two-string struct can. Do not "unify" the two
+    functions: the divergence is correct, not incidental. Before this shape, `makeDefaultOptions`
+    kept a keepalive array exactly like `buildCsvOptionsBuffer`'s, and a proven (if
+    low-probability) defect followed — a child string allocation reachable only from that local
+    array could be collected by Bun's GC between the call and the native read of its pointer.
+    Remedy chosen was **elimination**, not reinforcement: with no second allocation, there is
+    nothing left for the collector to reclaim out from under the struct — a comment telling a
+    future editor not to touch the code would not have fixed that, only documented it. An absent
+    or empty-string option leaves its pointer slot's eight zero bytes (NULL) and reserves no tail
+    bytes — the C converter maps that to "not specified". `OPTIONS_SIZE` stays a pinned literal
+    validated once at load (see the struct-size gate below), not re-read from the accessor on
+    every call — `getSymbols()` provably precedes `makeDefaultOptions` at all three
+    `database.ts` call sites, so reading the accessor per allocation was considered and rejected
+    as an FFI call added to every database open for no additional safety.
   - **`SCALAR_METADATA_SIZE` (56), `GROUP_METADATA_SIZE` (32), and `CSV_OPTIONS_SIZE` (56) live
     in `ffi-helpers.ts`**, not `metadata.ts`/`csv.ts` — those modules import them back. Reason:
     `loader.ts` needs all four struct-size constants (these three plus `OPTIONS_SIZE`) for its
@@ -94,10 +126,12 @@ biome.json        # Lint/format config
     `quiver_scalar_metadata_t` / `quiver_group_metadata_t` / `quiver_csv_options_t` (against
     `quiver_database_options_sizeof`/`quiver_scalar_metadata_sizeof`/
     `quiver_group_metadata_sizeof`/`quiver_csv_options_sizeof`) in that fixed order and
-    short-circuiting on the first mismatch. It must NOT move inside `openLibrary()` or any of
-    `initLibrary()`'s three `try`/`catch` tiers — each swallows its load failure as "try the next
-    path", which would remask a real size mismatch as a generic "Cannot load native library"
-    error and lose the struct name and both numbers. `checkStructSize(name, expected, native)` is
+    short-circuiting on the first mismatch. It must NOT move inside `openLibrary()`, any of
+    `initLibrary()`'s three `try`/`catch` tiers, or `resolveLibrary`'s own `try`/`catch` — each
+    swallows its load failure as "try the next path" (or, for `resolveLibrary`, as the
+    version-skew diagnosis above), which would remask a real size mismatch as a generic "Cannot
+    load native library" error and lose the struct name and both numbers. `checkStructSize(name,
+    expected, native)` is
     the pure, parameterized throw — one of the binding's few locally crafted error messages,
     since the C API cannot diagnose a disagreement about its own layout. **Every `*_sizeof`
     accessor call must be wrapped in `Number(...)` before comparing**: Bun returns a `bigint` for
