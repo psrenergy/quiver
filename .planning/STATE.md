@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 2
 current_phase_name: Config Path, Locale and Struct-Size Safety
 status: executing
-stopped_at: Completed 02-04-PLAN.md
-last_updated: "2026-09-19T15:11:26.349Z"
+stopped_at: Completed 02-07-PLAN.md
+last_updated: "2026-09-19T15:45:47.009Z"
 last_activity: 2026-09-19
 last_activity_desc: Phase 01 execution started
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 13
-  completed_plans: 11
+  completed_plans: 12
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-09-17)
 ## Current Position
 
 Phase: 2 — Config Path, Locale and Struct-Size Safety
-Plan: 6 of 7
+Plan: 7 of 7
 Status: Ready to execute
 Last activity: 2026-09-19 — Completed 02-01-PLAN.md
 
-Progress: [█████████░] 85%
+Progress: [█████████░] 92%
 
 ## Performance Metrics
 
@@ -69,6 +69,7 @@ Progress: [█████████░] 85%
 | Phase 02 P02 | 25min | 3 tasks | 10 files |
 | Phase 02 P05 | 30min | 3 tasks | 6 files |
 | Phase 02 P04 | 50min | 3 tasks | 8 files |
+| Phase 02 P07 | 15min | 3 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -106,10 +107,16 @@ Full log in PROJECT.md Key Decisions. Affecting current work:
 - [Phase ?]: Load-time struct-size gate written only to bindings/julia/generator/prologue.jl, proven regeneration-proof by re-running generator.bat twice with an empty resulting diff on c_api.jl
 - [Phase ?]: Dart: memoize the load-time struct-size gate with its own _structSizesChecked flag, separate from _cachedBindings, so the three native *_sizeof calls run once per isolate rather than on every bindings access
 - [Phase ?]: Dart: wrote test.bat's cache-clearing lines via raw printf with literal CRLF bytes, verified with xxd/cat -A, to avoid unix tooling silently rewriting the CRLF .bat file to LF
+- [Phase ?]: Release-timing checkpoint resolved as hold-for-phase-3: CHANGELOG.md 0.11.0 unreleased section is complete but the Bump Version dispatch is deferred until Phase 3 lands, per ROADMAP's same-release note; deferral recorded in STATE.md Pending Todos.
 
 ### Pending Todos
 
-None yet.
+- **Deferred release dispatch:** `CHANGELOG.md` heads a complete, unreleased `## [0.11.0]`
+  section (Phase 1 + Phase 2 content). Per the ROADMAP's Phase 3 note ("should ship in the same
+  release" as Phase 2), the Bump Version workflow dispatch is held until Phase 3 lands, then
+  dispatched exactly once with `part=minor` (never `part=patch` first — that would tag a
+  spurious `v0.10.7` shipping only Phase 1). Phase 3 entries append to the same unreleased
+  0.11.0 section; no second heading.
 
 ### Blockers/Concerns
 
@@ -127,6 +134,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-09-19T15:11:26.327Z
-Stopped at: Completed 02-04-PLAN.md
+Last session: 2026-09-19T15:45:46.973Z
+Stopped at: Completed 02-07-PLAN.md
 Resume file: None
