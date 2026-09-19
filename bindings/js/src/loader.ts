@@ -1,4 +1,4 @@
-import { dlopen, type Library, type Pointer, suffix } from "bun:ffi";
+import { dlopen, type FFIFunction, type Library, type Pointer, suffix } from "bun:ffi";
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { QuiverError } from "./errors.ts";
@@ -280,19 +280,19 @@ function ensureCoreOnPath(dir: string): void {
   }
 }
 
-function openLibrary(dir: string): QuiverLib {
+function openLibrary<S extends Record<string, FFIFunction>>(dir: string, symbols: S): Library<S> {
   ensureCoreOnPath(dir);
-  return dlopen(join(dir, C_API_LIB), allSymbols);
+  return dlopen(join(dir, C_API_LIB), symbols);
 }
 
-function initLibrary(): QuiverLib {
+function initLibrary<S extends Record<string, FFIFunction>>(symbols: S): Library<S> {
   let lastError: unknown;
 
   // Tier 1: Bundled libs/{os}-{arch}/ next to the loader (npm install / dev install).
   const bundledDir = getBundledLibDir();
   if (bundledDir) {
     try {
-      return openLibrary(bundledDir);
+      return openLibrary(bundledDir, symbols);
     } catch (e) {
       lastError = e; // Bundled libs found but failed to load -- fall through.
     }
@@ -301,7 +301,7 @@ function initLibrary(): QuiverLib {
   // Tier 2: Dev mode -- walk up directories looking for build/bin/.
   for (const dir of getSearchPaths()) {
     try {
-      return openLibrary(dir);
+      return openLibrary(dir, symbols);
     } catch (e) {
       lastError = e; // Try next path.
     }
@@ -310,7 +310,7 @@ function initLibrary(): QuiverLib {
   // Tier 3: System PATH fallback -- the core lib is expected to be discoverable
   // on PATH alongside the C API lib.
   try {
-    return dlopen(C_API_LIB, allSymbols);
+    return dlopen(C_API_LIB, symbols);
   } catch (e) {
     lastError = e; // Fall through to error.
   }
@@ -324,6 +324,51 @@ function initLibrary(): QuiverLib {
   throw new QuiverError(
     `Cannot load native library '${C_API_LIB}'. Searched: ${searched}${detail}`,
   );
+}
+
+// One symbol that has existed since before this milestone -- a successful probe with only this
+// symbol declared means "a Quiver native library is present and loadable here", distinguishing a
+// stale native (present, missing the newer *_sizeof exports) from no native at all (T-02-12-02).
+const PROBE_SYMBOLS = {
+  quiver_get_last_error: lifecycleSymbols.quiver_get_last_error,
+} as const;
+
+// The four size accessors introduced by this milestone, named here once for the version-skew
+// diagnosis message below.
+const SIZEOF_ACCESSOR_NAMES = [
+  "quiver_database_options_sizeof",
+  "quiver_scalar_metadata_sizeof",
+  "quiver_group_metadata_sizeof",
+  "quiver_csv_options_sizeof",
+] as const;
+
+// Resolves the full symbol map through the three tiers above. On failure, re-runs the same tiered
+// resolution with PROBE_SYMBOLS -- one symbol that predates this milestone. If that probe
+// succeeds, a Quiver native library is present and loadable but lacks the newer *_sizeof exports,
+// so the failure is a version skew, not a missing library: throw a message naming all four
+// accessors instead of the generic "Cannot load native library" text. If the probe also fails, no
+// native is loadable at all, so rethrow the original error unchanged -- a genuine not-found must
+// still read exactly as it does today (D-13, must_haves EDGE).
+//
+// This is a probe, not a catch-and-annotate: initLibrary() already collapses three distinct
+// failure paths into one lastError, so annotating that failure could only ever guess "maybe your
+// native is stale" -- and would guess it just as loudly when no native exists at all. Running a
+// second, independent resolution with a minimal symbol map is a determination, not a guess.
+export function resolveLibrary<S extends Record<string, FFIFunction>>(symbols: S): Library<S> {
+  try {
+    return initLibrary(symbols);
+  } catch (e) {
+    try {
+      initLibrary(PROBE_SYMBOLS);
+    } catch {
+      throw e; // No native loadable at all -- rethrow the original not-found unchanged.
+    }
+    throw new QuiverError(
+      `Native library '${C_API_LIB}' was found and loaded, but it does not export ` +
+        `${SIZEOF_ACCESSOR_NAMES.join(", ")}. This native library predates this release of the ` +
+        `JS binding -- reinstall a matching native library.`,
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -403,16 +448,17 @@ export function assertNativeStructSizes(lib: QuiverLib["symbols"]): void {
 // hit a temporal dead zone. Deferring to first call lets the module graph
 // settle first; the result is cached, so callers still get it synchronously.
 //
-// assertNativeStructSizes runs HERE, outside every initLibrary() try/catch tier (:278, :287,
-// :296 as of this comment) -- each tier swallows its load failure as "try the next path", so a
-// size-mismatch thrown inside a tier would be masked as "Cannot load native library ..." at
-// :308, losing the struct name and both numbers. loadLibrary() sits outside every catch and
-// runs the gate exactly once per process, on the memoized path.
+// assertNativeStructSizes runs HERE, outside every initLibrary() try/catch tier and outside
+// resolveLibrary()'s own try/catch -- each tier swallows its load failure as "try the next path",
+// so a size-mismatch thrown inside a tier would be masked as "Cannot load native library ..."
+// (or, since resolveLibrary(), as the version-skew message), losing the struct name and both
+// numbers. loadLibrary() sits outside every catch and runs the gate exactly once per process, on
+// the memoized path.
 let _lib: QuiverLib | null = null;
 
 export function loadLibrary(): QuiverLib {
   if (_lib === null) {
-    const lib = initLibrary();
+    const lib = resolveLibrary(allSymbols);
     assertNativeStructSizes(lib.symbols);
     _lib = lib;
   }

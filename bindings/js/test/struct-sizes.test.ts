@@ -8,7 +8,13 @@ import {
 } from "../src/ffi-helpers.ts";
 // This test intentionally DOES drag in the FFI loader (unlike ffi-helpers.test.ts) -- it is
 // proving the load-time gate itself, which only exists inside loader.ts.
-import { checkedStructNames, checkStructSize, getSymbols, loadLibrary } from "../src/loader.ts";
+import {
+  checkedStructNames,
+  checkStructSize,
+  getSymbols,
+  loadLibrary,
+  resolveLibrary,
+} from "../src/loader.ts";
 
 describe("native struct sizes (happy path)", () => {
   test("loading the library does not throw", () => {
@@ -109,4 +115,41 @@ describe("native struct sizes (failure path is actually exercised)", () => {
     expect(() => checkStructSize("quiver_csv_options_t", 56, 55)).toThrow(QuiverError);
     expect(() => checkStructSize("quiver_csv_options_t", 56, 57)).toThrow(QuiverError);
   });
+});
+
+// Gap 3: a native library predating this milestone has the full Phase 1 surface but none of the
+// *_sizeof exports Phase 2 introduces -- the only version skew a published native can actually
+// produce today. This drives resolveLibrary() with a symbol map containing one symbol that
+// certainly does not exist, taking the exact real-dlopen code path a stale native takes (not a
+// stubbed loader), and asserts the diagnosis names all four accessors instead of surfacing the
+// generic "Cannot load native library" text.
+describe("resolveLibrary diagnoses a native that loads but lacks the size accessors", () => {
+  test("a symbol map with a nonexistent symbol produces a version-skew diagnosis, not a not-found", () => {
+    const staleSymbols = {
+      quiver_symbol_that_does_not_exist: { args: [], returns: "void" },
+    } as const;
+
+    let thrown: unknown;
+    try {
+      resolveLibrary(staleSymbols);
+    } catch (e) {
+      thrown = e;
+    }
+
+    expect(thrown).toBeInstanceOf(QuiverError);
+    const message = (thrown as Error).message;
+    expect(message).toContain("quiver_database_options_sizeof");
+    expect(message).toContain("quiver_scalar_metadata_sizeof");
+    expect(message).toContain("quiver_group_metadata_sizeof");
+    expect(message).toContain("quiver_csv_options_sizeof");
+    expect(message).not.toContain("Searched:");
+  });
+
+  // The genuine not-found path (no native loadable at all, so the probe also fails and the
+  // original "Cannot load native library" error is rethrown unchanged) cannot be driven from
+  // this test file without deleting the real native library out from under the rest of the
+  // suite -- there is no loadable-directory parameter to redirect resolveLibrary() at a truly
+  // empty search tree. That path is a direct code-read: resolveLibrary's inner catch rethrows
+  // `e` (the original caught error), not a new QuiverError, only when the PROBE_SYMBOLS
+  // resolution also throws -- see loader.ts.
 });
