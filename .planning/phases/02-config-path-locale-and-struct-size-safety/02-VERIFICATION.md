@@ -165,3 +165,39 @@ and no committed test asserts a locale-specific label through whole-DB `describe
 | 5 | Add malformed + `:memory:` polarity tests outside C++ | medium |
 | 6 | `quiver_csv_options_sizeof()` + a fourth gate, or re-affirm the deferral explicitly in REQUIREMENTS | medium |
 | 7 | Commit tests for `open`/`from_migrations` with the new parameters, and one through `describe()` | low |
+
+## Post-verification reconciliation
+
+This section records what happened after the findings above were written. The findings above are
+the original record and are left unmodified.
+
+**BLOCKER — git half already resolved.** The merge that tagged `v0.10.7` landed at `7bd1f16`,
+roughly ten minutes after this report was written. `git tag` now shows `v0.10.7` locally, and
+`CMakeLists.txt` plus all five manifests read 0.10.7. The report's "Fix (after rebasing onto
+`origin/master`)" paragraph is superseded — no rebase was needed by the time plan 02-13 ran; the
+tag was already present in this clone.
+
+**BLOCKER — CHANGELOG half closed by 02-13.** `CHANGELOG.md` carried two `## [0.10.6] —
+2026-09-11` headings (one of which actually documented the 0.10.7 content) and a `[0.11.0]`
+compare link based against the never-tagged `v0.11.0`. Plan 02-13 renamed the mis-dated heading to
+`## [0.10.7] — 2026-09-17`, moved its misplaced context paragraph to the real 0.10.6 section,
+added the missing `[0.10.7]` compare link, and repointed `[0.11.0]`'s base to `v0.10.7`.
+
+**Follow-ups closed, mapped to the plan that closed each:**
+
+| # | Item | Closed by |
+|---|---|---|
+| 1 | Fetch/rebase; add the `0.10.7` CHANGELOG section and fix the compare base | 02-13 |
+| 2 | Make the struct-size tests exercise the wired gate, not the pure helper (all four bindings) | 02-08 / 02-10 / 02-11 |
+| 3 | Give JS a missing-accessor diagnosis | 02-12 |
+| 4 | Bind the JS keepalive so it cannot be optimized away | 02-12 |
+| 5 | Add malformed + `:memory:` polarity tests outside C++ | 02-09 |
+| 6 | `quiver_csv_options_sizeof()` + a fourth gate | 02-08 / 02-10 / 02-11 |
+| 7 | Commit tests for `open`/`from_migrations`, and one through `describe()` | 02-09 |
+
+**A finding this report could not have known:** the SC3 skeptic's Python gate deletion
+(`_assert_struct_sizes(ffi, lib)` replaced with `pass`) was not a hypothetical mutation test — it
+reproduced a defect that had already shipped. `bindings/python/src/quiverdb/_loader.py` at HEAD
+contained `pass  # MUTATION: gate unwired` at both call sites, landed via merge `e8d35b9`, so the
+gate was genuinely inert in the shipped binding, not merely undertested against deletion. Plan
+02-08 confirmed this by reading the file before making any edit and restored the gate.

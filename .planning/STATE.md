@@ -133,10 +133,19 @@ Full log in PROJECT.md Key Decisions. Affecting current work:
 
 ### Blockers/Concerns
 
-- **Pre-Phase-1:** `CHANGELOG.md` heads `## [0.10.4] — unreleased` against `CMakeLists.txt` 0.10.6. Reconcile before any bump dispatch.
+- **Resolved (was Pre-Phase-1):** `CMakeLists.txt` and all five manifests now agree at 0.10.7;
+  `v0.10.7` (PR #290's Lua CSV feature + `weakly_canonical` path hardening) exists both locally and
+  on the remote. Plan 02-13 reconciled `CHANGELOG.md`'s duplicate `## [0.10.6]` headings into one
+  `## [0.10.7] — 2026-09-17` section with a continuous compare-link chain (0.11.0 → 0.10.7 →
+  0.10.6 → …). No manifest was hand-edited to get here.
 - **Accepted risk (opens at Phase 1, closes at Phase 5):** Quiver becomes an authoritative repeater of unchecked labels. HTD's `HasCommitment` is inverted between Julia and its `enum.toml` today.
 - **Phase 2 hazard:** `bindings/js/src/ffi-helpers.ts` `makeDefaultOptions` — a wrong number is a native out-of-bounds write with no compile error and no fallback symbol. Gets its own plan.
-- The four binding describe suites assert only "returns a String" — do not count them as five-layer coverage.
+- **Partially addressed:** the four binding describe suites originally asserted only "returns a
+  String". 02-09 strengthened Julia/Dart/Python/JS to assert exact-string enum rendering against
+  the shared `tests/schemas/ui/` fixtures (DESC-07), so this is no longer true for the enum-label
+  path. What 02-09 deliberately left alone: malformed-config polarity and the `:memory:`-explicit-dir
+  distinction are still asserted only in C++, not in any binding, C API, or Lua suite (SC2 from
+  02-VERIFICATION.md, follow-up #5, still open).
 
 ## Deferred Items
 
