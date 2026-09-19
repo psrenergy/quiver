@@ -401,6 +401,11 @@ ffi.cdef("""
 
     quiver_csv_options_t quiver_csv_options_default(void);
 
+    // Native sizeof of quiver_csv_options_t -- same Bun-callable shape as
+    // quiver_database_options_sizeof (D-07). The fourth entry in every FFI binding's
+    // load-time struct-size gate.
+    size_t quiver_csv_options_sizeof(void);
+
     quiver_error_t quiver_database_export_csv(quiver_database_t* db,
         const char* collection, const char* group, const char* path,
         const quiver_csv_options_t* options);

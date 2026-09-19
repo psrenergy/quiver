@@ -17,13 +17,21 @@ _load_source: str = ""
 # Windows DLL directory handle (kept alive for process lifetime)
 _dll_dir_handle = None
 
-# Struct name -> native *_sizeof() accessor name. Fixed order (options, scalar, group) matches
-# every other binding's load-time gate in this phase (SAFE-02/SAFE-03, D-08/D-09).
+# Struct name -> native *_sizeof() accessor name. Fixed order (options, scalar, group, csv
+# options) matches every other binding's load-time gate in this phase (SAFE-02/SAFE-03, D-08/D-09).
 _STRUCT_SIZEOF_ACCESSORS = (
     ("quiver_database_options_t", "quiver_database_options_sizeof"),
     ("quiver_scalar_metadata_t", "quiver_scalar_metadata_sizeof"),
     ("quiver_group_metadata_t", "quiver_group_metadata_sizeof"),
+    ("quiver_csv_options_t", "quiver_csv_options_sizeof"),
 )
+
+# Wiring evidence: names of structs whose check has actually passed, in the order they were
+# checked. Empty unless _assert_struct_sizes actually ran; partial if it short-circuited on a
+# mismatch. Exists because a call to _assert_struct_sizes was once silently replaced with `pass`
+# in this file (both call sites below) and no test noticed -- a test asserting this list is exact
+# fails when the gate is unwired, which a test driving only _check_struct_size cannot do.
+_CHECKED_STRUCTS: list[str] = []
 
 
 def _check_struct_size(name: str, expected: int, native: int) -> None:
@@ -50,6 +58,7 @@ def _assert_struct_sizes(ffi: FFI, lib) -> None:
     not merely declare it in the cdef. Runs in the fixed order above, short-circuiting on the
     first mismatch or the first missing symbol.
     """
+    _CHECKED_STRUCTS.clear()
     for struct_name, accessor_name in _STRUCT_SIZEOF_ACCESSORS:
         expected = ffi.sizeof(struct_name)
         try:
@@ -60,6 +69,7 @@ def _assert_struct_sizes(ffi: FFI, lib) -> None:
                 f"quiverdb. Reinstall a matching quiverdb native library."
             ) from None
         _check_struct_size(struct_name, expected, accessor())
+        _CHECKED_STRUCTS.append(struct_name)
 
 
 def load_library(ffi: FFI):
@@ -82,7 +92,7 @@ def load_library(ffi: FFI):
                 _dll_dir_handle = os.add_dll_directory(str(_LIBS_DIR))
             ffi.dlopen(str(core_path))
             lib = ffi.dlopen(str(c_api_path))
-            pass  # MUTATION: gate unwired
+            _assert_struct_sizes(ffi, lib)
             _load_source = "bundled"
             return lib
         except OSError as e:
@@ -98,7 +108,7 @@ def load_library(ffi: FFI):
 
     try:
         lib = ffi.dlopen(dev_c_api)
-        pass  # MUTATION: gate unwired
+        _assert_struct_sizes(ffi, lib)
         _load_source = "development"
         return lib
     except OSError:

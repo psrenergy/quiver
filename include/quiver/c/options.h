@@ -64,6 +64,12 @@ QUIVER_C_API quiver_csv_options_t quiver_csv_options_default(void);
 // shape every binding's load-time layout assertion calls instead (D-07).
 QUIVER_C_API size_t quiver_database_options_sizeof(void);
 
+// Native sizeof of quiver_csv_options_t -- the fourth struct a binding hand-allocates a raw
+// buffer for (bindings/js/src/csv.ts allocates 56 bytes by hand). Same no-parameter,
+// Bun-callable size_t shape as quiver_database_options_sizeof (D-07); every load-time gate
+// checks this accessor last, after options/scalar metadata/group metadata.
+QUIVER_C_API size_t quiver_csv_options_sizeof(void);
+
 #ifdef __cplusplus
 }
 #endif
