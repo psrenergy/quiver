@@ -52,6 +52,18 @@ class QuiverDatabaseBindings {
   late final _quiver_database_options_default = _quiver_database_options_defaultPtr
       .asFunction<quiver_database_options_t Function()>();
 
+  // Hand-added (SAFE-01, D-07): native sizeof of quiver_database_options_t, so the load-time
+  // layout assertion in library_loader.dart can compare it against sizeOf<...>() without
+  // hardcoding 24 unchecked. Not ffigen output -- bindings.dart is hand-edited this phase.
+  int quiver_database_options_sizeof() {
+    return _quiver_database_options_sizeof();
+  }
+
+  late final _quiver_database_options_sizeofPtr = _lookup<ffi.NativeFunction<ffi.Size Function()>>(
+    'quiver_database_options_sizeof',
+  );
+  late final _quiver_database_options_sizeof = _quiver_database_options_sizeofPtr.asFunction<int Function()>();
+
   quiver_csv_options_t quiver_csv_options_default() {
     return _quiver_csv_options_default();
   }
@@ -205,6 +217,25 @@ class QuiverDatabaseBindings {
         'quiver_database_is_healthy',
       );
   late final _quiver_database_is_healthy = _quiver_database_is_healthyPtr
+      .asFunction<int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Int>)>();
+
+  // Hand-added (OPT-04, D-13): mirrors quiver_database_is_healthy's shape exactly. Not ffigen
+  // output -- bindings.dart is hand-edited this phase.
+  int quiver_database_has_ui_config(
+    ffi.Pointer<quiver_database_t> db,
+    ffi.Pointer<ffi.Int> out_has_config,
+  ) {
+    return _quiver_database_has_ui_config(
+      db,
+      out_has_config,
+    );
+  }
+
+  late final _quiver_database_has_ui_configPtr =
+      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Int>)>>(
+        'quiver_database_has_ui_config',
+      );
+  late final _quiver_database_has_ui_config = _quiver_database_has_ui_configPtr
       .asFunction<int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Int>)>();
 
   int quiver_database_path(
@@ -1685,6 +1716,27 @@ class QuiverDatabaseBindings {
       );
   late final _quiver_database_free_group_metadata = _quiver_database_free_group_metadataPtr
       .asFunction<int Function(ffi.Pointer<quiver_group_metadata_t>)>();
+
+  // Hand-added (SAFE-01, D-07): native sizeof of the two metadata structs, same Bun-callable
+  // shape as quiver_database_options_sizeof. Not ffigen output -- bindings.dart is hand-edited
+  // this phase.
+  int quiver_scalar_metadata_sizeof() {
+    return _quiver_scalar_metadata_sizeof();
+  }
+
+  late final _quiver_scalar_metadata_sizeofPtr = _lookup<ffi.NativeFunction<ffi.Size Function()>>(
+    'quiver_scalar_metadata_sizeof',
+  );
+  late final _quiver_scalar_metadata_sizeof = _quiver_scalar_metadata_sizeofPtr.asFunction<int Function()>();
+
+  int quiver_group_metadata_sizeof() {
+    return _quiver_group_metadata_sizeof();
+  }
+
+  late final _quiver_group_metadata_sizeofPtr = _lookup<ffi.NativeFunction<ffi.Size Function()>>(
+    'quiver_group_metadata_sizeof',
+  );
+  late final _quiver_group_metadata_sizeof = _quiver_group_metadata_sizeofPtr.asFunction<int Function()>();
 
   int quiver_database_list_scalar_attributes(
     ffi.Pointer<quiver_database_t> db,
@@ -3558,6 +3610,10 @@ final class quiver_database_options_t extends ffi.Struct {
 
   @ffi.Int32()
   external int console_level;
+
+  external ffi.Pointer<ffi.Char> ui_config_dir;
+
+  external ffi.Pointer<ffi.Char> ui_locale;
 }
 
 final class quiver_csv_options_t extends ffi.Struct {

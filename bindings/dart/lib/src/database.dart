@@ -50,14 +50,25 @@ class Database {
   static Pointer<quiver_database_options_t> _makeOptions(
     Arena arena,
     bool readOnly,
-    int? consoleLevel,
-  ) {
+    int? consoleLevel, [
+    String? uiConfigDir,
+    String? uiLocale,
+  ]) {
     final optionsPtr = arena<quiver_database_options_t>();
     optionsPtr.ref = bindings.quiver_database_options_default();
     optionsPtr.ref.read_only = readOnly ? 1 : 0;
     if (consoleLevel != null) {
       optionsPtr.ref.console_level = consoleLevel;
     }
+    // NULL means "not specified" on both fields (convention path / "en"). The Arena already
+    // owns this allocation until arena.releaseAll() runs in the caller's finally, which is
+    // strictly after the native call reads it -- no keepalive mechanism is needed here.
+    optionsPtr.ref.ui_config_dir = (uiConfigDir == null || uiConfigDir.isEmpty)
+        ? nullptr
+        : uiConfigDir.toNativeUtf8(allocator: arena).cast();
+    optionsPtr.ref.ui_locale = (uiLocale == null || uiLocale.isEmpty)
+        ? nullptr
+        : uiLocale.toNativeUtf8(allocator: arena).cast();
     return optionsPtr;
   }
 
@@ -70,10 +81,12 @@ class Database {
     String schemaPath, {
     bool readOnly = false,
     int? consoleLevel,
+    String? uiConfigDir,
+    String? uiLocale,
   }) {
     final arena = Arena();
     try {
-      final optionsPtr = _makeOptions(arena, readOnly, consoleLevel);
+      final optionsPtr = _makeOptions(arena, readOnly, consoleLevel, uiConfigDir, uiLocale);
       final outDbPtr = arena<Pointer<quiver_database_t>>();
 
       check(
@@ -99,10 +112,12 @@ class Database {
     String migrationsPath, {
     bool readOnly = false,
     int? consoleLevel,
+    String? uiConfigDir,
+    String? uiLocale,
   }) {
     final arena = Arena();
     try {
-      final optionsPtr = _makeOptions(arena, readOnly, consoleLevel);
+      final optionsPtr = _makeOptions(arena, readOnly, consoleLevel, uiConfigDir, uiLocale);
       final outDbPtr = arena<Pointer<quiver_database_t>>();
 
       check(
@@ -141,10 +156,12 @@ class Database {
     String dbPath, {
     bool readOnly = false,
     int? consoleLevel,
+    String? uiConfigDir,
+    String? uiLocale,
   }) {
     final arena = Arena();
     try {
-      final optionsPtr = _makeOptions(arena, readOnly, consoleLevel);
+      final optionsPtr = _makeOptions(arena, readOnly, consoleLevel, uiConfigDir, uiLocale);
       final outDbPtr = arena<Pointer<quiver_database_t>>();
 
       check(
@@ -208,6 +225,20 @@ class Database {
       final outHealthy = arena<Int>();
       check(bindings.quiver_database_is_healthy(_ptr, outHealthy));
       return outHealthy.value != 0;
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
+  /// Returns true if a UI sidecar config (PSR `database/ui/` TOML) was loaded, either from an
+  /// explicit `uiConfigDir` or the `<db_dir>/ui/` convention. Never throws.
+  bool hasUiConfig() {
+    _ensureNotClosed();
+    final arena = Arena();
+    try {
+      final outHasConfig = arena<Int>();
+      check(bindings.quiver_database_has_ui_config(_ptr, outHasConfig));
+      return outHasConfig.value != 0;
     } finally {
       arena.releaseAll();
     }
