@@ -100,6 +100,26 @@ Project.toml      # Deps: Artifacts, CEnum, Dates, Libdl; julia 1.11 compat
     verbatim by every `@ccall`) and pre-`dlopen`s the `libquiver` dependency from the same dir.
   - **Never** move the directory/`libquiver_c` resolution back to module top level (a `const`
     path) — that reintroduces the PackageCompiler relocation bug.
+- **`quiver_database_options_t` is 24 bytes** (`read_only`@0, `console_level`@4,
+  `ui_config_dir`@8, `ui_locale`@16 — `Ptr{Cchar}` fields, pinned by `static_assert`s in
+  `src/c/options.cpp`). `build_quiver_database_options` (`src/database.jl`) now returns
+  `(options, keepalive)`: each of `open`/`from_schema`/`from_migrations` wraps its `check(...)`
+  ccall in `GC.@preserve keepalive ...`, because a pointer written into a struct field is not
+  itself a Julia reference — the backing `String`/buffer for `ui_config_dir`/`ui_locale` is free
+  to be collected the moment the last *reference* (not the raw pointer) drops. An omitted or
+  empty `ui_config_dir`/`ui_locale` writes `Ptr{Cchar}(C_NULL)`, never a pointer to `""`.
+  `has_ui_config(db)` (no `!`, it is a read) mirrors `is_healthy`'s no-throw `Ref{Cint}` shape.
+- **The load-time struct-size gate lives in `generator/prologue.jl`, never `src/c_api.jl`.**
+  `generator.toml`'s `prologue_file_path = "./prologue.jl"` makes `c_api.jl`'s `__init__`
+  **verbatim prologue content** — a safety check hand-written directly into `c_api.jl` would be
+  silently deleted by the next `generator.bat` run while every happy-path test stayed green.
+  `_check_struct_size`/`_native_struct_size`/`_assert_struct_sizes` (prologue.jl) compare
+  `sizeof(quiver_database_options_t)` / `quiver_scalar_metadata_t` / `quiver_group_metadata_t`
+  against the three native `*_sizeof()` accessors, in that fixed order, as the last statement of
+  `__init__` — a version-skewed native library throws at `using Quiver`, naming the struct and
+  both numbers (the C API cannot diagnose a disagreement about its own layout, so this message is
+  locally crafted, like the boolean wrappers' conversion errors). Proven regeneration-proof: running
+  `generator/generator.bat` twice leaves `git diff bindings/julia/src/c_api.jl` empty.
 - **Manifest conflicts**: delete `bindings/julia/Manifest.toml`, then
   `julia --project=bindings/julia -e "using Pkg; Pkg.instantiate()"`.
 - **Julia-only surfaces**: the binary/expression wrappers (`src/binary/`, expression functions)
