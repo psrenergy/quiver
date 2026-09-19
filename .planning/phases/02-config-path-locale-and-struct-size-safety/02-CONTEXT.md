@@ -27,7 +27,7 @@ Out of scope: structured attribute metadata (Phase 3), collection/group metadata
 
 ### Config path and locale
 
-- **D-01 (user decision): an explicit config directory loads even for a `:memory:` database.**
+- **D-01:** (user decision) an explicit config directory loads even for a `:memory:` database.
   Phase 1's `:memory:` short-circuit narrows to guarding the **convention path only**. The guard
   exists because `fs::path(":memory:").parent_path()` is empty, so `parent_path() / "ui"` resolves
   against the process working directory (`build/bin` under the test runner) — that ambiguity does
@@ -49,8 +49,8 @@ Out of scope: structured attribute metadata (Phase 3), collection/group metadata
 - **D-04:** C++ `DatabaseOptions` gains `std::string ui_config_dir` (empty = unset) and
   `std::string ui_locale = "en"`. Empty-string-as-unset mirrors the C NULL mapping with no
   `std::optional` marshalling at the boundary.
-- **D-05: an explicit directory that is absent or malformed degrades — it does not throw — but logs
-  at `warn`, not `debug`.** `open()` never throwing is a Phase 1 invariant worth keeping (D-24/D-25,
+- **D-05:** an explicit directory that is absent or malformed degrades — it does not throw — but
+  logs at `warn`, not `debug`. `open()` never throwing is a Phase 1 invariant worth keeping (D-24/D-25,
   PARSE-11). But an absent *convention* path is the normal state for every non-PSR database
   (hence `debug`), whereas an explicit path the caller typed and got wrong is a caller error that
   must be visible. Same degradation, louder log. `has_ui_config()` reports false either way.
@@ -77,7 +77,7 @@ Out of scope: structured attribute metadata (Phase 3), collection/group metadata
 - **D-07:** one size accessor per struct, no parameters, returning a plain `size_t` — Bun can call
   that shape (it cannot call `quiver_database_options_default`, which returns a struct by value,
   bun#6139). Three accessors: options, `quiver_scalar_metadata_t`, `quiver_group_metadata_t`.
-- **D-08 (user decision): each binding asserts at library load and throws on mismatch.** All three
+- **D-08:** (user decision) each binding asserts at library load and throws on mismatch. All three
   structs are checked the moment the library opens, so a version-skewed install fails immediately
   and totally rather than corrupting a metadata read far from the cause. Accepted consequence: a
   consumer who never touches metadata still hard-fails on skew. That is the intent — a silent
@@ -108,7 +108,7 @@ Out of scope: structured attribute metadata (Phase 3), collection/group metadata
   no options channel of its own, so the new surface is two flags on `src/cli/main.cpp`
   (`--ui-config-dir`, `--ui-locale`) consumed before `Database` construction, alongside
   `--read-only` / `--log-level`. `LuaRunner` itself is unchanged.
-- **D-15 (user decision):** `bindings/dart/test/test.bat` clears `.dart_tool/hooks_runner/` and
+- **D-15:** (user decision) `bindings/dart/test/test.bat` clears `.dart_tool/hooks_runner/` and
   `.dart_tool/lib/` before running. Today it is literally `dart test %*` with no cache
   invalidation, and native-assets keys its cache on a checksum that does not cover the hook's own
   defines — so on an ABI-changing phase the suite can pass against the **old** struct layout.
