@@ -32,6 +32,14 @@ C++ core and C API suites live here; binding suites live in each binding's `test
 - Binary subsystem: `test_binary_file.cpp`, `test_binary_metadata.cpp`,
   `test_binary_time_properties.cpp`, `test_csv_converter.cpp`, `test_iteration.cpp`
 - Expression subsystem: `test_expression.cpp`
+- UI sidecar (PSR `database/ui/` TOML config, decorating `describe*` reports): `test_database_ui_golden.cpp`
+  (byte-for-byte comparison against the checked-in `tests/schemas/ui_golden/*.txt` files),
+  `test_database_ui_describe.cpp` (the rendering rules — header line, unit/hidden decoration,
+  enum histograms, the accented-label case), `test_database_ui_corpus.cpp` (the
+  `tests/schemas/ui/README.md` self-checks — every fixture directory is named, every pinned
+  literal matches the fixture on disk), `test_database_ui_parse.cpp` (one named `DatabaseUiParse`
+  case per PARSE-01/05-10 tolerance). `test_c_api_database_describe.cpp` mirrors the rendering
+  rules through the C API. See `tests/schemas/ui/` below for the fixture corpus these read.
 - `test_issues.cpp` - issue-numbered regression tests
 - `test_migrations.cpp` also covers the in-memory `validate_migrations` up-then-down round trip;
   `test_c_api_database_lifecycle.cpp` covers its C API success and error propagation;
@@ -122,6 +130,31 @@ never copy them into a binding.
   `set_no_unique.sql`, `vector_no_index.sql`
 - `migrations/` — versioned `1/`, `2/`, `3/`, each with `up.sql`/`down.sql`
 - `issues/` — regression migrations for specific issues (`issue52/`, `issue70/`)
+- `ui/` — one directory per PSR `database/ui/` TOML sidecar parser tolerance
+  (`enum_basic`, `malformed`, `no_ui_dir`, `bess_like`, `foresight_like`, `htd_like`, `no_enum`,
+  `empty_enum`, `unknown_keys`, `format_table`, `orphan_collection`). Each holds `schema.sql` plus
+  a `ui/` subdirectory (the hand-written sidecar), except `no_ui_dir`, which deliberately has none.
+  `tests/schemas/ui/README.md` is the authoritative directory→rule map **and** the mirrored copy
+  of the `## Fixture literals (authoritative)` table originally defined in
+  `.planning/phases/01-enum-labels-in-describe/01-02-PLAN.md` — every exact rendered string any
+  suite (C++, C API, or a binding) asserts against this corpus is quoted from that table; no
+  suite invents, paraphrases, or re-derives one. Editing a fixture's rendered output requires
+  updating both the fixture and the README table, and `test_database_ui_corpus.cpp`'s
+  `ReadmeNamesEveryFixture`/`FixtureLiteralsArePinned` cases check both directions. `tests/test_ui_fixture.h`'s
+  `open_ui_fixture(test_file, fixture_dir, db_stem)` is the one helper every suite (C++, C API,
+  and — through their own idiom — the four FFI bindings) uses to open a fixture: the on-disk
+  `.sqlite` filename is **per test case, not per suite**, because `ctest -j`, Dart's
+  concurrent-by-default `test` package, and any other parallel runner would otherwise race two
+  cases writing the same database file inside one shared fixture directory. Every generated
+  `<stem>.sqlite`/`quiver_database.log` is `.gitignore`d, never checked in.
+- `ui_golden/` — one fixture (outside the `ui/` tree, via `test_ui_fixture.h`'s
+  `open_ui_fixture_at`) whose `describe.txt`/`describe_collection.txt`/`summarize_collection.txt`
+  are byte-for-byte checked-in golden output, compared verbatim by `test_database_ui_golden.cpp`.
+  `.gitattributes` pins `tests/schemas/ui_golden/*.txt text eol=lf` — a golden is byte-compared on
+  three platforms, and an unpinned `.txt` fails on Windows alone (CRLF vs. the checked-in LF).
+  Never regenerate these from a test run; a golden that silently drifted to match new output is
+  the one gate this corpus can't catch itself, so it's cross-checked at phase-gate level (`git
+  diff --name-status` must show only `A` lines for this directory, never `M`).
 
 ## Other targets in `tests/CMakeLists.txt`
 

@@ -220,6 +220,20 @@ Settled questions — don't relitigate without the user; each was decided delibe
   count/position authority since `#t` is unreliable across holes. Scope is **scalars only** — the
   shared dense `read_column_values<T>` still serves vector/set `_by_id` and `read_element_ids`
   (NOT NULL / PK by convention); vector/set readers are unchanged.
+- **The PSR `<db_dir>/ui/` sidecar is read by a private C++ type, never a public one.**
+  `UIConfigSet`/`UIMetadata` (`src/ui_config.h`) are never under `include/`, never `QUIVER_API` — a
+  second route to the same data the schema/attribute metadata getters already expose, and hiding
+  it keeps `std::map` members out of the ABI. It loads lazily on first `describe`/
+  `describe_collection`/`summarize_collection` call through `Impl::require_ui_config()`, a separate
+  cache from `require_schema()`'s: a malformed sidecar must never turn a good database into a
+  throwing one, so a load failure logs a warning and leaves the cache empty rather than
+  propagating. Absence (no `ui/` directory, or `:memory:`, which never resolves a directory at all)
+  logs at debug, not warn. Either way — absent or malformed — nothing partial is published, mirroring
+  the schema-metadata lazy-load rule above. Rendering is append-only and guarded on non-empty, so a
+  sidecar-less database's reports stay byte-identical to before this feature existed. The enum
+  **code is always rendered beside its label** (`values {0: 8 (Disabled), 1: 4 (Enabled)}`, never
+  the label alone) — the standing mitigation for a text report now authoritatively repeating a
+  vocabulary label that nothing in the core has validated against the underlying data.
 
 ## Do Not "Fix"
 
@@ -536,7 +550,7 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
   Otherwise `SELECT COUNT(*)` / `SUM(int_col)`, which SQLite answers as INTEGER, and an integer
   stored in a REAL column, all read back as "no value". `query_integer` does **not** narrow a REAL;
   that direction is lossy.
-- Schema inspection — human-readable **text reports** (all return `std::string`): `describe()` (whole-DB overview: every collection, element counts, attribute/group names); `describe_collection(c)` (one collection's structure); `summarize_collection(c)` (per-scalar null/non-null counts + low-cardinality integer value distributions, per-group empty/non-empty counts). CSV: `export_csv()`, `import_csv()` with optional enum/date formatting via `CSVOptions`.
+- Schema inspection — human-readable **text reports** (all return `std::string`): `describe()` (whole-DB overview: every collection, element counts, attribute/group names); `describe_collection(c)` (one collection's structure); `summarize_collection(c)` (per-scalar null/non-null counts + low-cardinality integer value distributions, per-group empty/non-empty counts). All three transparently decorate their output with a PSR `<db_dir>/ui/` TOML sidecar's labels, units, hidden flags, and enum vocabularies when one is present — see the UI sidecar design decision below. `has_ui_config()` reports whether that sidecar loaded successfully (`false` for `:memory:`, an absent directory, or a malformed one — never throws); C++-only in this phase, every binding gains it in a later phase. CSV: `export_csv()`, `import_csv()` with optional enum/date formatting via `CSVOptions`.
   **Export and import are symmetric on foreign keys**: a FK column is written as the referenced
   element's `label` and read back by label (self-references are excluded on both sides, since the
   target rows are the ones being rewritten). Export used to emit the raw integer id, which import

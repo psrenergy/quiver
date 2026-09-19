@@ -5,7 +5,23 @@ All notable changes to Quiver are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entries that require
 callers to change something are prefixed **BREAKING** and say what to do.
 
-## [0.10.4] — unreleased
+## [0.10.7] — unreleased
+
+### Added
+
+- **`describe`, `describe_collection`, and `summarize_collection` now read a PSR `database/ui/`
+  TOML sidecar when one sits beside the database file.** An agent calling any of the three on a
+  database whose directory holds a `ui/` config now reads each scalar's label, unit, hidden flag,
+  and enum vocabulary — for example `values {0: 8 (Disabled), 1: 4 (Enabled)}` instead of a bare
+  integer code — with no API change and nothing required of the caller. With no sidecar present,
+  the output is byte-identical to before.
+
+[0.10.7]: https://github.com/psrenergy/quiver/compare/v0.10.6...v0.10.7
+
+## [0.10.6] — 2026-09-19
+
+Cut from the same unreleased block as 0.10.4 and 0.10.5 — all three versions were bumped and
+tagged before this entry was reconciled to name the version the tree actually carries.
 
 ### Changed
 
@@ -422,7 +438,7 @@ are functionally identical to 0.10.0.
   `read_time_series_group` emits for a NULL STRING cell — so feeding a read result back with the
   mask stripped was UB. A NULL entry, or a NULL per-column data pointer, is now SQL NULL.
 
-[0.10.4]: https://github.com/psrenergy/quiver/compare/v0.10.3...v0.11.0
+[0.10.6]: https://github.com/psrenergy/quiver/compare/v0.10.3...v0.10.6
 [0.10.3]: https://github.com/psrenergy/quiver/compare/v0.10.2...v0.10.3
 [0.10.2]: https://github.com/psrenergy/quiver/compare/v0.10.1...v0.10.2
 [0.10.1]: https://github.com/psrenergy/quiver/compare/v0.10.0...v0.10.1

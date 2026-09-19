@@ -44,6 +44,7 @@ src/                      # C++ implementation
   schema_validator.cpp    # Schema convention validation
   type_validator.cpp      # Scalar/array type validation (caller-threaded Pattern 1 messages)
   element.cpp / row.cpp / result.cpp / migration.cpp / migrations.cpp
+  ui_config.h / ui_config.cpp  # UIConfigSet - private PSR database/ui/ TOML sidecar parser
   lua_runner.cpp          # LuaRunner (sol2) - all Lua bindings
   cli/main.cpp            # quiver_cli CLI entry point
   utils/string.h          # String utilities: new_c_str, trim
@@ -293,6 +294,62 @@ impl_->logger->debug("Opening database: {}", path);
   `format_utc` always writes the full `T` form;
   use `is_date_time_column` (`data_type.h`) for `date_`-prefix checks (one legacy hand-rolled
   `starts_with("date_")` remains in `schema_validator.cpp`).
+
+## UI Sidecar Config (`src/ui_config.{h,cpp}`)
+
+Private parser for the PSR `<db_dir>/ui/` TOML sidecar that `describe()` / `describe_collection()`
+/ `summarize_collection()` decorate their reports with — labels, units, hidden flags, and enum
+vocabularies. Never under `include/`, never `QUIVER_API` (root design decision): `UIConfigSet` and
+`UIMetadata` aggregate `std::map` members that would otherwise leak into the ABI, and this is a
+second route to the same data the public schema/attribute metadata getters expose.
+
+- **Type set** (`ui_config.h`): `UIEnumEntry` (one `enum.toml` `[[<name>]]` entry: `code` +
+  `label`); `UIMetadata` (one record answering for a collection, an attribute, or a group —
+  `configured`, `label`, `tooltip`, `unit`, `format`, `icon`, `hidden`, `vocabulary`,
+  `display_order` — the same field set the public Phase-3 type will carry, so exposing it later is
+  a header move, not a redesign; `tooltip`/`icon`/`display_order` are unread in this phase);
+  `UICollectionConfig` (a `UIMetadata` for the collection itself, plus **separate** `attributes`
+  and `groups` maps — two maps because an id like `degradation` can legally name both an attribute
+  and a group, with different labels); `UIConfigSet` (the whole parsed sidecar: `source_directory`,
+  `locale`, `collections` keyed by PascalCase SQL table name, `vocabularies` keyed by name with
+  declaration order preserved in a `vector`, and `unlisted_files` — unread until Phase 5's
+  VALID-05).
+- **`from_directory`/content-parse split, copied from `BinaryMetadata`**: `from_directory(ui_dir,
+  locale, logger)` reads `main.toml`'s `collections` array plus the optional `enum.toml` and every
+  listed collection file, and is the only entry point that may throw (`toml::parse_error`, a
+  filesystem error). `parse_enum_content(content)` and `parse_collection_content(content, locale,
+  out_table_id, out_unknown_keys)` are the content-level halves, testable without touching disk —
+  reachable only indirectly through `Database`'s public surface in this phase, since
+  `quiver_tests` has no include path into `src/`.
+- **Locale fallback chain** (`resolve_localizable`, an anonymous-namespace helper): copied from
+  Hub's `LocalizationString.ofLocale` except the final leg — Hub throws when the chain is
+  exhausted, this returns `""` instead (PARSE-05/PARSE-11 forbid throwing on a resolution miss). A
+  bare TOML string wins outright and ignores locale entirely; a table (`label.en`/`label.es`/...)
+  resolves exact-locale, then `"en"`, then the first key in the table's own `std::map` (alphabetical)
+  order.
+- **Once-per-file unknown-key debug line** (`log_unknown_keys_once`): an unknown key at the main,
+  collection, or attribute level is never a reason to throw or skip anything (PARSE-05) — it's
+  accumulated per file into a sorted, deduplicated list and logged as **one** debug line naming the
+  file, never one line per key (the real PSR corpus has 736 attributes and one real occurrence of
+  an unknown key).
+- **`format`'s 4-key table-form precedence** (`resolve_format_table`, PARSE-06): the first present
+  of, in order, `data`, `element_view`, `collection_view`, `edit`, stored verbatim. A key present
+  but of the wrong TOML type is skipped like an unset key, never a throw.
+- **`unlisted_files` exists for Phase 5's VALID-05** — carried in the struct, unread by anything in
+  this phase.
+- **`Database::Impl::require_ui_config()`** (declared in `database_impl.h`, defined in
+  `ui_config.cpp` — the one non-inline `Impl` method there) is the lazy-load/cache entry point,
+  mirroring `require_schema`/`load_schema_metadata` except it **swallows** a load failure instead
+  of propagating it (D-25/PARSE-12): `:memory:` logs debug and never resolves a directory at all;
+  an absent `<db_dir>/ui/` logs debug; a directory present but malformed (bad TOML, a broken
+  collection file even with a valid `enum.toml` beside it) logs a warning and leaves the cache
+  unset — so a single broken file fails the whole sidecar, nothing partial publishes, and a
+  malformed sidecar never turns a `describe*` call into a throwing one.
+- **Lookup helpers used by the renderer** (`find_attribute`, `find_vocabulary`): both return
+  `nullptr` on a miss, neither throws — the renderer treats "no config" and "not found in config"
+  identically.
+- `Database::has_ui_config()` reports whether the cache is populated — C++-only in this phase (root
+  Core API entry, root design decision).
 
 ## LuaRunner
 
