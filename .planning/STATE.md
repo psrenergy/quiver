@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 02
 current_phase_name: config-path-locale-and-struct-size-safety
 status: executing
-stopped_at: Completed 02-10-PLAN.md
-last_updated: "2026-09-19T22:53:17.716Z"
+stopped_at: Completed 02-11-PLAN.md
+last_updated: "2026-09-19T23:36:32.587Z"
 last_activity: 2026-09-19
 last_activity_desc: Phase 01 execution started
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 19
-  completed_plans: 16
+  completed_plans: 17
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-09-17)
 ## Current Position
 
 Phase: 02 (config-path-locale-and-struct-size-safety) — EXECUTING
-Plan: 4 of 13
+Plan: 5 of 13
 Status: Ready to execute
 Last activity: 2026-09-19 — Phase 02 execution started
 
-Progress: [████████░░] 84%
+Progress: [█████████░] 89%
 
 ## Performance Metrics
 
@@ -73,6 +73,7 @@ Progress: [████████░░] 84%
 | Phase 02 P08 | 24min | 3 tasks | 8 files |
 | Phase 02 P09 | 55min | 3 tasks | 7 files |
 | Phase 02 P10 | unspecified | 3 tasks | 5 files |
+| Phase 02 P11 | 65min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -116,6 +117,7 @@ Full log in PROJECT.md Key Decisions. Affecting current work:
 - [Phase ?]: [Phase 02]: Restored ui_config_dir/ui_locale fields silently dropped from bindings/julia/src/c_api.jl by a prior merge (e8d35b9) -- Rule 1 auto-fix, blocked the entire Julia test suite
 - [Phase ?]: [Phase 02]: from_migrations() cross-layer coverage uses a runtime-generated scratch migrations directory (from foresight_like/schema.sql's own DDL) rather than a new committed fixture, in Julia/Dart/Python/JS
 - [Phase ?]: JS: quiver_csv_options_t joined the four-struct load-time gate (last, mirroring Python); named CSV_OPTIONS_* offset constants replace bare literals in csv.ts; CLAUDE.md deferral note closed.
+- [Phase ?]: Julia and Dart joined the four-struct load-time gate (options, scalar metadata, group metadata, csv options); Dart's wiring-evidence test had to be reordered to run before the pre-existing direct-call test, which was masking the mutation criterion
 
 ### Pending Todos
 
@@ -142,6 +144,6 @@ Full log in PROJECT.md Key Decisions. Affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-09-19T22:53:17.672Z
-Stopped at: Completed 02-10-PLAN.md
+Last session: 2026-09-19T23:36:32.542Z
+Stopped at: Completed 02-11-PLAN.md
 Resume file: None
