@@ -27,6 +27,7 @@ add_executable(quiver_tests
     test_database_ui_corpus.cpp
     test_database_ui_describe.cpp
     test_database_ui_golden.cpp
+    test_database_ui_parse.cpp
     test_database_update.cpp
     test_element.cpp
     test_issues.cpp

@@ -6,11 +6,46 @@
 #include <filesystem>
 #include <fstream>
 #include <set>
+#include <spdlog/spdlog.h>
 #include <toml++/toml.hpp>
 
 namespace quiver {
 
 namespace {
+
+// Every key in `tbl` that is not one of `known` -- the collection-level, attribute-level and
+// main-level "keys we consume" sets each pass their own `known` set here. An unknown key is
+// never a reason to throw or skip anything (PARSE-05); the caller only uses this to build one
+// sorted, deduplicated debug line per file (D-26).
+std::vector<std::string> unknown_keys_in(const toml::table& tbl, const std::set<std::string>& known) {
+    std::vector<std::string> unknown;
+    for (auto&& [key, value] : tbl) {
+        (void)value;
+        std::string key_str(key.str());
+        if (!known.count(key_str)) {
+            unknown.push_back(std::move(key_str));
+        }
+    }
+    return unknown;
+}
+
+// Sorts, dedupes and joins an accumulated unknown-key list, then emits exactly one debug line
+// naming `context` (a file path) -- never one line per key (D-26: the real corpus has 736
+// attributes and one real occurrence of an unknown key).
+void log_unknown_keys_once(const std::shared_ptr<spdlog::logger>& logger,
+                           std::vector<std::string> unknown_keys,
+                           const std::string& context) {
+    if (unknown_keys.empty()) {
+        return;
+    }
+    std::sort(unknown_keys.begin(), unknown_keys.end());
+    unknown_keys.erase(std::unique(unknown_keys.begin(), unknown_keys.end()), unknown_keys.end());
+    std::string joined;
+    for (size_t i = 0; i < unknown_keys.size(); ++i) {
+        joined += (i == 0 ? "" : ", ") + unknown_keys[i];
+    }
+    logger->debug("Ignoring unknown UI config key(s) in {}: {}", context, joined);
+}
 
 // Hub's LocalizationString.ofLocale chain, copied verbatim except the final leg: Hub throws
 // when the chain is exhausted, Quiver returns "" instead (PARSE-05/PARSE-11 forbid the throw).
@@ -47,9 +82,31 @@ std::string resolve_localizable(const toml::node* node, const std::string& local
     return "";
 }
 
+// The 4-key table-form precedence for `format` (PARSE-06, D-14): the first present of, in
+// order, `data`, `element_view`, `collection_view`, `edit`, stored verbatim. A key present but
+// of the wrong TOML type is skipped like an unset key, never a throw.
+std::string resolve_format_table(const toml::table& format_table) {
+    for (const char* key : {"data", "element_view", "collection_view", "edit"}) {
+        if (const auto* entry = format_table.get(key)) {
+            if (auto value = entry->value<std::string>()) {
+                return *value;
+            }
+        }
+    }
+    return "";
+}
+
 // Shared by [[attribute]] and [[attribute_group]] blocks -- both are `UIMetadata` records with
-// the same per-attribute keys (D-09's one-record-for-three-levels design).
-UIMetadata parse_attribute_or_group(const toml::table& tbl, const std::string& locale) {
+// the same per-attribute keys (D-09's one-record-for-three-levels design). `out_unknown_keys`
+// accumulates every key this block does not consume (PARSE-05); the caller owns logging it.
+UIMetadata parse_attribute_or_group(const toml::table& tbl,
+                                    const std::string& locale,
+                                    std::vector<std::string>& out_unknown_keys) {
+    static const std::set<std::string> kKnownAttributeKeys = {
+        "id", "label", "tooltip", "unit", "hide", "enum", "format"};
+    auto unknown = unknown_keys_in(tbl, kKnownAttributeKeys);
+    out_unknown_keys.insert(out_unknown_keys.end(), unknown.begin(), unknown.end());
+
     UIMetadata meta;
     meta.configured = true;
     meta.label = resolve_localizable(tbl.get("label"), locale);
@@ -59,11 +116,14 @@ UIMetadata parse_attribute_or_group(const toml::table& tbl, const std::string& l
             meta.unit = *value;
         }
     }
-    // format is read verbatim as a single string for now -- its 4-key table form is plan
-    // 01-04's tolerance (PARSE-06), not built here.
+    // `format` is either a plain string (stored verbatim) or a 4-key table (resolved by
+    // resolve_format_table's precedence, PARSE-06/D-14). Any other TOML type (array, integer)
+    // is ignored like an unknown key rather than thrown on.
     if (const auto* format = tbl.get("format")) {
         if (auto value = format->value<std::string>()) {
             meta.format = *value;
+        } else if (const auto* format_table = format->as_table()) {
+            meta.format = resolve_format_table(*format_table);
         }
     }
     if (const auto* hide = tbl.get("hide")) {
@@ -120,12 +180,19 @@ std::map<std::string, std::vector<UIEnumEntry>> UIConfigSet::parse_enum_content(
     return vocabularies;
 }
 
-UICollectionConfig
-UIConfigSet::parse_collection_content(const std::string& content, const std::string& locale, std::string& out_table_id) {
+UICollectionConfig UIConfigSet::parse_collection_content(const std::string& content,
+                                                         const std::string& locale,
+                                                         std::string& out_table_id,
+                                                         std::vector<std::string>& out_unknown_keys) {
     UICollectionConfig config;
     out_table_id.clear();
 
     toml::table tbl = toml::parse(content);
+
+    static const std::set<std::string> kKnownCollectionKeys = {
+        "id", "label", "tooltip", "icon", "attribute", "attribute_group"};
+    auto unknown = unknown_keys_in(tbl, kKnownCollectionKeys);
+    out_unknown_keys.insert(out_unknown_keys.end(), unknown.begin(), unknown.end());
 
     if (const auto* id = tbl.get("id")) {
         if (auto value = id->value<std::string>()) {
@@ -157,7 +224,7 @@ UIConfigSet::parse_collection_content(const std::string& content, const std::str
                 if (attribute_id.empty()) {
                     continue;
                 }
-                config.attributes[attribute_id] = parse_attribute_or_group(*attribute_table, locale);
+                config.attributes[attribute_id] = parse_attribute_or_group(*attribute_table, locale, out_unknown_keys);
             }
         }
     }
@@ -178,7 +245,7 @@ UIConfigSet::parse_collection_content(const std::string& content, const std::str
                 if (group_id.empty()) {
                     continue;
                 }
-                config.groups[group_id] = parse_attribute_or_group(*group_table, locale);
+                config.groups[group_id] = parse_attribute_or_group(*group_table, locale, out_unknown_keys);
             }
         }
     }
@@ -186,7 +253,9 @@ UIConfigSet::parse_collection_content(const std::string& content, const std::str
     return config;
 }
 
-UIConfigSet UIConfigSet::from_directory(const std::string& ui_dir, const std::string& locale) {
+UIConfigSet UIConfigSet::from_directory(const std::string& ui_dir,
+                                        const std::string& locale,
+                                        const std::shared_ptr<spdlog::logger>& logger) {
     namespace fs = std::filesystem;
 
     UIConfigSet config;
@@ -196,7 +265,11 @@ UIConfigSet UIConfigSet::from_directory(const std::string& ui_dir, const std::st
     const fs::path dir(ui_dir);
 
     // main.toml drives what loads (PARSE-01: never scan the directory to decide this).
-    toml::table main_tbl = toml::parse(read_file(dir / "main.toml"));
+    const auto main_path = dir / "main.toml";
+    toml::table main_tbl = toml::parse(read_file(main_path));
+    static const std::set<std::string> kKnownMainKeys = {"model", "collections"};
+    log_unknown_keys_once(logger, unknown_keys_in(main_tbl, kKnownMainKeys), main_path.string());
+
     std::vector<std::string> collection_files;
     if (const auto* collections = main_tbl.get("collections")) {
         if (const auto* collections_array = collections->as_array()) {
@@ -209,9 +282,16 @@ UIConfigSet UIConfigSet::from_directory(const std::string& ui_dir, const std::st
     }
 
     // enum.toml is optional; a missing file leaves vocabularies empty without error (PARSE-09).
+    // When present, a zero-byte file is treated as an empty document rather than parsed --
+    // toml++ accepts an empty string as an empty table, but this guard makes that behavior
+    // explicit rather than assumed (RESEARCH assumption A2). No other sidecar directory is ever
+    // consulted here -- this file's job stops at main.toml, enum.toml and the listed collections.
     const auto enum_path = dir / "enum.toml";
     if (fs::exists(enum_path)) {
-        config.vocabularies = parse_enum_content(read_file(enum_path));
+        const auto enum_content = read_file(enum_path);
+        if (!enum_content.empty()) {
+            config.vocabularies = parse_enum_content(enum_content);
+        }
     }
 
     for (size_t index = 0; index < collection_files.size(); ++index) {
@@ -221,7 +301,9 @@ UIConfigSet UIConfigSet::from_directory(const std::string& ui_dir, const std::st
             continue;
         }
         std::string table_id;
-        auto collection_config = parse_collection_content(read_file(collection_path), locale, table_id);
+        std::vector<std::string> unknown_keys;
+        auto collection_config = parse_collection_content(read_file(collection_path), locale, table_id, unknown_keys);
+        log_unknown_keys_once(logger, std::move(unknown_keys), collection_path.string());
         if (table_id.empty()) {
             // No usable `id` -- skip rather than fail the whole config (htd_like's
             // "missing collection id" tolerance).
@@ -301,7 +383,7 @@ void Database::Impl::require_ui_config() const {
     try {
         // The assignment is the last statement inside the try, so a throw anywhere in the walk
         // publishes nothing (D-25): ui_config stays nullopt rather than half-loaded.
-        ui_config = UIConfigSet::from_directory(ui_dir.string(), "en");
+        ui_config = UIConfigSet::from_directory(ui_dir.string(), "en", logger);
     } catch (const std::exception& e) {
         logger->warn("Failed to load UI config at {}: {}", ui_dir.string(), e.what());
     }

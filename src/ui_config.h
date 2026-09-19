@@ -3,8 +3,13 @@
 
 #include <cstdint>
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
+
+namespace spdlog {
+class logger;
+}  // namespace spdlog
 
 namespace quiver {
 
@@ -28,6 +33,10 @@ struct UIMetadata {
     std::string label;
     std::string tooltip;  // Phase 3 (META-01): unread in Phase 1, carried for the header-move design.
     std::string unit;
+    // A plain TOML string is stored verbatim. A 4-key TOML table (`element_view`/
+    // `collection_view`/`edit`/`data`) collapses to the first present of, in order, `data`,
+    // `element_view`, `collection_view`, `edit` -- verbatim, unclassified (PARSE-06, D-14). Phase
+    // 1's record carries one string; whether META-01 needs all four keys is Phase 3's call.
     std::string format;
     std::string icon;  // Phase 3 (META-01): unread in Phase 1, carried for the header-move design.
     bool hidden = false;
@@ -49,25 +58,35 @@ struct UIConfigSet {
     std::string locale;
     std::map<std::string, UICollectionConfig> collections;         // keyed by PascalCase SQL table name (PARSE-10)
     std::map<std::string, std::vector<UIEnumEntry>> vocabularies;  // vector: enum.toml declaration order survives
-    std::vector<std::string> unlisted_files;  // Phase 5 (VALID-05): unread in Phase 1, carried for the header-move design.
+    std::vector<std::string>
+        unlisted_files;  // Phase 5 (VALID-05): unread in Phase 1, carried for the header-move design.
 
     // Reads <ui_dir>/main.toml (its `collections` array, PARSE-01) plus the optional
     // <ui_dir>/enum.toml and every listed collection file. May throw (toml::parse_error or a
     // filesystem error); Impl::require_ui_config is what catches and swallows so a malformed
-    // sidecar publishes nothing (D-25). Mirrors BinaryMetadata::from_toml_file (D-19).
-    static UIConfigSet from_directory(const std::string& ui_dir, const std::string& locale);
+    // sidecar publishes nothing (D-25). Mirrors BinaryMetadata::from_toml_file (D-19). `logger`
+    // carries the once-per-file unknown-key debug line (PARSE-05, D-26) and the missing-`id`
+    // skip notice (PARSE-10); it is the same per-database logger require_ui_config already holds.
+    static UIConfigSet
+    from_directory(const std::string& ui_dir, const std::string& locale, const std::shared_ptr<spdlog::logger>& logger);
 
     // Content-level halves, testable without touching disk (D-19's from_toml_file/from_toml_content
     // split). quiver_tests has no include path into src/ (D-18 keeps UIConfigSet private), so these
     // are exercised only indirectly through Database's public surface in Phase 1 -- the seam is
     // what would let a future public wrapper reuse this split without re-deriving it.
     static std::map<std::string, std::vector<UIEnumEntry>> parse_enum_content(const std::string& content);
-    static UICollectionConfig
-    parse_collection_content(const std::string& content, const std::string& locale, std::string& out_table_id);
+    // `out_unknown_keys` accumulates every key this parse does not consume, at both the
+    // collection level and within every [[attribute]]/[[attribute_group]] block in `content` --
+    // the caller (from_directory) owns turning that list into one debug line per file (PARSE-05).
+    static UICollectionConfig parse_collection_content(const std::string& content,
+                                                       const std::string& locale,
+                                                       std::string& out_table_id,
+                                                       std::vector<std::string>& out_unknown_keys);
 };
 
 // Lookup helpers used by the renderer. Both return nullptr when absent -- neither throws.
-const UIMetadata* find_attribute(const UIConfigSet& config, const std::string& collection, const std::string& attribute);
+const UIMetadata*
+find_attribute(const UIConfigSet& config, const std::string& collection, const std::string& attribute);
 const std::vector<UIEnumEntry>* find_vocabulary(const UIConfigSet& config, const std::string& name);
 
 }  // namespace quiver
