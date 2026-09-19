@@ -5,24 +5,34 @@ All notable changes to Quiver are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entries that require
 callers to change something are prefixed **BREAKING** and say what to do.
 
-## [0.10.7] — unreleased
+## [0.11.0] — unreleased
 
 ### Added
 
+- **BREAKING — `quiver_database_options_t` grew from 8 to 24 bytes.** Two `const char*` fields,
+  `ui_config_dir` then `ui_locale`, were appended after `console_level` (offsets `0`/`4`/`8`/`16`).
+  Any consumer that allocates or reads this struct by hand — rather than through one of the five
+  first-party bindings, which have already been updated — must recompile against the new header
+  and update any hand-written FFI layer to the new size and offsets; a stale 8-byte allocation is
+  a native out-of-bounds write, not a compile error. The C API now also exposes
+  `quiver_database_options_sizeof`, `quiver_scalar_metadata_sizeof`, and
+  `quiver_group_metadata_sizeof`, and every first-party binding calls them at load time to assert
+  its own hardcoded struct layout against the native library, failing loudly on a version-skewed
+  install instead of silently corrupting a metadata read.
+- **`ui_config_dir` and `ui_locale` are now optional parameters on `open`, `from_schema`, and
+  `from_migrations` in every binding**, and as `--ui-config-dir` / `--ui-locale` on `quiver_cli`.
+  A caller can point the UI sidecar loader at a directory anywhere on disk (not just
+  `<db_dir>/ui/`) and choose a locale other than `"en"` for enum-vocabulary labels; both default
+  to today's behavior when unset. `Database::has_ui_config()` now reaches every layer, including
+  Lua (`db:has_ui_config()`).
 - **`describe`, `describe_collection`, and `summarize_collection` now read a PSR `database/ui/`
   TOML sidecar when one sits beside the database file.** An agent calling any of the three on a
   database whose directory holds a `ui/` config now reads each scalar's label, unit, hidden flag,
   and enum vocabulary — for example `values {0: 8 (Disabled), 1: 4 (Enabled)}` instead of a bare
   integer code — with no API change and nothing required of the caller. With no sidecar present,
   the output is byte-identical to before.
-- **`DatabaseOptions` gains `ui_config_dir` and `ui_locale`.** A caller can now point the UI
-  sidecar loader at a directory anywhere on disk (not just `<db_dir>/ui/`) and choose a locale
-  other than `"en"` for enum-vocabulary labels; both default to today's behavior when unset.
-  `Database::has_ui_config()` reaches the C API as `quiver_database_has_ui_config`, and
-  `quiver_database_options_sizeof`/`quiver_scalar_metadata_sizeof`/`quiver_group_metadata_sizeof`
-  let an FFI binding assert its hardcoded struct layout against the native library at load time.
 
-[0.10.7]: https://github.com/psrenergy/quiver/compare/v0.10.6...v0.10.7
+[0.11.0]: https://github.com/psrenergy/quiver/compare/v0.10.6...v0.11.0
 
 ## [0.10.6] — 2026-09-11
 
