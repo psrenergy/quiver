@@ -30,6 +30,10 @@ def _foresight_ui_dir() -> Path:
     return _foresight_fixture_dir() / "ui"
 
 
+def _malformed_ui_dir() -> Path:
+    return Path(__file__).resolve().parent.parent.parent.parent / "tests" / "schemas" / "ui" / "malformed" / "ui"
+
+
 def _open(tmp_path: Path, stem: str, *, ui_config_dir: str | None = None, ui_locale: str | None = None) -> Database:
     return Database.from_schema(
         str(tmp_path / f"{stem}.sqlite"),
@@ -37,6 +41,20 @@ def _open(tmp_path: Path, stem: str, *, ui_config_dir: str | None = None, ui_loc
         ui_config_dir=ui_config_dir,
         ui_locale=ui_locale,
     )
+
+
+def _write_migrations_dir(tmp_path: Path) -> Path:
+    """Gap 7 (02-VERIFICATION.md): from_migrations() needs a migrations directory that actually
+    creates the EconomicDriver schema the foresight_like sidecar labels -- no such fixture is
+    checked in (the plan's files_modified list is the six test files only), so this writes one at
+    runtime under pytest's tmp_path, mirroring foresight_like/schema.sql's own DDL. Nothing here
+    is committed."""
+    migrations_dir = tmp_path / "migrations"
+    up_dir = migrations_dir / "1"
+    up_dir.mkdir(parents=True)
+    (up_dir / "up.sql").write_text(_foresight_schema_path().read_text(encoding="utf-8"), encoding="utf-8")
+    (up_dir / "down.sql").write_text("DROP TABLE EconomicDriver;\nDROP TABLE Configuration;\n", encoding="utf-8")
+    return migrations_dir
 
 
 def test_options_struct_layout_matches_native() -> None:
@@ -88,5 +106,90 @@ def test_missing_ui_config_dir_degrades_without_raising(tmp_path: Path) -> None:
     db = _open(tmp_path, "missing_dir", ui_config_dir=str(missing_dir))
     try:
         assert db.has_ui_config() is False
+    finally:
+        db.close()
+
+
+def test_malformed_sidecar_reports_false_without_raising(tmp_path: Path) -> None:
+    """Gap 5 (02-VERIFICATION.md): malformed polarity, previously C++-only."""
+    db = _open(tmp_path, "malformed", ui_config_dir=str(_malformed_ui_dir()))
+    try:
+        assert db.has_ui_config() is False
+    finally:
+        db.close()
+
+
+def test_memory_database_distinction(tmp_path: Path) -> None:
+    """Gap 5 (02-VERIFICATION.md): the D-01 :memory: distinction, previously C++-only -- an
+    explicit ui_config_dir loads even for :memory:, while the <db_dir>/ui/ convention never
+    fires for :memory: (there is no directory to resolve against)."""
+    with_dir = Database.from_schema(":memory:", str(_foresight_schema_path()), ui_config_dir=str(_foresight_ui_dir()))
+    try:
+        assert with_dir.has_ui_config() is True
+    finally:
+        with_dir.close()
+
+    without_dir = Database.from_schema(":memory:", str(_foresight_schema_path()))
+    try:
+        assert without_dir.has_ui_config() is False
+    finally:
+        without_dir.close()
+
+
+def test_open_threads_ui_config_dir_and_locale(tmp_path: Path) -> None:
+    """Gap 7 (02-VERIFICATION.md): open() with ui_config_dir + ui_locale, previously proven only
+    through from_schema() by a committed test."""
+    db_path = tmp_path / "reopened.sqlite"
+    Database.from_schema(str(db_path), str(_foresight_schema_path())).close()
+
+    db = Database.open(str(db_path), ui_config_dir=str(_foresight_ui_dir()), ui_locale="es")
+    try:
+        report = db.describe_collection("EconomicDriver")
+        assert "Ingenuo Estacional" in report
+        assert "Tendencia Lineal Local" in report
+        assert "Seasonal Naïve" not in report
+    finally:
+        db.close()
+
+
+def test_from_migrations_threads_ui_config_dir_and_locale(tmp_path: Path) -> None:
+    """Gap 7 (02-VERIFICATION.md): from_migrations() with ui_config_dir + ui_locale, previously
+    proven only through from_schema() by a committed test."""
+    migrations_dir = _write_migrations_dir(tmp_path)
+    db = Database.from_migrations(
+        str(tmp_path / "migrated.sqlite"),
+        str(migrations_dir),
+        ui_config_dir=str(_foresight_ui_dir()),
+        ui_locale="es",
+    )
+    try:
+        report = db.describe_collection("EconomicDriver")
+        assert "Ingenuo Estacional" in report
+        assert "Tendencia Lineal Local" in report
+        assert "Seasonal Naïve" not in report
+    finally:
+        db.close()
+
+
+def test_describe_carries_locale_specific_label(tmp_path: Path) -> None:
+    """Gap 7 (02-VERIFICATION.md): a locale label through whole-database describe(), not only
+    describe_collection()."""
+    db = _open(tmp_path, "describe_es", ui_config_dir=str(_foresight_ui_dir()), ui_locale="es")
+    try:
+        report = db.describe()
+        assert "Ingenuo Estacional" in report
+        assert "Seasonal Naïve" not in report
+    finally:
+        db.close()
+
+
+def test_empty_string_ui_locale_matches_unset_output(tmp_path: Path) -> None:
+    """OPT-03/empty (02-09 edge lift): an empty-string ui_locale is unset (D-03), not a locale
+    named ""."""
+    db = _open(tmp_path, "empty_locale", ui_config_dir=str(_foresight_ui_dir()), ui_locale="")
+    try:
+        report = db.describe_collection("EconomicDriver")
+        assert "Seasonal Naïve" in report
+        assert "Ingenuo Estacional" not in report
     finally:
         db.close()
