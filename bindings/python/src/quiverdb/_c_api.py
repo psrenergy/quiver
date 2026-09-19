@@ -24,10 +24,19 @@ ffi.cdef("""
         QUIVER_LOG_OFF = 4,
     } quiver_log_level_t;
 
+    // ui_config_dir/ui_locale added Phase 2 (02-03): NULL means "convention path" / "en"
+    // respectively. Layout pinned by src/c/options.cpp static_asserts -- sizeof 24 on 64-bit,
+    // offsets read_only@0, console_level@4, ui_config_dir@8, ui_locale@16. Do not reorder.
     typedef struct {
         int read_only;
         quiver_log_level_t console_level;
+        const char* ui_config_dir;
+        const char* ui_locale;
     } quiver_database_options_t;
+
+    // Native sizeof of quiver_database_options_t -- Bun-callable shape (D-07), used by every
+    // FFI binding's load-time struct-size gate.
+    size_t quiver_database_options_sizeof(void);
 
     // database.h
     quiver_database_options_t quiver_database_options_default(void);
@@ -48,6 +57,7 @@ ffi.cdef("""
                                                 quiver_database_t** out_db);
     quiver_error_t quiver_database_close(quiver_database_t* db);
     quiver_error_t quiver_database_is_healthy(quiver_database_t* db, int* out_healthy);
+    quiver_error_t quiver_database_has_ui_config(quiver_database_t* db, int* out_has_config);
     quiver_error_t quiver_database_path(quiver_database_t* db, const char** out_path);
     quiver_error_t quiver_database_current_version(quiver_database_t* db, int64_t* out_version);
 
@@ -202,6 +212,12 @@ ffi.cdef("""
         quiver_scalar_metadata_t* value_columns;
         size_t value_column_count;
     } quiver_group_metadata_t;
+
+    // Native sizeof of the two structs above -- same Bun-callable shape as
+    // quiver_database_options_sizeof (D-07). Every FFI binding's load-time struct-size gate
+    // calls these.
+    size_t quiver_scalar_metadata_sizeof(void);
+    size_t quiver_group_metadata_sizeof(void);
 
     // Metadata queries
     quiver_error_t quiver_database_get_scalar_metadata(quiver_database_t* db,

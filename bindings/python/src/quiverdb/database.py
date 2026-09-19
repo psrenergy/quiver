@@ -27,14 +27,39 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         self._closed = False
 
     @staticmethod
-    def _make_options(read_only: bool, console_level: int | None):
+    def _make_options(
+        read_only: bool,
+        console_level: int | None,
+        ui_config_dir: str | None,
+        ui_locale: str | None,
+    ):
+        """Build the options struct and return it alongside its string-buffer keepalives.
+
+        CFFI's owning `ffi.new("char[]", ...)` cdata is freed once the last Python reference
+        to it drops -- storing its pointer in the options struct does not count as a reference.
+        The caller must bind the returned keepalive list to a local that stays in scope across
+        the FFI call, or a buffer can be collected before the native side reads it.
+        """
         lib = get_lib()
         options = ffi.new("quiver_database_options_t*")
         options[0] = lib.quiver_database_options_default()
         options.read_only = 1 if read_only else 0
         if console_level is not None:
             options.console_level = console_level
-        return options
+        keepalive = []
+        if ui_config_dir:
+            buf = ffi.new("char[]", ui_config_dir.encode("utf-8"))
+            keepalive.append(buf)
+            options.ui_config_dir = buf
+        else:
+            options.ui_config_dir = ffi.NULL
+        if ui_locale:
+            buf = ffi.new("char[]", ui_locale.encode("utf-8"))
+            keepalive.append(buf)
+            options.ui_locale = buf
+        else:
+            options.ui_locale = ffi.NULL
+        return options, keepalive
 
     @staticmethod
     def from_schema(
@@ -43,13 +68,16 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         *,
         read_only: bool = False,
         console_level: int | None = None,
+        ui_config_dir: str | None = None,
+        ui_locale: str | None = None,
     ) -> Database:
         """Create a database from a SQL schema file.
 
-        console_level takes a LogLevel constant (e.g. LogLevel.OFF).
+        console_level takes a LogLevel constant (e.g. LogLevel.OFF). ui_config_dir overrides
+        the <db_dir>/ui/ convention; ui_locale selects the enum-label locale (default "en").
         """
         lib = get_lib()
-        options = Database._make_options(read_only, console_level)
+        options, _keepalive = Database._make_options(read_only, console_level, ui_config_dir, ui_locale)
         out_db = ffi.new("quiver_database_t**")
         check(
             lib.quiver_database_from_schema(
@@ -68,10 +96,12 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         *,
         read_only: bool = False,
         console_level: int | None = None,
+        ui_config_dir: str | None = None,
+        ui_locale: str | None = None,
     ) -> Database:
         """Create a database using a migrations directory."""
         lib = get_lib()
-        options = Database._make_options(read_only, console_level)
+        options, _keepalive = Database._make_options(read_only, console_level, ui_config_dir, ui_locale)
         out_db = ffi.new("quiver_database_t**")
         check(
             lib.quiver_database_from_migrations(
@@ -98,10 +128,12 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         *,
         read_only: bool = False,
         console_level: int | None = None,
+        ui_config_dir: str | None = None,
+        ui_locale: str | None = None,
     ) -> Database:
         """Open an existing database file."""
         lib = get_lib()
-        options = Database._make_options(read_only, console_level)
+        options, _keepalive = Database._make_options(read_only, console_level, ui_config_dir, ui_locale)
         out_db = ffi.new("quiver_database_t**")
         check(
             lib.quiver_database_open(
@@ -162,6 +194,14 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         lib = get_lib()
         out = ffi.new("int*")
         check(lib.quiver_database_is_healthy(self._ptr, out))
+        return bool(out[0])
+
+    def has_ui_config(self) -> bool:
+        """Return True if a UI sidecar config loaded, False if absent or malformed."""
+        self._ensure_open()
+        lib = get_lib()
+        out = ffi.new("int*")
+        check(lib.quiver_database_has_ui_config(self._ptr, out))
         return bool(out[0])
 
     # -- Schema inspection ------------------------------------------------------
