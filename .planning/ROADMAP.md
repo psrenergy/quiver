@@ -95,12 +95,12 @@ Plans:
   4. `bindings/js/src/ffi-helpers.ts` allocates the options buffer from **named offset constants** with a field-order comment, sized from the size accessor — and the file's two unrelated `new Uint8Array(8)` allocations (`allocPtrOut`, `allocUint64Out`) are provably unchanged.
   5. Python's CFFI cdef, Dart's hand-edited `bindings.dart` (no ffigen regen; `.dart_tool/hooks_runner/` and `.dart_tool/lib/` cleared before the suite runs) and Julia's regenerated `c_api.jl` each carry at least one test that a wrong layout would actually fail.
 
-**Plans:** 7 plans
+**Plans:** 1/7 plans executed
 
 Plans:
 **Wave 1**
 
-- [ ] 02-01-PLAN.md — Native ABI freeze: `DatabaseOptions` 8 → 24 bytes, `require_ui_config` override branch, locale threading, three `*_sizeof` accessors, `quiver_database_has_ui_config` (wave 1)
+- [x] 02-01-PLAN.md — Native ABI freeze: `DatabaseOptions` 8 → 24 bytes, `require_ui_config` override branch, locale threading, three `*_sizeof` accessors, `quiver_database_has_ui_config` (wave 1)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -253,7 +253,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Enum Labels in Describe | 6/6 | Complete    | 2026-09-19 |
-| 2. Config Path, Locale and Struct-Size Safety | 0/TBD | Not started | - |
+| 2. Config Path, Locale and Struct-Size Safety | 1/7 | In Progress|  |
 | 3. Structured Attribute Metadata | 0/TBD | Not started | - |
 | 4. Collection and Attribute-Group Metadata | 0/TBD | Not started | - |
 | 5. `validate_ui_config()` and Milestone Release | 0/TBD | Not started | - |

@@ -43,10 +43,10 @@ The agent-facing surface. Reaches all five bindings and Lua with no ABI change, 
 
 The ABI-breaking phase. Isolated deliberately.
 
-- [ ] **OPT-01**: `DatabaseOptions` accepts an explicit UI config directory path, overriding the `<db_dir>/ui/` convention
-- [ ] **OPT-02**: `DatabaseOptions` accepts a UI locale, defaulting to `"en"`
+- [x] **OPT-01**: `DatabaseOptions` accepts an explicit UI config directory path, overriding the `<db_dir>/ui/` convention
+- [x] **OPT-02**: `DatabaseOptions` accepts a UI locale, defaulting to `"en"`
 - [ ] **OPT-03**: Both are exposed as optional parameters on `open`, `from_schema` and `from_migrations` in all five bindings, per the existing `read_only` / `console_level` pattern
-- [ ] **OPT-04**: `has_ui_config()` reports whether a UI config was successfully loaded, in every layer
+- [x] **OPT-04**: `has_ui_config()` reports whether a UI config was successfully loaded, in every layer
 - [ ] **OPT-05**: `bindings/js/src/ffi-helpers.ts` `makeDefaultOptions` allocates the correct buffer size for the grown options struct, with named offset constants rather than inline literals
 - [ ] **OPT-06**: Python's CFFI cdef, Dart's hand-edited `bindings.dart`, and Julia's regenerated `c_api.jl` all reflect the new options layout, and Dart's `.dart_tool/hooks_runner/` and `.dart_tool/lib/` caches are cleared so tests do not silently run the old layout
 
@@ -55,7 +55,7 @@ The ABI-breaking phase. Isolated deliberately.
 Turns the silent-corruption failure class into a loud startup error. Protects work beyond
 this milestone.
 
-- [ ] **SAFE-01**: The C API exposes size accessors returning the native `sizeof` for each FFI struct a binding allocates a buffer for
+- [x] **SAFE-01**: The C API exposes size accessors returning the native `sizeof` for each FFI struct a binding allocates a buffer for
 - [ ] **SAFE-02**: Each binding asserts its hardcoded struct size against the native value at load time and fails loudly on mismatch
 - [ ] **SAFE-03**: The assertion covers the pre-existing hazards as well as the new struct — the options struct, `quiver_scalar_metadata_t` (JS `SCALAR_METADATA_SIZE = 56`), and `quiver_group_metadata_t` (JS `GROUP_METADATA_SIZE = 32`)
 
@@ -160,13 +160,13 @@ Which phases cover which requirements. Populated during roadmap creation.
 | CORPUS-01 | Phase 1 | Complete |
 | CORPUS-02 | Phase 1 | Complete |
 | CORPUS-03 | Phase 1 | Complete |
-| OPT-01 | Phase 2 | Pending |
-| OPT-02 | Phase 2 | Pending |
+| OPT-01 | Phase 2 | Complete |
+| OPT-02 | Phase 2 | Complete |
 | OPT-03 | Phase 2 | Pending |
-| OPT-04 | Phase 2 | Pending |
+| OPT-04 | Phase 2 | Complete |
 | OPT-05 | Phase 2 | Pending |
 | OPT-06 | Phase 2 | Pending |
-| SAFE-01 | Phase 2 | Pending |
+| SAFE-01 | Phase 2 | Complete |
 | SAFE-02 | Phase 2 | Pending |
 | SAFE-03 | Phase 2 | Pending |
 | META-01 | Phase 3 | Pending |

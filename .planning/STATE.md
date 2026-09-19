@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 2
 current_phase_name: Config Path, Locale and Struct-Size Safety
 status: executing
-stopped_at: Completed 01-06-PLAN.md
-last_updated: "2026-09-19T13:59:39.427Z"
+stopped_at: Completed 02-01-PLAN.md
+last_updated: "2026-09-19T14:21:32.704Z"
 last_activity: 2026-09-19
 last_activity_desc: Phase 01 execution started
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 13
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-09-17)
 ## Current Position
 
 Phase: 2 — Config Path, Locale and Struct-Size Safety
-Plan: Not started
+Plan: 2 of 7
 Status: Ready to execute
-Last activity: 2026-09-19 — Phase 1 complete, transitioned to Phase 2
+Last activity: 2026-09-19 — Completed 02-01-PLAN.md
 
-Progress: [██████████] 100%
+Progress: [█████░░░░░] 54%
 
 ## Performance Metrics
 
@@ -64,6 +64,7 @@ Progress: [██████████] 100%
 | Phase 01 P04 | 45min | 2 tasks | 5 files |
 | Phase 01 P05 | 25min | 2 tasks | 3 files |
 | Phase 01 P06 | 35min | 3 tasks | 8 files |
+| Phase 02 P01 | 55min | 3 tasks | 20 files |
 
 ## Accumulated Context
 
@@ -89,6 +90,9 @@ Full log in PROJECT.md Key Decisions. Affecting current work:
 - [Phase ?]: 01-05: Lua describe tests use plain TEST(...) with open_ui_fixture instead of TEST_F(LuaRunnerTest, ...), since LuaRunnerTest's temp-dir sandbox has no ui/ sidecar sibling (D-28)
 - [Phase ?]: DESC-07 closed: Julia, Dart, Python, and JS each assert exact-string enum rendering against the shared tests/schemas/ui/ fixtures; D-31 (strengthen and keep) recorded and executed
 - [Phase ?]: CHANGELOG.md head reconciled to 0.10.6 (matching CMakeLists.txt); fresh 0.10.7 unreleased section opened for this phase; no manifest bumped
+- [Phase ?]: D-01/D-05 applied verbatim in require_ui_config: explicit override checked first, :memory: short-circuit moved (not deleted) to guard only the convention path, warn vs debug log split by override-vs-convention.
+- [Phase ?]: Threaded a locale parameter into UIConfigSet::parse_enum_content (previously hardcoded en with no parameter) -- the second locale site the adversarial review flagged; without it ui_locale=es would render byte-identical en output.
+- [Phase ?]: No new fixture tree for the explicit-config-dir proof: reused foresight_like with the database file placed in a scratch directory with no ui/ sibling of its own.
 
 ### Pending Todos
 
@@ -110,6 +114,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-09-19T07:15:02.426Z
-Stopped at: Completed 01-06-PLAN.md
+Last session: 2026-09-19T14:21:07.027Z
+Stopped at: Completed 02-01-PLAN.md
 Resume file: None
