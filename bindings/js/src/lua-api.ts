@@ -146,6 +146,7 @@ midnight.
 
 \`\`\`lua
 db:is_healthy()                    -- boolean
+db:has_ui_config()                 -- boolean: did a ui/ sidecar load?
 db:current_version()               -- integer (current migration version)
 db:path()                          -- string (database file path)
 db:number_of_elements(collection)  -- integer: how many elements the collection holds right now

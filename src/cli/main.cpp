@@ -57,6 +57,10 @@ int main(int argc, char* argv[]) {
         .help("set log verbosity (debug, info, warn, error, off)")
         .default_value(std::string("warn"));
 
+    program.add_argument("--ui-config-dir").help("load the UI config from this directory instead of <db_dir>/ui");
+
+    program.add_argument("--ui-locale").help("locale for UI labels; defaults to en");
+
     try {
         program.parse_args(argc, argv);
     } catch (const std::exception& e) {
@@ -95,6 +99,12 @@ int main(int argc, char* argv[]) {
         quiver::DatabaseOptions options{};
         options.read_only = program.get<bool>("--read-only");
         options.console_level = parse_log_level(program.get<std::string>("--log-level"));
+        if (auto ui_config_dir = program.present<std::string>("--ui-config-dir")) {
+            options.ui_config_dir = *ui_config_dir;
+        }
+        if (auto ui_locale = program.present<std::string>("--ui-locale")) {
+            options.ui_locale = *ui_locale;
+        }
 
         // Construct database (one of three modes)
         auto db_path = program.get<std::string>("database");

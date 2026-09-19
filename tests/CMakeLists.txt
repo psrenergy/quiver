@@ -48,6 +48,7 @@ add_executable(quiver_tests
     test_lua_runner_return.cpp
     test_lua_runner_time_series.cpp
     test_lua_runner_transaction.cpp
+    test_lua_runner_ui_options.cpp
     test_lua_runner_update.cpp
     test_migrations.cpp
     test_row_result.cpp
@@ -61,6 +62,13 @@ target_link_libraries(quiver_tests
         GTest::gtest_main
         GTest::gmock
 )
+
+# LuaRunnerUiOptions.Cli* shells out to the built quiver_cli binary (tests/test_lua_runner_ui_options.cpp).
+# quiver_cli must exist before quiver_tests runs, and the test needs an absolute, cwd-independent
+# path to it -- gtest_discover_tests' WORKING_DIRECTORY below only applies under ctest, not a
+# direct `./build/bin/quiver_tests.exe` invocation from the repo root.
+add_dependencies(quiver_tests quiver_cli)
+target_compile_definitions(quiver_tests PRIVATE QUIVER_CLI_PATH="$<TARGET_FILE:quiver_cli>")
 
 gtest_discover_tests(quiver_tests
     WORKING_DIRECTORY $<TARGET_FILE_DIR:quiver_tests>

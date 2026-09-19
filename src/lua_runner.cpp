@@ -270,6 +270,8 @@ struct LuaRunner::Impl {
             // Group 1: Database info
             "is_healthy",
             [](Database& self) { return self.is_healthy(); },
+            "has_ui_config",
+            [](Database& self) { return self.has_ui_config(); },
             "current_version",
             [](Database& self) { return self.current_version(); },
             "path",
