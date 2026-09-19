@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 01
 current_phase_name: enum-labels-in-describe
 status: executing
-stopped_at: Completed 01-02-PLAN.md
-last_updated: "2026-09-19T05:51:42.577Z"
+stopped_at: Completed 01-03-PLAN.md
+last_updated: "2026-09-19T06:09:42.761Z"
 last_activity: 2026-09-19
 last_activity_desc: Phase 01 execution started
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 6
-  completed_plans: 2
+  completed_plans: 3
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-09-17)
 ## Current Position
 
 Phase: 01 (enum-labels-in-describe) — EXECUTING
-Plan: 3 of 6
+Plan: 4 of 6
 Status: Ready to execute
 Last activity: 2026-09-19 — Phase 01 execution started
 
-Progress: [███░░░░░░░] 33%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
@@ -60,6 +60,7 @@ Progress: [███░░░░░░░] 33%
 |------|----------|-------|-------|
 | Phase 01 P01 | 40min | 3 tasks | 25 files |
 | Phase 01 P02 | 10min | 2 tasks | 37 files |
+| Phase 01 P03 | 35min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -77,6 +78,9 @@ Full log in PROJECT.md Key Decisions. Affecting current work:
 - [Phase ?]: Golden baseline for describe()/describe_collection()/summarize_collection() captured from unmodified renderer before any edit, pinned to eol=lf so DESC-05 is provable byte-for-byte on every platform
 - [Phase ?]: Pinned tests/schemas/ui/**/*.toml and *.md to eol=lf in .gitattributes so byte-pinned literals survive core.autocrlf=true checkouts
 - [Phase ?]: format_table/ fixture needed a second collection file (empty_collection.toml) for the zero-attribute-blocks edge, beyond the plan's frontmatter files_modified list
+- [Phase ?]: Task 2's commit is test-only: the four scalar-line clauses landed together with the header/label clauses in Task 1's commit since both touch the same write_collection_section edit site.
+- [Phase ?]: Task 3's fifth clause combination is read as vocabulary-resolved-vs-unresolved (htd_like vs no_enum), not label-present-vs-absent, since every vocabulary-bound attribute in the corpus carries a label.
+- [Phase ?]: Task 3's unit-only/label-only/both/neither combinations use a scratch RAII sidecar (ScratchSidecarDir) instead of a new tracked fixture, since enum_basic has no unit-without-label attribute and the task is scoped to the test file only.
 
 ### Pending Todos
 
@@ -98,6 +102,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-09-19T05:51:42.546Z
-Stopped at: Completed 01-02-PLAN.md
+Last session: 2026-09-19T06:09:42.735Z
+Stopped at: Completed 01-03-PLAN.md
 Resume file: None

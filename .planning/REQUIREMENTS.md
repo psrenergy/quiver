@@ -32,11 +32,11 @@ The agent-facing surface. Reaches all five bindings and Lua with no ABI change, 
 `describe*` already returns a `std::string` through the existing C API string wrappers.
 
 - [x] **DESC-01**: `summarize_collection` renders enum labels beside the codes in its value histogram — `values {0: 8 (Disabled), 1: 4 (Enabled)}`
-- [ ] **DESC-02**: `describe_collection` renders each scalar's UI label and unit after its type — `- max_generation (REAL) [MW] — "Maximum Generation"`
-- [ ] **DESC-03**: `describe_collection` names an enum attribute's vocabulary and its full value list, including codes with zero rows in the data
-- [ ] **DESC-04**: `describe` renders each collection's UI label and a header line naming the loaded UI config path and resolved locale
+- [x] **DESC-02**: `describe_collection` renders each scalar's UI label and unit after its type — `- max_generation (REAL) [MW] — "Maximum Generation"`
+- [x] **DESC-03**: `describe_collection` names an enum attribute's vocabulary and its full value list, including codes with zero rows in the data
+- [x] **DESC-04**: `describe` renders each collection's UI label and a header line naming the loaded UI config path and resolved locale
 - [x] **DESC-05**: With no UI config present, the output of `describe`, `describe_collection` and `summarize_collection` is **byte-identical** to the current output
-- [ ] **DESC-06**: A `hide = true` attribute still appears in describe output, tagged `[hidden]` — hiding is a GUI affordance, and an agent reading the schema wants it
+- [x] **DESC-06**: A `hide = true` attribute still appears in describe output, tagged `[hidden]` — hiding is a GUI affordance, and an agent reading the schema wants it
 - [ ] **DESC-07**: The enum rendering is exercised from Lua and from all five bindings by tests that assert on exact strings, not merely that a String was returned
 
 ### Config Path and Locale (OPT)
@@ -151,11 +151,11 @@ Which phases cover which requirements. Populated during roadmap creation.
 | PARSE-11 | Phase 1 | Complete |
 | PARSE-12 | Phase 1 | Complete |
 | DESC-01 | Phase 1 | Complete |
-| DESC-02 | Phase 1 | Pending |
-| DESC-03 | Phase 1 | Pending |
-| DESC-04 | Phase 1 | Pending |
+| DESC-02 | Phase 1 | Complete |
+| DESC-03 | Phase 1 | Complete |
+| DESC-04 | Phase 1 | Complete |
 | DESC-05 | Phase 1 | Complete |
-| DESC-06 | Phase 1 | Pending |
+| DESC-06 | Phase 1 | Complete |
 | DESC-07 | Phase 1 | Pending |
 | CORPUS-01 | Phase 1 | Complete |
 | CORPUS-02 | Phase 1 | Complete |
