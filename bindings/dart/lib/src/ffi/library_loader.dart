@@ -18,10 +18,61 @@ String get _coreLibraryName {
 
 QuiverDatabaseBindings? _cachedBindings;
 DynamicLibrary? _cachedLibrary;
+bool _structSizesChecked = false;
 
 QuiverDatabaseBindings get bindings {
   _cachedBindings ??= QuiverDatabaseBindings(library);
+  // Run once per isolate, memoized separately from _cachedBindings: constructing
+  // QuiverDatabaseBindings proves nothing about any symbol, since every symbol is a `late
+  // final` resolved on FIRST ACCESS (bindings.dart:16, :26-27) -- so this must actively CALL
+  // the three *_sizeof accessors, not merely reference their pointer fields.
+  if (!_structSizesChecked) {
+    assertNativeStructSizes(_cachedBindings!);
+    _structSizesChecked = true;
+  }
   return _cachedBindings!;
+}
+
+/// Throws a [StateError] naming [name] and both sizes when they disagree (SAFE-02, D-09). Kept
+/// pure and parameterized so the failure path can be tested without a second native build.
+void checkStructSize(String name, int expected, int native) {
+  if (expected != native) {
+    throw StateError(
+      'Native struct layout mismatch for $name: this binding expects $expected bytes, '
+      'the native library reports $native bytes. Reinstall a matching native library.',
+    );
+  }
+}
+
+/// Compares this binding's compiled struct layout against the native library's own view of it,
+/// for all three ABI-frozen structs, in a fixed order, short-circuiting on the first mismatch.
+void assertNativeStructSizes(QuiverDatabaseBindings b) {
+  int callNativeSizeof(String symbolName, int Function() call) {
+    try {
+      return call();
+    } on ArgumentError catch (e) {
+      throw StateError(
+        'Native library predates this binding: missing symbol $symbolName ($e). '
+        'Reinstall a matching native library.',
+      );
+    }
+  }
+
+  checkStructSize(
+    'quiver_database_options_t',
+    sizeOf<quiver_database_options_t>(),
+    callNativeSizeof('quiver_database_options_sizeof', b.quiver_database_options_sizeof),
+  );
+  checkStructSize(
+    'quiver_scalar_metadata_t',
+    sizeOf<quiver_scalar_metadata_t>(),
+    callNativeSizeof('quiver_scalar_metadata_sizeof', b.quiver_scalar_metadata_sizeof),
+  );
+  checkStructSize(
+    'quiver_group_metadata_t',
+    sizeOf<quiver_group_metadata_t>(),
+    callNativeSizeof('quiver_group_metadata_sizeof', b.quiver_group_metadata_sizeof),
+  );
 }
 
 DynamicLibrary get library {
