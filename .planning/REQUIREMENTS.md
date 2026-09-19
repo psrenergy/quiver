@@ -37,7 +37,7 @@ The agent-facing surface. Reaches all five bindings and Lua with no ABI change, 
 - [x] **DESC-04**: `describe` renders each collection's UI label and a header line naming the loaded UI config path and resolved locale
 - [x] **DESC-05**: With no UI config present, the output of `describe`, `describe_collection` and `summarize_collection` is **byte-identical** to the current output
 - [x] **DESC-06**: A `hide = true` attribute still appears in describe output, tagged `[hidden]` — hiding is a GUI affordance, and an agent reading the schema wants it
-- [ ] **DESC-07**: The enum rendering is exercised from Lua and from all five bindings by tests that assert on exact strings, not merely that a String was returned
+- [x] **DESC-07**: The enum rendering is exercised from Lua and from all five bindings by tests that assert on exact strings, not merely that a String was returned
 
 ### Config Path and Locale (OPT)
 
@@ -156,7 +156,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | DESC-04 | Phase 1 | Complete |
 | DESC-05 | Phase 1 | Complete |
 | DESC-06 | Phase 1 | Complete |
-| DESC-07 | Phase 1 | Pending |
+| DESC-07 | Phase 1 | Complete |
 | CORPUS-01 | Phase 1 | Complete |
 | CORPUS-02 | Phase 1 | Complete |
 | CORPUS-03 | Phase 1 | Complete |
