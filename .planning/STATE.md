@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 2
 current_phase_name: Config Path, Locale and Struct-Size Safety
 status: executing
-stopped_at: Completed 02-05-PLAN.md
-last_updated: "2026-09-19T15:08:11.005Z"
+stopped_at: Completed 02-04-PLAN.md
+last_updated: "2026-09-19T15:11:26.349Z"
 last_activity: 2026-09-19
 last_activity_desc: Phase 01 execution started
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 13
-  completed_plans: 10
+  completed_plans: 11
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-09-17)
 ## Current Position
 
 Phase: 2 — Config Path, Locale and Struct-Size Safety
-Plan: 5 of 7
+Plan: 6 of 7
 Status: Ready to execute
 Last activity: 2026-09-19 — Completed 02-01-PLAN.md
 
-Progress: [████████░░] 77%
+Progress: [█████████░] 85%
 
 ## Performance Metrics
 
@@ -68,6 +68,7 @@ Progress: [████████░░] 77%
 | Phase 02 P03 | 16min | 3 tasks | 6 files |
 | Phase 02 P02 | 25min | 3 tasks | 10 files |
 | Phase 02 P05 | 30min | 3 tasks | 6 files |
+| Phase 02 P04 | 50min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -103,6 +104,8 @@ Full log in PROJECT.md Key Decisions. Affecting current work:
 - [Phase ?]: JS: hasUiConfig implementation placed in introspection.ts (where isHealthy's real body lives), not database.ts as plan text literally said
 - [Phase ?]: Julia has zero export statements anywhere; has_ui_config follows house convention (Quiver.has_ui_config) rather than adding the codebase's first export
 - [Phase ?]: Load-time struct-size gate written only to bindings/julia/generator/prologue.jl, proven regeneration-proof by re-running generator.bat twice with an empty resulting diff on c_api.jl
+- [Phase ?]: Dart: memoize the load-time struct-size gate with its own _structSizesChecked flag, separate from _cachedBindings, so the three native *_sizeof calls run once per isolate rather than on every bindings access
+- [Phase ?]: Dart: wrote test.bat's cache-clearing lines via raw printf with literal CRLF bytes, verified with xxd/cat -A, to avoid unix tooling silently rewriting the CRLF .bat file to LF
 
 ### Pending Todos
 
@@ -124,6 +127,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-09-19T15:08:10.951Z
-Stopped at: Completed 02-05-PLAN.md
+Last session: 2026-09-19T15:11:26.327Z
+Stopped at: Completed 02-04-PLAN.md
 Resume file: None

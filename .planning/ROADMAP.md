@@ -95,7 +95,7 @@ Plans:
   4. `bindings/js/src/ffi-helpers.ts` allocates the options buffer from **named offset constants** with a field-order comment, sized from the size accessor — and the file's two unrelated `new Uint8Array(8)` allocations (`allocPtrOut`, `allocUint64Out`) are provably unchanged.
   5. Python's CFFI cdef, Dart's hand-edited `bindings.dart` (no ffigen regen; `.dart_tool/hooks_runner/` and `.dart_tool/lib/` cleared before the suite runs) and Julia's regenerated `c_api.jl` each carry at least one test that a wrong layout would actually fail.
 
-**Plans:** 4/7 plans executed
+**Plans:** 5/7 plans executed
 
 Plans:
 **Wave 1**
@@ -106,7 +106,7 @@ Plans:
 
 - [x] 02-02-PLAN.md — JS: 24-byte `makeDefaultOptions` from named offsets with string keepalives, load-time three-struct gate (wave 2)
 - [x] 02-03-PLAN.md — Python: hand-edited CFFI cdef, options kwargs, load-time gate that calls the accessors (wave 2)
-- [ ] 02-04-PLAN.md — Dart: hand-edited `bindings.dart`, actively-calling load-time gate, `test.bat` cache clearing (wave 2)
+- [x] 02-04-PLAN.md — Dart: hand-edited `bindings.dart`, actively-calling load-time gate, `test.bat` cache clearing (wave 2)
 - [x] 02-05-PLAN.md — Julia: regenerated `c_api.jl`, `GC.@preserve` keepalives, load-time gate in `generator/prologue.jl` (wave 2)
 
 **Wave 3** *(blocked on Wave 2 completion)*
@@ -253,7 +253,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Enum Labels in Describe | 6/6 | Complete    | 2026-09-19 |
-| 2. Config Path, Locale and Struct-Size Safety | 4/7 | In Progress|  |
+| 2. Config Path, Locale and Struct-Size Safety | 5/7 | In Progress|  |
 | 3. Structured Attribute Metadata | 0/TBD | Not started | - |
 | 4. Collection and Attribute-Group Metadata | 0/TBD | Not started | - |
 | 5. `validate_ui_config()` and Milestone Release | 0/TBD | Not started | - |
