@@ -95,9 +95,9 @@ Advisory, ships last. See the accepted risk in PROJECT.md.
 
 The corpus is worth more than the parser — it is the contract.
 
-- [ ] **CORPUS-01**: `tests/schemas/ui/` holds fixtures distilled from real model repos, covering the all-bare-string case (BESSOperation), the mixed en/es/pt case (Foresight), and the plain-`date_time`-attribute spelling (HydroThermalDispatch)
-- [ ] **CORPUS-02**: Fixtures cover each parser tolerance individually: gapped enum ids, absent `enum.toml`, unknown keys, the `format` table form, interleaved attribute/group entries, the orphan collection file, and the id-namespace collision
-- [ ] **CORPUS-03**: Fixtures live under `tests/schemas/` and are referenced by every binding suite, never copied into one
+- [x] **CORPUS-01**: `tests/schemas/ui/` holds fixtures distilled from real model repos, covering the all-bare-string case (BESSOperation), the mixed en/es/pt case (Foresight), and the plain-`date_time`-attribute spelling (HydroThermalDispatch)
+- [x] **CORPUS-02**: Fixtures cover each parser tolerance individually: gapped enum ids, absent `enum.toml`, unknown keys, the `format` table form, interleaved attribute/group entries, the orphan collection file, and the id-namespace collision
+- [x] **CORPUS-03**: Fixtures live under `tests/schemas/` and are referenced by every binding suite, never copied into one
 
 ## v2 Requirements
 
@@ -157,9 +157,9 @@ Which phases cover which requirements. Populated during roadmap creation.
 | DESC-05 | Phase 1 | Complete |
 | DESC-06 | Phase 1 | Pending |
 | DESC-07 | Phase 1 | Pending |
-| CORPUS-01 | Phase 1 | Pending |
-| CORPUS-02 | Phase 1 | Pending |
-| CORPUS-03 | Phase 1 | Pending |
+| CORPUS-01 | Phase 1 | Complete |
+| CORPUS-02 | Phase 1 | Complete |
+| CORPUS-03 | Phase 1 | Complete |
 | OPT-01 | Phase 2 | Pending |
 | OPT-02 | Phase 2 | Pending |
 | OPT-03 | Phase 2 | Pending |
