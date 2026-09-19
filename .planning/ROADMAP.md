@@ -95,7 +95,16 @@ Plans:
   4. `bindings/js/src/ffi-helpers.ts` allocates the options buffer from **named offset constants** with a field-order comment, sized from the size accessor — and the file's two unrelated `new Uint8Array(8)` allocations (`allocPtrOut`, `allocUint64Out`) are provably unchanged.
   5. Python's CFFI cdef, Dart's hand-edited `bindings.dart` (no ffigen regen; `.dart_tool/hooks_runner/` and `.dart_tool/lib/` cleared before the suite runs) and Julia's regenerated `c_api.jl` each carry at least one test that a wrong layout would actually fail.
 
-**Plans**: TBD
+**Plans:** 7 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Native ABI freeze: `DatabaseOptions` 8 → 24 bytes, `require_ui_config` override branch, locale threading, three `*_sizeof` accessors, `quiver_database_has_ui_config` (wave 1)
+- [ ] 02-02-PLAN.md — JS: 24-byte `makeDefaultOptions` from named offsets with string keepalives, load-time three-struct gate (wave 2)
+- [ ] 02-03-PLAN.md — Python: hand-edited CFFI cdef, options kwargs, load-time gate that calls the accessors (wave 2)
+- [ ] 02-04-PLAN.md — Dart: hand-edited `bindings.dart`, actively-calling load-time gate, `test.bat` cache clearing (wave 2)
+- [ ] 02-05-PLAN.md — Julia: regenerated `c_api.jl`, `GC.@preserve` keepalives, load-time gate in `generator/prologue.jl` (wave 2)
+- [ ] 02-06-PLAN.md — Lua host: `db:has_ui_config()`, `quiver_cli --ui-config-dir` / `--ui-locale`, automated CLI probe (wave 3)
+- [ ] 02-07-PLAN.md — Release: CHANGELOG 0.10.7 → 0.11.0 rename with BREAKING entry, single `part=minor` dispatch behind a decision checkpoint (wave 4)
 
 **Notes:**
 
