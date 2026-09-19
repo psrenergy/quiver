@@ -20,12 +20,23 @@ QuiverDatabaseBindings? _cachedBindings;
 DynamicLibrary? _cachedLibrary;
 bool _structSizesChecked = false;
 
+// Wiring-evidence list (mirrors Python's _CHECKED_STRUCTS / Julia's _CHECKED_STRUCTS): cleared on
+// entry to assertNativeStructSizes and appended after each struct's check passes. Lets a test
+// observe that the gate actually ran, and in what order, without calling assertNativeStructSizes
+// itself -- which would repopulate the record and recreate a vacuous pass if the real call site
+// in the `bindings` getter below were ever deleted.
+final List<String> _checkedStructs = <String>[];
+
+/// The exact ordered record of which structs the load-time gate checked, most recently. Empty
+/// until [bindings] has been accessed at least once.
+List<String> get checkedStructNames => List.unmodifiable(_checkedStructs);
+
 QuiverDatabaseBindings get bindings {
   _cachedBindings ??= QuiverDatabaseBindings(library);
   // Run once per isolate, memoized separately from _cachedBindings: constructing
   // QuiverDatabaseBindings proves nothing about any symbol, since every symbol is a `late
   // final` resolved on FIRST ACCESS (bindings.dart:16, :26-27) -- so this must actively CALL
-  // the three *_sizeof accessors, not merely reference their pointer fields.
+  // the four *_sizeof accessors, not merely reference their pointer fields.
   if (!_structSizesChecked) {
     assertNativeStructSizes(_cachedBindings!);
     _structSizesChecked = true;
@@ -45,7 +56,9 @@ void checkStructSize(String name, int expected, int native) {
 }
 
 /// Compares this binding's compiled struct layout against the native library's own view of it,
-/// for all three ABI-frozen structs, in a fixed order, short-circuiting on the first mismatch.
+/// for all four ABI-frozen structs, in a fixed order, short-circuiting on the first mismatch.
+/// Records each struct's name in [_checkedStructs] (cleared on entry) immediately after its own
+/// check passes -- the wiring evidence [checkedStructNames] exposes to tests.
 void assertNativeStructSizes(QuiverDatabaseBindings b) {
   int callNativeSizeof(String symbolName, int Function() call) {
     try {
@@ -58,21 +71,32 @@ void assertNativeStructSizes(QuiverDatabaseBindings b) {
     }
   }
 
+  _checkedStructs.clear();
+
   checkStructSize(
     'quiver_database_options_t',
     sizeOf<quiver_database_options_t>(),
     callNativeSizeof('quiver_database_options_sizeof', b.quiver_database_options_sizeof),
   );
+  _checkedStructs.add('quiver_database_options_t');
   checkStructSize(
     'quiver_scalar_metadata_t',
     sizeOf<quiver_scalar_metadata_t>(),
     callNativeSizeof('quiver_scalar_metadata_sizeof', b.quiver_scalar_metadata_sizeof),
   );
+  _checkedStructs.add('quiver_scalar_metadata_t');
   checkStructSize(
     'quiver_group_metadata_t',
     sizeOf<quiver_group_metadata_t>(),
     callNativeSizeof('quiver_group_metadata_sizeof', b.quiver_group_metadata_sizeof),
   );
+  _checkedStructs.add('quiver_group_metadata_t');
+  checkStructSize(
+    'quiver_csv_options_t',
+    sizeOf<quiver_csv_options_t>(),
+    callNativeSizeof('quiver_csv_options_sizeof', b.quiver_csv_options_sizeof),
+  );
+  _checkedStructs.add('quiver_csv_options_t');
 }
 
 DynamicLibrary get library {

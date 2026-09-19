@@ -1738,6 +1738,18 @@ class QuiverDatabaseBindings {
   );
   late final _quiver_group_metadata_sizeof = _quiver_group_metadata_sizeofPtr.asFunction<int Function()>();
 
+  // Hand-added (SAFE-01, D-07, Phase 2 plan 02-11): native sizeof of quiver_csv_options_t, the
+  // fourth struct the load-time layout gate checks. Same Size-returning shape as the three
+  // *_sizeof accessors above. Not ffigen output -- bindings.dart is hand-edited this phase.
+  int quiver_csv_options_sizeof() {
+    return _quiver_csv_options_sizeof();
+  }
+
+  late final _quiver_csv_options_sizeofPtr = _lookup<ffi.NativeFunction<ffi.Size Function()>>(
+    'quiver_csv_options_sizeof',
+  );
+  late final _quiver_csv_options_sizeof = _quiver_csv_options_sizeofPtr.asFunction<int Function()>();
+
   int quiver_database_list_scalar_attributes(
     ffi.Pointer<quiver_database_t> db,
     ffi.Pointer<ffi.Char> collection,
