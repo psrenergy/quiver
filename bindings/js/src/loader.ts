@@ -2,7 +2,12 @@ import { dlopen, type Library, type Pointer, suffix } from "bun:ffi";
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { QuiverError } from "./errors.ts";
-import { GROUP_METADATA_SIZE, OPTIONS_SIZE, SCALAR_METADATA_SIZE } from "./ffi-helpers.ts";
+import {
+  CSV_OPTIONS_SIZE,
+  GROUP_METADATA_SIZE,
+  OPTIONS_SIZE,
+  SCALAR_METADATA_SIZE,
+} from "./ffi-helpers.ts";
 
 // Bun FFI type shorthand constants. Deno's "buffer" parameter type (pass a
 // TypedArray, auto-converted to a pointer) has no Bun equivalent -- Bun rejects
@@ -180,6 +185,10 @@ const timeSeriesSymbols = {
 } as const;
 
 const csvSymbols = {
+  // Fourth *_sizeof accessor (D-07) -- csv.ts hand-allocates a raw quiver_csv_options_t buffer,
+  // the same hazard class as quiver_database_options_sizeof above; assertNativeStructSizes
+  // checks it last.
+  quiver_csv_options_sizeof: { args: [], returns: USIZE },
   quiver_database_export_csv: { args: [P, BUF, BUF, BUF, P], returns: I32 },
   quiver_database_import_csv: { args: [P, BUF, BUF, BUF, P], returns: I32 },
 } as const;
@@ -333,9 +342,21 @@ export function checkStructSize(name: string, expected: number, native: number):
   }
 }
 
-// Checks all three structs the moment the library opens, in a fixed order (options, scalar
-// metadata, group metadata), short-circuiting on the first mismatch -- a version skew makes all
-// three suspect, so reporting more than one error is noise (must_haves EDGE/ordering).
+// Names of the structs assertNativeStructSizes has actually checked, in check order, populated
+// only after each check returns without throwing. Exists so a test can fail when the gate is
+// unwired: driving only checkStructSize (as five of this file's tests already did) stayed green
+// when assertNativeStructSizes's body was replaced with `void lib;` -- a vacuous pass this
+// record makes impossible, since an unwired gate leaves the array empty.
+const _checkedStructs: string[] = [];
+
+export function checkedStructNames(): readonly string[] {
+  return _checkedStructs;
+}
+
+// Checks all four structs the moment the library opens, in a fixed order (options, scalar
+// metadata, group metadata, csv options), short-circuiting on the first mismatch -- a version
+// skew makes all four suspect, so reporting more than one error is noise (must_haves
+// EDGE/ordering).
 //
 // Bun returns a `bigint` for a USIZE FFI return (probe-verified in this repo's Bun:
 // `dlopen("kernel32.dll", { GetACP: { args: [], returns: "usize" } })` yields `typeof ===
@@ -345,21 +366,35 @@ export function checkStructSize(name: string, expected: number, native: number):
 // `bun test` does not typecheck, so a bare `24 !== 24n` would throw a bogus mismatch on every
 // single load.
 export function assertNativeStructSizes(lib: QuiverLib["symbols"]): void {
+  _checkedStructs.length = 0;
+
   checkStructSize(
     "quiver_database_options_t",
     OPTIONS_SIZE,
     Number(lib.quiver_database_options_sizeof()),
   );
+  _checkedStructs.push("quiver_database_options_t");
+
   checkStructSize(
     "quiver_scalar_metadata_t",
     SCALAR_METADATA_SIZE,
     Number(lib.quiver_scalar_metadata_sizeof()),
   );
+  _checkedStructs.push("quiver_scalar_metadata_t");
+
   checkStructSize(
     "quiver_group_metadata_t",
     GROUP_METADATA_SIZE,
     Number(lib.quiver_group_metadata_sizeof()),
   );
+  _checkedStructs.push("quiver_group_metadata_t");
+
+  checkStructSize(
+    "quiver_csv_options_t",
+    CSV_OPTIONS_SIZE,
+    Number(lib.quiver_csv_options_sizeof()),
+  );
+  _checkedStructs.push("quiver_csv_options_t");
 }
 
 // Resolve the native library lazily on first use. Initializing eagerly at
