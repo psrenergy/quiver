@@ -205,6 +205,22 @@ TEST(DatabaseUiParse, AttributesAfterAGroupBlockAreStillParsed) {
     EXPECT_TRUE(contains(report, "\"Rated Cycle Count\"")) << report;
 }
 
+// WR-02 (review fix): bess_like's enum.toml declares a gapped/negative/int64-max `look_ahead`
+// vocabulary (codes -1, 0, 3, 7, 9223372036854775807) as proof the parser/renderer tolerate the
+// full int64_t range -- but until this fix it was never bound to any attribute, so only toml++'s
+// own parser (already covered upstream) ever touched those values. `look_ahead` is now a real
+// Storage column bound via `enum = "look_ahead"`; this asserts the exact rendered line, including
+// the negative and int64-max codes, through append_scalar_ui_clauses -- the render path the
+// vocabulary was originally meant to prove.
+TEST(DatabaseUiParse, Int64ExtremeVocabularyCodesRenderExactly) {
+    auto db = quiver::test::open_ui_fixture(__FILE__, "bess_like", "cpp_int64_extremes");
+
+    const auto report = db.describe_collection("Storage");
+    const std::string expected =
+        "enum look_ahead {-1: Unknown, 0: Immediate, 3: Short Term, 7: Long Term, 9223372036854775807: Unbounded}";
+    EXPECT_TRUE(contains(report, expected)) << report;
+}
+
 // PARSE-04 adjacency: bess_like's labels are all bare strings -- the bare string wins outright and
 // renders unchanged, ahead of any locale key.
 TEST(DatabaseUiParse, BareStringLabelsIgnoreLocale) {

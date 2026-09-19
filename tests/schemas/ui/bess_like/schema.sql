@@ -6,12 +6,16 @@ CREATE TABLE Configuration (
     label TEXT UNIQUE NOT NULL
 ) STRICT;
 
+-- look_ahead is bound to enum.toml's gapped/negative/int64-max `look_ahead` vocabulary (WR-02):
+-- without a real attribute to bind it to, that vocabulary's extreme codes never reach the
+-- render path (append_scalar_ui_clauses / summarize_collection), only toml++'s own parser.
 CREATE TABLE Storage (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     label TEXT UNIQUE NOT NULL,
     degradation INTEGER,
     capacity REAL,
-    cycles INTEGER
+    cycles INTEGER,
+    look_ahead INTEGER
 ) STRICT;
 
 -- Value column is "rate", never "degradation" -- a column named after the group would collide

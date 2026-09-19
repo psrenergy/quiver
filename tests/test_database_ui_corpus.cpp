@@ -88,6 +88,7 @@ TEST(DatabaseUiCorpus, FixtureLiteralsArePinned) {
         {"foresight_like/ui/economic_driver.toml", "enum = \"model\""},
         {"bess_like/ui/storage.toml", "Degradation Rate"},
         {"bess_like/ui/storage.toml", "Degradation Curve"},
+        {"bess_like/ui/enum.toml", "9223372036854775807"},
         {"htd_like/ui/hydro_plant.toml", "Measurement Date"},
         {"enum_basic/ui/enum.toml", "Disabled"},
         {"enum_basic/ui/enum.toml", "Enabled"},

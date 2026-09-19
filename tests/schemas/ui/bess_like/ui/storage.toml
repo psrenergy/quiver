@@ -20,3 +20,8 @@ label = "Installed Capacity"
 [[attribute]]
 id = "cycles"
 label = "Rated Cycle Count"
+
+[[attribute]]
+id = "look_ahead"
+enum = "look_ahead"
+label = "Look Ahead"
