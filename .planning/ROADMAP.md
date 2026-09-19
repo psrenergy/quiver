@@ -29,7 +29,7 @@ not a technical layer. There is no "build the parser" phase followed by a "wire 
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Enum Labels in Describe** - An agent calling `describe` sees what an INTEGER column means, in all six layers, with no ABI change
+- [x] **Phase 1: Enum Labels in Describe** - An agent calling `describe` sees what an INTEGER column means, in all six layers, with no ABI change (completed 2026-09-19)
 - [ ] **Phase 2: Config Path, Locale and Struct-Size Safety** - A consumer points Quiver at any UI directory and locale; a drifted binding layout fails loudly instead of corrupting memory
 - [ ] **Phase 3: Structured Attribute Metadata** - claw reads label/tooltip/unit/format/enum as data instead of scraping a text report
 - [ ] **Phase 4: Collection and Attribute-Group Metadata** - Display labels, icons, help, `main.collections` order, and one answer for both time-series dimension spellings
@@ -227,7 +227,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Enum Labels in Describe | 6/6 | In Progress|  |
+| 1. Enum Labels in Describe | 6/6 | Complete    | 2026-09-19 |
 | 2. Config Path, Locale and Struct-Size Safety | 0/TBD | Not started | - |
 | 3. Structured Attribute Metadata | 0/TBD | Not started | - |
 | 4. Collection and Attribute-Group Metadata | 0/TBD | Not started | - |
