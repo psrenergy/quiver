@@ -47,7 +47,7 @@ The ABI-breaking phase. Isolated deliberately.
 - [x] **OPT-02**: `DatabaseOptions` accepts a UI locale, defaulting to `"en"`
 - [x] **OPT-03**: Both are exposed as optional parameters on `open`, `from_schema` and `from_migrations` in all five bindings, per the existing `read_only` / `console_level` pattern
 - [x] **OPT-04**: `has_ui_config()` reports whether a UI config was successfully loaded, in every layer
-- [ ] **OPT-05**: `bindings/js/src/ffi-helpers.ts` `makeDefaultOptions` allocates the correct buffer size for the grown options struct, with named offset constants rather than inline literals
+- [x] **OPT-05**: `bindings/js/src/ffi-helpers.ts` `makeDefaultOptions` allocates the correct buffer size for the grown options struct, with named offset constants rather than inline literals
 - [x] **OPT-06**: Python's CFFI cdef, Dart's hand-edited `bindings.dart`, and Julia's regenerated `c_api.jl` all reflect the new options layout, and Dart's `.dart_tool/hooks_runner/` and `.dart_tool/lib/` caches are cleared so tests do not silently run the old layout
 
 ### Layout Safety (SAFE)
@@ -164,7 +164,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | OPT-02 | Phase 2 | Complete |
 | OPT-03 | Phase 2 | Complete |
 | OPT-04 | Phase 2 | Complete |
-| OPT-05 | Phase 2 | Pending |
+| OPT-05 | Phase 2 | Complete |
 | OPT-06 | Phase 2 | Complete |
 | SAFE-01 | Phase 2 | Complete |
 | SAFE-02 | Phase 2 | Complete |
