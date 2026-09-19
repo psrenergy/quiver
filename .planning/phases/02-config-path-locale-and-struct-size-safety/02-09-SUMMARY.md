@@ -221,3 +221,7 @@ None — no external service configuration required.
 ---
 *Phase: 02-config-path-locale-and-struct-size-safety*
 *Completed: 2026-09-19*
+
+## Self-Check: PASSED
+
+All 8 files confirmed present on disk; all 5 commit hashes (60cda47, bc1fe6e, 303fbd2, 222141e, 485492d) confirmed present in `git log --oneline --all`.
