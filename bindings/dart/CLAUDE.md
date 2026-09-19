@@ -13,7 +13,8 @@ lib/src/ffi/      # bindings.dart (GENERATED ffigen output — do not hand-edit)
                   # library_loader.dart (hand-written native library resolution)
 generator/        # generator.bat → runs `dart run ffigen`
 hook/build.dart   # Native-assets build hook: compiles the C library via native_toolchain_cmake
-test/             # Test suite (*_test.dart per area) + test.bat (plain `dart test` wrapper)
+test/             # Test suite (*_test.dart per area) + test.bat/test.sh (clear the native-assets
+                  # cache, then `dart test` — see "Stale native cache" below)
 pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert_version.py)
 ```
 
@@ -37,6 +38,14 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   `quiver_database_update_relation` plus its `_by_label` form.
   Take the generator upgrade as its own deliberate change (regenerate, then fix the enum call
   sites here and in hub) rather than as a side effect of adding a C function.
+- **`quiver_database_options_t` is 24 bytes** (`read_only`@0, `console_level`@4,
+  `ui_config_dir`@8, `ui_locale`@16). The two pointer fields, plus
+  `quiver_database_options_sizeof`, `quiver_scalar_metadata_sizeof`, `quiver_group_metadata_sizeof`
+  and `quiver_database_has_ui_config`, were HAND-EDITED into `bindings.dart` (Phase 2, plan 02-04)
+  in the same "not ffigen output" style as the entries above — a regen still flips the three C
+  enums and breaks Hub. `uiConfigDir`/`uiLocale` are optional named parameters on
+  `Database.open`/`fromSchema`/`fromMigrations` (threaded through `_makeOptions`), and
+  `hasUiConfig()` mirrors `isHealthy()` exactly.
 - **Native library resolution** (`lib/src/ffi/library_loader.dart`), three tiers in order:
   (1) the native-assets build output (`.dart_tool/hooks_runner/shared/quiverdb/build`) — on
   Windows it pre-loads `libquiver.dll` from there so `libquiver_c.dll`'s dependency resolves;
@@ -76,8 +85,31 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   the hook's own defines. `check_function_exists` results are cached even by a *failed* configure
   and are then skipped forever, and flipping `QUIVER_UNVERSIONED_SHARED` does not force a relink,
   so the previous build's symlinks survive and the asset scan finds nothing.
+  **`test/test.bat` and `test/test.sh` now do this removal automatically**, before `dart test`
+  runs (D-15) — without it, native-assets keys its build cache on a checksum that does not cover
+  the hook's own defines, so an ABI-changing phase could otherwise pass the suite against the
+  *old* struct layout. The accepted cost is a native rebuild every run. `test/test.bat` is CRLF
+  (working-tree `.bat` files always are); edit it with a tool that preserves that, never `sed` or
+  another unix text tool.
+- **Load-time struct-size gate** (`lib/src/ffi/library_loader.dart`): the `bindings` getter calls
+  `assertNativeStructSizes` immediately after constructing `QuiverDatabaseBindings`, memoized
+  once per isolate by its own flag (separate from the `_cachedBindings` memoization). It compares
+  `sizeOf<quiver_database_options_t/quiver_scalar_metadata_t/quiver_group_metadata_t>()` against
+  the three native `*_sizeof` accessors, in that fixed order, short-circuiting on the first
+  mismatch, and throws a `StateError` naming the struct and both numbers (SAFE-02/D-09). It must
+  actually **call** each accessor, not merely reference its `late final` pointer field: every
+  symbol in `bindings.dart` resolves lazily on first access (`bindings.dart:16`, `:26-27`), so
+  constructing `QuiverDatabaseBindings` alone proves nothing about any symbol's presence. A
+  missing symbol (a native library built before this phase) is caught as the `ArgumentError`
+  `DynamicLibrary.lookup` throws and rethrown as a distinct `StateError` naming the version skew.
+  `checkStructSize` is kept pure and parameterized so `test/struct_sizes_test.dart` can exercise
+  the failure path (a deliberately wrong expected value) without a second native build.
 - **Marshaling idiom**: every method allocates through a `package:ffi` `Arena` and releases in
-  `finally`. Typed columns go through the shared private `_marshalGroupColumn(Arena, String, List<Object?>)`
+  `finally`. This is also why `uiConfigDir`/`uiLocale` need no keepalive mechanism the way JS and
+  Python's equivalents do: `_makeOptions` writes each `toNativeUtf8(allocator: arena).cast()`
+  (or `nullptr` when unset/empty) straight into the options struct, and the `Arena` already owns
+  that allocation until `arena.releaseAll()` runs in the caller's `finally` — strictly after the
+  native call reads it. Typed columns go through the shared private `_marshalGroupColumn(Arena, String, List<Object?>)`
   (used by `updateTimeSeriesGroup`, `upsertTimeSeriesRow`, `upsertTimeSeriesRowByLabel`,
   `updateVectorGroup`, `updateSetGroup` and the group writers' `ByLabel` forms); query parameters
   through `_marshalParams`. Both `_marshalGroupColumn` and `Element._setMixedList` dispatch on the
