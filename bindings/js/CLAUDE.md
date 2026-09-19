@@ -58,6 +58,43 @@ biome.json        # Lint/format config
   - No struct-by-value FFI return (oven-sh/bun#6139) → `quiver_database_options_default` is
     omitted from the symbol table; `ffi-helpers.makeDefaultOptions()` builds the options struct
     in JS.
+  - **`quiver_database_options_t` is 24 bytes** (`read_only`@0 int32, `console_level`@4 int32,
+    `ui_config_dir`@8 `const char*`, `ui_locale`@16 `const char*`), built entirely from named
+    offset constants in `ffi-helpers.ts` (`OPTIONS_OFFSET_READ_ONLY`/`_CONSOLE_LEVEL`/
+    `_UI_CONFIG_DIR`/`_UI_LOCALE`, `OPTIONS_SIZE`) — never an inline literal (a search-and-replace
+    over `8` in this file is itself the historical bug this guards against; `allocPtrOut` and
+    `allocUint64Out` in the same file allocate 8 bytes each for unrelated reasons — a pointer-out
+    and a u64-out parameter — and are pinned unchanged by `test/ffi-helpers.test.ts`).
+    `makeDefaultOptions` returns `[Allocation, Allocation[]]` — the struct plus every child
+    string allocation for `uiConfigDir`/`uiLocale` — copying `buildCsvOptionsBuffer`'s shape in
+    `csv.ts` exactly. **Every call site MUST destructure and bind the keepalive in the same scope
+    as the FFI call** (all three in `database.ts`); dropping it is a use-after-free, since the
+    struct's two pointer fields point into separately allocated buffers Bun's GC can otherwise
+    collect before the native call reads them. An absent or empty-string option leaves its
+    pointer slot's eight zero bytes (NULL), allocating no child string — the C converter maps
+    that to "not specified".
+  - **`SCALAR_METADATA_SIZE` (56) and `GROUP_METADATA_SIZE` (32) live in `ffi-helpers.ts`**, not
+    `metadata.ts` — `metadata.ts` imports them back. Reason: `loader.ts` needs all three
+    struct-size constants (these two plus `OPTIONS_SIZE`) for its load-time assertion, and
+    `metadata.ts` imports `database.ts`, so importing from there into `loader.ts` would pull the
+    whole database surface into the loader and create a cycle; `ffi-helpers.ts` imports only
+    `bun:ffi` and `./types.ts`, so it is the cycle-free home. Values are unchanged, only relocated.
+  - **Load-time struct-size gate**: `loadLibrary()` calls `assertNativeStructSizes(lib.symbols)`
+    exactly once, on the memoized path, checking `quiver_database_options_t` /
+    `quiver_scalar_metadata_t` / `quiver_group_metadata_t` in that fixed order and
+    short-circuiting on the first mismatch. It must NOT move inside `openLibrary()` or any of
+    `initLibrary()`'s three `try`/`catch` tiers — each swallows its load failure as "try the next
+    path", which would remask a real size mismatch as a generic "Cannot load native library"
+    error and lose the struct name and both numbers. `checkStructSize(name, expected, native)` is
+    the pure, parameterized throw — one of the binding's few locally crafted error messages,
+    since the C API cannot diagnose a disagreement about its own layout. **Every `*_sizeof`
+    accessor call must be wrapped in `Number(...)` before comparing**: Bun returns a `bigint` for
+    a `usize` FFI return (probe-verified: `1252n === 1252` is `false`), `bun test` does not
+    typecheck, and an unconverted comparison throws a bogus mismatch on every single load.
+  - **Known, deliberately unfixed**: `csv.ts`'s `buildCsvOptionsBuffer` hardcodes
+    `new Uint8Array(56)` for `quiver_csv_options_t` with no `sizeof` accessor and no load-time
+    assertion — a fourth instance of the same hazard class as the options struct above, out of
+    scope for this phase's three named structs (options, scalar metadata, group metadata).
 - **int64 handling**: input params accept `number | bigint` — `allocNativeInt64` writes each
   element with `DataView.setBigInt64`, so `bigint` inputs (scalar or array) are preserved
   exactly, never coerced through `Number`. Read paths return `number` (converted via `Number()`

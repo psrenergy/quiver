@@ -257,6 +257,7 @@ export class Database {
 
   // --- Introspection (implemented in introspection.ts) ---
   declare isHealthy: () => boolean;
+  declare hasUiConfig: () => boolean;
   declare currentVersion: () => number;
   declare path: () => string;
   declare describe: () => string;

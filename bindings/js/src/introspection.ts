@@ -10,6 +10,13 @@ Database.prototype.isHealthy = function (this: Database): boolean {
   return new DataView(outBuf.buffer).getInt32(0, true) !== 0;
 };
 
+Database.prototype.hasUiConfig = function (this: Database): boolean {
+  const lib = getSymbols();
+  const outBuf = new Uint8Array(4);
+  check(lib.quiver_database_has_ui_config(this._handle, outBuf));
+  return new DataView(outBuf.buffer).getInt32(0, true) !== 0;
+};
+
 Database.prototype.currentVersion = function (this: Database): number {
   const lib = getSymbols();
   const outBuf = new Uint8Array(8);
