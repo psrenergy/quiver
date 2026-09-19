@@ -51,6 +51,12 @@ end
 # Typed global so the @ccall sites keep their efficient codegen.
 libquiver_c::String = ""
 
+# Wiring-evidence list (mirrors Python's _CHECKED_STRUCTS from 02-08): cleared on entry to
+# _assert_struct_sizes and appended after each struct's check passes. Lets a test observe that
+# the gate actually RAN (and in what order) without re-driving _check_struct_size itself -- which
+# would recreate the vacuous-pass defect this list exists to prevent.
+const _CHECKED_STRUCTS = String[]
+
 # SAFE-02/SAFE-03/D-08/D-09: a load-time struct-layout gate. `c_api.jl`'s `__init__` is verbatim
 # `generator/prologue.jl` content (generator.toml's `prologue_file_path`), so this is the ONE
 # place a hand-written safety check survives `generator.bat` -- writing it into `c_api.jl` itself
@@ -84,9 +90,11 @@ function _native_struct_size(get_size::Function, name::AbstractString)
     end
 end
 
-# Fixed order: options, scalar metadata, group metadata -- short-circuits on the first mismatch
-# (`error` throws, so later checks never run).
+# Fixed order: options, scalar metadata, group metadata, csv options -- short-circuits on the
+# first mismatch (`error` throws, so later checks never run). Promoted rule (02-08): every struct
+# a binding hand-allocates a raw buffer for joins this list by default.
 function _assert_struct_sizes()
+    empty!(_CHECKED_STRUCTS)
     _check_struct_size(
         "quiver_database_options_t",
         sizeof(quiver_database_options_t),
@@ -95,6 +103,7 @@ function _assert_struct_sizes()
             "quiver_database_options_t",
         ),
     )
+    push!(_CHECKED_STRUCTS, "quiver_database_options_t")
     _check_struct_size(
         "quiver_scalar_metadata_t",
         sizeof(quiver_scalar_metadata_t),
@@ -103,6 +112,7 @@ function _assert_struct_sizes()
             "quiver_scalar_metadata_t",
         ),
     )
+    push!(_CHECKED_STRUCTS, "quiver_scalar_metadata_t")
     _check_struct_size(
         "quiver_group_metadata_t",
         sizeof(quiver_group_metadata_t),
@@ -111,6 +121,16 @@ function _assert_struct_sizes()
             "quiver_group_metadata_t",
         ),
     )
+    push!(_CHECKED_STRUCTS, "quiver_group_metadata_t")
+    _check_struct_size(
+        "quiver_csv_options_t",
+        sizeof(quiver_csv_options_t),
+        _native_struct_size(
+            () -> (@ccall libquiver_c.quiver_csv_options_sizeof()::Csize_t),
+            "quiver_csv_options_t",
+        ),
+    )
+    push!(_CHECKED_STRUCTS, "quiver_csv_options_t")
     return nothing
 end
 
