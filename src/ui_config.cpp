@@ -146,7 +146,8 @@ std::string read_file(const std::filesystem::path& path) {
 
 }  // namespace
 
-std::map<std::string, std::vector<UIEnumEntry>> UIConfigSet::parse_enum_content(const std::string& content) {
+std::map<std::string, std::vector<UIEnumEntry>>
+UIConfigSet::parse_enum_content(const std::string& content, const std::string& locale) {
     std::map<std::string, std::vector<UIEnumEntry>> vocabularies;
 
     toml::table tbl = toml::parse(content);
@@ -169,9 +170,7 @@ std::map<std::string, std::vector<UIEnumEntry>> UIConfigSet::parse_enum_content(
                     entry.code = *value_id;
                 }
             }
-            // Phase 1's locale is hardcoded "en" everywhere (D-06); enum labels resolve at "en"
-            // regardless of any future caller-supplied locale (OPT-02 is Phase 2).
-            entry.label = resolve_localizable(entry_table->get("label"), "en");
+            entry.label = resolve_localizable(entry_table->get("label"), locale);
             entries.push_back(std::move(entry));
         }
         vocabularies[std::string(name.str())] = std::move(entries);
@@ -298,7 +297,7 @@ UIConfigSet UIConfigSet::from_directory(const std::string& ui_dir,
     if (fs::exists(enum_path)) {
         const auto enum_content = read_file(enum_path);
         if (!enum_content.empty()) {
-            config.vocabularies = parse_enum_content(enum_content);
+            config.vocabularies = parse_enum_content(enum_content, locale);
         }
     }
 
@@ -373,26 +372,45 @@ void Database::Impl::require_ui_config() const {
     }
     ui_load_attempted = true;
 
-    // Checked before any directory computation: an in-memory path has no filesystem directory
-    // to derive one from, and any cwd-fallback copied from create_database_logger's would make
-    // every in-memory describe test sensitive to the process's working directory (see
-    // anti-pattern in 01-RESEARCH.md).
-    if (path == ":memory:") {
-        logger->debug("No UI config for in-memory database");
-        return;
+    namespace fs = std::filesystem;
+
+    fs::path ui_dir;
+    bool explicit_override = false;
+    if (!ui_config_dir.empty()) {
+        // D-01: an explicit directory loads even for a :memory: database -- the caller named it
+        // outright, so the cwd-ambiguity the :memory: guard below exists for does not apply.
+        ui_dir = ui_config_dir;
+        explicit_override = true;
+    } else {
+        // Checked before any directory computation: an in-memory path has no filesystem
+        // directory to derive one from, and any cwd-fallback copied from
+        // create_database_logger's would make every in-memory describe test sensitive to the
+        // process's working directory (see anti-pattern in 01-RESEARCH.md). Only guards the
+        // convention path -- an explicit override is handled above and never reaches here.
+        if (path == ":memory:") {
+            logger->debug("No UI config for in-memory database");
+            return;
+        }
+        ui_dir = fs::path(path).parent_path() / "ui";
     }
 
-    namespace fs = std::filesystem;
-    const auto ui_dir = fs::path(path).parent_path() / "ui";
     if (!fs::exists(ui_dir) || !fs::is_directory(ui_dir)) {
-        logger->debug("No UI config at {}", ui_dir.string());
+        // D-05: an absent CONVENTION path is the normal state for every non-PSR database
+        // (debug); an absent EXPLICIT path is a caller-typed path gone wrong, which must be
+        // visible (warn). Same degradation either way -- has_ui_config() reports false, open()
+        // never throws -- only the log volume differs.
+        if (explicit_override) {
+            logger->warn("No UI config at {}", ui_dir.string());
+        } else {
+            logger->debug("No UI config at {}", ui_dir.string());
+        }
         return;
     }
 
     try {
         // The assignment is the last statement inside the try, so a throw anywhere in the walk
         // publishes nothing (D-25): ui_config stays nullopt rather than half-loaded.
-        ui_config = UIConfigSet::from_directory(ui_dir.string(), "en", logger);
+        ui_config = UIConfigSet::from_directory(ui_dir.string(), ui_locale, logger);
     } catch (const std::exception& e) {
         logger->warn("Failed to load UI config at {}: {}", ui_dir.string(), e.what());
     }

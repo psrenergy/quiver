@@ -7,9 +7,16 @@
 #include <string>
 
 inline quiver::DatabaseOptions convert_database_options(const quiver_database_options_t& c_opts) {
+    // A NULL *or* empty ui_config_dir means "not specified" (convention path); a NULL *or*
+    // empty ui_locale means "not specified" ("en"). Guarding before construction matters here:
+    // constructing a std::string from a null const char* is undefined behavior.
+    const std::string ui_config_dir = c_opts.ui_config_dir ? c_opts.ui_config_dir : "";
+    const std::string ui_locale = (c_opts.ui_locale && c_opts.ui_locale[0] != '\0') ? c_opts.ui_locale : "en";
     return {
         .read_only = c_opts.read_only != 0,
         .console_level = static_cast<quiver::LogLevel>(c_opts.console_level),
+        .ui_config_dir = ui_config_dir,
+        .ui_locale = ui_locale,
     };
 }
 

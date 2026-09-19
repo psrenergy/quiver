@@ -20,6 +20,11 @@ enum class LogLevel {
 struct QUIVER_API DatabaseOptions {
     bool read_only = false;
     LogLevel console_level = LogLevel::Info;
+    // Empty = unset: an unset ui_config_dir means "use the <db_dir>/ui/ convention"; an unset
+    // ui_locale means "en". No std::optional -- matches read_only/console_level's shape and
+    // mirrors the C API's NULL-means-unset mapping (D-04).
+    std::string ui_config_dir;
+    std::string ui_locale = "en";
 };
 
 struct QUIVER_API CSVOptions {

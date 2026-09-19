@@ -61,6 +61,10 @@ struct Database::Impl {
     sqlite3* db = nullptr;
     std::string path;
     std::shared_ptr<spdlog::logger> logger;
+    // Set once at construction (Database::Database) from DatabaseOptions; consumed lazily by
+    // require_ui_config. Empty ui_config_dir means "use the <db_dir>/ui/ convention" (D-01/D-04).
+    std::string ui_config_dir;
+    std::string ui_locale = "en";
     // Loaded lazily by require_schema: the Database(path, options) constructor opens an existing
     // database without reading its schema, and every metadata/CRUD path goes through
     // require_schema. mutable so the const readers (get_*_metadata, describe, ...) can trigger it.

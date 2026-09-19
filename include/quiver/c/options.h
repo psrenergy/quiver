@@ -15,9 +15,16 @@ typedef enum {
     QUIVER_LOG_OFF = 4,
 } quiver_log_level_t;
 
+// NULL on ui_config_dir means "use the <db_dir>/ui/ convention"; NULL on ui_locale means "en".
+// An empty string on either field is treated identically to NULL (see convert_database_options).
+// Layout is pinned by static_asserts in src/c/options.cpp -- sizeof 24 on 64-bit, offsets
+// read_only@0, console_level@4, ui_config_dir@8, ui_locale@16. Every FFI binding hardcodes this
+// layout; do not reorder or insert fields.
 typedef struct {
     int read_only;
     quiver_log_level_t console_level;
+    const char* ui_config_dir;
+    const char* ui_locale;
 } quiver_database_options_t;
 
 // CSV options for controlling enum resolution and date formatting.
@@ -51,6 +58,11 @@ typedef struct {
 
 QUIVER_C_API quiver_database_options_t quiver_database_options_default(void);
 QUIVER_C_API quiver_csv_options_t quiver_csv_options_default(void);
+
+// Native sizeof of quiver_database_options_t. No parameters, plain size_t return -- Bun FFI
+// cannot call a struct-by-value function (quiver_database_options_default), so this is the
+// shape every binding's load-time layout assertion calls instead (D-07).
+QUIVER_C_API size_t quiver_database_options_sizeof(void);
 
 #ifdef __cplusplus
 }

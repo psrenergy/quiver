@@ -93,6 +93,8 @@ namespace quiver {
 
 Database::Database(const std::string& path, const DatabaseOptions& options) : impl_(std::make_unique<Impl>()) {
     impl_->path = path;
+    impl_->ui_config_dir = options.ui_config_dir;
+    impl_->ui_locale = options.ui_locale.empty() ? "en" : options.ui_locale;
     impl_->logger = create_database_logger(path, options.console_level);
 
     impl_->logger->debug("Opening database: {}", path);

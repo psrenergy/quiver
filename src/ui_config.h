@@ -74,7 +74,8 @@ struct UIConfigSet {
     // split). quiver_tests has no include path into src/ (D-18 keeps UIConfigSet private), so these
     // are exercised only indirectly through Database's public surface in Phase 1 -- the seam is
     // what would let a future public wrapper reuse this split without re-deriving it.
-    static std::map<std::string, std::vector<UIEnumEntry>> parse_enum_content(const std::string& content);
+    static std::map<std::string, std::vector<UIEnumEntry>>
+    parse_enum_content(const std::string& content, const std::string& locale);
     // `out_unknown_keys` accumulates every key this parse does not consume, at both the
     // collection level and within every [[attribute]]/[[attribute_group]] block in `content` --
     // the caller (from_directory) owns turning that list into one debug line per file (PARSE-05).
