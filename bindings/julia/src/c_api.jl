@@ -92,6 +92,8 @@ end
 mutable struct quiver_database_options_t
     read_only::Cint
     console_level::quiver_log_level_t
+    ui_config_dir::Ptr{Cchar}
+    ui_locale::Ptr{Cchar}
 end
 
 mutable struct quiver_csv_options_t
@@ -110,6 +112,10 @@ end
 
 function quiver_csv_options_default()
     @ccall libquiver_c.quiver_csv_options_default()::quiver_csv_options_t
+end
+
+function quiver_database_options_sizeof()
+    @ccall libquiver_c.quiver_database_options_sizeof()::Csize_t
 end
 
 @cenum quiver_data_type_t::UInt32 begin
@@ -150,6 +156,10 @@ end
 
 function quiver_database_path(db, out_path)
     @ccall libquiver_c.quiver_database_path(db::Ptr{quiver_database_t}, out_path::Ptr{Ptr{Cchar}})::quiver_error_t
+end
+
+function quiver_database_has_ui_config(db, out_has_config)
+    @ccall libquiver_c.quiver_database_has_ui_config(db::Ptr{quiver_database_t}, out_has_config::Ptr{Cint})::quiver_error_t
 end
 
 function quiver_database_begin_transaction(db)
@@ -336,6 +346,14 @@ struct quiver_group_metadata_t
     dimension_column::Ptr{Cchar}
     value_columns::Ptr{quiver_scalar_metadata_t}
     value_column_count::Csize_t
+end
+
+function quiver_scalar_metadata_sizeof()
+    @ccall libquiver_c.quiver_scalar_metadata_sizeof()::Csize_t
+end
+
+function quiver_group_metadata_sizeof()
+    @ccall libquiver_c.quiver_group_metadata_sizeof()::Csize_t
 end
 
 function quiver_database_get_scalar_metadata(db, collection, attribute, out_metadata)
