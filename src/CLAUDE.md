@@ -356,6 +356,14 @@ second route to the same data the public schema/attribute metadata getters expos
   `warn` instead of `debug` when the directory is missing (D-05) — the `:memory:` short-circuit
   itself still guards only the convention path. `ui_locale` reaches both `from_directory`'s
   existing `locale` parameter and `parse_enum_content`, which Phase 1 left hardcoded at `"en"`.
+- **Phase 2 (OPT-01/OPT-02) at the Lua layer (D-14):** `LuaRunner` takes an already-configured
+  `Database&` and has no options channel of its own — it is deliberately unchanged. Lua's host is
+  `quiver_cli` (`src/cli/main.cpp`), which gained `--ui-config-dir`/`--ui-locale` alongside the
+  existing `--read-only`/`--log-level`, consumed into `DatabaseOptions` before the three-mode
+  `Database` construction lambda via `program.present<std::string>(...)` (an unsupplied flag
+  leaves the field at its default). Neither flag is validated by the CLI: D-05 already degrades an
+  absent or malformed explicit directory with a warn log and no throw, and every other option the
+  CLI forwards is passed through unvalidated the same way.
 
 ## LuaRunner
 
@@ -390,7 +398,8 @@ Implementation conventions in `lua_runner.cpp`:
   `bindings/js/test/lua-api-sync.test.ts` parses `lua_runner.cpp` and fails otherwise. That check
   exists because the doc went stale two days after it was written: it said only
   `base`/`string`/`table` were loaded and "there is NO `math`", and #210 added
-  `math`/`coroutine`/`utf8` here without touching it.
+  `math`/`coroutine`/`utf8` here without touching it. `db:has_ui_config()` (OPT-04, Phase 2 02-06)
+  is bound beside `is_healthy` on the `Database` usertype and mirrored there in the same edit.
 - **A nullable argument whose absence *means* something takes `sol::object`, not
   `sol::optional<T>`**: `sol::optional<T>` yields `nullopt` for a wrong type just as it does for
   `nil`, so `db:update_relation(..., false)` silently cleared the relation.
