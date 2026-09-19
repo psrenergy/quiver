@@ -4,10 +4,13 @@
 #include <quiver/c/database.h>
 #include <string>
 
-// SAFE-01/OPT-04 (Phase 2, plan 02-01): the three *_sizeof accessors and
+// SAFE-01/OPT-04 (Phase 2, plan 02-01, extended 02-08): the four *_sizeof accessors and
 // quiver_database_has_ui_config through the C boundary itself -- every database here is built
 // through quiver_database_from_schema directly, never through the C++ test_ui_fixture.h helper
 // (the Phase 1 precedent: a C API test must prove the C boundary, not the C++ helper behind it).
+// 02-08 promoted the rule from "the three structs the gates check" to the general one: every C
+// struct a binding hand-allocates a raw buffer for gets a *_sizeof accessor here, covering
+// quiver_csv_options_t (bindings/js/src/csv.ts hand-allocates 56 bytes for it) as the fourth.
 
 namespace {
 
@@ -41,6 +44,9 @@ TEST(DatabaseCApiOptions, SizeofAccessorsMatchNativeLayout) {
 
     EXPECT_EQ(quiver_group_metadata_sizeof(), 32u);
     EXPECT_EQ(quiver_group_metadata_sizeof(), sizeof(quiver_group_metadata_t));
+
+    EXPECT_EQ(quiver_csv_options_sizeof(), 56u);
+    EXPECT_EQ(quiver_csv_options_sizeof(), sizeof(quiver_csv_options_t));
 }
 
 TEST(DatabaseCApiOptions, HasUiConfigTrueWhenLoaded) {
