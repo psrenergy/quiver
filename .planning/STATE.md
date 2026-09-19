@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 2
 current_phase_name: Config Path, Locale and Struct-Size Safety
 status: executing
-stopped_at: Completed 02-01-PLAN.md
-last_updated: "2026-09-19T14:21:32.704Z"
+stopped_at: Completed 02-03-PLAN.md
+last_updated: "2026-09-19T14:37:08.917Z"
 last_activity: 2026-09-19
 last_activity_desc: Phase 01 execution started
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 13
-  completed_plans: 7
+  completed_plans: 9
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-09-17)
 ## Current Position
 
 Phase: 2 — Config Path, Locale and Struct-Size Safety
-Plan: 2 of 7
+Plan: 3 of 7
 Status: Ready to execute
 Last activity: 2026-09-19 — Completed 02-01-PLAN.md
 
-Progress: [█████░░░░░] 54%
+Progress: [██████░░░░] 62%
 
 ## Performance Metrics
 
@@ -65,6 +65,7 @@ Progress: [█████░░░░░] 54%
 | Phase 01 P05 | 25min | 2 tasks | 3 files |
 | Phase 01 P06 | 35min | 3 tasks | 8 files |
 | Phase 02 P01 | 55min | 3 tasks | 20 files |
+| Phase 02 P03 | 16min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -93,6 +94,8 @@ Full log in PROJECT.md Key Decisions. Affecting current work:
 - [Phase ?]: D-01/D-05 applied verbatim in require_ui_config: explicit override checked first, :memory: short-circuit moved (not deleted) to guard only the convention path, warn vs debug log split by override-vs-convention.
 - [Phase ?]: Threaded a locale parameter into UIConfigSet::parse_enum_content (previously hardcoded en with no parameter) -- the second locale site the adversarial review flagged; without it ui_locale=es would render byte-identical en output.
 - [Phase ?]: No new fixture tree for the explicit-config-dir proof: reused foresight_like with the database file placed in a scratch directory with no ui/ sibling of its own.
+- [Phase ?]: Python _EXPECTED_STRUCT_SIZES implemented as inline ffi.sizeof(...) calls inside _assert_struct_sizes rather than a module-level dict, since _loader.py deliberately avoids importing quiverdb._c_api at module scope.
+- [Phase ?]: Python UI-options tests build every database under pytest's tmp_path (never the shared foresight_like fixture dir) so has_ui_config()==True can only come from the explicit ui_config_dir argument.
 
 ### Pending Todos
 
@@ -114,6 +117,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-09-19T14:21:07.027Z
-Stopped at: Completed 02-01-PLAN.md
+Last session: 2026-09-19T14:37:08.882Z
+Stopped at: Completed 02-03-PLAN.md
 Resume file: None
