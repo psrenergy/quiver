@@ -22,6 +22,22 @@ export const OPTIONS_SIZE = 24;
 export const SCALAR_METADATA_SIZE = 56;
 export const GROUP_METADATA_SIZE = 32;
 
+// quiver_csv_options_t field layout (include/quiver/c/options.h, pinned by the static_assert in
+// src/c/options.cpp): date_time_format@0 (const char*), enum_attribute_names@8 (const char*
+// const*), enum_locale_names@16 (const char* const*), enum_entry_counts@24 (const size_t*),
+// enum_labels@32 (const char* const*), enum_values@40 (const int64_t*), enum_group_count@48
+// (size_t). sizeof == 56 on 64-bit. Lives here, not csv.ts, for the same cycle-free reason as
+// OPTIONS_SIZE above -- loader.ts needs CSV_OPTIONS_SIZE for its load-time gate, and importing
+// from csv.ts would pull database.ts into the loader.
+export const CSV_OPTIONS_OFFSET_DATE_TIME_FORMAT = 0;
+export const CSV_OPTIONS_OFFSET_ENUM_ATTRIBUTE_NAMES = 8;
+export const CSV_OPTIONS_OFFSET_ENUM_LOCALE_NAMES = 16;
+export const CSV_OPTIONS_OFFSET_ENUM_ENTRY_COUNTS = 24;
+export const CSV_OPTIONS_OFFSET_ENUM_LABELS = 32;
+export const CSV_OPTIONS_OFFSET_ENUM_VALUES = 40;
+export const CSV_OPTIONS_OFFSET_ENUM_GROUP_COUNT = 48;
+export const CSV_OPTIONS_SIZE = 56;
+
 /**
  * Construct the 24-byte quiver_database_options_t struct as an Allocation, plus a keepalive
  * array of every child string allocation (ui_config_dir / ui_locale point into separately

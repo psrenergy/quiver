@@ -5,6 +5,14 @@ import {
   allocNativeInt64,
   allocNativeString,
   allocNativeStringArray,
+  CSV_OPTIONS_OFFSET_DATE_TIME_FORMAT,
+  CSV_OPTIONS_OFFSET_ENUM_ATTRIBUTE_NAMES,
+  CSV_OPTIONS_OFFSET_ENUM_ENTRY_COUNTS,
+  CSV_OPTIONS_OFFSET_ENUM_GROUP_COUNT,
+  CSV_OPTIONS_OFFSET_ENUM_LABELS,
+  CSV_OPTIONS_OFFSET_ENUM_LOCALE_NAMES,
+  CSV_OPTIONS_OFFSET_ENUM_VALUES,
+  CSV_OPTIONS_SIZE,
   nativeAddress,
   toCString,
 } from "./ffi-helpers.ts";
@@ -21,13 +29,13 @@ export interface CsvOptions {
  * Returns [structAllocation, keepalive] where keepalive prevents GC of native allocations.
  */
 function buildCsvOptionsBuffer(options?: CsvOptions): [Allocation, Allocation[]] {
-  const buf = new Uint8Array(56);
+  const buf = new Uint8Array(CSV_OPTIONS_SIZE);
   const dv = new DataView(buf.buffer);
   const keepalive: Allocation[] = [];
 
   const dtfStr = allocNativeString(options?.dateTimeFormat ?? "");
   keepalive.push(dtfStr);
-  dv.setBigUint64(0, nativeAddress(dtfStr.ptr), true);
+  dv.setBigUint64(CSV_OPTIONS_OFFSET_DATE_TIME_FORMAT, nativeAddress(dtfStr.ptr), true);
 
   if (!options?.enumLabels || Object.keys(options.enumLabels).length === 0) {
     return [{ ptr: ptr(buf), buf }, keepalive];
@@ -73,12 +81,12 @@ function buildCsvOptionsBuffer(options?: CsvOptions): [Allocation, Allocation[]]
   const valuesArr = allocNativeInt64(allValues);
   keepalive.push(valuesArr);
 
-  dv.setBigUint64(8, nativeAddress(attrTable.ptr), true);
-  dv.setBigUint64(16, nativeAddress(localeTable.ptr), true);
-  dv.setBigUint64(24, nativeAddress(entryCounts.ptr), true);
-  dv.setBigUint64(32, nativeAddress(labelsTable.ptr), true);
-  dv.setBigUint64(40, nativeAddress(valuesArr.ptr), true);
-  dv.setBigUint64(48, BigInt(groupCount), true);
+  dv.setBigUint64(CSV_OPTIONS_OFFSET_ENUM_ATTRIBUTE_NAMES, nativeAddress(attrTable.ptr), true);
+  dv.setBigUint64(CSV_OPTIONS_OFFSET_ENUM_LOCALE_NAMES, nativeAddress(localeTable.ptr), true);
+  dv.setBigUint64(CSV_OPTIONS_OFFSET_ENUM_ENTRY_COUNTS, nativeAddress(entryCounts.ptr), true);
+  dv.setBigUint64(CSV_OPTIONS_OFFSET_ENUM_LABELS, nativeAddress(labelsTable.ptr), true);
+  dv.setBigUint64(CSV_OPTIONS_OFFSET_ENUM_VALUES, nativeAddress(valuesArr.ptr), true);
+  dv.setBigUint64(CSV_OPTIONS_OFFSET_ENUM_GROUP_COUNT, BigInt(groupCount), true);
 
   return [{ ptr: ptr(buf), buf }, keepalive];
 }
