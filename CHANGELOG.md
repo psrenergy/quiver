@@ -32,11 +32,7 @@ callers to change something are prefixed **BREAKING** and say what to do.
   integer code — with no API change and nothing required of the caller. With no sidecar present,
   the output is byte-identical to before.
 
-## [0.10.6] — 2026-09-11
-
-Cut from the same unreleased block as 0.10.4 and 0.10.5 — all three versions were bumped and
-tagged before this entry was reconciled to name the version the tree actually carries.
-
+## [0.10.7] — 2026-09-17
 
 ### Changed
 
@@ -140,6 +136,9 @@ tagged before this entry was reconciled to name the version the tree actually ca
   keeping the existing not-found / is-a-directory / is-empty messages unchanged.
 
 ## [0.10.6] — 2026-09-11
+
+Cut from the same unreleased block as 0.10.4 and 0.10.5 — all three versions were bumped and
+tagged before this entry was reconciled to name the version the tree actually carries.
 
 ### Fixed
 
@@ -563,7 +562,8 @@ are functionally identical to 0.10.0.
   `read_time_series_group` emits for a NULL STRING cell — so feeding a read result back with the
   mask stripped was UB. A NULL entry, or a NULL per-column data pointer, is now SQL NULL.
 
-[0.11.0]: https://github.com/psrenergy/quiver/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/psrenergy/quiver/compare/v0.10.7...HEAD
+[0.10.7]: https://github.com/psrenergy/quiver/compare/v0.10.6...v0.10.7
 [0.10.6]: https://github.com/psrenergy/quiver/compare/v0.10.5...v0.10.6
 [0.10.5]: https://github.com/psrenergy/quiver/compare/v0.10.4...v0.10.5
 [0.10.4]: https://github.com/psrenergy/quiver/compare/v0.10.3...v0.10.4
