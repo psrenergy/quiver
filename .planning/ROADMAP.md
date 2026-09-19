@@ -47,7 +47,15 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. With no `ui/` directory — or a malformed one, or one whose collection file is broken — `open()` still succeeds, a warning is logged, `has_ui_config()` reports false, nothing partial is published, and the three reports are **byte-identical** to today's output, verified by diffing actual output against master rather than by "the tests pass".
   4. Shared fixtures under `tests/schemas/ui/`, distilled from BESSOperation (all-bare-string), Foresight (mixed en/es/pt) and HydroThermalDispatch (plain `date_time` attribute), pin every parser tolerance individually — bare and dotted localizable values in one file, absent and zero-byte `enum.toml`, an unknown key logged not thrown, 1-based and gapped vocabularies, an unlisted orphan collection file that stays unloaded, `format` as a 4-key table, interleaved `[[attribute]]`/`[[attribute_group]]` blocks, and `degradation` as both an attribute id and a group id — and the enum rendering is asserted on **exact strings** from the C++ suite, the Lua suite and all five binding suites against those same fixtures, never a copy.
   5. The phase ships as a **patch**: `git diff` shows no file under `bindings/` changed, and `CHANGELOG.md` heads the version `CMakeLists.txt` actually carries (0.10.6) before any bump is dispatched.
-**Plans**: TBD
+**Plans**: 6 plans in 4 waves
+
+Plans:
+- [ ] 01-01-PLAN.md — Tracer: one TOML sidecar reaches `summarize_collection`'s histogram end to end (parser, `Impl` wiring, `has_ui_config()`, golden baseline)
+- [ ] 01-02-PLAN.md — The `tests/schemas/ui/` fixture corpus, one directory per tolerance, plus the walk-and-never-copied guard
+- [ ] 01-03-PLAN.md — Render expansion: header line, collection label, unit / `[hidden]` / label / full vocabulary on the scalar line
+- [ ] 01-04-PLAN.md — Parser tolerances: unknown keys, `format` table form, absent/zero-byte `enum.toml`, PascalCase ids, dual namespace, interleaving, orphan file
+- [ ] 01-05-PLAN.md — DESC-07 at the C API and Lua boundaries, with exact-string and non-ASCII assertions
+- [ ] 01-06-PLAN.md — DESC-07 in Julia/Dart/Python/JS, the D-31 written call, CHANGELOG reconciliation, CLAUDE.md updates, phase gates
 
 **Notes:**
 - Strictly sequential inside the phase: parser → `Impl` wiring → rendering. There is no renderer without a config on `Impl` and no config without a parser. The `tests/schemas/ui/` corpus is the one work item that parallelizes with the parser.
@@ -185,7 +193,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Enum Labels in Describe | 0/TBD | Not started | - |
+| 1. Enum Labels in Describe | 0/6 | Planned | - |
 | 2. Config Path, Locale and Struct-Size Safety | 0/TBD | Not started | - |
 | 3. Structured Attribute Metadata | 0/TBD | Not started | - |
 | 4. Collection and Attribute-Group Metadata | 0/TBD | Not started | - |
