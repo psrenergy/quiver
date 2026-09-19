@@ -4,6 +4,17 @@
 
 extern "C" {
 
+// Native sizeof accessors (SAFE-01/D-07). No QUIVER_REQUIRE, no try/catch -- a sizeof cannot
+// throw (see the exception list in src/c/CLAUDE.md).
+
+QUIVER_C_API size_t quiver_scalar_metadata_sizeof(void) {
+    return sizeof(quiver_scalar_metadata_t);
+}
+
+QUIVER_C_API size_t quiver_group_metadata_sizeof(void) {
+    return sizeof(quiver_group_metadata_t);
+}
+
 // Metadata get functions
 
 QUIVER_C_API quiver_error_t quiver_database_get_scalar_metadata(quiver_database_t* db,

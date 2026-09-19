@@ -42,6 +42,15 @@ QUIVER_C_API quiver_error_t quiver_database_is_healthy(quiver_database_t* db, in
     return QUIVER_OK;
 }
 
+// has_ui_config() never throws (D-25: a malformed sidecar degrades, it does not raise), so this
+// mirrors is_healthy's body exactly -- same QUIVER_REQUIRE guard, no try/catch.
+QUIVER_C_API quiver_error_t quiver_database_has_ui_config(quiver_database_t* db, int* out_has_config) {
+    QUIVER_REQUIRE(db, out_has_config);
+
+    *out_has_config = db->db.has_ui_config() ? 1 : 0;
+    return QUIVER_OK;
+}
+
 QUIVER_C_API quiver_error_t quiver_database_path(quiver_database_t* db, const char** out_path) {
     QUIVER_REQUIRE(db, out_path);
 

@@ -38,6 +38,10 @@ QUIVER_C_API quiver_error_t quiver_database_from_schema(const char* db_path,
 QUIVER_C_API quiver_error_t quiver_database_close(quiver_database_t* db);
 QUIVER_C_API quiver_error_t quiver_database_is_healthy(quiver_database_t* db, int* out_healthy);
 QUIVER_C_API quiver_error_t quiver_database_path(quiver_database_t* db, const char** out_path);
+// Whether a database/ui/ TOML sidecar loaded successfully (OPT-04/D-13); triggers the same lazy
+// load has_ui_config() does in C++. 1 when a config loaded, 0 when the directory was absent or
+// malformed -- never throws (D-05/D-25).
+QUIVER_C_API quiver_error_t quiver_database_has_ui_config(quiver_database_t* db, int* out_has_config);
 
 // Transaction control
 QUIVER_C_API quiver_error_t quiver_database_begin_transaction(quiver_database_t* db);
@@ -334,6 +338,12 @@ typedef struct {
     quiver_scalar_metadata_t* value_columns;
     size_t value_column_count;
 } quiver_group_metadata_t;
+
+// Native sizeof of the two structs above. No parameters, plain size_t return -- the same
+// Bun-callable shape as quiver_database_options_sizeof (D-07). Every FFI binding's load-time
+// layout assertion (SAFE-01) calls these instead of hardcoding 56/32 unchecked.
+QUIVER_C_API size_t quiver_scalar_metadata_sizeof(void);
+QUIVER_C_API size_t quiver_group_metadata_sizeof(void);
 
 // Attribute metadata queries
 QUIVER_C_API quiver_error_t quiver_database_get_scalar_metadata(quiver_database_t* db,

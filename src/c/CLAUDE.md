@@ -46,7 +46,7 @@ src/c/expression/           # Expression node constructors, save, free
 ## Return Codes
 
 All C API functions return binary `quiver_error_t` (`QUIVER_OK = 0` or `QUIVER_ERROR = 1`). Values are returned via output parameters.
-Exceptions: `quiver_get_last_error`, `quiver_version`, `quiver_clear_last_error`, `quiver_database_options_default`, `quiver_csv_options_default` (utility functions with direct return).
+Exceptions: `quiver_get_last_error`, `quiver_version`, `quiver_clear_last_error`, `quiver_database_options_default`, `quiver_csv_options_default`, `quiver_database_options_sizeof`, `quiver_scalar_metadata_sizeof`, `quiver_group_metadata_sizeof` (utility functions with direct return; the three `*_sizeof` accessors are bare `sizeof` returns that cannot throw, D-07).
 
 ## Error Handling
 
