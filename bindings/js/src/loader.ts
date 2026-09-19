@@ -2,6 +2,7 @@ import { dlopen, type Library, type Pointer, suffix } from "bun:ffi";
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { QuiverError } from "./errors.ts";
+import { GROUP_METADATA_SIZE, OPTIONS_SIZE, SCALAR_METADATA_SIZE } from "./ffi-helpers.ts";
 
 // Bun FFI type shorthand constants. Deno's "buffer" parameter type (pass a
 // TypedArray, auto-converted to a pointer) has no Bun equivalent -- Bun rejects
@@ -32,7 +33,11 @@ const lifecycleSymbols = {
   // quiver_database_options_default is intentionally omitted: it returns a
   // struct by value, which Bun FFI does not support (oven-sh/bun#6139). It was
   // never called -- makeDefaultOptions() in ffi-helpers.ts builds the options
-  // struct in JS.
+  // struct in JS. The three *_sizeof accessors below (this one plus the two in
+  // metadataSymbols) exist precisely BECAUSE Bun cannot call the struct-by-value
+  // default -- they are what assertNativeStructSizes calls instead (D-07).
+  quiver_database_options_sizeof: { args: [], returns: USIZE },
+  quiver_database_has_ui_config: { args: [P, P], returns: I32 },
   quiver_database_from_schema: { args: [BUF, BUF, BUF, P], returns: I32 },
   quiver_database_from_migrations: { args: [BUF, BUF, BUF, P], returns: I32 },
   quiver_database_validate_migrations: { args: [BUF], returns: I32 },
@@ -109,6 +114,8 @@ const transactionSymbols = {
 } as const;
 
 const metadataSymbols = {
+  quiver_scalar_metadata_sizeof: { args: [], returns: USIZE },
+  quiver_group_metadata_sizeof: { args: [], returns: USIZE },
   quiver_database_get_scalar_metadata: { args: [P, BUF, BUF, P], returns: I32 },
   quiver_database_get_vector_metadata: { args: [P, BUF, BUF, P], returns: I32 },
   quiver_database_get_set_metadata: { args: [P, BUF, BUF, P], returns: I32 },
@@ -310,16 +317,69 @@ function initLibrary(): QuiverLib {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Load-time struct-size gate (SAFE-02/SAFE-03, D-08/D-09/D-10)
+// ---------------------------------------------------------------------------
+
+// Throws a QuiverError naming the struct and both numbers when they differ. This is one of the
+// binding's few locally crafted messages (D-09) -- the C API cannot diagnose a disagreement
+// about its own layout. Kept pure and parameterized so a test can drive the failure path
+// without a second native library.
+export function checkStructSize(name: string, expected: number, native: number): void {
+  if (expected !== native) {
+    throw new QuiverError(
+      `Native struct layout mismatch for ${name}: expected ${expected} bytes, native library reports ${native} bytes. The JS binding and the native library were built from different C API headers.`,
+    );
+  }
+}
+
+// Checks all three structs the moment the library opens, in a fixed order (options, scalar
+// metadata, group metadata), short-circuiting on the first mismatch -- a version skew makes all
+// three suspect, so reporting more than one error is noise (must_haves EDGE/ordering).
+//
+// Bun returns a `bigint` for a USIZE FFI return (probe-verified in this repo's Bun:
+// `dlopen("kernel32.dll", { GetACP: { args: [], returns: "usize" } })` yields `typeof ===
+// "bigint"`, and `1252n === 1252` is `false`). Every other USIZE use in this file is an ARGUMENT
+// position, so there is no in-repo precedent to copy for a USIZE return -- wrap each accessor
+// call in Number(...) before comparing, matching readUint64Out's `Number(dv.getBigUint64(...))`.
+// `bun test` does not typecheck, so a bare `24 !== 24n` would throw a bogus mismatch on every
+// single load.
+export function assertNativeStructSizes(lib: QuiverLib["symbols"]): void {
+  checkStructSize(
+    "quiver_database_options_t",
+    OPTIONS_SIZE,
+    Number(lib.quiver_database_options_sizeof()),
+  );
+  checkStructSize(
+    "quiver_scalar_metadata_t",
+    SCALAR_METADATA_SIZE,
+    Number(lib.quiver_scalar_metadata_sizeof()),
+  );
+  checkStructSize(
+    "quiver_group_metadata_t",
+    GROUP_METADATA_SIZE,
+    Number(lib.quiver_group_metadata_sizeof()),
+  );
+}
+
 // Resolve the native library lazily on first use. Initializing eagerly at
 // module-evaluation time would run during the loader<->errors import cycle,
 // before `errors.ts` has declared `QuiverError` -- making the not-found throw
 // hit a temporal dead zone. Deferring to first call lets the module graph
 // settle first; the result is cached, so callers still get it synchronously.
+//
+// assertNativeStructSizes runs HERE, outside every initLibrary() try/catch tier (:278, :287,
+// :296 as of this comment) -- each tier swallows its load failure as "try the next path", so a
+// size-mismatch thrown inside a tier would be masked as "Cannot load native library ..." at
+// :308, losing the struct name and both numbers. loadLibrary() sits outside every catch and
+// runs the gate exactly once per process, on the memoized path.
 let _lib: QuiverLib | null = null;
 
 export function loadLibrary(): QuiverLib {
   if (_lib === null) {
-    _lib = initLibrary();
+    const lib = initLibrary();
+    assertNativeStructSizes(lib.symbols);
+    _lib = lib;
   }
   return _lib;
 }
