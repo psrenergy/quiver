@@ -15,10 +15,15 @@ callers to change something are prefixed **BREAKING** and say what to do.
   first-party bindings, which have already been updated — must recompile against the new header
   and update any hand-written FFI layer to the new size and offsets; a stale 8-byte allocation is
   a native out-of-bounds write, not a compile error. The C API now also exposes
-  `quiver_database_options_sizeof`, `quiver_scalar_metadata_sizeof`, and
-  `quiver_group_metadata_sizeof`, and every first-party binding calls them at load time to assert
-  its own hardcoded struct layout against the native library, failing loudly on a version-skewed
-  install instead of silently corrupting a metadata read.
+  `quiver_database_options_sizeof`, `quiver_scalar_metadata_sizeof`,
+  `quiver_group_metadata_sizeof`, and `quiver_csv_options_sizeof`, and every first-party binding
+  calls all four at load time to assert its own hardcoded struct layout against the native
+  library, failing loudly on a version-skewed install instead of silently corrupting a metadata
+  read. `quiver_csv_options_sizeof` is new: a caller who hand-allocates `quiver_csv_options_t`
+  (56 bytes, seven pointer-width fields) for `quiver_database_export_csv` /
+  `quiver_database_import_csv` can now verify that size at runtime instead of hardcoding it. The
+  accessor is additive and breaks nothing on its own — the breaking part of this release remains
+  the options struct growing 8 → 24 bytes.
 - **`ui_config_dir` and `ui_locale` are now optional parameters on `open`, `from_schema`, and
   `from_migrations` in every binding**, and as `--ui-config-dir` / `--ui-locale` on `quiver_cli`.
   A caller can point the UI sidecar loader at a directory anywhere on disk (not just
