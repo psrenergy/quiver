@@ -307,4 +307,12 @@ void Database::Impl::require_ui_config() const {
     }
 }
 
+// D-22: C++-only in Phase 1 -- no C symbol, no binding surface. Phase 2's OPT-04 takes it to
+// every layer. Database is Pimpl, so this adds one exported C++ symbol and changes no layout,
+// no vtable and no C ABI -- the phase's only public header edit.
+bool Database::has_ui_config() const {
+    impl_->require_ui_config();
+    return impl_->ui_config.has_value();
+}
+
 }  // namespace quiver

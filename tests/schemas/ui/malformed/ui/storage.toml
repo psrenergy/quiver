@@ -1,0 +1,5 @@
+id = "Storage"
+
+[[attribute]]
+id = "has_commitment"
+label = "Has Commitment

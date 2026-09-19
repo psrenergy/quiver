@@ -224,6 +224,10 @@ public:
     // summarize_collection(): one collection's value statistics (null/non-null counts, low-cardinality
     // integer value distributions, per-group empty/non-empty counts).
     std::string summarize_collection(const std::string& collection) const;
+    // has_ui_config(): whether a database/ui/ TOML sidecar loaded successfully for this database
+    // (false for :memory:, an absent directory, or a malformed one -- never throws). C++-only in
+    // this phase; the C API and every binding gain it in Phase 2 (OPT-04).
+    bool has_ui_config() const;
 
     // CSV operations
     void export_csv(const std::string& collection,
