@@ -19,6 +19,31 @@ bool contains(const std::string& haystack, const std::string& needle) {
     return haystack.find(needle) != std::string::npos;
 }
 
+std::vector<std::string> split_lines(const std::string& text) {
+    std::vector<std::string> lines;
+    std::string::size_type start = 0;
+    while (start <= text.size()) {
+        const auto newline = text.find('\n', start);
+        if (newline == std::string::npos) {
+            lines.push_back(text.substr(start));
+            break;
+        }
+        lines.push_back(text.substr(start, newline - start));
+        start = newline + 1;
+    }
+    return lines;
+}
+
+// Returns the first line whose start matches `prefix`, or "" when none does.
+std::string find_line(const std::vector<std::string>& lines, const std::string& prefix) {
+    for (const auto& line : lines) {
+        if (line.rfind(prefix, 0) == 0) {
+            return line;
+        }
+    }
+    return "";
+}
+
 size_t count_occurrences(const std::string& haystack, const std::string& needle) {
     size_t count = 0;
     size_t pos = 0;
@@ -120,4 +145,103 @@ TEST(DatabaseUiParse, MissingThemesDirectoryIsNotConsulted) {
     auto db = quiver::test::open_ui_fixture(__FILE__, "no_enum", "cpp_no_themes");
     EXPECT_TRUE(db.has_ui_config());
     EXPECT_NO_THROW(db.describe());
+}
+
+// ---------------------------------------------------------------------------
+// Task 2: PascalCase ids, the dual id namespace, interleaved blocks, the orphan file
+// ---------------------------------------------------------------------------
+
+// PARSE-10: main.collections names the snake_case filename; the file's own `id` (PascalCase SQL
+// table name) is the actual lookup key. The snake_case string is never a valid lookup.
+TEST(DatabaseUiParse, PascalCaseIdKeysTheConfig) {
+    auto db = quiver::test::open_ui_fixture(__FILE__, "htd_like", "cpp_pascal_case");
+
+    const auto report = db.describe_collection("HydroPlant");
+    EXPECT_TRUE(contains(report, "Hydro Plants")) << report;
+    EXPECT_TRUE(contains(report, "Measurement Date")) << report;
+
+    EXPECT_THROW(db.describe_collection("hydro_plant"), std::runtime_error);
+}
+
+// PARSE-10: a listed collection file with no top-level `id` is skipped with a debug log, not
+// fatal -- the rest of the config still publishes. Different rule and different fixture from a
+// listed-but-missing file (that case is `malformed`'s job, not this one's).
+TEST(DatabaseUiParse, MissingCollectionIdIsSkippedNotFatal) {
+    auto db = quiver::test::open_ui_fixture(__FILE__, "htd_like", "cpp_missing_id");
+    EXPECT_TRUE(db.has_ui_config());
+
+    const auto hydro_report = db.describe_collection("HydroPlant");
+    EXPECT_TRUE(contains(hydro_report, "Hydro Plants")) << hydro_report;
+
+    const auto full_report = db.describe();
+    EXPECT_FALSE(contains(full_report, "Thermal Plants")) << full_report;
+}
+
+// PARSE-07: `degradation` is legally both an [[attribute]] id and an [[attribute_group]] id in
+// one file, with different labels -- the scalar line carries the attribute's label, never the
+// group's, while the Vectors: section still names the group.
+TEST(DatabaseUiParse, AttributeAndGroupIdsAreSeparateNamespaces) {
+    auto db = quiver::test::open_ui_fixture(__FILE__, "bess_like", "cpp_dual_namespace");
+
+    const auto report = db.describe_collection("Storage");
+    const auto lines = split_lines(report);
+
+    const auto scalar_line = find_line(lines, "    - degradation (");
+    ASSERT_FALSE(scalar_line.empty()) << report;
+    EXPECT_TRUE(contains(scalar_line, "Degradation Rate")) << scalar_line;
+    EXPECT_FALSE(contains(scalar_line, "Degradation Curve")) << scalar_line;
+
+    const auto group_line = find_line(lines, "    - degradation: ");
+    EXPECT_FALSE(group_line.empty()) << report;
+}
+
+// PARSE-08: [[attribute]] and [[attribute_group]] blocks may interleave in any order; the two
+// attributes declared after an [[attribute_group]] block parse with full fidelity.
+TEST(DatabaseUiParse, AttributesAfterAGroupBlockAreStillParsed) {
+    auto db = quiver::test::open_ui_fixture(__FILE__, "bess_like", "cpp_after_group");
+
+    const auto report = db.describe_collection("Storage");
+    EXPECT_TRUE(contains(report, "\"Installed Capacity\"")) << report;
+    EXPECT_TRUE(contains(report, "\"Rated Cycle Count\"")) << report;
+}
+
+// PARSE-04 adjacency: bess_like's labels are all bare strings -- the bare string wins outright and
+// renders unchanged, ahead of any locale key.
+TEST(DatabaseUiParse, BareStringLabelsIgnoreLocale) {
+    auto db = quiver::test::open_ui_fixture(__FILE__, "bess_like", "cpp_bare_locale");
+
+    const auto report = db.describe_collection("Storage");
+    EXPECT_TRUE(contains(report, "\"Installed Capacity\"")) << report;
+    EXPECT_TRUE(contains(report, "\"Rated Cycle Count\"")) << report;
+    EXPECT_TRUE(contains(report, "\"Degradation Rate\"")) << report;
+}
+
+// PARSE-04: one substring covering four locale-resolution legs at once -- exact-locale (2),
+// bare-string-wins (3), accented exact-locale (5, literal L9), and first-key-in-map-order
+// fallback for an entry declaring only `es`/`pt` (4, literal L10 -- "es" < "pt"). Entry order is
+// the fixture's TOML declaration order, deliberately not code order (also pins DESC-03).
+TEST(DatabaseUiParse, MixedLocaleFormsResolveInOneVocabulary) {
+    auto db = quiver::test::open_ui_fixture(__FILE__, "foresight_like", "cpp_mixed_locale");
+
+    const auto report = db.describe_collection("EconomicDriver");
+    // UTF-8 escapes, not literal accented characters: cmake/CompilerOptions.cmake passes no
+    // /utf-8 to MSVC, so a literal non-ASCII character in this source is a portability hazard.
+    const std::string expected =
+        "enum model {2: Local Linear Trend, 3: ARIMA, 5: Seasonal Na\xC3\xAFve, 4: Regresi\xC3\xB3n Lineal}";
+    EXPECT_TRUE(contains(report, expected)) << report;
+}
+
+// PARSE-01: a fully-formed collection file present in ui/ but absent from main.collections is
+// never loaded -- its collection label never renders, even though the file sits right there on
+// disk. `Storage` (listed) still carries its label as the contrast.
+TEST(DatabaseUiParse, UnlistedCollectionFileIsNeverLoaded) {
+    auto db = quiver::test::open_ui_fixture(__FILE__, "orphan_collection", "cpp_orphan");
+
+    const auto report = db.describe();
+    EXPECT_TRUE(contains(report, "\"Storage Units\"")) << report;
+
+    const auto lines = split_lines(report);
+    const auto agent_line = find_line(lines, "Collection: Agent");
+    ASSERT_FALSE(agent_line.empty()) << report;
+    EXPECT_FALSE(contains(agent_line, kEmDash)) << agent_line;
 }

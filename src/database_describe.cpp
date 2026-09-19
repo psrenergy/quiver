@@ -51,7 +51,9 @@ void append_collection_label(std::ostream& out, const UIConfigSet* ui, const std
 // Appends the four independently-guarded scalar-line clauses, in the fixed D-02 order: unit,
 // hidden, label, vocabulary. `ui` may be null (no sidecar); find_attribute returns nullptr for an
 // unconfigured attribute either way, so the whole block is skipped and today's line is unchanged.
-void append_scalar_ui_clauses(std::ostream& out, const UIConfigSet* ui, const std::string& collection,
+void append_scalar_ui_clauses(std::ostream& out,
+                              const UIConfigSet* ui,
+                              const std::string& collection,
                               const std::string& attribute_name) {
     if (!ui) {
         return;
@@ -90,7 +92,22 @@ void append_scalar_ui_clauses(std::ostream& out, const UIConfigSet* ui, const st
 
 // Print a group's value columns in declaration order; time series dimension
 // columns are bracketed, vector tables hide their structural vector_index.
-void print_group_columns(std::ostream& out, const TableDefinition& table, GroupTableType type) {
+//
+// `ui`/`collection` decorate only the time series **dimension** column with its own label
+// (literal L13, PARSE-10's htd_like fixture): a plan-01-04 addition, not a Phase-4 group-metadata
+// feature. D-09's model treats a collection/attribute/group id as one shared namespace shape, and
+// a time series dimension column (e.g. `date_time`) is registered as an ordinary [[attribute]]
+// block in the sidecar -- the same as a scalar column -- so it is looked up the same way
+// (find_attribute). This is deliberately narrower than append_scalar_ui_clauses: only the label
+// clause is applied (unit/hidden/vocabulary on a dimension column have no fixture and no literal
+// to prove), and it never touches a group's own [[attribute_group]] identity (still unrendered in
+// Phase 1). `ui` is nullable and the lookup is guarded, so DESC-05's no-sidecar byte-identical
+// output is unaffected by construction.
+void print_group_columns(std::ostream& out,
+                         const TableDefinition& table,
+                         GroupTableType type,
+                         const UIConfigSet* ui,
+                         const std::string& collection) {
     bool first = true;
     for (const auto& col_name : table.column_order) {
         if (col_name == "id" || (type == GroupTableType::Vector && col_name == "vector_index"))
@@ -100,6 +117,12 @@ void print_group_columns(std::ostream& out, const TableDefinition& table, GroupT
             out << ", ";
         if (type == GroupTableType::TimeSeries && is_date_time_column(col_name)) {
             out << "[" << col_name << "]";
+            if (ui) {
+                if (const auto* attribute = find_attribute(*ui, collection, col_name);
+                    attribute && !attribute->label.empty()) {
+                    out << " " << kEmDash << " \"" << attribute->label << "\"";
+                }
+            }
         } else {
             out << col_name << "(" << data_type_to_string(col.type) << ")";
         }
@@ -128,8 +151,11 @@ const char* plural(int64_t n) {
 // Write one collection's structural section (scalars + vector/set/time-series groups). `ui` is
 // nullable (no sidecar loaded); the same renderer serves describe() and describe_collection() --
 // it is never forked into a UI-aware and a UI-unaware variant (D-03).
-void write_collection_section(std::ostream& out, const Schema& schema, const UIConfigSet* ui,
-                              const std::string& collection, int64_t count) {
+void write_collection_section(std::ostream& out,
+                              const Schema& schema,
+                              const UIConfigSet* ui,
+                              const std::string& collection,
+                              int64_t count) {
     out << "Collection: " << collection << " (" << count << " element" << plural(count) << ")";
     append_collection_label(out, ui, collection);
     out << "\n";
@@ -164,7 +190,7 @@ void write_collection_section(std::ostream& out, const Schema& schema, const UIC
         for (const auto& group_name : groups) {
             const auto* table = schema.get_table(group_table_name(collection, group_name, type));
             out << "    - " << group_name << ": ";
-            print_group_columns(out, *table, type);
+            print_group_columns(out, *table, type, ui, collection);
         }
     }
 }

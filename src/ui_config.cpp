@@ -306,7 +306,8 @@ UIConfigSet UIConfigSet::from_directory(const std::string& ui_dir,
         log_unknown_keys_once(logger, std::move(unknown_keys), collection_path.string());
         if (table_id.empty()) {
             // No usable `id` -- skip rather than fail the whole config (htd_like's
-            // "missing collection id" tolerance).
+            // "missing collection id" tolerance, PARSE-10).
+            logger->debug("Skipping UI collection file {}: missing or empty `id`", collection_path.string());
             continue;
         }
         collection_config.meta.display_order = static_cast<int64_t>(index);
