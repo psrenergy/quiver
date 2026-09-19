@@ -18,7 +18,7 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 [0.10.7]: https://github.com/psrenergy/quiver/compare/v0.10.6...v0.10.7
 
-## [0.10.6] — 2026-09-19
+## [0.10.6] — 2026-09-11
 
 Cut from the same unreleased block as 0.10.4 and 0.10.5 — all three versions were bumped and
 tagged before this entry was reconciled to name the version the tree actually carries.
