@@ -3,16 +3,56 @@ import { type Allocation, type DatabaseOptions, LOG_LEVEL_INFO } from "./types.t
 
 const encoder = new TextEncoder();
 
+// quiver_database_options_t field layout (include/quiver/c/options.h, pinned by
+// static_asserts in src/c/options.cpp): read_only@0 (int32), console_level@4 (int32),
+// ui_config_dir@8 (const char*), ui_locale@16 (const char*). sizeof == 24 on 64-bit.
+// Every offset/size below is a NAMED constant -- makeDefaultOptions must never use a bare
+// numeric literal for any of them (OPT-05, D-11).
+export const OPTIONS_OFFSET_READ_ONLY = 0;
+export const OPTIONS_OFFSET_CONSOLE_LEVEL = 4;
+export const OPTIONS_OFFSET_UI_CONFIG_DIR = 8;
+export const OPTIONS_OFFSET_UI_LOCALE = 16;
+export const OPTIONS_SIZE = 24;
+
+// Relocated from metadata.ts (see that file's import) -- loader.ts needs all three struct-size
+// constants for its load-time assertion, and metadata.ts imports database.ts, so importing from
+// there into loader.ts would pull the whole database surface into the loader and create a
+// cycle. ffi-helpers.ts imports only bun:ffi and ./types.ts, so it is the cycle-free home.
+// Values unchanged -- verified field-by-field against include/quiver/c/database.h:320-336.
+export const SCALAR_METADATA_SIZE = 56;
+export const GROUP_METADATA_SIZE = 32;
+
 /**
- * Construct the 8-byte quiver_database_options_t struct as an Allocation.
- * Layout: offset 0 = int32 read_only (default 0), offset 4 = int32 console_level (default 1 = QUIVER_LOG_INFO).
+ * Construct the 24-byte quiver_database_options_t struct as an Allocation, plus a keepalive
+ * array of every child string allocation (ui_config_dir / ui_locale point into separately
+ * allocated buffers that must outlive the native call -- copied from buildCsvOptionsBuffer in
+ * csv.ts, the in-repo precedent for exactly this shape).
+ *
+ * An absent or empty-string option leaves its pointer slot's eight zero bytes (NULL), which the
+ * C converter maps to "not specified" -- matching 02-01's single NULL/empty rule. No child
+ * string is allocated for that case.
  */
-export function makeDefaultOptions(options?: DatabaseOptions): Allocation {
-  const buf = new Uint8Array(8);
+export function makeDefaultOptions(options?: DatabaseOptions): [Allocation, Allocation[]] {
+  const buf = new Uint8Array(OPTIONS_SIZE);
   const dv = new DataView(buf.buffer);
-  dv.setInt32(0, options?.readOnly ? 1 : 0, true);
-  dv.setInt32(4, options?.consoleLevel ?? LOG_LEVEL_INFO, true);
-  return { ptr: ptr(buf), buf };
+  const keepalive: Allocation[] = [];
+
+  dv.setInt32(OPTIONS_OFFSET_READ_ONLY, options?.readOnly ? 1 : 0, true);
+  dv.setInt32(OPTIONS_OFFSET_CONSOLE_LEVEL, options?.consoleLevel ?? LOG_LEVEL_INFO, true);
+
+  if (options?.uiConfigDir) {
+    const dirStr = allocNativeString(options.uiConfigDir);
+    keepalive.push(dirStr);
+    dv.setBigUint64(OPTIONS_OFFSET_UI_CONFIG_DIR, nativeAddress(dirStr.ptr), true);
+  }
+
+  if (options?.uiLocale) {
+    const localeStr = allocNativeString(options.uiLocale);
+    keepalive.push(localeStr);
+    dv.setBigUint64(OPTIONS_OFFSET_UI_LOCALE, nativeAddress(localeStr.ptr), true);
+  }
+
+  return [{ ptr: ptr(buf), buf }, keepalive];
 }
 
 /** Allocate an 8-byte buffer for a pointer out-parameter. */

@@ -4,8 +4,10 @@ import { check } from "./errors.ts";
 import {
   allocPtrOut,
   allocUint64Out,
+  GROUP_METADATA_SIZE,
   readPtrOut,
   readUint64Out,
+  SCALAR_METADATA_SIZE,
   toCString,
 } from "./ffi-helpers.ts";
 import { getSymbols, type NativePointer } from "./loader.ts";
@@ -26,9 +28,6 @@ export interface GroupMetadata {
   dimensionColumn: string | null;
   valueColumns: ScalarMetadata[];
 }
-
-const SCALAR_METADATA_SIZE = 56;
-const GROUP_METADATA_SIZE = 32;
 
 function readNullableString(base: Pointer, offset: number): string | null {
   const p = read.ptr(base, offset);

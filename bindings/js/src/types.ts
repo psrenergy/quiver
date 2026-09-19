@@ -19,6 +19,10 @@ export type DatabaseOptions = {
   readOnly?: boolean;
   /** A LOG_LEVEL_* constant; defaults to LOG_LEVEL_INFO. */
   consoleLevel?: number;
+  /** Overrides the `<db_dir>/ui/` convention with a UI config directory anywhere on disk. */
+  uiConfigDir?: string;
+  /** BCP-47-ish locale key for UI label resolution; defaults to `"en"`. */
+  uiLocale?: string;
 };
 
 /** A `boolean` is stored as the INTEGER 1 or 0 (see `readScalarBooleans` for the read side). */

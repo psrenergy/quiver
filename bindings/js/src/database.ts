@@ -18,7 +18,7 @@ export class Database {
 
   static fromSchema(dbPath: string, schemaPath: string, options?: DatabaseOptions): Database {
     const lib = getSymbols();
-    const optionsBuf = makeDefaultOptions(options);
+    const [optionsBuf, _keepalive] = makeDefaultOptions(options);
     const outDb = allocPtrOut();
     const dbPathBuf = toCString(dbPath);
     const schemaPathBuf = toCString(schemaPath);
@@ -36,7 +36,7 @@ export class Database {
     options?: DatabaseOptions,
   ): Database {
     const lib = getSymbols();
-    const optionsBuf = makeDefaultOptions(options);
+    const [optionsBuf, _keepalive] = makeDefaultOptions(options);
     const outDb = allocPtrOut();
     const dbPathBuf = toCString(dbPath);
     const migrPathBuf = toCString(migrationsPath);
@@ -55,7 +55,7 @@ export class Database {
 
   static open(dbPath: string, options?: DatabaseOptions): Database {
     const lib = getSymbols();
-    const optionsBuf = makeDefaultOptions(options);
+    const [optionsBuf, _keepalive] = makeDefaultOptions(options);
     const outDb = allocPtrOut();
     const dbPathBuf = toCString(dbPath);
 
