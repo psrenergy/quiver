@@ -46,7 +46,7 @@ src/c/expression/           # Expression node constructors, save, free
 ## Return Codes
 
 All C API functions return binary `quiver_error_t` (`QUIVER_OK = 0` or `QUIVER_ERROR = 1`). Values are returned via output parameters.
-Exceptions: `quiver_get_last_error`, `quiver_version`, `quiver_clear_last_error`, `quiver_database_options_default`, `quiver_csv_options_default`, `quiver_database_options_sizeof`, `quiver_scalar_metadata_sizeof`, `quiver_group_metadata_sizeof` (utility functions with direct return; the three `*_sizeof` accessors are bare `sizeof` returns that cannot throw, D-07).
+Exceptions: `quiver_get_last_error`, `quiver_version`, `quiver_clear_last_error`, `quiver_database_options_default`, `quiver_csv_options_default`, `quiver_database_options_sizeof`, `quiver_scalar_metadata_sizeof`, `quiver_group_metadata_sizeof`, `quiver_csv_options_sizeof` (utility functions with direct return; the four `*_sizeof` accessors are bare `sizeof` returns that cannot throw, D-07).
 
 ## Error Handling
 
@@ -94,6 +94,20 @@ and CSV alike).
 `src/c/options.cpp`; a NULL or empty string on either new field means "not specified"
 (`convert_database_options`, `src/c/database_options.h`). `quiver_database_has_ui_config` mirrors
 `quiver_database_is_healthy`'s body exactly (no try/catch — `has_ui_config()` never throws).
+
+**Phase 2 (SAFE-01, promoted rule, 02-08):** the size-accessor gate is not a fixed three-struct
+list — it's the general rule that **every C struct a binding hand-allocates a raw buffer for**
+gets a no-parameter, Bun-callable `size_t` `*_sizeof` accessor (D-07 shape), a `static_assert`
+pinning its size in `src/c/options.cpp` / `src/c/database_metadata.cpp`, and an entry in all four
+load-time gates (Julia, Dart, Python, JS), checked in one fixed order. Today that order is
+`quiver_database_options_t` (`quiver_database_options_sizeof`, 24 bytes),
+`quiver_scalar_metadata_t` (`quiver_scalar_metadata_sizeof`, 56 bytes),
+`quiver_group_metadata_t` (`quiver_group_metadata_sizeof`, 32 bytes), and
+`quiver_csv_options_t` (`quiver_csv_options_sizeof`, 56 bytes — added in 02-08 because
+`bindings/js/src/csv.ts` hand-allocates 56 bytes for it just like the other three). A new struct
+that a future phase gives a binding a raw buffer for (e.g. Phase 3's attribute-metadata struct)
+joins this list **by default**, appended after `quiver_csv_options_t` — that is not a decision to
+revisit per struct.
 
 ## Memory Management
 

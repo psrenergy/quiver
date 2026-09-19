@@ -43,15 +43,27 @@ ruff.toml         # Lint/format config (format.bat runs ruff)
   owning `ffi.new("char[]", ...)` cdata is freed once the last Python reference drops, and
   storing its pointer in a struct field does not count as a reference, so every call site must
   bind the returned keepalive list to a local that stays in scope across the FFI call.
-- **`load_library` gates on three native `*_sizeof()` accessors before returning `lib`** on both
+- **`load_library` gates on four native `*_sizeof()` accessors before returning `lib`** on both
   the bundled and dev-mode success paths (`_assert_struct_sizes` in `_loader.py`), comparing
   `ffi.sizeof(...)` against `quiver_database_options_sizeof`/`quiver_scalar_metadata_sizeof`/
-  `quiver_group_metadata_sizeof`. CFFI ABI mode resolves `lib.<name>` via dlsym-on-demand, so a
+  `quiver_group_metadata_sizeof`/`quiver_csv_options_sizeof`, in that fixed order
+  (`_STRUCT_SIZEOF_ACCESSORS`) — every hand-allocated struct joins this list by default (promoted
+  rule, `src/c/CLAUDE.md`). CFFI ABI mode resolves `lib.<name>` via dlsym-on-demand, so a
   native library that predates this gate raises `AttributeError` at the *call*, never at
   `ffi.dlopen` — the gate must actively call each accessor, not just declare it. A mismatch or a
   missing symbol raises `RuntimeError` naming the struct and both numbers — one of this binding's
   few locally crafted error messages (the C API cannot diagnose a disagreement about its own
   layout).
+- **`_assert_struct_sizes` records each passing check's struct name, in order, into the
+  module-level `_CHECKED_STRUCTS` list** (cleared on entry). This exists because both call sites
+  in `load_library` were once found silently replaced with a no-op `pass` statement in
+  HEAD, and every test in `tests/test_struct_sizes.py` still passed — the suite drove
+  `_check_struct_size` and the raw accessors directly, never the wired gate, so a green suite
+  proved nothing about wiring. `test_gate_ran_and_checked_all_four_structs_in_order` asserts the
+  exact four-name ordered list *without calling `_assert_struct_sizes` itself* — it is observing
+  wiring evidence left behind by an ordinary library load, not re-driving the helper. A test that
+  only exercises `_check_struct_size` in isolation can never catch the gate being deleted from
+  `load_library`; only a test observing what the gate leaves behind can.
 - **`Database.has_ui_config()`** mirrors `is_healthy()`'s no-throw shape; `open`/`from_schema`/
   `from_migrations` all take keyword-only `ui_config_dir: str | None` and `ui_locale: str | None`,
   passed to `_make_options` as `ffi.NULL` (never `b""`) when unset.
