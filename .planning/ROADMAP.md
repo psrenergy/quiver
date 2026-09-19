@@ -95,7 +95,7 @@ Plans:
   4. `bindings/js/src/ffi-helpers.ts` allocates the options buffer from **named offset constants** with a field-order comment, sized from the size accessor — and the file's two unrelated `new Uint8Array(8)` allocations (`allocPtrOut`, `allocUint64Out`) are provably unchanged.
   5. Python's CFFI cdef, Dart's hand-edited `bindings.dart` (no ffigen regen; `.dart_tool/hooks_runner/` and `.dart_tool/lib/` cleared before the suite runs) and Julia's regenerated `c_api.jl` each carry at least one test that a wrong layout would actually fail.
 
-**Plans:** 7/7 plans executed
+**Plans:** 7/13 — the original 7 executed; verification returned `gaps_found`, so 6 gap-closure plans (02-08 … 02-13) were added in 4 further waves
 
 Plans:
 **Wave 1**
@@ -116,6 +116,26 @@ Plans:
 **Wave 4** *(blocked on Wave 3 completion)*
 
 - [x] 02-07-PLAN.md — Release: CHANGELOG 0.10.7 → 0.11.0 rename with BREAKING entry, single `part=minor` dispatch behind a decision checkpoint (wave 4)
+
+*Gap closure — added after `02-VERIFICATION.md` returned `gaps_found` (3/5 success criteria MET, 2 PARTIAL, SAFE-01 incomplete). Waves restart at 1; plans 02-01 … 02-07 are executed history and are not re-planned.*
+
+**Gap-closure wave 1**
+
+- [ ] 02-08-PLAN.md — **Tracer:** `quiver_csv_options_sizeof` natively + Python's gate restored (it is unwired in HEAD), widened to four structs, and made observable so a test fails when it is removed
+
+**Gap-closure wave 2** *(blocked on 02-08)*
+
+- [ ] 02-09-PLAN.md — Malformed and `:memory:` polarity plus `open`/`from_migrations`/`describe()` coverage across the C API, Lua and all four bindings
+- [ ] 02-10-PLAN.md — JS: named CSV offset constants, the fourth struct in the load-time gate, a mutation-sensitive test, and the now-false deferral note removed from `bindings/js/CLAUDE.md`
+- [ ] 02-11-PLAN.md — Julia and Dart: fourth struct in each gate, observable check record, mutation-sensitive tests, `@test true` deleted
+
+**Gap-closure wave 3** *(blocked on 02-10)*
+
+- [ ] 02-12-PLAN.md — JS loader: version-skew diagnosis for a native missing the size accessors, and the options keepalive eliminated by a self-contained buffer
+
+**Gap-closure wave 4** *(blocked on all of the above)*
+
+- [ ] 02-13-PLAN.md — CHANGELOG 0.10.7 reconciliation (duplicate heading, missing compare link, wrong 0.11.0 base) and correction of the stale planning premises
 
 **Cross-cutting constraints:**
 
