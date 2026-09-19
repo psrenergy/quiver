@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 2
-current_phase_name: Config Path, Locale and Struct-Size Safety
+current_phase: 02
+current_phase_name: config-path-locale-and-struct-size-safety
 status: executing
-stopped_at: Completed 02-07-PLAN.md
-last_updated: "2026-09-19T15:45:47.009Z"
+stopped_at: Completed 02-08-PLAN.md
+last_updated: "2026-09-19T22:01:06.841Z"
 last_activity: 2026-09-19
 last_activity_desc: Phase 01 execution started
 progress:
   total_phases: 2
   completed_phases: 1
-  total_plans: 13
-  completed_plans: 12
+  total_plans: 19
+  completed_plans: 14
 ---
 
 # Project State
@@ -23,16 +23,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-09-17)
 
 **Core value:** An agent calling Quiver's `describe` on a PSR model database sees what an INTEGER column actually means — `values {0: 8 (Disabled), 1: 4 (Enabled)}`, not bare codes.
-**Current focus:** Phase 01 — enum-labels-in-describe
+**Current focus:** Phase 02 — config-path-locale-and-struct-size-safety
 
 ## Current Position
 
-Phase: 2 — Config Path, Locale and Struct-Size Safety
-Plan: 7 of 7
+Phase: 02 (config-path-locale-and-struct-size-safety) — EXECUTING
+Plan: 2 of 13
 Status: Ready to execute
-Last activity: 2026-09-19 — Completed 02-01-PLAN.md
+Last activity: 2026-09-19 — Phase 02 execution started
 
-Progress: [█████████░] 92%
+Progress: [███████░░░] 74%
 
 ## Performance Metrics
 
@@ -70,6 +70,7 @@ Progress: [█████████░] 92%
 | Phase 02 P05 | 30min | 3 tasks | 6 files |
 | Phase 02 P04 | 50min | 3 tasks | 8 files |
 | Phase 02 P07 | 15min | 3 tasks | 1 files |
+| Phase 02 P08 | 24min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -108,6 +109,8 @@ Full log in PROJECT.md Key Decisions. Affecting current work:
 - [Phase ?]: Dart: memoize the load-time struct-size gate with its own _structSizesChecked flag, separate from _cachedBindings, so the three native *_sizeof calls run once per isolate rather than on every bindings access
 - [Phase ?]: Dart: wrote test.bat's cache-clearing lines via raw printf with literal CRLF bytes, verified with xxd/cat -A, to avoid unix tooling silently rewriting the CRLF .bat file to LF
 - [Phase ?]: Release-timing checkpoint resolved as hold-for-phase-3: CHANGELOG.md 0.11.0 unreleased section is complete but the Bump Version dispatch is deferred until Phase 3 lands, per ROADMAP's same-release note; deferral recorded in STATE.md Pending Todos.
+- [Phase ?]: Promoted the struct-size gate rule from a fixed three-struct list to 'every hand-allocated struct gets a *_sizeof accessor', recorded in src/c/CLAUDE.md and bindings/python/CLAUDE.md
+- [Phase ?]: Confirmed Python's load-time struct-size gate was actually unwired in HEAD (pass # MUTATION: gate unwired at both call sites), not merely undertested; restored and made observable via _CHECKED_STRUCTS
 
 ### Pending Todos
 
@@ -134,6 +137,6 @@ Full log in PROJECT.md Key Decisions. Affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-09-19T15:45:46.973Z
-Stopped at: Completed 02-07-PLAN.md
+Last session: 2026-09-19T22:01:06.802Z
+Stopped at: Completed 02-08-PLAN.md
 Resume file: None

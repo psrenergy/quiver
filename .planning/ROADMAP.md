@@ -95,7 +95,7 @@ Plans:
   4. `bindings/js/src/ffi-helpers.ts` allocates the options buffer from **named offset constants** with a field-order comment, sized from the size accessor — and the file's two unrelated `new Uint8Array(8)` allocations (`allocPtrOut`, `allocUint64Out`) are provably unchanged.
   5. Python's CFFI cdef, Dart's hand-edited `bindings.dart` (no ffigen regen; `.dart_tool/hooks_runner/` and `.dart_tool/lib/` cleared before the suite runs) and Julia's regenerated `c_api.jl` each carry at least one test that a wrong layout would actually fail.
 
-**Plans:** 7/13 — the original 7 executed; verification returned `gaps_found`, so 6 gap-closure plans (02-08 … 02-13) were added in 4 further waves
+**Plans:** 8/13 plans executed
 
 Plans:
 **Wave 1**
@@ -121,7 +121,7 @@ Plans:
 
 **Gap-closure wave 1**
 
-- [ ] 02-08-PLAN.md — **Tracer:** `quiver_csv_options_sizeof` natively + Python's gate restored (it is unwired in HEAD), widened to four structs, and made observable so a test fails when it is removed
+- [x] 02-08-PLAN.md — **Tracer:** `quiver_csv_options_sizeof` natively + Python's gate restored (it is unwired in HEAD), widened to four structs, and made observable so a test fails when it is removed
 
 **Gap-closure wave 2** *(blocked on 02-08)*
 
@@ -273,7 +273,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Enum Labels in Describe | 6/6 | Complete    | 2026-09-19 |
-| 2. Config Path, Locale and Struct-Size Safety | 7/7 | In Progress|  |
+| 2. Config Path, Locale and Struct-Size Safety | 8/13 | In Progress|  |
 | 3. Structured Attribute Metadata | 0/TBD | Not started | - |
 | 4. Collection and Attribute-Group Metadata | 0/TBD | Not started | - |
 | 5. `validate_ui_config()` and Milestone Release | 0/TBD | Not started | - |
