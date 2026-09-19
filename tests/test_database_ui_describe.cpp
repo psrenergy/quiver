@@ -164,6 +164,57 @@ TEST(DatabaseUiDescribe, MalformedSidecarPublishesNothing) {
     EXPECT_FALSE(contains(report, "(Disabled)")) << report;
 }
 
+// WR-01 (review fix): a `ui/` directory that exists but has no `main.toml` -- e.g. a typo'd
+// filename, a partial deployment, a case-sensitivity slip -- must be treated as malformed
+// (D-24/D-25), not silently accepted as a valid, empty sidecar. Before the fix, read_file()
+// returned "" for the missing path and toml::parse("") succeeded as an empty table, so
+// has_ui_config() reported true with nothing to show for it. Schema is an exact copy of
+// tests/schemas/ui_golden/schema.sql, so the byte-for-byte comparison below proves the output is
+// identical to the no-sidecar golden baseline, not merely "doesn't throw".
+TEST(DatabaseUiDescribe, DirectoryWithoutMainTomlIsTreatedAsMalformed) {
+    auto db = quiver::test::open_ui_fixture(__FILE__, "no_main_toml", "cpp_no_main_toml");
+    EXPECT_FALSE(db.has_ui_config());
+
+    db.create_element(
+        "Items",
+        quiver::Element().set("label", std::string("a")).set("priority", static_cast<int64_t>(1)).set("weight", 1.5));
+    db.create_element(
+        "Items",
+        quiver::Element().set("label", std::string("b")).set("priority", static_cast<int64_t>(2)).set("weight", 2.5));
+
+    std::ifstream describe_collection_in(SCHEMA_PATH("schemas/ui_golden/describe_collection.txt"), std::ios::binary);
+    std::string describe_collection_golden((std::istreambuf_iterator<char>(describe_collection_in)),
+                                           std::istreambuf_iterator<char>());
+    EXPECT_EQ(db.describe_collection("Items"), describe_collection_golden);
+
+    std::ifstream summarize_collection_in(SCHEMA_PATH("schemas/ui_golden/summarize_collection.txt"), std::ios::binary);
+    std::string summarize_collection_golden((std::istreambuf_iterator<char>(summarize_collection_in)),
+                                            std::istreambuf_iterator<char>());
+    EXPECT_EQ(db.summarize_collection("Items"), summarize_collection_golden);
+
+    // describe()'s first line is "Database: <path>", which differs between this file-backed
+    // fixture and the :memory: golden -- compare everything after it, mirroring
+    // NoSidecarOutputStillMatchesGolden below.
+    std::ifstream describe_in(SCHEMA_PATH("schemas/ui_golden/describe.txt"), std::ios::binary);
+    std::string golden_describe((std::istreambuf_iterator<char>(describe_in)), std::istreambuf_iterator<char>());
+    const auto file_backed_describe = db.describe();
+    const auto golden_rest = golden_describe.substr(golden_describe.find('\n') + 1);
+    const auto file_backed_rest = file_backed_describe.substr(file_backed_describe.find('\n') + 1);
+    EXPECT_EQ(file_backed_rest, golden_rest);
+}
+
+// WR-01 companion: the same missing-main.toml directory logs at warn (the malformed path),
+// mirroring MalformedDirectoryLogsAtWarn below -- not at debug (the absent-directory path).
+TEST(DatabaseUiDescribe, DirectoryWithoutMainTomlLogsAtWarn) {
+    testing::internal::CaptureStderr();
+    auto db = quiver::Database::from_schema(SCHEMA_PATH("schemas/ui/no_main_toml") + "/cpp_stderr_no_main_toml.sqlite",
+                                            SCHEMA_PATH("schemas/ui/no_main_toml/schema.sql"),
+                                            {.read_only = false, .console_level = quiver::LogLevel::Warn});
+    db.has_ui_config();
+    const auto output = testing::internal::GetCapturedStderr();
+    EXPECT_FALSE(output.empty());
+}
+
 // The single riskiest regression in the phase: if the :memory: short-circuit in
 // Impl::require_ui_config were ever deleted, every existing :memory:-based describe test would
 // become sensitive to whatever happens to be sitting in the process's working directory

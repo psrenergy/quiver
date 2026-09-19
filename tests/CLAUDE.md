@@ -131,9 +131,11 @@ never copy them into a binding.
 - `migrations/` — versioned `1/`, `2/`, `3/`, each with `up.sql`/`down.sql`
 - `issues/` — regression migrations for specific issues (`issue52/`, `issue70/`)
 - `ui/` — one directory per PSR `database/ui/` TOML sidecar parser tolerance
-  (`enum_basic`, `malformed`, `no_ui_dir`, `bess_like`, `foresight_like`, `htd_like`, `no_enum`,
-  `empty_enum`, `unknown_keys`, `format_table`, `orphan_collection`). Each holds `schema.sql` plus
-  a `ui/` subdirectory (the hand-written sidecar), except `no_ui_dir`, which deliberately has none.
+  (`enum_basic`, `malformed`, `no_ui_dir`, `no_main_toml`, `bess_like`, `foresight_like`,
+  `htd_like`, `no_enum`, `empty_enum`, `unknown_keys`, `format_table`, `orphan_collection`). Each
+  holds `schema.sql` plus a `ui/` subdirectory (the hand-written sidecar), except `no_ui_dir`,
+  which deliberately has none, and `no_main_toml`, whose `ui/` exists but deliberately has no
+  `main.toml` inside it (WR-01).
   `tests/schemas/ui/README.md` is the authoritative directory→rule map **and** the mirrored copy
   of the `## Fixture literals (authoritative)` table originally defined in
   `.planning/phases/01-enum-labels-in-describe/01-02-PLAN.md` — every exact rendered string any

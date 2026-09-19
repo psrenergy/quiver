@@ -1,0 +1,6 @@
+id = "Items"
+
+[[attribute]]
+id = "priority"
+enum = "bool"
+label = "Priority"

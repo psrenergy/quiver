@@ -264,8 +264,16 @@ UIConfigSet UIConfigSet::from_directory(const std::string& ui_dir,
 
     const fs::path dir(ui_dir);
 
-    // main.toml drives what loads (PARSE-01: never scan the directory to decide this).
+    // main.toml drives what loads (PARSE-01: never scan the directory to decide this) and is
+    // mandatory -- unlike enum.toml/a listed collection file, there is no tolerant fallback for
+    // it. read_file() silently returns "" for a missing path and toml::parse("") succeeds as an
+    // empty table, so without this guard a `ui/` directory missing main.toml (typo, partial
+    // deployment, case-sensitivity slip) would publish an empty-but-"loaded" config instead of
+    // routing through the catch-and-warn path below (D-25/D-24: malformed logs at warn).
     const auto main_path = dir / "main.toml";
+    if (!fs::exists(main_path)) {
+        throw std::runtime_error("Failed to load UI config: missing " + main_path.string());
+    }
     toml::table main_tbl = toml::parse(read_file(main_path));
     static const std::set<std::string> kKnownMainKeys = {"model", "collections"};
     log_unknown_keys_once(logger, unknown_keys_in(main_tbl, kKnownMainKeys), main_path.string());

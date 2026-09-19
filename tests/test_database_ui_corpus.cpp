@@ -43,12 +43,13 @@ std::string read_binary(const fs::path& path) {
 
 }  // namespace
 
-// Every directory under tests/schemas/ui/ -- except no_ui_dir, which deliberately has none --
-// must hold schema.sql and ui/main.toml. Fails naming the specific directory that is broken.
+// Every directory under tests/schemas/ui/ -- except no_ui_dir (deliberately has no ui/ at all)
+// and no_main_toml (deliberately has a ui/ with no main.toml inside it, WR-01) -- must hold
+// schema.sql and ui/main.toml. Fails naming the specific directory that is broken.
 TEST(DatabaseUiCorpus, EveryFixtureIsStructurallyComplete) {
     const auto ui_dir = ui_corpus_dir();
     for (const auto& name : sorted_fixture_dir_names()) {
-        if (name == "no_ui_dir") {
+        if (name == "no_ui_dir" || name == "no_main_toml") {
             continue;
         }
         const auto dir = ui_dir / name;
