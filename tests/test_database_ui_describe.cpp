@@ -34,6 +34,26 @@ std::vector<std::string> split_lines(const std::string& text) {
 // this file never risks a literal character being mangled by a compiler's default source charset.
 const std::string kEmDash = "\xE2\x80\x94";
 
+// Returns the first line whose start matches `prefix`, or "" when none does.
+std::string find_line(const std::vector<std::string>& lines, const std::string& prefix) {
+    for (const auto& line : lines) {
+        if (line.rfind(prefix, 0) == 0) {
+            return line;
+        }
+    }
+    return "";
+}
+
+size_t count_occurrences(const std::string& haystack, const std::string& needle) {
+    size_t count = 0;
+    size_t pos = 0;
+    while ((pos = haystack.find(needle, pos)) != std::string::npos) {
+        ++count;
+        pos += needle.size();
+    }
+    return count;
+}
+
 void write_file(const std::filesystem::path& path, const std::string& content) {
     std::ofstream out(path, std::ios::binary);
     out << content;
@@ -245,4 +265,82 @@ TEST(DatabaseUiDescribe, CollectionLabelRendered) {
     EXPECT_TRUE(contains(db.describe(), expected)) << db.describe();
     EXPECT_TRUE(contains(db.describe_collection("Storage"), expected)) << db.describe_collection("Storage");
     EXPECT_TRUE(contains(db.summarize_collection("Storage"), expected)) << db.summarize_collection("Storage");
+}
+
+// DESC-02, literal L4 (tests/schemas/ui/README.md): unit and label clauses together, in the fixed
+// D-02 order (unit before label).
+TEST(DatabaseUiDescribe, UnitAndLabelRendered) {
+    auto db = quiver::test::open_ui_fixture(__FILE__, "enum_basic", "cpp_scalar_line");
+    const auto report = db.describe_collection("Storage");
+    const std::string expected = "    - max_generation (REAL) [MW] " + kEmDash + " \"Maximum Generation\"";
+    EXPECT_TRUE(contains(report, expected)) << report;
+}
+
+// DESC-06, literal L5: a hidden attribute is tagged, never dropped -- it still appears exactly
+// once, decorated with [hidden] and its label.
+TEST(DatabaseUiDescribe, HiddenAttributeTaggedNotDropped) {
+    auto db = quiver::test::open_ui_fixture(__FILE__, "enum_basic", "cpp_scalar_line_hidden");
+    const auto report = db.describe_collection("Storage");
+    const std::string expected = "    - internal_code (INTEGER) [hidden] " + kEmDash + " \"Internal Code\"";
+    EXPECT_TRUE(contains(report, expected)) << report;
+    EXPECT_EQ(1u, count_occurrences(report, "internal_code")) << report;
+}
+
+// DESC-03, literal L3: the full declared vocabulary renders even with zero elements in the
+// collection -- the list comes from enum.toml, never from the data.
+TEST(DatabaseUiDescribe, VocabularyFullValueListRendered) {
+    auto db = quiver::test::open_ui_fixture(__FILE__, "enum_basic", "cpp_scalar_line_vocab");
+    const auto report = db.describe_collection("Storage");
+    EXPECT_TRUE(contains(report, "enum bool {0: Disabled, 1: Enabled}")) << report;
+}
+
+// An attribute the sidecar does not configure (id, label -- enum_basic/ui/storage.toml declares
+// only has_commitment/max_generation/internal_code/notes) renders today's line unchanged: nothing
+// after its type or key flag.
+TEST(DatabaseUiDescribe, UnconfiguredAttributeRendersTodaysLine) {
+    auto db = quiver::test::open_ui_fixture(__FILE__, "enum_basic", "cpp_scalar_line_unconfigured");
+    const auto lines = split_lines(db.describe_collection("Storage"));
+
+    const auto id_line = find_line(lines, "    - id (INTEGER)");
+    ASSERT_FALSE(id_line.empty());
+    EXPECT_EQ("    - id (INTEGER) PRIMARY KEY", id_line);
+
+    const auto label_line = find_line(lines, "    - label (TEXT)");
+    ASSERT_FALSE(label_line.empty());
+    EXPECT_EQ("    - label (TEXT) NOT NULL", label_line);
+}
+
+// D-12, literal L7 (relocated from plan 01-01 task 3): a configured-with-no-label attribute
+// renders today's line exactly -- being present in the sidecar is not by itself a reason to
+// decorate a line, and the attribute id is never synthesised into the missing label.
+TEST(DatabaseUiDescribe, EmptyLabelRendersTodaysLine) {
+    auto db = quiver::test::open_ui_fixture(__FILE__, "enum_basic", "cpp_scalar_line_empty_label");
+    const auto lines = split_lines(db.describe_collection("Storage"));
+
+    const auto notes_line = find_line(lines, "    - notes (TEXT)");
+    ASSERT_FALSE(notes_line.empty());
+    EXPECT_EQ("    - notes (TEXT)", notes_line);
+    EXPECT_FALSE(contains(notes_line, kEmDash)) << notes_line;
+}
+
+// PARSE-09, literal L15: an attribute bound to a vocabulary the sidecar never declares names the
+// binding and the absence -- nothing is invented.
+TEST(DatabaseUiDescribe, UndeclaredVocabularyNamed) {
+    auto db = quiver::test::open_ui_fixture(__FILE__, "no_enum", "cpp_no_enum");
+    const auto report = db.describe_collection("Storage");
+    EXPECT_TRUE(contains(report, "enum bool (undeclared vocabulary)")) << report;
+}
+
+// D-03: describe() and describe_collection() render the exact same scalar line through the one
+// shared renderer -- not two independently-maintained copies.
+TEST(DatabaseUiDescribe, DescribeUsesTheSameRenderer) {
+    auto db = quiver::test::open_ui_fixture(__FILE__, "enum_basic", "cpp_same_renderer");
+
+    const auto describe_lines = split_lines(db.describe());
+    const auto describe_collection_lines = split_lines(db.describe_collection("Storage"));
+
+    const auto describe_line = find_line(describe_lines, "    - has_commitment (INTEGER)");
+    const auto describe_collection_line = find_line(describe_collection_lines, "    - has_commitment (INTEGER)");
+    ASSERT_FALSE(describe_line.empty());
+    EXPECT_EQ(describe_line, describe_collection_line);
 }
