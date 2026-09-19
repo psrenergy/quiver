@@ -15,6 +15,12 @@ callers to change something are prefixed **BREAKING** and say what to do.
   and enum vocabulary — for example `values {0: 8 (Disabled), 1: 4 (Enabled)}` instead of a bare
   integer code — with no API change and nothing required of the caller. With no sidecar present,
   the output is byte-identical to before.
+- **`DatabaseOptions` gains `ui_config_dir` and `ui_locale`.** A caller can now point the UI
+  sidecar loader at a directory anywhere on disk (not just `<db_dir>/ui/`) and choose a locale
+  other than `"en"` for enum-vocabulary labels; both default to today's behavior when unset.
+  `Database::has_ui_config()` reaches the C API as `quiver_database_has_ui_config`, and
+  `quiver_database_options_sizeof`/`quiver_scalar_metadata_sizeof`/`quiver_group_metadata_sizeof`
+  let an FFI binding assert its hardcoded struct layout against the native library at load time.
 
 [0.10.7]: https://github.com/psrenergy/quiver/compare/v0.10.6...v0.10.7
 

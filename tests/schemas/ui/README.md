@@ -67,6 +67,12 @@ and 01-06 quote these exact bytes; they do not invent, paraphrase or re-derive o
 | L15 | `no_enum` / `empty_enum` | `enum bool (undeclared vocabulary)` | 01-03, 01-04 |
 | L16 | `orphan_collection` | the `Storage` collection label renders; the `Agent` collection line carries none | 01-04 `UnlistedCollectionFileIsNeverLoaded` |
 | L17 | `bess_like` | `enum look_ahead {-1: Unknown, 0: Immediate, 3: Short Term, 7: Long Term, 9223372036854775807: Unbounded}` (WR-02 fix: the gapped/negative/int64-max vocabulary bound to a real attribute) | review fix `Int64ExtremeVocabularyCodesRenderExactly` |
+| L18 | `foresight_like` | `Tendencia Lineal Local` (code 2's `es` label) | 02-01 `DatabaseUiOptions.LocaleAffectsRenderedLabel`, all four binding locale tests (Wave 2) |
+| L19 | `foresight_like` | `Ingenuo Estacional` (code 5's `es` label, the counterpart to L9's `Seasonal Naïve`) | 02-01 `DatabaseUiOptions.LocaleAffectsRenderedLabel`, all four binding locale tests (Wave 2) |
 
 L8's entry order is the fixture's TOML declaration order, not code order — that is what makes
 DESC-03's "declaration order, never sorted-by-code" observable.
+
+L18 and L19 are Phase 2 additions (02-01): `ui_locale = "es"` threaded into
+`UIConfigSet::parse_enum_content`, which Phase 1 left hardcoded at `"en"`. Both are pure ASCII
+and need no UTF-8 escape encoding, unlike L9 and L10 above them.

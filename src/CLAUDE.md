@@ -348,8 +348,14 @@ second route to the same data the public schema/attribute metadata getters expos
 - **Lookup helpers used by the renderer** (`find_attribute`, `find_vocabulary`): both return
   `nullptr` on a miss, neither throws — the renderer treats "no config" and "not found in config"
   identically.
-- `Database::has_ui_config()` reports whether the cache is populated — C++-only in this phase (root
-  Core API entry, root design decision).
+- `Database::has_ui_config()` reports whether the cache is populated (root Core API entry).
+- **Phase 2 (OPT-01/OPT-02):** `DatabaseOptions` carries `ui_config_dir` (empty = convention path)
+  and `ui_locale` (empty = `"en"`), assigned into `Impl` once at construction and consumed lazily
+  by `require_ui_config()`. A non-empty `ui_config_dir` takes an explicit branch that skips the
+  `:memory:` guard (an explicit directory loads even for an in-memory database, D-01) and logs at
+  `warn` instead of `debug` when the directory is missing (D-05) — the `:memory:` short-circuit
+  itself still guards only the convention path. `ui_locale` reaches both `from_directory`'s
+  existing `locale` parameter and `parse_enum_content`, which Phase 1 left hardcoded at `"en"`.
 
 ## LuaRunner
 

@@ -89,6 +89,12 @@ quiver_database_close(db);
 A `NULL` options pointer means defaults — in **every** function that takes options (lifecycle
 and CSV alike).
 
+**Phase 2 (OPT-01/OPT-02/SAFE-01):** `quiver_database_options_t` is 24 bytes —
+`read_only`@0, `console_level`@4, `ui_config_dir`@8, `ui_locale`@16, pinned by `static_assert`s in
+`src/c/options.cpp`; a NULL or empty string on either new field means "not specified"
+(`convert_database_options`, `src/c/database_options.h`). `quiver_database_has_ui_config` mirrors
+`quiver_database_is_healthy`'s body exactly (no try/catch — `has_ui_config()` never throws).
+
 ## Memory Management
 
 `new`/`delete`, provide matching `quiver_{entity}_free_*` functions:

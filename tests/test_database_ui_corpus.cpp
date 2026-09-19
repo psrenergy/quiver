@@ -94,6 +94,8 @@ TEST(DatabaseUiCorpus, FixtureLiteralsArePinned) {
         {"enum_basic/ui/enum.toml", "Enabled"},
         {"htd_like/ui/enum.toml", "Disable"},
         {"htd_like/ui/enum.toml", "Enable"},
+        {"foresight_like/ui/enum.toml", "Tendencia Lineal Local"},
+        {"foresight_like/ui/enum.toml", "Ingenuo Estacional"},
     };
 
     const auto readme = read_binary(ui_corpus_dir() / "README.md");

@@ -40,6 +40,11 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   literal matches the fixture on disk), `test_database_ui_parse.cpp` (one named `DatabaseUiParse`
   case per PARSE-01/05-10 tolerance). `test_c_api_database_describe.cpp` mirrors the rendering
   rules through the C API. See `tests/schemas/ui/` below for the fixture corpus these read.
+  Phase 2 (02-01) adds `test_database_ui_options.cpp` (`DatabaseUiOptions` — the explicit
+  `ui_config_dir`/`ui_locale` proof, reusing `foresight_like` with the database file placed in a
+  scratch directory instead of a new fixture tree) and `test_c_api_database_options.cpp`
+  (`DatabaseCApiOptions` — the three `*_sizeof` accessors plus `has_ui_config` through the C
+  boundary itself).
 - `test_issues.cpp` - issue-numbered regression tests
 - `test_migrations.cpp` also covers the in-memory `validate_migrations` up-then-down round trip;
   `test_c_api_database_lifecycle.cpp` covers its C API success and error propagation;
