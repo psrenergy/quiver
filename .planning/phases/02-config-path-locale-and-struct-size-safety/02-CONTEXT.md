@@ -57,7 +57,20 @@ Out of scope: structured attribute metadata (Phase 3), collection/group metadata
 - **D-06:** the locale-resolution chain is unchanged from Phase 1 — bare string wins outright,
   then exact locale, then `en`, then first key in map order, then empty string. Only the `locale`
   argument becomes caller-supplied. `UIConfigSet::from_directory` already takes a `locale`
-  parameter; `src/ui_config.cpp:395` is its **only** call site and currently hardcodes `"en"`.
+  parameter, and `src/ui_config.cpp:395` is its only call site — but that is **not** the only
+  place a locale is resolved, and one edit there does **not** cover the locale.
+  **CORRECTED (adversarial review, verified against the tree):** `UIConfigSet::parse_enum_content`
+  takes **no locale parameter at all** (declared `src/ui_config.h:77`, defined
+  `src/ui_config.cpp:149`) and resolves every enum label at a hardcoded `"en"` at `:174`;
+  `from_directory` calls it without a locale at `:301`. The `locale` reaches
+  `parse_collection_content` (`:313`) and `parse_attribute_or_group` (`:112-113`) and stops.
+  Phase 1 left the warning in place at `:172-173`. So Phase 2 must thread `locale` into
+  `parse_enum_content`'s signature and call site as well — otherwise `ui_locale = "es"` renders
+  byte-identical `en` output on the `foresight_like` fixture, whose only locale-varying data is
+  `ui/enum.toml` (`economic_driver.toml`'s labels are bare strings, which win outright and ignore
+  locale). Threading an existing locale through a signature is not a second resolver;
+  `resolve_localizable` stays the one and only resolution chain. **Phases 3-5 render localizable
+  strings too — the "one call site" premise is false and must not be reused.**
 
 ### Struct-size safety
 
@@ -87,7 +100,7 @@ Out of scope: structured attribute metadata (Phase 3), collection/group metadata
 
 - **D-12:** `ui_config_dir` and `ui_locale` are optional parameters on `open`, `from_schema` and
   `from_migrations` in all five bindings, matching the existing `read_only` / `console_level`
-  pattern exactly (Julia `build_quiver_database_options`, Dart `_makeOptions` ×4 call sites,
+  pattern exactly (Julia `build_quiver_database_options`, Dart `_makeOptions` ×3 call sites,
   Python `_make_options`, JS `makeDefaultOptions`).
 - **D-13:** `has_ui_config()` gains a C symbol (`quiver_database_has_ui_config`) and is bound in
   Julia, Dart, Python, JS and Lua. This is OPT-04, deliberately deferred from Phase 1 by D-22.
@@ -148,18 +161,23 @@ Out of scope: structured attribute metadata (Phase 3), collection/group metadata
 
 ### Established patterns
 - Per-method FFI boilerplate is the house style in Dart and Python — do not collapse it.
-- Dart's `_makeOptions` is hand-written and duplicated at **four** call sites (`database.dart:50`,
-  `:68`, `:97`, `:140`); all four need the new fields.
+- Dart's `_makeOptions` is hand-written and called at **three** sites (`database.dart:76`, `:105`,
+  `:147`); `:50` is the **definition**, not a call site. All three need the new fields.
+  (Corrected from an earlier "×4 call sites" reading; plan 02-04 says three and is right.)
 - `quiver_database_options_default()` returns the struct **by value**, which is precisely why Bun
   cannot call it and JS must hand-roll the buffer.
 
 ### Integration points
 - `Database::Impl::require_ui_config()` (`src/ui_config.cpp:370-399`) is where the override
   intercepts: `:memory:` short-circuit at `:380`, convention path computed at `:386`, locale
-  hardcoded at `:395`. D-01 reorders the first two.
-- Load-time assertion seams: JS `initLibrary`/`getSymbols` after `dlopen` (`loader.ts`), Python
-  `load_library()` after `ffi.dlopen` (`_loader.py`), Dart after `DynamicLibrary` open
-  (`library_loader.dart`), Julia end of `__init__()` (`c_api.jl:52-60`).
+  hardcoded at `:395`. D-01 reorders the first two. **A second locale site sits behind it** —
+  `parse_enum_content` (`src/ui_config.h:77`, `src/ui_config.cpp:149`, hardcoded `"en"` at
+  `:174`, called locale-less at `:301`) — see the correction in D-06.
+- Load-time assertion seams: JS `loadLibrary()` (`loader.ts:320-325`, the one seam outside
+  `initLibrary`'s three swallowing `try`/`catch` tiers), Python `load_library()` after
+  `ffi.dlopen` (`_loader.py`), Dart after `DynamicLibrary` open (`library_loader.dart`), Julia
+  end of `__init__()` (`c_api.jl:56-64`, authored in `generator/prologue.jl` — `c_api.jl` is
+  generated).
 
 </code_context>
 
