@@ -34,7 +34,27 @@ ruff.toml         # Lint/format config (format.bat runs ruff)
   the C headers exactly (struct layout mismatches corrupt silently). After C API changes, run
   `generator/generator.bat` and diff its output against `_c_api.py`.
 - **`_loader.py` pre-loads `libquiver.dll`** on Windows so the OS resolves `libquiver_c.dll`'s
-  dependency chain. `tests/test.bat` prepends `build/bin/` to PATH for DLL discovery.
+  dependency chain. `tests/test.bat` prepends `build/bin/` to PATH for DLL discovery. Dev-mode
+  `ffi.dlopen` is a bare call with no build-tree walk-up (unlike Julia/JS), so a bare `uv run
+  python -m pytest` without that PATH prefix fails with "Missing: libquiver_c.dll" for a reason
+  unrelated to any cdef change — always run the suite through `test.bat`.
+- **`quiver_database_options_t` is 24 bytes** (Phase 2): `read_only`@0, `console_level`@4,
+  `ui_config_dir`@8, `ui_locale`@16. `_make_options` returns `(options, keepalive)` — CFFI's
+  owning `ffi.new("char[]", ...)` cdata is freed once the last Python reference drops, and
+  storing its pointer in a struct field does not count as a reference, so every call site must
+  bind the returned keepalive list to a local that stays in scope across the FFI call.
+- **`load_library` gates on three native `*_sizeof()` accessors before returning `lib`** on both
+  the bundled and dev-mode success paths (`_assert_struct_sizes` in `_loader.py`), comparing
+  `ffi.sizeof(...)` against `quiver_database_options_sizeof`/`quiver_scalar_metadata_sizeof`/
+  `quiver_group_metadata_sizeof`. CFFI ABI mode resolves `lib.<name>` via dlsym-on-demand, so a
+  native library that predates this gate raises `AttributeError` at the *call*, never at
+  `ffi.dlopen` — the gate must actively call each accessor, not just declare it. A mismatch or a
+  missing symbol raises `RuntimeError` naming the struct and both numbers — one of this binding's
+  few locally crafted error messages (the C API cannot diagnose a disagreement about its own
+  layout).
+- **`Database.has_ui_config()`** mirrors `is_healthy()`'s no-throw shape; `open`/`from_schema`/
+  `from_migrations` all take keyword-only `ui_config_dir: str | None` and `ui_locale: str | None`,
+  passed to `_make_options` as `ffi.NULL` (never `b""`) when unset.
 - **API shape**: `create_element`/`update_element` accept `**kwargs` (dict unpacking works:
   `db.create_element("Collection", **my_dict)`); the `Element` class is internal. Properties are
   regular methods, not `@property` (design decision). `LogLevel` is an `IntEnum` exported from
