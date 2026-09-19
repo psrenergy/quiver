@@ -78,15 +78,22 @@ biome.json        # Lint/format config
     collect before the native call reads them. An absent or empty-string option leaves its
     pointer slot's eight zero bytes (NULL), allocating no child string — the C converter maps
     that to "not specified".
-  - **`SCALAR_METADATA_SIZE` (56) and `GROUP_METADATA_SIZE` (32) live in `ffi-helpers.ts`**, not
-    `metadata.ts` — `metadata.ts` imports them back. Reason: `loader.ts` needs all three
-    struct-size constants (these two plus `OPTIONS_SIZE`) for its load-time assertion, and
-    `metadata.ts` imports `database.ts`, so importing from there into `loader.ts` would pull the
-    whole database surface into the loader and create a cycle; `ffi-helpers.ts` imports only
-    `bun:ffi` and `./types.ts`, so it is the cycle-free home. Values are unchanged, only relocated.
+  - **`SCALAR_METADATA_SIZE` (56), `GROUP_METADATA_SIZE` (32), and `CSV_OPTIONS_SIZE` (56) live
+    in `ffi-helpers.ts`**, not `metadata.ts`/`csv.ts` — those modules import them back. Reason:
+    `loader.ts` needs all four struct-size constants (these three plus `OPTIONS_SIZE`) for its
+    load-time assertion, and `metadata.ts`/`csv.ts` import `database.ts`, so importing from
+    either into `loader.ts` would pull the whole database surface into the loader and create a
+    cycle; `ffi-helpers.ts` imports only `bun:ffi` and `./types.ts`, so it is the cycle-free home.
+    Values are unchanged, only relocated. `csv.ts`'s seven `quiver_csv_options_t` field offsets
+    (`CSV_OPTIONS_OFFSET_DATE_TIME_FORMAT` through `CSV_OPTIONS_OFFSET_ENUM_GROUP_COUNT`, in
+    field-declaration order) are named the same way as the options struct's four — every C struct
+    a raw buffer is hand-allocated for gets a named size constant and named offset constants, no
+    bare numeric literal in the write.
   - **Load-time struct-size gate**: `loadLibrary()` calls `assertNativeStructSizes(lib.symbols)`
     exactly once, on the memoized path, checking `quiver_database_options_t` /
-    `quiver_scalar_metadata_t` / `quiver_group_metadata_t` in that fixed order and
+    `quiver_scalar_metadata_t` / `quiver_group_metadata_t` / `quiver_csv_options_t` (against
+    `quiver_database_options_sizeof`/`quiver_scalar_metadata_sizeof`/
+    `quiver_group_metadata_sizeof`/`quiver_csv_options_sizeof`) in that fixed order and
     short-circuiting on the first mismatch. It must NOT move inside `openLibrary()` or any of
     `initLibrary()`'s three `try`/`catch` tiers — each swallows its load failure as "try the next
     path", which would remask a real size mismatch as a generic "Cannot load native library"
@@ -96,10 +103,14 @@ biome.json        # Lint/format config
     accessor call must be wrapped in `Number(...)` before comparing**: Bun returns a `bigint` for
     a `usize` FFI return (probe-verified: `1252n === 1252` is `false`), `bun test` does not
     typecheck, and an unconverted comparison throws a bogus mismatch on every single load.
-  - **Known, deliberately unfixed**: `csv.ts`'s `buildCsvOptionsBuffer` hardcodes
-    `new Uint8Array(56)` for `quiver_csv_options_t` with no `sizeof` accessor and no load-time
-    assertion — a fourth instance of the same hazard class as the options struct above, out of
-    scope for this phase's three named structs (options, scalar metadata, group metadata).
+    `assertNativeStructSizes` records each struct's name in a module-level array, exposed via
+    `checkedStructNames()`, only after that struct's own check returns without throwing — this
+    exists because `test/struct-sizes.test.ts` used to drive only `checkStructSize` with
+    fabricated numbers, which stayed green when `assertNativeStructSizes`'s body was replaced
+    with `void lib;`; asserting the exact four-name ordered record makes that vacuous pass
+    impossible. The promoted rule from closing `quiver_csv_options_t`'s deferral: every C struct
+    a binding hand-allocates a raw buffer for gets a `*_sizeof` accessor, a named size constant,
+    named offset constants, and an entry in this gate — no struct is exempt.
 - **int64 handling**: input params accept `number | bigint` — `allocNativeInt64` writes each
   element with `DataView.setBigInt64`, so `bigint` inputs (scalar or array) are preserved
   exactly, never coerced through `Number`. Read paths return `number` (converted via `Number()`
