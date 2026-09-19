@@ -17,12 +17,12 @@ behaviour (`C:/Development/Hub/hub1/lib/models/configuration/*.dart`), **not** a
 - [x] **PARSE-02**: Quiver parses each collection TOML's `[[attribute]]` entries, keyed by the attribute's `id` (the SQL column name), into a flat per-collection map
 - [x] **PARSE-03**: Quiver parses `enum.toml` into named vocabularies, each an ordered list of `{id: int64, label}` entries, accepting arbitrary and gapped integer ids
 - [x] **PARSE-04**: Quiver resolves a localizable field that is either a bare string or a `{locale: string}` table, mixed within the same file, to a single string using Hub's fallback chain (exact locale → `en` → first key)
-- [ ] **PARSE-05**: Quiver ignores unknown keys rather than rejecting them, so a TOML written for a newer Hub still loads
-- [ ] **PARSE-06**: Quiver accepts `format` as either a string or the 4-key table form (`element_view` / `collection_view` / `edit` / `data`), even though no file in the corpus uses the table form today
-- [ ] **PARSE-07**: Quiver treats attribute ids and `[[attribute_group]]` ids as separate namespaces (`BESSOperation/storage.toml` uses `degradation` for both)
-- [ ] **PARSE-08**: Quiver accepts `[[attribute]]` and `[[attribute_group]]` interleaved in any order and flattens them correctly (15 files in the corpus interleave)
-- [ ] **PARSE-09**: Quiver tolerates an absent or zero-byte `enum.toml` and an absent `themes/` directory without error
-- [ ] **PARSE-10**: Quiver maps a collection TOML's PascalCase `id` (the SQL table name) to the snake_case filename listed in `main.collections`
+- [x] **PARSE-05**: Quiver ignores unknown keys rather than rejecting them, so a TOML written for a newer Hub still loads
+- [x] **PARSE-06**: Quiver accepts `format` as either a string or the 4-key table form (`element_view` / `collection_view` / `edit` / `data`), even though no file in the corpus uses the table form today
+- [x] **PARSE-07**: Quiver treats attribute ids and `[[attribute_group]]` ids as separate namespaces (`BESSOperation/storage.toml` uses `degradation` for both)
+- [x] **PARSE-08**: Quiver accepts `[[attribute]]` and `[[attribute_group]]` interleaved in any order and flattens them correctly (15 files in the corpus interleave)
+- [x] **PARSE-09**: Quiver tolerates an absent or zero-byte `enum.toml` and an absent `themes/` directory without error
+- [x] **PARSE-10**: Quiver maps a collection TOML's PascalCase `id` (the SQL table name) to the snake_case filename listed in `main.collections`
 - [x] **PARSE-11**: A missing or malformed `ui/` directory degrades silently — a warning is logged, `open()` still succeeds, and `has_ui_config()` returns false
 - [x] **PARSE-12**: A parsed UI config is published only after it validates, honouring `load_schema_metadata`'s publish-nothing-until-valid invariant
 
@@ -142,12 +142,12 @@ Which phases cover which requirements. Populated during roadmap creation.
 | PARSE-02 | Phase 1 | Complete |
 | PARSE-03 | Phase 1 | Complete |
 | PARSE-04 | Phase 1 | Complete |
-| PARSE-05 | Phase 1 | Pending |
-| PARSE-06 | Phase 1 | Pending |
-| PARSE-07 | Phase 1 | Pending |
-| PARSE-08 | Phase 1 | Pending |
-| PARSE-09 | Phase 1 | Pending |
-| PARSE-10 | Phase 1 | Pending |
+| PARSE-05 | Phase 1 | Complete |
+| PARSE-06 | Phase 1 | Complete |
+| PARSE-07 | Phase 1 | Complete |
+| PARSE-08 | Phase 1 | Complete |
+| PARSE-09 | Phase 1 | Complete |
+| PARSE-10 | Phase 1 | Complete |
 | PARSE-11 | Phase 1 | Complete |
 | PARSE-12 | Phase 1 | Complete |
 | DESC-01 | Phase 1 | Complete |
