@@ -94,16 +94,25 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
 - **Load-time struct-size gate** (`lib/src/ffi/library_loader.dart`): the `bindings` getter calls
   `assertNativeStructSizes` immediately after constructing `QuiverDatabaseBindings`, memoized
   once per isolate by its own flag (separate from the `_cachedBindings` memoization). It compares
-  `sizeOf<quiver_database_options_t/quiver_scalar_metadata_t/quiver_group_metadata_t>()` against
-  the three native `*_sizeof` accessors, in that fixed order, short-circuiting on the first
-  mismatch, and throws a `StateError` naming the struct and both numbers (SAFE-02/D-09). It must
-  actually **call** each accessor, not merely reference its `late final` pointer field: every
-  symbol in `bindings.dart` resolves lazily on first access (`bindings.dart:16`, `:26-27`), so
-  constructing `QuiverDatabaseBindings` alone proves nothing about any symbol's presence. A
-  missing symbol (a native library built before this phase) is caught as the `ArgumentError`
-  `DynamicLibrary.lookup` throws and rethrown as a distinct `StateError` naming the version skew.
-  `checkStructSize` is kept pure and parameterized so `test/struct_sizes_test.dart` can exercise
-  the failure path (a deliberately wrong expected value) without a second native build.
+  `sizeOf<quiver_database_options_t/quiver_scalar_metadata_t/quiver_group_metadata_t/
+  quiver_csv_options_t>()` against the four native `*_sizeof` accessors, in that fixed order,
+  short-circuiting on the first mismatch, and throws a `StateError` naming the struct and both
+  numbers (SAFE-02/D-09). It must actually **call** each accessor, not merely reference its `late
+  final` pointer field: every symbol in `bindings.dart` resolves lazily on first access
+  (`bindings.dart:16`, `:26-27`), so constructing `QuiverDatabaseBindings` alone proves nothing
+  about any symbol's presence. A missing symbol (a native library built before this phase) is
+  caught as the `ArgumentError` `DynamicLibrary.lookup` throws and rethrown as a distinct
+  `StateError` naming the version skew. `checkStructSize` is kept pure and parameterized so
+  `test/struct_sizes_test.dart` can exercise the failure path (a deliberately wrong expected
+  value) without a second native build. `quiver_csv_options_sizeof` joined `bindings.dart` as the
+  fourth accessor by **hand edit** (Phase 2, plan 02-11) — ffigen was not run; a full regeneration
+  still flips `quiver_data_type_t`/`quiver_error_t`/`quiver_log_level_t` into real enums and
+  breaks Hub, per the note above. `checkedStructNames` (`library_loader.dart`) is a
+  library-private `List<String>` wiring-evidence record — cleared on entry to
+  `assertNativeStructSizes`, appended after each struct's check passes — that
+  `test/struct_sizes_test.dart` asserts against the exact four-name ordered list (by touching the
+  `bindings` getter, never calling `assertNativeStructSizes` itself), so the gate cannot be
+  silently unwired while the struct-size suite stays green.
 - **Marshaling idiom**: every method allocates through a `package:ffi` `Arena` and releases in
   `finally`. This is also why `uiConfigDir`/`uiLocale` need no keepalive mechanism the way JS and
   Python's equivalents do: `_makeOptions` writes each `toNativeUtf8(allocator: arena).cast()`

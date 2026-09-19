@@ -114,12 +114,24 @@ Project.toml      # Deps: Artifacts, CEnum, Dates, Libdl; julia 1.11 compat
   **verbatim prologue content** — a safety check hand-written directly into `c_api.jl` would be
   silently deleted by the next `generator.bat` run while every happy-path test stayed green.
   `_check_struct_size`/`_native_struct_size`/`_assert_struct_sizes` (prologue.jl) compare
-  `sizeof(quiver_database_options_t)` / `quiver_scalar_metadata_t` / `quiver_group_metadata_t`
-  against the three native `*_sizeof()` accessors, in that fixed order, as the last statement of
-  `__init__` — a version-skewed native library throws at `using Quiver`, naming the struct and
-  both numbers (the C API cannot diagnose a disagreement about its own layout, so this message is
-  locally crafted, like the boolean wrappers' conversion errors). Proven regeneration-proof: running
-  `generator/generator.bat` twice leaves `git diff bindings/julia/src/c_api.jl` empty.
+  `sizeof(quiver_database_options_t)` / `quiver_scalar_metadata_t` / `quiver_group_metadata_t` /
+  `quiver_csv_options_t` against the four native `*_sizeof()` accessors, in that fixed order, as
+  the last statement of `__init__` — a version-skewed native library throws at `using Quiver`,
+  naming the struct and both numbers (the C API cannot diagnose a disagreement about its own
+  layout, so this message is locally crafted, like the boolean wrappers' conversion errors).
+  Promoted rule (02-08): every struct a binding hand-allocates a raw buffer for joins this list by
+  default, not a closed enumeration — `quiver_csv_options_t` joined as the fourth (Phase 2, plan
+  02-11). Proven regeneration-proof: running `generator/generator.bat` twice leaves
+  `git diff bindings/julia/src/c_api.jl` empty.
+- **`_CHECKED_STRUCTS`** (`generator/prologue.jl`, propagated into `src/c_api.jl` by
+  regeneration — never authored in `c_api.jl` directly, for the same reason as the gate itself) is
+  a module-level `String[]` wiring-evidence record: `_assert_struct_sizes` clears it on entry and
+  `push!`s each struct's name immediately after its own check passes. `test/test_struct_sizes.jl`
+  asserts the exact four-element ordered list rather than calling `_assert_struct_sizes` itself —
+  the earlier version of that test was a literal `@test true` whose comment claimed `using Quiver`
+  alone proved the gate ran, and the suite kept reporting all-green (`Struct Sizes | 23 pass`) even
+  with `_assert_struct_sizes()` deleted from `__init__`. The ordered-record assertion is what
+  actually catches that deletion.
 - **Manifest conflicts**: delete `bindings/julia/Manifest.toml`, then
   `julia --project=bindings/julia -e "using Pkg; Pkg.instantiate()"`.
 - **Julia-only surfaces**: the binary/expression wrappers (`src/binary/`, expression functions)
