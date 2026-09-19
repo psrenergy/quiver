@@ -1,0 +1,19 @@
+[[look_ahead]]
+id = -1
+label = "Unknown"
+
+[[look_ahead]]
+id = 0
+label = "Immediate"
+
+[[look_ahead]]
+id = 3
+label = "Short Term"
+
+[[look_ahead]]
+id = 7
+label = "Long Term"
+
+[[look_ahead]]
+id = 9223372036854775807
+label = "Unbounded"

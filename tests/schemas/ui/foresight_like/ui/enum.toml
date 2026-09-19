@@ -1,0 +1,20 @@
+[[model]]
+id = 2
+label.en = "Local Linear Trend"
+label.es = "Tendencia Lineal Local"
+label.pt = "Tendência Linear Local"
+
+[[model]]
+id = 3
+label = "ARIMA"
+
+[[model]]
+id = 5
+label.en = "Seasonal Naïve"
+label.es = "Ingenuo Estacional"
+label.pt = "Ingênuo Sazonal"
+
+[[model]]
+id = 4
+label.es = "Regresión Lineal"
+label.pt = "Regressão Linear"

@@ -1,0 +1,13 @@
+id = "Storage"
+label = "Storage Units"
+unknown_collection_level_key = "ignored"
+
+[[attribute]]
+id = "capacity"
+label = "Installed Capacity"
+unit = "MW"
+tab = "general"
+type = "float"
+read_only = true
+enabled_if = "true"
+conditions = "always"

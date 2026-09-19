@@ -1,0 +1,20 @@
+id = "Storage"
+label = "Storage Units"
+
+[[attribute]]
+id = "capacity"
+label = "Installed Capacity"
+format.element_view = "0.0"
+format.collection_view = "0.00"
+format.edit = "0.000"
+format.data = "0.0000"
+
+[[attribute]]
+id = "efficiency"
+label = "Efficiency"
+format = "0.0%"
+
+[[attribute]]
+id = "code"
+label = "Code"
+format.data = "raw"

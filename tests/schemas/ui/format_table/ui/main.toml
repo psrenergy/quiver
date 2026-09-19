@@ -1,0 +1,2 @@
+model = "FormatTable"
+collections = ["storage", "empty_collection"]

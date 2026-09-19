@@ -1,0 +1,10 @@
+id = "Agent"
+label = "Agents"
+
+[[attribute]]
+id = "risk_profile"
+label = "Risk Profile"
+
+[[attribute]]
+id = "notes"
+label = "Notes"

@@ -1,0 +1,22 @@
+id = "Storage"
+label = "Storage Units"
+
+[[attribute_group]]
+id = "degradation"
+label = "Degradation Curve"
+
+[[attribute]]
+id = "degradation"
+label = "Degradation Rate"
+
+[[attribute_group]]
+id = "rte"
+label = "Round Trip Efficiency Curve"
+
+[[attribute]]
+id = "capacity"
+label = "Installed Capacity"
+
+[[attribute]]
+id = "cycles"
+label = "Rated Cycle Count"

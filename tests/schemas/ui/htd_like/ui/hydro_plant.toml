@@ -1,0 +1,13 @@
+id = "HydroPlant"
+label = "Hydro Plants"
+
+[[attribute]]
+id = "date_time"
+label.en = "Measurement Date"
+tooltip.en = "Date and time of the measurement"
+
+[[attribute]]
+id = "has_commitment"
+type = "enum"
+enum = "bool"
+label.en = "Unit Commitment"

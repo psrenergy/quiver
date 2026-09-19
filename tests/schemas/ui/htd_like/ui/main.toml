@@ -1,0 +1,2 @@
+model = "HtdLike"
+collections = ["hydro_plant", "thermal_plant"]

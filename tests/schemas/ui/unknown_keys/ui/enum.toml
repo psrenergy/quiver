@@ -1,0 +1,7 @@
+[[bool]]
+id = 0
+label = "Disabled"
+
+[[bool]]
+id = 1
+label = "Enabled"

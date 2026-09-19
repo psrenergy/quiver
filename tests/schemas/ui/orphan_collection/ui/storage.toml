@@ -1,0 +1,8 @@
+id = "Storage"
+label = "Storage Units"
+
+[[attribute]]
+id = "has_commitment"
+type = "enum"
+enum = "bool"
+label = "Has Commitment"

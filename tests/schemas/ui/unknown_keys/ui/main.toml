@@ -1,0 +1,3 @@
+model = "UnknownKeys"
+collections = ["storage"]
+unknown_top_level_key = "ignored"

@@ -1,0 +1,13 @@
+id = "EconomicDriver"
+label = "Economic Drivers"
+
+[[attribute]]
+id = "forecast_model"
+type = "enum"
+enum = "model"
+label = "Forecast Model"
+
+[[attribute]]
+id = "notes"
+tooltip = {}
+label = ""
