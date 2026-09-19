@@ -68,6 +68,49 @@ TEST(DatabaseCApiOptions, HasUiConfigTrueWhenLoaded) {
     quiver_database_close(db);
 }
 
+// Gap 5 (02-VERIFICATION.md): malformed polarity was previously asserted only in C++
+// (DatabaseUiDescribe.MalformedSidecarPublishesNothing). D-25: a single broken collection file
+// fails the whole config -- degrade, never throw -- and the C boundary must report the same false.
+TEST(DatabaseCApiOptions, HasUiConfigFalseWhenSidecarMalformed) {
+    const auto malformed_ui_dir = quiver::test::path_from(__FILE__, "schemas/ui/malformed/ui");
+    const auto db_path = foresight_fixture_dir() + "/capi_options_malformed.sqlite";
+
+    auto options = quiver::test::quiet_options();
+    options.ui_config_dir = malformed_ui_dir.c_str();
+
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(db_path.c_str(), foresight_schema_path().c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    int has_config = 0;
+    EXPECT_EQ(quiver_database_has_ui_config(db, &has_config), QUIVER_OK);
+    EXPECT_EQ(has_config, 0);
+
+    quiver_database_close(db);
+}
+
+// Gap 5 (02-VERIFICATION.md): the D-01 :memory: distinction -- an explicit ui_config_dir loads
+// even for a :memory: database -- was previously asserted only in C++
+// (DatabaseUiOptions.ExplicitConfigDirLoadsEvenForMemoryDatabase). HasUiConfigFalseWhenDirectoryAbsent
+// below already covers the other half (:memory: + no override -> false, the convention path never
+// firing for :memory:).
+TEST(DatabaseCApiOptions, HasUiConfigTrueForMemoryDatabaseWithExplicitDir) {
+    const auto ui_dir = foresight_ui_dir();
+    auto options = quiver::test::quiet_options();
+    options.ui_config_dir = ui_dir.c_str();
+
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", foresight_schema_path().c_str(), &options, &db), QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    int has_config = 0;
+    EXPECT_EQ(quiver_database_has_ui_config(db, &has_config), QUIVER_OK);
+    EXPECT_EQ(has_config, 1);
+
+    quiver_database_close(db);
+}
+
 TEST(DatabaseCApiOptions, HasUiConfigFalseWhenDirectoryAbsent) {
     auto options = quiver::test::quiet_options();
 

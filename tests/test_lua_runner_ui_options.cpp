@@ -123,6 +123,33 @@ TEST(LuaRunnerUiOptions, LuaHasUiConfigFalseWhenAbsent) {
     lua.run(R"LUA(assert(db:has_ui_config() == false, "expected has_ui_config() to be false"))LUA");
 }
 
+// Gap 5 (02-VERIFICATION.md): Lua had no assertion for the malformed-sidecar polarity or the D-01
+// :memory: distinction. The script returns the boolean rather than asserting inside Lua, so the
+// JSON-encoded return value (LuaRunner::run's documented "true"/"false" encoding) is what is
+// checked -- proving the boundary that actually crosses out of the script, not merely truthiness
+// inside it.
+TEST(LuaRunnerUiOptions, LuaHasUiConfigFalseWhenSidecarMalformed) {
+    auto db = quiver::test::open_ui_fixture(__FILE__, "malformed", "lua_ui_options_malformed");
+    quiver::LuaRunner lua(db);
+    EXPECT_EQ(lua.run(R"LUA(return db:has_ui_config())LUA"), "false");
+}
+
+TEST(LuaRunnerUiOptions, LuaHasUiConfigTrueForMemoryDatabaseWithExplicitDir) {
+    auto db = quiver::Database::from_schema(
+        ":memory:",
+        foresight_schema_path(),
+        {.read_only = false, .console_level = quiver::LogLevel::Off, .ui_config_dir = foresight_ui_dir()});
+    quiver::LuaRunner lua(db);
+    EXPECT_EQ(lua.run(R"LUA(return db:has_ui_config())LUA"), "true");
+}
+
+TEST(LuaRunnerUiOptions, LuaHasUiConfigFalseForMemoryDatabaseWithoutDir) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", foresight_schema_path(), {.read_only = false, .console_level = quiver::LogLevel::Off});
+    quiver::LuaRunner lua(db);
+    EXPECT_EQ(lua.run(R"LUA(return db:has_ui_config())LUA"), "false");
+}
+
 TEST(LuaRunnerUiOptions, CliUiLocaleFlagRendersSpanishLabel) {
     ScratchDir scratch("cli_locale_es");
     const auto db_path = scratch.path("db.sqlite");
