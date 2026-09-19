@@ -1,0 +1,20 @@
+Database: :memory:
+Version: 0
+
+Collection: Configuration (0 elements)
+  Scalars:
+    - id (INTEGER) PRIMARY KEY
+    - label (TEXT) NOT NULL
+
+Collection: Items (2 elements)
+  Scalars:
+    - id (INTEGER) PRIMARY KEY
+    - label (TEXT) NOT NULL
+    - priority (INTEGER)
+    - weight (REAL)
+  Vectors:
+    - values: amount(REAL)
+  Sets:
+    - tags: tag(TEXT)
+  Time Series:
+    - data: [date_time], value(REAL)

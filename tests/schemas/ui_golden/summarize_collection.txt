@@ -1,0 +1,12 @@
+Collection: Items (2 elements)
+  Scalars:
+    - id: 2 non-null, 0 null
+    - label: 2 non-null, 0 null
+    - priority: 2 non-null, 0 null; values {1: 1, 2: 1}
+    - weight: 2 non-null, 0 null
+  Vectors:
+    - values: 0/2 non-empty
+  Sets:
+    - tags: 0/2 non-empty
+  Time Series:
+    - data: 0/2 non-empty

@@ -4,3 +4,4 @@
 *.h text eol=lf
 *.jl text eol=lf
 *.py text eol=lf
+tests/schemas/ui_golden/*.txt text eol=lf
