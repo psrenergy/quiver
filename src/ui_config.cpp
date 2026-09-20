@@ -4,6 +4,7 @@
 #include <fstream>
 #include <map>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <toml++/toml.hpp>
 #include <utility>
@@ -132,6 +133,9 @@ UiConfig load_ui_config(const std::string& migrations_path, spdlog::logger& logg
         if (fs::is_regular_file(enum_path)) {
             try {
                 std::ifstream file(enum_path);
+                if (!file.is_open()) {
+                    throw std::runtime_error("could not open file");
+                }
                 std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
                 vocabularies = parse_vocabularies(toml::parse(content));
             } catch (const std::exception& ex) {
@@ -153,6 +157,9 @@ UiConfig load_ui_config(const std::string& migrations_path, spdlog::logger& logg
             }
             try {
                 std::ifstream file(dir_entry.path());
+                if (!file.is_open()) {
+                    throw std::runtime_error("could not open file");
+                }
                 std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
                 auto parsed = parse_collection_file(toml::parse(content), vocabularies);
                 if (parsed) {
