@@ -12,15 +12,19 @@
       beside the migrations directory, resolved with `weakly_canonical` so a trailing separator or a
       relative migrations path lands on the right directory instead of `<migrations>/ui` or the
       process CWD
+
 - [ ] **READ-02**: Collection files are identified by shape — a non-recursive scan of `ui/*.toml`
       keeping files that carry both a top-level string `id` and an `attribute` array — so
       `main.toml`, `enum.toml`, `themes/` and `assets/` are never mistaken for one and no filename
       is ever translated into a table name
+
 - [ ] **READ-03**: Each collection file contributes `label` and `tooltip` per `[[attribute]]` entry,
       keyed by that file's own top-level `id` and the attribute's own `id`
+
 - [ ] **READ-04**: A localizable value is read as-is when it is a string and at its `en` key when it
       is a table, with `\n`/`\r` collapsed to a single space and UTF-8 bytes passed through
       untranscoded
+
 - [ ] **READ-05**: `enum.toml` vocabularies are parsed and joined to attributes by the attribute's
       `enum` value, yielding a code→label map in which the code is the entry's `id` field, never its
       position
@@ -29,16 +33,19 @@
 
 - [ ] **RENDER-01**: `describe` and `describe_collection` show an attribute's label, tooltip and enum
       labels, positioned after the attribute's name, type and flags
+
 - [ ] **RENDER-02**: `summarize_collection` annotates each entry of an integer column's value
       histogram with that code's enum label
+
 - [ ] **RENDER-03**: An attribute the sidecar does not describe — including one whose collection has
       no ui file, and one naming a column that does not exist in the schema — renders exactly as it
       does today
 
 ### Graceful Degradation
 
-- [ ] **SAFE-01**: A database opened from migrations with no `ui/` directory produces reports
+- [x] **SAFE-01**: A database opened from migrations with no `ui/` directory produces reports
       byte-identical to today's
+
 - [ ] **SAFE-02**: A missing, empty, unparseable or partially-populated `ui/` never fails
       `from_migrations` — it logs a warning and the reports render as though no sidecar were present
 
@@ -51,6 +58,7 @@ Acknowledged, not in this milestone's roadmap.
 - **VALID-01**: `validate_ui_config()` cross-checks the sidecar against the live SQL schema and
   reports drift — dangling attribute names, enum vocabularies contradicting the model's own
   declarations, collections with no ui file
+
 - **VALID-02**: The enum vocabulary is checked against the model's Julia `@enumx` declarations, or
   the disagreement is reported rather than silently rendered
 
@@ -59,6 +67,7 @@ Acknowledged, not in this milestone's roadmap.
 - **META-01**: `unit` and `format` are read and rendered, so an agent knows a column is `m³/s`
 - **META-02**: A structured getter exposes label / tooltip / enum labels as data through the C API
   and all five bindings, so `claw` can drop the per-attribute half of `study-config.ts`
+
 - **META-03**: Collection-level metadata (label, help, display order) is exposed
 
 ## Out of Scope
@@ -92,10 +101,11 @@ Mapped during roadmap creation (see .planning/ROADMAP.md).
 | RENDER-01 | Phase 1 | Pending |
 | RENDER-02 | Phase 2 | Pending |
 | RENDER-03 | Phase 1 | Pending |
-| SAFE-01 | Phase 1 | Pending |
+| SAFE-01 | Phase 1 | Complete |
 | SAFE-02 | Phase 1 | Pending |
 
 **Coverage:**
+
 - v0.10.8 requirements: 10 total
 - Mapped to phases: 10
 - Unmapped: 0 ✓

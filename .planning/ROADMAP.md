@@ -46,12 +46,12 @@ core; nothing in this milestone renders pixels, so no `UI hint` annotation appea
   5. A migrations path with a trailing separator, and a relative migrations path, resolve to the same `ui/` directory as the absolute separator-free form — never `<migrations>/ui`, and never a `ui/` under the process CWD.
   6. Fixtures build `migrations/` and `ui/` in a per-test temp dir; nothing is committed under `tests/schemas/ui/`, and the existing `test_database_lifecycle.cpp` describe assertions (`:396-436`, `:438-460`, `:463-485`, `:487-500`) still pass unmodified.
 
-**Plans**: 3 plans
+**Plans**: 1/3 plans executed
 
 Plans:
 **Wave 1**
 
-- [ ] 01-00-PLAN.md — Wave 0: temp-dir `migrations/` + `ui/` fixture harness and the SAFE-01 no-sidecar baseline test
+- [x] 01-00-PLAN.md — Wave 0: temp-dir `migrations/` + `ui/` fixture harness and the SAFE-01 no-sidecar baseline test
 - [ ] 01-01-PLAN.md — Wave 1: tracer slice (path resolve → shape-selected parse → `Impl` store → label/tooltip clauses in both reports), then the `enum.toml` vocabulary expansion
 
 **Wave 2** *(blocked on Wave 1 completion)*
@@ -100,7 +100,7 @@ is its own phase rather than a second edit inside Phase 1's.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Sidecar Reader and Attribute Meaning | 0/3 | Not started | - |
+| 1. Sidecar Reader and Attribute Meaning | 1/3 | In Progress|  |
 | 2. Enum Labels on the Value Histogram | 0/TBD | Not started | - |
 
 ## Requirement Coverage
