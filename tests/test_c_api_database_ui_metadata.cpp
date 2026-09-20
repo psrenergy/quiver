@@ -44,7 +44,7 @@ quiver_database_t* open_enum_basic(const std::string& db_stem) {
 // are the readable record of the same nine numbers the four hand-written FFI decoders hardcode,
 // so a reader of this file need not open the source to see them.
 
-TEST(DatabaseCApiUiMetadata, SizeofAccessorMatchesNativeSixtyFourByteLayout) {
+TEST(CApiDatabaseUiMetadata, SizeofAccessorMatchesNativeSixtyFourByteLayout) {
     EXPECT_EQ(quiver_ui_metadata_sizeof(), 64u);
     EXPECT_EQ(quiver_ui_metadata_sizeof(), sizeof(quiver_ui_metadata_t));
 
@@ -61,7 +61,7 @@ TEST(DatabaseCApiUiMetadata, SizeofAccessorMatchesNativeSixtyFourByteLayout) {
 
 // ROADMAP criterion 4: the two pre-existing metadata structs must be provably untouched by this
 // phase -- asserted here, next to the new struct, rather than only in a diff.
-TEST(DatabaseCApiUiMetadata, ScalarAndGroupMetadataSizesAreUnaffected) {
+TEST(CApiDatabaseUiMetadata, ScalarAndGroupMetadataSizesAreUnaffected) {
     EXPECT_EQ(quiver_scalar_metadata_sizeof(), 56u);
     EXPECT_EQ(quiver_scalar_metadata_sizeof(), sizeof(quiver_scalar_metadata_t));
 
@@ -73,7 +73,7 @@ TEST(DatabaseCApiUiMetadata, ScalarAndGroupMetadataSizesAreUnaffected) {
 // Single-record round trip
 // ============================================================================
 
-TEST(DatabaseCApiUiMetadata, ConfiguredAttributeRoundTripsAllNineFields) {
+TEST(CApiDatabaseUiMetadata, ConfiguredAttributeRoundTripsAllNineFields) {
     quiver_database_t* db = open_enum_basic("capi_ui_metadata_configured");
 
     quiver_ui_metadata_t meta = {};
@@ -106,7 +106,7 @@ TEST(DatabaseCApiUiMetadata, ConfiguredAttributeRoundTripsAllNineFields) {
 
 // D-12: notes declares label = "" -- a declared-blank string field is still a non-NULL pointer,
 // distinct from an unconfigured attribute (also empty, also non-NULL, but configured == 0).
-TEST(DatabaseCApiUiMetadata, DeclaredBlankLabelIsNonNullPointer) {
+TEST(CApiDatabaseUiMetadata, DeclaredBlankLabelIsNonNullPointer) {
     quiver_database_t* db = open_enum_basic("capi_ui_metadata_blank");
 
     quiver_ui_metadata_t meta = {};
@@ -127,7 +127,7 @@ TEST(DatabaseCApiUiMetadata, DeclaredBlankLabelIsNonNullPointer) {
 // assertions actually prove something instead of four transposable no-ops.
 // ============================================================================
 
-TEST(DatabaseCApiUiMetadata, UnitDistinguishesOffsetSixteenFromNeighbours) {
+TEST(CApiDatabaseUiMetadata, UnitDistinguishesOffsetSixteenFromNeighbours) {
     quiver_database_t* db = open_enum_basic("capi_ui_metadata_unit");
 
     quiver_ui_metadata_t meta = {};
@@ -139,7 +139,7 @@ TEST(DatabaseCApiUiMetadata, UnitDistinguishesOffsetSixteenFromNeighbours) {
     quiver_database_close(db);
 }
 
-TEST(DatabaseCApiUiMetadata, HiddenDistinguishesOffsetSixtyFromConfigured) {
+TEST(CApiDatabaseUiMetadata, HiddenDistinguishesOffsetSixtyFromConfigured) {
     quiver_database_t* db = open_enum_basic("capi_ui_metadata_hidden");
 
     quiver_ui_metadata_t meta = {};
@@ -156,7 +156,7 @@ TEST(DatabaseCApiUiMetadata, HiddenDistinguishesOffsetSixtyFromConfigured) {
 // Both D-36 polarities at the C boundary
 // ============================================================================
 
-TEST(DatabaseCApiUiMetadata, UnconfiguredRealColumnReturnsOkWithConfiguredFalse) {
+TEST(CApiDatabaseUiMetadata, UnconfiguredRealColumnReturnsOkWithConfiguredFalse) {
     quiver_database_t* db = open_enum_basic("capi_ui_metadata_unconfigured");
 
     // `label` is a real Storage column enum_basic/ui/storage.toml never mentions.
@@ -171,7 +171,7 @@ TEST(DatabaseCApiUiMetadata, UnconfiguredRealColumnReturnsOkWithConfiguredFalse)
     quiver_database_close(db);
 }
 
-TEST(DatabaseCApiUiMetadata, AbsentColumnReturnsErrorWithExactPattern2Message) {
+TEST(CApiDatabaseUiMetadata, AbsentColumnReturnsErrorWithExactPattern2Message) {
     quiver_database_t* db = open_enum_basic("capi_ui_metadata_no_such_column");
 
     quiver_ui_metadata_t meta = {};
@@ -189,7 +189,7 @@ TEST(DatabaseCApiUiMetadata, AbsentColumnReturnsErrorWithExactPattern2Message) {
 // enum_basic declares exactly one vocabulary, so this asserts the shape (name + count), not
 // ordering -- the non-vacuous ordering proof is 03-01 Task 3's three-name C++ scratch sidecar and
 // is not repeated here.
-TEST(DatabaseCApiUiMetadata, ListUiVocabulariesReturnsFixtureNames) {
+TEST(CApiDatabaseUiMetadata, ListUiVocabulariesReturnsFixtureNames) {
     quiver_database_t* db = open_enum_basic("capi_ui_metadata_list_vocab");
 
     char** names = nullptr;
@@ -204,7 +204,7 @@ TEST(DatabaseCApiUiMetadata, ListUiVocabulariesReturnsFixtureNames) {
     quiver_database_close(db);
 }
 
-TEST(DatabaseCApiUiMetadata, GetUiVocabularyReturnsOrderedCodesAndLabels) {
+TEST(CApiDatabaseUiMetadata, GetUiVocabularyReturnsOrderedCodesAndLabels) {
     quiver_database_t* db = open_enum_basic("capi_ui_metadata_get_vocab");
 
     int64_t* codes = nullptr;
@@ -224,7 +224,7 @@ TEST(DatabaseCApiUiMetadata, GetUiVocabularyReturnsOrderedCodesAndLabels) {
     quiver_database_close(db);
 }
 
-TEST(DatabaseCApiUiMetadata, GetUiVocabularyUnknownNameReturnsErrorWithExactMessage) {
+TEST(CApiDatabaseUiMetadata, GetUiVocabularyUnknownNameReturnsErrorWithExactMessage) {
     quiver_database_t* db = open_enum_basic("capi_ui_metadata_vocab_missing");
 
     int64_t* codes = nullptr;
@@ -243,7 +243,7 @@ TEST(DatabaseCApiUiMetadata, GetUiVocabularyUnknownNameReturnsErrorWithExactMess
 
 // quiver_database_free_ui_metadata takes the struct pointer itself and nulls the fields it frees,
 // so a second call on the same record is a documented no-op, unlike the vocabulary free below.
-TEST(DatabaseCApiUiMetadata, FreeUiMetadataTwiceOnSameRecordIsSafe) {
+TEST(CApiDatabaseUiMetadata, FreeUiMetadataTwiceOnSameRecordIsSafe) {
     quiver_database_t* db = open_enum_basic("capi_ui_metadata_free_twice");
 
     quiver_ui_metadata_t meta = {};
@@ -259,7 +259,7 @@ TEST(DatabaseCApiUiMetadata, FreeUiMetadataTwiceOnSameRecordIsSafe) {
 // quiver_database_free_ui_vocabulary cannot null the caller's raw pointers, so it is NOT asserted
 // safe against a second call on the same pointers (that would be a double free) -- only against a
 // zero-count result and NULL arrays, per the plan's explicit instruction not to write that test.
-TEST(DatabaseCApiUiMetadata, FreeUiVocabularyToleratesZeroCountAndNullArrays) {
+TEST(CApiDatabaseUiMetadata, FreeUiVocabularyToleratesZeroCountAndNullArrays) {
     // Both arrays NULL, count zero -- what get_ui_vocabulary itself returns for a declared-but-
     // empty vocabulary.
     EXPECT_EQ(quiver_database_free_ui_vocabulary(nullptr, nullptr, 0), QUIVER_OK);
