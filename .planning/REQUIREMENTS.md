@@ -80,26 +80,28 @@ Acknowledged, not in this milestone's roadmap.
 
 ## Traceability
 
-Populated during roadmap creation.
+Mapped during roadmap creation (see .planning/ROADMAP.md).
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| READ-01 | — | Pending |
-| READ-02 | — | Pending |
-| READ-03 | — | Pending |
-| READ-04 | — | Pending |
-| READ-05 | — | Pending |
-| RENDER-01 | — | Pending |
-| RENDER-02 | — | Pending |
-| RENDER-03 | — | Pending |
-| SAFE-01 | — | Pending |
-| SAFE-02 | — | Pending |
+| READ-01 | Phase 1 | Pending |
+| READ-02 | Phase 1 | Pending |
+| READ-03 | Phase 1 | Pending |
+| READ-04 | Phase 1 | Pending |
+| READ-05 | Phase 1 | Pending |
+| RENDER-01 | Phase 1 | Pending |
+| RENDER-02 | Phase 2 | Pending |
+| RENDER-03 | Phase 1 | Pending |
+| SAFE-01 | Phase 1 | Pending |
+| SAFE-02 | Phase 1 | Pending |
 
 **Coverage:**
 - v0.10.8 requirements: 10 total
-- Mapped to phases: 0
-- Unmapped: 10 ⚠️
+- Mapped to phases: 10
+- Unmapped: 0 ✓
+- Phase 1: 9 requirements (READ-01..05, RENDER-01, RENDER-03, SAFE-01, SAFE-02)
+- Phase 2: 1 requirement (RENDER-02)
 
 ---
 *Requirements defined: 2026-09-20*
-*Last updated: 2026-09-20 after milestone v0.10.8 initialization*
+*Last updated: 2026-09-20 after roadmap creation*
