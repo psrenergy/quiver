@@ -13,12 +13,12 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   `group` = group read/update + validation, `row` = `upsert_time_series_row`/`read_time_series_row`;
   the C++ core has no `_nulls` file), `test_database_transaction.cpp`,
   `test_database_csv_export.cpp`, `test_database_csv_import.cpp`, `test_database_errors.cpp`
-- `test_database_ui_metadata.cpp` covers the `ui/` TOML sidecar reader (`src/ui_config.{h,cpp}`)
+- `test_database_ui_metadata.cpp` covers the `ui/` TOML sidecar reader (`src/ui_metadata.{h,cpp}`)
   and its render into `describe`/`describe_collection`/`summarize_collection` — the one suite in
   this list that drives `from_migrations` describe output (every other describe assertion in the
   repo goes through `from_schema`, which never populates the sidecar). Two gtest fixture names
   exist so the loader-facing and render-facing halves can be filtered separately:
-  `UiConfigTest` (path resolution, shape selection, localized-value reading, `enum.toml` join, and
+  `UiMetadataTest` (path resolution, shape selection, localized-value reading, `enum.toml` join, and
   the malformed/degrade cases) and `DatabaseUiMetadataTest` (label/tooltip/enum clause rendering,
   the undescribed cases, and the SAFE-01 no-`ui/` baseline). Its `UiTempTreeFixture` base builds a
   per-test temp-dir `migrations/` tree plus sibling `ui/` tree from caller-supplied file contents

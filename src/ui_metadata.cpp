@@ -1,4 +1,4 @@
-#include "ui_config.h"
+#include "ui_metadata.h"
 
 #include <filesystem>
 #include <fstream>
@@ -117,13 +117,13 @@ parse_collection_file(const toml::table& tbl,
 
 }  // namespace
 
-UiConfig load_ui_config(const std::string& migrations_path, spdlog::logger& logger) {
-    UiConfig config;
+UiMetadata load_ui_metadata(const std::string& migrations_path, spdlog::logger& logger) {
+    UiMetadata metadata;
     try {
         const fs::path ui_dir = fs::weakly_canonical(fs::path(migrations_path)).parent_path() / "ui";
         if (!fs::is_directory(ui_dir)) {
             // An absent sidecar is the normal case (SAFE-01), not a degradation -- no warning.
-            return config;
+            return metadata;
         }
 
         // Vocabulary pass, before the collection pass: enum.toml's own inner try/catch, so a
@@ -163,7 +163,7 @@ UiConfig load_ui_config(const std::string& migrations_path, spdlog::logger& logg
                 std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
                 auto parsed = parse_collection_file(toml::parse(content), vocabularies);
                 if (parsed) {
-                    config.collections[parsed->first] = std::move(parsed->second);
+                    metadata.collections[parsed->first] = std::move(parsed->second);
                 }
             } catch (const std::exception& ex) {
                 logger.warn("Failed to load UI metadata from '{}': {}", dir_entry.path().string(), ex.what());
@@ -177,7 +177,7 @@ UiConfig load_ui_config(const std::string& migrations_path, spdlog::logger& logg
         logger.warn("Failed to load UI metadata from '{}': {}", migrations_path, ex.what());
         return {};
     }
-    return config;
+    return metadata;
 }
 
 }  // namespace quiver

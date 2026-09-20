@@ -49,7 +49,7 @@ src/                      # C++ implementation
                               # db:read_csv_stream -- no include/quiver/ counterpart (see below)
   csv_write.h / csv_write.cpp  # Internal CSV writer (hand-rolled, NOT Pimpl'd) behind db:write_csv
                                 # -- same no-include/quiver/-counterpart posture as csv_read
-  ui_config.h / ui_config.cpp  # Internal ui/ TOML sidecar reader behind describe/describe_collection
+  ui_metadata.h / ui_metadata.cpp  # Internal ui/ TOML sidecar reader behind describe/describe_collection
                                 # -- same no-include/quiver/-counterpart posture as csv_read
   cli/main.cpp            # quiver_cli CLI entry point
   utils/string.h          # String utilities: new_c_str, trim
@@ -117,17 +117,17 @@ state and no signature change for it, and padding happens before the cell vector
 `write_row`/`append_record`, so `append_record`'s `lone_empty_cell` predicate sees the final,
 already-padded cell count.
 
-`ui_config.h`/`ui_config.cpp` is the `ui/` TOML sidecar reader behind `describe()` and
+`ui_metadata.h`/`ui_metadata.cpp` is the `ui/` TOML sidecar reader behind `describe()` and
 `describe_collection()` (Phase 1 of the "UI Metadata in describe" milestone): same
 no-`include/quiver/`-header, no-`QUIVER_API`, no-C-API-symbol, no-FFI-binding posture as
 `csv_read` — `describe*` already return a plain `std::string` through the C API, so there is no
 FFI consumer for a structured getter, and toml++ is linked PRIVATE on `quiver`
-(`src/CMakeLists.txt`), so no `toml::` symbol may appear outside this `.cpp`; `ui_config.cpp` must
+(`src/CMakeLists.txt`), so no `toml::` symbol may appear outside this `.cpp`; `ui_metadata.cpp` must
 be listed in `QUIVER_SOURCES` for exactly that reason. The load happens once, in `from_migrations`
 (`database.cpp`) right after `migrate_up` returns, and deliberately **not** on
 `Impl::require_schema` — `migrate_up` early-returns before reaching the schema-load path on every
 re-open of an already-up-to-date study, which is the common case for a real PSR run. A database
-opened with `from_schema` never populates it, so its `Database::Impl::ui_config` stays
+opened with `from_schema` never populates it, so its `Database::Impl::ui_metadata` stays
 default-constructed (empty), and `describe`/`describe_collection` render exactly as before.
 
 The sibling directory is `fs::weakly_canonical(migrations_path).parent_path() / "ui"` — raw
@@ -149,19 +149,19 @@ its own `enum` value, never its `id` (several attributes commonly share one voca
 The whole load is a **nested try/catch that warns and degrades, and never throws** — explicitly
 not `src/binary/binary_metadata.cpp`'s posture, which throws on a parse error or a bare
 `.value()` unwrap with no test for either. One outer catch covers directory iteration and path
-resolution and yields a fully empty `UiConfig` on failure; one inner catch per collection file (and
+resolution and yields a fully empty `UiMetadata` on failure; one inner catch per collection file (and
 a separate one around `enum.toml`) means a single malformed `ui/*.toml` costs only that
 collection's metadata, not every other collection's. An absent or empty `ui/` directory is the
 ordinary case and logs nothing — an empty directory yields zero `directory_iterator` entries, so
 the per-file loop body never runs. A directory that cannot be iterated (path resolution or the
 iteration itself failing) logs one warning from the outer catch and degrades to an empty
-`UiConfig`; a file within it that cannot be opened (`ifstream::is_open()` is checked before
+`UiMetadata`; a file within it that cannot be opened (`ifstream::is_open()` is checked before
 reading, and a failed open throws so it lands in the same catch as a parse failure) or that fails
 to parse logs its own warning through the per-database logger and costs only that file —
 `from_migrations` still succeeds in every case.
 
 Rendering lives in `database_describe.cpp`, not here: `write_collection_section` gained a nullable
-`const UiConfig*` and a `bool with_tooltip` parameter and appends zero to three `"; keyword body"`
+`const UiMetadata*` and a `bool with_tooltip` parameter and appends zero to three `"; keyword body"`
 clauses (`label`, `enum`, `tooltip`, in that fixed order) after each scalar's existing
 name/type/flags line — `describe()` passes `with_tooltip = false`, `describe_collection()` passes
 `true`, so `describe()`'s line is always a strict prefix of `describe_collection()`'s by

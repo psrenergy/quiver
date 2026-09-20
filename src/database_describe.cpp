@@ -168,7 +168,7 @@ void write_collection_section(std::ostream& out,
                               const Schema& schema,
                               const std::string& collection,
                               int64_t count,
-                              const UiConfig* ui,
+                              const UiMetadata* ui,
                               bool with_tooltip) {
     out << "Collection: " << collection << " (" << count << " element" << plural(count) << ")\n";
 
@@ -219,7 +219,7 @@ std::string Database::describe() const {
     for (const auto& collection : impl_->schema->collection_names()) {
         out << "\n";
         write_collection_section(
-            out, *impl_->schema, collection, number_of_elements(collection), &impl_->ui_config, false);
+            out, *impl_->schema, collection, number_of_elements(collection), &impl_->ui_metadata, false);
     }
 
     return out.str();
@@ -230,7 +230,7 @@ std::string Database::describe_collection(const std::string& collection) const {
 
     std::ostringstream out;
     write_collection_section(
-        out, *impl_->schema, collection, number_of_elements(collection), &impl_->ui_config, true);
+        out, *impl_->schema, collection, number_of_elements(collection), &impl_->ui_metadata, true);
     return out.str();
 }
 

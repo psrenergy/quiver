@@ -110,7 +110,7 @@ protected:
 
 // Loader-facing gtest suite name -- reserved for the sidecar-parsing tests of a later plan in
 // this phase (see 01-VALIDATION.md's gtest filters).
-class UiConfigTest : public UiTempTreeFixture {};
+class UiMetadataTest : public UiTempTreeFixture {};
 
 // Render-facing gtest suite name -- describe / describe_collection / summarize_collection
 // assertions, including the SAFE-01 baseline below.
@@ -376,12 +376,12 @@ tooltip.en = "Operating mode of the plant."
 }
 
 // ============================================================================
-// UiConfigTest: loader-facing behavior, driven through the public Database API only (D-12)
+// UiMetadataTest: loader-facing behavior, driven through the public Database API only (D-12)
 // ============================================================================
 
 // READ-03: keyed by the file's own top-level id and each [[attribute]]'s own id -- never the
 // filename. The file below is named differently from both the collection and the attribute.
-TEST_F(UiConfigTest, LabelTooltipKeyedByFileIdAndAttributeId) {
+TEST_F(UiMetadataTest, LabelTooltipKeyedByFileIdAndAttributeId) {
     write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
     write_ui_file("plant_metadata.toml", R"(
 id = "HydroPlant"
@@ -399,7 +399,7 @@ label.en = "Reservoir Kind"
 }
 
 // READ-04: a localizable value is read either as a bare string or from a table's `en` sub-key.
-TEST_F(UiConfigTest, LocalizedStringOrTableEn) {
+TEST_F(UiMetadataTest, LocalizedStringOrTableEn) {
     write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
     write_ui_file("hydro_plant.toml", R"(
 id = "HydroPlant"
@@ -421,7 +421,7 @@ label.en = "Table En Label"
 }
 
 // READ-04: embedded newlines collapse to a single space so the rendered line stays one line.
-TEST_F(UiConfigTest, LocalizedNewlineCollapse) {
+TEST_F(UiMetadataTest, LocalizedNewlineCollapse) {
     write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
     write_ui_file("hydro_plant.toml", R"(
 id = "HydroPlant"
@@ -439,7 +439,7 @@ label.en = "Mean\nProduction\nFactor"
 
 // READ-04/D-03: every C0 control byte (tab, CR, ESC, ...) is normalized to a space, not just the
 // \r/\n/\t named in D-03's prose -- a deliberate superset that also neutralizes ESC.
-TEST_F(UiConfigTest, LocalizedControlCharacterCollapse) {
+TEST_F(UiMetadataTest, LocalizedControlCharacterCollapse) {
     write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
     write_ui_file("hydro_plant.toml", R"(
 id = "HydroPlant"
@@ -457,7 +457,7 @@ label.en = "A\tB\rC\u001bD"
 
 // READ-04/D-02: non-ASCII UTF-8 passes through byte-for-byte -- squash() may drop it for
 // redundancy comparisons, but the rendered text itself is never transcoded.
-TEST_F(UiConfigTest, LocalizedUtf8Passthrough) {
+TEST_F(UiMetadataTest, LocalizedUtf8Passthrough) {
     write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
     write_ui_file("hydro_plant.toml", R"(
 id = "HydroPlant"
@@ -484,7 +484,7 @@ tooltip.en = "Measured in °C"
 
 // D-06/D-19: a gapped vocabulary ([0, 2]) renders its real codes verbatim, joined by the
 // attribute's own `enum` value.
-TEST_F(UiConfigTest, EnumGappedCodesRenderVerbatim) {
+TEST_F(UiMetadataTest, EnumGappedCodesRenderVerbatim) {
     write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
     write_ui_file("enum.toml", R"(
 [[initial_volume_type]]
@@ -511,7 +511,7 @@ enum = "initial_volume_type"
 }
 
 // D-06: a 1-based vocabulary renders with no positional renumbering.
-TEST_F(UiConfigTest, EnumOneBasedCodesRenderVerbatim) {
+TEST_F(UiMetadataTest, EnumOneBasedCodesRenderVerbatim) {
     write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
     write_ui_file("enum.toml", R"(
 [[reservoir_type]]
@@ -539,7 +539,7 @@ enum = "reservoir_type"
 
 // D-19: two attributes with different ids sharing one vocabulary name each render that
 // vocabulary -- the join key is the attribute's `enum` value, never its `id`.
-TEST_F(UiConfigTest, EnumJoinedByEnumValueNotAttributeId) {
+TEST_F(UiMetadataTest, EnumJoinedByEnumValueNotAttributeId) {
     write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
     write_ui_file("enum.toml", R"(
 [[bool]]
@@ -572,7 +572,7 @@ enum = "bool"
 }
 
 // An attribute whose `enum` value names no vocabulary in enum.toml renders no enum clause.
-TEST_F(UiConfigTest, EnumUnknownVocabularyRendersNoClause) {
+TEST_F(UiMetadataTest, EnumUnknownVocabularyRendersNoClause) {
     write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
     write_ui_file("enum.toml", R"(
 [[bool]]
@@ -594,7 +594,7 @@ enum = "does_not_exist"
 }
 
 // A vocabulary with zero entries renders no enum clause -- never an empty brace pair.
-TEST_F(UiConfigTest, EnumEmptyVocabularyRendersNoClause) {
+TEST_F(UiMetadataTest, EnumEmptyVocabularyRendersNoClause) {
     write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
     write_ui_file("enum.toml", "reservoir_type = []\n");
     write_ui_file("hydro_plant.toml", R"(
@@ -613,7 +613,7 @@ enum = "reservoir_type"
 
 // A vocabulary entry with no id, or no readable label, is dropped; the surviving entry still
 // renders.
-TEST_F(UiConfigTest, EnumEntryMissingIdOrLabelIsDropped) {
+TEST_F(UiMetadataTest, EnumEntryMissingIdOrLabelIsDropped) {
     write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
     write_ui_file("enum.toml", R"(
 [[reservoir_type]]
@@ -641,7 +641,7 @@ enum = "reservoir_type"
 }
 
 // D-06: entries render in ascending code order regardless of file order.
-TEST_F(UiConfigTest, EnumEntriesRenderInAscendingCodeOrder) {
+TEST_F(UiMetadataTest, EnumEntriesRenderInAscendingCodeOrder) {
     write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
     write_ui_file("enum.toml", R"(
 [[initial_volume_type]]
@@ -670,7 +670,7 @@ enum = "initial_volume_type"
 // enum.toml has no wrapper key: each top-level key is discovered by iteration and IS itself a
 // vocabulary name. Three differently-named vocabularies in one file, each joined by a different
 // attribute, prove discover-by-iteration -- a fixed lookup key could not find any of them.
-TEST_F(UiConfigTest, EnumTopLevelKeyIsTheVocabularyName) {
+TEST_F(UiMetadataTest, EnumTopLevelKeyIsTheVocabularyName) {
     write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
     write_ui_file("enum.toml", R"(
 [[bool]]
@@ -710,7 +710,7 @@ enum = "reservoir_type"
 
 // A trailing separator on the migrations path resolves to the same ui/ sibling as the same path
 // without one -- raw parent_path() would instead land on "<migrations>/ui", which never exists.
-TEST_F(UiConfigTest, PathResolutionTrailingSeparator) {
+TEST_F(UiMetadataTest, PathResolutionTrailingSeparator) {
     write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
     write_ui_file("hydro_plant.toml", R"(
 id = "HydroPlant"
@@ -738,7 +738,7 @@ label.en = "Initial Storage"
 // A bare relative migrations path finds the sibling ui/ next to it, never a ui/ under the process
 // CWD -- raw parent_path() on a bare relative path yields "./ui" against whatever the CWD happens
 // to be at call time.
-TEST_F(UiConfigTest, PathResolutionRelativeMigrationsPath) {
+TEST_F(UiMetadataTest, PathResolutionRelativeMigrationsPath) {
     write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
     write_ui_file("hydro_plant.toml", R"(
 id = "HydroPlant"
@@ -769,7 +769,7 @@ label.en = "Initial Storage"
 // The decoy at migrations/ui/ (a live sibling of every numbered version directory) is never read
 // -- only the resolved sibling of the migrations path itself is. This is the exact misresolution
 // raw parent_path() produces on a trailing-separator or relative path.
-TEST_F(UiConfigTest, PathResolutionNeverReadsUiUnderMigrations) {
+TEST_F(UiMetadataTest, PathResolutionNeverReadsUiUnderMigrations) {
     write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
     write_ui_file("hydro_plant.toml", R"(
 id = "HydroPlant"
@@ -805,7 +805,7 @@ label.en = "Decoy Label"
 // main.toml (flat keys, no top-level id), a theme-shaped file (id but no attribute array), a plain
 // text file, and a themes/ subdirectory (non-recursive scan) contribute nothing and never throw --
 // even though the themes/ file would otherwise self-select as a collection file.
-TEST_F(UiConfigTest, ShapeSelectionIgnoresNonCollectionFiles) {
+TEST_F(UiMetadataTest, ShapeSelectionIgnoresNonCollectionFiles) {
     write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
     write_ui_file("main.toml", R"(
 model = "HydroThermalDispatch"
@@ -841,7 +841,7 @@ label.en = "Should Never Render"
 }
 
 // A collection file self-selects by its own top-level `id`, never its filename.
-TEST_F(UiConfigTest, ShapeSelectionUsesFileIdNotFilename) {
+TEST_F(UiMetadataTest, ShapeSelectionUsesFileIdNotFilename) {
     write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
     write_ui_file("dc_line.toml", R"(
 id = "HydroPlant"
@@ -1015,7 +1015,7 @@ attribute = "not_an_array"
 
 // D-09: two collection files, one unparseable -- the good collection's clauses still render, and
 // nothing throws. This is what the inner per-file catch buys over a single outer catch.
-TEST_F(UiConfigTest, MalformedOneFileKeepsOtherCollections) {
+TEST_F(UiMetadataTest, MalformedOneFileKeepsOtherCollections) {
     write_migration(1,
                     reservoir_schema() + R"(
 CREATE TABLE ThermalPlant (
