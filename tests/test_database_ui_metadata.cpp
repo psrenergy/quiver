@@ -45,17 +45,13 @@ protected:
         }
     }
 
-    std::string migrations_dir() const {
-        return (fs::path(root) / "migrations").string();
-    }
+    std::string migrations_dir() const { return (fs::path(root) / "migrations").string(); }
 
     // The sibling `ui/` directory `from_migrations` resolves against the migrations path. Uses
     // weakly_canonical before parent_path, matching src/lua_runner.cpp's resolve_sandboxed_path
     // idiom -- a raw parent_path() misresolves a trailing-slash or bare-relative migrations path
     // (CONTEXT.md "Two resolution traps").
-    std::string ui_dir() const {
-        return (fs::weakly_canonical(migrations_dir()).parent_path() / "ui").string();
-    }
+    std::string ui_dir() const { return (fs::weakly_canonical(migrations_dir()).parent_path() / "ui").string(); }
 
     void write_migration(int version, const std::string& up_sql, const std::string& down_sql) {
         auto dir = fs::path(migrations_dir()) / std::to_string(version);
@@ -77,10 +73,9 @@ protected:
     }
 
     quiver::Database open_tree() {
-        return quiver::Database::from_migrations(
-            (fs::path(root) / "study.db").string(),
-            migrations_dir(),
-            {.read_only = false, .console_level = quiver::LogLevel::Off});
+        return quiver::Database::from_migrations((fs::path(root) / "study.db").string(),
+                                                 migrations_dir(),
+                                                 {.read_only = false, .console_level = quiver::LogLevel::Off});
     }
 
     // A sibling of `root`, never a subdirectory of it -- copying `root` into its own subdirectory
@@ -105,10 +100,9 @@ protected:
         if (fs::exists(mirror_ui)) {
             fs::remove_all(mirror_ui);
         }
-        return quiver::Database::from_migrations(
-            (mirror / "mirror_study.db").string(),
-            mirror_migrations.string(),
-            {.read_only = false, .console_level = quiver::LogLevel::Off});
+        return quiver::Database::from_migrations((mirror / "mirror_study.db").string(),
+                                                 mirror_migrations.string(),
+                                                 {.read_only = false, .console_level = quiver::LogLevel::Off});
     }
 
     std::string root;
@@ -238,11 +232,9 @@ tooltip.en = "Reservoir volume at the start of the study."
 
     auto db = open_tree();
 
-    const std::string expected_describe_line =
-        "    - hm3_initial (REAL); label \"Initial Storage (hm³)\"\n";
-    const std::string expected_describe_collection_line =
-        "    - hm3_initial (REAL); label \"Initial Storage (hm³)\"; "
-        "tooltip \"Reservoir volume at the start of the study.\"\n";
+    const std::string expected_describe_line = "    - hm3_initial (REAL); label \"Initial Storage (hm³)\"\n";
+    const std::string expected_describe_collection_line = "    - hm3_initial (REAL); label \"Initial Storage (hm³)\"; "
+                                                          "tooltip \"Reservoir volume at the start of the study.\"\n";
 
     auto describe = db.describe();
     auto describe_collection = db.describe_collection("HydroPlant");
@@ -402,8 +394,7 @@ label.en = "Reservoir Kind"
     auto db = open_tree();
     auto describe_collection = db.describe_collection("HydroPlant");
 
-    EXPECT_NE(describe_collection.find("    - reservoir_type (INTEGER); label \"Reservoir Kind\"\n"),
-              std::string::npos)
+    EXPECT_NE(describe_collection.find("    - reservoir_type (INTEGER); label \"Reservoir Kind\"\n"), std::string::npos)
         << describe_collection;
 }
 
@@ -443,8 +434,7 @@ label.en = "Mean\nProduction\nFactor"
     auto db = open_tree();
     auto describe_collection = db.describe_collection("HydroPlant");
 
-    EXPECT_NE(describe_collection.find("; label \"Mean Production Factor\""), std::string::npos)
-        << describe_collection;
+    EXPECT_NE(describe_collection.find("; label \"Mean Production Factor\""), std::string::npos) << describe_collection;
 }
 
 // READ-04/D-03: every C0 control byte (tab, CR, ESC, ...) is normalized to a space, not just the
@@ -485,8 +475,7 @@ tooltip.en = "Measured in °C"
     auto describe_collection = db.describe_collection("HydroPlant");
 
     EXPECT_NE(describe_collection.find("; label \"Volume Útil\""), std::string::npos) << describe_collection;
-    EXPECT_NE(describe_collection.find("; tooltip \"Measured in °C\""), std::string::npos)
-        << describe_collection;
+    EXPECT_NE(describe_collection.find("; tooltip \"Measured in °C\""), std::string::npos) << describe_collection;
 }
 
 // ============================================================================
@@ -732,8 +721,8 @@ label.en = "Initial Storage"
 )");
 
     auto db_no_slash = quiver::Database::from_migrations((fs::path(root) / "study_no_slash.db").string(),
-                                                          migrations_dir(),
-                                                          {.read_only = false, .console_level = quiver::LogLevel::Off});
+                                                         migrations_dir(),
+                                                         {.read_only = false, .console_level = quiver::LogLevel::Off});
     auto db_trailing_slash =
         quiver::Database::from_migrations((fs::path(root) / "study_trailing_slash.db").string(),
                                           migrations_dir() + "/",
@@ -766,9 +755,7 @@ label.en = "Initial Storage"
     const fs::path saved_cwd = fs::current_path();
     struct CwdGuard {
         fs::path saved;
-        ~CwdGuard() {
-            fs::current_path(saved);
-        }
+        ~CwdGuard() { fs::current_path(saved); }
     } guard{saved_cwd};
     fs::current_path(root);
 
