@@ -1086,3 +1086,32 @@ enum = "initial_volume_type"
     EXPECT_TRUE(report.find(R"(values {0 "Per Unit": 2, 1: 1})") != std::string::npos) << report;
     EXPECT_FALSE(report.find("\"Volume\"") != std::string::npos) << report;
 }
+
+// D-09: a label that normalizes to empty (here, all-whitespace) drops only the annotation and
+// keeps the histogram entry -- deliberate divergence from D-06's `enum {}` clause, where an
+// empty-normalizing label drops the whole vocabulary entry.
+TEST_F(DatabaseUiMetadataTest, SummarizeHistogramKeepsEntryWhenLabelNormalizesToEmpty) {
+    write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
+    write_ui_file("enum.toml", R"(
+[[initial_volume_type]]
+id = 0
+label.en = "   "
+)");
+    write_ui_file("hydro_plant.toml", R"(
+id = "HydroPlant"
+
+[[attribute]]
+id = "initial_volume_type"
+enum = "initial_volume_type"
+)");
+
+    auto db = open_tree();
+    db.create_element(
+        "HydroPlant",
+        quiver::Element().set("label", std::string("a")).set("initial_volume_type", static_cast<int64_t>(0)));
+
+    auto report = db.summarize_collection("HydroPlant");
+
+    // The entry survives with a bare code -- only the annotation is dropped.
+    EXPECT_NE(report.find(R"(values {0: 1})"), std::string::npos) << report;
+}
