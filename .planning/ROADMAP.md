@@ -151,23 +151,48 @@ Plans:
 
 ### Phase 3: Structured Attribute Metadata
 
-**Goal**: `Claw/claw/src/core/study-config.ts` can drop its per-attribute half — a consumer asks Quiver for a scalar attribute's label, tooltip, unit, format, hidden flag and enum vocabulary as structured data, in every binding and in Lua, instead of parsing a text report.
+**Goal**: **As a** consumer of a PSR study database (claw first among them), **I want to** ask Quiver for a scalar attribute's label, tooltip, unit, format, hidden flag and enum vocabulary as structured data, in every binding and in Lua, **so that** I can interpret an INTEGER column's meaning without parsing a text report.
+
+*Goal line corrected during planning (03-CONTEXT P-01, P-03). The previous wording claimed `Claw/claw/src/core/study-config.ts` "can drop its per-attribute half". Both halves of that are wrong: the real path is `C:/Development/Claw/claw1/src/core/study-config.ts` (`claw1`, not `claw` — a grep for the old spelling finds nothing), and that file is 68 lines reading only `main.toml` plus each collection file's `id`, with a header comment stating that per-attribute semantics are deliberately left to quiverdb. claw also parses nothing out of `describe()`. **Phase 3 deletes no parser anywhere; it adds a capability claw has no code path for yet.***
 **Mode:** mvp
 **Depends on**: Phase 1 (buildable in parallel with Phase 2; ships in the same release)
 **Requirements**: META-01, META-02, META-03, META-04, META-05, META-06
 **Success Criteria** (what must be TRUE):
 
-  1. A caller in C++, the C API, Julia, Dart, Python, JS and Lua gets a structured record for a `(collection, attribute)` pair carrying label, tooltip, unit, format, hidden flag, vocabulary name and that vocabulary's full ordered `{code, label}` entries — and an attribute the TOML does not configure returns a default-constructed record rather than throwing.
+  1. A caller in C++, the C API, Julia, Dart, Python, JS and Lua gets a structured record for a `(collection, attribute)` pair carrying label, tooltip, unit, format, hidden flag and vocabulary **name**, and — via the paired vocabulary getter, **the two getters together** — that vocabulary's full ordered `{code, label}` entries; an attribute the TOML does not configure returns a default-constructed record rather than throwing. *(Amended during planning: the original wording read as one record carrying the entries inline, which drifts from D-10's unresolved-name design.)*
   2. A caller lists every loaded vocabulary and fetches one vocabulary's entries by name; an unknown name throws the Pattern 2 `not found` message, surfaced identically in all five bindings and Lua.
-  3. `format` round-trips **verbatim** in both grammars (`{:.2f}`, `yyyy-MM-dd`) and both shapes — the string form and the 4-key table form no corpus file uses — with Quiver classifying neither.
+  3. **The winning key's** `format` string round-trips **verbatim** in both grammars (`{:.2f}`, `yyyy-MM-dd`) and from both shapes — the string form and the 4-key table form, which collapses at parse time to the first present of `data` / `element_view` / `collection_view` / `edit` — with Quiver classifying neither. *(Amended during planning per D-33: the original "round-trips verbatim … in both shapes" is not deliverable for the table form, because `resolve_format_table` discards the three non-winning keys irrecoverably. Do not write a test asserting four-key round-trip; it cannot pass.)*
   4. `git diff` shows `include/quiver/attribute_metadata.h`, `quiver_scalar_metadata_t` and `quiver_group_metadata_t` untouched: the metadata crosses as its **own** struct with its own size accessor and its own free function, and JS adds a new constant only.
   5. `bindings/js/test/lua-api-sync.test.ts` is green — the new `db:` name landed in `src/lua_runner.cpp` and `bindings/js/src/lua-api.ts` as one edit, not two.
 
-**Plans**: TBD
+**Plans**: 7 plans in 4 waves
+
+Plans:
+**Wave 1**
+
+- [ ] 03-01-PLAN.md — Tracer: one attribute's UI record from the TOML sidecar to a Python caller (public `ui_metadata.h`, the three C++ getters, the 64-byte C struct + size accessor + get/free, Python's decoder and fifth gate entry, the C++ test file)
+
+**Wave 2** *(blocked on Wave 1 — completes and freezes the C header)*
+
+- [ ] 03-02-PLAN.md — The vocabulary pair across the C API with its dedicated combined free, the C-layer layout/independence/leak proof, and Python's two vocabulary decoders
+
+**Wave 3** *(blocked on Wave 2 for the four FFI decoders; the Lua plan is blocked on Wave 1 only)*
+
+- [ ] 03-03-PLAN.md — Julia: regenerated `c_api.jl` with a field-completeness assertion, the fifth gate entry in `generator/prologue.jl`, the three getters
+- [ ] 03-04-PLAN.md — Dart: hand-edited `bindings.dart`, fifth gate entry with the wiring-evidence test ordered first and its mutation executed, the three getters
+- [ ] 03-05-PLAN.md — JS: symbol table, `UI_METADATA_SIZE`, fifth gate entry, the nine hand-written offsets asserted field by field
+- [ ] 03-06-PLAN.md — Lua: the three `db:` methods with nil-for-empty and the record-array vocabulary, plus the `lua-api.ts` reference in the same commit
+
+**Wave 4** *(blocked on all of Wave 3)*
+
+- [ ] 03-07-PLAN.md — Close-out: CLAUDE.md updates incl. the Lua divergence entry, CHANGELOG under the single unreleased 0.11.0 heading, the criterion-4 diff proof, full suite, release-dispatch decision
 
 **Notes:**
 
-- Freeze the C header before any binding decoder starts, or five decoders get re-edited simultaneously. The five decoders parallelize once it is frozen.
+- Freeze the C header before any binding decoder starts, or five decoders get re-edited simultaneously. The four **FFI** decoders parallelize once it is frozen (end of 03-02).
+- **Lua is exempt from that freeze.** `LuaRunner` calls `Database::…` directly in C++ via sol2 and never goes through the C API, so 03-06 depends only on the C++ getter signatures 03-01 froze. It runs in the same wave as the four FFI decoders rather than behind them.
+- **`src/CMakeLists.txt` uses hand-maintained explicit source lists for both the `quiver` and `quiver_c` targets — no glob.** 03-CONTEXT D-43's "no CMake work" means no new dependency or target, not no edit. The plans sidestep the hazard entirely by adding no new `.cpp`: the C++ getters join `src/database_metadata.cpp` and the C API surface joins `src/c/database_metadata.cpp`. `tests/CMakeLists.txt` carries the same hazard for the three new test files and is edited explicitly, each with a nonzero-test-count acceptance criterion.
+- **No new C header.** The C surface is declared inside the existing `include/quiver/c/database.h`. A separate `include/quiver/c/ui_metadata.h` would need one line in Python's generator `HEADERS` list **and both** of Dart's ffigen header lists (`entry-points` and `include-directives` in `pubspec.yaml`) — three edits, not the one D-43 budgeted. Criterion 4 requires its own *struct*, not its own file.
 - Shape precedents to copy rather than invent: `convert_scalar_to_c` / `free_scalar_fields` for the converter pair, `quiver_csv_options_t` for grouped parallel arrays, `quiver_database_free_time_series_data` for the free signature, and `scalar_metadata_lua` (`src/lua_runner.cpp` L1166) for the Lua converter.
 - Carry the Phase 1 accepted-risk note forward: the structured getter hands the unchecked label to a consumer that will reason on it, so the enum **code** travels with it.
 
@@ -274,7 +299,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 |-------|----------------|--------|-----------|
 | 1. Enum Labels in Describe | 6/6 | Complete    | 2026-09-19 |
 | 2. Config Path, Locale and Struct-Size Safety | 13/13 | Complete    | 2026-09-19 |
-| 3. Structured Attribute Metadata | 0/TBD | Not started | - |
+| 3. Structured Attribute Metadata | 0/7 | Planned | - |
 | 4. Collection and Attribute-Group Metadata | 0/TBD | Not started | - |
 | 5. `validate_ui_config()` and Milestone Release | 0/TBD | Not started | - |
 
