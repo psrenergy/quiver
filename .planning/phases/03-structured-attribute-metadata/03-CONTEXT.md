@@ -182,8 +182,10 @@ are only what that panel left open, plus the corrections this discussion found.
   `:memory:`, an absent directory and a parse throw all end with the cache empty and
   `has_ui_config() == false`. Any getter calling it inherits a never-throws-from-loading contract
   for free. (This is orthogonal to D-36, which throws on a bad *column name*, not a bad sidecar.)
-- **D-42:** The single-record getter is **caller-allocated** with `char*` fields strdup'd by C and
-  nulled by the matching free — the `get_scalar_metadata` / `free_scalar_metadata` pair
+- **D-42:** The single-record getter is **caller-allocated** with `char*` fields allocated by C with
+  `quiver::string::new_c_str` (`new char[]`, `src/utils/string.h:16-21` — the house idiom per
+  `src/c/CLAUDE.md` "String Handling"), released with `delete[]` and nulled by the matching free —
+  the `get_scalar_metadata` / `free_scalar_metadata` pair
   (`include/quiver/c/database.h:349-352,370`). This fixes the allocation idiom in every binding:
   Julia `Ref`, Dart `arena<T>()`, Python `ffi.new("T*")`, JS `new Uint8Array(SIZE)`.
 - **D-43:** No new dependency and no CMake work. tomlplusplus is already `PRIVATE` on `quiver` and
