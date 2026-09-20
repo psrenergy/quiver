@@ -37,7 +37,7 @@
 - [ ] **RENDER-02**: `summarize_collection` annotates each entry of an integer column's value
       histogram with that code's enum label
 
-- [ ] **RENDER-03**: An attribute the sidecar does not describe — including one whose collection has
+- [x] **RENDER-03**: An attribute the sidecar does not describe — including one whose collection has
       no ui file, and one naming a column that does not exist in the schema — renders exactly as it
       does today
 
@@ -46,7 +46,7 @@
 - [x] **SAFE-01**: A database opened from migrations with no `ui/` directory produces reports
       byte-identical to today's
 
-- [ ] **SAFE-02**: A missing, empty, unparseable or partially-populated `ui/` never fails
+- [x] **SAFE-02**: A missing, empty, unparseable or partially-populated `ui/` never fails
       `from_migrations` — it logs a warning and the reports render as though no sidecar were present
 
 ## Future Requirements
@@ -100,9 +100,9 @@ Mapped during roadmap creation (see .planning/ROADMAP.md).
 | READ-05 | Phase 1 | Complete |
 | RENDER-01 | Phase 1 | Complete |
 | RENDER-02 | Phase 2 | Pending |
-| RENDER-03 | Phase 1 | Pending |
+| RENDER-03 | Phase 1 | Complete |
 | SAFE-01 | Phase 1 | Complete |
-| SAFE-02 | Phase 1 | Pending |
+| SAFE-02 | Phase 1 | Complete |
 
 **Coverage:**
 

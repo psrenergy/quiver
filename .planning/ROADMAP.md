@@ -46,7 +46,7 @@ core; nothing in this milestone renders pixels, so no `UI hint` annotation appea
   5. A migrations path with a trailing separator, and a relative migrations path, resolve to the same `ui/` directory as the absolute separator-free form — never `<migrations>/ui`, and never a `ui/` under the process CWD.
   6. Fixtures build `migrations/` and `ui/` in a per-test temp dir; nothing is committed under `tests/schemas/ui/`, and the existing `test_database_lifecycle.cpp` describe assertions (`:396-436`, `:438-460`, `:463-485`, `:487-500`) still pass unmodified.
 
-**Plans**: 2/3 plans executed
+**Plans**: 3/3 plans executed
 
 Plans:
 **Wave 1**
@@ -56,7 +56,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 01-02-PLAN.md — Wave 2: path-resolution, shape-selection, undescribed and malformed-sidecar coverage, plus the `CHANGELOG.md` reconciliation and CLAUDE.md updates
+- [x] 01-02-PLAN.md — Wave 2: path-resolution, shape-selection, undescribed and malformed-sidecar coverage, plus the `CHANGELOG.md` reconciliation and CLAUDE.md updates
 
 Also in this phase (prerequisite for its changelog entry): reconcile `CHANGELOG.md`'s
 `## [0.10.7] — unreleased` heading and its compare link to `0.10.8`, since `v0.10.7` is already
@@ -100,7 +100,7 @@ is its own phase rather than a second edit inside Phase 1's.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Sidecar Reader and Attribute Meaning | 2/3 | In Progress|  |
+| 1. Sidecar Reader and Attribute Meaning | 3/3 | In Progress|  |
 | 2. Enum Labels on the Value Histogram | 0/TBD | Not started | - |
 
 ## Requirement Coverage
