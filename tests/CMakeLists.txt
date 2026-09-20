@@ -102,6 +102,7 @@ if(QUIVER_BUILD_C_API)
         test_c_api_database_time_series_nulls.cpp
         test_c_api_database_time_series_row.cpp
         test_c_api_database_transaction.cpp
+        test_c_api_database_ui_metadata.cpp
         test_c_api_database_update.cpp
         test_c_api_element.cpp
         test_c_api_lua_runner.cpp
