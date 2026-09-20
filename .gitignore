@@ -67,4 +67,5 @@ Testing/
 *.log
 *.sqlite
 
+.gsd/
 .planning/
