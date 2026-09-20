@@ -267,12 +267,29 @@ std::string Database::summarize_collection(const std::string& collection) const 
                     query_int_rows(impl_->db,
                                    "SELECT " + quoted_col + ", COUNT(*) FROM " + quoted_collection + " WHERE " +
                                        quoted_col + " IS NOT NULL GROUP BY " + quoted_col + " ORDER BY " + quoted_col);
+                // D2-12: the lookup sits here, not at the top of the per-scalar loop, so a
+                // collection of TEXT/REAL/PK scalars pays zero two-level map lookups.
+                const auto* meta = impl_->ui_metadata.find(collection, scalar.name);
                 out << "; values {";
                 for (size_t i = 0; i < rows.size(); ++i) {
                     if (i != 0) {
                         out << ", ";
                     }
-                    out << rows[i][0] << ": " << rows[i][1];
+                    out << rows[i][0];
+                    // D2-06 / project decision D-09: deliberate divergence from D-06's enum
+                    // clause. There the entry IS the vocabulary, so an empty-normalizing label
+                    // drops the whole entry; here the entry is an observed row count, so an
+                    // empty-normalizing label drops only the annotation and keeps the entry.
+                    if (meta) {
+                        auto label_it = meta->enum_labels.find(rows[i][0]);
+                        if (label_it != meta->enum_labels.end()) {
+                            const std::string normalized_label = normalize_ui_text(label_it->second);
+                            if (!normalized_label.empty()) {
+                                out << " " << quote_ui_text(normalized_label);
+                            }
+                        }
+                    }
+                    out << ": " << rows[i][1];
                 }
                 out << "}";
             }
