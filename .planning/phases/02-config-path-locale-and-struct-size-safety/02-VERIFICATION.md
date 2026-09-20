@@ -1,10 +1,23 @@
 ---
 phase: 2
 slug: config-path-locale-and-struct-size-safety
-status: gaps_found
+status: passed
 verified: 2026-09-19
-method: 7-lens empirical verification workflow + adversarial challenge (partial — session limit)
-score: 3/5 success criteria MET, 2 PARTIAL; 1 external blocker
+method: 7-lens empirical verification workflow + adversarial challenge (initial, session-limited); re-verification after gap-closure wave (02-08..02-13) — goal-backward, evidence read directly from the codebase, all 6 suites re-run
+score: 5/5 success criteria MET (re-verification) — see "Re-verification" section below; original run scored 3/5 MET, 2 PARTIAL
+re_verification:
+  previous_status: gaps_found
+  previous_score: "3/5 MET, 2 PARTIAL (SC2, SC3, SC4 partial; SAFE-01 incomplete)"
+  gaps_closed:
+    - "Gap 1 — stale CHANGELOG/version premise (closed by 02-13)"
+    - "Gap 2 — struct-size tests passed vacuously with the gate deleted, all four bindings (closed by 02-08/02-10/02-11)"
+    - "Gap 3 — JS had no diagnosis for a native missing the *_sizeof accessors (closed by 02-12)"
+    - "Gap 4 — JS makeDefaultOptions GC-lifetime defect (closed by 02-12)"
+    - "Gap 5 — malformed/:memory: polarity tests were C++-only (closed by 02-09)"
+    - "Gap 6 — quiver_csv_options_t (fourth struct) had no accessor/gate in any binding (closed by 02-08/02-10/02-11)"
+    - "Gap 7 — open()/from_migrations()/whole-database describe() locale coverage was probe-only, not committed (closed by 02-09)"
+  gaps_remaining: []
+  regressions: []
 ---
 
 # Phase 2 Verification — Config Path, Locale and Struct-Size Safety
@@ -201,3 +214,201 @@ reproduced a defect that had already shipped. `bindings/python/src/quiverdb/_loa
 contained `pass  # MUTATION: gate unwired` at both call sites, landed via merge `e8d35b9`, so the
 gate was genuinely inert in the shipped binding, not merely undertested against deletion. Plan
 02-08 confirmed this by reading the file before making any edit and restored the gate.
+
+## Re-verification (gap-closure wave, plans 02-08 … 02-13) — 2026-09-19
+
+**Status: `passed`.** This section re-judges all five ROADMAP success criteria against the
+codebase at HEAD (`408e657`, branch `rs/enums`), reading loader/gate call sites and test bodies
+directly rather than trusting SUMMARY prose, and re-running all six test suites myself. The
+findings above (the original `gaps_found` run) are left unmodified as history; this section
+supersedes their verdicts.
+
+### Suites re-run (this verification, not the SUMMARYs' claims)
+
+| Suite | Command | Result |
+|---|---|---|
+| C++ core | `./build/bin/quiver_tests.exe` | **1304/1304 passed** |
+| C API | `./build/bin/quiver_c_tests.exe` | **569/569 passed** |
+| Python | `bindings/python/tests/test.bat` | **327 passed** |
+| JS (Bun) | `bindings/js/test/test.bat` | **241 pass, 0 fail** (448 expect() calls) |
+| Julia | `bindings/julia/test/test.bat` | **1490/1490 passed** (Struct Sizes 35/35, UI Options 27/27) |
+| Dart | `bindings/dart/test/test.bat` | **443/443 passed, "All tests passed!"** |
+
+All six match the counts each gap-closure SUMMARY reported — not merely "the SUMMARY said so",
+each was independently executed above.
+
+### Per-criterion verdict
+
+**SC1 — a caller in each host opens with an explicit UI config dir + non-`en` locale, and reads
+back a locale-specific label through `describe`, proving the value crossed the FFI.**
+**MET.** Confirmed a committed, exact-string, positive-and-negative assertion through
+whole-database `describe()` (not just `describe_collection()`) in all five hosts, closing the
+original report's self-reported SC1 coverage gap (Gap 7):
+- Julia: `bindings/julia/test/test_database_ui_options.jl:153-164` — `Quiver.describe(db)` with
+  `ui_locale="es"` asserts `occursin("Ingenuo Estacional", report)` **and**
+  `!occursin("Seasonal Naïve", report)`.
+- Dart: `bindings/dart/test/database_ui_options_test.dart:193-204` — `db.describe()` asserts
+  `contains('Ingenuo Estacional')` and `isNot(contains('Seasonal Naïve'))`.
+- Python: `bindings/python/tests/test_database_ui_options.py:174-183` —
+  `test_describe_carries_locale_specific_label` asserts the same positive/negative pair.
+- JS: `bindings/js/test/database-ui-options.test.ts:201-215` —
+  `describeCarriesLocaleSpecificLabel` asserts the same pair through `db.describe()`.
+- `open()` and `from_migrations()` (previously proven only via ad-hoc runtime probe, not a
+  committed test) now have committed cases in all four bindings: e.g.
+  `bindings/julia/test/test_database_ui_options.jl:123,136` (`open() threads ui_config_dir and
+  ui_locale` / `from_migrations() threads ...`), mirrored in Dart (`:150,169`), Python
+  (`test_open_threads_ui_config_dir_and_locale` / `test_from_migrations_threads_...`,
+  grep-confirmed present), JS (`:157,177` `openThreadsUiConfigDirAndLocale` /
+  `fromMigrationsThreadsUiConfigDirAndLocale`).
+- The empty-string `ui_locale` edge (D-03 NULL mapping) is also committed in all four bindings.
+
+**SC2 — `has_ui_config()` answers true/false correctly in every layer.**
+**MET** (was PARTIAL). The original gap was pure test-coverage: behaviour was already correct
+everywhere, but malformed-sidecar polarity and the `:memory:` distinction (D-01) were asserted
+only in C++. Verified new committed cases in all six layers:
+- C API: `tests/test_c_api_database_options.cpp` — `HasUiConfigFalseWhenSidecarMalformed`,
+  `HasUiConfigTrueForMemoryDatabaseWithExplicitDir`.
+- Lua: `tests/test_lua_runner_ui_options.cpp:131` — `LuaHasUiConfigFalseWhenSidecarMalformed`
+  plus two more `:memory:`-distinction `TEST`s, driving `LuaRunner::run("return
+  db:has_ui_config()")` and asserting the exact JSON string.
+- Julia/Dart/Python/JS: each carries a `malformed sidecar` case and a `:memory: distinction` case
+  (grep-confirmed at `test_database_ui_options.jl:95,106`,
+  `database_ui_options_test.dart:114,126`, `test_database_ui_options.py:113,122`,
+  `database-ui-options.test.ts:120,136`).
+
+**SC3 — loading against a native library whose struct sizes disagree produces a named, loud
+error at load time, covering options + `quiver_scalar_metadata_t` + `quiver_group_metadata_t`
+(JS's hardcoded `SCALAR_METADATA_SIZE`/`GROUP_METADATA_SIZE`).**
+**MET** (was PARTIAL — two independent refutations: vacuous tests in all four bindings, and no
+JS diagnosis for a native missing the accessors). Both refutations closed, verified directly:
+- **Vacuous-test refutation closed.** Read every gate's call site, not just its test: Python's
+  `_assert_struct_sizes(ffi, lib)` is called at both the bundled and development `load_library()`
+  paths (`bindings/python/src/quiverdb/_loader.py:88,109`) — confirmed by reading the file, not
+  by re-driving the gate. JS's `assertNativeStructSizes(lib.symbols)` has exactly one call site,
+  inside `loadLibrary()`, outside every `initLibrary()`/`resolveLibrary()` try/catch tier
+  (`bindings/js/src/loader.ts:459-467`). Julia's `_assert_struct_sizes()` runs inside `__init__()`
+  (`bindings/julia/generator/prologue.jl:137-145`). Dart's runs inside the `bindings` getter on
+  first access (`bindings/dart/lib/src/ffi/library_loader.dart:34-44`). Each binding now also
+  carries a wiring-evidence test (`_CHECKED_STRUCTS` / `checkedStructNames()`) that observes the
+  gate *ran* without re-driving it — confirmed each is populated only by the real gate function.
+  The one pre-existing test per binding that calls the gate directly (the "ordering" test) was
+  confirmed to run *after* the wiring-evidence test in file order (Dart's was explicitly moved to
+  be the file's first test, confirmed present at that position), so it cannot mask a mutation of
+  the real call site for the wiring test's own run. Julia's literal `@test true` (previously
+  flagged) is deleted — confirmed via `grep -n "@test true" bindings/julia/test/test_struct_sizes.jl`
+  returning only a comment mentioning the old defect, not a live assertion.
+  Independently confirmed Python's gate was not merely undertested but genuinely unwired in a
+  prior shipped state (`pass  # MUTATION: gate unwired`, merge `e8d35b9`) — 02-08 read this
+  directly before fixing it, correcting the original report's characterization from "untested"
+  to "was already broken and shipped."
+- **JS missing-accessor diagnosis closed.** `resolveLibrary()` (`bindings/js/src/loader.ts:357-`)
+  re-runs the tiered resolution with a minimal `PROBE_SYMBOLS` map on failure; if the probe
+  succeeds, it throws a message naming all four `*_sizeof` accessors and stating the native
+  predates this release, rather than the old generic "Cannot load native library" text. If the
+  probe also fails, the original error is rethrown unchanged (`throw e`) — confirmed by reading
+  the code, matching the SUMMARY's claim exactly.
+- All four bindings gate the same fourth struct, `quiver_csv_options_t` (56 bytes) — see SC5/SAFE-01
+  below.
+
+**SC4 — `ffi-helpers.ts` allocates the options buffer from named offset constants sized from the
+size accessor, and `allocPtrOut`/`allocUint64Out`'s unrelated `new Uint8Array(8)` allocations are
+provably unchanged.**
+**MET** (was PARTIAL — a proven, if low-exposure, GC lifetime defect in the old keepalive
+pattern). Verified two things directly:
+1. `allocPtrOut`/`allocUint64Out` still read `const buf = new Uint8Array(8);`
+   (`bindings/js/src/ffi-helpers.ts:91-92,104-105`). `git log -p --follow` on the file shows the
+   three Phase-2 commits that touch it (`ab0cd31`, `0ee7355`, `bd3df03`) mention these two
+   functions **only in commit-message prose** ("untouched"/"unchanged") — grep against the actual
+   diff hunks in each of those three commits found zero occurrences of either function name in a
+   `+`/`-` line. The one place their signature ever changed (`Buffer` → `Allocation`) was the
+   pre-Phase-2 Deno→Bun migration (`8f500d4`), not this phase.
+2. `makeDefaultOptions()` (plan 02-12) now returns a single self-contained `Allocation` — struct
+   header and both option strings live in one buffer, computed via `ptr(buf, tailOffset)` — with
+   no second allocation for the GC to reclaim, which is the structural elimination of the defect
+   `02-VERIFICATION.md`'s original run proved reachable (if barely) on a byte-for-byte replica.
+   `buildCsvOptionsBuffer` in `csv.ts` deliberately keeps its own keepalive tuple for a
+   genuinely different reason (variable-length child pointer tables) — documented in
+   `bindings/js/CLAUDE.md`, not silently left inconsistent.
+
+**SC5 — Python's CFFI cdef, Dart's hand-edited `bindings.dart`, and Julia's regenerated
+`c_api.jl` each carry at least one test that a wrong layout would actually fail.**
+**MET** (was MET but unchallenged by the original run's session limit; now independently
+re-judged, not merely re-affirmed). Judged whether each test could genuinely go red, not whether
+it exists:
+- **Adjacency/mismatch tests** exist in all three (and JS) for all four structs, e.g. Python's
+  mismatch parametrize block over `(24,8)`, `(56,40)`, `(32,16)`, `(56,55)`, `(56,57)`
+  (`bindings/python/tests/test_struct_sizes.py:47-58`) — these pass a wrong number directly to
+  the pure `_check_struct_size` helper, proving the raise path fires on any disagreement.
+- **The harder question — can the *gate itself* (not just its helper) be silently deleted
+  without a test noticing — is what the original report's SC3 skeptic (a) refuted for all four
+  bindings.** This is now closed (see SC3 above): each binding's wiring-evidence test
+  (`_CHECKED_STRUCTS` / `checkedStructNames`) is populated only as a side effect of the real gate
+  running during library load, and each plan recorded an actual mutation check (gate call site
+  commented out / replaced with a no-op, suite re-run, failure observed with the exact expected-
+  vs-actual mismatch, then restored and suite re-run green) — not merely asserted as a written
+  claim. I did not re-run these mutations myself (each would require a source-level mutation
+  followed by a full suite run per binding, several minutes each); I instead verified structurally
+  that (a) each wiring-evidence test never calls the gate function directly, and (b) the one
+  pre-existing test per binding that *does* call the gate directly (the "ordering" test) runs
+  after the wiring-evidence test in file order, so it cannot mask a deleted real call site for the
+  wiring test's own run. This satisfies "the test could genuinely go red" by construction; I flag
+  that I did not re-execute the mutation myself as the one piece of self-reported evidence in this
+  criterion I accepted on the SUMMARYs' record rather than reproducing firsthand.
+- Julia's `_CHECKED_STRUCTS` and gate call are authored only in `generator/prologue.jl`, never
+  hand-added to `src/c_api.jl` — confirmed by reading `prologue.jl:54-145` and comparing to the
+  regenerated `c_api.jl`, which contains no such wiring code, correctly placing this logic where a
+  `generator.bat` re-run cannot silently drop it (unlike the Julia field-drop regression 02-09
+  found and fixed in the *struct definition* itself, which lives in `c_api.jl` and was restored at
+  `bc1fe6e` — confirmed present: `bindings/julia/src/c_api.jl:176-181` has all four
+  `quiver_database_options_t` fields including `ui_config_dir`/`ui_locale`).
+- Dart's `quiver_csv_options_sizeof` is a 12-line hand-add to `bindings.dart`, not a full ffigen
+  regen (confirmed via the plan's own recorded `git diff --stat`, and independently sane: 12
+  lines is far below a full-regen diff, which the phase's own constraint says would flip several
+  enums).
+
+### Requirement coverage re-check
+
+| Requirement | Status | Evidence |
+|---|---|---|
+| OPT-01..04 | Complete | SC1/SC2 above |
+| OPT-05 | Complete | `CSV_OPTIONS_SIZE` + 7 named `CSV_OPTIONS_OFFSET_*` constants in `ffi-helpers.ts`, consumed by `csv.ts`'s `buildCsvOptionsBuffer` — grep-confirmed zero bare `new Uint8Array(56)` remaining in `csv.ts` |
+| OPT-06 | Complete | `bindings/dart/test/test.bat` confirmed to `rmdir /s /q .dart_tool\hooks_runner` and `.dart_tool\lib` before the suite runs |
+| SAFE-01 | Complete (was PARTIAL — missing `quiver_csv_options_sizeof`) | `include/quiver/c/options.h:71` declares it, `src/c/options.cpp:14,30` pins it with `static_assert(sizeof(quiver_csv_options_t) == 56, ...)` and defines the accessor |
+| SAFE-02 | Complete | all four load-time gates check all four structs in the same fixed order (options, scalar metadata, group metadata, csv options), confirmed by reading each gate function |
+| SAFE-03 | Complete | same four-struct coverage confirmed in every binding's gate, short-circuiting on first mismatch |
+
+### Previously-identified gaps — closure table
+
+| # | Gap (from original `02-VERIFICATION.md`) | Closed by | Verified how in this re-verification |
+|---|---|---|---|
+| 1 | Stale-clone/CHANGELOG blocker: duplicate `## [0.10.6]` headings, orphaned compare chain, `v0.10.7` premise wrong | 02-13 | `git tag -l v0.10.7` present; `grep -n "^## \[" CHANGELOG.md` shows exactly one heading each for 0.10.6/0.10.7; compare-link chain `0.11.0→0.10.7→0.10.6→...` is continuous with no orphan (read directly) |
+| 2 | Every in-repo struct-size test passed vacuously when the gate was deleted (all 4 bindings) | 02-08 (Python) / 02-10 (JS) / 02-11 (Julia, Dart) | Read each gate's call site and each wiring-evidence test; confirmed structurally that the gate is the sole populator of `_CHECKED_STRUCTS`/`checkedStructNames`, per binding, as detailed under SC3/SC5 above |
+| 3 | JS had no diagnosis for a native present but missing the `*_sizeof` accessors — the only skew that can occur today | 02-12 | Read `resolveLibrary()` in `loader.ts`; confirmed the probe-based diagnosis and the unchanged-rethrow fallback |
+| 4 | JS `makeDefaultOptions` had a proven (if low-exposure) GC lifetime defect | 02-12 | Read `makeDefaultOptions()`; confirmed the single self-contained `Allocation`, no second allocation |
+| 5 | Malformed-config and `:memory:` polarity tested only in C++ (not Julia/Dart/Python/JS/Lua) | 02-09 | Grep-confirmed malformed + `:memory:` test cases in all six layers, listed under SC2 above |
+| 6 | SAFE-01 incomplete: `quiver_csv_options_t` had no `*_sizeof` accessor or gate coverage in any binding | 02-08 (native+Python) / 02-10 (JS) / 02-11 (Julia, Dart) | Confirmed the native accessor + all four bindings' four-struct gates, listed under SC3/SAFE-01 above |
+| 7 | `open()`/`from_migrations()` proven only by ad-hoc probe; no committed test asserted a locale label through whole-database `describe()` | 02-09 | Confirmed committed tests for both, listed under SC1 above |
+
+**All seven previously-identified gaps are closed**, verified against the current codebase rather
+than accepted from SUMMARY claims.
+
+### Weighed and not counted as blocking
+
+- **Code review WR-01** (`bindings/dart/test/database_ui_options_test.dart:41-49`,
+  `scratchMigrationsDir()`): confirmed still present — the helper returns a path with no paired
+  `addTearDown`, so a scratch migrations directory leaks per test run. This is a test-hygiene
+  resource leak in one binding's test suite, not a defect in the shipped library or its safety
+  guarantees, and does not affect any of the five success criteria. **Does not block the goal**,
+  but is a legitimate low-severity follow-up (per the code review's own classification).
+- **CHANGELOG heads `## [0.11.0] — unreleased`; manifests at 0.10.7.** This is the deliberately
+  deferred release-ritual step (a single `part=minor` dispatch), not a criterion any of the five
+  success criteria depend on — `scripts/assert_version.py` exits 0 with all five manifests
+  agreeing at 0.10.7, confirmed directly. Dispatching the version bump is out of scope for this
+  phase's goal and was explicitly held for Phase 3 per `.planning/STATE.md`.
+
+### Verdict
+
+All five ROADMAP success criteria for Phase 2 are **MET** against the current codebase, all nine
+requirements (OPT-01..06, SAFE-01..03) are **Complete**, all seven previously-identified gaps are
+**closed**, and all six test suites are green (re-run directly, not accepted from SUMMARY
+claims). No blocking issues remain. **Recommendation: `passed` — ready to proceed to Phase 3.**
