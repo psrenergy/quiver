@@ -14,11 +14,10 @@ namespace {
 
 namespace fs = std::filesystem;
 
-// Serves label, tooltip and (task 1-01-02) each enum.toml entry's own label (READ-04): a plain
-// string is used as-is; a table is read at its "en" sub-key. Anything else (missing key, wrong
-// shape, no "en") degrades to nullopt rather than throwing -- there is no in-repo precedent for
-// this exact string-or-table branch (RESEARCH.md Pattern 3), so every read here stays
-// optional-checked.
+// Serves label, tooltip and each enum.toml entry's own label (READ-04): a plain string is used
+// as-is; a table is read at its "en" sub-key. Anything else (missing key, wrong shape, no "en")
+// degrades to nullopt rather than throwing -- there is no in-repo precedent for this exact
+// string-or-table branch (RESEARCH.md Pattern 3), so every read here stays optional-checked.
 std::optional<std::string> read_localized(const toml::node* node) {
     if (!node) {
         return std::nullopt;
@@ -34,12 +33,38 @@ std::optional<std::string> read_localized(const toml::node* node) {
     return std::nullopt;
 }
 
-// enum.toml's vocabulary pass. Filled in by task 1-01-02 (enum.toml has no wrapper key: each
-// top-level key IS itself a vocabulary name, discovered by iterating the whole top-level table --
-// RESEARCH.md Pattern 4). Left empty here so the seam exists and every attribute's enum_labels
-// stays default-constructed for this task.
-std::map<std::string, std::map<int64_t, std::string>> parse_vocabularies(const toml::table&) {
-    return {};
+// enum.toml has no wrapper key: each top-level key IS itself a vocabulary name ([[bool]],
+// [[initial_volume_type]], ...) and its value is an array of {id, label} tables. Discovered by
+// iterating the whole top-level table rather than reading one fixed array key (RESEARCH.md
+// Pattern 4, which corrects CONTEXT.md's "[[vocab]]" shorthand). A duplicated id inside one
+// vocabulary resolves to the later entry (map assignment in file order); an entry with no id, a
+// non-integer id, or no readable label is dropped.
+std::map<std::string, std::map<int64_t, std::string>> parse_vocabularies(const toml::table& tbl) {
+    std::map<std::string, std::map<int64_t, std::string>> vocabularies;
+    for (auto&& [key, node] : tbl) {
+        const auto* arr = node.as_array();
+        if (!arr) {
+            continue;
+        }
+        std::map<int64_t, std::string> entries;
+        for (auto& elem : *arr) {
+            const auto* entry_tbl = elem.as_table();
+            if (!entry_tbl) {
+                continue;
+            }
+            auto id = (*entry_tbl)["id"].value<int64_t>();
+            if (!id) {
+                continue;
+            }
+            auto label = read_localized(entry_tbl->get("label"));
+            if (!label) {
+                continue;
+            }
+            entries[*id] = *label;
+        }
+        vocabularies[std::string(key.str())] = std::move(entries);
+    }
+    return vocabularies;
 }
 
 // One ui/*.toml collection file. Returns nullopt when the file's shape does not self-select as a
@@ -49,7 +74,7 @@ std::map<std::string, std::map<int64_t, std::string>> parse_vocabularies(const t
 // (D-18). A repeated attribute id resolves to the later entry.
 std::optional<std::pair<std::string, std::map<std::string, UiAttribute>>>
 parse_collection_file(const toml::table& tbl,
-                      const std::map<std::string, std::map<int64_t, std::string>>& /*vocabularies*/) {
+                      const std::map<std::string, std::map<int64_t, std::string>>& vocabularies) {
     auto id = tbl["id"].value<std::string>();
     const auto* attributes = tbl["attribute"].as_array();
     if (!id || id->empty() || !attributes) {
@@ -74,8 +99,16 @@ parse_collection_file(const toml::table& tbl,
         if (auto tooltip = read_localized(attr_tbl->get("tooltip"))) {
             meta.tooltip = *tooltip;
         }
-        // Enum join (D-19) is task 1-01-02's seam -- meta.enum_labels stays default-constructed
-        // (empty) here.
+        // Join key is the attribute's own `enum` value, never its `id` (D-19) -- 46 corpus
+        // attributes share the `bool` vocabulary, so joining by attribute id would give each of
+        // them a different, wrong vocabulary or none. An `enum` value naming nothing leaves the
+        // map default-constructed (empty).
+        if (auto vocab_name = (*attr_tbl)["enum"].value<std::string>()) {
+            auto vocab_it = vocabularies.find(*vocab_name);
+            if (vocab_it != vocabularies.end()) {
+                meta.enum_labels = vocab_it->second;
+            }
+        }
         attrs[*attr_id] = std::move(meta);
     }
     return std::make_pair(*id, std::move(attrs));
