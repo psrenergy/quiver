@@ -66,3 +66,5 @@ Testing/
 
 *.log
 *.sqlite
+
+.planning/

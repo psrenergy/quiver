@@ -1,6 +1,6 @@
 {
   "model_profile": "adaptive",
-  "commit_docs": true,
+  "commit_docs": false,
   "parallelization": true,
   "search_gitignored": false,
   "brave_search": false,
@@ -12,7 +12,7 @@
   "jina": false,
   "git": {
     "branching_strategy": "none",
-    "create_tag": true,
+    "create_tag": false,
     "phase_branch_template": "gsd/phase-{phase}-{slug}",
     "milestone_branch_template": "gsd/{milestone}-{slug}",
     "quick_branch_template": null
@@ -47,7 +47,8 @@
     "security_enforcement": true,
     "security_asvs_level": 1,
     "security_block_on": "high",
-    "_auto_chain_active": false
+    "_auto_chain_active": false,
+    "use_worktrees": false
   },
   "ship": {
     "pr_body_sections": [
