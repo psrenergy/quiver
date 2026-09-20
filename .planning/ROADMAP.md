@@ -95,7 +95,7 @@ Plans:
   4. `bindings/js/src/ffi-helpers.ts` allocates the options buffer from **named offset constants** with a field-order comment, sized from the size accessor — and the file's two unrelated `new Uint8Array(8)` allocations (`allocPtrOut`, `allocUint64Out`) are provably unchanged.
   5. Python's CFFI cdef, Dart's hand-edited `bindings.dart` (no ffigen regen; `.dart_tool/hooks_runner/` and `.dart_tool/lib/` cleared before the suite runs) and Julia's regenerated `c_api.jl` each carry at least one test that a wrong layout would actually fail.
 
-**Plans:** 12/13 plans executed
+**Plans:** 13/13 plans executed
 
 Plans:
 **Wave 1**
@@ -135,7 +135,7 @@ Plans:
 
 **Gap-closure wave 4** *(blocked on all of the above)*
 
-- [ ] 02-13-PLAN.md — CHANGELOG 0.10.7 reconciliation (duplicate heading, missing compare link, wrong 0.11.0 base) and correction of the stale planning premises
+- [x] 02-13-PLAN.md — CHANGELOG 0.10.7 reconciliation (duplicate heading, missing compare link, wrong 0.11.0 base) and correction of the stale planning premises
 
 **Cross-cutting constraints:**
 
@@ -273,7 +273,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Enum Labels in Describe | 6/6 | Complete    | 2026-09-19 |
-| 2. Config Path, Locale and Struct-Size Safety | 12/13 | In Progress|  |
+| 2. Config Path, Locale and Struct-Size Safety | 13/13 | In Progress|  |
 | 3. Structured Attribute Metadata | 0/TBD | Not started | - |
 | 4. Collection and Attribute-Group Metadata | 0/TBD | Not started | - |
 | 5. `validate_ui_config()` and Milestone Release | 0/TBD | Not started | - |
