@@ -5,15 +5,15 @@ milestone_name: UI Metadata in describe
 current_phase: 01
 current_phase_name: Sidecar Reader and Attribute Meaning
 status: executing
-stopped_at: Completed 01-00-PLAN.md
-last_updated: "2026-09-20T16:16:23.625Z"
+stopped_at: Completed 01-01-PLAN.md
+last_updated: "2026-09-20T16:40:28.613Z"
 last_activity: 2026-09-20
 last_activity_desc: Roadmap created, 10/10 requirements mapped
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-09-20)
 ## Current Position
 
 Phase: 01 (Sidecar Reader and Attribute Meaning) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-09-20 — Phase 01 execution started
 
-Progress: [███░░░░░░░] 33%
+Progress: [███████░░░] 67%
 
 ## Performance Metrics
 
@@ -59,6 +59,7 @@ Progress: [███░░░░░░░] 33%
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | Phase 01 P00 | 25min | 1 tasks | 2 files |
+| Phase 01 P01 | 35min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -81,6 +82,8 @@ Full log in PROJECT.md Key Decisions. Affecting current work:
 
 - [Phase ?]: Moved the *NoUiDir* SAFE-01 baseline test from plan 02 to plan 00 (task 1-00-01) — the fixture and baseline must exist before any production code is written
 - [Phase ?]: Corrected the plan's summarize_collection literal-line assertion to match its actual output shape (no (TYPE) NOT NULL declaration form there); the no-clause-marker requirement (the actual SAFE-01 truth) is asserted against all three reports unchanged
+- [Phase ?]: Front-loaded the enum clause emitter into task 1's commit as an inert no-op over an empty vocabulary map; task 2 still ran RED (failing enum tests) then GREEN (parse_vocabularies + join) for the actual enum behavior.
+- [Phase ?]: normalize_ui_text treats every byte below 0x20 or equal to 0x7F as a control byte (superset of D-03's named \r/\n/\t), also neutralizing ESC for the T-01-03 ANSI-injection mitigation.
 
 ### Pending Todos
 
@@ -105,6 +108,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-09-20T16:16:23.608Z
-Stopped at: Completed 01-00-PLAN.md
+Last session: 2026-09-20T16:40:28.593Z
+Stopped at: Completed 01-01-PLAN.md
 Resume file: None

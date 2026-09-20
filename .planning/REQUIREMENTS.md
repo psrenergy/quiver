@@ -8,30 +8,30 @@
 
 ### Sidecar Reading
 
-- [ ] **READ-01**: Opening a database with `from_migrations` reads the `ui/` directory that sits
+- [x] **READ-01**: Opening a database with `from_migrations` reads the `ui/` directory that sits
       beside the migrations directory, resolved with `weakly_canonical` so a trailing separator or a
       relative migrations path lands on the right directory instead of `<migrations>/ui` or the
       process CWD
 
-- [ ] **READ-02**: Collection files are identified by shape — a non-recursive scan of `ui/*.toml`
+- [x] **READ-02**: Collection files are identified by shape — a non-recursive scan of `ui/*.toml`
       keeping files that carry both a top-level string `id` and an `attribute` array — so
       `main.toml`, `enum.toml`, `themes/` and `assets/` are never mistaken for one and no filename
       is ever translated into a table name
 
-- [ ] **READ-03**: Each collection file contributes `label` and `tooltip` per `[[attribute]]` entry,
+- [x] **READ-03**: Each collection file contributes `label` and `tooltip` per `[[attribute]]` entry,
       keyed by that file's own top-level `id` and the attribute's own `id`
 
-- [ ] **READ-04**: A localizable value is read as-is when it is a string and at its `en` key when it
+- [x] **READ-04**: A localizable value is read as-is when it is a string and at its `en` key when it
       is a table, with `\n`/`\r` collapsed to a single space and UTF-8 bytes passed through
       untranscoded
 
-- [ ] **READ-05**: `enum.toml` vocabularies are parsed and joined to attributes by the attribute's
+- [x] **READ-05**: `enum.toml` vocabularies are parsed and joined to attributes by the attribute's
       `enum` value, yielding a code→label map in which the code is the entry's `id` field, never its
       position
 
 ### Report Rendering
 
-- [ ] **RENDER-01**: `describe` and `describe_collection` show an attribute's label, tooltip and enum
+- [x] **RENDER-01**: `describe` and `describe_collection` show an attribute's label, tooltip and enum
       labels, positioned after the attribute's name, type and flags
 
 - [ ] **RENDER-02**: `summarize_collection` annotates each entry of an integer column's value
@@ -93,12 +93,12 @@ Mapped during roadmap creation (see .planning/ROADMAP.md).
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| READ-01 | Phase 1 | Pending |
-| READ-02 | Phase 1 | Pending |
-| READ-03 | Phase 1 | Pending |
-| READ-04 | Phase 1 | Pending |
-| READ-05 | Phase 1 | Pending |
-| RENDER-01 | Phase 1 | Pending |
+| READ-01 | Phase 1 | Complete |
+| READ-02 | Phase 1 | Complete |
+| READ-03 | Phase 1 | Complete |
+| READ-04 | Phase 1 | Complete |
+| READ-05 | Phase 1 | Complete |
+| RENDER-01 | Phase 1 | Complete |
 | RENDER-02 | Phase 2 | Pending |
 | RENDER-03 | Phase 1 | Pending |
 | SAFE-01 | Phase 1 | Complete |
