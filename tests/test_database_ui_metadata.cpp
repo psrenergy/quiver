@@ -274,6 +274,15 @@ tooltip.en = "Annual discount rate applied to future operating costs, in %."
 // describe_collection()'s line. The cheapest possible anti-drift guarantee -- write it first.
 TEST_F(DatabaseUiMetadataTest, PrefixInvariantDescribeIsPrefixOfDescribeCollection) {
     write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
+    write_ui_file("enum.toml", R"(
+[[reservoir_type]]
+id = 0
+label.en = "Reservoir"
+
+[[reservoir_type]]
+id = 1
+label.en = "Run of river"
+)");
     write_ui_file("hydro_plant.toml", R"(
 id = "HydroPlant"
 
@@ -285,6 +294,12 @@ tooltip.en = "Reservoir volume at the start of the study."
 [[attribute]]
 id = "discount_rate"
 tooltip.en = "Annual discount rate."
+
+[[attribute]]
+id = "reservoir_type"
+label.en = "Reservoir Kind"
+enum = "reservoir_type"
+tooltip.en = "Operating mode of the plant."
 )");
 
     auto db = open_tree();
@@ -413,4 +428,230 @@ tooltip.en = "Measured in °C"
     EXPECT_NE(describe_collection.find("; label \"Volume Útil\""), std::string::npos) << describe_collection;
     EXPECT_NE(describe_collection.find("; tooltip \"Measured in °C\""), std::string::npos)
         << describe_collection;
+}
+
+// ============================================================================
+// Task 1-01-02: enum.toml vocabularies and the enum clause (TDD)
+// ============================================================================
+
+// D-06/D-19: a gapped vocabulary ([0, 2]) renders its real codes verbatim, joined by the
+// attribute's own `enum` value.
+TEST_F(UiConfigTest, EnumGappedCodesRenderVerbatim) {
+    write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
+    write_ui_file("enum.toml", R"(
+[[initial_volume_type]]
+id = 0
+label.en = "Per Unit"
+
+[[initial_volume_type]]
+id = 2
+label.en = "Volume"
+)");
+    write_ui_file("hydro_plant.toml", R"(
+id = "HydroPlant"
+
+[[attribute]]
+id = "initial_volume_type"
+enum = "initial_volume_type"
+)");
+
+    auto db = open_tree();
+    auto describe_collection = db.describe_collection("HydroPlant");
+
+    EXPECT_NE(describe_collection.find(R"(; enum {0: "Per Unit", 2: "Volume"})"), std::string::npos)
+        << describe_collection;
+}
+
+// D-06: a 1-based vocabulary renders with no positional renumbering.
+TEST_F(UiConfigTest, EnumOneBasedCodesRenderVerbatim) {
+    write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
+    write_ui_file("enum.toml", R"(
+[[reservoir_type]]
+id = 1
+label.en = "Reservoir"
+
+[[reservoir_type]]
+id = 2
+label.en = "Run of river"
+)");
+    write_ui_file("hydro_plant.toml", R"(
+id = "HydroPlant"
+
+[[attribute]]
+id = "reservoir_type"
+enum = "reservoir_type"
+)");
+
+    auto db = open_tree();
+    auto describe_collection = db.describe_collection("HydroPlant");
+
+    EXPECT_NE(describe_collection.find(R"(; enum {1: "Reservoir", 2: "Run of river"})"), std::string::npos)
+        << describe_collection;
+}
+
+// D-19: two attributes with different ids sharing one vocabulary name each render that
+// vocabulary -- the join key is the attribute's `enum` value, never its `id`.
+TEST_F(UiConfigTest, EnumJoinedByEnumValueNotAttributeId) {
+    write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
+    write_ui_file("enum.toml", R"(
+[[bool]]
+id = 0
+label.en = "No"
+
+[[bool]]
+id = 1
+label.en = "Yes"
+)");
+    write_ui_file("hydro_plant.toml", R"(
+id = "HydroPlant"
+
+[[attribute]]
+id = "initial_volume_type"
+enum = "bool"
+
+[[attribute]]
+id = "reservoir_type"
+enum = "bool"
+)");
+
+    auto db = open_tree();
+    auto describe_collection = db.describe_collection("HydroPlant");
+
+    size_t first = describe_collection.find(R"(; enum {0: "No", 1: "Yes"})");
+    ASSERT_NE(first, std::string::npos) << describe_collection;
+    size_t second = describe_collection.find(R"(; enum {0: "No", 1: "Yes"})", first + 1);
+    EXPECT_NE(second, std::string::npos) << describe_collection;
+}
+
+// An attribute whose `enum` value names no vocabulary in enum.toml renders no enum clause.
+TEST_F(UiConfigTest, EnumUnknownVocabularyRendersNoClause) {
+    write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
+    write_ui_file("enum.toml", R"(
+[[bool]]
+id = 0
+label.en = "No"
+)");
+    write_ui_file("hydro_plant.toml", R"(
+id = "HydroPlant"
+
+[[attribute]]
+id = "reservoir_type"
+enum = "does_not_exist"
+)");
+
+    auto db = open_tree();
+    auto describe_collection = db.describe_collection("HydroPlant");
+
+    EXPECT_EQ(describe_collection.find(kEnumClauseOpener), std::string::npos) << describe_collection;
+}
+
+// A vocabulary with zero entries renders no enum clause -- never an empty brace pair.
+TEST_F(UiConfigTest, EnumEmptyVocabularyRendersNoClause) {
+    write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
+    write_ui_file("enum.toml", "reservoir_type = []\n");
+    write_ui_file("hydro_plant.toml", R"(
+id = "HydroPlant"
+
+[[attribute]]
+id = "reservoir_type"
+enum = "reservoir_type"
+)");
+
+    auto db = open_tree();
+    auto describe_collection = db.describe_collection("HydroPlant");
+
+    EXPECT_EQ(describe_collection.find(kEnumClauseOpener), std::string::npos) << describe_collection;
+}
+
+// A vocabulary entry with no id, or no readable label, is dropped; the surviving entry still
+// renders.
+TEST_F(UiConfigTest, EnumEntryMissingIdOrLabelIsDropped) {
+    write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
+    write_ui_file("enum.toml", R"(
+[[reservoir_type]]
+label.en = "No Id"
+
+[[reservoir_type]]
+id = 1
+
+[[reservoir_type]]
+id = 2
+label.en = "Valid Entry"
+)");
+    write_ui_file("hydro_plant.toml", R"(
+id = "HydroPlant"
+
+[[attribute]]
+id = "reservoir_type"
+enum = "reservoir_type"
+)");
+
+    auto db = open_tree();
+    auto describe_collection = db.describe_collection("HydroPlant");
+
+    EXPECT_NE(describe_collection.find(R"(; enum {2: "Valid Entry"})"), std::string::npos) << describe_collection;
+}
+
+// D-06: entries render in ascending code order regardless of file order.
+TEST_F(UiConfigTest, EnumEntriesRenderInAscendingCodeOrder) {
+    write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
+    write_ui_file("enum.toml", R"(
+[[initial_volume_type]]
+id = 2
+label.en = "Volume"
+
+[[initial_volume_type]]
+id = 0
+label.en = "Per Unit"
+)");
+    write_ui_file("hydro_plant.toml", R"(
+id = "HydroPlant"
+
+[[attribute]]
+id = "initial_volume_type"
+enum = "initial_volume_type"
+)");
+
+    auto db = open_tree();
+    auto describe_collection = db.describe_collection("HydroPlant");
+
+    EXPECT_NE(describe_collection.find(R"(; enum {0: "Per Unit", 2: "Volume"})"), std::string::npos)
+        << describe_collection;
+}
+
+// enum.toml has no wrapper key: each top-level key is discovered by iteration and IS itself a
+// vocabulary name. Three differently-named vocabularies in one file, each joined by a different
+// attribute, prove discover-by-iteration -- a fixed lookup key could not find any of them.
+TEST_F(UiConfigTest, EnumTopLevelKeyIsTheVocabularyName) {
+    write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
+    write_ui_file("enum.toml", R"(
+[[bool]]
+id = 0
+label.en = "No"
+
+[[initial_volume_type]]
+id = 0
+label.en = "Per Unit"
+
+[[reservoir_type]]
+id = 0
+label.en = "Reservoir"
+)");
+    write_ui_file("hydro_plant.toml", R"(
+id = "HydroPlant"
+
+[[attribute]]
+id = "initial_volume_type"
+enum = "initial_volume_type"
+
+[[attribute]]
+id = "reservoir_type"
+enum = "reservoir_type"
+)");
+
+    auto db = open_tree();
+    auto describe_collection = db.describe_collection("HydroPlant");
+
+    EXPECT_NE(describe_collection.find(R"(; enum {0: "Per Unit"})"), std::string::npos) << describe_collection;
+    EXPECT_NE(describe_collection.find(R"(; enum {0: "Reservoir"})"), std::string::npos) << describe_collection;
 }
