@@ -90,12 +90,12 @@ Non-negotiable implementation facts (measured, from PROJECT.md / research):
   2. A non-PK INTEGER column with no enum vocabulary, and an observed code the vocabulary does not cover, both keep today's bare-code entry — the annotation is per-code, not per-column.
   3. No injected label text introduces `Vectors:`, `Sets:`, `Time Series:` or a second `values {`, so the four brittle assertions in `tests/test_database_lifecycle.cpp` still pass unmodified.
 
-**Plans**: 1 plan
+**Plans**: 1/1 plans executed
 
 Plans:
 **Wave 1**
 
-- [ ] 02-01-PLAN.md — Annotate `summarize_collection`'s `; values {}` histogram with each observed code's enum label (D2-01..D2-13), plus D2-14's CHANGELOG/CLAUDE.md edits
+- [x] 02-01-PLAN.md — Annotate `summarize_collection`'s `; values {}` histogram with each observed code's enum label (D2-01..D2-13), plus D2-14's CHANGELOG/CLAUDE.md edits
 
 Second injection site: `summarize_collection`'s scalar line at `src/database_describe.cpp:136` and
 its histogram close at `:156-160`. It does not share `write_collection_section`, which is why this
@@ -106,7 +106,7 @@ is its own phase rather than a second edit inside Phase 1's.
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Sidecar Reader and Attribute Meaning | 3/3 | Complete    | 2026-09-20 |
-| 2. Enum Labels on the Value Histogram | 0/1 | Planned | - |
+| 2. Enum Labels on the Value Histogram | 1/1 | In Progress|  |
 
 ## Requirement Coverage
 

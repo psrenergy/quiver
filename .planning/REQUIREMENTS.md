@@ -34,7 +34,7 @@
 - [x] **RENDER-01**: `describe` and `describe_collection` show an attribute's label, tooltip and enum
       labels, positioned after the attribute's name, type and flags
 
-- [ ] **RENDER-02**: `summarize_collection` annotates each entry of an integer column's value
+- [x] **RENDER-02**: `summarize_collection` annotates each entry of an integer column's value
       histogram with that code's enum label
 
 - [x] **RENDER-03**: An attribute the sidecar does not describe — including one whose collection has
@@ -99,7 +99,7 @@ Mapped during roadmap creation (see .planning/ROADMAP.md).
 | READ-04 | Phase 1 | Complete |
 | READ-05 | Phase 1 | Complete |
 | RENDER-01 | Phase 1 | Complete |
-| RENDER-02 | Phase 2 | Pending |
+| RENDER-02 | Phase 2 | Complete |
 | RENDER-03 | Phase 1 | Complete |
 | SAFE-01 | Phase 1 | Complete |
 | SAFE-02 | Phase 1 | Complete |

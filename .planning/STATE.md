@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v0.10.8
 milestone_name: UI Metadata in describe
-current_phase: 2
+current_phase: 02
 current_phase_name: Enum Labels on the Value Histogram
-status: planning
-stopped_at: Completed 01-02-PLAN.md
-last_updated: "2026-09-20T17:58:10.035Z"
+status: verifying
+stopped_at: Completed 02-01-PLAN.md
+last_updated: "2026-09-20T19:32:06.222Z"
 last_activity: 2026-09-20
 last_activity_desc: Roadmap created, 10/10 requirements mapped
 progress:
-  total_phases: 1
-  completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  total_phases: 2
+  completed_phases: 2
+  total_plans: 4
+  completed_plans: 4
 ---
 
 # Project State
@@ -23,14 +23,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-09-20)
 
 **Core value:** An agent calling `describe` on a PSR study database sees what an INTEGER enum column actually means — `0 = User Defined Forecast, 1 = Model` — not bare codes.
-**Current focus:** Phase 01 — Sidecar Reader and Attribute Meaning
+**Current focus:** Phase 02 — Enum Labels on the Value Histogram
 
 ## Current Position
 
-Phase: 2 — Enum Labels on the Value Histogram
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-09-20 — Phase 01 complete, transitioned to Phase 2
+Phase: 02 (Enum Labels on the Value Histogram) — EXECUTING
+Plan: 1 of 1
+Status: Phase complete — ready for verification
+Last activity: 2026-09-20 — Phase 02 execution started
 
 Progress: [██████████] 100%
 
@@ -61,6 +61,7 @@ Progress: [██████████] 100%
 | Phase 01 P00 | 25min | 1 tasks | 2 files |
 | Phase 01 P01 | 35min | 2 tasks | 7 files |
 | Phase 01 P02 | 55min | 2 tasks | 4 files |
+| Phase 02 P01 | 20min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -103,6 +104,9 @@ Full log in PROJECT.md Key Decisions. Affecting current work:
 - [Phase ?]: normalize_ui_text treats every byte below 0x20 or equal to 0x7F as a control byte (superset of D-03's named \r/\n/\t), also neutralizing ESC for the T-01-03 ANSI-injection mitigation.
 - [Phase ?]: No production code change was needed in src/ui_config.cpp or src/database_describe.cpp -- plan 02's 20 new tests all passed against plan 01's existing implementation on first build.
 - [Phase ?]: describe() SAFE-02/RENDER-03 byte-identity comparisons use the extracted per-collection section, not the raw string -- the whole report embeds the database's own path, which legitimately differs between a main tree and its ui-free mirror in a different temp directory.
+- [Phase ?]: D-09 (D2-06): summarize_collection's histogram drops only the annotation on an empty-normalizing enum label, keeps the entry -- deliberate divergence from D-06's enum {} clause
+- [Phase ?]: ui_metadata remains from_migrations-only (Phase 1 boundary reaffirmed); Database::open(...).summarize_collection(...) still shows bare codes, and must not be fixed by hooking the load onto load_schema_metadata/require_schema
+- [Phase ?]: kMaxDistributionCardinality stays 64: a column with more than 64 distinct codes still renders no distribution clause at all
 
 ### Pending Todos
 
@@ -127,6 +131,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-09-20T16:58:21.912Z
-Stopped at: Completed 01-02-PLAN.md
+Last session: 2026-09-20T19:32:06.199Z
+Stopped at: Completed 02-01-PLAN.md
 Resume file: None
