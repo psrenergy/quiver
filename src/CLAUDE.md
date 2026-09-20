@@ -174,8 +174,29 @@ byte below `0x20` and `0x7F` to a space before collapsing runs and trimming — 
 superset of "just collapse newlines" that also neutralizes ESC, so a sidecar string can never emit
 an ANSI escape sequence into a terminal rendering the report. An attribute with `hide = true` in
 its sidecar still renders every clause: `describe*` describes the schema, not the UI's visibility
-policy. `summarize_collection()` does not render any of this yet — that is a later phase's scope,
-not an oversight.
+policy.
+
+`summarize_collection()`'s integer value histogram (`src/database_describe.cpp`, inside the
+`kMaxDistributionCardinality`-bounded branch) also annotates each *observed* code with its enum
+label: `values {0 "Per Unit": 2, 1: 1}`. The `ui_metadata.find(collection, scalar.name)` lookup
+sits immediately before `"; values {"` is written, not at the top of the per-scalar loop, so a
+collection of TEXT/REAL/PK scalars pays zero two-level map lookups. **D-09 (deliberate divergence
+from D-06):** here a label that normalizes to empty drops only the *annotation* and keeps the
+*entry* — unlike the `enum {}` clause above, where the entry IS the vocabulary and an
+empty-normalizing label drops the whole thing. In the histogram the entry is an observed row
+count, and dropping it would destroy data. Two known limits, recorded rather than fixed: (1)
+`ui_metadata` is populated only by `from_migrations` (see the early-return trap above), so
+`Database::open("study.db").summarize_collection(...)` still shows bare codes — this must not be
+"fixed" by hooking the load onto `load_schema_metadata` / `require_schema`, since `migrate_up`
+early-returns before it on the open-an-existing-study path; and (2) `kMaxDistributionCardinality`
+(64) still suppresses the whole `; values {}` clause above 64 distinct codes, so the richest enum
+column renders no labels at all — `describe_collection()`'s `; enum {...}` is the fallback, and 64
+labelled entries is already a ~2 KB single line, so no truncation is proposed (truncation needs its
+own ellipsis convention). One more honest note: `quote_ui_text` gives a parse-level guarantee, not
+substring immunity, and `summarize_collection` additionally emits `  Vectors:` / `  Sets:` /
+`  Time Series:` headers — so a naive header-count test written against it on a `from_migrations`
+database would be breakable by a label containing that text. The remedy, if it ever bites, is
+asserting on report structure (line prefix + indentation), never a substring blocklist.
 
 Three guards in the Lua layer's decoders (`src/lua_runner.cpp`) exist because a script is
 untrusted input, in the same spirit as the JSON encoder's two caps below:

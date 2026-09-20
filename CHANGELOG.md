@@ -23,7 +23,10 @@ callers to change something are prefixed **BREAKING** and say what to do.
   additional code on their side, since `describe`/`describe_collection` already return a plain
   string. Deliberately not included: no C API symbol, no structured getter, no validation of the
   sidecar against the schema, and English only — a database opened with `from_schema` is
-  unaffected, and `summarize_collection()` does not yet render this metadata.
+  unaffected. `summarize_collection()`'s integer value distribution now carries the same enum
+  labels: each observed code is annotated with its label, `values {0 "Per Unit": 2, 1: 1}`. A code
+  the vocabulary does not cover stays bare, and a column with more than 64 distinct codes still
+  renders no distribution clause at all.
 
 ## [0.10.7] — 2026-09-17
 

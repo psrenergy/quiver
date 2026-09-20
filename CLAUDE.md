@@ -573,7 +573,7 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
   Otherwise `SELECT COUNT(*)` / `SUM(int_col)`, which SQLite answers as INTEGER, and an integer
   stored in a REAL column, all read back as "no value". `query_integer` does **not** narrow a REAL;
   that direction is lossy.
-- Schema inspection — human-readable **text reports** (all return `std::string`): `describe()` (whole-DB overview: every collection, element counts, attribute/group names); `describe_collection(c)` (one collection's structure); `summarize_collection(c)` (per-scalar null/non-null counts + low-cardinality integer value distributions, per-group empty/non-empty counts). CSV: `export_csv()`, `import_csv()` with optional enum/date formatting via `CSVOptions`.
+- Schema inspection — human-readable **text reports** (all return `std::string`): `describe()` (whole-DB overview: every collection, element counts, attribute/group names); `describe_collection(c)` (one collection's structure); `summarize_collection(c)` (per-scalar null/non-null counts + low-cardinality integer value distributions, each observed code annotated with its `ui/` sidecar enum label when opened via `from_migrations`; per-group empty/non-empty counts). CSV: `export_csv()`, `import_csv()` with optional enum/date formatting via `CSVOptions`.
   **Export and import are symmetric on foreign keys**: a FK column is written as the referenced
   element's `label` and read back by label (self-references are excluded on both sides, since the
   target rows are the ones being rewritten). Export used to emit the raw integer id, which import
