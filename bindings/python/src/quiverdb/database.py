@@ -16,6 +16,7 @@ from quiverdb.metadata import (
     DataType,
     GroupMetadata,
     ScalarMetadata,
+    UiEnumEntry,
     UiMetadata,
 )
 
@@ -1321,6 +1322,45 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
             return _parse_ui_metadata(out)
         finally:
             lib.quiver_database_free_ui_metadata(out)
+
+    def list_ui_vocabularies(self) -> list[str]:
+        """List the names of every vocabulary declared in the PSR `<db_dir>/ui/enum.toml` sidecar.
+
+        Returns an empty list when no sidecar is loaded (D-41) -- never raises.
+        """
+        self._ensure_open()
+        lib = get_lib()
+        out_names = ffi.new("char***")
+        out_count = ffi.new("size_t*")
+        check(lib.quiver_database_list_ui_vocabularies(self._ptr, out_names, out_count))
+        count = out_count[0]
+        if count == 0:
+            return []
+        try:
+            return [decode_string(out_names[0][i]) for i in range(count)]
+        finally:
+            lib.quiver_database_free_string_array(out_names[0], count)
+
+    def get_ui_vocabulary(self, name: str) -> list[UiEnumEntry]:
+        """Get one vocabulary's ordered {code, label} entries by name.
+
+        Raises QuiverError with "Vocabulary not found: '<name>'" for an unknown or undeclared
+        name (D-41 collapses "no sidecar" and "sidecar present but lacks the name" into this one
+        message). A vocabulary declared with zero entries returns an empty list, not a raise.
+        """
+        self._ensure_open()
+        lib = get_lib()
+        out_codes = ffi.new("int64_t**")
+        out_labels = ffi.new("char***")
+        out_count = ffi.new("size_t*")
+        check(lib.quiver_database_get_ui_vocabulary(self._ptr, name.encode("utf-8"), out_codes, out_labels, out_count))
+        count = out_count[0]
+        if count == 0:
+            return []
+        try:
+            return [UiEnumEntry(code=int(out_codes[0][i]), label=decode_string(out_labels[0][i])) for i in range(count)]
+        finally:
+            lib.quiver_database_free_ui_vocabulary(out_codes[0], out_labels[0], count)
 
     def get_vector_metadata(
         self,

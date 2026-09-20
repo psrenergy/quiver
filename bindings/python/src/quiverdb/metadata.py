@@ -75,3 +75,13 @@ class UiMetadata:
     hidden: bool
     vocabulary: str
     display_order: int
+
+
+@dataclass(frozen=True)
+class UiEnumEntry:
+    """One entry in an enum vocabulary (Phase 3, META-05). Returned in declaration order by
+    Database.get_ui_vocabulary -- never a null cell, since D-11 crosses the vocabulary as two
+    parallel arrays rather than a struct with optional fields."""
+
+    code: int
+    label: str

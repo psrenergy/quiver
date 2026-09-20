@@ -285,6 +285,19 @@ ffi.cdef("""
 
     quiver_error_t quiver_database_free_ui_metadata(quiver_ui_metadata_t* metadata);
 
+    // UI vocabulary listing and by-name lookup (Phase 3, META-05, D-10/D-11): the vocabulary
+    // crosses as two parallel arrays, never a second struct. Transcribed field-for-field from
+    // include/quiver/c/database.h; do not retype from memory.
+    quiver_error_t quiver_database_list_ui_vocabularies(quiver_database_t* db,
+        char*** out_names, size_t* out_count);
+
+    quiver_error_t quiver_database_get_ui_vocabulary(quiver_database_t* db,
+        const char* name, int64_t** out_codes, char*** out_labels, size_t* out_count);
+
+    // Dedicated combined free (D-37) -- one call releases both arrays. Not safe to call twice on
+    // the same pointers (it takes raw pointers, unlike quiver_database_free_ui_metadata above).
+    quiver_error_t quiver_database_free_ui_vocabulary(int64_t* codes, char** labels, size_t count);
+
     // Schema inspection - human-readable text reports. Each returns a heap string
     // via *out_report, freed with quiver_database_free_string.
     quiver_error_t quiver_database_describe(quiver_database_t* db, char** out_report);

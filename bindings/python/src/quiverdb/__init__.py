@@ -7,6 +7,7 @@ from quiverdb.metadata import (
     GroupMetadata,
     LogLevel,
     ScalarMetadata,
+    UiEnumEntry,
     UiMetadata,
 )
 
@@ -19,6 +20,7 @@ __all__ = [
     "LuaRunner",
     "QuiverError",
     "ScalarMetadata",
+    "UiEnumEntry",
     "UiMetadata",
     "version",
 ]

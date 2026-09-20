@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from quiverdb import Database, QuiverError
+from quiverdb import Database, QuiverError, UiEnumEntry
 
 # Phase 3 tracer slice (META-01/META-02/META-05, D-36, D-41): get_attribute_ui_metadata proves the
 # whole path -- TOML sidecar -> C++ getter -> quiver_ui_metadata_t -> this hand-written decoder --
@@ -112,5 +112,63 @@ def test_nonexistent_column_raises_exact_pattern_2_message(tmp_path: Path) -> No
         with pytest.raises(QuiverError) as exc_info:
             db.get_attribute_ui_metadata("Storage", "no_such_column")
         assert str(exc_info.value) == "Scalar attribute not found: 'no_such_column' in collection 'Storage'"
+    finally:
+        db.close()
+
+
+# -- Plan 03-02: quiver_database_list_ui_vocabularies / quiver_database_get_ui_vocabulary --------
+# closing the C API's UI-metadata surface (META-05) with Python as the reference FFI decoder.
+
+
+def test_list_ui_vocabularies_returns_fixture_names(tmp_path: Path) -> None:
+    """enum_basic declares exactly one vocabulary -- a shape assertion, not an ordering one. The
+    non-vacuous ordering proof is 03-01 Task 3's three-name C++ scratch sidecar."""
+    db = _open(tmp_path, "python_ui_metadata_list_vocab")
+    try:
+        assert db.list_ui_vocabularies() == ["bool"]
+    finally:
+        db.close()
+
+
+def test_get_ui_vocabulary_returns_ordered_entries(tmp_path: Path) -> None:
+    db = _open(tmp_path, "python_ui_metadata_get_vocab")
+    try:
+        entries = db.get_ui_vocabulary("bool")
+        assert entries == [
+            UiEnumEntry(code=0, label="Disabled"),
+            UiEnumEntry(code=1, label="Enabled"),
+        ]
+    finally:
+        db.close()
+
+
+def test_get_ui_vocabulary_unknown_name_raises_exact_message(tmp_path: Path) -> None:
+    db = _open(tmp_path, "python_ui_metadata_vocab_missing")
+    try:
+        with pytest.raises(QuiverError) as exc_info:
+            db.get_ui_vocabulary("no_such_vocabulary")
+        assert str(exc_info.value) == "Vocabulary not found: 'no_such_vocabulary'"
+    finally:
+        db.close()
+
+
+def test_get_ui_vocabulary_declared_but_empty_returns_empty_list(tmp_path: Path) -> None:
+    """A vocabulary declared with a name but zero entries is a present key holding an empty
+    vector -- structurally different from an undeclared name, which raises. No tracked fixture
+    exercises this (the one confirmed corpus gap 03-01 closed at the C++ layer with a scratch
+    sidecar); this mirrors that sidecar under pytest's tmp_path, following the tmp_path idiom
+    already used in test_database_ui_options.py. The database file lives in tmp_path itself so the
+    <db_dir>/ui/ convention resolves the sidecar with no explicit ui_config_dir needed."""
+    (tmp_path / "ui").mkdir()
+    (tmp_path / "schema.sql").write_text(
+        "CREATE TABLE Configuration (\n    id INTEGER PRIMARY KEY,\n    label TEXT UNIQUE NOT NULL\n) STRICT;\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "ui" / "main.toml").write_text("collections = []\n", encoding="utf-8")
+    (tmp_path / "ui" / "enum.toml").write_text("alpha = []\n", encoding="utf-8")
+
+    db = Database.from_schema(str(tmp_path / "declared_but_empty.sqlite"), str(tmp_path / "schema.sql"))
+    try:
+        assert db.get_ui_vocabulary("alpha") == []
     finally:
         db.close()
