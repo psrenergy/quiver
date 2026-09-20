@@ -1,6 +1,8 @@
 #ifndef QUIVER_UI_CONFIG_H
 #define QUIVER_UI_CONFIG_H
 
+#include "quiver/ui_metadata.h"
+
 #include <cstdint>
 #include <map>
 #include <memory>
@@ -17,32 +19,10 @@ namespace quiver {
 // never exported from the shared library -- it aggregates std::map members that would otherwise
 // put std::map in the ABI, and it is a second route to the same data the Phase-3 public getters
 // expose).
-
-// One entry in an enum vocabulary (ui/enum.toml's [[<name>]] array-of-tables).
-struct UIEnumEntry {
-    int64_t code = 0;
-    std::string label;
-};
-
-// One record answers for a collection, an attribute, or a group (D-09) -- the same field set as
-// the public Phase-3 type, so that phase is a header move, not a redesign. `configured` is the
-// discriminator between "the sidecar declares this" and "nothing declared" -- `label` is never
-// back-filled from an id (D-12).
-struct UIMetadata {
-    bool configured = false;
-    std::string label;
-    std::string tooltip;  // Phase 3 (META-01): unread in Phase 1, carried for the header-move design.
-    std::string unit;
-    // A plain TOML string is stored verbatim. A 4-key TOML table (`element_view`/
-    // `collection_view`/`edit`/`data`) collapses to the first present of, in order, `data`,
-    // `element_view`, `collection_view`, `edit` -- verbatim, unclassified (PARSE-06, D-14). Phase
-    // 1's record carries one string; whether META-01 needs all four keys is Phase 3's call.
-    std::string format;
-    std::string icon;  // Phase 3 (META-01): unread in Phase 1, carried for the header-move design.
-    bool hidden = false;
-    std::string vocabulary;      // unresolved name; resolved via find_vocabulary()
-    int64_t display_order = -1;  // Phase 4 (GROUP-02): unread in Phase 1, carried for the header-move design.
-};
+//
+// UIEnumEntry / UIMetadata moved to the public quiver/ui_metadata.h in Phase 3 (D-30) -- a header
+// move, not a redesign. UIConfigSet stays private (D-18): it aggregates std::map members that
+// would otherwise leak into the ABI.
 
 // Two separate maps because `degradation` can legally be both an attribute id and a group id
 // (PARSE-07) -- one map per namespace keeps that legal.

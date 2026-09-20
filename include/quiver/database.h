@@ -6,6 +6,7 @@
 #include "quiver/element.h"
 #include "quiver/options.h"
 #include "quiver/result.h"
+#include "quiver/ui_metadata.h"
 
 #include <iostream>
 #include <memory>
@@ -154,6 +155,18 @@ public:
     ScalarMetadata get_scalar_metadata(const std::string& collection, const std::string& attribute) const;
     GroupMetadata get_vector_metadata(const std::string& collection, const std::string& group_name) const;
     GroupMetadata get_set_metadata(const std::string& collection, const std::string& group_name) const;
+
+    // UI metadata (Phase 3, META-01/META-02/META-05): the PSR `<db_dir>/ui/` sidecar's per-attribute
+    // record. Validates (collection, attribute) against the live SQL schema first -- Pattern 2 on a
+    // miss (D-36) -- then consults the sidecar, which never throws: a real column the sidecar does
+    // not configure returns a default-constructed UIMetadata (`configured == false`), and a database
+    // with no sidecar at all behaves identically (D-41).
+    UIMetadata get_attribute_ui_metadata(const std::string& collection, const std::string& attribute) const;
+    // Names of every loaded vocabulary, in map (= alphabetical) order. Empty when no sidecar loaded.
+    std::vector<std::string> list_ui_vocabularies() const;
+    // One vocabulary's entries by name, in declaration order. Throws Pattern 2
+    // ("Vocabulary not found: '<name>'") on an unknown name, including when no sidecar loaded.
+    std::vector<UIEnumEntry> get_ui_vocabulary(const std::string& name) const;
 
     // List attributes/groups - returns full metadata
     std::vector<ScalarMetadata> list_scalar_attributes(const std::string& collection) const;

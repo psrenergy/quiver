@@ -339,11 +339,29 @@ typedef struct {
     size_t value_column_count;
 } quiver_group_metadata_t;
 
-// Native sizeof of the two structs above. No parameters, plain size_t return -- the same
+// UI metadata (Phase 3, META-01/META-03). Deliberately does NOT mirror quiver_scalar_metadata_t's
+// declaration-order-with-padding shape: fields are grouped by type (all six pointers, then the
+// int64_t, then the two ints) so the struct is hole-free at exactly 64 bytes (D-15) -- see the
+// static_assert layout pin in src/c/database_metadata.cpp. Never add a field after this freeze;
+// doing so is an ABI break across five hand-written FFI decoders plus the struct-size gate.
+typedef struct {
+    const char* label;        // offset  0
+    const char* tooltip;      // offset  8
+    const char* unit;         // offset 16
+    const char* format;       // offset 24
+    const char* icon;         // offset 32
+    const char* vocabulary;   // offset 40
+    int64_t display_order;    // offset 48
+    int configured;           // offset 56
+    int hidden;                // offset 60
+} quiver_ui_metadata_t;        // sizeof == 64, zero padding
+
+// Native sizeof of the three structs above. No parameters, plain size_t return -- the same
 // Bun-callable shape as quiver_database_options_sizeof (D-07). Every FFI binding's load-time
-// layout assertion (SAFE-01) calls these instead of hardcoding 56/32 unchecked.
+// layout assertion (SAFE-01) calls these instead of hardcoding 56/32/64 unchecked.
 QUIVER_C_API size_t quiver_scalar_metadata_sizeof(void);
 QUIVER_C_API size_t quiver_group_metadata_sizeof(void);
+QUIVER_C_API size_t quiver_ui_metadata_sizeof(void);
 
 // Attribute metadata queries
 QUIVER_C_API quiver_error_t quiver_database_get_scalar_metadata(quiver_database_t* db,
@@ -366,9 +384,17 @@ QUIVER_C_API quiver_error_t quiver_database_get_time_series_metadata(quiver_data
                                                                      const char* group_name,
                                                                      quiver_group_metadata_t* out_metadata);
 
+// UI metadata (Phase 3, META-01/META-02): caller-allocated single-record getter, matching the
+// get_scalar_metadata/free_scalar_metadata idiom above (D-42).
+QUIVER_C_API quiver_error_t quiver_database_get_attribute_ui_metadata(quiver_database_t* db,
+                                                                      const char* collection,
+                                                                      const char* attribute,
+                                                                      quiver_ui_metadata_t* out_metadata);
+
 // Free metadata
 QUIVER_C_API quiver_error_t quiver_database_free_scalar_metadata(quiver_scalar_metadata_t* metadata);
 QUIVER_C_API quiver_error_t quiver_database_free_group_metadata(quiver_group_metadata_t* metadata);
+QUIVER_C_API quiver_error_t quiver_database_free_ui_metadata(quiver_ui_metadata_t* metadata);
 
 // List attributes/groups - returns full metadata
 QUIVER_C_API quiver_error_t quiver_database_list_scalar_attributes(quiver_database_t* db,

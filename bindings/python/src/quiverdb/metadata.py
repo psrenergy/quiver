@@ -53,3 +53,25 @@ class GroupMetadata:
     group_name: str
     dimension_column: str  # empty string for vector/set groups
     value_columns: list[ScalarMetadata]
+
+
+@dataclass(frozen=True)
+class UiMetadata:
+    """PSR `<db_dir>/ui/` sidecar record for one scalar attribute (Phase 3, META-01/META-02).
+
+    Every string field is a plain `str`, never `str | None` -- D-13 makes empty string the
+    spelling of absence on every FFI layer. `configured` is the discriminator between "the
+    sidecar declares this" and "nothing declared"; `label` is never back-filled from an id, so a
+    declared-but-blank label (`configured is True`, `label == ""`) is distinct from an
+    unconfigured attribute (`configured is False`, every string field empty).
+    """
+
+    configured: bool
+    label: str
+    tooltip: str
+    unit: str
+    format: str
+    icon: str
+    hidden: bool
+    vocabulary: str
+    display_order: int

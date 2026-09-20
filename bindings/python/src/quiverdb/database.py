@@ -16,6 +16,7 @@ from quiverdb.metadata import (
     DataType,
     GroupMetadata,
     ScalarMetadata,
+    UiMetadata,
 )
 
 
@@ -1292,6 +1293,35 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         finally:
             lib.quiver_database_free_scalar_metadata(out)
 
+    def get_attribute_ui_metadata(
+        self,
+        collection: str,
+        attribute: str,
+    ) -> UiMetadata:
+        """Get the PSR `<db_dir>/ui/` sidecar's UI metadata for a scalar attribute.
+
+        Validates (collection, attribute) against the live SQL schema first -- raises QuiverError
+        with "Scalar attribute not found: '<attribute>' in collection '<collection>'" for an
+        unknown column. A real column the sidecar does not configure (or a database with no
+        sidecar at all) returns a default-constructed UiMetadata with configured=False -- never
+        a raise.
+        """
+        self._ensure_open()
+        lib = get_lib()
+        out = ffi.new("quiver_ui_metadata_t*")
+        check(
+            lib.quiver_database_get_attribute_ui_metadata(
+                self._ptr,
+                collection.encode("utf-8"),
+                attribute.encode("utf-8"),
+                out,
+            )
+        )
+        try:
+            return _parse_ui_metadata(out)
+        finally:
+            lib.quiver_database_free_ui_metadata(out)
+
     def get_vector_metadata(
         self,
         collection: str,
@@ -2345,6 +2375,26 @@ def _parse_scalar_metadata(meta) -> ScalarMetadata:
         is_foreign_key=bool(meta.is_foreign_key),
         references_collection=decode_string_or_none(meta.references_collection),
         references_column=decode_string_or_none(meta.references_column),
+    )
+
+
+def _parse_ui_metadata(meta) -> UiMetadata:
+    """Parse a quiver_ui_metadata_t struct into a UiMetadata dataclass.
+
+    Every string field is decoded with decode_string (never decode_string_or_none): the C API
+    allocates every one of the six string fields unconditionally, including when empty (D-13),
+    so a NULL pointer here would indicate a decoder bug, not absence.
+    """
+    return UiMetadata(
+        configured=bool(meta.configured),
+        label=decode_string(meta.label),
+        tooltip=decode_string(meta.tooltip),
+        unit=decode_string(meta.unit),
+        format=decode_string(meta.format),
+        icon=decode_string(meta.icon),
+        hidden=bool(meta.hidden),
+        vocabulary=decode_string(meta.vocabulary),
+        display_order=int(meta.display_order),
     )
 
 

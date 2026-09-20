@@ -257,6 +257,34 @@ ffi.cdef("""
     quiver_error_t quiver_database_free_group_metadata_array(
         quiver_group_metadata_t* metadata, size_t count);
 
+    // UI metadata (Phase 3, META-01/META-02/META-03): fields grouped by type (six pointers, then
+    // the int64_t, then the two ints) so the struct is hole-free at 64 bytes -- deliberately does
+    // NOT mirror quiver_scalar_metadata_t's declaration-order-with-padding shape. Layout pinned by
+    // static_asserts in src/c/database_metadata.cpp. Transcribed field-for-field; do not retype
+    // from memory.
+    typedef struct {
+        const char* label;
+        const char* tooltip;
+        const char* unit;
+        const char* format;
+        const char* icon;
+        const char* vocabulary;
+        int64_t display_order;
+        int configured;
+        int hidden;
+    } quiver_ui_metadata_t;
+
+    // Native sizeof of quiver_ui_metadata_t -- same Bun-callable shape as
+    // quiver_database_options_sizeof (D-07). The fifth entry in every FFI binding's load-time
+    // struct-size gate.
+    size_t quiver_ui_metadata_sizeof(void);
+
+    quiver_error_t quiver_database_get_attribute_ui_metadata(quiver_database_t* db,
+        const char* collection, const char* attribute,
+        quiver_ui_metadata_t* out_metadata);
+
+    quiver_error_t quiver_database_free_ui_metadata(quiver_ui_metadata_t* metadata);
+
     // Schema inspection - human-readable text reports. Each returns a heap string
     // via *out_report, freed with quiver_database_free_string.
     quiver_error_t quiver_database_describe(quiver_database_t* db, char** out_report);
