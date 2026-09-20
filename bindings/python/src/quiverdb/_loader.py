@@ -18,12 +18,14 @@ _load_source: str = ""
 _dll_dir_handle = None
 
 # Struct name -> native *_sizeof() accessor name. Fixed order (options, scalar, group, csv
-# options) matches every other binding's load-time gate in this phase (SAFE-02/SAFE-03, D-08/D-09).
+# options, ui metadata) matches every other binding's load-time gate (SAFE-02/SAFE-03,
+# D-08/D-09; ui metadata appended last per Phase 3 D-40 -- no reordering of the first four).
 _STRUCT_SIZEOF_ACCESSORS = (
     ("quiver_database_options_t", "quiver_database_options_sizeof"),
     ("quiver_scalar_metadata_t", "quiver_scalar_metadata_sizeof"),
     ("quiver_group_metadata_t", "quiver_group_metadata_sizeof"),
     ("quiver_csv_options_t", "quiver_csv_options_sizeof"),
+    ("quiver_ui_metadata_t", "quiver_ui_metadata_sizeof"),
 )
 
 # Wiring evidence: names of structs whose check has actually passed, in the order they were
@@ -50,7 +52,7 @@ def _check_struct_size(name: str, expected: int, native: int) -> None:
 
 
 def _assert_struct_sizes(ffi: FFI, lib) -> None:
-    """Call the three native *_sizeof() accessors and compare against this cdef's own sizes.
+    """Call the five native *_sizeof() accessors and compare against this cdef's own sizes.
 
     CFFI ABI mode resolves each `lib.<name>` attribute via dlsym-on-demand -- a native library
     that predates this phase has no such symbol, and that only raises AttributeError at the
