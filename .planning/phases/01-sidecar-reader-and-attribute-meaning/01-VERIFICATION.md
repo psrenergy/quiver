@@ -1,10 +1,10 @@
 ---
 phase: 01-sidecar-reader-and-attribute-meaning
 verified: 2026-09-20T17:29:39Z
-status: human_needed
+status: passed
 score: 20/20 must-haves verified
 behavior_unverified: 0
-overrides_applied: 0
+overrides_applied: 4  # human sign-off 2026-09-20: 3 flagged assumptions + judgment-tier prohibitions accepted as-is
 human_verification:
   - test: "Confirm the planner's root-migrations-path interpretation for READ-01/D-16 is acceptable: `migrations_path` pointing at a filesystem root makes `parent_path()` the root itself, so `ui_dir` resolves to `<root>/ui` and finds nothing (no `/` sibling exists above a root). This case is untested and unspecified by any source artifact (01-01-PLAN.md flagged_assumptions #1)."
     expected: "Either confirm this degrade-to-empty behavior is acceptable for a case that cannot occur in real PSR studies, or file a follow-up to test/handle it explicitly."
