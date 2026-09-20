@@ -1044,3 +1044,45 @@ label.en = "Installed Capacity (MW)"
 
     EXPECT_NO_THROW(db->describe_collection("HydroPlant"));
 }
+
+// ============================================================================
+// Plan 02-01: summarize_collection's histogram annotates observed codes with enum labels
+// ============================================================================
+
+// D2-01/D2-02/D2-03/D2-04/D2-05/D2-07: the label rides on the key (`code SP "Label": count`), an
+// uncovered code (1) stays bare, and an unobserved vocabulary code (2) never appears at all.
+TEST_F(DatabaseUiMetadataTest, SummarizeHistogramAnnotatesCodesWithEnumLabels) {
+    write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
+    write_ui_file("enum.toml", R"(
+[[initial_volume_type]]
+id = 0
+label.en = "Per Unit"
+
+[[initial_volume_type]]
+id = 2
+label.en = "Volume"
+)");
+    write_ui_file("hydro_plant.toml", R"(
+id = "HydroPlant"
+
+[[attribute]]
+id = "initial_volume_type"
+enum = "initial_volume_type"
+)");
+
+    auto db = open_tree();
+    db.create_element(
+        "HydroPlant",
+        quiver::Element().set("label", std::string("a")).set("initial_volume_type", static_cast<int64_t>(0)));
+    db.create_element(
+        "HydroPlant",
+        quiver::Element().set("label", std::string("b")).set("initial_volume_type", static_cast<int64_t>(0)));
+    db.create_element(
+        "HydroPlant",
+        quiver::Element().set("label", std::string("c")).set("initial_volume_type", static_cast<int64_t>(1)));
+
+    auto report = db.summarize_collection("HydroPlant");
+
+    EXPECT_TRUE(report.find(R"(values {0 "Per Unit": 2, 1: 1})") != std::string::npos) << report;
+    EXPECT_FALSE(report.find("\"Volume\"") != std::string::npos) << report;
+}
