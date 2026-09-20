@@ -30,7 +30,7 @@ not a technical layer. There is no "build the parser" phase followed by a "wire 
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Enum Labels in Describe** - An agent calling `describe` sees what an INTEGER column means, in all six layers, with no ABI change (completed 2026-09-19)
-- [ ] **Phase 2: Config Path, Locale and Struct-Size Safety** - A consumer points Quiver at any UI directory and locale; a drifted binding layout fails loudly instead of corrupting memory
+- [x] **Phase 2: Config Path, Locale and Struct-Size Safety** - A consumer points Quiver at any UI directory and locale; a drifted binding layout fails loudly instead of corrupting memory (completed 2026-09-19)
 - [ ] **Phase 3: Structured Attribute Metadata** - claw reads label/tooltip/unit/format/enum as data instead of scraping a text report
 - [ ] **Phase 4: Collection and Attribute-Group Metadata** - Display labels, icons, help, `main.collections` order, and one answer for both time-series dimension spellings
 - [ ] **Phase 5: `validate_ui_config()` and Milestone Release** - The sidecar gets checked against the live SQL schema for the first time, and the milestone ships
@@ -95,7 +95,7 @@ Plans:
   4. `bindings/js/src/ffi-helpers.ts` allocates the options buffer from **named offset constants** with a field-order comment, sized from the size accessor — and the file's two unrelated `new Uint8Array(8)` allocations (`allocPtrOut`, `allocUint64Out`) are provably unchanged.
   5. Python's CFFI cdef, Dart's hand-edited `bindings.dart` (no ffigen regen; `.dart_tool/hooks_runner/` and `.dart_tool/lib/` cleared before the suite runs) and Julia's regenerated `c_api.jl` each carry at least one test that a wrong layout would actually fail.
 
-**Plans:** 13/13 plans executed
+**Plans:** 13/13 plans complete
 
 Plans:
 **Wave 1**
@@ -273,7 +273,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Enum Labels in Describe | 6/6 | Complete    | 2026-09-19 |
-| 2. Config Path, Locale and Struct-Size Safety | 13/13 | In Progress|  |
+| 2. Config Path, Locale and Struct-Size Safety | 13/13 | Complete    | 2026-09-19 |
 | 3. Structured Attribute Metadata | 0/TBD | Not started | - |
 | 4. Collection and Attribute-Group Metadata | 0/TBD | Not started | - |
 | 5. `validate_ui_config()` and Milestone Release | 0/TBD | Not started | - |
