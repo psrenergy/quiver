@@ -63,10 +63,10 @@ this milestone.
 
 What claw consumes, replacing the per-attribute half of `study-config.ts`.
 
-- [ ] **META-01**: A new C++ type carries a scalar attribute's UI metadata: label, tooltip, unit, format, hidden flag, enum vocabulary name, and enum values
-- [ ] **META-02**: A public C++ getter returns that metadata for a `(collection, attribute)` pair, returning a default-constructed value for an unconfigured attribute rather than throwing
-- [ ] **META-03**: The metadata crosses the C API as its **own** struct with its own free function — never as new fields on `quiver_scalar_metadata_t` or `quiver_group_metadata_t`
-- [ ] **META-04**: The getter is bound in all five bindings and in Lua, named per the cross-layer convention
+- [x] **META-01**: A new C++ type carries a scalar attribute's UI metadata: label, tooltip, unit, format, hidden flag, enum vocabulary name, and enum values
+- [x] **META-02**: A public C++ getter returns that metadata for a `(collection, attribute)` pair, returning a default-constructed value for an unconfigured attribute rather than throwing
+- [x] **META-03**: The metadata crosses the C API as its **own** struct with its own free function — never as new fields on `quiver_scalar_metadata_t` or `quiver_group_metadata_t`
+- [x] **META-04**: The getter is bound in all five bindings and in Lua, named per the cross-layer convention
 - [ ] **META-05**: A public method lists the loaded vocabularies, and another returns one vocabulary's entries by name, throwing Pattern 2 on an unknown name
 - [ ] **META-06**: Adding any new `db:` method keeps `bindings/js/src/lua-api.ts` in sync so `lua-api-sync.test.ts` passes
 
@@ -169,10 +169,10 @@ Which phases cover which requirements. Populated during roadmap creation.
 | SAFE-01 | Phase 2 | Complete |
 | SAFE-02 | Phase 2 | Complete |
 | SAFE-03 | Phase 2 | Complete |
-| META-01 | Phase 3 | Pending |
-| META-02 | Phase 3 | Pending |
-| META-03 | Phase 3 | Pending |
-| META-04 | Phase 3 | Pending |
+| META-01 | Phase 3 | Complete |
+| META-02 | Phase 3 | Complete |
+| META-03 | Phase 3 | Complete |
+| META-04 | Phase 3 | Complete |
 | META-05 | Phase 3 | Pending |
 | META-06 | Phase 3 | Pending |
 | GROUP-01 | Phase 4 | Pending |

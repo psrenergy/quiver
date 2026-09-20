@@ -165,12 +165,12 @@ Plans:
   4. `git diff` shows `include/quiver/attribute_metadata.h`, `quiver_scalar_metadata_t` and `quiver_group_metadata_t` untouched: the metadata crosses as its **own** struct with its own size accessor and its own free function, and JS adds a new constant only.
   5. `bindings/js/test/lua-api-sync.test.ts` is green — the new `db:` name landed in `src/lua_runner.cpp` and `bindings/js/src/lua-api.ts` as one edit, not two.
 
-**Plans**: 7 plans in 4 waves
+**Plans**: 1/7 plans executed in 4 waves
 
 Plans:
 **Wave 1**
 
-- [ ] 03-01-PLAN.md — Tracer: one attribute's UI record from the TOML sidecar to a Python caller (public `ui_metadata.h`, the three C++ getters, the 64-byte C struct + size accessor + get/free, Python's decoder and fifth gate entry, the C++ test file)
+- [x] 03-01-PLAN.md — Tracer: one attribute's UI record from the TOML sidecar to a Python caller (public `ui_metadata.h`, the three C++ getters, the 64-byte C struct + size accessor + get/free, Python's decoder and fifth gate entry, the C++ test file)
 
 **Wave 2** *(blocked on Wave 1 — completes and freezes the C header)*
 
@@ -299,7 +299,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 |-------|----------------|--------|-----------|
 | 1. Enum Labels in Describe | 6/6 | Complete    | 2026-09-19 |
 | 2. Config Path, Locale and Struct-Size Safety | 13/13 | Complete    | 2026-09-19 |
-| 3. Structured Attribute Metadata | 0/7 | Planned | - |
+| 3. Structured Attribute Metadata | 1/7 | In Progress|  |
 | 4. Collection and Attribute-Group Metadata | 0/TBD | Not started | - |
 | 5. `validate_ui_config()` and Milestone Release | 0/TBD | Not started | - |
 
