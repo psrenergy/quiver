@@ -155,24 +155,49 @@ collection's metadata, not every other collection's. An absent or empty `ui/` di
 ordinary case and logs nothing — an empty directory yields zero `directory_iterator` entries, so
 the per-file loop body never runs. A directory that cannot be iterated (path resolution or the
 iteration itself failing) logs one warning from the outer catch and degrades to an empty
-`UiMetadata`; a file within it that cannot be opened (`ifstream::is_open()` is checked before
-reading, and a failed open throws so it lands in the same catch as a parse failure) or that fails
-to parse logs its own warning through the per-database logger and costs only that file —
-`from_migrations` still succeeds in every case.
+`UiMetadata`; a file that cannot be read or parsed logs its own warning through the per-database
+logger and costs only that file — `from_migrations` still succeeds in every case. Both passes go
+through one `parse_toml_file(path)` helper so their failure behaviour cannot drift: it throws
+Pattern 3 on a failed open **and on a failed read** (`ifstream::bad()` after the slurp), the second
+because a truncated TOML prefix is usually still syntactically valid, so a half-read sidecar would
+otherwise have parsed as a complete one and silently lost every attribute past the cut. Two things
+in that loop are deliberately spelled the way they are: `directory_entry::is_regular_file` takes
+the **`std::error_code` overload**, because that test sits outside the per-file `try` and the
+throwing overload would send one unstattable entry into the *outer* catch, discarding every
+collection already parsed; and a second file declaring an `id` some earlier file already claimed
+logs a `Duplicate UI metadata for collection` warning before replacing it, since selection is by
+shape rather than filename and `directory_iterator` order is unspecified — last-in still wins, but
+the collision is diagnosable instead of varying silently by filesystem.
 
-Rendering lives in `database_describe.cpp`, not here: `write_collection_section` gained a nullable
-`const UiMetadata*` and a `bool with_tooltip` parameter and appends zero to three `"; keyword body"`
+Rendering lives in `database_describe.cpp`, not here: `write_collection_section` gained a
+`const UiMetadata&` and a `bool with_tooltip` parameter and appends zero to three `"; keyword body"`
 clauses (`label`, `enum`, `tooltip`, in that fixed order) after each scalar's existing
 name/type/flags line — `describe()` passes `with_tooltip = false`, `describe_collection()` passes
-`true`, so `describe()`'s line is always a strict prefix of `describe_collection()`'s by
-construction. A label or tooltip whose `squash` (ASCII-lowercase, digits and letters only —
+`true`, so `describe()`'s line is always a prefix of `describe_collection()`'s by
+construction (identical whenever the tooltip clause is suppressed, so "prefix", not "strict
+prefix"). Only **main-table scalars** are annotated: `print_group_columns` takes no `UiMetadata`,
+so a sidecar entry for a vector/set/time-series column is parsed and then never rendered anywhere.
+A label or tooltip whose `squash` (ASCII-lowercase, digits and letters only —
 spelled as an explicit ASCII test, never `std::tolower(char)`, which is undefined behavior on a
 negative `char` and would be hit by real non-ASCII corpus strings) matches the attribute name's
-(or, for tooltip, the raw label's) squash is suppressed as redundant; the enum clause is never
-suppressed, since it cannot be re-derived from the column name. `normalize_ui_text` maps every
-byte below `0x20` and `0x7F` to a space before collapsing runs and trimming — a deliberate
-superset of "just collapse newlines" that also neutralizes ESC, so a sidecar string can never emit
-an ANSI escape sequence into a terminal rendering the report. An attribute with `hide = true` in
+(or, for tooltip, the label's) squash is suppressed as redundant; the enum clause is never
+suppressed, since it cannot be re-derived from the column name. Both comparisons go through one
+`is_redundant(a, b)` predicate that requires the squash to be **non-empty**: squash drops every
+byte outside `a-z0-9`, so a symbol-only (`"%"`, `"(-)"`) or non-Latin (`"Начальный объём"`) string
+squashes to `""` and used to compare equal to an *absent* label's `""` — silently deleting a
+tooltip that restates nothing. That is the one direction in which squash's "drop non-ASCII" bias
+suppresses rather than prints, and it is the reason the predicate exists rather than three
+open-coded `squash(a) == squash(b)` tests. The raw-vs-normalized distinction D-05 once drew is
+unobservable and is not spelled: `normalize_ui_text` only rewrites bytes `squash` discards anyway,
+so `squash(normalize(x)) == squash(x)`. `normalize_ui_text` maps every
+byte below `0x20` and `0x7F` to a space before collapsing runs and trimming (via
+`quiver::string::trim`) — **and** the two-byte UTF-8 encoding of the C1 block,
+`0xC2 0x80`-`0xC2 0x9F`. The C1 half is not optional: U+009B is CSI and U+009D is OSC, the 8-bit
+forms of `ESC [` and `ESC ]` that xterm and the Linux console honour by default, so a C0-only
+gate still let a sidecar string colour a terminal or retitle its window. Every *other* byte at
+0x80 or above is a UTF-8 lead or continuation byte and is never touched, which is what keeps the
+text intact — do not widen this into "drop two-byte sequences" (`ã`, `µ` and `°` all start with
+the same `0xC2`/`0xC3` lead bytes). An attribute with `hide = true` in
 its sidecar still renders every clause: `describe*` describes the schema, not the UI's visibility
 policy.
 
@@ -184,11 +209,18 @@ collection of TEXT/REAL/PK scalars pays zero two-level map lookups. **D-09 (deli
 from D-06):** here a label that normalizes to empty drops only the *annotation* and keeps the
 *entry* — unlike the `enum {}` clause above, where the entry IS the vocabulary and an
 empty-normalizing label drops the whole thing. In the histogram the entry is an observed row
-count, and dropping it would destroy data. Two known limits, recorded rather than fixed: (1)
+count, and dropping it would destroy data. Three known limits, recorded rather than fixed: (1)
 `ui_metadata` is populated only by `from_migrations` (see the early-return trap above), so
 `Database::open("study.db").summarize_collection(...)` still shows bare codes — this must not be
 "fixed" by hooking the load onto `load_schema_metadata` / `require_schema`, since `migrate_up`
-early-returns before it on the open-an-existing-study path; and (2) `kMaxDistributionCardinality`
+early-returns before it on the open-an-existing-study path. Note the sharpest edge of that limit:
+`from_migrations` **throws** on `options.read_only`, so a read-only handle — the natural mode for
+an inspection tool, and the mode PSR's `load_study` defaults to — can never carry the sidecar at
+all. Closing it needs a dedicated lazy `require_ui_metadata()` that remembers the migrations path
+(orthogonal to schema loading, and not the forbidden `require_schema` hook), or persisting the
+sidecar into the database file at `from_migrations` time; both are design changes, not cleanups.
+(1b) group columns are never annotated — see the render paragraph above; and (2)
+`kMaxDistributionCardinality`
 (64) still suppresses the whole `; values {}` clause above 64 distinct codes, so the richest enum
 column renders no labels at all — `describe_collection()`'s `; enum {...}` is the fallback, and 64
 labelled entries is already a ~2 KB single line, so no truncation is proposed (truncation needs its

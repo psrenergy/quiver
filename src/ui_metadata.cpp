@@ -4,8 +4,10 @@
 #include <fstream>
 #include <map>
 #include <optional>
+#include <sstream>
 #include <stdexcept>
 #include <string>
+#include <system_error>
 #include <toml++/toml.hpp>
 #include <utility>
 
@@ -14,6 +16,26 @@ namespace quiver {
 namespace {
 
 namespace fs = std::filesystem;
+
+// The one file read in this translation unit, shared by the vocabulary pass and the collection
+// pass so their failure behaviour cannot drift. `ostringstream << rdbuf()` is the house idiom
+// (`Migration::up_sql`, src/migration.cpp) and is the reason the stream state is checked *after*
+// the read as well as before it: an `istreambuf_iterator` slurp stops on a read error exactly as
+// it stops at EOF, and a truncated TOML prefix is usually still syntactically valid -- so a
+// half-read sidecar would have parsed as a complete one and silently lost every attribute past
+// the cut. Both throws land in the caller's per-file catch and become one warning.
+toml::table parse_toml_file(const fs::path& path) {
+    std::ifstream file(path);
+    if (!file.is_open()) {
+        throw std::runtime_error("Failed to open UI metadata file: " + path.string());
+    }
+    std::ostringstream buffer;
+    buffer << file.rdbuf();
+    if (file.bad()) {
+        throw std::runtime_error("Failed to read UI metadata file: " + path.string());
+    }
+    return toml::parse(buffer.str());
+}
 
 // Serves label, tooltip and each enum.toml entry's own label (READ-04): a plain string is used
 // as-is; a table is read at its "en" sub-key. Anything else (missing key, wrong shape, no "en")
@@ -132,12 +154,7 @@ UiMetadata load_ui_metadata(const std::string& migrations_path, spdlog::logger& 
         const fs::path enum_path = ui_dir / "enum.toml";
         if (fs::is_regular_file(enum_path)) {
             try {
-                std::ifstream file(enum_path);
-                if (!file.is_open()) {
-                    throw std::runtime_error("could not open file");
-                }
-                std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-                vocabularies = parse_vocabularies(toml::parse(content));
+                vocabularies = parse_vocabularies(parse_toml_file(enum_path));
             } catch (const std::exception& ex) {
                 logger.warn("Failed to load UI metadata from '{}': {}", enum_path.string(), ex.what());
             }
@@ -146,7 +163,16 @@ UiMetadata load_ui_metadata(const std::string& migrations_path, spdlog::logger& 
         // Collection pass: non-recursive scan, each file in its own inner try/catch so one
         // malformed ui/*.toml costs only its own collection.
         for (const auto& dir_entry : fs::directory_iterator(ui_dir)) {
-            if (!dir_entry.is_regular_file() || dir_entry.path().extension() != ".toml") {
+            if (dir_entry.path().extension() != ".toml") {
+                continue;
+            }
+            // `error_code` overload, not the throwing one: this test sits outside the per-file
+            // try below, so a single unstattable entry (a locked or racing file, an EACCES on a
+            // component) would otherwise unwind into the *outer* catch and discard every
+            // collection already parsed -- the opposite of the per-file degradation this loop
+            // exists to provide.
+            std::error_code ec;
+            if (!dir_entry.is_regular_file(ec) || ec) {
                 continue;
             }
             // Already consumed by the vocabulary pass above -- skipping avoids a second parse and
@@ -156,14 +182,20 @@ UiMetadata load_ui_metadata(const std::string& migrations_path, spdlog::logger& 
                 continue;
             }
             try {
-                std::ifstream file(dir_entry.path());
-                if (!file.is_open()) {
-                    throw std::runtime_error("could not open file");
-                }
-                std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-                auto parsed = parse_collection_file(toml::parse(content), vocabularies);
+                auto parsed = parse_collection_file(parse_toml_file(dir_entry.path()), vocabularies);
                 if (parsed) {
-                    metadata.collections[parsed->first] = std::move(parsed->second);
+                    // Two files may legally declare the same collection `id` -- selection is by
+                    // shape, never by filename -- and `directory_iterator` order is unspecified,
+                    // so the winner would differ between filesystems with nothing to see it.
+                    // Last-in still wins (a stale copy is as likely to be first as last), but the
+                    // collision is now diagnosable.
+                    auto [it, inserted] = metadata.collections.try_emplace(parsed->first, std::move(parsed->second));
+                    if (!inserted) {
+                        logger.warn("Duplicate UI metadata for collection '{}' in '{}': replacing the earlier file",
+                                    parsed->first,
+                                    dir_entry.path().string());
+                        it->second = std::move(parsed->second);
+                    }
                 }
             } catch (const std::exception& ex) {
                 logger.warn("Failed to load UI metadata from '{}': {}", dir_entry.path().string(), ex.what());

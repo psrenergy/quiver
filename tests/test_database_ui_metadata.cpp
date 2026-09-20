@@ -27,7 +27,13 @@ const char* kTooltipClauseOpener = "; tooltip";
 class UiTempTreeFixture : public ::testing::Test {
 protected:
     void SetUp() override {
-        root = (fs::temp_directory_path() / "quiver_ui_metadata_test").string();
+        // Per-test directory name, the LuaSandboxTest idiom (tests/test_lua_runner.h): a single
+        // fixed name is shared by every test in the file *and* by any concurrent run of the
+        // binary, so one test's SetUp can remove_all another's live migrations tree mid-run.
+        const auto* info = ::testing::UnitTest::GetInstance()->current_test_info();
+        root = (fs::temp_directory_path() /
+                (std::string("quiver_ui_metadata_") + info->test_suite_name() + "_" + info->name()))
+                   .string();
         if (fs::exists(root)) {
             fs::remove_all(root);
         }
@@ -80,9 +86,7 @@ protected:
 
     // A sibling of `root`, never a subdirectory of it -- copying `root` into its own subdirectory
     // would recurse into itself.
-    std::string mirror_root() const {
-        return (fs::path(root).parent_path() / "quiver_ui_metadata_test_mirror").string();
-    }
+    std::string mirror_root() const { return root + "_mirror"; }
 
     // Copies the whole temp tree (migrations/ + ui/, if any) to a sibling directory, deletes that
     // copy's `ui/` sibling, and opens a fresh database there -- the "same tree with the sidecar
@@ -108,12 +112,12 @@ protected:
     std::string root;
 };
 
-// Loader-facing gtest suite name -- reserved for the sidecar-parsing tests of a later plan in
-// this phase (see 01-VALIDATION.md's gtest filters).
+// Loader-facing gtest suite name -- sidecar parsing: path resolution, shape selection,
+// localized-value reading and the enum.toml join.
 class UiMetadataTest : public UiTempTreeFixture {};
 
 // Render-facing gtest suite name -- describe / describe_collection / summarize_collection
-// assertions, including the SAFE-01 baseline below.
+// assertions, the undescribed and malformed-degradation cases, and the SAFE-01 baseline below.
 class DatabaseUiMetadataTest : public UiTempTreeFixture {};
 
 namespace {
@@ -141,13 +145,22 @@ CREATE TABLE HydroPlant (
 
 // Lines beginning with the pinned four-space-dash scalar prefix, in order -- used by the
 // prefix-invariant test (D-07) to compare describe()'s per-scalar line against
-// describe_collection()'s correspondingly-indexed line.
+// describe_collection()'s correspondingly-indexed line. Collection only inside the `  Scalars:`
+// section: write_collection_section emits the *same* `    - ` prefix for vector/set/time-series
+// entries, so an unfiltered scan would start comparing group lines against group lines the day
+// a group is added to reservoir_schema() -- passing vacuously and silently retiring the
+// invariant this helper exists to guard.
 std::vector<std::string> extract_scalar_lines(const std::string& text) {
     std::vector<std::string> lines;
     std::istringstream iss(text);
     std::string line;
+    bool in_scalars = false;
     while (std::getline(iss, line)) {
-        if (line.starts_with("    - ")) {
+        if (line.starts_with("  ") && !line.starts_with("    ")) {
+            in_scalars = (line == "  Scalars:");
+            continue;
+        }
+        if (in_scalars && line.starts_with("    - ")) {
             lines.push_back(line);
         }
     }
@@ -281,6 +294,31 @@ tooltip.en = "Storage Volume"
 
     EXPECT_NE(describe_collection.find("; label \"Storage Volume\""), std::string::npos) << describe_collection;
     EXPECT_EQ(describe_collection.find(kTooltipClauseOpener), std::string::npos) << describe_collection;
+}
+
+// D-05 regression: a tooltip that squashes to nothing (symbols only, or a non-Latin script) is
+// NOT redundant with an absent label. Both squashes used to be "", so the equality fired and the
+// tooltip vanished -- the one direction in which squash()'s "drop non-ASCII" bias suppresses
+// rather than prints.
+TEST_F(DatabaseUiMetadataTest, RenderKeepsSymbolOnlyTooltipWhenLabelIsAbsent) {
+    write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
+    write_ui_file("hydro_plant.toml", R"TOML(
+id = "HydroPlant"
+
+[[attribute]]
+id = "discount_rate"
+tooltip.en = "(%)"
+
+[[attribute]]
+id = "hm3_initial"
+tooltip.en = "Начальный объём"
+)TOML");
+
+    auto db = open_tree();
+    auto describe_collection = db.describe_collection("HydroPlant");
+
+    EXPECT_NE(describe_collection.find(R"EXP(; tooltip "(%)")EXP"), std::string::npos) << describe_collection;
+    EXPECT_NE(describe_collection.find("; tooltip \"Начальный объём\""), std::string::npos) << describe_collection;
 }
 
 // D-02: a label containing a double quote and a backslash arrives escaped, and nothing else is
@@ -453,6 +491,34 @@ label.en = "A\tB\rC\u001bD"
     auto describe_collection = db.describe_collection("HydroPlant");
 
     EXPECT_NE(describe_collection.find("; label \"A B C D\""), std::string::npos) << describe_collection;
+}
+
+// T-01-03 regression: the C1 block is neutralized too. U+009B is CSI and U+009D is OSC -- the
+// 8-bit forms of `ESC [` and `ESC ]` that xterm and the Linux console honour by default -- and
+// they encode as `0xC2 0x9B` / `0xC2 0x9D`, both bytes above 0x7F, so the C0-only test let them
+// straight through to a terminal rendering the report.
+TEST_F(UiMetadataTest, LocalizedC1ControlCharacterCollapse) {
+    write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
+    write_ui_file("hydro_plant.toml", R"(
+id = "HydroPlant"
+
+[[attribute]]
+id = "hm3_initial"
+label.en = "A\u009B31;5;7mB"
+
+[[attribute]]
+id = "reservoir_type"
+label.en = "Vazão µm"
+)");
+
+    auto db = open_tree();
+    auto describe_collection = db.describe_collection("HydroPlant");
+
+    EXPECT_NE(describe_collection.find("; label \"A 31;5;7mB\""), std::string::npos) << describe_collection;
+    EXPECT_EQ(describe_collection.find("\xC2\x9B"), std::string::npos) << describe_collection;
+    // U+00E3 and U+00B5 also start with 0xC2/0xC3 lead bytes but are not C1 -- ordinary text is
+    // untouched, so the C1 gate cannot be widened into "drop two-byte sequences".
+    EXPECT_NE(describe_collection.find("; label \"Vazão µm\""), std::string::npos) << describe_collection;
 }
 
 // READ-04/D-02: non-ASCII UTF-8 passes through byte-for-byte -- squash() may drop it for
