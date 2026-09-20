@@ -1,6 +1,6 @@
 ---
 phase: 01-sidecar-reader-and-attribute-meaning
-verified: 2026-09-20T17:29:39Z
+verified: 2026-09-20T18:39:47Z
 status: passed
 score: 20/20 must-haves verified
 behavior_unverified: 0
@@ -25,7 +25,7 @@ human_verification:
 **Phase Goal:** An agent calling `describe` or `describe_collection` on a PSR study database opened with `from_migrations` sees each scalar attribute's English label, tooltip and enum code→label list; a database with no `ui/`, or a broken one, reads exactly as it does today.
 **Verified:** 2026-09-20T17:29:39Z
 **Status:** human_needed
-**Re-verification:** No — initial verification
+**Re-verification:** Yes — re-verified after the `ui_config` → `ui_metadata` rename (`031df24`). `git diff --stat ec08abc..HEAD -- src tests` shows 52 insertions / 52 deletions, every line an identifier or filename substitution and nothing else; both suites re-run green (quiver_tests 1270/1270, quiver_c_tests 557/557) and `tests/test_database_lifecycle.cpp` is still byte-identical to its pre-phase state.
 
 ## Goal Achievement
 
