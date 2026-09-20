@@ -64,7 +64,7 @@ No phase SPEC exists, so the probe ran over RENDER-02 and surfaced 4 applicable 
 
 | Category | Probe | Disposition |
 |----------|-------|-------------|
-| `empty` | Result for empty / single-element / null input | **explicit** — covered by D2-05 (no vocabulary → bare), D2-06 (empty-normalizing label → annotation dropped, entry kept) and the existing zero-distinct-codes guard which omits the whole clause |
+| `empty` | Result for empty / single-element / null input | **split, deliberately** — D2-05 (no vocabulary, empty vocabulary or null `UiAttribute*` → bare, byte-identical) and the existing zero-distinct-codes guard are **explicit**, asserted by the new test. D2-06 (label normalizing to empty → annotation dropped, entry kept) is **backstop**: CONTEXT.md `<specifics>` caps this phase's test at one `EXPECT_TRUE` plus one `EXPECT_FALSE`, so nothing asserts it and the guarantee rests on the `if (!text.empty())` guard. Narrowed from a blanket "explicit" during planning rather than overclaiming coverage. |
 | `encoding` | Bytes vs code points vs normalized form | **explicit** — D2-03 reuses `normalize_ui_text` (C0 + 0x7F → space, UTF-8 bytes untranscoded) and `quote_ui_text` verbatim; `squash()` is NOT used here (D2-08) |
 | `ordering` | Is output order specified and stable when elements compare equal | **explicit** — D2-04: the existing `ORDER BY <col>` is ascending code; codes are unique per entry, so no tie exists |
 | `adjacency` | Exactly-equal or touching things — merge, collide, or separate | **backstop** — a label whose text is the code's own digits (`1 "1": 5`) renders, per D2-08; quoting keeps it unambiguous |
