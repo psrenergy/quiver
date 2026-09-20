@@ -27,7 +27,7 @@ core; nothing in this milestone renders pixels, so no `UI hint` annotation appea
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 1: Sidecar Reader and Attribute Meaning** - Parse `ui/` from `from_migrations` and render label, tooltip and enum labels in `describe` / `describe_collection`, degrading silently when the sidecar is absent or broken
+- [x] **Phase 1: Sidecar Reader and Attribute Meaning** - Parse `ui/` from `from_migrations` and render label, tooltip and enum labels in `describe` / `describe_collection`, degrading silently when the sidecar is absent or broken (completed 2026-09-20)
 - [ ] **Phase 2: Enum Labels on the Value Histogram** - Annotate `summarize_collection`'s integer value distribution with each code's enum label
 
 ## Phase Details
@@ -100,7 +100,7 @@ is its own phase rather than a second edit inside Phase 1's.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Sidecar Reader and Attribute Meaning | 3/3 | In Progress|  |
+| 1. Sidecar Reader and Attribute Meaning | 3/3 | Complete    | 2026-09-20 |
 | 2. Enum Labels on the Value Histogram | 0/TBD | Not started | - |
 
 ## Requirement Coverage
