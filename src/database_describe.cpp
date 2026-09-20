@@ -52,8 +52,124 @@ const char* plural(int64_t n) {
     return n == 1 ? "" : "s";
 }
 
+// Whitespace/control-byte normalization for UI sidecar text (D-03, and the T-01-03 mitigation):
+// maps every byte below 0x20 or equal to 0x7F to a space -- a deliberate superset of D-03's named
+// \r/\n/\t that also neutralizes ESC (0x1B) and every other C0 control, so no sidecar string can
+// emit an ANSI escape sequence into a terminal rendering the report. Then collapses runs of
+// spaces to one and trims both ends. Testing the byte as unsigned char is what keeps UTF-8
+// intact: every byte of a multibyte sequence is 0x80 or above and is never touched. An empty
+// result means the value is absent and no clause is emitted -- never an empty pair of quotes.
+std::string normalize_ui_text(const std::string& raw) {
+    std::string collapsed;
+    collapsed.reserve(raw.size());
+    bool last_was_space = false;
+    for (char c : raw) {
+        const auto uc = static_cast<unsigned char>(c);
+        const bool is_control = uc < 0x20 || uc == 0x7F;
+        const char out_char = is_control ? ' ' : c;
+        if (out_char == ' ') {
+            if (!last_was_space && !collapsed.empty()) {
+                collapsed.push_back(' ');
+            }
+            last_was_space = true;
+        } else {
+            collapsed.push_back(out_char);
+            last_was_space = false;
+        }
+    }
+    while (!collapsed.empty() && collapsed.back() == ' ') {
+        collapsed.pop_back();
+    }
+    return collapsed;
+}
+
+// Wraps text in ASCII double quotes with backslash doubled and double quote escaped, and no other
+// escaping (D-02). This is what makes every separator unambiguous: arbitrary user text only ever
+// appears between an unescaped opening and closing quote.
+std::string quote_ui_text(const std::string& text) {
+    std::string quoted = "\"";
+    quoted.reserve(text.size() + 2);
+    for (char c : text) {
+        if (c == '\\' || c == '"') {
+            quoted.push_back('\\');
+        }
+        quoted.push_back(c);
+    }
+    quoted.push_back('"');
+    return quoted;
+}
+
+// ASCII-lowercase, then keep only a-z/0-9 (D-04). Spelled as an explicit ASCII test rather than
+// std::tolower(char): passing a negative char to std::tolower is undefined behavior, and a
+// meaningful fraction of corpus strings are non-ASCII UTF-8. squash() therefore drops non-ASCII
+// bytes, which biases toward *printing* a label rather than suppressing it -- that is the safe
+// direction and is deliberate; do not "fix" it to a Unicode-aware fold.
+std::string squash(const std::string& s) {
+    std::string out;
+    out.reserve(s.size());
+    for (char c : s) {
+        const char lower = (c >= 'A' && c <= 'Z') ? static_cast<char>(c + 32) : c;
+        if ((lower >= 'a' && lower <= 'z') || (lower >= '0' && lower <= '9')) {
+            out.push_back(lower);
+        }
+    }
+    return out;
+}
+
+// Appends zero to three "; keyword body" clauses for one scalar attribute (D-01), in the fixed
+// order label, enum, tooltip. Each clause carries its own leading "; " so eliding one leaves no
+// dangling separator. Only the tooltip clause is conditional on with_tooltip -- label and enum
+// are unconditional -- which is what makes describe()'s line a strict prefix of
+// describe_collection()'s line by construction (D-07/D-08).
+void write_ui_clauses(std::ostream& out, const UiAttribute* meta, const std::string& name, bool with_tooltip) {
+    if (!meta) {
+        return;
+    }
+
+    const std::string normalized_label = normalize_ui_text(meta->label);
+    const bool emit_label = !normalized_label.empty() && squash(normalized_label) != squash(name);
+    if (emit_label) {
+        out << "; label " << quote_ui_text(normalized_label);
+    }
+
+    // Enum clause (D-06): never suppressed for redundancy -- it is the one field that cannot be
+    // re-derived from the column name. std::map<int64_t, std::string> already iterates in
+    // ascending key order, so there is no sort. An entry whose label normalizes to empty is
+    // dropped; when no entry survives, the whole clause is omitted (never an empty brace pair).
+    std::string enum_body;
+    for (const auto& [code, label] : meta->enum_labels) {
+        const std::string normalized_entry = normalize_ui_text(label);
+        if (normalized_entry.empty()) {
+            continue;
+        }
+        if (!enum_body.empty()) {
+            enum_body += ", ";
+        }
+        enum_body += std::to_string(code) + ": " + quote_ui_text(normalized_entry);
+    }
+    if (!enum_body.empty()) {
+        out << "; enum {" << enum_body << "}";
+    }
+
+    if (with_tooltip) {
+        const std::string normalized_tooltip = normalize_ui_text(meta->tooltip);
+        const bool redundant_vs_name = squash(normalized_tooltip) == squash(name);
+        // Compared against the raw sidecar label per D-05, even when the label clause itself was
+        // suppressed by D-04.
+        const bool redundant_vs_label = squash(normalized_tooltip) == squash(meta->label);
+        if (!normalized_tooltip.empty() && !redundant_vs_name && !redundant_vs_label) {
+            out << "; tooltip " << quote_ui_text(normalized_tooltip);
+        }
+    }
+}
+
 // Write one collection's structural section (scalars + vector/set/time-series groups).
-void write_collection_section(std::ostream& out, const Schema& schema, const std::string& collection, int64_t count) {
+void write_collection_section(std::ostream& out,
+                              const Schema& schema,
+                              const std::string& collection,
+                              int64_t count,
+                              const UiConfig* ui,
+                              bool with_tooltip) {
     out << "Collection: " << collection << " (" << count << " element" << plural(count) << ")\n";
 
     const auto* table_def = schema.get_table(collection);
@@ -68,6 +184,7 @@ void write_collection_section(std::ostream& out, const Schema& schema, const std
             if (col.not_null && !col.primary_key) {
                 out << " NOT NULL";
             }
+            write_ui_clauses(out, ui ? ui->find(collection, name) : nullptr, name, with_tooltip);
             out << "\n";
         }
     }
@@ -101,7 +218,8 @@ std::string Database::describe() const {
 
     for (const auto& collection : impl_->schema->collection_names()) {
         out << "\n";
-        write_collection_section(out, *impl_->schema, collection, number_of_elements(collection));
+        write_collection_section(
+            out, *impl_->schema, collection, number_of_elements(collection), &impl_->ui_config, false);
     }
 
     return out.str();
@@ -111,7 +229,8 @@ std::string Database::describe_collection(const std::string& collection) const {
     impl_->require_collection(collection, "describe_collection");
 
     std::ostringstream out;
-    write_collection_section(out, *impl_->schema, collection, number_of_elements(collection));
+    write_collection_section(
+        out, *impl_->schema, collection, number_of_elements(collection), &impl_->ui_config, true);
     return out.str();
 }
 

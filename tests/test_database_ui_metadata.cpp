@@ -2,6 +2,9 @@
 #include <fstream>
 #include <gtest/gtest.h>
 #include <quiver/database.h>
+#include <sstream>
+#include <string>
+#include <vector>
 
 namespace fs = std::filesystem;
 
@@ -107,6 +110,21 @@ CREATE TABLE HydroPlant (
 )";
 }
 
+// Lines beginning with the pinned four-space-dash scalar prefix, in order -- used by the
+// prefix-invariant test (D-07) to compare describe()'s per-scalar line against
+// describe_collection()'s correspondingly-indexed line.
+std::vector<std::string> extract_scalar_lines(const std::string& text) {
+    std::vector<std::string> lines;
+    std::istringstream iss(text);
+    std::string line;
+    while (std::getline(iss, line)) {
+        if (line.rfind("    - ", 0) == 0) {
+            lines.push_back(line);
+        }
+    }
+    return lines;
+}
+
 }  // namespace
 
 // SAFE-01 baseline: with no `ui/` sibling, a from_migrations tree renders describe(),
@@ -140,4 +158,259 @@ TEST_F(DatabaseUiMetadataTest, NoUiDirReportsUnchanged) {
         EXPECT_EQ(output->find(kEnumClauseOpener), std::string::npos) << *output;
         EXPECT_EQ(output->find(kTooltipClauseOpener), std::string::npos) << *output;
     }
+}
+
+// ============================================================================
+// Task 1-01-01: label + tooltip render, one path through every layer
+// ============================================================================
+
+// D-01/D-08 worked example: a label renders in both reports, a tooltip renders only in
+// describe_collection() and sits after the label clause.
+TEST_F(DatabaseUiMetadataTest, RenderLabelAndTooltipClauses) {
+    write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
+    write_ui_file("hydro_plant.toml", R"TOML(
+id = "HydroPlant"
+
+[[attribute]]
+id = "hm3_initial"
+label.en = "Initial Storage (hm³)"
+tooltip.en = "Reservoir volume at the start of the study."
+)TOML");
+
+    auto db = open_tree();
+
+    const std::string expected_describe_line =
+        "    - hm3_initial (REAL); label \"Initial Storage (hm³)\"\n";
+    const std::string expected_describe_collection_line =
+        "    - hm3_initial (REAL); label \"Initial Storage (hm³)\"; "
+        "tooltip \"Reservoir volume at the start of the study.\"\n";
+
+    auto describe = db.describe();
+    auto describe_collection = db.describe_collection("HydroPlant");
+
+    EXPECT_NE(describe.find(expected_describe_line), std::string::npos) << describe;
+    EXPECT_EQ(describe.find(kTooltipClauseOpener), std::string::npos) << describe;
+    EXPECT_NE(describe_collection.find(expected_describe_collection_line), std::string::npos) << describe_collection;
+}
+
+// D-04: a label whose squash equals the attribute name's squash emits no label clause.
+TEST_F(DatabaseUiMetadataTest, RenderSuppressesRedundantLabel) {
+    write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
+    write_ui_file("hydro_plant.toml", R"(
+id = "HydroPlant"
+
+[[attribute]]
+id = "initial_volume_type"
+label.en = "Initial Volume Type"
+)");
+
+    auto db = open_tree();
+    auto describe_collection = db.describe_collection("HydroPlant");
+
+    EXPECT_NE(describe_collection.find("    - initial_volume_type (INTEGER) NOT NULL\n"), std::string::npos)
+        << describe_collection;
+    EXPECT_EQ(describe_collection.find(kLabelClauseOpener), std::string::npos) << describe_collection;
+}
+
+// D-05: a tooltip whose squash equals the raw sidecar label's squash is suppressed, even though
+// the label itself (not redundant against the name) is still rendered.
+TEST_F(DatabaseUiMetadataTest, RenderSuppressesRedundantTooltip) {
+    write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
+    write_ui_file("hydro_plant.toml", R"(
+id = "HydroPlant"
+
+[[attribute]]
+id = "hm3_initial"
+label.en = "Storage Volume"
+tooltip.en = "Storage Volume"
+)");
+
+    auto db = open_tree();
+    auto describe_collection = db.describe_collection("HydroPlant");
+
+    EXPECT_NE(describe_collection.find("; label \"Storage Volume\""), std::string::npos) << describe_collection;
+    EXPECT_EQ(describe_collection.find(kTooltipClauseOpener), std::string::npos) << describe_collection;
+}
+
+// D-02: a label containing a double quote and a backslash arrives escaped, and nothing else is
+// escaped. A TOML literal (single-quoted) string keeps the source bytes exactly as written.
+TEST_F(DatabaseUiMetadataTest, RenderEscapesQuotesAndBackslashes) {
+    write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
+    write_ui_file("hydro_plant.toml", R"(
+id = "HydroPlant"
+
+[[attribute]]
+id = "hm3_initial"
+label = 'Say "Hi" and a backslash \ here'
+)");
+
+    auto db = open_tree();
+    auto describe_collection = db.describe_collection("HydroPlant");
+
+    EXPECT_NE(describe_collection.find(R"(; label "Say \"Hi\" and a backslash \\ here")"), std::string::npos)
+        << describe_collection;
+}
+
+// D-08: describe() never renders a tooltip clause, even when one is present in the sidecar.
+TEST_F(DatabaseUiMetadataTest, RenderDescribeOmitsTooltip) {
+    write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
+    write_ui_file("hydro_plant.toml", R"(
+id = "HydroPlant"
+
+[[attribute]]
+id = "discount_rate"
+tooltip.en = "Annual discount rate applied to future operating costs, in %."
+)");
+
+    auto db = open_tree();
+    auto describe = db.describe();
+    auto describe_collection = db.describe_collection("HydroPlant");
+
+    EXPECT_EQ(describe.find(kTooltipClauseOpener), std::string::npos) << describe;
+    EXPECT_NE(describe_collection.find(kTooltipClauseOpener), std::string::npos) << describe_collection;
+}
+
+// D-07: for every scalar, describe()'s line is a strict character-for-character prefix of
+// describe_collection()'s line. The cheapest possible anti-drift guarantee -- write it first.
+TEST_F(DatabaseUiMetadataTest, PrefixInvariantDescribeIsPrefixOfDescribeCollection) {
+    write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
+    write_ui_file("hydro_plant.toml", R"(
+id = "HydroPlant"
+
+[[attribute]]
+id = "hm3_initial"
+label.en = "Storage Volume"
+tooltip.en = "Reservoir volume at the start of the study."
+
+[[attribute]]
+id = "discount_rate"
+tooltip.en = "Annual discount rate."
+)");
+
+    auto db = open_tree();
+    auto describe = db.describe();
+    auto describe_collection = db.describe_collection("HydroPlant");
+
+    auto pos = describe.find("Collection: HydroPlant");
+    ASSERT_NE(pos, std::string::npos) << describe;
+    auto section_end = describe.find("\nCollection: ", pos + 1);
+    const std::string hydro_section =
+        section_end == std::string::npos ? describe.substr(pos) : describe.substr(pos, section_end - pos);
+
+    auto describe_lines = extract_scalar_lines(hydro_section);
+    auto describe_collection_lines = extract_scalar_lines(describe_collection);
+
+    ASSERT_EQ(describe_lines.size(), describe_collection_lines.size());
+    ASSERT_FALSE(describe_lines.empty());
+    for (size_t i = 0; i < describe_lines.size(); ++i) {
+        EXPECT_EQ(describe_collection_lines[i].rfind(describe_lines[i], 0), 0)
+            << "describe line:            " << describe_lines[i] << "\n"
+            << "describe_collection line: " << describe_collection_lines[i];
+    }
+}
+
+// ============================================================================
+// UiConfigTest: loader-facing behavior, driven through the public Database API only (D-12)
+// ============================================================================
+
+// READ-03: keyed by the file's own top-level id and each [[attribute]]'s own id -- never the
+// filename. The file below is named differently from both the collection and the attribute.
+TEST_F(UiConfigTest, LabelTooltipKeyedByFileIdAndAttributeId) {
+    write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
+    write_ui_file("plant_metadata.toml", R"(
+id = "HydroPlant"
+
+[[attribute]]
+id = "reservoir_type"
+label.en = "Reservoir Kind"
+)");
+
+    auto db = open_tree();
+    auto describe_collection = db.describe_collection("HydroPlant");
+
+    EXPECT_NE(describe_collection.find("    - reservoir_type (INTEGER); label \"Reservoir Kind\"\n"),
+              std::string::npos)
+        << describe_collection;
+}
+
+// READ-04: a localizable value is read either as a bare string or from a table's `en` sub-key.
+TEST_F(UiConfigTest, LocalizedStringOrTableEn) {
+    write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
+    write_ui_file("hydro_plant.toml", R"(
+id = "HydroPlant"
+
+[[attribute]]
+id = "hm3_initial"
+label = "Bare String Label"
+
+[[attribute]]
+id = "discount_rate"
+label.en = "Table En Label"
+)");
+
+    auto db = open_tree();
+    auto describe_collection = db.describe_collection("HydroPlant");
+
+    EXPECT_NE(describe_collection.find("; label \"Bare String Label\""), std::string::npos) << describe_collection;
+    EXPECT_NE(describe_collection.find("; label \"Table En Label\""), std::string::npos) << describe_collection;
+}
+
+// READ-04: embedded newlines collapse to a single space so the rendered line stays one line.
+TEST_F(UiConfigTest, LocalizedNewlineCollapse) {
+    write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
+    write_ui_file("hydro_plant.toml", R"(
+id = "HydroPlant"
+
+[[attribute]]
+id = "hm3_initial"
+label.en = "Mean\nProduction\nFactor"
+)");
+
+    auto db = open_tree();
+    auto describe_collection = db.describe_collection("HydroPlant");
+
+    EXPECT_NE(describe_collection.find("; label \"Mean Production Factor\""), std::string::npos)
+        << describe_collection;
+}
+
+// READ-04/D-03: every C0 control byte (tab, CR, ESC, ...) is normalized to a space, not just the
+// \r/\n/\t named in D-03's prose -- a deliberate superset that also neutralizes ESC.
+TEST_F(UiConfigTest, LocalizedControlCharacterCollapse) {
+    write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
+    write_ui_file("hydro_plant.toml", R"(
+id = "HydroPlant"
+
+[[attribute]]
+id = "hm3_initial"
+label.en = "A\tB\rC\u001bD"
+)");
+
+    auto db = open_tree();
+    auto describe_collection = db.describe_collection("HydroPlant");
+
+    EXPECT_NE(describe_collection.find("; label \"A B C D\""), std::string::npos) << describe_collection;
+}
+
+// READ-04/D-02: non-ASCII UTF-8 passes through byte-for-byte -- squash() may drop it for
+// redundancy comparisons, but the rendered text itself is never transcoded.
+TEST_F(UiConfigTest, LocalizedUtf8Passthrough) {
+    write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
+    write_ui_file("hydro_plant.toml", R"(
+id = "HydroPlant"
+
+[[attribute]]
+id = "hm3_initial"
+label.en = "Volume Útil"
+
+[[attribute]]
+id = "discount_rate"
+tooltip.en = "Measured in °C"
+)");
+
+    auto db = open_tree();
+    auto describe_collection = db.describe_collection("HydroPlant");
+
+    EXPECT_NE(describe_collection.find("; label \"Volume Útil\""), std::string::npos) << describe_collection;
+    EXPECT_NE(describe_collection.find("; tooltip \"Measured in °C\""), std::string::npos)
+        << describe_collection;
 }
