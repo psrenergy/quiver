@@ -5,7 +5,27 @@ All notable changes to Quiver are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entries that require
 callers to change something are prefixed **BREAKING** and say what to do.
 
-## [0.10.7] — unreleased
+## [0.10.8] — unreleased
+
+### Added
+
+- **`describe()` and `describe_collection()` now render an attribute's meaning, not just its
+  declaration, when the database was opened with `from_migrations`.** Each scalar attribute line
+  gains zero to three semicolon-delimited clauses read from a `ui/` TOML sidecar that sits beside
+  the migrations directory: an English `label`, an `enum` code-to-label list, and — in
+  `describe_collection()` only — a `tooltip`. Worked example:
+  `- initial_volume_type (INTEGER) NOT NULL; label "Initial Volume Unit"; enum {0: "Per Unit", 2: "Volume"}`.
+  A label or tooltip that merely restates the attribute name is suppressed, so only genuinely new
+  information is added. A database with no `ui/` sidecar, or with a broken one (missing directory,
+  empty file, invalid TOML, wrong-shaped entry), renders exactly as it did before this change and
+  `from_migrations` never fails because of it — a warning is logged and the affected collection or
+  vocabulary is simply left undescribed. The feature reaches every binding and Lua with no
+  additional code on their side, since `describe`/`describe_collection` already return a plain
+  string. Deliberately not included: no C API symbol, no structured getter, no validation of the
+  sidecar against the schema, and English only — a database opened with `from_schema` is
+  unaffected, and `summarize_collection()` does not yet render this metadata.
+
+## [0.10.7] — 2026-09-17
 
 ### Changed
 
@@ -532,7 +552,8 @@ are functionally identical to 0.10.0.
   `read_time_series_group` emits for a NULL STRING cell — so feeding a read result back with the
   mask stripped was UB. A NULL entry, or a NULL per-column data pointer, is now SQL NULL.
 
-[0.10.7]: https://github.com/psrenergy/quiver/compare/v0.10.6...HEAD
+[0.10.8]: https://github.com/psrenergy/quiver/compare/v0.10.7...HEAD
+[0.10.7]: https://github.com/psrenergy/quiver/compare/v0.10.6...v0.10.7
 [0.10.6]: https://github.com/psrenergy/quiver/compare/v0.10.5...v0.10.6
 [0.10.5]: https://github.com/psrenergy/quiver/compare/v0.10.4...v0.10.5
 [0.10.4]: https://github.com/psrenergy/quiver/compare/v0.10.3...v0.10.4

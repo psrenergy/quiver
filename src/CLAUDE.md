@@ -49,6 +49,8 @@ src/                      # C++ implementation
                               # db:read_csv_stream -- no include/quiver/ counterpart (see below)
   csv_write.h / csv_write.cpp  # Internal CSV writer (hand-rolled, NOT Pimpl'd) behind db:write_csv
                                 # -- same no-include/quiver/-counterpart posture as csv_read
+  ui_config.h / ui_config.cpp  # Internal ui/ TOML sidecar reader behind describe/describe_collection
+                                # -- same no-include/quiver/-counterpart posture as csv_read
   cli/main.cpp            # quiver_cli CLI entry point
   utils/string.h          # String utilities: new_c_str, trim
   utils/datetime.h        # ISO 8601 parse/format helpers
@@ -114,6 +116,62 @@ short `write_row` pads to the header's length, a long one throws) lives entirely
 state and no signature change for it, and padding happens before the cell vector ever reaches
 `write_row`/`append_record`, so `append_record`'s `lone_empty_cell` predicate sees the final,
 already-padded cell count.
+
+`ui_config.h`/`ui_config.cpp` is the `ui/` TOML sidecar reader behind `describe()` and
+`describe_collection()` (Phase 1 of the "UI Metadata in describe" milestone): same
+no-`include/quiver/`-header, no-`QUIVER_API`, no-C-API-symbol, no-FFI-binding posture as
+`csv_read` — `describe*` already return a plain `std::string` through the C API, so there is no
+FFI consumer for a structured getter, and toml++ is linked PRIVATE on `quiver`
+(`src/CMakeLists.txt`), so no `toml::` symbol may appear outside this `.cpp`; `ui_config.cpp` must
+be listed in `QUIVER_SOURCES` for exactly that reason. The load happens once, in `from_migrations`
+(`database.cpp`) right after `migrate_up` returns, and deliberately **not** on
+`Impl::require_schema` — `migrate_up` early-returns before reaching the schema-load path on every
+re-open of an already-up-to-date study, which is the common case for a real PSR run. A database
+opened with `from_schema` never populates it, so its `Database::Impl::ui_config` stays
+default-constructed (empty), and `describe`/`describe_collection` render exactly as before.
+
+The sibling directory is `fs::weakly_canonical(migrations_path).parent_path() / "ui"` — raw
+`parent_path()` was tried and is provably wrong two ways: a trailing separator on the migrations
+path yields `<migrations>/ui`, which never exists, and a bare relative migrations path yields
+`./ui` against whatever the process CWD happens to be at call time, not the sibling directory a
+caller means. `fs::weakly_canonical` normalizes both away before `parent_path()` ever runs (the
+same idiom `src/lua_runner.cpp`'s `resolve_sandboxed_path` already uses).
+
+A `ui/*.toml` collection file self-selects by shape, never by filename: a top-level string `id`
+plus an `attribute` array are both required, which is what excludes `main.toml` (no `id`), every
+theme file (`id` but no `attribute` array), and any non-`.toml` file, with the scan staying
+non-recursive so a `themes/` subdirectory is never walked into. `enum.toml` has no wrapper key of
+its own — every one of its top-level keys IS a vocabulary name, discovered by iterating the whole
+top-level table rather than reading one fixed array key, and an attribute joins a vocabulary by
+its own `enum` value, never its `id` (several attributes commonly share one vocabulary, e.g.
+`bool`).
+
+The whole load is a **nested try/catch that warns and degrades, and never throws** — explicitly
+not `src/binary/binary_metadata.cpp`'s posture, which throws on a parse error or a bare
+`.value()` unwrap with no test for either. One outer catch covers directory iteration and path
+resolution and yields a fully empty `UiConfig` on failure; one inner catch per collection file (and
+a separate one around `enum.toml`) means a single malformed `ui/*.toml` costs only that
+collection's metadata, not every other collection's. An absent `ui/` directory is the ordinary
+case and logs nothing; a directory that exists but is empty, unreadable, or malformed logs a
+warning through the per-database logger and degrades — `from_migrations` still succeeds either
+way.
+
+Rendering lives in `database_describe.cpp`, not here: `write_collection_section` gained a nullable
+`const UiConfig*` and a `bool with_tooltip` parameter and appends zero to three `"; keyword body"`
+clauses (`label`, `enum`, `tooltip`, in that fixed order) after each scalar's existing
+name/type/flags line — `describe()` passes `with_tooltip = false`, `describe_collection()` passes
+`true`, so `describe()`'s line is always a strict prefix of `describe_collection()`'s by
+construction. A label or tooltip whose `squash` (ASCII-lowercase, digits and letters only —
+spelled as an explicit ASCII test, never `std::tolower(char)`, which is undefined behavior on a
+negative `char` and would be hit by real non-ASCII corpus strings) matches the attribute name's
+(or, for tooltip, the raw label's) squash is suppressed as redundant; the enum clause is never
+suppressed, since it cannot be re-derived from the column name. `normalize_ui_text` maps every
+byte below `0x20` and `0x7F` to a space before collapsing runs and trimming — a deliberate
+superset of "just collapse newlines" that also neutralizes ESC, so a sidecar string can never emit
+an ANSI escape sequence into a terminal rendering the report. An attribute with `hide = true` in
+its sidecar still renders every clause: `describe*` describes the schema, not the UI's visibility
+policy. `summarize_collection()` does not render any of this yet — that is a later phase's scope,
+not an oversight.
 
 Three guards in the Lua layer's decoders (`src/lua_runner.cpp`) exist because a script is
 untrusted input, in the same spirit as the JSON encoder's two caps below:
