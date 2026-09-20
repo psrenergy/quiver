@@ -227,3 +227,7 @@ None beyond the raw-string fixture fix above.
 ---
 *Phase: 01-sidecar-reader-and-attribute-meaning*
 *Completed: 2026-09-20*
+
+> **Post-phase note:** `src/ui_config.{h,cpp}` / `UiConfig` / `load_ui_config` were renamed to
+> `src/ui_metadata.{h,cpp}` / `UiMetadata` / `load_ui_metadata` in `031df24`, after this plan ran.
+> Paths above are as they were at execution time.

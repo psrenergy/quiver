@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v0.10.8
 milestone_name: UI Metadata in describe
-current_phase: 01
-current_phase_name: Sidecar Reader and Attribute Meaning
-status: verifying
+current_phase: 2
+current_phase_name: Enum Labels on the Value Histogram
+status: planning
 stopped_at: Completed 01-02-PLAN.md
-last_updated: "2026-09-20T16:58:21.943Z"
+last_updated: "2026-09-20T17:58:10.035Z"
 last_activity: 2026-09-20
 last_activity_desc: Roadmap created, 10/10 requirements mapped
 progress:
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-09-20)
 
 ## Current Position
 
-Phase: 01 (Sidecar Reader and Attribute Meaning) — EXECUTING
-Plan: 3 of 3
-Status: Phase complete — ready for verification
-Last activity: 2026-09-20 — Phase 01 execution started
+Phase: 2 — Enum Labels on the Value Histogram
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-09-20 — Phase 01 complete, transitioned to Phase 2
 
 Progress: [██████████] 100%
 
@@ -38,7 +38,7 @@ Progress: [██████████] 100%
 
 **Velocity:**
 
-- Total plans completed: 0
+- Total plans completed: 3
 - Average duration: —
 - Total execution time: —
 
@@ -46,7 +46,7 @@ Progress: [██████████] 100%
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 01 | 3 | - | - |
 
 **Recent Trend:**
 
@@ -70,6 +70,22 @@ Full log in PROJECT.md Key Decisions. Affecting current work:
 
 - Roadmap: 2 phases, split on the one render seam that exists — `write_collection_section`
   (`describe` + `describe_collection`) vs `summarize_collection`'s own scalar loop and histogram.
+
+- **UI metadata stays a side map on `Impl`; it is NOT folded into `ScalarMetadata`** (user
+  decision, 2026-09-20, after explicitly weighing the alternative). Considered and rejected for
+  this milestone: (a) putting `label`/`tooltip`/`enum_labels` on `ScalarMetadata`, which is
+  META-02 pulled forward — it grows the ABI-exposed `quiver_scalar_metadata_t`, needs all three
+  FFI generators plus the hand-written JS loader, and does not simplify `describe` (the renderer
+  walks `ColumnDefinition`, never `ScalarMetadata`); (b) merging `ColumnDefinition` and
+  `ScalarMetadata` into one eagerly-built struct — workable (the FK join becomes a one-time
+  load-step and the `not_null` rowid-alias correction becomes a derived predicate rather than a
+  stored copy), but it couples `schema.h` to the ABI type, so an internal-only schema field would
+  become an ABI change. Milestone scope kept as originally defined. Note the lazy `require_schema`
+  trigger is independently settled and was not in question.
+
+- `src/ui_config.{h,cpp}` renamed to `src/ui_metadata.{h,cpp}` (`UiConfig` → `UiMetadata`,
+  `load_ui_config` → `load_ui_metadata`) in `031df24` — it holds descriptive strings, not
+  configuration, and `DatabaseOptions` already owns the word "config".
 
 - UI parsing lives in `from_migrations`, never hooked onto `load_schema_metadata` — `migrate_up`
   early-returns before it on the open-an-existing-study path.
