@@ -9,13 +9,16 @@ phase: a C++ parser, a lazy member on `Database::Impl`, and three append-only fo
 `std::string` through the existing C API wrappers. That first slice ships as a patch and stands
 alone; if the milestone stopped there, the defect an agent hits today would be closed.
 
-Everything after it serves the committed consumer. Phase 2 breaks the `DatabaseOptions` C ABI so
-claw can point Quiver at a UI directory its sandbox can actually reach, and pays off the whole
-silent-struct-corruption hazard class at the same time. Phase 3 hands claw structured metadata
-through a *new* C struct so the 56-byte and 32-byte constants four bindings mirror by hand never
-move. Phase 4 adds the collection- and group-level knowledge SQL cannot express. Phase 5 ships
-the advisory validator — the first thing in the PSR ecosystem that checks the sidecar against
-anything — and takes the milestone through the release ritual.
+That first slice turned out to be the whole of the core value, and the milestone was re-scoped
+after Phase 2 to say so (see **Scope Correction** below). Phase 2 paid off the
+silent-struct-corruption hazard class and is kept for that alone. Phase 3 now *removes* the
+options and structured-metadata surface Phase 2 and its own first two plans had added, returning
+`quiver_database_options_t` to its published 8-byte layout. Phase 4 adds the collection- and
+group-level knowledge SQL cannot express — rendered into `describe`, with no new public surface.
+Phase 5 is the release ritual alone.
+
+**The sidecar has exactly one consumer: `describe`.** No getter, no new C struct, no binding
+change. That is the whole design, and every requirement that contradicted it has been retired.
 
 **Mode:** MVP. Each phase is a vertical slice that a consumer can observe through the bindings,
 not a technical layer. There is no "build the parser" phase followed by a "wire the C API" phase.
@@ -31,9 +34,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Enum Labels in Describe** - An agent calling `describe` sees what an INTEGER column means, in all six layers, with no ABI change (completed 2026-09-19)
 - [x] **Phase 2: Config Path, Locale and Struct-Size Safety** - A consumer points Quiver at any UI directory and locale; a drifted binding layout fails loudly instead of corrupting memory (completed 2026-09-19)
-- [ ] **Phase 3: Structured Attribute Metadata** - claw reads label/tooltip/unit/format/enum as data instead of scraping a text report
-- [ ] **Phase 4: Collection and Attribute-Group Metadata** - Display labels, icons, help, `main.collections` order, and one answer for both time-series dimension spellings
-- [ ] **Phase 5: `validate_ui_config()` and Milestone Release** - The sidecar gets checked against the live SQL schema for the first time, and the milestone ships
+- [ ] **Phase 3: UI Metadata Simplification** - the options struct returns to its published 8-byte layout and the sidecar is read only by `describe`; no FFI surface change survives the milestone
+- [ ] **Phase 4: Collection and Attribute-Group Metadata** - Display labels, icons, help, `main.collections` order, and one answer for both time-series dimension spellings — rendered in `describe`, no new public surface
+- [ ] **Phase 5: Milestone Release** - `assert_version.py bump patch` to 0.10.8, the CHANGELOG rewrite, and the release ritual
 
 ## Phase Details
 
@@ -47,7 +50,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
   1. On a database with a `ui/` sidecar, `summarize_collection`'s value histogram shows the code **and** the label (`values {0: 8 (Disabled), 1: 4 (Enabled)}`), and `describe_collection` names the attribute's vocabulary with its **full declared value list** — including codes that zero rows use.
   2. `describe` and `describe_collection` render each collection's and each scalar's UI label and unit, tag a `hide = true` attribute `[hidden]` rather than dropping it, and emit a header line naming the loaded config path and the resolved locale.
-  3. With no `ui/` directory — or a malformed one, or one whose collection file is broken — `open()` still succeeds, a warning is logged, `has_ui_config()` reports false, nothing partial is published, and the three reports are **byte-identical** to today's output, verified by diffing actual output against master rather than by "the tests pass".
+  3. With no `ui/` directory — or a malformed one, or one whose collection file is broken — `open()` still succeeds, a warning is logged, `has_ui_config()` reports false, nothing partial is published, and the three reports are **byte-identical** to today's output, verified by diffing actual output against master rather than by "the tests pass". *(Delivered as written. The `has_ui_config()` clause is **superseded** by the scope correction — Phase 3 removes the method; the same condition is then observed through the absence of the `UI config:` header line. Every other clause stands unchanged.)*
   4. Shared fixtures under `tests/schemas/ui/`, distilled from BESSOperation (all-bare-string), Foresight (mixed en/es/pt) and HydroThermalDispatch (plain `date_time` attribute), pin every parser tolerance individually — bare and dotted localizable values in one file, absent and zero-byte `enum.toml`, an unknown key logged not thrown, 1-based and gapped vocabularies, an unlisted orphan collection file that stays unloaded, `format` as a 4-key table, interleaved `[[attribute]]`/`[[attribute_group]]` blocks, and `degradation` as both an attribute id and a group id — and the enum rendering is asserted on **exact strings** from the C++ suite, the Lua suite and all five binding suites against those same fixtures, never a copy.
   5. The phase ships as a **patch**: `git diff` shows no file under `bindings/` changed, and `CHANGELOG.md` heads the version `CMakeLists.txt` actually carries (0.10.6) before any bump is dispatched.
 
@@ -77,11 +80,16 @@ Plans:
 - Strictly sequential inside the phase: parser → `Impl` wiring → rendering. There is no renderer without a config on `Impl` and no config without a parser. The `tests/schemas/ui/` corpus is the one work item that parallelizes with the parser.
 - Write the parser against Hub's Dart source (`C:/Development/Hub/hub1/lib/models/configuration/*.dart` + `lib/models/utils/toml_utils.dart`). `toml-schema.md` is already wrong about group membership. Budget the read; cite the Dart class per key.
 - `tomlplusplus` is `PRIVATE` on the `quiver` target, so `quiver_tests` cannot include it. Exercise the parser through Quiver's public API; do **not** add a toml++ link line to the test target.
-- **Accepted-risk record:** from this phase on, Quiver authoritatively repeats labels nothing has checked — `HydroThermalDispatch`'s `HasCommitment` is inverted between Julia and the TOML today. Mitigation until Phase 5: always render the **code beside the label**, never the label alone.
+- **Accepted-risk record:** from this phase on, Quiver authoritatively repeats labels nothing has checked — `HydroThermalDispatch`'s `HasCommitment` is inverted between Julia and the TOML today. Mitigation: always render the **code beside the label**, never the label alone. With `validate_ui_config()` retired in the scope correction, this is the **permanent** mitigation, not a temporary one — nothing in the PSR ecosystem will check the sidecar against the schema.
 - The four binding describe suites currently assert only "returns a String". Make an explicit written call — strengthen them or leave them honest — and never count them as five-layer coverage.
 - Do not touch `CSVOptions::enum_labels` or any CSV source in this milestone.
 
 ### Phase 2: Config Path, Locale and Struct-Size Safety
+
+> **Partly superseded by the scope correction.** Delivered in full on 2026-09-19. Its struct-size
+> safety half (SAFE-01…03) is kept and is live. Its config-path/locale half (OPT-01…06) is retired
+> and is removed by Phase 3 — the criteria below record what was built, not what the milestone
+> ships. See Coverage Notes.
 
 **Goal**: A consumer in any binding opens a database pointing at a UI config directory anywhere on disk, in a locale of its choosing — unblocking claw, whose config lives at `<installRoot>/database/ui` and whose read sandbox cannot reach it — and any binding whose hardcoded FFI layout constants have drifted from the native library fails loudly at load instead of writing past a caller-owned buffer.
 **Mode:** mvp
@@ -90,7 +98,7 @@ Plans:
 **Success Criteria** (what must be TRUE):
 
   1. A caller in each of Julia, Dart, Python, JS and Lua's host opens a database with an explicit UI config directory outside `<db_dir>/ui/` and a non-`en` locale — via optional parameters on `open`, `from_schema` and `from_migrations`, matching the existing `read_only` / `console_level` pattern — and reads back a **locale-specific label** through `describe`, proving the value crossed the FFI rather than that `open()` merely returned.
-  2. `has_ui_config()` answers in every layer: true when a config loaded, false when the directory is absent or malformed.
+  2. `has_ui_config()` answers in every layer: true when a config loaded, false when the directory is absent or malformed. *(Delivered as written, then **retired** by the scope correction — OPT-04. Phase 3 removes it from all six layers; the `UI config:` header line in `describe` answers the same question and names the path.)*
   3. Loading any binding against a native library whose struct sizes disagree with that binding's hardcoded constants produces a named, loud error at load time — covering the grown options struct **and** the pre-existing `quiver_scalar_metadata_t` (JS `SCALAR_METADATA_SIZE = 56`) and `quiver_group_metadata_t` (JS `GROUP_METADATA_SIZE = 32`), each read from a C API size accessor that returns a plain `size_t` Bun can call.
   4. `bindings/js/src/ffi-helpers.ts` allocates the options buffer from **named offset constants** with a field-order comment, sized from the size accessor — and the file's two unrelated `new Uint8Array(8)` allocations (`allocPtrOut`, `allocUint64Out`) are provably unchanged.
   5. Python's CFFI cdef, Dart's hand-edited `bindings.dart` (no ffigen regen; `.dart_tool/hooks_runner/` and `.dart_tool/lib/` cleared before the suite runs) and Julia's regenerated `c_api.jl` each carry at least one test that a wrong layout would actually fail.
@@ -146,66 +154,52 @@ Plans:
 
 - Ships as a **minor** bump (0.x minor signals breaking). The C header edit lands before any of the four FFI options builders; those four are then independent of each other.
 - **`bindings/js/src/ffi-helpers.ts` `makeDefaultOptions` gets its own plan.** It is the only place in the repo where a wrong number is a native out-of-bounds write with no compile error, no exception, no generator and no fallback symbol — Bun cannot call `quiver_database_options_default` (struct-by-value, bun#6139). A search-and-replace over "8" in that file is itself the bug.
-- Buildable concurrently with Phase 3 (disjoint files, even in JS: `ffi-helpers.ts` vs a new `ui-metadata.ts`). Both are native changes and should ship in the same release.
+- **Superseded in part by the scope correction.** OPT-01…OPT-06 are retired and Phase 3 now removes the options surface this phase added. What survives and is kept deliberately is SAFE-01…SAFE-03 — the four `*_sizeof` accessors and the four load-time struct-size gates, which are independent of UI metadata and already caught a real defect (a merge that silently dropped two struct fields from `bindings/julia/src/c_api.jl`, breaking the entire Julia suite at load).
 - `quiver_database_options_default` uses designated initializers; `convert_database_options` needs a NULL guard on the two new `const char*` fields.
 
-### Phase 3: Structured Attribute Metadata
+### Phase 3: UI Metadata Simplification
 
-**Goal**: **As a** consumer of a PSR study database (claw first among them), **I want to** ask Quiver for a scalar attribute's label, tooltip, unit, format, hidden flag and enum vocabulary as structured data, in every binding and in Lua, **so that** I can interpret an INTEGER column's meaning without parsing a text report.
+**Goal**: **As** the Quiver maintainer, **I want** the `ui/` sidecar consumed only by `describe` inside the C++ core, **so that** the milestone ships with no FFI surface change, no ABI delta against v0.10.7, and a patch release instead of a minor one.
 
-*Goal line corrected during planning (03-CONTEXT P-01, P-03). The previous wording claimed `Claw/claw/src/core/study-config.ts` "can drop its per-attribute half". Both halves of that are wrong: the real path is `C:/Development/Claw/claw1/src/core/study-config.ts` (`claw1`, not `claw` — a grep for the old spelling finds nothing), and that file is 68 lines reading only `main.toml` plus each collection file's `id`, with a header comment stating that per-attribute semantics are deliberately left to quiverdb. claw also parses nothing out of `describe()`. **Phase 3 deletes no parser anywhere; it adds a capability claw has no code path for yet.***
+*This phase replaced "Structured Attribute Metadata" in the scope correction. Its first two plans (03-01, 03-02) had already shipped a public `UIMetadata` type, a 64-byte `quiver_ui_metadata_t`, three C++ getters, the C API surface and a Python decoder; those are reverted here. Plans 03-03…03-07 were never started.*
+
 **Mode:** mvp
-**Depends on**: Phase 1 (buildable in parallel with Phase 2; ships in the same release)
-**Requirements**: META-01, META-02, META-03, META-04, META-05, META-06
+**Depends on**: Phase 2
+**Requirements**: SAFE-01, SAFE-02, SAFE-03 (retained from Phase 2). META-01…META-06 and OPT-01…OPT-06 are **retired** — see Coverage Notes.
 **Success Criteria** (what must be TRUE):
 
-  1. A caller in C++, the C API, Julia, Dart, Python, JS and Lua gets a structured record for a `(collection, attribute)` pair carrying label, tooltip, unit, format, hidden flag and vocabulary **name**, and — via the paired vocabulary getter, **the two getters together** — that vocabulary's full ordered `{code, label}` entries; an attribute the TOML does not configure returns a default-constructed record rather than throwing. *(Amended during planning: the original wording read as one record carrying the entries inline, which drifts from D-10's unresolved-name design.)*
-  2. A caller lists every loaded vocabulary and fetches one vocabulary's entries by name; an unknown name throws the Pattern 2 `not found` message, surfaced identically in all five bindings and Lua.
-  3. **The winning key's** `format` string round-trips **verbatim** in both grammars (`{:.2f}`, `yyyy-MM-dd`) and from both shapes — the string form and the 4-key table form, which collapses at parse time to the first present of `data` / `element_view` / `collection_view` / `edit` — with Quiver classifying neither. *(Amended during planning per D-33: the original "round-trips verbatim … in both shapes" is not deliverable for the table form, because `resolve_format_table` discards the three non-winning keys irrecoverably. Do not write a test asserting four-key round-trip; it cannot pass.)*
-  4. `git diff` shows `include/quiver/attribute_metadata.h`, `quiver_scalar_metadata_t` and `quiver_group_metadata_t` untouched: the metadata crosses as its **own** struct with its own size accessor and its own free function, and JS adds a new constant only.
-  5. `bindings/js/test/lua-api-sync.test.ts` is green — the new `db:` name landed in `src/lua_runner.cpp` and `bindings/js/src/lua-api.ts` as one edit, not two.
+  1. `ui_config_dir` is gone from every layer. The sidecar directory is derived as `parent_path(migrations_path) / "ui"` inside `Database::migrate_up`, with `<db_dir>/ui` kept as the fallback and the `:memory:` early-return left unconditional. Verified against claw's layout: it resolves migrations as `join(configDir, "..", "migrations")`, so `migrations/` and `ui/` are guaranteed siblings.
+  2. `ui_locale` is gone from every layer. `src/ui_config.cpp` resolves at a file-local `constexpr kLocale = "en"` and the parameter is dropped from all six parse signatures. The bare-string-wins and first-key legs of the fallback chain survive, so `foresight_like` renders byte-identically — only the two `es` assertions Phase 2 added for itself are deleted.
+  3. `has_ui_config()` is gone from all six layers. The 19 Phase 1 assertions that used it are rewritten against the `UI config:` header line `write_ui_header` already emits from all three reports — strictly more informative than the bool, since it names the path.
+  4. `quiver_database_options_t` is `{int; quiver_log_level_t;}` — **8 bytes, byte-for-byte the published v0.10.7 layout**. `git diff v0.10.7 -- include/quiver/c/options.h` shows no layout change, and the BREAKING paragraph is **deleted** from `CHANGELOG.md` rather than answered with a second one.
+  5. `UIMetadata` and `UIEnumEntry` are private again in `src/ui_config.h`. `include/quiver/ui_metadata.h`, `quiver_ui_metadata_t` and its nine offset static_asserts, `quiver_ui_metadata_sizeof`, `get_attribute_ui_metadata`, the vocabulary getters and every binding decoder are deleted. `git diff v0.10.7 -- bindings/` shows changes attributable **only** to SAFE-01…03.
+  6. `describe` / `describe_collection` / `summarize_collection` output is unchanged, and all seven suites are green.
 
-**Plans**: 2/7 plans executed in 4 waves
-
-Plans:
-**Wave 1**
-
-- [x] 03-01-PLAN.md — Tracer: one attribute's UI record from the TOML sidecar to a Python caller (public `ui_metadata.h`, the three C++ getters, the 64-byte C struct + size accessor + get/free, Python's decoder and fifth gate entry, the C++ test file)
-
-**Wave 2** *(blocked on Wave 1 — completes and freezes the C header)*
-
-- [x] 03-02-PLAN.md — The vocabulary pair across the C API with its dedicated combined free, the C-layer layout/independence/leak proof, and Python's two vocabulary decoders
-
-**Wave 3** *(blocked on Wave 2 for the four FFI decoders; the Lua plan is blocked on Wave 1 only)*
-
-- [ ] 03-03-PLAN.md — Julia: regenerated `c_api.jl` with a field-completeness assertion, the fifth gate entry in `generator/prologue.jl`, the three getters
-- [ ] 03-04-PLAN.md — Dart: hand-edited `bindings.dart`, fifth gate entry with the wiring-evidence test ordered first and its mutation executed, the three getters
-- [ ] 03-05-PLAN.md — JS: symbol table, `UI_METADATA_SIZE`, fifth gate entry, the nine hand-written offsets asserted field by field
-- [ ] 03-06-PLAN.md — Lua: the three `db:` methods with nil-for-empty and the record-array vocabulary, plus the `lua-api.ts` reference in the same commit
-
-**Wave 4** *(blocked on all of Wave 3)*
-
-- [ ] 03-07-PLAN.md — Close-out: CLAUDE.md updates incl. the Lua divergence entry, CHANGELOG under the single unreleased 0.11.0 heading, the criterion-4 diff proof, full suite, release-dispatch decision
+**Plans**: TBD
 
 **Notes:**
 
-- Freeze the C header before any binding decoder starts, or five decoders get re-edited simultaneously. The four **FFI** decoders parallelize once it is frozen (end of 03-02).
-- **Lua is exempt from that freeze.** `LuaRunner` calls `Database::…` directly in C++ via sol2 and never goes through the C API, so 03-06 depends only on the C++ getter signatures 03-01 froze. It runs in the same wave as the four FFI decoders rather than behind them.
-- **`src/CMakeLists.txt` uses hand-maintained explicit source lists for both the `quiver` and `quiver_c` targets — no glob.** 03-CONTEXT D-43's "no CMake work" means no new dependency or target, not no edit. The plans sidestep the hazard entirely by adding no new `.cpp`: the C++ getters join `src/database_metadata.cpp` and the C API surface joins `src/c/database_metadata.cpp`. `tests/CMakeLists.txt` carries the same hazard for the three new test files and is edited explicitly, each with a nonzero-test-count acceptance criterion.
-- **No new C header.** The C surface is declared inside the existing `include/quiver/c/database.h`. A separate `include/quiver/c/ui_metadata.h` would need one line in Python's generator `HEADERS` list **and both** of Dart's ffigen header lists (`entry-points` and `include-directives` in `pubspec.yaml`) — three edits, not the one D-43 budgeted. Criterion 4 requires its own *struct*, not its own file.
-- Shape precedents to copy rather than invent: `convert_scalar_to_c` / `free_scalar_fields` for the converter pair, `quiver_csv_options_t` for grouped parallel arrays, `quiver_database_free_time_series_data` for the free signature, and `scalar_metadata_lua` (`src/lua_runner.cpp` L1166) for the Lua converter.
-- Carry the Phase 1 accepted-risk note forward: the structured getter hands the unchecked label to a consumer that will reason on it, so the enum **code** travels with it.
+- **Forward-delete, not `git revert`.** Reverting the Phase 2 option plumbing hits 6 conflicts, every one at a seam where a later struct-size-gate commit edited adjacent lines — all resolving the same way (keep the `_sizeof` lines, drop the ui lines), which is 13 revert commits plus 6 hand-resolutions to reach a state one forward-delete commit reaches.
+- **Do not run `/gsd-undo` on this repo.** `.planning/.phase-manifest.json` does not exist, so it falls back to git-log matching: `--phase 3` hits 32 commits (20 from already-merged milestones) and `--phase 2` hits 102, truncated at 50.
+- **Order matters — each step shrinks the next one's surface:** (a) delete the structured-metadata surface; (b) drop `ui_config_dir` and add the derivation; (c) drop `ui_locale`; (d) drop `has_ui_config` and rewrite the Phase 1 assertions; (e) shrink the options struct across the four bindings and re-tune the gates; (f) CHANGELOG + `assert_version.py bump patch`.
+- **Do not drop `ui_locale` alone.** Locale-only leaves the struct at 16 bytes — still an ABI break, still every binding edit and every size gate, for half the deletion. The two fields go together or not at all.
+- **Migrate, do not delete, the parser assertions.** `tests/test_database_ui_metadata.cpp` covers the declared-but-empty vocabulary case and the 4-key `format` collapse; neither is covered anywhere else. Move both into `tests/test_database_ui_parse.cpp` before deleting the file.
+- **Known gap, accepted.** claw falls back to `Database.open(dbPath)` when it finds no migrations directory, and the derivation does not cover that path. Accepted because that path already has no schema metadata either; if it ever matters the fix is an argument on `open()`, not a field in the options struct.
+- Removing an exported C symbol while a binding still names it is a **load failure, not a compile error** (Bun `dlopen`, CFFI lazy resolution, Dart `lookup`). There is no cross-layer symbol-coverage test, so a half-done removal ships silently. Sequence the binding deletions with the C deletions in the same plan.
 
 ### Phase 4: Collection and Attribute-Group Metadata
 
-**Goal**: A consumer reads the collection- and group-level knowledge SQL cannot express — a collection's display label, icon, help text and its position in `main.collections`, and each `[[attribute_group]]`'s metadata with its time-series dimension column answered once regardless of which of the two spellings the model repo used.
+**Goal**: `describe` renders the collection- and group-level knowledge SQL cannot express — a collection's display label, icon, help text and its position in `main.collections`, and each `[[attribute_group]]`'s metadata with its time-series dimension column answered once regardless of which of the two spellings the model repo used.
+
+*Reduced in the scope correction from a structured-getter surface to a `describe`-rendering surface. No new public type, no new C symbol, no binding change.*
+
 **Mode:** mvp
-**Depends on**: Phase 3 (reuses its struct / converter / free idiom; the parse landed in Phase 1)
+**Depends on**: Phase 3 (which removes the structured surface this phase would otherwise have extended; the parse landed in Phase 1)
 **Requirements**: GROUP-01, GROUP-02, GROUP-03, GROUP-04, GROUP-05
 **Success Criteria** (what must be TRUE):
 
-  1. A caller in every binding and in Lua reads a collection's UI label, icon and help text, plus its display order — its index in `main.collections`.
-  2. A caller reads an `[[attribute_group]]`'s metadata, with group membership recovered by joining the group's `id` against the `{Collection}_vector_{id}` / `_time_series_{id}` table names in SQLite — never inferred from the order entries appear in the TOML, which is what the only written spec gets wrong.
+  1. `describe` renders a collection's UI label, icon and help text, and orders collections by their index in `main.collections`. Reaching all five bindings and Lua for free, because `describe` already returns a `std::string` through the existing C API wrappers.
+  2. `describe_collection` renders an `[[attribute_group]]`'s metadata, with group membership recovered by joining the group's `id` against the `{Collection}_vector_{id}` / `_time_series_{id}` table names in SQLite — never inferred from the order entries appear in the TOML, which is what the only written spec gets wrong.
   3. A group declared with the nested `attribute_group.date_time.*` spelling (SCE, BESSOperation, GNoMo) and one declared with a plain `[[attribute]] id = "date_time"` (all six HTD group files, GNoMo/historical_conditions) return the **same** dimension answer, so no consumer and no renderer branches on the spelling.
   4. With group ids now read, the `degradation`-as-both-an-attribute-and-a-group fixture still resolves both independently, and the unlisted orphan collection file still stays unloaded.
 
@@ -213,48 +207,88 @@ Plans:
 
 **Notes:**
 
-- Independent of Phase 5; the two can be built concurrently.
 - Structure comes from SQL (PRAGMA-derived, as always), decoration from TOML. Quiver still parses no SQL text.
 - Revisit the describe byte-identical baseline here: any new group-level rendering is append-only under the same rule.
+- **This is the only feature work left in the milestone.** It was kept through the scope correction because it is `describe` rendering — the one consumer the correction preserved — not public API surface. If it is ever cut, the milestone is Phase 1 plus the Phase 3 cleanup plus a patch release.
 
-### Phase 5: `validate_ui_config()` and Milestone Release
+### Phase 5: Milestone Release
 
-**Goal**: The PSR ecosystem gets its first check of a `database/ui/` sidecar against anything — an advisory validator that reports drift between the TOML and the live SQL schema in every layer — and the milestone ships through the full release ritual.
+**Goal**: The milestone ships as a **patch** — `0.10.8` — with `CHANGELOG.md` rewritten to drop the BREAKING paragraph that no longer describes anything, and the full release ritual carried out.
+
+*`validate_ui_config()` was **retired** in the scope correction. VALID-01…VALID-08 are retired with it. See the Phase 1 accepted-risk note: with no validator, rendering the code beside the label is the permanent mitigation for the authoritative-wrong-label risk, not a temporary one.*
+
 **Mode:** mvp
 **Depends on**: Phase 4
-**Requirements**: VALID-01, VALID-02, VALID-03, VALID-04, VALID-05, VALID-06, VALID-07, VALID-08
+**Requirements**: none (operational work; see Coverage Notes)
 **Success Criteria** (what must be TRUE):
 
-  1. `validate_ui_config()` mirrors `validate_migrations` — no out-parameter, throws on failure — and is callable from C++, the C API, Julia, Dart, Python, JS and Lua, where it is db-scoped and sandboxed under the existing Lua file-operation policy.
-  2. Run against fixtures, it names each drift kind distinctly: an attribute bound to a vocabulary `enum.toml` does not declare, a TOML attribute whose column is absent from the SQL schema, a SQL table absent from `main.collections`, a collection TOML on disk that `main.collections` does not list, and a vocabulary that nothing binds.
-  3. Run against the real model repos it produces a recorded drift report — expected to surface HTD's `inflow_type`, the nine untyped `Configuration` flags, `Interconnection`, SCE's orphan `agent.toml` and the four dead vocabularies — with findings written down and **nothing auto-fixed**.
-  4. The milestone ships end to end: `scripts/assert_version.py` confirms `CHANGELOG.md` and all five manifests agree, then `publish-s3` → tag → Julia/Python/JS in parallel → **Dart published by hand and verified installed**, since no CI job runs `hook/build.dart` on any OS.
+  1. `scripts/assert_version.py` confirms `CHANGELOG.md` and all five manifests agree at **0.10.8**, reached via `scripts/assert_version.py bump patch` — a patch, not a minor, because the net ABI delta against published v0.10.7 is **zero**.
+  2. `CHANGELOG.md`'s `## [0.11.0] — unreleased` heading and its **BREAKING** paragraph about the grown options struct are **deleted**, not superseded — that struct never shipped.
+  3. `git diff v0.10.7 -- include/quiver/c/ bindings/` shows no layout change to any C struct and no binding change beyond the SAFE-01…03 struct-size gates.
+  4. The release runs end to end: `publish-s3` → tag → Julia/Python/JS in parallel → **Dart published by hand and verified installed**, since no CI job runs `hook/build.dart` on any OS.
 
 **Plans**: TBD
 
 **Notes:**
 
-- Ships last by explicit user decision, made with the `HasCommitment` inversion on the table (PROJECT.md records it as an accepted risk — this is not a sequencing defect). It is **not a stretch goal**: it is the only mitigation that will ever exist for the authoritative-wrong-label risk opened in Phase 1.
-- The validator's rule set is not yet enumerated — what counts as drift and what it says about each kind needs investigation during planning.
-- The validator reports disagreement; it does not resolve it. Codegen from Julia `@enumx` is unavailable — the sets diverge both ways and naming is unmappable across three styles.
 - Criterion 4 is operational work with no v1 requirement behind it; see Coverage Notes.
+- The publish step is the one irreversible action in the milestone — a yanked PyPI or npm version cannot be reused. It is gated on explicit human authorization, not on autonomous execution.
 
 ## Coverage
 
-**All 50 v1 requirements mapped to exactly one phase. No orphans, no duplicates.**
+**30 of 50 v1 requirements remain live. 20 were retired in the scope correction — recorded, not
+deleted, so the history says why.**
 
-| Category | Count | Phase |
-|----------|-------|-------|
-| PARSE-01 … PARSE-12 | 12 | Phase 1 |
-| DESC-01 … DESC-07 | 7 | Phase 1 |
-| CORPUS-01 … CORPUS-03 | 3 | Phase 1 |
-| OPT-01 … OPT-06 | 6 | Phase 2 |
-| SAFE-01 … SAFE-03 | 3 | Phase 2 |
-| META-01 … META-06 | 6 | Phase 3 |
-| GROUP-01 … GROUP-05 | 5 | Phase 4 |
-| VALID-01 … VALID-08 | 8 | Phase 5 |
+| Category | Count | Phase | Status |
+|----------|-------|-------|--------|
+| PARSE-01 … PARSE-12 | 12 | Phase 1 | live — delivered |
+| DESC-01 … DESC-07 | 7 | Phase 1 | live — delivered |
+| CORPUS-01 … CORPUS-03 | 3 | Phase 1 | live — delivered |
+| SAFE-01 … SAFE-03 | 3 | Phase 2 | live — delivered, kept deliberately |
+| GROUP-01 … GROUP-05 | 5 | Phase 4 | live — reduced to `describe` rendering |
+| ~~OPT-01 … OPT-06~~ | 6 | ~~Phase 2~~ | **retired** — options surface removed in Phase 3 |
+| ~~META-01 … META-06~~ | 6 | ~~Phase 3~~ | **retired** — no structured getter; `describe` is the only consumer |
+| ~~VALID-01 … VALID-08~~ | 8 | ~~Phase 5~~ | **retired** — no validator |
 
 ### Coverage Notes
+
+#### Scope Correction — 20 requirements retired
+
+Recorded after Phase 2 shipped and Phase 3 was two plans in. The trigger was a review of the work
+in flight, which found the milestone building a public API surface for a consumer that had no code
+path for it.
+
+The governing decision: **`describe` is the only consumer of the `ui/` sidecar.** Everything that
+existed to serve a *structured* consumer is retired.
+
+- **OPT-01 … OPT-06 (6)** — the `ui_config_dir` / `ui_locale` options and their binding surface.
+  `ui_config_dir` is replaced by deriving `ui/` as a sibling of the migrations directory (three
+  lines, no public API); `ui_locale` by hardcoding `"en"`; `has_ui_config()` had zero real callers
+  and is answered better by the `UI config:` header `describe` already prints. Dropping both option
+  fields returns `quiver_database_options_t` to its published 8-byte layout, so the milestone's
+  only ABI break **disappears** rather than being documented. OPT-06's Dart cache-clearing change
+  (`.dart_tool/hooks_runner/`, `.dart_tool/lib/`) is **kept** despite the retirement — it protects
+  every future ABI change, not just this one.
+- **META-01 … META-06 (6)** — the structured attribute-metadata getter. Retired because
+  `describe` reads the parsed config directly and no other consumer exists. claw, the committed
+  consumer, hands `describe()`'s report straight to an LLM and has no code path that would call a
+  getter.
+- **VALID-01 … VALID-08 (8)** — `validate_ui_config()`. Retired outright. The cost is real and is
+  recorded in the Phase 1 accepted-risk note: nothing in the PSR ecosystem will ever check the
+  sidecar against the live schema, so rendering the code beside the label is now the **permanent**
+  mitigation for the authoritative-wrong-label risk.
+- **SAFE-01 … SAFE-03 are explicitly NOT retired.** They are independent of UI metadata, already
+  caught a real defect (a merge that silently dropped two struct fields from
+  `bindings/julia/src/c_api.jl`, breaking the whole Julia suite at load), and cost nothing ongoing.
+
+Net effect: no FFI surface change survives the milestone, no ABI delta against v0.10.7, and the
+release becomes **0.10.8 (patch)** instead of 0.11.0 — no five-package republish risk.
+
+**Phase 1 already delivered the milestone's stated core value** (`describe` showing
+`values {0: 8 (Disabled)}` instead of bare codes). Everything from Phase 2 on is elaboration; the
+correction cut the elaboration that served nobody.
+
+#### Criteria with no backing requirement
 
 Two success criteria intentionally have no backing v1 requirement. Both are real work the
 milestone cannot ship without, and neither is a feature:
@@ -298,10 +332,14 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Enum Labels in Describe | 6/6 | Complete    | 2026-09-19 |
-| 2. Config Path, Locale and Struct-Size Safety | 13/13 | Complete    | 2026-09-19 |
-| 3. Structured Attribute Metadata | 2/7 | In Progress|  |
+| 2. Config Path, Locale and Struct-Size Safety | 13/13 | Complete (partly superseded) | 2026-09-19 |
+| 3. UI Metadata Simplification | 0/TBD | Not started — re-scoped | - |
 | 4. Collection and Attribute-Group Metadata | 0/TBD | Not started | - |
-| 5. `validate_ui_config()` and Milestone Release | 0/TBD | Not started | - |
+| 5. Milestone Release | 0/TBD | Not started | - |
+
+*Phase 3's previous incarnation ("Structured Attribute Metadata") reached 2/7 plans before the
+scope correction. Commits `1c1bcca`…`810e7b3` are reverted by the re-scoped phase; plans
+03-01/03-02 and their summaries are kept as history, 03-03…03-07 are deleted unstarted.*
 
 ---
 *Roadmap created: 2026-09-17*

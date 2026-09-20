@@ -39,36 +39,67 @@ The agent-facing surface. Reaches all five bindings and Lua with no ABI change, 
 - [x] **DESC-06**: A `hide = true` attribute still appears in describe output, tagged `[hidden]` — hiding is a GUI affordance, and an agent reading the schema wants it
 - [x] **DESC-07**: The enum rendering is exercised from Lua and from all five bindings by tests that assert on exact strings, not merely that a String was returned
 
-### Config Path and Locale (OPT)
+### Config Path and Locale (OPT) — ~~RETIRED~~
 
-The ABI-breaking phase. Isolated deliberately.
+> **All six retired in the scope correction.** Built and delivered in Phase 2; removed again by
+> Phase 3. `ui_config_dir` is replaced by deriving `ui/` as a sibling of the migrations directory
+> (three lines in `migrate_up`, no public API); `ui_locale` by a file-local `constexpr kLocale =
+> "en"`; `has_ui_config()` had zero real callers and is answered better by the `UI config:` header
+> `describe` already prints. Dropping both option fields returns `quiver_database_options_t` to its
+> published 8-byte layout, so the milestone's only ABI break disappears rather than being
+> documented.
+>
+> **One piece of OPT-06 is kept despite the retirement:** the Dart `.dart_tool/hooks_runner/` /
+> `.dart_tool/lib/` cache clearing in `bindings/dart/test/test.bat`. It protects every future ABI
+> change, not just this one, and reverting it would let a Dart suite silently pass against a stale
+> native layout.
+>
+> Kept below as history — what was built, and why it is no longer wanted.
 
-- [x] **OPT-01**: `DatabaseOptions` accepts an explicit UI config directory path, overriding the `<db_dir>/ui/` convention
-- [x] **OPT-02**: `DatabaseOptions` accepts a UI locale, defaulting to `"en"`
-- [x] **OPT-03**: Both are exposed as optional parameters on `open`, `from_schema` and `from_migrations` in all five bindings, per the existing `read_only` / `console_level` pattern
-- [x] **OPT-04**: `has_ui_config()` reports whether a UI config was successfully loaded, in every layer
-- [x] **OPT-05**: `bindings/js/src/ffi-helpers.ts` `makeDefaultOptions` allocates the correct buffer size for the grown options struct, with named offset constants rather than inline literals
-- [x] **OPT-06**: Python's CFFI cdef, Dart's hand-edited `bindings.dart`, and Julia's regenerated `c_api.jl` all reflect the new options layout, and Dart's `.dart_tool/hooks_runner/` and `.dart_tool/lib/` caches are cleared so tests do not silently run the old layout
+- [~] ~~**OPT-01**~~: `DatabaseOptions` accepts an explicit UI config directory path, overriding the `<db_dir>/ui/` convention
+- [~] ~~**OPT-02**~~: `DatabaseOptions` accepts a UI locale, defaulting to `"en"`
+- [~] ~~**OPT-03**~~: Both are exposed as optional parameters on `open`, `from_schema` and `from_migrations` in all five bindings, per the existing `read_only` / `console_level` pattern
+- [~] ~~**OPT-04**~~: `has_ui_config()` reports whether a UI config was successfully loaded, in every layer
+- [~] ~~**OPT-05**~~: `bindings/js/src/ffi-helpers.ts` `makeDefaultOptions` allocates the correct buffer size for the grown options struct, with named offset constants rather than inline literals
+- [~] ~~**OPT-06**~~: Python's CFFI cdef, Dart's hand-edited `bindings.dart`, and Julia's regenerated `c_api.jl` all reflect the new options layout, and Dart's `.dart_tool/hooks_runner/` and `.dart_tool/lib/` caches are cleared so tests do not silently run the old layout
 
-### Layout Safety (SAFE)
+### Layout Safety (SAFE) — LIVE
 
 Turns the silent-corruption failure class into a loud startup error. Protects work beyond
 this milestone.
+
+> **Explicitly NOT retired by the scope correction**, though it sits in the same phase as the
+> retired OPT block. SAFE is independent of UI metadata, costs nothing ongoing, and already caught
+> a real defect: a merge that silently dropped two struct fields from `bindings/julia/src/c_api.jl`
+> and broke the entire Julia suite at load. SAFE-03's reference to "the new struct" now means the
+> options struct at its restored 8-byte size, plus `quiver_csv_options_t` added later.
 
 - [x] **SAFE-01**: The C API exposes size accessors returning the native `sizeof` for each FFI struct a binding allocates a buffer for
 - [x] **SAFE-02**: Each binding asserts its hardcoded struct size against the native value at load time and fails loudly on mismatch
 - [x] **SAFE-03**: The assertion covers the pre-existing hazards as well as the new struct — the options struct, `quiver_scalar_metadata_t` (JS `SCALAR_METADATA_SIZE = 56`), and `quiver_group_metadata_t` (JS `GROUP_METADATA_SIZE = 32`)
 
-### Structured Metadata Getter (META)
+### Structured Metadata Getter (META) — ~~RETIRED~~
 
-What claw consumes, replacing the per-attribute half of `study-config.ts`.
+> **All six retired in the scope correction.** The premise was wrong in two ways, both verified
+> against the code. `study-config.ts` has no per-attribute half to replace — it is 68 lines
+> reading `main.toml` plus each collection file's `id`, with a header comment stating that
+> per-attribute semantics are deliberately left to quiverdb. And claw parses nothing out of
+> `describe()`: it hands the raw report string straight to an LLM. There is no consumer for a
+> structured getter and no code path that would call one.
+>
+> The governing decision: **`describe` is the only consumer of the `ui/` sidecar**, and it reads
+> the parsed config directly inside the C++ core. Phase 3 reverts the public `UIMetadata` type,
+> `quiver_ui_metadata_t`, the three getters, the C API surface and the Python decoder that plans
+> 03-01 and 03-02 had already shipped.
+>
+> Kept below as history.
 
-- [x] **META-01**: A new C++ type carries a scalar attribute's UI metadata: label, tooltip, unit, format, hidden flag, enum vocabulary name, and enum values
-- [x] **META-02**: A public C++ getter returns that metadata for a `(collection, attribute)` pair, returning a default-constructed value for an unconfigured attribute rather than throwing
-- [x] **META-03**: The metadata crosses the C API as its **own** struct with its own free function — never as new fields on `quiver_scalar_metadata_t` or `quiver_group_metadata_t`
-- [x] **META-04**: The getter is bound in all five bindings and in Lua, named per the cross-layer convention
-- [x] **META-05**: A public method lists the loaded vocabularies, and another returns one vocabulary's entries by name, throwing Pattern 2 on an unknown name
-- [ ] **META-06**: Adding any new `db:` method keeps `bindings/js/src/lua-api.ts` in sync so `lua-api-sync.test.ts` passes
+- [~] ~~**META-01**~~: A new C++ type carries a scalar attribute's UI metadata: label, tooltip, unit, format, hidden flag, enum vocabulary name, and enum values
+- [~] ~~**META-02**~~: A public C++ getter returns that metadata for a `(collection, attribute)` pair, returning a default-constructed value for an unconfigured attribute rather than throwing
+- [~] ~~**META-03**~~: The metadata crosses the C API as its **own** struct with its own free function — never as new fields on `quiver_scalar_metadata_t` or `quiver_group_metadata_t`
+- [~] ~~**META-04**~~: The getter is bound in all five bindings and in Lua, named per the cross-layer convention
+- [~] ~~**META-05**~~: A public method lists the loaded vocabularies, and another returns one vocabulary's entries by name, throwing Pattern 2 on an unknown name
+- [~] ~~**META-06**~~: Adding any new `db:` method keeps `bindings/js/src/lua-api.ts` in sync so `lua-api-sync.test.ts` passes
 
 ### Collection and Group Metadata (GROUP)
 
@@ -78,18 +109,32 @@ What claw consumes, replacing the per-attribute half of `study-config.ts`.
 - [ ] **GROUP-04**: Both spellings of the time-series dimension column are absorbed — nested `attribute_group.date_time.*` (SCE, BESSOperation, GNoMo) and a plain `[[attribute]] id = "date_time"` (all 6 HTD group files, GNoMo/historical_conditions)
 - [ ] **GROUP-05**: Collection and group metadata are bound through the C API to all five bindings and Lua
 
-### Validation (VALID)
+### Validation (VALID) — ~~RETIRED~~
 
-Advisory, ships last. See the accepted risk in PROJECT.md.
+> **All eight retired in the scope correction.** `validate_ui_config()` was a seven-layer public
+> surface, and the correction's governing decision is that the sidecar has exactly one consumer:
+> `describe`.
+>
+> **The cost of this one is real and is not hidden.** PROJECT.md's accepted risk — that Quiver
+> authoritatively repeats labels nothing has checked, with `HydroThermalDispatch`'s
+> `HasCommitment` inverted between Julia and the TOML today — was accepted *on the basis that
+> Phase 5 would mitigate it*. With the validator retired, nothing in the PSR ecosystem will ever
+> check a sidecar against the live schema. Rendering the enum **code beside the label** is now the
+> **permanent** mitigation, not a temporary one, and the Phase 1 note in ROADMAP.md has been
+> corrected to say so.
+>
+> The known drift this would have surfaced — HTD's `inflow_type`, the nine untyped
+> `Configuration` flags, `Interconnection`, SCE's orphan `agent.toml`, the four dead vocabularies
+> — remains unreported. Kept below as the record of what a future validator should check.
 
-- [ ] **VALID-01**: `validate_ui_config()` cross-checks the loaded sidecar against the live SQL schema and reports drift, mirroring `validate_migrations` — no out-parameter, throws on failure
-- [ ] **VALID-02**: Validation reports an attribute bound to a vocabulary that `enum.toml` does not declare
-- [ ] **VALID-03**: Validation reports a TOML attribute whose column does not exist in the SQL schema
-- [ ] **VALID-04**: Validation reports a SQL table absent from `main.collections` (HTD's `Interconnection` is entirely invisible today)
-- [ ] **VALID-05**: Validation reports a collection TOML present on disk but not listed in `main.collections` (SCE's orphan `agent.toml`)
-- [ ] **VALID-06**: Validation reports vocabularies declared but bound by nothing (4 dead vocabularies in the corpus)
-- [ ] **VALID-07**: `validate_ui_config()` is bound in every layer including Lua, db-scoped and sandboxed per the existing Lua file-operation policy
-- [ ] **VALID-08**: Running the validator against the real model repos produces a drift report; the findings are recorded, not auto-fixed
+- [~] ~~**VALID-01**~~: `validate_ui_config()` cross-checks the loaded sidecar against the live SQL schema and reports drift, mirroring `validate_migrations` — no out-parameter, throws on failure
+- [~] ~~**VALID-02**~~: Validation reports an attribute bound to a vocabulary that `enum.toml` does not declare
+- [~] ~~**VALID-03**~~: Validation reports a TOML attribute whose column does not exist in the SQL schema
+- [~] ~~**VALID-04**~~: Validation reports a SQL table absent from `main.collections` (HTD's `Interconnection` is entirely invisible today)
+- [~] ~~**VALID-05**~~: Validation reports a collection TOML present on disk but not listed in `main.collections` (SCE's orphan `agent.toml`)
+- [~] ~~**VALID-06**~~: Validation reports vocabularies declared but bound by nothing (4 dead vocabularies in the corpus)
+- [~] ~~**VALID-07**~~: `validate_ui_config()` is bound in every layer including Lua, db-scoped and sandboxed per the existing Lua file-operation policy
+- [~] ~~**VALID-08**~~: Running the validator against the real model repos produces a drift report; the findings are recorded, not auto-fixed
 
 ### Test Corpus (CORPUS)
 
@@ -160,39 +205,40 @@ Which phases cover which requirements. Populated during roadmap creation.
 | CORPUS-01 | Phase 1 | Complete |
 | CORPUS-02 | Phase 1 | Complete |
 | CORPUS-03 | Phase 1 | Complete |
-| OPT-01 | Phase 2 | Complete |
-| OPT-02 | Phase 2 | Complete |
-| OPT-03 | Phase 2 | Complete |
-| OPT-04 | Phase 2 | Complete |
-| OPT-05 | Phase 2 | Complete |
-| OPT-06 | Phase 2 | Complete |
+| ~~OPT-01~~ | ~~Phase 2~~ | **Retired** |
+| ~~OPT-02~~ | ~~Phase 2~~ | **Retired** |
+| ~~OPT-03~~ | ~~Phase 2~~ | **Retired** |
+| ~~OPT-04~~ | ~~Phase 2~~ | **Retired** |
+| ~~OPT-05~~ | ~~Phase 2~~ | **Retired** |
+| ~~OPT-06~~ | ~~Phase 2~~ | **Retired** |
 | SAFE-01 | Phase 2 | Complete |
 | SAFE-02 | Phase 2 | Complete |
 | SAFE-03 | Phase 2 | Complete |
-| META-01 | Phase 3 | Complete |
-| META-02 | Phase 3 | Complete |
-| META-03 | Phase 3 | Complete |
-| META-04 | Phase 3 | Complete |
-| META-05 | Phase 3 | Complete |
-| META-06 | Phase 3 | Pending |
+| ~~META-01~~ | ~~Phase 3~~ | **Retired** |
+| ~~META-02~~ | ~~Phase 3~~ | **Retired** |
+| ~~META-03~~ | ~~Phase 3~~ | **Retired** |
+| ~~META-04~~ | ~~Phase 3~~ | **Retired** |
+| ~~META-05~~ | ~~Phase 3~~ | **Retired** |
+| ~~META-06~~ | ~~Phase 3~~ | **Retired** |
 | GROUP-01 | Phase 4 | Pending |
 | GROUP-02 | Phase 4 | Pending |
 | GROUP-03 | Phase 4 | Pending |
 | GROUP-04 | Phase 4 | Pending |
 | GROUP-05 | Phase 4 | Pending |
-| VALID-01 | Phase 5 | Pending |
-| VALID-02 | Phase 5 | Pending |
-| VALID-03 | Phase 5 | Pending |
-| VALID-04 | Phase 5 | Pending |
-| VALID-05 | Phase 5 | Pending |
-| VALID-06 | Phase 5 | Pending |
-| VALID-07 | Phase 5 | Pending |
-| VALID-08 | Phase 5 | Pending |
+| ~~VALID-01~~ | ~~Phase 5~~ | **Retired** |
+| ~~VALID-02~~ | ~~Phase 5~~ | **Retired** |
+| ~~VALID-03~~ | ~~Phase 5~~ | **Retired** |
+| ~~VALID-04~~ | ~~Phase 5~~ | **Retired** |
+| ~~VALID-05~~ | ~~Phase 5~~ | **Retired** |
+| ~~VALID-06~~ | ~~Phase 5~~ | **Retired** |
+| ~~VALID-07~~ | ~~Phase 5~~ | **Retired** |
+| ~~VALID-08~~ | ~~Phase 5~~ | **Retired** |
 
 **Coverage:**
 
 - v1 requirements: 50 total
-- Mapped to phases: 50 ✓
+- **Live: 30** — mapped to phases, no orphans
+- **Retired: 20** — OPT-01…06 (6), META-01…06 (6), VALID-01…08 (8) (scope correction; see each section's banner)
 - Unmapped: 0
 
 **By phase:**
@@ -200,11 +246,22 @@ Which phases cover which requirements. Populated during roadmap creation.
 | Phase | Name | Requirements | Count |
 |-------|------|--------------|-------|
 | 1 | Enum Labels in Describe | PARSE-01…12, DESC-01…07, CORPUS-01…03 | 22 |
-| 2 | Config Path, Locale and Struct-Size Safety | OPT-01…06, SAFE-01…03 | 9 |
-| 3 | Structured Attribute Metadata | META-01…06 | 6 |
+| 2 | Config Path, Locale and Struct-Size Safety | SAFE-01…03 (OPT-01…06 retired) | 3 |
+| 3 | UI Metadata Simplification | none — removes retired surface | 0 |
 | 4 | Collection and Attribute-Group Metadata | GROUP-01…05 | 5 |
-| 5 | `validate_ui_config()` and Milestone Release | VALID-01…08 | 8 |
+| 5 | Milestone Release | none — operational (VALID-01…08 retired) | 0 |
+
+**Scope correction, 2026-09-20.** Recorded after Phase 2 shipped and Phase 3 was two plans in. The
+governing decision is that **`describe` is the only consumer of the `ui/` sidecar** — no public
+getter, no new C struct, no binding change. Every requirement that existed to serve a *structured*
+consumer was retired; every requirement serving `describe` was kept. SAFE-01…03 were kept despite
+sitting in the same phase as the retired OPT block, because they are independent of UI metadata and
+already caught a real defect.
+
+Net effect: no FFI surface change survives the milestone, no ABI delta against published v0.10.7,
+and the release becomes **0.10.8 (patch)** rather than 0.11.0. Phase 1 had already delivered the
+milestone's stated core value before any of the retired work began.
 
 ---
 *Requirements defined: 2026-09-17*
-*Last updated: 2026-09-17 after roadmap creation*
+*Last updated: 2026-09-20 — scope correction, 25 requirements retired*
