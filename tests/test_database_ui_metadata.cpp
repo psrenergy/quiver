@@ -1,6 +1,7 @@
 #include <filesystem>
 #include <fstream>
 #include <gtest/gtest.h>
+#include <optional>
 #include <quiver/database.h>
 #include <sstream>
 #include <string>
@@ -30,11 +31,17 @@ protected:
         if (fs::exists(root)) {
             fs::remove_all(root);
         }
+        if (fs::exists(mirror_root())) {
+            fs::remove_all(mirror_root());
+        }
     }
 
     void TearDown() override {
         if (fs::exists(root)) {
             fs::remove_all(root);
+        }
+        if (fs::exists(mirror_root())) {
+            fs::remove_all(mirror_root());
         }
     }
 
@@ -73,6 +80,34 @@ protected:
         return quiver::Database::from_migrations(
             (fs::path(root) / "study.db").string(),
             migrations_dir(),
+            {.read_only = false, .console_level = quiver::LogLevel::Off});
+    }
+
+    // A sibling of `root`, never a subdirectory of it -- copying `root` into its own subdirectory
+    // would recurse into itself.
+    std::string mirror_root() const {
+        return (fs::path(root).parent_path() / "quiver_ui_metadata_test_mirror").string();
+    }
+
+    // Copies the whole temp tree (migrations/ + ui/, if any) to a sibling directory, deletes that
+    // copy's `ui/` sibling, and opens a fresh database there -- the "same tree with the sidecar
+    // removed" comparison baseline (plan action text), built by copy-then-remove rather than by
+    // mutating the tree under an already-open handle. Call this before open_tree() in the same
+    // test so no live sqlite file is mid-copy.
+    quiver::Database open_ui_free_mirror() {
+        const fs::path mirror = mirror_root();
+        if (fs::exists(mirror)) {
+            fs::remove_all(mirror);
+        }
+        fs::copy(root, mirror, fs::copy_options::recursive);
+        const fs::path mirror_migrations = mirror / "migrations";
+        const fs::path mirror_ui = fs::weakly_canonical(mirror_migrations).parent_path() / "ui";
+        if (fs::exists(mirror_ui)) {
+            fs::remove_all(mirror_ui);
+        }
+        return quiver::Database::from_migrations(
+            (mirror / "mirror_study.db").string(),
+            mirror_migrations.string(),
             {.read_only = false, .console_level = quiver::LogLevel::Off});
     }
 
@@ -123,6 +158,30 @@ std::vector<std::string> extract_scalar_lines(const std::string& text) {
         }
     }
     return lines;
+}
+
+// One collection's section of a full describe() report, delimited by its own "Collection: <name>"
+// line and the next one (or end of string). describe()'s first two lines ("Database: <path>" /
+// "Version: N") carry the db's own path, which legitimately differs between a main tree and its
+// ui-free mirror (different temp directories) -- comparing only the collection section is what
+// makes the SAFE-02 byte-identity assertions meaningful rather than failing on an irrelevant path.
+std::string extract_collection_section(const std::string& describe_output, const std::string& collection) {
+    auto pos = describe_output.find("Collection: " + collection);
+    if (pos == std::string::npos) {
+        return {};
+    }
+    auto end = describe_output.find("\nCollection: ", pos + 1);
+    return end == std::string::npos ? describe_output.substr(pos) : describe_output.substr(pos, end - pos);
+}
+
+// Shared SAFE-02 assertion: a collection's describe()/describe_collection()/summarize_collection()
+// output is byte-identical between `db` (some sidecar tree, possibly malformed or undescribed) and
+// `mirror_db` (the same migrations tree with no ui/ sidecar at all).
+void expect_reports_match(quiver::Database& db, quiver::Database& mirror_db, const std::string& collection) {
+    EXPECT_EQ(extract_collection_section(db.describe(), collection),
+              extract_collection_section(mirror_db.describe(), collection));
+    EXPECT_EQ(db.describe_collection(collection), mirror_db.describe_collection(collection));
+    EXPECT_EQ(db.summarize_collection(collection), mirror_db.summarize_collection(collection));
 }
 
 }  // namespace
@@ -654,4 +713,347 @@ enum = "reservoir_type"
 
     EXPECT_NE(describe_collection.find(R"(; enum {0: "Per Unit"})"), std::string::npos) << describe_collection;
     EXPECT_NE(describe_collection.find(R"(; enum {0: "Reservoir"})"), std::string::npos) << describe_collection;
+}
+
+// ============================================================================
+// Task 1-02-01: path resolution (READ-01)
+// ============================================================================
+
+// A trailing separator on the migrations path resolves to the same ui/ sibling as the same path
+// without one -- raw parent_path() would instead land on "<migrations>/ui", which never exists.
+TEST_F(UiConfigTest, PathResolutionTrailingSeparator) {
+    write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
+    write_ui_file("hydro_plant.toml", R"(
+id = "HydroPlant"
+
+[[attribute]]
+id = "hm3_initial"
+label.en = "Initial Storage"
+)");
+
+    auto db_no_slash = quiver::Database::from_migrations((fs::path(root) / "study_no_slash.db").string(),
+                                                          migrations_dir(),
+                                                          {.read_only = false, .console_level = quiver::LogLevel::Off});
+    auto db_trailing_slash =
+        quiver::Database::from_migrations((fs::path(root) / "study_trailing_slash.db").string(),
+                                          migrations_dir() + "/",
+                                          {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    auto report_no_slash = db_no_slash.describe_collection("HydroPlant");
+    auto report_trailing_slash = db_trailing_slash.describe_collection("HydroPlant");
+
+    EXPECT_EQ(report_no_slash, report_trailing_slash);
+    EXPECT_NE(report_no_slash.find(kLabelClauseOpener), std::string::npos) << report_no_slash;
+}
+
+// A bare relative migrations path finds the sibling ui/ next to it, never a ui/ under the process
+// CWD -- raw parent_path() on a bare relative path yields "./ui" against whatever the CWD happens
+// to be at call time.
+TEST_F(UiConfigTest, PathResolutionRelativeMigrationsPath) {
+    write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
+    write_ui_file("hydro_plant.toml", R"(
+id = "HydroPlant"
+
+[[attribute]]
+id = "hm3_initial"
+label.en = "Initial Storage"
+)");
+
+    auto expected = open_tree().describe_collection("HydroPlant");
+
+    // Scope guard restores the process-wide CWD even if an assertion below fails (T-01-07): this
+    // mutates global state every other test in the binary shares.
+    const fs::path saved_cwd = fs::current_path();
+    struct CwdGuard {
+        fs::path saved;
+        ~CwdGuard() {
+            fs::current_path(saved);
+        }
+    } guard{saved_cwd};
+    fs::current_path(root);
+
+    auto db = quiver::Database::from_migrations(
+        "relative_study.db", "migrations", {.read_only = false, .console_level = quiver::LogLevel::Off});
+    auto actual = db.describe_collection("HydroPlant");
+
+    EXPECT_EQ(actual, expected);
+}
+
+// The decoy at migrations/ui/ (a live sibling of every numbered version directory) is never read
+// -- only the resolved sibling of the migrations path itself is. This is the exact misresolution
+// raw parent_path() produces on a trailing-separator or relative path.
+TEST_F(UiConfigTest, PathResolutionNeverReadsUiUnderMigrations) {
+    write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
+    write_ui_file("hydro_plant.toml", R"(
+id = "HydroPlant"
+
+[[attribute]]
+id = "hm3_initial"
+label.en = "Sibling Label"
+)");
+
+    const fs::path decoy_dir = fs::path(migrations_dir()) / "ui";
+    fs::create_directories(decoy_dir);
+    std::ofstream decoy(decoy_dir / "hydro_plant.toml");
+    decoy << R"(
+id = "HydroPlant"
+
+[[attribute]]
+id = "hm3_initial"
+label.en = "Decoy Label"
+)";
+    decoy.close();
+
+    auto db = open_tree();
+    auto describe_collection = db.describe_collection("HydroPlant");
+
+    EXPECT_NE(describe_collection.find("; label \"Sibling Label\""), std::string::npos) << describe_collection;
+    EXPECT_EQ(describe_collection.find("Decoy Label"), std::string::npos) << describe_collection;
+}
+
+// ============================================================================
+// Task 1-02-01: shape selection (READ-02)
+// ============================================================================
+
+// main.toml (flat keys, no top-level id), a theme-shaped file (id but no attribute array), a plain
+// text file, and a themes/ subdirectory (non-recursive scan) contribute nothing and never throw --
+// even though the themes/ file would otherwise self-select as a collection file.
+TEST_F(UiConfigTest, ShapeSelectionIgnoresNonCollectionFiles) {
+    write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
+    write_ui_file("main.toml", R"(
+model = "HydroThermalDispatch"
+collections = ["HydroPlant"]
+)");
+    write_ui_file("theme.toml", R"(
+id = "SomeTheme"
+)");
+    write_ui_file("notes.txt", "just a note, not toml at all");
+
+    const fs::path themes_dir = fs::path(ui_dir()) / "themes";
+    fs::create_directories(themes_dir);
+    std::ofstream themed_file(themes_dir / "hydro_plant.toml");
+    themed_file << R"(
+id = "HydroPlant"
+
+[[attribute]]
+id = "hm3_initial"
+label.en = "Should Never Render"
+)";
+    themed_file.close();
+
+    auto mirror_db = open_ui_free_mirror();
+    auto mirror_report = mirror_db.describe_collection("HydroPlant");
+
+    std::optional<quiver::Database> db;
+    EXPECT_NO_THROW(db.emplace(open_tree()));
+    ASSERT_TRUE(db.has_value());
+    auto report = db->describe_collection("HydroPlant");
+
+    EXPECT_EQ(report, mirror_report);
+    EXPECT_EQ(report.find("Should Never Render"), std::string::npos) << report;
+}
+
+// A collection file self-selects by its own top-level `id`, never its filename.
+TEST_F(UiConfigTest, ShapeSelectionUsesFileIdNotFilename) {
+    write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
+    write_ui_file("dc_line.toml", R"(
+id = "HydroPlant"
+
+[[attribute]]
+id = "hm3_initial"
+label.en = "Initial Storage"
+)");
+
+    auto db = open_tree();
+    auto describe_collection = db.describe_collection("HydroPlant");
+
+    EXPECT_NE(describe_collection.find("; label \"Initial Storage\""), std::string::npos) << describe_collection;
+}
+
+// ============================================================================
+// Task 1-02-01: undescribed cases (RENDER-03)
+// ============================================================================
+
+// A collection named by no ui/*.toml file at all (while ui/ itself exists and describes something
+// else) renders every scalar exactly as a no-sidecar run does.
+TEST_F(DatabaseUiMetadataTest, UndescribedCollectionRendersUnchanged) {
+    write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
+    write_ui_file("enum.toml", R"(
+[[bool]]
+id = 0
+label.en = "No"
+)");
+
+    auto mirror_report = open_ui_free_mirror().describe_collection("HydroPlant");
+    auto report = open_tree().describe_collection("HydroPlant");
+
+    EXPECT_EQ(report, mirror_report);
+}
+
+// An attribute absent from its collection's [[attribute]] array renders exactly as a no-sidecar
+// run, while a sibling attribute present in the same file still renders its clause.
+TEST_F(DatabaseUiMetadataTest, UndescribedAttributeRendersUnchanged) {
+    write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
+    write_ui_file("hydro_plant.toml", R"(
+id = "HydroPlant"
+
+[[attribute]]
+id = "hm3_initial"
+label.en = "Initial Storage"
+)");
+    // discount_rate has no [[attribute]] entry in this file.
+
+    auto mirror_lines = extract_scalar_lines(open_ui_free_mirror().describe_collection("HydroPlant"));
+    auto lines = extract_scalar_lines(open_tree().describe_collection("HydroPlant"));
+
+    ASSERT_EQ(lines.size(), mirror_lines.size());
+    bool checked_discount_rate = false;
+    bool checked_hm3_initial = false;
+    for (size_t i = 0; i < lines.size(); ++i) {
+        if (lines[i].rfind("    - discount_rate ", 0) == 0) {
+            EXPECT_EQ(lines[i], mirror_lines[i]) << lines[i];
+            checked_discount_rate = true;
+        }
+        if (lines[i].rfind("    - hm3_initial ", 0) == 0) {
+            EXPECT_NE(lines[i], mirror_lines[i]) << "sibling in the same file should still render its clause";
+            EXPECT_NE(lines[i].find(kLabelClauseOpener), std::string::npos) << lines[i];
+            checked_hm3_initial = true;
+        }
+    }
+    EXPECT_TRUE(checked_discount_rate);
+    EXPECT_TRUE(checked_hm3_initial);
+}
+
+// A ui entry naming a column the schema does not have changes nothing and warns nothing.
+TEST_F(DatabaseUiMetadataTest, UndescribedDanglingUiColumnRendersUnchanged) {
+    write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
+    write_ui_file("hydro_plant.toml", R"(
+id = "HydroPlant"
+
+[[attribute]]
+id = "does_not_exist_column"
+label.en = "Ghost Column"
+)");
+
+    auto mirror_report = open_ui_free_mirror().describe_collection("HydroPlant");
+    auto report = open_tree().describe_collection("HydroPlant");
+
+    EXPECT_EQ(report, mirror_report);
+}
+
+// D-20: an attribute carrying hide = true still renders its clauses -- describe describes the
+// schema, not the UI.
+TEST_F(DatabaseUiMetadataTest, HiddenAttributeStillRenders) {
+    write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
+    write_ui_file("hydro_plant.toml", R"(
+id = "HydroPlant"
+
+[[attribute]]
+id = "hm3_initial"
+label.en = "Initial Storage"
+hide = true
+)");
+
+    auto db = open_tree();
+    auto describe_collection = db.describe_collection("HydroPlant");
+
+    EXPECT_NE(describe_collection.find("; label \"Initial Storage\""), std::string::npos) << describe_collection;
+}
+
+// ============================================================================
+// Task 1-02-01: malformed-sidecar degradation (SAFE-02)
+// ============================================================================
+
+// An empty ui/ directory (present, but holding no files at all) opens successfully and renders
+// exactly as a no-sidecar run.
+TEST_F(DatabaseUiMetadataTest, MalformedEmptyUiDirRendersIdentical) {
+    write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
+    fs::create_directories(ui_dir());
+
+    auto mirror_db = open_ui_free_mirror();
+
+    std::optional<quiver::Database> db;
+    EXPECT_NO_THROW(db.emplace(open_tree()));
+    ASSERT_TRUE(db.has_value());
+
+    expect_reports_match(*db, mirror_db, "HydroPlant");
+}
+
+// A zero-byte enum.toml opens successfully and renders exactly as a no-sidecar run.
+TEST_F(DatabaseUiMetadataTest, MalformedZeroByteEnumRendersIdentical) {
+    write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
+    write_ui_file("enum.toml", "");
+
+    auto mirror_db = open_ui_free_mirror();
+
+    std::optional<quiver::Database> db;
+    EXPECT_NO_THROW(db.emplace(open_tree()));
+    ASSERT_TRUE(db.has_value());
+
+    expect_reports_match(*db, mirror_db, "HydroPlant");
+}
+
+// A syntactically invalid .toml collection file opens successfully (the inner per-file catch
+// warns and degrades) and renders exactly as a no-sidecar run.
+TEST_F(DatabaseUiMetadataTest, MalformedInvalidSyntaxRendersIdentical) {
+    write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
+    write_ui_file("hydro_plant.toml", "this is not valid toml {{{");
+
+    auto mirror_db = open_ui_free_mirror();
+
+    std::optional<quiver::Database> db;
+    EXPECT_NO_THROW(db.emplace(open_tree()));
+    ASSERT_TRUE(db.has_value());
+
+    expect_reports_match(*db, mirror_db, "HydroPlant");
+}
+
+// A collection file whose `attribute` value is a string rather than an array fails the shape gate
+// (never a filename, never a fixed key) and renders exactly as a no-sidecar run.
+TEST_F(DatabaseUiMetadataTest, MalformedWrongTypeAttributeRendersIdentical) {
+    write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
+    write_ui_file("hydro_plant.toml", R"(
+id = "HydroPlant"
+attribute = "not_an_array"
+)");
+
+    auto mirror_db = open_ui_free_mirror();
+
+    std::optional<quiver::Database> db;
+    EXPECT_NO_THROW(db.emplace(open_tree()));
+    ASSERT_TRUE(db.has_value());
+
+    expect_reports_match(*db, mirror_db, "HydroPlant");
+}
+
+// D-09: two collection files, one unparseable -- the good collection's clauses still render, and
+// nothing throws. This is what the inner per-file catch buys over a single outer catch.
+TEST_F(UiConfigTest, MalformedOneFileKeepsOtherCollections) {
+    write_migration(1,
+                    reservoir_schema() + R"(
+CREATE TABLE ThermalPlant (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    label TEXT UNIQUE NOT NULL,
+    capacity_mw REAL
+) STRICT;
+)",
+                    "DROP TABLE ThermalPlant; DROP TABLE HydroPlant; DROP TABLE Configuration;");
+
+    write_ui_file("hydro_plant.toml", "this is not valid toml {{{");
+    write_ui_file("thermal_plant.toml", R"TOML(
+id = "ThermalPlant"
+
+[[attribute]]
+id = "capacity_mw"
+label.en = "Installed Capacity (MW)"
+)TOML");
+
+    std::optional<quiver::Database> db;
+    EXPECT_NO_THROW(db.emplace(open_tree()));
+    ASSERT_TRUE(db.has_value());
+
+    auto thermal_report = db->describe_collection("ThermalPlant");
+    EXPECT_NE(thermal_report.find("; label \"Installed Capacity (MW)\""), std::string::npos) << thermal_report;
+
+    EXPECT_NO_THROW(db->describe_collection("HydroPlant"));
 }
