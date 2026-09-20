@@ -42,7 +42,12 @@ core; nothing in this milestone renders pixels, so no `UI hint` annotation appea
   4. `from_migrations` against a tree with no `ui/`, an empty `ui/`, a zero-byte `enum.toml`, or an unparseable `.toml` still opens the database — logging a warning for the malformed case — and all three reports come back byte-identical to a run of the same tree with the sidecar deleted.
   5. A migrations path with a trailing separator, and a relative migrations path, resolve to the same `ui/` directory as the absolute separator-free form — never `<migrations>/ui`, and never a `ui/` under the process CWD.
   6. Fixtures build `migrations/` and `ui/` in a per-test temp dir; nothing is committed under `tests/schemas/ui/`, and the existing `test_database_lifecycle.cpp` describe assertions (`:396-436`, `:438-460`, `:463-485`, `:487-500`) still pass unmodified.
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 01-00-PLAN.md — Wave 0: temp-dir `migrations/` + `ui/` fixture harness and the SAFE-01 no-sidecar baseline test
+- [ ] 01-01-PLAN.md — Wave 1: tracer slice (path resolve → shape-selected parse → `Impl` store → label/tooltip clauses in both reports), then the `enum.toml` vocabulary expansion
+- [ ] 01-02-PLAN.md — Wave 2: path-resolution, shape-selection, undescribed and malformed-sidecar coverage, plus the `CHANGELOG.md` reconciliation and CLAUDE.md updates
 
 Also in this phase (prerequisite for its changelog entry): reconcile `CHANGELOG.md`'s
 `## [0.10.7] — unreleased` heading and its compare link to `0.10.8`, since `v0.10.7` is already
@@ -79,7 +84,7 @@ is its own phase rather than a second edit inside Phase 1's.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Sidecar Reader and Attribute Meaning | 0/TBD | Not started | - |
+| 1. Sidecar Reader and Attribute Meaning | 0/3 | Not started | - |
 | 2. Enum Labels on the Value Histogram | 0/TBD | Not started | - |
 
 ## Requirement Coverage
