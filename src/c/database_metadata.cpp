@@ -129,6 +129,70 @@ QUIVER_C_API quiver_error_t quiver_database_get_attribute_ui_metadata(quiver_dat
     }
 }
 
+// UI vocabulary listing and by-name lookup (Phase 3, META-05). The vocabulary crosses as two
+// parallel arrays (D-11), allocated/freed exactly like quiver_database_read_time_series_files /
+// quiver_database_free_time_series_files (src/c/database_time_series.cpp) -- new[] + new_c_str,
+// released with delete[]. See quiver_database_free_ui_vocabulary's declaration comment for why the
+// combined free is dedicated rather than composed from the two generic array frees (D-37).
+
+QUIVER_C_API quiver_error_t quiver_database_list_ui_vocabularies(quiver_database_t* db,
+                                                                 char*** out_names,
+                                                                 size_t* out_count) {
+    QUIVER_REQUIRE(db, out_names, out_count);
+
+    try {
+        return copy_strings_to_c(db->db.list_ui_vocabularies(), out_names, out_count);
+    } catch (const std::exception& e) {
+        quiver_set_last_error(e.what());
+        return QUIVER_ERROR;
+    }
+}
+
+QUIVER_C_API quiver_error_t quiver_database_get_ui_vocabulary(quiver_database_t* db,
+                                                               const char* name,
+                                                               int64_t** out_codes,
+                                                               char*** out_labels,
+                                                               size_t* out_count) {
+    QUIVER_REQUIRE(db, name, out_codes, out_labels, out_count);
+
+    try {
+        auto entries = db->db.get_ui_vocabulary(name);
+        *out_count = entries.size();
+
+        if (entries.empty()) {
+            *out_codes = nullptr;
+            *out_labels = nullptr;
+            return QUIVER_OK;
+        }
+
+        *out_codes = new int64_t[entries.size()];
+        *out_labels = new char*[entries.size()];
+        for (size_t i = 0; i < entries.size(); ++i) {
+            (*out_codes)[i] = entries[i].code;
+            (*out_labels)[i] = quiver::string::new_c_str(entries[i].label);
+        }
+        return QUIVER_OK;
+    } catch (const std::exception& e) {
+        quiver_set_last_error(e.what());
+        return QUIVER_ERROR;
+    }
+}
+
+// Not wrapped in try/catch: plain delete[] cannot throw (matching quiver_database_free_string_array,
+// src/c/database_read.cpp). Tolerates NULL for either array -- delete[] nullptr is well-defined --
+// but is NOT safe to call twice on the same pointers (see the declaration comment).
+QUIVER_C_API quiver_error_t quiver_database_free_ui_vocabulary(int64_t* codes, char** labels, size_t count) {
+    delete[] codes;
+
+    if (labels) {
+        for (size_t i = 0; i < count; ++i) {
+            delete[] labels[i];
+        }
+        delete[] labels;
+    }
+    return QUIVER_OK;
+}
+
 // Metadata free functions (co-located with get/list)
 
 QUIVER_C_API quiver_error_t quiver_database_free_scalar_metadata(quiver_scalar_metadata_t* metadata) {

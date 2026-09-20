@@ -396,6 +396,28 @@ QUIVER_C_API quiver_error_t quiver_database_free_scalar_metadata(quiver_scalar_m
 QUIVER_C_API quiver_error_t quiver_database_free_group_metadata(quiver_group_metadata_t* metadata);
 QUIVER_C_API quiver_error_t quiver_database_free_ui_metadata(quiver_ui_metadata_t* metadata);
 
+// UI vocabulary listing and by-name lookup (Phase 3, META-05, D-10/D-11): a vocabulary crosses as
+// two parallel arrays -- int64_t codes, char* labels -- never a second struct.
+QUIVER_C_API quiver_error_t quiver_database_list_ui_vocabularies(quiver_database_t* db,
+                                                                  char*** out_names,
+                                                                  size_t* out_count);
+
+QUIVER_C_API quiver_error_t quiver_database_get_ui_vocabulary(quiver_database_t* db,
+                                                               const char* name,
+                                                               int64_t** out_codes,
+                                                               char*** out_labels,
+                                                               size_t* out_count);
+
+// Dedicated combined free for the vocabulary pair above (D-37). A decoder that composed
+// quiver_database_free_integer_array + quiver_database_free_string_array instead would leak
+// whichever array it forgot, with nothing to catch it, and would have to keep `count` alive for a
+// second call. Mirrors quiver_database_free_time_series_files's allocator (quiver::string::new_c_str
+// / new[], released with delete[]). Tolerates NULL for either array (a zero-count result may leave
+// both NULL). Not safe to call twice on the same pointers -- it takes raw pointers and cannot null
+// the caller's copies, unlike quiver_database_free_ui_metadata above, which takes the struct
+// pointer itself and nulls the fields it frees.
+QUIVER_C_API quiver_error_t quiver_database_free_ui_vocabulary(int64_t* codes, char** labels, size_t count);
+
 // List attributes/groups - returns full metadata
 QUIVER_C_API quiver_error_t quiver_database_list_scalar_attributes(quiver_database_t* db,
                                                                    const char* collection,
