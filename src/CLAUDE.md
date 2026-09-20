@@ -151,10 +151,14 @@ not `src/binary/binary_metadata.cpp`'s posture, which throws on a parse error or
 `.value()` unwrap with no test for either. One outer catch covers directory iteration and path
 resolution and yields a fully empty `UiConfig` on failure; one inner catch per collection file (and
 a separate one around `enum.toml`) means a single malformed `ui/*.toml` costs only that
-collection's metadata, not every other collection's. An absent `ui/` directory is the ordinary
-case and logs nothing; a directory that exists but is empty, unreadable, or malformed logs a
-warning through the per-database logger and degrades — `from_migrations` still succeeds either
-way.
+collection's metadata, not every other collection's. An absent or empty `ui/` directory is the
+ordinary case and logs nothing — an empty directory yields zero `directory_iterator` entries, so
+the per-file loop body never runs. A directory that cannot be iterated (path resolution or the
+iteration itself failing) logs one warning from the outer catch and degrades to an empty
+`UiConfig`; a file within it that cannot be opened (`ifstream::is_open()` is checked before
+reading, and a failed open throws so it lands in the same catch as a parse failure) or that fails
+to parse logs its own warning through the per-database logger and costs only that file —
+`from_migrations` still succeeds in every case.
 
 Rendering lives in `database_describe.cpp`, not here: `write_collection_section` gained a nullable
 `const UiConfig*` and a `bool with_tooltip` parameter and appends zero to three `"; keyword body"`
