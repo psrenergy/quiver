@@ -13,6 +13,21 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   `group` = group read/update + validation, `row` = `upsert_time_series_row`/`read_time_series_row`;
   the C++ core has no `_nulls` file), `test_database_transaction.cpp`,
   `test_database_csv_export.cpp`, `test_database_csv_import.cpp`, `test_database_errors.cpp`
+- `test_database_ui_metadata.cpp` covers the `ui/` TOML sidecar reader (`src/ui_metadata.{h,cpp}`)
+  and its render into `describe`/`describe_collection`/`summarize_collection` — the one suite in
+  this list that drives `from_migrations` describe output (every other describe assertion in the
+  repo goes through `from_schema`, which never populates the sidecar). Two gtest fixture names
+  exist so the loader-facing and render-facing halves can be filtered separately:
+  `UiMetadataTest` (path resolution, shape selection, localized-value reading including the C0/C1
+  control-byte collapse, and the `enum.toml` join) and `DatabaseUiMetadataTest`
+  (label/tooltip/enum clause rendering, the redundancy-suppression rules, the undescribed cases,
+  the malformed/degrade cases, the `summarize_collection` histogram annotation, and the SAFE-01
+  no-`ui/` baseline). Its `UiTempTreeFixture` base builds a
+  per-test temp-dir `migrations/` tree plus sibling `ui/` tree from caller-supplied file contents
+  (extending the `MigrationsTestFixture` idiom in `test_migrations.cpp`) — **nothing may be
+  committed under `tests/schemas/ui/`**, because such a directory would become a live sibling of
+  `tests/schemas/migrations` for every `from_migrations` call across six suites plus the
+  recursive-copy Lua migrations test.
 - Supporting types: `test_element.cpp`, `test_row_result.cpp`, `test_migrations.cpp`,
   `test_schema_validator.cpp`
 - Lua: `test_lua_runner_*.cpp` — per-area split mirroring the database files (`_create`, `_read`,

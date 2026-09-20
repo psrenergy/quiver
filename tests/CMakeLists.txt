@@ -24,6 +24,7 @@ add_executable(quiver_tests
     test_database_time_series_metadata.cpp
     test_database_time_series_row.cpp
     test_database_transaction.cpp
+    test_database_ui_metadata.cpp
     test_database_update.cpp
     test_element.cpp
     test_issues.cpp

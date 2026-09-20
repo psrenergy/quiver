@@ -5,6 +5,7 @@
 #include "quiver/schema.h"
 #include "quiver/schema_validator.h"
 #include "quiver/type_validator.h"
+#include "ui_metadata.h"
 
 #include <map>
 #include <memory>
@@ -69,6 +70,14 @@ struct Database::Impl {
     // nested callers compose. TransactionGuard needs no flag - it already no-ops when a
     // transaction is active.
     bool dry_run = false;
+
+    // Populated eagerly, once, at the end of from_migrations -- unlike schema/type_validator
+    // above, this is NOT lazily loaded and must never be hooked onto require_schema() /
+    // load_schema_metadata(): migrate_up early-returns before reaching schema loading on the
+    // already-up-to-date open path, which is the path every re-open of an existing study takes.
+    // A default-constructed value is the "no sidecar" state, so every other construction path
+    // (open(), from_schema, validate_migrations) degrades identically to "no ui/ present".
+    UiMetadata ui_metadata;
 
     // Takes no operation name: reading an existing database's schema on first use is what makes
     // open() usable, and a database that is not a quiver database throws the validator's own
