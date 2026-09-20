@@ -71,8 +71,9 @@ verified in the same run (see `<code_context>` → Verified Facts).
   test file. It breaks no published contract (the reports are opaque `std::string` through the C
   API), so the cost is test churn, not a migration.
 
-- **D-02: Every free-text value is wrapped in ASCII double quotes, with `\` written `\\` and `"`
-  written `\"`. No other escaping.** This is what makes every separator character unambiguous:
+- **D-02: Every free-text value is wrapped in ASCII double quotes.** Inside the quotes `\` is
+  written `\\` and `"` is written `\"`; no other escaping. This is what makes every separator
+  character unambiguous:
   arbitrary user text only ever appears between an unescaped opening and closing quote. Real corpus
   labels and tooltips contain commas, colons, semicolons, parentheses, brackets and braces — the
   hostile-data judge confirmed the unquoted alternatives become unparseable against that text. Enum
@@ -113,17 +114,17 @@ verified in the same run (see `<code_context>` → Verified Facts).
   positional assumption. An entry whose label normalizes to empty under D-03 is dropped; if no
   entry survives, the whole clause is omitted. An empty map counts as absent.
 
-- **D-07: Tooltip is last, which makes the `describe()` line a strict character-for-character
-  prefix of the `describe_collection()` line — and that must be pinned by a test.** Dropping the
-  tooltip only ever removes the final clause, so the two reports cannot drift by construction. All
+- **D-07: Tooltip is last, so the `describe()` line is a strict prefix.** It is a
+  character-for-character prefix of the `describe_collection()` line, and that must be pinned by a
+  test. Dropping the tooltip only ever removes the final clause, so the two reports cannot drift by construction. All
   three judges noted the winning proposal claimed this property and never checked it: add one test
   asserting, for every scalar, that the `describe()` line is a strict prefix of the
   `describe_collection()` line. Three lines, and it is the cheapest possible anti-drift guarantee.
 
 ### Report Scope
 
-- **D-08: The tooltip renders only in `describe_collection()`, never in whole-database
-  `describe()`.** User's explicit decision, to bound whole-DB report growth (a real model, GNoMo,
+- **D-08: The tooltip renders only in `describe_collection()`.** Never in whole-database
+  `describe()`. User's explicit decision, to bound whole-DB report growth (a real model, GNoMo,
   carries 236 attributes; PROJECT.md estimates ~15–20 KB of growth). `describe()` shows label +
   enum labels; `describe_collection()` shows label + enum labels + tooltip.
 
@@ -166,8 +167,9 @@ verified in the same run (see `<code_context>` → Verified Facts).
   the `quiver` target and therefore does not propagate to `quiver_c`, `quiver_cli` or
   `quiver_tests`.
 
-- **D-11: One plain, non-`mutable` member on `Database::Impl`** (`src/database_impl.h:59`),
-  populated in `from_migrations` (`src/database.cpp:242-257`) after `migrate_up` returns. It does
+- **D-11: One plain, non-`mutable` member on the Impl struct.** That is `Database::Impl` at
+  `src/database_impl.h:59`, populated in `from_migrations` (`src/database.cpp:242-257`) after
+  `migrate_up` returns. It does
   not need `mutable`: the three describe readers are `const` but reach `Impl` through `impl_->`,
   and constness does not propagate through `unique_ptr::operator->`. It must **not** be hooked onto
   `load_schema_metadata` — `migrate_up` early-returns at `src/database.cpp:398-401` and `:406-409`
