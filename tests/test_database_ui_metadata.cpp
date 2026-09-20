@@ -147,7 +147,7 @@ std::vector<std::string> extract_scalar_lines(const std::string& text) {
     std::istringstream iss(text);
     std::string line;
     while (std::getline(iss, line)) {
-        if (line.rfind("    - ", 0) == 0) {
+        if (line.starts_with("    - ")) {
             lines.push_back(line);
         }
     }
@@ -369,7 +369,7 @@ tooltip.en = "Operating mode of the plant."
     ASSERT_EQ(describe_lines.size(), describe_collection_lines.size());
     ASSERT_FALSE(describe_lines.empty());
     for (size_t i = 0; i < describe_lines.size(); ++i) {
-        EXPECT_EQ(describe_collection_lines[i].rfind(describe_lines[i], 0), 0)
+        EXPECT_TRUE(describe_collection_lines[i].starts_with(describe_lines[i]))
             << "describe line:            " << describe_lines[i] << "\n"
             << "describe_collection line: " << describe_collection_lines[i];
     }
@@ -897,11 +897,11 @@ label.en = "Initial Storage"
     bool checked_discount_rate = false;
     bool checked_hm3_initial = false;
     for (size_t i = 0; i < lines.size(); ++i) {
-        if (lines[i].rfind("    - discount_rate ", 0) == 0) {
+        if (lines[i].starts_with("    - discount_rate ")) {
             EXPECT_EQ(lines[i], mirror_lines[i]) << lines[i];
             checked_discount_rate = true;
         }
-        if (lines[i].rfind("    - hm3_initial ", 0) == 0) {
+        if (lines[i].starts_with("    - hm3_initial ")) {
             EXPECT_NE(lines[i], mirror_lines[i]) << "sibling in the same file should still render its clause";
             EXPECT_NE(lines[i].find(kLabelClauseOpener), std::string::npos) << lines[i];
             checked_hm3_initial = true;
