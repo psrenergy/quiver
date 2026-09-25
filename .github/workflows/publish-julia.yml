@@ -43,6 +43,10 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.sha }}
 
+      - name: Record source commit
+        id: source
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
       - uses: julia-actions/setup-julia@v3
         with:
           version: "1.11"
@@ -87,7 +91,7 @@ jobs:
           commit-message: "Release v${{ needs.version.outputs.version }}"
           title: "Release v${{ needs.version.outputs.version }}"
           body: |
-            Auto-generated mirror from `psrenergy/quiver@v${{ needs.version.outputs.version }}`.
+            Auto-generated mirror from `psrenergy/quiver@${{ steps.source.outputs.sha }}` for v${{ needs.version.outputs.version }}.
 
             Do not hand-edit this repository, it is generated from `psrenergy/quiver/bindings/julia`.
           delete-branch: true
