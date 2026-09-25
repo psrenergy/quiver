@@ -33,7 +33,14 @@ end
 # compiled/relocated apps (the failure this loader is designed to avoid).
 const _quiver_artifact_hash = let
     artifacts_toml = Artifacts.find_artifacts_toml(@__DIR__)
-    artifacts_toml === nothing ? nothing : Artifacts.artifact_hash("quiver", artifacts_toml)
+    if artifacts_toml === nothing
+        nothing
+    else
+        # Julia does not track Artifacts.toml as a source dependency automatically.
+        # Recompile when a release changes only the artifact binding.
+        Base.include_dependency(artifacts_toml)
+        Artifacts.artifact_hash("quiver", artifacts_toml)
+    end
 end
 
 # Directory holding libquiver_c (and its libquiver dependency), resolved at RUNTIME (from
