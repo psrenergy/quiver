@@ -1,5 +1,5 @@
-#ifndef QUIVER_SRC_CSV_WRITE_H
-#define QUIVER_SRC_CSV_WRITE_H
+#ifndef QUIVER_SRC_CSV_CSV_WRITE_H
+#define QUIVER_SRC_CSV_CSV_WRITE_H
 
 // Internal CSV writer behind the Lua-only db:write_csv binding (src/lua_runner.cpp). No public
 // include/quiver/ counterpart, no QUIVER_API, no C API, no FFI binding, for the same reason
@@ -19,7 +19,7 @@
 //
 // The full Pattern 1 message catalogue for this feature (this header/cpp plus the write_row cell
 // formatter it feeds from src/lua_runner.cpp) is pinned as a comment block at the top of
-// src/csv_write.cpp -- TEST-12 matches on those exact strings; do not reword any of them without
+// src/csv/csv_write.cpp -- TEST-12 matches on those exact strings; do not reword any of them without
 // updating that comment and the tests together.
 
 #include <fstream>
@@ -76,4 +76,4 @@ private:
 
 }  // namespace quiver::csv_write
 
-#endif  // QUIVER_SRC_CSV_WRITE_H
+#endif  // QUIVER_SRC_CSV_CSV_WRITE_H

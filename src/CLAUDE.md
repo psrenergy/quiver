@@ -45,16 +45,17 @@ src/                      # C++ implementation
   type_validator.cpp      # Scalar/array type validation (caller-threaded Pattern 1 messages)
   element.cpp / row.cpp / result.cpp / migration.cpp / migrations.cpp
   lua_runner.cpp          # LuaRunner (sol2) - all Lua bindings
-  csv_read.h / csv_read.cpp  # Internal CSV reader (csv-parser, Pimpl'd) behind db:read_csv /
-                              # db:read_csv_stream -- no include/quiver/ counterpart (see below)
-  csv_write.h / csv_write.cpp  # Internal CSV writer (hand-rolled, NOT Pimpl'd) behind db:write_csv
-                                # -- same no-include/quiver/-counterpart posture as csv_read
   ui_metadata.h / ui_metadata.cpp  # Internal ui/ TOML sidecar reader behind describe/describe_collection
                                 # -- same no-include/quiver/-counterpart posture as csv_read
   cli/main.cpp            # quiver_cli CLI entry point
   utils/string.h          # String utilities: new_c_str, trim
   utils/datetime.h        # ISO 8601 parse/format helpers
   utils/number.h          # quiver::utils::append_number -- std::to_chars shortest round-trip
+src/csv/                    # Standalone CSV file reader/writer (see below)
+  csv_read.h / csv_read.cpp   # Internal CSV reader (csv-parser, Pimpl'd) behind db:read_csv /
+                              # db:read_csv_stream -- no include/quiver/ counterpart
+  csv_write.h / csv_write.cpp # Internal CSV writer (hand-rolled, NOT Pimpl'd) behind db:write_csv
+                              # -- same no-include/quiver/-counterpart posture as csv_read
 src/binary/                 # Binary C++ implementation
   binary_file.cpp             # BinaryFile class (Pimpl impl) + write registry
   binary_utils.h              # Shared file-extension constants
@@ -76,7 +77,15 @@ src/expression/             # Expression C++ implementation
   expression_rename_agents.cpp     # ExpressionRenameAgents (label-axis rename)
 ```
 
-`csv_read.h`/`csv_read.cpp` is the first `.cpp` in `src/` with no `include/quiver/` public
+`src/csv/` is grouped by format, not by consumer: its classes never see a sol2 type, so Lua being
+their only caller today does not make them Lua code (a `src/lua/` folder would also have to take
+`lua_runner.cpp`, whose path `bindings/js/test/lua-api-sync.test.ts` hardcodes). It holds only the
+standalone reader/writer — `database_csv_{import,export}.cpp` stay with the `database_*` family
+and `binary/csv_converter.cpp` with `binary/`. A future format helper (e.g. a Lua JSON reader)
+gets a sibling folder (`src/json/`), which is also where the `run()` JSON encoder now in
+`lua_runner.cpp`'s anonymous namespace would move.
+
+`csv/csv_read.h`/`.cpp` is the first `.cpp` in `src/` with no `include/quiver/` public
 counterpart — every other internal helper here (`utils/string.h`, `database_internal.h`,
 `binary/binary_utils.h`) is header-only inline, and every other `QUIVER_SOURCES` entry implements
 a public header. It stays internal because there is no FFI consumer for it (Julia/Dart/Python/JS
@@ -102,7 +111,7 @@ returns an empty header with zero rows in total silence, so the check is gated o
 original request (`header_row != 0`) rather than header emptiness alone, since `header_row = 0`
 also yields an empty header by design.
 
-`csv_write.h`/`csv_write.cpp` is `csv_read`'s deliberate non-Pimpl counterpart (D-37): it depends
+`csv/csv_write.h`/`.cpp` is `csv_read`'s deliberate non-Pimpl counterpart (D-37): it depends
 on nothing that must be kept out of the sol2 translation unit (no csv-parser, no third-party
 headers), so hiding its `std::ofstream` member behind a Pimpl the way `Reader` hides csv-parser
 would be cargo cult. It backs `db:write_csv` alone, with the same no-`include/quiver/`-header,

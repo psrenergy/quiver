@@ -1,7 +1,7 @@
 #include "quiver/lua_runner.h"
 
-#include "csv_read.h"
-#include "csv_write.h"
+#include "csv/csv_read.h"
+#include "csv/csv_write.h"
 #include "quiver/binary/binary_file.h"
 #include "quiver/binary/binary_metadata.h"
 #include "quiver/binary/csv_converter.h"
@@ -843,7 +843,7 @@ struct LuaRunner::Impl {
                 auto cells = csv_row_cells_from_lua(row.as<sol::table>(), "write_row", row_index);
                 // FMT-07: header_width == 0 means no header was given, so no enforcement applies.
                 // A row wider than the header is never truncated -- it throws, naming the 1-based
-                // data-row ordinal and both counts (D-43, D-45; pinned in src/csv_write.cpp's
+                // data-row ordinal and both counts (D-43, D-45; pinned in src/csv/csv_write.cpp's
                 // TEST-12 catalogue comment -- reword both together). A short row is padded BEFORE
                 // Writer::write_row ever sees it -- append_record is a pure function of the vector
                 // it receives, so padding after the call would be too late (Pitfall 3).
