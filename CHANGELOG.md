@@ -5,7 +5,7 @@ All notable changes to Quiver are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entries that require
 callers to change something are prefixed **BREAKING** and say what to do.
 
-## [0.11.0] — unreleased
+## [0.10.9] — unreleased
 
 ### Changed
 
@@ -28,7 +28,149 @@ callers to change something are prefixed **BREAKING** and say what to do.
   *Adapt:* a set's rows are no longer sorted by value; they come back in the order they were
   written. Treat the order as unspecified but consistent across every reader of the group.
 
-## [0.10.4] — unreleased
+## [0.10.8] — 2026-09-20
+
+### Added
+
+- **`describe()` and `describe_collection()` now render an attribute's meaning, not just its
+  declaration, when the database was opened with `from_migrations`.** Each scalar attribute line
+  gains zero to three semicolon-delimited clauses read from a `ui/` TOML sidecar that sits beside
+  the migrations directory: an English `label`, an `enum` code-to-label list, and — in
+  `describe_collection()` only — a `tooltip`. Worked example:
+  `- initial_volume_type (INTEGER) NOT NULL; label "Initial Volume Unit"; enum {0: "Per Unit", 2: "Volume"}`.
+  A label or tooltip that merely restates the attribute name is suppressed, so only genuinely new
+  information is added. A database with no `ui/` sidecar, or with a broken one (missing directory,
+  empty file, invalid TOML, wrong-shaped entry), renders exactly as it did before this change and
+  `from_migrations` never fails because of it — a warning is logged and the affected collection or
+  vocabulary is simply left undescribed. The feature reaches every binding and Lua with no
+  additional code on their side, since `describe`/`describe_collection` already return a plain
+  string. Deliberately not included: no C API symbol, no structured getter, no validation of the
+  sidecar against the schema, and English only — a database opened with `from_schema` is
+  unaffected. `summarize_collection()`'s integer value distribution now carries the same enum
+  labels: each observed code is annotated with its label, `values {0 "Per Unit": 2, 1: 1}`. A code
+  the vocabulary does not cover stays bare, and a column with more than 64 distinct codes still
+  renders no distribution clause at all.
+
+## [0.10.7] — 2026-09-17
+
+### Changed
+
+- **The agent-facing Lua API reference now redirects a model to the file, instead of only telling
+  it what it lacks.** `LUA_DB_API_REFERENCE`'s `Standard library` bullet used to state only that
+  the Lua sandbox has no `io`, which correctly told a model it cannot open a file — and then led it
+  to conclude it must paste the file's contents into the script as literals. The correction sits at
+  that exact sentence: no `io`, but data files are read with `db:read_csv` / `db:read_csv_stream`.
+  The `CSV file reading` section also gained one worked example covering both real, dirty Maranhão
+  fixture shapes (a junk title row and units row around the header, apostrophe thousands
+  separators, quoted commas, English month names), including the `tonumber`/`gsub` parenthesis
+  trap: `gsub` returns two values, so `tonumber(v:gsub("'", ""))` silently passes the replacement
+  count as `tonumber`'s base argument and returns `nil`; the fix is `tonumber((v:gsub(...)))`.
+
+### Added
+
+- **A Lua script can now read a CSV file off disk.** `db:read_csv(path, opts)` reads the whole
+  file and returns `{ header = {...}, rows = {{...}, ...} }`, with every cell arriving as a string
+  and no numeric or date inference; `db:read_csv_stream(path, on_row, opts)` reads the same file
+  row by row through the same parser, so a large file can be processed with bounded memory. Both
+  are sandboxed to the database directory like every other Lua file operation, and both take the
+  same optional options table — `separator` (a single-character string, defaulting to `,`) and
+  `header_row` (see below) are its two keys today. This is Lua-only, with no C++/C API/FFI
+  counterpart.
+- **`db:read_csv`/`db:read_csv_stream` accept a `header_row` option** naming which line is the
+  header, 1-based, defaulting to `1`. `header_row = 0` declares the file has no header at all:
+  `csv.header` is absent (`nil`) and `csv.rows[1]` is the file's first line — useful for a file
+  with a junk title row and/or a units row around the real header. A `header_row` past the end of
+  the file throws, as does a value that isn't a non-negative integer.
+- **A Lua script can now write a CSV file to disk.** `db:write_csv(path, opts)` returns a handle;
+  `w:write_row(row)` appends one row and `w:close()` finishes it — streaming-only, with no
+  whole-file form. The same two options as the reader, `separator` and `header`, are all it takes.
+  Opening `db:write_csv` truncates an existing file at the target path (no overwrite guard). The
+  writer is hand-rolled RFC-4180 emission over `std::ofstream`, with no new dependency; numbers are
+  formatted via `std::to_chars`'s shortest round-trip form, and a `nil` cell and an empty-string
+  cell are indistinguishable after the round trip since CSV has no null. With a `header`, its
+  length is the row width: a shorter `write_row` pads with empty cells and a longer one throws,
+  naming the row's ordinal and both counts; omitting `header` disables the check. A writer still
+  open when the script's `run()` call returns is flushed automatically, so the file is complete
+  and re-readable even without an explicit `w:close()`.
+
+### Fixed
+
+- **Lua: a CSV writer held in a global was never flushed, leaving a 0-byte file.** The promise
+  that a writer the script never closed is still complete when `run()` returns was implemented as
+  a forced garbage collection, which only finalizes objects the script made *unreachable*.
+  `w = db:write_csv(path)` without `local` — Lua's default spelling — is a GC root, so its rows
+  stayed in the stream buffer and the file was empty (or truncated mid-record) for the host and
+  for any later `run()`. `LuaRunner::run` now closes every writer the run handed out, explicitly
+  and regardless of reachability. A writer does not outlive its `run()`: reusing the handle from a
+  later script reports `Cannot write_row: writer for '...' is already closed`.
+- **Lua: `w:close()` left the writer un-closeable after a flush failure.** It threw before marking
+  the writer closed and before releasing the handle, so every later `close()` raised the same
+  error instead of the documented no-op, and `w:write_row` then reported "failed to write" rather
+  than "already closed".
+- **BREAKING — Lua: `separator` no longer accepts a quote, CR, LF or NUL** in `db:read_csv`,
+  `db:read_csv_stream` or `db:write_csv`. They are one byte but cannot be delimiters, and
+  `db:write_csv(path, { separator = '"' })` silently produced a file `db:read_csv` refused to
+  open. They are now rejected up front:
+  `Cannot <op>: option 'separator' must not be a quote, carriage return, newline or NUL`. Callers
+  passing one of those four bytes must pick a real delimiter.
+- **Lua: a sparse row or `header` key allocated without bound.** `w:write_row({[1e9] = "x"})` and
+  `db:write_csv(p, { header = {[1e9] = "x"} })` build a dense vector up to the largest integer
+  key, so a single stray key asked for tens of gigabytes and surfaced as a raw `bad allocation`
+  with no `Cannot ...:` prefix. A key past 1,000,000 is now a precondition failure naming it.
+- **Lua: a non-string key in a CSV options table surfaced as a raw Lua value.**
+  `db:read_csv(p, { [true] = 1 })` (and the `db:write_csv` equivalent) converted the key
+  unchecked, so the script received a bare `true`/table as the error in Release and a sol2 panic
+  in Debug. Now `Cannot <op>: option key must be a string`.
+- **BREAKING — Lua: two `db:write_csv` writers open on the same path at once are now refused**
+  (`Cannot write_csv: file is already open for writing: <path>`). Each opened with truncation and
+  wrote from offset 0, so the second silently discarded everything the first had buffered — only
+  the second writer's rows survived, with no error. Close the first writer before reopening its
+  path; reopening a *closed* path still truncates, unchanged.
+- **Lua: a non-function `on_row` reached `db:read_csv_stream`'s caller as a raw sol2 message.**
+  `db:read_csv_stream(p, "oops")` reported `stack index 3, expected function, received string`
+  (and, for some argument types, escaped `pcall` entirely). Now
+  `Cannot read_csv_stream: on_row must be a function`.
+- **Lua: `w:write_row(<userdata>)` wrote a spurious empty record.** sol2's table check for the row
+  parameter also admits userdata, so `w:write_row(db)` appended `""` instead of throwing; the
+  argument's type is now checked (`Cannot write_row: row must be a table`), which also replaces
+  sol2's raw "stack index 2, expected table" for a string/number/nil argument.
+- **Lua: a `header` table with a bad key blamed the value.** `{ header = { name = "a" } }` reported
+  `option 'header' entry must be a string` although every entry was one; a bad key now reports
+  `option 'header' key must be a positive integer`.
+- **Lua: a csv-parser failure raised while fetching the first data row reached scripts unwrapped.**
+  `for_each_row` wrapped `++it` but not the initial `begin()`, which parses too.
+- **Lua: a path the OS refuses to resolve reached scripts as a raw `std::filesystem` message.**
+  Every file-touching Lua operation — `db:read_csv`, `db:read_csv_stream`, `db:write_csv`,
+  `db:open_file`, `db:bin_to_csv`, `db:csv_to_bin`, `db:export_csv`, `db:import_csv`,
+  `db:validate_migrations`
+  and `expr:save` — resolves its path through one shared gate, and that gate used throwing
+  `std::filesystem` overloads without catching them. Any OS failure that is not a plain "does not
+  exist" therefore surfaced unprefixed: on Windows, `db:read_csv("NUL")` (or any reserved device
+  name, in any case, in any directory) raised
+  `weakly_canonical: The parameter is incorrect.: "..."` instead of a `Cannot read_csv: ...`
+  message, breaking the guarantee that no standard-library text reaches a script unwrapped. Such
+  a failure is now reported as `Cannot <operation>: cannot resolve path '<path>': <reason>`. The
+  three CSV precondition checks were hardened the same way and now report
+  `Cannot <operation>: cannot access file '<path>': <reason>` when the OS refuses the query,
+  keeping the existing not-found / is-a-directory / is-empty messages unchanged.
+
+## [0.10.6] — 2026-09-11
+
+### Fixed
+
+- **Dart: every DateTime reader threw on valid values whose local wall-clock time the platform
+  considers nonexistent.** `stringToDateTime` validated by re-serializing a *local*
+  `DateTime.parse` and comparing it with the input, so a value inside a DST gap — on Windows the
+  historical Brazilian rules put one at midnight of 2019-01-01 — came back shifted by an hour and
+  was rejected as `Cannot convert "2019-01-01T00:00:00" to a date time in
+  'Consumption.date_time': expected a valid YYYY-MM-DD[THH:MM:SS]`, taking down
+  `readTimeSeriesGroup`, `readScalarDateTimes`, `queryDateTime` and the rest with it. The
+  fields are now range-checked in UTC (which has no gaps) and the local `DateTime` built from
+  them; the accepted grammar is unchanged and now pinned by `test/date_time_test.dart`. A value
+  inside a real DST gap still reads an hour later, since that local time does not exist — but it
+  reads.
+
+## [0.10.5] — 2026-09-09
 
 ### Changed
 
@@ -46,6 +188,8 @@ callers to change something are prefixed **BREAKING** and say what to do.
   shared libraries as plain `libquiver.dylib` / `libquiver.so` real files instead of a versioned
   real file plus unversioned symlinks. Only the Dart hook sets it — the published Julia, JS and
   Python natives keep their versioned install names, so nothing else changes.
+
+## [0.10.4] — 2026-09-04
 
 ### Added
 
@@ -434,8 +578,12 @@ are functionally identical to 0.10.0.
   `read_time_series_group` emits for a NULL STRING cell — so feeding a read result back with the
   mask stripped was UB. A NULL entry, or a NULL per-column data pointer, is now SQL NULL.
 
-[0.11.0]: https://github.com/psrenergy/quiver/compare/v0.10.5...v0.11.0
-[0.10.4]: https://github.com/psrenergy/quiver/compare/v0.10.3...v0.11.0
+[0.10.9]: https://github.com/psrenergy/quiver/compare/v0.10.8...HEAD
+[0.10.8]: https://github.com/psrenergy/quiver/compare/v0.10.7...v0.10.8
+[0.10.7]: https://github.com/psrenergy/quiver/compare/v0.10.6...v0.10.7
+[0.10.6]: https://github.com/psrenergy/quiver/compare/v0.10.5...v0.10.6
+[0.10.5]: https://github.com/psrenergy/quiver/compare/v0.10.4...v0.10.5
+[0.10.4]: https://github.com/psrenergy/quiver/compare/v0.10.3...v0.10.4
 [0.10.3]: https://github.com/psrenergy/quiver/compare/v0.10.2...v0.10.3
 [0.10.2]: https://github.com/psrenergy/quiver/compare/v0.10.1...v0.10.2
 [0.10.1]: https://github.com/psrenergy/quiver/compare/v0.10.0...v0.10.1

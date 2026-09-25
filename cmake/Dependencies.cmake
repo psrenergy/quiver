@@ -58,6 +58,35 @@ FetchContent_Declare(rapidcsv
 )
 FetchContent_MakeAvailable(rapidcsv)
 
+# csv-parser for streaming, quoting-correct CSV reads (Lua db:read_csv / db:read_csv_stream).
+# Upstream defaults are ON/OFF/ON/ON respectively; all four are FORCEd the other way, before
+# FetchContent_MakeAvailable:
+#   CSV_ENABLE_THREADS=OFF -- with threads off, the read window is a single unmultiplied chunk
+#     (src/csv_read.cpp never calls format.chunk_size(...)), which is what keeps the memory
+#     window from scaling with the host's CPU count. If this is ever turned back on,
+#     format.threading(false) must be added in src/csv_read.cpp to preserve that guarantee.
+#   CSV_NO_SIMD=ON -- with SIMD on, csv-parser adds a PUBLIC /arch:AVX2 (or -mavx2) compile
+#     option that would propagate into `quiver` itself and SIGILL on pre-AVX2 x86 for every
+#     shipped PyPI wheel, npm native, Julia artifact and S3 binary. Do not turn this back on.
+#   CSV_BUILD_PROGRAMS=OFF / CSV_BUILD_TESTS=OFF -- this project only needs the library target.
+# GIT_SHALLOW (used by no other dependency here) because this checkout is by far the largest:
+# 230 MB, of which 69 MB is history nothing reads. GIT_TAG is a tag, so the shallow fetch resolves.
+FetchContent_Declare(csv_parser
+    GIT_REPOSITORY https://github.com/vincentlaucsb/csv-parser.git
+    GIT_TAG 5.3.0
+    GIT_SHALLOW TRUE
+)
+set(CSV_ENABLE_THREADS OFF CACHE BOOL "" FORCE)
+set(CSV_NO_SIMD ON CACHE BOOL "" FORCE)
+set(CSV_BUILD_PROGRAMS OFF CACHE BOOL "" FORCE)
+set(CSV_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(csv_parser)
+# `csv_no_simd` duplicates all nine of `csv`'s sources; nothing links it, and csv-parser declares
+# no install()/export() rules for it, so excluding it from `all` is safe here. This is NOT the
+# same situation as the lua-cmake EXCLUDE_FROM_ALL warning above -- that one is about lua-cmake's
+# own install() rules -- so do not delete this line by analogy with that comment.
+set_target_properties(csv_no_simd PROPERTIES EXCLUDE_FROM_ALL YES)
+
 # argparse for CLI argument parsing (header-only)
 FetchContent_Declare(argparse
     GIT_REPOSITORY https://github.com/p-ranav/argparse.git

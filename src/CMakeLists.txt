@@ -10,6 +10,8 @@ set(QUIVER_SOURCES
     database_query.cpp
     database_csv_export.cpp
     database_csv_import.cpp
+    csv_read.cpp
+    csv_write.cpp
     database_describe.cpp
     element.cpp
     lua_runner.cpp
@@ -20,6 +22,7 @@ set(QUIVER_SOURCES
     schema.cpp
     schema_validator.cpp
     type_validator.cpp
+    ui_metadata.cpp
     binary/binary_file.cpp
     binary/iteration.cpp
     binary/csv_converter.cpp
@@ -59,6 +62,7 @@ target_include_directories(quiver
 target_compile_definitions(quiver PRIVATE
     SOL_SAFE_NUMERICS=1
     SOL_SAFE_FUNCTION=1
+    SOL_NO_NIL=1
 )
 
 # MSVC needs /bigobj for sol2 heavy template instantiations
@@ -80,6 +84,7 @@ target_link_libraries(quiver
         lua_library
         sol2
         rapidcsv
+        csv
         ${CMAKE_DL_LIBS}
 )
 

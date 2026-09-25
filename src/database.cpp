@@ -1,6 +1,7 @@
 #include "database_impl.h"
 #include "quiver/migrations.h"
 #include "quiver/result.h"
+#include "ui_metadata.h"
 #include "utils/string.h"
 
 #include <atomic>
@@ -254,6 +255,7 @@ Database Database::from_migrations(const std::string& db_path,
     }
     auto db = Database(db_path, options);
     db.migrate_up(migrations_path);
+    db.impl_->ui_metadata = load_ui_metadata(migrations_path, *db.impl_->logger);
     return db;
 }
 

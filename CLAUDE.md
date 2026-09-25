@@ -77,8 +77,10 @@ Settled questions — don't relitigate without the user; each was decided delibe
   `helper_maps.jl` is a second documented Julia-only exception (see convenience methods below).
 - **Lua file operations are db-scoped and sandboxed to the database directory.** Every
   file-touching Lua operation (`db:open_file`, `db:bin_to_csv`, `db:csv_to_bin`, `db:export_csv`,
-  `db:import_csv`, `db:validate_migrations`, `expr:save`) resolves relative paths against the directory
-  containing the database file and rejects — reads and writes alike — anything that escapes it
+  `db:import_csv`, `db:validate_migrations`, `db:read_csv`, `db:read_csv_stream`, `db:write_csv`,
+  `expr:save`)
+  resolves relative paths against the directory containing the database file and rejects — reads
+  and writes alike — anything that escapes it
   (subdirectories OK; checked via `weakly_canonical` with strict containment). In-memory databases
   (`:memory:`) reject all file operations. `dofile`/`loadfile` are removed from the Lua environment
   (string-form `load` stays). The enabled standard libraries are the pure-computation set
@@ -241,6 +243,34 @@ Settled questions — don't relitigate without the user; each was decided delibe
   each NULL as distinct, so once cells can be NULL no value-based order is total. Document it as
   *consistent across every reader of the group, otherwise unspecified*: it happens to equal write
   order (the group writers delete and re-insert), and that coincidence must not become a contract.
+- **`db:read_csv(path, opts)` / `db:read_csv_stream(path, on_row, opts)` are Lua-only, with no
+  counterpart anywhere else** — no public C++ header, no C API, no Julia/Dart/Python/JS binding.
+  The first `db:` methods with no counterpart in any other layer, and the newest member of the
+  documented per-binding omission list alongside JS-datetime, the binary/expression subsystems,
+  and the Lua whole-group readers above. The reason is the one the requirements give: every other
+  host already has a native CSV library, and Lua needs this precisely because `io` is deliberately
+  absent from its sandbox. Both forms are mounted on one internal reader
+  (`quiver::csv_read::Reader`, `src/csv_read.h`/`.cpp`, no public header) so they cannot diverge on
+  any input; every cell arrives as a string with no numeric or date inference; the options table
+  takes two keys — `separator` (a single-character string, defaulting to `,`) and `header_row`
+  (1-based, defaulting to `1`; `0` declares the file has no header at all). Both names are
+  sandboxed like every other Lua file operation (see the sandbox decision above). Writing is
+  exposed too, symmetric in kind but streaming-only: `db:write_csv(path, opts)` returns a handle,
+  `w:write_row(row)` appends one row, and `w:close()` finishes it — no whole-file form, since a
+  second code path is a second thing that can diverge. Like the reader, the writer is Lua-only
+  with no C++ header, no C API, and no FFI binding; it shares the same `resolve_sandboxed_path`
+  gate, truncates an existing file at open with no overwrite guard, takes the same two options
+  (`separator` and `header`) and no more, and formats numbers via `std::to_chars`'s shortest
+  round-trip form — a `nil` cell and an empty-string cell are indistinguishable after the round
+  trip, since CSV has no null. With a `header`, its length is the row width: `write_row` pads a
+  shorter row with empty cells and throws a Pattern 1 error naming the row ordinal and both counts
+  for a longer one; omitting `header` disables the check entirely. A writer still open when the
+  calling `LuaRunner::run` returns is closed at `run()`'s scope exit — covering the throw path too
+  — so the file is complete and re-readable even if the script never called `w:close()`, with no
+  warning emitted. That close goes through a `weak_ptr` registry of every writer the run handed
+  out, **not** through the GC: `collect_garbage()` alone only finalizes writers the script made
+  unreachable, so a writer held in a Lua global left a 0-byte file (see `src/CLAUDE.md`). A writer
+  does not outlive its `run()`.
 
 ## Do Not "Fix"
 
@@ -348,7 +378,11 @@ JS has no generator — update the hand-written symbol table in `bindings/js/src
   `cmake --build build` does build two binaries this project never uses; lua-cmake has **no**
   switch for them, so the `LUA_BUILD_INTERPRETER`/`LUA_BUILD_COMPILER` once set here were
   no-ops, and `EXCLUDE_FROM_ALL` is not a fix either — see the note in `cmake/Dependencies.cmake`),
-  sol2 v3.5.0, rapidcsv v8.92, argparse v3.2, googletest v1.17.0 (tests only).
+  sol2 v3.5.0, rapidcsv v8.92, csv-parser v5.3.0 (`csv` target, Lua `db:read_csv` only — fetched
+  `GIT_SHALLOW`, and `CSV_NO_SIMD`/`CSV_ENABLE_THREADS`/`CSV_BUILD_PROGRAMS`/`CSV_BUILD_TESTS` are
+  all FORCEd; the `CSV_NO_SIMD` pin is load-bearing — without it a PUBLIC `/arch:AVX2` propagates
+  into `quiver` and SIGILLs on pre-AVX2 x86 for every shipped wheel/native), argparse v3.2,
+  googletest v1.17.0 (tests only).
 - **Targets**: `quiver` (core, alias `quiver::database`), `quiver_c` (alias
   `quiver::database_c`), `quiver_cli`, `quiver_tests`, `quiver_c_tests`, `quiver_benchmark`,
   `quiver_sandbox`. Outputs: executables/DLLs → `build/bin/`, libs → `build/lib/`.
@@ -373,7 +407,10 @@ release ritual for that file is not settled. Release flow: `.github/CLAUDE.md`.
   `-fno-keep-inline-dllexport` flag first; skips `src/binary`).
 - `.pre-commit-config.yaml` — trailing-whitespace, end-of-file, yaml/json checks, merge-conflict
   markers, large files (>1 MB), LF line endings, clang-format, cppcheck, cmake-format.
-- `.gitattributes` enforces LF for `.cpp/.h/.dart/.jl/.py`. **Caution:** working-tree `.bat`
+- `.gitattributes` enforces LF for `.cpp/.h/.dart/.jl/.py`, and marks `tests/fixtures/*.csv`
+  `-text` so their exact bytes (BOM, CRLF) are never normalized — `.pre-commit-config.yaml`
+  excludes the same directory from `trailing-whitespace`/`end-of-file-fixer`/`mixed-line-ending`,
+  since `-text` only stops git's own conversion, not a hook's. **Caution:** working-tree `.bat`
   files are CRLF — unix tools (sed et al.) silently convert them to LF and can break them;
   restore CRLF if touched.
 
@@ -557,7 +594,7 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
   Otherwise `SELECT COUNT(*)` / `SUM(int_col)`, which SQLite answers as INTEGER, and an integer
   stored in a REAL column, all read back as "no value". `query_integer` does **not** narrow a REAL;
   that direction is lossy.
-- Schema inspection — human-readable **text reports** (all return `std::string`): `describe()` (whole-DB overview: every collection, element counts, attribute/group names); `describe_collection(c)` (one collection's structure); `summarize_collection(c)` (per-scalar null/non-null counts + low-cardinality integer value distributions, per-group empty/non-empty counts). CSV: `export_csv()`, `import_csv()` with optional enum/date formatting via `CSVOptions`.
+- Schema inspection — human-readable **text reports** (all return `std::string`): `describe()` (whole-DB overview: every collection, element counts, attribute/group names, each **scalar** line carrying its `ui/` sidecar `; label` and `; enum {code: "label"}` clauses); `describe_collection(c)` (one collection's structure — the same scalar line plus a trailing `; tooltip` clause, so `describe()`'s line is a prefix of this one); `summarize_collection(c)` (per-scalar null/non-null counts + low-cardinality integer value distributions, each observed code annotated with its `ui/` sidecar enum label; per-group empty/non-empty counts). Every sidecar clause is present **only when the database was opened via `from_migrations`** (the sole path that loads the sidecar) and only for main-table scalars — group columns render bare. CSV: `export_csv()`, `import_csv()` with optional enum/date formatting via `CSVOptions`.
   **Export and import are symmetric on foreign keys**: a FK column is written as the referenced
   element's `label` and read back by label (self-references are excluded on both sides, since the
   target rows are the ones being rewritten). Export used to emit the raw integer id, which import
@@ -637,6 +674,8 @@ The rules are mechanical: given any C++ method name, you can derive the equivale
 | Describe (text) | `describe()` | `quiver_database_describe()` | `describe()` | `describe()` | `describe()` |
 | Describe collection | `describe_collection()` | `quiver_database_describe_collection()` | `describe_collection()` | `describeCollection()` | `describe_collection()` |
 | Summarize collection | `summarize_collection()` | `quiver_database_summarize_collection()` | `summarize_collection()` | `summarizeCollection()` | `summarize_collection()` |
+| CSV file read | N/A | N/A | N/A | N/A | `db:read_csv()` / `db:read_csv_stream()` |
+| CSV file write | N/A | N/A | N/A | N/A | `db:write_csv()` / `w:write_row()` / `w:close()` |
 
 **Binary cross-layer examples (Julia + Lua subsystem):**
 

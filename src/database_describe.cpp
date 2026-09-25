@@ -1,4 +1,6 @@
 #include "database_impl.h"
+#include "ui_metadata.h"
+#include "utils/string.h"
 
 #include <ostream>
 #include <sstream>
@@ -52,8 +54,146 @@ const char* plural(int64_t n) {
     return n == 1 ? "" : "s";
 }
 
+// Whitespace/control-byte normalization for UI sidecar text (D-03, and the T-01-03 mitigation):
+// maps every byte below 0x20 or equal to 0x7F to a space -- a deliberate superset of D-03's named
+// \r/\n/\t that also neutralizes ESC (0x1B) and every other C0 control -- **and** the two-byte
+// UTF-8 encoding of the C1 block (U+0080-U+009F, `0xC2 0x80`-`0xC2 0x9F`). The C1 half is not
+// optional: U+009B is CSI and U+009D is OSC, the 8-bit forms of `ESC [` and `ESC ]` that xterm and
+// the Linux console honour by default, so dropping only C0 left a sidecar string able to colour a
+// terminal or retitle its window. Every *other* byte at 0x80 or above is a UTF-8 continuation or
+// lead byte and is never touched, which is what keeps the text intact. Runs of spaces then
+// collapse to one and both ends are trimmed. An empty result means the value is absent and no
+// clause is emitted -- never an empty pair of quotes.
+std::string normalize_ui_text(const std::string& raw) {
+    std::string collapsed;
+    collapsed.reserve(raw.size());
+    bool last_was_space = false;
+    for (size_t i = 0; i < raw.size(); ++i) {
+        const char c = raw[i];
+        const auto uc = static_cast<unsigned char>(c);
+        bool is_control = uc < 0x20 || uc == 0x7F;
+        if (uc == 0xC2 && i + 1 < raw.size()) {
+            const auto next = static_cast<unsigned char>(raw[i + 1]);
+            if (next >= 0x80 && next <= 0x9F) {
+                is_control = true;
+                ++i;  // the C1 code point is two bytes; both collapse into the one space
+            }
+        }
+        const char out_char = is_control ? ' ' : c;
+        if (out_char == ' ') {
+            if (!last_was_space) {
+                collapsed.push_back(' ');
+            }
+            last_was_space = true;
+        } else {
+            collapsed.push_back(out_char);
+            last_was_space = false;
+        }
+    }
+    return quiver::string::trim(collapsed);
+}
+
+// Wraps text in ASCII double quotes with backslash doubled and double quote escaped, and no other
+// escaping (D-02). This is what makes every separator unambiguous: arbitrary user text only ever
+// appears between an unescaped opening and closing quote.
+std::string quote_ui_text(const std::string& text) {
+    std::string quoted = "\"";
+    quoted.reserve(text.size() + 2);
+    for (char c : text) {
+        if (c == '\\' || c == '"') {
+            quoted.push_back('\\');
+        }
+        quoted.push_back(c);
+    }
+    quoted.push_back('"');
+    return quoted;
+}
+
+// ASCII-lowercase, then keep only a-z/0-9 (D-04). Spelled as an explicit ASCII test rather than
+// std::tolower(char): passing a negative char to std::tolower is undefined behavior, and a
+// meaningful fraction of corpus strings are non-ASCII UTF-8. squash() therefore drops non-ASCII
+// bytes, which biases toward *printing* a label rather than suppressing it -- that is the safe
+// direction and is deliberate; do not "fix" it to a Unicode-aware fold.
+std::string squash(const std::string& s) {
+    std::string out;
+    out.reserve(s.size());
+    for (char c : s) {
+        const char lower = (c >= 'A' && c <= 'Z') ? static_cast<char>(c + 32) : c;
+        if ((lower >= 'a' && lower <= 'z') || (lower >= '0' && lower <= '9')) {
+            out.push_back(lower);
+        }
+    }
+    return out;
+}
+
+// Redundancy test shared by the label and tooltip clauses. Both squashes must be **non-empty**:
+// squash() drops every byte outside a-z/0-9, so a symbol-only ("%", "(-)") or non-Latin
+// ("Начальный объём") string squashes to "" and would otherwise compare equal to an absent
+// label's "" -- silently suppressing a tooltip that restates nothing. The label clause has the
+// same shape but only reaches it when the column name squashes empty too; going through one
+// predicate is what keeps the two halves honest with each other.
+bool is_redundant(const std::string& squashed_text, const std::string& squashed_against) {
+    return !squashed_text.empty() && squashed_text == squashed_against;
+}
+
+// Appends zero to three "; keyword body" clauses for one scalar attribute (D-01), in the fixed
+// order label, enum, tooltip. Each clause carries its own leading "; " so eliding one leaves no
+// dangling separator. Only the tooltip clause is conditional on with_tooltip -- label and enum
+// are unconditional -- which is what makes describe()'s line a strict prefix of
+// describe_collection()'s line by construction (D-07/D-08).
+void write_ui_clauses(std::ostream& out, const UiAttribute* meta, const std::string& name, bool with_tooltip) {
+    if (!meta) {
+        return;
+    }
+
+    const std::string name_key = squash(name);
+    const std::string normalized_label = normalize_ui_text(meta->label);
+    const std::string label_key = squash(normalized_label);
+    if (!normalized_label.empty() && !is_redundant(label_key, name_key)) {
+        out << "; label " << quote_ui_text(normalized_label);
+    }
+
+    // Enum clause (D-06): never suppressed for redundancy -- it is the one field that cannot be
+    // re-derived from the column name. std::map<int64_t, std::string> already iterates in
+    // ascending key order, so there is no sort. An entry whose label normalizes to empty is
+    // dropped; when no entry survives, the whole clause is omitted (never an empty brace pair).
+    std::string enum_body;
+    for (const auto& [code, label] : meta->enum_labels) {
+        const std::string normalized_entry = normalize_ui_text(label);
+        if (normalized_entry.empty()) {
+            continue;
+        }
+        if (!enum_body.empty()) {
+            enum_body += ", ";
+        }
+        enum_body += std::to_string(code) + ": " + quote_ui_text(normalized_entry);
+    }
+    if (!enum_body.empty()) {
+        out << "; enum {" << enum_body << "}";
+    }
+
+    if (with_tooltip) {
+        const std::string normalized_tooltip = normalize_ui_text(meta->tooltip);
+        if (!normalized_tooltip.empty()) {
+            // Compared against the sidecar label per D-05, even when the label clause itself was
+            // suppressed by D-04. `label_key` above is that comparand: normalize_ui_text only
+            // rewrites bytes squash() discards anyway, so squash(normalize(x)) == squash(x) and
+            // the raw-vs-normalized distinction is unobservable.
+            const std::string tooltip_key = squash(normalized_tooltip);
+            if (!is_redundant(tooltip_key, name_key) && !is_redundant(tooltip_key, label_key)) {
+                out << "; tooltip " << quote_ui_text(normalized_tooltip);
+            }
+        }
+    }
+}
+
 // Write one collection's structural section (scalars + vector/set/time-series groups).
-void write_collection_section(std::ostream& out, const Schema& schema, const std::string& collection, int64_t count) {
+void write_collection_section(std::ostream& out,
+                              const Schema& schema,
+                              const std::string& collection,
+                              int64_t count,
+                              const UiMetadata& ui,
+                              bool with_tooltip) {
     out << "Collection: " << collection << " (" << count << " element" << plural(count) << ")\n";
 
     const auto* table_def = schema.get_table(collection);
@@ -68,6 +208,7 @@ void write_collection_section(std::ostream& out, const Schema& schema, const std
             if (col.not_null && !col.primary_key) {
                 out << " NOT NULL";
             }
+            write_ui_clauses(out, ui.find(collection, name), name, with_tooltip);
             out << "\n";
         }
     }
@@ -101,7 +242,8 @@ std::string Database::describe() const {
 
     for (const auto& collection : impl_->schema->collection_names()) {
         out << "\n";
-        write_collection_section(out, *impl_->schema, collection, number_of_elements(collection));
+        write_collection_section(
+            out, *impl_->schema, collection, number_of_elements(collection), impl_->ui_metadata, false);
     }
 
     return out.str();
@@ -111,7 +253,7 @@ std::string Database::describe_collection(const std::string& collection) const {
     impl_->require_collection(collection, "describe_collection");
 
     std::ostringstream out;
-    write_collection_section(out, *impl_->schema, collection, number_of_elements(collection));
+    write_collection_section(out, *impl_->schema, collection, number_of_elements(collection), impl_->ui_metadata, true);
     return out.str();
 }
 
@@ -148,12 +290,29 @@ std::string Database::summarize_collection(const std::string& collection) const 
                     query_int_rows(impl_->db,
                                    "SELECT " + quoted_col + ", COUNT(*) FROM " + quoted_collection + " WHERE " +
                                        quoted_col + " IS NOT NULL GROUP BY " + quoted_col + " ORDER BY " + quoted_col);
+                // D2-12: the lookup sits here, not at the top of the per-scalar loop, so a
+                // collection of TEXT/REAL/PK scalars pays zero two-level map lookups.
+                const auto* meta = impl_->ui_metadata.find(collection, scalar.name);
                 out << "; values {";
                 for (size_t i = 0; i < rows.size(); ++i) {
                     if (i != 0) {
                         out << ", ";
                     }
-                    out << rows[i][0] << ": " << rows[i][1];
+                    out << rows[i][0];
+                    // D2-06 / project decision D-09: deliberate divergence from D-06's enum
+                    // clause. There the entry IS the vocabulary, so an empty-normalizing label
+                    // drops the whole entry; here the entry is an observed row count, so an
+                    // empty-normalizing label drops only the annotation and keeps the entry.
+                    if (meta) {
+                        auto label_it = meta->enum_labels.find(rows[i][0]);
+                        if (label_it != meta->enum_labels.end()) {
+                            const std::string normalized_label = normalize_ui_text(label_it->second);
+                            if (!normalized_label.empty()) {
+                                out << " " << quote_ui_text(normalized_label);
+                            }
+                        }
+                    }
+                    out << ": " << rows[i][1];
                 }
                 out << "}";
             }
