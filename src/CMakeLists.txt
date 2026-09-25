@@ -10,8 +10,8 @@ set(QUIVER_SOURCES
     database_query.cpp
     database_csv_export.cpp
     database_csv_import.cpp
-    csv_read.cpp
-    csv_write.cpp
+    csv/csv_read.cpp
+    csv/csv_write.cpp
     database_describe.cpp
     element.cpp
     lua_runner.cpp

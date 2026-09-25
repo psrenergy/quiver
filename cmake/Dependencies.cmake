@@ -62,9 +62,9 @@ FetchContent_MakeAvailable(rapidcsv)
 # Upstream defaults are ON/OFF/ON/ON respectively; all four are FORCEd the other way, before
 # FetchContent_MakeAvailable:
 #   CSV_ENABLE_THREADS=OFF -- with threads off, the read window is a single unmultiplied chunk
-#     (src/csv_read.cpp never calls format.chunk_size(...)), which is what keeps the memory
+#     (src/csv/csv_read.cpp never calls format.chunk_size(...)), which is what keeps the memory
 #     window from scaling with the host's CPU count. If this is ever turned back on,
-#     format.threading(false) must be added in src/csv_read.cpp to preserve that guarantee.
+#     format.threading(false) must be added in src/csv/csv_read.cpp to preserve that guarantee.
 #   CSV_NO_SIMD=ON -- with SIMD on, csv-parser adds a PUBLIC /arch:AVX2 (or -mavx2) compile
 #     option that would propagate into `quiver` itself and SIGILL on pre-AVX2 x86 for every
 #     shipped PyPI wheel, npm native, Julia artifact and S3 binary. Do not turn this back on.

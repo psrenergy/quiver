@@ -250,7 +250,7 @@ Settled questions — don't relitigate without the user; each was decided delibe
   and the Lua whole-group readers above. The reason is the one the requirements give: every other
   host already has a native CSV library, and Lua needs this precisely because `io` is deliberately
   absent from its sandbox. Both forms are mounted on one internal reader
-  (`quiver::csv_read::Reader`, `src/csv_read.h`/`.cpp`, no public header) so they cannot diverge on
+  (`quiver::csv_read::Reader`, `src/csv/csv_read.h`/`.cpp`, no public header) so they cannot diverge on
   any input; every cell arrives as a string with no numeric or date inference; the options table
   takes two keys — `separator` (a single-character string, defaulting to `,`) and `header_row`
   (1-based, defaulting to `1`; `0` declares the file has no header at all). Both names are

@@ -1,5 +1,5 @@
-#ifndef QUIVER_SRC_CSV_READ_H
-#define QUIVER_SRC_CSV_READ_H
+#ifndef QUIVER_SRC_CSV_CSV_READ_H
+#define QUIVER_SRC_CSV_CSV_READ_H
 
 // Internal CSV reader wrapping vincentlaucsb/csv-parser for the Lua-only db:read_csv /
 // db:read_csv_stream bindings (src/lua_runner.cpp). No public include/quiver/ counterpart, no
@@ -68,4 +68,4 @@ private:
 
 }  // namespace quiver::csv_read
 
-#endif  // QUIVER_SRC_CSV_READ_H
+#endif  // QUIVER_SRC_CSV_CSV_READ_H
