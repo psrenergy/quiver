@@ -5,7 +5,15 @@ All notable changes to Quiver are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entries that require
 callers to change something are prefixed **BREAKING** and say what to do.
 
-## [0.10.9] — unreleased
+## [0.11.0] — unreleased
+
+### Fixed
+
+- **Julia: updating `Artifacts.toml` now invalidates the package precompile cache.** An artifact-only
+  update could leave the cached native library hash pointing at the previous release. Julia now
+  tracks `Artifacts.toml` as a precompile dependency and refreshes the hash when it changes.
+
+## [0.10.9] — 2026-09-25
 
 ### Changed
 
