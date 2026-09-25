@@ -37,11 +37,12 @@ describe("boolean convenience methods", () => {
       expect(db.readVectorBooleans("AllTypes", "count_value")).toEqual([
         [false, true],
         [true, false],
+        [],
       ]);
       expect(db.readVectorBooleansById("AllTypes", "count_value", idFalse)).toEqual([false, true]);
       expect(db.readVectorBooleansById("AllTypes", "count_value", idNull)).toEqual([]);
 
-      expect(db.readSetBooleans("AllTypes", "code")).toEqual([[false, true], [true]]);
+      expect(db.readSetBooleans("AllTypes", "code")).toEqual([[false, true], [true], []]);
       expect(db.readSetBooleansById("AllTypes", "code", idFalse)).toEqual([false, true]);
       expect(db.readSetBooleansById("AllTypes", "code", idNull)).toEqual([]);
 

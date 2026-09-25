@@ -5,7 +5,9 @@ const __dirname = import.meta.dir;
 
 import { Database, QuiverError } from "../src/index.ts";
 
-const SCHEMA_PATH = join(__dirname, "..", "..", "..", "tests", "schemas", "valid", "all_types.sql");
+const SCHEMAS_DIR = join(__dirname, "..", "..", "..", "tests", "schemas", "valid");
+const SCHEMA_PATH = join(SCHEMAS_DIR, "all_types.sql");
+const MULTI_COLUMN_SCHEMA_PATH = join(SCHEMAS_DIR, "multi_column_groups.sql");
 
 describe("readSetIntegers / readSetFloats / readSetStrings", () => {
   test("reads integer sets bulk", () => {
@@ -59,6 +61,24 @@ describe("readSetIntegers / readSetFloats / readSetStrings", () => {
       db.close();
     }
   });
+
+  test("returns one entry per element, aligned with readElementIds across an empty element", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      db.createElement("AllTypes", { label: "Item1", tag: ["a", "b"] });
+      db.createElement("AllTypes", { label: "Item2" }); // no set rows
+      db.createElement("AllTypes", { label: "Item3", tag: ["c"] });
+
+      const ids = db.readElementIds("AllTypes");
+      const values = db.readSetStrings("AllTypes", "tag");
+
+      expect(values.length).toEqual(ids.length);
+      // One entry per element: the element with no rows is an empty list, not a gap
+      expect(values).toEqual([["a", "b"], [], ["c"]]);
+    } finally {
+      db.close();
+    }
+  });
 });
 
 describe("readSetIntegersById / readSetFloatsById / readSetStringsById", () => {
@@ -101,6 +121,33 @@ describe("readSetIntegersById / readSetFloatsById / readSetStringsById", () => {
       const id = db.createElement("AllTypes", { label: "Item1" });
       const values = db.readSetIntegersById("AllTypes", "code", id);
       expect(values).toEqual([]);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("pairs two per-column reads of one set group by row", () => {
+    const db = Database.fromSchema(":memory:", MULTI_COLUMN_SCHEMA_PATH);
+    try {
+      db.createElement("Configuration", { label: "Config" });
+      const id = db.createElement("Items", { label: "Item1" });
+      // Unsorted in both columns on purpose: a value-ordered reader would pair the wrong rows
+      db.updateSetGroup("Items", "codes", id, {
+        code: ["zeta", "alpha", "mu"],
+        weight: [2.5, 3.5, 1.5],
+      });
+
+      const codes = db.readSetStringsById("Items", "code", id);
+      const weights = db.readSetFloatsById("Items", "weight", id);
+
+      expect(codes.length).toEqual(3);
+      expect(weights.length).toEqual(codes.length);
+      const pairs = codes.map((code, i) => [code, weights[i]]).toSorted();
+      expect(pairs).toEqual([
+        ["alpha", 3.5],
+        ["mu", 1.5],
+        ["zeta", 2.5],
+      ]);
     } finally {
       db.close();
     }
