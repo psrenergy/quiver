@@ -84,7 +84,6 @@ target_link_libraries(quiver
         lua_library
         sol2
         csv
-        ${CMAKE_DL_LIBS}
 )
 
 # Set library properties

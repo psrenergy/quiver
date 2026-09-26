@@ -9,6 +9,20 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ### Changed
 
+- **BREAKING — bundled SQLite 3.50.2 → 3.53.4, now built thread-safe.** Two SQLite changes reach
+  callers through `query_*` / Lua SQL and user schemas. Inside SQL, a REAL converted to text now
+  renders up to 17 significant digits instead of 15 — `CAST(1.1+2.2 AS TEXT)` was `3.3` and is now
+  `3.3000000000000003`, and `||`, `printf('%s', …)`, `quote()` and `json_*` change the same way. A
+  STRICT table's generated column whose value does not match its declared type now rejects the
+  write (`cannot store REAL value in INTEGER column …`). Quiver's own typed reads, CSV export and
+  `describe`/`summarize` are unaffected. The bump also brings the 3.50.3 AND-optimizer
+  wrong-answer fix and the WAL-reset corruption fix. SQLite is now compiled with
+  `SQLITE_THREADSAFE=1` (serialized) instead of `0`, so separate `Database` handles are safe to use
+  from different threads.
+
+  *Adapt:* compare converted floats numerically, or format explicitly with `format('%.15g', x)`;
+  declare a generated column with the type its expression produces, or `CAST` inside the
+  expression.
 - **BREAKING — `import_csv()` parses with the same CSV reader as `db:read_csv`.** Quiver no longer
   links rapidcsv. Import used to pre-process each file as text before parsing, and that caused
   several bugs, now fixed:

@@ -1,9 +1,12 @@
 include(FetchContent)
 
-# SQLite via FetchContent
+# SQLite via FetchContent (PSR's maintained fork of the archived sjinks/sqlite3-cmake)
+# Built thread-safe (serialized). FORCEd because option() will not override a stale cache entry,
+# and builds configured before the fork flipped its default would silently stay at 0.
+set(sqlite3_ENABLE_THREADSAFE ON CACHE BOOL "" FORCE)
 FetchContent_Declare(sqlite3
     GIT_REPOSITORY https://github.com/psrenergy/sqlite3-cmake.git
-    GIT_TAG v3.50.2
+    GIT_TAG v3.53.4
 )
 FetchContent_MakeAvailable(sqlite3)
 

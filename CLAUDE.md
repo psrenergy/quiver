@@ -394,8 +394,10 @@ JS has no generator — update the hand-written symbol table in `bindings/js/src
   `windows-release` (VS 17 2022), `linux-release`; build presets for
   dev/release/windows-release/linux-release; test presets for dev/windows-release/linux-release.
   Presets build into `build/<presetName>/`; the plain `build/` dir is the manual configure above.
-- **Dependencies** via FetchContent (`cmake/Dependencies.cmake`): sqlite3 v3.50.2
-  (psrenergy/sqlite3-cmake), tomlplusplus v3.4.0, spdlog v1.17.0, lua v5.4.8 (lua-cmake wrapper —
+- **Dependencies** via FetchContent (`cmake/Dependencies.cmake`): sqlite3 v3.53.4
+  (psrenergy/sqlite3-cmake, PSR's fork of the archived sjinks wrapper; built thread-safe,
+  serialized — `sqlite3_ENABLE_THREADSAFE` is FORCEd ON so a stale cache cannot keep it at 0),
+  tomlplusplus v3.4.0, spdlog v1.17.0, lua v5.4.8 (lua-cmake wrapper —
   its `lua_bin`/`luac_bin` are unconditional `add_executable`s in `all`, so a plain
   `cmake --build build` does build two binaries this project never uses; lua-cmake has **no**
   switch for them, so the `LUA_BUILD_INTERPRETER`/`LUA_BUILD_COMPILER` once set here were
