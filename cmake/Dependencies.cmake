@@ -51,7 +51,7 @@ FetchContent_Declare(sol2
 )
 FetchContent_MakeAvailable(sol2)
 
-# csv-parser for streaming, quoting-correct CSV reads: the one CSV parser in the repo, behind
+# csv-parser for streaming, quoting-correct CSV reads: the only CSV library in the repo, behind
 # src/csv/csv_read.cpp (Lua db:read_csv / db:read_csv_stream, and Database::import_csv).
 # Upstream defaults are ON/OFF/ON/ON respectively; all four are FORCEd the other way, before
 # FetchContent_MakeAvailable:

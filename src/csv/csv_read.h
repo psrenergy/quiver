@@ -1,7 +1,7 @@
 #ifndef QUIVER_SRC_CSV_CSV_READ_H
 #define QUIVER_SRC_CSV_CSV_READ_H
 
-// Internal CSV reader wrapping vincentlaucsb/csv-parser -- the repo's one CSV parser -- for the
+// Internal CSV reader wrapping vincentlaucsb/csv-parser -- the repo's only CSV library -- for the
 // Lua-only db:read_csv / db:read_csv_stream bindings (src/lua_runner.cpp) and for
 // Database::import_csv (src/database_csv_import.cpp). No public include/quiver/ counterpart, no
 // QUIVER_API, no C API, no FFI binding: import_csv is already the bound public surface,
@@ -32,15 +32,18 @@ struct Options {
 // exception, is the early-stop signal (an exception propagates through for_each_row verbatim).
 using RowSink = std::function<bool(std::vector<std::string>&& cells, int64_t index)>;
 
-// Wraps one csv::CSVReader. db:read_csv, db:read_csv_stream and import_csv each construct a Reader
-// and drive it through header() / for_each_row(), so they can never diverge in how they parse a
-// file (LUA-03).
+// Wraps one csv::CSVReader. db:read_csv and db:read_csv_stream both construct a Reader and drive it
+// through header() / for_each_row(), so the two Lua forms can never diverge in how they parse a file
+// (LUA-03). import_csv tokenizes through a Reader as well, but not with the same dialect: it sniffs
+// its own Options, rejects malformed quotes first and drops trailing empty columns after
+// (database_csv_import.cpp).
 class Reader {
 public:
     // `resolved_path` is the path used for the actual file access (sandbox-checked and absolute
-    // from Lua); `original_path` is the caller's own spelling, quoted verbatim in every error
-    // message this class raises, so the messages match what the script wrote rather than an
-    // internal canonicalization -- import_csv, which has only one path, passes it as both.
+    // from Lua); `original_path` is quoted verbatim in every error message this class raises. The
+    // Lua readers pass the script's own spelling there, so their messages match what the script
+    // wrote. import_csv, which has only one path, passes it as both, so a Lua db:import_csv error
+    // quotes the sandbox-resolved absolute path.
     // `operation` is the public method name ("read_csv" / "read_csv_stream" / "import_csv"),
     // threaded into every Pattern 1 message the same way resolve_sandboxed_path threads its own.
     // Throws (Pattern 1, naming `operation`) if the resolved path does not exist, is a directory,
@@ -48,9 +51,10 @@ public:
     Reader(std::string resolved_path, std::string original_path, std::string operation, Options options = {});
     ~Reader();
 
-    // Non-movable as well as non-copyable: both Lua entry points construct a Reader as a stack
-    // local and never move it, and a moved-from Reader's impl_ is null, so header() would be a
-    // null deref. Nothing needs the contract, so nothing declares it.
+    // Non-movable as well as non-copyable: every caller (both Lua entry points and import_csv's
+    // read_csv_file) constructs a Reader as a stack local and never moves it, and a moved-from
+    // Reader's impl_ is null, so header() would be a null deref. Nothing needs the contract, so
+    // nothing declares it.
     Reader(const Reader&) = delete;
     Reader& operator=(const Reader&) = delete;
     Reader(Reader&&) = delete;

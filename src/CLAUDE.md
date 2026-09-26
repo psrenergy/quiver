@@ -95,7 +95,8 @@ parses through it, and the only other caller is Lua, which needs it because `io`
 absent (Julia/Dart/Python/JS already have native CSV libraries), so the root CLAUDE.md rule "bind
 every public method down to every binding" never fires — no documented exception needed. Import
 passes its one unsandboxed path as both `resolved_path` and `original_path`, with `"import_csv"` as
-the operation. `Reader` is Pimpl'd specifically so csv-parser's headers never have
+the operation (from Lua it arrives already sandbox-resolved, so those errors quote the absolute
+path). `Reader` is Pimpl'd specifically so csv-parser's headers never have
 to be included by `lua_runner.cpp`, which already needs `/bigobj` on MSVC for sol2's template
 depth. Three `csv::CSVFormat` settings are pinned in exactly one place (`make_format`, in
 `csv_read.cpp`) because every one of the library defaults is wrong for this reader:
@@ -113,7 +114,10 @@ reintroduces phantom blank-line rows for every no-header read. `Reader`'s constr
 synthesizes the "header row not found" error csv-parser never raises itself: a header row past EOF
 returns an empty header with zero rows in total silence, so the check is gated on the caller's
 original request (`header_row != 0`) rather than header emptiness alone, since `header_row = 0`
-also yields an empty header by design.
+also yields an empty header by design. csv-parser's quote rules are not configurable at all, yet
+import's `require_well_formed_quotes` (`database_csv_import.cpp`) hand-copies them to guard its
+DELETE; `LuaRunner_ReadCsv.StrayQuotesTokenizeAsTheImportPrePassAssumes` pins the parser side, so
+re-check both on any csv-parser `GIT_TAG` bump.
 
 `csv/csv_write.h`/`.cpp` is `csv_read`'s deliberate non-Pimpl counterpart (D-37): it depends
 on nothing that must be kept out of the sol2 translation unit (no csv-parser, no third-party

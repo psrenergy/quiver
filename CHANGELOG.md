@@ -17,22 +17,27 @@ callers to change something are prefixed **BREAKING** and say what to do.
     unquoted `,` split its cell.
   - Without a `sep=` line, a file is read as semicolon-delimited when its *header line* holds `;`
     and no `,`.
-  - Blank lines after the header are skipped, and a lone CR ends a line.
+  - Blank lines after a `sep=` line or the header are skipped (so a `\r\r\n` line ending, which a
+    doubled Windows text-mode conversion writes, imports), and a lone CR ends a line.
   - Quoted multi-line cells are no longer cut by Excel's trailing-column cleanup.
 
-  Import is stricter in three places. A numeric cell must parse whole: `1.5`, `12abc` and
-  out-of-range values are rejected for an INTEGER column, and `9.99abc` or `1,5` for a REAL column
-  (they used to be truncated). A quoted field with text after its closing quote, or never closed,
-  is rejected before anything is deleted: `malformed quoted field on line N` /
-  `unterminated quoted field on line N`. A single record over 10 MB is rejected. Some file errors
-  are now reported differently:
+  Import is stricter in three places. A numeric cell must parse whole: `1.5` and `12abc` are
+  rejected for an INTEGER column, and `9.99abc` or `1,5` for a REAL column (they used to be
+  truncated); in a group import these are now caught before anything is deleted. A quoted field
+  with text after its closing quote, or never closed, is rejected before anything is deleted:
+  `malformed quoted field on line N` / `unterminated quoted field on line N`. A single record over
+  10 MB is rejected. Some errors are now reported differently:
 
   | Case | Before | Now |
   | --- | --- | --- |
   | Missing file | `could not open file: <p>` | `file not found: <p>` (also `path is a directory: <p>` and `cannot access file '<p>': …`) |
   | 0-byte file | `CSV file is empty.` | `file '<p>' is empty` |
-  | No header line (only a `sep=` line, only a BOM, or a blank first line) | — | `header row N not found in file '<p>'` |
-  | UTF-16/32 file | — | `cannot read file '<p>': …` |
+  | Only a `sep=` line, or only a BOM | `CSV file is empty.` | `header row N not found in file '<p>'` |
+  | Blank first line | `CSV file does not contain a 'label' column.` (collection) or a column-mismatch error (group) | `header row N not found in file '<p>'` |
+  | Unreadable file (e.g. another process holds a lock on it) | `could not open file: <p>`, or `CSV file is empty.` | `cannot read file '<p>'` |
+  | UTF-16/32 file | `CSV file does not contain a 'label' column.` (collection) or a column-mismatch error (group) | `cannot read file '<p>': …` |
+  | Non-numeric or out-of-range REAL cell in a group import | the bare `std::stod` text (`invalid stod argument` on MSVC) | `Invalid float value '<v>' for column '<c>'.` |
+  | Non-integer cell in a group INTEGER column with no enum labels | `Invalid enum value '<v>' for column '<c>'.` | `Invalid integer value '<v>' for column '<c>'.` |
 
   *Adapt:* update any matcher on the old messages; fix files that relied on truncated numbers or
   stray quotes.
@@ -47,6 +52,17 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ### Fixed
 
+- **`import_csv()` reads numbers the same way in every host locale and on every platform.** Under a
+  decimal-comma C locale (e.g. Python's `locale.setlocale(locale.LC_ALL, "")` on a pt-BR machine) a
+  REAL cell `9.99` was read as `9`, and on Linux and macOS a subnormal value such as `1e-310`, which
+  `export_csv()` writes, was rejected.
+- **`import_csv()` imports a `vector_index` column of a set or time-series group as its declared
+  type.** Only a vector group's `vector_index` is the structural index; elsewhere the name was
+  forced to INTEGER, so a TEXT cell `12abc` was stored as `12` and `abc` failed with a bare `stoll`
+  error.
+- **`export_csv()` reports a failed write.** A full disk or a locked file used to leave an empty or
+  cut-short CSV behind a successful return; it now throws `Failed to export_csv: could not write
+  file: <p>`.
 - **Julia: updating `Artifacts.toml` now invalidates the package precompile cache.** An artifact-only
   update could leave the cached native library hash pointing at the previous release. Julia now
   tracks `Artifacts.toml` as a precompile dependency and refreshes the hash when it changes.

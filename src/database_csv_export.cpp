@@ -113,6 +113,10 @@ static void write_csv(const Result& data_result,
         throw std::runtime_error("Failed to export_csv: could not open file: " + path);
     }
     file << out;
+    file.close();  // flushes: a full disk or a locked range fails here, and ~ofstream would swallow it
+    if (file.fail()) {
+        throw std::runtime_error("Failed to export_csv: could not write file: " + path);
+    }
 }
 
 void Database::export_csv(const std::string& collection,

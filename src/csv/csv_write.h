@@ -6,7 +6,7 @@
 // csv_read has none: Julia/Dart/Python/JS already have native CSV libraries, and Lua needs this
 // specifically because `io` is deliberately absent from its sandbox (root CLAUDE.md design
 // decisions). append_record is also Database::export_csv's record emitter
-// (src/database_csv_export.cpp), so the repo has exactly one CSV quoting rule.
+// (src/database_csv_export.cpp), so export_csv and db:write_csv share one CSV quoting rule.
 //
 // Unlike csv_read::Reader, this class is deliberately NOT Pimpl'd (D-37): Reader hides
 // csv-parser's headers from src/lua_runner.cpp (which already needs /bigobj on MSVC for sol2's

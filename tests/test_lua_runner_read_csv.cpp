@@ -190,6 +190,27 @@ TEST_F(LuaRunner_ReadCsv, LfAndCrlfEndingsParseIdentically) {
     EXPECT_EQ(crlf_json, lf_json) << "PARSE-06: CRLF and LF variants of the same content must parse identically";
 }
 
+// require_well_formed_quotes (src/database_csv_import.cpp) re-implements csv-parser's quote rules
+// instead of asking the parser, so import's data-loss guard holds only while csv-parser keeps them.
+// Pinned here so a csv-parser GIT_TAG bump that changes them goes red:
+//   - a quote opens a field only as its first byte: after a space or mid-field it is literal;
+//   - a closing quote followed by a separator, CR or LF closes the field;
+//   - text after a closing quote keeps the field open (db:read_csv's documented leniency) --
+//     the merged row the pre-pass exists to reject.
+TEST_F(LuaRunner_ReadCsv, StrayQuotesTokenizeAsTheImportPrePassAssumes) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    write_lua_csv_file(sandbox / "literal_quotes.csv", "a, \"x,y\"\nab\"c,\"d\"\r\n\"e\",f\n");
+    EXPECT_EQ(lua.run(R"(return db:read_csv("literal_quotes.csv", { header_row = 0 }).rows)"),
+              R"([["a"," \"x","y\""],["ab\"c","d"],["e","f"]])");
+
+    write_lua_csv_file(sandbox / "text_after_close.csv", "\"a\" ,b\n\"c\",d\n");
+    EXPECT_EQ(lua.run(R"(return db:read_csv("text_after_close.csv", { header_row = 0 }).rows)"),
+              R"([["a\" ,b\n\"c","d"]])");
+}
+
 TEST_F(LuaRunner_ReadCsv, BomStrippedUnderExplicitHeaderRowAndNoHeader) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);

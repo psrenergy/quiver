@@ -160,9 +160,14 @@ The single shared schema set — **every** suite (C++, C, all bindings) referenc
 never copy them into a binding.
 
 - `valid/` — `all_types.sql`, `basic.sql`, `collections.sql`, `composite_helpers.sql`,
-  `csv_export.sql`, `describe_multi_group.sql`, `mixed_time_series.sql`,
-  `multi_column_groups.sql`, `multi_dim_time_series.sql`, `multi_time_series.sql`,
-  `nullable_time_series.sql`, `relations.sql`
+  `csv_export.sql`, `csv_group_vector_index.sql`, `describe_multi_group.sql`,
+  `mixed_time_series.sql`, `multi_column_groups.sql`, `multi_dim_time_series.sql`,
+  `multi_time_series.sql`, `nullable_time_series.sql`, `relations.sql`
+  - `csv_group_vector_index.sql` gives a set group (`Codes_set_tags`) a TEXT `vector_index` column
+    and a time-series group (`Items_time_series_slots`) an INTEGER one — two collections, since one
+    may not declare an attribute in two groups. Only a vector group's `vector_index` is structural,
+    and `import_csv` once forced every column of that name to INTEGER and dereferenced it
+    unvalidated.
   - `multi_column_groups.sql` is the vector/set counterpart of the multi-column time-series
     schemas: `Items_vector_readings` (`amount`, `score`) and `Items_set_codes` (`code`, `weight`),
     both nullable, with the value columns deliberately named so the alphabetically-first one is
