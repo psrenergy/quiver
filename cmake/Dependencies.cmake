@@ -51,14 +51,8 @@ FetchContent_Declare(sol2
 )
 FetchContent_MakeAvailable(sol2)
 
-# rapidcsv for CSV reading/writing (header-only)
-FetchContent_Declare(rapidcsv
-    GIT_REPOSITORY https://github.com/d99kris/rapidcsv.git
-    GIT_TAG v8.92
-)
-FetchContent_MakeAvailable(rapidcsv)
-
-# csv-parser for streaming, quoting-correct CSV reads (Lua db:read_csv / db:read_csv_stream).
+# csv-parser for streaming, quoting-correct CSV reads: the only CSV library in the repo, behind
+# src/csv/csv_read.cpp (Lua db:read_csv / db:read_csv_stream, and Database::import_csv).
 # Upstream defaults are ON/OFF/ON/ON respectively; all four are FORCEd the other way, before
 # FetchContent_MakeAvailable:
 #   CSV_ENABLE_THREADS=OFF -- with threads off, the read window is a single unmultiplied chunk

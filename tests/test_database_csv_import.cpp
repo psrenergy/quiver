@@ -1,5 +1,6 @@
 #include "test_utils.h"
 
+#include <clocale>
 #include <filesystem>
 #include <fstream>
 #include <gtest/gtest.h>
@@ -7,6 +8,12 @@
 #include <quiver/element.h>
 #include <quiver/options.h>
 #include <sstream>
+
+// ImportCSV_LockedFile_RejectedBeforeDelete holds a byte-range lock, which only Windows enforces on
+// reads.
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 namespace fs = std::filesystem;
 
@@ -394,7 +401,8 @@ TEST(DatabaseCSV, ImportCSV_EmptyFile_Throws) {
             try {
                 db.import_csv("Items", "", csv_path.string());
             } catch (const std::runtime_error& e) {
-                EXPECT_NE(std::string(e.what()).find("CSV file is empty"), std::string::npos);
+                EXPECT_NE(std::string(e.what()).find("Cannot import_csv: file '" + csv_path.string() + "' is empty"),
+                          std::string::npos);
                 throw;
             }
         },
@@ -768,6 +776,314 @@ TEST(DatabaseCSV, ImportCSV_InvalidFloatValue_Throws) {
 }
 
 // ============================================================================
+// import_csv: parsing through csv_read::Reader (the db:read_csv parser)
+// ============================================================================
+
+// Expect import_csv to throw a runtime_error whose message contains `expected`.
+static void expect_import_error(quiver::Database& db,
+                                const std::string& group,
+                                const fs::path& csv_path,
+                                const std::string& expected) {
+    try {
+        db.import_csv("Items", group, csv_path.string());
+        ADD_FAILURE() << "import_csv did not throw; expected: " << expected;
+    } catch (const std::runtime_error& e) {
+        EXPECT_NE(std::string(e.what()).find(expected), std::string::npos) << e.what();
+    }
+}
+
+TEST(DatabaseCSV, ImportCSV_SemicolonSepHeader_KeepsQuotedSemicolonAndComma) {
+    auto db = make_db();
+    auto csv_path = temp_csv("ImportSemicolonQuoted");
+    // sep=; is the real delimiter: a quoted ';' and an unquoted ',' both stay inside their cells.
+    // They were rewritten to ',' before parsing, storing "x,y" and splitting "a,b".
+    write_csv_file(csv_path.string(), "sep=;\nlabel;name;status;price;date_created;notes\nItem1;\"x;y\";1;9.99;;a,b\n");
+
+    db.import_csv("Items", "", csv_path.string());
+
+    EXPECT_EQ(db.read_scalar_string_by_id("Items", "name", 1), "x;y");
+    EXPECT_EQ(db.read_scalar_string_by_id("Items", "notes", 1), "a,b");
+
+    fs::remove(csv_path);
+}
+
+TEST(DatabaseCSV, ImportCSV_BomBeforeSepLine_Imports) {
+    auto db = make_db();
+    auto csv_path = temp_csv("ImportBomSep");
+    write_csv_file(csv_path.string(),
+                   "\xEF\xBB\xBFsep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,1,9.99,,\n");
+
+    db.import_csv("Items", "", csv_path.string());
+
+    auto names = db.read_scalar_strings("Items", "name");
+    ASSERT_EQ(names.size(), 1);
+    EXPECT_EQ(names[0], "Alpha");
+
+    fs::remove(csv_path);
+}
+
+TEST(DatabaseCSV, ImportCSV_CrlfAndBlankLines_Import) {
+    auto db = make_db();
+    auto csv_path = temp_csv("ImportCrlfBlank");
+    write_csv_file(csv_path.string(),
+                   "sep=,\r\nlabel,name,status,price,date_created,notes\r\n\r\n"
+                   "Item1,Alpha,1,9.99,,\r\n\r\nItem2,Beta,2,19.5,,\r\n\r\n");
+
+    db.import_csv("Items", "", csv_path.string());
+
+    auto names = db.read_scalar_strings("Items", "name");
+    ASSERT_EQ(names.size(), 2);
+    EXPECT_EQ(names[0], "Alpha");
+    EXPECT_EQ(names[1], "Beta");
+
+    fs::remove(csv_path);
+}
+
+TEST(DatabaseCSV, ImportCSV_NumericCellWithTrailingText_Throws) {
+    auto db = make_db();
+    auto csv_path = temp_csv("ImportNumericTrailing");
+    const std::string header = "label,name,status,price,date_created,notes\n";
+    const std::vector<std::pair<std::string, std::string>> cases = {
+        {"sep=,\n" + header + "Item1,Alpha,1.5,9.99,,\n", "Invalid integer value '1.5' for column 'status'"},
+        {"sep=,\n" + header + "Item1,Alpha,99999999999999999999,9.99,,\n",
+         "Invalid integer value '99999999999999999999' for column 'status'"},
+        {"sep=,\n" + header + "Item1,Alpha,1,9.99abc,,\n", "Invalid float value '9.99abc' for column 'price'"},
+        // The decimal comma a sep=; file now delivers as one cell; stod alone would store 1.0.
+        {"sep=;\nlabel;name;status;price;date_created;notes\nItem1;Alpha;1;1,5;;\n",
+         "Invalid float value '1,5' for column 'price'"},
+    };
+
+    for (const auto& [content, expected] : cases) {
+        write_csv_file(csv_path.string(), content);
+        expect_import_error(db, "", csv_path, expected);
+    }
+    EXPECT_TRUE(db.read_scalar_strings("Items", "label").empty());
+
+    fs::remove(csv_path);
+}
+
+TEST(DatabaseCSV, ImportCSV_Group_InvalidFloat_Throws) {
+    auto db = make_db();
+
+    quiver::Element e1;
+    e1.set("label", std::string("Item1")).set("name", std::string("Alpha"));
+    db.create_element("Items", e1);
+
+    auto csv_path = temp_csv("ImportGroupBadFloat");
+    write_csv_file(csv_path.string(), "sep=,\nid,date_time,temperature,humidity\nItem1,2024-01-01T10:00:00,abc,60\n");
+
+    // Prefixed, not the bare "invalid stod argument" the group path used to leak.
+    expect_import_error(
+        db, "readings", csv_path, "Cannot import_csv: Invalid float value 'abc' for column 'temperature'.");
+
+    fs::remove(csv_path);
+}
+
+TEST(DatabaseCSV, ImportCSV_MalformedQuotedField_Throws) {
+    auto db = make_db();
+
+    quiver::Element existing;
+    existing.set("label", std::string("Keep")).set("name", std::string("Kept"));
+    db.create_element("Items", existing);
+
+    auto csv_path = temp_csv("ImportMalformedQuote");
+    const std::string header = "sep=,\nlabel,name,status,price,date_created,notes\n";
+    const std::vector<std::pair<std::string, std::string>> cases = {
+        // Text after a closing quote: csv-parser would merge these two lines into ONE 6-cell row.
+        {header + "\"Item1\" ,Alpha,1,9.99,,\n\"Item2\",Beta,2,19.5,,\n",
+         "Cannot import_csv: malformed quoted field on line 3"},
+        // An unterminated quote would swallow every line after it.
+        {header + "Item1,\"Alpha,1,9.99,,\nItem2,Beta,2,19.5,,\n",
+         "Cannot import_csv: unterminated quoted field on line 3"},
+        // A lone CR ends a line too, so a CR-only file reports the same line numbers.
+        {"sep=,\rlabel,name,status,price,date_created,notes\r\"Item1\" ,Alpha,1,9.99,,\r",
+         "Cannot import_csv: malformed quoted field on line 3"},
+        {"sep=,\rlabel,name,status,price,date_created,notes\rItem1,\"Alpha,1,9.99,,\r",
+         "Cannot import_csv: unterminated quoted field on line 3"},
+    };
+
+    for (const auto& [content, expected] : cases) {
+        write_csv_file(csv_path.string(), content);
+        expect_import_error(db, "", csv_path, expected);
+    }
+
+    // Rejected before the DELETE: the existing element is untouched.
+    auto labels = db.read_scalar_strings("Items", "label");
+    ASSERT_EQ(labels.size(), 1);
+    EXPECT_EQ(labels[0], "Keep");
+
+    fs::remove(csv_path);
+}
+
+TEST(DatabaseCSV, ImportCSV_BlankRecordsAfterSepLine_Import) {
+    auto db = make_db();
+    auto csv_path = temp_csv("ImportSepBlankRecords");
+    // csv-parser ends a record at a lone CR as well, so the \r\r\n of a doubled text-mode conversion
+    // (Python's csv.writer on a file opened without newline='') puts a blank record between the sep
+    // line and the header, as a blank line does.
+    for (const std::string sep_line : {"sep=,\r\r\n", "sep=,\n\n", "sep=,\r\n\r\n"}) {
+        write_csv_file(csv_path.string(),
+                       sep_line + "label,name,status,price,date_created,notes\r\r\nItem1,Alpha,1,9.99,,\r\r\n");
+        db.import_csv("Items", "", csv_path.string());
+        auto names = db.read_scalar_strings("Items", "name");
+        ASSERT_EQ(names.size(), 1);
+        EXPECT_EQ(names[0], "Alpha");
+    }
+    fs::remove(csv_path);
+}
+
+TEST(DatabaseCSV, ImportCSV_Group_InvalidInteger_Throws) {
+    auto db = make_db();
+
+    quiver::Element e1;
+    e1.set("label", std::string("Item1")).set("name", std::string("Alpha"));
+    db.create_element("Items", e1);
+
+    auto csv_path = temp_csv("ImportGroupBadInteger");
+    // Same message as the scalar path, not "Invalid enum value" for an enum that was never configured.
+    for (const std::string cell : {"1.5", "60abc", "99999999999999999999", "abc"}) {
+        write_csv_file(csv_path.string(),
+                       "sep=,\nid,date_time,temperature,humidity\nItem1,2024-01-01T10:00:00,22.5," + cell + "\n");
+        expect_import_error(
+            db, "readings", csv_path, "Cannot import_csv: Invalid integer value '" + cell + "' for column 'humidity'.");
+    }
+
+    fs::remove(csv_path);
+}
+
+// Only a vector group's vector_index is structural. A set or time-series column that shares the
+// name keeps its declared type: TEXT is stored as written, and a bad INTEGER is rejected like any
+// other INTEGER cell -- it used to be dereferenced unvalidated.
+TEST(DatabaseCSV, ImportCSV_NonVectorGroupVectorIndexColumn_KeepsDeclaredType) {
+    auto db = quiver::Database::from_schema(":memory:",
+                                            VALID_SCHEMA("csv_group_vector_index.sql"),
+                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
+    db.create_element("Codes", quiver::Element().set("label", std::string("Code1")));
+    db.create_element("Items", quiver::Element().set("label", std::string("Item1")));
+
+    auto csv_path = temp_csv("ImportNonVectorVectorIndex");
+    write_csv_file(csv_path.string(), "sep=,\nid,vector_index\nCode1,abc\nCode1,12abc\n");
+    db.import_csv("Codes", "tags", csv_path.string());
+    EXPECT_EQ(db.query_string("SELECT group_concat(vector_index, '|') FROM "
+                              "(SELECT vector_index FROM Codes_set_tags ORDER BY rowid)"),
+              "abc|12abc");
+
+    write_csv_file(csv_path.string(), "sep=,\nid,date_time,vector_index\nItem1,2024-01-01T00:00:00,1.5\n");
+    expect_import_error(
+        db, "slots", csv_path, "Cannot import_csv: Invalid integer value '1.5' for column 'vector_index'.");
+
+    fs::remove(csv_path);
+}
+
+TEST(DatabaseCSV, ImportCSV_Utf16File_ReportsEncoding) {
+    auto db = make_db();
+    auto csv_path = temp_csv("ImportUtf16");
+    // UTF-16LE with a BOM. U+0A17 U+0A22 are the bytes 17 0A 22 0A: a byte scan reads 0A as a line
+    // feed and 22 as an opening quote, and would report a quote error instead of the encoding.
+    auto utf16le = [](const std::string& ascii) {
+        std::string out;
+        for (char c : ascii) {
+            out += c;
+            out += '\0';
+        }
+        return out;
+    };
+    write_csv_file(csv_path.string(),
+                   "\xFF\xFE" + utf16le("label,name,status,price,date_created,notes\r\na,") +
+                       std::string("\x17\x0A\x22\x0A") + utf16le(",1,1.5,,\r\n"));
+    expect_import_error(db, "", csv_path, "UTF-16 encoded CSV input is not supported directly");
+    fs::remove(csv_path);
+}
+
+TEST(DatabaseCSV, ImportCSV_Directory_ReportsPathIsADirectory) {
+    auto db = make_db();
+    // A directory is the Reader's to report; the pre-read must not open it (libstdc++ would, and its
+    // filebuf throws a raw ios_base::failure on the first read).
+    auto dir = fs::temp_directory_path() / "quiver_test_ImportDirectory";
+    fs::create_directories(dir);
+    expect_import_error(db, "", dir, "Cannot import_csv: path is a directory: " + dir.string());
+    fs::remove(dir);
+}
+
+// A host can switch the process's C locale to a decimal comma -- Python's
+// locale.setlocale(locale.LC_ALL, "") does on a pt-BR or de-DE machine -- and strtod follows it,
+// while export_csv writes '.' in every locale (std::to_chars).
+TEST(DatabaseCSV, ImportCSV_DecimalCommaLocale_ReadsExportedFloats) {
+    struct RestoreNumericLocale {
+        std::string saved = std::setlocale(LC_NUMERIC, nullptr);
+        ~RestoreNumericLocale() { std::setlocale(LC_NUMERIC, saved.c_str()); }
+    } restore;
+    bool switched = false;
+    for (const char* name : {"pt-BR", "pt_BR.UTF-8", "de_DE.UTF-8"}) {
+        if (std::setlocale(LC_NUMERIC, name) != nullptr) {
+            switched = true;
+            break;
+        }
+    }
+    if (!switched) {
+        GTEST_SKIP() << "no decimal-comma locale installed";
+    }
+
+    auto db = make_db();
+    quiver::Element e;
+    e.set("label", std::string("Item1")).set("name", std::string("Alpha")).set("price", 9.99);
+    db.create_element("Items", e);
+    auto csv_path = temp_csv("ImportDecimalCommaLocale");
+    db.export_csv("Items", "", csv_path.string());
+
+    auto imported = make_db();
+    imported.import_csv("Items", "", csv_path.string());
+    EXPECT_EQ(imported.read_scalar_floats("Items", "price"), (std::vector<std::optional<double>>{9.99}));
+
+    write_csv_file(csv_path.string(), "sep=;\nlabel;name;status;price;date_created;notes\nItem1;Alpha;1;1,5;;\n");
+    auto comma = make_db();
+    expect_import_error(comma, "", csv_path, "Invalid float value '1,5' for column 'price'");
+
+    fs::remove(csv_path);
+}
+
+#ifdef _WIN32
+// A byte-range lock held on another handle fails ReadFile but not csv-parser's mapped reads, so the
+// quote check must not judge a file it could not read as empty: the import is refused before the
+// DELETE instead of storing rows the check never saw.
+TEST(DatabaseCSV, ImportCSV_LockedFile_RejectedBeforeDelete) {
+    auto db = make_db();
+    quiver::Element existing;
+    existing.set("label", std::string("Keep")).set("name", std::string("Kept"));
+    db.create_element("Items", existing);
+
+    auto csv_path = temp_csv("ImportLockedFile");
+    // Malformed on line 3: were the check skipped, csv-parser would merge the last two lines.
+    write_csv_file(csv_path.string(),
+                   "sep=,\nlabel,name,status,price,date_created,notes\n\"Item1\" ,Alpha,1,9.99,,\n"
+                   "\"Item2\",Beta,2,19.5,,\n");
+
+    HANDLE lock = CreateFileW(csv_path.wstring().c_str(),
+                              GENERIC_READ,
+                              FILE_SHARE_READ | FILE_SHARE_WRITE,
+                              nullptr,
+                              OPEN_EXISTING,
+                              FILE_ATTRIBUTE_NORMAL,
+                              nullptr);
+    ASSERT_NE(lock, INVALID_HANDLE_VALUE) << "GetLastError=" << GetLastError();
+    OVERLAPPED whole_file{};
+    ASSERT_TRUE(
+        LockFileEx(lock, LOCKFILE_EXCLUSIVE_LOCK | LOCKFILE_FAIL_IMMEDIATELY, 0, MAXDWORD, MAXDWORD, &whole_file))
+        << "GetLastError=" << GetLastError();
+
+    expect_import_error(db, "", csv_path, "Cannot import_csv: cannot read file '" + csv_path.string() + "'");
+
+    UnlockFileEx(lock, 0, MAXDWORD, MAXDWORD, &whole_file);
+    CloseHandle(lock);
+    fs::remove(csv_path);
+
+    auto labels = db.read_scalar_strings("Items", "label");
+    ASSERT_EQ(labels.size(), 1);
+    EXPECT_EQ(labels[0], "Keep");
+}
+#endif
+
+// ============================================================================
 // import_csv: FK-specific tests (relations.sql schema)
 // ============================================================================
 
@@ -927,7 +1243,8 @@ TEST(DatabaseCSV, ImportCSV_CannotOpenFile_Throws) {
             try {
                 db.import_csv("Items", "", "/nonexistent/path/file.csv");
             } catch (const std::runtime_error& e) {
-                EXPECT_NE(std::string(e.what()).find("Cannot import_csv: could not open file"), std::string::npos);
+                EXPECT_NE(std::string(e.what()).find("Cannot import_csv: file not found: /nonexistent/path/file.csv"),
+                          std::string::npos);
                 throw;
             }
         },

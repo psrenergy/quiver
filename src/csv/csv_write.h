@@ -5,7 +5,8 @@
 // include/quiver/ counterpart, no QUIVER_API, no C API, no FFI binding, for the same reason
 // csv_read has none: Julia/Dart/Python/JS already have native CSV libraries, and Lua needs this
 // specifically because `io` is deliberately absent from its sandbox (root CLAUDE.md design
-// decisions).
+// decisions). append_record is also Database::export_csv's record emitter
+// (src/database_csv_export.cpp), so export_csv and db:write_csv share one CSV quoting rule.
 //
 // Unlike csv_read::Reader, this class is deliberately NOT Pimpl'd (D-37): Reader hides
 // csv-parser's headers from src/lua_runner.cpp (which already needs /bigobj on MSVC for sol2's
@@ -34,6 +35,11 @@ struct Options {
     std::vector<std::string> header;
 };
 
+// Appends one LF-terminated record to `out`. A cell is quoted iff it contains `separator`, '"', CR
+// or LF (FMT-01), with an internal quote doubled; a record whose only cell is empty (or that has no
+// cells) is written as `""`, so a reader does not take it for a blank line and drop it (FMT-02).
+void append_record(const std::vector<std::string>& cells, char separator, std::string& out);
+
 class Writer {
 public:
     // `resolved_path` is the sandbox-checked absolute path used for the actual file access;
@@ -46,7 +52,7 @@ public:
     Writer(std::string resolved_path, std::string original_path, std::string operation, Options options = {});
     ~Writer();
 
-    // Non-movable as well as non-copyable: the sole owner (LuaRunner::Impl::CsvWriter) holds a
+    // Non-movable as well as non-copyable: the sole Writer owner (LuaRunner::Impl::CsvWriter) holds a
     // shared_ptr and constructs in place, so nothing moves a Writer. A defaulted move would have
     // to claim `noexcept` over std::ofstream's move (which is not noexcept, so a throw would
     // terminate) and would leave the moved-from source with closed_ == false.
