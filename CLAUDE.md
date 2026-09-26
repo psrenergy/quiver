@@ -91,7 +91,9 @@ Settled questions — don't relitigate without the user; each was decided delibe
   (int-for-REAL coercion), a double only for REAL (a float into an INTEGER column is rejected), a
   string for TEXT / INTEGER-FK / DATE_TIME. `TypeValidator` (scalar create/update) and
   `value_matches_type` (time-series writes) share this rule; bindings never coerce
-  schema-dependently.
+  schema-dependently. `import_csv` writes through a raw `INSERT`, so it applies the rule to CSV
+  text itself: `parse_integer` / `parse_float` (`src/database_csv_import.cpp`) accept a cell only
+  if it parses whole, so `1.5` is not an INTEGER and `9.99abc` / `1,5` are not REALs.
 - **A DATE_TIME string is validated on write, and stored verbatim.** The accepted grammar is
   `YYYY-MM-DD`, optionally followed by `THH:MM:SS` or ` HH:MM:SS`, every field fixed-width and
   zero-padded, year `0001`-`9999`, the calendar day must exist, no leap second; anything else
@@ -271,6 +273,20 @@ Settled questions — don't relitigate without the user; each was decided delibe
   out, **not** through the GC: `collect_garbage()` alone only finalizes writers the script made
   unreachable, so a writer held in a Lua global left a 0-byte file (see `src/CLAUDE.md`). A writer
   does not outlive its `run()`.
+- **One CSV parser, one CSV emitter.** csv-parser, through `csv_read::Reader`
+  (`src/csv/csv_read.cpp`), parses for both `import_csv` and `db:read_csv*`; `csv_write::append_record`
+  (`src/csv/csv_write.cpp`) emits for both `export_csv` and `db:write_csv`, so the repo has one
+  quoting rule (quote a cell iff it holds the separator, `"`, CR or LF). rapidcsv, which import and
+  export used before, was dropped. Its whole-document reader cannot back `db:read_csv_stream`'s
+  bounded memory, and its auto-quote quoted on a space but not on `"`, so `"x"` exported raw and read
+  back as `x`. Import's other old bugs came from Quiver's own pre-pass, deleted along with it: every `;` rewritten to `,`, a
+  `sep=` line missed after a BOM, and a per-line trailing-comma strip that cut into quoted multi-line
+  cells. What import still does itself, in `read_csv_file`: it reads the `sep=` line (or, with none,
+  a header line holding `;` and no `,`) to choose the separator, and it drops Excel's trailing empty
+  columns. It also runs `require_well_formed_quotes` before parsing. **Do not remove that check.**
+  csv-parser keeps text after a closing quote as a literal and stays inside the quote, so
+  `"a" ,b\n"c",d` parses as one row whose cell count can still match the header, and import
+  deletes the table before inserting. `db:read_csv` is read-only and deliberately stays lenient.
 
 ## Do Not "Fix"
 
@@ -378,7 +394,8 @@ JS has no generator — update the hand-written symbol table in `bindings/js/src
   `cmake --build build` does build two binaries this project never uses; lua-cmake has **no**
   switch for them, so the `LUA_BUILD_INTERPRETER`/`LUA_BUILD_COMPILER` once set here were
   no-ops, and `EXCLUDE_FROM_ALL` is not a fix either — see the note in `cmake/Dependencies.cmake`),
-  sol2 v3.5.0, rapidcsv v8.92, csv-parser v5.3.0 (`csv` target, Lua `db:read_csv` only — fetched
+  sol2 v3.5.0, csv-parser v5.3.0 (`csv` target, the one CSV parser — behind `csv_read::Reader`,
+  which serves Lua `db:read_csv*` and `import_csv`; fetched
   `GIT_SHALLOW`, and `CSV_NO_SIMD`/`CSV_ENABLE_THREADS`/`CSV_BUILD_PROGRAMS`/`CSV_BUILD_TESTS` are
   all FORCEd; the `CSV_NO_SIMD` pin is load-bearing — without it a PUBLIC `/arch:AVX2` propagates
   into `quiver` and SIGILLs on pre-AVX2 x86 for every shipped wheel/native), argparse v3.2,

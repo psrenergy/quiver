@@ -1,3 +1,4 @@
+#include "csv/csv_write.h"
 #include "database_impl.h"
 #include "quiver/options.h"
 #include "quiver/schema.h"
@@ -11,9 +12,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
-#include <rapidcsv.h>
 #include <set>
-#include <sstream>
 
 namespace quiver {
 
@@ -26,7 +25,7 @@ using FkLabelMaps = std::unordered_map<std::string, const IdLabelMap*>;
 // Convert a Value to its CSV string representation.
 // NULL -> empty string, foreign keys resolve to the referenced label, other integers check
 // enum_labels, floats round-trip exactly, strings apply DateTime formatting.
-// rapidcsv handles CSV escaping/quoting via auto-quote.
+// Quoting is csv_write::append_record's job, not this function's.
 static std::string value_to_csv_string(const Value& value,
                                        const std::string& column_name,
                                        DataType data_type,
@@ -81,28 +80,10 @@ static std::string value_to_csv_string(const Value& value,
     return "";
 }
 
-// Build a rapidcsv Document with column headers enabled and LF-only line endings.
-// SeparatorParams: comma separator, no trim, no CR (LF only), quoted linebreaks, auto-quote, double-quote char.
-static rapidcsv::Document make_csv_document() {
-    return rapidcsv::Document(
-        "", rapidcsv::LabelParams(0, -1), rapidcsv::SeparatorParams(',', false, false, true, true, '"'));
-}
-
-// Save a rapidcsv Document to a file path via stringstream intermediary.
-// Uses binary mode to prevent Windows CRLF conversion.
-static void save_csv_document(rapidcsv::Document& doc, const std::string& path) {
-    std::ostringstream oss;
-    oss << "sep=,\n";
-    doc.Save(oss);
-
-    std::ofstream file(path, std::ios::binary);
-    if (!file.is_open()) {
-        throw std::runtime_error("Failed to export_csv: could not open file: " + path);
-    }
-    file << oss.str();
-}
-
-// Render query results to a CSV file: create document, set headers, populate cells, save.
+// Render query results to a CSV file: the Excel `sep=,` preamble, the header, then one record per
+// row, all emitted by csv_write::append_record (the db:write_csv emitter) and written in one shot.
+// Binary mode keeps the LF record terminators from becoming CRLF on Windows, and the file is
+// opened only once the whole text is built, so a throw while rendering never truncates it.
 // Column types are resolved once from type_map (invariant across rows).
 static void write_csv(const Result& data_result,
                       const std::vector<std::string>& csv_columns,
@@ -110,13 +91,6 @@ static void write_csv(const Result& data_result,
                       const CSVOptions& options,
                       const FkLabelMaps& fk_labels,
                       const std::string& path) {
-    auto doc = make_csv_document();
-
-    for (size_t i = 0; i < csv_columns.size(); ++i) {
-        doc.SetColumnName(i, csv_columns[i]);
-    }
-
-    // Resolve column types once (invariant across rows)
     std::vector<DataType> col_types(csv_columns.size(), DataType::Text);
     for (size_t i = 0; i < csv_columns.size(); ++i) {
         if (auto it = type_map.find(csv_columns[i]); it != type_map.end()) {
@@ -124,16 +98,21 @@ static void write_csv(const Result& data_result,
         }
     }
 
-    size_t row_idx = 0;
+    std::string out = "sep=,\n";
+    csv_write::append_record(csv_columns, ',', out);
+    std::vector<std::string> cells(csv_columns.size());
     for (const auto& row : data_result) {
         for (size_t i = 0; i < csv_columns.size(); ++i) {
-            doc.SetCell<std::string>(
-                i, row_idx, value_to_csv_string(row[i], csv_columns[i], col_types[i], options, fk_labels));
+            cells[i] = value_to_csv_string(row[i], csv_columns[i], col_types[i], options, fk_labels);
         }
-        ++row_idx;
+        csv_write::append_record(cells, ',', out);
     }
 
-    save_csv_document(doc, path);
+    std::ofstream file(path, std::ios::binary);
+    if (!file.is_open()) {
+        throw std::runtime_error("Failed to export_csv: could not open file: " + path);
+    }
+    file << out;
 }
 
 void Database::export_csv(const std::string& collection,

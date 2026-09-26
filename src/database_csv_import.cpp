@@ -1,3 +1,4 @@
+#include "csv/csv_read.h"
 #include "database_impl.h"
 #include "quiver/options.h"
 #include "quiver/schema.h"
@@ -11,15 +12,50 @@
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
-#include <rapidcsv.h>
+#include <iterator>
+#include <optional>
 #include <set>
 #include <sstream>
+#include <string_view>
 
 namespace quiver {
 
-// Read a trimmed cell from a rapidcsv Document.
-static std::string read_cell(const rapidcsv::Document& doc, size_t col, size_t row) {
-    return string::trim(doc.GetCell<std::string>(col, row));
+// A parsed CSV file: the header, then every data row's cells in file order.
+struct CsvTable {
+    std::vector<std::string> header;
+    std::vector<std::vector<std::string>> rows;
+};
+
+// Read a trimmed cell. The per-row width check in import_csv runs before any call, so `col` is in
+// range for every row.
+static std::string read_cell(const CsvTable& csv, size_t col, size_t row) {
+    return string::trim(csv.rows[row][col]);
+}
+
+// Whole-cell number parses: nullopt unless every character is consumed, so "1.5" is not an integer
+// and "9.99abc" or a decimal-comma "1,5" is not a float (stoll/stod alone accept any valid prefix).
+// Import writes through a raw INSERT, so this is where the core typing policy -- a float into an
+// INTEGER column is rejected -- reaches CSV text.
+static std::optional<int64_t> parse_integer(const std::string& cell) {
+    size_t pos = 0;
+    int64_t value = 0;
+    try {
+        value = std::stoll(cell, &pos);
+    } catch (const std::logic_error&) {  // invalid_argument and out_of_range
+        return std::nullopt;
+    }
+    return pos == cell.size() ? std::optional(value) : std::nullopt;
+}
+
+static std::optional<double> parse_float(const std::string& cell) {
+    size_t pos = 0;
+    double value = 0.0;
+    try {
+        value = std::stod(cell, &pos);
+    } catch (const std::logic_error&) {  // invalid_argument and out_of_range
+        return std::nullopt;
+    }
+    return pos == cell.size() ? std::optional(value) : std::nullopt;
 }
 
 // Lowercase a string for case-insensitive comparison.
@@ -29,89 +65,100 @@ static std::string to_lower(const std::string& s) {
     return out;
 }
 
-// Read a CSV file, handling sep= header and semicolon-delimited files.
-// Returns a rapidcsv Document with column headers (LabelParams row 0).
-static rapidcsv::Document read_csv_file(const std::string& path) {
-    std::ifstream file(path, std::ios::binary);
-    if (!file.is_open()) {
-        throw std::runtime_error("Cannot import_csv: could not open file: " + path);
-    }
-
-    std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-
-    // Detect and strip sep= header line
-    char separator = ',';
-    if (content.starts_with("sep=")) {
-        auto nl = content.find('\n');
-        if (nl != std::string::npos) {
-            // Extract the separator character (e.g., "sep=," -> ',', "sep=;" -> ';')
-            if (nl >= 5) {
-                separator = content[4];
-            }
-            content = content.substr(nl + 1);
+// csv-parser keeps a closing quote that is followed by ordinary text as a literal and stays in
+// quoted mode, where separators and line breaks are plain text -- so `"a" ,b\n"c",d` parses as ONE
+// row whose cell count can still match the header, and an unterminated quote swallows the rest of
+// the file. db:read_csv tolerates that, but import deletes the table before inserting, so a silently
+// merged row is lost data: reject both shapes before parsing. A quote opens a field only as its
+// first byte, exactly as in csv-parser; inside one, `""` is an escaped quote.
+static void require_well_formed_quotes(std::string_view text, char separator) {
+    bool in_quotes = false;
+    bool field_start = true;
+    size_t line = 1;
+    size_t quote_line = 1;
+    for (size_t i = 0; i < text.size(); ++i) {
+        const char c = text[i];
+        if (c == '\n') {
+            ++line;
         }
+        if (in_quotes) {
+            if (c != '"') {
+                continue;
+            }
+            const char next = i + 1 < text.size() ? text[i + 1] : '\n';
+            if (next == '"') {
+                ++i;
+                continue;
+            }
+            if (next != separator && next != '\r' && next != '\n') {
+                throw std::runtime_error("Cannot import_csv: malformed quoted field on line " + std::to_string(line));
+            }
+            in_quotes = false;
+            field_start = false;
+            continue;
+        }
+        if (c == '"' && field_start) {
+            in_quotes = true;
+            quote_line = line;
+        }
+        field_start = c == separator || c == '\n' || c == '\r';
     }
-
-    // If semicolon separator, replace all ; with , for rapidcsv parsing
-    if (separator == ';') {
-        std::replace(content.begin(), content.end(), ';', ',');
-    } else if (separator == ',' && content.find(';') != std::string::npos && content.find(',') == std::string::npos) {
-        // No sep= header but semicolons present and no commas -> semicolon-delimited
-        std::replace(content.begin(), content.end(), ';', ',');
+    if (in_quotes) {
+        throw std::runtime_error("Cannot import_csv: unterminated quoted field on line " + std::to_string(quote_line));
     }
+}
 
-    // Strip trailing empty columns — common Excel artifact when editing CSVs with sep=,
-    // Count trailing commas on the header line, then strip that many from every line.
+// Read a CSV file through csv_read::Reader, the parser behind db:read_csv. An Excel `sep=X` first
+// line names the separator and is skipped; without one, a header line holding ';' and no ',' is
+// read as semicolon-delimited. Trailing empty header columns (an Excel artifact) are dropped, along
+// with up to that many trailing empty cells per row. Every row is buffered: import validates all of
+// them before mutating anything.
+static CsvTable read_csv_file(const std::string& path) {
+    // The whole file up front: the separator must be known before the parser is built, and the quote
+    // check needs every byte. A missing or unreadable file just reads as empty here; the Reader then
+    // reports it.
+    std::string content;
     {
-        auto first_nl = content.find('\n');
-        std::string_view header(content.data(), first_nl != std::string::npos ? first_nl : content.size());
-        size_t trailing = 0;
-        for (auto it = header.rbegin(); it != header.rend() && (*it == ',' || *it == ' ' || *it == '\t' || *it == '\r');
-             ++it) {
-            if (*it == ',')
-                ++trailing;
-        }
-        if (trailing > 0) {
-            std::string stripped;
-            stripped.reserve(content.size());
-            std::istringstream lines(content);
-            std::string line;
-            bool first = true;
-            while (std::getline(lines, line)) {
-                if (!first)
-                    stripped += '\n';
-                first = false;
-                // Remove exactly `trailing` trailing commas (and surrounding whitespace)
-                size_t to_remove = trailing;
-                auto end = line.size();
-                while (to_remove > 0 && end > 0) {
-                    auto ch = line[end - 1];
-                    if (ch == ' ' || ch == '\t' || ch == '\r') {
-                        --end;
-                        continue;
-                    }
-                    if (ch == ',') {
-                        --end;
-                        --to_remove;
-                        continue;
-                    }
-                    break;
-                }
-                stripped += line.substr(0, end);
-            }
-            content = std::move(stripped);
+        std::ifstream file(path, std::ios::binary);
+        content.assign(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
+    }
+    std::string_view text = content;
+    if (text.starts_with("\xEF\xBB\xBF")) {
+        text.remove_prefix(3);
+    }
+    const auto first_line = text.substr(0, text.find_first_of("\r\n"));
+
+    csv_read::Options options;
+    if (first_line.starts_with("sep=")) {
+        // "sep=" alone, like "sep=,", means a comma. header_row is 1-based and counts the sep line.
+        options.separator = first_line.size() > 4 ? first_line[4] : ',';
+        options.header_row = 2;
+    } else if (first_line.find(';') != std::string_view::npos && first_line.find(',') == std::string_view::npos) {
+        options.separator = ';';
+    }
+
+    require_well_formed_quotes(text, options.separator);
+
+    csv_read::Reader reader(path, path, "import_csv", options);
+    CsvTable csv{reader.header(), {}};
+    reader.for_each_row([&csv](std::vector<std::string>&& cells, int64_t) {
+        csv.rows.push_back(std::move(cells));
+        return true;
+    });
+
+    size_t width = csv.header.size();
+    while (width > 0 && string::trim(csv.header[width - 1]).empty()) {
+        --width;
+    }
+    const size_t trailing = csv.header.size() - width;
+    csv.header.resize(width);
+    for (auto& row : csv.rows) {
+        for (size_t n = 0; n < trailing && row.size() > width && string::trim(row.back()).empty(); ++n) {
+            row.pop_back();
         }
     }
 
-    std::istringstream ss(content);
-    auto doc = rapidcsv::Document(
-        ss, rapidcsv::LabelParams(0, -1), rapidcsv::SeparatorParams(',', false, false, true, true, '"'));
-
-    if (doc.GetColumnCount() == 0) {
-        throw std::runtime_error("Cannot import_csv: CSV file is empty.");
-    }
-
-    return doc;
+    return csv;
 }
 
 // Parse a datetime string from CSV back to ISO 8601 storage format.
@@ -180,18 +227,6 @@ static void validate_columns_match(const std::vector<std::string>& csv_cols, con
     }
 }
 
-// Get CSV column names from a rapidcsv Document.
-static std::vector<std::string> get_csv_columns(const rapidcsv::Document& doc) {
-    const auto size = doc.GetColumnCount();
-
-    std::vector<std::string> cols;
-    cols.reserve(size);
-    for (size_t i = 0; i < size; ++i) {
-        cols.push_back(doc.GetColumnName(i));
-    }
-    return cols;
-}
-
 // Get DB columns in schema order from a query result, optionally excluding a column.
 static std::vector<std::string> get_db_columns(const Result& schema_result, const std::string& exclude = "") {
     std::vector<std::string> cols;
@@ -255,7 +290,7 @@ void Database::import_csv(const std::string& collection,
 
     // Read CSV, validate columns against DB schema, handle empty CSV
     auto doc = read_csv_file(path);
-    auto csv_cols = get_csv_columns(doc);
+    const auto& csv_cols = doc.header;
     auto db_cols = get_db_columns(execute("SELECT * FROM " + table_name + " LIMIT 0"), group.empty() ? "id" : "");
 
     // Scalar path: require label column before general column validation
@@ -268,8 +303,8 @@ void Database::import_csv(const std::string& collection,
     validate_columns_match(csv_cols, db_cols);
 
     // Validate per-row column count
-    for (size_t row = 0; row < doc.GetRowCount(); ++row) {
-        auto row_data = doc.GetRow<std::string>(row);
+    for (size_t row = 0; row < doc.rows.size(); ++row) {
+        const auto& row_data = doc.rows[row];
         if (row_data.size() != csv_cols.size()) {
             throw std::runtime_error("Cannot import_csv: Row " + std::to_string(row + 1) + " has " +
                                      std::to_string(row_data.size()) + " columns, but the header has " +
@@ -277,7 +312,7 @@ void Database::import_csv(const std::string& collection,
         }
     }
 
-    auto row_count = doc.GetRowCount();
+    auto row_count = doc.rows.size();
     if (row_count == 0) {
         execute_raw("PRAGMA foreign_keys = OFF");
         try {
@@ -352,26 +387,18 @@ void Database::import_csv(const std::string& collection,
                     parse_datetime_import(cell, options.date_time_format);
                 }
 
-                if (type == DataType::Integer && !is_fk) {
-                    try {
-                        (void)std::stoll(cell);
-                    } catch (...) {
-                        if (options.enum_labels.count(col_name) > 0) {
-                            resolve_enum_value(cell, col_name, options);
-                        } else {
-                            throw std::runtime_error("Cannot import_csv: Invalid integer value '" + cell +
-                                                     "' for column '" + col_name + "'.");
-                        }
+                if (type == DataType::Integer && !is_fk && !parse_integer(cell)) {
+                    if (options.enum_labels.count(col_name) > 0) {
+                        resolve_enum_value(cell, col_name, options);
+                    } else {
+                        throw std::runtime_error("Cannot import_csv: Invalid integer value '" + cell +
+                                                 "' for column '" + col_name + "'.");
                     }
                 }
 
-                if (type == DataType::Real) {
-                    try {
-                        (void)std::stod(cell);
-                    } catch (...) {
-                        throw std::runtime_error("Cannot import_csv: Invalid float value '" + cell + "' for column '" +
-                                                 col_name + "'.");
-                    }
+                if (type == DataType::Real && !parse_float(cell)) {
+                    throw std::runtime_error("Cannot import_csv: Invalid float value '" + cell + "' for column '" +
+                                             col_name + "'.");
                 }
             }
         }
@@ -434,16 +461,16 @@ void Database::import_csv(const std::string& collection,
                     }
 
                     if (type == DataType::Integer) {
-                        try {
-                            parameters.emplace_back(std::stoll(cell));
-                        } catch (...) {
+                        if (auto value = parse_integer(cell)) {
+                            parameters.emplace_back(*value);
+                        } else {
                             parameters.emplace_back(resolve_enum_value(cell, col_name, options));
                         }
                         continue;
                     }
 
                     if (type == DataType::Real) {
-                        parameters.emplace_back(std::stod(cell));
+                        parameters.emplace_back(*parse_float(cell));  // validated above
                         continue;
                     }
 
@@ -555,13 +582,12 @@ void Database::import_csv(const std::string& collection,
 
             for (size_t row = 0; row < row_count; ++row) {
                 auto id_label = read_cell(doc, id_csv_idx, row);
-                auto vi_str = read_cell(doc, vi_csv_idx, row);
-                try {
-                    element_vector_indices[id_label].push_back(std::stoll(vi_str));
-                } catch (...) {
+                auto vector_index = parse_integer(read_cell(doc, vi_csv_idx, row));
+                if (!vector_index) {
                     throw std::runtime_error(
                         "Cannot import_csv: Column vector_index must be consecutive, unique and start at 1.");
                 }
+                element_vector_indices[id_label].push_back(*vector_index);
             }
 
             for (const auto& [label, indices] : element_vector_indices) {
@@ -650,7 +676,7 @@ void Database::import_csv(const std::string& collection,
                     }
 
                     if (col_name == "vector_index") {
-                        parameters.emplace_back(std::stoll(cell));
+                        parameters.emplace_back(*parse_integer(cell));  // validated above
                         continue;
                     }
 
@@ -668,16 +694,23 @@ void Database::import_csv(const std::string& collection,
                     }
 
                     if (type == DataType::Integer) {
-                        try {
-                            parameters.emplace_back(std::stoll(cell));
-                        } catch (...) {
+                        if (auto value = parse_integer(cell)) {
+                            parameters.emplace_back(*value);
+                        } else {
                             parameters.emplace_back(resolve_enum_value(cell, col_name, options));
                         }
                         continue;
                     }
 
+                    // The group validation pass does not type-check numbers, so a bad REAL cell is
+                    // caught here, inside the transaction the catch below rolls back.
                     if (type == DataType::Real) {
-                        parameters.emplace_back(std::stod(cell));
+                        auto value = parse_float(cell);
+                        if (!value) {
+                            throw std::runtime_error("Cannot import_csv: Invalid float value '" + cell +
+                                                     "' for column '" + col_name + "'.");
+                        }
+                        parameters.emplace_back(*value);
                         continue;
                     }
 

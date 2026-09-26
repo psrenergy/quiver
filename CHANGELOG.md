@@ -7,6 +7,44 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ## [0.11.0] — unreleased
 
+### Changed
+
+- **BREAKING — `import_csv()` parses with the same CSV reader as `db:read_csv`.** Quiver no longer
+  links rapidcsv. Import used to pre-process each file as text before parsing, and that caused
+  several bugs, now fixed:
+  - A `sep=X` first line is used as the real delimiter, including after a UTF-8 BOM and for tab or
+    `|`. Previously every `;` was rewritten to `,`, so a quoted `"x;y"` was stored as `x,y` and an
+    unquoted `,` split its cell.
+  - Without a `sep=` line, a file is read as semicolon-delimited when its *header line* holds `;`
+    and no `,`.
+  - Blank lines after the header are skipped, and a lone CR ends a line.
+  - Quoted multi-line cells are no longer cut by Excel's trailing-column cleanup.
+
+  Import is stricter in three places. A numeric cell must parse whole: `1.5`, `12abc` and
+  out-of-range values are rejected for an INTEGER column, and `9.99abc` or `1,5` for a REAL column
+  (they used to be truncated). A quoted field with text after its closing quote, or never closed,
+  is rejected before anything is deleted: `malformed quoted field on line N` /
+  `unterminated quoted field on line N`. A single record over 10 MB is rejected. Some file errors
+  are now reported differently:
+
+  | Case | Before | Now |
+  | --- | --- | --- |
+  | Missing file | `could not open file: <p>` | `file not found: <p>` (also `path is a directory: <p>` and `cannot access file '<p>': …`) |
+  | 0-byte file | `CSV file is empty.` | `file '<p>' is empty` |
+  | No header line (only a `sep=` line, only a BOM, or a blank first line) | — | `header row N not found in file '<p>'` |
+  | UTF-16/32 file | — | `cannot read file '<p>': …` |
+
+  *Adapt:* update any matcher on the old messages; fix files that relied on truncated numbers or
+  stray quotes.
+
+- **BREAKING — `export_csv()` quotes a cell for `"` or CR, and no longer for a space.** Export now
+  uses `db:write_csv`'s emitter: a cell is quoted if and only if it contains the separator, `"`, CR
+  or LF. The old rule quoted a cell containing a space but not one containing a quote, so `"x"` was
+  written raw and read back as `x`. A single-column row whose only cell is empty is written as `""`
+  instead of a blank line. Parsed values are unchanged, or now correct.
+
+  *Adapt:* regenerate golden files and any byte-for-byte comparisons over exported CSVs.
+
 ### Fixed
 
 - **Julia: updating `Artifacts.toml` now invalidates the package precompile cache.** An artifact-only

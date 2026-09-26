@@ -53,9 +53,9 @@ src/                      # C++ implementation
   utils/number.h          # quiver::utils::append_number -- std::to_chars shortest round-trip
 src/csv/                    # Standalone CSV file reader/writer (see below)
   csv_read.h / csv_read.cpp   # Internal CSV reader (csv-parser, Pimpl'd) behind db:read_csv /
-                              # db:read_csv_stream -- no include/quiver/ counterpart
-  csv_write.h / csv_write.cpp # Internal CSV writer (hand-rolled, NOT Pimpl'd) behind db:write_csv
-                              # -- same no-include/quiver/-counterpart posture as csv_read
+                              # db:read_csv_stream and import_csv -- no include/quiver/ counterpart
+  csv_write.h / csv_write.cpp # Internal CSV writer (hand-rolled, NOT Pimpl'd) behind db:write_csv;
+                              # its append_record also emits export_csv -- same posture as csv_read
 src/binary/                 # Binary C++ implementation
   binary_file.cpp             # BinaryFile class (Pimpl impl) + write registry
   binary_utils.h              # Shared file-extension constants
@@ -77,21 +77,25 @@ src/expression/             # Expression C++ implementation
   expression_rename_agents.cpp     # ExpressionRenameAgents (label-axis rename)
 ```
 
-`src/csv/` is grouped by format, not by consumer: its classes never see a sol2 type, so Lua being
-their only caller today does not make them Lua code (a `src/lua/` folder would also have to take
+`src/csv/` is grouped by format, not by consumer: its classes never see a sol2 type, and their
+callers are Lua (`db:read_csv*`, `db:write_csv`) and `Database::import_csv` / `export_csv` alike
+(a `src/lua/` folder would also have to take
 `lua_runner.cpp`, whose path `bindings/js/test/lua-api-sync.test.ts` hardcodes). It holds only the
-standalone reader/writer — `database_csv_{import,export}.cpp` stay with the `database_*` family
-and `binary/csv_converter.cpp` with `binary/`. A future format helper (e.g. a Lua JSON reader)
+standalone reader/writer — `database_csv_{import,export}.cpp` stay with the `database_*` family,
+parsing through `csv_read::Reader` and emitting through `csv_write::append_record` (root design
+decision "One CSV parser, one CSV emitter"), and `binary/csv_converter.cpp` stays with `binary/`. A future format helper (e.g. a Lua JSON reader)
 gets a sibling folder (`src/json/`), which is also where the `run()` JSON encoder now in
 `lua_runner.cpp`'s anonymous namespace would move.
 
 `csv/csv_read.h`/`.cpp` is the first `.cpp` in `src/` with no `include/quiver/` public
 counterpart — every other internal helper here (`utils/string.h`, `database_internal.h`,
 `binary/binary_utils.h`) is header-only inline, and every other `QUIVER_SOURCES` entry implements
-a public header. It stays internal because there is no FFI consumer for it (Julia/Dart/Python/JS
-already have native CSV libraries; Lua needs this precisely because `io` is deliberately absent),
-so the root CLAUDE.md rule "bind every public method down to every binding" never fires — no
-documented exception needed. `Reader` is Pimpl'd specifically so csv-parser's headers never have
+a public header. It stays internal because its public surface is already bound: `import_csv`
+parses through it, and the only other caller is Lua, which needs it because `io` is deliberately
+absent (Julia/Dart/Python/JS already have native CSV libraries), so the root CLAUDE.md rule "bind
+every public method down to every binding" never fires — no documented exception needed. Import
+passes its one unsandboxed path as both `resolved_path` and `original_path`, with `"import_csv"` as
+the operation. `Reader` is Pimpl'd specifically so csv-parser's headers never have
 to be included by `lua_runner.cpp`, which already needs `/bigobj` on MSVC for sol2's template
 depth. Three `csv::CSVFormat` settings are pinned in exactly one place (`make_format`, in
 `csv_read.cpp`) because every one of the library defaults is wrong for this reader:
@@ -114,8 +118,10 @@ also yields an empty header by design.
 `csv/csv_write.h`/`.cpp` is `csv_read`'s deliberate non-Pimpl counterpart (D-37): it depends
 on nothing that must be kept out of the sol2 translation unit (no csv-parser, no third-party
 headers), so hiding its `std::ofstream` member behind a Pimpl the way `Reader` hides csv-parser
-would be cargo cult. It backs `db:write_csv` alone, with the same no-`include/quiver/`-header,
-no-`QUIVER_API`, no-C-API posture as `csv_read`. Numeric cell formatting reuses
+would be cargo cult. `Writer` backs `db:write_csv`; the free `append_record` it emits through is
+also `export_csv`'s emitter (`database_csv_export.cpp` builds the whole file with it, then writes
+it in one shot, so `Writer`'s truncate-at-open and its `Cannot write_csv` messages stay out of
+export). Same no-`include/quiver/`-header, no-`QUIVER_API`, no-C-API posture as `csv_read`. Numeric cell formatting reuses
 `quiver::utils::append_number` (`src/utils/number.h`) via `std::to_chars`'s shortest round-trip
 form with no synthetic decimal point, so a whole float and the equal integer write identical text
 (D-34); a `nil` cell and an empty-string cell are structurally indistinguishable after a CSV round
@@ -415,7 +421,9 @@ impl_->logger->debug("Opening database: {}", path);
   writes) and `TypeValidator::validate_value` (`type_validator.cpp`, scalar create/update): int64
   matches `INTEGER` or `REAL` (int-for-REAL coercion), double matches `REAL` only (a float into an
   `INTEGER` column is rejected), string matches `TEXT`/`INTEGER`(FK label)/`DATE_TIME`. Keep the two
-  in sync (root design decision).
+  in sync (root design decision). `import_csv` is the third enforcer, on CSV text: its
+  `parse_integer` / `parse_float` (`database_csv_import.cpp`) take a cell only if it parses whole,
+  so a policy change must reach them too.
 - **DATE_TIME content is checked by both halves of that policy, through one predicate**:
   `datetime::is_valid_iso8601` (`utils/datetime.h`). `TypeValidator::validate_value` calls it in its
   string branch (covering scalar create/update and every vector/set array write, so it inherits the

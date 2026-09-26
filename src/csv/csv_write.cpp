@@ -52,16 +52,12 @@ namespace quiver::csv_write {
 
 namespace fs = std::filesystem;
 
-namespace {
-
-// Emits one record into `out`. Quotes a cell iff it contains the configured separator, the quote
-// character, CR or LF (FMT-01), escaping an internal quote by doubling it. A record of exactly
-// one empty cell -- and a record of zero cells -- is emitted as a single quoted empty cell
-// (FMT-02, extended to the degenerate zero-cell case): an unquoted record of either shape is a
-// blank line, and this project's own reader (csv_read::Reader, KEEP_NON_EMPTY) discards it. A
-// multi-column record with an empty field stays unquoted -- the rule is deliberately narrow.
-// Every record -- including the last -- is terminated with a single LF (FMT-03); the stream is
-// opened in std::ios::binary so that LF is never translated to CRLF on Windows.
+// A record of exactly one empty cell -- and a record of zero cells -- is emitted as a single quoted
+// empty cell (FMT-02, extended to the degenerate zero-cell case): an unquoted record of either
+// shape is a blank line, and this project's own reader (csv_read::Reader, KEEP_NON_EMPTY) discards
+// it. A multi-column record with an empty field stays unquoted -- the rule is deliberately narrow.
+// Every record -- including the last -- is terminated with a single LF (FMT-03); callers write it
+// through a std::ios::binary stream so that LF is never translated to CRLF on Windows.
 void append_record(const std::vector<std::string>& cells, char separator, std::string& out) {
     const bool lone_empty_cell = cells.size() <= 1 && (cells.empty() || cells.front().empty());
 
@@ -95,8 +91,6 @@ void append_record(const std::vector<std::string>& cells, char separator, std::s
     }
     out += '\n';
 }
-
-}  // namespace
 
 Writer::Writer(std::string resolved_path, std::string original_path, std::string operation, Options options)
     : separator_(options.separator), original_path_(std::move(original_path)) {
