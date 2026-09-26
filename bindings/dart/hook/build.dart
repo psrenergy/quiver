@@ -62,31 +62,19 @@ Future<void> main(List<String> args) async {
               ? '${input.config.code.macOS.targetVersion}'
               : '13.3',
         },
-        // Pre-set try_run results: sqlite3-cmake probes for the GNU strerror_r with
-        // check_c_source_runs, and CMake hard-errors on try_run in cross-compiling mode
-        // without these. Both Linux (explicit toolchain file) and macOS (the iOS toolchain
-        // file sets CMAKE_SYSTEM_NAME, so CMAKE_CROSSCOMPILING is true even for a host build)
-        // land in that mode, so the value has to be per-platform rather than blanket 0:
-        // glibc's strerror_r is the GNU char*-returning form (probe succeeds, exit 0), while
-        // Darwin's is the XSI int-returning form (probe must fail; any non-zero exit sends
-        // CheckSourceRuns down its falsy path). Getting this wrong is not cosmetic --
-        // sqlite3-cmake turns a true answer into STRERROR_R_CHAR_P=1, and sqlite3.c then
-        // assigns the int return to a char* and logs it ("Incorrectly concluding that the GNU
-        // version is available could lead to a segfault", sqlite3.c:40139); that branch is
-        // dead only while sqlite3_ENABLE_THREADSAFE is OFF.
-        'HAVE_GNU_STRERROR_R_EXITCODE': targetOS == OS.linux ? '0' : '1',
-        'HAVE_GNU_STRERROR_R_EXITCODE__TRYRUN_OUTPUT': '',
       },
       // Dart SDK always uses release mode
       buildMode: BuildMode.release,
       generator: generator,
       // The iOS toolchain file sets CMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY unless strict
-      // try_compile is on, so every check_function_exists only compiles and never links.
-      // Because the probe declares the symbol itself, it then reports EVERY function as
-      // present -- including Linux-only posix_fallocate, which makes sqlite3.c fail to compile
-      // on Darwin. Linking works fine for a native build. Passed through appleArgs rather than
-      // a raw -D: the raw form would only win because native_toolchain_cmake happens to append
-      // user defines after its own, which is not part of its API.
+      // try_compile is on, so configure checks only compile and never link. Hygiene, not a live
+      // fix: every probe left in the dependency tree reads a real header (sqlite3-cmake moved
+      // from check_function_exists, whose self-declared posix_fallocate once "passed" and broke
+      // sqlite3.c on Darwin, to check_symbol_exists), so compile-only and linked answers agree.
+      // Kept because no CI job runs this hook to prove removing it safe. Passed through
+      // appleArgs rather than a raw -D: the raw form would only win because
+      // native_toolchain_cmake happens to append user defines after its own, which is not part
+      // of its API.
       appleArgs: const AppleBuilderArgs(enableStrictTryCompile: true),
     );
 

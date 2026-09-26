@@ -85,7 +85,6 @@ target_link_libraries(quiver
         sol2
         rapidcsv
         csv
-        ${CMAKE_DL_LIBS}
 )
 
 # Set library properties
