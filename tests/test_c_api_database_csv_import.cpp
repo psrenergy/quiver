@@ -413,7 +413,7 @@ TEST(DatabaseCApiCSV, ImportCSV_CannotOpenFile_ReturnsError) {
     EXPECT_EQ(quiver_database_import_csv(db, "Items", "", "/nonexistent/path/file.csv", &import_options), QUIVER_ERROR);
 
     std::string err = quiver_get_last_error();
-    EXPECT_NE(err.find("Cannot import_csv: could not open file"), std::string::npos);
+    EXPECT_NE(err.find("Cannot import_csv: file not found: /nonexistent/path/file.csv"), std::string::npos);
 
     quiver_database_close(db);
 }
