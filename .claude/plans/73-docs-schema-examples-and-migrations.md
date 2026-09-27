@@ -19,7 +19,7 @@
    ```
    `Schema::is_collection` (`src/schema.cpp` ~L100) treats `Configuration` as a collection, and
    `validate_collection` (`schema_validator.cpp` ~L80-81) throws
-   `Collection '...' must have a 'label' column`. The root CLAUDE.md lists
+   `Collection '...' must have a 'label' column`. The root AGENTS.md lists
    `label TEXT UNIQUE NOT NULL` as required. The trailing comma is also a SQL syntax error.
 2. **Self-reference FK with `ON UPDATE SET NULL`.** `rules.md` ~L80 and `attributes.md` ~L46 use
    `FOREIGN KEY(plant_spill_to) REFERENCES Plant(id) ON UPDATE SET NULL ON DELETE CASCADE`. The

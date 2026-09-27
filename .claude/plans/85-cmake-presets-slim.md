@@ -1,6 +1,6 @@
 # 85 — `CMakePresets.json`: two presets that mirror what the scripts do
 
-**Batch** 7 · **Severity** low · **Breaking** no (no script or CI uses the presets) · **Size** S · **Layers** build config, root CLAUDE.md, tests/CLAUDE.md
+**Batch** 7 · **Severity** low · **Breaking** no (no script or CI uses the presets) · **Size** S · **Layers** build config, root AGENTS.md, tests/AGENTS.md
 **Depends on** none · **Overlaps with** 86 (root `CMakeLists.txt`), 44/46/48 (their Release-tree verification steps could use the new `release` preset)
 
 ## Why
@@ -11,7 +11,7 @@ No script, workflow or checked-in editor config reads `CMakePresets.json`
   `cmake_minimum_required(VERSION 3.26.0)`);
 - pins a `windows-release` preset to the "Visual Studio 17 2022" generator, which is not installed
   here (VS 18 is);
-- has a `release` preset with `QUIVER_BUILD_TESTS=OFF`. tests/CLAUDE.md (~L127-132) has to warn
+- has a `release` preset with `QUIVER_BUILD_TESTS=OFF`. tests/AGENTS.md (~L127-132) has to warn
   about that trap: "Do not use the plain `release` CMake preset for this ... it produces a Release
   tree with no test binary at all and would report success while testing nothing";
 - keeps a host-conditioned `windows-release`/`linux-release` pair and a hidden `base` that sets
@@ -21,7 +21,7 @@ No script, workflow or checked-in editor config reads `CMakePresets.json`
 
 - **Maintainer decision (binding):** slim, don't delete. Keep `dev` and `release`, both Ninja, both
   with tests and the C API ON, with matching build and test presets. Set `cmakeMinimumRequired` to
-  3.26. Update the root CLAUDE.md Presets bullet and the tests/CLAUDE.md trap note.
+  3.26. Update the root AGENTS.md Presets bullet and the tests/AGENTS.md trap note.
 - Pin `"generator": "Ninja"` on both presets. Otherwise Windows falls back to the multi-config VS
   generator, where `CMAKE_BUILD_TYPE` is ignored.
 - Presets build into `build/<presetName>/`, which is separate from the manual `build/` directory.
@@ -72,7 +72,7 @@ Check that the root `CMakeLists.txt` sets `CMAKE_EXPORT_COMPILE_COMMANDS` itself
 (`grep -n "EXPORT_COMPILE_COMMANDS" CMakeLists.txt`). If it does not, keep that cache variable in
 both presets.
 
-### Root `CLAUDE.md`, Build System → "Presets" bullet
+### Root `AGENTS.md`, Build System → "Presets" bullet
 
 New text:
 > - **Presets** (`CMakePresets.json`): `dev` (Debug) and `release` (Release), both Ninja with tests
@@ -80,7 +80,7 @@ New text:
 >   `build/<presetName>/`; the plain `build/` directory is the manual configure above. No script or
 >   CI job uses them — they are for IDEs and ad-hoc Release test runs.
 
-### `tests/CLAUDE.md` (~L127-132)
+### `tests/AGENTS.md` (~L127-132)
 
 Replace the "Do not use the plain `release` CMake preset ... Configure a separate tree explicitly:
 `cmake -S . -B build-release ...`" text with:
@@ -103,7 +103,7 @@ Configure and build with both presets once.
 ## Acceptance criteria
 
 - [ ] Two configure presets, both Ninja with tests ON. `cmakeMinimumRequired` is 3.26.
-- [ ] The root CLAUDE.md and tests/CLAUDE.md match.
+- [ ] The root AGENTS.md and tests/AGENTS.md match.
 
 ## Pitfalls
 

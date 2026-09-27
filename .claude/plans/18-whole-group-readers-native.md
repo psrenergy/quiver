@@ -1,6 +1,6 @@
 # 18 — Whole-group readers: Julia/Python call the native C API; JS gains them
 
-**Batch** 3 · **Severity** high (silent wrong data, or a crash, on any nullable multi-column group) · **Breaking** no: dense groups read back exactly as before; a group with NULL cells used to crash or mis-pair and now returns `nothing`/`None` in place; JS only gains methods · **Size** M · **Layers** Julia binding, Python binding (+ cdef), JS binding (+ loader), one test schema table, tests in Julia/Python/JS, root + `bindings/{julia,python,js}` + `tests/` CLAUDE.md, JS README, CHANGELOG. **No** C++ core, C API, Lua or Dart code change.
+**Batch** 3 · **Severity** high (silent wrong data, or a crash, on any nullable multi-column group) · **Breaking** no: dense groups read back exactly as before; a group with NULL cells used to crash or mis-pair and now returns `nothing`/`None` in place; JS only gains methods · **Size** M · **Layers** Julia binding, Python binding (+ cdef), JS binding (+ loader), one test schema table, tests in Julia/Python/JS, root + `bindings/{julia,python,js}` + `tests/` AGENTS.md, JS README, CHANGELOG. **No** C++ core, C API, Lua or Dart code change.
 
 **Depends on** none.
 
@@ -12,12 +12,12 @@
 - **32** (JS `mod.ts` re-exports `src/index.ts`): this plan changes which module `src/index.ts` takes `TimeSeriesData` from. It does not touch `mod.ts`, which keeps working because it re-exports the name from `./src/index.ts`.
 - **36** (Julia `read_time_series_group` frees in `finally`) and **40** (Dart group decoders free in `finally`): this plan deliberately leaves `read_time_series_group` (Julia, Python, JS logic) and Dart's `_decodeGroupRows` unchanged apart from moving the JS body. The new Julia/Python decoders already free in `finally`.
 - **42** (rename `read_{vector,set}_date_time_by_id` → `_date_times_by_id`): after this plan, `read_vector_group_by_id` / `read_set_group_by_id` no longer call those functions, so plan 42 has two fewer call sites (`read_vectors_by_id` / `read_sets_by_id` still call them).
-- **41** (stale "not positionally aligned" comments), **30** (Python stale docstrings, `_c_api.py` header), **21 / 22** (`_c_api.py` / `loader.ts` symbol edits), **74** (JS README), **75** (`tests/CLAUDE.md`): these touch the same files, not the same lines. This plan adds two README lines, and plan 74 does the full listing.
+- **41** (stale "not positionally aligned" comments), **30** (Python stale docstrings, `_c_api.py` header), **21 / 22** (`_c_api.py` / `loader.ts` symbol edits), **74** (JS README), **75** (`tests/AGENTS.md`): these touch the same files, not the same lines. This plan adds two README lines, and plan 74 does the full listing.
 - **01–17** may already have added `### Added` / `### Fixed` entries under `## [0.11.0] — unreleased`. Append to them; don't overwrite.
 
 ## Why
 
-`Database::read_vector_group_by_id` / `read_set_group_by_id` (C++, `src/database_read.cpp` ~L196-216) run **one** SELECT over every value column and keep SQL NULL cells as `Value{nullptr}`. They are exposed in C as `quiver_database_read_{vector,set}_group_by_id` (`src/c/database_read.cpp` ~L399-473): columnar typed arrays, a per-cell presence mask, freed by `quiver_database_free_time_series_data`. Dart calls them natively (`bindings/dart/lib/src/database_read.dart` ~L1020-1176, `_decodeGroupRows`). Root CLAUDE.md tells callers to "prefer `read_vector_group_by_id` / `read_set_group_by_id`, which are row- and NULL-correct".
+`Database::read_vector_group_by_id` / `read_set_group_by_id` (C++, `src/database_read.cpp` ~L196-216) run **one** SELECT over every value column and keep SQL NULL cells as `Value{nullptr}`. They are exposed in C as `quiver_database_read_{vector,set}_group_by_id` (`src/c/database_read.cpp` ~L399-473): columnar typed arrays, a per-cell presence mask, freed by `quiver_database_free_time_series_data`. Dart calls them natively (`bindings/dart/lib/src/database_read.dart` ~L1020-1176, `_decodeGroupRows`). Root AGENTS.md tells callers to "prefer `read_vector_group_by_id` / `read_set_group_by_id`, which are row- and NULL-correct".
 
 **Julia** has the generated ccalls (`bindings/julia/src/c_api.jl` ~L298-304) but never calls them. `bindings/julia/src/database_read.jl`, `read_vector_group_by_id` (currently ~L541-582; `read_set_group_by_id` ~L584-625 is the same with `set` in place of `vector`) zips the NULL-dropping per-column readers instead:
 
@@ -57,7 +57,7 @@ Reproduction with `tests/schemas/valid/multi_column_groups.sql` (`Items_vector_r
 
 The test suites work around it instead of testing it: `bindings/julia/test/test_database_update.jl` (~L929) says "asserted in SQL: the per-column reader drops NULLs", and `bindings/python/tests/test_database_update.py` `test_accepts_null_cells` (~L387) says "Asserted in SQL, not through read_vector_group_by_id". The C++ core is right: `UpdateGroupKeepsColumnPresentOnlyInALaterRow` (`tests/test_database_update.cpp` ~L1302) passes today (confirmed with `build/bin/quiver_tests.exe --gtest_filter=*UpdateGroupKeepsColumnPresentOnlyInALaterRow*`).
 
-**JS** binds neither symbol. `bindings/js/src/loader.ts` has no entry, and a grep for `GroupById` in `bindings/js/src` finds nothing. JS does bind all four group *writers*. So a JS caller has no NULL-correct multi-column group read at all: `bindings/js/test/database-update.test.ts` "writes null cells as SQL NULL" (~L200) also asserts in SQL. The Lua reference that ships in this package (`bindings/js/src/lua-api.ts` ~L391, ~L856) tells script authors to "do that read in the host binding", which JS cannot do today. No documented exception covers the omission (root CLAUDE.md lists JS-datetime, binary/expression, the Lua whole-group readers, Lua booleans and Lua CSV).
+**JS** binds neither symbol. `bindings/js/src/loader.ts` has no entry, and a grep for `GroupById` in `bindings/js/src` finds nothing. JS does bind all four group *writers*. So a JS caller has no NULL-correct multi-column group read at all: `bindings/js/test/database-update.test.ts` "writes null cells as SQL NULL" (~L200) also asserts in SQL. The Lua reference that ships in this package (`bindings/js/src/lua-api.ts` ~L391, ~L856) tells script authors to "do that read in the host binding", which JS cannot do today. No documented exception covers the omission (root AGENTS.md lists JS-datetime, binary/expression, the Lua whole-group readers, Lua booleans and Lua CSV).
 
 Principles violated: "Intelligence: Logic resides in C++ layer. Bindings/wrappers remain thin" (Julia and Python re-implemented the reader, wrongly), "All public C++ methods should be bound to C API, then to Julia/Dart/Python/JS/Lua" (JS), and "Homogeneity".
 
@@ -69,11 +69,11 @@ Principles violated: "Intelligence: Logic resides in C++ layer. Bindings/wrapper
   - **Python keeps the synthetic 0-based `vector_index`.**
   - JS `readVectorGroupById` / `readSetGroupById` return **rows**, `Record<string, number | string | null>[]`, for homogeneity with Dart/Python/Julia. **DATE_TIME stays a string.** The mask decode is **shared with `readTimeSeriesGroup` via one helper in `group-columns.ts`**, not copied.
   - The C API set-reader test is plan 19.
-  - Update the root CLAUDE.md "Multi-column group readers" table and the "still compose" caveat, `bindings/python/CLAUDE.md` and `bindings/js/CLAUDE.md`.
-- **Root design decision "group writers are column-oriented while the group readers are row-oriented"** (root CLAUDE.md ~L67-71). Row shape is kept in every binding, and JS joins it. Its binding list is updated (docs step), not relitigated.
+  - Update the root AGENTS.md "Multi-column group readers" table and the "still compose" caveat, `bindings/python/AGENTS.md` and `bindings/js/AGENTS.md`.
+- **Root design decision "group writers are column-oriented while the group readers are row-oriented"** (root AGENTS.md ~L67-71). Row shape is kept in every binding, and JS joins it. Its binding list is updated (docs step), not relitigated.
 - **Root design decision "JS keeps a string-based datetime surface"**: the JS readers return DATE_TIME cells as the stored ISO string.
 - **Root design decision "Lua has no row-aligned whole-group readers"**: Lua is not touched.
-- **Root "Do Not Fix": "Collapsing per-method FFI boilerplate in Dart/Python into closure-parameterized helpers"**. Python therefore keeps one expanded FFI call block per reader and shares only the *decoder*, a data codec like `_marshal_group_columns`. Julia's own documented convention (`bindings/julia/CLAUDE.md`, "One marshaller for every group writer": `_update_group_columns(db, update, ...)` takes the C entry point as an argument) is followed there: `_read_group_rows(db, read_group, ...)`. JS follows its own precedent, `updateGroupColumns(handle, caller, cFn, ...)`.
+- **Root "Do Not Fix": "Collapsing per-method FFI boilerplate in Dart/Python into closure-parameterized helpers"**. Python therefore keeps one expanded FFI call block per reader and shares only the *decoder*, a data codec like `_marshal_group_columns`. Julia's own documented convention (`bindings/julia/AGENTS.md`, "One marshaller for every group writer": `_update_group_columns(db, update, ...)` takes the C entry point as an argument) is followed there: `_read_group_rows(db, read_group, ...)`. JS follows its own precedent, `updateGroupColumns(handle, caller, cFn, ...)`.
 - **"Tests must exist in every layer the behaviour is visible in"**: the behaviour changes in Julia, Python and JS, and those layers get tests. The C++ core is already tested (`UpdateGroupMultiColumnRoundTrips`, `UpdateGroupKeepsColumnPresentOnlyInALaterRow`, `ReadSetByIdOrderMatchesGroupReader`). The C API vector reader already has `ReadVectorGroupByIdPreservesNullCells`, and the set one is plan 19. Dart is unchanged.
 - **Set row order is "consistent across every reader of the group, otherwise unspecified"** (root design decision). Set tests compare contents, never literal positions.
 - Error messages: no new message is crafted. Unknown group or collection errors still come from the C++ core (`Vector group not found: ...`, raised by the `get_vector_metadata` call inside `quiver_database_read_vector_group_by_id`), so they are unchanged in Julia and Python.
@@ -1072,7 +1072,7 @@ No new tests. The new schema table has to leave every existing suite green: `tes
 
 ## Docs and changelog
 
-### Root `CLAUDE.md`
+### Root `AGENTS.md`
 
 1. Design decision (currently ~L67-68). Old:
    > - **The group writers are column-oriented while the group readers are row-oriented** in Dart and
@@ -1106,7 +1106,7 @@ No new tests. The new schema table has to leave every existing suite green: `tes
 
 4. Delete the whole "Multi-column group readers" block at the end of the file (currently ~L807-813: the blank line, `**Multi-column group readers (Julia, Dart, and Python):**`, and the 4-line table). It sits under "Binding-Only Convenience Methods ... These have no direct C++ or C API counterpart", which these readers contradict, and item 3 replaces it. Make sure the file still ends with a single newline after the "Scoped resource factories" paragraph.
 
-### `bindings/julia/CLAUDE.md`
+### `bindings/julia/AGENTS.md`
 
 After the "**One marshaller for every row upsert**" bullet (currently ~L79-84), add:
 
@@ -1120,7 +1120,7 @@ After the "**One marshaller for every row upsert**" bullet (currently ~L79-84), 
 >   column, so one NULL cell mis-paired rows or threw `BoundsError`. `read_time_series_group` keeps its
 >   own decode on purpose: it returns columns and parses only the dimension column, by name.
 
-### `bindings/python/CLAUDE.md`
+### `bindings/python/AGENTS.md`
 
 1. In the `_marshal_group_columns` bullet (currently ~L89-94), old last sentence:
    > Note that the group
@@ -1142,7 +1142,7 @@ After the "**One marshaller for every row upsert**" bullet (currently ~L79-84), 
    >   `quiver_database_free_time_series_data` in a `finally`. `read_time_series_group` keeps its own
    >   loop (columns, dimension-only parsing).
 
-### `bindings/js/CLAUDE.md`
+### `bindings/js/AGENTS.md`
 
 1. Layout (currently L16). Old: `src/group-columns.ts # Shared columnar marshaller for the group writers (by id and by label)`. New: `src/group-columns.ts # Shared columnar marshaller (group writers) and decoder (group readers)`.
 2. In the "**`src/group-columns.ts` is the one columnar marshaller**" bullet (currently ~L70-77), append:
@@ -1164,7 +1164,7 @@ After the "**One marshaller for every row upsert**" bullet (currently ~L79-84), 
    >   only the former admits `boolean`, since no group reader produces one and its return type should
    >   not claim it.
 
-### `tests/CLAUDE.md`
+### `tests/AGENTS.md`
 
 In the `multi_column_groups.sql` bullet (currently ~L171-175), old:
 > `Items_vector_readings` (`amount`, `score`) and `Items_set_codes` (`code`, `weight`),
@@ -1238,7 +1238,7 @@ From the repo root (Git Bash paths shown; the `.bat` files also run from PowerSh
 - [ ] `TimeSeriesData` is defined in `group-columns.ts`, exported from `src/index.ts`, and still exported by name from `mod.ts`.
 - [ ] New tests exist and pass in Julia (3 testsets), Python (4 methods), and JS (6 tests). The three SQL-workaround assertions (Julia `test_database_update.jl`, Python `test_accepts_null_cells`, JS "writes null cells as SQL NULL") now go through the reader.
 - [ ] The C++, C API, Dart, Julia, Python and JS suites are all green. `bun run lint` is clean for the touched files. `scripts/format.bat` was applied.
-- [ ] Root, Julia, Python, JS and tests CLAUDE.md are updated as specified. The "Multi-column group readers" block is gone, and two rows were added to the cross-layer table. The JS README has the two lines.
+- [ ] Root, Julia, Python, JS and tests AGENTS.md are updated as specified. The "Multi-column group readers" block is gone, and two rows were added to the cross-layer table. The JS README has the two lines.
 - [ ] CHANGELOG has the `### Added` (JS) and `### Fixed` (Julia/Python) entries under 0.11.0. Neither is marked BREAKING.
 
 ## Pitfalls
@@ -1248,7 +1248,7 @@ From the repo root (Git Bash paths shown; the `.bat` files also run from PowerSh
 - **Don't fold `read_time_series_group` into the new Julia/Python decoders.** It parses by column *name* and returns other DATE_TIME columns as strings, so sharing would change its return types. Only JS shares, because JS parses nothing.
 - **Python house style.** Don't turn `_decode_group_rows` into a helper that makes the FFI call through a passed-in `lib` function. That is the closure-parameterized FFI helper on the root "Do Not Fix" list. Julia is different: its own `_update_group_columns` convention takes the C function, so `_read_group_rows` does too.
 - **JS name collision.** `group-columns.ts` imports `read` from `bun:ffi` for `read.ptr`. Name the C-function parameter `readGroup`, never `read`. For the same reason, don't name the Julia parameter `read`: it would shadow `Base.read`.
-- **JS out-params.** Pass the `.buf` TypedArrays to the FFI call and read them with `readPtrOut` / `readUint64Out` after the call. Never precompute `ptr(...)`: that is the documented Bun relocation bug in `bindings/js/CLAUDE.md`. The moved code already does this, so keep it verbatim.
+- **JS out-params.** Pass the `.buf` TypedArrays to the FFI call and read them with `readPtrOut` / `readUint64Out` after the call. Never precompute `ptr(...)`: that is the documented Bun relocation bug in `bindings/js/AGENTS.md`. The moved code already does this, so keep it verbatim.
 - **JS `TimeSeriesData` move.** Three import sites change (`time-series.ts`, `database.ts`, `index.ts`). Miss one and Bun still runs, because types are erased and nothing type-checks this repo, but the source is wrong. Grep `TimeSeriesData` across `bindings/js` after the edit. `mod.ts` needs no edit.
 - **Unused imports in `time-series.ts`.** Plan 17 edits the same file first. Remove `toArrayBuffer` / `decodePtrArray` / `DATA_TYPE_DATE_TIME` only if the grep shows no remaining use.
 - **Set tests.** Never assert a literal set row order. It is "consistent, otherwise unspecified" by root design decision.

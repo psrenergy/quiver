@@ -65,7 +65,7 @@ none of them is caught automatically.
 
 A key-type check gives one stable Pattern 1 message in Debug and Release, and the reference can
 then quote it. That is the same style as the file's `csv_options_entries` / `csv_separator_from_lua`
-key checks, which `src/CLAUDE.md` describes.
+key checks, which `src/AGENTS.md` describes.
 
 ## Constraints and decisions
 
@@ -197,7 +197,7 @@ the `update_set_group ... "must be an array of values"` test (~L346):
 Run both on Debug **and** on a Release test tree. Before the fix, Release produces a different or
 no error. Configure the Release tree once with
 `cmake -S . -B build-release -G Ninja -DCMAKE_BUILD_TYPE=Release -DQUIVER_BUILD_TESTS=ON -DQUIVER_BUILD_C_API=ON`
-(see tests/CLAUDE.md).
+(see tests/AGENTS.md).
 
 ### `tests/test_lua_runner_query.cpp` — nil parameters
 
@@ -226,7 +226,7 @@ the trailing-nil test only.
 
 ## Docs and changelog
 
-- `src/CLAUDE.md`, in the "Three guards in the Lua layer's decoders" list: add a fourth bullet.
+- `src/AGENTS.md`, in the "Three guards in the Lua layer's decoders" list: add a fourth bullet.
   "`collect_group_columns` checks each column key is a string before converting it (Release sol2
   getters are unchecked), so a table of row tables throws one Pattern 1 message in every build."
 - `CHANGELOG.md`, under `## [0.11.0] — unreleased` → `### Fixed`:

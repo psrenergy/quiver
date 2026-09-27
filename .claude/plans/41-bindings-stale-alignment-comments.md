@@ -1,7 +1,7 @@
 # 41 — All bindings: fix the stale "not positionally aligned" reader comments
 
 **Batch** 4 · **Severity** low · **Breaking** no (comments only) · **Size** S · **Layers** Julia, Dart, Python, JS doc comments
-**Depends on** none · **Overlaps with** 30 (Python docstrings; plan 30 deliberately leaves the alignment text to this plan), 42 (renames the Julia/Python date-time readers whose comments are edited here — if 42 lands first, the function names next to these comments differ, the comment text does not), 75 (fixes the same stale claim in `tests/CLAUDE.md:140`)
+**Depends on** none · **Overlaps with** 30 (Python docstrings; plan 30 deliberately leaves the alignment text to this plan), 42 (renames the Julia/Python date-time readers whose comments are edited here — if 42 lands first, the function names next to these comments differ, the comment text does not), 75 (fixes the same stale claim in `tests/AGENTS.md:140`)
 
 ## Why
 
@@ -9,7 +9,7 @@ The core's vector/set bulk readers now LEFT JOIN the group table onto the collec
 with no group rows is an empty inner list, and entry *i* is the same element as `read_element_ids`
 entry *i*. See `src/database_read.cpp`,
 `"SELECT c.id, g." + attribute + " FROM " + collection + " c LEFT JOIN " + ... + " ORDER BY c.rowid, ..."`,
-and the root CLAUDE.md design decision "Bulk reads of one collection are positionally aligned, but
+and the root AGENTS.md design decision "Bulk reads of one collection are positionally aligned, but
 still cell-dense". Only the "NULL cells are dropped" half of these binding comments is still true.
 The other half claims the opposite of what the code does, and of what each binding's own tests
 assert (e.g. `bindings/julia/test/test_database_read_vector.jl` "One entry per element: the element
@@ -155,7 +155,7 @@ New:
 /** Same shape as `readVectorBooleans`: one entry per element, NULL cells dropped. */
 ```
 
-### `bindings/js/CLAUDE.md` (~L95)
+### `bindings/js/AGENTS.md` (~L95)
 
 The "Time-series NULL cells" bullet says string columns use the null-guarded loop, "never
 `decodeStringArray`, which constructs a `CString` from a NULL pointer". Check that reason against
@@ -170,7 +170,7 @@ matters most for the Python triple-quoted docstrings and the Dart `///` blocks.
 
 ## Docs and changelog
 
-No CHANGELOG entry. Plan 75 fixes the `tests/CLAUDE.md` copy of this claim ("omission of elements
+No CHANGELOG entry. Plan 75 fixes the `tests/AGENTS.md` copy of this claim ("omission of elements
 without group rows").
 
 ## Verification
@@ -199,4 +199,4 @@ From the repo root:
 ## Out of scope
 
 - The vector/set readers' NULL-dropping itself (a documented design decision).
-- `tests/CLAUDE.md` (plan 75).
+- `tests/AGENTS.md` (plan 75).

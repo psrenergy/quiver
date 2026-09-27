@@ -7,7 +7,7 @@
 
 `src/lua_runner.cpp`, `read_vectors_by_id_lua` (currently ~L1801-1837) and `read_sets_by_id_lua`
 (~L1839-1874), are near-clones. Each hand-writes the vector→table conversion that the file's
-`to_lua_table` overloads already do. `src/CLAUDE.md` says "`to_lua_table<T>` overloads (flat +
+`to_lua_table` overloads already do. `src/AGENTS.md` says "`to_lua_table<T>` overloads (flat +
 nested) are the only vector→table marshalers". Current shape:
 
 ```cpp
@@ -99,7 +99,7 @@ TEST_F(LuaRunnerTest, ReadVectorsByIdEmptyGroupIsEmptyTable) {
 
 ## Docs and changelog
 
-None. `src/CLAUDE.md` already states that `to_lua_table` is the only marshaler, and this makes it
+None. `src/AGENTS.md` already states that `to_lua_table` is the only marshaler, and this makes it
 true.
 
 ## Verification

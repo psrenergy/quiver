@@ -60,17 +60,17 @@ The same wrong answer reaches every FFI binding. `quiver_database_read_time_seri
 
 There is a second, smaller inconsistency: a table whose date column is *outside* the key. Take `Meter_time_series_blocks(id, block INTEGER NOT NULL, date_time TEXT, value REAL, PRIMARY KEY (id, block))`, also reproduced with the CLI. Today its metadata reports `date_time` as the dimension, while `upsert_time_series_row` keys on `block` alone. `describe` prints `block(INTEGER), [date_time], value(REAL)`.
 
-Principles violated: a single definition of one concept (root CLAUDE.md "Intelligence: logic resides in C++" plus "Simple solutions"), and "Declaration order everywhere / nothing reports alphabetical order" (`src/CLAUDE.md`, Core Internals).
+Principles violated: a single definition of one concept (root AGENTS.md "Intelligence: logic resides in C++" plus "Simple solutions"), and "Declaration order everywhere / nothing reports alphabetical order" (`src/AGENTS.md`, Core Internals).
 
 ## Constraints and decisions
 
 - **Maintainer decision (binding):** keep the full predicate `col.type == DataType::DateTime || is_date_time_column(col_name)`. Apply it as a filter over `find_dimension_columns`, which returns the PK columns in declaration order. Do **not** narrow it to `DataType::DateTime` alone.
 - **Maintainer decision (binding):** the regression tests use a **new** schema file under `tests/schemas/valid/`. Do not modify shared schemas such as `nullable_time_series.sql`.
-- Root CLAUDE.md "Status: WIP project - breaking changes acceptable" and "Changelog: ... Prefix a breaking one **BREAKING** and say what a caller must do". 0.11.0 is unreleased and already a minor bump, so there is no manifest bump.
-- Root CLAUDE.md "Error Messages": the existing Pattern 2 text `Dimension column not found: time series table '<table>'` is reused unchanged. No new message.
-- Root CLAUDE.md "Self-Updating": update `src/CLAUDE.md` (nearest to `database_internal.h` and `database_describe.cpp`), root CLAUDE.md (Schema Conventions / Time Series Tables, which states the dimension rule), and `tests/CLAUDE.md` (schema list).
-- Root CLAUDE.md "Time-series group data is column-oriented", and the design decision on time-series NULL masks ("Lua ... the dimension column(s) are the row-count authority"). Both are unchanged, and this fix is what makes them true for a table with a second `date_` column.
-- `src/CLAUDE.md` Lua bullet: `time_series_rows_from_lua` discovers dimensions through the public metadata, as "`dimension_column` plus any `value_columns` with `primary_key` set". No Lua code change is needed. With the fix, a non-key `date_` column is an ordinary value column, not primary-key, so Lua lets it be sparse.
+- Root AGENTS.md "Status: WIP project - breaking changes acceptable" and "Changelog: ... Prefix a breaking one **BREAKING** and say what a caller must do". 0.11.0 is unreleased and already a minor bump, so there is no manifest bump.
+- Root AGENTS.md "Error Messages": the existing Pattern 2 text `Dimension column not found: time series table '<table>'` is reused unchanged. No new message.
+- Root AGENTS.md "Self-Updating": update `src/AGENTS.md` (nearest to `database_internal.h` and `database_describe.cpp`), root AGENTS.md (Schema Conventions / Time Series Tables, which states the dimension rule), and `tests/AGENTS.md` (schema list).
+- Root AGENTS.md "Time-series group data is column-oriented", and the design decision on time-series NULL masks ("Lua ... the dimension column(s) are the row-count authority"). Both are unchanged, and this fix is what makes them true for a table with a second `date_` column.
+- `src/AGENTS.md` Lua bullet: `time_series_rows_from_lua` discovers dimensions through the public metadata, as "`dimension_column` plus any `value_columns` with `primary_key` set". No Lua code change is needed. With the fix, a non-key `date_` column is an ordinary value column, not primary-key, so Lua lets it be sparse.
 
 Alternatives considered and rejected:
 - `find_dimension_columns(t).front()`: rejected because for `PRIMARY KEY (id, block, date_time)` with `block` declared first it returns `block`. The date filter is required.
@@ -81,13 +81,13 @@ Alternatives considered and rejected:
 - Leaving `describe`'s name-based bracketing (`print_group_columns`) alone: rejected because it is the third definition of the same concept, and both verifiers flagged it. The fix is one token. It is the only display change.
 
 Overlaps (all later plans; this plan runs first in numeric order):
-- **03** (`update_time_series_group` INSERT from the union of row keys): edits the same file, `src/database_time_series.cpp`, but a different block, plus the `src/CLAUDE.md` Lua bullet. This plan does **not** edit that bullet or `update_time_series_group`.
+- **03** (`update_time_series_group` INSERT from the union of row keys): edits the same file, `src/database_time_series.cpp`, but a different block, plus the `src/AGENTS.md` Lua bullet. This plan does **not** edit that bullet or `update_time_series_group`.
 - **04** (`read_time_series_row` multi-dim guard + ON-clause filter): edits `read_time_series_row`, which keeps calling `internal::find_dimension_column`. It also edits `docs/time_series.md` ~L52-55; this plan edits ~L23-26 only. **Constraint for 04:** keep resolving the date axis through `find_dimension_column`. The test `Database.GetTimeSeriesMetadataDateColumnOutsidePrimaryKeyThrows` added here asserts that `read_time_series_row` on `Meter.blocks` throws. A plain `find_dimension_columns(...).front()` would make it return values ordered by `block`.
 - **06** (SchemaValidator parent FK for set/time-series tables): the new schema here already declares `id ... REFERENCES <Parent>(id) ON DELETE CASCADE ON UPDATE CASCADE` on both time-series tables, so it keeps validating after 06.
 - **57** (`group_table_name` lifted out of `database_describe.cpp`, `require_group_table`): touches `database_describe.cpp` and `get_time_series_metadata`, not `print_group_columns`' condition or `find_dimension_column`.
 - **58** (import/export share a group lookup): notes that "Export still needs `internal::find_dimension_column(*table_def)`". It will inherit the PK-based definition from here.
 - **67** (moves C++ describe content tests into `tests/test_database_describe.cpp`): the test added here goes into that same file. There is no conflict, but expect a textual neighbour.
-- **75 / 76** (`tests/CLAUDE.md` / `src/CLAUDE.md` fixes): they edit different sentences of the same files.
+- **75 / 76** (`tests/AGENTS.md` / `src/AGENTS.md` fixes): they edit different sentences of the same files.
 
 ## Changes
 
@@ -740,10 +740,10 @@ Before the fix, `dimensionColumn` is `"date_approved"`, the key order is swapped
 
 ## Docs and changelog
 
-1. **`src/CLAUDE.md`**, File Map line:
+1. **`src/AGENTS.md`**, File Map line:
    - Old: `  database_internal.h     # internal:: helpers - read templates, value_matches_type, metadata converters`
    - New: `  database_internal.h     # internal:: helpers - read templates, value_matches_type, metadata converters, time-series dimension lookup`
-2. **`src/CLAUDE.md`**, "Core Internals Worth Knowing": insert a new bullet directly after the bullet that starts `- **Declaration order everywhere**:`.
+2. **`src/AGENTS.md`**, "Core Internals Worth Knowing": insert a new bullet directly after the bullet that starts `- **Declaration order everywhere**:`.
    ```
    - **One definition of a time series' dimensions** (`database_internal.h`): `find_dimension_columns`
      is every primary-key column except `id`, in declaration order — what `update_time_series_group`
@@ -759,10 +759,10 @@ Before the fix, `dimensionColumn` is `"date_approved"`, the key order is swapped
      every reader throw `Dimension column not found`, while the writers, which need only the key,
      still work. `describe`'s brackets (`print_group_columns`) mark the same primary-key set.
    ```
-3. **Root `CLAUDE.md`**, Schema Conventions, "### Time Series Tables":
+3. **Root `AGENTS.md`**, Schema Conventions, "### Time Series Tables":
    - Old: ``Named `{Collection}_time_series_{name}` with a dimension (ordering) column whose name starts with `date_` (e.g., `date_time`), stored as ISO 8601 text (`YYYY-MM-DDTHH:MM:SS`):``
    - New: ``Named `{Collection}_time_series_{name}` with a dimension (ordering) column: the first primary-key column after `id` whose name starts with `date_` (e.g., `date_time`), stored as ISO 8601 text (`YYYY-MM-DDTHH:MM:SS`). Any other `date_` column is an ordinary value column:``
-4. **`tests/CLAUDE.md`**, "## Schemas", `valid/` list:
+4. **`tests/AGENTS.md`**, "## Schemas", `valid/` list:
    - Old: `` `multi_time_series.sql`, `nullable_time_series.sql`, `relations.sql` ``
    - New: `` `multi_time_series.sql`, `nullable_time_series.sql`, `relations.sql`, `time_series_date_columns.sql` ``
    - Add a sub-bullet after the `multi_column_groups.sql` sub-bullet:
@@ -790,7 +790,7 @@ Before the fix, `dimensionColumn` is `"date_approved"`, the key order is swapped
      `date_` column is an ordinary value column: it may be NULL and `read_time_series_row` can read
      it. The bindings convert their native datetime types to and from this format automatically.
      ```
-6. No change to `bindings/js/src/lua-api.ts` (the Lua surface is unchanged, and `dimension_column = "date_time"` there stays correct), the binding READMEs, or any binding `CLAUDE.md`. Their "the dimension column's mask is always all 1" sentences become true for this schema; they were never edited.
+6. No change to `bindings/js/src/lua-api.ts` (the Lua surface is unchanged, and `dimension_column = "date_time"` there stays correct), the binding READMEs, or any binding `AGENTS.md`. Their "the dimension column's mask is always all 1" sentences become true for this schema; they were never edited.
 7. **`CHANGELOG.md`**: append under `## [0.11.0] — unreleased` → `### Changed`, after the last existing bullet of that subsection, which is the `export_csv()` quoting entry ending `*Adapt:* regenerate golden files ...`. Plan 01 may have added bullets before this one, so append after whatever is last in `### Changed`:
    ```
    - **BREAKING — a time series' dimension column is the date column of its primary key.** The
@@ -839,7 +839,7 @@ From the repo root (PowerShell):
 - [ ] `tests/schemas/valid/time_series_date_columns.sql` exists with the `Plant` and `Meter` collections exactly as above. No shared schema is modified.
 - [ ] The new tests pass: 4 C++ core tests in 3 files, 1 describe test, 2 C API tests, 1 Lua test, and 1 each in Julia, Dart, Python and JS. All pre-existing tests still pass unchanged.
 - [ ] No C API, FFI declaration, binding wrapper or `lua_runner.cpp` change. No generator run.
-- [ ] `src/CLAUDE.md` (file map plus the new bullet), root `CLAUDE.md` (Time Series Tables sentence), `tests/CLAUDE.md` (schema list plus sub-bullet) and `docs/time_series.md` (~L23-26) are updated as specified.
+- [ ] `src/AGENTS.md` (file map plus the new bullet), root `AGENTS.md` (Time Series Tables sentence), `tests/AGENTS.md` (schema list plus sub-bullet) and `docs/time_series.md` (~L23-26) are updated as specified.
 - [ ] A CHANGELOG **BREAKING** entry is under `[0.11.0] — unreleased` → `### Changed`, with an *Adapt:* line. No manifest version bump.
 - [ ] `scripts/format.bat` leaves no diff outside the touched files, and `scripts/test-all.bat` is green.
 
@@ -859,7 +859,7 @@ From the repo root (PowerShell):
 
 ## Out of scope
 
-- `update_time_series_group` building its INSERT from `rows[0]`, and the related "rows stay uniform" caveats in `src/CLAUDE.md` / `src/c/CLAUDE.md`: **plan 03**.
+- `update_time_series_group` building its INSERT from `rows[0]`, and the related "rows stay uniform" caveats in `src/AGENTS.md` / `src/c/AGENTS.md`: **plan 03**.
 - `read_time_series_row` on multi-dimension groups (Pattern 1 guard, ON-clause `IS NOT NULL`) and its `docs/time_series.md` ~L52-55 text: **plan 04**.
 - The `read_time_series_row` C API presence mask: **plan 17**.
 - The group-table lookup and message cleanup in `get_time_series_metadata` / `find_time_series_table`: **plan 57**.

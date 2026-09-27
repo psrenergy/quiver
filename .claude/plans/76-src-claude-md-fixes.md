@@ -1,11 +1,11 @@
-# 76 — `src/CLAUDE.md`: where `query_int_rows` lives, and the "every source has a public header" claim
+# 76 — `src/AGENTS.md`: where `query_int_rows` lives, and the "every source has a public header" claim
 
-**Batch** 7 · **Severity** low · **Breaking** no · **Size** S · **Layers** docs only (`src/CLAUDE.md`)
+**Batch** 7 · **Severity** low · **Breaking** no · **Size** S · **Layers** docs only (`src/AGENTS.md`)
 **Depends on** none · **Overlaps with** 53 (deletes `query_int_rows` and rewrites the same `describe*` sentence — **if 53 has landed, step 1 is already done; skip it**), 55 (adds three more no-public-header `.cpp` files and edits the same "first `.cpp` in `src/`" paragraph)
 
 ## Why
 
-Two statements in `src/CLAUDE.md` are false at HEAD.
+Two statements in `src/AGENTS.md` are false at HEAD.
 
 1. **~L418**: the `describe*` bullet says they "run their own read-only SQL via an anon-namespace
    `query_int_rows` helper that prepares/steps directly on `impl_->db` (the `current_version() const`
@@ -19,7 +19,7 @@ Two statements in `src/CLAUDE.md` are false at HEAD.
    neither of which has a public header. The same file later says so (~L128 "Same
    no-`include/quiver/`-header ... posture as `csv_read`", ~L141).
 
-## Changes — `src/CLAUDE.md`
+## Changes — `src/AGENTS.md`
 
 1. **Only if plan 53 has not landed.** In the ~L418 bullet, replace "via an anon-namespace
    `query_int_rows` helper that prepares/steps directly on `impl_->db`" with "via `query_int_rows`
@@ -55,4 +55,4 @@ None.
 
 ## Out of scope
 
-- Other `src/CLAUDE.md` edits (owned by the plans that change the code).
+- Other `src/AGENTS.md` edits (owned by the plans that change the code).

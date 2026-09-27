@@ -5,7 +5,7 @@
 
 ## Why
 
-`tests/CLAUDE.md` warns that a bare `EXPECT_THROW` on a `db:` call passes vacuously: a missing
+`tests/AGENTS.md` warns that a bare `EXPECT_THROW` on a `db:` call passes vacuously: a missing
 binding, a typo in the method name or any Lua error at all satisfies it. The file already provides
 the right helper, `expect_lua_error(lua, script, substring)` (`tests/test_lua_runner.h` ~L41). These
 tests call `db:` methods but only assert "something threw":
@@ -71,7 +71,7 @@ check that the test fails. Revert that before committing.
 
 ## Docs and changelog
 
-None. The tests/CLAUDE.md rule already exists.
+None. The tests/AGENTS.md rule already exists.
 
 ## Verification
 

@@ -45,7 +45,7 @@ None to production code.
 
 (Or create `tests/test_lua_runner_metadata.cpp`. If you do, register it in `tests/CMakeLists.txt`
 next to the other `test_lua_runner_*.cpp` entries, and add it to the Lua per-area list in
-`tests/CLAUDE.md`.)
+`tests/AGENTS.md`.)
 
 ```cpp
 TEST_F(LuaRunnerTest, GetScalarMetadataForeignKey) {
@@ -153,7 +153,7 @@ TEST(Database, ListVectorAndSetGroups) {
 ## Docs and changelog
 
 - If you created `test_lua_runner_metadata.cpp`, add it to the Lua per-area file list in
-  `tests/CLAUDE.md` (~L33-35). Plan 75 also edits that list; add the name in whichever lands later.
+  `tests/AGENTS.md` (~L33-35). Plan 75 also edits that list; add the name in whichever lands later.
 - No CHANGELOG entry (test-only).
 
 ## Verification

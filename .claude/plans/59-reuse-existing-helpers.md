@@ -1,6 +1,6 @@
 # 59 — Reuse `read_single_value`, `get_foreign_key` and one `bulk_group_sql`
 
-**Batch** 6 · **Severity** low · **Breaking** no (identical behaviour) · **Size** S · **Layers** C++ core only (+ src/CLAUDE.md sentence)
+**Batch** 6 · **Severity** low · **Breaking** no (identical behaviour) · **Size** S · **Layers** C++ core only (+ src/AGENTS.md sentence)
 **Depends on** 53 (`execute` → `impl_->execute`; adjust the calls below to whichever form exists) · **Overlaps with** 56 (rewrites `resolve_fk_label` with `get_foreign_key` already — if 56 landed, skip step 2's `resolve_fk_label` half), 22 (query C API; this is the C++ side only)
 
 ## Why
@@ -37,7 +37,7 @@ Three existing helpers are re-implemented inline.
 3. **The load-bearing LEFT JOIN is pasted six times.** Each of the six bulk vector/set readers
    (`src/database_read.cpp`, ~L59, 69, 79, 116, 126, 136) builds
    `"SELECT c.id, g." + attribute + " FROM " + collection + " c LEFT JOIN " + table + " g ON g.id = c.id ORDER BY c.rowid, <order>"`.
-   `src/CLAUDE.md` warns "Don't 'simplify' the SQL back to `SELECT id, value FROM <group_table>`".
+   `src/AGENTS.md` warns "Don't 'simplify' the SQL back to `SELECT id, value FROM <group_table>`".
    Six copies means six places where someone can do that.
 
 Principle: reuse what exists and delete duplication.
@@ -45,7 +45,7 @@ Principle: reuse what exists and delete duplication.
 ## Constraints and decisions
 
 - Behaviour-preserving. `read_single_value<double>` goes through `Row::get_float`, which widens an
-  INTEGER. That is exactly what `query_float`'s comment says, and `src/CLAUDE.md` already documents
+  INTEGER. That is exactly what `query_float`'s comment says, and `src/AGENTS.md` already documents
   it.
 - Build only the SQL in the helper. Leave each reader's own
   `require_collection` / `find_*_table` / `require_column` lines alone, so each error still names its
@@ -123,7 +123,7 @@ No new tests. These existing suites pin the behaviour:
 
 ## Docs and changelog
 
-- `src/CLAUDE.md`, "`read_grouped_values_all<T>` ... requires the LEFT JOIN their SQL builds" bullet:
+- `src/AGENTS.md`, "`read_grouped_values_all<T>` ... requires the LEFT JOIN their SQL builds" bullet:
   change the tail to "... requires the LEFT JOIN `bulk_group_sql` (`database_read.cpp`) builds for
   all six. Don't 'simplify' it back to ...".
 - No CHANGELOG entry.

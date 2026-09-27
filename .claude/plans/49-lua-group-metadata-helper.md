@@ -133,8 +133,8 @@ No behaviour change. The existing Lua tests plus plan 52's new metadata-getter t
 
 ## Docs and changelog
 
-- `src/CLAUDE.md`: no passage names these helpers, so there is nothing to update
-  (`grep -n "time_series_metadata_lua\|data_type_to_string" src/CLAUDE.md` should print nothing).
+- `src/AGENTS.md`: no passage names these helpers, so there is nothing to update
+  (`grep -n "time_series_metadata_lua\|data_type_to_string" src/AGENTS.md` should print nothing).
 - No CHANGELOG entry (internal).
 
 ## Verification

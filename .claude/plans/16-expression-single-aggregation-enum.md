@@ -1,7 +1,7 @@
 # 16 — Expressions: one AggregationOperation enum across C++, C API, Lua and Julia
 
 **Batch** 2 · **Severity** low · **Breaking** yes, for C and Julia callers of `aggregate_agents`: the `QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_*` constants and the `quiver_expression_aggregate_agents_operation_t` type are removed. C++ source compiles unchanged, and Lua is unaffected because it takes strings. · **Size** S · **Layers** C++ core (expression), C API, Julia (FFI regen + wrapper + tests), Lua (parser + test)
-**Depends on** none · **Overlaps with** 15 (edits other functions in `src/expression/expression_helpers.h` and other bullets of the src/CLAUDE.md Expression section), 51 (edits `bind_expression` in `src/lua_runner.cpp` next to the lambdas this plan edits; its notes give the aggregation-parser half to this plan), 12 / 21 / 22 (each also regenerates `bindings/julia/src/c_api.jl` and adds a CHANGELOG 0.11.0 entry), 09 / 10 (edit `src/expression/expression_aggregate.cpp`, which this plan does **not** touch)
+**Depends on** none · **Overlaps with** 15 (edits other functions in `src/expression/expression_helpers.h` and other bullets of the src/AGENTS.md Expression section), 51 (edits `bind_expression` in `src/lua_runner.cpp` next to the lambdas this plan edits; its notes give the aggregation-parser half to this plan), 12 / 21 / 22 (each also regenerates `bindings/julia/src/c_api.jl` and adds a CHANGELOG 0.11.0 entry), 09 / 10 (edit `src/expression/expression_aggregate.cpp`, which this plan does **not** touch)
 
 ## Why
 
@@ -24,17 +24,17 @@ Quiver.aggregate_agents(e, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_MEAN) 
 
 In C++, `expr.aggregate_agents(ExpressionAggregate::Operation::Mean)` does not compile, because there is no conversion between the two enum classes. The same happens in C++-compiled C API callers. `bindings/julia/test/test_expression.jl` (~L1274-1277) has to mix both families inside one expression.
 
-The change applies the root principles "Simple solutions over complex abstractions" and "Delete unused code". The templates are an abstraction whose only job is to paper over the duplication. src/CLAUDE.md (~L759) records the duplication ("The two aggregation enums are parallel types with identical values") but gives no reason for it. Commit `fa9ee9e` records none either.
+The change applies the root principles "Simple solutions over complex abstractions" and "Delete unused code". The templates are an abstraction whose only job is to paper over the duplication. src/AGENTS.md (~L759) records the duplication ("The two aggregation enums are parallel types with identical values") but gives no reason for it. Commit `fa9ee9e` records none either.
 
 ## Constraints and decisions
 
 - **Maintainer notes (binding):** "BREAKING (C/Julia constants). Keep per-operation Pattern 1 prefixes by threading the operation name into the single from_c and the single Lua parser. Plan 51 (Lua operator tables) touches nearby Lua code." The break is therefore limited to the C/Julia constants, and both merged converters take the calling operation's name.
 - **What "one AggregationOperation enum" means here.** The single enum is the existing `quiver::ExpressionAggregate::Operation`. `ExpressionAggregateAgents` refers to it through `using Operation = ExpressionAggregate::Operation;`. On the C side the one enum is the existing `quiver_expression_aggregate_operation_t`, whose name already fits both functions. This is the policy verifier's corrected proposal, and it keeps the break exactly where the maintainer put it.
-- **src/CLAUDE.md (~L759):** "All operation enums are nested in their owning class". The alias keeps that convention: every node still has an `Operation` member type.
-- **Root CLAUDE.md, error patterns:** Pattern 1 is `"Cannot {operation}: {reason}"`, where `{operation}` is the public method the user called. Today's messages are `Cannot aggregate: unknown operation 'bogus'` (Lua), `Cannot aggregate_agents: unknown operation '<op>'` (Lua), and `Cannot aggregate[_agents]: unknown operation enum value` (C). They must stay byte-identical. `tests/test_lua_expression.cpp` (~L178) pins the first one.
+- **src/AGENTS.md (~L759):** "All operation enums are nested in their owning class". The alias keeps that convention: every node still has an `Operation` member type.
+- **Root AGENTS.md, error patterns:** Pattern 1 is `"Cannot {operation}: {reason}"`, where `{operation}` is the public method the user called. Today's messages are `Cannot aggregate: unknown operation 'bogus'` (Lua), `Cannot aggregate_agents: unknown operation '<op>'` (Lua), and `Cannot aggregate[_agents]: unknown operation enum value` (C). They must stay byte-identical. `tests/test_lua_expression.cpp` (~L178) pins the first one.
 - **Root design decision:** "Binary + expression subsystems are exposed in Julia and Lua only." Dart, Python and JS therefore have no FFI declarations to touch. The JS `lua-api.ts` reference documents string operations (`e:aggregate_agents("mean")`), which do not change.
 - **Root "Changelog" rule:** the entry goes under the unreleased 0.11.0, prefixed **BREAKING**, and says what a caller must do. There is no manifest bump; 0.11.0 is already a minor bump.
-- **bindings/julia/CLAUDE.md:** "Regenerate after C API changes: `generator/generator.bat` rewrites `src/c_api.jl`". Never hand-edit it.
+- **bindings/julia/AGENTS.md:** "Regenerate after C API changes: `generator/generator.bat` rewrites `src/c_api.jl`". Never hand-edit it.
 
 Rejected alternatives:
 - *A new namespace-scope `quiver::AggregationOperation`, plus a renamed C enum.* This renames about 30 C++ test call sites, every Julia `AGGREGATE_OPERATION_*` site and every C `quiver_expression_aggregate` caller, for no behavioural gain. It also breaks the nested-enum convention and widens the break beyond the maintainer's "C/Julia constants".
@@ -572,7 +572,7 @@ No expression surface, so no tests (root design decision).
 
 ## Docs and changelog
 
-**`src/CLAUDE.md`, Expression Subsystem section:**
+**`src/AGENTS.md`, Expression Subsystem section:**
 
 1. The `Aggregation:` sub-bullet (currently ~L740). Old sentence:
    > `op` is the nested enum `ExpressionAggregate::Operation` (for `aggregate`) or `ExpressionAggregateAgents::Operation` (for `aggregate_agents`), each with `Sum / Mean / Min / Max / Percentile`.
@@ -589,7 +589,7 @@ No expression surface, so no tests (root design decision).
 3. The enum paragraph (currently ~L759, starting "- All operation enums are nested in their owning class:"). Replace the whole bullet with:
    > - All operation enums are nested in their owning class: `ExpressionBinary::Operation`, `ExpressionUnary::Operation`, `ExpressionTernary::Operation`, `ExpressionAggregate::Operation`. There is **one** aggregation enum (`Sum / Mean / Min / Max / Percentile`): `ExpressionAggregateAgents::Operation` is `using Operation = ExpressionAggregate::Operation;`, so `aggregate` and `aggregate_agents` take the same type and `aggregation_operation_label` / `validate_aggregation_param` / `aggregation_accumulate` / `aggregation_finalize` (`expression_helpers.h`) are plain functions on it. It used to be two parallel enums with identical values, which doubled the C enum, the C `from_c` switch, the Lua string parser and the Julia constants; do not re-split it. Label-axis projection nodes (`ExpressionSelectAgents`, `ExpressionRenameAgents`) have no operation enum — their behavior is fully specified by the label list / rename map. The C API mirrors this with four enums: `quiver_expression_operation_t` (now `ADD..DIVIDE`, the comparisons `GT/LT/GTE/LTE/EQ/NEQ`, and the logical `AND/OR`), `quiver_expression_unary_operation_t` (math ops plus `NOT`), `quiver_expression_ternary_operation_t`, and `quiver_expression_aggregate_operation_t`, which both `quiver_expression_aggregate` and `quiver_expression_aggregate_agents` take. The one C `from_c` and the one Lua `parse_aggregate_op` take the calling operation's name, so their Pattern 1 messages still read `Cannot aggregate: ...` or `Cannot aggregate_agents: ...`. Comparisons and logical ops reuse the `quiver_expression_apply*` / `quiver_expression_apply_unary` entry points (no new C functions); the Julia FFI enum (`src/c_api.jl`) must carry the same values.
 
-**`src/c/CLAUDE.md`, File Map (currently ~L19).** Old:
+**`src/c/AGENTS.md`, File Map (currently ~L19).** Old:
 ```
   expression.h                # quiver_expression_t handle + node constructors + five operation enums
 ```
@@ -598,7 +598,7 @@ New:
   expression.h                # quiver_expression_t handle + node constructors + four operation enums
 ```
 
-**`bindings/julia/CLAUDE.md`, root `CLAUDE.md`, `tests/CLAUDE.md`, `docs/*.md`, `bindings/js/src/lua-api.ts`:** none mention the two aggregation enums, so there are no edits. The Julia `aggregate_agents` surface is not documented anywhere but its tests.
+**`bindings/julia/AGENTS.md`, root `AGENTS.md`, `tests/AGENTS.md`, `docs/*.md`, `bindings/js/src/lua-api.ts`:** none mention the two aggregation enums, so there are no edits. The Julia `aggregate_agents` surface is not documented anywhere but its tests.
 
 **`CHANGELOG.md`:** under `## [0.11.0] — unreleased` → `### Changed`, append this bullet after the existing BREAKING entries. Earlier plans may have added more; keep all of them.
 
@@ -638,7 +638,7 @@ Run from the repo root `C:\Development\Quiver\quiver1`. The paths are for PowerS
 - [ ] `src/lua_runner.cpp` has one `parse_aggregate_op(op, caller)`; `parse_aggregate_agents_op` is gone; the Lua messages are unchanged.
 - [ ] `bindings/julia/src/c_api.jl` is regenerated, not hand-edited, and both `aggregate_agents` methods in `expression.jl` take `C.quiver_expression_aggregate_operation_t`.
 - [ ] The new tests `AggregateUnknownOperationNamesTheCaller` (C API) and `AggregateAgentsUnknownOpThrows` (Lua) pass; the edited C++, C API and Julia tests pass.
-- [ ] src/CLAUDE.md (three spots) and src/c/CLAUDE.md are updated as quoted; there is a CHANGELOG **BREAKING** entry under 0.11.0 → Changed.
+- [ ] src/AGENTS.md (three spots) and src/c/AGENTS.md are updated as quoted; there is a CHANGELOG **BREAKING** entry under 0.11.0 → Changed.
 - [ ] `scripts/test-all.bat` is green.
 
 ## Pitfalls

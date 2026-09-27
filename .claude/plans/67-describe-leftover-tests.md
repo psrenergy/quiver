@@ -65,8 +65,8 @@ their new names.
 
 ## Docs and changelog
 
-- `tests/CLAUDE.md`: if it lists the describe tests' location
-  (`grep -n "describe" tests/CLAUDE.md`), point it at `test_database_describe.cpp`. Plan 75 owns the
+- `tests/AGENTS.md`: if it lists the describe tests' location
+  (`grep -n "describe" tests/AGENTS.md`), point it at `test_database_describe.cpp`. Plan 75 owns the
   rest of that file.
 - No CHANGELOG entry.
 

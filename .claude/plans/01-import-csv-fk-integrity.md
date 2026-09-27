@@ -1,7 +1,7 @@
 # 01 — import_csv: keep foreign keys ON so dropped elements cascade
 
-**Batch** 1 · **Severity** h · **Breaking** yes. It affects callers whose scalar-import CSV omits an element that other rows depend on through `ON DELETE CASCADE`: those rows are now deleted, as `delete_element` would delete them. It also affects schemas with a `UNIQUE` column other than `label` whose values are swapped between two kept elements in one import: that import now fails and rolls back. · **Size** M · **Layers** C++ core (fix + tests), C API (tests), Lua (test), Julia/Dart/Python/JS (one test each), docs (root `CLAUDE.md`, `src/CLAUDE.md`, `tests/CLAUDE.md`, `bindings/js/src/lua-api.ts`, `CHANGELOG.md`), one new test schema
-**Depends on** none · **Overlaps with** 58 (same function: runs later and refactors the validation and write passes and the two catch tails; it must keep everything this plan adds); 60 (turns the hand-rolled `impl_->begin_transaction/commit/rollback` into `TransactionGuard`, which would change the precondition rationale written here again); 43 (edits the same `import_csv` paragraphs of `bindings/js/src/lua-api.ts`); 53 (moves `Database::execute` into `Impl`, and this plan adds two more `execute(...)` calls in `import_csv`); 22 (the new C API tests call `quiver_database_query_integer`); 06 (enforcing CASCADE parent FKs on set and time-series tables removes one fail-closed case listed under Pitfalls); 61 (the same file's includes: this plan adds a second use of the already-included `<set>`); 75 (`tests/CLAUDE.md` schema list); 69 (C API test hygiene: the new C API tests already free with the right functions)
+**Batch** 1 · **Severity** h · **Breaking** yes. It affects callers whose scalar-import CSV omits an element that other rows depend on through `ON DELETE CASCADE`: those rows are now deleted, as `delete_element` would delete them. It also affects schemas with a `UNIQUE` column other than `label` whose values are swapped between two kept elements in one import: that import now fails and rolls back. · **Size** M · **Layers** C++ core (fix + tests), C API (tests), Lua (test), Julia/Dart/Python/JS (one test each), docs (root `AGENTS.md`, `src/AGENTS.md`, `tests/AGENTS.md`, `bindings/js/src/lua-api.ts`, `CHANGELOG.md`), one new test schema
+**Depends on** none · **Overlaps with** 58 (same function: runs later and refactors the validation and write passes and the two catch tails; it must keep everything this plan adds); 60 (turns the hand-rolled `impl_->begin_transaction/commit/rollback` into `TransactionGuard`, which would change the precondition rationale written here again); 43 (edits the same `import_csv` paragraphs of `bindings/js/src/lua-api.ts`); 53 (moves `Database::execute` into `Impl`, and this plan adds two more `execute(...)` calls in `import_csv`); 22 (the new C API tests call `quiver_database_query_integer`); 06 (enforcing CASCADE parent FKs on set and time-series tables removes one fail-closed case listed under Pitfalls); 61 (the same file's includes: this plan adds a second use of the already-included `<set>`); 75 (`tests/AGENTS.md` schema list); 69 (C API test hygiene: the new C API tests already free with the right functions)
 
 ## Why
 
@@ -55,9 +55,9 @@ Cannot import_csv: Could not find an existing element from collection Parent wit
 - **Maintainer decisions for this item (binding):**
   - Write every row with **one** `INSERT ... ON CONFLICT(id) DO UPDATE SET col = excluded.col`, binding the preserved id or NULL. **Never** use `INSERT OR REPLACE`.
   - Reject duplicate labels in the validation pass.
-  - **Do not lift** the "refuses inside a transaction" precondition, because that decision is still pending with the user. Do update its stated rationale in the root `CLAUDE.md`, `src/CLAUDE.md` and `bindings/js/src/lua-api.ts`.
+  - **Do not lift** the "refuses inside a transaction" precondition, because that decision is still pending with the user. Do update its stated rationale in the root `AGENTS.md`, `src/AGENTS.md` and `bindings/js/src/lua-api.ts`.
   - Plan 58 later refactors the same file, so keep this change minimal and self-contained.
-- Root `CLAUDE.md` Design Decision, which stays in force (only the parenthetical reason changes): "**`import_csv` refuses to run inside an open transaction** (`PRAGMA foreign_keys` is a no-op mid-transaction, so nesting is unsupportable) — Pattern 1 precondition, not a silent rollback." Once the PRAGMA is gone, the precondition still guards something real. Import opens its own transaction with `impl_->begin_transaction()` (a raw `BEGIN`), and its catch calls `impl_->rollback()`. Inside a caller's transaction that `BEGIN` throws, and the catch's `ROLLBACK` would discard the caller's work. That is the new stated reason.
+- Root `AGENTS.md` Design Decision, which stays in force (only the parenthetical reason changes): "**`import_csv` refuses to run inside an open transaction** (`PRAGMA foreign_keys` is a no-op mid-transaction, so nesting is unsupportable) — Pattern 1 precondition, not a silent rollback." Once the PRAGMA is gone, the precondition still guards something real. Import opens its own transaction with `impl_->begin_transaction()` (a raw `BEGIN`), and its catch calls `impl_->rollback()`. Inside a caller's transaction that `BEGIN` throws, and the catch's `ROLLBACK` would discard the caller's work. That is the new stated reason.
 - Root dry-run decision: "`import_csv` still throws its `transaction already active` precondition". This stays true and is not edited.
 - Root Principles: clean over defensive, simple over abstract, delete rather than deprecate. So the zero-row special case is deleted, because the general path handles zero rows, and the group path's needless toggle goes too.
 - Error messages use the three root patterns. The duplicate check reuses the existing message `Cannot import_csv: There are duplicate entries in the CSV file.` (Pattern 1). Every layer's tests match it by the substring `duplicate entries`.
@@ -347,7 +347,7 @@ CREATE TABLE Node_vector_weights (
     PRIMARY KEY (id, vector_index)
 ) STRICT;
 ```
-I checked that this schema passes `SchemaValidator`: `quiver_cli --schema` on a scratch copy loaded it, and `node_parent` reports `is_foreign_key = true`. No CMake registration is needed, because `VALID_SCHEMA` resolves from the source path. List the file in `tests/CLAUDE.md` (see Docs).
+I checked that this schema passes `SchemaValidator`: `quiver_cli --schema` on a scratch copy loaded it, and `node_parent` reports `is_foreign_key = true`. No CMake registration is needed, because `VALID_SCHEMA` resolves from the source path. List the file in `tests/AGENTS.md` (see Docs).
 
 ### C++ core — `tests/test_database_csv_import.cpp`
 
@@ -810,7 +810,7 @@ Use `9.5`, not `9`: a JS integer array would marshal as INTEGER cells. Every bin
 
 ## Docs and changelog
 
-### Root `CLAUDE.md`
+### Root `AGENTS.md`
 
 (a) Design Decisions (currently ~L145-146). Replace
 ```
@@ -836,10 +836,10 @@ with
   its `ON DELETE` action (`SET NULL` clears it, `CASCADE` deletes the referencing row, which can be
   an element of another collection). A label may appear only once. Import used to switch foreign
   keys off and delete-then-reinsert every row, which orphaned the omitted elements' group rows and
-  left relations pointing at deleted ids. Mechanism and ordering: `src/CLAUDE.md`.
+  left relations pointing at deleted ids. Mechanism and ordering: `src/AGENTS.md`.
 ```
 
-### `src/CLAUDE.md`
+### `src/AGENTS.md`
 
 (a) Transactions section (currently ~L336-338). Replace
 ```
@@ -875,7 +875,7 @@ does. Whether it should nest instead is an open decision.)
   table whose ids and FK cells are all resolved to existing elements.
 ```
 
-### `tests/CLAUDE.md` — Schemas list (currently ~L162-170)
+### `tests/AGENTS.md` — Schemas list (currently ~L162-170)
 
 Replace
 ```
@@ -947,7 +947,7 @@ Append after the `export_csv()` quoting entry (the one ending `*Adapt:* regenera
   rolls back; route the swap through a temporary value.
 ```
 
-No other docs mention the PRAGMA or the omitted-element behaviour. I checked `docs/*.md` (only migration examples use `PRAGMA foreign_keys`) and the binding READMEs and docstrings (no import semantics are described). The binding `CLAUDE.md` files need no change, because no binding code changes.
+No other docs mention the PRAGMA or the omitted-element behaviour. I checked `docs/*.md` (only migration examples use `PRAGMA foreign_keys`) and the binding READMEs and docstrings (no import semantics are described). The binding `AGENTS.md` files need no change, because no binding code changes.
 
 ## Verification
 
@@ -970,9 +970,9 @@ Run from the repo root (`C:\Development\Quiver\quiver1`):
 - [ ] The scalar path runs clear self-FKs → delete omitted ids → `INSERT ... ON CONFLICT(id) DO UPDATE SET col = excluded.col` per row → self-FK pass, in one transaction; there is no `INSERT OR REPLACE` anywhere.
 - [ ] A repeated label throws `Cannot import_csv: There are duplicate entries in the CSV file.` from the validation pass, before any write.
 - [ ] The `in_transaction()` precondition and its message are unchanged, and its comment states the new reason.
-- [ ] New schema `tests/schemas/valid/csv_import_self_cascade.sql` exists (LF) and is listed in `tests/CLAUDE.md`.
+- [ ] New schema `tests/schemas/valid/csv_import_self_cascade.sql` exists (LF) and is listed in `tests/AGENTS.md`.
 - [ ] The five C++ tests, three C API tests, one Lua test and one test in each of Julia / Dart / Python / JS are added as specified; every existing test is still green.
-- [ ] Root `CLAUDE.md`, `src/CLAUDE.md`, `tests/CLAUDE.md`, `bindings/js/src/lua-api.ts`, `tests/test_database_transaction.cpp` (comment) and `CHANGELOG.md` are edited as specified.
+- [ ] Root `AGENTS.md`, `src/AGENTS.md`, `tests/AGENTS.md`, `bindings/js/src/lua-api.ts`, `tests/test_database_transaction.cpp` (comment) and `CHANGELOG.md` are edited as specified.
 - [ ] `scripts/format.bat` leaves no diff beyond this plan's files.
 
 ## Pitfalls
@@ -998,4 +998,4 @@ Run from the repo root (`C:\Development\Quiver\quiver1`):
 - Documenting import's replace-the-table semantics in the agent-facing Lua reference (plan 43).
 - Enforcing CASCADE parent FKs on set and time-series tables (plan 06).
 - Allowing `UNIQUE` value swaps between kept elements in one import. This would need deferred constraints or a two-phase write, and no schema in the repo has such a column.
-- Noticed but owned by no plan: the root `CLAUDE.md` sentence "(self-references are excluded on both sides, since the target rows are the ones being rewritten)" in the export/import FK paragraph is stale. Export now writes a self-reference's label (`ExportImportCSV_SelfForeignKeyRoundTrips`). It is left untouched here.
+- Noticed but owned by no plan: the root `AGENTS.md` sentence "(self-references are excluded on both sides, since the target rows are the ones being rewritten)" in the export/import FK paragraph is stale. Export now writes a self-reference's label (`ExportImportCSV_SelfForeignKeyRoundTrips`). It is left untouched here.

@@ -3,7 +3,7 @@
 **Batch** 4 · **Severity** medium · **Breaking** yes, for JS callers who pass a numeric array or
 group column containing a non-number cell (it now throws instead of silently coercing) · **Size** S
 · **Layers** JS binding only (`bindings/js/src/group-columns.ts`, `bindings/js/src/create.ts`,
-JS tests, `bindings/js/CLAUDE.md`, `CHANGELOG.md`)
+JS tests, `bindings/js/AGENTS.md`, `CHANGELOG.md`)
 
 **Depends on** none · **Overlaps with**
 - **24** (Python + Dart numeric column typing). Its notes say to "fix the Dart/JS comments citing
@@ -18,7 +18,7 @@ JS tests, `bindings/js/CLAUDE.md`, `CHANGELOG.md`)
   inline `nonNull`/`sanitized` code, which is gone.
 - **32** (JS package exports) edits `src/index.ts`. `numericCells` is module-internal and must
   **not** be added to `src/index.ts` or `mod.ts`.
-- **41** (stale alignment comments) edits `bindings/js/CLAUDE.md` too, but a different paragraph
+- **41** (stale alignment comments) edits `bindings/js/AGENTS.md` too, but a different paragraph
   (the "Time-series NULL cells" bullet, ~L95). No textual conflict.
 
 ## Why
@@ -90,7 +90,7 @@ A leading boolean truthiness-maps the whole array. So
 `createElement("AllTypes", {label: "A", count_value: [true, 5, false, 7]})` stores `[1, 1, 0, 1]`.
 The same payload through `updateVectorGroup` stores `[1, 5, 0, 7]`, and
 `test/database-boolean.test.ts` ("a mixed boolean/integer group column keeps its integer cells")
-pins that. `bindings/js/CLAUDE.md` (~L106-110) names exactly this `[true, 5]` → `[1, 1]` failure as
+pins that. `bindings/js/AGENTS.md` (~L106-110) names exactly this `[true, 5]` → `[1, 1]` failure as
 the reason the group marshaller converts per cell, but the fix never reached `setElementArray`.
 Its number branch (currently ~L44-56) has the same string-to-NaN hole as the group writers:
 `createElement("AllTypes", {label: "A", score: [1.5, "2"]})` stores `[1.5, 2.0]` in the REAL
@@ -100,7 +100,7 @@ column `score` with no error.
 statically, so only plain-JS or casting callers reach this half. The maintainer decided to fix it
 anyway, so that both writers agree cell for cell.
 
-**Principles violated:** root CLAUDE.md "One scalar typing policy lives in C++ … bindings never
+**Principles violated:** root AGENTS.md "One scalar typing policy lives in C++ … bindings never
 coerce schema-dependently". Here the binding coerces a string into a number, which the core would
 have rejected. Also **Homogeneity**: Dart (`database_update.dart` `_marshalGroupColumn`,
 `element.dart`) and Lua (`lua_table_to_vector`) both check every cell.
@@ -120,19 +120,19 @@ have rejected. Also **Homogeneity**: Dart (`database_update.dart` `_marshalGroup
 - **Maintainer decision (binding):** "One small exported `numericCells(caller, name, values)`
   helper in `group-columns.ts`, used by `updateGroupColumns` and `setElementArray`. No
   `marshalColumn` classifier returning allocations. String columns keep current behaviour."
-- Root CLAUDE.md **Error Messages**: the one exception to "all messages come from C++" is a pre-FFI
+- Root AGENTS.md **Error Messages**: the one exception to "all messages come from C++" is a pre-FFI
   type-marshalling error, "crafted locally and should name the offending column and type". The new
   message names the column, the JS type and the cell index. It uses Pattern 1,
   `Cannot {operation}: {reason}`, where `{operation}` is the JS method the caller used, as the
   existing `updateGroupColumns` messages already do.
-- Root CLAUDE.md **Boolean** decision: "On the write side a boolean is accepted wherever an integer
+- Root AGENTS.md **Boolean** decision: "On the write side a boolean is accepted wherever an integer
   is … mapping it to INTEGER 1/0". JS conversion happens in `setElementField` / `setElementArray` /
   `marshalParams` / `updateGroupColumns` / `upsertRowColumns`. That list stays true.
-- Root CLAUDE.md **Element arrays accept NULL cells**: "Julia/Python/JS pass a dense (NULL) mask
+- Root AGENTS.md **Element arrays accept NULL cells**: "Julia/Python/JS pass a dense (NULL) mask
   and keep their non-null surfaces". So this plan does not add null support to JS element arrays.
-- `bindings/js/CLAUDE.md`, the Bun FFI house rule: build masks by direct `Uint8Array` indexing,
+- `bindings/js/AGENTS.md`, the Bun FFI house rule: build masks by direct `Uint8Array` indexing,
   never with a `DataView`. The mask loop is kept exactly as it is.
-- `bindings/js/CLAUDE.md`: "There is pre-existing lint debt in untouched files — fix only what
+- `bindings/js/AGENTS.md`: "There is pre-existing lint debt in untouched files — fix only what
   your change orphans".
 - Status is WIP and breaking changes are acceptable. 0.11.0 is already a minor bump, so no manifest
   change is needed.
@@ -598,7 +598,7 @@ All of these stay green without edits. Re-run them; do not change them:
 
 ## Docs and changelog
 
-### `bindings/js/CLAUDE.md`
+### `bindings/js/AGENTS.md`
 
 1. Layout block (currently ~L16). Old:
 
@@ -655,7 +655,7 @@ All of these stay green without edits. Re-run them; do not change them:
    The following lines (`branch is \`typeof value === "number"\`, not an untyped \`else\`…`) stay as
    they are.
 
-No other CLAUDE.md changes. The root CLAUDE.md boolean decision lists
+No other AGENTS.md changes. The root AGENTS.md boolean decision lists
 "`setElementField` / `setElementArray` / `marshalParams` / `updateGroupColumns` /
 `upsertRowColumns` in JS" as the places where JS converts a boolean, and that is still true.
 `bindings/js/README.md` (owned by plan 74), `docs/*.md` and `bindings/js/src/lua-api.ts` are
@@ -705,7 +705,7 @@ Run from the repo root (`C:\Development\Quiver\quiver1`), in this order.
    its fix with `bunx biome check --write src/create.ts`.
 6. `scripts/format.bat`. Then `git diff --stat` should list only
    `bindings/js/src/group-columns.ts`, `bindings/js/src/create.ts`, the three test files,
-   `bindings/js/CLAUDE.md` and `CHANGELOG.md`.
+   `bindings/js/AGENTS.md` and `CHANGELOG.md`.
 7. `scripts/test-all.bat`: all six suites plus the CLI smoke test. Only the JS suite is affected,
    and it must stay green.
 
@@ -726,7 +726,7 @@ Run from the repo root (`C:\Development\Quiver\quiver1`), in this order.
       and writes nothing.
 - [ ] `createElement` with `count_value: [true, 5, false, 7]` stores `[1, 5, 0, 7]`.
 - [ ] The three new JS tests fail before the change and pass after. The whole JS suite is green.
-- [ ] `bindings/js/CLAUDE.md` (layout line + boolean bullet) and the `CHANGELOG.md` **BREAKING**
+- [ ] `bindings/js/AGENTS.md` (layout line + boolean bullet) and the `CHANGELOG.md` **BREAKING**
       entry are updated as specified.
 - [ ] No change outside `bindings/js/` except `CHANGELOG.md`.
 
@@ -736,7 +736,7 @@ Run from the repo root (`C:\Development\Quiver\quiver1`), in this order.
   is missed, the code runs and the message reads `Cannot undefined: …`. Test 3 catches it for all
   three methods.
 - **Keep the mask built by direct `Uint8Array` indexing.** Do not switch it to a `DataView` or move
-  it after a `.buffer` access. That is the documented Bun FFI pitfall in `bindings/js/CLAUDE.md`
+  it after a `.buffer` access. That is the documented Bun FFI pitfall in `bindings/js/AGENTS.md`
   ("Do not 'fix'").
 - **Do not run the string branch through `numericCells`**, and do not reject non-string cells in a
   string column. That is the maintainer's decision. A foreign-key column written by label

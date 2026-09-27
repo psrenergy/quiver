@@ -83,14 +83,14 @@ No existing test covers this path. `tests/test_lua_runner.py` has no closed-data
 
 ## Constraints and decisions
 
-- Root `CLAUDE.md` Principles: *"Clean code over defensive code … Simple solutions over complex
+- Root `AGENTS.md` Principles: *"Clean code over defensive code … Simple solutions over complex
   abstractions."* The fix reorders one assignment and adds one line. It adds no try/except, no
   `hasattr` check in `__del__`, and no helper.
-- Root `CLAUDE.md` Principles, *Error Messages*: messages come from the C/C++ layer. The
+- Root `AGENTS.md` Principles, *Error Messages*: messages come from the C/C++ layer. The
   `QuiverError` text stays the C API's `"Null argument: db"`. The binding adds no message of its own.
-- Root `CLAUDE.md` Principles, *Changelog*: this is a user-visible fix (stderr noise on a real
+- Root `AGENTS.md` Principles, *Changelog*: this is a user-visible fix (stderr noise on a real
   failure path). It gets a non-breaking entry under `## [0.11.0] — unreleased` → `### Fixed`.
-- Root `CLAUDE.md`, *Self-Updating*: the nearest CLAUDE.md is `bindings/python/CLAUDE.md`. It gets
+- Root `AGENTS.md`, *Self-Updating*: the nearest AGENTS.md is `bindings/python/AGENTS.md`. It gets
   a one-bullet note so the ordering is not later "tidied" back.
 - Maintainer notes for this item: none (`"notes": ""`).
 - **Correction to the original finding's proposal.** Its first option was: *"Set
@@ -234,7 +234,7 @@ other test that constructs a runner.
 
 ## Docs and changelog
 
-### `bindings/python/CLAUDE.md`
+### `bindings/python/AGENTS.md`
 
 In `## Rules and gotchas`, insert a new bullet right after the bullet that begins
 `- **\`LuaRunner.run\` owns its result**:` (currently ~L79-83), before the
@@ -249,8 +249,8 @@ In `## Rules and gotchas`, insert a new bullet right after the bullet that begin
   the missing `_closed` instead. Pinned by `test_failed_construction_is_silent_when_collected`.
 ```
 
-No other CLAUDE.md, `docs/*.md`, README or `bindings/js/src/lua-api.ts` text describes this
-behaviour. Checked: `bindings/python/README.md` and the root `CLAUDE.md` do not mention
+No other AGENTS.md, `docs/*.md`, README or `bindings/js/src/lua-api.ts` text describes this
+behaviour. Checked: `bindings/python/README.md` and the root `AGENTS.md` do not mention
 `LuaRunner` construction failure.
 
 ### `CHANGELOG.md`
@@ -304,11 +304,11 @@ No FFI generator run: no C API signature changes.
       `TestLuaRunnerLifecycle.test_failed_construction_is_silent_when_collected` exactly as above.
 - [ ] That test failed before the source change and passes after it.
 - [ ] The full Python suite passes. `ruff format` and `ruff check` are clean.
-- [ ] `bindings/python/CLAUDE.md` has the new `LuaRunner.__init__` gotcha bullet.
+- [ ] `bindings/python/AGENTS.md` has the new `LuaRunner.__init__` gotcha bullet.
 - [ ] `CHANGELOG.md` `## [0.11.0] — unreleased` → `### Fixed` has the Python `LuaRunner` entry,
       not marked BREAKING.
 - [ ] No files outside `bindings/python/src/quiverdb/lua_runner.py`,
-      `bindings/python/tests/test_lua_runner.py`, `bindings/python/CLAUDE.md` and `CHANGELOG.md`
+      `bindings/python/tests/test_lua_runner.py`, `bindings/python/AGENTS.md` and `CHANGELOG.md`
       changed.
 
 ## Pitfalls
@@ -345,6 +345,6 @@ No FFI generator run: no C API signature changes.
 - Making `LuaRunner(closed_db)` raise `"Database has been closed"` via `db._ensure_open()`: this
   would be a binding-crafted duplicate of the C API's own `Null argument: db`. Not needed.
 - Runner-outlives-database safety (a `LuaRunner` borrowing a `Database&` that was closed after the
-  runner was built): documented in the root `CLAUDE.md` scoped-resource caveat, and not changed
+  runner was built): documented in the root `AGENTS.md` scoped-resource caveat, and not changed
   here.
 - Julia, Dart and JS `LuaRunner` constructors: already correct (see "Other bindings checked").

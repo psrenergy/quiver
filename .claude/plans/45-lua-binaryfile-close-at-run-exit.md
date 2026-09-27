@@ -1,6 +1,6 @@
 # 45 — Lua: close `BinaryFile` handles (readers and writers) when `run()` returns
 
-**Batch** 5 · **Severity** medium · **Breaking** yes — a Lua script that reuses a `db:open_file` handle from an earlier `run()` (kept in a global) now gets a closed handle; reopen the file in each run · **Size** S · **Layers** C++ Lua runner (`src/lua_runner.cpp`), C++ Lua tests, `src/CLAUDE.md`, `bindings/js/src/lua-api.ts`, CHANGELOG
+**Batch** 5 · **Severity** medium · **Breaking** yes — a Lua script that reuses a `db:open_file` handle from an earlier `run()` (kept in a global) now gets a closed handle; reopen the file in each run · **Size** S · **Layers** C++ Lua runner (`src/lua_runner.cpp`), C++ Lua tests, `src/AGENTS.md`, `bindings/js/src/lua-api.ts`, CHANGELOG
 **Depends on** none · **Overlaps with** 43/44 (same lua-api.ts file; add one sentence in the binary section), 51 (operator metamethods for BinaryFile in the same file; independent), 16 (aggregation parser, same file)
 
 ## Why
@@ -178,7 +178,7 @@ Also run the whole binary and expression Lua suites, which exercise `f:` methods
 
 ## Docs and changelog
 
-- `src/CLAUDE.md`, the "A writer left open when the script returns is still flushed" paragraph.
+- `src/AGENTS.md`, the "A writer left open when the script returns is still flushed" paragraph.
   Add: "`db:open_file` handles, readers and writers, are recorded the same way (a `weak_ptr` in
   `Impl::open_binary_files`) and closed by `close_open_writers()`, so no binary file handle
   outlives its `run()` either. A writer left in a global would otherwise hold its path in the
@@ -211,7 +211,7 @@ From the repo root:
 - [ ] `open_file` returns `std::shared_ptr<BinaryFile>` and registers a `weak_ptr`.
 - [ ] `close_open_writers()` closes surviving binary files and clears the list.
 - [ ] Both new tests pass, and the binary/expression/CSV Lua suites stay green.
-- [ ] `src/CLAUDE.md`, lua-api.ts and the CHANGELOG are updated.
+- [ ] `src/AGENTS.md`, lua-api.ts and the CHANGELOG are updated.
 
 ## Pitfalls
 

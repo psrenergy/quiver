@@ -60,7 +60,7 @@ Existing coverage:
 
 If the catch branch broke (e.g. forgot `endDryRun()`), the handle would stay inside a dry run after
 an exception: every later write in the process would be silently rolled back at the next
-`end_dry_run`, and `in_dry_run()` would report `true`. Root CLAUDE.md "Tests must exist in all
+`end_dry_run`, and `in_dry_run()` would report `true`. Root AGENTS.md "Tests must exist in all
 layers".
 
 ## Constraints and decisions
@@ -157,7 +157,7 @@ experiment.
 
 ## Docs and changelog
 
-- No documentation change (the wrappers' behaviour is already documented in root CLAUDE.md
+- No documentation change (the wrappers' behaviour is already documented in root AGENTS.md
   "Transaction block wrappers").
 - No CHANGELOG entry (test-only).
 

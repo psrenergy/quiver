@@ -1,6 +1,6 @@
 # 82 — `build-all.bat` builds, then calls `test-all.bat`
 
-**Batch** 7 · **Severity** medium · **Breaking** no (developer script; build-all now reports a summary instead of stopping at the first failing suite) · **Size** S · **Layers** tooling (`scripts/build-all.bat`), root CLAUDE.md, tests/CLAUDE.md
+**Batch** 7 · **Severity** medium · **Breaking** no (developer script; build-all now reports a summary instead of stopping at the first failing suite) · **Size** S · **Layers** tooling (`scripts/build-all.bat`), root AGENTS.md, tests/AGENTS.md
 **Depends on** 65 (fixes `test-all.bat`'s CLI smoke test; without it, `build-all` would start failing on step 7) · **Overlaps with** 65 (both touch the test-script docs)
 
 ## Why
@@ -9,8 +9,8 @@
 `scripts/test-all.bat`'s six test steps (~L70-178) plus its own summary (~L180-197). The two copies
 differ in failure handling: build-all stops at the first failing suite, test-all runs them all and
 prints a summary. build-all also skips test-all's CLI smoke test. The docs record the drift instead
-of removing it: root CLAUDE.md (~L341-342) says "`test-all.bat` runs the six suites below plus a
-`quiver_cli` smoke test; `build-all.bat` builds and then runs the six suites", and tests/CLAUDE.md
+of removing it: root AGENTS.md (~L341-342) says "`test-all.bat` runs the six suites below plus a
+`quiver_cli` smoke test; `build-all.bat` builds and then runs the six suites", and tests/AGENTS.md
 (~L201-202) says "`scripts/build-all.bat` is also seven steps, but its step 1 is the build itself
 followed by the six suites — it does not run the CLI smoke test."
 
@@ -49,13 +49,13 @@ Principle: delete duplication. One test runner.
 
 ### Docs
 
-- Root `CLAUDE.md` ~L341-342: "`test-all.bat` runs the six suites below plus a `quiver_cli` smoke
-  test; `build-all.bat` builds and then runs the six suites (breakdown in `tests/CLAUDE.md`)." becomes
+- Root `AGENTS.md` ~L341-342: "`test-all.bat` runs the six suites below plus a `quiver_cli` smoke
+  test; `build-all.bat` builds and then runs the six suites (breakdown in `tests/AGENTS.md`)." becomes
   "`test-all.bat` runs the six suites below plus a `quiver_cli` smoke test; `build-all.bat` builds and
-  then calls `test-all.bat` (breakdown in `tests/CLAUDE.md`)."
-- `tests/CLAUDE.md` ~L201-202: replace the "`scripts/build-all.bat` is also seven steps ..." sentence
+  then calls `test-all.bat` (breakdown in `tests/AGENTS.md`)."
+- `tests/AGENTS.md` ~L201-202: replace the "`scripts/build-all.bat` is also seven steps ..." sentence
   with "`scripts/build-all.bat` configures and builds, then calls `test-all.bat`."
-- Keep tests/CLAUDE.md ~L186 (the benchmark is built by build-all). It stays true.
+- Keep tests/AGENTS.md ~L186 (the benchmark is built by build-all). It stays true.
 
 ## Tests
 
@@ -74,7 +74,7 @@ Run the script. That run is the test.
 
 - [ ] build-all contains no copy of the suite commands.
 - [ ] build-all's exit code is test-all's.
-- [ ] Both CLAUDE.md sentences are updated.
+- [ ] Both AGENTS.md sentences are updated.
 
 ## Pitfalls
 

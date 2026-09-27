@@ -5,7 +5,7 @@
 
 ## Why
 
-Root CLAUDE.md, "C++ Error Message Patterns": "Validators thread the calling operation's name
+Root AGENTS.md, "C++ Error Message Patterns": "Validators thread the calling operation's name
 through so the `{operation}` is the public method the user called". Three **private** helpers in
 `src/database.cpp` name themselves instead:
 

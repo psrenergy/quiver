@@ -6,7 +6,7 @@
 
 ### Overlaps in detail
 
-- **09. It must adapt when it runs.** Plan 09 was written against the old contract, where `add_offset_from_int` shifts by `value - initial_value`. Its rebase in the `ExpressionAggregate` constructor loops over the *remaining* output time dimensions: `output_meta_.initial_datetime = dim.time->add_offset_from_int(output_meta_.initial_datetime, 1);`. Under this plan, `add_offset_from_int(base, 1)` is the start of *base's own* period of that frequency. So that loop floors to the promoted child's period, and 09's `year × month` from 2025-03-01 example stays at 2025-03-01 instead of moving to 2025-01-01. Under the new contract the rebase is one call on the **reduced** dimension: `output_meta_.initial_datetime = operand_meta.dimensions[<reduced index>].time->add_offset_from_int(operand_meta.initial_datetime, 1);`. That floors to the start of the reduced period (Jan 1 for yearly, the 1st for monthly, the day for weekly/daily), which is the policy verifier's rule that 09's maintainer notes adopt. 09's "rebase before derive" pitfall stops mattering, because the new contract reads no `initial_value`. The new contract is written into `include/quiver/binary/time_properties.h` and `src/CLAUDE.md` by this plan. **Tell whoever runs 09.**
+- **09. It must adapt when it runs.** Plan 09 was written against the old contract, where `add_offset_from_int` shifts by `value - initial_value`. Its rebase in the `ExpressionAggregate` constructor loops over the *remaining* output time dimensions: `output_meta_.initial_datetime = dim.time->add_offset_from_int(output_meta_.initial_datetime, 1);`. Under this plan, `add_offset_from_int(base, 1)` is the start of *base's own* period of that frequency. So that loop floors to the promoted child's period, and 09's `year × month` from 2025-03-01 example stays at 2025-03-01 instead of moving to 2025-01-01. Under the new contract the rebase is one call on the **reduced** dimension: `output_meta_.initial_datetime = operand_meta.dimensions[<reduced index>].time->add_offset_from_int(operand_meta.initial_datetime, 1);`. That floors to the start of the reduced period (Jan 1 for yearly, the 1st for monthly, the day for weekly/daily), which is the policy verifier's rule that 09's maintainer notes adopt. 09's "rebase before derive" pitfall stops mattering, because the new contract reads no `initial_value`. The new contract is written into `include/quiver/binary/time_properties.h` and `src/AGENTS.md` by this plan. **Tell whoever runs 09.**
 - **09 also moves this plan's initial-value function.** After this plan, the initial values are set by `set_time_dimension_initial_values(quiver::BinaryMetadata&)`, in the anonymous namespace of `src/binary/binary_metadata.cpp`. It replaces `compute_time_dimension_initial_values` and the assignment loop. 09 moves its body into a `BinaryMetadata` member.
 - **10.** The restore rule in `next_dimensions` (and `ExpressionAggregate::compute_row`) looks only at the immediate parent. Any walk with **three or more** time levels and a non-1 innermost initial value therefore skips or invents cells. This plan's full-cell walks are two-level only, and its three-level tests write named cells. 10's "keep the start at midnight" caveat stops applying once this plan lands. 10 also flags a yearly × monthly × daily file from 2024-02-29 that cannot be written past year 1, and says it "belongs with plan 08's add_offset_from_int work". This plan fixes that case and tests it (`LeapDayStartUnderYearlyMonthlyDaily`).
 - **11.** It moves the tail of `from_toml_content` into a shared `build_metadata`. It must keep this plan's order: `metadata.validate();`, then `set_time_dimension_initial_values(metadata);`.
@@ -88,7 +88,7 @@ The last two rows come from `from_toml_content`, which computes initial values *
 
 As a result, the validator's messages ("must be ordered", "must be unique") are never reached for those layouts.
 
-Principles violated: a file the metadata accepts must be writable and readable in full, and one rule should live in one place (root CLAUDE.md, "Simple solutions over complex abstractions"; src/CLAUDE.md calls `next_dimensions` the "single source of truth for `.qvr` traversal", and validation disagrees with it).
+Principles violated: a file the metadata accepts must be writable and readable in full, and one rule should live in one place (root AGENTS.md, "Simple solutions over complex abstractions"; src/AGENTS.md calls `next_dimensions` the "single source of truth for `.qvr` traversal", and validation disagrees with it).
 
 ## Constraints and decisions
 
@@ -113,11 +113,11 @@ The finding's time-of-day symptom is fixed by this contract: the non-midnight fi
 
 **Other constraints:**
 - Binary and expression are exposed in the C API, Julia and Lua only (root Design Decisions). There is no Dart/Python/JS code or test to change, and no FFI declaration changes because no C signature changes. `c_api.jl` is **not** regenerated.
-- src/CLAUDE.md "Performance Bottlenecks": `validate_dimension_values` is ~19% of the hot path. The new code keeps one datetime fold per call and adds no allocation.
-- src/CLAUDE.md: internal helpers in `src/binary/binary_utils.h` are header-only `inline`, and the new position function follows that convention. Root principle "Delete unused code, do not deprecate": `TimeProperties::datetime_to_int` and `day_of_week` are deleted, not kept.
+- src/AGENTS.md "Performance Bottlenecks": `validate_dimension_values` is ~19% of the hot path. The new code keeps one datetime fold per call and adds no allocation.
+- src/AGENTS.md: internal helpers in `src/binary/binary_utils.h` are header-only `inline`, and the new position function follows that convention. Root principle "Delete unused code, do not deprecate": `TimeProperties::datetime_to_int` and `day_of_week` are deleted, not kept.
 - Root "C++ Error Message Patterns": the binary subsystem's messages are a documented pre-pattern exception. The `Invalid values for time dimensions: ...` text is kept **verbatim**, and nothing in the repo pins it.
 - Root "Changelog": BREAKING entries go under `## [0.11.0] — unreleased` and say what the caller must do. No manifest bump is needed (0.11.0 is already the unreleased minor).
-- Root "Self-Updating": update `src/CLAUDE.md`, plus one root Design Decision bullet so nobody reintroduces a Jan-1 week or relative calendar offsets.
+- Root "Self-Updating": update `src/AGENTS.md`, plus one root Design Decision bullet so nobody reintroduces a Jan-1 week or relative calendar offsets.
 
 **Alternatives rejected:**
 - *Finding as written (relative offsets + time of day):* leaves the leap-year and month-end failures above, in three of the eight pairs.
@@ -875,7 +875,7 @@ These bindings do not expose the binary subsystem (root Design Decision), so the
 
 ## Docs and changelog
 
-### `src/CLAUDE.md`
+### `src/AGENTS.md`
 
 1. File map. Old: `  binary_utils.h              # Shared file-extension constants`. New: `  binary_utils.h              # Shared file-extension constants, day_of_year, position_in_parent`.
 2. File map. Old: `  time_properties.cpp         # TimeFrequency string conversion`. New: `  time_properties.cpp         # TimeFrequency string conversion, add_offset_from_int`.
@@ -903,7 +903,7 @@ Daily under Yearly, Monthly or Weekly; Hourly under Yearly, Monthly, Weekly or D
 
 4. Performance Bottlenecks item 2. Old: ``(date arithmetic via `add_offset_from_int`/`datetime_to_int`)``. New: ``(date arithmetic via `add_offset_from_int`/`position_in_parent`)``.
 
-### Root `CLAUDE.md`
+### Root `AGENTS.md`
 
 In `## Design Decisions`, directly after the bullet `- **`BinaryMetadata::number_of_time_dimensions()` is derived** from `dimensions`, never stored.`, insert:
 
@@ -913,12 +913,12 @@ In `## Design Decisions`, directly after the bullet `- **`BinaryMetadata::number
   `add_offset_from_int` steps from period starts, never from `initial_datetime`'s own day, so month ends and leap
   years cannot shift a cell, and a week is seven days counted from `initial_datetime`'s day, never from January 1.
   One function, `position_in_parent` (`src/binary/binary_utils.h`), yields both the initial values and the
-  read/write check. Details in `src/CLAUDE.md` ("Time Coordinates").
+  read/write check. Details in `src/AGENTS.md` ("Time Coordinates").
 ```
 
 ### Other docs
 
-- `tests/CLAUDE.md` lists the binary test files by name, and none is added or removed, so it needs no edit.
+- `tests/AGENTS.md` lists the binary test files by name, and none is added or removed, so it needs no edit.
 - `bindings/js/src/lua-api.ts`, `docs/*.md` and the READMEs say nothing about time-coordinate semantics (grep for `initial_value`, `weekly`, `initial_datetime`). Nothing there becomes false, so they need no edit.
 
 ### `CHANGELOG.md`, under `## [0.11.0] — unreleased`
@@ -998,7 +998,7 @@ From the repo root (`C:\Development\Quiver\quiver1`), in order:
 - [ ] Every cell of all eight parent/child pairs, walked with `first_dimensions`/`next_dimensions` from 2025-03-15T06:00:00, writes and reads back (weekly layouts span 60 weeks across Dec 31).
 - [ ] The validator's `Invalid values for time dimensions: ...` message text is unchanged.
 - [ ] New tests exist in C++ (time properties, metadata, binary file, CSV), the C API, Lua and Julia, and each is listed in Verification.
-- [ ] `src/CLAUDE.md` (file map, "Time Coordinates", performance note) and a root CLAUDE.md Design Decision bullet are updated.
+- [ ] `src/AGENTS.md` (file map, "Time Coordinates", performance note) and a root AGENTS.md Design Decision bullet are updated.
 - [ ] CHANGELOG `[0.11.0]` has the BREAKING `Changed` entry and the two `Fixed` entries.
 - [ ] No C API, FFI declaration or binding wrapper changed; `c_api.jl` is untouched.
 - [ ] `scripts/test-all.bat` is green.
@@ -1024,5 +1024,5 @@ From the repo root (`C:\Development\Quiver\quiver1`), in order:
 - Deleting the C API metadata builders and `add_dimension`/`add_time_dimension`, which store `initial_value` 0: **plan 12**.
 - `csv_to_bin` float parsing, `bin_to_csv` float formatting (**plan 13**) and the CSV field-count check (**plan 14**).
 - The unreachable "Weekly under Yearly" case in `validate_time_dimension_sizes`. It is harmless and no plan owns it.
-- Making `validate_dimension_values` opt-in for speed (the src/CLAUDE.md performance note).
+- Making `validate_dimension_values` opt-in for speed (the src/AGENTS.md performance note).
 - Sub-hour cells: an hourly cell is a clock hour by design, so minutes in `initial_datetime` are floored, not preserved.

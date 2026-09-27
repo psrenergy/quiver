@@ -19,7 +19,7 @@
 2. **`scripts/test-wheel.bat` needs a dev venv that `uv build` never creates.** It sets
    `VENV_PYTHON=%PYTHON_DIR%\.venv\Scripts\python.exe` (~L12) and runs the validator with it
    (~L57): `"%VENV_PYTHON%" "%SCRIPT_DIR%validate_wheel.py" "!WHEEL_FILE!"`. In a fresh checkout
-   there is no `bindings/python/.venv`. The root CLAUDE.md says to run Python through `uv run`
+   there is no `bindings/python/.venv`. The root AGENTS.md says to run Python through `uv run`
    locally, because plain `python` is not on PATH.
 
 ## Constraints and decisions

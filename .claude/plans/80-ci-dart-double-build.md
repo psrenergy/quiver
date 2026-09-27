@@ -1,6 +1,6 @@
 # 80 — CI `dart-coverage`: drop the dead `build-cpp` and copy steps
 
-**Batch** 7 · **Severity** medium (CI builds the C++ library twice, and three docs repeat a false premise) · **Breaking** no · **Size** S · **Layers** CI (`.github/workflows/ci.yml`), docs (`bindings/dart/CLAUDE.md`, root CLAUDE.md, optionally `bindings/dart/hook/build.dart`)
+**Batch** 7 · **Severity** medium (CI builds the C++ library twice, and three docs repeat a false premise) · **Breaking** no · **Size** S · **Layers** CI (`.github/workflows/ci.yml`), docs (`bindings/dart/AGENTS.md`, root AGENTS.md, optionally `bindings/dart/hook/build.dart`)
 **Depends on** none · **Overlaps with** 81/83/88 (other `.github/` edits)
 
 ## Why
@@ -30,9 +30,9 @@ build hook (`bindings/dart/hook/build.dart`). The hook builds the C++ library it
 `.so` files are never loaded. The library is built twice and the job takes longer.
 
 This also means three docs are wrong:
-- `bindings/dart/CLAUDE.md` (~L69): "Note **no CI job runs this hook on any OS** — Dart is built and
+- `bindings/dart/AGENTS.md` (~L69): "Note **no CI job runs this hook on any OS** — Dart is built and
   published by hand."
-- Root `CLAUDE.md` Build System (~L384): "No CI job exercises the ON configuration."
+- Root `AGENTS.md` Build System (~L384): "No CI job exercises the ON configuration."
 - `bindings/dart/hook/build.dart` (~L74): "no CI job runs this hook". That comment is about the
   macOS `appleArgs`, and it is true for macOS only.
 
@@ -47,18 +47,18 @@ This also means three docs are wrong:
 - Before deleting, confirm that the hook really builds in CI. The next CI log for `dart-coverage`
   should show the CMake/native-toolchain output from `hook/build.dart` during the test step. If the
   job's test step fails after the change, the premise was wrong: restore the steps and record why in
-  `bindings/dart/CLAUDE.md`.
+  `bindings/dart/AGENTS.md`.
 
 ## Changes
 
 1. `.github/workflows/ci.yml`, job `dart-coverage`: delete the step
    `- uses: ./.github/actions/build-cpp` and the step `- name: Copy shared libraries` (with its `run`
    block). Leave checkout, setup-dart, Install lcov, `dart pub get` and the coverage steps.
-2. `bindings/dart/CLAUDE.md` ~L69: replace "Note **no CI job runs this hook on any OS** — Dart is
+2. `bindings/dart/AGENTS.md` ~L69: replace "Note **no CI job runs this hook on any OS** — Dart is
    built and published by hand." with "The Linux **Dart Coverage** CI job runs this hook through
    `dart test` on every push; the macOS/Windows paths and the three macOS workarounds above remain
    unexercised in CI. Dart is published by hand."
-3. Root `CLAUDE.md` ~L384: "No CI job exercises the ON configuration." becomes "Only the Linux Dart
+3. Root `AGENTS.md` ~L384: "No CI job exercises the ON configuration." becomes "Only the Linux Dart
    Coverage CI job exercises the ON configuration (through the hook); no macOS or Windows job does."
 4. Optional: `bindings/dart/hook/build.dart` ~L74, change "no CI job runs this hook" to "no macOS CI
    job runs this hook".

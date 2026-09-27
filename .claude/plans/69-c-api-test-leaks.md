@@ -72,7 +72,7 @@ fail; after it only the tests that use that fixture's data fail. Revert the expe
 
 ## Docs and changelog
 
-- `tests/CLAUDE.md`: add one line in the C API section: "Free C API strings with
+- `tests/AGENTS.md`: add one line in the C API section: "Free C API strings with
   `quiver_database_free_string`, never `delete[]`. Inside an open-for-write binary span use `EXPECT`,
   not `ASSERT`, so the writer is always closed."
 - No CHANGELOG entry.

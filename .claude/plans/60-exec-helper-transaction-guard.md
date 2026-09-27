@@ -1,6 +1,6 @@
 # 60 — `Impl::exec` for the `sqlite3_exec` blocks; `TransactionGuard` replaces the hand-rolled transactions
 
-**Batch** 6 · **Severity** low · **Breaking** no (same messages; a failed BEGIN inside migrate/import is now wrapped by that operation's message) · **Size** M · **Layers** C++ core only (+ src/CLAUDE.md)
+**Batch** 6 · **Severity** low · **Breaking** no (same messages; a failed BEGIN inside migrate/import is now wrapped by that operation's message) · **Size** M · **Layers** C++ core only (+ src/AGENTS.md)
 **Depends on** 53 (moves `execute_raw` into `Impl`), 58 (leaves `import_csv` with **one** write tail — this plan then edits one block instead of two), 01 (removes the `PRAGMA foreign_keys` toggles in import) · **Overlaps with** 63 (rewords the migrate/apply_schema error messages — land 60 first or merge carefully: both touch `migrate_up`/`migrate_down`/`apply_schema`)
 
 ## Why
@@ -36,7 +36,7 @@ These are `migrate_up`, `migrate_down` and `apply_schema` (`database.cpp` ~L425-
         }
 ```
 
-Principles: simplicity and RAII ("RAII used strictly", root CLAUDE.md).
+Principles: simplicity and RAII ("RAII used strictly", root AGENTS.md).
 
 ## Constraints and decisions
 
@@ -140,7 +140,7 @@ creates a table and then fails must leave `user_version` and the table absent.
 
 ## Docs and changelog
 
-- `src/CLAUDE.md`, Transactions section: add "Every internal write that owns a transaction
+- `src/AGENTS.md`, Transactions section: add "Every internal write that owns a transaction
   (`create_element` ..., the migrations, `apply_schema`, `import_csv`) uses `Impl::TransactionGuard`,
   declared inside its `try` so the rollback runs before the handler; `Impl::exec` is the one
   `sqlite3_exec` runner."
@@ -167,7 +167,7 @@ From the repo root:
 
 - Do not replace the **public** `Database::begin_transaction`/`commit`/`rollback`. They are the
   user API and must throw on misuse. Only internal hand-rolled blocks change.
-- The dry-run `end_dry_run` path calls `impl_->rollback()` directly on purpose (src/CLAUDE.md).
+- The dry-run `end_dry_run` path calls `impl_->rollback()` directly on purpose (src/AGENTS.md).
   Leave it.
 
 ## Out of scope

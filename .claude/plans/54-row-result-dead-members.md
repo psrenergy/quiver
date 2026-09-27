@@ -27,7 +27,7 @@ Principle: delete unused code, do not deprecate.
   tests.
 - Keep `Result::begin/end`, because `database_internal.h` iterates results. Keep `Result::empty`,
   `row_count`, `columns` and `operator[]`, and `Row::operator[]` plus the `get_*` getters.
-- `Row::get_float` widening an INTEGER is load-bearing (root CLAUDE.md), so do not touch it.
+- `Row::get_float` widening an INTEGER is load-bearing (root AGENTS.md), so do not touch it.
 
 ## Changes
 
@@ -106,7 +106,7 @@ Compiling the test file is the check. Any leftover use of a deleted member fails
 
 ## Docs and changelog
 
-- `src/CLAUDE.md` file map line `row.h / result.h  # Row and Result query-result types`: no change
+- `src/AGENTS.md` file map line `row.h / result.h  # Row and Result query-result types`: no change
   needed.
 - `CHANGELOG.md`, under `## [0.11.0] — unreleased` → `### Removed` (create the heading if absent):
   ```markdown

@@ -1,6 +1,6 @@
 # 81 — Publish workflows: remove the redundant `version` inputs
 
-**Batch** 7 · **Severity** medium (a manual dispatch can publish artifacts under the wrong version) · **Breaking** no (release tooling) · **Size** S · **Layers** CI (`.github/workflows/publish-{s3,julia,js}.yml`, `publish.yml`), `.github/CLAUDE.md`
+**Batch** 7 · **Severity** medium (a manual dispatch can publish artifacts under the wrong version) · **Breaking** no (release tooling) · **Size** S · **Layers** CI (`.github/workflows/publish-{s3,julia,js}.yml`, `publish.yml`), `.github/AGENTS.md`
 **Depends on** none · **Overlaps with** 83 (edits `publish-js.yml` elsewhere), 88 (stale names in the same workflows), 77/80 (other `.github/` docs)
 
 ## Why
@@ -28,7 +28,7 @@ orchestrator `publish.yml` passes the version it already derived (~L66, ~L101, ~
 In the orchestrated flow the input is redundant, because the checkout at that ref has the same
 version. In a manual dispatch it is harmful: typing a version that differs from the checked-out
 manifests publishes those manifests' artifacts labelled with the typed version. The single source
-of truth is `CMakeLists.txt`, checked by `scripts/assert_version.py` (root CLAUDE.md "Versioning").
+of truth is `CMakeLists.txt`, checked by `scripts/assert_version.py` (root AGENTS.md "Versioning").
 
 ## Constraints and decisions
 
@@ -53,7 +53,7 @@ of truth is `CMakeLists.txt`, checked by `scripts/assert_version.py` (root CLAUD
    argument. Keep `"ref=$SHA"` at ~L66. After this, `VERSION` is used only for the `"v$VERSION"`
    tag ref on the julia/js dispatch lines. If the publish-s3 dispatch step no longer references
    `VERSION`, drop it from that step's `env:`.
-3. `.github/CLAUDE.md`: add one line where the child publish workflows are described: "The child
+3. `.github/AGENTS.md`: add one line where the child publish workflows are described: "The child
    publish workflows take no `version` input: each resolves it from its checkout via
    `scripts/assert_version.py`; `ref` is their only override."
 
@@ -73,7 +73,7 @@ No automated test. Validate the YAML and do a dry read.
 
 - [ ] No child workflow declares or reads a `version` input.
 - [ ] `publish.yml` passes no `version=` argument, and every `ref` input is kept.
-- [ ] `.github/CLAUDE.md` is updated.
+- [ ] `.github/AGENTS.md` is updated.
 
 ## Pitfalls
 

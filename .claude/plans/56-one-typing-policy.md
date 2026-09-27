@@ -1,11 +1,11 @@
 # 56 — One scalar typing policy: `validate_value` uses `value_matches_type`; Pattern 1 messages for unknown columns and strings on INTEGER
 
-**Batch** 6 · **Severity** medium · **Breaking** no (the accepted values are unchanged; two error texts change) · **Size** M · **Layers** C++ core, C++ tests (+ src/CLAUDE.md, root CLAUDE.md typing bullet, CHANGELOG)
+**Batch** 6 · **Severity** medium · **Breaking** no (the accepted values are unchanged; two error texts change) · **Size** M · **Layers** C++ core, C++ tests (+ src/AGENTS.md, root AGENTS.md typing bullet, CHANGELOG)
 **Depends on** 53 (drops the `Database& db` parameter from `resolve_fk_label`/`resolve_element_fk_labels`; if 53 has not landed, keep that parameter). **Run this plan before 55**, which turns `TypeValidator` into free functions after this plan rewrites them. · **Overlaps with** 05 (moves array FK resolution into `prepare_group_data`; apply the `caller` threading there too), 55 (same file, next), 59 (`get_foreign_key` reuse in `resolve_fk_label` — do it here, see step 2)
 
 ## Why
 
-Root CLAUDE.md, Design Decision "One scalar typing policy lives in C++": an int64 is accepted for
+Root AGENTS.md, Design Decision "One scalar typing policy lives in C++": an int64 is accepted for
 INTEGER and REAL, a double only for REAL, and a string for TEXT / INTEGER-FK / DATE_TIME.
 "`TypeValidator` (scalar create/update) and `value_matches_type` (time-series writes) share this
 rule". Today the rule is **coded twice**:
@@ -57,9 +57,9 @@ Principles: logic lives in one place, and the error-pattern rule holds.
   - The unknown-column text must be `Impl::require_column`'s exact wording.
   - Delete `Schema::get_data_type(table, column)`.
   - Pin both messages with exact-match assertions.
-  - Update the src/CLAUDE.md typing-policy bullet.
+  - Update the src/AGENTS.md typing-policy bullet.
 - Keep the DATE_TIME **content** check (`datetime::is_valid_iso8601`) as a separate guard after the
-  shape check. The src/CLAUDE.md "DATE_TIME content is checked by both halves" bullet explains why
+  shape check. The src/AGENTS.md "DATE_TIME content is checked by both halves" bullet explains why
   it must not move into `value_matches_type`.
 - The accepted values do not change. Existing messages `Cannot <op>: type mismatch for <context>:
   expected <T>, got INTEGER|REAL|TEXT` stay byte-identical. `internal::value_type_name` (in
@@ -82,7 +82,7 @@ void TypeValidator::validate_value(const std::string& caller,
         throw std::runtime_error("Cannot " + caller + ": type mismatch for " + context + ": expected " +
                                  data_type_to_string(expected_type) + ", got " + internal::value_type_name(value));
     }
-    // Content check, separate on purpose (see src/CLAUDE.md): a DATE_TIME column is TEXT every
+    // Content check, separate on purpose (see src/AGENTS.md): a DATE_TIME column is TEXT every
     // binding parses back into a date, so an unparseable value is rejected here.
     if (expected_type == DataType::DateTime) {
         if (const auto* s = std::get_if<std::string>(&value); s && !datetime::is_valid_iso8601(*s)) {
@@ -176,7 +176,7 @@ Thread `caller` through the callers:
   `value = resolve_fk_label(caller, *table_def, col_name, value);`. `update_group_rows` already
   receives `caller`.
 
-Keep the "Failed to resolve label" message. src/CLAUDE.md records it as Pattern 3.
+Keep the "Failed to resolve label" message. src/AGENTS.md records it as Pattern 3.
 
 ## Tests
 
@@ -210,14 +210,14 @@ binding test that pinned `Cannot resolve attribute` changes to the new message.
 
 ## Docs and changelog
 
-- `src/CLAUDE.md`, "One scalar typing policy" bullet. Replace "string matches `TEXT`/`INTEGER`(FK
+- `src/AGENTS.md`, "One scalar typing policy" bullet. Replace "string matches `TEXT`/`INTEGER`(FK
   label)/`DATE_TIME`. Keep the two in sync (root design decision)." with: "string matches `TEXT` /
   `DATE_TIME`. `TypeValidator::validate_value` *calls* `value_matches_type`, so the rule lives in
   one function. An FK label string never reaches it: `Impl::resolve_fk_label` turns it into an id
   first, and rejects a string on a non-FK INTEGER column itself (Pattern 1, naming the caller)."
-  Also fix any src/CLAUDE.md sentence calling `resolve_fk_label`'s throw Pattern 3. Only the
+  Also fix any src/AGENTS.md sentence calling `resolve_fk_label`'s throw Pattern 3. Only the
   label-miss is Pattern 3.
-- Root CLAUDE.md typing-policy decision: "a string for TEXT / INTEGER-FK / DATE_TIME" stays true as
+- Root AGENTS.md typing-policy decision: "a string for TEXT / INTEGER-FK / DATE_TIME" stays true as
   a policy statement, so no edit is needed. If it says "`TypeValidator` and `value_matches_type`
   share this rule", make it "`TypeValidator` delegates to `value_matches_type`".
 - `CHANGELOG.md`, under `## [0.11.0] — unreleased` → `### Changed`:

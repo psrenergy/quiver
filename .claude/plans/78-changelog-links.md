@@ -16,7 +16,7 @@ link definition, so `[0.11.0]` renders as literal bracketed text. The definition
 
 0.10.9 was released (its heading ~L84 is dated, and `git tag -l v0.10.9` exists), but its link
 still compares against `HEAD`, so it keeps growing to include the 0.11.0 changes. The root
-CLAUDE.md "Versioning" says the changelog carries "`## [x.y.z] — unreleased` plus its compare link".
+AGENTS.md "Versioning" says the changelog carries "`## [x.y.z] — unreleased` plus its compare link".
 
 ## Changes — `CHANGELOG.md`
 
@@ -51,4 +51,4 @@ None.
 
 ## Out of scope
 
-- Settling the release ritual for this file (root CLAUDE.md leaves it open).
+- Settling the release ritual for this file (root AGENTS.md leaves it open).

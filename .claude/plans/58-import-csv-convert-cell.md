@@ -50,7 +50,7 @@ Principles: one decision tree instead of four copies, and "converting a row *is*
 - Convert every row **before** the first write (before the DELETE / omitted-id delete). A bad cell
   then throws before anything changes, which is today's guarantee from the separate validation pass.
 - Leave `require_well_formed_quotes`, `sniff_csv_file`/`read_csv_file` and the CSV parsing alone.
-  Root CLAUDE.md says "Do not remove that check".
+  Root AGENTS.md says "Do not remove that check".
 - Self-FK cells convert to `nullptr` in the converted rows and keep their label for the
   second pass, as today.
 - `export_csv`'s type map maps `id` to Text and a non-date dimension to Text. Keep that override
@@ -152,7 +152,7 @@ Value convert_cell(const std::string& cell,
 }
 ```
 Copy the throw texts **exactly** from the current validation copies; the ones above are HEAD's.
-Check `parse_datetime_import`'s return type (a `std::string` canonical form, per root CLAUDE.md)
+Check `parse_datetime_import`'s return type (a `std::string` canonical form, per root AGENTS.md)
 and `resolve_enum_value`'s (an `int64_t`). Check the `ColumnDefinition`/`ForeignKey` field names in
 `schema.h`.
 
@@ -238,7 +238,7 @@ before and after.
 
 ## Docs and changelog
 
-- `src/CLAUDE.md`: in "DATE_TIME content is checked by both halves", the sentence about
+- `src/AGENTS.md`: in "DATE_TIME content is checked by both halves", the sentence about
   `parse_datetime_import` stays true. Add one line: "Import converts every cell through one
   `convert_cell` (`database_csv_import.cpp`) before writing, so validation and the write cannot
   disagree."

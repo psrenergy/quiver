@@ -1,6 +1,6 @@
 # 57 — One group-table name helper and one `require_group_table`; Pattern 2 for every miss
 
-**Batch** 6 · **Severity** low · **Breaking** no (two error texts change to the documented pattern) · **Size** M · **Layers** C++ core, C++ tests (+ src/CLAUDE.md, CHANGELOG)
+**Batch** 6 · **Severity** low · **Breaking** no (two error texts change to the documented pattern) · **Size** M · **Layers** C++ core, C++ tests (+ src/AGENTS.md, CHANGELOG)
 **Depends on** 53 (`require_element(..., db)` loses its `db` argument; keep it if 53 has not landed) · **Overlaps with** 02/03/04 (edit `database_time_series.cpp` bodies — apply this plan's lookup replacement to whatever shape they left), 07 (`list_*_groups` use `require_collection`; not touched here), 55 (if landed, `schema.h`/`schema.cpp` live in `src/`), 58 (import/export share a different lookup, `Schema::find_group_table`, added there)
 
 ## Why
@@ -166,7 +166,7 @@ any vector/set table of the collection.
 
 ## Docs and changelog
 
-- `src/CLAUDE.md`, "Table classification has one source" bullet: add "and one name builder,
+- `src/AGENTS.md`, "Table classification has one source" bullet: add "and one name builder,
   `Schema::group_table_name(collection, group, GroupTableType)`; every group-addressed operation
   resolves its table through `Impl::require_group_table`, which owns the Pattern 2 miss."
 - `CHANGELOG.md`, under `## [0.11.0] — unreleased` → `### Changed`:

@@ -1,7 +1,7 @@
 # 88 — Stale names in CI scripts and docs (`release.yml`, `setup-node@v6`)
 
-**Batch** 7 · **Severity** low · **Breaking** no · **Size** S · **Layers** comments in `scripts/ci/dispatch_workflow.sh`, `.github/workflows/*.yml`, `.github/CLAUDE.md`
-**Depends on** none · **Overlaps with** 81, 83 (other edits in the same workflow files), 77, 80 (other `.github/CLAUDE.md` edits)
+**Batch** 7 · **Severity** low · **Breaking** no · **Size** S · **Layers** comments in `scripts/ci/dispatch_workflow.sh`, `.github/workflows/*.yml`, `.github/AGENTS.md`
+**Depends on** none · **Overlaps with** 81, 83 (other edits in the same workflow files), 77, 80 (other `.github/AGENTS.md` edits)
 
 ## Why
 
@@ -9,10 +9,10 @@
    - `scripts/ci/dispatch_workflow.sh` ~L4: "# Used by release.yml to orchestrate the four publish workflows."
    - same file, ~L10: "... release.yml's ..."
    - `.github/workflows/publish-python.yml` ~L91: "# skip-existing makes a release.yml re-run idempotent ..."
-2. **`setup-node@v6`.** `.github/CLAUDE.md` (~L142) says npm publishes "via `actions/setup-node@v6`",
+2. **`setup-node@v6`.** `.github/AGENTS.md` (~L142) says npm publishes "via `actions/setup-node@v6`",
    but `publish-js.yml` (~L29) uses `actions/setup-node@v7`. Pinned version numbers in prose go stale
    on every action bump.
-3. **Misattached parenthetical.** `.github/CLAUDE.md` table row (~L13) for `publish-s3.yml`:
+3. **Misattached parenthetical.** `.github/AGENTS.md` table row (~L13) for `publish-s3.yml`:
    "Builds native libs for `linux-x86_64`, `macos-aarch64`, `windows-x86_64` (via
    `scripts/ci/native_s3.sh`) and stages them on S3". `native_s3.sh` stages the libraries; it does not
    build them.
@@ -28,10 +28,10 @@
 
 1. `scripts/ci/dispatch_workflow.sh` ~L4 and ~L10: `release.yml` becomes `publish.yml`.
 2. `.github/workflows/publish-python.yml` ~L91: `release.yml` becomes `publish.yml`.
-3. `.github/CLAUDE.md` ~L142: "via `actions/setup-node@v6`" becomes "via `actions/setup-node`". Check
+3. `.github/AGENTS.md` ~L142: "via `actions/setup-node@v6`" becomes "via `actions/setup-node`". Check
    ~L144-147 for other version-pinned mentions and make them version-neutral too. Also check
    `publish-js.yml`'s own comments for a stale `@v6`: `grep -n "@v6" .github/workflows/publish-js.yml`.
-4. `.github/CLAUDE.md` ~L13: move the parenthetical to "... `windows-x86_64` and stages them on S3
+4. `.github/AGENTS.md` ~L13: move the parenthetical to "... `windows-x86_64` and stages them on S3
    (via `scripts/ci/native_s3.sh upload`)".
 
 Afterwards run `grep -rn "release\.yml" scripts .github`. It must print nothing.
@@ -42,7 +42,7 @@ None.
 
 ## Verification
 
-- The grep above prints nothing, and `grep -n "setup-node@v" .github/CLAUDE.md` prints nothing.
+- The grep above prints nothing, and `grep -n "setup-node@v" .github/AGENTS.md` prints nothing.
 - The YAML still parses: `uv run --with pyyaml python -c "import yaml; yaml.safe_load(open('.github/workflows/publish-python.yml'))"`.
 - `dispatch_workflow.sh` is LF (a shell script). Keep it LF.
 

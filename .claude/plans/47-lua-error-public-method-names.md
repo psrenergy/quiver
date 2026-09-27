@@ -5,7 +5,7 @@
 
 ## Why
 
-Root CLAUDE.md, "C++ Error Message Patterns": *"Validators thread the calling operation's name
+Root AGENTS.md, "C++ Error Message Patterns": *"Validators thread the calling operation's name
 through so the `{operation}` is the public method the user called (e.g., type mismatches report
 `"Cannot update_element: ..."`)."* Three Lua converters in `src/lua_runner.cpp` report the name of
 an **internal helper** instead:
@@ -109,7 +109,7 @@ if the file uses it):
   ```
 - `bindings/js/src/lua-api.ts`: if it quotes any of the old helper-named messages
   (`grep -n "table_to_element\|lua_table_to_value" bindings/js/src/lua-api.ts`), update the quote.
-- No CLAUDE.md change needed. The rule already says to thread the public name.
+- No AGENTS.md change needed. The rule already says to thread the public name.
 
 ## Verification
 

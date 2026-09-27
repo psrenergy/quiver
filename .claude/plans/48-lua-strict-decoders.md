@@ -1,6 +1,6 @@
 # 48 — Lua: strict option decoders for `export_csv`/`import_csv`, `quiver.metadata` and `rename_agents`
 
-**Batch** 5 · **Severity** medium · **Breaking** yes — a script with a misspelled or wrong-typed key in these tables now throws instead of silently getting defaults · **Size** M · **Layers** C++ Lua runner, C++ Lua tests (Debug + Release), `bindings/js/src/lua-api.ts`, `src/CLAUDE.md`, CHANGELOG
+**Batch** 5 · **Severity** medium · **Breaking** yes — a script with a misspelled or wrong-typed key in these tables now throws instead of silently getting defaults · **Size** M · **Layers** C++ Lua runner, C++ Lua tests (Debug + Release), `bindings/js/src/lua-api.ts`, `src/AGENTS.md`, CHANGELOG
 **Depends on** none · **Overlaps with** 16 (aggregation parser near `rename_agents`), 51 (operator tables next to `rename_agents`), 46/47 (other converters in the same file), 43/44 (lua-api.ts CSV and metadata sections), 11 (`BinaryMetadata::from_element` length checks; this plan validates the Lua side before calling it)
 
 ## Why
@@ -49,7 +49,7 @@ Three decoders in the same file skip that treatment.
    string.
 
 Principle: consistency within one file, and loud failure at a trust boundary. A script is
-untrusted input; see `src/CLAUDE.md` "Three guards in the Lua layer's decoders".
+untrusted input; see `src/AGENTS.md` "Three guards in the Lua layer's decoders".
 
 ## Constraints and decisions
 
@@ -57,10 +57,10 @@ untrusted input; see `src/CLAUDE.md` "Three guards in the Lua layer's decoders".
   - BREAKING, with a CHANGELOG entry.
   - Keep the collect-then-validate rule: never throw from inside a `for_each` lambda.
   - Run the negative tests on a Release build as well (`SOL_SAFE_GETTER` is off there).
-  - Update lua-api.ts and the `src/CLAUDE.md` `parse_csv_options` line.
+  - Update lua-api.ts and the `src/AGENTS.md` `parse_csv_options` line.
 - Reuse `csv_options_entries` for all three top-level tables. Its name says "csv". Renaming it to
   `lua_options_entries` is optional; if you rename it, rename every call site and the
-  `src/CLAUDE.md` mention in the same change.
+  `src/AGENTS.md` mention in the same change.
 - Use the same messages as the strict CSV decoders: `Cannot <op>: options must be a table`,
   `Cannot <op>: option key must be a string`, `Cannot <op>: unknown option '<k>'`. Add
   `Cannot <op>: option '<k>' must be a <type>` for value types.
@@ -249,7 +249,7 @@ pass.
 
 ## Docs and changelog
 
-- `src/CLAUDE.md`: the bullet "`parse_csv_options(table)` is the single CSVOptions parser shared by
+- `src/AGENTS.md`: the bullet "`parse_csv_options(table)` is the single CSVOptions parser shared by
   `export_csv`/`import_csv`." becomes "`parse_csv_options(options, operation)` is the single strict
   CSVOptions decoder for `export_csv`/`import_csv`: `nil` means defaults, any other non-table and any
   unknown or wrong-typed key throws, with the same collect-then-validate walk (`csv_options_entries`)
@@ -289,7 +289,7 @@ From the repo root:
 - [ ] No `sol::optional<sol::table>` options parameter remains on `export_csv`/`import_csv`.
 - [ ] No throw happens inside a `for_each` lambda in the three decoders.
 - [ ] All negative tests pass on Debug and Release, and the positive tests still pass.
-- [ ] lua-api.ts, src/CLAUDE.md and the CHANGELOG are updated.
+- [ ] lua-api.ts, src/AGENTS.md and the CHANGELOG are updated.
 
 ## Pitfalls
 

@@ -1,6 +1,6 @@
 # 29 — Python: delete Makefile, dotenv dev-dep, unused fixtures, Element.clear/_ensure_valid
 
-**Batch** 4 · **Severity** low · **Breaking** no. `Element` is internal (not exported from `quiverdb`), so no public surface changes. The only behaviour change is the message a use of an already-destroyed internal `Element` raises: `Element has been destroyed` becomes the C API's `Null argument: element`. No caller can reach this. · **Size** S · **Layers** Python binding only (`src/quiverdb/element.py`, `tests/`, `pyproject.toml`, `format.bat`, `Makefile`), plus `bindings/python/CLAUDE.md`
+**Batch** 4 · **Severity** low · **Breaking** no. `Element` is internal (not exported from `quiverdb`), so no public surface changes. The only behaviour change is the message a use of an already-destroyed internal `Element` raises: `Element has been destroyed` becomes the C API's `Null argument: element`. No caller can reach this. · **Size** S · **Layers** Python binding only (`src/quiverdb/element.py`, `tests/`, `pyproject.toml`, `format.bat`, `Makefile`), plus `bindings/python/AGENTS.md`
 
 **Depends on** none · **Overlaps with** 07, 21, 24, 25, 26, 28, 30, 67, 87 (what each shares is listed below)
 
@@ -35,7 +35,7 @@ Six pieces of dead or misleading code and config in the Python binding. Everythi
    - `docker_run` is declared phony, but no such rule exists.
    - `publish` runs `uv build` / `uv publish`, which bypasses the real publish path (`.github/workflows/publish-python.yml:36`, `pypa/cibuildwheel@v4.2.0`).
    - `test` duplicates `tests/test.bat` without the `build/bin` PATH prepend, so on Windows it cannot find the DLLs.
-   - The layout in `bindings/python/CLAUDE.md` does not list the Makefile.
+   - The layout in `bindings/python/AGENTS.md` does not list the Makefile.
 
    **Correction to the finding:** `format.bat` does *not* cover `lint`. `bindings/python/format.bat` is only:
    ```bat
@@ -92,7 +92,7 @@ Six pieces of dead or misleading code and config in the Python binding. Everythi
        lib = get_lib()
        check(lib.quiver_element_clear(self._ptr))
    ```
-   Its only caller is `tests/test_element.py::test_element_clear` (~L121-129). `Element` is internal (`bindings/python/CLAUDE.md`: "element.py # Element builder - INTERNAL ONLY"). Its three production users are `Database.create_element`, `update_element` and `update_element_by_label` (`database.py` ~L206-269). Each one builds an `Element`, calls `set` in a loop, makes one C call and destroys it in a `finally`. None of them ever clears it.
+   Its only caller is `tests/test_element.py::test_element_clear` (~L121-129). `Element` is internal (`bindings/python/AGENTS.md`: "element.py # Element builder - INTERNAL ONLY"). Its three production users are `Database.create_element`, `update_element` and `update_element_by_label` (`database.py` ~L206-269). Each one builds an `Element`, calls `set` in a loop, makes one C call and destroys it in a `finally`. None of them ever clears it.
 
 6. **`Element._ensure_valid`: redundant guard with a binding-crafted message.** `element.py` (currently ~L94-96):
    ```python
@@ -100,7 +100,7 @@ Six pieces of dead or misleading code and config in the Python binding. Everythi
        if self._destroyed:
            raise QuiverError("Element has been destroyed")
    ```
-   It is called from `set` (first statement, ~L24) and from `clear`. It can never fire in production (see 5). Even when it could, it is redundant. `destroy()` sets `self._ptr = ffi.NULL`, and every C setter starts with `QUIVER_REQUIRE(element, ...)` (`src/c/element.cpp`, e.g. `quiver_element_set_integer`). That macro (`src/c/internal.h`, `QUIVER_REQUIRE_1`) sets `"Null argument: element"` and returns `QUIVER_ERROR`, which `check()` raises as `QuiverError`. `ElementCApi.NullElementErrors` pins that C behaviour; it passes in the current `build/bin/quiver_c_tests.exe`. The root CLAUDE.md "Error Messages" principle is explicit: "All error messages are defined in the C++/C API layer. Bindings retrieve and surface them — they never craft their own." Once `_ensure_valid` goes, `from quiverdb.exceptions import QuiverError` (~L5) has no other use in `element.py`. Nothing would flag the stale import, because `ruff.toml` selects only `I`.
+   It is called from `set` (first statement, ~L24) and from `clear`. It can never fire in production (see 5). Even when it could, it is redundant. `destroy()` sets `self._ptr = ffi.NULL`, and every C setter starts with `QUIVER_REQUIRE(element, ...)` (`src/c/element.cpp`, e.g. `quiver_element_set_integer`). That macro (`src/c/internal.h`, `QUIVER_REQUIRE_1`) sets `"Null argument: element"` and returns `QUIVER_ERROR`, which `check()` raises as `QuiverError`. `ElementCApi.NullElementErrors` pins that C behaviour; it passes in the current `build/bin/quiver_c_tests.exe`. The root AGENTS.md "Error Messages" principle is explicit: "All error messages are defined in the C++/C API layer. Bindings retrieve and surface them — they never craft their own." Once `_ensure_valid` goes, `from quiverdb.exceptions import QuiverError` (~L5) has no other use in `element.py`. Nothing would flag the stale import, because `ruff.toml` selects only `I`.
 
    Reproduction of the message change:
    ```python
@@ -109,7 +109,7 @@ Six pieces of dead or misleading code and config in the Python binding. Everythi
    # after : QuiverError("Null argument: element")       <- from the C API
    ```
 
-Principles this change follows (root `CLAUDE.md`): "Delete unused code, do not deprecate." "Clean code over defensive code." The Error Messages rule quoted above.
+Principles this change follows (root `AGENTS.md`): "Delete unused code, do not deprecate." "Clean code over defensive code." The Error Messages rule quoted above.
 
 ---
 
@@ -117,13 +117,13 @@ Principles this change follows (root `CLAUDE.md`): "Delete unused code, do not d
 
 - **Maintainer decisions (binding):**
   1. "Move `ruff check --fix` into format.bat before deleting the Makefile."
-  2. "Keep the `quiver_element_clear` cdef (mirror)." `_c_api.py` mirrors the whole C header, including other element functions Python never calls: `quiver_element_has_scalars`, `has_arrays`, `scalar_count` and `array_count` (~L87-90). That mirror is what keeps it diffable against `generator/generator.bat` output (`bindings/python/CLAUDE.md`: "`_c_api.py` declarations must match the C headers exactly … diff its output against `_c_api.py`").
+  2. "Keep the `quiver_element_clear` cdef (mirror)." `_c_api.py` mirrors the whole C header, including other element functions Python never calls: `quiver_element_has_scalars`, `has_arrays`, `scalar_count` and `array_count` (~L87-90). That mirror is what keeps it diffable against `generator/generator.bat` output (`bindings/python/AGENTS.md`: "`_c_api.py` declarations must match the C headers exactly … diff its output against `_c_api.py`").
   3. "Delete the shadowing `collections_db` fixture in test_database_metadata.py."
-- **Root CLAUDE.md, "Python's `Element` is internal; users pass `**kwargs` to create/update"** (Design Decisions). Deleting `Element.clear` therefore changes no public API. It also creates no cross-binding asymmetry: in Julia (`clear!`) and Dart (`Element.clear`) `Element` is public, and there it stays bound. The C API function `quiver_element_clear` stays too.
+- **Root AGENTS.md, "Python's `Element` is internal; users pass `**kwargs` to create/update"** (Design Decisions). Deleting `Element.clear` therefore changes no public API. It also creates no cross-binding asymmetry: in Julia (`clear!`) and Dart (`Element.clear`) `Element` is public, and there it stays bound. The C API function `quiver_element_clear` stays too.
 - **Keep `self._destroyed`.** `destroy()` (idempotency), `__repr__` (`"Element(destroyed)"`, pinned by `test_element_repr_destroyed`) and `__del__` still read it.
 - **Keep `Element.__init__` as is** (plan 26's recorded decision).
-- **`.bat` files are CRLF in the working tree** (root CLAUDE.md, "Code Style Tooling" caution). `git ls-files --eol bindings/python/format.bat` shows `i/lf w/crlf attr/text=auto`, with `core.autocrlf=true`. The index stores LF and the working tree has CRLF. The rewritten `format.bat` must be CRLF on every line.
-- **No CHANGELOG entry.** Root CLAUDE.md: "user-visible changes get an entry". Nothing here is user-visible. `Element` is not exported. The Makefile, `format.bat` and the dev dependency group are contributor tooling. `uv.lock` is not committed.
+- **`.bat` files are CRLF in the working tree** (root AGENTS.md, "Code Style Tooling" caution). `git ls-files --eol bindings/python/format.bat` shows `i/lf w/crlf attr/text=auto`, with `core.autocrlf=true`. The index stores LF and the working tree has CRLF. The rewritten `format.bat` must be CRLF on every line.
+- **No CHANGELOG entry.** Root AGENTS.md: "user-visible changes get an entry". Nothing here is user-visible. `Element` is not exported. The Makefile, `format.bat` and the dev dependency group are contributor tooling. `uv.lock` is not committed.
 
 Alternatives considered and rejected:
 - *Also delete the `quiver_element_clear` cdef* (original proposal). Rejected by the maintainer: it would break the header mirror and add noise to every future generator diff.
@@ -426,7 +426,7 @@ No behaviour change is visible outside the Python binding, so no C++, C API, Lua
 
 ## Docs and changelog
 
-### `bindings/python/CLAUDE.md`, `## Layout` code block
+### `bindings/python/AGENTS.md`, `## Layout` code block
 
 Old:
 ```
@@ -443,7 +443,7 @@ pyproject.toml    # Version must match CMakeLists.txt; requires-python >=3.13; d
 ruff.toml         # Lint/format config; lint is isort only (select = ["I"])
 ```
 
-### `bindings/python/CLAUDE.md`, `## Rules and gotchas`, the "**API shape**" bullet
+### `bindings/python/AGENTS.md`, `## Rules and gotchas`, the "**API shape**" bullet
 
 Old sentence:
 ```
@@ -458,7 +458,7 @@ New:
 ```
 The rest of the bullet ("regular methods, not `@property` (design decision). `LogLevel` is …") stays. Re-wrap to ~100 columns like the surrounding text.
 
-### Root `CLAUDE.md`
+### Root `AGENTS.md`
 
 No change. "Code Style Tooling" says `scripts/format.bat` runs "each binding's own `format.bat` (JuliaFormatter, dart format, ruff, biome)", which stays accurate. No root passage mentions the Makefile, `dotenv`, the fixtures or Python's `Element.clear`. Verified: `git grep -n -E "conftest|csv_db|collections_db|Element\.clear|Makefile" -- '*.md'` finds nothing relevant.
 
@@ -517,7 +517,7 @@ Run from the repo root `C:\Development\Quiver\quiver1` unless stated otherwise. 
    - `bindings/python/tests/test_database_metadata.py`
    - `bindings/python/tests/test_database_query.py`
    - `bindings/python/tests/test_element.py`
-   - `bindings/python/CLAUDE.md`
+   - `bindings/python/AGENTS.md`
 
    If `git diff` shows `format.bat` or any other `.bat` file with changed line endings, restore CRLF (Pitfalls).
 
@@ -534,7 +534,7 @@ Run from the repo root `C:\Development\Quiver\quiver1` unless stated otherwise. 
 - [ ] `_c_api.py` still declares `quiver_element_clear`.
 - [ ] `test_element_clear` is deleted; `test_element_set_after_destroy_raises` exists and passes.
 - [ ] `uv run ruff check .` (from `bindings/python`) prints `All checks passed!`; `tests/test_database_query.py` carries the one-line isort fix.
-- [ ] `bindings/python/CLAUDE.md` Layout and API-shape bullet updated as above.
+- [ ] `bindings/python/AGENTS.md` Layout and API-shape bullet updated as above.
 - [ ] `bindings\python\tests\test.bat` and `scripts\test-all.bat` pass.
 
 ---

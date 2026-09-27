@@ -65,7 +65,7 @@ run the full suites.
 
 ## Docs and changelog
 
-- `tests/CLAUDE.md`: if it counts tests or describes these files' contents in a way that changes,
+- `tests/AGENTS.md`: if it counts tests or describes these files' contents in a way that changes,
   update it. Plan 75 owns the other edits there.
 - No CHANGELOG entry.
 

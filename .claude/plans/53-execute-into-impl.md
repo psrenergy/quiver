@@ -1,7 +1,7 @@
 # 53 — Move `Database::execute` into `Impl` (const) and drop the `Database&` back-references
 
-**Batch** 6 · **Severity** medium · **Breaking** no (private members only) · **Size** M · **Layers** C++ core only (+ src/CLAUDE.md)
-**Depends on** none (do it before 54/55, which trim `database.h`'s private section further) · **Overlaps with** 05 (`insert_group_data`/`resolve_element_fk_labels` signatures in `database_impl.h` — if 05 landed, apply the same `Database& db` removal to its new `prepare_group_data`), 54 (`Row`/`Result` members; 54 forward-declares `Result` in `database.h`), 57/59/60 (other `database_impl.h` / `database.cpp` edits), 76 (src/CLAUDE.md `query_int_rows` sentence — becomes moot here)
+**Batch** 6 · **Severity** medium · **Breaking** no (private members only) · **Size** M · **Layers** C++ core only (+ src/AGENTS.md)
+**Depends on** none (do it before 54/55, which trim `database.h`'s private section further) · **Overlaps with** 05 (`insert_group_data`/`resolve_element_fk_labels` signatures in `database_impl.h` — if 05 landed, apply the same `Database& db` removal to its new `prepare_group_data`), 54 (`Row`/`Result` members; 54 forward-declares `Result` in `database.h`), 57/59/60 (other `database_impl.h` / `database.cpp` edits), 76 (src/AGENTS.md `query_int_rows` sentence — becomes moot here)
 
 ## Why
 
@@ -159,7 +159,7 @@ guard; state which.
 
 ## Docs and changelog
 
-- `src/CLAUDE.md`:
+- `src/AGENTS.md`:
   - the `describe*` bullet: delete "These const methods run their own read-only SQL via an
     anon-namespace `query_int_rows` helper that prepares/steps directly on `impl_->db` (the
     `current_version() const` pattern — `execute()` is non-const)." → "They run their SQL through
@@ -185,7 +185,7 @@ From the repo root:
 - [ ] `Database` has no `execute`/`execute_raw` members; `Impl::execute` is const.
 - [ ] No `Database& db` parameter remains on an `Impl` helper; no `*this` passed to one.
 - [ ] `query_int_rows` and the hand-written `current_version` statement are gone.
-- [ ] All suites green; src/CLAUDE.md updated.
+- [ ] All suites green; src/AGENTS.md updated.
 
 ## Pitfalls
 

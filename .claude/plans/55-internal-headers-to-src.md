@@ -1,6 +1,6 @@
 # 55 — `TypeValidator` becomes free functions; `schema.h`, `schema_validator.h` and `type_validator.h` move into `src/`
 
-**Batch** 6 · **Severity** low · **Breaking** yes, for C++ consumers only: three installed headers are removed · **Size** M · **Layers** C++ core (+ root CLAUDE.md, src/CLAUDE.md, CHANGELOG)
+**Batch** 6 · **Severity** low · **Breaking** yes, for C++ consumers only: three installed headers are removed · **Size** M · **Layers** C++ core (+ root AGENTS.md, src/AGENTS.md, CHANGELOG)
 **Depends on** **56 — run plan 56 first, despite the numbering.** 56 rewrites `TypeValidator::validate_value` / `validate_scalar` / `validate_array` bodies and deletes `Schema::get_data_type`; this plan then moves the result. Also after 53 (execute into Impl) and 54. · **Overlaps with** 56 (same functions), 57/62 (edit `schema.h`/`schema.cpp`; if they land after this plan, they edit `src/schema.h`), 06 (edits `schema_validator.cpp`)
 
 ## Why
@@ -11,7 +11,7 @@ are installed, `QUIVER_API`-exported public headers, but nothing outside `src/` 
 finds only `src/` files (`database_impl.h`, `database_internal.h`, `database_csv_import.cpp`,
 `database_csv_export.cpp`, `schema.cpp`, `schema_validator.cpp`, `type_validator.cpp`). No binding
 wraps them, and the C API exposes schema introspection only through `get_*_metadata` / `list_*`.
-`src/CLAUDE.md` nonetheless lists them under "C++ public headers".
+`src/AGENTS.md` nonetheless lists them under "C++ public headers".
 
 `TypeValidator` (`include/quiver/type_validator.h`) is a class whose only state is a
 `const Schema&`:
@@ -39,7 +39,7 @@ members, and `load_schema_metadata` has to publish them together (`src/database_
         type_validator = std::make_unique<TypeValidator>(*loaded);
 ```
 
-The root CLAUDE.md lazy-schema decision spends a sentence on keeping that pair consistent
+The root AGENTS.md lazy-schema decision spends a sentence on keeping that pair consistent
 ("`schema` and `type_validator` are `mutable` ... publishes neither until validation passes").
 
 Principles: simple over abstract (a class with one reference member is three functions), and a
@@ -50,7 +50,7 @@ public API should be what is meant to be used.
 - **Maintainer notes (binding):**
   - BREAKING, with a CHANGELOG entry.
   - `load_schema_metadata` publishes `schema` alone.
-  - Update the root CLAUDE.md lazy-schema decision text and the src/CLAUDE.md file map.
+  - Update the root AGENTS.md lazy-schema decision text and the src/AGENTS.md file map.
   - Land after plan 56.
 - The free functions take `const Schema&` plus the table name, so the missing-table/column
   behaviour (which plan 56 rewrote to Pattern 1) is unchanged.
@@ -96,7 +96,7 @@ New `src/type_validator.h` body:
 namespace quiver {
 
 // Scalar/array type validation for create_element / update_element (the scalar half of the one
-// typing policy, root CLAUDE.md). `caller` names the public operation for Pattern 1 messages.
+// typing policy, root AGENTS.md). `caller` names the public operation for Pattern 1 messages.
 void validate_scalar(const std::string& caller, const Schema& schema, const std::string& table,
                      const std::string& column, const Value& value);
 void validate_array(const std::string& caller, const Schema& schema, const std::string& table,
@@ -153,20 +153,20 @@ directories in `tests/CMakeLists.txt`. Prefer the first.
 
 ## Docs and changelog
 
-- `src/CLAUDE.md` file map: move the three entries from the `include/quiver/` block into the `src/`
+- `src/AGENTS.md` file map: move the three entries from the `include/quiver/` block into the `src/`
   block (`schema.h`, `schema_validator.h`, `type_validator.h — scalar/array type validation (free
   functions)`). Fix the sentence claiming `csv_read` is "the first .cpp in `src/` with no
   `include/quiver/` public counterpart ... every other `QUIVER_SOURCES` entry implements a public
   header". `schema.cpp`, `schema_validator.cpp` and `type_validator.cpp` also have none now. Plan 76
   touches the same sentence; whichever lands second reconciles them.
-- `src/CLAUDE.md`, "Schema metadata loads lazily" bullet: "`schema` and `type_validator` are
+- `src/AGENTS.md`, "Schema metadata loads lazily" bullet: "`schema` and `type_validator` are
   `mutable` ... publishes **neither** member until `SchemaValidator::validate()` passes —
   assigning `schema` first would leave a half-loaded state (schema set, `type_validator` null)"
   becomes "`schema` is `mutable` (const readers trigger the load), and `load_schema_metadata()`
   publishes it only after `SchemaValidator::validate()` passes, so a failed lazy load leaves no
   half-loaded state for the next call." Also fix the "TypeValidator threads the caller's name"
   bullet: "`validate_scalar`/`validate_array` thread the caller's name".
-- Root `CLAUDE.md`, Design Decision "Schema metadata loads lazily": "`schema` and `type_validator`
+- Root `AGENTS.md`, Design Decision "Schema metadata loads lazily": "`schema` and `type_validator`
   are `mutable` so the const readers can trigger it, and `load_schema_metadata` publishes neither
   until validation passes" becomes "`schema` is `mutable` so the const readers can trigger it, and
   `load_schema_metadata` publishes it only after validation passes". Also update the typing-policy
@@ -195,7 +195,7 @@ From the repo root:
 
 - [ ] The three headers live in `src/` without `QUIVER_API`, and `grep -rn "quiver/schema.h\|quiver/schema_validator.h\|quiver/type_validator.h" .` (excluding `build/`) finds nothing.
 - [ ] No `TypeValidator` class remains, and `Impl` has no `type_validator` member.
-- [ ] All suites green. Both CLAUDE.md files and the CHANGELOG are updated.
+- [ ] All suites green. Both AGENTS.md files and the CHANGELOG are updated.
 
 ## Pitfalls
 

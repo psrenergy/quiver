@@ -1,7 +1,7 @@
 # 65 — Fix the CLI smoke test: move the deleted example script under `tests/`
 
 **Batch** 7 · **Severity** high (`test-all.bat` always reports failure) · **Breaking** no · **Size** S · **Layers** tests, scripts, docs
-**Depends on** none · **Overlaps with** 82 (`build-all.bat` will call `test-all.bat`, so it inherits this fix), 75 (edits `tests/CLAUDE.md` too)
+**Depends on** none · **Overlaps with** 82 (`build-all.bat` will call `test-all.bat`, so it inherits this fix), 75 (edits `tests/AGENTS.md` too)
 
 ## Why
 
@@ -17,9 +17,9 @@ deleted script, currently at ~L134 and ~L141:
 
 `src/cli/main.cpp` returns 1 when the script is missing (`Script file not found: ...`). So the
 positive run always fails and `test-all.bat` always prints "Some tests FAILED!". CI never runs
-`test-all.bat`, which is why nobody noticed. The docs still describe the folder: root CLAUDE.md
+`test-all.bat`, which is why nobody noticed. The docs still describe the folder: root AGENTS.md
 ~L24 (`example/  # example1.lua + example1.bat — quiver_cli/Lua CRUD demo`), ~L356
-(`quiver_cli.exe  # CLI entry point (see example/)`), and tests/CLAUDE.md ~L198
+(`quiver_cli.exe  # CLI entry point (see example/)`), and tests/AGENTS.md ~L198
 ("positive run (`--schema` + example Lua script → exit 0)").
 
 ## Constraints and decisions
@@ -30,7 +30,7 @@ positive run always fails and `test-all.bat` always prints "Some tests FAILED!".
   `read_element_by_id`, `update_element`, `delete_element`), and it matches today's
   `tests/schemas/valid/collections.sql` (`some_integer`, `some_float`, `value_int`).
 - `.bat` files in the working tree are CRLF. Edit `test-all.bat` with an editor that keeps CRLF,
-  or restore the line endings afterwards (root CLAUDE.md caution). Check with
+  or restore the line endings afterwards (root AGENTS.md caution). Check with
   `file scripts/test-all.bat` before and after.
 
 ## Changes
@@ -45,11 +45,11 @@ positive run always fails and `test-all.bat` always prints "Some tests FAILED!".
 2. `scripts/test-all.bat` ~L134 and ~L141: replace `"%ROOT_DIR%\example\example1.lua"` with
    `"%ROOT_DIR%\tests\cli\smoke.lua"` in both lines. The negative run's script argument only has to
    be parseable, since it exits 2 before reading it. Point it at the same file anyway.
-3. Root `CLAUDE.md`:
+3. Root `AGENTS.md`:
    - Delete the Repo Map line `example/                  # example1.lua + example1.bat — quiver_cli/Lua CRUD demo`.
    - `./build/bin/quiver_cli.exe        # CLI entry point (see example/)` becomes
      `./build/bin/quiver_cli.exe        # CLI entry point (smoke script: tests/cli/smoke.lua)`.
-4. `tests/CLAUDE.md` ~L198: "positive run (`--schema` + example Lua script → exit 0)" becomes
+4. `tests/AGENTS.md` ~L198: "positive run (`--schema` + example Lua script → exit 0)" becomes
    "positive run (`--schema` + `tests/cli/smoke.lua` → exit 0)". Add `cli/smoke.lua` to any
    directory listing of `tests/` in that file.
 
@@ -75,8 +75,8 @@ From the repo root:
 ## Acceptance criteria
 
 - [ ] `tests/cli/smoke.lua` exists, and step 7 of `test-all.bat` passes.
-- [ ] No remaining reference to `example/` in CLAUDE.md files or scripts:
-      `grep -rn "example1\|example/" CLAUDE.md tests/CLAUDE.md scripts/`.
+- [ ] No remaining reference to `example/` in AGENTS.md files or scripts:
+      `grep -rn "example1\|example/" AGENTS.md tests/AGENTS.md scripts/`.
 
 ## Pitfalls
 

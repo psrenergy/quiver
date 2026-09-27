@@ -1,6 +1,6 @@
 # 46 — Lua: one `lua_to_value` converter replaces four dispatch chains
 
-**Batch** 5 · **Severity** medium · **Breaking** no (every error message stays byte-identical) · **Size** S · **Layers** C++ Lua runner (`src/lua_runner.cpp`), `src/CLAUDE.md`
+**Batch** 5 · **Severity** medium · **Breaking** no (every error message stays byte-identical) · **Size** S · **Layers** C++ Lua runner (`src/lua_runner.cpp`), `src/AGENTS.md`
 **Depends on** none · **Overlaps with** 47 (next plan: renames the `caller` strings these call sites pass; land 46 first), 44 (adds a key check in `collect_group_columns`, next to `columns_to_cpp_rows`), 48 (other decoders in the same file)
 
 ## Why
@@ -35,7 +35,7 @@ times**:
 
 All four throws share the shape of the existing checked converter `lua_cell_as<T>` (~L1361):
 `"Cannot " + caller + ": " + what + " has unsupported Lua type"`. The boolean-as-1/0 policy, which
-root CLAUDE.md calls "A Lua boolean is INTEGER 1/0 on every write path", is therefore restated in
+root AGENTS.md calls "A Lua boolean is INTEGER 1/0 on every write path", is therefore restated in
 four places.
 
 Principles: simplicity and readability. One converter states the policy once.
@@ -83,7 +83,7 @@ Principles: simplicity and readability. One converter states the policy once.
     }
 ```
 The `is<int64_t>()`-before-`is<double>()` order is load-bearing: `SOL_SAFE_NUMERICS=1` makes
-`is<int64_t>()` false for a Lua float (see `src/CLAUDE.md`). Keep it.
+`is<int64_t>()` false for a Lua float (see `src/AGENTS.md`). Keep it.
 
 ### 2. `lua_table_to_value_map`
 
@@ -175,7 +175,7 @@ differ by build type.
 
 ## Docs and changelog
 
-- `src/CLAUDE.md`, LuaRunner conventions:
+- `src/AGENTS.md`, LuaRunner conventions:
   - Bullet "**A Lua boolean is INTEGER 1/0 on every write path** ... Every boolean test goes
     through the one predicate `is_lua_boolean`, used by `table_to_element` ..., `lua_table_to_value_map`
     ..., `lua_table_to_values` ..., `columns_to_cpp_rows` ..., and `lua_table_to_vector`". Change it
@@ -193,7 +193,7 @@ From the repo root:
 1. `cmake --build build --config Debug`
 2. `./build/bin/quiver_tests.exe --gtest_filter=LuaRunner*`
 3. `./build/bin/quiver_c_tests.exe --gtest_filter=*LuaRunner*`
-4. Release tree (configure once as in tests/CLAUDE.md):
+4. Release tree (configure once as in tests/AGENTS.md):
    `cmake --build build-release --config Release` then
    `./build-release/bin/quiver_tests.exe --gtest_filter=LuaRunner*`
 5. `bindings/js/test/test.bat test/lua-api-sync.test.ts` (it parses lua_runner.cpp)
@@ -204,7 +204,7 @@ From the repo root:
 - [ ] `lua_to_value` exists. The four chains are gone (`grep -c "has unsupported Lua type" src/lua_runner.cpp`
       drops by three, leaving `lua_to_value`, `lua_cell_as` and any unrelated sites).
 - [ ] All Lua suites pass on Debug and Release with unchanged messages.
-- [ ] `src/CLAUDE.md` bullets are updated.
+- [ ] `src/AGENTS.md` bullets are updated.
 
 ## Pitfalls
 

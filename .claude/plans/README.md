@@ -137,9 +137,9 @@ One self-contained implementation plan per review item, written to be executed i
 | 72 | [Convert 17 bare EXPECT_THROW Lua tests to expect_lua_error with real substrings](72-lua-bare-expect-throw.md) | medium | no | 47 |
 | 73 | [docs/rules.md and attributes.md: valid schema examples and real migration functions](73-docs-schema-examples-and-migrations.md) | medium (user-facing docs teach schemas the validator rejects) | no | 06 |
 | 74 | [JS README: describe returns a string; list missing methods and types](74-js-readme.md) | low | no | 32, 33 |
-| 75 | [tests/CLAUDE.md: fix claims that contradict the tests](75-tests-claude-md.md) | low | no | — |
-| 76 | [src/CLAUDE.md: query_int_rows location and public-header claim](76-src-claude-md-fixes.md) | low | no | — |
-| 77 | [.github/CLAUDE.md: drop the deleted .JuliaFormatter.toml from the mirror file list](77-github-claude-md-juliaformatter-toml.md) | low | no | — |
+| 75 | [tests/AGENTS.md: fix claims that contradict the tests](75-tests-claude-md.md) | low | no | — |
+| 76 | [src/AGENTS.md: query_int_rows location and public-header claim](76-src-claude-md-fixes.md) | low | no | — |
+| 77 | [.github/AGENTS.md: drop the deleted .JuliaFormatter.toml from the mirror file list](77-github-claude-md-juliaformatter-toml.md) | low | no | — |
 | 78 | [CHANGELOG: add [0.11.0] link and fix [0.10.9] compare range](78-changelog-links.md) | low | no | — |
 | 79 | [tidy.bat: checkout-name-independent filters and runner discovery](79-tidy-bat.md) | medium (`scripts/tidy.bat` silently lints zero files) | no | — |
 | 80 | [CI dart-coverage: drop the dead build-cpp and copy steps](80-ci-dart-double-build.md) | medium (CI builds the C++ library twice, and three docs repeat a false premise) | no | — |
@@ -166,6 +166,6 @@ One self-contained implementation plan per review item, written to be executed i
 **Refuted during adversarial review (do not implement):**
 - De-duplicating the three 3-line group-read column-list loops in the C API (not worth it).
 - Re-tagging the time-series dimension column DATE_TIME in the C API (conflicts with the Julia type-stability follow-up; low value).
-- Renaming "JuliaFormatter" in root/Julia CLAUDE.md (Style.jl wraps JuliaFormatter; only the `.JuliaFormatter.toml` line is stale, see plan 77).
+- Renaming "JuliaFormatter" in root/Julia AGENTS.md (Style.jl wraps JuliaFormatter; only the `.JuliaFormatter.toml` line is stale, see plan 77).
 - A lua-api.ts sync test that greps quoted error strings (too much machinery for cosmetic drift).
 - Table-driving the expression arithmetic tests (churn outweighs gain).

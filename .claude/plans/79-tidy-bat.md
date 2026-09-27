@@ -1,6 +1,6 @@
 # 79 — `tidy.bat`: filters that don't depend on the checkout's directory name; find the runner on PATH
 
-**Batch** 7 · **Severity** medium (`scripts/tidy.bat` silently lints zero files) · **Breaking** no · **Size** S · **Layers** tooling (`scripts/tidy.bat`, `.clang-tidy`, root `CMakeLists.txt`, root CLAUDE.md)
+**Batch** 7 · **Severity** medium (`scripts/tidy.bat` silently lints zero files) · **Breaking** no · **Size** S · **Layers** tooling (`scripts/tidy.bat`, `.clang-tidy`, root `CMakeLists.txt`, root AGENTS.md)
 **Depends on** none · **Overlaps with** 86 (edits other lines of the root `CMakeLists.txt`)
 
 ## Why
@@ -25,7 +25,7 @@ fails on non-Windows hosts) and nothing uses it.
 
 ## Constraints and decisions
 
-- The `.bat` is CRLF. Keep it CRLF (root CLAUDE.md caution).
+- The `.bat` is CRLF. Keep it CRLF (root AGENTS.md caution).
 - Put the header policy in `.clang-tidy`, in one place, so clangd and ad-hoc `clang-tidy` runs follow
   the same rule. clang-tidy 19+ supports `ExcludeHeaderFilterRegex`; the installed version is 22.x
   (`clang-tidy --version`).
@@ -63,7 +63,7 @@ fails on non-Windows hosts) and nothing uses it.
 3. Root `CMakeLists.txt` (~L118-126): delete the `find_program(CLANG_TIDY clang-tidy)` /
    `add_custom_target(tidy ...)` block and its comment. Also change the comment near ~L92 that says
    "format and tidy targets" to "format target" (`grep -n "tidy" CMakeLists.txt`).
-4. Root `CLAUDE.md`, Code Style Tooling bullet
+4. Root `AGENTS.md`, Code Style Tooling bullet
    "`scripts/tidy.bat` — `run-clang-tidy` over `build/compile_commands.json` (strips the MinGW-only
    `-fno-keep-inline-dllexport` flag first; skips `src/binary`)": append "; finds `run-clang-tidy` on
    PATH, and the header filter lives in `.clang-tidy`".
@@ -86,7 +86,7 @@ Run it for real. That run is the test.
 
 - [ ] `tidy.bat` lints the `src/` sources (except `src/binary`) in any checkout directory.
 - [ ] No hardcoded LLVM path. The header filter lives only in `.clang-tidy` and excludes `_deps`.
-- [ ] The CMake `tidy` target is gone, and root CLAUDE.md is updated.
+- [ ] The CMake `tidy` target is gone, and root AGENTS.md is updated.
 
 ## Pitfalls
 

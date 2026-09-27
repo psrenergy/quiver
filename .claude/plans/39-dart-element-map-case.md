@@ -34,7 +34,7 @@ db.createElement('Collection', {
 
 behaves exactly like passing `date_time` and `some_time_series_float` flat. The key looks like it
 selects a group (`some_time_series`), but it selects nothing: a typo in it is accepted silently, and
-the columns are routed **by column name** — the fan-out the root CLAUDE.md warns about under
+the columns are routed **by column name** — the fan-out the root AGENTS.md warns about under
 "Whole-group writers" ("an array is written to *every* matching table").
 
 It is Dart-only. The feature came in with #71 (commit e8740a7) in both Dart and Julia
@@ -76,7 +76,7 @@ clean over clever.
   '$name'")`, which already names the attribute (root rule: pre-FFI marshalling errors name the
   offending column and type).
 - The right tools for "write this one named group" are `updateTimeSeriesGroup` /
-  `updateVectorGroup` / `updateSetGroup` (root CLAUDE.md "Prefer the group writers whenever one
+  `updateVectorGroup` / `updateSetGroup` (root AGENTS.md "Prefer the group writers whenever one
   group is meant").
 
 ## Changes
@@ -167,7 +167,7 @@ Before the change this test fails, because the map is accepted. After the change
 
 ## Docs and changelog
 
-- `bindings/dart/CLAUDE.md`: no passage documents the Map case (`grep -n "Map<String, Object" bindings/dart/CLAUDE.md`
+- `bindings/dart/AGENTS.md`: no passage documents the Map case (`grep -n "Map<String, Object" bindings/dart/AGENTS.md`
   shows only the unrelated time-series read type) — no edit.
 - There is no `bindings/dart/README.md`, so there is nothing to update there.
 - `CHANGELOG.md`, `## [0.11.0] — unreleased` → `### Changed`:

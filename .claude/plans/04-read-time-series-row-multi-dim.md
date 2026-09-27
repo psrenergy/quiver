@@ -5,14 +5,14 @@
 **Depends on** none. Plan 02 lands first and redefines `internal::find_dimension_column`. The code below is correct whether or not 02 has landed.
 **Overlaps with**
 - **02**: changes what `internal::find_dimension_column` returns; this plan keeps calling it from the same line of `read_time_series_row`.
-- **17**: later adds an `out_mask` out-param to `quiver_database_read_time_series_row`. It must extend the new C API test added here, and it edits the same paragraphs in `docs/time_series.md`, root `CLAUDE.md` (the "Time series row" bullet), the Dart `readTimeSeriesRow` doc comment and the Python `read_time_series_row` docstring.
+- **17**: later adds an `out_mask` out-param to `quiver_database_read_time_series_row`. It must extend the new C API test added here, and it edits the same paragraphs in `docs/time_series.md`, root `AGENTS.md` (the "Time series row" bullet), the Dart `readTimeSeriesRow` doc comment and the Python `read_time_series_row` docstring.
 - **57**: later rewrites the `find_time_series_table` / `get_table` / throw prologue of this function. The guard added here sits just below that prologue.
 - **53**: later changes the `execute(sql, {date_time})` call in this function.
 - **43 / 44**: later edit other parts of `bindings/js/src/lua-api.ts`.
 
 ## Why
 
-`Database::read_time_series_row` promises one value per element: "last non-null value at or before `date_time`" (root `CLAUDE.md`, "Time series row" bullet; `docs/time_series.md`, "Rules"; `include/quiver/database.h`). It works that out with a self-join, `src/database_time_series.cpp` (currently ~L296-310):
+`Database::read_time_series_row` promises one value per element: "last non-null value at or before `date_time`" (root `AGENTS.md`, "Time series row" bullet; `docs/time_series.md`, "Rules"; `include/quiver/database.h`). It works that out with a self-join, `src/database_time_series.cpp` (currently ~L296-310):
 
 ```cpp
     // For each element, find the most recent non-null value where dim_col <= date_time.
@@ -57,11 +57,11 @@ No test at any layer calls `read_time_series_row` on `multi_dim_time_series.sql`
 
 - **Maintainer decision (binding):** "BREAKING. Do both the Pattern 1 guard (after find_dimension_columns succeeds) and the ON-clause IS NOT NULL. CHANGELOG under 0.11.0 (already a minor bump; no manifest bump)."
   - "After find_dimension_columns succeeds" means `internal::find_dimension_columns(*table_def)` runs first. It still throws its Pattern 2 `Dimension column not found: time series table '<t>'` for a table with no primary-key dimension. Only after that does the guard test `.size() > 1`.
-- **Error patterns** (root `CLAUDE.md`, "C++ Error Message Patterns"): the guard is Pattern 1, `Cannot {operation}: {reason}`, with `{operation}` set to the public method, `read_time_series_row`. The wording "group '<g>' of collection '<c>'" matches the attribute-miss message in this same function (`Time series attribute not found: '<a>' in group '<g>' of collection '<c>'`).
-- **Error messages live in C++** (root `CLAUDE.md`, "Principles"): bindings only pass the message through. No binding crafts its own message or adds a pre-check.
+- **Error patterns** (root `AGENTS.md`, "C++ Error Message Patterns"): the guard is Pattern 1, `Cannot {operation}: {reason}`, with `{operation}` set to the public method, `read_time_series_row`. The wording "group '<g>' of collection '<c>'" matches the attribute-miss message in this same function (`Time series attribute not found: '<a>' in group '<g>' of collection '<c>'`).
+- **Error messages live in C++** (root `AGENTS.md`, "Principles"): bindings only pass the message through. No binding crafts its own message or adds a pre-check.
 - **Tests at every layer where the behaviour is visible**: C++, C API, Lua, Julia, Dart, Python and JS all surface the new error, so each gets one test.
-- **Changelog** (root `CLAUDE.md`, "Principles"): a **BREAKING** entry under `## [0.11.0] — unreleased` that says what a caller must do. 0.11.0 is already the minor bump, so no manifest change is needed.
-- **Self-Updating**: the contract is written in root `CLAUDE.md` ("Core API", "Time series row" bullet). `src/CLAUDE.md` does not describe `read_time_series_row`, so the root bullet is the one to edit.
+- **Changelog** (root `AGENTS.md`, "Principles"): a **BREAKING** entry under `## [0.11.0] — unreleased` that says what a caller must do. 0.11.0 is already the minor bump, so no manifest change is needed.
+- **Self-Updating**: the contract is written in root `AGENTS.md` ("Core API", "Time series row" bullet). `src/AGENTS.md` does not describe `read_time_series_row`, so the root bullet is the one to edit.
 - **Multi-dimension groups remain a supported feature** (`docs/time_series.md`, "It is also possible to add more dimensions ... such as `block`"). Only this single-row reader refuses them. `read_time_series_group`, `update_time_series_group` and `upsert_time_series_row` keep working on them.
 - Alternatives considered and rejected:
   - *ON-clause filter only (non-breaking):* this fixes the NULL result, but a multi-dimension read still returns an arbitrary block's value. The maintainer chose to refuse that case.
@@ -173,7 +173,7 @@ No existing test pins the old multi-dimension behaviour, so no existing assertio
 
 The ON-clause filter (step 1b) has **no test that fails without it**. Once the guard is in place, the only case where the outer join returns more than one row per id (a multi-dimension group) is refused before the SQL runs. Do not try to build a failing case for it. The C++ test below checks the repro data, where the guard is what fires.
 
-No new schema file is needed. Every test uses `tests/schemas/valid/multi_dim_time_series.sql`, which is already listed in `tests/CLAUDE.md`.
+No new schema file is needed. Every test uses `tests/schemas/valid/multi_dim_time_series.sql`, which is already listed in `tests/AGENTS.md`.
 
 ### C++ — `tests/test_database_time_series_row.cpp`
 
@@ -367,7 +367,7 @@ const MULTI_DIM_TS_SCHEMA = join(
 
 ## Docs and changelog
 
-### Root `CLAUDE.md` — "Core API" → "Database Class", the "Time series row" bullet
+### Root `AGENTS.md` — "Core API" → "Database Class", the "Time series row" bullet
 
 Old:
 
@@ -497,7 +497,7 @@ From the repo root (`C:\Development\Quiver\quiver1`), in order:
 - [ ] New tests pass: C++ `Database.ReadTimeSeriesRowRejectsMultiDimensionGroup`, C API `DatabaseCApi.ReadTimeSeriesRowRejectsMultiDimensionGroup`, Lua `LuaRunnerTest.ReadTimeSeriesRowRejectsMultiDimensionGroup`, plus the Julia, Dart, Python and JS tests named above. Each asserts the exact message.
 - [ ] All existing single-dimension row-read tests pass unchanged.
 - [ ] No C API signature, FFI declaration or binding wrapper code changed. Only doc comments changed in Dart and Python.
-- [ ] Root `CLAUDE.md` "Time series row" bullet, `docs/time_series.md` Rules paragraph, `include/quiver/database.h` comment, and the `lua-api.ts` section are updated as written above.
+- [ ] Root `AGENTS.md` "Time series row" bullet, `docs/time_series.md` Rules paragraph, `include/quiver/database.h` comment, and the `lua-api.ts` section are updated as written above.
 - [ ] `CHANGELOG.md` has the **BREAKING** entry as the last bullet of `### Changed` under `## [0.11.0] — unreleased`. No manifest version changed.
 - [ ] `scripts/format.bat` leaves no diff after it runs a second time.
 
@@ -521,4 +521,4 @@ From the repo root (`C:\Development\Quiver\quiver1`), in order:
 - The shared group-table lookup helper and Pattern 2 misses in this function's prologue: **plan 57**.
 - Moving `execute` into `Impl`: **plan 53**.
 - A per-dimension (e.g. per-`block`) row reader, or a dimension-filter parameter on `read_time_series_row`. That is a new API; nobody has asked for it.
-- `include/quiver/c/database.h` and `src/c/CLAUDE.md`: the C API passes the error through unchanged, and plan 17 rewrites that comment block.
+- `include/quiver/c/database.h` and `src/c/AGENTS.md`: the C API passes the error through unchanged, and plan 17 rewrites that comment block.

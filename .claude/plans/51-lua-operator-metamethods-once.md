@@ -109,7 +109,7 @@ Adapt the file names to what the fixture writes.
 
 ## Docs and changelog
 
-None. Neither `src/CLAUDE.md` nor lua-api.ts documents the registration mechanics.
+None. Neither `src/AGENTS.md` nor lua-api.ts documents the registration mechanics.
 
 ## Verification
 

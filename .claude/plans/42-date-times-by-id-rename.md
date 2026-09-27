@@ -1,11 +1,11 @@
 # 42 — Julia/Python: rename `read_{vector,set}_date_time_by_id` to `read_{vector,set}_date_times_by_id`
 
-**Batch** 4 · **Severity** low · **Breaking** yes — Julia and Python callers of the two old names must switch to the new ones · **Size** S · **Layers** Julia binding, Python binding, root CLAUDE.md, CHANGELOG
+**Batch** 4 · **Severity** low · **Breaking** yes — Julia and Python callers of the two old names must switch to the new ones · **Size** S · **Layers** Julia binding, Python binding, root AGENTS.md, CHANGELOG
 **Depends on** 18 recommended first (it deletes the per-column group-reader compositions, which contain four of the call sites listed below) · **Overlaps with** 18 (same functions' callers), 41 (comments right next to these functions), 30 (Python docstrings in the same file)
 
 ## Why
 
-Root CLAUDE.md "Naming Convention": *"Singular vs plural: Type name matches return cardinality
+Root AGENTS.md "Naming Convention": *"Singular vs plural: Type name matches return cardinality
 (`read_scalar_integers` returns vector, `read_scalar_integer_by_id` returns optional)"*, and
 *"given any C++ method name, you can derive the equivalent in any layer."*
 
@@ -19,7 +19,7 @@ These two readers return a **list**, but their Julia and Python names are singul
 
 Their counterparts are already plural: Dart `readVectorDateTimesById` / `readSetDateTimesById`, and
 every binding's boolean readers (`read_vector_booleans_by_id`, `read_set_booleans_by_id`). The root
-CLAUDE.md DateTime wrapper table (~L746, ~L748) records the inconsistency:
+AGENTS.md DateTime wrapper table (~L746, ~L748) records the inconsistency:
 
 ```
 | `read_vector_date_time_by_id` | `readVectorDateTimesById` | `read_vector_date_time_by_id` | string vector read + date parsing |
@@ -33,7 +33,7 @@ Principle: Homogeneity, meaning mechanically derivable names.
 - **Maintainer decision (binding):** rename only. Keep `read_scalar_date_time_by_id` singular: it
   returns one optional value. Keep Julia's `read_time_series_row(...; date_time::DateTime)` keyword
   as is. BREAKING, with a CHANGELOG entry under 0.11.0 listing old and new names. Update the root
-  CLAUDE.md table. No manifest bump is needed (0.11.0 is already the unreleased minor).
+  AGENTS.md table. No manifest bump is needed (0.11.0 is already the unreleased minor).
 - No aliases or deprecation shims. Root principle: "Delete unused code, do not deprecate."
 - Julia does not `export` these names (`bindings/julia/src/Quiver.jl` has no export list for them);
   callers use `Quiver.<name>`. Python has no `__init__.py` re-export of them either.
@@ -107,13 +107,13 @@ Add one small test per binding pinning that the old name is gone, so an alias ca
 
 ## Docs and changelog
 
-- Root `CLAUDE.md`, DateTime wrappers table (~L746, ~L748). New rows:
+- Root `AGENTS.md`, DateTime wrappers table (~L746, ~L748). New rows:
   ```
   | `read_vector_date_times_by_id` | `readVectorDateTimesById` | `read_vector_date_times_by_id` | string vector read + date parsing |
   | `read_set_date_times_by_id`    | `readSetDateTimesById`    | `read_set_date_times_by_id`    | string set read + date parsing    |
   ```
   Re-align the Markdown columns if the table uses padded columns.
-- Grep for other mentions: `grep -rn "date_time_by_id" docs/ bindings/*/CLAUDE.md bindings/python/README* bindings/julia/README*`.
+- Grep for other mentions: `grep -rn "date_time_by_id" docs/ bindings/*/AGENTS.md bindings/python/README* bindings/julia/README*`.
   Update any hit except `read_scalar_date_time_by_id`.
 - `CHANGELOG.md`, `## [0.11.0] — unreleased` → `### Changed`:
   ```markdown
@@ -131,7 +131,7 @@ From the repo root:
 2. `bindings/julia/test/test.bat test_database_read_vector.jl`, then `test_database_read_set.jl`,
    then the full `bindings/julia/test/test.bat`.
 3. `bindings/python/tests/test.bat`, the full Python suite.
-4. `grep -rn "read_vector_date_time_by_id\|read_set_date_time_by_id" bindings/ CLAUDE.md docs/`.
+4. `grep -rn "read_vector_date_time_by_id\|read_set_date_time_by_id" bindings/ AGENTS.md docs/`.
    The only hits should be the two new "names are gone" tests.
 5. `scripts/format.bat`.
 
@@ -139,7 +139,7 @@ From the repo root:
 
 - [ ] Both bindings define only the plural names. Every internal caller and test uses them.
 - [ ] The "old name is gone" tests pass in both bindings.
-- [ ] The root CLAUDE.md table and CHANGELOG BREAKING entry are updated.
+- [ ] The root AGENTS.md table and CHANGELOG BREAKING entry are updated.
 
 ## Pitfalls
 

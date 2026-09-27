@@ -1,6 +1,6 @@
 # 87 — `.pre-commit-config.yaml`: drop `cmake-format`, and keep `.bat` files CRLF
 
-**Batch** 7 · **Severity** low · **Breaking** no · **Size** S · **Layers** tooling config, root CLAUDE.md
+**Batch** 7 · **Severity** low · **Breaking** no · **Size** S · **Layers** tooling config, root AGENTS.md
 **Depends on** none · **Overlaps with** none
 
 ## Why
@@ -25,13 +25,13 @@ conflict with the repo's own conventions.
            args: [--fix=lf]
            exclude: ^tests/fixtures/
    ```
-   Working-tree `.bat` files are CRLF on purpose (root CLAUDE.md: "working-tree `.bat` files are
+   Working-tree `.bat` files are CRLF on purpose (root AGENTS.md: "working-tree `.bat` files are
    CRLF — unix tools ... can break them"). This hook would convert every staged `.bat` to LF.
 
 ## Constraints and decisions
 
 - **Maintainer decision (binding):** keep the file. Exclude `\.bat$` (plus `tests/fixtures/`) from
-  `mixed-line-ending`. Remove `cmake-format` from the root CLAUDE.md "Code Style Tooling" bullet.
+  `mixed-line-ending`. Remove `cmake-format` from the root AGENTS.md "Code Style Tooling" bullet.
 - The narrower `exclude` is chosen over dropping `--fix=lf` altogether, because it keeps LF
   enforcement for every other text file.
 
@@ -40,7 +40,7 @@ conflict with the repo's own conventions.
 1. `.pre-commit-config.yaml`:
    - Delete the whole `cheshirekow/cmake-format-precommit` repo block (the last five lines).
    - `mixed-line-ending`: change `exclude: ^tests/fixtures/` to `exclude: (^tests/fixtures/|\.bat$)`.
-2. Root `CLAUDE.md`, the `.pre-commit-config.yaml` bullet in "Code Style Tooling" (~L433):
+2. Root `AGENTS.md`, the `.pre-commit-config.yaml` bullet in "Code Style Tooling" (~L433):
    "... large files (>1 MB), LF line endings, clang-format, cppcheck, cmake-format." becomes
    "... large files (>1 MB), LF line endings (except `.bat`, which stay CRLF), clang-format,
    cppcheck."
@@ -59,7 +59,7 @@ CMake file. It may flag pre-existing whitespace issues elsewhere; do not fix tho
 ## Acceptance criteria
 
 - [ ] No `cmake-format` hook, and `.bat` is excluded from `mixed-line-ending`.
-- [ ] The root CLAUDE.md bullet matches.
+- [ ] The root AGENTS.md bullet matches.
 
 ## Pitfalls
 

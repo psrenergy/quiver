@@ -1,6 +1,6 @@
 # 28 — Python: delete redundant bool branches (bool is an int subclass)
 
-**Batch** 4 · **Severity** low · **Breaking** no. Behaviour is unchanged on every write path; this is a readability and deletion change · **Size** S · **Layers** Python binding (`bindings/python/src/quiverdb/database.py`, `bindings/python/src/quiverdb/element.py`), Python tests (`bindings/python/tests/test_database_boolean.py`), root `CLAUDE.md`
+**Batch** 4 · **Severity** low · **Breaking** no. Behaviour is unchanged on every write path; this is a readability and deletion change · **Size** S · **Layers** Python binding (`bindings/python/src/quiverdb/database.py`, `bindings/python/src/quiverdb/element.py`), Python tests (`bindings/python/tests/test_database_boolean.py`), root `AGENTS.md`
 **Depends on** 24 (ordering only; see Overlaps) · **Overlaps with**
 - **24** (Python (+Dart): type numeric columns from all cells) rewrites the numeric dispatch of `_marshal_group_columns` and `Element._set_array`. Both functions contain bool branches this finding also names: `isinstance(first, bool) or isinstance(first, int)` in `_marshal_group_columns` (currently ~L2223) and `if isinstance(first, bool):` in `_set_array` (currently ~L66). **Plan 24 owns both functions.** This plan only checks, in Step 3, that no redundant `isinstance(..., bool)` test is left in them after 24, and removes one if there is. It must not restructure 24's code.
 - **25** (Python: accept datetime on every write path) adds a `datetime` branch to `_marshal_row_columns`, `Element.set` and `Element._set_array`, and changes the `_marshal_row_columns` `TypeError` text and the `Element.set` docstring. The bool branches deleted here are separate lines, but line numbers will have shifted. Anchor on the quoted excerpts, not on line numbers.
@@ -58,16 +58,16 @@ Reordering cannot send a bool to the float path, because `isinstance(True, float
 
 **Reproduction.** No input produces a wrong output. The defect is code and comments that send a maintainer looking for a hazard that isn't there, plus three spellings of one rule. Proof that the branches are dead weight: delete them, and `test_boolean_input` (extended below) and the rest of the suite still pass.
 
-This violates the root CLAUDE.md principles "Human-Centric: Codebase optimized for human readability" and "Simple solutions over complex abstractions. Delete unused code". It also leaves the root CLAUDE.md boolean passage naming "`element.py`'s `isinstance(value, bool)` branch" as the Python conversion point, which becomes false once the branch is gone (Self-Updating).
+This violates the root AGENTS.md principles "Human-Centric: Codebase optimized for human readability" and "Simple solutions over complex abstractions. Delete unused code". It also leaves the root AGENTS.md boolean passage naming "`element.py`'s `isinstance(value, bool)` branch" as the Python conversion point, which becomes false once the branch is gone (Self-Updating).
 
 ## Constraints and decisions
 
-- **Root CLAUDE.md, "Boolean wrappers ..." design decision (currently ~L173-182):** "On the write side a boolean is accepted wherever an integer is, in every layer including Lua: `create_element`/`update_element` (scalars and arrays), query parameters, the vector/set/time-series group writers, and `upsert_time_series_row` — all mapping it to INTEGER 1/0 ... Julia and Python need no explicit branch on most paths because `Bool <: Integer` and `bool` is an `int` subclass respectively — which makes the behaviour dispatch-order-dependent and worth a test rather than an assumption." The rule is about behaviour, and this change keeps it. The passage asks for a test, and this plan keeps `test_boolean_input` and extends it.
-- **Maintainer decision (binding):** "Keep test_boolean_input and extend with an upsert_time_series_row bool write. Update root CLAUDE.md boolean passage that names element.py isinstance(value, bool) branch. If plan 24 lands first, the _marshal_group_columns part is already gone - coordinate." Plans run in numeric order, so 24 will have landed. Step 3 handles whatever it left.
+- **Root AGENTS.md, "Boolean wrappers ..." design decision (currently ~L173-182):** "On the write side a boolean is accepted wherever an integer is, in every layer including Lua: `create_element`/`update_element` (scalars and arrays), query parameters, the vector/set/time-series group writers, and `upsert_time_series_row` — all mapping it to INTEGER 1/0 ... Julia and Python need no explicit branch on most paths because `Bool <: Integer` and `bool` is an `int` subclass respectively — which makes the behaviour dispatch-order-dependent and worth a test rather than an assumption." The rule is about behaviour, and this change keeps it. The passage asks for a test, and this plan keeps `test_boolean_input` and extends it.
+- **Maintainer decision (binding):** "Keep test_boolean_input and extend with an upsert_time_series_row bool write. Update root AGENTS.md boolean passage that names element.py isinstance(value, bool) branch. If plan 24 lands first, the _marshal_group_columns part is already gone - coordinate." Plans run in numeric order, so 24 will have landed. Step 3 handles whatever it left.
 - **Root "Error Messages":** unchanged. No message is added or reworded here. The `TypeError` texts in `Element.set` and `_marshal_row_columns` stay as they are (plan 25 may have reworded the latter).
 - **Root "Changelog":** only user-visible changes get an entry, and this change is not user-visible (see Docs and changelog).
-- `bindings/python/CLAUDE.md` does not describe the bool branches (grep `bool` finds only the `_integer_to_boolean` notes, ~L67-78). Nothing there goes stale, so it needs no edit.
-- `tests/CLAUDE.md` (~L110-117) says boolean input "is tested in the Lua layer and in all four bindings ... the four bindings extend their own boolean files". Extending `test_database_boolean.py` matches that, so it needs no edit.
+- `bindings/python/AGENTS.md` does not describe the bool branches (grep `bool` finds only the `_integer_to_boolean` notes, ~L67-78). Nothing there goes stale, so it needs no edit.
+- `tests/AGENTS.md` (~L110-117) says boolean input "is tested in the Lua layer and in all four bindings ... the four bindings extend their own boolean files". Extending `test_database_boolean.py` matches that, so it needs no edit.
 
 Alternatives considered and rejected:
 - *Keep the bool branches and only fix the comments.* Rejected: the branches are behaviourally identical to the `int` branch below them. Keeping a second spelling of one rule is the complexity the finding is about, and "delete unused code" applies.
@@ -183,7 +183,7 @@ If `git grep` printed nothing, this step is a no-op.
 
 See Tests.
 
-### 5. Root `CLAUDE.md`, boolean write-side passage
+### 5. Root `AGENTS.md`, boolean write-side passage
 
 See Docs and changelog.
 
@@ -256,11 +256,11 @@ Keep the trailing commas. ruff (`skip-magic-trailing-comma = false`, line length
 
 Existing tests: none change. `bindings/python/tests/test_element.py::test_element_set_bool_as_integer` (currently ~L40) and `bindings/python/tests/test_database_query.py::test_query_with_bool_param` (currently ~L87) keep passing unchanged. They call `Element.set` and query parameters with a bool. No test asserts on the deleted comments or branches.
 
-Other layers: no test. The C++ core, C API, Julia, Dart, JS and Lua are untouched, and their boolean-input tests (`tests/CLAUDE.md` ~L110-117) are unaffected.
+Other layers: no test. The C++ core, C API, Julia, Dart, JS and Lua are untouched, and their boolean-input tests (`tests/AGENTS.md` ~L110-117) are unaffected.
 
 ## Docs and changelog
 
-### Root `CLAUDE.md`, "Boolean wrappers are Julia/Dart/Python/JS only" design decision (currently ~L177-182)
+### Root `AGENTS.md`, "Boolean wrappers are Julia/Dart/Python/JS only" design decision (currently ~L177-182)
 
 Old:
 ```
@@ -293,8 +293,8 @@ What changed and why:
 
 ### Other docs
 
-- `bindings/python/CLAUDE.md`: no edit. It does not mention the bool branches.
-- `tests/CLAUDE.md`: no edit (see Constraints).
+- `bindings/python/AGENTS.md`: no edit. It does not mention the bool branches.
+- `tests/AGENTS.md`: no edit (see Constraints).
 - `bindings/python/README.md`, `docs/*.md`, `bindings/js/src/lua-api.ts`: no mention of this. No edit.
 - Docstrings `upsert_time_series_row` (`bool -> INTEGER (0/1), ...`) and `Element.set` (`bool (stored as int)`): still accurate. Plan 30 and plan 25 own their rewording.
 
@@ -316,7 +316,7 @@ Run from the repo root (`C:\Development\Quiver\quiver1`) in PowerShell.
    - In `Element.set`, change `elif isinstance(value, int):` to `elif type(value) is int:`. Run the same command. It must FAIL at the first `create_element` with `TypeError: Unsupported type bool for Element.set('some_integer')`. Revert the change.
    - `git diff --stat` must now show only the intended edits.
 5. `bindings\python\tests\test.bat` runs the full Python suite, and all tests must pass.
-6. `scripts\format.bat`, then `git status`. The only modified files should be `bindings/python/src/quiverdb/database.py`, `bindings/python/src/quiverdb/element.py`, `bindings/python/tests/test_database_boolean.py` and `CLAUDE.md`. If the formatter touched anything else, it was already unformatted before this plan. Revert those files and leave them alone (root "Do Not Fix": no drive-by lint fixes).
+6. `scripts\format.bat`, then `git status`. The only modified files should be `bindings/python/src/quiverdb/database.py`, `bindings/python/src/quiverdb/element.py`, `bindings/python/tests/test_database_boolean.py` and `AGENTS.md`. If the formatter touched anything else, it was already unformatted before this plan. Revert those files and leave them alone (root "Do Not Fix": no drive-by lint fixes).
 7. `scripts\test-all.bat` runs the six suites and the CLI smoke test, and all must pass. A CLI smoke failure that predates this plan is plan 65's to fix; note it and move on.
 
 ## Acceptance criteria
@@ -327,7 +327,7 @@ Run from the repo root (`C:\Development\Quiver\quiver1`) in PowerShell.
 - [ ] Plan 24's code in `_marshal_group_columns` / `Element._set_array` is unchanged apart from removing a redundant bool test, if one was left.
 - [ ] `test_boolean_input` takes `mixed_time_series_db`, has the corrected docstring, and asserts `humidity == [1, 0]` and `temperature == [21.5, 1.0]` after one `upsert_time_series_row` and one `upsert_time_series_row_by_label`.
 - [ ] The mutation check (Verification 4) failed as described for both sites and was reverted.
-- [ ] Root `CLAUDE.md` no longer mentions "`element.py`'s `isinstance(value, bool)` branch" and has the new Julia/Python sentence.
+- [ ] Root `AGENTS.md` no longer mentions "`element.py`'s `isinstance(value, bool)` branch" and has the new Julia/Python sentence.
 - [ ] No CHANGELOG entry and no manifest change.
 - [ ] Full Python suite and `scripts\test-all.bat` pass.
 
@@ -339,7 +339,7 @@ Run from the repo root (`C:\Development\Quiver\quiver1`) in PowerShell.
 - **Do not drop `int(v)` elsewhere.** `_marshal_group_columns`'s `int(v) if v is not None else 0` (if it still exists) is plan 24's to change. This plan changes only its condition.
 - **numpy scalars.** `numpy.bool_` and `numpy.int64` are not `bool`/`int` subclasses. They were not accepted before and are not now. This change does not touch them.
 - **pytest fixtures.** Two DB fixtures in one test share `tmp_path`. They write different file names, so nothing collides. Do not replace `mixed_time_series_db` with an in-memory DB built by hand, because conftest's fixture is the convention.
-- **Line endings.** The three `.py` files are LF in both the index and the working tree (`.gitattributes`: `*.py text eol=lf`). Root `CLAUDE.md` is `text=auto`: LF in the index but **CRLF in the working tree** (`git ls-files --eol CLAUDE.md` → `i/lf w/crlf`). Edit it with the Edit tool, which keeps the file's existing line endings. Do not rewrite it with `sed` or a heredoc. Confirm with `git diff --stat CLAUDE.md`: it must show only the ~9 changed lines, not the whole file. No `.bat` file is edited. If you open `bindings\python\tests\test.bat` or `format.bat`, do not save them through a Unix tool, which would convert their CRLF endings.
+- **Line endings.** The three `.py` files are LF in both the index and the working tree (`.gitattributes`: `*.py text eol=lf`). Root `AGENTS.md` is `text=auto`: LF in the index but **CRLF in the working tree** (`git ls-files --eol AGENTS.md` → `i/lf w/crlf`). Edit it with the Edit tool, which keeps the file's existing line endings. Do not rewrite it with `sed` or a heredoc. Confirm with `git diff --stat AGENTS.md`: it must show only the ~9 changed lines, not the whole file. No `.bat` file is edited. If you open `bindings\python\tests\test.bat` or `format.bat`, do not save them through a Unix tool, which would convert their CRLF endings.
 - **The mutation-check `TypeError` text.** Plan 25 may have extended `_marshal_row_columns`'s message (for example, adding `datetime` to the expected list). Only require that it names `humidity` and `bool`.
 
 ## Out of scope

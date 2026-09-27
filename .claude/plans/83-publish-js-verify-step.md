@@ -1,6 +1,6 @@
 # 83 — `publish-js`: delete the redundant "Verify native libraries" step; check the tarball against what was downloaded
 
-**Batch** 7 · **Severity** low · **Breaking** no · **Size** S · **Layers** CI (`.github/workflows/publish-js.yml`), comments in root `CMakeLists.txt` and root CLAUDE.md
+**Batch** 7 · **Severity** low · **Breaking** no · **Size** S · **Layers** CI (`.github/workflows/publish-js.yml`), comments in root `CMakeLists.txt` and root AGENTS.md
 **Depends on** none · **Overlaps with** 81 (edits `publish-js.yml`'s version resolution), 88 (stale comments in the same file)
 
 ## Why
@@ -51,7 +51,7 @@ lists would ship unchecked.
    - root `CMakeLists.txt` (~L21-22): "`scripts/ci/native_s3.sh`, `publish-s3.yml` and
      `publish-js.yml` ship libquiver.0.dylib / libquiver.so.0 by name" becomes "... `native_s3.sh` and
      `publish-s3.yml` ship ...".
-   - root `CLAUDE.md` Build System, `QUIVER_UNVERSIONED_SHARED` paragraph (~L382): same edit.
+   - root `AGENTS.md` Build System, `QUIVER_UNVERSIONED_SHARED` paragraph (~L382): same edit.
 
 ## Tests
 

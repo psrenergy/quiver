@@ -1,13 +1,13 @@
 # 07 — list_{vector,set,time_series}_groups throw on an unknown collection
 
-**Batch** 1 · **Severity** low · **Breaking** yes: any caller, in any layer, that passes a name that is not a table to `list_vector_groups` / `list_set_groups` / `list_time_series_groups` or to the `read_vectors_by_id` / `read_sets_by_id` composites now gets an error instead of an empty result · **Size** S · **Layers** C++ core (code); C API, Lua, Julia, Dart, Python, JS (tests only); root + `src/` CLAUDE.md; CHANGELOG
+**Batch** 1 · **Severity** low · **Breaking** yes: any caller, in any layer, that passes a name that is not a table to `list_vector_groups` / `list_set_groups` / `list_time_series_groups` or to the `read_vectors_by_id` / `read_sets_by_id` composites now gets an error instead of an empty result · **Size** S · **Layers** C++ core (code); C API, Lua, Julia, Dart, Python, JS (tests only); root + `src/` AGENTS.md; CHANGELOG
 
 **Depends on** none · **Overlaps with**
 - **57** (one `require_group_table` lookup) edits the same three function bodies later. Plan 57 must keep the `impl_->require_collection(...)` first line this plan adds. The maintainer said not to fold that refactor in here.
 - **52** (Lua metadata-getter tests + C++ `list_vector/set_groups` tests) adds positive-path tests to `tests/test_database_metadata.cpp` and the Lua suites. This plan adds only the unknown-collection cases. Plan 52 must not add them again.
 - **49 / 50** rewrite `list_vector_metadata_lua`, `list_set_metadata_lua`, `read_vectors_by_id_lua` and `read_sets_by_id_lua` in `src/lua_runner.cpp`. This plan does not touch that file. The Lua test added here must still pass after those plans, and it will as long as those functions still call `db.list_*_groups`.
 - **02 / 03 / 04** edit other functions in `src/database_time_series.cpp`. Only the file is shared.
-- **76** edits a different bullet of `src/CLAUDE.md`. Only the file is shared.
+- **76** edits a different bullet of `src/AGENTS.md`. Only the file is shared.
 - **01–06** all append to `CHANGELOG.md` `### Changed` / `### Fixed` under 0.11.0. Append your entry, don't overwrite theirs.
 
 ## Why
@@ -41,7 +41,7 @@ db.read_scalars_by_id("Colection", 1)    # QuiverError (goes through list_scalar
 db.read_vectors_by_id("Colection", 1)    # {}   <- silent (loops over list_vector_groups)
 db.read_sets_by_id("Colection", 1)       # {}   <- silent
 ```
-All other collection-scoped methods start with `Impl::require_collection`: every `get_*_metadata`, every `read_*`, `has_time_series_files` and `number_of_elements`. These three listers are the only ones that skip it. That breaks the project's missing-target-throws stance (root CLAUDE.md: `update_element` / `delete_element` "throw on a missing id … not a silent no-op") and Homogeneity. It also makes `read_scalars_by_id` and `read_vectors_by_id` disagree on the same bad name.
+All other collection-scoped methods start with `Impl::require_collection`: every `get_*_metadata`, every `read_*`, `has_time_series_files` and `number_of_elements`. These three listers are the only ones that skip it. That breaks the project's missing-target-throws stance (root AGENTS.md: `update_element` / `delete_element` "throw on a missing id … not a silent no-op") and Homogeneity. It also makes `read_scalars_by_id` and `read_vectors_by_id` disagree on the same bad name.
 
 One test pins the current behaviour. `tests/test_database_time_series_group.cpp`, `TEST(Database, TimeSeriesCollectionNotFound)` (currently ~L176):
 ```cpp
@@ -49,19 +49,19 @@ One test pins the current behaviour. `tests/test_database_time_series_group.cpp`
     auto groups = db.list_time_series_groups("NonexistentCollection");
     EXPECT_TRUE(groups.empty());
 ```
-Its only justification is the sibling lister's behaviour. No CLAUDE.md, CHANGELOG entry, `lua-api.ts` passage or Design Decision records the empty result as intended.
+Its only justification is the sibling lister's behaviour. No AGENTS.md, CHANGELOG entry, `lua-api.ts` passage or Design Decision records the empty result as intended.
 
 Current behaviour confirmed with the built binary: `./build/bin/quiver_tests.exe --gtest_filter=Database.TimeSeriesCollectionNotFound` passes (empty list).
 
 ## Constraints and decisions
 
 - **Maintainer decision (binding):** "BREAKING; CHANGELOG under 0.11.0. Do not fold in the require_group_table refactor (plan 57)." The three bodies stay as they are apart from their first line. Don't collapse them into one loop.
-- **Root CLAUDE.md, Changelog + Versioning:** 0.11.0 is unreleased and is already the minor bump over 0.10.9. The entry goes under `## [0.11.0] — unreleased`, prefixed **BREAKING**, and says what a caller must do. **No manifest bump.** (Correction: the facts verifier asked for a "0.x minor version bump across all five manifests". That bump has already happened, so it is not part of this change.)
-- **Root CLAUDE.md, C++ Error Message Patterns, Pattern 1:** `"Cannot {operation}: {reason}"`, where `{operation}` is the public method called. `Impl::require_collection(collection, operation)` (`src/database_impl.h`, currently ~L91) already produces exactly `Cannot <op>: collection not found: <collection>`. Reuse it; add no new helper or message.
-- **Root CLAUDE.md, Error Messages:** bindings never craft their own messages. The composites `read_vectors_by_id` / `read_sets_by_id` are binding-side conveniences with no C++ counterpart, so the error they surface names the core call they delegate to (`Cannot list_vector_groups: …`). `read_scalars_by_id` already does the same today (`Cannot list_scalar_attributes: …`). Leave it; re-wrapping it in a binding would break the rule.
-- **Root CLAUDE.md, "Intelligence: Logic resides in C++ layer":** the fix goes in the three C++ functions only. The C API wrappers (`src/c/database_metadata.cpp` `quiver_database_list_vector_groups` / `_list_set_groups`, `src/c/database_time_series.cpp` `quiver_database_list_time_series_groups`) already catch `std::exception` and call `quiver_set_last_error(e.what())`. The Lua wrappers (`src/lua_runner.cpp` `list_vector_metadata_lua`, `list_set_metadata_lua`, `list_time_series_groups_lua`, `read_vectors_by_id_lua`, `read_sets_by_id_lua`) and every binding's `check(...)` pass the error through. No C API signature changes, so no FFI regeneration (Julia `c_api.jl`, Dart `bindings.dart`, Python `_c_api.py`, JS `loader.ts` all stay untouched).
-- **Root CLAUDE.md, tests in every layer:** the new behaviour is visible in C++, the C API, Lua and all four FFI bindings (through their listers and through their binding-side composites), so each layer gets one small test. (Correction: the policy verifier said one C API test is enough and the bindings need nothing. The bindings need no *code*, but the project rule asks for a test wherever the behaviour is visible, and each binding's composite is binding code that now fails differently.)
-- **Root CLAUDE.md, Self-Updating:** update `src/CLAUDE.md` (nearest to the change) and the root Core API line that lists these functions.
+- **Root AGENTS.md, Changelog + Versioning:** 0.11.0 is unreleased and is already the minor bump over 0.10.9. The entry goes under `## [0.11.0] — unreleased`, prefixed **BREAKING**, and says what a caller must do. **No manifest bump.** (Correction: the facts verifier asked for a "0.x minor version bump across all five manifests". That bump has already happened, so it is not part of this change.)
+- **Root AGENTS.md, C++ Error Message Patterns, Pattern 1:** `"Cannot {operation}: {reason}"`, where `{operation}` is the public method called. `Impl::require_collection(collection, operation)` (`src/database_impl.h`, currently ~L91) already produces exactly `Cannot <op>: collection not found: <collection>`. Reuse it; add no new helper or message.
+- **Root AGENTS.md, Error Messages:** bindings never craft their own messages. The composites `read_vectors_by_id` / `read_sets_by_id` are binding-side conveniences with no C++ counterpart, so the error they surface names the core call they delegate to (`Cannot list_vector_groups: …`). `read_scalars_by_id` already does the same today (`Cannot list_scalar_attributes: …`). Leave it; re-wrapping it in a binding would break the rule.
+- **Root AGENTS.md, "Intelligence: Logic resides in C++ layer":** the fix goes in the three C++ functions only. The C API wrappers (`src/c/database_metadata.cpp` `quiver_database_list_vector_groups` / `_list_set_groups`, `src/c/database_time_series.cpp` `quiver_database_list_time_series_groups`) already catch `std::exception` and call `quiver_set_last_error(e.what())`. The Lua wrappers (`src/lua_runner.cpp` `list_vector_metadata_lua`, `list_set_metadata_lua`, `list_time_series_groups_lua`, `read_vectors_by_id_lua`, `read_sets_by_id_lua`) and every binding's `check(...)` pass the error through. No C API signature changes, so no FFI regeneration (Julia `c_api.jl`, Dart `bindings.dart`, Python `_c_api.py`, JS `loader.ts` all stay untouched).
+- **Root AGENTS.md, tests in every layer:** the new behaviour is visible in C++, the C API, Lua and all four FFI bindings (through their listers and through their binding-side composites), so each layer gets one small test. (Correction: the policy verifier said one C API test is enough and the bindings need nothing. The bindings need no *code*, but the project rule asks for a test wherever the behaviour is visible, and each binding's composite is binding code that now fails differently.)
+- **Root AGENTS.md, Self-Updating:** update `src/AGENTS.md` (nearest to the change) and the root Core API line that lists these functions.
 - **An existing collection with no groups of that kind still returns an empty list.** The tests that pin that stay unchanged: `ListTimeSeriesGroupsEmpty` (C++/C API, `"Configuration"`), Python `test_read_vectors_by_id_no_groups` / `test_read_sets_by_id_no_groups`, Lua `ReadVectorsById` / `ReadSetsById` (`"Configuration"`), and the Dart/Julia `"Configuration"` tests.
 
 Rejected alternatives:
@@ -341,7 +341,7 @@ No new schema files.
 
 ## Docs and changelog
 
-### Root `CLAUDE.md`, Core API → Database Class bullet list
+### Root `AGENTS.md`, Core API → Database Class bullet list
 
 Old:
 ```
@@ -355,7 +355,7 @@ New:
   composites inherit that throw.
 ```
 
-### `src/CLAUDE.md`, Core Internals Worth Knowing → the "**Table classification has one source**" bullet (currently ~L400)
+### `src/AGENTS.md`, Core Internals Worth Knowing → the "**Table classification has one source**" bullet (currently ~L400)
 
 Old (last sentence of the bullet):
 ```
@@ -371,7 +371,7 @@ New:
 
 ### Other docs
 
-None. `bindings/js/src/lua-api.ts` (Lists section, currently ~L521, and Composite by-id reads, ~L372), `bindings/js/README.md`, the binding docstrings and the C/C++ header comments don't mention the unknown-collection behaviour, so none of them is wrong after this change. No binding `CLAUDE.md` mentions it either (grep `-i "unknown collection\|collection not found\|list_.*group"` over all `CLAUDE.md` files).
+None. `bindings/js/src/lua-api.ts` (Lists section, currently ~L521, and Composite by-id reads, ~L372), `bindings/js/README.md`, the binding docstrings and the C/C++ header comments don't mention the unknown-collection behaviour, so none of them is wrong after this change. No binding `AGENTS.md` mentions it either (grep `-i "unknown collection\|collection not found\|list_.*group"` over all `AGENTS.md` files).
 
 ### `CHANGELOG.md`: append as the **last bullet of `### Changed`** under `## [0.11.0] — unreleased` (immediately before `### Fixed`; keep any bullets plans 01–06 added)
 
@@ -413,7 +413,7 @@ From the repo root (`C:\Development\Quiver\quiver1`), in order:
 - [ ] Each new test fails on the pre-change code (optional check: revert the three `src/` lines locally, rebuild, run step 2/3).
 - [ ] Every existing "real collection with no groups returns empty" test still passes unchanged.
 - [ ] No change to any C API header, `src/c/*`, `src/lua_runner.cpp`, FFI declaration file or binding source file.
-- [ ] Root `CLAUDE.md` List-groups line and `src/CLAUDE.md` Table-classification bullet updated as quoted above.
+- [ ] Root `AGENTS.md` List-groups line and `src/AGENTS.md` Table-classification bullet updated as quoted above.
 - [ ] `CHANGELOG.md` has the **BREAKING** entry as the last bullet of `### Changed` under 0.11.0. No manifest version changed.
 - [ ] `scripts/format.bat` leaves no further diff. `scripts/test-all.bat` is green (apart from any pre-existing CLI smoke failure owned by plan 65).
 
@@ -422,7 +422,7 @@ From the repo root (`C:\Development\Quiver\quiver1`), in order:
 - **Use `require_collection`, not `require_schema` plus a hand-written check.** `require_collection` already loads the schema lazily. Keep `require_schema` as a separate call and you get redundant code; drop it without `require_collection` and an `open()`ed database crashes on a null `schema`.
 - **The operation string must be the method's own name**, including `list_time_series_groups` in `database_time_series.cpp`. A copy-paste of `"list_vector_groups"` into the set/time-series function yields a wrong message, and only the exact-match assertions (not substring ones) catch it.
 - **Line numbers will have shifted.** Plans 02–04 edit `src/database_time_series.cpp` before this one. Find the function by name.
-- **Dart runs its own native build** through the native-assets hook, not `build/bin`. If the Dart test still sees the old behaviour after the C++ change, clear `bindings/dart/.dart_tool/hooks_runner/` and `bindings/dart/.dart_tool/lib/` and rerun (see `bindings/dart/CLAUDE.md`, "Stale native cache").
+- **Dart runs its own native build** through the native-assets hook, not `build/bin`. If the Dart test still sees the old behaviour after the C++ change, clear `bindings/dart/.dart_tool/hooks_runner/` and `bindings/dart/.dart_tool/lib/` and rerun (see `bindings/dart/AGENTS.md`, "Stale native cache").
 - **Python and JS load `build/bin` via PATH** (their `test.bat` prepends it), so rebuild (step 1) before running them. Julia loads `build/` unless `QUIVER_LIB_DIR` is set.
 - **Lua messages are substrings.** sol2 may prefix the C++ `what()` with Lua location text, which is why `expect_lua_error` does a substring match. Don't switch it to an exact comparison. The message is identical in Debug and Release.
 - **`.bat` files are CRLF.** This plan edits none. Don't let an editor or sed touch the test scripts.

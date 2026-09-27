@@ -1,6 +1,6 @@
 # 62 — Schema-loading errors name the table and column (unsupported type, invalid table name)
 
-**Batch** 6 · **Severity** medium · **Breaking** no (error text only) · **Size** S · **Layers** C++ core, C++ + C API tests, test schema (+ tests/CLAUDE.md schema list, CHANGELOG)
+**Batch** 6 · **Severity** medium · **Breaking** no (error text only) · **Size** S · **Layers** C++ core, C++ + C API tests, test schema (+ tests/AGENTS.md schema list, CHANGELOG)
 **Depends on** none · **Overlaps with** 55 (moves `schema.h`/`schema.cpp`-adjacent headers into `src/`; `data_type.h` stays public), 06 (adds invalid schemas and validator tests next to the ones added here), 57 (other `schema.cpp` edits)
 
 ## Why
@@ -139,8 +139,8 @@ Search the tests for the old texts and update any hit:
 
 ## Docs and changelog
 
-- `tests/CLAUDE.md`: add `unsupported_type.sql` to the `invalid/` schema list
-  (`grep -n "invalid/" tests/CLAUDE.md`).
+- `tests/AGENTS.md`: add `unsupported_type.sql` to the `invalid/` schema list
+  (`grep -n "invalid/" tests/AGENTS.md`).
 - `CHANGELOG.md`, under `## [0.11.0] — unreleased` → `### Changed`:
   ```markdown
   - **Schema errors name the offending column.** A column type Quiver does not support now fails
@@ -163,7 +163,7 @@ From the repo root:
       table, the column and the type.
 - [ ] One `is_safe_identifier` table check at load. The three per-function guards are gone (or
       reworded if they have another caller).
-- [ ] New schema and tests are green, and the CHANGELOG and tests/CLAUDE.md are updated.
+- [ ] New schema and tests are green, and the CHANGELOG and tests/AGENTS.md are updated.
 
 ## Pitfalls
 

@@ -1,6 +1,6 @@
 # 38 — Dart: one `_marshalGroupColumns` helper for the six group writers
 
-**Batch** 4 · **Severity** medium · **Breaking** no (the jagged-column `ArgumentError` message gains the column name; its type is unchanged) · **Size** M · **Layers** Dart binding only (+ bindings/dart/CLAUDE.md, bindings/python/CLAUDE.md cross-reference)
+**Batch** 4 · **Severity** medium · **Breaking** no (the jagged-column `ArgumentError` message gains the column name; its type is unchanged) · **Size** M · **Layers** Dart binding only (+ bindings/dart/AGENTS.md, bindings/python/AGENTS.md cross-reference)
 **Depends on** 24 recommended first (it rewrites the body of `_marshalGroupColumn` in the same file; this plan only calls it) · **Overlaps with** 20 (`updateTimeSeriesFiles` in the same file — a different method), 24 (same file), 39 (Dart `element.dart`, different file)
 
 ## Why
@@ -282,7 +282,7 @@ write one row, call with `{}`, and assert that the reader returns empty. Check w
 
 ## Docs and changelog
 
-- `bindings/dart/CLAUDE.md`, "Marshaling idiom" bullet (currently ~L77). Current text:
+- `bindings/dart/AGENTS.md`, "Marshaling idiom" bullet (currently ~L77). Current text:
   > Typed columns go through the shared private `_marshalGroupColumn(Arena, String, List<Object?>)`
   > (used by `updateTimeSeriesGroup`, `upsertTimeSeriesRow`, `upsertTimeSeriesRowByLabel`,
   > `updateVectorGroup`, `updateSetGroup` and the group writers' `ByLabel` forms);
@@ -298,7 +298,7 @@ write one row, call with `{}`, and assert that the reader returns empty. Check w
   eight call sites (...)". It stays true, because `_marshalGroupColumn` still serves all eight
   paths, six of them through `_marshalGroupColumns`. Append "(six of them via
   `_marshalGroupColumns`)".
-- `bindings/python/CLAUDE.md`, the `_marshal_group_columns` bullet: "same name as Dart's
+- `bindings/python/AGENTS.md`, the `_marshal_group_columns` bullet: "same name as Dart's
   `_marshalGroupColumn`" becomes "Dart's counterpart is `_marshalGroupColumns`".
 - `CHANGELOG.md`: no entry needed. The only user-visible difference is that the message now names
   the column, which does not break anyone. If you want to mention it, add one line under
@@ -323,7 +323,7 @@ From the repo root:
 - [ ] No `data.isEmpty` branch and no `// Validate equal lengths` loop remain in the six writers.
 - [ ] The upserts still call `_marshalGroupColumn` directly.
 - [ ] Two tightened message tests pass. The full Dart suite is green. `dart analyze` is clean.
-- [ ] Both CLAUDE.md files are updated.
+- [ ] Both AGENTS.md files are updated.
 
 ## Pitfalls
 

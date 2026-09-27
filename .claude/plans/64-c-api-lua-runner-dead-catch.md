@@ -7,7 +7,7 @@
 
 The C API has one documented error-handling shape: `QUIVER_REQUIRE`, then `try { ... return
 QUIVER_OK; } catch (const std::exception& e) { quiver_set_last_error(e.what()); return QUIVER_ERROR; }`.
-See `src/c/CLAUDE.md` on the single error channel. Only the two LuaRunner entry points add a
+See `src/c/AGENTS.md` on the single error channel. Only the two LuaRunner entry points add a
 second, ad-hoc arm (`src/c/lua_runner.cpp`):
 
 ```cpp

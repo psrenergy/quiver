@@ -1,6 +1,6 @@
 # 86 — Root `CMakeLists.txt`: a recursive format glob, and remove the no-op lines
 
-**Batch** 7 · **Severity** low · **Breaking** no · **Size** S · **Layers** build config, bindings/python/pyproject.toml, bindings/python/CLAUDE.md
+**Batch** 7 · **Severity** low · **Breaking** no · **Size** S · **Layers** build config, bindings/python/pyproject.toml, bindings/python/AGENTS.md
 **Depends on** 79 (deletes the CMake `tidy` target and edits the "format and tidy targets" comment right above this glob — if 79 landed, the comment already reads "format target") · **Overlaps with** 79, 85
 
 ## Why
@@ -28,7 +28,7 @@
    and CI's plain `ctest` need only `enable_testing()`.
 3. **Redundant pyproject arg**: `bindings/python/pyproject.toml` ~L14
    `cmake.args = ["-DQUIVER_BUILD_TESTS=OFF"]`. The root CMakeLists already detects `SKBUILD` and
-   forces tests OFF and the C API ON (root CLAUDE.md "Build System").
+   forces tests OFF and the C API ON (root AGENTS.md "Build System").
 4. **`OUTPUT_NAME quiver`** in `src/CMakeLists.txt` (~L94) restates the target name `quiver`.
 
 Principle: delete what has no effect. A no-op line reads as if it mattered.
@@ -61,7 +61,7 @@ Principle: delete what has no effect. A no-op line reads as if it mattered.
    step.
 4. `src/CMakeLists.txt` ~L94: delete the `OUTPUT_NAME quiver` line from `set_target_properties`. If
    that leaves `set_target_properties(quiver PROPERTIES PREFIX "lib")`, keep it.
-5. `bindings/python/CLAUDE.md` ~L102-104: "(`cmake.source-dir = ../..`, Release,
+5. `bindings/python/AGENTS.md` ~L102-104: "(`cmake.source-dir = ../..`, Release,
    `-DQUIVER_BUILD_TESTS=OFF`; the root CMakeLists detects `SKBUILD` and forces the C API ON)"
    becomes "(`cmake.source-dir = ../..`, Release; the root CMakeLists detects `SKBUILD` and forces
    the C API ON and tests OFF)".
@@ -87,7 +87,7 @@ Rebuild and re-run formatting.
 - [ ] The glob has five recursive roots.
 - [ ] One testing call (`enable_testing()`).
 - [ ] No redundant pyproject `cmake.args`, and no `OUTPUT_NAME quiver`.
-- [ ] Build, tests, format target and wheel are all fine. bindings/python/CLAUDE.md is updated.
+- [ ] Build, tests, format target and wheel are all fine. bindings/python/AGENTS.md is updated.
 
 ## Pitfalls
 
