@@ -1,6 +1,6 @@
 # 32 — JS: `mod.ts` re-exports `src/index.ts`; export the `DATA_TYPE_*` constants
 
-**Batch** 4 · **Severity** medium · **Breaking** no (additive: new exports) · **Size** S · **Layers** JS binding only (+ CHANGELOG, bindings/js/AGENTS.md check)
+**Batch** 4 · **Severity** medium · **Breaking** no (additive: new exports) · **Size** S · **Layers** JS binding only (+ CHANGELOG, bindings/js/CLAUDE.md check)
 **Depends on** none · **Overlaps with** 18 (adds `readVectorGroupById`/`readSetGroupById` and possibly a `GroupData` type to `src/index.ts`; with `export *` in `mod.ts` those reach the package root automatically), 33 (widens `QueryParam`/`GroupColumns`, no export change), 74 (JS README lists exported types — keep in sync if 74 lands later)
 
 ## Why
@@ -89,7 +89,7 @@ delete duplication).
 - **Maintainer decision (binding):** export `DATA_TYPE_INTEGER/FLOAT/STRING/DATE_TIME` **and**
   `DATA_TYPE_NULL`, for parity with the full enum Dart and Python expose.
 - Keep `mod.ts` as the entry point: it carries the `@module` JSDoc used by package docs, and
-  `bindings/js/AGENTS.md` already documents it as "Package entry point (re-exports src/index.ts)"
+  `bindings/js/CLAUDE.md` already documents it as "Package entry point (re-exports src/index.ts)"
   (line ~11). Repointing `package.json` `exports`/`types`/`files` at `src/index.ts` and deleting
   `mod.ts` was considered and rejected: more churn (three manifest fields) for the same result.
 - JS keeps its string-based datetime surface (root Design Decision) — irrelevant here, but do not
@@ -229,7 +229,7 @@ No other test changes. Existing tests keep importing `../src/index.ts`.
 
 ## Docs and changelog
 
-- `bindings/js/AGENTS.md` line ~11 already says `mod.ts  # Package entry point (re-exports src/index.ts)`,
+- `bindings/js/CLAUDE.md` line ~11 already says `mod.ts  # Package entry point (re-exports src/index.ts)`,
   which this change makes literally true. Line ~18
   (`src/types.ts  # Central DATA_TYPE_* / LOG_LEVEL_* constants and DatabaseOptions type`) is also
   accurate. Append " — all re-exported from the package root" to line 18.

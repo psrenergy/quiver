@@ -1,7 +1,7 @@
 # 03 — update_time_series_group: build INSERT from the union of row keys
 
-**Batch** 1 · **Severity** m · **Breaking** no. Only direct C++ callers passing non-uniform rows see a difference, and what they see is the fix. · **Size** S · **Layers** C++ core (fix + test), C API (comment only), Lua (comment only), docs (src/AGENTS.md, src/c/AGENTS.md, public header comment, CHANGELOG)
-**Depends on** none · **Overlaps with** 02, 04, 57, 53 (same file `src/database_time_series.cpp`); 46, 44 (`src/lua_runner.cpp`, next to the comment edited here); 23, 17 (`src/c/database_helpers.h` / `src/c/AGENTS.md`, next to the text edited here). Details under Pitfalls.
+**Batch** 1 · **Severity** m · **Breaking** no. Only direct C++ callers passing non-uniform rows see a difference, and what they see is the fix. · **Size** S · **Layers** C++ core (fix + test), C API (comment only), Lua (comment only), docs (src/CLAUDE.md, src/c/CLAUDE.md, public header comment, CHANGELOG)
+**Depends on** none · **Overlaps with** 02, 04, 57, 53 (same file `src/database_time_series.cpp`); 46, 44 (`src/lua_runner.cpp`, next to the comment edited here); 23, 17 (`src/c/database_helpers.h` / `src/c/CLAUDE.md`, next to the text edited here). Details under Pitfalls.
 
 ## Why
 
@@ -54,12 +54,12 @@ The workaround spread outward instead of being fixed in C++. The C API decoder (
 
 ## Constraints and decisions
 
-- **Maintainer decisions (binding):** "No C API test (the decoder always emits uniform rows). Remove the rows[0] caveat text from all five places." The five places are `src/c/database_helpers.h` (comment above `unmarshal_group_columns_to_rows`), `src/lua_runner.cpp` (comment above `columns_to_cpp_rows`), `src/c/AGENTS.md` (twice, in "Multi-Column Time Series") and `src/AGENTS.md` (the `time_series_rows_from_lua` bullet). Running `grep -rn 'from rows\[0\]\|from \`rows\[0\]\`' src/ include/` today matches exactly those five lines.
-- Root AGENTS.md "Intelligence: Logic resides in C++ layer. Bindings/wrappers remain thin." The fix belongs in the core.
-- Root AGENTS.md "Self-Updating". `src/AGENTS.md` is the AGENTS.md nearest to `src/database_time_series.cpp`, so it gets a sentence. `src/c/AGENTS.md` is nearest to `src/c/database_helpers.h`.
-- Root AGENTS.md "Changelog". This is a user-visible fix for C++ callers, so it goes under `## [0.11.0] — unreleased` → `### Fixed`. It is not BREAKING, and no manifest bump is needed (0.11.0 is already the unreleased minor).
+- **Maintainer decisions (binding):** "No C API test (the decoder always emits uniform rows). Remove the rows[0] caveat text from all five places." The five places are `src/c/database_helpers.h` (comment above `unmarshal_group_columns_to_rows`), `src/lua_runner.cpp` (comment above `columns_to_cpp_rows`), `src/c/CLAUDE.md` (twice, in "Multi-Column Time Series") and `src/CLAUDE.md` (the `time_series_rows_from_lua` bullet). Running `grep -rn 'from rows\[0\]\|from \`rows\[0\]\`' src/ include/` today matches exactly those five lines.
+- Root CLAUDE.md "Intelligence: Logic resides in C++ layer. Bindings/wrappers remain thin." The fix belongs in the core.
+- Root CLAUDE.md "Self-Updating". `src/CLAUDE.md` is the CLAUDE.md nearest to `src/database_time_series.cpp`, so it gets a sentence. `src/c/CLAUDE.md` is nearest to `src/c/database_helpers.h`.
+- Root CLAUDE.md "Changelog". This is a user-visible fix for C++ callers, so it goes under `## [0.11.0] — unreleased` → `### Fixed`. It is not BREAKING, and no manifest bump is needed (0.11.0 is already the unreleased minor).
 - Root design decision "Time-series group NULLs round-trip via a per-cell presence mask … Lua is mask- and sentinel-free: NULL is plain `nil` … value columns may be short/sparse/empty (missing cells write NULL)". This plan keeps all of that. The padding code in the C API decoder and in Lua stays; only its stated rationale changes.
-- `tests/AGENTS.md`: `test_database_time_series_group.cpp` is where "group read/update + validation" tests live, so the new C++ test goes there, not in `test_database_update.cpp`.
+- `tests/CLAUDE.md`: `test_database_time_series_group.cpp` is where "group read/update + validation" tests live, so the new C++ test goes there, not in `test_database_update.cpp`.
 - Error-message patterns are unaffected, because no message is added or changed.
 
 **Keep the padding in the C API decoder and in Lua.** It stays load-bearing after the fix. A named column whose cells are *all* NULL (Lua `flag = {}`, or a fully masked C API column) would otherwise appear in no row map. The core would then (a) never validate its name, so `typo = {}` would pass silently where it throws today (`column 'typo' not found in group ...`), and (b) leave it to the column DEFAULT instead of writing the explicit NULL the caller asked for. Only the "because rows[0]" justification is wrong. This refines the finding's proposal to "delete the caveats": the text is reworded to the real reason, not dropped.
@@ -278,7 +278,7 @@ No new tests, and this is deliberate (maintainer decision). The C API decoder an
 
 ## Docs and changelog
 
-### `src/AGENTS.md`
+### `src/CLAUDE.md`
 
 **(a)** In the `Impl::update_group_rows` bullet (currently ~L385-389). Current:
 
@@ -313,7 +313,7 @@ New:
   `flag = {}` is still validated and written as NULL, not left to the column DEFAULT.
 ```
 
-### `src/c/AGENTS.md` ("Multi-Column Time Series" section)
+### `src/c/CLAUDE.md` ("Multi-Column Time Series" section)
 
 **(a)** In the `quiver_database_update_time_series_group()` bullet (currently ~L184-187). Current:
 
@@ -349,7 +349,7 @@ New:
   left to the column DEFAULT.
 ```
 
-### Root `AGENTS.md`, `tests/AGENTS.md`, `docs/*.md`, `bindings/js/src/lua-api.ts`, READMEs
+### Root `CLAUDE.md`, `tests/CLAUDE.md`, `docs/*.md`, `bindings/js/src/lua-api.ts`, READMEs
 
 No change. None of them mention the `rows[0]` behaviour. `docs/time_series.md` and `lua-api.ts` describe the column-oriented binding surfaces, which always send every column.
 
@@ -385,7 +385,7 @@ Run from the repo root `C:\Development\Quiver\quiver3`:
 7. Binding regression runs (no binding code changed, but they load the rebuilt native library): `bindings/julia/test/test.bat`, `bindings/dart/test/test.bat`, `bindings/js/test/test.bat`, `bindings/python/tests/test.bat`. Expect all to pass.
 8. `scripts/format.bat`, then `git diff` to confirm it only touched the files listed below (it may regroup the new `#include <set>`).
 9. `scripts/test-all.bat`. Expect the six suites to PASS. The `quiver_cli` smoke step currently fails because `example/` no longer exists. That failure predates this plan and plan 65 fixes it, so do not try to fix it here.
-10. `git status`. Only these files should be modified: `src/database_time_series.cpp`, `include/quiver/database.h`, `src/c/database_helpers.h`, `src/lua_runner.cpp`, `tests/test_database_time_series_group.cpp`, `tests/test_database_update.cpp`, `src/AGENTS.md`, `src/c/AGENTS.md`, `CHANGELOG.md`.
+10. `git status`. Only these files should be modified: `src/database_time_series.cpp`, `include/quiver/database.h`, `src/c/database_helpers.h`, `src/lua_runner.cpp`, `tests/test_database_time_series_group.cpp`, `tests/test_database_update.cpp`, `src/CLAUDE.md`, `src/c/CLAUDE.md`, `CHANGELOG.md`.
 
 ## Acceptance criteria
 
@@ -393,9 +393,9 @@ Run from the repo root `C:\Development\Quiver\quiver3`:
 - [ ] The `row.find(col)` → `nullptr` fallback in the bind loop is unchanged.
 - [ ] `Database.UpdateTimeSeriesGroupKeepsColumnPresentOnlyInALaterRow` exists in `tests/test_database_time_series_group.cpp`, passes, and fails with step 1b reverted.
 - [ ] The comment above `UpdateGroupKeepsColumnPresentOnlyInALaterRow` in `tests/test_database_update.cpp` no longer claims time series "keeps" every row's keys.
-- [ ] All five "INSERT column list from rows[0]" rationales are reworded (`src/c/database_helpers.h`, `src/lua_runner.cpp`, `src/c/AGENTS.md` ×2, `src/AGENTS.md` time_series_rows_from_lua bullet), and the grep in Verification step 6 prints nothing.
+- [ ] All five "INSERT column list from rows[0]" rationales are reworded (`src/c/database_helpers.h`, `src/lua_runner.cpp`, `src/c/CLAUDE.md` ×2, `src/CLAUDE.md` time_series_rows_from_lua bullet), and the grep in Verification step 6 prints nothing.
 - [ ] The padding/pre-fill code in `unmarshal_group_columns_to_rows` and `columns_to_cpp_rows` is unchanged.
-- [ ] `src/AGENTS.md`'s `Impl::update_group_rows` bullet notes that `update_time_series_group` uses the same union.
+- [ ] `src/CLAUDE.md`'s `Impl::update_group_rows` bullet notes that `update_time_series_group` uses the same union.
 - [ ] The public header comment on `update_time_series_group` states the column contract.
 - [ ] The CHANGELOG `0.11.0 → Fixed` entry is present and not marked BREAKING.
 - [ ] No C API, Lua or binding test was added. No generator was run and no FFI declaration changed.
@@ -404,16 +404,16 @@ Run from the repo root `C:\Development\Quiver\quiver3`:
 ## Pitfalls
 
 - **Plan ordering and shifted lines.** Plan 02 (runs first) rewrites `find_dimension_column` in `src/database_internal.h` and may touch the read functions and possibly the `dim_col` line in this same file. Plan 04 (runs first) edits `read_time_series_row` in this file. Anchor on the quoted `// Get column names from first row` block, not on line numbers. Plans 53 (moves `execute` into `Impl`) and 57 (replaces the `find_time_series_table` lookup at the top of this function) run later and will rebase over this change.
-- **Neighbouring edits.** In `src/lua_runner.cpp`, plan 46 later rewrites the type-dispatch body of `columns_to_cpp_rows` directly under the comment edited here, and plan 44 edits `collect_group_columns` just above it. In `src/c/AGENTS.md`, plan 17 edits the `quiver_database_read_time_series_row()` bullet a few lines below edit (a). In `src/c/database_helpers.h`, plan 23 edits `marshal_group_rows_to_c` below the decoder. Change only the quoted comment text so those plans apply cleanly.
+- **Neighbouring edits.** In `src/lua_runner.cpp`, plan 46 later rewrites the type-dispatch body of `columns_to_cpp_rows` directly under the comment edited here, and plan 44 edits `collect_group_columns` just above it. In `src/c/CLAUDE.md`, plan 17 edits the `quiver_database_read_time_series_row()` bullet a few lines below edit (a). In `src/c/database_helpers.h`, plan 23 edits `marshal_group_rows_to_c` below the decoder. Change only the quoted comment text so those plans apply cleanly.
 - **Do not delete the NULL pre-fill** in Lua (`for (auto& row : cpp_rows) { row[column.name] = nullptr; }`) or the explicit `row[col_name] = nullptr` in the C API decoder. Both look redundant once the core takes the union, but they are what gets an all-nil / all-masked column validated and written as NULL (see Constraints).
 - **Behaviour nuance, not a regression.** A column named only in later rows now gets an explicit NULL in the earlier rows, not its DEFAULT. For a `NOT NULL DEFAULT x` non-key value column, that means the earlier rows now fail with a SQLite NOT NULL constraint error, where before the later value was silently lost. That is the same semantics `update_vector_group` / `update_set_group` already have. No test schema has a DEFAULT on a time-series value column (the only `DEFAULT`s under `tests/schemas` are on collection tables in issue52/issue70).
-- **Line endings.** `src/*.cpp` / `*.h` are LF (`.gitattributes`). `src/AGENTS.md`, `src/c/AGENTS.md` and `CHANGELOG.md` are CRLF in the working tree (LF in the index, `text=auto`). The Edit tool preserves either, but do not run `sed` over them. No `.bat` file is touched.
+- **Line endings.** `src/*.cpp` / `*.h` are LF (`.gitattributes`). `src/CLAUDE.md`, `src/c/CLAUDE.md` and `CHANGELOG.md` are CRLF in the working tree (LF in the index, `text=auto`). The Edit tool preserves either, but do not run `sed` over them. No `.bat` file is touched.
 - **`std::get` on a NULL cell throws `std::bad_variant_access`.** That is why the new test does `ASSERT_TRUE(holds_alternative<int64_t>)` before `std::get<int64_t>`, so the pre-fix run fails as a readable assertion rather than as an uncaught exception.
 - **`2u` vs `2`.** Both compile, since many tests in this file use a plain `3`. The new test uses `2u` to match its vector twin in `tests/test_database_update.cpp`.
 
 ## Out of scope
 
-- The array fan-out in `update_element` / `create_element` across groups sharing a column name (root AGENTS.md "Not yet fixed"). This plan does not touch it, and plan 05 covers validate-before-write for those paths.
+- The array fan-out in `update_element` / `create_element` across groups sharing a column name (root CLAUDE.md "Not yet fixed"). This plan does not touch it, and plan 05 covers validate-before-write for those paths.
 - The dimension-column definition (`find_dimension_column` vs `find_dimension_columns`) belongs to plan 02.
 - `read_time_series_row` multi-dimension/NULL handling belongs to plan 04.
 - The Pattern 2 message and the lookup helper for a missing time-series group (`find_time_series_table`) belong to plan 57.

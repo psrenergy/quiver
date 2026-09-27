@@ -1,11 +1,11 @@
 # 33 — JS: accept `bigint` in the group writers and query parameters
 
-**Batch** 4 · **Severity** low · **Breaking** no (additive: inputs that threw now work) · **Size** S · **Layers** JS binding only (+ bindings/js/AGENTS.md, README types, CHANGELOG)
+**Batch** 4 · **Severity** low · **Breaking** no (additive: inputs that threw now work) · **Size** S · **Layers** JS binding only (+ bindings/js/CLAUDE.md, README types, CHANGELOG)
 **Depends on** 31 (introduces `numericCells` in `src/group-columns.ts`; this plan extends it) · **Overlaps with** 22 (changes the query C entry points and `marshalParams`' call sites in `src/query.ts`; this plan only touches `marshalParams`' body), 74 (JS README type list)
 
 ## Why
 
-JS already treats `bigint` as the exact-int64 input type on some write paths. `bindings/js/AGENTS.md`,
+JS already treats `bigint` as the exact-int64 input type on some write paths. `bindings/js/CLAUDE.md`,
 "int64 handling": *"input params accept `number | bigint` — `allocNativeInt64` writes each element
 with `DataView.setBigInt64`, so `bigint` inputs (scalar or array) are preserved exactly, never
 coerced through `Number`."* `createElement` honours that (`src/create.ts`: `if (typeof first ===
@@ -301,7 +301,7 @@ Before the change both throw `Unsupported query parameter type at index 0: bigin
 
 ## Docs and changelog
 
-- `bindings/js/AGENTS.md`, "int64 handling" bullet. Current:
+- `bindings/js/CLAUDE.md`, "int64 handling" bullet. Current:
   > input params accept `number | bigint` — `allocNativeInt64` writes each element with
   > `DataView.setBigInt64`, so `bigint` inputs (scalar or array) are preserved exactly, never
   > coerced through `Number`.
@@ -343,7 +343,7 @@ From the repo root:
 - [ ] `numericCells` returns `bigint` cells unchanged; the INTEGER branch writes them exactly.
 - [ ] A mixed `[5n, 1.5]` column writes FLOAT `[5, 1.5]` with no raw `TypeError`.
 - [ ] `marshalParams` binds a `bigint` as INTEGER.
-- [ ] New tests pass; full JS suite green; CHANGELOG + AGENTS.md + README updated.
+- [ ] New tests pass; full JS suite green; CHANGELOG + CLAUDE.md + README updated.
 
 ## Pitfalls
 

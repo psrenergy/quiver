@@ -1,11 +1,11 @@
 # 09 — Binary: recompute initial_value in one place and rebase aggregate output start date
 
-**Batch** 2 · **Severity** high (silent data corruption in saved expression output) · **Breaking** yes, for C++ callers only: `TimeProperties::set_initial_value()` is removed. Behaviour also changes: an aggregate that removes the outermost time dimension now reports a different, correct `initial_datetime`. The C API, the FFI struct shape, and the Julia and Lua surfaces are unchanged · **Size** M · **Layers** C++ core (`include/quiver/binary/{time_properties,binary_metadata}.h`, `src/binary/{time_properties,binary_metadata}.cpp`, `src/expression/expression_aggregate.cpp`); new tests in C++, C API, Lua and Julia; root `AGENTS.md`, `src/AGENTS.md`, `CHANGELOG.md`
+**Batch** 2 · **Severity** high (silent data corruption in saved expression output) · **Breaking** yes, for C++ callers only: `TimeProperties::set_initial_value()` is removed. Behaviour also changes: an aggregate that removes the outermost time dimension now reports a different, correct `initial_datetime`. The C API, the FFI struct shape, and the Julia and Lua surfaces are unchanged · **Size** M · **Layers** C++ core (`include/quiver/binary/{time_properties,binary_metadata}.h`, `src/binary/{time_properties,binary_metadata}.cpp`, `src/expression/expression_aggregate.cpp`); new tests in C++, C API, Lua and Julia; root `CLAUDE.md`, `src/CLAUDE.md`, `CHANGELOG.md`
 **Depends on** 08 · **Overlaps with**
 - **08:** rewrites the initial-value calculation in `src/binary/binary_metadata.cpp` and moves `validate()` ahead of it in `from_toml_content`. It also makes `add_offset_from_int` keep the time of day, and it may change `datetime_to_int` in `time_properties.h/.cpp`.
-- **10:** edits `ExpressionAggregate::compute_row` in the same file as this plan (a different function). It adds tests near the ones added here and edits nearby `src/AGENTS.md` text.
+- **10:** edits `ExpressionAggregate::compute_row` in the same file as this plan (a different function). It adds tests near the ones added here and edits nearby `src/CLAUDE.md` text.
 - **11:** moves the tail of `from_toml_content`, including the `derive_initial_values()` call added here, into an anonymous `build_metadata` function.
-- **12:** deletes `add_time_dimension` and `quiver_binary_metadata_set_initial_datetime`. It appends to the `### Removed` section this plan may create, and edits the `BinaryMetadata` bullet list in `src/AGENTS.md`.
+- **12:** deletes `add_time_dimension` and `quiver_binary_metadata_set_initial_datetime`. It appends to the `### Removed` section this plan may create, and edits the `BinaryMetadata` bullet list in `src/CLAUDE.md`.
 - **15:** rewrites the broadcast helpers in `expression_helpers.h`. The `initial_value` comparison there stays.
 - **16:** renames the aggregation enum spellings used by the new tests.
 
@@ -57,7 +57,7 @@ The existing `ExpressionFixture.AggregateReduceOutermostTimeDimWithChildren` (`t
 2. The finding's fix, "recompute `initial_value` so the outermost dimension gets 1", is not enough on its own. With `initial_datetime` still 2025-03-01, output coordinate 1 would be labelled March 2025 but would hold January's sum. The file would be mislabelled instead of shifted. So `initial_datetime` must also move back to the start of the first reduced period, 2025-01-01. Then output month *m* is calendar month *m*, which is exactly what `compute_row` already forwards.
 
 **Principles violated.**
-- A stored value derived from other fields must be re-derived wherever those fields change. The root AGENTS.md applies the stricter form, "derived, never stored", to `number_of_time_dimensions()`.
+- A stored value derived from other fields must be re-derived wherever those fields change. The root CLAUDE.md applies the stricter form, "derived, never stored", to `number_of_time_dimensions()`.
 - The result is silent corruption of saved output in a feature exposed through Julia and Lua.
 
 ## Constraints and decisions
@@ -67,17 +67,17 @@ The existing `ExpressionFixture.AggregateReduceOutermostTimeDimWithChildren` (`t
   - Compute it in one `BinaryMetadata` function, called by `from_toml_content` and `ExpressionAggregate`.
   - Rebase the output `initial_datetime` when the outermost time dimension is reduced.
   - The builder path goes away with plan 12, and this plan depends on plan 08.
-- **Hot path** (`src/AGENTS.md` › Performance Bottlenecks):
+- **Hot path** (`src/CLAUDE.md` › Performance Bottlenecks):
   - `validate_dimension_values` costs about 19% of a profiled run.
   - `next_dimensions` runs once per cell.
   - Both read `initial_value` (through `add_offset_from_int` and the restore loop), so it stays a plain field. The new function runs once per metadata construction, never per cell.
-- **Binary and expression exist only in C++/C API, Julia and Lua** (root AGENTS.md, Design Decisions). No Dart, Python or JS change or test.
+- **Binary and expression exist only in C++/C API, Julia and Lua** (root CLAUDE.md, Design Decisions). No Dart, Python or JS change or test.
 - **No C API or FFI change.** `convert_dimension_to_c` (`src/c/binary/binary_metadata.cpp`) and Lua's `dimension_to_lua` (`src/lua_runner.cpp`) keep reading `dim.time->initial_value`. So there is nothing to regenerate: no change to Julia `c_api.jl`, Python `_c_api.py`, JS `loader.ts` or Dart `bindings.dart`.
-- **Why the new public member is not bound to the C API.** The root rule says "all public C++ methods should be bound". `derive_initial_values()` maintains an invariant of a mutable C++ value. No binding can mutate a `BinaryMetadata`: after plan 12 the C API has only factories and getters. This matches `validate_time_dimension_metadata()` / `validate_time_dimension_sizes()`, which are public, validation-only and unbound. Say so in `src/AGENTS.md` (see Docs).
+- **Why the new public member is not bound to the C API.** The root rule says "all public C++ methods should be bound". `derive_initial_values()` maintains an invariant of a mutable C++ value. No binding can mutate a `BinaryMetadata`: after plan 12 the C API has only factories and getters. This matches `validate_time_dimension_metadata()` / `validate_time_dimension_sizes()`, which are public, validation-only and unbound. Say so in `src/CLAUDE.md` (see Docs).
 - **Clean over defensive** (root Principles): `parent_dimension_index` always points to an earlier time dimension. So the first time dimension in order is the outermost one, before and after the aggregate's rewiring. `compute_time_dimension_initial_values` already relies on this.
 - **Delete, do not deprecate** (root Principles). After this change `set_initial_value` has no caller except its own test. It goes, with a **BREAKING** changelog line.
 - **Changelog** (root Principles): 0.11.0 is unreleased and already a minor bump. No manifest bump.
-- **Self-updating:** update `src/AGENTS.md` (Binary Subsystem, Expression Subsystem). Also extend the root AGENTS.md design-decision bullet about `number_of_time_dimensions()`, so the stored-field decision is not relitigated.
+- **Self-updating:** update `src/CLAUDE.md` (Binary Subsystem, Expression Subsystem). Also extend the root CLAUDE.md design-decision bullet about `number_of_time_dimensions()`, so the stored-field decision is not relitigated.
 
 Alternatives considered and rejected:
 - **Delete the field and derive it on read** (the finding's proposal). The maintainer rejected it: it adds calendar arithmetic to per-cell `validate_dimension_values` / `next_dimensions`.
@@ -536,9 +536,9 @@ All 17 `ExpressionFixture.Aggregate*` tests pass at HEAD. No schema files are in
 
 ## Docs and changelog
 
-`AGENTS.md`, `src/AGENTS.md` and `CHANGELOG.md` are **CRLF** in the working tree. Use the Edit tool, which keeps line endings.
+`CLAUDE.md`, `src/CLAUDE.md` and `CHANGELOG.md` are **CRLF** in the working tree. Use the Edit tool, which keeps line endings.
 
-### Root `AGENTS.md` — Design Decisions
+### Root `CLAUDE.md` — Design Decisions
 
 Old:
 ```
@@ -553,7 +553,7 @@ New:
   on-read derivation.
 ```
 
-### `src/AGENTS.md` — `## Binary Subsystem`
+### `src/CLAUDE.md` — `## Binary Subsystem`
 
 1. In the `BinaryMetadata` bullet list, add a new line directly after `  - Serialization: \`to_toml()\``. Leave the `Factories` and `Builders` lines exactly as they are: plan 12 anchors on them.
    ```
@@ -568,7 +568,7 @@ New:
    - `TimeProperties` struct: `frequency`, `initial_value`, `parent_dimension_index`. `initial_value` is the dimension's coordinate at `initial_datetime` (1 for the outermost time dimension). It is **stored**, not derived on read, because `first_dimensions`, `next_dimensions`, `dimension_sizes_at_values` and `validate_dimension_values` read it per cell (Performance Bottlenecks below). Any code that changes `dimensions` or `initial_datetime` must end with `BinaryMetadata::derive_initial_values()`.
    ```
 
-### `src/AGENTS.md` — `## Expression Subsystem`, the `ExpressionAggregate` bullet
+### `src/CLAUDE.md` — `## Expression Subsystem`, the `ExpressionAggregate` bullet
 
 Old:
 ```
@@ -581,7 +581,7 @@ New:
 If plan 08 already edited these bullets, apply the same additions to whatever text is there.
 
 No other docs change:
-- `docs/*.md`, `bindings/julia/AGENTS.md`, `tests/AGENTS.md` and `src/c/AGENTS.md` do not mention `initial_value` or aggregate start dates.
+- `docs/*.md`, `bindings/julia/CLAUDE.md`, `tests/CLAUDE.md` and `src/c/CLAUDE.md` do not mention `initial_value` or aggregate start dates.
 - `bindings/js/src/lua-api.ts` lists `initial_value` only as a `get_dimensions()` field. No Lua binding is added or removed, so `lua-api-sync.test.ts` is unaffected.
 
 ### `CHANGELOG.md` (under `## [0.11.0] — unreleased`)
@@ -639,7 +639,7 @@ From the repo root, in order:
 - [ ] The `ExpressionAggregate` constructor rebases `output_meta_.initial_datetime` when the reduced dimension is the outermost time dimension. It then calls `validate()` and `derive_initial_values()`, in that order. `compute_row` is unchanged.
 - [ ] The two new `ExpressionFixture` tests, and the new C API, Lua and Julia tests, pass. Each failed before the fix. `BinaryMetadataDeriveInitialValues.RecomputesFromCurrentInitialDatetime` passes.
 - [ ] Every existing binary, expression, iteration and CSV-converter test passes unchanged.
-- [ ] The root `AGENTS.md` decision bullet, the two `src/AGENTS.md` Binary Subsystem bullets and the `ExpressionAggregate` bullet are updated. CRLF is preserved.
+- [ ] The root `CLAUDE.md` decision bullet, the two `src/CLAUDE.md` Binary Subsystem bullets and the `ExpressionAggregate` bullet are updated. CRLF is preserved.
 - [ ] `CHANGELOG.md` 0.11.0 has the `### Removed` **BREAKING** entry with an *Adapt:* line and the `### Fixed` entry.
 - [ ] No C API, FFI declaration, binding source or `.bat` file is touched.
 

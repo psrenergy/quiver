@@ -1,13 +1,13 @@
 # 15 — Expressions: one N-ary broadcast-metadata builder with the relaxed label rule
 
-**Batch** 2 · **Severity** medium · **Breaking** no. This only loosens a rule: a binary operation on two single-label operands with different label names used to throw and now builds. Every expression that built before produces the same output. The one visible side effect is the error text: a label-set mismatch in a *binary* operation now reports the message `ifelse` already used (see Changelog). · **Size** S · **Layers** C++ core (`src/expression/expression_helpers.h`, `expression_binary.cpp`, `expression_ternary.cpp`); tests in C++, C API, Lua and Julia; `src/AGENTS.md`; `CHANGELOG.md`. No C API signature change, so there are no FFI regenerations or binding wrapper edits.
+**Batch** 2 · **Severity** medium · **Breaking** no. This only loosens a rule: a binary operation on two single-label operands with different label names used to throw and now builds. Every expression that built before produces the same output. The one visible side effect is the error text: a label-set mismatch in a *binary* operation now reports the message `ifelse` already used (see Changelog). · **Size** S · **Layers** C++ core (`src/expression/expression_helpers.h`, `expression_binary.cpp`, `expression_ternary.cpp`); tests in C++, C API, Lua and Julia; `src/CLAUDE.md`; `CHANGELOG.md`. No C API signature change, so there are no FFI regenerations or binding wrapper edits.
 
 **Depends on** none. This plan runs after 08–14 in numeric order, so every anchor below is a quoted excerpt, not a line number.
 
 **Overlaps with**
 - **16** (one AggregationOperation enum) edits the aggregation templates at the bottom of the same header, `src/expression/expression_helpers.h` (`aggregation_operation_label`, `validate_aggregation_param`, `aggregation_accumulate`, `aggregation_finalize`), and renames the aggregation enums in C++, the C API and Julia. This plan edits only the broadcast block above those templates. The new C++, C API and Julia tests here deliberately avoid `aggregate_agents`, so plan 16 has nothing to rename in them. The new Lua test uses the string ops `'max'`/`'min'`, which plan 16 keeps.
 - **10** adds tests to `tests/test_expression.cpp` and `bindings/julia/test/test_expression.jl` at other anchors (after `AggregateSumOverTimeDimVariable` / in the aggregate section). Only the files are shared.
-- **09** edits the `ExpressionAggregate` bullet of `src/AGENTS.md`'s Expression Subsystem section. This plan edits the `ExpressionBinary`, `ExpressionTernary` and "Validation is eager" bullets and adds one bullet after the last of these. Only the section is shared.
+- **09** edits the `ExpressionAggregate` bullet of `src/CLAUDE.md`'s Expression Subsystem section. This plan edits the `ExpressionBinary`, `ExpressionTernary` and "Validation is eager" bullets and adds one bullet after the last of these. Only the section is shared.
 - **51** re-registers the Lua operator metamethods for `BinaryFile` and `Expression`. The Lua test added here relies on `Expression - Expression`, so it must still pass after plan 51.
 - **01–14** append entries to `CHANGELOG.md` under `## [0.11.0] — unreleased`. Append yours; don't overwrite theirs.
 
@@ -46,7 +46,7 @@ local lo = quiver.expression(fa):aggregate_agents('min')   -- labels {"min"}
 quiver.ifelse(quiver.gt(hi, 0.0), hi, lo)   -- builds
 local spread = hi - lo                      -- throws: Cannot apply: labels have same size 1 but different content
 ```
-`ExpressionAggregateAgents` names its single label after the operation (`src/expression/expression_aggregate_agents.cpp`, `output_meta_.labels = {aggregation_operation_label(operation_)};`), so "max minus min over the agents" can never be written. The logical operators hit the same wall. src/AGENTS.md says `&&`/`||` skip the unit check "so conditions on different-unit variables compose", but two single-label files with different names (`(demand > x) & (price < y)`) still throw on labels.
+`ExpressionAggregateAgents` names its single label after the operation (`src/expression/expression_aggregate_agents.cpp`, `output_meta_.labels = {aggregation_operation_label(operation_)};`), so "max minus min over the agents" can never be written. The logical operators hit the same wall. src/CLAUDE.md says `&&`/`||` skip the unit check "so conditions on different-unit variables compose", but two single-label files with different names (`(demand > x) & (price < y)`) still throw on labels.
 
 The dimension half of the two builders is the same algorithm written twice. `build_broadcast_metadata` (currently ~L133-177) walks the lhs dims at `max(l, r)`, appends the rhs-only dims, and then remaps each time dim's parent by name, from lhs first:
 ```cpp
@@ -61,11 +61,11 @@ This violates Homogeneity (one rule, and it disagrees with itself) and "Simple s
 ## Constraints and decisions
 
 - **Maintainer decision (binding):** the relaxed (ternary) label rule applies to both binary and ternary operations. Label sets with more than one entry must match. A single label broadcasts. When every operand has a single label, the output takes the *primary* operand's labels. The primary is `lhs` for binary and `then_value` for ternary. Keep the current ternary dimension order (condition first) and the current `initial_datetime` fallback. Record it in CHANGELOG as a non-breaking relaxation.
-- Root `AGENTS.md` Design Decisions: "Binary + expression subsystems are exposed in Julia and Lua only." Tests therefore go in C++, C API, Lua and Julia. Dart, Python and JS are untouched.
-- Root `AGENTS.md` Principles: "Clean code over defensive code … Simple solutions over complex abstractions. Delete unused code, do not deprecate." Delete both old helper pairs outright.
-- Root `AGENTS.md` "C++ Error Message Patterns": Pattern 1 `"Cannot {operation}: {reason}"`. The expression subsystem uses `Cannot apply: …` throughout. Keep the ternary's existing message verbatim: `Cannot apply: labels are incompatible across operands (non-singleton label sets must match)`.
-- `src/AGENTS.md` Expression Subsystem: logical ops skip the unit check and emit a unitless result via the `is_logical(op)` branch in the `ExpressionBinary` constructor. That branch stays as it is. `ifelse`: "`then` and `else` units must match; `cond`'s unit is ignored". Unchanged.
-- "Self-Updating": `src/AGENTS.md` names `build_broadcast_metadata` and `build_ternary_broadcast_metadata`, so it must change in the same commit.
+- Root `CLAUDE.md` Design Decisions: "Binary + expression subsystems are exposed in Julia and Lua only." Tests therefore go in C++, C API, Lua and Julia. Dart, Python and JS are untouched.
+- Root `CLAUDE.md` Principles: "Clean code over defensive code … Simple solutions over complex abstractions. Delete unused code, do not deprecate." Delete both old helper pairs outright.
+- Root `CLAUDE.md` "C++ Error Message Patterns": Pattern 1 `"Cannot {operation}: {reason}"`. The expression subsystem uses `Cannot apply: …` throughout. Keep the ternary's existing message verbatim: `Cannot apply: labels are incompatible across operands (non-singleton label sets must match)`.
+- `src/CLAUDE.md` Expression Subsystem: logical ops skip the unit check and emit a unitless result via the `is_logical(op)` branch in the `ExpressionBinary` constructor. That branch stays as it is. `ifelse`: "`then` and `else` units must match; `cond`'s unit is ignored". Unchanged.
+- "Self-Updating": `src/CLAUDE.md` names `build_broadcast_metadata` and `build_ternary_broadcast_metadata`, so it must change in the same commit.
 
 **Why one source list is enough (correction to the facts verifier).** The facts verifier proposed a second order, `{then, else, cond}`, for the ternary labels and datetime. That second order isn't needed:
 - *Labels:* every non-singleton label set must be equal, so which one is returned doesn't matter. Order matters only when every operand is a singleton, and `primary` covers that case directly.
@@ -537,11 +537,11 @@ Insert directly after the `end` that closes `@testset "Label mismatch throws" be
 
 ### No new schemas
 
-These tests need no `tests/schemas/` files and add no test files, so `tests/AGENTS.md` needs no edit.
+These tests need no `tests/schemas/` files and add no test files, so `tests/CLAUDE.md` needs no edit.
 
 ## Docs and changelog
 
-### `src/AGENTS.md`: Expression Subsystem section
+### `src/CLAUDE.md`: Expression Subsystem section
 
 1. `ExpressionBinary` bullet (currently ~L751). Replace
    > Constructor pre-computes broadcast metadata (`build_broadcast_metadata`) and one `BroadcastOperand` per operand
@@ -566,7 +566,7 @@ These tests need no `tests/schemas/` files and add no test files, so `tests/AGEN
    - **One broadcast-metadata builder for every arity**: `build_broadcast_metadata(sources, primary)` (`expression_helpers.h`) builds the output metadata of `ExpressionBinary` (`{lhs, rhs}`, primary `lhs`) and `ExpressionTernary` (`{cond, then, else}`, primary `then`). Source order sets the output dimension order: the union of dimension names, first occurrence first, each sized as the max over the sources that have it, with time properties and parent link from the first source that has it (so `ifelse` output dimensions are condition-first). `version` and `unit` come from the primary (a logical op then clears the unit); `initial_datetime` comes from the first source with a time dimension, else from the primary — the pairwise `validate_shape_compatibility` calls already force every time-bearing source to agree, so only that no-time fallback depends on which operand is primary. Labels follow one rule, `broadcast_labels`: every operand with more than one label must carry the same label set, a single-label operand broadcasts whatever its label is called, and when every operand has a single label the output takes the primary's (`{"max"} - {"min"}` is `{"max"}`; `ifelse({"c"}, {"t"}, {"e"})` is `{"t"}`). A mismatch throws `Cannot apply: labels are incompatible across operands (non-singleton label sets must match)`. There used to be a separate two-operand builder whose stricter rule rejected two differently named single labels (so `aggregate_agents("max") - aggregate_agents("min")` threw while `ifelse` over the same operands worked) — don't reintroduce a per-arity copy.
    ```
 
-The file-map line `expression_helpers.h # Shared inline helpers (validation, broadcast metadata/operands, ...)` (currently ~L68) is still accurate and stays. The root `AGENTS.md`, `bindings/julia/AGENTS.md` and `src/c/AGENTS.md` don't mention these helpers or the label rule, so they need no edit.
+The file-map line `expression_helpers.h # Shared inline helpers (validation, broadcast metadata/operands, ...)` (currently ~L68) is still accurate and stays. The root `CLAUDE.md`, `bindings/julia/CLAUDE.md` and `src/c/CLAUDE.md` don't mention these helpers or the label rule, so they need no edit.
 
 ### Other docs
 
@@ -618,7 +618,7 @@ Run from the repo root (Git Bash). Run the `.bat` scripts from `cmd`/PowerShell,
 - [ ] `{val1,val2}` vs `{val1,val2,val3}` throws `... non-singleton label sets must match`.
 - [ ] Ternary output is unchanged: condition-first dims, `then` labels when every operand is single-label, `then`'s `initial_datetime` when no operand has a time dim (pinned by the two new ternary tests).
 - [ ] All pre-existing expression tests pass unchanged in C++, the C API, Lua and Julia.
-- [ ] `src/AGENTS.md` names the single builder and describes the label rule, and there is no remaining mention of `build_ternary_broadcast_metadata`.
+- [ ] `src/CLAUDE.md` names the single builder and describes the label rule, and there is no remaining mention of `build_ternary_broadcast_metadata`.
 - [ ] `CHANGELOG.md` has the non-BREAKING entry under 0.11.0 `### Changed`.
 - [ ] `scripts/format.bat` leaves no diff beyond this plan's files.
 

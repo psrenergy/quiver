@@ -3,7 +3,7 @@
 **Batch** 3 · **Severity** m · **Breaking** yes, for direct C API callers only: `quiver_database_query_{string,integer,float}` gain the three parameter arguments, and the `quiver_database_query_{string,integer,float}_params` functions are gone. No binding's public API changes (Julia, Dart, Python and JS keep their exact signatures). · **Size** M · **Layers** C API, Julia FFI (generated) + wrapper, Dart FFI (hand-edited) + wrapper, Python cdef + wrapper, JS loader + wrapper, C API tests, binding tests, docs/changelog
 **Depends on** none.
 **Overlaps with**
-- **21** (delete dead C API symbols): also edits `bindings/julia/src/c_api.jl` (regenerated), `bindings/dart/lib/src/ffi/bindings.dart` (hand-edited), `bindings/python/src/quiverdb/_c_api.py`, `src/c/AGENTS.md` and the hand-edit list in `bindings/dart/AGENTS.md`. Different declarations and sentences. Anchor every edit by symbol name, not line number.
+- **21** (delete dead C API symbols): also edits `bindings/julia/src/c_api.jl` (regenerated), `bindings/dart/lib/src/ffi/bindings.dart` (hand-edited), `bindings/python/src/quiverdb/_c_api.py`, `src/c/CLAUDE.md` and the hand-edit list in `bindings/dart/CLAUDE.md`. Different declarations and sentences. Anchor every edit by symbol name, not line number.
 - **17, 18, 20, 23**: also change C headers and the same FFI files (`c_api.jl`, `bindings.dart`, `_c_api.py`, `loader.ts`). Different symbols.
 - **30** (Python stale docstrings, `_c_api.py` header, a duplicate test): may touch `_c_api.py`'s header comment and Python tests. This plan edits only the query cdef block and renames one test in `tests/test_database_query.py`.
 - **33** (JS bigint in query parameters): adds a `bigint` branch inside the loop of `marshalParams` in `bindings/js/src/query.ts`. This plan changes that function's early return and return value, not its loop. Whichever lands second rebases onto the other.
@@ -55,7 +55,7 @@ Every binding pays for the split with a branch, and the branches disagree:
 - Dart, `bindings/dart/lib/src/database_query.dart` (~L16, ~L63, ~L114): `if (parameters == null)` → plain. So an **empty** Dart list goes to `_params`, while an empty JS or Python list goes to the plain form.
 - Julia, `bindings/julia/src/database_query.jl`: ten methods for five names. `query_string`/`query_integer`/`query_float` each have a 2-arg method (~L47-105) that copies the result handling of its 3-arg twin (~L113-204), and `query_boolean` (~L85, ~L173) and `query_date_time` (~L212, ~L222) are each written twice only to cover both arities.
 
-The split also breaks the root `AGENTS.md` naming rule "C++ to C API: Prefix `quiver_database_` to the C++ method name": the cross-layer table lists `query_string()` → `quiver_database_query_string()`, but that C function cannot carry the parameters the C++ method takes.
+The split also breaks the root `CLAUDE.md` naming rule "C++ to C API: Prefix `quiver_database_` to the C++ method name": the cross-layer table lists `query_string()` → `quiver_database_query_string()`, but that C function cannot carry the parameters the C++ method takes.
 
 **Second defect, same file: the parameter errors name an operation that does not exist.** `convert_params` (`src/c/database_query.cpp`, ~L10-37) hardcodes:
 
@@ -76,22 +76,22 @@ quiver_database_query_integer_params(db, "SELECT 1", param_types, param_values, 
 // quiver_get_last_error() == "Cannot query: unknown parameter type 999"
 ```
 
-No public method is called `query`. Root `AGENTS.md` "C++ Error Message Patterns", Pattern 1: "Validators thread the calling operation's name through so the `{operation}` is the public method the user called". The C API's other decoder already does it: `unmarshal_group_columns_to_rows(const char* caller, ...)` in `src/c/database_helpers.h` (~L217) builds `std::string("Cannot ") + caller + ": ..."`, and all eight call sites pass the C++ public name.
+No public method is called `query`. Root `CLAUDE.md` "C++ Error Message Patterns", Pattern 1: "Validators thread the calling operation's name through so the `{operation}` is the public method the user called". The C API's other decoder already does it: `unmarshal_group_columns_to_rows(const char* caller, ...)` in `src/c/database_helpers.h` (~L217) builds `std::string("Cannot ") + caller + ": ..."`, and all eight call sites pass the C++ public name.
 
 Principles violated: "Delete unused code", "Homogeneity" (bindings disagree on which path an empty list takes), the C++→C naming rule, and the Pattern 1 `{operation}` rule.
 
 ## Constraints and decisions
 
 - **Maintainer decision (binding):** "BREAKING (C only; binding APIs unchanged). Also thread the operation name into convert_params so messages say "Cannot query_string:" (error-message#5). JS passes null (not ptr of an empty array) with count 0. Julia collapses to one method per type with parameters::Vector = [] (also query_boolean/query_date_time)."
-- **Root `AGENTS.md` Versioning / task facts:** 0.11.0 is unreleased and already a minor bump over 0.10.9. The entry goes under `## [0.11.0] — unreleased`, prefixed **BREAKING**. **Do not bump any manifest.** (Corrects the policy verifier, who asked for a minor bump.)
-- **Root `AGENTS.md` "Error Messages":** messages live in the C++/C API layer. Both messages here are owned by the C API (`convert_params`), so they change there. No binding crafts them. No binding can trigger them either: every binding marshals only the four known type tags and never a NULL string pointer.
-- **`bindings/dart/AGENTS.md`, "The checked-in `bindings.dart` predates the pinned ffigen (20.1.1)":** regenerating turns `quiver_data_type_t` / `quiver_error_t` / `quiver_log_level_t` into Dart enums and breaks hub. **Hand-edit `bindings.dart` in its existing style. Do not run `bindings/dart/generator/generator.bat` or `scripts/generator.bat`** (the latter runs all three generators). (Corrects the original proposal and the policy verifier, who said "regenerate Julia/Dart".)
-- **`bindings/julia/AGENTS.md`:** "`src/c_api.jl` GENERATED low-level FFI module (do not hand-edit; regenerate)". Run `bindings/julia/generator/generator.bat` only. Also: "Always `GC.@preserve`: refs produced by `marshal_params` ... must stay inside a `GC.@preserve refs ...` block spanning the ccall". Keep that wrapper.
-- **`bindings/python/AGENTS.md`:** `_c_api.py` is "Hand-written CFFI cdef declarations (kept in sync manually)". Hand-edit.
-- **`bindings/js/AGENTS.md`:** "No generator — when the C API changes, add the symbol to `src/loader.ts` by hand". The Bun FFI gotchas are load-bearing: pass TypedArrays (not `ptr()` numbers) as pointer args. "Bun turns `null` into a NULL pointer for a `"pointer"` slot" (the idiom `group-columns.ts` and `updateRelation` already use).
+- **Root `CLAUDE.md` Versioning / task facts:** 0.11.0 is unreleased and already a minor bump over 0.10.9. The entry goes under `## [0.11.0] — unreleased`, prefixed **BREAKING**. **Do not bump any manifest.** (Corrects the policy verifier, who asked for a minor bump.)
+- **Root `CLAUDE.md` "Error Messages":** messages live in the C++/C API layer. Both messages here are owned by the C API (`convert_params`), so they change there. No binding crafts them. No binding can trigger them either: every binding marshals only the four known type tags and never a NULL string pointer.
+- **`bindings/dart/CLAUDE.md`, "The checked-in `bindings.dart` predates the pinned ffigen (20.1.1)":** regenerating turns `quiver_data_type_t` / `quiver_error_t` / `quiver_log_level_t` into Dart enums and breaks hub. **Hand-edit `bindings.dart` in its existing style. Do not run `bindings/dart/generator/generator.bat` or `scripts/generator.bat`** (the latter runs all three generators). (Corrects the original proposal and the policy verifier, who said "regenerate Julia/Dart".)
+- **`bindings/julia/CLAUDE.md`:** "`src/c_api.jl` GENERATED low-level FFI module (do not hand-edit; regenerate)". Run `bindings/julia/generator/generator.bat` only. Also: "Always `GC.@preserve`: refs produced by `marshal_params` ... must stay inside a `GC.@preserve refs ...` block spanning the ccall". Keep that wrapper.
+- **`bindings/python/CLAUDE.md`:** `_c_api.py` is "Hand-written CFFI cdef declarations (kept in sync manually)". Hand-edit.
+- **`bindings/js/CLAUDE.md`:** "No generator — when the C API changes, add the symbol to `src/loader.ts` by hand". The Bun FFI gotchas are load-bearing: pass TypedArrays (not `ptr()` numbers) as pointer args. "Bun turns `null` into a NULL pointer for a `"pointer"` slot" (the idiom `group-columns.ts` and `updateRelation` already use).
   - Verified with Bun 1.3.14: `ptr(new Uint8Array(0))` does **not** throw. It *returns* a `TypeError` object ("ArrayBufferView must have a length > 0. A pointer to empty memory doesn't work"). So an empty list must never reach the buffer path. That is why JS passes `null, null, 0n`.
-- **Root `AGENTS.md` "Do Not Fix":** "Collapsing per-method FFI boilerplate in Dart/Python into closure-parameterized helpers" is rejected. This plan adds no helper. It deletes a redundant C entry point and a branch per method, and each query method keeps its own expanded FFI call.
-- **Root `AGENTS.md` "Self-Updating":** update `src/c/AGENTS.md` (file map + "Parameterized Queries" section), `bindings/dart/AGENTS.md` (hand-edit record + query shape), `bindings/js/AGENTS.md` (the NULL idiom for no parameters).
+- **Root `CLAUDE.md` "Do Not Fix":** "Collapsing per-method FFI boilerplate in Dart/Python into closure-parameterized helpers" is rejected. This plan adds no helper. It deletes a redundant C entry point and a branch per method, and each query method keeps its own expanded FFI call.
+- **Root `CLAUDE.md` "Self-Updating":** update `src/c/CLAUDE.md` (file map + "Parameterized Queries" section), `bindings/dart/CLAUDE.md` (hand-edit record + query shape), `bindings/js/CLAUDE.md` (the NULL idiom for no parameters).
 - **C++ core and Lua are unchanged.** C++ already has one method per type, and Lua binds C++ directly (`src/lua_runner.cpp`), so neither sees the C API.
 
 Alternatives considered and rejected:
@@ -940,7 +940,7 @@ function marshalParams(parameters: QueryParam[] = []): {
 }
 ```
 
-Why: the call sites already passed the TypedArrays (`m.types.buf`), never the `ptr()` numbers, which is the house style in `bindings/js/AGENTS.md`. The two `ptr()` wrappers were dead. The returned object keeps `typesBuf`/`valuesBuf` alive, and `_keepalive` still holds the native int/float/string allocations the value slots point at.
+Why: the call sites already passed the TypedArrays (`m.types.buf`), never the `ptr()` numbers, which is the house style in `bindings/js/CLAUDE.md`. The two `ptr()` wrappers were dead. The returned object keeps `typesBuf`/`valuesBuf` alive, and `_keepalive` still holds the native int/float/string allocations the value slots point at.
 
 **12c.** `queryString`, `queryInteger`, `queryFloat`: replace the `if (parameters && parameters.length > 0) { ... } else { ... }` block with one call. `queryBoolean` is unchanged. New bodies:
 
@@ -1065,7 +1065,7 @@ None of the binding additions fail before the change: they pin that the collapse
 
 ## Docs and changelog
 
-**`src/c/AGENTS.md`** (CRLF in the working tree).
+**`src/c/CLAUDE.md`** (CRLF in the working tree).
 
 1. File map (currently ~L32). Old:
    ```
@@ -1105,7 +1105,7 @@ None of the binding additions fail before the change: they pin that the collapse
    ````
    The sentence at ~L203 ("This pattern mirrors the `convert_params()` approach from `database_query.cpp`...") stays true, leave it.
 
-**`bindings/dart/AGENTS.md`** (CRLF).
+**`bindings/dart/CLAUDE.md`** (CRLF).
 
 1. In the bullet "**The checked-in `bindings.dart` predates the pinned ffigen (20.1.1).**", find the list of hand edits. It currently ends with "`quiver_database_update_relation` plus its `_by_label` form." Plan 21 may have added a "Removals are hand-deleted the same way (...)" sentence after it. Add this sentence at the end of whatever is there, before "Take the generator upgrade as its own deliberate change":
    ```
@@ -1126,7 +1126,7 @@ None of the binding additions fail before the change: they pin that the collapse
      when `parameters` is null or empty, so a parameterless query allocates nothing.
    ```
 
-**`bindings/js/AGENTS.md`** (CRLF). Right after the bullet that starts "**A nullable scalar string argument passes literal `null`, never `""`**", add:
+**`bindings/js/CLAUDE.md`** (CRLF). Right after the bullet that starts "**A nullable scalar string argument passes literal `null`, never `""`**", add:
 
 ```
 - **No query parameters pass `null, null, 0n`** (`marshalParams` in `src/query.ts`). The C API
@@ -1134,7 +1134,7 @@ None of the binding additions fail before the change: they pin that the collapse
   for a zero-length buffer, so an empty or omitted list never builds a buffer at all.
 ```
 
-**No other AGENTS.md changes.** Root `AGENTS.md` already maps `query_string()` → `quiver_database_query_string()` in the cross-layer table and describes the C++ `query_*(sql, parameters = {})` surface. After this change both are true. `bindings/julia/AGENTS.md` (the `GC.@preserve` rule still holds), `bindings/python/AGENTS.md`, `src/AGENTS.md` and `tests/AGENTS.md` name neither the plain nor the `_params` symbols (verified by grep).
+**No other CLAUDE.md changes.** Root `CLAUDE.md` already maps `query_string()` → `quiver_database_query_string()` in the cross-layer table and describes the C++ `query_*(sql, parameters = {})` surface. After this change both are true. `bindings/julia/CLAUDE.md` (the `GC.@preserve` rule still holds), `bindings/python/CLAUDE.md`, `src/CLAUDE.md` and `tests/CLAUDE.md` name neither the plain nor the `_params` symbols (verified by grep).
 
 **No other docs.** `docs/*.md`, the READMEs (`bindings/js/README.md` documents `queryString(sql, parameters?)`, which is unchanged) and `bindings/js/src/lua-api.ts` do not mention the C symbols.
 
@@ -1180,13 +1180,13 @@ From the repo root (`C:\Development\Quiver\quiver3`), in order:
 - [ ] `_c_api.py` declares only the three 7-argument query functions. The Python query methods make one FFI call each.
 - [ ] `loader.ts` lists only the three 7-argument query symbols. `marshalParams` returns `null, null, 0n` for no parameters. The `bun:ffi` `ptr` import is gone from `query.ts`.
 - [ ] New omitted-parameters assertions in the Julia, Python, Dart and JS parameter-count tests. The Python `routes_to_simple` test is renamed.
-- [ ] `src/c/AGENTS.md`, `bindings/dart/AGENTS.md` and `bindings/js/AGENTS.md` updated as specified. CHANGELOG 0.11.0 `### Changed` has the **BREAKING** bullet with an *Adapt:* line. No manifest version changed.
+- [ ] `src/c/CLAUDE.md`, `bindings/dart/CLAUDE.md` and `bindings/js/CLAUDE.md` updated as specified. CHANGELOG 0.11.0 `### Changed` has the **BREAKING** bullet with an *Adapt:* line. No manifest version changed.
 - [ ] Verification steps 1-10 pass, and step 11 passes except the pre-existing CLI smoke failure.
 
 ## Pitfalls
 
 - **Do not run `scripts/generator.bat` or `bindings/dart/generator/generator.bat`.** Both run ffigen and rewrite `bindings.dart` into enum-based bindings that break hub. Run only the Julia generator.
-- **Stale Dart native build.** The Dart hook caches the compiled C library under `bindings/dart/.dart_tool/`. The old DLL still exports `quiver_database_query_string`, but with 4 arguments. Called with 7, it reads `param_types` (NULL) as `out_value` and fails with `Null argument: out_value`. That is confusing, so clear `.dart_tool/hooks_runner` and `.dart_tool/lib` first (`bindings/dart/AGENTS.md`, "Stale native cache").
+- **Stale Dart native build.** The Dart hook caches the compiled C library under `bindings/dart/.dart_tool/`. The old DLL still exports `quiver_database_query_string`, but with 4 arguments. Called with 7, it reads `param_types` (NULL) as `out_value` and fails with `Null argument: out_value`. That is confusing, so clear `.dart_tool/hooks_runner` and `.dart_tool/lib` first (`bindings/dart/CLAUDE.md`, "Stale native cache").
 - **Same-name trap for every FFI layer.** The names survive and only the arity changes, so a binding still pointed at an old library does not fail at load time. It misbehaves at call time. Python and JS load from `build/bin` (their `test.bat` prepend it to PATH), and Julia from `build/bin` (no `Artifacts.toml` in the monorepo). So always rebuild (step 1) before the binding tests.
 - **JS `dlopen` fails on a stale symbol.** If `loader.ts` still lists a `_params` name, `getSymbols()` throws on the first call and every JS test fails. Remove all three entries.
 - **Don't pass a zero-length TypedArray to Bun.** `ptr()` of one returns a `TypeError` object silently (it does not throw), and the zero-length argument path is unspecified. Keep the `n === 0` early return in `marshalParams`.
@@ -1202,6 +1202,6 @@ From the repo root (`C:\Development\Quiver\quiver3`), in order:
 - `bigint` query parameters in JS (`marshalParams` loop): plan 33.
 - Python `_marshal_params` datetime or bool changes: rejected or left unchanged by plans 25 and 28.
 - `convert_params` rejecting `QUIVER_DATA_TYPE_DATE_TIME` (3) as "unknown parameter type 3": pre-existing and untouched here. Bindings bind datetimes as strings.
-- Upgrading the Dart ffigen output: its own deliberate change per `bindings/dart/AGENTS.md`.
+- Upgrading the Dart ffigen output: its own deliberate change per `bindings/dart/CLAUDE.md`.
 - `src/schema.cpp` "Cannot query columns..." messages: plan 62.
 - The JS README method list: plan 74. Its `queryString(sql, parameters?)` line is already correct.

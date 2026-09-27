@@ -34,7 +34,7 @@ That body has four defects.
 Nothing compares `dimension_sizes.size()` with `dimensions.size()`, or `frequencies.size()` with `time_dimensions.size()`. `validate()` runs only after this loop. Reproductions, each with a valid `initial_datetime` so the loop is reached:
 - Julia `Quiver.Binary.Metadata(; initial_datetime="2025-01-01T00:00:00", unit="MW", labels=["v"], dimensions=["stage","block"], dimension_sizes=Int64[12])` reads `dimension_sizes[1]` from a 1-element vector.
 - Julia `Metadata(; ..., dimensions=["stage"], dimension_sizes=Int64[12], time_dimensions=["stage"])`. `frequencies` defaults to `String[]` (`bindings/julia/src/binary/metadata.jl` ~L36), so this reads `frequencies[0]` from an empty vector.
-- Lua `quiver.metadata{ initial_datetime='2025-01-01T00:00:00', unit='MW', labels={'v'}, dimensions={'a','b'} }` does the same. `lua_opt_int64_vector` (`src/lua_runner.cpp` ~L1055) returns `{}` for an absent key, so even omitting `dimension_sizes` reads past the end. src/AGENTS.md says "a script is untrusted input".
+- Lua `quiver.metadata{ initial_datetime='2025-01-01T00:00:00', unit='MW', labels={'v'}, dimensions={'a','b'} }` does the same. `lua_opt_int64_vector` (`src/lua_runner.cpp` ~L1055) returns `{}` for an absent key, so even omitting `dimension_sizes` reads past the end. src/CLAUDE.md says "a script is untrusted input".
 - A hand-edited `.toml` sidecar with `time_dimensions = ["stage"]` and no `frequencies`, opened with `open_file(path, 'r')`, does the same.
 
 In a Debug (MSVC) build each of these aborts the process with the CRT's "vector subscript out of range". In Release it is undefined behaviour: a heap read past the end.
@@ -60,7 +60,7 @@ TOML 1.0 (toml++ v3.4) allows mixed arrays, so the defects are:
 
 **4. `from_element` round-trips through TOML text.** At ~L191-217 it copies its already-typed vectors into a `toml::table`, prints it, and re-parses it with `from_toml_content`. The only purpose is to reuse the body. As a side effect, its errors say `Error building metadata from toml: ...` even though the caller never passed any TOML. `metadata.dimensions.clear()` (~L318) runs on a freshly default-constructed struct.
 
-Principles violated: input validation at an FFI and untrusted-script boundary (the "When NOT to be lazy" case), the root AGENTS.md error patterns (`Error building metadata from toml:` is an ad-hoc format), and "simple over roundabout" (the from_element round trip).
+Principles violated: input validation at an FFI and untrusted-script boundary (the "When NOT to be lazy" case), the root CLAUDE.md error patterns (`Error building metadata from toml:` is an ad-hoc format), and "simple over roundabout" (the from_element round trip).
 
 ## Constraints and decisions
 
@@ -69,11 +69,11 @@ Principles violated: input validation at an FFI and untrusted-script boundary (t
   - The body becomes `build_metadata(operation, dimensions, dimension_sizes, time_dimensions, frequencies, initial_datetime, unit, labels, version)` in an anonymous namespace in `src/binary/binary_metadata.cpp`.
   - `from_element` calls it directly, which deletes the TOML round trip.
   - `from_toml_content` calls it after reading the TOML.
-- **Root AGENTS.md, "C++ Error Message Patterns":** Pattern 1 is `"Cannot {operation}: {reason}"`, and "Validators thread the calling operation's name through so the `{operation}` is the public method the user called". The operation names are therefore `from_element` and `from_toml_content`, the C++ and Julia names of the two public factories. `from_toml_file` delegates to `from_toml_content` and reports that name.
-- **Root AGENTS.md, same section:** "Known exception: the binary/expression subsystem's metadata validation throws descriptive messages (e.g. `"Number of labels must be positive, got 0"`) that predate the pattern; new code should use the three patterns." Every new message here is Pattern 1. `validate()`'s messages stay as they are.
-- **Root AGENTS.md, Principles:** "Error Messages: All error messages are defined in the C++/C API layer". Julia and Lua surface these messages unchanged, so no binding code changes.
-- **Root AGENTS.md, Design Decisions:** "Binary + expression subsystems are exposed in Julia and Lua only". There are no Dart, Python or JS tests or changes.
-- **src/AGENTS.md, Lua section:** "a script is untrusted input". This is why the length checks belong in the C++ core, where every entry point passes.
+- **Root CLAUDE.md, "C++ Error Message Patterns":** Pattern 1 is `"Cannot {operation}: {reason}"`, and "Validators thread the calling operation's name through so the `{operation}` is the public method the user called". The operation names are therefore `from_element` and `from_toml_content`, the C++ and Julia names of the two public factories. `from_toml_file` delegates to `from_toml_content` and reports that name.
+- **Root CLAUDE.md, same section:** "Known exception: the binary/expression subsystem's metadata validation throws descriptive messages (e.g. `"Number of labels must be positive, got 0"`) that predate the pattern; new code should use the three patterns." Every new message here is Pattern 1. `validate()`'s messages stay as they are.
+- **Root CLAUDE.md, Principles:** "Error Messages: All error messages are defined in the C++/C API layer". Julia and Lua surface these messages unchanged, so no binding code changes.
+- **Root CLAUDE.md, Design Decisions:** "Binary + expression subsystems are exposed in Julia and Lua only". There are no Dart, Python or JS tests or changes.
+- **src/CLAUDE.md, Lua section:** "a script is untrusted input". This is why the length checks belong in the C++ core, where every entry point passes.
 - **Existing optionality is kept:**
   - `from_element` treats `time_dimensions` and `frequencies` as optional (`get_string_array_opt`) and the other six fields as required. That stays unchanged.
   - For TOML, an absent array keeps reading as empty, as it does today. A missing required array is then reported by the checks that run anyway: `dimension_sizes count (0) does not match dimensions count (2)` for a missing `dimension_sizes`, and `validate()`'s `Number of labels must be positive, got 0` for a missing `labels`.
@@ -784,7 +784,7 @@ None. The binary subsystem is not exposed there (root Design Decision).
 
 ## Docs and changelog
 
-**`src/AGENTS.md`, UI-metadata paragraph** (~L168-170). Old:
+**`src/CLAUDE.md`, UI-metadata paragraph** (~L168-170). Old:
 > explicitly
 > not `src/binary/binary_metadata.cpp`'s posture, which throws on a parse error or a bare
 > `.value()` unwrap with no test for either.
@@ -794,17 +794,17 @@ New:
 > not `src/binary/binary_metadata.cpp`'s posture, which throws on a parse error and on a missing
 > or wrong-typed key.
 
-**`src/AGENTS.md`, Binary Subsystem list** (~L695). Old:
+**`src/CLAUDE.md`, Binary Subsystem list** (~L695). Old:
 > `  - Factories: `from_toml_content()`, `from_element()``
 
 New (keep the two-space list indent):
 > `  - Factories: `from_toml_content()` (and `from_toml_file()`, which reads the sidecar and calls it), `from_element()`. Both hand their eight fields to one anonymous-namespace `build_metadata(operation, ...)` in `binary_metadata.cpp`. It rejects a `dimension_sizes`/`dimensions` or `frequencies`/`time_dimensions` count mismatch before indexing either, takes each time dimension's frequency from its matched position in `time_dimensions`, and names the calling factory in its Pattern 1 errors. `from_element` does not go through TOML text. In a TOML document, an absent array reads as empty, an absent or non-string `version`/`unit`/`initial_datetime` throws naming the key, and a wrong-typed array entry throws instead of being skipped.`
 
-No other AGENTS.md changes:
-- Root `AGENTS.md`'s "Known exception" sentence about binary validation messages is still true.
+No other CLAUDE.md changes:
+- Root `CLAUDE.md`'s "Known exception" sentence about binary validation messages is still true.
 - The cross-layer binary table rows do not change.
-- `src/c/AGENTS.md` and `bindings/julia/AGENTS.md` have no C API or binding change to record.
-- `tests/AGENTS.md` lists files, not test names.
+- `src/c/CLAUDE.md` and `bindings/julia/CLAUDE.md` have no C API or binding change to record.
+- `tests/CLAUDE.md` lists files, not test names.
 
 Also unchanged: `bindings/js/src/lua-api.ts`, whose `quiver.metadata` example stays valid, and `docs/*.md`, which do not mention binary metadata.
 
@@ -858,7 +858,7 @@ Run from the repo root in PowerShell. In Git Bash, use `./build/bin/...` and `cm
    - `tests/test_c_api_binary_metadata.cpp`
    - `tests/test_lua_binary.cpp`
    - `bindings/julia/test/test_binary_metadata.jl`
-   - `src/AGENTS.md`
+   - `src/CLAUDE.md`
    - `CHANGELOG.md`
 
    No `.bat` file should appear.
@@ -877,7 +877,7 @@ Run from the repo root in PowerShell. In Git Bash, use `./build/bin/...` and `cm
 - [ ] No `"Error building metadata from toml"` string is left anywhere in `src/`: `git grep "Error building metadata"` returns nothing.
 - [ ] Whatever plans 08 and 09 put in the tail of `from_toml_content` survives unchanged inside `build_metadata`.
 - [ ] The new C++, C API, Lua and Julia tests exist and pass, and the two tightened C++ tests pin the new message text.
-- [ ] The `src/AGENTS.md` edits (two places) and the `CHANGELOG.md` `### Fixed` entry are in.
+- [ ] The `src/CLAUDE.md` edits (two places) and the `CHANGELOG.md` `### Fixed` entry are in.
 - [ ] `scripts/test-all.bat` is green.
 
 ## Pitfalls
@@ -899,5 +899,5 @@ Run from the repo root in PowerShell. In Git Bash, use `./build/bin/...` and `cm
 - Where and how `initial_value` is computed, and validating time metadata before computing it: **plans 08 and 09**.
 - Rejecting unknown keys or wrong-typed values in the Lua `quiver.metadata{}` table (`build_metadata_from_lua`): **plan 48**. Lua converter errors naming the Lua-visible method: **plan 47**.
 - Making `Failed to parse initial_datetime: <s>` name the factory, and making `from_toml_file` errors name the sidecar path: not planned, and deliberately left alone here.
-- Rewriting `validate()`'s pre-pattern messages: covered by root AGENTS.md's documented "Known exception".
+- Rewriting `validate()`'s pre-pattern messages: covered by root CLAUDE.md's documented "Known exception".
 - Stricter TOML typing (`value_exact`): not planned.

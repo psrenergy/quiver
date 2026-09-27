@@ -3,12 +3,12 @@
 **Batch** 3 · **Severity** high · **Breaking** yes. It breaks three groups of callers. (1) Every C caller of `quiver_database_read_time_series_row`: a new `uint8_t** out_mask` out-parameter must be passed and freed. (2) Every Julia / Dart / Python / JS caller that read the old `0` / `NaN` for "no data": it now gets `nothing` / `null` / `None` / `null`. (3) Julia callers that relied on the element type: `Vector{Int64}` / `Vector{Float64}` become `Vector{Union{Nothing, T}}`. · **Size** M · **Layers** C API, Julia FFI + wrapper, Dart FFI + wrapper, Python cdef + wrapper, JS loader + wrapper, Lua (test only), C API/binding tests, docs, CHANGELOG
 **Depends on** none. Plan 04 lands earlier in numeric order and adds one C API test that calls this function. Item 7 of "Tests → C API" extends that test if it exists.
 **Overlaps with**
-- **04**: adds `TEST(DatabaseCApi, ReadTimeSeriesRowRejectsMultiDimensionGroup)` to the same C API test file. That test must gain the `out_mask` argument here. 04 also appends sentences to the same root `AGENTS.md` "Time series row" bullet and the same Dart doc comment and Python docstring. Keep 04's sentences.
+- **04**: adds `TEST(DatabaseCApi, ReadTimeSeriesRowRejectsMultiDimensionGroup)` to the same C API test file. That test must gain the `out_mask` argument here. 04 also appends sentences to the same root `CLAUDE.md` "Time series row" bullet and the same Dart doc comment and Python docstring. Keep 04's sentences.
 - **18**: later edits `bindings/js/src/time-series.ts` and `loader.ts`, `bindings/julia/src/database_read.jl` and `bindings/python/src/quiverdb/database.py`, in other functions.
 - **25**: later replaces the `date_time.strftime(...)` line in Python `read_time_series_row`. Leave that line as it is.
 - **36 / 40**: later add `finally` frees to the neighbouring `read_time_series_group` (Julia) and the Dart group decoders. They do not touch `readTimeSeriesRow`.
 - **69**: fixes handle leaks elsewhere in `tests/test_c_api_database_time_series_row.cpp` (the upsert section).
-- **23**: edits `src/c/database_helpers.h`'s group marshaller and `src/c/AGENTS.md`. Its maintainer note says "do not touch read_time_series_row". Neither plan edits the other's code.
+- **23**: edits `src/c/database_helpers.h`'s group marshaller and `src/c/CLAUDE.md`. Its maintainer note says "do not touch read_time_series_row". Neither plan edits the other's code.
 - **57 / 53**: later rewrite parts of the C++ core `Database::read_time_series_row`. This plan does not touch the core.
 
 ## Why
@@ -55,7 +55,7 @@ Sensor 2's missing value cannot be told apart from Sensor 1's stored `0`, so dat
 
 The code contradicts the contract in five places:
 
-- Root `AGENTS.md` ("Time series row" bullet): "null Value for elements with no matching data (bindings surface `nothing`/`null`/`None`/`nil`)".
+- Root `CLAUDE.md` ("Time series row" bullet): "null Value for elements with no matching data (bindings surface `nothing`/`null`/`None`/`nil`)".
 - `docs/time_series.md` ("Rules"): "Querying at `2020` returns `[1.0, nothing]`". Julia actually returns `[1.0, NaN]`.
 - The Dart doc comment: "elements with no matching data yield `null`".
 - The Python docstring: "elements with no matching data yield None".
@@ -68,12 +68,12 @@ Principles violated:
 
 ## Constraints and decisions
 
-- **Maintainer decision (binding):** "BREAKING. Allocate the mask for every data type (uniform decode). Julia returns Vector{Optional{T}} (T from data_type, also on the empty path) and remove that section from bindings/julia/type_stability_followup.md. Hand-edit Dart bindings.dart (do not run ffigen, see bindings/dart/AGENTS.md), Python _c_api.py, JS loader.ts; regenerate Julia c_api.jl. Move Python frees into try/finally."
+- **Maintainer decision (binding):** "BREAKING. Allocate the mask for every data type (uniform decode). Julia returns Vector{Optional{T}} (T from data_type, also on the empty path) and remove that section from bindings/julia/type_stability_followup.md. Hand-edit Dart bindings.dart (do not run ffigen, see bindings/dart/CLAUDE.md), Python _c_api.py, JS loader.ts; regenerate Julia c_api.jl. Move Python frees into try/finally."
 - **House pattern to copy:** `quiver_database_read_scalar_integers` / `_floats` (`include/quiver/c/database.h` ~L91-107, `src/c/database_helpers.h` `read_scalars_masked_impl`). A parallel `uint8_t** out_mask`, where `mask[i] == 0` means null and the data slot then holds a placeholder. It is freed by the existing `quiver_database_free_mask`. `*out_mask` is NULL when the count is 0. The out-param goes **between `out_values` and `out_count`**, as in the scalar readers.
-- `src/c/AGENTS.md` currently says "(The row API keeps its sentinel encoding; only the columnar group API uses the presence mask.)". That note was a scoping remark in e0f8465 (#208, verified with `git log -S`). It is not a root Design Decision or a Do-Not-Fix item, and it contradicts the root contract, so this plan removes it.
-- **Dart** (`bindings/dart/AGENTS.md`, "The checked-in `bindings.dart` predates the pinned ffigen"): regenerating rewrites the whole file and breaks downstream enum comparisons. C API changes are therefore hand-added "in the file's existing style". **Never run `scripts/generator.bat`**, because it runs the Dart generator too. Run only the Julia generator.
-- **Julia** (`bindings/julia/AGENTS.md`): `src/c_api.jl` is generated. Regenerate it with `bindings/julia/generator/generator.bat`.
-- **JS** (`bindings/js/AGENTS.md`): the symbol table in `loader.ts` is hand-written. Out-params are passed as the TypedArray (`alloc.buf`), never as a precomputed `ptr()`. A mask is read with `new Uint8Array(toArrayBuffer(...))`, never with a `DataView` over native memory.
+- `src/c/CLAUDE.md` currently says "(The row API keeps its sentinel encoding; only the columnar group API uses the presence mask.)". That note was a scoping remark in e0f8465 (#208, verified with `git log -S`). It is not a root Design Decision or a Do-Not-Fix item, and it contradicts the root contract, so this plan removes it.
+- **Dart** (`bindings/dart/CLAUDE.md`, "The checked-in `bindings.dart` predates the pinned ffigen"): regenerating rewrites the whole file and breaks downstream enum comparisons. C API changes are therefore hand-added "in the file's existing style". **Never run `scripts/generator.bat`**, because it runs the Dart generator too. Run only the Julia generator.
+- **Julia** (`bindings/julia/CLAUDE.md`): `src/c_api.jl` is generated. Regenerate it with `bindings/julia/generator/generator.bat`.
+- **JS** (`bindings/js/CLAUDE.md`): the symbol table in `loader.ts` is hand-written. Out-params are passed as the TypedArray (`alloc.buf`), never as a precomputed `ptr()`. A mask is read with `new Uint8Array(toArrayBuffer(...))`, never with a `DataView` over native memory.
 - **Julia type rule** (`bindings/julia/type_stability_followup.md`, "Guiding principle"): "Where a `nothing` can also mean 'no such row / no data / unknown', the optional is inherent". So `read_time_series_row` always returns `Vector{Optional{T}}`, never a concrete `Vector{T}` keyed on `not_null`.
 - **Versioning:** 0.11.0 is unreleased and is already the minor bump over 0.10.9. The **BREAKING** entry goes under `## [0.11.0] — unreleased` and **no manifest version changes**. This corrects both verifiers, who asked for a minor bump.
 - **Lua is already correct** (`nil` via `value_to_lua_object`). No Lua code changes. One Lua test is added so every layer pins the same contract.
@@ -1014,7 +1014,7 @@ It fails before the fix: `[0, 0]` and `[20.5, NaN]`.
 
 ## Docs and changelog
 
-### `src/c/AGENTS.md` — "Multi-Column Time Series", the row bullet (currently ~L198-201)
+### `src/c/CLAUDE.md` — "Multi-Column Time Series", the row bullet (currently ~L198-201)
 
 Old:
 
@@ -1037,7 +1037,7 @@ New:
   0 / NaN sentinels are gone: a stored 0 was indistinguishable from "no data".
 ```
 
-### Root `AGENTS.md` — "Core API" → "Database Class", the "Time series row" bullet (currently L611)
+### Root `CLAUDE.md` — "Core API" → "Database Class", the "Time series row" bullet (currently L611)
 
 Append this sentence at the **end** of the bullet, after any sentences plan 04 added:
 
@@ -1051,7 +1051,7 @@ The existing "null Value ... (bindings surface `nothing`/`null`/`None`/`nil`)" w
 
 Delete the whole section, from the heading `### \`read_time_series_row\` — fix the real instability (different bug)` (currently L34) through the end of its paragraph ("...not about nullability.", currently L43), plus the blank line after it. The fix is done, and the section's premise ("`nothing` for elements with no matching data") was false until now. Leave every other section unchanged.
 
-### `bindings/julia/AGENTS.md` — "Time-series group NULLs" bullet (currently ~L66-72)
+### `bindings/julia/CLAUDE.md` — "Time-series group NULLs" bullet (currently ~L66-72)
 
 Old fragment: `` `Vector{Union{T, Nothing}}` **always** (type-stable, like the `Optional{String}` precedent in
   `read_time_series_row`) — a NULL cell is `nothing`; ``
@@ -1067,7 +1067,7 @@ Then add a new bullet directly after that bullet:
   `quiver_database_free_mask`) and never `unsafe_string`s a masked-out pointer.
 ```
 
-### `bindings/dart/AGENTS.md`
+### `bindings/dart/CLAUDE.md`
 
 1. In the "checked-in `bindings.dart` predates the pinned ffigen" bullet, old:
    ```
@@ -1082,11 +1082,11 @@ Then add a new bullet directly after that bullet:
    ```
 2. At the end of the "**Scalar bulk NULLs**" bullet, after "(regenerate via ffigen; clear `.dart_tool` caches on C-API changes).", append: `` `readTimeSeriesRow` decodes the same kind of mask, which the C API returns for every column type (mask 0 = no data at or before the date → `null`; the string branch never `toDartString`s a masked-out pointer). ``
 
-### `bindings/python/AGENTS.md` — "**Scalar bulk NULLs**" bullet (currently ~L53-57)
+### `bindings/python/CLAUDE.md` — "**Scalar bulk NULLs**" bullet (currently ~L53-57)
 
 After "`_c_api.py` carries the mask out-param on the two numeric readers plus `quiver_database_free_mask`.", append: `` `read_time_series_row` decodes the same kind of mask, which the C API returns for **every** column type (strings included): mask 0 (no data at or before the date) → `None`, and each type branch frees the data array and the mask in a `finally`. ``
 
-### `bindings/js/AGENTS.md` — "**Scalar bulk NULLs**" bullet (currently ~L82-86)
+### `bindings/js/CLAUDE.md` — "**Scalar bulk NULLs**" bullet (currently ~L82-86)
 
 Old: `` `loader.ts` carries the
   mask arg on the two numeric symbols + `quiver_database_free_mask` (hand-maintained, no generator). ``
@@ -1162,7 +1162,7 @@ Run from the repo root (`C:\Development\Quiver\quiver3`), in order:
 - [ ] Python frees the data array and the mask in a `finally` in every type branch.
 - [ ] The C API tests assert on the mask; no `isnan` assertion remains for this reader. There is a new null-argument case for `out_mask` and a new every-type no-data test.
 - [ ] The new no-data tests exist in Lua, Julia, Dart, Python and JS. The old Julia `isnan` and concrete-type assertions are updated.
-- [ ] `src/c/AGENTS.md`, root `AGENTS.md`, `bindings/{julia,dart,python,js}/AGENTS.md`, `type_stability_followup.md` and `docs/time_series.md` are edited as written above.
+- [ ] `src/c/CLAUDE.md`, root `CLAUDE.md`, `bindings/{julia,dart,python,js}/CLAUDE.md`, `type_stability_followup.md` and `docs/time_series.md` are edited as written above.
 - [ ] `CHANGELOG.md` has the **BREAKING** entry as the last bullet of `### Changed` under 0.11.0. No manifest version is changed.
 - [ ] `scripts/test-all.bat` is green.
 
@@ -1177,7 +1177,7 @@ Run from the repo root (`C:\Development\Quiver\quiver3`), in order:
   - every call site
 
   Python's cdef and the JS loader are untyped `P` pointers, so a swap there is not a compile error. The C side would write a `size_t` into the mask slot and crash or corrupt memory.
-- **Do not run `scripts/generator.bat`.** It also runs the Dart ffigen generator, which rewrites `bindings.dart` wholesale and turns the int-constant classes into enums (`bindings/dart/AGENTS.md`). Run only `bindings/julia/generator/generator.bat`.
+- **Do not run `scripts/generator.bat`.** It also runs the Dart ffigen generator, which rewrites `bindings.dart` wholesale and turns the int-constant classes into enums (`bindings/dart/CLAUDE.md`). Run only `bindings/julia/generator/generator.bat`.
 - **Stale Dart native build.** If the old DLL is still in `.dart_tool/hooks_runner/`, the Dart tests call the 8-argument C function with 9 arguments and fail in confusing ways. Clear the cache first (Verification step 6).
 - **The binding suites load `build/bin`.** Build the C library first (step 1). Python and JS put `build/bin` on `PATH` in their `test.bat`, and Julia resolves the in-tree `build/`.
 - **`QUIVER_REQUIRE` supports at most 9 arguments** (`src/c/internal.h`). This call now uses all 9.

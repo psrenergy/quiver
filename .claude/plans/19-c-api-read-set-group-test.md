@@ -32,7 +32,7 @@ What I verified against HEAD 58dfe7a:
 - `grep -rn "read_set_group_by_id" tests/` matches only C++ core tests: `test_database_create.cpp` (~L442), `test_database_read_set.cpp` (~L117, ~L152) and `test_database_update.cpp` (~L1381). No `test_c_api_*` file calls it.
 - The vector sibling is covered by `DatabaseCApi.ReadVectorGroupByIdPreservesNullCells` in `tests/test_c_api_database_read_vector.cpp` (currently ~L591-643). That is the only C API test for either whole-group reader.
 - The only FFI consumer today is Dart's native `readSetGroupById` (`bindings/dart/lib/src/database_read.dart`, tested only in `bindings/dart/test/metadata_test.dart` ~L462, on a dense single-column group with no NULLs). Julia (`bindings/julia/src/database_read.jl`) and Python (`bindings/python/src/quiverdb/database.py`) still build the result from per-column reads until plan 18.
-- Nothing in any AGENTS.md records this gap as an accepted exception.
+- Nothing in any CLAUDE.md records this gap as an accepted exception.
 
 This breaks the rule that tests must exist in every layer where the behaviour is visible. The function's own logic is small. It shares `marshal_group_rows_to_c` with the vector reader and `read_time_series_group`. The set-specific parts are the `get_set_metadata` call and the `read_set_group_by_id` call. Nothing at the C layer checks the following:
 1. A per-cell NULL in a **set** group comes back as `column_has_value[c][r] == 0`.
@@ -44,16 +44,16 @@ The current behaviour is correct, and this plan changes no code. Nothing reprodu
 ## Constraints and decisions
 
 - **Maintainer decision (binding):** use `tests/schemas/valid/multi_column_groups.sql` `Items_set_codes` (two nullable columns, `code TEXT` and `weight REAL`). Put the NULL in the **second** column (`weight`). Write the rows with `quiver_database_update_set_group` **with a mask**.
-- Root `AGENTS.md`, Design Decisions, "A set group's rows come back in `rowid` order, and that order is not a promise": the order is *"consistent across every reader of the group, otherwise unspecified … that coincidence must not become a contract."* So the test must **not** assert which row index holds which row. It finds the NULL-bearing row by its `code` value. The C++ core test `Database.ReadSetByIdOrderMatchesGroupReader` (`tests/test_database_read_set.cpp` ~L92) follows the same rule.
-- Root `AGENTS.md`, "Time-series group NULLs round-trip via a per-cell presence mask" and `src/c/AGENTS.md` "Multi-Column Time Series": for a NULL cell (`mask[r] == 0`) the data slot is a placeholder the caller must ignore. The test asserts the mask for the NULL cell and **not** the placeholder value. Asserting `0.0` would pin an implementation detail the contract tells callers to ignore.
+- Root `CLAUDE.md`, Design Decisions, "A set group's rows come back in `rowid` order, and that order is not a promise": the order is *"consistent across every reader of the group, otherwise unspecified … that coincidence must not become a contract."* So the test must **not** assert which row index holds which row. It finds the NULL-bearing row by its `code` value. The C++ core test `Database.ReadSetByIdOrderMatchesGroupReader` (`tests/test_database_read_set.cpp` ~L92) follows the same rule.
+- Root `CLAUDE.md`, "Time-series group NULLs round-trip via a per-cell presence mask" and `src/c/CLAUDE.md` "Multi-Column Time Series": for a NULL cell (`mask[r] == 0`) the data slot is a placeholder the caller must ignore. The test asserts the mask for the NULL cell and **not** the placeholder value. Asserting `0.0` would pin an implementation detail the contract tells callers to ignore.
 - `include/quiver/c/database.h` (comment above `quiver_database_read_vector_group_by_id`, ~L227-230): the result is *"Freed by quiver_database_free_time_series_data"*. The test frees it that way.
-- `src/c/AGENTS.md` "Multi-Column Time Series": in `update_*_group` a NULL `column_has_value` entry means that column is dense. The maintainer asked for "a mask". The test passes an explicit all-ones mask for `code` and `{1, 0}` for `weight`, so every mask entry is readable at a glance.
-- `tests/AGENTS.md`, "Schemas": *"every set value column must be part of the UNIQUE constraint"*. `Items_set_codes` already declares `UNIQUE (id, code, weight)`. SQLite treats each NULL as distinct, so `('beta', NULL)` inserts fine. No schema change is needed.
+- `src/c/CLAUDE.md` "Multi-Column Time Series": in `update_*_group` a NULL `column_has_value` entry means that column is dense. The maintainer asked for "a mask". The test passes an explicit all-ones mask for `code` and `{1, 0}` for `weight`, so every mask entry is readable at a glance.
+- `tests/CLAUDE.md`, "Schemas": *"every set value column must be part of the UNIQUE constraint"*. `Items_set_codes` already declares `UNIQUE (id, code, weight)`. SQLite treats each NULL as distinct, so `('beta', NULL)` inserts fine. No schema change is needed.
 - Test-only change with no user-visible behaviour, so no CHANGELOG entry. None of the 0.11.0 entries are test-only.
 
 Alternatives considered and rejected:
 - **`relations.sql`** (the vector test's fixture): its set groups have one column each, so the test could not check two names, two type tags and a NULL in a non-first column. The maintainer chose `multi_column_groups.sql`.
-- **Writing the rows with `quiver_element_set_array_*` + `quiver_database_update_element`**: the maintainer chose `quiver_database_update_set_group` with a mask. It also names exactly one table, so it avoids the array fan-out the root `AGENTS.md` warns about.
+- **Writing the rows with `quiver_element_set_array_*` + `quiver_database_update_element`**: the maintainer chose `quiver_database_update_set_group` with a mask. It also names exactly one table, so it avoids the array fan-out the root `CLAUDE.md` warns about.
 - **Two tests (NULL-cell and empty-group)**: the two verifiers disagreed. I kept one test. The empty-group check is five assertions on the same fixture, and a second test would repeat about twenty lines of setup for them.
 - **A new schema whose declaration order differs from alphabetical order**: `code` sorts before `weight` in both orders, so the names assertion cannot tell declaration order from alphabetical order. I rejected the extra schema. Declaration order is a property of `get_set_metadata`, which the C++ core suites already cover, and not of this entry point. The test still pins `code` at index 0 and `weight` at index 1, which is what a caller depends on.
 - **An error-path case (unknown group / unknown collection)**: out of scope. The vector sibling has none, and the messages belong to the core (plans 07 and 57 are changing them).
@@ -197,13 +197,13 @@ Why each piece is there:
 | Julia / Python / JS | none here. Plan 18 moves them onto this entry point and owns their tests |
 | Dart | none. `metadata_test.dart` ~L462 already calls the native reader |
 
-No existing test changes and no assertion is modified. No new schema file, so nothing to register in `tests/AGENTS.md`. The C API test file already exists and is already in `tests/CMakeLists.txt`.
+No existing test changes and no assertion is modified. No new schema file, so nothing to register in `tests/CLAUDE.md`. The C API test file already exists and is already in `tests/CMakeLists.txt`.
 
 **Does the new test fail before the fix?** No. There is no code fix. The test pins behaviour that is correct today (verified by reading `quiver_database_read_set_group_by_id`, `Database::read_set_group_by_id` → `group_select_sql` / `group_rows_from_result` in `src/database_read.cpp` ~L170-216, and the FLOAT/STRING/empty branches of `marshal_group_rows_to_c`). The C++ core tests covering the same path pass on the current build (`Database.ReadSetByIdOrderMatchesGroupReader`, `Database.ReadSetIntegersByIdOrderMatchesGroupReader`: 2/2 passed). So do the neighbouring C API tests (`DatabaseCApi.ReadSet*`, `DatabaseCApi.ReadVectorGroupByIdPreservesNullCells`, `DatabaseCApi.UpdateGroupNullStringEntryIsNull`: 23/23 passed). To prove the new test is not vacuous, run the mutation check in Verification step 3.
 
 ## Docs and changelog
 
-- **AGENTS.md**: no edit. I checked root, `src/c/AGENTS.md` and `tests/AGENTS.md`. None claims this function is untested, and none lists per-test contents that the new test would make stale. `tests/AGENTS.md` describes `test_c_api_*` files by area only ("Mirror the same areas with the `test_c_api_*` prefix …"), and that stays true.
+- **CLAUDE.md**: no edit. I checked root, `src/c/CLAUDE.md` and `tests/CLAUDE.md`. None claims this function is untested, and none lists per-test contents that the new test would make stale. `tests/CLAUDE.md` describes `test_c_api_*` files by area only ("Mirror the same areas with the `test_c_api_*` prefix …"), and that stays true.
 - **Other docs** (`docs/*.md`, READMEs, `bindings/js/src/lua-api.ts`): no edit.
 - **CHANGELOG.md**: no entry. The change is test-only and not user-visible.
 
@@ -252,7 +252,7 @@ Run from the repo root (`C:\Development\Quiver\quiver3`), in order:
 - [ ] It asserts the empty-group case: `QUIVER_OK`, both counts 0 (seeded to 99 first), and all four out-arrays NULL.
 - [ ] It frees the non-empty result with `quiver_database_free_time_series_data`, destroys every element, and closes the database.
 - [ ] The Verification step 3 mutation made the test fail, and the mutation was reverted (`git diff src/` is empty).
-- [ ] `quiver_c_tests.exe` passes in full. No production file, FFI declaration, AGENTS.md or CHANGELOG changed.
+- [ ] `quiver_c_tests.exe` passes in full. No production file, FFI declaration, CLAUDE.md or CHANGELOG changed.
 
 ## Pitfalls
 

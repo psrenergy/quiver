@@ -5,7 +5,7 @@
 
 ## Why
 
-`bindings/julia/src/helper_maps.jl` is a documented Julia-only convenience (root AGENTS.md
+`bindings/julia/src/helper_maps.jl` is a documented Julia-only convenience (root CLAUDE.md
 "Relation map helpers (Julia only)"). Both helpers issue **one FFI round-trip and one SQL query per
 element** of `collection_from`, and resolve each related id with a linear `findfirst` over all ids
 of `collection_to`:
@@ -36,7 +36,7 @@ end
 `set_relation_map` (currently ~L65), shadowing the function it is inside.
 
 For 10,000 children that is 10,000 `SELECT ... WHERE id = ?` statements plus ~10^8 comparisons. The
-core already guarantees what a bulk read needs (root AGENTS.md "Bulk reads of one collection are
+core already guarantees what a bulk read needs (root CLAUDE.md "Bulk reads of one collection are
 positionally aligned"): `read_scalar_integers` returns one entry per element in `rowid` order with
 NULL kept as `nothing`, and `read_set_integers` returns one inner vector per element in the same
 `rowid` order (`src/database_read.cpp`: `... FROM <collection> c LEFT JOIN <set_table> g ON g.id =
@@ -52,13 +52,13 @@ and the thin-binding rule is respected (still composes public reads).
 - **Maintainer notes (binding):** keep the docstrings and the results; the existing
   `bindings/julia/test/test_helper_maps.jl` pins behaviour. Keep the "missing relation" sentinel
   exactly: `-1` for a scalar with no relation, `Int[]` for an element with no set rows.
-- The helpers stay in Julia (root AGENTS.md documents them as a deliberate exception to the
+- The helpers stay in Julia (root CLAUDE.md documents them as a deliberate exception to the
   thin-bindings rule, "kept in the binding because only Julia consumers use it"). Do not move them
   to C++.
 - Julia has **no** `read_element_ids` wrapper (`grep -rn "function read_element_ids"
   bindings/julia/src` finds nothing; only `c_api.jl` has the raw ccall), so keep using
   `read_scalar_integers(db, collection_to, "id")` for the id list, as the current code does. It
-  returns a concrete `Vector{Int64}` (`id` is reported `not_null`, root AGENTS.md scalar-NULL
+  returns a concrete `Vector{Int64}` (`id` is reported `not_null`, root CLAUDE.md scalar-NULL
   decision).
 - Error behaviour on an id that cannot be resolved (a dangling FK — impossible with `ON DELETE SET
   NULL/CASCADE`, but reachable via raw SQL with foreign keys off): today `findfirst` returns
@@ -161,8 +161,8 @@ existing "Basic Mapping" test does exactly that, so it does).
 
 ## Docs and changelog
 
-- No AGENTS.md text describes the helpers' implementation (root AGENTS.md "Relation map helpers" and
-  `bindings/julia/AGENTS.md:106` describe what they return), so no doc edit is needed. Re-read both
+- No CLAUDE.md text describes the helpers' implementation (root CLAUDE.md "Relation map helpers" and
+  `bindings/julia/CLAUDE.md:106` describe what they return), so no doc edit is needed. Re-read both
   passages after the change to confirm.
 - `CHANGELOG.md`, `## [0.11.0] — unreleased` → `### Fixed` (user-visible performance only):
   ```markdown
@@ -195,4 +195,4 @@ From the repo root:
 ## Out of scope
 
 - Moving the helpers into C++ or other bindings.
-- The array fan-out behaviour the root AGENTS.md mentions for `create_element!` in these tests.
+- The array fan-out behaviour the root CLAUDE.md mentions for `create_element!` in these tests.

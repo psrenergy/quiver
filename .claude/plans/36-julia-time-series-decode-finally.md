@@ -53,7 +53,7 @@ lib.quiver_database_free_time_series_data(...)` (`bindings/python/src/quiverdb/d
 `read_time_series_group`).
 
 Principle: Ownership — "RAII used strictly. Ownership of pointers/resources must be explicit and
-unambiguous" (root AGENTS.md).
+unambiguous" (root CLAUDE.md).
 
 ## Constraints and decisions
 
@@ -192,7 +192,7 @@ the error path, not a failing-first test. Say so in the commit message.
 
 ## Docs and changelog
 
-- `bindings/julia/AGENTS.md`: no rule currently describes free placement for this reader; add one
+- `bindings/julia/CLAUDE.md`: no rule currently describes free placement for this reader; add one
   line to the "Always `GC.@preserve`" area:
   > - **Free C results in `finally`** when decoding can throw (DateTime parsing, metadata lookups),
   >   as `read_time_series_group` does — Python's readers follow the same shape.

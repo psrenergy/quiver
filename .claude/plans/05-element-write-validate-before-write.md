@@ -1,6 +1,6 @@
 # 05 — create_element/update_element: validate every array before the first write
 
-**Batch** 1 · **Severity** m · **Breaking** no · **Size** M · **Layers** C++ core (`src/database_impl.h`, `src/database_create.cpp`, `src/database_update.cpp`), tests in C++ / C API / Lua / Julia / Dart / Python / JS, docs (root `AGENTS.md`, `src/AGENTS.md`, `CHANGELOG.md`)
+**Batch** 1 · **Severity** m · **Breaking** no · **Size** M · **Layers** C++ core (`src/database_impl.h`, `src/database_create.cpp`, `src/database_update.cpp`), tests in C++ / C API / Lua / Julia / Dart / Python / JS, docs (root `CLAUDE.md`, `src/CLAUDE.md`, `CHANGELOG.md`)
 **Depends on** none · **Overlaps with** 53 (drops the `Database& db` parameter from every Impl helper, including the ones this plan adds or renames), 55 (turns `type_validator->validate_array` into a free function; the call moves into the new `validate_group_columns`), 56 (changes `resolve_fk_label`, and may add a `caller` parameter that `resolve_scalar_fk_labels` then has to pass through), 57 (replaces the table lookup at the top of `update_group_rows`), 37 (adds tests to the same Dart/Julia transaction test files). Only file overlap with 37. For 53/55/56/57, this plan lands first and those plans re-anchor on the names introduced here.
 
 ## Why
@@ -29,7 +29,7 @@ The current order:
 | `update_element("Collection", id, { tag = { "new" }, value_int = { 1.5 } })` (element had `tag = {"keep"}`, `value_int = {7}`) | `Cannot update_element: type mismatch for array 'value_int' index 0: expected INTEGER, got REAL` | `tag = {"new"}`. `Collection_set_tags` sorts before `Collection_vector_values`, so it was rewritten before the vector table was checked. |
 | `create_element("Collection", { label = "Y", typo = { 1 } })` inside `db:begin_dry_run()` | same "does not match" error | `Y` is readable for the rest of the dry run |
 
-The code already states the invariant it breaks. Both writers carry the comment `// Pre-resolve pass: resolve all FK labels before any writes`, and the group writers already follow it: root `AGENTS.md` says "validation precedes the DELETE so a rejected write cannot leave a cleared group even when `TransactionGuard` owns no transaction (inside a dry run or a caller-owned transaction)", and `Database.UpdateGroupTypeErrorInsideDryRunKeepsExistingRows` pins that. The time-series writers (`update_time_series_group`, `upsert_time_series_row`, `update_time_series_files`) also validate before opening their guard. `create_element` and `update_element` are the only writers left that don't.
+The code already states the invariant it breaks. Both writers carry the comment `// Pre-resolve pass: resolve all FK labels before any writes`, and the group writers already follow it: root `CLAUDE.md` says "validation precedes the DELETE so a rejected write cannot leave a cleared group even when `TransactionGuard` owns no transaction (inside a dry run or a caller-owned transaction)", and `Database.UpdateGroupTypeErrorInsideDryRunKeepsExistingRows` pins that. The time-series writers (`update_time_series_group`, `upsert_time_series_row`, `update_time_series_files`) also validate before opening their guard. `create_element` and `update_element` are the only writers left that don't.
 
 There is a second, smaller defect. Arrays are routed twice, once in `resolve_element_fk_labels` (`schema->find_all_tables_for_column`, ~L184) and again in `insert_group_data` (~L311). The first pass resolves FK labels against the **first** matching table only, and its justification is wrong:
 
@@ -46,11 +46,11 @@ There is a second, smaller defect. Arrays are routed twice, once in `resolve_ele
 - **Maintainer decision (binding):** use the facts-verifier variant. Split `insert_group_data` into a no-write half (route + FK-resolve against **each** matched table + validate) and a write half. `resolve_element_fk_labels` then handles scalars only, which deletes the first-match loop and its wrong comment.
 - **Maintainer decision (binding):** do not move `validate_scalar` in `update_element`. It stays inside the guard, where it already runs before the UPDATE. (The original proposal wanted it moved out of the guard. That change has no effect, so it is dropped.)
 - **Maintainer decision (binding):** state plainly that SQLite constraint failures during an INSERT can still leave partial writes inside a caller-owned transaction. This is a documented limitation. Reproduced: `update_element(id, { some_integer = 5, tag = { "a", "a" } })` in a transaction throws `Failed to execute statement: UNIQUE constraint failed: Collection_set_tags.id, Collection_set_tags.tag`, and after commit `some_integer = 5` and `tag = {"a"}`. That stays true after this plan. A NULL cell in a NOT NULL group column behaves the same way: `TypeValidator::validate_value` accepts NULL for every type, and SQLite rejects it at the INSERT. So does a foreign-key violation.
-- Root `AGENTS.md`, "Design Decisions" → "Dry runs live on `Database`": the public begin/commit/rollback are absorbed during a dry run. Untouched. This plan changes no transaction semantics, only write order.
-- Root `AGENTS.md`, Core API → whole-group writers: validation precedes the DELETE, and a named column with no rows is an error. Untouched. `update_group_rows` keeps its checks and only moves `validate_group_columns` ahead of its guard.
-- Root `AGENTS.md`, "*Not yet fixed:*" array fan-out (`matches.size() > 1` writes every matching table and logs a warning). Not fixed here. The fan-out and its warning stay exactly as they are, and `Database.UpdateElementSharedColumnNameWritesEveryMatchingGroup` must keep passing.
-- `src/AGENTS.md`, "Group inserts are unified": one shared insert helper and one routing map, and "don't re-grow per-type copies". Kept: there is still one validator and one inserter for vector, set and time-series tables.
-- Error messages (root `AGENTS.md`, "C++ Error Message Patterns"): no message text changes. Every throw moves as-is.
+- Root `CLAUDE.md`, "Design Decisions" → "Dry runs live on `Database`": the public begin/commit/rollback are absorbed during a dry run. Untouched. This plan changes no transaction semantics, only write order.
+- Root `CLAUDE.md`, Core API → whole-group writers: validation precedes the DELETE, and a named column with no rows is an error. Untouched. `update_group_rows` keeps its checks and only moves `validate_group_columns` ahead of its guard.
+- Root `CLAUDE.md`, "*Not yet fixed:*" array fan-out (`matches.size() > 1` writes every matching table and logs a warning). Not fixed here. The fan-out and its warning stay exactly as they are, and `Database.UpdateElementSharedColumnNameWritesEveryMatchingGroup` must keep passing.
+- `src/CLAUDE.md`, "Group inserts are unified": one shared insert helper and one routing map, and "don't re-grow per-type copies". Kept: there is still one validator and one inserter for vector, set and time-series tables.
+- Error messages (root `CLAUDE.md`, "C++ Error Message Patterns"): no message text changes. Every throw moves as-is.
 - Rejected alternatives:
   - SAVEPOINT in the nested `TransactionGuard` (both verifiers' corrected proposal). Rejected by the maintainer, see above.
   - Keeping the first-match FK resolution and only fixing its comment (policy verifier). Rejected by the maintainer's "facts-verifier variant". Per-table resolution also falls out of the split for free, because each table gets its own resolved vector.
@@ -172,7 +172,7 @@ Replace the whole function (~L238-290, currently `void insert_rows_into_group_ta
     // 1-based vector_index. Callers run validate_group_columns first, so every column has the same
     // length. What can still throw here is only what SQLite checks (UNIQUE, NOT NULL, foreign
     // keys), after this call's earlier writes - a documented limit inside a caller-owned
-    // transaction (root AGENTS.md design decisions).
+    // transaction (root CLAUDE.md design decisions).
     void insert_rows_into_group_table(const std::string& table_name,
                                       GroupTableType type,
                                       const std::map<std::string, std::vector<Value>>& columns,
@@ -704,11 +704,11 @@ The file already uses `SCHEMA_PATH` = `valid/all_types.sql`, where `AllTypes_set
   });
 ```
 
-No new schema files. `tests/AGENTS.md` needs no change: no new files, and the file-per-area map is unchanged.
+No new schema files. `tests/CLAUDE.md` needs no change: no new files, and the file-per-area map is unchanged.
 
 ## Docs and changelog
 
-### Root `AGENTS.md`, "Design Decisions"
+### Root `CLAUDE.md`, "Design Decisions"
 
 Insert a new bullet directly after the "**Dry runs live on `Database`, not on `LuaRunner`.**" bullet. That bullet ends "...a script that wants a change count already has `SELECT total_changes()`."
 
@@ -728,7 +728,7 @@ Insert a new bullet directly after the "**Dry runs live on `Database`, not on `L
   no-op guard exists to avoid.
 ```
 
-### `src/AGENTS.md`, "Transactions" section
+### `src/CLAUDE.md`, "Transactions" section
 
 Old sentence (~L315):
 
@@ -738,7 +738,7 @@ New:
 
 > Internally, `Impl::TransactionGuard` is nest-aware RAII: if an explicit transaction is already active (checked via `sqlite3_get_autocommit()`), the guard becomes a no-op. This allows write methods (`create_element`, etc.) to work both standalone and inside explicit transactions without double-beginning. A no-op guard cannot roll anything back, so every writer finishes its checks before its first write (see "Group writes" under Core Internals). Only a failure SQLite alone detects mid-write (UNIQUE / NOT NULL / foreign key) can leave a call's earlier writes inside a caller-owned transaction. That is a documented limit, and there are no SAVEPOINTs (root design decisions).
 
-### `src/AGENTS.md`, "Core Internals Worth Knowing", first bullet
+### `src/CLAUDE.md`, "Core Internals Worth Knowing", first bullet
 
 Replace the whole bullet that starts `- **Group inserts are unified** (\`database_impl.h\`): one \`insert_rows_into_group_table(caller,` (~L375-384) with:
 
@@ -762,7 +762,7 @@ Replace the whole bullet that starts `- **Group inserts are unified** (\`databas
   the end of the empty vector.
 ```
 
-### `src/AGENTS.md`, `_by_label` sentence (~L452)
+### `src/CLAUDE.md`, `_by_label` sentence (~L452)
 
 Old: ``*element* validation — the empty-element throw, `TypeValidator`, `insert_group_data` — reports``
 New: ``*element* validation — the empty-element throw, `TypeValidator`, `prepare_group_data` — reports``
@@ -811,7 +811,7 @@ From `C:\Development\Quiver\quiver3`:
 - [ ] `update_group_rows` calls `validate_group_columns` before its guard and no longer builds `column_ptrs`.
 - [ ] No error message text changed (`git diff` shows the three throw strings moved verbatim).
 - [ ] New tests pass in C++ (3), C API (1), Lua (1), Julia, Dart, Python and JS (1 each), and each C++/C/Lua one fails on the pre-change build.
-- [ ] Root `AGENTS.md` has the new design-decision bullet. `src/AGENTS.md` Transactions paragraph, the Core Internals bullet and the `_by_label` sentence are updated. `CHANGELOG.md` has the Fixed entry.
+- [ ] Root `CLAUDE.md` has the new design-decision bullet. `src/CLAUDE.md` Transactions paragraph, the Core Internals bullet and the `_by_label` sentence are updated. `CHANGELOG.md` has the Fixed entry.
 - [ ] No SAVEPOINT anywhere (`grep -rni savepoint src/` is empty).
 - [ ] `scripts/test-all.bat` passes.
 
@@ -833,7 +833,7 @@ From `C:\Development\Quiver\quiver3`:
 ## Out of scope
 
 - Closing the SQLite-constraint gap (UNIQUE / NOT NULL / FK after earlier writes). It stays a documented limitation, and SAVEPOINTs are rejected.
-- The array fan-out (`matches.size() > 1` writing every matching table). This is the root `AGENTS.md` "*Not yet fixed*" item. The warning and behaviour are unchanged here.
+- The array fan-out (`matches.size() > 1` writing every matching table). This is the root `CLAUDE.md` "*Not yet fixed*" item. The warning and behaviour are unchanged here.
 - Adding the `caller` operation name to `resolve_fk_label`'s messages, and the typing-policy unification: plan 56.
 - Dropping the `Database& db` back-references: plan 53. `TypeValidator` as free functions: plan 55. The `update_group_rows` table lookup / `require_group_table`: plan 57. `TransactionGuard` / `Impl::exec`: plan 60.
 - Lua reference (`bindings/js/src/lua-api.ts`) wording about transactions and rollback: plans 43/44. Nothing there is made stale by this plan.

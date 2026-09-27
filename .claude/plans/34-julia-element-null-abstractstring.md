@@ -1,6 +1,6 @@
 # 34 — Julia `Element`: `setindex!` for `nothing` and for any `AbstractString` scalar
 
-**Batch** 4 · **Severity** medium · **Breaking** no (additive methods) · **Size** S · **Layers** Julia binding only (+ bindings/julia/AGENTS.md, CHANGELOG)
+**Batch** 4 · **Severity** medium · **Breaking** no (additive methods) · **Size** S · **Layers** Julia binding only (+ bindings/julia/CLAUDE.md, CHANGELOG)
 **Depends on** none · **Overlaps with** 21 (deletes `quiver_element_has_scalars`/counters from the C API and regenerates `c_api.jl`; this plan only calls the existing `quiver_element_set_null`, which 21 keeps), 42 (Julia reader renames in other files)
 
 ## Why
@@ -176,7 +176,7 @@ Before the change all three new DB tests throw `MethodError` at the `e[String(k)
 
 ## Docs and changelog
 
-- `bindings/julia/AGENTS.md`: add one bullet under "Rules and gotchas":
+- `bindings/julia/CLAUDE.md`: add one bullet under "Rules and gotchas":
   > - **`Element` scalars**: `el[name] = nothing` writes SQL NULL via `quiver_element_set_null`
   >   (so `create_element!`/`update_element!(...; x = nothing)` clears a column), and any
   >   `AbstractString` is accepted. Arrays stay non-null (root design decision).
@@ -203,7 +203,7 @@ From the repo root:
 - [ ] `setindex!(::Element, ::Nothing, ::String)` exists and calls `quiver_element_set_null`.
 - [ ] The scalar string method takes `AbstractString`.
 - [ ] New tests pass; full Julia suite green.
-- [ ] AGENTS.md bullet and CHANGELOG entry added.
+- [ ] CLAUDE.md bullet and CHANGELOG entry added.
 
 ## Pitfalls
 

@@ -44,7 +44,7 @@ The other malformed widths fail, but in the wrong place, with the wrong exceptio
 
 **The constructor is public without reason.** `include/quiver/binary/csv_converter.h:17` declares `CSVConverter(const BinaryMetadata& metadata, std::unique_ptr<std::iostream> io, bool aggregate_time_dimensions);` under `public:`. Its only callers are `csv_converter.cpp:51` and `:84`, both inside the two static functions (grep `CSVConverter(` over the repo, excluding `build/`). Every other member is private, so an instance built by an outside caller is unusable.
 
-Principles violated: the root AGENTS.md error rule (a precondition failure is Pattern 1 `Cannot {operation}: {reason}`), and "Simple solutions" (one definition per shape).
+Principles violated: the root CLAUDE.md error rule (a precondition failure is Pattern 1 `Cannot {operation}: {reason}`), and "Simple solutions" (one definition per shape).
 
 ## Constraints and decisions
 
@@ -55,11 +55,11 @@ Principles violated: the root AGENTS.md error rule (a precondition failure is Pa
   - Do **not** convert the class to free functions.
 
   The two new helpers that need no member state (`split_fields`, `join_fields`) go in an anonymous namespace in the `.cpp`. The class keeps its shape and its two static entry points.
-- **Root AGENTS.md, "One CSV parser, one CSV emitter":** "The binary subsystem's `CSVConverter` (`bin_to_csv`/`csv_to_bin`) is not on this path: it splits and joins on `,` and never quotes, so a label holding a comma does not round-trip." That stays true. The helpers keep exactly that behaviour, with no quoting.
-- **Root AGENTS.md, "C++ Error Message Patterns":** new messages use Pattern 1. The existing binary messages ("Unexpected header in CSV file: ...", "CSV dimension '...' has value ...") predate the patterns, which the root file lists as a known exception. They keep their wording here: this item moves the code that emits them and does not reword them.
+- **Root CLAUDE.md, "One CSV parser, one CSV emitter":** "The binary subsystem's `CSVConverter` (`bin_to_csv`/`csv_to_bin`) is not on this path: it splits and joins on `,` and never quotes, so a label holding a comma does not round-trip." That stays true. The helpers keep exactly that behaviour, with no quoting.
+- **Root CLAUDE.md, "C++ Error Message Patterns":** new messages use Pattern 1. The existing binary messages ("Unexpected header in CSV file: ...", "CSV dimension '...' has value ...") predate the patterns, which the root file lists as a known exception. They keep their wording here: this item moves the code that emits them and does not reword them.
 - **Root design decision:** the binary subsystem is exposed in Julia and Lua only. Dart, Python and JS have no binary surface, so there is nothing to change or test there.
-- **`src/AGENTS.md`:** "`CSVConverter` is a plain class composing a `BinaryMetadata` and the CSV `iostream` (no Pimpl, no inheritance)". Kept.
-- **Root "Self-Updating" and "Changelog":** update `src/AGENTS.md`, and add a `### Fixed` entry under `## [0.11.0] — unreleased`. No manifest bump.
+- **`src/CLAUDE.md`:** "`CSVConverter` is a plain class composing a `BinaryMetadata` and the CSV `iostream` (no Pimpl, no inheritance)". Kept.
+- **Root "Self-Updating" and "Changelog":** update `src/CLAUDE.md`, and add a `### Fixed` entry under `## [0.11.0] — unreleased`. No manifest bump.
 
 Alternatives considered and rejected:
 - **`std::getline(ss, f, ',')` for the split.** It drops a trailing empty field, so `1,1,1.0,2.0,` would pass the width check as 4 fields and be accepted silently. The maintainer explicitly rejected it.
@@ -605,7 +605,7 @@ No schema files are added.
 
 ## Docs and changelog
 
-**`src/AGENTS.md`, "Binary Subsystem" bullet list.**
+**`src/CLAUDE.md`, "Binary Subsystem" bullet list.**
 
 Old line:
 
@@ -628,10 +628,10 @@ New text (one bullet):
   a trailing-comma row pass the width check.
 ```
 
-No other AGENTS.md edit is needed:
-- The root AGENTS.md "One CSV parser" passage (`splits and joins on , and never quotes`) stays accurate.
-- `tests/AGENTS.md` already lists `test_csv_converter.cpp` and describes no per-test content.
-- `bindings/julia/AGENTS.md` has no CSVConverter rule.
+No other CLAUDE.md edit is needed:
+- The root CLAUDE.md "One CSV parser" passage (`splits and joins on , and never quotes`) stays accurate.
+- `tests/CLAUDE.md` already lists `test_csv_converter.cpp` and describes no per-test content.
+- `bindings/julia/CLAUDE.md` has no CSVConverter rule.
 - `bindings/js/src/lua-api.ts` documents `db:csv_to_bin(path)` without error semantics, so it needs no change, and `lua-api-sync.test.ts` is unaffected because no binding name changes.
 
 **`CHANGELOG.md`.** Under `## [0.11.0] — unreleased` → `### Fixed`, add this after plan 13's `csv_to_bin` entry if present, otherwise as the last bullet of `### Fixed`:
@@ -668,7 +668,7 @@ Run from `C:\Development\Quiver\quiver3`, in Git Bash:
    - `tests/test_c_api_csv_converter.cpp`
    - `tests/test_lua_binary.cpp`
    - `bindings/julia/test/test_csv_converter.jl`
-   - `src/AGENTS.md`
+   - `src/CLAUDE.md`
    - `CHANGELOG.md`
 
    If `format.bat` touched anything else, it is pre-existing drift: revert it.
@@ -685,7 +685,7 @@ No generator run is needed, because there is no C API signature change.
 - [ ] `read_line(line_number)` throws `Cannot csv_to_bin: line N has X fields, expected Y` before parsing any cell, and `Cannot csv_to_bin: file ends before line N` at EOF.
 - [ ] Plan 13's data-cell parse and value formatting are carried over unchanged, and any label-index guard plan 13 added is reduced to a plain `metadata_.labels[row.data.size()]`.
 - [ ] New tests pass in C++ (5, plus the tightened `HeaderTooFewColumns`), C API (1), Lua (1) and Julia (1). The full `scripts/test-all.bat` is green.
-- [ ] `src/AGENTS.md` Binary Subsystem bullet and the `CHANGELOG.md` `### Fixed` entry are updated as written above.
+- [ ] `src/CLAUDE.md` Binary Subsystem bullet and the `CHANGELOG.md` `### Fixed` entry are updated as written above.
 
 ## Pitfalls
 

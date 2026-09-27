@@ -1,15 +1,15 @@
 # 23 — C API group marshaller: stop narrowing REAL cells into INTEGER columns
 
-**Batch** 3 · **Severity** low · **Breaking** no. The behaviour changes only for a non-STRICT table that holds a non-integral REAL in an INTEGER column, and such a value can only get there through raw SQL · **Size** S · **Layers** C API (`src/c/database_helpers.h`), C API tests, one new test schema, `src/c/AGENTS.md`, `tests/AGENTS.md`, `CHANGELOG.md`. No C++ core, FFI declaration, binding wrapper or Lua change.
+**Batch** 3 · **Severity** low · **Breaking** no. The behaviour changes only for a non-STRICT table that holds a non-integral REAL in an INTEGER column, and such a value can only get there through raw SQL · **Size** S · **Layers** C API (`src/c/database_helpers.h`), C API tests, one new test schema, `src/c/CLAUDE.md`, `tests/CLAUDE.md`, `CHANGELOG.md`. No C++ core, FFI declaration, binding wrapper or Lua change.
 
 **Depends on** 22 (soft). Plan 22 renames `quiver_database_query_integer_params` to `quiver_database_query_integer`, and the new test calls that function. The fix itself needs nothing from 22. Both spellings are given in the Tests section, so this plan also applies if 22 has not landed.
 
 **Overlaps with**
-- **03** rewords the comment above `unmarshal_group_columns_to_rows` in `src/c/database_helpers.h` and two "rows[0]" sentences in the "Multi-Column Time Series" section of `src/c/AGENTS.md`. This plan edits `marshal_group_rows_to_c` further down the same header and a different bullet (`quiver_database_read_time_series_group()`) in the same section. The two edits do not share any text.
-- **17** rewrites `quiver_database_read_time_series_row` (`src/c/database_time_series.cpp`) and its `src/c/AGENTS.md` bullet. **This plan must not touch either** (maintainer decision).
+- **03** rewords the comment above `unmarshal_group_columns_to_rows` in `src/c/database_helpers.h` and two "rows[0]" sentences in the "Multi-Column Time Series" section of `src/c/CLAUDE.md`. This plan edits `marshal_group_rows_to_c` further down the same header and a different bullet (`quiver_database_read_time_series_group()`) in the same section. The two edits do not share any text.
+- **17** rewrites `quiver_database_read_time_series_row` (`src/c/database_time_series.cpp`) and its `src/c/CLAUDE.md` bullet. **This plan must not touch either** (maintainer decision).
 - **19** adds a C API test for `quiver_database_read_set_group_by_id`. That test goes through the same marshaller, but only its STRING and FLOAT branches, so it is unaffected by this change.
 - **18** makes Julia, Python and JS call `quiver_database_read_{vector,set}_group_by_id` natively. Once it lands those bindings inherit this fix with no code change of their own. No shared text.
-- **01, 02** each add a schema to the `valid/` list in `tests/AGENTS.md`, and **75** edits other claims in that file. This plan adds one more name to the same list, so insert it into whatever the list says when you get there.
+- **01, 02** each add a schema to the `valid/` list in `tests/CLAUDE.md`, and **75** edits other claims in that file. This plan adds one more name to the same list, so insert it into whatever the list says when you get there.
 - **69** is about leak hygiene in the C API tests. The new test frees every handle it opens, so it adds no work for 69.
 
 ## Why
@@ -52,7 +52,7 @@ std::optional<int64_t> Row::get_integer(size_t index) const {
 Every binding that decodes a group read from the C API honours the mask and nothing else (Dart `_decodeGroupRows` / `readTimeSeriesGroup`, Python and JS `read_time_series_group`, Julia's decoder). So Dart's `readVectorGroupById` returns `{quantity: 1}` for a cell that every per-column reader treats as absent.
 
 Principles violated:
-- Root `AGENTS.md`, Core API / Query: "`query_integer` does **not** narrow a REAL; that direction is lossy."
+- Root `CLAUDE.md`, Core API / Query: "`query_integer` does **not** narrow a REAL; that direction is lossy."
 - Root "Intelligence: Logic resides in C++ layer". The C API adds a conversion policy the core does not have.
 - Root "Clean code over defensive code … Delete unused code". The branch is dead for every schema that follows the conventions, and it is wrong for the one kind of schema that can reach it.
 
@@ -61,8 +61,8 @@ Principles violated:
 ## Constraints and decisions
 
 - **Maintainer decision (binding):** "Deletion only; no shared helper; do not touch read_time_series_row. Add one C API test (non-STRICT table, 1.5 written via query, group read comes back masked)."
-- Root `AGENTS.md`, **One scalar typing policy**: an int64 is accepted for INTEGER and REAL columns, and a double only for REAL. The read side of that rule lives in `Row::get_integer` / `Row::get_float`. `src/AGENTS.md` says of `Row::get_float`: "the one place the int64-for-REAL policy is implemented for reads … Don't re-add a widening branch at a call site." The FLOAT branch of `marshal_group_rows_to_c` widens int64 to double. That is the allowed direction, so **leave it alone**.
-- Root "Self-Updating": `src/c/AGENTS.md` is the nearest AGENTS.md to `src/c/database_helpers.h`. `tests/AGENTS.md` lists every schema file.
+- Root `CLAUDE.md`, **One scalar typing policy**: an int64 is accepted for INTEGER and REAL columns, and a double only for REAL. The read side of that rule lives in `Row::get_integer` / `Row::get_float`. `src/CLAUDE.md` says of `Row::get_float`: "the one place the int64-for-REAL policy is implemented for reads … Don't re-add a widening branch at a call site." The FLOAT branch of `marshal_group_rows_to_c` widens int64 to double. That is the allowed direction, so **leave it alone**.
+- Root "Self-Updating": `src/c/CLAUDE.md` is the nearest CLAUDE.md to `src/c/database_helpers.h`. `tests/CLAUDE.md` lists every schema file.
 - Root "All *.sql test schemas in `tests/schemas/`". The non-STRICT schema goes there as a file, not inline in the test.
 - Root "Changelog": a user-visible change gets an entry under `## [0.11.0] — unreleased`. The change is not breaking, so the entry goes under `### Fixed`.
 
@@ -72,7 +72,7 @@ Alternatives considered and rejected:
 - **Throw on a type-mismatched cell.** Rejected. Every other reader treats the cell as absent, and a read that throws on stored data would be a new, inconsistent policy.
 - **Enforce STRICT in `SchemaValidator`.** Out of scope. That would be a breaking design change nobody asked for.
 - **A test in every FFI binding.** Not done, per the maintainer decision ("one C API test"). The bindings have no conversion code of their own and only decode the mask, which their existing NULL-mask tests already cover.
-- **Update the header comments in `include/quiver/c/database.h`** ("mask[c][r] == 0 means SQL NULL", ~L227-230 and ~L393-396). Not done. For a schema that follows the conventions (STRICT), mask 0 still means exactly SQL NULL. The non-STRICT TEXT-in-INTEGER cell was already reported as mask 0 before this change, and the header never mentioned it either. The non-STRICT rule is documented in `src/c/AGENTS.md` instead.
+- **Update the header comments in `include/quiver/c/database.h`** ("mask[c][r] == 0 means SQL NULL", ~L227-230 and ~L393-396). Not done. For a schema that follows the conventions (STRICT), mask 0 still means exactly SQL NULL. The non-STRICT TEXT-in-INTEGER cell was already reported as mask 0 before this change, and the header never mentioned it either. The non-STRICT rule is documented in `src/c/CLAUDE.md` instead.
 
 ## Changes
 
@@ -273,7 +273,7 @@ TEST(DatabaseCApi, ReadVectorGroupByIdMasksRealCellInIntegerColumn) {
 
 ## Docs and changelog
 
-### `src/c/AGENTS.md`: "Multi-Column Time Series" section, the `quiver_database_read_time_series_group()` bullet (currently ~L189-193)
+### `src/c/CLAUDE.md`: "Multi-Column Time Series" section, the `quiver_database_read_time_series_group()` bullet (currently ~L189-193)
 
 Old (last sentence of the bullet):
 
@@ -295,7 +295,7 @@ New:
 
 Do not edit the `quiver_database_read_time_series_row()` bullet below it (plan 17), or the two `rows[0]` sentences above it (plan 03).
 
-### `tests/AGENTS.md`: "Schemas (`tests/schemas/`)" section
+### `tests/CLAUDE.md`: "Schemas (`tests/schemas/`)" section
 
 1. In the `- \`valid/\` — …` list (currently ~L162-165), insert `` `non_strict_vector.sql`, `` in alphabetical order, directly before `` `nullable_time_series.sql` ``. Plans 01 and 02 may have added names to this list by then, so keep whatever else is there. At HEAD the list's last line is:
 
@@ -322,7 +322,7 @@ Do not edit the `quiver_database_read_time_series_row()` bullet below it (plan 1
 
 ### Other docs
 
-None. The root `AGENTS.md` already says "`query_integer` does **not** narrow a REAL". `docs/*.md`, the binding READMEs and `bindings/js/src/lua-api.ts` never mention this path.
+None. The root `CLAUDE.md` already says "`query_integer` does **not** narrow a REAL". `docs/*.md`, the binding READMEs and `bindings/js/src/lua-api.ts` never mention this path.
 
 ### `CHANGELOG.md`
 
@@ -374,7 +374,7 @@ Run from the repo root (`C:\Development\Quiver\quiver3`), in PowerShell. In Git 
    bindings\python\tests\test.bat
    ```
    Expected: all pass.
-7. `scripts\format.bat`, then `git diff --stat`. Only these files should differ: `src/c/database_helpers.h`, `tests/test_c_api_database_read_vector.cpp`, `tests/schemas/valid/non_strict_vector.sql` (new, untracked until added), `src/c/AGENTS.md`, `tests/AGENTS.md`, `CHANGELOG.md`. If clang-format rewrapped the new test, keep its output.
+7. `scripts\format.bat`, then `git diff --stat`. Only these files should differ: `src/c/database_helpers.h`, `tests/test_c_api_database_read_vector.cpp`, `tests/schemas/valid/non_strict_vector.sql` (new, untracked until added), `src/c/CLAUDE.md`, `tests/CLAUDE.md`, `CHANGELOG.md`. If clang-format rewrapped the new test, keep its output.
 8. `scripts\test-all.bat`. Expected: steps 1-6 PASS. Step 7 (CLI smoke test) fails at HEAD because `example\example1.lua` was deleted. That failure predates this change and is fixed by plan 65. If 65 has landed, step 7 passes too.
 
 ## Acceptance criteria
@@ -385,7 +385,7 @@ Run from the repo root (`C:\Development\Quiver\quiver3`), in PowerShell. In Git 
 - [ ] `tests/schemas/valid/non_strict_vector.sql` exists with exactly the SQL above, and `Items_vector_counts` has no `STRICT`.
 - [ ] `DatabaseCApi.ReadVectorGroupByIdMasksRealCellInIntegerColumn` exists, failed before Change 1, and passes after it.
 - [ ] `quiver_c_tests.exe` and `quiver_tests.exe` pass in full, and so do the four binding suites.
-- [ ] `src/c/AGENTS.md` has the new sentences on the `read_time_series_group()` bullet. `tests/AGENTS.md` lists `non_strict_vector.sql` and has its sub-bullet.
+- [ ] `src/c/CLAUDE.md` has the new sentences on the `read_time_series_group()` bullet. `tests/CLAUDE.md` lists `non_strict_vector.sql` and has its sub-bullet.
 - [ ] `CHANGELOG.md` has the Fixed entry under `## [0.11.0] — unreleased`, not prefixed **BREAKING**.
 - [ ] No manifest version bump, no FFI file change, no binding change.
 
@@ -398,7 +398,7 @@ Run from the repo root (`C:\Development\Quiver\quiver3`), in PowerShell. In Git 
 - **Group name vs column name.** `quiver_database_read_vector_group_by_id` takes the group name (`"counts"`, from `Items_vector_counts`), while `quiver_database_read_vector_integers_by_id` takes the column name (`"quantity"`). Swapping them gives "Vector group not found" or a column-not-found error.
 - **Line endings.** Working-tree `.sql` files in this checkout are CRLF (`text=auto`), and the Write tool produces LF. Either works, and git normalizes on commit. Do not run `sed`/unix tools over `.bat` files while verifying: they are CRLF and would be silently converted.
 - **`test-all.bat` step 7** fails until plan 65 lands (see Verification step 8). Do not try to fix it here.
-- **`tests/AGENTS.md` list drift.** Plans 01 and 02 add schema names to the same `valid/` list. Insert `non_strict_vector.sql` alphabetically into the list as it is, and do not overwrite their additions.
+- **`tests/CLAUDE.md` list drift.** Plans 01 and 02 add schema names to the same `valid/` list. Insert `non_strict_vector.sql` alphabetically into the list as it is, and do not overwrite their additions.
 
 ## Out of scope
 

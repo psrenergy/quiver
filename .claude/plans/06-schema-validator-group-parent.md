@@ -8,9 +8,9 @@
 - **01**: no shared file. Plan 01 keeps FKs on during `import_csv` so a dropped element cascades into its groups. This plan makes sure every set and time-series table has a cascade to rely on.
 - **55** (batch 6): later moves `include/quiver/schema_validator.h` into `src/`. Edit the header where it is now. Plan 55 carries the edits along.
 - **59** (batch 6): later replaces FK loops with `TableDefinition::get_foreign_key` elsewhere, and explicitly leaves the `schema_validator.cpp` loops alone. The parent-FK loop moved here keeps its current predicate for that reason (see Constraints).
-- **62** (batch 6): later adds `invalid/unsupported_type.sql`, a test in `tests/test_schema_validator.cpp`, and a name in the `invalid/` list in `tests/AGENTS.md`. Both files are edited here first. Plan 62 appends to them and can reuse the `<gmock/gmock.h>` include added here.
+- **62** (batch 6): later adds `invalid/unsupported_type.sql`, a test in `tests/test_schema_validator.cpp`, and a name in the `invalid/` list in `tests/CLAUDE.md`. Both files are edited here first. Plan 62 appends to them and can reuse the `<gmock/gmock.h>` include added here.
 - **73** (batch 7): owns every other `docs/rules.md` / `docs/attributes.md` fix: the vector-relation examples that lack the parent FK (`HydroPlant_vector_gaugingstations`), the FK prose, the Configuration example and the migration sections. This plan edits only the two `HydroPlant_set_gaugingstations` examples and the three "must contain a Column named `id`" bullets (vector, set, time series) in each file. That split is what the maintainer asked for ("coordinate with plan 73").
-- **75** (batch 7): later fixes other claims in `tests/AGENTS.md`. This plan edits only the `invalid/` bullet.
+- **75** (batch 7): later fixes other claims in `tests/CLAUDE.md`. This plan edits only the `invalid/` bullet.
 
 ## Why
 
@@ -67,7 +67,7 @@ And `id` must have a CASCADE/CASCADE foreign key to that collection (~L140-154):
   fails with `Failed to execute statement: FOREIGN KEY constraint failed` from `delete_element`, because the `id` FK has no actions (SQLite reports `NO ACTION`). After the fix, the schema is rejected with `Time series table 'Collection_time_series_data' FK to parent must use ON DELETE CASCADE ON UPDATE CASCADE`.
 - A set table named after a nonexistent collection (`Ghost_set_tags`) validates today. So does a time-series *relation* FK with no actions (`parent_id INTEGER REFERENCES Parent(id)`), and deleting the referenced `Parent` then fails with the same `FOREIGN KEY constraint failed`. Both confirmed.
 
-Principles violated: the root `AGENTS.md` Schema Conventions say *"Always use `ON DELETE CASCADE ON UPDATE CASCADE` for parent references"*, and its set and time-series examples declare that FK. The core, where the logic is supposed to live, enforces it for one of three group kinds.
+Principles violated: the root `CLAUDE.md` Schema Conventions say *"Always use `ON DELETE CASCADE ON UPDATE CASCADE` for parent references"*, and its set and time-series examples declare that FK. The core, where the logic is supposed to live, enforces it for one of three group kinds.
 
 Secondary defects fixed in the same change:
 - The vector-only branch in `validate_foreign_keys` (~L317-322) repeats what `validate_vector_table` already checked, with a different message. It can fire first only when `id` carries two FKs.
@@ -80,10 +80,10 @@ Secondary defects fixed in the same change:
 
 - **Maintainer notes (binding):** BREAKING, because schemas without the parent FK are now rejected. Check that every existing `tests/schemas/valid/*.sql` and binding test schema still validates, and fix any that do not. Fix the `docs/rules.md` and `docs/attributes.md` set examples, and coordinate with plan 73.
 - **Existing schemas: all pass (verified).** Every git-tracked `.sql` was loaded into SQLite and checked against the new rules: parent exists, `id` FK to the parent is CASCADE/CASCADE, and every FK is `ON UPDATE CASCADE` with `ON DELETE CASCADE|SET NULL`. That covers all 13 `valid/` files, `migrations/1..3` applied cumulatively, and `issues/issue52`, `issues/issue70`. All pass, including `relations.sql`'s time-series relation `sponsor_id` (`SET NULL`/`CASCADE`, nullable). No test builds a group table inline: the inline schemas in `test_migrations.cpp` and `test_database_ui_metadata.cpp` have collections only. No binding has its own `.sql`. So no fixture other than `duplicate_attribute_time_series.sql` changes.
-- **Error messages** (root `AGENTS.md`, "C++ Error Message Patterns"): every validator message goes through `validation_error`, i.e. Pattern 3 `Failed to validate schema: <reason>`. The three vector messages are kept word for word. The only change is that the word "Vector" becomes the `kind` argument.
+- **Error messages** (root `CLAUDE.md`, "C++ Error Message Patterns"): every validator message goes through `validation_error`, i.e. Pattern 3 `Failed to validate schema: <reason>`. The three vector messages are kept word for word. The only change is that the word "Vector" becomes the `kind` argument.
 - **Lazy schema loading** (root Design Decision): `Database(path)` / `open()` validates on the first metadata/CRUD call. An existing database *file* with a non-conforming set or time-series table therefore opens, and its first use then fails. The CHANGELOG says so. Do not change the loading design.
 - **"Clean code over defensive code … Delete unused code"** (root Principles): the dead guards are deleted, not kept "just in case".
-- **Tests at every layer** (root `AGENTS.md` / task rules): the rule is visible wherever a schema is opened: C++, the C API, and all four bindings. Lua has no schema-opening entry point. Its only route to the validator is `db:validate_migrations`, which calls the same `migrate_up → load_schema_metadata → SchemaValidator::validate` as C++ `validate_migrations`, and the Lua binding (`src/lua_runner.cpp`, `validate_migrations` lambda) forwards the exception unchanged. No Lua test is added.
+- **Tests at every layer** (root `CLAUDE.md` / task rules): the rule is visible wherever a schema is opened: C++, the C API, and all four bindings. Lua has no schema-opening entry point. Its only route to the validator is `db:validate_migrations`, which calls the same `migrate_up → load_schema_metadata → SchemaValidator::validate` as C++ `validate_migrations`, and the Lua binding (`src/lua_runner.cpp`, `validate_migrations` lambda) forwards the exception unchanged. No Lua test is added.
 - **Alternatives rejected:**
   - A separate `validate_time_series_table` plus set-specific parent code: duplicates the vector block three times. One helper, called for all three kinds, is the whole fix.
   - Using `TableDefinition::get_foreign_key("id")` in the helper. `PRAGMA foreign_key_list` lists FKs in *reverse* declaration order (confirmed), so with two FKs on `id`, "first FK on `id`" is not "the parent FK". The helper keeps the current predicate (`from_column == "id" && to_table == parent`), and plan 59 leaves these loops alone for the same reason.
@@ -831,7 +831,7 @@ rejected when the schema is loaded. The bindings convert their native datetime t
 this format automatically.
 ```
 
-### Root `AGENTS.md` — "Schema Conventions" → "### Foreign Keys"
+### Root `CLAUDE.md` — "Schema Conventions" → "### Foreign Keys"
 
 Current (currently ~L529-530):
 ```
@@ -848,7 +848,7 @@ key, in any table, must use `ON UPDATE CASCADE` with `ON DELETE CASCADE` or `ON 
 (a `SET NULL` column must be nullable).
 ```
 
-### `src/AGENTS.md` — "Core Internals Worth Knowing"
+### `src/CLAUDE.md` — "Core Internals Worth Knowing"
 
 Insert a new bullet directly after the `- **Schema metadata loads lazily** (\`Impl::require_schema\`): …` bullet, which ends `… Rationale in the root design decisions.`:
 ```
@@ -861,7 +861,7 @@ Insert a new bullet directly after the `- **Schema metadata loads lazily** (\`Im
   set rows or make `delete_element` fail with SQLite's `FOREIGN KEY constraint failed`.
 ```
 
-### `tests/AGENTS.md` — "Schemas (`tests/schemas/`)" → the `invalid/` bullet
+### `tests/CLAUDE.md` — "Schemas (`tests/schemas/`)" → the `invalid/` bullet
 
 Current:
 ```
@@ -882,7 +882,7 @@ New:
   trailing-comma syntax error while pointing its FKs at a table that did not exist.
 ```
 
-### `bindings/js/src/lua-api.ts`, binding READMEs, binding `AGENTS.md` files
+### `bindings/js/src/lua-api.ts`, binding READMEs, binding `CLAUDE.md` files
 
 No change. None of them describe schema-validation rules (checked: grep for `CASCADE` / `REFERENCES` / `schema valid`).
 
@@ -949,7 +949,7 @@ From the repo root. Bash commands are for Git Bash; the `.bat` lines can be run 
 - [ ] New tests pass in C++ (4), C API (1), Julia (4), Dart (4), Python (1) and JS (1), and each of them fails on the pre-change code.
 - [ ] Every `valid/`, `migrations/` and `issues/` schema, and every schema added by plans 01–05, still loads: the full suites are green.
 - [ ] Both `HydroPlant_set_gaugingstations` doc examples declare the parent FK. The vector, set and time-series `id` bullets in `rules.md` and `attributes.md`, and the `time_series.md` paragraph, state the rule.
-- [ ] Root `AGENTS.md` Foreign Keys, `src/AGENTS.md` Core Internals and the `tests/AGENTS.md` `invalid/` list are updated.
+- [ ] Root `CLAUDE.md` Foreign Keys, `src/CLAUDE.md` Core Internals and the `tests/CLAUDE.md` `invalid/` list are updated.
 - [ ] A **BREAKING** CHANGELOG bullet is under `0.11.0` → `### Changed`. No manifest version bump.
 
 ## Pitfalls
@@ -961,7 +961,7 @@ From the repo root. Bash commands are for Git Bash; the `.bat` lines can be run 
 - **Line endings.** `.sql` files are CRLF in this working tree (`core.autocrlf=true`, `* text=auto`), and git stores them LF. Writing the new files with LF is fine: git normalizes them. When rewriting `duplicate_attribute_time_series.sql`, replace the whole file rather than patching it with `sed`. `.bat` files must not be touched.
 - **Message wrapping in tests.** clang-format may re-wrap the long `HasSubstr` string literals. Adjacent string literals concatenate, so a re-wrap is harmless. Check that no space was lost at a split point: `"… parent collection "` + `"'Collection'"`.
 - **`EXPECT_THAT` with a lambda.** Commas inside the lambda body are protected only because they sit inside the `from_schema(...)` parentheses. Do not add a top-level comma to a lambda body passed straight into the macro.
-- **Dart native cache.** `dart test` builds its own copy of the native library through the native-assets hook (`bindings/dart/AGENTS.md`). If the new Dart tests still see the old behaviour (the schemas are accepted), clear `bindings/dart/.dart_tool/hooks_runner/` and `.dart_tool/lib/` and re-run.
+- **Dart native cache.** `dart test` builds its own copy of the native library through the native-assets hook (`bindings/dart/CLAUDE.md`). If the new Dart tests still see the old behaviour (the schemas are accepted), clear `bindings/dart/.dart_tool/hooks_runner/` and `.dart_tool/lib/` and re-run.
 - **Existing database files.** `open()` validates lazily. A test or user database created before this change with a non-conforming set or time-series table opens, and then its first metadata or CRUD call fails. No test in the repo keeps such a file. This is the documented breaking behaviour, so do not add a compatibility path.
 - **`test-all.bat` step 7** fails until plan 65 lands (missing `example/example1.lua`). It is unrelated to this change.
 
