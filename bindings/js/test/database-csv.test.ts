@@ -303,6 +303,39 @@ describe("CSV options", () => {
 });
 
 // ============================================================================
+// Import of a CSV that omits an element
+// ============================================================================
+
+describe("CSV import omitting an element", () => {
+  test("the omitted element's group rows are deleted", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    const csvPath = tempCsv("import_omitted");
+    try {
+      db.createElement("Items", {
+        label: "Dropped",
+        name: "Alpha",
+        measurement: [1.5, 2.5],
+        tag: ["red"],
+      });
+      const kept = db.createElement("Items", { label: "Kept", name: "Beta", measurement: [9.5] });
+      writeFileSync(csvPath, "sep=,\nlabel,name,status,price,date_created,notes\nKept,Beta,,,,\n");
+
+      db.importCsv("Items", "", csvPath);
+
+      expect(db.readElementIds("Items")).toEqual([kept]);
+      expect(db.readVectorFloatsById("Items", "measurement", kept)).toEqual([9.5]);
+      const orphans = (table: string) =>
+        db.queryInteger(`SELECT COUNT(*) FROM ${table} WHERE id NOT IN (SELECT id FROM Items)`);
+      expect(orphans("Items_vector_measurements")).toBe(0);
+      expect(orphans("Items_set_tags")).toBe(0);
+    } finally {
+      db.close();
+      cleanup(csvPath);
+    }
+  });
+});
+
+// ============================================================================
 // Import inside an explicit transaction
 // ============================================================================
 

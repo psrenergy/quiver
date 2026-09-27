@@ -142,8 +142,12 @@ Settled questions — don't relitigate without the user; each was decided delibe
   depth alone does not bound a table that shares sub-tables), a string that is not valid UTF-8
   (JSON must be UTF-8, a Lua string need not), and a table where an integer key and a string key
   spell the same thing (two Lua keys, one JSON key — refused rather than silently dropped).
-- **`import_csv` refuses to run inside an open transaction** (`PRAGMA foreign_keys` is a no-op
-  mid-transaction, so nesting is unsupportable) — Pattern 1 precondition, not a silent rollback.
+- **`import_csv` refuses to run inside an open transaction** — Pattern 1 precondition, not a silent
+  rollback. Import opens its own transaction (a raw `BEGIN`, rolled back on any error), so nested
+  inside a caller's transaction its `BEGIN` would fail and that `ROLLBACK` would discard the
+  caller's work. The original reason (import toggled `PRAGMA foreign_keys`, a no-op
+  mid-transaction) is gone: import now keeps foreign keys on throughout. Whether to let it nest
+  instead is an open decision for the maintainer.
 - **`BinaryMetadata::number_of_time_dimensions()` is derived** from `dimensions`, never stored.
 - **One C API error channel**: everything (LuaRunner included) reports via
   `quiver_get_last_error`; no per-handle error channels.
@@ -289,7 +293,8 @@ Settled questions — don't relitigate without the user; each was decided delibe
   Excel's trailing empty columns. It also runs `require_well_formed_quotes` before parsing. **Do not
   remove that check.** csv-parser keeps text after a closing quote as a literal and stays inside the
   quote, so `"a" ,b\n"c",d` parses as one row whose cell count can still match the header, and
-  import deletes the table before inserting. The check judges import's own read of the file while
+  import deletes before it writes (a scalar import every element the CSV omits, a group import the
+  whole group table). The check judges import's own read of the file while
   csv-parser re-reads it by name, so that read fails closed: a regular file it cannot read in full
   is rejected rather than judged empty (a byte-range lock fails `ReadFile` but not csv-parser's
   mapped reads). `db:read_csv` is read-only and deliberately stays lenient.
@@ -626,6 +631,16 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
   then rejected — so any table with a relation could not round-trip. Floats are written with
   `std::to_chars` (shortest exact round-trip); `%g` was used first and silently truncated to 6
   significant digits.
+  **A scalar `import_csv` makes the collection match the CSV by label, with foreign keys on**: an
+  element whose label is in the file is updated in place (its id, group rows and inbound relations
+  survive), a new label is inserted, and an element the file omits is deleted exactly as
+  `delete_element` would delete it — its group rows cascade away and every relation to it follows
+  its `ON DELETE` action (`SET NULL` clears it, `CASCADE` deletes the referencing row, which can be
+  an element of another collection). A label may appear only once, and an import whose deletions
+  would cascade into an element the CSV keeps (a CASCADE cycle through another collection) is
+  refused and rolled back. Import used to switch foreign keys off and delete-then-reinsert every
+  row, which orphaned the omitted elements' group rows and left relations pointing at deleted ids.
+  Mechanism and ordering: `src/AGENTS.md`.
 
 ### Element Class
 Builder for element creation with fluent API:

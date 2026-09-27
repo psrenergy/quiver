@@ -333,9 +333,12 @@ because the dry run holds a real transaction. `end_dry_run` guards its rollback 
 `sqlite3_get_autocommit` because a caller can end the transaction out from under it with a bare
 `COMMIT` through `query_*`. Rationale and the documented consequences: root design decisions.
 
-The one write path that cannot nest is `import_csv` (it toggles `PRAGMA foreign_keys`, which is a
-no-op inside a transaction) — it throws `"Cannot import_csv: transaction already active"` as a
-precondition instead of silently destroying the caller's transaction.
+The one write path that cannot nest is `import_csv`: it opens its own transaction with a raw
+`impl_->begin_transaction()` (not `TransactionGuard`) and rolls back on any error, so inside a
+caller's transaction the `BEGIN` would fail and the `ROLLBACK` would discard the caller's work. It
+throws `"Cannot import_csv: transaction already active"` as a precondition instead. (It used to
+toggle `PRAGMA foreign_keys`, a no-op mid-transaction, which was the original reason; it no longer
+does. Whether it should nest instead is an open decision.)
 
 ## Move Semantics
 
@@ -390,6 +393,30 @@ impl_->logger->debug("Opening database: {}", path);
 - **`Impl::require_element`** (`database_impl.h`) is the single `SELECT 1 ... WHERE id = ?` guard
   behind the Pattern 2 `"Element not found: ..."` message, shared by `update_element`,
   `delete_element`, and both group writers.
+- **`import_csv`'s scalar path keeps foreign keys ON** (`database_csv_import.cpp`) and runs, in one
+  transaction and in this order, every step load-bearing: (1) set every self-FK column to NULL, so
+  that (2) deleting each existing element whose label the CSV omits (`DELETE ... WHERE id = ?`,
+  firing CASCADE / SET NULL exactly as `delete_element`) cannot cascade through a stale
+  `ON DELETE CASCADE` self-reference into an element the CSV keeps; (3) check, with one
+  `read_element_ids`, that every kept element survived the deletes, and otherwise throw
+  `Cannot import_csv: Deleting the elements the CSV omits would also delete element '<label>'
+  through an ON DELETE CASCADE chain.` — a CASCADE cycle through another collection can still
+  reach one, and the upsert would silently re-insert it by its preserved id without its group
+  rows; (4) write every CSV row with `INSERT ... ON CONFLICT(id) DO UPDATE SET col = excluded.col`,
+  binding the preserved id (NULL for a new label), so a kept element is updated in place and keeps
+  its group rows and inbound relations; (5) the self-FK label pass. Never `INSERT OR REPLACE`: its
+  implicit delete fires the ON DELETE actions and wipes the group rows of the very elements being
+  kept. Clearing *every* FK column in (1), rather than refusing in (3), was implemented and
+  reverted: blanking a relation to another collection on every row breaks any `CHECK` that
+  involves it (`kind = 0 OR bus_id IS NOT NULL`), even for an unchanged re-import, while the
+  upsert writes each row whole. A kept row whose CSV cell names an element the deletions cascade
+  away fails the import on its foreign key. Deleting before writing also frees an omitted
+  element's values in any other `UNIQUE` column; handing such a value from a kept element to a row
+  written before it (any swap does) still fails (row-by-row UPDATEs) and rolls the import back,
+  except in a self-FK column, which (1) cleared. A repeated label is rejected in the validation
+  pass, since the upsert would otherwise let the last row win silently. The group path needs
+  nothing special: it deletes and re-inserts one group table whose ids and FK cells are all
+  resolved to existing elements.
 - **Label→id resolution has one query** (`database_impl.h`): `Impl::lookup_id_by_label(table,
   label, db)` is the only `SELECT id ... WHERE label = ?`, shared by `Impl::resolve_label`
   (Pattern 2, backs every `_by_label` form) and `Impl::resolve_fk_label` (Pattern 3) — the two

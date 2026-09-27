@@ -223,8 +223,8 @@ Rules worth knowing:
   its BEGIN/COMMIT are absorbed. The flip side: a nested \`db:rollback\` does **not** partially
   undo — everything is undone when the dry run ends, whatever the nested calls asked for.
 - \`db:in_transaction()\` still reports \`true\` during a dry run: a real transaction is open.
-- \`db:import_csv\` cannot run inside a dry run (it toggles a pragma that is a no-op mid-transaction)
-  and throws \`Cannot import_csv: transaction already active\`.
+- \`db:import_csv\` cannot run inside a dry run (it manages its own transaction, and a dry run is a
+  real one) and throws \`Cannot import_csv: transaction already active\`.
 - **Dry runs do not nest.** The host may have already opened one around your whole script, in which
   case both \`db:begin_dry_run()\` and \`db:dry_run(fn)\` (which calls it internally) error with
   \`Cannot begin_dry_run: dry run already active\` — check \`db:in_dry_run()\` first and skip the
@@ -610,9 +610,9 @@ The optional \`options\` table has two keys:
 }
 \`\`\`
 
-**Precondition:** \`db:import_csv\` cannot run inside an open transaction (it toggles
-\`PRAGMA foreign_keys\`, a no-op mid-transaction) — it throws \`Cannot import_csv: transaction already
-active\`. Call it outside any \`db:transaction\` / \`db:begin_transaction\` block.
+**Precondition:** \`db:import_csv\` cannot run inside an open transaction (it opens and commits its
+own) — it throws \`Cannot import_csv: transaction already active\`. Call it outside any
+\`db:transaction\` / \`db:begin_transaction\` block.
 
 ---
 

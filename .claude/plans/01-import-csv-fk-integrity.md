@@ -999,3 +999,71 @@ Run from the repo root (`C:\Development\Quiver\quiver1`):
 - Enforcing CASCADE parent FKs on set and time-series tables (plan 06).
 - Allowing `UNIQUE` value swaps between kept elements in one import. This would need deferred constraints or a two-phase write, and no schema in the repo has such a column.
 - Noticed but owned by no plan: the root `AGENTS.md` sentence "(self-references are excluded on both sides, since the target rows are the ones being rewritten)" in the export/import FK paragraph is stale. Export now writes a self-reference's label (`ExportImportCSV_SelfForeignKeyRoundTrips`). It is left untouched here.
+
+## Implementation notes
+
+Implemented at base `1b81f1b`. One commit, not pushed.
+
+### Design change (maintainer-approved): refuse a cascade into a kept element
+
+The pre-flight adversarial check found a hole in the ordering fix. Clearing self-FK columns covers only the self-reference case. In a CASCADE **cycle between collections** (`Item.tag_pinned → Tag`, `Tag.item_owner → Item`, both `ON DELETE CASCADE`, which the validator allows), deleting an omitted Item cascades through Tag into an Item the CSV keeps. The upsert then silently re-inserts that Item by its preserved id, without its group rows. The Pitfall "exactly as `delete_element` can" was wrong: `delete_element` leaves the row deleted, while import resurrected it.
+
+- **First attempt, reverted:** clear *every* nullable FK column before the deletes. The diff review showed that this breaks any `CHECK` involving a nullable relation column (`CHECK (kind = 0 OR bus_id IS NOT NULL)`), even for an unchanged `export_csv` → `import_csv` round trip. It was reproduced through `quiver_cli`; the old code handled it.
+- **Shipped:** Step 5 exactly as written (clear self-FK columns only). After the delete loop, one `read_element_ids(collection)` checks that every kept element still exists. If one is missing, the import throws Pattern 1 `Cannot import_csv: Deleting the elements the CSV omits would also delete element '<label>' through an ON DELETE CASCADE chain.` inside the try, so the existing catch rolls back. This fails closed for any cascade into a kept element, including through NOT NULL FKs, and does not regress CHECK. The same round trip now succeeds.
+- **Extra schema and test:**
+  - `tests/schemas/valid/csv_import_cascade_cycle.sql` (Item/Tag cycle plus `Item_vector_weights`);
+  - `DatabaseCSV.ImportCSV_Scalar_OmittedElement_CascadeIntoKeptElement_Throws`, which asserts the exact message and a full rollback.
+
+  The test fails on the old code (the import succeeds) and when the check is disabled.
+- **Docs updated to match:**
+  - `src/AGENTS.md`: the bullet is now five steps, and records the reverted clear-all attempt and why.
+  - `tests/AGENTS.md`: both new schemas.
+  - root `AGENTS.md` and CHANGELOG: one sentence on the refusal, plus an *Adapt* hint to re-point the relation first.
+
+### Drift fixed
+
+1. **CHANGELOG placement.** 0.11.0 was released (tag `v0.11.0` = 58dfe7a), and the maintainer added an empty `## [0.12.0] — unreleased`. The plan's anchor ("after the export_csv() quoting entry, before `### Fixed`") now pointed inside the released 0.11.0 section. The entry went under a new `### Changed` in `[0.12.0]`.
+2. **Lua test raw string.** The plan's `R"( ... )"` was terminated early by the `)"` in `(SELECT id FROM Items)"`, and would not compile. It is now `R"LUA( ... )LUA"`, the delimiter already used in the tests.
+3. **UNIQUE wording.** "Swap" understated the case. Row-by-row upserts fail whenever a non-label UNIQUE value is handed to a row written *before* the kept row that gives it up; a new row taking a kept row's value counts. A self-FK column is the exception, since step 1 clears it. The wording is fixed in the CHANGELOG *Adapt* note and in `src/AGENTS.md`.
+4. **Stale "deletes the table before inserting".** Root `AGENTS.md` ("One CSV parser" decision) and the `require_well_formed_quotes` comment in `database_csv_import.cpp` now read "deletes before it writes". The root sentence also names both paths.
+5. **Formatting.** The Julia/JS lines that exceeded the formatter width were written pre-wrapped. `scripts/format.bat` also rewrote 20 unrelated JS files, CRLF → LF only, with no content diff. Those were restored with `git checkout`.
+6. **Cosmetic.**
+   - The JS anchor is at L305-307.
+   - The Verification baseline is 113 filtered tests, not 84. After this plan it is 119, since the old cycle test was replaced by the refusal test.
+   - `ExportCSV_GroupForeignKeyWritesLabel` also calls `import_csv` and is unaffected.
+   - The "match by substring" wording is inaccurate: the C++ and C API tests compare the full message. The tests were kept as written.
+
+### Test evidence
+
+- **Before the fix, failing as the plan predicts:**
+  - C++: HeaderOnly (counts 2/1), OmittedElement (2/1/1), OmittedParent, and the cycle test;
+  - Lua: `orphaned vector rows: 2`;
+  - C API: OmittedElement (2/1) and OmittedParent (`has_value` 1);
+  - Julia, Dart, Python and JS: orphan count 2 each.
+- **Guards that pass on the old code, by design:** RepeatedExistingLabel (C++, C API) and DoesNotCascadeThroughSelfReference.
+- **Mutation checks** on the fixed code:
+  - dropping the duplicate check fails RepeatedExistingLabel;
+  - dropping the self-FK clear fails DoesNotCascadeThroughSelfReference;
+  - disabling the survival check fails CascadeIntoKeptElement_Throws.
+
+  The existing `ImportCSV_Scalar_DuplicateEntries_Throws` does **not** guard Step 4 (new-label duplicates still collide on `label` UNIQUE); RepeatedExistingLabel is the real guard.
+- **After the fix:** filtered suites 119/119 C++ and 46/46 C API. Full suites 1299 C++, 560 C API, Julia 1433, Dart 418, JS 207, Python 304. `scripts/test-all.bat` passes the six suites. The CLI smoke test fails with `Script file not found: ...\example\example1.lua`, which is pre-existing and owned by plan 65.
+
+### For later plans
+
+- **22:** step 4 must also migrate the new `quiver_database_query_integer(db, sql, &orphans, &has_value)` loop in `tests/test_c_api_database_csv_import.cpp` (`ImportCSV_Scalar_OmittedElement_DeletesItsGroupRows`). Plan 22's text lists only the older caller.
+- **53:** rewrite the new `execute(...)` calls in `import_csv` (self-FK clear, omitted-id delete). The survival check calls the public `read_element_ids`.
+- **58:** preserve the order (clear self-FKs → delete omitted → survival check → upsert → self-FK pass), the upsert, the Step 4 duplicate check, and the survival check. The new throw is Pattern 1 and passes through the shared catch (no `UNIQUE constraint` in it).
+- **60:** with `TransactionGuard` the precondition's stated reason changes again. Update the root/src `AGENTS.md` and `lua-api.ts` rationale written here.
+- **06:** the fail-closed cases are broader than this plan's Pitfall said.
+  - A time-series *parent* FK is not validated at all. If it is `NO ACTION`/`RESTRICT`, the import now fails when it deletes an omitted element with time-series rows; if it is absent, orphans remain as before.
+  - A set parent FK declared `ON DELETE SET NULL` leaves rows whose id is NULL.
+
+  Enforcing CASCADE there closes these.
+
+### Side effects worth knowing
+
+- A repeated label now reports "duplicate entries" before any cell error in the repeated row.
+- A kept row whose CSV cell names an element that the deletions cascade away fails on its foreign key, as raw `Failed to execute statement: FOREIGN KEY constraint failed`, and rolls back.
+- Deleting row by row with foreign keys on scans unindexed referencing FK columns for each deleted element. This is accepted. If a large self-referencing import gets slow, index the FK columns.
+- Stale text still left alone, per Out of scope: the root `AGENTS.md` parenthetical "(self-references are excluded on both sides …)".
