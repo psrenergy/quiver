@@ -981,7 +981,7 @@ No change. Nothing there describes the bindings' per-cell dispatch (checked with
 
 ### `CHANGELOG.md`
 
-Under `## [0.11.0] — unreleased`, append this as the **last bullet of `### Changed`**, immediately
+Under `## [0.12.0] — unreleased`, append this as the **last bullet of `### Changed`**, immediately
 before the `### Fixed` heading (earlier plans may have added bullets, so anchor on the heading, not a
 line number):
 
@@ -1054,7 +1054,7 @@ From the repo root (`C:\Development\Quiver\quiver1`), in order:
       fail on the pre-change code.
 - [ ] `bindings/python/AGENTS.md` (5 edits), `bindings/dart/AGENTS.md` (4 edits) and
       `src/AGENTS.md` (1 edit) are updated as specified.
-- [ ] The CHANGELOG bullet is under `## [0.11.0] — unreleased` → `### Changed`, prefixed
+- [ ] The CHANGELOG bullet is under `## [0.12.0] — unreleased` → `### Changed`, prefixed
       **BREAKING**, with an *Adapt:* line.
 - [ ] `scripts/format.bat` leaves no diff, and `scripts/test-all.bat` is green.
 

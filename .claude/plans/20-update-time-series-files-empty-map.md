@@ -92,7 +92,7 @@ These early returns are also the odd ones out inside their own bindings. Each bi
   - "Error Messages: … Bindings retrieve and surface them — they never craft their own." The new tests assert the core's text verbatim.
   - "Clean code over defensive code … Delete unused code."
 - Root AGENTS.md, "Self-Updating": keep the nearest AGENTS.md current. The Dart zero-byte gotcha and the JS null-table convention are recorded in their binding's AGENTS.md, and the cross-layer contract goes in the root Core API list.
-- Root AGENTS.md, "Changelog": user-visible changes are listed under the unreleased 0.11.0. This is not marked **BREAKING**: every call whose result changes was already rejected by C++, C and Lua, and it writes nothing either way. The maintainer note calls it a "behaviour change", not BREAKING, unlike the notes for analogous items such as 07. It goes under **Fixed**.
+- Root AGENTS.md, "Changelog": user-visible changes are listed under the unreleased 0.12.0. This is not marked **BREAKING**: every call whose result changes was already rejected by C++, C and Lua, and it writes nothing either way. The maintainer note calls it a "behaviour change", not BREAKING, unlike the notes for analogous items such as 07. It goes under **Fixed**.
 - No C API signature changes, so **no FFI regeneration**: Julia `c_api.jl`, Dart `bindings.dart`, Python `_c_api.py` and JS `loader.ts` are untouched.
 - No Design Decision or Do-Not-Fix entry covers this early return. `git log -S` traces it to each binding's first time-series-files commit with no stated reason: 682397b (Julia, Dart), be60222 (Python), f70392c (JS).
 
@@ -415,7 +415,7 @@ No new schema files: every test uses `tests/schemas/valid/collections.sql`, whic
 
 4. No edits to `bindings/julia/AGENTS.md` or `bindings/python/AGENTS.md`: they state nothing about this path, and deleting a guard adds no rule worth recording. No edits to `bindings/js/src/lua-api.ts` either: plans 43/44 own the `update_time_series_files` prose there, and Lua behaviour does not change. No README or `docs/*.md` mentions an empty map.
 
-5. **`CHANGELOG.md`**, under `## [0.11.0] — unreleased` → `### Fixed` (currently ~L67), appended as the last bullet of that list:
+5. **`CHANGELOG.md`**, under `## [0.12.0] — unreleased` → `### Fixed` (currently ~L67), appended as the last bullet of that list:
    ```markdown
    - **Julia, Dart, Python, JS: `update_time_series_files` with an empty map validates the
      collection.** The four bindings returned before calling the core when the map was empty, so
@@ -450,7 +450,7 @@ Run from the repo root (`C:\Development\Quiver\quiver1`). Use Git Bash for the e
 - [ ] Each binding raises `Cannot update_time_series_files: collection not found: NoSuchCollection` for an empty map on an unknown collection, pinned by one new test per binding.
 - [ ] New C++, C API and Lua tests pin the core order (validate, then no-op on empty) and pass.
 - [ ] No C API, `c_api.jl`, `bindings.dart`, `_c_api.py` or `loader.ts` change.
-- [ ] Root, Dart and JS AGENTS.md updated as specified. CHANGELOG `### Fixed` entry under 0.11.0 added.
+- [ ] Root, Dart and JS AGENTS.md updated as specified. CHANGELOG `### Fixed` entry under 0.12.0 added.
 - [ ] `scripts\format.bat` leaves no diff outside the listed files. `scripts\test-all.bat` is green.
 
 ## Pitfalls

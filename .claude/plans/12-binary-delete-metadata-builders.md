@@ -62,14 +62,14 @@ This change violates no principle. It applies two: "Delete unused code, do not d
 
 - **Maintainer decision (binding), from the item's notes:**
   - Scope is only the binary-metadata part. The element counters and `quiver_clear_last_error` belong to plan 21.
-  - The change is BREAKING, with a CHANGELOG entry under 0.11.0.
+  - The change is BREAKING, with a CHANGELOG entry under 0.12.0.
   - Port the getter and null-argument C API tests to `from_toml` handles.
   - Move the useful C++ builder-test checks onto `from_element` / `from_toml_content`.
   - Regenerate Julia `c_api.jl`. Dart does not bind binary.
 - Root `AGENTS.md`, Principles: "WIP project - breaking changes acceptable"; "Delete unused code, do not deprecate"; "All public C++ methods should be bound to C API". That last rule is why the C++ half is deleted too.
 - Root `AGENTS.md`, Design Decisions: "Binary + expression subsystems are exposed in Julia and Lua only". So there is no Dart, Python or JS work: `bindings/dart/lib/src/ffi/bindings.dart`, `bindings/python/src/quiverdb/_c_api.py` and `bindings/js/src/loader.ts` hold no `quiver_binary_metadata_*` symbol (verified by grep).
 - `src/c/AGENTS.md`: "the C API never re-implements validation or error messages that exist in C++".
-- Versioning: 0.11.0 is unreleased and is already a minor bump over 0.10.9, so no manifest bump is needed. The two verifiers' "bump the 0.x minor version" step is already satisfied and is dropped.
+- Versioning: 0.12.0 is unreleased and is already a minor bump over 0.10.9, so no manifest bump is needed. The two verifiers' "bump the 0.x minor version" step is already satisfied and is dropped.
 - `bindings/julia/AGENTS.md`: "`src/c_api.jl` GENERATED low-level FFI module (do not hand-edit; regenerate)".
 - Self-Updating: fix the AGENTS.md lines that name the builders:
   - root `AGENTS.md` ~L717;
@@ -876,7 +876,7 @@ quiver_binary_metadata_from_toml/from_element/free
 
 Do not touch the `## Return Codes` exception list at ~L49. It belongs to plan 21.
 
-**`CHANGELOG.md`**: under `## [0.11.0] — unreleased`, add a new `### Removed` section after the last `### Changed` entry and before `### Fixed`. That is Keep a Changelog order: Added, Changed, Removed, Fixed. If an earlier plan already created `### Removed` under 0.11.0, append this bullet to it instead.
+**`CHANGELOG.md`**: under `## [0.12.0] — unreleased`, add a new `### Removed` section after the last `### Changed` entry and before `### Fixed`. That is Keep a Changelog order: Added, Changed, Removed, Fixed. If an earlier plan already created `### Removed` under 0.12.0, append this bullet to it instead.
 
 ```markdown
 ### Removed
@@ -974,7 +974,7 @@ Run from the repo root, in order.
   - the 3 new `BinaryMetadataFromTomlContent.Error*` tests pass.
 - [ ] The Julia 1960 test comment names `quiver_binary_metadata_from_element`, not `set_initial_datetime`.
 - [ ] The root `AGENTS.md` row, the `src/AGENTS.md` Builders/Factories lines and the `src/c/AGENTS.md` lifecycle block are updated. CRLF is preserved.
-- [ ] `CHANGELOG.md` 0.11.0 has the `### Removed` **BREAKING** entry with an *Adapt:* line.
+- [ ] `CHANGELOG.md` 0.12.0 has the `### Removed` **BREAKING** entry with an *Adapt:* line.
 - [ ] The `git grep` in Verification step 6 prints nothing. `scripts/test-all.bat` passes.
 
 ## Pitfalls

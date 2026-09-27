@@ -49,7 +49,7 @@ The current behaviour is correct, and this plan changes no code. Nothing reprodu
 - `include/quiver/c/database.h` (comment above `quiver_database_read_vector_group_by_id`, ~L227-230): the result is *"Freed by quiver_database_free_time_series_data"*. The test frees it that way.
 - `src/c/AGENTS.md` "Multi-Column Time Series": in `update_*_group` a NULL `column_has_value` entry means that column is dense. The maintainer asked for "a mask". The test passes an explicit all-ones mask for `code` and `{1, 0}` for `weight`, so every mask entry is readable at a glance.
 - `tests/AGENTS.md`, "Schemas": *"every set value column must be part of the UNIQUE constraint"*. `Items_set_codes` already declares `UNIQUE (id, code, weight)`. SQLite treats each NULL as distinct, so `('beta', NULL)` inserts fine. No schema change is needed.
-- Test-only change with no user-visible behaviour, so no CHANGELOG entry. None of the 0.11.0 entries are test-only.
+- Test-only change with no user-visible behaviour, so no CHANGELOG entry. None of the 0.12.0 entries are test-only.
 
 Alternatives considered and rejected:
 - **`relations.sql`** (the vector test's fixture): its set groups have one column each, so the test could not check two names, two type tags and a NULL in a non-first column. The maintainer chose `multi_column_groups.sql`.

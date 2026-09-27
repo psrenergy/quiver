@@ -339,8 +339,8 @@ TEST(DatabaseDryRun, ImportCsvStillRefusesToNest) {
         ":memory:", VALID_SCHEMA("csv_export.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
 
     db.begin_dry_run();
-    // import_csv toggles PRAGMA foreign_keys, which is a no-op mid-transaction — the dry run's
-    // transaction is a real one, so the existing precondition still fires.
+    // import_csv manages its own transaction and refuses to nest; the dry run's transaction is a
+    // real one, so that precondition still fires.
     EXPECT_THROW(db.import_csv("Items", "", "does_not_matter.csv"), std::runtime_error);
     db.end_dry_run();
 }

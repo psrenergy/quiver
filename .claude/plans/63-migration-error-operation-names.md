@@ -74,7 +74,7 @@ either text, update it to the `from_schema` wording. Also search bindings for th
 
 ## Docs and changelog
 
-- `CHANGELOG.md`, `## [0.11.0] — unreleased` → `### Changed`:
+- `CHANGELOG.md`, `## [0.12.0] — unreleased` → `### Changed`:
   ```markdown
   - **Migration and schema-file errors name the method you called.** `from_migrations`,
     `validate_migrations` and `from_schema` now report e.g. `Failed to validate_migrations: down

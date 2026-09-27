@@ -8,7 +8,7 @@
 - **49 / 50** rewrite `list_vector_metadata_lua`, `list_set_metadata_lua`, `read_vectors_by_id_lua` and `read_sets_by_id_lua` in `src/lua_runner.cpp`. This plan does not touch that file. The Lua test added here must still pass after those plans, and it will as long as those functions still call `db.list_*_groups`.
 - **02 / 03 / 04** edit other functions in `src/database_time_series.cpp`. Only the file is shared.
 - **76** edits a different bullet of `src/AGENTS.md`. Only the file is shared.
-- **01–06** all append to `CHANGELOG.md` `### Changed` / `### Fixed` under 0.11.0. Append your entry, don't overwrite theirs.
+- **01–06** all append to `CHANGELOG.md` `### Changed` / `### Fixed` under 0.12.0. Append your entry, don't overwrite theirs.
 
 ## Why
 
@@ -55,8 +55,8 @@ Current behaviour confirmed with the built binary: `./build/bin/quiver_tests.exe
 
 ## Constraints and decisions
 
-- **Maintainer decision (binding):** "BREAKING; CHANGELOG under 0.11.0. Do not fold in the require_group_table refactor (plan 57)." The three bodies stay as they are apart from their first line. Don't collapse them into one loop.
-- **Root AGENTS.md, Changelog + Versioning:** 0.11.0 is unreleased and is already the minor bump over 0.10.9. The entry goes under `## [0.11.0] — unreleased`, prefixed **BREAKING**, and says what a caller must do. **No manifest bump.** (Correction: the facts verifier asked for a "0.x minor version bump across all five manifests". That bump has already happened, so it is not part of this change.)
+- **Maintainer decision (binding):** "BREAKING; CHANGELOG under 0.12.0. Do not fold in the require_group_table refactor (plan 57)." The three bodies stay as they are apart from their first line. Don't collapse them into one loop.
+- **Root AGENTS.md, Changelog + Versioning:** 0.12.0 is unreleased and is already the minor bump over 0.10.9. The entry goes under `## [0.12.0] — unreleased`, prefixed **BREAKING**, and says what a caller must do. **No manifest bump.** (Correction: the facts verifier asked for a "0.x minor version bump across all five manifests". That bump has already happened, so it is not part of this change.)
 - **Root AGENTS.md, C++ Error Message Patterns, Pattern 1:** `"Cannot {operation}: {reason}"`, where `{operation}` is the public method called. `Impl::require_collection(collection, operation)` (`src/database_impl.h`, currently ~L91) already produces exactly `Cannot <op>: collection not found: <collection>`. Reuse it; add no new helper or message.
 - **Root AGENTS.md, Error Messages:** bindings never craft their own messages. The composites `read_vectors_by_id` / `read_sets_by_id` are binding-side conveniences with no C++ counterpart, so the error they surface names the core call they delegate to (`Cannot list_vector_groups: …`). `read_scalars_by_id` already does the same today (`Cannot list_scalar_attributes: …`). Leave it; re-wrapping it in a binding would break the rule.
 - **Root AGENTS.md, "Intelligence: Logic resides in C++ layer":** the fix goes in the three C++ functions only. The C API wrappers (`src/c/database_metadata.cpp` `quiver_database_list_vector_groups` / `_list_set_groups`, `src/c/database_time_series.cpp` `quiver_database_list_time_series_groups`) already catch `std::exception` and call `quiver_set_last_error(e.what())`. The Lua wrappers (`src/lua_runner.cpp` `list_vector_metadata_lua`, `list_set_metadata_lua`, `list_time_series_groups_lua`, `read_vectors_by_id_lua`, `read_sets_by_id_lua`) and every binding's `check(...)` pass the error through. No C API signature changes, so no FFI regeneration (Julia `c_api.jl`, Dart `bindings.dart`, Python `_c_api.py`, JS `loader.ts` all stay untouched).
@@ -373,7 +373,7 @@ New:
 
 None. `bindings/js/src/lua-api.ts` (Lists section, currently ~L521, and Composite by-id reads, ~L372), `bindings/js/README.md`, the binding docstrings and the C/C++ header comments don't mention the unknown-collection behaviour, so none of them is wrong after this change. No binding `AGENTS.md` mentions it either (grep `-i "unknown collection\|collection not found\|list_.*group"` over all `AGENTS.md` files).
 
-### `CHANGELOG.md`: append as the **last bullet of `### Changed`** under `## [0.11.0] — unreleased` (immediately before `### Fixed`; keep any bullets plans 01–06 added)
+### `CHANGELOG.md`: append as the **last bullet of `### Changed`** under `## [0.12.0] — unreleased` (immediately before `### Fixed`; keep any bullets plans 01–06 added)
 
 ```markdown
 - **BREAKING — `list_vector_groups()`, `list_set_groups()` and `list_time_series_groups()` throw
@@ -414,7 +414,7 @@ From the repo root (`C:\Development\Quiver\quiver1`), in order:
 - [ ] Every existing "real collection with no groups returns empty" test still passes unchanged.
 - [ ] No change to any C API header, `src/c/*`, `src/lua_runner.cpp`, FFI declaration file or binding source file.
 - [ ] Root `AGENTS.md` List-groups line and `src/AGENTS.md` Table-classification bullet updated as quoted above.
-- [ ] `CHANGELOG.md` has the **BREAKING** entry as the last bullet of `### Changed` under 0.11.0. No manifest version changed.
+- [ ] `CHANGELOG.md` has the **BREAKING** entry as the last bullet of `### Changed` under 0.12.0. No manifest version changed.
 - [ ] `scripts/format.bat` leaves no further diff. `scripts/test-all.bat` is green (apart from any pre-existing CLI smoke failure owned by plan 65).
 
 ## Pitfalls

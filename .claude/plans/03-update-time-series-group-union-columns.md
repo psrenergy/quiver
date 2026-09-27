@@ -57,7 +57,7 @@ The workaround spread outward instead of being fixed in C++. The C API decoder (
 - **Maintainer decisions (binding):** "No C API test (the decoder always emits uniform rows). Remove the rows[0] caveat text from all five places." The five places are `src/c/database_helpers.h` (comment above `unmarshal_group_columns_to_rows`), `src/lua_runner.cpp` (comment above `columns_to_cpp_rows`), `src/c/AGENTS.md` (twice, in "Multi-Column Time Series") and `src/AGENTS.md` (the `time_series_rows_from_lua` bullet). Running `grep -rn 'from rows\[0\]\|from \`rows\[0\]\`' src/ include/` today matches exactly those five lines.
 - Root AGENTS.md "Intelligence: Logic resides in C++ layer. Bindings/wrappers remain thin." The fix belongs in the core.
 - Root AGENTS.md "Self-Updating". `src/AGENTS.md` is the AGENTS.md nearest to `src/database_time_series.cpp`, so it gets a sentence. `src/c/AGENTS.md` is nearest to `src/c/database_helpers.h`.
-- Root AGENTS.md "Changelog". This is a user-visible fix for C++ callers, so it goes under `## [0.11.0] — unreleased` → `### Fixed`. It is not BREAKING, and no manifest bump is needed (0.11.0 is already the unreleased minor).
+- Root AGENTS.md "Changelog". This is a user-visible fix for C++ callers, so it goes under `## [0.12.0] — unreleased` → `### Fixed`. It is not BREAKING, and no manifest bump is needed (0.12.0 is already the unreleased minor).
 - Root design decision "Time-series group NULLs round-trip via a per-cell presence mask … Lua is mask- and sentinel-free: NULL is plain `nil` … value columns may be short/sparse/empty (missing cells write NULL)". This plan keeps all of that. The padding code in the C API decoder and in Lua stays; only its stated rationale changes.
 - `tests/AGENTS.md`: `test_database_time_series_group.cpp` is where "group read/update + validation" tests live, so the new C++ test goes there, not in `test_database_update.cpp`.
 - Error-message patterns are unaffected, because no message is added or changed.
@@ -355,7 +355,7 @@ No change. None of them mention the `rows[0]` behaviour. `docs/time_series.md` a
 
 ### `CHANGELOG.md`
 
-Under `## [0.11.0] — unreleased` → `### Fixed`, append after the last existing bullet (the Julia `Artifacts.toml` entry, just before `## [0.10.9] — 2026-09-25`):
+Under `## [0.12.0] — unreleased` → `### Fixed`, append after the last existing bullet (the Julia `Artifacts.toml` entry, just before `## [0.10.9] — 2026-09-25`):
 
 ```
 - **`update_time_series_group()` writes a value column that only a later row names.** The C++
@@ -397,7 +397,7 @@ Run from the repo root `C:\Development\Quiver\quiver1`:
 - [ ] The padding/pre-fill code in `unmarshal_group_columns_to_rows` and `columns_to_cpp_rows` is unchanged.
 - [ ] `src/AGENTS.md`'s `Impl::update_group_rows` bullet notes that `update_time_series_group` uses the same union.
 - [ ] The public header comment on `update_time_series_group` states the column contract.
-- [ ] The CHANGELOG `0.11.0 → Fixed` entry is present and not marked BREAKING.
+- [ ] The CHANGELOG `0.12.0 → Fixed` entry is present and not marked BREAKING.
 - [ ] No C API, Lua or binding test was added. No generator was run and no FFI declaration changed.
 - [ ] All C++ / C API / binding suites pass.
 

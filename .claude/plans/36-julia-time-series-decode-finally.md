@@ -196,7 +196,7 @@ the error path, not a failing-first test. Say so in the commit message.
   line to the "Always `GC.@preserve`" area:
   > - **Free C results in `finally`** when decoding can throw (DateTime parsing, metadata lookups),
   >   as `read_time_series_group` does — Python's readers follow the same shape.
-- `CHANGELOG.md`, `## [0.11.0] — unreleased` → `### Fixed`:
+- `CHANGELOG.md`, `## [0.12.0] — unreleased` → `### Fixed`:
   ```markdown
   - **Julia: `read_time_series_group` no longer leaks when decoding fails.** A dimension value that
     is not a valid date (possible in a database written before the DATE_TIME write gate, or by raw

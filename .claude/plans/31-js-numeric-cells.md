@@ -134,7 +134,7 @@ have rejected. Also **Homogeneity**: Dart (`database_update.dart` `_marshalGroup
   never with a `DataView`. The mask loop is kept exactly as it is.
 - `bindings/js/AGENTS.md`: "There is pre-existing lint debt in untouched files — fix only what
   your change orphans".
-- Status is WIP and breaking changes are acceptable. 0.11.0 is already a minor bump, so no manifest
+- Status is WIP and breaking changes are acceptable. 0.12.0 is already a minor bump, so no manifest
   change is needed.
 
 Rejected alternatives:
@@ -643,7 +643,7 @@ All of these stay green without edits. Re-run them; do not change them:
      Both halves of that are load-bearing. *Before* the choice, because `Number.isInteger(true)` is
      `false`, and a boolean would otherwise land in the column as FLOAT 1.0 with no error. *Per
      cell*, because a boolean branch chosen from the first cell truthiness-maps the rest:
-     `setElementArray` had one until 0.11.0 and rewrote a mixed `[true, 5]` array to `[1, 1]`.
+     `setElementArray` had one until 0.12.0 and rewrote a mixed `[true, 5]` array to `[1, 1]`.
      `numericCells` also **throws on any other non-null cell**, with `Cannot <caller>: numeric
      column '<name>' has unsupported value type <typeof> in cell <r>`. Such a cell fails
      `Number.isInteger` and tags the column FLOAT, and `setFloat64` would convert it with no error:
@@ -663,7 +663,7 @@ unaffected.
 
 ### `CHANGELOG.md`
 
-Put this under `## [0.11.0] — unreleased` → `### Changed`, as the last bullet of that subsection,
+Put this under `## [0.12.0] — unreleased` → `### Changed`, as the last bullet of that subsection,
 immediately before `### Fixed`. Earlier plans may have added bullets there; append after them.
 
 ```markdown

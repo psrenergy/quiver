@@ -32,8 +32,8 @@ Principle: Homogeneity, meaning mechanically derivable names.
 
 - **Maintainer decision (binding):** rename only. Keep `read_scalar_date_time_by_id` singular: it
   returns one optional value. Keep Julia's `read_time_series_row(...; date_time::DateTime)` keyword
-  as is. BREAKING, with a CHANGELOG entry under 0.11.0 listing old and new names. Update the root
-  AGENTS.md table. No manifest bump is needed (0.11.0 is already the unreleased minor).
+  as is. BREAKING, with a CHANGELOG entry under 0.12.0 listing old and new names. Update the root
+  AGENTS.md table. No manifest bump is needed (0.12.0 is already the unreleased minor).
 - No aliases or deprecation shims. Root principle: "Delete unused code, do not deprecate."
 - Julia does not `export` these names (`bindings/julia/src/Quiver.jl` has no export list for them);
   callers use `Quiver.<name>`. Python has no `__init__.py` re-export of them either.
@@ -115,7 +115,7 @@ Add one small test per binding pinning that the old name is gone, so an alias ca
   Re-align the Markdown columns if the table uses padded columns.
 - Grep for other mentions: `grep -rn "date_time_by_id" docs/ bindings/*/AGENTS.md bindings/python/README* bindings/julia/README*`.
   Update any hit except `read_scalar_date_time_by_id`.
-- `CHANGELOG.md`, `## [0.11.0] — unreleased` → `### Changed`:
+- `CHANGELOG.md`, `## [0.12.0] — unreleased` → `### Changed`:
   ```markdown
   - **BREAKING — Julia/Python: two date-time readers are renamed to the plural form.**
     `read_vector_date_time_by_id` → `read_vector_date_times_by_id` and `read_set_date_time_by_id` →

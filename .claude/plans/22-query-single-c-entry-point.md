@@ -83,7 +83,7 @@ Principles violated: "Delete unused code", "Homogeneity" (bindings disagree on w
 ## Constraints and decisions
 
 - **Maintainer decision (binding):** "BREAKING (C only; binding APIs unchanged). Also thread the operation name into convert_params so messages say "Cannot query_string:" (error-message#5). JS passes null (not ptr of an empty array) with count 0. Julia collapses to one method per type with parameters::Vector = [] (also query_boolean/query_date_time)."
-- **Root `AGENTS.md` Versioning / task facts:** 0.11.0 is unreleased and already a minor bump over 0.10.9. The entry goes under `## [0.11.0] — unreleased`, prefixed **BREAKING**. **Do not bump any manifest.** (Corrects the policy verifier, who asked for a minor bump.)
+- **Root `AGENTS.md` Versioning / task facts:** 0.12.0 is unreleased and already a minor bump over 0.10.9. The entry goes under `## [0.12.0] — unreleased`, prefixed **BREAKING**. **Do not bump any manifest.** (Corrects the policy verifier, who asked for a minor bump.)
 - **Root `AGENTS.md` "Error Messages":** messages live in the C++/C API layer. Both messages here are owned by the C API (`convert_params`), so they change there. No binding crafts them. No binding can trigger them either: every binding marshals only the four known type tags and never a NULL string pointer.
 - **`bindings/dart/AGENTS.md`, "The checked-in `bindings.dart` predates the pinned ffigen (20.1.1)":** regenerating turns `quiver_data_type_t` / `quiver_error_t` / `quiver_log_level_t` into Dart enums and breaks hub. **Hand-edit `bindings.dart` in its existing style. Do not run `bindings/dart/generator/generator.bat` or `scripts/generator.bat`** (the latter runs all three generators). (Corrects the original proposal and the policy verifier, who said "regenerate Julia/Dart".)
 - **`bindings/julia/AGENTS.md`:** "`src/c_api.jl` GENERATED low-level FFI module (do not hand-edit; regenerate)". Run `bindings/julia/generator/generator.bat` only. Also: "Always `GC.@preserve`: refs produced by `marshal_params` ... must stay inside a `GC.@preserve refs ...` block spanning the ccall". Keep that wrapper.
@@ -1138,7 +1138,7 @@ None of the binding additions fail before the change: they pin that the collapse
 
 **No other docs.** `docs/*.md`, the READMEs (`bindings/js/README.md` documents `queryString(sql, parameters?)`, which is unchanged) and `bindings/js/src/lua-api.ts` do not mention the C symbols.
 
-**`CHANGELOG.md`** (CRLF). Under `## [0.11.0] — unreleased` → `### Changed`, append at the end of the `### Changed` list, after the last bullet, which is currently the `export_csv()` quoting entry ending "*Adapt:* regenerate golden files and any byte-for-byte comparisons over exported CSVs.", and before `### Removed` or `### Fixed`, whichever comes first:
+**`CHANGELOG.md`** (CRLF). Under `## [0.12.0] — unreleased` → `### Changed`, append at the end of the `### Changed` list, after the last bullet, which is currently the `export_csv()` quoting entry ending "*Adapt:* regenerate golden files and any byte-for-byte comparisons over exported CSVs.", and before `### Removed` or `### Fixed`, whichever comes first:
 
 ```
 - **BREAKING — C API: one `quiver_database_query_*` function per type.** `quiver_database_query_string`,
@@ -1180,7 +1180,7 @@ From the repo root (`C:\Development\Quiver\quiver1`), in order:
 - [ ] `_c_api.py` declares only the three 7-argument query functions. The Python query methods make one FFI call each.
 - [ ] `loader.ts` lists only the three 7-argument query symbols. `marshalParams` returns `null, null, 0n` for no parameters. The `bun:ffi` `ptr` import is gone from `query.ts`.
 - [ ] New omitted-parameters assertions in the Julia, Python, Dart and JS parameter-count tests. The Python `routes_to_simple` test is renamed.
-- [ ] `src/c/AGENTS.md`, `bindings/dart/AGENTS.md` and `bindings/js/AGENTS.md` updated as specified. CHANGELOG 0.11.0 `### Changed` has the **BREAKING** bullet with an *Adapt:* line. No manifest version changed.
+- [ ] `src/c/AGENTS.md`, `bindings/dart/AGENTS.md` and `bindings/js/AGENTS.md` updated as specified. CHANGELOG 0.12.0 `### Changed` has the **BREAKING** bullet with an *Adapt:* line. No manifest version changed.
 - [ ] Verification steps 1-10 pass, and step 11 passes except the pre-existing CLI smoke failure.
 
 ## Pitfalls

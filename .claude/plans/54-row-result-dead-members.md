@@ -108,7 +108,7 @@ Compiling the test file is the check. Any leftover use of a deleted member fails
 
 - `src/AGENTS.md` file map line `row.h / result.h  # Row and Result query-result types`: no change
   needed.
-- `CHANGELOG.md`, under `## [0.11.0] — unreleased` → `### Removed` (create the heading if absent):
+- `CHANGELOG.md`, under `## [0.12.0] — unreleased` → `### Removed` (create the heading if absent):
   ```markdown
   - **BREAKING (C++ only) — unused `Row`/`Result` members removed:** `Row::size`, `column_count`,
     `empty`, `at`, `is_null`, `begin`, `end` and `Result::Result()`, `column_count`, `at`. They were

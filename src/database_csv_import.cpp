@@ -83,7 +83,7 @@ static std::string to_lower(const std::string& s) {
 // csv-parser keeps a closing quote that is followed by ordinary text as a literal and stays in
 // quoted mode, where separators and line breaks are plain text -- so `"a" ,b\n"c",d` parses as ONE
 // row whose cell count can still match the header, and an unterminated quote swallows the rest of
-// the file. db:read_csv tolerates that, but import deletes the table before inserting, so a silently
+// the file. db:read_csv tolerates that, but import deletes before it writes, so a silently
 // merged row is lost data: reject both shapes before parsing. A quote opens a field only as its
 // first byte, exactly as in csv-parser; inside one, `""` is an escaped quote.
 static void require_well_formed_quotes(std::string_view text, char separator) {
@@ -306,8 +306,8 @@ void Database::import_csv(const std::string& collection,
                           const CSVOptions& options) {
     impl_->require_collection(collection, "import_csv");
 
-    // Import toggles PRAGMA foreign_keys, which is a no-op inside a transaction,
-    // and manages its own transaction — so it cannot run inside an explicit one.
+    // Import manages its own transaction (a raw BEGIN, and a ROLLBACK on any error), so inside a
+    // caller's transaction its BEGIN would fail and that ROLLBACK would discard the caller's work.
     if (in_transaction()) {
         throw std::runtime_error("Cannot import_csv: transaction already active");
     }
@@ -361,17 +361,6 @@ void Database::import_csv(const std::string& collection,
     }
 
     auto row_count = csv.rows.size();
-    if (row_count == 0) {
-        execute_raw("PRAGMA foreign_keys = OFF");
-        try {
-            execute_raw("DELETE FROM " + table_name);
-            execute_raw("PRAGMA foreign_keys = ON");
-        } catch (...) {
-            execute_raw("PRAGMA foreign_keys = ON");
-            throw;
-        }
-        return;
-    }
 
     // Find the CSV column index for each db column
     std::unordered_map<std::string, size_t> csv_col_index;
@@ -386,8 +375,8 @@ void Database::import_csv(const std::string& collection,
 
         const auto* table_def = impl_->schema->get_table(collection);
 
-        // Capture label -> id before the delete so re-inserted elements keep their
-        // ids; otherwise foreign keys in other tables would silently re-point.
+        // Capture label -> id before any write: it decides which elements are updated in place (keeping
+        // their ids, so relations to them hold) and which ones the CSV omits and are deleted.
         auto existing_label_to_id = build_label_to_id_map(*this, collection);
 
         // Build FK map: column_name -> ForeignKey
@@ -404,8 +393,13 @@ void Database::import_csv(const std::string& collection,
             }
         }
 
-        // Validation pass: check all cells before mutating
+        // Validation pass: check all cells before mutating. A label may appear only once: an existing
+        // label is written in place by its id below, so a repeat would silently overwrite the first row.
+        std::set<std::string> csv_labels;
         for (size_t row = 0; row < row_count; ++row) {
+            if (!csv_labels.insert(csv.rows[row][csv_col_index.at("label")]).second) {
+                throw std::runtime_error("Cannot import_csv: There are duplicate entries in the CSV file.");
+            }
             for (const auto& col_name : db_cols) {
                 const auto& cell = csv.rows[row][csv_col_index[col_name]];
                 const auto* col_def = table_def->get_column(col_name);
@@ -451,22 +445,62 @@ void Database::import_csv(const std::string& collection,
             }
         }
 
-        // Data import: disable FK → DELETE → INSERT → enable FK
-        execute_raw("PRAGMA foreign_keys = OFF");
+        std::vector<std::string> self_fk_cols;
+        for (const auto& [col_name, fk] : fk_map) {
+            if (fk.to_table == collection) {
+                self_fk_cols.push_back(col_name);
+            }
+        }
+
+        // Data import, in one transaction and with foreign keys on throughout, so every ON DELETE
+        // action fires exactly as it does for delete_element.
         try {
             impl_->begin_transaction();
 
-            execute_raw("DELETE FROM " + collection);
+            // Clear self-references first: an ON DELETE CASCADE self-reference from a kept element to
+            // an omitted one would otherwise delete the kept element along with it. The second pass
+            // below restores them from the CSV's labels.
+            for (const auto& col_name : self_fk_cols) {
+                execute("UPDATE " + collection + " SET " + col_name + " = NULL");
+            }
 
-            // Build INSERT statement; id is inserted explicitly (it is not one of db_cols).
+            // Delete the elements the CSV omits: their group rows cascade away and every relation to
+            // them follows its ON DELETE action (SET NULL clears it, CASCADE deletes the row).
+            for (const auto& [label, id] : existing_label_to_id) {
+                if (!csv_labels.contains(label)) {
+                    execute("DELETE FROM " + collection + " WHERE id = ?", {id});
+                }
+            }
+
+            // A cascade can still reach a kept element through another collection (a cycle of ON DELETE
+            // CASCADE relations), and the upsert below would bring it back without its group rows.
+            // Refuse instead; the rollback restores everything.
+            auto remaining = read_element_ids(collection);
+            std::set<int64_t> remaining_ids(remaining.begin(), remaining.end());
+            for (const auto& [label, id] : existing_label_to_id) {
+                if (csv_labels.contains(label) && !remaining_ids.contains(id)) {
+                    throw std::runtime_error("Cannot import_csv: Deleting the elements the CSV omits would also delete "
+                                             "element '" +
+                                             label + "' through an ON DELETE CASCADE chain.");
+                }
+            }
+
+            // Write every row by id (id is not one of db_cols): an existing label's id updates its row
+            // in place, keeping its group rows and every relation pointing at it; a new label's NULL id
+            // gets a fresh one. Never INSERT OR REPLACE: its implicit delete would cascade as well.
             std::string insert_cols = "id";
             std::string insert_placeholders = "?";
+            std::string update_assignments;
             for (const auto& col : db_cols) {
                 insert_cols += ", " + col;
                 insert_placeholders += ", ?";
+                if (!update_assignments.empty()) {
+                    update_assignments += ", ";
+                }
+                update_assignments += col + " = excluded." + col;
             }
-            auto insert_sql =
-                "INSERT INTO " + collection + " (" + insert_cols + ") VALUES (" + insert_placeholders + ")";
+            auto insert_sql = "INSERT INTO " + collection + " (" + insert_cols + ") VALUES (" + insert_placeholders +
+                              ") ON CONFLICT(id) DO UPDATE SET " + update_assignments;
 
             for (size_t row = 0; row < row_count; ++row) {
                 std::vector<Value> parameters;
@@ -528,14 +562,7 @@ void Database::import_csv(const std::string& collection,
                 execute(insert_sql, parameters);
             }
 
-            // Second pass: resolve self-referencing FKs
-            std::vector<std::string> self_fk_cols;
-            for (const auto& [col_name, fk] : fk_map) {
-                if (fk.to_table == collection) {
-                    self_fk_cols.push_back(col_name);
-                }
-            }
-
+            // Second pass: resolve self-referencing FKs, now that every CSV row exists
             if (!self_fk_cols.empty()) {
                 auto self_label_to_id = build_label_to_id_map(*this, collection);
 
@@ -560,10 +587,8 @@ void Database::import_csv(const std::string& collection,
             }
 
             impl_->commit();
-            execute_raw("PRAGMA foreign_keys = ON");
         } catch (const std::exception& e) {
             impl_->rollback();
-            execute_raw("PRAGMA foreign_keys = ON");
 
             std::string msg = e.what();
             if (msg.find("UNIQUE constraint") != std::string::npos) {
@@ -703,8 +728,8 @@ void Database::import_csv(const std::string& collection,
             }
         }
 
-        // Data import: disable FK → DELETE → INSERT → enable FK
-        execute_raw("PRAGMA foreign_keys = OFF");
+        // Data import: DELETE → INSERT in one transaction. Every id and FK cell was resolved to an
+        // existing element above, so the inserts need no foreign-key relaxation.
         try {
             impl_->begin_transaction();
 
@@ -773,10 +798,8 @@ void Database::import_csv(const std::string& collection,
             }
 
             impl_->commit();
-            execute_raw("PRAGMA foreign_keys = ON");
         } catch (const std::exception& e) {
             impl_->rollback();
-            execute_raw("PRAGMA foreign_keys = ON");
 
             std::string msg = e.what();
             if (msg.find("UNIQUE constraint") != std::string::npos) {

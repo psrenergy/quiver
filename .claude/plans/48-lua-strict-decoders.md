@@ -261,7 +261,7 @@ pass.
   - The `quiver.metadata{...}` kwargs paragraph (`grep -n "quiver.metadata" bindings/js/src/lua-api.ts`):
     add "Only the eight keys above are accepted; an unknown key or a value of the wrong type throws."
   - Escape backticks as `\``.
-- `CHANGELOG.md`, under `## [0.11.0] — unreleased` → `### Changed`:
+- `CHANGELOG.md`, under `## [0.12.0] — unreleased` → `### Changed`:
   ```markdown
   - **BREAKING — Lua: `db:export_csv`/`db:import_csv` options, `quiver.metadata{...}` and
     `expr:rename_agents` reject unknown keys and wrong types.** A misspelled key (`date_format`,

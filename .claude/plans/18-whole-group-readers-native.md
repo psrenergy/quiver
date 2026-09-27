@@ -13,7 +13,7 @@
 - **36** (Julia `read_time_series_group` frees in `finally`) and **40** (Dart group decoders free in `finally`): this plan deliberately leaves `read_time_series_group` (Julia, Python, JS logic) and Dart's `_decodeGroupRows` unchanged apart from moving the JS body. The new Julia/Python decoders already free in `finally`.
 - **42** (rename `read_{vector,set}_date_time_by_id` → `_date_times_by_id`): after this plan, `read_vector_group_by_id` / `read_set_group_by_id` no longer call those functions, so plan 42 has two fewer call sites (`read_vectors_by_id` / `read_sets_by_id` still call them).
 - **41** (stale "not positionally aligned" comments), **30** (Python stale docstrings, `_c_api.py` header), **21 / 22** (`_c_api.py` / `loader.ts` symbol edits), **74** (JS README), **75** (`tests/AGENTS.md`): these touch the same files, not the same lines. This plan adds two README lines, and plan 74 does the full listing.
-- **01–17** may already have added `### Added` / `### Fixed` entries under `## [0.11.0] — unreleased`. Append to them; don't overwrite.
+- **01–17** may already have added `### Added` / `### Fixed` entries under `## [0.12.0] — unreleased`. Append to them; don't overwrite.
 
 ## Why
 
@@ -1188,7 +1188,7 @@ Under `### Read (by ID)`, after `- readSetStringsById(collection, attribute, id)
 
 No edit. Its "do that read in the host binding" (~L391) and "the row-aligned whole-group readers the other bindings have" (~L856) become true for JS with this change. Plans 43/44 own that file.
 
-### `CHANGELOG.md`, under `## [0.11.0] — unreleased`
+### `CHANGELOG.md`, under `## [0.12.0] — unreleased`
 
 Add an `### Added` section **above** `### Changed` if no earlier plan created one (Keep a Changelog order: Added, Changed, …, Fixed), then append:
 
@@ -1239,7 +1239,7 @@ From the repo root (Git Bash paths shown; the `.bat` files also run from PowerSh
 - [ ] New tests exist and pass in Julia (3 testsets), Python (4 methods), and JS (6 tests). The three SQL-workaround assertions (Julia `test_database_update.jl`, Python `test_accepts_null_cells`, JS "writes null cells as SQL NULL") now go through the reader.
 - [ ] The C++, C API, Dart, Julia, Python and JS suites are all green. `bun run lint` is clean for the touched files. `scripts/format.bat` was applied.
 - [ ] Root, Julia, Python, JS and tests AGENTS.md are updated as specified. The "Multi-column group readers" block is gone, and two rows were added to the cross-layer table. The JS README has the two lines.
-- [ ] CHANGELOG has the `### Added` (JS) and `### Fixed` (Julia/Python) entries under 0.11.0. Neither is marked BREAKING.
+- [ ] CHANGELOG has the `### Added` (JS) and `### Fixed` (Julia/Python) entries under 0.12.0. Neither is marked BREAKING.
 
 ## Pitfalls
 

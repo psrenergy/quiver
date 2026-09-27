@@ -191,7 +191,7 @@ If none exists, skip it: the change is the same shape and code review covers it.
 - `bindings/dart/AGENTS.md`: add one line near the `LuaRunner.run` note on freeing (currently
   ~L95-98): "The columnar group decoders (`_decodeGroupRows`, `readTimeSeriesGroup`) free the C
   result in their own `finally` for the same reason."
-- `CHANGELOG.md`, under `## [0.11.0] — unreleased` → `### Fixed`:
+- `CHANGELOG.md`, under `## [0.12.0] — unreleased` → `### Fixed`:
   ```markdown
   - **Dart: the group readers no longer leak when decoding fails.** `readTimeSeriesGroup`,
     `readVectorGroupById` and `readSetGroupById` freed the C result only on success; a date value

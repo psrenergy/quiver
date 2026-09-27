@@ -220,7 +220,7 @@ binding test that pinned `Cannot resolve attribute` changes to the new message.
 - Root AGENTS.md typing-policy decision: "a string for TEXT / INTEGER-FK / DATE_TIME" stays true as
   a policy statement, so no edit is needed. If it says "`TypeValidator` and `value_matches_type`
   share this rule", make it "`TypeValidator` delegates to `value_matches_type`".
-- `CHANGELOG.md`, under `## [0.11.0] — unreleased` → `### Changed`:
+- `CHANGELOG.md`, under `## [0.12.0] — unreleased` → `### Changed`:
   ```markdown
   - **`create_element`/`update_element` errors name the operation.** A string written to a non-FK
     INTEGER column now reports `Cannot create_element: type mismatch for column 'x': expected

@@ -55,12 +55,12 @@ No test at any layer calls `read_time_series_row` on `multi_dim_time_series.sql`
 
 ## Constraints and decisions
 
-- **Maintainer decision (binding):** "BREAKING. Do both the Pattern 1 guard (after find_dimension_columns succeeds) and the ON-clause IS NOT NULL. CHANGELOG under 0.11.0 (already a minor bump; no manifest bump)."
+- **Maintainer decision (binding):** "BREAKING. Do both the Pattern 1 guard (after find_dimension_columns succeeds) and the ON-clause IS NOT NULL. CHANGELOG under 0.12.0 (already a minor bump; no manifest bump)."
   - "After find_dimension_columns succeeds" means `internal::find_dimension_columns(*table_def)` runs first. It still throws its Pattern 2 `Dimension column not found: time series table '<t>'` for a table with no primary-key dimension. Only after that does the guard test `.size() > 1`.
 - **Error patterns** (root `AGENTS.md`, "C++ Error Message Patterns"): the guard is Pattern 1, `Cannot {operation}: {reason}`, with `{operation}` set to the public method, `read_time_series_row`. The wording "group '<g>' of collection '<c>'" matches the attribute-miss message in this same function (`Time series attribute not found: '<a>' in group '<g>' of collection '<c>'`).
 - **Error messages live in C++** (root `AGENTS.md`, "Principles"): bindings only pass the message through. No binding crafts its own message or adds a pre-check.
 - **Tests at every layer where the behaviour is visible**: C++, C API, Lua, Julia, Dart, Python and JS all surface the new error, so each gets one test.
-- **Changelog** (root `AGENTS.md`, "Principles"): a **BREAKING** entry under `## [0.11.0] — unreleased` that says what a caller must do. 0.11.0 is already the minor bump, so no manifest change is needed.
+- **Changelog** (root `AGENTS.md`, "Principles"): a **BREAKING** entry under `## [0.12.0] — unreleased` that says what a caller must do. 0.12.0 is already the minor bump, so no manifest change is needed.
 - **Self-Updating**: the contract is written in root `AGENTS.md` ("Core API", "Time series row" bullet). `src/AGENTS.md` does not describe `read_time_series_row`, so the root bullet is the one to edit.
 - **Multi-dimension groups remain a supported feature** (`docs/time_series.md`, "It is also possible to add more dimensions ... such as `block`"). Only this single-row reader refuses them. `read_time_series_group`, `update_time_series_group` and `upsert_time_series_row` keep working on them.
 - Alternatives considered and rejected:
@@ -456,7 +456,7 @@ Keep every backtick escaped as `\``. `test/lua-api-sync.test.ts` checks names on
   ```
 - Julia and JS have no doc comment on this function. Do not add one.
 
-### `CHANGELOG.md` — `## [0.11.0] — unreleased` → `### Changed`
+### `CHANGELOG.md` — `## [0.12.0] — unreleased` → `### Changed`
 
 Append as the **last bullet of `### Changed`**, directly above `### Fixed`. Earlier plans may have added bullets of their own; keep them.
 
@@ -473,7 +473,7 @@ Append as the **last bullet of `### Changed`**, directly above `### Fixed`. Earl
   *Adapt:* read a multi-dimension group with `read_time_series_group` and choose the block yourself.
 ```
 
-No manifest version bump (0.11.0 is already the minor bump).
+No manifest version bump (0.12.0 is already the minor bump).
 
 ## Verification
 
@@ -498,7 +498,7 @@ From the repo root (`C:\Development\Quiver\quiver1`), in order:
 - [ ] All existing single-dimension row-read tests pass unchanged.
 - [ ] No C API signature, FFI declaration or binding wrapper code changed. Only doc comments changed in Dart and Python.
 - [ ] Root `AGENTS.md` "Time series row" bullet, `docs/time_series.md` Rules paragraph, `include/quiver/database.h` comment, and the `lua-api.ts` section are updated as written above.
-- [ ] `CHANGELOG.md` has the **BREAKING** entry as the last bullet of `### Changed` under `## [0.11.0] — unreleased`. No manifest version changed.
+- [ ] `CHANGELOG.md` has the **BREAKING** entry as the last bullet of `### Changed` under `## [0.12.0] — unreleased`. No manifest version changed.
 - [ ] `scripts/format.bat` leaves no diff after it runs a second time.
 
 ## Pitfalls

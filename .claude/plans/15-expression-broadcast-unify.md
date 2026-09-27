@@ -9,7 +9,7 @@
 - **10** adds tests to `tests/test_expression.cpp` and `bindings/julia/test/test_expression.jl` at other anchors (after `AggregateSumOverTimeDimVariable` / in the aggregate section). Only the files are shared.
 - **09** edits the `ExpressionAggregate` bullet of `src/AGENTS.md`'s Expression Subsystem section. This plan edits the `ExpressionBinary`, `ExpressionTernary` and "Validation is eager" bullets and adds one bullet after the last of these. Only the section is shared.
 - **51** re-registers the Lua operator metamethods for `BinaryFile` and `Expression`. The Lua test added here relies on `Expression - Expression`, so it must still pass after plan 51.
-- **01–14** append entries to `CHANGELOG.md` under `## [0.11.0] — unreleased`. Append yours; don't overwrite theirs.
+- **01–14** append entries to `CHANGELOG.md` under `## [0.12.0] — unreleased`. Append yours; don't overwrite theirs.
 
 ## Why
 
@@ -574,7 +574,7 @@ None. `bindings/js/src/lua-api.ts` (the agent-facing Lua reference) documents no
 
 ### `CHANGELOG.md`
 
-Under `## [0.11.0] — unreleased`, append this entry as the last item of `### Changed`, after the last existing `### Changed` entry (currently the `export_csv()` quoting one, or whatever plans 01–14 appended after it) and before `### Fixed`. It has no **BREAKING** prefix (maintainer decision):
+Under `## [0.12.0] — unreleased`, append this entry as the last item of `### Changed`, after the last existing `### Changed` entry (currently the `export_csv()` quoting one, or whatever plans 01–14 appended after it) and before `### Fixed`. It has no **BREAKING** prefix (maintainer decision):
 ```markdown
 - **Expressions: a binary operation accepts two single-label operands whatever their labels are
   called.** `+ - * /`, the comparisons and `&&`/`||` (Julia and Lua `&`/`|`) threw `Cannot apply:
@@ -619,7 +619,7 @@ Run from the repo root (Git Bash). Run the `.bat` scripts from `cmd`/PowerShell,
 - [ ] Ternary output is unchanged: condition-first dims, `then` labels when every operand is single-label, `then`'s `initial_datetime` when no operand has a time dim (pinned by the two new ternary tests).
 - [ ] All pre-existing expression tests pass unchanged in C++, the C API, Lua and Julia.
 - [ ] `src/AGENTS.md` names the single builder and describes the label rule, and there is no remaining mention of `build_ternary_broadcast_metadata`.
-- [ ] `CHANGELOG.md` has the non-BREAKING entry under 0.11.0 `### Changed`.
+- [ ] `CHANGELOG.md` has the non-BREAKING entry under 0.12.0 `### Changed`.
 - [ ] `scripts/format.bat` leaves no diff beyond this plan's files.
 
 ## Pitfalls

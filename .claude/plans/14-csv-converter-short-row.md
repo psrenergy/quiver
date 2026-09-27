@@ -59,7 +59,7 @@ Principles violated: the root AGENTS.md error rule (a precondition failure is Pa
 - **Root AGENTS.md, "C++ Error Message Patterns":** new messages use Pattern 1. The existing binary messages ("Unexpected header in CSV file: ...", "CSV dimension '...' has value ...") predate the patterns, which the root file lists as a known exception. They keep their wording here: this item moves the code that emits them and does not reword them.
 - **Root design decision:** the binary subsystem is exposed in Julia and Lua only. Dart, Python and JS have no binary surface, so there is nothing to change or test there.
 - **`src/AGENTS.md`:** "`CSVConverter` is a plain class composing a `BinaryMetadata` and the CSV `iostream` (no Pimpl, no inheritance)". Kept.
-- **Root "Self-Updating" and "Changelog":** update `src/AGENTS.md`, and add a `### Fixed` entry under `## [0.11.0] — unreleased`. No manifest bump.
+- **Root "Self-Updating" and "Changelog":** update `src/AGENTS.md`, and add a `### Fixed` entry under `## [0.12.0] — unreleased`. No manifest bump.
 
 Alternatives considered and rejected:
 - **`std::getline(ss, f, ',')` for the split.** It drops a trailing empty field, so `1,1,1.0,2.0,` would pass the width check as 4 fields and be accepted silently. The maintainer explicitly rejected it.
@@ -634,7 +634,7 @@ No other AGENTS.md edit is needed:
 - `bindings/julia/AGENTS.md` has no CSVConverter rule.
 - `bindings/js/src/lua-api.ts` documents `db:csv_to_bin(path)` without error semantics, so it needs no change, and `lua-api-sync.test.ts` is unaffected because no binding name changes.
 
-**`CHANGELOG.md`.** Under `## [0.11.0] — unreleased` → `### Fixed`, add this after plan 13's `csv_to_bin` entry if present, otherwise as the last bullet of `### Fixed`:
+**`CHANGELOG.md`.** Under `## [0.12.0] — unreleased` → `### Fixed`, add this after plan 13's `csv_to_bin` entry if present, otherwise as the last bullet of `### Fixed`:
 
 ```
 - **`csv_to_bin()` checks every data row's width against the header.** A row missing a dimension cell

@@ -166,6 +166,31 @@ TEST_F(LuaRunner_ImportCSV, VectorTrailingEmptyColumns) {
     EXPECT_EQ(vals.size(), 2);
 }
 
+TEST_F(LuaRunner_ImportCSV, OmittedElementDeletesItsGroupRows) {
+    auto csv_schema = VALID_SCHEMA("csv_export.sql");
+    auto db = quiver::Database::from_schema(db_path(), csv_schema);
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(
+        db:create_element("Items", { label = "Dropped", name = "Alpha", measurement = {1.5, 2.5}, tag = {"red"} })
+        db:create_element("Items", { label = "Kept", name = "Beta", measurement = {9.5} })
+    )");
+
+    write_lua_csv_file((sandbox / "subset.csv").string(),
+                       "sep=,\nlabel,name,status,price,date_created,notes\nKept,Beta,,,,\n");
+
+    lua.run(R"LUA(
+        db:import_csv("Items", "", "subset.csv")
+        assert(db:number_of_elements("Items") == 1)
+        local vec = db:query_integer("SELECT COUNT(*) FROM Items_vector_measurements WHERE id NOT IN (SELECT id FROM Items)")
+        local set = db:query_integer("SELECT COUNT(*) FROM Items_set_tags WHERE id NOT IN (SELECT id FROM Items)")
+        assert(vec == 0, "orphaned vector rows: " .. vec)
+        assert(set == 0, "orphaned set rows: " .. set)
+    )LUA");
+
+    EXPECT_EQ(db.read_vector_floats_by_id("Items", "measurement", 2), (std::vector<double>{9.5}));
+}
+
 TEST_F(LuaRunner_ImportCSV, InsideTransactionThrows) {
     auto csv_schema = VALID_SCHEMA("csv_export.sql");
     auto db = quiver::Database::from_schema(db_path(), csv_schema);

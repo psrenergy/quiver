@@ -236,8 +236,8 @@ No other test changes. Existing tests keep importing `../src/index.ts`.
 - `bindings/js/README.md`: if it has an exports/types section, mention the constants (plan 74
   rewrites the Types list; if 74 has already landed, add one line: "`DATA_TYPE_*` and
   `LOG_LEVEL_*` constants").
-- `CHANGELOG.md`, under `## [0.11.0] — unreleased` → `### Added` (create the `### Added` heading
-  under 0.11.0 if it does not exist yet; keep the section order Changed / Added / Fixed / Removed
+- `CHANGELOG.md`, under `## [0.12.0] — unreleased` → `### Added` (create the `### Added` heading
+  under 0.12.0 if it does not exist yet; keep the section order Changed / Added / Fixed / Removed
   used in the file):
 
   ```markdown
@@ -266,7 +266,7 @@ From the repo root (`C:\Development\Quiver\quiver1`):
 - [ ] `src/index.ts` exports all five `DATA_TYPE_*` constants.
 - [ ] `test/package-entry.test.ts` exists, imports `../mod.ts`, and passes.
 - [ ] Full JS suite green.
-- [ ] CHANGELOG `### Added` entry under 0.11.0.
+- [ ] CHANGELOG `### Added` entry under 0.12.0.
 
 ## Pitfalls
 

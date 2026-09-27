@@ -5,7 +5,32 @@ All notable changes to Quiver are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entries that require
 callers to change something are prefixed **BREAKING** and say what to do.
 
-## [0.11.0] — unreleased
+## [0.12.0] — unreleased
+
+### Changed
+
+- **BREAKING — `import_csv()` into a collection deletes the elements the CSV omits the way
+  `delete_element()` does.** A scalar import makes the collection match the CSV by label. It used
+  to switch foreign keys off, delete every row and re-insert the CSV's, so an element the CSV left
+  out lost only its collection row: its vector, set and time-series rows stayed behind (still
+  readable by its old id), and every relation to it kept pointing at the deleted id, which
+  `export_csv()` then wrote as a bare number that `import_csv()` rejected. Foreign keys now stay on
+  for the whole import. An element whose label is in the CSV is updated in place, keeping its id,
+  group rows and inbound relations; a new label is inserted; an omitted element is deleted, so its
+  group rows go with it and each relation to it follows the schema's `ON DELETE` action (`SET NULL`
+  clears it, `CASCADE` deletes the referencing row, which can be an element of another collection).
+  A CSV that repeats a label is rejected before anything is written, and an import whose deletions
+  would cascade into an element the CSV keeps (a cycle of `ON DELETE CASCADE` relations through
+  another collection) is refused and rolled back.
+
+  *Adapt:* keep every element you mean to keep in the CSV, since omitting one now also removes
+  what depends on it through `ON DELETE CASCADE`; if an import is refused for cascading into a
+  kept element, re-point that element's relation first. In a schema with a `UNIQUE` column other
+  than `label` (a self-reference aside), an import that hands one of that column's values from an
+  element it keeps to a row listed before it in the CSV (any swap does) now fails and rolls back;
+  route it through a temporary value.
+
+## [0.11.0] — 2026-09-26
 
 ### Changed
 

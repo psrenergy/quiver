@@ -6,7 +6,7 @@ One self-contained implementation plan per review item, written to be executed i
 
 - Execute plans **in numeric order, one at a time**, except where the order notes below say otherwise. Each plan lists its **Depends on** and **Overlaps with** plans in its header, and anchors every edit by function name plus a quoted excerpt, because earlier plans shift line numbers.
 - Every plan ends with Verification and Acceptance criteria. Run the full `scripts/test-all.bat` at the end of each batch.
-- 0.11.0 is unreleased and already a minor bump, so every BREAKING change goes under `## [0.11.0] — unreleased` in `CHANGELOG.md` with no manifest bump.
+- 0.12.0 is unreleased and already a minor bump, so every BREAKING change goes under `## [0.12.0] — unreleased` in `CHANGELOG.md` with no manifest bump.
 - **Quality note:** plans 32–88 were written and checked against the code interactively. Plans 01–31 were written by per-item agents whose adversarial checkers never ran (weekly usage limit). Plan 01 has since been corrected for wrongly named `AGENTS.md` files, and 03 was spot-checked. Give 01–31 a quick read against the code before executing.
 
 ## Order notes (exceptions and tight couplings)
@@ -140,7 +140,7 @@ One self-contained implementation plan per review item, written to be executed i
 | 75 | [tests/AGENTS.md: fix claims that contradict the tests](75-tests-claude-md.md) | low | no | — |
 | 76 | [src/AGENTS.md: query_int_rows location and public-header claim](76-src-claude-md-fixes.md) | low | no | — |
 | 77 | [.github/AGENTS.md: drop the deleted .JuliaFormatter.toml from the mirror file list](77-github-claude-md-juliaformatter-toml.md) | low | no | — |
-| 78 | [CHANGELOG: add [0.11.0] link and fix [0.10.9] compare range](78-changelog-links.md) | low | no | — |
+| 78 | [CHANGELOG: add [0.12.0] link and fix [0.10.9] compare range](78-changelog-links.md) | low | no | — |
 | 79 | [tidy.bat: checkout-name-independent filters and runner discovery](79-tidy-bat.md) | medium (`scripts/tidy.bat` silently lints zero files) | no | — |
 | 80 | [CI dart-coverage: drop the dead build-cpp and copy steps](80-ci-dart-double-build.md) | medium (CI builds the C++ library twice, and three docs repeat a false premise) | no | — |
 | 81 | [Publish workflows: remove redundant version inputs](81-publish-version-inputs.md) | medium (a manual dispatch can publish artifacts under the wrong version) | no | — |

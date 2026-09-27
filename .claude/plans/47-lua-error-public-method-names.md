@@ -99,7 +99,7 @@ if the file uses it):
 
 ## Docs and changelog
 
-- `CHANGELOG.md`, under `## [0.11.0] — unreleased` → `### Fixed`:
+- `CHANGELOG.md`, under `## [0.12.0] — unreleased` → `### Fixed`:
   ```markdown
   - **Lua: conversion errors name the method the script called.** An unsupported value passed to
     `db:create_element`, `db:update_element`(`_by_label`), `db:upsert_time_series_row`(`_by_label`),

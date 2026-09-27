@@ -141,7 +141,7 @@ Search the tests for the old texts and update any hit:
 
 - `tests/AGENTS.md`: add `unsupported_type.sql` to the `invalid/` schema list
   (`grep -n "invalid/" tests/AGENTS.md`).
-- `CHANGELOG.md`, under `## [0.11.0] — unreleased` → `### Changed`:
+- `CHANGELOG.md`, under `## [0.12.0] — unreleased` → `### Changed`:
   ```markdown
   - **Schema errors name the offending column.** A column type Quiver does not support now fails
     with `Failed to validate schema: column 'payload' in table 'Items' has unsupported type 'BLOB'`

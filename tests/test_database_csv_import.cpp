@@ -211,7 +211,10 @@ TEST(DatabaseCSV, ImportCSV_Scalar_HeaderOnly_ClearsTable) {
 
     // Populate DB
     quiver::Element e1;
-    e1.set("label", std::string("Item1")).set("name", std::string("Alpha"));
+    e1.set("label", std::string("Item1"))
+        .set("name", std::string("Alpha"))
+        .set("measurement", std::vector<double>{1.1, 2.2})
+        .set("tag", std::vector<std::string>{"red"});
     db.create_element("Items", e1);
 
     // Import header-only CSV
@@ -222,6 +225,9 @@ TEST(DatabaseCSV, ImportCSV_Scalar_HeaderOnly_ClearsTable) {
 
     auto names = db.read_scalar_strings("Items", "name");
     EXPECT_TRUE(names.empty());
+    // Deleted with foreign keys on, so the element's group rows went with it.
+    EXPECT_EQ(db.query_integer("SELECT COUNT(*) FROM Items_vector_measurements"), 0);
+    EXPECT_EQ(db.query_integer("SELECT COUNT(*) FROM Items_set_tags"), 0);
 
     fs::remove(csv_path);
 }
@@ -1810,4 +1816,154 @@ TEST(DatabaseCSV, ImportCSV_InsideTransactionThrows) {
     db.rollback();
 
     fs::remove(csv_path);
+}
+
+// ============================================================================
+// import_csv: an element the CSV omits is deleted with foreign keys ON
+// ============================================================================
+
+// Import used to switch foreign keys off, delete every row and re-insert the CSV's, so an element the
+// CSV left out lost only its collection row: its group rows stayed behind, still readable by id.
+TEST(DatabaseCSV, ImportCSV_Scalar_OmittedElement_DeletesItsGroupRows) {
+    auto db = make_db();
+
+    auto dropped = db.create_element("Items",
+                                     quiver::Element()
+                                         .set("label", std::string("Dropped"))
+                                         .set("name", std::string("Alpha"))
+                                         .set("measurement", std::vector<double>{1.5, 2.5})
+                                         .set("tag", std::vector<std::string>{"red"}));
+    std::vector<std::map<std::string, quiver::Value>> readings = {
+        {{"date_time", std::string("2024-01-01T00:00:00")}, {"temperature", 20.0}, {"humidity", int64_t{50}}}};
+    db.update_time_series_group("Items", "readings", dropped, readings);
+    auto kept = db.create_element("Items",
+                                  quiver::Element()
+                                      .set("label", std::string("Kept"))
+                                      .set("name", std::string("Beta"))
+                                      .set("measurement", std::vector<double>{9.5}));
+
+    auto csv_path = temp_csv("ImportOmittedElement");
+    write_csv_file(csv_path.string(), "sep=,\nlabel,name,status,price,date_created,notes\nKept,Beta2,,,,\n");
+    db.import_csv("Items", "", csv_path.string());
+    fs::remove(csv_path);
+
+    EXPECT_EQ(db.read_element_ids("Items"), (std::vector<int64_t>{kept}));
+    // The kept element was updated in place: new scalar value, same id, group rows intact.
+    EXPECT_EQ(db.read_scalar_string_by_id("Items", "name", kept), "Beta2");
+    EXPECT_EQ(db.read_vector_floats_by_id("Items", "measurement", kept), (std::vector<double>{9.5}));
+    // The dropped element's group rows went with it (ON DELETE CASCADE).
+    for (const std::string table : {"Items_vector_measurements", "Items_set_tags", "Items_time_series_readings"}) {
+        EXPECT_EQ(db.query_integer("SELECT COUNT(*) FROM " + table + " WHERE id = ?", {dropped}), 0) << table;
+    }
+}
+
+// With foreign keys off, deleting an omitted element fired no ON DELETE action: every relation to it
+// kept the deleted id, which export_csv then wrote as a bare number that import_csv rejected.
+TEST(DatabaseCSV, ImportCSV_Scalar_OmittedParent_AppliesOnDeleteActions) {
+    auto db = make_relations_db();
+    auto id_a = db.create_element("Parent", quiver::Element().set("label", std::string("Parent A")));
+    auto id_b = db.create_element("Parent", quiver::Element().set("label", std::string("Parent B")));
+    auto child =
+        db.create_element("Child", quiver::Element().set("label", std::string("Child 1")).set("parent_id", id_b));
+    db.update_vector_group("Child", "refs", child, {{{"parent_ref", id_b}}});                          // SET NULL
+    db.update_set_group("Child", "parents", child, {{{"parent_ref", id_a}}, {{"parent_ref", id_b}}});  // CASCADE
+    std::vector<std::map<std::string, quiver::Value>> events = {
+        {{"date_time", std::string("2024-01-01T00:00:00")}, {"sponsor_id", id_b}}};  // SET NULL
+    db.update_time_series_group("Child", "events", child, events);
+
+    auto csv_path = temp_csv("ImportOmittedParent");
+    write_csv_file(csv_path.string(), "sep=,\nlabel\nParent A\n");
+    db.import_csv("Parent", "", csv_path.string());
+
+    EXPECT_EQ(db.read_element_ids("Parent"), (std::vector<int64_t>{id_a}));
+    EXPECT_FALSE(db.read_scalar_integer_by_id("Child", "parent_id", child).has_value());
+    EXPECT_EQ(db.query_integer("SELECT COUNT(*) FROM Child_vector_refs WHERE id = ? AND parent_ref IS NULL", {child}),
+              1);
+    EXPECT_EQ(db.read_set_integers_by_id("Child", "parent_ref", child), (std::vector<int64_t>{id_a}));
+    EXPECT_EQ(
+        db.query_integer("SELECT COUNT(*) FROM Child_time_series_events WHERE id = ? AND sponsor_id IS NULL", {child}),
+        1);
+
+    // No dangling id is left for export_csv to write, so the Child table round-trips again - and the
+    // re-import updates Child 1 in place, keeping its vector row.
+    db.export_csv("Child", "", csv_path.string());
+    EXPECT_NO_THROW(db.import_csv("Child", "", csv_path.string()));
+    fs::remove(csv_path);
+    EXPECT_EQ(db.query_integer("SELECT COUNT(*) FROM Child_vector_refs WHERE id = ?", {child}), 1);
+}
+
+// An existing label is written in place by its id, so a repeat would let the last row win silently;
+// the validation pass rejects it before anything is written.
+TEST(DatabaseCSV, ImportCSV_Scalar_RepeatedExistingLabel_Throws) {
+    auto db = make_db();
+    db.create_element("Items", quiver::Element().set("label", std::string("Item1")).set("name", std::string("Alpha")));
+
+    auto csv_path = temp_csv("ImportRepeatedExistingLabel");
+    write_csv_file(csv_path.string(),
+                   "sep=,\nlabel,name,status,price,date_created,notes\n"
+                   "Item1,Beta,,,,\n"
+                   "Item1,Gamma,,,,\n");
+
+    expect_import_error(db, "", csv_path, "Cannot import_csv: There are duplicate entries in the CSV file.");
+    fs::remove(csv_path);
+
+    EXPECT_EQ(db.read_scalar_string_by_id("Items", "name", 1), "Alpha");
+}
+
+// Leaf points at Root through an ON DELETE CASCADE self-reference. Deleting the omitted Root while
+// Leaf still pointed at it would delete Leaf too, and re-inserting Leaf by its preserved id would
+// bring the row back without its vector - so import clears self-references before deleting.
+TEST(DatabaseCSV, ImportCSV_Scalar_OmittedElement_DoesNotCascadeThroughSelfReference) {
+    auto db = quiver::Database::from_schema(":memory:",
+                                            VALID_SCHEMA("csv_import_self_cascade.sql"),
+                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
+    auto root = db.create_element("Node", quiver::Element().set("label", std::string("Root")));
+    auto leaf = db.create_element("Node",
+                                  quiver::Element()
+                                      .set("label", std::string("Leaf"))
+                                      .set("node_parent", root)
+                                      .set("weight", std::vector<double>{1.5, 2.5}));
+
+    auto csv_path = temp_csv("ImportSelfCascade");
+    write_csv_file(csv_path.string(), "sep=,\nlabel,node_parent\nLeaf,\n");
+    db.import_csv("Node", "", csv_path.string());
+    fs::remove(csv_path);
+
+    EXPECT_EQ(db.read_element_ids("Node"), (std::vector<int64_t>{leaf}));
+    EXPECT_FALSE(db.read_scalar_integer_by_id("Node", "node_parent", leaf).has_value());
+    EXPECT_EQ(db.read_vector_floats_by_id("Node", "weight", leaf), (std::vector<double>{1.5, 2.5}));
+}
+
+// Item A points at Tag Owned, which belongs to Item B, both through ON DELETE CASCADE relations.
+// Deleting the omitted B cascades to Owned and from Owned back to A; re-inserting A by its preserved
+// id would bring the row back without its vector, so import refuses and rolls back instead.
+TEST(DatabaseCSV, ImportCSV_Scalar_OmittedElement_CascadeIntoKeptElement_Throws) {
+    auto db = quiver::Database::from_schema(":memory:",
+                                            VALID_SCHEMA("csv_import_cascade_cycle.sql"),
+                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
+    auto a = db.create_element(
+        "Item", quiver::Element().set("label", std::string("A")).set("weight", std::vector<double>{1.5, 2.5}));
+    auto b = db.create_element("Item", quiver::Element().set("label", std::string("B")));
+    auto kept_tag = db.create_element("Tag", quiver::Element().set("label", std::string("Kept")));
+    auto owned_tag =
+        db.create_element("Tag", quiver::Element().set("label", std::string("Owned")).set("item_owner", b));
+    db.update_element("Item", a, quiver::Element().set("tag_pinned", owned_tag));
+
+    auto csv_path = temp_csv("ImportCascadeCycle");
+    write_csv_file(csv_path.string(), "sep=,\nlabel,tag_pinned\nA,Kept\n");
+    try {
+        db.import_csv("Item", "", csv_path.string());
+        FAIL() << "expected import_csv to refuse a cascade into a kept element";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(),
+                     "Cannot import_csv: Deleting the elements the CSV omits would also delete element 'A' through an "
+                     "ON DELETE CASCADE chain.");
+    }
+    fs::remove(csv_path);
+
+    // Rolled back: nothing was deleted or rewritten.
+    EXPECT_EQ(db.read_element_ids("Item"), (std::vector<int64_t>{a, b}));
+    EXPECT_EQ(db.read_element_ids("Tag"), (std::vector<int64_t>{kept_tag, owned_tag}));
+    EXPECT_EQ(db.read_scalar_integer_by_id("Item", "tag_pinned", a), owned_tag);
+    EXPECT_EQ(db.read_vector_floats_by_id("Item", "weight", a), (std::vector<double>{1.5, 2.5}));
 }

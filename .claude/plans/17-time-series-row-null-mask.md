@@ -75,7 +75,7 @@ Principles violated:
 - **Julia** (`bindings/julia/AGENTS.md`): `src/c_api.jl` is generated. Regenerate it with `bindings/julia/generator/generator.bat`.
 - **JS** (`bindings/js/AGENTS.md`): the symbol table in `loader.ts` is hand-written. Out-params are passed as the TypedArray (`alloc.buf`), never as a precomputed `ptr()`. A mask is read with `new Uint8Array(toArrayBuffer(...))`, never with a `DataView` over native memory.
 - **Julia type rule** (`bindings/julia/type_stability_followup.md`, "Guiding principle"): "Where a `nothing` can also mean 'no such row / no data / unknown', the optional is inherent". So `read_time_series_row` always returns `Vector{Optional{T}}`, never a concrete `Vector{T}` keyed on `not_null`.
-- **Versioning:** 0.11.0 is unreleased and is already the minor bump over 0.10.9. The **BREAKING** entry goes under `## [0.11.0] — unreleased` and **no manifest version changes**. This corrects both verifiers, who asked for a minor bump.
+- **Versioning:** 0.12.0 is unreleased and is already the minor bump over 0.10.9. The **BREAKING** entry goes under `## [0.12.0] — unreleased` and **no manifest version changes**. This corrects both verifiers, who asked for a minor bump.
 - **Lua is already correct** (`nil` via `value_to_lua_object`). No Lua code changes. One Lua test is added so every layer pins the same contract.
 - **Error messages:** this plan adds no new message. The new `QUIVER_REQUIRE` argument produces the standard `Null argument: out_mask`.
 
@@ -1110,7 +1110,7 @@ always a `Vector{Union{T, Nothing}}`, `T` taken from the attribute's type (`Int6
 
 No change is needed. The Dart doc ("elements with no matching data yield `null`") and the Python docstring ("elements with no matching data yield None") become true. JS has no doc comment. Do not add one.
 
-### `CHANGELOG.md` — `## [0.11.0] — unreleased` → `### Changed`
+### `CHANGELOG.md` — `## [0.12.0] — unreleased` → `### Changed`
 
 Append as the **last bullet of `### Changed`**, directly above `### Fixed`. Keep bullets earlier plans added.
 
@@ -1163,7 +1163,7 @@ Run from the repo root (`C:\Development\Quiver\quiver1`), in order:
 - [ ] The C API tests assert on the mask; no `isnan` assertion remains for this reader. There is a new null-argument case for `out_mask` and a new every-type no-data test.
 - [ ] The new no-data tests exist in Lua, Julia, Dart, Python and JS. The old Julia `isnan` and concrete-type assertions are updated.
 - [ ] `src/c/AGENTS.md`, root `AGENTS.md`, `bindings/{julia,dart,python,js}/AGENTS.md`, `type_stability_followup.md` and `docs/time_series.md` are edited as written above.
-- [ ] `CHANGELOG.md` has the **BREAKING** entry as the last bullet of `### Changed` under 0.11.0. No manifest version is changed.
+- [ ] `CHANGELOG.md` has the **BREAKING** entry as the last bullet of `### Changed` under 0.12.0. No manifest version is changed.
 - [ ] `scripts/test-all.bat` is green.
 
 ## Pitfalls

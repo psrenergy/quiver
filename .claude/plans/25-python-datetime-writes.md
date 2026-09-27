@@ -507,7 +507,7 @@ this format automatically. Python converts a timezone-aware `datetime` to UTC fi
 its readers return; a naive one is written as given.
 ```
 
-**`CHANGELOG.md`**: add under `## [0.11.0] — unreleased` → `### Fixed`, as the first bullet of that section. It is not BREAKING.
+**`CHANGELOG.md`**: add under `## [0.12.0] — unreleased` → `### Fixed`, as the first bullet of that section. It is not BREAKING.
 ```markdown
 - **Python: a `datetime` is accepted on every write path, and an aware one is stored as its UTC
   instant.** `create_element`, `update_element` and `update_element_by_label` (scalar and list
@@ -549,7 +549,7 @@ Run from the repo root (`C:\Development\Quiver\quiver1`) in PowerShell.
 - [ ] `_marshal_params` is unchanged.
 - [ ] The seven new tests pass, and each of them fails on the pre-change sources.
 - [ ] The full Python suite and `scripts/test-all.bat` pass.
-- [ ] `bindings/python/AGENTS.md` (layout line, new bullet, `_marshal_row_columns` note), `docs/time_series.md` and `CHANGELOG.md` (`0.11.0` → `### Fixed`) are updated as specified.
+- [ ] `bindings/python/AGENTS.md` (layout line, new bullet, `_marshal_row_columns` note), `docs/time_series.md` and `CHANGELOG.md` (`0.12.0` → `### Fixed`) are updated as specified.
 - [ ] No C++, C API, Julia, Dart, JS or Lua file is changed.
 
 ## Pitfalls

@@ -69,7 +69,7 @@ clean over clever.
 
 ## Constraints and decisions
 
-- **Maintainer decision (binding):** BREAKING, CHANGELOG under 0.11.0 (already the unreleased minor;
+- **Maintainer decision (binding):** BREAKING, CHANGELOG under 0.12.0 (already the unreleased minor;
   no manifest bump). Rewrite the issue-70 test flat, with a `readTimeSeriesGroup` assertion.
 - Do not add a new "maps are not supported" message: once the case is gone, a `Map` falls through
   to the existing `default:` branch, `ArgumentError("Unsupported type ${value.runtimeType} for
@@ -170,7 +170,7 @@ Before the change this test fails, because the map is accepted. After the change
 - `bindings/dart/AGENTS.md`: no passage documents the Map case (`grep -n "Map<String, Object" bindings/dart/AGENTS.md`
   shows only the unrelated time-series read type) — no edit.
 - There is no `bindings/dart/README.md`, so there is nothing to update there.
-- `CHANGELOG.md`, `## [0.11.0] — unreleased` → `### Changed`:
+- `CHANGELOG.md`, `## [0.12.0] — unreleased` → `### Changed`:
   ```markdown
   - **BREAKING — Dart: `Element.set` (and so `createElement` / `updateElement`) no longer accepts a
     nested `Map` value.** It used to flatten the map and ignore its key, so

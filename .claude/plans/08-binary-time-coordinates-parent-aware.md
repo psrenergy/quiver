@@ -116,7 +116,7 @@ The finding's time-of-day symptom is fixed by this contract: the non-midnight fi
 - src/AGENTS.md "Performance Bottlenecks": `validate_dimension_values` is ~19% of the hot path. The new code keeps one datetime fold per call and adds no allocation.
 - src/AGENTS.md: internal helpers in `src/binary/binary_utils.h` are header-only `inline`, and the new position function follows that convention. Root principle "Delete unused code, do not deprecate": `TimeProperties::datetime_to_int` and `day_of_week` are deleted, not kept.
 - Root "C++ Error Message Patterns": the binary subsystem's messages are a documented pre-pattern exception. The `Invalid values for time dimensions: ...` text is kept **verbatim**, and nothing in the repo pins it.
-- Root "Changelog": BREAKING entries go under `## [0.11.0] — unreleased` and say what the caller must do. No manifest bump is needed (0.11.0 is already the unreleased minor).
+- Root "Changelog": BREAKING entries go under `## [0.12.0] — unreleased` and say what the caller must do. No manifest bump is needed (0.12.0 is already the unreleased minor).
 - Root "Self-Updating": update `src/AGENTS.md`, plus one root Design Decision bullet so nobody reintroduces a Jan-1 week or relative calendar offsets.
 
 **Alternatives rejected:**
@@ -921,7 +921,7 @@ In `## Design Decisions`, directly after the bullet `- **`BinaryMetadata::number
 - `tests/AGENTS.md` lists the binary test files by name, and none is added or removed, so it needs no edit.
 - `bindings/js/src/lua-api.ts`, `docs/*.md` and the READMEs say nothing about time-coordinate semantics (grep for `initial_value`, `weekly`, `initial_datetime`). Nothing there becomes false, so they need no edit.
 
-### `CHANGELOG.md`, under `## [0.11.0] — unreleased`
+### `CHANGELOG.md`, under `## [0.12.0] — unreleased`
 
 Append to `### Changed`, after the `export_csv()` quoting bullet (its last line is `  *Adapt:* regenerate golden files and any byte-for-byte comparisons over exported CSVs.`), before `### Fixed`:
 
@@ -999,7 +999,7 @@ From the repo root (`C:\Development\Quiver\quiver1`), in order:
 - [ ] The validator's `Invalid values for time dimensions: ...` message text is unchanged.
 - [ ] New tests exist in C++ (time properties, metadata, binary file, CSV), the C API, Lua and Julia, and each is listed in Verification.
 - [ ] `src/AGENTS.md` (file map, "Time Coordinates", performance note) and a root AGENTS.md Design Decision bullet are updated.
-- [ ] CHANGELOG `[0.11.0]` has the BREAKING `Changed` entry and the two `Fixed` entries.
+- [ ] CHANGELOG `[0.12.0]` has the BREAKING `Changed` entry and the two `Fixed` entries.
 - [ ] No C API, FFI declaration or binding wrapper changed; `c_api.jl` is untouched.
 - [ ] `scripts/test-all.bat` is green.
 

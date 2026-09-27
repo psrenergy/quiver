@@ -187,7 +187,7 @@ Also run the whole binary and expression Lua suites, which exercise `f:` methods
   `grep -n "db:open_file" bindings/js/src/lua-api.ts`. Add one sentence: "A file handle does not
   outlive the \`run()\` that opened it: any handle still open when the script returns is closed
   (and a writer flushed), so reopen the file in each script." Escape backticks as `\``.
-- `CHANGELOG.md`, under `## [0.11.0] — unreleased` → `### Changed`:
+- `CHANGELOG.md`, under `## [0.12.0] — unreleased` → `### Changed`:
   ```markdown
   - **BREAKING — Lua: `db:open_file` handles are closed when `run()` returns.** A binary file a
     script left open (for example in a global, without `f:close()`) used to stay open, so a writer
