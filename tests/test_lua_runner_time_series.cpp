@@ -251,6 +251,35 @@ TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupDimensionNilThrows) {
     expect_lua_error(lua, script, "dimension column 'date_time' has nil at index 2");
 }
 
+// A date_ value column outside the primary key is a value column, so it may hold nil like any other;
+// only the key's date column (date_time) is the dense row-count authority.
+TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupSparseDateValueColumn) {
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("time_series_date_columns.sql"));
+    int64_t id = db.create_element("Plant", quiver::Element().set("label", "Plant 1"));
+
+    quiver::LuaRunner lua(db);
+
+    std::string script = R"(
+        local id = )" + std::to_string(id) +
+                         R"(
+        db:update_time_series_group("Plant", "events", id, {
+            date_time = { "2024-01-01T00:00:00", "2024-02-01T00:00:00", "2024-03-01T00:00:00" },
+            date_approved = { "2024-03-01T00:00:00", nil, "2024-01-15T00:00:00" },
+            value = { 1.5, 2.5, 3.5 },
+        })
+        local meta = db:get_time_series_metadata("Plant", "events")
+        assert(meta.dimension_column == "date_time", "Expected dimension_column 'date_time', got " .. tostring(meta.dimension_column))
+        local data = db:read_time_series_group("Plant", "events", id)
+        assert(#data.date_time == 3, "Expected 3 rows, got " .. #data.date_time)
+        assert(data.date_time[1] == "2024-01-01T00:00:00", "Expected rows in date_time order")
+        assert(data.date_time[3] == "2024-03-01T00:00:00", "Expected rows in date_time order")
+        assert(data.date_approved[1] == "2024-03-01T00:00:00", "Expected date_approved[1]")
+        assert(data.date_approved[2] == nil, "Expected date_approved[2] to be nil, SQL NULL")
+        assert(data.value[2] == 2.5, "Expected value[2] == 2.5")
+    )";
+    lua.run(script);
+}
+
 TEST_F(LuaRunnerTest, ReadTimeSeriesGroupNullIsNilHole) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));

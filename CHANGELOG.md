@@ -5,6 +5,29 @@ All notable changes to Quiver are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entries that require
 callers to change something are prefixed **BREAKING** and say what to do.
 
+## [0.12.1] — unreleased
+
+### Changed
+
+- **BREAKING — a time series' dimension column is the date column of its primary key.** The
+  dimension (`get_time_series_metadata`'s `dimension_column`, the row order of
+  `read_time_series_group` and `export_csv`, the axis `read_time_series_row` walks, and the dense
+  row-count column of Lua's `db:update_time_series_group`) used to be the alphabetically first
+  `date_` column, while `update_time_series_group` and `upsert_time_series_row` keyed on the
+  primary key. A `date_` value column sorting before `date_time` (say `date_approved`) was
+  therefore taken for the dimension: rows came back ordered by it, `read_time_series_row`
+  answered along it, Julia/Python/Dart reads failed on its NULL cells, and a Lua write with a
+  `nil` in it threw. The dimension is now the first primary-key column after `id` that is
+  DATE_TIME-typed or `date_`-named; any other `date_` column is an ordinary value column.
+  `describe` brackets exactly the primary-key columns, so a multi-dimension group now shows
+  `[block]` as well.
+
+  *Adapt:* a time-series table whose date column is not in its `PRIMARY KEY` now has no
+  dimension — `get_time_series_metadata`, `list_time_series_groups`, `read_time_series_group`,
+  `read_time_series_row`, `export_csv`/`import_csv` and Lua's `db:update_time_series_group`
+  throw `Dimension column not found: time series table '<table>'` for it. Add the date column to
+  the key, e.g. `PRIMARY KEY (id, date_time)`.
+
 ## [0.12.0] — unreleased
 
 ### Changed

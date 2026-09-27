@@ -356,6 +356,31 @@ include("fixture.jl")
 
         Quiver.close!(db)
     end
+
+    @testset "Date value column is not the dimension" begin
+        # time_series_date_columns.sql: date_approved is a nullable value column that sorts
+        # before the primary-key date column date_time.
+        path_schema = joinpath(tests_path(), "schemas", "valid", "time_series_date_columns.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+        id = Quiver.create_element!(db, "Plant"; label = "Plant 1")
+
+        metadata = Quiver.get_time_series_metadata(db, "Plant", "events")
+        @test metadata.dimension_column == "date_time"
+        @test [c.name for c in metadata.value_columns] == ["date_approved", "value"]
+
+        Quiver.update_time_series_group!(db, "Plant", "events", id;
+            date_time = ["2024-01-01T00:00:00", "2024-02-01T00:00:00", "2024-03-01T00:00:00"],
+            date_approved = ["2024-03-01T00:00:00", nothing, "2024-01-15T00:00:00"],
+            value = [1.5, 2.5, 3.5],
+        )
+
+        result = Quiver.read_time_series_group(db, "Plant", "events", id)
+        @test result["date_time"] == [DateTime(2024, 1, 1), DateTime(2024, 2, 1), DateTime(2024, 3, 1)]
+        @test result["date_approved"] == ["2024-03-01T00:00:00", nothing, "2024-01-15T00:00:00"]
+        @test result["value"] == [1.5, 2.5, 3.5]
+
+        Quiver.close!(db)
+    end
 end
 
 end

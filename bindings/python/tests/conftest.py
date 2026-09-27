@@ -176,3 +176,19 @@ def multi_dim_ts_db(multi_dim_ts_schema_path: Path, tmp_path: Path) -> Generator
     database = Database.from_schema(str(tmp_path / "multi_dim_ts.db"), str(multi_dim_ts_schema_path))
     yield database
     database.close()
+
+
+@pytest.fixture
+def time_series_date_columns_schema_path(schemas_path: Path) -> Path:
+    """Return the path to the schema with a date_ value column beside the time series dimension."""
+    return schemas_path / "valid" / "time_series_date_columns.sql"
+
+
+@pytest.fixture
+def time_series_date_columns_db(
+    time_series_date_columns_schema_path: Path, tmp_path: Path
+) -> Generator[Database, None, None]:
+    """Create a test database with the time_series_date_columns schema."""
+    database = Database.from_schema(str(tmp_path / "ts_date_columns.db"), str(time_series_date_columns_schema_path))
+    yield database
+    database.close()

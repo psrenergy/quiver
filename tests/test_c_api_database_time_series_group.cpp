@@ -1173,3 +1173,76 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupByLabelNamedColumnWithNoRowsRejected) {
 
     quiver_database_close(db);
 }
+
+TEST(DatabaseCApi, ReadTimeSeriesGroupDimensionIsThePrimaryKeyDateColumn) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("time_series_date_columns.sql").c_str(), &options, &db),
+        QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    quiver_element_t* element = nullptr;
+    ASSERT_EQ(quiver_element_create(&element), QUIVER_OK);
+    quiver_element_set_string(element, "label", "Plant 1");
+    int64_t id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Plant", element, &id), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
+
+    // A NULL char* entry in a string column is a SQL NULL cell (no mask needed).
+    const char* col_names[] = {"date_time", "date_approved", "value"};
+    int col_types[] = {QUIVER_DATA_TYPE_STRING, QUIVER_DATA_TYPE_STRING, QUIVER_DATA_TYPE_FLOAT};
+    const char* date_times[] = {"2024-01-01T00:00:00", "2024-02-01T00:00:00", "2024-03-01T00:00:00"};
+    const char* approved[] = {"2024-03-01T00:00:00", nullptr, "2024-01-15T00:00:00"};
+    double values[] = {1.5, 2.5, 3.5};
+    const void* col_data[] = {date_times, approved, values};
+    ASSERT_EQ(quiver_database_update_time_series_group(
+                  db, "Plant", "events", id, col_names, col_types, col_data, nullptr, 3, 3),
+              QUIVER_OK);
+
+    char** out_col_names = nullptr;
+    int* out_col_types = nullptr;
+    void** out_col_data = nullptr;
+    uint8_t** out_col_has_value = nullptr;
+    size_t col_count = 0;
+    size_t row_count = 0;
+    ASSERT_EQ(quiver_database_read_time_series_group(db,
+                                                     "Plant",
+                                                     "events",
+                                                     id,
+                                                     &out_col_names,
+                                                     &out_col_types,
+                                                     &out_col_data,
+                                                     &out_col_has_value,
+                                                     &col_count,
+                                                     &row_count),
+              QUIVER_OK);
+    ASSERT_EQ(col_count, 3);
+    ASSERT_EQ(row_count, 3);
+
+    EXPECT_STREQ(out_col_names[0], "date_time");
+    EXPECT_STREQ(out_col_names[1], "date_approved");
+    EXPECT_STREQ(out_col_names[2], "value");
+    EXPECT_EQ(out_col_types[0], QUIVER_DATA_TYPE_STRING);
+    EXPECT_EQ(out_col_types[1], QUIVER_DATA_TYPE_DATE_TIME);
+    EXPECT_EQ(out_col_types[2], QUIVER_DATA_TYPE_FLOAT);
+
+    // Rows in date_time order; the dimension is dense, date_approved's NULL is an ordinary masked cell.
+    auto** dims = static_cast<char**>(out_col_data[0]);
+    EXPECT_STREQ(dims[0], "2024-01-01T00:00:00");
+    EXPECT_STREQ(dims[1], "2024-02-01T00:00:00");
+    EXPECT_STREQ(dims[2], "2024-03-01T00:00:00");
+    EXPECT_EQ(out_col_has_value[0][1], 1);
+    EXPECT_EQ(out_col_has_value[1][1], 0);
+    auto** approved_out = static_cast<char**>(out_col_data[1]);
+    EXPECT_STREQ(approved_out[0], "2024-03-01T00:00:00");
+    EXPECT_STREQ(approved_out[2], "2024-01-15T00:00:00");
+    auto* values_out = static_cast<double*>(out_col_data[2]);
+    EXPECT_DOUBLE_EQ(values_out[0], 1.5);
+    EXPECT_DOUBLE_EQ(values_out[1], 2.5);
+    EXPECT_DOUBLE_EQ(values_out[2], 3.5);
+
+    quiver_database_free_time_series_data(
+        out_col_names, out_col_types, out_col_data, out_col_has_value, col_count, row_count);
+    quiver_database_close(db);
+}

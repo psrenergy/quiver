@@ -36,7 +36,7 @@ include/quiver/expression/  # Expression subsystem headers (lazy expressions on 
 src/                      # C++ implementation
   database.cpp            # Lifecycle, factories, transactions, execute, migrate_up
   database_impl.h         # Database::Impl - schema/type validators, label + FK resolution, group inserts, TransactionGuard
-  database_internal.h     # internal:: helpers - read templates, value_matches_type, metadata converters
+  database_internal.h     # internal:: helpers - read templates, value_matches_type, metadata converters, time-series dimension lookup
   database_create.cpp / database_read.cpp / database_update.cpp / database_delete.cpp
   database_metadata.cpp / database_query.cpp / database_time_series.cpp / database_describe.cpp
   database_csv_export.cpp / database_csv_import.cpp
@@ -431,6 +431,19 @@ impl_->logger->debug("Opening database: {}", path);
   All list/metadata/describe call sites use them — never hand-roll prefix scans.
 - **Declaration order everywhere**: metadata and list functions iterate `column_order`
   (declaration order), matching the `describe(ostream&)` dump and CSV export. Nothing reports alphabetical order.
+- **One definition of a time series' dimensions** (`database_internal.h`): `find_dimension_columns`
+  is every primary-key column except `id`, in declaration order — what `update_time_series_group`
+  and `upsert_time_series_row` key a row on. `find_dimension_column` is the first of those that
+  holds dates (DATE_TIME-typed or `date_`-named): `GroupMetadata::dimension_column`, the column
+  `read_time_series_group` orders by, the axis `read_time_series_row` walks, and (through the
+  metadata) the C API's column 0, the bindings' DateTime-parsed column, Lua's row-count authority
+  and `export_csv`'s row order. It used to scan the name-sorted `columns` map, so a `date_`
+  *value* column sorting before `date_time` (`date_approved`) became the readers' dimension while
+  the writers keyed on the primary key. Don't reintroduce a name- or map-order scan, and don't
+  "simplify" it to `find_dimension_columns(...).front()` — a key declared `(id, block, date_time)`
+  would return `block`. A table whose key holds no date column has no dimension: metadata and
+  every reader throw `Dimension column not found`, while the writers, which need only the key,
+  still work. `describe`'s brackets (`print_group_columns`) mark the same primary-key set.
 - **`number_of_elements` lives in `database_read.cpp`** alongside the other element-level reads
   (`read_element_ids`). `number_of_elements(c)
   const` validates through `Impl::require_collection` and directly executes `SELECT COUNT(*)`

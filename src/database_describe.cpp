@@ -17,8 +17,9 @@ namespace {
 // (and float/text/primary-key columns) report coverage counts only.
 constexpr int64_t kMaxDistributionCardinality = 64;
 
-// Print a group's value columns in declaration order; time series dimension
-// columns are bracketed, vector tables hide their structural vector_index.
+// Print a group's value columns in declaration order; a time series' dimension
+// columns (its primary key minus id -- the set find_dimension_columns returns) are
+// bracketed, vector tables hide their structural vector_index.
 void print_group_columns(std::ostream& out, const TableDefinition& table, GroupTableType type) {
     bool first = true;
     for (const auto& col_name : table.column_order) {
@@ -27,7 +28,7 @@ void print_group_columns(std::ostream& out, const TableDefinition& table, GroupT
         const auto& col = table.columns.at(col_name);
         if (!first)
             out << ", ";
-        if (type == GroupTableType::TimeSeries && is_date_time_column(col_name)) {
+        if (type == GroupTableType::TimeSeries && col.primary_key) {
             out << "[" << col_name << "]";
         } else {
             out << col_name << "(" << data_type_to_string(col.type) << ")";

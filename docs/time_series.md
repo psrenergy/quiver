@@ -21,9 +21,10 @@ CREATE TABLE Resource_time_series_group1 (
 ```
 
 A time series table is named `{Collection}_time_series_{group}` and must be indexed by a
-dimension column whose name starts with `date_` (usually `date_time`), stored as ISO 8601
-text (`YYYY-MM-DDTHH:MM:SS`). The bindings convert their native datetime types to and from
-this format automatically.
+dimension column: a column whose name starts with `date_` (usually `date_time`) and that is
+part of the table's `PRIMARY KEY`, stored as ISO 8601 text (`YYYY-MM-DDTHH:MM:SS`). Any other
+`date_` column is an ordinary value column: it may be NULL and `read_time_series_row` can read
+it. The bindings convert their native datetime types to and from this format automatically.
 
 The time part is optional — a bare `YYYY-MM-DD` is accepted, as is a space in place of the `T` —
 but nothing shorter is. `update_time_series_group` and `upsert_time_series_row` reject a dimension

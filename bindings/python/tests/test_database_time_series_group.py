@@ -251,3 +251,33 @@ class TestTimeSeriesSingleColumn:
             collections_db.update_time_series_group_by_label(
                 "Collection", "data", "Nope", {"date_time": ["2024-01-01T00:00:00"], "value": [1.5]}
             )
+
+
+# -- Dimension column (time_series_date_columns_db: a date_ value column beside the key) --
+
+
+class TestTimeSeriesDimensionColumn:
+    def test_date_value_column_is_not_the_dimension(self, time_series_date_columns_db: Database) -> None:
+        """date_approved sorts before date_time but is not in the primary key, so it is a value column."""
+        db = time_series_date_columns_db
+        eid = db.create_element("Plant", label="Plant 1")
+
+        meta = db.get_time_series_metadata("Plant", "events")
+        assert meta.dimension_column == "date_time"
+        assert [c.name for c in meta.value_columns] == ["date_approved", "value"]
+
+        db.update_time_series_group(
+            "Plant",
+            "events",
+            eid,
+            {
+                "date_time": ["2024-01-01T00:00:00", "2024-02-01T00:00:00", "2024-03-01T00:00:00"],
+                "date_approved": ["2024-03-01T00:00:00", None, "2024-01-15T00:00:00"],
+                "value": [1.5, 2.5, 3.5],
+            },
+        )
+        result = db.read_time_series_group("Plant", "events", eid)
+        assert list(result) == ["date_time", "date_approved", "value"]
+        assert result["date_time"] == [_utc(2024, 1, 1), _utc(2024, 2, 1), _utc(2024, 3, 1)]
+        assert result["date_approved"] == ["2024-03-01T00:00:00", None, "2024-01-15T00:00:00"]
+        assert result["value"] == [1.5, 2.5, 3.5]
