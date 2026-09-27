@@ -66,7 +66,7 @@ Principles violated: a single definition of one concept (root AGENTS.md "Intelli
 
 - **Maintainer decision (binding):** keep the full predicate `col.type == DataType::DateTime || is_date_time_column(col_name)`. Apply it as a filter over `find_dimension_columns`, which returns the PK columns in declaration order. Do **not** narrow it to `DataType::DateTime` alone.
 - **Maintainer decision (binding):** the regression tests use a **new** schema file under `tests/schemas/valid/`. Do not modify shared schemas such as `nullable_time_series.sql`.
-- Root AGENTS.md "Status: WIP project - breaking changes acceptable" and "Changelog: ... Prefix a breaking one **BREAKING** and say what a caller must do". 0.11.0 is unreleased and already a minor bump, so there is no manifest bump.
+- Root AGENTS.md "Status: WIP project - breaking changes acceptable" and "Changelog: ... Prefix a breaking one **BREAKING** and say what a caller must do". 0.12.0 is unreleased and already a minor bump, so there is no manifest bump.
 - Root AGENTS.md "Error Messages": the existing Pattern 2 text `Dimension column not found: time series table '<table>'` is reused unchanged. No new message.
 - Root AGENTS.md "Self-Updating": update `src/AGENTS.md` (nearest to `database_internal.h` and `database_describe.cpp`), root AGENTS.md (Schema Conventions / Time Series Tables, which states the dimension rule), and `tests/AGENTS.md` (schema list).
 - Root AGENTS.md "Time-series group data is column-oriented", and the design decision on time-series NULL masks ("Lua ... the dimension column(s) are the row-count authority"). Both are unchanged, and this fix is what makes them true for a table with a second `date_` column.
@@ -791,7 +791,7 @@ Before the fix, `dimensionColumn` is `"date_approved"`, the key order is swapped
      it. The bindings convert their native datetime types to and from this format automatically.
      ```
 6. No change to `bindings/js/src/lua-api.ts` (the Lua surface is unchanged, and `dimension_column = "date_time"` there stays correct), the binding READMEs, or any binding `AGENTS.md`. Their "the dimension column's mask is always all 1" sentences become true for this schema; they were never edited.
-7. **`CHANGELOG.md`**: append under `## [0.11.0] — unreleased` → `### Changed`, after the last existing bullet of that subsection, which is the `export_csv()` quoting entry ending `*Adapt:* regenerate golden files ...`. Plan 01 may have added bullets before this one, so append after whatever is last in `### Changed`:
+7. **`CHANGELOG.md`**: append under `## [0.12.0] — unreleased` → `### Changed`, after the last existing bullet of that subsection, which is the `export_csv()` quoting entry ending `*Adapt:* regenerate golden files ...`. Plan 01 may have added bullets before this one, so append after whatever is last in `### Changed`:
    ```
    - **BREAKING — a time series' dimension column is the date column of its primary key.** The
      dimension (`get_time_series_metadata`'s `dimension_column`, the row order of
@@ -840,7 +840,7 @@ From the repo root (PowerShell):
 - [ ] The new tests pass: 4 C++ core tests in 3 files, 1 describe test, 2 C API tests, 1 Lua test, and 1 each in Julia, Dart, Python and JS. All pre-existing tests still pass unchanged.
 - [ ] No C API, FFI declaration, binding wrapper or `lua_runner.cpp` change. No generator run.
 - [ ] `src/AGENTS.md` (file map plus the new bullet), root `AGENTS.md` (Time Series Tables sentence), `tests/AGENTS.md` (schema list plus sub-bullet) and `docs/time_series.md` (~L23-26) are updated as specified.
-- [ ] A CHANGELOG **BREAKING** entry is under `[0.11.0] — unreleased` → `### Changed`, with an *Adapt:* line. No manifest version bump.
+- [ ] A CHANGELOG **BREAKING** entry is under `[0.12.0] — unreleased` → `### Changed`, with an *Adapt:* line. No manifest version bump.
 - [ ] `scripts/format.bat` leaves no diff outside the touched files, and `scripts/test-all.bat` is green.
 
 ## Pitfalls

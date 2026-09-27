@@ -164,7 +164,7 @@ existing "Basic Mapping" test does exactly that, so it does).
 - No AGENTS.md text describes the helpers' implementation (root AGENTS.md "Relation map helpers" and
   `bindings/julia/AGENTS.md:106` describe what they return), so no doc edit is needed. Re-read both
   passages after the change to confirm.
-- `CHANGELOG.md`, `## [0.11.0] — unreleased` → `### Fixed` (user-visible performance only):
+- `CHANGELOG.md`, `## [0.12.0] — unreleased` → `### Fixed` (user-visible performance only):
   ```markdown
   - **Julia: `scalar_relation_map` / `set_relation_map` read in bulk.** They issued one query per
     element and a linear search per relation; they now make three reads and a dictionary lookup, so

@@ -1,7 +1,7 @@
 # 16 — Expressions: one AggregationOperation enum across C++, C API, Lua and Julia
 
 **Batch** 2 · **Severity** low · **Breaking** yes, for C and Julia callers of `aggregate_agents`: the `QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_*` constants and the `quiver_expression_aggregate_agents_operation_t` type are removed. C++ source compiles unchanged, and Lua is unaffected because it takes strings. · **Size** S · **Layers** C++ core (expression), C API, Julia (FFI regen + wrapper + tests), Lua (parser + test)
-**Depends on** none · **Overlaps with** 15 (edits other functions in `src/expression/expression_helpers.h` and other bullets of the src/AGENTS.md Expression section), 51 (edits `bind_expression` in `src/lua_runner.cpp` next to the lambdas this plan edits; its notes give the aggregation-parser half to this plan), 12 / 21 / 22 (each also regenerates `bindings/julia/src/c_api.jl` and adds a CHANGELOG 0.11.0 entry), 09 / 10 (edit `src/expression/expression_aggregate.cpp`, which this plan does **not** touch)
+**Depends on** none · **Overlaps with** 15 (edits other functions in `src/expression/expression_helpers.h` and other bullets of the src/AGENTS.md Expression section), 51 (edits `bind_expression` in `src/lua_runner.cpp` next to the lambdas this plan edits; its notes give the aggregation-parser half to this plan), 12 / 21 / 22 (each also regenerates `bindings/julia/src/c_api.jl` and adds a CHANGELOG 0.12.0 entry), 09 / 10 (edit `src/expression/expression_aggregate.cpp`, which this plan does **not** touch)
 
 ## Why
 
@@ -33,7 +33,7 @@ The change applies the root principles "Simple solutions over complex abstractio
 - **src/AGENTS.md (~L759):** "All operation enums are nested in their owning class". The alias keeps that convention: every node still has an `Operation` member type.
 - **Root AGENTS.md, error patterns:** Pattern 1 is `"Cannot {operation}: {reason}"`, where `{operation}` is the public method the user called. Today's messages are `Cannot aggregate: unknown operation 'bogus'` (Lua), `Cannot aggregate_agents: unknown operation '<op>'` (Lua), and `Cannot aggregate[_agents]: unknown operation enum value` (C). They must stay byte-identical. `tests/test_lua_expression.cpp` (~L178) pins the first one.
 - **Root design decision:** "Binary + expression subsystems are exposed in Julia and Lua only." Dart, Python and JS therefore have no FFI declarations to touch. The JS `lua-api.ts` reference documents string operations (`e:aggregate_agents("mean")`), which do not change.
-- **Root "Changelog" rule:** the entry goes under the unreleased 0.11.0, prefixed **BREAKING**, and says what a caller must do. There is no manifest bump; 0.11.0 is already a minor bump.
+- **Root "Changelog" rule:** the entry goes under the unreleased 0.12.0, prefixed **BREAKING**, and says what a caller must do. There is no manifest bump; 0.12.0 is already a minor bump.
 - **bindings/julia/AGENTS.md:** "Regenerate after C API changes: `generator/generator.bat` rewrites `src/c_api.jl`". Never hand-edit it.
 
 Rejected alternatives:
@@ -600,7 +600,7 @@ New:
 
 **`bindings/julia/AGENTS.md`, root `AGENTS.md`, `tests/AGENTS.md`, `docs/*.md`, `bindings/js/src/lua-api.ts`:** none mention the two aggregation enums, so there are no edits. The Julia `aggregate_agents` surface is not documented anywhere but its tests.
 
-**`CHANGELOG.md`:** under `## [0.11.0] — unreleased` → `### Changed`, append this bullet after the existing BREAKING entries. Earlier plans may have added more; keep all of them.
+**`CHANGELOG.md`:** under `## [0.12.0] — unreleased` → `### Changed`, append this bullet after the existing BREAKING entries. Earlier plans may have added more; keep all of them.
 
 ```markdown
 - **BREAKING — expressions: one aggregation operation enum.** `quiver_expression_aggregate_agents`
@@ -638,7 +638,7 @@ Run from the repo root `C:\Development\Quiver\quiver1`. The paths are for PowerS
 - [ ] `src/lua_runner.cpp` has one `parse_aggregate_op(op, caller)`; `parse_aggregate_agents_op` is gone; the Lua messages are unchanged.
 - [ ] `bindings/julia/src/c_api.jl` is regenerated, not hand-edited, and both `aggregate_agents` methods in `expression.jl` take `C.quiver_expression_aggregate_operation_t`.
 - [ ] The new tests `AggregateUnknownOperationNamesTheCaller` (C API) and `AggregateAgentsUnknownOpThrows` (Lua) pass; the edited C++, C API and Julia tests pass.
-- [ ] src/AGENTS.md (three spots) and src/c/AGENTS.md are updated as quoted; there is a CHANGELOG **BREAKING** entry under 0.11.0 → Changed.
+- [ ] src/AGENTS.md (three spots) and src/c/AGENTS.md are updated as quoted; there is a CHANGELOG **BREAKING** entry under 0.12.0 → Changed.
 - [ ] `scripts/test-all.bat` is green.
 
 ## Pitfalls
@@ -650,7 +650,7 @@ Run from the repo root `C:\Development\Quiver\quiver1`. The paths are for PowerS
 - **Unknown-enum test value:** use `5` (0..7 is the value range of an unscoped enum whose enumerators are 0..4). A cast to `99` is UB in C++17+ and can be optimised into anything.
 - **Message bytes.** `test_lua_expression.cpp` pins `Cannot aggregate: unknown operation 'bogus'`. Build the message as `"Cannot " + caller + ": unknown operation '" + op + "'"`, with no extra quoting around `caller`.
 - **Formatting.** `scripts/format.bat` runs clang-format and JuliaFormatter; let them re-wrap. Working-tree `.bat` files are CRLF, and nothing in this plan edits one; if `git diff` shows a `.bat`, restore it.
-- **CHANGELOG position.** Earlier plans in this batch may have added entries or a `### Removed` section under 0.11.0. Append to `### Changed` and do not reorder or delete others.
+- **CHANGELOG position.** Earlier plans in this batch may have added entries or a `### Removed` section under 0.12.0. Append to `### Changed` and do not reorder or delete others.
 
 ## Out of scope
 

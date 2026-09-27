@@ -808,7 +808,7 @@ No other AGENTS.md changes:
 
 Also unchanged: `bindings/js/src/lua-api.ts`, whose `quiver.metadata` example stays valid, and `docs/*.md`, which do not mention binary metadata.
 
-**`CHANGELOG.md`.** Append this as the last bullet of `### Fixed` under `## [0.11.0] — unreleased`, after whatever earlier plans added. Wrap at about 100 columns like the neighbouring entries:
+**`CHANGELOG.md`.** Append this as the last bullet of `### Fixed` under `## [0.12.0] — unreleased`, after whatever earlier plans added. Wrap at about 100 columns like the neighbouring entries:
 
 ```markdown
 - **Binary metadata factories reject mismatched or malformed fields instead of reading out of

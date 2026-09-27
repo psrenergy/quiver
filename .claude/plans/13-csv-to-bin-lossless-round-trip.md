@@ -48,7 +48,7 @@ Overlap details:
 | data cell `1e-310` (a subnormal; `bin_to_csv` writes it) on Linux/macOS | `std::out_of_range("stod")` | the subnormal |
 | data cell `abc` or empty | bare `invalid stod argument` (MSVC) / `stod` (libstdc++), which is a `std::invalid_argument` | a Pattern 1 message naming the label |
 
-The project fixed exactly this bug for `import_csv` (CHANGELOG 0.11.0 "Fixed: `import_csv()` reads numbers the same way in every host locale and on every platform"). The fix lives one file away as a `static` function, `parse_float`, in `src/database_csv_import.cpp` (currently ~L47-74). It spells the cell in the active locale, requires the whole cell to parse, and accepts subnormals. `std::stod` is the only one left in `src/`.
+The project fixed exactly this bug for `import_csv` (CHANGELOG 0.12.0 "Fixed: `import_csv()` reads numbers the same way in every host locale and on every platform"). The fix lives one file away as a `static` function, `parse_float`, in `src/database_csv_import.cpp` (currently ~L47-74). It spells the cell in the active locale, requires the whole cell to parse, and accepts subnormals. `std::stod` is the only one left in `src/`.
 
 Principles violated: the root typing-policy decision (numbers are read "in the 'C' locale's number format whatever locale the host process set"); "Error Messages" (every message is a Pattern 1/2/3 message defined in C++, never a bare library string); reuse over re-implementation.
 
@@ -617,7 +617,7 @@ New:
 
 D7. `bindings/js/src/lua-api.ts` documents `db:bin_to_csv` / `db:csv_to_bin` by name only and makes no claim about number formatting. **No change.** `docs/*.md`, the READMEs, `tests/AGENTS.md` and `bindings/julia/AGENTS.md` do not mention CSVConverter number handling. **No change.**
 
-D8. **`CHANGELOG.md`, under `## [0.11.0] — unreleased`.**
+D8. **`CHANGELOG.md`, under `## [0.12.0] — unreleased`.**
 
 Under `### Changed`, append after the `export_csv()` quoting entry (the one ending `*Adapt:* regenerate golden files and any byte-for-byte comparisons over exported CSVs.`), with one blank line before it:
 
@@ -645,7 +645,7 @@ Under `### Fixed`, insert directly after the `import_csv()` locale entry (the on
   the same parser as `import_csv()`.
 ```
 
-No manifest version bump (0.11.0 is already the unreleased minor).
+No manifest version bump (0.12.0 is already the unreleased minor).
 
 ## Verification
 
@@ -668,7 +668,7 @@ From the repo root (`C:\Development\Quiver\quiver1`), in order:
 - [ ] `grep -rn "std::stod" src` is empty.
 - [ ] C++ tests T3-T7, C API tests C1-C2, Lua tests L2-L3 and Julia tests J1-J3 exist and pass, and each fails when the `src/` change is reverted (a decimal-comma locale is needed for T7).
 - [ ] Root `AGENTS.md` (D1-D3), `cmake/Platform.cmake` comment (D3), and `src/AGENTS.md` (D4-D6) are updated.
-- [ ] CHANGELOG 0.11.0 has the BREAKING `### Changed` entry and the `### Fixed` entry from D8.
+- [ ] CHANGELOG 0.12.0 has the BREAKING `### Changed` entry and the `### Fixed` entry from D8.
 - [ ] No C API signature, FFI declaration, binding wrapper or `.bat` file changed.
 
 ## Pitfalls

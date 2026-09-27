@@ -925,7 +925,7 @@ own) — it throws \`Cannot import_csv: transaction already active\`. Call it ou
 ```
 Do not add replace-semantics prose here; plan 43 owns that claim. `lua-api-sync.test.ts` is unaffected, because no `db:` name changes.
 
-### `CHANGELOG.md` — under `## [0.11.0] — unreleased` → `### Changed`
+### `CHANGELOG.md` — under `## [0.12.0] — unreleased` → `### Changed`
 
 Append after the `export_csv()` quoting entry (the one ending `*Adapt:* regenerate golden files and any byte-for-byte comparisons over exported CSVs.`, currently ~L65) and before `### Fixed`:
 ```

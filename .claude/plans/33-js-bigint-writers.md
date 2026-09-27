@@ -320,7 +320,7 @@ Before the change both throw `Unsupported query parameter type at index 0: bigin
   `QueryParam -- number | string | null` to `QueryParam -- number | bigint | boolean | string | null`.
   If plan 74 already rewrote the Types section, just make sure `QueryParam` and `GroupColumns` list
   `bigint`.
-- `CHANGELOG.md`, `## [0.11.0] — unreleased` → `### Fixed`:
+- `CHANGELOG.md`, `## [0.12.0] — unreleased` → `### Fixed`:
   ```markdown
   - **JS: `bigint` is accepted by the group writers and as a query parameter.** `updateVectorGroup`,
     `updateSetGroup`, `updateTimeSeriesGroup` (and their `ByLabel` forms) and every `query*` method

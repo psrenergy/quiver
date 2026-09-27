@@ -3,7 +3,7 @@
 **Batch** 3 · **Severity** l · **Breaking** yes: C callers of `quiver_clear_last_error`, `quiver_element_has_scalars`, `quiver_element_has_arrays`, `quiver_element_scalar_count` and `quiver_element_array_count`, and C++ callers of `Element::has_scalars()` / `Element::has_arrays()`. No binding's public API changes. Only Julia's low-level `Quiver.C` wrappers and the internal Dart and Python declarations for these symbols go. · **Size** S · **Layers** C++ core, C API, Julia FFI (generated), Dart FFI (hand-edited), Python cdef, docs/changelog
 **Depends on** none. If plan 12 has landed, its `### Removed` section in `CHANGELOG.md` gets this bullet; if not, this plan creates the section.
 **Overlaps with**
-- **12** (binary-metadata builders): it creates the `### Removed` section under 0.11.0 that this plan appends to, and it regenerates `bindings/julia/src/c_api.jl`. It edits the `## Memory Management` block of `src/c/AGENTS.md` (~L112). This plan edits the `## Return Codes` line (~L49) and the `## Error Handling` paragraph (~L67-72) of the same file.
+- **12** (binary-metadata builders): it creates the `### Removed` section under 0.12.0 that this plan appends to, and it regenerates `bindings/julia/src/c_api.jl`. It edits the `## Memory Management` block of `src/c/AGENTS.md` (~L112). This plan edits the `## Return Codes` line (~L49) and the `## Error Handling` paragraph (~L67-72) of the same file.
 - **16, 17, 18, 20, 22, 23**: they also change C headers and regenerate or hand-edit the same FFI files (`bindings/julia/src/c_api.jl`, `bindings/dart/lib/src/ffi/bindings.dart`, `bindings/python/src/quiverdb/_c_api.py`). This plan touches different declarations. Anchor every edit by symbol name, not line number.
 - **30** (Python stale docstrings): it rewrites the header comment of `_c_api.py` (currently ~L5-6, "Phase 1 CFFI declarations..."). This plan deletes other lines in that file (~L16, ~L87-90) and one line of the `check()` docstring in `_helpers.py`. They do not conflict.
 
@@ -51,11 +51,11 @@ Every binding already reads the message only after a non-OK return: Julia `excep
 
 ## Constraints and decisions
 
-- **Maintainer decision (binding):** "Only quiver_clear_last_error and quiver_element_has_scalars/has_arrays/scalar_count/array_count plus C++ Element::has_scalars/has_arrays (binary builders are plan 12). BREAKING; CHANGELOG 0.11.0. Regenerate Julia/Dart FFI or hand-edit per binding AGENTS.md; update Python cdef and _helpers.py docstring."
+- **Maintainer decision (binding):** "Only quiver_clear_last_error and quiver_element_has_scalars/has_arrays/scalar_count/array_count plus C++ Element::has_scalars/has_arrays (binary builders are plan 12). BREAKING; CHANGELOG 0.12.0. Regenerate Julia/Dart FFI or hand-edit per binding AGENTS.md; update Python cdef and _helpers.py docstring."
 - **Root `AGENTS.md` Principles:** "All public C++ methods should be bound to C API". This is why the C++ `has_scalars`/`has_arrays` go together with their C wrappers, and are not left public with no binding.
   - `Element::scalars()` / `arrays()` stay. The core uses them. The C API never exposed their contents, only their sizes. That size exposure is what this plan removes.
 - **Root `AGENTS.md` Design Decisions, "One C API error channel":** everything reports via `quiver_get_last_error`. That function stays, and the decision is untouched.
-- **Root `AGENTS.md` Versioning / task facts:** 0.11.0 is unreleased and already a minor bump over 0.10.9. The entry goes under `## [0.11.0] — unreleased`, prefixed **BREAKING**.
+- **Root `AGENTS.md` Versioning / task facts:** 0.12.0 is unreleased and already a minor bump over 0.10.9. The entry goes under `## [0.12.0] — unreleased`, prefixed **BREAKING**.
   - *Correction to the verifiers' proposals:* both asked for "a 0.x minor bump across all five manifests". That is already done. **Do not bump any manifest.**
 - **`bindings/dart/AGENTS.md`, "The checked-in `bindings.dart` predates the pinned ffigen (20.1.1)":** regenerating rewrites the whole file and turns the int-constant enums into Dart `enum`s, which breaks hub. C API changes are hand-edited in "in the file's existing style".
   - *Correction to the policy verifier's proposal:* it said "Regenerate the Julia and Dart FFI with scripts/generator.bat". That would run ffigen. **Hand-delete the Dart entries instead, and do not run `scripts/generator.bat`**, because it runs all three generators.
@@ -660,7 +660,7 @@ If an earlier plan (17, 18, 20, 22 or 23) already extended this list, add the "R
 
 **No other docs.** `docs/*.md`, `README.md`, the binding READMEs and `bindings/js/src/lua-api.ts` do not mention them (verified by grep).
 
-**`CHANGELOG.md`** (CRLF). Put the bullet under `## [0.11.0] — unreleased` → `### Removed`.
+**`CHANGELOG.md`** (CRLF). Put the bullet under `## [0.12.0] — unreleased` → `### Removed`.
 - If plan 12 already created `### Removed`, which sits after the last `### Changed` entry and before `### Fixed`, append this bullet after plan 12's bullet.
 - Otherwise create `### Removed` in that position. Keep a Changelog order is Added, Changed, Removed, Fixed.
 
@@ -681,7 +681,7 @@ If an earlier plan (17, 18, 20, 22 or 23) already extended this list, add the "R
   `!element.arrays().empty()`.
 ```
 
-No manifest version bump. 0.11.0 is already the minor bump.
+No manifest version bump. 0.12.0 is already the minor bump.
 
 ## Verification
 
@@ -759,7 +759,7 @@ Run from the repo root (`C:\Development\Quiver\quiver1`), in this order.
 - [ ] `tests/test_element.cpp` has no `has_*` call. `Clear` / `ClearAndReuse` assert on `scalars()` / `arrays()`.
 - [ ] `tests/test_c_api_element.cpp` has the `element_string` helper. The ten tests listed in step 10 assert exact `to_string` output, and `NullAccessors` is deleted.
 - [ ] `src/c/AGENTS.md` (exception list and error-channel sentence) and `bindings/dart/AGENTS.md` (hand-removal note) are updated, with CRLF preserved.
-- [ ] `CHANGELOG.md` 0.11.0 `### Removed` has the **BREAKING** bullet with an *Adapt:* line. No manifest version changed.
+- [ ] `CHANGELOG.md` 0.12.0 `### Removed` has the **BREAKING** bullet with an *Adapt:* line. No manifest version changed.
 - [ ] The Verification step 6 `git grep` prints nothing. `Element.*` passes 23 tests, `ElementCApi.*` passes 20, and all native and binding suites pass.
 
 ## Pitfalls

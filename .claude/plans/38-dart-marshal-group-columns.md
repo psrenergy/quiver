@@ -302,7 +302,7 @@ write one row, call with `{}`, and assert that the reader returns empty. Check w
   `_marshalGroupColumn`" becomes "Dart's counterpart is `_marshalGroupColumns`".
 - `CHANGELOG.md`: no entry needed. The only user-visible difference is that the message now names
   the column, which does not break anyone. If you want to mention it, add one line under
-  `## [0.11.0] — unreleased` → `### Changed`: "Dart: the group writers' jagged-column
+  `## [0.12.0] — unreleased` → `### Changed`: "Dart: the group writers' jagged-column
   `ArgumentError` names the offending column."
 
 ## Verification

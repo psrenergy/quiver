@@ -89,7 +89,7 @@ No existing test covers this path. `tests/test_lua_runner.py` has no closed-data
 - Root `AGENTS.md` Principles, *Error Messages*: messages come from the C/C++ layer. The
   `QuiverError` text stays the C API's `"Null argument: db"`. The binding adds no message of its own.
 - Root `AGENTS.md` Principles, *Changelog*: this is a user-visible fix (stderr noise on a real
-  failure path). It gets a non-breaking entry under `## [0.11.0] — unreleased` → `### Fixed`.
+  failure path). It gets a non-breaking entry under `## [0.12.0] — unreleased` → `### Fixed`.
 - Root `AGENTS.md`, *Self-Updating*: the nearest AGENTS.md is `bindings/python/AGENTS.md`. It gets
   a one-bullet note so the ordering is not later "tidied" back.
 - Maintainer notes for this item: none (`"notes": ""`).
@@ -255,7 +255,7 @@ behaviour. Checked: `bindings/python/README.md` and the root `AGENTS.md` do not 
 
 ### `CHANGELOG.md`
 
-Under `## [0.11.0] — unreleased` → `### Fixed`, append this bullet after the last existing bullet
+Under `## [0.12.0] — unreleased` → `### Fixed`, append this bullet after the last existing bullet
 of that section (currently the `**Julia: updating \`Artifacts.toml\` now invalidates the package
 precompile cache.**` entry, ~L80-82), keeping the blank line before `## [0.10.9]`:
 
@@ -267,7 +267,7 @@ precompile cache.**` entry, ~L80-82), keeping the blank line before `## [0.10.9]
   attribute '_ptr'`. A runner now counts as closed until its native handle exists.
 ```
 
-Not breaking. No manifest version bump: 0.11.0 is already the unreleased version.
+Not breaking. No manifest version bump: 0.12.0 is already the unreleased version.
 
 ## Verification
 
@@ -305,7 +305,7 @@ No FFI generator run: no C API signature changes.
 - [ ] That test failed before the source change and passes after it.
 - [ ] The full Python suite passes. `ruff format` and `ruff check` are clean.
 - [ ] `bindings/python/AGENTS.md` has the new `LuaRunner.__init__` gotcha bullet.
-- [ ] `CHANGELOG.md` `## [0.11.0] — unreleased` → `### Fixed` has the Python `LuaRunner` entry,
+- [ ] `CHANGELOG.md` `## [0.12.0] — unreleased` → `### Fixed` has the Python `LuaRunner` entry,
       not marked BREAKING.
 - [ ] No files outside `bindings/python/src/quiverdb/lua_runner.py`,
       `bindings/python/tests/test_lua_runner.py`, `bindings/python/AGENTS.md` and `CHANGELOG.md`

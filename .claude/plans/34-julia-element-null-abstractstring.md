@@ -180,7 +180,7 @@ Before the change all three new DB tests throw `MethodError` at the `e[String(k)
   > - **`Element` scalars**: `el[name] = nothing` writes SQL NULL via `quiver_element_set_null`
   >   (so `create_element!`/`update_element!(...; x = nothing)` clears a column), and any
   >   `AbstractString` is accepted. Arrays stay non-null (root design decision).
-- `CHANGELOG.md`, `## [0.11.0] — unreleased` → `### Added`:
+- `CHANGELOG.md`, `## [0.12.0] — unreleased` → `### Added`:
   ```markdown
   - **Julia: `Element` accepts `nothing` and any `AbstractString` scalar.** `update_element!(db, c,
     id; attr = nothing)` (and the `create_element!` / `update_element_by_label!` keyword forms) now

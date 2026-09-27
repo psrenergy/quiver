@@ -173,7 +173,7 @@ directories in `tests/CMakeLists.txt`. Prefer the first.
   decision's mention of `TypeValidator` ("`TypeValidator` (scalar create/update) and
   `value_matches_type`") to "`validate_scalar`/`validate_value` (`src/type_validator.cpp`) and
   `value_matches_type`".
-- `CHANGELOG.md`, under `## [0.11.0] — unreleased` → `### Removed`:
+- `CHANGELOG.md`, under `## [0.12.0] — unreleased` → `### Removed`:
   ```markdown
   - **BREAKING (C++ only) — `quiver/schema.h`, `quiver/schema_validator.h` and
     `quiver/type_validator.h` are no longer installed.** They were internal (no binding and no C

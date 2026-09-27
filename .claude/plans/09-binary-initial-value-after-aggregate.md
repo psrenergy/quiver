@@ -76,7 +76,7 @@ The existing `ExpressionFixture.AggregateReduceOutermostTimeDimWithChildren` (`t
 - **Why the new public member is not bound to the C API.** The root rule says "all public C++ methods should be bound". `derive_initial_values()` maintains an invariant of a mutable C++ value. No binding can mutate a `BinaryMetadata`: after plan 12 the C API has only factories and getters. This matches `validate_time_dimension_metadata()` / `validate_time_dimension_sizes()`, which are public, validation-only and unbound. Say so in `src/AGENTS.md` (see Docs).
 - **Clean over defensive** (root Principles): `parent_dimension_index` always points to an earlier time dimension. So the first time dimension in order is the outermost one, before and after the aggregate's rewiring. `compute_time_dimension_initial_values` already relies on this.
 - **Delete, do not deprecate** (root Principles). After this change `set_initial_value` has no caller except its own test. It goes, with a **BREAKING** changelog line.
-- **Changelog** (root Principles): 0.11.0 is unreleased and already a minor bump. No manifest bump.
+- **Changelog** (root Principles): 0.12.0 is unreleased and already a minor bump. No manifest bump.
 - **Self-updating:** update `src/AGENTS.md` (Binary Subsystem, Expression Subsystem). Also extend the root AGENTS.md design-decision bullet about `number_of_time_dimensions()`, so the stored-field decision is not relitigated.
 
 Alternatives considered and rejected:
@@ -584,9 +584,9 @@ No other docs change:
 - `docs/*.md`, `bindings/julia/AGENTS.md`, `tests/AGENTS.md` and `src/c/AGENTS.md` do not mention `initial_value` or aggregate start dates.
 - `bindings/js/src/lua-api.ts` lists `initial_value` only as a `get_dimensions()` field. No Lua binding is added or removed, so `lua-api-sync.test.ts` is unaffected.
 
-### `CHANGELOG.md` (under `## [0.11.0] — unreleased`)
+### `CHANGELOG.md` (under `## [0.12.0] — unreleased`)
 
-1. `### Removed`. This is Keep a Changelog order (Changed, Removed, Fixed), and it is the section plan 12 appends to. If no earlier plan created it, add it immediately before the `### Fixed` heading of 0.11.0, after the last `### Changed` entry. If it already exists, append this bullet to it.
+1. `### Removed`. This is Keep a Changelog order (Changed, Removed, Fixed), and it is the section plan 12 appends to. If no earlier plan created it, add it immediately before the `### Fixed` heading of 0.12.0, after the last `### Changed` entry. If it already exists, append this bullet to it.
 ```markdown
 ### Removed
 
@@ -640,7 +640,7 @@ From the repo root, in order:
 - [ ] The two new `ExpressionFixture` tests, and the new C API, Lua and Julia tests, pass. Each failed before the fix. `BinaryMetadataDeriveInitialValues.RecomputesFromCurrentInitialDatetime` passes.
 - [ ] Every existing binary, expression, iteration and CSV-converter test passes unchanged.
 - [ ] The root `AGENTS.md` decision bullet, the two `src/AGENTS.md` Binary Subsystem bullets and the `ExpressionAggregate` bullet are updated. CRLF is preserved.
-- [ ] `CHANGELOG.md` 0.11.0 has the `### Removed` **BREAKING** entry with an *Adapt:* line and the `### Fixed` entry.
+- [ ] `CHANGELOG.md` 0.12.0 has the `### Removed` **BREAKING** entry with an *Adapt:* line and the `### Fixed` entry.
 - [ ] No C API, FFI declaration, binding source or `.bat` file is touched.
 
 ## Pitfalls

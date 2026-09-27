@@ -169,7 +169,7 @@ any vector/set table of the collection.
 - `src/AGENTS.md`, "Table classification has one source" bullet: add "and one name builder,
   `Schema::group_table_name(collection, group, GroupTableType)`; every group-addressed operation
   resolves its table through `Impl::require_group_table`, which owns the Pattern 2 miss."
-- `CHANGELOG.md`, under `## [0.11.0] — unreleased` → `### Changed`:
+- `CHANGELOG.md`, under `## [0.12.0] — unreleased` → `### Changed`:
   ```markdown
   - **Missing-group errors use one pattern.** The time-series operations now report `Time series
     group not found: 'g' in collection 'c'` (was `Time series group 'g' not found for collection

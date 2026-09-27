@@ -769,7 +769,7 @@ New: ``*element* validation — the empty-element throw, `TypeValidator`, `prepa
 
 ### `CHANGELOG.md`
 
-Under `## [0.11.0] — unreleased` → `### Fixed`, add as the **first** bullet:
+Under `## [0.12.0] — unreleased` → `### Fixed`, add as the **first** bullet:
 
 ```markdown
 - **A rejected `create_element()` / `update_element()` no longer leaves part of its write behind

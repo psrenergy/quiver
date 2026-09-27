@@ -64,7 +64,7 @@ Principles this breaks:
 - **No C API, FFI or binding code changes.** The helper is C++-only, like `dimension_sizes_at_values`. Nothing to regenerate: no Julia `c_api.jl` regeneration, no edit to Python `_c_api.py`, JS `loader.ts` or Dart `bindings.dart`. The behaviour does reach the C API, Lua and Julia through `aggregate`/`save`, so each of those layers gets one small end-to-end test.
 - **Hot path** (`src/AGENTS.md` › Performance Bottlenecks): `next_dimensions` runs once per cell. The new ancestor walk costs at most 4 integer comparisons per dimension, which is negligible next to the date arithmetic `dimension_sizes_at_values` already does in the same call. `validate_dimension_values` is not touched.
 - **Clean over defensive** (root AGENTS.md, Principles): `parent_dimension_index` always points to an earlier time dimension. `from_toml_content` sets it to the previous time dimension, and the `ExpressionAggregate` constructor rewires it to the grandparent or `-1`. So the chain always ends at `-1`: no cycle guard, and no `is_time_dimension()` check on an ancestor. The verifiers' corrected proposals agree: the old `parent_dim.is_time_dimension() ? … : 1` check in the aggregate can never fail, so it is deleted.
-- **Changelog** (root AGENTS.md, Principles): a user-visible fix goes under `## [0.11.0] — unreleased` › `### Fixed`. It is not breaking, and no manifest bump is needed (0.11.0 is already the unreleased minor).
+- **Changelog** (root AGENTS.md, Principles): a user-visible fix goes under `## [0.12.0] — unreleased` › `### Fixed`. It is not breaking, and no manifest bump is needed (0.12.0 is already the unreleased minor).
 - **Self-updating** (root AGENTS.md, Principles): update `src/AGENTS.md` (file map + Iteration Helpers).
 - **No new error messages.** The three message patterns do not come into play.
 - Maintainer notes for this item: none. Both verifiers upheld the finding. Their refinements are applied here:
@@ -408,7 +408,7 @@ None need to change. I checked every iteration and aggregate test (`IterationTes
 No other doc mentions this rule. `docs/*.md`, `bindings/julia/AGENTS.md` and `bindings/js/src/lua-api.ts` need no change; `lua-api.ts` mentions `initial_value` only as a field of `get_dimensions()`, and no Lua binding is added.
 
 ### `CHANGELOG.md`
-Under `## [0.11.0] — unreleased` › `### Fixed`, add this as the **last** bullet of that list, immediately before the line `## [0.10.9] — 2026-09-25`:
+Under `## [0.12.0] — unreleased` › `### Fixed`, add this as the **last** bullet of that list, immediately before the line `## [0.10.9] — 2026-09-25`:
 ```markdown
 - **Binary files with three or more time dimensions that start mid-period no longer skip cells.**
   For a `yearly × monthly × daily` file starting `2025-03-15`, the traversal behind an expression
@@ -443,7 +443,7 @@ From the repo root, in order:
 - [ ] Nowhere else in `src/` compares a parent's value against its `initial_value`: `grep -n "parent_initial\|parent_idx" src/binary/iteration.cpp src/expression/expression_aggregate.cpp` prints nothing. The `parent_idx` names in `expression_helpers.h` are broadcast-metadata code and are unrelated.
 - [ ] The 2 new `IterationTest` tests, and the new aggregate tests in C++, C API, Lua and Julia, pass. The 4 aggregate tests and the first iteration test failed before the fix.
 - [ ] All existing binary, expression, iteration and CSV-converter tests pass unchanged.
-- [ ] `src/AGENTS.md` file map and Iteration Helpers are updated. The CHANGELOG `### Fixed` bullet is added under 0.11.0.
+- [ ] `src/AGENTS.md` file map and Iteration Helpers are updated. The CHANGELOG `### Fixed` bullet is added under 0.12.0.
 - [ ] `scripts/format.bat` is clean. No `.bat` file is touched.
 
 ## Pitfalls

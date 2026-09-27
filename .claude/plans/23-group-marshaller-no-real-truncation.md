@@ -64,7 +64,7 @@ Principles violated:
 - Root `AGENTS.md`, **One scalar typing policy**: an int64 is accepted for INTEGER and REAL columns, and a double only for REAL. The read side of that rule lives in `Row::get_integer` / `Row::get_float`. `src/AGENTS.md` says of `Row::get_float`: "the one place the int64-for-REAL policy is implemented for reads … Don't re-add a widening branch at a call site." The FLOAT branch of `marshal_group_rows_to_c` widens int64 to double. That is the allowed direction, so **leave it alone**.
 - Root "Self-Updating": `src/c/AGENTS.md` is the nearest AGENTS.md to `src/c/database_helpers.h`. `tests/AGENTS.md` lists every schema file.
 - Root "All *.sql test schemas in `tests/schemas/`". The non-STRICT schema goes there as a file, not inline in the test.
-- Root "Changelog": a user-visible change gets an entry under `## [0.11.0] — unreleased`. The change is not breaking, so the entry goes under `### Fixed`.
+- Root "Changelog": a user-visible change gets an entry under `## [0.12.0] — unreleased`. The change is not breaking, so the entry goes under `### Fixed`.
 
 Alternatives considered and rejected:
 - **One shared "cell rule" helper used by both `marshal_group_rows_to_c` and `read_time_series_row`** (the finding's original proposal). Rejected by the maintainer. The remaining difference it would close, an int64 in a FLOAT column on the row read, cannot happen: a REAL-declared column (STRICT or not) always reads back as `SQLITE_FLOAT`. The helper would also keep a conversion policy in the C API, which is the leak this plan removes. `read_time_series_row` belongs to plan 17.
@@ -326,7 +326,7 @@ None. The root `AGENTS.md` already says "`query_integer` does **not** narrow a R
 
 ### `CHANGELOG.md`
 
-Add this at the **end** of the `### Fixed` list under `## [0.11.0] — unreleased`, after the last existing bullet. At HEAD that is the "Julia: updating `Artifacts.toml` …" entry, and earlier plans may have appended more.
+Add this at the **end** of the `### Fixed` list under `## [0.12.0] — unreleased`, after the last existing bullet. At HEAD that is the "Julia: updating `Artifacts.toml` …" entry, and earlier plans may have appended more.
 
 ```markdown
 - **The C API group readers no longer truncate a REAL cell in an INTEGER column.**
@@ -386,7 +386,7 @@ Run from the repo root (`C:\Development\Quiver\quiver1`), in PowerShell. In Git 
 - [ ] `DatabaseCApi.ReadVectorGroupByIdMasksRealCellInIntegerColumn` exists, failed before Change 1, and passes after it.
 - [ ] `quiver_c_tests.exe` and `quiver_tests.exe` pass in full, and so do the four binding suites.
 - [ ] `src/c/AGENTS.md` has the new sentences on the `read_time_series_group()` bullet. `tests/AGENTS.md` lists `non_strict_vector.sql` and has its sub-bullet.
-- [ ] `CHANGELOG.md` has the Fixed entry under `## [0.11.0] — unreleased`, not prefixed **BREAKING**.
+- [ ] `CHANGELOG.md` has the Fixed entry under `## [0.12.0] — unreleased`, not prefixed **BREAKING**.
 - [ ] No manifest version bump, no FFI file change, no binding change.
 
 ## Pitfalls

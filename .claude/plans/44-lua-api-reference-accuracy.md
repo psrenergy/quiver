@@ -229,7 +229,7 @@ the trailing-nil test only.
 - `src/AGENTS.md`, in the "Three guards in the Lua layer's decoders" list: add a fourth bullet.
   "`collect_group_columns` checks each column key is a string before converting it (Release sol2
   getters are unchecked), so a table of row tables throws one Pattern 1 message in every build."
-- `CHANGELOG.md`, under `## [0.11.0] — unreleased` → `### Fixed`:
+- `CHANGELOG.md`, under `## [0.12.0] — unreleased` → `### Fixed`:
   ```markdown
   - **Lua: an array of row tables passed to a group writer throws one clear error in every build**
     (`column names must be strings -- pass { column = { values... } } ...`). In Release it used to

@@ -31,7 +31,7 @@ The problems that remain fall into four groups:
 3. **Moderate duplication** in the core, the Lua runner and a few bindings.
 4. **Stale docs and tooling**, including a CLI smoke test that fails on every run.
 
-0.11.0 is still unreleased and is already a minor bump. Every BREAKING item below therefore goes
+0.12.0 is still unreleased and is already a minor bump. Every BREAKING item below therefore goes
 into its CHANGELOG section with no further manifest bump.
 
 Batches are ordered by value, and each is one commit series on `rs/quality`, with no push unless
@@ -473,7 +473,7 @@ commit per batch.
   entry has a public header" claim.
 - .github/AGENTS.md:112: drop `.JuliaFormatter.toml`. Style.jl wraps JuliaFormatter, so the other
   mentions are correct.
-- CHANGELOG: add a `[0.11.0]` link definition, and point `[0.10.9]` at `v0.10.8...v0.10.9`.
+- CHANGELOG: add a `[0.12.0]` link definition, and point `[0.10.9]` at `v0.10.8...v0.10.9`.
 
 **Tooling**
 - `scripts/tidy.bat` lints 0 files unless the checkout directory is named `quiver`. Fix:
@@ -533,4 +533,4 @@ conformance in 6.10, and test-code quality in the Tests list above.)*
 - Every fixed bug gets a regression test that fails before the fix, at every layer the behaviour is
   visible in.
 - Run `scripts/format.bat` and `scripts/tidy.bat` (the latter only works after the Batch 7 fix). Add
-  CHANGELOG entries under 0.11.0, and update the nearest AGENTS.md for each change.
+  CHANGELOG entries under 0.12.0, and update the nearest AGENTS.md for each change.

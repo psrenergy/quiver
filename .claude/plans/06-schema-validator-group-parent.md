@@ -886,7 +886,7 @@ New:
 
 No change. None of them describe schema-validation rules (checked: grep for `CASCADE` / `REFERENCES` / `schema valid`).
 
-### `CHANGELOG.md` — `## [0.11.0] — unreleased` → `### Changed`
+### `CHANGELOG.md` — `## [0.12.0] — unreleased` → `### Changed`
 
 Append as the last bullet of `### Changed`, before `### Fixed`. Earlier plans may have appended their own bullets, so append after whatever is last:
 ```
@@ -950,7 +950,7 @@ From the repo root. Bash commands are for Git Bash; the `.bat` lines can be run 
 - [ ] Every `valid/`, `migrations/` and `issues/` schema, and every schema added by plans 01–05, still loads: the full suites are green.
 - [ ] Both `HydroPlant_set_gaugingstations` doc examples declare the parent FK. The vector, set and time-series `id` bullets in `rules.md` and `attributes.md`, and the `time_series.md` paragraph, state the rule.
 - [ ] Root `AGENTS.md` Foreign Keys, `src/AGENTS.md` Core Internals and the `tests/AGENTS.md` `invalid/` list are updated.
-- [ ] A **BREAKING** CHANGELOG bullet is under `0.11.0` → `### Changed`. No manifest version bump.
+- [ ] A **BREAKING** CHANGELOG bullet is under `0.12.0` → `### Changed`. No manifest version bump.
 
 ## Pitfalls
 

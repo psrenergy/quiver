@@ -212,7 +212,7 @@ is called for every DateTime column).
 
 ## Docs and changelog
 
-- `CHANGELOG.md`, `## [0.11.0] — unreleased` → `### Fixed`:
+- `CHANGELOG.md`, `## [0.12.0] — unreleased` → `### Fixed`:
   ```markdown
   - **JS: the agent-facing Lua reference (`LUA_DB_API_REFERENCE`) no longer promises a rollback.**
     A failed script keeps every write that finished before the error; only `db:transaction` /

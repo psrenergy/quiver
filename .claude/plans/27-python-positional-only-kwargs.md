@@ -53,7 +53,7 @@ With the `/` in place I checked each method by monkeypatching a copy with `/` on
 
 ## Constraints and decisions
 
-- **Maintainer decision (binding):** "BREAKING (keyword passing of collection/id/group/label). CHANGELOG 0.11.0." The entry goes under `## [0.11.0] — unreleased` → `### Changed`, prefixed **BREAKING**, with what a caller must do. No manifest bump is needed, because 0.11.0 is already the unreleased minor.
+- **Maintainer decision (binding):** "BREAKING (keyword passing of collection/id/group/label). CHANGELOG 0.12.0." The entry goes under `## [0.12.0] — unreleased` → `### Changed`, prefixed **BREAKING**, with what a caller must do. No manifest bump is needed, because 0.12.0 is already the unreleased minor.
 - **Root `AGENTS.md`, Design Decisions:** "Python's `Element` is internal; users pass `**kwargs` to create/update." The change keeps `**kwargs` and only makes the leading parameters positional-only.
 - **Root `AGENTS.md`, Cross-Layer Naming:** "C++ to Python: Same `snake_case` name … Create/update use `**kwargs`: `create_element("Collection", label="x")`." Names are unchanged. The example is still valid.
 - **Root `AGENTS.md`, Self-Updating:** the bullet in `bindings/python/AGENTS.md` is rewritten in the same change (see Docs).
@@ -240,7 +240,7 @@ No root `AGENTS.md` edit. Its Python line (`Create/update use **kwargs: create_e
 
 ### `CHANGELOG.md` (CRLF, so use the Edit tool)
 
-Under `## [0.11.0] — unreleased` → `### Changed`, append this as the **last** bullet of that list, just before the blank line that precedes `### Fixed`. Earlier plans may have added bullets; append after whatever is last:
+Under `## [0.12.0] — unreleased` → `### Changed`, append this as the **last** bullet of that list, just before the blank line that precedes `### Fixed`. Earlier plans may have added bullets; append after whatever is last:
 
 ```
 - **BREAKING — Python: `collection`, `id`, `group` and `label` are positional-only on every
@@ -279,7 +279,7 @@ From the repo root `C:\Development\Quiver\quiver1` (PowerShell; `.bat` scripts r
 - [ ] The four new Python tests exist, fail on HEAD with `TypeError`, and pass after the change.
 - [ ] The full Python suite passes and no existing test was edited.
 - [ ] The `bindings/python/AGENTS.md` bullet is rewritten to name all five methods and the keyword-passing cost.
-- [ ] A `CHANGELOG.md` **BREAKING** entry is under `[0.11.0] — unreleased` → `### Changed`, with an *Adapt:* line.
+- [ ] A `CHANGELOG.md` **BREAKING** entry is under `[0.12.0] — unreleased` → `### Changed`, with an *Adapt:* line.
 - [ ] No C++, C API, FFI declaration, Julia, Dart, JS or Lua file is touched.
 - [ ] `scripts/test-all.bat` is green.
 
