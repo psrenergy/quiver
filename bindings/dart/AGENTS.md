@@ -1,7 +1,7 @@
 # Dart Binding (quiverdb)
 
 Cross-layer naming rules (snake_case → camelCase, named constructors for factories) and the
-convenience-method parity tables live in the root `CLAUDE.md`.
+convenience-method parity tables live in the root `AGENTS.md`.
 
 ## Layout
 

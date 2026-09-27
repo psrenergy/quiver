@@ -1,6 +1,6 @@
 # 20 — All bindings: an empty update_time_series_files map still reaches the core
 
-**Batch** 3 · **Severity** low · **Breaking** no. This is a behaviour change for already-invalid calls only: in Julia, Dart, Python and JS, an empty map on an unknown collection, or on a collection with no `_time_series_files` table, now raises instead of silently succeeding. C++, C and Lua already raise. · **Size** S · **Layers** Julia, Dart, Python, JS wrappers (code); C++, C API, Lua (tests only); root, Dart and JS CLAUDE.md; CHANGELOG
+**Batch** 3 · **Severity** low · **Breaking** no. This is a behaviour change for already-invalid calls only: in Julia, Dart, Python and JS, an empty map on an unknown collection, or on a collection with no `_time_series_files` table, now raises instead of silently succeeding. C++, C and Lua already raise. · **Size** S · **Layers** Julia, Dart, Python, JS wrappers (code); C++, C API, Lua (tests only); root, Dart and JS AGENTS.md; CHANGELOG
 **Depends on** none · **Overlaps with** 57 (same core function `Database::update_time_series_files`: 57 deletes its unreachable `if (!table_def)` block and may reword the "files table not found" message. This plan changes no core code, and its new tests deliberately do not pin that message.) Same files but different functions: 38/24/25/31 (`database_update.dart`, the group writers and `_marshalGroupColumn`), 17/33/41 (`bindings/js/src/time-series.ts`), 18/34/56 (`bindings/julia/src/database_update.jl`), 24/25/27/28/30 (`bindings/python/src/quiverdb/database.py`), 43/44 (Lua-reference prose on `update_time_series_files` in `bindings/js/src/lua-api.ts`, not touched here), 69 (C API test leaks: the new C API test closes its handle).
 
 ## Why
@@ -64,7 +64,7 @@ All four FFI bindings return before the FFI call, so the core's checks never run
 | `update_time_series_files("Configuration", {})` (no files table) | throws `Time series files table not found for collection 'Configuration'` | returns silently |
 | `update_time_series_files("Collection", {})` | no-op, existing paths kept | no-op |
 
-This breaks two root CLAUDE.md principles:
+This breaks two root AGENTS.md principles:
 - **Intelligence**: "Logic resides in C++ layer. Bindings/wrappers remain thin." The emptiness decision belongs to the core.
 - **Homogeneity**: the same call fails in three layers and passes in four.
 
@@ -86,13 +86,13 @@ These early returns are also the odd ones out inside their own bindings. Each bi
   - JS passes `null` tables with `0n`.
   - Every binding gets a test that an empty map on a nonexistent collection throws the core error.
   - This is a behaviour change and gets a CHANGELOG entry.
-- Root CLAUDE.md, Principles:
+- Root AGENTS.md, Principles:
   - "Logic resides in C++ layer. Bindings/wrappers remain thin."
   - "Homogeneity".
   - "Error Messages: … Bindings retrieve and surface them — they never craft their own." The new tests assert the core's text verbatim.
   - "Clean code over defensive code … Delete unused code."
-- Root CLAUDE.md, "Self-Updating": keep the nearest CLAUDE.md current. The Dart zero-byte gotcha and the JS null-table convention are recorded in their binding's CLAUDE.md, and the cross-layer contract goes in the root Core API list.
-- Root CLAUDE.md, "Changelog": user-visible changes are listed under the unreleased 0.11.0. This is not marked **BREAKING**: every call whose result changes was already rejected by C++, C and Lua, and it writes nothing either way. The maintainer note calls it a "behaviour change", not BREAKING, unlike the notes for analogous items such as 07. It goes under **Fixed**.
+- Root AGENTS.md, "Self-Updating": keep the nearest AGENTS.md current. The Dart zero-byte gotcha and the JS null-table convention are recorded in their binding's AGENTS.md, and the cross-layer contract goes in the root Core API list.
+- Root AGENTS.md, "Changelog": user-visible changes are listed under the unreleased 0.11.0. This is not marked **BREAKING**: every call whose result changes was already rejected by C++, C and Lua, and it writes nothing either way. The maintainer note calls it a "behaviour change", not BREAKING, unlike the notes for analogous items such as 07. It goes under **Fixed**.
 - No C API signature changes, so **no FFI regeneration**: Julia `c_api.jl`, Dart `bindings.dart`, Python `_c_api.py` and JS `loader.ts` are untouched.
 - No Design Decision or Do-Not-Fix entry covers this early return. `git log -S` traces it to each binding's first time-series-files commit with no stated reason: 682397b (Julia, Dart), be60222 (Python), f70392c (JS).
 
@@ -288,7 +288,7 @@ TEST_F(LuaRunnerTest, UpdateTimeSeriesFilesEmptyTableValidatesCollection) {
                      "Cannot update_time_series_files: collection not found: NoSuchCollection");
 }
 ```
-Use `expect_lua_error` (from `tests/test_lua_runner.h`), not bare `EXPECT_THROW`; see `tests/CLAUDE.md`.
+Use `expect_lua_error` (from `tests/test_lua_runner.h`), not bare `EXPECT_THROW`; see `tests/AGENTS.md`.
 
 ### Julia: `bindings/julia/test/test_database_time_series_files.jl`
 
@@ -366,7 +366,7 @@ No new schema files: every test uses `tests/schemas/valid/collections.sql`, whic
 
 ## Docs and changelog
 
-1. **Root `CLAUDE.md`**, Core API list, "### Database Class" (currently ~L612).
+1. **Root `AGENTS.md`**, Core API list, "### Database Class" (currently ~L612).
 
    Old line:
    ```markdown
@@ -377,7 +377,7 @@ No new schema files: every test uses `tests/schemas/valid/collections.sql`, whic
    - Time series files: `has_time_series_files()`, `list_time_series_files_columns()`, `read_time_series_files()`, `update_time_series_files()`. An empty `update_time_series_files` map still validates the collection and its files table (an unknown collection, or one with no `_time_series_files` table, throws) and then changes nothing — in every layer: the FFI bindings forward it as `count == 0` with NULL or zero-length arrays and never return early.
    ```
 
-2. **`bindings/dart/CLAUDE.md`**, the "Marshaling idiom" bullet (currently ~L77-78).
+2. **`bindings/dart/AGENTS.md`**, the "Marshaling idiom" bullet (currently ~L77-78).
 
    Old opening:
    ```markdown
@@ -395,7 +395,7 @@ No new schema files: every test uses `tests/schemas/valid/collections.sql`, whic
      through the shared private `_marshalGroupColumn(Arena, String, List<Object?>)`
    ```
 
-3. **`bindings/js/CLAUDE.md`**, the "A nullable scalar string argument passes literal `null`" bullet (currently ~L78-81).
+3. **`bindings/js/AGENTS.md`**, the "A nullable scalar string argument passes literal `null`" bullet (currently ~L78-81).
 
    Old:
    ```markdown
@@ -413,7 +413,7 @@ No new schema files: every test uses `tests/schemas/valid/collections.sql`, whic
      C API reads NULL as "clear the relation" and an empty string as a label to look up.
    ```
 
-4. No edits to `bindings/julia/CLAUDE.md` or `bindings/python/CLAUDE.md`: they state nothing about this path, and deleting a guard adds no rule worth recording. No edits to `bindings/js/src/lua-api.ts` either: plans 43/44 own the `update_time_series_files` prose there, and Lua behaviour does not change. No README or `docs/*.md` mentions an empty map.
+4. No edits to `bindings/julia/AGENTS.md` or `bindings/python/AGENTS.md`: they state nothing about this path, and deleting a guard adds no rule worth recording. No edits to `bindings/js/src/lua-api.ts` either: plans 43/44 own the `update_time_series_files` prose there, and Lua behaviour does not change. No README or `docs/*.md` mentions an empty map.
 
 5. **`CHANGELOG.md`**, under `## [0.11.0] — unreleased` → `### Fixed` (currently ~L67), appended as the last bullet of that list:
    ```markdown
@@ -439,7 +439,7 @@ Run from the repo root (`C:\Development\Quiver\quiver3`). Use Git Bash for the e
 6. `cd bindings/dart && dart analyze` must be clean, which checks the conditional `nullptr` typing. Then `bindings\dart\test\test.bat test/database_time_series_files_test.dart` must pass, then the full `bindings\dart\test\test.bat`. No C API change, so the native-assets cache does not need clearing.
 7. `bindings\python\tests\test.bat -k empty_map` must pass `test_update_time_series_files_empty_map_validates_collection`. Then run the full `bindings\python\tests\test.bat`.
 8. `bindings\js\test\test.bat` must pass everything, including "updateTimeSeriesFiles with {} still validates the collection". Then `cd bindings/js && bunx biome check src/time-series.ts test/database-time-series-files.test.ts` must be clean.
-9. `scripts\format.bat`, then `git diff --stat`. Only the files named in this plan may change: 4 binding sources, 7 test files, 3 CLAUDE.md files and `CHANGELOG.md`. Revert anything else the formatters touched.
+9. `scripts\format.bat`, then `git diff --stat`. Only the files named in this plan may change: 4 binding sources, 7 test files, 3 AGENTS.md files and `CHANGELOG.md`. Revert anything else the formatters touched.
 10. `scripts\test-all.bat`: all six suites plus the CLI smoke test must be green (the CLI smoke test is subject to plan 65's state).
 
 ## Acceptance criteria
@@ -450,7 +450,7 @@ Run from the repo root (`C:\Development\Quiver\quiver3`). Use Git Bash for the e
 - [ ] Each binding raises `Cannot update_time_series_files: collection not found: NoSuchCollection` for an empty map on an unknown collection, pinned by one new test per binding.
 - [ ] New C++, C API and Lua tests pin the core order (validate, then no-op on empty) and pass.
 - [ ] No C API, `c_api.jl`, `bindings.dart`, `_c_api.py` or `loader.ts` change.
-- [ ] Root, Dart and JS CLAUDE.md updated as specified. CHANGELOG `### Fixed` entry under 0.11.0 added.
+- [ ] Root, Dart and JS AGENTS.md updated as specified. CHANGELOG `### Fixed` entry under 0.11.0 added.
 - [ ] `scripts\format.bat` leaves no diff outside the listed files. `scripts\test-all.bat` is green.
 
 ## Pitfalls

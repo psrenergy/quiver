@@ -3,7 +3,7 @@
 **Batch** 3 · **Severity** l · **Breaking** yes: C callers of `quiver_clear_last_error`, `quiver_element_has_scalars`, `quiver_element_has_arrays`, `quiver_element_scalar_count` and `quiver_element_array_count`, and C++ callers of `Element::has_scalars()` / `Element::has_arrays()`. No binding's public API changes. Only Julia's low-level `Quiver.C` wrappers and the internal Dart and Python declarations for these symbols go. · **Size** S · **Layers** C++ core, C API, Julia FFI (generated), Dart FFI (hand-edited), Python cdef, docs/changelog
 **Depends on** none. If plan 12 has landed, its `### Removed` section in `CHANGELOG.md` gets this bullet; if not, this plan creates the section.
 **Overlaps with**
-- **12** (binary-metadata builders): it creates the `### Removed` section under 0.11.0 that this plan appends to, and it regenerates `bindings/julia/src/c_api.jl`. It edits the `## Memory Management` block of `src/c/CLAUDE.md` (~L112). This plan edits the `## Return Codes` line (~L49) and the `## Error Handling` paragraph (~L67-72) of the same file.
+- **12** (binary-metadata builders): it creates the `### Removed` section under 0.11.0 that this plan appends to, and it regenerates `bindings/julia/src/c_api.jl`. It edits the `## Memory Management` block of `src/c/AGENTS.md` (~L112). This plan edits the `## Return Codes` line (~L49) and the `## Error Handling` paragraph (~L67-72) of the same file.
 - **16, 17, 18, 20, 22, 23**: they also change C headers and regenerate or hand-edit the same FFI files (`bindings/julia/src/c_api.jl`, `bindings/dart/lib/src/ffi/bindings.dart`, `bindings/python/src/quiverdb/_c_api.py`). This plan touches different declarations. Anchor every edit by symbol name, not line number.
 - **30** (Python stale docstrings): it rewrites the header comment of `_c_api.py` (currently ~L5-6, "Phase 1 CFFI declarations..."). This plan deletes other lines in that file (~L16, ~L87-90) and one line of the `check()` docstring in `_helpers.py`. They do not conflict.
 
@@ -16,7 +16,7 @@ Five exported C functions and two public C++ methods have no consumer anywhere. 
 - **`quiver_clear_last_error`**
   - Declaration and definition: `include/quiver/c/common.h:34` and `src/c/common.cpp:24-26`.
   - FFI declarations that nothing calls: `bindings/julia/src/c_api.jl:87-89` (generated), `bindings/dart/lib/src/ffi/bindings.dart:38-43` and `bindings/python/src/quiverdb/_c_api.py:16`. JS dropped it from `loader.ts` in #198 because nothing used it.
-  - Two text mentions: a Python docstring that says the function is *not* called (`_helpers.py:11`: `Does NOT call quiver_clear_last_error() (matches Julia/Dart behavior).`), and the exception list at `src/c/CLAUDE.md:49`.
+  - Two text mentions: a Python docstring that says the function is *not* called (`_helpers.py:11`: `Does NOT call quiver_clear_last_error() (matches Julia/Dart behavior).`), and the exception list at `src/c/AGENTS.md:49`.
   - No test, script, doc or CI step calls it.
 - **`quiver_element_has_scalars` / `_has_arrays` / `_scalar_count` / `_array_count`**
   - Declarations and definitions: `include/quiver/c/element.h:44-47` and `src/c/element.cpp:138-164`.
@@ -46,24 +46,24 @@ QUIVER_C_API const char* quiver_get_last_error(void);
 Every binding already reads the message only after a non-OK return: Julia `exceptions.jl:14`, Dart `exceptions.dart:8` and `lua_runner.dart:71`, JS `errors.ts:14`, Python `_helpers.py:15`. So the honest contract is "read it only after `QUIVER_ERROR`", and `quiver_clear_last_error` has no job in it.
 
 **Principles violated:**
-- Root `CLAUDE.md` Principles: "Delete unused code, do not deprecate."
+- Root `AGENTS.md` Principles: "Delete unused code, do not deprecate."
 - The header comment misstates behaviour, which cuts against "Human-Centric: Codebase optimized for human readability".
 
 ## Constraints and decisions
 
-- **Maintainer decision (binding):** "Only quiver_clear_last_error and quiver_element_has_scalars/has_arrays/scalar_count/array_count plus C++ Element::has_scalars/has_arrays (binary builders are plan 12). BREAKING; CHANGELOG 0.11.0. Regenerate Julia/Dart FFI or hand-edit per binding CLAUDE.md; update Python cdef and _helpers.py docstring."
-- **Root `CLAUDE.md` Principles:** "All public C++ methods should be bound to C API". This is why the C++ `has_scalars`/`has_arrays` go together with their C wrappers, and are not left public with no binding.
+- **Maintainer decision (binding):** "Only quiver_clear_last_error and quiver_element_has_scalars/has_arrays/scalar_count/array_count plus C++ Element::has_scalars/has_arrays (binary builders are plan 12). BREAKING; CHANGELOG 0.11.0. Regenerate Julia/Dart FFI or hand-edit per binding AGENTS.md; update Python cdef and _helpers.py docstring."
+- **Root `AGENTS.md` Principles:** "All public C++ methods should be bound to C API". This is why the C++ `has_scalars`/`has_arrays` go together with their C wrappers, and are not left public with no binding.
   - `Element::scalars()` / `arrays()` stay. The core uses them. The C API never exposed their contents, only their sizes. That size exposure is what this plan removes.
-- **Root `CLAUDE.md` Design Decisions, "One C API error channel":** everything reports via `quiver_get_last_error`. That function stays, and the decision is untouched.
-- **Root `CLAUDE.md` Versioning / task facts:** 0.11.0 is unreleased and already a minor bump over 0.10.9. The entry goes under `## [0.11.0] — unreleased`, prefixed **BREAKING**.
+- **Root `AGENTS.md` Design Decisions, "One C API error channel":** everything reports via `quiver_get_last_error`. That function stays, and the decision is untouched.
+- **Root `AGENTS.md` Versioning / task facts:** 0.11.0 is unreleased and already a minor bump over 0.10.9. The entry goes under `## [0.11.0] — unreleased`, prefixed **BREAKING**.
   - *Correction to the verifiers' proposals:* both asked for "a 0.x minor bump across all five manifests". That is already done. **Do not bump any manifest.**
-- **`bindings/dart/CLAUDE.md`, "The checked-in `bindings.dart` predates the pinned ffigen (20.1.1)":** regenerating rewrites the whole file and turns the int-constant enums into Dart `enum`s, which breaks hub. C API changes are hand-edited in "in the file's existing style".
+- **`bindings/dart/AGENTS.md`, "The checked-in `bindings.dart` predates the pinned ffigen (20.1.1)":** regenerating rewrites the whole file and turns the int-constant enums into Dart `enum`s, which breaks hub. C API changes are hand-edited in "in the file's existing style".
   - *Correction to the policy verifier's proposal:* it said "Regenerate the Julia and Dart FFI with scripts/generator.bat". That would run ffigen. **Hand-delete the Dart entries instead, and do not run `scripts/generator.bat`**, because it runs all three generators.
-- **`bindings/julia/CLAUDE.md`:** "`src/c_api.jl` GENERATED low-level FFI module (do not hand-edit; regenerate)". Run `bindings/julia/generator/generator.bat` only.
-- **`bindings/python/CLAUDE.md`:** "`_c_api.py` Hand-written CFFI cdef declarations (kept in sync manually)". Hand-delete.
-- **`bindings/js/CLAUDE.md`:** "No generator". `src/loader.ts` has none of these symbols (verified by grep), so JS needs no change.
+- **`bindings/julia/AGENTS.md`:** "`src/c_api.jl` GENERATED low-level FFI module (do not hand-edit; regenerate)". Run `bindings/julia/generator/generator.bat` only.
+- **`bindings/python/AGENTS.md`:** "`_c_api.py` Hand-written CFFI cdef declarations (kept in sync manually)". Hand-delete.
+- **`bindings/js/AGENTS.md`:** "No generator". `src/loader.ts` has none of these symbols (verified by grep), so JS needs no change.
 - **Lua:** it binds the C++ `Database` directly through sol2 and never touches `Element::has_*`, so it needs no change.
-- **Root `CLAUDE.md` Principles, "Self-Updating":** update `src/c/CLAUDE.md` (the exception list and the error-channel contract) and `bindings/dart/CLAUDE.md` (the hand-edit record).
+- **Root `AGENTS.md` Principles, "Self-Updating":** update `src/c/AGENTS.md` (the exception list and the error-channel contract) and `bindings/dart/AGENTS.md` (the hand-edit record).
 
 Alternatives rejected:
 - **Clearing the message on success at every C entry point, so the old comment becomes true.** That adds defensive boilerplate across the whole C API for no consumer, since every binding reads the message only after a failure. The policy verifier rejected it too.
@@ -603,7 +603,7 @@ Leave `CreateAndDestroy`, `DestroyNull`, `SetArrayWithNullMask`, `ClearNull`, `N
 
 ## Docs and changelog
 
-**`src/c/CLAUDE.md`** (CRLF). There are two edits.
+**`src/c/AGENTS.md`** (CRLF). There are two edits.
 
 (a) `## Return Codes` (currently ~L49). Old:
 
@@ -635,7 +635,7 @@ after a call returns `QUIVER_ERROR` (every binding's `check` does exactly that).
 
 Do not touch the `## Memory Management` block (~L112). Plan 12 owns it.
 
-**`bindings/dart/CLAUDE.md`** (CRLF). In the bullet "**The checked-in `bindings.dart` predates the pinned ffigen (20.1.1).**", the current text reads:
+**`bindings/dart/AGENTS.md`** (CRLF). In the bullet "**The checked-in `bindings.dart` predates the pinned ffigen (20.1.1).**", the current text reads:
 
 ```
   `quiver_database_upsert_time_series_row` plus its `_by_label` form, and
@@ -654,8 +654,8 @@ New:
 
 If an earlier plan (17, 18, 20, 22 or 23) already extended this list, add the "Removals are hand-deleted..." sentence at the end of whatever list is there.
 
-**No other CLAUDE.md changes.**
-- Root `CLAUDE.md`, `src/CLAUDE.md`, `tests/CLAUDE.md`, `bindings/julia/CLAUDE.md`, `bindings/python/CLAUDE.md` and `bindings/js/CLAUDE.md` do not mention these symbols (verified by grep).
+**No other AGENTS.md changes.**
+- Root `AGENTS.md`, `src/AGENTS.md`, `tests/AGENTS.md`, `bindings/julia/AGENTS.md`, `bindings/python/AGENTS.md` and `bindings/js/AGENTS.md` do not mention these symbols (verified by grep).
 - The root "Element Class" section documents only the fluent `set` builder.
 
 **No other docs.** `docs/*.md`, `README.md`, the binding READMEs and `bindings/js/src/lua-api.ts` do not mention them (verified by grep).
@@ -758,14 +758,14 @@ Run from the repo root (`C:\Development\Quiver\quiver3`), in this order.
 - [ ] `bindings/python/src/quiverdb/_c_api.py` has no cdef for the five functions. The `_helpers.py` `check()` docstring no longer names `quiver_clear_last_error`.
 - [ ] `tests/test_element.cpp` has no `has_*` call. `Clear` / `ClearAndReuse` assert on `scalars()` / `arrays()`.
 - [ ] `tests/test_c_api_element.cpp` has the `element_string` helper. The ten tests listed in step 10 assert exact `to_string` output, and `NullAccessors` is deleted.
-- [ ] `src/c/CLAUDE.md` (exception list and error-channel sentence) and `bindings/dart/CLAUDE.md` (hand-removal note) are updated, with CRLF preserved.
+- [ ] `src/c/AGENTS.md` (exception list and error-channel sentence) and `bindings/dart/AGENTS.md` (hand-removal note) are updated, with CRLF preserved.
 - [ ] `CHANGELOG.md` 0.11.0 `### Removed` has the **BREAKING** bullet with an *Adapt:* line. No manifest version changed.
 - [ ] The Verification step 6 `git grep` prints nothing. `Element.*` passes 23 tests, `ElementCApi.*` passes 20, and all native and binding suites pass.
 
 ## Pitfalls
 
 - **Order matters for the test file.** `tests/test_c_api_element.cpp` calls the four accessors today. If you delete them from the header first, the C test target stops compiling. Rewrite the tests first (Verification step 1).
-- **Do not run `scripts/generator.bat`,** and do not run `dart run ffigen`. Either one regenerates `bindings.dart` with the pinned ffigen 20.1.1, which turns `quiver_error_t` / `quiver_data_type_t` / `quiver_log_level_t` into Dart enums and breaks hub (`bindings/dart/CLAUDE.md`). Run only `bindings/julia/generator/generator.bat`.
+- **Do not run `scripts/generator.bat`,** and do not run `dart run ffigen`. Either one regenerates `bindings.dart` with the pinned ffigen 20.1.1, which turns `quiver_error_t` / `quiver_data_type_t` / `quiver_log_level_t` into Dart enums and breaks hub (`bindings/dart/AGENTS.md`). Run only `bindings/julia/generator/generator.bat`.
 - **The Julia generator rewrites the whole file** from the current headers. If `git diff` of `c_api.jl` shows hunks beyond the five removals, an earlier plan changed a C header without regenerating.
   - Those hunks are correct, because they mirror the headers. Keep them and mention them in the commit message.
   - Do not hand-delete the wrappers as a shortcut. The generator needs `julia +1.12.5` (a juliaup channel).
@@ -773,7 +773,7 @@ Run from the repo root (`C:\Development\Quiver\quiver3`), in this order.
 - **`EXPECT_*` inside the helper is fine. `ASSERT_*` is not:** gtest's fatal assertions need a `void` function, and `element_string` returns `std::string`.
 - **Float formatting in the expected strings:** `Element::to_string` uses `std::to_string(double)`, which is `%f` in the "C" locale (`3.14` prints as `3.140000`). `quiver_c_tests` never changes the locale. The only `setlocale` in the tests is in `tests/test_database_csv_import.cpp`, which runs in the other executable and restores the locale with RAII.
 - **Keep each literal on its own line, ending in `\n`.** clang-format keeps a line break after a string literal that ends in `\n`, so the multi-line `EXPECT_EQ` literals survive `scripts/format.bat`. A single-line form of `Clear`'s expectation is over the 120-column limit.
-- **Line endings:** every `.md` edited here (`CHANGELOG.md`, `src/c/CLAUDE.md`, `bindings/dart/CLAUDE.md`) is CRLF in the working tree. The `.h` / `.cpp` / `.py` / `.dart` / `.jl` files are LF. Use the Edit tool, not `sed`, and touch no `.bat` file.
+- **Line endings:** every `.md` edited here (`CHANGELOG.md`, `src/c/AGENTS.md`, `bindings/dart/AGENTS.md`) is CRLF in the working tree. The `.h` / `.cpp` / `.py` / `.dart` / `.jl` files are LF. Use the Edit tool, not `sed`, and touch no `.bat` file.
 - **Stale native libraries in caches:** `bindings/dart/.dart_tool/...` and the Python venv may still hold a `libquiver_c` that exports the old symbols until they rebuild. That is harmless, because no binding declares or calls them any more.
 - **Earlier plans shift lines** in `c_api.jl`, `bindings.dart`, `_c_api.py` and `CHANGELOG.md` (plans 12, 16, 17, 18, 20). Find every edit by symbol name or quoted text.
 
@@ -781,7 +781,7 @@ Run from the repo root (`C:\Development\Quiver\quiver3`), in this order.
 
 - The seven `quiver_binary_metadata_*` builders and C++ `BinaryMetadata::add_dimension` / `add_time_dimension`: **plan 12**.
 - Clearing the error message on success at every entry point: rejected above.
-- Upgrading the Dart ffigen output (the enum churn): a separate, deliberate change per `bindings/dart/CLAUDE.md`. No plan owns it.
+- Upgrading the Dart ffigen output (the enum churn): a separate, deliberate change per `bindings/dart/AGENTS.md`. No plan owns it.
 - The `_c_api.py` header comment ("Phase 1 CFFI declarations...") and other stale Python docstrings: **plan 30**.
 - Python's `Element.clear` / `_ensure_valid`: **plan 29**. That plan leaves the `quiver_element_clear` C function in place; this plan does not touch it either.
 - Converting `SetArrayWithNullMask` / `ToString` in `tests/test_c_api_element.cpp` to the new helper: optional, and not required.

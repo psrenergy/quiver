@@ -3,7 +3,7 @@
 Runs on **Bun** (`bun:ffi`), not Deno/Node. Cross-layer naming follows the Dart camelCase rule
 (`readTimeSeriesRow`, ...) with `Csv` cased as `exportCsv`/`importCsv`; JS deliberately keeps a
 string-based datetime surface — no DateTime wrappers (root design decision). Publish flow lives
-in `.github/CLAUDE.md`.
+in `.github/AGENTS.md`.
 
 ## Layout
 
@@ -31,7 +31,7 @@ biome.json        # Lint/format config
   LLM system prompt, which is why it stays a plain `export const`: a string constant costs no FFI,
   no file read, and no Bun loader feature, and `bun build --compile` inlines it into a consumer's
   binary. Converting it to an imported `.md` was tried and deliberately reverted (see root
-  `CLAUDE.md` "Do Not Fix") — the escaped backticks are the accepted cost.
+  `AGENTS.md` "Do Not Fix") — the escaped backticks are the accepted cost.
   `test/lua-api-sync.test.ts` derives the bound surface from `src/lua_runner.cpp` and fails if a
   `db:`/`quiver.*` name is undocumented, a documented name no longer exists, or the stdlib sentence
   disagrees with `open_libraries` — that check is why the doc must keep the literal-token convention
@@ -124,4 +124,4 @@ biome.json        # Lint/format config
 `package.json` `files` allowlist ships `libs/**`; a `.npmignore` with no ignore patterns (just a
 comment) stops `npm pack` falling back to the root `.gitignore` (which excludes `*.dll`/`*.so`). `publishConfig.provenance: true` emits a
 signed provenance attestation. The npm OIDC trusted-publishing workflow is described in
-`.github/CLAUDE.md`.
+`.github/AGENTS.md`.

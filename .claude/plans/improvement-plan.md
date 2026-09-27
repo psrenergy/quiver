@@ -9,7 +9,7 @@ Architecture rule: all logic lives in C++, bindings stay thin, and every layer h
 How the review was done: 13 area reviewers covered every tracked source, test, build and doc file.
 A completeness critic then added 3 areas that were in scope but unexamined: the Lua reference text,
 error-pattern conformance and test-code quality. Each finding went to two independent skeptics told
-to refute it. One checked the facts against the code; the other checked it against the CLAUDE.md
+to refute it. One checked the facts against the code; the other checked it against the AGENTS.md
 Design Decisions / Do-Not-Fix lists and against the principles. 143 findings were raised, 5 were
 refuted and 138 survived. I spot-checked the high-severity claims myself (import_csv, binary time
 math, the savepoint history) and merged the duplicates, leaving about 100 items. One verifier suggestion is **dropped** on purpose:
@@ -44,12 +44,12 @@ asked. Items marked *(opt)* are verified but marginal. **They are skipped unless
 - Q3, broadcast label rule: **relaxed**, the ternary rule (non-singleton label sets must match,
   singletons broadcast), applied to binary ops too. A non-breaking relaxation.
 - Q4, `example/`: **move the smoke script to `tests/cli/smoke.lua`**. Point `test-all.bat:134,141`
-  at it, and drop the `example/` references in root CLAUDE.md:24, :356 and tests/CLAUDE.md:198.
+  at it, and drop the `example/` references in root AGENTS.md:24, :356 and tests/AGENTS.md:198.
 
 **How the work runs.** Batches go in order, 1 → 7. Several touch the same files (for example
 `database_csv_import.cpp` in Batches 1 and 6, and `lua_runner.cpp` in 1 and 5), so each batch lands
 before the next starts. Within a batch, independent layers can be done in parallel. Each batch ends
-with the full suite (Verification below), a CHANGELOG entry and the CLAUDE.md updates, then one
+with the full suite (Verification below), a CHANGELOG entry and the AGENTS.md updates, then one
 commit per batch.
 
 ---
@@ -80,8 +80,8 @@ commit per batch.
    value column, plus C++ tests for metadata, read order and `read_time_series_row`.
 3. **`update_time_series_group` drops columns that appear only in later rows.** It builds the INSERT
    from `rows[0]` (`src/database_time_series.cpp:172-189`). Fix: take the union of row keys, as
-   `update_group_rows` does. Add one C++ test, and delete the "rows[0]" caveats in src/CLAUDE.md,
-   src/c/CLAUDE.md, `database_helpers.h:215` and `lua_runner.cpp:2024`.
+   `update_group_rows` does. Add one C++ test, and delete the "rows[0]" caveats in src/AGENTS.md,
+   src/c/AGENTS.md, `database_helpers.h:215` and `lua_runner.cpp:2024`.
 4. **`read_time_series_row` on a multi-dimension group** can return NULL, or a value from an
    arbitrary block. Fix: throw Pattern 1 when the table has more than one dimension column, checked
    after `find_dimension_columns` succeeds. Also add `AND t.<attr> IS NOT NULL` to the outer ON.
@@ -141,8 +141,8 @@ commit per batch.
 5. **Delete the unused C API builder family**: `quiver_binary_metadata_create`, the `set_*`
    functions, `add_dimension`/`add_time_dimension`, and the C++ `BinaryMetadata::add_*` methods
    along with their tests. Port the getter and null-argument tests to `from_toml` handles, and
-   regenerate `c_api.jl`. **BREAKING.** Also fix root CLAUDE.md:717, src/CLAUDE.md:697 and
-   src/c/CLAUDE.md:112.
+   regenerate `c_api.jl`. **BREAKING.** Also fix root AGENTS.md:717, src/AGENTS.md:697 and
+   src/c/AGENTS.md:112.
 6. **The `csv_to_bin` round trip is lossy.**
    - The reader uses `std::stod`: it accepts trailing garbage and truncates under a `,` locale. Fix:
      move `parse_float` into `src/utils/number.h`, use it in `read_line`, and throw Pattern 1 with
@@ -158,7 +158,7 @@ commit per batch.
    fallback, with the **relaxed** label rule. Delete `compute_output_labels`,
    `compute_ternary_output_labels` and `build_ternary_broadcast_metadata`. Add a single-label
    binary-op test in C++, C API, Julia and Lua (`agg_max - agg_min` gets label "max"). CHANGELOG:
-   non-breaking relaxation. Update src/CLAUDE.md.
+   non-breaking relaxation. Update src/AGENTS.md.
 9. **Two identical aggregation enums.** Fix: one namespace-scope `AggregationOperation`, one C enum,
    one `from_c` and one Lua parser, each taking the operation name so messages stay the same.
    **BREAKING** (C/Julia constants).
@@ -176,7 +176,7 @@ commit per batch.
    - Julia returns `Vector{Optional{T}}`, which closes that item in `type_stability_followup.md`.
    - Update the C API NaN test and Julia's `isnan` assertions. Add a no-data INTEGER test per
      binding.
-   - Delete the sentinel note in src/c/CLAUDE.md. **BREAKING.**
+   - Delete the sentinel note in src/c/AGENTS.md. **BREAKING.**
 2. **Julia and Python compose `read_{vector,set}_group_by_id` from NULL-dropping per-column reads.**
    Once a cell is NULL they throw BoundsError/IndexError or mispair rows, although the native C
    readers exist. JS binds neither reader. Fix:
@@ -188,7 +188,7 @@ commit per batch.
      `readTimeSeriesGroup` rather than copying it.
    - NULL-cell tests go against `multi_column_groups.sql`, with a NULL in each column in turn.
      Switch `test_database_update.py:392` to assert through the reader.
-   - Update the root CLAUDE.md table, its "still compose" caveat and bindings/python/CLAUDE.md.
+   - Update the root AGENTS.md table, its "still compose" caveat and bindings/python/AGENTS.md.
 3. Add a C API test for `quiver_database_read_set_group_by_id` over `Items_set_codes` (two nullable
    columns, one NULL cell).
 4. **All four FFI bindings return early on an empty `update_time_series_files` map**, which skips
@@ -231,7 +231,7 @@ commit per batch.
      INTEGER, with bool as 1/0. Dart's `_marshalGroupColumn` gets the same whole-column rule.
    - Raise `TypeError(... cell {r} of column '{name}')` for a non-numeric cell.
    - Never call `int()`/`float()` on a str.
-   - Fix the Dart and JS comments that cite Python's `int(v)`, and bindings/python/CLAUDE.md.
+   - Fix the Dart and JS comments that cite Python's `int(v)`, and bindings/python/AGENTS.md.
 2. **`datetime` is rejected by `Element.set`, `_set_array` and `_marshal_row_columns`**, although the
    group writer, Julia and Dart accept it. Fix:
    - One `format_datetime` in `_helpers.py`, which avoids a circular import. An aware value converts
@@ -246,7 +246,7 @@ commit per batch.
    applied to only one method). Add a test that `update_element("C", id, id=...)` works.
    **BREAKING.**
 5. Delete the redundant `bool` branches (bool is an int subclass), keep `test_boolean_input` as the
-   pin, and fix root CLAUDE.md's boolean passage, which names the branch.
+   pin, and fix root AGENTS.md's boolean passage, which names the branch.
 6. Delete dead code:
    - `Makefile`; move its `ruff check --fix` into `format.bat` first
    - the `dotenv` dev dependency
@@ -354,7 +354,7 @@ commit per batch.
 8. *(opt)* Readability:
    - Register every `db:` method with `bind.set_function`, grouped by topic.
    - Strip the 46 D-xx/FMT-xx/RESEARCH.md planning references and keep the prose, in lua_runner.cpp,
-     `src/csv/`, `ui_metadata.cpp` and src/CLAUDE.md.
+     `src/csv/`, `ui_metadata.cpp` and src/AGENTS.md.
    - `quiver_cli`: make `script` a required positional and drop the duplicate exists check.
 
 ## Batch 6: Core structure cleanups (no behaviour change unless noted)
@@ -364,13 +364,13 @@ commit per batch.
    - Delete `query_int_rows` and the hand-rolled `current_version`, which also fixes its 32-bit
      `sqlite3_column_int`.
    - Guard the `summarize` histogram with `typeof(col) = 'integer'`.
-   - Update src/CLAUDE.md.
+   - Update src/AGENTS.md.
 2. Delete the dead `Row`/`Result` members, which only their own tests call, and forward-declare
    `Result` in `database.h`.
 3. Replace `TypeValidator` with src-only free functions, and move `schema.h`, `schema_validator.h`
    and `type_validator.h` into `src/` without `QUIVER_API`; nothing outside the DLL uses them.
    `load_schema_metadata` then publishes `schema` alone. **BREAKING** (C++ headers). Update root
-   CLAUDE.md (lazy-schema text) and src/CLAUDE.md.
+   AGENTS.md (lazy-schema text) and src/AGENTS.md.
 4. One typing policy:
    - `validate_value` calls `value_matches_type`.
    - `resolve_fk_label` becomes pure resolution (via `get_foreign_key`), keeping the early throw
@@ -447,7 +447,7 @@ commit per batch.
   - `UpdateVector{Integers}InvalidColumnThrows`, `Update{Vector,Set}InvalidCollection`, and the
     `test_database_errors.cpp:182-233` family
   - `test_c_api_database_lifecycle.cpp:310-501`
-- Convert 17 Lua tests that use a bare `EXPECT_THROW` (the vacuous-pass pattern tests/CLAUDE.md
+- Convert 17 Lua tests that use a bare `EXPECT_THROW` (the vacuous-pass pattern tests/AGENTS.md
   warns against) to `expect_lua_error` with each call's actual message substring.
 - *(opt)* Delete the unused `Configuration` preamble from ~191 C++/C tests and the "Configuration
   required first" comments. Keep it in the four tests that read it, with a comment.
@@ -467,11 +467,11 @@ commit per batch.
   - fix the `../rules.md` link
 - JS README: `describe()` returns a string; add `describeCollection`/`summarizeCollection`, the
   boolean/bigint types and `GroupColumns`.
-- tests/CLAUDE.md: say "empty inner list", not "omission"; add `test_database_metadata.cpp` and
+- tests/AGENTS.md: say "empty inner list", not "omission"; add `test_database_metadata.cpp` and
   `_describe` to the file lists; fix the C API file-set comparison.
-- src/CLAUDE.md: `query_int_rows`' location (moot after Batch 6.1) and the "every QUIVER_SOURCES
+- src/AGENTS.md: `query_int_rows`' location (moot after Batch 6.1) and the "every QUIVER_SOURCES
   entry has a public header" claim.
-- .github/CLAUDE.md:112: drop `.JuliaFormatter.toml`. Style.jl wraps JuliaFormatter, so the other
+- .github/AGENTS.md:112: drop `.JuliaFormatter.toml`. Style.jl wraps JuliaFormatter, so the other
   mentions are correct.
 - CHANGELOG: add a `[0.11.0]` link definition, and point `[0.10.9]` at `v0.10.8...v0.10.9`.
 
@@ -483,8 +483,8 @@ commit per batch.
   - delete the unused CMake `tidy` target
   - keep CRLF
 - CI `dart-coverage` builds the library twice. Fix: delete its `build-cpp` and "Copy shared
-  libraries" steps, and fix the "no CI job runs the hook" claims in bindings/dart/CLAUDE.md and
-  root CLAUDE.md.
+  libraries" steps, and fix the "no CI job runs the hook" claims in bindings/dart/AGENTS.md and
+  root AGENTS.md.
 - `publish-{s3,julia,js}.yml`: delete the `version` inputs and resolve the version from
   `assert_version.py` at checkout. Drop the `version=$VERSION` dispatch args in `publish.yml` in the
   same commit. Keep the `ref` inputs.
@@ -495,7 +495,7 @@ commit per batch.
 - `test-wheel-install.bat`: `set EXIT_CODE=1` on install failure. `test-wheel.bat`: use
   `uv run --no-project python`.
 - `CMakePresets.json` is used by nothing. Slim it to `dev`/`release` (both Ninja, tests + C API ON)
-  and fix the tests/CLAUDE.md trap note.
+  and fix the tests/AGENTS.md trap note.
 - Root `CMakeLists.txt`:
   - the format glob becomes the five recursive patterns CI checks
   - drop the duplicate `include(CTest)`/`enable_testing()`
@@ -529,8 +529,8 @@ conformance in 6.10, and test-code quality in the Tests list above.)*
   `--gtest_filter=LuaRunner*:LuaBinary*`.
 - After any C API signature change, run `scripts/generator.bat`. Hand-edit `_c_api.py`,
   `loader.ts` and `bindings.dart` in their existing style (Dart: no ffigen regen, per
-  bindings/dart/CLAUDE.md). Then run `bindings/js/test/lua-api-sync.test.ts`.
+  bindings/dart/AGENTS.md). Then run `bindings/js/test/lua-api-sync.test.ts`.
 - Every fixed bug gets a regression test that fails before the fix, at every layer the behaviour is
   visible in.
 - Run `scripts/format.bat` and `scripts/tidy.bat` (the latter only works after the Batch 7 fix). Add
-  CHANGELOG entries under 0.11.0, and update the nearest CLAUDE.md for each change.
+  CHANGELOG entries under 0.11.0, and update the nearest AGENTS.md for each change.

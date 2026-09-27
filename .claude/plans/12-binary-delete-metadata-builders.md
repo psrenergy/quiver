@@ -7,7 +7,7 @@
 - **09**: moves `initial_value` into a single computation. Its note says the builder half of that problem "disappears with plan 12". If plan 09 made `add_time_dimension` call its new helper, delete `add_time_dimension` anyway and keep the helper.
 - **11**: adds length checks and missing-key errors to `from_toml_content`, changes how `from_element` reaches it, and may add tests to both binary-metadata test files. Every TOML in this plan has all six required keys, explicit `time_dimensions` / `frequencies`, and equal array lengths, so it passes plan 11's checks.
 - **16**: also regenerates `bindings/julia/src/c_api.jl`. The two plans are independent.
-- **21**: deletes the other dead C API symbols (`quiver_clear_last_error`, element counters). It shares the CHANGELOG `### Removed` section this plan creates, and edits `src/c/CLAUDE.md` line ~49. This plan edits only the memory-management block of that file (line ~112).
+- **21**: deletes the other dead C API symbols (`quiver_clear_last_error`, element counters). It shares the CHANGELOG `### Removed` section this plan creates, and edits `src/c/AGENTS.md` line ~49. This plan edits only the memory-management block of that file (line ~112).
 
 ## Why
 
@@ -54,7 +54,7 @@ It also re-implements core logic in the C layer. `quiver_binary_metadata_set_ini
         }
 ```
 
-That is the same text as `from_toml_content` (`src/binary/binary_metadata.cpp` ~L309-313). `set_labels` writes its own C-layer message, `"Cannot set_labels: null label at index "`. Both break `src/c/CLAUDE.md`: "the C API never re-implements validation or error messages that exist in C++".
+That is the same text as `from_toml_content` (`src/binary/binary_metadata.cpp` ~L309-313). `set_labels` writes its own C-layer message, `"Cannot set_labels: null label at index "`. Both break `src/c/AGENTS.md`: "the C API never re-implements validation or error messages that exist in C++".
 
 This change violates no principle. It applies two: "Delete unused code, do not deprecate", and "Simple solutions over complex abstractions" (one construction path).
 
@@ -66,15 +66,15 @@ This change violates no principle. It applies two: "Delete unused code, do not d
   - Port the getter and null-argument C API tests to `from_toml` handles.
   - Move the useful C++ builder-test checks onto `from_element` / `from_toml_content`.
   - Regenerate Julia `c_api.jl`. Dart does not bind binary.
-- Root `CLAUDE.md`, Principles: "WIP project - breaking changes acceptable"; "Delete unused code, do not deprecate"; "All public C++ methods should be bound to C API". That last rule is why the C++ half is deleted too.
-- Root `CLAUDE.md`, Design Decisions: "Binary + expression subsystems are exposed in Julia and Lua only". So there is no Dart, Python or JS work: `bindings/dart/lib/src/ffi/bindings.dart`, `bindings/python/src/quiverdb/_c_api.py` and `bindings/js/src/loader.ts` hold no `quiver_binary_metadata_*` symbol (verified by grep).
-- `src/c/CLAUDE.md`: "the C API never re-implements validation or error messages that exist in C++".
+- Root `AGENTS.md`, Principles: "WIP project - breaking changes acceptable"; "Delete unused code, do not deprecate"; "All public C++ methods should be bound to C API". That last rule is why the C++ half is deleted too.
+- Root `AGENTS.md`, Design Decisions: "Binary + expression subsystems are exposed in Julia and Lua only". So there is no Dart, Python or JS work: `bindings/dart/lib/src/ffi/bindings.dart`, `bindings/python/src/quiverdb/_c_api.py` and `bindings/js/src/loader.ts` hold no `quiver_binary_metadata_*` symbol (verified by grep).
+- `src/c/AGENTS.md`: "the C API never re-implements validation or error messages that exist in C++".
 - Versioning: 0.11.0 is unreleased and is already a minor bump over 0.10.9, so no manifest bump is needed. The two verifiers' "bump the 0.x minor version" step is already satisfied and is dropped.
-- `bindings/julia/CLAUDE.md`: "`src/c_api.jl` GENERATED low-level FFI module (do not hand-edit; regenerate)".
-- Self-Updating: fix the CLAUDE.md lines that name the builders:
-  - root `CLAUDE.md` ~L717;
-  - `src/CLAUDE.md` ~L697;
-  - `src/c/CLAUDE.md` ~L112.
+- `bindings/julia/AGENTS.md`: "`src/c_api.jl` GENERATED low-level FFI module (do not hand-edit; regenerate)".
+- Self-Updating: fix the AGENTS.md lines that name the builders:
+  - root `AGENTS.md` ~L717;
+  - `src/AGENTS.md` ~L697;
+  - `src/c/AGENTS.md` ~L112.
 
 Alternatives considered and rejected:
 - **Keep the C++ `add_dimension` / `add_time_dimension` and delete only the C wrappers.** This leaves public C++ methods with no C binding, against a root principle. Their only other callers are tests.
@@ -829,7 +829,7 @@ New. This wording does not name `from_toml_content`, because plan 11 may stop ro
 
 All four `.md` files below are **CRLF in the working tree**. Edit them with the Edit tool, not `sed`.
 
-**Root `CLAUDE.md`**: the binary cross-layer table (currently ~L717). Julia's keyword constructor and Lua's `quiver.metadata{...}` both assemble an Element and call `from_element`. Old row:
+**Root `AGENTS.md`**: the binary cross-layer table (currently ~L717). Julia's keyword constructor and Lua's `quiver.metadata{...}` both assemble an Element and call `from_element`. Old row:
 
 ```
 | Metadata builder | `BinaryMetadata{}` | `quiver_binary_metadata_create()` | `Metadata(; kwargs...)` | `quiver.metadata{kwargs}` |
@@ -843,7 +843,7 @@ New row:
 
 Leave the next two rows ("Metadata from TOML", "Metadata from Element") unchanged.
 
-**`src/CLAUDE.md`**: `## Binary Subsystem`, the `BinaryMetadata` bullet list (currently ~L695-697).
+**`src/AGENTS.md`**: `## Binary Subsystem`, the `BinaryMetadata` bullet list (currently ~L695-697).
 
 - Delete the line:
   ```
@@ -860,7 +860,7 @@ Leave the next two rows ("Metadata from TOML", "Metadata from Element") unchange
 
 If plan 09 or 11 already reworded the Factories line, append only the clause from "— the only way to build one" onward to whatever is there.
 
-**`src/c/CLAUDE.md`**: `## Memory Management`, the code block (currently ~L111-112). Old:
+**`src/c/AGENTS.md`**: `## Memory Management`, the code block (currently ~L111-112). Old:
 
 ```
 // Binary metadata lifecycle
@@ -899,7 +899,7 @@ Do not touch the `## Return Codes` exception list at ~L49. It belongs to plan 21
   `BinaryMetadata::from_element`.
 ```
 
-No other docs change. `docs/*.md`, the READMEs and `bindings/js/src/lua-api.ts` do not mention these symbols (verified by grep). `tests/CLAUDE.md` names no test from this file.
+No other docs change. `docs/*.md`, the READMEs and `bindings/js/src/lua-api.ts` do not mention these symbols (verified by grep). `tests/AGENTS.md` names no test from this file.
 
 ## Verification
 
@@ -973,7 +973,7 @@ Run from the repo root, in order.
   - `MixedTimeAndNonTime` asserts parent indices;
   - the 3 new `BinaryMetadataFromTomlContent.Error*` tests pass.
 - [ ] The Julia 1960 test comment names `quiver_binary_metadata_from_element`, not `set_initial_datetime`.
-- [ ] The root `CLAUDE.md` row, the `src/CLAUDE.md` Builders/Factories lines and the `src/c/CLAUDE.md` lifecycle block are updated. CRLF is preserved.
+- [ ] The root `AGENTS.md` row, the `src/AGENTS.md` Builders/Factories lines and the `src/c/AGENTS.md` lifecycle block are updated. CRLF is preserved.
 - [ ] `CHANGELOG.md` 0.11.0 has the `### Removed` **BREAKING** entry with an *Adapt:* line.
 - [ ] The `git grep` in Verification step 6 prints nothing. `scripts/test-all.bat` passes.
 
@@ -990,7 +990,7 @@ Run from the repo root, in order.
   - Those hunks are still correct, because they reflect the headers. Keep them, and mention them in the commit message.
   - Do not hand-delete the 7 functions as a shortcut if the generator cannot run. The generator needs `julia +1.12.5` through juliaup. Install that channel instead.
   - Stale `@ccall` stubs would not fail the Julia tests: `@ccall` resolves lazily, and no test calls them. That is why Verification step 6 greps for them.
-- **Line endings.** `CLAUDE.md`, `src/CLAUDE.md`, `src/c/CLAUDE.md` and `CHANGELOG.md` are CRLF in the working tree. `.cpp`, `.h` and `.jl` are LF (`.gitattributes`). Use the Edit tool. Touch no `.bat` file.
+- **Line endings.** `AGENTS.md`, `src/AGENTS.md`, `src/c/AGENTS.md` and `CHANGELOG.md` are CRLF in the working tree. `.cpp`, `.h` and `.jl` are LF (`.gitattributes`). Use the Edit tool. Touch no `.bat` file.
 - **Stale native libraries elsewhere.** `bindings/dart/.dart_tool/...` and `bindings/python/.venv/.../libquiver_c.dll` still export the old symbols until those caches rebuild. That is harmless: neither binding declares them.
 - **`AllTimeFrequencies` string building.** Start the concatenation with `std::string(...)`. `const char* + const char*` does not compile. Pass `toml.c_str()` to `quiver_binary_metadata_from_toml`.
 - **The out-of-range index in `GetDimensionOutOfRange`** is `2`, the dimension count of `VALID_TOML`. A factory-built handle can never have zero dimensions (`validate()` rejects it), so the old "index 0 on an empty handle" case no longer exists.
@@ -999,7 +999,7 @@ Run from the repo root, in order.
 
 - The stored `TimeProperties::initial_value`, `set_initial_value`, and recomputing it after `aggregate()`: plan 09.
 - Length checks and missing-key / wrong-type errors in `from_toml_content`, and dropping `from_element`'s TOML round trip: plan 11.
-- `quiver_clear_last_error`, the element counters `quiver_element_{has_scalars,has_arrays,scalar_count,array_count}`, and C++ `Element::has_scalars/has_arrays`, together with their CLAUDE.md line at `src/c/CLAUDE.md` ~L49: plan 21.
+- `quiver_clear_last_error`, the element counters `quiver_element_{has_scalars,has_arrays,scalar_count,array_count}`, and C++ `Element::has_scalars/has_arrays`, together with their AGENTS.md line at `src/c/AGENTS.md` ~L49: plan 21.
 - Deduplicating the identical TOML literals in `GetNumberOfTimeDimensions` / `TomlRoundTrip`. Not needed for this change.
-- The pre-pattern messages in `BinaryMetadata::validate()`, such as `"Number of labels must be positive, got 0"`. They are the documented exception in the root `CLAUDE.md`.
+- The pre-pattern messages in `BinaryMetadata::validate()`, such as `"Number of labels must be positive, got 0"`. They are the documented exception in the root `AGENTS.md`.
 - The getters, `to_toml` and the free helpers of the binary-metadata C API. They are unchanged.

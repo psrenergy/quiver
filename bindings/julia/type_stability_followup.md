@@ -27,7 +27,7 @@ each value column concrete `Vector{T}` when its `not_null` is true, `Vector{Opti
 otherwise. The dimension column stays a dense `Vector{DateTime}` (already concrete). Mirror the
 mask-skipping pattern used in the scalar readers.
 
-Note the cross-binding decision (root `CLAUDE.md`): time-series group data is column-oriented and
+Note the cross-binding decision (root `AGENTS.md`): time-series group data is column-oriented and
 group reads currently return `Vector{Union{T,Nothing}}` always — update that design note if this
 lands, and keep Python/Dart/JS on their static nullable surface.
 
@@ -61,5 +61,5 @@ joins), and a query with no rows legitimately yields `nothing`. Keep returning `
   already plumbed C++ → C API → Julia.
 - Add `isa` assertions in the matching `test/test_*.jl` keyed to each column's real nullability;
   do not use `@inferred` on the public reader (its inferred type is intentionally a 2-way union).
-- Update the nearest `CLAUDE.md` (root design decision + `bindings/julia/CLAUDE.md`) per the
+- Update the nearest `AGENTS.md` (root design decision + `bindings/julia/AGENTS.md`) per the
   self-updating rule.

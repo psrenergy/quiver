@@ -15,7 +15,7 @@
 
 ## Why
 
-Four comments in the Python binding state things that are false, plus one duplicate test whose comment is false. None of them changes behaviour; each one misleads the person who reads it. Root `CLAUDE.md` Principles: *"Human-Centric: Codebase optimized for human readability"*. A docstring that states the wrong contract is a readability bug.
+Four comments in the Python binding state things that are false, plus one duplicate test whose comment is false. None of them changes behaviour; each one misleads the person who reads it. Root `AGENTS.md` Principles: *"Human-Centric: Codebase optimized for human readability"*. A docstring that states the wrong contract is a readability bug.
 
 ### 1. `upsert_time_series_row` docstring (`bindings/python/src/quiverdb/database.py`, currently ~L1785-1793)
 
@@ -33,7 +33,7 @@ Current code at HEAD (plan 25 will have inserted a `datetime -> STRING` clause, 
 ```
 Two sentences are false:
 
-- **"No Int->Float coercion (per D-03: Python strict typing)."** The core accepts an int for a REAL column. `_marshal_row_columns` (currently ~L2239) sends a Python `int` as `DataType.INTEGER`, and `validate_time_series_row` (`src/database_time_series.cpp`, ~L22) calls `internal::value_matches_type`, which accepts an int64 for REAL (root `CLAUDE.md`, *"One scalar typing policy lives in C++"*). `tests/test_database_time_series_row.cpp`, test `Database.UpsertTimeSeriesRowErrors`, case d (~L533): `// d. INTEGER passed for REAL column 'load' is accepted (converted on insert).` I ran it at HEAD: `quiver_tests.exe --gtest_filter=Database.UpsertTimeSeriesRowErrors` passes. So `db.upsert_time_series_row("Resource", "load", eid, date_time="2024-01-01", block=1, load=42)` succeeds and stores `42.0`, which is the opposite of the docstring. The sibling `update_time_series_group` docstring (~L1542) already says it correctly: *"integers are accepted for REAL columns."*
+- **"No Int->Float coercion (per D-03: Python strict typing)."** The core accepts an int for a REAL column. `_marshal_row_columns` (currently ~L2239) sends a Python `int` as `DataType.INTEGER`, and `validate_time_series_row` (`src/database_time_series.cpp`, ~L22) calls `internal::value_matches_type`, which accepts an int64 for REAL (root `AGENTS.md`, *"One scalar typing policy lives in C++"*). `tests/test_database_time_series_row.cpp`, test `Database.UpsertTimeSeriesRowErrors`, case d (~L533): `// d. INTEGER passed for REAL column 'load' is accepted (converted on insert).` I ran it at HEAD: `quiver_tests.exe --gtest_filter=Database.UpsertTimeSeriesRowErrors` passes. So `db.upsert_time_series_row("Resource", "load", eid, date_time="2024-01-01", block=1, load=42)` succeeds and stores `42.0`, which is the opposite of the docstring. The sibling `update_time_series_group` docstring (~L1542) already says it correctly: *"integers are accepted for REAL columns."*
   "D-03" is not a Python decision. The finding says the ID appears nowhere else. That is wrong: `git grep -n "D-03"` also finds `src/database_describe.cpp:57-58` and `tests/test_database_ui_metadata.cpp:478-479`, where D-03 is an unrelated UI-sidecar normalization decision. That makes the Python citation point at the wrong thing, which is one more reason to drop it.
 - **"The dimension column (e.g. date_time) and all value columns must be provided."** The verifiers did not flag this; I found it while re-reading the docstring. Only the dimension columns are required. `validate_time_series_row` rejects a missing dimension column (`"Cannot upsert_time_series_row: row missing required '<dim>' column"`) and nothing else. The INSERT lists only the caller's columns (`Database::upsert_time_series_row`, ~L242-256, comment: *"Any value column omitted from the caller's row is not listed in the INSERT, so SQLite leaves it as the column DEFAULT (NULL for nullable value columns)."*). C++ pins it: `Database.UpsertTimeSeriesRowPartialValueColumns` (~L451). A multi-dimension group (`multi_dim_time_series.sql`: `date_time` + `block`) also has more than one dimension column, so "The dimension column" is wrong too.
 
@@ -43,7 +43,7 @@ Two sentences are false:
 def _marshal_group_columns(data: dict[str, list]) -> tuple:
     """Marshal column lists into parallel C arrays for the columnar time series API.
 ```
-It serves all six columnar group writers: `update_time_series_group`, `update_time_series_group_by_label`, `update_vector_group`, `update_vector_group_by_label`, `update_set_group`, `update_set_group_by_label` (`grep -n "_marshal_group_columns(" bindings/python/src/quiverdb/database.py` gives six call sites plus the `def`). `bindings/python/CLAUDE.md` already says so: *"`_marshal_group_columns` serves every columnar group writer (time series, vector, set, by id and by label)"*.
+It serves all six columnar group writers: `update_time_series_group`, `update_time_series_group_by_label`, `update_vector_group`, `update_vector_group_by_label`, `update_set_group`, `update_set_group_by_label` (`grep -n "_marshal_group_columns(" bindings/python/src/quiverdb/database.py` gives six call sites plus the `def`). `bindings/python/AGENTS.md` already says so: *"`_marshal_group_columns` serves every columnar group writer (time series, vector, set, by id and by label)"*.
 
 ### 3. `_c_api.py` header comment (`bindings/python/src/quiverdb/_c_api.py`, L5-6)
 
@@ -52,10 +52,10 @@ It serves all six columnar group writers: `update_time_series_group`, `update_ti
 # Copied exactly from include/quiver/c/ headers with QUIVER_C_API stripped.
 ```
 Both lines are false:
-- It is not a "lifecycle subset". I compared function names at HEAD: the cdef block declares 113 `quiver_*` names; the five headers the Python generator reads (`common.h`, `options.h`, `database.h`, `element.h`, `lua_runner.h`) declare 115. The only two missing are `quiver_database_read_vector_group_by_id` and `quiver_database_read_set_group_by_id`, and plan 18 adds them. The `binary/` and `expression/` headers are excluded on purpose (root `CLAUDE.md`: *"Binary + expression subsystems are exposed in Julia and Lua only"*), and `bindings/python/generator/generator.py`'s `HEADERS` list excludes them too.
+- It is not a "lifecycle subset". I compared function names at HEAD: the cdef block declares 113 `quiver_*` names; the five headers the Python generator reads (`common.h`, `options.h`, `database.h`, `element.h`, `lua_runner.h`) declare 115. The only two missing are `quiver_database_read_vector_group_by_id` and `quiver_database_read_set_group_by_id`, and plan 18 adds them. The `binary/` and `expression/` headers are excluded on purpose (root `AGENTS.md`: *"Binary + expression subsystems are exposed in Julia and Lua only"*), and `bindings/python/generator/generator.py`'s `HEADERS` list excludes them too.
 - It is not "copied exactly". The block is regrouped by topic with its own section comments (`// Read scalar attributes`, `// Query methods - parameterized`, ...), and `database.h` declarations appear in several places (`// database.h`, `// database.h - element operations`, then `// element.h`, then more `database.h` content).
 
-The real workflow is in `bindings/python/CLAUDE.md`: *"After C API changes, run `generator/generator.bat` and diff its output against `_c_api.py`."* The header should say that.
+The real workflow is in `bindings/python/AGENTS.md`: *"After C API changes, run `generator/generator.bat` and diff its output against `_c_api.py`."* The header should say that.
 
 ### 4. Duplicate describe test (`bindings/python/tests/test_database_lifecycle.py`, currently ~L91-92)
 
@@ -68,14 +68,14 @@ def test_describe_runs_without_error(db: Database) -> None:
 ## Constraints and decisions
 
 - **Maintainer decision (binding):** only the non-alignment parts of python#5. The four "not positionally aligned" paragraphs belong to plan 41.
-- **Root `CLAUDE.md`, Design Decisions, "One scalar typing policy lives in C++":** *"an int64 is accepted for INTEGER and REAL columns (int-for-REAL coercion) ... `TypeValidator` (scalar create/update) and `value_matches_type` (time-series writes) share this rule; bindings never coerce schema-dependently."* The new docstring states that rule. It does not add any Python-side coercion.
-- **Root `CLAUDE.md`, Core API, Time series:** *"`upsert_time_series_row` inserts or replaces a single row by its dimension key (`INSERT OR REPLACE`)."* The docstring keeps "Insert or upsert" as its summary line.
-- **`bindings/python/CLAUDE.md`, Rules:** *"CFFI ABI-mode ... After C API changes, run `generator/generator.bat` and diff its output against `_c_api.py`."* The new header comment repeats this and names the excluded subsystems.
-- **Root `CLAUDE.md`, "Changelog":** *"user-visible changes get an entry"*. Nothing here changes what a caller gets or must do, and `CHANGELOG.md` has no entry for a docstring correction anywhere in its history (`grep -n -i docstring CHANGELOG.md` is empty). So there is **no CHANGELOG entry**.
-- **Self-Updating:** `bindings/python/CLAUDE.md` already states every fact the new comments state (marshaller scope, hand-maintained cdefs, generator diff). No CLAUDE.md edit is needed.
+- **Root `AGENTS.md`, Design Decisions, "One scalar typing policy lives in C++":** *"an int64 is accepted for INTEGER and REAL columns (int-for-REAL coercion) ... `TypeValidator` (scalar create/update) and `value_matches_type` (time-series writes) share this rule; bindings never coerce schema-dependently."* The new docstring states that rule. It does not add any Python-side coercion.
+- **Root `AGENTS.md`, Core API, Time series:** *"`upsert_time_series_row` inserts or replaces a single row by its dimension key (`INSERT OR REPLACE`)."* The docstring keeps "Insert or upsert" as its summary line.
+- **`bindings/python/AGENTS.md`, Rules:** *"CFFI ABI-mode ... After C API changes, run `generator/generator.bat` and diff its output against `_c_api.py`."* The new header comment repeats this and names the excluded subsystems.
+- **Root `AGENTS.md`, "Changelog":** *"user-visible changes get an entry"*. Nothing here changes what a caller gets or must do, and `CHANGELOG.md` has no entry for a docstring correction anywhere in its history (`grep -n -i docstring CHANGELOG.md` is empty). So there is **no CHANGELOG entry**.
+- **Self-Updating:** `bindings/python/AGENTS.md` already states every fact the new comments state (marshaller scope, hand-maintained cdefs, generator diff). No AGENTS.md edit is needed.
 - Alternatives considered and rejected:
   - *Fix the lifecycle test's comment instead of deleting the test:* rejected. `TestDescribe.test_returns_string` already asserts more, so the test adds nothing. Plan 67 reaches the same conclusion for all four bindings.
-  - *Also document that a `None` kwarg raises `TypeError` in the upsert docstring:* rejected. That is true (`_marshal_row_columns` has no `None` branch) but no Python test pins it, and it is not stale text. Leave it to `bindings/python/CLAUDE.md`, which already records it.
+  - *Also document that a `None` kwarg raises `TypeError` in the upsert docstring:* rejected. That is true (`_marshal_row_columns` has no `None` branch) but no Python test pins it, and it is not stale text. Leave it to `bindings/python/AGENTS.md`, which already records it.
   - *Also say "an existing row is replaced, not merged" in the docstring:* rejected. It is true (INSERT OR REPLACE), but no test in any layer pins that an omitted column is reset on replace, and this plan does not add behaviour pins beyond the docstring's claims. "Insert or upsert" stays as it is.
   - *Mention the D-03 collision anywhere:* rejected. Deleting the citation is enough; the describe D-03 comments are correct in their own context.
 
@@ -221,7 +221,7 @@ Pin the two claims the rewritten docstring now makes, since no Python test cover
 - `_utc` is the module helper already at the top of this file (~L24).
 - The two rows use **different** `date_time` values on purpose: `read_time_series_group` orders by the date dimension only (`ORDER BY date_time`, `src/database_time_series.cpp` ~L122), so two rows with the same date and different `block` come back in an unspecified order. The C++ test sorts for that reason.
 - `42 == 42.0` is true in Python, so the `isinstance(..., float)` line is what proves the value was stored in the REAL column as a real.
-- A NULL cell reads back as `None` (`bindings/python/CLAUDE.md`, "Time-series group NULLs").
+- A NULL cell reads back as `None` (`bindings/python/AGENTS.md`, "Time-series group NULLs").
 - Before and after: this test **passes at HEAD and after the change**. The change is docstring-only, so there is no fail-before test. The test exists so the docstring's two claims are checked in the layer that states them.
 
 ### Existing tests
@@ -231,7 +231,7 @@ Pin the two claims the rewritten docstring now makes, since no Python test cover
 
 ## Docs and changelog
 
-- **CLAUDE.md files:** no edit. `bindings/python/CLAUDE.md` already says `_c_api.py` is *"Hand-written CFFI cdef declarations (kept in sync manually)"*, that `_marshal_group_columns` *"serves every columnar group writer (time series, vector, set, by id and by label)"*, and how to diff against the generator. Root `CLAUDE.md` already states the int-for-REAL rule. `tests/CLAUDE.md` lists no Python test names.
+- **AGENTS.md files:** no edit. `bindings/python/AGENTS.md` already says `_c_api.py` is *"Hand-written CFFI cdef declarations (kept in sync manually)"*, that `_marshal_group_columns` *"serves every columnar group writer (time series, vector, set, by id and by label)"*, and how to diff against the generator. Root `AGENTS.md` already states the int-for-REAL rule. `tests/AGENTS.md` lists no Python test names.
 - **Other docs:** none. `bindings/python/README.md` and `docs/*.md` contain no "coercion"/"strict typing"/"D-03" claim about Python (`grep -rn -i "coercion\|strict typing" bindings/python/README.md docs/` is empty).
 - **CHANGELOG.md:** no entry. No behaviour, API or error message changes (see Constraints).
 
@@ -256,7 +256,7 @@ Run from the repo root (`C:\Development\Quiver\quiver3`), in PowerShell.
 - [ ] `test_describe_runs_without_error` is gone from `test_database_lifecycle.py`; `TestDescribe.test_returns_string` still exists.
 - [ ] `test_upsert_time_series_row_int_for_real_and_omitted_columns` exists and passes.
 - [ ] The four alignment docstrings are untouched (plan 41).
-- [ ] No CHANGELOG or CLAUDE.md change.
+- [ ] No CHANGELOG or AGENTS.md change.
 - [ ] Full Python suite passes; `scripts/format.bat` leaves no diff outside the four files.
 
 ## Pitfalls
@@ -275,7 +275,7 @@ Run from the repo root (`C:\Development\Quiver\quiver3`), in PowerShell.
 ## Out of scope
 
 - The four "not positionally aligned with read_element_ids" paragraphs in `read_vector_booleans`, `read_vector_date_times`, `read_set_booleans` and `read_set_date_times`, and the same claims in Dart, JS and Julia: **plan 41**.
-- The `tests/CLAUDE.md` claim that vector/set coverage includes "omission of elements without group rows": **plan 75**.
+- The `tests/AGENTS.md` claim that vector/set coverage includes "omission of elements without group rows": **plan 75**.
 - The type-dispatch paragraph of `_marshal_group_columns`' docstring (first non-None element vs all cells): **plan 24**.
 - Datetime support on `upsert_time_series_row` and its docstring clause: **plan 25**.
 - Adding `read_{vector,set}_group_by_id` to `_c_api.py`: **plan 18**. Deleting `quiver_clear_last_error` and the element counter cdefs: **plan 21**. Renaming the query cdefs: **plan 22**.

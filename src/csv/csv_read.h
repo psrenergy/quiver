@@ -6,7 +6,7 @@
 // Database::import_csv (src/database_csv_import.cpp). No public include/quiver/ counterpart, no
 // QUIVER_API, no C API, no FFI binding: import_csv is already the bound public surface,
 // Julia/Dart/Python/JS already have native CSV libraries, and Lua needs this specifically because
-// `io` is deliberately absent from its sandbox (root CLAUDE.md design decisions). This is the
+// `io` is deliberately absent from its sandbox (root AGENTS.md design decisions). This is the
 // first internal .cpp in src/ with no public header -- every other internal helper
 // (utils/string.h, database_internal.h, binary/binary_utils.h) is header-only inline; Reader is
 // Pimpl'd specifically so csv-parser's headers never have to be included by src/lua_runner.cpp,

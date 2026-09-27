@@ -1,6 +1,6 @@
 # 25 — Python: accept datetime on every write path, converting aware values to UTC
 
-**Batch** 4 · **Severity** medium · **Breaking** no (additive, plus a fix: an aware non-UTC `datetime` is now stored as its UTC instant instead of its wall clock) · **Size** S · **Layers** Python binding (`_helpers.py`, `element.py`, `database.py`, tests), `bindings/python/CLAUDE.md`, `docs/time_series.md`, `CHANGELOG.md`
+**Batch** 4 · **Severity** medium · **Breaking** no (additive, plus a fix: an aware non-UTC `datetime` is now stored as its UTC instant instead of its wall clock) · **Size** S · **Layers** Python binding (`_helpers.py`, `element.py`, `database.py`, tests), `bindings/python/AGENTS.md`, `docs/time_series.md`, `CHANGELOG.md`
 
 **Depends on** none. Plans 17 and 24 run earlier and edit the same functions (see Overlaps). This plan is written to apply on top of either state.
 **Overlaps with**
@@ -44,7 +44,7 @@ db.read_time_series_group("Sensor", "readings", eid)["date_time"]
 db.read_time_series_row("Collection", "data", "value", datetime(2024, 1, 1, 11, tzinfo=plus3))
 # looks up 11:00, not 08:00 UTC, so it returns the wrong row
 ```
-`bindings/python/CLAUDE.md` (the `_parse_datetime` bullet) records the same bug as fixed on the read side ("`"...T10:30:00+03:00"` came back as `10:30Z`, three hours off"). The write side still has it.
+`bindings/python/AGENTS.md` (the `_parse_datetime` bullet) records the same bug as fixed on the read side ("`"...T10:30:00+03:00"` came back as `10:30Z`, three hours off"). The write side still has it.
 
 **2. Three write paths reject `datetime`, although every reader returns one.**
 - `bindings/python/src/quiverdb/element.py`, `Element.set` (currently ~L18-40), handles None, bool, int, float, str and list. Anything else hits:
@@ -70,11 +70,11 @@ Principles violated: **Homogeneity** (the binding surface should be uniform, bot
   - Convert an aware value to UTC when `v.utcoffset() is not None`, because the readers return UTC.
   - Use the helper at every site, including the two existing `strftime` calls (`_marshal_group_columns` and `read_time_series_row`).
   - **Do not touch `_marshal_params`.** Query parameters stay datetime-free, as they are in Julia (`database_query.jl`) and Dart (`database_query.dart`).
-- Root CLAUDE.md, **Error Messages**: a pre-FFI type-marshalling error may be crafted locally and should name the offending column and type. The one message this plan changes (`_marshal_row_columns`' `TypeError`) keeps that shape.
-- Root CLAUDE.md, **"A DATE_TIME string is validated on write, and stored verbatim"**: the core never normalizes. The binding sends the exact grammar `YYYY-MM-DDTHH:MM:SS`, and the core's `datetime::is_valid_iso8601` still validates it, so no validation is added in Python.
-- Root CLAUDE.md, **"JS keeps a string-based datetime surface"**: JS is unaffected. Julia's `DateTime` has no zone and Dart writes its `DateTime`'s own fields. Neither is changed here.
-- Root CLAUDE.md, **Intelligence / thin bindings**: formatting a native value into the string the C API takes is marshalling, not schema-dependent coercion. The same helper is used whatever the column type.
-- `bindings/python/CLAUDE.md`: the `_marshal_row_columns` note ("each kwarg is a scalar wrapped in a 1-element typed array ... a `None` kwarg raises `TypeError` here") stays true. The `None` rejection does not change.
+- Root AGENTS.md, **Error Messages**: a pre-FFI type-marshalling error may be crafted locally and should name the offending column and type. The one message this plan changes (`_marshal_row_columns`' `TypeError`) keeps that shape.
+- Root AGENTS.md, **"A DATE_TIME string is validated on write, and stored verbatim"**: the core never normalizes. The binding sends the exact grammar `YYYY-MM-DDTHH:MM:SS`, and the core's `datetime::is_valid_iso8601` still validates it, so no validation is added in Python.
+- Root AGENTS.md, **"JS keeps a string-based datetime surface"**: JS is unaffected. Julia's `DateTime` has no zone and Dart writes its `DateTime`'s own fields. Neither is changed here.
+- Root AGENTS.md, **Intelligence / thin bindings**: formatting a native value into the string the C API takes is marshalling, not schema-dependent coercion. The same helper is used whatever the column type.
+- `bindings/python/AGENTS.md`: the `_marshal_row_columns` note ("each kwarg is a scalar wrapped in a 1-element typed array ... a `None` kwarg raises `TypeError` here") stays true. The `None` rejection does not change.
 - `pyproject.toml` has `requires-python = ">=3.13"`.
 
 Alternatives considered and rejected:
@@ -477,7 +477,7 @@ Fixture: `collections_db` uses `tests/schemas/valid/collections.sql`, `Collectio
 
 ## Docs and changelog
 
-**`bindings/python/CLAUDE.md`**
+**`bindings/python/AGENTS.md`**
 1. Layout block. Old: `  _helpers.py     # Shared check()/decode_string helpers`. New: `  _helpers.py     # Shared check()/decode_string/format_datetime helpers`.
 2. Insert a new bullet directly after the `_parse_datetime` bullet, which ends "...so that note is the only guard against a "remove the redundant overloads" cleanup.":
    ```markdown
@@ -493,7 +493,7 @@ Fixture: `collections_db` uses `tests/schemas/valid/collections.sql`, `Collectio
    ```
 3. `_marshal_row_columns` bullet. Old: `` `_by_label` form — each kwarg is a scalar wrapped in a 1-element typed array. Kept separate ``. New: `` `_by_label` form — each kwarg is a scalar wrapped in a 1-element typed array (a `datetime` is formatted by `format_datetime` first). Kept separate ``. Re-wrap the paragraph to about 100 columns.
 
-**Root `CLAUDE.md`: no edit.** No passage describes Python's write-side datetime handling. The "DateTime wrappers" table lists readers only, and the JS string-datetime decision is untouched.
+**Root `AGENTS.md`: no edit.** No passage describes Python's write-side datetime handling. The "DateTime wrappers" table lists readers only, and the JS string-datetime decision is untouched.
 
 **`docs/time_series.md`** (~L24-26). Old:
 ```
@@ -549,7 +549,7 @@ Run from the repo root (`C:\Development\Quiver\quiver3`) in PowerShell.
 - [ ] `_marshal_params` is unchanged.
 - [ ] The seven new tests pass, and each of them fails on the pre-change sources.
 - [ ] The full Python suite and `scripts/test-all.bat` pass.
-- [ ] `bindings/python/CLAUDE.md` (layout line, new bullet, `_marshal_row_columns` note), `docs/time_series.md` and `CHANGELOG.md` (`0.11.0` → `### Fixed`) are updated as specified.
+- [ ] `bindings/python/AGENTS.md` (layout line, new bullet, `_marshal_row_columns` note), `docs/time_series.md` and `CHANGELOG.md` (`0.11.0` → `### Fixed`) are updated as specified.
 - [ ] No C++, C API, Julia, Dart, JS or Lua file is changed.
 
 ## Pitfalls

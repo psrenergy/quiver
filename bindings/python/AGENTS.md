@@ -1,7 +1,7 @@
 # Python Binding (quiverdb)
 
 Cross-layer naming rules (same snake_case names, `@staticmethod` factories, kwargs create/update)
-and the convenience-method parity tables live in the root `CLAUDE.md`. Local Python runs go
+and the convenience-method parity tables live in the root `AGENTS.md`. Local Python runs go
 through `uv` (see root Build & Test).
 
 ## Layout
@@ -104,6 +104,6 @@ ruff.toml         # Lint/format config (format.bat runs ruff)
   `-DQUIVER_BUILD_TESTS=OFF`; the root CMakeLists detects `SKBUILD` and forces the C API ON).
   `wheel.exclude` strips `bin`/`lib`/`include`/`share` from the wheel.
 - **cibuildwheel** targets `cp313-win_amd64` and `cp313-manylinux_x86_64`, running pytest as the
-  wheel test. CI publish flow in `.github/CLAUDE.md`.
+  wheel test. CI publish flow in `.github/AGENTS.md`.
 - Local wheel checks: `scripts/test-wheel.bat`, `scripts/test-wheel-install.bat`,
   `scripts/validate_wheel.py`, `scripts/validate_wheel_install.py`.

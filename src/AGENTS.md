@@ -2,8 +2,8 @@
 
 This file covers the C++ library: public headers in `include/quiver/**` and implementation in
 `src/**`, including the Lua, binary, and expression subsystems. The C API (`src/c/`,
-`include/quiver/c/`) has its own `src/c/CLAUDE.md`. Cross-cutting rules (naming, error message
-patterns, schema conventions, design decisions) live in the root `CLAUDE.md`.
+`include/quiver/c/`) has its own `src/c/AGENTS.md`. Cross-cutting rules (naming, error message
+patterns, schema conventions, design decisions) live in the root `AGENTS.md`.
 
 ## File Map
 
@@ -92,7 +92,7 @@ counterpart — every other internal helper here (`utils/string.h`, `database_in
 `binary/binary_utils.h`) is header-only inline, and every other `QUIVER_SOURCES` entry implements
 a public header. It stays internal because its public surface is already bound: `import_csv`
 parses through it, and the only other caller is Lua, which needs it because `io` is deliberately
-absent (Julia/Dart/Python/JS already have native CSV libraries), so the root CLAUDE.md rule "bind
+absent (Julia/Dart/Python/JS already have native CSV libraries), so the root AGENTS.md rule "bind
 every public method down to every binding" never fires — no documented exception needed. Import
 passes its one unsandboxed path as both `resolved_path` and `original_path`, with `"import_csv"` as
 the operation (from Lua it arrives already sandbox-resolved, so those errors quote the absolute
@@ -570,7 +570,7 @@ Implementation conventions in `lua_runner.cpp`:
   skip silently; a skipped positional query parameter would shift the rest and bind NULL to the
   trailing placeholder.
 - **A Lua boolean is INTEGER 1/0 on every write path**, matching the cross-layer policy in the root
-  `CLAUDE.md`. Every boolean test goes through the one predicate `is_lua_boolean`, used by
+  `AGENTS.md`. Every boolean test goes through the one predicate `is_lua_boolean`, used by
   `table_to_element` (scalars *and* the array dispatch), `lua_table_to_value_map` (row upsert),
   `lua_table_to_values` (query parameters), `columns_to_cpp_rows` (group cells), and
   `lua_table_to_vector` (per array cell). `relation_target_from_lua` is the deliberate exception:

@@ -1,7 +1,7 @@
 # CI & Release Pipeline (`.github/`)
 
 Versioning rule (CMakeLists.txt is the source of truth, `scripts/assert_version.py` checks the
-five manifests) lives in the root `CLAUDE.md`.
+five manifests) lives in the root `AGENTS.md`.
 
 ## Workflow Inventory
 
@@ -12,7 +12,7 @@ five manifests) lives in the root `CLAUDE.md`.
 | `publish.yml` | `workflow_dispatch` | Release orchestrator (see below) |
 | `publish-s3.yml` | `workflow_dispatch` (usually from publish.yml) | Builds native libs for `linux-x86_64`, `macos-aarch64`, `windows-x86_64` (via `scripts/ci/native_s3.sh`) and stages them on S3 |
 | `publish-julia.yml` | `workflow_dispatch` | Mirrors `bindings/julia` into psrenergy/Quiver.jl (see below) |
-| `publish-python.yml` | push/PR to master + `workflow_dispatch` | cibuildwheel on a ubuntu+windows matrix (targets in `bindings/python/CLAUDE.md`); the PyPI publish job runs only on `workflow_dispatch` (trusted publishing, `skip-existing: true`, `environment: pypi`) |
+| `publish-python.yml` | push/PR to master + `workflow_dispatch` | cibuildwheel on a ubuntu+windows matrix (targets in `bindings/python/AGENTS.md`); the PyPI publish job runs only on `workflow_dispatch` (trusted publishing, `skip-existing: true`, `environment: pypi`) |
 | `publish-js.yml` | `workflow_dispatch` | npm publish with bundled native libs (see below) |
 
 Composite actions in `.github/actions/`:

@@ -1,16 +1,16 @@
 # 27 — Python: positional-only "/" on every **kwargs method
 
-**Batch** 4 · **Severity** low · **Breaking** yes, for Python callers only: anyone who passes `collection`, `id`, `group` or `label` **by keyword** to `create_element`, `update_element`, `upsert_time_series_row` or `upsert_time_series_row_by_label` now gets a `TypeError` · **Size** S · **Layers** Python binding only (`bindings/python/src/quiverdb/database.py`, three Python test files, `bindings/python/CLAUDE.md`, `CHANGELOG.md`)
+**Batch** 4 · **Severity** low · **Breaking** yes, for Python callers only: anyone who passes `collection`, `id`, `group` or `label` **by keyword** to `create_element`, `update_element`, `upsert_time_series_row` or `upsert_time_series_row_by_label` now gets a `TypeError` · **Size** S · **Layers** Python binding only (`bindings/python/src/quiverdb/database.py`, three Python test files, `bindings/python/AGENTS.md`, `CHANGELOG.md`)
 **Depends on** none · **Overlaps with**
 - **25** (Python: accept datetime on every write path) changes `Element.set` / `_marshal_row_columns`, which these five methods call, and may reword the upsert docstrings. This plan edits only the five `def` lines and the one-line `update_element` docstring, not the bodies or the upsert docstrings. After 25 lands, the `read_scalars_by_id` round trip also works on collections with a DATE_TIME attribute. The test here uses `Collection` (no DATE_TIME), so it passes before and after 25.
 - **28** (delete redundant bool branches) edits `Element.set` and the marshallers. It does not touch these signatures.
 - **30** (fix stale docstrings, including the upsert "types" docstring) owns the body of the `upsert_time_series_row` docstring (`"No Int->Float coercion (per D-03: Python strict typing)"` is stale). This plan does **not** touch that docstring. Plan 30 runs after this one, so it will see `/, **kwargs: object` in the `def` line above its docstring.
 - **56** (one scalar typing policy; Pattern 1 messages for unknown columns) may reword the core's `Column 'collection' not found in table 'Collection'` message. The `create_element` test below matches only `'collection'`, which any rewording that names the column keeps.
-- **24, 29** edit other parts of `database.py` and other bullets of `bindings/python/CLAUDE.md`. There is no shared line with this plan.
+- **24, 29** edit other parts of `database.py` and other bullets of `bindings/python/AGENTS.md`. There is no shared line with this plan.
 
 ## Why
 
-`bindings/python/CLAUDE.md` (currently ~L42-47) records the rule:
+`bindings/python/AGENTS.md` (currently ~L42-47) records the rule:
 
 > **A parameter that shadows a column name needs a `/`.** A method that addresses a row positionally *and* takes attributes as `**kwargs` must mark the positional parameters positional-only, or the kwarg binds to the parameter and raises `TypeError: got multiple values for argument '<name>'` before the FFI call. `update_element_by_label(collection, label, /, **kwargs)` is the acute case …
 
@@ -40,26 +40,26 @@ db.create_element("Collection", label="x", collection="y")
 ```
 
 `read_scalars_by_id` always includes `id`. Its docstring says "Includes id and label", and `tests/test_database_read_scalar.py` (~L268) asserts `"id" in result`. So "read a row, change a field, write it back" fails in Python before any FFI call. It works in every other binding. Julia keeps keywords apart from positionals (`bindings/julia/src/database_update.jl` ~L6 `update_element!(db::Database, collection::String, id::Int64; kwargs...)`, ~L300 `upsert_time_series_row!(db, collection, group, id; kwargs...)`). Dart and JS take a map or object. Lua takes a table. This breaks:
-- the **Homogeneity** principle in the root `CLAUDE.md`;
+- the **Homogeneity** principle in the root `AGENTS.md`;
 - the binding's own recorded rule;
 - **Error Messages** ("bindings retrieve and surface [messages] — they never craft their own"). Here Python's argument binder produces the error, and the core never sees the call.
 
 With the `/` in place I checked each method by monkeypatching a copy with `/` onto `Database` in a scratch script:
 - `update_element("Collection", eid, **row)` succeeds. The core writes `UPDATE Collection SET id = ?, label = ?, … WHERE id = ?` (`src/database_update.cpp`, `Database::update_element`, ~L34-50), which stores the same `id` back.
 - `upsert_time_series_row(..., id=eid, ...)` → `QuiverError: Cannot upsert_time_series_row: column 'id' not found in group 'data' for collection 'Collection'`. `time_series_schema_types` in `src/database_time_series.cpp` (~L9-17) drops `id`, and `validate_time_series_row` (~L34-37) raises this.
-- `upsert_time_series_row_by_label(..., label="x", ...)` → `QuiverError: Cannot upsert_time_series_row: column 'label' not found in group 'data' for collection 'Collection'`. The `_by_label` form delegates to the id form, so the message names the id form, as root `CLAUDE.md` specifies.
+- `upsert_time_series_row_by_label(..., label="x", ...)` → `QuiverError: Cannot upsert_time_series_row: column 'label' not found in group 'data' for collection 'Collection'`. The `_by_label` form delegates to the id form, so the message names the id form, as root `AGENTS.md` specifies.
 - `create_element("Collection", label="x", collection="y")` → `QuiverError: Column 'collection' not found in table 'Collection'`.
 - `update_element(collection="Collection", id=eid, some_integer=1)` → `TypeError: update_element() missing 2 required positional arguments: 'collection' and 'id'`. This is the intended breaking change.
 
 ## Constraints and decisions
 
 - **Maintainer decision (binding):** "BREAKING (keyword passing of collection/id/group/label). CHANGELOG 0.11.0." The entry goes under `## [0.11.0] — unreleased` → `### Changed`, prefixed **BREAKING**, with what a caller must do. No manifest bump is needed, because 0.11.0 is already the unreleased minor.
-- **Root `CLAUDE.md`, Design Decisions:** "Python's `Element` is internal; users pass `**kwargs` to create/update." The change keeps `**kwargs` and only makes the leading parameters positional-only.
-- **Root `CLAUDE.md`, Cross-Layer Naming:** "C++ to Python: Same `snake_case` name … Create/update use `**kwargs`: `create_element("Collection", label="x")`." Names are unchanged. The example is still valid.
-- **Root `CLAUDE.md`, Self-Updating:** the bullet in `bindings/python/CLAUDE.md` is rewritten in the same change (see Docs).
+- **Root `AGENTS.md`, Design Decisions:** "Python's `Element` is internal; users pass `**kwargs` to create/update." The change keeps `**kwargs` and only makes the leading parameters positional-only.
+- **Root `AGENTS.md`, Cross-Layer Naming:** "C++ to Python: Same `snake_case` name … Create/update use `**kwargs`: `create_element("Collection", label="x")`." Names are unchanged. The example is still valid.
+- **Root `AGENTS.md`, Self-Updating:** the bullet in `bindings/python/AGENTS.md` is rewritten in the same change (see Docs).
 - **Scope, all five methods (including `create_element`):** the facts verifier notes that `create_element` does not "address a row", so the rule's literal wording does not cover it. Its only collision is an attribute named `collection`. The policy verifier and the item title ("every **kwargs method") both include it, and the `/` costs nothing. So the rule is restated as "every `**kwargs` method", which is simpler to follow than "every method that addresses a row".
 - **Upserts gain little capability.** The core already rejects `id` and `label` as time-series columns, so there the `/` turns a Python `TypeError` into the core's `QuiverError`. The justification is uniformity and "messages come from C++", not a new feature. This is said plainly in the docs rather than overstated.
-- **`**kwargs` → `**kwargs: object` on the two upsert lines.** Those two `def` lines are edited anyway. This makes all five signatures the same shape as the three that already carry the annotation. Nothing typechecks the repo (`bindings/python/CLAUDE.md`: ruff is isort-only), so this is cosmetic and has no risk.
+- **`**kwargs` → `**kwargs: object` on the two upsert lines.** Those two `def` lines are edited anyway. This makes all five signatures the same shape as the three that already carry the annotation. Nothing typechecks the repo (`bindings/python/AGENTS.md`: ruff is isort-only), so this is cosmetic and has no risk.
 - **The `id` attribute is an ordinary scalar in the core.** `update_element("C", 3, id=103)` changes the element's id (via `ON UPDATE CASCADE` for group rows). This is already true in Julia (`update_element!(db, "C", 3; id = 103)`), Dart and JS. It is core behaviour and not this item's to change. No test here pins it.
 
 Rejected alternatives:
@@ -208,7 +208,7 @@ No tests in the other layers: the behaviour exists only in Python's argument bin
 
 ## Docs and changelog
 
-### `bindings/python/CLAUDE.md` (CRLF in the working tree, so use the Edit tool)
+### `bindings/python/AGENTS.md` (CRLF in the working tree, so use the Edit tool)
 
 Replace the whole bullet (currently ~L42-47):
 
@@ -236,7 +236,7 @@ New:
   keyword.
 ```
 
-No root `CLAUDE.md` edit. Its Python line (`Create/update use **kwargs: create_element("Collection", label="x")`) stays true, and the rule is Python-local. No `docs/*.md`, README or `bindings/js/src/lua-api.ts` change: `bindings/python/README.md` is empty, and root `README.md` ~L28 uses `db.create_element("Collection", label="Item 1", value=42)`, which is positional.
+No root `AGENTS.md` edit. Its Python line (`Create/update use **kwargs: create_element("Collection", label="x")`) stays true, and the rule is Python-local. No `docs/*.md`, README or `bindings/js/src/lua-api.ts` change: `bindings/python/README.md` is empty, and root `README.md` ~L28 uses `db.create_element("Collection", label="Item 1", value=42)`, which is positional.
 
 ### `CHANGELOG.md` (CRLF, so use the Edit tool)
 
@@ -267,7 +267,7 @@ From the repo root `C:\Development\Quiver\quiver3` (PowerShell; `.bat` scripts r
    - `test_database_time_series_row.py::TestUpsertTimeSeriesRow::test_upsert_passes_an_id_attribute_to_the_core`
    - `test_database_time_series_row.py::TestUpsertTimeSeriesRow::test_upsert_by_label_passes_a_label_attribute_to_the_core`
 4. `bindings/python/tests/test.bat`. Expected: the full Python suite passes, with no existing test changed.
-5. `bindings/python/format.bat` (ruff format; `scripts/format.bat` runs it among all the formatters). Then `git diff --stat` should list only `bindings/python/src/quiverdb/database.py`, the three test files, `bindings/python/CLAUDE.md` and `CHANGELOG.md`. If ruff rewrapped a new test line, keep its result.
+5. `bindings/python/format.bat` (ruff format; `scripts/format.bat` runs it among all the formatters). Then `git diff --stat` should list only `bindings/python/src/quiverdb/database.py`, the three test files, `bindings/python/AGENTS.md` and `CHANGELOG.md`. If ruff rewrapped a new test line, keep its result.
 6. `git grep -n "\*\*kwargs" -- bindings/python/src`. Expected: exactly five lines, all of them `def` lines containing `/, **kwargs: object`. The `upsert_time_series_row` docstring example uses `**row_dict`, so it does not match.
 7. `scripts/test-all.bat`. Expected: all suites green (no other layer changed).
 
@@ -278,14 +278,14 @@ From the repo root `C:\Development\Quiver\quiver3` (PowerShell; `.bat` scripts r
 - [ ] The `upsert_time_series_row` docstring text is untouched (left to plan 30).
 - [ ] The four new Python tests exist, fail on HEAD with `TypeError`, and pass after the change.
 - [ ] The full Python suite passes and no existing test was edited.
-- [ ] The `bindings/python/CLAUDE.md` bullet is rewritten to name all five methods and the keyword-passing cost.
+- [ ] The `bindings/python/AGENTS.md` bullet is rewritten to name all five methods and the keyword-passing cost.
 - [ ] A `CHANGELOG.md` **BREAKING** entry is under `[0.11.0] — unreleased` → `### Changed`, with an *Adapt:* line.
 - [ ] No C++, C API, FFI declaration, Julia, Dart, JS or Lua file is touched.
 - [ ] `scripts/test-all.bat` is green.
 
 ## Pitfalls
 
-- **CRLF files.** `bindings/python/CLAUDE.md` and `CHANGELOG.md` are CRLF in the working tree (`.gitattributes` has `* text=auto` and neither is in the LF list). Edit them with the Edit tool, not `sed`/heredocs. The `.py` files are LF (`*.py text eol=lf`). Don't touch any `.bat`.
+- **CRLF files.** `bindings/python/AGENTS.md` and `CHANGELOG.md` are CRLF in the working tree (`.gitattributes` has `* text=auto` and neither is in the LF list). Edit them with the Edit tool, not `sed`/heredocs. The `.py` files are LF (`*.py text eol=lf`). Don't touch any `.bat`.
 - **The DATE_TIME trap in T1.** Do not "improve" T1 to use the `db` fixture (`basic.sql`, `Configuration` has `date_attribute`). Until plan 25 lands, `read_scalars_by_id` returns a `datetime` for that column and `Element.set` raises `TypeError: Unsupported type datetime` (`bindings/python/src/quiverdb/element.py`, `Element.set`). That is a different `TypeError`, and it would confuse the before/after check.
 - **Pytest `-k` from `test.bat`.** `test.bat` forwards `%*` to `uv run pytest tests/`. Quote the `-k` expression as shown. From Git Bash use `cmd //c "bindings\python\tests\test.bat -k \"attribute_to_the_core or takes_an_id_attribute\""`, or just use PowerShell.
 - **Stale `__pycache__`.** `bindings/python/src/quiverdb/__pycache__` holds compiled files for two interpreters. Pytest recompiles on mtime change, so nothing needs deleting. Don't commit them (they are untracked).

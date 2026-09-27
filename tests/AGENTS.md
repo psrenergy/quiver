@@ -1,7 +1,7 @@
 # Tests (`tests/`)
 
 C++ core and C API suites live here; binding suites live in each binding's `test/` (or Python's
-`tests/`) directory. Run commands are in the root `CLAUDE.md`.
+`tests/`) directory. Run commands are in the root `AGENTS.md`.
 
 ## C++ core tests (`tests/test_*.cpp`, one file per functional area)
 

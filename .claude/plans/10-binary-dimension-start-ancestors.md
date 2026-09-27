@@ -1,7 +1,7 @@
 # 10 — Binary: one dimension-start helper that walks the whole parent chain
 
-**Batch** 2 · **Severity** medium · **Breaking** no. This is a bug fix. One side effect: a CSV that the old `bin_to_csv` wrote for an affected file is missing rows, and `csv_to_bin` now rejects it (see Changelog). · **Size** S · **Layers** C++ core (`src/binary/iteration.cpp`, `include/quiver/binary/iteration.h`, `src/expression/expression_aggregate.cpp`); tests in C++, C API, Lua and Julia; `src/CLAUDE.md`; `CHANGELOG.md`
-**Depends on** none. The fix and its tests do not need 08 or 09, but this plan runs after them in numeric order, so every anchor below is a quoted excerpt, not a line number. · **Overlaps with** 08 (edits `src/binary/` and may add tests to `tests/test_iteration.cpp`), 09 (edits the `ExpressionAggregate` constructor in the same file, a different function, and edits nearby `src/CLAUDE.md` text), 16 (later renames the aggregation enum that the new tests use)
+**Batch** 2 · **Severity** medium · **Breaking** no. This is a bug fix. One side effect: a CSV that the old `bin_to_csv` wrote for an affected file is missing rows, and `csv_to_bin` now rejects it (see Changelog). · **Size** S · **Layers** C++ core (`src/binary/iteration.cpp`, `include/quiver/binary/iteration.h`, `src/expression/expression_aggregate.cpp`); tests in C++, C API, Lua and Julia; `src/AGENTS.md`; `CHANGELOG.md`
+**Depends on** none. The fix and its tests do not need 08 or 09, but this plan runs after them in numeric order, so every anchor below is a quoted excerpt, not a line number. · **Overlaps with** 08 (edits `src/binary/` and may add tests to `tests/test_iteration.cpp`), 09 (edits the `ExpressionAggregate` constructor in the same file, a different function, and edits nearby `src/AGENTS.md` text), 16 (later renames the aggregation enum that the new tests use)
 
 ## Why
 
@@ -55,17 +55,17 @@ A `.qvr` file whose `initial_datetime` falls mid-period starts its inner time di
 Layouts with at most two time dimensions are unaffected. The parent is then the outermost time dimension, so "every ancestor" and "the parent" mean the same thing. No existing test reaches the bug: `tests/test_iteration.cpp` has only monthly+daily from 2025-01-01, and every 3- and 4-level fixture in the repo is metadata-only.
 
 Principles this breaks:
-- `src/CLAUDE.md` › Iteration Helpers calls `first_dimensions`/`next_dimensions` the "single source of truth for `.qvr` traversal". The aggregate keeps a second copy of the start rule, and both copies are wrong.
+- `src/AGENTS.md` › Iteration Helpers calls `first_dimensions`/`next_dimensions` the "single source of truth for `.qvr` traversal". The aggregate keeps a second copy of the start rule, and both copies are wrong.
 - Data is lost silently: NaN cells, missing CSV rows and wrong sums, with no error.
 
 ## Constraints and decisions
 
-- **The binary and expression subsystems exist only in C++/C API, Julia and Lua** (root CLAUDE.md, Design Decisions). No Dart, Python or JS change or test.
+- **The binary and expression subsystems exist only in C++/C API, Julia and Lua** (root AGENTS.md, Design Decisions). No Dart, Python or JS change or test.
 - **No C API, FFI or binding code changes.** The helper is C++-only, like `dimension_sizes_at_values`. Nothing to regenerate: no Julia `c_api.jl` regeneration, no edit to Python `_c_api.py`, JS `loader.ts` or Dart `bindings.dart`. The behaviour does reach the C API, Lua and Julia through `aggregate`/`save`, so each of those layers gets one small end-to-end test.
-- **Hot path** (`src/CLAUDE.md` › Performance Bottlenecks): `next_dimensions` runs once per cell. The new ancestor walk costs at most 4 integer comparisons per dimension, which is negligible next to the date arithmetic `dimension_sizes_at_values` already does in the same call. `validate_dimension_values` is not touched.
-- **Clean over defensive** (root CLAUDE.md, Principles): `parent_dimension_index` always points to an earlier time dimension. `from_toml_content` sets it to the previous time dimension, and the `ExpressionAggregate` constructor rewires it to the grandparent or `-1`. So the chain always ends at `-1`: no cycle guard, and no `is_time_dimension()` check on an ancestor. The verifiers' corrected proposals agree: the old `parent_dim.is_time_dimension() ? … : 1` check in the aggregate can never fail, so it is deleted.
-- **Changelog** (root CLAUDE.md, Principles): a user-visible fix goes under `## [0.11.0] — unreleased` › `### Fixed`. It is not breaking, and no manifest bump is needed (0.11.0 is already the unreleased minor).
-- **Self-updating** (root CLAUDE.md, Principles): update `src/CLAUDE.md` (file map + Iteration Helpers).
+- **Hot path** (`src/AGENTS.md` › Performance Bottlenecks): `next_dimensions` runs once per cell. The new ancestor walk costs at most 4 integer comparisons per dimension, which is negligible next to the date arithmetic `dimension_sizes_at_values` already does in the same call. `validate_dimension_values` is not touched.
+- **Clean over defensive** (root AGENTS.md, Principles): `parent_dimension_index` always points to an earlier time dimension. `from_toml_content` sets it to the previous time dimension, and the `ExpressionAggregate` constructor rewires it to the grandparent or `-1`. So the chain always ends at `-1`: no cycle guard, and no `is_time_dimension()` check on an ancestor. The verifiers' corrected proposals agree: the old `parent_dim.is_time_dimension() ? … : 1` check in the aggregate can never fail, so it is deleted.
+- **Changelog** (root AGENTS.md, Principles): a user-visible fix goes under `## [0.11.0] — unreleased` › `### Fixed`. It is not breaking, and no manifest bump is needed (0.11.0 is already the unreleased minor).
+- **Self-updating** (root AGENTS.md, Principles): update `src/AGENTS.md` (file map + Iteration Helpers).
 - **No new error messages.** The three message patterns do not come into play.
 - Maintainer notes for this item: none. Both verifiers upheld the finding. Their refinements are applied here:
   - Evaluate the helper on `next`, after earlier dimensions have been restored, in ascending order.
@@ -389,7 +389,7 @@ None need to change. I checked every iteration and aggregate test (`IterationTes
 
 ## Docs and changelog
 
-### `src/CLAUDE.md`
+### `src/AGENTS.md`
 1. File map, `include/quiver/binary/` block. Old:
    `  iteration.h                 # first_dimensions, next_dimensions, dimension_sizes_at_values`
    New:
@@ -405,7 +405,7 @@ None need to change. I checked every iteration and aggregate test (`IterationTes
    After the `dimension_sizes_at_values` bullet, add:
    `- \`dimension_start_at_values(meta, values, index)\` — where dimension \`index\` starts at that coordinate: its \`initial_value\` if it is a time dim and **every** time ancestor on the \`parent_dimension_index\` chain is at its own \`initial_value\` (the period the file starts in), else \`1\`. It is the only place the mid-period start rule is written: \`next_dimensions()\` and \`ExpressionAggregate::compute_row\` both call it, so an aggregate reduces over \`[dimension_start_at_values, dimension_sizes_at_values]\`, exactly the cells the traversal visits. Checking only the immediate parent (the old rule, which both places had) restarted every later March of a \`yearly × monthly × daily\` file starting 2025-03-15 at day 15.`
 
-No other doc mentions this rule. `docs/*.md`, `bindings/julia/CLAUDE.md` and `bindings/js/src/lua-api.ts` need no change; `lua-api.ts` mentions `initial_value` only as a field of `get_dimensions()`, and no Lua binding is added.
+No other doc mentions this rule. `docs/*.md`, `bindings/julia/AGENTS.md` and `bindings/js/src/lua-api.ts` need no change; `lua-api.ts` mentions `initial_value` only as a field of `get_dimensions()`, and no Lua binding is added.
 
 ### `CHANGELOG.md`
 Under `## [0.11.0] — unreleased` › `### Fixed`, add this as the **last** bullet of that list, immediately before the line `## [0.10.9] — 2026-09-25`:
@@ -443,7 +443,7 @@ From the repo root, in order:
 - [ ] Nowhere else in `src/` compares a parent's value against its `initial_value`: `grep -n "parent_initial\|parent_idx" src/binary/iteration.cpp src/expression/expression_aggregate.cpp` prints nothing. The `parent_idx` names in `expression_helpers.h` are broadcast-metadata code and are unrelated.
 - [ ] The 2 new `IterationTest` tests, and the new aggregate tests in C++, C API, Lua and Julia, pass. The 4 aggregate tests and the first iteration test failed before the fix.
 - [ ] All existing binary, expression, iteration and CSV-converter tests pass unchanged.
-- [ ] `src/CLAUDE.md` file map and Iteration Helpers are updated. The CHANGELOG `### Fixed` bullet is added under 0.11.0.
+- [ ] `src/AGENTS.md` file map and Iteration Helpers are updated. The CHANGELOG `### Fixed` bullet is added under 0.11.0.
 - [ ] `scripts/format.bat` is clean. No `.bat` file is touched.
 
 ## Pitfalls
@@ -467,5 +467,5 @@ From the repo root, in order:
 - Parent-aware time-coordinate validation, time of day in `add_offset_from_int`, and the weekly grid are owned by **08**.
 - A stale `initial_value` after `aggregate` and rebasing the output `initial_datetime` are owned by **09**.
 - Unifying the aggregation enum is owned by **16**.
-- Making `validate_dimension_values` opt-in for performance (src/CLAUDE.md Performance Bottlenecks) is not planned.
+- Making `validate_dimension_values` opt-in for performance (src/AGENTS.md Performance Bottlenecks) is not planned.
 - **Noticed, not owned by any listed plan:** a `yearly × monthly × daily` file starting on `2024-02-29` cannot be written past year 1. `add_offset_from_int` Yearly turns `2025-02-29` into `2025-03-01` before the Monthly offset runs, so coordinate `(2,1,1)` maps to 2025-01-04, and `validate_dimension_values` throws. This belongs with plan 08's `add_offset_from_int` work. It is flagged for the maintainer and not fixed here.

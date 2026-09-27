@@ -4,7 +4,7 @@
 // Internal CSV writer behind the Lua-only db:write_csv binding (src/lua_runner.cpp). No public
 // include/quiver/ counterpart, no QUIVER_API, no C API, no FFI binding, for the same reason
 // csv_read has none: Julia/Dart/Python/JS already have native CSV libraries, and Lua needs this
-// specifically because `io` is deliberately absent from its sandbox (root CLAUDE.md design
+// specifically because `io` is deliberately absent from its sandbox (root AGENTS.md design
 // decisions). append_record is also Database::export_csv's record emitter
 // (src/database_csv_export.cpp), so export_csv and db:write_csv share one CSV quoting rule.
 //

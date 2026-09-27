@@ -73,7 +73,7 @@ column 'score'`. JS (`group-columns.ts`, `nonNull.every(Number.isInteger)`) and 
 means three different things across the bindings.
 
 Principles this violates:
-- Root `CLAUDE.md`, Design Decisions, "One scalar typing policy lives in C++": the core rejects a
+- Root `AGENTS.md`, Design Decisions, "One scalar typing policy lives in C++": the core rejects a
   float in an INTEGER column, but Python truncates the float before the core sees it. `int("7")`
   parses text before the core's TEXT/FK typing runs.
 - Root **Error Messages**: a pre-FFI marshalling error "should name the offending column and type".
@@ -92,28 +92,28 @@ int64 and int/bool/float → double conversion itself, and no `int()`/`float()` 
   `TypeError` naming the cell and the column. Never `int()`/`float()` a `str`. Apply the rule to
   both `_marshal_group_columns` and `Element._set_array`. Give Dart `_marshalGroupColumn` the same
   whole-column rule. Fix the Dart and JS comments that cite Python's `int(v)`. Update
-  `bindings/python/CLAUDE.md` and `bindings/dart/CLAUDE.md`. Plan 38 touches the same Dart file
+  `bindings/python/AGENTS.md` and `bindings/dart/AGENTS.md`. Plan 38 touches the same Dart file
   (see ordering below).
 - **Dart `Element._setMixedList` also changes.** This goes one step past the literal note. The note's
-  stated goal is that `[1, 2.5]` "means the same in every binding", and `bindings/dart/CLAUDE.md`
+  stated goal is that `[1, 2.5]` "means the same in every binding", and `bindings/dart/AGENTS.md`
   documents `_marshalGroupColumn` and `_setMixedList` as one rule ("Both ... dispatch on the first
   non-null cell and then convert every cell"). Changing only the group writer would make
   `createElement({'score': [1, 2.5]})` throw while `updateVectorGroup` accepted the same list.
-- Root `CLAUDE.md`, "One scalar typing policy lives in C++ ... bindings never coerce
+- Root `AGENTS.md`, "One scalar typing policy lives in C++ ... bindings never coerce
   schema-dependently": the new rule looks at the cells only, never the schema. The core still owns
   every schema decision, including rejecting the widened FLOAT column in an INTEGER column.
-- Root `CLAUDE.md`, Error Messages: the new `TypeError` falls under the documented exception for
+- Root `AGENTS.md`, Error Messages: the new `TypeError` falls under the documented exception for
   pre-FFI marshalling errors, crafted locally. It reuses Dart's wording exactly:
   `Unsupported value type <T> in cell <i> of column '<name>'`.
-- Root `CLAUDE.md`, "Element arrays accept NULL cells": "Julia/Python/JS pass a dense (NULL) mask and
+- Root `AGENTS.md`, "Element arrays accept NULL cells": "Julia/Python/JS pass a dense (NULL) mask and
   keep their non-null surfaces." A Python element array therefore still **rejects** a `None` cell.
   The group writers skip it, because they have a mask.
-- `bindings/dart/CLAUDE.md`, Marshaling idiom: convert every cell individually, never `as`/`cast`,
+- `bindings/dart/AGENTS.md`, Marshaling idiom: convert every cell individually, never `as`/`cast`,
   and find the dispatch cell with a plain loop, not `firstWhere(..., orElse:)`. Both still hold. The
   change adds one `values.any((v) => v is double)` scan.
-- `bindings/python/CLAUDE.md`: per-method FFI boilerplate is the house style. This change does not
+- `bindings/python/AGENTS.md`: per-method FFI boilerplate is the house style. This change does not
   touch the six writer methods, only the shared marshaller and the Element helper.
-- `bindings/js/CLAUDE.md`: "fix only what your change orphans". JS changes by one comment sentence
+- `bindings/js/AGENTS.md`: "fix only what your change orphans". JS changes by one comment sentence
   and gains one test.
 
 Alternatives considered and rejected:
@@ -896,7 +896,7 @@ and 33, which rework `group-columns.ts` next, cannot silently regress the shared
 
 ## Docs and changelog
 
-### `bindings/python/CLAUDE.md`
+### `bindings/python/AGENTS.md`
 
 1. Layout block (currently ~L20). Old: `  _helpers.py     # Shared check()/decode_string helpers`. New:
    `  _helpers.py     # Shared check()/decode_string/column_data_type helpers`.
@@ -931,7 +931,7 @@ and 33, which rework `group-columns.ts` next, cannot silently regress the shared
      for now, a `datetime`) before typing, where a group-writer column skips it via the mask.
    ```
 
-### `bindings/dart/CLAUDE.md`
+### `bindings/dart/AGENTS.md`
 
 1. Marshaling idiom bullet (currently ~L81-85). Old: `Both `_marshalGroupColumn` and
    `Element._setMixedList` dispatch on the first non-null cell and then convert **every** cell
@@ -965,7 +965,7 @@ and 33, which rework `group-columns.ts` next, cannot silently regress the shared
    `_marshalGroupColumn` (family from the first non-null element, a `double` anywhere widens to
    float), ``.
 
-### `src/CLAUDE.md`
+### `src/AGENTS.md`
 
 In the `lua_table_to_vector<T>` bullet (currently ~L595-597), old: `comes from cell 1, so `{1, 2.5}`
 into a REAL column is rejected rather than widened (JS scans the whole column and accepts it).` New:
@@ -974,7 +974,7 @@ Dart type the whole column and widen it to FLOAT, and a Lua group-writer column 
 its own `Value`, so a Lua element array is the one path that refuses it).` That is the only Lua claim
 this plan changes. The claim itself stays true: Lua is not changed here.
 
-### Root `CLAUDE.md`, READMEs, `docs/*.md`, `bindings/js/src/lua-api.ts`
+### Root `AGENTS.md`, READMEs, `docs/*.md`, `bindings/js/src/lua-api.ts`
 
 No change. Nothing there describes the bindings' per-cell dispatch (checked with `grep` for
 `dispatch`, `first non-`, `int(v)`, `mixed`).
@@ -1052,8 +1052,8 @@ From the repo root (`C:\Development\Quiver\quiver3`), in order:
 - [ ] The new Python tests (`TestColumnTyping`, two time-series tests), the Dart group 'Mixed numeric
       cells' and the JS 'group writer column typing' test all pass, and the Python and Dart ones
       fail on the pre-change code.
-- [ ] `bindings/python/CLAUDE.md` (5 edits), `bindings/dart/CLAUDE.md` (4 edits) and
-      `src/CLAUDE.md` (1 edit) are updated as specified.
+- [ ] `bindings/python/AGENTS.md` (5 edits), `bindings/dart/AGENTS.md` (4 edits) and
+      `src/AGENTS.md` (1 edit) are updated as specified.
 - [ ] The CHANGELOG bullet is under `## [0.11.0] — unreleased` → `### Changed`, prefixed
       **BREAKING**, with an *Adapt:* line.
 - [ ] `scripts/format.bat` leaves no diff, and `scripts/test-all.bat` is green.
@@ -1085,7 +1085,7 @@ From the repo root (`C:\Development\Quiver\quiver3`), in order:
   within 100 columns (biome) and Python within 120 (ruff). No `.bat` file is touched.
 - **Line numbers have moved.** Plan 18 (whole-group readers in Python/JS) and plan 20
   (`update_time_series_files` in Python and Dart) edit `database.py`, `database_update.dart` and
-  `bindings/python/CLAUDE.md` before this plan runs. Anchor every edit on the quoted excerpt and
+  `bindings/python/AGENTS.md` before this plan runs. Anchor every edit on the quoted excerpt and
   function name.
 - **Dart pattern match on list types.** `Element.set` matches `List<int>` / `List<double>` before
   the generic `List v` case. A literal `[1, 2.5]` infers `List<num>`, so it reaches `_setMixedList`,
@@ -1112,7 +1112,7 @@ From the repo root (`C:\Development\Quiver\quiver3`), in order:
 - **Lua element arrays** (`table_to_element` → `lua_table_to_vector`) still reject `{1, 2.5}`
   rather than widen. Lua's group writers already convert per cell, so `{1, 2.5}` works there. The
   rejection is loud and loses no data. No plan in the current list owns widening it, and it is
-  recorded in `src/CLAUDE.md` (edit above).
+  recorded in `src/AGENTS.md` (edit above).
 - **Julia `Vector{Any}` columns** (`Any[1, 2.5]`) still raise `ArgumentError: Unsupported column
   type: Any`. Literals promote, so ordinary callers never hit it. Not owned by any plan.
 - **`None` cells in Python element arrays** (the C API mask supports them, but the root decision

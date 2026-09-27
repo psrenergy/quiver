@@ -1,12 +1,12 @@
 # 13 — csv_to_bin/bin_to_csv: strict whole-cell float parse and shortest round-trip output
 
 **Batch** 2 · **Severity** high · **Breaking** yes — for callers of `bin_to_csv` that compare its CSV text byte for byte (values are now written at full precision), for CSV files fed to `csv_to_bin` that relied on a cell being truncated (`9.99abc`, `1.5 `), and for matchers on the old bare `stod` error text. Reaches C++, the C API, Julia and Lua. · **Size** M · **Layers** C++ core, C API (tests), Julia (tests), Lua (tests), docs/changelog
-**Depends on** none · **Overlaps with** 14 (same function `CSVConverter::read_line`; see below), 58 (the `import_csv` call sites of `parse_float`), 56 (the same `src/CLAUDE.md` typing-policy bullet), 61 (the include block of `src/database_csv_import.cpp`), 45 and 48 (both add tests to `tests/test_lua_binary.cpp`), 08 and 10 (other functions in `src/binary/csv_converter.cpp`)
+**Depends on** none · **Overlaps with** 14 (same function `CSVConverter::read_line`; see below), 58 (the `import_csv` call sites of `parse_float`), 56 (the same `src/AGENTS.md` typing-policy bullet), 61 (the include block of `src/database_csv_import.cpp`), 45 and 48 (both add tests to `tests/test_lua_binary.cpp`), 08 and 10 (other functions in `src/binary/csv_converter.cpp`)
 
 Overlap details:
 - **14** (runs after this plan) restructures `read_line` into split-then-convert and adds a row-width check. It has to keep the `utils::parse_float` call and the exact message this plan adds, because four layers of tests pin that message. Once its width check runs before conversion, the `if (row.data.size() < metadata_.labels.size())` guard in this plan's throw can never be false, and 14 may delete it. The C++ test `NonNumericCellPastLastLabel` added here asserts only the `"Cannot csv_to_bin: "` prefix, so 14's width error still satisfies it.
 - **58** (later) rewrites `import_csv` around one `convert_cell`. After this plan its REAL branch has to call `utils::parse_float` from `src/utils/number.h`, because the file-local `parse_float` is gone.
-- **56** (later) rewrites the "One scalar typing policy" bullet in `src/CLAUDE.md`. This plan changes only the file reference for `parse_float` in that bullet.
+- **56** (later) rewrites the "One scalar typing policy" bullet in `src/AGENTS.md`. This plan changes only the file reference for `parse_float` in that bullet.
 - **61** (later) removes `<cstdio>` from `src/database_csv_import.cpp`. This plan removes `<cerrno>`, `<clocale>`, `<cmath>` and `<cstdlib>` from the same include block.
 - **08 / 10** change `build_datetime_string_from_time_dimension_values` and the dimension-start logic. Those are different functions in the same file, so no lines are shared.
 
@@ -55,12 +55,12 @@ Principles violated: the root typing-policy decision (numbers are read "in the '
 ## Constraints and decisions
 
 - **Maintainer decision (binding):** "Include the bin_to_csv {:.6g} -> utils::append_number writer fix in the same change." The reader fix and the writer fix land together.
-- **Root CLAUDE.md, "One scalar typing policy lives in C++":** `import_csv` reads CSV text with a whole-cell parse "in the 'C' locale's number format whatever locale the host process set, since export always writes `.`". `csv_to_bin` now follows the same rule through the same function.
-- **Root CLAUDE.md, "One CSV parser, one CSV emitter":** `CSVConverter` "is not on this path: it splits and joins on `,` and never quotes". That stays true. This plan does **not** route `CSVConverter` through `csv_read::Reader` / `csv_write::append_record`. It only shares the *number* reader and writer.
-- **Root CLAUDE.md, "C++ Error Message Patterns":** new code uses Pattern 1, `"Cannot {operation}: {reason}"`. The operation is `csv_to_bin`, which is the public name in C++, the C API (`quiver_csv_converter_csv_to_bin`), Julia (`csv_to_bin`) and Lua (`db:csv_to_bin`).
-- **Root CLAUDE.md, "Binary + expression subsystems are exposed in Julia and Lua only":** there are no Dart, Python or JS tests or changes.
-- **Root CLAUDE.md, "Do Not Fix":** the binary hot-path decisions in `src/CLAUDE.md` (the `unordered_map` dims parameter) are untouched.
-- **Root CLAUDE.md, Build System:** the macOS 13.3 floor exists because libc++ gates floating-point `std::to_chars`. `csv_converter.cpp` now instantiates it through `append_number`. The floor already applies to the whole core (`cmake/Platform.cmake`), so no build change is needed, only the list of files that CLAUDE.md names.
+- **Root AGENTS.md, "One scalar typing policy lives in C++":** `import_csv` reads CSV text with a whole-cell parse "in the 'C' locale's number format whatever locale the host process set, since export always writes `.`". `csv_to_bin` now follows the same rule through the same function.
+- **Root AGENTS.md, "One CSV parser, one CSV emitter":** `CSVConverter` "is not on this path: it splits and joins on `,` and never quotes". That stays true. This plan does **not** route `CSVConverter` through `csv_read::Reader` / `csv_write::append_record`. It only shares the *number* reader and writer.
+- **Root AGENTS.md, "C++ Error Message Patterns":** new code uses Pattern 1, `"Cannot {operation}: {reason}"`. The operation is `csv_to_bin`, which is the public name in C++, the C API (`quiver_csv_converter_csv_to_bin`), Julia (`csv_to_bin`) and Lua (`db:csv_to_bin`).
+- **Root AGENTS.md, "Binary + expression subsystems are exposed in Julia and Lua only":** there are no Dart, Python or JS tests or changes.
+- **Root AGENTS.md, "Do Not Fix":** the binary hot-path decisions in `src/AGENTS.md` (the `unordered_map` dims parameter) are untouched.
+- **Root AGENTS.md, Build System:** the macOS 13.3 floor exists because libc++ gates floating-point `std::to_chars`. `csv_converter.cpp` now instantiates it through `append_number`. The floor already applies to the whole core (`cmake/Platform.cmake`), so no build change is needed, only the list of files that AGENTS.md names.
 - **Principles:** "delete unused code" (the `fmt` include in `csv_converter.cpp` and the four C headers in `database_csv_import.cpp` become unused), and "simple over abstract" (no new helper beyond moving `parse_float`).
 - **Verifier corrections adopted:** `parse_float` becomes `inline` in the header; no line numbers in the message (`read_line` has no row counter, and plan 14 owns the row-level restructuring); the label index is bounds-guarded because a row wider than the header would otherwise index past `metadata_.labels`; `NonNumericDataValue` and `EmptyDataField` now assert the message. The Lua test that the policy verifier called optional **is** added, because the repo rule is a test in every layer where the behaviour is visible, and the message reaches Lua scripts.
 
@@ -577,7 +577,7 @@ No new schema files.
 
 ## Docs and changelog
 
-D1. **Root `CLAUDE.md`, "One scalar typing policy lives in C++"** (currently ~L94-97). Old:
+D1. **Root `AGENTS.md`, "One scalar typing policy lives in C++"** (currently ~L94-97). Old:
 > `import_csv` writes through a raw `INSERT`, so it applies the rule to CSV text itself: `parse_integer` / `parse_float` (`src/database_csv_import.cpp`) accept a cell only if it parses whole, so `1.5` is not an INTEGER and `9.99abc` / `1,5` are not REALs — in the "C" locale's number format whatever locale the host process set, since export always writes `.`.
 
 New:
@@ -585,15 +585,15 @@ New:
 
 (Keep the existing line wrapping style, about 100 columns.)
 
-D2. **Root `CLAUDE.md`, "One CSV parser, one CSV emitter"** (currently ~L280-282). Old sentence:
+D2. **Root `AGENTS.md`, "One CSV parser, one CSV emitter"** (currently ~L280-282). Old sentence:
 > The binary subsystem's `CSVConverter` (`bin_to_csv`/`csv_to_bin`) is not on this path: it splits and joins on `,` and never quotes, so a label holding a comma does not round-trip.
 
 New:
 > The binary subsystem's `CSVConverter` (`bin_to_csv`/`csv_to_bin`) is not on this path: it splits and joins on `,` and never quotes, so a label holding a comma does not round-trip. Its numbers do share the stack: data cells are written by `utils::append_number` and read by `utils::parse_float`, the same pair `export_csv`/`import_csv` use, so a value round-trips exactly in every host locale.
 
-D3. **Root `CLAUDE.md`, Build System, macOS floor** (currently ~L385-386). Old: "libc++ marks the floating-point `std::to_chars` used by `database_csv_export.cpp` and `lua_runner.cpp` unavailable below it". New: "libc++ marks the floating-point `std::to_chars` used by `database_csv_export.cpp`, `lua_runner.cpp` and `binary/csv_converter.cpp` (all through `utils::append_number`) unavailable below it". Make the same list edit in the comment at the top of `cmake/Platform.cmake` (currently L3-4: `libc++ marks the floating-point std::to_chars used by` / `database_csv_export.cpp and lua_runner.cpp unavailable before macOS 13.3`) → `... used by database_csv_export.cpp, lua_runner.cpp and binary/csv_converter.cpp unavailable before macOS 13.3`, re-wrapping the comment lines as needed.
+D3. **Root `AGENTS.md`, Build System, macOS floor** (currently ~L385-386). Old: "libc++ marks the floating-point `std::to_chars` used by `database_csv_export.cpp` and `lua_runner.cpp` unavailable below it". New: "libc++ marks the floating-point `std::to_chars` used by `database_csv_export.cpp`, `lua_runner.cpp` and `binary/csv_converter.cpp` (all through `utils::append_number`) unavailable below it". Make the same list edit in the comment at the top of `cmake/Platform.cmake` (currently L3-4: `libc++ marks the floating-point std::to_chars used by` / `database_csv_export.cpp and lua_runner.cpp unavailable before macOS 13.3`) → `... used by database_csv_export.cpp, lua_runner.cpp and binary/csv_converter.cpp unavailable before macOS 13.3`, re-wrapping the comment lines as needed.
 
-D4. **`src/CLAUDE.md`, File Map** (currently ~L53). Old:
+D4. **`src/AGENTS.md`, File Map** (currently ~L53). Old:
 ```
   utils/number.h          # quiver::utils::append_number -- std::to_chars shortest round-trip
 ```
@@ -603,19 +603,19 @@ New:
                           # parse_float (its whole-cell, host-locale-proof reader)
 ```
 
-D5. **`src/CLAUDE.md`, "One scalar typing policy" bullet** (currently ~L428-430). Old:
+D5. **`src/AGENTS.md`, "One scalar typing policy" bullet** (currently ~L428-430). Old:
 > `import_csv` is the third enforcer, on CSV text: its `parse_integer` / `parse_float` (`database_csv_import.cpp`) take a cell only if it parses whole, so a policy change must reach them too.
 
 New:
 > `import_csv` is the third enforcer, on CSV text: its `parse_integer` (`database_csv_import.cpp`) and `utils::parse_float` (`utils/number.h`, shared with `csv_to_bin`) take a cell only if it parses whole, so a policy change must reach them too.
 
-D6. **`src/CLAUDE.md`, Binary Subsystem** (currently ~L693). Old:
+D6. **`src/AGENTS.md`, Binary Subsystem** (currently ~L693). Old:
 > - `CSVConverter` class (composition, no Pimpl): `bin_to_csv(path, aggregate)`, `csv_to_bin(path)`
 
 New:
 > - `CSVConverter` class (composition, no Pimpl): `bin_to_csv(path, aggregate)`, `csv_to_bin(path)`. Data cells are written by `utils::append_number` and read by `utils::parse_float` (the whole cell must parse, in the "C" locale's format; `null` is NaN), so bin → csv → bin is exact in every host locale. A bad cell throws `Cannot csv_to_bin: invalid float value '<v>' for label '<label>'`.
 
-D7. `bindings/js/src/lua-api.ts` documents `db:bin_to_csv` / `db:csv_to_bin` by name only and makes no claim about number formatting. **No change.** `docs/*.md`, the READMEs, `tests/CLAUDE.md` and `bindings/julia/CLAUDE.md` do not mention CSVConverter number handling. **No change.**
+D7. `bindings/js/src/lua-api.ts` documents `db:bin_to_csv` / `db:csv_to_bin` by name only and makes no claim about number formatting. **No change.** `docs/*.md`, the READMEs, `tests/AGENTS.md` and `bindings/julia/AGENTS.md` do not mention CSVConverter number handling. **No change.**
 
 D8. **`CHANGELOG.md`, under `## [0.11.0] — unreleased`.**
 
@@ -667,7 +667,7 @@ From the repo root (`C:\Development\Quiver\quiver3`), in order:
 - [ ] `src/binary/csv_converter.cpp` has no `std::stod`, no `fmt::` and no `<spdlog/fmt/fmt.h>`. `read_line` calls `utils::parse_float` and throws `Cannot csv_to_bin: invalid float value '<v>' for label '<label>'` (the label clause is dropped only past the last label). `build_line` writes through `utils::append_number`.
 - [ ] `grep -rn "std::stod" src` is empty.
 - [ ] C++ tests T3-T7, C API tests C1-C2, Lua tests L2-L3 and Julia tests J1-J3 exist and pass, and each fails when the `src/` change is reverted (a decimal-comma locale is needed for T7).
-- [ ] Root `CLAUDE.md` (D1-D3), `cmake/Platform.cmake` comment (D3), and `src/CLAUDE.md` (D4-D6) are updated.
+- [ ] Root `AGENTS.md` (D1-D3), `cmake/Platform.cmake` comment (D3), and `src/AGENTS.md` (D4-D6) are updated.
 - [ ] CHANGELOG 0.11.0 has the BREAKING `### Changed` entry and the `### Fixed` entry from D8.
 - [ ] No C API signature, FFI declaration, binding wrapper or `.bat` file changed.
 

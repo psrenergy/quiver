@@ -1,9 +1,9 @@
 # Julia Binding (Quiver.jl)
 
 Canonical Julia package — the published `psrenergy/Quiver.jl` is a generated mirror of this
-directory; never hand-edit the mirror (publishing details in the repo-root `.github/CLAUDE.md`). Cross-layer
+directory; never hand-edit the mirror (publishing details in the repo-root `.github/AGENTS.md`). Cross-layer
 naming rules (`!` suffix for mutating ops) and the convenience-method parity tables live in the
-root `CLAUDE.md`.
+root `AGENTS.md`.
 
 ## Layout
 

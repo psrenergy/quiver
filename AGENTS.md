@@ -4,18 +4,18 @@ SQLite wrapper library with C++ core, C API for FFI, and language bindings (Juli
 
 ## Repo Map
 
-This repo uses **nested CLAUDE.md files**: this root file holds everything cross-cutting; each
-area's internals live in the CLAUDE.md next to it (loaded automatically when working there).
+This repo uses **nested AGENTS.md files**: this root file holds everything cross-cutting; each
+area's internals live in the AGENTS.md next to it (loaded automatically when working there).
 
 ```
-include/quiver/ + src/    # C++ core, Lua runner, binary + expression subsystems -> src/CLAUDE.md
-include/quiver/c/ + src/c/ # C API for FFI                                       -> src/c/CLAUDE.md
-bindings/julia/           # Quiver.jl (canonical; published repo is a mirror)    -> bindings/julia/CLAUDE.md
-bindings/dart/            # quiverdb on pub (ffigen + native-assets hook)        -> bindings/dart/CLAUDE.md
-bindings/python/          # quiverdb on PyPI (CFFI ABI-mode)                     -> bindings/python/CLAUDE.md
-bindings/js/              # quiverdb on npm (Bun FFI, hand-written loader)       -> bindings/js/CLAUDE.md
-tests/                    # C++/C API suites + shared SQL schemas                -> tests/CLAUDE.md
-.github/                  # CI + release/publish workflows, composite actions    -> .github/CLAUDE.md
+include/quiver/ + src/    # C++ core, Lua runner, binary + expression subsystems -> src/AGENTS.md
+include/quiver/c/ + src/c/ # C API for FFI                                       -> src/c/AGENTS.md
+bindings/julia/           # Quiver.jl (canonical; published repo is a mirror)    -> bindings/julia/AGENTS.md
+bindings/dart/            # quiverdb on pub (ffigen + native-assets hook)        -> bindings/dart/AGENTS.md
+bindings/python/          # quiverdb on PyPI (CFFI ABI-mode)                     -> bindings/python/AGENTS.md
+bindings/js/              # quiverdb on npm (Bun FFI, hand-written loader)       -> bindings/js/AGENTS.md
+tests/                    # C++/C API suites + shared SQL schemas                -> tests/AGENTS.md
+.github/                  # CI + release/publish workflows, composite actions    -> .github/AGENTS.md
 scripts/                  # build-all/test-all/clean-all.bat, format.bat, tidy.bat,
                           # generator.bat (runs all three FFI generators),
                           # assert_version.py (check + bump), validate_wheel*.py + test-wheel*.bat,
@@ -43,7 +43,7 @@ Top-level configs: `CMakePresets.json`, `.clang-format`, `.clang-tidy`, `.clangd
 - **Constraint**: Be critical. If code is already optimal, state that clearly. Do not invent useless suggestions just to provide output.
 - All public C++ methods should be bound to C API, then to Julia/Dart/Python/JS/Lua (exception: the binary/expression subsystems are exposed only in Julia and Lua by decision — not Dart/Python/JS)
 - All *.sql test schemas in `tests/schemas/`, bindings reference from there
-- **Self-Updating**: Keep the CLAUDE.md nearest to your change up to date (root + `src/`, `src/c/`, `bindings/{julia,dart,python,js}/`, `tests/`, `.github/`)
+- **Self-Updating**: Keep the AGENTS.md nearest to your change up to date (root + `src/`, `src/c/`, `bindings/{julia,dart,python,js}/`, `tests/`, `.github/`)
 - **Changelog**: user-visible changes get an entry in `CHANGELOG.md` under the current unreleased version section. Prefix a breaking one **BREAKING** and say what a caller must do about it. A `0.x` **minor** bump signals breaking changes, a **patch** bump does not — bump accordingly (all five manifests, see Versioning)
 
 ## Design Decisions
@@ -185,7 +185,7 @@ Settled questions — don't relitigate without the user; each was decided delibe
   additionally preserve NULLs positionally; the **vector/set readers do not** — they inherit
   `read_grouped_values_all`'s dropping of NULL *cells*, so an inner list is dense.
 - **Binary `dims` parameter is the map-based form only** — indexed overloads were prototyped and
-  deliberately dropped (perf rationale in `src/CLAUDE.md`).
+  deliberately dropped (perf rationale in `src/AGENTS.md`).
 - **Time-series group NULLs round-trip via a per-cell presence mask.** The columnar C API
   (`read`/`update`/`free_time_series_data`) carries a `uint8_t` mask parallel to the data arrays
   (NULL mask = dense; `mask[c][r] == 0` = SQL NULL, data ignored — so an all-NULL column can be
@@ -272,7 +272,7 @@ Settled questions — don't relitigate without the user; each was decided delibe
   — so the file is complete and re-readable even if the script never called `w:close()`, with no
   warning emitted. That close goes through a `weak_ptr` registry of every writer the run handed
   out, **not** through the GC: `collect_garbage()` alone only finalizes writers the script made
-  unreachable, so a writer held in a Lua global left a 0-byte file (see `src/CLAUDE.md`). A writer
+  unreachable, so a writer held in a Lua global left a 0-byte file (see `src/AGENTS.md`). A writer
   does not outlive its `run()`.
 - **One CSV parser, one CSV emitter.** csv-parser, through `csv_read::Reader`
   (`src/csv/csv_read.cpp`), parses for both `import_csv` and `db:read_csv*`; `csv_write::append_record`
@@ -301,8 +301,8 @@ Reviewed adversarially and rejected — these are not improvements:
 - Collapsing per-method FFI boilerplate in Dart/Python into closure-parameterized helpers — the
   expanded style is the de facto convention; helpers add pointer-type indirection for marginal gain.
 - Deleting or "cleaning up" `tests/sandbox` — intentional scratch target.
-- "Simplifying" the documented Bun FFI workarounds (`bindings/js/CLAUDE.md`) or the binary
-  hot-path decisions (`src/CLAUDE.md`) — load-bearing.
+- "Simplifying" the documented Bun FFI workarounds (`bindings/js/AGENTS.md`) or the binary
+  hot-path decisions (`src/AGENTS.md`) — load-bearing.
 - Drive-by fixing pre-existing lint debt in untouched JS files.
 - Relocating the agent-facing Lua reference (`bindings/js/src/lua-api.ts`, `LUA_DB_API_REFERENCE`).
   Moving it into the C++ layer would turn a build-time constant into a runtime FFI call just to
@@ -310,7 +310,7 @@ Reviewed adversarially and rejected — these are not improvements:
   libs, PyPI wheels, Julia artifacts, and S3 natives. Moving it to an imported `.md` was implemented,
   verified, and reverted — editing ergonomics only, at the cost of a `files`-allowlist dependency
   and a Bun text-loader floor. Neither fixes drift, which is what actually went wrong; the sync test
-  does. Rationale in `bindings/js/CLAUDE.md`.
+  does. Rationale in `bindings/js/AGENTS.md`.
 
 ## Build & Test
 
@@ -339,7 +339,7 @@ scripts/build-all.bat --release  # Build in Release mode
 scripts/test-all.bat             # Run all tests (assumes already built)
 ```
 `test-all.bat` runs the six suites below plus a `quiver_cli` smoke test; `build-all.bat` builds
-and then runs the six suites (breakdown in `tests/CLAUDE.md`).
+and then runs the six suites (breakdown in `tests/AGENTS.md`).
 
 ### Individual Tests
 ```bash
@@ -422,7 +422,7 @@ all agree — bump all five together. The same script also writes them:
 refusing to run from a state where they already disagree. Normally you dispatch the **Bump
 Version** workflow instead, which runs exactly that and opens the PR. `CHANGELOG.md` carries the
 version too (`## [x.y.z] — unreleased` plus its compare link) but is edited by hand — the
-release ritual for that file is not settled. Release flow: `.github/CLAUDE.md`.
+release ritual for that file is not settled. Release flow: `.github/AGENTS.md`.
 
 ## Code Style Tooling
 
@@ -637,13 +637,13 @@ Element().set("label", "Item 1").set("value", 42).set("tags", {"a", "b"})
 `.qvr` binary file I/O with `.toml` metadata sidecars (`BinaryFile`, `CSVConverter`,
 `BinaryMetadata`) and lazy arithmetic expressions over them (`Expression` DAGs with
 broadcast, aggregation, and label projection, materialized via `save()`). Exposed in Julia
-(FFI) and Lua (sol2). Full reference: `src/CLAUDE.md`.
+(FFI) and Lua (sol2). Full reference: `src/AGENTS.md`.
 
 ### LuaRunner Class
 Executes Lua scripts against a database; the `db` userdata exposes the same API surface
 (see cross-layer tables below). `run(script)` returns the script's return value encoded as
 **JSON** (empty string if it returned nothing) — every binding passes that string through
-verbatim. Implementation notes: `src/CLAUDE.md`.
+verbatim. Implementation notes: `src/AGENTS.md`.
 
 ## Cross-Layer Naming Conventions
 

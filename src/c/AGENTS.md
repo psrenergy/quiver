@@ -2,7 +2,7 @@
 
 The FFI surface every binding sits on. Thin marshaling over the C++ core — the C API never
 re-implements validation or error messages that exist in C++ (one layer owns each message).
-Cross-layer naming rules live in the root `CLAUDE.md`; C++ internals in `src/CLAUDE.md`.
+Cross-layer naming rules live in the root `AGENTS.md`; C++ internals in `src/AGENTS.md`.
 
 ## File Map
 
@@ -170,7 +170,7 @@ human-readable **text report** via a `char** out_report` out-param (freed by the
 
 `quiver_database_number_of_elements` lives in `database_read.cpp` alongside the other read
 operations — it is a read, not a dedicated concern, mirroring `number_of_elements`'s home in
-`database_read.cpp` on the C++ core side (`src/CLAUDE.md`).
+`database_read.cpp` on the C++ core side (`src/AGENTS.md`).
 
 ## Multi-Column Time Series
 
