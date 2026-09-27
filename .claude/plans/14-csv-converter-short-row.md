@@ -652,7 +652,7 @@ The entry is not marked **BREAKING**: every input it affects was already rejecte
 
 ## Verification
 
-Run from `C:\Development\Quiver\quiver3`, in Git Bash:
+Run from `C:\Development\Quiver\quiver1`, in Git Bash:
 
 1. `cmake --build build --config Debug`. Expect a clean build with no new warnings from `csv_converter.cpp`.
 2. `grep -rn "expected_dimension_names\|ostringstream" src/binary/csv_converter.cpp include/quiver/binary/csv_converter.h`. Expect no output.

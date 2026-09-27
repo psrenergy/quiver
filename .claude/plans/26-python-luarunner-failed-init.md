@@ -271,7 +271,7 @@ Not breaking. No manifest version bump: 0.11.0 is already the unreleased version
 
 ## Verification
 
-Run from the repo root (`C:\Development\Quiver\quiver3`), in PowerShell or cmd. From Git Bash,
+Run from the repo root (`C:\Development\Quiver\quiver1`), in PowerShell or cmd. From Git Bash,
 prefix each `.bat` with `cmd //c` and use backslashes.
 
 1. Make sure the native libraries exist (no C++ changes here, so this is a no-op on an up-to-date

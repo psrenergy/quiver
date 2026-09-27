@@ -306,7 +306,7 @@ One edge case applies only if plan 24 did not rewrite `Element._set_array` and S
 
 ## Verification
 
-Run from the repo root (`C:\Development\Quiver\quiver3`) in PowerShell.
+Run from the repo root (`C:\Development\Quiver\quiver1`) in PowerShell.
 
 1. `cmake --build build --config Debug`. Nothing in this plan changes C++, but the Python tests load `build\bin\libquiver_c.dll`, which must match any C API changes from earlier plans.
 2. `git grep -n "isinstance([a-z_]*, bool)" -- bindings/python/src` should print nothing.

@@ -972,7 +972,7 @@ Append to `### Fixed`, after the last bullet (the one ending `tracks `Artifacts.
 
 ## Verification
 
-From the repo root (`C:\Development\Quiver\quiver3`), in order:
+From the repo root (`C:\Development\Quiver\quiver1`), in order:
 
 1. `cmake --build build --config Debug`. It must compile with no new warnings in `src/binary/`.
 2. `./build/bin/quiver_tests.exe --gtest_filter="TimeFrequencyConversion.*:TimePropertiesSetters.*:TimePropertiesAddOffset.*:BinaryMetadata*:BinaryTempFileFixture.*:CSVConverterFixture.*:IterationTest.*:LuaBinaryTest.*:ExpressionFixture.*:LuaExpressionTest.*"`. All must pass, including these new tests:

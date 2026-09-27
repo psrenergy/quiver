@@ -685,7 +685,7 @@ immediately before `### Fixed`. Earlier plans may have added bullets there; appe
 
 ## Verification
 
-Run from the repo root (`C:\Development\Quiver\quiver3`), in this order.
+Run from the repo root (`C:\Development\Quiver\quiver1`), in this order.
 
 1. `cmake --build build --config Debug`. No C++ changes; this only makes sure the `build/bin`
    libraries the JS tests load are current.

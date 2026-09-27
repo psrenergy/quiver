@@ -951,7 +951,7 @@ No other docs mention the PRAGMA or the omitted-element behaviour. I checked `do
 
 ## Verification
 
-Run from the repo root (`C:\Development\Quiver\quiver3`):
+Run from the repo root (`C:\Development\Quiver\quiver1`):
 
 1. `cmake --build build --config Debug`
 2. `grep -n "PRAGMA" src/database_csv_import.cpp` → no output.

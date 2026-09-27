@@ -136,7 +136,7 @@ Alternatives considered and rejected:
 
 ## Changes
 
-All paths are relative to the repo root `C:\Development\Quiver\quiver3`. Python files are LF (`.gitattributes`: `*.py text eol=lf`). Edit them with the Edit tool.
+All paths are relative to the repo root `C:\Development\Quiver\quiver1`. Python files are LF (`.gitattributes`: `*.py text eol=lf`). Edit them with the Edit tool.
 
 ### 1. `bindings/python/format.bat`: add the isort fix step (do this BEFORE step 2)
 
@@ -474,7 +474,7 @@ None. No doc under `docs/`, no README and no `bindings/js/src/lua-api.ts` text m
 
 ## Verification
 
-Run from the repo root `C:\Development\Quiver\quiver3` unless stated otherwise. The PowerShell forms are given; Git Bash equivalents work too.
+Run from the repo root `C:\Development\Quiver\quiver1` unless stated otherwise. The PowerShell forms are given; Git Bash equivalents work too.
 
 1. Static greps, all expected to print nothing unless noted:
    ```bash

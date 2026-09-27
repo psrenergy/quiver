@@ -1155,7 +1155,7 @@ None of the binding additions fail before the change: they pin that the collapse
 
 ## Verification
 
-From the repo root (`C:\Development\Quiver\quiver3`), in order:
+From the repo root (`C:\Development\Quiver\quiver1`), in order:
 
 1. `cmake --build build --config Debug`. Expected: builds with no errors.
 2. `./build/bin/quiver_c_tests.exe --gtest_filter='DatabaseCApiQuery.*:DatabaseCApiCSV.ImportCSV_Scalar_SelfReferenceFK_ReImport'`. Expected: 23 tests from 2 suites pass (22 in `DatabaseCApiQuery`), including `QueryParamsNullStringElement`, `QueryParamsUnknownTypeNamesTheCalledFunction` and `QueryParameterCountMismatch`. `QueryParamsNullDb` and `QueryParamsUnknownType` no longer exist.

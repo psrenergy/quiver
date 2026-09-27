@@ -369,7 +369,7 @@ Under `## [0.11.0] — unreleased` → `### Fixed`, append after the last existi
 
 ## Verification
 
-Run from the repo root `C:\Development\Quiver\quiver3`:
+Run from the repo root `C:\Development\Quiver\quiver1`:
 
 1. `cmake --build build --config Debug`. It must build with no new warnings.
 2. The new test and its neighbours:

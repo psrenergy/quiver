@@ -685,7 +685,7 @@ No manifest version bump. 0.11.0 is already the minor bump.
 
 ## Verification
 
-Run from the repo root (`C:\Development\Quiver\quiver3`), in this order.
+Run from the repo root (`C:\Development\Quiver\quiver1`), in this order.
 
 1. **Tests first, against the unchanged code.** Apply steps 9 and 10 only, then:
    ```

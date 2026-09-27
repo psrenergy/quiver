@@ -788,7 +788,7 @@ No other docs: `docs/*.md` and the READMEs make no atomicity claim (I grepped `a
 
 ## Verification
 
-From `C:\Development\Quiver\quiver3`:
+From `C:\Development\Quiver\quiver1`:
 
 1. `cmake --build build --config Debug`
 2. `./build/bin/quiver_tests.exe --gtest_filter='Database.UpdateElementRejectedArrayInsideTransactionKeepsScalar:Database.UpdateElementRejectedArrayKeepsEarlierGroup:Database.CreateElementRejectedArrayInsideDryRunLeavesNoElement:LuaRunnerTest.TransactionBlockCaughtRejectedUpdateWritesNothing'`. All 4 pass. To confirm they are real regressions, run `git stash push -- src/` (this stashes only the core change and keeps the new tests), rebuild, and rerun the same filter: all 4 fail, with `some_integer` read as 2, the tags read as `{"new"}`, and `number_of_elements` returning 1. Then run `git stash pop` and rebuild.

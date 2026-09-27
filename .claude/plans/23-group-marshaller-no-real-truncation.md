@@ -340,7 +340,7 @@ Add this at the **end** of the `### Fixed` list under `## [0.11.0] — unrelease
 
 ## Verification
 
-Run from the repo root (`C:\Development\Quiver\quiver3`), in PowerShell. In Git Bash, prefix each `.bat` with `cmd //c`.
+Run from the repo root (`C:\Development\Quiver\quiver1`), in PowerShell. In Git Bash, prefix each `.bat` with `cmd //c`.
 
 1. Write the schema (Tests, first part) and the new test **before** touching `database_helpers.h`. Then:
    ```

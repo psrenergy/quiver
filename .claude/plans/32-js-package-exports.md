@@ -249,7 +249,7 @@ No other test changes. Existing tests keep importing `../src/index.ts`.
 
 ## Verification
 
-From the repo root (`C:\Development\Quiver\quiver3`):
+From the repo root (`C:\Development\Quiver\quiver1`):
 
 1. `cmake --build build --config Debug` (only needed if the native libs are stale; the JS tests
    load `build/bin`).

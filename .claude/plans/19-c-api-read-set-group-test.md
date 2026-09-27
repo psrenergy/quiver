@@ -209,7 +209,7 @@ No existing test changes and no assertion is modified. No new schema file, so no
 
 ## Verification
 
-Run from the repo root (`C:\Development\Quiver\quiver3`), in order:
+Run from the repo root (`C:\Development\Quiver\quiver1`), in order:
 
 1. Build:
    ```bash

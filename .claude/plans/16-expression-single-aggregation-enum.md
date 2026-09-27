@@ -617,7 +617,7 @@ New:
 
 ## Verification
 
-Run from the repo root `C:\Development\Quiver\quiver3`. The paths are for PowerShell; from Git Bash, prefix the `.bat` calls with `cmd //c`.
+Run from the repo root `C:\Development\Quiver\quiver1`. The paths are for PowerShell; from Git Bash, prefix the `.bat` calls with `cmd //c`.
 
 1. `cmake --build build --config Debug`. The build must succeed with no new warnings in `expression_helpers.h` or `src/c/expression/expression.cpp`.
 2. `./build/bin/quiver_tests.exe --gtest_filter='ExpressionFixture.*:LuaExpressionTest.*'`. All tests pass, including the edited `ExpressionFixture.AgentChainedAfterAggregate` and the new `LuaExpressionTest.AggregateAgentsUnknownOpThrows`, and `LuaExpressionTest.AggregateUnknownOpThrows` still passes.

@@ -1,6 +1,6 @@
 # Quiver improvement plans
 
-One self-contained implementation plan per review item, written to be executed in a fresh context with only the repo and the plan file. Repo: `C:\Development\Quiver\quiver3` (branch `rs/quality`, reviewed at HEAD `58dfe7a`).
+One self-contained implementation plan per review item, written to be executed in a fresh context with only the repo and the plan file. Repo: `C:\Development\Quiver\quiver1` (branch `rs/quality`, reviewed at HEAD `58dfe7a`).
 
 ## How to use
 

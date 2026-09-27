@@ -237,7 +237,7 @@ Pin the two claims the rewritten docstring now makes, since no Python test cover
 
 ## Verification
 
-Run from the repo root (`C:\Development\Quiver\quiver3`), in PowerShell.
+Run from the repo root (`C:\Development\Quiver\quiver1`), in PowerShell.
 
 1. `cmake --build build --config Debug` — no C++ changes here, but earlier plans change the native libraries the Python tests load, so the build must be current. Expected: builds with no errors.
 2. `bindings\python\tests\test.bat -k "TestUpsertTimeSeriesRow or TestDescribe or test_database_lifecycle"` — expected: all selected tests pass, including `test_database_time_series_row.py::TestUpsertTimeSeriesRow::test_upsert_time_series_row_int_for_real_and_omitted_columns`; `test_describe_runs_without_error` no longer appears.

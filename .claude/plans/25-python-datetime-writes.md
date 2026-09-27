@@ -522,7 +522,7 @@ its readers return; a naive one is written as given.
 
 ## Verification
 
-Run from the repo root (`C:\Development\Quiver\quiver3`) in PowerShell.
+Run from the repo root (`C:\Development\Quiver\quiver1`) in PowerShell.
 
 1. `git grep -n "strftime" bindings/python/src/quiverdb` → no output.
 2. `cmake --build build --config Debug`: no C++ changes, but the Python tests load `build/bin` DLLs, and earlier plans change C++.

@@ -1134,7 +1134,7 @@ Append as the **last bullet of `### Changed`**, directly above `### Fixed`. Keep
 
 ## Verification
 
-Run from the repo root (`C:\Development\Quiver\quiver3`), in order:
+Run from the repo root (`C:\Development\Quiver\quiver1`), in order:
 
 1. `cmake --build build --config Debug`. It must compile cleanly. `quiver_c_tests` will not compile until every call in the C API test file has `out_mask`.
 2. `./build/bin/quiver_c_tests.exe --gtest_filter="DatabaseCApi.ReadTimeSeriesRow*"`. All must pass, including the new `DatabaseCApi.ReadTimeSeriesRowNoDataIsMaskedForEveryType` (and plan 04's `ReadTimeSeriesRowRejectsMultiDimensionGroup` if present).

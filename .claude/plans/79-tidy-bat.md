@@ -10,7 +10,7 @@
 uv run python "%RUN_CLANG_TIDY%" -p "%BUILD%" -header-filter="(include/quiver/|quiver/src/)" -quiet "quiver[\\/]src[\\/](?!binary)"
 ```
 The file regex `quiver[\\/]src[\\/]` only matches if the repo directory is named `quiver`. In
-`C:\Development\Quiver\quiver3` it matches nothing, so the script reports success after linting
+`C:\Development\Quiver\quiver1` it matches nothing, so the script reports success after linting
 **0 files**. The header filter has the same `quiver/src/` bug. The runner path is hardcoded:
 ```bat
 SET RUN_CLANG_TIDY=C:\Program Files\LLVM\bin\run-clang-tidy

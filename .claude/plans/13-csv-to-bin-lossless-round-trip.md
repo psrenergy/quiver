@@ -649,7 +649,7 @@ No manifest version bump (0.11.0 is already the unreleased minor).
 
 ## Verification
 
-From the repo root (`C:\Development\Quiver\quiver3`), in order:
+From the repo root (`C:\Development\Quiver\quiver1`), in order:
 
 1. `cmake --build build --config Debug`. It must compile with no new warnings in `src/utils/number.h`, `src/database_csv_import.cpp` or `src/binary/csv_converter.cpp`.
 2. `./build/bin/quiver_tests.exe --gtest_filter='CSVConverterFixture.*'`. All pass, including the new `TrailingGarbageDataValue`, `NonNumericCellPastLastLabel`, `RoundTripIsLossless` and `DecimalCommaLocaleReadsWrittenFloats` (the last may print SKIPPED only on a machine without a decimal-comma locale; on Windows it must run), and the changed `FloatPrecision`, `NonNumericDataValue` and `EmptyDataField`.

@@ -429,7 +429,7 @@ No new schema files: every test uses `tests/schemas/valid/collections.sql`, whic
 
 ## Verification
 
-Run from the repo root (`C:\Development\Quiver\quiver3`). Use Git Bash for the executables and a Windows shell (cmd or PowerShell) for the `.bat` scripts.
+Run from the repo root (`C:\Development\Quiver\quiver1`). Use Git Bash for the executables and a Windows shell (cmd or PowerShell) for the `.bat` scripts.
 
 1. Optional TDD check: add the four binding tests before the four binding edits, then run them (steps 5-8 below). Each of the four new binding tests must fail with "expected throw"/"did not throw".
 2. `cmake --build build --config Debug`

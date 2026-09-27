@@ -477,7 +477,7 @@ No manifest version bump (0.11.0 is already the minor bump).
 
 ## Verification
 
-From the repo root (`C:\Development\Quiver\quiver3`), in order:
+From the repo root (`C:\Development\Quiver\quiver1`), in order:
 
 1. `cmake --build build --config Debug`. The build must succeed.
 2. `./build/bin/quiver_tests.exe --gtest_filter='Database.ReadTimeSeriesRow*:LuaRunnerTest.ReadTimeSeriesRow*'`. Expect every test to pass, including the new `Database.ReadTimeSeriesRowRejectsMultiDimensionGroup` and `LuaRunnerTest.ReadTimeSeriesRowRejectsMultiDimensionGroup` (two more tests than the same filter matched before this change; at HEAD 58dfe7a it matched 10).

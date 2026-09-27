@@ -1006,7 +1006,7 @@ line number):
 
 ## Verification
 
-From the repo root (`C:\Development\Quiver\quiver3`), in order:
+From the repo root (`C:\Development\Quiver\quiver1`), in order:
 
 1. `cmake --build build --config Debug`. No C++ change, so this is a no-op. It only ensures that
    `build/bin` holds the DLLs the binding suites load.

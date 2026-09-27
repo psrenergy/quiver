@@ -391,7 +391,7 @@ None. `bindings/js/src/lua-api.ts` (Lists section, currently ~L521, and Composit
 
 ## Verification
 
-From the repo root (`C:\Development\Quiver\quiver3`), in order:
+From the repo root (`C:\Development\Quiver\quiver1`), in order:
 
 1. `cmake --build build --config Debug`
 2. `./build/bin/quiver_tests.exe --gtest_filter='Database.TimeSeriesCollectionNotFound:Database.ListGroupsCollectionNotFound:Database.ListTimeSeriesGroups*:LuaRunnerTest.ListGroupsUnknownCollection:LuaRunnerTest.ReadVectorsById*:LuaRunnerTest.ReadSetsById*:LuaRunnerTest.NumberOfElementsUnknownCollection'`: all pass.

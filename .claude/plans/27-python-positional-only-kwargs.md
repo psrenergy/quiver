@@ -257,7 +257,7 @@ Under `## [0.11.0] — unreleased` → `### Changed`, append this as the **last*
 
 ## Verification
 
-From the repo root `C:\Development\Quiver\quiver3` (PowerShell; `.bat` scripts run directly):
+From the repo root `C:\Development\Quiver\quiver1` (PowerShell; `.bat` scripts run directly):
 
 1. `cmake --build build --config Debug` makes sure `build/bin/libquiver.dll` / `libquiver_c.dll` are current, since `test.bat` puts `build/bin` on PATH. There are no C++ changes, so this should be a no-op.
 2. Add the four tests **before** the source edits and run `bindings/python/tests/test.bat -k "attribute_to_the_core or takes_an_id_attribute"`. Expected: 4 failed, each with `TypeError: … got multiple values for argument 'id'` / `'label'` / `'collection'`.
