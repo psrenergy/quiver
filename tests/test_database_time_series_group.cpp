@@ -571,3 +571,35 @@ TEST(Database, UpdateTimeSeriesGroupByLabelValidationNamesTheIdForm) {
         EXPECT_TRUE(msg.find("Cannot update_time_series_group:") != std::string::npos) << "Actual: " << msg;
     }
 }
+
+// read_time_series_group orders by the primary-key date column, not by a date_ value column that
+// sorts before it (date_approved's order is NULL, 2024-01-15, 2024-03-01).
+TEST(Database, ReadTimeSeriesGroupOrdersByPrimaryKeyDateColumn) {
+    auto db = quiver::Database::from_schema(":memory:",
+                                            VALID_SCHEMA("time_series_date_columns.sql"),
+                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
+    auto id = db.create_element("Plant", quiver::Element().set("label", std::string("Plant 1")));
+
+    db.update_time_series_group(
+        "Plant",
+        "events",
+        id,
+        {{{"date_time", std::string("2024-01-01T00:00:00")},
+          {"date_approved", std::string("2024-03-01T00:00:00")},
+          {"value", 1.5}},
+         {{"date_time", std::string("2024-02-01T00:00:00")}, {"date_approved", nullptr}, {"value", 2.5}},
+         {{"date_time", std::string("2024-03-01T00:00:00")},
+          {"date_approved", std::string("2024-01-15T00:00:00")},
+          {"value", 3.5}}});
+
+    auto rows = db.read_time_series_group("Plant", "events", id);
+    ASSERT_EQ(rows.size(), 3);
+    EXPECT_EQ(std::get<std::string>(rows[0].at("date_time")), "2024-01-01T00:00:00");
+    EXPECT_EQ(std::get<std::string>(rows[1].at("date_time")), "2024-02-01T00:00:00");
+    EXPECT_EQ(std::get<std::string>(rows[2].at("date_time")), "2024-03-01T00:00:00");
+    EXPECT_EQ(std::get<std::string>(rows[0].at("date_approved")), "2024-03-01T00:00:00");
+    EXPECT_TRUE(std::holds_alternative<std::nullptr_t>(rows[1].at("date_approved")));
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[0].at("value")), 1.5);
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[1].at("value")), 2.5);
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[2].at("value")), 3.5);
+}

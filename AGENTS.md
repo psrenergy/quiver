@@ -512,7 +512,7 @@ CREATE TABLE Items_set_tags (
 ```
 
 ### Time Series Tables
-Named `{Collection}_time_series_{name}` with a dimension (ordering) column whose name starts with `date_` (e.g., `date_time`), stored as ISO 8601 text (`YYYY-MM-DDTHH:MM:SS`):
+Named `{Collection}_time_series_{name}` with a dimension (ordering) column: the first primary-key column after `id` whose name starts with `date_` (e.g., `date_time`), stored as ISO 8601 text (`YYYY-MM-DDTHH:MM:SS`). Any other `date_` column is an ordinary value column:
 ```sql
 CREATE TABLE Items_time_series_data (
     id INTEGER NOT NULL REFERENCES Items(id) ON DELETE CASCADE ON UPDATE CASCADE,

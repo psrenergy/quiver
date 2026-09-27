@@ -163,7 +163,7 @@ never copy them into a binding.
   `csv_export.sql`, `csv_group_vector_index.sql`, `csv_import_cascade_cycle.sql`,
   `csv_import_self_cascade.sql`, `describe_multi_group.sql`, `mixed_time_series.sql`,
   `multi_column_groups.sql`, `multi_dim_time_series.sql`, `multi_time_series.sql`,
-  `nullable_time_series.sql`, `relations.sql`
+  `nullable_time_series.sql`, `relations.sql`, `time_series_date_columns.sql`
   - `csv_group_vector_index.sql` gives a set group (`Codes_set_tags`) a TEXT `vector_index` column
     and a time-series group (`Items_time_series_slots`) an INTEGER one — two collections, since one
     may not declare an attribute in two groups. Only a vector group's `vector_index` is structural,
@@ -182,6 +182,12 @@ never copy them into a binding.
     both nullable, with the value columns deliberately named so the alphabetically-first one is
     not the only one — that ordering is what exposed the group-insert row-count bug. Note every
     set value column must be part of the UNIQUE constraint.
+  - `time_series_date_columns.sql` pins which column is a time series' dimension.
+    `Plant_time_series_events` has a nullable `date_approved` value column that sorts before its
+    key column `date_time`, so a lookup that scans columns by name instead of the primary key
+    picks the wrong one. `Meter_time_series_blocks` keeps its date column outside the key
+    (`PRIMARY KEY (id, block)`), so it has no dimension and its metadata and reads throw — use
+    `Meter` only to test that refusal.
 - `invalid/` — schemas the validator must reject: `duplicate_attribute_time_series.sql`,
   `duplicate_attribute_vector.sql`, `fk_actions.sql`, `fk_not_null_set_null.sql`,
   `label_not_null.sql`, `label_not_unique.sql`, `label_wrong_type.sql`, `no_configuration.sql`,

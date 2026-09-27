@@ -744,3 +744,42 @@ TEST(Database, UpsertTimeSeriesRowByLabelValidationNamesTheIdForm) {
         EXPECT_TRUE(msg.find("Cannot upsert_time_series_row:") != std::string::npos) << "Actual: " << msg;
     }
 }
+
+// read_time_series_row walks the primary-key date column. date_approved is an ordinary attribute;
+// the dimension itself is not one.
+TEST(Database, ReadTimeSeriesRowUsesPrimaryKeyDateColumn) {
+    auto db = quiver::Database::from_schema(":memory:",
+                                            VALID_SCHEMA("time_series_date_columns.sql"),
+                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
+    auto id = db.create_element("Plant", quiver::Element().set("label", std::string("Plant 1")));
+
+    db.update_time_series_group(
+        "Plant",
+        "events",
+        id,
+        {{{"date_time", std::string("2024-01-01T00:00:00")},
+          {"date_approved", std::string("2024-03-01T00:00:00")},
+          {"value", 1.5}},
+         {{"date_time", std::string("2024-02-01T00:00:00")}, {"date_approved", nullptr}, {"value", 2.5}},
+         {{"date_time", std::string("2024-03-01T00:00:00")},
+          {"date_approved", std::string("2024-01-15T00:00:00")},
+          {"value", 3.5}}});
+
+    // Latest date_time at or before 2024-02-15 is 2024-02-01. (Walking date_approved instead picks
+    // 2024-01-15, which is the 2024-03-01 row: 3.5.)
+    auto values = db.read_time_series_row("Plant", "events", "value", "2024-02-15T00:00:00");
+    ASSERT_EQ(values.size(), 1);
+    EXPECT_DOUBLE_EQ(std::get<double>(values[0]), 2.5);
+
+    // Last non-null date_approved at or before 2024-02-15 (by date_time) is the 2024-01-01 row's.
+    auto approved = db.read_time_series_row("Plant", "events", "date_approved", "2024-02-15T00:00:00");
+    ASSERT_EQ(approved.size(), 1);
+    EXPECT_EQ(std::get<std::string>(approved[0]), "2024-03-01T00:00:00");
+
+    try {
+        db.read_time_series_row("Plant", "events", "date_time", "2024-02-15T00:00:00");
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), "Time series attribute not found: 'date_time' in group 'events' of collection 'Plant'");
+    }
+}

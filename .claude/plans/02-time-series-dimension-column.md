@@ -833,15 +833,15 @@ From the repo root (PowerShell):
 
 ## Acceptance criteria
 
-- [ ] `find_dimension_column` iterates `find_dimension_columns(table_def)`, keeps the predicate `type == DataType::DateTime || is_date_time_column(name)`, and no longer iterates `table_def.columns`.
-- [ ] `find_dimension_columns` is defined before `find_dimension_column`, with its body unchanged and its comment no longer saying "mirrors find_dimension_column's contract".
-- [ ] `print_group_columns` brackets on `col.primary_key` for time-series tables; its comment says so.
-- [ ] `tests/schemas/valid/time_series_date_columns.sql` exists with the `Plant` and `Meter` collections exactly as above. No shared schema is modified.
-- [ ] The new tests pass: 4 C++ core tests in 3 files, 1 describe test, 2 C API tests, 1 Lua test, and 1 each in Julia, Dart, Python and JS. All pre-existing tests still pass unchanged.
-- [ ] No C API, FFI declaration, binding wrapper or `lua_runner.cpp` change. No generator run.
-- [ ] `src/AGENTS.md` (file map plus the new bullet), root `AGENTS.md` (Time Series Tables sentence), `tests/AGENTS.md` (schema list plus sub-bullet) and `docs/time_series.md` (~L23-26) are updated as specified.
-- [ ] A CHANGELOG **BREAKING** entry is under `[0.12.0] — unreleased` → `### Changed`, with an *Adapt:* line. No manifest version bump.
-- [ ] `scripts/format.bat` leaves no diff outside the touched files, and `scripts/test-all.bat` is green.
+- [x] `find_dimension_column` iterates `find_dimension_columns(table_def)`, keeps the predicate `type == DataType::DateTime || is_date_time_column(name)`, and no longer iterates `table_def.columns`.
+- [x] `find_dimension_columns` is defined before `find_dimension_column`, with its body unchanged and its comment no longer saying "mirrors find_dimension_column's contract".
+- [x] `print_group_columns` brackets on `col.primary_key` for time-series tables; its comment says so.
+- [x] `tests/schemas/valid/time_series_date_columns.sql` exists with the `Plant` and `Meter` collections exactly as above. No shared schema is modified.
+- [x] The new tests pass: 4 C++ core tests in 3 files, 1 describe test, 2 C API tests, 1 Lua test, and 1 each in Julia, Dart, Python and JS. All pre-existing tests still pass unchanged.
+- [x] No C API, FFI declaration, binding wrapper or `lua_runner.cpp` change. No generator run.
+- [x] `src/AGENTS.md` (file map plus the new bullet), root `AGENTS.md` (Time Series Tables sentence), `tests/AGENTS.md` (schema list plus sub-bullet) and `docs/time_series.md` (~L23-26) are updated as specified.
+- [x] A CHANGELOG **BREAKING** entry is under `[0.12.0] — unreleased` → `### Changed`, with an *Adapt:* line. No manifest version bump. *(Done under a new `[0.12.1] — unreleased` section instead; see Implementation notes.)*
+- [ ] `scripts/format.bat` leaves no diff outside the touched files, and `scripts/test-all.bat` is green. *(format.bat: yes. test-all.bat: 6 of 7 steps PASS; step 7, the CLI smoke test, FAILS because `example/example1.lua` was deleted in 4af1397, which is plan 65. Not caused by this change.)*
 
 ## Pitfalls
 
@@ -869,3 +869,23 @@ From the repo root (PowerShell):
   - Making the writers reject a key with no date column. They keep keying on the primary key.
   - A `SchemaValidator` check that a time-series key contains a date column. That would move the Meter case's error from first use to load time.
   - Removing the `is_ts && col_name.starts_with("date_")` skip in `schema_validator.cpp`'s duplicate-attribute check.
+
+## Implementation notes
+
+Implemented at HEAD `d17104b` (after plan 01, `0f590ad`). The code, schema and tests are exactly as specified above. Every quoted excerpt, symbol, signature and test anchor matched the tree.
+
+**Deviation (user decision): the CHANGELOG entry sits under a new `## [0.12.1] — unreleased` → `### Changed` section, and the manifests are not bumped.** This plan (and the README's batch note) assumed 0.12.0 was unreleased. It is not: tag `v0.12.0` points at `0f590ad` (plan 01), and #306 moved the five manifests to 0.12.1. The old `## [0.12.0] — unreleased` header was left as is, deliberately (the release ritual is not settled). **Later plans (03+) should put their CHANGELOG entries under `[0.12.1] — unreleased`, not `[0.12.0]`.** Whether the next release has to be 0.13.0 because of these BREAKING entries is still the maintainer's call.
+
+Drift fixed while implementing:
+- `tests/AGENTS.md`: the `valid/` list wraps, so the new name was appended to the `` `nullable_time_series.sql`, `relations.sql` `` line. The new sub-bullet sits after the `multi_column_groups.sql` sub-bullet; plan 01's two `csv_import_*` schemas sit before it.
+- Root `AGENTS.md`: the old Time Series Tables sentence ends in `:` (the plan's "Old" drops it). The whole line was replaced.
+- CHANGELOG anchor: the `export_csv()` "*Adapt:* regenerate golden files" bullet is under `[0.11.0]`, not 0.12.0. This became moot with the 0.12.1 section.
+
+Red/green: before the fix, all 8 new C++/C/Lua tests failed exactly as predicted (Lua: `dimension column 'date_approved' has nil at index 2`), and so did the four binding tests (Julia L368 metadata assertion; Dart, Python and JS all saw `'date_approved'`). After the fix: `quiver_tests` 1305/1305, `quiver_c_tests` 562/562, Julia pass, Dart 419/419, Python 305/305, JS 208/208. A 3-lens adversarial review of the diff confirmed no findings.
+
+Things later plans should know:
+- **Dart's native cache goes stale after a header-only change.** The hook did not rebuild after editing `src/database_internal.h`, so the Dart suite kept loading the pre-fix DLL. Clearing `bindings/dart/.dart_tool/hooks_runner` and `.dart_tool/lib` (the documented remedy) fixed it. Expect the same for any fix that lives in a header.
+- **`scripts/test-all.bat` step 7 (CLI smoke) already fails** (`Script file not found: ...\example\example1.lua`; `example/` was deleted in `4af1397`, #295). That is plan 65. Steps 1-6 pass.
+- **`scripts/format.bat` (biome) rewrites about 21 untouched JS files from CRLF to LF.** `git diff` shows no content change, but `git status` lists them. `git checkout --` them before committing.
+- **Plan 04:** `Database.GetTimeSeriesMetadataDateColumnOutsidePrimaryKeyThrows` pins that `read_time_series_row` on `Meter.blocks` throws. Keep resolving the date axis through `internal::find_dimension_column`.
+- On a no-date-key group (`Meter.blocks`), Lua's `db:update_time_series_group` throws (it reads the metadata), but Lua's `db:upsert_time_series_row` and the two C++ writers do not. That matches the CHANGELOG *Adapt:* list.
