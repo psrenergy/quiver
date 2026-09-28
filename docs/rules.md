@@ -86,6 +86,7 @@ CREATE TABLE Plant(
 - In case of a vector attribute, a table should be created with its name indicating the name of the Collection and the name of a group of the attribute, separated by `_vector_`, such as `COLLECTION_vector_GROUP_OF_ATTRIBUTES`.
 
 - The table must contain a Column named `id` and another named `vector_index`. These two columns together should form the Primary Key of the table.
+- The `id` column must reference the Collection's `id` with `ON DELETE CASCADE ON UPDATE CASCADE`, so deleting an element removes its rows.
 - There must be a Column named after the attributes names, which will store the value of the attribute for the specified element `id` and index `vector_index`.
 
 These groups are used to store vectors that should have the same size. If two vectors don't necessarily have the same size, they should be stored in different groups.
@@ -121,7 +122,7 @@ A set is a collection of unique values associated with an element from a Collect
 
 - In case of a set attribute, a table should be created with its name indicating the name of the Collection and the name of a group of the attribute, separated by `_set_`, such as `COLLECTION_set_GROUP_OF_ATTRIBUTES`.
 
-- The table must contain a Column named `id`.
+- The table must contain a Column named `id` that references the Collection's `id` with `ON DELETE CASCADE ON UPDATE CASCADE`, so deleting an element removes its rows.
 - The table must not have any primary keys.
 - The table must have an unique constraint on the combination of all columns.
 
@@ -131,6 +132,7 @@ CREATE TABLE HydroPlant_set_gaugingstations(
     id INTEGER,
     conversion_factor REAL NOT NULL,
     gaugingstation_id INTEGER,
+    FOREIGN KEY (id) REFERENCES HydroPlant(id) ON DELETE CASCADE ON UPDATE CASCADE,
     FOREIGN KEY (gaugingstation_id) REFERENCES GaugingStation(id) ON UPDATE CASCADE ON DELETE CASCADE,
     UNIQUE (id, conversion_factor, gaugingstation_id)
 ) STRICT;
@@ -139,7 +141,7 @@ CREATE TABLE HydroPlant_set_gaugingstations(
 ### Time Series
 - Time Series stored in the database should be stored in a table with the name of the Collection followed by `_time_series_` and the name of the attribute group, such a `COLLECTION_time_series_GROUP_OF_ATTRIBUTES`.
 
-- The table must contain a Column named `id`.
+- The table must contain a Column named `id` that references the Collection's `id` with `ON DELETE CASCADE ON UPDATE CASCADE`, so deleting an element removes its rows.
 - A mandatory column named `date_time` should be created to store the date of the time series data. The date_time column should be of type `TEXT` and have the `NOT NULL` constraint. Its values must be ISO 8601 (`YYYY-MM-DD`, optionally followed by `THH:MM:SS` or ` HH:MM:SS`); a value that does not parse is rejected when the row is written.
 
 Example:

@@ -1,5 +1,6 @@
 #include "test_utils.h"
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <quiver/database.h>
 
@@ -48,9 +49,12 @@ TEST_F(SchemaValidatorFixture, InvalidDuplicateAttribute) {
 }
 
 TEST_F(SchemaValidatorFixture, InvalidDuplicateAttributeTimeSeries) {
-    EXPECT_THROW(
-        quiver::Database::from_schema(":memory:", INVALID_SCHEMA("duplicate_attribute_time_series.sql"), options),
-        std::runtime_error);
+    EXPECT_THAT(
+        [&] {
+            quiver::Database::from_schema(":memory:", INVALID_SCHEMA("duplicate_attribute_time_series.sql"), options);
+        },
+        testing::ThrowsMessage<std::runtime_error>(
+            testing::HasSubstr("Duplicate attribute 'some_vector1' found in table 'Collection_time_series_group2'")));
 }
 
 TEST_F(SchemaValidatorFixture, InvalidVectorNoIndex) {
@@ -71,6 +75,37 @@ TEST_F(SchemaValidatorFixture, InvalidFkNotNullSetNull) {
 TEST_F(SchemaValidatorFixture, InvalidFkActions) {
     EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("fk_actions.sql"), options),
                  std::runtime_error);
+}
+
+TEST_F(SchemaValidatorFixture, InvalidSetNoParentFk) {
+    EXPECT_THAT(
+        [&] { quiver::Database::from_schema(":memory:", INVALID_SCHEMA("set_no_parent_fk.sql"), options); },
+        testing::ThrowsMessage<std::runtime_error>(testing::HasSubstr(
+            "Failed to validate schema: Set table 'Collection_set_tags' must have foreign key to parent collection "
+            "'Collection'")));
+}
+
+TEST_F(SchemaValidatorFixture, InvalidSetUnknownParent) {
+    EXPECT_THAT([&] { quiver::Database::from_schema(":memory:", INVALID_SCHEMA("set_unknown_parent.sql"), options); },
+                testing::ThrowsMessage<std::runtime_error>(
+                    testing::HasSubstr("Set table 'Ghost_set_tags' references non-existent collection 'Ghost'")));
+}
+
+TEST_F(SchemaValidatorFixture, InvalidTimeSeriesFkActions) {
+    EXPECT_THAT(
+        [&] { quiver::Database::from_schema(":memory:", INVALID_SCHEMA("time_series_fk_actions.sql"), options); },
+        testing::ThrowsMessage<std::runtime_error>(testing::HasSubstr(
+            "Time series table 'Collection_time_series_data' FK to parent must use ON DELETE CASCADE ON UPDATE "
+            "CASCADE")));
+}
+
+TEST_F(SchemaValidatorFixture, InvalidTimeSeriesRelationFkActions) {
+    EXPECT_THAT(
+        [&] {
+            quiver::Database::from_schema(":memory:", INVALID_SCHEMA("time_series_relation_fk_actions.sql"), options);
+        },
+        testing::ThrowsMessage<std::runtime_error>(testing::HasSubstr(
+            "Foreign key 'parent_id' in table 'Collection_time_series_events' must use ON UPDATE CASCADE")));
 }
 
 // ============================================================================

@@ -517,6 +517,14 @@ impl_->logger->debug("Opening database: {}", path);
   publishes **neither** member until `SchemaValidator::validate()` passes — assigning `schema`
   first would leave a half-loaded state (schema set, `type_validator` null) alive after a failed
   lazy load, crashing the next call. Rationale in the root design decisions.
+- **Every group table's parent is checked by one helper** (`schema_validator.cpp`,
+  `validate_group_parent`, called from `validate()` for vector, set and time-series tables after
+  their structural checks): the prefix must name an existing collection and `id` must reference
+  it with ON DELETE CASCADE ON UPDATE CASCADE — `delete_element` is a bare `DELETE` on the
+  collection and relies on that cascade. `validate_foreign_keys` then applies one action rule to
+  every FK in every table. Sets and time series used to skip the parent check, and time series
+  the action rule too, so a schema could leave orphan set rows or make `delete_element` fail on a
+  time-series table with SQLite's `FOREIGN KEY constraint failed`.
 - **`Row::get_float` widens an int64** (`row.cpp`): the one place the int64-for-REAL policy is
   implemented for reads, since `read_column_values<double>`,
   `read_column_values_nullable<double>`, `read_single_value<double>` and `query_float` all funnel

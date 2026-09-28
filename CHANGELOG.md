@@ -7,6 +7,29 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ## [0.12.3] — unreleased
 
+### Changed
+
+- **BREAKING — set and time-series tables need the same parent foreign key as vector tables.**
+  Opening a schema (`from_schema`, `from_migrations`, `validate_migrations`, or the first use of a
+  database opened with `open()`) now rejects a `<Collection>_set_<group>` or
+  `<Collection>_time_series_<group>` table when `<Collection>` does not exist, when its `id` has no
+  foreign key to `<Collection>(id)`, or when that key is not `ON DELETE CASCADE ON UPDATE CASCADE`
+  — the rules vector tables already followed. Without the cascade, `delete_element` left the
+  element's set rows behind, or failed with `FOREIGN KEY constraint failed` once the element had
+  time-series rows. Any other foreign key in a time-series table must now use `ON UPDATE CASCADE`
+  with `ON DELETE CASCADE` or `ON DELETE SET NULL`, as in every other table. The errors read
+  `Failed to validate schema: Set table '<t>' must have foreign key to parent collection '<c>'`,
+  `… references non-existent collection '<c>'`, and
+  `… FK to parent must use ON DELETE CASCADE ON UPDATE CASCADE`.
+
+  *Adapt:* declare `FOREIGN KEY (id) REFERENCES <Collection>(id) ON DELETE CASCADE ON UPDATE
+  CASCADE` on every set and time-series table, and give each time-series relation key
+  `ON UPDATE CASCADE` with `ON DELETE CASCADE` or `SET NULL`. SQLite cannot add a foreign key to
+  an existing table, so an existing database needs a migration that rebuilds the table: create the
+  new table, copy only the rows whose element still exists (`INSERT INTO <new> SELECT ... FROM
+  <old> WHERE id IN (SELECT id FROM <Collection>)` — the rows the old behaviour orphaned would fail
+  the new key), drop the old one, rename.
+
 ### Fixed
 
 - **A rejected `create_element()` / `update_element()` no longer leaves part of its write behind

@@ -219,6 +219,16 @@ TEST_F(TempFileFixture, FromSchemaInvalidPath) {
     EXPECT_NE(quiver_database_from_schema(":memory:", "nonexistent/path/schema.sql", &options, &db), QUIVER_OK);
 }
 
+TEST_F(TempFileFixture, FromSchemaRejectsSetTableWithoutParentFk) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    EXPECT_EQ(quiver_database_from_schema(":memory:", INVALID_SCHEMA("set_no_parent_fk.sql").c_str(), &options, &db),
+              QUIVER_ERROR);
+    EXPECT_STREQ(quiver_get_last_error(),
+                 "Failed to validate schema: Set table 'Collection_set_tags' must have foreign key to parent "
+                 "collection 'Collection'");
+}
+
 // ============================================================================
 // From migrations tests
 // ============================================================================
