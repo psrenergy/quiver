@@ -82,4 +82,19 @@ describe("transaction control", () => {
       db.close();
     }
   });
+
+  test("a rejected updateElement inside a transaction writes nothing", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      const id = db.createElement("AllTypes", { label: "Item 1", some_integer: 1 });
+      db.beginTransaction();
+      expect(() => db.updateElement("AllTypes", id, { some_integer: 2, tag: [1.5] })).toThrow(
+        /type mismatch for array 'tag'/,
+      );
+      db.commit();
+      expect(db.readScalarIntegerById("AllTypes", "some_integer", id)).toEqual(1);
+    } finally {
+      db.close();
+    }
+  });
 });

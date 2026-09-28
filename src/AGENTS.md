@@ -312,7 +312,7 @@ db.commit();   // or db.rollback();
 bool active = db.in_transaction();
 ```
 
-Internally, `Impl::TransactionGuard` is nest-aware RAII: if an explicit transaction is already active (checked via `sqlite3_get_autocommit()`), the guard becomes a no-op. This allows write methods (`create_element`, etc.) to work both standalone and inside explicit transactions without double-beginning.
+Internally, `Impl::TransactionGuard` is nest-aware RAII: if an explicit transaction is already active (checked via `sqlite3_get_autocommit()`), the guard becomes a no-op. This allows write methods (`create_element`, etc.) to work both standalone and inside explicit transactions without double-beginning. A no-op guard cannot roll anything back, so every writer that can run inside a caller's transaction finishes its checks before its first write (see "Group writes" under Core Internals). Only a failure SQLite alone detects mid-write (UNIQUE / NOT NULL / CHECK / foreign key) can leave a call's earlier writes inside a caller-owned transaction. That is a documented limit, and there are no SAVEPOINTs (root design decisions).
 
 ```cpp
 // Internal RAII guard (nest-aware)
@@ -375,16 +375,23 @@ impl_->logger->debug("Opening database: {}", path);
 
 ## Core Internals Worth Knowing
 
-- **Group inserts are unified** (`database_impl.h`): one `insert_rows_into_group_table(caller,
-  table, type, columns, id, delete_existing, db)` helper serves vector, set, and time-series
-  writes; a single routing map (`table_name -> {type, columns}`) classifies an element's array
-  attributes. Don't re-grow per-type copies. Two load-bearing details: validation (types +
-  same-length) runs **before** the DELETE, because `TransactionGuard` no-ops when a transaction is
-  already open (dry run, caller-owned) and a throw after the DELETE would leave the group cleared
-  with nothing to roll back; and `num_rows` is seeded from the **first** column rather than the
-  first non-empty one, because `columns` is name-sorted and an empty alphabetically-first column
-  otherwise left it at 0 for a later column to overwrite — skipping the check and indexing past the
-  end of the empty vector.
+- **Group writes are unified, and checked before anything is written** (`database_impl.h`): one
+  `validate_group_columns(caller, table, type, columns)` checks types and equal lengths, and one
+  `insert_rows_into_group_table(table, type, columns, id, delete_existing, db)` does the DELETE and
+  INSERTs, for vector, set and time-series tables alike. For `create_element` / `update_element`,
+  `prepare_group_data` routes each array to its table(s) through a single
+  `table_name -> GroupColumns` map, FK-resolves it against **each** table it is written to (a
+  shared FK column name may target a different collection per group), and validates every table;
+  the caller runs it **before** its scalar INSERT/UPDATE and hands the result to
+  `insert_group_data` afterwards. `update_group_rows` calls `validate_group_columns` before its
+  guard the same way. Don't re-grow per-type copies, and don't move a check back past the first
+  write: `TransactionGuard` no-ops when a transaction is already open (dry run, caller-owned), so a
+  throw after any write leaves it in place for the caller's commit. What remains is only what
+  SQLite checks at INSERT time (UNIQUE, NOT NULL, CHECK, foreign keys) - documented, not fixed (root
+  design decisions). `num_rows` is seeded from the **first** column rather than the first
+  non-empty one, because `columns` is name-sorted and an empty alphabetically-first column
+  otherwise left it at 0 for a later column to overwrite — skipping the check and indexing past
+  the end of the empty vector.
 - **`Impl::update_group_rows`** (`database_update.cpp`) is the shared body of
   `update_vector_group`/`update_set_group`. It validates the **union of every row's keys** (not
   `rows[0]`, which dropped later-row-only columns and skipped validating them) against the group
@@ -474,12 +481,13 @@ impl_->logger->debug("Opening database: {}", path);
 - **DATE_TIME content is checked by both halves of that policy, through one predicate**:
   `datetime::is_valid_iso8601` (`utils/datetime.h`). `TypeValidator::validate_value` calls it in its
   string branch (covering scalar create/update and every vector/set array write, so it inherits the
-  validate-before-DELETE ordering below); `validate_time_series_row` (`database_time_series.cpp`)
-  calls it in a **separate** guard next to `value_matches_type`. Do not "restore symmetry" by moving
-  the check into `value_matches_type`: that function decides the *variant's shape*, and TEXT into a
-  DATE_TIME column is the correct shape — routing a content failure through its `bool` would emit
-  `column 'date_time' has type DATE_TIME but received TEXT`, which is a lie. The two guards phrase
-  their own messages; the rule itself lives in exactly one function.
+  check-before-first-write ordering of the "Group writes" bullet above); `validate_time_series_row`
+  (`database_time_series.cpp`) calls it in a **separate** guard next to `value_matches_type`. Do
+  not "restore symmetry" by moving the check into `value_matches_type`: that function decides the
+  *variant's shape*, and TEXT into a DATE_TIME column is the correct shape — routing a content
+  failure through its `bool` would emit `column 'date_time' has type DATE_TIME but received TEXT`,
+  which is a lie. The two guards phrase their own messages; the rule itself lives in exactly one
+  function.
   `parse_datetime_import` (`database_csv_import.cpp`) is the **third** gate and needs to exist:
   `import_csv` writes through a raw `INSERT` and never reaches `TypeValidator`, and its
   custom-`date_time_format` branch parses with the caller's `get_time` format, which cannot see an
@@ -492,10 +500,10 @@ impl_->logger->debug("Opening database: {}", path);
   write, but with no rows it deletes nothing and returns silently.
   Every `_by_label` form resolves the label via `Impl::resolve_label`, and is a one-line
   delegation to its id counterpart (the root `_by_label` rule), so `update_element_by_label`'s
-  *element* validation — the empty-element throw, `TypeValidator`, `insert_group_data` — reports
-  `Cannot update_element: ...` and the group/row writers' column validation reports
-  `Cannot update_{vector,set,time_series}_group: ...` / `Cannot upsert_time_series_row: ...`,
-  naming the operation that validated.
+  *element* validation — the empty-element throw, `TypeValidator`, `prepare_group_data`'s
+  routing/type/length checks — reports `Cannot update_element: ...` and the group/row writers'
+  column validation reports `Cannot update_{vector,set,time_series}_group: ...` /
+  `Cannot upsert_time_series_row: ...`, naming the operation that validated.
 - **`update_relation` is a validated `update_element`** (`database_update.cpp`): the derived column
   is checked against the schema through the `TableDefinition::get_foreign_key` accessor added for
   it in `schema.cpp`, then written as a one-attribute `Element` (`std::nullopt` becomes

@@ -695,6 +695,27 @@ TEST(Database, ScalarFkResolutionFailureCausesNoPartialWrites) {
     EXPECT_EQ(labels.size(), 0);
 }
 
+// TransactionGuard no-ops inside a dry run, so an array rejected after the INSERT used to leave the
+// element readable for the rest of the dry run (a Lua script that pcall'd the error saw it).
+TEST(Database, CreateElementRejectedArrayInsideDryRunLeavesNoElement) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+    db.create_element("Configuration", quiver::Element().set("label", std::string("Config")));
+
+    db.begin_dry_run();
+    try {
+        db.create_element("Collection",
+                          quiver::Element().set("label", std::string("X")).set("typo", std::vector<int64_t>{1}));
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(),
+                     "Cannot create_element: array 'typo' does not match any vector, set, or time series table in "
+                     "collection 'Collection'");
+    }
+    EXPECT_EQ(db.number_of_elements("Collection"), 0);
+    db.end_dry_run();
+}
+
 TEST(Database, CreateScalarTypeCoercionPolicy) {
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});

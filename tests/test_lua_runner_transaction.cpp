@@ -122,6 +122,30 @@ TEST_F(LuaRunnerTest, TransactionBlockRollbackOnError) {
     EXPECT_EQ(labels.size(), 0);
 }
 
+// A script that catches an error inside db:transaction commits whatever the failed call left
+// behind, so a rejected update_element must leave nothing.
+TEST_F(LuaRunnerTest, TransactionBlockCaughtRejectedUpdateWritesNothing) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    auto id = db.create_element("Collection", quiver::Element().set("label", "Item 1").set("some_integer", int64_t{1}));
+    ASSERT_EQ(id, 1);
+
+    quiver::LuaRunner lua(db);
+    lua.run(R"(
+        db:transaction(function(db)
+            local ok, err = pcall(function()
+                db:update_element("Collection", 1, { some_integer = 2, tag = { 1.5 } })
+            end)
+            assert(ok == false, "expected update_element to fail")
+            assert(err:find("type mismatch for array 'tag'", 1, true) ~= nil, "unexpected error: " .. tostring(err))
+        end)
+    )");
+
+    auto value = db.read_scalar_integer_by_id("Collection", "some_integer", id);
+    ASSERT_TRUE(value.has_value());
+    EXPECT_EQ(*value, 1);
+}
+
 TEST_F(LuaRunnerTest, TransactionBlockMultiOps) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));

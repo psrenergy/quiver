@@ -1385,6 +1385,60 @@ TEST(Database, UpdateGroupTypeErrorInsideDryRunKeepsExistingRows) {
     f.db.end_dry_run();
 }
 
+// TransactionGuard no-ops inside a caller-owned transaction, so update_element must route and
+// validate every array before its scalar UPDATE - a throw after it left the UPDATE for the
+// caller's commit.
+TEST(Database, UpdateElementRejectedArrayInsideTransactionKeepsScalar) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+    db.create_element("Configuration", quiver::Element().set("label", std::string("Config")));
+    auto id = db.create_element("Collection",
+                                quiver::Element().set("label", std::string("Item 1")).set("some_integer", int64_t{1}));
+
+    db.begin_transaction();
+    try {
+        db.update_element(
+            "Collection", id, quiver::Element().set("some_integer", int64_t{2}).set("tag", std::vector<double>{1.5}));
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), "Cannot update_element: type mismatch for array 'tag' index 0: expected TEXT, got REAL");
+    }
+    db.commit();
+
+    auto value = db.read_scalar_integer_by_id("Collection", "some_integer", id);
+    ASSERT_TRUE(value.has_value());
+    EXPECT_EQ(*value, 1);
+}
+
+// Each group table used to be validated just before its own DELETE, and tables are written in
+// name order, so Collection_set_tags was already rewritten when Collection_vector_values failed.
+TEST(Database, UpdateElementRejectedArrayKeepsEarlierGroup) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+    db.create_element("Configuration", quiver::Element().set("label", std::string("Config")));
+    auto id = db.create_element("Collection",
+                                quiver::Element()
+                                    .set("label", std::string("Item 1"))
+                                    .set("tag", std::vector<std::string>{"keep"})
+                                    .set("value_int", std::vector<int64_t>{7}));
+
+    db.begin_transaction();
+    try {
+        db.update_element(
+            "Collection",
+            id,
+            quiver::Element().set("tag", std::vector<std::string>{"new"}).set("value_int", std::vector<double>{1.5}));
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(),
+                     "Cannot update_element: type mismatch for array 'value_int' index 0: expected INTEGER, got REAL");
+    }
+    db.commit();
+
+    EXPECT_EQ(db.read_set_strings_by_id("Collection", "tag", id), (std::vector<std::string>{"keep"}));
+    EXPECT_EQ(db.read_vector_integers_by_id("Collection", "value_int", id), (std::vector<int64_t>{7}));
+}
+
 // ============================================================================
 // Update by label tests
 // ============================================================================

@@ -5,6 +5,22 @@ All notable changes to Quiver are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entries that require
 callers to change something are prefixed **BREAKING** and say what to do.
 
+## [0.12.3] — unreleased
+
+### Fixed
+
+- **A rejected `create_element()` / `update_element()` no longer leaves part of its write behind
+  inside a transaction or dry run.** Both wrote the element's scalar row before routing and
+  validating its arrays, and rewrote each group table before checking the next. Inside a
+  caller-owned transaction (for example a Lua `pcall` inside `db:transaction`) or a dry run, a call
+  rejected for an unknown array, a type mismatch or unequal lengths still left the new element, the
+  updated scalars or an already-rewritten group in place for the commit. Every array is now routed,
+  FK-resolved and validated before the first write, in every binding; an array whose column name
+  several groups share is FK-resolved against each group it is written to, not only the first. A
+  failure only SQLite can detect — a duplicate value in a set, a NULL in a NOT NULL group column, a
+  CHECK constraint, a foreign-key violation — still happens mid-write, and inside a caller-owned
+  transaction the call's earlier writes stay; outside one the call is rolled back as before.
+
 ## [0.12.2] — unreleased
 
 ### Changed

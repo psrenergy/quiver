@@ -131,6 +131,22 @@ Settled questions — don't relitigate without the user; each was decided delibe
   and a caller can escape via a raw `COMMIT` through `query_*` (so `end_dry_run` guards on
   `sqlite3_get_autocommit` instead of throwing). A per-table changeset (SQLite session extension)
   was skipped — a script that wants a change count already has `SELECT total_changes()`.
+- **Writers check everything before their first write, and there are no SAVEPOINTs.**
+  `Impl::TransactionGuard` no-ops inside a caller-owned transaction or a dry run, so it cannot roll
+  back a failed call there. Every writer that can run inside one therefore resolves and validates
+  all of its input before its first INSERT/UPDATE/DELETE (`import_csv` cannot: it refuses to nest and
+  rolls back its own transaction). The group and time-series writers already do; `create_element` /
+  `update_element` used to write the scalar row before checking their arrays (a Lua `pcall` inside
+  `db:transaction` committed half a call), and now route, FK-resolve and validate every array in
+  `Impl::prepare_group_data` first. The documented limit is what only SQLite checks: a UNIQUE /
+  PRIMARY KEY, NOT NULL, CHECK or foreign-key failure on an INSERT, or a trigger that raises (a set
+  written `{"a", "a"}`, a NULL cell in a NOT NULL group column, a NOT NULL column the call leaves
+  out — e.g. a `date_time` array, which every time-series group of the collection shares, written
+  to a group whose value column the call does not name) still throws after the call's earlier
+  writes, and inside a caller-owned transaction those writes stay for the commit. Autocommit calls
+  are still all-or-nothing. A SAVEPOINT per nested guard would close that gap and was rejected in
+  the v0.3 research (`git show f92af8d:.planning/research/PITFALLS.md`, Pitfall 4) as the nesting
+  complexity the no-op guard exists to avoid.
 - **`LuaRunner::run` returns the script's return value as a JSON string.** One encoder in C++
   (`src/lua_runner.cpp`, anonymous namespace); every binding passes the string through without
   parsing, so no binding gains a JSON dependency (Julia would have needed one). Only the first

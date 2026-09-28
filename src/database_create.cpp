@@ -11,13 +11,13 @@ int64_t Database::create_element(const std::string& collection, const Element& e
         throw std::runtime_error("Cannot create_element: element must have at least one scalar attribute");
     }
 
-    // Pre-resolve pass: resolve all FK labels before any writes
-    auto resolved = impl_->resolve_element_fk_labels(collection, element, *this);
-
-    // Validate resolved scalar types
-    for (const auto& [name, value] : resolved.scalars) {
+    // Resolve and validate every scalar and array before the INSERT: TransactionGuard no-ops inside
+    // a caller-owned transaction or a dry run, so a throw after it would leave the element behind.
+    auto resolved = impl_->resolve_scalar_fk_labels(collection, scalars, *this);
+    for (const auto& [name, value] : resolved) {
         impl_->type_validator->validate_scalar("create_element", collection, name, value);
     }
+    auto groups = impl_->prepare_group_data("create_element", collection, element.arrays(), false, *this);
 
     Impl::TransactionGuard txn(*impl_);
 
@@ -27,7 +27,7 @@ int64_t Database::create_element(const std::string& collection, const Element& e
     std::vector<Value> parameters;
 
     auto first = true;
-    for (const auto& [name, value] : resolved.scalars) {
+    for (const auto& [name, value] : resolved) {
         if (!first) {
             sql += ", ";
             placeholders += ", ";
@@ -43,8 +43,8 @@ int64_t Database::create_element(const std::string& collection, const Element& e
     const auto element_id = sqlite3_last_insert_rowid(impl_->db);
     impl_->logger->debug("Inserted element with id: {}", element_id);
 
-    // Delegate group insertion to shared helper (empty arrays are skipped silently)
-    impl_->insert_group_data("create_element", collection, element_id, resolved.arrays, false, *this);
+    // prepare_group_data already dropped empty arrays; everything left was validated above.
+    impl_->insert_group_data(groups, element_id, false, *this);
 
     txn.commit();
     impl_->logger->info("Created element {} in {}", element_id, collection);

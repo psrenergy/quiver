@@ -805,15 +805,15 @@ From `C:\Development\Quiver\quiver1`:
 
 ## Acceptance criteria
 
-- [ ] `ResolvedElement` and `resolve_element_fk_labels` are gone. `grep -rn "resolve_element_fk_labels\|ResolvedElement\|FK columns have unique names" src/` returns nothing.
-- [ ] `prepare_group_data`, `validate_group_columns`, `insert_rows_into_group_table` (no `caller` parameter, owned-vector columns), `insert_group_data` (takes the prepared map) and `resolve_scalar_fk_labels` exist in `src/database_impl.h`, with the bodies above.
-- [ ] `create_element` calls `prepare_group_data` before `Impl::TransactionGuard`. `update_element` calls it before `Impl::TransactionGuard`, and its `validate_scalar` loop has not moved.
-- [ ] `update_group_rows` calls `validate_group_columns` before its guard and no longer builds `column_ptrs`.
-- [ ] No error message text changed (`git diff` shows the three throw strings moved verbatim).
-- [ ] New tests pass in C++ (3), C API (1), Lua (1), Julia, Dart, Python and JS (1 each), and each C++/C/Lua one fails on the pre-change build.
-- [ ] Root `AGENTS.md` has the new design-decision bullet. `src/AGENTS.md` Transactions paragraph, the Core Internals bullet and the `_by_label` sentence are updated. `CHANGELOG.md` has the Fixed entry.
-- [ ] No SAVEPOINT anywhere (`grep -rni savepoint src/` is empty).
-- [ ] `scripts/test-all.bat` passes.
+- [x] `ResolvedElement` and `resolve_element_fk_labels` are gone. `grep -rn "resolve_element_fk_labels\|ResolvedElement\|FK columns have unique names" src/` returns nothing.
+- [x] `prepare_group_data`, `validate_group_columns`, `insert_rows_into_group_table` (no `caller` parameter, owned-vector columns), `insert_group_data` (takes the prepared map) and `resolve_scalar_fk_labels` exist in `src/database_impl.h`, with the bodies above.
+- [x] `create_element` calls `prepare_group_data` before `Impl::TransactionGuard`. `update_element` calls it before `Impl::TransactionGuard`, and its `validate_scalar` loop has not moved.
+- [x] `update_group_rows` calls `validate_group_columns` before its guard and no longer builds `column_ptrs`.
+- [x] No error message text changed (`git diff` shows the three throw strings moved verbatim).
+- [x] New tests pass in C++ (3), C API (1), Lua (1), Julia, Dart, Python and JS (1 each), and each C++/C/Lua one fails on the pre-change build. *(JS and Python were also shown failing before the fix.)*
+- [x] Root `AGENTS.md` has the new design-decision bullet. `src/AGENTS.md` Transactions paragraph, the Core Internals bullet and the `_by_label` sentence are updated. `CHANGELOG.md` has the Fixed entry.
+- [x] No SAVEPOINT anywhere in code. *(Checked with `grep -rni savepoint src/ include/ --include=*.h --include=*.cpp`, which is empty. The plan's unscoped grep matches the new `src/AGENTS.md` sentence "there are no SAVEPOINTs"; see deviation 3.)*
+- [ ] `scripts/test-all.bat` passes. *(6 of 7 steps PASS. Step 7, the CLI smoke test, FAILS because `example/example1.lua` no longer exists; plan 65 fixes this, and it failed before this change too.)*
 
 ## Pitfalls
 
@@ -837,3 +837,70 @@ From `C:\Development\Quiver\quiver1`:
 - Adding the `caller` operation name to `resolve_fk_label`'s messages, and the typing-policy unification: plan 56.
 - Dropping the `Database& db` back-references: plan 53. `TypeValidator` as free functions: plan 55. The `update_group_rows` table lookup / `require_group_table`: plan 57. `TransactionGuard` / `Impl::exec`: plan 60.
 - Lua reference (`bindings/js/src/lua-api.ts`) wording about transactions and rollback: plans 43/44. Nothing there is made stale by this plan.
+
+## Implementation notes
+
+Implemented on `rs/plan5` at HEAD `0813296` (the `bump-version/0.12.3` merge, after plan 04's `ba9669a`). The core code (Changes 1-8) and all nine tests are the plan's, apart from the deviations listed below. A read-only verification pass matched every quoted excerpt, symbol, signature, fixture and test anchor, in all seven layers, before any edit. No C API, FFI, binding or Lua code changed, so the generators were not run.
+
+**Red/green.** The failures before the fix were exactly as predicted:
+- `CreateElementRejectedArrayInsideDryRunLeavesNoElement`: `number_of_elements` was `1`.
+- `UpdateElementRejectedArrayInsideTransactionKeepsScalar`: `*value` was `2`.
+- `UpdateElementRejectedArrayKeepsEarlierGroup`: `read_set_strings_by_id` returned `{ "new" }`.
+- `LuaRunnerTest.TransactionBlockCaughtRejectedUpdateWritesNothing`: `*value` was `2`.
+- `DatabaseCApi.TransactionRejectedUpdateElementWritesNothing`: `value` was `2`.
+- The new JS test failed with `Expected: 1 Received: 2`, and the new Python test failed as well.
+
+After the fix:
+- The 5 C++/C API/Lua tests pass.
+- Verification step 3's filter: 346/346.
+- `quiver_tests`: 1312/1312.
+- `quiver_c_tests`: 564/564.
+- Julia: 1443/1443.
+- Dart: 421/421, after clearing the native cache.
+- JS: 210/210.
+- Python: 307/307.
+- `scripts/test-all.bat`: steps 1-6 PASS (C++ 1312, C API 564, Julia 1443, Dart 421, JS 210, Python 307); step 7, the CLI smoke test, FAILS as it did before this plan (`Script file not found: ...\example\example1.lua`, which is plan 65).
+
+The strengthened `UpdateElementRejectedArrayKeepsEarlierGroup` (see deviation 5) was also re-run against the stashed pre-fix core. It still fails at the `{ "new" }` read, so the pinned error is the pre-fix error too.
+
+**Deviations (all small):**
+1. **The CHANGELOG entry sits under a new `## [0.12.3] — unreleased` → `### Fixed` section above `[0.12.2]`.** The plan said `[0.12.0]`. `v0.12.0`, `v0.12.1` and `v0.12.2` are all tagged now, and the manifests are already at 0.12.3 (#310). No manifest bump.
+2. **Only line numbers drifted:**
+   - `UpdateGroupTypeErrorInsideDryRunKeepsExistingRows` is at L1376 and the banner is a 3-line block. The new tests go above the whole banner.
+   - In `src/AGENTS.md`, the "Group inserts are unified" bullet is at L378 and the `_by_label` sentence is at L495.
+3. **The SAVEPOINT acceptance grep is scoped to code:** `grep -rni savepoint src/ include/ --include=*.h --include=*.cpp` is empty. The plan's `grep -rni savepoint src/` can never be empty, because the plan's own `src/AGENTS.md` sentence ("there are no SAVEPOINTs") lives under `src/`.
+4. **The documented SQLite-only limit is widened from UNIQUE / NOT NULL / foreign key.**
+   - CHECK constraints fail mid-write the same way, and root `AGENTS.md` itself recommends `CHECK (col IN (0, 1))`. So do PRIMARY KEY duplicates, raising triggers, and a NOT NULL column the call leaves out. The last one is real: `date_` columns of time-series tables are exempt from the duplicate check, so a `date_time` array fans out to every time-series group of the collection. `update_element("Sensor", id, {date_time = [...], temperature = [...]})` on `multi_time_series.sql` clears `Sensor_time_series_humidity` and then fails its INSERT on `humidity NOT NULL`.
+   - CHECK was added in the `insert_rows_into_group_table` comment, in both `src/AGENTS.md` places and in the CHANGELOG. The root bullet names the full list.
+   - The root bullet says the group and time-series writers "already do" validate first, not "always did": their validate-before-DELETE was itself a fix.
+5. **Fixes from the post-implementation 4-lens review.** It found two confirmed doc inaccuracies, and five nits were fixed along with them.
+   - The plan's "every writer" validates first is false for `import_csv`. Its CASCADE-survivor check and its self-FK label pass throw after writes. That is harmless, because it refuses to nest and rolls back its own transaction. The root bullet and the `src/AGENTS.md` Transactions paragraph now say "every writer that can run inside" a caller's transaction, and the root bullet names the exception.
+   - The `_by_label` sentence now says "`prepare_group_data`'s routing/type/length checks". Its array FK-resolution errors come from `resolve_fk_label` and carry no `Cannot update_element:` prefix until plan 56 threads `caller` in.
+   - `validate_group_columns`' comment named "every writer" as its callers. It now names its two real callers.
+   - The CHANGELOG entry gained one sentence on per-table FK resolution, the second user-visible change.
+   - `src/AGENTS.md`'s DATE_TIME bullet pointed "below" to the old bullet name. It now points to the "Group writes" bullet above.
+   - `UpdateElementRejectedArrayKeepsEarlierGroup` now pins the `value_int` message with the file's try/FAIL/catch idiom instead of a bare `EXPECT_THROW`, so a throw before any write can't pass it.
+
+**Error-precedence changes beyond the plan's "Known behaviour consequences."** No test pins any of them:
+- In `create_element`, an array FK-resolution failure now comes after a scalar type error. Before, `resolve_element_fk_labels` resolved arrays first.
+- SQLite errors from the scalar INSERT/UPDATE itself now come after every array routing, FK and validation error. These are a duplicate label, a CHECK failure, and the raw `Column 'x' not found` for an unknown scalar.
+- Between arrays, the first failing array in name order wins. Before, every array FK error came before any "does not match" error.
+- `update_element` can now log the fan-out warning and then throw on a scalar type check.
+
+**For later plans:**
+- **Rename map:**
+  - `resolve_element_fk_labels` → `resolve_scalar_fk_labels`, which handles scalars only. Plan 56 still threads `caller` into it and into `resolve_fk_label`.
+  - The array-validation loop now lives in `validate_group_columns`. That is plan 55's single `validate_array` call site, not `prepare_group_data`.
+  - `Database& db` is now on `resolve_scalar_fk_labels`, `prepare_group_data`, `insert_group_data` and `insert_rows_into_group_table`, for plan 53 to drop.
+  - Plan 53 edits the `src/AGENTS.md` bullet now titled "Group writes are unified, and checked before anything is written".
+  - `update_group_rows`' table lookup, which plan 57 replaces, is untouched.
+- **Plan 37's header** says it overlaps with no other plan, but 05 added tests to the same Dart and Julia transaction files. The anchors differ: Dart after 'multi-operation batch', Julia after "Multi-operation batch".
+- **Pre-existing gaps, not fixed here** (candidates for a later plan):
+  - `update_element(c, id, {id = {}})` silently clears every group of the element. `find_all_tables_for_column("id")` matches every group table, and `prepare_group_data`, unlike `update_group_rows`, does not reject `id` / `vector_index` as array names. A non-empty `vector_index` array duplicates an INSERT column.
+  - The `date_time` fan-out into a time-series group whose NOT NULL value column the call omits (deviation 4) deletes that group before failing. `validate_time_series_row` does not catch the equivalent either, because it only checks that the dimension columns are present.
+  - A fanned-out array now costs one resolved copy and one `resolve_fk_label` pass per matched table instead of one in total. Single-table arrays cost the same as before.
+- **Carried forward:**
+  - The Dart hook's native cache must be cleared before a regression run: delete `bindings/dart/.dart_tool/hooks_runner` and `.dart_tool/lib`.
+  - `scripts/format.bat`'s biome step again rewrote 22 untouched JS files from CRLF to LF with no content change. Revert them by the names `git status --porcelain` lists; `git diff --name-only` hides CR-only changes.
+  - The Debug build's `C4458: declaration of 'db' hides class member` warnings from `database_impl.h` predate this plan, and plan 53 removes them. `prepare_group_data` adds one more.
+  - The first `uv run pytest` after a manifest bump rebuilds the editable install in Release, which takes minutes. Python still loads `build/bin` through `PATH`.
