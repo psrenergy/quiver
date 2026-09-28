@@ -324,6 +324,19 @@ include("fixture.jl")
         Quiver.close!(db)
     end
 
+    @testset "Read Time Series Row - Multi-Dimension Group Rejected" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "multi_dim_time_series.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        exc = @test_throws Quiver.DatabaseException Quiver.read_time_series_row(
+            db, "Resource", "load", "load"; date_time = DateTime(2024, 1, 1),
+        )
+        @test exc.value.msg ==
+              "Cannot read_time_series_row: group 'load' of collection 'Resource' has more than one dimension column"
+
+        Quiver.close!(db)
+    end
+
     @testset "Read Time Series Row - String Null Distinguished From Empty" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "mixed_time_series.sql")
         db = Quiver.from_schema(":memory:", path_schema)

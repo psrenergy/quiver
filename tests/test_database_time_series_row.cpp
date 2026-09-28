@@ -236,6 +236,49 @@ TEST(Database, ReadTimeSeriesRowSkipsNullValues) {
     EXPECT_DOUBLE_EQ(std::get<double>(result[0]), 5.0);
 }
 
+TEST(Database, ReadTimeSeriesRowRejectsMultiDimensionGroup) {
+    auto db = quiver::Database::from_schema(":memory:",
+                                            VALID_SCHEMA("multi_dim_time_series.sql"),
+                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    const char* expected =
+        "Cannot read_time_series_row: group 'load' of collection 'Resource' has more than one dimension column";
+
+    // Refused on the schema, not the data: an empty collection already throws.
+    try {
+        db.read_time_series_row("Resource", "load", "load", "2024-01-01");
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), expected);
+    }
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element resource;
+    resource.set("label", std::string("Resource 1"));
+    auto id = db.create_element("Resource", resource);
+
+    // Two blocks at one date, block 2's load NULL: the read used to return NULL here although block 1 holds 10.0.
+    db.upsert_time_series_row(
+        "Resource", "load", id, {{"date_time", std::string("2024-01-01")}, {"block", int64_t{1}}, {"load", 10.0}});
+    db.upsert_time_series_row("Resource",
+                              "load",
+                              id,
+                              {{"date_time", std::string("2024-01-01")}, {"block", int64_t{2}}, {"flag", int64_t{5}}});
+
+    try {
+        db.read_time_series_row("Resource", "load", "load", "2024-01-01");
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), expected);
+    }
+
+    // The group itself stays readable through the group reader.
+    EXPECT_EQ(db.read_time_series_group("Resource", "load", id).size(), 2u);
+}
+
 // ============================================================================
 // upsert_time_series_row tests (CORE-11..14)
 // ============================================================================

@@ -38,6 +38,17 @@ const NULLABLE_TS_SCHEMA = join(
   "nullable_time_series.sql",
 );
 
+const MULTI_DIM_TS_SCHEMA = join(
+  __dirname,
+  "..",
+  "..",
+  "..",
+  "tests",
+  "schemas",
+  "valid",
+  "multi_dim_time_series.sql",
+);
+
 // ============================================================================
 // readTimeSeriesRow
 // ============================================================================
@@ -70,6 +81,17 @@ describe("readTimeSeriesRow", () => {
     try {
       const row = db.readTimeSeriesRow("Collection", "data", "value", "2024-01-15T00:00:00");
       expect(row).toEqual([]);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("throws on a group with more than one dimension column", () => {
+    const db = Database.fromSchema(":memory:", MULTI_DIM_TS_SCHEMA);
+    try {
+      expect(() => db.readTimeSeriesRow("Resource", "load", "load", "2024-01-01T00:00:00")).toThrow(
+        "Cannot read_time_series_row: group 'load' of collection 'Resource' has more than one dimension column",
+      );
     } finally {
       db.close();
     }

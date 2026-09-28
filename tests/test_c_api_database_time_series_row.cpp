@@ -1310,3 +1310,22 @@ TEST(DatabaseCApi, ReadTimeSeriesRowGroupNotFound) {
 
     quiver_database_close(db);
 }
+
+TEST(DatabaseCApi, ReadTimeSeriesRowRejectsMultiDimensionGroup) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("multi_dim_time_series.sql").c_str(), &options, &db),
+              QUIVER_OK);
+
+    int out_type = 0;
+    void* out_values = nullptr;
+    size_t out_count = 0;
+    auto err = quiver_database_read_time_series_row(
+        db, "Resource", "load", "load", "2024-01-01", &out_type, &out_values, &out_count);
+    EXPECT_EQ(err, QUIVER_ERROR);
+    EXPECT_EQ(out_values, nullptr);
+    EXPECT_STREQ(quiver_get_last_error(),
+                 "Cannot read_time_series_row: group 'load' of collection 'Resource' has more than one dimension column");
+
+    quiver_database_close(db);
+}

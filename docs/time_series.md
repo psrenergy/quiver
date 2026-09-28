@@ -55,6 +55,11 @@ value returned for each element is the **last non-null value at or before** the 
 date. If an element has no data at or before that date, the entry is null (`nothing` in
 Julia, `None` in Python, `null` in Dart/JS, `nil` in Lua).
 
+`read_time_series_row` needs a group with a single dimension column. A group with more
+dimensions (such as `block` above) holds several rows at each date, so there is no single
+value per element, and the call raises an error. Read such a group with
+`read_time_series_group` instead.
+
 For example, if you have the following data for the attribute `some_vector1`:
 
 | **Date** | **Resource 1** | **Resource 2** |

@@ -888,6 +888,16 @@ TEST_F(LuaRunnerTest, ReadTimeSeriesRow) {
     )");
 }
 
+TEST_F(LuaRunnerTest, ReadTimeSeriesRowRejectsMultiDimensionGroup) {
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("multi_dim_time_series.sql"));
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(
+        lua,
+        R"(db:read_time_series_row("Resource", "load", "load", "2024-01-01"))",
+        "Cannot read_time_series_row: group 'load' of collection 'Resource' has more than one dimension column");
+}
+
 TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupByLabel) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
