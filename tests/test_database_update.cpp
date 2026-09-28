@@ -1297,8 +1297,9 @@ TEST(Database, UpdateGroupMultiColumnRoundTrips) {
     EXPECT_DOUBLE_EQ(std::get<double>(rows[1].at("score")), 20.0);
 }
 
-// A column named only in a later row used to be dropped silently: the column set came from
-// rows[0]. update_time_series_group validates (and keeps) every row's keys.
+// A column named only in a later row used to be dropped silently: the column set came from the
+// first row's keys. update_time_series_group had the same bug; its twin is
+// UpdateTimeSeriesGroupKeepsColumnPresentOnlyInALaterRow (test_database_time_series_group.cpp).
 TEST(Database, UpdateGroupKeepsColumnPresentOnlyInALaterRow) {
     MultiColumnGroupFixture f;
 

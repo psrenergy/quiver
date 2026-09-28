@@ -2,6 +2,8 @@
 #include "database_internal.h"
 #include "utils/datetime.h"
 
+#include <set>
+
 namespace quiver {
 
 namespace {
@@ -169,11 +171,15 @@ void Database::update_time_series_group(const std::string& collection,
         return;
     }
 
-    // Get column names from first row (excluding dimension column which we handle specially)
-    std::vector<std::string> value_columns;
-    for (const auto& [col_name, _] : rows[0]) {
-        if (col_name != dim_col) {
-            value_columns.push_back(col_name);
+    // INSERT column list: the union of every row's keys (minus the dimension column, bound
+    // first), as update_group_rows does - not rows[0]'s, which dropped a value column named only
+    // in a later row after validating it. A row that omits a column binds NULL for it below.
+    std::set<std::string> value_columns;
+    for (const auto& row : rows) {
+        for (const auto& [col_name, _] : row) {
+            if (col_name != dim_col) {
+                value_columns.insert(col_name);
+            }
         }
     }
 

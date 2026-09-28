@@ -2021,9 +2021,11 @@ struct LuaRunner::Impl {
         return result;
     }
 
-    // Transpose the collected columns into uniform row maps: the C++ core derives the INSERT
-    // column list from rows[0], so every row carries every named column, with explicit NULL for
-    // the cells the caller left out (which is how nil holes from a read round-trip).
+    // Transpose the collected columns into row maps where every row carries every named column,
+    // with explicit NULL for the cells the caller left out (which is how nil holes from a read
+    // round-trip). The NULL pre-fill is what makes an all-nil column such as `flag = {}` reach the
+    // core at all: it is validated (an unknown name still throws) and written as NULL rather than
+    // left to the column DEFAULT.
     static std::vector<std::map<std::string, Value>>
     columns_to_cpp_rows(const std::string& caller, const std::vector<GroupColumn>& lua_columns, size_t row_count) {
         std::vector<std::map<std::string, Value>> cpp_rows(row_count);

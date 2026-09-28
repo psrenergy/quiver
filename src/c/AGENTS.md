@@ -182,9 +182,10 @@ NULL **presence mask** alongside the data arrays:
   dense (all values present). `column_has_value[c][r] == 0` inserts SQL NULL for that cell and the
   data entry is never read (a NULL `char*` placeholder is fine for string columns) — so an all-NULL
   column can be tagged `FLOAT` with zeroed data regardless of the schema column's type. The row map
-  receives an explicit `Value{nullptr}` for masked cells in **every** row, keeping rows uniform (the
-  core builds the INSERT column list from `rows[0]`). Masking a dimension/PK cell surfaces as the
-  SQLite NOT NULL/constraint error. Pass `column_count == 0` and `row_count == 0` with NULL arrays
+  receives an explicit `Value{nullptr}` for masked cells, so every row names every column and an
+  all-NULL column is still validated and written as NULL, not left to the column DEFAULT. Masking
+  a dimension/PK cell surfaces as the SQLite NOT NULL/constraint error. Pass `column_count == 0`
+  and `row_count == 0` with NULL arrays
   to clear all rows.
 - `quiver_database_read_time_series_group()` returns columnar typed arrays plus
   `out_column_has_value` (a `uint8_t**`, one mask per column). Column data arrays are typed:
@@ -214,8 +215,9 @@ inherit the group decoder's NULL contract. It owns three contracts the row-shape
 - **`column_count > 0` with `row_count == 0` is rejected.** The row-shaped result carries no column
   names, so the core would see an empty update and clear the group — a typo'd column name would
   destroy data and report success. Clearing is `column_count == 0`.
-- Masked cells become an explicit `Value{nullptr}` in **every** row, keeping rows uniform (the core
-  builds its INSERT column list from `rows[0]`).
+- Masked cells become an explicit `Value{nullptr}`, so every row names every column: an all-NULL
+  column is still validated by the core (an unknown name throws) and written as NULL rather than
+  left to the column DEFAULT.
 
 ## Parameterized Queries
 

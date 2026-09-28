@@ -5,6 +5,18 @@ All notable changes to Quiver are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entries that require
 callers to change something are prefixed **BREAKING** and say what to do.
 
+## [0.12.2] — unreleased
+
+### Fixed
+
+- **`update_time_series_group()` writes a value column that only a later row names.** The C++
+  method (and `update_time_series_group_by_label()`) built its INSERT column list from the first
+  row's keys, so a column that appeared only from the second row on passed validation and was
+  then silently dropped, reading back as NULL. It now uses the union of every row's keys, as
+  `update_vector_group()` / `update_set_group()` already do; a row that omits such a column writes
+  NULL for it. The C API, Lua and the bindings always pass every column in every row and were not
+  affected.
+
 ## [0.12.1] — unreleased
 
 ### Changed
