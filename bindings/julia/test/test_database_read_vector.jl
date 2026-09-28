@@ -266,6 +266,46 @@ include("fixture.jl")
 
         Quiver.close!(db)
     end
+
+    @testset "NULL cells and element types" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+        id = Quiver.create_element!(db, "Collection"; label = "Item 1")
+        Quiver.create_element!(db, "Collection"; label = "Item 2")  # no vector rows
+        # Julia's Element keeps a non-null array write surface, so the NULL cell is written
+        # through the group writer.
+        Quiver.update_vector_group!(db, "Collection", "values", id; value_int = [10, nothing, 30])
+
+        # A NULL cell keeps its slot; an element with no rows is an empty inner vector. Those two
+        # are different things, which is what the presence column in the core's LEFT JOIN buys.
+        @test Quiver.read_vector_integers(db, "Collection", "value_int") == [[10, nothing, 30], []]
+        @test Quiver.read_vector_integers_by_id(db, "Collection", "value_int", id) == [10, nothing, 30]
+
+        # value_int is nullable -> Optional element type; label is NOT NULL -> concrete.
+        @test Quiver.read_vector_integers(db, "Collection", "value_int") isa
+              Vector{Vector{Union{Int64, Nothing}}}
+        @test Quiver.read_vector_integers_by_id(db, "Collection", "value_int", id) isa
+              Vector{Union{Int64, Nothing}}
+
+        Quiver.close!(db)
+    end
+
+    @testset "Concrete element types for NOT NULL columns" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "all_types.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Config")
+        id = Quiver.create_element!(db, "AllTypes"; label = "Item 1", count_value = [1, 0])
+
+        # AllTypes_vector_counts.count_value is INTEGER NOT NULL -> concrete element type.
+        @test Quiver.read_vector_integers(db, "AllTypes", "count_value") isa Vector{Vector{Int64}}
+        @test Quiver.read_vector_integers_by_id(db, "AllTypes", "count_value", id) isa Vector{Int64}
+        @test Quiver.read_vector_booleans(db, "AllTypes", "count_value") isa Vector{Vector{Bool}}
+
+        Quiver.close!(db)
+    end
 end
 
 end

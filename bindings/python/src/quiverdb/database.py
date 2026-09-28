@@ -549,8 +549,8 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         collection: str,
         attribute: str,
         id: int,
-    ) -> list[datetime]:
-        """Read datetime values from a vector. Returns list of timezone-aware UTC datetimes."""
+    ) -> list[datetime | None]:
+        """Read datetime values from a vector. Timezone-aware UTC datetimes; a NULL cell is None."""
         return [
             _parse_datetime(s, collection, attribute) for s in self.read_vector_strings_by_id(collection, attribute, id)
         ]
@@ -560,8 +560,8 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         collection: str,
         attribute: str,
         id: int,
-    ) -> list[datetime]:
-        """Read datetime values from a set. Returns list of timezone-aware UTC datetimes."""
+    ) -> list[datetime | None]:
+        """Read datetime values from a set. Timezone-aware UTC datetimes; a NULL cell is None."""
         return [
             _parse_datetime(s, collection, attribute) for s in self.read_set_strings_by_id(collection, attribute, id)
         ]
@@ -788,11 +788,12 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
 
     # -- Vector reads (bulk) -----------------------------------------------------
 
-    def read_vector_integers(self, collection: str, attribute: str) -> list[list[int]]:
-        """Read integer vectors for all elements in a collection."""
+    def read_vector_integers(self, collection: str, attribute: str) -> list[list[int | None]]:
+        """Read integer vectors for all elements in a collection. A NULL cell is None."""
         self._ensure_open()
         lib = get_lib()
         out_vectors = ffi.new("int64_t***")
+        out_masks = ffi.new("uint8_t***")
         out_sizes = ffi.new("size_t**")
         out_count = ffi.new("size_t*")
         check(
@@ -801,6 +802,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
                 collection.encode("utf-8"),
                 attribute.encode("utf-8"),
                 out_vectors,
+                out_masks,
                 out_sizes,
                 out_count,
             )
@@ -809,33 +811,32 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         if count == 0 or out_vectors[0] == ffi.NULL:
             return []
         try:
-            result: list[list[int]] = []
+            result: list[list[int | None]] = []
             for i in range(count):
                 size = out_sizes[0][i]
                 if out_vectors[0][i] == ffi.NULL or size == 0:
                     result.append([])
                 else:
-                    result.append([out_vectors[0][i][j] for j in range(size)])
+                    values, mask = out_vectors[0][i], out_masks[0][i]
+                    result.append([values[j] if mask[j] else None for j in range(size)])
             return result
         finally:
             lib.quiver_database_free_integer_vectors(out_vectors[0], out_sizes[0], count)
+            lib.quiver_database_free_masks(out_masks[0], count)
 
-    def read_vector_booleans(self, collection: str, attribute: str) -> list[list[bool]]:
-        """Read boolean vectors stored as integer vectors.
-
-        NULL cells are dropped and only elements that own rows are returned, so the result is
-        not positionally aligned with read_element_ids (unlike read_scalar_booleans).
-        """
+    def read_vector_booleans(self, collection: str, attribute: str) -> list[list[bool | None]]:
+        """Read boolean vectors stored as integer vectors. A NULL cell is None."""
         return [
             [_integer_to_boolean(value, collection, attribute) for value in values]
             for values in self.read_vector_integers(collection, attribute)
         ]
 
-    def read_vector_floats(self, collection: str, attribute: str) -> list[list[float]]:
-        """Read float vectors for all elements in a collection."""
+    def read_vector_floats(self, collection: str, attribute: str) -> list[list[float | None]]:
+        """Read float vectors for all elements in a collection. A NULL cell is None."""
         self._ensure_open()
         lib = get_lib()
         out_vectors = ffi.new("double***")
+        out_masks = ffi.new("uint8_t***")
         out_sizes = ffi.new("size_t**")
         out_count = ffi.new("size_t*")
         check(
@@ -844,6 +845,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
                 collection.encode("utf-8"),
                 attribute.encode("utf-8"),
                 out_vectors,
+                out_masks,
                 out_sizes,
                 out_count,
             )
@@ -852,19 +854,21 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         if count == 0 or out_vectors[0] == ffi.NULL:
             return []
         try:
-            result: list[list[float]] = []
+            result: list[list[float | None]] = []
             for i in range(count):
                 size = out_sizes[0][i]
                 if out_vectors[0][i] == ffi.NULL or size == 0:
                     result.append([])
                 else:
-                    result.append([out_vectors[0][i][j] for j in range(size)])
+                    values, mask = out_vectors[0][i], out_masks[0][i]
+                    result.append([values[j] if mask[j] else None for j in range(size)])
             return result
         finally:
             lib.quiver_database_free_float_vectors(out_vectors[0], out_sizes[0], count)
+            lib.quiver_database_free_masks(out_masks[0], count)
 
-    def read_vector_strings(self, collection: str, attribute: str) -> list[list[str]]:
-        """Read string vectors for all elements in a collection."""
+    def read_vector_strings(self, collection: str, attribute: str) -> list[list[str | None]]:
+        """Read string vectors for all elements in a collection. A NULL cell is None."""
         self._ensure_open()
         lib = get_lib()
         out_vectors = ffi.new("char****")
@@ -884,23 +888,22 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         if count == 0 or out_vectors[0] == ffi.NULL:
             return []
         try:
-            result: list[list[str]] = []
+            result: list[list[str | None]] = []
             for i in range(count):
                 size = out_sizes[0][i]
                 if out_vectors[0][i] == ffi.NULL or size == 0:
                     result.append([])
                 else:
-                    result.append([ffi.string(out_vectors[0][i][j]).decode("utf-8") for j in range(size)])
+                    cells = out_vectors[0][i]
+                    result.append(
+                        [None if cells[j] == ffi.NULL else ffi.string(cells[j]).decode("utf-8") for j in range(size)]
+                    )
             return result
         finally:
             lib.quiver_database_free_string_vectors(out_vectors[0], out_sizes[0], count)
 
-    def read_vector_date_times(self, collection: str, attribute: str) -> list[list[datetime]]:
-        """Read datetime vectors stored as string vectors.
-
-        NULL cells are dropped and only elements that own rows are returned, so the result is
-        not positionally aligned with read_element_ids (unlike read_scalar_date_times).
-        """
+    def read_vector_date_times(self, collection: str, attribute: str) -> list[list[datetime | None]]:
+        """Read datetime vectors stored as string vectors. A NULL cell is None."""
         return [
             [_parse_datetime(value, collection, attribute) for value in values]
             for values in self.read_vector_strings(collection, attribute)
@@ -913,11 +916,12 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         collection: str,
         attribute: str,
         id: int,
-    ) -> list[int]:
-        """Read an integer vector for a single element."""
+    ) -> list[int | None]:
+        """Read an integer vector for a single element. A NULL cell is None."""
         self._ensure_open()
         lib = get_lib()
         out_values = ffi.new("int64_t**")
+        out_mask = ffi.new("uint8_t**")
         out_count = ffi.new("size_t*")
         check(
             lib.quiver_database_read_vector_integers_by_id(
@@ -926,6 +930,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
                 attribute.encode("utf-8"),
                 id,
                 out_values,
+                out_mask,
                 out_count,
             )
         )
@@ -933,17 +938,19 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         if count == 0 or out_values[0] == ffi.NULL:
             return []
         try:
-            return [out_values[0][i] for i in range(count)]
+            mask = out_mask[0]
+            return [out_values[0][i] if mask[i] else None for i in range(count)]
         finally:
             lib.quiver_database_free_integer_array(out_values[0])
+            lib.quiver_database_free_mask(out_mask[0])
 
     def read_vector_booleans_by_id(
         self,
         collection: str,
         attribute: str,
         id: int,
-    ) -> list[bool]:
-        """Read a boolean vector stored as integers for one element."""
+    ) -> list[bool | None]:
+        """Read a boolean vector stored as integers for one element. A NULL cell is None."""
         return [
             _integer_to_boolean(value, collection, attribute)
             for value in self.read_vector_integers_by_id(collection, attribute, id)
@@ -954,11 +961,12 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         collection: str,
         attribute: str,
         id: int,
-    ) -> list[float]:
-        """Read a float vector for a single element."""
+    ) -> list[float | None]:
+        """Read a float vector for a single element. A NULL cell is None."""
         self._ensure_open()
         lib = get_lib()
         out_values = ffi.new("double**")
+        out_mask = ffi.new("uint8_t**")
         out_count = ffi.new("size_t*")
         check(
             lib.quiver_database_read_vector_floats_by_id(
@@ -967,6 +975,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
                 attribute.encode("utf-8"),
                 id,
                 out_values,
+                out_mask,
                 out_count,
             )
         )
@@ -974,17 +983,19 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         if count == 0 or out_values[0] == ffi.NULL:
             return []
         try:
-            return [out_values[0][i] for i in range(count)]
+            mask = out_mask[0]
+            return [out_values[0][i] if mask[i] else None for i in range(count)]
         finally:
             lib.quiver_database_free_float_array(out_values[0])
+            lib.quiver_database_free_mask(out_mask[0])
 
     def read_vector_strings_by_id(
         self,
         collection: str,
         attribute: str,
         id: int,
-    ) -> list[str]:
-        """Read a string vector for a single element."""
+    ) -> list[str | None]:
+        """Read a string vector for a single element. A NULL cell is None."""
         self._ensure_open()
         lib = get_lib()
         out_values = ffi.new("char***")
@@ -1003,17 +1014,19 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         if count == 0 or out_values[0] == ffi.NULL:
             return []
         try:
-            return [ffi.string(out_values[0][i]).decode("utf-8") for i in range(count)]
+            cells = out_values[0]
+            return [None if cells[i] == ffi.NULL else ffi.string(cells[i]).decode("utf-8") for i in range(count)]
         finally:
             lib.quiver_database_free_string_array(out_values[0], count)
 
     # -- Set reads (bulk) --------------------------------------------------------
 
-    def read_set_integers(self, collection: str, attribute: str) -> list[list[int]]:
-        """Read integer sets for all elements in a collection."""
+    def read_set_integers(self, collection: str, attribute: str) -> list[list[int | None]]:
+        """Read integer sets for all elements in a collection. A NULL cell is None."""
         self._ensure_open()
         lib = get_lib()
         out_sets = ffi.new("int64_t***")
+        out_masks = ffi.new("uint8_t***")
         out_sizes = ffi.new("size_t**")
         out_count = ffi.new("size_t*")
         check(
@@ -1022,6 +1035,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
                 collection.encode("utf-8"),
                 attribute.encode("utf-8"),
                 out_sets,
+                out_masks,
                 out_sizes,
                 out_count,
             )
@@ -1030,33 +1044,32 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         if count == 0 or out_sets[0] == ffi.NULL:
             return []
         try:
-            result: list[list[int]] = []
+            result: list[list[int | None]] = []
             for i in range(count):
                 size = out_sizes[0][i]
                 if out_sets[0][i] == ffi.NULL or size == 0:
                     result.append([])
                 else:
-                    result.append([out_sets[0][i][j] for j in range(size)])
+                    values, mask = out_sets[0][i], out_masks[0][i]
+                    result.append([values[j] if mask[j] else None for j in range(size)])
             return result
         finally:
             lib.quiver_database_free_integer_vectors(out_sets[0], out_sizes[0], count)
+            lib.quiver_database_free_masks(out_masks[0], count)
 
-    def read_set_booleans(self, collection: str, attribute: str) -> list[list[bool]]:
-        """Read boolean sets stored as integer sets.
-
-        Same alignment caveat as read_vector_booleans: NULL cells are dropped and only elements
-        that own rows are returned.
-        """
+    def read_set_booleans(self, collection: str, attribute: str) -> list[list[bool | None]]:
+        """Read boolean sets stored as integer sets. A NULL cell is None."""
         return [
             [_integer_to_boolean(value, collection, attribute) for value in values]
             for values in self.read_set_integers(collection, attribute)
         ]
 
-    def read_set_floats(self, collection: str, attribute: str) -> list[list[float]]:
-        """Read float sets for all elements in a collection."""
+    def read_set_floats(self, collection: str, attribute: str) -> list[list[float | None]]:
+        """Read float sets for all elements in a collection. A NULL cell is None."""
         self._ensure_open()
         lib = get_lib()
         out_sets = ffi.new("double***")
+        out_masks = ffi.new("uint8_t***")
         out_sizes = ffi.new("size_t**")
         out_count = ffi.new("size_t*")
         check(
@@ -1065,6 +1078,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
                 collection.encode("utf-8"),
                 attribute.encode("utf-8"),
                 out_sets,
+                out_masks,
                 out_sizes,
                 out_count,
             )
@@ -1073,19 +1087,21 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         if count == 0 or out_sets[0] == ffi.NULL:
             return []
         try:
-            result: list[list[float]] = []
+            result: list[list[float | None]] = []
             for i in range(count):
                 size = out_sizes[0][i]
                 if out_sets[0][i] == ffi.NULL or size == 0:
                     result.append([])
                 else:
-                    result.append([out_sets[0][i][j] for j in range(size)])
+                    values, mask = out_sets[0][i], out_masks[0][i]
+                    result.append([values[j] if mask[j] else None for j in range(size)])
             return result
         finally:
             lib.quiver_database_free_float_vectors(out_sets[0], out_sizes[0], count)
+            lib.quiver_database_free_masks(out_masks[0], count)
 
-    def read_set_strings(self, collection: str, attribute: str) -> list[list[str]]:
-        """Read string sets for all elements in a collection."""
+    def read_set_strings(self, collection: str, attribute: str) -> list[list[str | None]]:
+        """Read string sets for all elements in a collection. A NULL cell is None."""
         self._ensure_open()
         lib = get_lib()
         out_sets = ffi.new("char****")
@@ -1105,23 +1121,22 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         if count == 0 or out_sets[0] == ffi.NULL:
             return []
         try:
-            result: list[list[str]] = []
+            result: list[list[str | None]] = []
             for i in range(count):
                 size = out_sizes[0][i]
                 if out_sets[0][i] == ffi.NULL or size == 0:
                     result.append([])
                 else:
-                    result.append([ffi.string(out_sets[0][i][j]).decode("utf-8") for j in range(size)])
+                    cells = out_sets[0][i]
+                    result.append(
+                        [None if cells[j] == ffi.NULL else ffi.string(cells[j]).decode("utf-8") for j in range(size)]
+                    )
             return result
         finally:
             lib.quiver_database_free_string_vectors(out_sets[0], out_sizes[0], count)
 
-    def read_set_date_times(self, collection: str, attribute: str) -> list[list[datetime]]:
-        """Read datetime sets stored as string sets.
-
-        Same alignment caveat as read_vector_date_times: NULL cells are dropped and only elements
-        that own rows are returned.
-        """
+    def read_set_date_times(self, collection: str, attribute: str) -> list[list[datetime | None]]:
+        """Read datetime sets stored as string sets. A NULL cell is None."""
         return [
             [_parse_datetime(value, collection, attribute) for value in values]
             for values in self.read_set_strings(collection, attribute)
@@ -1134,11 +1149,12 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         collection: str,
         attribute: str,
         id: int,
-    ) -> list[int]:
-        """Read an integer set for a single element."""
+    ) -> list[int | None]:
+        """Read an integer set for a single element. A NULL cell is None."""
         self._ensure_open()
         lib = get_lib()
         out_values = ffi.new("int64_t**")
+        out_mask = ffi.new("uint8_t**")
         out_count = ffi.new("size_t*")
         check(
             lib.quiver_database_read_set_integers_by_id(
@@ -1147,6 +1163,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
                 attribute.encode("utf-8"),
                 id,
                 out_values,
+                out_mask,
                 out_count,
             )
         )
@@ -1154,17 +1171,19 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         if count == 0 or out_values[0] == ffi.NULL:
             return []
         try:
-            return [out_values[0][i] for i in range(count)]
+            mask = out_mask[0]
+            return [out_values[0][i] if mask[i] else None for i in range(count)]
         finally:
             lib.quiver_database_free_integer_array(out_values[0])
+            lib.quiver_database_free_mask(out_mask[0])
 
     def read_set_booleans_by_id(
         self,
         collection: str,
         attribute: str,
         id: int,
-    ) -> list[bool]:
-        """Read a boolean set stored as integers for one element."""
+    ) -> list[bool | None]:
+        """Read a boolean set stored as integers for one element. A NULL cell is None."""
         return [
             _integer_to_boolean(value, collection, attribute)
             for value in self.read_set_integers_by_id(collection, attribute, id)
@@ -1175,11 +1194,12 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         collection: str,
         attribute: str,
         id: int,
-    ) -> list[float]:
-        """Read a float set for a single element."""
+    ) -> list[float | None]:
+        """Read a float set for a single element. A NULL cell is None."""
         self._ensure_open()
         lib = get_lib()
         out_values = ffi.new("double**")
+        out_mask = ffi.new("uint8_t**")
         out_count = ffi.new("size_t*")
         check(
             lib.quiver_database_read_set_floats_by_id(
@@ -1188,6 +1208,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
                 attribute.encode("utf-8"),
                 id,
                 out_values,
+                out_mask,
                 out_count,
             )
         )
@@ -1195,17 +1216,19 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         if count == 0 or out_values[0] == ffi.NULL:
             return []
         try:
-            return [out_values[0][i] for i in range(count)]
+            mask = out_mask[0]
+            return [out_values[0][i] if mask[i] else None for i in range(count)]
         finally:
             lib.quiver_database_free_float_array(out_values[0])
+            lib.quiver_database_free_mask(out_mask[0])
 
     def read_set_strings_by_id(
         self,
         collection: str,
         attribute: str,
         id: int,
-    ) -> list[str]:
-        """Read a string set for a single element."""
+    ) -> list[str | None]:
+        """Read a string set for a single element. A NULL cell is None."""
         self._ensure_open()
         lib = get_lib()
         out_values = ffi.new("char***")
@@ -1224,7 +1247,8 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         if count == 0 or out_values[0] == ffi.NULL:
             return []
         try:
-            return [ffi.string(out_values[0][i]).decode("utf-8") for i in range(count)]
+            cells = out_values[0]
+            return [None if cells[i] == ffi.NULL else ffi.string(cells[i]).decode("utf-8") for i in range(count)]
         finally:
             lib.quiver_database_free_string_array(out_values[0], count)
 

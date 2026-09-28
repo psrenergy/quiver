@@ -27,6 +27,15 @@ Project.toml      # Deps: Artifacts, CEnum, Dates, Libdl; julia 1.11 compat
 - **Always `GC.@preserve`**: refs produced by `marshal_params` (and any `Ref`s passed as pointers)
   must stay inside a `GC.@preserve refs ...` block spanning the ccall — the GC may otherwise
   collect them mid-call.
+- **Vector/set NULL cells are nullability-aware too.** All twelve vector/set readers consult
+  `list_{vector,set}_groups(...)` for the value column's `not_null` (`_group_value_not_null`,
+  `database_read.jl`) and return a concrete `Vector{Vector{Int64}}` / `Vector{Int64}` for a
+  `NOT NULL` column, `Optional{...}` otherwise — the scalar rule extended per cell. The numeric
+  readers decode the C mask (nested `Ptr{Ptr{UInt8}}` in bulk, freed by
+  `quiver_database_free_masks`; flat by id, freed by `quiver_database_free_mask`); the string
+  readers read a `C_NULL` entry as `nothing`. The boolean/datetime wrappers recover nullability
+  from the delegate's container type (`values isa Vector{Vector{Int64}}`), so there is no second
+  metadata hop.
 - **Scalar bulk NULLs (nullability-aware element type)**: `read_scalar_{integers,floats,strings}`
   first read `get_scalar_metadata(db, collection, attribute).not_null`, then return a **concrete
   `Vector{T}`** for `NOT NULL` columns and a **`Vector{Optional{T}}`** for nullable columns — for

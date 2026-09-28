@@ -50,11 +50,13 @@ ruff.toml         # Lint/format config (format.bat runs ruff)
   as a label to look up.
 - **Per-method FFI boilerplate is the house style** — don't collapse it into
   closure-parameterized helpers (root "Do not 'fix'" list).
-- **Scalar bulk NULLs**: `read_scalar_integers`/`_floats` decode a parallel `uint8_t**` mask into
-  `list[T | None]` (`mask[i]` falsy → `None`); `read_scalar_strings` already returns `list[str | None]`
-  via the `ffi.NULL` guard, and `read_scalar_date_times` maps that list while preserving its `None`
-  slots. `_c_api.py` carries the mask out-param on the two numeric readers plus
-  `quiver_database_free_mask`.
+- **Bulk and per-cell NULLs**: `read_scalar_integers`/`_floats` decode a parallel `uint8_t**` mask
+  into `list[T | None]` (`mask[i]` falsy → `None`); the four numeric vector/set `_by_id` readers do
+  the same, while the four numeric vector/set **bulk** readers decode a nested `uint8_t***` — one
+  mask per element, parallel to `out_sizes` — freed by `quiver_database_free_masks`. The string
+  readers carry no mask: a NULL cell is an `ffi.NULL` entry, guarded on read. The boolean and
+  datetime wrappers map those lists while preserving their `None` slots. `_c_api.py` carries the
+  mask out-params and both free functions.
 - **`_parse_datetime` gates on `_DATE_TIME_PATTERN` before calling `fromisoformat`.**
   `fromisoformat` is *wider* than the core's DATE_TIME grammar — it accepts `"20240115"`, a `Z`
   suffix and a UTC offset, none of which Julia's parser reads — so without the gate the same stored
@@ -90,8 +92,9 @@ ruff.toml         # Lint/format config (format.bat runs ruff)
   and by label) — same name as Dart's `_marshalGroupColumn`. It raises `ValueError` for jagged
   column lists (a pre-FFI marshalling error, the documented exception to "messages come from C++");
   everything else is validated in the core and surfaces as `QuiverError`. Note that the group
-  *writers* take columns while `read_vector_group_by_id` returns rows, and that reader composes
-  per-column reads, so it **drops NULL cells** — assert a NULL-cell write in SQL, not through it.
+  *writers* take columns while `read_vector_group_by_id` returns rows; that reader composes
+  per-column reads, which now preserve NULL cells, so its rows are NULL-correct and a NULL-cell
+  write can be asserted through it.
 - **`_marshal_row_columns` is its row-shaped sibling**, serving `upsert_time_series_row` and its
   `_by_label` form — each kwarg is a scalar wrapped in a 1-element typed array. Kept separate
   because the row-upsert C signature carries no per-cell mask: the group marshaller's zeroed

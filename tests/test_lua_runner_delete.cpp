@@ -78,7 +78,7 @@ TEST_F(LuaRunnerTest, DeleteElementByIdWithVectorData) {
     // Verify vector data of remaining element is intact
     auto vectors = db.read_vector_integers("Collection", "value_int");
     EXPECT_EQ(vectors.size(), 1);
-    EXPECT_EQ(vectors[0], (std::vector<int64_t>{4, 5, 6}));
+    EXPECT_EQ(vectors[0], (std::vector<std::optional<int64_t>>{4, 5, 6}));
 }
 
 TEST_F(LuaRunnerTest, DeleteElementByIdNonExistent) {

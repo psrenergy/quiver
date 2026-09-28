@@ -72,6 +72,16 @@ QUIVER_C_API quiver_error_t quiver_database_free_mask(uint8_t* mask) {
     return QUIVER_OK;
 }
 
+QUIVER_C_API quiver_error_t quiver_database_free_masks(uint8_t** masks, size_t count) {
+    if (masks) {
+        for (size_t i = 0; i < count; ++i) {
+            delete[] masks[i];
+        }
+        delete[] masks;
+    }
+    return QUIVER_OK;
+}
+
 QUIVER_C_API quiver_error_t quiver_database_free_string_array(char** values, size_t count) {
     if (values) {
         for (size_t i = 0; i < count; ++i) {
@@ -93,12 +103,14 @@ QUIVER_C_API quiver_error_t quiver_database_read_vector_integers(quiver_database
                                                                  const char* collection,
                                                                  const char* attribute,
                                                                  int64_t*** out_vectors,
+                                                                 uint8_t*** out_masks,
                                                                  size_t** out_sizes,
                                                                  size_t* out_count) {
-    QUIVER_REQUIRE(db, collection, attribute, out_vectors, out_sizes, out_count);
+    QUIVER_REQUIRE(db, collection, attribute, out_vectors, out_masks, out_sizes, out_count);
 
     try {
-        return read_vectors_impl(db->db.read_vector_integers(collection, attribute), out_vectors, out_sizes, out_count);
+        return read_vectors_masked_impl(
+            db->db.read_vector_integers(collection, attribute), out_vectors, out_masks, out_sizes, out_count);
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
         return QUIVER_ERROR;
@@ -109,12 +121,14 @@ QUIVER_C_API quiver_error_t quiver_database_read_vector_floats(quiver_database_t
                                                                const char* collection,
                                                                const char* attribute,
                                                                double*** out_vectors,
+                                                               uint8_t*** out_masks,
                                                                size_t** out_sizes,
                                                                size_t* out_count) {
-    QUIVER_REQUIRE(db, collection, attribute, out_vectors, out_sizes, out_count);
+    QUIVER_REQUIRE(db, collection, attribute, out_vectors, out_masks, out_sizes, out_count);
 
     try {
-        return read_vectors_impl(db->db.read_vector_floats(collection, attribute), out_vectors, out_sizes, out_count);
+        return read_vectors_masked_impl(
+            db->db.read_vector_floats(collection, attribute), out_vectors, out_masks, out_sizes, out_count);
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
         return QUIVER_ERROR;
@@ -172,12 +186,14 @@ QUIVER_C_API quiver_error_t quiver_database_read_set_integers(quiver_database_t*
                                                               const char* collection,
                                                               const char* attribute,
                                                               int64_t*** out_sets,
+                                                              uint8_t*** out_masks,
                                                               size_t** out_sizes,
                                                               size_t* out_count) {
-    QUIVER_REQUIRE(db, collection, attribute, out_sets, out_sizes, out_count);
+    QUIVER_REQUIRE(db, collection, attribute, out_sets, out_masks, out_sizes, out_count);
 
     try {
-        return read_vectors_impl(db->db.read_set_integers(collection, attribute), out_sets, out_sizes, out_count);
+        return read_vectors_masked_impl(
+            db->db.read_set_integers(collection, attribute), out_sets, out_masks, out_sizes, out_count);
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
         return QUIVER_ERROR;
@@ -188,12 +204,14 @@ QUIVER_C_API quiver_error_t quiver_database_read_set_floats(quiver_database_t* d
                                                             const char* collection,
                                                             const char* attribute,
                                                             double*** out_sets,
+                                                            uint8_t*** out_masks,
                                                             size_t** out_sizes,
                                                             size_t* out_count) {
-    QUIVER_REQUIRE(db, collection, attribute, out_sets, out_sizes, out_count);
+    QUIVER_REQUIRE(db, collection, attribute, out_sets, out_masks, out_sizes, out_count);
 
     try {
-        return read_vectors_impl(db->db.read_set_floats(collection, attribute), out_sets, out_sizes, out_count);
+        return read_vectors_masked_impl(
+            db->db.read_set_floats(collection, attribute), out_sets, out_masks, out_sizes, out_count);
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
         return QUIVER_ERROR;
@@ -296,12 +314,13 @@ QUIVER_C_API quiver_error_t quiver_database_read_vector_integers_by_id(quiver_da
                                                                        const char* attribute,
                                                                        int64_t id,
                                                                        int64_t** out_values,
+                                                                       uint8_t** out_mask,
                                                                        size_t* out_count) {
-    QUIVER_REQUIRE(db, collection, attribute, out_values, out_count);
+    QUIVER_REQUIRE(db, collection, attribute, out_values, out_mask, out_count);
 
     try {
         auto values = db->db.read_vector_integers_by_id(collection, attribute, id);
-        return read_scalars_impl(values, out_values, out_count);
+        return read_scalars_masked_impl(values, out_values, out_mask, out_count);
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
         return QUIVER_ERROR;
@@ -313,12 +332,13 @@ QUIVER_C_API quiver_error_t quiver_database_read_vector_floats_by_id(quiver_data
                                                                      const char* attribute,
                                                                      int64_t id,
                                                                      double** out_values,
+                                                                     uint8_t** out_mask,
                                                                      size_t* out_count) {
-    QUIVER_REQUIRE(db, collection, attribute, out_values, out_count);
+    QUIVER_REQUIRE(db, collection, attribute, out_values, out_mask, out_count);
 
     try {
         auto values = db->db.read_vector_floats_by_id(collection, attribute, id);
-        return read_scalars_impl(values, out_values, out_count);
+        return read_scalars_masked_impl(values, out_values, out_mask, out_count);
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
         return QUIVER_ERROR;
@@ -348,12 +368,13 @@ QUIVER_C_API quiver_error_t quiver_database_read_set_integers_by_id(quiver_datab
                                                                     const char* attribute,
                                                                     int64_t id,
                                                                     int64_t** out_values,
+                                                                    uint8_t** out_mask,
                                                                     size_t* out_count) {
-    QUIVER_REQUIRE(db, collection, attribute, out_values, out_count);
+    QUIVER_REQUIRE(db, collection, attribute, out_values, out_mask, out_count);
 
     try {
         auto values = db->db.read_set_integers_by_id(collection, attribute, id);
-        return read_scalars_impl(values, out_values, out_count);
+        return read_scalars_masked_impl(values, out_values, out_mask, out_count);
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
         return QUIVER_ERROR;
@@ -365,12 +386,13 @@ QUIVER_C_API quiver_error_t quiver_database_read_set_floats_by_id(quiver_databas
                                                                   const char* attribute,
                                                                   int64_t id,
                                                                   double** out_values,
+                                                                  uint8_t** out_mask,
                                                                   size_t* out_count) {
-    QUIVER_REQUIRE(db, collection, attribute, out_values, out_count);
+    QUIVER_REQUIRE(db, collection, attribute, out_values, out_mask, out_count);
 
     try {
         auto values = db->db.read_set_floats_by_id(collection, attribute, id);
-        return read_scalars_impl(values, out_values, out_count);
+        return read_scalars_masked_impl(values, out_values, out_mask, out_count);
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
         return QUIVER_ERROR;

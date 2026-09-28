@@ -315,5 +315,6 @@ TEST(Database, ReadFloatsWidenIntegerValuesInRealColumns) {
     ASSERT_TRUE(by_id.has_value());
     EXPECT_DOUBLE_EQ(*by_id, 7.0);
 
-    EXPECT_EQ(db.read_vector_floats_by_id("Collection", "value_float", id), (std::vector<double>{1.0, 2.0}));
+    EXPECT_EQ(db.read_vector_floats_by_id("Collection", "value_float", id),
+              (std::vector<std::optional<double>>{1.0, 2.0}));
 }

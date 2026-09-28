@@ -229,3 +229,41 @@ class TestReadVectorsByIdWithData:
         assert all(isinstance(v, int) for v in result["amount"])
         assert all(isinstance(v, float) for v in result["score"])
         assert all(isinstance(v, str) for v in result["note"])
+
+
+class TestVectorNullCells:
+    """NULL cells round-trip positionally."""
+
+    def test_bulk_and_by_id_keep_null_cells(self, collections_db: Database) -> None:
+        """A NULL cell keeps its slot, and an element with no rows is an empty list."""
+        collections_db.create_element("Configuration", label="Config")
+        id1 = collections_db.create_element("Collection", label="Item 1")
+        collections_db.create_element("Collection", label="Item 2")  # no vector rows
+        # create_element keeps a non-null array write surface, so the NULL cell goes in
+        # through the group writer.
+        collections_db.update_vector_group("Collection", "values", id1, {"value_int": [10, None, 30]})
+
+        assert collections_db.read_vector_integers("Collection", "value_int") == [[10, None, 30], []]
+        assert collections_db.read_vector_integers_by_id("Collection", "value_int", id1) == [10, None, 30]
+
+    def test_boolean_wrapper_keeps_null_cells(self, collections_db: Database) -> None:
+        """The boolean wrapper maps a NULL cell to None rather than raising."""
+        collections_db.create_element("Configuration", label="Config")
+        id1 = collections_db.create_element("Collection", label="Item 1")
+        collections_db.update_vector_group("Collection", "values", id1, {"value_int": [1, None, 0]})
+
+        assert collections_db.read_vector_booleans("Collection", "value_int") == [[True, None, False]]
+        assert collections_db.read_vector_booleans_by_id("Collection", "value_int", id1) == [True, None, False]
+
+    def test_group_reader_composition_is_null_correct(self, collections_db: Database) -> None:
+        """read_vector_group_by_id composes per-column reads, which now keep NULL cells."""
+        collections_db.create_element("Configuration", label="Config")
+        id1 = collections_db.create_element("Collection", label="Item 1")
+        collections_db.update_vector_group(
+            "Collection", "values", id1, {"value_int": [10, None, 30], "value_float": [1.5, 2.5, None]}
+        )
+
+        rows = collections_db.read_vector_group_by_id("Collection", "values", id1)
+        assert len(rows) == 3
+        assert [row["value_int"] for row in rows] == [10, None, 30]
+        assert [row["value_float"] for row in rows] == [1.5, 2.5, None]

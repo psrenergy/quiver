@@ -417,8 +417,10 @@ TEST(DatabaseCApi, ResolveFkLabelInSetCreate) {
 
     // Verify via read_set_integers_by_id
     int64_t* values = nullptr;
+    uint8_t* mask = nullptr;
     size_t count = 0;
-    ASSERT_EQ(quiver_database_read_set_integers_by_id(db, "Child", "mentor_id", child_id, &values, &count), QUIVER_OK);
+    ASSERT_EQ(quiver_database_read_set_integers_by_id(db, "Child", "mentor_id", child_id, &values, &mask, &count),
+              QUIVER_OK);
     ASSERT_EQ(count, 2);
 
     std::vector<int64_t> sorted(values, values + count);
@@ -427,6 +429,7 @@ TEST(DatabaseCApi, ResolveFkLabelInSetCreate) {
     EXPECT_EQ(sorted[1], 2);
 
     quiver_database_free_integer_array(values);
+    quiver_database_free_mask(mask);
     quiver_database_close(db);
 }
 
@@ -573,14 +576,16 @@ TEST(DatabaseCApi, CreateElementVectorFkLabels) {
 
     // Verify via read_vector_integers_by_id
     int64_t* values = nullptr;
+    uint8_t* mask = nullptr;
     size_t count = 0;
-    ASSERT_EQ(quiver_database_read_vector_integers_by_id(db, "Child", "parent_ref", child_id, &values, &count),
+    ASSERT_EQ(quiver_database_read_vector_integers_by_id(db, "Child", "parent_ref", child_id, &values, &mask, &count),
               QUIVER_OK);
     ASSERT_EQ(count, 2);
     EXPECT_EQ(values[0], 1);
     EXPECT_EQ(values[1], 2);
 
     quiver_database_free_integer_array(values);
+    quiver_database_free_mask(mask);
     quiver_database_close(db);
 }
 
@@ -704,23 +709,27 @@ TEST(DatabaseCApi, CreateElementAllFkTypesInOneCall) {
 
     // Verify set FK (mentor_id)
     int64_t* mentor_values = nullptr;
+    uint8_t* mentor_mask = nullptr;
     size_t mentor_count = 0;
-    ASSERT_EQ(
-        quiver_database_read_set_integers_by_id(db, "Child", "mentor_id", child_id, &mentor_values, &mentor_count),
-        QUIVER_OK);
+    ASSERT_EQ(quiver_database_read_set_integers_by_id(
+                  db, "Child", "mentor_id", child_id, &mentor_values, &mentor_mask, &mentor_count),
+              QUIVER_OK);
     ASSERT_EQ(mentor_count, 1);
     EXPECT_EQ(mentor_values[0], 2);
     quiver_database_free_integer_array(mentor_values);
+    quiver_database_free_mask(mentor_mask);
 
     // Verify vector FK (parent_ref)
     int64_t* vector_values = nullptr;
+    uint8_t* vector_mask = nullptr;
     size_t vector_count = 0;
-    ASSERT_EQ(
-        quiver_database_read_vector_integers_by_id(db, "Child", "parent_ref", child_id, &vector_values, &vector_count),
-        QUIVER_OK);
+    ASSERT_EQ(quiver_database_read_vector_integers_by_id(
+                  db, "Child", "parent_ref", child_id, &vector_values, &vector_mask, &vector_count),
+              QUIVER_OK);
     ASSERT_EQ(vector_count, 1);
     EXPECT_EQ(vector_values[0], 1);
     quiver_database_free_integer_array(vector_values);
+    quiver_database_free_mask(vector_mask);
 
     // Verify time series FK (sponsor_id)
     char** out_col_names = nullptr;

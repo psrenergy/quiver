@@ -201,16 +201,12 @@ describe("updateVectorGroup / updateSetGroup", () => {
     const { db, parentA, parentB, child } = openRelations();
     try {
       db.updateVectorGroup("Child", "refs", child, { parent_ref: [parentA, null, parentB] });
-      // Asserted in SQL: the per-column reader drops NULL cells.
-      expect(
-        db.queryInteger("SELECT COUNT(*) FROM Child_vector_refs WHERE id = ?", [child]),
-      ).toEqual(3);
-      expect(
-        db.queryInteger(
-          "SELECT COUNT(*) FROM Child_vector_refs WHERE id = ? AND parent_ref IS NULL",
-          [child],
-        ),
-      ).toEqual(1);
+      // null cells become SQL NULL, and the per-column reader hands them back positionally.
+      expect(db.readVectorIntegersById("Child", "parent_ref", child)).toEqual([
+        parentA,
+        null,
+        parentB,
+      ]);
     } finally {
       db.close();
     }

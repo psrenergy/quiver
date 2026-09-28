@@ -531,18 +531,22 @@ impl_->logger->debug("Opening database: {}", path);
   the action rule too, so a schema could leave orphan set rows or make `delete_element` fail on a
   time-series table with SQLite's `FOREIGN KEY constraint failed`.
 - **`Row::get_float` widens an int64** (`row.cpp`): the one place the int64-for-REAL policy is
-  implemented for reads, since `read_column_values<double>`,
-  `read_column_values_nullable<double>`, `read_single_value<double>` and `query_float` all funnel
+  implemented for reads, since `read_column_values_nullable<double>`,
+  `read_grouped_values_all<double>`, `read_single_value<double>` and `query_float` all funnel
   through it. Don't re-add a widening branch at a call site.
 - **Two column readers in `database_internal.h`**: `read_column_values<T>` drops NULLs (dense —
-  used by vector/set `_by_id` and `read_element_ids`, whose columns are NOT NULL / PK by
-  convention); `read_column_values_nullable<T>` keeps them as `std::optional<T>` and backs only the
-  three `read_scalar_*` bulk readers (one entry per element, `ORDER BY rowid`). The Lua scalar
-  readers consume the optional vector directly via a `to_lua_table(vector<optional<T>>)` overload
-  that emits `nil` holes (root scalar-NULL design decision).
-- **`read_grouped_values_all<T>`** (`database_internal.h`) backs the six bulk vector/set readers and
-  requires the LEFT JOIN their SQL builds. Don't "simplify" the SQL back to
-  `SELECT id, value FROM <group_table>` — that is the shape that skipped elements.
+  used only by `read_element_ids`, whose column is the collection's PK);
+  `read_column_values_nullable<T>` keeps them as `std::optional<T>` and backs the three
+  `read_scalar_*` bulk readers *and* the six vector/set `_by_id` readers (one entry per element or
+  per cell, `ORDER BY rowid`). The Lua readers consume the optional vector directly via a
+  `to_lua_table(vector<optional<T>>)` overload that emits `nil` holes (root NULL design decisions).
+- **`read_grouped_values_all<T>`** (`database_internal.h`) backs the six bulk vector/set readers,
+  returns `vector<vector<optional<T>>>`, and requires the LEFT JOIN their SQL builds. That SELECT
+  is `c.id, g.id, g.<attr>` — three columns, not two: `g.id` is a **presence column** that is NULL
+  only when the join found no row, which is the one thing that keeps "element with no group rows"
+  (empty inner vector) apart from "row whose value is NULL" (`nullopt` cell). Don't "simplify" the
+  SQL back to `SELECT id, value FROM <group_table>` (that shape skipped elements) and don't drop
+  `g.id` (that shape collapses the two NULL cases back together).
 - **`scalar_metadata_from_column` reports an INTEGER PRIMARY KEY as `not_null`**
   (`database_internal.h`): a rowid-alias PK is never NULL, but SQLite's `PRAGMA table_info` leaves
   the `notnull` flag unset, so the public `ScalarMetadata.not_null` ORs in `primary_key && type ==

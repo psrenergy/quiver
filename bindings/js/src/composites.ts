@@ -39,9 +39,9 @@ Database.prototype.readVectorsById = function (
   this: Database,
   collection: string,
   id: number,
-): Record<string, number[] | string[]> {
+): Record<string, (number | null)[] | (string | null)[]> {
   const groups = this.listVectorGroups(collection);
-  const result: Record<string, number[] | string[]> = {};
+  const result: Record<string, (number | null)[] | (string | null)[]> = {};
 
   for (const group of groups) {
     for (const col of group.valueColumns) {
@@ -69,9 +69,9 @@ Database.prototype.readSetsById = function (
   this: Database,
   collection: string,
   id: number,
-): Record<string, number[] | string[]> {
+): Record<string, (number | null)[] | (string | null)[]> {
   const groups = this.listSetGroups(collection);
-  const result: Record<string, number[] | string[]> = {};
+  const result: Record<string, (number | null)[] | (string | null)[]> = {};
 
   for (const group of groups) {
     for (const col of group.valueColumns) {

@@ -702,7 +702,7 @@ TEST(DatabaseCSV, ExportCSV_GroupForeignKeyWritesLabel) {
     db.import_csv("Child", "refs", path);
     fs::remove(path);
 
-    EXPECT_EQ(db.read_vector_integers_by_id("Child", "parent_ref", child), (std::vector<int64_t>{1}));
+    EXPECT_EQ(db.read_vector_integers_by_id("Child", "parent_ref", child), (std::vector<std::optional<int64_t>>{1}));
 }
 
 // export_csv and db:write_csv share one emitter (csv_write::append_record): a '"' or CR forces

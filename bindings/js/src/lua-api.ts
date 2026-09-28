@@ -127,8 +127,10 @@ midnight.
 
   **A table with holes is an object, not an array.** A bulk read of a nullable column returns
   \`nil\` holes (see Reading), so \`return db:read_scalar_integers(c, a)\` encodes as
-  \`{"1":10,"3":30}\` — not \`[10,null,30]\` — and the keys sort as text (\`"1","11","2"\`). When the host
-  needs positional data, return the ids alongside and fill the holes yourself:
+  \`{"1":10,"3":30}\` — not \`[10,null,30]\` — and the keys sort as text (\`"1","11","2"\`). The same
+  applies **inside** a vector/set read: an inner list with a NULL cell encodes as an object nested
+  in the outer array, e.g. \`[{"1":10,"3":30},[]]\`, not \`[[10,null,30],[]]\`. When the host needs
+  positional data, return the ids alongside and fill the holes yourself:
   \`local v = db:read_scalar_integers(c, a); local out = {}; for i in ipairs(ids) do out[i] = v[i] or false end\`.
 
   Returning a function, a coroutine, or a userdata (including \`db\` itself) raises
@@ -314,10 +316,13 @@ db:read_scalar_strings(collection, attribute)     -- { "Item 1", "Item 2", ... }
 
 ## Vector reads (bulk)
 
-Each returns an array of arrays — one inner array per element.
+Each returns an array of arrays — one inner array per element, aligned with
+\`db:read_element_ids\`; an element with no rows is \`{}\`. A NULL cell is a \`nil\` hole, so on a
+nullable column \`#\` and \`ipairs\` are unreliable on an inner list, and a trailing NULL is
+invisible (\`[10, NULL]\` reads as \`{10}\`; a NULL-only row reads as \`{}\`).
 
 \`\`\`lua
-db:read_vector_integers(collection, attribute)   -- { {1,2,3}, {2,3,4}, ... }
+db:read_vector_integers(collection, attribute)   -- { {1,2,3}, {10,nil,30}, {}, ... }
 db:read_vector_floats(collection, attribute)
 db:read_vector_strings(collection, attribute)
 \`\`\`
@@ -326,7 +331,7 @@ db:read_vector_strings(collection, attribute)
 
 ## Set reads (bulk)
 
-Same shape as vector reads — an array of arrays.
+Same shape and NULL handling as vector reads — an array of arrays with \`nil\` holes.
 
 \`\`\`lua
 db:read_set_integers(collection, attribute)
@@ -376,20 +381,17 @@ Rules:
 db:read_element_ids(collection)                  -- { 1, 2, 3, ... }
 
 db:read_scalars_by_id(collection, id)            -- { attr = value, ... } (missing -> nil)
-db:read_vectors_by_id(collection, id)            -- { column = { v1, v2, ... }, ... }
-db:read_sets_by_id(collection, id)               -- { column = { v1, v2, ... }, ... }
+db:read_vectors_by_id(collection, id)            -- { column = { v1, nil, v3, ... }, ... }
+db:read_sets_by_id(collection, id)               -- { column = { v1, nil, v3, ... }, ... }
 db:read_element_by_id(collection, id)            -- scalars + vectors + sets merged into one table
 \`\`\`
 
 \`read_element_by_id\` merges every scalar, vector, and set for the element into a single table.
 Scalar attributes with no value come back as \`nil\`.
 
-**Group columns are returned densely, with NULL cells dropped.** \`read_vectors_by_id\` and
-\`read_sets_by_id\` read each column independently, and a column read skips its NULL cells — so two
-columns of the same group are **not** positionally aligned with each other whenever one is
-nullable (e.g. an \`ON DELETE SET NULL\` relation). Do not zip them into rows. There is no
-row-aligned group read in Lua; if you need per-row alignment across a nullable group, do that read
-in the host binding instead.
+**Group columns keep NULL cells as \`nil\` holes**, so cell *i* of every column of one group is
+the same row. Zipping them needs the row count: \`#\` of a \`NOT NULL\` column of the group.
+There is no row-shaped group read in Lua.
 
 ---
 
@@ -856,6 +858,6 @@ and \`unit\` default to \`""\`; \`labels\`, \`dimensions\`, \`dimension_sizes\`,
 DateTime wrapper helpers (Lua uses ISO 8601 strings), boolean *reader* helpers (a stored flag reads
 back as \`0\`/\`1\` — writing a boolean is supported), \`_by_id\` single-scalar variants (use the
 composite by-id readers or the bulk readers instead), and the row-aligned whole-group readers the
-other bindings have (hence the null-dropping caveat under composite by-id reads). Everything else
+other bindings have (hence the row-count caveat under composite by-id reads). Everything else
 the native binding exposes — CRUD, reads, time series, metadata, query, CSV, and the
 binary/expression subsystems — is documented above and callable.`;

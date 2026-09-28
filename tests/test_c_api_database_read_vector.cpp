@@ -44,9 +44,10 @@ TEST(DatabaseCApi, ReadVectorIntegers) {
     EXPECT_EQ(quiver_element_destroy(e2), QUIVER_OK);
 
     int64_t** vectors = nullptr;
+    uint8_t** masks = nullptr;
     size_t* sizes = nullptr;
     size_t count = 0;
-    auto err = quiver_database_read_vector_integers(db, "Collection", "value_int", &vectors, &sizes, &count);
+    auto err = quiver_database_read_vector_integers(db, "Collection", "value_int", &vectors, &masks, &sizes, &count);
 
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(count, 2);
@@ -59,6 +60,7 @@ TEST(DatabaseCApi, ReadVectorIntegers) {
     EXPECT_EQ(vectors[1][1], 20);
 
     quiver_database_free_integer_vectors(vectors, sizes, count);
+    quiver_database_free_masks(masks, count);
     quiver_database_close(db);
 }
 
@@ -95,9 +97,10 @@ TEST(DatabaseCApi, ReadVectorFloats) {
     EXPECT_EQ(quiver_element_destroy(e2), QUIVER_OK);
 
     double** vectors = nullptr;
+    uint8_t** masks = nullptr;
     size_t* sizes = nullptr;
     size_t count = 0;
-    auto err = quiver_database_read_vector_floats(db, "Collection", "value_float", &vectors, &sizes, &count);
+    auto err = quiver_database_read_vector_floats(db, "Collection", "value_float", &vectors, &masks, &sizes, &count);
 
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(count, 2);
@@ -110,6 +113,7 @@ TEST(DatabaseCApi, ReadVectorFloats) {
     EXPECT_DOUBLE_EQ(vectors[1][1], 20.5);
 
     quiver_database_free_float_vectors(vectors, sizes, count);
+    quiver_database_free_masks(masks, count);
     quiver_database_close(db);
 }
 
@@ -128,23 +132,27 @@ TEST(DatabaseCApi, ReadVectorEmpty) {
     EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
 
     int64_t** integer_vectors = nullptr;
+    uint8_t** integer_masks = nullptr;
     size_t* integer_sizes = nullptr;
     size_t integer_count = 0;
     auto err = quiver_database_read_vector_integers(
-        db, "Collection", "value_int", &integer_vectors, &integer_sizes, &integer_count);
+        db, "Collection", "value_int", &integer_vectors, &integer_masks, &integer_sizes, &integer_count);
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(integer_count, 0);
     EXPECT_EQ(integer_vectors, nullptr);
+    EXPECT_EQ(integer_masks, nullptr);
     EXPECT_EQ(integer_sizes, nullptr);
 
     double** float_vectors = nullptr;
+    uint8_t** float_masks = nullptr;
     size_t* float_sizes = nullptr;
     size_t float_count = 0;
-    err =
-        quiver_database_read_vector_floats(db, "Collection", "value_float", &float_vectors, &float_sizes, &float_count);
+    err = quiver_database_read_vector_floats(
+        db, "Collection", "value_float", &float_vectors, &float_masks, &float_sizes, &float_count);
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(float_count, 0);
     EXPECT_EQ(float_vectors, nullptr);
+    EXPECT_EQ(float_masks, nullptr);
     EXPECT_EQ(float_sizes, nullptr);
 
     quiver_database_close(db);
@@ -193,9 +201,10 @@ TEST(DatabaseCApi, ReadVectorIncludesElementsWithNoRows) {
     EXPECT_EQ(quiver_element_destroy(e3), QUIVER_OK);
 
     int64_t** vectors = nullptr;
+    uint8_t** masks = nullptr;
     size_t* sizes = nullptr;
     size_t count = 0;
-    auto err = quiver_database_read_vector_integers(db, "Collection", "value_int", &vectors, &sizes, &count);
+    auto err = quiver_database_read_vector_integers(db, "Collection", "value_int", &vectors, &masks, &sizes, &count);
 
     // One entry per element: the element with no rows has size 0, not a gap
     ASSERT_EQ(err, QUIVER_OK);
@@ -210,6 +219,7 @@ TEST(DatabaseCApi, ReadVectorIncludesElementsWithNoRows) {
     EXPECT_EQ(vectors[2][1], 5);
 
     quiver_database_free_integer_vectors(vectors, sizes, count);
+    quiver_database_free_masks(masks, count);
     quiver_database_close(db);
 }
 
@@ -250,8 +260,9 @@ TEST(DatabaseCApi, ReadVectorIntegerById) {
     EXPECT_EQ(quiver_element_destroy(e2), QUIVER_OK);
 
     int64_t* values = nullptr;
+    uint8_t* mask = nullptr;
     size_t count = 0;
-    auto err = quiver_database_read_vector_integers_by_id(db, "Collection", "value_int", id1, &values, &count);
+    auto err = quiver_database_read_vector_integers_by_id(db, "Collection", "value_int", id1, &values, &mask, &count);
 
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(count, 3);
@@ -259,13 +270,15 @@ TEST(DatabaseCApi, ReadVectorIntegerById) {
     EXPECT_EQ(values[1], 2);
     EXPECT_EQ(values[2], 3);
     quiver_database_free_integer_array(values);
+    quiver_database_free_mask(mask);
 
-    err = quiver_database_read_vector_integers_by_id(db, "Collection", "value_int", id2, &values, &count);
+    err = quiver_database_read_vector_integers_by_id(db, "Collection", "value_int", id2, &values, &mask, &count);
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(count, 2);
     EXPECT_EQ(values[0], 10);
     EXPECT_EQ(values[1], 20);
     quiver_database_free_integer_array(values);
+    quiver_database_free_mask(mask);
 
     quiver_database_close(db);
 }
@@ -294,8 +307,9 @@ TEST(DatabaseCApi, ReadVectorFloatById) {
     EXPECT_EQ(quiver_element_destroy(e1), QUIVER_OK);
 
     double* values = nullptr;
+    uint8_t* mask = nullptr;
     size_t count = 0;
-    auto err = quiver_database_read_vector_floats_by_id(db, "Collection", "value_float", id1, &values, &count);
+    auto err = quiver_database_read_vector_floats_by_id(db, "Collection", "value_float", id1, &values, &mask, &count);
 
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(count, 3);
@@ -304,6 +318,7 @@ TEST(DatabaseCApi, ReadVectorFloatById) {
     EXPECT_DOUBLE_EQ(values[2], 3.5);
 
     quiver_database_free_float_array(values);
+    quiver_database_free_mask(mask);
     quiver_database_close(db);
 }
 
@@ -329,8 +344,9 @@ TEST(DatabaseCApi, ReadVectorByIdEmpty) {
     EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
 
     int64_t* values = nullptr;
+    uint8_t* mask = nullptr;
     size_t count = 0;
-    auto err = quiver_database_read_vector_integers_by_id(db, "Collection", "value_int", id, &values, &count);
+    auto err = quiver_database_read_vector_integers_by_id(db, "Collection", "value_int", id, &values, &mask, &count);
 
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(count, 0);
@@ -345,9 +361,11 @@ TEST(DatabaseCApi, ReadVectorByIdEmpty) {
 
 TEST(DatabaseCApi, ReadVectorIntegersNullDb) {
     int64_t** vectors = nullptr;
+    uint8_t** masks = nullptr;
     size_t* sizes = nullptr;
     size_t count = 0;
-    auto err = quiver_database_read_vector_integers(nullptr, "Collection", "value_int", &vectors, &sizes, &count);
+    auto err =
+        quiver_database_read_vector_integers(nullptr, "Collection", "value_int", &vectors, &masks, &sizes, &count);
     EXPECT_EQ(err, QUIVER_ERROR);
 }
 
@@ -359,9 +377,10 @@ TEST(DatabaseCApi, ReadVectorIntegersNullCollection) {
     ASSERT_NE(db, nullptr);
 
     int64_t** vectors = nullptr;
+    uint8_t** masks = nullptr;
     size_t* sizes = nullptr;
     size_t count = 0;
-    auto err = quiver_database_read_vector_integers(db, nullptr, "value_int", &vectors, &sizes, &count);
+    auto err = quiver_database_read_vector_integers(db, nullptr, "value_int", &vectors, &masks, &sizes, &count);
     EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
@@ -375,15 +394,19 @@ TEST(DatabaseCApi, ReadVectorIntegersNullOutput) {
     ASSERT_NE(db, nullptr);
 
     size_t* sizes = nullptr;
-    size_t count = 0;
-    auto err = quiver_database_read_vector_integers(db, "Collection", "value_int", nullptr, &sizes, &count);
-    EXPECT_EQ(err, QUIVER_ERROR);
-
     int64_t** vectors = nullptr;
-    err = quiver_database_read_vector_integers(db, "Collection", "value_int", &vectors, nullptr, &count);
+    uint8_t** masks = nullptr;
+    size_t count = 0;
+    auto err = quiver_database_read_vector_integers(db, "Collection", "value_int", nullptr, &masks, &sizes, &count);
     EXPECT_EQ(err, QUIVER_ERROR);
 
-    err = quiver_database_read_vector_integers(db, "Collection", "value_int", &vectors, &sizes, nullptr);
+    err = quiver_database_read_vector_integers(db, "Collection", "value_int", &vectors, nullptr, &sizes, &count);
+    EXPECT_EQ(err, QUIVER_ERROR);
+
+    err = quiver_database_read_vector_integers(db, "Collection", "value_int", &vectors, &masks, nullptr, &count);
+    EXPECT_EQ(err, QUIVER_ERROR);
+
+    err = quiver_database_read_vector_integers(db, "Collection", "value_int", &vectors, &masks, &sizes, nullptr);
     EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
@@ -391,9 +414,11 @@ TEST(DatabaseCApi, ReadVectorIntegersNullOutput) {
 
 TEST(DatabaseCApi, ReadVectorFloatsNullDb) {
     double** vectors = nullptr;
+    uint8_t** masks = nullptr;
     size_t* sizes = nullptr;
     size_t count = 0;
-    auto err = quiver_database_read_vector_floats(nullptr, "Collection", "value_float", &vectors, &sizes, &count);
+    auto err =
+        quiver_database_read_vector_floats(nullptr, "Collection", "value_float", &vectors, &masks, &sizes, &count);
     EXPECT_EQ(err, QUIVER_ERROR);
 }
 
@@ -405,15 +430,19 @@ TEST(DatabaseCApi, ReadVectorFloatsNullOutput) {
     ASSERT_NE(db, nullptr);
 
     size_t* sizes = nullptr;
-    size_t count = 0;
-    auto err = quiver_database_read_vector_floats(db, "Collection", "value_float", nullptr, &sizes, &count);
-    EXPECT_EQ(err, QUIVER_ERROR);
-
     double** vectors = nullptr;
-    err = quiver_database_read_vector_floats(db, "Collection", "value_float", &vectors, nullptr, &count);
+    uint8_t** masks = nullptr;
+    size_t count = 0;
+    auto err = quiver_database_read_vector_floats(db, "Collection", "value_float", nullptr, &masks, &sizes, &count);
     EXPECT_EQ(err, QUIVER_ERROR);
 
-    err = quiver_database_read_vector_floats(db, "Collection", "value_float", &vectors, &sizes, nullptr);
+    err = quiver_database_read_vector_floats(db, "Collection", "value_float", &vectors, nullptr, &sizes, &count);
+    EXPECT_EQ(err, QUIVER_ERROR);
+
+    err = quiver_database_read_vector_floats(db, "Collection", "value_float", &vectors, &masks, nullptr, &count);
+    EXPECT_EQ(err, QUIVER_ERROR);
+
+    err = quiver_database_read_vector_floats(db, "Collection", "value_float", &vectors, &masks, &sizes, nullptr);
     EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
@@ -433,8 +462,10 @@ TEST(DatabaseCApi, ReadVectorStringsNullDb) {
 
 TEST(DatabaseCApi, ReadVectorIntegersByIdNullDb) {
     int64_t* values = nullptr;
+    uint8_t* mask = nullptr;
     size_t count = 0;
-    auto err = quiver_database_read_vector_integers_by_id(nullptr, "Collection", "value_int", 1, &values, &count);
+    auto err =
+        quiver_database_read_vector_integers_by_id(nullptr, "Collection", "value_int", 1, &values, &mask, &count);
     EXPECT_EQ(err, QUIVER_ERROR);
 }
 
@@ -446,8 +477,9 @@ TEST(DatabaseCApi, ReadVectorIntegersByIdNullCollection) {
     ASSERT_NE(db, nullptr);
 
     int64_t* values = nullptr;
+    uint8_t* mask = nullptr;
     size_t count = 0;
-    auto err = quiver_database_read_vector_integers_by_id(db, nullptr, "value_int", 1, &values, &count);
+    auto err = quiver_database_read_vector_integers_by_id(db, nullptr, "value_int", 1, &values, &mask, &count);
     EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
@@ -460,12 +492,16 @@ TEST(DatabaseCApi, ReadVectorIntegersByIdNullOutput) {
               QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
+    int64_t* values = nullptr;
+    uint8_t* mask = nullptr;
     size_t count = 0;
-    auto err = quiver_database_read_vector_integers_by_id(db, "Collection", "value_int", 1, nullptr, &count);
+    auto err = quiver_database_read_vector_integers_by_id(db, "Collection", "value_int", 1, nullptr, &mask, &count);
     EXPECT_EQ(err, QUIVER_ERROR);
 
-    int64_t* values = nullptr;
-    err = quiver_database_read_vector_integers_by_id(db, "Collection", "value_int", 1, &values, nullptr);
+    err = quiver_database_read_vector_integers_by_id(db, "Collection", "value_int", 1, &values, nullptr, &count);
+    EXPECT_EQ(err, QUIVER_ERROR);
+
+    err = quiver_database_read_vector_integers_by_id(db, "Collection", "value_int", 1, &values, &mask, nullptr);
     EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
@@ -473,8 +509,10 @@ TEST(DatabaseCApi, ReadVectorIntegersByIdNullOutput) {
 
 TEST(DatabaseCApi, ReadVectorFloatsByIdNullDb) {
     double* values = nullptr;
+    uint8_t* mask = nullptr;
     size_t count = 0;
-    auto err = quiver_database_read_vector_floats_by_id(nullptr, "Collection", "value_float", 1, &values, &count);
+    auto err =
+        quiver_database_read_vector_floats_by_id(nullptr, "Collection", "value_float", 1, &values, &mask, &count);
     EXPECT_EQ(err, QUIVER_ERROR);
 }
 
@@ -485,12 +523,16 @@ TEST(DatabaseCApi, ReadVectorFloatsByIdNullOutput) {
               QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
+    double* values = nullptr;
+    uint8_t* mask = nullptr;
     size_t count = 0;
-    auto err = quiver_database_read_vector_floats_by_id(db, "Collection", "value_float", 1, nullptr, &count);
+    auto err = quiver_database_read_vector_floats_by_id(db, "Collection", "value_float", 1, nullptr, &mask, &count);
     EXPECT_EQ(err, QUIVER_ERROR);
 
-    double* values = nullptr;
-    err = quiver_database_read_vector_floats_by_id(db, "Collection", "value_float", 1, &values, nullptr);
+    err = quiver_database_read_vector_floats_by_id(db, "Collection", "value_float", 1, &values, nullptr, &count);
+    EXPECT_EQ(err, QUIVER_ERROR);
+
+    err = quiver_database_read_vector_floats_by_id(db, "Collection", "value_float", 1, &values, &mask, nullptr);
     EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
@@ -639,5 +681,79 @@ TEST(DatabaseCApi, ReadVectorGroupByIdPreservesNullCells) {
 
     quiver_database_free_time_series_data(
         column_names, column_types, column_data, column_has_value, column_count, row_count);
+    quiver_database_close(db);
+}
+
+// ============================================================================
+// NULL handling in vector reads
+// ============================================================================
+
+TEST(DatabaseCApi, ReadVectorIntegersPreservesNullCells) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    quiver_element_t* config = nullptr;
+    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
+    quiver_element_set_string(config, "label", "Test Config");
+    int64_t config_id = 0;
+    quiver_database_create_element(db, "Configuration", config, &config_id);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
+
+    // Item 1 has a NULL cell in the middle; Item 2 has no group rows at all.
+    quiver_element_t* e1 = nullptr;
+    ASSERT_EQ(quiver_element_create(&e1), QUIVER_OK);
+    quiver_element_set_string(e1, "label", "Item 1");
+    int64_t values[] = {10, 0, 30};
+    const uint8_t has_value[] = {1, 0, 1};
+    quiver_element_set_array_integer(e1, "value_int", values, 3, has_value);
+    int64_t id1 = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Collection", e1, &id1), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(e1), QUIVER_OK);
+
+    quiver_element_t* e2 = nullptr;
+    ASSERT_EQ(quiver_element_create(&e2), QUIVER_OK);
+    quiver_element_set_string(e2, "label", "Item 2");
+    int64_t id2 = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Collection", e2, &id2), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(e2), QUIVER_OK);
+
+    int64_t** vectors = nullptr;
+    uint8_t** masks = nullptr;
+    size_t* sizes = nullptr;
+    size_t count = 0;
+    ASSERT_EQ(quiver_database_read_vector_integers(db, "Collection", "value_int", &vectors, &masks, &sizes, &count),
+              QUIVER_OK);
+    ASSERT_EQ(count, 2);
+    EXPECT_EQ(sizes[0], 3);
+    EXPECT_EQ(masks[0][0], 1);
+    EXPECT_EQ(masks[0][1], 0);
+    EXPECT_EQ(masks[0][2], 1);
+    EXPECT_EQ(vectors[0][0], 10);
+    EXPECT_EQ(vectors[0][2], 30);
+    // The element with no rows is an empty entry, not a NULL cell.
+    EXPECT_EQ(sizes[1], 0);
+    EXPECT_EQ(vectors[1], nullptr);
+    EXPECT_EQ(masks[1], nullptr);
+    quiver_database_free_integer_vectors(vectors, sizes, count);
+    quiver_database_free_masks(masks, count);
+
+    int64_t* by_id = nullptr;
+    uint8_t* by_id_mask = nullptr;
+    size_t by_id_count = 0;
+    ASSERT_EQ(quiver_database_read_vector_integers_by_id(
+                  db, "Collection", "value_int", id1, &by_id, &by_id_mask, &by_id_count),
+              QUIVER_OK);
+    ASSERT_EQ(by_id_count, 3);
+    EXPECT_EQ(by_id_mask[0], 1);
+    EXPECT_EQ(by_id_mask[1], 0);
+    EXPECT_EQ(by_id_mask[2], 1);
+    EXPECT_EQ(by_id[0], 10);
+    EXPECT_EQ(by_id[2], 30);
+    quiver_database_free_integer_array(by_id);
+    quiver_database_free_mask(by_id_mask);
+
     quiver_database_close(db);
 }

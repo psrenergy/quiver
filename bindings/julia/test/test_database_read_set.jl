@@ -262,6 +262,45 @@ include("fixture.jl")
 
         Quiver.close!(db)
     end
+
+    @testset "NULL cells and element types" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+        id = Quiver.create_element!(db, "Collection"; label = "Item 1")
+        Quiver.create_element!(db, "Collection"; label = "Item 2")  # no set rows
+        # Julia's Element keeps a non-null array write surface, so the NULL cell is written
+        # through the group writer.
+        Quiver.update_set_group!(db, "Collection", "tags", id; tag = ["a", nothing, "c"])
+
+        # A NULL cell keeps its slot; an element with no rows is an empty inner vector.
+        @test Quiver.read_set_strings(db, "Collection", "tag") == [["a", nothing, "c"], []]
+        @test Quiver.read_set_strings_by_id(db, "Collection", "tag", id) == ["a", nothing, "c"]
+
+        # tag is nullable -> Optional element type.
+        @test Quiver.read_set_strings(db, "Collection", "tag") isa
+              Vector{Vector{Union{String, Nothing}}}
+        @test Quiver.read_set_strings_by_id(db, "Collection", "tag", id) isa
+              Vector{Union{String, Nothing}}
+
+        Quiver.close!(db)
+    end
+
+    @testset "Concrete element types for NOT NULL columns" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "all_types.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Config")
+        id = Quiver.create_element!(db, "AllTypes"; label = "Item 1", code = [1, 0])
+
+        # AllTypes_set_codes.code is INTEGER NOT NULL -> concrete element type.
+        @test Quiver.read_set_integers(db, "AllTypes", "code") isa Vector{Vector{Int64}}
+        @test Quiver.read_set_integers_by_id(db, "AllTypes", "code", id) isa Vector{Int64}
+        @test Quiver.read_set_booleans(db, "AllTypes", "code") isa Vector{Vector{Bool}}
+
+        Quiver.close!(db)
+    end
 end
 
 end

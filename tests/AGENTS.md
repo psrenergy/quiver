@@ -137,7 +137,9 @@ the four bindings extend their own boolean files. Two things to keep in mind whe
 
 The native-DateTime bindings (Julia, Dart, and Python) cover bulk scalar, vector, and set
 convenience readers in the corresponding `read` test files. Scalar coverage includes positional
-NULLs; vector/set coverage includes empty reads and omission of elements without group rows.
+NULLs; vector/set coverage includes empty reads, elements without group rows, and per-cell NULLs —
+including the pair that only the LEFT JOIN's presence column can tell apart, an element with no
+rows next to an element whose only row is NULL.
 
 The `read` → `{scalar,vector,set}` and `time_series` → `{metadata,group,row,files,nulls}` split is
 mirrored in every binding using each idiom's file naming (Julia `test_database_read_scalar.jl`,

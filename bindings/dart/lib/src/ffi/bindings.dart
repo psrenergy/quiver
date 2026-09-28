@@ -702,6 +702,7 @@ class QuiverDatabaseBindings {
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
     ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Int64>>> out_vectors,
+    ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Uint8>>> out_masks,
     ffi.Pointer<ffi.Pointer<ffi.Size>> out_sizes,
     ffi.Pointer<ffi.Size> out_count,
   ) {
@@ -710,6 +711,7 @@ class QuiverDatabaseBindings {
       collection,
       attribute,
       out_vectors,
+      out_masks,
       out_sizes,
       out_count,
     );
@@ -723,6 +725,7 @@ class QuiverDatabaseBindings {
             ffi.Pointer<ffi.Char>,
             ffi.Pointer<ffi.Char>,
             ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Int64>>>,
+            ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Uint8>>>,
             ffi.Pointer<ffi.Pointer<ffi.Size>>,
             ffi.Pointer<ffi.Size>,
           )
@@ -735,6 +738,7 @@ class QuiverDatabaseBindings {
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Int64>>>,
+          ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Uint8>>>,
           ffi.Pointer<ffi.Pointer<ffi.Size>>,
           ffi.Pointer<ffi.Size>,
         )
@@ -745,6 +749,7 @@ class QuiverDatabaseBindings {
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
     ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Double>>> out_vectors,
+    ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Uint8>>> out_masks,
     ffi.Pointer<ffi.Pointer<ffi.Size>> out_sizes,
     ffi.Pointer<ffi.Size> out_count,
   ) {
@@ -753,6 +758,7 @@ class QuiverDatabaseBindings {
       collection,
       attribute,
       out_vectors,
+      out_masks,
       out_sizes,
       out_count,
     );
@@ -766,6 +772,7 @@ class QuiverDatabaseBindings {
             ffi.Pointer<ffi.Char>,
             ffi.Pointer<ffi.Char>,
             ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Double>>>,
+            ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Uint8>>>,
             ffi.Pointer<ffi.Pointer<ffi.Size>>,
             ffi.Pointer<ffi.Size>,
           )
@@ -778,6 +785,7 @@ class QuiverDatabaseBindings {
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Double>>>,
+          ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Uint8>>>,
           ffi.Pointer<ffi.Pointer<ffi.Size>>,
           ffi.Pointer<ffi.Size>,
         )
@@ -831,6 +839,7 @@ class QuiverDatabaseBindings {
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
     ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Int64>>> out_sets,
+    ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Uint8>>> out_masks,
     ffi.Pointer<ffi.Pointer<ffi.Size>> out_sizes,
     ffi.Pointer<ffi.Size> out_count,
   ) {
@@ -839,6 +848,7 @@ class QuiverDatabaseBindings {
       collection,
       attribute,
       out_sets,
+      out_masks,
       out_sizes,
       out_count,
     );
@@ -852,6 +862,7 @@ class QuiverDatabaseBindings {
             ffi.Pointer<ffi.Char>,
             ffi.Pointer<ffi.Char>,
             ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Int64>>>,
+            ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Uint8>>>,
             ffi.Pointer<ffi.Pointer<ffi.Size>>,
             ffi.Pointer<ffi.Size>,
           )
@@ -864,6 +875,7 @@ class QuiverDatabaseBindings {
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Int64>>>,
+          ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Uint8>>>,
           ffi.Pointer<ffi.Pointer<ffi.Size>>,
           ffi.Pointer<ffi.Size>,
         )
@@ -874,6 +886,7 @@ class QuiverDatabaseBindings {
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
     ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Double>>> out_sets,
+    ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Uint8>>> out_masks,
     ffi.Pointer<ffi.Pointer<ffi.Size>> out_sizes,
     ffi.Pointer<ffi.Size> out_count,
   ) {
@@ -882,6 +895,7 @@ class QuiverDatabaseBindings {
       collection,
       attribute,
       out_sets,
+      out_masks,
       out_sizes,
       out_count,
     );
@@ -895,6 +909,7 @@ class QuiverDatabaseBindings {
             ffi.Pointer<ffi.Char>,
             ffi.Pointer<ffi.Char>,
             ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Double>>>,
+            ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Uint8>>>,
             ffi.Pointer<ffi.Pointer<ffi.Size>>,
             ffi.Pointer<ffi.Size>,
           )
@@ -907,6 +922,7 @@ class QuiverDatabaseBindings {
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Double>>>,
+          ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Uint8>>>,
           ffi.Pointer<ffi.Pointer<ffi.Size>>,
           ffi.Pointer<ffi.Size>,
         )
@@ -1090,6 +1106,7 @@ class QuiverDatabaseBindings {
     ffi.Pointer<ffi.Char> attribute,
     int id,
     ffi.Pointer<ffi.Pointer<ffi.Int64>> out_values,
+    ffi.Pointer<ffi.Pointer<ffi.Uint8>> out_mask,
     ffi.Pointer<ffi.Size> out_count,
   ) {
     return _quiver_database_read_vector_integers_by_id(
@@ -1098,6 +1115,7 @@ class QuiverDatabaseBindings {
       attribute,
       id,
       out_values,
+      out_mask,
       out_count,
     );
   }
@@ -1111,6 +1129,7 @@ class QuiverDatabaseBindings {
             ffi.Pointer<ffi.Char>,
             ffi.Int64,
             ffi.Pointer<ffi.Pointer<ffi.Int64>>,
+            ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
             ffi.Pointer<ffi.Size>,
           )
         >
@@ -1123,6 +1142,7 @@ class QuiverDatabaseBindings {
           ffi.Pointer<ffi.Char>,
           int,
           ffi.Pointer<ffi.Pointer<ffi.Int64>>,
+          ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
           ffi.Pointer<ffi.Size>,
         )
       >();
@@ -1133,6 +1153,7 @@ class QuiverDatabaseBindings {
     ffi.Pointer<ffi.Char> attribute,
     int id,
     ffi.Pointer<ffi.Pointer<ffi.Double>> out_values,
+    ffi.Pointer<ffi.Pointer<ffi.Uint8>> out_mask,
     ffi.Pointer<ffi.Size> out_count,
   ) {
     return _quiver_database_read_vector_floats_by_id(
@@ -1141,6 +1162,7 @@ class QuiverDatabaseBindings {
       attribute,
       id,
       out_values,
+      out_mask,
       out_count,
     );
   }
@@ -1154,6 +1176,7 @@ class QuiverDatabaseBindings {
             ffi.Pointer<ffi.Char>,
             ffi.Int64,
             ffi.Pointer<ffi.Pointer<ffi.Double>>,
+            ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
             ffi.Pointer<ffi.Size>,
           )
         >
@@ -1166,6 +1189,7 @@ class QuiverDatabaseBindings {
           ffi.Pointer<ffi.Char>,
           int,
           ffi.Pointer<ffi.Pointer<ffi.Double>>,
+          ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
           ffi.Pointer<ffi.Size>,
         )
       >();
@@ -1219,6 +1243,7 @@ class QuiverDatabaseBindings {
     ffi.Pointer<ffi.Char> attribute,
     int id,
     ffi.Pointer<ffi.Pointer<ffi.Int64>> out_values,
+    ffi.Pointer<ffi.Pointer<ffi.Uint8>> out_mask,
     ffi.Pointer<ffi.Size> out_count,
   ) {
     return _quiver_database_read_set_integers_by_id(
@@ -1227,6 +1252,7 @@ class QuiverDatabaseBindings {
       attribute,
       id,
       out_values,
+      out_mask,
       out_count,
     );
   }
@@ -1240,6 +1266,7 @@ class QuiverDatabaseBindings {
             ffi.Pointer<ffi.Char>,
             ffi.Int64,
             ffi.Pointer<ffi.Pointer<ffi.Int64>>,
+            ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
             ffi.Pointer<ffi.Size>,
           )
         >
@@ -1252,6 +1279,7 @@ class QuiverDatabaseBindings {
           ffi.Pointer<ffi.Char>,
           int,
           ffi.Pointer<ffi.Pointer<ffi.Int64>>,
+          ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
           ffi.Pointer<ffi.Size>,
         )
       >();
@@ -1262,6 +1290,7 @@ class QuiverDatabaseBindings {
     ffi.Pointer<ffi.Char> attribute,
     int id,
     ffi.Pointer<ffi.Pointer<ffi.Double>> out_values,
+    ffi.Pointer<ffi.Pointer<ffi.Uint8>> out_mask,
     ffi.Pointer<ffi.Size> out_count,
   ) {
     return _quiver_database_read_set_floats_by_id(
@@ -1270,6 +1299,7 @@ class QuiverDatabaseBindings {
       attribute,
       id,
       out_values,
+      out_mask,
       out_count,
     );
   }
@@ -1283,6 +1313,7 @@ class QuiverDatabaseBindings {
             ffi.Pointer<ffi.Char>,
             ffi.Int64,
             ffi.Pointer<ffi.Pointer<ffi.Double>>,
+            ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
             ffi.Pointer<ffi.Size>,
           )
         >
@@ -1295,6 +1326,7 @@ class QuiverDatabaseBindings {
           ffi.Pointer<ffi.Char>,
           int,
           ffi.Pointer<ffi.Pointer<ffi.Double>>,
+          ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
           ffi.Pointer<ffi.Size>,
         )
       >();
@@ -2680,6 +2712,23 @@ class QuiverDatabaseBindings {
   );
   late final _quiver_database_free_mask = _quiver_database_free_maskPtr
       .asFunction<int Function(ffi.Pointer<ffi.Uint8>)>();
+
+  int quiver_database_free_masks(
+    ffi.Pointer<ffi.Pointer<ffi.Uint8>> masks,
+    int count,
+  ) {
+    return _quiver_database_free_masks(
+      masks,
+      count,
+    );
+  }
+
+  late final _quiver_database_free_masksPtr =
+      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<ffi.Pointer<ffi.Uint8>>, ffi.Size)>>(
+        'quiver_database_free_masks',
+      );
+  late final _quiver_database_free_masks = _quiver_database_free_masksPtr
+      .asFunction<int Function(ffi.Pointer<ffi.Pointer<ffi.Uint8>>, int)>();
 
   int quiver_database_free_string(
     ffi.Pointer<ffi.Char> str,

@@ -1311,8 +1311,9 @@ struct LuaRunner::Impl {
         return t;
     }
 
-    // Scalar bulk reads: a SQL NULL becomes a nil hole, preserving positional index.
-    // #t over holes is unreliable — read_element_ids is the count/position authority.
+    // Nullable reads (scalar bulk, vector/set cells): a SQL NULL becomes a nil hole, preserving
+    // positional index. #t over holes is unreliable — for scalars read_element_ids is the
+    // count/position authority; a vector/set inner list has none, so trailing NULLs are invisible.
     template <typename T>
     static sol::table to_lua_table(sol::state_view& lua, const std::vector<std::optional<T>>& values) {
         auto t = lua.create_table();
@@ -1793,32 +1794,27 @@ struct LuaRunner::Impl {
 
         for (const auto& group : db.list_vector_groups(collection)) {
             for (const auto& col : group.value_columns) {
-                auto t = lua.create_table();
                 switch (col.data_type) {
                 case DataType::Integer: {
                     auto values = db.read_vector_integers_by_id(collection, col.name, id);
-                    for (size_t i = 0; i < values.size(); ++i)
-                        t[i + 1] = values[i];
+                    result[col.name] = to_lua_table(lua, values);
                     break;
                 }
                 case DataType::Real: {
                     auto values = db.read_vector_floats_by_id(collection, col.name, id);
-                    for (size_t i = 0; i < values.size(); ++i)
-                        t[i + 1] = values[i];
+                    result[col.name] = to_lua_table(lua, values);
                     break;
                 }
                 case DataType::Text:
                 case DataType::DateTime: {
                     auto values = db.read_vector_strings_by_id(collection, col.name, id);
-                    for (size_t i = 0; i < values.size(); ++i)
-                        t[i + 1] = values[i];
+                    result[col.name] = to_lua_table(lua, values);
                     break;
                 }
                 default:
                     throw std::runtime_error("Cannot read_vectors_by_id: unknown data type " +
                                              std::to_string(static_cast<int>(col.data_type)));
                 }
-                result[col.name] = t;
             }
         }
         return result;
@@ -1830,32 +1826,27 @@ struct LuaRunner::Impl {
 
         for (const auto& group : db.list_set_groups(collection)) {
             for (const auto& col : group.value_columns) {
-                auto t = lua.create_table();
                 switch (col.data_type) {
                 case DataType::Integer: {
                     auto values = db.read_set_integers_by_id(collection, col.name, id);
-                    for (size_t i = 0; i < values.size(); ++i)
-                        t[i + 1] = values[i];
+                    result[col.name] = to_lua_table(lua, values);
                     break;
                 }
                 case DataType::Real: {
                     auto values = db.read_set_floats_by_id(collection, col.name, id);
-                    for (size_t i = 0; i < values.size(); ++i)
-                        t[i + 1] = values[i];
+                    result[col.name] = to_lua_table(lua, values);
                     break;
                 }
                 case DataType::Text:
                 case DataType::DateTime: {
                     auto values = db.read_set_strings_by_id(collection, col.name, id);
-                    for (size_t i = 0; i < values.size(); ++i)
-                        t[i + 1] = values[i];
+                    result[col.name] = to_lua_table(lua, values);
                     break;
                 }
                 default:
                     throw std::runtime_error("Cannot read_sets_by_id: unknown data type " +
                                              std::to_string(static_cast<int>(col.data_type)));
                 }
-                result[col.name] = t;
             }
         }
         return result;

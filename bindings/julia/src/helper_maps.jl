@@ -47,7 +47,8 @@ end
 The function returns a vector of vectors of integers that represent the position of
 the related collection's elements in the list of ids of the related collection.
 The outer vector is ordered according to the order of the elements in the `collection_from`.
-If there is no relation, the inner vector is empty.
+If there is no relation, the inner vector is empty. A null cell in the set group (a nullable
+relation column with an empty row) is skipped, so the inner vector holds only real targets.
 """
 function set_relation_map(
     db::Database,
@@ -64,6 +65,8 @@ function set_relation_map(
         related_id = read_set_integers_by_id(db, collection_from, attribute_on_collection_from, id_from)
         set_relation_map = Int[]
         for id_to in related_id
+            # A null cell is an empty relation, not a target to look up.
+            id_to === nothing && continue
             # It has to find some match every time
             index_to = findfirst(isequal(id_to), collection_to_ids)
             push!(set_relation_map, index_to)

@@ -184,10 +184,16 @@ Settled questions — don't relitigate without the user; each was decided delibe
 - **JS keeps a string-based datetime surface** — no DateTime wrappers.
 - **Lua has no row-aligned whole-group readers.** `read_vector_group_by_id` /
   `read_set_group_by_id` are not bound; `db:read_vectors_by_id` / `db:read_sets_by_id` read each
-  column independently through the null-dropping per-column readers, so two columns of the same
-  group are **not** positionally aligned whenever one is nullable. A script that needs per-row
-  alignment across a nullable group does that read in the host binding. Recorded in the
-  agent-facing Lua reference (`bindings/js/src/lua-api.ts`).
+  column independently. The per-column readers now preserve NULL cells as `nil` holes, so cell *i*
+  of every column of one group is the same row — but a Lua inner list has **no count authority**
+  (`read_element_ids` counts elements, not rows, and vectors/sets have no dimension column), so a
+  trailing NULL is invisible (`[10, NULL]` reads as `{10}`) and a NULL-only row reads as `{}`,
+  exactly like no rows; the JSON result cannot tell them apart either. Only a `NOT NULL` column of
+  the group gives the row count. Accepted rather than
+  fixed: a sentinel would break the "`nil` is NULL" rule the time-series and scalar readers share,
+  and a script that needs exact row shape does that read in the host binding. Pinned by
+  `ReadVectorPreservesNullCellsAsNilHoles`; recorded in the agent-facing Lua reference
+  (`bindings/js/src/lua-api.ts`).
 - **Boolean wrappers are Julia/Dart/Python/JS only; Lua is deliberately excluded.** SQLite has no
   boolean type, so a boolean lives in an INTEGER column as 0/1 and the wrappers are a
   strict-conversion convenience with no C++ or C API counterpart (the fourth documented per-binding
@@ -214,9 +220,8 @@ Settled questions — don't relitigate without the user; each was decided delibe
   because `Bool <: Integer` and `bool` is an `int` subclass respectively — which makes the
   behaviour dispatch-order-dependent and worth a test rather than an assumption.
   `db:update_relation` is the one deliberate refusal: only `nil` may clear a relation.
-  All of them return one entry per element, aligned with `read_element_ids`. The scalar readers
-  additionally preserve NULLs positionally; the **vector/set readers do not** — they inherit
-  `read_grouped_values_all`'s dropping of NULL *cells*, so an inner list is dense.
+  All of them return one entry per element, aligned with `read_element_ids`, and all preserve
+  NULLs positionally — the scalar readers per element, the vector/set readers per cell.
 - **Binary `dims` parameter is the map-based form only** — indexed overloads were prototyped and
   deliberately dropped (perf rationale in `src/AGENTS.md`).
 - **Time-series group NULLs round-trip via a per-cell presence mask.** The columnar C API
@@ -251,14 +256,14 @@ Settled questions — don't relitigate without the user; each was decided delibe
   (e.g. `id`) is a rowid alias and is reported `not_null` by the C++ core
   (`scalar_metadata_from_column`, even though SQLite's `PRAGMA table_info` leaves the flag unset),
   so `id` reads are concrete `Vector{Int64}`. Scope of that Julia rule is
-  the bulk scalar readers only (their optional comes solely from NULL cells); `_by_id`/`query_*`
+  the readers whose optional comes solely from NULL cells — the bulk scalar readers and all twelve
+  vector/set readers (via `list_{vector,set}_groups(...)`); scalar `_by_id`/`query_*`
   (optional also from missing-id / unknown result nullability) and the time-series readers stay
   optional — tracked in `bindings/julia/type_stability_followup.md`. Lua uses
   `nil` holes (only `to_lua_table` changed; no C API mask) with `read_element_ids` as the
-  count/position authority since `#t` is unreliable across holes. Scope is **scalars only** — the
-  shared dense `read_column_values<T>` still serves vector/set `_by_id` and `read_element_ids`
-  (NOT NULL / PK by convention); vector/set cell NULLs are still dropped, see the next decision.
-- **Bulk reads of one collection are positionally aligned, but still cell-dense.** `read_element_ids`,
+  count/position authority since `#t` is unreliable across holes. The vector/set readers followed
+  the same rule (see the next decision).
+- **Bulk reads of one collection are positionally aligned, and cells preserve NULLs.** `read_element_ids`,
   `read_scalar_*` and the six vector/set bulk readers all order by the collection's `rowid`, so entry
   *i* is the same element in every one of them — the convention that makes zipping several attributes
   per element correct. The vector/set readers used to break it by skipping elements with no group
@@ -266,10 +271,16 @@ Settled questions — don't relitigate without the user; each was decided delibe
   vector (no signature changed, so the bindings inherited the fix). Alignment holds *between* calls,
   so a caller reading several attributes alongside a concurrent writer needs a read transaction
   around the whole group. Don't make a reader self-sufficient by calling `read_element_ids` inside
-  it: two statements are two snapshots, the same race moved inside the library. **Cell** NULLs are a
-  separate matter, still dropped by vector/set reads (`[0.10, NULL, 0.30]` → `[0.10, 0.30]`) —
-  preserving them needs a per-cell mask across the C ABI, so for multi-column group reads prefer
-  `read_vector_group_by_id` / `read_set_group_by_id`, which are row- and NULL-correct.
+  it: two statements are two snapshots, the same race moved inside the library. **Cell** NULLs used
+  to be dropped by the vector/set readers (`[0.10, NULL, 0.30]` → `[0.10, 0.30]`), which made two
+  per-column reads of one nullable group mis-pair; they are now preserved positionally
+  (`std::optional` / `nothing`/`None`/`null`/`nil`), so zipping per-column reads of a group is
+  correct. The LEFT JOIN carries a **presence column** (`g.id`) to keep "no group row" and "NULL
+  cell" apart: no row at all is an empty inner list, a row whose value is NULL is a null cell. The
+  C ABI carries the same distinction — a per-cell `uint8_t` mask for the numeric readers (freed by
+  `quiver_database_free_masks` in bulk, `quiver_database_free_mask` by id) and a `nullptr` entry
+  for the string ones. `read_vector_group_by_id` / `read_set_group_by_id` remain the row-shaped
+  readers, but no longer the only NULL-correct ones.
 - **A set group's rows come back in `rowid` order, and that order is not a promise.** All the set
   readers (`read_set_*`, `read_set_*_by_id`, `read_set_group_by_id`) `ORDER BY rowid`. The `_by_id`
   readers had no `ORDER BY` at all, so each took the order of whichever index SQLite picked for it:
@@ -614,14 +625,13 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
 - Element count: `number_of_elements(collection)` returns the current row count from the
   collection's main table (`COUNT(*)`), not its maximum ID or group-row count. Any table in the
   schema is accepted, so naming a group table reports that table's own row count.
-- Scalar/vector/set readers: `read_{scalar,vector,set}_{integers,floats,strings}(collection, attribute)` (+ `_by_id` variants). All the bulk readers return one entry per element, aligned with `read_element_ids` — an element with no group rows is an empty inner vector, never skipped. Scalar reads also preserve SQL NULLs positionally (`std::optional` / `nothing`/`None`/`null`/`nil`); vector/set reads still drop NULL cells. See the two NULL design decisions.
+- Scalar/vector/set readers: `read_{scalar,vector,set}_{integers,floats,strings}(collection, attribute)` (+ `_by_id` variants). All the bulk readers return one entry per element, aligned with `read_element_ids` — an element with no group rows is an empty inner vector, never skipped. Every one of them preserves SQL NULLs positionally (`std::optional` / `nothing`/`None`/`null`/`nil`): the scalar readers per element, the vector/set readers per cell. See the two NULL design decisions.
 - Whole-group readers: `read_vector_group_by_id()` / `read_set_group_by_id()` — row-shaped
   `vector<map<string, Value>>` over all of a group's value columns, positionally aligned with SQL
-  NULL cells preserved (`Value{nullptr}`). Use these for multi-column group reads: the dense
-  per-column `_by_id` readers drop NULLs, so zipping them misaligns rows when a nullable column
-  (e.g. an `ON DELETE SET NULL` relation) has empty cells. C API mirrors
-  `read_time_series_group`'s columnar+mask shape (freed by `free_time_series_data`); Dart binds
-  them natively; Julia/Python still compose per-column reads (null-dropping caveat applies there).
+  NULL cells preserved (`Value{nullptr}`). One call for a whole group, where zipping the
+  per-column `_by_id` readers takes N; both are NULL-correct now that the per-column readers
+  preserve cells. C API mirrors `read_time_series_group`'s columnar+mask shape (freed by
+  `free_time_series_data`); Dart binds them natively; Julia/Python compose per-column reads.
 - Whole-group writers: `update_vector_group()` / `update_set_group()` — replace all of an element's
   rows in one **named** group; an empty row list clears it. The write counterpart of the readers
   above, and the unambiguous alternative to passing arrays through `update_element` /
@@ -812,9 +822,8 @@ parser is wider than it in a different direction (Julia fills missing trailing c
 out-of-range field over rather than rejecting it). The write gate only fires on `date_`-prefixed
 columns, so a plain `TEXT` column is the path by which a non-conforming value reaches a reader.
 Like the boolean family, all of them return one entry per element, aligned with
-`read_element_ids`; the scalar readers additionally preserve NULLs positionally while the
-**vector/set readers do not** — they inherit `read_grouped_values_all`'s dropping of NULL *cells*,
-so an inner list is dense.
+`read_element_ids`, and all preserve NULLs positionally — the scalar readers per element, the
+vector/set readers per cell.
 
 **Boolean wrappers (Julia, Dart, Python, and JS):**
 

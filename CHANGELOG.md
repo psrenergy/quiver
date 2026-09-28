@@ -73,6 +73,21 @@ callers to change something are prefixed **BREAKING** and say what to do.
   `QUIVER_EXPRESSION_AGGREGATE_OPERATION_<OP>` — in Julia,
   `Quiver.aggregate_agents(e, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_MEAN)`.
 
+- **BREAKING — vector and set reads preserve NULL cells.** All twelve readers
+  (`read_{vector,set}_{integers,floats,strings}` and their `_by_id` forms, plus the C API and
+  binding equivalents) dropped SQL NULL cells, so `[0.10, NULL, 0.30]` read back as
+  `[0.10, 0.30]` and two per-column reads of one nullable group paired the wrong values together.
+  Cells are now positional: the inner element type is nullable in every layer (`std::optional<T>`
+  in C++, `nothing`/`None`/`null` in the bindings, a `nil` hole in Lua). The C API numeric readers
+  gained a per-cell presence mask — `uint8_t*** out_masks` on the four bulk readers (freed by the
+  new `quiver_database_free_masks`) and `uint8_t** out_mask` on the four numeric `_by_id` readers
+  (freed by `quiver_database_free_mask`); the string readers are unchanged and mark a NULL with a
+  `nullptr` entry.
+
+  *Adapt:* unwrap the inner values (`*v` / `v.value()`, `v === null` checks, `t[i] == nil` in Lua)
+  and, in C, pass and free the new mask out-parameters. Inner lists that used to be short are now
+  full length, so a length read as "number of non-null values" must count the non-null cells.
+
 ### Removed
 
 - **BREAKING (C++ only) — `TimeProperties::set_initial_value()`.** `BinaryMetadata::derive_initial_values()`

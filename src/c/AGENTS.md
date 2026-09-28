@@ -126,12 +126,16 @@ Conventions that keep the error paths safe:
   are zero-initialized (`new T*[n]()`) and out-parameters assigned as soon as each array is
   allocated, so error-path cleanup never sees uninitialized pointers. Single-shot allocations
   elsewhere use plain `new` (nothing can fail between alloc and return).
-- **Scalar bulk reads carry NULLs.** The numeric readers (`read_scalar_integers`/`_floats`) take a
-  parallel `uint8_t** out_mask` out-param (`mask[i] == 0` = SQL NULL, data slot is a 0/0.0
-  placeholder), allocated by `read_scalars_masked_impl` and freed by `quiver_database_free_mask`
-  (co-located in `database_read.cpp`). `read_scalar_strings` keeps its signature — a NULL is a
-  `nullptr` entry in the `char**` (via a `copy_strings_to_c(vector<optional<string>>, ...)`
-  overload), and `free_string_array` already tolerates NULL slots.
+- **Scalar bulk and vector/set reads carry NULLs.** The numeric readers take a parallel presence
+  mask out-param (`mask[i] == 0` = SQL NULL, data slot is a 0/0.0 placeholder):
+  `read_scalar_{integers,floats}` and the four `read_{vector,set}_{integers,floats}_by_id` take a
+  flat `uint8_t** out_mask` from `read_scalars_masked_impl`, freed by `quiver_database_free_mask`;
+  the four `read_{vector,set}_{integers,floats}` bulk readers take a nested `uint8_t*** out_masks`
+  (one mask per element, parallel to `out_sizes`) from `read_vectors_masked_impl`, freed by
+  `quiver_database_free_masks`. All four free functions are co-located in `database_read.cpp`. The
+  string readers keep their signatures — a NULL is a `nullptr` entry in the `char**` (via the
+  `copy_strings_to_c` / `copy_string_vectors_to_c` optional overloads), and
+  `free_string_array` / `free_string_vectors` already tolerate NULL slots.
 - **Array/string free functions are NULL-tolerant** (freeing NULL, or an array slot left NULL, is
   a no-op). Struct free functions (`free_scalar_metadata`, `free_group_metadata`,
   `free_dimension`, `free_time_series_files`) `QUIVER_REQUIRE` a non-NULL handle.

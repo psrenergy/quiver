@@ -139,8 +139,10 @@ TEST(DatabaseCApi, UpdateVectorIntegers) {
     EXPECT_EQ(err, QUIVER_OK);
 
     int64_t* read_values = nullptr;
+    uint8_t* read_mask = nullptr;
     size_t count = 0;
-    err = quiver_database_read_vector_integers_by_id(db, "Collection", "value_int", id, &read_values, &count);
+    err =
+        quiver_database_read_vector_integers_by_id(db, "Collection", "value_int", id, &read_values, &read_mask, &count);
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(count, 4);
     EXPECT_EQ(read_values[0], 10);
@@ -149,6 +151,7 @@ TEST(DatabaseCApi, UpdateVectorIntegers) {
     EXPECT_EQ(read_values[3], 40);
 
     quiver_database_free_integer_array(read_values);
+    quiver_database_free_mask(read_mask);
     quiver_database_close(db);
 }
 
@@ -184,14 +187,17 @@ TEST(DatabaseCApi, UpdateVectorFloats) {
     EXPECT_EQ(err, QUIVER_OK);
 
     double* read_values = nullptr;
+    uint8_t* read_mask = nullptr;
     size_t count = 0;
-    err = quiver_database_read_vector_floats_by_id(db, "Collection", "value_float", id, &read_values, &count);
+    err =
+        quiver_database_read_vector_floats_by_id(db, "Collection", "value_float", id, &read_values, &read_mask, &count);
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(count, 2);
     EXPECT_DOUBLE_EQ(read_values[0], 10.5);
     EXPECT_DOUBLE_EQ(read_values[1], 20.5);
 
     quiver_database_free_float_array(read_values);
+    quiver_database_free_mask(read_mask);
     quiver_database_close(db);
 }
 
@@ -226,8 +232,10 @@ TEST(DatabaseCApi, UpdateVectorToEmpty) {
     EXPECT_EQ(err, QUIVER_OK);
 
     int64_t* read_values = nullptr;
+    uint8_t* read_mask = nullptr;
     size_t count = 0;
-    err = quiver_database_read_vector_integers_by_id(db, "Collection", "value_int", id, &read_values, &count);
+    err =
+        quiver_database_read_vector_integers_by_id(db, "Collection", "value_int", id, &read_values, &read_mask, &count);
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(count, 0);
     EXPECT_EQ(read_values, nullptr);
@@ -1103,14 +1111,17 @@ TEST(DatabaseCApi, UpdateElementVectorFkLabels) {
 
     // Verify: vector resolved to {2, 1} (order preserved)
     int64_t* refs = nullptr;
+    uint8_t* refs_mask = nullptr;
     size_t count = 0;
-    ASSERT_EQ(quiver_database_read_vector_integers_by_id(db, "Child", "parent_ref", child_id, &refs, &count),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_read_vector_integers_by_id(db, "Child", "parent_ref", child_id, &refs, &refs_mask, &count),
+        QUIVER_OK);
     ASSERT_EQ(count, 2);
     EXPECT_EQ(refs[0], 2);
     EXPECT_EQ(refs[1], 1);
 
     quiver_database_free_integer_array(refs);
+    quiver_database_free_mask(refs_mask);
     quiver_database_close(db);
 }
 
@@ -1156,12 +1167,16 @@ TEST(DatabaseCApi, UpdateElementSetFkLabels) {
 
     // Verify: set resolved to {2}
     int64_t* mentors = nullptr;
+    uint8_t* mentors_mask = nullptr;
     size_t count = 0;
-    ASSERT_EQ(quiver_database_read_set_integers_by_id(db, "Child", "mentor_id", child_id, &mentors, &count), QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_read_set_integers_by_id(db, "Child", "mentor_id", child_id, &mentors, &mentors_mask, &count),
+        QUIVER_OK);
     ASSERT_EQ(count, 1);
     EXPECT_EQ(mentors[0], 2);
 
     quiver_database_free_integer_array(mentors);
+    quiver_database_free_mask(mentors_mask);
     quiver_database_close(db);
 }
 
@@ -1306,21 +1321,27 @@ TEST(DatabaseCApi, UpdateElementAllFkTypesInOneCall) {
 
     // Verify set FK: mentor_id == {2}
     int64_t* mentors = nullptr;
+    uint8_t* mentors_mask = nullptr;
     size_t mentor_count = 0;
-    ASSERT_EQ(quiver_database_read_set_integers_by_id(db, "Child", "mentor_id", child_id, &mentors, &mentor_count),
+    ASSERT_EQ(quiver_database_read_set_integers_by_id(
+                  db, "Child", "mentor_id", child_id, &mentors, &mentors_mask, &mentor_count),
               QUIVER_OK);
     ASSERT_EQ(mentor_count, 1);
     EXPECT_EQ(mentors[0], 2);
     quiver_database_free_integer_array(mentors);
+    quiver_database_free_mask(mentors_mask);
 
     // Verify vector FK: parent_ref == {2}
     int64_t* refs = nullptr;
+    uint8_t* refs_mask = nullptr;
     size_t ref_count = 0;
-    ASSERT_EQ(quiver_database_read_vector_integers_by_id(db, "Child", "parent_ref", child_id, &refs, &ref_count),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_read_vector_integers_by_id(db, "Child", "parent_ref", child_id, &refs, &refs_mask, &ref_count),
+        QUIVER_OK);
     ASSERT_EQ(ref_count, 1);
     EXPECT_EQ(refs[0], 2);
     quiver_database_free_integer_array(refs);
+    quiver_database_free_mask(refs_mask);
 
     // Verify time series FK: sponsor_id == {2}
     char** out_col_names = nullptr;
@@ -1526,8 +1547,9 @@ TEST(DatabaseCApi, UpdateSetIntegersHappyPath) {
     EXPECT_EQ(err, QUIVER_OK);
 
     int64_t* read_values = nullptr;
+    uint8_t* read_mask = nullptr;
     size_t read_count = 0;
-    err = quiver_database_read_set_integers_by_id(db, "AllTypes", "code", id, &read_values, &read_count);
+    err = quiver_database_read_set_integers_by_id(db, "AllTypes", "code", id, &read_values, &read_mask, &read_count);
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(read_count, 3);
 
@@ -1538,6 +1560,7 @@ TEST(DatabaseCApi, UpdateSetIntegersHappyPath) {
     EXPECT_EQ(sorted[2], 30);
 
     quiver_database_free_integer_array(read_values);
+    quiver_database_free_mask(read_mask);
     quiver_database_close(db);
 }
 
@@ -1574,8 +1597,9 @@ TEST(DatabaseCApi, UpdateSetFloatsHappyPath) {
     EXPECT_EQ(err, QUIVER_OK);
 
     double* read_values = nullptr;
+    uint8_t* read_mask = nullptr;
     size_t read_count = 0;
-    err = quiver_database_read_set_floats_by_id(db, "AllTypes", "weight", id, &read_values, &read_count);
+    err = quiver_database_read_set_floats_by_id(db, "AllTypes", "weight", id, &read_values, &read_mask, &read_count);
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(read_count, 2);
 
@@ -1585,6 +1609,7 @@ TEST(DatabaseCApi, UpdateSetFloatsHappyPath) {
     EXPECT_DOUBLE_EQ(sorted[1], 2.2);
 
     quiver_database_free_float_array(read_values);
+    quiver_database_free_mask(read_mask);
     quiver_database_close(db);
 }
 
@@ -1675,28 +1700,36 @@ TEST(DatabaseCApi, UpdateVectorGroupAndSetGroupStayIndependent) {
               QUIVER_OK);
 
     int64_t* out = nullptr;
+    uint8_t* out_mask = nullptr;
     size_t count = 0;
-    ASSERT_EQ(quiver_database_read_set_integers_by_id(db, "Child", "parent_ref", child, &out, &count), QUIVER_OK);
+    ASSERT_EQ(quiver_database_read_set_integers_by_id(db, "Child", "parent_ref", child, &out, &out_mask, &count),
+              QUIVER_OK);
     ASSERT_EQ(count, 1u);
     EXPECT_EQ(out[0], parent_a);
     quiver_database_free_integer_array(out);
+    quiver_database_free_mask(out_mask);
 
-    ASSERT_EQ(quiver_database_read_vector_integers_by_id(db, "Child", "parent_ref", child, &out, &count), QUIVER_OK);
+    ASSERT_EQ(quiver_database_read_vector_integers_by_id(db, "Child", "parent_ref", child, &out, &out_mask, &count),
+              QUIVER_OK);
     ASSERT_EQ(count, 1u);
     EXPECT_EQ(out[0], parent_b);
     quiver_database_free_integer_array(out);
+    quiver_database_free_mask(out_mask);
 
     // Clearing takes NULL arrays with zero counts, same as the time series group API.
     ASSERT_EQ(quiver_database_update_vector_group(db, "Child", "refs", child, nullptr, nullptr, nullptr, nullptr, 0, 0),
               QUIVER_OK);
-    ASSERT_EQ(quiver_database_read_vector_integers_by_id(db, "Child", "parent_ref", child, &out, &count), QUIVER_OK);
+    ASSERT_EQ(quiver_database_read_vector_integers_by_id(db, "Child", "parent_ref", child, &out, &out_mask, &count),
+              QUIVER_OK);
     EXPECT_EQ(count, 0u);
 
     // The set group survived the clear.
-    ASSERT_EQ(quiver_database_read_set_integers_by_id(db, "Child", "parent_ref", child, &out, &count), QUIVER_OK);
+    ASSERT_EQ(quiver_database_read_set_integers_by_id(db, "Child", "parent_ref", child, &out, &out_mask, &count),
+              QUIVER_OK);
     ASSERT_EQ(count, 1u);
     EXPECT_EQ(out[0], parent_a);
     quiver_database_free_integer_array(out);
+    quiver_database_free_mask(out_mask);
 
     EXPECT_EQ(quiver_database_close(db), QUIVER_OK);
 }
@@ -1729,12 +1762,20 @@ TEST(DatabaseCApi, UpdateVectorGroupHonoursNullMask) {
     ASSERT_EQ(quiver_database_update_vector_group(db, "Child", "refs", child, names, types, data, masks, 1, 3),
               QUIVER_OK);
 
-    // The dense per-column reader drops the NULL, so three rows read back as two values.
+    // The per-column reader preserves the NULL positionally: three rows in, three cells out.
     int64_t* out = nullptr;
+    uint8_t* out_mask = nullptr;
     size_t count = 0;
-    ASSERT_EQ(quiver_database_read_vector_integers_by_id(db, "Child", "parent_ref", child, &out, &count), QUIVER_OK);
-    ASSERT_EQ(count, 2u);
+    ASSERT_EQ(quiver_database_read_vector_integers_by_id(db, "Child", "parent_ref", child, &out, &out_mask, &count),
+              QUIVER_OK);
+    ASSERT_EQ(count, 3u);
+    EXPECT_EQ(out_mask[0], 1);
+    EXPECT_EQ(out_mask[1], 0);
+    EXPECT_EQ(out_mask[2], 1);
+    EXPECT_EQ(out[0], parent_a);
+    EXPECT_EQ(out[2], parent_a);
     quiver_database_free_integer_array(out);
+    quiver_database_free_mask(out_mask);
 
     EXPECT_EQ(quiver_database_close(db), QUIVER_OK);
 }
@@ -1801,10 +1842,13 @@ TEST(DatabaseCApi, UpdateGroupNamedColumnWithNoRowsRejected) {
               QUIVER_ERROR);
 
     int64_t* out = nullptr;
+    uint8_t* out_mask = nullptr;
     size_t count = 0;
-    ASSERT_EQ(quiver_database_read_vector_integers_by_id(db, "Child", "parent_ref", child, &out, &count), QUIVER_OK);
+    ASSERT_EQ(quiver_database_read_vector_integers_by_id(db, "Child", "parent_ref", child, &out, &out_mask, &count),
+              QUIVER_OK);
     EXPECT_EQ(count, 1u);
     quiver_database_free_integer_array(out);
+    quiver_database_free_mask(out_mask);
 
     EXPECT_EQ(quiver_database_close(db), QUIVER_OK);
 }
@@ -1837,12 +1881,13 @@ TEST(DatabaseCApi, UpdateGroupNullStringEntryIsNull) {
     ASSERT_EQ(quiver_database_update_set_group(db, "Items", "codes", item, names, types, data, nullptr, 1, 2),
               QUIVER_OK);
 
-    // The dense per-column reader drops the NULL: two rows written, one readable value.
+    // The per-column reader preserves the NULL as a NULL entry: two rows written, two cells out.
     char** out = nullptr;
     size_t count = 0;
     ASSERT_EQ(quiver_database_read_set_strings_by_id(db, "Items", "code", item, &out, &count), QUIVER_OK);
-    ASSERT_EQ(count, 1u);
+    ASSERT_EQ(count, 2u);
     EXPECT_STREQ(out[0], "first");
+    EXPECT_EQ(out[1], nullptr);
     quiver_database_free_string_array(out, count);
 
     EXPECT_EQ(quiver_database_close(db), QUIVER_OK);
@@ -2013,26 +2058,32 @@ TEST(DatabaseCApi, UpdateVectorGroupByLabel) {
         QUIVER_OK);
 
     int64_t* out = nullptr;
+    uint8_t* out_mask = nullptr;
     size_t count = 0;
-    ASSERT_EQ(quiver_database_read_vector_integers_by_id(db, "Child", "parent_ref", child, &out, &count), QUIVER_OK);
+    ASSERT_EQ(quiver_database_read_vector_integers_by_id(db, "Child", "parent_ref", child, &out, &out_mask, &count),
+              QUIVER_OK);
     ASSERT_EQ(count, 2u);
     EXPECT_EQ(out[0], parent_a);
     EXPECT_EQ(out[1], parent_b);
     quiver_database_free_integer_array(out);
+    quiver_database_free_mask(out_mask);
 
     // Clearing takes NULL arrays with zero counts, same as the id form.
     ASSERT_EQ(quiver_database_update_vector_group_by_label(
                   db, "Child", "refs", "Child 1", nullptr, nullptr, nullptr, nullptr, 0, 0),
               QUIVER_OK);
-    ASSERT_EQ(quiver_database_read_vector_integers_by_id(db, "Child", "parent_ref", child, &out, &count), QUIVER_OK);
+    ASSERT_EQ(quiver_database_read_vector_integers_by_id(db, "Child", "parent_ref", child, &out, &out_mask, &count),
+              QUIVER_OK);
     EXPECT_EQ(count, 0u);
 
     // The other child's group survived both writes.
-    ASSERT_EQ(quiver_database_read_vector_integers_by_id(db, "Child", "parent_ref", other_child, &out, &count),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_read_vector_integers_by_id(db, "Child", "parent_ref", other_child, &out, &out_mask, &count),
+        QUIVER_OK);
     ASSERT_EQ(count, 1u);
     EXPECT_EQ(out[0], parent_a);
     quiver_database_free_integer_array(out);
+    quiver_database_free_mask(out_mask);
 
     quiver_database_close(db);
 }
@@ -2134,25 +2185,31 @@ TEST(DatabaseCApi, UpdateSetGroupByLabel) {
         QUIVER_OK);
 
     int64_t* out = nullptr;
+    uint8_t* out_mask = nullptr;
     size_t count = 0;
-    ASSERT_EQ(quiver_database_read_set_integers_by_id(db, "Child", "parent_ref", child, &out, &count), QUIVER_OK);
+    ASSERT_EQ(quiver_database_read_set_integers_by_id(db, "Child", "parent_ref", child, &out, &out_mask, &count),
+              QUIVER_OK);
     ASSERT_EQ(count, 2u);
     EXPECT_EQ(out[0], parent_a);
     EXPECT_EQ(out[1], parent_b);
     quiver_database_free_integer_array(out);
+    quiver_database_free_mask(out_mask);
 
     // Clearing takes NULL arrays with zero counts, same as the id form.
     ASSERT_EQ(quiver_database_update_set_group_by_label(
                   db, "Child", "parents", "Child 1", nullptr, nullptr, nullptr, nullptr, 0, 0),
               QUIVER_OK);
-    ASSERT_EQ(quiver_database_read_set_integers_by_id(db, "Child", "parent_ref", child, &out, &count), QUIVER_OK);
+    ASSERT_EQ(quiver_database_read_set_integers_by_id(db, "Child", "parent_ref", child, &out, &out_mask, &count),
+              QUIVER_OK);
     EXPECT_EQ(count, 0u);
 
     // The other child's group survived both writes.
-    ASSERT_EQ(quiver_database_read_set_integers_by_id(db, "Child", "parent_ref", other_child, &out, &count), QUIVER_OK);
+    ASSERT_EQ(quiver_database_read_set_integers_by_id(db, "Child", "parent_ref", other_child, &out, &out_mask, &count),
+              QUIVER_OK);
     ASSERT_EQ(count, 1u);
     EXPECT_EQ(out[0], parent_a);
     quiver_database_free_integer_array(out);
+    quiver_database_free_mask(out_mask);
 
     quiver_database_close(db);
 }

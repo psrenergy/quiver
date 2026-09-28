@@ -6,6 +6,7 @@ const __dirname = import.meta.dir;
 import { Database, QuiverError } from "../src/index.ts";
 
 const SCHEMA_PATH = join(__dirname, "..", "..", "..", "tests", "schemas", "valid", "all_types.sql");
+const SCHEMAS_DIR = join(__dirname, "..", "..", "..", "tests", "schemas", "valid");
 
 describe("readVectorIntegers / readVectorFloats / readVectorStrings", () => {
   test("reads integer vectors bulk", () => {
@@ -125,6 +126,39 @@ describe("readVectorIntegersById / readVectorFloatsById / readVectorStringsById"
     try {
       const values = db.readVectorIntegersById("AllTypes", "count_value", 9999);
       expect(values).toEqual([]);
+    } finally {
+      db.close();
+    }
+  });
+});
+
+describe("vector NULL cells", () => {
+  test("keeps NULL cells positionally, and no rows is not the same as a NULL cell", () => {
+    const db = Database.fromSchema(":memory:", join(SCHEMAS_DIR, "collections.sql"));
+    try {
+      db.createElement("Configuration", { label: "Config" });
+      const id = db.createElement("Collection", { label: "Item 1" });
+      db.createElement("Collection", { label: "Item 2" }); // no vector rows
+      // createElement keeps a non-null array write surface, so the NULL cell goes in
+      // through the group writer.
+      db.updateVectorGroup("Collection", "values", id, { value_int: [10, null, 30] });
+
+      expect(db.readVectorIntegers("Collection", "value_int")).toEqual([[10, null, 30], []]);
+      expect(db.readVectorIntegersById("Collection", "value_int", id)).toEqual([10, null, 30]);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("surfaces NULL cells through the boolean wrapper", () => {
+    const db = Database.fromSchema(":memory:", join(SCHEMAS_DIR, "collections.sql"));
+    try {
+      db.createElement("Configuration", { label: "Config" });
+      const id = db.createElement("Collection", { label: "Item 1" });
+      db.updateVectorGroup("Collection", "values", id, { value_int: [1, null, 0] });
+
+      expect(db.readVectorBooleans("Collection", "value_int")).toEqual([[true, null, false]]);
+      expect(db.readVectorBooleansById("Collection", "value_int", id)).toEqual([true, null, false]);
     } finally {
       db.close();
     }

@@ -90,68 +90,119 @@ function read_scalar_date_times(db::Database, collection::String, attribute::Str
     return T[string_to_date_time(value, collection, attribute) for value in values]
 end
 
+# ponytail: one metadata FFI round-trip per read (cached-schema read, no SQL) plus a linear scan
+# mapping the attribute to its group; thread not_null out of the C read API if it ever matters.
+# An unknown attribute falls through as nullable and the read itself raises the core's error.
+# Resolves like `Schema::find_{vector,set}_table` (a group named after the attribute wins), since
+# the concrete path ignores the mask and must describe the very column the core reads.
+function _group_value_not_null(groups::Vector{GroupMetadata}, attribute::String)
+    for group in sort(groups; by = g -> g.group_name != attribute), column in group.value_columns
+        column.name == attribute && return column.not_null
+    end
+    return false
+end
+
+_vector_value_not_null(db::Database, collection::String, attribute::String) =
+    _group_value_not_null(list_vector_groups(db, collection), attribute)
+
+_set_value_not_null(db::Database, collection::String, attribute::String) =
+    _group_value_not_null(list_set_groups(db, collection), attribute)
+
 function read_vector_integers(db::Database, collection::String, attribute::String)
+    not_null = _vector_value_not_null(db, collection, attribute)
     out_vectors = Ref{Ptr{Ptr{Int64}}}(C_NULL)
+    out_masks = Ref{Ptr{Ptr{UInt8}}}(C_NULL)
     out_sizes = Ref{Ptr{Csize_t}}(C_NULL)
     out_count = Ref{Csize_t}(0)
 
-    check(C.quiver_database_read_vector_integers(db.ptr, collection, attribute, out_vectors, out_sizes, out_count))
+    check(
+        C.quiver_database_read_vector_integers(
+            db.ptr, collection, attribute, out_vectors, out_masks, out_sizes, out_count,
+        ),
+    )
 
     count = out_count[]
+    T = not_null ? Int64 : Optional{Int64}
     if count == 0 || out_vectors[] == C_NULL
-        return Vector{Int64}[]
+        return Vector{T}[]
     end
 
     vectors_ptr = unsafe_wrap(Array, out_vectors[], count)
+    masks_ptr = unsafe_wrap(Array, out_masks[], count)
     sizes_ptr = unsafe_wrap(Array, out_sizes[], count)
-    result = Vector{Int64}[]
+    result = Vector{T}[]
     for i in 1:count
-        if vectors_ptr[i] == C_NULL || sizes_ptr[i] == 0
-            push!(result, Int64[])
+        n = sizes_ptr[i]
+        if vectors_ptr[i] == C_NULL || n == 0
+            push!(result, T[])
+            continue
+        end
+        values = unsafe_wrap(Array, vectors_ptr[i], n)
+        if not_null
+            push!(result, copy(values))
         else
-            push!(result, copy(unsafe_wrap(Array, vectors_ptr[i], sizes_ptr[i])))
+            mask = unsafe_wrap(Array, masks_ptr[i], n)
+            push!(result, T[mask[j] != 0 ? values[j] : nothing for j in 1:n])
         end
     end
     C.quiver_database_free_integer_vectors(out_vectors[], out_sizes[], count)
+    C.quiver_database_free_masks(out_masks[], count)
     return result
 end
 
-# NULL cells are dropped and only ids that own rows are returned (`read_grouped_values_all`,
-# `src/database_internal.h`), so the result is not positionally aligned with `read_element_ids`.
 function read_vector_booleans(db::Database, collection::String, attribute::String)
     vectors = read_vector_integers(db, collection, attribute)
-    return Vector{Bool}[
-        [_integer_to_boolean(value, collection, attribute) for value in values] for values in vectors
+    # The delegate's container type carries the schema's nullability, so no second metadata read.
+    T = vectors isa Vector{Vector{Int64}} ? Bool : Optional{Bool}
+    return Vector{T}[
+        T[_integer_to_boolean(value, collection, attribute) for value in values] for values in vectors
     ]
 end
 
 function read_vector_floats(db::Database, collection::String, attribute::String)
+    not_null = _vector_value_not_null(db, collection, attribute)
     out_vectors = Ref{Ptr{Ptr{Cdouble}}}(C_NULL)
+    out_masks = Ref{Ptr{Ptr{UInt8}}}(C_NULL)
     out_sizes = Ref{Ptr{Csize_t}}(C_NULL)
     out_count = Ref{Csize_t}(0)
 
-    check(C.quiver_database_read_vector_floats(db.ptr, collection, attribute, out_vectors, out_sizes, out_count))
+    check(
+        C.quiver_database_read_vector_floats(
+            db.ptr, collection, attribute, out_vectors, out_masks, out_sizes, out_count,
+        ),
+    )
 
     count = out_count[]
+    T = not_null ? Float64 : Optional{Float64}
     if count == 0 || out_vectors[] == C_NULL
-        return Vector{Float64}[]
+        return Vector{T}[]
     end
 
     vectors_ptr = unsafe_wrap(Array, out_vectors[], count)
+    masks_ptr = unsafe_wrap(Array, out_masks[], count)
     sizes_ptr = unsafe_wrap(Array, out_sizes[], count)
-    result = Vector{Float64}[]
+    result = Vector{T}[]
     for i in 1:count
-        if vectors_ptr[i] == C_NULL || sizes_ptr[i] == 0
-            push!(result, Float64[])
+        n = sizes_ptr[i]
+        if vectors_ptr[i] == C_NULL || n == 0
+            push!(result, T[])
+            continue
+        end
+        values = unsafe_wrap(Array, vectors_ptr[i], n)
+        if not_null
+            push!(result, copy(values))
         else
-            push!(result, copy(unsafe_wrap(Array, vectors_ptr[i], sizes_ptr[i])))
+            mask = unsafe_wrap(Array, masks_ptr[i], n)
+            push!(result, T[mask[j] != 0 ? values[j] : nothing for j in 1:n])
         end
     end
     C.quiver_database_free_float_vectors(out_vectors[], out_sizes[], count)
+    C.quiver_database_free_masks(out_masks[], count)
     return result
 end
 
 function read_vector_strings(db::Database, collection::String, attribute::String)
+    not_null = _vector_value_not_null(db, collection, attribute)
     out_vectors = Ref{Ptr{Ptr{Ptr{Cchar}}}}(C_NULL)
     out_sizes = Ref{Ptr{Csize_t}}(C_NULL)
     out_count = Ref{Csize_t}(0)
@@ -159,94 +210,130 @@ function read_vector_strings(db::Database, collection::String, attribute::String
     check(C.quiver_database_read_vector_strings(db.ptr, collection, attribute, out_vectors, out_sizes, out_count))
 
     count = out_count[]
+    T = not_null ? String : Optional{String}
     if count == 0 || out_vectors[] == C_NULL
-        return Vector{String}[]
+        return Vector{T}[]
     end
 
     vectors_ptr = unsafe_wrap(Array, out_vectors[], count)
     sizes_ptr = unsafe_wrap(Array, out_sizes[], count)
-    result = Vector{String}[]
+    result = Vector{T}[]
     for i in 1:count
         if vectors_ptr[i] == C_NULL || sizes_ptr[i] == 0
-            push!(result, String[])
-        else
-            str_ptrs = unsafe_wrap(Array, vectors_ptr[i], sizes_ptr[i])
-            push!(result, [unsafe_string(ptr) for ptr in str_ptrs])
+            push!(result, T[])
+            continue
         end
+        str_ptrs = unsafe_wrap(Array, vectors_ptr[i], sizes_ptr[i])
+        push!(result, T[ptr == C_NULL ? nothing : unsafe_string(ptr) for ptr in str_ptrs])
     end
     C.quiver_database_free_string_vectors(out_vectors[], out_sizes[], count)
     return result
 end
 
-# Same alignment caveat as `read_vector_booleans`: NULL cells dropped, only ids that own rows.
 function read_vector_date_times(db::Database, collection::String, attribute::String)
     vectors = read_vector_strings(db, collection, attribute)
-    return Vector{DateTime}[
-        [string_to_date_time(value, collection, attribute) for value in values] for values in vectors
+    # The delegate's container type carries the schema's nullability, so no second metadata read.
+    T = vectors isa Vector{Vector{String}} ? DateTime : Optional{DateTime}
+    return Vector{T}[
+        T[string_to_date_time(value, collection, attribute) for value in values] for values in vectors
     ]
 end
 
 function read_set_integers(db::Database, collection::String, attribute::String)
+    not_null = _set_value_not_null(db, collection, attribute)
     out_sets = Ref{Ptr{Ptr{Int64}}}(C_NULL)
+    out_masks = Ref{Ptr{Ptr{UInt8}}}(C_NULL)
     out_sizes = Ref{Ptr{Csize_t}}(C_NULL)
     out_count = Ref{Csize_t}(0)
 
-    check(C.quiver_database_read_set_integers(db.ptr, collection, attribute, out_sets, out_sizes, out_count))
+    check(
+        C.quiver_database_read_set_integers(
+            db.ptr, collection, attribute, out_sets, out_masks, out_sizes, out_count,
+        ),
+    )
 
     count = out_count[]
+    T = not_null ? Int64 : Optional{Int64}
     if count == 0 || out_sets[] == C_NULL
-        return Vector{Int64}[]
+        return Vector{T}[]
     end
 
     sets_ptr = unsafe_wrap(Array, out_sets[], count)
+    masks_ptr = unsafe_wrap(Array, out_masks[], count)
     sizes_ptr = unsafe_wrap(Array, out_sizes[], count)
-    result = Vector{Int64}[]
+    result = Vector{T}[]
     for i in 1:count
-        if sets_ptr[i] == C_NULL || sizes_ptr[i] == 0
-            push!(result, Int64[])
+        n = sizes_ptr[i]
+        if sets_ptr[i] == C_NULL || n == 0
+            push!(result, T[])
+            continue
+        end
+        values = unsafe_wrap(Array, sets_ptr[i], n)
+        if not_null
+            push!(result, copy(values))
         else
-            push!(result, copy(unsafe_wrap(Array, sets_ptr[i], sizes_ptr[i])))
+            mask = unsafe_wrap(Array, masks_ptr[i], n)
+            push!(result, T[mask[j] != 0 ? values[j] : nothing for j in 1:n])
         end
     end
     C.quiver_database_free_integer_vectors(out_sets[], out_sizes[], count)
+    C.quiver_database_free_masks(out_masks[], count)
     return result
 end
 
-# Same alignment caveat as `read_vector_booleans`: NULL cells dropped, only ids that own rows.
 function read_set_booleans(db::Database, collection::String, attribute::String)
     sets = read_set_integers(db, collection, attribute)
-    return Vector{Bool}[
-        [_integer_to_boolean(value, collection, attribute) for value in values] for values in sets
+    # The delegate's container type carries the schema's nullability, so no second metadata read.
+    T = sets isa Vector{Vector{Int64}} ? Bool : Optional{Bool}
+    return Vector{T}[
+        T[_integer_to_boolean(value, collection, attribute) for value in values] for values in sets
     ]
 end
 
 function read_set_floats(db::Database, collection::String, attribute::String)
+    not_null = _set_value_not_null(db, collection, attribute)
     out_sets = Ref{Ptr{Ptr{Cdouble}}}(C_NULL)
+    out_masks = Ref{Ptr{Ptr{UInt8}}}(C_NULL)
     out_sizes = Ref{Ptr{Csize_t}}(C_NULL)
     out_count = Ref{Csize_t}(0)
 
-    check(C.quiver_database_read_set_floats(db.ptr, collection, attribute, out_sets, out_sizes, out_count))
+    check(
+        C.quiver_database_read_set_floats(
+            db.ptr, collection, attribute, out_sets, out_masks, out_sizes, out_count,
+        ),
+    )
 
     count = out_count[]
+    T = not_null ? Float64 : Optional{Float64}
     if count == 0 || out_sets[] == C_NULL
-        return Vector{Float64}[]
+        return Vector{T}[]
     end
 
     sets_ptr = unsafe_wrap(Array, out_sets[], count)
+    masks_ptr = unsafe_wrap(Array, out_masks[], count)
     sizes_ptr = unsafe_wrap(Array, out_sizes[], count)
-    result = Vector{Float64}[]
+    result = Vector{T}[]
     for i in 1:count
-        if sets_ptr[i] == C_NULL || sizes_ptr[i] == 0
-            push!(result, Float64[])
+        n = sizes_ptr[i]
+        if sets_ptr[i] == C_NULL || n == 0
+            push!(result, T[])
+            continue
+        end
+        values = unsafe_wrap(Array, sets_ptr[i], n)
+        if not_null
+            push!(result, copy(values))
         else
-            push!(result, copy(unsafe_wrap(Array, sets_ptr[i], sizes_ptr[i])))
+            mask = unsafe_wrap(Array, masks_ptr[i], n)
+            push!(result, T[mask[j] != 0 ? values[j] : nothing for j in 1:n])
         end
     end
     C.quiver_database_free_float_vectors(out_sets[], out_sizes[], count)
+    C.quiver_database_free_masks(out_masks[], count)
     return result
 end
 
 function read_set_strings(db::Database, collection::String, attribute::String)
+    not_null = _set_value_not_null(db, collection, attribute)
     out_sets = Ref{Ptr{Ptr{Ptr{Cchar}}}}(C_NULL)
     out_sizes = Ref{Ptr{Csize_t}}(C_NULL)
     out_count = Ref{Csize_t}(0)
@@ -254,30 +341,32 @@ function read_set_strings(db::Database, collection::String, attribute::String)
     check(C.quiver_database_read_set_strings(db.ptr, collection, attribute, out_sets, out_sizes, out_count))
 
     count = out_count[]
+    T = not_null ? String : Optional{String}
     if count == 0 || out_sets[] == C_NULL
-        return Vector{String}[]
+        return Vector{T}[]
     end
 
     sets_ptr = unsafe_wrap(Array, out_sets[], count)
     sizes_ptr = unsafe_wrap(Array, out_sizes[], count)
-    result = Vector{String}[]
+    result = Vector{T}[]
     for i in 1:count
         if sets_ptr[i] == C_NULL || sizes_ptr[i] == 0
-            push!(result, String[])
-        else
-            str_ptrs = unsafe_wrap(Array, sets_ptr[i], sizes_ptr[i])
-            push!(result, [unsafe_string(ptr) for ptr in str_ptrs])
+            push!(result, T[])
+            continue
         end
+        str_ptrs = unsafe_wrap(Array, sets_ptr[i], sizes_ptr[i])
+        push!(result, T[ptr == C_NULL ? nothing : unsafe_string(ptr) for ptr in str_ptrs])
     end
     C.quiver_database_free_string_vectors(out_sets[], out_sizes[], count)
     return result
 end
 
-# Same alignment caveat as `read_vector_booleans`: NULL cells dropped, only ids that own rows.
 function read_set_date_times(db::Database, collection::String, attribute::String)
     sets = read_set_strings(db, collection, attribute)
-    return Vector{DateTime}[
-        [string_to_date_time(value, collection, attribute) for value in values] for values in sets
+    # The delegate's container type carries the schema's nullability, so no second metadata read.
+    T = sets isa Vector{Vector{String}} ? DateTime : Optional{DateTime}
+    return Vector{T}[
+        T[string_to_date_time(value, collection, attribute) for value in values] for values in sets
     ]
 end
 
@@ -329,125 +418,185 @@ function read_scalar_date_time_by_id(db::Database, collection::String, attribute
 end
 
 function read_vector_integers_by_id(db::Database, collection::String, attribute::String, id::Int64)
+    not_null = _vector_value_not_null(db, collection, attribute)
     out_values = Ref{Ptr{Int64}}(C_NULL)
+    out_mask = Ref{Ptr{UInt8}}(C_NULL)
     out_count = Ref{Csize_t}(0)
 
-    check(C.quiver_database_read_vector_integers_by_id(db.ptr, collection, attribute, id, out_values, out_count))
+    check(
+        C.quiver_database_read_vector_integers_by_id(
+            db.ptr, collection, attribute, id, out_values, out_mask, out_count,
+        ),
+    )
 
     count = out_count[]
     if count == 0 || out_values[] == C_NULL
-        return Int64[]
+        return not_null ? Int64[] : Optional{Int64}[]
     end
 
-    result = unsafe_wrap(Array, out_values[], count) |> copy
+    values = unsafe_wrap(Array, out_values[], count)
+    result = if not_null
+        copy(values)
+    else
+        mask = unsafe_wrap(Array, out_mask[], count)
+        Optional{Int64}[mask[i] != 0 ? values[i] : nothing for i in 1:count]
+    end
     C.quiver_database_free_integer_array(out_values[])
+    C.quiver_database_free_mask(out_mask[])
     return result
 end
 
 function read_vector_booleans_by_id(db::Database, collection::String, attribute::String, id::Int64)
     values = read_vector_integers_by_id(db, collection, attribute, id)
-    return Bool[_integer_to_boolean(value, collection, attribute) for value in values]
+    # The delegate's container type carries the schema's nullability, so no second metadata read.
+    T = values isa Vector{Int64} ? Bool : Optional{Bool}
+    return T[_integer_to_boolean(value, collection, attribute) for value in values]
 end
 
 function read_vector_floats_by_id(db::Database, collection::String, attribute::String, id::Int64)
+    not_null = _vector_value_not_null(db, collection, attribute)
     out_values = Ref{Ptr{Float64}}(C_NULL)
+    out_mask = Ref{Ptr{UInt8}}(C_NULL)
     out_count = Ref{Csize_t}(0)
 
-    check(C.quiver_database_read_vector_floats_by_id(db.ptr, collection, attribute, id, out_values, out_count))
+    check(
+        C.quiver_database_read_vector_floats_by_id(
+            db.ptr, collection, attribute, id, out_values, out_mask, out_count,
+        ),
+    )
 
     count = out_count[]
     if count == 0 || out_values[] == C_NULL
-        return Float64[]
+        return not_null ? Float64[] : Optional{Float64}[]
     end
 
-    result = unsafe_wrap(Array, out_values[], count) |> copy
+    values = unsafe_wrap(Array, out_values[], count)
+    result = if not_null
+        copy(values)
+    else
+        mask = unsafe_wrap(Array, out_mask[], count)
+        Optional{Float64}[mask[i] != 0 ? values[i] : nothing for i in 1:count]
+    end
     C.quiver_database_free_float_array(out_values[])
+    C.quiver_database_free_mask(out_mask[])
     return result
 end
 
 function read_vector_strings_by_id(db::Database, collection::String, attribute::String, id::Int64)
+    not_null = _vector_value_not_null(db, collection, attribute)
     out_values = Ref{Ptr{Ptr{Cchar}}}(C_NULL)
     out_count = Ref{Csize_t}(0)
 
     check(C.quiver_database_read_vector_strings_by_id(db.ptr, collection, attribute, id, out_values, out_count))
 
     count = out_count[]
+    T = not_null ? String : Optional{String}
     if count == 0 || out_values[] == C_NULL
-        return String[]
+        return T[]
     end
 
     ptrs = unsafe_wrap(Array, out_values[], count)
-    result = [unsafe_string(ptr) for ptr in ptrs]
+    result = T[ptr == C_NULL ? nothing : unsafe_string(ptr) for ptr in ptrs]
     C.quiver_database_free_string_array(out_values[], count)
     return result
 end
 
 function read_vector_date_time_by_id(db::Database, collection::String, attribute::String, id::Int64)
-    return [
-        string_to_date_time(s, collection, attribute) for
-        s in read_vector_strings_by_id(db, collection, attribute, id)
-    ]
+    values = read_vector_strings_by_id(db, collection, attribute, id)
+    # The delegate's container type carries the schema's nullability, so no second metadata read.
+    T = values isa Vector{String} ? DateTime : Optional{DateTime}
+    return T[string_to_date_time(value, collection, attribute) for value in values]
 end
 
 function read_set_integers_by_id(db::Database, collection::String, attribute::String, id::Int64)
+    not_null = _set_value_not_null(db, collection, attribute)
     out_values = Ref{Ptr{Int64}}(C_NULL)
+    out_mask = Ref{Ptr{UInt8}}(C_NULL)
     out_count = Ref{Csize_t}(0)
 
-    check(C.quiver_database_read_set_integers_by_id(db.ptr, collection, attribute, id, out_values, out_count))
+    check(
+        C.quiver_database_read_set_integers_by_id(
+            db.ptr, collection, attribute, id, out_values, out_mask, out_count,
+        ),
+    )
 
     count = out_count[]
     if count == 0 || out_values[] == C_NULL
-        return Int64[]
+        return not_null ? Int64[] : Optional{Int64}[]
     end
 
-    result = unsafe_wrap(Array, out_values[], count) |> copy
+    values = unsafe_wrap(Array, out_values[], count)
+    result = if not_null
+        copy(values)
+    else
+        mask = unsafe_wrap(Array, out_mask[], count)
+        Optional{Int64}[mask[i] != 0 ? values[i] : nothing for i in 1:count]
+    end
     C.quiver_database_free_integer_array(out_values[])
+    C.quiver_database_free_mask(out_mask[])
     return result
 end
 
 function read_set_booleans_by_id(db::Database, collection::String, attribute::String, id::Int64)
     values = read_set_integers_by_id(db, collection, attribute, id)
-    return Bool[_integer_to_boolean(value, collection, attribute) for value in values]
+    # The delegate's container type carries the schema's nullability, so no second metadata read.
+    T = values isa Vector{Int64} ? Bool : Optional{Bool}
+    return T[_integer_to_boolean(value, collection, attribute) for value in values]
 end
 
 function read_set_floats_by_id(db::Database, collection::String, attribute::String, id::Int64)
+    not_null = _set_value_not_null(db, collection, attribute)
     out_values = Ref{Ptr{Float64}}(C_NULL)
+    out_mask = Ref{Ptr{UInt8}}(C_NULL)
     out_count = Ref{Csize_t}(0)
 
-    check(C.quiver_database_read_set_floats_by_id(db.ptr, collection, attribute, id, out_values, out_count))
+    check(
+        C.quiver_database_read_set_floats_by_id(
+            db.ptr, collection, attribute, id, out_values, out_mask, out_count,
+        ),
+    )
 
     count = out_count[]
     if count == 0 || out_values[] == C_NULL
-        return Float64[]
+        return not_null ? Float64[] : Optional{Float64}[]
     end
 
-    result = unsafe_wrap(Array, out_values[], count) |> copy
+    values = unsafe_wrap(Array, out_values[], count)
+    result = if not_null
+        copy(values)
+    else
+        mask = unsafe_wrap(Array, out_mask[], count)
+        Optional{Float64}[mask[i] != 0 ? values[i] : nothing for i in 1:count]
+    end
     C.quiver_database_free_float_array(out_values[])
+    C.quiver_database_free_mask(out_mask[])
     return result
 end
 
 function read_set_strings_by_id(db::Database, collection::String, attribute::String, id::Int64)
+    not_null = _set_value_not_null(db, collection, attribute)
     out_values = Ref{Ptr{Ptr{Cchar}}}(C_NULL)
     out_count = Ref{Csize_t}(0)
 
     check(C.quiver_database_read_set_strings_by_id(db.ptr, collection, attribute, id, out_values, out_count))
 
     count = out_count[]
+    T = not_null ? String : Optional{String}
     if count == 0 || out_values[] == C_NULL
-        return String[]
+        return T[]
     end
 
     ptrs = unsafe_wrap(Array, out_values[], count)
-    result = [unsafe_string(ptr) for ptr in ptrs]
+    result = T[ptr == C_NULL ? nothing : unsafe_string(ptr) for ptr in ptrs]
     C.quiver_database_free_string_array(out_values[], count)
     return result
 end
 
 function read_set_date_time_by_id(db::Database, collection::String, attribute::String, id::Int64)
-    return [
-        string_to_date_time(s, collection, attribute) for
-        s in read_set_strings_by_id(db, collection, attribute, id)
-    ]
+    values = read_set_strings_by_id(db, collection, attribute, id)
+    # The delegate's container type carries the schema's nullability, so no second metadata read.
+    T = values isa Vector{String} ? DateTime : Optional{DateTime}
+    return T[string_to_date_time(value, collection, attribute) for value in values]
 end
 
 function read_element_ids(db::Database, collection::String)

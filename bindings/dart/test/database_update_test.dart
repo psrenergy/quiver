@@ -1714,6 +1714,10 @@ void main() {
         expect(rows[0]['parent_ref'], equals(1));
         expect(rows[1]['parent_ref'], isNull);
         expect(rows[2]['parent_ref'], equals(2));
+        expect(
+          db.readVectorIntegersById('Child', 'parent_ref', 1),
+          equals([1, null, 2]),
+        );
       } finally {
         db.close();
       }

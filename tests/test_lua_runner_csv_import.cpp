@@ -188,7 +188,7 @@ TEST_F(LuaRunner_ImportCSV, OmittedElementDeletesItsGroupRows) {
         assert(set == 0, "orphaned set rows: " .. set)
     )LUA");
 
-    EXPECT_EQ(db.read_vector_floats_by_id("Items", "measurement", 2), (std::vector<double>{9.5}));
+    EXPECT_EQ(db.read_vector_floats_by_id("Items", "measurement", 2), (std::vector<std::optional<double>>{9.5}));
 }
 
 TEST_F(LuaRunner_ImportCSV, InsideTransactionThrows) {

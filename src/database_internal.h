@@ -29,11 +29,11 @@ inline std::optional<std::string> get_row_value(const Row& row, size_t index, st
 }
 
 // One output entry per element, aligned with read_element_ids. Expects the LEFT JOIN the bulk
-// readers build: column 0 the collection's id (never NULL), column 1 the value. An element with no
-// values joins to one NULL row, which the value check skips, leaving its entry empty.
+// readers build: column 0 the collection's id (never NULL), column 1 the group's join key,
+// column 2 the value. Cell NULLs are preserved positionally as std::nullopt.
 template <typename T>
-std::vector<std::vector<T>> read_grouped_values_all(const Result& result) {
-    std::vector<std::vector<T>> groups;
+std::vector<std::vector<std::optional<T>>> read_grouped_values_all(const Result& result) {
+    std::vector<std::vector<std::optional<T>>> groups;
     int64_t current_id = -1;
 
     for (size_t i = 0; i < result.row_count(); ++i) {
@@ -44,17 +44,18 @@ std::vector<std::vector<T>> read_grouped_values_all(const Result& result) {
             current_id = id;
         }
 
-        auto val = get_row_value(result[i], 1, static_cast<T*>(nullptr));
-        if (val) {
-            groups.back().push_back(*val);
+        // Column 1 is the group's join key: NULL only when the LEFT JOIN found no row, i.e. an
+        // empty group. A matched row's value may itself be NULL and is kept as nullopt.
+        if (result[i].get_integer(1)) {
+            groups.back().push_back(get_row_value(result[i], 2, static_cast<T*>(nullptr)));
         }
     }
     return groups;
 }
 
 // Template for reading column 0 values from query results.
-// Drops NULLs — used by group readers (vector/set by id) and read_element_ids,
-// where the columns are NOT NULL / PK by schema convention so no NULL ever appears.
+// Drops NULLs — used only by read_element_ids, whose column is the collection's
+// INTEGER PRIMARY KEY, so no NULL ever appears.
 template <typename T>
 std::vector<T> read_column_values(const Result& result) {
     std::vector<T> values;
@@ -69,8 +70,9 @@ std::vector<T> read_column_values(const Result& result) {
 }
 
 // Template for reading column 0 values, preserving NULLs as std::nullopt.
-// One entry per result row (positional) — used only by the scalar bulk readers,
-// where ORDER BY rowid alignment with the element list must be preserved.
+// One entry per result row (positional) — used by the scalar bulk readers, where ORDER BY
+// rowid alignment with the element list must be preserved, and by the vector/set _by_id
+// readers, where a NULL cell keeps its index within the group.
 template <typename T>
 std::vector<std::optional<T>> read_column_values_nullable(const Result& result) {
     std::vector<std::optional<T>> values;
