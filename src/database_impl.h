@@ -52,9 +52,12 @@ query_int_rows(sqlite3* db, const std::string& sql, const std::vector<int64_t>& 
     return rows;
 }
 
-struct ResolvedElement {
-    std::map<std::string, Value> scalars;
-    std::map<std::string, std::vector<Value>> arrays;
+// One group table's share of an element write: the element's arrays that route to it, each
+// FK-resolved against that table. Built by Impl::prepare_group_data, written by
+// Impl::insert_group_data.
+struct GroupColumns {
+    GroupTableType type;
+    std::map<std::string, std::vector<Value>> columns;
 };
 
 struct Database::Impl {
@@ -170,43 +173,15 @@ struct Database::Impl {
         return value;
     }
 
-    ResolvedElement resolve_element_fk_labels(const std::string& collection, const Element& element, Database& db) {
-        ResolvedElement resolved;
-
-        // Resolve scalars against collection table FK metadata
-        const auto* collection_def = schema->get_table(collection);
-        for (const auto& [name, value] : element.scalars()) {
-            resolved.scalars[name] = resolve_fk_label(*collection_def, name, value, db);
+    // Resolve FK labels among an element's scalars against the collection table. Arrays are
+    // resolved by prepare_group_data, against each group table they are written to.
+    std::map<std::string, Value>
+    resolve_scalar_fk_labels(const std::string& collection, const std::map<std::string, Value>& scalars, Database& db) {
+        const auto& collection_def = *schema->get_table(collection);
+        std::map<std::string, Value> resolved;
+        for (const auto& [name, value] : scalars) {
+            resolved[name] = resolve_fk_label(collection_def, name, value, db);
         }
-
-        // Resolve arrays against their respective group table FK metadata
-        for (const auto& [array_name, values] : element.arrays()) {
-            auto matches = schema->find_all_tables_for_column(collection, array_name);
-
-            // Find the first table match for FK resolution
-            // (FK columns have unique names per schema design, so first match is correct;
-            //  non-FK columns pass through resolve_fk_label unchanged regardless of table)
-            const TableDefinition* resolve_table = nullptr;
-            for (const auto& match : matches) {
-                const auto* td = schema->get_table(match.table_name);
-                if (td) {
-                    resolve_table = td;
-                    break;
-                }
-            }
-
-            std::vector<Value> resolved_values;
-            resolved_values.reserve(values.size());
-            for (const auto& val : values) {
-                if (resolve_table) {
-                    resolved_values.push_back(resolve_fk_label(*resolve_table, array_name, val, db));
-                } else {
-                    resolved_values.push_back(val);
-                }
-            }
-            resolved.arrays[array_name] = std::move(resolved_values);
-        }
-
         return resolved;
     }
 
@@ -235,37 +210,45 @@ struct Database::Impl {
                            const std::vector<std::map<std::string, Value>>& rows,
                            Database& db);
 
-    void insert_rows_into_group_table(const char* caller,
-                                      const std::string& table_name,
+    // Types and equal lengths of the columns bound for one group table. Both callers
+    // (prepare_group_data, update_group_rows) run it for every table they will touch *before*
+    // their first write: TransactionGuard no-ops inside a caller-owned transaction (or a dry run),
+    // so a throw after any write would leave that write in place with nothing to roll it back.
+    // num_rows is seeded from the first column rather than the first non-empty one: `columns` is
+    // name-sorted, so an empty alphabetically-first column used to leave it at 0 for a later column
+    // to set, skipping the check and indexing the empty vector on insert.
+    void validate_group_columns(const char* caller,
+                                const std::string& table_name,
+                                GroupTableType type,
+                                const std::map<std::string, std::vector<Value>>& columns) const {
+        const size_t num_rows = columns.empty() ? 0 : columns.begin()->second.size();
+        for (const auto& [col_name, values] : columns) {
+            if (!values.empty()) {
+                type_validator->validate_array(caller, table_name, col_name, values);
+            }
+            if (values.size() != num_rows) {
+                throw std::runtime_error(std::string("Cannot ") + caller + ": " + group_table_noun(type) +
+                                         " columns in table '" + table_name + "' must have the same length");
+            }
+        }
+    }
+
+    // DELETE (when replacing) and INSERT one element's rows in one group table; vector tables get a
+    // 1-based vector_index. Callers run validate_group_columns first, so every column has the same
+    // length. What can still throw here is only what SQLite checks (UNIQUE, NOT NULL, CHECK,
+    // foreign keys), after this call's earlier writes - a documented limit inside a caller-owned
+    // transaction (root AGENTS.md design decisions).
+    void insert_rows_into_group_table(const std::string& table_name,
                                       GroupTableType type,
-                                      const std::map<std::string, const std::vector<Value>*>& columns,
+                                      const std::map<std::string, std::vector<Value>>& columns,
                                       int64_t element_id,
                                       bool delete_existing,
                                       Database& db) {
-        const char* noun = group_table_noun(type);
-
-        // Validate types and verify same-length arrays *before* the DELETE: TransactionGuard
-        // no-ops inside a caller-owned transaction (or a dry run), so throwing after the DELETE
-        // would leave the group cleared with nothing to roll it back.
-        // num_rows is seeded from the first column rather than the first non-empty one: `columns`
-        // is name-sorted, so an empty alphabetically-first column used to leave it at 0 for a
-        // later column to set, skipping the check and indexing the empty vector below.
-        size_t num_rows = columns.empty() ? 0 : columns.begin()->second->size();
-        for (const auto& [col_name, values_ptr] : columns) {
-            if (!values_ptr->empty()) {
-                type_validator->validate_array(caller, table_name, col_name, *values_ptr);
-            }
-            if (values_ptr->size() != num_rows) {
-                throw std::runtime_error(std::string("Cannot ") + caller + ": " + noun + " columns in table '" +
-                                         table_name + "' must have the same length");
-            }
-        }
-
         if (delete_existing) {
             db.execute("DELETE FROM " + table_name + " WHERE id = ?", {element_id});
         }
 
-        // Insert rows (vector tables get a 1-based vector_index column)
+        const size_t num_rows = columns.empty() ? 0 : columns.begin()->second.size();
         for (size_t row_idx = 0; row_idx < num_rows; ++row_idx) {
             auto sql = "INSERT INTO " + table_name + " (id";
             std::string placeholders = "?";
@@ -277,30 +260,28 @@ struct Database::Impl {
                 parameters.emplace_back(static_cast<int64_t>(row_idx + 1));
             }
 
-            for (const auto& [col_name, values_ptr] : columns) {
+            for (const auto& [col_name, values] : columns) {
                 sql += ", " + col_name;
                 placeholders += ", ?";
-                parameters.push_back((*values_ptr)[row_idx]);
+                parameters.push_back(values[row_idx]);
             }
 
             sql += ") VALUES (" + placeholders + ")";
             db.execute(sql, parameters);
         }
-        logger->debug("Inserted {} {} rows into {}", num_rows, noun, table_name);
+        logger->debug("Inserted {} {} rows into {}", num_rows, group_table_noun(type), table_name);
     }
 
-    void insert_group_data(const char* caller,
-                           const std::string& collection,
-                           int64_t element_id,
-                           const std::map<std::string, std::vector<Value>>& arrays,
-                           bool delete_existing,
-                           Database& db) {
-        // Route arrays to their target tables
-        struct TableColumns {
-            GroupTableType type;
-            std::map<std::string, const std::vector<Value>*> columns;
-        };
-        std::map<std::string, TableColumns> table_columns;
+    // The no-write half of create_element / update_element's arrays: route each array to the group
+    // table(s) holding its column, FK-resolve it against each of them, and validate every table.
+    // Callers run it before their scalar INSERT/UPDATE (validate_group_columns says why) and hand
+    // the result to insert_group_data.
+    std::map<std::string, GroupColumns> prepare_group_data(const char* caller,
+                                                           const std::string& collection,
+                                                           const std::map<std::string, std::vector<Value>>& arrays,
+                                                           bool delete_existing,
+                                                           Database& db) {
+        std::map<std::string, GroupColumns> tables;
 
         for (const auto& [array_name, values] : arrays) {
             // Empty array handling: create skips silently, update still routes (for DELETE)
@@ -333,16 +314,33 @@ struct Database::Impl {
                              table_list);
             }
 
+            // Resolved per table: a shared FK column name may point at a different target in each
+            // group that holds it.
             for (const auto& match : matches) {
-                auto& entry = table_columns[match.table_name];
+                const auto& table_def = *schema->get_table(match.table_name);
+                auto& entry = tables[match.table_name];
                 entry.type = match.type;
-                entry.columns[array_name] = &values;
+                auto& resolved = entry.columns[array_name];
+                resolved.reserve(values.size());
+                for (const auto& value : values) {
+                    resolved.push_back(resolve_fk_label(table_def, array_name, value, db));
+                }
             }
         }
 
-        for (const auto& [table_name, entry] : table_columns) {
-            insert_rows_into_group_table(
-                caller, table_name, entry.type, entry.columns, element_id, delete_existing, db);
+        for (const auto& [table_name, entry] : tables) {
+            validate_group_columns(caller, table_name, entry.type, entry.columns);
+        }
+        return tables;
+    }
+
+    // The write half: add (create) or replace (update) the element's rows in every prepared table.
+    void insert_group_data(const std::map<std::string, GroupColumns>& tables,
+                           int64_t element_id,
+                           bool delete_existing,
+                           Database& db) {
+        for (const auto& [table_name, entry] : tables) {
+            insert_rows_into_group_table(table_name, entry.type, entry.columns, element_id, delete_existing, db);
         }
     }
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from quiverdb import Database
+from quiverdb import Database, QuiverError
 
 
 class TestExplicitTransaction:
@@ -39,6 +39,17 @@ class TestExplicitTransaction:
         collections_db.begin_transaction()
         collections_db.commit()
         assert collections_db.in_transaction() is False
+
+    def test_rejected_update_writes_nothing(self, collections_db: Database) -> None:
+        collections_db.create_element("Configuration", label="Config")
+        item_id = collections_db.create_element("Collection", label="Item 1", some_integer=1)
+
+        collections_db.begin_transaction()
+        with pytest.raises(QuiverError, match="type mismatch for array 'tag'"):
+            collections_db.update_element("Collection", item_id, some_integer=2, tag=[1.5])
+        collections_db.commit()
+
+        assert collections_db.read_scalar_integer_by_id("Collection", "some_integer", item_id) == 1
 
 
 class TestTransactionContextManager:

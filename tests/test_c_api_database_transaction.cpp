@@ -154,3 +154,51 @@ TEST(DatabaseCApi, InTransactionReflectsState) {
 
     quiver_database_close(db);
 }
+
+// The core validates every array before update_element's first write, so a rejected call inside a
+// caller-owned transaction leaves nothing for the commit to persist.
+TEST(DatabaseCApi, TransactionRejectedUpdateElementWritesNothing) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    quiver_element_t* config = nullptr;
+    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
+    quiver_element_set_string(config, "label", "Test Config");
+    int64_t config_id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Configuration", config, &config_id), QUIVER_OK);
+    quiver_element_destroy(config);
+
+    quiver_element_t* item = nullptr;
+    ASSERT_EQ(quiver_element_create(&item), QUIVER_OK);
+    quiver_element_set_string(item, "label", "Item 1");
+    quiver_element_set_integer(item, "some_integer", 1);
+    int64_t id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Collection", item, &id), QUIVER_OK);
+    quiver_element_destroy(item);
+
+    ASSERT_EQ(quiver_database_begin_transaction(db), QUIVER_OK);
+
+    quiver_element_t* update = nullptr;
+    ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
+    quiver_element_set_integer(update, "some_integer", 2);
+    const double tags[] = {1.5};
+    ASSERT_EQ(quiver_element_set_array_float(update, "tag", tags, 1, nullptr), QUIVER_OK);
+    EXPECT_EQ(quiver_database_update_element(db, "Collection", id, update), QUIVER_ERROR);
+    EXPECT_STREQ(quiver_get_last_error(),
+                 "Cannot update_element: type mismatch for array 'tag' index 0: expected TEXT, got REAL");
+    quiver_element_destroy(update);
+
+    ASSERT_EQ(quiver_database_commit(db), QUIVER_OK);
+
+    int64_t value = 0;
+    int has_value = 0;
+    ASSERT_EQ(quiver_database_read_scalar_integer_by_id(db, "Collection", "some_integer", id, &value, &has_value),
+              QUIVER_OK);
+    EXPECT_EQ(has_value, 1);
+    EXPECT_EQ(value, 1);
+
+    quiver_database_close(db);
+}

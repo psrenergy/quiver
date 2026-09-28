@@ -19,15 +19,18 @@ void Database::update_element(const std::string& collection, int64_t id, const E
 
     impl_->require_element(collection, id, *this);
 
-    // Pre-resolve pass: resolve all FK labels before any writes
-    auto resolved = impl_->resolve_element_fk_labels(collection, element, *this);
+    // Resolve every FK label and validate every array before the UPDATE: TransactionGuard no-ops
+    // inside a caller-owned transaction or a dry run, so a throw after it would leave the scalar
+    // update behind. (Scalar types are checked below, still ahead of the UPDATE.)
+    auto resolved = impl_->resolve_scalar_fk_labels(collection, scalars, *this);
+    auto groups = impl_->prepare_group_data("update_element", collection, arrays, true, *this);
 
     Impl::TransactionGuard txn(*impl_);
 
     // Update scalars if present
-    if (!resolved.scalars.empty()) {
+    if (!resolved.empty()) {
         // Validate scalar types
-        for (const auto& [name, value] : resolved.scalars) {
+        for (const auto& [name, value] : resolved) {
             impl_->type_validator->validate_scalar("update_element", collection, name, value);
         }
 
@@ -36,7 +39,7 @@ void Database::update_element(const std::string& collection, int64_t id, const E
         std::vector<Value> parameters;
 
         auto first = true;
-        for (const auto& [name, value] : resolved.scalars) {
+        for (const auto& [name, value] : resolved) {
             if (!first) {
                 sql += ", ";
             }
@@ -50,8 +53,8 @@ void Database::update_element(const std::string& collection, int64_t id, const E
         execute(sql, parameters);
     }
 
-    // Delegate group insertion to shared helper (delete_existing=true for updates)
-    impl_->insert_group_data("update_element", collection, id, resolved.arrays, true, *this);
+    // Replace every routed group (delete_existing=true: an empty array clears its group)
+    impl_->insert_group_data(groups, id, true, *this);
 
     txn.commit();
     impl_->logger->info("Updated element {} in {}", id, collection);
@@ -185,21 +188,18 @@ void Database::Impl::update_group_rows(const char* caller,
         }
     }
 
-    // Resolve FK labels before any writes, so a failed lookup cannot leave a cleared group.
+    // Resolve FK labels and validate before any writes, so a failed lookup or a bad cell cannot
+    // leave a cleared group.
     auto columns = transpose_group_rows(rows, names);
     for (auto& [col_name, values] : columns) {
         for (auto& value : values) {
             value = resolve_fk_label(*table_def, col_name, value, db);
         }
     }
-
-    std::map<std::string, const std::vector<Value>*> column_ptrs;
-    for (const auto& [col_name, values] : columns) {
-        column_ptrs[col_name] = &values;
-    }
+    validate_group_columns(caller, table_name, type, columns);
 
     TransactionGuard txn(*this);
-    insert_rows_into_group_table(caller, table_name, type, column_ptrs, id, true, db);
+    insert_rows_into_group_table(table_name, type, columns, id, true, db);
     txn.commit();
 }
 
