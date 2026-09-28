@@ -1491,7 +1491,8 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
 
         Uses "last non-null value at or before date_time" lookup semantics.
         Entries are typed by the column (int, float, or str); elements with no
-        matching data yield None.
+        matching data yield None. Raises QuiverError for a group with more than
+        one dimension column; use read_time_series_group for those.
         """
         self._ensure_open()
         lib = get_lib()

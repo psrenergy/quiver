@@ -67,6 +67,11 @@ For example, if you have the following data for the attribute `some_vector1`:
 2. Querying at `2021` returns `[1.0, 1.0]`.
 3. Querying at `2022` returns `[3.0, 1.0]`.
 
+`read_time_series_row` needs a group with a single dimension column. A group with more
+dimensions (such as `block` above) holds several rows at each date, so there is no single
+value per element, and the call raises an error. Read such a group with
+`read_time_series_group` instead.
+
 ### NULL cells in a group
 
 `read_time_series_group` and `update_time_series_group` round-trip `NULL` value cells, so a

@@ -286,6 +286,12 @@ std::vector<Value> Database::read_time_series_row(const std::string& collection,
     if (!table_def) {
         throw std::runtime_error("Time series table not found: " + ts_table);
     }
+    // One value per element needs one row per (element, date). A second dimension such as `block`
+    // keeps several rows at each date, and picking one of them would be arbitrary.
+    if (internal::find_dimension_columns(*table_def).size() > 1) {
+        throw std::runtime_error("Cannot read_time_series_row: group '" + group + "' of collection '" + collection +
+                                 "' has more than one dimension column");
+    }
     auto dim_col = internal::find_dimension_column(*table_def);
 
     const auto* attr_col = table_def->get_column(attribute);
@@ -299,11 +305,13 @@ std::vector<Value> Database::read_time_series_row(const std::string& collection,
         return {};
     }
 
-    // For each element, find the most recent non-null value where dim_col <= date_time.
-    // Self-join: subquery picks max dim_col per id, outer query gets the value.
+    // For each element, the most recent non-null value where dim_col <= date_time.
+    // Self-join: the subquery picks the latest non-null date per id, and the outer query reads the value there.
+    // The outer IS NOT NULL repeats the subquery's filter, so the join can only land on a non-null row.
     auto sql = "SELECT t.id, t." + attribute + " FROM " + ts_table + " t INNER JOIN (SELECT id, MAX(" + dim_col +
                ") as max_dt FROM " + ts_table + " WHERE " + dim_col + " <= ? AND " + attribute + " IS NOT NULL " +
-               "GROUP BY id) latest ON t.id = latest.id AND t." + dim_col + " = latest.max_dt ORDER BY t.id";
+               "GROUP BY id) latest ON t.id = latest.id AND t." + dim_col + " = latest.max_dt AND t." + attribute +
+               " IS NOT NULL ORDER BY t.id";
 
     auto query_result = execute(sql, {date_time});
 

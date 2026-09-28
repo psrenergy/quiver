@@ -419,7 +419,9 @@ local values = db:read_time_series_row(collection, group, attribute, date_time)
 \`\`\`
 
 One value per element using **last non-null value at or before \`date_time\`** semantics. Elements
-with no matching data yield \`nil\` in the array. \`date_time\` is an ISO 8601 string.
+with no matching data yield \`nil\` in the array. \`date_time\` is an ISO 8601 string. A group with
+more than one dimension column (e.g. \`date_time\` + \`block\`) throws — read it with
+\`read_time_series_group\`.
 
 ### Replace a whole group (column-oriented — SAME shape as the read)
 

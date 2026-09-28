@@ -172,6 +172,7 @@ public:
     // Read time series row - returns one value per element for a specific attribute at a given date_time
     // Uses "last non-null value at or before date_time" lookup semantics
     // Returns nullptr Value for elements with no matching data
+    // Throws for a group with more than one dimension column (e.g. date_time + block): use read_time_series_group
     std::vector<Value> read_time_series_row(const std::string& collection,
                                             const std::string& group,
                                             const std::string& attribute,

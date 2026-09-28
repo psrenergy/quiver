@@ -1280,7 +1280,8 @@ extension DatabaseRead on Database {
   ///
   /// Uses "last non-null value at or before [dateTime]" lookup semantics.
   /// Entries are typed by the column (`int`, `double`, or `String`); elements
-  /// with no matching data yield `null`.
+  /// with no matching data yield `null`. Throws [DatabaseException] for a group
+  /// with more than one dimension column; use [readTimeSeriesGroup] for those.
   List<Object?> readTimeSeriesRow(
     String collection,
     String group,

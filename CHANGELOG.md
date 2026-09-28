@@ -7,6 +7,19 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ## [0.12.2] — unreleased
 
+### Changed
+
+- **BREAKING — `read_time_series_row()` rejects a group with more than one dimension column.** In a
+  group keyed by `date_time` plus another dimension such as `block` (every primary-key column except
+  `id` is a dimension), each date holds one row per block, so there is no single value per element.
+  The read used to pick one of those rows by accident. It could return null although another block
+  held a value at that date (block 1 `10.0` and block 2 `NULL` read back as null), and with several
+  non-null blocks it returned whichever row came last. It now throws `Cannot read_time_series_row:
+  group '<g>' of collection '<c>' has more than one dimension column` in every binding, even when
+  the collection is empty. Single-dimension groups are unchanged.
+
+  *Adapt:* read a multi-dimension group with `read_time_series_group` and choose the block yourself.
+
 ### Fixed
 
 - **`update_time_series_group()` writes a value column that only a later row names.** The C++
