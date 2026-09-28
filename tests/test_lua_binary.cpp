@@ -216,6 +216,41 @@ TEST_F(LuaBinaryTest, MetadataFromToml) {
     )");
 }
 
+TEST_F(LuaBinaryTest, MetadataCountMismatchThrows) {
+    auto db = quiver::Database::from_schema(":memory:", schema);
+    quiver::LuaRunner lua(db);
+    // A script is untrusted input; each of these used to index past dimension_sizes / frequencies.
+    expect_lua_error(lua,
+                     "quiver.metadata{ initial_datetime='2025-01-01T00:00:00', unit='MW', labels={'v'},"
+                     " dimensions={'stage', 'block'}, dimension_sizes={12} }\n",
+                     "dimension_sizes count (1) does not match dimensions count (2)");
+    expect_lua_error(lua,
+                     "quiver.metadata{ initial_datetime='2025-01-01T00:00:00', unit='MW', labels={'v'},"
+                     " dimensions={'stage', 'block'} }\n",
+                     "dimension_sizes count (0) does not match dimensions count (2)");
+    expect_lua_error(lua,
+                     "quiver.metadata{ initial_datetime='2025-01-01T00:00:00', unit='MW', labels={'v'},"
+                     " dimensions={'stage'}, dimension_sizes={12}, time_dimensions={'stage'} }\n",
+                     "frequencies count (0) does not match time_dimensions count (1)");
+}
+
+TEST_F(LuaBinaryTest, MetadataFromTomlRejectsWrongTypedEntry) {
+    auto db = quiver::Database::from_schema(":memory:", schema);
+    quiver::LuaRunner lua(db);
+    expect_lua_error(lua,
+                     R"lua(
+        quiver.metadata_from_toml([[
+version = "1"
+dimensions = ["row", 2]
+dimension_sizes = [3, 2]
+initial_datetime = "2025-01-01T00:00:00"
+unit = "MW"
+labels = ["val"]
+]])
+    )lua",
+                     "array 'dimensions' must contain strings");
+}
+
 TEST_F(LuaBinaryTest, OpenFileInvalidModeThrows) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::LuaRunner lua(db);

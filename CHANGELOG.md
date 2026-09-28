@@ -82,6 +82,25 @@ callers to change something are prefixed **BREAKING** and say what to do.
   dimension is still in the starting period. Files with one or two time dimensions are
   unaffected. A CSV that `bin_to_csv` wrote for an affected file lacks those rows, so `csv_to_bin`
   now rejects it: convert the `.qvr` again.
+- **Binary metadata factories reject mismatched or malformed fields instead of reading out of
+  bounds.** `from_element` and `from_toml_content` (C API `quiver_binary_metadata_from_element` /
+  `_from_toml`, Julia `Metadata(; ...)` / `from_element` / `from_toml_content`, Lua
+  `quiver.metadata{}` / `quiver.metadata_from_toml` / `quiver.metadata_from_element`, and every
+  `.toml` sidecar read by `open_file(path, 'r')`) indexed `dimension_sizes` and `frequencies`
+  without checking their lengths. So `dimensions = {"a", "b"}, dimension_sizes = {3}`, or
+  `time_dimensions` without `frequencies`, read past the end of an array: undefined behaviour,
+  and an abort in a Debug build. They now throw `Cannot <op>: dimension_sizes count (1) does not
+  match dimensions count (2)` or `Cannot <op>: frequencies count (0) does not match
+  time_dimensions count (1)`. The same checks reject surplus entries (more sizes than dimensions,
+  or frequencies beyond `time_dimensions`), which used to be ignored. A TOML array entry of the
+  wrong type (`dimensions = ["a", 2]`) used to be dropped silently, which shifted every later
+  dimension onto the wrong size. It is now `Cannot from_toml_content: array 'dimensions' must
+  contain strings`, and a non-array value is `key '<k>' must be an array`. A missing or
+  non-string `version`, `unit` or `initial_datetime` used to throw a bare `bad_optional_access`.
+  It now names the key: `missing key 'unit'` or `key 'unit' must be a string`. The two
+  time-dimension errors are now Pattern 1 and name the factory that was called (`Cannot
+  from_element: time dimension 'x' is not in dimensions`). Before, they read `Error building
+  metadata from toml: ...`, even from `from_element`.
 
 ## [0.12.3] — unreleased
 
