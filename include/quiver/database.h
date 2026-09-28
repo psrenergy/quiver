@@ -177,7 +177,9 @@ public:
                                             const std::string& attribute,
                                             const std::string& date_time);
 
-    // Update time series group - replaces all rows for element
+    // Update time series group - replaces all rows for element. Every row must carry every
+    // dimension column; a value column named in any row is written for every row, as NULL where
+    // a row omits it (a column no row names is left to its DEFAULT).
     void update_time_series_group(const std::string& collection,
                                   const std::string& group,
                                   int64_t id,

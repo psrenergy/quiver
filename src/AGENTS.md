@@ -390,6 +390,9 @@ impl_->logger->debug("Opening database: {}", path);
   `rows[0]`, which dropped later-row-only columns and skipped validating them) against the group
   table, rejects the derived `id`/`vector_index`, and calls `require_element` — all before
   `transpose_group_rows`, so a named-but-empty column list cannot fall through to the DELETE.
+  `update_time_series_group` (`database_time_series.cpp`) builds its INSERT column list from the
+  same union (minus the primary dimension column, bound first); it used to take only the first
+  row's keys and silently drop a value column that a later row named.
 - **`Impl::require_element`** (`database_impl.h`) is the single `SELECT 1 ... WHERE id = ?` guard
   behind the Pattern 2 `"Element not found: ..."` message, shared by `update_element`,
   `delete_element`, and both group writers.
@@ -663,7 +666,8 @@ Implementation conventions in `lua_runner.cpp`:
   plus any `value_columns` with `primary_key` set — the multi-dim case; `Database` exposes no
   Schema accessor so `internal::find_dimension_columns` is unreachable here). Dimension columns
   must be present and dense; value columns may be shorter, sparse, or empty — missing indices become
-  `Value{nullptr}` (rows stay uniform: the core builds its INSERT list from `rows[0]`).
+  `Value{nullptr}`, so every row carries every named column and an all-nil column such as
+  `flag = {}` is still validated and written as NULL, not left to the column DEFAULT.
   Longer-than-dimension throws; a non-array column or non-positive-integer key throws; named
   columns with a zero-length dimension still throw — only a genuinely empty `{}` (no columns)
   clears (the anti-silent-clear trap is preserved). Column extents come from a `pairs` walk, never

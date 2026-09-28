@@ -389,17 +389,17 @@ Run from the repo root `C:\Development\Quiver\quiver1`:
 
 ## Acceptance criteria
 
-- [ ] `Database::update_time_series_group` builds `value_columns` as a `std::set<std::string>` over every row's keys minus `dim_col`, and `#include <set>` is added.
-- [ ] The `row.find(col)` → `nullptr` fallback in the bind loop is unchanged.
-- [ ] `Database.UpdateTimeSeriesGroupKeepsColumnPresentOnlyInALaterRow` exists in `tests/test_database_time_series_group.cpp`, passes, and fails with step 1b reverted.
-- [ ] The comment above `UpdateGroupKeepsColumnPresentOnlyInALaterRow` in `tests/test_database_update.cpp` no longer claims time series "keeps" every row's keys.
-- [ ] All five "INSERT column list from rows[0]" rationales are reworded (`src/c/database_helpers.h`, `src/lua_runner.cpp`, `src/c/AGENTS.md` ×2, `src/AGENTS.md` time_series_rows_from_lua bullet), and the grep in Verification step 6 prints nothing.
-- [ ] The padding/pre-fill code in `unmarshal_group_columns_to_rows` and `columns_to_cpp_rows` is unchanged.
-- [ ] `src/AGENTS.md`'s `Impl::update_group_rows` bullet notes that `update_time_series_group` uses the same union.
-- [ ] The public header comment on `update_time_series_group` states the column contract.
-- [ ] The CHANGELOG `0.12.0 → Fixed` entry is present and not marked BREAKING.
-- [ ] No C API, Lua or binding test was added. No generator was run and no FFI declaration changed.
-- [ ] All C++ / C API / binding suites pass.
+- [x] `Database::update_time_series_group` builds `value_columns` as a `std::set<std::string>` over every row's keys minus `dim_col`, and `#include <set>` is added.
+- [x] The `row.find(col)` → `nullptr` fallback in the bind loop is unchanged.
+- [x] `Database.UpdateTimeSeriesGroupKeepsColumnPresentOnlyInALaterRow` exists in `tests/test_database_time_series_group.cpp`, passes, and fails with step 1b reverted.
+- [x] The comment above `UpdateGroupKeepsColumnPresentOnlyInALaterRow` in `tests/test_database_update.cpp` no longer claims time series "keeps" every row's keys.
+- [x] All five "INSERT column list from rows[0]" rationales are reworded (`src/c/database_helpers.h`, `src/lua_runner.cpp`, `src/c/AGENTS.md` ×2, `src/AGENTS.md` time_series_rows_from_lua bullet), and the grep in Verification step 6 prints nothing.
+- [x] The padding/pre-fill code in `unmarshal_group_columns_to_rows` and `columns_to_cpp_rows` is unchanged.
+- [x] `src/AGENTS.md`'s `Impl::update_group_rows` bullet notes that `update_time_series_group` uses the same union.
+- [x] The public header comment on `update_time_series_group` states the column contract.
+- [x] The CHANGELOG `0.12.0 → Fixed` entry is present and not marked BREAKING.
+- [x] No C API, Lua or binding test was added. No generator was run and no FFI declaration changed.
+- [x] All C++ / C API / binding suites pass.
 
 ## Pitfalls
 
@@ -420,3 +420,30 @@ Run from the repo root `C:\Development\Quiver\quiver1`:
 - The comment in `src/database_update.cpp` `Impl::update_group_rows` ("update_time_series_group validates every row too") is accurate and stays.
 - The Lua read side `read_time_series_group_lua` iterating `rows[0]` (`src/lua_runner.cpp`, currently ~L1967) is correct, because the core read always returns every table column in every row. Leave it.
 - `upsert_time_series_row` takes a single row, so the bug cannot occur there. No change.
+
+## Implementation notes
+
+Implemented at HEAD `565c890` (plan 02's merge). The code, test, comments and docs are exactly as specified above. Every quoted excerpt, symbol and test anchor matched the tree. Plan 02 left the `dim_cols` / `const auto& dim_col = dim_cols.front();` lines in place, and they were kept. Only line numbers had drifted: the `time_series_rows_from_lua` line in `src/AGENTS.md` is now ~L666, and the `columns_to_cpp_rows` comment is at `src/lua_runner.cpp` ~L2024.
+
+**Deviation: the CHANGELOG entry sits under a new `## [0.12.2] — unreleased` → `### Fixed` section above `[0.12.1]`, and the manifests are not bumped.** The plan said `[0.12.0] — unreleased`, and plan 02 said later plans should use `[0.12.1]`. Both versions are now tagged: `v0.12.0` at `0f590ad`, and `v0.12.1` at `565c890`, which is this plan's starting HEAD. `origin/bump-version/0.12.2` already carries the five-manifest patch bump, and a non-breaking fix is a patch. The stale `— unreleased` headers of 0.12.1/0.12.0 and the link refs (plan 78) were left alone. The Julia `Artifacts.toml` bullet the plan anchored on now lives in the released `[0.11.0]`. **Later plans: put entries under the next untagged version. Run `git tag` first.**
+
+Red/green: before step 1b, the new test failed exactly as predicted (`test_database_time_series_group.cpp(158): Value of: std::holds_alternative<int64_t>(result[1].at("counter")) Actual: false`). After it, the test passes. Results:
+- Verification step 2: 39/39
+- Step 3 (Lua): 50/50
+- Step 4 (C API): 85/85
+- Full `quiver_tests`: 1306/1306
+- Full `quiver_c_tests`: 562/562
+- Bindings: Julia, Dart 419/419, JS 208/208, Python 305/305
+- The step-6 grep prints nothing.
+- `scripts/test-all.bat`: all six suites PASS. Only the CLI smoke step fails, as before (`Script file not found: ...\example\example1.lua`, which is plan 65).
+
+A 3-lens adversarial review (core correctness, comment/doc accuracy, acceptance audit) found no bugs and no unmet criteria. It raised two nits, both left as the plan wrote them:
+- The CHANGELOG's "reading back as NULL" is exact only for a nullable, no-DEFAULT column. With a DEFAULT, the old code left the value at the DEFAULT. With `NOT NULL` and no DEFAULT, the old INSERT failed loudly.
+- In `src/c/AGENTS.md`, the reflowed bullet ends in a short line followed by the kept `  to clear all rows.` line. It renders identically.
+
+Things later plans should know:
+- **The Dart native cache went stale again, this time after a `.cpp` change** (plan 02 saw it after a header change). The first Dart run loaded a 13:15 `libquiver.dll` built before this fix. Deleting `bindings/dart/.dart_tool/hooks_runner` and `.dart_tool/lib` made the hook rebuild, and the rerun passed 419/419. **Clear it before every Dart regression run.** Julia, Python and JS load `build/bin` directly.
+- **`scripts/format.bat` (biome) again rewrote 22 untouched JS files from CRLF to LF**, with no content change (`git diff --quiet -- bindings/js` is clean). `git checkout -- bindings/js` before committing.
+- The Debug build prints `C4458: declaration of 'db' hides class member` from `src/database_impl.h`. It is pre-existing, and it goes away with plan 53's removal of the `Database& db` back-references.
+- **Plans 46 / 44 (`src/lua_runner.cpp`), 23 (`src/c/database_helpers.h`) and 17 (`src/c/AGENTS.md`):** only comment text above `columns_to_cpp_rows` / `unmarshal_group_columns_to_rows` and the two `src/c/AGENTS.md` bullets changed. The code bodies are untouched, so those plans should apply cleanly.
+- **Plans 53 / 57 rebase over this change:** `value_columns` in `update_time_series_group` is now a `std::set<std::string>` built from every row, and `#include <set>` was added to `src/database_time_series.cpp`.
