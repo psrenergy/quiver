@@ -249,6 +249,25 @@ TEST_F(LuaExpressionTest, AggregateAgentsMean) {
     )");  // mean(10,20) = 15
 }
 
+TEST_F(LuaExpressionTest, AggregateAgentsMaxMinusMin) {
+    // aggregate_agents names its one label after the operation, so this subtracts a {'min'} operand
+    // from a {'max'} one. Single labels broadcast whatever they are called; the lhs label is kept.
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+    lua.run(prelude() + R"(
+        fill('expr_a', 10.0, 25.0)
+        local fa = db:open_file('expr_a', 'r')
+        local spread = quiver.expression(fa):aggregate_agents('max') - quiver.expression(fa):aggregate_agents('min')
+        spread:save('expr_out')
+        fa:close()
+        local r = db:open_file('expr_out', 'r')
+        local labels = r:get_metadata():get_labels()
+        assert(#labels == 1 and labels[1] == 'max', 'lhs label kept')
+        assert(r:read({row=2, col=1})[1] == 15.0, 'max - min')
+        r:close()
+    )");  // max(10, 25) - min(10, 25) = 15
+}
+
 TEST_F(LuaExpressionTest, SelectAndRenameAgents) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::LuaRunner lua(db);

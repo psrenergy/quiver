@@ -475,6 +475,33 @@ end
         end
     end
 
+    @testset "Single-label operands with different names broadcast" begin
+        path_a, path_b, path_out = make_path("a"), make_path("b"), make_path("out")
+        try
+            md_a = make_metadata_full(dimensions = ["row", "col"], dimension_sizes = [2, 2], labels = ["alpha"])
+            md_b = make_metadata_full(dimensions = ["row", "col"], dimension_sizes = [2, 2], labels = ["beta"])
+            write_dense(path_a, md_a, [:row, :col], [2, 2], 1, (dims, _) -> dims[1] * 10 + dims[2])
+            write_dense(path_b, md_b, [:row, :col], [2, 2], 1, (_, _) -> 1.0)
+
+            with_expr(path_a) do a
+                with_expr(path_b) do b
+                    diff = a - b
+                    try
+                        # Both operands carry a single label: the lhs label wins.
+                        @test Quiver.Binary.get_labels(Quiver.get_metadata(diff)) == ["alpha"]
+                        Quiver.save(diff, path_out)
+                    finally
+                        Quiver.close!(diff)
+                    end
+                end
+            end
+
+            @test read_one_cell(path_out; row = 2, col = 1) == [20.0]  # (2 * 10 + 1) - 1
+        finally
+            cleanup(path_a, path_b, path_out)
+        end
+    end
+
     @testset "Self-save collision throws" begin
         path_a = make_path("a")
         try

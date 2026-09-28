@@ -53,6 +53,17 @@ protected:
                                                 .set("labels", {"val1", "val2"}));
     }
 
+    // 3 x 2 (row, col) metadata with a single label.
+    static BinaryMetadata make_single_label_metadata(const char* label, const char* unit = "MW") {
+        return BinaryMetadata::from_element(Element()
+                                                .set("version", "1")
+                                                .set("initial_datetime", "2025-01-01T00:00:00")
+                                                .set("unit", unit)
+                                                .set("dimensions", {"row", "col"})
+                                                .set("dimension_sizes", {3, 2})
+                                                .set("labels", {label}));
+    }
+
     static void write_qvr(const std::string& path,
                           const BinaryMetadata& meta,
                           std::function<double(const std::vector<int64_t>& dims, size_t label_idx)> fill) {
@@ -390,6 +401,80 @@ TEST_F(ExpressionFixture, LabelMismatchThrows) {
     auto a = BinaryFile::open_file(path_a, 'r');
     auto b = BinaryFile::open_file(path_b, 'r');
     EXPECT_THROW({ auto e = Expression(a) + Expression(b); }, std::runtime_error);
+}
+
+TEST_F(ExpressionFixture, LabelSetsOfDifferentSizesThrow) {
+    // Only a single label broadcasts: two multi-label operands must carry the same label set.
+    auto md_a = make_simple_metadata();  // {val1, val2}
+    auto md_b = BinaryMetadata::from_element(Element()
+                                                 .set("version", "1")
+                                                 .set("initial_datetime", "2025-01-01T00:00:00")
+                                                 .set("unit", "MW")
+                                                 .set("dimensions", {"row", "col"})
+                                                 .set("dimension_sizes", {3, 2})
+                                                 .set("labels", {"val1", "val2", "val3"}));
+    write_qvr(path_a, md_a, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    write_qvr(path_b, md_b, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto b = BinaryFile::open_file(path_b, 'r');
+    EXPECT_THROW(
+        {
+            try {
+                auto e = Expression(a) + Expression(b);
+            } catch (const std::runtime_error& err) {
+                EXPECT_NE(std::string(err.what()).find("non-singleton label sets must match"), std::string::npos)
+                    << err.what();
+                throw;
+            }
+        },
+        std::runtime_error);
+}
+
+TEST_F(ExpressionFixture, SingleLabelOperandsWithDifferentNamesBroadcast) {
+    // A single label broadcasts whatever it is called, also against another single label, and the
+    // output takes the lhs label. aggregate_agents names its label after the operation, so max - min
+    // over one file is this case (LuaExpressionTest.AggregateAgentsMaxMinusMin).
+    write_qvr(path_a, make_single_label_metadata("alpha"), [](const std::vector<int64_t>& dims, size_t /*k*/) {
+        return static_cast<double>(dims[0] * 10 + dims[1]);
+    });
+    write_qvr(path_b, make_single_label_metadata("beta"), [](const std::vector<int64_t>&, size_t) { return 1.0; });
+
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto b = BinaryFile::open_file(path_b, 'r');
+    Expression e = Expression(a) - Expression(b);
+    EXPECT_EQ(e.metadata().labels, std::vector<std::string>{"alpha"});
+    e.save(path_out);
+
+    auto va = read_all_cells(path_a);
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(vo.size(), va.size());
+    for (size_t i = 0; i < vo.size(); ++i)
+        EXPECT_DOUBLE_EQ(vo[i], va[i] - 1.0) << " at index " << i;
+}
+
+TEST_F(ExpressionFixture, LogicalOnSingleLabelOperandsWithDifferentNames) {
+    // Conditions on two different variables usually come from single-label files with different
+    // names (and units); && ignores the units and must combine the labels too.
+    write_qvr(path_a, make_single_label_metadata("demand", "MW"), [](const std::vector<int64_t>& dims, size_t /*k*/) {
+        return static_cast<double>(dims[0]);
+    });
+    write_qvr(path_b, make_single_label_metadata("price", "USD"), [](const std::vector<int64_t>& dims, size_t /*k*/) {
+        return static_cast<double>(dims[1]);
+    });
+
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto b = BinaryFile::open_file(path_b, 'r');
+    Expression e = (Expression(a) > 1.0) && (Expression(b) < 2.0);
+    EXPECT_EQ(e.metadata().labels, std::vector<std::string>{"demand"});
+    EXPECT_EQ(e.metadata().unit, "");
+    e.save(path_out);
+
+    auto va = read_all_cells(path_a);
+    auto vb = read_all_cells(path_b);
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(vo.size(), va.size());
+    for (size_t i = 0; i < vo.size(); ++i)
+        EXPECT_DOUBLE_EQ(vo[i], (va[i] > 1.0 && vb[i] < 2.0) ? 1.0 : 0.0) << " at index " << i;
 }
 
 TEST_F(ExpressionFixture, MirrorTimeNonTimeMismatchAThrows) {
@@ -1971,6 +2056,76 @@ TEST_F(ExpressionFixture, IfElseBroadcastsLabels) {
     EXPECT_DOUBLE_EQ(cell_11[1], 1.0 * 10 + 1.0 + 1);
     EXPECT_DOUBLE_EQ(cell_22[0], -(2.0 * 10 + 2.0 + 0));
     EXPECT_DOUBLE_EQ(cell_22[1], -(2.0 * 10 + 2.0 + 1));
+}
+
+TEST_F(ExpressionFixture, IfElseSingleLabelOperandsTakeThenLabels) {
+    // Every operand has a single label, each named differently: the output takes the then label.
+    write_qvr(path_a, make_single_label_metadata("c", "flag"), [](const std::vector<int64_t>& dims, size_t /*k*/) {
+        return (dims[0] == 1) ? 1.0 : 0.0;
+    });
+    write_qvr(path_b, make_single_label_metadata("t"), [](const std::vector<int64_t>&, size_t) { return 10.0; });
+    write_qvr(path_c, make_single_label_metadata("e"), [](const std::vector<int64_t>&, size_t) { return 20.0; });
+
+    auto cond = BinaryFile::open_file(path_a, 'r');
+    auto then_v = BinaryFile::open_file(path_b, 'r');
+    auto else_v = BinaryFile::open_file(path_c, 'r');
+    Expression e = ifelse(Expression(cond), Expression(then_v), Expression(else_v));
+    EXPECT_EQ(e.metadata().labels, std::vector<std::string>{"t"});
+    e.save(path_out);
+
+    auto vc = read_all_cells(path_a);
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(vo.size(), vc.size());
+    for (size_t i = 0; i < vo.size(); ++i)
+        EXPECT_DOUBLE_EQ(vo[i], (vc[i] != 0.0) ? 10.0 : 20.0) << " at index " << i;
+}
+
+TEST_F(ExpressionFixture, IfElseDimensionsFollowConditionAndDatetimeFollowsThen) {
+    // Output dimensions come condition-first. With no time dimension anywhere, initial_datetime comes
+    // from the then operand, not the condition.
+    auto md_cond = BinaryMetadata::from_element(Element()
+                                                    .set("version", "1")
+                                                    .set("initial_datetime", "2030-01-01T00:00:00")
+                                                    .set("unit", "flag")
+                                                    .set("dimensions", {"scenario"})
+                                                    .set("dimension_sizes", {2})
+                                                    .set("labels", {"c"}));
+    auto md_branch = BinaryMetadata::from_element(Element()
+                                                      .set("version", "1")
+                                                      .set("initial_datetime", "2025-01-01T00:00:00")
+                                                      .set("unit", "MW")
+                                                      .set("dimensions", {"row"})
+                                                      .set("dimension_sizes", {3})
+                                                      .set("labels", {"val1", "val2"}));
+    write_qvr(
+        path_a, md_cond, [](const std::vector<int64_t>& dims, size_t /*k*/) { return (dims[0] == 1) ? 1.0 : 0.0; });
+    write_qvr(path_b, md_branch, [](const std::vector<int64_t>&, size_t) { return 10.0; });
+    write_qvr(path_c, md_branch, [](const std::vector<int64_t>&, size_t) { return 20.0; });
+
+    auto cond = BinaryFile::open_file(path_a, 'r');
+    auto then_v = BinaryFile::open_file(path_b, 'r');
+    auto else_v = BinaryFile::open_file(path_c, 'r');
+    Expression e = ifelse(Expression(cond), Expression(then_v), Expression(else_v));
+
+    const auto& m = e.metadata();
+    ASSERT_EQ(m.dimensions.size(), 2u);
+    EXPECT_EQ(m.dimensions[0].name, "scenario");
+    EXPECT_EQ(m.dimensions[0].size, 2);
+    EXPECT_EQ(m.dimensions[1].name, "row");
+    EXPECT_EQ(m.dimensions[1].size, 3);
+    EXPECT_EQ(m.labels, (std::vector<std::string>{"val1", "val2"}));
+    EXPECT_EQ(m.unit, "MW");
+    EXPECT_TRUE(m.initial_datetime == then_v.get_metadata().initial_datetime);
+    EXPECT_FALSE(m.initial_datetime == cond.get_metadata().initial_datetime);
+
+    e.save(path_out);
+    auto reopened = BinaryFile::open_file(path_out, 'r');
+    auto cell_12 = reopened.read({{"scenario", 1}, {"row", 2}}, true);
+    auto cell_23 = reopened.read({{"scenario", 2}, {"row", 3}}, true);
+    EXPECT_DOUBLE_EQ(cell_12[0], 10.0);
+    EXPECT_DOUBLE_EQ(cell_12[1], 10.0);
+    EXPECT_DOUBLE_EQ(cell_23[0], 20.0);
+    EXPECT_DOUBLE_EQ(cell_23[1], 20.0);
 }
 
 TEST_F(ExpressionFixture, IfElseUnitMismatchThenElseThrows) {
