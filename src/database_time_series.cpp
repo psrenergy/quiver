@@ -57,7 +57,7 @@ void validate_time_series_row(const std::string& caller,
 }  // namespace
 
 std::vector<GroupMetadata> Database::list_time_series_groups(const std::string& collection) const {
-    impl_->require_schema();
+    impl_->require_collection(collection, "list_time_series_groups");
 
     std::vector<GroupMetadata> result;
     for (const auto& group_name : impl_->schema->group_names(collection, GroupTableType::TimeSeries)) {

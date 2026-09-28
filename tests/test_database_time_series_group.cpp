@@ -207,9 +207,12 @@ TEST(Database, TimeSeriesCollectionNotFound) {
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
 
-    // Nonexistent collection returns empty list (matches list_vector_groups behavior)
-    auto groups = db.list_time_series_groups("NonexistentCollection");
-    EXPECT_TRUE(groups.empty());
+    try {
+        (void)db.list_time_series_groups("NonexistentCollection");
+        FAIL() << "Expected list_time_series_groups to reject an unknown collection";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), "Cannot list_time_series_groups: collection not found: NonexistentCollection");
+    }
 }
 
 static std::string capture_update_error(quiver::Database& db,

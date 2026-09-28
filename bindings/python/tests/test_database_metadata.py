@@ -159,6 +159,19 @@ class TestListGroups:
         for g in groups:
             assert g.dimension_column != ""
 
+    def test_list_groups_unknown_collection(self, collections_db: Database) -> None:
+        with pytest.raises(QuiverError, match="^Cannot list_vector_groups: collection not found: Nope$"):
+            collections_db.list_vector_groups("Nope")
+        with pytest.raises(QuiverError, match="^Cannot list_set_groups: collection not found: Nope$"):
+            collections_db.list_set_groups("Nope")
+        with pytest.raises(QuiverError, match="^Cannot list_time_series_groups: collection not found: Nope$"):
+            collections_db.list_time_series_groups("Nope")
+        # The composites inherit the throw instead of returning an empty dict.
+        with pytest.raises(QuiverError, match="^Cannot list_vector_groups: collection not found: Nope$"):
+            collections_db.read_vectors_by_id("Nope", 1)
+        with pytest.raises(QuiverError, match="^Cannot list_set_groups: collection not found: Nope$"):
+            collections_db.read_sets_by_id("Nope", 1)
+
 
 # -- Frozen dataclass behavior ------------------------------------------------
 

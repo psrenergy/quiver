@@ -636,7 +636,10 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
 - Time series row: `read_time_series_row(collection, group, attribute, date_time)` — one value per element using "last non-null value at or before date_time" semantics; null Value for elements with no matching data (bindings surface `nothing`/`null`/`None`/`nil`). Single-dimension groups only: a group with more than one dimension column (every PK column but `id`, e.g. `date_time` + `block`) holds several rows per date, so it throws Pattern 1 `Cannot read_time_series_row: group '<g>' of collection '<c>' has more than one dimension column` even on an empty collection — such a group is read with `read_time_series_group`. The query also filters NULL in its outer join, not only in the latest-date subquery.
 - Time series files: `has_time_series_files()`, `list_time_series_files_columns()`, `read_time_series_files()`, `update_time_series_files()`
 - Metadata: `get_{scalar,vector,set,time_series}_metadata()` — group metadata is a unified `GroupMetadata` with `dimension_column` (populated for time series, empty for vectors/sets)
-- List groups: `list_scalar_attributes()`, `list_vector_groups()`, `list_set_groups()`, `list_time_series_groups()`
+- List groups: `list_scalar_attributes()`, `list_vector_groups()`, `list_set_groups()`, `list_time_series_groups()` —
+  all four throw Pattern 1 `Cannot <op>: collection not found: <c>` for a name that is not a table (an existing
+  collection with no groups of that kind is an empty list), and the `read_vectors_by_id` / `read_sets_by_id`
+  composites inherit that throw.
 - Query: `query_string/integer/float(sql, parameters = {})` - parameterized SQL with positional `?`
   placeholders. **`Row::get_float` widens an INTEGER value** (the same int64-for-REAL rule as the
   scalar typing policy), so it applies to every float read — `query_float`, `read_scalar_floats`,
