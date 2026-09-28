@@ -958,24 +958,24 @@ Run from the repo root, in order.
 
 ## Acceptance criteria
 
-- [ ] `include/quiver/c/binary/binary_metadata.h` declares none of the 7 builder functions. `// Lifecycle` holds only `quiver_binary_metadata_free`.
-- [ ] `src/c/binary/binary_metadata.cpp` defines none of them. `<new>` and `<chrono>` are no longer included.
-- [ ] `include/quiver/binary/binary_metadata.h` has no `// Setters` block. `src/binary/binary_metadata.cpp` defines no `add_dimension` / `add_time_dimension`.
-- [ ] `bindings/julia/src/c_api.jl` was regenerated, and the only diff is the removal of the 7 wrappers.
-- [ ] `tests/test_c_api_binary_metadata.cpp`:
+- [x] `include/quiver/c/binary/binary_metadata.h` declares none of the 7 builder functions. `// Lifecycle` holds only `quiver_binary_metadata_free`.
+- [x] `src/c/binary/binary_metadata.cpp` defines none of them. `<new>` and `<chrono>` are no longer included.
+- [x] `include/quiver/binary/binary_metadata.h` has no `// Setters` block. `src/binary/binary_metadata.cpp` defines no `add_dimension` / `add_time_dimension`.
+- [x] `bindings/julia/src/c_api.jl` was regenerated, and the only diff is the removal of the 7 wrappers.
+- [x] `tests/test_c_api_binary_metadata.cpp`:
   - has `VALID_TOML` (or reuses an identical existing constant);
   - the 13 tests in T1 are deleted;
   - T2, T4 and T6–T10 are ported to `from_toml`;
   - `NullArgsErrorMessages` has no builder lines;
   - `BinaryCApiMetadata.*` passes.
-- [ ] `tests/test_binary_metadata.cpp`:
+- [x] `tests/test_binary_metadata.cpp`:
   - the `BinaryMetadataAddDimension` section is gone;
   - `MixedTimeAndNonTime` asserts parent indices;
   - the 3 new `BinaryMetadataFromTomlContent.Error*` tests pass.
-- [ ] The Julia 1960 test comment names `quiver_binary_metadata_from_element`, not `set_initial_datetime`.
-- [ ] The root `AGENTS.md` row, the `src/AGENTS.md` Builders/Factories lines and the `src/c/AGENTS.md` lifecycle block are updated. CRLF is preserved.
-- [ ] `CHANGELOG.md` 0.12.0 has the `### Removed` **BREAKING** entry with an *Adapt:* line.
-- [ ] The `git grep` in Verification step 6 prints nothing. `scripts/test-all.bat` passes.
+- [x] The Julia 1960 test comment names `quiver_binary_metadata_from_element`, not `set_initial_datetime`.
+- [x] The root `AGENTS.md` row, the `src/AGENTS.md` Builders/Factories lines and the `src/c/AGENTS.md` lifecycle block are updated. CRLF is preserved.
+- [x] `CHANGELOG.md` 0.12.0 has the `### Removed` **BREAKING** entry with an *Adapt:* line.
+- [x] The `git grep` in Verification step 6 prints nothing. `scripts/test-all.bat` passes.
 
 ## Pitfalls
 
@@ -1003,3 +1003,77 @@ Run from the repo root, in order.
 - Deduplicating the identical TOML literals in `GetNumberOfTimeDimensions` / `TomlRoundTrip`. Not needed for this change.
 - The pre-pattern messages in `BinaryMetadata::validate()`, such as `"Number of labels must be positive, got 0"`. They are the documented exception in the root `AGENTS.md`.
 - The getters, `to_toml` and the free helpers of the binary-metadata C API. They are unchanged.
+
+## Implementation notes
+
+Implemented on `rs/plan12` at `a47cb25`, the master merge of plan 11 (#319). Plans 08–11 had all landed by then (#316–#319), so this plan's "Depends on none" and the README's "08, 11" are both satisfied. `git merge origin/master` was a no-op.
+
+Before any edit, a verification pass re-read every excerpt against that tree:
+- The code this plan deletes had not moved:
+  - the C header and implementation;
+  - the C++ `// Setters` block and `add_dimension` / `add_time_dimension`;
+  - the 7 wrappers in `c_api.jl`.
+- Plans 08–11 had rewritten everything around it: `build_metadata`, `derive_initial_values()`, `read_toml_*`, and 14 + 4 new tests.
+- The Julia 1960 comment moved to L509–512.
+- Only line numbers drifted in the three AGENTS.md lines:
+  - root `AGENTS.md` row: L766;
+  - `src/AGENTS.md`: L759 / L762;
+  - `src/c/AGENTS.md`: L111–112.
+
+**Red probe.** This was a temporary test that was never committed. It followed the Reproduction on the builder path: `create`, `set_version`/`set_unit`/`set_labels`, `set_initial_datetime("2025-03-15T00:00:00")`, then month/12/monthly and day/31/daily. It then asserted the initial values against the factory values 1 and 15. It failed on both:
+- `test_c_api_binary_metadata.cpp(800): Expected equality ... Which is: 0` (month);
+- `(804) ... Which is: 0` (day).
+So the builders really left `initial_value` at 0 even after plan 09. The probe was then removed.
+
+**Tests first.** The ported and moved tests were written before any library code was deleted, and all passed on the unchanged code:
+- `BinaryMetadata*`: 91/91;
+- `BinaryCApiMetadata.*`: 25/25.
+
+After the deletion:
+- Build clean, with no reference to a deleted symbol.
+- `BinaryMetadata*`: 91/91. The baseline was 96: minus the 7 `AddDimension` tests, plus 2.
+- `BinaryCApiMetadata.*`: 25/25. The baseline was 38: plan 11's 4 are included, and 13 were deleted.
+- Full `quiver_tests`: 1344/1344. Full `quiver_c_tests`: 560/560.
+- Julia (`bindings/julia/test/test.bat`): "Testing Quiver tests passed", including Binary 83, Binary Metadata 161, Binary CSV 65 and Expression 184.
+- The Julia generator diff is exactly the 7 wrappers: 0 insertions, 28 deletions, no other hunk.
+- The leftover grep prints nothing.
+
+`scripts/test-all.bat` passes all six steps: C++ 1344, C API 560, Julia, Dart 426, JS 212 and Python 309. A first run had been stopped by the harness during the Dart step because the machine was low on memory, not because a test failed. The re-run started after clearing the partial `bindings/dart/.dart_tool/hooks_runner` cache that the first run left behind.
+
+**Deviations**
+1. **CHANGELOG.** The entry is appended to the existing `### Removed` under `## [0.12.4] — unreleased`, after plan 09's `set_initial_value()` bullet, not under `[0.12.0]`:
+   - `v0.12.0`–`v0.12.3` are tagged, and the manifests are already 0.12.4, so there is no bump.
+   - This is again a BREAKING entry in a patch release. Whether that calls for 0.13.0 is the maintainer's call.
+2. **`ErrorDuplicateFrequencies` was not added.** Plan 08's `BinaryMetadataFromTomlContent.InvalidFrequencyLayoutReportsTheValidatorMessage` already asserts the exact `Time dimension frequencies must be unique. Duplicate: daily` through `from_toml_content`. A third test would duplicate it. The other two C3–C4 tests were added.
+3. **Assertion idiom.** `ErrorUnknownFrequency` and `ErrorInvalidInitialDatetime` use the file's `EXPECT_THAT(..., ThrowsMessage<T>(HasSubstr(...)))` idiom, which plan 11 introduced there, instead of a bare `EXPECT_THROW`. They pin `std::invalid_argument` "Unknown frequency: invalid_freq" and `std::runtime_error` "Failed to parse initial_datetime: not-a-date".
+4. **Two plan-prescribed wordings were wrong and were narrowed.** The post-implementation review found both, with two lenses each, and verifiers confirmed them.
+   - `src/AGENTS.md` "the only way to build one" is false inside C++: `build_broadcast_metadata` / `build_ternary_broadcast_metadata` (`expression_helpers.h`) default-construct a `BinaryMetadata` and push dimensions. The sentence now says the factories are the only construction path **a binding** reaches (C API, Julia, Lua) and names those two helpers.
+   - The C header's `// Lifecycle (a handle is built only by the two factories below)` and the `src/c/AGENTS.md` block said a handle comes only from the factories. But `quiver_binary_file_get_metadata` and `quiver_expression_get_metadata` also return owned handles that need `quiver_binary_metadata_free`. Both comments now name those getters. This is comment-only; `c_api.jl` does not carry header comments.
+5. **`src/AGENTS.md` Factories line.** Plan 11 had reworded it into a paragraph ending in a full stop, so the clause went in as a new sentence rather than an em-dash append.
+6. **Leftover grep.** It needs `':!.claude/'` as well as `':!CHANGELOG.md'`, because the tracked plan files name the symbols.
+7. **`test-all.bat` has six steps.** Commit `01e78d7` removed the CLI smoke step. Root `AGENTS.md` ("plus a `quiver_cli` smoke test") and the `tests/AGENTS.md` step list still describe seven steps. That is out of scope here; it is plan 65/82 territory.
+
+**Format.**
+- clang-format: no change (the rebuild after it was a ninja no-op).
+- JuliaFormatter and dart format: no change.
+- `scripts/format.bat` exited 1 on two environment problems in this fresh checkout, not on code:
+  - **Python.** `uv sync` failed while building `quiverdb` ("Failed to update Windows PE resources: The system cannot open the device or file specified"). `uv run --no-project --with ruff ruff format --check bindings/python` reports "35 files already formatted".
+  - **JS.** There was no `node_modules`, so `biome` was not found. After `bun install --frozen-lockfile`, biome rewrote 42 untouched files from CRLF to LF. `git diff --ignore-cr-at-eol` confirmed there was no content change, and `git checkout -- bindings/js` restored them.
+
+**Review.** A 4-lens adversarial workflow ran: acceptance audit, coverage-loss audit, docs accuracy, hygiene/cross-plan. It used 8 agents, and each finding was verified independently.
+- Coverage-loss and acceptance lenses: nothing. Every deleted assertion about behaviour that still exists has a surviving home. The `to_toml` → `from_toml` time-dimension round trip that `TomlRoundTripFromBuilders` covered is still covered by `BinaryMetadataToToml.RoundTrip` and by `test_expression.cpp`'s reopen-and-combine check.
+- The two confirmed findings are deviation 4.
+
+**For later plans**
+- **Plan 21.** `### Removed` under `[0.12.4]` now holds two bullets; append a third. Plan 21's `src/c/AGENTS.md` Return Codes line (~L49) is untouched. The Memory Management binary-metadata block is now three lines.
+- **Plan 16.** Its regeneration of `c_api.jl` starts from a file without the 7 wrappers.
+- **Banners in `tests/test_c_api_binary_metadata.cpp`.**
+  - Renamed: `Builders and Getters` → `Getters` and `Zero time dimensions` → `Time dimension chaining`.
+  - Deleted: `TOML round-trip with builders` and `Labels -- edge cases`.
+  - Plan 11's `FromElementDimensionSizesCountMismatch` / `FromToml*` tests now close the `From Element -- error cases` section.
+  - The file-scope `VALID_TOML` is new. clangd flags it under `readability-identifier-naming` (GlobalConstantCase `lower_case`). It is kept as the plan names it, matching `QUIVER_FILE_VERSION` / `QVR_EXTENSION`.
+- **Pre-existing, not touched.**
+  - The `<cstring>` / `<filesystem>` includes in `tests/test_c_api_binary_metadata.cpp` are unused.
+  - The headers of `quiver_binary_file_get_metadata` (`binary_file.h`) and `quiver_expression_get_metadata` (`expression.h`) still do not say that the caller owns and frees the returned handle. Only the `binary_metadata.h` lifecycle comment and `src/c/AGENTS.md` now say so.
+  - `src/binary/binary_metadata.cpp` still ends without a trailing newline, as at HEAD.
+- **Fresh-checkout setup.** A checkout without `node_modules` needs `bun install` before `bindings/js/format.bat`. The first `uv sync` builds the whole C++ core through scikit-build, which is heavy with other sessions running in parallel.

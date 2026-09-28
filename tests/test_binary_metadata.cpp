@@ -189,6 +189,9 @@ labels = ["val"]
     EXPECT_FALSE(md.dimensions[1].is_time_dimension());
     EXPECT_TRUE(md.dimensions[2].is_time_dimension());
     EXPECT_EQ(md.number_of_time_dimensions(), 2);
+    // A time dimension chains to the previous *time* dimension, skipping the non-time "scenario"
+    EXPECT_EQ(md.dimensions[0].time->parent_dimension_index, -1);
+    EXPECT_EQ(md.dimensions[2].time->parent_dimension_index, 0);
 }
 
 TEST(BinaryMetadataFromTomlContent, ErrorTimeDimensionNotInDimensions) {
@@ -221,6 +224,36 @@ labels = ["val"]
     EXPECT_THAT([&] { BinaryMetadata::from_toml_content(toml); },
                 ThrowsMessage<std::runtime_error>(HasSubstr(
                     "Cannot from_toml_content: time dimensions must appear in the same order as dimensions")));
+}
+
+TEST(BinaryMetadataFromTomlContent, ErrorUnknownFrequency) {
+    std::string toml = R"(
+version = "1"
+dimensions = ["stage"]
+dimension_sizes = [4]
+time_dimensions = ["stage"]
+frequencies = ["invalid_freq"]
+initial_datetime = "2025-01-01T00:00:00"
+unit = "MW"
+labels = ["val"]
+)";
+    EXPECT_THAT([&] { BinaryMetadata::from_toml_content(toml); },
+                ThrowsMessage<std::invalid_argument>(HasSubstr("Unknown frequency: invalid_freq")));
+}
+
+TEST(BinaryMetadataFromTomlContent, ErrorInvalidInitialDatetime) {
+    std::string toml = R"(
+version = "1"
+dimensions = ["row"]
+dimension_sizes = [3]
+time_dimensions = []
+frequencies = []
+initial_datetime = "not-a-date"
+unit = "MW"
+labels = ["val"]
+)";
+    EXPECT_THAT([&] { BinaryMetadata::from_toml_content(toml); },
+                ThrowsMessage<std::runtime_error>(HasSubstr("Failed to parse initial_datetime: not-a-date")));
 }
 
 TEST(BinaryMetadataFromTomlContent, InvalidFrequencyLayoutReportsTheValidatorMessage) {
@@ -1006,72 +1039,4 @@ TEST(BinaryMetadataValidateTimeDimensionSizes, OutermostHasNoSizeConstraint) {
 TEST(BinaryMetadataValidateTimeDimensionSizes, InvalidCombination) {
     auto md = make_time_pair(TimeFrequency::Hourly, 24, TimeFrequency::Hourly, 24);
     EXPECT_THROW(md.validate_time_dimension_sizes(), std::runtime_error);
-}
-
-// ============================================================================
-// BinaryMetadataAddDimension
-// ============================================================================
-
-TEST(BinaryMetadataAddDimension, NonTimeDimension) {
-    BinaryMetadata md;
-    md.add_dimension("row", 3);
-    ASSERT_EQ(md.dimensions.size(), 1u);
-    EXPECT_EQ(md.dimensions[0].name, "row");
-    EXPECT_EQ(md.dimensions[0].size, 3);
-    EXPECT_FALSE(md.dimensions[0].is_time_dimension());
-}
-
-TEST(BinaryMetadataAddDimension, TimeDimension) {
-    BinaryMetadata md;
-    md.add_time_dimension("month", 12, "monthly");
-    ASSERT_EQ(md.dimensions.size(), 1u);
-    EXPECT_EQ(md.dimensions[0].name, "month");
-    EXPECT_EQ(md.dimensions[0].size, 12);
-    EXPECT_TRUE(md.dimensions[0].is_time_dimension());
-    EXPECT_EQ(md.dimensions[0].time->frequency, TimeFrequency::Monthly);
-    EXPECT_EQ(md.dimensions[0].time->parent_dimension_index, -1);
-}
-
-TEST(BinaryMetadataAddDimension, InvalidFrequencyThrows) {
-    BinaryMetadata md;
-    EXPECT_THROW(md.add_time_dimension("bad", 10, "invalid_freq"), std::invalid_argument);
-}
-
-TEST(BinaryMetadataAddDimension, MultipleAddsAccumulate) {
-    BinaryMetadata md;
-    md.add_dimension("row", 3);
-    md.add_dimension("col", 2);
-    md.add_time_dimension("month", 12, "monthly");
-    EXPECT_EQ(md.dimensions.size(), 3u);
-}
-
-TEST(BinaryMetadataAddDimension, TimeDimensionParentIndexMinusOne) {
-    BinaryMetadata md;
-    md.add_time_dimension("year", 5, "yearly");
-    EXPECT_EQ(md.dimensions[0].time->parent_dimension_index, -1);
-}
-
-TEST(BinaryMetadataAddDimension, TimeDimensionsCountedAndChained) {
-    BinaryMetadata md;
-    md.version = "1";
-    md.unit = "MW";
-    md.labels = {"val"};
-    md.add_time_dimension("month", 12, "monthly");
-    md.add_dimension("scenario", 3);
-    md.add_time_dimension("day", 31, "daily");
-    EXPECT_EQ(md.number_of_time_dimensions(), 2);
-    EXPECT_EQ(md.dimensions[0].time->parent_dimension_index, -1);
-    EXPECT_EQ(md.dimensions[2].time->parent_dimension_index, 0);
-    EXPECT_NO_THROW(md.validate());
-}
-
-TEST(BinaryMetadataAddDimension, ValidationFiresOnBuilderMetadata) {
-    BinaryMetadata md;
-    md.version = "1";
-    md.unit = "MW";
-    md.labels = {"val"};
-    md.add_time_dimension("a", 12, "monthly");
-    md.add_time_dimension("b", 12, "monthly");  // duplicate frequency must be rejected
-    EXPECT_EQ(md.number_of_time_dimensions(), 2);
-    EXPECT_THROW(md.validate(), std::runtime_error);
 }

@@ -4,8 +4,6 @@
 #include "../internal.h"
 #include "utils/datetime.h"
 
-#include <chrono>
-#include <new>
 #include <string>
 #include <vector>
 
@@ -45,18 +43,6 @@ void convert_dimension_to_c(const quiver::Dimension& src, quiver_dimension_t& ds
 extern "C" {
 
 // Lifecycle
-
-QUIVER_C_API quiver_error_t quiver_binary_metadata_create(quiver_binary_metadata_t** out) {
-    QUIVER_REQUIRE(out);
-
-    try {
-        *out = new quiver_binary_metadata{quiver::BinaryMetadata{}};
-        return QUIVER_OK;
-    } catch (const std::bad_alloc&) {
-        quiver_set_last_error("Memory allocation failed");
-        return QUIVER_ERROR;
-    }
-}
 
 QUIVER_C_API quiver_error_t quiver_binary_metadata_free(quiver_binary_metadata_t* md) {
     delete md;
@@ -99,88 +85,6 @@ QUIVER_C_API quiver_error_t quiver_binary_metadata_to_toml(quiver_binary_metadat
     try {
         auto toml = md->metadata.to_toml();
         *out_toml = quiver::string::new_c_str(toml);
-        return QUIVER_OK;
-    } catch (const std::exception& e) {
-        quiver_set_last_error(e.what());
-        return QUIVER_ERROR;
-    }
-}
-
-// Builders
-
-QUIVER_C_API quiver_error_t quiver_binary_metadata_set_initial_datetime(quiver_binary_metadata_t* md,
-                                                                        const char* iso8601) {
-    QUIVER_REQUIRE(md, iso8601);
-
-    try {
-        std::tm tm{};
-        if (!quiver::datetime::parse_iso8601(iso8601, tm)) {
-            throw std::runtime_error(std::string("Failed to parse initial_datetime: ") + iso8601);
-        }
-        md->metadata.initial_datetime = quiver::datetime::tm_to_time_point(tm);
-        return QUIVER_OK;
-    } catch (const std::exception& e) {
-        quiver_set_last_error(e.what());
-        return QUIVER_ERROR;
-    }
-}
-
-QUIVER_C_API quiver_error_t quiver_binary_metadata_set_unit(quiver_binary_metadata_t* md, const char* unit) {
-    QUIVER_REQUIRE(md, unit);
-
-    md->metadata.unit = unit;
-    return QUIVER_OK;
-}
-
-QUIVER_C_API quiver_error_t quiver_binary_metadata_set_version(quiver_binary_metadata_t* md, const char* version) {
-    QUIVER_REQUIRE(md, version);
-
-    md->metadata.version = version;
-    return QUIVER_OK;
-}
-
-QUIVER_C_API quiver_error_t quiver_binary_metadata_set_labels(quiver_binary_metadata_t* md,
-                                                              const char* const* labels,
-                                                              size_t count) {
-    QUIVER_REQUIRE(md, labels);
-
-    for (size_t i = 0; i < count; ++i) {
-        if (!labels[i]) {
-            quiver_set_last_error("Cannot set_labels: null label at index " + std::to_string(i));
-            return QUIVER_ERROR;
-        }
-    }
-
-    md->metadata.labels.clear();
-    md->metadata.labels.reserve(count);
-    for (size_t i = 0; i < count; ++i) {
-        md->metadata.labels.emplace_back(labels[i]);
-    }
-    return QUIVER_OK;
-}
-
-QUIVER_C_API quiver_error_t quiver_binary_metadata_add_dimension(quiver_binary_metadata_t* md,
-                                                                 const char* name,
-                                                                 int64_t size) {
-    QUIVER_REQUIRE(md, name);
-
-    try {
-        md->metadata.add_dimension(name, size);
-        return QUIVER_OK;
-    } catch (const std::exception& e) {
-        quiver_set_last_error(e.what());
-        return QUIVER_ERROR;
-    }
-}
-
-QUIVER_C_API quiver_error_t quiver_binary_metadata_add_time_dimension(quiver_binary_metadata_t* md,
-                                                                      const char* name,
-                                                                      int64_t size,
-                                                                      const char* frequency) {
-    QUIVER_REQUIRE(md, name, frequency);
-
-    try {
-        md->metadata.add_time_dimension(name, size, frequency);
         return QUIVER_OK;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
