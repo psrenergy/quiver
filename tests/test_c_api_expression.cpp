@@ -1184,6 +1184,51 @@ TEST_F(ExpressionCApiFixture, AggregateChainedWithBinary) {
     EXPECT_DOUBLE_EQ(cell1[1], 78.0);  // c=1, k=1: 66 + 6 + 6
 }
 
+TEST_F(ExpressionCApiFixture, AggregateOutermostTimeDimFromMidYearStart) {
+    // year x month from 2025-03-01 holds 2025-03..2026-12. Reducing "year" makes month outermost;
+    // output month m must be calendar month m, in memory and on disk.
+    auto* md = make_metadata_v(
+        {"year", "month"}, {2, 12}, {"v1"}, "MW", "2025-03-01T00:00:00", {"year", "month"}, {"yearly", "monthly"});
+    quiver_binary_file_t* f = nullptr;
+    ASSERT_EQ(quiver_binary_file_open_file(path_a.c_str(), 'w', md, &f), QUIVER_OK);
+    quiver_binary_metadata_free(md);
+    const char* dim_names[] = {"year", "month"};
+    for (int64_t year = 1; year <= 2; ++year) {
+        for (int64_t month = (year == 1 ? 3 : 1); month <= 12; ++month) {
+            int64_t dim_values[] = {year, month};
+            const double data[] = {static_cast<double>(100 * year + month)};
+            ASSERT_EQ(quiver_binary_file_write(f, dim_names, dim_values, 2, data, 1), QUIVER_OK);
+        }
+    }
+    ASSERT_EQ(quiver_binary_file_close(f), QUIVER_OK);
+
+    auto* a = expr_from_file(path_a);
+    quiver_expression_t* agg = nullptr;
+    ASSERT_EQ(quiver_expression_aggregate(a, "year", QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM, nullptr, &agg),
+              QUIVER_OK);
+
+    quiver_binary_metadata_t* out_md = nullptr;
+    ASSERT_EQ(quiver_expression_get_metadata(agg, &out_md), QUIVER_OK);
+    char* start = nullptr;
+    ASSERT_EQ(quiver_binary_metadata_get_initial_datetime(out_md, &start), QUIVER_OK);
+    EXPECT_STREQ(start, "2025-01-01T00:00:00");
+    quiver_binary_metadata_free_string(start);
+    quiver_dimension_t month_dim{};
+    ASSERT_EQ(quiver_binary_metadata_get_dimension(out_md, 0, &month_dim), QUIVER_OK);
+    EXPECT_EQ(month_dim.time_properties.initial_value, 1);
+    quiver_binary_metadata_free_dimension(&month_dim);
+    quiver_binary_metadata_free(out_md);
+
+    ASSERT_EQ(quiver_expression_save(agg, path_out.c_str()), QUIVER_OK);
+    quiver_expression_close(a);
+    quiver_expression_close(agg);
+
+    EXPECT_DOUBLE_EQ(read_one_cell(path_out, {"month"}, {1})[0], 201.0);   // Jan: 2026 only
+    EXPECT_DOUBLE_EQ(read_one_cell(path_out, {"month"}, {2})[0], 202.0);   // Feb: 2026 only
+    EXPECT_DOUBLE_EQ(read_one_cell(path_out, {"month"}, {3})[0], 306.0);   // Mar: 103 + 203
+    EXPECT_DOUBLE_EQ(read_one_cell(path_out, {"month"}, {12})[0], 324.0);  // Dec: 112 + 212
+}
+
 TEST_F(ExpressionCApiFixture, FromUnopenedBinaryFile) {
     write_fixture(path_a, [](int r, int c, int k) { return static_cast<double>(r * 100 + c * 10 + k); });
 

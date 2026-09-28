@@ -33,10 +33,6 @@ TimeFrequency frequency_from_string(const std::string& str) {
     throw std::invalid_argument("Unknown frequency: " + str);
 }
 
-void TimeProperties::set_initial_value(int64_t initial_value) {
-    this->initial_value = initial_value;
-}
-
 std::chrono::system_clock::time_point
 TimeProperties::add_offset_from_int(std::chrono::system_clock::time_point base_datetime, int64_t value) const {
     // Flooring first is what keeps calendar steps exact: an inner dimension's base is already the start of

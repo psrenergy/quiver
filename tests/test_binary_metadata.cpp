@@ -143,6 +143,17 @@ labels = ["val"]
     EXPECT_EQ(hourly.dimensions[1].time->initial_value, 7);
 }
 
+TEST(BinaryMetadataDeriveInitialValues, RecomputesFromCurrentInitialDatetime) {
+    auto md = BinaryMetadata::from_toml_content(make_valid_toml());
+    ASSERT_EQ(md.dimensions[1].time->initial_value, 1);
+
+    md.initial_datetime = sys_days{2025y / March / 15d};
+    md.derive_initial_values();
+
+    EXPECT_EQ(md.dimensions[0].time->initial_value, 1);   // the outermost time dimension always starts at 1
+    EXPECT_EQ(md.dimensions[1].time->initial_value, 15);  // day of the month
+}
+
 TEST(BinaryMetadataFromTomlContent, MixedTimeAndNonTime) {
     std::string toml = R"(
 version = "1"

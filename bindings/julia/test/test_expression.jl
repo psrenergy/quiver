@@ -1100,6 +1100,47 @@ end
         end
     end
 
+    @testset "Aggregate outermost time dim from mid-year start" begin
+        # year x month from 2025-03-01 holds 2025-03..2026-12. Reducing "year" makes month outermost;
+        # output month m must be calendar month m, in memory and after a reopen.
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            md = make_metadata_full(
+                dimensions = ["year", "month"],
+                dimension_sizes = [2, 12],
+                labels = ["v1"],
+                initial_datetime = "2025-03-01T00:00:00",
+                time_dimensions = ["year", "month"],
+                frequencies = ["yearly", "monthly"],
+            )
+            file = Quiver.Binary.open_file(path_a; mode = 'w', metadata = md)
+            for year in 1:2, month in 1:12
+                year == 1 && month < 3 && continue  # before the file starts
+                Quiver.Binary.write!(file; data = [100.0 * year + month], year = year, month = month)
+            end
+            Quiver.Binary.close!(file)
+
+            with_expr(path_a) do e
+                out = Quiver.aggregate(e, "year", Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM)
+                md_out = Quiver.get_metadata(out)
+                @test Quiver.Binary.get_initial_datetime(md_out) == "2025-01-01T00:00:00"
+                @test Quiver.Binary.get_dimensions(md_out)[1].initial_value == 1
+                Quiver.save(out, path_out)
+                return Quiver.close!(out)
+            end
+
+            reopened = Quiver.Binary.open_file(path_out; mode = 'r')
+            @test Quiver.Binary.get_initial_datetime(Quiver.Binary.get_metadata(reopened)) == "2025-01-01T00:00:00"
+            Quiver.Binary.close!(reopened)
+            @test read_one_cell(path_out; month = 1)[1] == 201.0   # Jan: 2026 only
+            @test read_one_cell(path_out; month = 2)[1] == 202.0   # Feb: 2026 only
+            @test read_one_cell(path_out; month = 3)[1] == 306.0   # Mar: 103 + 203
+            @test read_one_cell(path_out; month = 12)[1] == 324.0  # Dec: 112 + 212
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
     @testset "Aggregate dimension not found throws" begin
         path_a = make_path("a")
         try

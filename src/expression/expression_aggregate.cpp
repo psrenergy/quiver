@@ -67,7 +67,18 @@ ExpressionAggregate::ExpressionAggregate(Operation operation,
         }
     }
 
+    // Removing the outermost time dimension promotes its time child to outermost, but compute_row still
+    // forwards the child's coordinate to the operand unchanged: output month 3 is the operand's month 3,
+    // i.e. March. So the output must start where the removed dimension's period holding initial_datetime
+    // starts (year x month from 2025-03-01 -> 2025-01-01; day x hour from 06:00 -> 00:00). It runs before
+    // derive_initial_values(), which reads this start. With no time dimension left there is nothing to label.
+    if (reduced_dim.is_time_dimension() && reduced_dim.time->parent_dimension_index == -1 &&
+        output_meta_.number_of_time_dimensions() > 0) {
+        output_meta_.initial_datetime = reduced_dim.time->add_offset_from_int(operand_meta.initial_datetime, 1);
+    }
+
     output_meta_.validate();
+    output_meta_.derive_initial_values();
 
     operand_dims_buf_.resize(operand_meta.dimensions.size());
     operand_row_buf_.resize(operand_meta.labels.size());
