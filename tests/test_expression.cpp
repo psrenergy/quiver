@@ -1664,9 +1664,10 @@ TEST_F(ExpressionFixture, AgentChainedAfterAggregate) {
     auto md = make_simple_metadata();
     write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t) { return 3.0; });
     auto a = BinaryFile::open_file(path_a, 'r');
+    // One aggregation enum: the same spelling drives both the dimension and the label-axis reduction.
     Expression(a)
         .aggregate("row", ExpressionAggregate::Operation::Sum)
-        .aggregate_agents(ExpressionAggregateAgents::Operation::Mean)
+        .aggregate_agents(ExpressionAggregate::Operation::Mean)
         .save(path_out);
 
     // After reducing row(3) and agents(2): output dims=[col(2)], labels=["mean"] = 2 cells.

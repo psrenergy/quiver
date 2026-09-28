@@ -206,7 +206,7 @@ end
 
 function aggregate_agents(
     e::Expression,
-    operation::C.quiver_expression_aggregate_agents_operation_t,
+    operation::C.quiver_expression_aggregate_operation_t,
     parameter::Optional{Real} = nothing,
 )
     out = Ref{Ptr{C.quiver_expression}}(C_NULL)
@@ -232,7 +232,7 @@ end
 
 function aggregate_agents(
     f::Binary.File,
-    operation::C.quiver_expression_aggregate_agents_operation_t,
+    operation::C.quiver_expression_aggregate_operation_t,
     parameter::Optional{Real} = nothing,
 )
     return aggregate_agents(Expression(f), operation, parameter)

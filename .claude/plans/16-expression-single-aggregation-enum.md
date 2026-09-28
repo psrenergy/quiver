@@ -631,15 +631,15 @@ Run from the repo root `C:\Development\Quiver\quiver1`. The paths are for PowerS
 
 ## Acceptance criteria
 
-- [ ] `include/quiver/expression/expression_node.h` has exactly one `enum class Operation { Sum, Mean, Min, Max, Percentile };` (in `ExpressionAggregate`); `ExpressionAggregateAgents` declares `using Operation = ExpressionAggregate::Operation;`.
-- [ ] The four aggregation helpers in `src/expression/expression_helpers.h` are `inline` non-template functions taking `ExpressionAggregate::Operation`.
-- [ ] `include/quiver/c/expression/expression.h` has no `quiver_expression_aggregate_agents_operation_t`; `quiver_expression_aggregate_agents` takes `quiver_expression_aggregate_operation_t`.
-- [ ] `src/c/expression/expression.cpp` has one `from_c(op, caller)`; the messages are `Cannot aggregate: unknown operation enum value` and `Cannot aggregate_agents: unknown operation enum value`.
-- [ ] `src/lua_runner.cpp` has one `parse_aggregate_op(op, caller)`; `parse_aggregate_agents_op` is gone; the Lua messages are unchanged.
-- [ ] `bindings/julia/src/c_api.jl` is regenerated, not hand-edited, and both `aggregate_agents` methods in `expression.jl` take `C.quiver_expression_aggregate_operation_t`.
-- [ ] The new tests `AggregateUnknownOperationNamesTheCaller` (C API) and `AggregateAgentsUnknownOpThrows` (Lua) pass; the edited C++, C API and Julia tests pass.
-- [ ] src/AGENTS.md (three spots) and src/c/AGENTS.md are updated as quoted; there is a CHANGELOG **BREAKING** entry under 0.12.0 → Changed.
-- [ ] `scripts/test-all.bat` is green.
+- [x] `include/quiver/expression/expression_node.h` has exactly one `enum class Operation { Sum, Mean, Min, Max, Percentile };` (in `ExpressionAggregate`); `ExpressionAggregateAgents` declares `using Operation = ExpressionAggregate::Operation;`.
+- [x] The four aggregation helpers in `src/expression/expression_helpers.h` are `inline` non-template functions taking `ExpressionAggregate::Operation`.
+- [x] `include/quiver/c/expression/expression.h` has no `quiver_expression_aggregate_agents_operation_t`; `quiver_expression_aggregate_agents` takes `quiver_expression_aggregate_operation_t`.
+- [x] `src/c/expression/expression.cpp` has one `from_c(op, caller)`; the messages are `Cannot aggregate: unknown operation enum value` and `Cannot aggregate_agents: unknown operation enum value`.
+- [x] `src/lua_runner.cpp` has one `parse_aggregate_op(op, caller)`; `parse_aggregate_agents_op` is gone; the Lua messages are unchanged.
+- [x] `bindings/julia/src/c_api.jl` is regenerated, not hand-edited, and both `aggregate_agents` methods in `expression.jl` take `C.quiver_expression_aggregate_operation_t`.
+- [x] The new tests `AggregateUnknownOperationNamesTheCaller` (C API) and `AggregateAgentsUnknownOpThrows` (Lua) pass; the edited C++, C API and Julia tests pass.
+- [x] src/AGENTS.md (three spots) and src/c/AGENTS.md are updated as quoted; there is a CHANGELOG **BREAKING** entry under 0.12.0 → Changed. *(Under `[0.12.4] — unreleased` → `### Changed` instead; see Implementation notes.)*
+- [x] `scripts/test-all.bat` is green.
 
 ## Pitfalls
 
@@ -660,3 +660,43 @@ Run from the repo root `C:\Development\Quiver\quiver1`. The paths are for PowerS
 - Renaming `validate_aggregation_param`'s `fn_label` parameter to `caller`: cosmetic, not needed.
 - Caller names in other Lua converters (`table_to_element`, `lua_table_to_values`, ...): plan 47.
 - The other three C expression enums (`quiver_expression_operation_t`, `_unary_`, `_ternary_`): these are distinct concepts and stay as they are.
+
+## Implementation notes
+
+Implemented on `rs/plan16` at HEAD `59bb11a` (plan 15's merge). `git merge origin/master` fast-forwarded the branch from `236f547` over plans 06-15 before any edit. A read-only pass, repeated after that merge, matched every quoted excerpt, symbol, signature and test anchor; only line numbers had moved. Changes 1-8, the tests and the docs are the plan's text verbatim, and clang-format kept every edited line as written.
+
+**Red/green.**
+- Julia, on the baseline build: the plan's reproduction gave `MethodError: no method matching aggregate_agents(::Quiver.Expression, ::Quiver.C.quiver_expression_aggregate_operation_t)`.
+- `LuaExpressionTest.AggregateAgentsUnknownOpThrows` passed on the old code, as the plan says (it is a guard for the caller name).
+- With the edited C++ and C API tests on the old code, the build failed: MSVC `C2664` at `AgentChainedAfterAggregate` (`cannot convert argument 1 from 'quiver::ExpressionAggregate::Operation'`), and at all five `quiver_expression_aggregate_agents` calls in `test_c_api_expression.cpp` (four renamed sites plus the new test).
+- After the fix:
+  - `ExpressionFixture.*:LuaExpressionTest.*`: 138/138.
+  - `ExpressionCApiFixture.*`: 73/73.
+  - Julia `test_expression.jl`: 186/186.
+- `scripts/test-all.bat`: all six suites PASS (C++ 1362, C API 564, Julia 1489, Dart 426, JS 212, Python 309).
+- The build has no new warnings. The two `C4100` warnings in `test_c_api_expression.cpp` (`LogicalAndOrNot`) were already there; they moved down 20 lines because of the new test.
+
+**Generator.** `generator.bat` changed `c_api.jl` by exactly the two expected hunks (1 insertion, 9 deletions). It started from plan 12's regeneration, and no C header had changed since.
+
+**Deviations and drift:**
+1. **CHANGELOG section.** The bullet goes at the end of `## [0.12.4] — unreleased` → `### Changed`, just above `### Removed`. The plan said `[0.12.0]`, but `v0.12.0` to `v0.12.3` are tagged now and the manifests are at 0.12.4. There is no manifest bump. This follows plans 02, 04, 05 and 12.
+2. **Verification step 6's grep is scoped to `':!CHANGELOG.md' ':!.claude'`.** The plan files, this one included, quote the removed names, so the unscoped grep can never come back empty. Steps 6 and 7 are both empty with that scope. `git grep quiver_expression -- bindings/dart bindings/python bindings/js` is empty too.
+3. **Repo path.** The Verification section names `quiver1`; this checkout is `quiver9`. It had no `build/`, so the first-time configure line from root `AGENTS.md` was used.
+4. **`test-all.bat` has six steps.** `01e78d7` removed the CLI smoke step, so there is no pre-existing step-7 failure to report.
+
+**Environment issues in a fresh checkout (not code):**
+- Julia needed `Pkg.instantiate()` before the first run.
+- `scripts/format.bat` first exited 1 at the Python step, on uv's transient `Failed to update Windows PE resources`. A second `uv sync` succeeded, and the re-run exited 0.
+- JS needed `bun install --frozen-lockfile` and Dart needed `dart pub get` before `format.bat` could run.
+- As in plans 08-15, biome rewrote 42 untouched CRLF JS files as LF. `git diff --ignore-cr-at-eol` was empty, so `git checkout -- bindings/js` restored them. No `.bat` file changed.
+
+**Review.** A 4-lens adversarial workflow read the diff: C++/ABI/ODR, plan conformance, message bytes, and docs/leftovers. Three lenses found nothing. The fourth questioned the CHANGELOG sentence "C++ code compiles unchanged": a downstream pair of overloads on the two old types would now collide. The independent verifier rejected it. The wording is the plan's, nothing in the repo overloads on both types, and the entry already names the replacement type. The text was kept.
+
+**For later plans:**
+- **Plan 51** edits `bind_expression` next to the two lambdas changed here. The one parser is `parse_aggregate_op(op, caller)`, and the lambdas pass `"aggregate"` / `"aggregate_agents"`. Do not re-add a templated or second parser.
+- **Plans 21 / 22** regenerate `c_api.jl` starting from a file that no longer has `quiver_expression_aggregate_agents_operation_t`.
+- **New tests by other plans** must use `ExpressionAggregate::Operation::*` in C++ (the `ExpressionAggregateAgents::Operation::*` spelling still compiles through the alias), `QUIVER_EXPRESSION_AGGREGATE_OPERATION_*` in C, and `Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_*` in Julia, for `aggregate_agents` as well.
+- **Merge hotspots**, if a parallel branch touches them:
+  - the aggregation block of `src/expression/expression_helpers.h`, right below plan 15's builder;
+  - the "All operation enums are nested" bullet of `src/AGENTS.md`, right below plan 15's broadcast bullet;
+  - the end of `CHANGELOG.md` `[0.12.4]` → `### Changed`.

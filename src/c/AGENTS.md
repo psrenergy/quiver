@@ -16,7 +16,7 @@ include/quiver/c/binary/    # Binary C API headers
   csv_converter.h             # bin_to_csv, csv_to_bin functions
   binary_metadata.h           # quiver_binary_metadata_t + flat structs (quiver_dimension_t, quiver_time_properties_t)
 include/quiver/c/expression/  # Expression C API header
-  expression.h                # quiver_expression_t handle + node constructors + five operation enums
+  expression.h                # quiver_expression_t handle + node constructors + four operation enums
 src/c/
   common.cpp              # quiver_get_last_error / quiver_set_last_error / quiver_version
   internal.h              # Shared structs (quiver_database, quiver_element, quiver_binary_file, quiver_binary_metadata, quiver_expression), QUIVER_REQUIRE macro

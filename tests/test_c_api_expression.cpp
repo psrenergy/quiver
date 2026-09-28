@@ -1161,7 +1161,7 @@ TEST_F(ExpressionCApiFixture, AggregateAgentsSumReducesLabels) {
 
     auto* a = expr_from_file(path_a);
     quiver_expression_t* agg = nullptr;
-    ASSERT_EQ(quiver_expression_aggregate_agents(a, QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_SUM, nullptr, &agg),
+    ASSERT_EQ(quiver_expression_aggregate_agents(a, QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM, nullptr, &agg),
               QUIVER_OK);
 
     // Verify output metadata: single label "sum", dims unchanged.
@@ -1193,7 +1193,7 @@ TEST_F(ExpressionCApiFixture, AggregateAgentsPercentileWithParam) {
     auto* a = expr_from_file(path_a);
     const double p = 0.5;
     quiver_expression_t* agg = nullptr;
-    ASSERT_EQ(quiver_expression_aggregate_agents(a, QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_PERCENTILE, &p, &agg),
+    ASSERT_EQ(quiver_expression_aggregate_agents(a, QUIVER_EXPRESSION_AGGREGATE_OPERATION_PERCENTILE, &p, &agg),
               QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(agg, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
@@ -1224,11 +1224,30 @@ TEST_F(ExpressionCApiFixture, AggregateAgentsNullArguments) {
     auto* a = expr_from_file(path_a);
     quiver_expression_t* agg = nullptr;
 
-    EXPECT_EQ(
-        quiver_expression_aggregate_agents(nullptr, QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_SUM, nullptr, &agg),
-        QUIVER_ERROR);
-    EXPECT_EQ(quiver_expression_aggregate_agents(a, QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_SUM, nullptr, nullptr),
+    EXPECT_EQ(quiver_expression_aggregate_agents(nullptr, QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM, nullptr, &agg),
               QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_aggregate_agents(a, QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM, nullptr, nullptr),
+              QUIVER_ERROR);
+
+    quiver_expression_close(a);
+}
+
+TEST_F(ExpressionCApiFixture, AggregateUnknownOperationNamesTheCaller) {
+    write_fixture(path_a, [](int, int, int) { return 1.0; });
+    auto* a = expr_from_file(path_a);
+    quiver_expression_t* agg = nullptr;
+    // 5 is past PERCENTILE but inside the enum's value range (0..7), so the cast is well-defined.
+    const auto unknown = static_cast<quiver_expression_aggregate_operation_t>(5);
+
+    EXPECT_EQ(quiver_expression_aggregate(a, "row", unknown, nullptr, &agg), QUIVER_ERROR);
+    EXPECT_EQ(agg, nullptr);
+    EXPECT_NE(std::string(quiver_get_last_error()).find("Cannot aggregate: unknown operation enum value"),
+              std::string::npos);
+
+    EXPECT_EQ(quiver_expression_aggregate_agents(a, unknown, nullptr, &agg), QUIVER_ERROR);
+    EXPECT_EQ(agg, nullptr);
+    EXPECT_NE(std::string(quiver_get_last_error()).find("Cannot aggregate_agents: unknown operation enum value"),
+              std::string::npos);
 
     quiver_expression_close(a);
 }

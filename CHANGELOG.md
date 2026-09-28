@@ -62,6 +62,17 @@ callers to change something are prefixed **BREAKING** and say what to do.
   across operands (non-singleton label sets must match)`, replacing `labels have same size N but
   different content` and `labels have incompatible sizes N vs M`.
 
+- **BREAKING — expressions: one aggregation operation enum.** `quiver_expression_aggregate_agents`
+  now takes `quiver_expression_aggregate_operation_t`, the same enum as `quiver_expression_aggregate`;
+  `quiver_expression_aggregate_agents_operation_t` and its `QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_*`
+  constants are removed (their values were identical). In C++, `ExpressionAggregateAgents::Operation`
+  is now an alias of `ExpressionAggregate::Operation`, so C++ code compiles unchanged and can pass
+  either spelling to either method. Lua takes the operation as a string and is unaffected.
+
+  *Adapt:* in C and Julia, replace `QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_<OP>` with
+  `QUIVER_EXPRESSION_AGGREGATE_OPERATION_<OP>` — in Julia,
+  `Quiver.aggregate_agents(e, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_MEAN)`.
+
 ### Removed
 
 - **BREAKING (C++ only) — `TimeProperties::set_initial_value()`.** `BinaryMetadata::derive_initial_values()`
