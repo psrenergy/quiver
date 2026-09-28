@@ -191,7 +191,11 @@ never copy them into a binding.
 - `invalid/` — schemas the validator must reject: `duplicate_attribute_time_series.sql`,
   `duplicate_attribute_vector.sql`, `fk_actions.sql`, `fk_not_null_set_null.sql`,
   `label_not_null.sql`, `label_not_unique.sql`, `label_wrong_type.sql`, `no_configuration.sql`,
-  `set_no_unique.sql`, `vector_no_index.sql`
+  `set_no_parent_fk.sql`, `set_no_unique.sql`, `set_unknown_parent.sql`,
+  `time_series_fk_actions.sql`, `time_series_relation_fk_actions.sql`, `vector_no_index.sql`.
+  Each file must break exactly one rule and be otherwise valid SQL, and a new test should assert
+  the message rather than a bare throw: `duplicate_attribute_time_series.sql` once "passed" on a
+  trailing-comma syntax error while pointing its FKs at a table that did not exist.
 - `migrations/` — versioned `1/`, `2/`, `3/`, each with `up.sql`/`down.sql`
 - `issues/` — regression migrations for specific issues (`issue52/`, `issue70/`)
 

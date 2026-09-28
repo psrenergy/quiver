@@ -939,18 +939,18 @@ From the repo root. Bash commands are for Git Bash; the `.bat` lines can be run 
 
 ## Acceptance criteria
 
-- [ ] `validate()` calls `validate_group_parent(name, "Vector"|"Set"|"Time series")` for all three group kinds. The stale `// Time series tables have minimal validation` comment is gone.
-- [ ] `validate_vector_table` no longer contains the parent-exists or parent-FK code, and every "Vector table" message it still has is unchanged.
-- [ ] `validate_foreign_keys` has no vector-only branch and no `is_time_series_table` exemption from the action rule. Its naming-rule block is unchanged.
-- [ ] All eight dead guards are deleted: seven `if (!table)` / `if (!col_table)` / `if (!group_table)` and one `if (!col)`.
-- [ ] The `schema_validator.h` comment lists the new rules, and `validate_group_parent` is declared.
-- [ ] `duplicate_attribute_time_series.sql` is valid SQL, references `Collection(id)`, and its test asserts the duplicate-attribute message.
-- [ ] The four new invalid schemas exist, and each is rejected with exactly the message given above.
-- [ ] New tests pass in C++ (4), C API (1), Julia (4), Dart (4), Python (1) and JS (1), and each of them fails on the pre-change code.
-- [ ] Every `valid/`, `migrations/` and `issues/` schema, and every schema added by plans 01–05, still loads: the full suites are green.
-- [ ] Both `HydroPlant_set_gaugingstations` doc examples declare the parent FK. The vector, set and time-series `id` bullets in `rules.md` and `attributes.md`, and the `time_series.md` paragraph, state the rule.
-- [ ] Root `AGENTS.md` Foreign Keys, `src/AGENTS.md` Core Internals and the `tests/AGENTS.md` `invalid/` list are updated.
-- [ ] A **BREAKING** CHANGELOG bullet is under `0.12.0` → `### Changed`. No manifest version bump.
+- [x] `validate()` calls `validate_group_parent(name, "Vector"|"Set"|"Time series")` for all three group kinds. The stale `// Time series tables have minimal validation` comment is gone.
+- [x] `validate_vector_table` no longer contains the parent-exists or parent-FK code, and every "Vector table" message it still has is unchanged.
+- [x] `validate_foreign_keys` has no vector-only branch and no `is_time_series_table` exemption from the action rule. Its naming-rule block is unchanged.
+- [x] All eight dead guards are deleted: seven `if (!table)` / `if (!col_table)` / `if (!group_table)` and one `if (!col)`. *Seven deleted; `if (!col)` is reachable and was kept (Implementation notes, deviation 3).*
+- [x] The `schema_validator.h` comment lists the new rules, and `validate_group_parent` is declared.
+- [x] `duplicate_attribute_time_series.sql` is valid SQL, references `Collection(id)`, and its test asserts the duplicate-attribute message.
+- [x] The four new invalid schemas exist, and each is rejected with exactly the message given above.
+- [x] New tests pass in C++ (4), C API (1), Julia (4), Dart (4), Python (1) and JS (1), and each of them fails on the pre-change code.
+- [x] Every `valid/`, `migrations/` and `issues/` schema, and every schema added by plans 01–05, still loads: the full suites are green.
+- [x] Both `HydroPlant_set_gaugingstations` doc examples declare the parent FK. The vector, set and time-series `id` bullets in `rules.md` and `attributes.md`, and the `time_series.md` paragraph, state the rule.
+- [x] Root `AGENTS.md` Foreign Keys, `src/AGENTS.md` Core Internals and the `tests/AGENTS.md` `invalid/` list are updated.
+- [x] A **BREAKING** CHANGELOG bullet is under `0.12.0` → `### Changed`. No manifest version bump. *Under `[0.12.3]` instead (Implementation notes, deviation 1).*
 
 ## Pitfalls
 
@@ -974,3 +974,44 @@ From the repo root. Bash commands are for Git Bash; the `.bat` lines can be run 
 - Other time-series structural checks (dimension column present, composite primary key) and the `starts_with("date_")` skip in `validate_no_duplicate_attributes`. No plan owns them. Plan 02 redefines the dimension column in the reader/writer code only.
 - Case-insensitive matching of the `REFERENCES` target, and the FK naming rule's set/time-series exemption (`!is_set_table && !is_time_series_table`). Both are unchanged. No plan owns them.
 - Converting the other nine bare `EXPECT_THROW` invalid-schema tests (and their Julia/Dart mirrors) to message assertions. No plan owns this. Only the fixture fixed here gets a message assertion.
+
+## Implementation notes
+
+Implemented on `rs/plan6`, starting from HEAD `236f547` (the plan 05 merge). The maintainer's `01e78d7` (drops the CLI smoke step from `scripts/test-all.bat`) landed underneath while this was in progress. A verification pass in plan mode matched the rest of the plan against the current code, before any edit: every quoted excerpt in `src/schema_validator.cpp` and `include/quiver/schema_validator.h` (neither changed since `58dfe7a`), every test anchor in all six layers, and every docs/AGENTS anchor except the one in deviation 2. The three schemas that plans 01–05 added (`csv_import_cascade_cycle.sql`, `csv_import_self_cascade.sql`, `time_series_date_columns.sql`) already declare the parent FK with CASCADE/CASCADE, so Verification step 1 changed nothing. No test in any layer builds a set or time-series table inline. No C API, FFI, binding or Lua code changed, so the generators were not run.
+
+**Red/green.** Every new test was run against the pre-fix validator first, and every one failed:
+- C++: `InvalidSetNoParentFk`, `InvalidSetUnknownParent`, `InvalidTimeSeriesFkActions` and `InvalidTimeSeriesRelationFkActions` each failed with "does not throw any exception". `InvalidDuplicateAttributeTimeSeries` failed on the old fixture's `Failed to execute SQL: near ")": syntax error`, and passed once the fixture was fixed, still before the validator change.
+- C API: `FromSchemaRejectsSetTableWithoutParentFk` got `QUIVER_OK` (0) instead of `QUIVER_ERROR`.
+- Julia: all four new testsets failed. `runtests.jl` hard-codes `failfast = true`, so they were run once through a plain `@testset` wrapper to see all four.
+- Dart: all four failed (`Actual: <Closure: () => Database>`).
+- Python: `DID NOT RAISE QuiverError`.
+- JS: `expect(received).toThrow(expected)`.
+
+After the fix:
+- `SchemaValidatorFixture.*`: 36/36. `TempFileFixture.FromSchema*`: 5/5.
+- `quiver_tests`: 1316/1316. `quiver_c_tests`: 565/565.
+- Julia: 1451/1451. Dart: 425/425, after clearing `.dart_tool/hooks_runner` and `.dart_tool/lib`. Python: 308/308. JS: 211/211.
+- `scripts/test-all.bat` before `01e78d7`: steps 1-6 PASS, and step 7, the CLI smoke test, FAILED as before (`Script file not found: ...\example\example1.lua`, plan 65). After `01e78d7`, the six-step script reports `All tests PASSED` (C++ 1316, C API 565, Julia 1451, Dart 425, JS 211, Python 308).
+- Both reproductions from "Why" now exit 1 with the quoted messages.
+- `quiver_cli --schema` succeeds for all 16 `valid/*.sql` files, and `--migrations` for `migrations/` and `issues/issue70`. `issues/issue52` fails as it always has: it is deliberately invalid (Configuration has no `label`), and `IssuesFixture.Issue52` expects the throw. Its set and time-series tables have correct parent FKs.
+- The new `HydroPlant_set_gaugingstations` doc example validates. It was loaded with `Configuration`, `HydroPlant` and `GaugingStation` collections, and it is byte-identical in `rules.md` and `attributes.md`.
+
+**Deviations:**
+1. **The CHANGELOG entry sits under a new `### Changed` in `## [0.12.3] — unreleased`, above its `### Fixed`.** The plan said `[0.12.0]`, but `v0.12.0`–`v0.12.2` are tagged and the manifests are at 0.12.3. No manifest bump.
+2. **`docs/time_series.md`: plan 02 had rewritten the paragraph this plan quotes.** It now defines the dimension column as a `date_` column in the primary key, and says any other `date_` column is a value column. The new sentence was appended at the end of that paragraph rather than after the ISO sentence, so the `date_` discussion is not split. There it follows "…this format automatically", so it starts "The table's `id`" instead of "Its `id`", whose antecedent would be ambiguous there.
+3. **`if (!col) continue;` in `validate_foreign_keys` is reachable, so it was kept with a one-line comment.** The other seven guards were deleted. A probe with `quiver_cli` showed that SQLite accepts an FK whose child column is a generated column (`p_id INTEGER GENERATED ALWAYS AS (a) VIRTUAL REFERENCES P(id) ...`: `pragma_foreign_key_list` reports `from = p_id`). `PRAGMA table_info`, which is `Schema::load_columns`' source, omits generated columns: 0 rows, while `table_xinfo` returns 1. So `get_column` returns `nullptr` there, and without the guard the schema would crash the validator instead of loading. The plan's "Why" considered only unknown columns and case. No test pins the skip.
+4. **Review fixes to plan-prescribed text.** A post-implementation review ran on three lenses (plan conformance, validator correctness, prose accuracy), and each finding was then attacked by an independent refuter. Three prose errors survived and were fixed:
+   - **CHANGELOG *Adapt*:** the plain rebuild recipe ("copy the rows") fails with `FOREIGN KEY constraint failed` on exactly the databases the old behaviour damaged, because their orphan rows violate the new key. It now says to copy only rows whose element still exists (`... WHERE id IN (SELECT id FROM <Collection>)`). Both versions were checked with a scratch two-step migration: the plain copy fails, and the filtered copy succeeds and drops the orphan row.
+   - **`src/AGENTS.md`:** the plan's bullet said sets and time series "used to skip both" checks. Sets were already held to the FK-action rule; only time series were exempt. The bullet now says sets and time series skipped the parent check, and time series the action rule too.
+   - **`schema_validator.h`:** the plan's comment line "Vector tables have a composite (id, vector_index) primary key" claims a check that `validate_vector_table` never makes: a vector table with no PK, or with `PRIMARY KEY (id, value)`, validates. The line now says what is checked: "a vector_index column, and their id column is not the sole primary key".
+
+**A known loosening, accepted by the maintainer.** The branch deleted from `validate_foreign_keys` was not redundant in one case. It required CASCADE/CASCADE on *every* FK on a vector table's `id`, and `validate_group_parent` checks only the FK that points to the parent. A vector table with a correct parent FK plus a second `FOREIGN KEY (id) REFERENCES Other(id) ON DELETE SET NULL` was rejected before and is accepted now. Deleting the `Other` element nulls `id`, and the rows then outlive their element (reproduced). The schema is contrived: `id` has to be nullable, i.e. a non-STRICT table, or `id` outside the PK. Set tables have no PK, so their `id` is nullable by default, and sets and time series never had the check. Closing it means requiring CASCADE/CASCADE on every FK on a group table's `id`, in `validate_group_parent`. That is a candidate for a later plan.
+
+**For later plans:**
+- **55:** `include/quiver/schema_validator.h` gained the `validate_group_parent` declaration and a rewritten class comment. Carry both along.
+- **59:** the `validate_group_parent` loop keeps the `from_column == "id" && to_table == parent` predicate on purpose, because `PRAGMA foreign_key_list` is in reverse declaration order.
+- **62:** `tests/test_schema_validator.cpp` now includes `<gmock/gmock.h>` and uses `EXPECT_THAT(lambda, testing::ThrowsMessage<std::runtime_error>(testing::HasSubstr(...)))`, the first `ThrowsMessage` use in the repo. The `invalid/` list in `tests/AGENTS.md` is alphabetical, and its new trailing paragraph states the one-rule-per-fixture convention.
+- **73:** only the `HydroPlant_set_gaugingstations` examples and the vector/set/time-series `id` bullets were edited in `docs/rules.md` and `docs/attributes.md`. The vector bullet was inserted, not replaced. `HydroPlant_vector_gaugingstations`, the relation-FK prose, the Configuration example and the migration sections are untouched.
+- **75:** only the `invalid/` bullet of `tests/AGENTS.md` changed.
+- **Dart native cache:** the `dart test` hook did not rebuild after the `src/` change. The new Dart tests still saw the old validator until `bindings/dart/.dart_tool/hooks_runner` and `.dart_tool/lib` were cleared.
+- **`scripts/format.bat`:** biome's `format --write` rewrote 22 untouched JS files from the working tree's CRLF to LF. That is not a content change (`git diff --ignore-cr-at-eol` is empty), so those files were checked out again. Only the re-wrap of the new JS test was kept.

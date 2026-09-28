@@ -11,6 +11,7 @@ import { getSymbols } from "../src/loader.ts";
 
 const SCHEMA_PATH = join(__dirname, "..", "..", "..", "tests", "schemas", "valid", "basic.sql");
 const MIGRATIONS_PATH = join(__dirname, "..", "..", "..", "tests", "schemas", "migrations");
+const INVALID_SCHEMAS_PATH = join(__dirname, "..", "..", "..", "tests", "schemas", "invalid");
 
 describe("Database lifecycle", () => {
   const tempDirs: string[] = [];
@@ -57,6 +58,14 @@ describe("Database lifecycle", () => {
     expect(() => {
       Database.fromSchema(":memory:", "nonexistent/path/schema.sql");
     }).toThrow(QuiverError);
+  });
+
+  test("fromSchema rejects a set table without a parent foreign key", () => {
+    expect(() =>
+      Database.fromSchema(":memory:", join(INVALID_SCHEMAS_PATH, "set_no_parent_fk.sql")),
+    ).toThrow(
+      "Set table 'Collection_set_tags' must have foreign key to parent collection 'Collection'",
+    );
   });
 
   test("fromMigrations opens database and returns Database instance", () => {
