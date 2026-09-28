@@ -552,8 +552,6 @@ As the plan says, no test fails without the ON-clause filter. `ReadTimeSeriesRow
 
 **Review.** A 3-lens adversarial review (core correctness, docs accuracy, acceptance audit) found no bugs. Its one actionable nit was the docs placement above.
 
-**Commit history.** The plan lands in two commits instead of one. While the binding suites were running, a commit `ad67be7 "update"` was made on `rs/plan4` from outside this session and pushed to `origin/rs/plan4`. It holds the fix, the seven tests, and every doc and changelog edit. On the user's instruction it was kept, and the commit on top carries only what came after it: these notes, the `docs/time_series.md` paragraph move, and the clang-format reflow of the new C API test.
-
 Things later plans should know:
 - **Plan 17.** When the signature changes, give `DatabaseCApi.ReadTimeSeriesRowRejectsMultiDimensionGroup` the new `out_mask` argument. The test asserts `out_values == nullptr` on the error path, so check the mask the same way. Plan 17 also edits paragraphs that this plan extended:
   - The root `AGENTS.md` "Time series row" bullet now ends with the multi-dimension rule.
