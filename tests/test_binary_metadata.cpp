@@ -115,6 +115,34 @@ labels = ["val"]
     EXPECT_EQ(md.dimensions[2].time->initial_value, 11);  // hour 10 → 10+1=11
 }
 
+TEST(BinaryMetadataFromTomlContent, InitialValuesUnderWeeklyCountFromInitialDatetime) {
+    // Saturday 2025-03-15 was day 4 of a week counted from January 1. A week now starts on the day of
+    // initial_datetime, so the day starts at 1 and the hour at hour-of-day + 1.
+    auto daily = BinaryMetadata::from_toml_content(R"(
+version = "1"
+dimensions = ["week", "day"]
+dimension_sizes = [60, 7]
+time_dimensions = ["week", "day"]
+frequencies = ["weekly", "daily"]
+initial_datetime = "2025-03-15T06:00:00"
+unit = "MW"
+labels = ["val"]
+)");
+    EXPECT_EQ(daily.dimensions[1].time->initial_value, 1);
+
+    auto hourly = BinaryMetadata::from_toml_content(R"(
+version = "1"
+dimensions = ["week", "hour"]
+dimension_sizes = [60, 168]
+time_dimensions = ["week", "hour"]
+frequencies = ["weekly", "hourly"]
+initial_datetime = "2025-03-15T06:00:00"
+unit = "MW"
+labels = ["val"]
+)");
+    EXPECT_EQ(hourly.dimensions[1].time->initial_value, 7);
+}
+
 TEST(BinaryMetadataFromTomlContent, MixedTimeAndNonTime) {
     std::string toml = R"(
 version = "1"
@@ -160,6 +188,28 @@ unit = "MW"
 labels = ["val"]
 )";
     EXPECT_THROW(BinaryMetadata::from_toml_content(toml), std::runtime_error);
+}
+
+TEST(BinaryMetadataFromTomlContent, InvalidFrequencyLayoutReportsTheValidatorMessage) {
+    // validate() runs before the initial values are computed, so an inner yearly dimension or a repeated frequency
+    // gets the validator's message instead of an std::logic_error from the initial-value calculation
+    auto toml_with = [](const std::string& frequencies) {
+        return "version = \"1\"\ndimensions = [\"a\", \"b\"]\ndimension_sizes = [12, 31]\n"
+               "time_dimensions = [\"a\", \"b\"]\nfrequencies = " +
+               frequencies + "\ninitial_datetime = \"2025-01-01T00:00:00\"\nunit = \"MW\"\nlabels = [\"val\"]\n";
+    };
+    auto message_of = [](const std::string& toml) -> std::string {
+        try {
+            BinaryMetadata::from_toml_content(toml);
+        } catch (const std::runtime_error& e) {
+            return e.what();
+        }
+        return "no exception";
+    };
+    EXPECT_EQ(message_of(toml_with(R"(["monthly", "yearly"])")),
+              "Time dimension frequencies must be ordered from lowest to highest frequency.");
+    EXPECT_EQ(message_of(toml_with(R"(["daily", "daily"])")),
+              "Time dimension frequencies must be unique. Duplicate: daily");
 }
 
 TEST(BinaryMetadataFromTomlContent, NoTimeDimensions) {

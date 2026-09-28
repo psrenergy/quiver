@@ -165,6 +165,13 @@ Settled questions — don't relitigate without the user; each was decided delibe
   mid-transaction) is gone: import now keeps foreign keys on throughout. Whether to let it nest
   instead is an open decision for the maintainer.
 - **`BinaryMetadata::number_of_time_dimensions()` is derived** from `dimensions`, never stored.
+- **A binary time coordinate names a calendar cell, and a week starts on the day of `initial_datetime`.** An inner
+  time value is its position inside the parent's period (day of month/year/week, hour of day/month/year/week);
+  `add_offset_from_int` steps from period starts: yearly and monthly steps start from January 1 / the 1st, never
+  from `initial_datetime`'s day of the month, so month ends and leap years cannot shift a cell, and a week is seven
+  days counted from `initial_datetime`'s day, never from January 1.
+  One function, `position_in_parent` (`src/binary/binary_utils.h`), yields both the initial values and the
+  read/write check. Details in `src/AGENTS.md` ("Time Coordinates").
 - **One C API error channel**: everything (LuaRunner included) reports via
   `quiver_get_last_error`; no per-handle error channels.
 - **Python's `Element` is internal**; users pass `**kwargs` to create/update.

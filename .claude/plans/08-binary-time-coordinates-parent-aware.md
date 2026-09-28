@@ -990,18 +990,18 @@ From the repo root (`C:\Development\Quiver\quiver1`), in order:
 
 ## Acceptance criteria
 
-- [ ] `TimeProperties::datetime_to_int` and `quiver::day_of_week` are gone from headers, sources and tests.
-- [ ] `add_offset_from_int` implements the period-start contract documented in `time_properties.h` and reads no `initial_value`.
-- [ ] `position_in_parent` in `src/binary/binary_utils.h` is the only position calculation; it is called by `set_time_dimension_initial_values` and `BinaryFile::validate_dimension_values`, and nowhere else.
-- [ ] `from_toml_content` calls `metadata.validate()` before `set_time_dimension_initial_values(metadata)`; the four unreachable `std::logic_error` branches are deleted.
-- [ ] Under a weekly parent the day's `initial_value` is 1 and the hour's is hour-of-day + 1.
-- [ ] Every cell of all eight parent/child pairs, walked with `first_dimensions`/`next_dimensions` from 2025-03-15T06:00:00, writes and reads back (weekly layouts span 60 weeks across Dec 31).
-- [ ] The validator's `Invalid values for time dimensions: ...` message text is unchanged.
-- [ ] New tests exist in C++ (time properties, metadata, binary file, CSV), the C API, Lua and Julia, and each is listed in Verification.
-- [ ] `src/AGENTS.md` (file map, "Time Coordinates", performance note) and a root AGENTS.md Design Decision bullet are updated.
-- [ ] CHANGELOG `[0.12.0]` has the BREAKING `Changed` entry and the two `Fixed` entries.
-- [ ] No C API, FFI declaration or binding wrapper changed; `c_api.jl` is untouched.
-- [ ] `scripts/test-all.bat` is green.
+- [x] `TimeProperties::datetime_to_int` and `quiver::day_of_week` are gone from headers, sources and tests.
+- [x] `add_offset_from_int` implements the period-start contract documented in `time_properties.h` and reads no `initial_value`.
+- [x] `position_in_parent` in `src/binary/binary_utils.h` is the only position calculation; it is called by `set_time_dimension_initial_values` and `BinaryFile::validate_dimension_values`, and nowhere else.
+- [x] `from_toml_content` calls `metadata.validate()` before `set_time_dimension_initial_values(metadata)`; the four unreachable `std::logic_error` branches are deleted. *Four messages, five throw sites; all five are gone with the function (Implementation notes, deviation 6).*
+- [x] Under a weekly parent the day's `initial_value` is 1 and the hour's is hour-of-day + 1.
+- [x] Every cell of all eight parent/child pairs, walked with `first_dimensions`/`next_dimensions` from 2025-03-15T06:00:00, writes and reads back (weekly layouts span 60 weeks across Dec 31).
+- [x] The validator's `Invalid values for time dimensions: ...` message text is unchanged.
+- [x] New tests exist in C++ (time properties, metadata, binary file, CSV), the C API, Lua and Julia, and each is listed in Verification.
+- [x] `src/AGENTS.md` (file map, "Time Coordinates", performance note) and a root AGENTS.md Design Decision bullet are updated.
+- [x] CHANGELOG `[0.12.0]` has the BREAKING `Changed` entry and the two `Fixed` entries. *Under a new `[0.12.4]` instead (Implementation notes, deviation 1).*
+- [x] No C API, FFI declaration or binding wrapper changed; `c_api.jl` is untouched.
+- [x] `scripts/test-all.bat` is green.
 
 ## Pitfalls
 
@@ -1026,3 +1026,86 @@ From the repo root (`C:\Development\Quiver\quiver1`), in order:
 - The unreachable "Weekly under Yearly" case in `validate_time_dimension_sizes`. It is harmless and no plan owns it.
 - Making `validate_dimension_values` opt-in for speed (the src/AGENTS.md performance note).
 - Sub-hour cells: an hourly cell is a clock hour by design, so minutes in `initial_datetime` are floored, not preserved.
+
+## Implementation notes
+
+Implemented on `rs/plan8`. Before any edit, `origin/master` was merged in, which fast-forwarded to `41748e8`: plan 07's merge `ed824f5`, tagged `v0.12.3`, then the 0.12.4 manifest bump. Nothing in that merge touches the binary subsystem.
+
+A read-only verification workflow ran in plan mode first, before any edit. Four reviewers took one angle each (a Python model of the old and new code, a breakage sweep, anchors/APIs, a design critique), and a refuter attacked every finding.
+- Every quoted excerpt, symbol, test name and API in this plan still matched the code. No file under `src/binary` or `include/quiver/binary` has changed since `58dfe7a`.
+- Every number in Tests was reproduced by the model: first cells, cell counts, rejected cells, CSV labels, 343, 1122, and the weekly initial values 1 and 7 (4 and 79 before).
+- 456k two-level coordinates from 15 starts showed zero acceptance mismatches under the new contract.
+- No other existing test changes. The deleted functions have no caller outside `src/binary`.
+- Verdict: implement as written, with the text corrections below.
+
+No C API, FFI or binding code changed, so the generators were not run and `c_api.jl` is untouched.
+
+**Red/green.** Every new test was added first and run against the unfixed code.
+- C++ (the Verification step 2 filter, plus `TimePropertiesDatetimeToInt.*`, which still existed then): 19 failed and 346 passed. The 19 are exactly the "Fail before the fix" list, each with the predicted message:
+  - `'daily' has value 74 ... implies 15`
+  - `'hourly' has value 1759 ... implies 1`
+  - `'hourly' has value 343 ... implies 1`
+  - weekly `first_dimensions` `{1, 4}` / `{1, 79}`
+  - `'monthly' has value 2 ... implies 3`
+  - `'daily' has value 1 ... implies 4`
+  - `'hourly' has value 7 ... implies 1`
+  - CSV labels `2025-01-31, 2025-03-03, 2025-03-31, 2025-05-01`
+  - the metadata initial values 4 and 79, and an uncaught `YEARLY frequency not implemented...`
+  - the six `add_offset_from_int` results `2025-01-10`, `03-03`, `03-01`, `03-22 06:00`, `03-15 06:00`, `03-15 07:30`
+  - Lua `a day under a week starts at 1`
+
+  `EveryCellMonthlyUnderYearly`, `EveryCellDailyUnderMonthly`, `EveryCellHourlyUnderDaily` and `ValueOneIsThePeriodHoldingTheBase` passed, as predicted.
+- C API: `HourlyUnderMonthlyFromNonMidnightStart` failed alone (write returned `QUIVER_ERROR`, `'hour' has value 343 ... implies 1`). The other 139 tests passed.
+- Julia: the new testset errored at `write!` (1, 343) with `... implies 1`. The runner is fail-fast.
+
+After the fix:
+- The Verification step 2 filter: 354/354 (365 − the 11 deleted tests). Every test named in step 2 is `OK`, and no `TimePropertiesDatetimeToInt.*` test remains.
+- Step 3 filter: 140/140.
+- Step 5 `git grep`: prints nothing. `position_in_parent` is called only from `set_time_dimension_initial_values` and `validate_dimension_values`.
+- `scripts/test-all.bat` (six steps): `All tests PASSED`. C++ 1328 (plan 07's 1318 + 21 − 11), C API 567, Julia 1465 (1461 + 4), Dart 426, JS 212, Python 309.
+- One earlier full Julia run spent 38 min in `Expression`. It did not reproduce: that testset alone took 47 s, and in `test-all` it took 1m06s (3m17s for the whole Julia suite). The cause was environmental.
+- Build: no new warnings. The HEAD version of `time_properties.cpp` compiled with the same flags gives C4458 plus three C4715s. The new file gives the C4458 plus two C4715s (`frequency_to_string`, `add_offset_from_int`); `datetime_to_int`'s went with it.
+- The Reproduction table was re-run through `quiver_cli.exe` with a scratch Lua script. All eight cells now write and read back, and both invalid layouts report the validator messages. A monthly-only file from 2025-01-31 exports `2025-01-01 … 2025-04-01`.
+
+**Deviations:**
+1. **The CHANGELOG entries are in a new `## [0.12.4] — unreleased` section**, above `[0.12.3]`, with its own `### Changed` and `### Fixed`. The plan said `[0.12.0]`, but `v0.12.0` through `v0.12.3` are tagged and the manifests are at 0.12.4. The anchor bullets it names (the `export_csv()` quoting bullet and the `Artifacts.toml` one) now sit in the released `[0.11.0]`. No manifest bump.
+2. **The CHANGELOG weekly sentence is rewritten.** "…could not be written past its first week before this release, so no stored data depends on the old numbering" is false. `BinaryFile::write` with named coordinates (Julia `write!`, Lua `file:write`, the C API) accepted two kinds of cell under the old check:
+   - hours 1–24 of every week of a weekly × hourly file;
+   - the weeks of a weekly × daily file whose start on the old January-1 grid fell on the 1st of a month.
+
+   Those stored cells now name a moment `(day of year − 1) mod 7` days later. From 2025-03-15, old (1,1) is Mar 12 and new (1,1) is Mar 15. The entry now says so and tells the caller to rewrite such files. The Fixed bullet's "daily under weekly past the first week" was fixed the same way.
+
+   A first correction, made while planning, still read "only a weekly × daily file started on the 2nd–7th of January…". The post-implementation review showed that it held only for the walk-based writers (`csv_to_bin`, `save`).
+3. **The CHANGELOG Fixed bullet is narrowed** in two places:
+   - A non-midnight start rejected the first cell only with an **hourly** dimension under a monthly or yearly one. Monthly × daily from 06:00 worked.
+   - The 29th–31st broke **yearly + monthly** layouts. Monthly × daily from Jan 31 worked.
+4. **Doc text corrections.**
+   - `src/AGENTS.md` "Time Coordinates": "`add_offset_from_int(datetime, 1)` is the start of that frequency's period holding `datetime`" is wrong for Weekly. A qualifier was added: the week starts on `datetime`'s day, which is on the file's grid only when that day is a whole number of weeks after `initial_datetime`'s day.
+   - The root Design Decision bullet said steps are "never from `initial_datetime`'s own day", which contradicts outermost Weekly and Daily. It now says the yearly and monthly steps start from January 1 / the 1st, never from `initial_datetime`'s day of the month.
+   - The `BinaryTimeLayouts` banner no longer says 06:00:00 is "not the start of any period" (it starts an hourly one). It now reads "not the start of any day, week, month or year".
+5. **`HourlyUnderMonthlyFromNonMidnightStart` (C API) uses `EXPECT_EQ(out_count, 1u)` plus a guard instead of `ASSERT_EQ`.** The red run showed the problem: the `ASSERT` returned early and left the reader open, so later `BinaryCApiFixture` tests (`WriterBlocksReader`, `ClosedWriterAllowsReader`, …) failed in `TearDown` (`remove: The process cannot access the file`). The plan's "frees every handle, in line with plan 69" claim held only on the passing path.
+6. **Small drift.**
+   - There are five `std::logic_error` throw sites, not four: "Invalid parent frequency" is thrown for both DAILY and HOURLY. All five went with `compute_time_dimension_initial_values`.
+   - Verification step 7's "+ the CLI smoke test" is stale: `test-all.bat` has had six steps since `01e78d7` (plan 65).
+   - Line numbers drifted by a line or two; edits were anchored on names.
+
+**Post-implementation review.** A workflow looked at the diff through three lenses: plan conformance and acceptance criteria, C++ correctness, and prose accuracy. A refuter then attacked each finding.
+- Conformance and correctness found nothing. The correctness lens also covered the weekly modulo sign, types, includes, ODR, callers in `iteration.cpp`, `csv_converter.cpp`, the expression code, Lua and the C API, and test hygiene.
+- Prose raised five findings. Four survived the refuters and were fixed (deviations 2 and 4).
+- The fifth was refuted as a CHANGELOG defect. It is the 08 → 09 transient below.
+
+**For later plans:**
+- **09:**
+  - Use this plan's contract. The rebase is one call on the **reduced** dimension: `operand_meta.dimensions[reduced].time->add_offset_from_int(operand_meta.initial_datetime, 1)`, then derive the initial values. 09's loop over the remaining dimensions no longer rebases anything.
+  - **Known transient until 09 lands:** `ExpressionAggregate` copies the operand's stale initial values (`output_meta_ = operand_meta;`), and `add_offset_from_int` no longer subtracts `initial_value`.
+    - Aggregating away the year of a yearly × monthly × daily file with a mid-year start now throws in `save()` from many starts. From 2025-03-15 it reads operand June 31 (`Invalid values for time dimensions: dimension 'month' has value 6 ... implies 7`) after 108 rows.
+    - From some other starts it silently drops days.
+    - Before this plan the same save completed but wrote a file shifted by two months (09's bug).
+    - Suggested test for 09: yearly(2) × monthly(12) × daily(31) from 2025-03-15, `aggregate("year", Sum)`, `save` must not throw, the output `initial_datetime` is 2025-01-01, and 365 cells are walked.
+    - If 0.12.4 is tagged before 09 lands, add a known-gap sentence to its CHANGELOG.
+- **10:** the immediate-parent restore rule still limits walks of three or more levels with a mid-period start. The `EveryCell*` walks here are two-level, and the three-level tests write named cells.
+- **11:** keep `metadata.validate();` then `set_time_dimension_initial_values(metadata);` at the tail of `from_toml_content`.
+- **12:** `add_dimension` / `add_time_dimension` are untouched and still store `initial_value` 0.
+- **13/14:** the new `test_csv_converter.cpp` tests assert only `null` cells and dates, so they do not depend on float formatting.
+- **Pre-existing, not owned by any plan:** `dimension_sizes_at_values` replaces an inner daily or hourly size with the real length of the parent period. It never compares that with `dim.size`, while `validate_dimension_values` rejects any value above `dim.size`. So a layout `validate()` accepts with a minimum inner size (daily under monthly of size 28) cannot be walked past day 28 of a 31-day month.
+- **`scripts/format.bat`:** biome rewrote 24 untouched CRLF JS files to LF again, with no content change under `git diff --ignore-cr-at-eol`. They were checked out again.

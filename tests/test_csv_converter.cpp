@@ -246,6 +246,54 @@ TEST_F(CSVConverterFixture, HourlyMetadataRowCount) {
     EXPECT_EQ(data_rows, 72u);
 }
 
+TEST_F(CSVConverterFixture, AggregatedDateIsTheStartOfEachMonth) {
+    // A monthly file starting January 31 is labelled by calendar month; it used to read 2025-01-31, 2025-03-03,
+    // 2025-03-31, 2025-05-01
+    auto md = BinaryMetadata::from_element(Element()
+                                               .set("version", "1")
+                                               .set("initial_datetime", "2025-01-31T00:00:00")
+                                               .set("unit", "MW")
+                                               .set("dimensions", {"month"})
+                                               .set("dimension_sizes", {4})
+                                               .set("time_dimensions", {"month"})
+                                               .set("frequencies", {"monthly"})
+                                               .set("labels", {"val"}));
+    {
+        auto binary_file = BinaryFile::open_file(path, 'w', md);
+    }
+    CSVConverter::bin_to_csv(path, true);
+    auto lines = csv_lines();
+    ASSERT_EQ(lines.size(), 5u);
+    EXPECT_EQ(lines[1], "2025-01-01,null");
+    EXPECT_EQ(lines[2], "2025-02-01,null");
+    EXPECT_EQ(lines[3], "2025-03-01,null");
+    EXPECT_EQ(lines[4], "2025-04-01,null");
+}
+
+TEST_F(CSVConverterFixture, AggregatedDatetimeKeepsANonMidnightStart) {
+    // Monthly x hourly from 2025-01-15T06:00: the first row is the start itself (it used to be rejected, since the
+    // monthly step dropped the time of day), and rows advance one hour at a time to the end of January
+    auto md = BinaryMetadata::from_element(Element()
+                                               .set("version", "1")
+                                               .set("initial_datetime", "2025-01-15T06:00:00")
+                                               .set("unit", "MW")
+                                               .set("dimensions", {"month", "hour"})
+                                               .set("dimension_sizes", {1, 744})
+                                               .set("time_dimensions", {"month", "hour"})
+                                               .set("frequencies", {"monthly", "hourly"})
+                                               .set("labels", {"val"}));
+    {
+        auto binary_file = BinaryFile::open_file(path, 'w', md);
+    }
+    CSVConverter::bin_to_csv(path, true);
+    auto lines = csv_lines();
+    ASSERT_EQ(lines.size(), 1u + 402u);  // header + hours 343..744 of January
+    EXPECT_EQ(lines[1], "2025-01-15T06:00:00,null");
+    EXPECT_EQ(lines[2], "2025-01-15T07:00:00,null");
+    EXPECT_EQ(lines.back(), "2025-01-31T23:00:00,null");
+    EXPECT_NO_THROW(CSVConverter::csv_to_bin(path));  // re-reads the labels bin_to_csv wrote
+}
+
 // ============================================================================
 // CSVConverterCsvToBin -- Happy paths
 // ============================================================================

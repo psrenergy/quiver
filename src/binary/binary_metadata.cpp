@@ -17,85 +17,18 @@ namespace {
 
 constexpr std::string_view QUIVER_FILE_VERSION = "1";
 
-std::vector<int64_t>
-compute_time_dimension_initial_values(const std::vector<quiver::Dimension>& dimensions,
-                                      const std::chrono::system_clock::time_point& initial_datetime) {
-    std::vector<int64_t> initial_values;
-    initial_values.push_back(1);  // The largest time dimension always starts at 1
-
-    auto date = std::chrono::floor<std::chrono::days>(initial_datetime);
-    auto ymd = std::chrono::year_month_day{date};
-
-    for (const auto& dim : dimensions) {
-        if (dim.is_time_dimension() && dim.time->parent_dimension_index != -1) {
-            quiver::TimeFrequency current_frequency = dim.time->frequency;
-            quiver::TimeFrequency parent_frequency = dimensions[dim.time->parent_dimension_index].time->frequency;
-
-            // Yearly and weekly frequencies must always be at index 1, so they error if encountered as inner time
-            // dimensions
-            switch (current_frequency) {
-            case quiver::TimeFrequency::Yearly:
-                throw std::logic_error(
-                    "YEARLY frequency not implemented. This function should only be used for inner time dimensions.");
-            case quiver::TimeFrequency::Monthly: {
-                int64_t month = static_cast<unsigned>(ymd.month());
-                initial_values.push_back(month);
-                break;
-            }
-            case quiver::TimeFrequency::Weekly:
-                throw std::logic_error(
-                    "WEEKLY frequency not implemented. This function should only be used for inner time dimensions.");
-            case quiver::TimeFrequency::Daily: {
-                int64_t day;
-                switch (parent_frequency) {
-                case quiver::TimeFrequency::Weekly: {
-                    day = quiver::day_of_week(initial_datetime);
-                    break;
-                }
-                case quiver::TimeFrequency::Monthly: {
-                    day = static_cast<unsigned>(ymd.day());
-                    break;
-                }
-                case quiver::TimeFrequency::Yearly: {
-                    day = quiver::day_of_year(initial_datetime);
-                    break;
-                }
-                default:
-                    throw std::logic_error("Invalid parent frequency " + frequency_to_string(parent_frequency) +
-                                           " for DAILY dimension.");
-                }
-                initial_values.push_back(day);
-                break;
-            }
-            case quiver::TimeFrequency::Hourly: {
-                int64_t hour =
-                    std::chrono::floor<std::chrono::hours>(initial_datetime - date).count() + 1;  // 0-23 -> 1-24
-                switch (parent_frequency) {
-                case quiver::TimeFrequency::Daily:
-                    break;
-                case quiver::TimeFrequency::Weekly:
-                    hour += (quiver::day_of_week(initial_datetime) - 1) * quiver::time::MAX_HOURS_IN_DAY;
-                    break;
-                case quiver::TimeFrequency::Monthly:
-                    hour += (static_cast<unsigned>(ymd.day()) - 1) * quiver::time::MAX_HOURS_IN_DAY;
-                    break;
-                case quiver::TimeFrequency::Yearly:
-                    hour += (quiver::day_of_year(initial_datetime) - 1) * quiver::time::MAX_HOURS_IN_DAY;
-                    break;
-                default:
-                    throw std::logic_error("Invalid parent frequency " + frequency_to_string(parent_frequency) +
-                                           " for HOURLY dimension.");
-                }
-                initial_values.push_back(hour);
-                break;
-            }
-            default:
-                throw std::logic_error("Unhandled frequency " + frequency_to_string(current_frequency) +
-                                       " in compute_time_dimension_initial_values.");
-            }
+// Every time dimension starts at the cell holding initial_datetime: the outermost at 1, each inner one at the
+// position of initial_datetime inside its parent's period.
+void set_time_dimension_initial_values(quiver::BinaryMetadata& metadata) {
+    for (size_t i = 0; i < metadata.dimensions.size(); ++i) {
+        auto& time_properties = metadata.dimensions[i].time;
+        if (!time_properties) {
+            continue;
         }
+        time_properties->set_initial_value(time_properties->parent_dimension_index == -1
+                                               ? 1
+                                               : quiver::position_in_parent(metadata, i, metadata.initial_datetime));
     }
-    return initial_values;
 }
 
 }  // namespace
@@ -329,19 +262,11 @@ BinaryMetadata BinaryMetadata::from_toml_content(const std::string& content) {
             metadata.dimensions.push_back({dimensions[i], dimension_sizes[i], std::nullopt});
         }
     }
-    time_dim_index = 0;
 
-    // Compute and set initial values for time dimensions
-    std::vector<int64_t> initial_values =
-        compute_time_dimension_initial_values(metadata.dimensions, metadata.initial_datetime);
-    for (auto& dim : metadata.dimensions) {
-        if (dim.is_time_dimension()) {
-            dim.time->set_initial_value(initial_values[time_dim_index]);
-            time_dim_index++;
-        }
-    }
-
+    // Validate first: an initial value is a position inside the parent's period, which exists only for the
+    // parent/child layouts validate() accepts
     metadata.validate();
+    set_time_dimension_initial_values(metadata);
     return metadata;
 }
 

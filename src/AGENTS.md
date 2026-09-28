@@ -58,11 +58,11 @@ src/csv/                    # Standalone CSV file reader/writer (see below)
                               # its append_record also emits export_csv -- same posture as csv_read
 src/binary/                 # Binary C++ implementation
   binary_file.cpp             # BinaryFile class (Pimpl impl) + write registry
-  binary_utils.h              # Shared file-extension constants
+  binary_utils.h              # Shared file-extension constants, day_of_year, position_in_parent
   csv_converter.cpp           # CSVConverter implementation
   iteration.cpp               # first_dimensions/next_dimensions impls + dimension_sizes_at_values
   binary_metadata.cpp         # BinaryMetadata factories, serialization, validation
-  time_properties.cpp         # TimeFrequency string conversion
+  time_properties.cpp         # TimeFrequency string conversion, add_offset_from_int
 src/expression/             # Expression C++ implementation
   expression.cpp              # Expression class, operator overloads, save engine
   expression_helpers.h        # Shared inline helpers (validation, broadcast metadata/operands, aggregation accumulators, percentile)
@@ -763,6 +763,25 @@ Bound in **Julia and Lua** (root design decision); Lua binds these C++ classes d
 - `TimeProperties` struct: `frequency`, `initial_value`, `parent_dimension_index`
 - `TimeFrequency` enum: `Yearly`, `Monthly`, `Weekly`, `Daily`, `Hourly`
 
+### Time Coordinates
+
+A coordinate names a **cell**, and its datetime is the cell's start. `TimeProperties::add_offset_from_int(base, value)`
+floors `base` to the start of its own period (January 1, the 1st, the day for Weekly and Daily, the hour) and adds
+`value - 1` periods. Folded over the time dimensions outermost-first from `initial_datetime` (what
+`validate_dimension_values`, `dimension_sizes_at_values` and the CSV datetime column do), every inner step starts
+from its parent's period start, so no calendar step overflows (January 31 + one month is not March 3) and
+`initial_value` plays no part. `add_offset_from_int(datetime, 1)` is therefore the start of that frequency's period
+holding `datetime` (for Weekly, the week that starts on `datetime`'s day, which is on the file's grid only when
+that day is a whole number of weeks after `initial_datetime`'s day). Yearly and monthly periods are calendar-aligned; **a week is seven days counted
+from the day of `initial_datetime`**, never from January 1, so a weekly file crosses year ends on one grid.
+`position_in_parent` (`binary_utils.h`) is the inverse — a datetime's position inside a dimension's parent period —
+and the one rule for it: `from_toml_content` sets each inner `initial_value` to the position of `initial_datetime`
+(the outermost gets 1), and `validate_dimension_values` rejects a coordinate whose cell start sits at a different
+position than the value given (day 30 of February spills into March). `from_toml_content` runs `validate()`
+**before** computing initial values, since a position exists only for the eight parent/child layouts it admits:
+Monthly under Yearly; Daily under Yearly, Monthly or Weekly; Hourly under Yearly, Monthly, Weekly or Daily. The
+`EveryCell*` tests in `tests/test_binary_file.cpp` walk every cell of each pair from a mid-period, non-midnight start.
+
 ### Iteration Helpers
 
 Free functions in `quiver::` for traversing the dimension space of a `BinaryMetadata` (declared in `quiver/binary/iteration.h`):
@@ -782,7 +801,7 @@ In-process path registry prevents reading files that are currently open for writ
 Profiled with 480×500×31 dimensions (~7.3M read/write calls). Main hot-path costs:
 
 1. **`unordered_map<string, int64_t>` dims parameter (~40% of total time):** Every read/write constructs a hash map with string keys. Hashing, heap allocation for strings/buckets, and `find()` lookups dominate. Indexed `vector<int64_t>` overloads were prototyped and dropped in favor of API simplicity — the map-based form is the single supported entry point. Hot-path consumers (e.g., `ExpressionFile::compute_row`, `Expression::save`) cache the `unordered_map` across calls to amortize the allocation. Do not reintroduce indexed overloads without revisiting that decision.
-2. **`validate_dimension_values` (~19% of total time):** Called on every read/write. Checks dimension count, name existence, bounds, and time-dimension consistency (date arithmetic via `add_offset_from_int`/`datetime_to_int`). Could be made opt-in or skippable when callers guarantee correct values (e.g., when iterating via `next_dimensions()`).
+2. **`validate_dimension_values` (~19% of total time):** Called on every read/write. Checks dimension count, name existence, bounds, and time-dimension consistency (date arithmetic via `add_offset_from_int`/`position_in_parent`). Could be made opt-in or skippable when callers guarantee correct values (e.g., when iterating via `next_dimensions()`).
 3. **`vector<double>` allocation per read (~3%):** Each `read()` allocates a new vector. A `read_into(buffer, dims)` overload writing into caller-provided storage would eliminate this.
 
 ## Expression Subsystem

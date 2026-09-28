@@ -5,6 +5,56 @@ All notable changes to Quiver are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entries that require
 callers to change something are prefixed **BREAKING** and say what to do.
 
+## [0.12.4] — unreleased
+
+### Changed
+
+- **BREAKING — a binary file's time coordinate names a calendar cell, and a week starts on the day of
+  `initial_datetime`.** Each inner time value is its position inside the parent's period (day of
+  month, year or week; hour of day, month, year or week), and the date `bin_to_csv` writes — and
+  `csv_to_bin` checks — is the start of that cell. Two things change for callers:
+  - When the finest time dimension is monthly or yearly and `initial_datetime` falls mid-period, rows
+    are labelled from the period start: a monthly file from `2025-01-15` reads
+    `2025-01-01, 2025-02-01, …` (it read `2025-01-15, 2025-02-15, …`; from `2025-01-31` it read
+    `2025-01-31, 2025-03-03, 2025-03-31, 2025-05-01`). An hourly cell starts on the hour, so a start
+    of `…T06:30:00` labels its first row `…T06:00:00`.
+  - Under a weekly dimension, a week is seven days counted from the day of `initial_datetime`, not
+    from January 1: a daily child's `initial_value` is always 1 (it was 4 for a file starting
+    Saturday 2025-03-15) and an hourly child's is the hour of day + 1. Before this release such a
+    file could hold only some of its cells: `write` (and so Julia `write!`, Lua `file:write` and the
+    C API) accepted hours 1–24 of every week of a weekly × hourly file, and of a weekly × daily file
+    only the weeks whose start on the old January-1 week grid fell on the 1st of a month;
+    `csv_to_bin` and `Expression::save` stopped at the first cell they could not write. Unless
+    `initial_datetime` is day 1, 8, 15, … of its year, every such stored cell now names a moment
+    `(day of year − 1) mod 7` days later: rewrite those files from the source data.
+
+  C++ only: `TimeProperties::datetime_to_int` is removed, and `TimeProperties::add_offset_from_int`
+  now returns the start of the `value`-th period counted from the one holding its base, ignoring
+  `initial_value`.
+
+  *Adapt:* re-run `bin_to_csv` on such files before editing and re-importing their CSVs. C++ code
+  that called `datetime_to_int` has no replacement: the coordinate is the position, and
+  `BinaryFile::read`/`write` validate it.
+
+### Fixed
+
+- **Binary files accept every cell of every time layout their metadata accepts.** `read` and `write`
+  (and so `bin_to_csv`, `csv_to_bin` and `Expression::save`, in Julia and Lua too) rejected valid
+  cells for five of the eight parent/child layouts, with `Invalid values for time dimensions:
+  dimension 'hour' has value 25 but the resulting datetime implies 1`: hourly under monthly, yearly
+  or weekly past the first day, daily under yearly past January, and daily under weekly in any week
+  whose start on the old January-1 grid was not the 1st of a month. A non-midnight
+  `initial_datetime` with an hourly dimension under a monthly or yearly one rejected the file's own
+  first cell, and a start on the 29th-31st broke yearly + monthly layouts (yearly + monthly from
+  January 31 rejected February; yearly + monthly + daily from 2024-02-29 rejected 2025-03-01).
+- **Binary metadata with an invalid frequency layout reports why.** `from_toml_content` and
+  `from_element` (so Julia `Metadata` and Lua `quiver.metadata`) computed initial values before
+  validating, so frequencies `["monthly", "yearly"]` failed with `YEARLY frequency not implemented.
+  This function should only be used for inner time dimensions.` and `["daily", "daily"]` with
+  `Invalid parent frequency daily for DAILY dimension.`. They now report `Time dimension frequencies
+  must be ordered from lowest to highest frequency.` and `Time dimension frequencies must be unique.
+  Duplicate: daily`.
+
 ## [0.12.3] — unreleased
 
 ### Changed
