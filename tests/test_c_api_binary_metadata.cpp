@@ -636,6 +636,74 @@ TEST(BinaryCApiMetadata, FromElementMissingRequiredField) {
     quiver_element_destroy(el);
 }
 
+TEST(BinaryCApiMetadata, FromElementDimensionSizesCountMismatch) {
+    quiver_element_t* el = nullptr;
+    ASSERT_EQ(quiver_element_create(&el), QUIVER_OK);
+    quiver_element_set_string(el, "version", "1");
+    quiver_element_set_string(el, "initial_datetime", "2025-01-01T00:00:00");
+    quiver_element_set_string(el, "unit", "MW");
+    const char* dims[] = {"row", "col"};
+    quiver_element_set_array_string(el, "dimensions", dims, 2, nullptr);
+    int64_t sizes[] = {3};
+    quiver_element_set_array_integer(el, "dimension_sizes", sizes, 1, nullptr);
+    const char* labels[] = {"val"};
+    quiver_element_set_array_string(el, "labels", labels, 1, nullptr);
+
+    quiver_binary_metadata_t* md = nullptr;
+    EXPECT_EQ(quiver_binary_metadata_from_element(el, &md), QUIVER_ERROR);
+    EXPECT_EQ(md, nullptr);
+    EXPECT_STREQ(quiver_get_last_error(),
+                 "Cannot from_element: dimension_sizes count (1) does not match dimensions count (2)");
+
+    quiver_element_destroy(el);
+}
+
+TEST(BinaryCApiMetadata, FromTomlFrequenciesCountMismatch) {
+    const char* toml = R"(
+version = "1"
+dimensions = ["stage", "block"]
+dimension_sizes = [4, 31]
+time_dimensions = ["stage", "block"]
+initial_datetime = "2025-01-01T00:00:00"
+unit = "MW"
+labels = ["val"]
+)";
+    quiver_binary_metadata_t* md = nullptr;
+    EXPECT_EQ(quiver_binary_metadata_from_toml(toml, &md), QUIVER_ERROR);
+    EXPECT_EQ(md, nullptr);
+    EXPECT_STREQ(quiver_get_last_error(),
+                 "Cannot from_toml_content: frequencies count (0) does not match time_dimensions count (2)");
+}
+
+TEST(BinaryCApiMetadata, FromTomlMissingKeyNamesTheKey) {
+    const char* toml = R"(
+version = "1"
+dimensions = ["row"]
+dimension_sizes = [3]
+initial_datetime = "2025-01-01T00:00:00"
+labels = ["val"]
+)";
+    quiver_binary_metadata_t* md = nullptr;
+    EXPECT_EQ(quiver_binary_metadata_from_toml(toml, &md), QUIVER_ERROR);
+    EXPECT_EQ(md, nullptr);
+    EXPECT_STREQ(quiver_get_last_error(), "Cannot from_toml_content: missing key 'unit'");
+}
+
+TEST(BinaryCApiMetadata, FromTomlWrongTypedEntry) {
+    const char* toml = R"(
+version = "1"
+dimensions = ["row", "col"]
+dimension_sizes = [3, "2"]
+initial_datetime = "2025-01-01T00:00:00"
+unit = "MW"
+labels = ["val"]
+)";
+    quiver_binary_metadata_t* md = nullptr;
+    EXPECT_EQ(quiver_binary_metadata_from_toml(toml, &md), QUIVER_ERROR);
+    EXPECT_EQ(md, nullptr);
+    EXPECT_STREQ(quiver_get_last_error(), "Cannot from_toml_content: array 'dimension_sizes' must contain integers");
+}
+
 // ============================================================================
 // Labels -- edge cases
 // ============================================================================

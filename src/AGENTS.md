@@ -166,8 +166,9 @@ its own `enum` value, never its `id` (several attributes commonly share one voca
 `bool`).
 
 The whole load is a **nested try/catch that warns and degrades, and never throws** — explicitly
-not `src/binary/binary_metadata.cpp`'s posture, which throws on a parse error or a bare
-`.value()` unwrap with no test for either. One outer catch covers directory iteration and path
+not `src/binary/binary_metadata.cpp`'s posture, which throws on a parse error, a missing or
+non-string `version`/`unit`/`initial_datetime`, a non-array value, or a wrong-typed array entry
+(an absent array still reads as empty). One outer catch covers directory iteration and path
 resolution and yields a fully empty `UiMetadata` on failure; one inner catch per collection file (and
 a separate one around `enum.toml`) means a single malformed `ui/*.toml` costs only that
 collection's metadata, not every other collection's. An absent or empty `ui/` directory is the
@@ -755,9 +756,9 @@ Bound in **Julia and Lua** (root design decision); Lua binds these C++ classes d
 - `BinaryFile` class (Pimpl): `open_file(path, mode, metadata?)`, `read(dims, allow_nulls = false)`, `write(data, dims)`, `get_metadata()`, `get_file_path()`
 - `CSVConverter` class (composition, no Pimpl): `bin_to_csv(path, aggregate)`, `csv_to_bin(path)`
 - `BinaryMetadata` struct: `dimensions`, `initial_datetime`, `unit`, `labels`, `version`; `number_of_time_dimensions()` is derived from `dimensions` (not stored)
-  - Factories: `from_toml_content()`, `from_element()`
+  - Factories: `from_toml_content()` (and `from_toml_file()`, which reads the sidecar and calls it), `from_element()`. Both hand their eight fields to one anonymous-namespace `build_metadata(operation, ...)` in `binary_metadata.cpp`. It rejects a `dimension_sizes`/`dimensions` or `frequencies`/`time_dimensions` count mismatch before indexing either, takes each time dimension's frequency from its matched position in `time_dimensions`, and names the calling factory in its Pattern 1 errors. `from_element` does not go through TOML text. In a TOML document, an absent array reads as empty, an absent or non-string `version`/`unit`/`initial_datetime` throws naming the key, and a wrong-typed array entry throws instead of being skipped.
   - Serialization: `to_toml()`
-  - Initial values: `derive_initial_values()` — the one computation of every time dimension's `initial_value` (from `initial_datetime` and the parent chain). `from_toml_content` calls it after `validate()`; the `ExpressionAggregate` constructor calls it on its output metadata. `to_toml()` never writes the values, so every load re-derives them. It is public for those callers, and deliberately not bound to the C API/Julia/Lua: no binding can mutate a `BinaryMetadata`.
+  - Initial values: `derive_initial_values()` — the one computation of every time dimension's `initial_value` (from `initial_datetime` and the parent chain). `build_metadata` (behind both factories) calls it after `validate()`; the `ExpressionAggregate` constructor calls it on its output metadata. `to_toml()` never writes the values, so every load re-derives them. It is public for those callers, and deliberately not bound to the C API/Julia/Lua: no binding can mutate a `BinaryMetadata`.
   - Builders: `add_dimension()`, `add_time_dimension()` (chains `parent_dimension_index` to the previous time dimension)
   - Validation: `validate()`, `validate_time_dimension_metadata()`, `validate_time_dimension_sizes()`
 - `Dimension` struct: `name`, `size`, optional `TimeProperties`
@@ -776,10 +777,10 @@ holding `datetime` (for Weekly, the week that starts on `datetime`'s day, which 
 that day is a whole number of weeks after `initial_datetime`'s day). Yearly and monthly periods are calendar-aligned; **a week is seven days counted
 from the day of `initial_datetime`**, never from January 1, so a weekly file crosses year ends on one grid.
 `position_in_parent` (`binary_utils.h`) is the inverse — a datetime's position inside a dimension's parent period —
-and the one rule for it: `BinaryMetadata::derive_initial_values()` (called by `from_toml_content` and the
+and the one rule for it: `BinaryMetadata::derive_initial_values()` (called by `build_metadata`, behind both factories, and the
 `ExpressionAggregate` constructor) sets each inner `initial_value` to the position of `initial_datetime`
 (the outermost gets 1), and `validate_dimension_values` rejects a coordinate whose cell start sits at a different
-position than the value given (day 30 of February spills into March). `from_toml_content` runs `validate()`
+position than the value given (day 30 of February spills into March). `build_metadata` runs `validate()`
 **before** computing initial values, since a position exists only for the eight parent/child layouts it admits:
 Monthly under Yearly; Daily under Yearly, Monthly or Weekly; Hourly under Yearly, Monthly, Weekly or Daily. The
 `EveryCell*` tests in `tests/test_binary_file.cpp` walk every cell of each pair from a mid-period, non-midnight start.

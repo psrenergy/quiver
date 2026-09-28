@@ -868,17 +868,17 @@ Run from the repo root in PowerShell. In Git Bash, use `./build/bin/...` and `cm
 
 ## Acceptance criteria
 
-- [ ] `include/quiver/binary/binary_metadata.h` is byte-identical to before.
-- [ ] `src/binary/binary_metadata.cpp` has an anonymous namespace inside `namespace quiver` holding `read_toml_string`, `read_toml_array<T>` and `build_metadata(operation, dimensions, dimension_sizes, time_dimensions, frequencies, initial_datetime_str, unit, labels, version)`.
-- [ ] `build_metadata` checks both counts before any indexing and throws the two Pattern 1 messages quoted above.
-- [ ] The dimension loop reads `frequencies` at the matched position in `time_dimensions`. `metadata.dimensions.clear()` and the loop's running `time_dim_index` are gone.
-- [ ] `from_element` builds no `toml::table` and calls `build_metadata("from_element", ...)`.
-- [ ] `from_toml_content` reads every key through `read_toml_array` / `read_toml_string`. No bare `.value()` unwrap and no skip-on-wrong-type loop is left.
-- [ ] No `"Error building metadata from toml"` string is left anywhere in `src/`: `git grep "Error building metadata"` returns nothing.
-- [ ] Whatever plans 08 and 09 put in the tail of `from_toml_content` survives unchanged inside `build_metadata`.
-- [ ] The new C++, C API, Lua and Julia tests exist and pass, and the two tightened C++ tests pin the new message text.
-- [ ] The `src/AGENTS.md` edits (two places) and the `CHANGELOG.md` `### Fixed` entry are in.
-- [ ] `scripts/test-all.bat` is green.
+- [x] `include/quiver/binary/binary_metadata.h` is byte-identical to before.
+- [x] `src/binary/binary_metadata.cpp` has an anonymous namespace inside `namespace quiver` holding `read_toml_string`, `read_toml_array<T>` and `build_metadata(operation, dimensions, dimension_sizes, time_dimensions, frequencies, initial_datetime_str, unit, labels, version)`.
+- [x] `build_metadata` checks both counts before any indexing and throws the two Pattern 1 messages quoted above.
+- [x] The dimension loop reads `frequencies` at the matched position in `time_dimensions`. `metadata.dimensions.clear()` and the loop's running `time_dim_index` are gone.
+- [x] `from_element` builds no `toml::table` and calls `build_metadata("from_element", ...)`.
+- [x] `from_toml_content` reads every key through `read_toml_array` / `read_toml_string`. No bare `.value()` unwrap and no skip-on-wrong-type loop is left.
+- [x] No `"Error building metadata from toml"` string is left anywhere in `src/`: `git grep "Error building metadata"` returns nothing. *(Checked as `git grep "Error building metadata" -- src include`, which is empty: repo-wide, CHANGELOG.md, this plan and a test comment quote the old text. See Implementation notes.)*
+- [x] Whatever plans 08 and 09 put in the tail of `from_toml_content` survives unchanged inside `build_metadata`.
+- [x] The new C++, C API, Lua and Julia tests exist and pass, and the two tightened C++ tests pin the new message text.
+- [x] The `src/AGENTS.md` edits (two places) and the `CHANGELOG.md` `### Fixed` entry are in.
+- [x] `scripts/test-all.bat` is green. *(All six suites pass; the CLI smoke step no longer exists. See Implementation notes.)*
 
 ## Pitfalls
 
@@ -901,3 +901,53 @@ Run from the repo root in PowerShell. In Git Bash, use `./build/bin/...` and `cm
 - Making `Failed to parse initial_datetime: <s>` name the factory, and making `from_toml_file` errors name the sidecar path: not planned, and deliberately left alone here.
 - Rewriting `validate()`'s pre-pattern messages: covered by root AGENTS.md's documented "Known exception".
 - Stricter TOML typing (`value_exact`): not planned.
+
+## Implementation notes
+
+Implemented on `rs/plan11` at HEAD `946022d` (plan 10's merge). Plans 06 to 10 landed on master while this plan was being verified, so 08 and 09 had already reshaped the tail that Step 2 moves. `compute_time_dimension_initial_values` and the initial-value assignment loop are gone, and the tail ends `metadata.validate(); metadata.derive_initial_values(); return metadata;`. As Step 2 instructs, that tail was carried into `build_metadata` verbatim, together with 09's `// initial_value: derive_initial_values()` comment. Only edit (c) applied. Edit (d) had nothing left to change, because no counter remains. A read-only verification pass, by me and 3 adversarial agents, matched every other excerpt, symbol, signature and test anchor before any edit. No C API, FFI, binding or Lua source changed, so no generator was run.
+
+**Red/green.** Before the fix, each new or tightened gtest was run alone with `--gtest_filter=<one>`:
+- **Clean FAIL (9):**
+  - `ErrorTimeDimensionNotInDimensions`, `ErrorTimeDimensionsOutOfOrder` and `ErrorsNameFromElement`: the message was `Error building metadata from toml: ...`.
+  - `NonArrayValueThrows`: no throw.
+  - `MissingStringKeyNamesTheKey`, `NonStringKeyNamesTheKey` and C API `FromTomlMissingKeyNamesTheKey`: `std::bad_optional_access`, which MSVC spells `Bad optional access`.
+  - Lua `MetadataFromTomlRejectsWrongTypedEntry`: `expected script to throw`.
+- **ABORT (10):** `vector(1939) : Assertion failed: vector subscript out of range`, with no gtest summary line.
+  - `DimensionSizesCountMismatchThrows` and `FrequenciesCountMismatchThrows`, in both C++ suites.
+  - `RepeatedTimeDimensionNameStaysInBounds`.
+  - `WrongTypedArrayEntryThrows`: its first half had already failed with "does not throw".
+  - `AbsentArrayReadsAsEmpty`.
+  - C API `FromElementDimensionSizesCountMismatch`, `FromTomlFrequenciesCountMismatch` and `FromTomlWrongTypedEntry`.
+  - Lua `MetadataCountMismatchThrows`.
+- **Julia:** `test.bat test_binary_metadata.jl` failed at the first new testset (`from_toml_content wrong-typed array entry`: No exception thrown), and failfast stopped the run there. The two `Metadata` count-mismatch testsets were deliberately not run before the fix. Their out-of-bounds read happens inside the Debug `libquiver.dll` hosted by Julia, and without gtest nothing redirects the CRT assertion dialog, so the run would hang. The C++ and C API runs on the same `from_element` path are their red evidence.
+
+After the fix:
+- All 19 gtests pass.
+- `BinaryMetadata*:LuaBinaryTest.*`: 117/117.
+- `BinaryCApiMetadata.*`: 38/38.
+- `quiver_tests`: 1349/1349.
+- `quiver_c_tests`: 573/573.
+- Julia: 1482/1482 (Binary Metadata 161/161).
+- `scripts/test-all.bat`: green, exit 0. All six suites PASS: C++ 1349, C API 573, Julia 1482, Dart 426, JS 212, Python 309. There is no CLI smoke step any more: `01e78d7` (on master before plan 06) removed it from `test-all.bat`, so the pre-existing step 7 failure (plan 65) no longer shows up. Root `AGENTS.md` still says `test-all.bat` runs "the six suites below plus a `quiver_cli` smoke test", and `tests/AGENTS.md` still lists a step 7. That is out of scope here; it is for plan 65/82 or whoever owns `01e78d7`.
+
+**Deviations:**
+1. **gmock instead of the helper.** The tests use `EXPECT_THAT(fn, ThrowsMessage<std::runtime_error>(HasSubstr(...)))` (gmock is already linked into `quiver_tests`) instead of the plan's hand-written `expect_runtime_error`. It is one helper fewer, and it is also more correct for the red run. The helper caught only `runtime_error`, so the pre-fix `bad_optional_access` would have escaped and ended the test body. `ThrowsMessage` reports it as a mismatch, and the `SCOPED_TRACE` loop keeps going. The C API tests keep `EXPECT_STREQ`, because `quiver_c_tests` does not link gmock.
+2. **`RepeatedTimeDimensionNameStaysInBounds` pins the full message**, `Dimension names must be unique, duplicate: 'a'`. The plan's note says plan 08 would make the frequency-uniqueness message fire first, and that is wrong: 08 moved `validate()` as a whole, and `validate()` checks name uniqueness before it calls `validate_time_dimension_metadata()`.
+3. **CHANGELOG.** The entry is the last bullet of `### Fixed` under `## [0.12.4] — unreleased`. The plan said `[0.12.0]`, but the manifests are at 0.12.4 (#315), so no manifest bump either. Two changes to the plan's text:
+   - It says "a bare `bad_optional_access`", because MSVC spells the message `Bad optional access`.
+   - It adds one sentence: the count checks also reject **surplus** entries (more sizes than dimensions, or frequencies beyond `time_dimensions`), which used to be ignored silently. The plan's claim that "every input that now throws used to crash, load incorrectly, or throw an unnamed error" misses this one case. No caller in the repo produces it, so the change stays non-BREAKING.
+4. **Docs beyond the plan's two `src/AGENTS.md` edits.**
+   - The UI-metadata sentence says that an absent array still reads as empty. The plan's "missing or wrong-typed key" would have implied that an absent array throws.
+   - Three more phrases named `from_toml_content` as the caller of `validate()` / `derive_initial_values()`. That stopped being complete once `from_element` no longer round-trips through it. The phrases are in the "Initial values" bullet and the "Time Coordinates" paragraph of `src/AGENTS.md` (both added by 08/09) and in the root `AGENTS.md` design decision on the stored `initial_value`. All three now name `build_metadata`.
+   - For the same reason, the Julia section header `# Time dimension size validation (via from_toml_content)` in `test_binary_metadata.jl` became `(via Metadata / from_element)`.
+   - The post-implementation review workflow found these: 3 lenses, each finding adversarially verified, 4 confirmed and 4 refuted.
+5. **The acceptance grep is scoped:** `git grep "Error building metadata" -- src include` is empty. Repo-wide it can never be empty, because CHANGELOG.md, this plan and the `ErrorsNameFromElement` comment all quote the old text.
+6. **`scripts/format.bat` first failed at its last step** with `bun: command not found: biome`, because `bindings/js/node_modules` had never been installed. `bun install`, whose output is gitignored, fixed it, and the re-run passed. Biome then rewrote the CRLF working-tree copies of 42 JS files to LF with no content change (`git diff --ignore-cr-at-eol` was empty). Those files were restored with `git checkout -- bindings/js`. No `.bat` file was touched.
+
+**For later plans:**
+- **Plan 12:**
+  - The Julia builder path is now `Metadata` → `from_element` → `build_metadata`. It is **not** `from_element` → `from_toml_content`.
+  - The comment on `derive_initial_values()` in `include/quiver/binary/binary_metadata.h` ("every producer of metadata (from_toml_content, ExpressionAggregate) calls this") is now incomplete in the same way. It was left alone here because this plan keeps that header byte-identical. Plan 12 edits the header anyway.
+- **Plans 47/48:** the two Lua tests pin only the reason text, not the `Cannot <op>:` prefix.
+- **Future-format sidecars:** a sidecar with `version != "1"` and different key shapes now fails on its structure (`key 'labels' must be an array`) before `validate()`'s version check runs. No v2 format exists. If forward compatibility ever matters, check `version` first in `from_toml_content`.
+- **UTF-8:** `from_element` now stores strings byte-for-byte, where the old TOML round trip rewrote invalid UTF-8 bytes as `\u00XX`. `to_toml()` still escapes on write, so file round trips are unchanged.
