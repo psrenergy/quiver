@@ -755,7 +755,19 @@ Standalone binary file I/O layer for `.qvr` files with `.toml` metadata sidecars
 Bound in **Julia and Lua** (root design decision); Lua binds these C++ classes directly via sol2 in `src/lua_runner.cpp` (file I/O is db-scoped and sandboxed — `db:open_file`/`db:bin_to_csv`/`db:csv_to_bin`; metadata builders under `quiver.*`; method syntax + string aggregation ops).
 
 - `BinaryFile` class (Pimpl): `open_file(path, mode, metadata?)`, `read(dims, allow_nulls = false)`, `write(data, dims)`, `get_metadata()`, `get_file_path()`
-- `CSVConverter` class (composition, no Pimpl): `bin_to_csv(path, aggregate)`, `csv_to_bin(path)`. Data cells are written by `utils::append_number` and read by `utils::parse_float` (the whole cell must parse, in the "C" locale's format; `null` is NaN), so bin → csv → bin is exact in every host locale. A bad cell throws `Cannot csv_to_bin: invalid float value '<v>' for label '<label>'`.
+- `CSVConverter` class (composition, no Pimpl): `bin_to_csv(path, aggregate)`, `csv_to_bin(path)` — the only
+  entry points; the constructor is private. Writer and reader share one definition of each text shape, so a file
+  `bin_to_csv` writes is exactly what `csv_to_bin` checks: the column names (`header_`, built once by the
+  constructor — the dimension columns, or a leading `date`/`datetime` column instead of the time dimensions when
+  aggregating, then the labels), a coordinate's dimension cells (`dimension_cells`), and the comma split/join
+  (`split_fields`/`join_fields`, file-local). `csv_to_bin` checks each data row's field count against `header_`
+  before parsing a cell (Pattern 1 `Cannot csv_to_bin: line N has X fields, expected Y`, or `file ends before
+  line N`), which is what lets `validate_dimensions` index every dimension cell. `split_fields` keeps a trailing
+  empty field (`a,b,` is three): do not swap it for `std::getline(stream, field, ',')`, which drops it and would let
+  a trailing-comma row pass the width check. Data cells are written by `utils::append_number` and read by
+  `utils::parse_float` (the whole cell must parse, in the "C" locale's format; `null` is NaN), so bin → csv → bin
+  is exact in every host locale. A bad cell throws `Cannot csv_to_bin: invalid float value '<v>' for label
+  '<label>'`.
 - `BinaryMetadata` struct: `dimensions`, `initial_datetime`, `unit`, `labels`, `version`; `number_of_time_dimensions()` is derived from `dimensions` (not stored)
   - Factories: `from_toml_content()` (and `from_toml_file()`, which reads the sidecar and calls it), `from_element()`. Both hand their eight fields to one anonymous-namespace `build_metadata(operation, ...)` in `binary_metadata.cpp`. It rejects a `dimension_sizes`/`dimensions` or `frequencies`/`time_dimensions` count mismatch before indexing either, takes each time dimension's frequency from its matched position in `time_dimensions`, and names the calling factory in its Pattern 1 errors. `from_element` does not go through TOML text. In a TOML document, an absent array reads as empty, an absent or non-string `version`/`unit`/`initial_datetime` throws naming the key, and a wrong-typed array entry throws instead of being skipped. There is no incremental builder: the two factories are the only construction path a binding reaches (C API, Julia, Lua), and they derive every time dimension's `parent_dimension_index` (the previous time dimension) and `initial_value` (from `initial_datetime`). Inside the library, `build_broadcast_metadata` / `build_ternary_broadcast_metadata` (`expression_helpers.h`) still assemble `dimensions` directly.
   - Serialization: `to_toml()`

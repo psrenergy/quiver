@@ -296,3 +296,20 @@ TEST_F(BinaryCApiCSVFixture, CsvToBinTrailingGarbageReportsMessage) {
     EXPECT_EQ(quiver_csv_converter_csv_to_bin(path.c_str()), QUIVER_ERROR);
     EXPECT_STREQ(quiver_get_last_error(), "Cannot csv_to_bin: invalid float value '9.99abc' for label 'val1'");
 }
+
+TEST_F(BinaryCApiCSVFixture, CsvToBinShortRowReportsLine) {
+    // Opening a writer writes the .toml sidecar csv_to_bin reads; the metadata is copied, so free it now.
+    auto* md = make_simple_metadata();
+    quiver_binary_file_t* binary_file = nullptr;
+    const auto opened = quiver_binary_file_open_file(path.c_str(), 'w', md, &binary_file);
+    quiver_binary_metadata_free(md);
+    ASSERT_EQ(opened, QUIVER_OK);
+    quiver_binary_file_close(binary_file);
+    {
+        std::ofstream csv(path + ".csv");
+        csv << "row,col,val1,val2\n1\n";
+    }
+
+    EXPECT_EQ(quiver_csv_converter_csv_to_bin(path.c_str()), QUIVER_ERROR);
+    EXPECT_STREQ(quiver_get_last_error(), "Cannot csv_to_bin: line 2 has 1 fields, expected 4");
+}

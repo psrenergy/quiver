@@ -136,6 +136,16 @@ callers to change something are prefixed **BREAKING** and say what to do.
   then `db:csv_to_bin` through a `LuaRunner`) a data cell `1.5` was read as `1`, and on Linux and
   macOS a subnormal value such as `1e-310`, which `bin_to_csv` writes, was rejected. It now uses
   the same number parser as `import_csv()`.
+- **`csv_to_bin()` checks every data row's width against the header.** A row missing a dimension
+  cell (`1` under the header `row,col,val1,val2`) was read past its end — an assertion abort in a
+  debug build, a comparison against arbitrary memory in a release one. A data row must now have
+  exactly as many fields as the header or `csv_to_bin` throws `Cannot csv_to_bin: line N has X
+  fields, expected Y`, and a trailing comma counts as an extra field. That message also replaces
+  the `Data length X does not match expected length Y` a short or long row used to raise from the
+  binary writer, and it is a `std::runtime_error` like every other `csv_to_bin` failure, not a
+  `std::invalid_argument`. A file that ends before its last row throws `Cannot csv_to_bin: file ends before
+  line N`, and a header with too few columns now reports the same `Unexpected header in CSV file:
+  ...` as any other header mismatch instead of `CSV header has N columns, expected M`.
 
 ## [0.12.3] — unreleased
 
