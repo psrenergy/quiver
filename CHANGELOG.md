@@ -49,6 +49,19 @@ callers to change something are prefixed **BREAKING** and say what to do.
   *Adapt:* regenerate golden files and byte-for-byte comparisons over `bin_to_csv` output; fix CSV
   files that relied on a truncated cell; update any matcher on the old `stod` messages.
 
+- **Expressions: a binary operation accepts two single-label operands whatever their labels are
+  called.** `+ - * /`, the comparisons and `&&`/`||` (Julia and Lua `&`/`|`) threw `Cannot apply:
+  labels have same size 1 but different content` when each operand carried one label with a
+  different name, while `ifelse` over the same operands worked. So
+  `e:aggregate_agents("max") - e:aggregate_agents("min")` failed, and so did combining conditions
+  on two single-label files, e.g. `(demand > x) & (price < y)`. Binary operations now follow the
+  `ifelse` rule: operands with more than one label must carry the same label set, a single label
+  broadcasts, and when every operand has a single label the result takes the left operand's (for
+  `ifelse`, the `then` operand's). Every expression that built before builds the same output. A
+  label-set mismatch in a binary operation now reports `Cannot apply: labels are incompatible
+  across operands (non-singleton label sets must match)`, replacing `labels have same size N but
+  different content` and `labels have incompatible sizes N vs M`.
+
 ### Removed
 
 - **BREAKING (C++ only) — `TimeProperties::set_initial_value()`.** `BinaryMetadata::derive_initial_values()`

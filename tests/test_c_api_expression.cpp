@@ -598,6 +598,42 @@ TEST_F(ExpressionCApiFixture, LabelMismatchReturnsError) {
     quiver_expression_close(b);
 }
 
+TEST_F(ExpressionCApiFixture, SingleLabelOperandsWithDifferentNamesBroadcast) {
+    auto* md_a = make_metadata_v({"row", "col"}, {2, 2}, {"alpha"});
+    auto* md_b = make_metadata_v({"row", "col"}, {2, 2}, {"beta"});
+    write_dense(path_a, md_a, {"row", "col"}, {2, 2}, 1, [](const std::vector<int64_t>& dims, size_t /*k*/) {
+        return static_cast<double>(dims[0] * 10 + dims[1]);
+    });
+    write_dense(path_b, md_b, {"row", "col"}, {2, 2}, 1, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    quiver_binary_metadata_free(md_a);
+    quiver_binary_metadata_free(md_b);
+
+    auto* a = expr_from_file(path_a);
+    auto* b = expr_from_file(path_b);
+    quiver_expression_t* diff = nullptr;
+    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_SUBTRACT, a, b, &diff), QUIVER_OK)
+        << quiver_get_last_error();
+
+    quiver_binary_metadata_t* out_md = nullptr;
+    ASSERT_EQ(quiver_expression_get_metadata(diff, &out_md), QUIVER_OK);
+    char** labels = nullptr;
+    size_t label_count = 0;
+    ASSERT_EQ(quiver_binary_metadata_get_labels(out_md, &labels, &label_count), QUIVER_OK);
+    ASSERT_EQ(label_count, 1u);
+    EXPECT_STREQ(labels[0], "alpha");  // both operands single-label: the lhs label wins
+    quiver_binary_metadata_free_string_array(labels, label_count);
+    quiver_binary_metadata_free(out_md);
+
+    ASSERT_EQ(quiver_expression_save(diff, path_out.c_str()), QUIVER_OK);
+    quiver_expression_close(a);
+    quiver_expression_close(b);
+    quiver_expression_close(diff);
+
+    auto cell_21 = read_one_cell(path_out, {"row", "col"}, {2, 1});
+    ASSERT_EQ(cell_21.size(), 1u);
+    EXPECT_DOUBLE_EQ(cell_21[0], (2.0 * 10 + 1.0) - 1.0);
+}
+
 // ============================================================================
 // Save collision
 // ============================================================================

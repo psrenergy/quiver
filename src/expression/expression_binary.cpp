@@ -91,8 +91,7 @@ ExpressionBinary::ExpressionBinary(Operation operation,
     } else {
         validate_compatibility(lhs_meta, rhs_meta);
     }
-    auto output_labels = compute_output_labels(lhs_meta.labels, rhs_meta.labels);
-    broadcast_meta_ = build_broadcast_metadata(lhs_meta, rhs_meta, std::move(output_labels));
+    broadcast_meta_ = build_broadcast_metadata({&lhs_meta, &rhs_meta}, lhs_meta);
     if (is_logical(operation_)) {
         broadcast_meta_.unit = "";
     }

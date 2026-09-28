@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <initializer_list>
 #include <limits>
 #include <optional>
 #include <stdexcept>
@@ -109,146 +110,70 @@ inline void validate_compatibility(const BinaryMetadata& lhs, const BinaryMetada
     validate_shape_compatibility(lhs, rhs);
 }
 
-inline std::vector<std::string> compute_output_labels(const std::vector<std::string>& l_labels,
-                                                      const std::vector<std::string>& r_labels) {
-    const auto ll = l_labels.size();
-    const auto rl = r_labels.size();
-    if (ll == rl) {
-        if (l_labels != r_labels) {
-            throw std::runtime_error("Cannot apply: labels have same size " + std::to_string(ll) +
-                                     " but different content");
-        }
-        return l_labels;
-    }
-    if (ll == 1 && rl > 1) {
-        return r_labels;
-    }
-    if (rl == 1 && ll > 1) {
-        return l_labels;
-    }
-    throw std::runtime_error("Cannot apply: labels have incompatible sizes " + std::to_string(ll) + " vs " +
-                             std::to_string(rl));
-}
-
-inline BinaryMetadata
-build_broadcast_metadata(const BinaryMetadata& lhs, const BinaryMetadata& rhs, std::vector<std::string> output_labels) {
-    BinaryMetadata out;
-    out.version = lhs.version;
-    out.unit = lhs.unit;
-    out.labels = std::move(output_labels);
-
-    const auto lhs_has_time = any_time_dim(lhs.dimensions);
-    const auto rhs_has_time = any_time_dim(rhs.dimensions);
-    out.initial_datetime =
-        lhs_has_time ? lhs.initial_datetime : (rhs_has_time ? rhs.initial_datetime : lhs.initial_datetime);
-
-    std::unordered_map<std::string, int> output_index_by_name;
-    for (const auto& l_dim : lhs.dimensions) {
-        auto r_idx = find_dim_index(rhs.dimensions, l_dim.name);
-        int64_t out_size = (r_idx >= 0) ? std::max(l_dim.size, rhs.dimensions[r_idx].size) : l_dim.size;
-        Dimension d{l_dim.name, out_size, l_dim.time};
-        out.dimensions.push_back(std::move(d));
-        output_index_by_name[l_dim.name] = static_cast<int>(out.dimensions.size()) - 1;
-    }
-    for (const auto& r_dim : rhs.dimensions) {
-        if (output_index_by_name.count(r_dim.name))
-            continue;
-        out.dimensions.push_back(r_dim);
-        output_index_by_name[r_dim.name] = static_cast<int>(out.dimensions.size()) - 1;
-    }
-    for (auto& out_d : out.dimensions) {
-        if (!out_d.is_time_dimension())
-            continue;
-        auto src_idx = find_dim_index(lhs.dimensions, out_d.name);
-        const auto* src_meta = &lhs;
-        if (src_idx < 0) {
-            src_idx = find_dim_index(rhs.dimensions, out_d.name);
-            src_meta = &rhs;
-        }
-        int64_t src_parent_idx = src_meta->dimensions[src_idx].time->parent_dimension_index;
-        if (src_parent_idx < 0) {
-            out_d.time->parent_dimension_index = -1;
+// The one label rule for every broadcasting node: every operand with more than one label must carry
+// the same label set, and a single-label operand broadcasts its one value across it whatever that
+// label is called. When every operand has a single label, the output takes the primary operand's.
+inline std::vector<std::string> broadcast_labels(std::initializer_list<const BinaryMetadata*> sources,
+                                                 const BinaryMetadata& primary) {
+    const std::vector<std::string>* labels = nullptr;
+    for (const auto* src : sources) {
+        if (src->labels.size() <= 1) {
             continue;
         }
-        const std::string& parent_name = src_meta->dimensions[src_parent_idx].name;
-        out_d.time->parent_dimension_index = output_index_by_name.find(parent_name)->second;
-    }
-    return out;
-}
-
-inline std::vector<std::string> compute_ternary_output_labels(const std::vector<std::string>& c_labels,
-                                                              const std::vector<std::string>& t_labels,
-                                                              const std::vector<std::string>& e_labels) {
-    const std::vector<const std::vector<std::string>*> non_singleton = [&] {
-        std::vector<const std::vector<std::string>*> v;
-        if (c_labels.size() > 1)
-            v.push_back(&c_labels);
-        if (t_labels.size() > 1)
-            v.push_back(&t_labels);
-        if (e_labels.size() > 1)
-            v.push_back(&e_labels);
-        return v;
-    }();
-
-    if (non_singleton.empty()) {
-        return t_labels;
-    }
-
-    for (size_t i = 1; i < non_singleton.size(); ++i) {
-        if (*non_singleton[i] != *non_singleton[0]) {
+        if (labels == nullptr) {
+            labels = &src->labels;
+        } else if (src->labels != *labels) {
             throw std::runtime_error("Cannot apply: labels are incompatible across operands "
                                      "(non-singleton label sets must match)");
         }
     }
-    return *non_singleton[0];
+    return labels != nullptr ? *labels : primary.labels;
 }
 
-inline BinaryMetadata build_ternary_broadcast_metadata(const BinaryMetadata& cond,
-                                                       const BinaryMetadata& then_meta,
-                                                       const BinaryMetadata& else_meta,
-                                                       std::vector<std::string> output_labels) {
+// Output metadata of a broadcasting node, shared by ExpressionBinary ({lhs, rhs}, primary lhs) and
+// ExpressionTernary ({cond, then, else}, primary then). The order of `sources` is the output
+// dimension order: the union of dimension names, first occurrence first, each sized as the max over
+// the sources that have it (validate_shape_compatibility has already checked the sizes broadcast),
+// with time properties and the parent link taken from the first source that has it. version and
+// unit come from `primary`. initial_datetime comes from the first source with a time dimension,
+// else from `primary`. The pairwise validate_shape_compatibility calls force every time-bearing
+// source to agree, so only that fallback depends on which operand is primary.
+inline BinaryMetadata build_broadcast_metadata(std::initializer_list<const BinaryMetadata*> sources,
+                                               const BinaryMetadata& primary) {
     BinaryMetadata out;
-    out.version = then_meta.version;
-    out.unit = then_meta.unit;
-    out.labels = std::move(output_labels);
-
-    const auto then_has_time = any_time_dim(then_meta.dimensions);
-    const auto else_has_time = any_time_dim(else_meta.dimensions);
-    const auto cond_has_time = any_time_dim(cond.dimensions);
-    if (then_has_time) {
-        out.initial_datetime = then_meta.initial_datetime;
-    } else if (else_has_time) {
-        out.initial_datetime = else_meta.initial_datetime;
-    } else if (cond_has_time) {
-        out.initial_datetime = cond.initial_datetime;
-    } else {
-        out.initial_datetime = then_meta.initial_datetime;
+    out.version = primary.version;
+    out.unit = primary.unit;
+    out.labels = broadcast_labels(sources, primary);
+    out.initial_datetime = primary.initial_datetime;
+    for (const auto* src : sources) {
+        if (any_time_dim(src->dimensions)) {
+            out.initial_datetime = src->initial_datetime;
+            break;
+        }
     }
 
-    const std::vector<const BinaryMetadata*> sources = {&cond, &then_meta, &else_meta};
     std::unordered_map<std::string, int> output_index_by_name;
     for (const auto* src : sources) {
         for (const auto& dim : src->dimensions) {
-            if (output_index_by_name.count(dim.name))
+            if (output_index_by_name.count(dim.name)) {
                 continue;
+            }
             int64_t out_size = dim.size;
             for (const auto* other : sources) {
-                if (other == src)
-                    continue;
-                auto idx = find_dim_index(other->dimensions, dim.name);
+                const auto idx = find_dim_index(other->dimensions, dim.name);
                 if (idx >= 0) {
                     out_size = std::max(out_size, other->dimensions[idx].size);
                 }
             }
-            Dimension d{dim.name, out_size, dim.time};
-            out.dimensions.push_back(std::move(d));
+            out.dimensions.push_back(Dimension{dim.name, out_size, dim.time});
             output_index_by_name[dim.name] = static_cast<int>(out.dimensions.size()) - 1;
         }
     }
 
     for (auto& out_d : out.dimensions) {
-        if (!out_d.is_time_dimension())
+        if (!out_d.is_time_dimension()) {
             continue;
+        }
         const BinaryMetadata* src_meta = nullptr;
         int src_idx = -1;
         for (const auto* s : sources) {
@@ -258,7 +183,7 @@ inline BinaryMetadata build_ternary_broadcast_metadata(const BinaryMetadata& con
                 break;
             }
         }
-        int64_t src_parent_idx = src_meta->dimensions[src_idx].time->parent_dimension_index;
+        const int64_t src_parent_idx = src_meta->dimensions[src_idx].time->parent_dimension_index;
         if (src_parent_idx < 0) {
             out_d.time->parent_dimension_index = -1;
             continue;

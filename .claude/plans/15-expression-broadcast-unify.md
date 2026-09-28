@@ -611,16 +611,16 @@ Run from the repo root (Git Bash). Run the `.bat` scripts from `cmd`/PowerShell,
 
 ## Acceptance criteria
 
-- [ ] `src/expression/expression_helpers.h` has exactly one broadcast-metadata builder, `build_broadcast_metadata(std::initializer_list<const BinaryMetadata*>, const BinaryMetadata& primary)`, plus `broadcast_labels(...)`. `compute_output_labels`, `compute_ternary_output_labels` and `build_ternary_broadcast_metadata` no longer exist anywhere in the repo.
-- [ ] `ExpressionBinary` calls `build_broadcast_metadata({&lhs_meta, &rhs_meta}, lhs_meta)`, and `ExpressionTernary` calls `build_broadcast_metadata({&condition_meta, &then_meta, &else_meta}, then_meta)`.
-- [ ] Logical ops still clear the unit, and `ifelse` still validates `then`/`else` units and all three shape pairs.
-- [ ] `{"alpha"} - {"beta"}` builds with labels `{"alpha"}` in C++, the C API, Lua and Julia.
-- [ ] `{val1,val2}` vs `{val1,val2,val3}` throws `... non-singleton label sets must match`.
-- [ ] Ternary output is unchanged: condition-first dims, `then` labels when every operand is single-label, `then`'s `initial_datetime` when no operand has a time dim (pinned by the two new ternary tests).
-- [ ] All pre-existing expression tests pass unchanged in C++, the C API, Lua and Julia.
-- [ ] `src/AGENTS.md` names the single builder and describes the label rule, and there is no remaining mention of `build_ternary_broadcast_metadata`.
-- [ ] `CHANGELOG.md` has the non-BREAKING entry under 0.12.0 `### Changed`.
-- [ ] `scripts/format.bat` leaves no diff beyond this plan's files.
+- [x] `src/expression/expression_helpers.h` has exactly one broadcast-metadata builder, `build_broadcast_metadata(std::initializer_list<const BinaryMetadata*>, const BinaryMetadata& primary)`, plus `broadcast_labels(...)`. `compute_output_labels`, `compute_ternary_output_labels` and `build_ternary_broadcast_metadata` no longer exist anywhere in the repo.
+- [x] `ExpressionBinary` calls `build_broadcast_metadata({&lhs_meta, &rhs_meta}, lhs_meta)`, and `ExpressionTernary` calls `build_broadcast_metadata({&condition_meta, &then_meta, &else_meta}, then_meta)`.
+- [x] Logical ops still clear the unit, and `ifelse` still validates `then`/`else` units and all three shape pairs.
+- [x] `{"alpha"} - {"beta"}` builds with labels `{"alpha"}` in C++, the C API, Lua and Julia.
+- [x] `{val1,val2}` vs `{val1,val2,val3}` throws `... non-singleton label sets must match`.
+- [x] Ternary output is unchanged: condition-first dims, `then` labels when every operand is single-label, `then`'s `initial_datetime` when no operand has a time dim (pinned by the two new ternary tests).
+- [x] All pre-existing expression tests pass unchanged in C++, the C API, Lua and Julia.
+- [x] `src/AGENTS.md` names the single builder and describes the label rule, and there is no remaining mention of `build_ternary_broadcast_metadata`.
+- [x] `CHANGELOG.md` has the non-BREAKING entry under 0.12.0 `### Changed`. (Landed under `[0.12.4]`, the open section. See Implementation notes.)
+- [x] `scripts/format.bat` leaves no diff beyond this plan's files.
 
 ## Pitfalls
 
@@ -641,3 +641,120 @@ Run from the repo root (Git Bash). Run the `.bat` scripts from `cmd`/PowerShell,
 - Registering the Lua operator metamethods once: plan **51**.
 - Documenting expression broadcast rules (units, shapes, labels) in the agent-facing Lua reference `bindings/js/src/lua-api.ts`. It documents none of them today, so nothing there is stale. Plans **43/44** own that file's accuracy fixes.
 - The pre-existing CLI smoke-test failure in `scripts/test-all.bat` step 7: plan **65**.
+
+## Implementation notes
+
+Implemented on `rs/plan15`. The branch was already at `master` `784fdc0` when work started (plans
+06–14 and the 0.12.4 bump had landed), so `git merge origin/master` was a no-op. A read-only
+verification pass ran before any edit: every quoted excerpt, symbol, fixture, helper signature and
+insertion anchor matched, in all four test layers, and the three core files were byte-identical to
+the ones the plan quotes. An adversarial review (equivalence prover, test auditor, devil's
+advocate, each finding re-verified) found no input the library can build on which the new builder
+differs from the old ones, beyond the two changes the plan names. The Changes, Tests and Docs were
+applied as written, apart from the drift below. No C API, FFI or binding code changed, so no
+generator ran.
+
+### Regression proof (tests written first, run against the unchanged `src/`)
+
+- **C++ and Lua** (`--gtest_filter` over the six new tests): four failed and the two ternary pins
+  passed, exactly as predicted.
+  - `LabelSetsOfDifferentSizesThrow`: the substring check failed on `Cannot apply: labels have
+    incompatible sizes 2 vs 3`.
+  - `SingleLabelOperandsWithDifferentNamesBroadcast` and
+    `LogicalOnSingleLabelOperandsWithDifferentNames`: an uncaught `Cannot apply: labels have same
+    size 1 but different content`.
+  - `LuaExpressionTest.AggregateAgentsMaxMinusMin`: `Failed to run Lua script: Cannot apply: labels
+    have same size 1 but different content ... in metamethod 'sub'`.
+  - `IfElseSingleLabelOperandsTakeThenLabels` and
+    `IfElseDimensionsFollowConditionAndDatetimeFollowsThen`: passed.
+- **C API.** `SingleLabelOperandsWithDifferentNamesBroadcast`: `quiver_expression_apply` returned
+  `QUIVER_ERROR` (1) with the same message.
+- **Julia.** `"Single-label operands with different names broadcast"` errored with `Got exception
+  outside of a @test: Cannot apply: labels have same size 1 but different content` from
+  `_binop` (`expression.jl:27`). `runtests.jl` is fail-fast, so the run stopped there (18 passed,
+  1 errored).
+- After the change all of them pass.
+
+### Verification
+
+- The build shows no warnings in `src/expression/`. The build's other warnings (C4458 in
+  `database_impl.h`/`database_update.cpp`, C4100 in `LogicalAndOrNot` in
+  `test_c_api_expression.cpp`) were there before this plan.
+- `ExpressionFixture.*:LuaExpressionTest.*`: 137/137 pass. `ExpressionCApiFixture.*`: 72/72 pass.
+- Full suites: `quiver_tests` 1361/1361, `quiver_c_tests` 563/563, Julia `test_expression.jl`
+  186/186.
+- The step-6 grep for `compute_output_labels`, `compute_ternary_output_labels` and
+  `build_ternary_broadcast_metadata` prints nothing.
+- `scripts/test-all.bat`: every suite PASSES. C++ 1361, C API 563, Julia 1489, Dart 426, JS 212,
+  Python 309.
+- `scripts/format.bat` then leaves only this plan's nine files modified. It did not get there on
+  the first run in this fresh checkout. See Environment.
+
+### Drift fixed
+
+- **CHANGELOG section.** The entry is the last bullet of `### Changed` under
+  `## [0.12.4] — unreleased`, the open section (0.12.0–0.12.3 are tagged). The plan said 0.12.0.
+  It sits after plan 13's `bin_to_csv`/`csv_to_bin` entry and before `### Removed`. The text is the
+  plan's, with no BREAKING prefix and no manifest bump.
+- **A fourth `src/AGENTS.md` mention of the old helper.** Plan 12 (`4b7fece`) added a sentence to the
+  `BinaryMetadata` factories bullet: "Inside the library, `build_broadcast_metadata` /
+  `build_ternary_broadcast_metadata` (`expression_helpers.h`) still assemble `dimensions`
+  directly." The plan predates it. It now names only `build_broadcast_metadata`, so the acceptance
+  criterion "no remaining mention of `build_ternary_broadcast_metadata`" holds.
+- **Plan 09's `derive_initial_values()` rule.** Plan 09 landed first and documents: "Any code that
+  changes `dimensions` or `initial_datetime` must end with `BinaryMetadata::derive_initial_values()`."
+  The broadcast builder copies each time dimension's `TimeProperties` from the first source instead.
+  That is still correct. `validate_shape_compatibility` forces a shared time dimension to agree on
+  frequency, `initial_value` and parent name, and every time-bearing source to share
+  `initial_datetime`, so each copied `initial_value` already equals the derived one. One sentence
+  saying so was added to the new "One broadcast-metadata builder" bullet. No call was added, so the
+  plan's code is unchanged.
+- **Test-all has no step 7 any more.** Commit `01e78d7` (in the plan 06 PR) removed the CLI smoke
+  test from `scripts/test-all.bat`, which now runs six steps. The plan's "step 7 currently fails"
+  note is stale, and every step passes.
+- **Line numbers.** The `src/AGENTS.md` bullets were at ~L849/851/856, not ~L751/753/757. The test
+  anchors had moved too (plans 09/10 added tests). Every edit was re-anchored by the quoted text.
+- **README.** It lists this plan as depending on "08, 14". That misreads the plan header's "runs
+  after 08–14 in numeric order". The dependency is ordering only, and both had landed anyway.
+
+### Kept as written, on purpose
+
+- **`broadcast_labels` keeps `size() <= 1`**, as the plan says. A reviewer pointed out that `== 1`
+  would also reject a 0-label operand. With `<= 1`, a hand-built, unvalidated 0-label
+  `BinaryMetadata` (only reachable through the public `ExpressionScalar(double, BinaryMetadata)`
+  constructor or a custom node) would build and then read past an empty row buffer, and so would a
+  duplicate dimension name. Every metadata that files, scalar operators, the C API, Julia and Lua
+  produce goes through `validate()`, which rejects both. So this is a contract violation, not a
+  reachable bug, and the old ternary had the same hole.
+- **The builder comments** are the plan's verbatim text, although they repeat the new
+  `src/AGENTS.md` bullet.
+
+### Environment (fresh checkout, not code)
+
+- `build/` was configured from scratch.
+- The first `scripts/format.bat` run touched unrelated files:
+  - **Dart:** 25 files rewrapped at 80 columns. `.dart_tool` did not exist yet, so `dart format`
+    could not resolve `analysis_options.yaml` (`include: package:lints/...`) and ignored
+    `page_width: 120`. After reverting and running `dart pub get`, it changes 0 files.
+  - **Python:** `uv` failed while creating `.venv` with "Failed to update Windows PE resources".
+    Deleting the half-created `.venv` and running `uv sync` again fixed it.
+  - **JS:** `biome` was not installed. After `bun install`, it "fixed" all 42 files, but only by
+    rewriting the CRLF working copies (`core.autocrlf=true`) as LF. `git diff` showed no content
+    change, and `git checkout -- bindings/js` restored them.
+
+### For later plans
+
+- **Plan 16** edits the aggregation templates right below the new builder in
+  `expression_helpers.h`; one blank line separates the two blocks. Plan 16's anchor (`template
+  <typename Op> std::string aggregation_operation_label`) is unchanged. In `src/AGENTS.md`, the new
+  broadcast bullet sits directly above the "All operation enums are nested in their owning class"
+  bullet that plan 16 replaces. That is an adjacent-line conflict if the two are merged in
+  parallel: keep both.
+- **Plan 51** re-registers the Lua operator metamethods. `LuaExpressionTest.AggregateAgentsMaxMinusMin`
+  relies on `Expression - Expression` (`__sub`) and must keep passing.
+- **Noticed, not owned.** When two time dimensions each appear in only one operand (A has only
+  `year`, B has only `month`, same `initial_datetime`), both the old and the new builder output two
+  root time dimensions (parent -1 each). `validate()` accepts that, but `from_toml_content` always
+  chains time dimensions, so the saved `.toml` reloads with `month` as a child of `year`: a
+  different parent and a different derived `initial_value`. This plan keeps the behaviour exactly.
+  It is a candidate for a follow-up.
