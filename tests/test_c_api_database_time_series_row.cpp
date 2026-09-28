@@ -1324,8 +1324,9 @@ TEST(DatabaseCApi, ReadTimeSeriesRowRejectsMultiDimensionGroup) {
         db, "Resource", "load", "load", "2024-01-01", &out_type, &out_values, &out_count);
     EXPECT_EQ(err, QUIVER_ERROR);
     EXPECT_EQ(out_values, nullptr);
-    EXPECT_STREQ(quiver_get_last_error(),
-                 "Cannot read_time_series_row: group 'load' of collection 'Resource' has more than one dimension column");
+    EXPECT_STREQ(
+        quiver_get_last_error(),
+        "Cannot read_time_series_row: group 'load' of collection 'Resource' has more than one dimension column");
 
     quiver_database_close(db);
 }

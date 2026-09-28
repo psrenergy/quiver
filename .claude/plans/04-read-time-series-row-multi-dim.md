@@ -522,3 +522,45 @@ From the repo root (`C:\Development\Quiver\quiver1`), in order:
 - Moving `execute` into `Impl`: **plan 53**.
 - A per-dimension (e.g. per-`block`) row reader, or a dimension-filter parameter on `read_time_series_row`. That is a new API; nobody has asked for it.
 - `include/quiver/c/database.h` and `src/c/AGENTS.md`: the C API passes the error through unchanged, and plan 17 rewrites that comment block.
+
+## Implementation notes
+
+Implemented on `rs/plan4`, starting at `f5e059f` (PR #309, the merge of plan 03). The code, tests, comments and docs follow the plan. Every quoted excerpt, symbol and test anchor matched the tree. Only line numbers had drifted, by about +6: `read_time_series_row` is at `src/database_time_series.cpp:278`, and the `auto dim_col = internal::find_dimension_column(*table_def);` line is at ~L289, spelled as plan 02 left it. This plan's header says "Depends on none" while the README says 02. That no longer matters, because 02 has landed (`7155e60`).
+
+**Deviations:**
+- **The CHANGELOG entry is under `## [0.12.2] — unreleased`, in a new `### Changed` subsection above `### Fixed`,** not under `[0.12.0]`. Tags `v0.12.0` and `v0.12.1` exist. 0.12.2 is the next untagged version, and #308 already bumped the manifests to it, so there is no manifest bump here. This means a BREAKING entry lands in a patch release again. Whether the next release should be 0.13.0 is the maintainer's call.
+- **In `docs/time_series.md` the new paragraph comes after the worked example**, i.e. after the numbered `Querying at ...` list and directly above `### NULL cells in a group`. The plan put it right after the rule paragraph. There it separated the "last non-null value" rule from the example that illustrates it, so "For example, ..." read as if it illustrated the refusal. The text is unchanged. The review raised this.
+- **Verification counts.** Plan 02 added `Database.ReadTimeSeriesRowUsesPrimaryKeyDateColumn`, so the step-2 filter matched 11 tests before and 13 after, not 10 and 12. The step-3 filter matched 7 before and 8 after, as planned.
+
+**Red/green.** The tests went in first and were built against the unfixed core:
+- C++ `Database.ReadTimeSeriesRowRejectsMultiDimensionGroup`: `test_database_time_series_row.cpp(250): error: Failed`, `expected a throw`. This is the empty-collection half.
+- C API: `err` was `QUIVER_OK` (expected 1, got 0), and `quiver_get_last_error()` still held an earlier test's message.
+- Lua: `expected script to throw: db:read_time_series_row("Resource", "load", "load", "2024-01-01")`.
+- Python: `Failed: DID NOT RAISE QuiverError`.
+- JS: `Received function did not throw`, `Received value: []`.
+- Julia and Dart were only run after the fix.
+
+After the fix:
+- Step 2: 13/13. Step 3: 8/8.
+- Full `quiver_tests`: 1308/1308. Full `quiver_c_tests`: 563/563.
+- Julia: all pass ("Time Series Row" 50/50). Dart: 420/420. Python: 306/306. JS: 209/209, including `lua-api-sync.test.ts`.
+- `scripts/test-all.bat`: all six suites PASS. Only step 7, the CLI smoke test, fails: `Script file not found: ...\example\example1.lua`. That failure predates this plan and is plan 65's to fix.
+
+As the plan says, no test fails without the ON-clause filter. `ReadTimeSeriesRowSkipsNullValues` stays green with it.
+
+**Format.** `scripts/format.bat` reflowed only the new C API test's `EXPECT_STREQ` (clang-format). dart format, ruff and JuliaFormatter changed nothing. Biome again rewrote 22 JS files from CRLF to LF with no content change; `git checkout -- bindings/js` restored them. A second run changed no content.
+
+**Review.** A 3-lens adversarial review (core correctness, docs accuracy, acceptance audit) found no bugs. Its one actionable nit was the docs placement above.
+
+**Commit history.** The plan lands in two commits instead of one. While the binding suites were running, a commit `ad67be7 "update"` was made on `rs/plan4` from outside this session and pushed to `origin/rs/plan4`. It holds the fix, the seven tests, and every doc and changelog edit. On the user's instruction it was kept, and the commit on top carries only what came after it: these notes, the `docs/time_series.md` paragraph move, and the clang-format reflow of the new C API test.
+
+Things later plans should know:
+- **Plan 17.** When the signature changes, give `DatabaseCApi.ReadTimeSeriesRowRejectsMultiDimensionGroup` the new `out_mask` argument. The test asserts `out_values == nullptr` on the error path, so check the mask the same way. Plan 17 also edits paragraphs that this plan extended:
+  - The root `AGENTS.md` "Time series row" bullet now ends with the multi-dimension rule.
+  - In `docs/time_series.md`, the multi-dimension paragraph sits after the example list.
+  - The Dart `readTimeSeriesRow` doc comment and the Python `read_time_series_row` docstring each end with a "Throws/Raises ... more than one dimension column" sentence.
+- **Plan 57.** The guard sits directly below the `find_time_series_table` / `get_table` / throw prologue that 57 rewrites. Keep it between that prologue and `auto dim_col = ...`, above the attribute check and the empty-collection early return.
+- **Plan 53.** The `execute(sql, {date_time})` call is unchanged. Only the SQL string grew.
+- **Plans 43 / 44.** The `lua-api.ts` `read_time_series_row` section gained one sentence.
+- **The Dart native cache was cleared again** (`.dart_tool/hooks_runner`, `.dart_tool/lib`) before the Dart run. Keep doing that.
+- **The first `bindings/python/tests/test.bat` run of the session took ~20 minutes before pytest started** (uv preparing the environment). Later runs took ~35 s. Don't mistake that wait for a hang.
