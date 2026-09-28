@@ -5,7 +5,7 @@ All notable changes to Quiver are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entries that require
 callers to change something are prefixed **BREAKING** and say what to do.
 
-## [0.12.4] — unreleased
+## [0.12.4] — 2026-09-28
 
 ### Changed
 
@@ -171,7 +171,7 @@ callers to change something are prefixed **BREAKING** and say what to do.
   line N`, and a header with too few columns now reports the same `Unexpected header in CSV file:
   ...` as any other header mismatch instead of `CSV header has N columns, expected M`.
 
-## [0.12.3] — unreleased
+## [0.12.3] — 2026-09-28
 
 ### Changed
 
@@ -222,7 +222,7 @@ callers to change something are prefixed **BREAKING** and say what to do.
   CHECK constraint, a foreign-key violation — still happens mid-write, and inside a caller-owned
   transaction the call's earlier writes stay; outside one the call is rolled back as before.
 
-## [0.12.2] — unreleased
+## [0.12.2] — 2026-09-27
 
 ### Changed
 
@@ -247,7 +247,7 @@ callers to change something are prefixed **BREAKING** and say what to do.
   NULL for it. The C API, Lua and the bindings always pass every column in every row and were not
   affected.
 
-## [0.12.1] — unreleased
+## [0.12.1] — 2026-09-27
 
 ### Changed
 
@@ -270,7 +270,7 @@ callers to change something are prefixed **BREAKING** and say what to do.
   throw `Dimension column not found: time series table '<table>'` for it. Add the date column to
   the key, e.g. `PRIMARY KEY (id, date_time)`.
 
-## [0.12.0] — unreleased
+## [0.12.0] — 2026-09-27
 
 ### Changed
 
