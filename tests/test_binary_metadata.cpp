@@ -1,12 +1,17 @@
 #include <chrono>
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <quiver/binary/binary_metadata.h>
 #include <quiver/binary/dimension.h>
 #include <quiver/binary/time_properties.h>
 #include <quiver/element.h>
+#include <sstream>
+#include <string>
 
 using namespace quiver;
 using namespace std::chrono;
+using testing::HasSubstr;
+using testing::ThrowsMessage;
 
 // ============================================================================
 // Helper
@@ -35,6 +40,19 @@ static Element make_valid_element() {
         .set("time_dimensions", {"stage", "block"})
         .set("frequencies", {"monthly", "daily"})
         .set("labels", {"plant_1", "plant_2"});
+}
+
+// make_valid_toml() with the line assigning `key` removed.
+static std::string valid_toml_without(const std::string& key) {
+    std::istringstream in(make_valid_toml());
+    std::string out;
+    std::string line;
+    while (std::getline(in, line)) {
+        if (line.rfind(key + " =", 0) != 0) {
+            out += line + "\n";
+        }
+    }
+    return out;
 }
 
 // ============================================================================
@@ -115,6 +133,45 @@ labels = ["val"]
     EXPECT_EQ(md.dimensions[2].time->initial_value, 11);  // hour 10 → 10+1=11
 }
 
+TEST(BinaryMetadataFromTomlContent, InitialValuesUnderWeeklyCountFromInitialDatetime) {
+    // Saturday 2025-03-15 was day 4 of a week counted from January 1. A week now starts on the day of
+    // initial_datetime, so the day starts at 1 and the hour at hour-of-day + 1.
+    auto daily = BinaryMetadata::from_toml_content(R"(
+version = "1"
+dimensions = ["week", "day"]
+dimension_sizes = [60, 7]
+time_dimensions = ["week", "day"]
+frequencies = ["weekly", "daily"]
+initial_datetime = "2025-03-15T06:00:00"
+unit = "MW"
+labels = ["val"]
+)");
+    EXPECT_EQ(daily.dimensions[1].time->initial_value, 1);
+
+    auto hourly = BinaryMetadata::from_toml_content(R"(
+version = "1"
+dimensions = ["week", "hour"]
+dimension_sizes = [60, 168]
+time_dimensions = ["week", "hour"]
+frequencies = ["weekly", "hourly"]
+initial_datetime = "2025-03-15T06:00:00"
+unit = "MW"
+labels = ["val"]
+)");
+    EXPECT_EQ(hourly.dimensions[1].time->initial_value, 7);
+}
+
+TEST(BinaryMetadataDeriveInitialValues, RecomputesFromCurrentInitialDatetime) {
+    auto md = BinaryMetadata::from_toml_content(make_valid_toml());
+    ASSERT_EQ(md.dimensions[1].time->initial_value, 1);
+
+    md.initial_datetime = sys_days{2025y / March / 15d};
+    md.derive_initial_values();
+
+    EXPECT_EQ(md.dimensions[0].time->initial_value, 1);   // the outermost time dimension always starts at 1
+    EXPECT_EQ(md.dimensions[1].time->initial_value, 15);  // day of the month
+}
+
 TEST(BinaryMetadataFromTomlContent, MixedTimeAndNonTime) {
     std::string toml = R"(
 version = "1"
@@ -132,6 +189,9 @@ labels = ["val"]
     EXPECT_FALSE(md.dimensions[1].is_time_dimension());
     EXPECT_TRUE(md.dimensions[2].is_time_dimension());
     EXPECT_EQ(md.number_of_time_dimensions(), 2);
+    // A time dimension chains to the previous *time* dimension, skipping the non-time "scenario"
+    EXPECT_EQ(md.dimensions[0].time->parent_dimension_index, -1);
+    EXPECT_EQ(md.dimensions[2].time->parent_dimension_index, 0);
 }
 
 TEST(BinaryMetadataFromTomlContent, ErrorTimeDimensionNotInDimensions) {
@@ -145,7 +205,9 @@ initial_datetime = "2025-01-01T00:00:00"
 unit = "MW"
 labels = ["val"]
 )";
-    EXPECT_THROW(BinaryMetadata::from_toml_content(toml), std::runtime_error);
+    EXPECT_THAT([&] { BinaryMetadata::from_toml_content(toml); },
+                ThrowsMessage<std::runtime_error>(
+                    HasSubstr("Cannot from_toml_content: time dimension 'nonexistent' is not in dimensions")));
 }
 
 TEST(BinaryMetadataFromTomlContent, ErrorTimeDimensionsOutOfOrder) {
@@ -159,7 +221,61 @@ initial_datetime = "2025-01-01T00:00:00"
 unit = "MW"
 labels = ["val"]
 )";
-    EXPECT_THROW(BinaryMetadata::from_toml_content(toml), std::runtime_error);
+    EXPECT_THAT([&] { BinaryMetadata::from_toml_content(toml); },
+                ThrowsMessage<std::runtime_error>(HasSubstr(
+                    "Cannot from_toml_content: time dimensions must appear in the same order as dimensions")));
+}
+
+TEST(BinaryMetadataFromTomlContent, ErrorUnknownFrequency) {
+    std::string toml = R"(
+version = "1"
+dimensions = ["stage"]
+dimension_sizes = [4]
+time_dimensions = ["stage"]
+frequencies = ["invalid_freq"]
+initial_datetime = "2025-01-01T00:00:00"
+unit = "MW"
+labels = ["val"]
+)";
+    EXPECT_THAT([&] { BinaryMetadata::from_toml_content(toml); },
+                ThrowsMessage<std::invalid_argument>(HasSubstr("Unknown frequency: invalid_freq")));
+}
+
+TEST(BinaryMetadataFromTomlContent, ErrorInvalidInitialDatetime) {
+    std::string toml = R"(
+version = "1"
+dimensions = ["row"]
+dimension_sizes = [3]
+time_dimensions = []
+frequencies = []
+initial_datetime = "not-a-date"
+unit = "MW"
+labels = ["val"]
+)";
+    EXPECT_THAT([&] { BinaryMetadata::from_toml_content(toml); },
+                ThrowsMessage<std::runtime_error>(HasSubstr("Failed to parse initial_datetime: not-a-date")));
+}
+
+TEST(BinaryMetadataFromTomlContent, InvalidFrequencyLayoutReportsTheValidatorMessage) {
+    // validate() runs before the initial values are computed, so an inner yearly dimension or a repeated frequency
+    // gets the validator's message instead of an std::logic_error from the initial-value calculation
+    auto toml_with = [](const std::string& frequencies) {
+        return "version = \"1\"\ndimensions = [\"a\", \"b\"]\ndimension_sizes = [12, 31]\n"
+               "time_dimensions = [\"a\", \"b\"]\nfrequencies = " +
+               frequencies + "\ninitial_datetime = \"2025-01-01T00:00:00\"\nunit = \"MW\"\nlabels = [\"val\"]\n";
+    };
+    auto message_of = [](const std::string& toml) -> std::string {
+        try {
+            BinaryMetadata::from_toml_content(toml);
+        } catch (const std::runtime_error& e) {
+            return e.what();
+        }
+        return "no exception";
+    };
+    EXPECT_EQ(message_of(toml_with(R"(["monthly", "yearly"])")),
+              "Time dimension frequencies must be ordered from lowest to highest frequency.");
+    EXPECT_EQ(message_of(toml_with(R"(["daily", "daily"])")),
+              "Time dimension frequencies must be unique. Duplicate: daily");
 }
 
 TEST(BinaryMetadataFromTomlContent, NoTimeDimensions) {
@@ -177,6 +293,132 @@ labels = ["val"]
     EXPECT_EQ(md.number_of_time_dimensions(), 0);
     EXPECT_FALSE(md.dimensions[0].is_time_dimension());
     EXPECT_FALSE(md.dimensions[1].is_time_dimension());
+}
+
+TEST(BinaryMetadataFromTomlContent, DimensionSizesCountMismatchThrows) {
+    std::string toml = R"(
+version = "1"
+dimensions = ["stage", "block"]
+dimension_sizes = [12]
+initial_datetime = "2025-01-01T00:00:00"
+unit = "MW"
+labels = ["val"]
+)";
+    EXPECT_THAT([&] { BinaryMetadata::from_toml_content(toml); },
+                ThrowsMessage<std::runtime_error>(HasSubstr(
+                    "Cannot from_toml_content: dimension_sizes count (1) does not match dimensions count (2)")));
+}
+
+TEST(BinaryMetadataFromTomlContent, FrequenciesCountMismatchThrows) {
+    std::string toml = R"(
+version = "1"
+dimensions = ["stage", "block"]
+dimension_sizes = [4, 31]
+time_dimensions = ["stage", "block"]
+frequencies = ["monthly"]
+initial_datetime = "2025-01-01T00:00:00"
+unit = "MW"
+labels = ["val"]
+)";
+    EXPECT_THAT([&] { BinaryMetadata::from_toml_content(toml); },
+                ThrowsMessage<std::runtime_error>(HasSubstr(
+                    "Cannot from_toml_content: frequencies count (1) does not match time_dimensions count (2)")));
+}
+
+// Both counts agree, but a repeated dimension name matches the one time dimension twice. Indexing
+// frequencies by a running count read frequencies[1]; now validate() reports the duplicate.
+TEST(BinaryMetadataFromTomlContent, RepeatedTimeDimensionNameStaysInBounds) {
+    std::string toml = R"(
+version = "1"
+dimensions = ["a", "a"]
+dimension_sizes = [12, 12]
+time_dimensions = ["a"]
+frequencies = ["monthly"]
+initial_datetime = "2025-01-01T00:00:00"
+unit = "MW"
+labels = ["val"]
+)";
+    EXPECT_THAT([&] { BinaryMetadata::from_toml_content(toml); },
+                ThrowsMessage<std::runtime_error>(HasSubstr("Dimension names must be unique, duplicate: 'a'")));
+}
+
+TEST(BinaryMetadataFromTomlContent, WrongTypedArrayEntryThrows) {
+    std::string strings = R"(
+version = "1"
+dimensions = ["row", 2]
+dimension_sizes = [3, 2]
+initial_datetime = "2025-01-01T00:00:00"
+unit = "MW"
+labels = ["val"]
+)";
+    EXPECT_THAT([&] { BinaryMetadata::from_toml_content(strings); },
+                ThrowsMessage<std::runtime_error>(
+                    HasSubstr("Cannot from_toml_content: array 'dimensions' must contain strings")));
+
+    std::string integers = R"(
+version = "1"
+dimensions = ["row", "col"]
+dimension_sizes = [3, "2"]
+initial_datetime = "2025-01-01T00:00:00"
+unit = "MW"
+labels = ["val"]
+)";
+    EXPECT_THAT([&] { BinaryMetadata::from_toml_content(integers); },
+                ThrowsMessage<std::runtime_error>(
+                    HasSubstr("Cannot from_toml_content: array 'dimension_sizes' must contain integers")));
+}
+
+TEST(BinaryMetadataFromTomlContent, NonArrayValueThrows) {
+    std::string toml = R"(
+version = "1"
+dimensions = ["stage"]
+dimension_sizes = [12]
+time_dimensions = "stage"
+frequencies = ["monthly"]
+initial_datetime = "2025-01-01T00:00:00"
+unit = "MW"
+labels = ["val"]
+)";
+    EXPECT_THAT([&] { BinaryMetadata::from_toml_content(toml); },
+                ThrowsMessage<std::runtime_error>(
+                    HasSubstr("Cannot from_toml_content: key 'time_dimensions' must be an array")));
+}
+
+TEST(BinaryMetadataFromTomlContent, MissingStringKeyNamesTheKey) {
+    for (const std::string key : {"version", "initial_datetime", "unit"}) {
+        SCOPED_TRACE(key);
+        EXPECT_THAT(
+            [&] { BinaryMetadata::from_toml_content(valid_toml_without(key)); },
+            ThrowsMessage<std::runtime_error>(HasSubstr("Cannot from_toml_content: missing key '" + key + "'")));
+    }
+}
+
+TEST(BinaryMetadataFromTomlContent, NonStringKeyNamesTheKey) {
+    std::string toml = valid_toml_without("version") + "version = 1\n";
+    EXPECT_THAT(
+        [&] { BinaryMetadata::from_toml_content(toml); },
+        ThrowsMessage<std::runtime_error>(HasSubstr("Cannot from_toml_content: key 'version' must be a string")));
+}
+
+// An absent array reads as empty: the optional time keys load, and a missing required array is
+// reported by the count check or validate().
+TEST(BinaryMetadataFromTomlContent, AbsentArrayReadsAsEmpty) {
+    std::string no_time_keys = R"(
+version = "1"
+dimensions = ["row", "col"]
+dimension_sizes = [3, 2]
+initial_datetime = "2025-01-01T00:00:00"
+unit = "MW"
+labels = ["val"]
+)";
+    auto md = BinaryMetadata::from_toml_content(no_time_keys);
+    EXPECT_EQ(md.number_of_time_dimensions(), 0);
+
+    EXPECT_THAT([] { BinaryMetadata::from_toml_content(valid_toml_without("dimension_sizes")); },
+                ThrowsMessage<std::runtime_error>(HasSubstr(
+                    "Cannot from_toml_content: dimension_sizes count (0) does not match dimensions count (2)")));
+    EXPECT_THAT([] { BinaryMetadata::from_toml_content(valid_toml_without("labels")); },
+                ThrowsMessage<std::runtime_error>(HasSubstr("Number of labels must be positive, got 0")));
 }
 
 // ============================================================================
@@ -344,6 +586,55 @@ TEST(BinaryMetadataFromElement, DimensionSizesMustBeIntegers) {
                                                   .set("dimension_sizes", std::vector<std::string>{"3"})
                                                   .set("labels", {"val"})),
                  std::runtime_error);
+}
+
+TEST(BinaryMetadataFromElement, DimensionSizesCountMismatchThrows) {
+    EXPECT_THAT(
+        [] {
+            BinaryMetadata::from_element(Element()
+                                             .set("version", "1")
+                                             .set("initial_datetime", "2025-01-01T00:00:00")
+                                             .set("unit", "MW")
+                                             .set("dimensions", {"stage", "block"})
+                                             .set("dimension_sizes", {12})
+                                             .set("labels", {"val"}));
+        },
+        ThrowsMessage<std::runtime_error>(
+            HasSubstr("Cannot from_element: dimension_sizes count (1) does not match dimensions count (2)")));
+}
+
+TEST(BinaryMetadataFromElement, FrequenciesCountMismatchThrows) {
+    EXPECT_THAT(
+        [] {
+            BinaryMetadata::from_element(Element()
+                                             .set("version", "1")
+                                             .set("initial_datetime", "2025-01-01T00:00:00")
+                                             .set("unit", "MW")
+                                             .set("dimensions", {"stage"})
+                                             .set("dimension_sizes", {12})
+                                             .set("time_dimensions", {"stage"})
+                                             .set("labels", {"val"}));
+        },
+        ThrowsMessage<std::runtime_error>(
+            HasSubstr("Cannot from_element: frequencies count (0) does not match time_dimensions count (1)")));
+}
+
+// from_element used to round-trip through TOML, so its errors said "Error building metadata from toml".
+TEST(BinaryMetadataFromElement, ErrorsNameFromElement) {
+    EXPECT_THAT(
+        [] {
+            BinaryMetadata::from_element(Element()
+                                             .set("version", "1")
+                                             .set("initial_datetime", "2025-01-01T00:00:00")
+                                             .set("unit", "MW")
+                                             .set("dimensions", {"stage"})
+                                             .set("dimension_sizes", {12})
+                                             .set("time_dimensions", {"month"})
+                                             .set("frequencies", {"monthly"})
+                                             .set("labels", {"val"}));
+        },
+        ThrowsMessage<std::runtime_error>(
+            HasSubstr("Cannot from_element: time dimension 'month' is not in dimensions")));
 }
 
 TEST(BinaryMetadataFromElement, InvalidVersionPropagatesValidation) {
@@ -748,72 +1039,4 @@ TEST(BinaryMetadataValidateTimeDimensionSizes, OutermostHasNoSizeConstraint) {
 TEST(BinaryMetadataValidateTimeDimensionSizes, InvalidCombination) {
     auto md = make_time_pair(TimeFrequency::Hourly, 24, TimeFrequency::Hourly, 24);
     EXPECT_THROW(md.validate_time_dimension_sizes(), std::runtime_error);
-}
-
-// ============================================================================
-// BinaryMetadataAddDimension
-// ============================================================================
-
-TEST(BinaryMetadataAddDimension, NonTimeDimension) {
-    BinaryMetadata md;
-    md.add_dimension("row", 3);
-    ASSERT_EQ(md.dimensions.size(), 1u);
-    EXPECT_EQ(md.dimensions[0].name, "row");
-    EXPECT_EQ(md.dimensions[0].size, 3);
-    EXPECT_FALSE(md.dimensions[0].is_time_dimension());
-}
-
-TEST(BinaryMetadataAddDimension, TimeDimension) {
-    BinaryMetadata md;
-    md.add_time_dimension("month", 12, "monthly");
-    ASSERT_EQ(md.dimensions.size(), 1u);
-    EXPECT_EQ(md.dimensions[0].name, "month");
-    EXPECT_EQ(md.dimensions[0].size, 12);
-    EXPECT_TRUE(md.dimensions[0].is_time_dimension());
-    EXPECT_EQ(md.dimensions[0].time->frequency, TimeFrequency::Monthly);
-    EXPECT_EQ(md.dimensions[0].time->parent_dimension_index, -1);
-}
-
-TEST(BinaryMetadataAddDimension, InvalidFrequencyThrows) {
-    BinaryMetadata md;
-    EXPECT_THROW(md.add_time_dimension("bad", 10, "invalid_freq"), std::invalid_argument);
-}
-
-TEST(BinaryMetadataAddDimension, MultipleAddsAccumulate) {
-    BinaryMetadata md;
-    md.add_dimension("row", 3);
-    md.add_dimension("col", 2);
-    md.add_time_dimension("month", 12, "monthly");
-    EXPECT_EQ(md.dimensions.size(), 3u);
-}
-
-TEST(BinaryMetadataAddDimension, TimeDimensionParentIndexMinusOne) {
-    BinaryMetadata md;
-    md.add_time_dimension("year", 5, "yearly");
-    EXPECT_EQ(md.dimensions[0].time->parent_dimension_index, -1);
-}
-
-TEST(BinaryMetadataAddDimension, TimeDimensionsCountedAndChained) {
-    BinaryMetadata md;
-    md.version = "1";
-    md.unit = "MW";
-    md.labels = {"val"};
-    md.add_time_dimension("month", 12, "monthly");
-    md.add_dimension("scenario", 3);
-    md.add_time_dimension("day", 31, "daily");
-    EXPECT_EQ(md.number_of_time_dimensions(), 2);
-    EXPECT_EQ(md.dimensions[0].time->parent_dimension_index, -1);
-    EXPECT_EQ(md.dimensions[2].time->parent_dimension_index, 0);
-    EXPECT_NO_THROW(md.validate());
-}
-
-TEST(BinaryMetadataAddDimension, ValidationFiresOnBuilderMetadata) {
-    BinaryMetadata md;
-    md.version = "1";
-    md.unit = "MW";
-    md.labels = {"val"};
-    md.add_time_dimension("a", 12, "monthly");
-    md.add_time_dimension("b", 12, "monthly");  // duplicate frequency must be rejected
-    EXPECT_EQ(md.number_of_time_dimensions(), 2);
-    EXPECT_THROW(md.validate(), std::runtime_error);
 }

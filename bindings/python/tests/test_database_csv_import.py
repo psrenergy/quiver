@@ -177,6 +177,25 @@ class TestImportCSVEnumResolution:
         assert status == 1
 
 
+class TestImportCSVOmittedElement:
+    """A scalar import deletes the elements the CSV omits, together with their group rows."""
+
+    def test_omitted_element_group_rows_are_deleted(self, csv_db: Database, tmp_path):
+        csv_db.create_element("Items", label="Dropped", name="Alpha", measurement=[1.5, 2.5], tag=["red"])
+        kept = csv_db.create_element("Items", label="Kept", name="Beta", measurement=[9.5])
+
+        csv_path = tmp_path / "subset.csv"
+        csv_path.write_text("sep=,\nlabel,name,status,price,date_created,notes\nKept,Beta,,,,\n")
+
+        csv_db.import_csv("Items", "", str(csv_path))
+
+        assert csv_db.read_element_ids("Items") == [kept]
+        assert csv_db.read_vector_floats_by_id("Items", "measurement", kept) == [9.5]
+        orphans = "SELECT COUNT(*) FROM {} WHERE id NOT IN (SELECT id FROM Items)"
+        assert csv_db.query_integer(orphans.format("Items_vector_measurements")) == 0
+        assert csv_db.query_integer(orphans.format("Items_set_tags")) == 0
+
+
 class TestImportCSVInsideTransaction:
     """import_csv must refuse to run inside an explicit transaction."""
 

@@ -4,3 +4,6 @@
 *.h text eol=lf
 *.jl text eol=lf
 *.py text eol=lf
+
+# These fixtures' exact bytes (BOM, CRLF) are the test -- never normalize (02-03-PLAN.md, D-24).
+tests/fixtures/*.csv -text

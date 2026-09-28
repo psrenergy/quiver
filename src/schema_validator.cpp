@@ -30,12 +30,15 @@ void SchemaValidator::validate() {
             validate_collection(name);
         } else if (schema_.is_vector_table(name)) {
             validate_vector_table(name);
+            validate_group_parent(name, "Vector");
         } else if (schema_.is_set_table(name)) {
             validate_set_table(name);
+            validate_group_parent(name, "Set");
+        } else if (schema_.is_time_series_table(name)) {
+            validate_group_parent(name, "Time series");
         } else if (schema_.is_time_series_files_table(name)) {
             validate_time_series_files_table(name);
         }
-        // Time series tables have minimal validation (just file paths)
     }
 
     validate_no_duplicate_attributes();
@@ -65,9 +68,6 @@ void SchemaValidator::validate_collection_names() {
 
 void SchemaValidator::validate_collection(const std::string& name) {
     const auto* table = schema_.get_table(name);
-    if (!table) {
-        return;
-    }
 
     // Must have 'id' column as primary key
     const auto* id_column = table->get_column("id");
@@ -100,17 +100,29 @@ void SchemaValidator::validate_collection(const std::string& name) {
     }
 }
 
-void SchemaValidator::validate_vector_table(const std::string& name) {
-    const auto* table = schema_.get_table(name);
-    if (!table) {
-        return;
+// A vector, set or time series table belongs to the collection its name starts with, and its `id`
+// must reference that collection with ON DELETE CASCADE ON UPDATE CASCADE: delete_element is a bare
+// DELETE on the collection and relies on the cascade to remove the element's group rows.
+void SchemaValidator::validate_group_parent(const std::string& name, const std::string& kind) {
+    const auto parent = schema_.get_parent_collection(name);
+    if (std::find(collections_.begin(), collections_.end(), parent) == collections_.end()) {
+        validation_error(kind + " table '" + name + "' references non-existent collection '" + parent + "'");
     }
 
-    // Get parent collection
-    auto parent = schema_.get_parent_collection(name);
-    if (std::find(collections_.begin(), collections_.end(), parent) == collections_.end()) {
-        validation_error("Vector table '" + name + "' references non-existent collection '" + parent + "'");
+    for (const auto& fk : schema_.get_table(name)->foreign_keys) {
+        if (fk.from_column == "id" && fk.to_table == parent) {
+            if (fk.on_delete != "CASCADE" || fk.on_update != "CASCADE") {
+                validation_error(kind + " table '" + name +
+                                 "' FK to parent must use ON DELETE CASCADE ON UPDATE CASCADE");
+            }
+            return;
+        }
     }
+    validation_error(kind + " table '" + name + "' must have foreign key to parent collection '" + parent + "'");
+}
+
+void SchemaValidator::validate_vector_table(const std::string& name) {
+    const auto* table = schema_.get_table(name);
 
     // Must have 'id' column
     const auto* id_col = table->get_column("id");
@@ -136,29 +148,10 @@ void SchemaValidator::validate_vector_table(const std::string& name) {
     if (!table->has_column("vector_index")) {
         validation_error("Vector table '" + name + "' must have 'vector_index' column");
     }
-
-    // Must have FK to parent with ON DELETE CASCADE ON UPDATE CASCADE
-    auto has_parent_fk = false;
-    for (const auto& fk : table->foreign_keys) {
-        if (fk.from_column == "id" && fk.to_table == parent) {
-            has_parent_fk = true;
-            if (fk.on_delete != "CASCADE" || fk.on_update != "CASCADE") {
-                validation_error("Vector table '" + name +
-                                 "' FK to parent must use ON DELETE CASCADE ON UPDATE CASCADE");
-            }
-            break;
-        }
-    }
-    if (!has_parent_fk) {
-        validation_error("Vector table '" + name + "' must have foreign key to parent collection '" + parent + "'");
-    }
 }
 
 void SchemaValidator::validate_set_table(const std::string& name) {
     const auto* table = schema_.get_table(name);
-    if (!table) {
-        return;
-    }
 
     // Get FK column names
     std::set<std::string> fk_columns;
@@ -202,9 +195,6 @@ void SchemaValidator::validate_set_table(const std::string& name) {
 
 void SchemaValidator::validate_time_series_files_table(const std::string& name) {
     const auto* table = schema_.get_table(name);
-    if (!table) {
-        return;
-    }
 
     // Get parent collection
     auto parent = schema_.get_time_series_files_parent_collection(name);
@@ -230,9 +220,6 @@ void SchemaValidator::validate_no_duplicate_attributes() {
         }
 
         const auto* col_table = schema_.get_table(collection);
-        if (!col_table) {
-            continue;
-        }
 
         std::set<std::string> attributes;
 
@@ -257,9 +244,6 @@ void SchemaValidator::validate_no_duplicate_attributes() {
             }
 
             const auto* group_table = schema_.get_table(table_name);
-            if (!group_table) {
-                continue;
-            }
 
             // Get FK column names
             std::set<std::string> fk_cols;
@@ -294,12 +278,9 @@ void SchemaValidator::validate_no_duplicate_attributes() {
 void SchemaValidator::validate_foreign_keys() {
     for (const auto& table_name : schema_.table_names()) {
         const auto* table = schema_.get_table(table_name);
-        if (!table) {
-            continue;
-        }
 
         for (const auto& fk : table->foreign_keys) {
-            // Find the column for this FK
+            // A generated column can carry an FK, but PRAGMA table_info (the Schema's column source) omits it
             const auto* col = table->get_column(fk.from_column);
             if (!col) {
                 continue;
@@ -311,27 +292,15 @@ void SchemaValidator::validate_foreign_keys() {
                                  "' has ON DELETE SET NULL but NOT NULL constraint");
             }
 
-            // Rule: Valid FK action combinations
-            // For vector table parent FK: ON DELETE CASCADE ON UPDATE CASCADE
-            // For relation FKs: ON DELETE SET NULL ON UPDATE CASCADE
-            if (schema_.is_vector_table(table_name) && fk.from_column == "id") {
-                // Parent FK must be CASCADE/CASCADE
-                if (fk.on_delete != "CASCADE" || fk.on_update != "CASCADE") {
-                    validation_error("Vector table '" + table_name +
-                                     "' parent FK must use ON DELETE CASCADE ON UPDATE CASCADE");
-                }
-            } else if (!schema_.is_time_series_table(table_name)) {
-                // Relation FK - check for valid combinations
-                // Must be ON UPDATE CASCADE
-                if (fk.on_update != "CASCADE") {
-                    validation_error("Foreign key '" + fk.from_column + "' in table '" + table_name +
-                                     "' must use ON UPDATE CASCADE");
-                }
-                // ON DELETE must be SET NULL or CASCADE
-                if (fk.on_delete != "SET NULL" && fk.on_delete != "CASCADE") {
-                    validation_error("Foreign key '" + fk.from_column + "' in table '" + table_name +
-                                     "' must use ON DELETE SET NULL or ON DELETE CASCADE");
-                }
+            // Rule: every FK uses ON UPDATE CASCADE and ON DELETE SET NULL or CASCADE. A group table's
+            // parent FK is held to ON DELETE CASCADE by validate_group_parent, which runs first.
+            if (fk.on_update != "CASCADE") {
+                validation_error("Foreign key '" + fk.from_column + "' in table '" + table_name +
+                                 "' must use ON UPDATE CASCADE");
+            }
+            if (fk.on_delete != "SET NULL" && fk.on_delete != "CASCADE") {
+                validation_error("Foreign key '" + fk.from_column + "' in table '" + table_name +
+                                 "' must use ON DELETE SET NULL or ON DELETE CASCADE");
             }
 
             // Rule: FK column names should follow pattern <collection>_id or <collection>_<relation>

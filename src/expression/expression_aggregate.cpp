@@ -67,7 +67,18 @@ ExpressionAggregate::ExpressionAggregate(Operation operation,
         }
     }
 
+    // Removing the outermost time dimension promotes its time child to outermost, but compute_row still
+    // forwards the child's coordinate to the operand unchanged: output month 3 is the operand's month 3,
+    // i.e. March. So the output must start where the removed dimension's period holding initial_datetime
+    // starts (year x month from 2025-03-01 -> 2025-01-01; day x hour from 06:00 -> 00:00). It runs before
+    // derive_initial_values(), which reads this start. With no time dimension left there is nothing to label.
+    if (reduced_dim.is_time_dimension() && reduced_dim.time->parent_dimension_index == -1 &&
+        output_meta_.number_of_time_dimensions() > 0) {
+        output_meta_.initial_datetime = reduced_dim.time->add_offset_from_int(operand_meta.initial_datetime, 1);
+    }
+
     output_meta_.validate();
+    output_meta_.derive_initial_values();
 
     operand_dims_buf_.resize(operand_meta.dimensions.size());
     operand_row_buf_.resize(operand_meta.labels.size());
@@ -94,22 +105,11 @@ void ExpressionAggregate::compute_row(const std::vector<int64_t>& dims, std::vec
     }
     operand_dims_buf_[reduced_operand_index_] = 1;
 
-    const auto& reduced_dim = operand_meta.dimensions[reduced_operand_index_];
-    int64_t start = 1;
-    int64_t end = reduced_dim.size;
-    if (reduced_dim.is_time_dimension()) {
-        const auto& tp = *reduced_dim.time;
-        const int64_t parent_idx = tp.parent_dimension_index;
-        const auto sizes = dimension_sizes_at_values(operand_meta, operand_dims_buf_);
-        end = sizes[reduced_operand_index_];
-        if (parent_idx < 0) {
-            start = tp.initial_value;
-        } else {
-            const auto& parent_dim = operand_meta.dimensions[parent_idx];
-            const int64_t parent_initial = parent_dim.is_time_dimension() ? parent_dim.time->initial_value : 1;
-            start = (operand_dims_buf_[parent_idx] == parent_initial) ? tp.initial_value : 1;
-        }
-    }
+    // Reduce from where next_dimensions starts the reduced dimension at this coordinate to its
+    // actual size here (Feb = 28, ...). Reducing the outermost time dimension also reads the first
+    // period's cells before initial_datetime, which the walk never writes: NaN, so skipped.
+    const int64_t start = dimension_start_at_values(operand_meta, operand_dims_buf_, reduced_operand_index_);
+    const int64_t end = dimension_sizes_at_values(operand_meta, operand_dims_buf_)[reduced_operand_index_];
 
     std::vector<AggregationState> states(label_count);
     for (auto& scratch : percentile_scratch_) {

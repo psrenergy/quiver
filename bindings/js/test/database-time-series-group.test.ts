@@ -38,6 +38,17 @@ const NULLABLE_TS_SCHEMA = join(
   "nullable_time_series.sql",
 );
 
+const DATE_COLUMNS_TS_SCHEMA = join(
+  __dirname,
+  "..",
+  "..",
+  "..",
+  "tests",
+  "schemas",
+  "valid",
+  "time_series_date_columns.sql",
+);
+
 describe("readTimeSeriesGroup / updateTimeSeriesGroup (single-column)", () => {
   test("write and read back single-column time series data", () => {
     const db = Database.fromSchema(":memory:", COLLECTIONS_SCHEMA);
@@ -221,6 +232,39 @@ describe("updateTimeSeriesGroupByLabel", () => {
         }),
       ).toThrow(/Element not found: label 'Nope' in collection 'Collection'/);
       expect(db.readTimeSeriesGroup("Collection", "data", item).value).toEqual([1.5]);
+    } finally {
+      db.close();
+    }
+  });
+});
+
+describe("time series dimension column", () => {
+  // time_series_date_columns.sql: date_approved is a nullable value column that
+  // sorts before the primary-key date column date_time.
+  test("a date_ value column is not the dimension", () => {
+    const db = Database.fromSchema(":memory:", DATE_COLUMNS_TS_SCHEMA);
+    try {
+      const id = db.createElement("Plant", { label: "Plant 1" });
+
+      const meta = db.getTimeSeriesMetadata("Plant", "events");
+      expect(meta.dimensionColumn).toEqual("date_time");
+      expect(meta.valueColumns.map((c) => c.name)).toEqual(["date_approved", "value"]);
+
+      db.updateTimeSeriesGroup("Plant", "events", id, {
+        date_time: ["2024-01-01T00:00:00", "2024-02-01T00:00:00", "2024-03-01T00:00:00"],
+        date_approved: ["2024-03-01T00:00:00", null, "2024-01-15T00:00:00"],
+        value: [1.5, 2.5, 3.5],
+      });
+
+      const result = db.readTimeSeriesGroup("Plant", "events", id);
+      expect(Object.keys(result)).toEqual(["date_time", "date_approved", "value"]);
+      expect(result.date_time).toEqual([
+        "2024-01-01T00:00:00",
+        "2024-02-01T00:00:00",
+        "2024-03-01T00:00:00",
+      ]);
+      expect(result.date_approved).toEqual(["2024-03-01T00:00:00", null, "2024-01-15T00:00:00"]);
+      expect(result.value).toEqual([1.5, 2.5, 3.5]);
     } finally {
       db.close();
     }

@@ -12,95 +12,135 @@
 #include <sstream>
 #include <stdexcept>
 #include <toml++/toml.hpp>
+#include <type_traits>
 
 namespace {
 
 constexpr std::string_view QUIVER_FILE_VERSION = "1";
 
-std::vector<int64_t>
-compute_time_dimension_initial_values(const std::vector<quiver::Dimension>& dimensions,
-                                      const std::chrono::system_clock::time_point& initial_datetime) {
-    std::vector<int64_t> initial_values;
-    initial_values.push_back(1);  // The largest time dimension always starts at 1
-
-    auto date = std::chrono::floor<std::chrono::days>(initial_datetime);
-    auto ymd = std::chrono::year_month_day{date};
-
-    for (const auto& dim : dimensions) {
-        if (dim.is_time_dimension() && dim.time->parent_dimension_index != -1) {
-            quiver::TimeFrequency current_frequency = dim.time->frequency;
-            quiver::TimeFrequency parent_frequency = dimensions[dim.time->parent_dimension_index].time->frequency;
-
-            // Yearly and weekly frequencies must always be at index 1, so they error if encountered as inner time
-            // dimensions
-            switch (current_frequency) {
-            case quiver::TimeFrequency::Yearly:
-                throw std::logic_error(
-                    "YEARLY frequency not implemented. This function should only be used for inner time dimensions.");
-            case quiver::TimeFrequency::Monthly: {
-                int64_t month = static_cast<unsigned>(ymd.month());
-                initial_values.push_back(month);
-                break;
-            }
-            case quiver::TimeFrequency::Weekly:
-                throw std::logic_error(
-                    "WEEKLY frequency not implemented. This function should only be used for inner time dimensions.");
-            case quiver::TimeFrequency::Daily: {
-                int64_t day;
-                switch (parent_frequency) {
-                case quiver::TimeFrequency::Weekly: {
-                    day = quiver::day_of_week(initial_datetime);
-                    break;
-                }
-                case quiver::TimeFrequency::Monthly: {
-                    day = static_cast<unsigned>(ymd.day());
-                    break;
-                }
-                case quiver::TimeFrequency::Yearly: {
-                    day = quiver::day_of_year(initial_datetime);
-                    break;
-                }
-                default:
-                    throw std::logic_error("Invalid parent frequency " + frequency_to_string(parent_frequency) +
-                                           " for DAILY dimension.");
-                }
-                initial_values.push_back(day);
-                break;
-            }
-            case quiver::TimeFrequency::Hourly: {
-                int64_t hour =
-                    std::chrono::floor<std::chrono::hours>(initial_datetime - date).count() + 1;  // 0-23 -> 1-24
-                switch (parent_frequency) {
-                case quiver::TimeFrequency::Daily:
-                    break;
-                case quiver::TimeFrequency::Weekly:
-                    hour += (quiver::day_of_week(initial_datetime) - 1) * quiver::time::MAX_HOURS_IN_DAY;
-                    break;
-                case quiver::TimeFrequency::Monthly:
-                    hour += (static_cast<unsigned>(ymd.day()) - 1) * quiver::time::MAX_HOURS_IN_DAY;
-                    break;
-                case quiver::TimeFrequency::Yearly:
-                    hour += (quiver::day_of_year(initial_datetime) - 1) * quiver::time::MAX_HOURS_IN_DAY;
-                    break;
-                default:
-                    throw std::logic_error("Invalid parent frequency " + frequency_to_string(parent_frequency) +
-                                           " for HOURLY dimension.");
-                }
-                initial_values.push_back(hour);
-                break;
-            }
-            default:
-                throw std::logic_error("Unhandled frequency " + frequency_to_string(current_frequency) +
-                                       " in compute_time_dimension_initial_values.");
-            }
-        }
-    }
-    return initial_values;
-}
-
 }  // namespace
 
 namespace quiver {
+
+namespace {
+
+// Reads a required TOML string, naming `key` when it is absent or not a string.
+std::string read_toml_string(const toml::table& tbl, const std::string& key) {
+    const toml::node* node = tbl.get(key);
+    if (!node) {
+        throw std::runtime_error("Cannot from_toml_content: missing key '" + key + "'");
+    }
+    auto value = node->value<std::string>();
+    if (!value) {
+        throw std::runtime_error("Cannot from_toml_content: key '" + key + "' must be a string");
+    }
+    return *value;
+}
+
+// Reads a TOML array of T. An absent key reads as empty: build_metadata's count checks and
+// validate() then reject a missing required array. A non-array value or an entry of another type
+// throws instead of being skipped, which used to shift every later dimension onto the wrong size.
+template <typename T>
+std::vector<T> read_toml_array(const toml::table& tbl, const std::string& key) {
+    const toml::node* node = tbl.get(key);
+    if (!node) {
+        return {};
+    }
+    const toml::array* arr = node->as_array();
+    if (!arr) {
+        throw std::runtime_error("Cannot from_toml_content: key '" + key + "' must be an array");
+    }
+    std::vector<T> result;
+    for (const toml::node& entry : *arr) {
+        auto value = entry.value<T>();
+        if (!value) {
+            constexpr const char* kind = std::is_same_v<T, std::string> ? "strings" : "integers";
+            throw std::runtime_error("Cannot from_toml_content: array '" + key + "' must contain " + kind);
+        }
+        result.push_back(*value);
+    }
+    return result;
+}
+
+// The one body behind from_element and from_toml_content, which differ only in how they read the
+// eight fields. `operation` is the public factory the caller used, for the Pattern 1 messages.
+BinaryMetadata build_metadata(const std::string& operation,
+                              const std::vector<std::string>& dimensions,
+                              const std::vector<int64_t>& dimension_sizes,
+                              const std::vector<std::string>& time_dimensions,
+                              const std::vector<std::string>& frequencies,
+                              const std::string& initial_datetime_str,
+                              const std::string& unit,
+                              const std::vector<std::string>& labels,
+                              const std::string& version) {
+    // The dimension loop reads dimension_sizes and frequencies in parallel with dimensions and
+    // time_dimensions, so their lengths must agree before anything is indexed.
+    if (dimension_sizes.size() != dimensions.size()) {
+        throw std::runtime_error("Cannot " + operation + ": dimension_sizes count (" +
+                                 std::to_string(dimension_sizes.size()) + ") does not match dimensions count (" +
+                                 std::to_string(dimensions.size()) + ")");
+    }
+    if (frequencies.size() != time_dimensions.size()) {
+        throw std::runtime_error("Cannot " + operation + ": frequencies count (" + std::to_string(frequencies.size()) +
+                                 ") does not match time_dimensions count (" + std::to_string(time_dimensions.size()) +
+                                 ")");
+    }
+
+    // Validate time_dimensions are a subset of dimensions
+    for (const auto& td : time_dimensions) {
+        if (std::find(dimensions.begin(), dimensions.end(), td) == dimensions.end()) {
+            throw std::runtime_error("Cannot " + operation + ": time dimension '" + td + "' is not in dimensions");
+        }
+    }
+
+    // Validate time_dimensions are in the same order as dimensions
+    size_t last_pos = 0;
+    for (const auto& td : time_dimensions) {
+        auto it = std::find(dimensions.begin() + last_pos, dimensions.end(), td);
+        if (it == dimensions.end()) {
+            throw std::runtime_error("Cannot " + operation +
+                                     ": time dimensions must appear in the same order as dimensions");
+        }
+        last_pos = static_cast<size_t>(std::distance(dimensions.begin(), it)) + 1;
+    }
+
+    // Create and populate BinaryMetadata
+    BinaryMetadata metadata;
+    metadata.unit = unit;
+    metadata.labels = labels;
+    metadata.version = version;
+
+    std::tm tm{};
+    if (!quiver::datetime::parse_iso8601(initial_datetime_str, tm)) {
+        throw std::runtime_error("Failed to parse initial_datetime: " + initial_datetime_str);
+    }
+    metadata.initial_datetime = quiver::datetime::tm_to_time_point(tm);
+
+    // Add dimensions to metadata
+    int64_t previous_time_dim_index = -1;
+    for (size_t i = 0; i < dimensions.size(); ++i) {
+        auto time_it = std::find(time_dimensions.begin(), time_dimensions.end(), dimensions[i]);
+        if (time_it != time_dimensions.end()) {
+            // The frequency at the matched position, not a running count: a repeated dimension name
+            // matches twice, and a count would read past `frequencies` before validate() rejects it.
+            auto time_pos = static_cast<size_t>(std::distance(time_dimensions.begin(), time_it));
+            TimeFrequency freq = frequency_from_string(frequencies[time_pos]);
+            TimeProperties time_props{freq, 0, previous_time_dim_index};  // initial_value: derive_initial_values()
+            metadata.dimensions.push_back({dimensions[i], dimension_sizes[i], std::move(time_props)});
+            previous_time_dim_index = i;
+        } else {
+            metadata.dimensions.push_back({dimensions[i], dimension_sizes[i], std::nullopt});
+        }
+    }
+
+    // Validate first: an initial value is a position inside the parent's period, which exists only for the
+    // parent/child layouts validate() accepts
+    metadata.validate();
+    metadata.derive_initial_values();
+    return metadata;
+}
+
+}  // namespace
 
 BinaryMetadata::BinaryMetadata() = default;
 BinaryMetadata::~BinaryMetadata() = default;
@@ -113,6 +153,19 @@ int64_t BinaryMetadata::number_of_time_dimensions() const {
         }
     }
     return count;
+}
+
+// Every time dimension starts at the cell holding initial_datetime: the outermost at 1, each inner one at the
+// position of initial_datetime inside its parent's period.
+void BinaryMetadata::derive_initial_values() {
+    for (size_t i = 0; i < dimensions.size(); ++i) {
+        auto& time_properties = dimensions[i].time;
+        if (!time_properties) {
+            continue;
+        }
+        time_properties->initial_value =
+            time_properties->parent_dimension_index == -1 ? 1 : position_in_parent(*this, i, initial_datetime);
+    }
 }
 
 BinaryMetadata BinaryMetadata::from_element(const Element& element) {
@@ -188,33 +241,15 @@ BinaryMetadata BinaryMetadata::from_element(const Element& element) {
     std::vector<std::string> labels = get_string_array("labels");
     std::string version = get_string("version");
 
-    // Build TOML and delegate
-    toml::array dim_arr, size_arr, time_dim_arr, freq_arr, label_arr;
-    for (const auto& d : dimensions)
-        dim_arr.push_back(d);
-    for (auto s : dimension_sizes)
-        size_arr.push_back(s);
-    for (const auto& td : time_dimensions)
-        time_dim_arr.push_back(td);
-    for (const auto& f : frequencies)
-        freq_arr.push_back(f);
-    for (const auto& l : labels)
-        label_arr.push_back(l);
-
-    toml::table tbl{
-        {"version", version},
-        {"dimensions", std::move(dim_arr)},
-        {"dimension_sizes", std::move(size_arr)},
-        {"time_dimensions", std::move(time_dim_arr)},
-        {"frequencies", std::move(freq_arr)},
-        {"initial_datetime", initial_datetime_str},
-        {"unit", unit},
-        {"labels", std::move(label_arr)},
-    };
-
-    std::ostringstream oss;
-    oss << tbl;
-    return from_toml_content(oss.str());
+    return build_metadata("from_element",
+                          dimensions,
+                          dimension_sizes,
+                          time_dimensions,
+                          frequencies,
+                          initial_datetime_str,
+                          unit,
+                          labels,
+                          version);
 }
 
 BinaryMetadata BinaryMetadata::from_toml_file(const std::string& file_path) {
@@ -228,121 +263,26 @@ BinaryMetadata BinaryMetadata::from_toml_file(const std::string& file_path) {
 }
 
 BinaryMetadata BinaryMetadata::from_toml_content(const std::string& content) {
-    // Parse toml content
     toml::table tbl = toml::parse(content);
 
-    std::vector<std::string> dimensions;
-    if (auto* arr = tbl["dimensions"].as_array()) {
-        for (auto& elem : *arr) {
-            if (auto val = elem.value<std::string>()) {
-                dimensions.push_back(*val);
-            }
-        }
-    }
+    std::vector<std::string> dimensions = read_toml_array<std::string>(tbl, "dimensions");
+    std::vector<int64_t> dimension_sizes = read_toml_array<int64_t>(tbl, "dimension_sizes");
+    std::vector<std::string> time_dimensions = read_toml_array<std::string>(tbl, "time_dimensions");
+    std::vector<std::string> frequencies = read_toml_array<std::string>(tbl, "frequencies");
+    std::string initial_datetime_str = read_toml_string(tbl, "initial_datetime");
+    std::string unit = read_toml_string(tbl, "unit");
+    std::vector<std::string> labels = read_toml_array<std::string>(tbl, "labels");
+    std::string version = read_toml_string(tbl, "version");
 
-    std::vector<int64_t> dimension_sizes;
-    if (auto* arr = tbl["dimension_sizes"].as_array()) {
-        for (auto& elem : *arr) {
-            if (auto val = elem.value<int64_t>()) {
-                dimension_sizes.push_back(*val);
-            }
-        }
-    }
-
-    std::vector<std::string> time_dimensions;
-    if (auto* arr = tbl["time_dimensions"].as_array()) {
-        for (auto& elem : *arr) {
-            if (auto val = elem.value<std::string>()) {
-                time_dimensions.push_back(*val);
-            }
-        }
-    }
-
-    std::vector<std::string> frequencies;
-    if (auto* arr = tbl["frequencies"].as_array()) {
-        for (auto& elem : *arr) {
-            if (auto val = elem.value<std::string>()) {
-                frequencies.push_back(*val);
-            }
-        }
-    }
-
-    std::string initial_datetime_str = tbl["initial_datetime"].value<std::string>().value();
-    std::string unit = tbl["unit"].value<std::string>().value();
-
-    std::vector<std::string> labels;
-    if (auto* arr = tbl["labels"].as_array()) {
-        for (auto& elem : *arr) {
-            if (auto val = elem.value<std::string>()) {
-                labels.push_back(*val);
-            }
-        }
-    }
-
-    std::string version = tbl["version"].value<std::string>().value();
-
-    // Validate time_dimensions are a subset of dimensions
-    for (const auto& td : time_dimensions) {
-        if (std::find(dimensions.begin(), dimensions.end(), td) == dimensions.end()) {
-            throw std::runtime_error("Error building metadata from toml: time dimension '" + td +
-                                     "' is not in dimensions");
-        }
-    }
-
-    // Validate time_dimensions are in the same order as dimensions
-    size_t last_pos = 0;
-    for (const auto& td : time_dimensions) {
-        auto it = std::find(dimensions.begin() + last_pos, dimensions.end(), td);
-        if (it == dimensions.end()) {
-            throw std::runtime_error(
-                "Error building metadata from toml: time dimensions must appear in the same order as dimensions");
-        }
-        last_pos = static_cast<size_t>(std::distance(dimensions.begin(), it)) + 1;
-    }
-
-    // Create and populate BinaryMetadata
-    BinaryMetadata metadata;
-    metadata.unit = unit;
-    metadata.labels = labels;
-    metadata.version = version;
-
-    std::tm tm{};
-    if (!quiver::datetime::parse_iso8601(initial_datetime_str, tm)) {
-        throw std::runtime_error("Failed to parse initial_datetime: " + initial_datetime_str);
-    }
-    metadata.initial_datetime = quiver::datetime::tm_to_time_point(tm);
-
-    // Add dimensions to metadata
-    int64_t time_dim_index = 0;
-    int64_t previous_time_dim_index = -1;
-    metadata.dimensions.clear();
-    for (size_t i = 0; i < dimensions.size(); ++i) {
-        bool is_time =
-            std::find(time_dimensions.begin(), time_dimensions.end(), dimensions[i]) != time_dimensions.end();
-        if (is_time) {
-            TimeFrequency freq = frequency_from_string(frequencies[time_dim_index]);
-            TimeProperties time_props{freq, 0, previous_time_dim_index};
-            metadata.dimensions.push_back({dimensions[i], dimension_sizes[i], std::move(time_props)});
-            time_dim_index++;
-            previous_time_dim_index = i;
-        } else {
-            metadata.dimensions.push_back({dimensions[i], dimension_sizes[i], std::nullopt});
-        }
-    }
-    time_dim_index = 0;
-
-    // Compute and set initial values for time dimensions
-    std::vector<int64_t> initial_values =
-        compute_time_dimension_initial_values(metadata.dimensions, metadata.initial_datetime);
-    for (auto& dim : metadata.dimensions) {
-        if (dim.is_time_dimension()) {
-            dim.time->set_initial_value(initial_values[time_dim_index]);
-            time_dim_index++;
-        }
-    }
-
-    metadata.validate();
-    return metadata;
+    return build_metadata("from_toml_content",
+                          dimensions,
+                          dimension_sizes,
+                          time_dimensions,
+                          frequencies,
+                          initial_datetime_str,
+                          unit,
+                          labels,
+                          version);
 }
 
 std::string BinaryMetadata::to_toml() const {
@@ -566,23 +506,6 @@ void BinaryMetadata::validate_time_dimension_sizes() const {
                                      "] based on the next lower frequency: '" + frequency_to_string(parent_freq) + "'");
         }
     }
-}
-
-void BinaryMetadata::add_dimension(const std::string& name, int64_t size) {
-    dimensions.push_back({name, size, std::nullopt});
-}
-
-void BinaryMetadata::add_time_dimension(const std::string& name, int64_t size, const std::string& frequency) {
-    TimeFrequency freq_enum = frequency_from_string(frequency);
-    // Chain to the previous time dimension, matching from_toml_content/from_element
-    int64_t parent_index = -1;
-    for (size_t i = 0; i < dimensions.size(); ++i) {
-        if (dimensions[i].is_time_dimension()) {
-            parent_index = static_cast<int64_t>(i);
-        }
-    }
-    TimeProperties time_props{freq_enum, 0, parent_index};
-    dimensions.push_back({name, size, std::move(time_props)});
 }
 
 }  // namespace quiver

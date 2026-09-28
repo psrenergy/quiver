@@ -229,7 +229,7 @@ void BinaryFile::validate_dimension_values(const std::unordered_map<std::string,
     }
 
     if (metadata.number_of_time_dimensions() > 1) {
-        // Build the datetime by accumulating offsets from each time dimension
+        // The start of the cell the coordinates name
         auto datetime = metadata.initial_datetime;
         for (const auto& dim : dimensions) {
             if (dim.is_time_dimension()) {
@@ -237,18 +237,15 @@ void BinaryFile::validate_dimension_values(const std::unordered_map<std::string,
             }
         }
 
-        // Verify that inner time dimensions are consistent with the resulting date
-        bool first = true;
-        for (const auto& dim : dimensions) {
-            if (!dim.is_time_dimension())
+        // An inner value past the real length of its parent's period (day 30 of February, hour 700 of February)
+        // spills into the next period, where its position is no longer the value given
+        for (size_t i = 0; i < dimensions.size(); ++i) {
+            const auto& dim = dimensions[i];
+            if (!dim.is_time_dimension() || dim.time->parent_dimension_index == -1)
                 continue;
-            if (first) {
-                first = false;
-                continue;
-            }  // skip outermost time dimension
 
             int64_t expected_value = dims.at(dim.name);
-            int64_t resulting_value = dim.time->datetime_to_int(datetime);
+            int64_t resulting_value = position_in_parent(metadata, i, datetime);
             if (expected_value != resulting_value) {
                 throw std::invalid_argument("Invalid values for time dimensions: dimension '" + dim.name +
                                             "' has value " + std::to_string(expected_value) +

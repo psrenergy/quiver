@@ -22,6 +22,13 @@ def test_from_schema_context_manager(valid_schema_path: Path, tmp_path: Path) ->
         db.path()
 
 
+def test_from_schema_rejects_set_table_without_parent_fk(schemas_path: Path, tmp_path: Path) -> None:
+    schema = schemas_path / "invalid" / "set_no_parent_fk.sql"
+    message = "Set table 'Collection_set_tags' must have foreign key to parent collection 'Collection'"
+    with pytest.raises(QuiverError, match=message):
+        Database.from_schema(str(tmp_path / "test.db"), str(schema))
+
+
 def test_from_migrations_creates_database(migrations_path: Path, tmp_path: Path) -> None:
     db = Database.from_migrations(str(tmp_path / "test.db"), str(migrations_path))
     assert db is not None

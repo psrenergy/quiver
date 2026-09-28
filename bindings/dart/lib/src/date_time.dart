@@ -19,10 +19,10 @@ String dateTimeToString(DateTime dt) =>
 /// every returned DateTime `isUtc == false`: Dart's `==` compares `isUtc` as well as the instant,
 /// so a list mixing the two has same-moment values comparing unequal and deduping to two in a Set.
 final _dateTimePattern = RegExp(
-  r'^(?!0000)\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}:\d{2})?$',
+  r'^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}):(\d{2}))?$',
 );
 
-/// Converts an ISO 8601 format string (YYYY-MM-DDTHH:MM:SS) to DateTime.
+/// Converts an ISO 8601 format string (YYYY-MM-DDTHH:MM:SS) to a local DateTime.
 ///
 /// Throws [ArgumentError] on a value outside the core's grammar, naming
 /// `collection.attribute` when one is given.
@@ -31,16 +31,35 @@ DateTime stringToDateTime(
   String collection = '',
   String attribute = '',
 ]) {
-  final parsed = _dateTimePattern.hasMatch(s) ? DateTime.parse(s) : null;
-  // `DateTime.parse` rolls an out-of-range field over instead of rejecting it ('2024-02-31' reads
-  // as March 2, hour 25 as the next day) where Julia and Python both throw, so re-serialize and
-  // compare: only a value the parse left untouched is in the grammar.
-  final normalized = s.length == 10 ? '${s}T00:00:00' : s.replaceFirst(' ', 'T');
-  if (parsed == null || dateTimeToString(parsed) != normalized) {
-    final source = collection.isEmpty ? '' : " in '$collection.$attribute'";
-    throw ArgumentError(
-      'Cannot convert "$s" to a date time$source: expected a valid YYYY-MM-DD[THH:MM:SS]',
-    );
+  final match = _dateTimePattern.firstMatch(s);
+  if (match != null) {
+    final year = int.parse(match[1]!);
+    final month = int.parse(match[2]!);
+    final day = int.parse(match[3]!);
+    final hour = match[4] == null ? 0 : int.parse(match[4]!);
+    final minute = match[5] == null ? 0 : int.parse(match[5]!);
+    final second = match[6] == null ? 0 : int.parse(match[6]!);
+    // Dart rolls an out-of-range field over instead of rejecting it ('2024-02-31' reads as March
+    // 2, hour 25 as the next day) where Julia and Python both throw, so the fields are checked by
+    // constructing the value and comparing what came back: only a field left untouched is in
+    // range. The check runs in UTC on purpose. A *local* construction (or `DateTime.parse`, which
+    // is one) also moves a wall-clock time the platform's time zone considers nonexistent -- a DST
+    // gap, and on Windows the historical Brazilian rules put one at midnight of 2019-01-01 -- so a
+    // perfectly valid stored value would fail the comparison and be reported as malformed. UTC has
+    // no gaps, so the comparison there judges the fields alone.
+    final utc = DateTime.utc(year, month, day, hour, minute, second);
+    if (year >= 1 &&
+        utc.year == year &&
+        utc.month == month &&
+        utc.day == day &&
+        utc.hour == hour &&
+        utc.minute == minute &&
+        utc.second == second) {
+      return DateTime(year, month, day, hour, minute, second);
+    }
   }
-  return parsed;
+  final source = collection.isEmpty ? '' : " in '$collection.$attribute'";
+  throw ArgumentError(
+    'Cannot convert "$s" to a date time$source: expected a valid YYYY-MM-DD[THH:MM:SS]',
+  );
 }

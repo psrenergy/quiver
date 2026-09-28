@@ -162,7 +162,8 @@ private:
 
 class QUIVER_API ExpressionAggregateAgents final : public ExpressionNode {
 public:
-    enum class Operation { Sum, Mean, Min, Max, Percentile };
+    // The same five reductions as ExpressionAggregate: one enum serves both (and the C API and Lua).
+    using Operation = ExpressionAggregate::Operation;
 
     ExpressionAggregateAgents(Operation operation,
                               std::shared_ptr<ExpressionNode> operand,

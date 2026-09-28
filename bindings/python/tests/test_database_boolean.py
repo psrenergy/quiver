@@ -31,11 +31,11 @@ def test_boolean_convenience_methods(all_types_db: Database) -> None:
     assert all_types_db.read_scalar_boolean_by_id("AllTypes", "some_integer", id_true) is True
     assert all_types_db.read_scalar_boolean_by_id("AllTypes", "some_integer", id_null) is None
 
-    assert all_types_db.read_vector_booleans("AllTypes", "count_value") == [[False, True], [True, False]]
+    assert all_types_db.read_vector_booleans("AllTypes", "count_value") == [[False, True], [True, False], []]
     assert all_types_db.read_vector_booleans_by_id("AllTypes", "count_value", id_false) == [False, True]
     assert all_types_db.read_vector_booleans_by_id("AllTypes", "count_value", id_null) == []
 
-    assert all_types_db.read_set_booleans("AllTypes", "code") == [[False, True], [True]]
+    assert all_types_db.read_set_booleans("AllTypes", "code") == [[False, True], [True], []]
     assert all_types_db.read_set_booleans_by_id("AllTypes", "code", id_false) == [False, True]
     assert all_types_db.read_set_booleans_by_id("AllTypes", "code", id_null) == []
 

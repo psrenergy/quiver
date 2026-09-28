@@ -25,6 +25,12 @@ struct QUIVER_API BinaryMetadata {
     // Derived from dimensions: count of entries carrying time properties
     int64_t number_of_time_dimensions() const;
 
+    // Sets every time dimension's TimeProperties::initial_value from initial_datetime and the parent
+    // chain. The one place initial_value is computed. It is never serialized, so every producer of
+    // metadata (from_toml_content, ExpressionAggregate) calls this after setting dimensions and
+    // initial_datetime.
+    void derive_initial_values();
+
     // Create metadata from Element
     static BinaryMetadata from_element(const Element& element);
 
@@ -37,10 +43,6 @@ struct QUIVER_API BinaryMetadata {
     void validate() const;
     void validate_time_dimension_metadata() const;
     void validate_time_dimension_sizes() const;
-
-    // Setters
-    void add_dimension(const std::string& name, int64_t size);
-    void add_time_dimension(const std::string& name, int64_t size, const std::string& frequency);
 };
 
 }  // namespace quiver

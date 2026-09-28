@@ -189,5 +189,36 @@ void main() {
         db.close();
       }
     });
+
+    test('rejected updateElement inside a transaction writes nothing', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Config'});
+        final id = db.createElement('Collection', {'label': 'Item 1', 'some_integer': 1});
+
+        db.beginTransaction();
+        expect(
+          () => db.updateElement('Collection', id, {
+            'some_integer': 2,
+            'tag': [1.5],
+          }),
+          throwsA(
+            isA<DatabaseException>().having(
+              (e) => e.message,
+              'message',
+              contains("type mismatch for array 'tag'"),
+            ),
+          ),
+        );
+        db.commit();
+
+        expect(db.readScalarIntegerById('Collection', 'some_integer', id), equals(1));
+      } finally {
+        db.close();
+      }
+    });
   });
 }

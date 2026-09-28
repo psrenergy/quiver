@@ -5,7 +5,7 @@ All notable changes to Quiver are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entries that require
 callers to change something are prefixed **BREAKING** and say what to do.
 
-## [0.10.4] — unreleased
+## [0.12.4] — 2026-09-28
 
 ### Changed
 
@@ -18,6 +18,554 @@ callers to change something are prefixed **BREAKING** and say what to do.
   `paths[i]` through the C API). **Lua cannot**: `{ x = nil }` is `{}`, so omission is its only
   signal and it now means *preserve* — the limitation it already had on `create_element` /
   `update_element` scalars.
+
+- **BREAKING — a binary file's time coordinate names a calendar cell, and a week starts on the day of
+  `initial_datetime`.** Each inner time value is its position inside the parent's period (day of
+  month, year or week; hour of day, month, year or week), and the date `bin_to_csv` writes — and
+  `csv_to_bin` checks — is the start of that cell. Two things change for callers:
+  - When the finest time dimension is monthly or yearly and `initial_datetime` falls mid-period, rows
+    are labelled from the period start: a monthly file from `2025-01-15` reads
+    `2025-01-01, 2025-02-01, …` (it read `2025-01-15, 2025-02-15, …`; from `2025-01-31` it read
+    `2025-01-31, 2025-03-03, 2025-03-31, 2025-05-01`). An hourly cell starts on the hour, so a start
+    of `…T06:30:00` labels its first row `…T06:00:00`.
+  - Under a weekly dimension, a week is seven days counted from the day of `initial_datetime`, not
+    from January 1: a daily child's `initial_value` is always 1 (it was 4 for a file starting
+    Saturday 2025-03-15) and an hourly child's is the hour of day + 1. Before this release such a
+    file could hold only some of its cells: `write` (and so Julia `write!`, Lua `file:write` and the
+    C API) accepted hours 1–24 of every week of a weekly × hourly file, and of a weekly × daily file
+    only the weeks whose start on the old January-1 week grid fell on the 1st of a month;
+    `csv_to_bin` and `Expression::save` stopped at the first cell they could not write. Unless
+    `initial_datetime` is day 1, 8, 15, … of its year, every such stored cell now names a moment
+    `(day of year − 1) mod 7` days later: rewrite those files from the source data.
+
+  C++ only: `TimeProperties::datetime_to_int` is removed, and `TimeProperties::add_offset_from_int`
+  now returns the start of the `value`-th period counted from the one holding its base, ignoring
+  `initial_value`.
+
+  *Adapt:* re-run `bin_to_csv` on such files before editing and re-importing their CSVs. C++ code
+  that called `datetime_to_int` has no replacement: the coordinate is the position, and
+  `BinaryFile::read`/`write` validate it.
+
+- **BREAKING — `bin_to_csv` writes values at full precision, and `csv_to_bin` rejects a data cell
+  that is not a whole number.** `bin_to_csv` wrote each value with 6 significant digits, so
+  `1.23456789` became `1.23457` and a bin → csv → bin round trip silently changed the data. It now
+  writes the shortest text that reads back to the same double, as `export_csv()` does, so round
+  values may also change notation (`200000` → `2e+05`). `csv_to_bin` used `std::stod`, which reads
+  the longest valid prefix, so a cell `9.99abc` was stored as `9.99` and a trailing space was
+  ignored. The whole cell must now parse (leading whitespace is still skipped), and a bad cell
+  reports `Cannot csv_to_bin: invalid float value '<v>' for label '<label>'` instead of the bare
+  `stod` / `invalid stod argument` text. `null` still reads as a missing value.
+
+  *Adapt:* regenerate golden files and byte-for-byte comparisons over `bin_to_csv` output; fix CSV
+  files that relied on a truncated cell; update any matcher on the old `stod` messages.
+
+- **Expressions: a binary operation accepts two single-label operands whatever their labels are
+  called.** `+ - * /`, the comparisons and `&&`/`||` (Julia and Lua `&`/`|`) threw `Cannot apply:
+  labels have same size 1 but different content` when each operand carried one label with a
+  different name, while `ifelse` over the same operands worked. So
+  `e:aggregate_agents("max") - e:aggregate_agents("min")` failed, and so did combining conditions
+  on two single-label files, e.g. `(demand > x) & (price < y)`. Binary operations now follow the
+  `ifelse` rule: operands with more than one label must carry the same label set, a single label
+  broadcasts, and when every operand has a single label the result takes the left operand's (for
+  `ifelse`, the `then` operand's). Every expression that built before builds the same output. A
+  label-set mismatch in a binary operation now reports `Cannot apply: labels are incompatible
+  across operands (non-singleton label sets must match)`, replacing `labels have same size N but
+  different content` and `labels have incompatible sizes N vs M`.
+
+- **BREAKING — expressions: one aggregation operation enum.** `quiver_expression_aggregate_agents`
+  now takes `quiver_expression_aggregate_operation_t`, the same enum as `quiver_expression_aggregate`;
+  `quiver_expression_aggregate_agents_operation_t` and its `QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_*`
+  constants are removed (their values were identical). In C++, `ExpressionAggregateAgents::Operation`
+  is now an alias of `ExpressionAggregate::Operation`, so C++ code compiles unchanged and can pass
+  either spelling to either method. Lua takes the operation as a string and is unaffected.
+
+  *Adapt:* in C and Julia, replace `QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_<OP>` with
+  `QUIVER_EXPRESSION_AGGREGATE_OPERATION_<OP>` — in Julia,
+  `Quiver.aggregate_agents(e, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_MEAN)`.
+
+### Removed
+
+- **BREAKING (C++ only) — `TimeProperties::set_initial_value()`.** `BinaryMetadata::derive_initial_values()`
+  is now the one place a time dimension's `initial_value` is computed, and nothing else called the
+  setter. No C API function or binding exposed it.
+
+  *Adapt:* after changing a `BinaryMetadata`'s `dimensions` or `initial_datetime`, call
+  `derive_initial_values()` instead of setting each value by hand.
+
+- **BREAKING — the C API's incremental binary-metadata builders, and the C++
+  `BinaryMetadata::add_dimension` / `add_time_dimension` behind them.** `quiver_binary_metadata_create`,
+  `quiver_binary_metadata_set_initial_datetime`, `quiver_binary_metadata_set_unit`,
+  `quiver_binary_metadata_set_version`, `quiver_binary_metadata_set_labels`,
+  `quiver_binary_metadata_add_dimension` and `quiver_binary_metadata_add_time_dimension` are gone.
+  No binding called them — Julia's `Metadata(; kwargs...)` and Lua's `quiver.metadata{...}` already
+  build through `from_element` — and they were the one construction path that never derived a time
+  dimension's `initial_value` from `initial_datetime`: it stayed 0, so a traversal of builder-made
+  metadata started at coordinate 0. Julia and Lua code is unaffected; only the generated low-level
+  `Quiver.C` wrappers for these seven symbols disappear.
+
+  *Adapt:* build the metadata in one call — in C with `quiver_binary_metadata_from_toml` (a TOML
+  string with `version`, `dimensions`, `dimension_sizes`, `time_dimensions`, `frequencies`,
+  `initial_datetime`, `unit` and `labels`) or `quiver_binary_metadata_from_element` (an element
+  carrying the same keys); in C++ with `BinaryMetadata::from_toml_content` or
+  `BinaryMetadata::from_element`.
+
+### Fixed
+
+- **Binary files accept every cell of every time layout their metadata accepts.** `read` and `write`
+  (and so `bin_to_csv`, `csv_to_bin` and `Expression::save`, in Julia and Lua too) rejected valid
+  cells for five of the eight parent/child layouts, with `Invalid values for time dimensions:
+  dimension 'hour' has value 25 but the resulting datetime implies 1`: hourly under monthly, yearly
+  or weekly past the first day, daily under yearly past January, and daily under weekly in any week
+  whose start on the old January-1 grid was not the 1st of a month. A non-midnight
+  `initial_datetime` with an hourly dimension under a monthly or yearly one rejected the file's own
+  first cell, and a start on the 29th-31st broke yearly + monthly layouts (yearly + monthly from
+  January 31 rejected February; yearly + monthly + daily from 2024-02-29 rejected 2025-03-01).
+- **Binary metadata with an invalid frequency layout reports why.** `from_toml_content` and
+  `from_element` (so Julia `Metadata` and Lua `quiver.metadata`) computed initial values before
+  validating, so frequencies `["monthly", "yearly"]` failed with `YEARLY frequency not implemented.
+  This function should only be used for inner time dimensions.` and `["daily", "daily"]` with
+  `Invalid parent frequency daily for DAILY dimension.`. They now report `Time dimension frequencies
+  must be ordered from lowest to highest frequency.` and `Time dimension frequencies must be unique.
+  Duplicate: daily`.
+- **Expressions: aggregating away the outermost time dimension no longer shifts the result.** For
+  `year × month` data starting 2025-03-01, `aggregate("year", ...)` kept the month's start at 3 in
+  memory while the saved file re-read it as 1. The file came back shifted by two months, the
+  January and February sums were never computed, and the in-memory result could not be combined
+  with its own saved output (`incompatible TimeProperties`). The output now starts where the first
+  reduced period starts: its `initial_datetime` becomes 2025-01-01 and output month *m* is calendar
+  month *m*, in memory and on disk. The same holds for every frequency: a `day × hour` file from
+  06:00 aggregated over `day` starts at 00:00. Reducing `year` over `year × month × day` data whose
+  first year is a leap year still fails at 29 February, as it already did for a 1 January start.
+  Affects C++, the C API, Julia and Lua.
+- **Binary files with three or more time dimensions that start mid-period no longer skip cells.**
+  For a `yearly × monthly × daily` file starting `2025-03-15`, the traversal behind an expression
+  `save`, `bin_to_csv` and `csv_to_bin` resumed every later March at day 15, so 2026-03-01..14 were
+  never visited. A saved expression left them NaN, `bin_to_csv` left their rows out, and
+  `aggregate("day")` summed March 2026 from the 15th only. This affected C++, the C API, Julia and
+  Lua. A time dimension now resumes at its starting value only while every enclosing time
+  dimension is still in the starting period. Files with one or two time dimensions are
+  unaffected. A CSV that `bin_to_csv` wrote for an affected file lacks those rows, so `csv_to_bin`
+  now rejects it: convert the `.qvr` again.
+- **Binary metadata factories reject mismatched or malformed fields instead of reading out of
+  bounds.** `from_element` and `from_toml_content` (C API `quiver_binary_metadata_from_element` /
+  `_from_toml`, Julia `Metadata(; ...)` / `from_element` / `from_toml_content`, Lua
+  `quiver.metadata{}` / `quiver.metadata_from_toml` / `quiver.metadata_from_element`, and every
+  `.toml` sidecar read by `open_file(path, 'r')`) indexed `dimension_sizes` and `frequencies`
+  without checking their lengths. So `dimensions = {"a", "b"}, dimension_sizes = {3}`, or
+  `time_dimensions` without `frequencies`, read past the end of an array: undefined behaviour,
+  and an abort in a Debug build. They now throw `Cannot <op>: dimension_sizes count (1) does not
+  match dimensions count (2)` or `Cannot <op>: frequencies count (0) does not match
+  time_dimensions count (1)`. The same checks reject surplus entries (more sizes than dimensions,
+  or frequencies beyond `time_dimensions`), which used to be ignored. A TOML array entry of the
+  wrong type (`dimensions = ["a", 2]`) used to be dropped silently, which shifted every later
+  dimension onto the wrong size. It is now `Cannot from_toml_content: array 'dimensions' must
+  contain strings`, and a non-array value is `key '<k>' must be an array`. A missing or
+  non-string `version`, `unit` or `initial_datetime` used to throw a bare `bad_optional_access`.
+  It now names the key: `missing key 'unit'` or `key 'unit' must be a string`. The two
+  time-dimension errors are now Pattern 1 and name the factory that was called (`Cannot
+  from_element: time dimension 'x' is not in dimensions`). Before, they read `Error building
+  metadata from toml: ...`, even from `from_element`.
+- **`csv_to_bin` reads numbers the same way in every host locale and on every platform.** Under a
+  decimal-comma C locale (e.g. Python's `locale.setlocale(locale.LC_ALL, "")` on a pt-BR machine,
+  then `db:csv_to_bin` through a `LuaRunner`) a data cell `1.5` was read as `1`, and on Linux and
+  macOS a subnormal value such as `1e-310`, which `bin_to_csv` writes, was rejected. It now uses
+  the same number parser as `import_csv()`.
+- **`csv_to_bin()` checks every data row's width against the header.** A row missing a dimension
+  cell (`1` under the header `row,col,val1,val2`) was read past its end — an assertion abort in a
+  debug build, a comparison against arbitrary memory in a release one. A data row must now have
+  exactly as many fields as the header or `csv_to_bin` throws `Cannot csv_to_bin: line N has X
+  fields, expected Y`, and a trailing comma counts as an extra field. That message also replaces
+  the `Data length X does not match expected length Y` a short or long row used to raise from the
+  binary writer, and it is a `std::runtime_error` like every other `csv_to_bin` failure, not a
+  `std::invalid_argument`. A file that ends before its last row throws `Cannot csv_to_bin: file ends before
+  line N`, and a header with too few columns now reports the same `Unexpected header in CSV file:
+  ...` as any other header mismatch instead of `CSV header has N columns, expected M`.
+
+## [0.12.3] — 2026-09-28
+
+### Changed
+
+- **BREAKING — set and time-series tables need the same parent foreign key as vector tables.**
+  Opening a schema (`from_schema`, `from_migrations`, `validate_migrations`, or the first use of a
+  database opened with `open()`) now rejects a `<Collection>_set_<group>` or
+  `<Collection>_time_series_<group>` table when `<Collection>` does not exist, when its `id` has no
+  foreign key to `<Collection>(id)`, or when that key is not `ON DELETE CASCADE ON UPDATE CASCADE`
+  — the rules vector tables already followed. Without the cascade, `delete_element` left the
+  element's set rows behind, or failed with `FOREIGN KEY constraint failed` once the element had
+  time-series rows. Any other foreign key in a time-series table must now use `ON UPDATE CASCADE`
+  with `ON DELETE CASCADE` or `ON DELETE SET NULL`, as in every other table. The errors read
+  `Failed to validate schema: Set table '<t>' must have foreign key to parent collection '<c>'`,
+  `… references non-existent collection '<c>'`, and
+  `… FK to parent must use ON DELETE CASCADE ON UPDATE CASCADE`.
+
+  *Adapt:* declare `FOREIGN KEY (id) REFERENCES <Collection>(id) ON DELETE CASCADE ON UPDATE
+  CASCADE` on every set and time-series table, and give each time-series relation key
+  `ON UPDATE CASCADE` with `ON DELETE CASCADE` or `SET NULL`. SQLite cannot add a foreign key to
+  an existing table, so an existing database needs a migration that rebuilds the table: create the
+  new table, copy only the rows whose element still exists (`INSERT INTO <new> SELECT ... FROM
+  <old> WHERE id IN (SELECT id FROM <Collection>)` — the rows the old behaviour orphaned would fail
+  the new key), drop the old one, rename.
+
+- **BREAKING — `list_vector_groups()`, `list_set_groups()` and `list_time_series_groups()` throw
+  for an unknown collection.** They returned an empty list for a name that is not a table, so a
+  mistyped collection looked the same as a collection with no groups, while
+  `list_scalar_attributes()` on the same name threw. All four now raise
+  `Cannot <operation>: collection not found: <name>`, in the C API, Lua and every binding. The
+  `read_vectors_by_id` / `read_sets_by_id` composites (Julia, Dart, Python, JS, Lua) are built on
+  them and now raise `Cannot list_vector_groups: …` / `Cannot list_set_groups: …` instead of
+  returning an empty map. An existing collection with no groups still returns an empty list.
+
+  *Adapt:* a caller that used an empty result to mean "no such collection" must catch the error
+  instead.
+
+### Fixed
+
+- **A rejected `create_element()` / `update_element()` no longer leaves part of its write behind
+  inside a transaction or dry run.** Both wrote the element's scalar row before routing and
+  validating its arrays, and rewrote each group table before checking the next. Inside a
+  caller-owned transaction (for example a Lua `pcall` inside `db:transaction`) or a dry run, a call
+  rejected for an unknown array, a type mismatch or unequal lengths still left the new element, the
+  updated scalars or an already-rewritten group in place for the commit. Every array is now routed,
+  FK-resolved and validated before the first write, in every binding; an array whose column name
+  several groups share is FK-resolved against each group it is written to, not only the first. A
+  failure only SQLite can detect — a duplicate value in a set, a NULL in a NOT NULL group column, a
+  CHECK constraint, a foreign-key violation — still happens mid-write, and inside a caller-owned
+  transaction the call's earlier writes stay; outside one the call is rolled back as before.
+
+## [0.12.2] — 2026-09-27
+
+### Changed
+
+- **BREAKING — `read_time_series_row()` rejects a group with more than one dimension column.** In a
+  group keyed by `date_time` plus another dimension such as `block` (every primary-key column except
+  `id` is a dimension), each date holds one row per block, so there is no single value per element.
+  The read used to pick one of those rows by accident. It could return null although another block
+  held a value at that date (block 1 `10.0` and block 2 `NULL` read back as null), and with several
+  non-null blocks it returned whichever row came last. It now throws `Cannot read_time_series_row:
+  group '<g>' of collection '<c>' has more than one dimension column` in every binding, even when
+  the collection is empty. Single-dimension groups are unchanged.
+
+  *Adapt:* read a multi-dimension group with `read_time_series_group` and choose the block yourself.
+
+### Fixed
+
+- **`update_time_series_group()` writes a value column that only a later row names.** The C++
+  method (and `update_time_series_group_by_label()`) built its INSERT column list from the first
+  row's keys, so a column that appeared only from the second row on passed validation and was
+  then silently dropped, reading back as NULL. It now uses the union of every row's keys, as
+  `update_vector_group()` / `update_set_group()` already do; a row that omits such a column writes
+  NULL for it. The C API, Lua and the bindings always pass every column in every row and were not
+  affected.
+
+## [0.12.1] — 2026-09-27
+
+### Changed
+
+- **BREAKING — a time series' dimension column is the date column of its primary key.** The
+  dimension (`get_time_series_metadata`'s `dimension_column`, the row order of
+  `read_time_series_group` and `export_csv`, the axis `read_time_series_row` walks, and the dense
+  row-count column of Lua's `db:update_time_series_group`) used to be the alphabetically first
+  `date_` column, while `update_time_series_group` and `upsert_time_series_row` keyed on the
+  primary key. A `date_` value column sorting before `date_time` (say `date_approved`) was
+  therefore taken for the dimension: rows came back ordered by it, `read_time_series_row`
+  answered along it, Julia/Python/Dart reads failed on its NULL cells, and a Lua write with a
+  `nil` in it threw. The dimension is now the first primary-key column after `id` that is
+  DATE_TIME-typed or `date_`-named; any other `date_` column is an ordinary value column.
+  `describe` brackets exactly the primary-key columns, so a multi-dimension group now shows
+  `[block]` as well.
+
+  *Adapt:* a time-series table whose date column is not in its `PRIMARY KEY` now has no
+  dimension — `get_time_series_metadata`, `list_time_series_groups`, `read_time_series_group`,
+  `read_time_series_row`, `export_csv`/`import_csv` and Lua's `db:update_time_series_group`
+  throw `Dimension column not found: time series table '<table>'` for it. Add the date column to
+  the key, e.g. `PRIMARY KEY (id, date_time)`.
+
+## [0.12.0] — 2026-09-27
+
+### Changed
+
+- **BREAKING — `import_csv()` into a collection deletes the elements the CSV omits the way
+  `delete_element()` does.** A scalar import makes the collection match the CSV by label. It used
+  to switch foreign keys off, delete every row and re-insert the CSV's, so an element the CSV left
+  out lost only its collection row: its vector, set and time-series rows stayed behind (still
+  readable by its old id), and every relation to it kept pointing at the deleted id, which
+  `export_csv()` then wrote as a bare number that `import_csv()` rejected. Foreign keys now stay on
+  for the whole import. An element whose label is in the CSV is updated in place, keeping its id,
+  group rows and inbound relations; a new label is inserted; an omitted element is deleted, so its
+  group rows go with it and each relation to it follows the schema's `ON DELETE` action (`SET NULL`
+  clears it, `CASCADE` deletes the referencing row, which can be an element of another collection).
+  A CSV that repeats a label is rejected before anything is written, and an import whose deletions
+  would cascade into an element the CSV keeps (a cycle of `ON DELETE CASCADE` relations through
+  another collection) is refused and rolled back.
+
+  *Adapt:* keep every element you mean to keep in the CSV, since omitting one now also removes
+  what depends on it through `ON DELETE CASCADE`; if an import is refused for cascading into a
+  kept element, re-point that element's relation first. In a schema with a `UNIQUE` column other
+  than `label` (a self-reference aside), an import that hands one of that column's values from an
+  element it keeps to a row listed before it in the CSV (any swap does) now fails and rolls back;
+  route it through a temporary value.
+
+## [0.11.0] — 2026-09-26
+
+### Changed
+
+- **BREAKING — bundled SQLite 3.50.2 → 3.53.4, now built thread-safe.** Two SQLite changes reach
+  callers through `query_*` / Lua SQL and user schemas. Inside SQL, a REAL converted to text now
+  renders up to 17 significant digits instead of 15 — `CAST(1.1+2.2 AS TEXT)` was `3.3` and is now
+  `3.3000000000000003`, and `||`, `printf('%s', …)`, `quote()` and `json_*` change the same way. A
+  STRICT table's generated column whose value does not match its declared type now rejects the
+  write (`cannot store REAL value in INTEGER column …`). Quiver's own typed reads, CSV export and
+  `describe`/`summarize` are unaffected. The bump also brings the 3.50.3 AND-optimizer
+  wrong-answer fix and the WAL-reset corruption fix. SQLite is now compiled with
+  `SQLITE_THREADSAFE=1` (serialized) instead of `0`, so separate `Database` handles are safe to use
+  from different threads.
+
+  *Adapt:* compare converted floats numerically, or format explicitly with `format('%.15g', x)`;
+  declare a generated column with the type its expression produces, or `CAST` inside the
+  expression.
+- **BREAKING — `import_csv()` parses with the same CSV reader as `db:read_csv`.** Quiver no longer
+  links rapidcsv. Import used to pre-process each file as text before parsing, and that caused
+  several bugs, now fixed:
+  - A `sep=X` first line is used as the real delimiter, including after a UTF-8 BOM and for tab or
+    `|`. Previously every `;` was rewritten to `,`, so a quoted `"x;y"` was stored as `x,y` and an
+    unquoted `,` split its cell.
+  - Without a `sep=` line, a file is read as semicolon-delimited when its *header line* holds `;`
+    and no `,`.
+  - Blank lines after a `sep=` line or the header are skipped (so a `\r\r\n` line ending, which a
+    doubled Windows text-mode conversion writes, imports), and a lone CR ends a line.
+  - Quoted multi-line cells are no longer cut by Excel's trailing-column cleanup.
+
+  Import is stricter in three places. A numeric cell must parse whole: `1.5` and `12abc` are
+  rejected for an INTEGER column, and `9.99abc` or `1,5` for a REAL column (they used to be
+  truncated); in a group import these are now caught before anything is deleted. A quoted field
+  with text after its closing quote, or never closed, is rejected before anything is deleted:
+  `malformed quoted field on line N` / `unterminated quoted field on line N`. A single record over
+  10 MB is rejected. Some errors are now reported differently:
+
+  | Case | Before | Now |
+  | --- | --- | --- |
+  | Missing file | `could not open file: <p>` | `file not found: <p>` (also `path is a directory: <p>` and `cannot access file '<p>': …`) |
+  | 0-byte file | `CSV file is empty.` | `file '<p>' is empty` |
+  | Only a `sep=` line, or only a BOM | `CSV file is empty.` | `header row N not found in file '<p>'` |
+  | Blank first line | `CSV file does not contain a 'label' column.` (collection) or a column-mismatch error (group) | `header row N not found in file '<p>'` |
+  | Unreadable file (e.g. another process holds a lock on it) | `could not open file: <p>`, or `CSV file is empty.` | `cannot read file '<p>'` |
+  | UTF-16/32 file | `CSV file does not contain a 'label' column.` (collection) or a column-mismatch error (group) | `cannot read file '<p>': …` |
+  | Non-numeric or out-of-range REAL cell in a group import | the bare `std::stod` text (`invalid stod argument` on MSVC) | `Invalid float value '<v>' for column '<c>'.` |
+  | Non-integer cell in a group INTEGER column with no enum labels | `Invalid enum value '<v>' for column '<c>'.` | `Invalid integer value '<v>' for column '<c>'.` |
+
+  *Adapt:* update any matcher on the old messages; fix files that relied on truncated numbers or
+  stray quotes.
+
+- **BREAKING — `export_csv()` quotes a cell for `"` or CR, and no longer for a space.** Export now
+  uses `db:write_csv`'s emitter: a cell is quoted if and only if it contains the separator, `"`, CR
+  or LF. The old rule quoted a cell containing a space but not one containing a quote, so `"x"` was
+  written raw and read back as `x`. A single-column row whose only cell is empty is written as `""`
+  instead of a blank line. Parsed values are unchanged, or now correct.
+
+  *Adapt:* regenerate golden files and any byte-for-byte comparisons over exported CSVs.
+
+### Fixed
+
+- **`import_csv()` reads numbers the same way in every host locale and on every platform.** Under a
+  decimal-comma C locale (e.g. Python's `locale.setlocale(locale.LC_ALL, "")` on a pt-BR machine) a
+  REAL cell `9.99` was read as `9`, and on Linux and macOS a subnormal value such as `1e-310`, which
+  `export_csv()` writes, was rejected.
+- **`import_csv()` imports a `vector_index` column of a set or time-series group as its declared
+  type.** Only a vector group's `vector_index` is the structural index; elsewhere the name was
+  forced to INTEGER, so a TEXT cell `12abc` was stored as `12` and `abc` failed with a bare `stoll`
+  error.
+- **`export_csv()` reports a failed write.** A full disk or a locked file used to leave an empty or
+  cut-short CSV behind a successful return; it now throws `Failed to export_csv: could not write
+  file: <p>`.
+- **Julia: updating `Artifacts.toml` now invalidates the package precompile cache.** An artifact-only
+  update could leave the cached native library hash pointing at the previous release. Julia now
+  tracks `Artifacts.toml` as a precompile dependency and refreshes the hash when it changes.
+
+## [0.10.9] — 2026-09-25
+
+### Changed
+
+- **BREAKING — vector and set bulk reads return one entry per element.** The six bulk readers
+  (`read_vector_{integers,floats,strings}`, `read_set_{integers,floats,strings}`, and their C API
+  and binding equivalents) skipped elements that had no group rows, re-indexing every entry after
+  the gap so one element's values were read as another's. They now return one entry per element,
+  positionally aligned with `read_element_ids()` and empty where an element has no rows. No
+  signature changed in any layer; the outer length and the position of every entry did.
+
+  *Adapt:* callers that zipped a bulk read against `read_element_ids()` were misaligned and are now
+  correct; callers that read the outer length as "elements with data" must skip empty entries.
+
+- **BREAKING — a set group's rows read back in one consistent order.**
+  `read_set_{integers,floats,strings}_by_id` had no `ORDER BY`, so each took the order of whichever
+  index SQLite chose for it — reading two columns of one set group could return their rows in
+  different orders and pair the wrong values together. Every set reader now orders by `rowid`,
+  matching `read_set_group_by_id`.
+
+  *Adapt:* a set's rows are no longer sorted by value; they come back in the order they were
+  written. Treat the order as unspecified but consistent across every reader of the group.
+
+## [0.10.8] — 2026-09-20
+
+### Added
+
+- **`describe()` and `describe_collection()` now render an attribute's meaning, not just its
+  declaration, when the database was opened with `from_migrations`.** Each scalar attribute line
+  gains zero to three semicolon-delimited clauses read from a `ui/` TOML sidecar that sits beside
+  the migrations directory: an English `label`, an `enum` code-to-label list, and — in
+  `describe_collection()` only — a `tooltip`. Worked example:
+  `- initial_volume_type (INTEGER) NOT NULL; label "Initial Volume Unit"; enum {0: "Per Unit", 2: "Volume"}`.
+  A label or tooltip that merely restates the attribute name is suppressed, so only genuinely new
+  information is added. A database with no `ui/` sidecar, or with a broken one (missing directory,
+  empty file, invalid TOML, wrong-shaped entry), renders exactly as it did before this change and
+  `from_migrations` never fails because of it — a warning is logged and the affected collection or
+  vocabulary is simply left undescribed. The feature reaches every binding and Lua with no
+  additional code on their side, since `describe`/`describe_collection` already return a plain
+  string. Deliberately not included: no C API symbol, no structured getter, no validation of the
+  sidecar against the schema, and English only — a database opened with `from_schema` is
+  unaffected. `summarize_collection()`'s integer value distribution now carries the same enum
+  labels: each observed code is annotated with its label, `values {0 "Per Unit": 2, 1: 1}`. A code
+  the vocabulary does not cover stays bare, and a column with more than 64 distinct codes still
+  renders no distribution clause at all.
+
+## [0.10.7] — 2026-09-17
+
+### Changed
+
+- **The agent-facing Lua API reference now redirects a model to the file, instead of only telling
+  it what it lacks.** `LUA_DB_API_REFERENCE`'s `Standard library` bullet used to state only that
+  the Lua sandbox has no `io`, which correctly told a model it cannot open a file — and then led it
+  to conclude it must paste the file's contents into the script as literals. The correction sits at
+  that exact sentence: no `io`, but data files are read with `db:read_csv` / `db:read_csv_stream`.
+  The `CSV file reading` section also gained one worked example covering both real, dirty Maranhão
+  fixture shapes (a junk title row and units row around the header, apostrophe thousands
+  separators, quoted commas, English month names), including the `tonumber`/`gsub` parenthesis
+  trap: `gsub` returns two values, so `tonumber(v:gsub("'", ""))` silently passes the replacement
+  count as `tonumber`'s base argument and returns `nil`; the fix is `tonumber((v:gsub(...)))`.
+
+### Added
+
+- **A Lua script can now read a CSV file off disk.** `db:read_csv(path, opts)` reads the whole
+  file and returns `{ header = {...}, rows = {{...}, ...} }`, with every cell arriving as a string
+  and no numeric or date inference; `db:read_csv_stream(path, on_row, opts)` reads the same file
+  row by row through the same parser, so a large file can be processed with bounded memory. Both
+  are sandboxed to the database directory like every other Lua file operation, and both take the
+  same optional options table — `separator` (a single-character string, defaulting to `,`) and
+  `header_row` (see below) are its two keys today. This is Lua-only, with no C++/C API/FFI
+  counterpart.
+- **`db:read_csv`/`db:read_csv_stream` accept a `header_row` option** naming which line is the
+  header, 1-based, defaulting to `1`. `header_row = 0` declares the file has no header at all:
+  `csv.header` is absent (`nil`) and `csv.rows[1]` is the file's first line — useful for a file
+  with a junk title row and/or a units row around the real header. A `header_row` past the end of
+  the file throws, as does a value that isn't a non-negative integer.
+- **A Lua script can now write a CSV file to disk.** `db:write_csv(path, opts)` returns a handle;
+  `w:write_row(row)` appends one row and `w:close()` finishes it — streaming-only, with no
+  whole-file form. The same two options as the reader, `separator` and `header`, are all it takes.
+  Opening `db:write_csv` truncates an existing file at the target path (no overwrite guard). The
+  writer is hand-rolled RFC-4180 emission over `std::ofstream`, with no new dependency; numbers are
+  formatted via `std::to_chars`'s shortest round-trip form, and a `nil` cell and an empty-string
+  cell are indistinguishable after the round trip since CSV has no null. With a `header`, its
+  length is the row width: a shorter `write_row` pads with empty cells and a longer one throws,
+  naming the row's ordinal and both counts; omitting `header` disables the check. A writer still
+  open when the script's `run()` call returns is flushed automatically, so the file is complete
+  and re-readable even without an explicit `w:close()`.
+
+### Fixed
+
+- **Lua: a CSV writer held in a global was never flushed, leaving a 0-byte file.** The promise
+  that a writer the script never closed is still complete when `run()` returns was implemented as
+  a forced garbage collection, which only finalizes objects the script made *unreachable*.
+  `w = db:write_csv(path)` without `local` — Lua's default spelling — is a GC root, so its rows
+  stayed in the stream buffer and the file was empty (or truncated mid-record) for the host and
+  for any later `run()`. `LuaRunner::run` now closes every writer the run handed out, explicitly
+  and regardless of reachability. A writer does not outlive its `run()`: reusing the handle from a
+  later script reports `Cannot write_row: writer for '...' is already closed`.
+- **Lua: `w:close()` left the writer un-closeable after a flush failure.** It threw before marking
+  the writer closed and before releasing the handle, so every later `close()` raised the same
+  error instead of the documented no-op, and `w:write_row` then reported "failed to write" rather
+  than "already closed".
+- **BREAKING — Lua: `separator` no longer accepts a quote, CR, LF or NUL** in `db:read_csv`,
+  `db:read_csv_stream` or `db:write_csv`. They are one byte but cannot be delimiters, and
+  `db:write_csv(path, { separator = '"' })` silently produced a file `db:read_csv` refused to
+  open. They are now rejected up front:
+  `Cannot <op>: option 'separator' must not be a quote, carriage return, newline or NUL`. Callers
+  passing one of those four bytes must pick a real delimiter.
+- **Lua: a sparse row or `header` key allocated without bound.** `w:write_row({[1e9] = "x"})` and
+  `db:write_csv(p, { header = {[1e9] = "x"} })` build a dense vector up to the largest integer
+  key, so a single stray key asked for tens of gigabytes and surfaced as a raw `bad allocation`
+  with no `Cannot ...:` prefix. A key past 1,000,000 is now a precondition failure naming it.
+- **Lua: a non-string key in a CSV options table surfaced as a raw Lua value.**
+  `db:read_csv(p, { [true] = 1 })` (and the `db:write_csv` equivalent) converted the key
+  unchecked, so the script received a bare `true`/table as the error in Release and a sol2 panic
+  in Debug. Now `Cannot <op>: option key must be a string`.
+- **BREAKING — Lua: two `db:write_csv` writers open on the same path at once are now refused**
+  (`Cannot write_csv: file is already open for writing: <path>`). Each opened with truncation and
+  wrote from offset 0, so the second silently discarded everything the first had buffered — only
+  the second writer's rows survived, with no error. Close the first writer before reopening its
+  path; reopening a *closed* path still truncates, unchanged.
+- **Lua: a non-function `on_row` reached `db:read_csv_stream`'s caller as a raw sol2 message.**
+  `db:read_csv_stream(p, "oops")` reported `stack index 3, expected function, received string`
+  (and, for some argument types, escaped `pcall` entirely). Now
+  `Cannot read_csv_stream: on_row must be a function`.
+- **Lua: `w:write_row(<userdata>)` wrote a spurious empty record.** sol2's table check for the row
+  parameter also admits userdata, so `w:write_row(db)` appended `""` instead of throwing; the
+  argument's type is now checked (`Cannot write_row: row must be a table`), which also replaces
+  sol2's raw "stack index 2, expected table" for a string/number/nil argument.
+- **Lua: a `header` table with a bad key blamed the value.** `{ header = { name = "a" } }` reported
+  `option 'header' entry must be a string` although every entry was one; a bad key now reports
+  `option 'header' key must be a positive integer`.
+- **Lua: a csv-parser failure raised while fetching the first data row reached scripts unwrapped.**
+  `for_each_row` wrapped `++it` but not the initial `begin()`, which parses too.
+- **Lua: a path the OS refuses to resolve reached scripts as a raw `std::filesystem` message.**
+  Every file-touching Lua operation — `db:read_csv`, `db:read_csv_stream`, `db:write_csv`,
+  `db:open_file`, `db:bin_to_csv`, `db:csv_to_bin`, `db:export_csv`, `db:import_csv`,
+  `db:validate_migrations`
+  and `expr:save` — resolves its path through one shared gate, and that gate used throwing
+  `std::filesystem` overloads without catching them. Any OS failure that is not a plain "does not
+  exist" therefore surfaced unprefixed: on Windows, `db:read_csv("NUL")` (or any reserved device
+  name, in any case, in any directory) raised
+  `weakly_canonical: The parameter is incorrect.: "..."` instead of a `Cannot read_csv: ...`
+  message, breaking the guarantee that no standard-library text reaches a script unwrapped. Such
+  a failure is now reported as `Cannot <operation>: cannot resolve path '<path>': <reason>`. The
+  three CSV precondition checks were hardened the same way and now report
+  `Cannot <operation>: cannot access file '<path>': <reason>` when the OS refuses the query,
+  keeping the existing not-found / is-a-directory / is-empty messages unchanged.
+
+## [0.10.6] — 2026-09-11
+
+### Fixed
+
+- **Dart: every DateTime reader threw on valid values whose local wall-clock time the platform
+  considers nonexistent.** `stringToDateTime` validated by re-serializing a *local*
+  `DateTime.parse` and comparing it with the input, so a value inside a DST gap — on Windows the
+  historical Brazilian rules put one at midnight of 2019-01-01 — came back shifted by an hour and
+  was rejected as `Cannot convert "2019-01-01T00:00:00" to a date time in
+  'Consumption.date_time': expected a valid YYYY-MM-DD[THH:MM:SS]`, taking down
+  `readTimeSeriesGroup`, `readScalarDateTimes`, `queryDateTime` and the rest with it. The
+  fields are now range-checked in UTC (which has no gaps) and the local `DateTime` built from
+  them; the accepted grammar is unchanged and now pinned by `test/date_time_test.dart`. A value
+  inside a real DST gap still reads an hour later, since that local time does not exist — but it
+  reads.
+
+## [0.10.5] — 2026-09-09
+
+### Changed
+
+- **The Dart binding's native build now works on macOS.** `quiverdb`'s native-assets hook
+  previously could not configure, compile, or register its libraries there.
+- **macOS builds now target macOS 13.3 as their minimum, deterministically.** libc++ marks the
+  floating-point `std::to_chars` (used by `database_csv_export.cpp` and `lua_runner.cpp`)
+  unavailable below 13.3, so that is the core's real floor and `cmake/Platform.cmake` now sets
+  it for every macOS build. Previously no build path set one, so clang stamped the *builder's*
+  OS version into the shipped dylibs and the published Julia/JS/S3 natives silently required
+  whatever macOS the CI runner image was — usually much newer than 13.3. A higher explicit
+  `CMAKE_OSX_DEPLOYMENT_TARGET` is respected; a lower one is raised to 13.3, which is what the
+  code actually requires.
+- **New CMake option `QUIVER_UNVERSIONED_SHARED` (default OFF).** Turning it on builds the
+  shared libraries as plain `libquiver.dylib` / `libquiver.so` real files instead of a versioned
+  real file plus unversioned symlinks. Only the Dart hook sets it — the published Julia, JS and
+  Python natives keep their versioned install names, so nothing else changes.
+
+## [0.10.4] — 2026-09-04
 
 ### Added
 
@@ -406,7 +954,12 @@ are functionally identical to 0.10.0.
   `read_time_series_group` emits for a NULL STRING cell — so feeding a read result back with the
   mask stripped was UB. A NULL entry, or a NULL per-column data pointer, is now SQL NULL.
 
-[0.10.4]: https://github.com/psrenergy/quiver/compare/v0.10.3...v0.11.0
+[0.10.9]: https://github.com/psrenergy/quiver/compare/v0.10.8...HEAD
+[0.10.8]: https://github.com/psrenergy/quiver/compare/v0.10.7...v0.10.8
+[0.10.7]: https://github.com/psrenergy/quiver/compare/v0.10.6...v0.10.7
+[0.10.6]: https://github.com/psrenergy/quiver/compare/v0.10.5...v0.10.6
+[0.10.5]: https://github.com/psrenergy/quiver/compare/v0.10.4...v0.10.5
+[0.10.4]: https://github.com/psrenergy/quiver/compare/v0.10.3...v0.10.4
 [0.10.3]: https://github.com/psrenergy/quiver/compare/v0.10.2...v0.10.3
 [0.10.2]: https://github.com/psrenergy/quiver/compare/v0.10.1...v0.10.2
 [0.10.1]: https://github.com/psrenergy/quiver/compare/v0.10.0...v0.10.1

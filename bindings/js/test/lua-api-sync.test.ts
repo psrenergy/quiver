@@ -72,7 +72,7 @@ describe("lua-api reference stays in sync with src/lua_runner.cpp", () => {
     // shown on the right type — the doc uses ad-hoc receiver names (f/r/md/e), so no fixed token
     // is available. Coverage, not signature checking.
     const missing: string[] = [];
-    for (const type of ["BinaryFile", "BinaryMetadata", "Expression"]) {
+    for (const type of ["BinaryFile", "BinaryMetadata", "Expression", "CsvWriter"]) {
       for (const name of usertypeMethods.get(type) ?? []) {
         if (!LUA_DB_API_REFERENCE.includes(`:${name}(`)) missing.push(`${type}:${name}`);
       }

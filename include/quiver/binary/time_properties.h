@@ -19,13 +19,16 @@ QUIVER_API TimeFrequency frequency_from_string(const std::string& str);
 
 struct QUIVER_API TimeProperties {
     TimeFrequency frequency;
+    // Coordinate of the metadata's initial_datetime in this dimension (1 for the outermost time
+    // dimension). Stored because traversal (next_dimensions, ExpressionAggregate::compute_row) reads it
+    // per cell; computed only by BinaryMetadata::derive_initial_values().
     int64_t initial_value;
     int64_t parent_dimension_index;
 
-    // Setters
-    void set_initial_value(int64_t initial_value);
-
-    int64_t datetime_to_int(std::chrono::system_clock::time_point datetime) const;
+    // Start of period number `value`, counting the period of this frequency that holds base_datetime as 1:
+    // base_datetime floored to January 1, the 1st of its month, its day (Weekly and Daily) or its hour, plus
+    // value - 1 periods. Folded over a file's time dimensions outermost first, starting at initial_datetime,
+    // it yields the start of the cell a coordinate names. initial_value plays no part.
     std::chrono::system_clock::time_point add_offset_from_int(std::chrono::system_clock::time_point base_datetime,
                                                               int64_t value) const;
 };

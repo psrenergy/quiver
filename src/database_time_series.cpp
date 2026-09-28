@@ -2,6 +2,8 @@
 #include "database_internal.h"
 #include "utils/datetime.h"
 
+#include <set>
+
 namespace quiver {
 
 namespace {
@@ -55,7 +57,7 @@ void validate_time_series_row(const std::string& caller,
 }  // namespace
 
 std::vector<GroupMetadata> Database::list_time_series_groups(const std::string& collection) const {
-    impl_->require_schema();
+    impl_->require_collection(collection, "list_time_series_groups");
 
     std::vector<GroupMetadata> result;
     for (const auto& group_name : impl_->schema->group_names(collection, GroupTableType::TimeSeries)) {
@@ -169,11 +171,15 @@ void Database::update_time_series_group(const std::string& collection,
         return;
     }
 
-    // Get column names from first row (excluding dimension column which we handle specially)
-    std::vector<std::string> value_columns;
-    for (const auto& [col_name, _] : rows[0]) {
-        if (col_name != dim_col) {
-            value_columns.push_back(col_name);
+    // INSERT column list: the union of every row's keys (minus the dimension column, bound
+    // first), as update_group_rows does - not rows[0]'s, which dropped a value column named only
+    // in a later row after validating it. A row that omits a column binds NULL for it below.
+    std::set<std::string> value_columns;
+    for (const auto& row : rows) {
+        for (const auto& [col_name, _] : row) {
+            if (col_name != dim_col) {
+                value_columns.insert(col_name);
+            }
         }
     }
 
@@ -280,6 +286,12 @@ std::vector<Value> Database::read_time_series_row(const std::string& collection,
     if (!table_def) {
         throw std::runtime_error("Time series table not found: " + ts_table);
     }
+    // One value per element needs one row per (element, date). A second dimension such as `block`
+    // keeps several rows at each date, and picking one of them would be arbitrary.
+    if (internal::find_dimension_columns(*table_def).size() > 1) {
+        throw std::runtime_error("Cannot read_time_series_row: group '" + group + "' of collection '" + collection +
+                                 "' has more than one dimension column");
+    }
     auto dim_col = internal::find_dimension_column(*table_def);
 
     const auto* attr_col = table_def->get_column(attribute);
@@ -293,11 +305,13 @@ std::vector<Value> Database::read_time_series_row(const std::string& collection,
         return {};
     }
 
-    // For each element, find the most recent non-null value where dim_col <= date_time.
-    // Self-join: subquery picks max dim_col per id, outer query gets the value.
+    // For each element, the most recent non-null value where dim_col <= date_time.
+    // Self-join: the subquery picks the latest non-null date per id, and the outer query reads the value there.
+    // The outer IS NOT NULL repeats the subquery's filter, so the join can only land on a non-null row.
     auto sql = "SELECT t.id, t." + attribute + " FROM " + ts_table + " t INNER JOIN (SELECT id, MAX(" + dim_col +
                ") as max_dt FROM " + ts_table + " WHERE " + dim_col + " <= ? AND " + attribute + " IS NOT NULL " +
-               "GROUP BY id) latest ON t.id = latest.id AND t." + dim_col + " = latest.max_dt ORDER BY t.id";
+               "GROUP BY id) latest ON t.id = latest.id AND t." + dim_col + " = latest.max_dt AND t." + attribute +
+               " IS NOT NULL ORDER BY t.id";
 
     auto query_result = execute(sql, {date_time});
 

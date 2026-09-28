@@ -33,7 +33,14 @@ end
 # compiled/relocated apps (the failure this loader is designed to avoid).
 const _quiver_artifact_hash = let
     artifacts_toml = Artifacts.find_artifacts_toml(@__DIR__)
-    artifacts_toml === nothing ? nothing : Artifacts.artifact_hash("quiver", artifacts_toml)
+    if artifacts_toml === nothing
+        nothing
+    else
+        # Julia does not track Artifacts.toml as a source dependency automatically.
+        # Recompile when a release changes only the artifact binding.
+        Base.include_dependency(artifacts_toml)
+        Artifacts.artifact_hash("quiver", artifacts_toml)
+    end
 end
 
 # Directory holding libquiver_c (and its libquiver dependency), resolved at RUNTIME (from
@@ -615,10 +622,6 @@ mutable struct quiver_binary_metadata end
 
 const quiver_binary_metadata_t = quiver_binary_metadata
 
-function quiver_binary_metadata_create(out)
-    @ccall libquiver_c.quiver_binary_metadata_create(out::Ptr{Ptr{quiver_binary_metadata_t}})::quiver_error_t
-end
-
 function quiver_binary_metadata_free(md)
     @ccall libquiver_c.quiver_binary_metadata_free(md::Ptr{quiver_binary_metadata_t})::quiver_error_t
 end
@@ -633,30 +636,6 @@ end
 
 function quiver_binary_metadata_to_toml(md, out_toml)
     @ccall libquiver_c.quiver_binary_metadata_to_toml(md::Ptr{quiver_binary_metadata_t}, out_toml::Ptr{Ptr{Cchar}})::quiver_error_t
-end
-
-function quiver_binary_metadata_set_initial_datetime(md, iso8601)
-    @ccall libquiver_c.quiver_binary_metadata_set_initial_datetime(md::Ptr{quiver_binary_metadata_t}, iso8601::Ptr{Cchar})::quiver_error_t
-end
-
-function quiver_binary_metadata_set_unit(md, unit)
-    @ccall libquiver_c.quiver_binary_metadata_set_unit(md::Ptr{quiver_binary_metadata_t}, unit::Ptr{Cchar})::quiver_error_t
-end
-
-function quiver_binary_metadata_set_version(md, version)
-    @ccall libquiver_c.quiver_binary_metadata_set_version(md::Ptr{quiver_binary_metadata_t}, version::Ptr{Cchar})::quiver_error_t
-end
-
-function quiver_binary_metadata_set_labels(md, labels, count)
-    @ccall libquiver_c.quiver_binary_metadata_set_labels(md::Ptr{quiver_binary_metadata_t}, labels::Ptr{Ptr{Cchar}}, count::Csize_t)::quiver_error_t
-end
-
-function quiver_binary_metadata_add_dimension(md, name, size)
-    @ccall libquiver_c.quiver_binary_metadata_add_dimension(md::Ptr{quiver_binary_metadata_t}, name::Ptr{Cchar}, size::Int64)::quiver_error_t
-end
-
-function quiver_binary_metadata_add_time_dimension(md, name, size, frequency)
-    @ccall libquiver_c.quiver_binary_metadata_add_time_dimension(md::Ptr{quiver_binary_metadata_t}, name::Ptr{Cchar}, size::Int64, frequency::Ptr{Cchar})::quiver_error_t
 end
 
 function quiver_binary_metadata_get_unit(md, out)
@@ -791,14 +770,6 @@ end
     QUIVER_EXPRESSION_AGGREGATE_OPERATION_PERCENTILE = 4
 end
 
-@cenum quiver_expression_aggregate_agents_operation_t::UInt32 begin
-    QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_SUM = 0
-    QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_MEAN = 1
-    QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_MIN = 2
-    QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_MAX = 3
-    QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_PERCENTILE = 4
-end
-
 function quiver_expression_from_file(file, out)
     @ccall libquiver_c.quiver_expression_from_file(file::Ptr{quiver_binary_file_t}, out::Ptr{Ptr{quiver_expression_t}})::quiver_error_t
 end
@@ -840,7 +811,7 @@ function quiver_expression_aggregate(expression, dimension, operation, parameter
 end
 
 function quiver_expression_aggregate_agents(expression, operation, parameter, out)
-    @ccall libquiver_c.quiver_expression_aggregate_agents(expression::Ptr{quiver_expression_t}, operation::quiver_expression_aggregate_agents_operation_t, parameter::Ptr{Cdouble}, out::Ptr{Ptr{quiver_expression_t}})::quiver_error_t
+    @ccall libquiver_c.quiver_expression_aggregate_agents(expression::Ptr{quiver_expression_t}, operation::quiver_expression_aggregate_operation_t, parameter::Ptr{Cdouble}, out::Ptr{Ptr{quiver_expression_t}})::quiver_error_t
 end
 
 function quiver_expression_select_agents(expression, labels, label_count, out)

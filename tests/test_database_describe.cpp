@@ -109,3 +109,13 @@ TEST(DatabaseDescribe, SummarizeNotFound) {
     auto db = open(VALID_SCHEMA("describe_multi_group.sql"));
     EXPECT_THROW(db.summarize_collection("Nope"), std::runtime_error);
 }
+
+// Bracketed columns are exactly the time series' primary-key dimensions: a date_ value column is
+// not bracketed, and a non-date key column (block) is.
+TEST(DatabaseDescribe, TimeSeriesBracketsPrimaryKeyDimensionsOnly) {
+    auto plant = open(VALID_SCHEMA("time_series_date_columns.sql")).describe_collection("Plant");
+    EXPECT_TRUE(contains(plant, "- events: [date_time], date_approved(DATE_TIME), value(REAL)\n")) << plant;
+
+    auto resource = open(VALID_SCHEMA("multi_dim_time_series.sql")).describe_collection("Resource");
+    EXPECT_TRUE(contains(resource, "- load: [date_time], [block], load(REAL), flag(INTEGER)\n")) << resource;
+}

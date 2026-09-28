@@ -165,7 +165,7 @@ TEST_F(LuaRunnerTest, CreateElementUnsupportedArrayElementTypeThrows) {
 
 // ============================================================================
 // Boolean input. SQLite has no boolean type, so a Lua boolean is INTEGER 1/0 wherever an integer
-// is accepted. Lua has no boolean *readers* (deliberate — root CLAUDE.md), so these read back
+// is accepted. Lua has no boolean *readers* (deliberate — root AGENTS.md), so these read back
 // through the integer readers.
 // ============================================================================
 

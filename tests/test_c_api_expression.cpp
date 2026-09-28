@@ -598,6 +598,42 @@ TEST_F(ExpressionCApiFixture, LabelMismatchReturnsError) {
     quiver_expression_close(b);
 }
 
+TEST_F(ExpressionCApiFixture, SingleLabelOperandsWithDifferentNamesBroadcast) {
+    auto* md_a = make_metadata_v({"row", "col"}, {2, 2}, {"alpha"});
+    auto* md_b = make_metadata_v({"row", "col"}, {2, 2}, {"beta"});
+    write_dense(path_a, md_a, {"row", "col"}, {2, 2}, 1, [](const std::vector<int64_t>& dims, size_t /*k*/) {
+        return static_cast<double>(dims[0] * 10 + dims[1]);
+    });
+    write_dense(path_b, md_b, {"row", "col"}, {2, 2}, 1, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    quiver_binary_metadata_free(md_a);
+    quiver_binary_metadata_free(md_b);
+
+    auto* a = expr_from_file(path_a);
+    auto* b = expr_from_file(path_b);
+    quiver_expression_t* diff = nullptr;
+    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_SUBTRACT, a, b, &diff), QUIVER_OK)
+        << quiver_get_last_error();
+
+    quiver_binary_metadata_t* out_md = nullptr;
+    ASSERT_EQ(quiver_expression_get_metadata(diff, &out_md), QUIVER_OK);
+    char** labels = nullptr;
+    size_t label_count = 0;
+    ASSERT_EQ(quiver_binary_metadata_get_labels(out_md, &labels, &label_count), QUIVER_OK);
+    ASSERT_EQ(label_count, 1u);
+    EXPECT_STREQ(labels[0], "alpha");  // both operands single-label: the lhs label wins
+    quiver_binary_metadata_free_string_array(labels, label_count);
+    quiver_binary_metadata_free(out_md);
+
+    ASSERT_EQ(quiver_expression_save(diff, path_out.c_str()), QUIVER_OK);
+    quiver_expression_close(a);
+    quiver_expression_close(b);
+    quiver_expression_close(diff);
+
+    auto cell_21 = read_one_cell(path_out, {"row", "col"}, {2, 1});
+    ASSERT_EQ(cell_21.size(), 1u);
+    EXPECT_DOUBLE_EQ(cell_21[0], (2.0 * 10 + 1.0) - 1.0);
+}
+
 // ============================================================================
 // Save collision
 // ============================================================================
@@ -1083,12 +1119,49 @@ TEST_F(ExpressionCApiFixture, AggregateDimensionNotFoundReturnsError) {
     quiver_expression_close(a);
 }
 
+TEST_F(ExpressionCApiFixture, AggregateSumOverInnermostTimeDimFromMidPeriodStart) {
+    // year(2) x month(12) x day(31) from 2025-03-15: only March 2025 starts on the 15th, so the
+    // March 2026 sum covers all 31 days, not 15..31.
+    auto* md = make_metadata_v({"year", "month", "day"},
+                               {2, 12, 31},
+                               {"v1"},
+                               "MW",
+                               "2025-03-15T00:00:00",
+                               {"year", "month", "day"},
+                               {"yearly", "monthly", "daily"});
+    quiver_binary_file_t* f = nullptr;
+    ASSERT_EQ(quiver_binary_file_open_file(path_a.c_str(), 'w', md, &f), QUIVER_OK);
+    quiver_binary_metadata_free(md);  // open_file copies the metadata
+    const char* dim_names[] = {"year", "month", "day"};
+    const double one[] = {1.0};
+    for (int64_t day = 15; day <= 31; ++day) {
+        int64_t dim_values[] = {1, 3, day};
+        ASSERT_EQ(quiver_binary_file_write(f, dim_names, dim_values, 3, one, 1), QUIVER_OK);
+    }
+    for (int64_t day = 1; day <= 31; ++day) {
+        int64_t dim_values[] = {2, 3, day};
+        ASSERT_EQ(quiver_binary_file_write(f, dim_names, dim_values, 3, one, 1), QUIVER_OK);
+    }
+    ASSERT_EQ(quiver_binary_file_close(f), QUIVER_OK);
+
+    auto* a = expr_from_file(path_a);
+    quiver_expression_t* agg = nullptr;
+    ASSERT_EQ(quiver_expression_aggregate(a, "day", QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM, nullptr, &agg),
+              QUIVER_OK);
+    ASSERT_EQ(quiver_expression_save(agg, path_out.c_str()), QUIVER_OK);
+    quiver_expression_close(a);
+    quiver_expression_close(agg);
+
+    EXPECT_DOUBLE_EQ(read_one_cell(path_out, {"year", "month"}, {1, 3})[0], 17.0);  // 2025-03-15..31
+    EXPECT_DOUBLE_EQ(read_one_cell(path_out, {"year", "month"}, {2, 3})[0], 31.0);  // all of March 2026
+}
+
 TEST_F(ExpressionCApiFixture, AggregateAgentsSumReducesLabels) {
     write_fixture(path_a, [](int r, int c, int k) { return static_cast<double>(r * 10 + c + k); });
 
     auto* a = expr_from_file(path_a);
     quiver_expression_t* agg = nullptr;
-    ASSERT_EQ(quiver_expression_aggregate_agents(a, QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_SUM, nullptr, &agg),
+    ASSERT_EQ(quiver_expression_aggregate_agents(a, QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM, nullptr, &agg),
               QUIVER_OK);
 
     // Verify output metadata: single label "sum", dims unchanged.
@@ -1120,7 +1193,7 @@ TEST_F(ExpressionCApiFixture, AggregateAgentsPercentileWithParam) {
     auto* a = expr_from_file(path_a);
     const double p = 0.5;
     quiver_expression_t* agg = nullptr;
-    ASSERT_EQ(quiver_expression_aggregate_agents(a, QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_PERCENTILE, &p, &agg),
+    ASSERT_EQ(quiver_expression_aggregate_agents(a, QUIVER_EXPRESSION_AGGREGATE_OPERATION_PERCENTILE, &p, &agg),
               QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(agg, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
@@ -1151,11 +1224,30 @@ TEST_F(ExpressionCApiFixture, AggregateAgentsNullArguments) {
     auto* a = expr_from_file(path_a);
     quiver_expression_t* agg = nullptr;
 
-    EXPECT_EQ(
-        quiver_expression_aggregate_agents(nullptr, QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_SUM, nullptr, &agg),
-        QUIVER_ERROR);
-    EXPECT_EQ(quiver_expression_aggregate_agents(a, QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_SUM, nullptr, nullptr),
+    EXPECT_EQ(quiver_expression_aggregate_agents(nullptr, QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM, nullptr, &agg),
               QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_aggregate_agents(a, QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM, nullptr, nullptr),
+              QUIVER_ERROR);
+
+    quiver_expression_close(a);
+}
+
+TEST_F(ExpressionCApiFixture, AggregateUnknownOperationNamesTheCaller) {
+    write_fixture(path_a, [](int, int, int) { return 1.0; });
+    auto* a = expr_from_file(path_a);
+    quiver_expression_t* agg = nullptr;
+    // 5 is past PERCENTILE but inside the enum's value range (0..7), so the cast is well-defined.
+    const auto unknown = static_cast<quiver_expression_aggregate_operation_t>(5);
+
+    EXPECT_EQ(quiver_expression_aggregate(a, "row", unknown, nullptr, &agg), QUIVER_ERROR);
+    EXPECT_EQ(agg, nullptr);
+    EXPECT_NE(std::string(quiver_get_last_error()).find("Cannot aggregate: unknown operation enum value"),
+              std::string::npos);
+
+    EXPECT_EQ(quiver_expression_aggregate_agents(a, unknown, nullptr, &agg), QUIVER_ERROR);
+    EXPECT_EQ(agg, nullptr);
+    EXPECT_NE(std::string(quiver_get_last_error()).find("Cannot aggregate_agents: unknown operation enum value"),
+              std::string::npos);
 
     quiver_expression_close(a);
 }
@@ -1182,6 +1274,51 @@ TEST_F(ExpressionCApiFixture, AggregateChainedWithBinary) {
     auto cell1 = read_one_cell(path_out, {"col"}, {1});
     EXPECT_DOUBLE_EQ(cell1[0], 72.0);  // c=1, k=0: 66 + 6 + 0
     EXPECT_DOUBLE_EQ(cell1[1], 78.0);  // c=1, k=1: 66 + 6 + 6
+}
+
+TEST_F(ExpressionCApiFixture, AggregateOutermostTimeDimFromMidYearStart) {
+    // year x month from 2025-03-01 holds 2025-03..2026-12. Reducing "year" makes month outermost;
+    // output month m must be calendar month m, in memory and on disk.
+    auto* md = make_metadata_v(
+        {"year", "month"}, {2, 12}, {"v1"}, "MW", "2025-03-01T00:00:00", {"year", "month"}, {"yearly", "monthly"});
+    quiver_binary_file_t* f = nullptr;
+    ASSERT_EQ(quiver_binary_file_open_file(path_a.c_str(), 'w', md, &f), QUIVER_OK);
+    quiver_binary_metadata_free(md);
+    const char* dim_names[] = {"year", "month"};
+    for (int64_t year = 1; year <= 2; ++year) {
+        for (int64_t month = (year == 1 ? 3 : 1); month <= 12; ++month) {
+            int64_t dim_values[] = {year, month};
+            const double data[] = {static_cast<double>(100 * year + month)};
+            ASSERT_EQ(quiver_binary_file_write(f, dim_names, dim_values, 2, data, 1), QUIVER_OK);
+        }
+    }
+    ASSERT_EQ(quiver_binary_file_close(f), QUIVER_OK);
+
+    auto* a = expr_from_file(path_a);
+    quiver_expression_t* agg = nullptr;
+    ASSERT_EQ(quiver_expression_aggregate(a, "year", QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM, nullptr, &agg),
+              QUIVER_OK);
+
+    quiver_binary_metadata_t* out_md = nullptr;
+    ASSERT_EQ(quiver_expression_get_metadata(agg, &out_md), QUIVER_OK);
+    char* start = nullptr;
+    ASSERT_EQ(quiver_binary_metadata_get_initial_datetime(out_md, &start), QUIVER_OK);
+    EXPECT_STREQ(start, "2025-01-01T00:00:00");
+    quiver_binary_metadata_free_string(start);
+    quiver_dimension_t month_dim{};
+    ASSERT_EQ(quiver_binary_metadata_get_dimension(out_md, 0, &month_dim), QUIVER_OK);
+    EXPECT_EQ(month_dim.time_properties.initial_value, 1);
+    quiver_binary_metadata_free_dimension(&month_dim);
+    quiver_binary_metadata_free(out_md);
+
+    ASSERT_EQ(quiver_expression_save(agg, path_out.c_str()), QUIVER_OK);
+    quiver_expression_close(a);
+    quiver_expression_close(agg);
+
+    EXPECT_DOUBLE_EQ(read_one_cell(path_out, {"month"}, {1})[0], 201.0);   // Jan: 2026 only
+    EXPECT_DOUBLE_EQ(read_one_cell(path_out, {"month"}, {2})[0], 202.0);   // Feb: 2026 only
+    EXPECT_DOUBLE_EQ(read_one_cell(path_out, {"month"}, {3})[0], 306.0);   // Mar: 103 + 203
+    EXPECT_DOUBLE_EQ(read_one_cell(path_out, {"month"}, {12})[0], 324.0);  // Dec: 112 + 212
 }
 
 TEST_F(ExpressionCApiFixture, FromUnopenedBinaryFile) {

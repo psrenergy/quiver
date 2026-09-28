@@ -475,6 +475,33 @@ end
         end
     end
 
+    @testset "Single-label operands with different names broadcast" begin
+        path_a, path_b, path_out = make_path("a"), make_path("b"), make_path("out")
+        try
+            md_a = make_metadata_full(dimensions = ["row", "col"], dimension_sizes = [2, 2], labels = ["alpha"])
+            md_b = make_metadata_full(dimensions = ["row", "col"], dimension_sizes = [2, 2], labels = ["beta"])
+            write_dense(path_a, md_a, [:row, :col], [2, 2], 1, (dims, _) -> dims[1] * 10 + dims[2])
+            write_dense(path_b, md_b, [:row, :col], [2, 2], 1, (_, _) -> 1.0)
+
+            with_expr(path_a) do a
+                with_expr(path_b) do b
+                    diff = a - b
+                    try
+                        # Both operands carry a single label: the lhs label wins.
+                        @test Quiver.Binary.get_labels(Quiver.get_metadata(diff)) == ["alpha"]
+                        Quiver.save(diff, path_out)
+                    finally
+                        Quiver.close!(diff)
+                    end
+                end
+            end
+
+            @test read_one_cell(path_out; row = 2, col = 1) == [20.0]  # (2 * 10 + 1) - 1
+        finally
+            cleanup(path_a, path_b, path_out)
+        end
+    end
+
     @testset "Self-save collision throws" begin
         path_a = make_path("a")
         try
@@ -1100,6 +1127,47 @@ end
         end
     end
 
+    @testset "Aggregate outermost time dim from mid-year start" begin
+        # year x month from 2025-03-01 holds 2025-03..2026-12. Reducing "year" makes month outermost;
+        # output month m must be calendar month m, in memory and after a reopen.
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            md = make_metadata_full(
+                dimensions = ["year", "month"],
+                dimension_sizes = [2, 12],
+                labels = ["v1"],
+                initial_datetime = "2025-03-01T00:00:00",
+                time_dimensions = ["year", "month"],
+                frequencies = ["yearly", "monthly"],
+            )
+            file = Quiver.Binary.open_file(path_a; mode = 'w', metadata = md)
+            for year in 1:2, month in 1:12
+                year == 1 && month < 3 && continue  # before the file starts
+                Quiver.Binary.write!(file; data = [100.0 * year + month], year = year, month = month)
+            end
+            Quiver.Binary.close!(file)
+
+            with_expr(path_a) do e
+                out = Quiver.aggregate(e, "year", Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM)
+                md_out = Quiver.get_metadata(out)
+                @test Quiver.Binary.get_initial_datetime(md_out) == "2025-01-01T00:00:00"
+                @test Quiver.Binary.get_dimensions(md_out)[1].initial_value == 1
+                Quiver.save(out, path_out)
+                return Quiver.close!(out)
+            end
+
+            reopened = Quiver.Binary.open_file(path_out; mode = 'r')
+            @test Quiver.Binary.get_initial_datetime(Quiver.Binary.get_metadata(reopened)) == "2025-01-01T00:00:00"
+            Quiver.Binary.close!(reopened)
+            @test read_one_cell(path_out; month = 1)[1] == 201.0   # Jan: 2026 only
+            @test read_one_cell(path_out; month = 2)[1] == 202.0   # Feb: 2026 only
+            @test read_one_cell(path_out; month = 3)[1] == 306.0   # Mar: 103 + 203
+            @test read_one_cell(path_out; month = 12)[1] == 324.0  # Dec: 112 + 212
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
     @testset "Aggregate dimension not found throws" begin
         path_a = make_path("a")
         try
@@ -1172,6 +1240,39 @@ end
         end
     end
 
+    @testset "Aggregate sum over innermost time dim from mid-period start" begin
+        # year x month x day from 2025-03-15: only March 2025 starts on the 15th, so the
+        # March 2026 sum covers all 31 days.
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            md = make_metadata_full(
+                dimensions = ["year", "month", "day"],
+                dimension_sizes = [2, 12, 31],
+                labels = ["v1"],
+                initial_datetime = "2025-03-15T00:00:00",
+                time_dimensions = ["year", "month", "day"],
+                frequencies = ["yearly", "monthly", "daily"],
+            )
+            file = Quiver.Binary.open_file(path_a; mode = 'w', metadata = md)
+            for day in 15:31
+                Quiver.Binary.write!(file; data = [1.0], year = 1, month = 3, day = day)
+            end
+            for day in 1:31
+                Quiver.Binary.write!(file; data = [1.0], year = 2, month = 3, day = day)
+            end
+            Quiver.Binary.close!(file)
+            with_expr(path_a) do e
+                out = Quiver.aggregate(e, "day", Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM)
+                Quiver.save(out, path_out)
+                return Quiver.close!(out)
+            end
+            @test read_one_cell(path_out; year = 1, month = 3)[1] == 17.0  # 2025-03-15..31
+            @test read_one_cell(path_out; year = 2, month = 3)[1] == 31.0  # all of March 2026
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
     # ==========================================================================
     # Aggregation: label-axis reduction (Quiver.aggregate_agents)
     # ==========================================================================
@@ -1181,7 +1282,7 @@ end
         try
             write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
             with_expr(path_a) do e
-                out = Quiver.aggregate_agents(e, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_SUM)
+                out = Quiver.aggregate_agents(e, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM)
                 md = Quiver.get_metadata(out)
                 @test Quiver.Binary.get_labels(md) == ["sum"]
                 Quiver.save(out, path_out)
@@ -1200,7 +1301,7 @@ end
         try
             write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
             with_expr(path_a) do e
-                out = Quiver.aggregate_agents(e, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_MEAN)
+                out = Quiver.aggregate_agents(e, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_MEAN)
                 Quiver.save(out, path_out)
                 return Quiver.close!(out)
             end
@@ -1217,7 +1318,7 @@ end
         try
             write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
             with_expr(path_a) do e
-                out = Quiver.aggregate_agents(e, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_PERCENTILE, 0.5)
+                out = Quiver.aggregate_agents(e, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_PERCENTILE, 0.5)
                 Quiver.save(out, path_out)
                 return Quiver.close!(out)
             end
@@ -1234,7 +1335,7 @@ end
             # Mark label k=1 as NaN; sum should fall back to the other label.
             write_fixture(path_a, (r, c, k) -> k == 1 ? NaN : Float64(r * 10 + c + k))
             with_expr(path_a) do e
-                out = Quiver.aggregate_agents(e, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_SUM)
+                out = Quiver.aggregate_agents(e, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM)
                 Quiver.save(out, path_out)
                 return Quiver.close!(out)
             end
@@ -1251,7 +1352,7 @@ end
         try
             write_fixture(path_a, (_, _, _) -> 1.0)
             with_expr(path_a) do e
-                out = Quiver.aggregate_agents(e, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_MEAN)
+                out = Quiver.aggregate_agents(e, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_MEAN)
                 md = Quiver.get_metadata(out)
                 @test Quiver.Binary.get_labels(md) == ["mean"]
                 @test Quiver.Binary.get_unit(md) == "MW"
@@ -1273,7 +1374,7 @@ end
             with_expr(path_a) do e
                 out = Quiver.aggregate_agents(
                     Quiver.aggregate(e, "row", Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM),
-                    Quiver.C.QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_MEAN,
+                    Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_MEAN,
                 )
                 Quiver.save(out, path_out)
                 return Quiver.close!(out)
@@ -1311,7 +1412,7 @@ end
             write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
             file = Quiver.Binary.open_file(path_a; mode = 'r')
             try
-                out = Quiver.aggregate_agents(file, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_MEAN)
+                out = Quiver.aggregate_agents(file, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_MEAN)
                 Quiver.save(out, path_out)
                 Quiver.close!(out)
             finally

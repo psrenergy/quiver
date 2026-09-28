@@ -53,6 +53,17 @@ protected:
                                                 .set("labels", {"val1", "val2"}));
     }
 
+    // 3 x 2 (row, col) metadata with a single label.
+    static BinaryMetadata make_single_label_metadata(const char* label, const char* unit = "MW") {
+        return BinaryMetadata::from_element(Element()
+                                                .set("version", "1")
+                                                .set("initial_datetime", "2025-01-01T00:00:00")
+                                                .set("unit", unit)
+                                                .set("dimensions", {"row", "col"})
+                                                .set("dimension_sizes", {3, 2})
+                                                .set("labels", {label}));
+    }
+
     static void write_qvr(const std::string& path,
                           const BinaryMetadata& meta,
                           std::function<double(const std::vector<int64_t>& dims, size_t label_idx)> fill) {
@@ -390,6 +401,80 @@ TEST_F(ExpressionFixture, LabelMismatchThrows) {
     auto a = BinaryFile::open_file(path_a, 'r');
     auto b = BinaryFile::open_file(path_b, 'r');
     EXPECT_THROW({ auto e = Expression(a) + Expression(b); }, std::runtime_error);
+}
+
+TEST_F(ExpressionFixture, LabelSetsOfDifferentSizesThrow) {
+    // Only a single label broadcasts: two multi-label operands must carry the same label set.
+    auto md_a = make_simple_metadata();  // {val1, val2}
+    auto md_b = BinaryMetadata::from_element(Element()
+                                                 .set("version", "1")
+                                                 .set("initial_datetime", "2025-01-01T00:00:00")
+                                                 .set("unit", "MW")
+                                                 .set("dimensions", {"row", "col"})
+                                                 .set("dimension_sizes", {3, 2})
+                                                 .set("labels", {"val1", "val2", "val3"}));
+    write_qvr(path_a, md_a, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    write_qvr(path_b, md_b, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto b = BinaryFile::open_file(path_b, 'r');
+    EXPECT_THROW(
+        {
+            try {
+                auto e = Expression(a) + Expression(b);
+            } catch (const std::runtime_error& err) {
+                EXPECT_NE(std::string(err.what()).find("non-singleton label sets must match"), std::string::npos)
+                    << err.what();
+                throw;
+            }
+        },
+        std::runtime_error);
+}
+
+TEST_F(ExpressionFixture, SingleLabelOperandsWithDifferentNamesBroadcast) {
+    // A single label broadcasts whatever it is called, also against another single label, and the
+    // output takes the lhs label. aggregate_agents names its label after the operation, so max - min
+    // over one file is this case (LuaExpressionTest.AggregateAgentsMaxMinusMin).
+    write_qvr(path_a, make_single_label_metadata("alpha"), [](const std::vector<int64_t>& dims, size_t /*k*/) {
+        return static_cast<double>(dims[0] * 10 + dims[1]);
+    });
+    write_qvr(path_b, make_single_label_metadata("beta"), [](const std::vector<int64_t>&, size_t) { return 1.0; });
+
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto b = BinaryFile::open_file(path_b, 'r');
+    Expression e = Expression(a) - Expression(b);
+    EXPECT_EQ(e.metadata().labels, std::vector<std::string>{"alpha"});
+    e.save(path_out);
+
+    auto va = read_all_cells(path_a);
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(vo.size(), va.size());
+    for (size_t i = 0; i < vo.size(); ++i)
+        EXPECT_DOUBLE_EQ(vo[i], va[i] - 1.0) << " at index " << i;
+}
+
+TEST_F(ExpressionFixture, LogicalOnSingleLabelOperandsWithDifferentNames) {
+    // Conditions on two different variables usually come from single-label files with different
+    // names (and units); && ignores the units and must combine the labels too.
+    write_qvr(path_a, make_single_label_metadata("demand", "MW"), [](const std::vector<int64_t>& dims, size_t /*k*/) {
+        return static_cast<double>(dims[0]);
+    });
+    write_qvr(path_b, make_single_label_metadata("price", "USD"), [](const std::vector<int64_t>& dims, size_t /*k*/) {
+        return static_cast<double>(dims[1]);
+    });
+
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto b = BinaryFile::open_file(path_b, 'r');
+    Expression e = (Expression(a) > 1.0) && (Expression(b) < 2.0);
+    EXPECT_EQ(e.metadata().labels, std::vector<std::string>{"demand"});
+    EXPECT_EQ(e.metadata().unit, "");
+    e.save(path_out);
+
+    auto va = read_all_cells(path_a);
+    auto vb = read_all_cells(path_b);
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(vo.size(), va.size());
+    for (size_t i = 0; i < vo.size(); ++i)
+        EXPECT_DOUBLE_EQ(vo[i], (va[i] > 1.0 && vb[i] < 2.0) ? 1.0 : 0.0) << " at index " << i;
 }
 
 TEST_F(ExpressionFixture, MirrorTimeNonTimeMismatchAThrows) {
@@ -1119,6 +1204,30 @@ TEST_F(ExpressionFixture, AggregateSumOverTimeDimVariable) {
     EXPECT_DOUBLE_EQ(vo[3], 30.0);  // Apr
 }
 
+TEST_F(ExpressionFixture, AggregateSumOverInnermostTimeDimFromMidPeriodStart) {
+    // year(2) x month(12) x day(31) from 2025-03-15. Only March 2025 starts on the 15th, so the
+    // March 2026 sum must cover all 31 days. Both the walk that writes the input (write_qvr) and
+    // the aggregate window used to start every March at day 15.
+    auto md = BinaryMetadata::from_element(Element()
+                                               .set("version", "1")
+                                               .set("initial_datetime", "2025-03-15T00:00:00")
+                                               .set("unit", "MW")
+                                               .set("dimensions", {"year", "month", "day"})
+                                               .set("dimension_sizes", {2, 12, 31})
+                                               .set("time_dimensions", {"year", "month", "day"})
+                                               .set("frequencies", {"yearly", "monthly", "daily"})
+                                               .set("labels", {"v1"}));
+    // Every visited cell is 1.0, so each output cell counts the days summed.
+    write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    Expression(a).aggregate("day", ExpressionAggregate::Operation::Sum).save(path_out);
+
+    // Output [year, month] walks Mar..Dec 2025, then Jan..Dec 2026.
+    auto vo = read_all_cells(path_out);
+    EXPECT_EQ(vo, (std::vector<double>{17, 30, 31, 30, 31, 31, 30, 31, 30, 31, 31,
+                                       28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}));
+}
+
 TEST_F(ExpressionFixture, AggregateSumSkipsNaNs) {
     auto md = make_simple_metadata();
     const double kNan = std::numeric_limits<double>::quiet_NaN();
@@ -1201,6 +1310,110 @@ TEST_F(ExpressionFixture, AggregateReduceOutermostTimeDimWithChildren) {
     ASSERT_TRUE(m.dimensions[0].is_time_dimension());
     EXPECT_EQ(m.dimensions[0].time->parent_dimension_index, -1);
     EXPECT_EQ(m.number_of_time_dimensions(), 1);
+}
+
+TEST_F(ExpressionFixture, AggregateOutermostTimeDimFromMidYearStart) {
+    // year(2) x month(12) from 2025-03-01 holds 2025-03..2026-12. Reducing "year" makes month outermost;
+    // output month m must be calendar month m in memory, on disk, and after a reopen.
+    auto md = BinaryMetadata::from_element(Element()
+                                               .set("version", "1")
+                                               .set("initial_datetime", "2025-03-01T00:00:00")
+                                               .set("unit", "MW")
+                                               .set("dimensions", {"year", "month"})
+                                               .set("dimension_sizes", {2, 12})
+                                               .set("time_dimensions", {"year", "month"})
+                                               .set("frequencies", {"yearly", "monthly"})
+                                               .set("labels", {"v1"}));
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t) {
+        return static_cast<double>(100 * dims[0] + dims[1]);  // 2025-01/02 are never visited: NaN
+    });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto out = Expression(a).aggregate("year", ExpressionAggregate::Operation::Sum);
+
+    const auto jan_1 = std::chrono::system_clock::time_point{
+        std::chrono::sys_days{std::chrono::year{2025} / std::chrono::January / 1}};
+    EXPECT_EQ(out.metadata().initial_datetime, jan_1);
+    EXPECT_EQ(out.metadata().dimensions[0].time->initial_value, 1);
+
+    out.save(path_out);
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(vo.size(), 12u);
+    EXPECT_DOUBLE_EQ(vo[0], 201.0);  // Jan: 2026 only
+    EXPECT_DOUBLE_EQ(vo[1], 202.0);  // Feb: 2026 only
+    for (int64_t m = 3; m <= 12; ++m) {
+        EXPECT_DOUBLE_EQ(vo[m - 1], static_cast<double>(300 + 2 * m)) << "month " << m;  // (100+m) + (200+m)
+    }
+
+    auto reopened = BinaryFile::open_file(path_out, 'r');
+    EXPECT_EQ(reopened.get_metadata().initial_datetime, jan_1);
+    EXPECT_EQ(reopened.get_metadata().dimensions[0].time->initial_value, 1);
+    EXPECT_NO_THROW(out + Expression(reopened));  // in-memory and saved metadata agree
+}
+
+TEST_F(ExpressionFixture, AggregateOutermostTimeDimFromMidDayStart) {
+    // day(2) x hour(24) from 2025-01-01T06:00 holds Jan 1 06:00 .. Jan 2 23:00. Reducing "day" makes hour
+    // outermost; output hour h must be hour-of-day h, so the output starts at midnight.
+    auto md = BinaryMetadata::from_element(Element()
+                                               .set("version", "1")
+                                               .set("initial_datetime", "2025-01-01T06:00:00")
+                                               .set("unit", "MW")
+                                               .set("dimensions", {"day", "hour"})
+                                               .set("dimension_sizes", {2, 24})
+                                               .set("time_dimensions", {"day", "hour"})
+                                               .set("frequencies", {"daily", "hourly"})
+                                               .set("labels", {"v1"}));
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t) {
+        return static_cast<double>(100 * dims[0] + dims[1]);  // Jan 1 00:00..05:00 are never visited: NaN
+    });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto out = Expression(a).aggregate("day", ExpressionAggregate::Operation::Sum);
+
+    const auto midnight = std::chrono::system_clock::time_point{
+        std::chrono::sys_days{std::chrono::year{2025} / std::chrono::January / 1}};
+    EXPECT_EQ(out.metadata().initial_datetime, midnight);
+    EXPECT_EQ(out.metadata().dimensions[0].time->initial_value, 1);
+
+    out.save(path_out);
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(vo.size(), 24u);
+    for (int64_t h = 1; h <= 6; ++h) {
+        EXPECT_DOUBLE_EQ(vo[h - 1], static_cast<double>(200 + h)) << "hour " << h;  // Jan 2 only
+    }
+    for (int64_t h = 7; h <= 24; ++h) {
+        EXPECT_DOUBLE_EQ(vo[h - 1], static_cast<double>(300 + 2 * h)) << "hour " << h;  // (100+h) + (200+h)
+    }
+}
+
+TEST_F(ExpressionFixture, AggregateOutermostTimeDimOverMonthAndDayFromMidYearStart) {
+    // year(2) x month(12) x day(31) from 2025-03-15. Reducing "year" leaves month x day, which must start on
+    // 2025-01-01 at (1, 1): day keeps no stale initial value of 15, and save walks the whole 2025 calendar.
+    auto md = BinaryMetadata::from_element(Element()
+                                               .set("version", "1")
+                                               .set("initial_datetime", "2025-03-15T00:00:00")
+                                               .set("unit", "MW")
+                                               .set("dimensions", {"year", "month", "day"})
+                                               .set("dimension_sizes", {2, 12, 31})
+                                               .set("time_dimensions", {"year", "month", "day"})
+                                               .set("frequencies", {"yearly", "monthly", "daily"})
+                                               .set("labels", {"v1"}));
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t) {
+        return static_cast<double>(10000 * dims[0] + 100 * dims[1] + dims[2]);
+    });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto out = Expression(a).aggregate("year", ExpressionAggregate::Operation::Sum);
+
+    const auto jan_1 = std::chrono::system_clock::time_point{
+        std::chrono::sys_days{std::chrono::year{2025} / std::chrono::January / 1}};
+    EXPECT_EQ(out.metadata().initial_datetime, jan_1);
+    EXPECT_EQ(out.metadata().dimensions[0].time->initial_value, 1);
+    EXPECT_EQ(out.metadata().dimensions[1].time->initial_value, 1);
+
+    out.save(path_out);
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(vo.size(), 365u);
+    EXPECT_DOUBLE_EQ(vo[0], 20101.0);    // Jan 1: 2026 only
+    EXPECT_DOUBLE_EQ(vo[73], 30630.0);   // Mar 15: 10315 + 20315
+    EXPECT_DOUBLE_EQ(vo[364], 32462.0);  // Dec 31: 11231 + 21231
 }
 
 TEST_F(ExpressionFixture, AggregateDimensionNotFoundThrows) {
@@ -1451,9 +1664,10 @@ TEST_F(ExpressionFixture, AgentChainedAfterAggregate) {
     auto md = make_simple_metadata();
     write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t) { return 3.0; });
     auto a = BinaryFile::open_file(path_a, 'r');
+    // One aggregation enum: the same spelling drives both the dimension and the label-axis reduction.
     Expression(a)
         .aggregate("row", ExpressionAggregate::Operation::Sum)
-        .aggregate_agents(ExpressionAggregateAgents::Operation::Mean)
+        .aggregate_agents(ExpressionAggregate::Operation::Mean)
         .save(path_out);
 
     // After reducing row(3) and agents(2): output dims=[col(2)], labels=["mean"] = 2 cells.
@@ -1843,6 +2057,76 @@ TEST_F(ExpressionFixture, IfElseBroadcastsLabels) {
     EXPECT_DOUBLE_EQ(cell_11[1], 1.0 * 10 + 1.0 + 1);
     EXPECT_DOUBLE_EQ(cell_22[0], -(2.0 * 10 + 2.0 + 0));
     EXPECT_DOUBLE_EQ(cell_22[1], -(2.0 * 10 + 2.0 + 1));
+}
+
+TEST_F(ExpressionFixture, IfElseSingleLabelOperandsTakeThenLabels) {
+    // Every operand has a single label, each named differently: the output takes the then label.
+    write_qvr(path_a, make_single_label_metadata("c", "flag"), [](const std::vector<int64_t>& dims, size_t /*k*/) {
+        return (dims[0] == 1) ? 1.0 : 0.0;
+    });
+    write_qvr(path_b, make_single_label_metadata("t"), [](const std::vector<int64_t>&, size_t) { return 10.0; });
+    write_qvr(path_c, make_single_label_metadata("e"), [](const std::vector<int64_t>&, size_t) { return 20.0; });
+
+    auto cond = BinaryFile::open_file(path_a, 'r');
+    auto then_v = BinaryFile::open_file(path_b, 'r');
+    auto else_v = BinaryFile::open_file(path_c, 'r');
+    Expression e = ifelse(Expression(cond), Expression(then_v), Expression(else_v));
+    EXPECT_EQ(e.metadata().labels, std::vector<std::string>{"t"});
+    e.save(path_out);
+
+    auto vc = read_all_cells(path_a);
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(vo.size(), vc.size());
+    for (size_t i = 0; i < vo.size(); ++i)
+        EXPECT_DOUBLE_EQ(vo[i], (vc[i] != 0.0) ? 10.0 : 20.0) << " at index " << i;
+}
+
+TEST_F(ExpressionFixture, IfElseDimensionsFollowConditionAndDatetimeFollowsThen) {
+    // Output dimensions come condition-first. With no time dimension anywhere, initial_datetime comes
+    // from the then operand, not the condition.
+    auto md_cond = BinaryMetadata::from_element(Element()
+                                                    .set("version", "1")
+                                                    .set("initial_datetime", "2030-01-01T00:00:00")
+                                                    .set("unit", "flag")
+                                                    .set("dimensions", {"scenario"})
+                                                    .set("dimension_sizes", {2})
+                                                    .set("labels", {"c"}));
+    auto md_branch = BinaryMetadata::from_element(Element()
+                                                      .set("version", "1")
+                                                      .set("initial_datetime", "2025-01-01T00:00:00")
+                                                      .set("unit", "MW")
+                                                      .set("dimensions", {"row"})
+                                                      .set("dimension_sizes", {3})
+                                                      .set("labels", {"val1", "val2"}));
+    write_qvr(
+        path_a, md_cond, [](const std::vector<int64_t>& dims, size_t /*k*/) { return (dims[0] == 1) ? 1.0 : 0.0; });
+    write_qvr(path_b, md_branch, [](const std::vector<int64_t>&, size_t) { return 10.0; });
+    write_qvr(path_c, md_branch, [](const std::vector<int64_t>&, size_t) { return 20.0; });
+
+    auto cond = BinaryFile::open_file(path_a, 'r');
+    auto then_v = BinaryFile::open_file(path_b, 'r');
+    auto else_v = BinaryFile::open_file(path_c, 'r');
+    Expression e = ifelse(Expression(cond), Expression(then_v), Expression(else_v));
+
+    const auto& m = e.metadata();
+    ASSERT_EQ(m.dimensions.size(), 2u);
+    EXPECT_EQ(m.dimensions[0].name, "scenario");
+    EXPECT_EQ(m.dimensions[0].size, 2);
+    EXPECT_EQ(m.dimensions[1].name, "row");
+    EXPECT_EQ(m.dimensions[1].size, 3);
+    EXPECT_EQ(m.labels, (std::vector<std::string>{"val1", "val2"}));
+    EXPECT_EQ(m.unit, "MW");
+    EXPECT_TRUE(m.initial_datetime == then_v.get_metadata().initial_datetime);
+    EXPECT_FALSE(m.initial_datetime == cond.get_metadata().initial_datetime);
+
+    e.save(path_out);
+    auto reopened = BinaryFile::open_file(path_out, 'r');
+    auto cell_12 = reopened.read({{"scenario", 1}, {"row", 2}}, true);
+    auto cell_23 = reopened.read({{"scenario", 2}, {"row", 3}}, true);
+    EXPECT_DOUBLE_EQ(cell_12[0], 10.0);
+    EXPECT_DOUBLE_EQ(cell_12[1], 10.0);
+    EXPECT_DOUBLE_EQ(cell_23[0], 20.0);
+    EXPECT_DOUBLE_EQ(cell_23[1], 20.0);
 }
 
 TEST_F(ExpressionFixture, IfElseUnitMismatchThenElseThrows) {

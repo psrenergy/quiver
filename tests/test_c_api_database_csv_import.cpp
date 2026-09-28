@@ -413,7 +413,7 @@ TEST(DatabaseCApiCSV, ImportCSV_CannotOpenFile_ReturnsError) {
     EXPECT_EQ(quiver_database_import_csv(db, "Items", "", "/nonexistent/path/file.csv", &import_options), QUIVER_ERROR);
 
     std::string err = quiver_get_last_error();
-    EXPECT_NE(err.find("Cannot import_csv: could not open file"), std::string::npos);
+    EXPECT_NE(err.find("Cannot import_csv: file not found: /nonexistent/path/file.csv"), std::string::npos);
 
     quiver_database_close(db);
 }
@@ -992,4 +992,136 @@ TEST(DatabaseCApiCSV, ImportCSV_InsideTransactionFails) {
 
     quiver_database_close(db);
     fs::remove(csv_path);
+}
+
+// ============================================================================
+// CSV Import: an element the CSV omits is deleted with foreign keys ON
+// ============================================================================
+
+TEST(DatabaseCApiCSV, ImportCSV_Scalar_OmittedElement_DeletesItsGroupRows) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+              QUIVER_OK);
+
+    quiver_element_t* dropped = nullptr;
+    ASSERT_EQ(quiver_element_create(&dropped), QUIVER_OK);
+    quiver_element_set_string(dropped, "label", "Dropped");
+    quiver_element_set_string(dropped, "name", "Alpha");
+    double dropped_values[] = {1.5, 2.5};
+    quiver_element_set_array_float(dropped, "measurement", dropped_values, 2, nullptr);
+    const char* dropped_tags[] = {"red"};
+    quiver_element_set_array_string(dropped, "tag", dropped_tags, 1, nullptr);
+    int64_t dropped_id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Items", dropped, &dropped_id), QUIVER_OK);
+    quiver_element_destroy(dropped);
+
+    quiver_element_t* kept = nullptr;
+    ASSERT_EQ(quiver_element_create(&kept), QUIVER_OK);
+    quiver_element_set_string(kept, "label", "Kept");
+    quiver_element_set_string(kept, "name", "Beta");
+    double kept_values[] = {9.5};
+    quiver_element_set_array_float(kept, "measurement", kept_values, 1, nullptr);
+    int64_t kept_id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Items", kept, &kept_id), QUIVER_OK);
+    quiver_element_destroy(kept);
+
+    auto csv_path = temp_csv("ImportOmittedElement");
+    write_csv_file(csv_path.string(), "sep=,\nlabel,name,status,price,date_created,notes\nKept,Beta,,,,\n");
+    auto import_options = quiver_csv_options_default();
+    ASSERT_EQ(quiver_database_import_csv(db, "Items", "", csv_path.string().c_str(), &import_options), QUIVER_OK);
+    fs::remove(csv_path);
+
+    // The kept element was updated in place, so its vector survives.
+    double* values = nullptr;
+    size_t value_count = 0;
+    ASSERT_EQ(quiver_database_read_vector_floats_by_id(db, "Items", "measurement", kept_id, &values, &value_count),
+              QUIVER_OK);
+    ASSERT_EQ(value_count, 1u);
+    EXPECT_EQ(values[0], 9.5);
+    quiver_database_free_float_array(values);
+
+    // The dropped element's group rows went with it.
+    for (const char* sql : {"SELECT COUNT(*) FROM Items_vector_measurements WHERE id NOT IN (SELECT id FROM Items)",
+                            "SELECT COUNT(*) FROM Items_set_tags WHERE id NOT IN (SELECT id FROM Items)"}) {
+        int64_t orphans = -1;
+        int has_value = 0;
+        ASSERT_EQ(quiver_database_query_integer(db, sql, &orphans, &has_value), QUIVER_OK);
+        EXPECT_EQ(has_value, 1);
+        EXPECT_EQ(orphans, 0) << sql;
+    }
+
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApiCSV, ImportCSV_Scalar_OmittedParent_ClearsRelation) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("relations.sql").c_str(), &options, &db), QUIVER_OK);
+
+    const char* parent_labels[] = {"Parent A", "Parent B"};
+    int64_t parent_ids[] = {0, 0};
+    for (int i = 0; i < 2; ++i) {
+        quiver_element_t* parent = nullptr;
+        ASSERT_EQ(quiver_element_create(&parent), QUIVER_OK);
+        quiver_element_set_string(parent, "label", parent_labels[i]);
+        ASSERT_EQ(quiver_database_create_element(db, "Parent", parent, &parent_ids[i]), QUIVER_OK);
+        quiver_element_destroy(parent);
+    }
+
+    quiver_element_t* child = nullptr;
+    ASSERT_EQ(quiver_element_create(&child), QUIVER_OK);
+    quiver_element_set_string(child, "label", "Child 1");
+    quiver_element_set_integer(child, "parent_id", parent_ids[1]);
+    int64_t child_id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Child", child, &child_id), QUIVER_OK);
+    quiver_element_destroy(child);
+
+    auto csv_path = temp_csv("ImportOmittedParent");
+    write_csv_file(csv_path.string(), "sep=,\nlabel\nParent A\n");
+    auto import_options = quiver_csv_options_default();
+    ASSERT_EQ(quiver_database_import_csv(db, "Parent", "", csv_path.string().c_str(), &import_options), QUIVER_OK);
+    fs::remove(csv_path);
+
+    // Parent B was deleted with foreign keys on, so Child.parent_id's ON DELETE SET NULL fired.
+    int64_t parent_id = -1;
+    int has_value = 1;
+    ASSERT_EQ(quiver_database_read_scalar_integer_by_id(db, "Child", "parent_id", child_id, &parent_id, &has_value),
+              QUIVER_OK);
+    EXPECT_EQ(has_value, 0);
+
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApiCSV, ImportCSV_Scalar_RepeatedExistingLabel_ReturnsError) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+              QUIVER_OK);
+
+    quiver_element_t* e1 = nullptr;
+    ASSERT_EQ(quiver_element_create(&e1), QUIVER_OK);
+    quiver_element_set_string(e1, "label", "Item1");
+    quiver_element_set_string(e1, "name", "Alpha");
+    int64_t id1 = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Items", e1, &id1), QUIVER_OK);
+    quiver_element_destroy(e1);
+
+    auto csv_path = temp_csv("ImportRepeatedExistingLabel");
+    write_csv_file(csv_path.string(),
+                   "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Beta,,,,\nItem1,Gamma,,,,\n");
+    auto import_options = quiver_csv_options_default();
+    EXPECT_EQ(quiver_database_import_csv(db, "Items", "", csv_path.string().c_str(), &import_options), QUIVER_ERROR);
+    EXPECT_STREQ(quiver_get_last_error(), "Cannot import_csv: There are duplicate entries in the CSV file.");
+    fs::remove(csv_path);
+
+    // Rejected before anything was written.
+    char* name = nullptr;
+    int has_value = 0;
+    ASSERT_EQ(quiver_database_read_scalar_string_by_id(db, "Items", "name", id1, &name, &has_value), QUIVER_OK);
+    ASSERT_EQ(has_value, 1);
+    EXPECT_STREQ(name, "Alpha");
+    quiver_database_free_string(name);
+
+    quiver_database_close(db);
 }

@@ -5,21 +5,67 @@
 #include "quiver/binary/dimension.h"
 #include "quiver/binary/iteration.h"
 #include "utils/datetime.h"
+#include "utils/number.h"
 
 #include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <fstream>
-#include <spdlog/fmt/fmt.h>
-#include <sstream>
+#include <limits>
 #include <stdexcept>
+#include <string_view>
 
 namespace quiver {
+
+namespace {
+
+// Splits on every ',' and keeps empty fields, so "a,b," is three fields and "" is one. Do not swap
+// this for std::getline(stream, field, ','): it drops the trailing empty field, which would let a
+// row with a trailing comma pass read_line's width check one field short.
+std::vector<std::string> split_fields(const std::string& line) {
+    std::vector<std::string> fields;
+    size_t field_start = 0;
+    for (;;) {
+        const size_t comma = line.find(',', field_start);
+        if (comma == std::string::npos) {
+            fields.push_back(line.substr(field_start));
+            return fields;
+        }
+        fields.push_back(line.substr(field_start, comma - field_start));
+        field_start = comma + 1;
+    }
+}
+
+std::string join_fields(const std::vector<std::string>& fields, std::string_view separator) {
+    std::string joined;
+    for (size_t i = 0; i < fields.size(); ++i) {
+        if (i > 0)
+            joined += separator;
+        joined += fields[i];
+    }
+    return joined;
+}
+
+}  // namespace
 
 CSVConverter::CSVConverter(const BinaryMetadata& metadata,
                            std::unique_ptr<std::iostream> io,
                            bool aggregate_time_dimensions)
-    : metadata_(metadata), io_(std::move(io)), aggregate_time_dimensions_(aggregate_time_dimensions) {}
+    : metadata_(metadata), io_(std::move(io)), aggregate_time_dimensions_(aggregate_time_dimensions) {
+    // The one definition of the CSV columns. write_header emits it, and validate_header, read_line
+    // and validate_dimensions check against it, so a file bin_to_csv writes is exactly what
+    // csv_to_bin accepts.
+    const bool aggregate_time = aggregates_time_dimensions();
+    if (aggregate_time) {
+        header_.push_back(has_hourly_dimension() ? "datetime" : "date");
+    }
+    for (const auto& dim : metadata_.dimensions) {
+        if (aggregate_time && dim.is_time_dimension())
+            continue;
+        header_.push_back(dim.name);
+    }
+    header_.insert(header_.end(), metadata_.labels.begin(), metadata_.labels.end());
+}
 
 bool CSVConverter::aggregates_time_dimensions() const {
     const auto& dimensions = metadata_.dimensions;
@@ -54,11 +100,11 @@ void CSVConverter::csv_to_bin(const std::string& file_path) {
     // Open the binary file in write mode
     BinaryFile bin_writer = BinaryFile::open_file(file_path, 'w', metadata);
 
-    // Iterate CSV lines and write to binary
+    // Iterate CSV lines and write to binary. Line 1 is the header, so data starts at line 2.
     const auto& dimensions = metadata.dimensions;
     std::vector<int64_t> current_dimensions = first_dimensions(metadata);
-    for (;;) {
-        auto row = csv_reader.read_line();
+    for (size_t line_number = 2;; ++line_number) {
+        auto row = csv_reader.read_line(line_number);
         csv_reader.validate_dimensions(row.dimension_values, current_dimensions);
 
         std::unordered_map<std::string, int64_t> dims;
@@ -103,80 +149,57 @@ void CSVConverter::bin_to_csv(const std::string& file_path, bool aggregate_time_
     }
 }
 
-CSVConverter::CSVRow CSVConverter::read_line() {
+CSVConverter::CSVRow CSVConverter::read_line(size_t line_number) {
     std::string line;
-    std::getline(*io_, line);
+    if (!std::getline(*io_, line)) {
+        throw std::runtime_error("Cannot csv_to_bin: file ends before line " + std::to_string(line_number));
+    }
 
-    // The first N fields are dimension labels (strings), the rest are data values (doubles).
-    // N depends on whether time dimensions are aggregated into a single datetime column.
-    const size_t n_dim_fields = expected_dimension_names().size();
+    // Check the width before touching any cell: validate_dimensions indexes every dimension cell (a
+    // short row would read past its end), and the data branch below names a cell's label by position
+    // (a long row would index past the last label).
+    std::vector<std::string> fields = split_fields(line);
+    if (fields.size() != header_.size()) {
+        throw std::runtime_error("Cannot csv_to_bin: line " + std::to_string(line_number) + " has " +
+                                 std::to_string(fields.size()) + " fields, expected " + std::to_string(header_.size()));
+    }
+
+    // The leading fields are dimension cells (strings), the rest are data values (doubles), one per label.
+    const size_t n_dim_fields = header_.size() - metadata_.labels.size();
     CSVRow row;
-    size_t field_start = 0;
-    while (field_start <= line.size()) {
-        // Find the next comma, or use end-of-line if none remains.
-        size_t comma_position = line.find(',', field_start);
-        size_t field_end;
-        if (comma_position == std::string::npos) {
-            field_end = line.size();
-        } else {
-            field_end = comma_position;
-        }
-        std::string field(line, field_start, field_end - field_start);
-
-        // Route the field: dimension labels come first, data values follow.
+    for (std::string& field : fields) {
+        // Route the field: dimension cells come first, data values follow.
         if (row.dimension_values.size() < n_dim_fields) {
             row.dimension_values.push_back(std::move(field));
         } else {
-            // Convert data value to double, treating "null" as NaN.
+            // Convert data value to double, treating "null" as NaN. The whole cell must parse, in the
+            // "C" locale's number format whatever locale the host set -- bin_to_csv writes '.'.
             if (field == "null") {
                 row.data.push_back(std::numeric_limits<double>::quiet_NaN());
+            } else if (auto value = utils::parse_float(field)) {
+                row.data.push_back(*value);
             } else {
-                row.data.push_back(std::stod(field));
+                throw std::runtime_error("Cannot csv_to_bin: invalid float value '" + field + "' for label '" +
+                                         metadata_.labels[row.data.size()] + "'");
             }
-        }
-
-        // Advance past the comma. If there was no comma, jump past end-of-line to exit the loop.
-        if (comma_position == std::string::npos) {
-            field_start = line.size() + 1;
-        } else {
-            field_start = comma_position + 1;
         }
     }
     return row;
 }
 
 std::string CSVConverter::build_line(const std::vector<double>& data, const std::vector<int64_t>& current_dimensions) {
-    const auto& dimensions = metadata_.dimensions;
-    std::vector<std::string> elements;
-
-    const bool aggregate_time = aggregates_time_dimensions();
-
-    if (aggregate_time) {
-        elements.push_back(build_datetime_string_from_time_dimension_values(current_dimensions));
-    }
-
-    for (size_t i = 0; i < dimensions.size(); ++i) {
-        if (aggregate_time && dimensions[i].is_time_dimension())
-            continue;
-        elements.push_back(std::to_string(current_dimensions[i]));
-    }
-
+    std::vector<std::string> cells = dimension_cells(current_dimensions);
     for (double v : data) {
         if (std::isnan(v)) {
-            elements.push_back("null");
+            cells.push_back("null");
         } else {
-            elements.push_back(fmt::format("{:.6g}", v));
+            // Shortest text that reads back to the same double, '.' in every locale.
+            std::string cell;
+            utils::append_number(v, cell);
+            cells.push_back(std::move(cell));
         }
     }
-
-    std::ostringstream oss;
-    for (size_t i = 0; i < elements.size(); ++i) {
-        if (i > 0)
-            oss << ',';
-        oss << elements[i];
-    }
-    oss << '\n';
-    return oss.str();
+    return join_fields(cells, ",") + '\n';
 }
 
 std::string CSVConverter::build_datetime_string_from_time_dimension_values(
@@ -200,131 +223,45 @@ std::string CSVConverter::build_datetime_string_from_time_dimension_values(
     return quiver::datetime::format_utc(datetime).substr(0, 10);
 }
 
-void CSVConverter::write_header() {
+// The dimension cells of one coordinate, in header_ order. build_line writes them and
+// validate_dimensions checks against them.
+std::vector<std::string> CSVConverter::dimension_cells(const std::vector<int64_t>& current_dimensions) const {
     const auto& dimensions = metadata_.dimensions;
-
-    std::vector<std::string> header;
-
     const bool aggregate_time = aggregates_time_dimensions();
 
+    std::vector<std::string> cells;
     if (aggregate_time) {
-        header.push_back(has_hourly_dimension() ? "datetime" : "date");
+        cells.push_back(build_datetime_string_from_time_dimension_values(current_dimensions));
     }
-
-    for (const auto& dim : dimensions) {
-        if (aggregate_time && dim.is_time_dimension())
+    for (size_t i = 0; i < dimensions.size(); ++i) {
+        if (aggregate_time && dimensions[i].is_time_dimension())
             continue;
-        header.push_back(dim.name);
+        cells.push_back(std::to_string(current_dimensions[i]));
     }
-
-    for (const auto& label : metadata_.labels) {
-        header.push_back(label);
-    }
-
-    auto& io = *io_;
-    for (size_t i = 0; i < header.size(); ++i) {
-        if (i > 0)
-            io << ',';
-        io << header[i];
-    }
-    io << '\n';
+    return cells;
 }
 
-std::vector<std::string> CSVConverter::expected_dimension_names() const {
-    const auto& dimensions = metadata_.dimensions;
-
-    std::vector<std::string> names;
-    if (aggregates_time_dimensions()) {
-        names.push_back(has_hourly_dimension() ? "datetime" : "date");
-        for (const auto& dim : dimensions) {
-            if (!dim.is_time_dimension()) {
-                names.push_back(dim.name);
-            }
-        }
-    } else {
-        for (const auto& dim : dimensions) {
-            names.push_back(dim.name);
-        }
-    }
-    return names;
+void CSVConverter::write_header() {
+    *io_ << join_fields(header_, ",") << '\n';
 }
 
 void CSVConverter::validate_header() {
     std::string header_line;
     std::getline(*io_, header_line);
 
-    // Build the expected header: dimension names (or aggregated date/datetime) followed by labels.
-    std::vector<std::string> expected = expected_dimension_names();
-    for (const auto& label : metadata_.labels) {
-        expected.push_back(label);
-    }
-
-    // Split the header line on commas and compare each field against the expected column name.
-    size_t field_start = 0;
-    size_t field_index = 0;
-    while (field_start <= header_line.size()) {
-        size_t comma_position = header_line.find(',', field_start);
-        size_t field_end;
-        if (comma_position == std::string::npos) {
-            field_end = header_line.size();
-        } else {
-            field_end = comma_position;
-        }
-        std::string field(header_line, field_start, field_end - field_start);
-
-        if (field_index >= expected.size() || field != expected[field_index]) {
-            std::string expected_str;
-            for (size_t i = 0; i < expected.size(); ++i) {
-                if (i > 0)
-                    expected_str += ", ";
-                expected_str += expected[i];
-            }
-            throw std::runtime_error("Unexpected header in CSV file: '" + header_line +
-                                     "'. Expected columns are: " + expected_str);
-        }
-
-        field_index++;
-        // Advance past the comma. If there was no comma, jump past end-of-line to exit the loop.
-        if (comma_position == std::string::npos) {
-            field_start = header_line.size() + 1;
-        } else {
-            field_start = comma_position + 1;
-        }
-    }
-
-    if (field_index != expected.size()) {
-        throw std::runtime_error("CSV header has " + std::to_string(field_index) + " columns, expected " +
-                                 std::to_string(expected.size()));
+    if (split_fields(header_line) != header_) {
+        throw std::runtime_error("Unexpected header in CSV file: '" + header_line +
+                                 "'. Expected columns are: " + join_fields(header_, ", "));
     }
 }
 
 void CSVConverter::validate_dimensions(const std::vector<std::string>& csv_dimension_values,
                                        const std::vector<int64_t>& current_bin_dimension_values) {
-    const auto& dimensions = metadata_.dimensions;
-
-    std::vector<std::string> expected_names = expected_dimension_names();
-    std::vector<std::string> expected_values;
-
-    // Build expected values
-    if (aggregates_time_dimensions()) {
-        // First expected value is the aggregated datetime string.
-        expected_values.push_back(build_datetime_string_from_time_dimension_values(current_bin_dimension_values));
-        // Remaining expected values are the non-time dimension integers.
-        for (size_t i = 0; i < dimensions.size(); ++i) {
-            if (!dimensions[i].is_time_dimension()) {
-                expected_values.push_back(std::to_string(current_bin_dimension_values[i]));
-            }
-        }
-    } else {
-        for (size_t i = 0; i < dimensions.size(); ++i) {
-            expected_values.push_back(std::to_string(current_bin_dimension_values[i]));
-        }
-    }
-
-    // Compare CSV dimension values against expected values
-    for (size_t i = 0; i < expected_names.size(); ++i) {
+    // read_line's width check guarantees csv_dimension_values has one cell per dimension column.
+    const std::vector<std::string> expected_values = dimension_cells(current_bin_dimension_values);
+    for (size_t i = 0; i < expected_values.size(); ++i) {
         if (csv_dimension_values[i] != expected_values[i]) {
-            throw std::runtime_error("CSV dimension '" + expected_names[i] + "' has value '" + csv_dimension_values[i] +
+            throw std::runtime_error("CSV dimension '" + header_[i] + "' has value '" + csv_dimension_values[i] +
                                      "', expected '" + expected_values[i] + "'");
         }
     }

@@ -446,4 +446,44 @@ void main() {
       }
     });
   });
+
+  group('Time Series Dimension Column', () {
+    // time_series_date_columns.sql: date_approved is a nullable value column
+    // that sorts before the primary-key date column date_time.
+    test('a date_ value column is not the dimension', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'time_series_date_columns.sql'),
+      );
+      try {
+        final id = db.createElement('Plant', {'label': 'Plant 1'});
+
+        final meta = db.getTimeSeriesMetadata('Plant', 'events');
+        expect(meta.dimensionColumn, equals('date_time'));
+        expect(
+          meta.valueColumns.map((c) => c.name).toList(),
+          equals(['date_approved', 'value']),
+        );
+
+        db.updateTimeSeriesGroup('Plant', 'events', id, {
+          'date_time': ['2024-01-01T00:00:00', '2024-02-01T00:00:00', '2024-03-01T00:00:00'],
+          'date_approved': ['2024-03-01T00:00:00', null, '2024-01-15T00:00:00'],
+          'value': [1.5, 2.5, 3.5],
+        });
+
+        final result = db.readTimeSeriesGroup('Plant', 'events', id);
+        expect(
+          result['date_time'],
+          equals([DateTime(2024, 1, 1), DateTime(2024, 2, 1), DateTime(2024, 3, 1)]),
+        );
+        expect(
+          result['date_approved'],
+          equals(['2024-03-01T00:00:00', null, '2024-01-15T00:00:00']),
+        );
+        expect(result['value'], equals([1.5, 2.5, 3.5]));
+      } finally {
+        db.close();
+      }
+    });
+  });
 }

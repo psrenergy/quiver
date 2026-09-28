@@ -44,7 +44,8 @@ typedef enum {
     QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE = 0,
 } quiver_expression_ternary_operation_t;
 
-// Aggregate operation kind (dimension-axis reduction)
+// Aggregate operation kind, taken by both quiver_expression_aggregate (dimension-axis reduction)
+// and quiver_expression_aggregate_agents (label-axis reduction)
 typedef enum {
     QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM = 0,
     QUIVER_EXPRESSION_AGGREGATE_OPERATION_MEAN = 1,
@@ -52,15 +53,6 @@ typedef enum {
     QUIVER_EXPRESSION_AGGREGATE_OPERATION_MAX = 3,
     QUIVER_EXPRESSION_AGGREGATE_OPERATION_PERCENTILE = 4,
 } quiver_expression_aggregate_operation_t;
-
-// Aggregate agents operation kind (label-axis reduction)
-typedef enum {
-    QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_SUM = 0,
-    QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_MEAN = 1,
-    QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_MIN = 2,
-    QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_MAX = 3,
-    QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_PERCENTILE = 4,
-} quiver_expression_aggregate_agents_operation_t;
 
 // Construction
 QUIVER_C_API quiver_error_t quiver_expression_from_file(quiver_binary_file_t* file, quiver_expression_t** out);
@@ -106,7 +98,7 @@ QUIVER_C_API quiver_error_t quiver_expression_aggregate(quiver_expression_t* exp
                                                         quiver_expression_t** out);
 
 QUIVER_C_API quiver_error_t quiver_expression_aggregate_agents(quiver_expression_t* expression,
-                                                               quiver_expression_aggregate_agents_operation_t operation,
+                                                               quiver_expression_aggregate_operation_t operation,
                                                                const double* parameter,
                                                                quiver_expression_t** out);
 

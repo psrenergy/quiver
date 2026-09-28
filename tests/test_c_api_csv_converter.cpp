@@ -110,7 +110,8 @@ TEST_F(BinaryCApiCSVFixture, RoundTrip) {
 
         const char* dim_names[] = {"row", "col"};
         int64_t dim_values[] = {1, 1};
-        double data[] = {42.5, 99.5};
+        // 0.1 + 0.2 needs 17 significant digits; bin_to_csv used to write "0.3", one ULP away.
+        double data[] = {0.1 + 0.2, 99.5};
         quiver_binary_file_write(binary_file, dim_names, dim_values, 2, data, 2);
 
         quiver_binary_file_close(binary_file);
@@ -135,8 +136,8 @@ TEST_F(BinaryCApiCSVFixture, RoundTrip) {
         size_t out_count = 0;
         EXPECT_EQ(quiver_binary_file_read(binary_file, dim_names, dim_values, 2, 0, &out_data, &out_count), QUIVER_OK);
         ASSERT_EQ(out_count, 2u);
-        EXPECT_DOUBLE_EQ(out_data[0], 42.5);
-        EXPECT_DOUBLE_EQ(out_data[1], 99.5);
+        EXPECT_EQ(out_data[0], 0.1 + 0.2);  // exact: EXPECT_DOUBLE_EQ tolerates the 1-ULP loss
+        EXPECT_EQ(out_data[1], 99.5);
 
         quiver_binary_file_free_float_array(out_data);
         quiver_binary_file_close(binary_file);
@@ -278,4 +279,37 @@ TEST_F(BinaryCApiCSVFixture, CsvToBinMissingToml) {
     EXPECT_FALSE(err.empty());
 
     fs::remove(path + ".csv");
+}
+
+TEST_F(BinaryCApiCSVFixture, CsvToBinTrailingGarbageReportsMessage) {
+    auto* md = make_simple_metadata();
+    quiver_binary_file_t* binary_file = nullptr;
+    ASSERT_EQ(quiver_binary_file_open_file(path.c_str(), 'w', md, &binary_file), QUIVER_OK);  // writes the .toml
+    quiver_binary_file_close(binary_file);
+    quiver_binary_metadata_free(md);
+
+    {
+        std::ofstream csv(path + ".csv");
+        csv << "row,col,val1,val2\n1,1,9.99abc,2.0\n";
+    }
+
+    EXPECT_EQ(quiver_csv_converter_csv_to_bin(path.c_str()), QUIVER_ERROR);
+    EXPECT_STREQ(quiver_get_last_error(), "Cannot csv_to_bin: invalid float value '9.99abc' for label 'val1'");
+}
+
+TEST_F(BinaryCApiCSVFixture, CsvToBinShortRowReportsLine) {
+    // Opening a writer writes the .toml sidecar csv_to_bin reads; the metadata is copied, so free it now.
+    auto* md = make_simple_metadata();
+    quiver_binary_file_t* binary_file = nullptr;
+    const auto opened = quiver_binary_file_open_file(path.c_str(), 'w', md, &binary_file);
+    quiver_binary_metadata_free(md);
+    ASSERT_EQ(opened, QUIVER_OK);
+    quiver_binary_file_close(binary_file);
+    {
+        std::ofstream csv(path + ".csv");
+        csv << "row,col,val1,val2\n1\n";
+    }
+
+    EXPECT_EQ(quiver_csv_converter_csv_to_bin(path.c_str()), QUIVER_ERROR);
+    EXPECT_STREQ(quiver_get_last_error(), "Cannot csv_to_bin: line 2 has 1 fields, expected 4");
 }
