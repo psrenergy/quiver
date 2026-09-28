@@ -678,14 +678,14 @@ No generator run is needed, because there is no C API signature change.
 
 ## Acceptance criteria
 
-- [ ] `CSVConverter`'s constructor is under `private:`, and the public section holds only `csv_to_bin` and `bin_to_csv`.
-- [ ] `expected_dimension_names()` is deleted. The CSV column names exist once, as `header_`, built in the constructor body.
-- [ ] `write_header`, `validate_header`, `build_line` and `validate_dimensions` use `header_`, `dimension_cells`, `split_fields` and `join_fields`. No `find(',')` loop and no hand-rolled join loop remains in the file.
-- [ ] `split_fields` keeps a trailing empty field (pinned by `RowWithTrailingCommaReportsLine`).
-- [ ] `read_line(line_number)` throws `Cannot csv_to_bin: line N has X fields, expected Y` before parsing any cell, and `Cannot csv_to_bin: file ends before line N` at EOF.
-- [ ] Plan 13's data-cell parse and value formatting are carried over unchanged, and any label-index guard plan 13 added is reduced to a plain `metadata_.labels[row.data.size()]`.
-- [ ] New tests pass in C++ (5, plus the tightened `HeaderTooFewColumns`), C API (1), Lua (1) and Julia (1). The full `scripts/test-all.bat` is green.
-- [ ] `src/AGENTS.md` Binary Subsystem bullet and the `CHANGELOG.md` `### Fixed` entry are updated as written above.
+- [x] `CSVConverter`'s constructor is under `private:`, and the public section holds only `csv_to_bin` and `bin_to_csv`.
+- [x] `expected_dimension_names()` is deleted. The CSV column names exist once, as `header_`, built in the constructor body.
+- [x] `write_header`, `validate_header`, `build_line` and `validate_dimensions` use `header_`, `dimension_cells`, `split_fields` and `join_fields`. No `find(',')` loop and no hand-rolled join loop remains in the file.
+- [x] `split_fields` keeps a trailing empty field (pinned by `RowWithTrailingCommaReportsLine`).
+- [x] `read_line(line_number)` throws `Cannot csv_to_bin: line N has X fields, expected Y` before parsing any cell, and `Cannot csv_to_bin: file ends before line N` at EOF.
+- [x] Plan 13's data-cell parse and value formatting are carried over unchanged, and any label-index guard plan 13 added is reduced to a plain `metadata_.labels[row.data.size()]`.
+- [x] New tests pass in C++ (5, plus the tightened `HeaderTooFewColumns`), C API (1), Lua (1) and Julia (1). The full `scripts/test-all.bat` is green.
+- [x] `src/AGENTS.md` Binary Subsystem bullet and the `CHANGELOG.md` `### Fixed` entry are updated as written above.
 
 ## Pitfalls
 
@@ -710,3 +710,139 @@ No generator run is needed, because there is no C API signature change.
 - Cleaning up the partial `.qvr` a failed `csv_to_bin` leaves behind.
 - Caching `aggregates_time_dimensions()`, which is still recomputed per row by `dimension_cells`.
 - Any Dart, Python or JS change: the binary subsystem is Julia + Lua only by design decision.
+
+## Implementation notes
+
+Implemented on `rs/plan14`. The branch was already at `master` `d9d7b1c` when work started (plans
+06–13 and the 0.12.4 bump had landed), so the merge was a no-op. The Changes, Tests and Docs were
+applied as written, apart from the drift and deviations below. No C API, FFI or binding code
+changed, so no generator ran and `c_api.jl` is untouched.
+
+### Regression proof (tests written first, run against the unfixed `src/`)
+
+- **C++ and Lua**, six tests run with `--gtest_filter`. All six failed as predicted:
+  - `HeaderTooFewColumns`: got `CSV header has 2 columns, expected 4`.
+  - `RowMissingDataCellReportsLine` and `RowWithExtraFieldReportsLine`: an uncaught
+    `std::invalid_argument`, `Data length 1 (3) does not match expected length 2`.
+  - `RowWithTrailingCommaReportsLine`: got plan 13's `Cannot csv_to_bin: invalid float value ''`.
+    It has no label clause because plan 13's guard dropped it.
+  - `FileEndingEarlyReportsLine`: got `CSV dimension 'row' has value '', expected '1'`.
+  - `LuaBinaryTest.CsvToBinShortRowReportsLine`: got `Failed to run Lua script: Data length 0 does
+    not match expected length 1`.
+- **The root-cause bug.** `CSVConverterFixture.RowMissingDimensionCellReportsLine` and
+  `BinaryCApiCSVFixture.CsvToBinShortRowReportsLine`, each run alone, aborted their executable
+  (exit 127) with the MSVC STL assertion `vector(1949) : Assertion failed: vector subscript out of
+  range`.
+- **Julia.** `runtests.jl` is failfast, so the new testset's input was probed in a separate `julia`
+  process. `Quiver.Binary.csv_to_bin` on `row,col,val1,val2\n1\n` killed that process with
+  `EXCEPTION_BREAKPOINT` inside `libquiver.dll`, which is consistent with the same debug assertion.
+  The frame names are unsymbolized.
+- After the fix every one of these passes.
+
+### Drift fixed
+
+- **Test helper.** Plan 13 already added `expect_csv_to_bin_error(message)` to
+  `CSVConverterFixture`. It catches only `std::runtime_error`, `EXPECT_STREQ`s the message and
+  `FAIL()`s when nothing is thrown, so it pins the exception type the same way T1's helper would.
+  T1's `csv_to_bin_error` was not added; every new and tightened test calls plan 13's helper.
+- **Includes.**
+  - `tests/test_lua_binary.cpp` already had `<fstream>` (added by plan 13).
+  - `csv_converter.cpp` already had `<limits>`, also from plan 13, and its `fmt` include was
+    already gone.
+  - Step 2 therefore only deleted `<sstream>` and added `<string_view>`.
+- **Plan 13's label guard.** The guard (`if (row.data.size() < metadata_.labels.size())` plus the
+  label-less fallback message) is now a single `throw` indexing `metadata_.labels[row.data.size()]`,
+  and its comment is gone. Everything else plan 13 wrote is carried over unchanged:
+  - the `"null"`-first test;
+  - the `utils::parse_float` call;
+  - the message text;
+  - `build_line`'s `utils::append_number` body, apart from renaming `elements` to `cells`.
+- **CHANGELOG section.** The entry is the last bullet of `### Fixed` under
+  `## [0.12.4] — unreleased`, which is the open section, not under 0.12.0. It sits right after plan
+  13's `csv_to_bin` locale entry, and it is wrapped at the file's ~100 columns. There is no manifest
+  bump.
+- **`src/AGENTS.md`.** Plan 13 had already extended the `CSVConverter` bullet with the
+  append_number/parse_float sentence and the invalid-float message. Plan 14's text replaces the
+  bullet's first sentence, and plan 13's sentences follow it, so both survive.
+- **Insertion points.**
+  - The C API test comes after plan 13's `CsvToBinTrailingGarbageReportsMessage`.
+  - The Lua test comes after plan 13's `CsvToBinRejectsTrailingGarbage`.
+- **Environment.**
+  - The repo root is `quiver7`.
+  - `build/` was configured from scratch.
+  - The Julia project needed `Pkg.instantiate()`. Its Manifest is gitignored.
+  - `test-all.bat` has six steps, not seven: `01e78d7` removed the CLI smoke step.
+  - Line endings: the `.md` files are CRLF in the working tree (`i/lf w/crlf`, `text=auto`) and the
+    code files are LF. Each file kept its own style.
+
+### Deviations (from the post-implementation review)
+
+A 4-lens adversarial review workflow ran over the diff, 10 agents in all:
+- behavioural equivalence, using a Python model of the old and new helpers on 20k random inputs each;
+- an acceptance audit;
+- docs accuracy;
+- hygiene and cross-plan effects.
+
+Two independent refuters checked each finding. Three findings survived, and two of them are the
+same issue:
+1. **clang-format.** The width-check `throw` needed rewrapping. `scripts/format.bat` ran after the
+   review and joined it as predicted. Nothing else changed.
+2. **The `read_line` comment named the wrong hazard.** The plan's wording, "a short row would read
+   past the end", holds for `validate_dimensions` but not for the label lookup. A short row always
+   indexes `labels` in range. Only a long row, with a non-numeric cell after the last label, would
+   reach `labels[labels.size()]`. The comment now names the two hazards separately.
+
+Two reviewer notes were also adopted, both text-only:
+- **Exception type.** The CHANGELOG entry now says a short or long row raises a `std::runtime_error`
+  like every other `csv_to_bin` failure, not a `std::invalid_argument`. The plan's "not BREAKING"
+  rationale mentioned that type change, but its entry text did not. Only C++ callers that catch by
+  type can observe it.
+- **Column position.** The header comment and `src/AGENTS.md` said "one `date`/`datetime` column in
+  place of the time dimensions". Both now say "a leading `date`/`datetime` column instead of the
+  time dimensions", because the column always comes first, even when time dimensions are
+  interleaved: `{month, scenario, day}` gives `date,scenario,val`.
+
+The equivalence lens found no behavioural change beyond the intended ones:
+- `bin_to_csv` output is byte-identical in all five header layouts and on every data line.
+- `validate_header` and `validate_dimensions` accept exactly the set they accepted before.
+
+### Results
+
+- **Build** (Debug, MSVC): clean, no new warnings.
+  - `grep "expected_dimension_names\|ostringstream"` over the two files is empty.
+  - The only `find(',')` calls left are `split_fields` itself and `csv_to_bin`'s unchanged
+    first-field aggregate detection.
+- **Filtered suites:** `CSVConverterFixture.*` 48/48, `LuaBinaryTest.*` 23/23,
+  `BinaryCApiCSVFixture.*` 12/12.
+- **Full suites:** `quiver_tests` 1355/1355 and `quiver_c_tests` 562/562. Julia reports "Testing
+  Quiver tests passed", with Binary CSV at 70/70.
+- **`scripts/format.bat`:** exit 0 once the environment was fixed.
+  - The first run exited 1, on environment problems only. `biome` was missing because there was no
+    `node_modules`, and `dart format` without `pub get` rewrote 25 untouched Dart files.
+  - The fix was `git checkout -- bindings/dart`, then `dart pub get` and
+    `bun install --frozen-lockfile`.
+  - On the rerun, Dart and Python changed 0 files each. clang-format changed only the width-check
+    line, and JuliaFormatter changed nothing.
+  - biome rewrote 42 untouched JS files from CRLF to LF with no content change
+    (`git diff --ignore-cr-at-eol` is empty). `git checkout -- bindings/js` restored them.
+- **`scripts/test-all.bat`:** all six steps pass. C++ 1355, C API 562, Julia, Dart 426, JS 212 and
+  Python 309.
+- **`git diff --stat`:** exactly the eight files the plan lists, plus this plan file.
+
+### For later plans
+
+- **`CSVConverterFixture.NonNumericCellPastLastLabel` (plan 13) is now a weaker duplicate.** Its
+  row `1,1,1.0,2.0,abc` hits the width check first (`line 2 has 5 fields, expected 4`), and the test
+  pins only the `Cannot csv_to_bin: ` prefix, so it repeats `RowWithExtraFieldReportsLine`. Its
+  comment anticipated this, and it still passes. It was left alone because plan 14 keeps existing
+  tests unchanged. A test-cleanup plan could delete it or pin the full message.
+- **Plan 15** depends on 14 by order only. Nothing it quotes lives in `csv_converter.*`.
+- **CHANGELOG anchors.** Plans 15, 16, 45 and 48 still anchor their CHANGELOG edits on
+  `## [0.12.0] — unreleased`. The open section is `## [0.12.4] — unreleased`.
+- **Private constructor.** A test can no longer build a `CSVConverter`, and
+  `split_fields`/`join_fields` are file-local. Exercise them through `csv_to_bin`/`bin_to_csv`, as
+  every existing test already does.
+- **`<chrono>`.** `csv_converter.cpp` still includes it, and it was unused before this plan too.
+  Plan 61 does not cover this file; widen it if wanted.
+- **`master-plan.md` item 7** still names the helpers `header_fields` and `join`. The real names are
+  `header_`, `dimension_cells`, `split_fields` and `join_fields`.

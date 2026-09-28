@@ -212,6 +212,18 @@ TEST_F(LuaBinaryTest, CsvToBinRejectsTrailingGarbage) {
     expect_lua_error(lua, "db:csv_to_bin('bin_a')\n", "Cannot csv_to_bin: invalid float value '9.99abc' for label 'v'");
 }
 
+TEST_F(LuaBinaryTest, CsvToBinShortRowReportsLine) {
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+    // Opening a writer leaves the .toml sidecar csv_to_bin reads. Lua has no io, so the CSV is written here.
+    lua.run(md1() + "db:open_file('bin_a', 'w', md):close()\n");
+    {
+        std::ofstream csv(sandbox / "bin_a.csv");
+        csv << "row,v\n1\n";
+    }
+    expect_lua_error(lua, "db:csv_to_bin('bin_a')\n", "Cannot csv_to_bin: line 2 has 1 fields, expected 2");
+}
+
 TEST_F(LuaBinaryTest, MetadataFromToml) {
     auto db = quiver::Database::from_schema(":memory:", schema);
     quiver::LuaRunner lua(db);

@@ -486,6 +486,19 @@ end
         end
     end
 
+    @testset "Short data row reports its line" begin
+        path = make_binary_file_path()
+        try
+            md = make_simple_metadata()
+            write_toml(path, md)
+            write_csv(path, "row,col,val1,val2\n1\n")
+            exc = @test_throws Quiver.DatabaseException Quiver.Binary.csv_to_bin(path)
+            @test exc.value.msg == "Cannot csv_to_bin: line 2 has 1 fields, expected 4"
+        finally
+            cleanup_binary_file(path)
+        end
+    end
+
     # ==========================================================================
     # Round-trip tests
     # ==========================================================================

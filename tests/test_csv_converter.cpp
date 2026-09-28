@@ -405,7 +405,7 @@ TEST_F(CSVConverterFixture, HeaderTooFewColumns) {
     auto md = make_simple_metadata();
     write_toml(md);
     write_csv("row,col\n1,1\n");
-    EXPECT_THROW(CSVConverter::csv_to_bin(path), std::runtime_error);
+    expect_csv_to_bin_error("Unexpected header in CSV file: 'row,col'. Expected columns are: row, col, val1, val2");
 }
 
 TEST_F(CSVConverterFixture, HeaderTooManyColumns) {
@@ -465,6 +465,47 @@ TEST_F(CSVConverterFixture, EmptyCSVFile) {
     write_toml(md);
     write_csv("");
     EXPECT_THROW(CSVConverter::csv_to_bin(path), std::runtime_error);
+}
+
+// ============================================================================
+// CSVConverterCsvToBin -- Row width
+// ============================================================================
+
+// Every data row must have exactly as many fields as the header. A row missing a dimension cell
+// used to reach validate_dimensions, which indexes every dimension cell: under row,col a lone "2"
+// matched row=2 and then read past the end of the one-element row.
+TEST_F(CSVConverterFixture, RowMissingDimensionCellReportsLine) {
+    write_toml(make_simple_metadata());
+    write_csv("row,col,val1,val2\n1,1,1.0,2.0\n1,2,3.0,4.0\n2\n");
+    expect_csv_to_bin_error("Cannot csv_to_bin: line 4 has 1 fields, expected 4");
+}
+
+// Used to surface from BinaryFile::write as std::invalid_argument("Data length 1 does not match ...").
+TEST_F(CSVConverterFixture, RowMissingDataCellReportsLine) {
+    write_toml(make_simple_metadata());
+    write_csv("row,col,val1,val2\n1,1,1.0\n");
+    expect_csv_to_bin_error("Cannot csv_to_bin: line 2 has 3 fields, expected 4");
+}
+
+TEST_F(CSVConverterFixture, RowWithExtraFieldReportsLine) {
+    write_toml(make_simple_metadata());
+    write_csv("row,col,val1,val2\n1,1,1.0,2.0,3.0\n");
+    expect_csv_to_bin_error("Cannot csv_to_bin: line 2 has 5 fields, expected 4");
+}
+
+// A trailing comma is an empty fifth field. Pins split_fields: std::getline(stream, field, ',')
+// would drop it and let this row through as four fields.
+TEST_F(CSVConverterFixture, RowWithTrailingCommaReportsLine) {
+    write_toml(make_simple_metadata());
+    write_csv("row,col,val1,val2\n1,1,1.0,2.0,\n");
+    expect_csv_to_bin_error("Cannot csv_to_bin: line 2 has 5 fields, expected 4");
+}
+
+// Six data rows are expected (3 x 2); the file stops after the first.
+TEST_F(CSVConverterFixture, FileEndingEarlyReportsLine) {
+    write_toml(make_simple_metadata());
+    write_csv("row,col,val1,val2\n1,1,1.0,2.0\n");
+    expect_csv_to_bin_error("Cannot csv_to_bin: file ends before line 3");
 }
 
 // ============================================================================
