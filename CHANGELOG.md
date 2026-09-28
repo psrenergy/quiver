@@ -73,6 +73,15 @@ callers to change something are prefixed **BREAKING** and say what to do.
   06:00 aggregated over `day` starts at 00:00. Reducing `year` over `year × month × day` data whose
   first year is a leap year still fails at 29 February, as it already did for a 1 January start.
   Affects C++, the C API, Julia and Lua.
+- **Binary files with three or more time dimensions that start mid-period no longer skip cells.**
+  For a `yearly × monthly × daily` file starting `2025-03-15`, the traversal behind an expression
+  `save`, `bin_to_csv` and `csv_to_bin` resumed every later March at day 15, so 2026-03-01..14 were
+  never visited. A saved expression left them NaN, `bin_to_csv` left their rows out, and
+  `aggregate("day")` summed March 2026 from the 15th only. This affected C++, the C API, Julia and
+  Lua. A time dimension now resumes at its starting value only while every enclosing time
+  dimension is still in the starting period. Files with one or two time dimensions are
+  unaffected. A CSV that `bin_to_csv` wrote for an affected file lacks those rows, so `csv_to_bin`
+  now rejects it: convert the `.qvr` again.
 
 ## [0.12.3] — unreleased
 

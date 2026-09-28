@@ -4,6 +4,7 @@
 #include "quiver/binary/time_constants.h"
 #include "quiver/binary/time_properties.h"
 
+#include <algorithm>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
@@ -83,6 +84,24 @@ std::vector<int64_t> dimension_sizes_at_values(const BinaryMetadata& metadata,
     return sizes;
 }
 
+int64_t
+dimension_start_at_values(const BinaryMetadata& meta, const std::vector<int64_t>& dimension_values, size_t index) {
+    const auto& dim = meta.dimensions[index];
+    if (!dim.is_time_dimension())
+        return 1;
+
+    // Only the period the file starts in begins at initial_value (day 15 of March 2025 for a
+    // 2025-03-15 start), and a coordinate is in that period exactly when every time ancestor, up
+    // the parent_dimension_index chain, is at its own initial_value. Checking the parent alone
+    // restarted every later March at day 15 as well.
+    for (auto ancestor = dim.time->parent_dimension_index; ancestor != -1;
+         ancestor = meta.dimensions[ancestor].time->parent_dimension_index) {
+        if (dimension_values[ancestor] != meta.dimensions[ancestor].time->initial_value)
+            return 1;
+    }
+    return dim.time->initial_value;
+}
+
 std::vector<int64_t> first_dimensions(const BinaryMetadata& meta) {
     std::vector<int64_t> result;
     result.reserve(meta.dimensions.size());
@@ -93,7 +112,6 @@ std::vector<int64_t> first_dimensions(const BinaryMetadata& meta) {
 }
 
 std::optional<std::vector<int64_t>> next_dimensions(const BinaryMetadata& meta, const std::vector<int64_t>& current) {
-    const auto& dimensions = meta.dimensions;
     const auto current_sizes = dimension_sizes_at_values(meta, current);
 
     std::vector<int64_t> next = current;
@@ -112,20 +130,13 @@ std::optional<std::vector<int64_t>> next_dimensions(const BinaryMetadata& meta, 
     if (!incremented)
         return std::nullopt;
 
-    // Restore initial_value when a child time dim wrapped to 1 but its parent
-    // is still at its own initial_value: the cascade reset above forces 1, but
-    // a non-1 initial_value means the iteration starts mid-period (e.g. day=5
-    // within a month), and that offset must persist across parent rollovers.
+    // The cascade resets every wrapped dimension to 1, but a file that starts mid-period
+    // (2025-03-15 -> month 3, day 15) must resume at initial_value wherever the walk re-enters
+    // that starting period: e.g. when a non-time outer dimension (a scenario) rolls over, but not a
+    // year later. Ascending order matters: an ancestor restored earlier in this pass is the value
+    // its descendants compare against.
     for (size_t i = 0; i < next.size(); ++i) {
-        const auto& dim = dimensions[i];
-        if (!dim.is_time_dimension())
-            continue;
-        auto initial_value = dim.time->initial_value;
-        auto parent_idx = dim.time->parent_dimension_index;  // -1 = no parent
-        if (next[i] < initial_value && parent_idx != -1 &&
-            next[parent_idx] == dimensions[parent_idx].time->initial_value) {
-            next[i] = initial_value;
-        }
+        next[i] = std::max(next[i], dimension_start_at_values(meta, next, i));
     }
 
     return next;

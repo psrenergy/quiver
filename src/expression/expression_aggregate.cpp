@@ -105,22 +105,11 @@ void ExpressionAggregate::compute_row(const std::vector<int64_t>& dims, std::vec
     }
     operand_dims_buf_[reduced_operand_index_] = 1;
 
-    const auto& reduced_dim = operand_meta.dimensions[reduced_operand_index_];
-    int64_t start = 1;
-    int64_t end = reduced_dim.size;
-    if (reduced_dim.is_time_dimension()) {
-        const auto& tp = *reduced_dim.time;
-        const int64_t parent_idx = tp.parent_dimension_index;
-        const auto sizes = dimension_sizes_at_values(operand_meta, operand_dims_buf_);
-        end = sizes[reduced_operand_index_];
-        if (parent_idx < 0) {
-            start = tp.initial_value;
-        } else {
-            const auto& parent_dim = operand_meta.dimensions[parent_idx];
-            const int64_t parent_initial = parent_dim.is_time_dimension() ? parent_dim.time->initial_value : 1;
-            start = (operand_dims_buf_[parent_idx] == parent_initial) ? tp.initial_value : 1;
-        }
-    }
+    // Reduce from where next_dimensions starts the reduced dimension at this coordinate to its
+    // actual size here (Feb = 28, ...). Reducing the outermost time dimension also reads the first
+    // period's cells before initial_datetime, which the walk never writes: NaN, so skipped.
+    const int64_t start = dimension_start_at_values(operand_meta, operand_dims_buf_, reduced_operand_index_);
+    const int64_t end = dimension_sizes_at_values(operand_meta, operand_dims_buf_)[reduced_operand_index_];
 
     std::vector<AggregationState> states(label_count);
     for (auto& scratch : percentile_scratch_) {

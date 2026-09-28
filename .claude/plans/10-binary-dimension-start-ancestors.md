@@ -437,14 +437,14 @@ From the repo root, in order:
 
 ## Acceptance criteria
 
-- [ ] `dimension_start_at_values(meta, values, index)` is declared in `include/quiver/binary/iteration.h` with `QUIVER_API` and defined in `src/binary/iteration.cpp`.
-- [ ] `next_dimensions` restores through the helper in ascending order, evaluated on `next`. The old parent-only restore block and the unused `dimensions` local are gone.
-- [ ] `ExpressionAggregate::compute_row` computes `start`/`end` with the helper and `dimension_sizes_at_values` only. The `reduced_dim`/`tp`/`parent_idx`/`parent_initial` code is gone.
-- [ ] Nowhere else in `src/` compares a parent's value against its `initial_value`: `grep -n "parent_initial\|parent_idx" src/binary/iteration.cpp src/expression/expression_aggregate.cpp` prints nothing. The `parent_idx` names in `expression_helpers.h` are broadcast-metadata code and are unrelated.
-- [ ] The 2 new `IterationTest` tests, and the new aggregate tests in C++, C API, Lua and Julia, pass. The 4 aggregate tests and the first iteration test failed before the fix.
-- [ ] All existing binary, expression, iteration and CSV-converter tests pass unchanged.
-- [ ] `src/AGENTS.md` file map and Iteration Helpers are updated. The CHANGELOG `### Fixed` bullet is added under 0.12.0.
-- [ ] `scripts/format.bat` is clean. No `.bat` file is touched.
+- [x] `dimension_start_at_values(meta, values, index)` is declared in `include/quiver/binary/iteration.h` with `QUIVER_API` and defined in `src/binary/iteration.cpp`.
+- [x] `next_dimensions` restores through the helper in ascending order, evaluated on `next`. The old parent-only restore block and the unused `dimensions` local are gone.
+- [x] `ExpressionAggregate::compute_row` computes `start`/`end` with the helper and `dimension_sizes_at_values` only. The `reduced_dim`/`tp`/`parent_idx`/`parent_initial` code is gone.
+- [x] Nowhere else in `src/` compares a parent's value against its `initial_value`: `grep -n "parent_initial\|parent_idx" src/binary/iteration.cpp src/expression/expression_aggregate.cpp` prints nothing. The `parent_idx` names in `expression_helpers.h` are broadcast-metadata code and are unrelated.
+- [x] The 2 new `IterationTest` tests, and the new aggregate tests in C++, C API, Lua and Julia, pass. The 4 aggregate tests and the first iteration test failed before the fix.
+- [x] All existing binary, expression, iteration and CSV-converter tests pass unchanged. *(Two stale comments were deleted, no assertion changed; see deviation 4.)*
+- [x] `src/AGENTS.md` file map and Iteration Helpers are updated. The CHANGELOG `### Fixed` bullet is added under 0.12.0. *(Under `[0.12.4]`, the current unreleased section; see deviation 1.)*
+- [x] `scripts/format.bat` is clean. No `.bat` file is touched.
 
 ## Pitfalls
 
@@ -469,3 +469,67 @@ From the repo root, in order:
 - Unifying the aggregation enum is owned by **16**.
 - Making `validate_dimension_values` opt-in for performance (src/AGENTS.md Performance Bottlenecks) is not planned.
 - **Noticed, not owned by any listed plan:** a `yearly × monthly × daily` file starting on `2024-02-29` cannot be written past year 1. `add_offset_from_int` Yearly turns `2025-02-29` into `2025-03-01` before the Monthly offset runs, so coordinate `(2,1,1)` maps to 2025-01-04, and `validate_dimension_values` throws. This belongs with plan 08's `add_offset_from_int` work. It is flagged for the maintainer and not fixed here.
+
+## Implementation notes
+
+Implemented on `rs/plan10`. The plan was verified read-only in plan mode against `236f547`, the merge of plan 05. By the time editing started, the branch was at `1c84505`, the merge of plan 09 (#317): plans 06–09 and the 0.12.4 bump had landed in between. `git merge origin/master` then reported it was already up to date. Every anchor was re-verified against that tree before the first edit.
+
+**Verification before editing.**
+- Every quoted excerpt still matched. Plans 08 and 09 did not touch the restore block in `next_dimensions` or the start block in `compute_row`. Only line numbers drifted. Every test anchor is present; 08 and 09 added tests next to some of them, for example the `AggregateOutermostTimeDimFromMidYearStart` tests in all four layers.
+- The tests' numbers were re-derived under plan 08's period-start contract, where a coordinate is an absolute position inside its parent's period:
+  - `(2,2,28)` cascades to `(2,3,1)`, and the old restore turned that into `(2,3,15)`.
+  - The walk counts are 657 against the old 643, and 110 for the second test.
+  - The 22-value aggregate vector holds.
+  - The direct writes `(2,3,1..31)` pass the new `validate_dimension_values` check (`position_in_parent`).
+- **Depends on:** the header says none and the README says 08, 09. Both have landed anyway.
+- The two old copies disagreed on the outermost time dimension. The walk never lifted it, while the aggregate started it at `initial_value`. That difference is no longer observable, because plan 09's `derive_initial_values()` sets the outermost `initial_value` to 1 everywhere, aggregate output included.
+
+**Red/green.** The tests were added first and run against the unfixed tree:
+- The `quiver_tests` filter from Verification step 1 gave 3 failures and 1 pass, as predicted:
+  - `*after_feb_2026` was `{2, 3, 15}` and `count` was 643.
+  - The aggregate vector held 17 at element 12, March 2026.
+  - Lua failed with `Failed to run Lua script: ...:15: March 2026 is a whole month`.
+  - `NextDimensionsResumesMidPeriodStartWhenANonTimeOuterDimensionRollsOver` passed.
+- `quiver_c_tests`: 1 failure, `(2, 3)` read 17.
+- Julia `test.bat test_expression.jl`: `Evaluated: 17.0 == 31.0`.
+
+After the fix:
+- The Verification step 3 filter passed 263/263, the step 4 filter 108/108, and Julia `test_expression.jl` passed.
+- `scripts/test-all.bat`: `All tests PASSED`. C++ 1336 (plan 09's 1332 + 4), C API 569 (568 + 1), Julia 1474 (1472 + 2), Dart 426, JS 212, Python 309.
+  - The script has six steps. Plan 65 already removed the CLI smoke step (`01e78d7`), so Verification step 7's caveat is stale.
+- After the review fixes below, the full suites were run again: `quiver_tests` 1336/1336, `quiver_c_tests` 569/569.
+- The acceptance grep `grep -n "parent_initial\|parent_idx"` over the two files prints nothing. No `.bat` file is touched.
+
+**Deviations:**
+1. **The CHANGELOG entry is under `## [0.12.4] — unreleased` › `### Fixed`,** as the section's last bullet. `v0.12.0`–`v0.12.3` are tagged, the manifests are at 0.12.4, and plan 08's and 09's entries are in the same section. No manifest bump.
+2. **The second iteration test gained one assertion.** The plan says that test guards against computing starts from a snapshot taken before the restore. It does not. On its layout, and on the first test's, the only ancestor that gets lifted is the outermost time dimension, whose start never changes, so a snapshot gives the same result. The new assertion uses `[scenario, year, month, day]` from 2025-03-15 and expects `next_dimensions({1,2,12,31}) == {2,1,3,15}`. Both outcomes were checked with temporary mutations:
+   - With the restore loop reading a copy of `next`, only this assertion fails (`{2, 1, 3, 1}`).
+   - With the old parent-only rule put back, only the first test fails, so the second test still passes before and after the fix.
+3. **Two doc sentences are qualified (review finding).** The `compute_row` comment and the `src/AGENTS.md` bullet for `dimension_start_at_values` said an aggregate reads "exactly the cells the traversal visits". That is false when the reduced dimension is the outermost time dimension. Its window `[1, size]` also reads the first period's cells before `initial_datetime`. The walk never writes those cells, so they are NaN and skipped; the "Jan 1: 2026 only" assertion in `AggregateOutermostTimeDimOverMonthAndDayFromMidYearStart` relies on that. The behaviour predates this plan; both texts now state it.
+4. **Two stale "plan 10" pointers were deleted.** Both are comments, and neither deletion changes a test's assertions:
+   - `tests/test_expression.cpp`, in plan 09's `AggregateOutermostTimeDimOverMonthAndDayFromMidYearStart`: "Only cells the operand walk certainly wrote are asserted: the walk skips 2026-03-01..14 (plan 10)." Its assertions are unchanged and still pass.
+   - `tests/test_binary_file.cpp`, in plan 08's `BinaryTimeLayouts` banner: "Two-level only: three-level mid-period walks depend on next_dimensions' restore rule (plan 10)." That file is outside this plan's list; the edit removes a pointer to the bug this plan fixes.
+5. **`scripts/format.bat` needed `bun install` first.** The first run failed at the JS step with `bun: command not found: biome`, because this checkout had no `bindings/js/node_modules`. `bun install` fixed that; its output is gitignored and no tracked file changed. The rerun exited 0.
+   - biome rewrote 42 untouched CRLF JS files to LF with no content change (`git diff --ignore-cr-at-eol` is empty). They were checked out again, as in plans 08 and 09.
+   - clang-format put the helper's definition signature on one line. It also left `src/binary/iteration.cpp` LF in the working tree, which `.gitattributes` requires for `.cpp` anyway.
+
+**Post-implementation review.** A workflow reviewed the diff through three lenses (walk-breaker, prose, scope), and one refuter attacked each finding.
+- **Walk-breaker:** found no failures in 31 layouts. Each ran through `quiver_cli` and Lua: the `bin_to_csv` walk, a rewrite of every walked cell, a CSV round trip, and single and chained aggregates. The results were compared with an independent Python calendar model and matched exactly. The layouts included:
+  - a non-time dimension in every position;
+  - weekly layouts;
+  - an outermost monthly dimension with non-midnight starts;
+  - four time levels;
+  - aggregate chains.
+
+  A CSV missing the 2026-03-01..14 rows fails `csv_to_bin` with `CSV dimension 'date' has value '2026-03-15', expected '2026-03-01'`, so the CHANGELOG claim holds.
+- **Confirmed and fixed:** deviation 3, and the `test_binary_file.cpp` banner in deviation 4. The walk-breaker's test-coverage note became deviation 2.
+- **Refuted:** adding a CHANGELOG clause for 2024-02-29 starts. The failure it would describe existed only between plans 08 and 10, and neither is released.
+
+**For later plans and the maintainer:**
+- **The Feb-29 item in Out of scope is resolved by 08 plus this plan.** A `yearly × monthly × daily` file from 2024-02-29 now walks 672 cells through `bin_to_csv`, every day from 2024-02-29 to 2025-12-31. Between plans 08 and 10, the parent-only restore stepped onto `(2,2,29)`, which is 2025-02-29, and the walk threw.
+- **16:** the new tests use `ExpressionAggregate::Operation::Sum` (1 site, `tests/test_expression.cpp`), `QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM` (1 site, `tests/test_c_api_expression.cpp`) and `Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM` (1 site, Julia). Lua uses the string `'sum'`.
+- **12:** `dimension_start_at_values` reads only the stored `initial_value` and `parent_dimension_index`. Builder-made metadata (`add_time_dimension`, `initial_value` 0) gets start 1 for its inner dimensions, since no ancestor value equals 0. That is harmless until 12 deletes the builders.
+- **Noted by the review, pre-existing, not owned by any plan:**
+  - `aggregate("month")` on `year × month × day` fails in the constructor's `validate()`, because the day would sit under a yearly parent with size 31.
+  - `aggregate("month")` on `month × day × hour` fails at operand `(2, 29)`, as plan 09's notes already record.
+- The `<cmath>` and `<limits>` includes in `expression_aggregate.cpp` were already unused at HEAD; clangd flags them. They were left alone.
