@@ -1119,6 +1119,30 @@ TEST_F(ExpressionFixture, AggregateSumOverTimeDimVariable) {
     EXPECT_DOUBLE_EQ(vo[3], 30.0);  // Apr
 }
 
+TEST_F(ExpressionFixture, AggregateSumOverInnermostTimeDimFromMidPeriodStart) {
+    // year(2) x month(12) x day(31) from 2025-03-15. Only March 2025 starts on the 15th, so the
+    // March 2026 sum must cover all 31 days. Both the walk that writes the input (write_qvr) and
+    // the aggregate window used to start every March at day 15.
+    auto md = BinaryMetadata::from_element(Element()
+                                               .set("version", "1")
+                                               .set("initial_datetime", "2025-03-15T00:00:00")
+                                               .set("unit", "MW")
+                                               .set("dimensions", {"year", "month", "day"})
+                                               .set("dimension_sizes", {2, 12, 31})
+                                               .set("time_dimensions", {"year", "month", "day"})
+                                               .set("frequencies", {"yearly", "monthly", "daily"})
+                                               .set("labels", {"v1"}));
+    // Every visited cell is 1.0, so each output cell counts the days summed.
+    write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    Expression(a).aggregate("day", ExpressionAggregate::Operation::Sum).save(path_out);
+
+    // Output [year, month] walks Mar..Dec 2025, then Jan..Dec 2026.
+    auto vo = read_all_cells(path_out);
+    EXPECT_EQ(vo, (std::vector<double>{17, 30, 31, 30, 31, 31, 30, 31, 30, 31, 31,
+                                       28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}));
+}
+
 TEST_F(ExpressionFixture, AggregateSumSkipsNaNs) {
     auto md = make_simple_metadata();
     const double kNan = std::numeric_limits<double>::quiet_NaN();
@@ -1278,7 +1302,6 @@ TEST_F(ExpressionFixture, AggregateOutermostTimeDimFromMidDayStart) {
 TEST_F(ExpressionFixture, AggregateOutermostTimeDimOverMonthAndDayFromMidYearStart) {
     // year(2) x month(12) x day(31) from 2025-03-15. Reducing "year" leaves month x day, which must start on
     // 2025-01-01 at (1, 1): day keeps no stale initial value of 15, and save walks the whole 2025 calendar.
-    // Only cells the operand walk certainly wrote are asserted: the walk skips 2026-03-01..14 (plan 10).
     auto md = BinaryMetadata::from_element(Element()
                                                .set("version", "1")
                                                .set("initial_datetime", "2025-03-15T00:00:00")

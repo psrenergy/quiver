@@ -1213,6 +1213,39 @@ end
         end
     end
 
+    @testset "Aggregate sum over innermost time dim from mid-period start" begin
+        # year x month x day from 2025-03-15: only March 2025 starts on the 15th, so the
+        # March 2026 sum covers all 31 days.
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            md = make_metadata_full(
+                dimensions = ["year", "month", "day"],
+                dimension_sizes = [2, 12, 31],
+                labels = ["v1"],
+                initial_datetime = "2025-03-15T00:00:00",
+                time_dimensions = ["year", "month", "day"],
+                frequencies = ["yearly", "monthly", "daily"],
+            )
+            file = Quiver.Binary.open_file(path_a; mode = 'w', metadata = md)
+            for day in 15:31
+                Quiver.Binary.write!(file; data = [1.0], year = 1, month = 3, day = day)
+            end
+            for day in 1:31
+                Quiver.Binary.write!(file; data = [1.0], year = 2, month = 3, day = day)
+            end
+            Quiver.Binary.close!(file)
+            with_expr(path_a) do e
+                out = Quiver.aggregate(e, "day", Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM)
+                Quiver.save(out, path_out)
+                return Quiver.close!(out)
+            end
+            @test read_one_cell(path_out; year = 1, month = 3)[1] == 17.0  # 2025-03-15..31
+            @test read_one_cell(path_out; year = 2, month = 3)[1] == 31.0  # all of March 2026
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
     # ==========================================================================
     # Aggregation: label-axis reduction (Quiver.aggregate_agents)
     # ==========================================================================

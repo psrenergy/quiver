@@ -1083,6 +1083,43 @@ TEST_F(ExpressionCApiFixture, AggregateDimensionNotFoundReturnsError) {
     quiver_expression_close(a);
 }
 
+TEST_F(ExpressionCApiFixture, AggregateSumOverInnermostTimeDimFromMidPeriodStart) {
+    // year(2) x month(12) x day(31) from 2025-03-15: only March 2025 starts on the 15th, so the
+    // March 2026 sum covers all 31 days, not 15..31.
+    auto* md = make_metadata_v({"year", "month", "day"},
+                               {2, 12, 31},
+                               {"v1"},
+                               "MW",
+                               "2025-03-15T00:00:00",
+                               {"year", "month", "day"},
+                               {"yearly", "monthly", "daily"});
+    quiver_binary_file_t* f = nullptr;
+    ASSERT_EQ(quiver_binary_file_open_file(path_a.c_str(), 'w', md, &f), QUIVER_OK);
+    quiver_binary_metadata_free(md);  // open_file copies the metadata
+    const char* dim_names[] = {"year", "month", "day"};
+    const double one[] = {1.0};
+    for (int64_t day = 15; day <= 31; ++day) {
+        int64_t dim_values[] = {1, 3, day};
+        ASSERT_EQ(quiver_binary_file_write(f, dim_names, dim_values, 3, one, 1), QUIVER_OK);
+    }
+    for (int64_t day = 1; day <= 31; ++day) {
+        int64_t dim_values[] = {2, 3, day};
+        ASSERT_EQ(quiver_binary_file_write(f, dim_names, dim_values, 3, one, 1), QUIVER_OK);
+    }
+    ASSERT_EQ(quiver_binary_file_close(f), QUIVER_OK);
+
+    auto* a = expr_from_file(path_a);
+    quiver_expression_t* agg = nullptr;
+    ASSERT_EQ(quiver_expression_aggregate(a, "day", QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM, nullptr, &agg),
+              QUIVER_OK);
+    ASSERT_EQ(quiver_expression_save(agg, path_out.c_str()), QUIVER_OK);
+    quiver_expression_close(a);
+    quiver_expression_close(agg);
+
+    EXPECT_DOUBLE_EQ(read_one_cell(path_out, {"year", "month"}, {1, 3})[0], 17.0);  // 2025-03-15..31
+    EXPECT_DOUBLE_EQ(read_one_cell(path_out, {"year", "month"}, {2, 3})[0], 31.0);  // all of March 2026
+}
+
 TEST_F(ExpressionCApiFixture, AggregateAgentsSumReducesLabels) {
     write_fixture(path_a, [](int r, int c, int k) { return static_cast<double>(r * 10 + c + k); });
 

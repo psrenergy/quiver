@@ -545,8 +545,7 @@ TEST_F(BinaryTempFileFixture, InitialDatetimeYear1960) {
 
 // ============================================================================
 // BinaryTimeLayouts -- every cell of each of the 8 parent/child pairs validate() accepts, from Saturday
-// 2025-03-15T06:00:00: not midnight, not the start of any day, week, month or year. Two-level only:
-// three-level mid-period walks depend on next_dimensions' restore rule (plan 10).
+// 2025-03-15T06:00:00: not midnight, not the start of any day, week, month or year.
 // ============================================================================
 
 TEST_F(BinaryTempFileFixture, EveryCellMonthlyUnderYearly) {

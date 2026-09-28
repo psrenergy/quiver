@@ -166,6 +166,30 @@ TEST_F(LuaExpressionTest, AggregateDimensionPercentile) {
     )");  // median{1,2,3} = 2
 }
 
+TEST_F(LuaExpressionTest, AggregateSumOverInnermostTimeDimFromMidPeriodStart) {
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+    // year x month x day from 2025-03-15: only March 2025 starts on the 15th, so March 2026 sums
+    // all 31 days.
+    lua.run(R"(
+        local md = quiver.metadata{ initial_datetime='2025-03-15T00:00:00', unit='MW',
+            labels={'v'}, dimensions={'year','month','day'}, dimension_sizes={2,12,31},
+            time_dimensions={'year','month','day'}, frequencies={'yearly','monthly','daily'} }
+        local f = db:open_file('expr_a', 'w', md)
+        for day=15,31 do f:write({1.0}, {year=1, month=3, day=day}) end
+        for day=1,31 do f:write({1.0}, {year=2, month=3, day=day}) end
+        f:close()
+        local fa = db:open_file('expr_a', 'r')
+        local agg = quiver.expression(fa):aggregate('day', 'sum')
+        agg:save('expr_out')
+        fa:close()
+        local r = db:open_file('expr_out', 'r')
+        assert(r:read({year=1, month=3})[1] == 17.0, 'March 2025 starts on the 15th')
+        assert(r:read({year=2, month=3})[1] == 31.0, 'March 2026 is a whole month')
+        r:close()
+    )");
+}
+
 TEST_F(LuaExpressionTest, AggregateUnknownOpThrows) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::LuaRunner lua(db);

@@ -25,7 +25,7 @@ include/quiver/           # C++ public headers
 include/quiver/binary/      # Binary subsystem headers (binary file I/O)
   binary_file.h               # BinaryFile class (Pimpl) - open_file, read, write, get_metadata
   csv_converter.h             # CSVConverter class - bin_to_csv, csv_to_bin
-  iteration.h                 # first_dimensions, next_dimensions, dimension_sizes_at_values
+  iteration.h                 # first_dimensions, next_dimensions, dimension_sizes_at_values, dimension_start_at_values
   binary_metadata.h           # BinaryMetadata struct - dimensions, labels, serialization
   dimension.h                 # Dimension struct (name, size, optional TimeProperties)
   time_properties.h           # TimeFrequency enum, TimeProperties struct
@@ -60,7 +60,7 @@ src/binary/                 # Binary C++ implementation
   binary_file.cpp             # BinaryFile class (Pimpl impl) + write registry
   binary_utils.h              # Shared file-extension constants, day_of_year, position_in_parent
   csv_converter.cpp           # CSVConverter implementation
-  iteration.cpp               # first_dimensions/next_dimensions impls + dimension_sizes_at_values
+  iteration.cpp               # first_dimensions/next_dimensions impls + dimension_sizes_at_values/dimension_start_at_values
   binary_metadata.cpp         # BinaryMetadata factories, serialization, validation
   time_properties.cpp         # TimeFrequency string conversion, add_offset_from_int
 src/expression/             # Expression C++ implementation
@@ -789,8 +789,9 @@ Monthly under Yearly; Daily under Yearly, Monthly or Weekly; Hourly under Yearly
 Free functions in `quiver::` for traversing the dimension space of a `BinaryMetadata` (declared in `quiver/binary/iteration.h`):
 
 - `first_dimensions(meta)` — initial position; returns `initial_value` for time dims, `1` for non-time dims
-- `next_dimensions(meta, current)` — next position via right-to-left cascade; returns `nullopt` at end. Uses `dimension_sizes_at_values` to handle variable-length time dims (Feb=28/29, Jan=31, etc.)
+- `next_dimensions(meta, current)` — next position via right-to-left cascade; returns `nullopt` at end. Uses `dimension_sizes_at_values` to handle variable-length time dims (Feb=28/29, Jan=31, etc.), then lifts each reset dimension to `dimension_start_at_values` in ascending index order (an ancestor restored earlier in the same pass is what its descendants compare against).
 - `dimension_sizes_at_values(meta, values)` — per-dim actual sizes at a coordinate vector. Used by `next_dimensions()` and `ExpressionAggregate` to size variable-length time-dim iteration windows.
+- `dimension_start_at_values(meta, values, index)` — where dimension `index` starts at that coordinate: its `initial_value` if it is a time dim and **every** time ancestor on the `parent_dimension_index` chain is at its own `initial_value` (the period the file starts in), else `1`. It is the only place the mid-period start rule is written: `next_dimensions()` and `ExpressionAggregate::compute_row` both call it, so an aggregate reduces over `[dimension_start_at_values, dimension_sizes_at_values]`, exactly the cells the traversal visits — except when the reduced dimension is the outermost time dimension, whose window `[1, size]` also reads the first period's cells before `initial_datetime` (never written, so NaN, and skipped). Checking only the immediate parent (the old rule, which both places had) restarted every later March of a `yearly × monthly × daily` file starting 2025-03-15 at day 15.
 
 Used by `Expression::save()` and `CSVConverter::{bin_to_csv, csv_to_bin}` — single source of truth for `.qvr` traversal.
 
