@@ -36,6 +36,19 @@ callers to change something are prefixed **BREAKING** and say what to do.
   that called `datetime_to_int` has no replacement: the coordinate is the position, and
   `BinaryFile::read`/`write` validate it.
 
+- **BREAKING — `bin_to_csv` writes values at full precision, and `csv_to_bin` rejects a data cell
+  that is not a whole number.** `bin_to_csv` wrote each value with 6 significant digits, so
+  `1.23456789` became `1.23457` and a bin → csv → bin round trip silently changed the data. It now
+  writes the shortest text that reads back to the same double, as `export_csv()` does, so round
+  values may also change notation (`200000` → `2e+05`). `csv_to_bin` used `std::stod`, which reads
+  the longest valid prefix, so a cell `9.99abc` was stored as `9.99` and a trailing space was
+  ignored. The whole cell must now parse (leading whitespace is still skipped), and a bad cell
+  reports `Cannot csv_to_bin: invalid float value '<v>' for label '<label>'` instead of the bare
+  `stod` / `invalid stod argument` text. `null` still reads as a missing value.
+
+  *Adapt:* regenerate golden files and byte-for-byte comparisons over `bin_to_csv` output; fix CSV
+  files that relied on a truncated cell; update any matcher on the old `stod` messages.
+
 ### Removed
 
 - **BREAKING (C++ only) — `TimeProperties::set_initial_value()`.** `BinaryMetadata::derive_initial_values()`
@@ -118,6 +131,11 @@ callers to change something are prefixed **BREAKING** and say what to do.
   time-dimension errors are now Pattern 1 and name the factory that was called (`Cannot
   from_element: time dimension 'x' is not in dimensions`). Before, they read `Error building
   metadata from toml: ...`, even from `from_element`.
+- **`csv_to_bin` reads numbers the same way in every host locale and on every platform.** Under a
+  decimal-comma C locale (e.g. Python's `locale.setlocale(locale.LC_ALL, "")` on a pt-BR machine,
+  then `db:csv_to_bin` through a `LuaRunner`) a data cell `1.5` was read as `1`, and on Linux and
+  macOS a subnormal value such as `1e-310`, which `bin_to_csv` writes, was rejected. It now uses
+  the same number parser as `import_csv()`.
 
 ## [0.12.3] — unreleased
 

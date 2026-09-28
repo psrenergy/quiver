@@ -92,9 +92,11 @@ Settled questions — don't relitigate without the user; each was decided delibe
   string for TEXT / INTEGER-FK / DATE_TIME. `TypeValidator` (scalar create/update) and
   `value_matches_type` (time-series writes) share this rule; bindings never coerce
   schema-dependently. `import_csv` writes through a raw `INSERT`, so it applies the rule to CSV
-  text itself: `parse_integer` / `parse_float` (`src/database_csv_import.cpp`) accept a cell only
-  if it parses whole, so `1.5` is not an INTEGER and `9.99abc` / `1,5` are not REALs — in the "C"
-  locale's number format whatever locale the host process set, since export always writes `.`.
+  text itself: `parse_integer` (`src/database_csv_import.cpp`) and `utils::parse_float`
+  (`src/utils/number.h`) accept a cell only if it parses whole, so `1.5` is not an INTEGER and
+  `9.99abc` / `1,5` are not REALs — in the "C" locale's number format whatever locale the host
+  process set, since export always writes `.`. `csv_to_bin` reads its data cells through the same
+  `utils::parse_float`.
 - **A DATE_TIME string is validated on write, and stored verbatim.** The accepted grammar is
   `YYYY-MM-DD`, optionally followed by `THH:MM:SS` or ` HH:MM:SS`, every field fixed-width and
   zero-padded, year `0001`-`9999`, the calendar day must exist, no leap second; anything else
@@ -310,8 +312,10 @@ Settled questions — don't relitigate without the user; each was decided delibe
   (`src/csv/csv_write.cpp`) emits for both `export_csv` and `db:write_csv`, so those four share one
   quoting rule (quote a cell iff it holds the separator, `"`, CR or LF). The binary subsystem's
   `CSVConverter` (`bin_to_csv`/`csv_to_bin`) is not on this path: it splits and joins on `,` and
-  never quotes, so a label holding a comma does not round-trip. rapidcsv, which import and
-  export used before, was dropped. Its whole-document reader cannot back `db:read_csv_stream`'s
+  never quotes, so a label holding a comma does not round-trip. Its numbers do share the stack:
+  data cells are written by `utils::append_number` and read by `utils::parse_float`, the same pair
+  `export_csv`/`import_csv` use, so a value round-trips exactly in every host locale. rapidcsv,
+  which import and export used before, was dropped. Its whole-document reader cannot back `db:read_csv_stream`'s
   bounded memory, and its auto-quote quoted on a space but not on `"`, so `"x"` exported raw and read
   back as `x`. Import's other old bugs came from Quiver's own pre-pass, deleted along with it: every `;` rewritten to `,`, a
   `sep=` line missed after a BOM, and a per-line trailing-comma strip that cut into quoted multi-line
@@ -415,8 +419,9 @@ JS has no generator — update the hand-written symbol table in `bindings/js/src
   a substitute — under the Xcode generator the hook uses, it drops the symlinks but keeps the
   versioned file name. No CI job exercises the ON configuration.
 - **macOS builds are floored at deployment target 13.3** (`cmake/Platform.cmake`): libc++ marks
-  the floating-point `std::to_chars` used by `database_csv_export.cpp` and `lua_runner.cpp`
-  unavailable below it, so that is the **core's** floor, not one binding's. A higher explicit
+  the floating-point `std::to_chars` used by `database_csv_export.cpp`, `lua_runner.cpp` and
+  `binary/csv_converter.cpp` (all through `utils::append_number`) unavailable below it, so that is
+  the **core's** floor, not one binding's. A higher explicit
   `CMAKE_OSX_DEPLOYMENT_TARGET` is respected; a lower one is raised. Do not remove it: with no
   floor, clang stamps the builder's own OS version into every dylib, which is how the published
   Julia/JS/S3 natives ended up requiring whatever macOS the CI runner image was. The Dart hook

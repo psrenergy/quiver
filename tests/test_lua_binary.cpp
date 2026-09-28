@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <fstream>
 #include <gtest/gtest.h>
 #include <quiver/database.h>
 #include <quiver/lua_runner.h>
@@ -186,18 +187,29 @@ TEST_F(LuaBinaryTest, CsvRoundTrip) {
         local md = quiver.metadata{ initial_datetime='2025-01-01T00:00:00', unit='MW',
             labels={'v1','v2'}, dimensions={'row','col'}, dimension_sizes={3,2} }
         local f = db:open_file('bin_a', 'w', md)
-        for row=1,3 do for col=1,2 do f:write({row*10+col, row+col}, {row=row, col=col}) end end
+        for row=1,3 do for col=1,2 do f:write({row*10+col + 0.123456789, row+col}, {row=row, col=col}) end end
         f:close()
         db:bin_to_csv('bin_a')
         db:csv_to_bin('bin_a')
         local r = db:open_file('bin_a', 'r')
         for row=1,3 do for col=1,2 do
           local cell = r:read({row=row, col=col})
-          assert(cell[1] == row*10+col and cell[2] == row+col, 'csv roundtrip at '..row..','..col)
+          assert(cell[1] == row*10+col + 0.123456789 and cell[2] == row+col, 'csv roundtrip at '..row..','..col)
         end end
         r:close()
     )");
     EXPECT_TRUE(fs::exists(sandbox / "bin_a.csv"));
+}
+
+TEST_F(LuaBinaryTest, CsvToBinRejectsTrailingGarbage) {
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+    lua.run(md1() + "local f = db:open_file('bin_a', 'w', md)\nf:close()\n");  // writes bin_a.toml
+    {
+        std::ofstream csv(sandbox / "bin_a.csv");
+        csv << "row,v\n1,9.99abc\n2,1\n3,1\n";
+    }
+    expect_lua_error(lua, "db:csv_to_bin('bin_a')\n", "Cannot csv_to_bin: invalid float value '9.99abc' for label 'v'");
 }
 
 TEST_F(LuaBinaryTest, MetadataFromToml) {
