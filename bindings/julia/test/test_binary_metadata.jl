@@ -506,10 +506,10 @@ end
     end
 
     @testset "Pre-epoch initial datetime (1960) round-trips" begin
-        # Regression guard: pre-1970 datetimes go through the C API's
-        # quiver_binary_metadata_set_initial_datetime, which on Windows used to corrupt them via
-        # _mkgmtime (1960-01-01 -> 1969-12-31T23:59:59). The C++ fix routes through the chrono
-        # calendar; assert the exact string survives the FFI round-trip.
+        # Regression guard: `Metadata(; ...)` builds through quiver_binary_metadata_from_element,
+        # whose initial_datetime parse (shared with from_toml) used to corrupt pre-1970 datetimes
+        # on Windows via _mkgmtime (1960-01-01 -> 1969-12-31T23:59:59). The C++ fix routes through
+        # the chrono calendar; assert the exact string survives the FFI round-trip.
         md = Quiver.Binary.Metadata(;
             initial_datetime = "1960-01-01T00:00:00",
             unit = "MW",

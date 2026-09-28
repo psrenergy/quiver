@@ -45,6 +45,23 @@ callers to change something are prefixed **BREAKING** and say what to do.
   *Adapt:* after changing a `BinaryMetadata`'s `dimensions` or `initial_datetime`, call
   `derive_initial_values()` instead of setting each value by hand.
 
+- **BREAKING — the C API's incremental binary-metadata builders, and the C++
+  `BinaryMetadata::add_dimension` / `add_time_dimension` behind them.** `quiver_binary_metadata_create`,
+  `quiver_binary_metadata_set_initial_datetime`, `quiver_binary_metadata_set_unit`,
+  `quiver_binary_metadata_set_version`, `quiver_binary_metadata_set_labels`,
+  `quiver_binary_metadata_add_dimension` and `quiver_binary_metadata_add_time_dimension` are gone.
+  No binding called them — Julia's `Metadata(; kwargs...)` and Lua's `quiver.metadata{...}` already
+  build through `from_element` — and they were the one construction path that never derived a time
+  dimension's `initial_value` from `initial_datetime`: it stayed 0, so a traversal of builder-made
+  metadata started at coordinate 0. Julia and Lua code is unaffected; only the generated low-level
+  `Quiver.C` wrappers for these seven symbols disappear.
+
+  *Adapt:* build the metadata in one call — in C with `quiver_binary_metadata_from_toml` (a TOML
+  string with `version`, `dimensions`, `dimension_sizes`, `time_dimensions`, `frequencies`,
+  `initial_datetime`, `unit` and `labels`) or `quiver_binary_metadata_from_element` (an element
+  carrying the same keys); in C++ with `BinaryMetadata::from_toml_content` or
+  `BinaryMetadata::from_element`.
+
 ### Fixed
 
 - **Binary files accept every cell of every time layout their metadata accepts.** `read` and `write`

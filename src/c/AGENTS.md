@@ -108,8 +108,9 @@ quiver_database_free_string(char*)
 // Lua script result (JSON returned by quiver_lua_runner_run)
 quiver_lua_runner_free_string(char*)
 
-// Binary metadata lifecycle
-quiver_binary_metadata_create/free
+// Binary metadata lifecycle (no incremental builder: from_toml / from_element build a handle,
+// quiver_binary_file_get_metadata / quiver_expression_get_metadata return a copy; free releases each)
+quiver_binary_metadata_from_toml/from_element/free
 quiver_binary_metadata_free_string(char*)
 quiver_binary_metadata_free_string_array(char**, size_t)
 quiver_binary_metadata_free_dimension(quiver_dimension_t*)

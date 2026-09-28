@@ -508,21 +508,4 @@ void BinaryMetadata::validate_time_dimension_sizes() const {
     }
 }
 
-void BinaryMetadata::add_dimension(const std::string& name, int64_t size) {
-    dimensions.push_back({name, size, std::nullopt});
-}
-
-void BinaryMetadata::add_time_dimension(const std::string& name, int64_t size, const std::string& frequency) {
-    TimeFrequency freq_enum = frequency_from_string(frequency);
-    // Chain to the previous time dimension, matching from_toml_content/from_element
-    int64_t parent_index = -1;
-    for (size_t i = 0; i < dimensions.size(); ++i) {
-        if (dimensions[i].is_time_dimension()) {
-            parent_index = static_cast<int64_t>(i);
-        }
-    }
-    TimeProperties time_props{freq_enum, 0, parent_index};
-    dimensions.push_back({name, size, std::move(time_props)});
-}
-
 }  // namespace quiver

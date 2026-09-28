@@ -43,10 +43,6 @@ struct QUIVER_API BinaryMetadata {
     void validate() const;
     void validate_time_dimension_metadata() const;
     void validate_time_dimension_sizes() const;
-
-    // Setters
-    void add_dimension(const std::string& name, int64_t size);
-    void add_time_dimension(const std::string& name, int64_t size, const std::string& frequency);
 };
 
 }  // namespace quiver

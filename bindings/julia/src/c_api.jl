@@ -622,10 +622,6 @@ mutable struct quiver_binary_metadata end
 
 const quiver_binary_metadata_t = quiver_binary_metadata
 
-function quiver_binary_metadata_create(out)
-    @ccall libquiver_c.quiver_binary_metadata_create(out::Ptr{Ptr{quiver_binary_metadata_t}})::quiver_error_t
-end
-
 function quiver_binary_metadata_free(md)
     @ccall libquiver_c.quiver_binary_metadata_free(md::Ptr{quiver_binary_metadata_t})::quiver_error_t
 end
@@ -640,30 +636,6 @@ end
 
 function quiver_binary_metadata_to_toml(md, out_toml)
     @ccall libquiver_c.quiver_binary_metadata_to_toml(md::Ptr{quiver_binary_metadata_t}, out_toml::Ptr{Ptr{Cchar}})::quiver_error_t
-end
-
-function quiver_binary_metadata_set_initial_datetime(md, iso8601)
-    @ccall libquiver_c.quiver_binary_metadata_set_initial_datetime(md::Ptr{quiver_binary_metadata_t}, iso8601::Ptr{Cchar})::quiver_error_t
-end
-
-function quiver_binary_metadata_set_unit(md, unit)
-    @ccall libquiver_c.quiver_binary_metadata_set_unit(md::Ptr{quiver_binary_metadata_t}, unit::Ptr{Cchar})::quiver_error_t
-end
-
-function quiver_binary_metadata_set_version(md, version)
-    @ccall libquiver_c.quiver_binary_metadata_set_version(md::Ptr{quiver_binary_metadata_t}, version::Ptr{Cchar})::quiver_error_t
-end
-
-function quiver_binary_metadata_set_labels(md, labels, count)
-    @ccall libquiver_c.quiver_binary_metadata_set_labels(md::Ptr{quiver_binary_metadata_t}, labels::Ptr{Ptr{Cchar}}, count::Csize_t)::quiver_error_t
-end
-
-function quiver_binary_metadata_add_dimension(md, name, size)
-    @ccall libquiver_c.quiver_binary_metadata_add_dimension(md::Ptr{quiver_binary_metadata_t}, name::Ptr{Cchar}, size::Int64)::quiver_error_t
-end
-
-function quiver_binary_metadata_add_time_dimension(md, name, size, frequency)
-    @ccall libquiver_c.quiver_binary_metadata_add_time_dimension(md::Ptr{quiver_binary_metadata_t}, name::Ptr{Cchar}, size::Int64, frequency::Ptr{Cchar})::quiver_error_t
 end
 
 function quiver_binary_metadata_get_unit(md, out)
