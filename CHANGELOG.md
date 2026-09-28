@@ -30,6 +30,18 @@ callers to change something are prefixed **BREAKING** and say what to do.
   <old> WHERE id IN (SELECT id FROM <Collection>)` — the rows the old behaviour orphaned would fail
   the new key), drop the old one, rename.
 
+- **BREAKING — `list_vector_groups()`, `list_set_groups()` and `list_time_series_groups()` throw
+  for an unknown collection.** They returned an empty list for a name that is not a table, so a
+  mistyped collection looked the same as a collection with no groups, while
+  `list_scalar_attributes()` on the same name threw. All four now raise
+  `Cannot <operation>: collection not found: <name>`, in the C API, Lua and every binding. The
+  `read_vectors_by_id` / `read_sets_by_id` composites (Julia, Dart, Python, JS, Lua) are built on
+  them and now raise `Cannot list_vector_groups: …` / `Cannot list_set_groups: …` instead of
+  returning an empty map. An existing collection with no groups still returns an empty list.
+
+  *Adapt:* a caller that used an empty result to mean "no such collection" must catch the error
+  instead.
+
 ### Fixed
 
 - **A rejected `create_element()` / `update_element()` no longer leaves part of its write behind

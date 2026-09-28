@@ -174,4 +174,28 @@ describe("listVectorGroups / listSetGroups / listTimeSeriesGroups", () => {
       db.close();
     }
   });
+
+  test("an unknown collection throws in every lister and in the composites", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      expect(() => db.listVectorGroups("Nope")).toThrow(
+        "Cannot list_vector_groups: collection not found: Nope",
+      );
+      expect(() => db.listSetGroups("Nope")).toThrow(
+        "Cannot list_set_groups: collection not found: Nope",
+      );
+      expect(() => db.listTimeSeriesGroups("Nope")).toThrow(
+        "Cannot list_time_series_groups: collection not found: Nope",
+      );
+      // The composites inherit the throw instead of returning an empty object.
+      expect(() => db.readVectorsById("Nope", 1)).toThrow(
+        "Cannot list_vector_groups: collection not found: Nope",
+      );
+      expect(() => db.readSetsById("Nope", 1)).toThrow(
+        "Cannot list_set_groups: collection not found: Nope",
+      );
+    } finally {
+      db.close();
+    }
+  });
 });

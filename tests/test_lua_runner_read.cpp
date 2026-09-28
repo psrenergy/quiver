@@ -548,3 +548,19 @@ TEST_F(LuaRunnerTest, NumberOfElementsUnknownCollection) {
 
     expect_lua_error(lua, R"(db:number_of_elements("Nope"))", "Cannot number_of_elements: collection not found: Nope");
 }
+
+TEST_F(LuaRunnerTest, ListGroupsUnknownCollection) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(lua, R"(db:list_vector_groups("Nope"))", "Cannot list_vector_groups: collection not found: Nope");
+    expect_lua_error(lua, R"(db:list_set_groups("Nope"))", "Cannot list_set_groups: collection not found: Nope");
+    expect_lua_error(
+        lua, R"(db:list_time_series_groups("Nope"))", "Cannot list_time_series_groups: collection not found: Nope");
+
+    // The composites inherit the throw instead of returning an empty table.
+    expect_lua_error(
+        lua, R"(db:read_vectors_by_id("Nope", 1))", "Cannot list_vector_groups: collection not found: Nope");
+    expect_lua_error(lua, R"(db:read_sets_by_id("Nope", 1))", "Cannot list_set_groups: collection not found: Nope");
+}

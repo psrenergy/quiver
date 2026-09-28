@@ -436,3 +436,52 @@ From the repo root (`C:\Development\Quiver\quiver1`), in order:
 - `require_collection` only checks `has_table`, so a group-table name (e.g. `list_vector_groups("Collection_vector_values")`) passes and returns `[]`, just as `list_scalar_attributes` accepts it today. That's a separate question about what counts as a "collection". This plan doesn't change it, and no plan in the list owns it.
 - Making a composite's error name the composite (`read_vectors_by_id`) instead of the core call: it would need a binding-crafted message, which the Error Messages principle rules out. `read_scalars_by_id` already behaves the same way.
 - A `has_collection` probe API: not requested.
+
+## Implementation notes
+
+Implemented on `rs/plan7`. Planning started at HEAD `236f547` (the plan 05 merge). The maintainer then fast-forwarded the branch to `ca439c6` (the plan 06 merge, #313), at 23:50, before the baseline build. So every red and green run below is on plan 06 plus this change. The three core edits, the seven tests and the two AGENTS.md edits are the plan's own, verbatim. A read-only verification pass matched every quoted excerpt, symbol, signature, message and test anchor in all seven layers before any edit. Plan 06 touched none of this plan's anchors except `CHANGELOG.md` (see deviation 1). No C API, FFI, binding-source or Lua code changed, so the generators were not run.
+
+**Red first (unfixed core, tests added):**
+- **C++:**
+  - `Database.TimeSeriesCollectionNotFound` failed with the plan's `Expected list_time_series_groups to reject an unknown collection`.
+  - `Database.ListGroupsCollectionNotFound` failed.
+  - `LuaRunnerTest.ListGroupsUnknownCollection` failed five times, once per `expected script to throw: db:...` call.
+- **C API:** `DatabaseCApiMetadata.ListGroupsCollectionNotFound` failed. Each call returned `0` (`QUIVER_OK`), and `quiver_get_last_error()` was `""`.
+- **Python:** `Failed: DID NOT RAISE QuiverError`.
+- **JS:** `Received function did not throw / Received value: []`.
+- **Dart:** `Which: returned []`. This was after clearing `.dart_tool/hooks_runner` and `.dart_tool/lib`.
+- **Julia:** `No exception thrown` at `list_vector_groups(db, "Nope")`. The runner is fail-fast, so it stops at the first assertion.
+
+**Green, after the fix:**
+
+| Suite | Result | Plan 06 baseline |
+|---|---|---|
+| Plan Verification step 2 filter (C++) | 10/10 | — |
+| Plan Verification step 3 filter (C API) | 15/15 | — |
+| `quiver_tests` | 1318/1318 | 1316 |
+| `quiver_c_tests` | 566/566 | 565 |
+| Julia | 1461/1461 | 1451, plus 10 assertions |
+| Dart | 426/426 | 425 |
+| JS | 212/212 | 211 |
+| Python | 309/309 | 308 |
+
+`scripts/test-all.bat`: all six steps PASS and it reports `All tests PASSED` (C++ 1318, C API 566, Julia 1461, Dart 426, JS 212, Python 309). Since the maintainer's `01e78d7` it has no CLI smoke step (plan 65).
+
+Every existing "real collection with no groups returns empty" test is unchanged and still passes. `scripts/format.bat` leaves no content diff. A read-only adversarial review found nothing. It had three lenses (plan fidelity, test and cross-layer exactness plus every non-table caller, and doc accuracy), each followed by a skeptic.
+
+**Deviations (all small):**
+1. **The CHANGELOG entry is the last bullet of `### Changed` under `## [0.12.3] — unreleased`, not under `[0.12.0]`.** It sits after plan 06's bullet, which had already created that `### Changed` subsection. Tags `v0.12.0`–`v0.12.2` exist, and the manifests are already at 0.12.3 (#310), so there is no manifest bump. This is again a BREAKING entry in a patch release. Whether the next release has to be 0.13.0 is the maintainer's call, as plans 02, 04 and 06 noted.
+2. **Only line numbers and the repo path drifted.**
+   - `TimeSeriesCollectionNotFound` is at L206, not ~L176.
+   - `list_time_series_groups` is at L59.
+   - The repo is `quiver2`, not `quiver1`.
+3. **Test tooling on this checkout.**
+   - `cmd //c` splits a quoted test name that contains spaces, so the filtered runs used regex names. The commands were `--name List.Groups.Unknown.Collection` for Dart and `-t unknown.collection.throws` for JS.
+   - `bindings/js/node_modules` was absent, so the first `format.bat` failed at `bun: command not found: biome`. After `bun install` (biome 2.5.14, which satisfies `^2.4.6`; `node_modules` and `bun.lock` are gitignored), biome again rewrote 41 untouched JS files from CRLF to LF. They were checked out again. Biome did not rewrap the new JS test either: `git diff --ignore-cr-at-eol` of the whole tree is identical before and after `format.bat`.
+   - The first `uv run` in `bindings/python` failed with `Failed to update Windows PE resources` for its trampoline, a transient Windows error. The retry built the venv and passed.
+
+**For later plans:**
+- **57:** keep `impl_->require_collection(collection, "<own name>")` as the first line of all three listers when you fold them into `require_group_table`. The exact-message tests in all seven layers pin the `Cannot list_{vector,set,time_series}_groups: collection not found: <c>` text.
+- **52:** the unknown-collection cases now exist. They are `Database.ListGroupsCollectionNotFound` in `tests/test_database_metadata.cpp`, the flipped `Database.TimeSeriesCollectionNotFound`, and `LuaRunnerTest.ListGroupsUnknownCollection` in `tests/test_lua_runner_read.cpp`. Add only the positive-path tests.
+- **49 / 50:** `LuaRunnerTest.ListGroupsUnknownCollection` covers `db:read_vectors_by_id` / `db:read_sets_by_id`. It stays green as long as the rewritten wrappers still call `db.list_*_groups`.
+- **Still open, and owned by no plan:** `require_collection` only checks `has_table`, so a group-table name passes every lister (and `list_scalar_attributes`) and returns `[]`.

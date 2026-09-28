@@ -438,7 +438,10 @@ impl_->logger->debug("Opening database: {}", path);
 - **Table classification has one source** (`schema.cpp`): `Schema::group_names(collection,
   GroupTableType)` and `is_group_table(table, type)` are the only way to enumerate/classify
   `_vector_` / `_set_` / `_time_series_` tables (`group_names` excludes `_time_series_files`).
-  All list/metadata/describe call sites use them — never hand-roll prefix scans.
+  All list/metadata/describe call sites use them — never hand-roll prefix scans. `group_names` returns an empty
+  list for a name that is not a table, so each `list_{vector,set,time_series}_groups` calls
+  `Impl::require_collection` first (as `list_scalar_attributes` does); without it a mistyped collection is
+  indistinguishable from one that has no groups.
 - **Declaration order everywhere**: metadata and list functions iterate `column_order`
   (declaration order), matching the `describe(ostream&)` dump and CSV export. Nothing reports alphabetical order.
 - **One definition of a time series' dimensions** (`database_internal.h`): `find_dimension_columns`
