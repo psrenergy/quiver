@@ -36,6 +36,15 @@ callers to change something are prefixed **BREAKING** and say what to do.
   that called `datetime_to_int` has no replacement: the coordinate is the position, and
   `BinaryFile::read`/`write` validate it.
 
+### Removed
+
+- **BREAKING (C++ only) — `TimeProperties::set_initial_value()`.** `BinaryMetadata::derive_initial_values()`
+  is now the one place a time dimension's `initial_value` is computed, and nothing else called the
+  setter. No C API function or binding exposed it.
+
+  *Adapt:* after changing a `BinaryMetadata`'s `dimensions` or `initial_datetime`, call
+  `derive_initial_values()` instead of setting each value by hand.
+
 ### Fixed
 
 - **Binary files accept every cell of every time layout their metadata accepts.** `read` and `write`
@@ -54,6 +63,16 @@ callers to change something are prefixed **BREAKING** and say what to do.
   `Invalid parent frequency daily for DAILY dimension.`. They now report `Time dimension frequencies
   must be ordered from lowest to highest frequency.` and `Time dimension frequencies must be unique.
   Duplicate: daily`.
+- **Expressions: aggregating away the outermost time dimension no longer shifts the result.** For
+  `year × month` data starting 2025-03-01, `aggregate("year", ...)` kept the month's start at 3 in
+  memory while the saved file re-read it as 1. The file came back shifted by two months, the
+  January and February sums were never computed, and the in-memory result could not be combined
+  with its own saved output (`incompatible TimeProperties`). The output now starts where the first
+  reduced period starts: its `initial_datetime` becomes 2025-01-01 and output month *m* is calendar
+  month *m*, in memory and on disk. The same holds for every frequency: a `day × hour` file from
+  06:00 aggregated over `day` starts at 00:00. Reducing `year` over `year × month × day` data whose
+  first year is a leap year still fails at 29 February, as it already did for a 1 January start.
+  Affects C++, the C API, Julia and Lua.
 
 ## [0.12.3] — unreleased
 

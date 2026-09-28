@@ -178,6 +178,36 @@ TEST_F(LuaExpressionTest, AggregateUnknownOpThrows) {
                      "Cannot aggregate: unknown operation 'bogus'");
 }
 
+TEST_F(LuaExpressionTest, AggregateOutermostTimeDimFromMidYearStart) {
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+    // year x month from 2025-03-01 holds 2025-03..2026-12. Reducing 'year' makes month outermost;
+    // output month m must be calendar month m, in memory and after a reopen.
+    lua.run(R"(
+        local md = quiver.metadata{ initial_datetime='2025-03-01T00:00:00', unit='MW', labels={'v'},
+            dimensions={'year','month'}, dimension_sizes={2,12},
+            time_dimensions={'year','month'}, frequencies={'yearly','monthly'} }
+        local f = db:open_file('expr_a', 'w', md)
+        for year=1,2 do for month=1,12 do
+            if year == 2 or month >= 3 then f:write({100 * year + month}, {year=year, month=month}) end
+        end end
+        f:close()
+        local fa = db:open_file('expr_a', 'r')
+        local agg = quiver.expression(fa):aggregate('year', 'sum')
+        local start = agg:metadata():get_initial_datetime()
+        assert(start == '2025-01-01T00:00:00', 'output starts at the first reduced period, got ' .. start)
+        assert(agg:metadata():get_dimensions()[1].initial_value == 1, 'month starts at 1')
+        agg:save('expr_out')
+        fa:close()
+        local r = db:open_file('expr_out', 'r')
+        assert(r:get_metadata():get_initial_datetime() == '2025-01-01T00:00:00', 'saved start')
+        assert(r:read({month=1}, true)[1] == 201, 'Jan: 2026 only')
+        assert(r:read({month=3}, true)[1] == 306, 'Mar: 103 + 203')
+        assert(r:read({month=12}, true)[1] == 324, 'Dec: 112 + 212')
+        r:close()
+    )");
+}
+
 TEST_F(LuaExpressionTest, AggregateAgentsMean) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::LuaRunner lua(db);

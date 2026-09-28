@@ -17,20 +17,6 @@ namespace {
 
 constexpr std::string_view QUIVER_FILE_VERSION = "1";
 
-// Every time dimension starts at the cell holding initial_datetime: the outermost at 1, each inner one at the
-// position of initial_datetime inside its parent's period.
-void set_time_dimension_initial_values(quiver::BinaryMetadata& metadata) {
-    for (size_t i = 0; i < metadata.dimensions.size(); ++i) {
-        auto& time_properties = metadata.dimensions[i].time;
-        if (!time_properties) {
-            continue;
-        }
-        time_properties->set_initial_value(time_properties->parent_dimension_index == -1
-                                               ? 1
-                                               : quiver::position_in_parent(metadata, i, metadata.initial_datetime));
-    }
-}
-
 }  // namespace
 
 namespace quiver {
@@ -46,6 +32,19 @@ int64_t BinaryMetadata::number_of_time_dimensions() const {
         }
     }
     return count;
+}
+
+// Every time dimension starts at the cell holding initial_datetime: the outermost at 1, each inner one at the
+// position of initial_datetime inside its parent's period.
+void BinaryMetadata::derive_initial_values() {
+    for (size_t i = 0; i < dimensions.size(); ++i) {
+        auto& time_properties = dimensions[i].time;
+        if (!time_properties) {
+            continue;
+        }
+        time_properties->initial_value =
+            time_properties->parent_dimension_index == -1 ? 1 : position_in_parent(*this, i, initial_datetime);
+    }
 }
 
 BinaryMetadata BinaryMetadata::from_element(const Element& element) {
@@ -254,7 +253,7 @@ BinaryMetadata BinaryMetadata::from_toml_content(const std::string& content) {
             std::find(time_dimensions.begin(), time_dimensions.end(), dimensions[i]) != time_dimensions.end();
         if (is_time) {
             TimeFrequency freq = frequency_from_string(frequencies[time_dim_index]);
-            TimeProperties time_props{freq, 0, previous_time_dim_index};
+            TimeProperties time_props{freq, 0, previous_time_dim_index};  // initial_value: derive_initial_values()
             metadata.dimensions.push_back({dimensions[i], dimension_sizes[i], std::move(time_props)});
             time_dim_index++;
             previous_time_dim_index = i;
@@ -266,7 +265,7 @@ BinaryMetadata BinaryMetadata::from_toml_content(const std::string& content) {
     // Validate first: an initial value is a position inside the parent's period, which exists only for the
     // parent/child layouts validate() accepts
     metadata.validate();
-    set_time_dimension_initial_values(metadata);
+    metadata.derive_initial_values();
     return metadata;
 }
 

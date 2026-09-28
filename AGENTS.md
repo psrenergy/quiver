@@ -165,6 +165,10 @@ Settled questions — don't relitigate without the user; each was decided delibe
   mid-transaction) is gone: import now keeps foreign keys on throughout. Whether to let it nest
   instead is an open decision for the maintainer.
 - **`BinaryMetadata::number_of_time_dimensions()` is derived** from `dimensions`, never stored.
+  `TimeProperties::initial_value` is the deliberate opposite: it is stored, because the per-cell
+  traversal (`next_dimensions`, `ExpressionAggregate::compute_row`) reads it, and it is computed only by
+  `BinaryMetadata::derive_initial_values()`, which `from_toml_content` and the `ExpressionAggregate`
+  constructor call. Do not turn it into an on-read derivation.
 - **A binary time coordinate names a calendar cell, and a week starts on the day of `initial_datetime`.** An inner
   time value is its position inside the parent's period (day of month/year/week, hour of day/month/year/week);
   `add_offset_from_int` steps from period starts: yearly and monthly steps start from January 1 / the 1st, never

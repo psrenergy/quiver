@@ -633,15 +633,15 @@ From the repo root, in order:
 
 ## Acceptance criteria
 
-- [ ] `TimeProperties::initial_value` is still a plain stored field. `TimeProperties::set_initial_value` is gone from the header, the `.cpp` and the tests.
-- [ ] `BinaryMetadata::derive_initial_values()` is declared in `binary_metadata.h` and defined in `binary_metadata.cpp`. It is the only code that computes or assigns an initial value; `add_time_dimension`'s literal `0` stays for plan 12 to delete.
-- [ ] `from_toml_content` ends with `metadata.validate(); metadata.derive_initial_values(); return metadata;`. The `time_dim_index = 0;` reset and the assignment loop are gone.
-- [ ] The `ExpressionAggregate` constructor rebases `output_meta_.initial_datetime` when the reduced dimension is the outermost time dimension. It then calls `validate()` and `derive_initial_values()`, in that order. `compute_row` is unchanged.
-- [ ] The two new `ExpressionFixture` tests, and the new C API, Lua and Julia tests, pass. Each failed before the fix. `BinaryMetadataDeriveInitialValues.RecomputesFromCurrentInitialDatetime` passes.
-- [ ] Every existing binary, expression, iteration and CSV-converter test passes unchanged.
-- [ ] The root `AGENTS.md` decision bullet, the two `src/AGENTS.md` Binary Subsystem bullets and the `ExpressionAggregate` bullet are updated. CRLF is preserved.
-- [ ] `CHANGELOG.md` 0.12.0 has the `### Removed` **BREAKING** entry with an *Adapt:* line and the `### Fixed` entry.
-- [ ] No C API, FFI declaration, binding source or `.bat` file is touched.
+- [x] `TimeProperties::initial_value` is still a plain stored field. `TimeProperties::set_initial_value` is gone from the header, the `.cpp` and the tests.
+- [x] `BinaryMetadata::derive_initial_values()` is declared in `binary_metadata.h` and defined in `binary_metadata.cpp`. It is the only code that computes or assigns an initial value; `add_time_dimension`'s literal `0` stays for plan 12 to delete.
+- [x] `from_toml_content` ends with `metadata.validate(); metadata.derive_initial_values(); return metadata;`. The `time_dim_index = 0;` reset and the assignment loop are gone.
+- [x] The `ExpressionAggregate` constructor rebases `output_meta_.initial_datetime` when the reduced dimension is the outermost time dimension. It then calls `validate()` and `derive_initial_values()`, in that order. `compute_row` is unchanged.
+- [x] The two new `ExpressionFixture` tests, and the new C API, Lua and Julia tests, pass. Each failed before the fix. `BinaryMetadataDeriveInitialValues.RecomputesFromCurrentInitialDatetime` passes.
+- [x] Every existing binary, expression, iteration and CSV-converter test passes unchanged.
+- [x] The root `AGENTS.md` decision bullet, the two `src/AGENTS.md` Binary Subsystem bullets and the `ExpressionAggregate` bullet are updated. CRLF is preserved.
+- [x] `CHANGELOG.md` 0.12.0 has the `### Removed` **BREAKING** entry with an *Adapt:* line and the `### Fixed` entry.
+- [x] No C API, FFI declaration, binding source or `.bat` file is touched.
 
 ## Pitfalls
 
@@ -673,3 +673,65 @@ From the repo root, in order:
   - **Same with a leap first year:** `year(2) × month × day` from 2024-01-01, `aggregate("year")`, fails at operand `(2, 2, 29)`.
   - **Effect of this plan:** it makes a mid-period start behave exactly like a period-aligned one. For a `year × month × day` file whose first year is a leap year and which starts after February, the old code silently dropped January and February; it now reaches 29 February and throws, as a 1 January start already did. The CHANGELOG entry says so.
   - **Likely fix:** in `compute_row`, skip reduced values for which the child coordinate is past that period's `dimension_sizes_at_values` size. That is a behaviour decision (skip, or NaN), not part of this plan.
+
+## Implementation notes
+
+Implemented on `rs/plan9`. `git merge origin/master` was already up to date at `5b039df`, the plan-08 merge (`7875dc3`) on top of the 0.12.4 bump. Plan 08 had therefore landed, as this plan's **Depends on** requires.
+
+**Verification before editing.** A read-only workflow ran in plan mode: one checker per test layer (C++, C API, Lua, Julia) and one design check against plan 08.
+- Every helper, signature, fixture member and insertion anchor in Tests matched the code. The test code needed no change.
+- The design check confirmed plan 08's Overlaps note: under 08's contract, Change 5 as written no longer rebases (see deviation 1).
+
+**Red/green.** The five aggregate tests were added first and run against the plan-08 tree.
+- `quiver_tests`: 4 failed (the plan's 3, plus the extra test of deviation 3). Each failed as predicted:
+  - `MidYearStart`: start `2025-03-01`; `initial_value` 3; `vo[0]`/`vo[1]` NaN; the reopened start `2025-03-01`; `out + Expression(reopened)` threw `Cannot apply: time dimension 'month' has incompatible TimeProperties`.
+  - `MidDayStart`: start `06:00`; `initial_value` 7; `vo[0..5]` NaN.
+  - The three-level test: start `2025-03-15`; initial values 3 and 15; `save()` threw `Invalid values for time dimensions: dimension 'month' has value 6 but the resulting datetime implies 7`, the throw plan 08's notes predicted.
+  - Lua: `output starts at the first reduced period, got 2025-03-01T00:00:00`.
+- `quiver_c_tests`: 1 failed. The start was `"2025-03-01T00:00:00"`, `initial_value` was 3, and months 1/2 were NaN.
+- Julia (`test.bat test_expression.jl`): `Evaluated: "2025-03-01T00:00:00" == "2025-01-01T00:00:00"`. The runner is fail-fast.
+
+**After the fix:**
+- Verification step 3 filter: 358/358. That is plan 08's 354, plus the 4 new C++/Lua tests and `BinaryMetadataDeriveInitialValues.RecomputesFromCurrentInitialDatetime`, minus `TimePropertiesSetters.SetInitialValue`.
+- Step 4 filter: 141/141.
+- Steps 5-7: all three `git grep`s print nothing. `position_in_parent` is called only from `derive_initial_values` and `validate_dimension_values`.
+- `bindings/julia/test/test.bat test_expression.jl`: passed.
+- `scripts/test-all.bat`: `All tests PASSED`, with C++ 1332, C API 568, Julia 1472, Dart 426, JS 212, Python 309.
+- Build: no new warnings. `time_properties.cpp` keeps its two C4715s, and the C4458 that the setter's parameter caused is gone.
+
+**Deviations:**
+1. **Change 5 is one call on the reduced dimension, not a loop over the remaining ones.** Plan 08 gave `add_offset_from_int(base, v)` a period-start contract: floor `base` to the period holding it, then add `v - 1` periods, ignoring `initial_value`. Under that contract, the plan's loop floors to the *promoted child's* period, so `year × month` from 2025-03-01 stays at 2025-03-01. The rebase is now `output_meta_.initial_datetime = reduced_dim.time->add_offset_from_int(operand_meta.initial_datetime, 1);`, the start of the removed dimension's period.
+   - The "rebase before derive" pitfall still holds, for a different reason: `derive_initial_values()` reads the rebased `initial_datetime`. Deriving first would leave `day` at 15 for `year × month × day` from 2025-03-15. `add_offset_from_int` no longer reads initial values.
+   - The code comment and the `src/AGENTS.md` bullet say this. They drop "the operand's datetime at coordinate 1 of every remaining time dimension" and "because `add_offset_from_int` reads the operand's initial values".
+2. **The rebase has one more guard: `&& output_meta_.number_of_time_dimensions() > 0`.** With the one-call form, reducing the *only* time dimension would still floor `initial_datetime` (03-15T06:00 → 03-01). This plan intended a no-op there ("the loop has nothing to do"), and the guard keeps it.
+3. **One extra C++ test: `ExpressionFixture.AggregateOutermostTimeDimOverMonthAndDayFromMidYearStart`.** It is `year(2) × month(12) × day(31)` from 2025-03-15, aggregated over `year`. Plan 08's notes suggested it for 09, since it is the case 08 turned from a silent shift into a throw.
+   - It is the only test that pins the derive-after-rebase order for an inner dimension (`day` 15 → 1).
+   - It asserts only the start, both initial values, the 365-cell walk, and Jan 1 / Mar 15 / Dec 31. Those cells are ones the operand's `write_qvr` walk certainly writes: the walk skips 2026-03-01..14 through the restore rule plan 10 fixes. Once plan 10 lands, the skipped cells are written and none of these assertions change.
+   - This departs from this plan's "two time levels only" rule, which was about a full-value check through that walk.
+4. **The `derive_initial_values()` body is plan 08's `set_time_dimension_initial_values`,** moved, as Change 4a anticipated. `metadata.` became member access, `set_initial_value(x)` became `initial_value = x`, and `quiver::position_in_parent(metadata, i, metadata.initial_datetime)` became `position_in_parent(*this, i, initial_datetime)`. It keeps 08's comment. `position_in_parent` reads no `initial_value`, so assigning during the loop is safe. Plan 08 had already removed the `time_dim_index = 0;` reset and moved `validate()` up.
+5. **Doc wording adjusted for plan 08.** After 08, only `next_dimensions` and `ExpressionAggregate::compute_row` read `initial_value` per cell; `first_dimensions` reads it once per traversal. `validate_dimension_values` and `dimension_sizes_at_values` no longer read it.
+   - The `time_properties.h` comment, the root `AGENTS.md` bullet and the `src/AGENTS.md` `TimeProperties` bullet name those readers, not the plan's "traversal and validation" / "`validate_dimension_values`" / "(Performance Bottlenecks below)".
+   - 08's "Time Coordinates" paragraph now says that `derive_initial_values()` sets the initial values, called by `from_toml_content` and the `ExpressionAggregate` constructor.
+6. **CHANGELOG changes.**
+   - The entries are in `## [0.12.4] — unreleased`, where plan 08's are: `v0.12.0`-`v0.12.3` are tagged, and there is no `[0.10.9]` anchor any more. `### Removed` sits between 0.12.4's `### Changed` and `### Fixed`. The `### Fixed` bullet is the section's last.
+   - The Fixed bullet's leap-year caveat now reads "over `year × month × day` data" instead of "over a daily grid". The post-implementation review found the wider wording false for `year × day`, where the failure is day 366 of any non-leap year, unrelated to 29 February.
+   - No manifest bump.
+7. **`scripts/format.bat`:** biome rewrote 42 untouched CRLF JS files to LF, as in plan 08. They were checked out again. clang-format re-wrapped only the new C API `make_metadata_v` call.
+
+**Post-implementation review.** A workflow reviewed the diff through three lenses: plan conformance, C++ correctness, and prose. A refuter attacked every finding.
+- Conformance and correctness found nothing that survived.
+- Two prose findings survived and were fixed:
+  - the leap-year caveat (deviation 6);
+  - the `TimeProperties` bullet calling `first_dimensions` per-cell and citing Performance Bottlenecks (deviation 5).
+- Refuted: "no binding can mutate a `BinaryMetadata`" (`src/AGENTS.md`) is still false at this HEAD, because the C API builders exist. It is this plan's prescribed text, and plan 12 makes it true (see below).
+
+**For later plans:**
+- **10:** the constructor rebase is in place and `compute_row` is untouched. The outermost time dimension of an aggregate's output now always has `initial_value` 1. The new three-level test tolerates the restore rule either way.
+- **11:** `from_toml_content` now ends `metadata.validate(); metadata.derive_initial_values(); return metadata;`. The `time_dim_index` counter survives only inside the dimension loop. `set_time_dimension_initial_values` no longer exists; call `metadata.derive_initial_values()` from `build_metadata`.
+- **12:** `add_time_dimension` still builds `TimeProperties{freq_enum, 0, parent_index}`, and `quiver_binary_metadata_set_initial_datetime` does not re-derive. Builder-made metadata therefore still starts at coordinate 0 until 12 deletes both. That deletion also makes the new `src/AGENTS.md` "Initial values" line ("no binding can mutate a `BinaryMetadata`") true. `derive_initial_values()` must stay.
+- **16:** the new tests use `ExpressionAggregate::Operation::Sum`, `QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM` and `Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM`. That is 5 C++/C/Julia sites; Lua uses the string `'sum'`.
+
+**Flags for the maintainer (not owned by any plan):**
+- Still open, from Out of scope: a variable-size child under the reduced dimension makes `save()` throw. For example, `month(4) × day(31)` aggregated over `month` fails at operand `(2, 29)`, and `year × month × day` with a leap first year fails at `(2, 2, 29)`.
+- **New, silent:** reducing `year` over `year × month × day` whose *later* year is a leap year (e.g. 2027-2028) leaves 2028-02-29 out of the sum without an error. The output grid takes its month lengths from the first year, so output February has 28 days. This predates the plan and holds for a 1 January start too.
+- `year × day` (daily under yearly, size 366) over a span holding a non-leap year throws at day 366. This also predates the plan.

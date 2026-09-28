@@ -1203,6 +1203,111 @@ TEST_F(ExpressionFixture, AggregateReduceOutermostTimeDimWithChildren) {
     EXPECT_EQ(m.number_of_time_dimensions(), 1);
 }
 
+TEST_F(ExpressionFixture, AggregateOutermostTimeDimFromMidYearStart) {
+    // year(2) x month(12) from 2025-03-01 holds 2025-03..2026-12. Reducing "year" makes month outermost;
+    // output month m must be calendar month m in memory, on disk, and after a reopen.
+    auto md = BinaryMetadata::from_element(Element()
+                                               .set("version", "1")
+                                               .set("initial_datetime", "2025-03-01T00:00:00")
+                                               .set("unit", "MW")
+                                               .set("dimensions", {"year", "month"})
+                                               .set("dimension_sizes", {2, 12})
+                                               .set("time_dimensions", {"year", "month"})
+                                               .set("frequencies", {"yearly", "monthly"})
+                                               .set("labels", {"v1"}));
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t) {
+        return static_cast<double>(100 * dims[0] + dims[1]);  // 2025-01/02 are never visited: NaN
+    });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto out = Expression(a).aggregate("year", ExpressionAggregate::Operation::Sum);
+
+    const auto jan_1 = std::chrono::system_clock::time_point{
+        std::chrono::sys_days{std::chrono::year{2025} / std::chrono::January / 1}};
+    EXPECT_EQ(out.metadata().initial_datetime, jan_1);
+    EXPECT_EQ(out.metadata().dimensions[0].time->initial_value, 1);
+
+    out.save(path_out);
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(vo.size(), 12u);
+    EXPECT_DOUBLE_EQ(vo[0], 201.0);  // Jan: 2026 only
+    EXPECT_DOUBLE_EQ(vo[1], 202.0);  // Feb: 2026 only
+    for (int64_t m = 3; m <= 12; ++m) {
+        EXPECT_DOUBLE_EQ(vo[m - 1], static_cast<double>(300 + 2 * m)) << "month " << m;  // (100+m) + (200+m)
+    }
+
+    auto reopened = BinaryFile::open_file(path_out, 'r');
+    EXPECT_EQ(reopened.get_metadata().initial_datetime, jan_1);
+    EXPECT_EQ(reopened.get_metadata().dimensions[0].time->initial_value, 1);
+    EXPECT_NO_THROW(out + Expression(reopened));  // in-memory and saved metadata agree
+}
+
+TEST_F(ExpressionFixture, AggregateOutermostTimeDimFromMidDayStart) {
+    // day(2) x hour(24) from 2025-01-01T06:00 holds Jan 1 06:00 .. Jan 2 23:00. Reducing "day" makes hour
+    // outermost; output hour h must be hour-of-day h, so the output starts at midnight.
+    auto md = BinaryMetadata::from_element(Element()
+                                               .set("version", "1")
+                                               .set("initial_datetime", "2025-01-01T06:00:00")
+                                               .set("unit", "MW")
+                                               .set("dimensions", {"day", "hour"})
+                                               .set("dimension_sizes", {2, 24})
+                                               .set("time_dimensions", {"day", "hour"})
+                                               .set("frequencies", {"daily", "hourly"})
+                                               .set("labels", {"v1"}));
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t) {
+        return static_cast<double>(100 * dims[0] + dims[1]);  // Jan 1 00:00..05:00 are never visited: NaN
+    });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto out = Expression(a).aggregate("day", ExpressionAggregate::Operation::Sum);
+
+    const auto midnight = std::chrono::system_clock::time_point{
+        std::chrono::sys_days{std::chrono::year{2025} / std::chrono::January / 1}};
+    EXPECT_EQ(out.metadata().initial_datetime, midnight);
+    EXPECT_EQ(out.metadata().dimensions[0].time->initial_value, 1);
+
+    out.save(path_out);
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(vo.size(), 24u);
+    for (int64_t h = 1; h <= 6; ++h) {
+        EXPECT_DOUBLE_EQ(vo[h - 1], static_cast<double>(200 + h)) << "hour " << h;  // Jan 2 only
+    }
+    for (int64_t h = 7; h <= 24; ++h) {
+        EXPECT_DOUBLE_EQ(vo[h - 1], static_cast<double>(300 + 2 * h)) << "hour " << h;  // (100+h) + (200+h)
+    }
+}
+
+TEST_F(ExpressionFixture, AggregateOutermostTimeDimOverMonthAndDayFromMidYearStart) {
+    // year(2) x month(12) x day(31) from 2025-03-15. Reducing "year" leaves month x day, which must start on
+    // 2025-01-01 at (1, 1): day keeps no stale initial value of 15, and save walks the whole 2025 calendar.
+    // Only cells the operand walk certainly wrote are asserted: the walk skips 2026-03-01..14 (plan 10).
+    auto md = BinaryMetadata::from_element(Element()
+                                               .set("version", "1")
+                                               .set("initial_datetime", "2025-03-15T00:00:00")
+                                               .set("unit", "MW")
+                                               .set("dimensions", {"year", "month", "day"})
+                                               .set("dimension_sizes", {2, 12, 31})
+                                               .set("time_dimensions", {"year", "month", "day"})
+                                               .set("frequencies", {"yearly", "monthly", "daily"})
+                                               .set("labels", {"v1"}));
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t) {
+        return static_cast<double>(10000 * dims[0] + 100 * dims[1] + dims[2]);
+    });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto out = Expression(a).aggregate("year", ExpressionAggregate::Operation::Sum);
+
+    const auto jan_1 = std::chrono::system_clock::time_point{
+        std::chrono::sys_days{std::chrono::year{2025} / std::chrono::January / 1}};
+    EXPECT_EQ(out.metadata().initial_datetime, jan_1);
+    EXPECT_EQ(out.metadata().dimensions[0].time->initial_value, 1);
+    EXPECT_EQ(out.metadata().dimensions[1].time->initial_value, 1);
+
+    out.save(path_out);
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(vo.size(), 365u);
+    EXPECT_DOUBLE_EQ(vo[0], 20101.0);    // Jan 1: 2026 only
+    EXPECT_DOUBLE_EQ(vo[73], 30630.0);   // Mar 15: 10315 + 20315
+    EXPECT_DOUBLE_EQ(vo[364], 32462.0);  // Dec 31: 11231 + 21231
+}
+
 TEST_F(ExpressionFixture, AggregateDimensionNotFoundThrows) {
     auto md = make_simple_metadata();
     write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t) { return 1.0; });
