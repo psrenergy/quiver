@@ -159,6 +159,26 @@ TEST_F(LuaBinaryTest, TimeDimensionWriteRead) {
     )");
 }
 
+TEST_F(LuaBinaryTest, WeeklyDailyCountsDaysFromInitialDatetimeAcrossYearEnd) {
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+    // 60 weeks from Saturday 2025-03-15: a week is seven days from that day, so week 42 day 6 is 2026-01-01
+    lua.run(R"(
+        local md = quiver.metadata{ initial_datetime='2025-03-15T00:00:00', unit='MW',
+            labels={'v'}, dimensions={'week','day'}, dimension_sizes={60,7},
+            time_dimensions={'week','day'}, frequencies={'weekly','daily'} }
+        assert(md:get_dimensions()[2].initial_value == 1, 'a day under a week starts at 1')
+        local f = db:open_file('bin_w', 'w', md)
+        for week=1,60 do for day=1,7 do f:write({week*10+day}, {week=week, day=day}) end end
+        f:close()
+        local r = db:open_file('bin_w', 'r')
+        for week=1,60 do for day=1,7 do
+          assert(r:read({week=week, day=day})[1] == week*10+day, 'cell '..week..','..day)
+        end end
+        r:close()
+    )");
+}
+
 TEST_F(LuaBinaryTest, CsvRoundTrip) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::LuaRunner lua(db);

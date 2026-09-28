@@ -3,9 +3,14 @@
 #include <filesystem>
 #include <gtest/gtest.h>
 #include <limits>
+#include <optional>
 #include <quiver/binary/binary_file.h>
 #include <quiver/binary/binary_metadata.h>
+#include <quiver/binary/iteration.h>
 #include <quiver/element.h>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 using namespace quiver;
 namespace fs = std::filesystem;
@@ -48,6 +53,52 @@ protected:
                                                 .set("time_dimensions", {"stage", "block"})
                                                 .set("frequencies", {"monthly", "daily"})
                                                 .set("labels", {"plant_1", "plant_2"}));
+    }
+
+    // One-label metadata whose dimensions are all time dimensions, each named after its frequency.
+    static BinaryMetadata make_time_layout(const std::vector<std::string>& frequencies,
+                                           const std::vector<int64_t>& sizes,
+                                           const std::string& initial_datetime) {
+        return BinaryMetadata::from_element(Element()
+                                                .set("version", "1")
+                                                .set("initial_datetime", initial_datetime)
+                                                .set("unit", "MW")
+                                                .set("dimensions", frequencies)
+                                                .set("dimension_sizes", sizes)
+                                                .set("time_dimensions", frequencies)
+                                                .set("frequencies", frequencies)
+                                                .set("labels", {"val"}));
+    }
+
+    // Writes a distinct value to every cell first_dimensions/next_dimensions visits, then reopens the file and
+    // reads each one back. Returns the number of cells.
+    size_t write_and_read_every_cell(const BinaryMetadata& md) {
+        std::vector<std::vector<int64_t>> cells;
+        for (std::optional<std::vector<int64_t>> cell = first_dimensions(md); cell; cell = next_dimensions(md, *cell)) {
+            cells.push_back(*cell);
+        }
+        auto dims_of = [&md](const std::vector<int64_t>& cell) {
+            std::unordered_map<std::string, int64_t> dims;
+            for (size_t i = 0; i < cell.size(); ++i) {
+                dims[md.dimensions[i].name] = cell[i];
+            }
+            return dims;
+        };
+        {
+            auto writer = BinaryFile::open_file(path, 'w', md);
+            for (size_t n = 0; n < cells.size(); ++n) {
+                writer.write({static_cast<double>(n)}, dims_of(cells[n]));
+            }
+        }
+        auto reader = BinaryFile::open_file(path, 'r');
+        size_t mismatches = 0;
+        for (size_t n = 0; n < cells.size(); ++n) {
+            if (reader.read(dims_of(cells[n]))[0] != static_cast<double>(n)) {
+                ++mismatches;
+            }
+        }
+        EXPECT_EQ(mismatches, 0u);
+        return cells.size();
     }
 };
 
@@ -449,8 +500,7 @@ TEST_F(BinaryTempFileFixture, ValidTimeDimensionCoordinates) {
 TEST_F(BinaryTempFileFixture, InvalidTimeDimensionCoordinates) {
     auto md = make_time_metadata();
     auto binary_file = BinaryFile::open_file(path, 'w', md);
-    // stage=2 (Feb), block=30 → Feb doesn't have 30 days: datetime implies day 30 but month says day 2
-    // The datetime accumulation would compute Feb + 29 days offset = March 2nd, datetime_to_int(March) != 2
+    // stage=2 (Feb), block=30: February 1 + 29 days is March 2, whose day of month (2) is not the 30 given
     EXPECT_THROW(binary_file.write({1.0, 2.0}, {{"stage", 2}, {"block", 30}}), std::invalid_argument);
 }
 
@@ -491,6 +541,108 @@ TEST_F(BinaryTempFileFixture, InitialDatetimeYear1960) {
     auto v2 = reader.read({{"stage", 1}, {"block", 31}});
     EXPECT_DOUBLE_EQ(v2[0], 3.0);
     EXPECT_DOUBLE_EQ(v2[1], 4.0);
+}
+
+// ============================================================================
+// BinaryTimeLayouts -- every cell of each of the 8 parent/child pairs validate() accepts, from Saturday
+// 2025-03-15T06:00:00: not midnight, not the start of any day, week, month or year. Two-level only:
+// three-level mid-period walks depend on next_dimensions' restore rule (plan 10).
+// ============================================================================
+
+TEST_F(BinaryTempFileFixture, EveryCellMonthlyUnderYearly) {
+    auto md = make_time_layout({"yearly", "monthly"}, {2, 12}, "2025-03-15T06:00:00");
+    EXPECT_EQ(first_dimensions(md), (std::vector<int64_t>{1, 3}));
+    EXPECT_EQ(write_and_read_every_cell(md), 22u);  // March-December 2025, then all of 2026
+}
+
+TEST_F(BinaryTempFileFixture, EveryCellDailyUnderYearly) {
+    auto md = make_time_layout({"yearly", "daily"}, {2, 366}, "2025-03-15T06:00:00");
+    EXPECT_EQ(first_dimensions(md), (std::vector<int64_t>{1, 74}));
+    EXPECT_EQ(write_and_read_every_cell(md), 657u);  // 292 days left in 2025 + 365
+    auto writer = BinaryFile::open_file(path, 'w', md);
+    EXPECT_THROW(writer.write({1.0}, {{"yearly", 1}, {"daily", 366}}), std::invalid_argument);  // 2025 has 365
+}
+
+TEST_F(BinaryTempFileFixture, EveryCellHourlyUnderYearly) {
+    auto md = make_time_layout({"yearly", "hourly"}, {2, 8784}, "2025-03-15T06:00:00");
+    EXPECT_EQ(first_dimensions(md), (std::vector<int64_t>{1, 1759}));  // 73 * 24 + 6 + 1
+    EXPECT_EQ(write_and_read_every_cell(md), 15762u);                  // 7002 hours left in 2025 + 8760
+    auto writer = BinaryFile::open_file(path, 'w', md);
+    EXPECT_THROW(writer.write({1.0}, {{"yearly", 1}, {"hourly", 8761}}), std::invalid_argument);
+}
+
+TEST_F(BinaryTempFileFixture, EveryCellDailyUnderMonthly) {
+    auto md = make_time_layout({"monthly", "daily"}, {12, 31}, "2025-03-15T06:00:00");
+    EXPECT_EQ(first_dimensions(md), (std::vector<int64_t>{1, 15}));
+    EXPECT_EQ(write_and_read_every_cell(md), 351u);  // 2025-03-15 to 2026-02-28
+    auto writer = BinaryFile::open_file(path, 'w', md);
+    EXPECT_THROW(writer.write({1.0}, {{"monthly", 2}, {"daily", 31}}), std::invalid_argument);  // April 31
+}
+
+TEST_F(BinaryTempFileFixture, EveryCellHourlyUnderMonthly) {
+    auto md = make_time_layout({"monthly", "hourly"}, {12, 744}, "2025-03-15T06:00:00");
+    EXPECT_EQ(first_dimensions(md), (std::vector<int64_t>{1, 343}));  // 14 * 24 + 6 + 1
+    EXPECT_EQ(write_and_read_every_cell(md), 8418u);                  // 402 hours of March + 334 days * 24
+    auto writer = BinaryFile::open_file(path, 'w', md);
+    EXPECT_THROW(writer.write({1.0}, {{"monthly", 2}, {"hourly", 721}}), std::invalid_argument);  // April: 720
+}
+
+TEST_F(BinaryTempFileFixture, EveryCellDailyUnderWeeklyAcrossYearEnd) {
+    // A week is seven days from the day of initial_datetime, so week 42 day 6 is 2026-01-01 and the grid does
+    // not restart on January 1
+    auto md = make_time_layout({"weekly", "daily"}, {60, 7}, "2025-03-15T06:00:00");
+    EXPECT_EQ(first_dimensions(md), (std::vector<int64_t>{1, 1}));
+    EXPECT_EQ(write_and_read_every_cell(md), 420u);
+}
+
+TEST_F(BinaryTempFileFixture, EveryCellHourlyUnderWeeklyAcrossYearEnd) {
+    auto md = make_time_layout({"weekly", "hourly"}, {60, 168}, "2025-03-15T06:00:00");
+    EXPECT_EQ(first_dimensions(md), (std::vector<int64_t>{1, 7}));
+    EXPECT_EQ(write_and_read_every_cell(md), 10074u);  // 162 hours of week 1 + 59 * 168
+}
+
+TEST_F(BinaryTempFileFixture, EveryCellHourlyUnderDaily) {
+    auto md = make_time_layout({"daily", "hourly"}, {3, 24}, "2025-03-15T06:00:00");
+    EXPECT_EQ(first_dimensions(md), (std::vector<int64_t>{1, 7}));
+    EXPECT_EQ(write_and_read_every_cell(md), 66u);  // 18 + 24 + 24
+}
+
+TEST_F(BinaryTempFileFixture, MonthlyUnderYearlyFromTheThirtyFirst) {
+    // January 31 + one month used to be March 3, so month 2 was rejected
+    auto md = make_time_layout({"yearly", "monthly"}, {1, 12}, "2025-01-31T00:00:00");
+    EXPECT_EQ(write_and_read_every_cell(md), 12u);
+}
+
+TEST_F(BinaryTempFileFixture, LeapDayStartUnderYearlyMonthlyDaily) {
+    // From 2024-02-29, (2, 3, 1) is 2025-03-01: the missing 2025-02-29 must not shift it
+    auto md = make_time_layout({"yearly", "monthly", "daily"}, {2, 12, 31}, "2024-02-29T00:00:00");
+    EXPECT_EQ(first_dimensions(md), (std::vector<int64_t>{1, 2, 29}));
+    {
+        auto writer = BinaryFile::open_file(path, 'w', md);
+        writer.write({1.0}, {{"yearly", 1}, {"monthly", 2}, {"daily", 29}});
+        writer.write({2.0}, {{"yearly", 2}, {"monthly", 2}, {"daily", 28}});
+        writer.write({3.0}, {{"yearly", 2}, {"monthly", 3}, {"daily", 1}});
+        EXPECT_THROW(writer.write({4.0}, {{"yearly", 2}, {"monthly", 2}, {"daily", 29}}), std::invalid_argument);
+    }
+    auto reader = BinaryFile::open_file(path, 'r');
+    EXPECT_DOUBLE_EQ(reader.read({{"yearly", 1}, {"monthly", 2}, {"daily", 29}})[0], 1.0);
+    EXPECT_DOUBLE_EQ(reader.read({{"yearly", 2}, {"monthly", 2}, {"daily", 28}})[0], 2.0);
+    EXPECT_DOUBLE_EQ(reader.read({{"yearly", 2}, {"monthly", 3}, {"daily", 1}})[0], 3.0);
+}
+
+TEST_F(BinaryTempFileFixture, NonMidnightStartUnderMonthlyDailyHourly) {
+    // The first cell is 06:00 on January 1; the monthly step used to drop the time of day and reject it
+    auto md = make_time_layout({"monthly", "daily", "hourly"}, {12, 31, 24}, "2025-01-01T06:00:00");
+    EXPECT_EQ(first_dimensions(md), (std::vector<int64_t>{1, 1, 7}));
+    {
+        auto writer = BinaryFile::open_file(path, 'w', md);
+        writer.write({1.0}, {{"monthly", 1}, {"daily", 1}, {"hourly", 7}});
+        writer.write({2.0}, {{"monthly", 2}, {"daily", 28}, {"hourly", 24}});
+        EXPECT_THROW(writer.write({3.0}, {{"monthly", 2}, {"daily", 29}, {"hourly", 1}}), std::invalid_argument);
+    }
+    auto reader = BinaryFile::open_file(path, 'r');
+    EXPECT_DOUBLE_EQ(reader.read({{"monthly", 1}, {"daily", 1}, {"hourly", 7}})[0], 1.0);
+    EXPECT_DOUBLE_EQ(reader.read({{"monthly", 2}, {"daily", 28}, {"hourly", 24}})[0], 2.0);
 }
 
 // ============================================================================
