@@ -5,12 +5,13 @@
 #include "quiver/binary/dimension.h"
 #include "quiver/binary/iteration.h"
 #include "utils/datetime.h"
+#include "utils/number.h"
 
 #include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <fstream>
-#include <spdlog/fmt/fmt.h>
+#include <limits>
 #include <sstream>
 #include <stdexcept>
 
@@ -127,11 +128,19 @@ CSVConverter::CSVRow CSVConverter::read_line() {
         if (row.dimension_values.size() < n_dim_fields) {
             row.dimension_values.push_back(std::move(field));
         } else {
-            // Convert data value to double, treating "null" as NaN.
+            // Convert data value to double, treating "null" as NaN. The whole cell must parse, in the
+            // "C" locale's number format whatever locale the host set -- bin_to_csv writes '.'.
             if (field == "null") {
                 row.data.push_back(std::numeric_limits<double>::quiet_NaN());
+            } else if (auto value = utils::parse_float(field)) {
+                row.data.push_back(*value);
             } else {
-                row.data.push_back(std::stod(field));
+                std::string message = "Cannot csv_to_bin: invalid float value '" + field + "'";
+                // A cell past the last label belongs to a row wider than the header: no label to name.
+                if (row.data.size() < metadata_.labels.size()) {
+                    message += " for label '" + metadata_.labels[row.data.size()] + "'";
+                }
+                throw std::runtime_error(message);
             }
         }
 
@@ -165,7 +174,10 @@ std::string CSVConverter::build_line(const std::vector<double>& data, const std:
         if (std::isnan(v)) {
             elements.push_back("null");
         } else {
-            elements.push_back(fmt::format("{:.6g}", v));
+            // Shortest text that reads back to the same double, '.' in every locale.
+            std::string cell;
+            utils::append_number(v, cell);
+            elements.push_back(std::move(cell));
         }
     }
 

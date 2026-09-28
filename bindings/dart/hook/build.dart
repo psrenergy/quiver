@@ -51,13 +51,13 @@ Future<void> main(List<String> args) async {
         // for it, unlike the strict-try-compile flag passed via appleArgs below.
         if (targetOS == OS.macOS) ...{
           'CMAKE_MACOSX_BUNDLE': 'OFF',
-          // The floating-point std::to_chars (src/database_csv_export.cpp, src/lua_runner.cpp)
-          // is marked unavailable by libc++ before macOS 13.3, so the build floor cannot go
-          // lower than that. Honour a higher floor if the SDK asks for one rather than
-          // silently overriding the consumer's deployment target in both directions. Set
-          // DEPLOYMENT_TARGET, not CMAKE_OSX_DEPLOYMENT_TARGET -- the iOS toolchain file
-          // derives the latter from the former with CACHE INTERNAL (which implies FORCE), so
-          // setting it directly is silently overwritten.
+          // The floating-point std::to_chars (src/database_csv_export.cpp, src/lua_runner.cpp,
+          // src/binary/csv_converter.cpp) is marked unavailable by libc++ before macOS 13.3, so
+          // the build floor cannot go lower than that. Honour a higher floor if the SDK asks
+          // for one rather than silently overriding the consumer's deployment target in both
+          // directions. Set DEPLOYMENT_TARGET, not CMAKE_OSX_DEPLOYMENT_TARGET -- the iOS
+          // toolchain file derives the latter from the former with CACHE INTERNAL (which
+          // implies FORCE), so setting it directly is silently overwritten.
           'DEPLOYMENT_TARGET': input.config.code.macOS.targetVersion > 13
               ? '${input.config.code.macOS.targetVersion}'
               : '13.3',

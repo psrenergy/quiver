@@ -662,14 +662,14 @@ From the repo root (`C:\Development\Quiver\quiver1`), in order:
 
 ## Acceptance criteria
 
-- [ ] `src/utils/number.h` holds `inline std::optional<double> parse_float(std::string)`, with the exact body of the former import copy and the includes it needs.
-- [ ] `src/database_csv_import.cpp` has no `parse_float` definition, calls `utils::parse_float` at its four REAL sites, includes `utils/number.h`, and no longer includes `<cerrno>`, `<clocale>`, `<cmath>` or `<cstdlib>`.
-- [ ] `src/binary/csv_converter.cpp` has no `std::stod`, no `fmt::` and no `<spdlog/fmt/fmt.h>`. `read_line` calls `utils::parse_float` and throws `Cannot csv_to_bin: invalid float value '<v>' for label '<label>'` (the label clause is dropped only past the last label). `build_line` writes through `utils::append_number`.
-- [ ] `grep -rn "std::stod" src` is empty.
-- [ ] C++ tests T3-T7, C API tests C1-C2, Lua tests L2-L3 and Julia tests J1-J3 exist and pass, and each fails when the `src/` change is reverted (a decimal-comma locale is needed for T7).
-- [ ] Root `AGENTS.md` (D1-D3), `cmake/Platform.cmake` comment (D3), and `src/AGENTS.md` (D4-D6) are updated.
-- [ ] CHANGELOG 0.12.0 has the BREAKING `### Changed` entry and the `### Fixed` entry from D8.
-- [ ] No C API signature, FFI declaration, binding wrapper or `.bat` file changed.
+- [x] `src/utils/number.h` holds `inline std::optional<double> parse_float(std::string)`, with the exact body of the former import copy and the includes it needs.
+- [x] `src/database_csv_import.cpp` has no `parse_float` definition, calls `utils::parse_float` at its four REAL sites, includes `utils/number.h`, and no longer includes `<cerrno>`, `<clocale>`, `<cmath>` or `<cstdlib>`.
+- [x] `src/binary/csv_converter.cpp` has no `std::stod`, no `fmt::` and no `<spdlog/fmt/fmt.h>`. `read_line` calls `utils::parse_float` and throws `Cannot csv_to_bin: invalid float value '<v>' for label '<label>'` (the label clause is dropped only past the last label). `build_line` writes through `utils::append_number`.
+- [x] `grep -rn "std::stod" src` is empty.
+- [x] C++ tests T3-T7, C API tests C1-C2, Lua tests L2-L3 and Julia tests J1-J3 exist and pass, and each fails when the `src/` change is reverted (a decimal-comma locale is needed for T7).
+- [x] Root `AGENTS.md` (D1-D3), `cmake/Platform.cmake` comment (D3), and `src/AGENTS.md` (D4-D6) are updated.
+- [x] CHANGELOG (under `## [0.12.4] — unreleased`, see Implementation notes) has the BREAKING `### Changed` entry and the `### Fixed` entry from D8.
+- [x] No C API signature, FFI declaration, binding wrapper or `.bat` file changed.
 
 ## Pitfalls
 
@@ -692,3 +692,104 @@ From the repo root (`C:\Development\Quiver\quiver1`), in order:
 - Quoting in `CSVConverter` (a label holding a comma still does not round-trip), a documented limit in the root "One CSV parser, one CSV emitter" decision, which is left as is.
 - Line or row numbers in the csv_to_bin error message: not needed; plan 14 may add a row counter together with its width check.
 - `lua-api.ts` wording about CSV number formats: nothing there is wrong; Lua reference accuracy is owned by plans **43** / **44**.
+
+## Implementation notes
+
+Implemented on `rs/plan13`, branched from `master` at 758cf31 (plans 08–12 and the 0.12.4 bump had
+landed; the merge was a fast-forward). The Changes, Tests and Docs were applied as written, apart
+from the deviations below.
+
+### Regression proof (tests written first, run against the unfixed `src/`)
+
+- **C++:**
+  - `FloatPrecision`: got `"1,1.23457"`.
+  - `NonNumericDataValue`, `EmptyDataField` and `NonNumericCellPastLastLabel`: uncaught
+    `invalid stod argument`.
+  - `TrailingGarbageDataValue`: got `CSV dimension 'row' has value '', expected '1'`.
+  - `RoundTripIsLossless`: row 1 read back `1.23457`.
+  - `DecimalCommaLocaleReadsWrittenFloats`: ran under `pt-BR` and wrote `"1,1,1.5,0.3"`.
+- **Lua:**
+  - `LuaBinaryTest.CsvRoundTrip`: `csv roundtrip at 1,1`.
+  - `CsvToBinRejectsTrailingGarbage`: the script did not throw.
+- **C API:**
+  - `RoundTrip`: `0.3` vs `0.30000000000000004`.
+  - `CsvToBinTrailingGarbageReportsMessage`: got the dimension error.
+- **Julia:** J1 failed with `"1,1.23457"`. `runtests.jl` is failfast, so J2 and J3 were probed
+  outside it: `csv_to_bin` reported `invalid stod argument` for J2 and the dimension error for J3.
+- No other test failed before the fix. After it, all of them pass. T7 runs on Windows; it does not
+  skip.
+
+### Drift fixed
+
+- **CHANGELOG section.** Both entries sit under `## [0.12.4] — unreleased`, the open section at
+  implementation time, not under `[0.12.0]`. The BREAKING entry goes at the end of its
+  `### Changed`, the Fixed entry at the end of its `### Fixed`. The plan's anchor entries (the
+  `export_csv` quoting entry and the `import_csv` locale entry) now sit in the released `0.11.0`
+  section. There is no manifest bump. That follows plans 02–05, which filed BREAKING entries under
+  the open patch section; bumps are the maintainer's separate Bump Version PR.
+- **CHANGELOG wording.**
+  - `to_chars` and `{:.6g}` do not "agree whenever 6 digits are enough": round values change
+    notation (`200000` becomes `2e+05`; `0.0005` becomes `5e-04`). The BREAKING entry says so. No
+    existing test pinned such a value.
+  - D8's "`9.99abc` (or `1.5 ` with a trailing space) was stored as `9.99`" became "`9.99abc` was
+    stored as `9.99` and a trailing space was ignored; the whole cell must now parse (leading
+    whitespace is still skipped)".
+  - The Fixed entry says "the same number parser as `import_csv()`". Import also trims cells;
+    `csv_to_bin` deliberately does not, as specified.
+- **Missing include.** `#include <limits>` was added to `csv_converter.cpp`. `read_line` uses
+  `std::numeric_limits`, and the dropped `<spdlog/fmt/fmt.h>` was one of the headers that pulled it
+  in transitively.
+- **Stale caller lists** (comment/doc-only edits):
+  - D3's list of `to_chars` users was also in `bindings/dart/AGENTS.md` and the macOS comment in
+    `bindings/dart/hook/build.dart`. Both now list `binary/csv_converter.cpp`.
+  - The `append_number` caller lists in `src/AGENTS.md` (the JSON-encoder bullet, which said "its
+    third caller") and the `database_csv_export.cpp` float comment now include `bin_to_csv`.
+- **Self-checks.**
+  - The 2a grep also lists the `<cerrno>` include and the `parse_integer` comment; both are
+    removed or rewritten by 2a/2b anyway.
+  - `1.23457` legitimately remains in the CHANGELOG (the old and new entries), in the
+    `database_csv_export.cpp` comment, and in the T6 comment. It appears in no assertion.
+  - Verification step 3 also needs `LuaRunner*CSV*`, because gtest filters are case-sensitive and
+    `LuaRunner_ImportCSV` / `LuaRunner_ExportCSV` spell it in upper case.
+- **Environment.**
+  - The repo root is `quiver6`, and `build/` had to be configured from scratch.
+  - `test-all.bat` on this master has six steps; the CLI smoke step the plan expected to fail is
+    not there.
+  - On a fresh checkout, `scripts/format.bat` needs `dart pub get` first. Without it
+    `package:lints` does not resolve and `page_width: 120` is ignored, so `dart format` rewrites
+    25 untouched files. It also needs `bun install` in `bindings/js`, or biome is missing. Biome
+    then rewrites every `.ts` from CRLF to LF on an `autocrlf=true` checkout, with no content
+    change; those files were restored.
+
+### Results
+
+- `CSVConverterFixture.*`: 43 passed.
+- `DatabaseCSV.*:LuaBinaryTest.*:LuaRunner*Csv*:LuaRunner*CSV*`: 268 passed.
+- `BinaryCApiCSVFixture.*`: 11 passed.
+- Julia `test_csv_converter.jl`: 68 passed, and the full Julia suite passes.
+- `scripts/format.bat`: exit 0, with no changes to the plan's files.
+- `scripts/test-all.bat`: all six suites pass (C++ 1349, C API 561, Julia, Dart 426, JS 212,
+  Python 309).
+- The touched sources add no new compiler warnings. C4458 in `database_impl.h` and C4701
+  `group_type` in `database_csv_import.cpp` were already there.
+
+### For later plans
+
+- **Overlap corrections.** Plans 08–12 did not touch `csv_converter.cpp`, `number.h` or
+  `database_csv_import.cpp`, contrary to this plan's overlap note. They only appended tests to
+  `test_csv_converter.cpp` and `test_lua_binary.cpp`.
+- **14** must branch from this commit, not from an older master. Keep:
+  - the `utils::parse_float` call;
+  - the exact message `Cannot csv_to_bin: invalid float value '<v>' for label '<label>'`, which is
+    pinned in C++, the C API, Lua and Julia.
+
+  Once 14's width check runs before conversion, the `row.data.size() < metadata_.labels.size()`
+  guard can never be false and may go. `NonNumericCellPastLastLabel` asserts only the
+  `Cannot csv_to_bin: ` prefix, so 14's width error still satisfies it.
+- **58.** The file-local `parse_float` is gone; the REAL branch of `convert_cell` calls
+  `utils::parse_float` from `src/utils/number.h`.
+- **61.** `<cerrno>`, `<clocale>`, `<cmath>` and `<cstdlib>` are already gone from
+  `database_csv_import.cpp`, and `<cstdio>` is still there for 61. `csv_converter.cpp` gained
+  `<limits>` and lost `<spdlog/fmt/fmt.h>`.
+- **56.** Root `AGENTS.md` and `src/AGENTS.md` now name `utils::parse_float` (`src/utils/number.h`)
+  in the typing-policy bullets.

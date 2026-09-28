@@ -59,7 +59,8 @@ static std::string value_to_csv_string(const Value& value,
     }
 
     // Float: shortest representation that round-trips exactly, via utils::append_number (the one
-    // house idiom for numbers, shared with the Lua JSON encoder and db:write_csv's cell formatter).
+    // house idiom for numbers, shared with the Lua JSON encoder, db:write_csv's cell formatter and
+    // bin_to_csv).
     // "%g" was used here first and silently truncated to 6 significant digits, so an export ->
     // edit -> import cycle lost precision (1234567.89 came back as 1.23457e+06).
     if (std::holds_alternative<double>(value)) {

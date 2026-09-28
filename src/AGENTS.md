@@ -50,7 +50,8 @@ src/                      # C++ implementation
   cli/main.cpp            # quiver_cli CLI entry point
   utils/string.h          # String utilities: new_c_str, trim
   utils/datetime.h        # ISO 8601 parse/format helpers
-  utils/number.h          # quiver::utils::append_number -- std::to_chars shortest round-trip
+  utils/number.h          # quiver::utils::append_number (std::to_chars shortest round-trip) and
+                          # parse_float (its whole-cell, host-locale-proof reader)
 src/csv/                    # Standalone CSV file reader/writer (see below)
   csv_read.h / csv_read.cpp   # Internal CSV reader (csv-parser, Pimpl'd) behind db:read_csv /
                               # db:read_csv_stream and import_csv -- no include/quiver/ counterpart
@@ -480,8 +481,8 @@ impl_->logger->debug("Opening database: {}", path);
   matches `INTEGER` or `REAL` (int-for-REAL coercion), double matches `REAL` only (a float into an
   `INTEGER` column is rejected), string matches `TEXT`/`INTEGER`(FK label)/`DATE_TIME`. Keep the two
   in sync (root design decision). `import_csv` is the third enforcer, on CSV text: its
-  `parse_integer` / `parse_float` (`database_csv_import.cpp`) take a cell only if it parses whole,
-  so a policy change must reach them too.
+  `parse_integer` (`database_csv_import.cpp`) and `utils::parse_float` (`utils/number.h`, shared
+  with `csv_to_bin`) take a cell only if it parses whole, so a policy change must reach them too.
 - **DATE_TIME content is checked by both halves of that policy, through one predicate**:
   `datetime::is_valid_iso8601` (`utils/datetime.h`). `TypeValidator::validate_value` calls it in its
   string branch (covering scalar create/update and every vector/set array write, so it inherits the
@@ -697,7 +698,7 @@ Implementation conventions in `lua_runner.cpp`:
 - **`run` returns the script's return value as JSON**, built by the anonymous-namespace
   `append_json` / `append_json_string` / `append_json_double` / `append_json_table` at the top of
   the file, plus `quiver::utils::append_number` (`src/utils/number.h` — moved out of this file,
-  D-38; `db:write_csv`'s cell formatter is its third caller). The table check uses `get_type()` rather than
+  D-38; `db:write_csv`'s cell formatter and `bin_to_csv` are its other callers). The table check uses `get_type()` rather than
   `is<T>()` on purpose: sol2's `is<sol::table>()` also accepts **userdata**, so `return db` would
   quietly encode as `{}`. The boolean check spells `get_type()` for consistency with
   `is_lua_boolean` in `Impl`, not out of necessity — sol2's `check<bool>` *is* `lua_isboolean`
@@ -754,7 +755,7 @@ Standalone binary file I/O layer for `.qvr` files with `.toml` metadata sidecars
 Bound in **Julia and Lua** (root design decision); Lua binds these C++ classes directly via sol2 in `src/lua_runner.cpp` (file I/O is db-scoped and sandboxed — `db:open_file`/`db:bin_to_csv`/`db:csv_to_bin`; metadata builders under `quiver.*`; method syntax + string aggregation ops).
 
 - `BinaryFile` class (Pimpl): `open_file(path, mode, metadata?)`, `read(dims, allow_nulls = false)`, `write(data, dims)`, `get_metadata()`, `get_file_path()`
-- `CSVConverter` class (composition, no Pimpl): `bin_to_csv(path, aggregate)`, `csv_to_bin(path)`
+- `CSVConverter` class (composition, no Pimpl): `bin_to_csv(path, aggregate)`, `csv_to_bin(path)`. Data cells are written by `utils::append_number` and read by `utils::parse_float` (the whole cell must parse, in the "C" locale's format; `null` is NaN), so bin → csv → bin is exact in every host locale. A bad cell throws `Cannot csv_to_bin: invalid float value '<v>' for label '<label>'`.
 - `BinaryMetadata` struct: `dimensions`, `initial_datetime`, `unit`, `labels`, `version`; `number_of_time_dimensions()` is derived from `dimensions` (not stored)
   - Factories: `from_toml_content()` (and `from_toml_file()`, which reads the sidecar and calls it), `from_element()`. Both hand their eight fields to one anonymous-namespace `build_metadata(operation, ...)` in `binary_metadata.cpp`. It rejects a `dimension_sizes`/`dimensions` or `frequencies`/`time_dimensions` count mismatch before indexing either, takes each time dimension's frequency from its matched position in `time_dimensions`, and names the calling factory in its Pattern 1 errors. `from_element` does not go through TOML text. In a TOML document, an absent array reads as empty, an absent or non-string `version`/`unit`/`initial_datetime` throws naming the key, and a wrong-typed array entry throws instead of being skipped. There is no incremental builder: the two factories are the only construction path a binding reaches (C API, Julia, Lua), and they derive every time dimension's `parent_dimension_index` (the previous time dimension) and `initial_value` (from `initial_datetime`). Inside the library, `build_broadcast_metadata` / `build_ternary_broadcast_metadata` (`expression_helpers.h`) still assemble `dimensions` directly.
   - Serialization: `to_toml()`

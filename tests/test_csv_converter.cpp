@@ -1,4 +1,5 @@
 #include <chrono>
+#include <clocale>
 #include <cmath>
 #include <filesystem>
 #include <fstream>
@@ -91,6 +92,16 @@ protected:
                 lines.push_back(line);
         }
         return lines;
+    }
+
+    // csv_to_bin(path) must throw std::runtime_error carrying exactly `message`.
+    void expect_csv_to_bin_error(const std::string& message) {
+        try {
+            CSVConverter::csv_to_bin(path);
+            FAIL() << "expected csv_to_bin to throw";
+        } catch (const std::runtime_error& e) {
+            EXPECT_STREQ(e.what(), message.c_str());
+        }
     }
 };
 
@@ -196,8 +207,8 @@ TEST_F(CSVConverterFixture, FloatPrecision) {
     CSVConverter::bin_to_csv(path);
     auto lines = csv_lines();
     ASSERT_GE(lines.size(), 2u);
-    // {:.6g} format
-    EXPECT_EQ(lines[1], "1,1.23457");
+    // Shortest round-trip form (utils::append_number), not 6 significant digits.
+    EXPECT_EQ(lines[1], "1,1.23456789");
 }
 
 // ============================================================================
@@ -416,14 +427,37 @@ TEST_F(CSVConverterFixture, NonNumericDataValue) {
     auto md = make_simple_metadata();
     write_toml(md);
     write_csv("row,col,val1,val2\n1,1,abc,2.0\n");
-    EXPECT_THROW(CSVConverter::csv_to_bin(path), std::exception);
+    expect_csv_to_bin_error("Cannot csv_to_bin: invalid float value 'abc' for label 'val1'");
 }
 
 TEST_F(CSVConverterFixture, EmptyDataField) {
     auto md = make_simple_metadata();
     write_toml(md);
     write_csv("row,col,val1,val2\n1,1,,2.0\n");
-    EXPECT_THROW(CSVConverter::csv_to_bin(path), std::exception);
+    expect_csv_to_bin_error("Cannot csv_to_bin: invalid float value '' for label 'val1'");
+}
+
+// std::stod read the longest valid prefix, so this cell was stored as 9.99 with no error.
+TEST_F(CSVConverterFixture, TrailingGarbageDataValue) {
+    auto md = make_simple_metadata();
+    write_toml(md);
+    write_csv("row,col,val1,val2\n1,1,1.0,9.99abc\n");
+    expect_csv_to_bin_error("Cannot csv_to_bin: invalid float value '9.99abc' for label 'val2'");
+}
+
+// A cell past the last label belongs to a row wider than the header, so there is no label to name
+// (and indexing labels there would read past the end). Only the Pattern 1 prefix is pinned: a
+// row-width check in front of the conversion would report this row first, just as correctly.
+TEST_F(CSVConverterFixture, NonNumericCellPastLastLabel) {
+    auto md = make_simple_metadata();
+    write_toml(md);
+    write_csv("row,col,val1,val2\n1,1,1.0,2.0,abc\n");
+    try {
+        CSVConverter::csv_to_bin(path);
+        FAIL() << "expected csv_to_bin to throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_TRUE(std::string(e.what()).starts_with("Cannot csv_to_bin: ")) << e.what();
+    }
 }
 
 TEST_F(CSVConverterFixture, EmptyCSVFile) {
@@ -543,6 +577,72 @@ TEST_F(CSVConverterFixture, RoundTripWithNullValues) {
     auto v = reader.read({{"row", 1}, {"col", 1}}, true);
     EXPECT_TRUE(std::isnan(v[0]));
     EXPECT_TRUE(std::isnan(v[1]));
+}
+
+// bin_to_csv writes each value in the shortest form that reads back to the same double, and
+// csv_to_bin parses it whole, so the round trip is exact. {:.6g} brought 1.23456789 back as 1.23457,
+// and std::stod rejected the subnormal on Linux/macOS (ERANGE -> out_of_range). EXPECT_EQ, not
+// EXPECT_DOUBLE_EQ: 0.1 + 0.2 and 0.3 are one ULP apart, inside EXPECT_DOUBLE_EQ's tolerance.
+TEST_F(CSVConverterFixture, RoundTripIsLossless) {
+    const std::vector<double> values = {1.23456789, 0.1 + 0.2, 1234567.89, -2.5e300, 1e-310};
+    auto md = BinaryMetadata::from_element(Element()
+                                               .set("version", "1")
+                                               .set("initial_datetime", "2025-01-01T00:00:00")
+                                               .set("unit", "MW")
+                                               .set("dimensions", {"row"})
+                                               .set("dimension_sizes", {5})
+                                               .set("labels", {"val"}));
+    {
+        auto binary_file = BinaryFile::open_file(path, 'w', md);
+        for (size_t i = 0; i < values.size(); ++i) {
+            binary_file.write({values[i]}, {{"row", static_cast<int64_t>(i + 1)}});
+        }
+    }
+    CSVConverter::bin_to_csv(path);
+    fs::remove(path + ".qvr");
+    CSVConverter::csv_to_bin(path);
+
+    auto reader = BinaryFile::open_file(path, 'r');
+    for (size_t i = 0; i < values.size(); ++i) {
+        EXPECT_EQ(reader.read({{"row", static_cast<int64_t>(i + 1)}})[0], values[i]) << "row " << (i + 1);
+    }
+}
+
+// A host can switch the process's C locale to a decimal comma -- Python's
+// locale.setlocale(locale.LC_ALL, "") does on a pt-BR or de-DE machine -- and strtod follows it,
+// while bin_to_csv writes '.' in every locale. std::stod read "1.5" back as 1 there.
+TEST_F(CSVConverterFixture, DecimalCommaLocaleReadsWrittenFloats) {
+    struct RestoreNumericLocale {
+        std::string saved = std::setlocale(LC_NUMERIC, nullptr);
+        ~RestoreNumericLocale() { std::setlocale(LC_NUMERIC, saved.c_str()); }
+    } restore;
+    bool switched = false;
+    for (const char* name : {"pt-BR", "pt_BR.UTF-8", "de_DE.UTF-8"}) {
+        if (std::setlocale(LC_NUMERIC, name) != nullptr) {
+            switched = true;
+            break;
+        }
+    }
+    if (!switched) {
+        GTEST_SKIP() << "no decimal-comma locale installed";
+    }
+
+    auto md = make_simple_metadata();
+    {
+        auto binary_file = BinaryFile::open_file(path, 'w', md);
+        binary_file.write({1.5, 0.1 + 0.2}, {{"row", 1}, {"col", 1}});
+    }
+    CSVConverter::bin_to_csv(path);
+    auto lines = csv_lines();
+    ASSERT_GE(lines.size(), 2u);
+    EXPECT_EQ(lines[1], "1,1,1.5,0.30000000000000004");
+    fs::remove(path + ".qvr");
+    CSVConverter::csv_to_bin(path);
+
+    auto reader = BinaryFile::open_file(path, 'r');
+    auto v = reader.read({{"row", 1}, {"col", 1}});
+    EXPECT_EQ(v[0], 1.5);
+    EXPECT_EQ(v[1], 0.1 + 0.2);
 }
 
 TEST_F(CSVConverterFixture, AggregatedAndNonAggregatedProduceSameBinary) {

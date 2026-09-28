@@ -3,15 +3,12 @@
 #include "quiver/options.h"
 #include "quiver/schema.h"
 #include "utils/datetime.h"
+#include "utils/number.h"
 #include "utils/string.h"
 
 #include <algorithm>
 #include <cctype>
-#include <cerrno>
-#include <clocale>
-#include <cmath>
 #include <cstdio>
-#include <cstdlib>
 #include <ctime>
 #include <filesystem>
 #include <fstream>
@@ -29,10 +26,10 @@ struct CsvTable {
     std::vector<std::vector<std::string>> rows;
 };
 
-// Whole-cell number parses: nullopt unless every character is consumed, so "1.5" is not an integer
-// and "9.99abc" or a decimal-comma "1,5" is not a float (stoll/strtod alone accept any valid prefix).
-// Import writes through a raw INSERT, so this is where the core typing policy -- a float into an
-// INTEGER column is rejected -- reaches CSV text.
+// Whole-cell integer parse: nullopt unless every character is consumed, so "1.5" is not an integer
+// (stoll alone accepts any valid prefix); REAL cells go through its float counterpart,
+// utils::parse_float. Import writes through a raw INSERT, so this is where the core typing policy --
+// a float into an INTEGER column is rejected -- reaches CSV text.
 static std::optional<int64_t> parse_integer(const std::string& cell) {
     size_t pos = 0;
     int64_t value = 0;
@@ -42,35 +39,6 @@ static std::optional<int64_t> parse_integer(const std::string& cell) {
         return std::nullopt;
     }
     return pos == cell.size() ? std::optional(value) : std::nullopt;
-}
-
-// strtod reads the C locale's decimal point, which a host process can switch to ',' (Python's
-// locale.setlocale(LC_ALL, "") on a pt-BR machine), while export_csv writes '.' in every locale. So the
-// cell is spelled in the active locale first, and parses exactly as it would in the "C" locale.
-static std::optional<double> parse_float(std::string cell) {
-    const std::string_view point = std::localeconv()->decimal_point;
-    if (point != ".") {
-        if (cell.find(point) != std::string::npos) {
-            return std::nullopt;  // "1,5" is not a number in the "C" locale either
-        }
-        if (const auto dot = cell.find('.'); dot != std::string::npos) {
-            cell.replace(dot, 1, point);
-        }
-    }
-    const char* begin = cell.c_str();
-    char* end = nullptr;
-    errno = 0;
-    const double value = std::strtod(begin, &end);
-    if (end == begin || end != begin + cell.size()) {
-        return std::nullopt;
-    }
-    // ERANGE marks a literal no finite double holds -- overflow to inf, or a nonzero value flushed to
-    // 0 -- but glibc and Apple libc also raise it for a representable subnormal, which export_csv
-    // writes, so only the first two are rejected.
-    if (errno == ERANGE && (std::isinf(value) || value == 0.0)) {
-        return std::nullopt;
-    }
-    return value;
 }
 
 // Lowercase a string for case-insensitive comparison.
@@ -438,7 +406,7 @@ void Database::import_csv(const std::string& collection,
                     }
                 }
 
-                if (type == DataType::Real && !parse_float(cell)) {
+                if (type == DataType::Real && !utils::parse_float(cell)) {
                     throw std::runtime_error("Cannot import_csv: Invalid float value '" + cell + "' for column '" +
                                              col_name + "'.");
                 }
@@ -552,7 +520,7 @@ void Database::import_csv(const std::string& collection,
                     }
 
                     if (type == DataType::Real) {
-                        parameters.emplace_back(*parse_float(cell));  // validated above
+                        parameters.emplace_back(*utils::parse_float(cell));  // validated above
                         continue;
                     }
 
@@ -721,7 +689,7 @@ void Database::import_csv(const std::string& collection,
                     }
                 }
 
-                if (type == DataType::Real && !parse_float(cell)) {
+                if (type == DataType::Real && !utils::parse_float(cell)) {
                     throw std::runtime_error("Cannot import_csv: Invalid float value '" + cell + "' for column '" +
                                              col_name + "'.");
                 }
@@ -787,7 +755,7 @@ void Database::import_csv(const std::string& collection,
                     }
 
                     if (type == DataType::Real) {
-                        parameters.emplace_back(*parse_float(cell));  // validated above
+                        parameters.emplace_back(*utils::parse_float(cell));  // validated above
                         continue;
                     }
 
