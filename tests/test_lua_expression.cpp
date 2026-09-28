@@ -202,6 +202,18 @@ TEST_F(LuaExpressionTest, AggregateUnknownOpThrows) {
                      "Cannot aggregate: unknown operation 'bogus'");
 }
 
+TEST_F(LuaExpressionTest, AggregateAgentsUnknownOpThrows) {
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+    expect_lua_error(lua,
+                     prelude() + R"(
+        fill_by_row('expr_a')
+        local fa = db:open_file('expr_a', 'r')
+        quiver.expression(fa):aggregate_agents('bogus')
+    )",
+                     "Cannot aggregate_agents: unknown operation 'bogus'");
+}
+
 TEST_F(LuaExpressionTest, AggregateOutermostTimeDimFromMidYearStart) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::LuaRunner lua(db);

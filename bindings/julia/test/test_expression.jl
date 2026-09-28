@@ -1282,7 +1282,7 @@ end
         try
             write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
             with_expr(path_a) do e
-                out = Quiver.aggregate_agents(e, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_SUM)
+                out = Quiver.aggregate_agents(e, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM)
                 md = Quiver.get_metadata(out)
                 @test Quiver.Binary.get_labels(md) == ["sum"]
                 Quiver.save(out, path_out)
@@ -1301,7 +1301,7 @@ end
         try
             write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
             with_expr(path_a) do e
-                out = Quiver.aggregate_agents(e, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_MEAN)
+                out = Quiver.aggregate_agents(e, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_MEAN)
                 Quiver.save(out, path_out)
                 return Quiver.close!(out)
             end
@@ -1318,7 +1318,7 @@ end
         try
             write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
             with_expr(path_a) do e
-                out = Quiver.aggregate_agents(e, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_PERCENTILE, 0.5)
+                out = Quiver.aggregate_agents(e, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_PERCENTILE, 0.5)
                 Quiver.save(out, path_out)
                 return Quiver.close!(out)
             end
@@ -1335,7 +1335,7 @@ end
             # Mark label k=1 as NaN; sum should fall back to the other label.
             write_fixture(path_a, (r, c, k) -> k == 1 ? NaN : Float64(r * 10 + c + k))
             with_expr(path_a) do e
-                out = Quiver.aggregate_agents(e, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_SUM)
+                out = Quiver.aggregate_agents(e, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM)
                 Quiver.save(out, path_out)
                 return Quiver.close!(out)
             end
@@ -1352,7 +1352,7 @@ end
         try
             write_fixture(path_a, (_, _, _) -> 1.0)
             with_expr(path_a) do e
-                out = Quiver.aggregate_agents(e, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_MEAN)
+                out = Quiver.aggregate_agents(e, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_MEAN)
                 md = Quiver.get_metadata(out)
                 @test Quiver.Binary.get_labels(md) == ["mean"]
                 @test Quiver.Binary.get_unit(md) == "MW"
@@ -1374,7 +1374,7 @@ end
             with_expr(path_a) do e
                 out = Quiver.aggregate_agents(
                     Quiver.aggregate(e, "row", Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM),
-                    Quiver.C.QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_MEAN,
+                    Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_MEAN,
                 )
                 Quiver.save(out, path_out)
                 return Quiver.close!(out)
@@ -1412,7 +1412,7 @@ end
             write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
             file = Quiver.Binary.open_file(path_a; mode = 'r')
             try
-                out = Quiver.aggregate_agents(file, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_MEAN)
+                out = Quiver.aggregate_agents(file, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_MEAN)
                 Quiver.save(out, path_out)
                 Quiver.close!(out)
             finally

@@ -967,12 +967,13 @@ struct LuaRunner::Impl {
             [](Expression& self) -> BinaryMetadata { return self.metadata(); },
             "aggregate",
             [](Expression& self, const std::string& dimension, const std::string& op, sol::optional<double> parameter) {
-                return self.aggregate(
-                    dimension, parse_aggregate_op(op), parameter ? std::optional<double>(*parameter) : std::nullopt);
+                return self.aggregate(dimension,
+                                      parse_aggregate_op(op, "aggregate"),
+                                      parameter ? std::optional<double>(*parameter) : std::nullopt);
             },
             "aggregate_agents",
             [](Expression& self, const std::string& op, sol::optional<double> parameter) {
-                return self.aggregate_agents(parse_aggregate_agents_op(op),
+                return self.aggregate_agents(parse_aggregate_op(op, "aggregate_agents"),
                                              parameter ? std::optional<double>(*parameter) : std::nullopt);
             },
             "select_agents",
@@ -1155,7 +1156,8 @@ struct LuaRunner::Impl {
         return apply_binop(op, to_expression(lhs), to_expression(rhs));
     }
 
-    static ExpressionAggregate::Operation parse_aggregate_op(const std::string& op) {
+    // `caller` is the public method ("aggregate" / "aggregate_agents") named in the Pattern 1 message.
+    static ExpressionAggregate::Operation parse_aggregate_op(const std::string& op, const std::string& caller) {
         if (op == "sum")
             return ExpressionAggregate::Operation::Sum;
         if (op == "mean")
@@ -1166,21 +1168,7 @@ struct LuaRunner::Impl {
             return ExpressionAggregate::Operation::Max;
         if (op == "percentile")
             return ExpressionAggregate::Operation::Percentile;
-        throw std::runtime_error("Cannot aggregate: unknown operation '" + op + "'");
-    }
-
-    static ExpressionAggregateAgents::Operation parse_aggregate_agents_op(const std::string& op) {
-        if (op == "sum")
-            return ExpressionAggregateAgents::Operation::Sum;
-        if (op == "mean")
-            return ExpressionAggregateAgents::Operation::Mean;
-        if (op == "min")
-            return ExpressionAggregateAgents::Operation::Min;
-        if (op == "max")
-            return ExpressionAggregateAgents::Operation::Max;
-        if (op == "percentile")
-            return ExpressionAggregateAgents::Operation::Percentile;
-        throw std::runtime_error("Cannot aggregate_agents: unknown operation '" + op + "'");
+        throw std::runtime_error("Cannot " + caller + ": unknown operation '" + op + "'");
     }
 
     // Resolves a script-supplied path against the database file's directory and enforces that the

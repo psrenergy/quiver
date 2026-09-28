@@ -194,26 +194,26 @@ inline BinaryMetadata build_broadcast_metadata(std::initializer_list<const Binar
     return out;
 }
 
-template <typename Op>
-std::string aggregation_operation_label(Op op) {
+inline std::string aggregation_operation_label(ExpressionAggregate::Operation op) {
     switch (op) {
-    case Op::Sum:
+    case ExpressionAggregate::Operation::Sum:
         return "sum";
-    case Op::Mean:
+    case ExpressionAggregate::Operation::Mean:
         return "mean";
-    case Op::Min:
+    case ExpressionAggregate::Operation::Min:
         return "min";
-    case Op::Max:
+    case ExpressionAggregate::Operation::Max:
         return "max";
-    case Op::Percentile:
+    case ExpressionAggregate::Operation::Percentile:
         return "percentile";
     }
     throw std::runtime_error("Cannot label aggregation: unhandled Operation variant");
 }
 
-template <typename Op>
-void validate_aggregation_param(Op op, std::optional<double> parameter, const std::string& fn_label) {
-    const bool needs_param = (op == Op::Percentile);
+inline void validate_aggregation_param(ExpressionAggregate::Operation op,
+                                       std::optional<double> parameter,
+                                       const std::string& fn_label) {
+    const bool needs_param = (op == ExpressionAggregate::Operation::Percentile);
     if (needs_param && !parameter.has_value()) {
         throw std::runtime_error("Cannot " + fn_label + ": operation 'percentile' requires a parameter");
     }
@@ -302,52 +302,53 @@ struct AggregationState {
 };
 
 // NaN inputs are skipped; Percentile collects into the caller's scratch buffer.
-template <typename Op>
-void aggregation_accumulate(Op op, AggregationState& state, std::vector<double>& percentile_scratch, double value) {
+inline void aggregation_accumulate(ExpressionAggregate::Operation op,
+                                   AggregationState& state,
+                                   std::vector<double>& percentile_scratch,
+                                   double value) {
     if (std::isnan(value)) {
         return;
     }
     switch (op) {
-    case Op::Sum:
-    case Op::Mean:
+    case ExpressionAggregate::Operation::Sum:
+    case ExpressionAggregate::Operation::Mean:
         state.sum += value;
         ++state.count;
         break;
-    case Op::Min:
+    case ExpressionAggregate::Operation::Min:
         if (value < state.min) {
             state.min = value;
         }
         ++state.count;
         break;
-    case Op::Max:
+    case ExpressionAggregate::Operation::Max:
         if (value > state.max) {
             state.max = value;
         }
         ++state.count;
         break;
-    case Op::Percentile:
+    case ExpressionAggregate::Operation::Percentile:
         percentile_scratch.push_back(value);
         break;
     }
 }
 
 // An all-NaN (empty) accumulation yields NaN.
-template <typename Op>
-double aggregation_finalize(Op op,
-                            const AggregationState& state,
-                            std::vector<double>& percentile_scratch,
-                            const std::optional<double>& parameter) {
+inline double aggregation_finalize(ExpressionAggregate::Operation op,
+                                   const AggregationState& state,
+                                   std::vector<double>& percentile_scratch,
+                                   const std::optional<double>& parameter) {
     const double nan_value = std::numeric_limits<double>::quiet_NaN();
     switch (op) {
-    case Op::Sum:
+    case ExpressionAggregate::Operation::Sum:
         return (state.count > 0) ? state.sum : nan_value;
-    case Op::Mean:
+    case ExpressionAggregate::Operation::Mean:
         return (state.count > 0) ? state.sum / static_cast<double>(state.count) : nan_value;
-    case Op::Min:
+    case ExpressionAggregate::Operation::Min:
         return (state.count > 0) ? state.min : nan_value;
-    case Op::Max:
+    case ExpressionAggregate::Operation::Max:
         return (state.count > 0) ? state.max : nan_value;
-    case Op::Percentile:
+    case ExpressionAggregate::Operation::Percentile:
         return compute_percentile(percentile_scratch, *parameter);
     }
     return nan_value;
