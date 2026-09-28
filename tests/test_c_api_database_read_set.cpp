@@ -95,7 +95,7 @@ TEST(DatabaseCApi, ReadSetEmpty) {
     quiver_database_close(db);
 }
 
-TEST(DatabaseCApi, ReadSetOnlyReturnsElementsWithData) {
+TEST(DatabaseCApi, ReadSetIncludesElementsWithNoRows) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
@@ -142,11 +142,15 @@ TEST(DatabaseCApi, ReadSetOnlyReturnsElementsWithData) {
     size_t count = 0;
     auto err = quiver_database_read_set_strings(db, "Collection", "tag", &sets, &sizes, &count);
 
-    // Only elements with set data are returned
-    EXPECT_EQ(err, QUIVER_OK);
-    EXPECT_EQ(count, 2);
-    EXPECT_EQ(sizes[0], 1);
-    EXPECT_EQ(sizes[1], 2);
+    // One entry per element: the element with no rows has size 0, not a gap
+    ASSERT_EQ(err, QUIVER_OK);
+    ASSERT_EQ(count, 3);
+    ASSERT_EQ(sizes[0], 1);
+    ASSERT_EQ(sizes[1], 0);
+    ASSERT_EQ(sizes[2], 2);
+    EXPECT_STREQ(sets[0][0], "important");
+    EXPECT_STREQ(sets[2][0], "urgent");
+    EXPECT_STREQ(sets[2][1], "review");
 
     quiver_database_free_string_vectors(sets, sizes, count);
     quiver_database_close(db);

@@ -123,6 +123,20 @@ def composite_helpers_db(composite_helpers_schema_path: Path, tmp_path: Path) ->
 
 
 @pytest.fixture
+def multi_column_groups_schema_path(schemas_path: Path) -> Path:
+    """Return the path to the multi-column groups test schema."""
+    return schemas_path / "valid" / "multi_column_groups.sql"
+
+
+@pytest.fixture
+def multi_column_groups_db(multi_column_groups_schema_path: Path, tmp_path: Path) -> Generator[Database, None, None]:
+    """Create a test database with the multi-column groups schema."""
+    database = Database.from_schema(str(tmp_path / "multi_column_groups.db"), str(multi_column_groups_schema_path))
+    yield database
+    database.close()
+
+
+@pytest.fixture
 def mixed_time_series_schema_path(schemas_path: Path) -> Path:
     """Return the path to the mixed time series test schema."""
     return schemas_path / "valid" / "mixed_time_series.sql"
@@ -160,5 +174,21 @@ def multi_dim_ts_schema_path(schemas_path: Path) -> Path:
 def multi_dim_ts_db(multi_dim_ts_schema_path: Path, tmp_path: Path) -> Generator[Database, None, None]:
     """Create a test database with the multi-dim time series schema (composite PK: date_time + block)."""
     database = Database.from_schema(str(tmp_path / "multi_dim_ts.db"), str(multi_dim_ts_schema_path))
+    yield database
+    database.close()
+
+
+@pytest.fixture
+def time_series_date_columns_schema_path(schemas_path: Path) -> Path:
+    """Return the path to the schema with a date_ value column beside the time series dimension."""
+    return schemas_path / "valid" / "time_series_date_columns.sql"
+
+
+@pytest.fixture
+def time_series_date_columns_db(
+    time_series_date_columns_schema_path: Path, tmp_path: Path
+) -> Generator[Database, None, None]:
+    """Create a test database with the time_series_date_columns schema."""
+    database = Database.from_schema(str(tmp_path / "ts_date_columns.db"), str(time_series_date_columns_schema_path))
     yield database
     database.close()

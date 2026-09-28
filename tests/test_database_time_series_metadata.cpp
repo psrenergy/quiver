@@ -53,3 +53,43 @@ TEST(Database, ListTimeSeriesGroupsEmpty) {
     auto groups = db.list_time_series_groups("Configuration");
     EXPECT_TRUE(groups.empty());
 }
+
+// time_series_date_columns.sql: Plant_time_series_events has a nullable date_approved value column
+// that sorts before its primary-key date column date_time. The dimension comes from the key.
+TEST(Database, GetTimeSeriesMetadataDateValueColumnIsNotTheDimension) {
+    auto db = quiver::Database::from_schema(":memory:",
+                                            VALID_SCHEMA("time_series_date_columns.sql"),
+                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    auto metadata = db.get_time_series_metadata("Plant", "events");
+    EXPECT_EQ(metadata.dimension_column, "date_time");
+    ASSERT_EQ(metadata.value_columns.size(), 2);
+    EXPECT_EQ(metadata.value_columns[0].name, "date_approved");
+    EXPECT_EQ(metadata.value_columns[0].data_type, quiver::DataType::DateTime);
+    EXPECT_FALSE(metadata.value_columns[0].primary_key);
+    EXPECT_EQ(metadata.value_columns[1].name, "value");
+
+    auto groups = db.list_time_series_groups("Plant");
+    ASSERT_EQ(groups.size(), 1);
+    EXPECT_EQ(groups[0].dimension_column, "date_time");
+}
+
+// Meter_time_series_blocks keys on (id, block); its date_time is a value column, so the group has
+// no date dimension. Metadata and the readers refuse it instead of ordering by a column the writers
+// never key on.
+TEST(Database, GetTimeSeriesMetadataDateColumnOutsidePrimaryKeyThrows) {
+    auto db = quiver::Database::from_schema(":memory:",
+                                            VALID_SCHEMA("time_series_date_columns.sql"),
+                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
+    auto id = db.create_element("Meter", quiver::Element().set("label", std::string("Meter 1")));
+
+    try {
+        db.get_time_series_metadata("Meter", "blocks");
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), "Dimension column not found: time series table 'Meter_time_series_blocks'");
+    }
+    EXPECT_THROW(db.list_time_series_groups("Meter"), std::runtime_error);
+    EXPECT_THROW(db.read_time_series_group("Meter", "blocks", id), std::runtime_error);
+    EXPECT_THROW(db.read_time_series_row("Meter", "blocks", "value", "2024-01-01T00:00:00"), std::runtime_error);
+}

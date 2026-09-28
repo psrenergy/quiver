@@ -12,9 +12,12 @@ namespace quiver {
 // Validates that a schema follows QUIVER conventions:
 // - Configuration table exists
 // - Collections have id/label with proper constraints
-// - Vector tables have proper structure and FK constraints
+// - Every vector, set and time series table is named after an existing collection, and its `id`
+//   references that collection with ON DELETE CASCADE ON UPDATE CASCADE
+// - Vector tables have a vector_index column, and their id column is not the sole primary key
 // - Set tables have proper UNIQUE constraints
-// - No duplicate attributes across collection and its vector tables
+// - Every foreign key uses ON UPDATE CASCADE and ON DELETE SET NULL or CASCADE
+// - No duplicate attributes across a collection and its vector, set and time series tables
 class QUIVER_API SchemaValidator {
 public:
     explicit SchemaValidator(const Schema& schema);
@@ -30,6 +33,7 @@ private:
     void validate_configuration_exists();
     void validate_collection_names();
     void validate_collection(const std::string& name);
+    void validate_group_parent(const std::string& name, const std::string& kind);
     void validate_vector_table(const std::string& name);
     void validate_set_table(const std::string& name);
     void validate_time_series_files_table(const std::string& name);

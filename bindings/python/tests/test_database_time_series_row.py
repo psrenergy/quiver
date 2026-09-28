@@ -147,3 +147,11 @@ class TestReadTimeSeriesRow:
         _create_collection_element(collections_db, "Item 1")
         with pytest.raises(QuiverError, match="Time series attribute not found"):
             collections_db.read_time_series_row("Collection", "data", "nonexistent", datetime(2024, 1, 15))
+
+    def test_read_time_series_row_multi_dimension_group_raises(self, multi_dim_ts_db: Database) -> None:
+        """A second dimension (block) leaves no single value per element at a date."""
+        with pytest.raises(
+            QuiverError,
+            match="Cannot read_time_series_row: group 'load' of collection 'Resource' has more than one dimension column",
+        ):
+            multi_dim_ts_db.read_time_series_row("Resource", "load", "load", datetime(2024, 1, 1))

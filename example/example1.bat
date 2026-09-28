@@ -1,1 +1,0 @@
-..\build\bin\quiver_cli.exe --schema ..\tests\schemas\valid\collections.sql :memory: example1.lua

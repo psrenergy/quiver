@@ -152,5 +152,57 @@ void main() {
         throwsA(isA<DatabaseException>()),
       );
     });
+
+    test('rejects schema with set table without parent FK', () {
+      expect(
+        () => Database.fromSchema(dbPath, path.join(invalidPath, 'set_no_parent_fk.sql')),
+        throwsA(
+          isA<DatabaseException>().having(
+            (e) => e.message,
+            'message',
+            contains("Set table 'Collection_set_tags' must have foreign key to parent collection 'Collection'"),
+          ),
+        ),
+      );
+    });
+
+    test('rejects schema with set table of a non-existent collection', () {
+      expect(
+        () => Database.fromSchema(dbPath, path.join(invalidPath, 'set_unknown_parent.sql')),
+        throwsA(
+          isA<DatabaseException>().having(
+            (e) => e.message,
+            'message',
+            contains("Set table 'Ghost_set_tags' references non-existent collection 'Ghost'"),
+          ),
+        ),
+      );
+    });
+
+    test('rejects schema with time series parent FK without CASCADE', () {
+      expect(
+        () => Database.fromSchema(dbPath, path.join(invalidPath, 'time_series_fk_actions.sql')),
+        throwsA(
+          isA<DatabaseException>().having(
+            (e) => e.message,
+            'message',
+            contains("Time series table 'Collection_time_series_data' FK to parent must use ON DELETE CASCADE"),
+          ),
+        ),
+      );
+    });
+
+    test('rejects schema with time series relation FK without ON UPDATE CASCADE', () {
+      expect(
+        () => Database.fromSchema(dbPath, path.join(invalidPath, 'time_series_relation_fk_actions.sql')),
+        throwsA(
+          isA<DatabaseException>().having(
+            (e) => e.message,
+            'message',
+            contains("Foreign key 'parent_id' in table 'Collection_time_series_events' must use ON UPDATE CASCADE"),
+          ),
+        ),
+      );
+    });
   });
 }

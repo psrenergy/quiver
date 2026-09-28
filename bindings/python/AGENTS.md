@@ -1,0 +1,111 @@
+# Python Binding (quiverdb)
+
+Cross-layer naming rules (same snake_case names, `@staticmethod` factories, kwargs create/update)
+and the convenience-method parity tables live in the root `AGENTS.md`. Local Python runs go
+through `uv` (see root Build & Test).
+
+## Layout
+
+```
+src/quiverdb/
+  __init__.py     # Public exports: Database, QuiverError, LuaRunner, CSVOptions, DataType,
+                  # LogLevel, ScalarMetadata, GroupMetadata, version()
+  database.py     # Database class (inherits the CSV mixins below)
+  database_csv_export.py / database_csv_import.py  # export_csv / import_csv mixins
+  database_options.py  # CSVOptions-to-C marshaling
+  lua_runner.py   # LuaRunner class
+  metadata.py     # DataType/LogLevel (IntEnums), CSVOptions, ScalarMetadata, GroupMetadata
+  element.py      # Element builder - INTERNAL ONLY (users pass **kwargs)
+  exceptions.py   # QuiverError
+  _helpers.py     # Shared check()/decode_string helpers
+  _c_api.py       # Hand-written CFFI cdef declarations (kept in sync manually)
+  _loader.py      # Library loading
+  py.typed        # PEP 561 marker
+generator/        # generator.py prints current cdecls from headers to stdout — a diff aid
+                  # for hand-updating _c_api.py (it does NOT write the file)
+tests/            # Test suite (test_*.py per area) + test.bat
+pyproject.toml    # Version must match CMakeLists.txt; requires-python >=3.13; deps: cffi>=2.0
+ruff.toml         # Lint/format config (format.bat runs ruff)
+```
+
+## Rules and gotchas
+
+- **CFFI ABI-mode** — no compiler required at install time; `_c_api.py` declarations must match
+  the C headers exactly (struct layout mismatches corrupt silently). After C API changes, run
+  `generator/generator.bat` and diff its output against `_c_api.py`.
+- **`_loader.py` pre-loads `libquiver.dll`** on Windows so the OS resolves `libquiver_c.dll`'s
+  dependency chain. `tests/test.bat` prepends `build/bin/` to PATH for DLL discovery.
+- **API shape**: `create_element`/`update_element` accept `**kwargs` (dict unpacking works:
+  `db.create_element("Collection", **my_dict)`); the `Element` class is internal. Properties are
+  regular methods, not `@property` (design decision). `LogLevel` is an `IntEnum` exported from
+  `__init__.py`; internal mixin classes are not exported.
+- **A parameter that shadows a column name needs a `/`.** A method that addresses a row
+  positionally *and* takes attributes as `**kwargs` must mark the positional parameters
+  positional-only, or the kwarg binds to the parameter and raises `TypeError: got multiple values
+  for argument '<name>'` before the FFI call. `update_element_by_label(collection, label, /,
+  **kwargs)` is the acute case — renaming via `label=` is the point of the method, and every
+  collection has a `label` column by convention.
+- **A nullable scalar string argument passes `ffi.NULL`, never `b""`** (`update_relation` /
+  `update_relation_by_label`) — the C API reads NULL as "clear the relation" and an empty string
+  as a label to look up.
+- **Per-method FFI boilerplate is the house style** — don't collapse it into
+  closure-parameterized helpers (root "Do not 'fix'" list).
+- **Scalar bulk NULLs**: `read_scalar_integers`/`_floats` decode a parallel `uint8_t**` mask into
+  `list[T | None]` (`mask[i]` falsy → `None`); `read_scalar_strings` already returns `list[str | None]`
+  via the `ffi.NULL` guard, and `read_scalar_date_times` maps that list while preserving its `None`
+  slots. `_c_api.py` carries the mask out-param on the two numeric readers plus
+  `quiver_database_free_mask`.
+- **`read_time_series_row` absence mask**: same `uint8_t**` protocol as above, numeric columns only —
+  STRING/DATE_TIME get a NULL mask, so only the numeric branches call `quiver_database_free_mask`.
+- **`_parse_datetime` gates on `_DATE_TIME_PATTERN` before calling `fromisoformat`.**
+  `fromisoformat` is *wider* than the core's DATE_TIME grammar — it accepts `"20240115"`, a `Z`
+  suffix and a UTC offset, none of which Julia's parser reads — so without the gate the same stored
+  bytes read differently per binding. The gate is also what makes the trailing
+  `.replace(tzinfo=timezone.utc)` correct: it used to **overwrite** an offset rather than convert
+  it, so `"...T10:30:00+03:00"` came back as `10:30Z`, three hours off, with no error. Everything
+  reaching that line is now naive. An out-of-range field that clears the regex (`"2024-02-31"`)
+  falls through to the same rejection so the message still names the column. Keep this parser
+  accepting exactly the same set as Julia's `string_to_date_time` and Dart's `stringToDateTime`.
+  Its `@overload` triple mirrors `_integer_to_boolean`'s — keep the `(str) -> datetime` variant, or
+  the vector/set readers' comprehensions widen to `list[list[datetime | None]]` against their
+  declared `list[list[datetime]]`. Nothing typechecks this repo (`ruff.toml` is `select = ["I"]`,
+  isort only; no mypy/pyright in CI, `pyproject.toml`, or the pre-commit hooks), so that note is
+  the only guard against a "remove the redundant overloads" cleanup.
+- **`_integer_to_boolean` raises `ValueError`, not `QuiverError`** — the second documented
+  exception to "messages come from C++", alongside `_marshal_group_columns`' jagged-column check.
+  The boolean readers are a binding-only convenience with no C++ counterpart, so the core cannot
+  diagnose a stray `2`; the message names the offending `collection.attribute` (nothing to name for
+  `query_boolean`). The `@overload` triple mirrors `bindings/js/src/boolean.ts` — keep the
+  `(int) -> bool` variant, or the vector/set readers' comprehensions widen to `list[bool | None]`
+  against their declared `list[list[bool]]`.
+- **`LuaRunner.run` owns its result**: `quiver_lua_runner_run` takes a `char** out_result` and the
+  JSON string must be freed with `quiver_lua_runner_free_string` — *not*
+  `quiver_database_free_string` (both are hand-declared in `_c_api.py`). The free sits in a
+  `finally` so a `decode_string` failure (the JSON is rejected as non-UTF-8 in C++, but be safe)
+  cannot leak the native buffer.
+- **Time-series group NULLs**: `read_time_series_group` surfaces a SQL NULL cell as `None` in the
+  column list (decoded via the per-cell `uint8_t**` mask out-param); the dimension column stays
+  dense datetimes. `_marshal_group_columns` dispatches on the first non-`None` element, builds
+  a per-column mask, and substitutes `0`/`0.0`/`ffi.NULL` placeholders for `None` cells; an all-`None`
+  column is tagged FLOAT with a zeroed placeholder.
+- **`_marshal_group_columns` serves every columnar group writer** (time series, vector, set, by id
+  and by label) — same name as Dart's `_marshalGroupColumn`. It raises `ValueError` for jagged
+  column lists (a pre-FFI marshalling error, the documented exception to "messages come from C++");
+  everything else is validated in the core and surfaces as `QuiverError`. Note that the group
+  *writers* take columns while `read_vector_group_by_id` returns rows, and that reader composes
+  per-column reads, so it **drops NULL cells** — assert a NULL-cell write in SQL, not through it.
+- **`_marshal_row_columns` is its row-shaped sibling**, serving `upsert_time_series_row` and its
+  `_by_label` form — each kwarg is a scalar wrapped in a 1-element typed array. Kept separate
+  because the row-upsert C signature carries no per-cell mask: the group marshaller's zeroed
+  placeholder for a `None` cell would be written as data instead of NULL (a `None` kwarg raises
+  `TypeError` here).
+
+## Packaging
+
+- Wheels build via **scikit-build-core** (`cmake.source-dir = ../..`, Release,
+  `-DQUIVER_BUILD_TESTS=OFF`; the root CMakeLists detects `SKBUILD` and forces the C API ON).
+  `wheel.exclude` strips `bin`/`lib`/`include`/`share` from the wheel.
+- **cibuildwheel** targets `cp313-win_amd64` and `cp313-manylinux_x86_64`, running pytest as the
+  wheel test. CI publish flow in `.github/AGENTS.md`.
+- Local wheel checks: `scripts/test-wheel.bat`, `scripts/test-wheel-install.bat`,
+  `scripts/validate_wheel.py`, `scripts/validate_wheel_install.py`.

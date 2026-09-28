@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from quiverdb import Database
+import pytest
 
+from quiverdb import Database
 
 # -- Vector reads by ID -------------------------------------------------------
 
@@ -59,12 +60,13 @@ class TestReadVectorIntegersBulk:
         assert result == []
 
     def test_read_vector_integers_with_empty_vector(self, collections_db: Database) -> None:
-        # C++ bulk read skips elements with no vector data (same as scalar NULL skipping)
+        # One entry per element: an element with no vector data reads back as an empty list
         collections_db.create_element("Collection", label="item1", some_integer=10, value_int=[1, 2])
         collections_db.create_element("Collection", label="item2", some_integer=20)
         result = collections_db.read_vector_integers("Collection", "value_int")
-        assert len(result) == 1
+        assert len(result) == 2
         assert result[0] == [1, 2]
+        assert result[1] == []
 
 
 class TestReadVectorFloatsBulk:
@@ -138,6 +140,41 @@ class TestReadVectorStringsBulk:
         assert len(result) == 2
         assert result[0] == ["alpha", "beta"]
         assert result[1] == ["gamma", "delta", "epsilon"]
+
+
+class TestReadVectorDateTimesBulk:
+    def test_read_vector_date_times(self, all_types_db: Database) -> None:
+        assert all_types_db.read_vector_date_times("AllTypes", "label_value") == []
+
+        all_types_db.create_element(
+            "AllTypes",
+            label="item1",
+            label_value=["2024-01-15T10:30:00", "2024-01-16"],
+        )
+        all_types_db.create_element(
+            "AllTypes",
+            label="item2",
+            label_value=["2024-06-20 14:45:30"],
+        )
+        all_types_db.create_element("AllTypes", label="no vector")
+
+        assert all_types_db.read_vector_date_times("AllTypes", "label_value") == [
+            [
+                datetime(2024, 1, 15, 10, 30, tzinfo=timezone.utc),
+                datetime(2024, 1, 16, tzinfo=timezone.utc),
+            ],
+            [datetime(2024, 6, 20, 14, 45, 30, tzinfo=timezone.utc)],
+            [],
+        ]
+
+    def test_rejects_a_malformed_cell_naming_the_column(self, all_types_db: Database) -> None:
+        all_types_db.create_element("AllTypes", label="item1", label_value=["2024-01-15", "2024-01"])
+
+        with pytest.raises(ValueError, match=r"AllTypes\.label_value.*expected a valid YYYY-MM-DD"):
+            all_types_db.read_vector_date_times("AllTypes", "label_value")
+
+        with pytest.raises(ValueError, match=r"AllTypes\.label_value"):
+            all_types_db.read_vector_date_time_by_id("AllTypes", "label_value", 1)
 
 
 class TestReadVectorStringsById:

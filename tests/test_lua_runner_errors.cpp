@@ -304,14 +304,28 @@ TEST_F(LuaRunnerTest, QueryParameterUnsupportedTypeThrows) {
 
     quiver::LuaRunner lua(db);
 
-    // A silently dropped parameter would shift the remaining ones and return wrong results
+    // A silently dropped parameter would shift the remaining ones and return wrong results.
+    // A boolean is no longer the unsupported case — it binds as INTEGER 1/0 (see
+    // QueryParameterBooleanBindsInteger below); a function still has no SQL counterpart.
     try {
-        lua.run(R"(db:query_integer("SELECT id FROM Configuration WHERE label = ?", { true }))");
+        lua.run(R"(db:query_integer("SELECT id FROM Configuration WHERE label = ?", { print }))");
         FAIL() << "expected unsupported query parameter type to throw";
     } catch (const std::runtime_error& e) {
         EXPECT_NE(std::string(e.what()).find("Cannot lua_table_to_values: parameter #1"), std::string::npos)
             << e.what();
     }
+}
+
+TEST_F(LuaRunnerTest, QueryParameterBooleanBindsInteger) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+
+    quiver::LuaRunner lua(db);
+
+    auto json = lua.run(R"(
+        db:create_element("Collection", { label = "Flagged", some_integer = 1 })
+        return db:query_integer("SELECT COUNT(*) FROM Collection WHERE some_integer = ?", { true })
+    )");
+    EXPECT_EQ(json, "1");
 }
 
 TEST_F(LuaRunnerTest, InvalidDateTimeValueThrows) {

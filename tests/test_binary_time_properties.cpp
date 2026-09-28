@@ -73,86 +73,6 @@ TEST(TimeFrequencyConversion, RoundTrip) {
 }
 
 // ============================================================================
-// TimePropertiesSetters
-// ============================================================================
-
-TEST(TimePropertiesSetters, SetInitialValue) {
-    TimeProperties props{TimeFrequency::Daily, 1, -1};
-    props.set_initial_value(15);
-    EXPECT_EQ(props.initial_value, 15);
-}
-
-// ============================================================================
-// TimePropertiesDatetimeToInt
-// ============================================================================
-
-TEST(TimePropertiesDatetimeToInt, MonthlyJanuary) {
-    TimeProperties props{TimeFrequency::Monthly, 1, -1};
-    auto dt = sys_days{2025y / January / 15d};
-    EXPECT_EQ(props.datetime_to_int(dt), 1);
-}
-
-TEST(TimePropertiesDatetimeToInt, MonthlyMarch) {
-    TimeProperties props{TimeFrequency::Monthly, 1, -1};
-    auto dt = sys_days{2025y / March / 1d};
-    EXPECT_EQ(props.datetime_to_int(dt), 3);
-}
-
-TEST(TimePropertiesDatetimeToInt, MonthlyDecember) {
-    TimeProperties props{TimeFrequency::Monthly, 1, -1};
-    auto dt = sys_days{2025y / December / 31d};
-    EXPECT_EQ(props.datetime_to_int(dt), 12);
-}
-
-TEST(TimePropertiesDatetimeToInt, DailyFirst) {
-    TimeProperties props{TimeFrequency::Daily, 1, 0};
-    auto dt = sys_days{2025y / January / 1d};
-    EXPECT_EQ(props.datetime_to_int(dt), 1);
-}
-
-TEST(TimePropertiesDatetimeToInt, DailyFifteenth) {
-    TimeProperties props{TimeFrequency::Daily, 1, 0};
-    auto dt = sys_days{2025y / January / 15d};
-    EXPECT_EQ(props.datetime_to_int(dt), 15);
-}
-
-TEST(TimePropertiesDatetimeToInt, DailyThirtyFirst) {
-    TimeProperties props{TimeFrequency::Daily, 1, 0};
-    auto dt = sys_days{2025y / January / 31d};
-    EXPECT_EQ(props.datetime_to_int(dt), 31);
-}
-
-TEST(TimePropertiesDatetimeToInt, HourlyMidnight) {
-    TimeProperties props{TimeFrequency::Hourly, 1, 0};
-    auto dt = sys_days{2025y / January / 1d} + hours{0};
-    EXPECT_EQ(props.datetime_to_int(dt), 1);  // 0 + 1
-}
-
-TEST(TimePropertiesDatetimeToInt, HourlyNoon) {
-    TimeProperties props{TimeFrequency::Hourly, 1, 0};
-    auto dt = sys_days{2025y / January / 1d} + hours{12};
-    EXPECT_EQ(props.datetime_to_int(dt), 13);  // 12 + 1
-}
-
-TEST(TimePropertiesDatetimeToInt, HourlyLastHour) {
-    TimeProperties props{TimeFrequency::Hourly, 1, 0};
-    auto dt = sys_days{2025y / January / 1d} + hours{23};
-    EXPECT_EQ(props.datetime_to_int(dt), 24);  // 23 + 1
-}
-
-TEST(TimePropertiesDatetimeToInt, YearlyThrows) {
-    TimeProperties props{TimeFrequency::Yearly, 1, -1};
-    auto dt = sys_days{2025y / January / 1d};
-    EXPECT_THROW(props.datetime_to_int(dt), std::invalid_argument);
-}
-
-TEST(TimePropertiesDatetimeToInt, WeeklyThrows) {
-    TimeProperties props{TimeFrequency::Weekly, 1, -1};
-    auto dt = sys_days{2025y / January / 1d};
-    EXPECT_THROW(props.datetime_to_int(dt), std::invalid_argument);
-}
-
-// ============================================================================
 // TimePropertiesAddOffset
 // ============================================================================
 
@@ -196,17 +116,46 @@ TEST(TimePropertiesAddOffset, HourlyAddsHours) {
     EXPECT_EQ(result, expected);
 }
 
-TEST(TimePropertiesAddOffset, NoOpWhenValueEqualsInitial) {
+TEST(TimePropertiesAddOffset, ValueOneIsThePeriodHoldingTheBase) {
     TimeProperties props{TimeFrequency::Daily, 1, 0};
     auto base = sys_days{2025y / January / 1d};
     auto result = props.add_offset_from_int(base, 1);
     EXPECT_EQ(result, base);
 }
 
-TEST(TimePropertiesAddOffset, NonOneInitialValue) {
+TEST(TimePropertiesAddOffset, IgnoresInitialValue) {
+    // Periods count from the one holding the base, not from initial_value
     TimeProperties props{TimeFrequency::Daily, 5, 0};
     auto base = sys_days{2025y / January / 5d};
-    auto result = props.add_offset_from_int(base, 10);
-    auto ymd = year_month_day{floor<days>(result)};
-    EXPECT_EQ(ymd.day(), 10d);
+    EXPECT_EQ(props.add_offset_from_int(base, 10), sys_days{2025y / January / 14d});
+}
+
+TEST(TimePropertiesAddOffset, MonthlyStartsFromTheFirstOfTheBaseMonth) {
+    TimeProperties props{TimeFrequency::Monthly, 1, -1};
+    auto base = sys_days{2025y / January / 31d} + hours{6};
+    EXPECT_EQ(props.add_offset_from_int(base, 2), sys_days{2025y / February / 1d});  // not March 3
+}
+
+TEST(TimePropertiesAddOffset, YearlyStartsFromJanuaryFirstOfTheBaseYear) {
+    TimeProperties props{TimeFrequency::Yearly, 1, -1};
+    auto base = sys_days{2024y / February / 29d};
+    EXPECT_EQ(props.add_offset_from_int(base, 2), sys_days{2025y / January / 1d});
+}
+
+TEST(TimePropertiesAddOffset, WeeklyStartsOnTheBaseDay) {
+    TimeProperties props{TimeFrequency::Weekly, 1, -1};
+    auto base = sys_days{2025y / March / 15d} + hours{6};
+    EXPECT_EQ(props.add_offset_from_int(base, 2), sys_days{2025y / March / 22d});
+}
+
+TEST(TimePropertiesAddOffset, DailyStartsAtMidnight) {
+    TimeProperties props{TimeFrequency::Daily, 1, 0};
+    auto base = sys_days{2025y / March / 15d} + hours{6};
+    EXPECT_EQ(props.add_offset_from_int(base, 1), sys_days{2025y / March / 15d});
+}
+
+TEST(TimePropertiesAddOffset, HourlyStartsOnTheHour) {
+    TimeProperties props{TimeFrequency::Hourly, 1, 0};
+    auto base = sys_days{2025y / March / 15d} + hours{6} + minutes{30};
+    EXPECT_EQ(props.add_offset_from_int(base, 2), sys_days{2025y / March / 15d} + hours{7});
 }

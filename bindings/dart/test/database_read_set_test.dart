@@ -50,8 +50,41 @@ void main() {
     });
   });
 
-  group('Read Set Only Returns Elements With Data', () {
-    test('only returns sets for elements with data', () {
+  group('Read Set DateTimes', () {
+    test('reads DateTime sets in bulk', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'all_types.sql'),
+      );
+      try {
+        expect(db.readSetDateTimes('AllTypes', 'tag'), isEmpty);
+
+        db.createElement('AllTypes', {
+          'label': 'Item 1',
+          'tag': ['2024-01-15T10:30:00', '2024-01-16'],
+        });
+        db.createElement('AllTypes', {
+          'label': 'Item 2',
+          'tag': ['2024-06-20 14:45:30'],
+        });
+        db.createElement('AllTypes', {'label': 'No set'});
+
+        final result = db.readSetDateTimes('AllTypes', 'tag');
+        expect(result.length, equals(3));
+        expect(
+          result[0]..sort(),
+          equals([DateTime(2024, 1, 15, 10, 30), DateTime(2024, 1, 16)]),
+        );
+        expect(result[1], equals([DateTime(2024, 6, 20, 14, 45, 30)]));
+        expect(result[2], isEmpty);
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  group('Read Set Includes Elements With No Rows', () {
+    test('returns one entry per element, empty for elements with no rows', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
@@ -71,9 +104,12 @@ void main() {
           'tag': ['urgent', 'review'],
         });
 
-        // Only elements with set data are returned
+        // One entry per element: the element with no rows is an empty list, not a gap
         final result = db.readSetStrings('Collection', 'tag');
-        expect(result.length, equals(2));
+        expect(result.length, equals(3));
+        expect(result[0], equals(['important']));
+        expect(result[1], isEmpty);
+        expect(result[2], equals(['urgent', 'review']));
       } finally {
         db.close();
       }
@@ -272,6 +308,68 @@ void main() {
         expect(result['code']!.every((v) => v is int), isTrue);
         expect(result['weight']!.every((v) => v is double), isTrue);
         expect(result['tag']!.every((v) => v is String), isTrue);
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  group('Read Set DateTimes Rejects A Malformed Cell', () {
+    test('rejects and names the column', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'all_types.sql'),
+      );
+      try {
+        db.createElement('AllTypes', {
+          'label': 'Item 1',
+          'tag': ['2024-01-15', '20240115'],
+        });
+
+        expect(
+          () => db.readSetDateTimes('AllTypes', 'tag'),
+          throwsA(
+            isArgumentError.having(
+              (e) => e.toString(),
+              'message',
+              contains('AllTypes.tag'),
+            ),
+          ),
+        );
+        expect(
+          () => db.readSetDateTimesById('AllTypes', 'tag', 1),
+          throwsArgumentError,
+        );
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  group('Read Set Group Columns Pair By Row', () {
+    test('two per-column reads of one set group pair by row', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'multi_column_groups.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        final id = db.createElement('Items', {'label': 'Item 1'});
+        // Unsorted in both columns on purpose: a value-ordered reader would pair the wrong rows
+        db.updateSetGroup('Items', 'codes', id, {
+          'code': ['zeta', 'alpha', 'mu'],
+          'weight': [2.5, 3.5, 1.5],
+        });
+
+        final codes = db.readSetStringsById('Items', 'code', id);
+        final weights = db.readSetFloatsById('Items', 'weight', id);
+
+        expect(codes.length, equals(3));
+        expect(weights.length, equals(codes.length));
+        final pairs = {
+          for (var i = 0; i < codes.length; i++) codes[i]: weights[i],
+        };
+        expect(pairs, equals({'alpha': 3.5, 'mu': 1.5, 'zeta': 2.5}));
       } finally {
         db.close();
       }

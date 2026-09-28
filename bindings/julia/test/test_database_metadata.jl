@@ -196,6 +196,26 @@ include("fixture.jl")
 
         Quiver.close!(db)
     end
+
+    @testset "List Groups Unknown Collection" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        exc = @test_throws Quiver.DatabaseException Quiver.list_vector_groups(db, "Nope")
+        @test exc.value.msg == "Cannot list_vector_groups: collection not found: Nope"
+        exc = @test_throws Quiver.DatabaseException Quiver.list_set_groups(db, "Nope")
+        @test exc.value.msg == "Cannot list_set_groups: collection not found: Nope"
+        exc = @test_throws Quiver.DatabaseException Quiver.list_time_series_groups(db, "Nope")
+        @test exc.value.msg == "Cannot list_time_series_groups: collection not found: Nope"
+
+        # The composites inherit the throw instead of returning an empty Dict
+        exc = @test_throws Quiver.DatabaseException Quiver.read_vectors_by_id(db, "Nope", 1)
+        @test exc.value.msg == "Cannot list_vector_groups: collection not found: Nope"
+        exc = @test_throws Quiver.DatabaseException Quiver.read_sets_by_id(db, "Nope", 1)
+        @test exc.value.msg == "Cannot list_set_groups: collection not found: Nope"
+
+        Quiver.close!(db)
+    end
 end
 
 @testset "Read Set Group By ID" begin

@@ -367,6 +367,36 @@ include("fixture.jl")
         end
     end
 
+    @testset "Scalar import deletes an omitted element's group rows" begin
+        db = Quiver.from_schema(":memory:", path_schema)
+        csv_path = tempname() * ".csv"
+        try
+            Quiver.create_element!(db, "Items";
+                label = "Dropped",
+                name = "Alpha",
+                measurement = [1.5, 2.5],
+                tag = ["red"],
+            )
+            kept = Quiver.create_element!(db, "Items"; label = "Kept", name = "Beta", measurement = [9.5])
+
+            open(csv_path, "w") do f
+                return write(f, "sep=,\nlabel,name,status,price,date_created,notes\nKept,Beta,,,,\n")
+            end
+
+            Quiver.import_csv(db, "Items", "", csv_path)
+
+            @test Quiver.read_element_ids(db, "Items") == [kept]
+            @test Quiver.read_vector_floats_by_id(db, "Items", "measurement", kept) == [9.5]
+            orphans(table) =
+                Quiver.query_integer(db, "SELECT COUNT(*) FROM $table WHERE id NOT IN (SELECT id FROM Items)")
+            @test orphans("Items_vector_measurements") == 0
+            @test orphans("Items_set_tags") == 0
+        finally
+            isfile(csv_path) && rm(csv_path)
+            Quiver.close!(db)
+        end
+    end
+
     @testset "Import inside transaction throws" begin
         db = Quiver.from_schema(":memory:", path_schema)
         csv_path = tempname() * ".csv"

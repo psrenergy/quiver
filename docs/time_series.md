@@ -21,9 +21,12 @@ CREATE TABLE Resource_time_series_group1 (
 ```
 
 A time series table is named `{Collection}_time_series_{group}` and must be indexed by a
-dimension column whose name starts with `date_` (usually `date_time`), stored as ISO 8601
-text (`YYYY-MM-DDTHH:MM:SS`). The bindings convert their native datetime types to and from
-this format automatically.
+dimension column: a column whose name starts with `date_` (usually `date_time`) and that is
+part of the table's `PRIMARY KEY`, stored as ISO 8601 text (`YYYY-MM-DDTHH:MM:SS`). Any other
+`date_` column is an ordinary value column: it may be NULL and `read_time_series_row` can read
+it. The bindings convert their native datetime types to and from this format automatically.
+The table's `id` must reference the collection's `id` with `ON DELETE CASCADE ON UPDATE CASCADE`,
+as in the example; a table without that foreign key is rejected when the schema is loaded.
 
 The time part is optional — a bare `YYYY-MM-DD` is accepted, as is a space in place of the `T` —
 but nothing shorter is. `update_time_series_group` and `upsert_time_series_row` reject a dimension
@@ -65,6 +68,11 @@ For example, if you have the following data for the attribute `some_vector1`:
 1. Querying at `2020` returns `[1.0, nothing]`.
 2. Querying at `2021` returns `[1.0, 1.0]`.
 3. Querying at `2022` returns `[3.0, 1.0]`.
+
+`read_time_series_row` needs a group with a single dimension column. A group with more
+dimensions (such as `block` above) holds several rows at each date, so there is no single
+value per element, and the call raises an error. Read such a group with
+`read_time_series_group` instead.
 
 ### NULL cells in a group
 

@@ -488,7 +488,8 @@ TEST_F(LuaRunnerCApiTest, RunScriptUnsupportedAttributeTypeFails) {
     ASSERT_EQ(quiver_lua_runner_new(db, &lua), QUIVER_OK);
     ASSERT_NE(lua, nullptr);
 
-    auto result = run_script(lua, R"(db:create_element("Configuration", { label = "X", enabled = true }))");
+    // A function, not a boolean: a boolean is INTEGER 1/0 on every write path now.
+    auto result = run_script(lua, R"(db:create_element("Configuration", { label = "X", enabled = print }))");
     EXPECT_EQ(result, QUIVER_ERROR);
 
     const char* error = quiver_get_last_error();

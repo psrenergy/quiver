@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from quiverdb import Database
+import pytest
 
+from quiverdb import Database
 
 # -- Set reads by ID ----------------------------------------------------------
 
@@ -50,12 +51,48 @@ class TestReadSetStringsBulk:
         assert result == []
 
     def test_read_set_strings_with_empty_set(self, collections_db: Database) -> None:
-        # C++ bulk read skips elements with no set data (same as scalar NULL skipping)
+        # One entry per element: an element with no set data reads back as an empty list
         collections_db.create_element("Collection", label="item1", some_integer=10, tag=["alpha"])
         collections_db.create_element("Collection", label="item2", some_integer=20)
         result = collections_db.read_set_strings("Collection", "tag")
-        assert len(result) == 1
+        assert len(result) == 2
         assert result[0] == ["alpha"]
+        assert result[1] == []
+
+
+class TestReadSetDateTimesBulk:
+    def test_read_set_date_times(self, all_types_db: Database) -> None:
+        assert all_types_db.read_set_date_times("AllTypes", "tag") == []
+
+        all_types_db.create_element(
+            "AllTypes",
+            label="item1",
+            tag=["2024-01-15T10:30:00", "2024-01-16"],
+        )
+        all_types_db.create_element(
+            "AllTypes",
+            label="item2",
+            tag=["2024-06-20 14:45:30"],
+        )
+        all_types_db.create_element("AllTypes", label="no set")
+
+        result = all_types_db.read_set_date_times("AllTypes", "tag")
+        assert len(result) == 3
+        assert sorted(result[0]) == [
+            datetime(2024, 1, 15, 10, 30, tzinfo=timezone.utc),
+            datetime(2024, 1, 16, tzinfo=timezone.utc),
+        ]
+        assert result[1] == [datetime(2024, 6, 20, 14, 45, 30, tzinfo=timezone.utc)]
+        assert result[2] == []
+
+    def test_rejects_a_malformed_cell_naming_the_column(self, all_types_db: Database) -> None:
+        all_types_db.create_element("AllTypes", label="item1", tag=["2024-01-15", "20240115"])
+
+        with pytest.raises(ValueError, match=r"AllTypes\.tag.*expected a valid YYYY-MM-DD"):
+            all_types_db.read_set_date_times("AllTypes", "tag")
+
+        with pytest.raises(ValueError, match=r"AllTypes\.tag"):
+            all_types_db.read_set_date_time_by_id("AllTypes", "tag", 1)
 
 
 # -- Convenience set reads ---------------------------------------------------
@@ -222,3 +259,26 @@ class TestReadElementById:
         assert all(isinstance(v, int) for v in result["code"])
         assert all(isinstance(v, float) for v in result["weight"])
         assert all(isinstance(v, str) for v in result["tag"])
+
+
+# -- Set group column pairing -------------------------------------------------
+
+
+class TestReadSetGroupColumnsPairByRow:
+    def test_two_per_column_reads_pair_by_row(self, multi_column_groups_db: Database) -> None:
+        multi_column_groups_db.create_element("Configuration", label="Config")
+        element_id = multi_column_groups_db.create_element("Items", label="item1")
+        # Unsorted in both columns on purpose: a value-ordered reader would pair the wrong rows
+        multi_column_groups_db.update_set_group(
+            "Items",
+            "codes",
+            element_id,
+            {"code": ["zeta", "alpha", "mu"], "weight": [2.5, 3.5, 1.5]},
+        )
+
+        codes = multi_column_groups_db.read_set_strings_by_id("Items", "code", element_id)
+        weights = multi_column_groups_db.read_set_floats_by_id("Items", "weight", element_id)
+
+        assert len(codes) == 3
+        assert len(weights) == len(codes)
+        assert sorted(zip(codes, weights)) == [("alpha", 3.5), ("mu", 1.5), ("zeta", 2.5)]

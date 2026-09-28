@@ -51,13 +51,25 @@ Lua values map to Quiver column values as follows:
 | integer            | INTEGER      | Also accepted for REAL columns (coerced to real). |
 | number (float)     | REAL         | A float is rejected for an INTEGER column.     |
 | string             | TEXT         | Also used for \`date_time\` columns (ISO 8601).  |
+| boolean            | INTEGER 1/0  | SQLite has no boolean type; \`true\` writes 1, \`false\` 0. |
 | \`nil\`              | NULL         | In query params, file paths, ts rows, relations.|
 | table (1-indexed)  | array        | Used for vectors/sets and column-oriented data.|
 
-**Unsupported types throw.** Passing a boolean, a function, or a nested table where a scalar is
-expected raises an error rather than silently dropping the value. This applies to element
-attributes, time-series rows, and query parameters. A skipped positional query parameter would
-shift every later parameter and bind NULL to the trailing placeholder, so this is rejected loudly.
+A boolean is accepted **wherever an integer is** — element scalars and arrays, query parameters,
+the group writers, and \`upsert_time_series_row\` — so it also reaches a REAL column through the
+usual int-for-REAL coercion. Reading is the asymmetric half: there are no boolean readers in Lua
+(unlike Julia/Dart/Python/JS), so a stored flag comes back as \`0\`/\`1\` from
+\`read_scalar_integers\`. Compare against 0 rather than truth-testing —
+\`read_scalar_integers(c, a)[i] == 1\` — because in Lua a \`nil\` from a NULL cell is *not* equal to
+0 and \`nil ~= 0\` evaluates to \`true\`.
+
+The one place a boolean is deliberately refused is \`db:update_relation\`, where the argument is a
+target label and only \`nil\` (or omitting it) may clear the relation.
+
+**Unsupported types throw.** Passing a function or a nested table where a scalar is expected raises
+an error rather than silently dropping the value. This applies to element attributes, time-series
+rows, and query parameters. A skipped positional query parameter would shift every later parameter
+and bind NULL to the trailing placeholder, so this is rejected loudly.
 
 Dates are plain strings in ISO 8601 format: \`YYYY-MM-DDTHH:MM:SS\`. (Lua keeps a string-based
 datetime surface — there are no DateTime wrapper helpers, unlike Julia/Dart/Python.) The time part
@@ -81,9 +93,13 @@ midnight.
 - **Standard library.** Loaded standard libraries: base, string, table, math, coroutine, utf8.
   That is the pure-computation set — there is no \`os\`, \`io\`, \`debug\`, or \`package\`/\`require\`,
   and \`dofile\`/\`loadfile\` are removed (string-form \`load\` stays available). Integer division is
-  the Lua 5.4 \`//\` operator — a language operator, unrelated to \`math\`.
+  the Lua 5.4 \`//\` operator — a language operator, unrelated to \`math\`. No \`io\` does **not** mean
+  a data file on disk is out of reach: read it with \`db:read_csv\` / \`db:read_csv_stream\` (see
+  the CSV file reading section below). Never copy, paste, or re-type a data file's contents into
+  the script as literals — read the file.
 - **Filesystem sandbox.** Every file-touching operation (\`db:export_csv\`, \`db:import_csv\`,
-  \`db:open_file\`, \`db:bin_to_csv\`, \`db:csv_to_bin\`, \`db:validate_migrations\`, \`expr:save\`) resolves
+  \`db:open_file\`, \`db:bin_to_csv\`, \`db:csv_to_bin\`, \`db:validate_migrations\`, \`db:read_csv\`,
+  \`db:read_csv_stream\`, \`db:write_csv\`, \`expr:save\`) resolves
   relative paths against the directory containing the database file and rejects anything outside it
   (subdirectories are fine; \`..\` escapes and outside absolute paths throw \`Cannot <op>: path '...' escapes the
   database directory ...\`). On an in-memory database these operations throw
@@ -207,8 +223,8 @@ Rules worth knowing:
   its BEGIN/COMMIT are absorbed. The flip side: a nested \`db:rollback\` does **not** partially
   undo — everything is undone when the dry run ends, whatever the nested calls asked for.
 - \`db:in_transaction()\` still reports \`true\` during a dry run: a real transaction is open.
-- \`db:import_csv\` cannot run inside a dry run (it toggles a pragma that is a no-op mid-transaction)
-  and throws \`Cannot import_csv: transaction already active\`.
+- \`db:import_csv\` cannot run inside a dry run (it manages its own transaction, and a dry run is a
+  real one) and throws \`Cannot import_csv: transaction already active\`.
 - **Dry runs do not nest.** The host may have already opened one around your whole script, in which
   case both \`db:begin_dry_run()\` and \`db:dry_run(fn)\` (which calls it internally) error with
   \`Cannot begin_dry_run: dry run already active\` — check \`db:in_dry_run()\` first and skip the
@@ -368,6 +384,13 @@ db:read_element_by_id(collection, id)            -- scalars + vectors + sets mer
 \`read_element_by_id\` merges every scalar, vector, and set for the element into a single table.
 Scalar attributes with no value come back as \`nil\`.
 
+**Group columns are returned densely, with NULL cells dropped.** \`read_vectors_by_id\` and
+\`read_sets_by_id\` read each column independently, and a column read skips its NULL cells — so two
+columns of the same group are **not** positionally aligned with each other whenever one is
+nullable (e.g. an \`ON DELETE SET NULL\` relation). Do not zip them into rows. There is no
+row-aligned group read in Lua; if you need per-row alignment across a nullable group, do that read
+in the host binding instead.
+
 ---
 
 ## Time series
@@ -396,7 +419,9 @@ local values = db:read_time_series_row(collection, group, attribute, date_time)
 \`\`\`
 
 One value per element using **last non-null value at or before \`date_time\`** semantics. Elements
-with no matching data yield \`nil\` in the array. \`date_time\` is an ISO 8601 string.
+with no matching data yield \`nil\` in the array. \`date_time\` is an ISO 8601 string. A group with
+more than one dimension column (e.g. \`date_time\` + \`block\`) throws — read it with
+\`read_time_series_group\`.
 
 Because \`nil\` cannot occupy an array slot, **take the element count from
 \`db:read_element_ids(collection)\`**, never from \`#values\`.
@@ -590,9 +615,156 @@ The optional \`options\` table has two keys:
 }
 \`\`\`
 
-**Precondition:** \`db:import_csv\` cannot run inside an open transaction (it toggles
-\`PRAGMA foreign_keys\`, a no-op mid-transaction) — it throws \`Cannot import_csv: transaction already
-active\`. Call it outside any \`db:transaction\` / \`db:begin_transaction\` block.
+**Precondition:** \`db:import_csv\` cannot run inside an open transaction (it opens and commits its
+own) — it throws \`Cannot import_csv: transaction already active\`. Call it outside any
+\`db:transaction\` / \`db:begin_transaction\` block.
+
+---
+
+## CSV file reading
+
+Read a CSV file from disk directly into Lua — the only way to get file data into a script, since
+\`io\` is deliberately absent from the sandbox. \`path\` is sandboxed the same way as every other
+file-touching operation (see Critical rules).
+
+\`\`\`lua
+local csv = db:read_csv(path, { separator = ",", header_row = 1 })   -- { header = {...}, rows = {{...}, ...} }
+\`\`\`
+
+Every cell arrives as a **string**, with no numeric or date inference — \`"0012"\` stays \`"0012"\`
+and a date stays text. \`csv.header\` is a 1-based array of the file's column names in file order;
+\`csv.rows\` is a 1-based array of rows, each a 1-based array of strings, addressed positionally
+(\`csv.rows[1][1]\`). Rows are never padded to header width — a short row stays short and a field
+past its end is \`nil\`. A 0-byte file throws \`Cannot read_csv: file '<path>' is empty\`; a
+header-only file returns a populated \`header\` and an empty \`rows\`.
+
+The options table is optional; its two keys are \`separator\` and \`header_row\`. \`header_row\` is
+1-based (like every other index here) and defaults to \`1\`; \`header_row = 0\` declares the file has
+no header at all, so \`csv.header\` is absent (\`nil\`, not an empty table) and \`csv.rows[1]\` is the
+file's first line — useful for a file with a junk title row and/or a units row around the real
+header (skip them by naming the header row and slicing \`csv.rows\` in the script). A \`header_row\`
+past the end of the file throws. Passing the separator positionally (\`db:read_csv(path, ";")\`)
+throws \`Cannot read_csv: options must be a table\` instead of silently parsing with a comma; an
+unknown key, a separator that isn't a single character (or is a quote, CR, LF or NUL — none of
+those can be a delimiter), a non-string option key, or a \`header_row\` that isn't a
+non-negative integer also throws.
+
+**Reading a file \`db:export_csv\` wrote:** \`export_csv\` emits an Excel-style \`sep=,\` preamble as
+line 1, so its real header is line 2 — read it with \`{ header_row = 2 }\`. With the default
+\`header_row = 1\` the preamble itself becomes a two-column header and the column names come back
+as \`rows[1]\`.
+
+\`db:read_csv_stream\` reads the same file through the same parser, row by row, so the process holds
+a bounded window instead of the whole file:
+
+\`\`\`lua
+local n = db:read_csv_stream(path, function(row, index, header)
+    -- row: same shape as db:read_csv's rows; index: the 1-based ordinal of this DATA row (the
+    -- header row is not counted, so skipping index 1 to "skip a header" drops a real record);
+    -- header: the same array db:read_csv returns, reachable here so a column can be found by
+    -- name before processing row 1.
+    return row[1] ~= ""     -- returning false stops the read early; a bare comparison as the
+end, { separator = "," })   -- last statement can silently truncate the stream this way
+-- n counts rows FED to the callback, not rows it kept -- a filtering callback logging n as
+-- "imported" would be wrong.
+\`\`\`
+
+A Lua error raised inside the callback propagates to the host verbatim, and the file is closed.
+
+**Worked example**, over two real files that used to be hand-transcribed into scripts instead of
+read from disk:
+
+\`\`\`lua
+-- File 1: BOM + CRLF, a junk title row above the header, a units row below it, apostrophe
+-- thousands separators, and a DD/MM/YYYY date.
+local csv = db:read_csv("ma_energia_residencial.csv", { header_row = 2 })
+-- header_row = 2 skips the block-title junk row (line 1). rows[1] is the units row that sits
+-- BELOW the header (line 3) -- not a reader concern -- so real data starts at rows[2].
+for i = 2, #csv.rows do
+    local row = csv.rows[i]
+    local dd, mm, yyyy = row[5]:match("(%d%d)/(%d%d)/(%d%d%d%d)")
+    local date_key = yyyy .. "-" .. mm
+    -- gsub returns TWO values (string, replacement count). tonumber(row[6]:gsub("['%s]", ""))
+    -- would hand the count to tonumber as its BASE argument and silently return nil, no error.
+    -- The parentheses below truncate the call to one value -- this is the correct form.
+    local value = tonumber((row[6]:gsub("['%s]", "")))
+end
+
+-- File 2: header is line 1 (the default, no header_row needed), a quoted field containing a
+-- comma, and English month names -- os is unloaded, so there is no date library to lean on.
+local MONTHS = {
+    January = 1, February = 2, March = 3, April = 4, May = 5, June = 6,
+    July = 7, August = 8, September = 9, October = 10, November = 11, December = 12,
+}
+local gd = db:read_csv("ma_gd_data.csv")
+for i = 1, #gd.rows do
+    local row = gd.rows[i]
+    -- The date cell is a quoted field containing a comma ("May 1, 2014"); the row still has
+    -- exactly 2 fields -- mishandled quoting would have split the date and shifted this value.
+    local month_name, _, year = row[1]:match("(%a+) (%d+), (%d+)")
+    local date_key = string.format("%d-%02d", tonumber(year), MONTHS[month_name])
+    local value = tonumber(row[2])  -- already a plain decimal string, no cleanup needed
+end
+\`\`\`
+
+---
+
+## CSV file writing
+
+Write a CSV file to disk — the only way to get data out of a script onto disk, since \`io\` is
+deliberately absent from the sandbox. Streaming only, with no whole-file counterpart: \`db:write_csv\`
+returns a handle, \`w:write_row({...})\` appends one row, \`w:close()\` finishes it. \`path\` is
+sandboxed the same way as every other file-touching operation (see Critical rules).
+
+\`\`\`lua
+local w = db:write_csv(path, { separator = ",", header = { "name", "note", "active", "score" } })
+local rows = {
+    { "Alpha", "first", true, 42 },
+    { "Beta", nil, false, 3.5 },     -- nil is INTERIOR, not the row's last cell: a TRAILING nil
+                                      -- would shorten the row instead of writing an empty cell.
+}
+for _, row in ipairs(rows) do
+    w:write_row(row)
+end
+w:close()
+\`\`\`
+
+The options table is optional; its only two keys are \`separator\` (a single character, default
+\`,\`) and \`header\` (column names written as the first record, default none — no header row). A
+quote, CR, LF or NUL is rejected as a separator: none of them can be a delimiter, and a file
+written with one could not be read back.
+
+Opening \`db:write_csv\` **truncates** an existing file at the target path — there is no overwrite
+guard, so a script can destroy an existing file in the case folder (including the database file
+itself) by writing to its path. This is documented behaviour, not a bug: reopening the same path
+always starts a fresh file. Two writers open on the *same* path at once is refused, though
+(\`Cannot write_csv: file is already open for writing: ...\`) — the second would truncate what the
+first is still buffering. Close the first writer before reopening its path.
+
+\`write_row\` after \`close\` throws; \`close\` is idempotent (a second call is a no-op, not an error).
+
+A number is written in its shortest round-trip form (\`std::to_chars\`, no synthetic decimal point),
+so a whole float like \`2014.0\` and the integer \`2014\` write identical text — a script that needs
+a decimal point writes the cell as a string. A boolean writes \`1\`/\`0\`, matching the project-wide
+boolean-is-INTEGER write policy.
+
+\`nil\` and an empty string are not always the same thing here. An INTERIOR \`nil\` cell (not a row's
+last cell, like \`"Beta"\`'s note above) writes an empty cell, indistinguishable from \`""\` after the
+round trip — CSV has no null. A TRAILING \`nil\`, however, is not a cell at all: Lua stores no key
+for it, so the row's maximum integer key is lower. **With no \`header\`** that makes the row come
+back **one column narrower**, and a script that needs a trailing empty column must write an empty
+string there, not \`nil\`. **With a \`header\`** the padding rule below fills the gap, so the row is
+header-width either way.
+
+With a \`header\`, its length is the row width: a \`write_row\` shorter than the header pads with
+empty cells, and a longer one throws, naming the row's ordinal and both counts. Omitting \`header\`
+disables the check entirely — rows of any length are written as-is.
+
+A writer never explicitly closed is still flushed and closed when the script's \`run()\` call
+returns — whether or not the script still holds it (a \`local\` that went out of scope and a global
+alike) — so the file is complete and re-readable even without a \`w:close()\` call, and no warning
+is emitted. The writer does not survive that \`run()\`: using the same handle from a later
+\`run()\` throws \`Cannot write_row: writer for '...' is already closed\`.
 
 ---
 
@@ -684,7 +856,9 @@ and \`unit\` default to \`""\`; \`labels\`, \`dimensions\`, \`dimension_sizes\`,
 
 ## What Lua does *not* expose
 
-DateTime wrapper helpers (Lua uses ISO 8601 strings) and \`_by_id\` single-scalar variants (use the
-composite by-id readers or the bulk readers instead). Everything else the native binding exposes —
-CRUD, reads, time series, metadata, query, CSV, and the binary/expression subsystems — is
-documented above and callable.`;
+DateTime wrapper helpers (Lua uses ISO 8601 strings), boolean *reader* helpers (a stored flag reads
+back as \`0\`/\`1\` — writing a boolean is supported), \`_by_id\` single-scalar variants (use the
+composite by-id readers or the bulk readers instead), and the row-aligned whole-group readers the
+other bindings have (hence the null-dropping caveat under composite by-id reads). Everything else
+the native binding exposes — CRUD, reads, time series, metadata, query, CSV, and the
+binary/expression subsystems — is documented above and callable.`;

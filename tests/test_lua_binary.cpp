@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <fstream>
 #include <gtest/gtest.h>
 #include <quiver/database.h>
 #include <quiver/lua_runner.h>
@@ -122,6 +123,25 @@ TEST_F(LuaBinaryTest, ReadNullWithoutAllowThrows) {
     EXPECT_THROW(lua.run("local r = db:open_file('bin_a', 'r')\nr:read({row=2})\n"), std::exception);
 }
 
+TEST_F(LuaBinaryTest, ReadRejectsNonIntegerDimension) {
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+    lua.run(md1() + R"(
+        local f = db:open_file('bin_a', 'w', md)
+        f:write({42.0}, {row=1})
+        f:close()
+    )");
+    // An unchecked dimension getter silently rounded in a release build and panicked on a raw
+    // sol2 error in a debug one, so a bad dimension returned the wrong slice instead of failing.
+    // (A boolean is not tested here: it coerces to 1 like every other numeric slot.)
+    expect_lua_error(lua,
+                     R"(
+        local r = db:open_file('bin_a', 'r')
+        r:read({row=1.5})
+    )",
+                     "dimension 'row' has unsupported Lua type");
+}
+
 TEST_F(LuaBinaryTest, TimeDimensionWriteRead) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::LuaRunner lua(db);
@@ -140,6 +160,26 @@ TEST_F(LuaBinaryTest, TimeDimensionWriteRead) {
     )");
 }
 
+TEST_F(LuaBinaryTest, WeeklyDailyCountsDaysFromInitialDatetimeAcrossYearEnd) {
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+    // 60 weeks from Saturday 2025-03-15: a week is seven days from that day, so week 42 day 6 is 2026-01-01
+    lua.run(R"(
+        local md = quiver.metadata{ initial_datetime='2025-03-15T00:00:00', unit='MW',
+            labels={'v'}, dimensions={'week','day'}, dimension_sizes={60,7},
+            time_dimensions={'week','day'}, frequencies={'weekly','daily'} }
+        assert(md:get_dimensions()[2].initial_value == 1, 'a day under a week starts at 1')
+        local f = db:open_file('bin_w', 'w', md)
+        for week=1,60 do for day=1,7 do f:write({week*10+day}, {week=week, day=day}) end end
+        f:close()
+        local r = db:open_file('bin_w', 'r')
+        for week=1,60 do for day=1,7 do
+          assert(r:read({week=week, day=day})[1] == week*10+day, 'cell '..week..','..day)
+        end end
+        r:close()
+    )");
+}
+
 TEST_F(LuaBinaryTest, CsvRoundTrip) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::LuaRunner lua(db);
@@ -147,18 +187,41 @@ TEST_F(LuaBinaryTest, CsvRoundTrip) {
         local md = quiver.metadata{ initial_datetime='2025-01-01T00:00:00', unit='MW',
             labels={'v1','v2'}, dimensions={'row','col'}, dimension_sizes={3,2} }
         local f = db:open_file('bin_a', 'w', md)
-        for row=1,3 do for col=1,2 do f:write({row*10+col, row+col}, {row=row, col=col}) end end
+        for row=1,3 do for col=1,2 do f:write({row*10+col + 0.123456789, row+col}, {row=row, col=col}) end end
         f:close()
         db:bin_to_csv('bin_a')
         db:csv_to_bin('bin_a')
         local r = db:open_file('bin_a', 'r')
         for row=1,3 do for col=1,2 do
           local cell = r:read({row=row, col=col})
-          assert(cell[1] == row*10+col and cell[2] == row+col, 'csv roundtrip at '..row..','..col)
+          assert(cell[1] == row*10+col + 0.123456789 and cell[2] == row+col, 'csv roundtrip at '..row..','..col)
         end end
         r:close()
     )");
     EXPECT_TRUE(fs::exists(sandbox / "bin_a.csv"));
+}
+
+TEST_F(LuaBinaryTest, CsvToBinRejectsTrailingGarbage) {
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+    lua.run(md1() + "local f = db:open_file('bin_a', 'w', md)\nf:close()\n");  // writes bin_a.toml
+    {
+        std::ofstream csv(sandbox / "bin_a.csv");
+        csv << "row,v\n1,9.99abc\n2,1\n3,1\n";
+    }
+    expect_lua_error(lua, "db:csv_to_bin('bin_a')\n", "Cannot csv_to_bin: invalid float value '9.99abc' for label 'v'");
+}
+
+TEST_F(LuaBinaryTest, CsvToBinShortRowReportsLine) {
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+    // Opening a writer leaves the .toml sidecar csv_to_bin reads. Lua has no io, so the CSV is written here.
+    lua.run(md1() + "db:open_file('bin_a', 'w', md):close()\n");
+    {
+        std::ofstream csv(sandbox / "bin_a.csv");
+        csv << "row,v\n1\n";
+    }
+    expect_lua_error(lua, "db:csv_to_bin('bin_a')\n", "Cannot csv_to_bin: line 2 has 1 fields, expected 2");
 }
 
 TEST_F(LuaBinaryTest, MetadataFromToml) {
@@ -175,6 +238,41 @@ TEST_F(LuaBinaryTest, MetadataFromToml) {
         local labels = md2:get_labels()
         assert(#labels == 2 and labels[1] == "a" and labels[2] == "b", "labels roundtrip")
     )");
+}
+
+TEST_F(LuaBinaryTest, MetadataCountMismatchThrows) {
+    auto db = quiver::Database::from_schema(":memory:", schema);
+    quiver::LuaRunner lua(db);
+    // A script is untrusted input; each of these used to index past dimension_sizes / frequencies.
+    expect_lua_error(lua,
+                     "quiver.metadata{ initial_datetime='2025-01-01T00:00:00', unit='MW', labels={'v'},"
+                     " dimensions={'stage', 'block'}, dimension_sizes={12} }\n",
+                     "dimension_sizes count (1) does not match dimensions count (2)");
+    expect_lua_error(lua,
+                     "quiver.metadata{ initial_datetime='2025-01-01T00:00:00', unit='MW', labels={'v'},"
+                     " dimensions={'stage', 'block'} }\n",
+                     "dimension_sizes count (0) does not match dimensions count (2)");
+    expect_lua_error(lua,
+                     "quiver.metadata{ initial_datetime='2025-01-01T00:00:00', unit='MW', labels={'v'},"
+                     " dimensions={'stage'}, dimension_sizes={12}, time_dimensions={'stage'} }\n",
+                     "frequencies count (0) does not match time_dimensions count (1)");
+}
+
+TEST_F(LuaBinaryTest, MetadataFromTomlRejectsWrongTypedEntry) {
+    auto db = quiver::Database::from_schema(":memory:", schema);
+    quiver::LuaRunner lua(db);
+    expect_lua_error(lua,
+                     R"lua(
+        quiver.metadata_from_toml([[
+version = "1"
+dimensions = ["row", 2]
+dimension_sizes = [3, 2]
+initial_datetime = "2025-01-01T00:00:00"
+unit = "MW"
+labels = ["val"]
+]])
+    )lua",
+                     "array 'dimensions' must contain strings");
 }
 
 TEST_F(LuaBinaryTest, OpenFileInvalidModeThrows) {
@@ -231,6 +329,22 @@ TEST_F(LuaBinaryTest, RootItselfRejected) {
     quiver::LuaRunner lua(db);
     expect_lua_error(lua, md1() + "db:open_file('.', 'w', md)\n", "escapes the database directory");
 }
+
+#ifdef _WIN32
+// resolve_sandboxed_path is the single gate every file-touching Lua operation shares, so the
+// Pattern 1 guarantee it makes has to hold for all of them, not just the one where the hole was
+// found (db:read_csv -- see LuaRunner_ReadCsv.DeviceNamePathIsReportedWithPrefix). A Windows
+// device name makes weakly_canonical throw rather than report a missing file; unwrapped, the raw
+// "weakly_canonical: The parameter is incorrect.: ..." reached the script. Guarded to _WIN32
+// because no POSIX path is reserved this way.
+TEST_F(LuaBinaryTest, DeviceNamePathIsReportedWithPrefix) {
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+    expect_lua_error(lua, md1() + "db:open_file('NUL', 'w', md)\n", "Cannot open_file: cannot resolve path 'NUL': ");
+    expect_lua_error(lua, "db:bin_to_csv('NUL')\n", "Cannot bin_to_csv: cannot resolve path 'NUL': ");
+    expect_lua_error(lua, "db:csv_to_bin('NUL')\n", "Cannot csv_to_bin: cannot resolve path 'NUL': ");
+}
+#endif
 
 TEST_F(LuaBinaryTest, ConverterEscapeThrows) {
     auto db = quiver::Database::from_schema(db_path(), schema);

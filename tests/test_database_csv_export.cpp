@@ -624,6 +624,22 @@ TEST(DatabaseCSV, ExportImportCSV_FloatRoundTripPreservesValue) {
     EXPECT_DOUBLE_EQ(*price, 1234567.89);
 }
 
+// glibc and Apple libc flag a subnormal strtod result with ERANGE; export writes one as `1e-310`,
+// so import must accept it there too (only overflow and a nonzero value flushed to 0 are rejected).
+TEST(DatabaseCSV, ExportImportCSV_SubnormalFloatRoundTrips) {
+    auto db = make_db();
+    quiver::Element e;
+    e.set("label", std::string("Item1")).set("name", std::string("Name")).set("price", 1e-310);
+    auto id = db.create_element("Items", e);
+
+    auto path = (fs::temp_directory_path() / "quiver_subnormal_roundtrip.csv").string();
+    db.export_csv("Items", "", path);
+    db.import_csv("Items", "", path);
+    fs::remove(path);
+
+    EXPECT_EQ(db.read_scalar_float_by_id("Items", "price", id), 1e-310);
+}
+
 TEST(DatabaseCSV, ExportImportCSV_ForeignKeyColumnRoundTrips) {
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
@@ -687,4 +703,27 @@ TEST(DatabaseCSV, ExportCSV_GroupForeignKeyWritesLabel) {
     fs::remove(path);
 
     EXPECT_EQ(db.read_vector_integers_by_id("Child", "parent_ref", child), (std::vector<int64_t>{1}));
+}
+
+// export_csv and db:write_csv share one emitter (csv_write::append_record): a '"' or CR forces
+// quoting, a space alone does not. The old emitter quoted on a space but left `"quoted"` raw, which
+// import then read back as `quoted`.
+TEST(DatabaseCSV, ExportImportCSV_QuoteAndSpaceCellsRoundTrip) {
+    auto db = make_db();
+    quiver::Element e;
+    e.set("label", std::string("Item 1")).set("name", std::string("5\"")).set("notes", std::string("\"quoted\""));
+    db.create_element("Items", e);
+
+    auto path = temp_csv("ExportQuoteSpace").string();
+    db.export_csv("Items", "", path);
+    auto content = read_file(path);
+    EXPECT_NE(content.find("\nItem 1,\"5\"\"\",,,,\"\"\"quoted\"\"\"\n"), std::string::npos) << content;
+
+    auto db2 = make_db();
+    db2.import_csv("Items", "", path);
+    fs::remove(path);
+
+    EXPECT_EQ(db2.read_scalar_string_by_id("Items", "label", 1), "Item 1");
+    EXPECT_EQ(db2.read_scalar_string_by_id("Items", "name", 1), "5\"");
+    EXPECT_EQ(db2.read_scalar_string_by_id("Items", "notes", 1), "\"quoted\"");
 }

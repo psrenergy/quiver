@@ -3,8 +3,9 @@
 The bulk scalar readers (`read_scalar_integers` / `read_scalar_floats` / `read_scalar_strings`)
 are nullability-aware: a `NOT NULL` column returns a concrete `Vector{T}`, a nullable column
 returns `Vector{Optional{T}}` (`Optional{T} = Union{Nothing, T}`), decided from
-`get_scalar_metadata(...).not_null`. `read_scalar_booleans` inherits the same shape without a
-second metadata read — it branches on `read_scalar_integers`' container type. This document tracks
+`get_scalar_metadata(...).not_null`. Two derivative wrappers inherit the same shape without a
+second metadata read, by branching on the delegate's container type: `read_scalar_booleans`
+(on `read_scalar_integers`) and `read_scalar_date_times` (on `read_scalar_strings`). This document tracks
 the readers that were deliberately left out of that change and what (if anything) should happen to
 them.
 
@@ -26,7 +27,7 @@ each value column concrete `Vector{T}` when its `not_null` is true, `Vector{Opti
 otherwise. The dimension column stays a dense `Vector{DateTime}` (already concrete). Mirror the
 mask-skipping pattern used in the scalar readers.
 
-Note the cross-binding decision (root `CLAUDE.md`): time-series group data is column-oriented and
+Note the cross-binding decision (root `AGENTS.md`): time-series group data is column-oriented and
 group reads currently return `Vector{Union{T,Nothing}}` always — update that design note if this
 lands, and keep Python/Dart/JS on their static nullable surface.
 
@@ -49,5 +50,5 @@ joins), and a query with no rows legitimately yields `nothing`. Keep returning `
   already plumbed C++ → C API → Julia.
 - Add `isa` assertions in the matching `test/test_*.jl` keyed to each column's real nullability;
   do not use `@inferred` on the public reader (its inferred type is intentionally a 2-way union).
-- Update the nearest `CLAUDE.md` (root design decision + `bindings/julia/CLAUDE.md`) per the
+- Update the nearest `AGENTS.md` (root design decision + `bindings/julia/AGENTS.md`) per the
   self-updating rule.

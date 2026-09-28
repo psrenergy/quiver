@@ -35,8 +35,8 @@ typedef struct {
 // Opaque handle type
 typedef struct quiver_binary_metadata quiver_binary_metadata_t;
 
-// Lifecycle
-QUIVER_C_API quiver_error_t quiver_binary_metadata_create(quiver_binary_metadata_t** out);
+// Lifecycle: there is no incremental builder. A handle comes from the two factories below, or as a copy
+// from quiver_binary_file_get_metadata / quiver_expression_get_metadata; free releases every one.
 QUIVER_C_API quiver_error_t quiver_binary_metadata_free(quiver_binary_metadata_t* md);
 
 // Factories
@@ -47,22 +47,6 @@ QUIVER_C_API quiver_error_t quiver_binary_metadata_from_element(quiver_element_t
 
 // Serialization
 QUIVER_C_API quiver_error_t quiver_binary_metadata_to_toml(quiver_binary_metadata_t* md, char** out_toml);
-
-// Builders
-QUIVER_C_API quiver_error_t quiver_binary_metadata_set_initial_datetime(quiver_binary_metadata_t* md,
-                                                                        const char* iso8601);
-QUIVER_C_API quiver_error_t quiver_binary_metadata_set_unit(quiver_binary_metadata_t* md, const char* unit);
-QUIVER_C_API quiver_error_t quiver_binary_metadata_set_version(quiver_binary_metadata_t* md, const char* version);
-QUIVER_C_API quiver_error_t quiver_binary_metadata_set_labels(quiver_binary_metadata_t* md,
-                                                              const char* const* labels,
-                                                              size_t count);
-QUIVER_C_API quiver_error_t quiver_binary_metadata_add_dimension(quiver_binary_metadata_t* md,
-                                                                 const char* name,
-                                                                 int64_t size);
-QUIVER_C_API quiver_error_t quiver_binary_metadata_add_time_dimension(quiver_binary_metadata_t* md,
-                                                                      const char* name,
-                                                                      int64_t size,
-                                                                      const char* frequency);
 
 // Getters
 QUIVER_C_API quiver_error_t quiver_binary_metadata_get_unit(quiver_binary_metadata_t* md, char** out);

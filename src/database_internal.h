@@ -28,24 +28,23 @@ inline std::optional<std::string> get_row_value(const Row& row, size_t index, st
     return row.get_string(index);
 }
 
-// Template for reading grouped values (vectors or sets) for all elements
+// One output entry per element, aligned with read_element_ids. Expects the LEFT JOIN the bulk
+// readers build: column 0 the collection's id (never NULL), column 1 the value. An element with no
+// values joins to one NULL row, which the value check skips, leaving its entry empty.
 template <typename T>
 std::vector<std::vector<T>> read_grouped_values_all(const Result& result) {
     std::vector<std::vector<T>> groups;
     int64_t current_id = -1;
 
     for (size_t i = 0; i < result.row_count(); ++i) {
-        auto id = result[i].get_integer(0);
-        auto val = get_row_value(result[i], 1, static_cast<T*>(nullptr));
-
-        if (!id)
-            continue;
-
-        if (*id != current_id) {
+        // Column 0 is the collection's INTEGER PRIMARY KEY, so it is never NULL.
+        auto id = *result[i].get_integer(0);
+        if (id != current_id) {
             groups.emplace_back();
-            current_id = *id;
+            current_id = id;
         }
 
+        auto val = get_row_value(result[i], 1, static_cast<T*>(nullptr));
         if (val) {
             groups.back().push_back(*val);
         }
@@ -91,23 +90,11 @@ std::optional<T> read_single_value(const Result& result) {
     return get_row_value(result[0], 0, static_cast<T*>(nullptr));
 }
 
-// Find the dimension/ordering column in a time series table
-inline std::string find_dimension_column(const TableDefinition& table_def) {
-    for (const auto& [col_name, col] : table_def.columns) {
-        if (col_name == "id")
-            continue;
-        if (col.type == DataType::DateTime || is_date_time_column(col_name)) {
-            return col_name;
-        }
-    }
-    throw std::runtime_error("Dimension column not found: time series table '" + table_def.name + "'");
-}
-
 // Find all dimension columns for a time series table: every PK column except
 // "id", returned in declaration order (column_order is populated from
-// PRAGMA table_info, which reports columns in declaration order). Throws if
-// the table has no dimension columns — mirrors find_dimension_column's
-// contract so callers don't repeat the empty check.
+// PRAGMA table_info, which reports columns in declaration order). These are the
+// columns the writers key a row on. Throws if the table has none, so callers
+// don't repeat the empty check.
 inline std::vector<std::string> find_dimension_columns(const TableDefinition& table_def) {
     std::vector<std::string> dim_cols;
     for (const auto& col_name : table_def.column_order) {
@@ -123,6 +110,19 @@ inline std::vector<std::string> find_dimension_columns(const TableDefinition& ta
         throw std::runtime_error("Dimension column not found: time series table '" + table_def.name + "'");
     }
     return dim_cols;
+}
+
+// Find the date dimension of a time series table: the first of find_dimension_columns
+// that holds dates. Built on the primary key, so the readers (metadata, ORDER BY, the
+// read_time_series_row axis) agree with the writers; a date_ value column outside the
+// key is never picked. Throws if the key holds no date column.
+inline std::string find_dimension_column(const TableDefinition& table_def) {
+    for (const auto& col_name : find_dimension_columns(table_def)) {
+        if (table_def.columns.at(col_name).type == DataType::DateTime || is_date_time_column(col_name)) {
+            return col_name;
+        }
+    }
+    throw std::runtime_error("Dimension column not found: time series table '" + table_def.name + "'");
 }
 
 // True if the Value variant holds the data type expected by a schema column.

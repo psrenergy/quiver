@@ -81,8 +81,8 @@ void main() {
     });
   });
 
-  group('Read Vector Only Returns Elements With Data', () {
-    test('only returns vectors for elements with data', () {
+  group('Read Vector Includes Elements With No Rows', () {
+    test('returns one entry per element, empty for elements with no rows', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
@@ -102,11 +102,12 @@ void main() {
           'value_int': [4, 5],
         });
 
-        // Only elements with vector data are returned
+        // One entry per element: the element with no rows is an empty list, not a gap
         final result = db.readVectorIntegers('Collection', 'value_int');
-        expect(result.length, equals(2));
+        expect(result.length, equals(3));
         expect(result[0], equals([1, 2, 3]));
-        expect(result[1], equals([4, 5]));
+        expect(result[1], isEmpty);
+        expect(result[2], equals([4, 5]));
       } finally {
         db.close();
       }
@@ -251,6 +252,39 @@ void main() {
     });
   });
 
+  group('Read Vector DateTimes', () {
+    test('reads DateTime vectors in bulk', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'all_types.sql'),
+      );
+      try {
+        expect(db.readVectorDateTimes('AllTypes', 'label_value'), isEmpty);
+
+        db.createElement('AllTypes', {
+          'label': 'Item 1',
+          'label_value': ['2024-01-15T10:30:00', '2024-01-16'],
+        });
+        db.createElement('AllTypes', {
+          'label': 'Item 2',
+          'label_value': ['2024-06-20 14:45:30'],
+        });
+        db.createElement('AllTypes', {'label': 'No vector'});
+
+        expect(
+          db.readVectorDateTimes('AllTypes', 'label_value'),
+          equals([
+            [DateTime(2024, 1, 15, 10, 30), DateTime(2024, 1, 16)],
+            [DateTime(2024, 6, 20, 14, 45, 30)],
+            <DateTime>[],
+          ]),
+        );
+      } finally {
+        db.close();
+      }
+    });
+  });
+
   group('Read Vector Invalid Collection', () {
     test('throws on nonexistent collection for vector integers', () {
       final db = Database.fromSchema(
@@ -355,6 +389,38 @@ void main() {
 
         final rows = db.readVectorGroupById('Collection', 'values', 999);
         expect(rows, isEmpty);
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  group('Read Vector DateTimes Rejects A Malformed Cell', () {
+    test('rejects and names the column', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'all_types.sql'),
+      );
+      try {
+        db.createElement('AllTypes', {
+          'label': 'Item 1',
+          'label_value': ['2024-01-15', '2024-01'],
+        });
+
+        expect(
+          () => db.readVectorDateTimes('AllTypes', 'label_value'),
+          throwsA(
+            isArgumentError.having(
+              (e) => e.toString(),
+              'message',
+              contains('AllTypes.label_value'),
+            ),
+          ),
+        );
+        expect(
+          () => db.readVectorDateTimesById('AllTypes', 'label_value', 1),
+          throwsArgumentError,
+        );
       } finally {
         db.close();
       }

@@ -226,12 +226,14 @@ TEST(Database, CreateElementWithNoOptionalAttributes) {
     int64_t id = db.create_element("Collection", element);
     EXPECT_EQ(id, 1);
 
-    // Verify vector attributes are empty
+    // Verify vector attributes are empty - one entry per element, empty for this one
     auto vectors = db.read_vector_integers("Collection", "value_int");
-    EXPECT_TRUE(vectors.empty());
+    ASSERT_EQ(vectors.size(), 1);
+    EXPECT_TRUE(vectors[0].empty());
 
     auto sets = db.read_set_strings("Collection", "tag");
-    EXPECT_TRUE(sets.empty());
+    ASSERT_EQ(sets.size(), 1);
+    EXPECT_TRUE(sets[0].empty());
 }
 
 TEST(Database, CreateElementWithTimeSeries) {
@@ -691,6 +693,27 @@ TEST(Database, ScalarFkResolutionFailureCausesNoPartialWrites) {
     // Verify: no child was created (zero partial writes)
     auto labels = db.read_scalar_strings("Child", "label");
     EXPECT_EQ(labels.size(), 0);
+}
+
+// TransactionGuard no-ops inside a dry run, so an array rejected after the INSERT used to leave the
+// element readable for the rest of the dry run (a Lua script that pcall'd the error saw it).
+TEST(Database, CreateElementRejectedArrayInsideDryRunLeavesNoElement) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+    db.create_element("Configuration", quiver::Element().set("label", std::string("Config")));
+
+    db.begin_dry_run();
+    try {
+        db.create_element("Collection",
+                          quiver::Element().set("label", std::string("X")).set("typo", std::vector<int64_t>{1}));
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(),
+                     "Cannot create_element: array 'typo' does not match any vector, set, or time series table in "
+                     "collection 'Collection'");
+    }
+    EXPECT_EQ(db.number_of_elements("Collection"), 0);
+    db.end_dry_run();
 }
 
 TEST(Database, CreateScalarTypeCoercionPolicy) {

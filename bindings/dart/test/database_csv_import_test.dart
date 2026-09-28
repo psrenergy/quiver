@@ -395,6 +395,39 @@ void main() {
       }
     });
 
+    test('scalar import deletes an omitted element\'s group rows', () {
+      final db = Database.fromSchema(':memory:', schemaPath);
+      final csvPath = '${Directory.systemTemp.path}/quiver_dart_csv_import_omitted.csv';
+      try {
+        db.createElement('Items', {
+          'label': 'Dropped',
+          'name': 'Alpha',
+          'measurement': [1.5, 2.5],
+          'tag': ['red'],
+        });
+        final kept = db.createElement('Items', {
+          'label': 'Kept',
+          'name': 'Beta',
+          'measurement': [9.5],
+        });
+
+        File(csvPath).writeAsStringSync('sep=,\nlabel,name,status,price,date_created,notes\nKept,Beta,,,,\n');
+
+        db.importCSV('Items', '', csvPath);
+
+        expect(db.readElementIds('Items'), [kept]);
+        expect(db.readVectorFloatsById('Items', 'measurement', kept), [9.5]);
+        int? orphans(String table) =>
+            db.queryInteger('SELECT COUNT(*) FROM $table WHERE id NOT IN (SELECT id FROM Items)');
+        expect(orphans('Items_vector_measurements'), 0);
+        expect(orphans('Items_set_tags'), 0);
+      } finally {
+        final f = File(csvPath);
+        if (f.existsSync()) f.deleteSync();
+        db.close();
+      }
+    });
+
     test('import inside transaction throws', () {
       final db = Database.fromSchema(':memory:', schemaPath);
       final csvPath = '${Directory.systemTemp.path}/quiver_dart_csv_import_in_tx.csv';

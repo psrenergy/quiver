@@ -47,6 +47,30 @@ protected:
         quiver_element_destroy(el);
         return md;
     }
+
+    // monthly(2) x hourly(744) from 2025-03-15T06:00:00: month 1 is March, month 2 is April (720 hours)
+    quiver_binary_metadata_t* make_monthly_hourly_metadata() {
+        quiver_element_t* el = nullptr;
+        quiver_element_create(&el);
+        quiver_element_set_string(el, "version", "1");
+        quiver_element_set_string(el, "initial_datetime", "2025-03-15T06:00:00");
+        quiver_element_set_string(el, "unit", "MW");
+
+        const char* dims[] = {"month", "hour"};
+        quiver_element_set_array_string(el, "dimensions", dims, 2, nullptr);
+        int64_t sizes[] = {2, 744};
+        quiver_element_set_array_integer(el, "dimension_sizes", sizes, 2, nullptr);
+        quiver_element_set_array_string(el, "time_dimensions", dims, 2, nullptr);
+        const char* frequencies[] = {"monthly", "hourly"};
+        quiver_element_set_array_string(el, "frequencies", frequencies, 2, nullptr);
+        const char* labels[] = {"val"};
+        quiver_element_set_array_string(el, "labels", labels, 1, nullptr);
+
+        quiver_binary_metadata_t* md = nullptr;
+        quiver_binary_metadata_from_element(el, &md);
+        quiver_element_destroy(el);
+        return md;
+    }
 };
 
 // ============================================================================
@@ -461,6 +485,47 @@ TEST_F(BinaryCApiFixture, ReadUnwrittenPositionFails) {
 
         quiver_binary_file_close(binary_file);
     }
+}
+
+TEST_F(BinaryCApiFixture, HourlyUnderMonthlyFromNonMidnightStart) {
+    auto* md = make_monthly_hourly_metadata();
+    ASSERT_NE(md, nullptr);
+
+    // 06:00 on March 15 is hour 14 * 24 + 7 = 343 of March
+    quiver_dimension_t hour_dim = {};
+    EXPECT_EQ(quiver_binary_metadata_get_dimension(md, 1, &hour_dim), QUIVER_OK);
+    EXPECT_EQ(hour_dim.time_properties.initial_value, 343);
+    quiver_binary_metadata_free_dimension(&hour_dim);
+
+    const char* dim_names[] = {"month", "hour"};
+    const int64_t cells[][2] = {{1, 343}, {1, 744}, {2, 1}, {2, 720}};  // start, end of March, April's first/last
+
+    quiver_binary_file_t* writer = nullptr;
+    ASSERT_EQ(quiver_binary_file_open_file(path.c_str(), 'w', md, &writer), QUIVER_OK);
+    for (const auto& cell : cells) {
+        double data[] = {static_cast<double>(cell[0] * 1000 + cell[1])};
+        EXPECT_EQ(quiver_binary_file_write(writer, dim_names, cell, 2, data, 1), QUIVER_OK) << quiver_get_last_error();
+    }
+    int64_t past_april[] = {2, 721};
+    double one[] = {1.0};
+    EXPECT_EQ(quiver_binary_file_write(writer, dim_names, past_april, 2, one, 1), QUIVER_ERROR);
+    EXPECT_NE(std::string(quiver_get_last_error()).find("dimension 'hour' has value 721"), std::string::npos);
+    quiver_binary_file_close(writer);
+    quiver_binary_metadata_free(md);
+
+    quiver_binary_file_t* reader = nullptr;
+    ASSERT_EQ(quiver_binary_file_open_file(path.c_str(), 'r', nullptr, &reader), QUIVER_OK);
+    for (const auto& cell : cells) {
+        double* out_data = nullptr;
+        size_t out_count = 0;
+        EXPECT_EQ(quiver_binary_file_read(reader, dim_names, cell, 2, 0, &out_data, &out_count), QUIVER_OK);
+        EXPECT_EQ(out_count, 1u);  // not ASSERT: returning here would leave the reader open for later tests
+        if (out_count == 1u) {
+            EXPECT_DOUBLE_EQ(out_data[0], static_cast<double>(cell[0] * 1000 + cell[1]));
+        }
+        quiver_binary_file_free_float_array(out_data);
+    }
+    quiver_binary_file_close(reader);
 }
 
 // ============================================================================

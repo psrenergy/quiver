@@ -149,6 +149,31 @@ end
         @test_throws Quiver.DatabaseException Quiver.Binary.from_toml_content(toml)
     end
 
+    @testset "from_toml_content wrong-typed array entry" begin
+        toml = """
+            version = "1"
+            dimensions = ["row", 2]
+            dimension_sizes = [3, 2]
+            initial_datetime = "2025-01-01T00:00:00"
+            unit = "MW"
+            labels = ["val"]
+            """
+        err = @test_throws Quiver.DatabaseException Quiver.Binary.from_toml_content(toml)
+        @test err.value.msg == "Cannot from_toml_content: array 'dimensions' must contain strings"
+    end
+
+    @testset "from_toml_content missing unit names the key" begin
+        toml = """
+            version = "1"
+            dimensions = ["row"]
+            dimension_sizes = [3]
+            initial_datetime = "2025-01-01T00:00:00"
+            labels = ["val"]
+            """
+        err = @test_throws Quiver.DatabaseException Quiver.Binary.from_toml_content(toml)
+        @test err.value.msg == "Cannot from_toml_content: missing key 'unit'"
+    end
+
     @testset "from_toml_content no time dimensions" begin
         toml = """
             version = "1"
@@ -401,6 +426,30 @@ end
         @test_throws Quiver.DatabaseException Quiver.Binary.from_element(el)
     end
 
+    @testset "Metadata dimension_sizes count mismatch" begin
+        err = @test_throws Quiver.DatabaseException Quiver.Binary.Metadata(;
+            initial_datetime = "2025-01-01T00:00:00",
+            unit = "MW",
+            labels = ["val"],
+            dimensions = ["stage", "block"],
+            dimension_sizes = Int64[12],
+        )
+        @test err.value.msg == "Cannot from_element: dimension_sizes count (1) does not match dimensions count (2)"
+    end
+
+    @testset "Metadata time dimensions without frequencies" begin
+        # frequencies defaults to String[]; this used to read frequencies[0] from an empty vector
+        err = @test_throws Quiver.DatabaseException Quiver.Binary.Metadata(;
+            initial_datetime = "2025-01-01T00:00:00",
+            unit = "MW",
+            labels = ["val"],
+            dimensions = ["stage"],
+            dimension_sizes = Int64[12],
+            time_dimensions = ["stage"],
+        )
+        @test err.value.msg == "Cannot from_element: frequencies count (0) does not match time_dimensions count (1)"
+    end
+
     # ==========================================================================
     # to_toml
     # ==========================================================================
@@ -457,10 +506,10 @@ end
     end
 
     @testset "Pre-epoch initial datetime (1960) round-trips" begin
-        # Regression guard: pre-1970 datetimes go through the C API's
-        # quiver_binary_metadata_set_initial_datetime, which on Windows used to corrupt them via
-        # _mkgmtime (1960-01-01 -> 1969-12-31T23:59:59). The C++ fix routes through the chrono
-        # calendar; assert the exact string survives the FFI round-trip.
+        # Regression guard: `Metadata(; ...)` builds through quiver_binary_metadata_from_element,
+        # whose initial_datetime parse (shared with from_toml) used to corrupt pre-1970 datetimes
+        # on Windows via _mkgmtime (1960-01-01 -> 1969-12-31T23:59:59). The C++ fix routes through
+        # the chrono calendar; assert the exact string survives the FFI round-trip.
         md = Quiver.Binary.Metadata(;
             initial_datetime = "1960-01-01T00:00:00",
             unit = "MW",
@@ -642,7 +691,7 @@ end
     end
 
     # ==========================================================================
-    # Time dimension size validation (via from_toml_content)
+    # Time dimension size validation (via Metadata / from_element)
     # ==========================================================================
 
     # --- Hourly under Daily ---

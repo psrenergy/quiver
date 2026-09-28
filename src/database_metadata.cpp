@@ -80,7 +80,7 @@ std::vector<ScalarMetadata> Database::list_scalar_attributes(const std::string& 
 }
 
 std::vector<GroupMetadata> Database::list_vector_groups(const std::string& collection) const {
-    impl_->require_schema();
+    impl_->require_collection(collection, "list_vector_groups");
 
     std::vector<GroupMetadata> result;
     for (const auto& group_name : impl_->schema->group_names(collection, GroupTableType::Vector)) {
@@ -90,7 +90,7 @@ std::vector<GroupMetadata> Database::list_vector_groups(const std::string& colle
 }
 
 std::vector<GroupMetadata> Database::list_set_groups(const std::string& collection) const {
-    impl_->require_schema();
+    impl_->require_collection(collection, "list_set_groups");
 
     std::vector<GroupMetadata> result;
     for (const auto& group_name : impl_->schema->group_names(collection, GroupTableType::Set)) {

@@ -232,5 +232,28 @@ void main() {
         db.close();
       }
     });
+
+    test('readTimeSeriesRow throws on a multi-dimension group', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'multi_dim_time_series.sql'),
+      );
+      try {
+        expect(
+          () => db.readTimeSeriesRow('Resource', 'load', 'load', DateTime(2024, 1, 1)),
+          throwsA(
+            isA<DatabaseException>().having(
+              (e) => e.message,
+              'message',
+              equals(
+                "Cannot read_time_series_row: group 'load' of collection 'Resource' has more than one dimension column",
+              ),
+            ),
+          ),
+        );
+      } finally {
+        db.close();
+      }
+    });
   });
 }

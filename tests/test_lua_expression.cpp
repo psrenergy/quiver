@@ -166,6 +166,30 @@ TEST_F(LuaExpressionTest, AggregateDimensionPercentile) {
     )");  // median{1,2,3} = 2
 }
 
+TEST_F(LuaExpressionTest, AggregateSumOverInnermostTimeDimFromMidPeriodStart) {
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+    // year x month x day from 2025-03-15: only March 2025 starts on the 15th, so March 2026 sums
+    // all 31 days.
+    lua.run(R"(
+        local md = quiver.metadata{ initial_datetime='2025-03-15T00:00:00', unit='MW',
+            labels={'v'}, dimensions={'year','month','day'}, dimension_sizes={2,12,31},
+            time_dimensions={'year','month','day'}, frequencies={'yearly','monthly','daily'} }
+        local f = db:open_file('expr_a', 'w', md)
+        for day=15,31 do f:write({1.0}, {year=1, month=3, day=day}) end
+        for day=1,31 do f:write({1.0}, {year=2, month=3, day=day}) end
+        f:close()
+        local fa = db:open_file('expr_a', 'r')
+        local agg = quiver.expression(fa):aggregate('day', 'sum')
+        agg:save('expr_out')
+        fa:close()
+        local r = db:open_file('expr_out', 'r')
+        assert(r:read({year=1, month=3})[1] == 17.0, 'March 2025 starts on the 15th')
+        assert(r:read({year=2, month=3})[1] == 31.0, 'March 2026 is a whole month')
+        r:close()
+    )");
+}
+
 TEST_F(LuaExpressionTest, AggregateUnknownOpThrows) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::LuaRunner lua(db);
@@ -176,6 +200,48 @@ TEST_F(LuaExpressionTest, AggregateUnknownOpThrows) {
         quiver.expression(fa):aggregate('row', 'bogus')
     )",
                      "Cannot aggregate: unknown operation 'bogus'");
+}
+
+TEST_F(LuaExpressionTest, AggregateAgentsUnknownOpThrows) {
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+    expect_lua_error(lua,
+                     prelude() + R"(
+        fill_by_row('expr_a')
+        local fa = db:open_file('expr_a', 'r')
+        quiver.expression(fa):aggregate_agents('bogus')
+    )",
+                     "Cannot aggregate_agents: unknown operation 'bogus'");
+}
+
+TEST_F(LuaExpressionTest, AggregateOutermostTimeDimFromMidYearStart) {
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+    // year x month from 2025-03-01 holds 2025-03..2026-12. Reducing 'year' makes month outermost;
+    // output month m must be calendar month m, in memory and after a reopen.
+    lua.run(R"(
+        local md = quiver.metadata{ initial_datetime='2025-03-01T00:00:00', unit='MW', labels={'v'},
+            dimensions={'year','month'}, dimension_sizes={2,12},
+            time_dimensions={'year','month'}, frequencies={'yearly','monthly'} }
+        local f = db:open_file('expr_a', 'w', md)
+        for year=1,2 do for month=1,12 do
+            if year == 2 or month >= 3 then f:write({100 * year + month}, {year=year, month=month}) end
+        end end
+        f:close()
+        local fa = db:open_file('expr_a', 'r')
+        local agg = quiver.expression(fa):aggregate('year', 'sum')
+        local start = agg:metadata():get_initial_datetime()
+        assert(start == '2025-01-01T00:00:00', 'output starts at the first reduced period, got ' .. start)
+        assert(agg:metadata():get_dimensions()[1].initial_value == 1, 'month starts at 1')
+        agg:save('expr_out')
+        fa:close()
+        local r = db:open_file('expr_out', 'r')
+        assert(r:get_metadata():get_initial_datetime() == '2025-01-01T00:00:00', 'saved start')
+        assert(r:read({month=1}, true)[1] == 201, 'Jan: 2026 only')
+        assert(r:read({month=3}, true)[1] == 306, 'Mar: 103 + 203')
+        assert(r:read({month=12}, true)[1] == 324, 'Dec: 112 + 212')
+        r:close()
+    )");
 }
 
 TEST_F(LuaExpressionTest, AggregateAgentsMean) {
@@ -193,6 +259,25 @@ TEST_F(LuaExpressionTest, AggregateAgentsMean) {
         assert(r:read({row=1, col=1})[1] == 15.0, 'mean value')
         r:close()
     )");  // mean(10,20) = 15
+}
+
+TEST_F(LuaExpressionTest, AggregateAgentsMaxMinusMin) {
+    // aggregate_agents names its one label after the operation, so this subtracts a {'min'} operand
+    // from a {'max'} one. Single labels broadcast whatever they are called; the lhs label is kept.
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+    lua.run(prelude() + R"(
+        fill('expr_a', 10.0, 25.0)
+        local fa = db:open_file('expr_a', 'r')
+        local spread = quiver.expression(fa):aggregate_agents('max') - quiver.expression(fa):aggregate_agents('min')
+        spread:save('expr_out')
+        fa:close()
+        local r = db:open_file('expr_out', 'r')
+        local labels = r:get_metadata():get_labels()
+        assert(#labels == 1 and labels[1] == 'max', 'lhs label kept')
+        assert(r:read({row=2, col=1})[1] == 15.0, 'max - min')
+        r:close()
+    )");  // max(10, 25) - min(10, 25) = 15
 }
 
 TEST_F(LuaExpressionTest, SelectAndRenameAgents) {

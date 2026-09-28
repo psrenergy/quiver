@@ -1,8 +1,5 @@
 #include "quiver/binary/time_properties.h"
 
-#include "binary_utils.h"
-#include "quiver/binary/time_constants.h"
-
 #include <stdexcept>
 
 namespace quiver {
@@ -36,46 +33,24 @@ TimeFrequency frequency_from_string(const std::string& str) {
     throw std::invalid_argument("Unknown frequency: " + str);
 }
 
-void TimeProperties::set_initial_value(int64_t initial_value) {
-    this->initial_value = initial_value;
-}
-
-int64_t TimeProperties::datetime_to_int(std::chrono::system_clock::time_point datetime) const {
-    auto date = std::chrono::floor<std::chrono::days>(datetime);
-    auto ymd = std::chrono::year_month_day{date};
-    switch (this->frequency) {
-    case TimeFrequency::Yearly:
-        throw std::invalid_argument("YEARLY frequency extraction not implemented. This function should only be used "
-                                    "for inner time dimensions.");
-    case TimeFrequency::Monthly:
-        return static_cast<unsigned>(ymd.month());  // 1-12
-    case TimeFrequency::Weekly:
-        throw std::invalid_argument("WEEKLY frequency extraction not implemented. This function should only be used "
-                                    "for inner time dimensions.");
-    case TimeFrequency::Daily:
-        return static_cast<unsigned>(ymd.day());  // 1-31
-    case TimeFrequency::Hourly:
-        int64_t hour = std::chrono::floor<std::chrono::hours>(datetime - date).count() + 1;  // 0-23 -> 1-24
-        return hour;
-    }
-}
-
 std::chrono::system_clock::time_point
 TimeProperties::add_offset_from_int(std::chrono::system_clock::time_point base_datetime, int64_t value) const {
+    // Flooring first is what keeps calendar steps exact: an inner dimension's base is already the start of
+    // its parent's period (a 1st at midnight), so January 31 + one month can never become March 3.
     auto date = std::chrono::floor<std::chrono::days>(base_datetime);
     auto ymd = std::chrono::year_month_day{date};
-    int64_t relative_value = value - this->initial_value;
-    switch (this->frequency) {
+    int64_t steps = value - 1;
+    switch (frequency) {
     case TimeFrequency::Yearly:
-        return std::chrono::sys_days{ymd + std::chrono::years{relative_value}};
+        return std::chrono::sys_days{(ymd.year() + std::chrono::years{steps}) / std::chrono::January / 1};
     case TimeFrequency::Monthly:
-        return std::chrono::sys_days{ymd + std::chrono::months{relative_value}};
+        return std::chrono::sys_days{(ymd.year() / ymd.month() + std::chrono::months{steps}) / 1};
     case TimeFrequency::Weekly:
-        return base_datetime + std::chrono::weeks{relative_value};
+        return date + std::chrono::weeks{steps};
     case TimeFrequency::Daily:
-        return base_datetime + std::chrono::days{relative_value};
+        return date + std::chrono::days{steps};
     case TimeFrequency::Hourly:
-        return base_datetime + std::chrono::hours{relative_value};
+        return std::chrono::floor<std::chrono::hours>(base_datetime) + std::chrono::hours{steps};
     }
 }
 

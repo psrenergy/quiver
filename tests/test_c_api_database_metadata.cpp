@@ -216,3 +216,24 @@ TEST(DatabaseCApiMetadata, SummarizeCollectionNotFound) {
 
     quiver_database_close(db);
 }
+
+TEST(DatabaseCApiMetadata, ListGroupsCollectionNotFound) {
+    quiver_database_t* db = open_collections();
+
+    quiver_group_metadata_t* groups = nullptr;
+    size_t count = 0;
+
+    EXPECT_EQ(quiver_database_list_vector_groups(db, "Nope", &groups, &count), QUIVER_ERROR);
+    EXPECT_STREQ(quiver_get_last_error(), "Cannot list_vector_groups: collection not found: Nope");
+
+    EXPECT_EQ(quiver_database_list_set_groups(db, "Nope", &groups, &count), QUIVER_ERROR);
+    EXPECT_STREQ(quiver_get_last_error(), "Cannot list_set_groups: collection not found: Nope");
+
+    EXPECT_EQ(quiver_database_list_time_series_groups(db, "Nope", &groups, &count), QUIVER_ERROR);
+    EXPECT_STREQ(quiver_get_last_error(), "Cannot list_time_series_groups: collection not found: Nope");
+
+    // Nothing was allocated, so there is nothing to free.
+    EXPECT_EQ(groups, nullptr);
+
+    quiver_database_close(db);
+}

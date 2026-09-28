@@ -229,8 +229,9 @@ inline void free_group_fields(quiver_group_metadata_t& m) {
 // Decodes the columnar typed-arrays + per-cell mask form into the row-shaped data the C++ core
 // takes - the inverse of marshal_group_rows_to_c, shared by every group update C function
 // (time series, vector, set). A NULL mask (for the whole parameter or for one column) means dense,
-// and a NULL cell becomes an explicit Value{nullptr} in every row so rows stay uniform (the core
-// builds its INSERT column list from rows[0]).
+// and a NULL cell becomes an explicit Value{nullptr}, so every row names every column: a column
+// whose cells are all NULL is still validated by the core (an unknown name throws) and is written
+// as NULL rather than left to the column DEFAULT.
 inline std::vector<std::map<std::string, quiver::Value>>
 unmarshal_group_columns_to_rows(const char* caller,
                                 const char* const* column_names,

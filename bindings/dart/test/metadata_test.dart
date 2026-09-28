@@ -493,4 +493,30 @@ void main() {
       }
     });
   });
+
+  group('List Groups Unknown Collection', () {
+    test('listers and composites throw instead of returning empty', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      Matcher throwsNotFound(String operation) => throwsA(
+        isA<DatabaseException>().having(
+          (e) => e.message,
+          'message',
+          equals('Cannot $operation: collection not found: Nope'),
+        ),
+      );
+      try {
+        expect(() => db.listVectorGroups('Nope'), throwsNotFound('list_vector_groups'));
+        expect(() => db.listSetGroups('Nope'), throwsNotFound('list_set_groups'));
+        expect(() => db.listTimeSeriesGroups('Nope'), throwsNotFound('list_time_series_groups'));
+        // The composites inherit the throw instead of returning an empty map.
+        expect(() => db.readVectorsById('Nope', 1), throwsNotFound('list_vector_groups'));
+        expect(() => db.readSetsById('Nope', 1), throwsNotFound('list_set_groups'));
+      } finally {
+        db.close();
+      }
+    });
+  });
 }

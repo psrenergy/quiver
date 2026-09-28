@@ -34,7 +34,7 @@ inline std::chrono::system_clock::time_point tm_to_time_point(const std::tm& tm)
 // "THH:MM:SS" or " HH:MM:SS", matched against the shape mask below - 'd' is a digit, 'T' is 'T' or
 // a space, everything else is a literal. The length check is what forbids a partial or trailing
 // anything, so "2005", "2024-01-15T10:30", "+2024-01-15" and "2024-01-01xyz" never reach the mask.
-// Hand-rolled rather than std::get_time, whose field widths are maxima; rationale in src/CLAUDE.md.
+// Hand-rolled rather than std::get_time, whose field widths are maxima; rationale in src/AGENTS.md.
 inline bool parse_iso8601(const std::string& datetime_str, std::tm& tm) {
     static constexpr std::string_view kMask = "dddd-dd-ddTdd:dd:dd";
     if (datetime_str.size() != 10 && datetime_str.size() != kMask.size()) {

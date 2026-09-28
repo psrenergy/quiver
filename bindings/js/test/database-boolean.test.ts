@@ -37,11 +37,12 @@ describe("boolean convenience methods", () => {
       expect(db.readVectorBooleans("AllTypes", "count_value")).toEqual([
         [false, true],
         [true, false],
+        [],
       ]);
       expect(db.readVectorBooleansById("AllTypes", "count_value", idFalse)).toEqual([false, true]);
       expect(db.readVectorBooleansById("AllTypes", "count_value", idNull)).toEqual([]);
 
-      expect(db.readSetBooleans("AllTypes", "code")).toEqual([[false, true], [true]]);
+      expect(db.readSetBooleans("AllTypes", "code")).toEqual([[false, true], [true], []]);
       expect(db.readSetBooleansById("AllTypes", "code", idFalse)).toEqual([false, true]);
       expect(db.readSetBooleansById("AllTypes", "code", idNull)).toEqual([]);
 
@@ -75,6 +76,39 @@ describe("boolean convenience methods", () => {
       expect(
         db.queryBoolean("SELECT some_integer FROM AllTypes WHERE some_integer = ?", [false]),
       ).toBeFalse();
+    } finally {
+      db.close();
+    }
+  });
+
+  test("writes booleans as integers through the group writers", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      const id = db.createElement("AllTypes", { label: "Grouped" });
+
+      // updateGroupColumns is shared by updateVectorGroup / updateSetGroup /
+      // updateTimeSeriesGroup and their ByLabel forms.
+      db.updateVectorGroup("AllTypes", "counts", id, { count_value: [true, false, true] });
+      db.updateSetGroup("AllTypes", "codes", id, { code: [true, false] });
+
+      expect(db.readVectorBooleansById("AllTypes", "count_value", id)).toEqual([true, false, true]);
+      // A set has no insertion order, so compare unordered.
+      expect(db.readSetBooleansById("AllTypes", "code", id).toSorted()).toEqual([false, true]);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("a mixed boolean/integer group column keeps its integer cells", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      const id = db.createElement("AllTypes", { label: "Mixed" });
+
+      // Booleans are normalized per cell, not by truthiness-mapping the whole column: a column
+      // dispatched on a leading boolean used to write 1 for every non-zero cell, destroying the 5.
+      db.updateVectorGroup("AllTypes", "counts", id, { count_value: [true, 5, false, 7] });
+
+      expect(db.readVectorIntegersById("AllTypes", "count_value", id)).toEqual([1, 5, 0, 7]);
     } finally {
       db.close();
     }

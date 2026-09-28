@@ -211,7 +211,7 @@ end
             Quiver.Binary.bin_to_csv(path; aggregate_time_dimensions = false)
             lines = csv_lines(path)
             @test length(lines) >= 2
-            @test lines[2] == "1,1.23457"
+            @test lines[2] == "1,1.23456789"
         finally
             cleanup_binary_file(path)
         end
@@ -442,7 +442,21 @@ end
             md = make_simple_metadata()
             write_toml(path, md)
             write_csv(path, "row,col,val1,val2\n1,1,abc,2.0\n")
-            @test_throws Quiver.DatabaseException Quiver.Binary.csv_to_bin(path)
+            exc = @test_throws Quiver.DatabaseException Quiver.Binary.csv_to_bin(path)
+            @test exc.value.msg == "Cannot csv_to_bin: invalid float value 'abc' for label 'val1'"
+        finally
+            cleanup_binary_file(path)
+        end
+    end
+
+    @testset "Trailing garbage data value" begin
+        path = make_binary_file_path()
+        try
+            md = make_simple_metadata()
+            write_toml(path, md)
+            write_csv(path, "row,col,val1,val2\n1,1,1.0,9.99abc\n")
+            exc = @test_throws Quiver.DatabaseException Quiver.Binary.csv_to_bin(path)
+            @test exc.value.msg == "Cannot csv_to_bin: invalid float value '9.99abc' for label 'val2'"
         finally
             cleanup_binary_file(path)
         end
@@ -467,6 +481,19 @@ end
             write_toml(path, md)
             write_csv(path, "")
             @test_throws Quiver.DatabaseException Quiver.Binary.csv_to_bin(path)
+        finally
+            cleanup_binary_file(path)
+        end
+    end
+
+    @testset "Short data row reports its line" begin
+        path = make_binary_file_path()
+        try
+            md = make_simple_metadata()
+            write_toml(path, md)
+            write_csv(path, "row,col,val1,val2\n1\n")
+            exc = @test_throws Quiver.DatabaseException Quiver.Binary.csv_to_bin(path)
+            @test exc.value.msg == "Cannot csv_to_bin: line 2 has 1 fields, expected 4"
         finally
             cleanup_binary_file(path)
         end

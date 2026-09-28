@@ -133,6 +133,36 @@ TEST(Database, UpdateTimeSeriesGroupEmpty) {
     EXPECT_TRUE(result.empty());
 }
 
+// A value column named only in a later row used to be dropped silently: the INSERT column list
+// came from the first row's keys, after every row had been validated. The twin of
+// UpdateGroupKeepsColumnPresentOnlyInALaterRow (test_database_update.cpp) for vector/set groups.
+TEST(Database, UpdateTimeSeriesGroupKeepsColumnPresentOnlyInALaterRow) {
+    auto db = quiver::Database::from_schema(":memory:",
+                                            VALID_SCHEMA("nullable_time_series.sql"),
+                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    auto id = db.create_element("Sensor", quiver::Element().set("label", "Sensor 1"));
+
+    std::vector<std::map<std::string, quiver::Value>> rows = {
+        {{"date_time", std::string("2024-01-01T00:00:00")}, {"temperature", 1.5}},
+        {{"date_time", std::string("2024-01-02T00:00:00")}, {"temperature", 2.5}, {"counter", int64_t{7}}}};
+    db.update_time_series_group("Sensor", "readings", id, rows);
+
+    auto result = db.read_time_series_group("Sensor", "readings", id);
+    ASSERT_EQ(result.size(), 2u);
+    EXPECT_DOUBLE_EQ(std::get<double>(result[0].at("temperature")), 1.5);
+    EXPECT_DOUBLE_EQ(std::get<double>(result[1].at("temperature")), 2.5);
+
+    // The row that omitted "counter" gets SQL NULL; the later row's value is written, not dropped.
+    EXPECT_TRUE(std::holds_alternative<std::nullptr_t>(result[0].at("counter")));
+    ASSERT_TRUE(std::holds_alternative<int64_t>(result[1].at("counter")));
+    EXPECT_EQ(std::get<int64_t>(result[1].at("counter")), 7);
+
+    // "status" is named by no row, so it is not in the INSERT and stays NULL (its DEFAULT).
+    EXPECT_TRUE(std::holds_alternative<std::nullptr_t>(result[0].at("status")));
+    EXPECT_TRUE(std::holds_alternative<std::nullptr_t>(result[1].at("status")));
+}
+
 TEST(Database, TimeSeriesOrdering) {
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
@@ -177,9 +207,12 @@ TEST(Database, TimeSeriesCollectionNotFound) {
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
 
-    // Nonexistent collection returns empty list (matches list_vector_groups behavior)
-    auto groups = db.list_time_series_groups("NonexistentCollection");
-    EXPECT_TRUE(groups.empty());
+    try {
+        (void)db.list_time_series_groups("NonexistentCollection");
+        FAIL() << "Expected list_time_series_groups to reject an unknown collection";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), "Cannot list_time_series_groups: collection not found: NonexistentCollection");
+    }
 }
 
 static std::string capture_update_error(quiver::Database& db,
@@ -570,4 +603,36 @@ TEST(Database, UpdateTimeSeriesGroupByLabelValidationNamesTheIdForm) {
         std::string msg = e.what();
         EXPECT_TRUE(msg.find("Cannot update_time_series_group:") != std::string::npos) << "Actual: " << msg;
     }
+}
+
+// read_time_series_group orders by the primary-key date column, not by a date_ value column that
+// sorts before it (date_approved's order is NULL, 2024-01-15, 2024-03-01).
+TEST(Database, ReadTimeSeriesGroupOrdersByPrimaryKeyDateColumn) {
+    auto db = quiver::Database::from_schema(":memory:",
+                                            VALID_SCHEMA("time_series_date_columns.sql"),
+                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
+    auto id = db.create_element("Plant", quiver::Element().set("label", std::string("Plant 1")));
+
+    db.update_time_series_group(
+        "Plant",
+        "events",
+        id,
+        {{{"date_time", std::string("2024-01-01T00:00:00")},
+          {"date_approved", std::string("2024-03-01T00:00:00")},
+          {"value", 1.5}},
+         {{"date_time", std::string("2024-02-01T00:00:00")}, {"date_approved", nullptr}, {"value", 2.5}},
+         {{"date_time", std::string("2024-03-01T00:00:00")},
+          {"date_approved", std::string("2024-01-15T00:00:00")},
+          {"value", 3.5}}});
+
+    auto rows = db.read_time_series_group("Plant", "events", id);
+    ASSERT_EQ(rows.size(), 3);
+    EXPECT_EQ(std::get<std::string>(rows[0].at("date_time")), "2024-01-01T00:00:00");
+    EXPECT_EQ(std::get<std::string>(rows[1].at("date_time")), "2024-02-01T00:00:00");
+    EXPECT_EQ(std::get<std::string>(rows[2].at("date_time")), "2024-03-01T00:00:00");
+    EXPECT_EQ(std::get<std::string>(rows[0].at("date_approved")), "2024-03-01T00:00:00");
+    EXPECT_TRUE(std::holds_alternative<std::nullptr_t>(rows[1].at("date_approved")));
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[0].at("value")), 1.5);
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[1].at("value")), 2.5);
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[2].at("value")), 3.5);
 }

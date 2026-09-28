@@ -340,19 +340,33 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
       );
       try {
+        expect(
+          db.readScalarDateTimes('Configuration', 'date_attribute'),
+          isEmpty,
+        );
         db.createElement('Configuration', {
           'label': 'Config 1',
           'date_attribute': '2024-01-15T10:30:00',
         });
         db.createElement('Configuration', {
           'label': 'Config 2',
-          'date_attribute': '2024-06-20T14:45:30',
+          'date_attribute': '2024-06-20 14:45:30',
         });
+        db.createElement('Configuration', {'label': 'Config 3'});
 
         final dates = db.readScalarStrings('Configuration', 'date_attribute');
-        expect(dates.length, equals(2));
+        expect(dates.length, equals(3));
         expect(dates[0], equals('2024-01-15T10:30:00'));
-        expect(dates[1], equals('2024-06-20T14:45:30'));
+        expect(dates[1], equals('2024-06-20 14:45:30'));
+        expect(dates[2], isNull);
+        expect(
+          db.readScalarDateTimes('Configuration', 'date_attribute'),
+          equals([
+            DateTime(2024, 1, 15, 10, 30),
+            DateTime(2024, 6, 20, 14, 45, 30),
+            null,
+          ]),
+        );
       } finally {
         db.close();
       }
@@ -697,6 +711,65 @@ void main() {
         // Sets (unordered)
         expect((result['code'] as List)..sort(), equals([5, 6]));
         expect((result['tag'] as List)..sort(), equals(['alpha', 'beta']));
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  // The core's DATE_TIME write gate only fires on `date_`-prefixed columns, so a plain TEXT column
+  // is the reachable path for a value outside the grammar. Every binding's parser must reject the
+  // same set, or the same stored bytes read back differently per language.
+  group('DateTime Readers Reject Outside The Grammar', () {
+    test('rejects malformed values and names the column', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        const bad = [
+          '2024-01',
+          '20240115',
+          '2024-01-15T10:30:00+03:00',
+          '2024-02-31',
+          'not-a-date',
+        ];
+        for (var i = 0; i < bad.length; i++) {
+          final id = db.createElement('Configuration', {
+            'label': 'Config $i',
+            'string_attribute': bad[i],
+          });
+          expect(
+            () => db.readScalarDateTimes('Configuration', 'string_attribute'),
+            throwsA(
+              isArgumentError.having(
+                (e) => e.toString(),
+                'message',
+                allOf(
+                  contains('Configuration.string_attribute'),
+                  contains(bad[i]),
+                ),
+              ),
+            ),
+            reason: bad[i],
+          );
+          db.deleteElement('Configuration', id);
+        }
+
+        expect(
+          () => db.queryDateTime("SELECT '2024-01'"),
+          throwsArgumentError,
+        );
+
+        // A conforming value in the same plain TEXT column still reads.
+        db.createElement('Configuration', {
+          'label': 'Good',
+          'string_attribute': '2024-01-15 10:30:00',
+        });
+        expect(
+          db.readScalarDateTimes('Configuration', 'string_attribute'),
+          equals([DateTime(2024, 1, 15, 10, 30)]),
+        );
       } finally {
         db.close();
       }

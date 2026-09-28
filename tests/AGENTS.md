@@ -1,0 +1,221 @@
+# Tests (`tests/`)
+
+C++ core and C API suites live here; binding suites live in each binding's `test/` (or Python's
+`tests/`) directory. Run commands are in the root `AGENTS.md`.
+
+## C++ core tests (`tests/test_*.cpp`, one file per functional area)
+
+- Database: `test_database_lifecycle.cpp` (open/close/move/options), `test_database_create.cpp`,
+  `test_database_read_{scalar,vector,set}.cpp` (read split by attribute type; element-level reads
+  `read_element_ids`/`read_element_by_id`/`number_of_elements` live in the `_scalar` file),
+  `test_database_update.cpp`, `test_database_delete.cpp`, `test_database_describe.cpp`, `test_database_query.cpp`,
+  `test_database_time_series_{metadata,group,row,files}.cpp` (time series split by sub-concern:
+  `group` = group read/update + validation, `row` = `upsert_time_series_row`/`read_time_series_row`;
+  the C++ core has no `_nulls` file), `test_database_transaction.cpp`,
+  `test_database_csv_export.cpp`, `test_database_csv_import.cpp`, `test_database_errors.cpp`
+- `test_database_ui_metadata.cpp` covers the `ui/` TOML sidecar reader (`src/ui_metadata.{h,cpp}`)
+  and its render into `describe`/`describe_collection`/`summarize_collection` — the one suite in
+  this list that drives `from_migrations` describe output (every other describe assertion in the
+  repo goes through `from_schema`, which never populates the sidecar). Two gtest fixture names
+  exist so the loader-facing and render-facing halves can be filtered separately:
+  `UiMetadataTest` (path resolution, shape selection, localized-value reading including the C0/C1
+  control-byte collapse, and the `enum.toml` join) and `DatabaseUiMetadataTest`
+  (label/tooltip/enum clause rendering, the redundancy-suppression rules, the undescribed cases,
+  the malformed/degrade cases, the `summarize_collection` histogram annotation, and the SAFE-01
+  no-`ui/` baseline). Its `UiTempTreeFixture` base builds a
+  per-test temp-dir `migrations/` tree plus sibling `ui/` tree from caller-supplied file contents
+  (extending the `MigrationsTestFixture` idiom in `test_migrations.cpp`) — **nothing may be
+  committed under `tests/schemas/ui/`**, because such a directory would become a live sibling of
+  `tests/schemas/migrations` for every `from_migrations` call across six suites plus the
+  recursive-copy Lua migrations test.
+- Supporting types: `test_element.cpp`, `test_row_result.cpp`, `test_migrations.cpp`,
+  `test_schema_validator.cpp`
+- Lua: `test_lua_runner_*.cpp` — per-area split mirroring the database files (`_create`, `_read`,
+  `_update`, `_delete`, `_query`, `_return`, `_time_series`, `_transaction`, `_errors`,
+  `_csv_export`, `_csv_import`, `_all_types`, `_fk`, `_migrations`). `_return` covers the JSON
+  encoding of a script's return value; `_transaction` covers `db:dry_run` (the core-level dry run
+  lives in `test_database_transaction.cpp`); `_migrations` covers `db:validate_migrations` (sandboxed
+  like the other file-touching Lua operations). The shared `LuaRunnerTest` and `LuaSandboxTest` fixtures,
+  the `expect_lua_error` helper (throw + message-substring assert — plain `EXPECT_THROW` passes
+  vacuously when a removed function raises "attempt to call a nil value"), and the common include
+  prelude live in `test_lua_runner.h`; the single-use `LuaRunnerAllTypesTest` / `LuaRunnerFkTest`
+  fixtures stay local to their files. Lua file operations are sandboxed to the database directory
+  (root design decision), so every file-touching Lua test uses `LuaSandboxTest`: a file-backed db
+  in a dedicated per-test temp dir, with scripts passing relative paths. The Lua binary/expression
+  subsystem bindings (and the sandbox itself) are covered by `test_lua_binary.cpp` and
+  `test_lua_expression.cpp`.
+- Binary subsystem: `test_binary_file.cpp`, `test_binary_metadata.cpp`,
+  `test_binary_time_properties.cpp`, `test_csv_converter.cpp`, `test_iteration.cpp`
+- Expression subsystem: `test_expression.cpp`
+- `test_issues.cpp` - issue-numbered regression tests
+- `test_migrations.cpp` also covers the in-memory `validate_migrations` up-then-down round trip;
+  `test_c_api_database_lifecycle.cpp` covers its C API success and error propagation;
+  `test_lua_runner_migrations.cpp` covers the sandboxed `db:validate_migrations` Lua binding.
+- `test_lua_runner_read_csv.cpp` covers the Lua-only `db:read_csv`/`db:read_csv_stream` bindings
+  (parsing, the `separator`/`header_row` options, and the sandbox/error-catalogue negatives) —
+  there is no C++ core, C API, or other-binding counterpart to mirror (root design decision), so
+  this suite has no sibling elsewhere. Most of its CSV fixtures are still written at runtime into
+  the `LuaSandboxTest` sandbox, since they exist only to be read back once. **`tests/fixtures/`**
+  is the one exception: `ma_energia_residencial.csv` and `ma_gd_data.csv` are two real Maranhão
+  utility files committed byte-exact (Phase 2, TEST-02), copied into the sandbox by the tests that
+  read them rather than generated inline. They are committed rather than hand-written because
+  their exact bytes are themselves what two of the parser requirements assert — a leading UTF-8
+  BOM and CRLF line endings on the Energia file, neither on the GD file — and a fixture built by a
+  test-writer's editor cannot be trusted to reproduce that. `.gitattributes` marks both `-text` so
+  git's line-ending normalization never touches them (D-24); like `tests/schemas/`, the directory
+  needs no CMake registration since both tests locate it from the compiled-in source path.
+  Two of its negatives need an OS-level lever rather than a fixture, and the two platforms
+  disagree about which one works. `UnreadableFileReportsParserFailure` needs a file that passes
+  exists/not-a-directory/non-empty but still cannot be opened, so the csv-parser wrapper is the
+  message under test: Windows takes an exclusive lock (`CreateFileW` with `dwShareMode` 0, since a
+  DENY ACE there blocks the open but *not* the metadata queries, and `chmod` is a no-op for read
+  access), POSIX uses `chmod 000` (which blocks the open while `stat` still succeeds) and skips
+  under root. It asserts the three preconditions still pass before reading, so it cannot silently
+  degrade into re-testing an earlier catalogue message. `DeviceNamePathIsReportedWithPrefix` (here
+  and in `test_lua_binary.cpp`) is `_WIN32`-only because no POSIX path is reserved the way `NUL`
+  is; the `test_lua_binary.cpp` copy spans `open_file`/`bin_to_csv`/`csv_to_bin` on purpose, so the
+  fix stays in the shared `resolve_sandboxed_path` gate instead of regressing to a per-caller patch.
+- `test_lua_runner_write_csv.cpp` covers the Lua-only `db:write_csv`/`w:write_row`/`w:close`
+  binding (cell-type dispatch, the `separator`/`header` options, the max-integer-key row walk, and
+  the WRITE-08 truncate-at-open behaviour) — same no-other-layer-counterpart situation as
+  `test_lua_runner_read_csv.cpp` above. Every correctness assertion in it round-trips the written
+  file back through `db:read_csv` rather than reading the raw bytes, for the same reason
+  `export_csv`'s export-only string-search tests were a trap this project hit twice already.
+
+## C API tests
+
+Mirror the same areas with the `test_c_api_*` prefix (`test_c_api_database_*.cpp` per database
+area — the file sets diverge slightly: the C API adds `test_c_api_database_metadata.cpp` and has
+no errors file) plus `test_c_api_element.cpp`, `test_c_api_lua_runner.cpp`,
+`test_c_api_expression.cpp`, and the binary trio `test_c_api_binary_file.cpp` /
+`test_c_api_binary_metadata.cpp` / `test_c_api_csv_converter.cpp`. The same `read` →
+`{scalar,vector,set}` and `time_series` → `{metadata,group,row,files,nulls}` split applies; the
+C API time-series set additionally has `test_c_api_database_time_series_nulls.cpp` (per-cell
+NULL-mask round-trips plus `read_time_series_row`'s absence mask), which the C++ core lacks.
+
+## Binding suites
+
+`bindings/julia/test/`, `bindings/dart/test/`, `bindings/python/tests/`, and
+`bindings/js/test/` mirror the same areas in each language's idiom. Julia additionally covers
+the binary/expression subsystems (`test_binary_file.jl`, `test_binary_metadata.jl`,
+`test_csv_converter.jl`, `test_expression.jl`) and the relation-map helpers
+(`test_helper_maps.jl`).
+
+The boolean convenience readers have one file per binding — `test_database_boolean.jl`,
+`database_boolean_test.dart`, `test_database_boolean.py`, `database-boolean.test.ts` — all over
+`valid/all_types.sql` (`some_integer` scalar, `count_value` vector, `code` set). There is no C++/C
+counterpart for the **readers**: those wrappers are binding-only, and Lua is deliberately excluded
+(root design decisions).
+
+Boolean **input** is a different matter: a native boolean is INTEGER 1/0 on every write path, and
+that is tested in the Lua layer and in all four bindings. There is no C++-core or C API test,
+because there is no such write path to test — `Element::set` has `int64_t`/`double` overloads and
+no `bool` one, and the C API has no boolean setter (root design decision); each binding converts
+before the FFI call. The Lua side lives in `test_lua_runner_create.cpp` (scalar, array, mixed
+integer/boolean array, mixed float/boolean array, cell-type mismatch, update, group writer, row
+upsert) with the query parameter in `test_lua_runner_errors.cpp`, over `valid/collections.sql`;
+the four bindings extend their own boolean files. Two things to keep in mind when touching these:
+
+- **The unsupported-type tests use a function (`print`), not a boolean** — in
+  `test_lua_runner_create.cpp`, `test_lua_runner_errors.cpp` and `test_c_api_lua_runner.cpp`. They
+  asserted a boolean rejection before booleans were accepted; a function is the value that still
+  has no SQL counterpart. `test_lua_runner_update.cpp` keeps its boolean rejection for
+  `db:update_relation`, where only `nil` may clear a relation.
+- **The three mixed-array tests are release-sensitive.**
+  `CreateElementMixedIntegerAndBooleanArray`, `CreateElementMixedFloatAndBooleanArray` and
+  `CreateElementArrayCellTypeMismatchThrows` cover bugs that only manifested with
+  `SOL_SAFE_GETTER` off (silent 0 / 0.0 / `""` instead of a throw), and `SOL_SAFE_GETTER` is on by
+  default in Debug — so a Debug-only run cannot prove the fix. Build Release and run
+  `--gtest_filter='LuaRunner*'` when touching `lua_table_to_vector`. **Do not use the plain
+  `release` CMake preset for this** — it sets `QUIVER_BUILD_TESTS=OFF`, so it produces a Release
+  tree with no test binary at all and would report success while testing nothing. Configure a
+  separate tree explicitly: `cmake -S . -B build-release -G Ninja -DCMAKE_BUILD_TYPE=Release
+  -DQUIVER_BUILD_TESTS=ON -DQUIVER_BUILD_C_API=ON`, build it, then run the filter against
+  `build-release/bin/quiver_tests.exe`. Phase 2's `header_row` decoder (a new `sol::object` type
+  check) was verified this way (TEST-05): 291/291 `LuaRunner*` tests passed in both Debug and
+  Release, with no divergence.
+
+The native-DateTime bindings (Julia, Dart, and Python) cover bulk scalar, vector, and set
+convenience readers in the corresponding `read` test files. Scalar coverage includes positional
+NULLs; vector/set coverage includes empty reads and omission of elements without group rows.
+
+The `read` → `{scalar,vector,set}` and `time_series` → `{metadata,group,row,files,nulls}` split is
+mirrored in every binding using each idiom's file naming (Julia `test_database_read_scalar.jl`,
+Dart `database_read_scalar_test.dart`, JS `database-read-scalar.test.ts`, Python
+`test_database_read_scalar.py`). JS and Python have no `metadata` time-series file; the C++ core
+has no `nulls` file. JS Database-operation test files carry a `database-` prefix
+(`database-create.test.ts`, `database-lifecycle.test.ts`, …) to match the other bindings; the
+non-Database files (`composites.test.ts`, `introspection.test.ts`, `lua-runner.test.ts`,
+`lua-api-sync.test.ts`) keep their bare names.
+
+`bindings/js/test/lua-api-sync.test.ts` is the only JS test file that needs neither a database nor
+the native library: it parses `src/lua_runner.cpp` and asserts `bindings/js/src/lua-api.ts` documents
+every bound `db:`/`quiver.*` name and the exact `open_libraries` list. It imports the constant from
+`../src/lua-api.ts` directly rather than `../src/index.ts` specifically to avoid the FFI loader, so
+it still passes on a checkout with no `build/`.
+
+## Schemas (`tests/schemas/`)
+
+The single shared schema set — **every** suite (C++, C, all bindings) references these files;
+never copy them into a binding.
+
+- `valid/` — `all_types.sql`, `basic.sql`, `collections.sql`, `composite_helpers.sql`,
+  `csv_export.sql`, `csv_group_vector_index.sql`, `csv_import_cascade_cycle.sql`,
+  `csv_import_self_cascade.sql`, `describe_multi_group.sql`, `mixed_time_series.sql`,
+  `multi_column_groups.sql`, `multi_dim_time_series.sql`, `multi_time_series.sql`,
+  `nullable_time_series.sql`, `relations.sql`, `time_series_date_columns.sql`
+  - `csv_group_vector_index.sql` gives a set group (`Codes_set_tags`) a TEXT `vector_index` column
+    and a time-series group (`Items_time_series_slots`) an INTEGER one — two collections, since one
+    may not declare an attribute in two groups. Only a vector group's `vector_index` is structural,
+    and `import_csv` once forced every column of that name to INTEGER and dereferenced it
+    unvalidated.
+  - `csv_import_self_cascade.sql` is the one schema with an `ON DELETE CASCADE` **self**-reference
+    (`Node.node_parent`), plus a vector group. `import_csv` clears self-references before deleting
+    the elements a CSV omits; without that, deleting an omitted parent cascades into a kept child
+    and its vector rows (`ImportCSV_Scalar_OmittedElement_DoesNotCascadeThroughSelfReference`).
+  - `csv_import_cascade_cycle.sql` is the one with a CASCADE cycle between two collections
+    (`Item.tag_pinned` → `Tag`, `Tag.item_owner` → `Item`), plus a vector group. There the cascade
+    reaches a kept element through another collection, so `import_csv` refuses and rolls back
+    (`ImportCSV_Scalar_OmittedElement_CascadeIntoKeptElement_Throws`).
+  - `multi_column_groups.sql` is the vector/set counterpart of the multi-column time-series
+    schemas: `Items_vector_readings` (`amount`, `score`) and `Items_set_codes` (`code`, `weight`),
+    both nullable, with the value columns deliberately named so the alphabetically-first one is
+    not the only one — that ordering is what exposed the group-insert row-count bug. Note every
+    set value column must be part of the UNIQUE constraint.
+  - `time_series_date_columns.sql` pins which column is a time series' dimension.
+    `Plant_time_series_events` has a nullable `date_approved` value column that sorts before its
+    key column `date_time`, so a lookup that scans columns by name instead of the primary key
+    picks the wrong one. `Meter_time_series_blocks` keeps its date column outside the key
+    (`PRIMARY KEY (id, block)`), so it has no dimension and its metadata and reads throw — use
+    `Meter` only to test that refusal.
+- `invalid/` — schemas the validator must reject: `duplicate_attribute_time_series.sql`,
+  `duplicate_attribute_vector.sql`, `fk_actions.sql`, `fk_not_null_set_null.sql`,
+  `label_not_null.sql`, `label_not_unique.sql`, `label_wrong_type.sql`, `no_configuration.sql`,
+  `set_no_parent_fk.sql`, `set_no_unique.sql`, `set_unknown_parent.sql`,
+  `time_series_fk_actions.sql`, `time_series_relation_fk_actions.sql`, `vector_no_index.sql`.
+  Each file must break exactly one rule and be otherwise valid SQL, and a new test should assert
+  the message rather than a bare throw: `duplicate_attribute_time_series.sql` once "passed" on a
+  trailing-comma syntax error while pointing its FKs at a table that did not exist.
+- `migrations/` — versioned `1/`, `2/`, `3/`, each with `up.sql`/`down.sql`
+- `issues/` — regression migrations for specific issues (`issue52/`, `issue70/`)
+
+## Other targets in `tests/CMakeLists.txt`
+
+- `quiver_benchmark` — standalone transaction-performance comparison (individual vs batched).
+  Built by `build-all.bat` but never executed automatically; run manually.
+- `quiver_sandbox` — intentional scratch target for ad-hoc experiments. Do not delete or "clean
+  up"; links only against the C++ core.
+
+## `scripts/test-all.bat` steps
+
+1. C++ tests (`quiver_tests.exe`)
+2. C API tests (`quiver_c_tests.exe`)
+3. Julia tests
+4. Dart tests
+5. JavaScript tests
+6. Python tests
+7. CLI smoke test — positive run (`--schema` + example Lua script → exit 0) and negative run
+   (`--schema` and `--migrations` together → exit 2)
+
+`scripts/build-all.bat` is also seven steps, but its step 1 is the build itself followed by the
+six suites — it does not run the CLI smoke test.

@@ -83,6 +83,13 @@ function read_scalar_strings(db::Database, collection::String, attribute::String
     return result
 end
 
+function read_scalar_date_times(db::Database, collection::String, attribute::String)
+    values = read_scalar_strings(db, collection, attribute)
+    # Preserve the delegate's schema-derived concrete-vs-optional element type.
+    T = values isa Vector{String} ? DateTime : Optional{DateTime}
+    return T[string_to_date_time(value, collection, attribute) for value in values]
+end
+
 function read_vector_integers(db::Database, collection::String, attribute::String)
     out_vectors = Ref{Ptr{Ptr{Int64}}}(C_NULL)
     out_sizes = Ref{Ptr{Csize_t}}(C_NULL)
@@ -169,6 +176,14 @@ function read_vector_strings(db::Database, collection::String, attribute::String
     end
     C.quiver_database_free_string_vectors(out_vectors[], out_sizes[], count)
     return result
+end
+
+# Same alignment caveat as `read_vector_booleans`: NULL cells dropped, only ids that own rows.
+function read_vector_date_times(db::Database, collection::String, attribute::String)
+    vectors = read_vector_strings(db, collection, attribute)
+    return Vector{DateTime}[
+        [string_to_date_time(value, collection, attribute) for value in values] for values in vectors
+    ]
 end
 
 function read_set_integers(db::Database, collection::String, attribute::String)
@@ -258,6 +273,14 @@ function read_set_strings(db::Database, collection::String, attribute::String)
     return result
 end
 
+# Same alignment caveat as `read_vector_booleans`: NULL cells dropped, only ids that own rows.
+function read_set_date_times(db::Database, collection::String, attribute::String)
+    sets = read_set_strings(db, collection, attribute)
+    return Vector{DateTime}[
+        [string_to_date_time(value, collection, attribute) for value in values] for values in sets
+    ]
+end
+
 function read_scalar_integer_by_id(db::Database, collection::String, attribute::String, id::Int64)
     out_value = Ref{Int64}(0)
     out_has_value = Ref{Cint}(0)
@@ -302,10 +325,7 @@ end
 
 function read_scalar_date_time_by_id(db::Database, collection::String, attribute::String, id::Int64)
     result = read_scalar_string_by_id(db, collection, attribute, id)
-    if result === nothing
-        return nothing
-    end
-    return string_to_date_time(result)
+    return string_to_date_time(result, collection, attribute)
 end
 
 function read_vector_integers_by_id(db::Database, collection::String, attribute::String, id::Int64)
@@ -363,7 +383,10 @@ function read_vector_strings_by_id(db::Database, collection::String, attribute::
 end
 
 function read_vector_date_time_by_id(db::Database, collection::String, attribute::String, id::Int64)
-    return [string_to_date_time(s) for s in read_vector_strings_by_id(db, collection, attribute, id)]
+    return [
+        string_to_date_time(s, collection, attribute) for
+        s in read_vector_strings_by_id(db, collection, attribute, id)
+    ]
 end
 
 function read_set_integers_by_id(db::Database, collection::String, attribute::String, id::Int64)
@@ -421,7 +444,10 @@ function read_set_strings_by_id(db::Database, collection::String, attribute::Str
 end
 
 function read_set_date_time_by_id(db::Database, collection::String, attribute::String, id::Int64)
-    return [string_to_date_time(s) for s in read_set_strings_by_id(db, collection, attribute, id)]
+    return [
+        string_to_date_time(s, collection, attribute) for
+        s in read_set_strings_by_id(db, collection, attribute, id)
+    ]
 end
 
 function read_element_ids(db::Database, collection::String)
@@ -648,7 +674,8 @@ function read_time_series_group(db::Database, collection::String, group::String,
             str_ptr_ptr = reinterpret(Ptr{Ptr{Cchar}}, data_ptrs[i])
             str_ptrs = unsafe_wrap(Array, str_ptr_ptr, row_count)
             if col_name == dim_col
-                result[col_name] = DateTime[string_to_date_time(unsafe_string(p)) for p in str_ptrs]
+                result[col_name] =
+                    DateTime[string_to_date_time(unsafe_string(p), collection, col_name) for p in str_ptrs]
             else
                 # Never unsafe_string a masked-out (NULL) pointer.
                 result[col_name] =

@@ -663,6 +663,38 @@ end
         end
     end
 
+    @testset "Hourly under monthly from a non-midnight mid-month start" begin
+        path = make_binary_file_path()
+        try
+            md = Quiver.Binary.Metadata(;
+                initial_datetime = "2025-03-15T06:00:00",
+                unit = "MW",
+                labels = ["val"],
+                dimensions = ["month", "hour"],
+                dimension_sizes = Int64[2, 744],
+                time_dimensions = ["month", "hour"],
+                frequencies = ["monthly", "hourly"],
+            )
+            # 06:00 on March 15 is hour 14 * 24 + 7 = 343 of March; April has 720 hours
+            @test Quiver.Binary.get_dimensions(md)[2].initial_value == 343
+            cells = vcat([(1, h) for h in 343:744], [(2, h) for h in 1:720])
+            @test length(cells) == 1122
+
+            file = Quiver.Binary.open_file(path; mode = 'w', metadata = md)
+            for (month, hour) in cells
+                Quiver.Binary.write!(file; data = [month * 1000.0 + hour], month = month, hour = hour)
+            end
+            @test_throws Quiver.DatabaseException Quiver.Binary.write!(file; data = [1.0], month = 2, hour = 721)
+            Quiver.Binary.close!(file)
+
+            reader = Quiver.Binary.open_file(path; mode = 'r')
+            @test all(Quiver.Binary.read(reader; month = m, hour = h) == [m * 1000.0 + h] for (m, h) in cells)
+            Quiver.Binary.close!(reader)
+        finally
+            cleanup_binary_file(path)
+        end
+    end
+
     @testset "Single time dimension skips consistency check" begin
         path = make_binary_file_path()
         try

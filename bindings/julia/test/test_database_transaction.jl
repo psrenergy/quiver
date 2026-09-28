@@ -154,6 +154,27 @@ include("fixture.jl")
 
         Quiver.close!(db)
     end
+
+    @testset "Rejected update_element inside a transaction writes nothing" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Config")
+        id = Quiver.create_element!(db, "Collection"; label = "Item 1", some_integer = 1)
+
+        Quiver.begin_transaction!(db)
+        exc = @test_throws Quiver.DatabaseException Quiver.update_element!(
+            db, "Collection", id;
+            some_integer = 2,
+            tag = [1.5],
+        )
+        @test occursin("type mismatch for array 'tag'", exc.value.msg)
+        Quiver.commit!(db)
+
+        @test Quiver.read_scalar_integer_by_id(db, "Collection", "some_integer", id) == 1
+
+        Quiver.close!(db)
+    end
 end
 
 end
