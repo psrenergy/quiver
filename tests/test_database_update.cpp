@@ -26,7 +26,7 @@ TEST(Database, UpdateVectorIntegers) {
     db.update_element("Collection", id, update);
 
     auto vec = db.read_vector_integers_by_id("Collection", "value_int", id);
-    EXPECT_EQ(vec, (std::vector<int64_t>{10, 20, 30, 40}));
+    EXPECT_EQ(vec, (std::vector<std::optional<int64_t>>{10, 20, 30, 40}));
 }
 
 TEST(Database, UpdateVectorFloats) {
@@ -46,7 +46,7 @@ TEST(Database, UpdateVectorFloats) {
     db.update_element("Collection", id, update);
 
     auto vec = db.read_vector_floats_by_id("Collection", "value_float", id);
-    EXPECT_EQ(vec, (std::vector<double>{10.5, 20.5}));
+    EXPECT_EQ(vec, (std::vector<std::optional<double>>{10.5, 20.5}));
 }
 
 TEST(Database, UpdateVectorToEmpty) {
@@ -92,11 +92,11 @@ TEST(Database, UpdateVectorMultipleElements) {
 
     // Verify first element changed
     auto vec1 = db.read_vector_integers_by_id("Collection", "value_int", id1);
-    EXPECT_EQ(vec1, (std::vector<int64_t>{100, 200}));
+    EXPECT_EQ(vec1, (std::vector<std::optional<int64_t>>{100, 200}));
 
     // Verify second element unchanged
     auto vec2 = db.read_vector_integers_by_id("Collection", "value_int", id2);
-    EXPECT_EQ(vec2, (std::vector<int64_t>{10, 20}));
+    EXPECT_EQ(vec2, (std::vector<std::optional<int64_t>>{10, 20}));
 }
 
 // ============================================================================
@@ -121,7 +121,7 @@ TEST(Database, UpdateSetStrings) {
 
     auto set = db.read_set_strings_by_id("Collection", "tag", id);
     std::sort(set.begin(), set.end());
-    EXPECT_EQ(set, (std::vector<std::string>{"new_tag1", "new_tag2", "new_tag3"}));
+    EXPECT_EQ(set, (std::vector<std::optional<std::string>>{"new_tag1", "new_tag2", "new_tag3"}));
 }
 
 TEST(Database, UpdateSetToEmpty) {
@@ -167,12 +167,12 @@ TEST(Database, UpdateSetMultipleElements) {
 
     // Verify first element changed
     auto set1 = db.read_set_strings_by_id("Collection", "tag", id1);
-    EXPECT_EQ(set1, (std::vector<std::string>{"updated"}));
+    EXPECT_EQ(set1, (std::vector<std::optional<std::string>>{"updated"}));
 
     // Verify second element unchanged
     auto set2 = db.read_set_strings_by_id("Collection", "tag", id2);
     std::sort(set2.begin(), set2.end());
-    EXPECT_EQ(set2, (std::vector<std::string>{"review", "urgent"}));
+    EXPECT_EQ(set2, (std::vector<std::optional<std::string>>{"review", "urgent"}));
 }
 
 // ============================================================================
@@ -196,7 +196,7 @@ TEST(Database, UpdateVectorStringsBasic) {
     db.update_element("AllTypes", id, update);
 
     auto vec = db.read_vector_strings_by_id("AllTypes", "label_value", id);
-    EXPECT_EQ(vec, (std::vector<std::string>{"alpha", "beta"}));
+    EXPECT_EQ(vec, (std::vector<std::optional<std::string>>{"alpha", "beta"}));
 }
 
 TEST(Database, UpdateSetIntegersBasic) {
@@ -217,7 +217,7 @@ TEST(Database, UpdateSetIntegersBasic) {
 
     auto set = db.read_set_integers_by_id("AllTypes", "code", id);
     std::sort(set.begin(), set.end());
-    EXPECT_EQ(set, (std::vector<int64_t>{10, 20, 30}));
+    EXPECT_EQ(set, (std::vector<std::optional<int64_t>>{10, 20, 30}));
 }
 
 TEST(Database, UpdateSetFloatsBasic) {
@@ -239,8 +239,8 @@ TEST(Database, UpdateSetFloatsBasic) {
     auto set = db.read_set_floats_by_id("AllTypes", "weight", id);
     std::sort(set.begin(), set.end());
     EXPECT_EQ(set.size(), 2);
-    EXPECT_DOUBLE_EQ(set[0], 1.1);
-    EXPECT_DOUBLE_EQ(set[1], 2.2);
+    EXPECT_DOUBLE_EQ(*set[0], 1.1);
+    EXPECT_DOUBLE_EQ(*set[1], 2.2);
 }
 
 // ============================================================================
@@ -358,7 +358,7 @@ TEST(Database, UpdateElementWithArrays) {
 
     // Verify vector was also updated
     auto vec = db.read_vector_integers_by_id("Collection", "value_int", id);
-    EXPECT_EQ(vec, (std::vector<int64_t>{10, 20, 30}));
+    EXPECT_EQ(vec, (std::vector<std::optional<int64_t>>{10, 20, 30}));
 }
 
 TEST(Database, UpdateElementWithSetOnly) {
@@ -381,7 +381,7 @@ TEST(Database, UpdateElementWithSetOnly) {
     // Verify set was updated
     auto set = db.read_set_strings_by_id("Collection", "tag", id);
     std::sort(set.begin(), set.end());
-    EXPECT_EQ(set, (std::vector<std::string>{"new_tag1", "new_tag2"}));
+    EXPECT_EQ(set, (std::vector<std::optional<std::string>>{"new_tag1", "new_tag2"}));
 
     // Verify label unchanged
     auto label = db.read_scalar_string_by_id("Collection", "label", id);
@@ -411,12 +411,12 @@ TEST(Database, UpdateElementWithVectorAndSet) {
 
     // Verify vector was updated
     auto vec = db.read_vector_integers_by_id("Collection", "value_int", id);
-    EXPECT_EQ(vec, (std::vector<int64_t>{100, 200}));
+    EXPECT_EQ(vec, (std::vector<std::optional<int64_t>>{100, 200}));
 
     // Verify set was updated
     auto set = db.read_set_strings_by_id("Collection", "tag", id);
     std::sort(set.begin(), set.end());
-    EXPECT_EQ(set, (std::vector<std::string>{"new_tag1", "new_tag2"}));
+    EXPECT_EQ(set, (std::vector<std::optional<std::string>>{"new_tag1", "new_tag2"}));
 }
 
 TEST(Database, UpdateElementWithTimeSeries) {
@@ -497,7 +497,7 @@ TEST(Database, UpdateVectorSingleElement) {
     db.update_element("Collection", id, update);
 
     auto vec = db.read_vector_integers_by_id("Collection", "value_int", id);
-    EXPECT_EQ(vec, (std::vector<int64_t>{42}));
+    EXPECT_EQ(vec, (std::vector<std::optional<int64_t>>{42}));
 }
 
 TEST(Database, UpdateSetSingleElement) {
@@ -518,7 +518,7 @@ TEST(Database, UpdateSetSingleElement) {
     db.update_element("Collection", id, update);
 
     auto set = db.read_set_strings_by_id("Collection", "tag", id);
-    EXPECT_EQ(set, (std::vector<std::string>{"single_tag"}));
+    EXPECT_EQ(set, (std::vector<std::optional<std::string>>{"single_tag"}));
 }
 
 TEST(Database, UpdateVectorInvalidCollection) {
@@ -570,7 +570,7 @@ TEST(Database, UpdateVectorFromEmptyToNonEmpty) {
     db.update_element("Collection", id, update);
 
     auto vec = db.read_vector_integers_by_id("Collection", "value_int", id);
-    EXPECT_EQ(vec, (std::vector<int64_t>{1, 2, 3}));
+    EXPECT_EQ(vec, (std::vector<std::optional<int64_t>>{1, 2, 3}));
 }
 
 TEST(Database, UpdateSetFromEmptyToNonEmpty) {
@@ -597,7 +597,7 @@ TEST(Database, UpdateSetFromEmptyToNonEmpty) {
 
     auto set = db.read_set_strings_by_id("Collection", "tag", id);
     std::sort(set.begin(), set.end());
-    EXPECT_EQ(set, (std::vector<std::string>{"important", "urgent"}));
+    EXPECT_EQ(set, (std::vector<std::optional<std::string>>{"important", "urgent"}));
 }
 
 // ============================================================================
@@ -681,7 +681,7 @@ TEST(Database, UpdateSetStringsTrimsWhitespace) {
 
     auto set_vals = db.read_set_strings_by_id("Collection", "tag", id);
     std::sort(set_vals.begin(), set_vals.end());
-    EXPECT_EQ(set_vals, (std::vector<std::string>{"alpha", "beta", "gamma"}));
+    EXPECT_EQ(set_vals, (std::vector<std::optional<std::string>>{"alpha", "beta", "gamma"}));
 }
 
 // ============================================================================
@@ -1139,11 +1139,12 @@ TEST(Database, UpdateVectorGroupReplacesRows) {
 
     f.db.update_vector_group("Child", "refs", f.child, {{{"parent_ref", f.parent_a}}, {{"parent_ref", f.parent_b}}});
     EXPECT_EQ(f.db.read_vector_integers_by_id("Child", "parent_ref", f.child),
-              (std::vector<int64_t>{f.parent_a, f.parent_b}));
+              (std::vector<std::optional<int64_t>>{f.parent_a, f.parent_b}));
 
     // A second call replaces rather than appends.
     f.db.update_vector_group("Child", "refs", f.child, {{{"parent_ref", f.parent_b}}});
-    EXPECT_EQ(f.db.read_vector_integers_by_id("Child", "parent_ref", f.child), (std::vector<int64_t>{f.parent_b}));
+    EXPECT_EQ(f.db.read_vector_integers_by_id("Child", "parent_ref", f.child),
+              (std::vector<std::optional<int64_t>>{f.parent_b}));
 }
 
 TEST(Database, UpdateVectorGroupEmptyClearsRows) {
@@ -1159,7 +1160,7 @@ TEST(Database, UpdateSetGroupReplacesRows) {
 
     f.db.update_set_group("Child", "parents", f.child, {{{"parent_ref", f.parent_a}}, {{"parent_ref", f.parent_b}}});
     EXPECT_EQ(f.db.read_set_integers_by_id("Child", "parent_ref", f.child),
-              (std::vector<int64_t>{f.parent_a, f.parent_b}));
+              (std::vector<std::optional<int64_t>>{f.parent_a, f.parent_b}));
 
     f.db.update_set_group("Child", "parents", f.child, {});
     EXPECT_TRUE(f.db.read_set_integers_by_id("Child", "parent_ref", f.child).empty());
@@ -1172,19 +1173,23 @@ TEST(Database, UpdateGroupDoesNotTouchSiblingGroupSharingAColumnName) {
     f.db.update_vector_group("Child", "refs", f.child, {{{"parent_ref", f.parent_b}}});
 
     // Each group keeps its own rows: (collection, group) names exactly one table.
-    EXPECT_EQ(f.db.read_set_integers_by_id("Child", "parent_ref", f.child), (std::vector<int64_t>{f.parent_a}));
-    EXPECT_EQ(f.db.read_vector_integers_by_id("Child", "parent_ref", f.child), (std::vector<int64_t>{f.parent_b}));
+    EXPECT_EQ(f.db.read_set_integers_by_id("Child", "parent_ref", f.child),
+              (std::vector<std::optional<int64_t>>{f.parent_a}));
+    EXPECT_EQ(f.db.read_vector_integers_by_id("Child", "parent_ref", f.child),
+              (std::vector<std::optional<int64_t>>{f.parent_b}));
 
     // Clearing one group leaves the other intact.
     f.db.update_vector_group("Child", "refs", f.child, {});
-    EXPECT_EQ(f.db.read_set_integers_by_id("Child", "parent_ref", f.child), (std::vector<int64_t>{f.parent_a}));
+    EXPECT_EQ(f.db.read_set_integers_by_id("Child", "parent_ref", f.child),
+              (std::vector<std::optional<int64_t>>{f.parent_a}));
 }
 
 TEST(Database, UpdateGroupResolvesFkLabels) {
     SharedFkFixture f;
 
     f.db.update_vector_group("Child", "refs", f.child, {{{"parent_ref", std::string("Parent B")}}});
-    EXPECT_EQ(f.db.read_vector_integers_by_id("Child", "parent_ref", f.child), (std::vector<int64_t>{f.parent_b}));
+    EXPECT_EQ(f.db.read_vector_integers_by_id("Child", "parent_ref", f.child),
+              (std::vector<std::optional<int64_t>>{f.parent_b}));
 }
 
 TEST(Database, UpdateGroupFkResolutionFailurePreservesExistingRows) {
@@ -1195,7 +1200,8 @@ TEST(Database, UpdateGroupFkResolutionFailurePreservesExistingRows) {
                  std::runtime_error);
 
     // The failed lookup happens before the DELETE, so the group is untouched.
-    EXPECT_EQ(f.db.read_vector_integers_by_id("Child", "parent_ref", f.child), (std::vector<int64_t>{f.parent_a}));
+    EXPECT_EQ(f.db.read_vector_integers_by_id("Child", "parent_ref", f.child),
+              (std::vector<std::optional<int64_t>>{f.parent_a}));
 }
 
 TEST(Database, UpdateGroupUnknownGroupThrows) {
@@ -1221,7 +1227,7 @@ TEST(Database, UpdateGroupPreservesNullCells) {
                              f.child,
                              {{{"parent_ref", f.parent_a}}, {{"parent_ref", nullptr}}, {{"parent_ref", f.parent_b}}});
 
-    // read_vector_group_by_id keeps NULL cells positionally (the dense per-column reader drops them).
+    // read_vector_group_by_id keeps NULL cells positionally, as the per-column readers now do.
     auto rows = f.db.read_vector_group_by_id("Child", "refs", f.child);
     ASSERT_EQ(rows.size(), 3u);
     EXPECT_EQ(std::get<int64_t>(rows[0].at("parent_ref")), f.parent_a);
@@ -1243,9 +1249,11 @@ TEST(Database, UpdateElementSharedColumnNameWritesEveryMatchingGroup) {
     e.set("parent_ref", std::vector<int64_t>{f.parent_b});
     f.db.update_element("Child", f.child, e);
 
-    EXPECT_EQ(f.db.read_vector_integers_by_id("Child", "parent_ref", f.child), (std::vector<int64_t>{f.parent_b}));
+    EXPECT_EQ(f.db.read_vector_integers_by_id("Child", "parent_ref", f.child),
+              (std::vector<std::optional<int64_t>>{f.parent_b}));
     // The set group was collateral damage - it now holds the vector's value, not parent_a.
-    EXPECT_EQ(f.db.read_set_integers_by_id("Child", "parent_ref", f.child), (std::vector<int64_t>{f.parent_b}));
+    EXPECT_EQ(f.db.read_set_integers_by_id("Child", "parent_ref", f.child),
+              (std::vector<std::optional<int64_t>>{f.parent_b}));
 }
 
 namespace {
@@ -1435,8 +1443,8 @@ TEST(Database, UpdateElementRejectedArrayKeepsEarlierGroup) {
     }
     db.commit();
 
-    EXPECT_EQ(db.read_set_strings_by_id("Collection", "tag", id), (std::vector<std::string>{"keep"}));
-    EXPECT_EQ(db.read_vector_integers_by_id("Collection", "value_int", id), (std::vector<int64_t>{7}));
+    EXPECT_EQ(db.read_set_strings_by_id("Collection", "tag", id), (std::vector<std::optional<std::string>>{"keep"}));
+    EXPECT_EQ(db.read_vector_integers_by_id("Collection", "value_int", id), (std::vector<std::optional<int64_t>>{7}));
 }
 
 // ============================================================================
@@ -1485,8 +1493,9 @@ TEST(Database, UpdateElementByLabel) {
     // and only the labelled element's.
     auto tags = db.read_set_strings_by_id("Collection", "tag", id);
     std::sort(tags.begin(), tags.end());
-    EXPECT_EQ(tags, (std::vector<std::string>{"alpha", "beta"}));
-    EXPECT_EQ(db.read_set_strings_by_id("Collection", "tag", other_id), (std::vector<std::string>{"keep"}));
+    EXPECT_EQ(tags, (std::vector<std::optional<std::string>>{"alpha", "beta"}));
+    EXPECT_EQ(db.read_set_strings_by_id("Collection", "tag", other_id),
+              (std::vector<std::optional<std::string>>{"keep"}));
 }
 
 // The label is an ordinary scalar, so a rename resolves against the old value and then writes the
@@ -1628,16 +1637,19 @@ TEST(Database, UpdateVectorGroupByLabel) {
     f.db.update_vector_group_by_label(
         "Child", "refs", "Child 1", {{{"parent_ref", f.parent_a}}, {{"parent_ref", f.parent_b}}});
     EXPECT_EQ(f.db.read_vector_integers_by_id("Child", "parent_ref", f.child),
-              (std::vector<int64_t>{f.parent_a, f.parent_b}));
-    EXPECT_EQ(f.db.read_vector_integers_by_id("Child", "parent_ref", other), (std::vector<int64_t>{f.parent_a}));
+              (std::vector<std::optional<int64_t>>{f.parent_a, f.parent_b}));
+    EXPECT_EQ(f.db.read_vector_integers_by_id("Child", "parent_ref", other),
+              (std::vector<std::optional<int64_t>>{f.parent_a}));
 
     // A second call replaces rather than appends, and an empty row list clears.
     f.db.update_vector_group_by_label("Child", "refs", "Child 1", {{{"parent_ref", f.parent_b}}});
-    EXPECT_EQ(f.db.read_vector_integers_by_id("Child", "parent_ref", f.child), (std::vector<int64_t>{f.parent_b}));
+    EXPECT_EQ(f.db.read_vector_integers_by_id("Child", "parent_ref", f.child),
+              (std::vector<std::optional<int64_t>>{f.parent_b}));
 
     f.db.update_vector_group_by_label("Child", "refs", "Child 1", {});
     EXPECT_TRUE(f.db.read_vector_integers_by_id("Child", "parent_ref", f.child).empty());
-    EXPECT_EQ(f.db.read_vector_integers_by_id("Child", "parent_ref", other), (std::vector<int64_t>{f.parent_a}));
+    EXPECT_EQ(f.db.read_vector_integers_by_id("Child", "parent_ref", other),
+              (std::vector<std::optional<int64_t>>{f.parent_a}));
 }
 
 TEST(Database, UpdateVectorGroupByLabelNonExistent) {
@@ -1653,7 +1665,8 @@ TEST(Database, UpdateVectorGroupByLabelNonExistent) {
     }
 
     // Nothing was written - the lookup throws before the group is cleared.
-    EXPECT_EQ(f.db.read_vector_integers_by_id("Child", "parent_ref", f.child), (std::vector<int64_t>{f.parent_a}));
+    EXPECT_EQ(f.db.read_vector_integers_by_id("Child", "parent_ref", f.child),
+              (std::vector<std::optional<int64_t>>{f.parent_a}));
 
     // A label is unique per collection, not per database: one naming an element of another
     // collection must not resolve here.
@@ -1705,16 +1718,19 @@ TEST(Database, UpdateSetGroupByLabel) {
     f.db.update_set_group_by_label(
         "Child", "parents", "Child 1", {{{"parent_ref", f.parent_a}}, {{"parent_ref", f.parent_b}}});
     EXPECT_EQ(f.db.read_set_integers_by_id("Child", "parent_ref", f.child),
-              (std::vector<int64_t>{f.parent_a, f.parent_b}));
-    EXPECT_EQ(f.db.read_set_integers_by_id("Child", "parent_ref", other), (std::vector<int64_t>{f.parent_a}));
+              (std::vector<std::optional<int64_t>>{f.parent_a, f.parent_b}));
+    EXPECT_EQ(f.db.read_set_integers_by_id("Child", "parent_ref", other),
+              (std::vector<std::optional<int64_t>>{f.parent_a}));
 
     // A second call replaces rather than appends, and an empty row list clears.
     f.db.update_set_group_by_label("Child", "parents", "Child 1", {{{"parent_ref", f.parent_b}}});
-    EXPECT_EQ(f.db.read_set_integers_by_id("Child", "parent_ref", f.child), (std::vector<int64_t>{f.parent_b}));
+    EXPECT_EQ(f.db.read_set_integers_by_id("Child", "parent_ref", f.child),
+              (std::vector<std::optional<int64_t>>{f.parent_b}));
 
     f.db.update_set_group_by_label("Child", "parents", "Child 1", {});
     EXPECT_TRUE(f.db.read_set_integers_by_id("Child", "parent_ref", f.child).empty());
-    EXPECT_EQ(f.db.read_set_integers_by_id("Child", "parent_ref", other), (std::vector<int64_t>{f.parent_a}));
+    EXPECT_EQ(f.db.read_set_integers_by_id("Child", "parent_ref", other),
+              (std::vector<std::optional<int64_t>>{f.parent_a}));
 }
 
 TEST(Database, UpdateSetGroupByLabelNonExistent) {
@@ -1730,7 +1746,8 @@ TEST(Database, UpdateSetGroupByLabelNonExistent) {
     }
 
     // Nothing was written - the lookup throws before the group is cleared.
-    EXPECT_EQ(f.db.read_set_integers_by_id("Child", "parent_ref", f.child), (std::vector<int64_t>{f.parent_a}));
+    EXPECT_EQ(f.db.read_set_integers_by_id("Child", "parent_ref", f.child),
+              (std::vector<std::optional<int64_t>>{f.parent_a}));
 
     // A label is unique per collection, not per database: one naming an element of another
     // collection must not resolve here.

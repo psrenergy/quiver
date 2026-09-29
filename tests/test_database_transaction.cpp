@@ -103,11 +103,11 @@ TEST(DatabaseTransaction, WriteMethodsInsideTransaction) {
 
     // Verify all writes persisted
     auto vec = db.read_vector_integers_by_id("Collection", "value_int", id1);
-    EXPECT_EQ(vec, (std::vector<int64_t>{10, 20, 30}));
+    EXPECT_EQ(vec, (std::vector<std::optional<int64_t>>{10, 20, 30}));
 
     auto tags = db.read_set_strings_by_id("Collection", "tag", id1);
     std::sort(tags.begin(), tags.end());
-    EXPECT_EQ(tags, (std::vector<std::string>{"alpha", "beta"}));
+    EXPECT_EQ(tags, (std::vector<std::optional<std::string>>{"alpha", "beta"}));
 
     auto ts = db.read_time_series_group("Collection", "data", id1);
     EXPECT_EQ(ts.size(), 2);
@@ -149,7 +149,7 @@ TEST(DatabaseTransaction, RollbackUndoesMixedWrites) {
 
     // Vector should be unchanged (original values)
     auto vec = db.read_vector_integers_by_id("Collection", "value_int", id1);
-    EXPECT_EQ(vec, (std::vector<int64_t>{1, 2, 3}));
+    EXPECT_EQ(vec, (std::vector<std::optional<int64_t>>{1, 2, 3}));
 
     // Second element should not exist
     auto labels = db.read_scalar_strings("Collection", "label");

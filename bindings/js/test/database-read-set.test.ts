@@ -153,3 +153,22 @@ describe("readSetIntegersById / readSetFloatsById / readSetStringsById", () => {
     }
   });
 });
+
+describe("set NULL cells", () => {
+  test("keeps NULL cells positionally, and no rows is not the same as a NULL cell", () => {
+    const db = Database.fromSchema(":memory:", join(SCHEMAS_DIR, "collections.sql"));
+    try {
+      db.createElement("Configuration", { label: "Config" });
+      const id = db.createElement("Collection", { label: "Item 1" });
+      db.createElement("Collection", { label: "Item 2" }); // no set rows
+      // createElement keeps a non-null array write surface, so the NULL cell goes in
+      // through the group writer.
+      db.updateSetGroup("Collection", "tags", id, { tag: ["a", null, "c"] });
+
+      expect(db.readSetStrings("Collection", "tag")).toEqual([["a", null, "c"], []]);
+      expect(db.readSetStringsById("Collection", "tag", id)).toEqual(["a", null, "c"]);
+    } finally {
+      db.close();
+    }
+  });
+});

@@ -27,8 +27,8 @@ TEST(Database, ReadVectorIntegers) {
 
     auto vectors = db.read_vector_integers("Collection", "value_int");
     EXPECT_EQ(vectors.size(), 2);
-    EXPECT_EQ(vectors[0], (std::vector<int64_t>{1, 2, 3}));
-    EXPECT_EQ(vectors[1], (std::vector<int64_t>{10, 20}));
+    EXPECT_EQ(vectors[0], (std::vector<std::optional<int64_t>>{1, 2, 3}));
+    EXPECT_EQ(vectors[1], (std::vector<std::optional<int64_t>>{10, 20}));
 }
 
 TEST(Database, ReadVectorFloats) {
@@ -49,8 +49,8 @@ TEST(Database, ReadVectorFloats) {
 
     auto vectors = db.read_vector_floats("Collection", "value_float");
     EXPECT_EQ(vectors.size(), 2);
-    EXPECT_EQ(vectors[0], (std::vector<double>{1.5, 2.5, 3.5}));
-    EXPECT_EQ(vectors[1], (std::vector<double>{10.5, 20.5}));
+    EXPECT_EQ(vectors[0], (std::vector<std::optional<double>>{1.5, 2.5, 3.5}));
+    EXPECT_EQ(vectors[1], (std::vector<std::optional<double>>{10.5, 20.5}));
 }
 
 TEST(Database, ReadVectorEmpty) {
@@ -98,9 +98,9 @@ TEST(Database, ReadVectorIncludesElementsWithNoRows) {
     auto vectors = db.read_vector_integers("Collection", "value_int");
     ASSERT_EQ(ids.size(), 3);
     ASSERT_EQ(vectors.size(), ids.size());
-    EXPECT_EQ(vectors[0], (std::vector<int64_t>{1, 2, 3}));
+    EXPECT_EQ(vectors[0], (std::vector<std::optional<int64_t>>{1, 2, 3}));
     EXPECT_TRUE(vectors[1].empty());
-    EXPECT_EQ(vectors[2], (std::vector<int64_t>{4, 5}));
+    EXPECT_EQ(vectors[2], (std::vector<std::optional<int64_t>>{4, 5}));
 }
 
 // ============================================================================
@@ -126,8 +126,8 @@ TEST(Database, ReadVectorIntegerById) {
     auto vec1 = db.read_vector_integers_by_id("Collection", "value_int", id1);
     auto vec2 = db.read_vector_integers_by_id("Collection", "value_int", id2);
 
-    EXPECT_EQ(vec1, (std::vector<int64_t>{1, 2, 3}));
-    EXPECT_EQ(vec2, (std::vector<int64_t>{10, 20}));
+    EXPECT_EQ(vec1, (std::vector<std::optional<int64_t>>{1, 2, 3}));
+    EXPECT_EQ(vec2, (std::vector<std::optional<int64_t>>{10, 20}));
 }
 
 TEST(Database, ReadVectorFloatById) {
@@ -149,8 +149,8 @@ TEST(Database, ReadVectorFloatById) {
     auto vec1 = db.read_vector_floats_by_id("Collection", "value_float", id1);
     auto vec2 = db.read_vector_floats_by_id("Collection", "value_float", id2);
 
-    EXPECT_EQ(vec1, (std::vector<double>{1.5, 2.5, 3.5}));
-    EXPECT_EQ(vec2, (std::vector<double>{10.5, 20.5}));
+    EXPECT_EQ(vec1, (std::vector<std::optional<double>>{1.5, 2.5, 3.5}));
+    EXPECT_EQ(vec2, (std::vector<std::optional<double>>{10.5, 20.5}));
 }
 
 TEST(Database, ReadVectorByIdEmpty) {
@@ -230,8 +230,8 @@ TEST(Database, ReadVectorStringsBulk) {
 
     auto vectors = db.read_vector_strings("AllTypes", "label_value");
     EXPECT_EQ(vectors.size(), 2);
-    EXPECT_EQ(vectors[0], (std::vector<std::string>{"alpha", "beta", "gamma"}));
-    EXPECT_EQ(vectors[1], (std::vector<std::string>{"delta", "epsilon"}));
+    EXPECT_EQ(vectors[0], (std::vector<std::optional<std::string>>{"alpha", "beta", "gamma"}));
+    EXPECT_EQ(vectors[1], (std::vector<std::optional<std::string>>{"delta", "epsilon"}));
 }
 
 TEST(Database, ReadVectorStringsByIdBasic) {
@@ -250,7 +250,7 @@ TEST(Database, ReadVectorStringsByIdBasic) {
     db.update_element("AllTypes", id, update);
 
     auto vec = db.read_vector_strings_by_id("AllTypes", "label_value", id);
-    EXPECT_EQ(vec, (std::vector<std::string>{"hello", "world"}));
+    EXPECT_EQ(vec, (std::vector<std::optional<std::string>>{"hello", "world"}));
 }
 
 TEST(Database, ReadVectorIntegersInvalidColumnThrows) {
@@ -271,4 +271,74 @@ TEST(Database, ReadVectorIntegersInvalidColumnThrows) {
             }
         },
         std::runtime_error);
+}
+
+// ============================================================================
+// NULL handling in vector reads
+// ============================================================================
+
+TEST(Database, ReadVectorPreservesNullCells) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    db.create_element("Configuration", quiver::Element().set("label", std::string("Test Config")));
+
+    // value_int is nullable, so a null cell is stored as SQL NULL.
+    quiver::Element e;
+    e.set("label", std::string("Item 1"))
+        .set("value_int", std::vector<quiver::Value>{int64_t{10}, nullptr, int64_t{30}});
+    int64_t id = db.create_element("Collection", e);
+
+    auto vectors = db.read_vector_integers("Collection", "value_int");
+    ASSERT_EQ(vectors.size(), 1u);
+    EXPECT_EQ(vectors[0], (std::vector<std::optional<int64_t>>{10, std::nullopt, 30}));
+
+    EXPECT_EQ(db.read_vector_integers_by_id("Collection", "value_int", id),
+              (std::vector<std::optional<int64_t>>{10, std::nullopt, 30}));
+}
+
+TEST(Database, ReadVectorDistinguishesNoRowsFromNullOnlyRow) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    db.create_element("Configuration", quiver::Element().set("label", std::string("Test Config")));
+
+    // Item 1 has no group rows at all; Item 2 has exactly one row whose value is NULL.
+    db.create_element("Collection", quiver::Element().set("label", std::string("Item 1")));
+    quiver::Element e2;
+    e2.set("label", std::string("Item 2")).set("value_int", std::vector<quiver::Value>{nullptr});
+    db.create_element("Collection", e2);
+
+    auto vectors = db.read_vector_integers("Collection", "value_int");
+    ASSERT_EQ(vectors.size(), 2u);
+    EXPECT_TRUE(vectors[0].empty());
+    EXPECT_EQ(vectors[1], (std::vector<std::optional<int64_t>>{std::nullopt}));
+}
+
+TEST(Database, ReadVectorBulkKeepsElementWithIdMinusOne) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    db.create_element("Configuration", quiver::Element().set("label", std::string("Test Config")));
+
+    // -1 is a valid id (create_element accepts an explicit one) and, as the smallest rowid, the
+    // first row of the LEFT JOIN: it must not be taken for "no element read yet".
+    db.create_element("Collection",
+                      quiver::Element()
+                          .set("label", std::string("Negative"))
+                          .set("id", int64_t{-1})
+                          .set("value_int", std::vector<int64_t>{1, 2}));
+    db.create_element("Collection", quiver::Element().set("label", std::string("Empty")));
+    db.create_element(
+        "Collection",
+        quiver::Element().set("label", std::string("Positive")).set("value_int", std::vector<int64_t>{7}));
+
+    auto ids = db.read_element_ids("Collection");
+    auto vectors = db.read_vector_integers("Collection", "value_int");
+    ASSERT_EQ(ids.size(), 3u);
+    ASSERT_EQ(vectors.size(), ids.size());
+    EXPECT_EQ(ids[0], -1);
+    EXPECT_EQ(vectors[0], (std::vector<std::optional<int64_t>>{1, 2}));
+    EXPECT_TRUE(vectors[1].empty());
+    EXPECT_EQ(vectors[2], (std::vector<std::optional<int64_t>>{7}));
 }

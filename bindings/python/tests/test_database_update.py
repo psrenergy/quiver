@@ -389,18 +389,8 @@ class TestUpdateVectorSetGroup:
 
         relations_db.update_vector_group("Child", "refs", child, {"parent_ref": [1, None, 2]})
 
-        # Asserted in SQL, not through read_vector_group_by_id: Python composes that from
-        # per-column reads, which drop NULL cells (the documented null-dropping caveat - only
-        # Dart binds the NULL-preserving native reader).
-        assert (
-            relations_db.query_integer("SELECT COUNT(*) FROM Child_vector_refs WHERE id = ?", parameters=[child]) == 3
-        )
-        assert (
-            relations_db.query_integer(
-                "SELECT COUNT(*) FROM Child_vector_refs WHERE id = ? AND parent_ref IS NULL", parameters=[child]
-            )
-            == 1
-        )
+        # None cells become SQL NULL, and the per-column reader hands them back positionally.
+        assert relations_db.read_vector_integers_by_id("Child", "parent_ref", child) == [1, None, 2]
 
     def test_unknown_group_or_column_raises(self, relations_db: Database) -> None:
         child = self._seed(relations_db)

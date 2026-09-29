@@ -282,3 +282,17 @@ class TestReadSetGroupColumnsPairByRow:
         assert len(codes) == 3
         assert len(weights) == len(codes)
         assert sorted(zip(codes, weights)) == [("alpha", 3.5), ("mu", 1.5), ("zeta", 2.5)]
+
+
+class TestSetNullCells:
+    """NULL cells round-trip positionally."""
+
+    def test_bulk_and_by_id_keep_null_cells(self, collections_db: Database) -> None:
+        """A NULL cell keeps its slot, and an element with no rows is an empty list."""
+        collections_db.create_element("Configuration", label="Config")
+        id1 = collections_db.create_element("Collection", label="Item 1")
+        collections_db.create_element("Collection", label="Item 2")  # no set rows
+        collections_db.update_set_group("Collection", "tags", id1, {"tag": ["a", None, "c"]})
+
+        assert collections_db.read_set_strings("Collection", "tag") == [["a", None, "c"], []]
+        assert collections_db.read_set_strings_by_id("Collection", "tag", id1) == ["a", None, "c"]

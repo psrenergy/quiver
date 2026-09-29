@@ -113,7 +113,39 @@ TEST_F(LuaRunnerTest, UpdateElementWithArrays) {
     EXPECT_EQ(*integer_value, 999);
 
     auto vec_values = db.read_vector_integers_by_id("Collection", "value_int", 1);
-    EXPECT_EQ(vec_values, (std::vector<int64_t>{7, 8, 9}));
+    EXPECT_EQ(vec_values, (std::vector<std::optional<int64_t>>{7, 8, 9}));
+}
+
+TEST_F(LuaRunnerTest, UpdateElementRefusesArrayWithNilHole) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    db.create_element("Collection",
+                      quiver::Element()
+                          .set("label", "Item 1")
+                          .set("value_int", std::vector<quiver::Value>{int64_t{10}, nullptr, int64_t{30}}));
+    db.create_element(
+        "Collection",
+        quiver::Element().set("label", "Item 2").set("value_int", std::vector<quiver::Value>{nullptr, int64_t{20}}));
+    db.create_element("Collection",
+                      quiver::Element().set("label", "Item 3").set("value_int", std::vector<int64_t>{7, 8, 9}));
+
+    quiver::LuaRunner lua(db);
+
+    // A read hands each NULL cell back as a nil hole. Written back through an element array it
+    // used to keep only the cells before the hole, or with a leading hole skip the array, silently.
+    expect_lua_error(
+        lua,
+        R"(db:update_element("Collection", 3, { value_int = db:read_vectors_by_id("Collection", 1).value_int }))",
+        "has a nil hole");
+    expect_lua_error(lua,
+                     R"(db:update_element("Collection", 3, {
+                         label = "Item 3b", value_int = db:read_vectors_by_id("Collection", 2).value_int }))",
+                     "has a nil hole");
+
+    EXPECT_EQ(db.read_vector_integers_by_id("Collection", "value_int", 3),
+              (std::vector<std::optional<int64_t>>{7, 8, 9}));
+    EXPECT_EQ(db.read_scalar_string_by_id("Collection", "label", 3), "Item 3");
 }
 
 TEST_F(LuaRunnerTest, UpdateVectorIntegers) {
@@ -129,7 +161,7 @@ TEST_F(LuaRunnerTest, UpdateVectorIntegers) {
     )");
 
     auto vec = db.read_vector_integers_by_id("Collection", "value_int", 1);
-    EXPECT_EQ(vec, (std::vector<int64_t>{10, 20, 30, 40}));
+    EXPECT_EQ(vec, (std::vector<std::optional<int64_t>>{10, 20, 30, 40}));
 }
 
 TEST_F(LuaRunnerTest, UpdateVectorFloats) {
@@ -145,7 +177,7 @@ TEST_F(LuaRunnerTest, UpdateVectorFloats) {
     )");
 
     auto vec = db.read_vector_floats_by_id("Collection", "value_float", 1);
-    EXPECT_EQ(vec, (std::vector<double>{5.5, 6.6, 7.7}));
+    EXPECT_EQ(vec, (std::vector<std::optional<double>>{5.5, 6.6, 7.7}));
 }
 
 TEST_F(LuaRunnerTest, UpdateScalarStringTrimsWhitespace) {
@@ -163,7 +195,7 @@ TEST_F(LuaRunnerTest, UpdateScalarStringTrimsWhitespace) {
 
     auto set_vals = db.read_set_strings_by_id("Collection", "tag", 1);
     std::sort(set_vals.begin(), set_vals.end());
-    EXPECT_EQ(set_vals, (std::vector<std::string>{"alpha", "beta", "gamma"}));
+    EXPECT_EQ(set_vals, (std::vector<std::optional<std::string>>{"alpha", "beta", "gamma"}));
 }
 
 TEST_F(LuaRunnerTest, UpdateVectorStrings) {
@@ -279,7 +311,7 @@ TEST_F(LuaRunnerTest, UpdateVectorGroupReplacesAndClears) {
     quiver::LuaRunner lua(db);
 
     lua.run(R"(db:update_vector_group("Child", "refs", 1, { parent_ref = { 1, 2 } }))");
-    EXPECT_EQ(db.read_vector_integers_by_id("Child", "parent_ref", 1), (std::vector<int64_t>{1, 2}));
+    EXPECT_EQ(db.read_vector_integers_by_id("Child", "parent_ref", 1), (std::vector<std::optional<int64_t>>{1, 2}));
 
     lua.run(R"(db:update_vector_group("Child", "refs", 1, {}))");
     EXPECT_TRUE(db.read_vector_integers_by_id("Child", "parent_ref", 1).empty());
@@ -296,7 +328,7 @@ TEST_F(LuaRunnerTest, UpdateSetGroupLeavesSiblingSharingColumnNameUntouched) {
     )");
 
     EXPECT_TRUE(db.read_vector_integers_by_id("Child", "parent_ref", 1).empty());
-    EXPECT_EQ(db.read_set_integers_by_id("Child", "parent_ref", 1), (std::vector<int64_t>{1}));
+    EXPECT_EQ(db.read_set_integers_by_id("Child", "parent_ref", 1), (std::vector<std::optional<int64_t>>{1}));
 }
 
 TEST_F(LuaRunnerTest, UpdateGroupResolvesForeignKeyLabels) {
@@ -304,7 +336,7 @@ TEST_F(LuaRunnerTest, UpdateGroupResolvesForeignKeyLabels) {
     quiver::LuaRunner lua(db);
 
     lua.run(R"(db:update_vector_group("Child", "refs", 1, { parent_ref = { "Parent B" } }))");
-    EXPECT_EQ(db.read_vector_integers_by_id("Child", "parent_ref", 1), (std::vector<int64_t>{2}));
+    EXPECT_EQ(db.read_vector_integers_by_id("Child", "parent_ref", 1), (std::vector<std::optional<int64_t>>{2}));
 }
 
 // No dimension column here, so the row count is the largest index any column reaches; a nil hole
@@ -346,7 +378,7 @@ TEST_F(LuaRunnerTest, UpdateGroupErrors) {
         lua, R"(db:update_set_group("Child", "parents", 1, { parent_ref = 5 }))", "must be an array of values");
 
     // Every rejected call left the existing row alone.
-    EXPECT_EQ(db.read_vector_integers_by_id("Child", "parent_ref", 1), (std::vector<int64_t>{1}));
+    EXPECT_EQ(db.read_vector_integers_by_id("Child", "parent_ref", 1), (std::vector<std::optional<int64_t>>{1}));
 }
 
 TEST_F(LuaRunnerTest, UpdateVectorGroupByLabel) {
@@ -358,11 +390,11 @@ TEST_F(LuaRunnerTest, UpdateVectorGroupByLabel) {
         db:update_vector_group_by_label("Child", "refs", "Child 2", { parent_ref = { 1 } })
         db:update_vector_group_by_label("Child", "refs", "Child 1", { parent_ref = { 1, "Parent B" } })
     )");
-    EXPECT_EQ(db.read_vector_integers_by_id("Child", "parent_ref", 1), (std::vector<int64_t>{1, 2}));
+    EXPECT_EQ(db.read_vector_integers_by_id("Child", "parent_ref", 1), (std::vector<std::optional<int64_t>>{1, 2}));
 
     lua.run(R"(db:update_vector_group_by_label("Child", "refs", "Child 1", {}))");
     EXPECT_TRUE(db.read_vector_integers_by_id("Child", "parent_ref", 1).empty());
-    EXPECT_EQ(db.read_vector_integers_by_id("Child", "parent_ref", 2), (std::vector<int64_t>{1}));
+    EXPECT_EQ(db.read_vector_integers_by_id("Child", "parent_ref", 2), (std::vector<std::optional<int64_t>>{1}));
 }
 
 TEST_F(LuaRunnerTest, UpdateVectorGroupByLabelErrors) {
@@ -377,7 +409,7 @@ TEST_F(LuaRunnerTest, UpdateVectorGroupByLabelErrors) {
     expect_lua_error(
         lua, R"(db:update_vector_group_by_label("Child", "refs", "Nope", { parent_ref = {} }))", "contain no rows");
 
-    EXPECT_EQ(db.read_vector_integers_by_id("Child", "parent_ref", 1), (std::vector<int64_t>{1}));
+    EXPECT_EQ(db.read_vector_integers_by_id("Child", "parent_ref", 1), (std::vector<std::optional<int64_t>>{1}));
 }
 
 TEST_F(LuaRunnerTest, UpdateSetGroupByLabel) {
@@ -389,11 +421,11 @@ TEST_F(LuaRunnerTest, UpdateSetGroupByLabel) {
         db:update_set_group_by_label("Child", "parents", "Child 2", { parent_ref = { 1 } })
         db:update_set_group_by_label("Child", "parents", "Child 1", { parent_ref = { 1, "Parent B" } })
     )");
-    EXPECT_EQ(db.read_set_integers_by_id("Child", "parent_ref", 1), (std::vector<int64_t>{1, 2}));
+    EXPECT_EQ(db.read_set_integers_by_id("Child", "parent_ref", 1), (std::vector<std::optional<int64_t>>{1, 2}));
 
     lua.run(R"(db:update_set_group_by_label("Child", "parents", "Child 1", {}))");
     EXPECT_TRUE(db.read_set_integers_by_id("Child", "parent_ref", 1).empty());
-    EXPECT_EQ(db.read_set_integers_by_id("Child", "parent_ref", 2), (std::vector<int64_t>{1}));
+    EXPECT_EQ(db.read_set_integers_by_id("Child", "parent_ref", 2), (std::vector<std::optional<int64_t>>{1}));
 }
 
 TEST_F(LuaRunnerTest, UpdateSetGroupByLabelErrors) {
@@ -408,7 +440,7 @@ TEST_F(LuaRunnerTest, UpdateSetGroupByLabelErrors) {
     expect_lua_error(
         lua, R"(db:update_set_group_by_label("Child", "parents", "Nope", { parent_ref = {} }))", "contain no rows");
 
-    EXPECT_EQ(db.read_set_integers_by_id("Child", "parent_ref", 1), (std::vector<int64_t>{1}));
+    EXPECT_EQ(db.read_set_integers_by_id("Child", "parent_ref", 1), (std::vector<std::optional<int64_t>>{1}));
 }
 
 TEST_F(LuaRunnerTest, UpdateRelationSetsAndClears) {

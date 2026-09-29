@@ -305,9 +305,9 @@ TEST(DatabaseCSV, ImportCSV_Vector_RoundTrip) {
 
     auto vals = db.read_vector_floats_by_id("Items", "measurement", id1);
     ASSERT_EQ(vals.size(), 3);
-    EXPECT_NEAR(vals[0], 1.1, 0.001);
-    EXPECT_NEAR(vals[1], 2.2, 0.001);
-    EXPECT_NEAR(vals[2], 3.3, 0.001);
+    EXPECT_NEAR(*vals[0], 1.1, 0.001);
+    EXPECT_NEAR(*vals[1], 2.2, 0.001);
+    EXPECT_NEAR(*vals[2], 3.3, 0.001);
 
     fs::remove(csv_path);
 }
@@ -334,7 +334,7 @@ TEST(DatabaseCSV, ImportCSV_Set_RoundTrip) {
     auto tags = db.read_set_strings_by_id("Items", "tag", id1);
     ASSERT_EQ(tags.size(), 3);
 
-    std::set<std::string> tag_set(tags.begin(), tags.end());
+    std::set<std::optional<std::string>> tag_set(tags.begin(), tags.end());
     EXPECT_TRUE(tag_set.count("red"));
     EXPECT_TRUE(tag_set.count("green"));
     EXPECT_TRUE(tag_set.count("blue"));
@@ -1680,8 +1680,8 @@ TEST(DatabaseCSV, ImportCSV_Vector_TrailingEmptyColumns) {
 
     auto vals = db.read_vector_floats_by_id("Items", "measurement", 1);
     ASSERT_EQ(vals.size(), 2);
-    EXPECT_NEAR(vals[0], 1.1, 0.001);
-    EXPECT_NEAR(vals[1], 2.2, 0.001);
+    EXPECT_NEAR(*vals[0], 1.1, 0.001);
+    EXPECT_NEAR(*vals[1], 2.2, 0.001);
 
     fs::remove(csv_path);
 }
@@ -1850,7 +1850,7 @@ TEST(DatabaseCSV, ImportCSV_Scalar_OmittedElement_DeletesItsGroupRows) {
     EXPECT_EQ(db.read_element_ids("Items"), (std::vector<int64_t>{kept}));
     // The kept element was updated in place: new scalar value, same id, group rows intact.
     EXPECT_EQ(db.read_scalar_string_by_id("Items", "name", kept), "Beta2");
-    EXPECT_EQ(db.read_vector_floats_by_id("Items", "measurement", kept), (std::vector<double>{9.5}));
+    EXPECT_EQ(db.read_vector_floats_by_id("Items", "measurement", kept), (std::vector<std::optional<double>>{9.5}));
     // The dropped element's group rows went with it (ON DELETE CASCADE).
     for (const std::string table : {"Items_vector_measurements", "Items_set_tags", "Items_time_series_readings"}) {
         EXPECT_EQ(db.query_integer("SELECT COUNT(*) FROM " + table + " WHERE id = ?", {dropped}), 0) << table;
@@ -1879,7 +1879,7 @@ TEST(DatabaseCSV, ImportCSV_Scalar_OmittedParent_AppliesOnDeleteActions) {
     EXPECT_FALSE(db.read_scalar_integer_by_id("Child", "parent_id", child).has_value());
     EXPECT_EQ(db.query_integer("SELECT COUNT(*) FROM Child_vector_refs WHERE id = ? AND parent_ref IS NULL", {child}),
               1);
-    EXPECT_EQ(db.read_set_integers_by_id("Child", "parent_ref", child), (std::vector<int64_t>{id_a}));
+    EXPECT_EQ(db.read_set_integers_by_id("Child", "parent_ref", child), (std::vector<std::optional<int64_t>>{id_a}));
     EXPECT_EQ(
         db.query_integer("SELECT COUNT(*) FROM Child_time_series_events WHERE id = ? AND sponsor_id IS NULL", {child}),
         1);
@@ -1931,7 +1931,7 @@ TEST(DatabaseCSV, ImportCSV_Scalar_OmittedElement_DoesNotCascadeThroughSelfRefer
 
     EXPECT_EQ(db.read_element_ids("Node"), (std::vector<int64_t>{leaf}));
     EXPECT_FALSE(db.read_scalar_integer_by_id("Node", "node_parent", leaf).has_value());
-    EXPECT_EQ(db.read_vector_floats_by_id("Node", "weight", leaf), (std::vector<double>{1.5, 2.5}));
+    EXPECT_EQ(db.read_vector_floats_by_id("Node", "weight", leaf), (std::vector<std::optional<double>>{1.5, 2.5}));
 }
 
 // Item A points at Tag Owned, which belongs to Item B, both through ON DELETE CASCADE relations.
@@ -1965,5 +1965,5 @@ TEST(DatabaseCSV, ImportCSV_Scalar_OmittedElement_CascadeIntoKeptElement_Throws)
     EXPECT_EQ(db.read_element_ids("Item"), (std::vector<int64_t>{a, b}));
     EXPECT_EQ(db.read_element_ids("Tag"), (std::vector<int64_t>{kept_tag, owned_tag}));
     EXPECT_EQ(db.read_scalar_integer_by_id("Item", "tag_pinned", a), owned_tag);
-    EXPECT_EQ(db.read_vector_floats_by_id("Item", "weight", a), (std::vector<double>{1.5, 2.5}));
+    EXPECT_EQ(db.read_vector_floats_by_id("Item", "weight", a), (std::vector<std::optional<double>>{1.5, 2.5}));
 }

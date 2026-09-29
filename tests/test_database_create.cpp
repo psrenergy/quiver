@@ -52,11 +52,11 @@ TEST(Database, CreateElementWithVector) {
 
     auto integer_vectors = db.read_vector_integers("Collection", "value_int");
     EXPECT_EQ(integer_vectors.size(), 1);
-    EXPECT_EQ(integer_vectors[0], (std::vector<int64_t>{1, 2, 3}));
+    EXPECT_EQ(integer_vectors[0], (std::vector<std::optional<int64_t>>{1, 2, 3}));
 
     auto float_vectors = db.read_vector_floats("Collection", "value_float");
     EXPECT_EQ(float_vectors.size(), 1);
-    EXPECT_EQ(float_vectors[0], (std::vector<double>{1.5, 2.5, 3.5}));
+    EXPECT_EQ(float_vectors[0], (std::vector<std::optional<double>>{1.5, 2.5, 3.5}));
 }
 
 TEST(Database, CreateElementWithVectorGroup) {
@@ -80,11 +80,11 @@ TEST(Database, CreateElementWithVectorGroup) {
     // Verify using public read APIs
     auto integer_vectors = db.read_vector_integers("Collection", "value_int");
     EXPECT_EQ(integer_vectors.size(), 1);
-    EXPECT_EQ(integer_vectors[0], (std::vector<int64_t>{10, 20, 30}));
+    EXPECT_EQ(integer_vectors[0], (std::vector<std::optional<int64_t>>{10, 20, 30}));
 
     auto float_vectors = db.read_vector_floats("Collection", "value_float");
     EXPECT_EQ(float_vectors.size(), 1);
-    EXPECT_EQ(float_vectors[0], (std::vector<double>{1.5, 2.5, 3.5}));
+    EXPECT_EQ(float_vectors[0], (std::vector<std::optional<double>>{1.5, 2.5, 3.5}));
 }
 
 TEST(Database, CreateElementWithSetGroup) {
@@ -108,7 +108,7 @@ TEST(Database, CreateElementWithSetGroup) {
     EXPECT_EQ(sets.size(), 1);
     auto tags = sets[0];
     std::sort(tags.begin(), tags.end());
-    EXPECT_EQ(tags, (std::vector<std::string>{"important", "review", "urgent"}));
+    EXPECT_EQ(tags, (std::vector<std::optional<std::string>>{"important", "review", "urgent"}));
 }
 
 TEST(Database, CreateMultipleElements) {
@@ -152,7 +152,7 @@ TEST(Database, CreateElementSingleElementVector) {
 
     auto vectors = db.read_vector_integers("Collection", "value_int");
     EXPECT_EQ(vectors.size(), 1);
-    EXPECT_EQ(vectors[0], (std::vector<int64_t>{42}));
+    EXPECT_EQ(vectors[0], (std::vector<std::optional<int64_t>>{42}));
 }
 
 TEST(Database, CreateElementSingleElementSet) {
@@ -171,7 +171,7 @@ TEST(Database, CreateElementSingleElementSet) {
 
     auto sets = db.read_set_strings("Collection", "tag");
     EXPECT_EQ(sets.size(), 1);
-    EXPECT_EQ(sets[0], (std::vector<std::string>{"single_tag"}));
+    EXPECT_EQ(sets[0], (std::vector<std::optional<std::string>>{"single_tag"}));
 }
 
 TEST(Database, CreateElementInvalidCollection) {
@@ -381,7 +381,7 @@ TEST(Database, CreateElementTrimsWhitespaceFromStrings) {
     EXPECT_EQ(sets.size(), 1);
     auto tags = sets[0];
     std::sort(tags.begin(), tags.end());
-    EXPECT_EQ(tags, (std::vector<std::string>{"important", "review", "urgent"}));
+    EXPECT_EQ(tags, (std::vector<std::optional<std::string>>{"important", "review", "urgent"}));
 }
 
 TEST(Database, CreateElementWithDatetime) {
@@ -474,7 +474,7 @@ TEST(Database, ResolveFkLabelInSetCreate) {
     ASSERT_EQ(sets[0].size(), 2);
 
     // Resolved parent Ids should be 1 and 2
-    std::vector<int64_t> sorted_ids(sets[0].begin(), sets[0].end());
+    std::vector<std::optional<int64_t>> sorted_ids(sets[0].begin(), sets[0].end());
     std::sort(sorted_ids.begin(), sorted_ids.end());
     EXPECT_EQ(sorted_ids[0], 1);
     EXPECT_EQ(sorted_ids[1], 2);

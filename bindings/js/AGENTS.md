@@ -79,11 +79,16 @@ biome.json        # Lint/format config
   (`updateRelation`/`updateRelationByLabel`) — Bun turns `null` into a NULL pointer for a
   `"pointer"` slot, the same way `group-columns.ts` passes `null` for the array pointers when
   clearing. The C API reads NULL as "clear the relation" and an empty string as a label to look up.
-- **Scalar bulk NULLs**: `readScalarIntegers`/`readScalarFloats` read a parallel `uint8_t*` mask
+- **Bulk and per-cell NULLs**: `readScalarIntegers`/`readScalarFloats` read a parallel `uint8_t*` mask
   (`new Uint8Array(toArrayBuffer(...))`) and gate `mask[i] ? v : null` → `(number | null)[]` — never
-  `Number()` a masked slot (would turn NULL into 0). `readScalarStrings` reads pointer-by-pointer with
-  `read.ptr` + a NULL guard → `(string | null)[]` (not `decodeStringArray`). `loader.ts` carries the
-  mask arg on the two numeric symbols + `quiver_database_free_mask` (hand-maintained, no generator).
+  `Number()` a masked slot (would turn NULL into 0). The vector/set readers do the same per cell:
+  `readByIdIntegers`/`readByIdFloats` take a flat mask (`quiver_database_free_mask`), while
+  `readBulkIntegers`/`readBulkFloats` take a nested one — `decodePtrArray` over the outer pointer,
+  then a `Uint8Array` per element sized by `sizes[i]`, freed by `quiver_database_free_masks`. Every
+  string reader (scalar, `readBulkStrings`, `readByIdStrings`) reads pointer-by-pointer with
+  `decodePtrArray` + a NULL guard — **never `decodeStringArray`**, which turns a NULL `char*` into
+  `""`. `loader.ts` carries the mask args on the eight numeric vector/set symbols plus both free
+  functions (hand-maintained, no generator).
 - **`LuaRunner.run` owns its result**: `quiver_lua_runner_run` takes a `char** out_result` and the
   JSON string must be freed with `quiver_lua_runner_free_string` — *not* `quiver_database_free_string`
   (both are in `loader.ts`, hand-maintained). `decodeStringFromBuf` returns `""` for a NULL pointer,
@@ -94,6 +99,12 @@ biome.json        # Lint/format config
   for masked cells). Reads decode the mask and null-out cells; string columns use the null-guarded
   pointer loop (never `decodeStringArray`, which constructs a `CString` from a NULL pointer). Masks
   are built by direct `Uint8Array` indexing — never a `DataView` — per the TypedArray house rule.
+- **`setElementArray` refuses a `null` cell in a numeric or boolean array** (`QuiverError` naming
+  the column). A vector/set read returns a NULL cell as `null`, and without the check a read written
+  back through `createElement`/`updateElement` stored it as 0 / `false` (`allocNativeFloat64`'s
+  `setFloat64(null)` writes 0), or misrouted an integer array to the float setter. A string array
+  keeps its NULL-pointer path, which the C setter reads as NULL. Other NULL cells go through
+  `updateVectorGroup` / `updateSetGroup`.
 - **`integerToBoolean` throws `RangeError`, not `QuiverError`** — the one exception to the
   "always `QuiverError`" rule above, and deliberate: that message comes from
   `quiver_get_last_error`, while this one is crafted here (the boolean readers are a binding-only

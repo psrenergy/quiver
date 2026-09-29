@@ -29,7 +29,7 @@ TEST_F(LuaRunnerFkTest, CreateElementSetFkLabels) {
     ASSERT_EQ(sets.size(), 1);
     ASSERT_EQ(sets[0].size(), 2);
 
-    std::vector<int64_t> sorted_ids(sets[0].begin(), sets[0].end());
+    std::vector<std::optional<int64_t>> sorted_ids(sets[0].begin(), sets[0].end());
     std::sort(sorted_ids.begin(), sorted_ids.end());
     EXPECT_EQ(sorted_ids[0], 1);
     EXPECT_EQ(sorted_ids[1], 2);

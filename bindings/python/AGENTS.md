@@ -50,11 +50,13 @@ ruff.toml         # Lint/format config (format.bat runs ruff)
   as a label to look up.
 - **Per-method FFI boilerplate is the house style** — don't collapse it into
   closure-parameterized helpers (root "Do not 'fix'" list).
-- **Scalar bulk NULLs**: `read_scalar_integers`/`_floats` decode a parallel `uint8_t**` mask into
-  `list[T | None]` (`mask[i]` falsy → `None`); `read_scalar_strings` already returns `list[str | None]`
-  via the `ffi.NULL` guard, and `read_scalar_date_times` maps that list while preserving its `None`
-  slots. `_c_api.py` carries the mask out-param on the two numeric readers plus
-  `quiver_database_free_mask`.
+- **Bulk and per-cell NULLs**: `read_scalar_integers`/`_floats` decode a parallel `uint8_t**` mask
+  into `list[T | None]` (`mask[i]` falsy → `None`); the four numeric vector/set `_by_id` readers do
+  the same, while the four numeric vector/set **bulk** readers decode a nested `uint8_t***` — one
+  mask per element, parallel to `out_sizes` — freed by `quiver_database_free_masks`. The string
+  readers carry no mask: a NULL cell is an `ffi.NULL` entry, guarded on read. The boolean and
+  datetime wrappers map those lists while preserving their `None` slots. `_c_api.py` carries the
+  mask out-params and both free functions.
 - **`_parse_datetime` gates on `_DATE_TIME_PATTERN` before calling `fromisoformat`.**
   `fromisoformat` is *wider* than the core's DATE_TIME grammar — it accepts `"20240115"`, a `Z`
   suffix and a UTC offset, none of which Julia's parser reads — so without the gate the same stored
@@ -64,18 +66,23 @@ ruff.toml         # Lint/format config (format.bat runs ruff)
   reaching that line is now naive. An out-of-range field that clears the regex (`"2024-02-31"`)
   falls through to the same rejection so the message still names the column. Keep this parser
   accepting exactly the same set as Julia's `string_to_date_time` and Dart's `stringToDateTime`.
-  Its `@overload` triple mirrors `_integer_to_boolean`'s — keep the `(str) -> datetime` variant, or
-  the vector/set readers' comprehensions widen to `list[list[datetime | None]]` against their
-  declared `list[list[datetime]]`. Nothing typechecks this repo (`ruff.toml` is `select = ["I"]`,
-  isort only; no mypy/pyright in CI, `pyproject.toml`, or the pre-commit hooks), so that note is
-  the only guard against a "remove the redundant overloads" cleanup.
+  Its `@overload` triple mirrors `_integer_to_boolean`'s. No declared return type depends on the
+  narrow `(str) -> datetime` variant any more — the vector/set readers keep NULL cells and are
+  declared `list[... datetime | None]` — so it only sharpens the two callers that pass a
+  guaranteed `str` (`query_date_time`, the time-series dimension column). Nothing typechecks this
+  repo (`ruff.toml` is `select = ["I"]`, isort only; no mypy/pyright in CI, `pyproject.toml`, or
+  the pre-commit hooks).
 - **`_integer_to_boolean` raises `ValueError`, not `QuiverError`** — the second documented
   exception to "messages come from C++", alongside `_marshal_group_columns`' jagged-column check.
   The boolean readers are a binding-only convenience with no C++ counterpart, so the core cannot
   diagnose a stray `2`; the message names the offending `collection.attribute` (nothing to name for
-  `query_boolean`). The `@overload` triple mirrors `bindings/js/src/boolean.ts` — keep the
-  `(int) -> bool` variant, or the vector/set readers' comprehensions widen to `list[bool | None]`
-  against their declared `list[list[bool]]`.
+  `query_boolean`). The `@overload` triple mirrors `bindings/js/src/boolean.ts`; every caller now
+  passes `int | None` (the vector/set readers keep NULL cells and are declared
+  `list[... bool | None]`), so the narrow `(int) -> bool` variant backs no declared type.
+- **`Element._set_array` refuses a `None` cell** with a `TypeError` naming the column: a vector/set
+  read returns a NULL cell as `None`, and without the check it failed inside cffi
+  (`an integer is required`) or on `str.encode`, naming nothing. NULL cells are written with
+  `update_vector_group` / `update_set_group` (the element surface stays non-null).
 - **`LuaRunner.run` owns its result**: `quiver_lua_runner_run` takes a `char** out_result` and the
   JSON string must be freed with `quiver_lua_runner_free_string` — *not*
   `quiver_database_free_string` (both are hand-declared in `_c_api.py`). The free sits in a
@@ -90,8 +97,9 @@ ruff.toml         # Lint/format config (format.bat runs ruff)
   and by label) — same name as Dart's `_marshalGroupColumn`. It raises `ValueError` for jagged
   column lists (a pre-FFI marshalling error, the documented exception to "messages come from C++");
   everything else is validated in the core and surfaces as `QuiverError`. Note that the group
-  *writers* take columns while `read_vector_group_by_id` returns rows, and that reader composes
-  per-column reads, so it **drops NULL cells** — assert a NULL-cell write in SQL, not through it.
+  *writers* take columns while `read_vector_group_by_id` returns rows; that reader composes
+  per-column reads, which now preserve NULL cells, so its rows are NULL-correct and a NULL-cell
+  write can be asserted through it.
 - **`_marshal_row_columns` is its row-shaped sibling**, serving `upsert_time_series_row` and its
   `_by_label` form — each kwarg is a scalar wrapped in a 1-element typed array. Kept separate
   because the row-upsert C signature carries no per-cell mask: the group marshaller's zeroed

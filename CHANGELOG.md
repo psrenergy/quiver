@@ -73,6 +73,30 @@ callers to change something are prefixed **BREAKING** and say what to do.
   `QUIVER_EXPRESSION_AGGREGATE_OPERATION_<OP>` — in Julia,
   `Quiver.aggregate_agents(e, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_MEAN)`.
 
+- **BREAKING — vector and set reads preserve NULL cells.** All twelve readers
+  (`read_{vector,set}_{integers,floats,strings}` and their `_by_id` forms, plus the C API and
+  binding equivalents) dropped SQL NULL cells, so `[0.10, NULL, 0.30]` read back as
+  `[0.10, 0.30]` and two per-column reads of one nullable group paired the wrong values together.
+  Cells are now positional: the inner element type is nullable (`std::optional<T>` in C++,
+  `nothing`/`None`/`null` in the bindings, a `nil` hole in Lua) — in Julia only for a nullable
+  column: a `NOT NULL` one keeps its concrete `Vector{Int64}`, while a nullable one now reads as
+  `Vector{Union{Nothing, Int64}}` even when it holds no NULL. The C API numeric readers gained a
+  per-cell presence mask — `uint8_t*** out_masks` on the four bulk readers (freed by the new
+  `quiver_database_free_masks`) and `uint8_t** out_mask` on the four numeric `_by_id` readers
+  (freed by `quiver_database_free_mask`); the string readers keep their signatures and mark a NULL
+  with a `nullptr` entry, which they never returned before.
+
+  *Adapt:* unwrap the inner values (`*v` / `v.value()`, `v === null` checks, `t[i] == nil` in Lua)
+  and, in C, pass and free the new mask out-parameters and NULL-check every `char*` a string reader
+  returns before using it. Inner lists that used to be short are now full length, so a length read
+  as "number of non-null values" must count the non-null cells. To write a read back, a NULL cell
+  goes through `update_vector_group` / `update_set_group` in every layer; the element-array setters
+  refuse it (Lua: an array with a `nil` hole throws instead of being cut short at the hole; JS: a
+  `null` in a numeric or boolean array throws instead of being stored as 0 / `false`; Python and
+  Julia: an error naming the column). Julia's `create_element!` / `update_element!` take a nullable
+  read as it is when it holds no `nothing`. In C++, map `std::nullopt` to `nullptr` into a
+  `std::vector<Value>`: `Element::set` has no `std::vector<std::optional<T>>` overload.
+
 ### Removed
 
 - **BREAKING (C++ only) — `TimeProperties::set_initial_value()`.** `BinaryMetadata::derive_initial_values()`
@@ -170,6 +194,11 @@ callers to change something are prefixed **BREAKING** and say what to do.
   `std::invalid_argument`. A file that ends before its last row throws `Cannot csv_to_bin: file ends before
   line N`, and a header with too few columns now reports the same `Unexpected header in CSV file:
   ...` as any other header mismatch instead of `CSV header has N columns, expected M`.
+- **Bulk vector and set reads keep an element whose id is -1.** The six bulk readers used -1 as
+  their "no element yet" marker, so when -1 was a collection's smallest id (`create_element`
+  accepts an explicit `id`) that element was left out — every later element then sat one slot off
+  `read_element_ids` — or, when it had group rows, they were appended to an empty result
+  (undefined behaviour; a Debug build aborts).
 
 ## [0.12.3] — 2026-09-28
 

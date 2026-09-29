@@ -184,13 +184,16 @@ TEST(DatabaseCApiCSV, ImportCSV_Vector_RoundTrip) {
 
     // Verify
     double* vals = nullptr;
+    uint8_t* vals_mask = nullptr;
     size_t val_count = 0;
-    ASSERT_EQ(quiver_database_read_vector_floats_by_id(db, "Items", "measurement", id1, &vals, &val_count), QUIVER_OK);
+    ASSERT_EQ(quiver_database_read_vector_floats_by_id(db, "Items", "measurement", id1, &vals, &vals_mask, &val_count),
+              QUIVER_OK);
     ASSERT_EQ(val_count, 3u);
     EXPECT_NEAR(vals[0], 1.1, 0.001);
     EXPECT_NEAR(vals[1], 2.2, 0.001);
     EXPECT_NEAR(vals[2], 3.3, 0.001);
     quiver_database_free_float_array(vals);
+    quiver_database_free_mask(vals_mask);
 
     fs::remove(csv_path);
     quiver_database_close(db);
@@ -628,12 +631,15 @@ TEST(DatabaseCApiCSV, ImportCSV_Vector_WithFK_RoundTrip) {
     ASSERT_EQ(quiver_database_import_csv(db, "Child", "refs", csv_path.string().c_str(), &import_options), QUIVER_OK);
 
     int64_t* vals = nullptr;
+    uint8_t* vals_mask = nullptr;
     size_t val_count = 0;
-    ASSERT_EQ(quiver_database_read_vector_integers_by_id(db, "Child", "parent_ref", cid, &vals, &val_count), QUIVER_OK);
+    ASSERT_EQ(quiver_database_read_vector_integers_by_id(db, "Child", "parent_ref", cid, &vals, &vals_mask, &val_count),
+              QUIVER_OK);
     ASSERT_EQ(val_count, 2u);
     EXPECT_EQ(vals[0], pid1);
     EXPECT_EQ(vals[1], pid2);
     quiver_database_free_integer_array(vals);
+    quiver_database_free_mask(vals_mask);
 
     fs::remove(csv_path);
     quiver_database_close(db);
@@ -959,12 +965,15 @@ TEST(DatabaseCApiCSV, ImportCSV_Vector_TrailingEmptyColumns) {
               QUIVER_OK);
 
     double* vals = nullptr;
+    uint8_t* vals_mask = nullptr;
     size_t val_count = 0;
-    ASSERT_EQ(quiver_database_read_vector_floats_by_id(db, "Items", "measurement", id1, &vals, &val_count), QUIVER_OK);
+    ASSERT_EQ(quiver_database_read_vector_floats_by_id(db, "Items", "measurement", id1, &vals, &vals_mask, &val_count),
+              QUIVER_OK);
     ASSERT_EQ(val_count, 2u);
     EXPECT_NEAR(vals[0], 1.1, 0.001);
     EXPECT_NEAR(vals[1], 2.2, 0.001);
     quiver_database_free_float_array(vals);
+    quiver_database_free_mask(vals_mask);
 
     fs::remove(csv_path);
     quiver_database_close(db);
@@ -1034,12 +1043,15 @@ TEST(DatabaseCApiCSV, ImportCSV_Scalar_OmittedElement_DeletesItsGroupRows) {
 
     // The kept element was updated in place, so its vector survives.
     double* values = nullptr;
+    uint8_t* mask = nullptr;
     size_t value_count = 0;
-    ASSERT_EQ(quiver_database_read_vector_floats_by_id(db, "Items", "measurement", kept_id, &values, &value_count),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_read_vector_floats_by_id(db, "Items", "measurement", kept_id, &values, &mask, &value_count),
+        QUIVER_OK);
     ASSERT_EQ(value_count, 1u);
     EXPECT_EQ(values[0], 9.5);
     quiver_database_free_float_array(values);
+    quiver_database_free_mask(mask);
 
     // The dropped element's group rows went with it.
     for (const char* sql : {"SELECT COUNT(*) FROM Items_vector_measurements WHERE id NOT IN (SELECT id FROM Items)",

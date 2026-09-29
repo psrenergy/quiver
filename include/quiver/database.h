@@ -83,31 +83,37 @@ public:
     std::optional<std::string>
     read_scalar_string_by_id(const std::string& collection, const std::string& attribute, int64_t id);
 
-    // Read vector attributes (all elements). One entry per element, aligned with read_element_ids.
-    // Values are dense — NULL cells are dropped.
-    std::vector<std::vector<int64_t>> read_vector_integers(const std::string& collection, const std::string& attribute);
-    std::vector<std::vector<double>> read_vector_floats(const std::string& collection, const std::string& attribute);
-    std::vector<std::vector<std::string>> read_vector_strings(const std::string& collection,
-                                                              const std::string& attribute);
+    // Read vector attributes (all elements). One entry per element, aligned with read_element_ids;
+    // within each entry a SQL NULL cell is std::nullopt (positional — never dropped).
+    std::vector<std::vector<std::optional<int64_t>>> read_vector_integers(const std::string& collection,
+                                                                          const std::string& attribute);
+    std::vector<std::vector<std::optional<double>>> read_vector_floats(const std::string& collection,
+                                                                       const std::string& attribute);
+    std::vector<std::vector<std::optional<std::string>>> read_vector_strings(const std::string& collection,
+                                                                             const std::string& attribute);
 
-    // Read vector attributes (by element ID)
-    std::vector<int64_t>
+    // Read vector attributes (by element ID). A SQL NULL cell is std::nullopt.
+    std::vector<std::optional<int64_t>>
     read_vector_integers_by_id(const std::string& collection, const std::string& attribute, int64_t id);
-    std::vector<double>
+    std::vector<std::optional<double>>
     read_vector_floats_by_id(const std::string& collection, const std::string& attribute, int64_t id);
-    std::vector<std::string>
+    std::vector<std::optional<std::string>>
     read_vector_strings_by_id(const std::string& collection, const std::string& attribute, int64_t id);
 
     // Read set attributes (all elements). Same contract as the vector readers above.
-    std::vector<std::vector<int64_t>> read_set_integers(const std::string& collection, const std::string& attribute);
-    std::vector<std::vector<double>> read_set_floats(const std::string& collection, const std::string& attribute);
-    std::vector<std::vector<std::string>> read_set_strings(const std::string& collection, const std::string& attribute);
+    std::vector<std::vector<std::optional<int64_t>>> read_set_integers(const std::string& collection,
+                                                                       const std::string& attribute);
+    std::vector<std::vector<std::optional<double>>> read_set_floats(const std::string& collection,
+                                                                    const std::string& attribute);
+    std::vector<std::vector<std::optional<std::string>>> read_set_strings(const std::string& collection,
+                                                                          const std::string& attribute);
 
-    // Read set attributes (by element ID)
-    std::vector<int64_t>
+    // Read set attributes (by element ID). Same contract as the vector readers above.
+    std::vector<std::optional<int64_t>>
     read_set_integers_by_id(const std::string& collection, const std::string& attribute, int64_t id);
-    std::vector<double> read_set_floats_by_id(const std::string& collection, const std::string& attribute, int64_t id);
-    std::vector<std::string>
+    std::vector<std::optional<double>>
+    read_set_floats_by_id(const std::string& collection, const std::string& attribute, int64_t id);
+    std::vector<std::optional<std::string>>
     read_set_strings_by_id(const std::string& collection, const std::string& attribute, int64_t id);
 
     // Read a whole vector/set group (by element ID) - returns rows keyed by value column,

@@ -22,12 +22,6 @@ part 'database_update.dart';
 
 bool? _integerToBoolean(int? value, [String collection = '', String attribute = '']) {
   if (value == null) return null;
-  return _integerToBooleanNonNull(value, collection, attribute);
-}
-
-/// The non-nullable sibling, for group readers whose cells are never null.
-/// Keeping it separate avoids `_integerToBoolean(...)!` at the call sites.
-bool _integerToBooleanNonNull(int value, [String collection = '', String attribute = '']) {
   if (value == 0) return false;
   if (value == 1) return true;
   final source = collection.isEmpty ? '' : " in '$collection.$attribute'";

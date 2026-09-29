@@ -27,6 +27,24 @@ Project.toml      # Deps: Artifacts, CEnum, Dates, Libdl; julia 1.11 compat
 - **Always `GC.@preserve`**: refs produced by `marshal_params` (and any `Ref`s passed as pointers)
   must stay inside a `GC.@preserve refs ...` block spanning the ccall — the GC may otherwise
   collect them mid-call.
+- **Vector/set NULL cells are nullability-aware too.** All twelve vector/set readers consult
+  `list_{vector,set}_groups(...)` for the value column's `not_null` (`_group_value_not_null`,
+  `database_read.jl`) and return a concrete `Vector{Vector{Int64}}` / `Vector{Int64}` for a
+  `NOT NULL` column, `Optional{...}` otherwise — the scalar rule extended per cell. The lookup runs
+  **after** the C read, so an unknown collection reports the reader, not `list_vector_groups`.
+  Every cell goes through the C mask (`_masked_cells`; nested `Ptr{Ptr{UInt8}}` in bulk, freed by
+  `quiver_database_free_masks`, flat by id, freed by `quiver_database_free_mask`) and every string
+  through a `C_NULL` check (`_string_cells`), the concrete path included: a masked cell in a
+  `NOT NULL` column (a reader of the wrong type, or a NULL in a non-STRICT composite key, which the
+  core reports `not_null`) raises instead of passing the C placeholder `0`/`0.0` off as data, and
+  the C arrays are freed in `finally`. The public by-id readers wrap `_read_*_by_id(..., not_null)`
+  kernels: `read_{vectors,sets}_by_id` pass the answer from the groups they already listed, and
+  `read_{vector,set}_group_by_id` and `set_relation_map` pass `false` (their values end up untyped),
+  so no composite pays a `list_*_groups` round-trip per column or per element. The boolean/datetime
+  wrappers recover nullability from the delegate's container type (`values isa
+  Vector{Vector{Int64}}`), so there is no second metadata hop. `Element` accepts the
+  `Vector{Union{Nothing, T}}` a nullable read returns (narrowed; a real `nothing` cell raises
+  `ArgumentError` — NULL cells are written with `update_vector_group!` / `update_set_group!`).
 - **Scalar bulk NULLs (nullability-aware element type)**: `read_scalar_{integers,floats,strings}`
   first read `get_scalar_metadata(db, collection, attribute).not_null`, then return a **concrete
   `Vector{T}`** for `NOT NULL` columns and a **`Vector{Optional{T}}`** for nullable columns — for

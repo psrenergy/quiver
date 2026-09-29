@@ -35,11 +35,11 @@ TEST_F(LuaRunnerTest, CreateElementWithArrays) {
 
     auto vectors = db.read_vector_integers("Collection", "value_int");
     EXPECT_EQ(vectors.size(), 1);
-    EXPECT_EQ(vectors[0], (std::vector<int64_t>{1, 2, 3}));
+    EXPECT_EQ(vectors[0], (std::vector<std::optional<int64_t>>{1, 2, 3}));
 
     auto floats = db.read_vector_floats("Collection", "value_float");
     EXPECT_EQ(floats.size(), 1);
-    EXPECT_EQ(floats[0], (std::vector<double>{1.5, 2.5, 3.5}));
+    EXPECT_EQ(floats[0], (std::vector<std::optional<double>>{1.5, 2.5, 3.5}));
 }
 
 TEST_F(LuaRunnerTest, CreateElementWithOnlyLabel) {
@@ -108,7 +108,7 @@ TEST_F(LuaRunnerTest, CreateElementTrimsWhitespace) {
     EXPECT_EQ(sets.size(), 1);
     auto tags = sets[0];
     std::sort(tags.begin(), tags.end());
-    EXPECT_EQ(tags, (std::vector<std::string>{"important", "review", "urgent"}));
+    EXPECT_EQ(tags, (std::vector<std::optional<std::string>>{"important", "review", "urgent"}));
 }
 
 TEST_F(LuaRunnerTest, CreateElementWithSpecialCharactersInLabel) {
@@ -193,7 +193,8 @@ TEST_F(LuaRunnerTest, CreateElementBooleanArrayStoresIntegers) {
     lua.run(R"(db:create_element("Collection", { label = "Item", value_int = { true, false, true } }))");
 
     auto id = db.read_element_ids("Collection")[0];
-    EXPECT_EQ(db.read_vector_integers_by_id("Collection", "value_int", id), (std::vector<int64_t>{1, 0, 1}));
+    EXPECT_EQ(db.read_vector_integers_by_id("Collection", "value_int", id),
+              (std::vector<std::optional<int64_t>>{1, 0, 1}));
 }
 
 TEST_F(LuaRunnerTest, CreateElementMixedIntegerAndBooleanArray) {
@@ -207,7 +208,8 @@ TEST_F(LuaRunnerTest, CreateElementMixedIntegerAndBooleanArray) {
     lua.run(R"(db:create_element("Collection", { label = "Item", value_int = { 7, true, false } }))");
 
     auto id = db.read_element_ids("Collection")[0];
-    EXPECT_EQ(db.read_vector_integers_by_id("Collection", "value_int", id), (std::vector<int64_t>{7, 1, 0}));
+    EXPECT_EQ(db.read_vector_integers_by_id("Collection", "value_int", id),
+              (std::vector<std::optional<int64_t>>{7, 1, 0}));
 }
 
 TEST_F(LuaRunnerTest, UpdateElementBooleanAttributeStoresInteger) {
@@ -234,7 +236,8 @@ TEST_F(LuaRunnerTest, UpdateVectorGroupBooleanCellsStoreIntegers) {
     )");
 
     auto id = db.read_element_ids("Collection")[0];
-    EXPECT_EQ(db.read_vector_integers_by_id("Collection", "value_int", id), (std::vector<int64_t>{1, 0}));
+    EXPECT_EQ(db.read_vector_integers_by_id("Collection", "value_int", id),
+              (std::vector<std::optional<int64_t>>{1, 0}));
 }
 
 TEST_F(LuaRunnerTest, UpsertTimeSeriesRowBooleanStoresInteger) {
@@ -264,7 +267,8 @@ TEST_F(LuaRunnerTest, CreateElementMixedFloatAndBooleanArray) {
     lua.run(R"(db:create_element("Collection", { label = "Item", value_float = { 1.5, true, false } }))");
 
     auto id = db.read_element_ids("Collection")[0];
-    EXPECT_EQ(db.read_vector_floats_by_id("Collection", "value_float", id), (std::vector<double>{1.5, 1.0, 0.0}));
+    EXPECT_EQ(db.read_vector_floats_by_id("Collection", "value_float", id),
+              (std::vector<std::optional<double>>{1.5, 1.0, 0.0}));
 }
 
 TEST_F(LuaRunnerTest, CreateElementArrayCellTypeMismatchThrows) {

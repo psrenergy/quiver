@@ -88,6 +88,12 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   non-nullable list — which is what a mixed literal like `[1.5, 2]` infers.
 - **The group writers take columns while the group readers return rows** (`readVectorGroupById`).
   The only asymmetric reader/writer pair here — deliberate, see the root design decisions.
+- **Vector/set NULL cells**: the four numeric bulk readers decode a nested
+  `Pointer<Pointer<Uint8>>` — one mask per element, parallel to `outSizes` — freed by
+  `quiver_database_free_masks`; the four numeric `_by_id` readers take a flat mask freed by
+  `quiver_database_free_mask`. The string readers carry no mask: a NULL cell is a `nullptr` entry,
+  guarded with the same `ptr == nullptr ? null : ...` form the scalar string reader uses. All twelve
+  return a nullable inner element (`List<List<int?>>`, `List<int?>`, …).
 - **Scalar bulk NULLs**: `readScalarIntegers`/`readScalarFloats` decode a parallel `Pointer<Uint8>`
   mask into `List<int?>`/`List<double?>` (mask 0 → `null`); `readScalarStrings` returns `List<String?>`,
   null-guarding the pointer before `toDartString`; `readScalarDateTimes` maps that list while
@@ -125,11 +131,10 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   does not exist); it is no longer an error. `test/date_time_test.dart` pins the grammar (both
   directions) and the time-zone independence. Keep this parser accepting exactly the same set as
   Julia's `string_to_date_time` and Python's `_parse_datetime`.
-- **Booleans are INTEGER 0/1 in both directions.** `_integerToBoolean` (nullable) and
-  `_integerToBooleanNonNull` (group cells, which are never null) live in `database.dart` so the
-  `part` files share them; both take the `collection`/`attribute` so the rejection message names
-  the offending column. They throw `ArgumentError` — a locally-crafted message is unavoidable
-  here, since these readers are a binding-only convenience the core never sees. On writes,
+- **Booleans are INTEGER 0/1 in both directions.** `_integerToBoolean` lives in
+  `database.dart` so the `part` files share it; it takes the `collection`/`attribute` so the
+  rejection message names the offending column. It throws `ArgumentError` — a locally-crafted
+  message is unavoidable here, since these readers are a binding-only convenience the core never sees. On writes,
   `Element.set` maps `bool` to `setInteger` (and a `List<bool?>` through `_setMixedList`),
   `_marshalParams` binds a `bool` parameter as INTEGER, and `_marshalGroupColumn`
   (`database_update.dart`) dispatches on `first is bool || first is int` — a Dart `bool` is not an

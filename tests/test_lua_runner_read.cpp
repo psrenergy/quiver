@@ -250,8 +250,9 @@ TEST_F(LuaRunnerTest, ReadVectorBulkAlignsWithElementIdsAcrossEmptyElement) {
 
     quiver::LuaRunner lua(db);
 
-    // The empty element is an empty table, not a nil hole, so #vectors stays reliable
-    // (unlike the scalar readers) and the positions line up with read_element_ids.
+    // The empty element is an empty table, not a nil hole, so #vectors (the outer list) stays
+    // reliable and the positions line up with read_element_ids. An inner list is only reliable
+    // under # when its column has no NULL cells - value_int has none here.
     lua.run(R"(
         local ids = db:read_element_ids("Collection")
         local vectors = db:read_vector_integers("Collection", "value_int")
@@ -563,4 +564,40 @@ TEST_F(LuaRunnerTest, ListGroupsUnknownCollection) {
     expect_lua_error(
         lua, R"(db:read_vectors_by_id("Nope", 1))", "Cannot list_vector_groups: collection not found: Nope");
     expect_lua_error(lua, R"(db:read_sets_by_id("Nope", 1))", "Cannot list_set_groups: collection not found: Nope");
+}
+
+TEST_F(LuaRunnerTest, ReadVectorPreservesNullCellsAsNilHoles) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    db.create_element("Collection",
+                      quiver::Element()
+                          .set("label", "Item 1")
+                          .set("value_int", std::vector<quiver::Value>{int64_t{10}, nullptr, int64_t{30}}));
+    db.create_element("Collection", quiver::Element().set("label", "Item 2"));  // no vector rows
+    db.create_element("Collection",
+                      quiver::Element()
+                          .set("label", "Item 3")
+                          .set("value_int", std::vector<quiver::Value>{nullptr}));  // one NULL-only row
+
+    quiver::LuaRunner lua(db);
+
+    // The outer list still has one entry per element, but an inner list of a nullable column can
+    // now carry nil holes, so # is unreliable *inside* it - assert by explicit index.
+    lua.run(R"(
+        local vectors = db:read_vector_integers("Collection", "value_int")
+        assert(#vectors == 3, "Expected 3 entries, got " .. #vectors)
+        assert(vectors[1][1] == 10, "vectors[1][1] should be 10")
+        assert(vectors[1][2] == nil, "vectors[1][2] should be nil for the NULL cell")
+        assert(vectors[1][3] == 30, "vectors[1][3] should be 30")
+        assert(#vectors[2] == 0, "Element with no rows should be an empty table")
+        -- The documented limit: an inner list has no count authority, so a NULL-only row is
+        -- indistinguishable from no rows at all.
+        assert(next(vectors[3]) == nil, "A NULL-only row should read as an empty table")
+
+        local by_id = db:read_vectors_by_id("Collection", db:read_element_ids("Collection")[1])
+        assert(by_id.value_int[1] == 10, "by_id[1] should be 10")
+        assert(by_id.value_int[2] == nil, "by_id[2] should be nil for the NULL cell")
+        assert(by_id.value_int[3] == 30, "by_id[3] should be 30")
+    )");
 }

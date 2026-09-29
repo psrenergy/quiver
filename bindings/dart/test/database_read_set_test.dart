@@ -375,4 +375,35 @@ void main() {
       }
     });
   });
+
+  group('Read Set NULL Cells', () {
+    test('keeps NULL cells positionally, and empty is not the same as null', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        final id = db.createElement('Collection', {
+          'label': 'Item 1',
+          'tag': ['a', null, 'c'],
+        });
+        db.createElement('Collection', {'label': 'Item 2'}); // no set rows
+
+        expect(
+          db.readSetStrings('Collection', 'tag'),
+          equals([
+            ['a', null, 'c'],
+            <String?>[],
+          ]),
+        );
+        expect(
+          db.readSetStringsById('Collection', 'tag', id),
+          equals(['a', null, 'c']),
+        );
+      } finally {
+        db.close();
+      }
+    });
+  });
 }

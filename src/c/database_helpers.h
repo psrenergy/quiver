@@ -56,26 +56,27 @@ quiver_error_t read_scalars_masked_impl(const std::vector<std::optional<T>>& val
     return QUIVER_OK;
 }
 
-// Helper template for reading numeric vectors
+// Helper for reading nullable numeric vectors: one value array + one parallel presence mask per
+// element. masks[i][j] == 0 means SQL NULL; the data slot then holds a placeholder to be ignored.
 template <typename T>
-quiver_error_t
-read_vectors_impl(const std::vector<std::vector<T>>& vectors, T*** out_vectors, size_t** out_sizes, size_t* out_count) {
+quiver_error_t read_vectors_masked_impl(const std::vector<std::vector<std::optional<T>>>& vectors,
+                                        T*** out_vectors,
+                                        uint8_t*** out_masks,
+                                        size_t** out_sizes,
+                                        size_t* out_count) {
     *out_count = vectors.size();
     if (vectors.empty()) {
         *out_vectors = nullptr;
+        *out_masks = nullptr;
         *out_sizes = nullptr;
         return QUIVER_OK;
     }
     *out_vectors = new T*[vectors.size()];
+    *out_masks = new uint8_t*[vectors.size()];
     *out_sizes = new size_t[vectors.size()];
+    // One element's cells are exactly one masked scalar read, empty inner vector included.
     for (size_t i = 0; i < vectors.size(); ++i) {
-        (*out_sizes)[i] = vectors[i].size();
-        if (vectors[i].empty()) {
-            (*out_vectors)[i] = nullptr;
-        } else {
-            (*out_vectors)[i] = new T[vectors[i].size()];
-            std::copy(vectors[i].begin(), vectors[i].end(), (*out_vectors)[i]);
-        }
+        read_scalars_masked_impl(vectors[i], &(*out_vectors)[i], &(*out_masks)[i], &(*out_sizes)[i]);
     }
     return QUIVER_OK;
 }
@@ -92,8 +93,9 @@ void free_vectors_impl(T** vectors, size_t* sizes, size_t count) {
     delete[] sizes;
 }
 
-// Helper to copy nested string vectors (vector/set reads) to C arrays
-inline void copy_string_vectors_to_c(const std::vector<std::vector<std::string>>& vectors,
+// Helper to copy nested string vectors (vector/set reads) to C arrays. A SQL NULL cell becomes
+// a nullptr entry (no mask needed); quiver_database_free_string_vectors tolerates nullptr slots.
+inline void copy_string_vectors_to_c(const std::vector<std::vector<std::optional<std::string>>>& vectors,
                                      char**** out_vectors,
                                      size_t** out_sizes,
                                      size_t* out_count) {
@@ -112,7 +114,7 @@ inline void copy_string_vectors_to_c(const std::vector<std::vector<std::string>>
         } else {
             (*out_vectors)[i] = new char*[vectors[i].size()];
             for (size_t j = 0; j < vectors[i].size(); ++j) {
-                (*out_vectors)[i][j] = quiver::string::new_c_str(vectors[i][j]);
+                (*out_vectors)[i][j] = vectors[i][j] ? quiver::string::new_c_str(*vectors[i][j]) : nullptr;
             }
         }
     }

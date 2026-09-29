@@ -9,6 +9,13 @@ second metadata read, by branching on the delegate's container type: `read_scala
 the readers that were deliberately left out of that change and what (if anything) should happen to
 them.
 
+The twelve vector/set readers (bulk **and** `_by_id`) followed once the core
+started preserving NULL cells: their `Optional` is NULL-cell-only too (a missing id gives an empty
+vector, not a `nothing` element), so both halves take the concrete-vs-optional rule. They read the
+value column's `not_null` from `list_{vector,set}_groups(...)` via `_group_value_not_null`, and
+`read_{vector,set}_booleans[_by_id]` / `read_{vector,set}_date_times` / `read_{vector,set}_date_time_by_id`
+recover the shape from the delegate's container type, exactly as the scalar wrappers do.
+
 ## Guiding principle
 
 Apply the concrete-vs-optional rule **only where the `Optional` would come solely from a NULL

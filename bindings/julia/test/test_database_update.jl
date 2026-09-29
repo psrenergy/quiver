@@ -928,11 +928,10 @@ include("fixture.jl")
         Quiver.update_vector_group!(db, "Child", "refs", child; parent_ref = ["Parent B"])
         @test Quiver.read_vector_integers_by_id(db, "Child", "parent_ref", child) == [parent_b]
 
-        # `nothing` cells become SQL NULL (asserted in SQL: the per-column reader drops NULLs).
+        # `nothing` cells become SQL NULL, and the per-column reader hands them back positionally.
         Quiver.update_vector_group!(db, "Child", "refs", child; parent_ref = [parent_a, nothing, parent_b])
-        @test Quiver.query_integer(db, "SELECT COUNT(*) FROM Child_vector_refs WHERE id = ?", [child]) == 3
-        @test Quiver.query_integer(
-            db, "SELECT COUNT(*) FROM Child_vector_refs WHERE id = ? AND parent_ref IS NULL", [child]) == 1
+        @test Quiver.read_vector_integers_by_id(db, "Child", "parent_ref", child) ==
+              [parent_a, nothing, parent_b]
 
         # Unknown group / column, structural columns, a missing id, and a named-but-empty column
         # (which must not silently clear) all throw.

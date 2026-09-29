@@ -144,12 +144,13 @@ extension DatabaseRead on Database {
   }
 
   /// Reads all int vectors for a vector attribute from a collection.
-  List<List<int>> readVectorIntegers(String collection, String attribute) {
+  List<List<int?>> readVectorIntegers(String collection, String attribute) {
     _ensureNotClosed();
 
     final arena = Arena();
     try {
       final outVectors = arena<Pointer<Pointer<Int64>>>();
+      final outMasks = arena<Pointer<Pointer<Uint8>>>();
       final outSizes = arena<Pointer<Size>>();
       final outCount = arena<Size>();
 
@@ -159,6 +160,7 @@ extension DatabaseRead on Database {
           collection.toNativeUtf8(allocator: arena).cast(),
           attribute.toNativeUtf8(allocator: arena).cast(),
           outVectors,
+          outMasks,
           outSizes,
           outCount,
         ),
@@ -169,13 +171,17 @@ extension DatabaseRead on Database {
         return [];
       }
 
-      final result = <List<int>>[];
+      final result = <List<int?>>[];
       for (var i = 0; i < count; i++) {
         final size = outSizes.value[i];
         if (size == 0 || outVectors.value[i] == nullptr) {
           result.add([]);
         } else {
-          result.add(List<int>.generate(size, (j) => outVectors.value[i][j]));
+          final values = outVectors.value[i];
+          final mask = outMasks.value[i];
+          result.add(
+            List<int?>.generate(size, (j) => mask[j] != 0 ? values[j] : null),
+          );
         }
       }
       bindings.quiver_database_free_integer_vectors(
@@ -183,31 +189,30 @@ extension DatabaseRead on Database {
         outSizes.value,
         count,
       );
+      bindings.quiver_database_free_masks(outMasks.value, count);
       return result;
     } finally {
       arena.releaseAll();
     }
   }
 
-  /// Reads all boolean vectors stored as integer vector attributes.
-  ///
-  /// NULL cells are dropped and only elements that own rows are returned, so the
-  /// result is not positionally aligned with [readElementIds] (unlike
-  /// [readScalarBooleans]).
-  List<List<bool>> readVectorBooleans(String collection, String attribute) {
+  /// Reads all boolean vectors stored as integer vector attributes. One entry per
+  /// element; within an entry a SQL NULL cell is `null`.
+  List<List<bool?>> readVectorBooleans(String collection, String attribute) {
     return readVectorIntegers(
       collection,
       attribute,
-    ).map((values) => values.map((value) => _integerToBooleanNonNull(value, collection, attribute)).toList()).toList();
+    ).map((values) => values.map((value) => _integerToBoolean(value, collection, attribute)).toList()).toList();
   }
 
   /// Reads all float vectors for a vector attribute from a collection.
-  List<List<double>> readVectorFloats(String collection, String attribute) {
+  List<List<double?>> readVectorFloats(String collection, String attribute) {
     _ensureNotClosed();
 
     final arena = Arena();
     try {
       final outVectors = arena<Pointer<Pointer<Double>>>();
+      final outMasks = arena<Pointer<Pointer<Uint8>>>();
       final outSizes = arena<Pointer<Size>>();
       final outCount = arena<Size>();
 
@@ -217,6 +222,7 @@ extension DatabaseRead on Database {
           collection.toNativeUtf8(allocator: arena).cast(),
           attribute.toNativeUtf8(allocator: arena).cast(),
           outVectors,
+          outMasks,
           outSizes,
           outCount,
         ),
@@ -227,14 +233,16 @@ extension DatabaseRead on Database {
         return [];
       }
 
-      final result = <List<double>>[];
+      final result = <List<double?>>[];
       for (var i = 0; i < count; i++) {
         final size = outSizes.value[i];
         if (size == 0 || outVectors.value[i] == nullptr) {
           result.add([]);
         } else {
+          final values = outVectors.value[i];
+          final mask = outMasks.value[i];
           result.add(
-            List<double>.generate(size, (j) => outVectors.value[i][j]),
+            List<double?>.generate(size, (j) => mask[j] != 0 ? values[j] : null),
           );
         }
       }
@@ -243,6 +251,7 @@ extension DatabaseRead on Database {
         outSizes.value,
         count,
       );
+      bindings.quiver_database_free_masks(outMasks.value, count);
       return result;
     } finally {
       arena.releaseAll();
@@ -250,7 +259,7 @@ extension DatabaseRead on Database {
   }
 
   /// Reads all string vectors for a vector attribute from a collection.
-  List<List<String>> readVectorStrings(String collection, String attribute) {
+  List<List<String?>> readVectorStrings(String collection, String attribute) {
     _ensureNotClosed();
 
     final arena = Arena();
@@ -275,17 +284,17 @@ extension DatabaseRead on Database {
         return [];
       }
 
-      final result = <List<String>>[];
+      final result = <List<String?>>[];
       for (var i = 0; i < count; i++) {
         final size = outSizes.value[i];
         if (size == 0 || outVectors.value[i] == nullptr) {
           result.add([]);
         } else {
           result.add(
-            List<String>.generate(
-              size,
-              (j) => outVectors.value[i][j].cast<Utf8>().toDartString(),
-            ),
+            List<String?>.generate(size, (j) {
+              final ptr = outVectors.value[i][j];
+              return ptr == nullptr ? null : ptr.cast<Utf8>().toDartString();
+            }),
           );
         }
       }
@@ -300,29 +309,28 @@ extension DatabaseRead on Database {
     }
   }
 
-  /// Reads all DateTime vectors for a vector attribute from a collection.
-  ///
-  /// NULL cells are dropped and only elements that own rows are returned, so the
-  /// result is not positionally aligned with [readElementIds] (unlike
-  /// [readScalarDateTimes]).
-  List<List<DateTime>> readVectorDateTimes(
+  /// Reads all DateTime vectors for a vector attribute from a collection. One entry
+  /// per element; within an entry a SQL NULL cell is `null`.
+  List<List<DateTime?>> readVectorDateTimes(
     String collection,
     String attribute,
   ) {
     return readVectorStrings(collection, attribute)
         .map(
-          (values) => values.map((value) => stringToDateTime(value, collection, attribute)).toList(),
+          (values) =>
+              values.map((value) => value == null ? null : stringToDateTime(value, collection, attribute)).toList(),
         )
         .toList();
   }
 
   /// Reads all int sets for a set attribute from a collection.
-  List<List<int>> readSetIntegers(String collection, String attribute) {
+  List<List<int?>> readSetIntegers(String collection, String attribute) {
     _ensureNotClosed();
 
     final arena = Arena();
     try {
       final outSets = arena<Pointer<Pointer<Int64>>>();
+      final outMasks = arena<Pointer<Pointer<Uint8>>>();
       final outSizes = arena<Pointer<Size>>();
       final outCount = arena<Size>();
 
@@ -332,6 +340,7 @@ extension DatabaseRead on Database {
           collection.toNativeUtf8(allocator: arena).cast(),
           attribute.toNativeUtf8(allocator: arena).cast(),
           outSets,
+          outMasks,
           outSizes,
           outCount,
         ),
@@ -342,13 +351,17 @@ extension DatabaseRead on Database {
         return [];
       }
 
-      final result = <List<int>>[];
+      final result = <List<int?>>[];
       for (var i = 0; i < count; i++) {
         final size = outSizes.value[i];
         if (size == 0 || outSets.value[i] == nullptr) {
           result.add([]);
         } else {
-          result.add(List<int>.generate(size, (j) => outSets.value[i][j]));
+          final values = outSets.value[i];
+          final mask = outMasks.value[i];
+          result.add(
+            List<int?>.generate(size, (j) => mask[j] != 0 ? values[j] : null),
+          );
         }
       }
       bindings.quiver_database_free_integer_vectors(
@@ -356,6 +369,7 @@ extension DatabaseRead on Database {
         outSizes.value,
         count,
       );
+      bindings.quiver_database_free_masks(outMasks.value, count);
       return result;
     } finally {
       arena.releaseAll();
@@ -364,22 +378,23 @@ extension DatabaseRead on Database {
 
   /// Reads all boolean sets stored as integer set attributes.
   ///
-  /// Same alignment caveat as [readVectorBooleans]: NULL cells are dropped and
-  /// only elements that own rows are returned.
-  List<List<bool>> readSetBooleans(String collection, String attribute) {
+  /// Same contract as [readVectorBooleans]: one entry per element, and a SQL NULL
+  /// cell is `null`.
+  List<List<bool?>> readSetBooleans(String collection, String attribute) {
     return readSetIntegers(
       collection,
       attribute,
-    ).map((values) => values.map((value) => _integerToBooleanNonNull(value, collection, attribute)).toList()).toList();
+    ).map((values) => values.map((value) => _integerToBoolean(value, collection, attribute)).toList()).toList();
   }
 
   /// Reads all float sets for a set attribute from a collection.
-  List<List<double>> readSetFloats(String collection, String attribute) {
+  List<List<double?>> readSetFloats(String collection, String attribute) {
     _ensureNotClosed();
 
     final arena = Arena();
     try {
       final outSets = arena<Pointer<Pointer<Double>>>();
+      final outMasks = arena<Pointer<Pointer<Uint8>>>();
       final outSizes = arena<Pointer<Size>>();
       final outCount = arena<Size>();
 
@@ -389,6 +404,7 @@ extension DatabaseRead on Database {
           collection.toNativeUtf8(allocator: arena).cast(),
           attribute.toNativeUtf8(allocator: arena).cast(),
           outSets,
+          outMasks,
           outSizes,
           outCount,
         ),
@@ -399,13 +415,17 @@ extension DatabaseRead on Database {
         return [];
       }
 
-      final result = <List<double>>[];
+      final result = <List<double?>>[];
       for (var i = 0; i < count; i++) {
         final size = outSizes.value[i];
         if (size == 0 || outSets.value[i] == nullptr) {
           result.add([]);
         } else {
-          result.add(List<double>.generate(size, (j) => outSets.value[i][j]));
+          final values = outSets.value[i];
+          final mask = outMasks.value[i];
+          result.add(
+            List<double?>.generate(size, (j) => mask[j] != 0 ? values[j] : null),
+          );
         }
       }
       bindings.quiver_database_free_float_vectors(
@@ -413,6 +433,7 @@ extension DatabaseRead on Database {
         outSizes.value,
         count,
       );
+      bindings.quiver_database_free_masks(outMasks.value, count);
       return result;
     } finally {
       arena.releaseAll();
@@ -420,7 +441,7 @@ extension DatabaseRead on Database {
   }
 
   /// Reads all string sets for a set attribute from a collection.
-  List<List<String>> readSetStrings(String collection, String attribute) {
+  List<List<String?>> readSetStrings(String collection, String attribute) {
     _ensureNotClosed();
 
     final arena = Arena();
@@ -445,17 +466,17 @@ extension DatabaseRead on Database {
         return [];
       }
 
-      final result = <List<String>>[];
+      final result = <List<String?>>[];
       for (var i = 0; i < count; i++) {
         final size = outSizes.value[i];
         if (size == 0 || outSets.value[i] == nullptr) {
           result.add([]);
         } else {
           result.add(
-            List<String>.generate(
-              size,
-              (j) => outSets.value[i][j].cast<Utf8>().toDartString(),
-            ),
+            List<String?>.generate(size, (j) {
+              final ptr = outSets.value[i][j];
+              return ptr == nullptr ? null : ptr.cast<Utf8>().toDartString();
+            }),
           );
         }
       }
@@ -472,12 +493,13 @@ extension DatabaseRead on Database {
 
   /// Reads all DateTime sets for a set attribute from a collection.
   ///
-  /// Same alignment caveat as [readVectorDateTimes]: NULL cells are dropped and
-  /// only elements that own rows are returned.
-  List<List<DateTime>> readSetDateTimes(String collection, String attribute) {
+  /// Same contract as [readVectorDateTimes]: one entry per element, and a SQL NULL
+  /// cell is `null`.
+  List<List<DateTime?>> readSetDateTimes(String collection, String attribute) {
     return readSetStrings(collection, attribute)
         .map(
-          (values) => values.map((value) => stringToDateTime(value, collection, attribute)).toList(),
+          (values) =>
+              values.map((value) => value == null ? null : stringToDateTime(value, collection, attribute)).toList(),
         )
         .toList();
   }
@@ -600,7 +622,7 @@ extension DatabaseRead on Database {
   // ==========================================================================
 
   /// Reads integer vector for a vector attribute by element Id.
-  List<int> readVectorIntegersById(
+  List<int?> readVectorIntegersById(
     String collection,
     String attribute,
     int id,
@@ -610,6 +632,7 @@ extension DatabaseRead on Database {
     final arena = Arena();
     try {
       final outValues = arena<Pointer<Int64>>();
+      final outMask = arena<Pointer<Uint8>>();
       final outCount = arena<Size>();
 
       check(
@@ -619,6 +642,7 @@ extension DatabaseRead on Database {
           attribute.toNativeUtf8(allocator: arena).cast(),
           id,
           outValues,
+          outMask,
           outCount,
         ),
       );
@@ -628,8 +652,14 @@ extension DatabaseRead on Database {
         return [];
       }
 
-      final result = List<int>.generate(count, (i) => outValues.value[i]);
-      bindings.quiver_database_free_integer_array(outValues.value);
+      final values = outValues.value;
+      final mask = outMask.value;
+      final result = List<int?>.generate(
+        count,
+        (i) => mask[i] != 0 ? values[i] : null,
+      );
+      bindings.quiver_database_free_integer_array(values);
+      bindings.quiver_database_free_mask(mask);
       return result;
     } finally {
       arena.releaseAll();
@@ -637,16 +667,16 @@ extension DatabaseRead on Database {
   }
 
   /// Reads a boolean vector stored as an integer vector attribute by element Id.
-  List<bool> readVectorBooleansById(String collection, String attribute, int id) {
+  List<bool?> readVectorBooleansById(String collection, String attribute, int id) {
     return readVectorIntegersById(
       collection,
       attribute,
       id,
-    ).map((value) => _integerToBooleanNonNull(value, collection, attribute)).toList();
+    ).map((value) => _integerToBoolean(value, collection, attribute)).toList();
   }
 
   /// Reads float vector for a vector attribute by element Id.
-  List<double> readVectorFloatsById(
+  List<double?> readVectorFloatsById(
     String collection,
     String attribute,
     int id,
@@ -656,6 +686,7 @@ extension DatabaseRead on Database {
     final arena = Arena();
     try {
       final outValues = arena<Pointer<Double>>();
+      final outMask = arena<Pointer<Uint8>>();
       final outCount = arena<Size>();
 
       check(
@@ -665,6 +696,7 @@ extension DatabaseRead on Database {
           attribute.toNativeUtf8(allocator: arena).cast(),
           id,
           outValues,
+          outMask,
           outCount,
         ),
       );
@@ -674,8 +706,14 @@ extension DatabaseRead on Database {
         return [];
       }
 
-      final result = List<double>.generate(count, (i) => outValues.value[i]);
-      bindings.quiver_database_free_float_array(outValues.value);
+      final values = outValues.value;
+      final mask = outMask.value;
+      final result = List<double?>.generate(
+        count,
+        (i) => mask[i] != 0 ? values[i] : null,
+      );
+      bindings.quiver_database_free_float_array(values);
+      bindings.quiver_database_free_mask(mask);
       return result;
     } finally {
       arena.releaseAll();
@@ -683,7 +721,7 @@ extension DatabaseRead on Database {
   }
 
   /// Reads string vector for a vector attribute by element Id.
-  List<String> readVectorStringsById(
+  List<String?> readVectorStringsById(
     String collection,
     String attribute,
     int id,
@@ -711,10 +749,10 @@ extension DatabaseRead on Database {
         return [];
       }
 
-      final result = List<String>.generate(
-        count,
-        (i) => outValues.value[i].cast<Utf8>().toDartString(),
-      );
+      final result = List<String?>.generate(count, (i) {
+        final ptr = outValues.value[i];
+        return ptr == nullptr ? null : ptr.cast<Utf8>().toDartString();
+      });
       bindings.quiver_database_free_string_array(outValues.value, count);
       return result;
     } finally {
@@ -723,7 +761,7 @@ extension DatabaseRead on Database {
   }
 
   /// Reads DateTime vector for a vector attribute by element Id.
-  List<DateTime> readVectorDateTimesById(
+  List<DateTime?> readVectorDateTimesById(
     String collection,
     String attribute,
     int id,
@@ -732,7 +770,7 @@ extension DatabaseRead on Database {
       collection,
       attribute,
       id,
-    ).map((s) => stringToDateTime(s, collection, attribute)).toList();
+    ).map((s) => s == null ? null : stringToDateTime(s, collection, attribute)).toList();
   }
 
   // ==========================================================================
@@ -740,12 +778,13 @@ extension DatabaseRead on Database {
   // ==========================================================================
 
   /// Reads integer set for a set attribute by element Id.
-  List<int> readSetIntegersById(String collection, String attribute, int id) {
+  List<int?> readSetIntegersById(String collection, String attribute, int id) {
     _ensureNotClosed();
 
     final arena = Arena();
     try {
       final outValues = arena<Pointer<Int64>>();
+      final outMask = arena<Pointer<Uint8>>();
       final outCount = arena<Size>();
 
       check(
@@ -755,6 +794,7 @@ extension DatabaseRead on Database {
           attribute.toNativeUtf8(allocator: arena).cast(),
           id,
           outValues,
+          outMask,
           outCount,
         ),
       );
@@ -764,8 +804,14 @@ extension DatabaseRead on Database {
         return [];
       }
 
-      final result = List<int>.generate(count, (i) => outValues.value[i]);
-      bindings.quiver_database_free_integer_array(outValues.value);
+      final values = outValues.value;
+      final mask = outMask.value;
+      final result = List<int?>.generate(
+        count,
+        (i) => mask[i] != 0 ? values[i] : null,
+      );
+      bindings.quiver_database_free_integer_array(values);
+      bindings.quiver_database_free_mask(mask);
       return result;
     } finally {
       arena.releaseAll();
@@ -773,21 +819,22 @@ extension DatabaseRead on Database {
   }
 
   /// Reads a boolean set stored as an integer set attribute by element Id.
-  List<bool> readSetBooleansById(String collection, String attribute, int id) {
+  List<bool?> readSetBooleansById(String collection, String attribute, int id) {
     return readSetIntegersById(
       collection,
       attribute,
       id,
-    ).map((value) => _integerToBooleanNonNull(value, collection, attribute)).toList();
+    ).map((value) => _integerToBoolean(value, collection, attribute)).toList();
   }
 
   /// Reads float set for a set attribute by element Id.
-  List<double> readSetFloatsById(String collection, String attribute, int id) {
+  List<double?> readSetFloatsById(String collection, String attribute, int id) {
     _ensureNotClosed();
 
     final arena = Arena();
     try {
       final outValues = arena<Pointer<Double>>();
+      final outMask = arena<Pointer<Uint8>>();
       final outCount = arena<Size>();
 
       check(
@@ -797,6 +844,7 @@ extension DatabaseRead on Database {
           attribute.toNativeUtf8(allocator: arena).cast(),
           id,
           outValues,
+          outMask,
           outCount,
         ),
       );
@@ -806,8 +854,14 @@ extension DatabaseRead on Database {
         return [];
       }
 
-      final result = List<double>.generate(count, (i) => outValues.value[i]);
-      bindings.quiver_database_free_float_array(outValues.value);
+      final values = outValues.value;
+      final mask = outMask.value;
+      final result = List<double?>.generate(
+        count,
+        (i) => mask[i] != 0 ? values[i] : null,
+      );
+      bindings.quiver_database_free_float_array(values);
+      bindings.quiver_database_free_mask(mask);
       return result;
     } finally {
       arena.releaseAll();
@@ -815,7 +869,7 @@ extension DatabaseRead on Database {
   }
 
   /// Reads string set for a set attribute by element Id.
-  List<String> readSetStringsById(String collection, String attribute, int id) {
+  List<String?> readSetStringsById(String collection, String attribute, int id) {
     _ensureNotClosed();
 
     final arena = Arena();
@@ -839,10 +893,10 @@ extension DatabaseRead on Database {
         return [];
       }
 
-      final result = List<String>.generate(
-        count,
-        (i) => outValues.value[i].cast<Utf8>().toDartString(),
-      );
+      final result = List<String?>.generate(count, (i) {
+        final ptr = outValues.value[i];
+        return ptr == nullptr ? null : ptr.cast<Utf8>().toDartString();
+      });
       bindings.quiver_database_free_string_array(outValues.value, count);
       return result;
     } finally {
@@ -851,7 +905,7 @@ extension DatabaseRead on Database {
   }
 
   /// Reads DateTime set for a set attribute by element Id.
-  List<DateTime> readSetDateTimesById(
+  List<DateTime?> readSetDateTimesById(
     String collection,
     String attribute,
     int id,
@@ -860,7 +914,7 @@ extension DatabaseRead on Database {
       collection,
       attribute,
       id,
-    ).map((s) => stringToDateTime(s, collection, attribute)).toList();
+    ).map((s) => s == null ? null : stringToDateTime(s, collection, attribute)).toList();
   }
 
   // ==========================================================================
@@ -952,10 +1006,10 @@ extension DatabaseRead on Database {
   /// Reads all vector attributes for an element by Id.
   /// Returns a map of column name to list of values.
   /// DateTime columns are converted to DateTime objects.
-  Map<String, List<Object>> readVectorsById(String collection, int id) {
+  Map<String, List<Object?>> readVectorsById(String collection, int id) {
     _ensureNotClosed();
 
-    final result = <String, List<Object>>{};
+    final result = <String, List<Object?>>{};
     for (final group in listVectorGroups(collection)) {
       for (final col in group.valueColumns) {
         final name = col.name;
@@ -979,10 +1033,10 @@ extension DatabaseRead on Database {
   /// Reads all set attributes for an element by Id.
   /// Returns a map of column name to list of values.
   /// DateTime columns are converted to DateTime objects.
-  Map<String, List<Object>> readSetsById(String collection, int id) {
+  Map<String, List<Object?>> readSetsById(String collection, int id) {
     _ensureNotClosed();
 
-    final result = <String, List<Object>>{};
+    final result = <String, List<Object?>>{};
     for (final group in listSetGroups(collection)) {
       for (final col in group.valueColumns) {
         final name = col.name;

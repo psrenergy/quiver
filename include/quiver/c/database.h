@@ -114,11 +114,14 @@ QUIVER_C_API quiver_error_t quiver_database_read_scalar_strings(quiver_database_
                                                                 size_t* out_count);
 
 // Read vector attributes. One entry per element (aligned with quiver_database_read_element_ids), so
-// out_count is the element count. Values are dense — NULL cells are dropped.
+// out_count is the element count. Numeric readers carry a per-cell presence mask parallel to the
+// data: out_masks[i][j] == 0 means SQL NULL and out_vectors[i][j] is then a placeholder (0 / 0.0)
+// to be ignored. Free out_masks with quiver_database_free_masks.
 QUIVER_C_API quiver_error_t quiver_database_read_vector_integers(quiver_database_t* db,
                                                                  const char* collection,
                                                                  const char* attribute,
                                                                  int64_t*** out_vectors,
+                                                                 uint8_t*** out_masks,
                                                                  size_t** out_sizes,
                                                                  size_t* out_count);
 
@@ -126,9 +129,11 @@ QUIVER_C_API quiver_error_t quiver_database_read_vector_floats(quiver_database_t
                                                                const char* collection,
                                                                const char* attribute,
                                                                double*** out_vectors,
+                                                               uint8_t*** out_masks,
                                                                size_t** out_sizes,
                                                                size_t* out_count);
 
+// A SQL NULL cell is returned as a NULL entry in the inner array (no mask).
 QUIVER_C_API quiver_error_t quiver_database_read_vector_strings(quiver_database_t* db,
                                                                 const char* collection,
                                                                 const char* attribute,
@@ -141,6 +146,7 @@ QUIVER_C_API quiver_error_t quiver_database_read_set_integers(quiver_database_t*
                                                               const char* collection,
                                                               const char* attribute,
                                                               int64_t*** out_sets,
+                                                              uint8_t*** out_masks,
                                                               size_t** out_sizes,
                                                               size_t* out_count);
 
@@ -148,6 +154,7 @@ QUIVER_C_API quiver_error_t quiver_database_read_set_floats(quiver_database_t* d
                                                             const char* collection,
                                                             const char* attribute,
                                                             double*** out_sets,
+                                                            uint8_t*** out_masks,
                                                             size_t** out_sizes,
                                                             size_t* out_count);
 
@@ -180,12 +187,14 @@ QUIVER_C_API quiver_error_t quiver_database_read_scalar_string_by_id(quiver_data
                                                                      char** out_value,
                                                                      int* out_has_value);
 
-// Read vector attributes by element ID
+// Read vector attributes by element ID. Numeric readers carry a presence mask, as the scalar
+// bulk readers do: out_mask[i] == 0 means SQL NULL. Free it with quiver_database_free_mask.
 QUIVER_C_API quiver_error_t quiver_database_read_vector_integers_by_id(quiver_database_t* db,
                                                                        const char* collection,
                                                                        const char* attribute,
                                                                        int64_t id,
                                                                        int64_t** out_values,
+                                                                       uint8_t** out_mask,
                                                                        size_t* out_count);
 
 QUIVER_C_API quiver_error_t quiver_database_read_vector_floats_by_id(quiver_database_t* db,
@@ -193,8 +202,10 @@ QUIVER_C_API quiver_error_t quiver_database_read_vector_floats_by_id(quiver_data
                                                                      const char* attribute,
                                                                      int64_t id,
                                                                      double** out_values,
+                                                                     uint8_t** out_mask,
                                                                      size_t* out_count);
 
+// A SQL NULL cell is returned as a NULL entry in out_values (no mask).
 QUIVER_C_API quiver_error_t quiver_database_read_vector_strings_by_id(quiver_database_t* db,
                                                                       const char* collection,
                                                                       const char* attribute,
@@ -202,12 +213,13 @@ QUIVER_C_API quiver_error_t quiver_database_read_vector_strings_by_id(quiver_dat
                                                                       char*** out_values,
                                                                       size_t* out_count);
 
-// Read set attributes by element ID
+// Read set attributes by element ID. Same contract as the vector readers above.
 QUIVER_C_API quiver_error_t quiver_database_read_set_integers_by_id(quiver_database_t* db,
                                                                     const char* collection,
                                                                     const char* attribute,
                                                                     int64_t id,
                                                                     int64_t** out_values,
+                                                                    uint8_t** out_mask,
                                                                     size_t* out_count);
 
 QUIVER_C_API quiver_error_t quiver_database_read_set_floats_by_id(quiver_database_t* db,
@@ -215,8 +227,10 @@ QUIVER_C_API quiver_error_t quiver_database_read_set_floats_by_id(quiver_databas
                                                                   const char* attribute,
                                                                   int64_t id,
                                                                   double** out_values,
+                                                                  uint8_t** out_mask,
                                                                   size_t* out_count);
 
+// A SQL NULL cell is returned as a NULL entry in out_values (no mask).
 QUIVER_C_API quiver_error_t quiver_database_read_set_strings_by_id(quiver_database_t* db,
                                                                    const char* collection,
                                                                    const char* attribute,
@@ -533,7 +547,11 @@ QUIVER_C_API quiver_error_t quiver_database_free_integer_array(int64_t* values);
 QUIVER_C_API quiver_error_t quiver_database_free_float_array(double* values);
 QUIVER_C_API quiver_error_t quiver_database_free_string_array(char** values, size_t count);
 // Memory cleanup for the presence mask returned by the integer/float scalar readers
+// and by the integer/float vector/set _by_id readers
 QUIVER_C_API quiver_error_t quiver_database_free_mask(uint8_t* mask);
+// Memory cleanup for the per-element presence masks returned by the integer/float
+// vector/set bulk readers
+QUIVER_C_API quiver_error_t quiver_database_free_masks(uint8_t** masks, size_t count);
 // Memory cleanup for single string returned by query/read-by-id operations
 QUIVER_C_API quiver_error_t quiver_database_free_string(char* str);
 

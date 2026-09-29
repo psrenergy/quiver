@@ -268,9 +268,11 @@ TEST_F(LuaRunnerCApiTest, CreateElementWithVectors) {
 
     // Verify with C API read
     int64_t** vectors = nullptr;
+    uint8_t** masks = nullptr;
     size_t* sizes = nullptr;
     size_t count = 0;
-    auto read_result = quiver_database_read_vector_integers(db, "Collection", "value_int", &vectors, &sizes, &count);
+    auto read_result =
+        quiver_database_read_vector_integers(db, "Collection", "value_int", &vectors, &masks, &sizes, &count);
     EXPECT_EQ(read_result, QUIVER_OK);
     EXPECT_EQ(count, 1);
     EXPECT_EQ(sizes[0], 3);
@@ -278,6 +280,7 @@ TEST_F(LuaRunnerCApiTest, CreateElementWithVectors) {
     EXPECT_EQ(vectors[0][1], 2);
     EXPECT_EQ(vectors[0][2], 3);
     quiver_database_free_integer_vectors(vectors, sizes, count);
+    quiver_database_free_masks(masks, count);
 
     quiver_lua_runner_free(lua);
     quiver_database_close(db);

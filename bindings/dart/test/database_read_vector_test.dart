@@ -426,4 +426,62 @@ void main() {
       }
     });
   });
+
+  group('Read Vector NULL Cells', () {
+    test('keeps NULL cells positionally, and empty is not the same as null', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        final id = db.createElement('Collection', {
+          'label': 'Item 1',
+          'value_int': [10, null, 30],
+        });
+        db.createElement('Collection', {'label': 'Item 2'}); // no vector rows
+
+        expect(
+          db.readVectorIntegers('Collection', 'value_int'),
+          equals([
+            [10, null, 30],
+            <int?>[],
+          ]),
+        );
+        expect(
+          db.readVectorIntegersById('Collection', 'value_int', id),
+          equals([10, null, 30]),
+        );
+      } finally {
+        db.close();
+      }
+    });
+
+    test('surfaces NULL cells through the boolean wrapper', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        final id = db.createElement('Collection', {
+          'label': 'Item 1',
+          'value_int': [1, null, 0],
+        });
+
+        expect(
+          db.readVectorBooleans('Collection', 'value_int'),
+          equals([
+            [true, null, false],
+          ]),
+        );
+        expect(
+          db.readVectorBooleansById('Collection', 'value_int', id),
+          equals([true, null, false]),
+        );
+      } finally {
+        db.close();
+      }
+    });
+  });
 }
