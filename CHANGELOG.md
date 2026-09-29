@@ -25,7 +25,7 @@ callers to change something are prefixed **BREAKING** and say what to do.
   `x is None`). Julia code typed on `Vector{Float64}` / `Vector{Int64}` must accept the `Union`
   element type (`something.(v, NaN)` gives back the old `Vector{Float64}` for a REAL column).
 
-## [0.12.4] — 2026-09-28
+## [0.12.4] — 2026-09-29
 
 ### Changed
 
