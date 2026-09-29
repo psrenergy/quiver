@@ -199,6 +199,13 @@ NULL **presence mask** alongside the data arrays:
   `INTEGER` -> `int64_t*`, `FLOAT` -> `double*`, `STRING`/`DATE_TIME` -> `char**`. For a NULL cell
   (`mask[r] == 0`) the data is a placeholder to ignore: `INTEGER` 0, `FLOAT` 0.0, `STRING`/`DATE_TIME`
   NULL `char*` — NULL strings no longer fail the read. The dimension column's mask is always all 1.
+  The vector/set group readers share this encoder (`marshal_group_rows_to_c`), and it follows the
+  core's read rule rather than one of its own: a cell whose stored value the column's type cannot
+  hold is reported absent (mask 0). Only a non-STRICT table can hold such a cell (e.g. `1.5`
+  written into an INTEGER column through raw SQL). A REAL is never narrowed into an INTEGER column
+  (`Row::get_integer`); the FLOAT case keeps `Row::get_float`'s int64 widening, which a
+  REAL-declared column never reaches (SQLite stores an integer there as REAL).
+  `DatabaseCApi.ReadVectorGroupByIdMasksRealCellInIntegerColumn` pins it.
 - `quiver_database_free_time_series_data()` deallocates read results; it takes the mask array
   (`column_has_value`) and frees it **before** the typed `column_data` dispatch so the unknown-type
   throw cannot leak the masks. String columns require per-element cleanup; numeric columns and the

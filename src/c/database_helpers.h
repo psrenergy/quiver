@@ -326,11 +326,10 @@ inline void marshal_group_rows_to_c(const char* caller,
                 (*out_column_data)[c] = arr;
                 for (size_t r = 0; r < row_count; ++r) {
                     auto& val = rows[r].at(columns[c].first);
+                    // Only an int64 is an INTEGER value. A REAL cell (only a non-STRICT table can
+                    // hold one) is absent, never narrowed - Row::get_integer's rule.
                     if (std::holds_alternative<int64_t>(val)) {
                         arr[r] = std::get<int64_t>(val);
-                        mask[r] = 1;
-                    } else if (std::holds_alternative<double>(val)) {
-                        arr[r] = static_cast<int64_t>(std::get<double>(val));
                         mask[r] = 1;
                     } else {
                         arr[r] = 0;

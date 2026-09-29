@@ -379,15 +379,15 @@ Run from the repo root (`C:\Development\Quiver\quiver1`), in PowerShell. In Git 
 
 ## Acceptance criteria
 
-- [ ] The `else if (std::holds_alternative<double>(val))` branch is gone from the `QUIVER_DATA_TYPE_INTEGER` case of `marshal_group_rows_to_c`. `grep -n "static_cast<int64_t>(std::get<double>" src/c/database_helpers.h` prints nothing.
-- [ ] The FLOAT case, the STRING/DATE_TIME case, `default`, the early return and the cleanup `catch` are byte-identical to before.
-- [ ] `src/c/database_time_series.cpp` is untouched by this plan (`quiver_database_read_time_series_row` included).
-- [ ] `tests/schemas/valid/non_strict_vector.sql` exists with exactly the SQL above, and `Items_vector_counts` has no `STRICT`.
-- [ ] `DatabaseCApi.ReadVectorGroupByIdMasksRealCellInIntegerColumn` exists, failed before Change 1, and passes after it.
-- [ ] `quiver_c_tests.exe` and `quiver_tests.exe` pass in full, and so do the four binding suites.
-- [ ] `src/c/AGENTS.md` has the new sentences on the `read_time_series_group()` bullet. `tests/AGENTS.md` lists `non_strict_vector.sql` and has its sub-bullet.
-- [ ] `CHANGELOG.md` has the Fixed entry under `## [0.12.0] — unreleased`, not prefixed **BREAKING**.
-- [ ] No manifest version bump, no FFI file change, no binding change.
+- [x] The `else if (std::holds_alternative<double>(val))` branch is gone from the `QUIVER_DATA_TYPE_INTEGER` case of `marshal_group_rows_to_c`. `grep -n "static_cast<int64_t>(std::get<double>" src/c/database_helpers.h` prints nothing.
+- [x] The FLOAT case, the STRING/DATE_TIME case, `default`, the early return and the cleanup `catch` are byte-identical to before.
+- [x] `src/c/database_time_series.cpp` is untouched by this plan (`quiver_database_read_time_series_row` included).
+- [x] `tests/schemas/valid/non_strict_vector.sql` exists with exactly the SQL above, and `Items_vector_counts` has no `STRICT`.
+- [x] `DatabaseCApi.ReadVectorGroupByIdMasksRealCellInIntegerColumn` exists, failed before Change 1, and passes after it.
+- [x] `quiver_c_tests.exe` and `quiver_tests.exe` pass in full, and so do the four binding suites.
+- [x] `src/c/AGENTS.md` has the new sentences on the `read_time_series_group()` bullet. `tests/AGENTS.md` lists `non_strict_vector.sql` and has its sub-bullet.
+- [x] `CHANGELOG.md` has the Fixed entry under `## [0.12.0] — unreleased`, not prefixed **BREAKING**.
+- [x] No manifest version bump, no FFI file change, no binding change.
 
 ## Pitfalls
 
@@ -407,3 +407,56 @@ Run from the repo root (`C:\Development\Quiver\quiver1`), in PowerShell. In Git 
 - The native vector/set group readers for Julia, Python and JS belong to plan **18**. The C API set-reader test belongs to plan **19**.
 - Enforcing STRICT in `SchemaValidator` is not planned anywhere and would be a design decision.
 - The header comments in `include/quiver/c/database.h` that say "mask 0 = SQL NULL" are deliberately unchanged (see Constraints).
+
+## Implementation notes
+
+This was implemented on `rs/plan23`. At planning time the branch sat at `afa5fea`. By the time implementation started it had been fast-forwarded to master `511dacf`, which brought in plans 17-22 (#328-#333). So `git merge origin/master` was a no-op, and every result below refers to `511dacf` plus this change.
+
+Before any edit, three read-only reviewers checked the plan: one on the code claims, one on overlap with other plans, and one arguing against it. Their verdict was **implement**. They added two reasons the plan does not give:
+- The deleted branch was also undefined behaviour. A non-STRICT INTEGER column keeps `1e300` as REAL (checked in SQLite), and `static_cast<int64_t>(1e300)` is UB.
+- Plan 18 had already moved the Julia, Python and JS group readers onto this marshaller. Without 23, those readers regressed within 0.12.5 from null to a truncated `1`.
+
+### Drift fixed
+
+- **Query spelling.** Plan 22 had landed, so the test calls `quiver_database_query_integer(db, sql, param_types, param_values, 2, &unused, &has_value)`.
+- **Contrast block.**
+  - Since 61e6236, `quiver_database_read_vector_integers_by_id` takes a `uint8_t** out_mask`. It keeps the REAL cell as a masked NULL instead of dropping it.
+  - The block therefore asserts `count == 2`, mask `{1, 0}` and `values[0] == 7`, and frees the mask with `quiver_database_free_mask`.
+  - The two readers now agree cell for cell. The per-column path returns the same result before and after the fix.
+  - For the same reason, the "Why" table row "dropped: result is `[7]`" is stale: that reader reports the cell absent (mask 0).
+- **Test placement.** `ReadVectorGroupByIdPreservesNullCells` is no longer the last test in the file. The new test sits directly after it, before the `// NULL handling in vector reads` divider.
+- **CHANGELOG.**
+  - `## [0.12.0] — unreleased` no longer exists. The entry is the last bullet of `## [0.12.5] — unreleased` → `### Fixed`, right after plan 20's bullet. There is no manifest bump and no compare link (plan 78 owns links).
+  - It also mentions the `1e300` undefined behaviour.
+  - I removed the "with one exception: a non-integral REAL … now reads as its truncated integer … instead of `nothing` / `None`" clause from plan 18's Julia/Python `### Fixed` bullet. This fix reverses that behaviour in the same unreleased version, so the clause would have shipped false. The new entry names Dart and, since this release, Julia, Python and JS.
+- **"Only a non-STRICT table written through raw SQL" was too strong.**
+  - A non-STRICT `INTEGER DEFAULT 1.5` column stores a REAL on an ordinary API write that leaves the column out (checked in SQLite).
+  - The CHANGELOG entry and both AGENTS.md texts now say "only a non-STRICT table can hold such a cell (e.g. written through raw SQL)".
+  - The schema's SQL statements are exactly the plan's. Only the last clause of its header comment changed: "which is the only way a cell … can reach a reader" became "so a cell's storage class can differ from its declared type".
+  - The code comment in `database_helpers.h` is exactly as planned.
+- **`src/c/AGENTS.md`.** The FLOAT clause now says the int64 widening is never reached by a REAL-declared column. SQLite stores an integer as REAL in any REAL column, STRICT or not. Only the `read_time_series_group()` bullet was edited. The `read_time_series_row()` bullet (plan 17) was not touched.
+- **`tests/AGENTS.md`.**
+  - The `valid/` list now also holds `shared_group_columns.sql` (added by plan 18). `non_strict_vector.sql` goes before `nullable_time_series.sql`, and the list was rewrapped.
+  - The sub-bullet follows the `multi_column_groups.sql` sub-bullet, which plan 18 extended.
+  - "Keep every other schema STRICT" was false, because `issues/issue52/1/up.sql` and `migrations/2/down.sql` already have non-STRICT tables. The bullet now calls this the only `valid/` schema with a non-STRICT **group** table, and asks to keep the other `valid/` schemas STRICT.
+- **Paths and counts.**
+  - The repo is `C:\Development\Quiver\quiver7`.
+  - Verification step 3's filter matched 83 tests, including the new one.
+  - `scripts/test-all.bat` now runs six suites with no CLI smoke step, so step 8's expected step-7 failure no longer applies.
+
+### Results
+
+- **Red first.** With only the schema and the test in place, the filter failed exactly as predicted: `test_c_api_database_read_vector.cpp(745): error: Expected equality of these values: column_has_value[0][1] Which is: '\x1' (1) 0`.
+- **Green.** After Change 1 the new test passes (1/1), and the neighbour filter passes 83/83. `quiver_c_tests` passes 571/571 (570 after plan 22, plus this test), and `quiver_tests` passes 1375/1375.
+- **`scripts/test-all.bat`.** All six suites passed: C++ 1375, C API 571, Julia 1559, Dart 436, JS 229, Python 325.
+- **`scripts/format.bat`.**
+  - clang-format left the C++ files unchanged.
+  - Biome rewrote the line endings of 42 unrelated `bindings/js` files, with no content change (`git diff` was empty). I restored them with `git checkout -- bindings/js`, which is safe here because this plan edits no JS file.
+- **`git diff --stat`.** Exactly the six planned files changed. There was no FFI change, no generator run, no binding change and no manifest bump.
+
+### For later plans
+
+- **The "Out of scope" Lua claim is wrong for vectors and sets.** Lua has no `read_{vector,set}_group_by_id` (root design decision). Only `db:read_time_series_group` returns the raw `1.5`. The C++ core's own group readers still return the raw REAL too, and changing that would be a design decision.
+- **`src/row.cpp` (the `Row::get_float` comment, ~L42-43) is wrong.** It says "an integer stored in a REAL column stays INTEGER", but SQLite's REAL affinity converts it. The widening is still needed for `COUNT(*)` / `SUM(int_col)`. This is out of scope here and is a candidate for a `src/` doc cleanup.
+- **The header comments in `include/quiver/c/database.h` ("mask 0 = SQL NULL") were deliberately left unchanged.** For a non-STRICT table, mask 0 also means "a value the column's type cannot hold". That rule is recorded in `src/c/AGENTS.md`.
+- **75** (`tests/AGENTS.md` claims): the `valid/` list now includes `non_strict_vector.sql`, with its sub-bullet.

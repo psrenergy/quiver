@@ -179,8 +179,8 @@ never copy them into a binding.
   `csv_export.sql`, `csv_group_vector_index.sql`, `csv_import_cascade_cycle.sql`,
   `csv_import_self_cascade.sql`, `describe_multi_group.sql`, `mixed_time_series.sql`,
   `multi_column_groups.sql`, `multi_dim_time_series.sql`, `multi_time_series.sql`,
-  `nullable_time_series.sql`, `relations.sql`, `shared_group_columns.sql`,
-  `time_series_date_columns.sql`
+  `non_strict_vector.sql`, `nullable_time_series.sql`, `relations.sql`,
+  `shared_group_columns.sql`, `time_series_date_columns.sql`
   - `csv_group_vector_index.sql` gives a set group (`Codes_set_tags`) a TEXT `vector_index` column
     and a time-series group (`Items_time_series_slots`) an INTEGER one — two collections, since one
     may not declare an attribute in two groups. Only a vector group's `vector_index` is structural,
@@ -201,6 +201,12 @@ never copy them into a binding.
     `Items_vector_events` (`date_event` DATE_TIME, `note` TEXT, both nullable) for the whole-group
     readers' DATE_TIME parsing and NULL string cells. Note every set value column must be part of
     the UNIQUE constraint.
+  - `non_strict_vector.sql` is the only `valid/` schema with a group table (`Items_vector_counts`)
+    that is deliberately **not** STRICT. Without STRICT, INTEGER affinity keeps a non-integral
+    value written through raw SQL (`1.5`) as REAL, so a cell's storage class can differ from its
+    declared type. `DatabaseCApi.ReadVectorGroupByIdMasksRealCellInIntegerColumn` uses it to pin
+    that the C API group marshaller reports such a cell absent instead of truncating it. Keep the
+    other `valid/` schemas STRICT.
   - `shared_group_columns.sql` has groups whose column names collide, which the validator allows
     for FK columns: `Child_vector_links` / `Child_vector_routes` and `Child_set_mentors` /
     `Child_set_sponsors` share `parent_ref`, and `Child_vector_cost` is named after `routes`'
