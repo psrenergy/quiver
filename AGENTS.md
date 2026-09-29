@@ -231,7 +231,7 @@ Settled questions — don't relitigate without the user; each was decided delibe
 - **`read_time_series_row` reports absence with a mask, never a sentinel.** It used to substitute
   `0` for INTEGER and NaN for FLOAT, and a legitimately stored `0` is indistinguishable from the
   INTEGER one, so absence moved out of band onto a presence mask rather than leaving the two
-  numeric types on different absence protocols (C API shape in `src/c/CLAUDE.md`). Absence is a
+  numeric types on different absence protocols (C API shape in `src/c/AGENTS.md`). Absence is a
   property of the *query*, not of the column — an element whose first row is after `date_time` is
   absent even from a `NOT NULL` column — so **Julia returns `Vector{Optional{T}}` unconditionally**
   here; the bulk-scalar `not_null` fast path does not apply. Python/Dart/JS keep their declared

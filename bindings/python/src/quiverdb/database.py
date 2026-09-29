@@ -1520,18 +1520,20 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         # Numeric types carry a presence mask; a masked-out slot is a placeholder, not a value.
         if data_type == DataType.INTEGER:
             int_ptr = ffi.cast("int64_t*", out_values[0])
-            mask = out_mask[0]
-            result: list = [int_ptr[i] if mask[i] else None for i in range(count)]
-            lib.quiver_database_free_integer_array(int_ptr)
-            lib.quiver_database_free_mask(mask)
-            return result
+            try:
+                mask = out_mask[0]
+                return [int_ptr[i] if mask[i] else None for i in range(count)]
+            finally:
+                lib.quiver_database_free_integer_array(int_ptr)
+                lib.quiver_database_free_mask(out_mask[0])
         if data_type == DataType.FLOAT:
             float_ptr = ffi.cast("double*", out_values[0])
-            mask = out_mask[0]
-            result = [float_ptr[i] if mask[i] else None for i in range(count)]
-            lib.quiver_database_free_float_array(float_ptr)
-            lib.quiver_database_free_mask(mask)
-            return result
+            try:
+                mask = out_mask[0]
+                return [float_ptr[i] if mask[i] else None for i in range(count)]
+            finally:
+                lib.quiver_database_free_float_array(float_ptr)
+                lib.quiver_database_free_mask(out_mask[0])
         # STRING or DATE_TIME; NULL entries mark elements with no data
         str_ptr = ffi.cast("char**", out_values[0])
         result = [None if str_ptr[i] == ffi.NULL else ffi.string(str_ptr[i]).decode("utf-8") for i in range(count)]
