@@ -17,7 +17,7 @@ src/quiverdb/
   metadata.py     # DataType/LogLevel (IntEnums), CSVOptions, ScalarMetadata, GroupMetadata
   element.py      # Element builder - INTERNAL ONLY (users pass **kwargs)
   exceptions.py   # QuiverError
-  _helpers.py     # Shared check()/decode_string/column_data_type helpers
+  _helpers.py     # Shared check()/decode_string/column_data_type/format_datetime helpers
   _c_api.py       # Hand-written CFFI cdef declarations (kept in sync manually)
   _loader.py      # Library loading
   py.typed        # PEP 561 marker
@@ -74,6 +74,15 @@ ruff.toml         # Lint/format config (format.bat runs ruff)
   guaranteed `str` (`query_date_time`, the time-series dimension column). Nothing typechecks this
   repo (`ruff.toml` is `select = ["I"]`, isort only; no mypy/pyright in CI, `pyproject.toml`, or
   the pre-commit hooks).
+- **`format_datetime` (`_helpers.py`) is the write side's only datetime → string conversion.**
+  `Element.set` (scalar and list), `_marshal_group_columns`, `_marshal_row_columns` and
+  `read_time_series_row`'s `date_time` all call it. An aware value (`utcoffset()` not `None`) is
+  converted to UTC before formatting, because every reader stamps UTC: formatting the wall clock,
+  as `strftime` used to, stored `10:00+03:00` as `10:00` and read it back as `10:00Z` — the
+  write-side twin of the `_parse_datetime` bug above. A naive value is written as given (never
+  `astimezone` it — that would assume the host's zone). It lives in `_helpers.py`, not
+  `database.py`, because `database.py` imports `element.py`. Query parameters (`_marshal_params`)
+  deliberately take no datetime, as in Julia and Dart.
 - **`_integer_to_boolean` raises `ValueError`, not `QuiverError`** — the second documented
   exception to "messages come from C++", alongside `_marshal_group_columns`' jagged-column and
   cell-type checks.
@@ -116,7 +125,8 @@ ruff.toml         # Lint/format config (format.bat runs ruff)
   parsed to 7, both with no error. cffi converts bool/int cells into `int64_t[]` and bool/int/float
   cells into `double[]` itself. Element arrays stay dense: `_set_array` refuses a `None` cell before
   typing (the `Element._set_array` bullet above), where a group-writer column skips it via the
-  mask, and for now it refuses an all-`datetime` list too.
+  mask. An all-`datetime` list is formatted by `format_datetime` and written as strings, like a
+  group-writer DATE_TIME column.
 - **`_decode_group_rows` is the one decoder for the two whole-group readers** — a module-level data
   codec like `_marshal_group_columns` (Dart's `_decodeGroupRows`), not the closure-parameterized FFI
   helper the root "Do not 'fix'" list forbids: each reader keeps its own expanded FFI call block
@@ -127,10 +137,10 @@ ruff.toml         # Lint/format config (format.bat runs ruff)
   same kind shares came from that group's table — and took N snapshots. `read_time_series_group`
   keeps its own loop (columns, dimension-only parsing).
 - **`_marshal_row_columns` is its row-shaped sibling**, serving `upsert_time_series_row` and its
-  `_by_label` form — each kwarg is a scalar wrapped in a 1-element typed array. Kept separate
-  because the row-upsert C signature carries no per-cell mask: the group marshaller's zeroed
-  placeholder for a `None` cell would be written as data instead of NULL (a `None` kwarg raises
-  `TypeError` here).
+  `_by_label` form — each kwarg is a scalar wrapped in a 1-element typed array (a `datetime` is
+  formatted by `format_datetime` first). Kept separate because the row-upsert C signature carries
+  no per-cell mask: the group marshaller's zeroed placeholder for a `None` cell would be written as
+  data instead of NULL (a `None` kwarg raises `TypeError` here).
 
 ## Packaging
 

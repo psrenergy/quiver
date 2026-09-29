@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -265,3 +265,42 @@ class TestCreateScalarDateTime:
         assert db.read_scalar_date_time_by_id("Configuration", "date_attribute", elem_id) == datetime(
             2005, 1, 1, tzinfo=timezone.utc
         )
+
+
+class TestCreateWithDatetime:
+    def test_aware_datetime_stored_as_utc_instant(self, db: Database) -> None:
+        # Every reader returns UTC, so an aware value is converted to UTC on the way in. Writing its
+        # wall clock would read back three hours off.
+        written = datetime(2024, 1, 1, 10, tzinfo=timezone(timedelta(hours=3)))
+        elem_id = db.create_element("Configuration", label="cfg", date_attribute=written)
+
+        assert db.read_scalar_string_by_id("Configuration", "date_attribute", elem_id) == "2024-01-01T07:00:00"
+        assert db.read_scalar_date_time_by_id("Configuration", "date_attribute", elem_id) == datetime(
+            2024, 1, 1, 7, tzinfo=timezone.utc
+        )
+
+    def test_naive_datetime_stored_as_written(self, db: Database) -> None:
+        elem_id = db.create_element("Configuration", label="cfg", date_attribute=datetime(2024, 1, 15, 10, 30))
+        assert db.read_scalar_string_by_id("Configuration", "date_attribute", elem_id) == "2024-01-15T10:30:00"
+
+    def test_read_back_datetime_writes_back(self, db: Database) -> None:
+        # A read-modify-write round trip: the reader's UTC-aware datetime is a valid write value.
+        source = db.create_element("Configuration", label="a", date_attribute="2024-01-15T10:30:00")
+        value = db.read_scalar_date_time_by_id("Configuration", "date_attribute", source)
+
+        copy = db.create_element("Configuration", label="b", date_attribute=value)
+        assert db.read_scalar_string_by_id("Configuration", "date_attribute", copy) == "2024-01-15T10:30:00"
+
+        db.update_element("Configuration", copy, date_attribute=datetime(2025, 6, 1, tzinfo=timezone.utc))
+        assert db.read_scalar_string_by_id("Configuration", "date_attribute", copy) == "2025-06-01T00:00:00"
+
+    def test_datetime_list_stored_as_strings(self, all_types_db: Database) -> None:
+        elem_id = all_types_db.create_element(
+            "AllTypes",
+            label="item1",
+            label_value=[datetime(2024, 1, 15, 10, 30), datetime(2024, 1, 16, tzinfo=timezone(timedelta(hours=3)))],
+        )
+        assert all_types_db.read_vector_strings_by_id("AllTypes", "label_value", elem_id) == [
+            "2024-01-15T10:30:00",
+            "2024-01-15T21:00:00",
+        ]

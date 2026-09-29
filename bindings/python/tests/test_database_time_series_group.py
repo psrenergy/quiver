@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -122,6 +122,24 @@ class TestUpdateTimeSeriesGroup:
 
         result = mixed_time_series_db.read_time_series_group("Sensor", "readings", eid)
         assert result == SAMPLE_READBACK
+
+    def test_update_time_series_group_converts_aware_datetime_to_utc(self, mixed_time_series_db: Database) -> None:
+        """An aware datetime is stored as its UTC instant, the zone read_time_series_group returns."""
+        eid = _create_sensor(mixed_time_series_db, "S1")
+        data = {
+            "date_time": [datetime(2024, 1, 1, 10, tzinfo=timezone(timedelta(hours=3)))],
+            "temperature": [20.5],
+            "humidity": [65],
+            "status": ["normal"],
+        }
+        mixed_time_series_db.update_time_series_group("Sensor", "readings", eid, data)
+
+        stored = mixed_time_series_db.query_string(
+            "SELECT date_time FROM Sensor_time_series_readings WHERE id = ?", parameters=[eid]
+        )
+        assert stored == "2024-01-01T07:00:00"
+        result = mixed_time_series_db.read_time_series_group("Sensor", "readings", eid)
+        assert result["date_time"] == [datetime(2024, 1, 1, 7, tzinfo=timezone.utc)]
 
     def test_update_time_series_group_clear(self, mixed_time_series_db: Database) -> None:
         """Write rows, then update with empty dict, read back returns empty."""

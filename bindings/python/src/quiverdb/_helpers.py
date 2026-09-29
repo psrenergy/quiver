@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from quiverdb._c_api import ffi, get_lib
 from quiverdb.exceptions import QuiverError
@@ -68,3 +68,15 @@ def column_data_type(name: str, values: list) -> DataType | None:
         else:
             raise TypeError(f"Unsupported value type {type(v).__name__} in cell {i} of column '{name}'")
     return column_type
+
+
+def format_datetime(value: datetime) -> str:
+    """Format a datetime as the core's DATE_TIME string, YYYY-MM-DDTHH:MM:SS.
+
+    An aware value is converted to UTC first, the zone every datetime reader returns, so
+    10:00+03:00 is written as 07:00. A naive value is written as given. Sub-second precision
+    is truncated; the core's grammar has none.
+    """
+    if value.utcoffset() is not None:
+        value = value.astimezone(timezone.utc).replace(tzinfo=None)
+    return value.isoformat(timespec="seconds")
