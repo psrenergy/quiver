@@ -249,6 +249,109 @@ TEST(DatabaseCApi, ReadSetByIdEmpty) {
     quiver_database_close(db);
 }
 
+// The set counterpart of ReadVectorGroupByIdPreservesNullCells, over a group with two value
+// columns of different types and a NULL in the second one. A set group's row order is consistent
+// but unspecified, so each row is located by its code, never by position. An element with no rows
+// must come back as all-NULL outputs with zero counts.
+TEST(DatabaseCApi, ReadSetGroupByIdPreservesNullCells) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("multi_column_groups.sql").c_str(), &options, &db),
+              QUIVER_OK);
+
+    const auto make = [&](const char* collection, const char* label) {
+        quiver_element_t* e = nullptr;
+        EXPECT_EQ(quiver_element_create(&e), QUIVER_OK);
+        quiver_element_set_string(e, "label", label);
+        int64_t id = 0;
+        EXPECT_EQ(quiver_database_create_element(db, collection, e, &id), QUIVER_OK);
+        EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
+        return id;
+    };
+    make("Configuration", "Config");
+    const int64_t item = make("Items", "Item 1");
+    const int64_t empty_item = make("Items", "Item 2");
+
+    const char* names[] = {"code", "weight"};
+    const int types[] = {QUIVER_DATA_TYPE_STRING, QUIVER_DATA_TYPE_FLOAT};
+    const char* codes[] = {"alpha", "beta"};
+    const double weights[] = {1.5, 0.0};  // slot 1 is masked out and never read
+    const uint8_t code_mask[] = {1, 1};
+    const uint8_t weight_mask[] = {1, 0};
+    const void* data[] = {codes, weights};
+    const uint8_t* masks[] = {code_mask, weight_mask};
+    ASSERT_EQ(quiver_database_update_set_group(db, "Items", "codes", item, names, types, data, masks, 2, 2), QUIVER_OK);
+
+    char** column_names = nullptr;
+    int* column_types = nullptr;
+    void** column_data = nullptr;
+    uint8_t** column_has_value = nullptr;
+    size_t column_count = 0;
+    size_t row_count = 0;
+    ASSERT_EQ(quiver_database_read_set_group_by_id(db,
+                                                   "Items",
+                                                   "codes",
+                                                   item,
+                                                   &column_names,
+                                                   &column_types,
+                                                   &column_data,
+                                                   &column_has_value,
+                                                   &column_count,
+                                                   &row_count),
+              QUIVER_OK);
+
+    ASSERT_EQ(column_count, 2u);
+    ASSERT_EQ(row_count, 2u);
+    EXPECT_STREQ(column_names[0], "code");
+    EXPECT_STREQ(column_names[1], "weight");
+    EXPECT_EQ(column_types[0], QUIVER_DATA_TYPE_STRING);
+    EXPECT_EQ(column_types[1], QUIVER_DATA_TYPE_FLOAT);
+
+    auto** read_codes = static_cast<char**>(column_data[0]);
+    auto* read_weights = static_cast<double*>(column_data[1]);
+    ASSERT_NE(read_codes[0], nullptr);
+    const size_t alpha = std::string(read_codes[0]) == "alpha" ? 0 : 1;
+    const size_t beta = 1 - alpha;
+    EXPECT_STREQ(read_codes[alpha], "alpha");
+    EXPECT_STREQ(read_codes[beta], "beta");
+    EXPECT_EQ(column_has_value[0][alpha], 1);
+    EXPECT_EQ(column_has_value[0][beta], 1);
+    EXPECT_EQ(column_has_value[1][alpha], 1);
+    EXPECT_DOUBLE_EQ(read_weights[alpha], 1.5);
+    EXPECT_EQ(column_has_value[1][beta], 0);  // the NULL weight; its data slot is a placeholder
+
+    quiver_database_free_time_series_data(
+        column_names, column_types, column_data, column_has_value, column_count, row_count);
+
+    // No rows: every out-array is NULL and both counts are 0. The counts are seeded non-zero so
+    // the assertion proves the call wrote them.
+    column_names = nullptr;
+    column_types = nullptr;
+    column_data = nullptr;
+    column_has_value = nullptr;
+    column_count = 99;
+    row_count = 99;
+    ASSERT_EQ(quiver_database_read_set_group_by_id(db,
+                                                   "Items",
+                                                   "codes",
+                                                   empty_item,
+                                                   &column_names,
+                                                   &column_types,
+                                                   &column_data,
+                                                   &column_has_value,
+                                                   &column_count,
+                                                   &row_count),
+              QUIVER_OK);
+    EXPECT_EQ(column_count, 0u);
+    EXPECT_EQ(row_count, 0u);
+    EXPECT_EQ(column_names, nullptr);
+    EXPECT_EQ(column_types, nullptr);
+    EXPECT_EQ(column_data, nullptr);
+    EXPECT_EQ(column_has_value, nullptr);
+
+    EXPECT_EQ(quiver_database_close(db), QUIVER_OK);
+}
+
 // ============================================================================
 // Read set null pointer tests
 // ============================================================================
