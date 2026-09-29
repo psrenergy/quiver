@@ -224,6 +224,14 @@ Settled questions — don't relitigate without the user; each was decided delibe
   NULLs positionally — the scalar readers per element, the vector/set readers per cell.
 - **Binary `dims` parameter is the map-based form only** — indexed overloads were prototyped and
   deliberately dropped (perf rationale in `src/AGENTS.md`).
+- **An unnamed column is not a written column** — `update_time_series_files` only. It writes just
+  the columns the caller names: a named column takes the caller's value, `nullopt` included, and an
+  unnamed one keeps what it has (with no existing row there is nothing to keep, so it is NULL).
+  **Lua cannot write NULL through it**: `{ x = nil }` is `{}`, so omission is Lua's only signal and
+  it now means *preserve* — the same limitation Lua has on `create_element`/`update_element`
+  scalars, and a write-only sentinel would be a value `read_time_series_files` could never emit.
+  **No other writer patches**: `upsert_time_series_row`, `create_element`/`update_element` arrays,
+  and the group writers each rebuild the unit they address and NULL an unnamed column.
 - **Time-series group NULLs round-trip via a per-cell presence mask.** The columnar C API
   (`read`/`update`/`free_time_series_data`) carries a `uint8_t` mask parallel to the data arrays
   (NULL mask = dense; `mask[c][r] == 0` = SQL NULL, data ignored — so an all-NULL column can be
@@ -667,7 +675,7 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
   breaking behaviour change rather than a bug fix.
 - Time series: `read_time_series_group()`, `update_time_series_group()`, `update_time_series_group_by_label()`, `upsert_time_series_row()`, `upsert_time_series_row_by_label()` — group read/update use N typed value columns per group; `upsert_time_series_row` inserts or replaces a single row by its dimension key (`INSERT OR REPLACE`). All bindings expose group data **column-oriented** (`{column: [values]}`); updating with no data clears the group. Integer values are accepted for REAL columns (converted on insert). NULL cells round-trip through every layer: the C API carries a per-cell presence mask, the FFI bindings surface null-padded columns (`nothing`/`None`/`null`), and Lua uses plain `nil` holes with the row count taken from the dimension column(s) — see the design decision below.
 - Time series row: `read_time_series_row(collection, group, attribute, date_time)` — one value per element using "last non-null value at or before date_time" semantics; null Value for elements with no matching data (bindings surface `nothing`/`null`/`None`/`nil`). Single-dimension groups only: a group with more than one dimension column (every PK column but `id`, e.g. `date_time` + `block`) holds several rows per date, so it throws Pattern 1 `Cannot read_time_series_row: group '<g>' of collection '<c>' has more than one dimension column` even on an empty collection — such a group is read with `read_time_series_group`. The query also filters NULL in its outer join, not only in the latest-date subquery.
-- Time series files: `has_time_series_files()`, `list_time_series_files_columns()`, `read_time_series_files()`, `update_time_series_files()`
+- Time series files: `has_time_series_files()`, `list_time_series_files_columns()`, `read_time_series_files()`, `update_time_series_files()` — the writer **patches**: only the named columns are written, a named column takes the caller's value (explicit NULL included), an unnamed one keeps its current value. See the design decision above.
 - Metadata: `get_{scalar,vector,set,time_series}_metadata()` — group metadata is a unified `GroupMetadata` with `dimension_column` (populated for time series, empty for vectors/sets)
 - List groups: `list_scalar_attributes()`, `list_vector_groups()`, `list_set_groups()`, `list_time_series_groups()` —
   all four throw Pattern 1 `Cannot <op>: collection not found: <c>` for a name that is not a table (an existing

@@ -84,4 +84,28 @@ describe("time series files", () => {
       db.close();
     }
   });
+
+  test("updateTimeSeriesFiles leaves an unnamed column alone", () => {
+    const db = Database.fromSchema(":memory:", COLLECTIONS_SCHEMA);
+    try {
+      db.updateTimeSeriesFiles("Collection", {
+        data_file: "/old/data.qvr",
+        metadata_file: "/old/metadata.toml",
+      });
+
+      // metadata_file is unnamed here, so it survives.
+      db.updateTimeSeriesFiles("Collection", { data_file: "/new/data.qvr" });
+      let result = db.readTimeSeriesFiles("Collection");
+      expect(result.data_file).toEqual("/new/data.qvr");
+      expect(result.metadata_file).toEqual("/old/metadata.toml");
+
+      // Naming it with null clears it, while data_file (now unnamed) survives.
+      db.updateTimeSeriesFiles("Collection", { metadata_file: null });
+      result = db.readTimeSeriesFiles("Collection");
+      expect(result.data_file).toEqual("/new/data.qvr");
+      expect(result.metadata_file).toEqual(null);
+    } finally {
+      db.close();
+    }
+  });
 });
