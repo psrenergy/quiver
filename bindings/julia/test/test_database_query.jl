@@ -282,6 +282,8 @@ include("fixture.jl")
         # Too many parameters for the single placeholder
         @test_throws Quiver.DatabaseException Quiver.query_string(
             db, "SELECT label FROM Configuration WHERE id = ?", Any[1, 2])
+        # Parameters omitted entirely (the 2-arg method passes an empty list)
+        @test_throws Quiver.DatabaseException Quiver.query_string(db, "SELECT label FROM Configuration WHERE id = ?")
         # Exactly one parameter succeeds
         @test Quiver.query_string(db, "SELECT label FROM Configuration WHERE id = ?", Any[1]) == "Item1"
 

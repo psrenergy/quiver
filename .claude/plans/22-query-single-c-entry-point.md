@@ -1171,17 +1171,17 @@ From the repo root (`C:\Development\Quiver\quiver1`), in order:
 
 ## Acceptance criteria
 
-- [ ] `include/quiver/c/database.h` declares exactly three query functions, `quiver_database_query_{string,integer,float}`, each with `(db, sql, param_types, param_values, param_count, out_value, out_has_value)`. No `_params` symbol remains.
-- [ ] `src/c/database_query.cpp` has three bodies and `convert_params(const char* caller, ...)`. Its two messages read `Cannot <query_string|query_integer|query_float>: ...`.
-- [ ] `tests/test_c_api_database_query.cpp`: 12 plain-form tests migrated to `(nullptr, nullptr, 0)`, `_params` suffixes dropped, `QueryParamsNullDb` deleted, `QueryParamsNullStringElement` pins its full message, `QueryParamsUnknownTypeNamesTheCalledFunction` pins all three. The `delete[] value;` lines are untouched.
-- [ ] `tests/test_c_api_database_csv_import.cpp` calls `quiver_database_query_integer`.
-- [ ] `bindings/julia/src/c_api.jl` regenerated (not hand-edited). `database_query.jl` has five query definitions with `parameters::Vector = []`, all inside `GC.@preserve refs`.
-- [ ] `bindings/dart/lib/src/ffi/bindings.dart` hand-edited (ffigen not run; the enum classes are untouched). `_marshalParams` returns `nullptr`/`nullptr`/0 for null or empty. No branch left in `database_query.dart`.
-- [ ] `_c_api.py` declares only the three 7-argument query functions. The Python query methods make one FFI call each.
-- [ ] `loader.ts` lists only the three 7-argument query symbols. `marshalParams` returns `null, null, 0n` for no parameters. The `bun:ffi` `ptr` import is gone from `query.ts`.
-- [ ] New omitted-parameters assertions in the Julia, Python, Dart and JS parameter-count tests. The Python `routes_to_simple` test is renamed.
-- [ ] `src/c/AGENTS.md`, `bindings/dart/AGENTS.md` and `bindings/js/AGENTS.md` updated as specified. CHANGELOG 0.12.0 `### Changed` has the **BREAKING** bullet with an *Adapt:* line. No manifest version changed.
-- [ ] Verification steps 1-10 pass, and step 11 passes except the pre-existing CLI smoke failure.
+- [x] `include/quiver/c/database.h` declares exactly three query functions, `quiver_database_query_{string,integer,float}`, each with `(db, sql, param_types, param_values, param_count, out_value, out_has_value)`. No `_params` symbol remains.
+- [x] `src/c/database_query.cpp` has three bodies and `convert_params(const char* caller, ...)`. Its two messages read `Cannot <query_string|query_integer|query_float>: ...`.
+- [x] `tests/test_c_api_database_query.cpp`: 12 plain-form tests migrated to `(nullptr, nullptr, 0)`, `_params` suffixes dropped, `QueryParamsNullDb` deleted, `QueryParamsNullStringElement` pins its full message, `QueryParamsUnknownTypeNamesTheCalledFunction` pins all three. The `delete[] value;` lines are untouched.
+- [x] `tests/test_c_api_database_csv_import.cpp` calls `quiver_database_query_integer`. (Both callers: the `_params` one in `ImportCSV_Scalar_SelfReferenceFK_ReImport` and the plain one in `ImportCSV_Scalar_OmittedElement_DeletesItsGroupRows`, see Implementation notes.)
+- [x] `bindings/julia/src/c_api.jl` regenerated (not hand-edited). `database_query.jl` has five query definitions with `parameters::Vector = []`, all inside `GC.@preserve refs`.
+- [x] `bindings/dart/lib/src/ffi/bindings.dart` hand-edited (ffigen not run; the enum classes are untouched). `_marshalParams` returns `nullptr`/`nullptr`/0 for null or empty. No branch left in `database_query.dart`.
+- [x] `_c_api.py` declares only the three 7-argument query functions. The Python query methods make one FFI call each.
+- [x] `loader.ts` lists only the three 7-argument query symbols. `marshalParams` returns `null, null, 0n` for no parameters. The `bun:ffi` `ptr` import is gone from `query.ts`.
+- [x] New omitted-parameters assertions in the Julia, Python, Dart and JS parameter-count tests. The Python `routes_to_simple` test is renamed.
+- [x] `src/c/AGENTS.md`, `bindings/dart/AGENTS.md` and `bindings/js/AGENTS.md` updated as specified. CHANGELOG `### Changed` has the **BREAKING** bullet with an *Adapt:* line, under `[0.12.5] — unreleased` instead of 0.12.0 (see Implementation notes). No manifest version changed.
+- [x] Verification steps 1-10 pass, and step 11 passes. `test-all.bat` has no CLI smoke step at this HEAD, and all six suites passed.
 
 ## Pitfalls
 
@@ -1205,3 +1205,52 @@ From the repo root (`C:\Development\Quiver\quiver1`), in order:
 - Upgrading the Dart ffigen output: its own deliberate change per `bindings/dart/AGENTS.md`.
 - `src/schema.cpp` "Cannot query columns..." messages: plan 62.
 - The JS README method list: plan 74. Its `queryString(sql, parameters?)` line is already correct.
+
+## Implementation notes
+
+Implemented on `rs/plan22`. At planning time the branch sat at `afa5fea`, the 0.12.5 version-bump merge (#327). By the time implementation started it had been fast-forwarded to master `7f71669`, which brought in plans 17-21 (#328-#332), so `git merge origin/master` was a no-op. Every result below refers to `7f71669` plus this change.
+
+Before any edit, eight read-only agents checked every excerpt, symbol and test name: one per layer, plus one arguing against the plan. Their verdict was **implement**. The value is structural (6 C functions become 3, and the binding branches go away), since no binding behaves differently today. The ABI-break cost is low:
+- The repo documents no direct C consumer.
+- hub uses the public Dart API, which does not export the query FFI.
+- Every published artifact ships its own natives.
+- Same-name arity changes have shipped before (61e6236, plan 17).
+
+### Drift fixed
+
+- **CHANGELOG section, a user decision.** `## [0.12.0] — unreleased` no longer exists: v0.12.0 through v0.12.4 are tagged, and the manifests are at 0.12.5. The user chose **`## [0.12.5] — unreleased` with no manifest bump**. Plans 17, 18 and 21 had already created that section. The entry is the last `### Changed` bullet, directly above plan 21's `### Removed`, as plan 21's notes asked. No compare link was added (plan 78 owns links).
+- **A second C caller the plan missed.** `DatabaseCApiCSV.ImportCSV_Scalar_OmittedElement_DeletesItsGroupRows` (added by #305) called the plain 4-arg `quiver_database_query_integer`. It now passes `nullptr, nullptr, 0`, and the Verification step 2 filter includes it (24 tests from 2 suites).
+- **JS explicit `null`.** The plan's `marshalParams(parameters: QueryParam[] = [])` would throw a raw `TypeError` on an untyped `queryString(sql, null)`, a call that works today. It uses `parameters?: QueryParam[]` with an early `if (!parameters || parameters.length === 0)` return instead, so binding behaviour is unchanged. `query.ts` no longer calls `ptr()`, so the code comment and the new `bindings/js/AGENTS.md` bullet name the zero-length TypedArray instead. Biome wraps that early return onto two lines.
+- **`bindings/dart/AGENTS.md`.** Plan 21 appended "Removals are hand-deleted..." and asked that it stay last, so the query sentence goes right before it. `_marshalParams` is also added to plan 20's "Marshaling idiom" list of places that pass `nullptr` for an empty array. The old explicit-`[]` path requested `arena<Int>(0)`, which that bullet forbids.
+- **`bindings/js/AGENTS.md`.** Plan 20 reworded the "nullable scalar string argument" bullet. The new bullet sits right after it.
+- **Verification step 4 grep.** `.claude/plans` is tracked, so the grep needs `':!.claude'`. With it, the grep prints nothing.
+- **Julia regen.** The six wrappers are adjacent, so the diff is one contiguous hunk, not six. There were no foreign hunks, because plans 17 and 21 had regenerated.
+- **Python generator.** `generator.bat` runs `uv run` inside the Python project, which first builds the whole wheel through CMake and takes minutes. Running `uv run --no-project python bindings/python/generator/generator.py` from the repo root prints the same declarations at once. The only difference from the cdef is the expected `const void* const*` vs `void**`, and the cdef keeps `void**`.
+- **Paths and tooling.** The repo is `C:\Development\Quiver\quiver6`, and `scripts/test-all.bat` has six suites with no CLI smoke step. Every line hint had moved, so each edit was anchored by symbol.
+
+### Results
+
+- **Red first.** Steps 1, 3 and 4 were applied, and step 2's bodies were renamed, while `convert_params` still hardcoded `"Cannot query:"`. The filter ran 24 tests: 22 passed and 2 failed, with all four new `EXPECT_STREQ`s failing:
+  - `QueryParamsNullStringElement`: Actual `"Cannot query: parameter at index 0 has null string value"`.
+  - `QueryParamsUnknownTypeNamesTheCalledFunction`: `"Cannot query: unknown parameter type 999"` for all three types.
+- **Green.** With the caller name passed in, the filter passes 24/24. `quiver_c_tests` 570/570 (571 before, minus the deleted `QueryParamsNullDb`), `quiver_tests` 1375/1375.
+- **Bindings:** Julia 1559/1559 (one new assertion), Dart 436/436, Python 325/325, JS 229/229. The Dart and Python assertions were added inside existing tests.
+- **Static checks:**
+  - `dart analyze`: the same 7 existing infos before and after.
+  - Biome lint (formatter off) is clean on `query.ts`, `loader.ts` and `database-query.test.ts`. `bun run lint` fails repo-wide on existing CRLF format debt.
+- **`scripts/format.bat`.** clang-format reflowed `src/c/database_query.cpp` and `tests/test_c_api_database_query.cpp`, and the C filter was re-run afterwards (24/24). Biome rewrote the line endings of 39 unrelated `bindings/js` files with no content change. Only those files were reverted. `git checkout -- bindings/js` would also have dropped this plan's JS edits. No `.bat` file was touched.
+- **`scripts/test-all.bat`:** all six suites passed (C++ 1375, C API 570, Julia 1559, Dart 436, JS 229, Python 325).
+
+### For later plans
+
+- **23:**
+  - The `_params` names are gone. Call `quiver_database_query_integer(db, sql, param_types, param_values, param_count, &out, &has)`, with the old `_params` argument order. A conversion error reads `Cannot query_integer: ...`.
+  - The CHANGELOG entry goes last in `## [0.12.5] — unreleased` → `### Fixed`.
+  - Heads-up: plan 23's contrast block calls `quiver_database_read_vector_integers_by_id` with 6 arguments and expects `count == 1`. Since 61e6236 that reader takes a `uint8_t** out_mask` and keeps NULL cells in place, so that block is stale.
+- **69:**
+  - The `delete[] value;` lines are untouched. After clang-format they sit at `tests/test_c_api_database_query.cpp` L40 (`QueryStringReturnsValue`) and L298 (`QueryStringWithParams`); re-anchor by test name.
+  - `QueryParamsNullDb` is deleted.
+  - `QueryParamsUnknownType` is now `QueryParamsUnknownTypeNamesTheCalledFunction`. It leaks nothing, because `convert_params` throws before any out-param is written.
+- **33:** `marshalParams` returns `{ types: null, values: null, count: 0n, _keepalive: [] }` early when there are no parameters. It no longer imports `ptr` or wraps its buffers in `Allocation`, and `types`/`values` are the raw `Uint8Array`s. The bigint branch goes in the loop.
+- **30:** only the query cdef block of `_c_api.py` changed. Its header comment is untouched.
+- **25/28:** `_marshal_params` is unchanged.

@@ -35,7 +35,9 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   `quiver_database_update_element_by_label`, the three group writers' `_by_label` forms,
   `quiver_database_upsert_time_series_row` plus its `_by_label` form,
   `quiver_database_update_relation` plus its `_by_label` form, and the `out_mask` parameter of
-  `quiver_database_read_time_series_row`. Removals are hand-deleted the same way
+  `quiver_database_read_time_series_row`. The query entry points were collapsed the same way:
+  the three plain `quiver_database_query_{string,integer,float}` blocks were deleted and the
+  parameterized blocks renamed onto those names. Removals are hand-deleted the same way
   (`quiver_clear_last_error` and the four `quiver_element_*` has/count accessors).
   Take the generator upgrade as its own deliberate change (regenerate, then fix the enum call
   sites here and in hub) rather than as a side effect of adding a C function.
@@ -82,7 +84,7 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   `ArgumentError('Could not allocate 0 bytes.')` whenever the platform returns NULL for it, which
   POSIX `malloc`/`calloc` may do (Windows' `CoTaskMemAlloc` does not, so a Windows test run will
   not catch it). Pass `nullptr` for an empty array instead, since the C API takes NULL with a zero
-  count; `updateTimeSeriesFiles` and the group writers' clear paths do this. Typed columns go
+  count; `updateTimeSeriesFiles`, the group writers' clear paths and `_marshalParams` do this. Typed columns go
   through the shared private `_marshalGroupColumn(Arena, String, List<Object?>)`
   (used by `updateTimeSeriesGroup`, `upsertTimeSeriesRow`, `upsertTimeSeriesRowByLabel`,
   `updateVectorGroup`, `updateSetGroup` and the group writers' `ByLabel` forms); query parameters
@@ -119,7 +121,9 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   first non-null element, and tags an all-null/empty column FLOAT with a zeroed placeholder. Reads
   decode the mask out-param and never `toDartString` a masked-out (NULL) pointer.
 - **Query API shape**: `queryString`/`queryInteger`/`queryBoolean`/`queryFloat`/`queryDateTime`
-  take an optional positional `List<Object?>? parameters` (no separate `*Params` methods).
+  take an optional positional `List<Object?>? parameters` (no separate `*Params` methods). Every
+  call makes the one C call per type; `_marshalParams` returns `nullptr` arrays and a count of 0
+  when `parameters` is null or empty, so a parameterless query allocates nothing.
 - **`stringToDateTime` gates the shape with a regex, then range-checks the fields in UTC.**
   `DateTime.parse` is wider than the core's DATE_TIME grammar (it takes `"20240115"`, a `Z` suffix,
   a UTC offset) *and* it silently rolls an out-of-range field over instead of rejecting it —

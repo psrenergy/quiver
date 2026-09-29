@@ -406,6 +406,11 @@ void main() {
           () => db.queryString('SELECT label FROM Configuration WHERE id = ?', [1, 2]),
           throwsA(isA<DatabaseException>()),
         );
+        // Parameters omitted entirely
+        expect(
+          () => db.queryString('SELECT label FROM Configuration WHERE id = ?'),
+          throwsA(isA<DatabaseException>()),
+        );
         // Exactly one parameter succeeds
         expect(
           db.queryString('SELECT label FROM Configuration WHERE id = ?', [1]),

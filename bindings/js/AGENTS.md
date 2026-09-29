@@ -87,6 +87,10 @@ biome.json        # Lint/format config
   `"pointer"` slot, the same way `group-columns.ts` (clearing a group) and `updateTimeSeriesFiles`
   (an empty map) pass `null` for the array pointers instead of building zero-length tables. The
   C API reads NULL as "clear the relation" and an empty string as a label to look up.
+- **No query parameters pass `null, null, 0n`** (`marshalParams` in `src/query.ts`), whether the
+  list is omitted, `null` or empty. The C API reads neither array at count 0, and a zero-length
+  TypedArray has no pointer in Bun (`ptr()` of one *returns* a `TypeError` object instead of
+  throwing), so a parameterless query never builds a buffer at all.
 - **Bulk and per-cell NULLs**: `readScalarIntegers`/`readScalarFloats` read a parallel `uint8_t*` mask
   (`new Uint8Array(toArrayBuffer(...))`) and gate `mask[i] ? v : null` → `(number | null)[]` — never
   `Number()` a masked slot (would turn NULL into 0). The vector/set readers do the same per cell:
