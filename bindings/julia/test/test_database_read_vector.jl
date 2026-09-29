@@ -306,6 +306,40 @@ include("fixture.jl")
 
         Quiver.close!(db)
     end
+
+    @testset "Errors name the reader" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        # The nullability lookup runs after the read, so it never reports list_vector_groups.
+        exc = @test_throws Quiver.DatabaseException Quiver.read_vector_integers(db, "Nope", "value_int")
+        @test exc.value.msg == "Cannot read_vector_integers: collection not found: Nope"
+        exc = @test_throws Quiver.DatabaseException Quiver.read_vector_strings_by_id(db, "Nope", "value_int", 1)
+        @test exc.value.msg == "Cannot read_vector_strings_by_id: collection not found: Nope"
+
+        Quiver.close!(db)
+    end
+
+    @testset "Nullable read round-trips into create_element!" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+        id = Quiver.create_element!(db, "Collection"; label = "Item 1", value_int = [1, 2, 3])
+
+        # value_int is nullable, so the read is Vector{Union{Nothing, Int64}} even without a NULL.
+        values = Quiver.read_vector_integers_by_id(db, "Collection", "value_int", id)
+        copy_id = Quiver.create_element!(db, "Collection"; label = "Item 2", value_int = values)
+        @test Quiver.read_vector_integers_by_id(db, "Collection", "value_int", copy_id) == [1, 2, 3]
+
+        # A real NULL cell is refused: NULL cells are written through the group writers.
+        Quiver.update_vector_group!(db, "Collection", "values", id; value_int = [1, nothing])
+        with_null = Quiver.read_vector_integers_by_id(db, "Collection", "value_int", id)
+        @test_throws ArgumentError Quiver.update_element!(db, "Collection", copy_id; value_int = with_null)
+        @test Quiver.read_vector_integers_by_id(db, "Collection", "value_int", copy_id) == [1, 2, 3]
+
+        Quiver.close!(db)
+    end
 end
 
 end

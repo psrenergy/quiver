@@ -28,13 +28,24 @@ inline std::optional<std::string> get_row_value(const Row& row, size_t index, st
     return row.get_string(index);
 }
 
-// One output entry per element, aligned with read_element_ids. Expects the LEFT JOIN the bulk
-// readers build: column 0 the collection's id (never NULL), column 1 the group's join key,
-// column 2 the value. Cell NULLs are preserved positionally as std::nullopt.
+// The LEFT JOIN read_grouped_values_all parses, by position: column 0 the collection's id (never
+// NULL), column 1 the group's join key (the presence column), column 2 the value. `order_column`
+// orders an element's cells: vector_index for a vector group, rowid for a set group.
+inline std::string grouped_values_sql(const std::string& collection,
+                                      const std::string& table,
+                                      const std::string& attribute,
+                                      const std::string& order_column) {
+    return "SELECT c.id, g.id, g." + attribute + " FROM " + collection + " c LEFT JOIN " + table +
+           " g ON g.id = c.id ORDER BY c.rowid, g." + order_column;
+}
+
+// One output entry per element, aligned with read_element_ids, from grouped_values_sql's result.
+// Cell NULLs are preserved positionally as std::nullopt.
 template <typename T>
 std::vector<std::vector<std::optional<T>>> read_grouped_values_all(const Result& result) {
     std::vector<std::vector<std::optional<T>>> groups;
-    int64_t current_id = -1;
+    // No sentinel id: every int64, -1 included, is a valid element id (an explicit one is accepted).
+    std::optional<int64_t> current_id;
 
     for (size_t i = 0; i < result.row_count(); ++i) {
         // Column 0 is the collection's INTEGER PRIMARY KEY, so it is never NULL.
@@ -45,8 +56,9 @@ std::vector<std::vector<std::optional<T>>> read_grouped_values_all(const Result&
         }
 
         // Column 1 is the group's join key: NULL only when the LEFT JOIN found no row, i.e. an
-        // empty group. A matched row's value may itself be NULL and is kept as nullopt.
-        if (result[i].get_integer(1)) {
+        // empty group. A matched row's value may itself be NULL and is kept as nullopt. Tested
+        // with is_null, not get_integer: a key stored as REAL or TEXT still matched the join.
+        if (!result[i].is_null(1)) {
             groups.back().push_back(get_row_value(result[i], 2, static_cast<T*>(nullptr)));
         }
     }

@@ -99,6 +99,12 @@ biome.json        # Lint/format config
   for masked cells). Reads decode the mask and null-out cells; string columns use the null-guarded
   pointer loop (never `decodeStringArray`, which constructs a `CString` from a NULL pointer). Masks
   are built by direct `Uint8Array` indexing — never a `DataView` — per the TypedArray house rule.
+- **`setElementArray` refuses a `null` cell in a numeric or boolean array** (`QuiverError` naming
+  the column). A vector/set read returns a NULL cell as `null`, and without the check a read written
+  back through `createElement`/`updateElement` stored it as 0 / `false` (`allocNativeFloat64`'s
+  `setFloat64(null)` writes 0), or misrouted an integer array to the float setter. A string array
+  keeps its NULL-pointer path, which the C setter reads as NULL. Other NULL cells go through
+  `updateVectorGroup` / `updateSetGroup`.
 - **`integerToBoolean` throws `RangeError`, not `QuiverError`** — the one exception to the
   "always `QuiverError`" rule above, and deliberate: that message comes from
   `quiver_get_last_error`, while this one is crafted here (the boolean readers are a binding-only

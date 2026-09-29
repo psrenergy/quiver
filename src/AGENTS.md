@@ -538,15 +538,21 @@ impl_->logger->debug("Opening database: {}", path);
   used only by `read_element_ids`, whose column is the collection's PK);
   `read_column_values_nullable<T>` keeps them as `std::optional<T>` and backs the three
   `read_scalar_*` bulk readers *and* the six vector/set `_by_id` readers (one entry per element or
-  per cell, `ORDER BY rowid`). The Lua readers consume the optional vector directly via a
+  per cell, `ORDER BY rowid` — except the vector `_by_id` readers, which order by `vector_index`).
+  The Lua readers consume the optional vector directly via a
   `to_lua_table(vector<optional<T>>)` overload that emits `nil` holes (root NULL design decisions).
 - **`read_grouped_values_all<T>`** (`database_internal.h`) backs the six bulk vector/set readers,
-  returns `vector<vector<optional<T>>>`, and requires the LEFT JOIN their SQL builds. That SELECT
-  is `c.id, g.id, g.<attr>` — three columns, not two: `g.id` is a **presence column** that is NULL
-  only when the join found no row, which is the one thing that keeps "element with no group rows"
-  (empty inner vector) apart from "row whose value is NULL" (`nullopt` cell). Don't "simplify" the
-  SQL back to `SELECT id, value FROM <group_table>` (that shape skipped elements) and don't drop
-  `g.id` (that shape collapses the two NULL cases back together).
+  returns `vector<vector<optional<T>>>`, and parses by position the LEFT JOIN that its neighbour
+  `grouped_values_sql` builds for all six. That SELECT is `c.id, g.id, g.<attr>` — three columns,
+  not two: `g.id` is a **presence column** that is NULL only when the join found no row, which is
+  the one thing that keeps "element with no group rows" (empty inner vector) apart from "row whose
+  value is NULL" (`nullopt` cell). Don't "simplify" the SQL back to `SELECT id, value FROM
+  <group_table>` (that shape skipped elements) and don't drop `g.id` (that shape collapses the two
+  NULL cases back together). The presence test is `!is_null(1)`, not `get_integer(1)`: a group
+  whose `id` column is declared REAL or TEXT (the validator does not check its type) stores the id
+  as 1.0 / '1', which still matches the join. The element tracker is an `optional<int64_t>`, never
+  a sentinel id: an explicit id of -1 is accepted by `create_element`, and a `-1` sentinel dropped
+  that element (or appended to an empty result) when it was the smallest id.
 - **`scalar_metadata_from_column` reports an INTEGER PRIMARY KEY as `not_null`**
   (`database_internal.h`): a rowid-alias PK is never NULL, but SQLite's `PRAGMA table_info` leaves
   the `notnull` flag unset, so the public `ScalarMetadata.not_null` ORs in `primary_key && type ==
@@ -660,7 +666,10 @@ Implementation conventions in `lua_runner.cpp`:
   `"Cannot <caller>: cell #N has unsupported Lua type"` for anything that does not fit, so both the
   int and the float/string paths are covered. Two known limits, both pre-existing: the loop is
   bounded by `t.size()` (`lua_rawlen`), so a table with `nil` holes truncates — unlike
-  `collect_group_columns`, which walks `pairs` for exactly that reason; and the element type still
+  `collect_group_columns`, which walks `pairs` for exactly that reason. For element arrays that
+  would be silent data loss, since a vector/set read hands a NULL cell back as a `nil` hole, so
+  `table_to_element` first calls `require_dense_array`, which throws on a hole (or a non-integer
+  key) and points at the group writers; and the element type still
   comes from cell 1, so `{1, 2.5}` into a REAL column is rejected rather than widened (JS scans the
   whole column and accepts it). One consequence worth knowing: `lua_opt_int64_vector` routes
   through it too, so `quiver.metadata{dimension_sizes = {true}}` coerces to a size-1 dimension

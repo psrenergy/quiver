@@ -62,6 +62,14 @@ class Element:
             check(lib.quiver_element_set_array_integer(self._ptr, name.encode("utf-8"), ffi.NULL, 0, ffi.NULL))
             return
 
+        # A vector/set read returns a NULL cell as None. The element surface is non-null (NULL cells
+        # go through update_vector_group / update_set_group), so name the column here instead of
+        # failing inside cffi or on str.encode.
+        if any(v is None for v in values):
+            raise TypeError(
+                f"Unsupported array element type NoneType for Element.set('{name}'): "
+                "write NULL cells with update_vector_group or update_set_group"
+            )
         first = values[0]
         if isinstance(first, bool):
             self._set_array_integer(name, [int(v) for v in values])

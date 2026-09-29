@@ -163,4 +163,22 @@ describe("vector NULL cells", () => {
       db.close();
     }
   });
+
+  test("refuses a null cell written back through updateElement instead of storing 0", () => {
+    const db = Database.fromSchema(":memory:", join(SCHEMAS_DIR, "collections.sql"));
+    try {
+      db.createElement("Configuration", { label: "Config" });
+      const a = db.createElement("Collection", { label: "Item 1" });
+      const b = db.createElement("Collection", { label: "Item 2", value_float: [7.5] });
+      db.updateVectorGroup("Collection", "values", a, { value_float: [1.5, null, 2.5] });
+
+      const read = db.readVectorFloatsById("Collection", "value_float", a) as number[];
+      expect(() => db.updateElement("Collection", b, { value_float: read })).toThrow(
+        "Unsupported null cell in array 'value_float'",
+      );
+      expect(db.readVectorFloatsById("Collection", "value_float", b)).toEqual([7.5]);
+    } finally {
+      db.close();
+    }
+  });
 });

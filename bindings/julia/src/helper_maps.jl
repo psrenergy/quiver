@@ -62,7 +62,8 @@ function set_relation_map(
     map_of_indexes = Vector{Vector{Int}}(undef, length(collection_from_ids))
 
     for (index_from, id_from) in enumerate(collection_from_ids)
-        related_id = read_set_integers_by_id(db, collection_from, attribute_on_collection_from, id_from)
+        # Only the ids are used, so decode Optional (`false`) and skip the per-element metadata lookup.
+        related_id = _read_set_integers_by_id(db, collection_from, attribute_on_collection_from, id_from, false)
         set_relation_map = Int[]
         for id_to in related_id
             # A null cell is an empty relation, not a target to look up.

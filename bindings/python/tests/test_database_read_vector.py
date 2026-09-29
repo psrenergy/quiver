@@ -246,6 +246,16 @@ class TestVectorNullCells:
         assert collections_db.read_vector_integers("Collection", "value_int") == [[10, None, 30], []]
         assert collections_db.read_vector_integers_by_id("Collection", "value_int", id1) == [10, None, 30]
 
+    def test_null_cell_is_refused_on_element_write(self, collections_db: Database) -> None:
+        """A read with a NULL cell written back through create_element names the column."""
+        collections_db.create_element("Configuration", label="Config")
+        id1 = collections_db.create_element("Collection", label="Item 1")
+        collections_db.update_vector_group("Collection", "values", id1, {"value_int": [10, None, 30]})
+
+        values = collections_db.read_vector_integers_by_id("Collection", "value_int", id1)
+        with pytest.raises(TypeError, match="Element.set\\('value_int'\\)"):
+            collections_db.create_element("Collection", label="Item 2", value_int=values)
+
     def test_boolean_wrapper_keeps_null_cells(self, collections_db: Database) -> None:
         """The boolean wrapper maps a NULL cell to None rather than raising."""
         collections_db.create_element("Configuration", label="Config")

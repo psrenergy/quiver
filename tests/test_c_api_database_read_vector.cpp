@@ -720,13 +720,25 @@ TEST(DatabaseCApi, ReadVectorIntegersPreservesNullCells) {
     ASSERT_EQ(quiver_database_create_element(db, "Collection", e2, &id2), QUIVER_OK);
     EXPECT_EQ(quiver_element_destroy(e2), QUIVER_OK);
 
+    // Item 3 has exactly one row, and its value is NULL: the pair only the presence column tells
+    // apart from Item 2 (no rows at all).
+    quiver_element_t* e3 = nullptr;
+    ASSERT_EQ(quiver_element_create(&e3), QUIVER_OK);
+    quiver_element_set_string(e3, "label", "Item 3");
+    int64_t null_only[] = {0};
+    const uint8_t null_only_mask[] = {0};
+    quiver_element_set_array_integer(e3, "value_int", null_only, 1, null_only_mask);
+    int64_t id3 = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Collection", e3, &id3), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(e3), QUIVER_OK);
+
     int64_t** vectors = nullptr;
     uint8_t** masks = nullptr;
     size_t* sizes = nullptr;
     size_t count = 0;
     ASSERT_EQ(quiver_database_read_vector_integers(db, "Collection", "value_int", &vectors, &masks, &sizes, &count),
               QUIVER_OK);
-    ASSERT_EQ(count, 2);
+    ASSERT_EQ(count, 3);
     EXPECT_EQ(sizes[0], 3);
     EXPECT_EQ(masks[0][0], 1);
     EXPECT_EQ(masks[0][1], 0);
@@ -737,6 +749,9 @@ TEST(DatabaseCApi, ReadVectorIntegersPreservesNullCells) {
     EXPECT_EQ(sizes[1], 0);
     EXPECT_EQ(vectors[1], nullptr);
     EXPECT_EQ(masks[1], nullptr);
+    // The element whose only row is NULL is one masked cell, not an empty entry.
+    EXPECT_EQ(sizes[2], 1);
+    EXPECT_EQ(masks[2][0], 0);
     quiver_database_free_integer_vectors(vectors, sizes, count);
     quiver_database_free_masks(masks, count);
 

@@ -314,3 +314,31 @@ TEST(Database, ReadVectorDistinguishesNoRowsFromNullOnlyRow) {
     EXPECT_TRUE(vectors[0].empty());
     EXPECT_EQ(vectors[1], (std::vector<std::optional<int64_t>>{std::nullopt}));
 }
+
+TEST(Database, ReadVectorBulkKeepsElementWithIdMinusOne) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    db.create_element("Configuration", quiver::Element().set("label", std::string("Test Config")));
+
+    // -1 is a valid id (create_element accepts an explicit one) and, as the smallest rowid, the
+    // first row of the LEFT JOIN: it must not be taken for "no element read yet".
+    db.create_element("Collection",
+                      quiver::Element()
+                          .set("label", std::string("Negative"))
+                          .set("id", int64_t{-1})
+                          .set("value_int", std::vector<int64_t>{1, 2}));
+    db.create_element("Collection", quiver::Element().set("label", std::string("Empty")));
+    db.create_element(
+        "Collection",
+        quiver::Element().set("label", std::string("Positive")).set("value_int", std::vector<int64_t>{7}));
+
+    auto ids = db.read_element_ids("Collection");
+    auto vectors = db.read_vector_integers("Collection", "value_int");
+    ASSERT_EQ(ids.size(), 3u);
+    ASSERT_EQ(vectors.size(), ids.size());
+    EXPECT_EQ(ids[0], -1);
+    EXPECT_EQ(vectors[0], (std::vector<std::optional<int64_t>>{1, 2}));
+    EXPECT_TRUE(vectors[1].empty());
+    EXPECT_EQ(vectors[2], (std::vector<std::optional<int64_t>>{7}));
+}

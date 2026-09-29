@@ -127,11 +127,14 @@ midnight.
 
   **A table with holes is an object, not an array.** A bulk read of a nullable column returns
   \`nil\` holes (see Reading), so \`return db:read_scalar_integers(c, a)\` encodes as
-  \`{"1":10,"3":30}\` — not \`[10,null,30]\` — and the keys sort as text (\`"1","11","2"\`). The same
-  applies **inside** a vector/set read: an inner list with a NULL cell encodes as an object nested
-  in the outer array, e.g. \`[{"1":10,"3":30},[]]\`, not \`[[10,null,30],[]]\`. When the host needs
-  positional data, return the ids alongside and fill the holes yourself:
+  \`{"1":10,"3":30}\` — not \`[10,null,30]\` — and the keys sort as text (\`"1","11","2"\`). When the
+  host needs positional scalar data, return the ids alongside and fill the holes yourself:
   \`local v = db:read_scalar_integers(c, a); local out = {}; for i in ipairs(ids) do out[i] = v[i] or false end\`.
+  **Inside** a vector/set read an inner list with an interior NULL cell encodes as an object nested
+  in the outer array (\`[{"1":10,"3":30},[]]\`), but a trailing NULL cell leaves no trace at all:
+  \`[10, NULL]\` encodes as the plain \`[10]\`. The ids count elements, not rows, so they cannot
+  restore inner positions — take the row count from a \`NOT NULL\` column of the group (see
+  *Vector reads*), or do that read in the host binding.
 
   Returning a function, a coroutine, or a userdata (including \`db\` itself) raises
   \`Cannot run: script returned an unsupported Lua type\`; nesting deeper than 32 levels raises
@@ -282,6 +285,10 @@ Notes:
   \`Cannot update_element: ...\`.
 - **Empty arrays are skipped.** An attribute whose value is \`{}\` writes no vector/set (the element
   type can't be inferred from an empty array), so it is silently dropped.
+- **Arrays must be dense.** A vector/set read returns a NULL cell as a \`nil\` hole, but an element
+  array cannot carry one: \`create_element\` / \`update_element\` throw \`array '<name>' has a nil
+  hole ...\` rather than cut the array short at the hole. Write NULL cells with
+  \`update_vector_group\` / \`update_set_group\`, which write a hole as NULL.
 - **No \`nil\` scalar attributes.** In Lua a key set to \`nil\` is dropped from the table, so
   \`{ x = nil }\` is identical to \`{}\`; an update/create table that ends up with no attributes
   **throws** (\`...must have at least one scalar attribute\` on create, \`...at least one attribute
@@ -363,7 +370,8 @@ rewriting groups you never named. \`(collection, group)\` names exactly one tabl
 
 Rules:
 - **Row count is the largest index any column reaches.** Shorter or sparse columns write NULL in
-  the gaps, so \`nil\` holes from a read round-trip.
+  the gaps, so interior \`nil\` holes from a read round-trip. A trailing row that is NULL in every
+  column is invisible to a read (see *Vector reads*), so writing a read back drops it.
 - **\`{}\` (no columns) clears the group.** Naming a column whose array is empty is an error, not a
   clear — a typo'd column name must not destroy data.
 - **\`id\` and \`vector_index\` are managed by the group** (the element and the row's position) and

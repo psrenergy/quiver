@@ -103,9 +103,11 @@ the binary/expression subsystems (`test_binary_file.jl`, `test_binary_metadata.j
 
 The boolean convenience readers have one file per binding — `test_database_boolean.jl`,
 `database_boolean_test.dart`, `test_database_boolean.py`, `database-boolean.test.ts` — all over
-`valid/all_types.sql` (`some_integer` scalar, `count_value` vector, `code` set). There is no C++/C
-counterpart for the **readers**: those wrappers are binding-only, and Lua is deliberately excluded
-(root design decisions).
+`valid/all_types.sql` (`some_integer` scalar, `count_value` vector, `code` set). Their NULL-cell
+cases are the exception: every group column of `all_types.sql` is `NOT NULL`, so those sit next to
+the integer NULL-cell tests in the vector/set `read` files, over `valid/collections.sql`. There is
+no C++/C counterpart for the **readers**: those wrappers are binding-only, and Lua is deliberately
+excluded (root design decisions).
 
 Boolean **input** is a different matter: a native boolean is INTEGER 1/0 on every write path, and
 that is tested in the Lua layer and in all four bindings. There is no C++-core or C API test,
@@ -137,9 +139,14 @@ the four bindings extend their own boolean files. Two things to keep in mind whe
 
 The native-DateTime bindings (Julia, Dart, and Python) cover bulk scalar, vector, and set
 convenience readers in the corresponding `read` test files. Scalar coverage includes positional
-NULLs; vector/set coverage includes empty reads, elements without group rows, and per-cell NULLs —
-including the pair that only the LEFT JOIN's presence column can tell apart, an element with no
-rows next to an element whose only row is NULL.
+NULLs; vector/set DateTime coverage is empty reads and elements without group rows only — no valid
+schema has a nullable date column in a vector or set group, so the wrappers' NULL-cell branches are
+untested. Per-cell NULLs are covered through the integer, string and boolean readers in every
+binding (a middle NULL next to an element with no rows). The pair only the LEFT JOIN's presence
+column can tell apart — an element with no rows next to an element whose only row is NULL — is
+pinned in the C++ core (`Read{Vector,Set}DistinguishesNoRowsFromNullOnlyRow`) and through the C ABI
+(`ReadVectorIntegersPreservesNullCells`: a size-1 entry with a 0 mask, not an empty one), which is
+the shape every FFI binding decodes.
 
 The `read` → `{scalar,vector,set}` and `time_series` → `{metadata,group,row,files,nulls}` split is
 mirrored in every binding using each idiom's file naming (Julia `test_database_read_scalar.jl`,

@@ -1415,6 +1415,22 @@ struct LuaRunner::Impl {
         return result;
     }
 
+    // A vector/set read hands a NULL cell back as a nil hole, and `#` over a hole is an arbitrary
+    // border: lua_table_to_vector (bounded by t.size()) would silently cut such an array short, and
+    // table_to_element skips it outright when the hole is cell 1. Element arrays stay dense; the
+    // group writers are the ones that write a hole as NULL.
+    static void require_dense_array(const sol::table& arr, const std::string& name) {
+        size_t entries = 0;
+        for ([[maybe_unused]] const auto& entry : arr) {
+            ++entries;
+        }
+        if (entries != arr.size()) {
+            throw std::runtime_error("Cannot table_to_element: array '" + name +
+                                     "' has a nil hole or a non-integer key; write NULL cells with "
+                                     "update_vector_group or update_set_group");
+        }
+    }
+
     static Element table_to_element(const sol::table& values) {
         Element element;
         for (const auto& pair : values) {
@@ -1424,6 +1440,7 @@ struct LuaRunner::Impl {
 
             if (val.is<sol::table>()) {
                 auto arr = val.as<sol::table>();
+                require_dense_array(arr, k);
                 if (arr.size() > 0) {
                     sol::object first = arr[1];
                     // Cell 1 only picks the element type; lua_table_to_vector checks the rest.

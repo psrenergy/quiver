@@ -66,18 +66,23 @@ ruff.toml         # Lint/format config (format.bat runs ruff)
   reaching that line is now naive. An out-of-range field that clears the regex (`"2024-02-31"`)
   falls through to the same rejection so the message still names the column. Keep this parser
   accepting exactly the same set as Julia's `string_to_date_time` and Dart's `stringToDateTime`.
-  Its `@overload` triple mirrors `_integer_to_boolean`'s — keep the `(str) -> datetime` variant, or
-  the vector/set readers' comprehensions widen to `list[list[datetime | None]]` against their
-  declared `list[list[datetime]]`. Nothing typechecks this repo (`ruff.toml` is `select = ["I"]`,
-  isort only; no mypy/pyright in CI, `pyproject.toml`, or the pre-commit hooks), so that note is
-  the only guard against a "remove the redundant overloads" cleanup.
+  Its `@overload` triple mirrors `_integer_to_boolean`'s. No declared return type depends on the
+  narrow `(str) -> datetime` variant any more — the vector/set readers keep NULL cells and are
+  declared `list[... datetime | None]` — so it only sharpens the two callers that pass a
+  guaranteed `str` (`query_date_time`, the time-series dimension column). Nothing typechecks this
+  repo (`ruff.toml` is `select = ["I"]`, isort only; no mypy/pyright in CI, `pyproject.toml`, or
+  the pre-commit hooks).
 - **`_integer_to_boolean` raises `ValueError`, not `QuiverError`** — the second documented
   exception to "messages come from C++", alongside `_marshal_group_columns`' jagged-column check.
   The boolean readers are a binding-only convenience with no C++ counterpart, so the core cannot
   diagnose a stray `2`; the message names the offending `collection.attribute` (nothing to name for
-  `query_boolean`). The `@overload` triple mirrors `bindings/js/src/boolean.ts` — keep the
-  `(int) -> bool` variant, or the vector/set readers' comprehensions widen to `list[bool | None]`
-  against their declared `list[list[bool]]`.
+  `query_boolean`). The `@overload` triple mirrors `bindings/js/src/boolean.ts`; every caller now
+  passes `int | None` (the vector/set readers keep NULL cells and are declared
+  `list[... bool | None]`), so the narrow `(int) -> bool` variant backs no declared type.
+- **`Element._set_array` refuses a `None` cell** with a `TypeError` naming the column: a vector/set
+  read returns a NULL cell as `None`, and without the check it failed inside cffi
+  (`an integer is required`) or on `str.encode`, naming nothing. NULL cells are written with
+  `update_vector_group` / `update_set_group` (the element surface stays non-null).
 - **`LuaRunner.run` owns its result**: `quiver_lua_runner_run` takes a `char** out_result` and the
   JSON string must be freed with `quiver_lua_runner_free_string` — *not*
   `quiver_database_free_string` (both are hand-declared in `_c_api.py`). The free sits in a

@@ -29,6 +29,15 @@ function setElementArray(
 
   const first = values[0];
 
+  // A vector/set read returns a NULL cell as null. The element surface is non-null (NULL cells go
+  // through updateVectorGroup / updateSetGroup), and the numeric setters below would store a null
+  // as 0 / false. A string array keeps its NULL-pointer path, which the C setter reads as NULL.
+  if (typeof first !== "string" && values.some((v) => v === null || v === undefined)) {
+    throw new QuiverError(
+      `Unsupported null cell in array '${name}': write NULL cells with updateVectorGroup or updateSetGroup`,
+    );
+  }
+
   if (typeof first === "bigint") {
     const arr = allocNativeInt64(values as bigint[]);
     check(lib.quiver_element_set_array_integer(elemPtr, nameBuf.buf, arr.buf, values.length, null));

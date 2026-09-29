@@ -275,8 +275,13 @@ Settled questions — don't relitigate without the user; each was decided delibe
   to be dropped by the vector/set readers (`[0.10, NULL, 0.30]` → `[0.10, 0.30]`), which made two
   per-column reads of one nullable group mis-pair; they are now preserved positionally
   (`std::optional` / `nothing`/`None`/`null`/`nil`), so zipping per-column reads of a group is
-  correct. The LEFT JOIN carries a **presence column** (`g.id`) to keep "no group row" and "NULL
-  cell" apart: no row at all is an empty inner list, a row whose value is NULL is a null cell. The
+  correct — provided each column name resolves to that group. A per-column reader resolves a name
+  to the group named after it, else to the first group of that kind (in table order) holding the
+  column, so when two vector or two set groups share a column name (legal for FK columns) the name
+  reads the other group's table; Julia's and Python's composed `read_{vector,set}_group_by_id`
+  inherit that, Dart's native call does not. The LEFT JOIN carries a **presence column** (`g.id`)
+  to keep "no group row" and "NULL cell" apart: no row at all is an empty inner list, a row whose
+  value is NULL is a null cell. The
   C ABI carries the same distinction — a per-cell `uint8_t` mask for the numeric readers (freed by
   `quiver_database_free_masks` in bulk, `quiver_database_free_mask` by id) and a `nullptr` entry
   for the string ones. `read_vector_group_by_id` / `read_set_group_by_id` remain the row-shaped
@@ -631,7 +636,9 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
   NULL cells preserved (`Value{nullptr}`). One call for a whole group, where zipping the
   per-column `_by_id` readers takes N; both are NULL-correct now that the per-column readers
   preserve cells. C API mirrors `read_time_series_group`'s columnar+mask shape (freed by
-  `free_time_series_data`); Dart binds them natively; Julia/Python compose per-column reads.
+  `free_time_series_data`); Dart binds them natively; Julia/Python compose per-column reads, which
+  resolve each column by name — so a column name another group of the same kind shares is read
+  from whichever group the name resolves to (see the bulk-reads decision).
 - Whole-group writers: `update_vector_group()` / `update_set_group()` — replace all of an element's
   rows in one **named** group; an empty row list clears it. The write counterpart of the readers
   above, and the unambiguous alternative to passing arrays through `update_element` /

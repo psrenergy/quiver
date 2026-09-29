@@ -116,6 +116,38 @@ TEST_F(LuaRunnerTest, UpdateElementWithArrays) {
     EXPECT_EQ(vec_values, (std::vector<std::optional<int64_t>>{7, 8, 9}));
 }
 
+TEST_F(LuaRunnerTest, UpdateElementRefusesArrayWithNilHole) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    db.create_element("Collection",
+                      quiver::Element()
+                          .set("label", "Item 1")
+                          .set("value_int", std::vector<quiver::Value>{int64_t{10}, nullptr, int64_t{30}}));
+    db.create_element(
+        "Collection",
+        quiver::Element().set("label", "Item 2").set("value_int", std::vector<quiver::Value>{nullptr, int64_t{20}}));
+    db.create_element("Collection",
+                      quiver::Element().set("label", "Item 3").set("value_int", std::vector<int64_t>{7, 8, 9}));
+
+    quiver::LuaRunner lua(db);
+
+    // A read hands each NULL cell back as a nil hole. Written back through an element array it
+    // used to keep only the cells before the hole, or with a leading hole skip the array, silently.
+    expect_lua_error(
+        lua,
+        R"(db:update_element("Collection", 3, { value_int = db:read_vectors_by_id("Collection", 1).value_int }))",
+        "has a nil hole");
+    expect_lua_error(lua,
+                     R"(db:update_element("Collection", 3, {
+                         label = "Item 3b", value_int = db:read_vectors_by_id("Collection", 2).value_int }))",
+                     "has a nil hole");
+
+    EXPECT_EQ(db.read_vector_integers_by_id("Collection", "value_int", 3),
+              (std::vector<std::optional<int64_t>>{7, 8, 9}));
+    EXPECT_EQ(db.read_scalar_string_by_id("Collection", "label", 3), "Item 3");
+}
+
 TEST_F(LuaRunnerTest, UpdateVectorIntegers) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));

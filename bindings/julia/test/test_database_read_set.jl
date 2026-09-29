@@ -301,6 +301,19 @@ include("fixture.jl")
 
         Quiver.close!(db)
     end
+
+    @testset "Errors name the reader" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        # The nullability lookup runs after the read, so it never reports list_set_groups.
+        exc = @test_throws Quiver.DatabaseException Quiver.read_set_strings(db, "Nope", "tag")
+        @test exc.value.msg == "Cannot read_set_strings: collection not found: Nope"
+        exc = @test_throws Quiver.DatabaseException Quiver.read_set_integers_by_id(db, "Nope", "tag", 1)
+        @test exc.value.msg == "Cannot read_set_integers_by_id: collection not found: Nope"
+
+        Quiver.close!(db)
+    end
 end
 
 end
