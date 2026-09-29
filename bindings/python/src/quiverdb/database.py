@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from typing import overload
 
 from quiverdb._c_api import ffi, get_lib
-from quiverdb._helpers import check, column_data_type, decode_string, decode_string_or_none
+from quiverdb._helpers import check, column_data_type, decode_string, decode_string_or_none, format_datetime
 from quiverdb.database_csv_export import DatabaseCSVExport
 from quiverdb.database_csv_import import DatabaseCSVImport
 from quiverdb.element import Element
@@ -1483,7 +1483,8 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
     ) -> list:
         """Read one value per element for a time series attribute at a given date.
 
-        Uses "last non-null value at or before date_time" lookup semantics.
+        Uses "last non-null value at or before date_time" lookup semantics. An aware
+        date_time is converted to UTC first; a naive one is taken as UTC.
         Entries are typed by the column (int, float, or str); elements with no
         matching data yield None. Raises QuiverError for a group with more than
         one dimension column; use read_time_series_group for those.
@@ -1500,7 +1501,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
                 collection.encode("utf-8"),
                 group.encode("utf-8"),
                 attribute.encode("utf-8"),
-                date_time.strftime("%Y-%m-%dT%H:%M:%S").encode("utf-8"),
+                format_datetime(date_time).encode("utf-8"),
                 out_data_type,
                 out_values,
                 out_mask,
@@ -1545,7 +1546,8 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         """Update time series data for an element from column lists keyed by name.
 
         Pass an empty dict to clear all rows. datetime values are formatted to
-        ISO strings; integers are accepted for REAL columns.
+        ISO strings (an aware value is converted to UTC); integers are accepted
+        for REAL columns.
         """
         self._ensure_open()
         lib = get_lib()
@@ -1793,7 +1795,8 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         Keyword arguments map column names to values. The dimension column (e.g.
         date_time) and all value columns must be provided. Type dispatch uses
         isinstance: bool -> INTEGER (0/1), int -> INTEGER, float -> FLOAT, str ->
-        STRING. No Int->Float coercion (per D-03: Python strict typing).
+        STRING, datetime -> STRING (an aware value is converted to UTC).
+        No Int->Float coercion (per D-03: Python strict typing).
         Dict unpacking is supported: db.upsert_time_series_row("Col", "grp", 1, **row_dict).
         """
         self._ensure_open()
@@ -2217,11 +2220,11 @@ def _marshal_group_columns(data: dict[str, list]) -> tuple:
 
     Each column is typed from all of its non-None cells by `column_data_type`: bool/int ->
     INTEGER, and a float anywhere widens the column to FLOAT; str -> STRING; datetime ->
-    STRING in the core's ISO format. A cell that does not fit its column raises TypeError
-    naming the cell and the column. The C++ layer validates against the schema and accepts
-    integers for REAL columns. A None entry becomes a per-cell NULL via the mask (with a
-    placeholder in the data array); an all-None column is tagged FLOAT with a zero-filled
-    placeholder.
+    STRING in the core's ISO format (via format_datetime, aware values converted to UTC). A
+    cell that does not fit its column raises TypeError naming the cell and the column. The
+    C++ layer validates against the schema and accepts integers for REAL columns. A None entry
+    becomes a per-cell NULL via the mask (with a placeholder in the data array); an all-None
+    column is tagged FLOAT with a zero-filled placeholder.
 
     Returns (keepalive, c_col_names, c_col_types, c_col_data, c_col_has_value,
     col_count, row_count) where keepalive must remain referenced until the C API
@@ -2256,7 +2259,7 @@ def _marshal_group_columns(data: dict[str, list]) -> tuple:
             c_col_types[c] = DataType.FLOAT
             c_col_data[c] = ffi.cast("void*", arr)
         elif column_type == DataType.DATE_TIME:
-            encoded = [(v.strftime("%Y-%m-%dT%H:%M:%S").encode("utf-8") if v is not None else b"") for v in values]
+            encoded = [(format_datetime(v).encode("utf-8") if v is not None else b"") for v in values]
             c_strs = [ffi.new("char[]", e) for e in encoded]
             keepalive.extend(c_strs)
             c_arr = ffi.new("char*[]", [(s if v is not None else ffi.NULL) for s, v in zip(c_strs, values)])
@@ -2290,7 +2293,8 @@ def _marshal_group_columns(data: dict[str, list]) -> tuple:
 def _marshal_row_columns(kwargs: dict) -> tuple:
     """Marshal one row of scalars into parallel C arrays for the row-oriented upsert API.
 
-    Each value is wrapped in a 1-element typed array. Not `_marshal_group_columns`: the
+    Each value is wrapped in a 1-element typed array; a datetime is formatted by
+    format_datetime and sent as a string. Not `_marshal_group_columns`: the
     row-upsert C signature carries no per-cell mask, so a None cell would be written as that
     helper's zeroed placeholder instead of NULL.
 
@@ -2308,6 +2312,9 @@ def _marshal_row_columns(kwargs: dict) -> tuple:
         name_buf = ffi.new("char[]", name.encode("utf-8"))
         keepalive.append(name_buf)
         c_col_names[i] = name_buf
+
+        if isinstance(v, datetime):
+            v = format_datetime(v)  # marshalled by the str branch below
 
         # bool is a subclass of int; test it explicitly first so True/False
         # marshal as INTEGER 1/0 rather than being rejected by the `is int`
@@ -2336,7 +2343,7 @@ def _marshal_row_columns(kwargs: dict) -> tuple:
             c_col_data[i] = ffi.cast("void*", c_str_arr)
         else:
             raise TypeError(
-                f"Column '{name}' value has unsupported type {type(v).__name__}; expected int, float, or str"
+                f"Column '{name}' value has unsupported type {type(v).__name__}; expected int, float, str, or datetime"
             )
 
     return keepalive, c_col_names, c_col_types, c_col_data, col_count

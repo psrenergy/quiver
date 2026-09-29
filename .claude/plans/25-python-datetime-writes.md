@@ -542,15 +542,15 @@ Run from the repo root (`C:\Development\Quiver\quiver1`) in PowerShell.
 
 ## Acceptance criteria
 
-- [ ] `format_datetime(value: datetime) -> str` exists in `bindings/python/src/quiverdb/_helpers.py` with the body in step 1.2. It converts to UTC only when `value.utcoffset() is not None`.
-- [ ] `Element.set` accepts a `datetime` scalar, and `Element._set_array` accepts a list of `datetime`. Both go through `format_datetime`.
-- [ ] `_marshal_row_columns` accepts a `datetime`, and its `TypeError` text lists `datetime`.
-- [ ] `_marshal_group_columns` and `read_time_series_row` call `format_datetime`. No `strftime` remains in `bindings/python/src/quiverdb`.
-- [ ] `_marshal_params` is unchanged.
-- [ ] The seven new tests pass, and each of them fails on the pre-change sources.
-- [ ] The full Python suite and `scripts/test-all.bat` pass.
-- [ ] `bindings/python/AGENTS.md` (layout line, new bullet, `_marshal_row_columns` note), `docs/time_series.md` and `CHANGELOG.md` (`0.12.0` → `### Fixed`) are updated as specified.
-- [ ] No C++, C API, Julia, Dart, JS or Lua file is changed.
+- [x] `format_datetime(value: datetime) -> str` exists in `bindings/python/src/quiverdb/_helpers.py` with the body in step 1.2. It converts to UTC only when `value.utcoffset() is not None`.
+- [x] `Element.set` accepts a `datetime` scalar, and `Element._set_array` accepts a list of `datetime`. Both go through `format_datetime`.
+- [x] `_marshal_row_columns` accepts a `datetime`, and its `TypeError` text lists `datetime`.
+- [x] `_marshal_group_columns` and `read_time_series_row` call `format_datetime`. No `strftime` remains in `bindings/python/src/quiverdb`.
+- [x] `_marshal_params` is unchanged.
+- [x] The seven new tests pass, and each of them fails on the pre-change sources.
+- [x] The full Python suite and `scripts/test-all.bat` pass.
+- [x] `bindings/python/AGENTS.md` (layout line, new bullet, `_marshal_row_columns` note), `docs/time_series.md` and `CHANGELOG.md` (`0.12.0` → `### Fixed`) are updated as specified.
+- [x] No C++, C API, Julia, Dart, JS or Lua file is changed.
 
 ## Pitfalls
 
@@ -579,3 +579,54 @@ Run from the repo root (`C:\Development\Quiver\quiver1`) in PowerShell.
 - Accepting `datetime.date`, which is not a `datetime` subclass: not requested. It still raises `TypeError`.
 - Time-zone handling in Dart (`dateTimeToString` writes the `DateTime`'s own fields) and Julia (`DateTime` has no zone): unchanged, since each is consistent with its own readers.
 - JS: string-based datetime surface by Design Decision.
+
+## Implementation notes
+
+Implemented on `rs/plan25` on top of master `e4a6833`, which already contains plan 17 (28d6e1f) and plan 24 (ac3d70e). `git fetch && git merge origin/master` was a no-op. Before any edit, a three-agent read-only workflow checked the plan: completeness and grammar, the seven tests' red/green traces, and a "should we implement" critic. Its verdict was **implement**. It found no design problem, only drift, most of it from plan 24.
+
+### User decisions
+
+- The README lists 24 as a dependency, while this plan's header says "none". The user confirmed plan 24 had landed, so the post-24 variants below were used.
+- The change was kept as **Fixed, not BREAKING**, although the group writers and `read_time_series_row` now store or look up a different string for an aware non-UTC value (`10:00+03:00` → `07:00`). Python's own readers were three hours off before. The CHANGELOG entry already says rows written earlier keep their wall-clock value.
+
+### Drift fixed
+
+- **Plan 24 changed four of the anchors.**
+  - `_helpers.py` already imported `datetime` (and `DataType`). The import became `from datetime import datetime, timezone`, and `format_datetime` was appended after `column_data_type`, not after `decode_string_or_none`.
+  - `element.py` had no `datetime` import (plan 24 dropped it). A stdlib block `from datetime import datetime` was added, and the helper import is now `check, column_data_type, decode_string, format_datetime`.
+  - `Element._set_array` has no pre-check to drop. Plan 24's DATE_TIME slot was the final `else: raise TypeError("Unsupported value type <T> in cell 0 of column ...")`. Its body is now `self._set_array_string(name, [format_datetime(v) for v in values])`, with the comment "None was refused above, so every cell is a datetime". The `None` check and the other branches are unchanged. A mixed `[datetime, "x"]` list is still rejected by `column_data_type`.
+  - Docstrings were merged, not replaced:
+    - The `Element.set` docstring keeps plan 24's float-widening sentence and adds `datetime` and datetime lists.
+    - The `_marshal_group_columns` parenthetical was appended to plan 24's phrase `datetime -> STRING in the core's ISO format`, and the paragraph was re-wrapped.
+    - The `database.py` import is `check, column_data_type, decode_string, decode_string_or_none, format_datetime` (108 columns).
+- **Test 5.4's pre-fix error** is now `TypeError: Unsupported value type datetime in cell 0 of column 'label_value'`, which is plan 24's message, not `Unsupported array element type ...`.
+- **`bindings/python/AGENTS.md`**:
+  - The layout line had become `check()/decode_string/column_data_type helpers`, and is now `.../column_data_type/format_datetime helpers`.
+  - The last sentence of plan 24's `column_data_type` bullet ("for now it refuses an all-`datetime` list too") was replaced: an all-`datetime` list is now formatted by `format_datetime` and written as strings.
+  - The `_parse_datetime` bullet now ends "…or the pre-commit hooks).". The new bullet was inserted after it anyway.
+  - The `_marshal_row_columns` bullet was re-wrapped to 100 columns.
+- **`docs/time_series.md`**: the quoted two-line excerpt no longer exists. The Python sentence was appended after "…to and from this format automatically." (L27, mid-paragraph), and the rest of the paragraph was re-wrapped to at most 100 columns.
+- **CHANGELOG**: `## [0.12.0] — unreleased` does not exist. Plan 24 had opened `## [0.12.6] — unreleased` with `### Changed`. The entry went, word for word, into a new `### Fixed` after that block, above `## [0.12.5]`. The `[0.12.5]` header still says "unreleased" although `v0.12.5` is tagged. Dating it is the maintainer's release step.
+- **Repo path**: the plan says `quiver1`; this checkout is `quiver2`. Line numbers had moved everywhere, so every edit was anchored by function name and excerpt. The `git grep` also lists `database.py:2107` (`datetime.fromisoformat`), not only the comment.
+- **Teeth check**: the tests were written first and run against the untouched sources, instead of stashing afterwards.
+
+### Results
+
+- **Red** (tests only, sources untouched): `test.bat -k "datetime or utc"` gave 7 failed and 31 passed, exactly the seven new tests:
+  - three `TypeError: Unsupported type datetime for Element.set('date_attribute')`;
+  - `TypeError: Unsupported value type datetime in cell 0 of column 'label_value'`;
+  - `AssertionError: assert '2024-01-01T10:00:00' == '2024-01-01T07:00:00'` (group writer);
+  - `TypeError: Column 'date_time' value has unsupported type datetime; expected int, float, or str` (upsert);
+  - `assert [20.5] == [10.5]` (`read_time_series_row`).
+- **Green**:
+  - The targeted run passes 38/38, and the full Python suite 344/344. `git grep strftime bindings/python/src/quiverdb` is empty.
+  - `scripts/format.bat` made no content change: ruff left 35 files unchanged, and Julia/Dart/C++ were unchanged. Biome rewrote all 42 JS files from CRLF to LF with no content change; they were restored with `git checkout -- bindings/js`. `uv run ruff check` (isort) passes on the six edited Python files.
+  - `scripts/test-all.bat`: all six suites PASS (C++ 1375, C API 571, Julia, Dart 440, JS 230, Python 344).
+- The first `test.bat` run after the 0.12.6 manifest bump spent several minutes rebuilding the editable `quiverdb` package: scikit-build-core compiles the core in Release. This is expected and happens only once.
+
+### For later plans
+
+- **28 (bool branches).** In `_marshal_row_columns`, keep the two lines `if isinstance(v, datetime): v = format_datetime(v)` that sit *above* the bool comment and branch. They are a pre-chain normalization, not a branch, and `test_upsert_time_series_row_accepts_datetime` guards them. `Element.set`'s new `datetime` branch sits after the `str` branch, away from the bool branch.
+- **29 (dead code).** `Element.set`'s `self._ensure_valid()` call and the `QuiverError` import in `element.py` are untouched.
+- **30 (docstrings).** The `upsert_time_series_row` docstring now reads `... str -> STRING, datetime -> STRING (an aware value is converted to UTC).`, followed by `No Int->Float coercion (per D-03: Python strict typing).` on its own line. Plan 30's "current" excerpt should match that.
+- **42 (rename).** The new tests call no `read_{vector,set}_date_time_by_id`.

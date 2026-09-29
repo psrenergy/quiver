@@ -26,6 +26,18 @@ callers to change something are prefixed **BREAKING** and say what to do.
   column is now rejected by the core instead of being truncated, including a whole-number one
   (`[65, 70.0]`); pass ints, or round the values yourself if you intended truncation.
 
+### Fixed
+
+- **Python: a `datetime` is accepted on every write path, and an aware one is stored as its UTC
+  instant.** `create_element`, `update_element` and `update_element_by_label` (scalar and list
+  attributes) and `upsert_time_series_row` / `upsert_time_series_row_by_label` raised `TypeError`
+  for a `datetime`, although every reader returns one, so a value read back could not be written
+  back. The group writers and `read_time_series_row` did take one but formatted its wall clock and
+  dropped the offset, while the readers stamp UTC: `10:00+03:00` was stored as `10:00` and read
+  back as `10:00Z`, three hours off, and `read_time_series_row` looked up the wrong instant the
+  same way. An aware value is now converted to UTC (`07:00`); a naive one is written as given.
+  Rows written earlier from an aware non-UTC value keep the wall-clock time they were stored with.
+
 ## [0.12.5] — unreleased
 
 ### Added

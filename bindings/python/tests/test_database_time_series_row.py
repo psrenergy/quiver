@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -72,6 +72,19 @@ class TestUpsertTimeSeriesRow:
         assert result["date_time"] == [_utc(2024, 2, 1)]
         assert result["value"] == [7.5]
 
+    def test_upsert_time_series_row_accepts_datetime(self, collections_db: Database) -> None:
+        """A datetime dimension value is accepted by both upserts; an aware one is stored as UTC."""
+        eid = _create_collection_element(collections_db, "Item1")
+        aware = datetime(2024, 1, 1, 10, tzinfo=timezone(timedelta(hours=3)))
+        collections_db.upsert_time_series_row("Collection", "data", eid, date_time=aware, value=10.0)
+        collections_db.upsert_time_series_row_by_label(
+            "Collection", "data", "Item1", date_time=datetime(2024, 1, 2), value=20.0
+        )
+
+        result = collections_db.read_time_series_group("Collection", "data", eid)
+        assert result["date_time"] == [datetime(2024, 1, 1, 7, tzinfo=timezone.utc), _utc(2024, 1, 2)]
+        assert result["value"] == [10.0, 20.0]
+
     def test_upsert_time_series_row_multi_dim(self, multi_dim_ts_db: Database) -> None:
         """Multi-dimension PK (date_time + block) round-trips through the Python wrapper."""
         eid = multi_dim_ts_db.create_element("Resource", label="R1")
@@ -138,6 +151,21 @@ class TestReadTimeSeriesRow:
 
         row = collections_db.read_time_series_row("Collection", "data", "value", datetime(2024, 1, 15))
         assert row == [10.5, 30.5]
+
+    def test_read_time_series_row_converts_aware_datetime_to_utc(self, collections_db: Database) -> None:
+        """An aware date_time is looked up at its UTC instant."""
+        eid = _create_collection_element(collections_db, "Item 1")
+        collections_db.update_time_series_group(
+            "Collection",
+            "data",
+            eid,
+            {"date_time": ["2024-01-01T07:00:00", "2024-01-01T09:00:00"], "value": [10.5, 20.5]},
+        )
+
+        # 11:00+03:00 is 08:00 UTC, so the 07:00 row is the last at or before it. Formatting the
+        # wall clock would look up 11:00 and return the 09:00 row.
+        at = datetime(2024, 1, 1, 11, tzinfo=timezone(timedelta(hours=3)))
+        assert collections_db.read_time_series_row("Collection", "data", "value", at) == [10.5]
 
     def test_read_time_series_row_no_elements(self, collections_db: Database) -> None:
         row = collections_db.read_time_series_row("Collection", "data", "value", datetime(2024, 1, 15))

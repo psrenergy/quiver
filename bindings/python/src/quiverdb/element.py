@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from datetime import datetime
+
 from quiverdb._c_api import ffi, get_lib
-from quiverdb._helpers import check, column_data_type, decode_string
+from quiverdb._helpers import check, column_data_type, decode_string, format_datetime
 from quiverdb.exceptions import QuiverError
 from quiverdb.metadata import DataType
 
@@ -19,8 +21,9 @@ class Element:
     def set(self, name: str, value: object) -> Element:
         """Set an attribute value. Returns self for fluent chaining.
 
-        Supported types: int, float, str, None, bool (stored as int), and lists of
-        int/bool, float or str -- a float anywhere in a numeric list makes it a float array.
+        Supported types: int, float, str, None, bool (stored as int), datetime (stored as a
+        DATE_TIME string, see format_datetime), and lists of int/bool, float, str or datetime --
+        a float anywhere in a numeric list makes it a float array.
         """
         self._ensure_valid()
         if value is None:
@@ -34,6 +37,8 @@ class Element:
             self._set_float(name, value)
         elif isinstance(value, str):
             self._set_string(name, value)
+        elif isinstance(value, datetime):
+            self._set_string(name, format_datetime(value))
         elif isinstance(value, list):
             self._set_array(name, value)
         else:
@@ -80,9 +85,8 @@ class Element:
         elif array_type == DataType.STRING:
             self._set_array_string(name, values)
         else:
-            # DataType.DATE_TIME: None was refused above, so every cell is a datetime and cell 0
-            # is the first one an element array does not accept yet.
-            raise TypeError(f"Unsupported value type {type(values[0]).__name__} in cell 0 of column '{name}'")
+            # DataType.DATE_TIME: None was refused above, so every cell is a datetime.
+            self._set_array_string(name, [format_datetime(v) for v in values])
 
     def _set_array_integer(self, name: str, values: list[int]) -> None:
         lib = get_lib()
