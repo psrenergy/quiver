@@ -1918,8 +1918,6 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         self._ensure_open()
         lib = get_lib()
         count = len(data)
-        if count == 0:
-            return
 
         keepalive: list = []
         c_columns = ffi.new("const char*[]", count)

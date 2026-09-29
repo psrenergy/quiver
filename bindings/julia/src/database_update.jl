@@ -308,10 +308,6 @@ function upsert_time_series_row_by_label!(db::Database, collection::String, grou
 end
 
 function update_time_series_files!(db::Database, collection::String, paths::AbstractDict{String, <:Optional{String}})
-    if isempty(paths)
-        return nothing
-    end
-
     count = length(paths)
     columns = collect(keys(paths))
     path_values = [paths[col] for col in columns]

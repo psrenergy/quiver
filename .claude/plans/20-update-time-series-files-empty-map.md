@@ -444,14 +444,14 @@ Run from the repo root (`C:\Development\Quiver\quiver1`). Use Git Bash for the e
 
 ## Acceptance criteria
 
-- [ ] `update_time_series_files!` (Julia) and `update_time_series_files` (Python) have no empty-map early return.
-- [ ] Dart `updateTimeSeriesFiles` has no early return and passes `nullptr` for both arrays when `count == 0`. It never calls `arena<…>(0)`.
-- [ ] JS `updateTimeSeriesFiles` calls `quiver_database_update_time_series_files(this._handle, collBuf.buf, null, null, 0n)` on `{}` and does not build zero-length tables.
-- [ ] Each binding raises `Cannot update_time_series_files: collection not found: NoSuchCollection` for an empty map on an unknown collection, pinned by one new test per binding.
-- [ ] New C++, C API and Lua tests pin the core order (validate, then no-op on empty) and pass.
-- [ ] No C API, `c_api.jl`, `bindings.dart`, `_c_api.py` or `loader.ts` change.
-- [ ] Root, Dart and JS AGENTS.md updated as specified. CHANGELOG `### Fixed` entry under 0.12.0 added.
-- [ ] `scripts\format.bat` leaves no diff outside the listed files. `scripts\test-all.bat` is green.
+- [x] `update_time_series_files!` (Julia) and `update_time_series_files` (Python) have no empty-map early return.
+- [x] Dart `updateTimeSeriesFiles` has no early return and passes `nullptr` for both arrays when `count == 0`. It never calls `arena<…>(0)`.
+- [x] JS `updateTimeSeriesFiles` calls `quiver_database_update_time_series_files(this._handle, collBuf.buf, null, null, 0n)` on `{}` and does not build zero-length tables.
+- [x] Each binding raises `Cannot update_time_series_files: collection not found: NoSuchCollection` for an empty map on an unknown collection, pinned by one new test per binding.
+- [x] New C++, C API and Lua tests pin the core order (validate, then no-op on empty) and pass.
+- [x] No C API, `c_api.jl`, `bindings.dart`, `_c_api.py` or `loader.ts` change.
+- [x] Root, Dart and JS AGENTS.md updated as specified. CHANGELOG `### Fixed` entry under 0.12.0 added. *(Landed under `## [0.12.5] — unreleased`, the open section. See Implementation notes.)*
+- [x] `scripts\format.bat` leaves no diff outside the listed files. `scripts\test-all.bat` is green. *(After restoring 40 JS files biome rewrote CRLF→LF only. See Implementation notes.)*
 
 ## Pitfalls
 
@@ -470,3 +470,33 @@ Run from the repo root (`C:\Development\Quiver\quiver1`). Use Git Bash for the e
 - The Lua-reference claims about `update_time_series_files` (whole-row replace, `nil` semantics) in `bindings/js/src/lua-api.ts`: plans 43 and 44.
 - Python docstring wording for `update_time_series_files`: plan 30.
 - Any change to the core's empty-map no-op or to the whole-row-replace semantics of a non-empty map: not planned, and the current behaviour is intended.
+
+## Implementation notes
+
+Implemented on `rs/plan20`. Before any edit the branch fast-forwarded from `afa5fea` to `35b7fba`, which brought in plans 17 (`28d6e1f`), 18 (`42790be`) and 19 (`063cfe0`). After that, `git fetch origin && git merge origin/master` reported "Already up to date". Every anchor was re-checked after the merge: the four binding early returns, `Database::update_time_series_files` (validate, then `if (paths.empty()) return;`, now at `src/database_time_series.cpp:401-414`), the C API `count > 0` guard, `update_time_series_files_lua`, all seven test anchors, and the three AGENTS.md passages. None changed apart from line numbers. Every code and test edit is the plan's text verbatim. `dart analyze` accepted the untyped `count == 0 ? nullptr : arena<Pointer<Char>>(count)` conditional, so no annotation was needed.
+
+**Results.**
+- TDD: the four new binding tests failed before the fix, each for the expected reason:
+  - Julia: `No exception thrown` (16 pass / 1 fail in the file).
+  - Dart: `Actual: <Closure: () => void> Which: returned <null>`.
+  - Python: `Failed: DID NOT RAISE QuiverError`.
+  - JS: `Received function did not throw`.
+
+  All four pass after the fix. The C++, C API and Lua pinning tests passed before the fix, as the plan predicts.
+- `*UpdateTimeSeriesFilesEmpty*`: 2/2 in `quiver_tests` and 1/1 in `quiver_c_tests`. `*TimeSeriesFiles*`: 14/14 and 9/9, exactly the plan's counts.
+- File-level runs: Julia 18/18, Dart 9/9. Python `-k empty_map` 1 passed, and JS 229/229.
+- `scripts/test-all.bat`: all six suites PASS (C++ 1375, C API 572, Julia 1558, Dart 436, JS 229, Python 325). That is plan 19's recorded totals plus exactly this plan's new tests. The script has six steps; the CLI smoke step is gone (see plan 65).
+- `dart analyze`: no issue in the touched files, only pre-existing `info`s elsewhere. biome, on the LF-normalized content that is what gets committed: both files are format-clean, and the only lint hits are the pre-existing unused `MIXED_TS_SCHEMA` / `NULLABLE_TS_SCHEMA` constants in the test file, left alone per the no-drive-by rule.
+
+**Drift fixed or noted:**
+1. The repo is `quiver4`, not `quiver1`, and line numbers moved as the Pitfalls anticipate.
+2. The CHANGELOG entry went under `## [0.12.5] — unreleased` → `### Fixed`, the open section plans 17/18 created, not under `0.12.0` (released). This is a patch bump for a non-breaking fix, so no manifest changes.
+3. `scripts/format.bat`: clang-format, JuliaFormatter, dart format and ruff changed nothing. biome rewrote 42 JS files CRLF→LF, as in plans 08-19; this checkout has `core.autocrlf=true`, so the working tree is CRLF and the index LF. `git diff --stat` showed content changes only in the 15 planned files, so the other 40 were restored with `git checkout --`. No `.bat` file changed.
+4. **The CHANGELOG wording deviates from §Docs 5.** The review found that the plan's text says both cases raise `collection not found`. The no-files-table case actually raises `find_time_series_files_table`'s own error. The entry now quotes the message only for the unknown collection and names the other as "the files-table-not-found error" without quoting it, since plan 57 rewords it.
+
+**Review.** A three-lens adversarial workflow read the diff: FFI marshalling of the empty path per binding, scope and doc accuracy, and completeness (any other early return, doc comment or test that pinned the old no-op). It confirmed only drift item 4, which is fixed. The FFI and completeness lenses raised nothing.
+
+**For later plans:**
+- **Plan 57** must keep the core's order, validate and only then `if (paths.empty()) return;`. The four bindings now depend on it, and `UpdateTimeSeriesFilesEmptyMapValidatesCollection` (C++ and C API) plus the Lua test pin it. Those tests assert only the `collection not found` text. The `Configuration` case is a bare `EXPECT_THROW` / `QUIVER_ERROR`, so 57 can reword the files-table message freely.
+- **Plan 43** (Lua reference prose on `update_time_series_files`) is unaffected: Lua behaviour did not change.
+- **Teammate branch `origin/db/patch-ts-files`** (unmerged, not a plan) rewrites the same core function to write only the named columns. It appends tests to the same seven test files, so merging it will conflict textually with this commit's appended tests; the conflicts are additive. Its semantics are compatible: an empty map stays a no-op after validation.

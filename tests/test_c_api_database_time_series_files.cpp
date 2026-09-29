@@ -243,3 +243,24 @@ TEST(DatabaseCApi, TimeSeriesFilesNullArguments) {
 
     quiver_database_close(db);
 }
+
+// count == 0 with NULL arrays is a legal call, and the core still validates the collection and its
+// files table before treating the empty map as a no-op. This is how the Dart and JS bindings
+// forward an empty map.
+TEST(DatabaseCApi, UpdateTimeSeriesFilesEmptyMapValidatesCollection) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    EXPECT_EQ(quiver_database_update_time_series_files(db, "NoSuchCollection", nullptr, nullptr, 0), QUIVER_ERROR);
+    EXPECT_STREQ(quiver_get_last_error(), "Cannot update_time_series_files: collection not found: NoSuchCollection");
+
+    // Configuration has no time series files table
+    EXPECT_EQ(quiver_database_update_time_series_files(db, "Configuration", nullptr, nullptr, 0), QUIVER_ERROR);
+
+    EXPECT_EQ(quiver_database_update_time_series_files(db, "Collection", nullptr, nullptr, 0), QUIVER_OK);
+
+    quiver_database_close(db);
+}
