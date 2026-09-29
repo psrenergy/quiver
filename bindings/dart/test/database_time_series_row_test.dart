@@ -194,6 +194,52 @@ void main() {
       }
     });
 
+    test('readTimeSeriesRow returns null for an element with no data', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'mixed_time_series.sql'),
+      );
+      try {
+        final id1 = db.createElement('Sensor', {'label': 'Sensor 1'});
+        db.createElement('Sensor', {'label': 'Sensor 2'}); // no rows
+
+        db.updateTimeSeriesGroup('Sensor', 'readings', id1, {
+          'date_time': ['2024-01-02T00:00:00'],
+          'temperature': [20.5],
+          'humidity': [0],
+          'status': ['ok'],
+        });
+
+        // A stored 0 and "no data" are distinguishable.
+        final at = DateTime(2024, 1, 2);
+        expect(
+          db.readTimeSeriesRow('Sensor', 'readings', 'humidity', at),
+          equals([0, null]),
+        );
+        expect(
+          db.readTimeSeriesRow('Sensor', 'readings', 'temperature', at),
+          equals([20.5, null]),
+        );
+        expect(
+          db.readTimeSeriesRow('Sensor', 'readings', 'status', at),
+          equals(['ok', null]),
+        );
+
+        // Before the first row even Sensor 1 has no data.
+        final before = DateTime(2024, 1, 1);
+        expect(
+          db.readTimeSeriesRow('Sensor', 'readings', 'humidity', before),
+          equals([null, null]),
+        );
+        expect(
+          db.readTimeSeriesRow('Sensor', 'readings', 'temperature', before),
+          equals([null, null]),
+        );
+      } finally {
+        db.close();
+      }
+    });
+
     test('readTimeSeriesRow throws on a multi-dimension group', () {
       final db = Database.fromSchema(
         ':memory:',

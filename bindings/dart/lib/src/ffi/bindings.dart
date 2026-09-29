@@ -2415,6 +2415,7 @@ class QuiverDatabaseBindings {
     ffi.Pointer<ffi.Char> date_time,
     ffi.Pointer<ffi.Int> out_data_type,
     ffi.Pointer<ffi.Pointer<ffi.Void>> out_values,
+    ffi.Pointer<ffi.Pointer<ffi.Uint8>> out_mask,
     ffi.Pointer<ffi.Size> out_count,
   ) {
     return _quiver_database_read_time_series_row(
@@ -2425,6 +2426,7 @@ class QuiverDatabaseBindings {
       date_time,
       out_data_type,
       out_values,
+      out_mask,
       out_count,
     );
   }
@@ -2440,6 +2442,7 @@ class QuiverDatabaseBindings {
             ffi.Pointer<ffi.Char>,
             ffi.Pointer<ffi.Int>,
             ffi.Pointer<ffi.Pointer<ffi.Void>>,
+            ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
             ffi.Pointer<ffi.Size>,
           )
         >
@@ -2454,6 +2457,7 @@ class QuiverDatabaseBindings {
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Int>,
           ffi.Pointer<ffi.Pointer<ffi.Void>>,
+          ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
           ffi.Pointer<ffi.Size>,
         )
       >();

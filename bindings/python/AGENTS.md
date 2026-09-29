@@ -56,7 +56,9 @@ ruff.toml         # Lint/format config (format.bat runs ruff)
   mask per element, parallel to `out_sizes` — freed by `quiver_database_free_masks`. The string
   readers carry no mask: a NULL cell is an `ffi.NULL` entry, guarded on read. The boolean and
   datetime wrappers map those lists while preserving their `None` slots. `_c_api.py` carries the
-  mask out-params and both free functions.
+  mask out-params and both free functions. `read_time_series_row` decodes the same kind of mask,
+  which the C API returns for **every** column type (strings included): mask 0 (no data at or
+  before the date) → `None`, and each type branch frees the data array and the mask in a `finally`.
 - **`_parse_datetime` gates on `_DATE_TIME_PATTERN` before calling `fromisoformat`.**
   `fromisoformat` is *wider* than the core's DATE_TIME grammar — it accepts `"20240115"`, a `Z`
   suffix and a UTC offset, none of which Julia's parser reads — so without the gate the same stored

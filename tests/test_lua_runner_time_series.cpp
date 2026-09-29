@@ -898,6 +898,33 @@ TEST_F(LuaRunnerTest, ReadTimeSeriesRowRejectsMultiDimensionGroup) {
         "Cannot read_time_series_row: group 'load' of collection 'Resource' has more than one dimension column");
 }
 
+TEST_F(LuaRunnerTest, ReadTimeSeriesRowNoDataIsNil) {
+    auto db = quiver::Database::from_schema(":memory:",
+                                            VALID_SCHEMA("mixed_time_series.sql"),
+                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(
+        db:create_element("Configuration", { label = "Config" })
+        local id1 = db:create_element("Sensor", { label = "Sensor 1" })
+        db:create_element("Sensor", { label = "Sensor 2" })
+        db:update_time_series_group("Sensor", "readings", id1, {
+            date_time = { "2024-01-01T00:00:00" },
+            temperature = { 20.5 },
+            humidity = { 0 },
+            status = { "ok" },
+        })
+
+        for _, attribute in ipairs({ "temperature", "humidity", "status" }) do
+            local row = db:read_time_series_row("Sensor", "readings", attribute, "2024-01-01T00:00:00")
+            assert(row[1] ~= nil, attribute .. ": Sensor 1 has data")
+            assert(row[2] == nil, attribute .. ": Sensor 2 has no data, got " .. tostring(row[2]))
+        end
+        local humidity = db:read_time_series_row("Sensor", "readings", "humidity", "2024-01-01T00:00:00")
+        assert(humidity[1] == 0, "a stored 0 is a value, got " .. tostring(humidity[1]))
+    )");
+}
+
 TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupByLabel) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));

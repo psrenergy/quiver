@@ -170,6 +170,10 @@ values = Quiver.read_time_series_row(
 )
 ```
 
+An element with no data at or before `date_time` reads as `nothing`, so in Julia the result is
+always a `Vector{Union{T, Nothing}}`, `T` taken from the attribute's type (`Int64`, `Float64` or
+`String`), even when every element has data.
+
 ## Updating data
 
 `update_time_series_group!` replaces **all** rows of the group for the element. To change a

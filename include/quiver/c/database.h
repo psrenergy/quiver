@@ -487,12 +487,14 @@ QUIVER_C_API quiver_error_t quiver_database_upsert_time_series_row_by_label(quiv
 // Uses "last non-null value at or before date_time" lookup semantics
 // out_data_type: attribute's data type (QUIVER_DATA_TYPE_*)
 // out_values: typed array (int64_t* for INTEGER, double* for FLOAT, char** for STRING/DATE_TIME)
-// out_count: number of elements in the collection
-// For elements with no matching data: INTEGER -> 0, FLOAT -> NaN, STRING/DATE_TIME -> NULL pointer
+// out_mask: presence mask, returned for every data type. out_mask[i] == 0 means the element has no
+// data at or before date_time; out_values[i] is then a placeholder (0 / 0.0 / NULL char*) to ignore
+// out_count: number of elements in the collection; 0 leaves out_values and out_mask NULL
 // Free out_values with the typed free function matching *out_data_type:
 //   INTEGER -> quiver_database_free_integer_array
 //   FLOAT -> quiver_database_free_float_array
 //   STRING/DATE_TIME -> quiver_database_free_string_array
+// and out_mask with quiver_database_free_mask
 QUIVER_C_API quiver_error_t quiver_database_read_time_series_row(quiver_database_t* db,
                                                                  const char* collection,
                                                                  const char* group,
@@ -500,6 +502,7 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_row(quiver_database
                                                                  const char* date_time,
                                                                  int* out_data_type,
                                                                  void** out_values,
+                                                                 uint8_t** out_mask,
                                                                  size_t* out_count);
 
 // Free multi-column time series read results
@@ -546,7 +549,8 @@ QUIVER_C_API quiver_error_t quiver_database_free_time_series_files(char** column
 QUIVER_C_API quiver_error_t quiver_database_free_integer_array(int64_t* values);
 QUIVER_C_API quiver_error_t quiver_database_free_float_array(double* values);
 QUIVER_C_API quiver_error_t quiver_database_free_string_array(char** values, size_t count);
-// Memory cleanup for the presence mask returned by the integer/float scalar readers
+// Memory cleanup for the presence mask returned by the integer/float scalar readers and by
+// quiver_database_read_time_series_row
 // and by the integer/float vector/set _by_id readers
 QUIVER_C_API quiver_error_t quiver_database_free_mask(uint8_t* mask);
 // Memory cleanup for the per-element presence masks returned by the integer/float

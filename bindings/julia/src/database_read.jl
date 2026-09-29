@@ -807,6 +807,7 @@ end
 function read_time_series_row(db::Database, collection::String, group::String, attribute::String; date_time::DateTime)
     out_data_type = Ref{Cint}(0)
     out_values = Ref{Ptr{Cvoid}}(C_NULL)
+    out_mask = Ref{Ptr{UInt8}}(C_NULL)
     out_count = Ref{Csize_t}(0)
 
     dt_str = date_time_to_string(date_time)
@@ -814,39 +815,42 @@ function read_time_series_row(db::Database, collection::String, group::String, a
     check(
         C.quiver_database_read_time_series_row(
             db.ptr, collection, group, attribute, dt_str,
-            out_data_type, out_values, out_count,
+            out_data_type, out_values, out_mask, out_count,
         ),
     )
 
     count = out_count[]
     data_type = out_data_type[]
 
-    if count == 0 || out_values[] == C_NULL
-        if data_type == Cint(C.QUIVER_DATA_TYPE_INTEGER)
-            return Int64[]
-        elseif data_type == Cint(C.QUIVER_DATA_TYPE_FLOAT)
-            return Float64[]
-        elseif data_type == Cint(C.QUIVER_DATA_TYPE_STRING) || data_type == Cint(C.QUIVER_DATA_TYPE_DATE_TIME)
-            return Optional{String}[]
-        end
-        return Any[]
-    end
-
+    # Always Vector{Optional{T}} with T keyed on the column's data type, empty or not: a `nothing`
+    # (mask 0) means "no data at or before date_time", so the optional is inherent to this reader.
     if data_type == Cint(C.QUIVER_DATA_TYPE_INTEGER)
+        count == 0 && return Optional{Int64}[]
         int_ptr = reinterpret(Ptr{Int64}, out_values[])
-        result = copy(unsafe_wrap(Array, int_ptr, count))
+        values = unsafe_wrap(Array, int_ptr, count)
+        mask = unsafe_wrap(Array, out_mask[], count)
+        result = Optional{Int64}[mask[i] != 0 ? values[i] : nothing for i in 1:count]
         C.quiver_database_free_integer_array(int_ptr)
+        C.quiver_database_free_mask(out_mask[])
         return result
     elseif data_type == Cint(C.QUIVER_DATA_TYPE_FLOAT)
+        count == 0 && return Optional{Float64}[]
         float_ptr = reinterpret(Ptr{Float64}, out_values[])
-        result = copy(unsafe_wrap(Array, float_ptr, count))
+        values = unsafe_wrap(Array, float_ptr, count)
+        mask = unsafe_wrap(Array, out_mask[], count)
+        result = Optional{Float64}[mask[i] != 0 ? values[i] : nothing for i in 1:count]
         C.quiver_database_free_float_array(float_ptr)
+        C.quiver_database_free_mask(out_mask[])
         return result
     elseif data_type == Cint(C.QUIVER_DATA_TYPE_STRING) || data_type == Cint(C.QUIVER_DATA_TYPE_DATE_TIME)
+        count == 0 && return Optional{String}[]
         str_ptr_ptr = reinterpret(Ptr{Ptr{Cchar}}, out_values[])
         str_ptrs = unsafe_wrap(Array, str_ptr_ptr, count)
-        result = Optional{String}[p == C_NULL ? nothing : unsafe_string(p) for p in str_ptrs]
+        mask = unsafe_wrap(Array, out_mask[], count)
+        # Never unsafe_string a masked-out (NULL) pointer.
+        result = Optional{String}[mask[i] != 0 ? unsafe_string(str_ptrs[i]) : nothing for i in 1:count]
         C.quiver_database_free_string_array(str_ptr_ptr, Csize_t(count))
+        C.quiver_database_free_mask(out_mask[])
         return result
     end
 

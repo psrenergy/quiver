@@ -87,8 +87,10 @@ biome.json        # Lint/format config
   then a `Uint8Array` per element sized by `sizes[i]`, freed by `quiver_database_free_masks`. Every
   string reader (scalar, `readBulkStrings`, `readByIdStrings`) reads pointer-by-pointer with
   `decodePtrArray` + a NULL guard — **never `decodeStringArray`**, which turns a NULL `char*` into
-  `""`. `loader.ts` carries the mask args on the eight numeric vector/set symbols plus both free
-  functions (hand-maintained, no generator).
+  `""`. `loader.ts` carries the mask args on the eight numeric vector/set symbols and on
+  `quiver_database_read_time_series_row`, plus both free functions (hand-maintained, no
+  generator). `readTimeSeriesRow` gates every column type on its mask the same way (mask 0 = no
+  data at or before the date → `null`) and builds a `CString` only for an unmasked slot.
 - **`LuaRunner.run` owns its result**: `quiver_lua_runner_run` takes a `char** out_result` and the
   JSON string must be freed with `quiver_lua_runner_free_string` — *not* `quiver_database_free_string`
   (both are in `loader.ts`, hand-maintained). `decodeStringFromBuf` returns `""` for a NULL pointer,
