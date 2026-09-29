@@ -601,3 +601,41 @@ TEST_F(LuaRunnerTest, ReadVectorPreservesNullCellsAsNilHoles) {
         assert(by_id.value_int[3] == 30, "by_id[3] should be 30")
     )");
 }
+
+TEST_F(LuaRunnerTest, ReadSetPreservesNullCellsAsNilHoles) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    db.create_element("Collection",
+                      quiver::Element()
+                          .set("label", "Item 1")
+                          .set("tag", std::vector<quiver::Value>{std::string("a"), nullptr, std::string("c")}));
+
+    quiver::LuaRunner lua(db);
+
+    // Set order is unspecified, so count the cells over indices 1..3 rather than pinning a slot. A
+    // dropped NULL would also leave one nil in 1..3 (a trailing one), so also require a value at
+    // index 3: that relies on rowid order only to the extent that the NULL, written in the middle,
+    // is not the last row - a Lua inner list has no count authority to say more (design decision).
+    lua.run(R"(
+        local function tally(t)
+            local nils, found = 0, {}
+            for i = 1, 3 do
+                if t[i] == nil then nils = nils + 1 else found[t[i]] = true end
+            end
+            assert(t[3] ~= nil, "Expected a value after the nil hole, got a list cut short")
+            return nils, found
+        end
+
+        local sets = db:read_set_strings("Collection", "tag")
+        assert(#sets == 1, "Expected 1 entry, got " .. #sets)
+        local nils, found = tally(sets[1])
+        assert(nils == 1, "Expected one nil hole in the bulk read, got " .. nils)
+        assert(found.a and found.c, "Bulk read should hold 'a' and 'c'")
+
+        local by_id = db:read_sets_by_id("Collection", db:read_element_ids("Collection")[1])
+        nils, found = tally(by_id.tag)
+        assert(nils == 1, "Expected one nil hole in read_sets_by_id, got " .. nils)
+        assert(found.a and found.c, "read_sets_by_id should hold 'a' and 'c'")
+    )");
+}

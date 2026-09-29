@@ -238,6 +238,74 @@ include("fixture.jl")
         Quiver.close!(db)
     end
 
+    @testset "Vector Group by ID Keeps NULL Cells In Place" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "multi_column_groups.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+        id = Quiver.create_element!(db, "Items"; label = "Item 1")
+
+        Quiver.update_vector_group!(db, "Items", "readings", id; amount = [1.5, 2.5], score = [nothing, 20.5])
+        rows = Quiver.read_vector_group_by_id(db, "Items", "readings", id)
+        @test length(rows) == 2
+        @test rows[1]["amount"] == 1.5
+        @test rows[1]["score"] === nothing
+        @test rows[2]["amount"] == 2.5
+        @test rows[2]["score"] == 20.5
+
+        Quiver.update_vector_group!(db, "Items", "readings", id; amount = [nothing, 2.5], score = [10.5, 20.5])
+        rows = Quiver.read_vector_group_by_id(db, "Items", "readings", id)
+        @test length(rows) == 2
+        @test rows[1]["amount"] === nothing
+        @test rows[1]["score"] == 10.5
+        @test rows[2]["amount"] == 2.5
+        @test rows[2]["score"] == 20.5
+
+        Quiver.close!(db)
+    end
+
+    @testset "Vector Group by ID Parses DateTime Columns" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "multi_column_groups.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+        id = Quiver.create_element!(db, "Items"; label = "Item 1")
+        Quiver.update_vector_group!(db, "Items", "events", id;
+            date_event = [DateTime(2024, 1, 15, 10, 30, 0), nothing, DateTime(2024, 3, 1)],
+            note = [nothing, "second", "third"],
+        )
+
+        rows = Quiver.read_vector_group_by_id(db, "Items", "events", id)
+        @test length(rows) == 3
+        @test rows[1]["date_event"] == DateTime(2024, 1, 15, 10, 30, 0)
+        @test rows[1]["note"] === nothing
+        @test rows[2]["date_event"] === nothing
+        @test rows[2]["note"] == "second"
+        @test rows[3]["date_event"] == DateTime(2024, 3, 1)
+        @test rows[3]["note"] == "third"
+
+        Quiver.close!(db)
+    end
+
+    @testset "Vector Group by ID Reads Its Own Table When Groups Share A Column" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "shared_group_columns.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+        parent_a = Quiver.create_element!(db, "Parent"; label = "Parent A")
+        parent_b = Quiver.create_element!(db, "Parent"; label = "Parent B")
+        child = Quiver.create_element!(db, "Child"; label = "Child 1")
+
+        # links and routes share parent_ref, and a per-column read of that name resolves to links.
+        Quiver.update_vector_group!(db, "Child", "links", child; parent_ref = [parent_a])
+        Quiver.update_vector_group!(db, "Child", "routes", child; parent_ref = [parent_b, parent_b], cost = [1.5, 2.5])
+
+        rows = Quiver.read_vector_group_by_id(db, "Child", "routes", child)
+        @test [(row["parent_ref"], row["cost"]) for row in rows] == [(parent_b, 1.5), (parent_b, 2.5)]
+
+        Quiver.close!(db)
+    end
+
     @testset "read_vectors_by_id" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "composite_helpers.sql")
         db = Quiver.from_schema(":memory:", path_schema)
@@ -292,6 +360,22 @@ include("fixture.jl")
         Quiver.close!(db)
     end
 
+    @testset "Nullable booleans keep NULL cells" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+        id = Quiver.create_element!(db, "Collection"; label = "Item 1")
+        Quiver.update_vector_group!(db, "Collection", "values", id; value_int = [1, nothing, 0])
+
+        @test Quiver.read_vector_booleans(db, "Collection", "value_int") == [[true, nothing, false]]
+        @test Quiver.read_vector_booleans(db, "Collection", "value_int") isa Vector{Vector{Union{Bool, Nothing}}}
+        @test Quiver.read_vector_booleans_by_id(db, "Collection", "value_int", id) == [true, nothing, false]
+        @test Quiver.read_vector_booleans_by_id(db, "Collection", "value_int", id) isa Vector{Union{Bool, Nothing}}
+
+        Quiver.close!(db)
+    end
+
     @testset "Concrete element types for NOT NULL columns" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "all_types.sql")
         db = Quiver.from_schema(":memory:", path_schema)
@@ -337,6 +421,15 @@ include("fixture.jl")
         with_null = Quiver.read_vector_integers_by_id(db, "Collection", "value_int", id)
         @test_throws ArgumentError Quiver.update_element!(db, "Collection", copy_id; value_int = with_null)
         @test Quiver.read_vector_integers_by_id(db, "Collection", "value_int", copy_id) == [1, 2, 3]
+
+        # The boolean wrapper's nullable read (Vector{Union{Nothing, Bool}}) round-trips the same way.
+        flags_id = Quiver.create_element!(db, "Collection"; label = "Item 3", value_int = [1, 0])
+        flags = Quiver.read_vector_booleans_by_id(db, "Collection", "value_int", flags_id)
+        flags_copy = Quiver.create_element!(db, "Collection"; label = "Item 4", value_int = flags)
+        @test Quiver.read_vector_integers_by_id(db, "Collection", "value_int", flags_copy) == [1, 0]
+        Quiver.update_vector_group!(db, "Collection", "values", flags_id; value_int = [1, nothing])
+        flags_with_null = Quiver.read_vector_booleans_by_id(db, "Collection", "value_int", flags_id)
+        @test_throws ArgumentError Quiver.update_element!(db, "Collection", flags_copy; value_int = flags_with_null)
 
         Quiver.close!(db)
     end

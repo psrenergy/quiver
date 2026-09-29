@@ -351,6 +351,7 @@ TEST(DatabaseCApi, ReadVectorByIdEmpty) {
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(count, 0);
     EXPECT_EQ(values, nullptr);
+    EXPECT_EQ(mask, nullptr);
 
     quiver_database_close(db);
 }
@@ -744,6 +745,7 @@ TEST(DatabaseCApi, ReadVectorIntegersPreservesNullCells) {
     EXPECT_EQ(masks[0][1], 0);
     EXPECT_EQ(masks[0][2], 1);
     EXPECT_EQ(vectors[0][0], 10);
+    EXPECT_EQ(vectors[0][1], 0);  // the documented placeholder in a masked slot
     EXPECT_EQ(vectors[0][2], 30);
     // The element with no rows is an empty entry, not a NULL cell.
     EXPECT_EQ(sizes[1], 0);
@@ -769,6 +771,86 @@ TEST(DatabaseCApi, ReadVectorIntegersPreservesNullCells) {
     EXPECT_EQ(by_id[2], 30);
     quiver_database_free_integer_array(by_id);
     quiver_database_free_mask(by_id_mask);
+
+    // value_float shares the group and was never written, so every cell of Item 1 is NULL.
+    double** float_vectors = nullptr;
+    uint8_t** float_masks = nullptr;
+    size_t* float_sizes = nullptr;
+    size_t float_count = 0;
+    ASSERT_EQ(quiver_database_read_vector_floats(
+                  db, "Collection", "value_float", &float_vectors, &float_masks, &float_sizes, &float_count),
+              QUIVER_OK);
+    ASSERT_EQ(float_count, 3);
+    ASSERT_EQ(float_sizes[0], 3);
+    for (size_t j = 0; j < 3; ++j) {
+        EXPECT_EQ(float_masks[0][j], 0);
+        EXPECT_EQ(float_vectors[0][j], 0.0);
+    }
+    EXPECT_EQ(float_sizes[1], 0);
+    EXPECT_EQ(float_sizes[2], 1);
+    EXPECT_EQ(float_masks[2][0], 0);
+    quiver_database_free_float_vectors(float_vectors, float_sizes, float_count);
+    quiver_database_free_masks(float_masks, float_count);
+
+    double* float_by_id = nullptr;
+    uint8_t* float_by_id_mask = nullptr;
+    size_t float_by_id_count = 0;
+    ASSERT_EQ(quiver_database_read_vector_floats_by_id(
+                  db, "Collection", "value_float", id1, &float_by_id, &float_by_id_mask, &float_by_id_count),
+              QUIVER_OK);
+    ASSERT_EQ(float_by_id_count, 3);
+    for (size_t j = 0; j < 3; ++j) {
+        EXPECT_EQ(float_by_id_mask[j], 0);
+    }
+    quiver_database_free_float_array(float_by_id);
+    quiver_database_free_mask(float_by_id_mask);
+
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, ReadVectorStringsPreservesNullCells) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("multi_column_groups.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    quiver_element_t* config = nullptr;
+    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
+    quiver_element_set_string(config, "label", "Test Config");
+    int64_t config_id = 0;
+    quiver_database_create_element(db, "Configuration", config, &config_id);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
+
+    // note lives only in Items_vector_events, so the array routes there; a nullptr entry is NULL.
+    quiver_element_t* e = nullptr;
+    ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
+    quiver_element_set_string(e, "label", "Item 1");
+    const char* notes[] = {"x", nullptr, "z"};
+    quiver_element_set_array_string(e, "note", notes, 3, nullptr);
+    int64_t id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Items", e, &id), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
+
+    char*** vectors = nullptr;
+    size_t* sizes = nullptr;
+    size_t count = 0;
+    ASSERT_EQ(quiver_database_read_vector_strings(db, "Items", "note", &vectors, &sizes, &count), QUIVER_OK);
+    ASSERT_EQ(count, 1);
+    ASSERT_EQ(sizes[0], 3);
+    EXPECT_STREQ(vectors[0][0], "x");
+    EXPECT_EQ(vectors[0][1], nullptr);
+    EXPECT_STREQ(vectors[0][2], "z");
+    quiver_database_free_string_vectors(vectors, sizes, count);
+
+    char** by_id = nullptr;
+    size_t by_id_count = 0;
+    ASSERT_EQ(quiver_database_read_vector_strings_by_id(db, "Items", "note", id, &by_id, &by_id_count), QUIVER_OK);
+    ASSERT_EQ(by_id_count, 3);
+    EXPECT_STREQ(by_id[0], "x");
+    EXPECT_EQ(by_id[1], nullptr);
+    EXPECT_STREQ(by_id[2], "z");
+    quiver_database_free_string_array(by_id, by_id_count);
 
     quiver_database_close(db);
 }

@@ -104,8 +104,10 @@ the binary/expression subsystems (`test_binary_file.jl`, `test_binary_metadata.j
 The boolean convenience readers have one file per binding — `test_database_boolean.jl`,
 `database_boolean_test.dart`, `test_database_boolean.py`, `database-boolean.test.ts` — all over
 `valid/all_types.sql` (`some_integer` scalar, `count_value` vector, `code` set). Their NULL-cell
-cases are the exception: every group column of `all_types.sql` is `NOT NULL`, so those sit next to
-the integer NULL-cell tests in the vector/set `read` files, over `valid/collections.sql`. There is
+cases are the exception: every group column of `all_types.sql` is `NOT NULL`, so the vector ones sit
+next to the integer NULL-cell tests in the vector `read` files over `valid/collections.sql`'s
+`value_int` (all four bindings), and the set ones over `valid/relations.sql`'s
+`Child_set_scores.score` (Python and Dart only). There is
 no C++/C counterpart for the **readers**: those wrappers are binding-only, and Lua is deliberately
 excluded (root design decisions).
 
@@ -138,11 +140,16 @@ the four bindings extend their own boolean files. Two things to keep in mind whe
   Release, with no divergence.
 
 The native-DateTime bindings (Julia, Dart, and Python) cover bulk scalar, vector, and set
-convenience readers in the corresponding `read` test files. Scalar coverage includes positional
-NULLs; vector/set DateTime coverage is empty reads and elements without group rows only — no valid
-schema has a nullable date column in a vector or set group, so the wrappers' NULL-cell branches are
-untested. Per-cell NULLs are covered through the integer, string and boolean readers in every
-binding (a middle NULL next to an element with no rows). The pair only the LEFT JOIN's presence
+convenience readers in the corresponding `read` test files, NULL cells included: the set wrappers
+over `collections.sql`'s nullable `tag` (the wrappers parse any TEXT column), the vector ones in
+Dart and Python over `multi_column_groups.sql`'s nullable `Items_vector_events.date_event`, which
+is also the only `date_`-typed (DATE_TIME) column in any vector or set group. Per-cell NULLs are
+covered through every vector/set reader, bulk and by id, in Python and Dart (integer, float, string
+and boolean) and in the C API (integer, float and string; it has no boolean readers). JS covers
+vector integers and booleans (bulk and by id), vector floats (bulk and by id), set strings (bulk and
+by id) and bulk set floats, which between them reach every decode helper in `read.ts`; Julia covers
+integer and boolean vectors, string sets, the DateTime set wrapper, the whole-group readers and
+`set_relation_map`'s skip of a NULL cell. The pair only the LEFT JOIN's presence
 column can tell apart — an element with no rows next to an element whose only row is NULL — is
 pinned in the C++ core (`Read{Vector,Set}DistinguishesNoRowsFromNullOnlyRow`) and through the C ABI
 (`ReadVectorIntegersPreservesNullCells`: a size-1 entry with a 0 mask, not an empty one), which is
@@ -172,7 +179,8 @@ never copy them into a binding.
   `csv_export.sql`, `csv_group_vector_index.sql`, `csv_import_cascade_cycle.sql`,
   `csv_import_self_cascade.sql`, `describe_multi_group.sql`, `mixed_time_series.sql`,
   `multi_column_groups.sql`, `multi_dim_time_series.sql`, `multi_time_series.sql`,
-  `nullable_time_series.sql`, `relations.sql`, `time_series_date_columns.sql`
+  `nullable_time_series.sql`, `relations.sql`, `shared_group_columns.sql`,
+  `time_series_date_columns.sql`
   - `csv_group_vector_index.sql` gives a set group (`Codes_set_tags`) a TEXT `vector_index` column
     and a time-series group (`Items_time_series_slots`) an INTEGER one — two collections, since one
     may not declare an attribute in two groups. Only a vector group's `vector_index` is structural,
@@ -189,8 +197,17 @@ never copy them into a binding.
   - `multi_column_groups.sql` is the vector/set counterpart of the multi-column time-series
     schemas: `Items_vector_readings` (`amount`, `score`) and `Items_set_codes` (`code`, `weight`),
     both nullable, with the value columns deliberately named so the alphabetically-first one is
-    not the only one — that ordering is what exposed the group-insert row-count bug. Note every
-    set value column must be part of the UNIQUE constraint.
+    not the only one — that ordering is what exposed the group-insert row-count bug — plus
+    `Items_vector_events` (`date_event` DATE_TIME, `note` TEXT, both nullable) for the whole-group
+    readers' DATE_TIME parsing and NULL string cells. Note every set value column must be part of
+    the UNIQUE constraint.
+  - `shared_group_columns.sql` has groups whose column names collide, which the validator allows
+    for FK columns: `Child_vector_links` / `Child_vector_routes` and `Child_set_mentors` /
+    `Child_set_sponsors` share `parent_ref`, and `Child_vector_cost` is named after `routes`'
+    `cost` column without holding it, as `Child_set_tier` is after `sponsors`' `tier`. A per-column
+    reader resolves a column name, so only the whole-group readers are sure to read a named group's
+    own table (`ReadGroupByIdReadsItsOwnTableWhenGroupsShareAColumn`,
+    `ReadGroupColumnSkipsGroupNamedAfterAColumnItLacks`, and the binding tests on this schema).
   - `time_series_date_columns.sql` pins which column is a time series' dimension.
     `Plant_time_series_events` has a nullable `date_approved` value column that sorts before its
     key column `date_time`, so a lookup that scans columns by name instead of the primary key

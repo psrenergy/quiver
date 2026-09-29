@@ -39,12 +39,15 @@ Project.toml      # Deps: Artifacts, CEnum, Dates, Libdl; julia 1.11 compat
   core reports `not_null`) raises instead of passing the C placeholder `0`/`0.0` off as data, and
   the C arrays are freed in `finally`. The public by-id readers wrap `_read_*_by_id(..., not_null)`
   kernels: `read_{vectors,sets}_by_id` pass the answer from the groups they already listed, and
-  `read_{vector,set}_group_by_id` and `set_relation_map` pass `false` (their values end up untyped),
-  so no composite pays a `list_*_groups` round-trip per column or per element. The boolean/datetime
+  `set_relation_map` passes `false` (its values end up untyped), so no composite pays a
+  `list_*_groups` round-trip per column or per element. The boolean/datetime
   wrappers recover nullability from the delegate's container type (`values isa
   Vector{Vector{Int64}}`), so there is no second metadata hop. `Element` accepts the
-  `Vector{Union{Nothing, T}}` a nullable read returns (narrowed; a real `nothing` cell raises
-  `ArgumentError` — NULL cells are written with `update_vector_group!` / `update_set_group!`).
+  `Vector{Union{Nothing, T}}` a nullable read returns, `Optional{Bool}` from the boolean wrappers
+  included (narrowed; a real `nothing` cell raises `ArgumentError` — NULL cells are written with
+  `update_vector_group!` / `update_set_group!` / `update_time_series_group!`). The union is an
+  explicit list on purpose: a `where T` form would also match `Vector{Any}`, which must keep
+  raising `MethodError`.
 - **Scalar bulk NULLs (nullability-aware element type)**: `read_scalar_{integers,floats,strings}`
   first read `get_scalar_metadata(db, collection, attribute).not_null`, then return a **concrete
   `Vector{T}`** for `NOT NULL` columns and a **`Vector{Optional{T}}`** for nullable columns — for
@@ -104,6 +107,17 @@ Project.toml      # Deps: Artifacts, CEnum, Dates, Libdl; julia 1.11 compat
   one-line wrappers over it, with the same `key::Union{Int64, String}` note. Kept separate from
   `_update_group_columns` because the row-upsert C signature carries no per-cell NULL mask, and
   that helper writes a zeroed placeholder for a masked cell.
+- **The whole-group readers call the native C readers**: `read_vector_group_by_id` /
+  `read_set_group_by_id` are one-line wrappers over `_read_group_rows(db, read_group, ...)`
+  (`src/database_read.jl`), which takes the C entry point as `_update_group_columns` does, decodes
+  the columnar typed arrays + per-cell mask into `Vector{Dict{String, Any}}` rows (masked cell →
+  `nothing`, DATE_TIME column → `DateTime` via `string_to_date_time`, never `unsafe_string` on a
+  masked-out pointer) and frees with `quiver_database_free_time_series_data` in a `finally`. They
+  used to zip one per-column `_by_id` read per column, and a per-column read resolves the column
+  *name*: a column another group of the same kind shares came from that group's table (wrong rows,
+  or a `BoundsError` from the row count of the last column), and the N reads were N snapshots.
+  `read_time_series_group` keeps its own decode on purpose: it returns columns and parses only the
+  dimension column, by name.
 - **A nullable scalar string argument passes `Ptr{Cchar}(C_NULL)`, never `""`**
   (`update_relation!`/`update_relation_by_label!`) — the C API reads NULL as "clear the relation"
   and an empty string as a label to look up. The `GC.@preserve` rule above does not apply: there

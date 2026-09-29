@@ -137,6 +137,20 @@ def multi_column_groups_db(multi_column_groups_schema_path: Path, tmp_path: Path
 
 
 @pytest.fixture
+def shared_group_columns_schema_path(schemas_path: Path) -> Path:
+    """Return the path to the schema whose groups share column names."""
+    return schemas_path / "valid" / "shared_group_columns.sql"
+
+
+@pytest.fixture
+def shared_group_columns_db(shared_group_columns_schema_path: Path, tmp_path: Path) -> Generator[Database, None, None]:
+    """Create a test database with the shared_group_columns schema."""
+    database = Database.from_schema(str(tmp_path / "shared_group_columns.db"), str(shared_group_columns_schema_path))
+    yield database
+    database.close()
+
+
+@pytest.fixture
 def mixed_time_series_schema_path(schemas_path: Path) -> Path:
     """Return the path to the mixed time series test schema."""
     return schemas_path / "valid" / "mixed_time_series.sql"

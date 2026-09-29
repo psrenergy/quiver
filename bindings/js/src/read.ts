@@ -14,6 +14,7 @@ import {
   readUint64Out,
   toCString,
 } from "./ffi-helpers.ts";
+import { readGroupColumns, type TimeSeriesData } from "./group-columns.ts";
 import { getSymbols, type NativePointer } from "./loader.ts";
 
 // --- Scalar array reads ---
@@ -696,5 +697,60 @@ Database.prototype.readSetStringsById = function (
     collection,
     attribute,
     id,
+  );
+};
+
+// --- Whole-group reads ---
+
+/** One record per row, from decoded columns that all share one length. */
+function columnsToRows(columns: TimeSeriesData): Record<string, number | string | null>[] {
+  const names = Object.keys(columns);
+  if (names.length === 0) return [];
+  return columns[names[0]].map((_, r) =>
+    Object.fromEntries(names.map((name) => [name, columns[name][r]])),
+  );
+}
+
+/**
+ * Read an element's vector group as one record per row, in vector_index order. One native read of
+ * the named group's own table: a SQL NULL cell is `null` in its row, and a column name another
+ * group shares still reads this group (a per-column reader resolves the name). DATE_TIME cells
+ * stay ISO 8601 strings.
+ */
+Database.prototype.readVectorGroupById = function (
+  this: Database,
+  collection: string,
+  group: string,
+  id: number,
+): Record<string, number | string | null>[] {
+  return columnsToRows(
+    readGroupColumns(
+      this._handle,
+      getSymbols().quiver_database_read_vector_group_by_id,
+      collection,
+      group,
+      id,
+    ),
+  );
+};
+
+/**
+ * Set-group counterpart of readVectorGroupById. Row order is consistent across every reader of
+ * the group, otherwise unspecified.
+ */
+Database.prototype.readSetGroupById = function (
+  this: Database,
+  collection: string,
+  group: string,
+  id: number,
+): Record<string, number | string | null>[] {
+  return columnsToRows(
+    readGroupColumns(
+      this._handle,
+      getSymbols().quiver_database_read_set_group_by_id,
+      collection,
+      group,
+      id,
+    ),
   );
 };

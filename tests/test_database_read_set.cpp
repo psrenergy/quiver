@@ -80,7 +80,8 @@ TEST(Database, ReadSetIncludesElementsWithNoRows) {
     ASSERT_EQ(sets.size(), ids.size());
     EXPECT_EQ(sets[0], (std::vector<std::optional<std::string>>{"important"}));
     EXPECT_TRUE(sets[1].empty());
-    EXPECT_EQ(sets[2], (std::vector<std::optional<std::string>>{"urgent", "review"}));
+    std::sort(sets[2].begin(), sets[2].end());
+    EXPECT_EQ(sets[2], (std::vector<std::optional<std::string>>{"review", "urgent"}));
 }
 
 // ============================================================================
@@ -366,12 +367,13 @@ TEST(Database, ReadSetPreservesNullCells) {
         .set("tag", std::vector<quiver::Value>{std::string("a"), nullptr, std::string("c")});
     int64_t id = db.create_element("Collection", e);
 
+    // Set order is unspecified: pin the agreement between readers and the content, not the order.
     auto sets = db.read_set_strings("Collection", "tag");
     ASSERT_EQ(sets.size(), 1u);
-    EXPECT_EQ(sets[0], (std::vector<std::optional<std::string>>{"a", std::nullopt, "c"}));
-
-    EXPECT_EQ(db.read_set_strings_by_id("Collection", "tag", id),
-              (std::vector<std::optional<std::string>>{"a", std::nullopt, "c"}));
+    auto by_id = db.read_set_strings_by_id("Collection", "tag", id);
+    EXPECT_EQ(sets[0], by_id);
+    std::sort(by_id.begin(), by_id.end());  // nullopt sorts first
+    EXPECT_EQ(by_id, (std::vector<std::optional<std::string>>{std::nullopt, "a", "c"}));
 }
 
 TEST(Database, ReadSetDistinguishesNoRowsFromNullOnlyRow) {

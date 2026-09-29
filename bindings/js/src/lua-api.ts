@@ -399,7 +399,10 @@ Scalar attributes with no value come back as \`nil\`.
 
 **Group columns keep NULL cells as \`nil\` holes**, so cell *i* of every column of one group is
 the same row. Zipping them needs the row count: \`#\` of a \`NOT NULL\` column of the group.
-There is no row-shaped group read in Lua.
+There is no row-shaped group read in Lua. The result is keyed by column name, so when two vector
+(or two set) groups share a column name, which a foreign key may, that name appears once and is
+read from the group it resolves to (the one named after it, else the one whose table name sorts
+first) — do not zip it with the other group's columns.
 
 ---
 

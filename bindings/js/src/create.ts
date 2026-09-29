@@ -29,12 +29,13 @@ function setElementArray(
 
   const first = values[0];
 
-  // A vector/set read returns a NULL cell as null. The element surface is non-null (NULL cells go
-  // through updateVectorGroup / updateSetGroup), and the numeric setters below would store a null
-  // as 0 / false. A string array keeps its NULL-pointer path, which the C setter reads as NULL.
-  if (typeof first !== "string" && values.some((v) => v === null || v === undefined)) {
+  // A vector/set/time-series read returns a NULL cell as null. The element surface is non-null
+  // (NULL cells go through the group writers), whatever the cell's position or the array's type:
+  // the numeric setters below would store a null as 0 / false, and a string array would store an
+  // `undefined` as the text "undefined". `includes`, not `some`: it also sees a sparse array's holes.
+  if (values.includes(null) || values.includes(undefined)) {
     throw new QuiverError(
-      `Unsupported null cell in array '${name}': write NULL cells with updateVectorGroup or updateSetGroup`,
+      `Unsupported null cell in array '${name}': write NULL cells with updateVectorGroup, updateSetGroup or updateTimeSeriesGroup`,
     );
   }
 

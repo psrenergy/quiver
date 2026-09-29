@@ -7,6 +7,16 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ## [0.12.5] — unreleased
 
+### Added
+
+- **JS: `readVectorGroupById()` / `readSetGroupById()`.** The whole-group readers Julia, Dart and
+  Python already had. Each returns one record per row, `Record<string, number | string | null>[]`,
+  read from the named group's own table in one statement: a SQL NULL cell is `null` in its row,
+  and a DATE_TIME cell stays an ISO 8601 string, as in every JS reader. Prefer them to zipping
+  `readVectorFloatsById` and the other per-column readers, which resolve a column *name*: when two
+  groups of one kind share a column name (legal for a foreign key), the zip pairs another group's
+  values with this one's.
+
 ### Changed
 
 - **BREAKING — `read_time_series_row()` returns null, not `0` / `NaN`, for an element with no
@@ -24,6 +34,35 @@ callers to change something are prefixed **BREAKING** and say what to do.
   `isnan(x)` / `x == 0` no-data checks with a null check (`x === nothing`, `x == null`,
   `x is None`). Julia code typed on `Vector{Float64}` / `Vector{Int64}` must accept the `Union`
   element type (`something.(v, NaN)` gives back the old `Vector{Float64}` for a REAL column).
+
+### Fixed
+
+- **Julia and Python: `read_vector_group_by_id` / `read_set_group_by_id` read the group they are
+  given.** Both built their rows from one per-column read per column, and a per-column read
+  resolves the column *name*: when two groups of one kind share a column name (legal for a foreign
+  key), the column came from whichever group's table sorts first, so the rows paired another
+  group's values with this group's or raised `BoundsError` / `IndexError`. They now call the native
+  C reader, as Dart does: one statement over the named group's own table, so the rows no longer mix
+  separate snapshots either. A group with no such shared name reads back as before, with one
+  exception: a non-integral REAL stored in a non-STRICT INTEGER group column (reachable only through
+  raw SQL) now reads as its truncated integer, as it already did in Dart, instead of
+  `nothing` / `None`.
+- **A vector or set group named after another group's column no longer hides that column.** The
+  per-column readers (`read_{vector,set}_{integers,floats,strings}` and their `_by_id` forms, in
+  every layer) took the group named after the column even when that group did not hold it, and
+  threw `Cannot read_vector_floats_by_id: column 'cost' not found in table 'Child_vector_cost'`.
+  They now fall through to the group that holds the column.
+- **Julia: `create_element!` / `update_element!` take a nullable boolean read.**
+  `read_vector_booleans` / `read_set_booleans` (and their `_by_id` forms) on a nullable column
+  return `Vector{Union{Nothing, Bool}}` since 0.12.4, which no `Element` method accepted
+  (`MethodError`). It now round-trips like the other nullable reads, and a real `nothing` cell
+  raises the `ArgumentError` naming the column.
+- **JS: an element array refuses a `null` cell in any position.** A string array decided by its
+  first cell: `["a", null]` stored a SQL NULL while `[null, "a"]` threw, and `["a", undefined]`
+  stored the text `"undefined"`. Every array now throws on a `null` or `undefined` cell, as in
+  Python, Julia and Lua. *Adapt:* write NULL cells with `updateVectorGroup` / `updateSetGroup`.
+- The element-array null-cell error in Julia, Python and JS also names `update_time_series_group`,
+  which writes NULL cells too.
 
 ## [0.12.4] — 2026-09-29
 
@@ -109,11 +148,14 @@ callers to change something are prefixed **BREAKING** and say what to do.
   *Adapt:* unwrap the inner values (`*v` / `v.value()`, `v === null` checks, `t[i] == nil` in Lua)
   and, in C, pass and free the new mask out-parameters and NULL-check every `char*` a string reader
   returns before using it. Inner lists that used to be short are now full length, so a length read
-  as "number of non-null values" must count the non-null cells. To write a read back, a NULL cell
-  goes through `update_vector_group` / `update_set_group` in every layer; the element-array setters
-  refuse it (Lua: an array with a `nil` hole throws instead of being cut short at the hole; JS: a
-  `null` in a numeric or boolean array throws instead of being stored as 0 / `false`; Python and
-  Julia: an error naming the column). Julia's `create_element!` / `update_element!` take a nullable
+  as "number of non-null values" must count the non-null cells. To write a read back through
+  `create_element` / `update_element`, mind the layer. Lua, Python and Julia element arrays refuse a
+  NULL cell (Lua: an array with a `nil` hole, or any non-integer key such as a `table.pack`
+  result's `n`, throws instead of being cut short or skipped; Python and Julia: an error naming the
+  column), and so do JS numeric and boolean arrays (a `null` throws instead of being stored as 0 /
+  `false`); write those NULL cells with `update_vector_group` / `update_set_group`. C++ (a
+  `std::vector<Value>` holding `nullptr`), the C API (the `has_value` mask) and Dart (`List<T?>`)
+  write a NULL cell as SQL NULL. Julia's `create_element!` / `update_element!` take a nullable
   read as it is when it holds no `nothing`. In C++, map `std::nullopt` to `nullptr` into a
   `std::vector<Value>`: `Element::set` has no `std::vector<std::optional<T>>` overload.
 

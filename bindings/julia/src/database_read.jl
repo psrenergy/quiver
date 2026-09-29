@@ -646,91 +646,72 @@ function read_sets_by_id(db::Database, collection::String, id::Int64)
 end
 
 function read_vector_group_by_id(db::Database, collection::String, group::String, id::Int64)
-    metadata = get_vector_metadata(db, collection, group)
-    columns = metadata.value_columns
-
-    if isempty(columns)
-        return Vector{Dict{String, Any}}()
-    end
-
-    # Read each column's data
-    column_data = Dict{String, Vector{Any}}()
-    row_count = 0
-
-    # The rows hold Any, so there is no element type to decide: decode Optional, no metadata lookup.
-    for col in columns
-        name = col.name
-        values = if col.data_type == C.QUIVER_DATA_TYPE_INTEGER
-            _read_vector_integers_by_id(db, collection, name, id, false)
-        elseif col.data_type == C.QUIVER_DATA_TYPE_FLOAT
-            _read_vector_floats_by_id(db, collection, name, id, false)
-        elseif col.data_type == C.QUIVER_DATA_TYPE_STRING
-            _read_vector_strings_by_id(db, collection, name, id, false)
-        elseif col.data_type == C.QUIVER_DATA_TYPE_DATE_TIME
-            _to_date_times(_read_vector_strings_by_id(db, collection, name, id, false), collection, name)
-        else
-            throw(ArgumentError("Unsupported data type $(col.data_type) for column '$(col.name)'"))
-        end
-
-        column_data[name] = values
-        row_count = length(values)
-    end
-
-    # Transpose columns to rows
-    rows = Vector{Dict{String, Any}}()
-    for i in 1:row_count
-        row = Dict{String, Any}()
-        for (name, values) in column_data
-            row[name] = values[i]
-        end
-        push!(rows, row)
-    end
-
-    return rows
+    return _read_group_rows(db, C.quiver_database_read_vector_group_by_id, collection, group, id)
 end
 
 function read_set_group_by_id(db::Database, collection::String, group::String, id::Int64)
-    metadata = get_set_metadata(db, collection, group)
-    columns = metadata.value_columns
+    return _read_group_rows(db, C.quiver_database_read_set_group_by_id, collection, group, id)
+end
 
-    if isempty(columns)
-        return Vector{Dict{String, Any}}()
+# Shared by the two whole-group readers; `read_group` is the C entry point (the
+# `_update_group_columns` convention). The native reader runs one SELECT over the named group's own
+# table, so a column name another group shares cannot pull that group's rows in, and every column
+# comes from one snapshot: a masked cell is `nothing`, a DATE_TIME column is parsed.
+# read_time_series_group keeps its own decode: it returns columns and parses only the dimension column.
+function _read_group_rows(db::Database, read_group::Function, collection::String, group::String, id::Int64)
+    out_col_names = Ref{Ptr{Ptr{Cchar}}}(C_NULL)
+    out_col_types = Ref{Ptr{Cint}}(C_NULL)
+    out_col_data = Ref{Ptr{Ptr{Cvoid}}}(C_NULL)
+    out_col_has_value = Ref{Ptr{Ptr{UInt8}}}(C_NULL)
+    out_col_count = Ref{Csize_t}(0)
+    out_row_count = Ref{Csize_t}(0)
+
+    check(
+        read_group(
+            db.ptr, collection, group, id,
+            out_col_names, out_col_types, out_col_data, out_col_has_value, out_col_count, out_row_count,
+        ),
+    )
+
+    col_count = out_col_count[]
+    row_count = out_row_count[]
+    if col_count == 0 || row_count == 0
+        return Dict{String, Any}[]
     end
 
-    # Read each column's data
-    column_data = Dict{String, Vector{Any}}()
-    row_count = 0
+    try
+        name_ptrs = unsafe_wrap(Array, out_col_names[], col_count)
+        type_vals = unsafe_wrap(Array, out_col_types[], col_count)
+        data_ptrs = unsafe_wrap(Array, out_col_data[], col_count)
+        mask_ptrs = unsafe_wrap(Array, out_col_has_value[], col_count)
 
-    # The rows hold Any, so there is no element type to decide: decode Optional, no metadata lookup.
-    for col in columns
-        name = col.name
-        values = if col.data_type == C.QUIVER_DATA_TYPE_INTEGER
-            _read_set_integers_by_id(db, collection, name, id, false)
-        elseif col.data_type == C.QUIVER_DATA_TYPE_FLOAT
-            _read_set_floats_by_id(db, collection, name, id, false)
-        elseif col.data_type == C.QUIVER_DATA_TYPE_STRING
-            _read_set_strings_by_id(db, collection, name, id, false)
-        elseif col.data_type == C.QUIVER_DATA_TYPE_DATE_TIME
-            _to_date_times(_read_set_strings_by_id(db, collection, name, id, false), collection, name)
-        else
-            throw(ArgumentError("Unsupported data type $(col.data_type) for column '$(col.name)'"))
+        rows = [Dict{String, Any}() for _ in 1:row_count]
+        for c in 1:col_count
+            name = unsafe_string(name_ptrs[c])
+            col_type = type_vals[c]
+            mask = unsafe_wrap(Array, mask_ptrs[c], row_count)
+            for r in 1:row_count
+                if mask[r] == 0
+                    rows[r][name] = nothing
+                elseif col_type == Cint(C.QUIVER_DATA_TYPE_INTEGER)
+                    rows[r][name] = unsafe_load(reinterpret(Ptr{Int64}, data_ptrs[c]), r)
+                elseif col_type == Cint(C.QUIVER_DATA_TYPE_FLOAT)
+                    rows[r][name] = unsafe_load(reinterpret(Ptr{Float64}, data_ptrs[c]), r)
+                else
+                    # STRING or DATE_TIME. The mask test above keeps a NULL char* out of unsafe_string.
+                    s = unsafe_string(unsafe_load(reinterpret(Ptr{Ptr{Cchar}}, data_ptrs[c]), r))
+                    rows[r][name] =
+                        col_type == Cint(C.QUIVER_DATA_TYPE_DATE_TIME) ? string_to_date_time(s, collection, name) : s
+                end
+            end
         end
-
-        column_data[name] = values
-        row_count = length(values)
+        return rows
+    finally
+        C.quiver_database_free_time_series_data(
+            out_col_names[], out_col_types[], out_col_data[], out_col_has_value[],
+            Csize_t(col_count), Csize_t(row_count),
+        )
     end
-
-    # Transpose columns to rows
-    rows = Vector{Dict{String, Any}}()
-    for i in 1:row_count
-        row = Dict{String, Any}()
-        for (name, values) in column_data
-            row[name] = values[i]
-        end
-        push!(rows, row)
-    end
-
-    return rows
 end
 
 function read_time_series_group(db::Database, collection::String, group::String, id::Int64)

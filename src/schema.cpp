@@ -141,9 +141,10 @@ std::string Schema::get_time_series_files_parent_collection(const std::string& t
 }
 
 std::string Schema::find_vector_table(const std::string& collection, const std::string& attribute) const {
-    // First try: Collection_vector_attribute
+    // First try: Collection_vector_attribute, when it holds the column: a group may be named after
+    // another group's column
     auto vt = vector_table_name(collection, attribute);
-    if (has_table(vt)) {
+    if (const auto* table_def = get_table(vt); table_def && table_def->has_column(attribute)) {
         return vt;
     }
 
@@ -164,9 +165,9 @@ std::string Schema::find_vector_table(const std::string& collection, const std::
 }
 
 std::string Schema::find_set_table(const std::string& collection, const std::string& attribute) const {
-    // First try: Collection_set_attribute
+    // First try: Collection_set_attribute, when it holds the column (see find_vector_table)
     auto st = set_table_name(collection, attribute);
-    if (has_table(st)) {
+    if (const auto* table_def = get_table(st); table_def && table_def->has_column(attribute)) {
         return st;
     }
 

@@ -483,5 +483,62 @@ void main() {
         db.close();
       }
     });
+
+    test('keeps NULL cells through the float reader', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        final id = db.createElement('Collection', {
+          'label': 'Item 1',
+          'value_int': [1, 2],
+          'value_float': [null, 2.5],
+        });
+
+        expect(
+          db.readVectorFloats('Collection', 'value_float'),
+          equals([
+            [null, 2.5],
+          ]),
+        );
+        expect(db.readVectorFloatsById('Collection', 'value_float', id), equals([null, 2.5]));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('keeps NULL cells through the string and DateTime readers', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'multi_column_groups.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        final id = db.createElement('Items', {
+          'label': 'Item 1',
+          'date_event': ['2024-01-01', null],
+          'note': [null, 'b'],
+        });
+
+        expect(
+          db.readVectorStrings('Items', 'note'),
+          equals([
+            [null, 'b'],
+          ]),
+        );
+        expect(db.readVectorStringsById('Items', 'note', id), equals([null, 'b']));
+        expect(
+          db.readVectorDateTimes('Items', 'date_event'),
+          equals([
+            [DateTime(2024, 1, 1), null],
+          ]),
+        );
+        expect(db.readVectorDateTimesById('Items', 'date_event', id), equals([DateTime(2024, 1, 1), null]));
+      } finally {
+        db.close();
+      }
+    });
   });
 }

@@ -1268,3 +1268,138 @@ From the repo root (Git Bash paths shown; the `.bat` files also run from PowerSh
 - Python/Julia/JS `read_vectors_by_id` / `read_sets_by_id` composites. They still read per column and drop NULL cells, as documented. Lua whole-group readers: not bound, by design decision.
 - The C API group readers call `get_{vector,set}_metadata` and then the C++ reader, which looks the metadata up again. That redundancy is harmless and not touched, since the C API is unchanged here.
 - A Dart test over the new `Items_vector_events` table: Dart's decoder is unchanged by this plan.
+
+## Implementation notes
+
+Implemented 2026-09-29 on `rs/plan18`, fast-forwarded to master `4e06621` (plan 17 and PR #324
+had both landed). **Re-scoped with the maintainer before editing**, because
+PR #324 ("fix: preserve NULL cells in vector and set reads", `git diff 73094f0 3e7fb62`, shipped
+in v0.12.4) had already removed this plan's headline bug.
+
+### PR #324 review (asked for by the maintainer)
+
+Eight read-only layer reviewers, each followed by an adversarial verifier (C++ core, C API,
+Julia, Python, Dart, JS, docs, plan-18 comparison). Verdict: #324's core, C API and binding
+decoders are sound; no high- or medium-severity correctness bug survived verification. Confirmed,
+all low, and all fixed in this commit:
+- Julia regression: `Element` rejected the `Vector{Union{Nothing, Bool}}` a nullable boolean read
+  now returns (`MethodError`), contradicting #324's own CHANGELOG. Fixed (`element.jl` union).
+- JS inconsistency: `setElementArray`'s null refusal skipped string arrays by their *first* cell, so
+  `["a", null]` stored NULL while `[null, "a"]` threw, and `["a", undefined]` stored `"undefined"`.
+  Maintainer decision: refuse a null/undefined cell in any array (`includes`, which also sees a
+  sparse array's holes). Not marked BREAKING, per that decision.
+- Docs: the CHANGELOG `[0.12.4]` Adapt paragraph said element-array setters refuse NULL "in every
+  layer" (false for C++, the C API and Dart) and omitted that Lua element arrays with a non-integer
+  key now throw — corrected in place; root AGENTS.md said per-column resolution is "in table order"
+  (it is alphabetical by table name); the agent-facing Lua reference claimed zipping a group's
+  columns is always row-aligned (not for a column name two groups share); `bindings/js/AGENTS.md`
+  described `decodeStringArray` two ways; `tests/AGENTS.md` overstated boolean/DateTime NULL
+  coverage.
+- Tests: the new set NULL tests pinned write order in C++, C API, Julia, Python, Dart and JS
+  (against the "set order is not a promise" decision) — now cross-reader agreement + contents; and
+  most hand-copied mask/nullptr decoders had no NULL-cell test — added (C API floats / vector
+  strings / set integers / set floats, Lua set nil holes, Julia nullable booleans /
+  `set_relation_map` / set DateTime, Python and Dart every remaining reader, JS vector floats).
+- Refuted: a marshaller leak on `bad_alloc`, the Dart hand-edit inventory, a C ABI break "in a
+  patch" as a #324 defect (a systemic release-process issue, see below).
+
+### Plan 18 vs #324: the native readers are better, and were implemented
+
+#324 kept Julia/Python's per-column composition, now NULL-correct. It still resolves each column by
+**name** (`Schema::find_vector_table`/`find_set_table`): when two groups of one kind share an FK
+column (legal), the composition reads the other group's table (wrong rows or
+`BoundsError`/`IndexError`), and it runs N statements (N snapshots) and N+1 FFI calls. The native
+reader reads the named group's own table in one SELECT, as Dart already did. So Changes 2–10 were
+applied as written, re-anchored. The red-first regressions are the shared-FK-column cases
+(`tests/schemas/valid/shared_group_columns.sql`, new): Julia `BoundsError`, Python `IndexError`, JS
+"not a function" — all shown failing before the fix.
+
+### Beyond the original plan (maintainer-approved)
+
+- **Core name guard**: `find_vector_table`/`find_set_table` took the group named after the
+  attribute even when it did not hold that column, so a group named after another group's column
+  (`Child_vector_cost` next to `routes.cost`; `Child_set_tier` next to `sponsors.tier`) made every
+  per-column read of that column throw `column '...' not found in table '...'`. Now the exact-name
+  table wins only if it has the column. Red-first C++ test
+  `ReadGroupColumnSkipsGroupNamedAfterAColumnItLacks` (both halves shown failing). A name that no
+  table holds now reports `Vector attribute '...' not found for collection '...'` instead of
+  require_column's message; no test pinned either. Plan 57 later rewrites exactly these miss
+  messages, so it must keep the `has_column` guard.
+- The element null-cell hint in Julia/Python/JS names `update_time_series_group` too.
+
+### Drift fixed
+
+- Anchors: Julia readers at ~L648-734 (bodies used the `_read_*_by_id(..., false)` kernels, not the
+  plan's excerpt); Python readers ~L2010-2078; `read.ts` ends ~L700; `database.ts`'s
+  `readSetStringsById` is multi-line and returns `(string | null)[]`; the JS test file already had
+  `SCHEMAS_DIR` (reused, no `MULTI_COLUMN_SCHEMA_PATH` added).
+- Skipped plan steps #324 already did: the rewrites of `test_database_update.jl`, Python
+  `test_accepts_null_cells` and JS "writes null cells as SQL NULL". The plan's two Python vector
+  NULL tests were folded into #324's `test_group_reader_composition_is_null_correct`, renamed
+  `test_group_reader_keeps_null_cells_in_place`.
+- Docs rewritten against the post-#324 text: root AGENTS.md "Whole-group readers" bullet and the
+  bulk-reads decision's shared-name sentence (the plan missed the latter); Julia AGENTS.md's
+  "`read_{vector,set}_group_by_id` ... pass `false`" (only `set_relation_map` does now); Python
+  AGENTS.md's composition sentence.
+- CHANGELOG target: `[0.12.0] — unreleased` does not exist. Plan 17 created
+  `## [0.12.5] — unreleased`; entries went there (`### Added` JS readers, `### Fixed` the rest). No
+  compare link: the link list stops at 0.10.9 (plan 78).
+- `time-series.ts` after plan 17: `decodePtrArray` and `DATA_TYPE_DATE_TIME` became unused and were
+  removed; `toArrayBuffer`, `decodeStringArray` and the rest are still used by `readTimeSeriesRow` /
+  the files readers.
+- Verification step 9: `test-all.bat` now has six steps and no CLI smoke test.
+
+### Verification
+
+`scripts/test-all.bat`: all six suites PASS (C++ 1373, C API 570, Julia 1556, Dart 435, JS 228,
+Python 324). `bun run lint`: no new diagnostics in the touched files (the six `noBannedTypes` in
+`read.ts` and the unused `QuiverError` imports in the two read test files predate this change).
+`scripts/format.bat` applied; biome's CRLF→LF churn on untouched JS files reverted.
+
+### Acceptance criteria (as amended by the re-scope)
+
+- [x] `multi_column_groups.sql` ends with `Items_vector_events`; the two existing tables unchanged.
+- [x] Julia readers are one-line calls to `_read_group_rows` (C reader, mask → `nothing`, DATE_TIME
+  parsed, free in `finally`); no metadata or per-column call remains in either.
+- [x] Julia `read_time_series_group` and `c_api.jl` unchanged.
+- [x] `_c_api.py` declares both readers, matching the header.
+- [x] Python readers keep their own expanded FFI blocks and share `_decode_group_rows`; the vector
+  reader keeps the 0-based `vector_index`; `read_time_series_group` unchanged.
+- [x] JS `loader.ts` has both symbols; `readGroupColumns` is the only columnar read decoder;
+  `readTimeSeriesGroup` is a one-line call to it with unchanged output (its free now sits in a
+  `finally`); the row readers return `Record<string, number | string | null>[]` with DATE_TIME as a
+  string and no `vector_index`; both declared on `Database`.
+- [x] `TimeSeriesData` lives in `group-columns.ts`, exported from `src/index.ts` and by name from
+  `mod.ts`.
+- [x] New tests in Julia, Python and JS (plus the shared-group regressions); the three
+  SQL-workaround assertions were already moved to readers by #324 (amended criterion).
+- [x] C++, C API, Dart, Julia, Python and JS suites green; lint clean for touched files; format
+  applied.
+- [x] Root, src, tests, Julia, Python and JS AGENTS.md updated; the "Multi-column group readers"
+  block is gone and two cross-layer rows added; JS README has the two lines.
+- [x] CHANGELOG has `### Added` (JS) and `### Fixed` entries under `[0.12.5] — unreleased`; none
+  BREAKING.
+
+### For later plans
+
+- **Plan 23**: until it lands, the native marshaller narrows a non-integral REAL stored in a
+  non-STRICT INTEGER group column to an integer; the old Julia/Python composition returned
+  `nothing`/`None` there (`Row::get_integer`). The `[0.12.5]` Fixed entry records it; plan 23's own
+  entry should say it restores the null in Julia, Python and JS too.
+- **Plan 19** (C API `read_set_group_by_id` test) is unaffected; it can reuse
+  `shared_group_columns.sql` for a sponsors/mentors case.
+- **Plan 41** is obsolete: #324 already removed its "not positionally aligned" comments. Plan 30
+  still defers to it.
+- **Plan 42**: Julia's composition no longer called the date-time by-id readers even before this;
+  Python's two call sites are gone now. `read_{vectors,sets}_by_id` still call them.
+- **Plan 57** rewrites `find_vector_table`/`find_set_table`'s miss messages; keep the new
+  `has_column` guard on the exact-name table.
+- **Plans 43/44** own `lua-api.ts`; this commit added only the shared-column caveat to the
+  group-columns paragraph.
+- Not done, out of scope: Julia's NOT NULL scalar readers ignore the mask and a wrong-typed reader
+  raises a raw `MethodError` (the principled fix is a core reader-vs-column type check); the Lua
+  `require_dense_array` hint says `Cannot table_to_element` and names group writers for
+  `quiver.metadata_from_element` too (plan 47 owns those messages); the
+  `read_{vectors,sets}_by_id` composites keep name resolution and key by column name (cannot be
+  fixed by name). Versioning: #324's BREAKING changes shipped in patch 0.12.4 (0.12.x has done this
+  before) — a release-process decision; plan 17's BREAKING entry now sits in `[0.12.5]` as well.

@@ -104,6 +104,8 @@ bun run example.ts
 - `readSetBooleansById(collection, attribute, id)` -- Read INTEGER-backed boolean set
 - `readSetFloatsById(collection, attribute, id)` -- Read float set
 - `readSetStringsById(collection, attribute, id)` -- Read string set
+- `readVectorGroupById(collection, group, id)` -- Read a whole vector group as rows (`null` for a SQL NULL cell)
+- `readSetGroupById(collection, group, id)` -- Read a whole set group as rows (`null` for a SQL NULL cell)
 
 ### Read (IDs)
 

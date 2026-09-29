@@ -167,6 +167,19 @@ ffi.cdef("""
         const char* collection, const char* attribute, int64_t id,
         char*** out_values, size_t* out_count);
 
+    // Read a whole vector/set group by ID: columnar typed arrays + per-cell mask,
+    // freed by quiver_database_free_time_series_data
+    quiver_error_t quiver_database_read_vector_group_by_id(quiver_database_t* db,
+        const char* collection, const char* group, int64_t id,
+        char*** out_column_names, int** out_column_types,
+        void*** out_column_data, uint8_t*** out_column_has_value,
+        size_t* out_column_count, size_t* out_row_count);
+    quiver_error_t quiver_database_read_set_group_by_id(quiver_database_t* db,
+        const char* collection, const char* group, int64_t id,
+        char*** out_column_names, int** out_column_types,
+        void*** out_column_data, uint8_t*** out_column_has_value,
+        size_t* out_column_count, size_t* out_row_count);
+
     // Read element Ids
     quiver_error_t quiver_database_read_element_ids(quiver_database_t* db,
         const char* collection, int64_t** out_ids, size_t* out_count);
