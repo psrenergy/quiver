@@ -77,7 +77,12 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   and are then skipped forever, and flipping `QUIVER_UNVERSIONED_SHARED` does not force a relink,
   so the previous build's symlinks survive and the asset scan finds nothing.
 - **Marshaling idiom**: every method allocates through a `package:ffi` `Arena` and releases in
-  `finally`. Typed columns go through the shared private `_marshalGroupColumn(Arena, String, List<Object?>)`
+  `finally`. Never request zero bytes (`arena<T>(0)`): package:ffi's allocator throws
+  `ArgumentError('Could not allocate 0 bytes.')` whenever the platform returns NULL for it, which
+  POSIX `malloc`/`calloc` may do (Windows' `CoTaskMemAlloc` does not, so a Windows test run will
+  not catch it). Pass `nullptr` for an empty array instead, since the C API takes NULL with a zero
+  count; `updateTimeSeriesFiles` and the group writers' clear paths do this. Typed columns go
+  through the shared private `_marshalGroupColumn(Arena, String, List<Object?>)`
   (used by `updateTimeSeriesGroup`, `upsertTimeSeriesRow`, `upsertTimeSeriesRowByLabel`,
   `updateVectorGroup`, `updateSetGroup` and the group writers' `ByLabel` forms); query parameters
   through `_marshalParams`. Both `_marshalGroupColumn` and `Element._setMixedList` dispatch on the

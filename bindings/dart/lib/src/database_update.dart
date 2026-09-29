@@ -683,12 +683,11 @@ extension DatabaseUpdate on Database {
     try {
       final count = paths.length;
 
-      if (count == 0) {
-        return;
-      }
-
-      final columns = arena<Pointer<Char>>(count);
-      final pathPtrs = arena<Pointer<Char>>(count);
+      // An empty map still reaches the core, which validates the collection and its files table
+      // before treating it as a no-op. NULL arrays, not arena(0): package:ffi throws when the
+      // allocator returns NULL for a zero-byte request, which POSIX malloc/calloc may do.
+      final columns = count == 0 ? nullptr : arena<Pointer<Char>>(count);
+      final pathPtrs = count == 0 ? nullptr : arena<Pointer<Char>>(count);
 
       var i = 0;
       for (final entry in paths.entries) {

@@ -63,6 +63,15 @@ callers to change something are prefixed **BREAKING** and say what to do.
   Python, Julia and Lua. *Adapt:* write NULL cells with `updateVectorGroup` / `updateSetGroup`.
 - The element-array null-cell error in Julia, Python and JS also names `update_time_series_group`,
   which writes NULL cells too.
+- **Julia, Dart, Python, JS: `update_time_series_files` with an empty map validates the
+  collection.** The four bindings returned before calling the core when the map was empty, so
+  `update_time_series_files("NoSuchCollection", {})`, or the same call on a collection with no
+  `_time_series_files` table, succeeded silently where C++, the C API and Lua raised. The empty
+  map now reaches the core in every binding and raises the core's error there too:
+  `Cannot update_time_series_files: collection not found: <collection>` for an unknown
+  collection, and the files-table-not-found error for a collection without one. On a collection
+  that has the table it still changes nothing. A caller that made this call on a collection
+  without a files table should check `has_time_series_files` first.
 
 ## [0.12.4] — 2026-09-29
 

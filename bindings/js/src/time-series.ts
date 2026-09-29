@@ -351,7 +351,12 @@ Database.prototype.updateTimeSeriesFiles = function (
   const lib = getSymbols();
   const collBuf = toCString(collection);
   const entries = Object.entries(data);
-  if (entries.length === 0) return;
+  // An empty map still reaches the core, which validates the collection and its files table
+  // before the no-op. null tables, never zero-length buffers (same as updateGroupColumns).
+  if (entries.length === 0) {
+    check(lib.quiver_database_update_time_series_files(this._handle, collBuf.buf, null, null, 0n));
+    return;
+  }
   const keepalive: Allocation[] = [];
 
   const colNames = entries.map(([name]) => name);

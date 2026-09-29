@@ -645,6 +645,15 @@ TEST_F(LuaRunnerTest, UpdateTimeSeriesFilesRejectsNonStringPath) {
     EXPECT_FALSE(db.read_time_series_files("Collection")["data_file"].has_value());
 }
 
+TEST_F(LuaRunnerTest, UpdateTimeSeriesFilesEmptyTableValidatesCollection) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(lua,
+                     R"(db:update_time_series_files("NoSuchCollection", {}))",
+                     "Cannot update_time_series_files: collection not found: NoSuchCollection");
+}
+
 TEST_F(LuaRunnerTest, MultiColumnTimeSeriesUpdateAndRead) {
     auto db = quiver::Database::from_schema(":memory:",
                                             VALID_SCHEMA("mixed_time_series.sql"),
