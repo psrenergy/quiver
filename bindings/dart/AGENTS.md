@@ -33,8 +33,9 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   `quiver_database_number_of_elements` likewise (hand-added right after
   `quiver_database_read_element_ids`, matching the C API's declaration order), as were
   `quiver_database_update_element_by_label`, the three group writers' `_by_label` forms,
-  `quiver_database_upsert_time_series_row` plus its `_by_label` form, and
-  `quiver_database_update_relation` plus its `_by_label` form.
+  `quiver_database_upsert_time_series_row` plus its `_by_label` form,
+  `quiver_database_update_relation` plus its `_by_label` form, and the `out_mask` parameter of
+  `quiver_database_read_time_series_row`.
   Take the generator upgrade as its own deliberate change (regenerate, then fix the enum call
   sites here and in hub) rather than as a side effect of adding a C function.
 - **Native library resolution** (`lib/src/ffi/library_loader.dart`), three tiers in order:
@@ -98,7 +99,9 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   mask into `List<int?>`/`List<double?>` (mask 0 → `null`); `readScalarStrings` returns `List<String?>`,
   null-guarding the pointer before `toDartString`; `readScalarDateTimes` maps that list while
   preserving its null slots. `bindings.dart` carries the mask arg + `quiver_database_free_mask`
-  (regenerate via ffigen; clear `.dart_tool` caches on C-API changes).
+  (regenerate via ffigen; clear `.dart_tool` caches on C-API changes). `readTimeSeriesRow` decodes
+  the same kind of mask, which the C API returns for every column type (mask 0 = no data at or
+  before the date → `null`; the string branch never `toDartString`s a masked-out pointer).
 - **`LuaRunner.run` owns its result**: `quiver_lua_runner_run` takes a `char** out_result` whose JSON
   string is C-heap allocated, so the `Arena` cannot own it — it is freed with
   `quiver_lua_runner_free_string` (*not* `quiver_database_free_string`) in its own nested `finally`,

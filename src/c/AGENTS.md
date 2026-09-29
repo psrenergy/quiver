@@ -202,9 +202,12 @@ NULL **presence mask** alongside the data arrays:
   throw cannot leak the masks. String columns require per-element cleanup; numeric columns and the
   masks use a single `delete[]`. The masks follow the zero-initialized out-array convention.
 - `quiver_database_read_time_series_row()` returns a single `void*` array whose element type the
-  caller dispatches on via `out_data_type`. Null entries are encoded per type: `FLOAT` → NaN,
-  `STRING`/`DATE_TIME` → NULL `char*`, `INTEGER` → 0. (The row API keeps its sentinel encoding; only
-  the columnar group API uses the presence mask.)
+  caller dispatches on via `out_data_type`, plus a parallel `uint8_t** out_mask` for **every** type
+  (`mask[i] == 0` = no data at or before `date_time`; the data slot is then a placeholder: `INTEGER`
+  0, `FLOAT` 0.0, `STRING`/`DATE_TIME` NULL `char*`). Unlike `read_scalar_strings`, strings are
+  masked too, so every binding decodes one way. The data array is freed by the typed free function
+  and the mask by `quiver_database_free_mask`; both are NULL for an empty collection. The old
+  0 / NaN sentinels are gone: a stored 0 was indistinguishable from "no data".
 
 This pattern mirrors the `convert_params()` approach from `database_query.cpp` for type-safe FFI marshaling across N typed columns.
 

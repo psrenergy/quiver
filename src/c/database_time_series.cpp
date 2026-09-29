@@ -3,7 +3,6 @@
 #include "quiver/c/database.h"
 #include "quiver/data_type.h"
 
-#include <limits>
 #include <map>
 #include <optional>
 #include <string>
@@ -62,8 +61,9 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_row(quiver_database
                                                                  const char* date_time,
                                                                  int* out_data_type,
                                                                  void** out_values,
+                                                                 uint8_t** out_mask,
                                                                  size_t* out_count) {
-    QUIVER_REQUIRE(db, collection, group, attribute, date_time, out_data_type, out_values, out_count);
+    QUIVER_REQUIRE(db, collection, group, attribute, date_time, out_data_type, out_values, out_mask, out_count);
 
     try {
         // The C++ layer validates collection/group/attribute and throws the
@@ -84,14 +84,20 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_row(quiver_database
 
         if (values.empty()) {
             *out_values = nullptr;
+            *out_mask = nullptr;
             return QUIVER_OK;
         }
 
+        // One mask for every data type: mask[i] == 0 means no data at or before date_time
+        // (a null Value from the core), and the data slot is a placeholder.
+        auto* mask = new uint8_t[values.size()];
         switch (*out_data_type) {
         case QUIVER_DATA_TYPE_INTEGER: {
             auto* arr = new int64_t[values.size()];
             for (size_t i = 0; i < values.size(); ++i) {
-                arr[i] = std::holds_alternative<int64_t>(values[i]) ? std::get<int64_t>(values[i]) : 0;
+                const auto* value = std::get_if<int64_t>(&values[i]);
+                arr[i] = value ? *value : 0;
+                mask[i] = value ? 1 : 0;
             }
             *out_values = arr;
             break;
@@ -99,8 +105,9 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_row(quiver_database
         case QUIVER_DATA_TYPE_FLOAT: {
             auto* arr = new double[values.size()];
             for (size_t i = 0; i < values.size(); ++i) {
-                arr[i] = std::holds_alternative<double>(values[i]) ? std::get<double>(values[i])
-                                                                   : std::numeric_limits<double>::quiet_NaN();
+                const auto* value = std::get_if<double>(&values[i]);
+                arr[i] = value ? *value : 0.0;
+                mask[i] = value ? 1 : 0;
             }
             *out_values = arr;
             break;
@@ -109,17 +116,19 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_row(quiver_database
         case QUIVER_DATA_TYPE_DATE_TIME: {
             auto** arr = new char*[values.size()];
             for (size_t i = 0; i < values.size(); ++i) {
-                arr[i] = std::holds_alternative<std::string>(values[i])
-                             ? quiver::string::new_c_str(std::get<std::string>(values[i]))
-                             : nullptr;
+                const auto* value = std::get_if<std::string>(&values[i]);
+                arr[i] = value ? quiver::string::new_c_str(*value) : nullptr;
+                mask[i] = value ? 1 : 0;
             }
             *out_values = arr;
             break;
         }
         default:
+            delete[] mask;
             throw std::runtime_error("Cannot read_time_series_row: unknown data type " +
                                      std::to_string(*out_data_type));
         }
+        *out_mask = mask;
 
         return QUIVER_OK;
     } catch (const std::exception& e) {

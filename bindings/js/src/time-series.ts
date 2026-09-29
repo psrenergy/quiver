@@ -138,6 +138,7 @@ Database.prototype.readTimeSeriesRow = function (
   const dtBuf = toCString(dateTime);
   const outDataType = new Uint8Array(4);
   const outValues = allocPtrOut();
+  const outMask = allocPtrOut();
   const outCount = allocUint64Out();
 
   check(
@@ -149,6 +150,7 @@ Database.prototype.readTimeSeriesRow = function (
       dtBuf.buf,
       outDataType,
       outValues.buf,
+      outMask.buf,
       outCount.buf,
     ),
   );
@@ -157,26 +159,33 @@ Database.prototype.readTimeSeriesRow = function (
   const valuesPtr = readPtrOut(outValues);
   if (count === 0 || !valuesPtr) return [];
 
+  // mask[i] === 0: no data at or before dateTime; the data slot is a placeholder, never read.
+  const maskPtr = readPtrOut(outMask);
+  const mask = new Uint8Array(toArrayBuffer(maskPtr as Pointer, 0, count));
   const dataType = new DataView(outDataType.buffer).getInt32(0, true);
   switch (dataType) {
     case DATA_TYPE_INTEGER: {
-      const result = decodeInt64Array(valuesPtr, count);
+      const result = decodeInt64Array(valuesPtr, count).map((v, i) => (mask[i] ? v : null));
       lib.quiver_database_free_integer_array(valuesPtr);
+      lib.quiver_database_free_mask(maskPtr);
       return result;
     }
     case DATA_TYPE_FLOAT: {
-      const result = decodeFloat64Array(valuesPtr, count);
+      const result = decodeFloat64Array(valuesPtr, count).map((v, i) => (mask[i] ? v : null));
       lib.quiver_database_free_float_array(valuesPtr);
+      lib.quiver_database_free_mask(maskPtr);
       return result;
     }
     default: {
-      // STRING or DATE_TIME; NULL entries mark elements with no data
+      // STRING or DATE_TIME; never build a CString from a masked-out (NULL) pointer
       const result: (string | null)[] = new Array(count);
       for (let i = 0; i < count; i++) {
-        const strPtr = read.ptr(valuesPtr as Pointer, i * 8);
-        result[i] = strPtr === 0 ? null : new CString(strPtr as Pointer).toString();
+        result[i] = mask[i]
+          ? new CString(read.ptr(valuesPtr as Pointer, i * 8) as Pointer).toString()
+          : null;
       }
       lib.quiver_database_free_string_array(valuesPtr, BigInt(count));
+      lib.quiver_database_free_mask(maskPtr);
       return result;
     }
   }

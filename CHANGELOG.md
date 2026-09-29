@@ -5,6 +5,26 @@ All notable changes to Quiver are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entries that require
 callers to change something are prefixed **BREAKING** and say what to do.
 
+## [0.12.5] — unreleased
+
+### Changed
+
+- **BREAKING — `read_time_series_row()` returns null, not `0` / `NaN`, for an element with no
+  data.** The C++ core and Lua always did. The C API collapsed the missing value into a sentinel
+  (`0` for an INTEGER column, `NaN` for a REAL one), so Julia, Dart, Python and JS returned a `0`
+  that could not be told apart from a stored `0`, and a `NaN` their own docs did not mention.
+  `quiver_database_read_time_series_row` now takes a `uint8_t** out_mask` out-parameter between
+  `out_values` and `out_count`, filled for every data type (`out_mask[i] == 0` = no data at or
+  before `date_time`) and freed with `quiver_database_free_mask`. Every binding maps it to
+  `nothing` / `null` / `None`. In Julia the result is now `Vector{Union{Nothing, T}}` for every
+  column type, `T` from the attribute's type (`Int64`, `Float64` or `String`), including an empty
+  result. It used to be `Vector{Int64}` / `Vector{Float64}` for numeric columns.
+
+  *Adapt:* C callers pass `&out_mask` and free it with `quiver_database_free_mask`. Replace
+  `isnan(x)` / `x == 0` no-data checks with a null check (`x === nothing`, `x == null`,
+  `x is None`). Julia code typed on `Vector{Float64}` / `Vector{Int64}` must accept the `Union`
+  element type (`something.(v, NaN)` gives back the old `Vector{Float64}` for a REAL column).
+
 ## [0.12.4] — 2026-09-28
 
 ### Changed

@@ -155,3 +155,25 @@ class TestReadTimeSeriesRow:
             match="Cannot read_time_series_row: group 'load' of collection 'Resource' has more than one dimension column",
         ):
             multi_dim_ts_db.read_time_series_row("Resource", "load", "load", datetime(2024, 1, 1))
+
+    def test_read_time_series_row_no_data_is_none(self, mixed_time_series_db: Database) -> None:
+        """An element with no row at or before the date reads None in every column type, never 0 or nan."""
+        id1 = _create_sensor(mixed_time_series_db, "Sensor 1")
+        _create_sensor(mixed_time_series_db, "Sensor 2")  # no rows
+        mixed_time_series_db.update_time_series_group(
+            "Sensor",
+            "readings",
+            id1,
+            {"date_time": ["2024-01-02T00:00:00"], "temperature": [20.5], "humidity": [0], "status": ["ok"]},
+        )
+
+        # A stored 0 and "no data" are distinguishable.
+        at = datetime(2024, 1, 2)
+        assert mixed_time_series_db.read_time_series_row("Sensor", "readings", "humidity", at) == [0, None]
+        assert mixed_time_series_db.read_time_series_row("Sensor", "readings", "temperature", at) == [20.5, None]
+        assert mixed_time_series_db.read_time_series_row("Sensor", "readings", "status", at) == ["ok", None]
+
+        # Before the first row even Sensor 1 has no data.
+        before = datetime(2024, 1, 1)
+        assert mixed_time_series_db.read_time_series_row("Sensor", "readings", "humidity", before) == [None, None]
+        assert mixed_time_series_db.read_time_series_row("Sensor", "readings", "temperature", before) == [None, None]

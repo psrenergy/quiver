@@ -1204,3 +1204,44 @@ Run from the repo root (`C:\Development\Quiver\quiver1`), in order:
 - Julia's concrete-vs-optional conversion for `read_time_series_group` (still tracked in `type_stability_followup.md`; no plan).
 - Deleting the unreachable `default:` branch of the C switch.
 - Lua code and `bindings/js/src/lua-api.ts` (already correct: `nil`).
+
+## Implementation notes
+
+Implemented on `rs/plan17` at HEAD `afa5fea` (the 0.12.5 bump merge). `git merge origin/master` was already up to date. Plan 04, which this plan builds on, landed in `ef935dc`. A read-only pass matched every quoted code excerpt, symbol, signature and test anchor. Only line numbers had moved, plus the two doc anchors listed under drift. Changes 1-11, the tests and the docs use the plan's text. The only difference is that biome wrapped the JS string-branch ternary onto three lines.
+
+**Red/green.** The new tests were written first and run against the unfixed build:
+- Dart: `Expected: [0, null]  Actual: [0, 0]`.
+- Python: `test_read_time_series_row_no_data_is_none` failed at the humidity assert (`[0, 0] != [0, None]`).
+- JS: `toEqual([0, null])` received `[0, 0]`.
+- Julia: "No Data Is Nothing In Every Type" failed its first assertion (`humids isa Vector{Quiver.Optional{Int64}}`) under failfast.
+- C API: with the edited test file and the old header, MSVC gave `C2660: 'quiver_database_read_time_series_row': function does not take 9 arguments`.
+- `LuaRunnerTest.ReadTimeSeriesRowNoDataIsNil` passed on the old code, as the plan says.
+
+After the fix:
+- `DatabaseCApi.ReadTimeSeriesRow*`: 9/9.
+- `*ReadTimeSeriesRow*` (core + Lua): 14/14.
+- `scripts/test-all.bat`: all six suites PASS (C++ 1370, C API 567, Julia 1522, Dart 430, JS 217, Python 315).
+- The three consistency greps are empty.
+- `dart analyze` reports the same 7 infos before and after, none in changed code.
+- `bun run lint` on the three JS files shows only the old unused `NULLABLE_TS_SCHEMA` warning (test file L30).
+
+**Generator.** `bindings/julia/generator/generator.bat` changed `c_api.jl` by exactly the one expected hunk. Dart `bindings.dart` was hand-edited in three spots, and ffigen was not run.
+
+**Deviations and drift:**
+1. **CHANGELOG section.** The entry creates `## [0.12.5] — unreleased` → `### Changed` above `[0.12.4]`. The plan said `[0.12.0]`, but `v0.12.4` is tagged and the manifests are at 0.12.5. There is no manifest bump. Plans 18-23, running in parallel, will add to the same new section, so expect a trivial merge conflict on its header.
+2. **`bindings/python/AGENTS.md` and `bindings/js/AGENTS.md`.** PR #324 renamed their bullet to "**Bulk and per-cell NULLs**" and changed its wording. The plan's sentences were re-anchored:
+   - Python: appended after "`_c_api.py` carries the mask out-params and both free functions."
+   - JS: the `loader.ts` sentence now names `quiver_database_read_time_series_row` alongside "the eight numeric vector/set symbols".
+3. **Julia `AGENTS.md`.** The replaced fragment was re-wrapped to keep lines under 100 characters.
+4. **`scripts/format.bat`.**
+   - The C++ step ran. The Julia step exited 1 because JuliaFormatter reformats `bindings/julia/src/element.jl` (an old line from master that is too long) and reports "Some files have not been formatted". That file is out of scope, so it was reverted, and the Dart, Python and JS formatters were then run individually. All three exited 0.
+   - As in earlier plans, biome rewrote untouched CRLF JS files as LF. The content was identical, and they are not in the commit.
+   - No `.bat` file was touched.
+
+**Review.** A 3-lens adversarial workflow (FFI argument order at every site, memory ownership in the C impl and all four decoders, docs accuracy) found nothing.
+
+**For later plans:**
+- **18** edits `time-series.ts` / `loader.ts` / `database_read.jl` / `database.py` in other functions. `readTimeSeriesRow` now reads its mask inline, with the same idiom as `read.ts` L48, and uses no shared helper.
+- **25** owns the `strftime` line in Python `read_time_series_row`, which is unchanged.
+- **36 / 40**: `readTimeSeriesRow` (Dart) and `read_time_series_row` (Julia) keep straight-line frees. The Python version frees in `finally`.
+- **23**: `src/c/database_helpers.h` was not touched.

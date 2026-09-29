@@ -1348,6 +1348,7 @@ extension DatabaseRead on Database {
     try {
       final outDataType = arena<Int>();
       final outValues = arena<Pointer<Void>>();
+      final outMask = arena<Pointer<Uint8>>();
       final outCount = arena<Size>();
 
       check(
@@ -1359,6 +1360,7 @@ extension DatabaseRead on Database {
           dateTimeToString(dateTime).toNativeUtf8(allocator: arena).cast(),
           outDataType,
           outValues,
+          outMask,
           outCount,
         ),
       );
@@ -1368,25 +1370,37 @@ extension DatabaseRead on Database {
         return [];
       }
 
+      // mask[i] == 0: no data at or before [dateTime]; the data slot is a
+      // placeholder and is never read.
+      final mask = outMask.value;
       switch (outDataType.value) {
         case quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER:
           final ptr = outValues.value.cast<Int64>();
-          final result = List<Object?>.generate(count, (i) => ptr[i]);
+          final result = List<Object?>.generate(
+            count,
+            (i) => mask[i] != 0 ? ptr[i] : null,
+          );
           bindings.quiver_database_free_integer_array(ptr);
+          bindings.quiver_database_free_mask(mask);
           return result;
         case quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT:
           final ptr = outValues.value.cast<Double>();
-          final result = List<Object?>.generate(count, (i) => ptr[i]);
+          final result = List<Object?>.generate(
+            count,
+            (i) => mask[i] != 0 ? ptr[i] : null,
+          );
           bindings.quiver_database_free_float_array(ptr);
+          bindings.quiver_database_free_mask(mask);
           return result;
         default:
-          // STRING or DATE_TIME; NULL entries mark elements with no data
+          // STRING or DATE_TIME; never toDartString a masked-out (NULL) pointer
           final ptr = outValues.value.cast<Pointer<Char>>();
           final result = List<Object?>.generate(
             count,
-            (i) => ptr[i] == nullptr ? null : ptr[i].cast<Utf8>().toDartString(),
+            (i) => mask[i] != 0 ? ptr[i].cast<Utf8>().toDartString() : null,
           );
           bindings.quiver_database_free_string_array(ptr, count);
+          bindings.quiver_database_free_mask(mask);
           return result;
       }
     } finally {
