@@ -13,7 +13,7 @@ src/              # Module per C API category: database.ts, create.ts, read.ts, 
                   # query.ts, time-series.ts, transaction.ts, csv.ts, introspection.ts,
                   # composites.ts, lua-runner.ts (index.ts re-exports the public surface)
 src/lua-api.ts    # LUA_DB_API_REFERENCE — agent-facing Lua `db:` API reference, as a string const
-src/group-columns.ts # Shared columnar marshaller for the group writers (by id and by label)
+src/group-columns.ts # Shared columnar marshaller (group writers) and decoder (group readers)
 src/loader.ts     # HAND-WRITTEN FFI symbol table + 3-tier library loader
 src/types.ts      # Central DATA_TYPE_* / LOG_LEVEL_* constants and DatabaseOptions type
 src/ffi-helpers.ts # Alloc helpers, makeDefaultOptions()
@@ -75,6 +75,13 @@ biome.json        # Lint/format config
   throw a `QuiverError` naming the column. Load-bearing — an empty column would otherwise marshal a
   `null` data pointer that the C API dereferences against the first column's `row_count`. Pass `{}`
   (no columns) to clear the group. The C API rejects both cases too; failing here names the column.
+  Its read-side twin, `readGroupColumns(handle, readGroup, collection, group, id)`, is the one
+  decoder of the columnar + per-cell-mask read result, and frees it in a `finally`:
+  `readTimeSeriesGroup` returns its columns as they are, and `readVectorGroupById` /
+  `readSetGroupById` (`read.ts`) transpose them into `Record<string, number | string | null>[]`
+  rows — rows like the other three bindings (root design decision), with DATE_TIME left as the
+  stored string and no synthetic `vector_index`. The C-function parameter is `readGroup`, never
+  `read`, which is the `bun:ffi` import the decoder uses for `read.ptr`.
 - **A nullable scalar string argument passes literal `null`, never `""`**
   (`updateRelation`/`updateRelationByLabel`) — Bun turns `null` into a NULL pointer for a
   `"pointer"` slot, the same way `group-columns.ts` passes `null` for the array pointers when
@@ -99,14 +106,16 @@ biome.json        # Lint/format config
   `null` value marshals to a per-column `uint8_t` mask (0 = NULL) with a placeholder in the data
   array; an all-`null` column is tagged FLOAT with a zeroed placeholder (the C API ignores the tag
   for masked cells). Reads decode the mask and null-out cells; string columns use the null-guarded
-  pointer loop (never `decodeStringArray`, which constructs a `CString` from a NULL pointer). Masks
+  pointer loop (never `decodeStringArray`, which turns a NULL `char*` into `""`). Masks
   are built by direct `Uint8Array` indexing — never a `DataView` — per the TypedArray house rule.
-- **`setElementArray` refuses a `null` cell in a numeric or boolean array** (`QuiverError` naming
-  the column). A vector/set read returns a NULL cell as `null`, and without the check a read written
-  back through `createElement`/`updateElement` stored it as 0 / `false` (`allocNativeFloat64`'s
-  `setFloat64(null)` writes 0), or misrouted an integer array to the float setter. A string array
-  keeps its NULL-pointer path, which the C setter reads as NULL. Other NULL cells go through
-  `updateVectorGroup` / `updateSetGroup`.
+- **`setElementArray` refuses a `null` or `undefined` cell in any array** (`QuiverError` naming
+  the column), whatever its position. A vector/set read returns a NULL cell as `null`, and without
+  the check a read written back through `createElement`/`updateElement` stored it as 0 / `false`
+  (`allocNativeFloat64`'s `setFloat64(null)` writes 0), or misrouted an integer array to the float
+  setter. String arrays used to be exempt, which made the outcome depend on the first cell
+  (`["a", null]` stored NULL, `[null, "a"]` threw) and let `["a", undefined]` store the text
+  `"undefined"`. NULL cells go through `updateVectorGroup` / `updateSetGroup` (or
+  `updateTimeSeriesGroup`), as in Python, Julia and Lua.
 - **`integerToBoolean` throws `RangeError`, not `QuiverError`** — the one exception to the
   "always `QuiverError`" rule above, and deliberate: that message comes from
   `quiver_get_last_error`, while this one is crafted here (the boolean readers are a binding-only
@@ -124,9 +133,9 @@ biome.json        # Lint/format config
   so it cannot change what a mixed `['a', true]` column already wrote. `upsertRowColumns`'s last
   branch is `typeof value === "number"`, not an untyped `else` — `Number(null)` is 0 and anything
   else is NaN, both of which used to be written with no error. **`GroupColumns` is the write type and
-  `TimeSeriesData` the read type** — they are otherwise identical, but only the former admits
-  `boolean`, since `readTimeSeriesGroup` never produces one and its return type should not claim
-  it. The four `updateTimeSeriesGroup*`/group writers therefore take `GroupColumns`.
+  `TimeSeriesData` the read type** (both in `group-columns.ts`) — they are otherwise identical, but
+  only the former admits `boolean`, since no group reader produces one and its return type should
+  not claim it. The four `updateTimeSeriesGroup*`/group writers therefore take `GroupColumns`.
 - **Test/lint/format**: `bun test test`, `bun run lint`, `bun run format` (biome, project-pinned
   version). No permission flags needed (Bun has none — don't carry over Deno habits). There is
   pre-existing lint debt in untouched files — fix only what your change orphans, don't drive-by

@@ -342,3 +342,98 @@ TEST(Database, ReadVectorBulkKeepsElementWithIdMinusOne) {
     EXPECT_TRUE(vectors[1].empty());
     EXPECT_EQ(vectors[2], (std::vector<std::optional<int64_t>>{7}));
 }
+
+// ============================================================================
+// Column-name resolution (shared_group_columns.sql)
+// ============================================================================
+
+namespace {
+
+struct SharedGroupColumnsFixture {
+    quiver::Database db;
+    int64_t parent_a;
+    int64_t parent_b;
+    int64_t child;
+
+    SharedGroupColumnsFixture()
+        : db(quiver::Database::from_schema(":memory:",
+                                           VALID_SCHEMA("shared_group_columns.sql"),
+                                           {.read_only = false, .console_level = quiver::LogLevel::Off})) {
+        db.create_element("Configuration", quiver::Element().set("label", std::string("Config")));
+        parent_a = db.create_element("Parent", quiver::Element().set("label", std::string("Parent A")));
+        parent_b = db.create_element("Parent", quiver::Element().set("label", std::string("Parent B")));
+        child = db.create_element("Child", quiver::Element().set("label", std::string("Child 1")));
+    }
+};
+
+}  // namespace
+
+// A group named after a column it does not hold (Child_vector_cost holds "amount") must not stop
+// the per-column read of Child_vector_routes' "cost": it used to throw "column 'cost' not found in
+// table 'Child_vector_cost'", so no reader in any layer could read that column.
+TEST(Database, ReadGroupColumnSkipsGroupNamedAfterAColumnItLacks) {
+    SharedGroupColumnsFixture f;
+    f.db.update_vector_group(
+        "Child",
+        "routes",
+        f.child,
+        {{{"parent_ref", f.parent_b}, {"cost", 1.5}}, {{"parent_ref", f.parent_b}, {"cost", 2.5}}});
+    f.db.update_vector_group("Child", "cost", f.child, {{{"amount", 9.0}}});
+
+    EXPECT_EQ(f.db.read_vector_floats_by_id("Child", "cost", f.child), (std::vector<std::optional<double>>{1.5, 2.5}));
+    EXPECT_EQ(f.db.read_vector_floats("Child", "cost"), (std::vector<std::vector<std::optional<double>>>{{1.5, 2.5}}));
+    EXPECT_EQ(f.db.read_vector_floats_by_id("Child", "amount", f.child), (std::vector<std::optional<double>>{9.0}));
+
+    // The set counterpart: Child_set_tier holds "rank", while "tier" belongs to sponsors.
+    f.db.update_set_group(
+        "Child",
+        "sponsors",
+        f.child,
+        {{{"parent_ref", f.parent_b}, {"tier", int64_t{1}}}, {{"parent_ref", f.parent_b}, {"tier", int64_t{2}}}});
+    f.db.update_set_group("Child", "tier", f.child, {{{"rank", int64_t{9}}}});
+    auto tiers = f.db.read_set_integers_by_id("Child", "tier", f.child);
+    std::sort(tiers.begin(), tiers.end());
+    EXPECT_EQ(tiers, (std::vector<std::optional<int64_t>>{1, 2}));
+    EXPECT_EQ(f.db.read_set_integers_by_id("Child", "rank", f.child), (std::vector<std::optional<int64_t>>{9}));
+}
+
+// Two groups of one kind share the FK column parent_ref. A per-column read resolves the NAME, to the
+// group table whose name sorts first; the whole-group reader reads the group it is given.
+TEST(Database, ReadGroupByIdReadsItsOwnTableWhenGroupsShareAColumn) {
+    SharedGroupColumnsFixture f;
+    f.db.update_vector_group("Child", "links", f.child, {{{"parent_ref", f.parent_a}}});
+    f.db.update_vector_group(
+        "Child",
+        "routes",
+        f.child,
+        {{{"parent_ref", f.parent_b}, {"cost", 1.5}}, {{"parent_ref", f.parent_b}, {"cost", 2.5}}});
+    f.db.update_set_group("Child", "mentors", f.child, {{{"parent_ref", f.parent_a}}});
+    f.db.update_set_group(
+        "Child",
+        "sponsors",
+        f.child,
+        {{{"parent_ref", f.parent_b}, {"tier", int64_t{1}}}, {{"parent_ref", f.parent_b}, {"tier", int64_t{2}}}});
+
+    EXPECT_EQ(f.db.read_vector_integers_by_id("Child", "parent_ref", f.child),
+              (std::vector<std::optional<int64_t>>{f.parent_a}));
+    EXPECT_EQ(f.db.read_set_integers_by_id("Child", "parent_ref", f.child),
+              (std::vector<std::optional<int64_t>>{f.parent_a}));
+
+    auto routes = f.db.read_vector_group_by_id("Child", "routes", f.child);
+    ASSERT_EQ(routes.size(), 2u);
+    for (const auto& row : routes) {
+        EXPECT_EQ(std::get<int64_t>(row.at("parent_ref")), f.parent_b);
+    }
+    EXPECT_EQ(std::get<double>(routes[0].at("cost")), 1.5);
+    EXPECT_EQ(std::get<double>(routes[1].at("cost")), 2.5);
+
+    auto sponsors = f.db.read_set_group_by_id("Child", "sponsors", f.child);
+    ASSERT_EQ(sponsors.size(), 2u);
+    std::vector<int64_t> tiers;
+    for (const auto& row : sponsors) {
+        EXPECT_EQ(std::get<int64_t>(row.at("parent_ref")), f.parent_b);
+        tiers.push_back(std::get<int64_t>(row.at("tier")));
+    }
+    std::sort(tiers.begin(), tiers.end());
+    EXPECT_EQ(tiers, (std::vector<int64_t>{1, 2}));
+}

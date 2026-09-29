@@ -64,9 +64,9 @@ Settled questions — don't relitigate without the user; each was decided delibe
   `type_validator` are `mutable` so the const readers can trigger it, and `load_schema_metadata`
   publishes neither until validation passes — a half-loaded state would survive a failed lazy load
   and crash the next call. A non-quiver database now reports the validator's actual reason.
-- **The group writers are column-oriented while the group readers are row-oriented** in Dart and
-  Python (`read_vector_group_by_id` returns rows; Python even adds a synthetic 0-based
-  `vector_index`). The only asymmetric reader/writer pair in those bindings, and deliberate for now:
+- **The group writers are column-oriented while the group readers are row-oriented** in every
+  FFI binding (`read_vector_group_by_id` returns rows in Julia, Dart, Python and JS; Python even
+  adds a synthetic 0-based `vector_index`). The only asymmetric reader/writer pair in those bindings, and deliberate for now:
   the columnar shape is the canonical cross-binding one for group *writes* (it is what the C API
   takes), and changing either side is a breaking API change, not a fix.
 - **Binary + expression subsystems are exposed in Julia and Lua only.** Dart, Python, and JS
@@ -276,10 +276,12 @@ Settled questions — don't relitigate without the user; each was decided delibe
   per-column reads of one nullable group mis-pair; they are now preserved positionally
   (`std::optional` / `nothing`/`None`/`null`/`nil`), so zipping per-column reads of a group is
   correct — provided each column name resolves to that group. A per-column reader resolves a name
-  to the group named after it, else to the first group of that kind (in table order) holding the
-  column, so when two vector or two set groups share a column name (legal for FK columns) the name
-  reads the other group's table; Julia's and Python's composed `read_{vector,set}_group_by_id`
-  inherit that, Dart's native call does not. The LEFT JOIN carries a **presence column** (`g.id`)
+  to the group named after it when that group holds the column (a group may be named after another
+  group's column), else to the group of that kind whose table name sorts first among those holding
+  it, so when two vector or two set groups share a column name (legal for FK columns) the name reads
+  one of them for both. The `read_{vectors,sets}_by_id` composites read and key by column name, so
+  they inherit that; `read_{vector,set}_group_by_id` read the group they are given, in every
+  binding. The LEFT JOIN carries a **presence column** (`g.id`)
   to keep "no group row" and "NULL cell" apart: no row at all is an empty inner list, a row whose
   value is NULL is a null cell. The
   C ABI carries the same distinction — a per-cell `uint8_t` mask for the numeric readers (freed by
@@ -636,9 +638,12 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
   NULL cells preserved (`Value{nullptr}`). One call for a whole group, where zipping the
   per-column `_by_id` readers takes N; both are NULL-correct now that the per-column readers
   preserve cells. C API mirrors `read_time_series_group`'s columnar+mask shape (freed by
-  `free_time_series_data`); Dart binds them natively; Julia/Python compose per-column reads, which
-  resolve each column by name — so a column name another group of the same kind shares is read
-  from whichever group the name resolves to (see the bulk-reads decision).
+  `free_time_series_data`). Julia, Dart, Python and JS all call it and return rows, read from the
+  named group's own table in one statement — so, unlike zipping per-column reads, a column name
+  another group of the same kind shares cannot pull that group's rows in (see the bulk-reads
+  decision). A SQL NULL is `nothing`/`null`/`None`/`null`, a DATE_TIME column is parsed except in
+  JS (string datetime surface), and Python adds a synthetic 0-based `vector_index`. Lua does not
+  bind them (design decision).
 - Whole-group writers: `update_vector_group()` / `update_set_group()` — replace all of an element's
   rows in one **named** group; an empty row list clears it. The write counterpart of the readers
   above, and the unambiguous alternative to passing arrays through `update_element` /
@@ -765,6 +770,8 @@ The rules are mechanical: given any C++ method name, you can derive the equivale
 | Vector group update by label | `update_vector_group_by_label()` | `quiver_database_update_vector_group_by_label()` | `update_vector_group_by_label!()` | `updateVectorGroupByLabel()` | `update_vector_group_by_label()` |
 | Set group update | `update_set_group()` | `quiver_database_update_set_group()` | `update_set_group!()` | `updateSetGroup()` | `update_set_group()` |
 | Set group update by label | `update_set_group_by_label()` | `quiver_database_update_set_group_by_label()` | `update_set_group_by_label!()` | `updateSetGroupByLabel()` | `update_set_group_by_label()` |
+| Vector group read | `read_vector_group_by_id()` | `quiver_database_read_vector_group_by_id()` | `read_vector_group_by_id()` | `readVectorGroupById()` | N/A (not bound — design decision) |
+| Set group read | `read_set_group_by_id()` | `quiver_database_read_set_group_by_id()` | `read_set_group_by_id()` | `readSetGroupById()` | N/A (not bound — design decision) |
 | Query | `query_string()` | `quiver_database_query_string()` | `query_string()` | `queryString()` | `query_string()` |
 | CSV | `export_csv()` | `quiver_database_export_csv()` | `export_csv()` | `exportCSV()` | `export_csv()` |
 | Describe (text) | `describe()` | `quiver_database_describe()` | `describe()` | `describe()` | `describe()` |
@@ -874,10 +881,3 @@ Python has `with` on `Database` and `LuaRunner`; Dart and JS have neither. All o
 `open + fn + close`. Two caveats hold wherever a scoped form exists: a `LuaRunner` borrows its
 `Database` (raw `Database&` in `src/lua_runner.cpp`) and must not outlive the block, and an
 uncommitted transaction still open at the block's exit is rolled back by the close.
-
-**Multi-column group readers (Julia, Dart, and Python):**
-
-| Julia | Dart | Python | Wraps |
-|-------|------|--------|-------|
-| `read_vector_group_by_id` | `readVectorGroupById` | `read_vector_group_by_id` | Julia/Python: metadata + per-column vector reads; Dart: native C++ `read_vector_group_by_id` (NULL-preserving) |
-| `read_set_group_by_id` | `readSetGroupById` | `read_set_group_by_id` | Julia/Python: metadata + per-column set reads; Dart: native C++ `read_set_group_by_id` (NULL-preserving) |

@@ -126,6 +126,38 @@ class TestReadVectorGroupById:
         result = collections_db.read_vector_group_by_id("Collection", "values", id1)
         assert result == []
 
+    def test_parses_date_time_columns(self, multi_column_groups_db: Database) -> None:
+        db = multi_column_groups_db
+        db.create_element("Configuration", label="Config")
+        item = db.create_element("Items", label="item1")
+        db.update_vector_group(
+            "Items",
+            "events",
+            item,
+            {"date_event": ["2024-01-15T10:30:00", None, "2024-03-01"], "note": [None, "second", "third"]},
+        )
+
+        assert db.read_vector_group_by_id("Items", "events", item) == [
+            {"vector_index": 0, "date_event": datetime(2024, 1, 15, 10, 30, tzinfo=timezone.utc), "note": None},
+            {"vector_index": 1, "date_event": None, "note": "second"},
+            {"vector_index": 2, "date_event": datetime(2024, 3, 1, tzinfo=timezone.utc), "note": "third"},
+        ]
+
+    def test_reads_its_own_table_when_groups_share_a_column(self, shared_group_columns_db: Database) -> None:
+        db = shared_group_columns_db
+        db.create_element("Configuration", label="Config")
+        parent_a = db.create_element("Parent", label="Parent A")
+        parent_b = db.create_element("Parent", label="Parent B")
+        child = db.create_element("Child", label="Child 1")
+        # links and routes share parent_ref, and a per-column read of that name resolves to links.
+        db.update_vector_group("Child", "links", child, {"parent_ref": [parent_a]})
+        db.update_vector_group("Child", "routes", child, {"parent_ref": [parent_b, parent_b], "cost": [1.5, 2.5]})
+
+        assert db.read_vector_group_by_id("Child", "routes", child) == [
+            {"vector_index": 0, "parent_ref": parent_b, "cost": 1.5},
+            {"vector_index": 1, "parent_ref": parent_b, "cost": 2.5},
+        ]
+
 
 # -- String vector reads (gap-fill) ------------------------------------------
 
@@ -265,8 +297,8 @@ class TestVectorNullCells:
         assert collections_db.read_vector_booleans("Collection", "value_int") == [[True, None, False]]
         assert collections_db.read_vector_booleans_by_id("Collection", "value_int", id1) == [True, None, False]
 
-    def test_group_reader_composition_is_null_correct(self, collections_db: Database) -> None:
-        """read_vector_group_by_id composes per-column reads, which now keep NULL cells."""
+    def test_group_reader_keeps_null_cells_in_place(self, collections_db: Database) -> None:
+        """read_vector_group_by_id returns a NULL cell as None in its own row."""
         collections_db.create_element("Configuration", label="Config")
         id1 = collections_db.create_element("Collection", label="Item 1")
         collections_db.update_vector_group(
@@ -277,3 +309,25 @@ class TestVectorNullCells:
         assert len(rows) == 3
         assert [row["value_int"] for row in rows] == [10, None, 30]
         assert [row["value_float"] for row in rows] == [1.5, 2.5, None]
+
+    def test_float_reader_keeps_null_cells(self, collections_db: Database) -> None:
+        collections_db.create_element("Configuration", label="Config")
+        id1 = collections_db.create_element("Collection", label="Item 1")
+        collections_db.update_vector_group(
+            "Collection", "values", id1, {"value_int": [1, 2], "value_float": [None, 2.5]}
+        )
+
+        assert collections_db.read_vector_floats("Collection", "value_float") == [[None, 2.5]]
+        assert collections_db.read_vector_floats_by_id("Collection", "value_float", id1) == [None, 2.5]
+
+    def test_string_and_date_time_readers_keep_null_cells(self, multi_column_groups_db: Database) -> None:
+        db = multi_column_groups_db
+        db.create_element("Configuration", label="Config")
+        item = db.create_element("Items", label="item1")
+        db.update_vector_group("Items", "events", item, {"date_event": ["2024-01-01", None], "note": [None, "b"]})
+
+        assert db.read_vector_strings("Items", "note") == [[None, "b"]]
+        assert db.read_vector_strings_by_id("Items", "note", item) == [None, "b"]
+        jan_first = datetime(2024, 1, 1, tzinfo=timezone.utc)
+        assert db.read_vector_date_times("Items", "date_event") == [[jan_first, None]]
+        assert db.read_vector_date_time_by_id("Items", "date_event", item) == [jan_first, None]

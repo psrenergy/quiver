@@ -1,11 +1,10 @@
 import type { CsvOptions } from "./csv.ts";
 import { check, QuiverError } from "./errors.ts";
 import { allocPtrOut, makeDefaultOptions, readPtrOut, toCString } from "./ffi-helpers.ts";
-import type { GroupColumns } from "./group-columns.ts";
+import type { GroupColumns, TimeSeriesData } from "./group-columns.ts";
 import type { NativePointer } from "./loader.ts";
 import { getSymbols } from "./loader.ts";
 import type { GroupMetadata, ScalarMetadata } from "./metadata.ts";
-import type { TimeSeriesData } from "./time-series.ts";
 import type { DatabaseOptions, ElementData, QueryParam } from "./types.ts";
 
 export class Database {
@@ -186,6 +185,16 @@ export class Database {
     attribute: string,
     id: number,
   ) => (string | null)[];
+  declare readVectorGroupById: (
+    collection: string,
+    group: string,
+    id: number,
+  ) => Record<string, number | string | null>[];
+  declare readSetGroupById: (
+    collection: string,
+    group: string,
+    id: number,
+  ) => Record<string, number | string | null>[];
 
   // --- Queries (implemented in query.ts) ---
   declare queryString: (sql: string, parameters?: QueryParam[]) => string | null;

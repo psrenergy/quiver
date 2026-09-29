@@ -69,20 +69,27 @@ function Base.setindex!(el::Element, value::Vector{<:AbstractString}, name::Stri
 end
 
 # A nullable vector/set column reads back as Vector{Union{Nothing, T}} even when no cell is NULL
-# (the element type follows the schema). The Element surface stays non-null: narrow such a vector
-# so a read round-trips into create_element!/update_element!, and refuse a real `nothing` cell.
+# (the element type follows the schema; the boolean wrappers give Optional{Bool}). The Element
+# surface stays non-null: narrow such a vector so a read round-trips into
+# create_element!/update_element!, and refuse a real `nothing` cell.
 function Base.setindex!(
     el::Element,
     value::Union{
         Vector{Optional{Int64}},
         Vector{Optional{Float64}},
+        Vector{Optional{Bool}},
         Vector{Optional{String}},
         Vector{Optional{DateTime}},
     },
     name::String,
 )
     if any(isnothing, value)
-        throw(ArgumentError("Cannot set array '$name': a `nothing` cell needs update_vector_group! or update_set_group!"))
+        throw(
+            ArgumentError(
+                "Cannot set array '$name': a `nothing` cell needs update_vector_group!, " *
+                "update_set_group! or update_time_series_group!",
+            ),
+        )
     end
     el[name] = convert(Vector{Base.nonnothingtype(eltype(value))}, value)
     return nothing

@@ -160,6 +160,21 @@ include("fixture.jl")
             Quiver.close!(db)
         end
 
+        @testset "NULL Cell Is Not A Target" begin
+            path_schema = joinpath(tests_path(), "schemas", "valid", "relations.sql")
+            db = Quiver.from_schema(":memory:", path_schema)
+
+            Quiver.create_element!(db, "Configuration"; label = "Config")
+            Quiver.create_element!(db, "Parent"; label = "Parent 1")  # id=1
+            child = Quiver.create_element!(db, "Child"; label = "Child 1")
+            # A nullable relation column can hold an empty row; it maps to no target.
+            Quiver.update_set_group!(db, "Child", "parents", child; parent_ref = [1, nothing])
+
+            @test Quiver.set_relation_map(db, "Child", "Parent", "ref") == [Int64[1]]
+
+            Quiver.close!(db)
+        end
+
         @testset "With Set Relations" begin
             path_schema = joinpath(tests_path(), "schemas", "valid", "relations.sql")
             db = Quiver.from_schema(":memory:", path_schema)

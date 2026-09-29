@@ -165,8 +165,83 @@ describe("set NULL cells", () => {
       // through the group writer.
       db.updateSetGroup("Collection", "tags", id, { tag: ["a", null, "c"] });
 
-      expect(db.readSetStrings("Collection", "tag")).toEqual([["a", null, "c"], []]);
-      expect(db.readSetStringsById("Collection", "tag", id)).toEqual(["a", null, "c"]);
+      // Set order is unspecified: pin the agreement between the readers and the content.
+      const byId = db.readSetStringsById("Collection", "tag", id);
+      expect(db.readSetStrings("Collection", "tag")).toEqual([byId, []]);
+      expect(byId).toHaveLength(3);
+      expect(byId).toEqual(expect.arrayContaining(["a", null, "c"]));
+    } finally {
+      db.close();
+    }
+  });
+
+  test("keeps NULL cells through the bulk float reader", () => {
+    const db = Database.fromSchema(":memory:", MULTI_COLUMN_SCHEMA_PATH);
+    try {
+      db.createElement("Configuration", { label: "Config" });
+      const id = db.createElement("Items", { label: "Item1" });
+      db.updateSetGroup("Items", "codes", id, { code: ["a", "b"], weight: [1.5, null] });
+
+      const [weights] = db.readSetFloats("Items", "weight");
+      expect(weights).toHaveLength(2);
+      expect(weights).toEqual(expect.arrayContaining([1.5, null]));
+    } finally {
+      db.close();
+    }
+  });
+});
+
+describe("readSetGroupById", () => {
+  test("returns every row with NULL cells in place", () => {
+    const db = Database.fromSchema(":memory:", MULTI_COLUMN_SCHEMA_PATH);
+    try {
+      db.createElement("Configuration", { label: "Config" });
+      const id = db.createElement("Items", { label: "Item1" });
+      db.updateSetGroup("Items", "codes", id, {
+        code: ["alpha", null, "mu"],
+        weight: [1.5, 2.5, null],
+      });
+
+      const rows = db.readSetGroupById("Items", "codes", id);
+      // A set's row order is unspecified: check membership, not positions.
+      expect(rows).toHaveLength(3);
+      expect(rows).toContainEqual({ code: "alpha", weight: 1.5 });
+      expect(rows).toContainEqual({ code: null, weight: 2.5 });
+      expect(rows).toContainEqual({ code: "mu", weight: null });
+    } finally {
+      db.close();
+    }
+  });
+
+  test("returns [] for an element with no rows", () => {
+    const db = Database.fromSchema(":memory:", MULTI_COLUMN_SCHEMA_PATH);
+    try {
+      db.createElement("Configuration", { label: "Config" });
+      const id = db.createElement("Items", { label: "Item1" });
+      expect(db.readSetGroupById("Items", "codes", id)).toEqual([]);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("reads its own table when another group shares a column name", () => {
+    const db = Database.fromSchema(":memory:", join(SCHEMAS_DIR, "shared_group_columns.sql"));
+    try {
+      db.createElement("Configuration", { label: "Config" });
+      const parentA = db.createElement("Parent", { label: "Parent A" });
+      const parentB = db.createElement("Parent", { label: "Parent B" });
+      const child = db.createElement("Child", { label: "Child 1" });
+      // mentors and sponsors share parent_ref, and a per-column read of that name resolves to mentors.
+      db.updateSetGroup("Child", "mentors", child, { parent_ref: [parentA] });
+      db.updateSetGroup("Child", "sponsors", child, {
+        parent_ref: [parentB, parentB],
+        tier: [1, 2],
+      });
+
+      const rows = db.readSetGroupById("Child", "sponsors", child);
+      expect(rows).toHaveLength(2);
+      expect(rows).toContainEqual({ parent_ref: parentB, tier: 1 });
+      expect(rows).toContainEqual({ parent_ref: parentB, tier: 2 });
     } finally {
       db.close();
     }

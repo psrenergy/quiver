@@ -263,6 +263,46 @@ include("fixture.jl")
         Quiver.close!(db)
     end
 
+    @testset "Set Group by ID Keeps NULL Cells In Place" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "multi_column_groups.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+        id = Quiver.create_element!(db, "Items"; label = "Item 1")
+        Quiver.update_set_group!(db, "Items", "codes", id;
+            code = ["alpha", nothing, "mu"],
+            weight = [1.5, 2.5, nothing],
+        )
+
+        rows = Quiver.read_set_group_by_id(db, "Items", "codes", id)
+        @test length(rows) == 3
+        # A set's row order is unspecified: compare the (code, weight) pairs, not positions.
+        @test Set((row["code"], row["weight"]) for row in rows) ==
+              Set([("alpha", 1.5), (nothing, 2.5), ("mu", nothing)])
+
+        Quiver.close!(db)
+    end
+
+    @testset "Set Group by ID Reads Its Own Table When Groups Share A Column" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "shared_group_columns.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+        parent_a = Quiver.create_element!(db, "Parent"; label = "Parent A")
+        parent_b = Quiver.create_element!(db, "Parent"; label = "Parent B")
+        child = Quiver.create_element!(db, "Child"; label = "Child 1")
+
+        # mentors and sponsors share parent_ref, and a per-column read of that name resolves to mentors.
+        Quiver.update_set_group!(db, "Child", "mentors", child; parent_ref = [parent_a])
+        Quiver.update_set_group!(db, "Child", "sponsors", child; parent_ref = [parent_b, parent_b], tier = [1, 2])
+
+        rows = Quiver.read_set_group_by_id(db, "Child", "sponsors", child)
+        @test length(rows) == 2
+        @test Set((row["parent_ref"], row["tier"]) for row in rows) == Set([(parent_b, 1), (parent_b, 2)])
+
+        Quiver.close!(db)
+    end
+
     @testset "NULL cells and element types" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
         db = Quiver.from_schema(":memory:", path_schema)
@@ -274,15 +314,26 @@ include("fixture.jl")
         # through the group writer.
         Quiver.update_set_group!(db, "Collection", "tags", id; tag = ["a", nothing, "c"])
 
-        # A NULL cell keeps its slot; an element with no rows is an empty inner vector.
-        @test Quiver.read_set_strings(db, "Collection", "tag") == [["a", nothing, "c"], []]
-        @test Quiver.read_set_strings_by_id(db, "Collection", "tag", id) == ["a", nothing, "c"]
+        # A NULL cell keeps a slot; an element with no rows is an empty inner vector. Set order is
+        # unspecified, so pin the agreement between the two readers and the content, not the order.
+        sets = Quiver.read_set_strings(db, "Collection", "tag")
+        by_id = Quiver.read_set_strings_by_id(db, "Collection", "tag", id)
+        @test length(sets) == 2
+        @test isempty(sets[2])
+        @test isequal(sets[1], by_id)
+        @test length(by_id) == 3
+        @test Set(by_id) == Set(["a", nothing, "c"])
 
         # tag is nullable -> Optional element type.
         @test Quiver.read_set_strings(db, "Collection", "tag") isa
               Vector{Vector{Union{String, Nothing}}}
         @test Quiver.read_set_strings_by_id(db, "Collection", "tag", id) isa
               Vector{Union{String, Nothing}}
+
+        # The DateTime wrapper keeps the NULL cell too.
+        Quiver.update_set_group!(db, "Collection", "tags", id; tag = ["2024-01-01", nothing])
+        @test Set(Quiver.read_set_date_times(db, "Collection", "tag")[1]) == Set([DateTime(2024, 1, 1), nothing])
+        @test Set(Quiver.read_set_date_time_by_id(db, "Collection", "tag", id)) == Set([DateTime(2024, 1, 1), nothing])
 
         Quiver.close!(db)
     end

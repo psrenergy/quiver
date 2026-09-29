@@ -81,10 +81,11 @@ ruff.toml         # Lint/format config (format.bat runs ruff)
   `query_boolean`). The `@overload` triple mirrors `bindings/js/src/boolean.ts`; every caller now
   passes `int | None` (the vector/set readers keep NULL cells and are declared
   `list[... bool | None]`), so the narrow `(int) -> bool` variant backs no declared type.
-- **`Element._set_array` refuses a `None` cell** with a `TypeError` naming the column: a vector/set
-  read returns a NULL cell as `None`, and without the check it failed inside cffi
-  (`an integer is required`) or on `str.encode`, naming nothing. NULL cells are written with
-  `update_vector_group` / `update_set_group` (the element surface stays non-null).
+- **`Element._set_array` refuses a `None` cell** with a `TypeError` naming the column: a
+  vector/set/time-series read returns a NULL cell as `None`, and without the check it failed inside
+  cffi (`an integer is required`) or on `str.encode`, naming nothing. NULL cells are written with
+  `update_vector_group` / `update_set_group` / `update_time_series_group` (the element surface stays
+  non-null).
 - **`LuaRunner.run` owns its result**: `quiver_lua_runner_run` takes a `char** out_result` and the
   JSON string must be freed with `quiver_lua_runner_free_string` — *not*
   `quiver_database_free_string` (both are hand-declared in `_c_api.py`). The free sits in a
@@ -99,9 +100,18 @@ ruff.toml         # Lint/format config (format.bat runs ruff)
   and by label) — same name as Dart's `_marshalGroupColumn`. It raises `ValueError` for jagged
   column lists (a pre-FFI marshalling error, the documented exception to "messages come from C++");
   everything else is validated in the core and surfaces as `QuiverError`. Note that the group
-  *writers* take columns while `read_vector_group_by_id` returns rows; that reader composes
-  per-column reads, which now preserve NULL cells, so its rows are NULL-correct and a NULL-cell
-  write can be asserted through it.
+  *writers* take columns while `read_vector_group_by_id` / `read_set_group_by_id` return rows (the
+  vector form adds a synthetic 0-based `vector_index`); both read a NULL cell back as `None` in its
+  row, so a NULL-cell write can be asserted through them.
+- **`_decode_group_rows` is the one decoder for the two whole-group readers** — a module-level data
+  codec like `_marshal_group_columns` (Dart's `_decodeGroupRows`), not the closure-parameterized FFI
+  helper the root "Do not 'fix'" list forbids: each reader keeps its own expanded FFI call block
+  and hands the out-params over. It maps mask 0 to `None` (never `ffi.string` a masked-out NULL
+  `char*`), parses DATE_TIME columns with `_parse_datetime`, and frees with
+  `quiver_database_free_time_series_data` in a `finally`. The readers used to compose one
+  per-column read per column, which resolves the column *name* — a column another group of the
+  same kind shares came from that group's table — and took N snapshots. `read_time_series_group`
+  keeps its own loop (columns, dimension-only parsing).
 - **`_marshal_row_columns` is its row-shaped sibling**, serving `upsert_time_series_row` and its
   `_by_label` form — each kwarg is a scalar wrapped in a 1-element typed array. Kept separate
   because the row-upsert C signature carries no per-cell mask: the group marshaller's zeroed

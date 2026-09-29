@@ -29,3 +29,14 @@ CREATE TABLE Items_set_codes (
     weight REAL,
     UNIQUE (id, code, weight)
 ) STRICT;
+
+-- A DATE_TIME (date_-prefixed) and a TEXT value column, both nullable: the whole-group readers
+-- parse the first (Julia/Python/Dart; JS keeps the ISO string) and must never decode the NULL
+-- char* of a masked-out cell
+CREATE TABLE Items_vector_events (
+    id INTEGER NOT NULL REFERENCES Items(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    vector_index INTEGER NOT NULL,
+    date_event TEXT,
+    note TEXT,
+    PRIMARY KEY (id, vector_index)
+) STRICT;

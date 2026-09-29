@@ -2023,35 +2023,39 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         group: str,
         id: int,
     ) -> list[dict]:
-        """Read a multi-column vector group as row dicts.
+        """Read a multi-column vector group as row dicts, in vector_index order.
 
-        Each row is a dict mapping column names to typed values.
-        Includes 'vector_index' (0-based) for ordering info.
-        Rows are returned in vector_index order.
-        DATE_TIME columns are parsed to datetime objects.
+        Each row maps column names to typed values and adds a synthetic 0-based 'vector_index'.
+        One native read of the named group's own table: a SQL NULL cell is None in its row, and a
+        column name another group shares still reads this group. DATE_TIME columns are parsed to
+        datetime objects.
         """
         self._ensure_open()
-        metadata = self.get_vector_metadata(collection, group)
-        columns = metadata.value_columns
-        if not columns:
-            return []
-
-        column_data = {}
-        row_count = 0
-        for col in columns:
-            name = col.name
-            if col.data_type == DataType.INTEGER:
-                values = self.read_vector_integers_by_id(collection, name, id)
-            elif col.data_type == DataType.FLOAT:
-                values = self.read_vector_floats_by_id(collection, name, id)
-            elif col.data_type == DataType.DATE_TIME:
-                values = self.read_vector_date_time_by_id(collection, name, id)
-            else:  # STRING
-                values = self.read_vector_strings_by_id(collection, name, id)
-            column_data[name] = values
-            row_count = len(values)
-
-        return [{"vector_index": i, **{name: vals[i] for name, vals in column_data.items()}} for i in range(row_count)]
+        lib = get_lib()
+        out_names = ffi.new("char***")
+        out_types = ffi.new("int**")
+        out_data = ffi.new("void***")
+        out_has_value = ffi.new("uint8_t***")
+        out_col_count = ffi.new("size_t*")
+        out_row_count = ffi.new("size_t*")
+        check(
+            lib.quiver_database_read_vector_group_by_id(
+                self._ptr,
+                collection.encode("utf-8"),
+                group.encode("utf-8"),
+                id,
+                out_names,
+                out_types,
+                out_data,
+                out_has_value,
+                out_col_count,
+                out_row_count,
+            )
+        )
+        rows = _decode_group_rows(
+            collection, out_names, out_types, out_data, out_has_value, out_col_count[0], out_row_count[0]
+        )
+        return [{"vector_index": i, **row} for i, row in enumerate(rows)]
 
     def read_set_group_by_id(
         self,
@@ -2061,31 +2065,36 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
     ) -> list[dict]:
         """Read a multi-column set group as row dicts.
 
-        Each row is a dict mapping column names to typed values.
-        DATE_TIME columns are parsed to datetime objects.
+        One native read of the named group's own table: a SQL NULL cell is None in its row, and a
+        column name another group shares still reads this group. DATE_TIME columns are parsed to
+        datetime objects. Row order is consistent across every reader of the group, otherwise
+        unspecified.
         """
         self._ensure_open()
-        metadata = self.get_set_metadata(collection, group)
-        columns = metadata.value_columns
-        if not columns:
-            return []
-
-        column_data = {}
-        row_count = 0
-        for col in columns:
-            name = col.name
-            if col.data_type == DataType.INTEGER:
-                values = self.read_set_integers_by_id(collection, name, id)
-            elif col.data_type == DataType.FLOAT:
-                values = self.read_set_floats_by_id(collection, name, id)
-            elif col.data_type == DataType.DATE_TIME:
-                values = self.read_set_date_time_by_id(collection, name, id)
-            else:  # STRING
-                values = self.read_set_strings_by_id(collection, name, id)
-            column_data[name] = values
-            row_count = len(values)
-
-        return [{name: vals[i] for name, vals in column_data.items()} for i in range(row_count)]
+        lib = get_lib()
+        out_names = ffi.new("char***")
+        out_types = ffi.new("int**")
+        out_data = ffi.new("void***")
+        out_has_value = ffi.new("uint8_t***")
+        out_col_count = ffi.new("size_t*")
+        out_row_count = ffi.new("size_t*")
+        check(
+            lib.quiver_database_read_set_group_by_id(
+                self._ptr,
+                collection.encode("utf-8"),
+                group.encode("utf-8"),
+                id,
+                out_names,
+                out_types,
+                out_data,
+                out_has_value,
+                out_col_count,
+                out_row_count,
+            )
+        )
+        return _decode_group_rows(
+            collection, out_names, out_types, out_data, out_has_value, out_col_count[0], out_row_count[0]
+        )
 
     def __repr__(self) -> str:
         if self._closed:
@@ -2196,6 +2205,43 @@ def _marshal_params(parameters: list) -> tuple:
             raise TypeError(f"Unsupported parameter type: {type(p).__name__}. Expected int, float, str, or None.")
 
     return keepalive, c_types, c_values
+
+
+def _decode_group_rows(
+    collection: str, out_names, out_types, out_data, out_has_value, col_count: int, row_count: int
+) -> list[dict]:
+    """Decode a whole-group read's columnar typed arrays + per-cell mask into row dicts, then free them.
+
+    Shared by read_vector_group_by_id and read_set_group_by_id (Dart's _decodeGroupRows). A cell
+    whose mask is 0 is None and its data slot is never read (a NULL cell's char* is NULL). DATE_TIME
+    columns go through _parse_datetime. read_time_series_group keeps its own loop: it returns
+    columns and parses only the dimension column.
+    """
+    if col_count == 0 or row_count == 0:
+        return []
+    try:
+        columns: dict[str, list] = {}
+        for c in range(col_count):
+            name = ffi.string(out_names[0][c]).decode("utf-8")
+            ctype = out_types[0][c]
+            mask = out_has_value[0][c]
+            if ctype == DataType.INTEGER:
+                ints = ffi.cast("int64_t*", out_data[0][c])
+                columns[name] = [ints[r] if mask[r] else None for r in range(row_count)]
+            elif ctype == DataType.FLOAT:
+                floats = ffi.cast("double*", out_data[0][c])
+                columns[name] = [floats[r] if mask[r] else None for r in range(row_count)]
+            else:  # STRING or DATE_TIME
+                strs = ffi.cast("char**", out_data[0][c])
+                texts = [ffi.string(strs[r]).decode("utf-8") if mask[r] else None for r in range(row_count)]
+                columns[name] = (
+                    [_parse_datetime(t, collection, name) for t in texts] if ctype == DataType.DATE_TIME else texts
+                )
+        return [{name: cells[r] for name, cells in columns.items()} for r in range(row_count)]
+    finally:
+        get_lib().quiver_database_free_time_series_data(
+            out_names[0], out_types[0], out_data[0], out_has_value[0], col_count, row_count
+        )
 
 
 def _marshal_group_columns(data: dict[str, list]) -> tuple:

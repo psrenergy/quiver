@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <gtest/gtest.h>
+#include <optional>
 #include <quiver/c/database.h>
 #include <quiver/c/element.h>
 #include <string>
@@ -644,16 +645,22 @@ TEST(DatabaseCApi, ReadSetStringsPreservesNullCells) {
     ASSERT_EQ(quiver_database_create_element(db, "Collection", e2, &id2), QUIVER_OK);
     EXPECT_EQ(quiver_element_destroy(e2), QUIVER_OK);
 
-    // A NULL cell is a nullptr entry in the inner array - no mask for strings.
+    // A NULL cell is a nullptr entry in the inner array - no mask for strings. Set order is
+    // unspecified: pin the agreement between the two readers and the content, not the order.
+    auto to_cells = [](char** values, size_t n) {
+        std::vector<std::optional<std::string>> cells;
+        for (size_t i = 0; i < n; ++i) {
+            cells.push_back(values[i] ? std::optional<std::string>(values[i]) : std::nullopt);
+        }
+        return cells;
+    };
+
     char*** sets = nullptr;
     size_t* sizes = nullptr;
     size_t count = 0;
     ASSERT_EQ(quiver_database_read_set_strings(db, "Collection", "tag", &sets, &sizes, &count), QUIVER_OK);
     ASSERT_EQ(count, 2);
-    EXPECT_EQ(sizes[0], 3);
-    EXPECT_STREQ(sets[0][0], "a");
-    EXPECT_EQ(sets[0][1], nullptr);
-    EXPECT_STREQ(sets[0][2], "c");
+    auto bulk = to_cells(sets[0], sizes[0]);
     EXPECT_EQ(sizes[1], 0);
     EXPECT_EQ(sets[1], nullptr);
     quiver_database_free_string_vectors(sets, sizes, count);
@@ -661,11 +668,114 @@ TEST(DatabaseCApi, ReadSetStringsPreservesNullCells) {
     char** by_id = nullptr;
     size_t by_id_count = 0;
     ASSERT_EQ(quiver_database_read_set_strings_by_id(db, "Collection", "tag", id1, &by_id, &by_id_count), QUIVER_OK);
-    ASSERT_EQ(by_id_count, 3);
-    EXPECT_STREQ(by_id[0], "a");
-    EXPECT_EQ(by_id[1], nullptr);
-    EXPECT_STREQ(by_id[2], "c");
+    auto cells = to_cells(by_id, by_id_count);
     quiver_database_free_string_array(by_id, by_id_count);
+
+    EXPECT_EQ(bulk, cells);
+    std::sort(cells.begin(), cells.end());  // nullopt sorts first
+    EXPECT_EQ(cells, (std::vector<std::optional<std::string>>{std::nullopt, "a", "c"}));
+
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, ReadSetIntegersPreservesNullCells) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("relations.sql").c_str(), &options, &db), QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    quiver_element_t* config = nullptr;
+    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
+    quiver_element_set_string(config, "label", "Test Config");
+    int64_t config_id = 0;
+    quiver_database_create_element(db, "Configuration", config, &config_id);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
+
+    // score is a nullable INTEGER set column (Child_set_scores).
+    quiver_element_t* e = nullptr;
+    ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
+    quiver_element_set_string(e, "label", "Child 1");
+    int64_t scores[] = {7, 0};
+    const uint8_t has_value[] = {1, 0};
+    quiver_element_set_array_integer(e, "score", scores, 2, has_value);
+    int64_t id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Child", e, &id), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
+
+    // Set order is unspecified: one cell is masked and the other is 7, whichever slot each is in.
+    int64_t** sets = nullptr;
+    uint8_t** masks = nullptr;
+    size_t* sizes = nullptr;
+    size_t count = 0;
+    ASSERT_EQ(quiver_database_read_set_integers(db, "Child", "score", &sets, &masks, &sizes, &count), QUIVER_OK);
+    ASSERT_EQ(count, 1);
+    ASSERT_EQ(sizes[0], 2);
+    EXPECT_EQ(masks[0][0] + masks[0][1], 1);
+    EXPECT_EQ(masks[0][0] ? sets[0][0] : sets[0][1], 7);
+    quiver_database_free_integer_vectors(sets, sizes, count);
+    quiver_database_free_masks(masks, count);
+
+    int64_t* by_id = nullptr;
+    uint8_t* by_id_mask = nullptr;
+    size_t by_id_count = 0;
+    ASSERT_EQ(quiver_database_read_set_integers_by_id(db, "Child", "score", id, &by_id, &by_id_mask, &by_id_count),
+              QUIVER_OK);
+    ASSERT_EQ(by_id_count, 2);
+    EXPECT_EQ(by_id_mask[0] + by_id_mask[1], 1);
+    EXPECT_EQ(by_id_mask[0] ? by_id[0] : by_id[1], 7);
+    quiver_database_free_integer_array(by_id);
+    quiver_database_free_mask(by_id_mask);
+
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, ReadSetFloatsPreservesNullCells) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("multi_column_groups.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    quiver_element_t* config = nullptr;
+    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
+    quiver_element_set_string(config, "label", "Test Config");
+    int64_t config_id = 0;
+    quiver_database_create_element(db, "Configuration", config, &config_id);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
+
+    // weight is a nullable REAL set column (Items_set_codes); code stays NULL on both rows.
+    quiver_element_t* e = nullptr;
+    ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
+    quiver_element_set_string(e, "label", "Item 1");
+    double weights[] = {1.5, 0.0};
+    const uint8_t has_value[] = {1, 0};
+    quiver_element_set_array_float(e, "weight", weights, 2, has_value);
+    int64_t id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Items", e, &id), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
+
+    double** sets = nullptr;
+    uint8_t** masks = nullptr;
+    size_t* sizes = nullptr;
+    size_t count = 0;
+    ASSERT_EQ(quiver_database_read_set_floats(db, "Items", "weight", &sets, &masks, &sizes, &count), QUIVER_OK);
+    ASSERT_EQ(count, 1);
+    ASSERT_EQ(sizes[0], 2);
+    EXPECT_EQ(masks[0][0] + masks[0][1], 1);
+    EXPECT_EQ(masks[0][0] ? sets[0][0] : sets[0][1], 1.5);
+    quiver_database_free_float_vectors(sets, sizes, count);
+    quiver_database_free_masks(masks, count);
+
+    double* by_id = nullptr;
+    uint8_t* by_id_mask = nullptr;
+    size_t by_id_count = 0;
+    ASSERT_EQ(quiver_database_read_set_floats_by_id(db, "Items", "weight", id, &by_id, &by_id_mask, &by_id_count),
+              QUIVER_OK);
+    ASSERT_EQ(by_id_count, 2);
+    EXPECT_EQ(by_id_mask[0] + by_id_mask[1], 1);
+    EXPECT_EQ(by_id_mask[0] ? by_id[0] : by_id[1], 1.5);
+    quiver_database_free_float_array(by_id);
+    quiver_database_free_mask(by_id_mask);
 
     quiver_database_close(db);
 }

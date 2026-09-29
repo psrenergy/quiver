@@ -541,6 +541,11 @@ impl_->logger->debug("Opening database: {}", path);
   per cell, `ORDER BY rowid` — except the vector `_by_id` readers, which order by `vector_index`).
   The Lua readers consume the optional vector directly via a
   `to_lua_table(vector<optional<T>>)` overload that emits `nil` holes (root NULL design decisions).
+  Every per-column vector/set reader finds its table by column **name** (`Schema::find_vector_table`
+  / `find_set_table`): the group named after the column only if it holds that column (a group may
+  be named after another group's column, which used to throw `column not found`), else the group
+  whose table name sorts first among those holding it. A name two groups share therefore reads one
+  of them; `read_{vector,set}_group_by_id` take the group and are the reads that cannot be misrouted.
 - **`read_grouped_values_all<T>`** (`database_internal.h`) backs the six bulk vector/set readers,
   returns `vector<vector<optional<T>>>`, and parses by position the LEFT JOIN that its neighbour
   `grouped_values_sql` builds for all six. That SELECT is `c.id, g.id, g.<attr>` — three columns,
