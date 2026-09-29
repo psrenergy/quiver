@@ -40,12 +40,6 @@ QUIVER_C_API quiver_error_t quiver_element_set_array_string(quiver_element_t* el
                                                             int32_t count,
                                                             const uint8_t* has_value);
 
-// Accessors
-QUIVER_C_API quiver_error_t quiver_element_has_scalars(quiver_element_t* element, int* out_result);
-QUIVER_C_API quiver_error_t quiver_element_has_arrays(quiver_element_t* element, int* out_result);
-QUIVER_C_API quiver_error_t quiver_element_scalar_count(quiver_element_t* element, size_t* out_count);
-QUIVER_C_API quiver_error_t quiver_element_array_count(quiver_element_t* element, size_t* out_count);
-
 // Pretty print (caller must free returned string with quiver_database_free_string)
 QUIVER_C_API quiver_error_t quiver_element_to_string(quiver_element_t* element, char** out_string);
 

@@ -21,10 +21,6 @@ QUIVER_C_API const char* quiver_get_last_error(void) {
     return g_last_error.c_str();
 }
 
-QUIVER_C_API void quiver_clear_last_error(void) {
-    g_last_error.clear();
-}
-
 QUIVER_C_API const char* quiver_version(void) {
     return QUIVER_VERSION;
 }

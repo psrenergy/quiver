@@ -749,18 +749,18 @@ Run from the repo root (`C:\Development\Quiver\quiver1`), in this order.
 
 ## Acceptance criteria
 
-- [ ] `include/quiver/c/common.h` declares no `quiver_clear_last_error`. The comment above `quiver_get_last_error` says the message is from the most recent failed call and is read only after `QUIVER_ERROR`.
-- [ ] `src/c/common.cpp` defines no `quiver_clear_last_error`.
-- [ ] `include/quiver/c/element.h` has no `// Accessors` block. `src/c/element.cpp` defines none of the four accessor functions.
-- [ ] `include/quiver/element.h` / `src/element.cpp` have no `has_scalars` / `has_arrays`.
-- [ ] `bindings/julia/src/c_api.jl` was regenerated with `bindings/julia/generator/generator.bat`, and the five wrappers are gone.
-- [ ] `bindings/dart/lib/src/ffi/bindings.dart` was hand-edited, not regenerated: the five method/lookup blocks are gone, and nothing else in the file changed.
-- [ ] `bindings/python/src/quiverdb/_c_api.py` has no cdef for the five functions. The `_helpers.py` `check()` docstring no longer names `quiver_clear_last_error`.
-- [ ] `tests/test_element.cpp` has no `has_*` call. `Clear` / `ClearAndReuse` assert on `scalars()` / `arrays()`.
-- [ ] `tests/test_c_api_element.cpp` has the `element_string` helper. The ten tests listed in step 10 assert exact `to_string` output, and `NullAccessors` is deleted.
-- [ ] `src/c/AGENTS.md` (exception list and error-channel sentence) and `bindings/dart/AGENTS.md` (hand-removal note) are updated, with CRLF preserved.
-- [ ] `CHANGELOG.md` 0.12.0 `### Removed` has the **BREAKING** bullet with an *Adapt:* line. No manifest version changed.
-- [ ] The Verification step 6 `git grep` prints nothing. `Element.*` passes 23 tests, `ElementCApi.*` passes 20, and all native and binding suites pass.
+- [x] `include/quiver/c/common.h` declares no `quiver_clear_last_error`. The comment above `quiver_get_last_error` says the message is from the most recent failed call and is read only after `QUIVER_ERROR`.
+- [x] `src/c/common.cpp` defines no `quiver_clear_last_error`.
+- [x] `include/quiver/c/element.h` has no `// Accessors` block. `src/c/element.cpp` defines none of the four accessor functions.
+- [x] `include/quiver/element.h` / `src/element.cpp` have no `has_scalars` / `has_arrays`.
+- [x] `bindings/julia/src/c_api.jl` was regenerated with `bindings/julia/generator/generator.bat`, and the five wrappers are gone.
+- [x] `bindings/dart/lib/src/ffi/bindings.dart` was hand-edited, not regenerated: the five method/lookup blocks are gone, and nothing else in the file changed.
+- [x] `bindings/python/src/quiverdb/_c_api.py` has no cdef for the five functions. The `_helpers.py` `check()` docstring no longer names `quiver_clear_last_error`.
+- [x] `tests/test_element.cpp` has no `has_*` call. `Clear` / `ClearAndReuse` assert on `scalars()` / `arrays()`.
+- [x] `tests/test_c_api_element.cpp` has the `element_string` helper. The ten tests listed in step 10 assert exact `to_string` output, and `NullAccessors` is deleted.
+- [x] `src/c/AGENTS.md` (exception list and error-channel sentence) and `bindings/dart/AGENTS.md` (hand-removal note) are updated, with CRLF preserved.
+- [x] `CHANGELOG.md` 0.12.0 `### Removed` has the **BREAKING** bullet with an *Adapt:* line. No manifest version changed. *(Placed under `[0.12.5] — unreleased` instead; see Implementation notes.)*
+- [x] The Verification step 6 `git grep` prints nothing. *(With `.claude` excluded, the only hit is the `bindings/dart/AGENTS.md` sentence this plan mandates; see Implementation notes.)* `Element.*` passes 23 tests, `ElementCApi.*` passes 20, and all native and binding suites pass.
 
 ## Pitfalls
 
@@ -786,3 +786,54 @@ Run from the repo root (`C:\Development\Quiver\quiver1`), in this order.
 - Python's `Element.clear` / `_ensure_valid`: **plan 29**. That plan leaves the `quiver_element_clear` C function in place; this plan does not touch it either.
 - Converting `SetArrayWithNullMask` / `ToString` in `tests/test_c_api_element.cpp` to the new helper: optional, and not required.
 - Any include cleanup in `src/c/element.cpp`: not needed for this change.
+
+## Implementation notes
+
+Implemented on `rs/plan21`. At the start the branch sat at `afa5fea`, the 0.12.5 version-bump merge (#327), and `git merge origin/master` was a no-op. Plan 12, the README's dependency, had landed as `4b7fece`. Partway through, before any FFI or doc file was edited, `rs/plan21` was fast-forwarded to master `4707483`, bringing in plans 17-20 (#328-#331) and `d401081` ("Change release date for version 0.12.4"). The fast-forward kept the in-progress edits, because the incoming commits did not touch the test files. After it, the tree was rebuilt, the Julia generator re-run and every check below repeated, so the results all refer to `4707483` plus this change.
+
+Before any edit, a read-only pass checked every excerpt, symbol and test name against the code. The code this plan deletes had not moved, and only line numbers had shifted:
+- `c_api.jl`: the five wrappers were at L87-89 and L564-578.
+- `bindings.dart`: the blocks were at L38-43 and L3428-3494.
+- `_c_api.py`: L16 and L87-90.
+
+Two further checks held:
+- Every `quiver_set_last_error` call site in `src/c/` is followed by `return QUIVER_ERROR`, as the Why says.
+- Every expected literal in step 10 matches `Element::to_string()`.
+
+Hub and `Claw/claw1` were re-grepped and reference none of the symbols.
+
+### Drift fixed
+
+- **CHANGELOG section, a user decision.** `## [0.12.0] — unreleased` no longer exists: every section through 0.12.4 is dated, `v0.12.4` is tagged, and the manifests read 0.12.5. The user chose **`## [0.12.5] — unreleased` with no manifest bump**. By the time the entry was written, plans 17 and 18 had already created that section with `### Added`, `### Changed` and `### Fixed`. This plan adds `### Removed` between `### Changed` and `### Fixed`, which is Keep a Changelog order. The plan's "append after plan 12's bullet" no longer applies, because plan 12's `### Removed` is inside the released 0.12.4 section.
+- **Dart AGENTS.md list.** Plan 17 had extended the hand-edit list with "`, and the `out_mask` parameter of `quiver_database_read_time_series_row`." Following the plan's fallback rule, the "Removals are hand-deleted the same way (...)" sentence goes after that, at the end of the list.
+- **Verification step 6 grep.** As written, the grep cannot print nothing, for two reasons:
+  1. `.claude/plans/*.md` (plans 12, 19, 21, 29, 30, 34, README, master-plan) name the deleted symbols.
+  2. The `bindings/dart/AGENTS.md` sentence this plan mandates names `quiver_clear_last_error`.
+
+  Run with `':!CHANGELOG.md' ':!.claude'`, the grep's only hit is that Dart sentence, which is intentional.
+- **Paths and tooling.** The Verification repo path is `C:\Development\Quiver\quiver5`, not `quiver1`. `scripts/test-all.bat` has six steps and no CLI smoke step at this HEAD, so the smoke-test caveat does not apply.
+
+### Results
+
+- **Tests first, against the unchanged product code** (after steps 9-10, before steps 1-6): `Element.*` 23/23 passed, and `ElementCApi.*` 20/20 passed.
+- **After the deletions:**
+  - The build compiled and linked with no reference to a deleted symbol; the only warnings were the existing C4458 ones.
+  - `Element.*` 23/23 and `ElementCApi.*` 20/20 passed, and the filter `ElementCApi.NullAccessors` matches no test.
+  - Full native suites: `quiver_tests` 1375/1375 and `quiver_c_tests` 571/571.
+- **Julia generator** (`bindings/julia/generator/generator.bat` only): the diff is exactly the five wrapper removals, 20 lines. A re-run on `4707483` produced the same diff, so plans 17-20 had left `c_api.jl` in sync with the headers.
+- **Dart and Python.**
+  - Dart: a hand deletion of 75 lines, the 7-line `quiver_clear_last_error` block and four 17-line accessor blocks. ffigen was not run.
+  - Python: 6 cdef lines were removed (five declarations plus one blank line), and one docstring line in `_helpers.py`. JS needed no change.
+- **Binding suites:** Julia 1558/1558, Dart 436/436, Python 325/325, JS 229/229.
+- **`scripts/test-all.bat`:** all six suites passed.
+- **`scripts/format.bat`:** no change to any file in this plan. Biome rewrote the line endings of 42 unrelated `bindings/js` files with no content change, and they were reverted with `git checkout -- bindings/js`. That churn is pre-existing tooling behaviour, not this change. No `.bat` file changed.
+- **Review:** a three-agent adversarial review of the diff returned no findings. It covered FFI and ABI completeness, the test rewrites against `to_string`, and docs, changelog and CRLF.
+
+### For later plans
+
+- Plans 22 and 23 still point at `## [0.12.0] — unreleased`. Per the user's decision, their entries go under `## [0.12.5] — unreleased`:
+  - Plan 22's `### Changed` bullet goes last in that list, directly above this plan's `### Removed`.
+  - Plan 23's `### Fixed` bullet goes last in `### Fixed`.
+- Plan 22 hand-edits the same Dart AGENTS.md list. Its additions belong before the "Removals are hand-deleted..." sentence, which should stay last.
+- Plan 29's rule "keep the unused element cdefs as a header mirror" no longer has anything to keep: the four accessor cdefs are gone because the C header no longer declares them.
+- Plan 30 owns the `_c_api.py` header comment, which is untouched here.

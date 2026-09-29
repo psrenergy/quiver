@@ -135,34 +135,6 @@ QUIVER_C_API quiver_error_t quiver_element_set_array_string(quiver_element_t* el
     return QUIVER_OK;
 }
 
-QUIVER_C_API quiver_error_t quiver_element_has_scalars(quiver_element_t* element, int* out_result) {
-    QUIVER_REQUIRE(element, out_result);
-
-    *out_result = element->element.has_scalars() ? 1 : 0;
-    return QUIVER_OK;
-}
-
-QUIVER_C_API quiver_error_t quiver_element_has_arrays(quiver_element_t* element, int* out_result) {
-    QUIVER_REQUIRE(element, out_result);
-
-    *out_result = element->element.has_arrays() ? 1 : 0;
-    return QUIVER_OK;
-}
-
-QUIVER_C_API quiver_error_t quiver_element_scalar_count(quiver_element_t* element, size_t* out_count) {
-    QUIVER_REQUIRE(element, out_count);
-
-    *out_count = element->element.scalars().size();
-    return QUIVER_OK;
-}
-
-QUIVER_C_API quiver_error_t quiver_element_array_count(quiver_element_t* element, size_t* out_count) {
-    QUIVER_REQUIRE(element, out_count);
-
-    *out_count = element->element.arrays().size();
-    return QUIVER_OK;
-}
-
 QUIVER_C_API quiver_error_t quiver_element_to_string(quiver_element_t* element, char** out_string) {
     QUIVER_REQUIRE(element, out_string);
 

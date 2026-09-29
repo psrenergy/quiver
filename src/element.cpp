@@ -95,14 +95,6 @@ const std::map<std::string, std::vector<Value>>& Element::arrays() const {
     return arrays_;
 }
 
-bool Element::has_scalars() const {
-    return !scalars_.empty();
-}
-
-bool Element::has_arrays() const {
-    return !arrays_.empty();
-}
-
 void Element::clear() {
     scalars_.clear();
     arrays_.clear();

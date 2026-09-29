@@ -46,7 +46,7 @@ src/c/expression/           # Expression node constructors, save, free
 ## Return Codes
 
 All C API functions return binary `quiver_error_t` (`QUIVER_OK = 0` or `QUIVER_ERROR = 1`). Values are returned via output parameters.
-Exceptions: `quiver_get_last_error`, `quiver_version`, `quiver_clear_last_error`, `quiver_database_options_default`, `quiver_csv_options_default` (utility functions with direct return).
+Exceptions: `quiver_get_last_error`, `quiver_version`, `quiver_database_options_default`, `quiver_csv_options_default` (utility functions with direct return).
 
 ## Error Handling
 
@@ -69,7 +69,9 @@ Every entry point that executes C++ logic wears the try/catch: nothing may throw
 boundary. Trivial functions that cannot throw (plain `delete[]` frees, pointer-read getters like
 `is_healthy`/`in_transaction`) skip the wrapper; `quiver_database_free_time_series_data` keeps it
 because its typed-dispatch deallocation can. All components (LuaRunner included) report through
-the single `quiver_get_last_error` channel; there are no per-handle error channels.
+the single `quiver_get_last_error` channel; there are no per-handle error channels. Nothing resets
+that message: a successful call leaves the previous failure's text in place, so it is read only
+after a call returns `QUIVER_ERROR` (every binding's `check` does exactly that).
 
 ## Factory Functions
 
