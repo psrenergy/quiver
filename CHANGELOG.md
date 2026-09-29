@@ -5,7 +5,7 @@ All notable changes to Quiver are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entries that require
 callers to change something are prefixed **BREAKING** and say what to do.
 
-## [0.12.4] — 2026-09-28
+## [0.12.4] — 2026-09-29
 
 ### Changed
 
