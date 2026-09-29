@@ -35,6 +35,23 @@ callers to change something are prefixed **BREAKING** and say what to do.
   `x is None`). Julia code typed on `Vector{Float64}` / `Vector{Int64}` must accept the `Union`
   element type (`something.(v, NaN)` gives back the old `Vector{Float64}` for a REAL column).
 
+### Removed
+
+- **BREAKING — `quiver_clear_last_error`, the C element accessors, and C++ `Element::has_scalars` /
+  `has_arrays`.** `quiver_clear_last_error`, `quiver_element_has_scalars`,
+  `quiver_element_has_arrays`, `quiver_element_scalar_count` and `quiver_element_array_count` are
+  removed from the C API, along with the two C++ methods behind them. Nothing called them: no binding
+  read an element back or cleared the error message. Julia's generated `Quiver.C` wrappers and the
+  internal Dart and Python declarations for them are gone too. No binding's public API changes. The
+  `quiver_get_last_error` header comment is corrected. It used to say the message is empty when no
+  error occurred, but a successful call never reset it, so after a failure every later successful
+  call still reported the old message.
+
+  *Adapt:* in C, delete calls to `quiver_clear_last_error` and read `quiver_get_last_error` only
+  after a call returns `QUIVER_ERROR`. To inspect an element, use `quiver_element_to_string`. In C++,
+  replace `element.has_scalars()` / `element.has_arrays()` with `!element.scalars().empty()` /
+  `!element.arrays().empty()`.
+
 ### Fixed
 
 - **Julia and Python: `read_vector_group_by_id` / `read_set_group_by_id` read the group they are

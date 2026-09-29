@@ -8,7 +8,6 @@ def check(err: int) -> None:
     """Raise QuiverError if err indicates a C API failure.
 
     Reads the thread-local error message via quiver_get_last_error().
-    Does NOT call quiver_clear_last_error() (matches Julia/Dart behavior).
     """
     if err != 0:
         lib = get_lib()

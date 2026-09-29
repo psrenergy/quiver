@@ -84,10 +84,6 @@ function quiver_get_last_error()
     @ccall libquiver_c.quiver_get_last_error()::Ptr{Cchar}
 end
 
-function quiver_clear_last_error()
-    @ccall libquiver_c.quiver_clear_last_error()::Cvoid
-end
-
 @cenum quiver_log_level_t::UInt32 begin
     QUIVER_LOG_DEBUG = 0
     QUIVER_LOG_INFO = 1
@@ -559,22 +555,6 @@ end
 
 function quiver_element_set_array_string(element, name, values, count, has_value)
     @ccall libquiver_c.quiver_element_set_array_string(element::Ptr{quiver_element_t}, name::Ptr{Cchar}, values::Ptr{Ptr{Cchar}}, count::Int32, has_value::Ptr{UInt8})::quiver_error_t
-end
-
-function quiver_element_has_scalars(element, out_result)
-    @ccall libquiver_c.quiver_element_has_scalars(element::Ptr{quiver_element_t}, out_result::Ptr{Cint})::quiver_error_t
-end
-
-function quiver_element_has_arrays(element, out_result)
-    @ccall libquiver_c.quiver_element_has_arrays(element::Ptr{quiver_element_t}, out_result::Ptr{Cint})::quiver_error_t
-end
-
-function quiver_element_scalar_count(element, out_count)
-    @ccall libquiver_c.quiver_element_scalar_count(element::Ptr{quiver_element_t}, out_count::Ptr{Csize_t})::quiver_error_t
-end
-
-function quiver_element_array_count(element, out_count)
-    @ccall libquiver_c.quiver_element_array_count(element::Ptr{quiver_element_t}, out_count::Ptr{Csize_t})::quiver_error_t
 end
 
 function quiver_element_to_string(element, out_string)

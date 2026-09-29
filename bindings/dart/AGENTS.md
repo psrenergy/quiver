@@ -35,7 +35,8 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   `quiver_database_update_element_by_label`, the three group writers' `_by_label` forms,
   `quiver_database_upsert_time_series_row` plus its `_by_label` form,
   `quiver_database_update_relation` plus its `_by_label` form, and the `out_mask` parameter of
-  `quiver_database_read_time_series_row`.
+  `quiver_database_read_time_series_row`. Removals are hand-deleted the same way
+  (`quiver_clear_last_error` and the four `quiver_element_*` has/count accessors).
   Take the generator upgrade as its own deliberate change (regenerate, then fix the enum call
   sites here and in hub) rather than as a side effect of adding a C function.
 - **Native library resolution** (`lib/src/ffi/library_loader.dart`), three tiers in order:

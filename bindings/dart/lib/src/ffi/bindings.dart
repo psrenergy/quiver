@@ -35,13 +35,6 @@ class QuiverDatabaseBindings {
   );
   late final _quiver_get_last_error = _quiver_get_last_errorPtr.asFunction<ffi.Pointer<ffi.Char> Function()>();
 
-  void quiver_clear_last_error() {
-    return _quiver_clear_last_error();
-  }
-
-  late final _quiver_clear_last_errorPtr = _lookup<ffi.NativeFunction<ffi.Void Function()>>('quiver_clear_last_error');
-  late final _quiver_clear_last_error = _quiver_clear_last_errorPtr.asFunction<void Function()>();
-
   quiver_database_options_t quiver_database_options_default() {
     return _quiver_database_options_default();
   }
@@ -3428,74 +3421,6 @@ class QuiverDatabaseBindings {
           ffi.Pointer<ffi.Uint8>,
         )
       >();
-
-  int quiver_element_has_scalars(
-    ffi.Pointer<quiver_element_t1> element,
-    ffi.Pointer<ffi.Int> out_result,
-  ) {
-    return _quiver_element_has_scalars(
-      element,
-      out_result,
-    );
-  }
-
-  late final _quiver_element_has_scalarsPtr =
-      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<quiver_element_t1>, ffi.Pointer<ffi.Int>)>>(
-        'quiver_element_has_scalars',
-      );
-  late final _quiver_element_has_scalars = _quiver_element_has_scalarsPtr
-      .asFunction<int Function(ffi.Pointer<quiver_element_t1>, ffi.Pointer<ffi.Int>)>();
-
-  int quiver_element_has_arrays(
-    ffi.Pointer<quiver_element_t1> element,
-    ffi.Pointer<ffi.Int> out_result,
-  ) {
-    return _quiver_element_has_arrays(
-      element,
-      out_result,
-    );
-  }
-
-  late final _quiver_element_has_arraysPtr =
-      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<quiver_element_t1>, ffi.Pointer<ffi.Int>)>>(
-        'quiver_element_has_arrays',
-      );
-  late final _quiver_element_has_arrays = _quiver_element_has_arraysPtr
-      .asFunction<int Function(ffi.Pointer<quiver_element_t1>, ffi.Pointer<ffi.Int>)>();
-
-  int quiver_element_scalar_count(
-    ffi.Pointer<quiver_element_t1> element,
-    ffi.Pointer<ffi.Size> out_count,
-  ) {
-    return _quiver_element_scalar_count(
-      element,
-      out_count,
-    );
-  }
-
-  late final _quiver_element_scalar_countPtr =
-      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<quiver_element_t1>, ffi.Pointer<ffi.Size>)>>(
-        'quiver_element_scalar_count',
-      );
-  late final _quiver_element_scalar_count = _quiver_element_scalar_countPtr
-      .asFunction<int Function(ffi.Pointer<quiver_element_t1>, ffi.Pointer<ffi.Size>)>();
-
-  int quiver_element_array_count(
-    ffi.Pointer<quiver_element_t1> element,
-    ffi.Pointer<ffi.Size> out_count,
-  ) {
-    return _quiver_element_array_count(
-      element,
-      out_count,
-    );
-  }
-
-  late final _quiver_element_array_countPtr =
-      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<quiver_element_t1>, ffi.Pointer<ffi.Size>)>>(
-        'quiver_element_array_count',
-      );
-  late final _quiver_element_array_count = _quiver_element_array_countPtr
-      .asFunction<int Function(ffi.Pointer<quiver_element_t1>, ffi.Pointer<ffi.Size>)>();
 
   int quiver_element_to_string(
     ffi.Pointer<quiver_element_t1> element,

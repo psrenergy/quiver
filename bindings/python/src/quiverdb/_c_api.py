@@ -13,7 +13,6 @@ ffi.cdef("""
 
     const char* quiver_version(void);
     const char* quiver_get_last_error(void);
-    void quiver_clear_last_error(void);
 
     // options.h
     typedef enum {
@@ -83,11 +82,6 @@ ffi.cdef("""
                                                     const char* const* values,
                                                     int32_t count,
                                                     const uint8_t* has_value);
-
-    quiver_error_t quiver_element_has_scalars(quiver_element_t* element, int* out_result);
-    quiver_error_t quiver_element_has_arrays(quiver_element_t* element, int* out_result);
-    quiver_error_t quiver_element_scalar_count(quiver_element_t* element, size_t* out_count);
-    quiver_error_t quiver_element_array_count(quiver_element_t* element, size_t* out_count);
 
     quiver_error_t quiver_element_to_string(quiver_element_t* element, char** out_string);
     quiver_error_t quiver_database_free_string(char* str);

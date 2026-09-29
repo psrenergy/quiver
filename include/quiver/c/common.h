@@ -28,10 +28,9 @@ typedef enum {
 // Utility functions
 QUIVER_C_API const char* quiver_version(void);
 
-// Error message capture - returns detailed error message from last operation
-// Returns empty string if no error occurred. Thread-local storage.
+// Message of the most recent failed call on this thread (thread-local storage).
+// A successful call does not reset it, so read it only after a call returns QUIVER_ERROR.
 QUIVER_C_API const char* quiver_get_last_error(void);
-QUIVER_C_API void quiver_clear_last_error(void);
 
 #ifdef __cplusplus
 }
