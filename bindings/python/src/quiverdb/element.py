@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from quiverdb._c_api import ffi, get_lib
-from quiverdb._helpers import check, decode_string
+from quiverdb._helpers import check, column_data_type, decode_string
 from quiverdb.exceptions import QuiverError
+from quiverdb.metadata import DataType
 
 
 class Element:
@@ -18,8 +19,8 @@ class Element:
     def set(self, name: str, value: object) -> Element:
         """Set an attribute value. Returns self for fluent chaining.
 
-        Supported types: int, float, str, None, bool (stored as int),
-        list[int], list[float], list[str].
+        Supported types: int, float, str, None, bool (stored as int), and lists of
+        int/bool, float or str -- a float anywhere in a numeric list makes it a float array.
         """
         self._ensure_valid()
         if value is None:
@@ -70,17 +71,18 @@ class Element:
                 f"Unsupported array element type NoneType for Element.set('{name}'): "
                 "write NULL cells with update_vector_group, update_set_group or update_time_series_group"
             )
-        first = values[0]
-        if isinstance(first, bool):
-            self._set_array_integer(name, [int(v) for v in values])
-        elif isinstance(first, int):
+        # Typed from every cell like a group-writer column (column_data_type).
+        array_type = column_data_type(name, values)
+        if array_type == DataType.INTEGER:
             self._set_array_integer(name, values)
-        elif isinstance(first, float):
+        elif array_type == DataType.FLOAT:
             self._set_array_float(name, values)
-        elif isinstance(first, str):
+        elif array_type == DataType.STRING:
             self._set_array_string(name, values)
         else:
-            raise TypeError(f"Unsupported array element type {type(first).__name__} for Element.set('{name}')")
+            # DataType.DATE_TIME: None was refused above, so every cell is a datetime and cell 0
+            # is the first one an element array does not accept yet.
+            raise TypeError(f"Unsupported value type {type(values[0]).__name__} in cell 0 of column '{name}'")
 
     def _set_array_integer(self, name: str, values: list[int]) -> None:
         lib = get_lib()

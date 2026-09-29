@@ -17,7 +17,7 @@ src/quiverdb/
   metadata.py     # DataType/LogLevel (IntEnums), CSVOptions, ScalarMetadata, GroupMetadata
   element.py      # Element builder - INTERNAL ONLY (users pass **kwargs)
   exceptions.py   # QuiverError
-  _helpers.py     # Shared check()/decode_string helpers
+  _helpers.py     # Shared check()/decode_string/column_data_type helpers
   _c_api.py       # Hand-written CFFI cdef declarations (kept in sync manually)
   _loader.py      # Library loading
   py.typed        # PEP 561 marker
@@ -75,7 +75,8 @@ ruff.toml         # Lint/format config (format.bat runs ruff)
   repo (`ruff.toml` is `select = ["I"]`, isort only; no mypy/pyright in CI, `pyproject.toml`, or
   the pre-commit hooks).
 - **`_integer_to_boolean` raises `ValueError`, not `QuiverError`** — the second documented
-  exception to "messages come from C++", alongside `_marshal_group_columns`' jagged-column check.
+  exception to "messages come from C++", alongside `_marshal_group_columns`' jagged-column and
+  cell-type checks.
   The boolean readers are a binding-only convenience with no C++ counterpart, so the core cannot
   diagnose a stray `2`; the message names the offending `collection.attribute` (nothing to name for
   `query_boolean`). The `@overload` triple mirrors `bindings/js/src/boolean.ts`; every caller now
@@ -93,16 +94,29 @@ ruff.toml         # Lint/format config (format.bat runs ruff)
   cannot leak the native buffer.
 - **Time-series group NULLs**: `read_time_series_group` surfaces a SQL NULL cell as `None` in the
   column list (decoded via the per-cell `uint8_t**` mask out-param); the dimension column stays
-  dense datetimes. `_marshal_group_columns` dispatches on the first non-`None` element, builds
-  a per-column mask, and substitutes `0`/`0.0`/`ffi.NULL` placeholders for `None` cells; an all-`None`
+  dense datetimes. `_marshal_group_columns` types each column from all of its non-`None` cells
+  (`column_data_type`, below), builds a per-column mask, and substitutes `0`/`0.0`/`ffi.NULL` placeholders for `None` cells; an all-`None`
   column is tagged FLOAT with a zeroed placeholder.
 - **`_marshal_group_columns` serves every columnar group writer** (time series, vector, set, by id
   and by label) — same name as Dart's `_marshalGroupColumn`. It raises `ValueError` for jagged
-  column lists (a pre-FFI marshalling error, the documented exception to "messages come from C++");
-  everything else is validated in the core and surfaces as `QuiverError`. Note that the group
+  column lists and `TypeError` for a cell that does not fit its column (both pre-FFI marshalling
+  errors, the documented exception to "messages come from C++"); everything else is validated in
+  the core and surfaces as `QuiverError`. Note that the group
   *writers* take columns while `read_vector_group_by_id` / `read_set_group_by_id` return rows (the
   vector form adds a synthetic 0-based `vector_index`); both read a NULL cell back as `None` in its
   row, so a NULL-cell write can be asserted through them.
+- **`column_data_type` (`_helpers.py`) types a column from every cell**, for both
+  `_marshal_group_columns` and `Element._set_array`: bool/int cells are INTEGER, a float anywhere
+  among them widens the column to FLOAT (JS's and Dart's rule too, so `[1, 2.5]` writes 1.0 and 2.5
+  in every binding), str is STRING and datetime DATE_TIME (the group marshaller formats it and tags
+  STRING). Any other cell, or one that does not fit the column (a str among numbers, a number
+  among strs, a str among datetimes), raises `TypeError: Unsupported value type <T> in cell <i> of
+  column '<name>'` — Dart's wording. **No cell is run through `int()`/`float()`**: the first-cell
+  dispatch this replaced did, so `[1, 2.5]` reached a REAL column as `[1, 2]` and `[1, "7"]` was
+  parsed to 7, both with no error. cffi converts bool/int cells into `int64_t[]` and bool/int/float
+  cells into `double[]` itself. Element arrays stay dense: `_set_array` refuses a `None` cell before
+  typing (the `Element._set_array` bullet above), where a group-writer column skips it via the
+  mask, and for now it refuses an all-`datetime` list too.
 - **`_decode_group_rows` is the one decoder for the two whole-group readers** — a module-level data
   codec like `_marshal_group_columns` (Dart's `_decodeGroupRows`), not the closure-parameterized FFI
   helper the root "Do not 'fix'" list forbids: each reader keeps its own expanded FFI call block

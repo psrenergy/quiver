@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from typing import overload
 
 from quiverdb._c_api import ffi, get_lib
-from quiverdb._helpers import check, decode_string, decode_string_or_none
+from quiverdb._helpers import check, column_data_type, decode_string, decode_string_or_none
 from quiverdb.database_csv_export import DatabaseCSVExport
 from quiverdb.database_csv_import import DatabaseCSVImport
 from quiverdb.element import Element
@@ -2213,13 +2213,15 @@ def _decode_group_rows(
 
 
 def _marshal_group_columns(data: dict[str, list]) -> tuple:
-    """Marshal column lists into parallel C arrays for the columnar time series API.
+    """Marshal column lists into parallel C arrays for the columnar group writers.
 
-    Column types are dispatched on the first non-None element: datetime/str ->
-    STRING, bool/int -> INTEGER, float -> FLOAT. The C++ layer validates against
-    the schema and accepts integers for REAL columns. A None entry becomes a
-    per-cell NULL via the mask (with a placeholder in the data array); an all-None
-    column is tagged FLOAT with a zero-filled placeholder.
+    Each column is typed from all of its non-None cells by `column_data_type`: bool/int ->
+    INTEGER, and a float anywhere widens the column to FLOAT; str -> STRING; datetime ->
+    STRING in the core's ISO format. A cell that does not fit its column raises TypeError
+    naming the cell and the column. The C++ layer validates against the schema and accepts
+    integers for REAL columns. A None entry becomes a per-cell NULL via the mask (with a
+    placeholder in the data array); an all-None column is tagged FLOAT with a zero-filled
+    placeholder.
 
     Returns (keepalive, c_col_names, c_col_types, c_col_data, c_col_has_value,
     col_count, row_count) where keepalive must remain referenced until the C API
@@ -2246,14 +2248,14 @@ def _marshal_group_columns(data: dict[str, list]) -> tuple:
         keepalive.append(mask)
         c_col_has_value[c] = mask
 
-        first = next((v for v in values if v is not None), None)
-        if first is None:
+        column_type = column_data_type(name, values)
+        if column_type is None:
             # All-null column: tag FLOAT with zeroed placeholder data; the mask is all zero.
             arr = ffi.new("double[]", [0.0] * row_count)
             keepalive.append(arr)
             c_col_types[c] = DataType.FLOAT
             c_col_data[c] = ffi.cast("void*", arr)
-        elif isinstance(first, datetime):
+        elif column_type == DataType.DATE_TIME:
             encoded = [(v.strftime("%Y-%m-%dT%H:%M:%S").encode("utf-8") if v is not None else b"") for v in values]
             c_strs = [ffi.new("char[]", e) for e in encoded]
             keepalive.extend(c_strs)
@@ -2261,7 +2263,7 @@ def _marshal_group_columns(data: dict[str, list]) -> tuple:
             keepalive.append(c_arr)
             c_col_types[c] = DataType.STRING
             c_col_data[c] = ffi.cast("void*", c_arr)
-        elif isinstance(first, str):
+        elif column_type == DataType.STRING:
             encoded = [(v.encode("utf-8") if v is not None else b"") for v in values]
             c_strs = [ffi.new("char[]", e) for e in encoded]
             keepalive.extend(c_strs)
@@ -2269,18 +2271,18 @@ def _marshal_group_columns(data: dict[str, list]) -> tuple:
             keepalive.append(c_arr)
             c_col_types[c] = DataType.STRING
             c_col_data[c] = ffi.cast("void*", c_arr)
-        elif isinstance(first, bool) or isinstance(first, int):
-            arr = ffi.new("int64_t[]", [int(v) if v is not None else 0 for v in values])
+        elif column_type == DataType.INTEGER:
+            # Every cell is a bool or an int; cffi stores True/False as 1/0.
+            arr = ffi.new("int64_t[]", [v if v is not None else 0 for v in values])
             keepalive.append(arr)
             c_col_types[c] = DataType.INTEGER
             c_col_data[c] = ffi.cast("void*", arr)
-        elif isinstance(first, float):
-            arr = ffi.new("double[]", [float(v) if v is not None else 0.0 for v in values])
+        else:
+            # DataType.FLOAT: float cells, plus any bool/int cells, which cffi widens to double.
+            arr = ffi.new("double[]", [v if v is not None else 0.0 for v in values])
             keepalive.append(arr)
             c_col_types[c] = DataType.FLOAT
             c_col_data[c] = ffi.cast("void*", arr)
-        else:
-            raise TypeError(f"Unsupported value type for column '{name}': {type(first).__name__}")
 
     return keepalive, c_col_names, c_col_types, c_col_data, c_col_has_value, col_count, row_count
 

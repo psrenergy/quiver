@@ -5,6 +5,27 @@ All notable changes to Quiver are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entries that require
 callers to change something are prefixed **BREAKING** and say what to do.
 
+## [0.12.6] — unreleased
+
+### Changed
+
+- **BREAKING — Python and Dart type a numeric group column or element array from every cell.**
+  Python took a column's type from its first non-`None` cell and ran every other cell through
+  `int()` or `float()`, so `update_vector_group(..., {"score": [1, 2.5]})` stored `[1.0, 2.0]` with
+  no error. The same happened in `update_set_group`, `update_time_series_group` and their
+  `_by_label` forms, and in `create_element`/`update_element` arrays that start with a `bool`. A
+  `str` cell among numbers was parsed (`[1, "7"]` stored `7`). A float anywhere in a numeric column
+  now makes it FLOAT, so `[1, 2.5]` stores `1.0` and `2.5`; bool/int columns stay INTEGER. A cell
+  that does not fit its column — a `str` among numbers, a number among strings, a `str` among
+  `datetime`s, any unsupported type — raises
+  `TypeError: Unsupported value type <T> in cell <i> of column '<name>'` before the call. Dart
+  applies the same whole-column rule in the group writers and `Element.set`, where `[1, 2.5]` used
+  to throw `ArgumentError`. JS and Julia already behaved this way.
+
+  *Adapt:* pass numbers, not numeric strings. A float anywhere in a list written to an INTEGER
+  column is now rejected by the core instead of being truncated, including a whole-number one
+  (`[65, 70.0]`); pass ints, or round the values yourself if you intended truncation.
+
 ## [0.12.5] — unreleased
 
 ### Added
