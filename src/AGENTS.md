@@ -675,8 +675,9 @@ Implementation conventions in `lua_runner.cpp`:
   would be silent data loss, since a vector/set read hands a NULL cell back as a `nil` hole, so
   `table_to_element` first calls `require_dense_array`, which throws on a hole (or a non-integer
   key) and points at the group writers; and the element type still
-  comes from cell 1, so `{1, 2.5}` into a REAL column is rejected rather than widened (JS scans the
-  whole column and accepts it). One consequence worth knowing: `lua_opt_int64_vector` routes
+  comes from cell 1, so `{1, 2.5}` into a REAL column is rejected rather than widened (JS, Python
+  and Dart type the whole column and widen it to FLOAT, and a Lua group-writer column converts each
+  cell to its own `Value`, so a Lua element array is the one path that refuses it). One consequence worth knowing: `lua_opt_int64_vector` routes
   through it too, so `quiver.metadata{dimension_sizes = {true}}` coerces to a size-1 dimension
   rather than erroring. That is consistent with the cross-layer boolean policy, and
   `BinaryMetadata::validate()` still rejects a non-positive size, so `{false}` throws.

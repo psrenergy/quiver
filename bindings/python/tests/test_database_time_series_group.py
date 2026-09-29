@@ -180,6 +180,34 @@ class TestTimeSeriesValidation:
         result = mixed_time_series_db.read_time_series_group("Sensor", "readings", eid)
         assert result["temperature"] == [20.0]
 
+    def test_update_time_series_group_float_among_ints_widens(self, mixed_time_series_db: Database) -> None:
+        """A float anywhere makes the column FLOAT; the first-cell dispatch int()-ed 20.5 to 20."""
+        eid = _create_sensor(mixed_time_series_db, "S1")
+        data = {
+            "date_time": ["2024-01-01T00:00:00", "2024-01-02T00:00:00"],
+            "temperature": [20, 20.5],
+            "humidity": [65, 70],
+            "status": ["normal", "normal"],
+        }
+        mixed_time_series_db.update_time_series_group("Sensor", "readings", eid, data)
+
+        result = mixed_time_series_db.read_time_series_group("Sensor", "readings", eid)
+        assert result["temperature"] == [20.0, 20.5]
+
+    def test_update_time_series_group_float_among_ints_rejected_for_int_column(
+        self, mixed_time_series_db: Database
+    ) -> None:
+        """The widened column reaches the core, which rejects a float in an INTEGER column."""
+        eid = _create_sensor(mixed_time_series_db, "S1")
+        bad_data = {
+            "date_time": ["2024-01-01T00:00:00", "2024-01-02T00:00:00"],
+            "temperature": [20.5, 21.0],
+            "humidity": [65, 70.5],
+            "status": ["normal", "normal"],
+        }
+        with pytest.raises(QuiverError, match="column 'humidity' has type INTEGER but received REAL"):
+            mixed_time_series_db.update_time_series_group("Sensor", "readings", eid, bad_data)
+
     def test_update_time_series_group_wrong_type_str_for_int(self, mixed_time_series_db: Database) -> None:
         """Strings for an INTEGER column are rejected by the C++ layer."""
         eid = _create_sensor(mixed_time_series_db, "S1")

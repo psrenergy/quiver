@@ -1038,25 +1038,29 @@ From the repo root (`C:\Development\Quiver\quiver1`), in order:
 
 ## Acceptance criteria
 
-- [ ] `bindings/python/src/quiverdb/_helpers.py` defines `column_data_type(name, values)` as given.
+- [x] `bindings/python/src/quiverdb/_helpers.py` defines `column_data_type(name, values)` as given.
       Neither it nor any other Python marshaller calls `int(v)`/`float(v)` on a cell.
-- [ ] `_marshal_group_columns` types every column through `column_data_type`, and its old trailing
+      *(Scoped: `_marshal_group_columns` and `_set_array` have none; the bool-only `[int(v)]` in
+      `_marshal_row_columns` and `int(value)` in scalar `Element.set` remain for plan 28.)*
+- [x] `_marshal_group_columns` types every column through `column_data_type`, and its old trailing
       `TypeError` branch is gone.
-- [ ] `Element._set_array` rejects `None`/`datetime` cells with the shared message, then types the
+- [x] `Element._set_array` rejects `None`/`datetime` cells with the shared message, then types the
       list through `column_data_type`. Its `isinstance(first, bool)` / `[int(v) for v in values]`
-      branch is gone.
-- [ ] Dart `_marshalGroupColumn` and `Element._setMixedList` take the INTEGER branch only when no
+      branch is gone. *(Drift: the existing a3a949e `None` message is kept word for word; a
+      `datetime` list gets the shared message. See Implementation notes.)*
+- [x] Dart `_marshalGroupColumn` and `Element._setMixedList` take the INTEGER branch only when no
       cell is a `double`.
-- [ ] The Dart comment citing "Python's per-cell `int(v)`" and the JS comment citing the same are
+- [x] The Dart comment citing "Python's per-cell `int(v)`" and the JS comment citing the same are
       rewritten.
-- [ ] The new Python tests (`TestColumnTyping`, two time-series tests), the Dart group 'Mixed numeric
+- [x] The new Python tests (`TestColumnTyping`, two time-series tests), the Dart group 'Mixed numeric
       cells' and the JS 'group writer column typing' test all pass, and the Python and Dart ones
       fail on the pre-change code.
-- [ ] `bindings/python/AGENTS.md` (5 edits), `bindings/dart/AGENTS.md` (4 edits) and
+- [x] `bindings/python/AGENTS.md` (5 edits), `bindings/dart/AGENTS.md` (4 edits) and
       `src/AGENTS.md` (1 edit) are updated as specified.
-- [ ] The CHANGELOG bullet is under `## [0.12.0] — unreleased` → `### Changed`, prefixed
-      **BREAKING**, with an *Adapt:* line.
-- [ ] `scripts/format.bat` leaves no diff, and `scripts/test-all.bat` is green.
+- [x] The CHANGELOG bullet is under `## [0.12.0] — unreleased` → `### Changed`, prefixed
+      **BREAKING**, with an *Adapt:* line. *(Retargeted: `## [0.12.6] — unreleased` → `### Changed`;
+      v0.12.5 is tagged.)*
+- [x] `scripts/format.bat` leaves no diff, and `scripts/test-all.bat` is green.
 
 ## Pitfalls
 
@@ -1117,3 +1121,74 @@ From the repo root (`C:\Development\Quiver\quiver1`), in order:
   type: Any`. Literals promote, so ordinary callers never hit it. Not owned by any plan.
 - **`None` cells in Python element arrays** (the C API mask supports them, but the root decision
   keeps Python's element surface dense). Not planned.
+
+## Implementation notes
+
+This was implemented on `rs/plan24` at master `5358778`. The v0.12.6 version bump had already landed, and `git fetch && git merge origin/master` was a no-op. Before any edit, a five-agent read-only workflow checked the plan: four reviewers each verified one area's excerpts, symbols and test names against the code, and a fifth argued against implementing it. Their verdict was **implement, with adjustments**. It reproduced every data-loss row of the "Why" table in the venv, confirmed both cffi facts, and ran `column_data_type` on the 10 listed cases and 12 more, all of which gave the stated result. Nothing that worked before now stores a different value without an error. The one behaviour change the plan does not state is that a whole-number float among ints in an INTEGER column (`[65, 70.0]`, previously `int()`-ed to 70) is now rejected by the core. The CHANGELOG *Adapt* line says so.
+
+### Drift fixed
+
+- **`Element._set_array` already refused `None`.** Commit a3a949e added the check after this plan was written, and plan 18 reworded it: `Unsupported array element type NoneType for Element.set('<name>'): write NULL cells with update_vector_group, update_set_group or update_time_series_group`. Three things depend on it:
+  - `test_database_read_vector.py::test_null_cell_is_refused_on_element_write` matches `Element.set\('value_int'\)`;
+  - the `[0.12.5]` CHANGELOG line says the Julia/Python/JS null-cell error names the group writers;
+  - there is a `bindings/python/AGENTS.md` bullet about it.
+
+  The planned pre-check would have broken that test and dropped the remedy hint that all three bindings share. **The `None` check is kept word for word.** The planned `for i, v in enumerate(values): if v is None or isinstance(v, datetime)` loop, and the `datetime` import in `element.py`, were dropped. `_set_array` now calls `column_data_type`, then branches INTEGER / FLOAT / STRING. A final `else` raises `Unsupported value type <T> in cell 0 of column '<name>'` for the only remaining case, DATE_TIME. With `None` refused first, every cell is a datetime, so cell 0 is the first unsupported one. Knock-on changes:
+  - The element parametrization's `[1, None]` case was replaced by `(["a", 1], "Unsupported value type int in cell 1 of column 'score'")`. Before the fix it raised `AttributeError`, so the test still bites; `[1, None]` is already pinned by the existing test.
+  - The CHANGELOG bullet no longer lists "`None` in an element array" among the new `TypeError`s, since it already raised `TypeError` in 0.12.4.
+  - The last sentence of Python AGENTS.md edit 5 points at the existing `Element._set_array` bullet instead of restating it. That bullet was left unchanged.
+- **CHANGELOG target.** `## [0.12.0] — unreleased` no longer exists, and `v0.12.5` is tagged (7c8bf7a) with the manifests at 0.12.6. The entry is in a new `## [0.12.6] — unreleased` → `### Changed` section above `[0.12.5]`, with no manifest bump and no compare link (plan 78 owns links). The `[0.12.5]` header still says "unreleased" although it is tagged. Dating it is the maintainer's release step and was left alone.
+- ***Adapt* wording.** It no longer quotes `type mismatch`: that is the vector/set wording, and time series reports `column '<c>' has type INTEGER but received REAL`. It also mentions `[65, 70.0]`.
+- **Where the core validates.** Vector/set validation happens in `validate_group_columns`, called from `Impl::update_group_rows` before `insert_rows_into_group_table` (which does the DELETE). The plan says "via `insert_rows_into_group_table`". The behaviour is the same: validation precedes the DELETE, and `[7]` survives.
+- **Acceptance wording.** "No Python marshaller calls `int(v)`/`float(v)` on a cell" is literally false. Two bool-only conversions remain: `[int(v)]` in `_marshal_row_columns`' `isinstance(v, bool)` branch, and `int(value)` in `Element.set`'s scalar bool branch. Both lose nothing and belong to plan 28. `_marshal_group_columns` and `_set_array` have none.
+- **Small fixes.**
+  - Line numbers had moved everywhere; every edit was anchored by function name and excerpt.
+  - The new JS test comment was re-wrapped to ≤100 columns (its first line was 101).
+  - The Dart element-path wording is `... in cell <i> of '<name>'`, without "column". The tests match only `score` and `cell N`.
+- **Verification commands.** `test.bat -k "..."` / `--name "..."` / `-t "..."` lose their quoting through `cmd //c` from Git Bash: pytest saw `or` as a path, and dart hung. The targeted runs therefore call `uv run pytest` / `dart test` / `bun test` directly from the binding folder, with `build/bin` on PATH.
+- **The JS lint failure predates this change.** `bun run lint` (`biome check`) exits 1 in this checkout. `core.autocrlf=true` checks every `.ts` file out as CRLF, which Biome's LF formatter rejects: the untouched `src/read.ts` fails the same way. `biome check --line-ending=crlf` on the two edited JS files passes, so they add no findings. `scripts/format.bat` (biome `format --write`) rewrote 28 JS files to LF with no content change (the diff was byte-identical before and after). The 26 untouched ones were restored with `git checkout --`, and the two edited ones were put back to CRLF.
+
+### Results
+
+- **Red first.**
+  - Python: with only the tests in place, all 12 new tests failed as the plan predicts:
+    - `[1.0, 2.0, 1.0] != [1.0, 2.5, 1.0]` and `[1.0, 2.0] != [1.0, 2.5]` for the two widening tests;
+    - `DID NOT RAISE QuiverError` for the INTEGER-column test;
+    - `DID NOT RAISE TypeError` for `[1, "7"]` / `[1.5, "2"]`;
+    - `AttributeError: 'int' object has no attribute 'encode'` for `["a", 1]`;
+    - a non-matching regex for `[None, object()]`;
+    - `AttributeError: 'str' object has no attribute 'strftime'` for the datetime/str case;
+    - `DID NOT RAISE TypeError` and `AttributeError` for the two element cases;
+    - `[20.0, 20.0] != [20.0, 20.5]` and `DID NOT RAISE QuiverError` for the time-series pair.
+  - Dart: all 4 new tests failed:
+    - `Unsupported value type double in cell 1 of column 'score'` / `... of 'score'` for the two widening tests;
+    - `ArgumentError` where the INTEGER-column test expected `DatabaseException`;
+    - `cell 1` instead of `cell 2` for the String test.
+  - JS: the parity test passed before the change, as intended.
+- **Green.**
+  - Python: the targeted run (the 12 new tests, `test_boolean_input`, `test_null_cell_is_refused_on_element_write`) passes 14/14, and the full suite 337/337.
+  - Dart: `Mixed numeric cells` 4/4, `database_boolean_test.dart` 8/8, full suite 440/440.
+  - JS: 230/230.
+  - Julia: all testsets pass.
+  - `scripts/format.bat`: no content change.
+  - `scripts/test-all.bat`: all six suites PASS (C++ 1375, C API 571, Julia, Dart 440, JS 230, Python 337); no CLI smoke step exists in it any more.
+
+### For later plans
+
+- **25 (datetime writes).**
+  - `_set_array` has no `or isinstance(v, datetime)` pre-check to drop. The DATE_TIME slot is the final `else: raise TypeError(...)` after the STRING branch: replace it with `self._set_array_string(name, [format_datetime(v) for v in values])`.
+  - A mixed `[datetime, "x"]` list is already rejected by `column_data_type`.
+  - `_marshal_group_columns`' datetime branch is keyed on `column_type == DataType.DATE_TIME`, and still formats with `v.strftime("%Y-%m-%dT%H:%M:%S")`.
+  - The docstring phrase to extend is `datetime -> STRING in the core's ISO format`.
+- **28 (bool branches).**
+  - The `_set_array` bool branch and the `isinstance(first, bool) or isinstance(first, int)` test in `_marshal_group_columns` are gone.
+  - `column_data_type` has no bool test: its `isinstance(v, int)` check carries a `# bool is an int subclass` comment, so there is nothing to delete there.
+  - The `test_boolean_input` docstring was rewritten here; plan 28's "old docstring" excerpt is stale.
+- **30 (docstrings).** `_marshal_group_columns`' summary line is now "Marshal column lists into parallel C arrays for the columnar group writers.", and `columnar time series API` is gone, so no change is needed.
+- **31 / 33 (JS).**
+  - The `updateGroupColumns` comment no longer cites "Python's per-cell `int(v)`"; it now reads "the same per-cell 1/0 Python and Dart apply".
+  - Keep `describe("group writer column typing")` in `database-update.test.ts` green.
+- **38 (Dart `_marshalGroupColumns`).** `_marshalGroupColumn` keeps its signature and return record. It gained a `final isNumeric = first is bool || first is int || first is double;` local. The INTEGER branch is `isNumeric && !values.any((v) => v is double)` and the FLOAT branch is `isNumeric`. Carry both unchanged.
+- **56 (typing-policy messages).**
+  - `test_update_time_series_group_float_among_ints_rejected_for_int_column` pins the full `column 'humidity' has type INTEGER but received REAL`, like its neighbour `..._wrong_type_str_for_int`. Update both together.
+  - The vector-group tests match only `count_value`.

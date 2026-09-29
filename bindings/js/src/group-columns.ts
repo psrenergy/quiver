@@ -118,8 +118,9 @@ export function updateGroupColumns(
     // SQLite has no boolean type: a boolean is INTEGER 1/0, as in setElementField and
     // marshalParams. Normalizing per cell before the dispatch (rather than adding a boolean
     // branch after it) is what makes a mixed [true, 5] column write 1 and 5 instead of
-    // truthiness-mapping every cell, and matches Python's per-cell `int(v)`. A string column is
-    // left alone so normalizing cannot change what a mixed ['a', true] column already wrote.
+    // truthiness-mapping every cell -- the same per-cell 1/0 Python and Dart apply. A string
+    // column is left alone so normalizing cannot change what a mixed ['a', true] column already
+    // wrote.
     const isStringColumn = typeof rawValues.find((v) => v !== null) === "string";
     const values = isStringColumn
       ? rawValues

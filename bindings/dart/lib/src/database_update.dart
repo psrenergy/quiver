@@ -717,9 +717,9 @@ extension DatabaseUpdate on Database {
   /// Marshals one vector/set/time-series column into arena-allocated typed + mask arrays,
   /// returning its quiver_data_type_t tag, data pointer, and per-cell NULL mask.
   /// Supported value types: int, bool (INTEGER 1/0), double, String, DateTime; a `null` entry becomes
-  /// a SQL NULL (mask 0) with a placeholder in the data array. An all-null (or
-  /// empty) column is tagged FLOAT with a zeroed placeholder — the C API ignores
-  /// the type tag and data for masked-out cells.
+  /// a SQL NULL (mask 0) with a placeholder in the data array. A numeric column is FLOAT if any cell
+  /// is a double and INTEGER otherwise. An all-null (or empty) column is tagged FLOAT with a zeroed
+  /// placeholder — the C API ignores the type tag and data for masked-out cells.
   ({int type, Pointer<Void> data, Pointer<Uint8> hasValue}) _marshalGroupColumn(
     Arena arena,
     String column,
@@ -751,10 +751,14 @@ extension DatabaseUpdate on Database {
       );
     }
     // SQLite has no boolean type: a bool is INTEGER 1/0, the same as on Element.set and the query
-    // parameters. Folded into the int branch (checked first — a Dart bool is not an int) and
-    // converted per cell, so a mixed [true, 1] column writes 1 and 1 rather than throwing a raw
-    // TypeError that names no column. Matches Python's per-cell `int(v)` and JS's normalization.
-    if (first is bool || first is int) {
+    // parameters (a Dart bool is not an int, so it is named here). The first non-null cell picks the
+    // family and every cell picks the numeric type: one double anywhere widens the column to FLOAT,
+    // so [1, 2.5] writes 1.0 and 2.5 — the whole-column rule Python and JS apply — where choosing
+    // INTEGER from the first cell threw on the 2.5. Both branches still convert per cell, so a mixed
+    // [true, 1] column writes 1 and 1 and a stray String reports its cell and column instead of
+    // throwing a raw TypeError.
+    final isNumeric = first is bool || first is int || first is double;
+    if (isNumeric && !values.any((v) => v is double)) {
       final arr = arena<Int64>(values.length);
       for (var r = 0; r < values.length; r++) {
         final v = values[r];
@@ -775,7 +779,7 @@ extension DatabaseUpdate on Database {
     }
     // An int in a REAL column is the documented int-for-REAL coercion, and a bool reaches REAL
     // through it; converted per cell so a mixed column reports the cell rather than raw-casting.
-    if (first is double) {
+    if (isNumeric) {
       final arr = arena<Double>(values.length);
       for (var r = 0; r < values.length; r++) {
         final v = values[r];

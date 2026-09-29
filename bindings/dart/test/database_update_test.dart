@@ -1831,6 +1831,87 @@ void main() {
   });
 
   // ==========================================================================
+  // Mixed numeric cells
+  // ==========================================================================
+
+  group('Mixed numeric cells', () {
+    // A numeric column (or element array) is INTEGER only while no cell is a double; one double
+    // widens it to FLOAT, so [1, 2.5] writes 1.0 and 2.5 here as in Python, JS and Julia. Choosing
+    // INTEGER from the first cell used to throw ArgumentError on the 2.5.
+    Database openAllTypes() => Database.fromSchema(
+      ':memory:',
+      path.join(testsPath, 'schemas', 'valid', 'all_types.sql'),
+    );
+
+    test('a double among ints widens a group column to FLOAT', () {
+      final db = openAllTypes();
+      try {
+        final id = db.createElement('AllTypes', {'label': 'Widened'});
+        db.updateVectorGroup('AllTypes', 'scores', id, {
+          'score': [1, 2.5, true],
+        });
+        expect(db.readVectorFloatsById('AllTypes', 'score', id), equals([1.0, 2.5, 1.0]));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('a double among ints widens an element array to FLOAT', () {
+      final db = openAllTypes();
+      try {
+        final id = db.createElement('AllTypes', {
+          'label': 'Widened',
+          'score': [1, 2.5],
+        });
+        expect(db.readVectorFloatsById('AllTypes', 'score', id), equals([1.0, 2.5]));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('an INTEGER column still rejects a widened column', () {
+      final db = openAllTypes();
+      try {
+        final id = db.createElement('AllTypes', {
+          'label': 'Counts',
+          'count_value': [7],
+        });
+        expect(
+          () => db.updateVectorGroup('AllTypes', 'counts', id, {
+            'count_value': [1, 2.5],
+          }),
+          throwsA(isA<DatabaseException>().having((e) => e.message, 'message', contains('count_value'))),
+        );
+        // Validation runs before the DELETE, so the group is intact.
+        expect(db.readVectorIntegersById('AllTypes', 'count_value', id), equals([7]));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('a String among numbers names its own cell', () {
+      final db = openAllTypes();
+      try {
+        final id = db.createElement('AllTypes', {'label': 'Bad'});
+        expect(
+          () => db.updateVectorGroup('AllTypes', 'scores', id, {
+            'score': [1, 2.5, 'x'],
+          }),
+          throwsA(
+            isA<ArgumentError>().having(
+              (e) => e.message,
+              'message',
+              allOf(contains('score'), contains('cell 2')),
+            ),
+          ),
+        );
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  // ==========================================================================
   // Update relation
   // ==========================================================================
 

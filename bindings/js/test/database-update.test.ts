@@ -401,3 +401,18 @@ describe("updateRelation", () => {
     }
   });
 });
+
+// A numeric column is typed from every cell -- one decimal widens it to FLOAT -- the rule Python
+// and Dart now share, so [1, 2.5] writes 1 and 2.5 in every binding.
+describe("group writer column typing", () => {
+  test("a decimal among integers widens the column to FLOAT", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      const id = db.createElement("AllTypes", { label: "Widened" });
+      db.updateVectorGroup("AllTypes", "scores", id, { score: [1, 2.5] });
+      expect(db.readVectorFloatsById("AllTypes", "score", id)).toEqual([1, 2.5]);
+    } finally {
+      db.close();
+    }
+  });
+});

@@ -88,9 +88,11 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   through the shared private `_marshalGroupColumn(Arena, String, List<Object?>)`
   (used by `updateTimeSeriesGroup`, `upsertTimeSeriesRow`, `upsertTimeSeriesRowByLabel`,
   `updateVectorGroup`, `updateSetGroup` and the group writers' `ByLabel` forms); query parameters
-  through `_marshalParams`. Both `_marshalGroupColumn` and `Element._setMixedList` dispatch on the
-  first non-null cell and then convert **every** cell individually — never `as`/`cast` the rest to
-  the dispatched type, which defers the check to iteration and throws a raw `TypeError` naming
+  through `_marshalParams`. Both `_marshalGroupColumn` and `Element._setMixedList` take the family
+  (numeric, String, DateTime) from the first non-null cell and the numeric type from all of them: a
+  numeric column is INTEGER unless some cell is a `double`, which widens it to FLOAT (the rule
+  Python and JS share, so `[1, 2.5]` writes 1.0 and 2.5 in every binding; it used to throw here).
+  They then convert **every** cell individually — never `as`/`cast` the rest to the dispatched type, which defers the check to iteration and throws a raw `TypeError` naming
   neither the column nor the cell. An `int` (and a `bool`) is accepted into a REAL column by the
   int-for-REAL coercion. Find the dispatch cell with a plain loop, not `firstWhere(..., orElse: ()
   => null)`: `orElse` must return the list's *runtime* element type, so it throws on every
@@ -117,8 +119,8 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
 - **Time-series group NULLs**: `readTimeSeriesGroup`/`updateTimeSeriesGroup` use
   `Map<String, List<Object?>>` — a `null` cell is a SQL NULL. `_marshalGroupColumn` returns a
   `({int type, Pointer<Void> data, Pointer<Uint8> hasValue})` record (the per-cell mask;
-  `upsertTimeSeriesRow` and `upsertTimeSeriesRowByLabel` ignore `hasValue`), dispatches on the
-  first non-null element, and tags an all-null/empty column FLOAT with a zeroed placeholder. Reads
+  `upsertTimeSeriesRow` and `upsertTimeSeriesRowByLabel` ignore `hasValue`), types the column by
+  the rule above, and tags an all-null/empty column FLOAT with a zeroed placeholder. Reads
   decode the mask out-param and never `toDartString` a masked-out (NULL) pointer.
 - **Query API shape**: `queryString`/`queryInteger`/`queryBoolean`/`queryFloat`/`queryDateTime`
   take an optional positional `List<Object?>? parameters` (no separate `*Params` methods). Every
@@ -150,17 +152,18 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   message is unavoidable here, since these readers are a binding-only convenience the core never sees. On writes,
   `Element.set` maps `bool` to `setInteger` (and a `List<bool?>` through `_setMixedList`),
   `_marshalParams` binds a `bool` parameter as INTEGER, and `_marshalGroupColumn`
-  (`database_update.dart`) dispatches on `first is bool || first is int` — a Dart `bool` is not an
-  `int`, so without the `bool` half the group writers threw. The two are **one branch converting
-  per cell**, not two branches each casting `as` their own type: dispatch reads only the first
-  non-null cell, so a mixed `[true, 1]` column would otherwise throw a raw `TypeError` naming
-  nothing. That branch covers all eight call sites
+  (`database_update.dart`) counts `bool` as numeric (`first is bool || first is int || first is
+  double`) — a Dart `bool` is not an `int`, so without the `bool` half the group writers threw.
+  bool and int are **one branch converting per cell**, not two branches each casting `as` their own
+  type: the family comes from the first non-null cell, so a mixed `[true, 1]` column would
+  otherwise throw a raw `TypeError` naming nothing. That branch covers all eight call sites
   (`updateVectorGroup`/`updateSetGroup`/`updateTimeSeriesGroup`/`upsertTimeSeriesRow` and every
   `ByLabel` form), which is why it takes the column name: its unsupported-type `ArgumentError`
   has to name the offending column per the root marshalling-error rule.
 - **Element array NULLs**: `Element.setArray{Integer,Float,String}` take `List<T?>` and pass the
-  per-cell `has_value` mask to the C setters; `Element.set` dispatches mixed lists on the first
-  non-null element, and an empty or all-null list is tagged integer (valid — type is irrelevant
+  per-cell `has_value` mask to the C setters; `Element.set` types mixed lists like
+  `_marshalGroupColumn` (family from the first non-null element, a `double` anywhere widens to
+  float), and an empty or all-null list is tagged integer (valid — type is irrelevant
   when no value is read). Do not reintroduce the old "empty mixed list" rejection: an empty array
   on `updateElement` is the clear-group path.
 - **Per-method FFI boilerplate is the house style** — don't collapse it into

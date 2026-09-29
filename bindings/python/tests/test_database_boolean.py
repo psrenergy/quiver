@@ -84,9 +84,10 @@ def test_boolean_conversion_rejects_non_binary_integer(all_types_db: Database) -
 def test_boolean_input(all_types_db: Database) -> None:
     """A native bool on the write side.
 
-    Python needs no special handling in most places (`bool` is an `int` subclass), but
-    `Element.set` and the group/row marshallers each test `bool` explicitly and before `int`,
-    so a stray reordering would send a bool down the float or the unsupported-type path.
+    Python needs no special handling in most places (`bool` is an `int` subclass): `Element.set`
+    and the row marshaller test `bool` before `int`, and `column_data_type` (group columns and
+    element arrays) lets it fall into its `int` check, so this pins that a bool arrives as 1/0
+    whichever way it is dispatched.
     """
     element_id = all_types_db.create_element(
         "AllTypes",

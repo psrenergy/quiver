@@ -94,10 +94,12 @@ class Element {
   }
 
   void _setMixedList(String name, List<dynamic> values) {
-    // Dispatch on the first non-null element; an empty or all-null list is
-    // tagged integer (the type is irrelevant when every cell is NULL). Each branch then converts
-    // per cell rather than `cast`ing the list, which defers the check to iteration and throws a
-    // raw TypeError naming neither the attribute nor the cell. A bool is INTEGER 1/0 and an int
+    // The first non-null element picks the family and every element the numeric type: a numeric
+    // list is an integer array unless some cell is a double, which widens it to a float array (so
+    // [1, 2.5] stores 1.0 and 2.5, as in the other bindings). An empty or all-null list is tagged
+    // integer (the type is irrelevant when every cell is NULL). Each branch then converts per cell
+    // rather than `cast`ing the list, which defers the check to iteration and throws a raw
+    // TypeError naming neither the attribute nor the cell. A bool is INTEGER 1/0 and an int
     // reaches a REAL column by the int-for-REAL coercion — the rules `_marshalGroupColumn` applies.
     Object? first;
     for (final v in values) {
@@ -106,9 +108,10 @@ class Element {
         break;
       }
     }
+    final isNumeric = first is bool || first is int || first is double;
     if (first == null) {
       setArrayInteger(name, List<int?>.filled(values.length, null));
-    } else if (first is bool || first is int) {
+    } else if (isNumeric && !values.any((v) => v is double)) {
       setArrayInteger(name, [
         for (var i = 0; i < values.length; i++)
           switch (values[i]) {
@@ -120,7 +123,7 @@ class Element {
             ),
           },
       ]);
-    } else if (first is double) {
+    } else if (isNumeric) {
       setArrayFloat(name, [
         for (var i = 0; i < values.length; i++)
           switch (values[i]) {
