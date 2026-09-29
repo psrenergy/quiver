@@ -246,13 +246,13 @@ Run from the repo root (`C:\Development\Quiver\quiver1`), in order:
 
 ## Acceptance criteria
 
-- [ ] `tests/test_c_api_database_read_set.cpp` contains `TEST(DatabaseCApi, ReadSetGroupByIdPreservesNullCells)`, placed right after `ReadSetByIdEmpty` and before the "Read set null pointer tests" banner.
-- [ ] The test uses `VALID_SCHEMA("multi_column_groups.sql")`, writes with `quiver_database_update_set_group` and a non-NULL `column_has_value` array, and puts the NULL in `weight` (the second column).
-- [ ] It asserts `column_count == 2`, `row_count == 2`, names `code`/`weight`, types `STRING`/`FLOAT`, `column_has_value[1][beta] == 0`, and the non-NULL cells' values and masks. Rows are located by `code`, never by fixed index.
-- [ ] It asserts the empty-group case: `QUIVER_OK`, both counts 0 (seeded to 99 first), and all four out-arrays NULL.
-- [ ] It frees the non-empty result with `quiver_database_free_time_series_data`, destroys every element, and closes the database.
-- [ ] The Verification step 3 mutation made the test fail, and the mutation was reverted (`git diff src/` is empty).
-- [ ] `quiver_c_tests.exe` passes in full. No production file, FFI declaration, AGENTS.md or CHANGELOG changed.
+- [x] `tests/test_c_api_database_read_set.cpp` contains `TEST(DatabaseCApi, ReadSetGroupByIdPreservesNullCells)`, placed right after `ReadSetByIdEmpty` and before the "Read set null pointer tests" banner.
+- [x] The test uses `VALID_SCHEMA("multi_column_groups.sql")`, writes with `quiver_database_update_set_group` and a non-NULL `column_has_value` array, and puts the NULL in `weight` (the second column).
+- [x] It asserts `column_count == 2`, `row_count == 2`, names `code`/`weight`, types `STRING`/`FLOAT`, `column_has_value[1][beta] == 0`, and the non-NULL cells' values and masks. Rows are located by `code`, never by fixed index.
+- [x] It asserts the empty-group case: `QUIVER_OK`, both counts 0 (seeded to 99 first), and all four out-arrays NULL.
+- [x] It frees the non-empty result with `quiver_database_free_time_series_data`, destroys every element, and closes the database.
+- [x] The Verification step 3 mutation made the test fail, and the mutation was reverted (`git diff src/` is empty).
+- [x] `quiver_c_tests.exe` passes in full. No production file, FFI declaration, AGENTS.md or CHANGELOG changed.
 
 ## Pitfalls
 
@@ -274,3 +274,35 @@ Run from the repo root (`C:\Development\Quiver\quiver1`), in order:
 - Error-path cases for this entry point (unknown collection, unknown group). The messages belong to the core and are being reworked by plans **07** and **57**.
 - The REAL-into-INTEGER narrowing in the marshaller's INTEGER branch: plan **23**.
 - Leak/free cleanups in other C API tests: plan **69**.
+
+## Implementation notes
+
+Implemented on `rs/plan19`. Before any edit the branch fast-forwarded from `afa5fea` to `d22b74e`, bringing in plans 17 (`28d6e1f`) and 18 (`42790be`); `git fetch origin && git merge origin/master` then reported "Already up to date". Every anchor was re-checked after that merge: `quiver_database_read_set_group_by_id` (still `get_set_metadata` → `read_set_group_by_id` → `marshal_group_rows_to_c`), the marshaller's empty branch, the `update_set_group` / `read_set_group_by_id` / `free_time_series_data` signatures, `Items_set_codes`, `ReadSetByIdEmpty` and the null-pointer banner. None changed. Plan 18 added `ReadSetIntegersPreservesNullCells` / `ReadSetFloatsPreservesNullCells` further down the same file, but no `read_set_group_by_id` test. The test is Changes step 1 verbatim. clang-format kept every line as written.
+
+**Results.**
+- New test: 1/1 passed.
+- Mutation (Verification step 3, `get_set_metadata` → `get_vector_metadata`): the test failed where the plan predicted, then the mutation was reverted and rebuilt (`git diff src/` empty):
+  ```
+  tests\test_c_api_database_read_set.cpp(301): error: Expected equality of these values:
+    quiver_database_read_set_group_by_id(db, "Items", "codes", item, ...)
+      Which is: 1
+    QUIVER_OK
+      Which is: 0
+  [  FAILED  ] DatabaseCApi.ReadSetGroupByIdPreservesNullCells
+  ```
+- `DatabaseCApi.ReadSet*:DatabaseCApi.ReadVectorGroupById*:DatabaseCApi.UpdateGroup*`: 29/29. That is more than the plan's count, because plan 18 added two `ReadSet*` tests.
+- `scripts/test-all.bat`: all six suites PASS (C++ 1373, C API 571, Julia 1556, Dart 435, JS 228, Python 324).
+- No new compiler warnings. The MSVC `C4458` warnings in `src/database_impl.h` / `src/database_update.cpp` were already there. clangd's clang-tidy flags `const void* data[] = {codes, weights}` as `bugprone-multi-level-implicit-pointer-conversion`. The plan's Pitfalls say not to add casts, and `UpdateGroupNullStringEntryIsNull` uses the same idiom, so the line was kept.
+
+**Drift fixed or noted:**
+1. The repo is `quiver3`, not `quiver1`, and HEAD is `d22b74e`, not `58dfe7a`. Line numbers moved: the entry point is at `src/c/database_read.cpp:459`, the vector sibling at `test_c_api_database_read_vector.cpp:633`, and the `make` lambda's source test at `test_c_api_database_update.cpp:1859`.
+2. `scripts/test-all.bat` has six steps. The CLI smoke step is gone, so Verification step 7's "step 7 fails independently" caveat no longer applies: the full run passes.
+3. `scripts/format.bat` took about 13 minutes. Its Python step's `uv sync` rebuilt the quiverdb wheel (0.12.4 → 0.12.5) against the freshly merged sources. As in plans 08-16, biome rewrote 42 untouched CRLF JS files as LF. `git diff --ignore-cr-at-eol` was empty, so `git checkout -- bindings/js` restored them. No `.bat` file changed.
+
+**Review.** A three-lens adversarial workflow read the diff (plan conformance, C/gtest correctness, contract/project rules). None of the lenses raised a finding.
+
+**For later plans:**
+- **Plan 18's notes** suggest plan 19 "can reuse `shared_group_columns.sql` for a sponsors/mentors case". That was not done: it is outside this plan's scope and the maintainer's fixture choice. It could become its own follow-up if the shared-column resolution needs a C-layer test.
+- **Plan 23** changes only the INTEGER branch of `marshal_group_rows_to_c`. This test goes through the STRING and FLOAT branches plus the empty branch, and should pass unedited.
+- **Plan 69** has nothing to fix in this test. It destroys every element, frees the non-empty result with `quiver_database_free_time_series_data`, and closes the database. The empty result is deliberately not freed, because nothing was allocated.
+- **Plans 07 / 57** may reword the set-metadata not-found messages. This test asserts no message.
