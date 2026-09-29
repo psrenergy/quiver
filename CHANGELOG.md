@@ -37,6 +37,11 @@ callers to change something are prefixed **BREAKING** and say what to do.
   back as `10:00Z`, three hours off, and `read_time_series_row` looked up the wrong instant the
   same way. An aware value is now converted to UTC (`07:00`); a naive one is written as given.
   Rows written earlier from an aware non-UTC value keep the wall-clock time they were stored with.
+- **Python: a `LuaRunner` whose construction fails is silent when it is garbage-collected.**
+  `LuaRunner(db)` on a closed `Database` raised `QuiverError: Null argument: db` as it should, but
+  the half-built object's `__del__` then emitted a spurious `ResourceWarning: LuaRunner was not
+  closed explicitly` and printed `Exception ignored in … AttributeError: 'LuaRunner' object has no
+  attribute '_ptr'`. A runner now counts as closed until its native handle exists.
 
 ## [0.12.5] — unreleased
 

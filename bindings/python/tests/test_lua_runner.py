@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import gc
 import json
+import sys
+import warnings
 
 import pytest
 
@@ -100,6 +103,21 @@ class TestLuaRunnerLifecycle:
         lua = LuaRunner(collections_db)
         lua.close()
         lua.close()  # Should not raise
+
+    def test_failed_construction_is_silent_when_collected(
+        self, collections_db: Database, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        collections_db.close()
+        gc.collect()  # flush earlier tests' garbage so only this runner's __del__ is observed
+        unraisable: list[sys.UnraisableHookArgs] = []
+        monkeypatch.setattr(sys, "unraisablehook", unraisable.append)
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")  # ResourceWarning is ignored by the default filters
+            with pytest.raises(QuiverError, match="Null argument: db"):
+                LuaRunner(collections_db)
+            gc.collect()  # runs the half-built runner's __del__ even if it sits in a cycle
+        assert [str(w.message) for w in caught] == []
+        assert [repr(u.exc_value) for u in unraisable] == []
 
     def test_database_reference_kept(self, collections_db: Database) -> None:
         lua = LuaRunner(collections_db)

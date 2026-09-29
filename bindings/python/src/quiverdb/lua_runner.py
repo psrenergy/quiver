@@ -19,12 +19,15 @@ class LuaRunner:
     """
 
     def __init__(self, db: Database) -> None:
+        # Closed until the native runner exists: Python still runs __del__ when __init__ raises,
+        # and a failed construction must be a no-op there, not a warning plus a missing _ptr.
+        self._closed = True
         self._db = db
-        self._closed = False
         lib = get_lib()
         out_runner = ffi.new("quiver_lua_runner_t**")
         check(lib.quiver_lua_runner_new(db._ptr, out_runner))
         self._ptr = out_runner[0]
+        self._closed = False
 
     def close(self) -> None:
         """Free the LuaRunner handle. Idempotent."""

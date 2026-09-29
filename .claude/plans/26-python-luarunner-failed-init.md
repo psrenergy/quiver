@@ -296,18 +296,18 @@ No FFI generator run: no C API signature changes.
 
 ## Acceptance criteria
 
-- [ ] `LuaRunner.__init__` sets `self._closed = True` as its first statement and
+- [x] `LuaRunner.__init__` sets `self._closed = True` as its first statement and
       `self._closed = False` as its last, after `self._ptr = out_runner[0]`, with the two-line
       comment.
-- [ ] `close`, `_ensure_open`, `run` and `__del__` are unchanged.
-- [ ] `tests/test_lua_runner.py` imports `gc`, `sys` and `warnings`, and has
+- [x] `close`, `_ensure_open`, `run` and `__del__` are unchanged.
+- [x] `tests/test_lua_runner.py` imports `gc`, `sys` and `warnings`, and has
       `TestLuaRunnerLifecycle.test_failed_construction_is_silent_when_collected` exactly as above.
-- [ ] That test failed before the source change and passes after it.
-- [ ] The full Python suite passes. `ruff format` and `ruff check` are clean.
-- [ ] `bindings/python/AGENTS.md` has the new `LuaRunner.__init__` gotcha bullet.
-- [ ] `CHANGELOG.md` `## [0.12.0] — unreleased` → `### Fixed` has the Python `LuaRunner` entry,
+- [x] That test failed before the source change and passes after it.
+- [x] The full Python suite passes. `ruff format` and `ruff check` are clean.
+- [x] `bindings/python/AGENTS.md` has the new `LuaRunner.__init__` gotcha bullet.
+- [x] `CHANGELOG.md` `## [0.12.0] — unreleased` → `### Fixed` has the Python `LuaRunner` entry,
       not marked BREAKING.
-- [ ] No files outside `bindings/python/src/quiverdb/lua_runner.py`,
+- [x] No files outside `bindings/python/src/quiverdb/lua_runner.py`,
       `bindings/python/tests/test_lua_runner.py`, `bindings/python/AGENTS.md` and `CHANGELOG.md`
       changed.
 
@@ -348,3 +348,86 @@ No FFI generator run: no C API signature changes.
   runner was built): documented in the root `AGENTS.md` scoped-resource caveat, and not changed
   here.
 - Julia, Dart and JS `LuaRunner` constructors: already correct (see "Other bindings checked").
+
+## Implementation notes
+
+Implemented on `rs/plan26` on top of master `3cbdcd1`, which contains plans 24 (`ac3d70e`) and 25
+(`ae57b68`). `git fetch && git merge origin/master` was a no-op. Before any edit, every quoted
+excerpt, symbol, path and test name was re-checked against HEAD (all matched), and a read-only
+adversarial reviewer checked the test design (no vacuous pass, no spurious failure). After the
+edits, a three-lens refutation workflow (test mechanics, fix completeness, docs accuracy) reviewed
+the diff and returned no findings. Code, test, AGENTS.md bullet and CHANGELOG text are exactly as
+this plan specifies.
+
+### User decision
+
+- **CHANGELOG section.** Where to file the entry was asked, since every Batch 4 session faces it.
+  The answer: under `## [0.12.6] — unreleased`, not the stale `[0.12.5] — unreleased` header
+  (`v0.12.5` is tagged at `7c8bf7a`; the manifests are 0.12.6).
+
+### Drift fixed
+
+- **CHANGELOG**:
+  - `## [0.12.0] — unreleased` does not exist; 0.12.0 was released on 2026-09-27.
+  - The plan's anchor, the Julia `Artifacts.toml` entry, now sits inside the released `[0.11.0]`
+    section.
+  - Plans 24/25 had already opened `## [0.12.6] — unreleased` with `### Fixed`. The entry went,
+    word for word, at the end of that `### Fixed` list, above `## [0.12.5]`.
+  - No manifest bump: 0.12.6 is already a patch bump, which fits a non-breaking fix.
+  - The `[0.12.5]` header still says "unreleased". Dating it is the maintainer's release step.
+- **Repo path**: the plan says `quiver1`; this checkout is `quiver3`.
+- **pytest**: `uv.lock` pins 9.1.1, not 9.1. Nothing depends on the difference.
+- **Line numbers**: the `bindings/python/AGENTS.md` anchor bullets moved (plans 24/25) to L99 /
+  L104. The bullet was placed by content, between the same two bullets.
+- **Pitfalls addition**: keep the *first* `gc.collect()` outside the recording block. pytest 9.1.1
+  never runs gc between tests (only at session cleanup), so without it an earlier test's cyclic
+  garbage could be finalized inside the block.
+
+### Results
+
+- **Red** (test written, `lua_runner.py` untouched):
+  - `test.bat -k failed_construction -v` gave **1 failed**:
+    `AssertionError: assert ['LuaRunner w...d explicitly'] == []`
+    (`Left contains one more item: 'LuaRunner was not closed explicitly'`).
+  - The first assert stops the test, so a standalone probe checked the second half. The patched
+    `sys.unraisablehook` received `AttributeError("'LuaRunner' object has no attribute '_ptr'")`.
+  - The reviewer also ran the half-fix this plan warns against (only moving `_closed = False`
+    down). The warning list is then empty, and the second assert fails on
+    `AttributeError("... no attribute '_closed'")`. Both asserts are therefore load-bearing.
+- **Green**:
+  - The targeted run passes 1/1, and the probe prints `warnings: []` / `unraisable: []`.
+  - The full Python suite passes 345/345.
+  - `scripts\test-all.bat`: C++ 1375, C API 571, Julia, JS 230 and Python 345 PASS.
+  - Dart first failed 26/440 (`Failed to execute statement: expected 1 bound parameter(s) but got
+    0`). The cause was this checkout's stale native-assets cache: `.dart_tool/.../libquiver_c.dll`
+    was built at 13:37, before plan 22 (15:31) changed the query C API. Clearing
+    `.dart_tool/hooks_runner/` and `.dart_tool/lib/`, as `bindings/dart/AGENTS.md` prescribes,
+    gave 440/440. Nothing in this change touches Dart.
+- **Format and lint**:
+  - `bindings\python\format.bat`: ruff left 35 files unchanged.
+  - `uv run ruff check` passes on both edited `.py` files. The whole-tree check reports one
+    pre-existing `I001` in `tests/test_database_query.py`: an extra blank line after the imports,
+    which dates from plan 22 or earlier. It was left alone as out of scope.
+  - `scripts\format.bat` made no content change. Biome again rewrote all 42 JS files from CRLF to
+    LF with no content diff; they were restored with `git checkout -- bindings/js`.
+- **Environment notes**:
+  - The first `test.bat` after the 0.12.6 manifest bump spent several minutes rebuilding the
+    editable `quiverdb` (scikit-build-core compiles the core in Release). This happens only once.
+  - `cmd` here does not search the current directory, so run `.\format.bat`, not `format.bat`.
+
+### For later plans
+
+- **27–30 (Python)**: append to `## [0.12.6] — unreleased`. This change touched only
+  `LuaRunner.__init__` and `TestLuaRunnerLifecycle`. `test_lua_runner.py` now imports `gc`, `sys`
+  and `warnings`.
+- **29 (dead code)**: `Element.__init__` still sets `_destroyed = False` after `check(...)`, the
+  same ordering fixed here. It was left alone as out of scope, as this plan says.
+- **Verifying Python fixes by hand**: this machine's global uv CPython 3.13 has an editable
+  `quiverdb` from `C:\Development\Quiver\quiver2`, through `_editable_skbc_quiverdb.pth`. Its
+  meta-path finder beats `PYTHONPATH`, so `uv run --no-project --with pytest ...` silently imports
+  quiver2's code. Use `bindings\python\tests\test.bat` or the project `.venv`.
+- **Dart**: in a checkout whose Dart cache predates plan 22, clear `.dart_tool/hooks_runner/` and
+  `.dart_tool/lib/` before trusting a Dart failure.
+- **Changelog policy (for the maintainer, not fixed here)**: the `[0.12.6]` section holds plan
+  24's BREAKING entry under a patch-level version. The root AGENTS.md rule says a `0.x` minor bump
+  signals breaking changes.

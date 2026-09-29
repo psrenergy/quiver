@@ -101,6 +101,12 @@ ruff.toml         # Lint/format config (format.bat runs ruff)
   `quiver_database_free_string` (both are hand-declared in `_c_api.py`). The free sits in a
   `finally` so a `decode_string` failure (the JSON is rejected as non-UTF-8 in C++, but be safe)
   cannot leak the native buffer.
+- **`LuaRunner.__init__` starts with `_closed = True` and sets it to `False` only after `_ptr` is
+  assigned.** Python runs `__del__` even when `__init__` raised, so a runner whose construction
+  failed (e.g. `LuaRunner(closed_db)`, which the C API rejects with `Null argument: db`) must
+  already look closed. Otherwise `__del__` emits a spurious `ResourceWarning` and then fails on the
+  missing `_ptr`. Only moving `_closed = False` below `_ptr` is not enough: `__del__` then fails on
+  the missing `_closed` instead. Pinned by `test_failed_construction_is_silent_when_collected`.
 - **Time-series group NULLs**: `read_time_series_group` surfaces a SQL NULL cell as `None` in the
   column list (decoded via the per-cell `uint8_t**` mask out-param); the dimension column stays
   dense datetimes. `_marshal_group_columns` types each column from all of its non-`None` cells
