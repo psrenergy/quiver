@@ -98,12 +98,9 @@ const readSymbols = {
 } as const;
 
 const querySymbols = {
-  quiver_database_query_string: { args: [P, BUF, P, P], returns: I32 },
-  quiver_database_query_integer: { args: [P, BUF, P, P], returns: I32 },
-  quiver_database_query_float: { args: [P, BUF, P, P], returns: I32 },
-  quiver_database_query_string_params: { args: [P, BUF, P, P, USIZE, P, P], returns: I32 },
-  quiver_database_query_integer_params: { args: [P, BUF, P, P, USIZE, P, P], returns: I32 },
-  quiver_database_query_float_params: { args: [P, BUF, P, P, USIZE, P, P], returns: I32 },
+  quiver_database_query_string: { args: [P, BUF, P, P, USIZE, P, P], returns: I32 },
+  quiver_database_query_integer: { args: [P, BUF, P, P, USIZE, P, P], returns: I32 },
+  quiver_database_query_float: { args: [P, BUF, P, P, USIZE, P, P], returns: I32 },
 } as const;
 
 const transactionSymbols = {

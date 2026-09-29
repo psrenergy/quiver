@@ -35,6 +35,17 @@ callers to change something are prefixed **BREAKING** and say what to do.
   `x is None`). Julia code typed on `Vector{Float64}` / `Vector{Int64}` must accept the `Union`
   element type (`something.(v, NaN)` gives back the old `Vector{Float64}` for a REAL column).
 
+- **BREAKING — C API: one `quiver_database_query_*` function per type.** `quiver_database_query_string`,
+  `quiver_database_query_integer` and `quiver_database_query_float` now take the parameter arrays
+  (`param_types`, `param_values`, `param_count`) that the `quiver_database_query_*_params` forms
+  took, and those three `_params` functions are gone, so each C++ `query_*` method maps to exactly
+  one C function. A parameter the C API cannot convert now names the function called
+  (`Cannot query_integer: unknown parameter type 999`) instead of `Cannot query: …`. The Julia,
+  Dart, Python and JS query methods are unchanged.
+
+  *Adapt:* in direct C API calls, pass `NULL, NULL, 0` after `sql` for a query without parameters,
+  and drop the `_params` suffix from a parameterized call.
+
 ### Removed
 
 - **BREAKING — `quiver_clear_last_error`, the C element accessors, and C++ `Element::has_scalars` /

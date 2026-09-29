@@ -425,29 +425,19 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         lib = get_lib()
         out_value = ffi.new("char**")
         out_has = ffi.new("int*")
-
-        if parameters is not None and len(parameters) > 0:
-            keepalive, c_types, c_values = _marshal_params(parameters)
-            check(
-                lib.quiver_database_query_string_params(
-                    self._ptr,
-                    sql.encode("utf-8"),
-                    c_types,
-                    c_values,
-                    len(parameters),
-                    out_value,
-                    out_has,
-                )
+        parameters = parameters or []
+        keepalive, c_types, c_values = _marshal_params(parameters)
+        check(
+            lib.quiver_database_query_string(
+                self._ptr,
+                sql.encode("utf-8"),
+                c_types,
+                c_values,
+                len(parameters),
+                out_value,
+                out_has,
             )
-        else:
-            check(
-                lib.quiver_database_query_string(
-                    self._ptr,
-                    sql.encode("utf-8"),
-                    out_value,
-                    out_has,
-                )
-            )
+        )
 
         if out_has[0] == 0 or out_value[0] == ffi.NULL:
             return None
@@ -462,29 +452,19 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         lib = get_lib()
         out_value = ffi.new("int64_t*")
         out_has = ffi.new("int*")
-
-        if parameters is not None and len(parameters) > 0:
-            keepalive, c_types, c_values = _marshal_params(parameters)
-            check(
-                lib.quiver_database_query_integer_params(
-                    self._ptr,
-                    sql.encode("utf-8"),
-                    c_types,
-                    c_values,
-                    len(parameters),
-                    out_value,
-                    out_has,
-                )
+        parameters = parameters or []
+        keepalive, c_types, c_values = _marshal_params(parameters)
+        check(
+            lib.quiver_database_query_integer(
+                self._ptr,
+                sql.encode("utf-8"),
+                c_types,
+                c_values,
+                len(parameters),
+                out_value,
+                out_has,
             )
-        else:
-            check(
-                lib.quiver_database_query_integer(
-                    self._ptr,
-                    sql.encode("utf-8"),
-                    out_value,
-                    out_has,
-                )
-            )
+        )
 
         if out_has[0] == 0:
             return None
@@ -500,29 +480,19 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         lib = get_lib()
         out_value = ffi.new("double*")
         out_has = ffi.new("int*")
-
-        if parameters is not None and len(parameters) > 0:
-            keepalive, c_types, c_values = _marshal_params(parameters)
-            check(
-                lib.quiver_database_query_float_params(
-                    self._ptr,
-                    sql.encode("utf-8"),
-                    c_types,
-                    c_values,
-                    len(parameters),
-                    out_value,
-                    out_has,
-                )
+        parameters = parameters or []
+        keepalive, c_types, c_values = _marshal_params(parameters)
+        check(
+            lib.quiver_database_query_float(
+                self._ptr,
+                sql.encode("utf-8"),
+                c_types,
+                c_values,
+                len(parameters),
+                out_value,
+                out_has,
             )
-        else:
-            check(
-                lib.quiver_database_query_float(
-                    self._ptr,
-                    sql.encode("utf-8"),
-                    out_value,
-                    out_has,
-                )
-            )
+        )
 
         if out_has[0] == 0:
             return None

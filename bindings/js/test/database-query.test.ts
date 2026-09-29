@@ -140,6 +140,8 @@ describe("query parameter count", () => {
       expect(() =>
         db.queryString("SELECT label FROM AllTypes WHERE some_integer = ?", [1, 2]),
       ).toThrow();
+      // Parameters omitted entirely
+      expect(() => db.queryString("SELECT label FROM AllTypes WHERE some_integer = ?")).toThrow();
       // Exactly one parameter succeeds
       expect(db.queryString("SELECT label FROM AllTypes WHERE some_integer = ?", [1])).toEqual(
         "Item1",

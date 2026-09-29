@@ -576,49 +576,35 @@ QUIVER_C_API quiver_error_t quiver_database_import_csv(quiver_database_t* db,
                                                        const char* path,
                                                        const quiver_csv_options_t* options);
 
-// Query methods - execute SQL and return first row's first column
+// Query methods - execute SQL and return the first row's first column.
+// Parameters bind positionally to `?` placeholders. A query without parameters passes
+// (NULL, NULL, 0): the arrays are only read when param_count > 0.
+// param_types[i]: QUIVER_DATA_TYPE_INTEGER (0), QUIVER_DATA_TYPE_FLOAT (1),
+//                 QUIVER_DATA_TYPE_STRING (2), QUIVER_DATA_TYPE_NULL (4)
+// param_values[i]: pointer to int64_t, double, const char*, or NULL
 QUIVER_C_API quiver_error_t quiver_database_query_string(quiver_database_t* db,
                                                          const char* sql,
+                                                         const int* param_types,
+                                                         const void* const* param_values,
+                                                         size_t param_count,
                                                          char** out_value,
                                                          int* out_has_value);
 
 QUIVER_C_API quiver_error_t quiver_database_query_integer(quiver_database_t* db,
                                                           const char* sql,
+                                                          const int* param_types,
+                                                          const void* const* param_values,
+                                                          size_t param_count,
                                                           int64_t* out_value,
                                                           int* out_has_value);
 
 QUIVER_C_API quiver_error_t quiver_database_query_float(quiver_database_t* db,
                                                         const char* sql,
+                                                        const int* param_types,
+                                                        const void* const* param_values,
+                                                        size_t param_count,
                                                         double* out_value,
                                                         int* out_has_value);
-
-// Parameterized query methods
-// param_types[i]: QUIVER_DATA_TYPE_INTEGER (0), QUIVER_DATA_TYPE_FLOAT (1),
-//                 QUIVER_DATA_TYPE_STRING (2), QUIVER_DATA_TYPE_NULL (4)
-// param_values[i]: pointer to int64_t, double, const char*, or NULL
-QUIVER_C_API quiver_error_t quiver_database_query_string_params(quiver_database_t* db,
-                                                                const char* sql,
-                                                                const int* param_types,
-                                                                const void* const* param_values,
-                                                                size_t param_count,
-                                                                char** out_value,
-                                                                int* out_has_value);
-
-QUIVER_C_API quiver_error_t quiver_database_query_integer_params(quiver_database_t* db,
-                                                                 const char* sql,
-                                                                 const int* param_types,
-                                                                 const void* const* param_values,
-                                                                 size_t param_count,
-                                                                 int64_t* out_value,
-                                                                 int* out_has_value);
-
-QUIVER_C_API quiver_error_t quiver_database_query_float_params(quiver_database_t* db,
-                                                               const char* sql,
-                                                               const int* param_types,
-                                                               const void* const* param_values,
-                                                               size_t param_count,
-                                                               double* out_value,
-                                                               int* out_has_value);
 
 // Schema inspection — human-readable text reports. Each returns a heap string via *out_report,
 // freed with quiver_database_free_string.

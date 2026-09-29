@@ -29,7 +29,7 @@ src/c/
   database_delete.cpp     # quiver_database_delete_element, quiver_database_delete_element_by_label
   database_read.cpp       # All read operations + quiver_database_number_of_elements, + co-located free functions
   database_metadata.cpp   # Metadata get/list + co-located free functions
-  database_query.cpp      # Query operations (plain and parameterized)
+  database_query.cpp      # Query operations: one C function per C++ query_* method
   database_time_series.cpp # Time series operations + co-located free functions
   database_transaction.cpp # Transaction control (begin, commit, rollback, in_transaction) +
                            # dry runs (begin_dry_run, end_dry_run, in_dry_run)
@@ -229,11 +229,17 @@ inherit the group decoder's NULL contract. It owns three contracts the row-shape
   column is still validated by the core (an unknown name throws) and written as NULL rather than
   left to the column DEFAULT.
 
-## Parameterized Queries
+## Queries
 
-`_params` variants use parallel arrays for typed parameters:
+One C function per C++ `query_*` method, so the names follow the prefix rule. Each takes parallel
+arrays for its positional `?` parameters. A query without parameters passes `(NULL, NULL, 0)`,
+since the arrays are only required when `param_count > 0`. There is no separate no-parameter form,
+so every binding makes the same call whether or not it has parameters:
 ```c
 // param_types[i]: QUIVER_DATA_TYPE_INTEGER(0), FLOAT(1), STRING(2), NULL(4)
 // param_values[i]: pointer to int64_t, double, const char*, or NULL
-quiver_database_query_string_params(db, sql, param_types, param_values, param_count, &out, &has);
+quiver_database_query_string(db, sql, param_types, param_values, param_count, &out, &has);
+quiver_database_query_integer(db, "SELECT COUNT(*) FROM Items", NULL, NULL, 0, &count, &has);
 ```
+`convert_params(caller, ...)` takes the C++ method name, like `unmarshal_group_columns_to_rows`,
+so its Pattern 1 errors read `Cannot query_string: unknown parameter type 999`.

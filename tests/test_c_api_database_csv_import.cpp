@@ -526,7 +526,7 @@ TEST(DatabaseCApiCSV, ImportCSV_Scalar_SelfReferenceFK_ReImport) {
         const void* param_val = label;
         int64_t out = 0;
         int has = 0;
-        EXPECT_EQ(quiver_database_query_integer_params(db, sql, &param_type, &param_val, 1, &out, &has), QUIVER_OK);
+        EXPECT_EQ(quiver_database_query_integer(db, sql, &param_type, &param_val, 1, &out, &has), QUIVER_OK);
         return {out, has};
     };
 
@@ -1058,7 +1058,7 @@ TEST(DatabaseCApiCSV, ImportCSV_Scalar_OmittedElement_DeletesItsGroupRows) {
                             "SELECT COUNT(*) FROM Items_set_tags WHERE id NOT IN (SELECT id FROM Items)"}) {
         int64_t orphans = -1;
         int has_value = 0;
-        ASSERT_EQ(quiver_database_query_integer(db, sql, &orphans, &has_value), QUIVER_OK);
+        ASSERT_EQ(quiver_database_query_integer(db, sql, nullptr, nullptr, 0, &orphans, &has_value), QUIVER_OK);
         EXPECT_EQ(has_value, 1);
         EXPECT_EQ(orphans, 0) << sql;
     }
