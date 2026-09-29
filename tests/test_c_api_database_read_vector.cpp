@@ -685,6 +685,84 @@ TEST(DatabaseCApi, ReadVectorGroupByIdPreservesNullCells) {
     quiver_database_close(db);
 }
 
+// A non-STRICT table's INTEGER column keeps a non-integral value as REAL (INTEGER affinity only
+// converts what it can convert losslessly). The group reader must report that cell absent, as
+// Row::get_integer and the per-column reader do - not truncate 1.5 to 1 and call it present.
+TEST(DatabaseCApi, ReadVectorGroupByIdMasksRealCellInIntegerColumn) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("non_strict_vector.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    quiver_element_t* item = nullptr;
+    ASSERT_EQ(quiver_element_create(&item), QUIVER_OK);
+    quiver_element_set_string(item, "label", "Item 1");
+    int64_t item_id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Items", item, &item_id), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(item), QUIVER_OK);
+
+    // Every API write path rejects a double for an INTEGER column, so raw SQL is the only way in.
+    int param_types[] = {QUIVER_DATA_TYPE_INTEGER, QUIVER_DATA_TYPE_INTEGER};
+    const void* param_values[] = {&item_id, &item_id};
+    int64_t unused = 0;
+    int has_value = 1;
+    ASSERT_EQ(quiver_database_query_integer(db,
+                                            "INSERT INTO Items_vector_counts (id, vector_index, quantity) "
+                                            "VALUES (?, 1, 7), (?, 2, 1.5)",
+                                            param_types,
+                                            param_values,
+                                            2,
+                                            &unused,
+                                            &has_value),
+              QUIVER_OK);
+    EXPECT_EQ(has_value, 0);
+
+    char** column_names = nullptr;
+    int* column_types = nullptr;
+    void** column_data = nullptr;
+    uint8_t** column_has_value = nullptr;
+    size_t column_count = 0;
+    size_t row_count = 0;
+    ASSERT_EQ(quiver_database_read_vector_group_by_id(db,
+                                                      "Items",
+                                                      "counts",
+                                                      item_id,
+                                                      &column_names,
+                                                      &column_types,
+                                                      &column_data,
+                                                      &column_has_value,
+                                                      &column_count,
+                                                      &row_count),
+              QUIVER_OK);
+
+    ASSERT_EQ(column_count, 1);
+    ASSERT_EQ(row_count, 2);
+    EXPECT_STREQ(column_names[0], "quantity");
+    EXPECT_EQ(column_types[0], QUIVER_DATA_TYPE_INTEGER);
+    EXPECT_EQ(column_has_value[0][0], 1);
+    EXPECT_EQ(static_cast<int64_t*>(column_data[0])[0], 7);
+    EXPECT_EQ(column_has_value[0][1], 0);
+
+    quiver_database_free_time_series_data(
+        column_names, column_types, column_data, column_has_value, column_count, row_count);
+
+    // The per-column reader reports the same cell absent, so the two readers agree.
+    int64_t* values = nullptr;
+    uint8_t* mask = nullptr;
+    size_t count = 0;
+    ASSERT_EQ(quiver_database_read_vector_integers_by_id(db, "Items", "quantity", item_id, &values, &mask, &count),
+              QUIVER_OK);
+    ASSERT_EQ(count, 2);
+    EXPECT_EQ(mask[0], 1);
+    EXPECT_EQ(values[0], 7);
+    EXPECT_EQ(mask[1], 0);
+    quiver_database_free_integer_array(values);
+    quiver_database_free_mask(mask);
+
+    quiver_database_close(db);
+}
+
 // ============================================================================
 // NULL handling in vector reads
 // ============================================================================

@@ -71,10 +71,7 @@ callers to change something are prefixed **BREAKING** and say what to do.
   key), the column came from whichever group's table sorts first, so the rows paired another
   group's values with this group's or raised `BoundsError` / `IndexError`. They now call the native
   C reader, as Dart does: one statement over the named group's own table, so the rows no longer mix
-  separate snapshots either. A group with no such shared name reads back as before, with one
-  exception: a non-integral REAL stored in a non-STRICT INTEGER group column (reachable only through
-  raw SQL) now reads as its truncated integer, as it already did in Dart, instead of
-  `nothing` / `None`.
+  separate snapshots either. A group with no such shared name reads back as before.
 - **A vector or set group named after another group's column no longer hides that column.** The
   per-column readers (`read_{vector,set}_{integers,floats,strings}` and their `_by_id` forms, in
   every layer) took the group named after the column even when that group did not hold it, and
@@ -100,6 +97,14 @@ callers to change something are prefixed **BREAKING** and say what to do.
   collection, and the files-table-not-found error for a collection without one. On a collection
   that has the table it still changes nothing. A caller that made this call on a collection
   without a files table should check `has_time_series_files` first.
+- **The C API group readers no longer truncate a REAL cell in an INTEGER column.**
+  `quiver_database_read_vector_group_by_id`, `quiver_database_read_set_group_by_id` and
+  `quiver_database_read_time_series_group` turned a stored `1.5` into `1` and reported it
+  present, and an out-of-range REAL such as `1e300` was undefined behaviour. The cell is now
+  absent (mask 0), the same as in the per-column integer readers, so the binding group readers
+  built on these functions (Dart, and since this release Julia, Python and JS) return null for it.
+  Only a non-STRICT table can hold such a value (e.g. written through raw SQL); STRICT schemas, as
+  the conventions use, are unaffected.
 
 ## [0.12.4] — 2026-09-29
 
