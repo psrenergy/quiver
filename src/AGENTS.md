@@ -258,10 +258,13 @@ untrusted input, in the same spirit as the JSON encoder's two caps below:
   1,000,000. Both callers materialize a **dense** vector up to that key, so `{[1e9] = "x"}` — the
   same sparseness hazard the encoder note below names — allocated tens of gigabytes, or reached
   the script as a raw `std::bad_alloc` with no Pattern 1 prefix.
-- `csv_options_entries` checks each option key's Lua *type* before converting it. sol2's
-  `std::string` getter is `lua_tolstring`, which answers `nullptr` for a boolean/table/function
-  key: unchecked in Release (`SOL_SAFE_GETTER` is off there) and a raw sol2 panic in Debug, so
-  `{ [true] = 1 }` reached the script as a bare Lua value rather than a message.
+- `csv_options_entries` and `collect_group_columns` check each key's Lua *type* before converting
+  it. sol2's `std::string` getter is `lua_tolstring`, which answers `nullptr` for a
+  boolean/table/function key and spells a number key as text: unchecked in Release
+  (`SOL_SAFE_GETTER` is off there) and a raw sol2 panic in Debug, so `{ [true] = 1 }` reached the
+  script as a bare Lua value rather than a message. For the six group writers the check makes an
+  array of row tables (`{ { date_time = ... } }`) throw one Pattern 1 message in every build,
+  where Release used to report a misleading `column '1' must be an array of values`.
 - `csv_separator_from_lua` rejects `"`, CR, LF and NUL in addition to the multi-byte check. They
   are one byte but cannot be delimiters: csv-parser refuses a delimiter that overlaps its quote
   character, so `db:write_csv` with `separator = '"'` silently produced a file `db:read_csv`

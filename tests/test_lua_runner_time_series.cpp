@@ -137,6 +137,25 @@ TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupScalarColumnThrows) {
     expect_lua_error(lua, script, "must be an array of values");
 }
 
+TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupRejectsArrayOfRowTables) {
+    // Negative path: an array of row tables (the upsert_time_series_row shape) has integer keys.
+    // It must throw one Pattern 1 message in every build, not sol2's Debug-only panic or
+    // Release's misleading "column '1' must be an array of values".
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    int64_t id = db.create_element("Collection", quiver::Element().set("label", "Item 1"));
+
+    quiver::LuaRunner lua(db);
+
+    std::string script = R"(
+        db:update_time_series_group("Collection", "data", )" +
+                         std::to_string(id) + R"(, {
+            { date_time = "2024-01-01T00:00:00", value = 1.0 },
+        })
+    )";
+    expect_lua_error(lua, script, "Cannot update_time_series_group: column names must be strings");
+}
+
 TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupAllEmptyColumnsThrows) {
     // Negative path: named columns that transpose to zero rows are a caller
     // mistake (only an empty table {} clears the group), so this must throw

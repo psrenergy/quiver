@@ -166,3 +166,22 @@ TEST_F(LuaRunnerTest, QueryParameterCountMismatch) {
         assert(label == "Item 1", "expected Item 1, got " .. tostring(label))
     )");
 }
+
+// Lua stores no key for a nil, so a query parameter table's length is the `#` border: an interior
+// nil in a constructor ({ nil, 5 }) is counted and binds NULL, a trailing one ({ 5, nil }) is not.
+TEST_F(LuaRunnerTest, QueryInteriorNilParamBindsNull) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(
+        local r = db:query_integer("SELECT CASE WHEN ? IS NULL THEN ? ELSE -1 END", { nil, 5 })
+        assert(r == 5, "interior nil must bind NULL, got " .. tostring(r))
+    )");
+}
+
+TEST_F(LuaRunnerTest, QueryTrailingNilParamIsACountMismatch) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(lua, R"(db:query_integer("SELECT ? + ?", { 5, nil }))", "expected 2 bound parameter(s) but got 1");
+}
