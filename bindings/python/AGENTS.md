@@ -24,8 +24,10 @@ src/quiverdb/
 generator/        # generator.py prints current cdecls from headers to stdout — a diff aid
                   # for hand-updating _c_api.py (it does NOT write the file)
 tests/            # Test suite (test_*.py per area) + test.bat
-pyproject.toml    # Version must match CMakeLists.txt; requires-python >=3.13; deps: cffi>=2.0
-ruff.toml         # Lint/format config (format.bat runs ruff)
+format.bat        # uv sync, ruff check --fix (isort), ruff format; run from bindings/python
+pyproject.toml    # Version must match CMakeLists.txt; requires-python >=3.13; deps: cffi>=2.0;
+                  # dev group: pytest, ruff
+ruff.toml         # Lint/format config; lint is isort only (select = ["I"])
 ```
 
 ## Rules and gotchas
@@ -36,7 +38,10 @@ ruff.toml         # Lint/format config (format.bat runs ruff)
 - **`_loader.py` pre-loads `libquiver.dll`** on Windows so the OS resolves `libquiver_c.dll`'s
   dependency chain. `tests/test.bat` prepends `build/bin/` to PATH for DLL discovery.
 - **API shape**: `create_element`/`update_element` accept `**kwargs` (dict unpacking works:
-  `db.create_element("Collection", **my_dict)`); the `Element` class is internal. Properties are
+  `db.create_element("Collection", **my_dict)`); the `Element` class is internal — created, filled
+  in a `try` and destroyed in its `finally` by each writer, with no `clear` and no binding-side
+  use-after-destroy guard (a destroyed `Element` holds `ffi.NULL`, which the C API rejects as
+  `Null argument: element`). Properties are
   regular methods, not `@property` (design decision). `LogLevel` is an `IntEnum` exported from
   `__init__.py`; internal mixin classes are not exported.
 - **Every `**kwargs` method marks its leading parameters positional-only (`/`).** Without it, a

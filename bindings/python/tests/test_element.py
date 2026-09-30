@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 
+from quiverdb import QuiverError
 from quiverdb.element import Element
 
 
@@ -118,15 +119,12 @@ def test_element_repr_destroyed() -> None:
     assert repr(e) == "Element(destroyed)"
 
 
-def test_element_clear() -> None:
+def test_element_set_after_destroy_raises() -> None:
+    """A destroyed Element holds a NULL pointer; the C API, not the binding, rejects it."""
     e = Element()
-    try:
-        e.set("label", "test").set("value", 42)
-        e.clear()
-        # After clear, can set new values
-        e.set("label", "new_test").set("value", 99)
-    finally:
-        e.destroy()
+    e.destroy()
+    with pytest.raises(QuiverError, match="Null argument: element"):
+        e.set("label", "x")
 
 
 def test_element_not_in_public_api() -> None:
