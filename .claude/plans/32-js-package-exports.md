@@ -262,11 +262,11 @@ From the repo root (`C:\Development\Quiver\quiver1`):
 
 ## Acceptance criteria
 
-- [ ] `mod.ts` contains the doc comment plus exactly `export * from "./src/index.ts";`.
-- [ ] `src/index.ts` exports all five `DATA_TYPE_*` constants.
-- [ ] `test/package-entry.test.ts` exists, imports `../mod.ts`, and passes.
-- [ ] Full JS suite green.
-- [ ] CHANGELOG `### Added` entry under 0.12.0.
+- [x] `mod.ts` contains the doc comment plus exactly `export * from "./src/index.ts";`.
+- [x] `src/index.ts` exports all five `DATA_TYPE_*` constants.
+- [x] `test/package-entry.test.ts` exists, imports `../mod.ts`, and passes.
+- [x] Full JS suite green.
+- [x] CHANGELOG `### Added` entry under 0.12.0 (under `## [0.12.6] — unreleased`, see Implementation notes).
 
 ## Pitfalls
 
@@ -284,3 +284,69 @@ From the repo root (`C:\Development\Quiver\quiver1`):
 - Converting the constants to a TS `enum` or a frozen object (would change the public shape).
 - README rewrite (plan 74).
 - Any change to `package.json` `exports`/`files`.
+
+## Implementation notes
+
+This was implemented on `rs/plan32`. At planning time the branch sat at master `5358778`. By the time implementation started it had been fast-forwarded to master `3608708`, which brought in plans 24-31 (#336-#343). So `git merge origin/master` was a no-op, and every result below refers to `3608708` plus this change. Plan 31 had touched `bindings/js/AGENTS.md` and `CHANGELOG.md`, but none of the lines this plan edits.
+
+Before any edit, three read-only reviewers checked the plan: one on the code claims, one on overlap with other plans and the CHANGELOG, and one arguing against it. Their verdict was **implement**. They confirmed:
+- `export *` is safe under Bun 1.3.14, TS `isolatedModules` and `verbatimModuleSyntax`, and `bun build --compile`.
+- Nothing internal leaks: `Allocation`, the `ffi-helpers`, `check`, `numericCells` and the loader stay unexported.
+- `claw`'s `LUA_DB_API_REFERENCE` import is unchanged.
+- Biome's recommended set does not include `noReExportAll` / `noBarrelFile`.
+- Plain `export const` constants leave room for an additive enum-like type later.
+
+After the change, two more read-only reviewers went over the diff, one on correctness and one on docs. Both said **ship**. Their one nit is fixed below (`tests/AGENTS.md`).
+
+### Drift fixed
+
+- **CHANGELOG.**
+  - `## [0.12.0] — unreleased` no longer exists; 0.12.0 was released 2026-09-27. `v0.12.5` is tagged at `7c8bf7a`, and the manifests are at 0.12.6.
+  - When implementation started, plan 24 had already opened `## [0.12.6] — unreleased`, with `### Changed` and `### Fixed`.
+  - The entry is the plan's text verbatim, under a new `### Added` placed first in that section. The file's real subsection order is Added / Changed / Removed / Fixed, not "Changed / Added / Fixed / Removed".
+  - The still-undated `## [0.12.5] — unreleased` heading was left for the maintainer, who dates headings by hand (`73094f0`, `d401081`).
+  - There is no manifest bump (the change is additive and 0.12.6 is already set) and no compare link (plan 78).
+- **Test 4 checks every scalar type against the core.** Instead of asserting only `integer_attribute`, it asserts `integer_attribute` / `float_attribute` / `string_attribute` / `date_attribute` of `basic.sql` against `DATA_TYPE_INTEGER` / `FLOAT` / `STRING` / `DATE_TIME`. Tests 2 and 3 only restate literals copied from `types.ts`. No JS test checked a `dataType` *value* before (`database-metadata.test.ts` checks `typeof`), so this is what actually ties the constants to `quiver_data_type_t`.
+- **Schema path.** It uses `join(import.meta.dir, "..", …)` from `node:path`, like the other tests, instead of a template string. Biome then wrapped it one segment per line, as in `database-metadata.test.ts`.
+- **README.** It has a `## Types` section and plan 74 depends on 32, so the "if 74 has already landed" branch cannot happen. Two bullets were added after `CsvOptions` in **plan 74's wording** (74's steps 2-3):
+  - the `DatabaseOptions` line verbatim;
+  - the constants line, verbatim plus a short trailing description.
+
+  That way 74 finds them and skips its step 3. The stale existing bullets (`ScalarValue` / `ArrayValue` / `QueryParam`, README:181-185) are left to plans 33 and 74.
+- **`bindings/js/AGENTS.md`.** The appended text went on a `#` continuation line to keep the layout block within width.
+- **`tests/AGENTS.md`.** Its list of JS test files without the `database-` prefix now includes `package-entry.test.ts` (the post-review nit).
+- **Commands and paths.**
+  - The repo is `C:\Development\Quiver\quiver9`, not `quiver1`.
+  - Verification step 2 (`test.bat test/package-entry.test.ts`) runs the **whole** suite. `test.bat` is `bun test test %*`, bun ORs positional filename filters, and "test" matches every file. To run the one file, from `bindings/js` with `build/bin` on `PATH`: `bun test package-entry`.
+  - Step 1's rebuild was required, not optional. The stale `build/bin` lacked `quiver_database_free_masks`.
+- **Plan text** (no action needed):
+  - There were 20 test files, not 21; `lua-api-sync.test.ts` imports `src/lua-api.ts`.
+  - Plan 18 added no `GroupData` type.
+  - Julia defines four `QUIVER_DATA_TYPE_*` consts (no `NULL`) and does not export them.
+  - `fromSchema` is at `database.ts:18`.
+  - `query.ts`, `time-series.ts` and `ffi-helpers.ts` also import the constants from `./types.ts` directly. They are unchanged.
+
+### Results
+
+- **Red first.** With only the new test in place, `bun test package-entry` gave `1 pass, 3 fail`:
+  - `exports the log-level constants`: `Expected: 0 Received: undefined`.
+  - `exports the data-type constants ...`: `Expected: 0 Received: undefined`.
+  - The options/metadata test: `Expected: undefined Received: 0`. It also printed the core's INFO log lines, because `consoleLevel: undefined` fell back to `LOG_LEVEL_INFO`.
+- **Green.**
+  - `bun test package-entry` gives `4 pass, 0 fail, 18 expect() calls`, with no log output, since `LOG_LEVEL_OFF` now reaches the core.
+  - `Object.keys` of `mod.ts` is `DATA_TYPE_{DATE_TIME,FLOAT,INTEGER,NULL,STRING}, Database, LOG_LEVEL_{DEBUG,ERROR,INFO,OFF,WARN}, LUA_DB_API_REFERENCE, LuaRunner, QuiverError`.
+  - `bindings/js/test/test.bat` gives `237 pass, 0 fail`, 21 files.
+- **Lint.**
+  - `bunx biome lint mod.ts src/index.ts test/package-entry.test.ts` is clean.
+  - `bunx biome check` on the same three files is clean too, once `format.bat` has normalized them to LF. Before that, `biome check` on the untouched files reports format errors, because the Windows checkout (`core.autocrlf=true`) leaves them CRLF.
+- **`scripts/format.bat`** exited 0.
+  - clang-format, JuliaFormatter, dart format and ruff left the tree unchanged.
+  - Biome "fixed" 43 JS files. 40 of them were line-ending-only rewrites of untouched files; `git diff` showed no content change. I restored them with `git checkout --` on exactly those 40 (not a blanket `bindings/js` restore, since this plan edits files there).
+- **`git diff --stat`.** Exactly the planned files changed: `mod.ts`, `src/index.ts`, `test/package-entry.test.ts` (new), `bindings/js/AGENTS.md`, `bindings/js/README.md`, `tests/AGENTS.md`, `CHANGELOG.md`, and this file.
+
+### For later plans
+
+- **33** (JS bigint writers): the README Types lines it edits (`QueryParam`, README:185) are untouched. The two new bullets sit after `CsvOptions`.
+- **74** (JS README): the `DatabaseOptions` and constants bullets are already there in 74's wording, so its step 3 is satisfied. Its Types rewrite should keep both bullets.
+- **Batch 4 CHANGELOG**: `## [0.12.6] — unreleased` now has `### Added` (this entry) above `### Changed` / `### Fixed`. Later plans add to it instead of opening a section.
+- **Not done (optional):** an exact `Object.keys(mod.ts)` snapshot test was suggested as a guard against accidental exports. It was left out because it brings back a second hand-kept list of the public surface, which is what this plan removes. With `export *`, `src/index.ts` is the one reviewed list.

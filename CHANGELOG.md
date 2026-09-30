@@ -7,6 +7,13 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ## [0.12.6] — unreleased
 
+### Added
+
+- **JS: `LOG_LEVEL_*`, `DATA_TYPE_*` and the `DatabaseOptions` type are exported from
+  `quiverdb`.** `mod.ts` now re-exports `src/index.ts` whole, so the package root can no longer
+  drift from it. The `consoleLevel` values `DatabaseOptions` documents were previously not
+  reachable from outside the package, and `ScalarMetadata.dataType` had no named constants.
+
 ### Changed
 
 - **BREAKING — Python and Dart type a numeric group column or element array from every cell.**
