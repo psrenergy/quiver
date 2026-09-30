@@ -43,6 +43,20 @@ class TestUpdateElement:
         assert float_val is not None
         assert abs(float_val - 2.5) < 1e-9
 
+    def test_update_element_takes_an_id_attribute(self, collections_db: Database) -> None:
+        """read_scalars_by_id's dict holds `id`; the positional-only `id` lets it unpack into kwargs."""
+        collections_db.create_element("Configuration", label="cfg")
+        elem_id = collections_db.create_element("Collection", label="Item1", some_integer=10, some_float=2.5)
+        row = collections_db.read_scalars_by_id("Collection", elem_id)
+        row["some_integer"] = 99
+        collections_db.update_element("Collection", elem_id, **row)
+        assert collections_db.read_scalars_by_id("Collection", elem_id) == {
+            "id": elem_id,
+            "label": "Item1",
+            "some_integer": 99,
+            "some_float": 2.5,
+        }
+
 
 class TestUpdateElementByLabel:
     def test_update_element_by_label(self, collections_db: Database) -> None:

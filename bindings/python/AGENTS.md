@@ -39,12 +39,17 @@ ruff.toml         # Lint/format config (format.bat runs ruff)
   `db.create_element("Collection", **my_dict)`); the `Element` class is internal. Properties are
   regular methods, not `@property` (design decision). `LogLevel` is an `IntEnum` exported from
   `__init__.py`; internal mixin classes are not exported.
-- **A parameter that shadows a column name needs a `/`.** A method that addresses a row
-  positionally *and* takes attributes as `**kwargs` must mark the positional parameters
-  positional-only, or the kwarg binds to the parameter and raises `TypeError: got multiple values
-  for argument '<name>'` before the FFI call. `update_element_by_label(collection, label, /,
-  **kwargs)` is the acute case — renaming via `label=` is the point of the method, and every
-  collection has a `label` column by convention.
+- **Every `**kwargs` method marks its leading parameters positional-only (`/`).** Without it, a
+  kwarg that shares a parameter's name binds to the parameter and raises `TypeError: got multiple
+  values for argument '<name>'` before the FFI call. All five follow it: `create_element(collection,
+  /, **kwargs)`, `update_element(collection, id, /, **kwargs)`, `update_element_by_label(collection,
+  label, /, **kwargs)`, `upsert_time_series_row(collection, group, id, /, **kwargs)` and
+  `upsert_time_series_row_by_label(collection, group, label, /, **kwargs)`. A new `**kwargs` method
+  gets the `/` too. With it the kwarg reaches the core like any other attribute:
+  `update_element(c, id, **read_scalars_by_id(c, id))` works (that dict holds `id`), `label=`
+  renames through `update_element_by_label`, and `id=`/`label=` on an upsert gets the core's
+  `column '<name>' not found in group` error. The cost is that these parameters cannot be passed by
+  keyword.
 - **A nullable scalar string argument passes `ffi.NULL`, never `b""`** (`update_relation` /
   `update_relation_by_label`) — the C API reads NULL as "clear the relation" and an empty string
   as a label to look up.

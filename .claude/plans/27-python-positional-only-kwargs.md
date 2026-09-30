@@ -273,15 +273,15 @@ From the repo root `C:\Development\Quiver\quiver1` (PowerShell; `.bat` scripts r
 
 ## Acceptance criteria
 
-- [ ] `create_element`, `update_element`, `upsert_time_series_row` and `upsert_time_series_row_by_label` have `/` after their leading parameters. `update_element_by_label` is unchanged. All five annotate `**kwargs: object`.
-- [ ] `update_element`'s docstring says why `collection`/`id` are positional-only.
-- [ ] The `upsert_time_series_row` docstring text is untouched (left to plan 30).
-- [ ] The four new Python tests exist, fail on HEAD with `TypeError`, and pass after the change.
-- [ ] The full Python suite passes and no existing test was edited.
-- [ ] The `bindings/python/AGENTS.md` bullet is rewritten to name all five methods and the keyword-passing cost.
-- [ ] A `CHANGELOG.md` **BREAKING** entry is under `[0.12.0] — unreleased` → `### Changed`, with an *Adapt:* line.
-- [ ] No C++, C API, FFI declaration, Julia, Dart, JS or Lua file is touched.
-- [ ] `scripts/test-all.bat` is green.
+- [x] `create_element`, `update_element`, `upsert_time_series_row` and `upsert_time_series_row_by_label` have `/` after their leading parameters. `update_element_by_label` is unchanged. All five annotate `**kwargs: object`.
+- [x] `update_element`'s docstring says why `collection`/`id` are positional-only.
+- [x] The `upsert_time_series_row` docstring text is untouched (left to plan 30).
+- [x] The four new Python tests exist, fail on HEAD with `TypeError`, and pass after the change.
+- [x] The full Python suite passes and no existing test was edited.
+- [x] The `bindings/python/AGENTS.md` bullet is rewritten to name all five methods and the keyword-passing cost.
+- [x] A `CHANGELOG.md` **BREAKING** entry is under `[0.12.0] — unreleased` → `### Changed`, with an *Adapt:* line. (Filed under `[0.12.6] — unreleased`; see Implementation notes.)
+- [x] No C++, C API, FFI declaration, Julia, Dart, JS or Lua file is touched.
+- [x] `scripts/test-all.bat` is green.
 
 ## Pitfalls
 
@@ -299,3 +299,59 @@ From the repo root `C:\Development\Quiver\quiver1` (PowerShell; `.bat` scripts r
 - Accepting `datetime` in `Element.set` / the upsert marshaller, which would make the `read_scalars_by_id` round trip work on DATE_TIME collections: plan **25**.
 - Deleting the `bool` branches in `Element.set` / the marshallers: plan **28**.
 - Pattern 1 rewording of the core's `Column '<c>' not found in table '<t>'`: plan **56**.
+
+## Implementation notes
+
+Implemented on `rs/plan27` on top of master `4f9107d`, which already contains plans 24 (`e4a6833`), 25 (`ae57b68`) and 26 (`a185a02`). `git fetch origin && git merge origin/master` was a no-op.
+
+Before any edit, a three-lens read-only verification workflow checked the plan against the code:
+- code facts: every excerpt, symbol, test anchor, fixture, import, core message and line length;
+- overlap with the other batch-4 plans;
+- a devil's-advocate case against implementing.
+
+Its verdict was **implement**. The design needs no change. After the merge every anchor was re-checked: the five `def` lines, the three test-class anchors and the AGENTS.md bullet were unchanged apart from line numbers.
+
+Code, tests, the AGENTS.md bullet and the CHANGELOG text are exactly as this plan specifies. After the edits, a two-lens adversarial review of the diff (code/test correctness, docs accuracy) returned no findings.
+
+**Why implement.** The devil's-advocate lens found:
+- **No victims.** No caller in the repo, and none among the PSR consumers under `C:/Development`, passes `collection=`/`id=`/`group=`/`label=` by keyword. Those consumers are BESSOperation `build_brazil_case.py`, the Keynotes quiver tutorial and `Temp/main.py`.
+- **`/` is available.** `requires-python >=3.13`.
+- **Nothing forwards by keyword.** There are no `.pyi` stubs, `partial` or keyword-forwarding wrappers.
+- **Homogeneity improves.** Python was the only binding that accepted `collection=` by name.
+
+The gain is small: only `update_element` gains a capability. The cost is close to zero.
+
+### Drift fixed
+
+- **CHANGELOG section.** `## [0.12.0] — unreleased` does not exist, because 0.12.0 was released 2026-09-27. `v0.12.5` is tagged at `7c8bf7a`, though its header still reads "unreleased", and the manifests are 0.12.6.
+  - Following the user's batch-4 decision (recorded in plan 26's notes), the entry is the last `### Changed` bullet of `## [0.12.6] — unreleased`, after plan 24's BREAKING bullet. There is no manifest bump and no compare link (plan 78 owns links).
+  - This still contradicts root AGENTS.md's "breaking ⇒ 0.x minor bump" rule, as plans 21, 22 and 24 already did.
+- **Plan 25 had landed**, so the `**read_scalars_by_id` round trip also works on collections with a DATE_TIME attribute. The CHANGELOG and AGENTS.md claims are therefore unqualified and true.
+- **Repo path and line numbers.** This checkout is `quiver4`, not `quiver1`. The upsert `def` lines are at L1796/L1818 (the plan says ~L1785/~L1806). `time_series_schema_types` is at L11-19 and the unknown-column throw at L37-39 of `src/database_time_series.cpp`. The `update_element` SQL is at L37-53 of `src/database_update.cpp`.
+- **Overlap note.** The plan says plan 29 edits `database.py`. It edits `element.py` and `bindings/python/AGENTS.md`.
+
+### Results
+
+- **Red** (tests added, `database.py` untouched). `test.bat -k "attribute_to_the_core or takes_an_id_attribute"` gave **4 failed, 345 deselected**:
+  - `TypeError: Database.create_element() got multiple values for argument 'collection'`
+  - `TypeError: Database.upsert_time_series_row() got multiple values for argument 'id'`
+  - `TypeError: Database.upsert_time_series_row_by_label() got multiple values for argument 'label'`
+  - `TypeError: Database.update_element() got multiple values for argument 'id'`
+- **Green.** The same run gave **4 passed**, and the full Python suite passed **349/349**, with no existing test edited.
+- **Grep.** `git grep -n "\*\*kwargs" -- bindings/python/src` prints exactly the five `def` lines, all with `/, **kwargs: object`.
+- **`scripts\format.bat`.** clang-format, JuliaFormatter, dart format and ruff (35 files unchanged) changed nothing. Biome again rewrote the 42 JS files from CRLF to LF with no content change, and `git checkout -- bindings/js` reverted them (this plan has no JS edits). No `.bat` file was touched.
+- **`scripts\test-all.bat`.** All six suites pass: C++ 1375, C API 571, Julia 1559, Dart 440, JS 230, Python 349.
+  - The first run failed Dart 26/440 with `Null argument: out_value` / `expected 1 bound parameter(s) but got 0`. The cause was the stale native-assets cache: `.dart_tool/.../libquiver_c.dll` had been built at 13:54, before plan 22 (15:31) changed the query C API.
+  - Clearing `.dart_tool/hooks_runner/` and `.dart_tool/lib/`, per `bindings/dart/AGENTS.md`, fixed it.
+  - Root cause: the hook's `dependencies.dependencies_hash_file.json` records `"file_system": []`. `hook/build.dart` declares no C++ source dependencies, so the hooks runner never re-runs after a C++ change. That is out of scope here and not owned by any plan.
+
+### For later plans
+
+- **Plan 30:** its "Why" quote of `def upsert_time_series_row(self, collection: str, group: str, id: int, **kwargs) -> None:` is stale. The line now reads `..., id: int, /, **kwargs: object) -> None:`. This is harmless, because 30 anchors on the docstring phrase, and the upsert docstrings were left untouched.
+- **Plan 29:** its API-shape bullet in `bindings/python/AGENTS.md` sits directly above the rewritten "Every `**kwargs` method…" bullet. Re-anchor by text, and expect at most an adjacent-hunk conflict.
+- **Batch-4 CHANGELOG entries** go under `## [0.12.6] — unreleased`. `### Changed` now holds plan 24's and this plan's BREAKING bullets, in that order.
+- **Core follow-up, not owned by any plan:**
+  - The failure: `update_element(c, 3, id=103, <array attr>=[...])` renumbers the element in the scalar UPDATE, and its group rows cascade to 103. The group write then uses the old id: `insert_group_data(groups, id, ...)` in `src/database_update.cpp`. So the DELETE matches nothing and the INSERT fails its foreign key. Autocommit rolls this back, but inside a caller-owned transaction or dry run the renumber survives the throw.
+  - Reach: Julia, Dart, JS and Lua could already reach it, and Python now can too via `id=`.
+  - Fix options: reject a differing `id` scalar in `update_element`, or write the group rows under the new id.
+- **The Dart hook declares no file dependencies** (see Results). Until someone fixes `hook/build.dart` (e.g. `output.dependencies` over `src/`, `include/` and `CMakeLists.txt`), clear the cache before every Dart run after a C++ change.
