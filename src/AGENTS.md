@@ -652,17 +652,21 @@ Implementation conventions in `lua_runner.cpp`:
   skip silently; a skipped positional query parameter would shift the rest and bind NULL to the
   trailing placeholder.
 - **A Lua boolean is INTEGER 1/0 on every write path**, matching the cross-layer policy in the root
-  `AGENTS.md`. Every boolean test goes through the one predicate `is_lua_boolean`, used by
-  `table_to_element` (scalars *and* the array dispatch), `lua_table_to_value_map` (row upsert),
-  `lua_table_to_values` (query parameters), `columns_to_cpp_rows` (group cells), and
-  `lua_table_to_vector` (per array cell). `relation_target_from_lua` is the deliberate exception:
+  `AGENTS.md`. Every boolean test goes through the one predicate `is_lua_boolean`, and the 1/0
+  mapping lives in two converters: `lua_to_value` (the `Value`-typed one, behind
+  `table_to_element`'s scalars, `lua_table_to_value_map` (row upsert), `lua_table_to_values` (query
+  parameters) and `columns_to_cpp_rows` (group cells)) and `lua_cell_as<T>` (typed arrays via
+  `lua_table_to_vector`). `table_to_element`'s array dispatch also tests cell 1 with it to pick the
+  element type, and `csv_cell_to_string` writes a boolean as the text `1`/`0`.
+  `relation_target_from_lua` is the deliberate exception:
   only `nil` may clear a relation, so a boolean still throws there. Lua has no boolean *readers*
   (root design decision), so this is a write-side-only asymmetry.
-- **`lua_cell_as<T>(object, caller, what)` is the one checked Lua-value→C++ conversion**, and
-  every converter routes through it: `lua_table_to_vector` (per array cell),
+- **`lua_cell_as<T>(object, caller, what)` is the checked Lua-value→T conversion for the typed
+  paths**: `lua_table_to_vector` (per array cell),
   `lua_table_to_dim_map` (per binary dimension) and `update_time_series_files_lua` (per path).
   `what` names the offending slot in the Pattern 1 message — `cell #3`, `dimension 'stage'`,
-  `path 'data_file'` — so one rule and one message shape cover all three.
+  `path 'data_file'` — so one rule and one message shape cover all three. Its `Value`-typed
+  sibling is `lua_to_value(object, caller, what)`, with the same message shape.
 - **`lua_table_to_vector<T>(table, caller)` is the only table→vector converter**, and it converts
   and checks **every cell**, not just the one the caller dispatched on. Both halves are
   load-bearing. `table_to_element` picks an array's element type from cell 1 alone, and sol2's

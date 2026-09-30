@@ -375,7 +375,7 @@ struct LuaRunner::Impl {
 
     // One sol::object cell -> the std::string quiver::csv_write::Writer takes. Dispatch order is
     // nil first (D-40: a hole from csv_row_cells_from_lua above is an empty cell), then the same
-    // order table_to_element uses -- boolean, int64, double, string -- else a Pattern 1 rejection
+    // order lua_to_value uses -- boolean, int64, double, string -- else a Pattern 1 rejection
     // naming write_row and the 1-based cell index.
     //
     // This project compiles with SOL_SAFE_NUMERICS=1 (src/CMakeLists.txt), which is what makes
@@ -1357,10 +1357,12 @@ struct LuaRunner::Impl {
     }
 
     // Every boolean test in this file goes through this one predicate, so the rule lives in one
-    // place rather than in a comment repeated at each site.
+    // place rather than in a comment repeated at each site. The Value mapping itself lives in
+    // lua_to_value (scalars, row upserts, query parameters, group cells) and lua_cell_as (typed arrays).
     static bool is_lua_boolean(const sol::object& v) { return v.get_type() == sol::type::boolean; }
 
-    // The one checked Lua-value→T conversion, shared by every converter below. Load-bearing:
+    // The checked Lua-value→T conversion for the typed paths (arrays, dimensions, file paths);
+    // lua_to_value below is its Value-typed sibling. Load-bearing:
     // sol2's plain `get<T>` is unchecked whenever SOL_SAFE_GETTER is off — which is every release
     // build (`src/CMakeLists.txt` sets SOL_SAFE_NUMERICS and SOL_SAFE_FUNCTION, not
     // SOL_SAFE_GETTER), where a mismatched value silently yields 0 / 0.0 / "" while a Debug build
@@ -1379,6 +1381,28 @@ struct LuaRunner::Impl {
             throw std::runtime_error("Cannot " + caller + ": " + what + " has unsupported Lua type");
         }
         return std::move(*value);
+    }
+
+    // The one Lua-value -> Value conversion: nil -> NULL, boolean -> INTEGER 1/0 (the cross-layer
+    // write policy), then int64, double, string; anything else is Pattern 1 naming the slot. The
+    // Value-typed sibling of lua_cell_as<T>, with the same arguments and message shape.
+    static Value lua_to_value(const sol::object& v, const std::string& caller, const std::string& what) {
+        if (v.is<sol::lua_nil_t>()) {
+            return nullptr;
+        }
+        if (is_lua_boolean(v)) {
+            return v.as<bool>() ? int64_t{1} : int64_t{0};
+        }
+        if (v.is<int64_t>()) {
+            return v.as<int64_t>();
+        }
+        if (v.is<double>()) {
+            return v.as<double>();
+        }
+        if (v.is<std::string>()) {
+            return v.as<std::string>();
+        }
+        throw std::runtime_error("Cannot " + caller + ": " + what + " has unsupported Lua type");
     }
 
     // The only table→vector converter. Every cell goes through `lua_cell_as`, which
@@ -1414,24 +1438,7 @@ struct LuaRunner::Impl {
         std::map<std::string, Value> result;
         for (auto& pair : t) {
             auto key = pair.first.as<std::string>();
-            sol::object val = pair.second;
-            if (val.is<sol::lua_nil_t>()) {
-                result[key] = nullptr;
-            } else if (is_lua_boolean(val)) {
-                result[key] = val.as<bool>() ? int64_t{1} : int64_t{0};
-            } else if (val.is<int64_t>()) {
-                result[key] = val.as<int64_t>();
-            } else if (val.is<double>()) {
-                result[key] = val.as<double>();
-            } else if (val.is<std::string>()) {
-                result[key] = val.as<std::string>();
-            } else {
-                // Surface typos / nested tables / unsupported Lua types loudly
-                // instead of silently dropping the column (would cause confusing
-                // downstream "column missing" or NULL-stored errors).
-                throw std::runtime_error("Cannot lua_table_to_value_map: column '" + key +
-                                         "' has unsupported Lua type");
-            }
+            result[key] = lua_to_value(pair.second, "lua_table_to_value_map", "column '" + key + "'");
         }
         return result;
     }
@@ -1475,24 +1482,21 @@ struct LuaRunner::Impl {
                         element.set(k, lua_table_to_vector<std::string>(arr, array_caller));
                     } else {
                         // Surface unsupported element types loudly instead of silently
-                        // dropping the attribute (same policy as lua_table_to_value_map)
+                        // dropping the attribute (same policy as lua_to_value)
                         throw std::runtime_error("Cannot table_to_element: array '" + k +
                                                  "' has unsupported element type");
                     }
                 }
-            } else if (is_lua_boolean(val)) {
-                // A boolean is INTEGER 1/0, the same policy as every other layer.
-                element.set(k, val.as<bool>() ? int64_t{1} : int64_t{0});
-            } else if (val.is<int64_t>()) {
-                element.set(k, val.as<int64_t>());
-            } else if (val.is<double>()) {
-                element.set(k, val.as<double>());
-            } else if (val.is<std::string>()) {
-                element.set(k, val.as<std::string>());
             } else {
-                // Surface typos / functions / nested structures loudly instead of
-                // silently dropping the attribute (same policy as lua_table_to_value_map)
-                throw std::runtime_error("Cannot table_to_element: attribute '" + k + "' has unsupported Lua type");
+                std::visit(
+                    [&](auto&& x) {
+                        if constexpr (std::is_same_v<std::decay_t<decltype(x)>, std::nullptr_t>) {
+                            element.set_null(k);
+                        } else {
+                            element.set(k, x);
+                        }
+                    },
+                    lua_to_value(val, "table_to_element", "attribute '" + k + "'"));
             }
         }
         return element;
@@ -1740,23 +1744,9 @@ struct LuaRunner::Impl {
     static std::vector<Value> lua_table_to_values(const sol::table& parameters) {
         std::vector<Value> values;
         for (size_t i = 1; i <= parameters.size(); ++i) {
-            sol::object val = parameters[i];
-            if (val.is<sol::lua_nil_t>()) {
-                values.emplace_back(nullptr);
-            } else if (is_lua_boolean(val)) {
-                values.emplace_back(val.as<bool>() ? int64_t{1} : int64_t{0});
-            } else if (val.is<int64_t>()) {
-                values.emplace_back(val.as<int64_t>());
-            } else if (val.is<double>()) {
-                values.emplace_back(val.as<double>());
-            } else if (val.is<std::string>()) {
-                values.emplace_back(val.as<std::string>());
-            } else {
-                // A silently skipped parameter would shift every later positional
-                // parameter left and bind NULL to the trailing placeholder.
-                throw std::runtime_error("Cannot lua_table_to_values: parameter #" + std::to_string(i) +
-                                         " has unsupported Lua type");
-            }
+            // A skipped parameter would shift every later placeholder, so anything unsupported throws.
+            values.push_back(
+                lua_to_value(parameters.get<sol::object>(i), "lua_table_to_values", "parameter #" + std::to_string(i)));
         }
         return values;
     }
@@ -2058,21 +2048,10 @@ struct LuaRunner::Impl {
             for (auto& row : cpp_rows) {
                 row[column.name] = nullptr;
             }
+            const std::string what = "column '" + column.name + "'";
             for (auto& cell : column.values) {
                 const auto index = static_cast<size_t>(cell.first.as<int64_t>());
-                sol::object val = cell.second;
-                if (is_lua_boolean(val)) {
-                    cpp_rows[index - 1][column.name] = val.as<bool>() ? int64_t{1} : int64_t{0};
-                } else if (val.is<int64_t>()) {
-                    cpp_rows[index - 1][column.name] = val.as<int64_t>();
-                } else if (val.is<double>()) {
-                    cpp_rows[index - 1][column.name] = val.as<double>();
-                } else if (val.is<std::string>()) {
-                    cpp_rows[index - 1][column.name] = val.as<std::string>();
-                } else {
-                    throw std::runtime_error("Cannot " + caller + ": column '" + column.name +
-                                             "' has unsupported Lua type");
-                }
+                cpp_rows[index - 1][column.name] = lua_to_value(cell.second, caller, what);
             }
         }
         return cpp_rows;
