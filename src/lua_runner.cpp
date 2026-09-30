@@ -1150,10 +1150,6 @@ struct LuaRunner::Impl {
             t["frequency"] = frequency_to_string(dim.time->frequency);
             t["initial_value"] = dim.time->initial_value;
             t["parent_dimension_index"] = dim.time->parent_dimension_index;
-        } else {
-            t["frequency"] = sol::lua_nil;
-            t["initial_value"] = sol::lua_nil;
-            t["parent_dimension_index"] = sol::lua_nil;
         }
         return t;
     }
@@ -1687,39 +1683,25 @@ struct LuaRunner::Impl {
 
     static sol::table list_vector_metadata_lua(Database& db, const std::string& collection, sol::this_state s) {
         sol::state_view lua(s);
-        auto metadata_list = db.list_vector_groups(collection);
         auto t = lua.create_table();
-        for (size_t i = 0; i < metadata_list.size(); ++i) {
-            auto metadata = lua.create_table();
-            metadata["group_name"] = metadata_list[i].group_name;
-            auto cols = lua.create_table();
-            for (size_t j = 0; j < metadata_list[i].value_columns.size(); ++j) {
-                cols[j + 1] = scalar_metadata_lua(lua, metadata_list[i].value_columns[j]);
-            }
-            metadata["value_columns"] = cols;
-            t[i + 1] = metadata;
+        const auto groups = db.list_vector_groups(collection);
+        for (size_t i = 0; i < groups.size(); ++i) {
+            t[i + 1] = group_metadata_lua(lua, groups[i]);
         }
         return t;
     }
 
     static sol::table list_set_metadata_lua(Database& db, const std::string& collection, sol::this_state s) {
         sol::state_view lua(s);
-        auto metadata_list = db.list_set_groups(collection);
         auto t = lua.create_table();
-        for (size_t i = 0; i < metadata_list.size(); ++i) {
-            auto metadata = lua.create_table();
-            metadata["group_name"] = metadata_list[i].group_name;
-            auto cols = lua.create_table();
-            for (size_t j = 0; j < metadata_list[i].value_columns.size(); ++j) {
-                cols[j + 1] = scalar_metadata_lua(lua, metadata_list[i].value_columns[j]);
-            }
-            metadata["value_columns"] = cols;
-            t[i + 1] = metadata;
+        const auto groups = db.list_set_groups(collection);
+        for (size_t i = 0; i < groups.size(); ++i) {
+            t[i + 1] = group_metadata_lua(lua, groups[i]);
         }
         return t;
     }
 
-    static std::string data_type_to_string(DataType type) {
+    static std::string lua_data_type_name(DataType type) {
         switch (type) {
         case DataType::Integer:
             return "integer";
@@ -1730,7 +1712,7 @@ struct LuaRunner::Impl {
         case DataType::DateTime:
             return "date_time";
         default:
-            throw std::runtime_error("Cannot data_type_to_string: unknown data type " +
+            throw std::runtime_error("Cannot lua_data_type_name: unknown data type " +
                                      std::to_string(static_cast<int>(type)));
         }
     }
@@ -1747,25 +1729,35 @@ struct LuaRunner::Impl {
     static sol::table scalar_metadata_lua(sol::state_view& lua, const ScalarMetadata& attribute) {
         auto t = lua.create_table();
         t["name"] = attribute.name;
-        t["data_type"] = data_type_to_string(attribute.data_type);
+        t["data_type"] = lua_data_type_name(attribute.data_type);
         t["not_null"] = attribute.not_null;
         t["primary_key"] = attribute.primary_key;
         if (attribute.default_value.has_value()) {
             t["default_value"] = *attribute.default_value;
-        } else {
-            t["default_value"] = sol::lua_nil;
         }
         t["is_foreign_key"] = attribute.is_foreign_key;
         if (attribute.references_collection.has_value()) {
             t["references_collection"] = *attribute.references_collection;
-        } else {
-            t["references_collection"] = sol::lua_nil;
         }
         if (attribute.references_column.has_value()) {
             t["references_column"] = *attribute.references_column;
-        } else {
-            t["references_column"] = sol::lua_nil;
         }
+        return t;
+    }
+
+    // One Lua table shape for every group kind, like the C API's convert_group_to_c:
+    // group_name, value_columns, and dimension_column for a time series (never empty there).
+    static sol::table group_metadata_lua(sol::state_view& lua, const GroupMetadata& metadata) {
+        auto t = lua.create_table();
+        t["group_name"] = metadata.group_name;
+        if (!metadata.dimension_column.empty()) {
+            t["dimension_column"] = metadata.dimension_column;
+        }
+        auto cols = lua.create_table();
+        for (size_t i = 0; i < metadata.value_columns.size(); ++i) {
+            cols[i + 1] = scalar_metadata_lua(lua, metadata.value_columns[i]);
+        }
+        t["value_columns"] = cols;
         return t;
     }
 
@@ -1774,17 +1766,7 @@ struct LuaRunner::Impl {
                                               const std::string& group_name,
                                               sol::this_state s) {
         sol::state_view lua(s);
-        auto metadata = db.get_vector_metadata(collection, group_name);
-        auto t = lua.create_table();
-        t["group_name"] = metadata.group_name;
-
-        auto cols = lua.create_table();
-        for (size_t i = 0; i < metadata.value_columns.size(); ++i) {
-            cols[i + 1] = scalar_metadata_lua(lua, metadata.value_columns[i]);
-        }
-        t["value_columns"] = cols;
-
-        return t;
+        return group_metadata_lua(lua, db.get_vector_metadata(collection, group_name));
     }
 
     static sol::table get_set_metadata_lua(Database& db,
@@ -1792,17 +1774,7 @@ struct LuaRunner::Impl {
                                            const std::string& group_name,
                                            sol::this_state s) {
         sol::state_view lua(s);
-        auto metadata = db.get_set_metadata(collection, group_name);
-        auto t = lua.create_table();
-        t["group_name"] = metadata.group_name;
-
-        auto cols = lua.create_table();
-        for (size_t i = 0; i < metadata.value_columns.size(); ++i) {
-            cols[i + 1] = scalar_metadata_lua(lua, metadata.value_columns[i]);
-        }
-        t["value_columns"] = cols;
-
-        return t;
+        return group_metadata_lua(lua, db.get_set_metadata(collection, group_name));
     }
 
     static std::vector<Value> lua_table_to_values(const std::string& caller, const sol::table& parameters) {
@@ -1987,33 +1959,20 @@ struct LuaRunner::Impl {
     // Time series metadata
     // ========================================================================
 
-    static sol::table time_series_metadata_lua(sol::state_view& lua, const GroupMetadata& metadata) {
-        auto t = lua.create_table();
-        t["group_name"] = metadata.group_name;
-        t["dimension_column"] = metadata.dimension_column;
-        auto cols = lua.create_table();
-        for (size_t i = 0; i < metadata.value_columns.size(); ++i) {
-            cols[i + 1] = scalar_metadata_lua(lua, metadata.value_columns[i]);
-        }
-        t["value_columns"] = cols;
-        return t;
-    }
-
     static sol::table get_time_series_metadata_lua(Database& db,
                                                    const std::string& collection,
                                                    const std::string& group_name,
                                                    sol::this_state s) {
         sol::state_view lua(s);
-        auto metadata = db.get_time_series_metadata(collection, group_name);
-        return time_series_metadata_lua(lua, metadata);
+        return group_metadata_lua(lua, db.get_time_series_metadata(collection, group_name));
     }
 
     static sol::table list_time_series_groups_lua(Database& db, const std::string& collection, sol::this_state s) {
         sol::state_view lua(s);
-        auto metadata_list = db.list_time_series_groups(collection);
         auto t = lua.create_table();
-        for (size_t i = 0; i < metadata_list.size(); ++i) {
-            t[i + 1] = time_series_metadata_lua(lua, metadata_list[i]);
+        const auto groups = db.list_time_series_groups(collection);
+        for (size_t i = 0; i < groups.size(); ++i) {
+            t[i + 1] = group_metadata_lua(lua, groups[i]);
         }
         return t;
     }
@@ -2320,8 +2279,6 @@ struct LuaRunner::Impl {
         for (const auto& [key, val] : files) {
             if (val.has_value()) {
                 t[key] = *val;
-            } else {
-                t[key] = sol::lua_nil;
             }
         }
         return t;
