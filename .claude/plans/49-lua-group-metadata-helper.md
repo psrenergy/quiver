@@ -147,10 +147,10 @@ From the repo root:
 
 ## Acceptance criteria
 
-- [ ] One `group_metadata_lua` is used by all six getters/listers.
-- [ ] No `data_type_to_string` definition remains in `lua_runner.cpp`.
-- [ ] No `else t[...] = sol::lua_nil;` on a freshly created table remains.
-- [ ] The Lua suites pass unchanged.
+- [x] One `group_metadata_lua` is used by all six getters/listers.
+- [x] No `data_type_to_string` definition remains in `lua_runner.cpp`.
+- [x] No `else t[...] = sol::lua_nil;` on a freshly created table remains.
+- [x] The Lua suites pass unchanged.
 
 ## Pitfalls
 
@@ -162,3 +162,49 @@ From the repo root:
 
 - Merging `list_scalar_metadata_lua` (already minimal).
 - Any change to the C++ `GroupMetadata` struct.
+
+## Implementation notes
+
+Implemented on `rs/plan49`. At planning time the branch sat at master `b4c62bb`. By the time implementation started it had been fast-forwarded to master `12422d7`, which brought in plans 43-48 (#355-#360). So `git fetch origin && git merge --no-edit origin/master` printed "Already up to date." Plans 46/47/48 edit `src/lua_runner.cpp`, so every anchor was re-grepped after the fast-forward. The bodies were unchanged; only the line numbers moved.
+
+**Verdict: implement.** The plan was correct as written, and nothing argued against it.
+
+### Drift fixed
+
+- **Line numbers.** At `12422d7` the functions sit at these lines:
+  - `dimension_to_lua` else-branch L1153-1157
+  - `list_vector_metadata_lua` L1688, `list_set_metadata_lua` L1705
+  - `data_type_to_string` L1722, called at L1750
+  - `scalar_metadata_lua` L1747, `get_vector_metadata_lua` L1772, `get_set_metadata_lua` L1790
+  - `time_series_metadata_lua` L1990, `get_time_series_metadata_lua` L2002, `list_time_series_groups_lua` L2011
+  - `read_time_series_files_lua` L2316
+
+  The plan quoted L1085-L2255.
+- **Throw text renamed.** The unreachable `default:` throw now reads `Cannot lua_data_type_name: ...`, the plan's first option. `grep data_type_to_string src/lua_runner.cpp` prints nothing.
+- **One grep did not print nothing.** The plan's `grep -n "time_series_metadata_lua\|data_type_to_string" src/AGENTS.md` prints one line, `src/AGENTS.md:21`. That line is the file map's entry for the **public** `data_type.h` (`DataType enum, data_type_to_string, ...`), and it is correct as written. Nothing was updated.
+- **Plan 52 had not landed,** so this plan's fallback test was added: `LuaRunnerTest.GroupMetadataDimensionColumnOnlyForTimeSeries` in `tests/test_lua_runner_time_series.cpp`. It goes slightly beyond the plan's two asserts:
+  - it also covers `get_set_metadata`, `list_vector_groups` and `list_set_groups`;
+  - every `dimension_column == nil` is paired with a positive check on the same table (`group_name`, column count or name), following plan 52's pitfall.
+
+### Results
+
+- **Pin green on the old code.** The test was added before any production edit and passed: `3 tests ... [  PASSED  ] 3 tests` (alongside `GetTimeSeriesMetadata` and `ListTimeSeriesGroups`).
+- **Mutation red.** `group_metadata_lua` was temporarily forced to always emit `dimension_column`. The pin then failed at chunk line 4 (`vector has no dimension_column`): `[  FAILED  ] LuaRunnerTest.GroupMetadataDimensionColumnOnlyForTimeSeries`. The mutation was reverted from a backup copy, and `grep "if (true)"` returned 0.
+- **Green after.**
+  - `quiver_tests.exe --gtest_filter=LuaRunner*:LuaBinary*`: **398/398**
+  - full `quiver_tests.exe`: **1389/1389**
+  - `quiver_c_tests.exe`: **571/571**
+  - `bindings/js/test/test.bat test/lua-api-sync.test.ts`: **242 pass, 0 fail**. `test.bat` prepends `test`, so bun runs the whole JS suite. `bun test test/lua-api-sync.test.ts` alone gives 6/6.
+- **`scripts\format.bat`** exits 0:
+  - clang-format changed nothing in the diff;
+  - JuliaFormatter, dart format (44 files, 0 changed) and ruff (35 unchanged) changed nothing;
+  - Biome rewrote 43 JS files CRLF→LF. `git diff --ignore-cr-at-eol bindings/js` was empty (0 lines), and `git checkout -- bindings/js` reverted them.
+- **Adversarial review.** A two-lens read-only workflow ran over the diff. Lens one checked Lua-visible identity for all ten affected getters, `pairs`/`next`/`#`/JSON-encoder observability, and the claim that the dimension is never empty for time series and never set for vectors/sets. Lens two checked scope, style, stray `lua_nil` and the soundness of the test. Both returned `findings: []`.
+- Diff: `src/lua_runner.cpp` +28/-71, test +22. No CHANGELOG or AGENTS.md change (internal, as the plan says).
+- **Not run:** `scripts/test-all.bat` (Julia, Dart and Python suites). The change is confined to the Lua runner. The README asks for test-all at the end of each batch.
+
+### For later plans
+
+- **Plan 52** can keep its Pitfall assert (`v.dimension_column == nil` next to a positive check) or rely on this test, which already pins it for all four vector/set getters and listers. Its `GetVectorAndSetMetadata` / `ListScalarAttributesAndGroups` tests do not collide with this test's name.
+- **Layout in `lua_runner.cpp`.** `group_metadata_lua` now sits directly after `scalar_metadata_lua`, followed by the one-line `get_vector_metadata_lua` / `get_set_metadata_lua`. The "Time series metadata" banner section holds only `get_time_series_metadata_lua` and `list_time_series_groups_lua`.
+- **Plan 50** edits `read_vectors_by_id_lua` / `read_sets_by_id_lua`, which are not near these functions. No conflict is expected.

@@ -35,6 +35,28 @@ TEST_F(LuaRunnerTest, ListTimeSeriesGroups) {
     )");
 }
 
+// Only time-series group metadata carries a dimension_column key; vector and set tables must not.
+TEST_F(LuaRunnerTest, GroupMetadataDimensionColumnOnlyForTimeSeries) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(
+        local v = db:get_vector_metadata("Collection", "values")
+        assert(v.group_name == "values" and #v.value_columns == 2, "vector metadata")
+        assert(v.dimension_column == nil, "vector has no dimension_column")
+        local s = db:get_set_metadata("Collection", "tags")
+        assert(s.group_name == "tags" and s.value_columns[1].name == "tag", "set metadata")
+        assert(s.dimension_column == nil, "set has no dimension_column")
+        local vg = db:list_vector_groups("Collection")
+        assert(vg[1].group_name == "values" and vg[1].dimension_column == nil, "listed vector group")
+        local sg = db:list_set_groups("Collection")
+        assert(sg[1].group_name == "tags" and sg[1].dimension_column == nil, "listed set group")
+        local ts = db:get_time_series_metadata("Collection", "data")
+        assert(ts.dimension_column == "date_time", "time series dimension_column")
+    )");
+}
+
 TEST_F(LuaRunnerTest, ReadTimeSeriesGroupById) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
