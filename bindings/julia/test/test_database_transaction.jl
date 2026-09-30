@@ -123,6 +123,29 @@ include("fixture.jl")
         Quiver.close!(db)
     end
 
+    @testset "Dry run block rolls back and ends on exception" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Config")
+
+        @test_throws ErrorException begin
+            Quiver.dry_run(db) do db
+                Quiver.create_element!(db, "Collection"; label = "Preview")
+                return error("boom")
+            end
+        end
+
+        @test Quiver.in_dry_run(db) == false
+        @test isempty(Quiver.read_scalar_strings(db, "Collection", "label"))
+
+        # The handle is usable normally afterwards: a plain write commits.
+        Quiver.create_element!(db, "Collection"; label = "After")
+        @test Quiver.read_scalar_strings(db, "Collection", "label") == ["After"]
+
+        Quiver.close!(db)
+    end
+
     @testset "Multi-operation batch" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
         db = Quiver.from_schema(":memory:", path_schema)

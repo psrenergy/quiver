@@ -172,10 +172,10 @@ From the repo root:
 
 ## Acceptance criteria
 
-- [ ] One new Dart test and one new Julia testset exercising a throwing `fn` inside the dry-run
+- [x] One new Dart test and one new Julia testset exercising a throwing `fn` inside the dry-run
       wrapper, asserting the error surfaces, `in_dry_run` is false, the write is gone, and the
       handle works afterwards.
-- [ ] Both suites green.
+- [x] Both suites green.
 
 ## Pitfalls
 
@@ -187,3 +187,21 @@ From the repo root:
 
 - Any change to the wrappers themselves.
 - Lua `db:dry_run` (covered by the C++ Lua suite).
+
+## Implementation notes
+
+- **Master merge**: `rs/plan37` was already at `origin/master` (3608708); `git merge origin/master`
+  reported "Already up to date".
+- **Drift**: none. Every quoted excerpt, line range, symbol and test name matched the code at
+  3608708. The two tests were added verbatim as written above.
+- **Mutation check** (not committed): with `endDryRun();` / `end_dry_run!(db)` commented out of the
+  catch branch, both new tests fail on the `in_dry_run` assertion (Dart `Expected: false, Actual:
+  <true>`; Julia `Evaluated: true == false` at `test_database_transaction.jl:139`). Restored with
+  `git checkout`.
+- **Results**: `database_transaction_test.dart` 11/11, `test_database_transaction.jl` 26/26; full
+  Dart suite 441 passed, full Julia suite 1573/1573. `cmake --build` had no work to do.
+- **`scripts/format.bat`**: left both test files unchanged. Its biome step rewrote 43 untouched
+  `bindings/js` files from CRLF to LF with zero content diff (`core.autocrlf=true`). Those files
+  were restored and are not in this commit. Later plans that run `format.bat` will see the same
+  line-ending churn and should restore those files too.
+- **For later plans**: nothing. Production code is unchanged.
