@@ -63,6 +63,11 @@ callers to change something are prefixed **BREAKING** and say what to do.
   *Adapt:* make every cell of a numeric column a number (or a `bigint` or a boolean); convert
   strings with `Number(...)` before the call.
 
+- **Dart: the group writers' jagged-column `ArgumentError` names the offending column.** The six
+  columnar writers (`updateVectorGroup`, `updateSetGroup`, `updateTimeSeriesGroup` and their
+  `ByLabel` forms) now throw `All column lists must have the same length, got <n> for '<name>'`,
+  Python's message; the error type is unchanged.
+
 ### Fixed
 
 - **Python: a `datetime` is accepted on every write path, and an aware one is stored as its UTC

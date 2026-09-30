@@ -123,7 +123,7 @@ ruff.toml         # Lint/format config; lint is isort only (select = ["I"])
   (`column_data_type`, below), builds a per-column mask, and substitutes `0`/`0.0`/`ffi.NULL` placeholders for `None` cells; an all-`None`
   column is tagged FLOAT with a zeroed placeholder.
 - **`_marshal_group_columns` serves every columnar group writer** (time series, vector, set, by id
-  and by label) — same name as Dart's `_marshalGroupColumn`. It raises `ValueError` for jagged
+  and by label) — Dart's counterpart is `_marshalGroupColumns`. It raises `ValueError` for jagged
   column lists and `TypeError` for a cell that does not fit its column (both pre-FFI marshalling
   errors, the documented exception to "messages come from C++"); everything else is validated in
   the core and surfaces as `QuiverError`. Note that the group

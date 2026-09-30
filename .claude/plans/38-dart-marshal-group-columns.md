@@ -318,12 +318,12 @@ From the repo root:
 
 ## Acceptance criteria
 
-- [ ] `_marshalGroupColumns` exists, and the six writers call it. Each still has its own explicit
+- [x] `_marshalGroupColumns` exists, and the six writers call it. Each still has its own explicit
       `check(bindings.quiver_database_update_*(...))`.
-- [ ] No `data.isEmpty` branch and no `// Validate equal lengths` loop remain in the six writers.
-- [ ] The upserts still call `_marshalGroupColumn` directly.
-- [ ] Two tightened message tests pass. The full Dart suite is green. `dart analyze` is clean.
-- [ ] Both AGENTS.md files are updated.
+- [x] No `data.isEmpty` branch and no `// Validate equal lengths` loop remain in the six writers.
+- [x] The upserts still call `_marshalGroupColumn` directly.
+- [x] Two tightened message tests pass. The full Dart suite is green. `dart analyze` is clean.
+- [x] Both AGENTS.md files are updated.
 
 ## Pitfalls
 
@@ -340,3 +340,41 @@ From the repo root:
 - The upsert marshalling.
 - Any change to `_marshalGroupColumn`'s typing rules (plan 24).
 - Python/JS/Julia.
+
+## Implementation notes
+
+- **Master merge**: `git fetch origin` + `git merge origin/master` reported "Already up to date";
+  `rs/plan38` was at `origin/master` (`9a0e651`, plans 32-37 landed). None of those touched
+  `database_update.dart`, the two test files or either AGENTS.md; the edits applied at the function
+  anchors above. Plan 24 (the dependency) is `ac3d70e`.
+- **Test first**: with only the two message tests tightened, both failed against the old code, e.g.
+  `Which: threw ArgumentError:<Invalid argument(s): All column lists must have the same length>
+  which has 'message' with value 'All column lists must have the same length' which is different`
+  (`database_update_test.dart` and `database_time_series_group_test.dart`, `+92 -2` combined).
+  After the change: `database_update_test.dart` 78/78, `database_time_series_group_test.dart` 16/16,
+  full Dart suite 442 passed. `dart analyze`: 7 pre-existing infos, none in files touched here.
+  `cmake --build` had no work to do (no C API change).
+- **Drift fixed**:
+  - The CHANGELOG's current section is `## [0.12.6] — unreleased`, not `[0.12.0]`. The optional
+    one-line entry went there under `### Changed`, non-breaking, with no version bump.
+  - `updateSetGroup` (by id) was the only one of the six writers with no empty-map clear test. Added
+    `updateSetGroup replaces rows and clears on an empty map` next to the vector version, per the
+    plan's "if any writer lacks one" step.
+  - In `bindings/dart/AGENTS.md`'s marshaling bullet, "the group writers' clear paths" (the writers
+    that pass `nullptr` for an empty array) now reads "`_marshalGroupColumns` (empty map)", since
+    that is where the clear path lives now. The "eight call sites" parenthesis reads "…every
+    `ByLabel` form; six of them via `_marshalGroupColumns`".
+- **Adversarial review** (3 read-only agents: behaviour parity, house style / doc accuracy, test
+  coverage): no bugs, no doc inaccuracies. One nit, left as is: the jagged-length path is tested
+  through `updateVectorGroup` and `updateTimeSeriesGroup` only, and all six writers now share that
+  one code path.
+- **`scripts/format.bat`**: `dart format` changed 0 files. As in plan 37, the biome step rewrote 43
+  untouched `bindings/js` files from CRLF to LF with no content diff (`core.autocrlf=true`). They
+  were restored and are not in this commit.
+- **For later plans**: `_marshalGroupColumn` still requests `arena<Uint8>(0)` (the mask) for a
+  named-but-empty column (`{'x': []}`). On POSIX, package:ffi can throw
+  `ArgumentError('Could not allocate 0 bytes.')` there before the C API's "named column with no
+  rows" error is reached, and Windows test runs do not see it. This predates plan 38 and is out of its
+  scope; the fix is to skip the allocation (or use `nullptr`) when `values` is empty. The same
+  applies to `upsertTimeSeriesRow*` with an empty `row` map, which calls `arena(0)` for its three
+  arrays.

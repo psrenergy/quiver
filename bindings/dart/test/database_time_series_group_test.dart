@@ -383,7 +383,13 @@ void main() {
             'humidity': [45, 50],
             'status': ['normal', 'high'],
           }),
-          throwsA(isA<ArgumentError>()),
+          throwsA(
+            isA<ArgumentError>().having(
+              (e) => e.message,
+              'message',
+              "All column lists must have the same length, got 1 for 'temperature'",
+            ),
+          ),
         );
       } finally {
         db.close();
