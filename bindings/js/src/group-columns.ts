@@ -24,12 +24,16 @@ import {
   DATA_TYPE_STRING,
 } from "./types.ts";
 
-/** Column-oriented group payload: one array of cells per column name, `null` for SQL NULL. */
-export type GroupColumns = Record<string, (number | string | boolean | null)[]>;
+/**
+ * Column-oriented group payload: one array of cells per column name, `null` for SQL NULL. A
+ * `bigint` cell is written as an exact int64 (like createElement); a `boolean` as INTEGER 1/0.
+ */
+export type GroupColumns = Record<string, (number | bigint | string | boolean | null)[]>;
 
 /**
  * Column-oriented group read result: one array of cells per column name, `null` for SQL NULL.
- * The read-side twin of GroupColumns; no reader produces a boolean, so it admits none.
+ * The read-side twin of GroupColumns; no reader produces a boolean or a bigint, so it admits
+ * neither.
  */
 export type TimeSeriesData = Record<string, (number | string | null)[]>;
 
@@ -52,24 +56,26 @@ type ColumnUpdateFn = (
 ) => number;
 
 /**
- * Check and normalize the cells of a numeric column: one whose first non-null cell is a number or
- * a boolean. Shared by updateGroupColumns and setElementArray (create.ts) so the group writers and
- * the element arrays agree on every cell. String columns are never passed here.
+ * Check and normalize the cells of a numeric column: one whose first non-null cell is a number, a
+ * bigint or a boolean. Shared by updateGroupColumns and setElementArray (create.ts) so the group
+ * writers and the element arrays agree on every cell. String columns are never passed here.
  *
  * - A boolean becomes INTEGER 1/0, since SQLite has no boolean type. Per cell, because mapping the
  *   whole column from a leading boolean truthiness-mapped the rest and rewrote [true, 5] as
  *   [1, 1]. Before the INTEGER/FLOAT choice, because Number.isInteger(true) is false.
- * - Any other non-null cell that is not a number throws, naming the column and the cell. It would
- *   fail Number.isInteger, tag the column FLOAT and reach DataView.setFloat64, which converts it
- *   with no error: "abc" to NaN, which SQLite stores as NULL, and "2" to 2.
+ * - A bigint stays a bigint, so an INTEGER column keeps it exact; the caller maps it through
+ *   Number() only if the column turns out FLOAT.
+ * - Any other non-null cell throws, naming the column and the cell. It would fail
+ *   Number.isInteger, tag the column FLOAT and reach DataView.setFloat64, which converts it with no
+ *   error: "abc" to NaN, which SQLite stores as NULL, and "2" to 2.
  */
 export function numericCells(
   caller: string,
   name: string,
   values: readonly unknown[],
-): (number | null)[] {
+): (number | bigint | null)[] {
   return values.map((v, r) => {
-    if (v === null || typeof v === "number") return v;
+    if (v === null || typeof v === "number" || typeof v === "bigint") return v;
     if (typeof v === "boolean") return v ? 1 : 0;
     throw new QuiverError(
       `Cannot ${caller}: numeric column '${name}' has unsupported value type ${typeof v} in cell ${r}`,
@@ -165,17 +171,22 @@ export function updateGroupColumns(
       );
       keepalive.push(table, ...strPtrs);
       dataPtrs.push(table.ptr);
-    } else if (typeof first === "number" || typeof first === "boolean") {
+    } else if (
+      typeof first === "number" ||
+      typeof first === "boolean" ||
+      typeof first === "bigint"
+    ) {
       const cells = numericCells(caller, colName, values);
-      const sanitized = cells.map((v) => v ?? 0);
-      if (cells.every((v) => v === null || Number.isInteger(v))) {
+      if (cells.every((v) => v === null || typeof v === "bigint" || Number.isInteger(v))) {
         typesDv.setInt32(c * 4, DATA_TYPE_INTEGER, true);
-        const p = allocNativeInt64(sanitized);
+        const p = allocNativeInt64(cells.map((v) => v ?? 0));
         keepalive.push(p);
         dataPtrs.push(p.ptr);
       } else {
+        // A fractional cell makes the column FLOAT; a bigint cell then follows the int-for-REAL
+        // rule through Number(), exact up to 2^53 like any JS number.
         typesDv.setInt32(c * 4, DATA_TYPE_FLOAT, true);
-        const p = allocNativeFloat64(sanitized);
+        const p = allocNativeFloat64(cells.map((v) => (v === null ? 0 : Number(v))));
         keepalive.push(p);
         dataPtrs.push(p.ptr);
       }

@@ -65,10 +65,13 @@ biome.json        # Lint/format config
   - No struct-by-value FFI return (oven-sh/bun#6139) → `quiver_database_options_default` is
     omitted from the symbol table; `ffi-helpers.makeDefaultOptions()` builds the options struct
     in JS.
-- **int64 handling**: input params accept `number | bigint` — `allocNativeInt64` writes each
-  element with `DataView.setBigInt64`, so `bigint` inputs (scalar or array) are preserved
-  exactly, never coerced through `Number`. Read paths return `number` (converted via `Number()`
-  after the FFI call) — the deliberately simple surface.
+- **int64 handling**: input params accept `number | bigint` on every write path —
+  `createElement`/`updateElement` scalars and arrays, the group writers (`GroupColumns`),
+  `upsertTimeSeriesRow` and query parameters (`QueryParam`). `allocNativeInt64` writes each
+  element with `DataView.setBigInt64`, so a `bigint` is preserved exactly, never coerced through
+  `Number` — except in a group column or element array that also holds a fractional cell, which is
+  written FLOAT and maps the `bigint` through `Number()` (int-for-REAL). Read paths return `number`
+  (converted via `Number()` after the FFI call) — the deliberately simple surface.
 - **`src/group-columns.ts` is the one columnar marshaller** for `updateTimeSeriesGroup`,
   `updateVectorGroup`, `updateSetGroup` and their `ByLabel` forms. They differ only in which C
   entry point they pass to `updateGroupColumns(handle, caller, cFn, ...)` and whether `key` is a
@@ -132,8 +135,9 @@ biome.json        # Lint/format config
   `ScalarValue`/`ArrayValue`/`QueryParam`/`GroupColumns` include it. The row and array marshallers
   instead **normalize per cell before the INTEGER/FLOAT choice**: `upsertRowColumns`
   (`time-series.ts`) maps its one cell, and `updateGroupColumns` (`group-columns.ts`) and
-  `setElementArray` (`create.ts`) pass every numeric column — first non-null cell a number or a
-  boolean — through `numericCells` (`group-columns.ts`), so no boolean branch is needed at all.
+  `setElementArray` (`create.ts`) pass every numeric column — first non-null cell a number, a
+  `bigint` or a boolean — through `numericCells` (`group-columns.ts`), so no boolean branch is
+  needed at all.
   Both halves of that are load-bearing. *Before* the choice, because `Number.isInteger(true)` is
   `false`, and a boolean would otherwise land in the column as FLOAT 1.0 with no error. *Per
   cell*, because a boolean branch chosen from the first cell truthiness-maps the rest:
@@ -142,13 +146,13 @@ biome.json        # Lint/format config
   column '<name>' has unsupported value type <typeof> in cell <r>`. Such a cell fails
   `Number.isInteger` and tags the column FLOAT, and `setFloat64` would convert it with no error:
   `"abc"` to NaN, which SQLite stores as NULL, and `"2"` to 2. A string column is not checked, so
-  a mixed `['a', true]` column still writes the text `"true"`. A `bigint[]` element array keeps
-  its own branch in `setElementArray` and is not checked either. `upsertRowColumns`'s last
+  a mixed `['a', true]` column still writes the text `"true"`. `upsertRowColumns`'s last
   branch is `typeof value === "number"`, not an untyped `else` — `Number(null)` is 0 and anything
   else is NaN, both of which used to be written with no error. **`GroupColumns` is the write type and
   `TimeSeriesData` the read type** (both in `group-columns.ts`) — they are otherwise identical, but
-  only the former admits `boolean`, since no group reader produces one and its return type should
-  not claim it. The four `updateTimeSeriesGroup*`/group writers therefore take `GroupColumns`.
+  only the former admits `bigint` and `boolean`, since no group reader produces either and its
+  return type should not claim them. The four `updateTimeSeriesGroup*`/group writers therefore
+  take `GroupColumns`.
 - **Test/lint/format**: `bun test test`, `bun run lint`, `bun run format` (biome, project-pinned
   version). No permission flags needed (Bun has none — don't carry over Deno habits). There is
   pre-existing lint debt in untouched files — fix only what your change orphans, don't drive-by

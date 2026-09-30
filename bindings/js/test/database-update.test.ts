@@ -212,6 +212,26 @@ describe("updateVectorGroup / updateSetGroup", () => {
     }
   });
 
+  test("updateVectorGroup keeps a bigint cell beyond Number.MAX_SAFE_INTEGER exact", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      const id = db.createElement("AllTypes", { label: "Item1" });
+      const big = 9007199254740993n; // 2^53 + 1
+      db.updateVectorGroup("AllTypes", "counts", id, { count_value: [big, 7n] });
+      expect(
+        db.queryString(
+          "SELECT CAST(count_value AS TEXT) FROM AllTypes_vector_counts WHERE vector_index = 1",
+        ),
+      ).toBe("9007199254740993");
+      expect(db.readVectorIntegersById("AllTypes", "count_value", id)).toEqual([
+        9007199254740992, // readers return number (documented), so the last digit is not exact here
+        7,
+      ]);
+    } finally {
+      db.close();
+    }
+  });
+
   test("throws on an unknown group or column", () => {
     const { db, parentA, child } = openRelations();
     try {
@@ -411,6 +431,17 @@ describe("group writer column typing", () => {
       const id = db.createElement("AllTypes", { label: "Widened" });
       db.updateVectorGroup("AllTypes", "scores", id, { score: [1, 2.5] });
       expect(db.readVectorFloatsById("AllTypes", "score", id)).toEqual([1, 2.5]);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("a mixed bigint/fractional column is written as FLOAT", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      const id = db.createElement("AllTypes", { label: "Item1" });
+      db.updateVectorGroup("AllTypes", "scores", id, { score: [5n, 1.5] });
+      expect(db.readVectorFloatsById("AllTypes", "score", id)).toEqual([5, 1.5]);
     } finally {
       db.close();
     }
