@@ -201,10 +201,10 @@ From the repo root:
 
 ## Acceptance criteria
 
-- [ ] `lua_to_value` exists. The four chains are gone (`grep -c "has unsupported Lua type" src/lua_runner.cpp`
+- [x] `lua_to_value` exists. The four chains are gone (`grep -c "has unsupported Lua type" src/lua_runner.cpp`
       drops by three, leaving `lua_to_value`, `lua_cell_as` and any unrelated sites).
-- [ ] All Lua suites pass on Debug and Release with unchanged messages.
-- [ ] `src/AGENTS.md` bullets are updated.
+- [x] All Lua suites pass on Debug and Release with unchanged messages.
+- [x] `src/AGENTS.md` bullets are updated.
 
 ## Pitfalls
 
@@ -216,3 +216,64 @@ From the repo root:
 
 - Renaming the internal `caller` strings to public method names (plan 47).
 - `lua_table_to_values`' `t.size()` bound (plan 44 decision: leave it).
+
+## Implementation notes
+
+Landed on `rs/plan46` on top of `6a7c977` (plans 43, 44 and 45 had been merged into master and
+fast-forwarded in before the edit). Neither 44's `collect_group_columns` key check nor 45's
+`open_binary_files` registry touches the four sites.
+
+**What changed.** `lua_to_value` sits right after `lua_cell_as<T>` in `src/lua_runner.cpp`. The
+four chains now call it, and `table_to_element`'s scalar branch uses the plan's `std::visit`.
+`grep -c "has unsupported Lua type" src/lua_runner.cpp` went from 7 to 4: `csv_cell_to_string`,
+`lua_cell_as`, `lua_to_value` and `relation_target_from_lua`. There were no test changes, no
+CHANGELOG entry and no C API or FFI change.
+
+**Test results.**
+- Debug: `quiver_tests` 1382/1382 and `quiver_c_tests` 571/571.
+- Release (`build-release`, configured per tests/AGENTS.md): `quiver_tests` 1382/1382 and
+  `quiver_c_tests` 571/571, including the `*Lua*` filter at 414/414 and 27/27.
+- `lua-api-sync.test.ts`: 6/6. `bindings/js/test/test.bat test/lua-api-sync.test.ts` runs the whole
+  Bun suite, because the script already passes the filter `test`: 242/242.
+- `scripts/format.bat` passes, and clang-format kept the new code as written. biome rewrote every JS
+  file's line endings from CRLF to LF with no content change. That happens because this checkout
+  has `core.autocrlf=true` and is unrelated to this plan, so those files were restored with
+  `git checkout`.
+
+**Drift fixed.**
+- `lua_table_to_values` passes `parameters.get<sol::object>(i)`, the same idiom as
+  `lua_table_to_vector`, instead of the proxy `parameters[i]`. The plan allowed this fallback. In
+  sol2 3.5.0 both reach the same non-raw `traverse_get_single`, so an interior `nil` is still NULL.
+- Step 6: the `is_lua_boolean` comment never listed call sites, and it is still accurate, so it
+  gained only one sentence. The comment this refactor actually made wrong was `lua_cell_as`'s ("The
+  one checked Lua-value→T conversion, shared by every converter below"). It now reads "for the
+  typed paths" and names `lua_to_value` as its sibling. Two cross-reference comments that pointed at
+  removed code now point at `lua_to_value`: `csv_cell_to_string`'s "the same order
+  table_to_element uses" and the array branch's "same policy as lua_table_to_value_map". Both edits
+  are comment-only; the array branch code is unchanged.
+- src/AGENTS.md: the plan's replacement text would have dropped `table_to_element`'s array
+  dispatch, which still calls `is_lua_boolean(first)` directly. The bullet keeps it and also notes
+  that `csv_cell_to_string` writes a boolean as the text `1`/`0`. The `lua_cell_as` bullet's lead
+  ("the one checked ... every converter routes through it") would have contradicted the new
+  sibling sentence, so it now reads "for the typed paths".
+- Root AGENTS.md: "the five sol2 converters in `src/lua_runner.cpp`" now names
+  `lua_to_value` / `lua_cell_as`. The plan didn't list this edit, but the old text went stale with
+  this change.
+- Verification: the plan's `LuaRunner*` filter misses `LuaBinaryTest` / `LuaExpressionTest`, and
+  `quiver.metadata{...}` goes through `table_to_element`'s scalar branch, so the full suites were
+  run instead.
+- Plan-text drift, not acted on: the "Why" section attributes "A Lua boolean is INTEGER 1/0 on every
+  write path" to root AGENTS.md, but it is in src/AGENTS.md. The C API test is at
+  `test_c_api_lua_runner.cpp:500`, not ~L497.
+
+**For later plans.**
+- Plan 47: every `caller` literal now sits in a `lua_to_value(...)` call. `columns_to_cpp_rows` gets
+  its caller from `group_rows_from_lua` / `time_series_rows_from_lua`. 47's `lua_table_to_values`
+  snippet quotes `lua_to_value(parameters[i], ...)`, so re-anchor it on
+  `lua_to_value(parameters.get<sol::object>(i), ...)`. The `parameters.size()` bound is unchanged
+  (plan 44's decision).
+- Test coverage: no test triggers the unsupported-type throw of `lua_table_to_value_map` (via
+  `upsert_time_series_row*`) or of `columns_to_cpp_rows` (the six group writers). The tests for
+  `table_to_element` and `lua_table_to_values` check only the prefix up to the slot name. Byte
+  identity for all four was verified by reading the code, so a rename in 47 has no failing test to
+  update for sites 1 and 4.

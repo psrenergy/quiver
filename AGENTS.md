@@ -215,7 +215,7 @@ Settled questions — don't relitigate without the user; each was decided delibe
   INTEGER 1/0, which therefore also reaches a REAL column through the int-for-REAL coercion. There
   is no boolean setter in the C API and none is needed: each binding converts before the FFI call
   (`Element.set` in Dart, `setElementField` / `setElementArray` / `marshalParams` /
-  `updateGroupColumns` / `upsertRowColumns` in JS, the five sol2 converters in
+  `updateGroupColumns` / `upsertRowColumns` in JS, `lua_to_value` / `lua_cell_as` in
   `src/lua_runner.cpp`). Julia and Python need no conversion branch because `Bool <: Integer` and
   `bool` is an `int` subclass respectively, so a boolean takes each writer's integer branch. That
   is worth a test rather than an assumption: in Julia the group and row marshallers are
