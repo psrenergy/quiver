@@ -29,6 +29,23 @@ include("fixture.jl")
         Quiver.close!(db)
     end
 
+    @testset "Element Scalar Set To Nothing" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Config 1", float_attribute = 1.5)
+        @test Quiver.read_scalar_float_by_id(db, "Configuration", "float_attribute", 1) == 1.5
+
+        Quiver.update_element!(db, "Configuration", 1; float_attribute = nothing)
+        @test isnothing(Quiver.read_scalar_float_by_id(db, "Configuration", "float_attribute", 1))
+
+        Quiver.update_element_by_label!(db, "Configuration", "Config 1"; float_attribute = 2.5)
+        Quiver.update_element_by_label!(db, "Configuration", "Config 1"; float_attribute = nothing)
+        @test isnothing(Quiver.read_scalar_float_by_id(db, "Configuration", "float_attribute", 1))
+
+        Quiver.close!(db)
+    end
+
     @testset "Element Multiple Scalars" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
         db = Quiver.from_schema(":memory:", path_schema)

@@ -48,6 +48,9 @@ Project.toml      # Deps: Artifacts, CEnum, Dates, Libdl; julia 1.11 compat
   `update_vector_group!` / `update_set_group!` / `update_time_series_group!`). The union is an
   explicit list on purpose: a `where T` form would also match `Vector{Any}`, which must keep
   raising `MethodError`.
+- **`Element` scalars**: `el[name] = nothing` writes SQL NULL via `quiver_element_set_null`
+  (so `create_element!`/`update_element!(...; x = nothing)` clears a column), and any
+  `AbstractString` is accepted. Arrays stay non-null (root design decision).
 - **Scalar bulk NULLs (nullability-aware element type)**: `read_scalar_{integers,floats,strings}`
   first read `get_scalar_metadata(db, collection, attribute).not_null`, then return a **concrete
   `Vector{T}`** for `NOT NULL` columns and a **`Vector{Optional{T}}`** for nullable columns — for
