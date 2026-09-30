@@ -766,7 +766,12 @@ Implementation conventions in `lua_runner.cpp`:
   therefore hands out a `std::shared_ptr<csv_write::Writer>` and records a `weak_ptr` in
   `Impl::open_writers`; `close_open_writers()` locks each one still alive, closes it (swallowing a
   flush failure — a scope-exit guard has no caller to report to, exactly as `~Writer` did), and
-  clears the list. A writer therefore does not outlive its `run()`. The `collect_garbage()` call
+  clears the list. A writer therefore does not outlive its `run()`. `db:open_file` handles,
+  readers and writers, are recorded the same way (a `weak_ptr` in `Impl::open_binary_files`) and
+  closed by `close_open_writers()`, so no binary file handle outlives its `run()` either. A writer
+  left in a global would otherwise hold its path in the process-wide write registry until the
+  `LuaRunner` is destroyed (pinned by `LuaBinaryTest.WriterHeldInAGlobalIsClosedWhenRunReturns`
+  and `HandleFromAnEarlierRunIsClosed`). The `collect_garbage()` call
   stays for every other sol2-owned resource; one call was proven sufficient by an executed probe
   against this repo's own vendored sol2/Lua build (RESEARCH.md Q1) — it must not be "hardened"
   into a loop.

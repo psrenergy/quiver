@@ -867,7 +867,9 @@ File I/O is db-scoped (\`db:open_file\` / \`db:bin_to_csv\` / \`db:csv_to_bin\`)
 base paths, sandboxed to the database directory (see Critical rules), and \`get_file_path()\` returns
 the resolved absolute path. The pure-metadata builders and expression constructors live under the
 global \`quiver\` table. Mirrors the Julia surface; aggregation ops are strings (Lua has no enums);
-operators are \`+ - * /\` and unary \`-\`, with scalars allowed on either side.
+operators are \`+ - * /\` and unary \`-\`, with scalars allowed on either side. A file handle does not
+outlive the \`run()\` that opened it: any handle still open when the script returns is closed (and a
+writer flushed), so reopen the file in each script.
 
 \`\`\`lua
 local md = quiver.metadata{

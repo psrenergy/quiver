@@ -123,6 +123,39 @@ TEST_F(LuaBinaryTest, ReadNullWithoutAllowThrows) {
     EXPECT_THROW(lua.run("local r = db:open_file('bin_a', 'r')\nr:read({row=2})\n"), std::exception);
 }
 
+TEST_F(LuaBinaryTest, WriterHeldInAGlobalIsClosedWhenRunReturns) {
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+    // No `local`, no f:close(): f is a GC root when run() returns.
+    lua.run(R"(
+        local md = quiver.metadata{ initial_datetime='2025-01-01T00:00:00', unit='MW',
+            labels={'v1'}, dimensions={'row'}, dimension_sizes={2} }
+        f = db:open_file('bin_global', 'w', md)
+        f:write({42.0}, {row=1})
+        f:write({43.0}, {row=2})
+    )");
+    // A second run can open it for reading: the path is no longer in the write registry, and
+    // the data was flushed.
+    lua.run(R"(
+        local r = db:open_file('bin_global', 'r')
+        assert(r:read({row=1})[1] == 42.0, 'row 1')
+        assert(r:read({row=2})[1] == 43.0, 'row 2')
+        r:close()
+    )");
+}
+
+TEST_F(LuaBinaryTest, HandleFromAnEarlierRunIsClosed) {
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+    lua.run(R"(
+        local md = quiver.metadata{ initial_datetime='2025-01-01T00:00:00', unit='MW',
+            labels={'v1'}, dimensions={'row'}, dimension_sizes={1} }
+        local w = db:open_file('bin_reuse', 'w', md); w:write({1.0}, {row=1}); w:close()
+        g = db:open_file('bin_reuse', 'r')
+    )");
+    lua.run(R"(assert(not g:is_open(), 'a handle must not outlive its run()'))");
+}
+
 TEST_F(LuaBinaryTest, ReadRejectsNonIntegerDimension) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::LuaRunner lua(db);
