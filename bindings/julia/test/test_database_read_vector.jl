@@ -177,9 +177,14 @@ include("fixture.jl")
 
         @test_throws ArgumentError Quiver.read_vector_date_times(db, "AllTypes", "label_value")
         @test_throws "AllTypes.label_value" Quiver.read_vector_date_times(db, "AllTypes", "label_value")
-        @test_throws ArgumentError Quiver.read_vector_date_time_by_id(db, "AllTypes", "label_value", 1)
+        @test_throws ArgumentError Quiver.read_vector_date_times_by_id(db, "AllTypes", "label_value", 1)
 
         Quiver.close!(db)
+    end
+
+    @testset "Singular date-time by-id names are gone" begin
+        @test !isdefined(Quiver, :read_vector_date_time_by_id)
+        @test !isdefined(Quiver, :read_set_date_time_by_id)
     end
 
     @testset "Read Vector Strings By ID" begin

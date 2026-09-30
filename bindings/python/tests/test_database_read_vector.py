@@ -206,7 +206,7 @@ class TestReadVectorDateTimesBulk:
             all_types_db.read_vector_date_times("AllTypes", "label_value")
 
         with pytest.raises(ValueError, match=r"AllTypes\.label_value"):
-            all_types_db.read_vector_date_time_by_id("AllTypes", "label_value", 1)
+            all_types_db.read_vector_date_times_by_id("AllTypes", "label_value", 1)
 
 
 class TestReadVectorStringsById:
@@ -217,22 +217,26 @@ class TestReadVectorStringsById:
         assert result == ["hello", "world"]
 
 
-class TestReadVectorDateTimeById:
-    def test_read_vector_date_time_by_id(self, all_types_db: Database) -> None:
-        """read_vector_date_time_by_id wraps read_vector_strings_by_id + datetime parsing."""
+class TestReadVectorDateTimesById:
+    def test_read_vector_date_times_by_id(self, all_types_db: Database) -> None:
+        """read_vector_date_times_by_id wraps read_vector_strings_by_id + datetime parsing."""
         id1 = all_types_db.create_element("AllTypes", label="item1")
         all_types_db.update_element(
             "AllTypes",
             id1,
             label_value=["2024-01-15T10:30:00", "2024-06-20T08:00:00"],
         )
-        result = all_types_db.read_vector_date_time_by_id("AllTypes", "label_value", id1)
+        result = all_types_db.read_vector_date_times_by_id("AllTypes", "label_value", id1)
         assert len(result) == 2
         assert isinstance(result[0], datetime)
         assert result[0].year == 2024
         assert result[0].month == 1
         assert result[0].day == 15
         assert result[1].month == 6
+
+    def test_singular_date_time_by_id_names_are_gone(self, all_types_db: Database) -> None:
+        assert not hasattr(all_types_db, "read_vector_date_time_by_id")
+        assert not hasattr(all_types_db, "read_set_date_time_by_id")
 
 
 # -- Convenience vector reads with data (gap-fill) --------------------------
@@ -330,4 +334,5 @@ class TestVectorNullCells:
         assert db.read_vector_strings_by_id("Items", "note", item) == [None, "b"]
         jan_first = datetime(2024, 1, 1, tzinfo=timezone.utc)
         assert db.read_vector_date_times("Items", "date_event") == [[jan_first, None]]
-        assert db.read_vector_date_time_by_id("Items", "date_event", item) == [jan_first, None]
+        assert db.read_vector_date_times_by_id("Items", "date_event", item) == [jan_first, None]
+        assert db.read_vectors_by_id("Items", item)["date_event"] == [jan_first, None]

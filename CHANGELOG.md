@@ -75,6 +75,12 @@ callers to change something are prefixed **BREAKING** and say what to do.
   `ArgumentError` ("Unsupported type ... for '<name>'"). *Adapt:* pass the columns flat, or use
   `updateTimeSeriesGroup` / `updateVectorGroup` / `updateSetGroup` to write one named group.
 
+- **BREAKING — Julia/Python: two date-time readers are renamed to the plural form.**
+  `read_vector_date_time_by_id` → `read_vector_date_times_by_id` and `read_set_date_time_by_id` →
+  `read_set_date_times_by_id`. They return a list, and the naming rule makes a list-returning
+  reader plural (Dart already spelled them `readVectorDateTimesById` / `readSetDateTimesById`).
+  `read_scalar_date_time_by_id` is unchanged. *Adapt:* rename the calls; there is no alias.
+
 ### Fixed
 
 - **Python: a `datetime` is accepted on every write path, and an aware one is stored as its UTC

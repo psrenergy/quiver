@@ -184,7 +184,7 @@ include("fixture.jl")
 
         @test_throws ArgumentError Quiver.read_set_date_times(db, "AllTypes", "tag")
         @test_throws "AllTypes.tag" Quiver.read_set_date_times(db, "AllTypes", "tag")
-        @test_throws ArgumentError Quiver.read_set_date_time_by_id(db, "AllTypes", "tag", 1)
+        @test_throws ArgumentError Quiver.read_set_date_times_by_id(db, "AllTypes", "tag", 1)
 
         Quiver.close!(db)
     end
@@ -333,7 +333,7 @@ include("fixture.jl")
         # The DateTime wrapper keeps the NULL cell too.
         Quiver.update_set_group!(db, "Collection", "tags", id; tag = ["2024-01-01", nothing])
         @test Set(Quiver.read_set_date_times(db, "Collection", "tag")[1]) == Set([DateTime(2024, 1, 1), nothing])
-        @test Set(Quiver.read_set_date_time_by_id(db, "Collection", "tag", id)) == Set([DateTime(2024, 1, 1), nothing])
+        @test Set(Quiver.read_set_date_times_by_id(db, "Collection", "tag", id)) == Set([DateTime(2024, 1, 1), nothing])
 
         Quiver.close!(db)
     end
