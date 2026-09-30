@@ -57,6 +57,86 @@ TEST_F(LuaRunnerTest, GroupMetadataDimensionColumnOnlyForTimeSeries) {
     )");
 }
 
+// --- Metadata getters: scalar, vector and set tables (the time-series ones are above). Every nil
+// check sits next to a positive check on the same table, so a wrong table cannot pass vacuously ---
+
+TEST_F(LuaRunnerTest, GetScalarMetadataForeignKey) {
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"));
+    quiver::LuaRunner lua(db);
+    lua.run(R"(
+        local m = db:get_scalar_metadata("Child", "parent_id")
+        assert(m.name == "parent_id", "name")
+        assert(m.data_type == "integer", "data_type: " .. tostring(m.data_type))
+        assert(m.not_null == false, "not_null")
+        assert(m.primary_key == false, "primary_key")
+        assert(m.is_foreign_key == true, "is_foreign_key")
+        assert(m.references_collection == "Parent", "references_collection")
+        assert(m.references_column == "id", "references_column")
+        assert(m.default_value == nil, "no default")
+
+        local l = db:get_scalar_metadata("Child", "label")
+        assert(l.data_type == "text" and l.not_null == true, "label is TEXT NOT NULL")
+        assert(l.is_foreign_key == false and l.references_collection == nil, "label is not an FK")
+        assert(l.references_column == nil, "label references no column")
+    )");
+}
+
+TEST_F(LuaRunnerTest, GetScalarMetadataDefaultValue) {
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"));
+    quiver::LuaRunner lua(db);
+    lua.run(R"(
+        local m = db:get_scalar_metadata("Configuration", "integer_attribute")
+        assert(m.data_type == "integer", "data_type")
+        assert(m.default_value == "6", "default_value: " .. tostring(m.default_value))
+
+        local f = db:get_scalar_metadata("Configuration", "float_attribute")
+        assert(f.data_type == "real" and f.default_value == nil, "float_attribute is REAL with no default")
+
+        assert(db:get_scalar_metadata("Configuration", "string_attribute").data_type == "text", "text")
+        assert(db:get_scalar_metadata("Configuration", "date_attribute").data_type == "date_time", "date_time")
+    )");
+}
+
+TEST_F(LuaRunnerTest, GetVectorAndSetMetadata) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    quiver::LuaRunner lua(db);
+    lua.run(R"(
+        local v = db:get_vector_metadata("Collection", "values")
+        assert(v.group_name == "values", "vector group_name")
+        assert(#v.value_columns == 2, "two vector value columns, got " .. #v.value_columns)
+        assert(v.value_columns[1].name == "value_int" and v.value_columns[1].data_type == "integer", "value_int")
+        assert(v.value_columns[2].name == "value_float" and v.value_columns[2].data_type == "real", "value_float")
+
+        local s = db:get_set_metadata("Collection", "tags")
+        assert(s.group_name == "tags", "set group_name")
+        assert(#s.value_columns == 1 and s.value_columns[1].name == "tag", "tag column")
+        assert(s.value_columns[1].data_type == "text", "tag is text")
+    )");
+}
+
+TEST_F(LuaRunnerTest, ListScalarAttributesAndGroups) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    quiver::LuaRunner lua(db);
+    lua.run(R"(
+        local attributes = db:list_scalar_attributes("Collection")
+        local names = {}
+        for i, a in ipairs(attributes) do names[i] = a.name end
+        assert(table.concat(names, ",") == "id,label,some_integer,some_float",
+               "declaration order, got " .. table.concat(names, ","))
+        assert(attributes[1].primary_key == true and attributes[1].not_null == true, "id is a NOT NULL primary key")
+        assert(attributes[4].data_type == "real", "some_float is real")
+
+        local vg = db:list_vector_groups("Collection")
+        assert(#vg == 1 and vg[1].group_name == "values", "vector groups")
+        assert(vg[1].value_columns[1].name == "value_int" and vg[1].value_columns[2].data_type == "real",
+               "vector columns in declaration order")
+
+        local sg = db:list_set_groups("Collection")
+        assert(#sg == 1 and sg[1].group_name == "tags", "set groups")
+        assert(sg[1].value_columns[1].name == "tag" and sg[1].value_columns[1].data_type == "text", "set column")
+    )");
+}
+
 TEST_F(LuaRunnerTest, ReadTimeSeriesGroupById) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));

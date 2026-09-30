@@ -165,9 +165,9 @@ From the repo root:
 
 ## Acceptance criteria
 
-- [ ] Every one of the six Lua getters is called by at least one test, with positive assertions on
+- [x] Every one of the six Lua getters is called by at least one test, with positive assertions on
       `data_type`, FK fields and order.
-- [ ] `Database.ListVectorAndSetGroups` exists and passes.
+- [x] `Database.ListVectorAndSetGroups` exists and passes.
 
 ## Pitfalls
 
@@ -179,3 +179,70 @@ From the repo root:
 
 - Time-series metadata (already tested).
 - Any change to the getters (plan 49).
+
+## Implementation notes
+
+Implemented on `rs/plan52`. At planning time the branch sat at master `b4c62bb`. By the time implementation started it had been fast-forwarded to master `616c8a1`, which brought in plans 43-51 (#355-#363). So `git fetch origin && git merge origin/master` printed "Already up to date." There are no dependencies.
+
+**Verdict: implement.** The change is test-only. Six Lua getters that are bound and documented to agents had no positive test at all.
+
+### Drift fixed
+
+- **Plan 49 landed first.** Numeric order put it ahead of this plan. It added the fallback test `LuaRunnerTest.GroupMetadataDimensionColumnOnlyForTimeSeries` to `tests/test_lua_runner_time_series.cpp`. That test pins `dimension_column == nil` next to a positive check for all four vector/set getters and listers, and `"date_time"` for time series. This plan's Pitfall is therefore already covered, and the new tests do not repeat it.
+  - The builders are now `scalar_metadata_lua` / `group_metadata_lua` / `lua_data_type_name` (`src/lua_runner.cpp` ~L1702-1776), bound at L698-705. The plan quoted ~L663-670 and ~L1583-1711.
+- **Placement.** The tests use the plan's primary option: they are appended to `tests/test_lua_runner_time_series.cpp`, right after 49's test, under a `// --- Metadata getters ... ---` banner in the file's own banner style.
+  - The session plan had preferred a new `test_lua_runner_metadata.cpp`. Because 49 had already put a metadata test in this file, a new file would have split the Lua metadata tests in two.
+  - So there is no `tests/CMakeLists.txt` or `tests/AGENTS.md` edit. The plan's docs step applies only to the new-file option.
+- **"No test calls the six from Lua" was slightly off.** `db:list_vector_groups` / `db:list_set_groups` were already called, on the error path only (`tests/test_lua_runner_read.cpp:558-559`, plan 07). There was still no positive test.
+- **Checked at runtime:**
+  - `list_scalar_attributes` includes `id`, so the plan's `"id,label,some_integer,some_float"` stands.
+  - `DEFAULT 6` reads back as `"6"`.
+  - No Configuration row is needed.
+- **C++ core test placement.** In `tests/test_database_metadata.cpp` the banner `List groups: unknown collection` became `List groups`. The new test sits before `ListGroupsCollectionNotFound`.
+
+### Small additions to the plan's test code
+
+- `GetScalarMetadataForeignKey` adds `l.references_column == nil`.
+- `GetScalarMetadataDefaultValue` adds three checks, which cover all four `data_type` names that `lua-api.ts` promises:
+  - `float_attribute` is `"real"` with `default_value == nil` on the same table (the no-default branch);
+  - `string_attribute` is `"text"`;
+  - `date_attribute` is `"date_time"` (the `date_` prefix, `schema.cpp`).
+- `ListScalarAttributesAndGroups` adds four checks:
+  - `id` is `primary_key` and `not_null` (the rowid rule);
+  - `some_float` is `"real"`;
+  - listed vector column 2 is `"real"`;
+  - listed set column `tag` is `"text"`.
+- `Database.ListVectorAndSetGroups` adds `sets[0].dimension_column.empty()`.
+
+### Results
+
+- **New tests.** The plan's filter runs 5 tests; all pass.
+- **Mutation red.** Two temporary edits to `src/lua_runner.cpp`: `lua_data_type_name` `"real"` → `"float"`, and `is_foreign_key` forced to `false`.
+  - All four Lua tests failed, each on its targeted assert: `is_foreign_key`, `float_attribute is REAL with no default`, `value_float`, `some_float is real`.
+  - The core test stayed green, as it should.
+  - The edits were reverted with `git checkout -- src/lua_runner.cpp`. `grep -c MUTATION` printed 0 and the `src/` diff was empty.
+- **Full suites.** `quiver_tests` 1396/1396 and `quiver_c_tests` 571/571.
+- **`scripts/test-all.bat`** (end of batch 5) exited 0:
+
+  | Suite | Result |
+  |---|---|
+  | C++ | 1396 |
+  | C API | 571 |
+  | Julia | 1575 |
+  | Dart | 445 |
+  | JS | 242 |
+  | Python | 350 |
+
+  It ran before the last two list `data_type` asserts were added. After them, the 5 tests and the full `quiver_tests` (1396/1396) were re-run.
+- **`scripts/format.bat`** exited 0:
+  - clang-format changed nothing in the diff;
+  - Biome again rewrote 43 JS files CRLF→LF, as in plan 49. `git diff --ignore-cr-at-eol bindings/js` was empty, and `git checkout -- bindings/js` reverted them.
+- **Adversarial review.** A two-lens read-only workflow ran, and each finding was verified independently.
+  - The correctness lens raised one low finding: the `list_*` group results had no `data_type` assert. The verifier refuted it, because they share the covered `group_metadata_lua` path. The two one-clause checks were added anyway, so the first acceptance criterion holds for each getter.
+  - The scope lens returned `[]`.
+- No CHANGELOG entry (test-only).
+
+### For later plans
+
+- **Plan 75.** This plan leaves the Lua per-area list in `tests/AGENTS.md` unchanged, since no new file was created. That file's `scripts/test-all.bat` section also describes seven steps ending in a CLI smoke test. At `616c8a1` the script runs six suites, has no smoke step and ends in `All tests PASSED`. That is plan 65's area, and the README's "`test-all.bat` always reports failure" no longer holds.
+- **Any refactor of `scalar_metadata_lua` / `group_metadata_lua` / `lua_data_type_name`.** The net is these four tests plus 49's `GroupMetadataDimensionColumnOnlyForTimeSeries`.
