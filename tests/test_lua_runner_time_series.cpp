@@ -559,6 +559,20 @@ TEST_F(LuaRunnerTest, UpsertTimeSeriesRowMissingDimErrors) {
     EXPECT_THROW({ lua.run(script); }, std::runtime_error);
 }
 
+TEST_F(LuaRunnerTest, UpsertTimeSeriesRowUnsupportedValueTypeThrows) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    int64_t id = db.create_element("Collection", quiver::Element().set("label", "Item 1"));
+
+    quiver::LuaRunner lua(db);
+
+    // The message names the method the script called, not the internal converter.
+    expect_lua_error(lua,
+                     R"(db:upsert_time_series_row("Collection", "data", )" + std::to_string(id) +
+                         R"(, { date_time = "2024-01-01T00:00:00", value = print }))",
+                     "Cannot upsert_time_series_row: column 'value' has unsupported Lua type");
+}
+
 TEST_F(LuaRunnerTest, UpsertTimeSeriesRowByLabel) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));

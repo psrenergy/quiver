@@ -145,7 +145,7 @@ TEST_F(LuaRunnerTest, CreateElementUnsupportedAttributeTypeThrows) {
         lua.run(R"(db:create_element("Configuration", { label = "Item", enabled = print }))");
         FAIL() << "expected unsupported attribute type to throw";
     } catch (const std::runtime_error& e) {
-        EXPECT_NE(std::string(e.what()).find("Cannot table_to_element: attribute 'enabled'"), std::string::npos)
+        EXPECT_NE(std::string(e.what()).find("Cannot create_element: attribute 'enabled'"), std::string::npos)
             << e.what();
     }
 }
@@ -159,7 +159,7 @@ TEST_F(LuaRunnerTest, CreateElementUnsupportedArrayElementTypeThrows) {
         lua.run(R"(db:create_element("Configuration", { label = "Item", tags = { print, print } }))");
         FAIL() << "expected unsupported array element type to throw";
     } catch (const std::runtime_error& e) {
-        EXPECT_NE(std::string(e.what()).find("Cannot table_to_element: array 'tags'"), std::string::npos) << e.what();
+        EXPECT_NE(std::string(e.what()).find("Cannot create_element: array 'tags'"), std::string::npos) << e.what();
     }
 }
 
@@ -286,6 +286,7 @@ TEST_F(LuaRunnerTest, CreateElementArrayCellTypeMismatchThrows) {
             lua.run(script);
             FAIL() << "expected a mismatched array cell to throw: " << script;
         } catch (const std::runtime_error& e) {
+            EXPECT_NE(std::string(e.what()).find("Cannot create_element: array '"), std::string::npos) << e.what();
             EXPECT_NE(std::string(e.what()).find("cell #2 has unsupported Lua type"), std::string::npos) << e.what();
         }
     }

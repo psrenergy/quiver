@@ -311,8 +311,7 @@ TEST_F(LuaRunnerTest, QueryParameterUnsupportedTypeThrows) {
         lua.run(R"(db:query_integer("SELECT id FROM Configuration WHERE label = ?", { print }))");
         FAIL() << "expected unsupported query parameter type to throw";
     } catch (const std::runtime_error& e) {
-        EXPECT_NE(std::string(e.what()).find("Cannot lua_table_to_values: parameter #1"), std::string::npos)
-            << e.what();
+        EXPECT_NE(std::string(e.what()).find("Cannot query_integer: parameter #1"), std::string::npos) << e.what();
     }
 }
 

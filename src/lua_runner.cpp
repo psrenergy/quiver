@@ -965,8 +965,9 @@ struct LuaRunner::Impl {
         ns.set_function("metadata", [](const sol::table& t) { return build_metadata_from_lua(t); });
         ns.set_function("metadata_from_toml",
                         [](const std::string& content) { return BinaryMetadata::from_toml_content(content); });
-        ns.set_function("metadata_from_element",
-                        [](const sol::table& t) { return BinaryMetadata::from_element(table_to_element(t)); });
+        ns.set_function("metadata_from_element", [](const sol::table& t) {
+            return BinaryMetadata::from_element(table_to_element("metadata_from_element", t));
+        });
         // NOLINTEND(performance-unnecessary-value-parameter)
     }
 
@@ -1431,14 +1432,14 @@ struct LuaRunner::Impl {
             val);
     }
 
-    static std::map<std::string, Value> lua_table_to_value_map(const sol::table& t) {
+    static std::map<std::string, Value> lua_table_to_value_map(const std::string& caller, const sol::table& t) {
         // Column order in the resulting map is alphabetical (std::map invariant),
         // which is fine because the C++ layer indexes by column name rather than
         // relying on positional order. Callers should not depend on insertion order.
         std::map<std::string, Value> result;
         for (auto& pair : t) {
             auto key = pair.first.as<std::string>();
-            result[key] = lua_to_value(pair.second, "lua_table_to_value_map", "column '" + key + "'");
+            result[key] = lua_to_value(pair.second, caller, "column '" + key + "'");
         }
         return result;
     }
@@ -1447,19 +1448,19 @@ struct LuaRunner::Impl {
     // border: lua_table_to_vector (bounded by t.size()) would silently cut such an array short, and
     // table_to_element skips it outright when the hole is cell 1. Element arrays stay dense; the
     // group writers are the ones that write a hole as NULL.
-    static void require_dense_array(const sol::table& arr, const std::string& name) {
+    static void require_dense_array(const std::string& caller, const sol::table& arr, const std::string& name) {
         size_t entries = 0;
         for ([[maybe_unused]] const auto& entry : arr) {
             ++entries;
         }
         if (entries != arr.size()) {
-            throw std::runtime_error("Cannot table_to_element: array '" + name +
+            throw std::runtime_error("Cannot " + caller + ": array '" + name +
                                      "' has a nil hole or a non-integer key; write NULL cells with "
                                      "update_vector_group or update_set_group");
         }
     }
 
-    static Element table_to_element(const sol::table& values) {
+    static Element table_to_element(const std::string& caller, const sol::table& values) {
         Element element;
         for (const auto& pair : values) {
             auto key = pair.first;
@@ -1468,12 +1469,12 @@ struct LuaRunner::Impl {
 
             if (val.is<sol::table>()) {
                 auto arr = val.as<sol::table>();
-                require_dense_array(arr, k);
+                require_dense_array(caller, arr, k);
                 if (arr.size() > 0) {
                     sol::object first = arr[1];
                     // Cell 1 only picks the element type; lua_table_to_vector checks the rest.
                     // A boolean array is an INTEGER array.
-                    const std::string array_caller = "table_to_element: array '" + k + "'";
+                    const std::string array_caller = caller + ": array '" + k + "'";
                     if (is_lua_boolean(first) || first.is<int64_t>()) {
                         element.set(k, lua_table_to_vector<int64_t>(arr, array_caller));
                     } else if (first.is<double>()) {
@@ -1483,7 +1484,7 @@ struct LuaRunner::Impl {
                     } else {
                         // Surface unsupported element types loudly instead of silently
                         // dropping the attribute (same policy as lua_to_value)
-                        throw std::runtime_error("Cannot table_to_element: array '" + k +
+                        throw std::runtime_error("Cannot " + caller + ": array '" + k +
                                                  "' has unsupported element type");
                     }
                 }
@@ -1496,19 +1497,19 @@ struct LuaRunner::Impl {
                             element.set(k, x);
                         }
                     },
-                    lua_to_value(val, "table_to_element", "attribute '" + k + "'"));
+                    lua_to_value(val, caller, "attribute '" + k + "'"));
             }
         }
         return element;
     }
 
     static int64_t create_element_lua(Database& db, const std::string& collection, const sol::table& values) {
-        auto element = table_to_element(values);
+        auto element = table_to_element("create_element", values);
         return db.create_element(collection, element);
     }
 
     static void update_element_lua(Database& db, const std::string& collection, int64_t id, const sol::table& values) {
-        auto element = table_to_element(values);
+        auto element = table_to_element("update_element", values);
         db.update_element(collection, id, element);
     }
 
@@ -1516,7 +1517,7 @@ struct LuaRunner::Impl {
                                             const std::string& collection,
                                             const std::string& label,
                                             const sol::table& values) {
-        auto element = table_to_element(values);
+        auto element = table_to_element("update_element_by_label", values);
         db.update_element_by_label(collection, label, element);
     }
 
@@ -1741,12 +1742,11 @@ struct LuaRunner::Impl {
         return t;
     }
 
-    static std::vector<Value> lua_table_to_values(const sol::table& parameters) {
+    static std::vector<Value> lua_table_to_values(const std::string& caller, const sol::table& parameters) {
         std::vector<Value> values;
         for (size_t i = 1; i <= parameters.size(); ++i) {
             // A skipped parameter would shift every later placeholder, so anything unsupported throws.
-            values.push_back(
-                lua_to_value(parameters.get<sol::object>(i), "lua_table_to_values", "parameter #" + std::to_string(i)));
+            values.push_back(lua_to_value(parameters.get<sol::object>(i), caller, "parameter #" + std::to_string(i)));
         }
         return values;
     }
@@ -1754,7 +1754,7 @@ struct LuaRunner::Impl {
     static sol::object
     query_string_lua(Database& db, const std::string& sql, sol::optional<sol::table> parameters, sol::this_state s) {
         sol::state_view lua(s);
-        auto values = parameters ? lua_table_to_values(*parameters) : std::vector<Value>{};
+        auto values = parameters ? lua_table_to_values("query_string", *parameters) : std::vector<Value>{};
         auto result = db.query_string(sql, values);
         if (result.has_value()) {
             return sol::make_object(lua, *result);
@@ -1765,7 +1765,7 @@ struct LuaRunner::Impl {
     static sol::object
     query_integer_lua(Database& db, const std::string& sql, sol::optional<sol::table> parameters, sol::this_state s) {
         sol::state_view lua(s);
-        auto values = parameters ? lua_table_to_values(*parameters) : std::vector<Value>{};
+        auto values = parameters ? lua_table_to_values("query_integer", *parameters) : std::vector<Value>{};
         auto result = db.query_integer(sql, values);
         if (result.has_value()) {
             return sol::make_object(lua, *result);
@@ -1776,7 +1776,7 @@ struct LuaRunner::Impl {
     static sol::object
     query_float_lua(Database& db, const std::string& sql, sol::optional<sol::table> parameters, sol::this_state s) {
         sol::state_view lua(s);
-        auto values = parameters ? lua_table_to_values(*parameters) : std::vector<Value>{};
+        auto values = parameters ? lua_table_to_values("query_float", *parameters) : std::vector<Value>{};
         auto result = db.query_float(sql, values);
         if (result.has_value()) {
             return sol::make_object(lua, *result);
@@ -2228,7 +2228,7 @@ struct LuaRunner::Impl {
                                            const std::string& group,
                                            int64_t id,
                                            sol::table row) {
-        db.upsert_time_series_row(collection, group, id, lua_table_to_value_map(row));
+        db.upsert_time_series_row(collection, group, id, lua_table_to_value_map("upsert_time_series_row", row));
     }
 
     static void upsert_time_series_row_by_label_lua(Database& db,
@@ -2236,7 +2236,8 @@ struct LuaRunner::Impl {
                                                     const std::string& group,
                                                     const std::string& label,
                                                     sol::table row) {
-        db.upsert_time_series_row_by_label(collection, group, label, lua_table_to_value_map(row));
+        db.upsert_time_series_row_by_label(
+            collection, group, label, lua_table_to_value_map("upsert_time_series_row_by_label", row));
     }
 
     // ========================================================================

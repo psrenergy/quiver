@@ -137,7 +137,7 @@ TEST_F(LuaRunnerTest, UpdateElementRefusesArrayWithNilHole) {
     expect_lua_error(
         lua,
         R"(db:update_element("Collection", 3, { value_int = db:read_vectors_by_id("Collection", 1).value_int }))",
-        "has a nil hole");
+        "Cannot update_element: array 'value_int' has a nil hole");
     expect_lua_error(lua,
                      R"(db:update_element("Collection", 3, {
                          label = "Item 3b", value_int = db:read_vectors_by_id("Collection", 2).value_int }))",
@@ -241,6 +241,19 @@ TEST_F(LuaRunnerTest, UpdateElementByIdNonExistent) {
 
     // Updating a non-existent element throws "Element not found"
     expect_lua_error(lua, R"(db:update_element("Collection", 999, { some_integer = 5 }))", "Element not found");
+}
+
+TEST_F(LuaRunnerTest, UpdateElementUnsupportedAttributeTypeThrows) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    db.create_element("Collection", quiver::Element().set("label", "Item 1"));
+
+    quiver::LuaRunner lua(db);
+
+    // The message names the method the script called, not the internal converter.
+    expect_lua_error(lua,
+                     R"(db:update_element("Collection", 1, { some_integer = print }))",
+                     "Cannot update_element: attribute 'some_integer' has unsupported Lua type");
 }
 
 TEST_F(LuaRunnerTest, UpdateElementByLabel) {
