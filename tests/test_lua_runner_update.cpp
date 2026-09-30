@@ -376,6 +376,11 @@ TEST_F(LuaRunnerTest, UpdateGroupErrors) {
     expect_lua_error(lua, R"(db:update_vector_group("Child", "refs", 1, { parent_ref = {} }))", "contain no rows");
     expect_lua_error(
         lua, R"(db:update_set_group("Child", "parents", 1, { parent_ref = 5 }))", "must be an array of values");
+    // A non-string column key: one Pattern 1 message in every build, not a sol2 panic (Debug) or
+    // column '' (Release).
+    expect_lua_error(lua,
+                     R"(db:update_vector_group("Child", "refs", 1, { [true] = { 1 } }))",
+                     "Cannot update_vector_group: column names must be strings");
 
     // Every rejected call left the existing row alone.
     EXPECT_EQ(db.read_vector_integers_by_id("Child", "parent_ref", 1), (std::vector<std::optional<int64_t>>{1}));

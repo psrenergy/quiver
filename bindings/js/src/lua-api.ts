@@ -52,7 +52,7 @@ Lua values map to Quiver column values as follows:
 | number (float)     | REAL         | A float is rejected for an INTEGER column.     |
 | string             | TEXT         | Also used for \`date_time\` columns (ISO 8601).  |
 | boolean            | INTEGER 1/0  | SQLite has no boolean type; \`true\` writes 1, \`false\` 0. |
-| \`nil\`              | NULL         | In query params, file paths, ts rows, relations.|
+| \`nil\`              | NULL         | In query params (not trailing), ts rows, group cells, relations. |
 | table (1-indexed)  | array        | Used for vectors/sets and column-oriented data.|
 
 A boolean is accepted **wherever an integer is** — element scalars and arrays, query parameters,
@@ -114,9 +114,12 @@ midnight.
   \`Cannot <op>: database is in-memory, file operations are unavailable\`.
 - **Output.** A script can \`return\` one value and the host receives it as JSON — prefer this over
   \`print()\` when you need structured data back (\`print()\` still works and is captured). Only the
-  **first** returned value is encoded. Arrays are 1-indexed (iterate with \`ipairs\`); reading a NULL
-  yields \`nil\`, writing \`nil\` stores NULL where NULL is accepted (query params, ts rows,
-  relation targets — but NOT element scalar attributes; see CRUD).
+  **first** returned value is encoded. Arrays are 1-indexed. Iterate with \`ipairs\` only where no
+  NULL can appear: a read of a nullable column (a bulk scalar read, a vector/set inner list, a
+  time-series value column, \`db:read_time_series_row\`) has \`nil\` holes, and \`ipairs\` stops at
+  the first one (see Scalar reads). Reading a NULL yields \`nil\`; writing \`nil\` stores NULL where
+  NULL is accepted (query params except a trailing one, ts rows, group cells, relation targets —
+  but NOT element scalar attributes; see CRUD).
 
   \`\`\`lua
   return { ids = db:read_element_ids("Collection"), total = 3 }
@@ -134,10 +137,10 @@ midnight.
   | any other table            | object, keys sorted; integer keys stringify              |
 
   **A table with holes is an object, not an array.** A bulk read of a nullable column returns
-  \`nil\` holes (see Reading), so \`return db:read_scalar_integers(c, a)\` encodes as
+  \`nil\` holes (see Scalar reads), so \`return db:read_scalar_integers(c, a)\` encodes as
   \`{"1":10,"3":30}\` — not \`[10,null,30]\` — and the keys sort as text (\`"1","11","2"\`). When the
   host needs positional scalar data, return the ids alongside and fill the holes yourself:
-  \`local v = db:read_scalar_integers(c, a); local out = {}; for i in ipairs(ids) do out[i] = v[i] or false end\`.
+  \`local ids = db:read_element_ids(c); local v = db:read_scalar_integers(c, a); local out = {}; for i = 1, #ids do out[i] = v[i] or false end\`.
   **Inside** a vector/set read an inner list with an interior NULL cell encodes as an object nested
   in the outer array (\`[{"1":10,"3":30},[]]\`), but a trailing NULL cell leaves no trace at all:
   \`[10, NULL]\` encodes as the plain \`[10]\`. The ids count elements, not rows, so they cannot
@@ -150,8 +153,10 @@ midnight.
   self-referencing table); a result over 64 MB raises
   \`Cannot run: script return value exceeds ... bytes of JSON\`; a string holding bytes that are not
   valid UTF-8 raises \`Cannot run: script return value contains a string that is not valid UTF-8\`;
-  and a table where an integer key and a string key spell the same thing (\`{[1] = 'a', ['1'] = 'b'}\`)
-  raises \`Cannot run: script returned a table with duplicate key '1'\`.
+  a table where an integer key and a string key spell the same thing (\`{[1] = 'a', ['1'] = 'b'}\`)
+  raises \`Cannot run: script returned a table with duplicate key '1'\`; and a table with a key that
+  is neither an integer nor a string (a boolean, a float such as \`1.5\`, a table) raises
+  \`Cannot run: script returned a table with an unsupported key type\`.
 - **Embedding harness may restrict further.** The library itself allows transactions and the
   (sandboxed) CSV/file operations below. A host that runs your script (e.g. a hosted \`run_lua\`
   tool) may disable some of them and report \`disabled in the run_lua sandbox\` — that limit comes
@@ -201,9 +206,10 @@ end)   -- both writes commit together; if either throws, both roll back
 \`\`\`
 
 **Caveat:** if the host already runs your script inside a plain transaction (not a dry run), an
-explicit \`db:begin_transaction()\` will error (\`cannot start a transaction within a transaction\`)
-and a mid-script \`db:commit()\` would prematurely end the host's transaction. When unsure whether
-a transaction is already open, check \`db:in_transaction()\` first, or just issue writes directly:
+explicit \`db:begin_transaction()\` will error
+(\`Cannot begin_transaction: transaction already active\`) and a mid-script \`db:commit()\` would
+prematurely end the host's transaction. \`db:transaction(fn)\` begins one too, so it fails the same
+way. When unsure whether a transaction is already open, check \`db:in_transaction()\` first, or just issue writes directly:
 outside a transaction each \`db:\` write commits on its own, while inside the host's transaction it
 commits or rolls back with the host's.
 
@@ -244,6 +250,11 @@ Rules worth knowing:
   \`Cannot begin_dry_run: dry run already active\` — check \`db:in_dry_run()\` first and skip the
   wrapper when one is already active. Do **not** call \`db:end_dry_run()\` to get around it: that
   ends the host's dry run, and everything you write afterwards is committed for real.
+- **Nor inside a plain transaction.** If the host (or a \`db:transaction\` block) already holds a
+  plain transaction, \`db:begin_dry_run()\` and \`db:dry_run(fn)\` throw
+  \`Cannot begin_dry_run: transaction already active\`. \`db:in_transaction()\` is true under a host
+  dry run *and* under a host transaction, so it is the one check that covers both;
+  \`db:in_dry_run()\` covers only the first.
 - For a rough sense of how much a run touched, \`db:query_integer("SELECT total_changes()")\` gives
   the number of rows inserted, updated or deleted on this connection.
 
@@ -302,10 +313,10 @@ Notes:
   \`{ x = nil }\` is identical to \`{}\`; an update/create table that ends up with no attributes
   **throws** (\`...must have at least one scalar attribute\` on create, \`...at least one attribute
   to update\` on update). To leave a column unchanged, omit the key — you cannot set a scalar to
-  NULL via the element table. (\`nil\` → NULL is accepted by \`update_relation\`, and as a cell in
-  the group writers; \`upsert_time_series_row\` and \`update_time_series_files\` replace the whole
-  row, so a column you leave out (or set to \`nil\`, the same thing) is cleared — see Time series
-  and Time series files.)
+  NULL via the element table. (\`nil\` → NULL is accepted by \`update_relation\` and in query params
+  (not a trailing one), and as a cell in the group writers; \`upsert_time_series_row\` and
+  \`update_time_series_files\` replace the whole row, so a column you leave out (or set to \`nil\`,
+  the same thing) is cleared — see Time series and Time series files.)
 - **\`update_relation\` points one scalar foreign-key relation at another element**, named by the
   target's label. The column is derived from the naming convention —
   \`lowercase(collection_to) .. "_" .. relation_type\`, so
@@ -322,7 +333,10 @@ Notes:
 
 ## Scalar reads (bulk, across all elements)
 
-Each returns a flat array (1-indexed table), one value per element, in id order.
+Each returns a flat array (1-indexed table), one value per element, in id order. A NULL is a
+\`nil\` hole at that position, so \`ipairs\` stops at the first one and \`#\` is unreliable. Loop
+\`for i = 1, #ids\` over \`local ids = db:read_element_ids(collection)\` and index the result with
+\`i\`.
 
 \`\`\`lua
 db:read_scalar_integers(collection, attribute)   -- { 42, 37, ... }
@@ -443,9 +457,10 @@ local values = db:read_time_series_row(collection, group, attribute, date_time)
 \`\`\`
 
 One value per element using **last non-null value at or before \`date_time\`** semantics. Elements
-with no matching data yield \`nil\` in the array. \`date_time\` is an ISO 8601 string. A group with
-more than one dimension column (e.g. \`date_time\` + \`block\`) throws — read it with
-\`read_time_series_group\`.
+with no matching data yield \`nil\` in the array, so the result can hold \`nil\` holes: loop over
+\`db:read_element_ids(collection)\` rather than using \`ipairs\`. \`date_time\` is an ISO 8601
+string. A group with more than one dimension column (e.g. \`date_time\` + \`block\`) throws — read
+it with \`read_time_series_group\`.
 
 ### Replace a whole group (column-oriented — SAME shape as the read)
 
@@ -474,8 +489,8 @@ db:update_time_series_group("Items", "data", id, ts)   -- write the whole group 
 
 **DO NOT pass an array of row tables** (\`{ { date_time = ..., value = ... }, ... }\`) — that is the
 \`upsert_time_series_row\` shape, not this one. Doing so raises
-\`stack index -1, expected string, received number\` (the integer array indices 1, 2, 3 are not
-column names). Each value of the top-level table must be an **array**, not a scalar.
+\`Cannot update_time_series_group: column names must be strings; pass { column = { values... } }, not an array of row tables\`.
+Each value of the top-level table must be an **array**, not a scalar.
 
 **Rules** (a violation throws; see "Errors abort the script" for what is kept):
 - Every column value must be an array — a bare scalar throws \`column '...' must be an array of values\`.
@@ -489,8 +504,9 @@ column names). Each value of the top-level table must be an **array**, not a sca
   column **longer** than the dimension column throws \`column '...' has length N but expected M\`.
 - Named columns whose dimension transposes to zero rows throw (\`contain no rows; pass an empty
   table {} to clear the group\`) — only a bare \`{}\` clears.
-- Integer values are accepted for REAL columns (converted on insert). Booleans, functions, and
-  other unsupported Lua types throw \`column '...' has unsupported Lua type\`.
+- Integer values are accepted for REAL columns (converted on insert), and a boolean is written as
+  1/0. A function, a table or another unsupported Lua type throws
+  \`column '...' has unsupported Lua type\`.
 - The element id must exist; the \`_by_label\` form takes a label in its place, with
   \`update_element_by_label\`'s resolution and miss semantics. Every rule above applies to both.
 
@@ -595,9 +611,15 @@ entirely.
 ## Query (parameterized SQL)
 
 Positional \`?\` placeholders; \`params\` is an optional 1-indexed array. Each returns the first
-column of the first row as the requested type, or \`nil\` if there is no result. The number of
+column of the first row, or \`nil\` when there is no row, the value is NULL, or it is not already
+the requested type. Only \`query_float\` converts (it widens an INTEGER), so
+\`db:query_string("SELECT COUNT(*) ...")\` and \`db:query_integer("SELECT AVG(x) ...")\` return
+\`nil\`; \`CAST\` in the SQL when unsure (\`SELECT CAST(AVG(x) AS INTEGER)\`). The number of
 \`params\` must match the number of \`?\` placeholders exactly — a mismatch (too few or too many)
-throws rather than binding NULL or ignoring extras.
+throws rather than binding NULL or ignoring extras. A \`nil\` param binds NULL only in a table
+constructor whose last entry is not \`nil\` (\`{ nil, 5 }\`): Lua stores no key for a \`nil\`, so
+\`{ 5, nil }\` or \`{ nil }\` comes up short and throws that mismatch. To test for NULL, write
+\`IS NULL\` in the SQL.
 
 \`\`\`lua
 db:query_string(sql, params)    -- string or nil

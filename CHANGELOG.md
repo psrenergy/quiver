@@ -14,6 +14,13 @@ callers to change something are prefixed **BREAKING** and say what to do.
   `db:dry_run` undo their block. The CSV section now says that `import_csv` replaces the target
   table (and that `group = ""` is the scalar table), and that `upsert_time_series_row` and
   `update_time_series_files` replace the whole row.
+- **Lua: an array of row tables passed to a group writer throws one clear error in every build**
+  (`Cannot <method>: column names must be strings; pass { column = { values... } }, not an array
+  of row tables`). It used to raise sol2's raw `stack index -1, expected string, received number`
+  in Debug and a misleading `column '1' must be an array of values` in Release; a boolean key
+  became column `''`. The agent-facing reference also now documents boolean cells, the real
+  transaction/dry-run error texts, that `query_*` do not convert types, the `nil` holes in bulk
+  reads and the trailing-`nil` query-parameter limit.
 
 ## [0.12.6] — unreleased
 

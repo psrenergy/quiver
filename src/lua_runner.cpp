@@ -2000,6 +2000,14 @@ struct LuaRunner::Impl {
     static std::vector<GroupColumn> collect_group_columns(const std::string& caller, const sol::table& columns) {
         std::vector<GroupColumn> result;
         for (auto& pair : columns) {
+            // Check the key's type before converting it. sol2's string getter is unchecked in
+            // Release (SOL_SAFE_GETTER off): key 1 became column "1" and a boolean key column "",
+            // so an array of row tables got a misleading error there and a raw sol2 panic in Debug.
+            if (pair.first.get_type() != sol::type::string) {
+                throw std::runtime_error("Cannot " + caller +
+                                         ": column names must be strings; pass { column = { values... } }, "
+                                         "not an array of row tables");
+            }
             auto name = pair.first.as<std::string>();
             if (!pair.second.is<sol::table>()) {
                 throw std::runtime_error("Cannot " + caller + ": column '" + name + "' must be an array of values");

@@ -250,11 +250,11 @@ From the repo root:
 
 ## Acceptance criteria
 
-- [ ] `collect_group_columns` rejects non-string keys with the new Pattern 1 message. The tests
+- [x] `collect_group_columns` rejects non-string keys with the new Pattern 1 message. The tests
       pass on Debug and Release.
-- [ ] Every quoted error in the edited passages exists verbatim in `src/`
+- [x] Every quoted error in the edited passages exists verbatim in `src/`
       (`grep -rn "<fragment>" src/`).
-- [ ] The prose edits a–h are applied, and lua-api-sync and the full JS suite pass.
+- [x] The prose edits a–h are applied, and lua-api-sync and the full JS suite pass.
 
 ## Pitfalls
 
@@ -267,3 +267,71 @@ From the repo root:
 
 - Changing `lua_table_to_values` to walk `pairs`. Maintainer decision: leave it.
 - The data-loss claims (plan 43) and the strict option decoders (plan 48).
+
+## Implementation notes
+
+- **Starting point.** `rs/plan44` already held `origin/master` (`7f60d0b`, plan 43 merged), so the
+  merge was a no-op. Every edit was re-anchored on plan 43's text. Before editing, four read-only
+  agents checked each claim against the code, the vendored sol2, Lua 5.4.8 and SQLite 3.53.4. The
+  corrections below came out of that check.
+- **Red first.** The two key-type tests failed before the fix in both builds, each with a
+  different message for the same script:
+  - Debug: `stack index -1, expected string, received number` for the row-table array, and
+    `... received boolean` for `{ [true] = { 1 } }`.
+  - Release: `Cannot update_time_series_group: column '1' must be an array of values` and
+    `Cannot update_vector_group: column '' not found in group 'refs' for collection 'Child'`.
+  - After the fix, both builds give the new message.
+  - The plan's description of Release was wrong. The unchecked getter is `lua_tolstring`, so key
+    `1` becomes the name `"1"` (not garbage) and the call fails at once. A boolean key becomes
+    `''`, which the core rejects. Nothing was ever silent. The code comment, the CHANGELOG and
+    `src/AGENTS.md` say this instead.
+- **Corrections to the plan text:**
+  - *Message separator.* The message uses `; pass { column = ... }` instead of ` -- pass ...`.
+    No thrown string in `src/` uses ` -- `; the house style is `"...; pass an empty table {} ..."`.
+    The tests match only the `column names must be strings` prefix.
+  - *g, Vector reads: dropped.* "NULL cells are dropped, so ... not aligned" is false today. The
+    vector/set readers keep NULL cells as `nil` holes and stay aligned (root AGENTS.md decision),
+    and the Vector reads section already said `{}` and holes.
+  - *g, Critical rules.* The `ipairs` exception now names every read with holes: a bulk scalar
+    read, a vector/set inner list, a time-series value column, and `db:read_time_series_row`.
+  - *`#` wording.* Only `ipairs` stops at the first hole; `#` is "unreliable" (any border). The
+    plan said both stop.
+  - *f, nil params.* Lua 5.4.8's `luaH_getn` gives fixed values for constructor tables: `{nil,5}`
+    is 2, `{5,nil}` is 1, `{nil}` is 0 and `{nil,nil}` is 0. So the plan's non-determinism
+    fallback was not needed. The prose says "only in a table constructor whose last entry is not
+    `nil`", because a table built by assignment can also come up short. The trailing-nil test
+    asserts the exact `expected 2 bound parameter(s) but got 1`.
+  - *h, Output bullet.* The nil list now matches the L55 table row: "group cells" added. Plan 43
+    had already dropped "file columns".
+  - *Transactions caveat.* The "durable on its own" clause the verifiers flagged had already been
+    rewritten by plan 43. Only the quote and the `db:transaction(fn)` sentence changed here.
+  - *CHANGELOG.* The entry went under `## [0.12.7] — unreleased` → `### Fixed`, which plan 43
+    opened, not `[0.12.0]`. No manifest bump.
+  - *src/AGENTS.md.* The `collect_group_columns` check is folded into the existing
+    `csv_options_entries` bullet (the same rule, stated once), instead of a fourth bullet. The list
+    still has three bullets, so "Three guards", which plan 48 cites by name, stays true.
+  - *Pitfall.* The plan claims `is<std::string>()` is true for numbers. It is false in this sol2:
+    the checker is a strict `lua_type` compare. Only the unchecked getter coerces. The fix uses
+    `get_type()`, as `csv_options_entries` does.
+- **Verification.**
+  - `LuaRunner*`: 367/367 in Debug and 367/367 in Release. The Release tree is `build-release`,
+    configured as tests/AGENTS.md says.
+  - Full Debug suites: `quiver_tests` 1380/1380, `quiver_c_tests` 571/571.
+  - JS: 242/242; `lua-api-sync` 6/6.
+  - `scripts/format.bat` exits 0. Biome rewrote 42 untouched JS files from CRLF to LF; they were
+    restored. `lua-api.ts` was put back to CRLF, and `biome check --line-ending=crlf` on it is
+    clean. clang-format changed nothing.
+- **For later plans (found, not changed here):**
+  - The same unchecked key conversion, `pair.first.as<std::string>()` on a table key, remains in
+    `lua_table_to_value_map` (`upsert_time_series_row`, where a positional `{ "2024-01-01", 10.0 }`
+    row is the natural mistake), `table_to_element`, `lua_table_to_dim_map` and
+    `update_time_series_files_lua`. That is for 46/47/48, or one shared checked-key helper.
+  - The "Unsupported types throw" paragraph still says a skipped query parameter would "bind NULL
+    to the trailing placeholder". Now that `execute` checks the parameter count, a skip throws
+    instead. It was left alone: it is a rationale sentence and does not mislead a script.
+  - The time-series "Rules" header (plan 43) points at "Errors abort the script", but that bullet
+    is now titled "An uncaught error aborts the script, ...".
+  - `sol::table::size()` is `lua_len`, not `lua_rawlen` as `src/AGENTS.md` says. The two agree for
+    any table without `__len`.
+  - Only the vector writer has a boolean-cell test (`UpdateVectorGroupBooleanCellsStoreIntegers`).
+    The time-series writer shares `columns_to_cpp_rows`, so edit a relies on that shared path.
