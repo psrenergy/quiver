@@ -7,6 +7,14 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ## [0.12.7] — unreleased
 
+### Changed
+
+- **BREAKING — Lua: `db:open_file` handles are closed when `run()` returns.** A binary file a
+  script left open (for example in a global, without `f:close()`) used to stay open, so a writer
+  kept its path blocked for reading and writing in the whole process. Readers and writers now
+  follow the rule CSV writers already did. *Adapt:* reopen the file in each `run()` instead of
+  reusing a handle kept in a global.
+
 ### Fixed
 
 - **JS: the agent-facing Lua reference (`LUA_DB_API_REFERENCE`) no longer promises a rollback.**

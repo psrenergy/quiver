@@ -249,8 +249,9 @@ struct LuaRunner::Impl {
     }
 
     // Lua-visible handle behind db:write_csv (LUA-11, D-35). Wraps the internal writer; sol2 owns
-    // it via std::unique_ptr, registered with sol::no_constructor and no explicit finalizer -- the
-    // same ownership pattern BinaryFile uses below.
+    // it via std::unique_ptr, registered with sol::no_constructor and no explicit finalizer.
+    // db:open_file's BinaryFile is sol2-owned through a std::shared_ptr instead, for the same reason
+    // `writer` below is one: Impl keeps a weak_ptr to it (open_binary_files).
     struct CsvWriter {
         // shared_ptr, not a value: Impl keeps a weak_ptr to every writer it hands out so run()
         // can close the ones the script never closed, whether or not Lua can still reach them
@@ -278,6 +279,12 @@ struct LuaRunner::Impl {
     // run()'s exit.
     std::vector<std::pair<std::string, std::weak_ptr<quiver::csv_write::Writer>>> open_writers;
 
+    // Every BinaryFile db:open_file handed out during the current run(), readers and writers
+    // alike, so close_open_writers() can close it at run()'s exit even when the script keeps it in
+    // a global (a GC root). A writer left open would otherwise keep its path in the process-wide
+    // write registry until the LuaRunner is destroyed.
+    std::vector<std::weak_ptr<BinaryFile>> open_binary_files;
+
     // True while some writer this run handed out for `resolved_path` is alive and unclosed. Two
     // writers on one path each open with ios::trunc and write from offset 0, so the second one
     // silently discards everything the first buffered -- the same hazard db:open_file's
@@ -295,11 +302,11 @@ struct LuaRunner::Impl {
         return false;
     }
 
-    // WRITE-06's actual mechanism. A CsvWriter the script left reachable -- `w = db:write_csv(...)`
-    // without `local`, the Lua default -- is a GC root, so collect_garbage() never finalizes it and
-    // its buffered rows never reach disk. Closing through this registry instead makes the flush
-    // independent of reachability, which is what the documented guarantee ("the file is complete
-    // and re-readable even without w:close()") actually promises.
+    // WRITE-06's actual mechanism, for every writer and binary file handle. A CsvWriter the script
+    // left reachable -- `w = db:write_csv(...)` without `local`, the Lua default -- is a GC root, so
+    // collect_garbage() never finalizes it and its buffered rows never reach disk. Closing through
+    // this registry instead makes the flush independent of reachability, which is what the documented
+    // guarantee ("the file is complete and re-readable even without w:close()") actually promises.
     void close_open_writers() {
         for (const auto& [path, weak] : open_writers) {
             if (const auto writer = weak.lock()) {
@@ -312,6 +319,16 @@ struct LuaRunner::Impl {
             }
         }
         open_writers.clear();
+        for (const auto& weak : open_binary_files) {
+            if (const auto file = weak.lock()) {
+                try {
+                    file->close();
+                } catch (const std::exception&) {
+                    // Same as the CSV loop above: nobody to report a flush failure to at scope exit.
+                }
+            }
+        }
+        open_binary_files.clear();
     }
 
     // The MAXIMUM integer key of a Lua table, never sol::table::size()/lua_rawlen (FMT-08), plus
@@ -690,17 +707,21 @@ struct LuaRunner::Impl {
 
         // Binary subsystem file I/O — db-scoped and sandboxed: paths resolve against the directory
         // containing the database file and must stay inside it.
-        bind.set_function(
-            "open_file",
-            [](Database& self, const std::string& path, const std::string& mode, sol::optional<BinaryMetadata> metadata)
-                -> std::unique_ptr<BinaryFile> {
-                if (mode.size() != 1 || (mode[0] != 'r' && mode[0] != 'w')) {
-                    throw std::runtime_error("Cannot open_file: mode must be \"r\" or \"w\"");
-                }
-                const auto resolved = resolve_sandboxed_path(self, "open_file", path);
-                std::optional<BinaryMetadata> md = metadata ? std::optional<BinaryMetadata>(*metadata) : std::nullopt;
-                return std::make_unique<BinaryFile>(BinaryFile::open_file(resolved, mode[0], md));
-            });
+        bind.set_function("open_file",
+                          [this](Database& self,
+                                 const std::string& path,
+                                 const std::string& mode,
+                                 sol::optional<BinaryMetadata> metadata) -> std::shared_ptr<BinaryFile> {
+                              if (mode.size() != 1 || (mode[0] != 'r' && mode[0] != 'w')) {
+                                  throw std::runtime_error("Cannot open_file: mode must be \"r\" or \"w\"");
+                              }
+                              const auto resolved = resolve_sandboxed_path(self, "open_file", path);
+                              std::optional<BinaryMetadata> md =
+                                  metadata ? std::optional<BinaryMetadata>(*metadata) : std::nullopt;
+                              auto file = std::make_shared<BinaryFile>(BinaryFile::open_file(resolved, mode[0], md));
+                              open_binary_files.push_back(file);
+                              return file;
+                          });
         bind.set_function("bin_to_csv", [](Database& self, const std::string& path, sol::optional<bool> aggregate) {
             CSVConverter::bin_to_csv(resolve_sandboxed_path(self, "bin_to_csv", path), aggregate.value_or(true));
         });
@@ -814,8 +835,8 @@ struct LuaRunner::Impl {
                 return std::make_unique<CsvWriter>(std::move(writer), header_width);
             });
 
-        // LUA-11: sol::no_constructor + std::unique_ptr return (above), no explicit finalizer --
-        // the same ownership pattern as BinaryFile below.
+        // LUA-11: sol::no_constructor + std::unique_ptr return (above), no explicit finalizer.
+        // BinaryFile below is the same except for its holder, a std::shared_ptr (see db:open_file).
         lua.new_usertype<CsvWriter>(
             "CsvWriter",
             sol::no_constructor,
@@ -2298,9 +2319,10 @@ std::string LuaRunner::run(const std::string& script) {
     // guard (declared first) is destroyed AFTER `result` (declared second) -- releasing
     // `result`'s Lua stack reference before the collection below runs. Declaring the guard after
     // `result` would collect while a live stack reference still anchors the script's userdata (D-46).
-    // close_open_writers() runs first and does NOT depend on reachability: a writer the script
-    // assigned to a global (`w = db:write_csv(...)`, the Lua default spelling) is a GC root, so
-    // collect_garbage() alone would leave its rows in the ofstream buffer and the file at 0 bytes.
+    // close_open_writers() runs first and does NOT depend on reachability: it closes CSV writers and
+    // binary files. A writer the script assigned to a global (`w = db:write_csv(...)`, the Lua
+    // default spelling) is a GC root, so collect_garbage() alone would leave its rows in the ofstream
+    // buffer and the file at 0 bytes -- and a db:open_file writer's path in the write registry.
     // The collection still runs afterwards for every other unique_ptr usertype.
     struct GcGuard {
         Impl& impl;
