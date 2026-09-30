@@ -200,3 +200,27 @@ From the repo root:
 
 - The vector/set readers' NULL-dropping itself (a documented design decision).
 - `tests/AGENTS.md` (plan 75).
+
+## Implementation notes
+
+Not implemented: superseded. Checked on `rs/plan41` at `4863906` (the plan 32 merge). `master` and `origin/master` were at the same commit, so there was nothing to integrate. No source, test, CHANGELOG or AGENTS.md file changed. This note is the only edit, and the maintainer approved closing the plan this way.
+
+**Why it was superseded.** `61e6236` ("fix: preserve NULL cells in vector and set reads", 2026-09-28) was written after this plan. It rewrote all 14 stale sites in Julia, Dart, Python and JS, and it also changed the behaviour this plan's wording describes: the vector/set bulk readers now **preserve** NULL cells positionally (root AGENTS.md, "Bulk reads of one collection are positionally aligned, and cells preserve NULLs"). The agreed text "NULL cells are dropped, so each inner list is dense" is now false. Writing it would bring back the opposite-of-the-code comment this plan set out to delete. The current comments are accurate:
+- Dart `readVectorBooleans` / `readVectorDateTimes`: "One entry per element; within an entry a SQL NULL cell is `null`."
+- Dart `readSetBooleans` / `readSetDateTimes`, JS `readSetBooleans`: "Same contract as [readVector…]: one entry per element, and a SQL NULL cell is `null`."
+- JS `readVectorBooleans`: "One entry per element; within an entry a SQL NULL cell is `null`."
+- Python: "Read boolean/datetime vectors/sets stored as integer/string vectors/sets. A NULL cell is None."
+- Julia: the old comments are gone. The four readers delegate to the mask-aware `read_{vector,set}_{integers,strings}`, and the `read_grouped_values_all` pointer went with them.
+
+**`bindings/js/AGENTS.md` check.** Accurate, so it was left alone. Both mentions (the vector/set reader bullet and the "Time-series NULL cells" bullet) say `decodeStringArray` "turns a NULL `char*` into `""`", and that matches `bindings/js/src/ffi-helpers.ts` (`strPtr === 0 ? "" : new CString(...)`). The plan's premise ("constructs a `CString` from a NULL pointer") no longer appears anywhere.
+
+**Verification.** Verification step 1's grep (`own rows\|not positionally aligned\|alignment caveat` over `bindings/julia/src bindings/dart/lib bindings/python/src bindings/js/src`) prints nothing. The two intentional sites don't match its pattern: the Dart whole-group readers' "rows stay positionally aligned" and the `lua-api.ts` column-alignment note. Steps 2-4 (the suites, `dart analyze`, `scripts/format.bat`) were not run because no code or comment changed.
+
+**Acceptance criteria.**
+- [x] All 14 stale sites are rewritten. `61e6236` did this, with wording that matches the NULL-preserving readers rather than this plan's obsolete wording.
+- [x] The intentional "aligned" comments are untouched.
+- [x] All four binding suites pass. Nothing in them changed.
+
+**For later plans.**
+- Plan 75: its `tests/AGENTS.md` target ("omission of elements without group rows") no longer appears in that file, and `grep -n "omission\|without group rows" tests/AGENTS.md` prints nothing. Re-check that item before executing it; `61e6236` probably superseded it too.
+- Plan 42 overlaps only in function names next to these comments. Nothing here affects it.
