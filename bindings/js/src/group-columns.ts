@@ -52,6 +52,32 @@ type ColumnUpdateFn = (
 ) => number;
 
 /**
+ * Check and normalize the cells of a numeric column: one whose first non-null cell is a number or
+ * a boolean. Shared by updateGroupColumns and setElementArray (create.ts) so the group writers and
+ * the element arrays agree on every cell. String columns are never passed here.
+ *
+ * - A boolean becomes INTEGER 1/0, since SQLite has no boolean type. Per cell, because mapping the
+ *   whole column from a leading boolean truthiness-mapped the rest and rewrote [true, 5] as
+ *   [1, 1]. Before the INTEGER/FLOAT choice, because Number.isInteger(true) is false.
+ * - Any other non-null cell that is not a number throws, naming the column and the cell. It would
+ *   fail Number.isInteger, tag the column FLOAT and reach DataView.setFloat64, which converts it
+ *   with no error: "abc" to NaN, which SQLite stores as NULL, and "2" to 2.
+ */
+export function numericCells(
+  caller: string,
+  name: string,
+  values: readonly unknown[],
+): (number | null)[] {
+  return values.map((v, r) => {
+    if (v === null || typeof v === "number") return v;
+    if (typeof v === "boolean") return v ? 1 : 0;
+    throw new QuiverError(
+      `Cannot ${caller}: numeric column '${name}' has unsupported value type ${typeof v} in cell ${r}`,
+    );
+  });
+}
+
+/**
  * Marshal a column-oriented payload and forward it to one of the columnar group update C
  * functions. Shared by updateTimeSeriesGroup / updateVectorGroup / updateSetGroup and their
  * _by_label counterparts: they differ only in which C entry point they call.
@@ -114,17 +140,7 @@ export function updateGroupColumns(
   const maskPtrs: (Pointer | null)[] = [];
 
   for (let c = 0; c < columnCount; c++) {
-    const [colName, rawValues] = entries[c];
-    // SQLite has no boolean type: a boolean is INTEGER 1/0, as in setElementField and
-    // marshalParams. Normalizing per cell before the dispatch (rather than adding a boolean
-    // branch after it) is what makes a mixed [true, 5] column write 1 and 5 instead of
-    // truthiness-mapping every cell -- the same per-cell 1/0 Python and Dart apply. A string
-    // column is left alone so normalizing cannot change what a mixed ['a', true] column already
-    // wrote.
-    const isStringColumn = typeof rawValues.find((v) => v !== null) === "string";
-    const values = isStringColumn
-      ? rawValues
-      : rawValues.map((v) => (typeof v === "boolean" ? (v ? 1 : 0) : v));
+    const [colName, values] = entries[c];
     const first = values.find((v) => v !== null);
 
     // Mask via direct indexing — never a DataView, to avoid the documented
@@ -142,16 +158,17 @@ export function updateGroupColumns(
       keepalive.push(p);
       dataPtrs.push(p.ptr);
     } else if (typeof first === "string") {
+      // Not checked by numericCells: a mixed ['a', true] column still writes what it always wrote.
       typesDv.setInt32(c * 4, DATA_TYPE_STRING, true);
       const { table, keepalive: strPtrs } = allocNativeStringArray(
         values.map((v) => (v === null ? null : (v as string))),
       );
       keepalive.push(table, ...strPtrs);
       dataPtrs.push(table.ptr);
-    } else if (typeof first === "number") {
-      const nonNull = values.filter((v) => v !== null) as number[];
-      const sanitized = values.map((v) => (v === null ? 0 : (v as number)));
-      if (nonNull.every((v) => Number.isInteger(v))) {
+    } else if (typeof first === "number" || typeof first === "boolean") {
+      const cells = numericCells(caller, colName, values);
+      const sanitized = cells.map((v) => v ?? 0);
+      if (cells.every((v) => v === null || Number.isInteger(v))) {
         typesDv.setInt32(c * 4, DATA_TYPE_INTEGER, true);
         const p = allocNativeInt64(sanitized);
         keepalive.push(p);

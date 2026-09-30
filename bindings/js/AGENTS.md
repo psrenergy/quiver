@@ -13,7 +13,8 @@ src/              # Module per C API category: database.ts, create.ts, read.ts, 
                   # query.ts, time-series.ts, transaction.ts, csv.ts, introspection.ts,
                   # composites.ts, lua-runner.ts (index.ts re-exports the public surface)
 src/lua-api.ts    # LUA_DB_API_REFERENCE — agent-facing Lua `db:` API reference, as a string const
-src/group-columns.ts # Shared columnar marshaller (group writers) and decoder (group readers)
+src/group-columns.ts # Shared columnar marshaller (group writers) and decoder (group readers),
+                     # plus numericCells, the per-cell numeric check setElementArray shares
 src/loader.ts     # HAND-WRITTEN FFI symbol table + 3-tier library loader
 src/types.ts      # Central DATA_TYPE_* / LOG_LEVEL_* constants and DatabaseOptions type
 src/ffi-helpers.ts # Alloc helpers, makeDefaultOptions()
@@ -125,17 +126,23 @@ biome.json        # Lint/format config
   "always `QuiverError`" rule above, and deliberate: that message comes from
   `quiver_get_last_error`, while this one is crafted here (the boolean readers are a binding-only
   convenience the core never sees). It names the offending `collection.attribute`; `queryBoolean`
-  has no column to name. On writes a `boolean` is an INTEGER 1/0 — `setElementField`,
-  `setElementArray` and `marshalParams` each carry a `typeof === "boolean"` branch, and
-  `ScalarValue`/`ArrayValue`/`QueryParam`/`GroupColumns` include it. The two group/row marshallers
-  instead **normalize per cell before the type dispatch** — `updateGroupColumns`
-  (`group-columns.ts`) and `upsertRowColumns` (`time-series.ts`) both map `boolean → 1/0` first, so
-  no boolean branch is needed at all. Both halves of that are load-bearing: *before* the dispatch,
-  because `Number.isInteger(true)` is `false` and a boolean otherwise falls through to the FLOAT
-  fallback and lands in the column as FLOAT 1.0 with no error; *per cell*, because a boolean branch
-  chosen from the first cell would truthiness-map the rest and silently rewrite a mixed
-  `[true, 5]` column to `[1, 1]`. `updateGroupColumns` skips the normalization for a string column,
-  so it cannot change what a mixed `['a', true]` column already wrote. `upsertRowColumns`'s last
+  has no column to name. On writes a `boolean` is an INTEGER 1/0 — `setElementField` and
+  `marshalParams` each carry a `typeof === "boolean"` branch, and
+  `ScalarValue`/`ArrayValue`/`QueryParam`/`GroupColumns` include it. The row and array marshallers
+  instead **normalize per cell before the INTEGER/FLOAT choice**: `upsertRowColumns`
+  (`time-series.ts`) maps its one cell, and `updateGroupColumns` (`group-columns.ts`) and
+  `setElementArray` (`create.ts`) pass every numeric column — first non-null cell a number or a
+  boolean — through `numericCells` (`group-columns.ts`), so no boolean branch is needed at all.
+  Both halves of that are load-bearing. *Before* the choice, because `Number.isInteger(true)` is
+  `false`, and a boolean would otherwise land in the column as FLOAT 1.0 with no error. *Per
+  cell*, because a boolean branch chosen from the first cell truthiness-maps the rest:
+  `setElementArray` had one until 0.12.6 and rewrote a mixed `[true, 5]` array to `[1, 1]`.
+  `numericCells` also **throws on any other non-null cell**, with `Cannot <caller>: numeric
+  column '<name>' has unsupported value type <typeof> in cell <r>`. Such a cell fails
+  `Number.isInteger` and tags the column FLOAT, and `setFloat64` would convert it with no error:
+  `"abc"` to NaN, which SQLite stores as NULL, and `"2"` to 2. A string column is not checked, so
+  a mixed `['a', true]` column still writes the text `"true"`. A `bigint[]` element array keeps
+  its own branch in `setElementArray` and is not checked either. `upsertRowColumns`'s last
   branch is `typeof value === "number"`, not an untyped `else` — `Number(null)` is 0 and anything
   else is NaN, both of which used to be written with no error. **`GroupColumns` is the write type and
   `TimeSeriesData` the read type** (both in `group-columns.ts`) — they are otherwise identical, but
