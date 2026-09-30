@@ -339,11 +339,14 @@ From the repo root:
 
 ## Acceptance criteria
 
-- [ ] `GroupColumns` and `QueryParam` include `bigint`.
-- [ ] `numericCells` returns `bigint` cells unchanged; the INTEGER branch writes them exactly.
-- [ ] A mixed `[5n, 1.5]` column writes FLOAT `[5, 1.5]` with no raw `TypeError`.
-- [ ] `marshalParams` binds a `bigint` as INTEGER.
-- [ ] New tests pass; full JS suite green; CHANGELOG + AGENTS.md + README updated.
+- [x] `GroupColumns` and `QueryParam` include `bigint`.
+- [x] `numericCells` returns `bigint` cells unchanged; the INTEGER branch writes them exactly.
+- [x] A mixed `[5n, 1.5]` column writes FLOAT `[5, 1.5]` with no raw `TypeError`.
+- [x] `marshalParams` binds a `bigint` as INTEGER.
+- [x] New tests pass; full JS suite green; CHANGELOG + AGENTS.md + README updated.
+- [x] *(added at implementation, maintainer decision)* `setElementArray` routes `bigint`-led arrays
+  through `numericCells` like any other numeric array, so no mixed `bigint` array hits a raw
+  `TypeError` / `RangeError`.
 
 ## Pitfalls
 
@@ -357,3 +360,125 @@ From the repo root:
 - Returning `bigint` from readers.
 - Any change to `create.ts` / `upsertRowColumns` (already correct).
 - The query C API shape (plan 22).
+
+## Implementation notes
+
+This was implemented on `rs/plan33`. At planning time HEAD, `master` and `origin/master` were all
+`3608708` (plans 01-31). By the time implementation started, plan 32 (#344) had been merged into
+`master`, so `git merge master` fast-forwarded to `4863906`. Plan 32 touches `mod.ts`, `index.ts`,
+the Layout block of `AGENTS.md`, the README type list and the CHANGELOG `### Added`, none of which
+this plan edits. Plans 31 and 22 (the dependency and the overlap) were both in. Before any edit,
+every excerpt, symbol, path and test name in the plan was checked against the code. They all
+matched, apart from the gap and drift listed below. The verdict was **implement**: the change is
+small, additive, and gives the binding one int64 input rule.
+
+### Plan gap: `create.ts` did need a change (maintainer decision: unify)
+
+"No change is needed in `create.ts`" was wrong. `setElementArray` shares `numericCells`, and its
+INTEGER test was plain `Number.isInteger`. Widening `numericCells` alone would have turned
+`createElement(..., { count_value: [5, 7n] })` from the plan-31 `QuiverError` into a raw
+`TypeError: Conversion from 'BigInt' to 'number' is not allowed`, thrown by `setFloat64`.
+
+Separately, the old `bigint`-led branch (`allocNativeInt64(values as bigint[])`) skipped the
+per-cell check. Probed at HEAD: `[7n, "12"]` silently stored `[7, 12]` through `BigInt("12")`, and
+`[7n, 1.5]` threw a raw `RangeError: Not an integer`.
+
+The maintainer chose to **unify**. The `bigint` branch is deleted, and number/boolean/bigint arrays
+all go through `numericCells` with the group writers' rule:
+- `typeof v === "bigint" || Number.isInteger(v)` → INTEGER, via `allocNativeInt64`.
+- otherwise FLOAT, via `allocNativeFloat64(cells.map(Number))`.
+
+Every cell order now behaves the same on both paths. A test pins it: `createElement with arrays` >
+"an array mixing bigint and numbers is typed like a group column". `bindings/js/AGENTS.md` loses
+its "A `bigint[]` element array keeps its own branch … not checked either" sentence, and the
+CHANGELOG entry covers element arrays.
+
+### Drift fixed
+
+- **CHANGELOG target.** The entry went under `## [0.12.6] — unreleased` → `### Fixed` (last
+  bullet), not the `[0.12.0]` the plan names. The newest tag is `v0.12.5`. There is no manifest
+  bump.
+- **Plan 31's BREAKING bullet**, in the same unreleased `[0.12.6]` section, said a numeric
+  column's cells must be "a number or a boolean". This change made that false, so the bullet and
+  its *Adapt* line now say "a number, a `bigint` or a boolean".
+- **CHANGELOG error text.** The plan's bullet said the query methods "threw `unsupported value
+  type bigint`". They actually threw `Unsupported query parameter type at index <i>: bigint`, and
+  the entry now quotes both messages.
+- **README.** Plan 74 has not landed, so the Types list only changes the `QueryParam` line.
+  `GroupColumns` is not listed there yet. The plan missed the prose under `### Query` (~L138),
+  "Parameters are passed as an array of `number | boolean | string | null`", which the review
+  caught. It now lists `bigint`.
+- **Test placement.** The mixed `[5n, 1.5]` group test is in `describe("group writer column
+  typing")`, added by plan 24 after this plan was written, instead of `updateVectorGroup /
+  updateSetGroup`. The other tests are where the plan puts them.
+- **Doc lines this change made false**, updated in place:
+  - `TimeSeriesData`'s doc ("no reader produces a boolean or a bigint, so it admits neither").
+  - The `numericCells` doc: its lead line now reads "a number, a bigint or a boolean", and "Any
+    other non-null cell that is not a number throws" is now "Any other non-null cell throws".
+  - Two sentences in the AGENTS.md boolean paragraph: "first non-null cell a number, a `bigint` or
+    a boolean", and "only the former admits `bigint` and `boolean`".
+  - The AGENTS.md int64 bullet's FLOAT exception names element arrays as well as group columns.
+- **Formatting.** The plan's verbatim `numericCells` dispatch line and one test line exceed Biome's
+  width, and `format.bat` wrapped them. Contents are otherwise as planned.
+
+### Results
+
+- **Red first.** With only the five tests in place, the three files ran 65 pass / 5 fail, and the
+  five failures were exactly the new tests:
+  ```
+  (fail) createElement with arrays > an array mixing bigint and numbers is typed like a group column
+    QuiverError: Cannot createElement: numeric column 'count_value' has unsupported value type bigint in cell 1
+  (fail) queryString > binds a bigint parameter exactly
+    QuiverError: Unsupported query parameter type at index 0: bigint
+  (fail) queryInteger > binds a bigint parameter
+    QuiverError: Unsupported query parameter type at index 0: bigint
+  (fail) updateVectorGroup / updateSetGroup > updateVectorGroup keeps a bigint cell beyond Number.MAX_SAFE_INTEGER exact
+    QuiverError: Cannot updateVectorGroup: column 'count_value' has unsupported value type bigint
+  (fail) group writer column typing > a mixed bigint/fractional column is written as FLOAT
+    QuiverError: Cannot updateVectorGroup: column 'score' has unsupported value type bigint
+  ```
+- **Green.** The three files pass 70/70, and the full JS suite 242/242 (237 at `4863906` plus the
+  5 new tests).
+- **`scripts/test-all.bat`.** All six suites PASS: C++ 1375, C API 571, Julia 1559, Dart 440,
+  JS 242, Python 349.
+- **`scripts/format.bat`.**
+  - clang-format, JuliaFormatter, dart format and ruff changed nothing. The Python step first
+    rebuilt the editable wheel, as it does after a version bump.
+  - Biome fixed 30 JS files. Of the 23 outside this change, it only rewrote line endings (CRLF to
+    LF), and those were restored with `git checkout --`. The 8 touched `.ts` / README files went
+    back to CRLF with `unix2dos`.
+  - Nine other JS files were already LF in this checkout before the run, and were left alone.
+  - `bunx biome check --line-ending=crlf` over the 7 touched `.ts` files: no errors, no warnings.
+- **Adversarial review workflow** (8 agents). Three read-only lenses ran, each finding going to a
+  refuting verifier:
+  - **Runtime** (Bun probes, new tree against a HEAD copy): no findings. Every pure number or
+    boolean case gave byte-identical output. `bigint` works in every position of all six group
+    writers. `[7n, {}]` / `[7n, [1]]` now throw the `numericCells` error, where HEAD threw a raw
+    `SyntaxError` or stored 1.
+  - **Types** (strict `tsc` 7.0.2, both trees): the same 8 errors, all from before this change,
+    in each tree (the `key` parameter mismatches of `ColumnUpdateFn` / `UpsertRowFn` at the
+    `create.ts` / `time-series.ts` call sites). No new errors.
+  - **Docs**: three confirmed defects, all fixed above (README ~L138, the CHANGELOG error text,
+    plan 31's bullet). One finding was refuted: that the `GroupColumns` doc's "exact int64" is
+    loose for a mixed fractional column. A fractional cell only writes into a REAL column, where
+    "int64" is not observable.
+
+### For later plans
+
+- **Out-of-range int64 silently wraps (follow-up, maintainer decision: not this plan).**
+  `allocNativeInt64` uses `DataView.setBigInt64`, which wraps modulo 2^64, so `2n ** 63n` is stored
+  as −2^63. An integer `number` ≥ 2^63 (e.g. `1e19`, where `Number.isInteger` is `true`) wraps the
+  same way through `BigInt()`. The bug predates this plan, but this plan opens the path to `bigint`
+  on the group writers and query parameters, where a `bigint` used to throw.
+  - The fix belongs in `allocNativeInt64`, one guard shared by every path:
+    `BigInt.asIntN(64, b) !== b` → throw.
+  - The error message needs a design, because the helper does not know the column; the
+    pre-FFI-marshalling rule wants the column named.
+  - `setElementField`'s scalar path passes the `bigint` straight to an FFI `i64` argument, and
+    needs checking separately.
+- **Plan 74 (JS README).** List `GroupColumns` with `bigint` in the Types list, and keep the new
+  `QueryParam` line and the `### Query` prose (`number | bigint | boolean | string | null`) in sync.
+  Plan 74 was written before this change.
+- **`ArrayValue` is unchanged** (`number[] | bigint[] | boolean[] | string[]`). Mixed arrays are now
+  well-defined at runtime, but the type still forbids them, so the tests cast `as unknown as
+  Value`. Widening it would be a separate typing decision.

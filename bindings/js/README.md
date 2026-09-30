@@ -135,8 +135,8 @@ bun run example.ts
 - `queryBoolean(sql, parameters?)` -- Query returning an INTEGER-backed boolean or null
 - `queryFloat(sql, parameters?)` -- Query returning float or null
 
-Parameters are passed as an array of `number | boolean | string | null` (a `boolean` binds as the
-INTEGER 1 or 0).
+Parameters are passed as an array of `number | bigint | boolean | string | null` (a `bigint` binds
+as an exact INTEGER, a `boolean` as the INTEGER 1 or 0).
 
 ### Transaction
 
@@ -182,7 +182,7 @@ Exported types available for TypeScript consumers:
 - `ArrayValue` -- `number[] | bigint[] | string[]`
 - `Value` -- `ScalarValue | ArrayValue`
 - `ElementData` -- `Record<string, Value | undefined>`
-- `QueryParam` -- `number | string | null`
+- `QueryParam` -- `number | bigint | boolean | string | null`
 - `QuiverError` -- Error class for all Quiver operations
 - `ScalarMetadata` -- Scalar attribute metadata
 - `GroupMetadata` -- Vector/set/time series group metadata

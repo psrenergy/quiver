@@ -40,22 +40,18 @@ function setElementArray(
     );
   }
 
-  if (typeof first === "bigint") {
-    const arr = allocNativeInt64(values as bigint[]);
-    check(lib.quiver_element_set_array_integer(elemPtr, nameBuf.buf, arr.buf, values.length, null));
-    return;
-  }
-
-  if (typeof first === "number" || typeof first === "boolean") {
+  if (typeof first === "number" || typeof first === "boolean" || typeof first === "bigint") {
     // The null check above leaves no null cell, so the cast only narrows.
-    const cells = numericCells(caller, name, values) as number[];
-    if (cells.every((v) => Number.isInteger(v))) {
+    const cells = numericCells(caller, name, values) as (number | bigint)[];
+    if (cells.every((v) => typeof v === "bigint" || Number.isInteger(v))) {
       const arr = allocNativeInt64(cells);
       check(
         lib.quiver_element_set_array_integer(elemPtr, nameBuf.buf, arr.buf, values.length, null),
       );
     } else {
-      const arr = allocNativeFloat64(cells);
+      // A fractional cell makes the array FLOAT; a bigint cell then follows the int-for-REAL rule
+      // through Number(), exact up to 2^53 like any JS number.
+      const arr = allocNativeFloat64(cells.map(Number));
       check(lib.quiver_element_set_array_float(elemPtr, nameBuf.buf, arr.buf, values.length, null));
     }
     return;
