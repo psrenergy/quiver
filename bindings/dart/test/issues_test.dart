@@ -29,14 +29,17 @@ void main() {
         path.join(issuesPath, 'issue70'),
       );
       try {
-        db.createElement('Collection', {
+        final id = db.createElement('Collection', {
           'label': 'label',
-          'some_time_series': {
-            'date_time': [DateTime(1990, 1, 1)],
-            'some_time_series_float': [1.0],
-            'some_time_series_integer': [1],
-          },
+          'date_time': [DateTime(1990, 1, 1)],
+          'some_time_series_float': [1.0],
+          'some_time_series_integer': [1],
         });
+
+        final ts = db.readTimeSeriesGroup('Collection', 'some_time_series', id);
+        expect(ts['date_time'], equals([DateTime(1990, 1, 1)]));
+        expect(ts['some_time_series_float'], equals([1.0]));
+        expect(ts['some_time_series_integer'], equals([1]));
       } finally {
         db.close();
       }
