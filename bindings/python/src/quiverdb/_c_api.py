@@ -2,8 +2,9 @@ from cffi import FFI
 
 ffi = FFI()
 
-# Phase 1 CFFI declarations: lifecycle subset from C API headers.
-# Copied exactly from include/quiver/c/ headers with QUIVER_C_API stripped.
+# Hand-maintained CFFI declarations for the C API in include/quiver/c/, minus the binary/ and
+# expression/ headers (those subsystems are exposed only in Julia and Lua). Grouped by topic, not
+# by header. After a C API change, run generator/generator.bat and diff its output against this block.
 ffi.cdef("""
     // common.h
     typedef enum {
