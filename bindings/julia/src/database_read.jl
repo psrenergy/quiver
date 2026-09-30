@@ -452,7 +452,7 @@ end
 read_vector_strings_by_id(db::Database, collection::String, attribute::String, id::Int64) =
     _read_vector_strings_by_id(db, collection, attribute, id, nothing)
 
-read_vector_date_time_by_id(db::Database, collection::String, attribute::String, id::Int64) =
+read_vector_date_times_by_id(db::Database, collection::String, attribute::String, id::Int64) =
     _to_date_times(read_vector_strings_by_id(db, collection, attribute, id), collection, attribute)
 
 function _read_set_integers_by_id(
@@ -544,7 +544,7 @@ end
 read_set_strings_by_id(db::Database, collection::String, attribute::String, id::Int64) =
     _read_set_strings_by_id(db, collection, attribute, id, nothing)
 
-read_set_date_time_by_id(db::Database, collection::String, attribute::String, id::Int64) =
+read_set_date_times_by_id(db::Database, collection::String, attribute::String, id::Int64) =
     _to_date_times(read_set_strings_by_id(db, collection, attribute, id), collection, attribute)
 
 function read_element_ids(db::Database, collection::String)

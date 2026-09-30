@@ -137,9 +137,9 @@ From the repo root:
 
 ## Acceptance criteria
 
-- [ ] Both bindings define only the plural names. Every internal caller and test uses them.
-- [ ] The "old name is gone" tests pass in both bindings.
-- [ ] The root AGENTS.md table and CHANGELOG BREAKING entry are updated.
+- [x] Both bindings define only the plural names. Every internal caller and test uses them.
+- [x] The "old name is gone" tests pass in both bindings.
+- [x] The root AGENTS.md table and CHANGELOG BREAKING entry are updated.
 
 ## Pitfalls
 
@@ -152,3 +152,54 @@ From the repo root:
 
 - Renaming `read_scalar_date_time_by_id`, or changing Julia's `read_time_series_row` keyword.
 - Dart and JS (Dart is already plural; JS has no datetime wrappers by design).
+
+## Implementation notes
+
+Implemented on `rs/plan42`. At planning time the branch sat at master `4863906`. By the time implementation started it had been fast-forwarded to master `60ed75b`, which brought in plans 33-40 (#345-#352). So `git fetch origin && git merge origin/master` was a no-op. Plan 41 had not landed. Every anchor was re-checked after the fast-forward and none had moved.
+
+Before any edit, a three-lens read-only workflow checked the plan:
+- **consumers:** a devil's-advocate case against implementing, plus a caller search;
+- **overlap:** plans 33-41 in flight and 43-88;
+- **completeness:** every hit, the formatter margins, and `isdefined`/`hasattr` semantics.
+
+Its verdict was **implement**. After the edits, a two-lens adversarial review of the diff (code/tests, docs/CHANGELOG) returned no findings.
+
+**Why implement.** The consumer lens searched:
+- every repo under `C:/Development` outside `Quiver/`;
+- the Julia depot, the uv cache and the psrenergy GitHub org (default branches).
+
+It found **no external caller** of either old name. Every hit was a copy of Quiver itself: the Keynotes talk snapshot, spine's vendored `quiver/` copy, and installed Quiver.jl versions. BDCont, LightPSRIO and SDDPSQLite depend on Quiver but use none of the date-time by-id readers.
+
+An old call fails loudly, with `UndefVarError` or `AttributeError`, never silently. Every sibling reader is already plural: Dart, the boolean `_by_id` readers, and the bulk `read_{vector,set}_date_times`. The only cost is that the names have been published since v0.10.3, so unseen callers must rename.
+
+### Drift fixed
+
+- **Julia composites never called these readers.** `read_vectors_by_id` / `read_sets_by_id` decode through `_read_{vector,set}_strings_by_id(..., not_null)` + `_to_date_times`, and plan 18 made the group readers native. Julia step 3 therefore had nothing to do. Only the two definitions changed, and they are now one-line `name(...) =` forms at `database_read.jl:455` / `:547` (the plan quoted `function ...(` at ~L385/~L446).
+- **Python lines moved.** The definitions are at `database.py:521` / `:532`, and the composite calls at `:1959` / `:1981`. The docstrings do not name their own methods, so step 4 was a no-op.
+- **Three test call sites the plan did not list** were added by the NULL-cell work: `test_database_read_set.jl:336`, `test_database_read_vector.py:333` (`TestVectorNullCells`) and `test_database_read_set.py:354` (`TestSetNullCells`). All three are renamed.
+- **Python test classes renamed too.** `TestReadVectorDateTimeById` / `TestReadSetDateTimeById` → `...DateTimesById`, matching `TestReadVectorDateTimesBulk` and the other `...ById` neighbours. The "gone" test lives in `TestReadVectorDateTimesById`.
+- **CHANGELOG section.** `## [0.12.0] — unreleased` does not exist (0.12.0 was released). The entry is the plan's text verbatim, as the last `### Changed` bullet of `## [0.12.6] — unreleased`, after plan 39's Dart `Element.set` bullet. There is no manifest bump. As with plans 21/22/24/27/31/39, this still contradicts root AGENTS.md's "breaking ⇒ 0.x minor bump" rule.
+- **`bindings/julia/type_stability_followup.md:16`** read `read_{vector,set}_date_times` / `read_{vector,set}_date_time_by_id`. Neither of the plan's greps matches that brace form. It now reads `read_{vector,set}_date_times[_by_id]`, the same form as the booleans on the same line. Line 43 (the scalar reader) stays.
+- **Root AGENTS.md table.** It is at L823-831, not ~L746. The new names are wider than the old padding, and the three "bulk read" rows already overflowed the Wraps column, so the whole table was re-aligned.
+- **Small addition beyond the plan (coverage gap).** Nothing exercised Python `read_vectors_by_id`'s DATE_TIME branch, so leaving that rename out would have passed the suite and broken at runtime (this plan's own Pitfall). One assert now covers it, in `TestVectorNullCells.test_string_and_date_time_readers_keep_null_cells`: `db.read_vectors_by_id("Items", item)["date_event"] == [jan_first, None]`. The set branch has no equivalent, because no schema has a DATE_TIME set column, so the grep is its only guard.
+
+### Results
+
+- **Red** (tests renamed plus the "gone" tests added, sources untouched):
+  - Python `test.bat -k date_time`: **5 failed, 28 passed**. `AttributeError: 'Database' object has no attribute 'read_vector_date_times_by_id'. Did you mean: 'read_vector_date_time_by_id'?`, and the "gone" test failed on `hasattr`.
+  - Julia `test.bat test_database_read_vector.jl`: `UndefVarError: read_vector_date_times_by_id not defined in Quiver` at L180 (fail-fast). `isdefined(Quiver, :read_{vector,set}_date_time_by_id)` printed `true true`.
+- **Green.**
+  - Julia `test_database_read_vector.jl`: Read Vector **80/80**. `test_database_read_set.jl`: Read Set **62/62**. Full Julia suite: **1575/1575**.
+  - Full Python suite: **350 passed**, the previous 349 plus the new "gone" test.
+- **Grep.** `git grep -n "read_vector_date_time_by_id\|read_set_date_time_by_id" -- bindings AGENTS.md docs` prints only the four lines of the two "gone" tests.
+- **`cmake --build build --config Debug`.** This checkout had no `build/`, so it was configured first with the root AGENTS.md configure line. Both steps succeeded.
+- **`scripts\format.bat`** exits 0. clang-format, JuliaFormatter, dart format (44 files, 0 changed) and ruff (35 unchanged) changed nothing. Biome rewrote 43 JS files CRLF→LF with an empty `git diff --ignore-cr-at-eol`, and `git checkout -- bindings/js` reverted them (this plan has no JS edits). No `.bat` file was touched.
+  - **Fresh-checkout pitfall.** The first run exited 1. `bindings/dart` had never had `dart pub get`, so `analysis_options.yaml`'s `package:lints` include did not resolve, `dart format` fell back to 80 columns, and it rewrote 28 Dart files. `bindings/js` had no `bun install` (`bun: command not found: biome`).
+  - Fix: `git checkout -- bindings/dart`, then `dart pub get` and `bun install`, then re-run. Any new checkout needs both before `format.bat`.
+- **Not run:** `scripts/test-all.bat`. The change touches only the Julia and Python bindings, whose suites pass above. The README asks for test-all at the end of each batch.
+
+### For later plans
+
+- **Plan 41** (stale alignment comments, all bindings) had not landed. It edits comments on the bulk readers: `database_read.jl` ~L119/181/215/276 and `database.py` ~L826/901/1122. None of those is a line this plan renamed (Julia L455/547, Python L521/532/1959/1981), and 41 names neither by-id reader, so no conflict is expected.
+- **Batch-4 CHANGELOG.** `## [0.12.6] — unreleased` `### Changed` now ends with plan 39's Dart `Element.set` BREAKING bullet, then this one.
+- The old names remain only in historical text: `.claude/plans/README.md:92`, `master-plan.md:304`, and this plan file. README L9's "0.12.0 is unreleased" note is stale (the current section is 0.12.6). All are left for the maintainer.

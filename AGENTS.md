@@ -820,15 +820,15 @@ The bindings provide additional convenience methods that compose core operations
 
 **DateTime wrappers (Julia, Dart, and Python):**
 
-|             Julia             |           Dart            |             Python            |               Wraps               |
-| ----------------------------- | ------------------------- | ----------------------------- | --------------------------------- |
-| `read_scalar_date_times`      | `readScalarDateTimes`     | `read_scalar_date_times`      | string scalar bulk read + date parsing |
-| `read_scalar_date_time_by_id` | `readScalarDateTimeById`  | `read_scalar_date_time_by_id` | string read + date parsing        |
-| `read_vector_date_times`      | `readVectorDateTimes`     | `read_vector_date_times`      | string vector bulk read + date parsing |
-| `read_vector_date_time_by_id` | `readVectorDateTimesById` | `read_vector_date_time_by_id` | string vector read + date parsing |
-| `read_set_date_times`         | `readSetDateTimes`        | `read_set_date_times`         | string set bulk read + date parsing |
-| `read_set_date_time_by_id`    | `readSetDateTimesById`    | `read_set_date_time_by_id`    | string set read + date parsing    |
-| `query_date_time`             | `queryDateTime`           | `query_date_time`             | string query + date parsing       |
+|             Julia              |           Dart            |             Python             |                 Wraps                  |
+| ------------------------------ | ------------------------- | ------------------------------ | -------------------------------------- |
+| `read_scalar_date_times`       | `readScalarDateTimes`     | `read_scalar_date_times`       | string scalar bulk read + date parsing |
+| `read_scalar_date_time_by_id`  | `readScalarDateTimeById`  | `read_scalar_date_time_by_id`  | string read + date parsing             |
+| `read_vector_date_times`       | `readVectorDateTimes`     | `read_vector_date_times`       | string vector bulk read + date parsing |
+| `read_vector_date_times_by_id` | `readVectorDateTimesById` | `read_vector_date_times_by_id` | string vector read + date parsing      |
+| `read_set_date_times`          | `readSetDateTimes`        | `read_set_date_times`          | string set bulk read + date parsing    |
+| `read_set_date_times_by_id`    | `readSetDateTimesById`    | `read_set_date_times_by_id`    | string set read + date parsing         |
+| `query_date_time`              | `queryDateTime`           | `query_date_time`              | string query + date parsing            |
 
 The three parsers (`string_to_date_time`, `stringToDateTime`, `_parse_datetime`) each gate their
 input to the core's DATE_TIME grammar — `YYYY-MM-DD` optionally plus `THH:MM:SS` or ` HH:MM:SS`,

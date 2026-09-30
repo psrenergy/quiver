@@ -518,7 +518,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         """Read a datetime scalar attribute. Returns timezone-aware UTC datetime or None."""
         return _parse_datetime(self.read_scalar_string_by_id(collection, attribute, id), collection, attribute)
 
-    def read_vector_date_time_by_id(
+    def read_vector_date_times_by_id(
         self,
         collection: str,
         attribute: str,
@@ -529,7 +529,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
             _parse_datetime(s, collection, attribute) for s in self.read_vector_strings_by_id(collection, attribute, id)
         ]
 
-    def read_set_date_time_by_id(
+    def read_set_date_times_by_id(
         self,
         collection: str,
         attribute: str,
@@ -1956,7 +1956,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
                 elif dt == DataType.FLOAT:
                     result[name] = self.read_vector_floats_by_id(collection, name, id)
                 elif dt == DataType.DATE_TIME:
-                    result[name] = self.read_vector_date_time_by_id(collection, name, id)
+                    result[name] = self.read_vector_date_times_by_id(collection, name, id)
                 else:  # STRING
                     result[name] = self.read_vector_strings_by_id(collection, name, id)
         return result
@@ -1978,7 +1978,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
                 elif dt == DataType.FLOAT:
                     result[name] = self.read_set_floats_by_id(collection, name, id)
                 elif dt == DataType.DATE_TIME:
-                    result[name] = self.read_set_date_time_by_id(collection, name, id)
+                    result[name] = self.read_set_date_times_by_id(collection, name, id)
                 else:  # STRING
                     result[name] = self.read_set_strings_by_id(collection, name, id)
         return result

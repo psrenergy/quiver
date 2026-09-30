@@ -93,7 +93,7 @@ class TestReadSetDateTimesBulk:
             all_types_db.read_set_date_times("AllTypes", "tag")
 
         with pytest.raises(ValueError, match=r"AllTypes\.tag"):
-            all_types_db.read_set_date_time_by_id("AllTypes", "tag", 1)
+            all_types_db.read_set_date_times_by_id("AllTypes", "tag", 1)
 
 
 # -- Convenience set reads ---------------------------------------------------
@@ -198,16 +198,16 @@ class TestReadSetFloatsById:
 # -- DateTime set convenience (gap-fill) ------------------------------------
 
 
-class TestReadSetDateTimeById:
-    def test_read_set_date_time_by_id(self, all_types_db: Database) -> None:
-        """read_set_date_time_by_id wraps read_set_strings_by_id + datetime parsing."""
+class TestReadSetDateTimesById:
+    def test_read_set_date_times_by_id(self, all_types_db: Database) -> None:
+        """read_set_date_times_by_id wraps read_set_strings_by_id + datetime parsing."""
         id1 = all_types_db.create_element("AllTypes", label="item1")
         all_types_db.update_element(
             "AllTypes",
             id1,
             tag=["2024-01-15T10:30:00", "2024-06-20T08:00:00"],
         )
-        result = all_types_db.read_set_date_time_by_id("AllTypes", "tag", id1)
+        result = all_types_db.read_set_date_times_by_id("AllTypes", "tag", id1)
         assert len(result) == 2
         assert all(isinstance(dt, datetime) for dt in result)
         years = sorted(dt.month for dt in result)
@@ -351,4 +351,4 @@ class TestSetNullCells:
 
         expected = Counter([datetime(2024, 1, 1, tzinfo=timezone.utc), None])
         assert Counter(collections_db.read_set_date_times("Collection", "tag")[0]) == expected
-        assert Counter(collections_db.read_set_date_time_by_id("Collection", "tag", id1)) == expected
+        assert Counter(collections_db.read_set_date_times_by_id("Collection", "tag", id1)) == expected
