@@ -251,3 +251,76 @@ From the repo root:
 - The other inaccuracies in this file (plan 44).
 - Changing `import_csv` or `update_time_series_files` behaviour (plan 01; the files replace
   semantics are unchanged by design).
+
+## Implementation notes
+
+- **Starting point.** Master was already in the branch: `rs/plan43`, `master` and `origin/master`
+  were all `b4c62bb`, so there was nothing to merge. Plan 01 had landed (`a464023`), so the
+  post-01 scalar-import wording applies. Every quoted excerpt matched the code; only the line
+  numbers had drifted.
+- **Adversarial check.** Before editing, four read-only agents tried to refute each new sentence
+  against the code. The wording changes below came out of that check. They stay inside the claims
+  this plan fixes and keep the new prose true:
+  - **Errors bullet.**
+    - A `db:` error caught with `pcall` does not stop the script, so the bullet now says
+      "uncaught" and "that you do not catch with `pcall`".
+    - The claim that the failing call writes nothing holds only outside a transaction. Inside
+      one, a failure that only SQLite detects (UNIQUE, NOT NULL, CHECK or FK) keeps the call's
+      earlier writes (root AGENTS.md, "Writers check everything before their first write").
+    - Only database writes are undone. Nothing undoes a file a `db:` call wrote; `db:csv_to_bin`,
+      for example, truncates the `.qvr` before it parses the rows.
+    - "For the host to commit or roll back" was wrong for a dry run, which cannot be committed.
+      It now reads "closing it is up to the host".
+    - The all-or-nothing advice now adds "do not `pcall` inside it": a caught error lets
+      `db:transaction` commit whatever ran.
+  - **CSV, scalar table.** The CSV must hold *exactly* the table's columns except `id`, not just
+    "contain `label`" (`validate_columns_match`).
+  - **CSV, scalar import.** The paragraph now states:
+    - Elements are matched by exact label.
+    - A kept element has every column overwritten, and a blank cell writes NULL.
+    - `CASCADE` deletes the row that holds the relation: a group row, or an element of another
+      collection.
+    - Editing a label deletes that element and creates a new one.
+    - Only relations "from another table" follow `ON DELETE`: import clears self-references and
+      rewrites them from the file, so "exactly as `delete_element` would" was untrue for those.
+  - **`update_time_series_files`.** A column left out gets NULL *or its DEFAULT*, because the code
+    does a DELETE and then an INSERT of the given columns only.
+  - **Nil parenthetical.** `upsert_time_series_row` is also a whole-row replace
+    (`INSERT OR REPLACE` lists only the caller's columns). The plan's text listed it as if it did a
+    partial update, so it now names it with `update_time_series_files`.
+- **Extra scope the maintainer approved:**
+  - A warning in the `upsert_time_series_row` section that an existing row is replaced whole, plus
+    `LuaRunnerTest.UpsertTimeSeriesRowReplacesTheWholeRow`.
+  - L119 (Output bullet): "file columns" dropped from the list of places where `nil` stores NULL.
+  - L206-208 (Transactions caveat): "each `db:` write is durable on its own" became "outside a
+    transaction each `db:` write commits on its own, while inside the host's transaction it commits
+    or rolls back with the host's".
+- **Tests.** `UpdateTimeSeriesFilesReplacesTheWholeRow` (the plan's body) and
+  `UpsertTimeSeriesRowReplacesTheWholeRow` both pin behaviour that already exists. They pass before
+  and after this change, because the bug was in the prose, so there is no failing-first run.
+- **CHANGELOG.** The entry went into a new `## [0.12.7] — unreleased` → `### Fixed` section, not
+  `[0.12.0]`: v0.12.6 is tagged and the manifests are already at 0.12.7. The plan's entry gained one
+  clause about `upsert_time_series_row`. No manifest bump.
+- **Verification.**
+  - All 364 `LuaRunner*` tests pass, including both new ones.
+  - The full JS suite passes, 242/242; `lua-api-sync` passes 6/6.
+  - `scripts/format.bat` exits 0. Biome rewrote 30 untouched JS files from CRLF to LF, and those
+    were restored.
+  - `bunx biome check --line-ending=crlf src/lua-api.ts` is clean.
+- **For plan 44** (`bindings/js/src/lua-api.ts` line anchors after this plan):
+  - L55: the type-table row still says "file paths". It was left for 44(h), which removes it.
+  - L119: the Output bullet now reads `(query params, ts rows,\n  relation targets — ...`. 44(h)
+    adds its "except a trailing one" caveat here.
+  - L204: the quoted `cannot start a transaction within a transaction` error is unchanged, for
+    44(b). The paragraph's last sentence (L206-208) was rewritten, so re-anchor 44(b) on it.
+  - L305-308: the nil parenthetical now starts `(\`nil\` → NULL is accepted by \`update_relation\`,
+    and as a cell in the group writers; ...`. Append "query params (not a trailing one)" to that
+    first list.
+  - L480: the time-series rules header. The booleans bullet under it is still wrong, for 44.
+- **For plan 45:** the binary section is unchanged.
+- **Found and not planned anywhere:**
+  - `db:export_csv` silently overwrites an existing file at `path`, with no guard.
+  - `update_time_series_group(c, g, missing_id, {})` is a silent no-op, while the reference says
+    "the element id must exist". Only with rows does a missing id fail, on the foreign key.
+  - `db:transaction` leaves its transaction open if the final COMMIT fails
+    (`src/lua_runner.cpp`, the `transaction` lambda calls `commit()` outside the rollback branch).

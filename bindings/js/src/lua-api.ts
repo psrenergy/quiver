@@ -86,10 +86,18 @@ midnight.
 - **Type coercion.** An integer is accepted for a REAL column (coerced to real on insert); a float
   is rejected for an INTEGER column. A string bound to a \`date_*\` column must parse as ISO 8601
   (\`YYYY-MM-DD\`, optionally \`THH:MM:SS\` or \` HH:MM:SS\`). Other type mismatches raise a
-  validation error and roll the whole script back.
-- **Errors abort the script.** Any error thrown by a \`db:\` call stops the script and surfaces as
-  \`Failed to run Lua script: <message>\`. Validation failures roll back whatever the current
-  transaction covered.
+  validation error.
+- **An uncaught error aborts the script, and the script is not rolled back.** Any error thrown by
+  a \`db:\` call that you do not catch with \`pcall\` stops the script and surfaces as
+  \`Failed to run Lua script: <message>\`. Outside a transaction each \`db:\` write commits on its
+  own, so the failing call changes nothing in the database, but every write that finished before
+  it **stays**. Only \`db:transaction(fn)\` and \`db:dry_run(fn)\` undo their block's database
+  writes when \`fn\` errors; nothing undoes a file a \`db:\` call wrote. A
+  \`db:begin_transaction()\` (or \`db:begin_dry_run()\`) you opened and never closed stays open
+  after the error, and closing it is up to the host. A host that runs your script inside its own
+  transaction or dry run may undo the whole run; check \`db:in_transaction()\` if it matters. To
+  make several writes all-or-nothing, put them in one \`db:transaction(function(db) ... end)\`
+  and do not \`pcall\` inside it: a caught error lets the block commit whatever ran.
 - **Standard library.** Loaded standard libraries: base, string, table, math, coroutine, utf8.
   That is the pure-computation set — there is no \`os\`, \`io\`, \`debug\`, or \`package\`/\`require\`,
   and \`dofile\`/\`loadfile\` are removed (string-form \`load\` stays available). Integer division is
@@ -107,8 +115,8 @@ midnight.
 - **Output.** A script can \`return\` one value and the host receives it as JSON — prefer this over
   \`print()\` when you need structured data back (\`print()\` still works and is captured). Only the
   **first** returned value is encoded. Arrays are 1-indexed (iterate with \`ipairs\`); reading a NULL
-  yields \`nil\`, writing \`nil\` stores NULL where NULL is accepted (query params, ts rows, file
-  columns, relation targets — but NOT element scalar attributes; see CRUD).
+  yields \`nil\`, writing \`nil\` stores NULL where NULL is accepted (query params, ts rows,
+  relation targets — but NOT element scalar attributes; see CRUD).
 
   \`\`\`lua
   return { ids = db:read_element_ids("Collection"), total = 3 }
@@ -195,8 +203,9 @@ end)   -- both writes commit together; if either throws, both roll back
 **Caveat:** if the host already runs your script inside a plain transaction (not a dry run), an
 explicit \`db:begin_transaction()\` will error (\`cannot start a transaction within a transaction\`)
 and a mid-script \`db:commit()\` would prematurely end the host's transaction. When unsure whether
-a transaction is already open, check \`db:in_transaction()\` first, or just issue writes directly —
-each \`db:\` write is durable on its own.
+a transaction is already open, check \`db:in_transaction()\` first, or just issue writes directly:
+outside a transaction each \`db:\` write commits on its own, while inside the host's transaction it
+commits or rolls back with the host's.
 
 ---
 
@@ -293,8 +302,10 @@ Notes:
   \`{ x = nil }\` is identical to \`{}\`; an update/create table that ends up with no attributes
   **throws** (\`...must have at least one scalar attribute\` on create, \`...at least one attribute
   to update\` on update). To leave a column unchanged, omit the key — you cannot set a scalar to
-  NULL via the element table. (\`nil\` → NULL is only accepted by
-  \`upsert_time_series_row\`, \`update_time_series_files\` and \`update_relation\`.)
+  NULL via the element table. (\`nil\` → NULL is accepted by \`update_relation\`, and as a cell in
+  the group writers; \`upsert_time_series_row\` and \`update_time_series_files\` replace the whole
+  row, so a column you leave out (or set to \`nil\`, the same thing) is cleared — see Time series
+  and Time series files.)
 - **\`update_relation\` points one scalar foreign-key relation at another element**, named by the
   target's label. The column is derived from the naming convention —
   \`lowercase(collection_to) .. "_" .. relation_type\`, so
@@ -466,7 +477,7 @@ db:update_time_series_group("Items", "data", id, ts)   -- write the whole group 
 \`stack index -1, expected string, received number\` (the integer array indices 1, 2, 3 are not
 column names). Each value of the top-level table must be an **array**, not a scalar.
 
-**Rules** (validation throws, rolling the script back):
+**Rules** (a violation throws; see "Errors abort the script" for what is kept):
 - Every column value must be an array — a bare scalar throws \`column '...' must be an array of values\`.
 - The **dimension column(s) set the row count** and must be present and fully populated: the
   \`date_*\` ordering column, plus any extra primary-key columns in a multi-dimensional group (e.g.
@@ -503,6 +514,10 @@ db:upsert_time_series_row_by_label("Items", "data", "Item 1", {
 The element id must exist; the \`_by_label\` form takes a label in its place, with
 \`update_element_by_label\`'s resolution and miss semantics.
 
+An existing row with the same dimension key is **replaced whole**: every value column you leave
+out (or set to \`nil\`) is reset to NULL (or its DEFAULT). To change one value, pass every value
+column of the row.
+
 ---
 
 ## Time series files
@@ -514,10 +529,15 @@ singleton table):
 db:has_time_series_files(collection)              -- boolean
 db:list_time_series_files_columns(collection)     -- { "data_file", "metadata_file", ... }
 db:read_time_series_files(collection)             -- { data_file = "path", metadata_file = nil, ... }
-db:update_time_series_files(collection, { data_file = "path/to/data.bin", metadata_file = nil })
+db:update_time_series_files(collection, { data_file = "path/to/data.bin" })  -- metadata_file is cleared
 \`\`\`
 
-In \`update_time_series_files\`, a \`nil\` value clears that column.
+\`update_time_series_files\` **replaces the whole row**: every column you do not give a string is
+set to NULL (or to its DEFAULT, if the schema declares one), and in Lua a \`nil\` value and a
+missing key are the same thing. A table with no string values (\`{}\`, or only \`nil\` values)
+changes nothing and clears nothing. A value that is not a string throws. To change one path, read
+the row with \`db:read_time_series_files(collection)\`, change that one entry, and pass the whole
+table back.
 
 ---
 
@@ -599,9 +619,22 @@ local count = db:query_integer("SELECT COUNT(*) FROM Collection")
 
 ## CSV import / export
 
-Export a time-series group to a CSV file, or import one from a CSV file. \`path\` is sandboxed:
-relative paths resolve against the database file's directory and must stay inside it (see
-Critical rules); \`options\` is optional.
+Export one table of \`collection\` to a CSV file, or import one from a CSV file. \`group\` names a
+vector, set or time-series group of \`collection\`; pass \`""\` for the collection's own scalar table
+(the CSV then holds exactly the table's columns except \`id\`, \`label\` included). \`path\` is
+sandboxed: relative paths resolve against the database file's directory and must stay inside it
+(see Critical rules); \`options\` is optional.
+
+**\`db:import_csv\` replaces, it does not merge.** A group import deletes every existing row of
+that group, for every element, not only the elements named in the file, and then inserts the
+file's rows. A scalar import (\`group = ""\`) matches elements by exact label. An element whose
+label is in the file keeps its id and has every column overwritten from the file (a blank cell
+writes NULL). **Every element whose label is not in the file is deleted** as
+\`db:delete_element\` would delete it: its group rows go with it, and every relation pointing at
+it from another table follows its \`ON DELETE\` action (\`SET NULL\` clears it, \`CASCADE\`
+deletes the row that holds it, a group row or an element of another collection). So editing a
+label in the file deletes that element and creates a new one. A header-only CSV empties the
+table. To add or change a few elements, use \`db:create_element\` / \`db:update_element\` instead.
 
 \`\`\`lua
 db:export_csv(collection, group, path, options)
@@ -612,7 +645,7 @@ The optional \`options\` table has two keys:
 
 \`\`\`lua
 {
-    date_time_format = "%Y-%m-%d",   -- strftime-style format for the dimension column
+    date_time_format = "%Y-%m-%d",   -- strftime-style format for every date-time column
 
     -- enum_labels: write/read integer codes as human labels. Three nested levels:
     --   attribute name -> locale -> { label = integer_id }

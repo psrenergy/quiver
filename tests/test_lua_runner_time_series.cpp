@@ -501,6 +501,27 @@ TEST_F(LuaRunnerTest, UpsertTimeSeriesRowMultiDim) {
     EXPECT_EQ(std::get<int64_t>(rows[0].at("flag")), 1);
 }
 
+TEST_F(LuaRunnerTest, UpsertTimeSeriesRowReplacesTheWholeRow) {
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("multi_dim_time_series.sql"));
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    int64_t id = db.create_element("Resource", quiver::Element().set("label", "Resource 1"));
+
+    quiver::LuaRunner lua(db);
+
+    std::string script = R"(
+        local id = )" + std::to_string(id) +
+                         R"(
+        db:upsert_time_series_row("Resource", "load", id, { date_time = "2024-06-01", block = 1, load = 42.5, flag = 1 })
+        db:upsert_time_series_row("Resource", "load", id, { date_time = "2024-06-01", block = 1, load = 50.0 })
+    )";
+    lua.run(script);
+
+    auto rows = db.read_time_series_group("Resource", "load", id);
+    ASSERT_EQ(rows.size(), 1);
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[0].at("load")), 50.0);
+    EXPECT_TRUE(std::holds_alternative<std::nullptr_t>(rows[0].at("flag")));  // left out -> cleared
+}
+
 TEST_F(LuaRunnerTest, UpsertTimeSeriesRowMissingDimErrors) {
     // Negative path: omitting the required date_time dimension column must
     // surface the C++ "Cannot upsert_time_series_row: row missing required ..."
@@ -652,6 +673,22 @@ TEST_F(LuaRunnerTest, UpdateTimeSeriesFilesEmptyTableValidatesCollection) {
     expect_lua_error(lua,
                      R"(db:update_time_series_files("NoSuchCollection", {}))",
                      "Cannot update_time_series_files: collection not found: NoSuchCollection");
+}
+
+TEST_F(LuaRunnerTest, UpdateTimeSeriesFilesReplacesTheWholeRow) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", collections_schema, {.read_only = false, .console_level = quiver::LogLevel::Off});
+    quiver::LuaRunner lua(db);
+    lua.run(R"(
+        db:update_time_series_files("Collection", { data_file = "a.bin", metadata_file = "a.toml" })
+        db:update_time_series_files("Collection", { data_file = "b.bin" })
+        local f = db:read_time_series_files("Collection")
+        assert(f.data_file == "b.bin", "data_file")
+        assert(f.metadata_file == nil, "metadata_file must be cleared")
+        db:update_time_series_files("Collection", {})
+        local g = db:read_time_series_files("Collection")
+        assert(g.data_file == "b.bin", "an empty table changes nothing")
+    )");
 }
 
 TEST_F(LuaRunnerTest, MultiColumnTimeSeriesUpdateAndRead) {
