@@ -79,6 +79,9 @@ callers to change something are prefixed **BREAKING** and say what to do.
   the half-built object's `__del__` then emitted a spurious `ResourceWarning: LuaRunner was not
   closed explicitly` and printed `Exception ignored in … AttributeError: 'LuaRunner' object has no
   attribute '_ptr'`. A runner now counts as closed until its native handle exists.
+- **Julia: `scalar_relation_map` / `set_relation_map` read in bulk.** They issued one query per
+  element and a linear search per relation; they now make two bulk reads and a dictionary lookup,
+  so they scale linearly. Results are unchanged.
 - **JS: `bigint` is accepted by the group writers and as a query parameter.** `updateVectorGroup`,
   `updateSetGroup`, `updateTimeSeriesGroup` (and their `ByLabel` forms) and every `query*` method
   now take a `bigint` cell or parameter and write it as an exact int64, as `createElement` and

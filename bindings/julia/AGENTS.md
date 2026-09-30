@@ -38,9 +38,8 @@ Project.toml      # Deps: Artifacts, CEnum, Dates, Libdl; julia 1.11 compat
   `NOT NULL` column (a reader of the wrong type, or a NULL in a non-STRICT composite key, which the
   core reports `not_null`) raises instead of passing the C placeholder `0`/`0.0` off as data, and
   the C arrays are freed in `finally`. The public by-id readers wrap `_read_*_by_id(..., not_null)`
-  kernels: `read_{vectors,sets}_by_id` pass the answer from the groups they already listed, and
-  `set_relation_map` passes `false` (its values end up untyped), so no composite pays a
-  `list_*_groups` round-trip per column or per element. The boolean/datetime
+  kernels: `read_{vectors,sets}_by_id` pass the answer from the groups they already listed, so no
+  composite pays a `list_*_groups` round-trip per column. The boolean/datetime
   wrappers recover nullability from the delegate's container type (`values isa
   Vector{Vector{Int64}}`), so there is no second metadata hop. `Element` accepts the
   `Vector{Union{Nothing, T}}` a nullable read returns, `Optional{Bool}` from the boolean wrappers
