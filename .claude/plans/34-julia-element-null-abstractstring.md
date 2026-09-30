@@ -200,10 +200,10 @@ From the repo root:
 
 ## Acceptance criteria
 
-- [ ] `setindex!(::Element, ::Nothing, ::String)` exists and calls `quiver_element_set_null`.
-- [ ] The scalar string method takes `AbstractString`.
-- [ ] New tests pass; full Julia suite green.
-- [ ] AGENTS.md bullet and CHANGELOG entry added.
+- [x] `setindex!(::Element, ::Nothing, ::String)` exists and calls `quiver_element_set_null`.
+- [x] The scalar string method takes `AbstractString`.
+- [x] New tests pass; full Julia suite green.
+- [x] AGENTS.md bullet and CHANGELOG entry added.
 
 ## Pitfalls
 
@@ -217,3 +217,36 @@ From the repo root:
 
 - Nullable vector/set cells in Julia `Element`.
 - Any C API change.
+
+## Implementation notes
+
+- **Merged master first:** `origin/master` fast-forwarded to `4863906` (plan 32). No conflicts.
+- **Drift, CHANGELOG:** the current unreleased section is `## [0.12.6] — unreleased`, not
+  `0.12.0` (the version was bumped as earlier plans landed). Plan 32 had already opened a
+  `### Added` there, so the entry was appended to it. No manifest bump: the change is additive.
+- **AGENTS.md:** the **`Element` scalars** bullet is under "Rules and gotchas", right after the
+  "Vector/set NULL cells are nullability-aware too" bullet, which already describes the `Element`
+  array surface.
+- Everything else matched the plan verbatim: the `element.jl` anchors, the kwargs loops in
+  `database_create.jl`/`database_update.jl`, the test file testsets, `basic.sql` and
+  `Element::to_string`. The code and tests are exactly as written above.
+- **Regression tests before the fix:**
+  - `test_element.jl` "Set Nothing":
+    `MethodError: no method matching setindex!(::Quiver.Element, ::Nothing, ::String)`
+  - `test_database_update.jl` "Element Scalar Set To Nothing": the same error
+  - `test_database_create.jl` "Scalar Nothing And SubString":
+    `MethodError: no method matching setindex!(::Quiver.Element, ::SubString{String}, ::String)`
+  - The "Set SubString" element case was shown with a one-line `julia -e` snippet, because
+    `failfast` stops `test_element.jl` at "Set Nothing". It raised the same `SubString` error.
+- **After the fix:**
+  - `test_element.jl`: 23/23 passed
+  - `test_database_update.jl`: 108/108 passed
+  - `test_database_create.jl`: 70/70 passed
+  - full Julia suite: 1566/1566 passed
+- **For later plans (35/36/37/42 touch Julia):**
+  - `Element` now has a `setindex!(::Element, ::Nothing, ::String)` method. `nothing` passed to
+    any `create_element!` / `update_element!` / `update_element_by_label!` keyword writes SQL NULL
+    to a scalar instead of raising `MethodError`.
+  - The scalar string setter takes `AbstractString`.
+  - A test that relied on `nothing` raising a `MethodError` would now fail. None existed.
+- **Format:** `scripts/format.bat` changed none of the touched files. Biome rewrote the line endings of 43 JS files (no content change), and that churn was reverted.

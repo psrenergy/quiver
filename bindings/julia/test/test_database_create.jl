@@ -27,6 +27,19 @@ include("fixture.jl")
         Quiver.close!(db)
     end
 
+    @testset "Scalar Nothing And SubString" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        label = split("a,b", ",")[1]            # SubString{String}
+        Quiver.create_element!(db, "Configuration"; label = label, string_attribute = nothing)
+
+        @test Quiver.read_scalar_string_by_id(db, "Configuration", "label", 1) == "a"
+        @test isnothing(Quiver.read_scalar_string_by_id(db, "Configuration", "string_attribute", 1))
+
+        Quiver.close!(db)
+    end
+
     @testset "Collections with Vectors" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
         db = Quiver.from_schema(":memory:", path_schema)
