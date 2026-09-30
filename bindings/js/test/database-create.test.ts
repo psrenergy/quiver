@@ -199,6 +199,34 @@ describe("createElement with arrays", () => {
     }
   });
 
+  test("an array mixing bigint and numbers is typed like a group column", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      // ArrayValue forbids a mixed array, but a plain-JS caller can pass one. A bigint-led array
+      // used to skip the per-cell check: BigInt("12") stored 12, and BigInt(1.5) threw a RangeError.
+      const exact = [5, 9007199254740993n] as unknown as Value;
+      const widened = [7n, 1.5] as unknown as Value;
+      const id = db.createElement("AllTypes", {
+        label: "Item1",
+        count_value: exact,
+        score: widened,
+      });
+      expect(
+        db.queryString(
+          "SELECT CAST(count_value AS TEXT) FROM AllTypes_vector_counts WHERE vector_index = 2",
+        ),
+      ).toBe("9007199254740993");
+      expect(db.readVectorFloatsById("AllTypes", "score", id)).toEqual([7, 1.5]);
+
+      const parsed = [7n, "12"] as unknown as Value;
+      expect(() => db.createElement("AllTypes", { label: "Item2", count_value: parsed })).toThrow(
+        "Cannot createElement: numeric column 'count_value' has unsupported value type string in cell 1",
+      );
+    } finally {
+      db.close();
+    }
+  });
+
   test("rejects a non-number cell in a numeric array, naming the method and the column", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {

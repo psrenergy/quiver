@@ -26,7 +26,8 @@ export type ScalarValue = number | bigint | boolean | string | null;
 export type ArrayValue = number[] | bigint[] | boolean[] | string[];
 export type Value = ScalarValue | ArrayValue;
 export type ElementData = Record<string, Value | undefined>;
-export type QueryParam = number | boolean | string | null;
+/** A `bigint` binds as an exact INTEGER; a `boolean` as INTEGER 1/0. */
+export type QueryParam = number | bigint | boolean | string | null;
 
 /** Native memory allocation result. Callers MUST hold `buf` in scope to prevent GC. */
 export type Allocation = {

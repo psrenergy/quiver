@@ -49,8 +49,8 @@ callers to change something are prefixed **BREAKING** and say what to do.
   raises `TypeError`; write `update_element("C", 1, x=2)`.
 
 - **BREAKING — JavaScript: a numeric array or group column with a non-number cell throws.** When a
-  column's first non-null cell is a number or a boolean, every other non-null cell must be a number
-  or a boolean too. This applies to `createElement` / `updateElement` / `updateElementByLabel`
+  column's first non-null cell is a number, a `bigint` or a boolean, every other non-null cell must
+  be one of those too. This applies to `createElement` / `updateElement` / `updateElementByLabel`
   arrays and to the six group writers (`updateTimeSeriesGroup`, `updateVectorGroup`,
   `updateSetGroup` and their `ByLabel` forms). The binding used to type the column from one cell
   and convert the rest with no error: in a nullable REAL column, `[1.5, "abc"]` stored
@@ -60,8 +60,8 @@ callers to change something are prefixed **BREAKING** and say what to do.
   1/0 one cell at a time, as the group writers already did, so `[true, 5, false, 7]` stores
   `[1, 5, 0, 7]` instead of `[1, 1, 0, 1]`.
 
-  *Adapt:* make every cell of a numeric column a number (or a boolean); convert strings with
-  `Number(...)` before the call.
+  *Adapt:* make every cell of a numeric column a number (or a `bigint` or a boolean); convert
+  strings with `Number(...)` before the call.
 
 ### Fixed
 
@@ -82,6 +82,16 @@ callers to change something are prefixed **BREAKING** and say what to do.
 - **Julia: `scalar_relation_map` / `set_relation_map` read in bulk.** They issued one query per
   element and a linear search per relation; they now make two bulk reads and a dictionary lookup,
   so they scale linearly. Results are unchanged.
+- **JS: `bigint` is accepted by the group writers and as a query parameter.** `updateVectorGroup`,
+  `updateSetGroup`, `updateTimeSeriesGroup` (and their `ByLabel` forms) and every `query*` method
+  now take a `bigint` cell or parameter and write it as an exact int64, as `createElement` and
+  `upsertTimeSeriesRow` already did. Previously the group writers threw `unsupported value type
+  bigint` and the query methods `Unsupported query parameter type at index <i>: bigint`. A
+  numeric group column or `createElement` / `updateElement` array may mix `bigint` with numbers
+  and booleans: it is INTEGER unless a cell is fractional, which makes it FLOAT and converts a
+  `bigint` through `Number()`. An element array led by a `bigint` now gets the same per-cell check
+  as any other numeric array: `[7n, "12"]` used to store `12`, and `[7n, 1.5]` threw a raw
+  `RangeError`.
 
 ## [0.12.5] — unreleased
 
