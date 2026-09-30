@@ -351,3 +351,100 @@ Run from the repo root (`C:\Development\Quiver\quiver1`) in PowerShell.
 - The `upsert_time_series_row` docstring type line and the D-03 reference, and the `_marshal_group_columns` docstring wording: plan 30.
 - JS boolean handling in its marshallers (`setElementArray`, `updateGroupColumns`): plan 31.
 - The `_marshal_params` comment `# bool is subclass of int, handled here`: accurate, left as is.
+
+## Implementation notes
+
+Implemented on `rs/plan28` on top of master `f825f02`, which already contains plans 24 (`e4a6833`), 25
+(`3cbdcd1`), 26 (`4f9107d`) and 27 (`f825f02`). `git merge master` was a no-op.
+
+Before any edit, a three-lens read-only verification workflow checked the plan:
+- a live cffi/mutation run;
+- a simulation of plans 24–27 landing, with this plan applied on top;
+- a devil's-advocate case against implementing.
+
+Its verdict was **implement**. The design needs no change. The three agents independently confirmed
+the following:
+- cffi turns a `bool` into 1/0 in every `int64_t`/`double` slot.
+- The extended test passes before and after the edit.
+- Both mutations fail as predicted.
+- A control run shows the old test body could not detect a `type(v) is int` narrowing in
+  `_marshal_row_columns`, so the new block is a real pin.
+
+Code and test are exactly as this plan specifies, anchored by excerpt.
+
+### Drift fixed
+
+- **Test docstring.** Plan 24 had already rewritten the `test_boolean_input` docstring (not listed
+  under Overlaps), so the quoted "Old" text did not exist. Plan 24's wording ("`Element.set` and the
+  row marshaller test `bool` before `int`") became false with this plan. I replaced it wholesale with
+  the new docstring, anchored on `def test_boolean_input(`.
+- **The `elif` → `if` pitfall is inverted after plan 25.** Plan 25 put
+  `if isinstance(v, datetime): v = format_datetime(v)` directly above the bool comment, so the
+  "right after `c_col_names[i] = name_buf`" anchor was stale too.
+  - A leftover `elif isinstance(v, int)` is **not** a syntax error there. It chains onto the
+    datetime `if` and silently marshals every datetime kwarg as NULL. The verifier's probe
+    confirmed this: a NOT NULL failure on the dimension column and NULL in a nullable
+    `date_approved`.
+  - The int test is now a separate `if`, as the plan's New text says.
+  - `test_database_time_series_row.py::test_upsert_time_series_row_accepts_datetime` guards it.
+- **Step 3 was a no-op.** After plans 24–27, `git grep -n "isinstance([a-z_]*, bool)" --
+  bindings/python/src` printed exactly the two lines Steps 1–2 remove (`database.py:2326`,
+  `element.py:31`). Plan 24's `column_data_type` uses `isinstance(v, int)`.
+- **Root AGENTS.md text: two precision fixes to this plan's own wording.**
+  - "need no explicit branch" became "need no conversion branch".
+    `bindings/julia/src/element.jl:80` has a `Vector{Optional{Bool}}` `setindex!` entry. It is
+    required because `Vector{Union{Nothing,Bool}}` is not `<: Vector{<:Integer}`, but it only
+    narrows a nullable read and does not convert a bool.
+  - "dispatch-order-dependent" became "the group and row marshallers are branch-order-dependent".
+    Julia method dispatch picks the most specific method, so only the if/elseif chains depend on
+    order (`database_update.jl` `T <: Integer`/`T <: Real`, `v isa Integer`/`v isa Real`).
+    `marshal_params` tests `AbstractFloat`, which `Bool` is not.
+- **`tests/AGENTS.md`: one clause added.** The plan said no edit, but the boolean-files paragraph
+  said they are all over `valid/all_types.sql`, and `test_boolean_input` now also opens
+  `valid/mixed_time_series.sql`. Root Self-Updating rule.
+- **`-k bool` selects 7 tests, not 5.** It also matches
+  `TestSetNullCells::test_numeric_and_boolean_readers_keep_null_cells` and
+  `TestVectorNullCells::test_boolean_wrapper_keeps_null_cells`.
+- **Repo path, HEAD and line numbers.** This checkout is `quiver5`, not `quiver1`. The base is
+  `f825f02`, not `58dfe7a`. The root AGENTS.md boolean passage was at L216-221, and the
+  `mixed_time_series_db` fixture is at `conftest.py` L159-164.
+- **Stale native build.** `build/bin/libquiver_c.dll` predated plans 21 and 22, so Verification
+  step 1 (rebuild) was mandatory. Without it, the `query_*` paths fail with
+  `expected 1 bound parameter(s) but got 0`.
+
+### Results
+
+- **Baseline.** After the rebuild, before any edit, the full Python suite passed 349/349.
+- **Test first.** With the extended `test_boolean_input` and the sources untouched,
+  `test.bat -k test_boolean_input` gave 1 passed. That is expected: this change keeps behaviour.
+- **Mutation check.** Each mutation was applied and reverted, and `git diff --stat` afterwards
+  showed only the intended edits.
+  - `_marshal_row_columns` changed to `if type(v) is int:` failed at `test_database_boolean.py:129`,
+    the first `upsert_time_series_row`, with
+    `TypeError: Column 'humidity' value has unsupported type bool; expected int, float, str, or datetime`.
+  - `Element.set` changed to `elif type(value) is int:` failed at `test_database_boolean.py:92`,
+    the first `create_element`, with `TypeError: Unsupported type bool for Element.set('some_integer')`.
+- **Grep.** `git grep -n "isinstance([a-z_]*, bool)" -- bindings/python/src` prints nothing.
+- **`test.bat -k bool`.** 7 passed.
+- **Full Python suite.** 349 passed.
+- **`scripts\format.bat`.** clang-format, JuliaFormatter, dart format and ruff (35 files unchanged)
+  changed nothing. Biome again rewrote the 42 JS files from CRLF to LF with no content change, and
+  `git checkout -- bindings/js` reverted them (this plan has no JS edits).
+- **`scripts\test-all.bat`.** All six suites pass: C++ 1375, C API 571, Julia 1559, Dart 440,
+  JS 230, Python 349. The current `test-all.bat` has no CLI smoke step (`[1/6]`..`[6/6]`), so
+  root AGENTS.md's "six suites plus a `quiver_cli` smoke test" is stale. That is plan 65's to
+  settle.
+
+### For later plans
+
+- **Plan 29:** `self._ensure_valid()` is still the first statement of `Element.set`, followed by
+  `if value is None:` and then `elif isinstance(value, int):  # bool is an int subclass: ...`.
+- **Plan 30:**
+  - The upsert docstring's `bool -> INTEGER (0/1)` stays true.
+  - The REAL-column bool pin runs through `upsert_time_series_row_by_label` (`temperature=True`).
+    The id form writes the bool to the INTEGER column `humidity`. Both share
+    `_marshal_row_columns`, so "the row upsert pins a bool into a REAL column" holds.
+- **Comment wordings.** The Python write paths now carry the "bool is an int subclass" fact as
+  `# bool is subclass of int, handled here` (`_marshal_params`), `# bool is an int subclass`
+  (`column_data_type`), and `# bool is an int subclass: True/False marshal as 1/0` (here, twice).
+  Converging them was out of scope.

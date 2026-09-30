@@ -2320,15 +2320,7 @@ def _marshal_row_columns(kwargs: dict) -> tuple:
         if isinstance(v, datetime):
             v = format_datetime(v)  # marshalled by the str branch below
 
-        # bool is a subclass of int; test it explicitly first so True/False
-        # marshal as INTEGER 1/0 rather than being rejected by the `is int`
-        # check. Mirrors `_marshal_params` policy in this same file.
-        if isinstance(v, bool):
-            arr = ffi.new("int64_t[]", [int(v)])
-            keepalive.append(arr)
-            c_col_types[i] = DataType.INTEGER
-            c_col_data[i] = ffi.cast("void*", arr)
-        elif isinstance(v, int):
+        if isinstance(v, int):  # bool is an int subclass: True/False marshal as 1/0
             arr = ffi.new("int64_t[]", [v])
             keepalive.append(arr)
             c_col_types[i] = DataType.INTEGER

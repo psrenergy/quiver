@@ -118,7 +118,9 @@ no `bool` one, and the C API has no boolean setter (root design decision); each 
 before the FFI call. The Lua side lives in `test_lua_runner_create.cpp` (scalar, array, mixed
 integer/boolean array, mixed float/boolean array, cell-type mismatch, update, group writer, row
 upsert) with the query parameter in `test_lua_runner_errors.cpp`, over `valid/collections.sql`;
-the four bindings extend their own boolean files. Two things to keep in mind when touching these:
+the four bindings extend their own boolean files (Python's `test_boolean_input` also opens
+`valid/mixed_time_series.sql` for the row upsert, since `AllTypes` has no time-series group). Two
+things to keep in mind when touching these:
 
 - **The unsupported-type tests use a function (`print`), not a boolean** — in
   `test_lua_runner_create.cpp`, `test_lua_runner_errors.cpp` and `test_c_api_lua_runner.cpp`. They

@@ -81,13 +81,13 @@ def test_boolean_conversion_rejects_non_binary_integer(all_types_db: Database) -
         all_types_db.query_boolean("SELECT 2")
 
 
-def test_boolean_input(all_types_db: Database) -> None:
-    """A native bool on the write side.
+def test_boolean_input(all_types_db: Database, mixed_time_series_db: Database) -> None:
+    """A native bool is INTEGER 1/0 on every write path.
 
-    Python needs no special handling in most places (`bool` is an `int` subclass): `Element.set`
-    and the row marshaller test `bool` before `int`, and `column_data_type` (group columns and
-    element arrays) lets it fall into its `int` check, so this pins that a bool arrives as 1/0
-    whichever way it is dispatched.
+    No write path has a `bool` branch: `bool` is an `int` subclass, so each path's integer test
+    (`isinstance(v, int)`) takes it. That covers `Element.set` and its arrays, query parameters,
+    the group writers, and the time-series row upsert. This test pins it: narrowing any of those
+    tests to `type(v) is int` would reject a bool.
     """
     element_id = all_types_db.create_element(
         "AllTypes",
@@ -122,3 +122,28 @@ def test_boolean_input(all_types_db: Database) -> None:
     all_types_db.update_set_group("AllTypes", "codes", element_id, {"code": [True, False]})
     # A set has no insertion order.
     assert sorted(all_types_db.read_set_booleans_by_id("AllTypes", "code", element_id)) == [False, True]
+
+    # Row upsert (`_marshal_row_columns`), by id and by label. A bool written to the REAL column
+    # (`temperature`) reaches it as INTEGER 1 through the core's int-for-REAL rule.
+    sensor_id = mixed_time_series_db.create_element("Sensor", label="S1")
+    mixed_time_series_db.upsert_time_series_row(
+        "Sensor",
+        "readings",
+        sensor_id,
+        date_time="2024-01-01T00:00:00",
+        temperature=21.5,
+        humidity=True,
+        status="ok",
+    )
+    mixed_time_series_db.upsert_time_series_row_by_label(
+        "Sensor",
+        "readings",
+        "S1",
+        date_time="2024-01-02T00:00:00",
+        temperature=True,
+        humidity=False,
+        status="ok",
+    )
+    readings = mixed_time_series_db.read_time_series_group("Sensor", "readings", sensor_id)
+    assert readings["humidity"] == [1, 0]
+    assert readings["temperature"] == [21.5, 1.0]
