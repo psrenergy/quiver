@@ -98,6 +98,17 @@ class TestUpsertTimeSeriesRow:
         assert result["load"] == [500.0]
         assert result["flag"] == [0]
 
+    def test_upsert_time_series_row_int_for_real_and_omitted_columns(self, multi_dim_ts_db: Database) -> None:
+        """An int is accepted for a REAL column; a value column left out of kwargs is stored as NULL."""
+        eid = multi_dim_ts_db.create_element("Resource", label="R1")
+        multi_dim_ts_db.upsert_time_series_row("Resource", "load", eid, date_time="2024-01-01", block=1, load=42)
+        multi_dim_ts_db.upsert_time_series_row("Resource", "load", eid, date_time="2024-01-02", block=1, flag=5)
+
+        result = multi_dim_ts_db.read_time_series_group("Resource", "load", eid)
+        assert result["date_time"] == [_utc(2024, 1, 1), _utc(2024, 1, 2)]
+        assert result["load"] == [42.0, None]
+        assert result["flag"] == [None, 5]
+
     def test_upsert_time_series_row_by_label(self, collections_db: Database) -> None:
         """Label-addressed upsert writes only the labelled element; same PK overwrites."""
         item = _create_collection_element(collections_db, "Item1")

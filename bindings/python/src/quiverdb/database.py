@@ -1796,11 +1796,12 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
     def upsert_time_series_row(self, collection: str, group: str, id: int, /, **kwargs: object) -> None:
         """Insert or upsert a single time series row for an element.
 
-        Keyword arguments map column names to values. The dimension column (e.g.
-        date_time) and all value columns must be provided. Type dispatch uses
-        isinstance: bool -> INTEGER (0/1), int -> INTEGER, float -> FLOAT, str ->
-        STRING, datetime -> STRING (an aware value is converted to UTC).
-        No Int->Float coercion (per D-03: Python strict typing).
+        Keyword arguments map column names to values. Every dimension column (e.g.
+        date_time) must be provided; a value column left out gets its column default
+        (NULL if it declares none; a NOT NULL column with no default must be provided).
+        Type dispatch uses isinstance: bool -> INTEGER (0/1), int -> INTEGER,
+        float -> FLOAT, str -> STRING, datetime -> STRING (an aware value is converted
+        to UTC); integers are accepted for REAL columns.
         Dict unpacking is supported: db.upsert_time_series_row("Col", "grp", 1, **row_dict).
         """
         self._ensure_open()
@@ -2220,7 +2221,7 @@ def _decode_group_rows(
 
 
 def _marshal_group_columns(data: dict[str, list]) -> tuple:
-    """Marshal column lists into parallel C arrays for the columnar group writers.
+    """Marshal column lists into parallel C arrays for the columnar group writers (time series, vector, set).
 
     Each column is typed from all of its non-None cells by `column_data_type`: bool/int ->
     INTEGER, and a float anywhere widens the column to FLOAT; str -> STRING; datetime ->

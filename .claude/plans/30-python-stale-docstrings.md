@@ -249,15 +249,15 @@ Run from the repo root (`C:\Development\Quiver\quiver1`), in PowerShell.
 
 ## Acceptance criteria
 
-- [ ] `upsert_time_series_row`'s docstring no longer contains `No Int->Float coercion`, `D-03` or `all value columns must be provided`. It says every dimension column is required, a left-out value column gets its column default, and integers are accepted for REAL columns. Plan 25's `datetime -> STRING (an aware value is converted to UTC)` clause is kept if present.
-- [ ] `upsert_time_series_row`'s `def` line and `upsert_time_series_row_by_label`'s docstring are unchanged by this plan.
-- [ ] `_marshal_group_columns`'s summary line names the time-series, vector and set writers.
-- [ ] `_c_api.py`'s header comment says the declarations are hand-maintained, excludes `binary/` and `expression/`, and points to `generator/generator.bat`. The `ffi.cdef` block itself is unchanged.
-- [ ] `test_describe_runs_without_error` is gone from `test_database_lifecycle.py`; `TestDescribe.test_returns_string` still exists.
-- [ ] `test_upsert_time_series_row_int_for_real_and_omitted_columns` exists and passes.
-- [ ] The four alignment docstrings are untouched (plan 41).
-- [ ] No CHANGELOG or AGENTS.md change.
-- [ ] Full Python suite passes; `scripts/format.bat` leaves no diff outside the four files.
+- [x] `upsert_time_series_row`'s docstring no longer contains `No Int->Float coercion`, `D-03` or `all value columns must be provided`. It says every dimension column is required, a left-out value column gets its column default, and integers are accepted for REAL columns. Plan 25's `datetime -> STRING (an aware value is converted to UTC)` clause is kept if present.
+- [x] `upsert_time_series_row`'s `def` line and `upsert_time_series_row_by_label`'s docstring are unchanged by this plan.
+- [x] `_marshal_group_columns`'s summary line names the time-series, vector and set writers.
+- [x] `_c_api.py`'s header comment says the declarations are hand-maintained, excludes `binary/` and `expression/`, and points to `generator/generator.bat`. The `ffi.cdef` block itself is unchanged.
+- [x] `test_describe_runs_without_error` is gone from `test_database_lifecycle.py`; `TestDescribe.test_returns_string` still exists.
+- [x] `test_upsert_time_series_row_int_for_real_and_omitted_columns` exists and passes.
+- [x] The four alignment docstrings are untouched (plan 41).
+- [x] No CHANGELOG or AGENTS.md change.
+- [x] Full Python suite passes; `scripts/format.bat` leaves no diff outside the four files.
 
 ## Pitfalls
 
@@ -281,3 +281,58 @@ Run from the repo root (`C:\Development\Quiver\quiver1`), in PowerShell.
 - Adding `read_{vector,set}_group_by_id` to `_c_api.py`: **plan 18**. Deleting `quiver_clear_last_error` and the element counter cdefs: **plan 21**. Renaming the query cdefs: **plan 22**.
 - The equivalent leftover describe tests in Julia, Dart, JS, C++ and the C API: **plan 67**.
 - Documenting or pinning that a `None` kwarg to `upsert_time_series_row` raises `TypeError`, and that a replaced row resets its omitted value columns: not planned. Both are true today and neither is contradicted by any comment.
+
+## Implementation notes
+
+This was implemented on `rs/plan30`, in the repo at `C:\Development\Quiver\quiver7`, not `quiver1` as Verification says.
+
+**Branch state.** When planning started, the branch sat at master `5358778` and plans 24-29 had not landed. Before implementation began, it had been fast-forwarded to master `1f44aad`, which brought in plans 24-29 (#336-#341). After that, `git fetch origin && git merge origin/master` reported "Already up to date". Every anchor was in the state the plan predicted:
+- Plan 25's `datetime -> STRING (an aware value is converted to UTC)` clause is present.
+- Plan 27's `def` line reads `..., id: int, /, **kwargs: object) -> None:`.
+- Plan 24's summary line reads `...for the columnar group writers.`.
+- `test_upsert_time_series_row_multi_dim` is still in `TestUpsertTimeSeriesRow`, after plan 25's `..._accepts_datetime`.
+
+The plan header says **Depends on** none, but README's Batch 4 table lists 18, 21, 24, 25, 27, 28, 29. All of those had landed, so nothing blocked.
+
+**Pre-flight review.** Three read-only lenses reviewed the plan before any edit: code claims, overlap with plans 18-29/41/67, and a devil's advocate. All three said **implement-with-changes**. Skipping the plan would keep a docstring that states the opposite of the contract, because plans 25, 27 and 28 each left that sentence to this plan. Their changes are the deviations below.
+
+### Deviations
+
+- **Upsert docstring, NOT NULL wording.** The plan's `(NULL unless the schema declares one)` misleads for a `NOT NULL` value column with no default, which is the repo's canonical `value REAL NOT NULL` layout. There SQLite rejects the row instead of storing NULL. The clause now reads `(NULL if it declares none; a NOT NULL column with no default must be provided)`.
+  - Checked by hand on `mixed_time_series.sql`: `upsert_time_series_row("Sensor", "readings", eid, date_time="2024-01-01", temperature=1)` raises `QuiverError: Failed to execute statement: NOT NULL constraint failed: Sensor_time_series_readings.humidity`.
+  - No Python test was added for it. The rejection is SQLite's own constraint, and the C API already pins the same behaviour for `update_time_series_group` (`test_c_api_database_time_series_group.cpp` ~L569-580).
+  - The rest of the text is the plan's "New (after plan 25)" block, rewrapped. The rejected "replaced, not merged" clause stays out.
+- **`_marshal_group_columns` summary line.** Plan 24's `...for the columnar group writers.` fits Step 2's "no change" branch but not acceptance criterion 3 read literally. The line gained ` (time series, vector, set)`, which makes it exactly the plan's target line (109 chars). The rest of plan 24's docstring is untouched.
+- **New test, without the `isinstance(result["load"][0], float)` line.** That assertion cannot fail. `quiver_database_read_time_series_group` types each output column from the schema metadata (`src/c/database_time_series.cpp`), so a REAL column always decodes as a Python float whatever SQLite stored. The Tests bullet and the "`42 == 42.0`" Pitfall above are wrong for that reason. The int-for-REAL claim is proven by the int upsert being accepted and reading back as `42.0`.
+
+### Drift fixed
+
+- **Line numbers.** Anchors were found by phrase, at these positions before any edit (`1f44aad`):
+  - upsert docstring: `database.py` L1797-1805
+  - `_marshal_group_columns`: L2222
+  - lifecycle test: L98-99
+  - `TestDescribe.test_returns_string`: `test_database_metadata.py` L217-219
+  - `multi_dim_ts_db`: `conftest.py` L170
+  - C++ `UpsertTimeSeriesRowPartialValueColumns`: L494
+  - C++ `UpsertTimeSeriesRowErrors` case d: L576
+- **cdef counts.** Why §3's "113 vs 115" predates plans 21/22. At HEAD, the cdef block and the five generator headers each declare exactly 108 `quiver_*` functions, with no difference either way. That makes the new header's "the C API ... minus binary/ and expression/" exactly true.
+- **D-03.** The other hits are `src/database_describe.cpp:58-59` and `tests/test_database_ui_metadata.cpp:478-479` (L420's `READ-03` also matches). They were left alone.
+- **`scripts\test-all.bat` has no CLI smoke step at HEAD** (`grep -i "smoke\|cli" scripts/test-all.bat` finds nothing). The root `AGENTS.md` line "test-all.bat runs the six suites below plus a quiver_cli smoke test" is stale, and plans 65/82 own it. Nothing is expected to fail.
+
+### Verification results
+
+- `cmake --build build --config Debug`: no work to do.
+- `bindings\python\tests\test.bat -k "TestUpsertTimeSeriesRow or TestDescribe or test_database_lifecycle"`: 30 passed, including the new test. `test_describe_runs_without_error` is no longer collected.
+- `bindings\python\tests\test.bat`: 349 passed.
+- Stale-text `git grep` over `bindings/python`: no output.
+- `git diff` of `database.py`: two hunks, in `upsert_time_series_row` and `_marshal_group_columns`. The alignment docstrings are untouched.
+- `scripts\format.bat`: exit 0. Ruff changed none of the four files.
+  - Biome "fixed" 42 JS files, but only by rewriting CRLF to LF. With `core.autocrlf=true` the working tree is CRLF, and `git diff --stat` showed no content change. Those working copies were restored with `git checkout -- bindings/js`. This is a pre-existing environment quirk, unrelated to this plan.
+- `scripts\test-all.bat`: all six suites PASS (C++ 1375, C API 571, Julia, Dart, JS, Python 349).
+- **Environment note.** `uv` failed to build the editable `quiverdb` with `Failed to update Windows PE resources: ...\Temp\...\uv-trampoline-*.exe (os error -2147024786)`. Pointing `TEMP`/`TMP` at a scratch directory fixed it.
+
+### For later plans
+
+- **67:** its Python step (delete `test_describe_runs_without_error`) is now a no-op.
+- **41:** its four Python "not positionally aligned" paragraphs are already gone at HEAD. `read_vector_booleans`' docstring is `Read boolean vectors stored as integer vectors. A NULL cell is None.` Its mandated "NULL cells are dropped" wording also contradicts root `AGENTS.md`, which says vector/set cells preserve NULLs. Re-check 41 against the code before running it.
+- **28 overlap:** plan 28's `test_boolean_input` already writes a bool into a REAL column through `upsert_time_series_row_by_label`, which covers part of the int-for-REAL half of the new test. The omitted-column half is the only Python pin for a partial upsert.

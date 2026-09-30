@@ -95,10 +95,6 @@ def test_is_healthy_returns_true(db: Database) -> None:
     assert db.is_healthy() is True
 
 
-def test_describe_runs_without_error(db: Database) -> None:
-    db.describe()  # Should not raise; output goes to stdout
-
-
 def test_version_returns_string() -> None:
     result = quiverdb.version()
     assert isinstance(result, str)
