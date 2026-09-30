@@ -214,11 +214,15 @@ Settled questions — don't relitigate without the user; each was decided delibe
   the vector/set/time-series group writers, and `upsert_time_series_row` — all mapping it to
   INTEGER 1/0, which therefore also reaches a REAL column through the int-for-REAL coercion. There
   is no boolean setter in the C API and none is needed: each binding converts before the FFI call
-  (`Element.set` in Dart, `element.py`'s `isinstance(value, bool)` branch, `setElementField` /
-  `setElementArray` / `marshalParams` / `updateGroupColumns` / `upsertRowColumns` in JS, the five
-  sol2 converters in `src/lua_runner.cpp`). Julia and Python need no explicit branch on most paths
-  because `Bool <: Integer` and `bool` is an `int` subclass respectively — which makes the
-  behaviour dispatch-order-dependent and worth a test rather than an assumption.
+  (`Element.set` in Dart, `setElementField` / `setElementArray` / `marshalParams` /
+  `updateGroupColumns` / `upsertRowColumns` in JS, the five sol2 converters in
+  `src/lua_runner.cpp`). Julia and Python need no conversion branch because `Bool <: Integer` and
+  `bool` is an `int` subclass respectively, so a boolean takes each writer's integer branch. That
+  is worth a test rather than an assumption: in Julia the group and row marshallers are
+  branch-order-dependent (`Bool <: Real` too, so their `Integer` test must precede the `Real`
+  one), and in Python it holds only while every write path tests `isinstance(v, int)` —
+  `type(v) is int` would reject a bool (pinned by `test_boolean_input` in
+  `bindings/python/tests/test_database_boolean.py`).
   `db:update_relation` is the one deliberate refusal: only `nil` may clear a relation.
   All of them return one entry per element, aligned with `read_element_ids`, and all preserve
   NULLs positionally — the scalar readers per element, the vector/set readers per cell.

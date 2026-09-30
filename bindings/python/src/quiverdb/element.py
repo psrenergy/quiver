@@ -28,10 +28,7 @@ class Element:
         self._ensure_valid()
         if value is None:
             self._set_null(name)
-        elif isinstance(value, bool):
-            # Must check bool before int (bool is subclass of int)
-            self._set_integer(name, int(value))
-        elif isinstance(value, int):
+        elif isinstance(value, int):  # bool is an int subclass: True/False marshal as 1/0
             self._set_integer(name, value)
         elif isinstance(value, float):
             self._set_float(name, value)
