@@ -381,6 +381,26 @@ include("fixture.jl")
 
         Quiver.close!(db)
     end
+
+    @testset "Read With Malformed Dimension Throws And Frees" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+        id = Quiver.create_element!(db, "Collection"; label = "Item 1")
+        Quiver.update_time_series_group!(db, "Collection", "data", id;
+            date_time = ["2024-01-01T10:00:00"],
+            value = [1.5],
+        )
+        # Bypass the DATE_TIME write gate with raw SQL, as a pre-gate database or another tool would.
+        Quiver.query_string(db, "UPDATE Collection_time_series_data SET date_time = '2024-1-5' WHERE id = ?", [id])
+
+        @test_throws ArgumentError Quiver.read_time_series_group(db, "Collection", "data", id)
+        # The handle is still healthy afterwards: a second read fails the same way, no crash.
+        @test_throws ArgumentError Quiver.read_time_series_group(db, "Collection", "data", id)
+
+        Quiver.close!(db)
+    end
 end
 
 end

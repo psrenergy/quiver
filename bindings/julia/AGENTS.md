@@ -27,6 +27,8 @@ Project.toml      # Deps: Artifacts, CEnum, Dates, Libdl; julia 1.11 compat
 - **Always `GC.@preserve`**: refs produced by `marshal_params` (and any `Ref`s passed as pointers)
   must stay inside a `GC.@preserve refs ...` block spanning the ccall — the GC may otherwise
   collect them mid-call.
+- **Free C results in `finally`** when decoding can throw (DateTime parsing, metadata lookups),
+  as `read_time_series_group` does — Python's readers follow the same shape.
 - **Vector/set NULL cells are nullability-aware too.** All twelve vector/set readers consult
   `list_{vector,set}_groups(...)` for the value column's `not_null` (`_group_value_not_null`,
   `database_read.jl`) and return a concrete `Vector{Vector{Int64}}` / `Vector{Int64}` for a

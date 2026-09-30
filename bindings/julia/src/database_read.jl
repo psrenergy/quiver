@@ -736,53 +736,56 @@ function read_time_series_group(db::Database, collection::String, group::String,
         return Dict{String, Vector}()
     end
 
-    # Get dimension column name for DateTime parsing
-    metadata = get_time_series_metadata(db, collection, group)
-    dim_col = metadata.dimension_column
+    # Free in `finally`: the metadata lookup, the DateTime parse of a malformed dimension cell and
+    # the unsupported-type branch can all throw while the C buffers are held. The decode copies
+    # everything out (unsafe_string, fresh Vectors) before the free runs.
+    try
+        # Get dimension column name for DateTime parsing
+        metadata = get_time_series_metadata(db, collection, group)
+        dim_col = metadata.dimension_column
 
-    # Unmarshal column names, types, data, and per-cell NULL masks
-    name_ptrs = unsafe_wrap(Array, out_col_names[], col_count)
-    type_vals = unsafe_wrap(Array, out_col_types[], col_count)
-    data_ptrs = unsafe_wrap(Array, out_col_data[], col_count)
-    mask_ptrs = unsafe_wrap(Array, out_col_has_value[], col_count)
+        # Unmarshal column names, types, data, and per-cell NULL masks
+        name_ptrs = unsafe_wrap(Array, out_col_names[], col_count)
+        type_vals = unsafe_wrap(Array, out_col_types[], col_count)
+        data_ptrs = unsafe_wrap(Array, out_col_data[], col_count)
+        mask_ptrs = unsafe_wrap(Array, out_col_has_value[], col_count)
 
-    # Value columns are typed Optional{T}: mask[r] == 0 surfaces as `nothing`. The
-    # dimension column's mask is always all 1, so it stays a dense Vector{DateTime}.
-    result = Dict{String, Vector}()
-    for i in 1:col_count
-        col_name = unsafe_string(name_ptrs[i])
-        col_type = type_vals[i]
-        mask = unsafe_wrap(Array, mask_ptrs[i], row_count)
+        # Value columns are typed Optional{T}: mask[r] == 0 surfaces as `nothing`. The
+        # dimension column's mask is always all 1, so it stays a dense Vector{DateTime}.
+        result = Dict{String, Vector}()
+        for i in 1:col_count
+            col_name = unsafe_string(name_ptrs[i])
+            col_type = type_vals[i]
+            mask = unsafe_wrap(Array, mask_ptrs[i], row_count)
 
-        if col_type == Cint(C.QUIVER_DATA_TYPE_INTEGER)
-            int_arr = unsafe_wrap(Array, reinterpret(Ptr{Int64}, data_ptrs[i]), row_count)
-            result[col_name] = Optional{Int64}[mask[r] != 0 ? int_arr[r] : nothing for r in 1:row_count]
-        elseif col_type == Cint(C.QUIVER_DATA_TYPE_FLOAT)
-            float_arr = unsafe_wrap(Array, reinterpret(Ptr{Float64}, data_ptrs[i]), row_count)
-            result[col_name] = Optional{Float64}[mask[r] != 0 ? float_arr[r] : nothing for r in 1:row_count]
-        elseif col_type == Cint(C.QUIVER_DATA_TYPE_STRING) || col_type == Cint(C.QUIVER_DATA_TYPE_DATE_TIME)
-            str_ptr_ptr = reinterpret(Ptr{Ptr{Cchar}}, data_ptrs[i])
-            str_ptrs = unsafe_wrap(Array, str_ptr_ptr, row_count)
-            if col_name == dim_col
-                result[col_name] =
-                    DateTime[string_to_date_time(unsafe_string(p), collection, col_name) for p in str_ptrs]
+            if col_type == Cint(C.QUIVER_DATA_TYPE_INTEGER)
+                int_arr = unsafe_wrap(Array, reinterpret(Ptr{Int64}, data_ptrs[i]), row_count)
+                result[col_name] = Optional{Int64}[mask[r] != 0 ? int_arr[r] : nothing for r in 1:row_count]
+            elseif col_type == Cint(C.QUIVER_DATA_TYPE_FLOAT)
+                float_arr = unsafe_wrap(Array, reinterpret(Ptr{Float64}, data_ptrs[i]), row_count)
+                result[col_name] = Optional{Float64}[mask[r] != 0 ? float_arr[r] : nothing for r in 1:row_count]
+            elseif col_type == Cint(C.QUIVER_DATA_TYPE_STRING) || col_type == Cint(C.QUIVER_DATA_TYPE_DATE_TIME)
+                str_ptr_ptr = reinterpret(Ptr{Ptr{Cchar}}, data_ptrs[i])
+                str_ptrs = unsafe_wrap(Array, str_ptr_ptr, row_count)
+                if col_name == dim_col
+                    result[col_name] =
+                        DateTime[string_to_date_time(unsafe_string(p), collection, col_name) for p in str_ptrs]
+                else
+                    # Never unsafe_string a masked-out (NULL) pointer.
+                    result[col_name] =
+                        Optional{String}[mask[r] != 0 ? unsafe_string(str_ptrs[r]) : nothing for r in 1:row_count]
+                end
             else
-                # Never unsafe_string a masked-out (NULL) pointer.
-                result[col_name] =
-                    Optional{String}[mask[r] != 0 ? unsafe_string(str_ptrs[r]) : nothing for r in 1:row_count]
+                throw(ArgumentError("Unsupported data type $(col_type) for column '$col_name'"))
             end
-        else
-            throw(ArgumentError("Unsupported data type $(col_type) for column '$col_name'"))
         end
+        return result
+    finally
+        C.quiver_database_free_time_series_data(
+            out_col_names[], out_col_types[], out_col_data[], out_col_has_value[],
+            Csize_t(col_count), Csize_t(row_count),
+        )
     end
-
-    # Free C-allocated memory
-    C.quiver_database_free_time_series_data(
-        out_col_names[], out_col_types[], out_col_data[], out_col_has_value[],
-        Csize_t(col_count), Csize_t(row_count),
-    )
-
-    return result
 end
 
 function read_time_series_row(db::Database, collection::String, group::String, attribute::String; date_time::DateTime)
