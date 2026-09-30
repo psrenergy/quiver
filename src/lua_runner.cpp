@@ -1858,22 +1858,16 @@ struct LuaRunner::Impl {
         for (const auto& group : db.list_vector_groups(collection)) {
             for (const auto& col : group.value_columns) {
                 switch (col.data_type) {
-                case DataType::Integer: {
-                    auto values = db.read_vector_integers_by_id(collection, col.name, id);
-                    result[col.name] = to_lua_table(lua, values);
+                case DataType::Integer:
+                    result[col.name] = to_lua_table(lua, db.read_vector_integers_by_id(collection, col.name, id));
                     break;
-                }
-                case DataType::Real: {
-                    auto values = db.read_vector_floats_by_id(collection, col.name, id);
-                    result[col.name] = to_lua_table(lua, values);
+                case DataType::Real:
+                    result[col.name] = to_lua_table(lua, db.read_vector_floats_by_id(collection, col.name, id));
                     break;
-                }
                 case DataType::Text:
-                case DataType::DateTime: {
-                    auto values = db.read_vector_strings_by_id(collection, col.name, id);
-                    result[col.name] = to_lua_table(lua, values);
+                case DataType::DateTime:
+                    result[col.name] = to_lua_table(lua, db.read_vector_strings_by_id(collection, col.name, id));
                     break;
-                }
                 default:
                     throw std::runtime_error("Cannot read_vectors_by_id: unknown data type " +
                                              std::to_string(static_cast<int>(col.data_type)));
@@ -1890,22 +1884,16 @@ struct LuaRunner::Impl {
         for (const auto& group : db.list_set_groups(collection)) {
             for (const auto& col : group.value_columns) {
                 switch (col.data_type) {
-                case DataType::Integer: {
-                    auto values = db.read_set_integers_by_id(collection, col.name, id);
-                    result[col.name] = to_lua_table(lua, values);
+                case DataType::Integer:
+                    result[col.name] = to_lua_table(lua, db.read_set_integers_by_id(collection, col.name, id));
                     break;
-                }
-                case DataType::Real: {
-                    auto values = db.read_set_floats_by_id(collection, col.name, id);
-                    result[col.name] = to_lua_table(lua, values);
+                case DataType::Real:
+                    result[col.name] = to_lua_table(lua, db.read_set_floats_by_id(collection, col.name, id));
                     break;
-                }
                 case DataType::Text:
-                case DataType::DateTime: {
-                    auto values = db.read_set_strings_by_id(collection, col.name, id);
-                    result[col.name] = to_lua_table(lua, values);
+                case DataType::DateTime:
+                    result[col.name] = to_lua_table(lua, db.read_set_strings_by_id(collection, col.name, id));
                     break;
-                }
                 default:
                     throw std::runtime_error("Cannot read_sets_by_id: unknown data type " +
                                              std::to_string(static_cast<int>(col.data_type)));
