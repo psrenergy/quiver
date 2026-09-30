@@ -107,6 +107,10 @@ callers to change something are prefixed **BREAKING** and say what to do.
 - **Julia: `read_time_series_group` no longer leaks when decoding fails.** A dimension value that
   is not a valid date (possible in a database written before the DATE_TIME write gate, or by raw
   SQL) raised before the C result was freed.
+- **Dart: the group readers no longer leak when decoding fails.** `readTimeSeriesGroup`,
+  `readVectorGroupById` and `readSetGroupById` freed the C result only on success; a date value
+  outside the accepted grammar (possible in a database written before the DATE_TIME write gate,
+  or by raw SQL) leaked it on every call.
 
 ## [0.12.5] — unreleased
 
