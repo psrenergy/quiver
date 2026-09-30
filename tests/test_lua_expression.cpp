@@ -468,3 +468,35 @@ TEST_F(LuaExpressionTest, LogicalComposesIfElse) {
         r:close()
     )");
 }
+
+// Every operator metamethod on both usertypes. Each usertype is the left operand against a number,
+// so Lua (which tries the left operand's metamethod first) cannot fall back to the other one's.
+TEST_F(LuaExpressionTest, OperatorMetamethodsOnFileAndExpression) {
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+    lua.run(prelude() + R"(
+        fill('expr_a', 6.0, 0.0)
+        local fa = db:open_file('expr_a', 'r')
+        local n = 0
+        local function check(kind, expr, v1, v2, op)
+            n = n + 1
+            local path = 'expr_out' .. n
+            expr:save(path)
+            local r = db:open_file(path, 'r')
+            local cell = r:read({row = 1, col = 1})
+            r:close()
+            assert(cell[1] == v1 and cell[2] == v2, op .. ' on ' .. kind)
+        end
+        for kind, x in pairs({file = fa, expression = quiver.expression(fa)}) do
+            check(kind, x + 2.0, 8.0, 2.0, '+')
+            check(kind, x - 2.0, 4.0, -2.0, '-')
+            check(kind, x * 2.0, 12.0, 0.0, '*')
+            check(kind, x / 2.0, 3.0, 0.0, '/')
+            check(kind, -x, -6.0, 0.0, 'unary -')
+            check(kind, x & 1.0, 1.0, 0.0, '&')
+            check(kind, x | 0.0, 1.0, 0.0, '|')
+            check(kind, ~x, 0.0, 1.0, '~')
+        end
+        fa:close()
+    )");
+}

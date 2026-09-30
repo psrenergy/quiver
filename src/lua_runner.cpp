@@ -940,7 +940,7 @@ struct LuaRunner::Impl {
             "to_toml",
             [](BinaryMetadata& self) -> std::string { return self.to_toml(); });
 
-        lua.new_usertype<BinaryFile>(
+        auto binary_file_type = lua.new_usertype<BinaryFile>(
             "BinaryFile",
             sol::no_constructor,
             "read",
@@ -960,25 +960,9 @@ struct LuaRunner::Impl {
             "get_metadata",
             [](BinaryFile& self) -> BinaryMetadata { return self.get_metadata(); },
             "get_file_path",
-            [](BinaryFile& self) -> std::string { return self.get_file_path(); },
-            // Arithmetic on files mirrors Julia: file_a + file_b, -file, file * 2.0 (auto-wrap to Expression)
-            sol::meta_function::addition,
-            [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Add, a, b); },
-            sol::meta_function::subtraction,
-            [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Subtract, a, b); },
-            sol::meta_function::multiplication,
-            [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Multiply, a, b); },
-            sol::meta_function::division,
-            [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Divide, a, b); },
-            sol::meta_function::unary_minus,
-            [](sol::object a, sol::object) { return -to_expression(a); },
-            // Logical ops (nonzero = true, NaN propagates, unitless): `&` / `|` / `~`.
-            sol::meta_function::bitwise_and,
-            [](sol::object a, sol::object b) { return binop_dispatch(BinOp::And, a, b); },
-            sol::meta_function::bitwise_or,
-            [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Or, a, b); },
-            sol::meta_function::bitwise_not,
-            [](sol::object a, sol::object) { return !to_expression(a); });
+            [](BinaryFile& self) -> std::string { return self.get_file_path(); });
+        // Arithmetic on files mirrors Julia: file_a + file_b, -file, file * 2.0 (auto-wrap to Expression)
+        bind_expression_operators(binary_file_type);
 
         ns.set_function("metadata", [](const sol::object& t) { return build_metadata_from_lua(t); });
         ns.set_function("metadata_from_toml",
@@ -998,7 +982,7 @@ struct LuaRunner::Impl {
 
         // NOLINTBEGIN(performance-unnecessary-value-parameter) sol2 lambda bindings require pass-by-value for type
         // deduction
-        lua.new_usertype<Expression>(
+        auto expression_type = lua.new_usertype<Expression>(
             "Expression",
             sol::no_constructor,
             "save",
@@ -1039,24 +1023,8 @@ struct LuaRunner::Impl {
                     pairs.emplace_back(std::move(old_name), std::move(new_name));
                 }
                 return self.rename_agents(pairs);
-            },
-            sol::meta_function::addition,
-            [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Add, a, b); },
-            sol::meta_function::subtraction,
-            [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Subtract, a, b); },
-            sol::meta_function::multiplication,
-            [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Multiply, a, b); },
-            sol::meta_function::division,
-            [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Divide, a, b); },
-            sol::meta_function::unary_minus,
-            [](sol::object a, sol::object) { return -to_expression(a); },
-            // Logical ops (nonzero = true, NaN propagates, unitless): `&` / `|` / `~`.
-            sol::meta_function::bitwise_and,
-            [](sol::object a, sol::object b) { return binop_dispatch(BinOp::And, a, b); },
-            sol::meta_function::bitwise_or,
-            [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Or, a, b); },
-            sol::meta_function::bitwise_not,
-            [](sol::object a, sol::object) { return !to_expression(a); });
+            });
+        bind_expression_operators(expression_type);
 
         ns.set_function("expression", [](sol::object o) { return to_expression(o); });
         ns.set_function("abs", [](sol::object o) { return quiver::abs(to_expression(o)); });
@@ -1219,6 +1187,36 @@ struct LuaRunner::Impl {
         }
         return apply_binop(op, to_expression(lhs), to_expression(rhs));
     }
+
+    // NOLINTBEGIN(performance-unnecessary-value-parameter) sol2 lambda bindings require pass-by-value for type
+    // deduction
+    // The arithmetic, unary-minus and logical metamethods shared by every usertype that behaves like an
+    // expression (BinaryFile auto-wraps to Expression). One table, so a new operator is added once.
+    template <typename T>
+    static void bind_expression_operators(sol::usertype<T>& type) {
+        type[sol::meta_function::addition] = [](sol::object a, sol::object b) {
+            return binop_dispatch(BinOp::Add, a, b);
+        };
+        type[sol::meta_function::subtraction] = [](sol::object a, sol::object b) {
+            return binop_dispatch(BinOp::Subtract, a, b);
+        };
+        type[sol::meta_function::multiplication] = [](sol::object a, sol::object b) {
+            return binop_dispatch(BinOp::Multiply, a, b);
+        };
+        type[sol::meta_function::division] = [](sol::object a, sol::object b) {
+            return binop_dispatch(BinOp::Divide, a, b);
+        };
+        type[sol::meta_function::unary_minus] = [](sol::object a, sol::object) { return -to_expression(a); };
+        // Logical ops (nonzero = true, NaN propagates, unitless): `&` / `|` / `~`.
+        type[sol::meta_function::bitwise_and] = [](sol::object a, sol::object b) {
+            return binop_dispatch(BinOp::And, a, b);
+        };
+        type[sol::meta_function::bitwise_or] = [](sol::object a, sol::object b) {
+            return binop_dispatch(BinOp::Or, a, b);
+        };
+        type[sol::meta_function::bitwise_not] = [](sol::object a, sol::object) { return !to_expression(a); };
+    }
+    // NOLINTEND(performance-unnecessary-value-parameter)
 
     // `caller` is the public method ("aggregate" / "aggregate_agents") named in the Pattern 1 message.
     static ExpressionAggregate::Operation parse_aggregate_op(const std::string& op, const std::string& caller) {

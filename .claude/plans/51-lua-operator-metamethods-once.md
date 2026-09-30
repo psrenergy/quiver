@@ -122,8 +122,8 @@ From the repo root:
 
 ## Acceptance criteria
 
-- [ ] `grep -c "sol::meta_function::addition" src/lua_runner.cpp` prints 1.
-- [ ] The Lua expression/binary suites and lua-api-sync pass.
+- [x] `grep -c "sol::meta_function::addition" src/lua_runner.cpp` prints 1.
+- [x] The Lua expression/binary suites and lua-api-sync pass.
 
 ## Pitfalls
 
@@ -136,3 +136,46 @@ From the repo root:
 
 - The aggregation-op parser duplication (plan 16).
 - Adding operators.
+
+## Implementation notes
+
+Implemented on `rs/plan51` at `0da36ae`. Plans 43–50 were already merged there, so `git merge origin/master` was a no-op.
+
+### What changed
+
+- `src/lua_runner.cpp`: the eight `sol::meta_function::*` pairs are gone from both `new_usertype` lists. `bind_binary()` now captures `auto binary_file_type = lua.new_usertype<BinaryFile>(...)` and `bind_expression()` captures `auto expression_type = lua.new_usertype<Expression>(...)`. Each then calls the new `bind_expression_operators(...)`, which registers the eight metamethods once. The "Arithmetic on files mirrors Julia" comment now sits above the `BinaryFile` call. The method pairs, `sol::no_constructor` and their order are unchanged.
+- `tests/test_lua_expression.cpp`: one new test, `LuaExpressionTest.OperatorMetamethodsOnFileAndExpression`.
+- No CHANGELOG or AGENTS.md edits, as the plan says. `src/AGENTS.md`'s "`__band`/`__bor`/`__bnot` metamethods on the Expression and BinaryFile usertypes" is still true.
+
+### Why sol2 behaves identically (checked in `build/_deps/sol2-src/include/sol`)
+
+`new_usertype(key, args...)` registers the automagic enrollments first, then calls `ut.tuple_set(...)`, which calls `basic_usertype::set(key, value)` for each pair (`table.hpp` L63-81, `usertype.hpp` L48). `ut[meta_function::x] = f` goes through `usertype_proxy::operator=` → `tbl.set(key, value)`, the same `usertype_storage::set`. None of the automagic flags (`types.hpp` L1490) is an arithmetic or bitwise op, so running after creation cannot conflict with them.
+
+### Drift from the plan
+
+1. **Helper placement.** The plan says "just before the function that creates the two usertypes", but they are created in two functions (`bind_binary`, `bind_expression`). `BinOp`, `to_expression` and `binop_dispatch` are static members of `LuaRunner::Impl`, so `bind_expression_operators` is a `static` member template. It sits right after `binop_dispatch`, in the section headed "Expression operator dispatch (shared by Expression and BinaryFile metamethods)". Member bodies are complete-class context, so it can sit after its callers.
+2. **NOLINT block.** The helper's lambdas take `sol::object` by value, like every other sol2 lambda in the file. It is wrapped in the file's usual `// NOLINTBEGIN(performance-unnecessary-value-parameter) ...` / `NOLINTEND` pair.
+3. **Test.** The plan's sample test (`(a + b) * 2.0 - (-a)`, `(a & b) | ~a`) asserted no values and never used `/`. Before this plan, Lua `/` and unary `-` had no test on either usertype, and `- * /` had none with a file as the left operand. The new test loops over `{file = fa, expression = quiver.expression(fa)}` and checks all eight operators with values. Each usertype is the **left** operand against a number, because Lua tries the left operand's metamethod first; otherwise one usertype's table could stand in for the other's.
+4. **JS verification command.** `bindings/js/test/test.bat test/lua-api-sync.test.ts` expands to `bun test test test/lua-api-sync.test.ts`, and the bare `test` filter matches every file, so it runs the whole JS suite. `cd bindings/js && bun test test/lua-api-sync.test.ts` runs the sync test alone. Both were run.
+
+### Results
+
+- **Baseline** (test added, source untouched): `quiver_tests.exe --gtest_filter=LuaExpression*:LuaBinary*` → **50/50 passed**, the new test included. This is a refactor, so the test must pass before the change.
+- **After the refactor:** same filter **50/50**. Full `quiver_tests.exe` **1391/1391**. `quiver_c_tests.exe` **571/571**.
+- **Mutation checks:**
+  - Commenting out `bind_expression_operators(binary_file_type);` fails `FilePlusFile`, `LogicalOperators` and the new test with `attempt to perform arithmetic on a sol.sol::d::u<quiver::BinaryFile> value (local 'x')`.
+  - Commenting out `bind_expression_operators(expression_type);` fails 8 tests, the new one included.
+  - Both were restored and rebuilt, and the full suites above ran on the restored code.
+- **JS:** `bindings/js/test/test.bat test/lua-api-sync.test.ts` → **242 pass / 0 fail** (the whole suite, see drift 4). `bun test test/lua-api-sync.test.ts` → **6/6**, re-run after formatting.
+- **Julia:** `bindings/julia/test/test.bat test_lua_runner.jl` → LuaRunner **24/24**. It must be run from PowerShell or cmd. Through Git Bash's `cmd //c` it printed "The system cannot find the path specified."
+- **`grep -c "sol::meta_function::addition" src/lua_runner.cpp`** → `1`.
+- **`scripts\format.bat`** → exit 0.
+  - clang-format only rewrapped the new helper's lambdas.
+  - Biome again rewrote 43 JS files CRLF→LF with an empty `git diff --ignore-cr-at-eol`, and they were reverted with `git checkout -- bindings/js`.
+  - uv's first Python build failed with a transient `Failed to update Windows PE resources` (uv trampoline), then built and passed on its own (ruff: 35 files unchanged).
+  - No `.bat` file was touched.
+
+### For later plans
+
+- **The file's NOLINT spelling is wrong, and this plan copied it.** Every `NOLINTBEGIN/END(performance-unnecessary-value-parameter)` in `src/lua_runner.cpp` names a check that does not exist. The real one is `performance-unnecessary-value-param`, and clangd still reports it inside those blocks, e.g. `sol::object options` at the `read_csv*` lambdas. The new block uses the same spelling on purpose, so a later file-wide replace fixes all of them at once. No plan covers it (plan 79 is about `tidy.bat` itself), so it is left for the maintainer. Correcting the name would turn the blocks on, so the other lambdas' suppressed lint should be checked first.
+- `bind_expression_operators` is now the one place to add a Lua operator metamethod. The comparison free functions (`quiver.gt/...`) and the `Expression`/`BinaryFile` method lists are unchanged.
