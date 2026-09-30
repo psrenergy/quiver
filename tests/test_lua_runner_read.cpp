@@ -444,6 +444,21 @@ TEST_F(LuaRunnerTest, ReadVectorsByIdWithData) {
     lua.run(script);
 }
 
+TEST_F(LuaRunnerTest, ReadVectorsByIdEmptyGroupIsEmptyTable) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    int64_t id = db.create_element("Collection", quiver::Element().set("label", "Item 1"));  // no vector rows
+
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(
+        local v = db:read_vectors_by_id("Collection", )" +
+            std::to_string(id) + R"()
+        assert(type(v.value_int) == "table" and next(v.value_int) == nil, "empty group -> {}")
+        assert(type(v.value_float) == "table" and next(v.value_float) == nil, "empty group -> {}")
+    )");
+}
+
 TEST_F(LuaRunnerTest, ReadSetsByIdWithData) {
     auto db = quiver::Database::from_schema(":memory:",
                                             VALID_SCHEMA("composite_helpers.sql"),
