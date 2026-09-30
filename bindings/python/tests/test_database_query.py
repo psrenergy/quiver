@@ -8,7 +8,6 @@ import pytest
 
 from quiverdb import Database, QuiverError
 
-
 # -- Simple queries (QUERY-01) ------------------------------------------------
 
 

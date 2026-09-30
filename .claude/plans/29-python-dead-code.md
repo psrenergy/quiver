@@ -525,17 +525,17 @@ Run from the repo root `C:\Development\Quiver\quiver1` unless stated otherwise. 
 
 ## Acceptance criteria
 
-- [ ] `bindings/python/format.bat` is exactly `uv sync` / `uv run ruff check . --fix` / `uv run ruff format .`, all-CRLF with a final CRLF.
-- [ ] `bindings/python/Makefile` is deleted (`git rm`).
-- [ ] `pyproject.toml` dev group is `["pytest>=8.4.1", "ruff>=0.12.2"]`; no `dotenv` anywhere in tracked files.
-- [ ] `conftest.py` no longer defines `tests_path`, `csv_db_export`, `csv_db_import`; `csv_db` is kept.
-- [ ] `test_database_metadata.py` has no local `collections_db` fixture and no `Generator` / `Path` imports; `--fixtures-per-test` shows conftest's fixture for its tests.
-- [ ] `element.py` has no `_ensure_valid`, no `clear`, no `self._ensure_valid()` call and (unless an earlier plan added a real use) no `QuiverError` import; `_destroyed`, `destroy`, `__repr__`, `__del__` and `__init__` are unchanged apart from the one-line comment in `destroy`.
-- [ ] `_c_api.py` still declares `quiver_element_clear`.
-- [ ] `test_element_clear` is deleted; `test_element_set_after_destroy_raises` exists and passes.
-- [ ] `uv run ruff check .` (from `bindings/python`) prints `All checks passed!`; `tests/test_database_query.py` carries the one-line isort fix.
-- [ ] `bindings/python/AGENTS.md` Layout and API-shape bullet updated as above.
-- [ ] `bindings\python\tests\test.bat` and `scripts\test-all.bat` pass.
+- [x] `bindings/python/format.bat` is exactly `uv sync` / `uv run ruff check . --fix` / `uv run ruff format .`, all-CRLF with a final CRLF. *(`cat -A`: three lines, each ending `^M$`.)*
+- [x] `bindings/python/Makefile` is deleted (`git rm`).
+- [x] `pyproject.toml` dev group is `["pytest>=8.4.1", "ruff>=0.12.2"]`; no `dotenv` anywhere in tracked files. *(Read as scoped to the code: outside `.claude/plans`, which name it in prose, `git grep dotenv` finds nothing.)*
+- [x] `conftest.py` no longer defines `tests_path`, `csv_db_export`, `csv_db_import`; `csv_db` is kept.
+- [x] `test_database_metadata.py` has no local `collections_db` fixture and no `Generator` / `Path` imports; `--fixtures-per-test` shows conftest's fixture for its tests. *(Every `collections_db` line reads `tests\conftest.py:50`.)*
+- [x] `element.py` has no `_ensure_valid`, no `clear`, no `self._ensure_valid()` call and (unless an earlier plan added a real use) no `QuiverError` import; `_destroyed`, `destroy`, `__repr__`, `__del__` and `__init__` are unchanged apart from the one-line comment in `destroy`. *(Plans 24, 25 and 28 added no `QuiverError` use, so the import went.)*
+- [x] `_c_api.py` still declares `quiver_element_clear`. *(Line 63; the only `quiver_element_clear` hit in `bindings/python`.)*
+- [x] `test_element_clear` is deleted; `test_element_set_after_destroy_raises` exists and passes. *(It failed before the fix; see Implementation notes.)*
+- [x] `uv run ruff check .` (from `bindings/python`) prints `All checks passed!`; `tests/test_database_query.py` carries the one-line isort fix.
+- [x] `bindings/python/AGENTS.md` Layout and API-shape bullet updated as above. *(The API-shape wording is lightly corrected, and the two lines that follow are not re-wrapped; see Implementation notes.)*
+- [x] `bindings\python\tests\test.bat` and `scripts\test-all.bat` pass. *(Python 349 passed. All six suites of `test-all` pass.)*
 
 ---
 
@@ -564,3 +564,83 @@ Run from the repo root `C:\Development\Quiver\quiver1` unless stated otherwise. 
 - `Database._ensure_open`'s binding-crafted `"Database has been closed"`: not part of this finding; not touched.
 - `ruff.toml`'s stale `known-first-party = ["app"]`, widening `select` beyond `I`, and adding a ruff step to CI: not in this item's findings.
 - The empty `bindings/python/README.md`: not in this item's findings.
+
+---
+
+## Implementation notes
+
+This was implemented on `rs/plan29`, in the repo at `C:\Development\Quiver\quiver6`.
+
+**Branch state.** When planning started, the branch sat at master `5358778` and plans 24-28 had not landed. Before implementation began, it had been fast-forwarded to master `a659792`, which brought in plans 24-28 (#336-#340). After that, `git fetch origin && git merge origin/master` reported "Already up to date". So the plan's premise holds as written: plans 24, 25 and 28 had already edited `Element.set` / `_set_array` when this ran. Every anchor was re-checked on `a659792`, and only line numbers had moved:
+- `self._ensure_valid()` is at `element.py` L28.
+- `_ensure_valid` is at L105-107.
+- `clear` is at L118-122.
+- `QuiverError` (L7) was still used only by `_ensure_valid`, so the import went.
+
+**Pre-flight review.** Three read-only lenses reviewed the plan before any edit: code claims, overlap with plans 07/21/24-28/30/67/86/87, and a devil's advocate. All three said **implement**. None found hidden uses: no fixture, plugin or config uses the deleted items, and nothing outside the binding can reach the behaviour change.
+
+The devil's advocate added one framing point: the justification is "dead + redundant". The repo keeps binding-written lifecycle messages on live paths:
+- Python `Database._ensure_open` "Database has been closed"
+- `LuaRunner` "LuaRunner is closed"
+- Dart "Element has been disposed"
+- JS "Database is closed"
+
+This change sets no precedent for removing them.
+
+A two-lens read-only review of the finished diff checked conformance to the plan and doc accuracy, and scanned plans 30-42. It found no problems.
+
+### Results
+
+- **Red first.** With only the new test added (and the `QuiverError` import in `test_element.py`), `uv run pytest tests/test_element.py -v` failed exactly as predicted:
+  ```
+  E       AssertionError: Regex pattern did not match.
+  E         Expected regex: 'Null argument: element'
+  E         Actual message: 'Element has been destroyed'
+  ```
+  The result was 1 failed, 16 passed.
+- **Green.** After Changes §6 and the removal of `test_element_clear`, `tests/test_element.py` passes 16/16.
+- **`bindings/python/format.bat`, first run.**
+  - `uv sync` uninstalled `dotenv==0.9.9` and `python-dotenv==1.2.3`.
+  - `ruff check . --fix` reported `Found 1 error (1 fixed, 0 remaining).`
+  - `ruff format .` left all 35 files unchanged.
+  - A follow-up `uv run ruff check .` printed `All checks passed!`.
+  - The only diff from this step was the predicted one-line removal in `tests/test_database_query.py`.
+- **Fixture resolution.** In `--fixtures-per-test`, every `collections_db` user in `test_database_metadata.py` shows `collections_db -- tests\conftest.py:50`. That covers `TestGetGroupMetadata` (4), `TestListGroups` (4; plan 07's `test_list_groups_unknown_collection` had already landed), `test_group_metadata_frozen`, `TestDescribe`, `TestDescribeCollection` and `TestSummarizeCollection`.
+- **`bindings\python\tests\test.bat`.** 349 passed.
+- **`scripts\format.bat`.**
+  - clang-format, JuliaFormatter and dart format (0 changed) left their files unchanged.
+  - The Python step printed `All checks passed!` / `35 files left unchanged`.
+  - Biome again rewrote 42 `bindings/js` files CRLF→LF with no content change (`git diff -- bindings/js` is empty). They were restored with `git checkout -- bindings/js`, since this plan edits no JS.
+  - No `.bat` file other than `bindings/python/format.bat` changed.
+- **`scripts\test-all.bat`.** All six suites pass: C++ 1375, C API 571, Julia 1559, Dart 440, JS 230, Python 349.
+- **`git status --short`.** Exactly the nine files from Verification §6. The Makefile deletion is staged. `uv.lock` does not appear.
+
+### Drift fixed or noted
+
+- **Paths and HEAD.** The repo is `quiver6`, not `quiver1`, at `a659792`, not `58dfe7a`. Line numbers moved as the Pitfalls anticipate:
+  - The local `collections_db` fixture was at `test_database_metadata.py` L219-224. Plan 07's test shifted it.
+  - After step 4, conftest's `collections_db` is at L49-50, not ~L51.
+- **The `_c_api.py` mirror rationale is partly stale.** Plan 21 (`ad7856e`) deleted the `quiver_element_has_scalars` / `has_arrays` / `scalar_count` / `array_count` cdefs that Constraints §2 and the Pitfalls cite. The maintainer's decision still holds: `quiver_element_clear` (`_c_api.py:63`) mirrors `include/quiver/c/element.h`. It is now the only mirrored element function that Python never calls.
+- **The C API pins cover the code, not the message.** `ElementCApi.ClearNull` and `NullElementErrors` assert only `QUIVER_ERROR`. `test_element_set_after_destroy_raises` is now the only test that pins the `Null argument: element` text.
+- **The API-shape bullet in `bindings/python/AGENTS.md`** deviates from the plan in two small ways:
+  - Wording: the plan's "built, set and destroyed inside one `try/finally`" became "created, filled in a `try` and destroyed in its `finally` by each writer". `Element()` is constructed on the line before `try:` in all three writers (`database.py` L209/236/259).
+  - No re-wrap: only the old line ending in `internal. Properties are` was replaced. The next two lines were left byte-identical, to keep the hunk away from plan 27's rewrite of the next bullet. Plan 27 had in fact landed by then, but the minimal hunk is kept anyway.
+- **Verification §3's command.** `cmd /c format.bat` from PowerShell fails with `'format.bat' is not recognized as an internal or external command`: cmd did not look in the current directory. Use `cmd /c .\format.bat`, the same form as `scripts\format.bat`'s `call .\format.bat`.
+- **Correction to the CRLF Pitfall.** Pre-commit's `mixed-line-ending --fix=lf` rewrites *any* CRLF file, all-CRLF ones included, not only mixed ones. That is plan 87's premise. It is harmless here: no pre-commit git hook is installed (`.git/hooks` holds only samples), and CI does not run pre-commit. The index stores `.bat` files as LF either way (`i/lf w/crlf`). `format.bat` was written with `[IO.File]::WriteAllText` using an absolute path.
+- **`uv` behaviour.** The first `uv run` found an effectively empty `.venv` and rebuilt the editable `quiverdb` in well under a minute. It was not the multi-minute CMake build the Pitfalls warn about, but that can still happen on a cold cache.
+
+### For later plans
+
+- **Import-order diffs after this plan.** Once 29 is on master, `scripts\format.bat` also runs `ruff check . --fix` (isort) in `bindings/python`. Plans 30-42 were written against the old `format.bat`, which only formatted. If one of them adds an unsorted import, its format run will produce an import-order-only diff. Accept that diff; do not revert it. This applies even where a plan's check says "format.bat leaves no diff outside my files" (plan 30, step 6).
+- **After batch 4.** Once batch 4 is merged, run `bindings\python\format.bat` (or `uv run ruff check .`) once on master, and commit any import-order diff on its own.
+- **Plan 30.** `TestDescribe.test_returns_string` is unchanged, now at `test_database_metadata.py` L217-219. It resolves to conftest's file-backed `collections_db` instead of `:memory:`. conftest line numbers moved up by 18: `multi_dim_ts_db` is now at L170.
+- **Plan 34.** It quotes `if value is None: self._set_null(name)` in `element.py`. That code is still there and is now the first statement of `set`.
+- **Plans 34-37.** Their `tests_path()` is the Julia helper (`bindings/julia/test/fixture.jl`), not the deleted Python fixture.
+- **Shadowing fixture.** Do not add a module-level fixture named `collections_db` to `test_database_metadata.py` again, or the shadowing comes back.
+- **Dead-code sweep.** A future dead-cdef sweep should leave `quiver_element_clear` in `_c_api.py`; it stays by the maintainer's decision.
+- **Outside this plan's scope.** An F-rule ruff pass, which `ruff.toml` does not enable, finds pre-existing unused names:
+  - `pytest` in `tests/test_database_csv_export.py:5`;
+  - `pytest` (L7) and `QuiverError` (L9) in `tests/test_database_time_series_nulls.py`;
+  - `db` in `tests/test_database_transaction.py:85`.
+
+  A later dead-code item could pick these up.

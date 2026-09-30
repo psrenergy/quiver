@@ -4,8 +4,6 @@ methods (describe / describe_collection / summarize_collection)."""
 from __future__ import annotations
 
 import dataclasses
-from collections.abc import Generator
-from pathlib import Path
 
 import pytest
 
@@ -214,14 +212,6 @@ class TestDataType:
 #    The binding only verifies each method returns a string; the report content
 #    is covered by the C++ core tests (tests/test_database_describe.cpp).
 # -----------------------------------------------------------------------------
-
-
-@pytest.fixture
-def collections_db(collections_schema_path: Path) -> Generator[Database, None, None]:
-    """An in-memory database opened from the collections schema."""
-    database = Database.from_schema(":memory:", str(collections_schema_path))
-    yield database
-    database.close()
 
 
 class TestDescribe:

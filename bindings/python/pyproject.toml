@@ -16,7 +16,7 @@ wheel.packages = ["src/quiverdb"]
 wheel.exclude = ["bin", "lib", "include", "share"]
 
 [dependency-groups]
-dev = ["dotenv>=0.9.9", "pytest>=8.4.1", "ruff>=0.12.2"]
+dev = ["pytest>=8.4.1", "ruff>=0.12.2"]
 
 [tool.cibuildwheel]
 build = ["cp313-win_amd64", "cp313-manylinux_x86_64"]

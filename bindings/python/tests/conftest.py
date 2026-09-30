@@ -9,12 +9,6 @@ from quiverdb import Database
 
 
 @pytest.fixture
-def tests_path() -> Path:
-    """Return the tests/ directory path."""
-    return Path(__file__).resolve().parent
-
-
-@pytest.fixture
 def schemas_path() -> Path:
     """Return the shared test schemas directory."""
     return Path(__file__).resolve().parent.parent.parent.parent / "tests" / "schemas"
@@ -80,18 +74,6 @@ def csv_db(csv_export_schema_path: Path, tmp_path: Path) -> Generator[Database, 
     database = Database.from_schema(str(tmp_path / "csv.db"), str(csv_export_schema_path))
     yield database
     database.close()
-
-
-@pytest.fixture
-def csv_db_export(csv_db: Database) -> Database:
-    """Return csv_db typed as DatabaseCSVExport (Database inherits it)."""
-    return csv_db
-
-
-@pytest.fixture
-def csv_db_import(csv_db: Database) -> Database:
-    """Return csv_db typed as DatabaseCSVImport (Database inherits it)."""
-    return csv_db
 
 
 @pytest.fixture

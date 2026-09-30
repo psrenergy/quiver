@@ -4,7 +4,6 @@ from datetime import datetime
 
 from quiverdb._c_api import ffi, get_lib
 from quiverdb._helpers import check, column_data_type, decode_string, format_datetime
-from quiverdb.exceptions import QuiverError
 from quiverdb.metadata import DataType
 
 
@@ -25,7 +24,6 @@ class Element:
         DATE_TIME string, see format_datetime), and lists of int/bool, float, str or datetime --
         a float anywhere in a numeric list makes it a float array.
         """
-        self._ensure_valid()
         if value is None:
             self._set_null(name)
         elif isinstance(value, int):  # bool is an int subclass: True/False marshal as 1/0
@@ -102,24 +100,14 @@ class Element:
         c_arr = ffi.new("const char*[]", c_strings)
         check(lib.quiver_element_set_array_string(self._ptr, name.encode("utf-8"), c_arr, len(values), ffi.NULL))
 
-    def _ensure_valid(self) -> None:
-        if self._destroyed:
-            raise QuiverError("Element has been destroyed")
-
     def destroy(self) -> None:
         """Free the underlying C element. Idempotent."""
         if self._destroyed:
             return
         lib = get_lib()
         lib.quiver_element_destroy(self._ptr)
-        self._ptr = ffi.NULL
+        self._ptr = ffi.NULL  # a later set() fails in the C API: "Null argument: element"
         self._destroyed = True
-
-    def clear(self) -> None:
-        """Clear all set attributes from this element."""
-        self._ensure_valid()
-        lib = get_lib()
-        check(lib.quiver_element_clear(self._ptr))
 
     def __repr__(self) -> str:
         if self._destroyed:
