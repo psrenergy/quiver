@@ -8,7 +8,7 @@ import {
   readPtrOut,
   toCString,
 } from "./ffi-helpers.ts";
-import { type GroupColumns, updateGroupColumns } from "./group-columns.ts";
+import { type GroupColumns, numericCells, updateGroupColumns } from "./group-columns.ts";
 import { getSymbols, type NativePointer } from "./loader.ts";
 import type { ElementData, Value } from "./types.ts";
 
@@ -17,6 +17,7 @@ type Symbols = ReturnType<typeof getSymbols>;
 function setElementArray(
   lib: Symbols,
   elemPtr: NativePointer,
+  caller: string,
   name: string,
   values: unknown[],
 ): void {
@@ -45,21 +46,16 @@ function setElementArray(
     return;
   }
 
-  if (typeof first === "boolean") {
-    const arr = allocNativeInt64((values as boolean[]).map((v) => (v ? 1 : 0)));
-    check(lib.quiver_element_set_array_integer(elemPtr, nameBuf.buf, arr.buf, values.length, null));
-    return;
-  }
-
-  if (typeof first === "number") {
-    const allIntegers = (values as number[]).every((v) => Number.isInteger(v));
-    if (allIntegers) {
-      const arr = allocNativeInt64(values as number[]);
+  if (typeof first === "number" || typeof first === "boolean") {
+    // The null check above leaves no null cell, so the cast only narrows.
+    const cells = numericCells(caller, name, values) as number[];
+    if (cells.every((v) => Number.isInteger(v))) {
+      const arr = allocNativeInt64(cells);
       check(
         lib.quiver_element_set_array_integer(elemPtr, nameBuf.buf, arr.buf, values.length, null),
       );
     } else {
-      const arr = allocNativeFloat64(values as number[]);
+      const arr = allocNativeFloat64(cells);
       check(lib.quiver_element_set_array_float(elemPtr, nameBuf.buf, arr.buf, values.length, null));
     }
     return;
@@ -76,7 +72,13 @@ function setElementArray(
   throw new QuiverError(`Unsupported array element type for '${name}': ${typeof first}`);
 }
 
-function setElementField(lib: Symbols, elemPtr: NativePointer, name: string, value: Value): void {
+function setElementField(
+  lib: Symbols,
+  elemPtr: NativePointer,
+  caller: string,
+  name: string,
+  value: Value,
+): void {
   const nameBuf = toCString(name);
 
   if (value === null) {
@@ -110,7 +112,7 @@ function setElementField(lib: Symbols, elemPtr: NativePointer, name: string, val
   }
 
   if (Array.isArray(value)) {
-    setElementArray(lib, elemPtr, name, value);
+    setElementArray(lib, elemPtr, caller, name, value);
     return;
   }
 
@@ -132,7 +134,7 @@ Database.prototype.createElement = function (
   try {
     for (const [key, value] of Object.entries(data)) {
       if (value === undefined) continue;
-      setElementField(lib, elemPtr, key, value);
+      setElementField(lib, elemPtr, "createElement", key, value);
     }
 
     const outIdBuf = new Uint8Array(8);
@@ -160,7 +162,7 @@ Database.prototype.updateElement = function (
   try {
     for (const [key, value] of Object.entries(data)) {
       if (value === undefined) continue;
-      setElementField(lib, elemPtr, key, value);
+      setElementField(lib, elemPtr, "updateElement", key, value);
     }
     const collBuf = toCString(collection);
     check(lib.quiver_database_update_element(handle, collBuf.buf, BigInt(id), elemPtr));
@@ -186,7 +188,7 @@ Database.prototype.updateElementByLabel = function (
   try {
     for (const [key, value] of Object.entries(data)) {
       if (value === undefined) continue;
-      setElementField(lib, elemPtr, key, value);
+      setElementField(lib, elemPtr, "updateElementByLabel", key, value);
     }
     const collBuf = toCString(collection);
     const labelBuf = toCString(label);

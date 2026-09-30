@@ -711,24 +711,24 @@ Run from the repo root (`C:\Development\Quiver\quiver1`), in this order.
 
 ## Acceptance criteria
 
-- [ ] `numericCells(caller, name, values)` is exported from `bindings/js/src/group-columns.ts` and
+- [x] `numericCells(caller, name, values)` is exported from `bindings/js/src/group-columns.ts` and
       is **not** re-exported from `src/index.ts` or `mod.ts`.
-- [ ] `updateGroupColumns` sends every column whose first non-null cell is a number or a boolean
+- [x] `updateGroupColumns` sends every column whose first non-null cell is a number or a boolean
       through `numericCells`. Its string, all-null and unsupported-first-cell branches are
       unchanged. The `isStringColumn` / `rawValues` pre-mapping and the Python `int(v)` comment are
       gone.
-- [ ] `setElementArray` has no `typeof first === "boolean"` branch. It takes a `caller` and sends
+- [x] `setElementArray` has no `typeof first === "boolean"` branch. It takes a `caller` and sends
       number- or boolean-first arrays through `numericCells`.
-- [ ] `setElementField` threads `caller`. `createElement`, `updateElement` and
+- [x] `setElementField` threads `caller`. `createElement`, `updateElement` and
       `updateElementByLabel` pass their own names.
-- [ ] `[1.5, "abc"]` through `updateTimeSeriesGroup` throws
+- [x] `[1.5, "abc"]` through `updateTimeSeriesGroup` throws
       `Cannot updateTimeSeriesGroup: numeric column 'temperature' has unsupported value type string in cell 1`
       and writes nothing.
-- [ ] `createElement` with `count_value: [true, 5, false, 7]` stores `[1, 5, 0, 7]`.
-- [ ] The three new JS tests fail before the change and pass after. The whole JS suite is green.
-- [ ] `bindings/js/AGENTS.md` (layout line + boolean bullet) and the `CHANGELOG.md` **BREAKING**
+- [x] `createElement` with `count_value: [true, 5, false, 7]` stores `[1, 5, 0, 7]`.
+- [x] The three new JS tests fail before the change and pass after. The whole JS suite is green.
+- [x] `bindings/js/AGENTS.md` (layout line + boolean bullet) and the `CHANGELOG.md` **BREAKING**
       entry are updated as specified.
-- [ ] No change outside `bindings/js/` except `CHANGELOG.md`.
+- [x] No change outside `bindings/js/` except `CHANGELOG.md`.
 
 ## Pitfalls
 
@@ -780,3 +780,39 @@ Run from the repo root (`C:\Development\Quiver\quiver1`), in this order.
   `Cannot <caller>: …` form. They are pinned by `database-create.test.ts`, and no plan owns this.
 - **NaN number cells.** NaN is a `number`, so it passes `numericCells` and SQLite stores it as
   NULL. That is not a marshalling-type issue, and no plan owns it.
+
+## Implementation notes
+
+This was implemented on `rs/plan31`. At planning time the branch sat at master `5358778` (plans 01-23 plus the 0.12.6 bump). By the time implementation started, it had been fast-forwarded to master `264d544`, which brought in plans 24-30 (#336-#342). `git fetch && git merge origin/master` was then a no-op. Every result below refers to `264d544` plus this change. Before any edit, every excerpt, symbol, path and test name in this plan was checked against the code. Apart from the drift listed below, all of them matched. The verdict was **implement**: the group half loses data on a payload that `GroupColumns` admits, and the fix is small and JS-only.
+
+### Drift fixed
+
+- **`setElementArray` already refused `null` / `undefined` cells.** Commit 61e6236 added the check (`Unsupported null cell in array '<name>': write NULL cells with updateVectorGroup, updateSetGroup or updateTimeSeriesGroup`) after this plan was written. The "New (complete function)" in Step 4 leaves it out. **It is kept word for word**, in place after `const first` and before the `bigint` branch. Consequences:
+  - `numericCells` never sees a null on the element path. The cast comment reads "The null check above leaves no null cell, so the cast only narrows." instead of the planned "ArrayValue has no null cell (JS element arrays pass a dense mask)…".
+  - The first "Out of scope" claim is stale. "A plain-JS `[1, null]` is still written as `[1.0, 0.0]`" is no longer true: that payload throws the null-cell error, and has done so since 61e6236.
+- **Plan 24 had already reworded the `updateGroupColumns` comment** that Step 2 deletes. It no longer cited "Python's per-cell `int(v)`"; it read "the same per-cell 1/0 Python and Dart apply". The comment is deleted as planned. Its reasoning now lives in the `numericCells` doc comment, with no Python or Dart reference.
+- **CHANGELOG target.** `## [0.12.0] — unreleased` no longer exists. Plan 24 had created `## [0.12.6] — unreleased`, so the entry is the last bullet of its `### Changed`, right after plan 27's positional-only bullet and before `### Fixed`. There is no manifest bump (the manifests are already at 0.12.6) and no compare link (plan 78 owns links). The `[0.12.5]` header still reads "unreleased" although `v0.12.5` is tagged. Dating it is the maintainer's release step and was left alone.
+- **`bindings/js/AGENTS.md`.** "`setElementArray` had one until 0.12.0" reads "until 0.12.6". The boolean bullet now sits at ~L125-145. Its old text matched the plan verbatim, and the replacement is otherwise exactly the planned text.
+- **Paths.** The repo is `C:\Development\Quiver\quiver8`. `scripts/test-all.bat` runs six suites and has no CLI smoke step.
+- **Lint command.** `bun run lint` (`biome check`) exits 1 in this checkout whatever the change. `core.autocrlf=true` checks every `.ts` file out as CRLF, and Biome's LF formatter rejects them all (plan 24 recorded the same). `bunx biome check --line-ending=crlf` over the 5 touched JS files reports no errors and 2 warnings. Both are pre-existing `noUnusedVariables` on `COLLECTIONS_SCHEMA` / `MIXED_TS_SCHEMA` in `database-time-series-nulls.test.ts`, which were already unused at HEAD and were left alone (lint-debt rule).
+
+### Results
+
+- **Red first.** With only the three tests in place, the three files ran 33 pass / 3 fail, exactly the predicted three:
+  - `a mixed boolean/integer element array keeps its integer cells`: received `[1, 1, 0, 1]`.
+  - `rejects a non-number cell in a numeric array, naming the method and the column`: `Received function did not throw`, received value `1`, the new element id.
+  - `rejects a non-number cell in a numeric column instead of writing NULL`: `Received function did not throw`.
+- **Green.** After Steps 1-5 the three files pass 36/36, and the full JS suite 233/233 (230 before plus the three new tests). Plan 24's `describe("group writer column typing")` stays green.
+- **`scripts/test-all.bat`.** All six suites PASS: C++ 1375, C API 571, Julia 1559, Dart 440, JS 233, Python 349.
+- **`scripts/format.bat`.** clang-format, JuliaFormatter, dart format and ruff changed nothing. Biome rewrote 42 JS files to LF, with no content change in any of them. The 37 files outside this change were restored with `git checkout --`, and the 5 edited ones were put back to CRLF with `unix2dos`. `git diff --stat` then listed exactly the 7 planned files, plus this plan file for these notes.
+- **Grep checks.** `setElementField` / `setElementArray` show the 3 call sites (`"createElement"`, `"updateElement"`, `"updateElementByLabel"`) plus the one inside `setElementField`. `numericCells` is in neither `src/index.ts` nor `mod.ts`.
+- **Adversarial review.** A six-agent workflow ran after the change. Four read-only lenses covered runtime behaviour (with Bun probes), strict TypeScript, doc accuracy and plan completeness, and each finding went to a refuting verifier. It confirmed **no findings**.
+  - Strict `tsc` gives the same error set on the old and new sources, apart from 4 fewer implicit-`any` (TS7006) errors in `group-columns.ts`. Every other error is pre-existing, such as TS2345 where `create.ts` passes the Bun symbols to `updateGroupColumns`.
+  - Two findings were refuted. One was sparse-array holes, which predate this change and lie outside `GroupColumns` (see below). The other was plan 24's "JS and Julia already behaved this way" sentence, which is plan 24's text and was not touched.
+
+### For later plans
+
+- **33 (bigint in group writers).** Widen `numericCells` itself: accept `bigint`, and return `(number | bigint | null)[]`. The INTEGER test in `updateGroupColumns` is now `cells.every((v) => v === null || Number.isInteger(v))`, so it must also let `bigint` through, and a `bigint` must never reach `allocNativeFloat64`. The old inline `nonNull` / `sanitized` code is gone. `setElementArray`'s separate `bigint` branch still runs before the `numericCells` branch, and it keeps the null check ahead of it.
+- **24 is done on the JS side.** The JS comment it asked to fix is deleted here.
+- **Sparse-array holes (no plan owns them).** `Array.prototype.map` skips holes, so a hole after the first real cell of a group column bypasses `numericCells`. In a FLOAT column it still becomes NULL through `setFloat64(undefined)`; in an INTEGER column it throws a raw `TypeError` from `BigInt(undefined)`. Both behaviours predate this change. An explicit `undefined` cell is caught (`... unsupported value type undefined in cell <r>`). If holes are ever owned, `Array.from(values, (v, r) => …)` in `numericCells` plus hole-aware `first` / mask computation fixes both the leading and the trailing case.
+- **Plan 24's CHANGELOG sentence "JS and Julia already behaved this way."** It is true for float widening (`[1, 2.5]`), which JS still does. Read broadly, it was false before this change, and this change makes it more true: JS numeric columns now reject a string cell. Narrowing it to "JS and Julia already widened `[1, 2.5]` to FLOAT" would be an optional cleanup.

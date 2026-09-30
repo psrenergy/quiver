@@ -198,6 +198,31 @@ describe("createElement with arrays", () => {
       db.close();
     }
   });
+
+  test("rejects a non-number cell in a numeric array, naming the method and the column", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      // ArrayValue forbids a mixed array, but a plain-JS caller can pass one. "2" used to be
+      // written to the REAL column as 2.0 with no error.
+      const mixed = [1.5, "2"] as unknown as Value;
+
+      expect(() => db.createElement("AllTypes", { label: "Item1", score: mixed })).toThrow(
+        "Cannot createElement: numeric column 'score' has unsupported value type string in cell 1",
+      );
+      expect(db.numberOfElements("AllTypes")).toBe(0);
+
+      const id = db.createElement("AllTypes", { label: "Item1", score: [9.5] });
+      expect(() => db.updateElement("AllTypes", id, { score: mixed })).toThrow(
+        "Cannot updateElement: numeric column 'score' has unsupported value type string in cell 1",
+      );
+      expect(() => db.updateElementByLabel("AllTypes", "Item1", { score: mixed })).toThrow(
+        "Cannot updateElementByLabel: numeric column 'score' has unsupported value type string in cell 1",
+      );
+      expect(db.readVectorFloatsById("AllTypes", "score", id)).toEqual([9.5]);
+    } finally {
+      db.close();
+    }
+  });
 });
 
 describe("deleteElement", () => {
