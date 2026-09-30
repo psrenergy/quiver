@@ -393,6 +393,37 @@ void main() {
         db.close();
       }
     });
+
+    test('malformed DATE_TIME cell throws ArgumentError and the handle stays usable', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'multi_column_groups.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        final id = db.createElement('Items', {
+          'label': 'Item 1',
+          'date_event': ['2024-01-01'],
+        });
+        // Bypass the DATE_TIME write gate, as a pre-gate database or another tool would.
+        db.queryString(
+          'UPDATE Items_vector_events SET date_event = ? WHERE id = ?',
+          ['2024-1-5', id],
+        );
+
+        expect(
+          () => db.readVectorGroupById('Items', 'events', id),
+          throwsA(isA<ArgumentError>()),
+        );
+        // A second read fails the same way: no crash, no double free.
+        expect(
+          () => db.readVectorGroupById('Items', 'events', id),
+          throwsA(isA<ArgumentError>()),
+        );
+      } finally {
+        db.close();
+      }
+    });
   });
 
   group('Read Vector DateTimes Rejects A Malformed Cell', () {

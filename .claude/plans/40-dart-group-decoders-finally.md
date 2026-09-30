@@ -209,10 +209,12 @@ From the repo root:
 
 ## Acceptance criteria
 
-- [ ] Both decoders free inside a `finally` that covers the whole decode, including the metadata
+- [x] Both decoders free inside a `finally` that covers the whole decode, including the metadata
       lookup in `readTimeSeriesGroup`.
-- [ ] The empty-result early returns stay before the `try`.
-- [ ] The new test passes, the full suite is green and `dart analyze` is clean.
+- [x] The empty-result early returns stay before the `try`.
+- [x] The new test passes, the full suite is green and `dart analyze` is clean. (Both new tests
+      pass; 445/445; `dart analyze` reports no errors or warnings — only 7 pre-existing infos, see
+      Implementation notes.)
 
 ## Pitfalls
 
@@ -223,3 +225,62 @@ From the repo root:
 
 - The other readers' string decoding.
 - Julia's equivalent (plan 36) and the Python and JS readers.
+
+## Implementation notes
+
+Implemented on `rs/plan40`. At planning time the branch sat at master `3608708` (plans 01-31), and
+`git fetch` showed nothing to merge. While the plan was being approved the branch was
+fast-forwarded to master `2dcef0f`, which brought in plans 32-39 (#344-#351). The uncommitted edits
+applied cleanly on top, and every result below refers to `2dcef0f` plus this change. Every excerpt,
+symbol, path and test name in this plan was checked against the code before any edit; apart from
+the drift below, all of them matched. Verdict: **implement** — a real leak on a reachable input,
+fixed in the idiom `LuaRunner.run` already uses. After the edits, a three-lens read-only review
+(code: every exit path frees exactly once and the bodies moved unchanged; tests: not vacuous, the
+throw comes from the decoder's `stringToDateTime` branch; docs: caller list and wording) returned no
+findings.
+
+### Drift fixed
+
+- **CHANGELOG target.** `## [0.12.0] — unreleased` no longer exists. The entry is the last bullet of
+  `## [0.12.6] — unreleased` → `### Fixed`, right after plan 36's Julia twin fix, with the plan's
+  text verbatim. No manifest bump (the manifests are already 0.12.6; the fix is not breaking).
+- **Line numbers.** `_decodeGroupRows` sits at ~L1168 and `readTimeSeriesGroup` at ~L1241, not
+  ~L1116 / ~L1187; `LuaRunner.run`'s nested finally is at `lua_runner.dart:75-82` as stated.
+- **The optional `_decodeGroupRows` test applies.** The plan's grep matches many time-series files,
+  but the one vector/set `date_` column is `multi_column_groups.sql`'s nullable
+  `Items_vector_events.date_event` (`tests/AGENTS.md` says so). So
+  `database_read_vector_test.dart` → `group('Read Vector Group by Id')` gained
+  `'malformed DATE_TIME cell throws ArgumentError and the handle stays usable'`, the same shape as
+  the time-series test: write `2024-01-01`, raw `UPDATE Items_vector_events SET date_event =
+  '2024-1-5'`, assert `ArgumentError` from `readVectorGroupById('Items', 'events', id)` twice. No
+  set group has a `date_` column, so `readSetGroupById` is covered by the shared decoder only.
+- **`_decodeGroupRows` leading comment.** Reflowed to the file's two-line width: "...into row maps,
+  and always frees the C allocations, even / when decoding throws."
+
+### Red/green
+
+Both new tests were run **before** the fix and passed (`+2: All tests passed!` with `--name
+malformed`), as the plan predicts: the throw happens either way, and a C-heap leak is not observable
+from a Dart test. They pin the error path and, with the second read, the absence of a crash or double free; the leak itself is
+shown by code review (`git diff -w` shows only the `try` / `return` / `finally` lines moving).
+
+### Verification results
+
+- `bindings/dart/test/test.bat test/database_time_series_group_test.dart test/database_read_vector_test.dart`: `+39: All tests passed!`
+- `bindings/dart/test/test.bat`: `+445: All tests passed!`
+- `dart analyze`: 7 infos, no warnings or errors, all pre-existing. Four are
+  `unintended_html_in_doc_comment` on `readTimeSeriesGroup`'s untouched `///` doc (`List<DateTime>`
+  etc., now L1242-1244); the rest are in `quiverdb.dart`, `date_time.dart` and `metadata_test.dart`.
+  Left alone as unrelated lint.
+- `scripts/format.bat`: Dart `0 changed`, Julia/Python clean. Biome reported "Fixed 43 files" in
+  `bindings/js`, but `git diff --ignore-cr-at-eol` showed no content change — it rewrote the CRLF
+  working-tree files to LF. Reverted with `git checkout -- bindings/js`; later sessions running
+  `format.bat` on a CRLF checkout will see the same noise.
+
+### For later plans
+
+- **41** edits comments in `database_read.dart`. Both group decoders now have one extra indentation
+  level (a nested `try` in `readTimeSeriesGroup`, a top-level `try` in `_decodeGroupRows`), so
+  re-anchor by function name.
+- `bindings/dart/AGENTS.md`: the new sentence is appended to the "**`LuaRunner.run` owns its
+  result**" bullet.

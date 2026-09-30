@@ -1166,7 +1166,8 @@ extension DatabaseRead on Database {
   }
 
   // Decodes the columnar typed-arrays + per-cell mask result of the group
-  // read C functions into row maps, then frees the C allocations.
+  // read C functions into row maps, and always frees the C allocations, even
+  // when decoding throws.
   List<Map<String, Object?>> _decodeGroupRows(
     String collection,
     Pointer<Pointer<Pointer<Char>>> outColNames,
@@ -1181,52 +1182,55 @@ extension DatabaseRead on Database {
 
     if (colCount == 0 || rowCount == 0) return [];
 
-    final rows = List.generate(rowCount, (_) => <String, Object?>{});
-    for (var c = 0; c < colCount; c++) {
-      final colName = outColNames.value[c].cast<Utf8>().toDartString();
-      final colType = outColTypes.value[c];
-      final mask = outColHasValue.value[c];
+    // The result is C-heap allocated, so the caller's Arena cannot own it: free it in a finally so
+    // a DateTime parse or UTF-8 decode failure mid-loop cannot leak it.
+    try {
+      final rows = List.generate(rowCount, (_) => <String, Object?>{});
+      for (var c = 0; c < colCount; c++) {
+        final colName = outColNames.value[c].cast<Utf8>().toDartString();
+        final colType = outColTypes.value[c];
+        final mask = outColHasValue.value[c];
 
-      if (colType == quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER) {
-        final ptr = outColData.value[c].cast<Int64>();
-        for (var r = 0; r < rowCount; r++) {
-          rows[r][colName] = mask[r] != 0 ? ptr[r] : null;
-        }
-      } else if (colType == quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT) {
-        final ptr = outColData.value[c].cast<Double>();
-        for (var r = 0; r < rowCount; r++) {
-          rows[r][colName] = mask[r] != 0 ? ptr[r] : null;
-        }
-      } else if (colType == quiver_data_type_t.QUIVER_DATA_TYPE_DATE_TIME) {
-        final ptr = outColData.value[c].cast<Pointer<Char>>();
-        for (var r = 0; r < rowCount; r++) {
-          // Never toDartString a masked-out (NULL) pointer.
-          rows[r][colName] = mask[r] != 0
-              ? stringToDateTime(
-                  ptr[r].cast<Utf8>().toDartString(),
-                  collection,
-                  colName,
-                )
-              : null;
-        }
-      } else {
-        final ptr = outColData.value[c].cast<Pointer<Char>>();
-        for (var r = 0; r < rowCount; r++) {
-          rows[r][colName] = mask[r] != 0 ? ptr[r].cast<Utf8>().toDartString() : null;
+        if (colType == quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER) {
+          final ptr = outColData.value[c].cast<Int64>();
+          for (var r = 0; r < rowCount; r++) {
+            rows[r][colName] = mask[r] != 0 ? ptr[r] : null;
+          }
+        } else if (colType == quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT) {
+          final ptr = outColData.value[c].cast<Double>();
+          for (var r = 0; r < rowCount; r++) {
+            rows[r][colName] = mask[r] != 0 ? ptr[r] : null;
+          }
+        } else if (colType == quiver_data_type_t.QUIVER_DATA_TYPE_DATE_TIME) {
+          final ptr = outColData.value[c].cast<Pointer<Char>>();
+          for (var r = 0; r < rowCount; r++) {
+            // Never toDartString a masked-out (NULL) pointer.
+            rows[r][colName] = mask[r] != 0
+                ? stringToDateTime(
+                    ptr[r].cast<Utf8>().toDartString(),
+                    collection,
+                    colName,
+                  )
+                : null;
+          }
+        } else {
+          final ptr = outColData.value[c].cast<Pointer<Char>>();
+          for (var r = 0; r < rowCount; r++) {
+            rows[r][colName] = mask[r] != 0 ? ptr[r].cast<Utf8>().toDartString() : null;
+          }
         }
       }
+      return rows;
+    } finally {
+      bindings.quiver_database_free_time_series_data(
+        outColNames.value,
+        outColTypes.value,
+        outColData.value,
+        outColHasValue.value,
+        colCount,
+        rowCount,
+      );
     }
-
-    bindings.quiver_database_free_time_series_data(
-      outColNames.value,
-      outColTypes.value,
-      outColData.value,
-      outColHasValue.value,
-      colCount,
-      rowCount,
-    );
-
-    return rows;
   }
 
   // ==========================================================================
@@ -1274,57 +1278,60 @@ extension DatabaseRead on Database {
 
       if (colCount == 0 || rowCount == 0) return {};
 
-      // Get dimension column for DateTime parsing
-      final meta = getTimeSeriesMetadata(collection, group);
-      final dimCol = meta.dimensionColumn;
+      // The result is C-heap allocated, so the Arena cannot own it: free it in its own finally so
+      // a metadata lookup, DateTime parse or UTF-8 decode failure cannot leak it.
+      try {
+        // Get dimension column for DateTime parsing
+        final meta = getTimeSeriesMetadata(collection, group);
+        final dimCol = meta.dimensionColumn;
 
-      // Per-cell NULL mask: mask[r] == 0 means SQL NULL, surfaced as null. The
-      // dimension column's mask is always all 1, so it stays a dense List<DateTime>.
-      final result = <String, List<Object?>>{};
-      for (var c = 0; c < colCount; c++) {
-        final colName = outColNames.value[c].cast<Utf8>().toDartString();
-        final colType = outColTypes.value[c];
-        final mask = outColHasValue.value[c];
+        // Per-cell NULL mask: mask[r] == 0 means SQL NULL, surfaced as null. The
+        // dimension column's mask is always all 1, so it stays a dense List<DateTime>.
+        final result = <String, List<Object?>>{};
+        for (var c = 0; c < colCount; c++) {
+          final colName = outColNames.value[c].cast<Utf8>().toDartString();
+          final colType = outColTypes.value[c];
+          final mask = outColHasValue.value[c];
 
-        if (colType == quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER) {
-          final ptr = outColData.value[c].cast<Int64>();
-          result[colName] = List<int?>.generate(rowCount, (r) => mask[r] != 0 ? ptr[r] : null);
-        } else if (colType == quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT) {
-          final ptr = outColData.value[c].cast<Double>();
-          result[colName] = List<double?>.generate(rowCount, (r) => mask[r] != 0 ? ptr[r] : null);
-        } else {
-          // STRING or DATE_TIME
-          final ptr = outColData.value[c].cast<Pointer<Char>>();
-          if (colName == dimCol) {
-            result[colName] = List<DateTime>.generate(
-              rowCount,
-              (r) => stringToDateTime(
-                ptr[r].cast<Utf8>().toDartString(),
-                collection,
-                colName,
-              ),
-            );
+          if (colType == quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER) {
+            final ptr = outColData.value[c].cast<Int64>();
+            result[colName] = List<int?>.generate(rowCount, (r) => mask[r] != 0 ? ptr[r] : null);
+          } else if (colType == quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT) {
+            final ptr = outColData.value[c].cast<Double>();
+            result[colName] = List<double?>.generate(rowCount, (r) => mask[r] != 0 ? ptr[r] : null);
           } else {
-            // Never toDartString a masked-out (NULL) pointer.
-            result[colName] = List<String?>.generate(
-              rowCount,
-              (r) => mask[r] != 0 ? ptr[r].cast<Utf8>().toDartString() : null,
-            );
+            // STRING or DATE_TIME
+            final ptr = outColData.value[c].cast<Pointer<Char>>();
+            if (colName == dimCol) {
+              result[colName] = List<DateTime>.generate(
+                rowCount,
+                (r) => stringToDateTime(
+                  ptr[r].cast<Utf8>().toDartString(),
+                  collection,
+                  colName,
+                ),
+              );
+            } else {
+              // Never toDartString a masked-out (NULL) pointer.
+              result[colName] = List<String?>.generate(
+                rowCount,
+                (r) => mask[r] != 0 ? ptr[r].cast<Utf8>().toDartString() : null,
+              );
+            }
           }
         }
+
+        return result;
+      } finally {
+        bindings.quiver_database_free_time_series_data(
+          outColNames.value,
+          outColTypes.value,
+          outColData.value,
+          outColHasValue.value,
+          colCount,
+          rowCount,
+        );
       }
-
-      // Free C-allocated memory
-      bindings.quiver_database_free_time_series_data(
-        outColNames.value,
-        outColTypes.value,
-        outColData.value,
-        outColHasValue.value,
-        colCount,
-        rowCount,
-      );
-
-      return result;
     } finally {
       arena.releaseAll();
     }

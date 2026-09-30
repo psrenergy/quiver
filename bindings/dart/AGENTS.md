@@ -117,7 +117,8 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
 - **`LuaRunner.run` owns its result**: `quiver_lua_runner_run` takes a `char** out_result` whose JSON
   string is C-heap allocated, so the `Arena` cannot own it — it is freed with
   `quiver_lua_runner_free_string` (*not* `quiver_database_free_string`) in its own nested `finally`,
-  so a `toDartString` failure cannot leak it.
+  so a `toDartString` failure cannot leak it. The columnar group decoders (`_decodeGroupRows`,
+  `readTimeSeriesGroup`) free the C result in their own `finally` for the same reason.
 - **Time-series group NULLs**: `readTimeSeriesGroup`/`updateTimeSeriesGroup` use
   `Map<String, List<Object?>>` — a `null` cell is a SQL NULL. `_marshalGroupColumn` returns a
   `({int type, Pointer<Void> data, Pointer<Uint8> hasValue})` record (the per-cell mask;
