@@ -213,9 +213,9 @@ From the repo root:
 
 ## Acceptance criteria
 
-- [ ] The free is in a `finally` that covers the metadata lookup and the decode loop.
-- [ ] The empty-result early return stays before the `try`.
-- [ ] New testset passes; full suite green.
+- [x] The free is in a `finally` that covers the metadata lookup and the decode loop.
+- [x] The empty-result early return stays before the `try`.
+- [x] New testset passes; full suite green.
 
 ## Pitfalls
 
@@ -228,3 +228,33 @@ From the repo root:
 - The vector/set group readers (plan 18) and `read_time_series_row` (plan 17).
 - Dropping the `get_time_series_metadata` call (column 0 is the dimension per
   `include/quiver/c/database.h`); maintainer asked to keep it.
+
+## Implementation notes
+
+- **Landed as planned.** The `read_time_series_group` body inside `try` is the old code verbatim,
+  one level deeper. The free moved into `finally`, `return result` moved inside `try`, and the
+  empty-result early return stays before the `try`. The shape matches `_read_group_rows` (plan 18),
+  which sits just above it in `database_read.jl`.
+- **Test is a behaviour pin, not failing-first.** `Read With Malformed Dimension Throws And Frees`
+  passes before the fix too (58/58 in the file before and after): the `ArgumentError` is thrown
+  either way, and Julia cannot observe the leak. The code review of the `try/finally` shape is the
+  real check. The testset proves the error path runs through `finally` twice with no double-free
+  or crash.
+- **Drift fixed:**
+  - The CHANGELOG entry went under `## [0.12.6] — unreleased` → `### Fixed`, not
+    `## [0.12.0] — unreleased`. 0.12.0 has since been released, and 0.12.6 is the current
+    `CMakeLists.txt` version.
+  - The function now sits at ~L717-789, not ~L627-697, because plan 18's `_read_group_rows` was
+    added above it.
+  - `query_string(db, sql, parameters::Vector = [])` is unchanged by plan 22, so the test calls
+    it as written. The C++ and Python tests already run DML through `query_*`.
+- **Verification:**
+  - `cmake --build build --config Debug`: no work to do.
+  - `test.bat test_database_time_series_group.jl`: 58/58.
+  - Full `bindings/julia/test/test.bat`: 1569/1569.
+  - `scripts/format.bat` exits 0, and JuliaFormatter left the Julia edits unchanged. Biome rewrote
+    43 untouched JS files CRLF→LF with content identical under `--ignore-cr-at-eol`. That churn is
+    an environment artifact, not part of this plan, so it was reverted.
+- **For later plans:** plans 41/42 (comment/rename edits elsewhere in `database_read.jl`) should
+  re-anchor by function name. This plan only adds a `try` level to `read_time_series_group`;
+  plans 17 and 18 had already landed and their functions are untouched.

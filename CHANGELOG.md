@@ -92,6 +92,9 @@ callers to change something are prefixed **BREAKING** and say what to do.
   `bigint` through `Number()`. An element array led by a `bigint` now gets the same per-cell check
   as any other numeric array: `[7n, "12"]` used to store `12`, and `[7n, 1.5]` threw a raw
   `RangeError`.
+- **Julia: `read_time_series_group` no longer leaks when decoding fails.** A dimension value that
+  is not a valid date (possible in a database written before the DATE_TIME write gate, or by raw
+  SQL) raised before the C result was freed.
 
 ## [0.12.5] — unreleased
 
