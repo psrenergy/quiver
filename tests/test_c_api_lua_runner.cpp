@@ -497,7 +497,7 @@ TEST_F(LuaRunnerCApiTest, RunScriptUnsupportedAttributeTypeFails) {
 
     const char* error = quiver_get_last_error();
     ASSERT_NE(error, nullptr);
-    EXPECT_NE(std::string(error).find("Cannot table_to_element: attribute 'enabled'"), std::string::npos) << error;
+    EXPECT_NE(std::string(error).find("Cannot create_element: attribute 'enabled'"), std::string::npos) << error;
 
     quiver_lua_runner_free(lua);
     quiver_database_close(db);

@@ -122,9 +122,9 @@ From the repo root:
 
 ## Acceptance criteria
 
-- [ ] No internal helper name appears in any thrown message.
-- [ ] Four pinned tests are updated and two new tests added. Lua and C API suites are green.
-- [ ] CHANGELOG entry added.
+- [x] No internal helper name appears in any thrown message.
+- [x] Four pinned tests are updated and two new tests added. Lua and C API suites are green.
+- [x] CHANGELOG entry added.
 
 ## Pitfalls
 
@@ -137,3 +137,54 @@ From the repo root:
 
 - Other decoders' messages (plan 48).
 - Any C++ core message.
+
+## Implementation notes
+
+Landed on `rs/plan47` on top of plans 43–46 (merged via master, `2692911`).
+
+**Tests first.** With the test changes in and the fix not yet made, 8 tests failed, each still
+naming a helper: 7 C++ (`CreateElementUnsupportedAttributeTypeThrows`,
+`CreateElementUnsupportedArrayElementTypeThrows`, `CreateElementArrayCellTypeMismatchThrows`,
+`QueryParameterUnsupportedTypeThrows`, `UpsertTimeSeriesRowUnsupportedValueTypeThrows`,
+`UpdateElementRefusesArrayWithNilHole`, `UpdateElementUnsupportedAttributeTypeThrows`) and 1 C API
+(`RunScriptUnsupportedAttributeTypeFails`). For example:
+`Failed to run Lua script: Cannot lua_table_to_value_map: column 'value' has unsupported Lua type`.
+After the fix: `LuaRunner*` 369/369, C API `*LuaRunner*` 27/27, full `quiver_tests` 1384/1384, full
+`quiver_c_tests` 571/571, JS `lua-api-sync` 6/6, full JS suite 242/242.
+
+**Drift fixed:**
+- `require_dense_array` (a separate helper called from `table_to_element`) also hardcoded
+  `Cannot table_to_element: array '...' has a nil hole ...`. The plan's "any other throw inside the
+  function" didn't cover it, and plan 18's notes hand this message to 47. It now takes a leading
+  `caller`, like the other three. `UpdateElementRefusesArrayWithNilHole`'s first assertion is
+  tightened to `Cannot update_element: array 'value_int' has a nil hole` to pin it.
+- `CreateElementArrayCellTypeMismatchThrows` also asserts `Cannot create_element: array '`, which
+  pins the `array_caller` → `lua_cell_as` form (`Cannot create_element: array 'tag': cell #2 has
+  unsupported Lua type`).
+- The plan's final grep (`"table_to_element\|...`) can't match a `"Cannot table_to_element` literal.
+  The check used instead was
+  `grep -nE "Cannot (table_to_element|lua_table_to_value)|\"(table_to_element|lua_table_to_value)" src/lua_runner.cpp`,
+  which is empty. Comments still name the helpers (they are function names).
+- The plan's new update test named `Configuration.integer_attribute`, which `collections.sql`
+  doesn't have (it would pass anyway, since conversion runs before the column lookup). The test uses
+  `Collection.some_integer` instead.
+- The C API pinned assertion is at `tests/test_c_api_lua_runner.cpp:500` (the plan says ~497).
+- CHANGELOG: the plan's `[0.12.0]` was stale. The entry is under `## [0.12.7] — unreleased` →
+  `### Fixed`, which plans 43–45 had created, with one added sentence for the nil-hole message.
+- `bindings/js/test/test.bat test/lua-api-sync.test.ts` expands to `bun test test test/...`, which
+  runs the whole JS suite. `bun test test/lua-api-sync.test.ts` from `bindings/js` runs only the
+  sync test. Both were run.
+- `bindings/js/src/lua-api.ts` quotes no helper-named message (re-checked after 43/44), so it is
+  unchanged.
+
+**For later plans:**
+- Plan 72: take substrings from the public names: `Cannot create_element:`,
+  `Cannot update_element:`, `Cannot update_element_by_label:`, `Cannot query_{string,integer,float}:`,
+  `Cannot upsert_time_series_row(_by_label):`, `Cannot metadata_from_element:`. The nil-hole
+  rejection now names the public method too.
+- Not fixed (out of scope): the nil-hole hint says "write NULL cells with update_vector_group or
+  update_set_group", which is the wrong advice when the caller is `quiver.metadata_from_element`.
+  Also, the C++ core's own `BinaryMetadata::from_element` errors still say `Cannot from_element:`
+  after the Lua conversion step says `metadata_from_element`.
+- No Lua test calls `quiver.metadata_from_element`, or the `_by_label` / `query_string` /
+  `query_float` conversion errors. They share the helper strings the tested callers pin.

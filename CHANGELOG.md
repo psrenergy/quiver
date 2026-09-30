@@ -29,6 +29,12 @@ callers to change something are prefixed **BREAKING** and say what to do.
   became column `''`. The agent-facing reference also now documents boolean cells, the real
   transaction/dry-run error texts, that `query_*` do not convert types, the `nil` holes in bulk
   reads and the trailing-`nil` query-parameter limit.
+- **Lua: conversion errors name the method the script called.** An unsupported value passed to
+  `db:create_element`, `db:update_element`(`_by_label`), `db:upsert_time_series_row`(`_by_label`),
+  `db:query_*` or `quiver.metadata_from_element` now reports e.g. `Cannot create_element: attribute
+  'x' has unsupported Lua type`, instead of an internal helper name (`table_to_element`,
+  `lua_table_to_value_map`, `lua_table_to_values`). The same holds for an element array with a
+  `nil` hole (`Cannot update_element: array 'x' has a nil hole ...`).
 
 ## [0.12.6] — unreleased
 
