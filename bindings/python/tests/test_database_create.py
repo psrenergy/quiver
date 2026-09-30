@@ -16,6 +16,12 @@ class TestCreateElement:
         assert isinstance(result, int)
         assert result > 0
 
+    def test_create_element_passes_a_collection_attribute_to_the_core(self, collections_db: Database) -> None:
+        """`collection` is positional-only: an attribute of that name reaches the core, not a TypeError."""
+        collections_db.create_element("Configuration", label="cfg")
+        with pytest.raises(QuiverError, match="'collection'"):
+            collections_db.create_element("Collection", label="Item1", collection="x")
+
     def test_create_multiple_elements(self, collections_db: Database) -> None:
         collections_db.create_element("Configuration", label="cfg")
         id1 = collections_db.create_element(

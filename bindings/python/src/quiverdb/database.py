@@ -203,7 +203,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         finally:
             lib.quiver_database_free_string(out[0])
 
-    def create_element(self, collection: str, **kwargs: object) -> int:
+    def create_element(self, collection: str, /, **kwargs: object) -> int:
         """Create a new element. Returns the new element ID."""
         self._ensure_open()
         elem = Element()
@@ -226,8 +226,12 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
 
     # -- Write operations -------------------------------------------------------
 
-    def update_element(self, collection: str, id: int, **kwargs: object) -> None:
-        """Update an existing element's attributes."""
+    def update_element(self, collection: str, id: int, /, **kwargs: object) -> None:
+        """Update an existing element's attributes.
+
+        `collection` and `id` are positional-only so that an `id` in kwargs (e.g. the dict
+        from `read_scalars_by_id`) is written as an attribute instead of colliding with this parameter.
+        """
         self._ensure_open()
         elem = Element()
         try:
@@ -1789,7 +1793,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
             )
         )
 
-    def upsert_time_series_row(self, collection: str, group: str, id: int, **kwargs) -> None:
+    def upsert_time_series_row(self, collection: str, group: str, id: int, /, **kwargs: object) -> None:
         """Insert or upsert a single time series row for an element.
 
         Keyword arguments map column names to values. The dimension column (e.g.
@@ -1811,7 +1815,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
             )
         )
 
-    def upsert_time_series_row_by_label(self, collection: str, group: str, label: str, **kwargs) -> None:
+    def upsert_time_series_row_by_label(self, collection: str, group: str, label: str, /, **kwargs: object) -> None:
         """Label-addressed counterpart of upsert_time_series_row."""
         self._ensure_open()
         lib = get_lib()

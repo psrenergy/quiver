@@ -129,6 +129,22 @@ class TestUpsertTimeSeriesRow:
 
         assert collections_db.read_time_series_group("Collection", "data", eid) == {}
 
+    def test_upsert_passes_an_id_attribute_to_the_core(self, collections_db: Database) -> None:
+        """`id` is positional-only: an `id=` kwarg reaches the core's column check instead of colliding."""
+        eid = _create_collection_element(collections_db, "Item1")
+        with pytest.raises(QuiverError, match="column 'id' not found in group 'data'"):
+            collections_db.upsert_time_series_row("Collection", "data", eid, id=eid, date_time="2024-01-01", value=1.0)
+        assert collections_db.read_time_series_group("Collection", "data", eid) == {}
+
+    def test_upsert_by_label_passes_a_label_attribute_to_the_core(self, collections_db: Database) -> None:
+        """`label` is positional-only: a `label=` kwarg reaches the core's column check instead of colliding."""
+        eid = _create_collection_element(collections_db, "Item1")
+        with pytest.raises(QuiverError, match="column 'label' not found in group 'data'"):
+            collections_db.upsert_time_series_row_by_label(
+                "Collection", "data", "Item1", label="Item1", date_time="2024-01-01", value=1.0
+            )
+        assert collections_db.read_time_series_group("Collection", "data", eid) == {}
+
 
 class TestReadTimeSeriesRow:
     def test_read_time_series_row_returns_one_value_per_element(self, collections_db: Database) -> None:

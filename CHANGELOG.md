@@ -26,6 +26,17 @@ callers to change something are prefixed **BREAKING** and say what to do.
   column is now rejected by the core instead of being truncated, including a whole-number one
   (`[65, 70.0]`); pass ints, or round the values yourself if you intended truncation.
 
+- **BREAKING — Python: `collection`, `id`, `group` and `label` are positional-only on every
+  `**kwargs` method.** `create_element`, `update_element`, `upsert_time_series_row` and
+  `upsert_time_series_row_by_label` now mark their leading parameters positional-only, as
+  `update_element_by_label` already did. An attribute with the same name as one of those parameters
+  now reaches the core instead of failing with `TypeError: got multiple values for argument
+  '<name>'` before the call. As a result, `db.update_element("C", eid, **db.read_scalars_by_id("C",
+  eid))` works: the dict holds `id`, and it is written back as-is.
+
+  *Adapt:* pass those parameters positionally. `update_element(collection="C", id=1, x=2)` now
+  raises `TypeError`; write `update_element("C", 1, x=2)`.
+
 ### Fixed
 
 - **Python: a `datetime` is accepted on every write path, and an aware one is stored as its UTC
