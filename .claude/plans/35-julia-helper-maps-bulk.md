@@ -196,3 +196,94 @@ From the repo root:
 
 - Moving the helpers into C++ or other bindings.
 - The array fan-out behaviour the root AGENTS.md mentions for `create_element!` in these tests.
+
+## Implementation notes
+
+Implemented on `rs/plan35` in `C:\Development\Quiver\quiver3`. The branch already sat at
+`origin/master` `a859229`, which includes plans 32 and 34 (#344, #345). `git fetch origin && git merge
+origin/master` reported "Already up to date". Neither plan touched `helper_maps.jl` or its test. Plan 34
+added a bullet to `bindings/julia/AGENTS.md` below the anchor edited here, and an `### Added` block to
+`CHANGELOG.md`; both are untouched. **Depends on** none, so nothing blocked.
+
+### Drift fixed
+
+- **`set_relation_map` had already learned to skip NULL set cells.** The plan's excerpt predates that.
+  The code called the kernel `_read_set_integers_by_id(..., false)`, not `read_set_integers_by_id`. The
+  docstring says "A null cell in the set group … is skipped", and the `"NULL Cell Is Not A Target"`
+  testset pins it (`parent_ref = [1, nothing]` → `[Int64[1]]`). The plan's body
+  `Int[position[related_id] for related_id in ids]` would raise `KeyError(nothing)` there. The inner
+  comprehension filters instead, keeping the existing comment:
+  `Int[position[id] for id in ids if !isnothing(id)]`.
+- **Julia now has `read_element_ids`** (`database_read.jl`, exercised by the delete, read-scalar and
+  csv-import suites). The plan's constraint and its first pitfall assume it does not exist. The id list
+  comes from `read_element_ids(db, collection_to)` instead of `read_scalar_integers(db, collection_to,
+  "id")`. It is the same `SELECT id ... ORDER BY rowid` with the same concrete `Vector{Int64}`, matches
+  the docstring's "list of ids of the related collection", and skips the `get_scalar_metadata` round-trip.
+- **`bindings/julia/AGENTS.md` did describe the implementation.** The plan says no AGENTS.md text does.
+  The nullability bullet said "`set_relation_map` passes `false` (its values end up untyped), so no
+  composite pays a `list_*_groups` round-trip per column or per element". That clause is removed; the
+  sentence now covers only `read_{vectors,sets}_by_id` ("per column"). Root AGENTS.md "Relation map
+  helpers" and the Julia "Julia-only surfaces" bullet describe results only and were left as they are.
+  `tests/AGENTS.md`'s "`set_relation_map`'s skip of a NULL cell" is still true.
+- **CHANGELOG section.** The current unreleased section is `## [0.12.6] — unreleased`, not 0.12.0.
+  The plan's entry also said "three reads"; the rewrite makes two bulk reads, and the entry says so.
+  It is filed under `### Fixed`, as the plan says.
+
+### Deviations
+
+- The id list uses `read_element_ids` and the set comprehension filters `nothing`; both are drift fixes
+  above. Everything else is the plan's text: the ordering test verbatim, and both docstrings
+  byte-for-byte.
+- **No red-green run.** This is a refactor with unchanged results, so the new testset passes on the
+  old code too, and no test could fail before the change. Instead, a throwaway script in the session
+  scratchpad (not committed) ran the old bodies and the new ones side by side. It used
+  `relations.sql` in memory with 2,000 parents (4 deleted), and 5,000 children (every 7th with no
+  relation, the rest with one `parent_id` and two `parent_ref`s). It asserted that old and new return
+  equal results for both helpers, then took the best of 5 runs:
+
+  | helper | old | new |
+  |---|---|---|
+  | `scalar_relation_map` | 255.8 ms | 27.6 ms |
+  | `set_relation_map` | 484.0 ms | 94.5 ms |
+
+- Behaviour differences, both only reachable outside the schema contract:
+  - A dangling FK (possible only via raw SQL with foreign keys off) raises `KeyError` instead of a
+    `MethodError` on `convert(Int, nothing)`. The plan accepts this.
+  - The set helper now reads through the public bulk `read_set_integers`, which asks
+    `list_set_groups` once per call for the column's `not_null`. For a `NOT NULL` set column holding a
+    masked cell (a non-STRICT table), that reader raises where the old `false`-kernel path decoded the
+    cell as `nothing` and skipped it. The raise is the public readers' documented behaviour.
+
+### Verification results
+
+- `cmake --build build --config Debug`: no work to do.
+- `bindings/julia/test/test.bat test_helper_maps.jl`:
+  - before the edit: `Helper Maps | 24 24`
+  - after: `Helper Maps | 25 25`, which is every existing testset, byte-unchanged (`git diff` shows only
+    additions to the test file), plus "Positions Follow Collection Order Not Ids"
+- `bindings/julia/test/test.bat` (full suite): `test set | 1567 1567 1m26.6s`, "Testing Quiver tests
+  passed". The `[error] Failed to apply schema` lines in the log come from the invalid-schema tests,
+  which expect them.
+- `scripts/format.bat`: exit 0. JuliaFormatter left every Julia file unchanged, Ruff reported "35 files
+  left unchanged", and clang-format/dart had nothing to change.
+  - Biome again "fixed" 43 JS files by rewriting CRLF→LF only (`git diff --stat` counted no content
+    change there), the quirk plan 30's notes describe. Restored with `git checkout -- bindings/js`.
+  - The final diff is exactly `CHANGELOG.md`, `bindings/julia/AGENTS.md`, `helper_maps.jl`,
+    `test_helper_maps.jl` and this file. No `.bat` file was touched.
+
+### Acceptance criteria
+
+- [x] Neither helper calls a `_by_id` reader or `findfirst`. `grep -nE "_by_id|findfirst"
+  bindings/julia/src/helper_maps.jl` finds nothing.
+- [x] Docstrings unchanged; return types `Vector{Int}` (`Int[...]`) / `Vector{Vector{Int}}`
+  (`Vector{Int}[...]`).
+- [x] `test_helper_maps.jl` passes unchanged, plus the new ordering test (25/25).
+
+### For later plans
+
+- Plans 41 and 42 edit `database_read.jl`, and 42 renames `read_{vector,set}_date_time_by_id`. Neither
+  touches these helpers, which now call only `read_element_ids`, `read_scalar_integers` and
+  `read_set_integers`.
+- No caller passes a literal `false` to `_read_set_integers_by_id` any more. The kernels' `not_null`
+  parameter still takes `false` from `read_{vectors,sets}_by_id` (via `_group_value_not_null`), so it
+  stays.

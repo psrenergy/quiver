@@ -18,22 +18,9 @@ function scalar_relation_map(
     relation_type::String,
 )
     attribute_on_collection_from = lowercase(collection_to) * "_" * relation_type
-    collection_from_ids = read_scalar_integers(db, collection_from, "id")
-    collection_to_ids = read_scalar_integers(db, collection_to, "id")
-    map_of_indexes = Vector{Int}(undef, length(collection_from_ids))
-
-    for (index_from, id_from) in enumerate(collection_from_ids)
-        related_id = read_scalar_integer_by_id(db, collection_from, attribute_on_collection_from, id_from)
-        if related_id !== nothing
-            # It has to find some match every time
-            index_to = findfirst(isequal(related_id), collection_to_ids)
-            map_of_indexes[index_from] = index_to
-        else
-            map_of_indexes[index_from] = -1
-        end
-    end
-
-    return map_of_indexes
+    position = Dict(id => index for (index, id) in enumerate(read_element_ids(db, collection_to)))
+    related_ids = read_scalar_integers(db, collection_from, attribute_on_collection_from)
+    return Int[isnothing(related_id) ? -1 : position[related_id] for related_id in related_ids]
 end
 
 """
@@ -57,23 +44,8 @@ function set_relation_map(
     relation_type::String,
 )
     attribute_on_collection_from = lowercase(collection_to) * "_" * relation_type
-    collection_from_ids = read_scalar_integers(db, collection_from, "id")
-    collection_to_ids = read_scalar_integers(db, collection_to, "id")
-    map_of_indexes = Vector{Vector{Int}}(undef, length(collection_from_ids))
-
-    for (index_from, id_from) in enumerate(collection_from_ids)
-        # Only the ids are used, so decode Optional (`false`) and skip the per-element metadata lookup.
-        related_id = _read_set_integers_by_id(db, collection_from, attribute_on_collection_from, id_from, false)
-        set_relation_map = Int[]
-        for id_to in related_id
-            # A null cell is an empty relation, not a target to look up.
-            id_to === nothing && continue
-            # It has to find some match every time
-            index_to = findfirst(isequal(id_to), collection_to_ids)
-            push!(set_relation_map, index_to)
-        end
-        map_of_indexes[index_from] = set_relation_map
-    end
-
-    return map_of_indexes
+    position = Dict(id => index for (index, id) in enumerate(read_element_ids(db, collection_to)))
+    related_ids = read_set_integers(db, collection_from, attribute_on_collection_from)
+    # A null cell is an empty relation, not a target to look up.
+    return Vector{Int}[Int[position[id] for id in ids if !isnothing(id)] for ids in related_ids]
 end
