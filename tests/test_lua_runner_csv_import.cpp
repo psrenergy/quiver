@@ -126,6 +126,33 @@ TEST_F(LuaRunner_ImportCSV, DateTimeFormat) {
     )");
 }
 
+// Every level of enum_labels is type-checked, after it is collected: a non-table level or a
+// non-integer code used to become a silent 0 in Release and a raw sol2 panic in Debug.
+TEST_F(LuaRunner_ImportCSV, OptionsAreStrict) {
+    auto csv_schema = VALID_SCHEMA("csv_export.sql");
+    auto db = quiver::Database::from_schema(db_path(), csv_schema);
+    quiver::LuaRunner lua(db);
+
+    write_lua_csv_file((sandbox / "enum.csv").string(),
+                       "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,1,,,\n");
+
+    expect_lua_error(lua,
+                     R"(db:import_csv("Items", "", "enum.csv", { enum_labels = 5 }))",
+                     "Cannot import_csv: option 'enum_labels' must be a table");
+    expect_lua_error(lua,
+                     R"(db:import_csv("Items", "", "enum.csv", { enum_labels = { status = 1 } }))",
+                     "Cannot import_csv: option 'enum_labels['status']' must be a table");
+    expect_lua_error(
+        lua,
+        R"(db:import_csv("Items", "", "enum.csv", { enum_labels = { status = { en = { active = "one" } } } }))",
+        "Cannot import_csv: code for label 'active' has unsupported Lua type");
+    expect_lua_error(lua,
+                     R"(db:import_csv("Items", "", "enum.csv", { enum_labels = { status = { en = { [1] = 1 } } } }))",
+                     "Cannot import_csv: keys of option 'enum_labels['status']['en']' must be strings");
+
+    EXPECT_EQ(db.read_element_ids("Items").size(), 0u);
+}
+
 TEST_F(LuaRunner_ImportCSV, ScalarTrailingEmptyColumns) {
     auto csv_schema = VALID_SCHEMA("csv_export.sql");
     auto db = quiver::Database::from_schema(db_path(), csv_schema);

@@ -42,6 +42,7 @@ TEST_F(LuaBinaryTest, MetadataBuilderAndAccessors) {
     quiver::LuaRunner lua(db);
     lua.run(R"(
         local md = quiver.metadata{
+            version = "1",
             initial_datetime = "2025-01-01T00:00:00",
             unit = "MW",
             labels = {"plant_1", "plant_2"},
@@ -289,6 +290,25 @@ TEST_F(LuaBinaryTest, MetadataCountMismatchThrows) {
                      "quiver.metadata{ initial_datetime='2025-01-01T00:00:00', unit='MW', labels={'v'},"
                      " dimensions={'stage'}, dimension_sizes={12}, time_dimensions={'stage'} }\n",
                      "frequencies count (0) does not match time_dimensions count (1)");
+}
+
+// An unknown key, or a known key of the wrong type, used to be ignored and replaced by its default.
+TEST_F(LuaBinaryTest, MetadataIsStrict) {
+    auto db = quiver::Database::from_schema(":memory:", schema);
+    quiver::LuaRunner lua(db);
+    expect_lua_error(
+        lua, "quiver.metadata{ dimension_size = {3} }\n", "Cannot metadata: unknown option 'dimension_size'");
+    expect_lua_error(lua,
+                     "quiver.metadata{ initial_datetime='2025-01-01T00:00:00', unit=5, labels={'v'},"
+                     " dimensions={'row'}, dimension_sizes={3} }\n",
+                     "Cannot metadata: field 'unit' has unsupported Lua type");
+    expect_lua_error(lua,
+                     "quiver.metadata{ initial_datetime='2025-01-01T00:00:00', unit='MW', labels='v1',"
+                     " dimensions={'row'}, dimension_sizes={3} }\n",
+                     "Cannot metadata: field 'labels' must be a table");
+    // A non-table argument reached lua_next unchecked in Release (sol2 skips argument checks there).
+    expect_lua_error(lua, "quiver.metadata(5)\n", "Cannot metadata: options must be a table");
+    expect_lua_error(lua, "quiver.metadata()\n", "Cannot metadata: options must be a table");
 }
 
 TEST_F(LuaBinaryTest, MetadataFromTomlRejectsWrongTypedEntry) {

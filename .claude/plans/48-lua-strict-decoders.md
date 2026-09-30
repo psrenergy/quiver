@@ -286,10 +286,10 @@ From the repo root:
 
 ## Acceptance criteria
 
-- [ ] No `sol::optional<sol::table>` options parameter remains on `export_csv`/`import_csv`.
-- [ ] No throw happens inside a `for_each` lambda in the three decoders.
-- [ ] All negative tests pass on Debug and Release, and the positive tests still pass.
-- [ ] lua-api.ts, src/AGENTS.md and the CHANGELOG are updated.
+- [x] No `sol::optional<sol::table>` options parameter remains on `export_csv`/`import_csv`.
+- [x] No throw happens inside a `for_each` lambda in the three decoders.
+- [x] All negative tests pass on Debug and Release, and the positive tests still pass.
+- [x] lua-api.ts, src/AGENTS.md and the CHANGELOG are updated.
 
 ## Pitfalls
 
@@ -304,3 +304,67 @@ From the repo root:
 
 - `db:read_csv`/`write_csv` decoders (already strict).
 - The aggregation-op string parser (plan 16).
+
+## Implementation notes
+
+Implemented on `rs/plan48`. The plan was checked read-only at master `b4c62bb`. `git fetch origin && git merge origin/master` then fast-forwarded to `6b4e204`, bringing in plans 43-47 (#355-#359). Every anchor was re-checked by function name, and only line numbers had moved: `parse_csv_options` ~L1251 at that point, `build_metadata_from_lua` ~L1085, `rename_agents` ~L1005. Plans 43 and 44 had rewritten the lua-api.ts CSV section, and plan 45 had created `## [0.12.7] — unreleased`.
+
+**Why implement.** A script is untrusted input. The pre-fix Release build showed the plan understates the problem:
+- `rename_agents({ v1 = true })` **succeeded silently** (the boolean target went through an unchecked `as<std::string>()`);
+- `rename_agents({ 'alpha' })` reported the misleading `label not found: '1'`;
+- `import_csv(..., { enum_labels = { status = 1 } })` **crashed the process** (SEH 0xc0000005 access violation).
+
+No fixture or binding test passes a key outside the accepted sets. That covers all 15 `quiver.metadata` call sites, and no binding test calls `db:export_csv`/`db:import_csv` with options. So the break only affects scripts that were already wrong.
+
+### Drift fixed
+
+1. `CSVOptions::enum_labels` is three nested `std::unordered_map`s, not `std::map`. The `operator[]` code is unchanged.
+2. The Pitfall "sol2's `is<std::string>()` is true for numbers" is **false** for the vendored sol2 v3.5.0. The string checker (`stack_check_unqualified.hpp`, final `else`) requires `type::string` exactly. `lua_cell_as<std::string>` therefore already rejects `5`, and no extra check was added. `MetadataIsStrict`'s `unit = 5` case pins this.
+3. CHANGELOG: `## [0.12.0] — unreleased` does not exist. The entry is the plan's text verbatim, as the second `### Changed` bullet of `## [0.12.7] — unreleased`, after plan 45's. There is no manifest bump, following the 21/22/24/27/31/39/42/45 precedent. That still contradicts root AGENTS.md's "breaking ⇒ 0.x minor" rule.
+4. Stale mentions the plan missed, all fixed:
+   - `src/AGENTS.md`'s `lua_opt_int64_vector` sentence now refers to `metadata_array<int64_t>`;
+   - the `read_csv_options_from_lua` comment ("the optional-table style `parse_csv_options` above uses");
+   - the `csv_options_entries` comment ("both CSV options decoders");
+   - after review: the `lua_cell_as` bullet in `src/AGENTS.md` and the two code comments that listed only three callers "so one rule ... covers all three". They now name the metadata fields, the `rename_agents` names and the `enum_labels` codes, and record that a boolean `enum_labels` code becomes 1, per the boolean policy.
+5. The nested-level message is `option 'enum_labels['status']' must be a table`, as the plan anticipated.
+6. The plan says the existing positive tests use "`quiver.metadata` with all keys". That was false for `version`. `MetadataBuilderAndAccessors` now passes `version = "1"`, which pins allowlist slot 0.
+
+### Deviations from the plan's code
+
+- **`quiver.metadata`:** two helpers take the `found` slot, `metadata_string(slot, key, fallback)` and `metadata_array<T>(slot, key)`. They replace the plan's two lambdas and the inlined `dimension_sizes` block, give the same messages, and keep the cell-level `caller` strings unchanged. The three `lua_opt_*` helpers are deleted (they had no other callers).
+- **`quiver.metadata` and `expr:rename_agents` take `const sol::object&` with an explicit table check.** This was added after review and is a regression fix. Release builds do not type-check a `const sol::table&` parameter: `SOL_SAFE_FUNCTION_CALLS` and `SOL_SAFE_REFERENCES` default off under `NDEBUG`. The new `csv_options_entries` call then ran `lua_next` on a non-table. With the reviewer's Release CLI repro, `pcall(quiver.metadata, 5)` / `'x'` segfaulted (exit 139) and `pcall(quiver.metadata, nil)` hung. The old optional getters had failed cleanly there. The new messages are `Cannot metadata: options must be a table` and `Cannot rename_agents: mapping must be a table`. The `rename_agents(5)` crash predates this diff. The check stays in the callers, following the existing convention: every caller of `csv_options_entries` checks its own argument first.
+- **`db:export_csv`/`db:import_csv`:** they resolve the sandbox path into a local before parsing the options, which is `db:write_csv`'s D-22 order. Before, both were arguments of a single call, so the order was unspecified. `options` is `const sol::object&`, so the change adds no new `performance-unnecessary-value-param` lint.
+- **Extra assertions beyond the plan's list:**
+  - `{ enum_labels = 5 }`;
+  - the label-key check (`keys of option 'enum_labels['status']['en']' must be strings`);
+  - `rename_agents({ 'alpha' })` (`key has unsupported Lua type`);
+  - `rename_agents(5)`, `quiver.metadata(5)` and `quiver.metadata()`;
+  - "no element was written" after the failed imports.
+- The `csv_options_entries` name is kept. The optional rename was skipped because plan 44 cites the name and the batch-5 plans edit this file in parallel.
+
+### Results
+
+- **Red, Debug** (new tests, old decoder): 4/4 new tests failed.
+  - export: "expected script to throw" ×3;
+  - import: `{ enum_labels = 5 }` did not throw and imported the row; the other three are raw `[sol2] ... panic has been invoked: stack index 1, expected string, received number/table`;
+  - metadata: `Failed to parse initial_datetime:` / "expected script to throw" / `Number of labels must be positive, got 0`;
+  - rename: `stack index -1, expected string, received boolean/number`.
+- **Red, Release** (old decoder, same tests): 4/4 failed. Rename `{v1 = true}` passed silently, `{'alpha'}` gave `label not found: '1'`, and the import test crashed with an access violation, so its TearDown could not remove the sandbox.
+- **Red, review additions** (Debug): `stack index 1, expected table, received number` / `received no value` (sol2's own text). In Release they segfault or hang, as above.
+- **Green:**
+  - `LuaRunner*:LuaBinary*:LuaExpression*`: 420/420 on Debug and on a fresh `build-release` tree (configured with the tests-ON line, not the preset).
+  - Full `quiver_tests` 1388/1388 and `quiver_c_tests` 571/571, on Debug and on Release.
+  - JS: `test.bat test/lua-api-sync.test.ts` runs the whole suite, since the `test` argument matches every file: 242/242.
+  - Julia `test_lua_runner.jl`: LuaRunner 24/24.
+  - Release CLI probe: `pcall(quiver.metadata, 5 / nil / "x")` and `pcall(quiver.metadata)` all return `false  Cannot metadata: options must be a table`.
+- **`scripts\format.bat`** exited 0, and the later C++ edits were re-run through `cmake --build build --target format`. Biome again rewrote 43 JS files CRLF→LF with no content change. The 42 outside this diff were restored with `git checkout`, and `lua-api.ts` was converted back to CRLF, so its diff is exactly the 5 documentation lines. No `.bat` file was touched.
+- **Adversarial review:** a three-lens workflow (sol2 semantics, tests, docs), with one skeptic verifying each finding. It confirmed two findings, the Release crash and the stale `lua_cell_as` caller list, and both are fixed above. It refuted one: no positive `version` test is a coverage gap, not a defect, and it was added anyway.
+- **Not run:** `scripts/test-all.bat`. The change is C++ Lua-runner only; the C++, C API, JS and Julia suites above cover it, and Dart and Python do not exercise these Lua paths.
+
+### For later plans
+
+- **The `SOL_SAFE_FUNCTION=1` define in `src/CMakeLists.txt` is not a sol2 macro.** Verified: nothing in `build/_deps/sol2-src/include` reads `SOL_SAFE_FUNCTION`; sol2 spells it `SOL_SAFE_FUNCTIONS` / `SOL_SAFE_FUNCTION_CALLS`. So **no Lua→C++ argument is type-checked in Release**, and every remaining `const sol::table&` binding reaches its body unchecked there. That includes `select_agents`, `quiver.metadata_from_element`, `file:read`/`file:write` dims, `create_element` and the group writers. The misspelling is repeated in `src/AGENTS.md` (~L682) and the `lua_cell_as` comment in `src/lua_runner.cpp`. Fixing it is a maintainer decision: correct the define, which changes Release behaviour file-wide, or keep converting the parameters to `sol::object` with explicit checks, as this plan did for two bindings. It deserves its own plan.
+- `lua_table_to_dim_map` still calls `pair.first.as<std::string>()` unchecked during traversal (out of scope here).
+- **Plan 51** edits the `Expression` usertype next to `rename_agents`. That lambda now takes `const sol::object& mapping`.
+- **Plans 49 and 50** edit the same file. Nothing here touches `group_metadata_lua`, `data_type_to_string` or the `read_{vectors,sets}_by_id` composites.
+- **CHANGELOG:** `## [0.12.7] — unreleased` `### Changed` now holds plan 45's bullet, then this one.

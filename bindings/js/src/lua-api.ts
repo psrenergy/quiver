@@ -680,6 +680,9 @@ The optional \`options\` table has two keys:
 }
 \`\`\`
 
+An options value that is not a table, an unknown key or a wrong-typed value throws
+(\`Cannot export_csv: unknown option '...'\`).
+
 **Precondition:** \`db:import_csv\` cannot run inside an open transaction (it opens and commits its
 own) — it throws \`Cannot import_csv: transaction already active\`. Call it outside any
 \`db:transaction\` / \`db:begin_transaction\` block.
@@ -904,7 +907,8 @@ e:save(out_path); e:metadata()                       -- save path is sandboxed l
 
 **\`quiver.metadata{...}\` kwargs and defaults:** \`version\` defaults to \`"1"\`; \`initial_datetime\`
 and \`unit\` default to \`""\`; \`labels\`, \`dimensions\`, \`dimension_sizes\`, \`time_dimensions\`, and
-\`frequencies\` default to empty arrays.
+\`frequencies\` default to empty arrays. Only these eight keys are accepted; an unknown key or a
+value of the wrong type throws.
 
 **\`get_dimensions()\` / \`get_metadata()\` dimension shape** — returns an array of dimension tables:
 

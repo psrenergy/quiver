@@ -644,7 +644,11 @@ Implementation conventions in `lua_runner.cpp`:
   a non-string throws `Cannot <caller>: target_label has unsupported Lua type`. Both
   `db:update_relation(..., nil)` and omitting the argument clear; that affordance is sol2's and
   Lua-only (the FFI bindings all require the parameter and take their language's null).
-- `parse_csv_options(table)` is the single CSVOptions parser shared by `export_csv`/`import_csv`.
+- `parse_csv_options(options, operation)` is the single strict CSVOptions decoder for
+  `export_csv`/`import_csv`: `nil` means defaults, any other non-table and any unknown or
+  wrong-typed key throws, with the same collect-then-validate walk (`csv_options_entries`) as the
+  `read_csv`/`write_csv` decoders. `quiver.metadata{...}` and `expr:rename_agents` are decoded
+  the same strict way.
 - `to_lua_table<T>` overloads (flat + nested) are the only vector→table marshalers.
 - `describe` / `describe_collection` / `summarize_collection` are bound as plain lambdas returning
   the C++ `std::string` text report (`db:describe()` returns a string — it does not print).
@@ -663,10 +667,14 @@ Implementation conventions in `lua_runner.cpp`:
   (root design decision), so this is a write-side-only asymmetry.
 - **`lua_cell_as<T>(object, caller, what)` is the checked Lua-value→T conversion for the typed
   paths**: `lua_table_to_vector` (per array cell),
-  `lua_table_to_dim_map` (per binary dimension) and `update_time_series_files_lua` (per path).
+  `lua_table_to_dim_map` (per binary dimension), `update_time_series_files_lua` (per path), the
+  scalar `quiver.metadata` fields (`metadata_string`), `expr:rename_agents` (each key and value)
+  and the `export_csv`/`import_csv` `enum_labels` codes (`parse_csv_options`).
   `what` names the offending slot in the Pattern 1 message — `cell #3`, `dimension 'stage'`,
-  `path 'data_file'` — so one rule and one message shape cover all three. Its `Value`-typed
-  sibling is `lua_to_value(object, caller, what)`, with the same message shape.
+  `path 'data_file'`, `field 'unit'`, `value for 'v1'`, `code for label 'active'` — so one rule
+  and one message shape cover them all. Because it maps a boolean to 1/0 for a numeric `T`, an
+  `enum_labels` code of `true` is code 1, the same policy as `dimension_sizes = {true}` below. Its
+  `Value`-typed sibling is `lua_to_value(object, caller, what)`, with the same message shape.
 - **`lua_table_to_vector<T>(table, caller)` is the only table→vector converter**, and it converts
   and checks **every cell**, not just the one the caller dispatched on. Both halves are
   load-bearing. `table_to_element` picks an array's element type from cell 1 alone, and sol2's
@@ -684,9 +692,10 @@ Implementation conventions in `lua_runner.cpp`:
   key) and points at the group writers; and the element type still
   comes from cell 1, so `{1, 2.5}` into a REAL column is rejected rather than widened (JS, Python
   and Dart type the whole column and widen it to FLOAT, and a Lua group-writer column converts each
-  cell to its own `Value`, so a Lua element array is the one path that refuses it). One consequence worth knowing: `lua_opt_int64_vector` routes
-  through it too, so `quiver.metadata{dimension_sizes = {true}}` coerces to a size-1 dimension
-  rather than erroring. That is consistent with the cross-layer boolean policy, and
+  cell to its own `Value`, so a Lua element array is the one path that refuses it). One
+  consequence worth knowing: `quiver.metadata`'s `dimension_sizes` routes through it too (via
+  `metadata_array<int64_t>`), so `quiver.metadata{dimension_sizes = {true}}` coerces to a size-1
+  dimension rather than erroring. That is consistent with the cross-layer boolean policy, and
   `BinaryMetadata::validate()` still rejects a non-positive size, so `{false}` throws.
 - **`SOL_SAFE_NUMERICS=1` (`src/CMakeLists.txt`) is load-bearing for the whole file.** It turns on
   sol2's `SOL_NUMBER_PRECISION_CHECKS`, which is what makes `is<int64_t>()` false for a Lua float.

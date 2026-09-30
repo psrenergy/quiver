@@ -15,6 +15,13 @@ callers to change something are prefixed **BREAKING** and say what to do.
   follow the rule CSV writers already did. *Adapt:* reopen the file in each `run()` instead of
   reusing a handle kept in a global.
 
+- **BREAKING — Lua: `db:export_csv`/`db:import_csv` options, `quiver.metadata{...}` and
+  `expr:rename_agents` reject unknown keys and wrong types.** A misspelled key (`date_format`,
+  `dimension_size`) or a wrong-typed value (`unit = 5`, `labels = "v1"`, a boolean rename target)
+  used to be ignored or silently replaced by a default, and in Release some became empty strings.
+  They now throw a `Cannot <op>: ...` error, like the `read_csv`/`write_csv` options already did.
+  *Adapt:* fix the key or value the error names.
+
 ### Fixed
 
 - **JS: the agent-facing Lua reference (`LUA_DB_API_REFERENCE`) no longer promises a rollback.**

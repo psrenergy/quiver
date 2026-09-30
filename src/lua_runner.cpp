@@ -447,11 +447,12 @@ struct LuaRunner::Impl {
         return names;
     }
 
-    // The collect-then-validate walk both CSV options decoders share (LUA-09/D-17): every entry is
-    // collected before any of them is validated, so a mid-traversal throw cannot abandon sol2's
-    // traversal state. `allowed` is the option names this caller accepts, in precedence order; an
-    // unknown key is the first thing rejected, and the returned vector is parallel to `allowed`
-    // (an absent option is a disengaged optional).
+    // The collect-then-validate walk every strict options decoder shares (LUA-09/D-17): read_csv,
+    // write_csv, export_csv/import_csv and quiver.metadata. Every entry is collected before any of
+    // them is validated, so a mid-traversal throw cannot abandon sol2's traversal state. `allowed`
+    // is the option names this caller accepts, in precedence order; an unknown key is the first
+    // thing rejected, and the returned vector is parallel to `allowed` (an absent option is a
+    // disengaged optional).
     static std::vector<std::optional<sol::object>>
     csv_options_entries(const sol::object& options,
                         const std::string& operation,
@@ -479,6 +480,26 @@ struct LuaRunner::Impl {
             found[static_cast<std::size_t>(std::distance(allowed.begin(), it))] = entry.second;
         }
         return found;
+    }
+
+    // Collect a nested option table's entries before any is checked (the same LUA-09 rule), after
+    // checking the value really is a table.
+    static std::vector<std::pair<sol::object, sol::object>>
+    table_entries(const sol::object& value, const std::string& operation, const std::string& what) {
+        if (value.get_type() != sol::type::table) {
+            throw std::runtime_error("Cannot " + operation + ": option '" + what + "' must be a table");
+        }
+        std::vector<std::pair<sol::object, sol::object>> entries;
+        value.as<sol::table>().for_each(
+            [&](sol::object key, sol::object entry) { entries.emplace_back(std::move(key), std::move(entry)); });
+        return entries;
+    }
+
+    static std::string string_key(const sol::object& key, const std::string& operation, const std::string& what) {
+        if (key.get_type() != sol::type::string) {
+            throw std::runtime_error("Cannot " + operation + ": keys of option '" + what + "' must be strings");
+        }
+        return key.as<std::string>();
     }
 
     // The `separator` branch both decoders share, so the byte-vs-character rule and the messages
@@ -615,11 +636,10 @@ struct LuaRunner::Impl {
                const std::string& collection,
                const std::string& group,
                const std::string& path,
-               sol::optional<sol::table> options_table) {
-                self.export_csv(collection,
-                                group,
-                                resolve_sandboxed_path(self, "export_csv", path),
-                                parse_csv_options(std::move(options_table)));
+               const sol::object& options) {
+                // Sandbox checks before the options table, as in db:write_csv (D-22).
+                const auto resolved = resolve_sandboxed_path(self, "export_csv", path);
+                self.export_csv(collection, group, resolved, parse_csv_options(options, "export_csv"));
             },
             // Group 12: CSV import
             "import_csv",
@@ -627,11 +647,9 @@ struct LuaRunner::Impl {
                const std::string& collection,
                const std::string& group,
                const std::string& path,
-               sol::optional<sol::table> options_table) {
-                self.import_csv(collection,
-                                group,
-                                resolve_sandboxed_path(self, "import_csv", path),
-                                parse_csv_options(std::move(options_table)));
+               const sol::object& options) {
+                const auto resolved = resolve_sandboxed_path(self, "import_csv", path);
+                self.import_csv(collection, group, resolved, parse_csv_options(options, "import_csv"));
             });
         // NOLINTEND(performance-unnecessary-value-parameter)
 
@@ -962,7 +980,7 @@ struct LuaRunner::Impl {
             sol::meta_function::bitwise_not,
             [](sol::object a, sol::object) { return !to_expression(a); });
 
-        ns.set_function("metadata", [](const sol::table& t) { return build_metadata_from_lua(t); });
+        ns.set_function("metadata", [](const sol::object& t) { return build_metadata_from_lua(t); });
         ns.set_function("metadata_from_toml",
                         [](const std::string& content) { return BinaryMetadata::from_toml_content(content); });
         ns.set_function("metadata_from_element", [](const sol::table& t) {
@@ -1003,10 +1021,22 @@ struct LuaRunner::Impl {
                 return self.select_agents(lua_table_to_vector<std::string>(labels, "select_agents"));
             },
             "rename_agents",
-            [](Expression& self, const sol::table& mapping) {
+            [](Expression& self, const sol::object& mapping) {
+                // sol2 does not check a table parameter in Release, so check it here. Then collect,
+                // then check both halves (LUA-09): an unchecked as<std::string>() spelled a number
+                // key as text and gave "" for a boolean in Release.
+                if (mapping.get_type() != sol::type::table) {
+                    throw std::runtime_error("Cannot rename_agents: mapping must be a table");
+                }
+                std::vector<std::pair<sol::object, sol::object>> entries;
+                mapping.as<sol::table>().for_each([&](sol::object key, sol::object value) {
+                    entries.emplace_back(std::move(key), std::move(value));
+                });
                 std::vector<std::pair<std::string, std::string>> pairs;
-                for (auto& kv : mapping) {
-                    pairs.emplace_back(kv.first.as<std::string>(), kv.second.as<std::string>());
+                for (const auto& [key, value] : entries) {
+                    auto old_name = lua_cell_as<std::string>(key, "rename_agents", "key");
+                    auto new_name = lua_cell_as<std::string>(value, "rename_agents", "value for '" + old_name + "'");
+                    pairs.emplace_back(std::move(old_name), std::move(new_name));
                 }
                 return self.rename_agents(pairs);
             },
@@ -1063,35 +1093,51 @@ struct LuaRunner::Impl {
         return dims;
     }
 
-    static std::string lua_opt_string(const sol::table& t, const char* key, const std::string& fallback) {
-        auto opt = t.get<sol::optional<std::string>>(key);
-        return opt ? *opt : fallback;
+    // One quiver.metadata{...} field, as csv_options_entries returned it (absent = disengaged).
+    static std::string
+    metadata_string(const std::optional<sol::object>& value, const char* key, const std::string& fallback) {
+        return value ? lua_cell_as<std::string>(*value, "metadata", std::string("field '") + key + "'") : fallback;
     }
 
-    static std::vector<std::string> lua_opt_string_vector(const sol::table& t, const char* key) {
-        auto opt = t.get<sol::optional<sol::table>>(key);
-        return opt ? lua_table_to_vector<std::string>(*opt, std::string("metadata: field '") + key + "'")
-                   : std::vector<std::string>{};
-    }
-
-    static std::vector<int64_t> lua_opt_int64_vector(const sol::table& t, const char* key) {
-        auto opt = t.get<sol::optional<sol::table>>(key);
-        return opt ? lua_table_to_vector<int64_t>(*opt, std::string("metadata: field '") + key + "'")
-                   : std::vector<int64_t>{};
+    template <typename T>
+    static std::vector<T> metadata_array(const std::optional<sol::object>& value, const char* key) {
+        if (!value) {
+            return {};
+        }
+        const auto field = std::string("field '") + key + "'";
+        if (value->get_type() != sol::type::table) {
+            throw std::runtime_error("Cannot metadata: " + field + " must be a table");
+        }
+        return lua_table_to_vector<T>(value->as<sol::table>(), "metadata: " + field);
     }
 
     // Build BinaryMetadata from a Lua kwargs table, mirroring the Julia Metadata(; ...) constructor:
     // assemble an Element and delegate to from_element (which computes time-dimension initial values).
-    static BinaryMetadata build_metadata_from_lua(const sol::table& t) {
+    // Strict: a table (checked here, since sol2 does not check a table parameter in Release) with
+    // only these eight keys, each of the right type.
+    static BinaryMetadata build_metadata_from_lua(const sol::object& t) {
+        if (t.get_type() != sol::type::table) {
+            throw std::runtime_error("Cannot metadata: options must be a table");
+        }
+        const auto found = csv_options_entries(t,
+                                               "metadata",
+                                               {"version",
+                                                "initial_datetime",
+                                                "unit",
+                                                "labels",
+                                                "dimensions",
+                                                "dimension_sizes",
+                                                "time_dimensions",
+                                                "frequencies"});
         Element el;
-        el.set("version", lua_opt_string(t, "version", "1"));
-        el.set("initial_datetime", lua_opt_string(t, "initial_datetime", ""));
-        el.set("unit", lua_opt_string(t, "unit", ""));
-        el.set("labels", lua_opt_string_vector(t, "labels"));
-        el.set("dimensions", lua_opt_string_vector(t, "dimensions"));
-        el.set("dimension_sizes", lua_opt_int64_vector(t, "dimension_sizes"));
-        el.set("time_dimensions", lua_opt_string_vector(t, "time_dimensions"));
-        el.set("frequencies", lua_opt_string_vector(t, "frequencies"));
+        el.set("version", metadata_string(found[0], "version", "1"));
+        el.set("initial_datetime", metadata_string(found[1], "initial_datetime", ""));
+        el.set("unit", metadata_string(found[2], "unit", ""));
+        el.set("labels", metadata_array<std::string>(found[3], "labels"));
+        el.set("dimensions", metadata_array<std::string>(found[4], "dimensions"));
+        el.set("dimension_sizes", metadata_array<int64_t>(found[5], "dimension_sizes"));
+        el.set("time_dimensions", metadata_array<std::string>(found[6], "time_dimensions"));
+        el.set("frequencies", metadata_array<std::string>(found[7], "frequencies"));
         return BinaryMetadata::from_element(el);
     }
 
@@ -1248,36 +1294,51 @@ struct LuaRunner::Impl {
         return candidate.string();
     }
 
-    static CSVOptions parse_csv_options(sol::optional<sol::table> options_table) {
-        CSVOptions options;
-        if (!options_table) {
-            return options;
+    // Strict decoder for db:export_csv / db:import_csv options, the same collect-then-validate walk
+    // as the read_csv/write_csv decoders: nil/missing means defaults; anything else must be a table
+    // with only known keys of the right types.
+    static CSVOptions parse_csv_options(const sol::object& options, const std::string& operation) {
+        CSVOptions result;
+        if (!options.valid() || options.get_type() == sol::type::lua_nil) {
+            return result;
         }
-        auto& t = *options_table;
-        if (auto fmt = t.get<sol::optional<std::string>>("date_time_format")) {
-            options.date_time_format = *fmt;
+        if (options.get_type() != sol::type::table) {
+            throw std::runtime_error("Cannot " + operation + ": options must be a table");
         }
-        if (auto enums = t.get<sol::optional<sol::table>>("enum_labels")) {
-            enums->for_each([&](sol::object attr_key, sol::object attr_value) {
-                auto attr_name = attr_key.as<std::string>();
-                auto& attr_locale_map = options.enum_labels[attr_name];
-                attr_value.as<sol::table>().for_each([&](sol::object locale_key, sol::object locale_value) {
-                    auto locale_name = locale_key.as<std::string>();
-                    auto& label_map = attr_locale_map[locale_name];
-                    locale_value.as<sol::table>().for_each(
-                        [&](sol::object k, sol::object v) { label_map[k.as<std::string>()] = v.as<int64_t>(); });
-                });
-            });
+        const auto found = csv_options_entries(options, operation, {"date_time_format", "enum_labels"});
+
+        if (const auto& format = found[0]) {
+            if (format->get_type() != sol::type::string) {
+                throw std::runtime_error("Cannot " + operation + ": option 'date_time_format' must be a string");
+            }
+            result.date_time_format = format->as<std::string>();
         }
-        return options;
+        if (const auto& enums = found[1]) {
+            // attribute -> locale -> { label = code }: every level collected before it is checked.
+            for (const auto& [attr_key, attr_value] : table_entries(*enums, operation, "enum_labels")) {
+                const auto attr = string_key(attr_key, operation, "enum_labels");
+                const auto attr_where = "enum_labels['" + attr + "']";
+                auto& locales = result.enum_labels[attr];
+                for (const auto& [locale_key, locale_value] : table_entries(attr_value, operation, attr_where)) {
+                    const auto locale = string_key(locale_key, operation, attr_where);
+                    const auto where = attr_where + "['" + locale + "']";
+                    auto& labels = locales[locale];
+                    for (const auto& [label_key, code] : table_entries(locale_value, operation, where)) {
+                        const auto label = string_key(label_key, operation, where);
+                        labels[label] = lua_cell_as<int64_t>(code, operation, "code for label '" + label + "'");
+                    }
+                }
+            }
+        }
+        return result;
     }
 
     // Shared strict decoder for db:read_csv / db:read_csv_stream's trailing options table
     // (D-14/D-15/D-16/D-17, LUA-03 -- one decoder so the two entry points cannot diverge on any
-    // option). `options` is `sol::object`, **not** the optional-table style `parse_csv_options`
-    // above uses: sol2's optional checker never raises on a type mismatch on its own (see
-    // relation_target_from_lua below, the pattern this copies), so a wrong type
-    // would otherwise silently fall through to defaults instead of throwing. `operation` is the
+    // option). `options` is `sol::object`, not `sol::optional<sol::table>`: sol2's optional checker
+    // never raises on a type mismatch on its own (see relation_target_from_lua below, the pattern
+    // this copies), so a wrong type would otherwise silently fall through to defaults instead of
+    // throwing. `operation` is the
     // caller's own method name ("read_csv" / "read_csv_stream"), so the same bad table reports
     // whichever entry point the script actually called (D-19).
     static csv_read::Options read_csv_options_from_lua(const sol::object& options, const std::string& operation) {
@@ -1359,11 +1420,13 @@ struct LuaRunner::Impl {
 
     // Every boolean test in this file goes through this one predicate, so the rule lives in one
     // place rather than in a comment repeated at each site. The Value mapping itself lives in
-    // lua_to_value (scalars, row upserts, query parameters, group cells) and lua_cell_as (typed arrays).
+    // lua_to_value (scalars, row upserts, query parameters, group cells) and lua_cell_as (the typed
+    // paths, e.g. arrays).
     static bool is_lua_boolean(const sol::object& v) { return v.get_type() == sol::type::boolean; }
 
-    // The checked Lua-value→T conversion for the typed paths (arrays, dimensions, file paths);
-    // lua_to_value below is its Value-typed sibling. Load-bearing:
+    // The checked Lua-value→T conversion for the typed paths (arrays, dimensions, file paths,
+    // quiver.metadata fields, rename_agents names, enum_labels codes); lua_to_value below is its
+    // Value-typed sibling. Load-bearing:
     // sol2's plain `get<T>` is unchecked whenever SOL_SAFE_GETTER is off — which is every release
     // build (`src/CMakeLists.txt` sets SOL_SAFE_NUMERICS and SOL_SAFE_FUNCTION, not
     // SOL_SAFE_GETTER), where a mismatched value silently yields 0 / 0.0 / "" while a Debug build
