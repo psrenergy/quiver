@@ -5,6 +5,16 @@ All notable changes to Quiver are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entries that require
 callers to change something are prefixed **BREAKING** and say what to do.
 
+## [0.12.7] — unreleased
+
+### Fixed
+
+- **JS: the agent-facing Lua reference (`LUA_DB_API_REFERENCE`) no longer promises a rollback.**
+  A failed script keeps every write that finished before the error; only `db:transaction` /
+  `db:dry_run` undo their block. The CSV section now says that `import_csv` replaces the target
+  table (and that `group = ""` is the scalar table), and that `upsert_time_series_row` and
+  `update_time_series_files` replace the whole row.
+
 ## [0.12.6] — unreleased
 
 ### Added
