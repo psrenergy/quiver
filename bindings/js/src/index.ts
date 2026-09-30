@@ -24,6 +24,11 @@ export type {
   Value,
 } from "./types.ts";
 export {
+  DATA_TYPE_DATE_TIME,
+  DATA_TYPE_FLOAT,
+  DATA_TYPE_INTEGER,
+  DATA_TYPE_NULL,
+  DATA_TYPE_STRING,
   LOG_LEVEL_DEBUG,
   LOG_LEVEL_ERROR,
   LOG_LEVEL_INFO,

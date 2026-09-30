@@ -16,7 +16,8 @@ src/lua-api.ts    # LUA_DB_API_REFERENCE — agent-facing Lua `db:` API referenc
 src/group-columns.ts # Shared columnar marshaller (group writers) and decoder (group readers),
                      # plus numericCells, the per-cell numeric check setElementArray shares
 src/loader.ts     # HAND-WRITTEN FFI symbol table + 3-tier library loader
-src/types.ts      # Central DATA_TYPE_* / LOG_LEVEL_* constants and DatabaseOptions type
+src/types.ts      # Central DATA_TYPE_* / LOG_LEVEL_* constants and DatabaseOptions type —
+                  # all re-exported from the package root
 src/ffi-helpers.ts # Alloc helpers, makeDefaultOptions()
 src/boolean.ts    # integerToBoolean — strict 0/1 conversion for the boolean convenience readers
 src/errors.ts     # QuiverError (always thrown; message from quiver_get_last_error)

@@ -188,6 +188,9 @@ Exported types available for TypeScript consumers:
 - `GroupMetadata` -- Vector/set/time series group metadata
 - `TimeSeriesData` -- Time series column data
 - `CsvOptions` -- CSV import/export options
+- `DatabaseOptions` -- `{ readOnly?: boolean; consoleLevel?: number }` (a `LOG_LEVEL_*` constant)
+- `LOG_LEVEL_DEBUG | INFO | WARN | ERROR | OFF`, `DATA_TYPE_INTEGER | FLOAT | STRING | DATE_TIME | NULL`
+  -- constants for `DatabaseOptions.consoleLevel` and metadata `dataType`
 
 ## Development
 
