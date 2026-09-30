@@ -144,6 +144,22 @@ TEST_F(LuaRunner_ExportCSV, CombinedOptions) {
                                                                                                << content;
 }
 
+// A misspelled key, a wrong-typed value and a non-table options argument used to be ignored.
+TEST_F(LuaRunner_ExportCSV, OptionsAreStrict) {
+    auto csv_schema = VALID_SCHEMA("csv_export.sql");
+    auto db = quiver::Database::from_schema(db_path(), csv_schema);
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(lua,
+                     R"(db:export_csv("Items", "", "out.csv", { date_format = "%Y" }))",
+                     "Cannot export_csv: unknown option 'date_format'");
+    expect_lua_error(
+        lua, R"(db:export_csv("Items", "", "out.csv", "x"))", "Cannot export_csv: options must be a table");
+    expect_lua_error(lua,
+                     R"(db:export_csv("Items", "", "out.csv", { date_time_format = 5 }))",
+                     "Cannot export_csv: option 'date_time_format' must be a string");
+}
+
 // --- db-directory sandbox ---
 
 TEST_F(LuaRunner_ExportCSV, RelativeResolvesAgainstDbDir) {

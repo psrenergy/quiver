@@ -300,6 +300,23 @@ TEST_F(LuaExpressionTest, SelectAndRenameAgents) {
     )");
 }
 
+// Both halves of each mapping entry used to go through unchecked as<std::string>(): in Release a
+// boolean target became "" (the rename succeeded) and a number key became the text "1".
+TEST_F(LuaExpressionTest, RenameAgentsRejectsNonStringNames) {
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+    lua.run(prelude() + "fill('expr_a', 1.0, 1.0)");
+    expect_lua_error(lua,
+                     "quiver.expression(db:open_file('expr_a', 'r')):rename_agents({ v1 = true })",
+                     "Cannot rename_agents: value for 'v1' has unsupported Lua type");
+    expect_lua_error(lua,
+                     "quiver.expression(db:open_file('expr_a', 'r')):rename_agents({ 'alpha' })",
+                     "Cannot rename_agents: key has unsupported Lua type");
+    expect_lua_error(lua,
+                     "quiver.expression(db:open_file('expr_a', 'r')):rename_agents(5)",
+                     "Cannot rename_agents: mapping must be a table");
+}
+
 TEST_F(LuaExpressionTest, SaveOutputCollisionThrows) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::LuaRunner lua(db);
