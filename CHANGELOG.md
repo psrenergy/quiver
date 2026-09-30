@@ -68,6 +68,13 @@ callers to change something are prefixed **BREAKING** and say what to do.
   `ByLabel` forms) now throw `All column lists must have the same length, got <n> for '<name>'`,
   Python's message; the error type is unchanged.
 
+- **BREAKING — Dart: `Element.set` (and so `createElement` / `updateElement` /
+  `updateElementByLabel`) no longer accepts a nested `Map` value.** It used to flatten the map and
+  ignore its key, so `{'some_group': {'date_time': [...], 'value': [...]}}` behaved exactly like
+  passing the columns flat, and a misspelled key was accepted silently. A `Map` now throws
+  `ArgumentError` ("Unsupported type ... for '<name>'"). *Adapt:* pass the columns flat, or use
+  `updateTimeSeriesGroup` / `updateVectorGroup` / `updateSetGroup` to write one named group.
+
 ### Fixed
 
 - **Python: a `datetime` is accepted on every write path, and an aware one is stored as its UTC

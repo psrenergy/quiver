@@ -193,10 +193,10 @@ From the repo root:
 
 ## Acceptance criteria
 
-- [ ] No `case Map<String, Object?>` in `element.dart`; doc line removed.
-- [ ] Issue-70 test writes flat and asserts the stored rows.
-- [ ] New rejection test passes.
-- [ ] Full Dart suite and `dart analyze` clean; BREAKING CHANGELOG entry present.
+- [x] No `case Map<String, Object?>` in `element.dart`; doc line removed.
+- [x] Issue-70 test writes flat and asserts the stored rows.
+- [x] New rejection test passes.
+- [x] Full Dart suite and `dart analyze` clean; BREAKING CHANGELOG entry present.
 
 ## Pitfalls
 
@@ -209,3 +209,50 @@ From the repo root:
 
 - Adding a group-addressed `createElement` form.
 - Julia/Python/JS (no equivalent feature).
+
+## Implementation notes
+
+Implemented on `rs/plan39`. At planning time the branch was at master `3608708` (plans 01–31). By the time implementation started it had been fast-forwarded to master `52b27ea`, which also contains plans 32–38 (#344–#350). `git fetch origin && git merge origin/master` was therefore a no-op, and every result below is for `52b27ea` plus this change.
+
+Before any edit, a three-lens read-only verification workflow checked the plan: code facts, overlap with the other batch-4 plans, and a devil's-advocate search for real callers. After the merge, every anchor was checked again. The verdict was **implement**.
+
+**Why implement.** The change has no victims.
+- The only external users of `quiverdb` are the Hub apps: `C:/Development/Hub/hub1`, `hub2` and `hub3`, and `spine/hub`. All of them pin old refs.
+- Their only calls are `createElement` / `updateElement` in `lib/models/database.dart`. Those calls receive flat maps: `Element.toMap()` plus the flat vector/set `dataGroup.toMap(...)`. Time series are written with `updateTimeSeriesGroup`.
+- The one historical nested-map call, removed in hub3 `e630ba1`, went to `psr_database_sqlite`, not quiverdb. It is probably what issue 70 / #71 was written for.
+- The plan's history claims hold:
+  - `e8740a7` (#71) added the Dart case, the Julia `Dict` `setindex!` and the issue-70 test.
+  - `cd8b4e5` (#198) removed only the Julia method.
+
+Code and tests match the plan exactly. The CHANGELOG text differs in one word; see the adversarial review below.
+
+### Drift fixed
+
+- **CHANGELOG section.** `## [0.12.0] — unreleased` does not exist: 0.12.0 was released on 2026-09-27.
+  - As in plans 24, 27 and 31, the entry is the last `### Changed` bullet of `## [0.12.6] — unreleased`. It sits after plan 38's "Dart: the group writers' jagged-column `ArgumentError` names the offending column" bullet and before `### Fixed`.
+  - There is no manifest bump (the manifests are already at 0.12.6) and no compare link (plan 78 owns links).
+- **Grep claim.** The plan says `grep -rn "Map<String, Object?> v" bindings/dart/lib` returns only the case line. It also matches the `createElement` / `updateElement` / `updateElementByLabel` signatures (`Map<String, Object?> values`). Those signatures are unchanged.
+- **Line numbers.** The doc line (L58), the case (L83-86) and the issue-70 test (L26-43) were exactly where the plan says. `group('Element Set Values')` ends at ~L102, and the new test is its last test.
+- **`dart format`** reflowed the rejection test's `element.set(...)` call, breaking the map literal onto its own lines. The content is unchanged.
+
+### Results
+
+- **Red first.** The rejection test was added alone and run with `test.bat test/element_test.dart --plain-name "rejects a nested map value"`. It failed with `Expected: throws <Instance of 'ArgumentError'> with 'message': contains 'for \'some_time_series\'' / Actual: <Closure: () => void> / Which: returned <null>`, meaning the map was accepted.
+- **Green.**
+  - `test/issues_test.dart` 2/2 and `test/element_test.dart` 26/26 pass.
+  - The full Dart suite passes **443/443**.
+  - `dart analyze` exits 0. It reports 7 pre-existing infos, none in a touched file. `dart analyze` over the three touched Dart files reports "No issues found!".
+- **`scripts/format.bat`** exits 0.
+  - `dart format` changed only `test/element_test.dart` (the reflow above). ruff reported no changes.
+  - Biome again rewrote all 43 JS files CRLF→LF with no content change (plans 24 and 31 hit the same). They were restored with `git checkout -- bindings/js`.
+  - `git diff --stat` then listed exactly the 4 planned files, plus this plan file.
+- **Not run:** `scripts/test-all.bat`. The change is Dart-only, and the README asks for a full run at the end of each batch.
+- **Adversarial review.** A read-only workflow reviewed the diff through two lenses (code/test correctness, docs accuracy), and each finding went to a verifier told to refute it.
+  - The code lens found nothing.
+  - The docs lens confirmed one finding. The plan's CHANGELOG parenthetical "(and so `createElement` / `updateElement`)" left out `updateElementByLabel`, which also sends each entry through `Element.set` (`database_update.dart:40-46`). The neighbouring bullets all name the by-label form.
+  - The bullet now reads "(and so `createElement` / `updateElement` / `updateElementByLabel`)".
+
+### For later plans
+
+- A nested `Map` now reaches `Element.set`'s `default:` branch. That branch throws `Unsupported type _Map<String, List<DateTime>> for '<name>'`, so the runtime type in the message is the private `_Map`, and a test should match on `for '<name>'` as this one does.
+- No `bindings/dart/AGENTS.md` edit was needed: no passage there ever described the Map case.

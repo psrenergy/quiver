@@ -55,7 +55,6 @@ class Element {
   /// - `List<double?>` - array of floats
   /// - `List<String?>` - array of strings
   /// - `List<DateTime?>` - array of datetimes (converted to ISO 8601 strings)
-  /// - `Map<String, Object?>` - recursively sets each entry as a separate attribute
   void set(String name, Object? value) {
     _ensureNotDisposed();
 
@@ -80,10 +79,6 @@ class Element {
         setArrayString(name, v);
       case List<DateTime> v:
         setArrayString(name, v.map(dateTimeToString).toList());
-      case Map<String, Object?> v:
-        for (final entry in v.entries) {
-          set(entry.key, entry.value);
-        }
       case List v:
         _setMixedList(name, v);
       default:
