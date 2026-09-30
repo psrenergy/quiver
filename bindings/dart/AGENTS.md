@@ -84,11 +84,13 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   `ArgumentError('Could not allocate 0 bytes.')` whenever the platform returns NULL for it, which
   POSIX `malloc`/`calloc` may do (Windows' `CoTaskMemAlloc` does not, so a Windows test run will
   not catch it). Pass `nullptr` for an empty array instead, since the C API takes NULL with a zero
-  count; `updateTimeSeriesFiles`, the group writers' clear paths and `_marshalParams` do this. Typed columns go
-  through the shared private `_marshalGroupColumn(Arena, String, List<Object?>)`
-  (used by `updateTimeSeriesGroup`, `upsertTimeSeriesRow`, `upsertTimeSeriesRowByLabel`,
-  `updateVectorGroup`, `updateSetGroup` and the group writers' `ByLabel` forms); query parameters
-  through `_marshalParams`. Both `_marshalGroupColumn` and `Element._setMixedList` take the family
+  count; `updateTimeSeriesFiles`, `_marshalGroupColumns` (empty map) and `_marshalParams` do this.
+  The six columnar group writers (`updateVectorGroup`/`updateSetGroup`/`updateTimeSeriesGroup`
+  and their `ByLabel` forms) marshal the whole payload through `_marshalGroupColumns(Arena, Map)`
+  (empty map → NULL arrays; jagged columns → `ArgumentError` naming the column), which calls the
+  per-column `_marshalGroupColumn(Arena, String, List<Object?>)`. The two row upserts call
+  `_marshalGroupColumn` directly (no mask in the row C signature); query parameters
+  go through `_marshalParams`. Both `_marshalGroupColumn` and `Element._setMixedList` take the family
   (numeric, String, DateTime) from the first non-null cell and the numeric type from all of them: a
   numeric column is INTEGER unless some cell is a `double`, which widens it to FLOAT (the rule
   Python and JS share, so `[1, 2.5]` writes 1.0 and 2.5 in every binding; it used to throw here).
@@ -158,7 +160,7 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   type: the family comes from the first non-null cell, so a mixed `[true, 1]` column would
   otherwise throw a raw `TypeError` naming nothing. That branch covers all eight call sites
   (`updateVectorGroup`/`updateSetGroup`/`updateTimeSeriesGroup`/`upsertTimeSeriesRow` and every
-  `ByLabel` form), which is why it takes the column name: its unsupported-type `ArgumentError`
+  `ByLabel` form; six of them via `_marshalGroupColumns`), which is why it takes the column name: its unsupported-type `ArgumentError`
   has to name the offending column per the root marshalling-error rule.
 - **Element array NULLs**: `Element.setArray{Integer,Float,String}` take `List<T?>` and pass the
   per-cell `has_value` mask to the C setters; `Element.set` types mixed lists like

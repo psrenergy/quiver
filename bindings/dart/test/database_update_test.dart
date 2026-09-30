@@ -1671,6 +1671,21 @@ void main() {
       }
     });
 
+    test('updateSetGroup replaces rows and clears on an empty map', () {
+      final db = openRelations();
+      try {
+        db.updateSetGroup('Child', 'parents', 1, {
+          'parent_ref': [1, 2],
+        });
+        expect(db.readSetIntegersById('Child', 'parent_ref', 1), equals([1, 2]));
+
+        db.updateSetGroup('Child', 'parents', 1, {});
+        expect(db.readSetIntegersById('Child', 'parent_ref', 1), isEmpty);
+      } finally {
+        db.close();
+      }
+    });
+
     test('leaves a sibling group sharing a column name untouched', () {
       final db = openRelations();
       try {
@@ -1751,7 +1766,13 @@ void main() {
             'parent_ref': [1, 2],
             'vector_index': [1],
           }),
-          throwsA(isA<ArgumentError>()),
+          throwsA(
+            isA<ArgumentError>().having(
+              (e) => e.message,
+              'message',
+              "All column lists must have the same length, got 1 for 'vector_index'",
+            ),
+          ),
         );
       } finally {
         db.close();
