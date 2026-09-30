@@ -27,10 +27,18 @@ function Base.setindex!(el::Element, value::Real, name::String)
     return nothing
 end
 
-function Base.setindex!(el::Element, value::String, name::String)
+function Base.setindex!(el::Element, value::AbstractString, name::String)
     cname = Base.cconvert(Cstring, name)
     cvalue = Base.cconvert(Cstring, value)
     check(C.quiver_element_set_string(el.ptr, cname, cvalue))
+    return nothing
+end
+
+# `nothing` writes SQL NULL (quiver_element_set_null). Scalars only: Julia's array surface stays
+# non-null (root design decision "Element arrays accept NULL cells").
+function Base.setindex!(el::Element, ::Nothing, name::String)
+    cname = Base.cconvert(Cstring, name)
+    check(C.quiver_element_set_null(el.ptr, cname))
     return nothing
 end
 

@@ -13,6 +13,10 @@ callers to change something are prefixed **BREAKING** and say what to do.
   `quiverdb`.** `mod.ts` now re-exports `src/index.ts` whole, so the package root can no longer
   drift from it. The `consoleLevel` values `DatabaseOptions` documents were previously not
   reachable from outside the package, and `ScalarMetadata.dataType` had no named constants.
+- **Julia: `Element` accepts `nothing` and any `AbstractString` scalar.** `update_element!(db, c,
+  id; attr = nothing)` (and the `create_element!` / `update_element_by_label!` keyword forms) now
+  write SQL NULL, as every other binding already could; previously it raised a `MethodError`. A
+  `SubString` scalar is accepted too, not only `String`.
 
 ### Changed
 
