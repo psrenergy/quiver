@@ -10,9 +10,9 @@ five manifests) lives in the root `AGENTS.md`.
 | `ci.yml` | push/PR to master | Build matrix (ubuntu/windows/macos × Release/Debug) + ctest + artifact upload; four coverage jobs uploading to Codecov with flags `cpp`, `julia`, `dart`, `python`; plus `clang-format` check, `actionlint`, and a `bun-test` matrix (ubuntu+windows) |
 | `bump-version.yml` | `workflow_dispatch` (`part`: major/minor/patch) | Runs `scripts/assert_version.py bump <part>` and opens a PR with the five manifests rewritten (see below) |
 | `publish.yml` | `workflow_dispatch` | Release orchestrator (see below) |
-| `publish-s3.yml` | `workflow_dispatch` (usually from publish.yml) | Builds native libs for `linux-x86_64`, `macos-aarch64`, `windows-x86_64` (via `scripts/ci/native_s3.sh`) and stages them on S3 |
+| `publish-s3.yml` | `workflow_dispatch` (usually from publish.yml) | Builds native libs for `linux-x86_64`, `linux-aarch64`, `macos-aarch64`, `windows-x86_64` (via `scripts/ci/native_s3.sh`) and stages them on S3 |
 | `publish-julia.yml` | `workflow_dispatch` | Mirrors `bindings/julia` into psrenergy/Quiver.jl (see below) |
-| `publish-python.yml` | push/PR to master + `workflow_dispatch` | cibuildwheel on a ubuntu+windows matrix (targets in `bindings/python/AGENTS.md`); the PyPI publish job runs only on `workflow_dispatch` (trusted publishing, `skip-existing: true`, `environment: pypi`) |
+| `publish-python.yml` | push/PR to master + `workflow_dispatch` | cibuildwheel on a ubuntu+ubuntu-arm+windows matrix (targets in `bindings/python/AGENTS.md`); the PyPI publish job runs only on `workflow_dispatch` (trusted publishing, `skip-existing: true`, `environment: pypi`) |
 | `publish-js.yml` | `workflow_dispatch` | npm publish with bundled native libs (see below) |
 
 Composite actions in `.github/actions/`:
@@ -37,17 +37,24 @@ toolchain/cmake/glibc floor can't drift. **GCC 11 (devtoolset-11) is required**:
 `<chrono>` calendar types (`year_month_day`/`hh_mm_ss`/`sys_days`) that GCC 10 lacks — and CentOS 7's
 SCL caps at GCC 11, which keeps GLIBCXX ≤ the **3.4.30** ceiling Julia's bundled libstdc++ provides
 (this is a plain S3 artifact — no `CompilerSupportLibraries_jll` at load time, so libstdc++ is whatever
-Julia bundles; GCC 13 → `3.4.32` would fail to load). The script builds into `build/manylinux/`, runs `patchelf --set-rpath '$ORIGIN'`
+Julia bundles; GCC 13 → `3.4.32` would fail to load). The script builds into `build/manylinux-<arch>/`, runs `patchelf --set-rpath '$ORIGIN'`
 on `libquiver_c.so` so it finds `libquiver.so.0` as a sibling in the flat ship layout, dereferences the
 version symlinks into real files (matching the old `cp -L`), and runs the portability gate
 in-container (fails unless glibc ≤ 2.17, GLIBCXX ≤ 3.4.30, both libs dynamically linked to
 `libstdc++.so.6`, and `libquiver_c.so` carries an `$ORIGIN` rpath). libstdc++ stays **dynamic** — never
 static-link (the C API catches C++-core exceptions by type across the `libquiver.so` →
 `libquiver_c.so` boundary, and two static copies under `-fvisibility=hidden` would break that; this
-also rules out zig/libc++ static toolchains). The three files land in `build/manylinux/lib/` exactly as
+also rules out zig/libc++ static toolchains). The three files land in `build/manylinux-<arch>/lib/` exactly as
 the downstream `upload-s3` job + `scripts/ci/native_s3.sh` expect. Feeds both the Julia and JS/npm
 native libs (shared S3 staging). macOS/Windows still use `build-cpp` (gated `if: runner.os !=
 'Linux'`) — only Linux needs the old-glibc image.
+
+**`linux-aarch64` (e.g. DGX Spark) has a glibc 2.28 floor, not 2.17:** `bash
+scripts/build_native_linux.sh aarch64` runs on the `ubuntu-24.04-arm` hosted runner inside
+**manylinux_2_28_aarch64** (AlmaLinux 8, also pinned by digest). manylinux2014 cannot serve it: CentOS 7's
+aarch64 SCL stops at devtoolset-10, and GCC 10 lacks the `<chrono>` calendar. The gcc-toolset there
+links newer libstdc++ symbols statically (`libstdc++_nonshared`), so GLIBCXX stays at the system's 3.4.25
+and the same gate passes with the glibc check at 2.28 — the floor the Python wheels already ship with.
 
 > **Why not the alternatives** (settled 2026-07-24): BinaryBuilder.jl also reaches 2.17 without Docker,
 > but pulls the whole Julia + compiler-shard stack and can't run on a Windows dev box (local
@@ -137,7 +144,7 @@ The order is **bump, merge, publish** — two deliberate dispatches, never chain
 ## npm Publishing (JS)
 
 `publish-js.yml` downloads native libs from S3 into
-`libs/{linux-x86_64,macos-aarch64,windows-x86_64}/`, asserts every lib is in a throwaway
+`libs/{linux-x86_64,linux-aarch64,macos-aarch64,windows-x86_64}/`, asserts every lib is in a throwaway
 `npm pack` tarball via `tar -tzf` (format-independent; npm roots entries under `package/`), then
 publishes with **`npm publish --loglevel verbose` via `actions/setup-node@v6`** using **npm
 Trusted Publishing (OIDC)** — `permissions: id-token: write`, no stored token; npm packs inline

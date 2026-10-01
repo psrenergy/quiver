@@ -26,7 +26,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, ubuntu-24.04-arm, windows-latest]
 
     steps:
       - uses: actions/checkout@v7
@@ -80,7 +80,7 @@ jobs:
           pip install --quiet twine
           twine check dist/*.whl
           # Ensure every platform target declared in cibuildwheel config is represented.
-          required_patterns=(manylinux win_amd64)
+          required_patterns=(manylinux*x86_64 manylinux*aarch64 win_amd64)
           for pat in "${required_patterns[@]}"; do
             if ! ls dist/*${pat}*.whl >/dev/null 2>&1; then
               echo "::error::No wheel matching pattern '*${pat}*' in dist/"
