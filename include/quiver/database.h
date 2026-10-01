@@ -5,7 +5,6 @@
 #include "quiver/attribute_metadata.h"
 #include "quiver/element.h"
 #include "quiver/options.h"
-#include "quiver/result.h"
 
 #include <iostream>
 #include <memory>

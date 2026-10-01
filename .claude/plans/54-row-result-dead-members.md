@@ -126,9 +126,10 @@ From the repo root:
 
 ## Acceptance criteria
 
-- [ ] The listed members are gone from the headers and `.cpp` files.
-- [ ] Everything builds, and both C++ suites pass.
-- [ ] CHANGELOG `### Removed` entry added.
+- [x] The listed members are gone from the headers and `.cpp` files (all except `Row::is_null`,
+  which stays; see Implementation notes).
+- [x] Everything builds, and both C++ suites pass.
+- [x] CHANGELOG `### Removed` entry added.
 
 ## Pitfalls
 
@@ -138,3 +139,71 @@ From the repo root:
 ## Out of scope
 
 - Moving `row.h`/`result.h` to `src/`, and `TypeValidator` (plan 55).
+
+## Implementation notes
+
+Implemented on `rs/plan54` at `5b12950` (plan 53 merged). `git merge origin/master` was a no-op.
+
+### What changed
+
+- **`include/quiver/row.h`, `src/row.cpp`.** `size`, `column_count`, `empty`, `at`, and the
+  `begin`/`end` pair are gone. `Row` keeps its constructor, `operator[]`, `is_null` and the three
+  `get_*` getters. `get_float`'s widening is untouched.
+- **`include/quiver/result.h`, `src/result.cpp`.** `Result()`, `column_count` and `at` are gone.
+  `Result` keeps the 2-arg constructor, `columns`, `row_count`, `empty`, `operator[]` and
+  `begin`/`end`.
+- **`include/quiver/database.h`.** `#include "quiver/result.h"` is deleted, and no forward
+  declaration replaces it, because after plan 53 nothing in the header names `Result`.
+  `src/database_impl.h` already included `quiver/result.h` (plan 53 added it), so no other
+  include changed.
+- **`tests/test_row_result.cpp`.**
+  - Deleted: `Row.EmptyRow`, `Row.AtOutOfBounds`, `Row.IteratorSupport`,
+    `Result.DefaultConstructor`, `Result.AtOutOfBounds`.
+  - `Result.EmptyResult`: the column check now reads `columns().size()` instead of
+    `column_count()`.
+  - `Result.IteratorOnEmpty`: builds its empty result with `Result({}, {})`.
+  - `Result.IteratorOnNonEmpty`: checks `row.get_integer(0).value() == count + 1` instead of
+    `row.size() == 1`.
+  - `Result.MixedValueTypes`: only the `column_count()` assertion was removed.
+- **`CHANGELOG.md`.** One `### Removed` entry under `## [0.12.8] — unreleased`, placed before plan
+  53's `### Fixed` (Keep a Changelog order).
+
+### Deviations and drift
+
+- **`Row::is_null` is kept (user decision).** The "Why" grep is wrong:
+  `src/database_internal.h` `read_grouped_values_all` calls `!result[i].is_null(1)`. That is the
+  LEFT JOIN presence test behind all six bulk vector/set readers, and `src/AGENTS.md` documents it.
+  So `is_null` stays, and so do its two tests (`Row.IsNullTrueForNullValue`,
+  `Row.IsNullFalseForNonNull`) and the `MixedValueTypes` `is_null(3)` assertion. It is also left off
+  the CHANGELOG list, whose *Adapt* line names `is_null` as one of the kept accessors.
+- **`Result.IteratorOnNonEmpty` needed an edit.** The plan listed it as "keep", but it called
+  `row.size()`. The new assertion also pins row order.
+- **`Result.EmptyResult` and `Result.IteratorOnEmpty` were rewritten, not deleted.** Both test kept
+  members: `empty()`/`row_count()` with columns present, and `begin`/`end` on an empty result.
+  `EmptyResult` is the only unit test of `Result::empty()`.
+- **CHANGELOG section.** The entry is under 0.12.8, not 0.12.0. Plan 53 opened that section.
+- **Commit type.** The commit is `refactor!:`, matching the `fix!:` convention plans 45/48 used for
+  breaking changes. No manifest bump.
+
+### Verification
+
+- **Build.** `cmake --build build --config Debug` exited 0. The only warnings are ones that were
+  already there: C4715 in `time_properties.cpp`, C4701 `group_type` in `import_csv`, and C4100 in
+  `test_c_api_expression.cpp`.
+- **`quiver_tests`.** 1392/1392 passed. That is 1397 at plan 53 minus the 5 deleted tests, and all
+  18 `Row.*`/`Result.*`/`RowResult.*` tests pass.
+- **`quiver_c_tests`.** 571/571 passed.
+- **`scripts/format.bat`.** Exited 0, and clang-format changed nothing.
+  - Biome again rewrote 43 JS files CRLF→LF. `git diff --ignore-cr-at-eol bindings/` was empty, and
+    `git checkout -- bindings/js` reverted them.
+- **Line endings.** Checked by byte count: `CHANGELOG.md` and this plan are still CRLF, and the
+  C++ files are still LF.
+
+### For later plans
+
+- **Plan 55.** `quiver/database.h` no longer pulls in `result.h`/`row.h`. A `src/` file that needs
+  `Result`/`Row` gets them from `database_impl.h`, `database_internal.h`, or its own include
+  (`database.cpp`). The umbrella `quiver/quiver.h` never included `result.h`, so C++ consumers now
+  reach these types only by including the header directly.
+- **Plan 59.** `Row::is_null` is still the presence test in `read_grouped_values_all`. Keep it if
+  that function is touched.
