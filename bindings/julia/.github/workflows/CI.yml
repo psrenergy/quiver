@@ -23,12 +23,13 @@ jobs:
           - '1.12'
         os:
           - ubuntu-latest
+          - ubuntu-24.04-arm
           - macos-latest
           - windows-latest
     steps:
       - uses: actions/checkout@v4
       # No arch input: setup-julia defaults to the runner's native arch
-      # (x64 on ubuntu/windows, aarch64 on macos-latest — matching the artifact).
+      # (x64 on ubuntu-latest/windows, aarch64 on ubuntu-24.04-arm/macos-latest — matching the artifact).
       - uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.version }}

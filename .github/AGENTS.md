@@ -7,7 +7,7 @@ five manifests) lives in the root `AGENTS.md`.
 
 | Workflow | Trigger | Purpose |
 |---|---|---|
-| `ci.yml` | push/PR to master | Build matrix (ubuntu/windows/macos × Release/Debug) + ctest + artifact upload; four coverage jobs uploading to Codecov with flags `cpp`, `julia`, `dart`, `python`; plus `clang-format` check, `actionlint`, and a `bun-test` matrix (ubuntu+windows) |
+| `ci.yml` | push/PR to master | Build matrix (ubuntu/ubuntu-arm/windows/macos × Release/Debug) + ctest + artifact upload; four coverage jobs uploading to Codecov with flags `cpp`, `julia`, `dart`, `python`; plus `clang-format` check, `actionlint`, and a `bun-test` matrix (ubuntu+ubuntu-arm+windows) |
 | `bump-version.yml` | `workflow_dispatch` (`part`: major/minor/patch) | Runs `scripts/assert_version.py bump <part>` and opens a PR with the five manifests rewritten (see below) |
 | `publish.yml` | `workflow_dispatch` | Release orchestrator (see below) |
 | `publish-s3.yml` | `workflow_dispatch` (usually from publish.yml) | Builds native libs for `linux-x86_64`, `linux-aarch64`, `macos-aarch64`, `windows-x86_64` (via `scripts/ci/native_s3.sh`) and stages them on S3 |
@@ -19,7 +19,9 @@ Composite actions in `.github/actions/`:
 - `build-cpp` — configure/build the core + C API with a FetchContent source cache. The cache key
   includes a **toolchain fingerprint** (default CMake generator): FetchContent subbuilds pin the
   generator in their CMakeCache, so restoring a `_deps` cache built under a different default
-  generator (e.g. windows-latest moving VS 17 → 18) fails configure.
+  generator (e.g. windows-latest moving VS 17 → 18) fails configure. Every key also carries
+  `runner.arch`: `ubuntu-latest` and `ubuntu-24.04-arm` both report `runner.os == Linux`, and a
+  restored cache of the other arch's `_deps` sub-builds / sccache objects breaks the build.
   **Used by macOS/Windows only in `publish-s3.yml`** (`if: runner.os != 'Linux'`); `ci.yml` still
   uses it for all three OSes.
 
@@ -137,8 +139,8 @@ The order is **bump, merge, publish** — two deliberate dispatches, never chain
   gets an `@loader_path` rpath via `install_name_tool` in `publish-s3.yml`. (2) `install_name_tool`
   invalidates the ad-hoc linker signature and arm64 macOS SIGKILLs `dlopen` of unsigned code, so
   the workflow re-signs with `codesign --force --sign -` — that step is load-bearing. (3) The
-  mirror's `CI.yml` passes no `arch` to setup-julia (runner-native: x64 on ubuntu/windows,
-  aarch64 on macos-latest); x64 Julia on an arm64 mac runs under Rosetta and would not match the
+  mirror's `CI.yml` passes no `arch` to setup-julia (runner-native: x64 on ubuntu-latest/windows,
+  aarch64 on ubuntu-24.04-arm/macos-latest); x64 Julia on an arm64 mac runs under Rosetta and would not match the
   `arch = "aarch64"` Artifacts.toml entry.
 
 ## npm Publishing (JS)
