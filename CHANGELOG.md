@@ -15,6 +15,14 @@ callers to change something are prefixed **BREAKING** and say what to do.
   `update_set_group` name themselves the same way), and an unknown attribute reports
   `Cannot create_element: column 'x' not found in table 'T'` (was `Column 'x' not found in table
   'T'`). The accepted values are unchanged.
+- **Missing-group errors use one pattern.** The time-series operations now report `Time series
+  group not found: 'g' in collection 'c'` (was `Time series group 'g' not found for collection
+  'c'`), matching `get_time_series_metadata`; a missing vector/set attribute reports `Vector
+  attribute not found: 'a' in collection 'c'` (was `Vector attribute 'a' not found for collection
+  'c'`); and `read_time_series_files` / `update_time_series_files` on a collection with no files
+  table report `Time series files table not found: c_time_series_files` (was `... not found for
+  collection 'c'`), matching `list_time_series_files_columns`.
+
 ### Added
 
 - **Linux ARM64 (`aarch64`, e.g. NVIDIA DGX Spark) is a published platform.** PyPI ships a

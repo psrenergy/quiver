@@ -442,7 +442,10 @@ impl_->logger->debug("Opening database: {}", path);
   delegate's.
 - **Table classification has one source** (`schema.cpp`): `Schema::group_names(collection,
   GroupTableType)` and `is_group_table(table, type)` are the only way to enumerate/classify
-  `_vector_` / `_set_` / `_time_series_` tables (`group_names` excludes `_time_series_files`).
+  `_vector_` / `_set_` / `_time_series_` tables (`group_names` excludes `_time_series_files`),
+  and one name builder, `Schema::group_table_name(collection, group, GroupTableType)`; every
+  group-addressed operation resolves its table through `Impl::require_group_table`, which owns the
+  Pattern 2 miss (`{Vector|Set|Time series} group not found: 'g' in collection 'c'`).
   All list/metadata/describe call sites use them — never hand-roll prefix scans. `group_names` returns an empty
   list for a name that is not a table, so each `list_{vector,set,time_series}_groups` calls
   `Impl::require_collection` first (as `list_scalar_attributes` does); without it a mistyped collection is

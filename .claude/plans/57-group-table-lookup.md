@@ -206,3 +206,40 @@ From the repo root:
 
 - Merging the `get_*_metadata` column loops.
 - The CSV import/export lookup (plan 58).
+
+## Implementation notes
+
+Implemented on `rs/plan57` after fast-forwarding to master at `3b35d3f` (plan 55 landed while this
+plan was being verified, so 53, 54, 55 and 56 are all in).
+
+**Drift fixed**
+- Plan 55 had moved `schema.h` to `src/schema.h`; the `group_table_name` declaration and the two
+  deleted `find_time_series_*` declarations are edited there, not in `include/quiver/`.
+- The CHANGELOG's unreleased section is `## [0.12.8] — unreleased`, not `[0.12.0]`; the entry
+  sits under its `### Changed`.
+- `update_group_rows` still needs `is_vector` for its `vector_index` check, so only the
+  table-name ternary and the sync comment were deleted; the variable stays.
+- `read_time_series_files` / `update_time_series_files` on a collection without a files table now
+  say `Time series files table not found: <c>_time_series_files` (was `... not found for collection
+  '<c>'`). The plan changes this in step 4 but its CHANGELOG text did not mention it; the entry now
+  does.
+
+**Beyond the plan's letter**
+- `TimeSeriesOpsReportMissingGroupAsPattern2` pins the exact message for all four time-series ops,
+  not only `update_time_series_group`, since all four call sites changed.
+- The attribute pins tightened the existing `ReadVectorIntegersInvalidAttribute` and
+  `ReadSetStringsInvalidAttribute` tests (`EXPECT_THROW` → `EXPECT_STREQ`) rather than adding new
+  tests; the Set message changed too, so it is pinned as well.
+- Before the fix the three tests failed with the old texts (`Vector attribute 'nonexistent_attribute'
+  not found for collection 'Collection'`, the Set equivalent, and `Time series group 'no_such_group'
+  not found for collection 'Collection'` from all four ops).
+
+**For later plans**
+- 58: `Schema::group_table_name(collection, group, GroupTableType)` exists now; its
+  `find_group_table` for import/export can build the three candidate names with it.
+- The time-series ops look a group up as `{collection}_time_series_{group}`, so the group name
+  `files` still resolves to the `_time_series_files` table (it then throws `Dimension column not found`
+  from `find_dimension_columns`). That was true before this plan too (`find_time_series_table` and
+  `get_time_series_metadata` did the same) and is left alone.
+- The build prints MSVC `C4701` (potentially uninitialized `group_type`) at
+  `database_csv_import.cpp:587`. It was there before this plan; the code belongs to plan 58.

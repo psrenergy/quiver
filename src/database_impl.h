@@ -71,6 +71,23 @@ struct Database::Impl {
         }
     }
 
+    // The one lookup behind every group-addressed operation: the collection must exist, then the
+    // {collection}_{vector|set|time_series}_{group} table. One Pattern 2 message per kind.
+    const TableDefinition& require_group_table(const std::string& collection,
+                                               const std::string& group,
+                                               GroupTableType type,
+                                               const char* operation) const {
+        require_collection(collection, operation);
+        if (const auto* table_def = schema->get_table(Schema::group_table_name(collection, group, type))) {
+            return *table_def;
+        }
+        const char* kind = type == GroupTableType::Vector ? "Vector"
+                           : type == GroupTableType::Set  ? "Set"
+                                                          : "Time series";
+        throw std::runtime_error(std::string(kind) + " group not found: '" + group + "' in collection '" + collection +
+                                 "'");
+    }
+
     // A missing id is Pattern 2 everywhere (root design decision), so every id-scoped write
     // resolves it through here rather than letting SQLite report a foreign-key failure.
     void require_element(const std::string& collection, int64_t id) const {

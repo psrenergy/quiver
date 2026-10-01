@@ -38,19 +38,6 @@ void print_group_columns(std::ostream& out, const TableDefinition& table, GroupT
     out << "\n";
 }
 
-std::string group_table_name(const std::string& collection, const std::string& group, GroupTableType type) {
-    switch (type) {
-    case GroupTableType::Vector:
-        return Schema::vector_table_name(collection, group);
-    case GroupTableType::Set:
-        return Schema::set_table_name(collection, group);
-    case GroupTableType::TimeSeries:
-        return Schema::time_series_table_name(collection, group);
-    default:
-        return "";
-    }
-}
-
 const char* plural(int64_t n) {
     return n == 1 ? "" : "s";
 }
@@ -225,7 +212,7 @@ void write_collection_section(std::ostream& out,
             continue;
         out << header << "\n";
         for (const auto& group_name : groups) {
-            const auto* table = schema.get_table(group_table_name(collection, group_name, type));
+            const auto* table = schema.get_table(Schema::group_table_name(collection, group_name, type));
             out << "    - " << group_name << ": ";
             print_group_columns(out, *table, type);
         }
@@ -332,7 +319,7 @@ std::string Database::summarize_collection(const std::string& collection) const 
             continue;
         out << header << "\n";
         for (const auto& group_name : groups) {
-            const auto table = group_table_name(collection, group_name, type);
+            const auto table = Schema::group_table_name(collection, group_name, type);
             const auto non_empty =
                 *impl_->execute("SELECT COUNT(DISTINCT id) FROM \"" + table + "\"")[0].get_integer(0);
             out << "    - " << group_name << ": " << non_empty << "/" << element_count << " non-empty\n";

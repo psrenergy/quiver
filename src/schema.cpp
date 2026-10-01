@@ -84,6 +84,19 @@ std::string Schema::time_series_files_table_name(const std::string& collection) 
     return collection + "_time_series_files";
 }
 
+std::string Schema::group_table_name(const std::string& collection, const std::string& group, GroupTableType type) {
+    switch (type) {
+    case GroupTableType::Vector:
+        return vector_table_name(collection, group);
+    case GroupTableType::Set:
+        return set_table_name(collection, group);
+    case GroupTableType::TimeSeries:
+        return time_series_table_name(collection, group);
+    default:
+        return "";
+    }
+}
+
 bool Schema::is_collection(const std::string& table) const {
     if (table == "Configuration") {
         return true;
@@ -149,7 +162,7 @@ std::string Schema::find_vector_table(const std::string& collection, const std::
         }
     }
 
-    throw std::runtime_error("Vector attribute '" + attribute + "' not found for collection '" + collection + "'");
+    throw std::runtime_error("Vector attribute not found: '" + attribute + "' in collection '" + collection + "'");
 }
 
 std::string Schema::find_set_table(const std::string& collection, const std::string& attribute) const {
@@ -172,42 +185,7 @@ std::string Schema::find_set_table(const std::string& collection, const std::str
         }
     }
 
-    throw std::runtime_error("Set attribute '" + attribute + "' not found for collection '" + collection + "'");
-}
-
-std::string Schema::find_time_series_table(const std::string& collection, const std::string& group) const {
-    // First try: Collection_time_series_group
-    auto ts = time_series_table_name(collection, group);
-    if (has_table(ts)) {
-        return ts;
-    }
-
-    // Second try: search all time series tables for the collection
-    for (const auto& table_name : table_names()) {
-        if (!is_time_series_table(table_name))
-            continue;
-        if (get_parent_collection(table_name) != collection)
-            continue;
-
-        // Extract group name from table and compare
-        auto prefix = collection + "_time_series_";
-        if (table_name.starts_with(prefix)) {
-            auto extracted_group = table_name.substr(prefix.size());
-            if (extracted_group == group) {
-                return table_name;
-            }
-        }
-    }
-
-    throw std::runtime_error("Time series group '" + group + "' not found for collection '" + collection + "'");
-}
-
-std::string Schema::find_time_series_files_table(const std::string& collection) const {
-    auto tsf = time_series_files_table_name(collection);
-    if (has_table(tsf)) {
-        return tsf;
-    }
-    throw std::runtime_error("Time series files table not found for collection '" + collection + "'");
+    throw std::runtime_error("Set attribute not found: '" + attribute + "' in collection '" + collection + "'");
 }
 
 bool Schema::is_group_table(const std::string& table, GroupTableType type) const {
@@ -224,19 +202,9 @@ bool Schema::is_group_table(const std::string& table, GroupTableType type) const
 }
 
 std::vector<std::string> Schema::group_names(const std::string& collection, GroupTableType type) const {
-    std::string infix;
-    switch (type) {
-    case GroupTableType::Vector:
-        infix = "_vector_";
-        break;
-    case GroupTableType::Set:
-        infix = "_set_";
-        break;
-    case GroupTableType::TimeSeries:
-        infix = "_time_series_";
-        break;
-    }
-    const auto prefix = collection + infix;
+    // "Items_vector_" etc. The time-series prefix also matches Items_time_series_files, which
+    // is_group_table excludes below.
+    const auto prefix = group_table_name(collection, "", type);
 
     std::vector<std::string> result;
     for (const auto& table_name : table_names()) {

@@ -16,52 +16,37 @@ ScalarMetadata Database::get_scalar_metadata(const std::string& collection, cons
 }
 
 GroupMetadata Database::get_vector_metadata(const std::string& collection, const std::string& group_name) const {
-    impl_->require_collection(collection, "get_vector_metadata");
-
-    // Find the vector table for this group
-    auto vector_table = Schema::vector_table_name(collection, group_name);
-    const auto* table_def = impl_->schema->get_table(vector_table);
-
-    if (!table_def) {
-        throw std::runtime_error("Vector group not found: '" + group_name + "' in collection '" + collection + "'");
-    }
+    const auto& table_def =
+        impl_->require_group_table(collection, group_name, GroupTableType::Vector, "get_vector_metadata");
 
     GroupMetadata metadata;
     metadata.group_name = group_name;
 
     // Add all data columns in declaration order (skip id and vector_index)
-    for (const auto& col_name : table_def->column_order) {
+    for (const auto& col_name : table_def.column_order) {
         if (col_name == "id" || col_name == "vector_index") {
             continue;
         }
 
-        metadata.value_columns.push_back(internal::scalar_metadata_with_fk(*table_def, col_name));
+        metadata.value_columns.push_back(internal::scalar_metadata_with_fk(table_def, col_name));
     }
 
     return metadata;
 }
 
 GroupMetadata Database::get_set_metadata(const std::string& collection, const std::string& group_name) const {
-    impl_->require_collection(collection, "get_set_metadata");
-
-    // Find the set table for this group
-    auto set_table = Schema::set_table_name(collection, group_name);
-    const auto* table_def = impl_->schema->get_table(set_table);
-
-    if (!table_def) {
-        throw std::runtime_error("Set group not found: '" + group_name + "' in collection '" + collection + "'");
-    }
+    const auto& table_def = impl_->require_group_table(collection, group_name, GroupTableType::Set, "get_set_metadata");
 
     GroupMetadata metadata;
     metadata.group_name = group_name;
 
     // Add all data columns in declaration order (skip id)
-    for (const auto& col_name : table_def->column_order) {
+    for (const auto& col_name : table_def.column_order) {
         if (col_name == "id") {
             continue;
         }
 
-        metadata.value_columns.push_back(internal::scalar_metadata_with_fk(*table_def, col_name));
+        metadata.value_columns.push_back(internal::scalar_metadata_with_fk(table_def, col_name));
     }
 
     return metadata;

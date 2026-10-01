@@ -64,6 +64,7 @@ public:
     static std::string set_table_name(const std::string& collection, const std::string& group);
     static std::string time_series_table_name(const std::string& collection, const std::string& group);
     static std::string time_series_files_table_name(const std::string& collection);
+    static std::string group_table_name(const std::string& collection, const std::string& group, GroupTableType type);
 
     // Table classification
     bool is_collection(const std::string& table) const;
@@ -77,8 +78,6 @@ public:
     // Find table for attribute (throws if not found)
     std::string find_vector_table(const std::string& collection, const std::string& attribute) const;
     std::string find_set_table(const std::string& collection, const std::string& attribute) const;
-    std::string find_time_series_table(const std::string& collection, const std::string& group) const;
-    std::string find_time_series_files_table(const std::string& collection) const;
 
     // Find which group tables contain a given column (for routing in create_element/update_element)
     struct TableMatch {
