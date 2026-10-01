@@ -108,6 +108,12 @@ TEST_F(SchemaValidatorFixture, InvalidTimeSeriesRelationFkActions) {
             "Foreign key 'parent_id' in table 'Collection_time_series_events' must use ON UPDATE CASCADE")));
 }
 
+TEST_F(SchemaValidatorFixture, UnsupportedColumnTypeNamesTableAndColumn) {
+    EXPECT_THAT([&] { quiver::Database::from_schema(":memory:", INVALID_SCHEMA("unsupported_type.sql"), options); },
+                testing::ThrowsMessage<std::runtime_error>(testing::StrEq(
+                    "Failed to validate schema: column 'payload' in table 'Items' has unsupported type 'BLOB'")));
+}
+
 // ============================================================================
 // Type validation tests (via create_element errors)
 // ============================================================================

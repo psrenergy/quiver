@@ -300,6 +300,10 @@ void Schema::load_from_database(sqlite3* db) {
 
     // Load each table's metadata
     for (const auto& name : names) {
+        // The only path into query_columns/query_foreign_keys/query_indexes, which splice the name into PRAGMA SQL
+        if (!is_safe_identifier(name)) {
+            throw std::runtime_error("Failed to validate schema: invalid table name '" + name + "'");
+        }
         TableDefinition table;
         table.name = name;
 
@@ -319,9 +323,6 @@ void Schema::load_from_database(sqlite3* db) {
 }
 
 std::vector<ColumnDefinition> Schema::query_columns(sqlite3* db, const std::string& table) {
-    if (!is_safe_identifier(table)) {
-        throw std::runtime_error("Cannot query columns: invalid table name: " + table);
-    }
     std::vector<ColumnDefinition> columns;
     auto sql = "PRAGMA table_info(" + table + ")";
 
@@ -338,7 +339,13 @@ std::vector<ColumnDefinition> Schema::query_columns(sqlite3* db, const std::stri
 
         col.name = name ? name : "";
         std::string type_str = type ? type : "";
-        col.type = data_type_from_string(type_str);
+        const auto data_type = data_type_from_string(type_str);
+        if (!data_type) {
+            sqlite3_finalize(stmt);
+            throw std::runtime_error("Failed to validate schema: column '" + col.name + "' in table '" + table +
+                                     "' has unsupported type '" + (type_str.empty() ? "(none)" : type_str) + "'");
+        }
+        col.type = *data_type;
         col.not_null = sqlite3_column_int(stmt, 3) != 0;
         col.primary_key = sqlite3_column_int(stmt, 5) != 0;
         if (dflt_value) {
@@ -357,9 +364,6 @@ std::vector<ColumnDefinition> Schema::query_columns(sqlite3* db, const std::stri
 }
 
 std::vector<ForeignKey> Schema::query_foreign_keys(sqlite3* db, const std::string& table) {
-    if (!is_safe_identifier(table)) {
-        throw std::runtime_error("Cannot query foreign keys: invalid table name: " + table);
-    }
     std::vector<ForeignKey> fks;
     auto sql = "PRAGMA foreign_key_list(" + table + ")";
 
@@ -389,9 +393,6 @@ std::vector<ForeignKey> Schema::query_foreign_keys(sqlite3* db, const std::strin
 }
 
 std::vector<Index> Schema::query_indexes(sqlite3* db, const std::string& table) {
-    if (!is_safe_identifier(table)) {
-        throw std::runtime_error("Cannot query indexes: invalid table name: " + table);
-    }
     std::vector<Index> indexes;
     auto sql = "PRAGMA index_list(" + table + ")";
 

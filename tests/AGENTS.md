@@ -228,7 +228,8 @@ never copy them into a binding.
   `duplicate_attribute_vector.sql`, `fk_actions.sql`, `fk_not_null_set_null.sql`,
   `label_not_null.sql`, `label_not_unique.sql`, `label_wrong_type.sql`, `no_configuration.sql`,
   `set_no_parent_fk.sql`, `set_no_unique.sql`, `set_unknown_parent.sql`,
-  `time_series_fk_actions.sql`, `time_series_relation_fk_actions.sql`, `vector_no_index.sql`.
+  `time_series_fk_actions.sql`, `time_series_relation_fk_actions.sql`, `unsupported_type.sql`,
+  `vector_no_index.sql`.
   Each file must break exactly one rule and be otherwise valid SQL, and a new test should assert
   the message rather than a bare throw: `duplicate_attribute_time_series.sql` once "passed" on a
   trailing-comma syntax error while pointing its FKs at a table that did not exist.

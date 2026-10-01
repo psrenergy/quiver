@@ -229,6 +229,15 @@ TEST_F(TempFileFixture, FromSchemaRejectsSetTableWithoutParentFk) {
                  "collection 'Collection'");
 }
 
+TEST_F(TempFileFixture, FromSchemaRejectsUnsupportedColumnType) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    EXPECT_EQ(quiver_database_from_schema(":memory:", INVALID_SCHEMA("unsupported_type.sql").c_str(), &options, &db),
+              QUIVER_ERROR);
+    EXPECT_STREQ(quiver_get_last_error(),
+                 "Failed to validate schema: column 'payload' in table 'Items' has unsupported type 'BLOB'");
+}
+
 // ============================================================================
 // From migrations tests
 // ============================================================================

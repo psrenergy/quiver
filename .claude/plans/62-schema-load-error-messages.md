@@ -159,11 +159,11 @@ From the repo root:
 
 ## Acceptance criteria
 
-- [ ] `data_type_from_string` returns `std::optional`, and the unsupported-type message names the
+- [x] `data_type_from_string` returns `std::optional`, and the unsupported-type message names the
       table, the column and the type.
-- [ ] One `is_safe_identifier` table check at load. The three per-function guards are gone (or
+- [x] One `is_safe_identifier` table check at load. The three per-function guards are gone (or
       reworded if they have another caller).
-- [ ] New schema and tests are green, and the CHANGELOG and tests/AGENTS.md are updated.
+- [x] New schema and tests are green, and the CHANGELOG and tests/AGENTS.md are updated.
 
 ## Pitfalls
 
@@ -178,3 +178,34 @@ From the repo root:
 
 - Supporting BLOB columns.
 - Validator (post-load) messages.
+
+## Implementation notes
+
+- **Landed as planned.** `data_type_from_string` returns `std::optional<DataType>`, and
+  `Schema::query_columns` throws `Failed to validate schema: column '<c>' in table '<t>' has
+  unsupported type '<type>'` (`(none)` for an untyped column). One `is_safe_identifier` check at
+  the top of the per-table loop in `Schema::load_from_database` throws `Failed to validate
+  schema: invalid table name '<t>'`. The three per-function guards are deleted, since the loop was
+  their only caller. The index-name `continue` and `is_safe_identifier` itself stay.
+- **Leak fixed on the new throw path.** The throw sits inside the `sqlite3_step` loop, so
+  `query_columns` now calls `sqlite3_finalize(stmt)` before throwing. The old throw from inside
+  `data_type_from_string` leaked the statement, and an unfinalized statement keeps both
+  `sqlite3_close` (`Database::~Database`) and `sqlite3_close_v2` (`Impl`) from releasing the
+  connection. That held a file database open (and locked on Windows) after the failed open.
+- **Tests (red first, then green).** `SchemaValidatorFixture.UnsupportedColumnTypeNamesTableAndColumn`
+  (`tests/test_schema_validator.cpp`) uses the file's `EXPECT_THAT(..., ThrowsMessage(StrEq(...)))`
+  style instead of the plan's try/catch, and still asserts the full message.
+  `TempFileFixture.FromSchemaRejectsUnsupportedColumnType` (`tests/test_c_api_database_lifecycle.cpp`)
+  asserts the full message through `quiver_get_last_error`. Before the fix both failed with
+  `Unknown data type: BLOB`. The invalid-table-name path has no test, as the plan decided.
+- **Drift fixed.** Line numbers had moved (call at `schema.cpp` ~L341, loop ~L302). `schema.h` now
+  lives in `src/` (plan 55). The CHANGELOG section is `[0.12.8] — unreleased`, not `[0.12.0]`.
+  The local `const char* type` already existed in `query_columns`, so the optional is named
+  `data_type`.
+- **Deviation: CHANGELOG BREAKING (C++ only) line.** The plan header says "Breaking: no", but
+  `quiver/data_type.h` is an installed header and the return type changed. Following plans 54 and
+  55, I added a `BREAKING (C++ only)` bullet with an *Adapt* under `### Changed`. No binding or C
+  API symbol changed, so no FFI regeneration was needed.
+- **For later plans.** `scripts/format.bat` (biome) rewrites every JS file in a CRLF working tree
+  to LF. That is line-ending churn only (`git diff --ignore-cr-at-eol` is empty), so revert it
+  with `git checkout -- bindings/js` before committing.
