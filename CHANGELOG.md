@@ -7,6 +7,15 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ## [0.12.8] — unreleased
 
+### Removed
+
+- **BREAKING (C++ only) — unused `Row`/`Result` members removed:** `Row::size`, `column_count`,
+  `empty`, `at`, `begin`, `end` and `Result::Result()`, `column_count`, `at`. They were reachable
+  only from the installed headers, and no binding used them. `quiver/database.h` no longer includes
+  `quiver/result.h`. *Adapt:* use `operator[]`, `is_null` and the `get_*` getters, construct an
+  empty result as `Result({}, {})`, and read the column count as `columns().size()`. Include
+  `quiver/result.h` directly if you need the type.
+
 ### Fixed
 
 - **`summarize_collection()`'s value distribution counts only integer cells.** In a non-STRICT
