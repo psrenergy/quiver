@@ -32,6 +32,10 @@ callers to change something are prefixed **BREAKING** and say what to do.
   with `Failed to validate schema: column 'payload' in table 'Items' has unsupported type 'BLOB'`
   (was `Unknown data type: BLOB`), and an unsafe table name with `Failed to validate schema:
   invalid table name '...'` (was `Cannot query columns: invalid table name: ...`).
+- **Migration and schema-file errors name the method you called.** `from_migrations`,
+  `validate_migrations` and `from_schema` now report e.g. `Failed to validate_migrations: down
+  migration 2: ...` and `Cannot from_schema: schema file is empty: ...` instead of the private
+  helper names `migrate_up` / `migrate_down` / `apply_schema`.
 - **BREAKING (C++ only) — `data_type_from_string` (`quiver/data_type.h`) returns
   `std::optional<DataType>`.** It returns `std::nullopt` for an unsupported type instead of
   throwing `Unknown data type: ...`. *Adapt:* check the optional before using it.

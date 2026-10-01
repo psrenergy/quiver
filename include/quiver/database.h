@@ -270,7 +270,7 @@ private:
 
     // Internal methods
     void set_version(int64_t version);
-    void migrate_up(const std::string& migration_path);
+    void migrate_up(const std::string& migration_path, const char* operation);
     void migrate_down(const std::string& migrations_path);
     void apply_schema(const std::string& schema_path);
 };
