@@ -26,11 +26,7 @@ Composite actions in `.github/actions/`:
   cannot mix. On Intel macOS the composite first puts a pinned, sha256-checked sccache release
   binary on PATH: Homebrew ships no Intel-macOS bottles (Tier 3), so the ccache-action's
   `brew install sccache` would build LLVM and Rust from source. macOS publishing uses
-  `macos-latest` for ARM64 and `macos-15-intel` for x86_64. Before upload, the macOS and Linux
-  ARM64 jobs copy exactly `matrix.lib_paths` into a temporary directory (macOS also checks each
-  dylib's `lipo -archs`), and a compiled JS-binding smoke executable placed there queries an
-  in-memory database from an unrelated working directory, with the build library directory
-  hidden to enforce relocation.
+  `macos-latest` for ARM64 and `macos-15-intel` for x86_64.
 
 **glibc floor for the published Linux x86_64 native libs (`publish-s3.yml`):** the `linux-x86_64` native
 libs are NOT built via `build-cpp` on a bare `ubuntu-latest` runner — that binds `GLIBC_2.28`..`2.34`
@@ -66,8 +62,7 @@ CMake's defaults). Its baseline is Ubuntu 22.04+ / glibc 2.35. The staging scrip
 and `libquiver_c.so` into `build/native-aarch64/lib/`, sets the C API DT_RPATH to `$ORIGIN`
 (`--force-rpath`, as above),
 and enforces AArch64 ELF, GLIBC<=2.35, GLIBCXX<=3.4.30, and dynamic libstdc++.
-Before upload, the compiled JS binding queries a database with relocated siblings while
-the original `build/lib` is hidden. Keep this separate from the x86_64 manylinux script.
+Keep this separate from the x86_64 manylinux script.
 
 > **Why not the alternatives** (settled 2026-07-24): BinaryBuilder.jl also reaches 2.17 without Docker,
 > but pulls the whole Julia + compiler-shard stack and can't run on a Windows dev box (local
@@ -153,8 +148,7 @@ The order is **bump, merge, publish** — two deliberate dispatches, never chain
   the workflow re-signs with `codesign --force --sign -` — that step is load-bearing. (3) The
   mirror's `CI.yml` passes no `arch` to setup-julia (runner-native: x64 on ubuntu/windows,
   aarch64 on macos-latest), so Julia CI loads only the `macos-aarch64` artifact; x64 Julia on an
-  arm64 mac (Rosetta) selects `macos-x86_64`, which only the Bun smoke check in `publish-s3.yml`
-  on `macos-15-intel` exercises.
+  arm64 mac (Rosetta) selects `macos-x86_64`, which no CI job loads.
 
 ## npm Publishing (JS)
 

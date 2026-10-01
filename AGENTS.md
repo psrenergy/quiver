@@ -479,8 +479,7 @@ Native S3, npm, and Julia releases include `linux-x86_64`, `linux-aarch64`,
 glibc 2.17 floor. Linux ARM64 builds natively on `ubuntu-22.04-arm` with GCC 11 and a glibc
 2.35 floor (Ubuntu 22.04+); `scripts/ci/stage_native_linux_arm64.sh` checks architecture,
 symbol versions, dynamic libstdc++, and sibling-library RPATH before upload. macOS Intel
-builds run on `macos-15-intel`. Build caches include architecture, and both Mac targets
-and Linux ARM64 check the compiled JS binding with relocated native libraries.
+builds run on `macos-15-intel`. Build caches include architecture.
 
 `CMakeLists.txt` `project(... VERSION x.y.z)` is the single source of truth.
 `scripts/assert_version.py` asserts that `bindings/python/pyproject.toml`,

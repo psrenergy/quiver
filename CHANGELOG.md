@@ -11,10 +11,10 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 - **Linux ARM64 native binaries** (`linux-aarch64`) are published in S3, the npm package,
   and Julia artifacts for Ubuntu 22.04+ (glibc 2.35), including DGX Spark. Native GCC 11
-  builds check AArch64 ELF, symbol compatibility, dynamic libstdc++, and relocated loading.
+  builds check AArch64 ELF, symbol compatibility, dynamic libstdc++, and the `$ORIGIN` rpath.
 - **Intel macOS native binaries** (`macos-x86_64`) are published alongside Apple Silicon
   binaries in S3, the npm package, and Julia artifacts. Both macOS architectures retain the
-  macOS 13.3 deployment floor and are checked for architecture and relocated library loading.
+  macOS 13.3 deployment floor.
 
 ### Fixed
 
