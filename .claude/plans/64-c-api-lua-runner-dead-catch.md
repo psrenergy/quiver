@@ -72,8 +72,8 @@ From the repo root:
 
 ## Acceptance criteria
 
-- [ ] `grep -n "catch (\.\.\.)" src/c/lua_runner.cpp` prints nothing.
-- [ ] C API LuaRunner tests pass.
+- [x] `grep -n "catch (\.\.\.)" src/c/lua_runner.cpp` prints nothing.
+- [x] C API LuaRunner tests pass.
 
 ## Pitfalls
 
@@ -84,3 +84,37 @@ From the repo root:
 ## Out of scope
 
 - The `bad_alloc` arms elsewhere in the C API (an optional item, not planned).
+
+## Implementation notes
+
+- **Landed as written, no drift.** Both excerpts matched `src/c/lua_runner.cpp` exactly, and
+  `rs/plan64` was already level with `master` (merge was a no-op). Six lines deleted, nothing else
+  in the source changed.
+- **The arms were checked dead before deleting them**:
+  - `src/lua_runner.cpp` throws only `std::runtime_error`.
+  - sol2's `error` / `dump_error` derive from `std::runtime_error`, and `bad_optional_access` from
+    `std::exception`.
+  - `SOL_EXCEPTIONS_SAFE_PROPAGATION` is not defined, so sol2's trampolines turn any C++ exception
+    into a Lua error that `run` rethrows as `std::runtime_error`.
+  - Lua builds as C (`LUA_LANGUAGE:STRING=C`, the lua-cmake default; nothing in the repo
+    overrides it).
+  - Nothing compiles with `/EHa`, so the arm never caught SEH either.
+- **No test, CHANGELOG or AGENTS.md change.** This is not user-visible, so there was no
+  regression test to show failing first. `src/c/AGENTS.md` ("Error Handling") already documents
+  the single `std::exception` arm, which the two functions now match.
+- **Left alone, deliberately.**
+  - `#include <new>` in `src/c/lua_runner.cpp`: clangd flags it unused, and it was unused before
+    this change too. That is include hygiene, not this plan.
+  - The `catch (...)` at `src/c/database_helpers.h` (`marshal_group_rows_to_c`): it is a
+    cleanup-and-`throw;`, not an error-reporting arm.
+- **Verification.**
+  - `quiver_c_tests --gtest_filter=*LuaRunner*`: 27/27 passed.
+  - Full `quiver_c_tests`: 572/572 passed. Full `quiver_tests`: 1402/1402 passed.
+  - The acceptance grep over text files prints nothing. A plain `grep -rn` still hits the stale,
+    gitignored Dart native-assets build (`bindings/dart/.dart_tool/**/libquiver_c.dll`, `.obj`),
+    which the next hook build regenerates.
+- **For later plans.**
+  - `scripts/format.bat` hit plan 63's stale-glob failure again (`include/quiver/schema.h: no
+    such file or directory`). `cmake -S . -B build` fixed it, which is more evidence for plan 86.
+  - Biome again rewrote 43 untouched CRLF JS files to LF. I reverted them with
+    `git checkout -- bindings/js`.
