@@ -5,7 +5,7 @@ All notable changes to Quiver are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entries that require
 callers to change something are prefixed **BREAKING** and say what to do.
 
-## [0.12.7] — unreleased
+## [0.12.8] — unreleased
 
 ### Added
 
@@ -15,6 +15,23 @@ callers to change something are prefixed **BREAKING** and say what to do.
 - **Intel macOS native binaries** (`macos-x86_64`) are published alongside Apple Silicon
   binaries in S3, the npm package, and Julia artifacts. Both macOS architectures retain the
   macOS 13.3 deployment floor and are checked for architecture and relocated library loading.
+
+### Fixed
+
+- **JS: standalone Bun binaries find native libraries beside the executable**, even when
+  launched from another working directory. Bundled package and development library paths
+  keep their existing precedence.
+- **JS: a library that is found but fails to load is reported as the error.** The loader
+  used to report only its last, bare-name attempt (`cannot open shared object file`), hiding
+  the real cause, such as a bundled library that needs a newer glibc or a missing
+  `libquiver.so.0` / `libquiver.0.dylib` beside a standalone binary.
+- **Bundled Linux natives always load their own `libquiver.so.0`.** `libquiver_c.so` now
+  carries `$ORIGIN` as a DT_RPATH instead of a DT_RUNPATH. `LD_LIBRARY_PATH` outranks a
+  RUNPATH, so a different build's core on `LD_LIBRARY_PATH` could be paired with it.
+- **Bundled macOS natives no longer search the CI build directory.** `libquiver_c.dylib`
+  carried `/Users/runner/work/quiver/quiver/build/lib` as an rpath ahead of `@loader_path`.
+
+## [0.12.7] — unreleased
 
 ### Changed
 
@@ -32,10 +49,6 @@ callers to change something are prefixed **BREAKING** and say what to do.
   *Adapt:* fix the key or value the error names.
 
 ### Fixed
-
-- **JS: standalone Bun binaries find native libraries beside the executable**, even when
-  launched from another working directory. Bundled package and development library paths
-  keep their existing precedence.
 
 - **JS: the agent-facing Lua reference (`LUA_DB_API_REFERENCE`) no longer promises a rollback.**
   A failed script keeps every write that finished before the error; only `db:transaction` /
