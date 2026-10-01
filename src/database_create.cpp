@@ -13,7 +13,7 @@ int64_t Database::create_element(const std::string& collection, const Element& e
 
     // Resolve and validate every scalar and array before the INSERT: TransactionGuard no-ops inside
     // a caller-owned transaction or a dry run, so a throw after it would leave the element behind.
-    auto resolved = impl_->resolve_scalar_fk_labels(collection, scalars);
+    auto resolved = impl_->resolve_scalar_fk_labels("create_element", collection, scalars);
     for (const auto& [name, value] : resolved) {
         impl_->type_validator->validate_scalar("create_element", collection, name, value);
     }

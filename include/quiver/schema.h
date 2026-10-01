@@ -60,9 +60,6 @@ public:
     const TableDefinition* get_table(const std::string& name) const;
     bool has_table(const std::string& name) const;
 
-    // Column type lookup (throws if table/column not found)
-    DataType get_data_type(const std::string& table, const std::string& column) const;
-
     // Vector/Set/TimeSeries table naming convention
     static std::string vector_table_name(const std::string& collection, const std::string& group);
     static std::string set_table_name(const std::string& collection, const std::string& group);

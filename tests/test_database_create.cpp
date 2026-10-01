@@ -506,7 +506,26 @@ TEST(Database, RejectStringForNonFkIntegerColumn) {
     child.set("label", std::string("Child 1"));
     child.set("score", std::vector<std::string>{"not_a_label"});
 
-    EXPECT_THROW(db.create_element("Child", child), std::runtime_error);
+    try {
+        db.create_element("Child", child);
+        FAIL() << "Expected std::runtime_error";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), "Cannot create_element: type mismatch for column 'score': expected INTEGER, got TEXT");
+    }
+}
+
+// Same wording as Impl::require_column: one condition, one Pattern 1 message.
+TEST(Database, CreateElementUnknownScalarAttribute) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    try {
+        db.create_element("Configuration",
+                          quiver::Element().set("label", std::string("x")).set("no_such_column", int64_t{1}));
+        FAIL() << "Expected std::runtime_error";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), "Cannot create_element: column 'no_such_column' not found in table 'Configuration'");
+    }
 }
 
 // ============================================================================

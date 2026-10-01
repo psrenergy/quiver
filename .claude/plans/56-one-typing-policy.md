@@ -239,11 +239,11 @@ From the repo root:
 
 ## Acceptance criteria
 
-- [ ] `validate_value` has no per-type shape branches. It calls `value_matches_type`, then the
+- [x] `validate_value` has no per-type shape branches. It calls `value_matches_type`, then the
       DATE_TIME content check.
-- [ ] `Schema::get_data_type(table, column)` is gone.
-- [ ] Both new messages are Pattern 1, name the caller, and are pinned exactly.
-- [ ] All suites green, docs and CHANGELOG updated.
+- [x] `Schema::get_data_type(table, column)` is gone.
+- [x] Both new messages are Pattern 1, name the caller, and are pinned exactly.
+- [x] All suites green, docs and CHANGELOG updated.
 
 ## Pitfalls
 
@@ -258,3 +258,71 @@ From the repo root:
 
 - Turning `TypeValidator` into free functions and moving headers (plan 55).
 - `import_csv`'s own parse rules (`parse_integer`/`parse_float`).
+
+## Implementation notes
+
+Implemented on `rs/plan56`. At planning time the branch sat at master `3ca11b8`. By the time implementation started it had been fast-forwarded to `96c205e`, which brought in plans 53 (#368) and 54 (#369). So `git fetch origin && git merge origin/master` printed "Already up to date." 53 had landed. 55 had not, so this plan ran before 55, as the README order note says.
+
+**Verdict: implement.** It removes a duplicated rule and a dead branch, deletes one method, and fixes two error texts that broke Pattern 1. The values `Database` accepts do not change.
+
+### Drift fixed
+
+- **Plan 05 had landed.** `resolve_element_fk_labels` is now `resolve_scalar_fk_labels`, which handles scalars only. Arrays are resolved in `prepare_group_data`, which already had `caller`. `caller` was threaded through three paths:
+  - `resolve_scalar_fk_labels` (new first parameter): `create_element` / `update_element`;
+  - `prepare_group_data`;
+  - `Impl::update_group_rows`.
+- **Plan 53 had landed.** There is no `Database& db` anywhere. `resolve_fk_label` and `resolve_scalar_fk_labels` are now `const`, since `lookup_id_by_label` is a const member.
+- **The existing test writes an array, not a scalar.** `RejectStringForNonFkIntegerColumn` writes `score`, which is a column of the set table `Child_set_scores`. The early throw always says `column '<c>'`, so the pinned text is `type mismatch for column 'score'`. Every other array mismatch says `array '<c>' index <i>`. That small difference was kept on purpose: the maintainer note keeps the early throw, and the `resolve_fk_label` comment says so.
+- **CHANGELOG.** The plan says `[0.12.0]`. Plan 54 had already opened `## [0.12.8] — unreleased` with `### Removed`. `### Changed` went in before it. The entry also says that `update_vector_group` / `update_set_group` name themselves.
+- **One more CHANGELOG line**, beyond the plan, added after review: `### Removed` → **BREAKING (C++ only)** `Schema::get_data_type(table, column)` removed.
+  - It was a method of `QUIVER_API Schema` in an installed header. Plan 54 logged the same kind of removal in this section.
+  - The line also notes that the public static `TypeValidator::validate_value` no longer accepts a string for INTEGER. No `Database` path passed it one.
+  - The plan's "Breaking no" holds for every binding and every `Database` method.
+- **Docs the plan missed:**
+  - **src/AGENTS.md "DATE_TIME content" bullet.** It said `validate_value` "calls it in its string branch" and argued against "restoring symmetry". Both halves now have the same shape, a separate content guard after the `value_matches_type` shape check, so the bullet now says that.
+  - **src/AGENTS.md typing bullet and root AGENTS.md decision.** Both now say that the time-series writers resolve no labels (existing behaviour; the old text implied they did).
+  - **Root AGENTS.md** now says that `TypeValidator` delegates the shape check to `value_matches_type`.
+  - **src/AGENTS.md "Label→id resolution" bullet.** It now says `resolve_fk_label` reports "a miss is Pattern 3".
+- **Small addition to the tests.** `UpdateElementStringForNonFkIntegerScalar` pins the new `caller` on the scalar path, which the existing array test does not reach.
+- **Unknown-column test for update.** `update_element` runs `require_element` before validation, so `UpdateElementUnknownScalarAttribute` creates the element first.
+
+### Results
+
+- **Red first.** All four tests failed on the old code, each with its old message:
+  - `Cannot resolve attribute: 'score' is INTEGER but received string 'not_a_label' (not a foreign key)`
+  - `Column 'no_such_column' not found in table 'Configuration'` (create and update)
+  - `Cannot resolve attribute: 'integer_attribute' is INTEGER but received string 'abc' (not a foreign key)`
+- **Green after the change.** `quiver_tests` 1395/1395 and `quiver_c_tests` 571/571.
+- **`scripts/test-all.bat`** exited 0:
+
+  | Suite | Result |
+  |---|---|
+  | C++ | 1395 |
+  | C API | 571 |
+  | Julia | 1575 |
+  | Dart | 445 |
+  | JS | 242 |
+  | Python | 350 |
+
+  No binding pinned an old message; each binding's test for this case only asserts that it throws.
+- **`scripts/format.bat`** exited 0:
+  - clang-format changed nothing in the diff;
+  - Biome again rewrote 43 JS files CRLF→LF. `git diff --ignore-cr-at-eol bindings/js` was empty, and `git checkout -- bindings/js` reverted them.
+- **Greps.**
+  - `git grep -n "Cannot resolve attribute" -- src tests bindings docs` prints nothing. Plain `grep -r` would still match stale ignored DLLs in `bindings/python/.venv` and `bindings/dart/.dart_tool`.
+  - `git grep -n "get_data_type(" -- src include tests` shows only the one-argument `TableDefinition` form.
+- **Adversarial review.** Two read-only workflows ran: one on the execution plan and one on the diff. Each finding was verified independently.
+  - The plan review led to the time-series wording, the DATE_TIME bullet rewrite, the `git grep` form and the 55-first fallback.
+  - The diff review led to the `### Removed` line and the more precise `resolve_fk_label` comment.
+  - The diff review confirmed that `validate_value` accepts the same values and produces byte-identical messages for every `DataType` × variant pair, except the dropped string→INTEGER pair, which nothing reached.
+
+### For later plans
+
+- **Plan 55.**
+  - The `TypeValidator` bodies are final. `column_type` is an anonymous-namespace helper in `type_validator.cpp` and moves with them unchanged.
+  - `Schema::get_data_type(table, column)` is gone, so nothing in `schema.h` refers to it.
+  - The root AGENTS.md typing sentence now reads "`TypeValidator` (scalar create/update) delegates the shape check to `value_matches_type`, which the time-series writers call directly". 55's quoted anchor ("... and `value_matches_type` (time-series writes) share this rule") no longer matches. Rewrite the new sentence with the free-function names.
+  - `TypeValidator::validate_value` is also named in the src/AGENTS.md typing and DATE_TIME bullets and in the `resolve_fk_label` comment (`src/database_impl.h`).
+  - 55's CHANGELOG entry (headers no longer installed) can absorb this plan's `Schema::get_data_type` `### Removed` line.
+- **Plan 59.** Step 2's `resolve_fk_label` half is done: it uses `TableDefinition::get_foreign_key`. The `database_csv_export.cpp` FK loops are still there.
+- **Plan 75.** Unchanged from plan 52's note: `tests/AGENTS.md` still describes a seven-step `test-all.bat` with a CLI smoke test, but the script runs six suites.

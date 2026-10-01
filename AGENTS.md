@@ -89,8 +89,10 @@ Settled questions — don't relitigate without the user; each was decided delibe
   in `src/lua_runner.cpp`), not binary-subsystem policy.
 - **One scalar typing policy lives in C++**: an int64 is accepted for INTEGER and REAL columns
   (int-for-REAL coercion), a double only for REAL (a float into an INTEGER column is rejected), a
-  string for TEXT / INTEGER-FK / DATE_TIME. `TypeValidator` (scalar create/update) and
-  `value_matches_type` (time-series writes) share this rule; bindings never coerce
+  string for TEXT / DATE_TIME, and an FK label for an INTEGER foreign key wherever
+  `create_element`/`update_element` or the vector/set group writers resolve it to an id first (the
+  time-series writers take ids only). `TypeValidator` (scalar create/update) delegates the shape
+  check to `value_matches_type`, which the time-series writers call directly; bindings never coerce
   schema-dependently. `import_csv` writes through a raw `INSERT`, so it applies the rule to CSV
   text itself: `parse_integer` (`src/database_csv_import.cpp`) and `utils::parse_float`
   (`src/utils/number.h`) accept a cell only if it parses whole, so `1.5` is not an INTEGER and
