@@ -23,9 +23,6 @@ QUIVER_C_API quiver_error_t quiver_lua_runner_new(quiver_database_t* db, quiver_
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
         return QUIVER_ERROR;
-    } catch (...) {
-        quiver_set_last_error("Unknown error creating LuaRunner");
-        return QUIVER_ERROR;
     }
 }
 
@@ -43,9 +40,6 @@ QUIVER_C_API quiver_error_t quiver_lua_runner_run(quiver_lua_runner_t* runner, c
         return QUIVER_OK;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
-        return QUIVER_ERROR;
-    } catch (...) {
-        quiver_set_last_error("Unknown error running Lua script");
         return QUIVER_ERROR;
     }
 }
