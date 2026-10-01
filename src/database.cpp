@@ -252,7 +252,7 @@ Database Database::from_migrations(const std::string& db_path,
         throw std::runtime_error("Cannot from_migrations: path is not a directory: " + migrations_path);
     }
     auto db = Database(db_path, options);
-    db.migrate_up(migrations_path);
+    db.migrate_up(migrations_path, "from_migrations");
     db.impl_->ui_metadata = load_ui_metadata(migrations_path, *db.impl_->logger);
     return db;
 }
@@ -270,7 +270,7 @@ void Database::validate_migrations(const std::string& migrations_path) {
     }
 
     Database db(":memory:", {.console_level = LogLevel::Off});
-    db.migrate_up(migrations_path);
+    db.migrate_up(migrations_path, "validate_migrations");
     db.migrate_down(migrations_path);
 
     const auto leftovers = Schema::from_database(db.impl_->db).table_names();
@@ -376,7 +376,7 @@ bool Database::in_dry_run() const {
     return impl_->dry_run;
 }
 
-void Database::migrate_up(const std::string& migrations_path) {
+void Database::migrate_up(const std::string& migrations_path, const char* operation) {
     const auto migrations = Migrations(migrations_path);
     if (migrations.empty()) {
         impl_->logger->debug("No migrations found in {}", migrations_path);
@@ -399,8 +399,8 @@ void Database::migrate_up(const std::string& migrations_path) {
 
         const auto up_sql = migration.up_sql();
         if (up_sql.empty()) {
-            throw std::runtime_error("Cannot migrate_up: migration " + std::to_string(migration.version()) +
-                                     " has no up.sql file");
+            throw std::runtime_error(std::string("Cannot ") + operation + ": migration " +
+                                     std::to_string(migration.version()) + " has no up.sql file");
         }
 
         try {
@@ -411,8 +411,8 @@ void Database::migrate_up(const std::string& migrations_path) {
             impl_->logger->info("Migration {} applied successfully", migration.version());
         } catch (const std::exception& e) {
             impl_->logger->error("Migration {} failed: {}", migration.version(), e.what());
-            throw std::runtime_error("Failed to migrate_up: migration " + std::to_string(migration.version()) + ": " +
-                                     e.what());
+            throw std::runtime_error(std::string("Failed to ") + operation + ": up migration " +
+                                     std::to_string(migration.version()) + ": " + e.what());
         }
     }
 
@@ -435,7 +435,7 @@ void Database::migrate_down(const std::string& migrations_path) {
 
         const auto down_sql = it->down_sql();
         if (down_sql.empty()) {
-            throw std::runtime_error("Cannot migrate_down: migration " + std::to_string(it->version()) +
+            throw std::runtime_error("Cannot validate_migrations: migration " + std::to_string(it->version()) +
                                      " has no down.sql file");
         }
 
@@ -448,8 +448,8 @@ void Database::migrate_down(const std::string& migrations_path) {
             impl_->logger->info("Migration {} reverted successfully", it->version());
         } catch (const std::exception& e) {
             impl_->logger->error("Migration {} failed: {}", it->version(), e.what());
-            throw std::runtime_error("Failed to migrate_down: migration " + std::to_string(it->version()) + ": " +
-                                     e.what());
+            throw std::runtime_error("Failed to validate_migrations: down migration " + std::to_string(it->version()) +
+                                     ": " + e.what());
         }
     }
 }
@@ -457,7 +457,7 @@ void Database::migrate_down(const std::string& migrations_path) {
 void Database::apply_schema(const std::string& schema_path) {
     std::ifstream file(schema_path);
     if (!file.is_open()) {
-        throw std::runtime_error("Failed to apply_schema: could not open file: " + schema_path);
+        throw std::runtime_error("Failed to from_schema: could not open file: " + schema_path);
     }
 
     std::stringstream buffer;
@@ -465,7 +465,7 @@ void Database::apply_schema(const std::string& schema_path) {
     const auto schema_sql = buffer.str();
 
     if (schema_sql.empty()) {
-        throw std::runtime_error("Cannot apply_schema: schema file is empty: " + schema_path);
+        throw std::runtime_error("Cannot from_schema: schema file is empty: " + schema_path);
     }
 
     impl_->logger->info("Applying schema from: {}", schema_path);

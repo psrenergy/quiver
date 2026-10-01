@@ -1,6 +1,7 @@
 #include "test_utils.h"
 
 #include <filesystem>
+#include <fstream>
 #include <gtest/gtest.h>
 #include <quiver/database.h>
 #include <quiver/element.h>
@@ -92,6 +93,20 @@ TEST_F(TempFileFixture, FromSchemaFileNotFound) {
         quiver::Database::from_schema(
             ":memory:", "nonexistent/path/schema.sql", {.read_only = false, .console_level = quiver::LogLevel::Off}),
         std::runtime_error);
+}
+
+TEST_F(TempFileFixture, FromSchemaEmptyFile) {
+    const auto schema_path = (fs::temp_directory_path() / "quiver_empty_schema.sql").string();
+    std::ofstream(schema_path).close();
+
+    try {
+        quiver::Database::from_schema(
+            ":memory:", schema_path, {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ADD_FAILURE() << "Expected from_schema to throw";
+    } catch (const std::runtime_error& error) {
+        EXPECT_EQ(std::string(error.what()), "Cannot from_schema: schema file is empty: " + schema_path);
+    }
+    fs::remove(schema_path);
 }
 
 TEST_F(TempFileFixture, FromSchemaInvalidPath) {

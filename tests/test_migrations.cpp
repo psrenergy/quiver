@@ -199,9 +199,13 @@ TEST_F(MigrationsTestFixture, DatabaseMigrationWithEmptyUpSql) {
     up_file.close();
 
     // Empty up.sql should cause migration to fail
-    EXPECT_THROW(quiver::Database::from_migrations(
-                     ":memory:", temp_dir, {.read_only = false, .console_level = quiver::LogLevel::Off}),
-                 std::runtime_error);
+    try {
+        quiver::Database::from_migrations(
+            ":memory:", temp_dir, {.read_only = false, .console_level = quiver::LogLevel::Off});
+        FAIL() << "Expected from_migrations to throw";
+    } catch (const std::runtime_error& error) {
+        EXPECT_STREQ(error.what(), "Cannot from_migrations: migration 1 has no up.sql file");
+    }
 }
 
 TEST_F(MigrationsTestFixture, DatabaseMigrationWithInvalidSQL) {
@@ -211,9 +215,13 @@ TEST_F(MigrationsTestFixture, DatabaseMigrationWithInvalidSQL) {
     up_file << "THIS IS NOT VALID SQL AT ALL;";
     up_file.close();
 
-    EXPECT_THROW(quiver::Database::from_migrations(
-                     ":memory:", temp_dir, {.read_only = false, .console_level = quiver::LogLevel::Off}),
-                 std::runtime_error);
+    try {
+        quiver::Database::from_migrations(
+            ":memory:", temp_dir, {.read_only = false, .console_level = quiver::LogLevel::Off});
+        FAIL() << "Expected from_migrations to throw";
+    } catch (const std::runtime_error& error) {
+        EXPECT_NE(std::string(error.what()).find("Failed to from_migrations: up migration 1:"), std::string::npos);
+    }
 }
 
 TEST_F(MigrationsTestFixture, DatabaseMigrationFailureLeavesNoPartialSchema) {
@@ -250,7 +258,7 @@ TEST_F(MigrationsTestFixture, ValidateMigrationsExecutesUpSql) {
         FAIL() << "Expected validate_migrations to throw";
     } catch (const std::runtime_error& error) {
         const std::string message = error.what();
-        EXPECT_NE(message.find("Failed to migrate_up: migration 1:"), std::string::npos);
+        EXPECT_NE(message.find("Failed to validate_migrations: up migration 1:"), std::string::npos);
         EXPECT_NE(message.find("Failed to execute SQL:"), std::string::npos);
     }
 }
@@ -267,7 +275,7 @@ TEST_F(MigrationsTestFixture, ValidateMigrationsExecutesDownSql) {
         FAIL() << "Expected validate_migrations to throw";
     } catch (const std::runtime_error& error) {
         const std::string message = error.what();
-        EXPECT_NE(message.find("Failed to migrate_down: migration 1:"), std::string::npos);
+        EXPECT_NE(message.find("Failed to validate_migrations: down migration 1:"), std::string::npos);
         EXPECT_NE(message.find("Failed to execute SQL:"), std::string::npos);
     }
 }
@@ -301,7 +309,7 @@ TEST_F(MigrationsTestFixture, ValidateMigrationsRequiresDownSql) {
         quiver::Database::validate_migrations(temp_dir);
         FAIL() << "Expected validate_migrations to throw";
     } catch (const std::runtime_error& error) {
-        EXPECT_STREQ(error.what(), "Cannot migrate_down: migration 1 has no down.sql file");
+        EXPECT_STREQ(error.what(), "Cannot validate_migrations: migration 1 has no down.sql file");
     }
 }
 

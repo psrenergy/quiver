@@ -104,3 +104,40 @@ From the repo root:
 ## Out of scope
 
 - Moving these helpers into `Impl` (not planned).
+
+## Implementation notes
+
+- **Landed as written.** `migrate_up(path, operation)` gets `"from_migrations"` from
+  `from_migrations` and `"validate_migrations"` from `validate_migrations` (see the pitfall).
+  `migrate_down` and `apply_schema` hard-code their only caller. The "up"/"down" direction word
+  is kept. Both Pattern 2 `... not found: ...` messages are unchanged.
+- **Drift fixed in place.** The line numbers had moved (`migrate_up` ~L379, `migrate_down`
+  ~L423, `apply_schema` ~L457; the test pins were at L253/L270/L304). After plan 60, both
+  `Failed to ...` throws are the re-wraps in the `catch` blocks, and the `Cannot ...` throws
+  sit before the `try`, as this plan anticipated. The L237 pin was
+  `ValidateMigrationsExecutesUpSql`, so it became `Failed to validate_migrations: up migration 1:`.
+- **CHANGELOG retarget.** The entry is under `## [0.12.8] — unreleased` → `### Changed`, not
+  `[0.12.0]` (the newest tag is `v0.12.7`). The manifests were not bumped.
+- **Tests beyond the three pins.** `DatabaseMigrationWithEmptyUpSql` and
+  `DatabaseMigrationWithInvalidSQL` were bare `EXPECT_THROW`s. They now pin
+  `Cannot from_migrations: migration 1 has no up.sql file` and
+  `Failed to from_migrations: up migration 1:`; before this, nothing checked the
+  `"from_migrations"` argument. I added `TempFileFixture.FromSchemaEmptyFile`
+  (`tests/test_database_lifecycle.cpp`). It is a full-string pin of
+  `Cannot from_schema: schema file is empty: <path>`. I did not pin
+  `Failed to from_schema: could not open file:`: the only way to reach it past the `fs::exists`
+  check is a directory path, which fails the open on Windows but opens and reads as empty on Linux.
+  All six tests failed against the old build before the fix (old helper names in the messages).
+- **No binding changes.** No binding, C API, Lua or docs test quotes these texts. I grepped
+  `bindings/**/test*`, `bindings/python/tests`, `tests/test_c_api*`, `tests/test_lua*`,
+  `bindings/js/src/lua-api.ts` and `docs/`.
+- **AGENTS.md.** The plan listed no AGENTS.md edit. Per the Self-Updating rule, I added one
+  sentence to `src/AGENTS.md` ("Factory Methods"): the private helpers name the public caller.
+- **For later plans.**
+  - `scripts/format.bat` failed at first with `include/quiver/schema.h: no such file or
+    directory` (also `schema_validator.h` and `type_validator.h`). The cause: the root
+    `ALL_SOURCE_FILES` `GLOB_RECURSE` has no `CONFIGURE_DEPENDS`, so the `build/` tree still
+    listed the headers plan 55 moved into `src/`. `cmake -S . -B build` fixed it, and no file
+    changed. This is relevant to plan 86 (format glob).
+  - A known quirk, left alone: an *existing but empty* `up.sql` also reports "has no up.sql
+    file", because `Migration::up_sql()` returns `""` in both cases.

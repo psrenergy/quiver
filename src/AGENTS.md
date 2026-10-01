@@ -375,7 +375,9 @@ static void validate_migrations(const std::string& migrations_path);
 subdirectories with `up.sql`/`down.sql`.
 `validate_migrations` validates that directory in an in-memory database by executing every up migration
 and then every down migration, and finally rejects any table left behind; the direction-specific
-execution helpers remain private.
+execution helpers remain private. Their errors name the public caller, not the helper:
+`migrate_up` takes it as `operation` (`from_migrations` or `validate_migrations`), while
+`migrate_down` and `apply_schema` write their only caller's name in directly.
 
 ## Logging
 
