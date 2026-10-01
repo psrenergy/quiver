@@ -10,21 +10,16 @@ callers to change something are prefixed **BREAKING** and say what to do.
 ### Added
 
 - **Linux ARM64 native binaries** (`linux-aarch64`) are published in S3, the npm package,
-  and Julia artifacts for Ubuntu 22.04+ (glibc 2.35), including DGX Spark. Native GCC 11
-  builds check AArch64 ELF, symbol compatibility, dynamic libstdc++, and the `$ORIGIN` rpath.
+  and Julia artifacts for Ubuntu 22.04+ (glibc 2.35), including DGX Spark.
 - **Intel macOS native binaries** (`macos-x86_64`) are published alongside Apple Silicon
   binaries in S3, the npm package, and Julia artifacts. Both macOS architectures retain the
   macOS 13.3 deployment floor.
 
 ### Fixed
 
-- **JS: standalone Bun binaries find native libraries beside the executable**, even when
-  launched from another working directory. Bundled package and development library paths
-  keep their existing precedence.
 - **JS: a library that is found but fails to load is reported as the error.** The loader
   used to report only its last, bare-name attempt (`cannot open shared object file`), hiding
-  the real cause, such as a bundled library that needs a newer glibc or a missing
-  `libquiver.so.0` / `libquiver.0.dylib` beside a standalone binary.
+  the real cause, such as a bundled library that needs a newer glibc.
 - **Bundled Linux natives always load their own `libquiver.so.0`.** `libquiver_c.so` now
   carries `$ORIGIN` as a DT_RPATH instead of a DT_RUNPATH. `LD_LIBRARY_PATH` outranks a
   RUNPATH, so a different build's core on `LD_LIBRARY_PATH` could be paired with it.

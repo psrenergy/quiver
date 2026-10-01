@@ -52,8 +52,6 @@ jobs:
               build/manylinux/lib/libquiver_c.so
           - os: ubuntu-22.04-arm
             platform_key: linux-aarch64
-            c_compiler: gcc-11
-            cxx_compiler: g++-11
             lib_paths: |
               build/native-aarch64/lib/libquiver.so
               build/native-aarch64/lib/libquiver.so.0
@@ -85,8 +83,6 @@ jobs:
         with:
           build_type: Release
           build_tests: "OFF"
-          c_compiler: ${{ matrix.c_compiler || '' }}
-          cxx_compiler: ${{ matrix.cxx_compiler || '' }}
 
       # Linux x86_64: build the glibc-2.17 native libs inside manylinux2014 (CentOS 7) via Docker. This is the
       # SAME script a developer runs locally (`bash scripts/build_native_linux.sh`) — it only needs
@@ -115,7 +111,7 @@ jobs:
 
       - uses: actions/upload-artifact@v7
         with:
-          name: native-${{ matrix.platform_key }}
+          name: ${{ matrix.platform_key }}
           path: ${{ matrix.lib_paths }}
           if-no-files-found: error
 
@@ -128,35 +124,10 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.sha }}
 
-      - name: Download Linux x86_64 native libraries
-        uses: actions/download-artifact@v8
+      # No name: every artifact lands in native/<platform_key>/, the layout native_s3.sh uploads.
+      - uses: actions/download-artifact@v8
         with:
-          name: native-linux-x86_64
-          path: native/linux-x86_64
-
-      - name: Download macOS aarch64 native libraries
-        uses: actions/download-artifact@v8
-        with:
-          name: native-macos-aarch64
-          path: native/macos-aarch64
-
-      - name: Download Linux aarch64 native libraries
-        uses: actions/download-artifact@v8
-        with:
-          name: native-linux-aarch64
-          path: native/linux-aarch64
-
-      - name: Download macOS x86_64 native libraries
-        uses: actions/download-artifact@v8
-        with:
-          name: native-macos-x86_64
-          path: native/macos-x86_64
-
-      - name: Download Windows x86_64 native libraries
-        uses: actions/download-artifact@v8
-        with:
-          name: native-windows-x86_64
-          path: native/windows-x86_64
+          path: native
 
       - name: Upload native libs to S3
         run: bash scripts/ci/native_s3.sh upload "${{ needs.version.outputs.version }}"

@@ -21,15 +21,10 @@ s3_object() {  # <version> <platform> <file>  ->  <prefix>/<version>/native/<pla
 }
 
 cmd_upload() {
-  local version="$1" platform file src
+  local version="$1" platform file
   for platform in "${PLATFORMS[@]}"; do
     for file in $(files_for "$platform"); do
-      src="native/${platform}/${file}"
-      if [ ! -f "$src" ]; then
-        echo "::error::native_s3.sh upload: missing local file '$src'" >&2
-        exit 1
-      fi
-      aws s3 cp "$src" "s3://${S3_BUCKET}/$(s3_object "$version" "$platform" "$file")" --acl public-read
+      aws s3 cp "native/${platform}/${file}" "s3://${S3_BUCKET}/$(s3_object "$version" "$platform" "$file")" --acl public-read
     done
   done
   echo "Uploaded native libs for v${version} to s3://${S3_BUCKET}/${S3_PREFIX}/${version}/native/"

@@ -55,14 +55,13 @@ also rules out zig/libc++ static toolchains). The three files land in `build/man
 the downstream `upload-s3` job + `scripts/ci/native_s3.sh` expect. Feeds both the Julia and JS/npm
 native libs (shared S3 staging). Only `linux-x86_64` uses the old-glibc image.
 
-**Linux ARM64** (`linux-aarch64`) builds natively on `ubuntu-22.04-arm` through `build-cpp`,
-with optional `c_compiler: gcc-11` / `cxx_compiler: g++-11` inputs (other platforms retain
-CMake's defaults). Its baseline is Ubuntu 22.04+ / glibc 2.35. The staging script
+**Linux ARM64** (`linux-aarch64`) builds natively on `ubuntu-22.04-arm` through `build-cpp`
+with the runner's default compiler (GCC 11 on 22.04). Its baseline is Ubuntu 22.04+ / glibc 2.35
+— the runner's own glibc, so no symbol can exceed it. The staging script
 `scripts/ci/stage_native_linux_arm64.sh` copies dereferenced `libquiver.so`, `libquiver.so.0`,
 and `libquiver_c.so` into `build/native-aarch64/lib/`, sets the C API DT_RPATH to `$ORIGIN`
-(`--force-rpath`, as above),
-and enforces AArch64 ELF, GLIBC<=2.35, GLIBCXX<=3.4.30, and dynamic libstdc++.
-Keep this separate from the x86_64 manylinux script.
+(`--force-rpath`, as above), and enforces GLIBCXX<=3.4.30 — the one ceiling a change of the
+runner's default compiler could break. Keep this separate from the x86_64 manylinux script.
 
 > **Why not the alternatives** (settled 2026-07-24): BinaryBuilder.jl also reaches 2.17 without Docker,
 > but pulls the whole Julia + compiler-shard stack and can't run on a Windows dev box (local

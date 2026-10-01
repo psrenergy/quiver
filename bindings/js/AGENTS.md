@@ -15,7 +15,7 @@ src/              # Module per C API category: database.ts, create.ts, read.ts, 
 src/lua-api.ts    # LUA_DB_API_REFERENCE — agent-facing Lua `db:` API reference, as a string const
 src/group-columns.ts # Shared columnar marshaller (group writers) and decoder (group readers),
                      # plus numericCells, the per-cell numeric check setElementArray shares
-src/loader.ts     # HAND-WRITTEN FFI symbol table + 4-tier library loader
+src/loader.ts     # HAND-WRITTEN FFI symbol table + 3-tier library loader
 src/types.ts      # Central DATA_TYPE_* / LOG_LEVEL_* constants and DatabaseOptions type —
                   # all re-exported from the package root
 src/ffi-helpers.ts # Alloc helpers, makeDefaultOptions()
@@ -48,9 +48,8 @@ biome.json        # Lint/format config
   `{ name: { args, returns } }`. This is the drift-prone spot: check it whenever a new C function
   exists in other bindings but not here.
 - **Library loader**: lazy `getSymbols()` (init on first use — eager init would hit a
-  `QuiverError` TDZ during the loader↔errors import cycle). Four tiers: bundled
-  `libs/{os}-{arch}/` (shipped in the npm package) → dev `build/bin` walk-up → executable
-  directory (`dirname(process.execPath)`, for standalone Bun binaries) → system PATH. On
+  `QuiverError` TDZ during the loader↔errors import cycle). Three tiers: bundled
+  `libs/{os}-{arch}/` (shipped in the npm package) → dev `build/bin` walk-up → system PATH. On
   Windows, `ensureCoreOnPath` prepends the lib dir to `process.env.PATH` so the OS loader finds
   the sibling `libquiver.dll` (Bun's `dlopen` cannot preload the core lib — it rejects an empty
   symbol map). The thrown `QuiverError` carries the **first** tier's failure (`firstError ??=`,
