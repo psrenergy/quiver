@@ -31,7 +31,7 @@ void Database::update_element(const std::string& collection, int64_t id, const E
     if (!resolved.empty()) {
         // Validate scalar types
         for (const auto& [name, value] : resolved) {
-            impl_->type_validator->validate_scalar("update_element", collection, name, value);
+            validate_scalar("update_element", *impl_->schema, collection, name, value);
         }
 
         // Build UPDATE SQL

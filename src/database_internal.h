@@ -3,8 +3,8 @@
 
 #include "quiver/attribute_metadata.h"
 #include "quiver/result.h"
-#include "quiver/schema.h"
 #include "quiver/value.h"
+#include "schema.h"
 
 #include <optional>
 #include <stdexcept>

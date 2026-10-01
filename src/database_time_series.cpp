@@ -44,7 +44,7 @@ void validate_time_series_row(const std::string& caller,
                                      internal::value_type_name(value));
         }
         // Content check for DATE_TIME, sharing datetime::is_valid_iso8601 with
-        // TypeValidator::validate_value: value_matches_type only decides the variant's shape, and
+        // validate_value (type_validator.cpp): value_matches_type only decides the variant's shape, and
         // "TEXT into a DATE_TIME column" is the correct shape. A NULL cell stays legal.
         if (it->second == DataType::DateTime && std::holds_alternative<std::string>(value) &&
             !datetime::is_valid_iso8601(std::get<std::string>(value))) {

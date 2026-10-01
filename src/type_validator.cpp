@@ -1,4 +1,4 @@
-#include "quiver/type_validator.h"
+#include "type_validator.h"
 
 #include "database_internal.h"
 #include "utils/datetime.h"
@@ -22,29 +22,26 @@ column_type(const Schema& schema, const std::string& caller, const std::string& 
 
 }  // namespace
 
-TypeValidator::TypeValidator(const Schema& schema) : schema_(schema) {}
-
-void TypeValidator::validate_scalar(const std::string& caller,
-                                    const std::string& table,
-                                    const std::string& column,
-                                    const Value& value) const {
-    validate_value(caller, "column '" + column + "'", column_type(schema_, caller, table, column), value);
+void validate_scalar(const std::string& caller,
+                     const Schema& schema,
+                     const std::string& table,
+                     const std::string& column,
+                     const Value& value) {
+    validate_value(caller, "column '" + column + "'", column_type(schema, caller, table, column), value);
 }
 
-void TypeValidator::validate_array(const std::string& caller,
-                                   const std::string& table,
-                                   const std::string& column,
-                                   const std::vector<Value>& values) const {
-    const auto expected = column_type(schema_, caller, table, column);
+void validate_array(const std::string& caller,
+                    const Schema& schema,
+                    const std::string& table,
+                    const std::string& column,
+                    const std::vector<Value>& values) {
+    const auto expected = column_type(schema, caller, table, column);
     for (size_t i = 0; i < values.size(); ++i) {
         validate_value(caller, "array '" + column + "' index " + std::to_string(i), expected, values[i]);
     }
 }
 
-void TypeValidator::validate_value(const std::string& caller,
-                                   const std::string& context,
-                                   DataType expected_type,
-                                   const Value& value) {
+void validate_value(const std::string& caller, const std::string& context, DataType expected_type, const Value& value) {
     // The shape rule is the one typing policy (internal::value_matches_type): int64 -> INTEGER or
     // REAL, double -> REAL, string -> TEXT or DATE_TIME, NULL -> any. FK label strings never get
     // here: Impl::resolve_fk_label turns them into ids (or rejects them) first.

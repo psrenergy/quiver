@@ -3,9 +3,9 @@
 
 #include "quiver/database.h"
 #include "quiver/result.h"
-#include "quiver/schema.h"
-#include "quiver/schema_validator.h"
-#include "quiver/type_validator.h"
+#include "schema.h"
+#include "schema_validator.h"
+#include "type_validator.h"
 #include "ui_metadata.h"
 
 #include <map>
@@ -36,14 +36,13 @@ struct Database::Impl {
     // database without reading its schema, and every metadata/CRUD path goes through
     // require_schema. mutable so the const readers (get_*_metadata, describe, ...) can trigger it.
     mutable std::unique_ptr<Schema> schema;
-    mutable std::unique_ptr<TypeValidator> type_validator;
     // A dry run holds one real transaction open and absorbs the public begin/commit/rollback so
     // nested callers compose. TransactionGuard needs no flag - it already no-ops when a
     // transaction is active.
     bool dry_run = false;
 
-    // Populated eagerly, once, at the end of from_migrations -- unlike schema/type_validator
-    // above, this is NOT lazily loaded and must never be hooked onto require_schema() /
+    // Populated eagerly, once, at the end of from_migrations -- unlike schema above, this is
+    // NOT lazily loaded and must never be hooked onto require_schema() /
     // load_schema_metadata(): migrate_up early-returns before reaching schema loading on the
     // already-up-to-date open path, which is the path every re-open of an existing study takes.
     // A default-constructed value is the "no sidecar" state, so every other construction path
@@ -134,7 +133,7 @@ struct Database::Impl {
         }
 
         // A string on a non-FK INTEGER column is rejected here, before any write, in
-        // TypeValidator::validate_value's scalar wording (`type mismatch for column '<c>'`). An array
+        // validate_value's scalar wording (`type mismatch for column '<c>'`). An array
         // cell is reported by column too, not by index.
         if (const auto type = table_def.get_data_type(column); type && *type == DataType::Integer) {
             throw std::runtime_error(std::string("Cannot ") + caller + ": type mismatch for column '" + column +
@@ -194,7 +193,7 @@ struct Database::Impl {
         const size_t num_rows = columns.empty() ? 0 : columns.begin()->second.size();
         for (const auto& [col_name, values] : columns) {
             if (!values.empty()) {
-                type_validator->validate_array(caller, table_name, col_name, values);
+                validate_array(caller, *schema, table_name, col_name, values);
             }
             if (values.size() != num_rows) {
                 throw std::runtime_error(std::string("Cannot ") + caller + ": " + group_table_noun(type) +
@@ -310,13 +309,11 @@ struct Database::Impl {
         }
     }
 
-    // Nothing is published until validation passes: a half-loaded state (schema set,
-    // type_validator null) would survive a failed lazy load and crash the next call.
+    // Nothing is published until validation passes: require_schema only loads while `schema` is
+    // null, so a schema published before a failed validate() would never be validated again.
     void load_schema_metadata() const {
         auto loaded = std::make_unique<Schema>(Schema::from_database(db));
         SchemaValidator(*loaded).validate();
-        // TypeValidator holds a reference to the Schema; moving the unique_ptr keeps the pointee.
-        type_validator = std::make_unique<TypeValidator>(*loaded);
         schema = std::move(loaded);
     }
 

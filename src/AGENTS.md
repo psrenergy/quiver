@@ -14,9 +14,6 @@ include/quiver/           # C++ public headers
   options.h               # DatabaseOptions, CSVOptions types and factories
   element.h               # Element builder for create operations
   lua_runner.h            # Lua scripting support
-  schema.h                # Schema/TableDefinition introspection, group table name helpers
-  schema_validator.h      # SchemaValidator - schema convention checks
-  type_validator.h        # TypeValidator - value-vs-column type checks
   value.h                 # Value variant (nullptr/int64/double/string)
   data_type.h             # DataType enum, data_type_to_string, is_date_time_column
   row.h / result.h        # Row and Result query-result types
@@ -35,14 +32,16 @@ include/quiver/expression/  # Expression subsystem headers (lazy expressions on 
   expression_node.h           # ExpressionNode base + concrete node classes + BroadcastOperand
 src/                      # C++ implementation
   database.cpp            # Lifecycle, factories, transactions, execute, migrate_up
-  database_impl.h         # Database::Impl - schema/type validators, label + FK resolution, group inserts, TransactionGuard
+  database_impl.h         # Database::Impl - lazy schema load, label + FK resolution, group inserts, TransactionGuard
   database_internal.h     # internal:: helpers - read templates, value_matches_type, metadata converters, time-series dimension lookup
   database_create.cpp / database_read.cpp / database_update.cpp / database_delete.cpp
   database_metadata.cpp / database_query.cpp / database_time_series.cpp / database_describe.cpp
   database_csv_export.cpp / database_csv_import.cpp
-  schema.cpp              # Schema introspection (from_database), table classification, group_names
-  schema_validator.cpp    # Schema convention validation
-  type_validator.cpp      # Scalar/array type validation (caller-threaded Pattern 1 messages)
+  schema.h / schema.cpp   # Schema/TableDefinition introspection (from_database), table classification,
+                          # group_names, group table name helpers
+  schema_validator.h / schema_validator.cpp  # SchemaValidator - schema convention checks
+  type_validator.h / type_validator.cpp      # Scalar/array type validation (free functions,
+                                             # caller-threaded Pattern 1 messages)
   element.cpp / row.cpp / result.cpp / migration.cpp / migrations.cpp
   lua_runner.cpp          # LuaRunner (sol2) - all Lua bindings
   ui_metadata.h / ui_metadata.cpp  # Internal ui/ TOML sidecar reader behind describe/describe_collection
@@ -89,9 +88,10 @@ gets a sibling folder (`src/json/`), which is also where the `run()` JSON encode
 `lua_runner.cpp`'s anonymous namespace would move.
 
 `csv/csv_read.h`/`.cpp` is the first `.cpp` in `src/` with no `include/quiver/` public
-counterpart — every other internal helper here (`utils/string.h`, `database_internal.h`,
-`binary/binary_utils.h`) is header-only inline, and every other `QUIVER_SOURCES` entry implements
-a public header. It stays internal because its public surface is already bound: `import_csv`
+counterpart — the header-only internal helpers here (`utils/string.h`, `database_internal.h`,
+`binary/binary_utils.h`) have no `.cpp` at all, and `schema.cpp`, `schema_validator.cpp` and
+`type_validator.cpp` share csv_read's posture since their headers moved into `src/`. It stays
+internal because its public surface is already bound: `import_csv`
 parses through it, and the only other caller is Lua, which needs it because `io` is deliberately
 absent (Julia/Dart/Python/JS already have native CSV libraries), so the root AGENTS.md rule "bind
 every public method down to every binding" never fires — no documented exception needed. Import
@@ -476,13 +476,13 @@ impl_->logger->debug("Opening database: {}", path);
   run their SQL through `Impl::execute`, which is const. The distribution counts only cells whose
   `typeof` is `integer`, since a non-STRICT INTEGER column can also hold TEXT/REAL. All three are
   bound 1:1 across the C API and every binding as string getters.
-- **`TypeValidator` threads the caller's name** (`type_validator.cpp`): call sites pass
+- **`validate_scalar`/`validate_array` thread the caller's name** (`type_validator.cpp`): call sites pass
   `"create_element"` / `"update_element"` so messages read `"Cannot create_element: type
   mismatch for column ..."` (root Pattern 1).
 - **One scalar typing policy** shared by `value_matches_type` (`database_internal.h`, time-series
-  writes) and `TypeValidator::validate_value` (`type_validator.cpp`, scalar create/update): int64
+  writes) and `validate_value` (`type_validator.cpp`, scalar create/update): int64
   matches `INTEGER` or `REAL` (int-for-REAL coercion), double matches `REAL` only (a float into an
-  `INTEGER` column is rejected), string matches `TEXT` / `DATE_TIME`. `TypeValidator::validate_value`
+  `INTEGER` column is rejected), string matches `TEXT` / `DATE_TIME`. `validate_value`
   *calls* `value_matches_type`, so the rule lives in one function. An FK label string never reaches
   `validate_value`: `Impl::resolve_fk_label` turns it into an id first, and rejects a string on a
   non-FK INTEGER column itself (Pattern 1, naming the caller). The time-series writers
@@ -492,7 +492,7 @@ impl_->logger->debug("Opening database: {}", path);
   with `csv_to_bin`) take a cell only if it parses whole, so a policy change must reach them too.
 - **DATE_TIME content is checked by both halves of that policy, through one predicate**:
   `datetime::is_valid_iso8601` (`utils/datetime.h`). Both halves call it in a separate guard right
-  after the `value_matches_type` shape check: `TypeValidator::validate_value` (covering scalar
+  after the `value_matches_type` shape check: `validate_value` (covering scalar
   create/update and every vector/set array write, so it inherits the check-before-first-write
   ordering of the "Group writes" bullet above) and `validate_time_series_row`
   (`database_time_series.cpp`). Do not fold the check into `value_matches_type`: that function decides the
@@ -501,7 +501,7 @@ impl_->logger->debug("Opening database: {}", path);
   which is a lie. The two guards phrase their own messages; the rule itself lives in exactly one
   function.
   `parse_datetime_import` (`database_csv_import.cpp`) is the **third** gate and needs to exist:
-  `import_csv` writes through a raw `INSERT` and never reaches `TypeValidator`, and its
+  `import_csv` writes through a raw `INSERT` and never reaches `validate_value`, and its
   custom-`date_time_format` branch parses with the caller's `get_time` format, which cannot see an
   impossible calendar day (`"%d/%m/%Y"` on `31/02/2024`). It therefore runs `is_valid_iso8601` on
   the string it canonicalizes, so import is held to the same grammar as the other writers.
@@ -512,7 +512,7 @@ impl_->logger->debug("Opening database: {}", path);
   write, but with no rows it deletes nothing and returns silently.
   Every `_by_label` form resolves the label via `Impl::resolve_label`, and is a one-line
   delegation to its id counterpart (the root `_by_label` rule), so `update_element_by_label`'s
-  *element* validation — the empty-element throw, `TypeValidator`, `prepare_group_data`'s
+  *element* validation — the empty-element throw, `validate_scalar`, `prepare_group_data`'s
   routing/type/length checks — reports `Cannot update_element: ...` and the group/row writers'
   column validation reports `Cannot update_{vector,set,time_series}_group: ...` /
   `Cannot upsert_time_series_row: ...`, naming the operation that validated.
@@ -524,11 +524,11 @@ impl_->logger->debug("Opening database: {}", path);
   — so failures past the derivation report `Cannot update_element: ...`.
 
 - **Schema metadata loads lazily** (`Impl::require_schema`): the `Database(path, options)`
-  constructor does not read it, so the first metadata/CRUD call does. `schema` and `type_validator`
-  are `mutable` (const readers trigger the load) and `load_schema_metadata()` is `const` and
-  publishes **neither** member until `SchemaValidator::validate()` passes — assigning `schema`
-  first would leave a half-loaded state (schema set, `type_validator` null) alive after a failed
-  lazy load, crashing the next call. Rationale in the root design decisions.
+  constructor does not read it, so the first metadata/CRUD call does. `schema` is `mutable` (const
+  readers trigger the load), and `load_schema_metadata()` publishes it only after
+  `SchemaValidator::validate()` passes, so a failed lazy load leaves no half-loaded state for the
+  next call: `require_schema` loads only while `schema` is null, so a schema published early would
+  never be validated again. Rationale in the root design decisions.
 - **Every group table's parent is checked by one helper** (`schema_validator.cpp`,
   `validate_group_parent`, called from `validate()` for vector, set and time-series tables after
   their structural checks): the prefix must name an existing collection and `id` must reference

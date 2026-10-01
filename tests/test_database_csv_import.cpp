@@ -588,7 +588,7 @@ TEST(DatabaseCSV, ImportCSV_Scalar_DateOnly_RoundTrips) {
     fs::remove(csv_path);
 }
 
-// import_csv writes through a raw INSERT, so it is the one write path TypeValidator never sees.
+// import_csv writes through a raw INSERT, so it is the one write path validate_value never sees.
 // std::get_time range-checks %m and %d independently but cannot see that February has no 31st, so
 // without the canonical-form check this stored a date no binding can read.
 TEST(DatabaseCSV, ImportCSV_Scalar_CustomFormatImpossibleDay_Throws) {

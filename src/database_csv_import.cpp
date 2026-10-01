@@ -1,7 +1,7 @@
 #include "csv/csv_read.h"
 #include "database_impl.h"
 #include "quiver/options.h"
-#include "quiver/schema.h"
+#include "schema.h"
 #include "utils/datetime.h"
 #include "utils/number.h"
 #include "utils/string.h"
@@ -194,7 +194,7 @@ static std::string parse_datetime_import(const std::string& raw_value, const std
     if (parsed && tm.tm_mday >= 1) {
         std::strftime(buffer, sizeof(buffer), "%Y-%m-%dT%H:%M:%S", &tm);
     }
-    // Import writes through a raw INSERT and never reaches TypeValidator, so the canonical form is
+    // Import writes through a raw INSERT and never reaches validate_value, so the canonical form is
     // re-checked here to hold it to the same grammar as create_element/update_element. get_time on
     // its own does not reject an impossible calendar day, so `date_time_format = "%d/%m/%Y"` on a
     // cell "31/02/2024" otherwise stored "2024-02-31T00:00:00" - a value the core's own writers
