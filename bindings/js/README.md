@@ -33,14 +33,18 @@ The loader searches for native libraries in four tiers:
 2. **Dev mode**: Walks up directories looking for `build/bin/` (auto-discovered
    during in-tree development against a local C++ build).
 3. **Executable directory**: Next to `process.execPath`, for standalone Bun binaries
-   whose module paths are virtual. The working directory can be elsewhere.
+   (`bun build --compile`) whose module paths are virtual. Copy every file from the
+   matching `libs/{os}-{arch}/` beside the executable (the C API library needs its
+   sibling `libquiver.so.0` / `libquiver.0.dylib` / `libquiver.dll`). The working
+   directory can be elsewhere.
 4. **System PATH**: Falls back to loading by library name.
 
 Currently prebuilt binaries ship for `linux-x86_64`, `linux-aarch64`, `macos-aarch64`,
 `macos-x86_64`, and `windows-x86_64`. Linux ARM64 requires glibc 2.35 (Ubuntu 22.04+),
 including DGX Spark's Ubuntu 24.04 environment. Linux x86_64 retains its glibc 2.17 floor.
-On other platforms, build from source and point to `build/bin/`
-via tier 2.
+On other platforms, build from source. Tier 2 only finds Windows builds (`build/bin/`);
+Linux and macOS builds put the libraries in `build/lib/`, so make them loadable by name
+for tier 4 (e.g. `LD_LIBRARY_PATH=build/lib`, as CI does).
 
 ## Quick Start
 

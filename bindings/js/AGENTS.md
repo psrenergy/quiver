@@ -53,7 +53,9 @@ biome.json        # Lint/format config
   directory (`dirname(process.execPath)`, for standalone Bun binaries) → system PATH. On
   Windows, `ensureCoreOnPath` prepends the lib dir to `process.env.PATH` so the OS loader finds
   the sibling `libquiver.dll` (Bun's `dlopen` cannot preload the core lib — it rejects an empty
-  symbol map).
+  symbol map). The thrown `QuiverError` carries the **first** tier's failure (`firstError ??=`,
+  as in the Dart loader): the system-PATH attempt runs last and usually just says "not found",
+  which would hide a library that exists but cannot load (glibc floor, missing sibling core).
 - **Bun FFI gotchas (load-bearing — do not "fix"):**
   - `FFIType.buffer` is rejected as an argument ABI type → buffer/string params are declared
     `"pointer"` and call sites pass the `Uint8Array` (`alloc.buf`) directly; Bun pins the

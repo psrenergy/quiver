@@ -276,7 +276,10 @@ function openLibrary(dir: string): QuiverLib {
 }
 
 function initLibrary(): QuiverLib {
-  let lastError: unknown;
+  // Each tier remembers the first failure, so if every tier fails the error names the real
+  // loader problem (e.g. a bundled library that needs a newer glibc, or a missing sibling)
+  // instead of only the bare-name fallback -- the same policy as the Dart loader.
+  let firstError: unknown;
 
   // Tier 1: Bundled libs/{os}-{arch}/ next to the loader (npm install / dev install).
   const bundledDir = getBundledLibDir();
@@ -284,7 +287,7 @@ function initLibrary(): QuiverLib {
     try {
       return openLibrary(bundledDir);
     } catch (e) {
-      lastError = e; // Bundled libs found but failed to load -- fall through.
+      firstError ??= e; // Bundled libs found but failed to load -- fall through.
     }
   }
 
@@ -293,7 +296,7 @@ function initLibrary(): QuiverLib {
     try {
       return openLibrary(dir);
     } catch (e) {
-      lastError = e; // Try next path.
+      firstError ??= e; // Try next path.
     }
   }
 
@@ -304,7 +307,7 @@ function initLibrary(): QuiverLib {
     try {
       return openLibrary(executableDir);
     } catch (e) {
-      lastError = e;
+      firstError ??= e;
     }
   }
 
@@ -313,7 +316,7 @@ function initLibrary(): QuiverLib {
   try {
     return dlopen(C_API_LIB, allSymbols);
   } catch (e) {
-    lastError = e; // Fall through to error.
+    firstError ??= e; // Fall through to error.
   }
 
   const searched = [
@@ -322,7 +325,7 @@ function initLibrary(): QuiverLib {
     executableDir,
     "system PATH",
   ].join(", ");
-  const detail = lastError instanceof Error ? `: ${lastError.message}` : "";
+  const detail = firstError instanceof Error ? `: ${firstError.message}` : "";
   throw new QuiverError(
     `Cannot load native library '${C_API_LIB}'. Searched: ${searched}${detail}`,
   );

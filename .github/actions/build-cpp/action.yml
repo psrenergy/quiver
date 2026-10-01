@@ -40,6 +40,19 @@ runs:
         restore-keys: |
           cmake-deps-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.fp }}-
 
+    # Homebrew ships no Intel-macOS bottle for sccache (Intel macOS is Homebrew Tier 3), so the
+    # action's `brew install sccache` would build LLVM and Rust from source for hours. A pinned
+    # release binary on PATH makes the action skip its install (it checks `io.which` first).
+    - name: Install sccache (Intel macOS)
+      if: runner.os == 'macOS' && runner.arch == 'X64'
+      shell: bash
+      run: |
+        dir=sccache-v0.10.0-x86_64-apple-darwin
+        curl -fsSL "https://github.com/mozilla/sccache/releases/download/v0.10.0/$dir.tar.gz" -o "$RUNNER_TEMP/sccache.tar.gz"
+        echo "6d4a77802ec83607478df7b6338be28171e65e58a38a49497ebec1fbb300fce4  $RUNNER_TEMP/sccache.tar.gz" | shasum -a 256 -c -
+        tar -xzf "$RUNNER_TEMP/sccache.tar.gz" -C "$RUNNER_TEMP"
+        echo "$RUNNER_TEMP/$dir" >> "$GITHUB_PATH"
+
     - name: Setup sccache
       uses: hendrikmuhs/ccache-action@v1.2
       with:

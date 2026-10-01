@@ -23,11 +23,14 @@ Composite actions in `.github/actions/`:
   Used by macOS, Windows, and Linux ARM64 in `publish-s3.yml`
   (`if: matrix.platform_key != 'linux-x86_64'`); `ci.yml` uses it for all three OSes.
   All dependency and sccache restore prefixes include `runner.arch`, so Intel and ARM64 caches
-  cannot mix. macOS publishing uses `macos-latest` for ARM64 and `macos-15-intel` for x86_64;
-  both verify dylib architecture and load the C API through Bun FFI from a temporary directory
-  containing the two shipped dylibs before uploading artifacts. A compiled JS-binding smoke
-  executable also queries an in-memory database from an unrelated working directory; the original
-  build library directory is hidden during both checks to enforce relocation.
+  cannot mix. On Intel macOS the composite first puts a pinned, sha256-checked sccache release
+  binary on PATH: Homebrew ships no Intel-macOS bottles (Tier 3), so the ccache-action's
+  `brew install sccache` would build LLVM and Rust from source. macOS publishing uses
+  `macos-latest` for ARM64 and `macos-15-intel` for x86_64. Before upload, the macOS and Linux
+  ARM64 jobs copy exactly `matrix.lib_paths` into a temporary directory (macOS also checks each
+  dylib's `lipo -archs`), and a compiled JS-binding smoke executable placed there queries an
+  in-memory database from an unrelated working directory, with the build library directory
+  hidden to enforce relocation.
 
 **glibc floor for the published Linux x86_64 native libs (`publish-s3.yml`):** the `linux-x86_64` native
 libs are NOT built via `build-cpp` on a bare `ubuntu-latest` runner — that binds `GLIBC_2.28`..`2.34`
@@ -43,8 +46,10 @@ toolchain/cmake/glibc floor can't drift. **GCC 11 (devtoolset-11) is required**:
 `<chrono>` calendar types (`year_month_day`/`hh_mm_ss`/`sys_days`) that GCC 10 lacks — and CentOS 7's
 SCL caps at GCC 11, which keeps GLIBCXX ≤ the **3.4.30** ceiling Julia's bundled libstdc++ provides
 (this is a plain S3 artifact — no `CompilerSupportLibraries_jll` at load time, so libstdc++ is whatever
-Julia bundles; GCC 13 → `3.4.32` would fail to load). The script builds into `build/manylinux/`, runs `patchelf --set-rpath '$ORIGIN'`
-on `libquiver_c.so` so it finds `libquiver.so.0` as a sibling in the flat ship layout, dereferences the
+Julia bundles; GCC 13 → `3.4.32` would fail to load). The script builds into `build/manylinux/`, runs `patchelf --force-rpath --set-rpath '$ORIGIN'`
+on `libquiver_c.so` so it finds `libquiver.so.0` as a sibling in the flat ship layout (a DT_RPATH, not
+a DT_RUNPATH: ld.so searches `LD_LIBRARY_PATH` before RUNPATH, which would let a user's
+`LD_LIBRARY_PATH` pair the bundled C API with another build's core), dereferences the
 version symlinks into real files (matching the old `cp -L`), and runs the portability gate
 in-container (fails unless glibc ≤ 2.17, GLIBCXX ≤ 3.4.30, both libs dynamically linked to
 `libstdc++.so.6`, and `libquiver_c.so` carries an `$ORIGIN` rpath). libstdc++ stays **dynamic** — never
@@ -58,7 +63,8 @@ native libs (shared S3 staging). Only `linux-x86_64` uses the old-glibc image.
 with optional `c_compiler: gcc-11` / `cxx_compiler: g++-11` inputs (other platforms retain
 CMake's defaults). Its baseline is Ubuntu 22.04+ / glibc 2.35. The staging script
 `scripts/ci/stage_native_linux_arm64.sh` copies dereferenced `libquiver.so`, `libquiver.so.0`,
-and `libquiver_c.so` into `build/native-aarch64/lib/`, sets the C API RPATH to `$ORIGIN`,
+and `libquiver_c.so` into `build/native-aarch64/lib/`, sets the C API DT_RPATH to `$ORIGIN`
+(`--force-rpath`, as above),
 and enforces AArch64 ELF, GLIBC<=2.35, GLIBCXX<=3.4.30, and dynamic libstdc++.
 Before upload, the compiled JS binding queries a database with relocated siblings while
 the original `build/lib` is hidden. Keep this separate from the x86_64 manylinux script.
@@ -140,13 +146,15 @@ The order is **bump, merge, publish** — two deliberate dispatches, never chain
   dylibs **filesystem-first** — no Linux-style SONAME matching against already-loaded images — so
   the artifact ships libquiver ONLY under its install name `libquiver.0.dylib` (the `.0` tracks
   SOVERSION = major version); a second `libquiver.dylib` copy in the same dir could be loaded as
-  a duplicate image (duplicated static state, e.g. the binary write registry). `libquiver_c.dylib`
-  gets an `@loader_path` rpath via `install_name_tool` in `publish-s3.yml`. (2) `install_name_tool`
+  a duplicate image (duplicated static state, e.g. the binary write registry). `publish-s3.yml`
+  replaces `libquiver_c.dylib`'s absolute build-tree rpath with `@loader_path`
+  (`install_name_tool -rpath`; appending would leave the CI path searched first). (2) `install_name_tool`
   invalidates the ad-hoc linker signature and arm64 macOS SIGKILLs `dlopen` of unsigned code, so
   the workflow re-signs with `codesign --force --sign -` — that step is load-bearing. (3) The
   mirror's `CI.yml` passes no `arch` to setup-julia (runner-native: x64 on ubuntu/windows,
-  aarch64 on macos-latest); x64 Julia on an arm64 mac runs under Rosetta and would not match the
-  `arch = "aarch64"` Artifacts.toml entry.
+  aarch64 on macos-latest), so Julia CI loads only the `macos-aarch64` artifact; x64 Julia on an
+  arm64 mac (Rosetta) selects `macos-x86_64`, which only the Bun smoke check in `publish-s3.yml`
+  on `macos-15-intel` exercises.
 
 ## npm Publishing (JS)
 

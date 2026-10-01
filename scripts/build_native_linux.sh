@@ -43,7 +43,7 @@ cmake --build build/manylinux --parallel "$(nproc)"
 
 # libquiver_c.so must find libquiver.so.0 as a sibling in the flat ship layout (what BinaryBuilder's
 # ELF auditor used to do), then turn the version symlinks into real files (matching the old cp -L).
-patchelf --set-rpath '$ORIGIN' "$(readlink -f build/manylinux/lib/libquiver_c.so)"
+patchelf --force-rpath --set-rpath '$ORIGIN' "$(readlink -f build/manylinux/lib/libquiver_c.so)"
 ( cd build/manylinux/lib
   for f in libquiver.so libquiver.so.0 libquiver_c.so; do
     if [ -L "$f" ]; then cp --remove-destination "$(readlink -f "$f")" "$f"; fi

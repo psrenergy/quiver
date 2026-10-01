@@ -108,7 +108,9 @@ jobs:
       - name: Set RPATH for macOS
         if: runner.os == 'macOS'
         run: |
-          install_name_tool -add_rpath '@loader_path' build/lib/libquiver_c.dylib
+          # Replace (not append to) CMake's absolute build-tree rpath, so the shipped dylib only
+          # looks beside itself; install_name_tool fails loudly if that rpath is not present.
+          install_name_tool -rpath "$PWD/build/lib" '@loader_path' build/lib/libquiver_c.dylib
           codesign --force --sign - build/lib/libquiver_c.dylib
 
       - uses: oven-sh/setup-bun@v2
@@ -116,46 +118,26 @@ jobs:
         with:
           bun-version: 1.3.14
 
-      - name: Verify macOS architecture and relocated native libraries
-        if: runner.os == 'macOS'
+      - name: Verify architecture and relocated native libraries
+        if: runner.os == 'macOS' || matrix.platform_key == 'linux-aarch64'
         env:
+          LIB_PATHS: ${{ matrix.lib_paths }}
           PLATFORM_KEY: ${{ matrix.platform_key }}
         run: |
           set -euo pipefail
-          arch="${PLATFORM_KEY#macos-}"
-          if [ "$arch" = "aarch64" ]; then arch=arm64; fi
           relocated="$(mktemp -d)"
           trap 'rm -rf "$relocated"' EXIT
-          for lib in libquiver.0.dylib libquiver_c.dylib; do
-            test "$(lipo -archs "build/lib/$lib")" = "$arch"
-            cp -L "build/lib/$lib" "$relocated/$lib"
-          done
-          # Compile the real JS binding to verify executable-directory lookup,
-          # in addition to the direct FFI check of the sibling dylib dependency.
-          printf 'import { Database } from "%s/bindings/js/mod.ts";\nconst db = Database.open(":memory:");\nif (db.queryInteger("SELECT 42") !== 42) throw new Error("Native query failed");\ndb.close();\n' "$PWD" > "$relocated/smoke.ts"
-          bun build --compile --no-compile-autoload-bunfig --no-compile-autoload-dotenv \
-            "$relocated/smoke.ts" --outfile "$relocated/smoke"
-          # Hide the build-tree libraries so an absolute build RPATH cannot mask
-          # a broken sibling-library lookup in the shipped layout.
-          mv build/lib "$relocated/build-libs"
-          trap 'mv "$relocated/build-libs" build/lib; rm -rf "$relocated"' EXIT
-          RELOCATED_LIB_DIR="$relocated" bun -e '
-            const { dlopen } = require("bun:ffi");
-            const lib = dlopen(`${process.env.RELOCATED_LIB_DIR}/libquiver_c.dylib`, {
-              quiver_get_last_error: { args: [], returns: "cstring" },
-            });
-            lib.symbols.quiver_get_last_error();
-            lib.close();
-          '
-          (cd "$RUNNER_TEMP" && "$relocated/smoke")
-
-      - name: Verify Linux ARM64 compiled binding with relocated libraries
-        if: matrix.platform_key == 'linux-aarch64'
-        run: |
-          set -euo pipefail
-          relocated="$(mktemp -d)"
-          trap 'rm -rf "$relocated"' EXIT
-          cp build/native-aarch64/lib/*.so* "$relocated/"
+          # Exactly the files upload-artifact ships.
+          while IFS= read -r lib; do
+            [ -z "$lib" ] || cp -L "$lib" "$relocated/"
+          done <<< "$LIB_PATHS"
+          if [ "$RUNNER_OS" = macOS ]; then
+            arch="${PLATFORM_KEY#macos-}"
+            if [ "$arch" = aarch64 ]; then arch=arm64; fi
+            for lib in "$relocated"/*.dylib; do test "$(lipo -archs "$lib")" = "$arch"; done
+          fi
+          # A compiled JS binding must find the shipped libraries beside its executable
+          # (loader Tier 3), run from an unrelated directory with the build tree hidden.
           printf 'import { Database } from "%s/bindings/js/mod.ts";\nconst db = Database.open(":memory:");\nif (db.queryInteger("SELECT 42") !== 42) throw new Error("Native query failed");\ndb.close();\n' "$PWD" > "$relocated/smoke.ts"
           bun build --compile --no-compile-autoload-bunfig --no-compile-autoload-dotenv \
             "$relocated/smoke.ts" --outfile "$relocated/smoke"
