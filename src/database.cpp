@@ -220,13 +220,13 @@ Result Database::Impl::execute(const std::string& sql, const std::vector<Value>&
     return {std::move(columns), std::move(rows)};
 }
 
-void Database::Impl::execute_raw(const std::string& sql) const {
+void Database::Impl::execute_raw(const std::string& sql, const char* what) const {
     char* err_msg = nullptr;
     const auto rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &err_msg);
     if (rc != SQLITE_OK) {
         std::string error = err_msg ? err_msg : "Unknown error";
         sqlite3_free(err_msg);
-        throw std::runtime_error("Failed to execute SQL: " + error);
+        throw std::runtime_error(std::string("Failed to ") + what + ": " + error);
     }
 }
 
@@ -301,14 +301,7 @@ Database::from_schema(const std::string& db_path, const std::string& schema_path
 }
 
 void Database::set_version(int64_t version) {
-    const auto sql = "PRAGMA user_version = " + std::to_string(version) + ";";
-    char* err_msg = nullptr;
-    const auto rc = sqlite3_exec(impl_->db, sql.c_str(), nullptr, nullptr, &err_msg);
-    if (rc != SQLITE_OK) {
-        std::string error = err_msg ? err_msg : "Unknown error";
-        sqlite3_free(err_msg);
-        throw std::runtime_error("Failed to set user_version: " + error);
-    }
+    impl_->execute_raw("PRAGMA user_version = " + std::to_string(version) + ";", "set user_version");
     impl_->logger->debug("Set database version to {}", version);
 }
 
@@ -410,14 +403,13 @@ void Database::migrate_up(const std::string& migrations_path) {
                                      " has no up.sql file");
         }
 
-        impl_->begin_transaction();
         try {
+            Impl::TransactionGuard txn(*impl_);
             impl_->execute_raw(up_sql);
             set_version(migration.version());
-            impl_->commit();
+            txn.commit();
             impl_->logger->info("Migration {} applied successfully", migration.version());
         } catch (const std::exception& e) {
-            impl_->rollback();
             impl_->logger->error("Migration {} failed: {}", migration.version(), e.what());
             throw std::runtime_error("Failed to migrate_up: migration " + std::to_string(migration.version()) + ": " +
                                      e.what());
@@ -448,14 +440,13 @@ void Database::migrate_down(const std::string& migrations_path) {
         }
 
         const auto preceding_version = it + 1 == all.rend() ? 0 : (it + 1)->version();
-        impl_->begin_transaction();
         try {
+            Impl::TransactionGuard txn(*impl_);
             impl_->execute_raw(down_sql);
             set_version(preceding_version);
-            impl_->commit();
+            txn.commit();
             impl_->logger->info("Migration {} reverted successfully", it->version());
         } catch (const std::exception& e) {
-            impl_->rollback();
             impl_->logger->error("Migration {} failed: {}", it->version(), e.what());
             throw std::runtime_error("Failed to migrate_down: migration " + std::to_string(it->version()) + ": " +
                                      e.what());
@@ -479,13 +470,12 @@ void Database::apply_schema(const std::string& schema_path) {
 
     impl_->logger->info("Applying schema from: {}", schema_path);
 
-    impl_->begin_transaction();
     try {
+        Impl::TransactionGuard txn(*impl_);
         impl_->execute_raw(schema_sql);
         impl_->load_schema_metadata();
-        impl_->commit();
+        txn.commit();
     } catch (const std::exception& e) {
-        impl_->rollback();
         impl_->logger->error("Failed to apply schema: {}", e.what());
         throw;
     }

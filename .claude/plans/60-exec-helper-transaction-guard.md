@@ -156,12 +156,12 @@ From the repo root:
 
 ## Acceptance criteria
 
-- [ ] `sqlite3_exec` appears once in `database_impl.h`/`database.cpp`, plus any deliberately
+- [x] `sqlite3_exec` appears once in `database_impl.h`/`database.cpp`, plus any deliberately
       unchecked constructor PRAGMA.
-- [ ] No `impl_->begin_transaction()` / `impl_->commit()` / `impl_->rollback()` pairs remain in
+- [x] No `impl_->begin_transaction()` / `impl_->commit()` / `impl_->rollback()` pairs remain in
       `database.cpp` or `database_csv_import.cpp`. The public `Database::begin_transaction`/`commit`/
       `rollback` keep calling the `Impl` methods.
-- [ ] Suites green, messages unchanged.
+- [x] Suites green, messages unchanged.
 
 ## Pitfalls
 
@@ -174,3 +174,72 @@ From the repo root:
 
 - The migration error wording (plan 63).
 - SAVEPOINTs (rejected in v0.3).
+
+## Implementation notes
+
+### Deviations
+
+- **No `Impl::exec`. `Impl::execute_raw` takes the `what` instead** (the maintainer's call during
+  planning). Its signature is now `execute_raw(const std::string& sql, const char* what =
+  "execute SQL") const`. Adding `exec` and turning `execute_raw` into a one-line wrapper over it
+  would have left three runners (`execute`, `execute_raw`, `exec`), two of them the same function.
+  - The four existing callers (`migrate_up`, `migrate_down`, `apply_schema`, import's group
+    `DELETE`) are unchanged and get `Failed to execute SQL: ...` from the default.
+  - `Impl::begin_transaction` / `Impl::commit` / `Database::set_version` pass their own `what`.
+  - The body stays out of line in `database.cpp`, beside `Impl::execute`, which is plan 53's
+    placement.
+- **`Impl::rollback` keeps its own `sqlite3_exec`, as step 2 says ("unchanged").** It logs instead
+  of throwing. That means the first acceptance criterion counts three hits, not one plus the
+  constructor: `execute_raw` (`database.cpp`), `rollback` (`database_impl.h`), and the
+  constructor's unchecked `PRAGMA foreign_keys = ON` (left alone, as the plan says). The plan's
+  "Why" counts five blocks, rollback included, while step 2 routes only four of them.
+
+### Drift fixed
+
+- `execute_raw` was already an `Impl` member (plan 53), defined in `database.cpp`.
+- `import_csv` has one write tail (plan 58) and no `PRAGMA foreign_keys` line in its catch
+  (plan 01).
+- The pinned messages are at `tests/test_migrations.cpp` ~L254 and ~L271 (after the new test).
+
+### Docs (beyond the plan's one sentence)
+
+- **`src/AGENTS.md`, Transactions section.**
+  - Added the plan's sentence, adjusted on two counts. It names `Impl::execute_raw`. It says the
+    guard is declared inside the `try` only where the writer has a handler (the migrations,
+    `apply_schema`, `import_csv`). `create_element`/`update_element` and the group and time-series
+    writers declare it at function scope with no `catch`.
+  - Rewrote the `import_csv` paragraph, which still said "a raw `impl_->begin_transaction()` (not
+    `TransactionGuard`)".
+- **Root `AGENTS.md`, design decision "`import_csv` refuses to run inside an open transaction".**
+  Same reason rewritten. Nested, the guard would no-op, so a failure partway through would leave
+  import's earlier writes (its DELETEs included) for the caller's commit. The old reason, a nested
+  `BEGIN` failing and its `ROLLBACK` discarding the caller's work, no longer describes the code.
+- The precondition comment at the top of `import_csv` now gives the same reason.
+- No CHANGELOG entry, per the plan.
+
+### Tests
+
+- Added `MigrationsTestFixture.DatabaseMigrationFailureLeavesNoPartialSchema`. Its `up.sql` is
+  `CREATE TABLE ...; <invalid>`, run on a file database, then reopened: `current_version() == 0`
+  and no tables. It passed before the refactor and passes after.
+- Mutation check: with `migrate_up`'s begin/commit/rollback removed, it failed (`COUNT(*)` was 1).
+  The mutation was reverted before the change.
+- `quiver_tests` 1400/1400 and `quiver_c_tests` 571/571 pass.
+- The plan's filter `*Migration*:*Transaction*:*DryRun*:*Csv*:*CSV*` passes 397/397.
+- `scripts/format.bat` passed. Its only side effect was biome rewriting the line endings of 43 JS
+  files, with no content diff. Those were restored and are not in this commit.
+- An adversarial review (three lenses: behaviour equivalence, byte-identical messages, doc
+  accuracy) confirmed only the "inside its `try`" overstatement above, now fixed.
+
+### For later plans
+
+- **Plan 63.** `migrate_up`, `migrate_down` and `apply_schema` now read
+  `try { Impl::TransactionGuard txn(*impl_); ...; txn.commit(); ... } catch (...) { log; re-wrap }`.
+  The re-wrap text 63 rewords lives in those `catch` blocks, unchanged.
+  - A failed `BEGIN` now happens inside the `try`, so it is wrapped too: `Failed to migrate_up:
+    migration N: Failed to begin transaction: ...`. 63's new prefix will apply to it as well.
+  - In `apply_schema` a failed `BEGIN` is now logged before the plain `throw;`.
+  - The `has no up.sql` / `has no down.sql` / file-open / empty-file throws sit before the `try`,
+    where they were.
+- **Any new internal writer** that needs a transaction: use `Impl::TransactionGuard`. Any new
+  parameterless `sqlite3_exec` statement: use `impl_->execute_raw(sql, "<what>")`.

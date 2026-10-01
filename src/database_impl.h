@@ -52,8 +52,9 @@ struct Database::Impl {
     // The one statement runner (defined in database.cpp). const: it only uses the sqlite3 handle,
     // so const readers (number_of_elements, current_version, describe*) go through it too.
     Result execute(const std::string& sql, const std::vector<Value>& parameters = {}) const;
-    // sqlite3_exec for multi-statement scripts (migrations, apply_schema, import's DELETE).
-    void execute_raw(const std::string& sql) const;
+    // The one sqlite3_exec runner, for SQL with no parameters or results (multi-statement scripts,
+    // BEGIN/COMMIT, PRAGMA user_version): throws Pattern 3 "Failed to <what>: <sqlite message>".
+    void execute_raw(const std::string& sql, const char* what = "execute SQL") const;
 
     // Takes no operation name: reading an existing database's schema on first use is what makes
     // open() usable, and a database that is not a quiver database throws the validator's own
@@ -344,24 +345,12 @@ struct Database::Impl {
     }
 
     void begin_transaction() {
-        char* err_msg = nullptr;
-        const auto rc = sqlite3_exec(db, "BEGIN TRANSACTION;", nullptr, nullptr, &err_msg);
-        if (rc != SQLITE_OK) {
-            std::string error = err_msg ? err_msg : "Unknown error";
-            sqlite3_free(err_msg);
-            throw std::runtime_error("Failed to begin transaction: " + error);
-        }
+        execute_raw("BEGIN TRANSACTION;", "begin transaction");
         logger->debug("Transaction started");
     }
 
     void commit() {
-        char* err_msg = nullptr;
-        const auto rc = sqlite3_exec(db, "COMMIT;", nullptr, nullptr, &err_msg);
-        if (rc != SQLITE_OK) {
-            std::string error = err_msg ? err_msg : "Unknown error";
-            sqlite3_free(err_msg);
-            throw std::runtime_error("Failed to commit transaction: " + error);
-        }
+        execute_raw("COMMIT;", "commit transaction");
         logger->debug("Transaction committed");
     }
 

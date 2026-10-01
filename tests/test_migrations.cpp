@@ -216,6 +216,22 @@ TEST_F(MigrationsTestFixture, DatabaseMigrationWithInvalidSQL) {
                  std::runtime_error);
 }
 
+TEST_F(MigrationsTestFixture, DatabaseMigrationFailureLeavesNoPartialSchema) {
+    // up.sql creates a table and then fails: the migration's transaction must take the table with it.
+    fs::create_directories(fs::path(temp_dir) / "1");
+    std::ofstream(fs::path(temp_dir) / "1" / "up.sql")
+        << "CREATE TABLE Configuration (id INTEGER PRIMARY KEY, label TEXT UNIQUE NOT NULL) STRICT;"
+           "THIS IS NOT VALID SQL;";
+    const auto db_path = (fs::path(temp_dir) / "study.db").string();
+    const quiver::DatabaseOptions quiet{.read_only = false, .console_level = quiver::LogLevel::Off};
+
+    EXPECT_THROW(quiver::Database::from_migrations(db_path, temp_dir, quiet), std::runtime_error);
+
+    quiver::Database db(db_path, quiet);
+    EXPECT_EQ(db.current_version(), 0);
+    EXPECT_EQ(db.query_integer("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table'"), 0);
+}
+
 // ============================================================================
 // Migration round-trip tests
 // ============================================================================
