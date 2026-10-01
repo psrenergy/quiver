@@ -26,22 +26,23 @@ runs:
         fp="$(cmake --help | sed -n 's/^\* *\([^=]*\)=.*/\1/p' | head -n1 | tr -dc 'A-Za-z0-9._-')"
         echo "fp=${fp:-unknown}" >> "$GITHUB_OUTPUT"
 
+    # runner.arch keeps ubuntu-latest (X64) and ubuntu-24.04-arm (ARM64) from sharing caches.
     - name: Cache CMake FetchContent sources
       uses: actions/cache@v4
       with:
         path: build/_deps
-        key: cmake-deps-${{ runner.os }}-${{ steps.toolchain.outputs.fp }}-${{ hashFiles('cmake/Dependencies.cmake', 'CMakeLists.txt') }}
+        key: cmake-deps-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.fp }}-${{ hashFiles('cmake/Dependencies.cmake', 'CMakeLists.txt') }}
         restore-keys: |
-          cmake-deps-${{ runner.os }}-${{ steps.toolchain.outputs.fp }}-
+          cmake-deps-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.fp }}-
 
     - name: Setup sccache
       uses: hendrikmuhs/ccache-action@v1.2
       with:
         variant: sccache
-        key: sccache-${{ runner.os }}-${{ inputs.build_type }}-${{ inputs.coverage }}
+        key: sccache-${{ runner.os }}-${{ runner.arch }}-${{ inputs.build_type }}-${{ inputs.coverage }}
         restore-keys: |
-          sccache-${{ runner.os }}-${{ inputs.build_type }}-
-          sccache-${{ runner.os }}-
+          sccache-${{ runner.os }}-${{ runner.arch }}-${{ inputs.build_type }}-
+          sccache-${{ runner.os }}-${{ runner.arch }}-
 
     - name: Configure CMake
       shell: bash

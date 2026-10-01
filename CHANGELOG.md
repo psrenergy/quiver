@@ -7,6 +7,12 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ## [0.12.8] — unreleased
 
+### Added
+
+- **Linux ARM64 (`aarch64`, e.g. NVIDIA DGX Spark) is a published platform.** PyPI ships a
+  `manylinux_aarch64` wheel, and the Julia artifact and npm package carry `linux-aarch64` native
+  libraries. They need glibc 2.28 or newer (Linux x86_64 stays at 2.17).
+
 ### Removed
 
 - **BREAKING (C++ only) — unused `Row`/`Result` members removed:** `Row::size`, `column_count`,
