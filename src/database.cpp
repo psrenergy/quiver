@@ -129,11 +129,11 @@ bool Database::is_healthy() const {
     return impl_ && impl_->db != nullptr;
 }
 
-Result Database::execute(const std::string& sql, const std::vector<Value>& parameters) {
+Result Database::Impl::execute(const std::string& sql, const std::vector<Value>& parameters) const {
     sqlite3_stmt* raw_stmt = nullptr;
-    auto rc = sqlite3_prepare_v2(impl_->db, sql.c_str(), -1, &raw_stmt, nullptr);
+    auto rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &raw_stmt, nullptr);
     if (rc != SQLITE_OK) {
-        throw std::runtime_error("Failed to prepare statement: " + std::string(sqlite3_errmsg(impl_->db)));
+        throw std::runtime_error("Failed to prepare statement: " + std::string(sqlite3_errmsg(db)));
     }
     StmtPtr stmt(raw_stmt, sqlite3_finalize);
 
@@ -214,26 +214,24 @@ Result Database::execute(const std::string& sql, const std::vector<Value>& param
     }
 
     if (rc != SQLITE_DONE) {
-        throw std::runtime_error("Failed to execute statement: " + std::string(sqlite3_errmsg(impl_->db)));
+        throw std::runtime_error("Failed to execute statement: " + std::string(sqlite3_errmsg(db)));
     }
 
     return {std::move(columns), std::move(rows)};
 }
 
-int64_t Database::current_version() const {
-    sqlite3_stmt* raw_stmt = nullptr;
-    const char* sql = "PRAGMA user_version;";
-    auto rc = sqlite3_prepare_v2(impl_->db, sql, -1, &raw_stmt, nullptr);
+void Database::Impl::execute_raw(const std::string& sql) const {
+    char* err_msg = nullptr;
+    const auto rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &err_msg);
     if (rc != SQLITE_OK) {
-        throw std::runtime_error("Failed to prepare statement: " + std::string(sqlite3_errmsg(impl_->db)));
+        std::string error = err_msg ? err_msg : "Unknown error";
+        sqlite3_free(err_msg);
+        throw std::runtime_error("Failed to execute SQL: " + error);
     }
-    StmtPtr stmt(raw_stmt, sqlite3_finalize);
+}
 
-    rc = sqlite3_step(stmt.get());
-    if (rc != SQLITE_ROW) {
-        throw std::runtime_error("Failed to read user_version: " + std::string(sqlite3_errmsg(impl_->db)));
-    }
-    return sqlite3_column_int(stmt.get(), 0);
+int64_t Database::current_version() const {
+    return *impl_->execute("PRAGMA user_version")[0].get_integer(0);
 }
 
 const std::string& Database::path() const {
@@ -385,16 +383,6 @@ bool Database::in_dry_run() const {
     return impl_->dry_run;
 }
 
-void Database::execute_raw(const std::string& sql) {
-    char* err_msg = nullptr;
-    const auto rc = sqlite3_exec(impl_->db, sql.c_str(), nullptr, nullptr, &err_msg);
-    if (rc != SQLITE_OK) {
-        std::string error = err_msg ? err_msg : "Unknown error";
-        sqlite3_free(err_msg);
-        throw std::runtime_error("Failed to execute SQL: " + error);
-    }
-}
-
 void Database::migrate_up(const std::string& migrations_path) {
     const auto migrations = Migrations(migrations_path);
     if (migrations.empty()) {
@@ -424,7 +412,7 @@ void Database::migrate_up(const std::string& migrations_path) {
 
         impl_->begin_transaction();
         try {
-            execute_raw(up_sql);
+            impl_->execute_raw(up_sql);
             set_version(migration.version());
             impl_->commit();
             impl_->logger->info("Migration {} applied successfully", migration.version());
@@ -462,7 +450,7 @@ void Database::migrate_down(const std::string& migrations_path) {
         const auto preceding_version = it + 1 == all.rend() ? 0 : (it + 1)->version();
         impl_->begin_transaction();
         try {
-            execute_raw(down_sql);
+            impl_->execute_raw(down_sql);
             set_version(preceding_version);
             impl_->commit();
             impl_->logger->info("Migration {} reverted successfully", it->version());
@@ -493,7 +481,7 @@ void Database::apply_schema(const std::string& schema_path) {
 
     impl_->begin_transaction();
     try {
-        execute_raw(schema_sql);
+        impl_->execute_raw(schema_sql);
         impl_->load_schema_metadata();
         impl_->commit();
     } catch (const std::exception& e) {

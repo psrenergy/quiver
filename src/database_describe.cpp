@@ -271,41 +271,40 @@ std::string Database::summarize_collection(const std::string& collection) const 
     for (const auto& scalar : list_scalar_attributes(collection)) {
         const std::string quoted_col = "\"" + scalar.name + "\"";
 
-        auto counts = query_int_rows(impl_->db,
-                                     "SELECT COUNT(*) - COUNT(" + quoted_col + "), COUNT(" + quoted_col + ") FROM " +
-                                         quoted_collection);
-        const int64_t null_count = counts[0][0];
-        const int64_t non_null_count = counts[0][1];
+        const auto counts = impl_->execute("SELECT COUNT(*) - COUNT(" + quoted_col + "), COUNT(" + quoted_col +
+                                           ") FROM " + quoted_collection);
+        const int64_t null_count = *counts[0].get_integer(0);
+        const int64_t non_null_count = *counts[0].get_integer(1);
         out << "    - " << scalar.name << ": " << non_null_count << " non-null, " << null_count << " null";
 
         // Integer value distribution: only for non-primary-key INTEGER columns whose distinct
         // cardinality is bounded. The LIMIT-based pre-check keeps high-cardinality columns
-        // (ids, large FKs) from materializing a huge list.
+        // (ids, large FKs) from materializing a huge list. Both queries count integer cells only:
+        // a non-STRICT INTEGER column can also hold TEXT/REAL cells, which are not codes.
         if (scalar.data_type == DataType::Integer && !scalar.primary_key) {
-            auto distinct = query_int_rows(impl_->db,
-                                           "SELECT COUNT(*) FROM (SELECT DISTINCT " + quoted_col + " FROM " +
-                                               quoted_collection + " WHERE " + quoted_col + " IS NOT NULL LIMIT ?)",
-                                           {kMaxDistributionCardinality + 1});
-            if (distinct[0][0] > 0 && distinct[0][0] <= kMaxDistributionCardinality) {
-                auto rows =
-                    query_int_rows(impl_->db,
-                                   "SELECT " + quoted_col + ", COUNT(*) FROM " + quoted_collection + " WHERE " +
-                                       quoted_col + " IS NOT NULL GROUP BY " + quoted_col + " ORDER BY " + quoted_col);
+            const auto integer_cells = " WHERE typeof(" + quoted_col + ") = 'integer'";
+            const auto distinct_sql = "SELECT COUNT(*) FROM (SELECT DISTINCT " + quoted_col + " FROM " +
+                                      quoted_collection + integer_cells + " LIMIT ?)";
+            const auto distinct = *impl_->execute(distinct_sql, {kMaxDistributionCardinality + 1})[0].get_integer(0);
+            if (distinct > 0 && distinct <= kMaxDistributionCardinality) {
+                const auto rows = impl_->execute("SELECT " + quoted_col + ", COUNT(*) FROM " + quoted_collection +
+                                                 integer_cells + " GROUP BY " + quoted_col + " ORDER BY " + quoted_col);
                 // D2-12: the lookup sits here, not at the top of the per-scalar loop, so a
                 // collection of TEXT/REAL/PK scalars pays zero two-level map lookups.
                 const auto* meta = impl_->ui_metadata.find(collection, scalar.name);
                 out << "; values {";
-                for (size_t i = 0; i < rows.size(); ++i) {
+                for (size_t i = 0; i < rows.row_count(); ++i) {
                     if (i != 0) {
                         out << ", ";
                     }
-                    out << rows[i][0];
+                    const int64_t code = *rows[i].get_integer(0);
+                    out << code;
                     // D2-06 / project decision D-09: deliberate divergence from D-06's enum
                     // clause. There the entry IS the vocabulary, so an empty-normalizing label
                     // drops the whole entry; here the entry is an observed row count, so an
                     // empty-normalizing label drops only the annotation and keeps the entry.
                     if (meta) {
-                        auto label_it = meta->enum_labels.find(rows[i][0]);
+                        auto label_it = meta->enum_labels.find(code);
                         if (label_it != meta->enum_labels.end()) {
                             const std::string normalized_label = normalize_ui_text(label_it->second);
                             if (!normalized_label.empty()) {
@@ -313,7 +312,7 @@ std::string Database::summarize_collection(const std::string& collection) const 
                             }
                         }
                     }
-                    out << ": " << rows[i][1];
+                    out << ": " << *rows[i].get_integer(1);
                 }
                 out << "}";
             }
@@ -334,7 +333,8 @@ std::string Database::summarize_collection(const std::string& collection) const 
         out << header << "\n";
         for (const auto& group_name : groups) {
             const auto table = group_table_name(collection, group_name, type);
-            const auto non_empty = query_int_rows(impl_->db, "SELECT COUNT(DISTINCT id) FROM \"" + table + "\"")[0][0];
+            const auto non_empty =
+                *impl_->execute("SELECT COUNT(DISTINCT id) FROM \"" + table + "\"")[0].get_integer(0);
             out << "    - " << group_name << ": " << non_empty << "/" << element_count << " non-empty\n";
         }
     }

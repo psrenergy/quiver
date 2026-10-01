@@ -2,6 +2,7 @@
 #define QUIVER_DATABASE_IMPL_H
 
 #include "quiver/database.h"
+#include "quiver/result.h"
 #include "quiver/schema.h"
 #include "quiver/schema_validator.h"
 #include "quiver/type_validator.h"
@@ -18,39 +19,6 @@
 namespace quiver {
 
 using StmtPtr = std::unique_ptr<sqlite3_stmt, decltype(&sqlite3_finalize)>;
-
-// Run a read-only query that yields integer columns and collect the rows. Prepares/steps
-// directly on the raw sqlite3* rather than through Database::execute(), which is non-const and
-// unusable from const methods (number_of_elements, current_version, describe/summarize_collection).
-// Only integer parameters are needed (LIMIT bounds, ids), and every column read is an int64.
-inline std::vector<std::vector<int64_t>>
-query_int_rows(sqlite3* db, const std::string& sql, const std::vector<int64_t>& parameters = {}) {
-    sqlite3_stmt* raw_stmt = nullptr;
-    if (sqlite3_prepare_v2(db, sql.c_str(), -1, &raw_stmt, nullptr) != SQLITE_OK) {
-        throw std::runtime_error("Failed to prepare statement: " + std::string(sqlite3_errmsg(db)));
-    }
-    StmtPtr stmt(raw_stmt, sqlite3_finalize);
-
-    for (size_t i = 0; i < parameters.size(); ++i) {
-        sqlite3_bind_int64(stmt.get(), static_cast<int>(i + 1), parameters[i]);
-    }
-
-    const int col_count = sqlite3_column_count(stmt.get());
-    std::vector<std::vector<int64_t>> rows;
-    int rc = 0;
-    while ((rc = sqlite3_step(stmt.get())) == SQLITE_ROW) {
-        std::vector<int64_t> row;
-        row.reserve(col_count);
-        for (int c = 0; c < col_count; ++c) {
-            row.push_back(sqlite3_column_int64(stmt.get(), c));
-        }
-        rows.push_back(std::move(row));
-    }
-    if (rc != SQLITE_DONE) {
-        throw std::runtime_error("Failed to execute statement: " + std::string(sqlite3_errmsg(db)));
-    }
-    return rows;
-}
 
 // One group table's share of an element write: the element's arrays that route to it, each
 // FK-resolved against that table. Built by Impl::prepare_group_data, written by
@@ -82,6 +50,12 @@ struct Database::Impl {
     // (open(), from_schema, validate_migrations) degrades identically to "no ui/ present".
     UiMetadata ui_metadata;
 
+    // The one statement runner (defined in database.cpp). const: it only uses the sqlite3 handle,
+    // so const readers (number_of_elements, current_version, describe*) go through it too.
+    Result execute(const std::string& sql, const std::vector<Value>& parameters = {}) const;
+    // sqlite3_exec for multi-statement scripts (migrations, apply_schema, import's DELETE).
+    void execute_raw(const std::string& sql) const;
+
     // Takes no operation name: reading an existing database's schema on first use is what makes
     // open() usable, and a database that is not a quiver database throws the validator's own
     // (already self-describing) reason from here rather than "Cannot <op>: no schema loaded".
@@ -100,30 +74,29 @@ struct Database::Impl {
 
     // A missing id is Pattern 2 everywhere (root design decision), so every id-scoped write
     // resolves it through here rather than letting SQLite report a foreign-key failure.
-    void require_element(const std::string& collection, int64_t id, Database& db) const {
-        if (db.execute("SELECT 1 FROM " + collection + " WHERE id = ?", {id}).empty()) {
+    void require_element(const std::string& collection, int64_t id) const {
+        if (execute("SELECT 1 FROM " + collection + " WHERE id = ?", {id}).empty()) {
             throw std::runtime_error("Element not found: " + std::to_string(id) + " in collection '" + collection +
                                      "'");
         }
     }
 
     // The one label -> id lookup; callers own the throw (Pattern 2 vs Pattern 3).
-    static std::optional<int64_t> lookup_id_by_label(const std::string& table, const std::string& label, Database& db) {
-        auto result = db.execute("SELECT id FROM " + table + " WHERE label = ?", {label});
+    std::optional<int64_t> lookup_id_by_label(const std::string& table, const std::string& label) const {
+        auto result = execute("SELECT id FROM " + table + " WHERE label = ?", {label});
         if (result.empty()) {
             return std::nullopt;
         }
         return result[0].get_integer(0);
     }
 
-    int64_t
-    resolve_label(const std::string& collection, const std::string& label, const char* operation, Database& db) const {
+    int64_t resolve_label(const std::string& collection, const std::string& label, const char* operation) const {
         require_collection(collection, operation);
         // Any table is accepted by require_collection (it only checks has_table), so a group table
         // would otherwise reach the SELECT and leak a raw "no such column: label" prepare error.
         require_column(collection, "label", operation);
 
-        auto id = lookup_id_by_label(collection, label, db);
+        auto id = lookup_id_by_label(collection, label);
         if (!id) {
             throw std::runtime_error("Element not found: label '" + label + "' in collection '" + collection + "'");
         }
@@ -142,8 +115,7 @@ struct Database::Impl {
         }
     }
 
-    Value
-    resolve_fk_label(const TableDefinition& table_def, const std::string& column, const Value& value, Database& db) {
+    Value resolve_fk_label(const TableDefinition& table_def, const std::string& column, const Value& value) {
         if (!std::holds_alternative<std::string>(value)) {
             return value;
         }
@@ -153,7 +125,7 @@ struct Database::Impl {
         // Check if column is a foreign key
         for (const auto& fk : table_def.foreign_keys) {
             if (fk.from_column == column) {
-                auto id = lookup_id_by_label(fk.to_table, str_val, db);
+                auto id = lookup_id_by_label(fk.to_table, str_val);
                 if (!id) {
                     throw std::runtime_error("Failed to resolve label '" + str_val + "' to ID in table '" +
                                              fk.to_table + "'");
@@ -175,12 +147,12 @@ struct Database::Impl {
 
     // Resolve FK labels among an element's scalars against the collection table. Arrays are
     // resolved by prepare_group_data, against each group table they are written to.
-    std::map<std::string, Value>
-    resolve_scalar_fk_labels(const std::string& collection, const std::map<std::string, Value>& scalars, Database& db) {
+    std::map<std::string, Value> resolve_scalar_fk_labels(const std::string& collection,
+                                                          const std::map<std::string, Value>& scalars) {
         const auto& collection_def = *schema->get_table(collection);
         std::map<std::string, Value> resolved;
         for (const auto& [name, value] : scalars) {
-            resolved[name] = resolve_fk_label(collection_def, name, value, db);
+            resolved[name] = resolve_fk_label(collection_def, name, value);
         }
         return resolved;
     }
@@ -207,8 +179,7 @@ struct Database::Impl {
                            const std::string& group,
                            GroupTableType type,
                            int64_t id,
-                           const std::vector<std::map<std::string, Value>>& rows,
-                           Database& db);
+                           const std::vector<std::map<std::string, Value>>& rows);
 
     // Types and equal lengths of the columns bound for one group table. Both callers
     // (prepare_group_data, update_group_rows) run it for every table they will touch *before*
@@ -242,10 +213,9 @@ struct Database::Impl {
                                       GroupTableType type,
                                       const std::map<std::string, std::vector<Value>>& columns,
                                       int64_t element_id,
-                                      bool delete_existing,
-                                      Database& db) {
+                                      bool delete_existing) {
         if (delete_existing) {
-            db.execute("DELETE FROM " + table_name + " WHERE id = ?", {element_id});
+            execute("DELETE FROM " + table_name + " WHERE id = ?", {element_id});
         }
 
         const size_t num_rows = columns.empty() ? 0 : columns.begin()->second.size();
@@ -267,7 +237,7 @@ struct Database::Impl {
             }
 
             sql += ") VALUES (" + placeholders + ")";
-            db.execute(sql, parameters);
+            execute(sql, parameters);
         }
         logger->debug("Inserted {} {} rows into {}", num_rows, group_table_noun(type), table_name);
     }
@@ -279,8 +249,7 @@ struct Database::Impl {
     std::map<std::string, GroupColumns> prepare_group_data(const char* caller,
                                                            const std::string& collection,
                                                            const std::map<std::string, std::vector<Value>>& arrays,
-                                                           bool delete_existing,
-                                                           Database& db) {
+                                                           bool delete_existing) {
         std::map<std::string, GroupColumns> tables;
 
         for (const auto& [array_name, values] : arrays) {
@@ -323,7 +292,7 @@ struct Database::Impl {
                 auto& resolved = entry.columns[array_name];
                 resolved.reserve(values.size());
                 for (const auto& value : values) {
-                    resolved.push_back(resolve_fk_label(table_def, array_name, value, db));
+                    resolved.push_back(resolve_fk_label(table_def, array_name, value));
                 }
             }
         }
@@ -335,12 +304,10 @@ struct Database::Impl {
     }
 
     // The write half: add (create) or replace (update) the element's rows in every prepared table.
-    void insert_group_data(const std::map<std::string, GroupColumns>& tables,
-                           int64_t element_id,
-                           bool delete_existing,
-                           Database& db) {
+    void
+    insert_group_data(const std::map<std::string, GroupColumns>& tables, int64_t element_id, bool delete_existing) {
         for (const auto& [table_name, entry] : tables) {
-            insert_rows_into_group_table(table_name, entry.type, entry.columns, element_id, delete_existing, db);
+            insert_rows_into_group_table(table_name, entry.type, entry.columns, element_id, delete_existing);
         }
     }
 

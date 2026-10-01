@@ -110,7 +110,7 @@ Settled questions — don't relitigate without the user; each was decided delibe
   `datetime::is_valid_iso8601` (`src/utils/datetime.h`), is called from both halves of the typing
   policy above. The core never normalizes — padding a partial date to midnight would make
   `read_scalar_string_by_id` return something the caller never wrote (leading/trailing whitespace
-  is the exception: `Database::execute` trims every bound string, so the predicate trims too and
+  is the exception: `Impl::execute` trims every bound string, so the predicate trims too and
   the gate judges what is actually stored). `import_csv` is the deliberate exception to
   "no normalizing": it *parses* a cell, so it canonicalizes to `YYYY-MM-DDTHH:MM:SS` (which is what
   lets an exported date-only value round-trip) — and then runs the same predicate over the

@@ -13,11 +13,11 @@ int64_t Database::create_element(const std::string& collection, const Element& e
 
     // Resolve and validate every scalar and array before the INSERT: TransactionGuard no-ops inside
     // a caller-owned transaction or a dry run, so a throw after it would leave the element behind.
-    auto resolved = impl_->resolve_scalar_fk_labels(collection, scalars, *this);
+    auto resolved = impl_->resolve_scalar_fk_labels(collection, scalars);
     for (const auto& [name, value] : resolved) {
         impl_->type_validator->validate_scalar("create_element", collection, name, value);
     }
-    auto groups = impl_->prepare_group_data("create_element", collection, element.arrays(), false, *this);
+    auto groups = impl_->prepare_group_data("create_element", collection, element.arrays(), false);
 
     Impl::TransactionGuard txn(*impl_);
 
@@ -39,12 +39,12 @@ int64_t Database::create_element(const std::string& collection, const Element& e
     }
     sql += ") VALUES (" + placeholders + ")";
 
-    execute(sql, parameters);
+    impl_->execute(sql, parameters);
     const auto element_id = sqlite3_last_insert_rowid(impl_->db);
     impl_->logger->debug("Inserted element with id: {}", element_id);
 
     // prepare_group_data already dropped empty arrays; everything left was validated above.
-    impl_->insert_group_data(groups, element_id, false, *this);
+    impl_->insert_group_data(groups, element_id, false);
 
     txn.commit();
     impl_->logger->info("Created element {} in {}", element_id, collection);

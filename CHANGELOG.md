@@ -5,6 +5,14 @@ All notable changes to Quiver are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entries that require
 callers to change something are prefixed **BREAKING** and say what to do.
 
+## [0.12.8] — unreleased
+
+### Fixed
+
+- **`summarize_collection()`'s value distribution counts only integer cells.** In a non-STRICT
+  INTEGER column a TEXT or REAL cell used to appear as a bogus code (`'abc'` as `0`, `1.5` as `1`)
+  and count toward the 64-code cutoff.
+
 ## [0.12.7] — unreleased
 
 ### Changed

@@ -105,6 +105,14 @@ TEST(DatabaseDescribe, SummarizeDistributionCardinalityBoundary) {
     }
 }
 
+// A non-STRICT INTEGER column can hold TEXT and REAL cells; the value distribution counts only
+// integers (they used to read back as codes 0 and 1).
+TEST(DatabaseDescribe, SummarizeDistributionSkipsNonIntegerCells) {
+    auto db = open(VALID_SCHEMA("non_strict_vector.sql"));
+    db.query_string("INSERT INTO Items (label, code) VALUES ('a', 'not-a-number'), ('b', 1.5), ('c', 1)");
+    EXPECT_TRUE(contains(db.summarize_collection("Items"), "code: 3 non-null, 0 null; values {1: 1}\n"));
+}
+
 TEST(DatabaseDescribe, SummarizeNotFound) {
     auto db = open(VALID_SCHEMA("describe_multi_group.sql"));
     EXPECT_THROW(db.summarize_collection("Nope"), std::runtime_error);

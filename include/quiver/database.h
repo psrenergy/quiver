@@ -269,12 +269,6 @@ private:
     struct Impl;
     std::unique_ptr<Impl> impl_;
 
-    // Internal helper for executing raw SQL (for migrations)
-    void execute_raw(const std::string& sql);
-
-    // Internal method for parameterized queries
-    Result execute(const std::string& sql, const std::vector<Value>& parameters = {});
-
     // Internal methods
     void set_version(int64_t version);
     void migrate_up(const std::string& migration_path);

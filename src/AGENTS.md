@@ -382,7 +382,7 @@ impl_->logger->debug("Opening database: {}", path);
 
 - **Group writes are unified, and checked before anything is written** (`database_impl.h`): one
   `validate_group_columns(caller, table, type, columns)` checks types and equal lengths, and one
-  `insert_rows_into_group_table(table, type, columns, id, delete_existing, db)` does the DELETE and
+  `insert_rows_into_group_table(table, type, columns, id, delete_existing)` does the DELETE and
   INSERTs, for vector, set and time-series tables alike. For `create_element` / `update_element`,
   `prepare_group_data` routes each array to its table(s) through a single
   `table_name -> GroupColumns` map, FK-resolves it against **each** table it is written to (a
@@ -433,7 +433,7 @@ impl_->logger->debug("Opening database: {}", path);
   nothing special: it deletes and re-inserts one group table whose ids and FK cells are all
   resolved to existing elements.
 - **Label→id resolution has one query** (`database_impl.h`): `Impl::lookup_id_by_label(table,
-  label, db)` is the only `SELECT id ... WHERE label = ?`, shared by `Impl::resolve_label`
+  label)` is the only `SELECT id ... WHERE label = ?`, shared by `Impl::resolve_label`
   (Pattern 2, backs every `_by_label` form) and `Impl::resolve_fk_label` (Pattern 3) — the two
   report a miss differently, so the throw stays with each caller. `resolve_label` calls
   `require_column(collection, "label")` because `require_collection` only checks `has_table`, so a
@@ -472,10 +472,10 @@ impl_->logger->debug("Opening database: {}", path);
 - **`describe*` return text reports** (`database_describe.cpp`): `describe()` (whole-DB overview),
   `describe_collection(c)` (one collection's structure), `summarize_collection(c)` (per-scalar
   null/non-null counts + low-cardinality integer distributions [threshold `kMaxDistributionCardinality`]
-  + per-group empty/non-empty counts) all build an `std::ostringstream` and return `std::string`. These
-  const methods run their own read-only SQL via an anon-namespace `query_int_rows` helper that
-  prepares/steps directly on `impl_->db` (the `current_version() const` pattern — `execute()` is
-  non-const). All three are bound 1:1 across the C API and every binding as string getters.
+  + per-group empty/non-empty counts) all build an `std::ostringstream` and return `std::string`. They
+  run their SQL through `Impl::execute`, which is const. The distribution counts only cells whose
+  `typeof` is `integer`, since a non-STRICT INTEGER column can also hold TEXT/REAL. All three are
+  bound 1:1 across the C API and every binding as string getters.
 - **`TypeValidator` threads the caller's name** (`type_validator.cpp`): call sites pass
   `"create_element"` / `"update_element"` so messages read `"Cannot create_element: type
   mismatch for column ..."` (root Pattern 1).
@@ -567,9 +567,9 @@ impl_->logger->debug("Opening database: {}", path);
   Integer`. The raw `ColumnDefinition.not_null` stays the literal PRAGMA value — `csv_import`
   (empty-cell rejection) and `schema_validator` read it directly and must not see PK flip. This is
   what lets Julia's nullability-aware readers return a concrete `Vector{Int64}` for `id`.
-- **`execute` validates parameter count** (`database.cpp`): `sqlite3_bind_parameter_count` must
-  equal `parameters.size()`, else it throws — the single guard for every `query_*` and internal
-  parameterized statement.
+- **`execute` validates parameter count** (`Impl::execute`, `database.cpp`):
+  `sqlite3_bind_parameter_count` must equal `parameters.size()`, else it throws — the single guard
+  for every `query_*` and internal parameterized statement.
 - **Utilities**: `quiver::string::new_c_str` / `trim` in `src/utils/string.h`; ISO 8601
   parse/format helpers in `src/utils/datetime.h` — `parse_iso8601` accepts `YYYY-MM-DD` with an
   optional `THH:MM:SS`/` HH:MM:SS`, every field fixed-width and zero-padded, year `0001`-`9999`,
@@ -586,7 +586,7 @@ impl_->logger->debug("Opening database: {}", path);
   `2024-01-0110:30:00`.) `parse_iso8601` fills `tm_wday`/`tm_yday` too — nothing else does, and
   `format_datetime` feeds the `tm` to `strftime`, so `%a`/`%A`/`%j`/`%U`/`%W` would otherwise
   report every date as a Sunday on day 001. `is_valid_iso8601` trims before parsing, because
-  `Database::execute` trims every bound string and the gate must judge the value that is stored.
+  `Impl::execute` trims every bound string and the gate must judge the value that is stored.
   `format_utc` always writes the full `T` form;
   use `is_date_time_column` (`data_type.h`) for `date_`-prefix checks (one legacy hand-rolled
   `starts_with("date_")` remains in `schema_validator.cpp`).
