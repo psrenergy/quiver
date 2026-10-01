@@ -28,6 +28,13 @@ callers to change something are prefixed **BREAKING** and say what to do.
   imports like any other column of its type. A group-table cell naming a missing element now
   reports the same `Could not find an existing element ... Create the element before referencing
   it.` text as the scalar path; it lacked that last sentence before.
+- **Schema errors name the offending column.** A column type Quiver does not support now fails
+  with `Failed to validate schema: column 'payload' in table 'Items' has unsupported type 'BLOB'`
+  (was `Unknown data type: BLOB`), and an unsafe table name with `Failed to validate schema:
+  invalid table name '...'` (was `Cannot query columns: invalid table name: ...`).
+- **BREAKING (C++ only) — `data_type_from_string` (`quiver/data_type.h`) returns
+  `std::optional<DataType>`.** It returns `std::nullopt` for an unsupported type instead of
+  throwing `Unknown data type: ...`. *Adapt:* check the optional before using it.
 
 ### Added
 
