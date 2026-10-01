@@ -17,6 +17,13 @@ namespace {
 // (and float/text/primary-key columns) report coverage counts only.
 constexpr int64_t kMaxDistributionCardinality = 64;
 
+// The group kinds every report lists, in order, under these section headers.
+constexpr std::pair<const char*, GroupTableType> kGroupSections[] = {
+    {"  Vectors:", GroupTableType::Vector},
+    {"  Sets:", GroupTableType::Set},
+    {"  Time Series:", GroupTableType::TimeSeries},
+};
+
 // Print a group's value columns in declaration order; a time series' dimension
 // columns (its primary key minus id -- the set find_dimension_columns returns) are
 // bracketed, vector tables hide their structural vector_index.
@@ -201,12 +208,7 @@ void write_collection_section(std::ostream& out,
         }
     }
 
-    const std::pair<const char*, GroupTableType> sections[] = {
-        {"  Vectors:", GroupTableType::Vector},
-        {"  Sets:", GroupTableType::Set},
-        {"  Time Series:", GroupTableType::TimeSeries},
-    };
-    for (const auto& [header, type] : sections) {
+    for (const auto& [header, type] : kGroupSections) {
         auto groups = schema.group_names(collection, type);
         if (groups.empty())
             continue;
@@ -308,12 +310,7 @@ std::string Database::summarize_collection(const std::string& collection) const 
     }
 
     // Per group: count elements that have at least one row in the group table.
-    const std::pair<const char*, GroupTableType> sections[] = {
-        {"  Vectors:", GroupTableType::Vector},
-        {"  Sets:", GroupTableType::Set},
-        {"  Time Series:", GroupTableType::TimeSeries},
-    };
-    for (const auto& [header, type] : sections) {
+    for (const auto& [header, type] : kGroupSections) {
         auto groups = impl_->schema->group_names(collection, type);
         if (groups.empty())
             continue;

@@ -278,3 +278,90 @@ From the repo root:
 - `TransactionGuard` (plan 60).
 - Lifting the "refuses inside a transaction" precondition.
 - `bin_to_csv`/`csv_to_bin` (plans 13, 14).
+
+## Implementation notes
+
+Implemented on `rs/plan58` at master `21ccb91`. All three dependencies had landed: 01 (`0f590ad`),
+53 (`5b12950`) and 57 (`21ccb91`). Before writing code, a read-only adversarial review checked the
+design for behaviour drift. Two of its six agents finished before a session limit; I re-traced the
+other two lenses (group path, test fallout) by hand. The review found four places where this plan,
+followed literally, would have been wrong.
+
+**Corrections to the plan**
+- **The `col_def` fallbacks are not dead.** `db_cols` comes from `SELECT *`, which lists generated
+  columns, while `PRAGMA table_info` (the Schema's source) omits them (see
+  `schema_validator.cpp`'s FK loop). The same is true of a column added by raw DDL after the
+  schema loaded. `*get_column(...)` would have dereferenced nullptr. `convert_cell` therefore takes
+  `const ColumnDefinition*` and keeps the fallback once, inside: a null column converts as nullable
+  TEXT, and the INSERT reports a generated column exactly as before.
+- **Deleting `get_time_series_metadata` from import dropped a guard.** Its `find_dimension_column`
+  was the only thing that made `import_csv("Collection", "files", ...)` throw.
+  `time_series_table_name(c, "files")` is the `_time_series_files` table, and `has_table`, which
+  `find_group_table` uses, accepts it. Without the guard, a header-only CSV silently cleared the
+  collection's file references. The group branch now calls
+  `internal::find_dimension_column(table_def)` for a time-series group at the same point
+  `group_meta` used to be built, so the old message and its precedence are unchanged. This also
+  keeps a dateless-key group (`Meter_time_series_blocks`) refused, as before and symmetric with
+  export. Pinned by `ImportCSV_TimeSeriesFilesTable_IsNotAGroup`, which fails if the guard is
+  removed.
+- **Export keeps its dimension override.** The Constraints said to keep it; §6 said to delete it.
+  The time-series ORDER BY branch already computes the dimension, so
+  `type_map[dimension] = is_date_time_column(dimension) ? DateTime : Text` sits there, and export
+  output is byte-identical even for non-STRICT tables.
+- **CHANGELOG** covers the `date_` typing change as well as the FK-miss suffix (see deltas).
+
+**Drift fixed**
+- The file has no anonymous namespace; its helpers are `static`, and so is `convert_cell` (placed
+  after `resolve_enum_value`). `parse_float` is `utils::parse_float`.
+- Neither CSV file included `database_internal.h`; both do now, for `find_dimension_column`.
+- The group DELETE stays `impl_->execute_raw`.
+- Test names follow the file's `TEST(DatabaseCSV, ImportCSV_...)` convention. The plan's
+  `TEST(Database, ImportCsvBadCellInLastRowWritesNothing)` became
+  `ImportCSV_Scalar_BadCellInLastRow_WritesNothing`.
+- Type `export_csv`'s map by iterating `table_def.columns` directly (name → type), which is
+  equivalent to `column_order` + `columns.at`.
+- `GroupTableType group_type{}` also clears the MSVC C4701 that plan 57's notes mention.
+
+**Shape, beyond the plan's letter**
+- Two things in the scalar loop keep error precedence exactly as before:
+  - The duplicate-label check stays the first thing done for each row, inside the conversion
+    loop, rather than in a separate loop before it.
+  - Only a **non-empty** self-FK cell becomes `nullptr` directly. An empty one still goes through
+    `convert_cell`, so a NOT NULL self-FK column still reports `Column x cannot be NULL.`
+- `self_fk_cols` is filled in the same `fk_map` loop that builds `fk_label_maps`, instead of a
+  second loop over the same map.
+- The two INSERT builders and plan 01's scalar write steps moved verbatim into the one tail.
+  Merging the INSERT builders was not in scope.
+
+**Behaviour deltas (non-breaking, in CHANGELOG)**
+1. A group-table FK miss now carries the scalar path's `.\nCreate the element before referencing
+   it.` suffix.
+2. A `date_`-named column that is not TEXT is typed by its declared type. Examples are
+   `date_x INTEGER`/`REAL`, and a `date_`-named FK (`date_id → Date`, self-FK included). Before,
+   the `|| is_date_time_column` re-checks sent every cell through `parse_datetime_import`, so no
+   number or label could be imported. Pinned by
+   `ImportCSV_DatePrefixedIntegerColumn_ImportsByDeclaredType`.
+
+Nothing else changes in import or export.
+
+**Tests**
+- Test-first: `ImportCSV_Vector_FK_InvalidLabel_Throws` (C++) and
+  `ImportCSV_Vector_FK_InvalidLabel_ReturnsError` (C API) gained the suffix assertion. Both failed
+  before the change: `Expected: (msg.find("Create the element before referencing it")) !=
+  (std::string::npos)`.
+- `ImportCSV_DatePrefixedIntegerColumn_ImportsByDeclaredType` fails before the change with
+  `Timestamp 7 is not valid`.
+- `ImportCSV_Scalar_BadCellInLastRow_WritesNothing` and `ImportCSV_TimeSeriesFilesTable_IsNotAGroup`
+  are pins. They pass before and after: import always owns its transaction, so a mid-write
+  failure would be rolled back anyway. The second guards correction 2.
+
+**For later plans**
+- **60:** `import_csv` now has one `try`, whose first statement is `impl_->begin_transaction()`.
+  The catch is `rollback()` plus the `UNIQUE constraint` → "duplicate entries" rewrite. A
+  `TransactionGuard` declared there replaces the begin, commit and rollback; keep the rewrite.
+- **61:** both CSV files now include `database_internal.h`. Re-check `<set>` (import still uses
+  it), `<algorithm>` (import's `std::find`; export no longer needs it), `<cctype>`, `<iomanip>`.
+- **Maintainer decision left open:** a time-series group whose key holds no date column is still
+  refused by import, as before. The time-series writers need only the key, so making it importable
+  would be consistent with them. Export would still refuse it, though, since its ORDER BY needs
+  the dimension.

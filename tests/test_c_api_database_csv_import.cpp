@@ -675,6 +675,7 @@ TEST(DatabaseCApiCSV, ImportCSV_Vector_FK_InvalidLabel_ReturnsError) {
     std::string err = quiver_get_last_error();
     EXPECT_NE(err.find("Could not find an existing element from collection Parent with label NonExistent"),
               std::string::npos);
+    EXPECT_NE(err.find("Create the element before referencing it"), std::string::npos);
 
     fs::remove(csv_path);
     quiver_database_close(db);

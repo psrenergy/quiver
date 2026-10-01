@@ -1,5 +1,6 @@
 #include "csv/csv_write.h"
 #include "database_impl.h"
+#include "database_internal.h"
 #include "quiver/options.h"
 #include "schema.h"
 #include "utils/datetime.h"
@@ -201,27 +202,14 @@ void Database::export_csv(const std::string& collection,
         // Group export
         impl_->require_collection(collection, "export_csv");
 
-        // Determine group type by checking schema for matching table names
-        std::string table_name;
-        GroupTableType group_type{};
-
-        auto vec_table = Schema::vector_table_name(collection, group);
-        auto set_table = Schema::set_table_name(collection, group);
-        auto ts_table = Schema::time_series_table_name(collection, group);
-
-        if (impl_->schema->has_table(vec_table)) {
-            table_name = vec_table;
-            group_type = GroupTableType::Vector;
-        } else if (impl_->schema->has_table(set_table)) {
-            table_name = set_table;
-            group_type = GroupTableType::Set;
-        } else if (impl_->schema->has_table(ts_table)) {
-            table_name = ts_table;
-            group_type = GroupTableType::TimeSeries;
-        } else {
+        const auto match = impl_->schema->find_group_table(collection, group);
+        if (!match) {
             throw std::runtime_error("Cannot export_csv: group not found: '" + group + "' in collection '" +
                                      collection + "'");
         }
+        const auto& table_name = match->table_name;
+        const auto group_type = match->type;
+        const auto& table_def = *impl_->schema->get_table(table_name);
 
         // Get group table columns in schema definition order
         auto schema_result = impl_->execute("SELECT * FROM " + table_name + " LIMIT 0");
@@ -230,29 +218,13 @@ void Database::export_csv(const std::string& collection,
         // All group table columns become CSV columns (label first, then group data columns)
         std::vector<std::string> csv_columns(all_group_columns.begin(), all_group_columns.end());
 
-        // Build DataType map from group metadata
+        // DataType map from the table's columns. id is always Text as it takes the label value from the
+        // parent collection.
         std::unordered_map<std::string, DataType> type_map;
-        GroupMetadata group_meta{};
-        if (group_type == GroupTableType::Vector) {
-            group_meta = get_vector_metadata(collection, group);
-        } else if (group_type == GroupTableType::Set) {
-            group_meta = get_set_metadata(collection, group);
-        } else {
-            group_meta = get_time_series_metadata(collection, group);
+        for (const auto& [name, col] : table_def.columns) {
+            type_map[name] = col.type;
         }
-        for (const auto& vc : group_meta.value_columns) {
-            type_map[vc.name] = vc.data_type;
-        }
-        // id is always Text as it takes the label value from the parent collection
         type_map["id"] = DataType::Text;
-        // Dimension column (if time series) is DateTime if its name starts with "date_"
-        if (!group_meta.dimension_column.empty()) {
-            if (is_date_time_column(group_meta.dimension_column)) {
-                type_map[group_meta.dimension_column] = DataType::DateTime;
-            } else {
-                type_map[group_meta.dimension_column] = DataType::Text;
-            }
-        }
 
         // Build SELECT query: C.label + group data columns with JOIN
         std::string select_cols = "C.label";
@@ -269,7 +241,10 @@ void Database::export_csv(const std::string& collection,
         } else if (group_type == GroupTableType::Set) {
             order_clause = "ORDER BY G.id";
         } else {
-            order_clause = "ORDER BY G.id, G." + group_meta.dimension_column;
+            const auto dimension = internal::find_dimension_column(table_def);
+            // The dimension column is DateTime if its name starts with "date_"
+            type_map[dimension] = is_date_time_column(dimension) ? DataType::DateTime : DataType::Text;
+            order_clause = "ORDER BY G.id, G." + dimension;
         }
 
         std::string query = "SELECT " + select_cols + " FROM " + table_name + " G JOIN " + collection +
@@ -278,7 +253,7 @@ void Database::export_csv(const std::string& collection,
         // Same as the scalar branch, minus the parent "id" column: it is already selected as
         // C.label by the JOIN above, and import resolves it against the parent collection.
         FkLabelMaps fk_labels;
-        for (const auto& fk : impl_->schema->get_table(table_name)->foreign_keys) {
+        for (const auto& fk : table_def.foreign_keys) {
             if (fk.from_column != "id") {
                 fk_labels[fk.from_column] = &id_to_label_map(fk.to_table);
             }

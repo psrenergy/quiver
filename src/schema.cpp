@@ -248,6 +248,17 @@ std::vector<Schema::TableMatch> Schema::find_all_tables_for_column(const std::st
     return matches;
 }
 
+std::optional<Schema::TableMatch> Schema::find_group_table(const std::string& collection,
+                                                           const std::string& group) const {
+    for (const auto type : {GroupTableType::Vector, GroupTableType::Set, GroupTableType::TimeSeries}) {
+        const auto name = group_table_name(collection, group, type);
+        if (has_table(name)) {
+            return TableMatch{name, type};
+        }
+    }
+    return std::nullopt;
+}
+
 std::vector<std::string> Schema::table_names() const {
     std::vector<std::string> names;
     names.reserve(tables_.size());
