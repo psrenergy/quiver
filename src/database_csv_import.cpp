@@ -9,7 +9,6 @@
 
 #include <algorithm>
 #include <cctype>
-#include <cstdio>
 #include <ctime>
 #include <filesystem>
 #include <fstream>
