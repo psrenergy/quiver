@@ -1,5 +1,6 @@
 #include "test_utils.h"
 
+#include <functional>
 #include <gtest/gtest.h>
 #include <quiver/database.h>
 #include <quiver/element.h>
@@ -201,6 +202,28 @@ TEST(Database, TimeSeriesGroupNotFound) {
     EXPECT_THROW(db.get_time_series_metadata("Collection", "nonexistent"), std::runtime_error);
 
     EXPECT_THROW(db.read_time_series_group("Collection", "nonexistent", 1), std::runtime_error);
+}
+
+TEST(Database, TimeSeriesOpsReportMissingGroupAsPattern2) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    auto id = db.create_element("Collection", quiver::Element().set("label", "A"));
+
+    const std::vector<std::function<void()>> ops = {
+        [&] { (void)db.read_time_series_group("Collection", "no_such_group", id); },
+        [&] { db.update_time_series_group("Collection", "no_such_group", id, {}); },
+        [&] { db.upsert_time_series_row("Collection", "no_such_group", id, {{"date_time", "2024-01-01"}}); },
+        [&] { (void)db.read_time_series_row("Collection", "no_such_group", "value", "2024-01-01"); },
+    };
+    for (const auto& op : ops) {
+        try {
+            op();
+            ADD_FAILURE() << "expected a throw";
+        } catch (const std::runtime_error& e) {
+            EXPECT_STREQ(e.what(), "Time series group not found: 'no_such_group' in collection 'Collection'");
+        }
+    }
 }
 
 TEST(Database, TimeSeriesCollectionNotFound) {

@@ -222,7 +222,12 @@ TEST(Database, ReadSetStringsInvalidAttribute) {
     config.set("label", std::string("Test Config"));
     db.create_element("Configuration", config);
 
-    EXPECT_THROW(db.read_set_strings("Collection", "nonexistent_attribute"), std::runtime_error);
+    try {
+        (void)db.read_set_strings("Collection", "nonexistent_attribute");
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), "Set attribute not found: 'nonexistent_attribute' in collection 'Collection'");
+    }
 }
 
 TEST(Database, ReadSetStringsByIdInvalidCollection) {

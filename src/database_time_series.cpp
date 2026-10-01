@@ -67,28 +67,20 @@ std::vector<GroupMetadata> Database::list_time_series_groups(const std::string& 
 }
 
 GroupMetadata Database::get_time_series_metadata(const std::string& collection, const std::string& group_name) const {
-    impl_->require_collection(collection, "get_time_series_metadata");
-
-    // Find the time series table for this group
-    auto ts_table = Schema::time_series_table_name(collection, group_name);
-    const auto* table_def = impl_->schema->get_table(ts_table);
-
-    if (!table_def) {
-        throw std::runtime_error("Time series group not found: '" + group_name + "' in collection '" + collection +
-                                 "'");
-    }
+    const auto& table_def =
+        impl_->require_group_table(collection, group_name, GroupTableType::TimeSeries, "get_time_series_metadata");
 
     GroupMetadata metadata;
     metadata.group_name = group_name;
-    metadata.dimension_column = internal::find_dimension_column(*table_def);
+    metadata.dimension_column = internal::find_dimension_column(table_def);
 
     // Add value columns in declaration order (skip id and dimension)
-    for (const auto& col_name : table_def->column_order) {
+    for (const auto& col_name : table_def.column_order) {
         if (col_name == "id" || col_name == metadata.dimension_column) {
             continue;
         }
 
-        metadata.value_columns.push_back(internal::scalar_metadata_with_fk(*table_def, col_name));
+        metadata.value_columns.push_back(internal::scalar_metadata_with_fk(table_def, col_name));
     }
 
     return metadata;
@@ -96,19 +88,14 @@ GroupMetadata Database::get_time_series_metadata(const std::string& collection, 
 
 std::vector<std::map<std::string, Value>>
 Database::read_time_series_group(const std::string& collection, const std::string& group, int64_t id) {
-    impl_->require_collection(collection, "read_time_series_group");
-
-    auto ts_table = impl_->schema->find_time_series_table(collection, group);
-    const auto* table_def = impl_->schema->get_table(ts_table);
-    if (!table_def) {
-        throw std::runtime_error("Time series table not found: " + ts_table);
-    }
-    auto dim_col = internal::find_dimension_column(*table_def);
+    const auto& table_def =
+        impl_->require_group_table(collection, group, GroupTableType::TimeSeries, "read_time_series_group");
+    auto dim_col = internal::find_dimension_column(table_def);
 
     // Build column list (excluding id)
     std::vector<std::string> columns;
     columns.push_back(dim_col);
-    for (const auto& [col_name, col] : table_def->columns) {
+    for (const auto& [col_name, col] : table_def.columns) {
         if (col_name != "id" && col_name != dim_col) {
             columns.push_back(col_name);
         }
@@ -121,7 +108,7 @@ Database::read_time_series_group(const std::string& collection, const std::strin
             sql += ", ";
         sql += columns[i];
     }
-    sql += " FROM " + ts_table + " WHERE id = ? ORDER BY " + dim_col;
+    sql += " FROM " + table_def.name + " WHERE id = ? ORDER BY " + dim_col;
 
     auto result = impl_->execute(sql, {id});
 
@@ -144,18 +131,13 @@ void Database::update_time_series_group(const std::string& collection,
                                         int64_t id,
                                         const std::vector<std::map<std::string, Value>>& rows) {
     impl_->logger->debug("Updating time series {}.{} for id {} with {} rows", collection, group, id, rows.size());
-    impl_->require_collection(collection, "update_time_series_group");
-
-    auto ts_table = impl_->schema->find_time_series_table(collection, group);
-    const auto* table_def = impl_->schema->get_table(ts_table);
-    if (!table_def) {
-        throw std::runtime_error("Time series table not found: " + ts_table);
-    }
-    auto dim_cols = internal::find_dimension_columns(*table_def);
+    const auto& table_def =
+        impl_->require_group_table(collection, group, GroupTableType::TimeSeries, "update_time_series_group");
+    auto dim_cols = internal::find_dimension_columns(table_def);
     const auto& dim_col = dim_cols.front();
 
     // Validate rows against schema before any writes
-    const auto schema_types = time_series_schema_types(*table_def);
+    const auto schema_types = time_series_schema_types(table_def);
     for (const auto& row : rows) {
         validate_time_series_row("update_time_series_group", schema_types, dim_cols, collection, group, row);
     }
@@ -163,7 +145,7 @@ void Database::update_time_series_group(const std::string& collection,
     Impl::TransactionGuard txn(*impl_);
 
     // Delete existing time series data for this element
-    auto delete_sql = "DELETE FROM " + ts_table + " WHERE id = ?";
+    auto delete_sql = "DELETE FROM " + table_def.name + " WHERE id = ?";
     impl_->execute(delete_sql, {id});
 
     if (rows.empty()) {
@@ -184,7 +166,7 @@ void Database::update_time_series_group(const std::string& collection,
     }
 
     // Build INSERT SQL
-    auto insert_sql = "INSERT INTO " + ts_table + " (id, " + dim_col;
+    auto insert_sql = "INSERT INTO " + table_def.name + " (id, " + dim_col;
     for (const auto& col : value_columns) {
         insert_sql += ", " + col;
     }
@@ -229,19 +211,14 @@ void Database::upsert_time_series_row(const std::string& collection,
                                       int64_t id,
                                       const std::map<std::string, Value>& row) {
     impl_->logger->debug("Upserting time series row {}.{} for id {} ({} columns)", collection, group, id, row.size());
-    impl_->require_collection(collection, "upsert_time_series_row");
-
-    auto ts_table = impl_->schema->find_time_series_table(collection, group);
-    const auto* table_def = impl_->schema->get_table(ts_table);
-    if (!table_def) {
-        throw std::runtime_error("Time series table not found: " + ts_table);
-    }
+    const auto& table_def =
+        impl_->require_group_table(collection, group, GroupTableType::TimeSeries, "upsert_time_series_row");
 
     // Every PK column except "id" is a dimension that must be supplied by the caller.
-    auto dim_cols = internal::find_dimension_columns(*table_def);
+    auto dim_cols = internal::find_dimension_columns(table_def);
 
     validate_time_series_row(
-        "upsert_time_series_row", time_series_schema_types(*table_def), dim_cols, collection, group, row);
+        "upsert_time_series_row", time_series_schema_types(table_def), dim_cols, collection, group, row);
 
     Impl::TransactionGuard txn(*impl_);
 
@@ -249,7 +226,7 @@ void Database::upsert_time_series_row(const std::string& collection,
     // deletes it and inserts the new one (upsert semantic). Any value column
     // omitted from the caller's row is not listed in the INSERT, so SQLite
     // leaves it as the column DEFAULT (NULL for nullable value columns).
-    std::string insert_sql = "INSERT OR REPLACE INTO " + ts_table + " (id";
+    std::string insert_sql = "INSERT OR REPLACE INTO " + table_def.name + " (id";
     std::string placeholders = "?";
     std::vector<Value> parameters;
     parameters.emplace_back(id);
@@ -279,22 +256,17 @@ std::vector<Value> Database::read_time_series_row(const std::string& collection,
                                                   const std::string& group,
                                                   const std::string& attribute,
                                                   const std::string& date_time) {
-    impl_->require_collection(collection, "read_time_series_row");
-
-    auto ts_table = impl_->schema->find_time_series_table(collection, group);
-    const auto* table_def = impl_->schema->get_table(ts_table);
-    if (!table_def) {
-        throw std::runtime_error("Time series table not found: " + ts_table);
-    }
+    const auto& table_def =
+        impl_->require_group_table(collection, group, GroupTableType::TimeSeries, "read_time_series_row");
     // One value per element needs one row per (element, date). A second dimension such as `block`
     // keeps several rows at each date, and picking one of them would be arbitrary.
-    if (internal::find_dimension_columns(*table_def).size() > 1) {
+    if (internal::find_dimension_columns(table_def).size() > 1) {
         throw std::runtime_error("Cannot read_time_series_row: group '" + group + "' of collection '" + collection +
                                  "' has more than one dimension column");
     }
-    auto dim_col = internal::find_dimension_column(*table_def);
+    auto dim_col = internal::find_dimension_column(table_def);
 
-    const auto* attr_col = table_def->get_column(attribute);
+    const auto* attr_col = table_def.get_column(attribute);
     if (!attr_col || attribute == "id" || attribute == dim_col) {
         throw std::runtime_error("Time series attribute not found: '" + attribute + "' in group '" + group +
                                  "' of collection '" + collection + "'");
@@ -308,8 +280,8 @@ std::vector<Value> Database::read_time_series_row(const std::string& collection,
     // For each element, the most recent non-null value where dim_col <= date_time.
     // Self-join: the subquery picks the latest non-null date per id, and the outer query reads the value there.
     // The outer IS NOT NULL repeats the subquery's filter, so the join can only land on a non-null row.
-    auto sql = "SELECT t.id, t." + attribute + " FROM " + ts_table + " t INNER JOIN (SELECT id, MAX(" + dim_col +
-               ") as max_dt FROM " + ts_table + " WHERE " + dim_col + " <= ? AND " + attribute + " IS NOT NULL " +
+    auto sql = "SELECT t.id, t." + attribute + " FROM " + table_def.name + " t INNER JOIN (SELECT id, MAX(" + dim_col +
+               ") as max_dt FROM " + table_def.name + " WHERE " + dim_col + " <= ? AND " + attribute + " IS NOT NULL " +
                "GROUP BY id) latest ON t.id = latest.id AND t." + dim_col + " = latest.max_dt AND t." + attribute +
                " IS NOT NULL ORDER BY t.id";
 
@@ -356,7 +328,7 @@ std::map<std::string, std::optional<std::string>> Database::read_time_series_fil
     impl_->logger->debug("Reading time series files for collection: {}", collection);
     impl_->require_collection(collection, "read_time_series_files");
 
-    auto tsf = impl_->schema->find_time_series_files_table(collection);
+    auto tsf = Schema::time_series_files_table_name(collection);
     const auto* table_def = impl_->schema->get_table(tsf);
     if (!table_def) {
         throw std::runtime_error("Time series files table not found: " + tsf);
@@ -403,7 +375,7 @@ void Database::update_time_series_files(const std::string& collection,
     impl_->logger->debug("Updating time series files for collection: {}", collection);
     impl_->require_collection(collection, "update_time_series_files");
 
-    auto tsf = impl_->schema->find_time_series_files_table(collection);
+    auto tsf = Schema::time_series_files_table_name(collection);
     const auto* table_def = impl_->schema->get_table(tsf);
     if (!table_def) {
         throw std::runtime_error("Time series files table not found: " + tsf);

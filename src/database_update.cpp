@@ -149,17 +149,8 @@ void Database::Impl::update_group_rows(const char* caller,
                                        GroupTableType type,
                                        int64_t id,
                                        const std::vector<std::map<std::string, Value>>& rows) {
-    require_collection(collection, caller);
-
+    const auto& table_def = require_group_table(collection, group, type, caller);
     const auto is_vector = type == GroupTableType::Vector;
-    const auto table_name =
-        is_vector ? Schema::vector_table_name(collection, group) : Schema::set_table_name(collection, group);
-    const auto* table_def = schema->get_table(table_name);
-    if (!table_def) {
-        // Same wording as get_vector_metadata / get_set_metadata for the same condition (Pattern 2).
-        throw std::runtime_error(std::string(is_vector ? "Vector" : "Set") + " group not found: '" + group +
-                                 "' in collection '" + collection + "'");
-    }
     require_element(collection, id);
 
     // Validate the union of every row's keys, not just rows[0]: a column named only in a later row
@@ -181,7 +172,7 @@ void Database::Impl::update_group_rows(const char* caller,
             throw std::runtime_error(std::string("Cannot ") + caller + ": column '" + col_name +
                                      "' is managed by the group table, not a value column");
         }
-        if (!table_def->has_column(col_name)) {
+        if (!table_def.has_column(col_name)) {
             throw std::runtime_error(std::string("Cannot ") + caller + ": column '" + col_name +
                                      "' not found in group '" + group + "' for collection '" + collection + "'");
         }
@@ -192,13 +183,13 @@ void Database::Impl::update_group_rows(const char* caller,
     auto columns = transpose_group_rows(rows, names);
     for (auto& [col_name, values] : columns) {
         for (auto& value : values) {
-            value = resolve_fk_label(caller, *table_def, col_name, value);
+            value = resolve_fk_label(caller, table_def, col_name, value);
         }
     }
-    validate_group_columns(caller, table_name, type, columns);
+    validate_group_columns(caller, table_def.name, type, columns);
 
     TransactionGuard txn(*this);
-    insert_rows_into_group_table(table_name, type, columns, id, true);
+    insert_rows_into_group_table(table_def.name, type, columns, id, true);
     txn.commit();
 }
 
