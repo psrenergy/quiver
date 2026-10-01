@@ -428,10 +428,13 @@ impl_->logger->debug("Opening database: {}", path);
   away fails the import on its foreign key. Deleting before writing also frees an omitted
   element's values in any other `UNIQUE` column; handing such a value from a kept element to a row
   written before it (any swap does) still fails (row-by-row UPDATEs) and rolls the import back,
-  except in a self-FK column, which (1) cleared. A repeated label is rejected in the validation
+  except in a self-FK column, which (1) cleared. A repeated label is rejected in the conversion
   pass, since the upsert would otherwise let the last row win silently. The group path needs
   nothing special: it deletes and re-inserts one group table whose ids and FK cells are all
-  resolved to existing elements.
+  resolved to existing elements. A time-series group still needs its date dimension
+  (`find_dimension_column`, as export and the readers do), which is also what refuses group
+  `files`: that name is the `_time_series_files` table, and a header-only CSV would clear it. Both
+  paths then share one write tail, with one transaction and one catch.
 - **Label→id resolution has one query** (`database_impl.h`): `Impl::lookup_id_by_label(table,
   label)` is the only `SELECT id ... WHERE label = ?`, shared by `Impl::resolve_label`
   (Pattern 2, backs every `_by_label` form) and `Impl::resolve_fk_label` (a miss is Pattern 3) — the two
@@ -508,6 +511,11 @@ impl_->logger->debug("Opening database: {}", path);
   custom-`date_time_format` branch parses with the caller's `get_time` format, which cannot see an
   impossible calendar day (`"%d/%m/%Y"` on `31/02/2024`). It therefore runs `is_valid_iso8601` on
   the string it canonicalizes, so import is held to the same grammar as the other writers.
+  Import converts every cell through one `convert_cell` (`database_csv_import.cpp`) before
+  writing, so validation and the write cannot disagree. It picks a branch on the column's
+  declared type alone (`query_columns` already types a TEXT `date_` column DATE_TIME), and a
+  column the Schema does not list (`PRAGMA table_info` omits generated columns, which `SELECT *`
+  returns) converts as nullable TEXT.
 - **`update_element` / `delete_element` / the vector+set group writers verify the id exists** (via
   `Impl::require_element`) and throw Pattern 2 `"Element not found: ..."` — no silent no-op.
   The two time-series writers do not: `upsert_time_series_row` always writes one row, so a bad id

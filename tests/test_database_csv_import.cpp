@@ -781,6 +781,90 @@ TEST(DatabaseCSV, ImportCSV_InvalidFloatValue_Throws) {
     fs::remove(csv_path);
 }
 
+// Every row is converted before the first write, so a bad cell in the last row throws with nothing
+// changed: the kept element keeps its values and the one the CSV omits is not deleted.
+TEST(DatabaseCSV, ImportCSV_Scalar_BadCellInLastRow_WritesNothing) {
+    auto db = make_db();
+    db.create_element("Items", quiver::Element().set("label", std::string("Keep1")).set("name", std::string("One")));
+    db.create_element("Items", quiver::Element().set("label", std::string("Keep2")).set("name", std::string("Two")));
+
+    auto csv_path = temp_csv("ImportBadCellInLastRow");
+    write_csv_file(csv_path.string(),
+                   "sep=,\nlabel,name,status,price,date_created,notes\n"
+                   "Keep1,Renamed,1,,,\n"
+                   "New1,Three,2,,,\n"
+                   "New2,Four,abc,,,\n");
+
+    try {
+        db.import_csv("Items", "", csv_path.string());
+        ADD_FAILURE() << "import_csv did not throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_NE(std::string(e.what()).find("Invalid integer value 'abc' for column 'status'"), std::string::npos)
+            << e.what();
+    }
+
+    EXPECT_EQ(db.number_of_elements("Items"), 2);
+    auto labels = db.read_scalar_strings("Items", "label");
+    auto names = db.read_scalar_strings("Items", "name");
+    ASSERT_EQ(labels.size(), 2);
+    EXPECT_EQ(labels[0], "Keep1");
+    EXPECT_EQ(labels[1], "Keep2");
+    EXPECT_EQ(names[0], "One");
+    EXPECT_EQ(names[1], "Two");
+
+    fs::remove(csv_path);
+}
+
+// A date_-named column that is not TEXT is typed by its declared type. The name alone used to send
+// every cell through the timestamp parser, so no number in it could be imported.
+TEST(DatabaseCSV, ImportCSV_DatePrefixedIntegerColumn_ImportsByDeclaredType) {
+    const auto db_path = fs::temp_directory_path() / "quiver_test_ImportDatePrefixedInteger.db";
+    fs::remove(db_path);
+    {
+        auto db = quiver::Database::from_schema(db_path.string(),
+                                                VALID_SCHEMA("csv_export.sql"),
+                                                {.read_only = false, .console_level = quiver::LogLevel::Off});
+        db.query_string("ALTER TABLE Items ADD COLUMN date_count INTEGER");
+    }
+
+    auto csv_path = temp_csv("ImportDatePrefixedInteger");
+    write_csv_file(csv_path.string(),
+                   "sep=,\nlabel,name,status,price,date_created,notes,date_count\nItem1,Alpha,,,,,7\n");
+    {
+        quiver::Database db(db_path.string(), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        db.import_csv("Items", "", csv_path.string());
+        EXPECT_EQ(db.read_scalar_integer_by_id("Items", "date_count", 1), 7);
+    }
+
+    fs::remove(csv_path);
+    fs::remove(db_path);
+}
+
+// The time-series table name for group "files" is the _time_series_files table, which has no
+// dimension. Import refuses it, as export and the readers do; accepting it would let a header-only
+// CSV clear the collection's file references.
+TEST(DatabaseCSV, ImportCSV_TimeSeriesFilesTable_IsNotAGroup) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+    std::map<std::string, std::optional<std::string>> paths;
+    paths["data_file"] = "data.qvr";
+    paths["metadata_file"] = "data.toml";
+    db.update_time_series_files("Collection", paths);
+
+    auto csv_path = temp_csv("ImportTimeSeriesFilesTable");
+    write_csv_file(csv_path.string(), "sep=,\ndata_file,metadata_file\n");
+
+    try {
+        db.import_csv("Collection", "files", csv_path.string());
+        ADD_FAILURE() << "import_csv did not throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), "Dimension column not found: time series table 'Collection_time_series_files'");
+    }
+    EXPECT_EQ(db.read_time_series_files("Collection"), paths);
+
+    fs::remove(csv_path);
+}
+
 // ============================================================================
 // import_csv: parsing through csv_read::Reader (the db:read_csv parser)
 // ============================================================================
@@ -1404,6 +1488,8 @@ TEST(DatabaseCSV, ImportCSV_Vector_FK_InvalidLabel_Throws) {
                 std::string msg = e.what();
                 EXPECT_NE(msg.find("Could not find an existing element from collection Parent with label NonExistent"),
                           std::string::npos);
+                // Same text as the scalar path.
+                EXPECT_NE(msg.find("Create the element before referencing it"), std::string::npos);
                 throw;
             }
         },

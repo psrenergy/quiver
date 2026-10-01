@@ -22,6 +22,12 @@ callers to change something are prefixed **BREAKING** and say what to do.
   'c'`); and `read_time_series_files` / `update_time_series_files` on a collection with no files
   table report `Time series files table not found: c_time_series_files` (was `... not found for
   collection 'c'`), matching `list_time_series_files_columns`.
+- **`import_csv` types each column by its declared type alone.** A `date_`-named column that is
+  not TEXT (`date_x INTEGER`, or a foreign key such as `date_id`) used to be parsed as a
+  timestamp, so every number or label in it was rejected as `Timestamp ... is not valid`. It now
+  imports like any other column of its type. A group-table cell naming a missing element now
+  reports the same `Could not find an existing element ... Create the element before referencing
+  it.` text as the scalar path; it lacked that last sentence before.
 
 ### Added
 
