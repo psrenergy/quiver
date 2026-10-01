@@ -50,8 +50,21 @@ jobs:
               build/manylinux/lib/libquiver.so
               build/manylinux/lib/libquiver.so.0
               build/manylinux/lib/libquiver_c.so
+          - os: ubuntu-22.04-arm
+            platform_key: linux-aarch64
+            c_compiler: gcc-11
+            cxx_compiler: g++-11
+            lib_paths: |
+              build/native-aarch64/lib/libquiver.so
+              build/native-aarch64/lib/libquiver.so.0
+              build/native-aarch64/lib/libquiver_c.so
           - os: macos-latest
             platform_key: macos-aarch64
+            lib_paths: |
+              build/lib/libquiver.0.dylib
+              build/lib/libquiver_c.dylib
+          - os: macos-15-intel
+            platform_key: macos-x86_64
             lib_paths: |
               build/lib/libquiver.0.dylib
               build/lib/libquiver_c.dylib
@@ -66,22 +79,31 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.sha }}
 
-      # macOS + Windows keep the host composite (host toolchain + FetchContent/sccache caching)
+      # macOS, Windows, and Ubuntu 22.04 ARM use the native host toolchain.
       - uses: ./.github/actions/build-cpp
-        if: runner.os != 'Linux'
+        if: matrix.platform_key != 'linux-x86_64'
         with:
           build_type: Release
           build_tests: "OFF"
+          c_compiler: ${{ matrix.c_compiler || '' }}
+          cxx_compiler: ${{ matrix.cxx_compiler || '' }}
 
-      # Linux: build the glibc-2.17 native libs inside manylinux2014 (CentOS 7) via Docker. This is the
+      # Linux x86_64: build the glibc-2.17 native libs inside manylinux2014 (CentOS 7) via Docker. This is the
       # SAME script a developer runs locally (`bash scripts/build_native_linux.sh`) — it only needs
       # Docker, which the stock ubuntu-latest runner already provides. It builds + patchelfs the
       # $ORIGIN rpath + runs the portability gate (glibc<=2.17, GLIBCXX<=3.4.30, dynamic libstdc++)
       # in-container. Why manylinux/Docker and not BinaryBuilder / a job-level container: / a CMake
       # flag: see .github/AGENTS.md "glibc floor".
       - name: Build + verify Linux libs (manylinux2014, glibc 2.17)
-        if: runner.os == 'Linux'
+        if: matrix.platform_key == 'linux-x86_64'
         run: bash scripts/build_native_linux.sh
+
+      - name: Stage + verify Linux ARM64 libs (Ubuntu 22.04, glibc 2.35)
+        if: matrix.platform_key == 'linux-aarch64'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y patchelf
+          bash scripts/ci/stage_native_linux_arm64.sh
 
       - name: Set RPATH for macOS
         if: runner.os == 'macOS'
@@ -89,10 +111,63 @@ jobs:
           install_name_tool -add_rpath '@loader_path' build/lib/libquiver_c.dylib
           codesign --force --sign - build/lib/libquiver_c.dylib
 
+      - uses: oven-sh/setup-bun@v2
+        if: runner.os == 'macOS' || matrix.platform_key == 'linux-aarch64'
+        with:
+          bun-version: 1.3.14
+
+      - name: Verify macOS architecture and relocated native libraries
+        if: runner.os == 'macOS'
+        env:
+          PLATFORM_KEY: ${{ matrix.platform_key }}
+        run: |
+          set -euo pipefail
+          arch="${PLATFORM_KEY#macos-}"
+          if [ "$arch" = "aarch64" ]; then arch=arm64; fi
+          relocated="$(mktemp -d)"
+          trap 'rm -rf "$relocated"' EXIT
+          for lib in libquiver.0.dylib libquiver_c.dylib; do
+            test "$(lipo -archs "build/lib/$lib")" = "$arch"
+            cp -L "build/lib/$lib" "$relocated/$lib"
+          done
+          # Compile the real JS binding to verify executable-directory lookup,
+          # in addition to the direct FFI check of the sibling dylib dependency.
+          printf 'import { Database } from "%s/bindings/js/mod.ts";\nconst db = Database.open(":memory:");\nif (db.queryInteger("SELECT 42") !== 42) throw new Error("Native query failed");\ndb.close();\n' "$PWD" > "$relocated/smoke.ts"
+          bun build --compile --no-compile-autoload-bunfig --no-compile-autoload-dotenv \
+            "$relocated/smoke.ts" --outfile "$relocated/smoke"
+          # Hide the build-tree libraries so an absolute build RPATH cannot mask
+          # a broken sibling-library lookup in the shipped layout.
+          mv build/lib "$relocated/build-libs"
+          trap 'mv "$relocated/build-libs" build/lib; rm -rf "$relocated"' EXIT
+          RELOCATED_LIB_DIR="$relocated" bun -e '
+            const { dlopen } = require("bun:ffi");
+            const lib = dlopen(`${process.env.RELOCATED_LIB_DIR}/libquiver_c.dylib`, {
+              quiver_get_last_error: { args: [], returns: "cstring" },
+            });
+            lib.symbols.quiver_get_last_error();
+            lib.close();
+          '
+          (cd "$RUNNER_TEMP" && "$relocated/smoke")
+
+      - name: Verify Linux ARM64 compiled binding with relocated libraries
+        if: matrix.platform_key == 'linux-aarch64'
+        run: |
+          set -euo pipefail
+          relocated="$(mktemp -d)"
+          trap 'rm -rf "$relocated"' EXIT
+          cp build/native-aarch64/lib/*.so* "$relocated/"
+          printf 'import { Database } from "%s/bindings/js/mod.ts";\nconst db = Database.open(":memory:");\nif (db.queryInteger("SELECT 42") !== 42) throw new Error("Native query failed");\ndb.close();\n' "$PWD" > "$relocated/smoke.ts"
+          bun build --compile --no-compile-autoload-bunfig --no-compile-autoload-dotenv \
+            "$relocated/smoke.ts" --outfile "$relocated/smoke"
+          mv build/lib "$relocated/build-libs"
+          trap 'mv "$relocated/build-libs" build/lib; rm -rf "$relocated"' EXIT
+          (cd "$RUNNER_TEMP" && env -u LD_LIBRARY_PATH "$relocated/smoke")
+
       - uses: actions/upload-artifact@v7
         with:
           name: native-${{ matrix.platform_key }}
           path: ${{ matrix.lib_paths }}
+          if-no-files-found: error
 
   upload-s3:
     name: Upload native libs to S3
@@ -114,6 +189,18 @@ jobs:
         with:
           name: native-macos-aarch64
           path: native/macos-aarch64
+
+      - name: Download Linux aarch64 native libraries
+        uses: actions/download-artifact@v8
+        with:
+          name: native-linux-aarch64
+          path: native/linux-aarch64
+
+      - name: Download macOS x86_64 native libraries
+        uses: actions/download-artifact@v8
+        with:
+          name: native-macos-x86_64
+          path: native/macos-x86_64
 
       - name: Download Windows x86_64 native libraries
         uses: actions/download-artifact@v8

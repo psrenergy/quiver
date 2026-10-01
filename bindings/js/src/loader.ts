@@ -297,7 +297,18 @@ function initLibrary(): QuiverLib {
     }
   }
 
-  // Tier 3: System PATH fallback -- the core lib is expected to be discoverable
+  // Tier 3: Standalone Bun executable -- import.meta.dir is virtual in a
+  // compiled binary, so the shipped native libraries live beside the executable.
+  const executableDir = dirname(process.execPath);
+  if (existsSync(join(executableDir, C_API_LIB))) {
+    try {
+      return openLibrary(executableDir);
+    } catch (e) {
+      lastError = e;
+    }
+  }
+
+  // Tier 4: System PATH fallback -- the core lib is expected to be discoverable
   // on PATH alongside the C API lib.
   try {
     return dlopen(C_API_LIB, allSymbols);
@@ -308,6 +319,7 @@ function initLibrary(): QuiverLib {
   const searched = [
     join(__dirname, "..", "libs", platformKey),
     ...getSearchPaths(),
+    executableDir,
     "system PATH",
   ].join(", ");
   const detail = lastError instanceof Error ? `: ${lastError.message}` : "";

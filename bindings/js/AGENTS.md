@@ -15,7 +15,7 @@ src/              # Module per C API category: database.ts, create.ts, read.ts, 
 src/lua-api.ts    # LUA_DB_API_REFERENCE — agent-facing Lua `db:` API reference, as a string const
 src/group-columns.ts # Shared columnar marshaller (group writers) and decoder (group readers),
                      # plus numericCells, the per-cell numeric check setElementArray shares
-src/loader.ts     # HAND-WRITTEN FFI symbol table + 3-tier library loader
+src/loader.ts     # HAND-WRITTEN FFI symbol table + 4-tier library loader
 src/types.ts      # Central DATA_TYPE_* / LOG_LEVEL_* constants and DatabaseOptions type —
                   # all re-exported from the package root
 src/ffi-helpers.ts # Alloc helpers, makeDefaultOptions()
@@ -48,8 +48,9 @@ biome.json        # Lint/format config
   `{ name: { args, returns } }`. This is the drift-prone spot: check it whenever a new C function
   exists in other bindings but not here.
 - **Library loader**: lazy `getSymbols()` (init on first use — eager init would hit a
-  `QuiverError` TDZ during the loader↔errors import cycle). Three tiers: bundled
-  `libs/{os}-{arch}/` (shipped in the npm package) → dev `build/bin` walk-up → system PATH. On
+  `QuiverError` TDZ during the loader↔errors import cycle). Four tiers: bundled
+  `libs/{os}-{arch}/` (shipped in the npm package) → dev `build/bin` walk-up → executable
+  directory (`dirname(process.execPath)`, for standalone Bun binaries) → system PATH. On
   Windows, `ensureCoreOnPath` prepends the lib dir to `process.env.PATH` so the OS loader finds
   the sibling `libquiver.dll` (Bun's `dlopen` cannot preload the core lib — it rejects an empty
   symbol map).
@@ -159,6 +160,13 @@ biome.json        # Lint/format config
   reformat.
 
 ## Packaging (package-local parts)
+
+The published native library directories are `linux-x86_64`, `linux-aarch64`,
+`macos-aarch64`, `macos-x86_64`, and `windows-x86_64`. Linux ARM64 requires glibc 2.35
+(Ubuntu 22.04+); Linux x86_64 retains glibc 2.17. Both Linux directories ship real files
+`libquiver.so`, `libquiver.so.0`, and `libquiver_c.so`, with `$ORIGIN` on the C API library.
+Both macOS directories ship `libquiver.0.dylib`
+and `libquiver_c.dylib`; the loader already maps `process.arch === "x64"` to `x86_64`.
 
 `package.json` `files` allowlist ships `libs/**`; a `.npmignore` with no ignore patterns (just a
 comment) stops `npm pack` falling back to the root `.gitignore` (which excludes `*.dll`/`*.so`). `publishConfig.provenance: true` emits a

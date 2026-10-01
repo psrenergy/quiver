@@ -14,7 +14,9 @@ const S3_PREFIX = get(ENV, "QUIVER_S3_PREFIX", "quiver")
 # omits libquiver.so.0.
 const PLATFORMS = Dict(
     "linux-x86_64"   => (subdir = "lib", files = ("libquiver.so", "libquiver_c.so"),         tags = Dict("os" => "linux",   "arch" => "x86_64", "libc" => "glibc")),
+    "linux-aarch64"  => (subdir = "lib", files = ("libquiver.so", "libquiver_c.so"),         tags = Dict("os" => "linux",   "arch" => "aarch64", "libc" => "glibc")),
     "macos-aarch64"  => (subdir = "lib", files = ("libquiver.0.dylib", "libquiver_c.dylib"), tags = Dict("os" => "macos",   "arch" => "aarch64")),
+    "macos-x86_64"   => (subdir = "lib", files = ("libquiver.0.dylib", "libquiver_c.dylib"), tags = Dict("os" => "macos",   "arch" => "x86_64")),
     "windows-x86_64" => (subdir = "bin", files = ("libquiver.dll", "libquiver_c.dll"),       tags = Dict("os" => "windows", "arch" => "x86_64")),
 )
 

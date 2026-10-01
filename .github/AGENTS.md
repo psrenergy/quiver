@@ -10,20 +10,26 @@ five manifests) lives in the root `AGENTS.md`.
 | `ci.yml` | push/PR to master | Build matrix (ubuntu/windows/macos × Release/Debug) + ctest + artifact upload; four coverage jobs uploading to Codecov with flags `cpp`, `julia`, `dart`, `python`; plus `clang-format` check, `actionlint`, and a `bun-test` matrix (ubuntu+windows) |
 | `bump-version.yml` | `workflow_dispatch` (`part`: major/minor/patch) | Runs `scripts/assert_version.py bump <part>` and opens a PR with the five manifests rewritten (see below) |
 | `publish.yml` | `workflow_dispatch` | Release orchestrator (see below) |
-| `publish-s3.yml` | `workflow_dispatch` (usually from publish.yml) | Builds native libs for `linux-x86_64`, `macos-aarch64`, `windows-x86_64` (via `scripts/ci/native_s3.sh`) and stages them on S3 |
+| `publish-s3.yml` | `workflow_dispatch` (usually from publish.yml) | Builds native libs for `linux-x86_64`, `linux-aarch64`, `macos-aarch64`, `macos-x86_64`, `windows-x86_64` (via `scripts/ci/native_s3.sh`) and stages them on S3 |
 | `publish-julia.yml` | `workflow_dispatch` | Mirrors `bindings/julia` into psrenergy/Quiver.jl (see below) |
 | `publish-python.yml` | push/PR to master + `workflow_dispatch` | cibuildwheel on a ubuntu+windows matrix (targets in `bindings/python/AGENTS.md`); the PyPI publish job runs only on `workflow_dispatch` (trusted publishing, `skip-existing: true`, `environment: pypi`) |
 | `publish-js.yml` | `workflow_dispatch` | npm publish with bundled native libs (see below) |
 
 Composite actions in `.github/actions/`:
 - `build-cpp` — configure/build the core + C API with a FetchContent source cache. The cache key
-  includes a **toolchain fingerprint** (default CMake generator): FetchContent subbuilds pin the
+  includes **runner architecture** and a **toolchain fingerprint** (default CMake generator): FetchContent subbuilds pin the
   generator in their CMakeCache, so restoring a `_deps` cache built under a different default
   generator (e.g. windows-latest moving VS 17 → 18) fails configure.
-  **Used by macOS/Windows only in `publish-s3.yml`** (`if: runner.os != 'Linux'`); `ci.yml` still
-  uses it for all three OSes.
+  Used by macOS, Windows, and Linux ARM64 in `publish-s3.yml`
+  (`if: matrix.platform_key != 'linux-x86_64'`); `ci.yml` uses it for all three OSes.
+  All dependency and sccache restore prefixes include `runner.arch`, so Intel and ARM64 caches
+  cannot mix. macOS publishing uses `macos-latest` for ARM64 and `macos-15-intel` for x86_64;
+  both verify dylib architecture and load the C API through Bun FFI from a temporary directory
+  containing the two shipped dylibs before uploading artifacts. A compiled JS-binding smoke
+  executable also queries an in-memory database from an unrelated working directory; the original
+  build library directory is hidden during both checks to enforce relocation.
 
-**glibc floor for the published Linux native libs (`publish-s3.yml`):** the `linux-x86_64` native
+**glibc floor for the published Linux x86_64 native libs (`publish-s3.yml`):** the `linux-x86_64` native
 libs are NOT built via `build-cpp` on a bare `ubuntu-latest` runner — that binds `GLIBC_2.28`..`2.34`
 symbols (libm math, `stat`, the pthread/dlopen libc merge) and fails on old systems like Amazon
 Linux 1 = glibc 2.17 (Julia's own floor). Instead they are built inside the **manylinux2014** image
@@ -46,8 +52,16 @@ static-link (the C API catches C++-core exceptions by type across the `libquiver
 `libquiver_c.so` boundary, and two static copies under `-fvisibility=hidden` would break that; this
 also rules out zig/libc++ static toolchains). The three files land in `build/manylinux/lib/` exactly as
 the downstream `upload-s3` job + `scripts/ci/native_s3.sh` expect. Feeds both the Julia and JS/npm
-native libs (shared S3 staging). macOS/Windows still use `build-cpp` (gated `if: runner.os !=
-'Linux'`) — only Linux needs the old-glibc image.
+native libs (shared S3 staging). Only `linux-x86_64` uses the old-glibc image.
+
+**Linux ARM64** (`linux-aarch64`) builds natively on `ubuntu-22.04-arm` through `build-cpp`,
+with optional `c_compiler: gcc-11` / `cxx_compiler: g++-11` inputs (other platforms retain
+CMake's defaults). Its baseline is Ubuntu 22.04+ / glibc 2.35. The staging script
+`scripts/ci/stage_native_linux_arm64.sh` copies dereferenced `libquiver.so`, `libquiver.so.0`,
+and `libquiver_c.so` into `build/native-aarch64/lib/`, sets the C API RPATH to `$ORIGIN`,
+and enforces AArch64 ELF, GLIBC<=2.35, GLIBCXX<=3.4.30, and dynamic libstdc++.
+Before upload, the compiled JS binding queries a database with relocated siblings while
+the original `build/lib` is hidden. Keep this separate from the x86_64 manylinux script.
 
 > **Why not the alternatives** (settled 2026-07-24): BinaryBuilder.jl also reaches 2.17 without Docker,
 > but pulls the whole Julia + compiler-shard stack and can't run on a Windows dev box (local
@@ -122,7 +136,7 @@ The order is **bump, merge, publish** — two deliberate dispatches, never chain
   tarring — Windows DLLs **must be executable in the artifact**, or Pkg's Windows extraction
   yields an NTFS ACL without execute and `LoadLibrary` fails with "Access is denied" (Linux `.so`
   load ignores the bit, so the symptom is Windows-only).
-- **macOS artifact gotchas** (Apple-Silicon-only, `macos-aarch64`): (1) dyld resolves dependent
+- **macOS artifact gotchas** (`macos-aarch64` and `macos-x86_64`): (1) dyld resolves dependent
   dylibs **filesystem-first** — no Linux-style SONAME matching against already-loaded images — so
   the artifact ships libquiver ONLY under its install name `libquiver.0.dylib` (the `.0` tracks
   SOVERSION = major version); a second `libquiver.dylib` copy in the same dir could be loaded as
@@ -137,7 +151,7 @@ The order is **bump, merge, publish** — two deliberate dispatches, never chain
 ## npm Publishing (JS)
 
 `publish-js.yml` downloads native libs from S3 into
-`libs/{linux-x86_64,macos-aarch64,windows-x86_64}/`, asserts every lib is in a throwaway
+`libs/{linux-x86_64,linux-aarch64,macos-aarch64,macos-x86_64,windows-x86_64}/`, asserts every lib is in a throwaway
 `npm pack` tarball via `tar -tzf` (format-independent; npm roots entries under `package/`), then
 publishes with **`npm publish --loglevel verbose` via `actions/setup-node@v6`** using **npm
 Trusted Publishing (OIDC)** — `permissions: id-token: write`, no stored token; npm packs inline

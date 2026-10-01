@@ -7,6 +7,15 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ## [0.12.7] — unreleased
 
+### Added
+
+- **Linux ARM64 native binaries** (`linux-aarch64`) are published in S3, the npm package,
+  and Julia artifacts for Ubuntu 22.04+ (glibc 2.35), including DGX Spark. Native GCC 11
+  builds check AArch64 ELF, symbol compatibility, dynamic libstdc++, and relocated loading.
+- **Intel macOS native binaries** (`macos-x86_64`) are published alongside Apple Silicon
+  binaries in S3, the npm package, and Julia artifacts. Both macOS architectures retain the
+  macOS 13.3 deployment floor and are checked for architecture and relocated library loading.
+
 ### Changed
 
 - **BREAKING — Lua: `db:open_file` handles are closed when `run()` returns.** A binary file a
@@ -23,6 +32,10 @@ callers to change something are prefixed **BREAKING** and say what to do.
   *Adapt:* fix the key or value the error names.
 
 ### Fixed
+
+- **JS: standalone Bun binaries find native libraries beside the executable**, even when
+  launched from another working directory. Bundled package and development library paths
+  keep their existing precedence.
 
 - **JS: the agent-facing Lua reference (`LUA_DB_API_REFERENCE`) no longer promises a rollback.**
   A failed script keeps every write that finished before the error; only `db:transaction` /
