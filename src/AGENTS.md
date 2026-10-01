@@ -328,6 +328,14 @@ Internally, `Impl::TransactionGuard` is nest-aware RAII: if an explicit transact
 }
 ```
 
+Every internal write that owns a transaction (`create_element`, `update_element`, the group and
+time-series writers, the migrations, `apply_schema`, `import_csv`) uses `Impl::TransactionGuard`.
+Where the writer has a handler (the migrations, `apply_schema`, `import_csv`), the guard is
+declared inside the `try`, so the rollback runs before the `catch`. `Impl::execute_raw(sql, what)`
+is the one `sqlite3_exec` runner (`BEGIN`, `COMMIT`, `PRAGMA user_version`, multi-statement
+scripts). Two calls keep their own: `Impl::rollback`, which logs instead of throwing, and the
+constructor's unchecked `PRAGMA foreign_keys = ON`.
+
 **Dry runs** (`begin_dry_run` / `end_dry_run` / `in_dry_run`, `Impl::dry_run` flag) sit on top of
 the same machinery: `begin_dry_run` opens a real transaction and sets the flag; `end_dry_run`
 clears the flag and calls `impl_->rollback()` **directly** — the public `rollback()` is a no-op
@@ -338,12 +346,12 @@ because the dry run holds a real transaction. `end_dry_run` guards its rollback 
 `sqlite3_get_autocommit` because a caller can end the transaction out from under it with a bare
 `COMMIT` through `query_*`. Rationale and the documented consequences: root design decisions.
 
-The one write path that cannot nest is `import_csv`: it opens its own transaction with a raw
-`impl_->begin_transaction()` (not `TransactionGuard`) and rolls back on any error, so inside a
-caller's transaction the `BEGIN` would fail and the `ROLLBACK` would discard the caller's work. It
-throws `"Cannot import_csv: transaction already active"` as a precondition instead. (It used to
-toggle `PRAGMA foreign_keys`, a no-op mid-transaction, which was the original reason; it no longer
-does. Whether it should nest instead is an open decision.)
+The one write path that cannot nest is `import_csv`: it must own its transaction, because inside a
+caller's its `TransactionGuard` would no-op, and a failure partway through would leave import's
+earlier writes (the DELETEs included) in the caller's transaction for its commit. It throws
+`"Cannot import_csv: transaction already active"` as a precondition instead. (It used to open a
+raw `BEGIN`, and before that to toggle `PRAGMA foreign_keys`, a no-op mid-transaction, which was
+the original reason. Whether it should nest instead is an open decision.)
 
 ## Move Semantics
 

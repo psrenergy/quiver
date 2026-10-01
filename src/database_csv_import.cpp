@@ -325,8 +325,9 @@ void Database::import_csv(const std::string& collection,
                           const CSVOptions& options) {
     impl_->require_collection(collection, "import_csv");
 
-    // Import manages its own transaction (a raw BEGIN, and a ROLLBACK on any error), so inside a
-    // caller's transaction its BEGIN would fail and that ROLLBACK would discard the caller's work.
+    // Import must own its transaction: inside a caller's, its TransactionGuard would no-op, and a
+    // failure partway through would leave its earlier writes (the DELETEs included) for the caller's
+    // commit.
     if (in_transaction()) {
         throw std::runtime_error("Cannot import_csv: transaction already active");
     }
@@ -531,7 +532,7 @@ void Database::import_csv(const std::string& collection,
     // Data import, in one transaction and with foreign keys on throughout, so every ON DELETE action
     // fires exactly as it does for delete_element.
     try {
-        impl_->begin_transaction();
+        Impl::TransactionGuard txn(*impl_);
 
         if (group.empty()) {
             // Clear self-references first: an ON DELETE CASCADE self-reference from a kept element to
@@ -630,10 +631,9 @@ void Database::import_csv(const std::string& collection,
             }
         }
 
-        impl_->commit();
+        txn.commit();
     } catch (const std::exception& e) {
-        impl_->rollback();
-
+        // txn's destructor has already rolled back.
         std::string msg = e.what();
         if (msg.find("UNIQUE constraint") != std::string::npos) {
             throw std::runtime_error("Cannot import_csv: There are duplicate entries in the CSV file.");

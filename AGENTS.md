@@ -165,11 +165,11 @@ Settled questions — don't relitigate without the user; each was decided delibe
   (JSON must be UTF-8, a Lua string need not), and a table where an integer key and a string key
   spell the same thing (two Lua keys, one JSON key — refused rather than silently dropped).
 - **`import_csv` refuses to run inside an open transaction** — Pattern 1 precondition, not a silent
-  rollback. Import opens its own transaction (a raw `BEGIN`, rolled back on any error), so nested
-  inside a caller's transaction its `BEGIN` would fail and that `ROLLBACK` would discard the
-  caller's work. The original reason (import toggled `PRAGMA foreign_keys`, a no-op
-  mid-transaction) is gone: import now keeps foreign keys on throughout. Whether to let it nest
-  instead is an open decision for the maintainer.
+  rollback. Import must own its transaction (a `TransactionGuard`, rolled back on any error):
+  nested inside a caller's, the guard would no-op, so a failure partway through would leave
+  import's earlier writes, its DELETEs included, for the caller's commit. The original reason
+  (import toggled `PRAGMA foreign_keys`, a no-op mid-transaction) is gone: import now keeps foreign
+  keys on throughout. Whether to let it nest instead is an open decision for the maintainer.
 - **`BinaryMetadata::number_of_time_dimensions()` is derived** from `dimensions`, never stored.
   `TimeProperties::initial_value` is the deliberate opposite: it is stored, because the per-cell
   traversal (`next_dimensions`, `ExpressionAggregate::compute_row`) reads it, and it is computed only by
