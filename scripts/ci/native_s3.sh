@@ -5,11 +5,11 @@ set -euo pipefail
 S3_BUCKET="${QUIVER_S3_BUCKET:-julia-artifacts}"
 S3_PREFIX="${QUIVER_S3_PREFIX:-quiver}"
 
-readonly PLATFORMS=("linux-x86_64" "macos-aarch64" "windows-x86_64")
+readonly PLATFORMS=("linux-x86_64" "linux-aarch64" "macos-aarch64" "windows-x86_64")
 
 files_for() {
   case "$1" in
-    linux-x86_64)   echo "libquiver.so libquiver.so.0 libquiver_c.so" ;;
+    linux-x86_64|linux-aarch64) echo "libquiver.so libquiver.so.0 libquiver_c.so" ;;
     macos-aarch64)  echo "libquiver.0.dylib libquiver_c.dylib" ;;
     windows-x86_64) echo "libquiver.dll libquiver_c.dll" ;;
     *) echo "::error::native_s3.sh: unknown platform '$1'" >&2; return 1 ;;

@@ -163,7 +163,7 @@ ruff.toml         # Lint/format config; lint is isort only (select = ["I"])
 - Wheels build via **scikit-build-core** (`cmake.source-dir = ../..`, Release,
   `-DQUIVER_BUILD_TESTS=OFF`; the root CMakeLists detects `SKBUILD` and forces the C API ON).
   `wheel.exclude` strips `bin`/`lib`/`include`/`share` from the wheel.
-- **cibuildwheel** targets `cp313-win_amd64` and `cp313-manylinux_x86_64`, running pytest as the
-  wheel test. CI publish flow in `.github/AGENTS.md`.
+- **cibuildwheel** targets `cp313-win_amd64`, `cp313-manylinux_x86_64` and `cp313-manylinux_aarch64`
+  (built natively on `ubuntu-24.04-arm`), running pytest as the wheel test. CI publish flow in `.github/AGENTS.md`.
 - Local wheel checks: `scripts/test-wheel.bat`, `scripts/test-wheel-install.bat`,
   `scripts/validate_wheel.py`, `scripts/validate_wheel_install.py`.

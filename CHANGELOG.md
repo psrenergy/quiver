@@ -15,6 +15,11 @@ callers to change something are prefixed **BREAKING** and say what to do.
   `update_set_group` name themselves the same way), and an unknown attribute reports
   `Cannot create_element: column 'x' not found in table 'T'` (was `Column 'x' not found in table
   'T'`). The accepted values are unchanged.
+### Added
+
+- **Linux ARM64 (`aarch64`, e.g. NVIDIA DGX Spark) is a published platform.** PyPI ships a
+  `manylinux_aarch64` wheel, and the Julia artifact and npm package carry `linux-aarch64` native
+  libraries. They need glibc 2.28 or newer (Linux x86_64 stays at 2.17).
 
 ### Removed
 
