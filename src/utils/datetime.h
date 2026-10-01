@@ -84,7 +84,7 @@ inline bool parse_iso8601(const std::string& datetime_str, std::tm& tm) {
 // Shared by TypeValidator::validate_value (scalar + array writes) and validate_time_series_row
 // (time-series writes) - the two halves of the one scalar typing policy.
 //
-// Trims first because Database::execute trims every bound string, so the value that reaches SQLite
+// Trims first because Impl::execute trims every bound string, so the value that reaches SQLite
 // is the trimmed one; validating the raw string would reject " 2024-01-15", which stores fine.
 inline bool is_valid_iso8601(const std::string& datetime_str) {
     std::tm tm{};

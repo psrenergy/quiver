@@ -182,10 +182,10 @@ From the repo root:
 
 ## Acceptance criteria
 
-- [ ] `Database` has no `execute`/`execute_raw` members; `Impl::execute` is const.
-- [ ] No `Database& db` parameter remains on an `Impl` helper; no `*this` passed to one.
-- [ ] `query_int_rows` and the hand-written `current_version` statement are gone.
-- [ ] All suites green; src/AGENTS.md updated.
+- [x] `Database` has no `execute`/`execute_raw` members; `Impl::execute` is const.
+- [x] No `Database& db` parameter remains on an `Impl` helper; no `*this` passed to one.
+- [x] `query_int_rows` and the hand-written `current_version` statement are gone.
+- [x] All suites green; src/AGENTS.md updated.
 
 ## Pitfalls
 
@@ -199,3 +199,119 @@ From the repo root:
 
 - Moving migrations/apply_schema/set_version into `Impl`.
 - Removing `Row`/`Result` public members (plan 54) or headers (plan 55).
+
+## Implementation notes
+
+Implemented on `rs/plan53` at `3ca11b8`. `git merge master` was a no-op.
+
+### What changed
+
+- **`include/quiver/database.h`.** The private `execute` / `execute_raw` are gone.
+  `#include "quiver/result.h"` stays, because plan 54 owns the forward declaration.
+- **`src/database_impl.h`.**
+  - It includes `quiver/result.h` itself, which plan 54 relies on.
+  - `query_int_rows` is deleted.
+  - `Impl` declares `Result execute(sql, parameters = {}) const` and `void execute_raw(sql) const`.
+  - Nine helpers lost `Database& db`: `require_element`, `lookup_id_by_label` (now a `const`
+    member, no longer `static`), `resolve_label`, `resolve_fk_label`, `resolve_scalar_fk_labels`,
+    `update_group_rows`, `insert_rows_into_group_table`, `prepare_group_data`, `insert_group_data`.
+- **`src/database.cpp`.**
+  - `Database::Impl::execute` and `Database::Impl::execute_raw` are defined here, side by side.
+  - `current_version()` is `*impl_->execute("PRAGMA user_version")[0].get_integer(0)`.
+- **Call sites.**
+  - 47 member `execute(` calls became `impl_->execute(`: read 21, time_series 8, csv_export 5,
+    csv_import 6, query 3, create 1, delete 1, update 1, and `current_version`.
+  - 4 `execute_raw(` calls became `impl_->execute_raw(`: three in migrations and `apply_schema`, one
+    in import.
+  - 17 `, *this)` arguments were dropped: create 3, delete 2, update 10, time_series 2.
+- **`number_of_elements`.** It goes through `impl_->execute`.
+- **`summarize_collection`.**
+  - All four counts go through `impl_->execute`.
+  - The distinct pre-check and the histogram both filter `WHERE typeof(col) = 'integer'`, which
+    replaces `IS NOT NULL`.
+  - The loop uses `Result::row_count()`, not `size()`, and avoids `Row::size/at/is_null`, which plan
+    54 deletes.
+
+### Deviations and drift
+
+- **`Impl::execute` / `execute_raw` are defined out of line in `database.cpp`, not inline in
+  `database_impl.h`.** The user approved this when the plan was reviewed. It follows the precedent
+  `Impl::update_group_rows` set in `database_update.cpp`. The body stayed in place (the diff is the
+  signature plus `impl_->db` → `db`), the header did not gain `utils/string.h`, and the
+  `database.cpp … execute` file-map line in `src/AGENTS.md` stays true.
+- **9 helpers, not 8.** `resolve_element_fk_labels` is now `resolve_scalar_fk_labels`, and plan 05
+  added `prepare_group_data`.
+- **Left unchanged:**
+  - `build_label_to_id_map(Database& db, …)` in `database_csv_import.cpp` calls the public
+    `read_scalar_*`, not `execute`.
+  - `get_db_columns` takes a `Result`.
+  - `TransactionGuard txn(*this)` in `Impl::update_group_rows` passes the Impl's own `*this`.
+- **The test was renamed and strengthened.** It is `DatabaseDescribe.SummarizeDistributionSkipsNonIntegerCells`
+  and asserts `code: 3 non-null, 0 null; values {1: 1}\n`. The spec's `EXPECT_NO_THROW` would
+  already have passed at HEAD: `query_int_rows` never crashed, it silently read TEXT `'not-a-number'`
+  as code `0` and REAL `1.5` as `1` (`values {1: 1, 1: 1, 0: 1}`). The test failed at HEAD and
+  passes after the fix.
+- **The test schema was reused, not added.** `tests/schemas/valid/non_strict_vector.sql`'s `Items`
+  is no longer STRICT and gained a nullable `code INTEGER`. That keeps tests/AGENTS.md's "keep the
+  other `valid/` schemas STRICT" rule. `DatabaseCApi.ReadVectorGroupByIdMasksRealCellInIntegerColumn`
+  only writes `label`, so it is unaffected.
+- **The `current_version` int64 read is tidying, not a fix.** `user_version` is a 32-bit header
+  field, so `sqlite3_column_int` lost nothing. It has no CHANGELOG line, and the
+  `Failed to read user_version` message is gone (no test pinned it).
+- **CHANGELOG.** `v0.12.7` is tagged and the manifests are at 0.12.8, so the one `### Fixed` entry
+  (the summarize distribution) opened `## [0.12.8] — unreleased`.
+- **Extra docs beyond the plan's list.** Root `AGENTS.md` and `src/AGENTS.md` (the trim sentence),
+  the comments in `src/utils/datetime.h` and `tests/test_database_create.cpp`, and
+  `tests/AGENTS.md` (the `non_strict_vector.sql` entry) all said `Database::execute`, or described
+  the schema; they now say `Impl::execute`. The `src/AGENTS.md` describe bullet also records the
+  `typeof` filter.
+
+### Verification
+
+- **Core suites.** `quiver_tests` 1397/1397 and `quiver_c_tests` 571/571, before and after the final
+  format pass.
+- **`scripts/test-all.bat`** exited 0, with six steps and no CLI smoke step:
+
+  | Suite | Result |
+  |---|---|
+  | C++ | 1397 |
+  | C API | 571 |
+  | Julia | 1575 |
+  | Dart | 445 |
+  | JS | 242 |
+  | Python | 350 |
+
+- **`scripts/format.bat`** exited 0.
+  - clang-format only rewrapped this plan's new `summarize_collection` lines. An awkward
+    `*impl_` / `->execute` wrap was then removed by splitting out `distinct_sql`.
+  - Biome again rewrote 30 JS files CRLF→LF. `git diff --ignore-cr-at-eol bindings/` was empty, and
+    `git checkout -- bindings/js` reverted them.
+- **`scripts/tidy.bat`** cannot run on this machine: it hard-codes
+  `C:\Program Files\LLVM\bin\run-clang-tidy`, which is absent (plan 79's area). Instead, Visual
+  Studio's bundled `clang-tidy -p build` was run over the 10 changed `.cpp` files. It found two
+  warnings, both on untouched lines: `kMaxDistributionCardinality` naming (describe.cpp:18) and a
+  signed/unsigned compare (csv_import.cpp:638).
+- **MSVC build.** It still reports the existing C4701 on `GroupTableType group_type;` in
+  `import_csv`, a declaration this plan did not touch.
+- **Greps.**
+  - `Database& db` in `database_impl.h` / `database_update.cpp`: none.
+  - `*this)` in `src/database_*.cpp`: only `TransactionGuard txn(*this)`.
+  - `query_int_rows` / `Database::execute` in `src include tests AGENTS.md`: none.
+  - `execute(` / `execute_raw` in `include/quiver/database.h`: none.
+
+### For later plans
+
+- **Where `execute` lives.** `Impl::execute` / `Impl::execute_raw` are *declared* in
+  `src/database_impl.h` and *defined* in `src/database.cpp`. Plan 60's `exec` helper and its
+  `execute_raw` rewrite anchor on `Database::Impl::execute_raw` in `database.cpp`.
+- **How to call it.** Inside `Impl` it is `execute(...)`; from a `Database` method it is
+  `impl_->execute(...)` / `impl_->execute_raw(...)`. No `db` or `*this` is passed to any Impl helper
+  any more. Plans 56, 57, 58 and 59 should drop those arguments from their excerpts, for example
+  `require_element(collection, id)`, `resolve_fk_label(table_def, column, value)` and
+  `lookup_id_by_label(table, label)`.
+- **Plan 54.** `database.h` no longer references `Result`. Replace its include with nothing or a
+  forward declaration; `database_impl.h` already includes `quiver/result.h`.
+- **Plan 76.** Step 1 (the `query_int_rows` describe sentence) is done. That bullet now says they
+  run through `Impl::execute`, which is const.
+- **Plans 56–64.** CHANGELOG entries go under `## [0.12.8] — unreleased`, unless `v0.12.8` gets
+  tagged first.

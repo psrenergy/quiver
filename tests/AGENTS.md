@@ -203,12 +203,14 @@ never copy them into a binding.
     `Items_vector_events` (`date_event` DATE_TIME, `note` TEXT, both nullable) for the whole-group
     readers' DATE_TIME parsing and NULL string cells. Note every set value column must be part of
     the UNIQUE constraint.
-  - `non_strict_vector.sql` is the only `valid/` schema with a group table (`Items_vector_counts`)
-    that is deliberately **not** STRICT. Without STRICT, INTEGER affinity keeps a non-integral
-    value written through raw SQL (`1.5`) as REAL, so a cell's storage class can differ from its
-    declared type. `DatabaseCApi.ReadVectorGroupByIdMasksRealCellInIntegerColumn` uses it to pin
-    that the C API group marshaller reports such a cell absent instead of truncating it. Keep the
-    other `valid/` schemas STRICT.
+  - `non_strict_vector.sql` is the only `valid/` schema with tables that are deliberately **not**
+    STRICT: the group table `Items_vector_counts` and the collection `Items` (`code INTEGER`).
+    Without STRICT, INTEGER affinity keeps a non-integral value written through raw SQL (`1.5`) as
+    REAL and a non-numeric one as TEXT, so a cell's storage class can differ from its declared
+    type. `DatabaseCApi.ReadVectorGroupByIdMasksRealCellInIntegerColumn` uses it to pin that the C
+    API group marshaller reports such a cell absent instead of truncating it, and
+    `DatabaseDescribe.SummarizeDistributionSkipsNonIntegerCells` that `summarize_collection`'s
+    value distribution counts only integer cells. Keep the other `valid/` schemas STRICT.
   - `shared_group_columns.sql` has groups whose column names collide, which the validator allows
     for FK columns: `Child_vector_links` / `Child_vector_routes` and `Child_set_mentors` /
     `Child_set_sponsors` share `parent_ref`, and `Child_vector_cost` is named after `routes`'

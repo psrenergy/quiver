@@ -3,7 +3,7 @@
 namespace quiver {
 
 std::optional<std::string> Database::query_string(const std::string& sql, const std::vector<Value>& parameters) {
-    auto result = execute(sql, parameters);
+    auto result = impl_->execute(sql, parameters);
     if (result.empty()) {
         return std::nullopt;
     }
@@ -11,7 +11,7 @@ std::optional<std::string> Database::query_string(const std::string& sql, const 
 }
 
 std::optional<int64_t> Database::query_integer(const std::string& sql, const std::vector<Value>& parameters) {
-    auto result = execute(sql, parameters);
+    auto result = impl_->execute(sql, parameters);
     if (result.empty()) {
         return std::nullopt;
     }
@@ -19,7 +19,7 @@ std::optional<int64_t> Database::query_integer(const std::string& sql, const std
 }
 
 std::optional<double> Database::query_float(const std::string& sql, const std::vector<Value>& parameters) {
-    auto result = execute(sql, parameters);
+    auto result = impl_->execute(sql, parameters);
     if (result.empty()) {
         return std::nullopt;
     }

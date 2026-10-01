@@ -741,7 +741,7 @@ TEST(Database, CreateScalarDateTimeGrammar) {
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
 
-    // The last entry is padded: Database::execute trims every bound string, so the validator has to
+    // The last entry is padded: Impl::execute trims every bound string, so the validator has to
     // judge the trimmed value or it would reject a write that stores perfectly well.
     const std::vector<std::string> accepted = {
         "2024-01-15", "2024-01-15T10:30:00", "2024-01-15 10:30:00", "  2024-02-29T23:59:59  "};

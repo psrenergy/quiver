@@ -307,7 +307,8 @@ void Database::import_csv(const std::string& collection,
     // Read CSV, validate columns against DB schema, handle empty CSV
     auto csv = read_csv_file(path);
     const auto& csv_cols = csv.header;
-    auto db_cols = get_db_columns(execute("SELECT * FROM " + table_name + " LIMIT 0"), group.empty() ? "id" : "");
+    auto db_cols =
+        get_db_columns(impl_->execute("SELECT * FROM " + table_name + " LIMIT 0"), group.empty() ? "id" : "");
 
     // Scalar path: require label column before general column validation
     if (group.empty()) {
@@ -429,14 +430,14 @@ void Database::import_csv(const std::string& collection,
             // an omitted one would otherwise delete the kept element along with it. The second pass
             // below restores them from the CSV's labels.
             for (const auto& col_name : self_fk_cols) {
-                execute("UPDATE " + collection + " SET " + col_name + " = NULL");
+                impl_->execute("UPDATE " + collection + " SET " + col_name + " = NULL");
             }
 
             // Delete the elements the CSV omits: their group rows cascade away and every relation to
             // them follows its ON DELETE action (SET NULL clears it, CASCADE deletes the row).
             for (const auto& [label, id] : existing_label_to_id) {
                 if (!csv_labels.contains(label)) {
-                    execute("DELETE FROM " + collection + " WHERE id = ?", {id});
+                    impl_->execute("DELETE FROM " + collection + " WHERE id = ?", {id});
                 }
             }
 
@@ -527,7 +528,7 @@ void Database::import_csv(const std::string& collection,
                     parameters.emplace_back(cell);
                 }
 
-                execute(insert_sql, parameters);
+                impl_->execute(insert_sql, parameters);
             }
 
             // Second pass: resolve self-referencing FKs, now that every CSV row exists
@@ -548,8 +549,8 @@ void Database::import_csv(const std::string& collection,
                                 " with label " + cell + ".\nCreate the element before referencing it.");
                         }
 
-                        execute("UPDATE " + collection + " SET " + col_name + " = ? WHERE id = ?",
-                                {self_label_to_id.at(cell), self_label_to_id.at(label)});
+                        impl_->execute("UPDATE " + collection + " SET " + col_name + " = ? WHERE id = ?",
+                                       {self_label_to_id.at(cell), self_label_to_id.at(label)});
                     }
                 }
             }
@@ -701,7 +702,7 @@ void Database::import_csv(const std::string& collection,
         try {
             impl_->begin_transaction();
 
-            execute_raw("DELETE FROM " + table_name);
+            impl_->execute_raw("DELETE FROM " + table_name);
 
             // Build INSERT statement
             std::string insert_cols;
@@ -762,7 +763,7 @@ void Database::import_csv(const std::string& collection,
                     parameters.emplace_back(cell);
                 }
 
-                execute(insert_sql, parameters);
+                impl_->execute(insert_sql, parameters);
             }
 
             impl_->commit();

@@ -17,13 +17,13 @@ void Database::update_element(const std::string& collection, int64_t id, const E
         throw std::runtime_error("Cannot update_element: element must have at least one attribute to update");
     }
 
-    impl_->require_element(collection, id, *this);
+    impl_->require_element(collection, id);
 
     // Resolve every FK label and validate every array before the UPDATE: TransactionGuard no-ops
     // inside a caller-owned transaction or a dry run, so a throw after it would leave the scalar
     // update behind. (Scalar types are checked below, still ahead of the UPDATE.)
-    auto resolved = impl_->resolve_scalar_fk_labels(collection, scalars, *this);
-    auto groups = impl_->prepare_group_data("update_element", collection, arrays, true, *this);
+    auto resolved = impl_->resolve_scalar_fk_labels(collection, scalars);
+    auto groups = impl_->prepare_group_data("update_element", collection, arrays, true);
 
     Impl::TransactionGuard txn(*impl_);
 
@@ -50,11 +50,11 @@ void Database::update_element(const std::string& collection, int64_t id, const E
         sql += " WHERE id = ?";
         parameters.emplace_back(id);
 
-        execute(sql, parameters);
+        impl_->execute(sql, parameters);
     }
 
     // Replace every routed group (delete_existing=true: an empty array clears its group)
-    impl_->insert_group_data(groups, id, true, *this);
+    impl_->insert_group_data(groups, id, true);
 
     txn.commit();
     impl_->logger->info("Updated element {} in {}", id, collection);
@@ -63,7 +63,7 @@ void Database::update_element(const std::string& collection, int64_t id, const E
 void Database::update_element_by_label(const std::string& collection,
                                        const std::string& label,
                                        const Element& element) {
-    update_element(collection, impl_->resolve_label(collection, label, "update_element_by_label", *this), element);
+    update_element(collection, impl_->resolve_label(collection, label, "update_element_by_label"), element);
 }
 
 void Database::update_relation(const std::string& collection_from,
@@ -116,7 +116,7 @@ void Database::update_relation_by_label(const std::string& collection_from,
     update_relation(collection_from,
                     collection_to,
                     relation_type,
-                    impl_->resolve_label(collection_from, label, "update_relation_by_label", *this),
+                    impl_->resolve_label(collection_from, label, "update_relation_by_label"),
                     target_label);
 }
 
@@ -148,8 +148,7 @@ void Database::Impl::update_group_rows(const char* caller,
                                        const std::string& group,
                                        GroupTableType type,
                                        int64_t id,
-                                       const std::vector<std::map<std::string, Value>>& rows,
-                                       Database& db) {
+                                       const std::vector<std::map<std::string, Value>>& rows) {
     require_collection(collection, caller);
 
     const auto is_vector = type == GroupTableType::Vector;
@@ -161,7 +160,7 @@ void Database::Impl::update_group_rows(const char* caller,
         throw std::runtime_error(std::string(is_vector ? "Vector" : "Set") + " group not found: '" + group +
                                  "' in collection '" + collection + "'");
     }
-    require_element(collection, id, db);
+    require_element(collection, id);
 
     // Validate the union of every row's keys, not just rows[0]: a column named only in a later row
     // must still be written, and an unknown one must still be rejected (update_time_series_group
@@ -193,13 +192,13 @@ void Database::Impl::update_group_rows(const char* caller,
     auto columns = transpose_group_rows(rows, names);
     for (auto& [col_name, values] : columns) {
         for (auto& value : values) {
-            value = resolve_fk_label(*table_def, col_name, value, db);
+            value = resolve_fk_label(*table_def, col_name, value);
         }
     }
     validate_group_columns(caller, table_name, type, columns);
 
     TransactionGuard txn(*this);
-    insert_rows_into_group_table(table_name, type, columns, id, true, db);
+    insert_rows_into_group_table(table_name, type, columns, id, true);
     txn.commit();
 }
 
@@ -208,7 +207,7 @@ void Database::update_vector_group(const std::string& collection,
                                    int64_t id,
                                    const std::vector<std::map<std::string, Value>>& rows) {
     impl_->logger->debug("Updating vector {}.{} for id {} with {} rows", collection, group, id, rows.size());
-    impl_->update_group_rows("update_vector_group", collection, group, GroupTableType::Vector, id, rows, *this);
+    impl_->update_group_rows("update_vector_group", collection, group, GroupTableType::Vector, id, rows);
     impl_->logger->info("Updated vector {}.{} for id {} with {} rows", collection, group, id, rows.size());
 }
 
@@ -217,7 +216,7 @@ void Database::update_vector_group_by_label(const std::string& collection,
                                             const std::string& label,
                                             const std::vector<std::map<std::string, Value>>& rows) {
     update_vector_group(
-        collection, group, impl_->resolve_label(collection, label, "update_vector_group_by_label", *this), rows);
+        collection, group, impl_->resolve_label(collection, label, "update_vector_group_by_label"), rows);
 }
 
 void Database::update_set_group(const std::string& collection,
@@ -225,7 +224,7 @@ void Database::update_set_group(const std::string& collection,
                                 int64_t id,
                                 const std::vector<std::map<std::string, Value>>& rows) {
     impl_->logger->debug("Updating set {}.{} for id {} with {} rows", collection, group, id, rows.size());
-    impl_->update_group_rows("update_set_group", collection, group, GroupTableType::Set, id, rows, *this);
+    impl_->update_group_rows("update_set_group", collection, group, GroupTableType::Set, id, rows);
     impl_->logger->info("Updated set {}.{} for id {} with {} rows", collection, group, id, rows.size());
 }
 
@@ -233,8 +232,7 @@ void Database::update_set_group_by_label(const std::string& collection,
                                          const std::string& group,
                                          const std::string& label,
                                          const std::vector<std::map<std::string, Value>>& rows) {
-    update_set_group(
-        collection, group, impl_->resolve_label(collection, label, "update_set_group_by_label", *this), rows);
+    update_set_group(collection, group, impl_->resolve_label(collection, label, "update_set_group_by_label"), rows);
 }
 
 }  // namespace quiver

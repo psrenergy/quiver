@@ -123,7 +123,7 @@ Database::read_time_series_group(const std::string& collection, const std::strin
     }
     sql += " FROM " + ts_table + " WHERE id = ? ORDER BY " + dim_col;
 
-    auto result = execute(sql, {id});
+    auto result = impl_->execute(sql, {id});
 
     std::vector<std::map<std::string, Value>> rows;
     rows.reserve(result.row_count());
@@ -164,7 +164,7 @@ void Database::update_time_series_group(const std::string& collection,
 
     // Delete existing time series data for this element
     auto delete_sql = "DELETE FROM " + ts_table + " WHERE id = ?";
-    execute(delete_sql, {id});
+    impl_->execute(delete_sql, {id});
 
     if (rows.empty()) {
         txn.commit();
@@ -209,7 +209,7 @@ void Database::update_time_series_group(const std::string& collection,
             }
         }
 
-        execute(insert_sql, parameters);
+        impl_->execute(insert_sql, parameters);
     }
 
     txn.commit();
@@ -221,7 +221,7 @@ void Database::update_time_series_group_by_label(const std::string& collection,
                                                  const std::string& label,
                                                  const std::vector<std::map<std::string, Value>>& rows) {
     update_time_series_group(
-        collection, group, impl_->resolve_label(collection, label, "update_time_series_group_by_label", *this), rows);
+        collection, group, impl_->resolve_label(collection, label, "update_time_series_group_by_label"), rows);
 }
 
 void Database::upsert_time_series_row(const std::string& collection,
@@ -261,7 +261,7 @@ void Database::upsert_time_series_row(const std::string& collection,
     }
     insert_sql += ") VALUES (" + placeholders + ")";
 
-    execute(insert_sql, parameters);
+    impl_->execute(insert_sql, parameters);
 
     txn.commit();
     impl_->logger->debug("Upserted time series row {}.{} for id {}", collection, group, id);
@@ -272,7 +272,7 @@ void Database::upsert_time_series_row_by_label(const std::string& collection,
                                                const std::string& label,
                                                const std::map<std::string, Value>& row) {
     upsert_time_series_row(
-        collection, group, impl_->resolve_label(collection, label, "upsert_time_series_row_by_label", *this), row);
+        collection, group, impl_->resolve_label(collection, label, "upsert_time_series_row_by_label"), row);
 }
 
 std::vector<Value> Database::read_time_series_row(const std::string& collection,
@@ -313,7 +313,7 @@ std::vector<Value> Database::read_time_series_row(const std::string& collection,
                "GROUP BY id) latest ON t.id = latest.id AND t." + dim_col + " = latest.max_dt AND t." + attribute +
                " IS NOT NULL ORDER BY t.id";
 
-    auto query_result = execute(sql, {date_time});
+    auto query_result = impl_->execute(sql, {date_time});
 
     std::map<int64_t, Value> id_value_map;
     for (size_t i = 0; i < query_result.row_count(); ++i) {
@@ -380,7 +380,7 @@ std::map<std::string, std::optional<std::string>> Database::read_time_series_fil
     }
     sql += " FROM " + tsf + " LIMIT 1";
 
-    auto result = execute(sql);
+    auto result = impl_->execute(sql);
 
     std::map<std::string, std::optional<std::string>> paths;
     if (result.empty()) {
@@ -425,7 +425,7 @@ void Database::update_time_series_files(const std::string& collection,
 
     // Delete existing row (singleton table)
     auto delete_sql = "DELETE FROM " + tsf;
-    execute(delete_sql);
+    impl_->execute(delete_sql);
 
     // Build INSERT SQL
     std::string insert_sql = "INSERT INTO " + tsf + " (";
@@ -449,7 +449,7 @@ void Database::update_time_series_files(const std::string& collection,
     }
     insert_sql += ") VALUES (" + placeholders + ")";
 
-    execute(insert_sql, parameters);
+    impl_->execute(insert_sql, parameters);
 
     txn.commit();
     impl_->logger->info("Updated time series files for collection: {}", collection);

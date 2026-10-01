@@ -145,7 +145,7 @@ void Database::export_csv(const std::string& collection,
         IdLabelMap id_to_label;
         // One query, not two full-column reads. id (PK) and label (NOT NULL by schema convention)
         // are always present, so the guards are defensive only.
-        for (const auto& row : execute("SELECT id, label FROM " + to_table)) {
+        for (const auto& row : impl_->execute("SELECT id, label FROM " + to_table)) {
             auto id = row.get_integer(0);
             auto label = row.get_string(1);
             if (id && label) {
@@ -160,7 +160,7 @@ void Database::export_csv(const std::string& collection,
         impl_->require_collection(collection, "export_csv");
 
         // Get columns in schema definition order via SELECT * LIMIT 0
-        auto schema_result = execute("SELECT * FROM " + collection + " LIMIT 0");
+        auto schema_result = impl_->execute("SELECT * FROM " + collection + " LIMIT 0");
         const auto& all_columns = schema_result.columns();
 
         // Filter out "id", keep remaining columns in schema order
@@ -195,7 +195,7 @@ void Database::export_csv(const std::string& collection,
             fk_labels[fk.from_column] = &id_to_label_map(fk.to_table);
         }
 
-        auto data_result = execute("SELECT " + select_cols + " FROM " + collection + " ORDER BY rowid");
+        auto data_result = impl_->execute("SELECT " + select_cols + " FROM " + collection + " ORDER BY rowid");
         write_csv(data_result, csv_columns, type_map, options, fk_labels, path);
     } else {
         // Group export
@@ -224,7 +224,7 @@ void Database::export_csv(const std::string& collection,
         }
 
         // Get group table columns in schema definition order
-        auto schema_result = execute("SELECT * FROM " + table_name + " LIMIT 0");
+        auto schema_result = impl_->execute("SELECT * FROM " + table_name + " LIMIT 0");
         const auto& all_group_columns = schema_result.columns();
 
         // All group table columns become CSV columns (label first, then group data columns)
@@ -284,7 +284,7 @@ void Database::export_csv(const std::string& collection,
             }
         }
 
-        auto data_result = execute(query);
+        auto data_result = impl_->execute(query);
         write_csv(data_result, csv_columns, type_map, options, fk_labels, path);
     }
 }
