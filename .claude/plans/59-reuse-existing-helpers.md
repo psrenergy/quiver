@@ -137,11 +137,13 @@ From the repo root:
 
 ## Acceptance criteria
 
-- [ ] The `query_*` bodies are one line each.
-- [ ] No `for (const auto& fk : table_def.foreign_keys)` loop remains in `scalar_metadata_with_fk`
+- [x] The `query_*` bodies are one line each.
+- [x] No `for (const auto& fk : table_def.foreign_keys)` loop remains in `scalar_metadata_with_fk`
       (or in `resolve_fk_label`).
-- [ ] The LEFT JOIN SQL appears once (`grep -c "LEFT JOIN" src/database_read.cpp` prints 1).
-- [ ] Suites green.
+- [x] The LEFT JOIN SQL appears once. It is in `internal::grouped_values_sql`
+      (`src/database_internal.h`), not in `database_read.cpp`, so `grep -c "LEFT JOIN"
+      src/database_read.cpp` prints 0. See Implementation notes.
+- [x] Suites green.
 
 ## Pitfalls
 
@@ -153,3 +155,47 @@ From the repo root:
 
 - The `_by_id` readers' SQL.
 - The C API query entry points (plan 22).
+
+## Implementation notes
+
+Implemented on `rs/plan59` after fast-forwarding to master at `5a8c605` (plan 58), so 53, 54, 55,
+56, 57 and 58 are all in. Neither file this plan edits was touched by 58.
+
+**Drift fixed**
+- **Step 3 was already done, so it was skipped.** Master already has a single builder,
+  `internal::grouped_values_sql(collection, table, attribute, order_column)`. It sits in
+  `src/database_internal.h`, next to `read_grouped_values_all`, which parses its result by
+  position, and all six bulk vector/set readers call it. Its SQL is
+  `SELECT c.id, g.id, g.<attr> ...` with the `g.id` presence column, which this plan's excerpt
+  predates. `src/AGENTS.md` already describes it as the reader's "neighbour `grouped_values_sql`
+  [that] builds for all six", so the AGENTS.md edit was already in place too. The helper stays in
+  the header: moving it into `database_read.cpp`'s anonymous namespace would separate the builder
+  from the parser that depends on its column order, and contradict the placement AGENTS.md
+  documents. Acceptance criterion 3 is restated to match.
+- **The `resolve_fk_label` half of step 2 was done by plan 56**: it already uses
+  `table_def.get_foreign_key(column)`.
+- The `query_*` bodies called `impl_->execute(...)` (post-53), not `execute(...)`; the one-liners
+  keep `impl_->execute`.
+- `read_single_value<T>` needed no new specialization: it dispatches through the three
+  `get_row_value` overloads (`int64_t`, `double`, `std::string`), and the `double` one is
+  `Row::get_float`, which widens an INTEGER. The `src/AGENTS.md` "`Row::get_float` widens an
+  int64" bullet stays true as written: `query_float` now reaches it through
+  `read_single_value<double>`.
+
+**Verification**
+- `cmake --build build --config Debug`: OK.
+- `quiver_tests.exe`: 1399/1399 passed. `quiver_c_tests.exe`: 571/571 passed.
+- `scripts/format.bat`: exit 0. clang-format left both C++ edits unchanged. Biome rewrote 43
+  CRLF working-copy JS files to LF with no content change (`git diff --ignore-cr-at-eol` was empty,
+  and `core.autocrlf=true` normalizes them to the same blobs). That is pre-existing tooling noise,
+  so those files were restored with `git checkout` and are not part of this commit.
+
+**For later plans**
+- `TableDefinition::get_foreign_key` now has three callers: `scalar_metadata_with_fk`,
+  `Impl::resolve_fk_label` and `update_relation`. The four remaining `for (const auto& fk :
+  ...foreign_keys)` loops in `database_csv_import.cpp` (scalar and group FK maps) and
+  `database_csv_export.cpp` (scalar and group `fk_labels`) build a map over *every* FK. They are
+  not per-column lookups, so they are not `get_foreign_key` candidates.
+- Running `scripts/format.bat` on a Windows checkout with `core.autocrlf=true` leaves every JS file
+  showing as modified (EOL only). Restore them with `git checkout -- bindings/js` before
+  committing.
