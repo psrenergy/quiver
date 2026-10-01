@@ -434,7 +434,7 @@ impl_->logger->debug("Opening database: {}", path);
   resolved to existing elements.
 - **Label→id resolution has one query** (`database_impl.h`): `Impl::lookup_id_by_label(table,
   label)` is the only `SELECT id ... WHERE label = ?`, shared by `Impl::resolve_label`
-  (Pattern 2, backs every `_by_label` form) and `Impl::resolve_fk_label` (Pattern 3) — the two
+  (Pattern 2, backs every `_by_label` form) and `Impl::resolve_fk_label` (a miss is Pattern 3) — the two
   report a miss differently, so the throw stays with each caller. `resolve_label` calls
   `require_column(collection, "label")` because `require_collection` only checks `has_table`, so a
   group table would otherwise reach the SELECT and leak a raw `no such column: label` prepare
@@ -482,16 +482,20 @@ impl_->logger->debug("Opening database: {}", path);
 - **One scalar typing policy** shared by `value_matches_type` (`database_internal.h`, time-series
   writes) and `TypeValidator::validate_value` (`type_validator.cpp`, scalar create/update): int64
   matches `INTEGER` or `REAL` (int-for-REAL coercion), double matches `REAL` only (a float into an
-  `INTEGER` column is rejected), string matches `TEXT`/`INTEGER`(FK label)/`DATE_TIME`. Keep the two
-  in sync (root design decision). `import_csv` is the third enforcer, on CSV text: its
+  `INTEGER` column is rejected), string matches `TEXT` / `DATE_TIME`. `TypeValidator::validate_value`
+  *calls* `value_matches_type`, so the rule lives in one function. An FK label string never reaches
+  `validate_value`: `Impl::resolve_fk_label` turns it into an id first, and rejects a string on a
+  non-FK INTEGER column itself (Pattern 1, naming the caller). The time-series writers
+  (`update_time_series_group` / `upsert_time_series_row`) resolve no labels, so a label there reaches
+  `value_matches_type` and is rejected. `import_csv` is the third enforcer, on CSV text: its
   `parse_integer` (`database_csv_import.cpp`) and `utils::parse_float` (`utils/number.h`, shared
   with `csv_to_bin`) take a cell only if it parses whole, so a policy change must reach them too.
 - **DATE_TIME content is checked by both halves of that policy, through one predicate**:
-  `datetime::is_valid_iso8601` (`utils/datetime.h`). `TypeValidator::validate_value` calls it in its
-  string branch (covering scalar create/update and every vector/set array write, so it inherits the
-  check-before-first-write ordering of the "Group writes" bullet above); `validate_time_series_row`
-  (`database_time_series.cpp`) calls it in a **separate** guard next to `value_matches_type`. Do
-  not "restore symmetry" by moving the check into `value_matches_type`: that function decides the
+  `datetime::is_valid_iso8601` (`utils/datetime.h`). Both halves call it in a separate guard right
+  after the `value_matches_type` shape check: `TypeValidator::validate_value` (covering scalar
+  create/update and every vector/set array write, so it inherits the check-before-first-write
+  ordering of the "Group writes" bullet above) and `validate_time_series_row`
+  (`database_time_series.cpp`). Do not fold the check into `value_matches_type`: that function decides the
   *variant's shape*, and TEXT into a DATE_TIME column is the correct shape — routing a content
   failure through its `bool` would emit `column 'date_time' has type DATE_TIME but received TEXT`,
   which is a lie. The two guards phrase their own messages; the rule itself lives in exactly one

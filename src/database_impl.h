@@ -115,44 +115,43 @@ struct Database::Impl {
         }
     }
 
-    Value resolve_fk_label(const TableDefinition& table_def, const std::string& column, const Value& value) {
+    Value resolve_fk_label(const char* caller,
+                           const TableDefinition& table_def,
+                           const std::string& column,
+                           const Value& value) const {
         if (!std::holds_alternative<std::string>(value)) {
             return value;
         }
+        const auto& label = std::get<std::string>(value);
 
-        const auto& str_val = std::get<std::string>(value);
-
-        // Check if column is a foreign key
-        for (const auto& fk : table_def.foreign_keys) {
-            if (fk.from_column == column) {
-                auto id = lookup_id_by_label(fk.to_table, str_val);
-                if (!id) {
-                    throw std::runtime_error("Failed to resolve label '" + str_val + "' to ID in table '" +
-                                             fk.to_table + "'");
-                }
-                return *id;
+        if (const auto* fk = table_def.get_foreign_key(column)) {
+            auto id = lookup_id_by_label(fk->to_table, label);
+            if (!id) {
+                throw std::runtime_error("Failed to resolve label '" + label + "' to ID in table '" + fk->to_table +
+                                         "'");
             }
+            return *id;
         }
 
-        // String value on a non-FK INTEGER column is an error
-        auto col_type = table_def.get_data_type(column);
-        if (col_type && *col_type == DataType::Integer) {
-            throw std::runtime_error("Cannot resolve attribute: '" + column + "' is INTEGER but received string '" +
-                                     str_val + "' (not a foreign key)");
+        // A string on a non-FK INTEGER column is rejected here, before any write, in
+        // TypeValidator::validate_value's scalar wording (`type mismatch for column '<c>'`). An array
+        // cell is reported by column too, not by index.
+        if (const auto type = table_def.get_data_type(column); type && *type == DataType::Integer) {
+            throw std::runtime_error(std::string("Cannot ") + caller + ": type mismatch for column '" + column +
+                                     "': expected INTEGER, got TEXT");
         }
-
-        // String value for TEXT/DATETIME column: pass through
         return value;
     }
 
     // Resolve FK labels among an element's scalars against the collection table. Arrays are
     // resolved by prepare_group_data, against each group table they are written to.
-    std::map<std::string, Value> resolve_scalar_fk_labels(const std::string& collection,
-                                                          const std::map<std::string, Value>& scalars) {
+    std::map<std::string, Value> resolve_scalar_fk_labels(const char* caller,
+                                                          const std::string& collection,
+                                                          const std::map<std::string, Value>& scalars) const {
         const auto& collection_def = *schema->get_table(collection);
         std::map<std::string, Value> resolved;
         for (const auto& [name, value] : scalars) {
-            resolved[name] = resolve_fk_label(collection_def, name, value);
+            resolved[name] = resolve_fk_label(caller, collection_def, name, value);
         }
         return resolved;
     }
@@ -292,7 +291,7 @@ struct Database::Impl {
                 auto& resolved = entry.columns[array_name];
                 resolved.reserve(values.size());
                 for (const auto& value : values) {
-                    resolved.push_back(resolve_fk_label(table_def, array_name, value));
+                    resolved.push_back(resolve_fk_label(caller, table_def, array_name, value));
                 }
             }
         }

@@ -7,6 +7,15 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ## [0.12.8] — unreleased
 
+### Changed
+
+- **`create_element`/`update_element` errors name the operation.** A string written to a non-FK
+  INTEGER column now reports `Cannot create_element: type mismatch for column 'x': expected
+  INTEGER, got TEXT` (was `Cannot resolve attribute: ...`; `update_vector_group` /
+  `update_set_group` name themselves the same way), and an unknown attribute reports
+  `Cannot create_element: column 'x' not found in table 'T'` (was `Column 'x' not found in table
+  'T'`). The accepted values are unchanged.
+
 ### Removed
 
 - **BREAKING (C++ only) — unused `Row`/`Result` members removed:** `Row::size`, `column_count`,
@@ -15,6 +24,11 @@ callers to change something are prefixed **BREAKING** and say what to do.
   `quiver/result.h`. *Adapt:* use `operator[]`, `is_null` and the `get_*` getters, construct an
   empty result as `Result({}, {})`, and read the column count as `columns().size()`. Include
   `quiver/result.h` directly if you need the type.
+- **BREAKING (C++ only) — `Schema::get_data_type(table, column)` removed.** Its only caller was
+  `TypeValidator`, which now reports an unknown column itself (see Changed). The public static
+  `TypeValidator::validate_value` also no longer accepts a string for an INTEGER column; no
+  `Database` method passes it one, since FK labels are resolved to ids first. *Adapt:* use
+  `schema.get_table(table)->get_data_type(column)`, which returns `std::optional<DataType>`.
 
 ### Fixed
 

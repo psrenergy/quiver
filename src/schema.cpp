@@ -68,18 +68,6 @@ bool Schema::has_table(const std::string& name) const {
     return tables_.find(name) != tables_.end();
 }
 
-DataType Schema::get_data_type(const std::string& table, const std::string& column) const {
-    const auto* tbl = get_table(table);
-    if (!tbl) {
-        throw std::runtime_error("Table not found in schema: " + table);
-    }
-    auto type = tbl->get_data_type(column);
-    if (!type) {
-        throw std::runtime_error("Column '" + column + "' not found in table '" + table + "'");
-    }
-    return *type;
-}
-
 std::string Schema::vector_table_name(const std::string& collection, const std::string& group) {
     return collection + "_vector_" + group;
 }

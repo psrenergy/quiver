@@ -22,7 +22,7 @@ void Database::update_element(const std::string& collection, int64_t id, const E
     // Resolve every FK label and validate every array before the UPDATE: TransactionGuard no-ops
     // inside a caller-owned transaction or a dry run, so a throw after it would leave the scalar
     // update behind. (Scalar types are checked below, still ahead of the UPDATE.)
-    auto resolved = impl_->resolve_scalar_fk_labels(collection, scalars);
+    auto resolved = impl_->resolve_scalar_fk_labels("update_element", collection, scalars);
     auto groups = impl_->prepare_group_data("update_element", collection, arrays, true);
 
     Impl::TransactionGuard txn(*impl_);
@@ -192,7 +192,7 @@ void Database::Impl::update_group_rows(const char* caller,
     auto columns = transpose_group_rows(rows, names);
     for (auto& [col_name, values] : columns) {
         for (auto& value : values) {
-            value = resolve_fk_label(*table_def, col_name, value);
+            value = resolve_fk_label(caller, *table_def, col_name, value);
         }
     }
     validate_group_columns(caller, table_name, type, columns);

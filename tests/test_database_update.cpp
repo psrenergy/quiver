@@ -970,6 +970,36 @@ TEST(Database, UpdateElementTypeMismatchTextSetWithIntegers) {
     }
 }
 
+TEST(Database, UpdateElementUnknownScalarAttribute) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+    // update_element checks the id exists before it validates attributes.
+    auto id = db.create_element("Configuration", quiver::Element().set("label", std::string("Config")));
+
+    try {
+        db.update_element("Configuration", id, quiver::Element().set("no_such_column", int64_t{1}));
+        FAIL() << "Expected std::runtime_error";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), "Cannot update_element: column 'no_such_column' not found in table 'Configuration'");
+    }
+}
+
+// A string on a non-FK INTEGER scalar is rejected by FK resolution, before any write, in the same
+// words the type validator uses.
+TEST(Database, UpdateElementStringForNonFkIntegerScalar) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+    auto id = db.create_element("Configuration", quiver::Element().set("label", std::string("Config")));
+
+    try {
+        db.update_element("Configuration", id, quiver::Element().set("integer_attribute", std::string("abc")));
+        FAIL() << "Expected std::runtime_error";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(),
+                     "Cannot update_element: type mismatch for column 'integer_attribute': expected INTEGER, got TEXT");
+    }
+}
+
 // The scalar path threads the caller's name; the array path names the offending index. The full
 // grammar is covered once, in test_database_create.cpp.
 TEST(Database, UpdateElementInvalidDateTimeScalar) {
