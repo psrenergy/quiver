@@ -68,8 +68,8 @@ From the repo root:
 
 ## Acceptance criteria
 
-- [ ] Every remaining `#include` in both files is used, as shown by the symbol grep.
-- [ ] Debug build and CSV tests green.
+- [x] Every remaining `#include` in both files is used, as shown by the symbol grep.
+- [x] Debug build and CSV tests green.
 
 ## Pitfalls
 
@@ -81,3 +81,34 @@ From the repo root:
 ## Out of scope
 
 - Include cleanup in any other file.
+
+## Implementation notes
+
+- **Removed.** From `src/database_csv_export.cpp`: `<algorithm>`, `<cctype>`, `<cstring>`,
+  `<ctime>`, `<iomanip>` and `<set>`. Only `<filesystem>` (`fs::create_directories`) and `<fstream>`
+  (`std::ofstream`) are left. From `src/database_csv_import.cpp`: `<cstdio>`. Its other standard
+  includes are all used: `<algorithm>` (`std::transform`/`find`/`max`), `<cctype>` (`tolower`),
+  `<ctime>` (`std::tm`/`strftime`), `<filesystem>`, `<fstream>`, `<iomanip>` (`get_time`),
+  `<optional>`, `<set>`, `<sstream>` and `<string_view>`. Every project include in both files is
+  used.
+- **The greps.** The regexes above are written with `std::` prefixes. Without the prefix, `find`
+  matches the member `.find()` calls on `std::unordered_map` in the export file, which are not
+  `<algorithm>`.
+- **Drift fixed.**
+  - In export, the include block is at L9-16, not L8-15.
+  - In import, `<cstdio>` was at L12, not L13.
+  - Plan 13 (`ea886ad`) had already removed import's `<cerrno>`, `<clocale>`, `<cmath>` and
+    `<cstdlib>`, so the conditional step found nothing left to do.
+- **Order.** Plans 01, 13 and 58 had landed when this started, and plan 60 (`85e92d7`) landed on
+  master during the work. It edits import_csv's write tail, not the include block, and uses none of
+  the removed headers (greps re-run on HEAD). The build and the test runs below include it.
+- **Verification.**
+  - Debug build is green on MSVC.
+  - `quiver_tests --gtest_filter=*Csv*:*CSV*`: 303 passed. `quiver_c_tests` with the same filter:
+    58 passed.
+  - No local Linux build: WSL has only the `docker-desktop` distro, so the Linux/macOS CI jobs
+    cover libstdc++/libc++.
+  - `scripts/format.bat` passed its C++, Julia and Dart steps and changed no file. Its Python step
+    failed in the environment, before ruff ran: uv could not build its `quiverdb` venv ("Failed to
+    update Windows PE resources ... uv-trampoline.exe"). The script stops there, so the JS step
+    never ran. This change touches no Python or JS.
