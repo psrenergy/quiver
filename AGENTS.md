@@ -60,10 +60,11 @@ Settled questions — don't relitigate without the user; each was decided delibe
   live in the constructor, where it would validate a half-migrated database before `migrate_up`
   ran. Loading on first `require_schema` instead makes `open()` usable everywhere (it previously
   yielded a handle whose every metadata/CRUD call threw "no schema loaded") while
-  `from_schema`/`from_migrations` keep validating eagerly at construction. `schema` and
-  `type_validator` are `mutable` so the const readers can trigger it, and `load_schema_metadata`
-  publishes neither until validation passes — a half-loaded state would survive a failed lazy load
-  and crash the next call. A non-quiver database now reports the validator's actual reason.
+  `from_schema`/`from_migrations` keep validating eagerly at construction. `schema` is `mutable`
+  so the const readers can trigger it, and `load_schema_metadata` publishes it only after
+  validation passes, so a failed lazy load leaves nothing published for the next call (a schema
+  published early would never be validated again). A non-quiver database now reports the
+  validator's actual reason.
 - **The group writers are column-oriented while the group readers are row-oriented** in every
   FFI binding (`read_vector_group_by_id` returns rows in Julia, Dart, Python and JS; Python even
   adds a synthetic 0-based `vector_index`). The only asymmetric reader/writer pair in those bindings, and deliberate for now:
@@ -91,7 +92,8 @@ Settled questions — don't relitigate without the user; each was decided delibe
   (int-for-REAL coercion), a double only for REAL (a float into an INTEGER column is rejected), a
   string for TEXT / DATE_TIME, and an FK label for an INTEGER foreign key wherever
   `create_element`/`update_element` or the vector/set group writers resolve it to an id first (the
-  time-series writers take ids only). `TypeValidator` (scalar create/update) delegates the shape
+  time-series writers take ids only). `validate_value` (`src/type_validator.cpp`, scalar
+  create/update) delegates the shape
   check to `value_matches_type`, which the time-series writers call directly; bindings never coerce
   schema-dependently. `import_csv` writes through a raw `INSERT`, so it applies the rule to CSV
   text itself: `parse_integer` (`src/database_csv_import.cpp`) and `utils::parse_float`
@@ -116,7 +118,7 @@ Settled questions — don't relitigate without the user; each was decided delibe
   the gate judges what is actually stored). `import_csv` is the deliberate exception to
   "no normalizing": it *parses* a cell, so it canonicalizes to `YYYY-MM-DDTHH:MM:SS` (which is what
   lets an exported date-only value round-trip) — and then runs the same predicate over the
-  canonical string, because import writes through a raw `INSERT` that `TypeValidator` never sees.
+  canonical string, because import writes through a raw `INSERT` that `validate_value` never sees.
 - **`update_element` / `delete_element` throw on a missing id** (`"Element not found: <id> in
   collection '<c>'"`, Pattern 2) — not a silent no-op. The error surfaces through the C API error
   channel and every binding.

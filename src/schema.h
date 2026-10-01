@@ -1,8 +1,7 @@
 #ifndef QUIVER_SCHEMA_H
 #define QUIVER_SCHEMA_H
 
-#include "data_type.h"
-#include "export.h"
+#include "quiver/data_type.h"
 
 #include <map>
 #include <optional>
@@ -51,7 +50,7 @@ struct TableDefinition {
     const ForeignKey* get_foreign_key(const std::string& column) const;
 };
 
-class QUIVER_API Schema {
+class Schema {
 public:
     // Factory: loads schema from database
     static Schema from_database(sqlite3* db);

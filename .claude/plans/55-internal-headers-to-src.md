@@ -193,9 +193,9 @@ From the repo root:
 
 ## Acceptance criteria
 
-- [ ] The three headers live in `src/` without `QUIVER_API`, and `grep -rn "quiver/schema.h\|quiver/schema_validator.h\|quiver/type_validator.h" .` (excluding `build/`) finds nothing.
-- [ ] No `TypeValidator` class remains, and `Impl` has no `type_validator` member.
-- [ ] All suites green. Both AGENTS.md files and the CHANGELOG are updated.
+- [x] The three headers live in `src/` without `QUIVER_API`, and `grep -rn "quiver/schema.h\|quiver/schema_validator.h\|quiver/type_validator.h" .` (excluding `build/`) finds nothing. (Checked with the scoped `git grep`; see Implementation notes.)
+- [x] No `TypeValidator` class remains, and `Impl` has no `type_validator` member.
+- [x] All suites green. Both AGENTS.md files and the CHANGELOG are updated.
 
 ## Pitfalls
 
@@ -209,3 +209,93 @@ From the repo root:
 
 - The typing-policy rewrite (plan 56).
 - `Row`/`Result` (plan 54, which keeps them public).
+
+## Implementation notes
+
+I implemented this on `rs/plan55`, merging `origin/master` at `53300d9` first. That merge
+carries plans 53 (`5b12950`), 54 (`96c205e`) and 56 (`53300d9`), so all three dependencies had
+landed. The user confirmed 56 should run before 55. I verified the plan against the code twice:
+once at `3ca11b8` in plan mode, with a read-only adversarial pass, and again after the merge. Every
+edit is re-anchored by function name.
+
+### Deviations and drift
+
+- **Array validation call site.** It is in `Impl::validate_group_columns`, not
+  `insert_rows_into_group_table`; plan 05 moved it. It now reads
+  `validate_array(caller, *schema, table_name, col_name, values)`, with the
+  `if (!values.empty())` guard kept. `validate_group_columns` stays `const` and non-static.
+- **Bodies.** I kept them exactly as plan 56 left them, including its anonymous
+  `column_type(schema, caller, table, column)` helper, which the free functions now pass `schema`
+  to directly. The constructor and the `schema_` member are gone. clang-format joined the
+  `validate_value` definition onto one line.
+- **The comment above `Impl::schema` needed no change.** It already describes one member. Only the
+  `type_validator` line went. I also changed "unlike schema/type_validator above" above
+  `ui_metadata`, and `resolve_fk_label`'s comment naming `TypeValidator::validate_value`, which
+  plan 56 added.
+- **`load_schema_metadata`'s comment and both AGENTS.md lazy-schema texts name the real hazard.**
+  With one member, the old "half-loaded state ... crash the next call" is no longer what can go
+  wrong. A schema published before `validate()` would stay published, and `require_schema` (which
+  loads only while `schema` is null) would never validate it again. The plan's replacement for the
+  root AGENTS.md text stopped at "passes" and left the stale "crash the next call" tail, so I
+  rewrote the tail as well.
+- **More `TypeValidator` mentions than the plan listed.** Besides its own anchors, I changed
+  `tests/test_database_csv_import.cpp` (~L591), root `AGENTS.md` L117 ("never sees") and the
+  `src/AGENTS.md` mentions at ~L483/485/495/504/515. I also changed the file-map `database_impl.h`
+  line from "schema/type validators" to "lazy schema load". Plan 56 had already rewritten the
+  root AGENTS.md typing sentence, which now reads "`validate_value` (`src/type_validator.cpp`,
+  scalar create/update) delegates the shape check to `value_matches_type`".
+- **`src/AGENTS.md` "first `.cpp` with no `include/quiver/` counterpart" paragraph.** Both of its
+  clauses became false: "every other internal helper ... is header-only inline" and "every other
+  `QUIVER_SOURCES` entry implements a public header". I rewrote both and named `schema.cpp`,
+  `schema_validator.cpp` and `type_validator.cpp`.
+- **CHANGELOG.** The entry is under `## [0.12.8] — unreleased` → `### Removed`, a section plan 54
+  opened; there is no 0.12.0 section. The entry also says that it supersedes the *Adapt* line of
+  plan 56's `Schema::get_data_type` entry just above it. That line told C++ users to call
+  `schema.get_table(...)`, which no outside code can do any more. No manifest bump.
+- **Acceptance grep.** The plan's `grep -rn ... .` can never come back empty: these plan files,
+  `.cache/clangd`, `bindings/dart/.dart_tool` build trees and the new CHANGELOG entry all contain
+  the strings. I used
+  `git grep -n "quiver/schema.h\|quiver/schema_validator.h\|quiver/type_validator.h" -- . ':!.claude/plans' ':!CHANGELOG.md'`
+  instead, and it is empty.
+- **Commit type.** `refactor!:`, as for plans 42 and 54. It is breaking for C++ consumers only.
+
+### Verification
+
+- **Baseline.** Before any edit, the build was green, with 1395 `quiver_tests` and 571
+  `quiver_c_tests`.
+- **Configure.** I ran `cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
+  -DQUIVER_BUILD_TESTS=ON -DQUIVER_BUILD_C_API=ON` first. The root `GLOB_RECURSE ALL_SOURCE_FILES`
+  has no `CONFIGURE_DEPENDS`, so without a reconfigure the format target would still list
+  `include/quiver/schema.h`.
+- **Build.** `cmake --build build --config Debug` exited 0. The only warning is the existing C4701
+  `group_type` in `database_csv_import.cpp`, a file where this plan changed only the include line.
+- **`quiver_tests`.** 1395/1395 passed.
+- **`quiver_c_tests`.** 571/571 passed.
+- **`cmake --install build --prefix %TEMP%\quiver-install`.** `include/quiver/` no longer has
+  `schema.h`, `schema_validator.h` or `type_validator.h`. I deleted the prefix afterwards.
+- **`scripts/test-all.bat`.**
+  - The first run failed before running any Python test: `uv` could not install the
+    `scikit-build-core` build dependency ("Failed to update Windows PE resources:
+    ...uv-trampoline...exe — The system cannot open the device or file specified"). That is an
+    environment problem. `bindings/python/tests/test.bat` alone then passed, 350 tests.
+  - The final run, after formatting, exited 0 with every suite passing: C++, C API, Julia,
+    Dart (445), JS (242 pass, 0 fail) and Python (350).
+- **`scripts/format.bat`.** Exited 0.
+  - clang-format reflowed only the `validate_value` signature.
+  - Biome again rewrote 43 JS files CRLF→LF. `git diff --ignore-cr-at-eol -- bindings/js` was
+    empty, and I reverted them with `git checkout -- bindings/js`.
+
+### For later plans
+
+- **57** (L73, L111, L126) and **58** (L64) cite `include/quiver/schema.h`. The file is now
+  `src/schema.h`, without `QUIVER_API`. **62** cites only `src/schema.cpp`, so it needs no path
+  change.
+- **76** (`src/AGENTS.md` ~L91-93): this plan already rewrote the paragraph's two false clauses
+  for the three moved pairs. Step 2 still has to add `csv/csv_write.cpp`/`ui_metadata.cpp`
+  and change "is the first" to "was the first".
+- **README.** The batch-6 table lists 56 as depending on "53, 55". That contradicts the order
+  note "56 before 55" and both plan headers, which form the cycle with 55's "56". The
+  order that actually ran was 53, 54, 56, 55.
+- **`validate_scalar`/`validate_array`/`validate_value`** are free functions in namespace `quiver`
+  (`src/type_validator.h`). Any later plan that validates a value calls them with the `Schema`
+  (`*impl_->schema` or `*schema` inside `Impl`).

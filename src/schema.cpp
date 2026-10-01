@@ -1,4 +1,4 @@
-#include "quiver/schema.h"
+#include "schema.h"
 
 #include <algorithm>
 #include <cctype>

@@ -34,6 +34,11 @@ callers to change something are prefixed **BREAKING** and say what to do.
   `TypeValidator::validate_value` also no longer accepts a string for an INTEGER column; no
   `Database` method passes it one, since FK labels are resolved to ids first. *Adapt:* use
   `schema.get_table(table)->get_data_type(column)`, which returns `std::optional<DataType>`.
+- **BREAKING (C++ only) — `quiver/schema.h`, `quiver/schema_validator.h` and
+  `quiver/type_validator.h` are no longer installed.** They were internal (no binding and no C
+  API used them), and `TypeValidator` is now three internal free functions. This supersedes the
+  *Adapt* of the entry above: `Schema` is no longer reachable from outside the library either.
+  *Adapt:* use `Database::get_*_metadata` / `list_*` for schema introspection.
 
 ### Fixed
 

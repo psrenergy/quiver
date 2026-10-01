@@ -1,7 +1,6 @@
 #ifndef QUIVER_SCHEMA_VALIDATOR_H
 #define QUIVER_SCHEMA_VALIDATOR_H
 
-#include "export.h"
 #include "schema.h"
 
 #include <string>
@@ -18,7 +17,7 @@ namespace quiver {
 // - Set tables have proper UNIQUE constraints
 // - Every foreign key uses ON UPDATE CASCADE and ON DELETE SET NULL or CASCADE
 // - No duplicate attributes across a collection and its vector, set and time series tables
-class QUIVER_API SchemaValidator {
+class SchemaValidator {
 public:
     explicit SchemaValidator(const Schema& schema);
 

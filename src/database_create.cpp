@@ -15,7 +15,7 @@ int64_t Database::create_element(const std::string& collection, const Element& e
     // a caller-owned transaction or a dry run, so a throw after it would leave the element behind.
     auto resolved = impl_->resolve_scalar_fk_labels("create_element", collection, scalars);
     for (const auto& [name, value] : resolved) {
-        impl_->type_validator->validate_scalar("create_element", collection, name, value);
+        validate_scalar("create_element", *impl_->schema, collection, name, value);
     }
     auto groups = impl_->prepare_group_data("create_element", collection, element.arrays(), false);
 

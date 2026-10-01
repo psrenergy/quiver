@@ -1,7 +1,7 @@
 #include "csv/csv_write.h"
 #include "database_impl.h"
 #include "quiver/options.h"
-#include "quiver/schema.h"
+#include "schema.h"
 #include "utils/datetime.h"
 #include "utils/number.h"
 

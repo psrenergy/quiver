@@ -336,7 +336,7 @@ TEST_F(MigrationFixture, FromMigrationsLoadsSchemaMetadata) {
 TEST_F(MigrationFixture, FromMigrationsAllowsCreateElement) {
     auto db = quiver::Database::from_migrations(":memory:", migrations_path);
 
-    // create_element requires schema and type_validator to be loaded
+    // create_element requires the schema to be loaded
     auto id = db.create_element("Test1", quiver::Element().set("label", "item1").set("name", "Test Item"));
     EXPECT_GT(id, 0);
 

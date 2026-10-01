@@ -81,7 +81,7 @@ inline bool parse_iso8601(const std::string& datetime_str, std::tm& tm) {
 }
 
 // Write-side gate for DATE_TIME columns: the parsed fields are discarded, only validity matters.
-// Shared by TypeValidator::validate_value (scalar + array writes) and validate_time_series_row
+// Shared by validate_value (type_validator.cpp, scalar + array writes) and validate_time_series_row
 // (time-series writes) - the two halves of the one scalar typing policy.
 //
 // Trims first because Impl::execute trims every bound string, so the value that reaches SQLite
