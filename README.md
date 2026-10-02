@@ -9,8 +9,6 @@
 
 Schema-first SQLite wrapper for decision support models. Define tables in plain SQL and get typed scalars, vectors, sets, and time series — with parameterized queries, CSV import/export, and transactions.
 
-## Install
-
 | Language   | Package                                                                |
 | ---------- | ---------------------------------------------------------------------- |
 | Julia      | [Quiver.jl](https://github.com/psrenergy/Quiver.jl)              |
