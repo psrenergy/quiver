@@ -352,6 +352,13 @@ TEST_F(LuaBinaryTest, OpenFileInvalidModeThrows) {
     expect_lua_error(lua, "db:open_file('bin_a', 'x')\n", "Cannot open_file: mode must be");
 }
 
+// The mode is validated before the path is resolved, so an escaping path cannot mask a bad mode.
+TEST_F(LuaBinaryTest, OpenFileReportsInvalidModeBeforeEscapingPath) {
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+    expect_lua_error(lua, "db:open_file('../escape', 'z')", R"(Cannot open_file: mode must be "r" or "w")");
+}
+
 // --- db-directory sandbox ---
 
 TEST_F(LuaBinaryTest, RelativePathResolvesAgainstDbDir) {

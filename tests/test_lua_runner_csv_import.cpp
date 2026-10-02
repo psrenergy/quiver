@@ -269,6 +269,18 @@ TEST_F(LuaRunner_ImportCSV, EscapeThrows) {
     );
 }
 
+// The path is resolved before the options are decoded, so a non-table options argument cannot mask an escaping path.
+TEST_F(LuaRunner_ImportCSV, EscapeIsReportedBeforeNonTableOptions) {
+    auto schema = VALID_SCHEMA("csv_export.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+    expect_lua_error(
+        lua,
+        R"(db:import_csv("Items", "", "../x.csv", 5))",
+        "Cannot import_csv: path '../x.csv' escapes the database directory"
+    );
+}
+
 TEST_F(LuaRunner_ImportCSV, InMemoryThrows) {
     auto csv_schema = VALID_SCHEMA("csv_export.sql");
     auto db = quiver::Database::from_schema(":memory:", csv_schema);
