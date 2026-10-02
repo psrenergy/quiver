@@ -1,8 +1,14 @@
 #include "test_lua_runner.h"
 
 #include <filesystem>
+#include <memory>
 #include <string>
 #include <utility>
+
+static_assert(
+    sizeof(quiver::LuaRunner) == sizeof(void*),
+    "LuaRunner must hold only its heap Impl: run state outside Impl dangles after a move"
+);
 
 // A move hands the heap Impl over whole, so the moved-to runner's bindings still reach the registries
 // that close every CSV writer and binary file at run() exit.
@@ -65,6 +71,36 @@ TEST_F(LuaRunner_Lifecycle, MoveAssignment) {
     target.run(open_handles("target"));  // destroyed with live globals by the assignment below
 
     target = std::move(source);
+    target.run("assert(origin == 'first', 'moved-to runner lost the source Lua state')");
+    target.run(open_handles("second"));
+    target.run(expect_handles_closed("second"));
+    EXPECT_TRUE(std::filesystem::exists(sandbox / "second_doubled.qvr"));
+}
+
+// The source is freed before the moved-to runner runs again, so run state still reached through the
+// moved-from runner dangles instead of silently working.
+TEST_F(LuaRunner_Lifecycle, MoveConstructorOutlivesSource) {
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    auto source = std::make_unique<quiver::LuaRunner>(db);
+    source->run(open_handles("first"));
+
+    quiver::LuaRunner moved = std::move(*source);
+    source.reset();
+    moved.run("assert(origin == 'first', 'moved-to runner lost the source Lua state')");
+    moved.run(open_handles("second"));
+    moved.run(expect_handles_closed("second"));
+    EXPECT_TRUE(std::filesystem::exists(sandbox / "second_doubled.qvr"));
+}
+
+TEST_F(LuaRunner_Lifecycle, MoveAssignmentOutlivesSource) {
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    auto source = std::make_unique<quiver::LuaRunner>(db);
+    source->run(open_handles("first"));
+    quiver::LuaRunner target(db);
+    target.run(open_handles("target"));
+
+    target = std::move(*source);
+    source.reset();
     target.run("assert(origin == 'first', 'moved-to runner lost the source Lua state')");
     target.run(open_handles("second"));
     target.run(expect_handles_closed("second"));
