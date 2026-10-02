@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 #
 # Dispatch a workflow_dispatch workflow, find the run it created, and wait for it to finish.
-# Used by release.yml to orchestrate the four publish workflows. Dispatch (not workflow_call)
+# Used by publish.yml to orchestrate the four publish workflows. Dispatch (not workflow_call)
 # is load-bearing: npm and PyPI trusted publishing validate the *top-level* workflow filename
 # from the OIDC claims, so publish-js.yml / publish-python.yml must run as their own top-level
 # workflows or registry auth breaks (and npm allows only one trusted publisher per package).
 #
 # Run correlation: `gh workflow run` returns nothing, so the created run is found by listing
-# runs of that workflow on that ref created after a pre-dispatch timestamp. release.yml's
+# runs of that workflow on that ref created after a pre-dispatch timestamp. publish.yml's
 # `release` concurrency group serializes orchestrators, and the bindings are dispatched on a
 # fresh per-release tag, so the newest matching run is unambiguous.
 #
