@@ -84,10 +84,10 @@ Rebuild and re-run formatting.
 
 ## Acceptance criteria
 
-- [ ] The glob has five recursive roots.
-- [ ] One testing call (`enable_testing()`).
-- [ ] No redundant pyproject `cmake.args`, and no `OUTPUT_NAME quiver`.
-- [ ] Build, tests, format target and wheel are all fine. bindings/python/AGENTS.md is updated.
+- [x] The glob has five recursive roots.
+- [x] One testing call (`enable_testing()`).
+- [x] No redundant pyproject `cmake.args`, and no `OUTPUT_NAME quiver`.
+- [x] Build, tests, format target and wheel are all fine. bindings/python/AGENTS.md is updated.
 
 ## Pitfalls
 
@@ -97,3 +97,31 @@ Rebuild and re-run formatting.
 ## Out of scope
 
 - The tidy target (plan 79). The presets (plan 85).
+
+## Implementation notes
+
+- **Depends on 79: landed** (PR #395, merged before this branch integrated master at `9c97ddd`).
+  79 had already changed the glob comment to `# Source files for format target`; this plan's
+  comment replaces it.
+- **The glob's file set is unchanged.** `include/` holds only `quiver/`, and every old pattern was
+  already recursive, so the five roots select exactly the old files (and exactly what CI's
+  `find include src tests` checks). Verification step 3's contingency did not trigger: the format
+  target changed no file.
+- **Correction to Why #2: `include(CTest)` was a pure no-op, not a source of `BUILD_TESTING`.**
+  sol2 sets `CMAKE_PROJECT_INCLUDE` to its `cmake/Includes/Project.cmake`, which runs
+  `include(CTest)` during `include(Dependencies)` — before our line. So `BUILD_TESTING` (cache,
+  default ON) and the dashboard targets (`Experimental`, `Nightly`, ...) still exist after this
+  change, even in a wheel build (`BUILD_TESTING:BOOL=ON` in the scikit-build cache). Nothing in
+  this repo or its deps reads `BUILD_TESTING`, so deleting our call changes nothing. Removing
+  sol2's would need a `CMAKE_PROJECT_INCLUDE` override around its `FetchContent_MakeAvailable`;
+  not done (no effect worth the code). The only thing our call still produced was
+  `build/DartConfiguration.tcl`; an existing build tree keeps a stale copy, and ctest does not need
+  it (`ctest -N` lists all 1937 tests with it moved aside).
+- **Drift:** the `bindings/python/AGENTS.md` sentence is at ~L163-164, not ~L102-104. Wording
+  matched; edited as specified.
+- **Results:** Debug configure + build OK; `ctest --test-dir build` 1937/1937 passed;
+  `scripts/format.bat` clean (biome's CRLF->LF churn on 43 untouched JS files reverted); wheel
+  built (`quiverdb-0.12.9-cp313-cp313-win_amd64.whl` with `libquiver.dll` + `libquiver_c.dll`),
+  its cache has `QUIVER_BUILD_TESTS:BOOL=OFF` and no googletest was fetched; `build/bin` still has
+  `libquiver.dll` / `libquiver_c.dll`.
+- No CHANGELOG entry: build-internal, no caller-visible effect (plan 79's target removal had none).

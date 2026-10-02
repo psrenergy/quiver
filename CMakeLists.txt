@@ -54,7 +54,6 @@ add_subdirectory(src)
 
 # Tests
 if(QUIVER_BUILD_TESTS)
-    include(CTest)
     enable_testing()
     add_subdirectory(tests)
 endif()
@@ -89,21 +88,13 @@ if(NOT DEFINED SKBUILD)
     )
 endif()
 
-# Source files for format target
+# Source files for the format target (recursive, matching CI's clang-format check)
 file(GLOB_RECURSE ALL_SOURCE_FILES
-    ${CMAKE_SOURCE_DIR}/include/quiver/*.h
-    ${CMAKE_SOURCE_DIR}/include/quiver/c/*.h
+    ${CMAKE_SOURCE_DIR}/include/*.h
     ${CMAKE_SOURCE_DIR}/src/*.cpp
     ${CMAKE_SOURCE_DIR}/src/*.h
-    ${CMAKE_SOURCE_DIR}/src/binary/*.cpp
-    ${CMAKE_SOURCE_DIR}/src/binary/*.h
-    ${CMAKE_SOURCE_DIR}/src/c/*.cpp
-    ${CMAKE_SOURCE_DIR}/src/c/*.h
-    ${CMAKE_SOURCE_DIR}/src/cli/*.cpp
-    ${CMAKE_SOURCE_DIR}/src/utils/*.h
     ${CMAKE_SOURCE_DIR}/tests/*.cpp
     ${CMAKE_SOURCE_DIR}/tests/*.h
-    ${CMAKE_SOURCE_DIR}/tests/benchmark/*.cpp
 )
 
 # Format target

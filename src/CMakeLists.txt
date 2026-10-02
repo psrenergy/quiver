@@ -91,7 +91,6 @@ target_link_libraries(quiver
 # (set next to the option in the root CMakeLists.txt).
 set_target_properties(quiver PROPERTIES
     ${QUIVER_LIB_VERSION}
-    OUTPUT_NAME quiver
     PREFIX "lib"
 )
 
