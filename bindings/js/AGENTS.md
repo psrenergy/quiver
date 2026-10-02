@@ -24,6 +24,8 @@ src/errors.ts     # QuiverError (always thrown; message from quiver_get_last_err
 test/             # bun:test suite (*.test.ts per area) + test.bat
 package.json      # Version must match CMakeLists.txt; scripts: test/lint/format (biome)
 biome.json        # Lint/format config
+bunfig.toml       # coverageSkipTestFiles = true (Bun 1.3 reports test/ otherwise; CI uploads
+                  # `bun test test --coverage --coverage-reporter=lcov` as Codecov flag `js`)
 ```
 
 ## Rules and gotchas

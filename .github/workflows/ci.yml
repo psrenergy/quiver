@@ -74,6 +74,9 @@ jobs:
           files: coverage.info
           flags: cpp
           fail_ci_if_error: true
+          disable_search: true
+          # The CLI's gcov plugin would re-run gcov over build/ and upload tests/ and _deps/.
+          plugins: noop
           token: ${{ secrets.CODECOV_TOKEN }}
 
   julia-coverage:
@@ -115,6 +118,7 @@ jobs:
           files: lcov.info
           flags: julia
           fail_ci_if_error: true
+          disable_search: true
           token: ${{ secrets.CODECOV_TOKEN }}
 
   dart-coverage:
@@ -153,6 +157,7 @@ jobs:
           files: bindings/dart/coverage/lcov.info
           flags: dart
           fail_ci_if_error: true
+          disable_search: true
           token: ${{ secrets.CODECOV_TOKEN }}
 
   python-coverage:
@@ -186,6 +191,7 @@ jobs:
           files: bindings/python/coverage.xml
           flags: python
           fail_ci_if_error: true
+          disable_search: true
           token: ${{ secrets.CODECOV_TOKEN }}
 
   clang-format:
@@ -249,7 +255,7 @@ jobs:
         working-directory: bindings/js
         env:
           LD_LIBRARY_PATH: ${{ github.workspace }}/build/lib
-        run: bun test test
+        run: bun test test --coverage --coverage-reporter=lcov
 
       - name: Run Bun tests (Windows)
         if: runner.os == 'Windows'
@@ -258,3 +264,13 @@ jobs:
         run: |
           $env:PATH = "${{ github.workspace }}\build\bin\Debug;$env:PATH"
           bun test test
+
+      - name: Upload to Codecov
+        if: matrix.os == 'ubuntu-latest'
+        uses: codecov/codecov-action@v7
+        with:
+          files: bindings/js/coverage/lcov.info
+          flags: js
+          fail_ci_if_error: true
+          disable_search: true
+          token: ${{ secrets.CODECOV_TOKEN }}

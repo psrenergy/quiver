@@ -7,13 +7,23 @@ five manifests) lives in the root `AGENTS.md`.
 
 | Workflow | Trigger | Purpose |
 |---|---|---|
-| `ci.yml` | push/PR to master | Build matrix (ubuntu/ubuntu-arm/windows/macos × Release/Debug) + ctest + artifact upload; four coverage jobs uploading to Codecov with flags `cpp`, `julia`, `dart`, `python`; plus `clang-format` check (22.1.8 wheel via `uvx`), `actionlint`, and a `bun-test` matrix (ubuntu+ubuntu-arm+windows) |
+| `ci.yml` | push/PR to master | Build matrix (ubuntu/ubuntu-arm/windows/macos × Release/Debug) + ctest + artifact upload; four coverage jobs uploading to Codecov with flags `cpp`, `julia`, `dart`, `python`; plus `clang-format` check (22.1.8 wheel via `uvx`), `actionlint`, and a `bun-test` matrix (ubuntu+ubuntu-arm+windows) whose `ubuntu-latest` leg uploads flag `js` |
 | `bump-version.yml` | `workflow_dispatch` (`part`: major/minor/patch) | Runs `scripts/assert_version.py bump <part>` and opens a PR with the five manifests rewritten (see below) |
 | `publish.yml` | `workflow_dispatch` | Release orchestrator (see below) |
 | `publish-s3.yml` | `workflow_dispatch` (usually from publish.yml) | Builds native libs for `linux-x86_64`, `linux-aarch64`, `macos-aarch64`, `windows-x86_64` and stages them on S3 (via `scripts/ci/native_s3.sh upload`) |
 | `publish-julia.yml` | `workflow_dispatch` | Mirrors `bindings/julia` into psrenergy/Quiver.jl (see below) |
 | `publish-python.yml` | push/PR to master + `workflow_dispatch` | cibuildwheel on a ubuntu+ubuntu-arm+windows matrix (targets in `bindings/python/AGENTS.md`); the PyPI publish job runs only on `workflow_dispatch` (trusted publishing, `skip-existing: true`, `environment: pypi`) |
 | `publish-js.yml` | `workflow_dispatch` | npm publish with bundled native libs (see below) |
+
+**Codecov uploads send exactly the one file they name.** Every `codecov-action` step sets
+`disable_search: true`, and the C++ one also sets `plugins: noop`. With the defaults, the CLI runs
+its gcov plugin over every `.gcno` in `build/` and adds whatever else its search finds, which put
+all of `tests/*.cpp` into the report behind lcov's `--remove` filter (62% of the measured lines,
+reading 96.7% where the source was at 93.6%). Two related traps: in `codecov.yml`, `dir/**/*`
+compiles to a regex that needs a subdirectory and never matches `dir`'s own files, so write `dir/`
+(check with `curl -X POST --data-binary @codecov.yml https://codecov.io/validate`). And Bun 1.3
+reports test files in coverage despite its docs, so `bindings/js/bunfig.toml` sets
+`coverageSkipTestFiles` explicitly.
 
 Composite actions in `.github/actions/`:
 - `build-cpp` — configure/build the core + C API with a FetchContent source cache. The cache key
