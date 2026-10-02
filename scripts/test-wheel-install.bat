@@ -68,6 +68,7 @@ echo Installing wheel into clean venv...
 uv pip install --python "%VENV_PYTHON%" "!WHEEL_FILE!"
 if !errorlevel! neq 0 (
     echo FAIL: wheel install failed
+    set "EXIT_CODE=1"
     goto :cleanup
 )
 echo.

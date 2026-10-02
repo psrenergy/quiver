@@ -56,8 +56,8 @@ Run both scripts. That run is the test.
 
 ## Acceptance criteria
 
-- [ ] A failed wheel install makes `test-wheel-install.bat` exit non-zero, with no SUCCESS banner.
-- [ ] `test-wheel.bat` works without a dev venv.
+- [x] A failed wheel install makes `test-wheel-install.bat` exit non-zero, with no SUCCESS banner.
+- [x] `test-wheel.bat` works without a dev venv.
 
 ## Pitfalls
 
@@ -66,3 +66,29 @@ Run both scripts. That run is the test.
 ## Out of scope
 
 - CI wheel validation (`validate_wheel*.py` in the cibuildwheel flow).
+
+## Implementation notes
+
+- **No drift.** Every excerpt and line number matched. Integrating master was a no-op (branch was
+  at `origin/master`). No AGENTS.md describes the dev-venv requirement and these are local dev
+  scripts, so there is no AGENTS.md or CHANGELOG edit.
+- Only Step 3 of `test-wheel-install.bat` lacked `set "EXIT_CODE=1"`; Steps 4/5 already set it and
+  Steps 1/2 `exit /b 1` directly. `validate_wheel.py` is stdlib-only, so no `--with`.
+- **Regression shown on a throwaway copy** of `test-wheel-install.bat` with `WHEEL_FILE` pointed at
+  `dist\nonexistent.whl`. Before the fix: `FAIL: wheel install failed`, then the SUCCESS banner,
+  exit 0. After: the FAILURE banner, exit 1.
+- **Verification:** `test-wheel.bat` with `bindings\python\.venv` renamed away → `VALIDATION PASSED`,
+  exit 0. `test-wheel-install.bat` in full → bundled import validation and 350 pytest passes, exit 0.
+- **Host flakiness, not caused by this plan:** on this machine `uv` intermittently fails to write
+  its launcher exe (`Failed to update Windows PE resources ... uv-trampoline-*.exe`, os error
+  -2147024786) in `uv venv`, and in `uv build` while installing build deps, about 3 runs in 4. The
+  verification runs were retried until a run got past it.
+- **Pre-existing, left for a follow-up (out of scope):** `test-wheel-install.bat`'s temp venv is
+  created outside `bindings/python`, so it ignores that directory's `.python-version` (3.13) and
+  picks uv's default interpreter (3.14 here), while `uv build` produces a `cp313` wheel. Step 3
+  then fails to install, which until this fix was reported as SUCCESS. The full run above set
+  `UV_PYTHON=3.13`. A fix would pass the wheel's interpreter to `uv venv --python`.
+- `scripts/format.bat` passes, but biome rewrites the CRLF working copies of `bindings/js` to LF
+  (no content diff; git normalizes them). Restored with `git checkout -- bindings/js`. Plans 86/87
+  may want to know.
+- Nothing later plans depend on.
