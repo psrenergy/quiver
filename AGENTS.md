@@ -494,7 +494,8 @@ release ritual for that file is not settled. Release flow: `.github/AGENTS.md`.
   `-fno-keep-inline-dllexport` flag first; skips `src/binary`; finds `run-clang-tidy` on PATH, and
   the header filter lives in `.clang-tidy`).
 - `.pre-commit-config.yaml` — trailing-whitespace, end-of-file, yaml/json checks, merge-conflict
-  markers, large files (>1 MB), LF line endings, clang-format, cppcheck, cmake-format.
+  markers, large files (>1 MB), LF line endings (except `.bat`, which stay CRLF), clang-format,
+  cppcheck.
 - `.gitattributes` enforces LF for `.cpp/.h/.dart/.jl/.py`, and marks `tests/fixtures/*.csv`
   `-text` so their exact bytes (BOM, CRLF) are never normalized — `.pre-commit-config.yaml`
   excludes the same directory from `trailing-whitespace`/`end-of-file-fixer`/`mixed-line-ending`,
