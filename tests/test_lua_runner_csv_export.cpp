@@ -195,9 +195,10 @@ TEST_F(LuaRunner_ExportCSV, EscapeThrows) {
 
 // The path is resolved before the options are decoded, so a non-table options argument cannot mask an escaping path.
 TEST_F(LuaRunner_ExportCSV, EscapeIsReportedBeforeNonTableOptions) {
-    auto schema = VALID_SCHEMA("csv_export.sql");
-    auto db = quiver::Database::from_schema(db_path(), schema);
+    auto csv_schema = VALID_SCHEMA("csv_export.sql");
+    auto db = quiver::Database::from_schema(db_path(), csv_schema);
     quiver::LuaRunner lua(db);
+
     expect_lua_error(
         lua,
         R"(db:export_csv("Items", "", "../x.csv", 5))",

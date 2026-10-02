@@ -1154,6 +1154,7 @@ TEST_F(LuaRunner_ReadCsv, EscapingPathIsReportedBeforeNonTableOptions) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::LuaRunner lua(db);
+
     expect_lua_error(
         lua,
         R"(db:read_csv("../escape.csv", 5))",
@@ -1166,6 +1167,7 @@ TEST_F(LuaRunner_ReadCsv, StreamReportsNonFunctionOnRowBeforeEscapingPath) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::LuaRunner lua(db);
+
     expect_lua_error(
         lua,
         R"(db:read_csv_stream("../escape.csv", 5))",
@@ -1178,6 +1180,7 @@ TEST_F(LuaRunner_ReadCsv, StreamReportsEscapingPathBeforeNonTableOptions) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::LuaRunner lua(db);
+
     expect_lua_error(
         lua,
         R"(db:read_csv_stream("../escape.csv", function() end, 5))",

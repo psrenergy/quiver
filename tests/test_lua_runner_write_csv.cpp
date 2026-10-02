@@ -1259,6 +1259,15 @@ TEST_F(LuaRunner_WriteCsv, EscapingPathIsReportedBeforeNonTableOptions) {
     );
 }
 
+// A non-table options value is rejected on its own, so the order pin above has two real errors to tell apart.
+TEST_F(LuaRunner_WriteCsv, NonTableOptionsThrows) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(lua, R"(db:write_csv("ok.csv", 5))", "Cannot write_csv: options must be a table");
+}
+
 // WRITE-08: db:write_csv truncates an existing target at open. Two rows written and closed, then
 // the SAME path reopened and one row written, reads back as exactly one row.
 TEST_F(LuaRunner_WriteCsv, ReopeningSamePathTruncatesExistingContent) {

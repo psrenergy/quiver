@@ -54,8 +54,9 @@ TEST_F(LuaRunner_Lifecycle, MoveConstructor) {
     quiver::LuaRunner source(db);
     source.run(open_handles("first"));
 
-    // `source` stays alive to the end: run state left behind in it would then fail the checks below
-    // instead of dangling.
+    // `source` stays alive to the end, so a run() that closes through a different object than the bindings
+    // register into fails the checks below instead of dangling. State reached only through the moved-from
+    // runner still works while `source` lives; the OutlivesSource pins and the static_assert catch that.
     quiver::LuaRunner moved = std::move(source);
     moved.run("assert(origin == 'first', 'moved-to runner lost the source Lua state')");
     moved.run(open_handles("second"));
