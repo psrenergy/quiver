@@ -97,3 +97,45 @@ Run it for real. That run is the test.
 
 - Fixing the warnings tidy now reports.
 - CI integration of tidy.
+
+## Implementation notes
+
+- **Done as planned.** All four changes landed as written: the `where` lookup, the file regex,
+  `.clang-tidy`'s `HeaderFilterRegex` + `ExcludeHeaderFilterRegex: '_deps'`, the deleted CMake
+  `tidy` block, the "format target" comment, and the AGENTS.md bullet. Branch integrated master at
+  `3447a34` (plan 74) first, as a fast-forward.
+- **Runner:** `where run-clang-tidy` returns one hit,
+  `C:\Program Files\Microsoft Visual Studio\18\Community\VC\Tools\Llvm\x64\bin\run-clang-tidy`.
+  It is an extensionless Python script, not a `.exe` wrapper, so the `uv run python` invocation
+  stays.
+- **Verification (real run):** after reconfiguring, `scripts\tidy.bat` printed
+  `Running clang-tidy in 14 threads for 53 files out of 187 in compilation database ...` and
+  exited 0. The 53 files are src, src/c, src/c/binary, src/c/expression, src/cli, src/csv and
+  src/expression; none from src/binary, tests or build/_deps. It reported warnings only, about 890
+  of them (mostly identifier-naming, exception-escape and use-using), all pre-existing and out of
+  scope. Not one diagnostic came from a `_deps` path. With the LLVM dir removed from PATH it
+  printed `Error: run-clang-tidy not found on PATH` and exited 1. `file scripts/tidy.bat` still
+  reports CRLF. `cmake --build build` succeeded. `scripts/format.bat` exited 0 with no content
+  diff. Biome again rewrote 43 JS files from CRLF to LF, and `git checkout -- bindings/js`
+  restored them (same as plan 70).
+- **Adversarial review:** three lenses (batch semantics, regex/config, scope/docs) checked the
+  following and found it fine:
+  - the first `where` match wins, and a `RUN_CLANG_TIDY` preset by the caller is cleared;
+  - paths with spaces and parentheses work;
+  - the regex survives cmd, uv and Python argv parsing intact, and the exit code propagates;
+  - `clang-tidy --dump-config` parses both keys, and llvm::Regex's `[\/]` accepts both separators;
+  - nothing else references the deleted target.
+
+  No CHANGELOG entry: this is dev tooling only.
+- **Known ceiling (accepted, not fixed):** the file regex matches any path segment named `src`,
+  so an ancestor directory of that name counts too. A checkout at `C:\src\quiver` or `~/src/quiver`
+  selects 132 files instead of 53, adding all tests and src/binary. That fails loudly, by linting
+  more. A checkout under a directory named `_deps` selects 0 files. Anchoring the regex to the
+  `re.escape`d `%ROOT%` would close both, but it would make any path alias (a `subst` drive, a
+  junction, an 8.3 short name, drive-letter case) silently lint 0 files, which is the bug class
+  this plan fixes. Revisit only if a `~/src` checkout becomes the norm.
+- **Pre-existing, untouched:** the compile db is MSVC `cl.exe`, so the MinGW
+  `-fno-keep-inline-dllexport` strip is a no-op on this machine. Headers in src/binary still
+  report when another src file includes them, as they did before.
+- **For plan 86:** the CMake `tidy` block is gone, and the glob comment already reads
+  `# Source files for format target`.
