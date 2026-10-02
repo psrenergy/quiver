@@ -5,7 +5,7 @@ All notable changes to Quiver are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entries that require
 callers to change something are prefixed **BREAKING** and say what to do.
 
-## [0.12.8] — unreleased
+## [0.12.8] — 2026-10-01
 
 ### Changed
 
@@ -71,7 +71,7 @@ callers to change something are prefixed **BREAKING** and say what to do.
   INTEGER column a TEXT or REAL cell used to appear as a bogus code (`'abc'` as `0`, `1.5` as `1`)
   and count toward the 64-code cutoff.
 
-## [0.12.7] — unreleased
+## [0.12.7] — 2026-10-01
 
 ### Changed
 
@@ -109,7 +109,7 @@ callers to change something are prefixed **BREAKING** and say what to do.
   `lua_table_to_value_map`, `lua_table_to_values`). The same holds for an element array with a
   `nil` hole (`Cannot update_element: array 'x' has a nil hole ...`).
 
-## [0.12.6] — unreleased
+## [0.12.6] — 2026-09-30
 
 ### Added
 
@@ -222,7 +222,7 @@ callers to change something are prefixed **BREAKING** and say what to do.
   outside the accepted grammar (possible in a database written before the DATE_TIME write gate,
   or by raw SQL) leaked it on every call.
 
-## [0.12.5] — unreleased
+## [0.12.5] — 2026-09-29
 
 ### Added
 
@@ -1294,7 +1294,17 @@ are functionally identical to 0.10.0.
   `read_time_series_group` emits for a NULL STRING cell — so feeding a read result back with the
   mask stripped was UB. A NULL entry, or a NULL per-column data pointer, is now SQL NULL.
 
-[0.10.9]: https://github.com/psrenergy/quiver/compare/v0.10.8...HEAD
+[0.12.8]: https://github.com/psrenergy/quiver/compare/v0.12.7...v0.12.8
+[0.12.7]: https://github.com/psrenergy/quiver/compare/v0.12.6...v0.12.7
+[0.12.6]: https://github.com/psrenergy/quiver/compare/v0.12.5...v0.12.6
+[0.12.5]: https://github.com/psrenergy/quiver/compare/v0.12.4...v0.12.5
+[0.12.4]: https://github.com/psrenergy/quiver/compare/v0.12.3...v0.12.4
+[0.12.3]: https://github.com/psrenergy/quiver/compare/v0.12.2...v0.12.3
+[0.12.2]: https://github.com/psrenergy/quiver/compare/v0.12.1...v0.12.2
+[0.12.1]: https://github.com/psrenergy/quiver/compare/v0.12.0...v0.12.1
+[0.12.0]: https://github.com/psrenergy/quiver/compare/v0.11.0...v0.12.0
+[0.11.0]: https://github.com/psrenergy/quiver/compare/v0.10.9...v0.11.0
+[0.10.9]: https://github.com/psrenergy/quiver/compare/v0.10.8...v0.10.9
 [0.10.8]: https://github.com/psrenergy/quiver/compare/v0.10.7...v0.10.8
 [0.10.7]: https://github.com/psrenergy/quiver/compare/v0.10.6...v0.10.7
 [0.10.6]: https://github.com/psrenergy/quiver/compare/v0.10.5...v0.10.6
