@@ -30,12 +30,12 @@ CREATE TABLE ThermalPlant(
 #### Configuration collection
 
 Every database definition must have a `Configuration`, which will store information from the case. 
-The column `label` is not mandatory for a `Configuration` collection.
 
 ```sql
 CREATE TABLE Configuration (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    value1 REAL NOT NULL DEFAULT 100,
+    label TEXT UNIQUE NOT NULL,
+    value1 REAL NOT NULL DEFAULT 100
 ) STRICT;
 ```
 
@@ -49,7 +49,7 @@ Example:
 CREATE TABLE ThermalPlant(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     label TEXT UNIQUE NOT NULL,
-    minimum_generation REAL NOT NULL
+    minimum_generation REAL NOT NULL,
     some_example_of_attribute REAL
 ) STRICT;
 ```
@@ -66,7 +66,7 @@ CREATE TABLE ThermalPlant(
 ) STRICT;
 ```
 
-A relation with another collection should be stored as an attribute whose name is the name of the target collection followed by the relation type defined as `_relation_type`, i.e. `collectionname_relation_type`. The relation attribute name starts with the name of another collection it should be stored as a `INTEGER` and indicates a relation with another collection. It should never have the `NOT NULL` constraint. All references should always declare the `ON UPDATE CASCADE ON DELETE CASCADE` constraint. In the example below the attribute `gaugingstation_id` indicates that the collection Plant has an `id` relation with the collection GaugingStation and the attribute `plant_spill_to` indicates that the collection Plant has a `spill_to` relation with itself.
+A relation with another collection should be stored as an attribute whose name is the name of the target collection followed by the relation type defined as `_relation_type`, i.e. `collectionname_relation_type`. The relation attribute name starts with the name of another collection it should be stored as a `INTEGER` and indicates a relation with another collection. It should never have the `NOT NULL` constraint. Every reference must declare `ON UPDATE CASCADE`, and either `ON DELETE CASCADE` or `ON DELETE SET NULL` (`SET NULL` requires the column to be nullable). In the example below the attribute `gaugingstation_id` indicates that the collection Plant has an `id` relation with the collection GaugingStation and the attribute `plant_spill_to` indicates that the collection Plant has a `spill_to` relation with itself.
 
 Example:
 ```sql
@@ -77,7 +77,7 @@ CREATE TABLE Plant(
     gaugingstation_id INTEGER,
     plant_spill_to INTEGER,
     FOREIGN KEY(gaugingstation_id) REFERENCES GaugingStation(id) ON UPDATE CASCADE ON DELETE CASCADE,
-    FOREIGN KEY(plant_spill_to) REFERENCES Plant(id) ON UPDATE SET NULL ON DELETE CASCADE
+    FOREIGN KEY(plant_spill_to) REFERENCES Plant(id) ON UPDATE CASCADE ON DELETE SET NULL
 ) STRICT;
 ```
 
@@ -111,6 +111,7 @@ CREATE TABLE HydroPlant_vector_gaugingstations(
     vector_index INTEGER NOT NULL,
     conversion_factor REAL NOT NULL,
     gaugingstation_id INTEGER,
+    FOREIGN KEY (id) REFERENCES HydroPlant(id) ON DELETE CASCADE ON UPDATE CASCADE,
     FOREIGN KEY (gaugingstation_id) REFERENCES GaugingStation(id) ON UPDATE CASCADE ON DELETE CASCADE,
     PRIMARY KEY (id, vector_index)
 ) STRICT;
@@ -190,12 +191,13 @@ database/migrations
 
 ### Creating a migration
 
-It is advised to create new migrations using the functions from `Quiver`. First you need to make sure that the migrations directory is registered 
-by the function `Quiver.set_migrations_folder` and after that you can create a new migration using the function `Quiver.create_migration`. This function will create a new migration file with the name and version specified by the user. The migration file will contain a template for the migration.
+There is no scaffolding helper: add a numbered directory `migrations/<N>/` containing `up.sql`
+and `down.sql`, as the tree above shows.
 
 ### Running migrations
 
-To run migrations you need to use the function `Quiver.apply_migrations!`. There are various versions of this function, each one tailored to make something easier for the user.
+Open the database with `from_migrations(db_path, migrations_path)` (`Database.fromMigrations` in
+Dart and JS). It applies every pending `up.sql` in version order, each in its own transaction.
 
 ### Validating migrations
 

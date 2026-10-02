@@ -70,8 +70,8 @@ No CHANGELOG entry.
 
 ## Acceptance criteria
 
-- [ ] `describe` is documented as returning a string, and the other two report methods are listed.
-- [ ] The type lines match the source exactly.
+- [x] `describe` is documented as returning a string, and the other two report methods are listed.
+- [x] The type lines match the source exactly.
 
 ## Pitfalls
 
@@ -80,3 +80,29 @@ No CHANGELOG entry.
 ## Out of scope
 
 - Rewriting the README's structure.
+
+## Implementation notes
+
+- **Already done by the dependencies.** By the time this plan ran, plans 32, 33 and 18 had already
+  put these into the README: the Constants line (`LOG_LEVEL_*` / `DATA_TYPE_*`), `DatabaseOptions`,
+  `QueryParam` with `bigint`, the `boolean`-parameter sentence, and
+  `readVectorGroupById` / `readSetGroupById`. Changes 3 and 4 therefore needed no edit.
+- **Done as planned.** The introspection list now says `describe()` returns a string and adds
+  `describeCollection` / `summarizeCollection`. `ScalarValue` / `ArrayValue` gained `boolean`, and a
+  `GroupColumns` line was added. Each type line matches `src/types.ts` / `src/group-columns.ts` exactly.
+- **Beyond the plan (the user approved it).** The README was also missing 15 public methods, now
+  each on one line in the existing sections:
+  - `Database.open`
+  - `updateRelation` and `updateRelationByLabel`
+  - `updateVectorGroup`, `updateSetGroup` and their `ByLabel` forms
+  - `updateTimeSeriesGroupByLabel`
+  - `readTimeSeriesRow`
+  - `upsertTimeSeriesRow` and its `ByLabel` form
+  - `hasTimeSeriesFiles`, `listTimeSeriesFilesColumns`, `readTimeSeriesFiles` and `updateTimeSeriesFiles`
+
+  `fromSchema` / `fromMigrations` also now show their `options?` parameter. The README structure
+  itself was not changed.
+- **Coverage check.** Every `Database.prototype.X` / `static X(` in `bindings/js/src/*.ts` is now
+  in the README, except the internal helpers `check`, `ensureCoreOnPath`, `updateGroupColumns` and
+  `upsertRowColumns`. A later plan that adds a JS method should add its README line in the same change.
+- No CHANGELOG or AGENTS.md change (docs only, per the plan).

@@ -118,7 +118,7 @@ The order is **bump, merge, publish** — two deliberate dispatches, never chain
   `Artifacts.toml`), then **wipes the mirror (keeping only its `.git/`) and copies the entire
   `bindings/julia` tree into it** — `src/`, `test/`, `.github/` (the mirror's `CI.yml`/`TagBot.yml`
   live here, dormant in the monorepo since nested workflows don't run), `README.md`, `.gitignore`,
-  `.gitattributes`, `.JuliaFormatter.toml`, `LICENSE`, and the verbatim `Project.toml` (the
+  `.gitattributes`, `LICENSE`, and the verbatim `Project.toml` (the
   binding shares Quiver.jl's UUID). It then copies the real test schemas from repo-root
   `tests/schemas/` into the mirror's `test/schemas/` (no schemas live in `bindings/julia`;
   `test/fixture.jl` resolves the schema dir at runtime), overlays the generated

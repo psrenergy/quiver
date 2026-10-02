@@ -119,9 +119,9 @@ This plan is the docs change. No CHANGELOG entry.
 
 ## Acceptance criteria
 
-- [ ] Every `CREATE TABLE` example in both files is valid SQL and passes `SchemaValidator`.
-- [ ] The FK prose matches the validator's rule.
-- [ ] The migration section names `from_migrations`, and the link is fixed.
+- [x] Every `CREATE TABLE` example in both files is valid SQL and passes `SchemaValidator`.
+- [x] The FK prose matches the validator's rule.
+- [x] The migration section names `from_migrations`, and the link is fixed.
 
 ## Pitfalls
 
@@ -130,3 +130,35 @@ This plan is the docs change. No CHANGELOG entry.
 ## Out of scope
 
 - Other docs (`docs/introduction.md`, `docs/time_series.md`). Plan 04 edits `time_series.md`.
+
+## Implementation notes
+
+- **Landed as written, docs only.** `rs/plan73` was already level with `master` (`f16b6b6`), so the
+  merge was a no-op. Plan 06 had landed (`8c0f4bd`), and both `HydroPlant_set_gaugingstations`
+  examples already carried the parent FK, so change 7 had nothing to do. No CHANGELOG or AGENTS.md
+  edit, as the plan says. There is no `docs/AGENTS.md`.
+- **Drift fixed.**
+  - Validator line numbers moved; the rules the plan quotes have not. The label check is
+    `validate_collection`. The parent-FK check is `validate_group_parent`, which now covers vector,
+    set and time-series tables (it is no longer in `validate_vector_table`). The relation-FK rule is
+    `validate_foreign_keys`: `ON UPDATE CASCADE`, then `ON DELETE CASCADE` or `SET NULL`, and
+    `SET NULL` on a `NOT NULL` column is rejected.
+  - The Tests section's "one scratch file" cannot work. `ThermalPlant` is defined three times in
+    `rules.md` and twice in `attributes.md`. The vector and set `HydroPlant` examples both define
+    `conversion_factor`, which `validate_no_duplicate_attributes` rejects when they share a schema.
+    Each example is valid on its own, so each ```sql block was validated alone instead.
+    `tests/cli/smoke.lua` (plan 65) is not on this branch, so the script was a scratch `return 1`.
+- **Validation.** A throwaway script (not committed) strips CR, extracts every ```sql block of
+  both files, and prepends a `Configuration` stub (unless the block defines it). It also prepends
+  `id`/`label` stubs for any of `GaugingStation`, `HydroPlant`, `ThermalPlant`, `Resource` and
+  `Plant` that the block references without defining. It then runs
+  `build/bin/quiver_cli.exe --log-level off --schema <block>.sql :memory: noop.lua`.
+  - Before the edits, 7 of 16 blocks failed: the Configuration block and both `ThermalPlant`
+    comma blocks with SQL syntax errors, both `Plant` blocks with
+    `Foreign key 'plant_spill_to' in table 'Plant' must use ON UPDATE CASCADE`, and both
+    `HydroPlant_vector_gaugingstations` blocks with
+    `must have foreign key to parent collection 'HydroPlant'`.
+  - After the edits, all 16 passed. The Verification grep prints nothing.
+- **For later plans.** Git Bash `sed -i` on these CRLF docs rewrote them to LF, and a `\r$`
+  anchor then matched nothing. CRLF was restored by staging and re-checking-out the files.
+  `.md` files in the working tree are CRLF too (`autocrlf=true`), not only `.bat`.

@@ -154,6 +154,10 @@ stays small. Once plan 70 deletes the two tests, delete the two banners too, or 
 - No other file names any deleted test, apart from the plan files. `tests/AGENTS.md` neither
   counts tests nor describes these files' contents, so it is unchanged. No CHANGELOG entry.
 
-**For plan 70:** this branch deletes the 12 NullDb/NullCollection tests on both sides of the two
-NullAttribute tests, so the merge will conflict there. Resolve it by keeping both deletions; both
-plans want those regions gone.
+**Merge with plan 70 (resolved):** plan 70 (#386) landed after this branch was opened. It deleted
+the two NullAttribute tests, and this branch deleted the 12 NullDb/NullCollection tests around
+them, so `tests/test_c_api_database_update.cpp` conflicted in that section. I kept both deletions
+and also removed the `Update vector/set null pointer tests` banners, which were left with no tests
+under them. Every remaining banner in the file has tests under it. After the merge,
+`quiver_tests.exe` still passes 1394/1394, and `quiver_c_tests.exe` passes 543/543 (546, minus
+plan 70's four deletions, plus its new `UpdateElementNullStringArrayEntryIsNull`).

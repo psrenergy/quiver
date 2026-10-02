@@ -99,8 +99,8 @@ None.
 
 ## Acceptance criteria
 
-- [ ] The four misnamed tests are gone, and the new test passes.
-- [ ] `ElementCApi.ArrayNullErrors` still covers the null-name guard.
+- [x] The four misnamed tests are gone, and the new test passes.
+- [x] `ElementCApi.ArrayNullErrors` still covers the null-name guard.
 
 ## Pitfalls
 
@@ -110,3 +110,37 @@ None.
 ## Out of scope
 
 - Other leftover tests (plan 71) and leaks (plan 69).
+
+## Implementation notes
+
+- **Done as planned.** All four tests matched the description and passed for the wrong reason
+  (confirmed by running them before deletion: 4/4 OK). The two `NullAttribute` tests ignored the
+  setter's null-name `QUIVER_ERROR` and updated an empty element. The two `NullElement` tests'
+  `{"a", nullptr, "c"}` was accepted by the setter, and the update then failed on a missing id 1.
+  All four were deleted. The empty `// Null string element tests` banner went with them.
+- **New test** `DatabaseCApi.UpdateElementNullStringArrayEntryIsNull` sits directly after
+  `UpdateGroupNullStringEntryIsNull`. It asserts `COUNT(*) ... WHERE tag IS NULL == 1`, which does
+  not depend on row order (set row order is deliberately not a contract). It passed first time. No
+  fix was needed: it pins existing behaviour. To show the test is not vacuous, I temporarily set
+  `tags[]` to `{"a", "b", "c"}`. The test then failed with `nulls` 0 vs 1. The change was reverted
+  before commit.
+- **Verification:** the filtered run (new test, `UpdateGroupNullStringEntryIsNull`,
+  `ElementCApi.ArrayNullErrors`) passed 3/3, and the full `quiver_c_tests.exe` passed 569/569. Both
+  ran after integrating master at `6fb45ba` (plan 68). `scripts/format.bat` exited 0 and left no
+  content diff. clang-format, Julia, Dart and ruff changed nothing. Biome rewrote 43 JS files from
+  CRLF to LF with no content change, so `git checkout -- bindings/js` restored them. Its Python step
+  `uv sync` rebuilds the quiverdb wheel from source, so expect ~15 min on a fresh checkout.
+- **Drift fixed:**
+  - Plan 22 has landed, so `quiver_database_query_integer` now takes
+    `(db, sql, param_types, param_values, param_count, &out, &has_value)`. It is called with
+    `nullptr, nullptr, 0`.
+  - The line numbers had moved: the four tests were at L622/L784/L930/L948 and the anchor at L1859.
+  - `collections.sql` has no triggers, so no `Configuration` row is created. The plan's
+    "copy the neighbouring setup" comment was dropped from the test.
+- **`ElementCApi.ArrayNullErrors`** (`tests/test_c_api_element.cpp`) still covers the null-name
+  guard for all three array setters.
+- **For 69/71:** none of the four deleted tests had a leak or a `delete[]`, so plan 69's sites are
+  unaffected. Plan 71's step "**Keep** `UpdateVectorIntegersNullAttribute` and
+  `UpdateSetStringsNullAttribute`" and its acceptance criterion "The two NullAttribute tests remain
+  for plan 70" no longer apply: this plan deleted both tests. 71 should skip that item and tick that
+  criterion as handled by 70.
