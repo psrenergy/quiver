@@ -86,3 +86,38 @@ From the repo root:
 ## Out of scope
 
 - Adding the smoke test to CI.
+
+## Implementation notes
+
+- **The plan's premise had drifted.** This plan was written at `58dfe7a`. A later commit, `01e78d7`
+  ("update", 2026-09-27), had already **deleted step 7 (the CLI smoke test) from
+  `scripts/test-all.bat`**. That commit dropped `CLI_RESULT`, renumbered `[x/7]` to `[x/6]`, and took
+  out both `example\example1.lua` lines. There was nothing left to re-point, and `test-all.bat` no
+  longer always failed.
+- **Maintainer decision (asked during this implementation): docs-only cleanup.** The smoke step stays
+  removed. `tests/cli/smoke.lua` was **not** created, and `scripts/test-all.bat` is untouched.
+- What changed:
+  - Root `AGENTS.md`: deleted the `example/` Repo Map line.
+  - Root `AGENTS.md`: "`test-all.bat` runs the six suites below plus a `quiver_cli` smoke test;
+    `build-all.bat` builds and then runs the six suites" now reads "`test-all.bat` runs the six suites
+    below; `build-all.bat` builds and then runs the same six suites".
+  - Root `AGENTS.md`: the `quiver_cli.exe` line now reads
+    `# CLI entry point: runs a Lua script against a database (--help)`.
+  - `tests/AGENTS.md`: removed test-all step 7 and replaced the build-all sentence with
+    "`scripts/build-all.bat` is seven steps: step 1 is the build itself, followed by the same six
+    suites."
+- There is no CHANGELOG entry, and no code, test or FFI change. `quiver_cli` now has no automated
+  coverage at all, which is a known gap and was accepted.
+- Acceptance criteria:
+  - [x] ~~`tests/cli/smoke.lua` exists, and step 7 of `test-all.bat` passes~~: N/A. Step 7 no longer
+    exists (`01e78d7`), and the maintainer chose not to restore it.
+  - [x] `grep -rn "example1\|example/\|smoke" AGENTS.md tests/AGENTS.md scripts/` returns nothing.
+- **For plan 82:** its "Depends on 65" is void, because test-all has no smoke step to fix. Several
+  parts of plan 82 are now stale:
+  - The REM text "all six suites + the CLI smoke test" and the header text "all suites plus the CLI
+    smoke test".
+  - "test-all prints its own `[n/7]` numbering": test-all now prints `[n/6]`.
+  - The root-AGENTS.md "before" excerpt: it now reads "`test-all.bat` runs the six suites below;
+    `build-all.bat` builds and then runs the same six suites (breakdown in `tests/AGENTS.md`)."
+  - The tests/AGENTS.md sentence it replaces: it now reads "`scripts/build-all.bat` is seven steps:
+    step 1 is the build itself, followed by the same six suites."
