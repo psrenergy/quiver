@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v0.12.9
 milestone_name: milestone
-current_phase: 1
-current_phase_name: Behaviour Pins
+current_phase: 01
+current_phase_name: behaviour-pins
 status: executing
-stopped_at: Phase 1 context gathered
-last_updated: "2026-10-02T20:04:08.715Z"
+stopped_at: Completed 01-01-PLAN.md
+last_updated: "2026-10-02T22:19:19.097Z"
 last_activity: 2026-10-02
 last_activity_desc: Roadmap revised after checker feedback (5 phases, 40/40 v1 requirements mapped)
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 2
-  completed_plans: 0
+  completed_plans: 1
 ---
 
 # Project State
@@ -23,16 +23,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-02)
 
 **Core value:** Every file in the Lua scripting layer is small and single-purpose enough for an agent to change safely, and every existing script behaves exactly as before, apart from the deliberate, test-pinned fixes.
-**Current focus:** Phase 1 - Behaviour Pins
+**Current focus:** Phase 01 — behaviour-pins
 
 ## Current Position
 
-Phase: 1 of 5 (Behaviour Pins)
-Plan: 0 of TBD in current phase
+Phase: 01 (behaviour-pins) — EXECUTING
+Plan: 2 of 2
 Status: Ready to execute
-Last activity: 2026-10-02 — Roadmap revised after checker feedback (5 phases, 40/40 v1 requirements mapped)
+Last activity: 2026-10-02 — Phase 01 execution started
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
@@ -54,6 +54,11 @@ Progress: [░░░░░░░░░░] 0%
 - Trend: -
 
 *Updated after each plan completion*
+**Per-Plan Metrics:**
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 01 P01 | 134min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -71,6 +76,7 @@ Recent decisions affecting current work:
 - Roadmap: TEST-01 rides with the rename (Phase 5), so the unit test is written once against `resolve_contained_path`. Its tests use a `ContainedPathTest` prefix, outside the `Sandbox*` count. REN-07 (`tests/scratch`) is also in Phase 5.
 - Roadmap: Phase 5 renames the binding source/test files and headers with the class; Python's module path becomes `quiverdb.sandbox`.
 - Roadmap: the CHANGELOG `[0.13.0] — unreleased` section and its compare link are opened in Phase 4 (C1/C5/C7/`load` BREAKING, the Release dot-call and raw sol2 self-check text, C2/C4/C6/C8 Fixed) and completed in Phase 5 (rename). No version bump.
+- [Phase 01]: Move pins pair a kept-alive source with a freed source, plus static_assert(sizeof(LuaRunner)==sizeof(void*)) so run state held outside Impl fails in Release too
 
 ### Pending Todos
 
@@ -93,6 +99,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-10-02T19:20:53.786Z
-Stopped at: Phase 1 context gathered
-Resume file: .planning/phases/01-behaviour-pins/01-CONTEXT.md
+Last session: 2026-10-02T22:19:19.079Z
+Stopped at: Completed 01-01-PLAN.md
+Resume file: None
