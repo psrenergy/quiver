@@ -148,8 +148,10 @@ The order is **bump, merge, publish** — two deliberate dispatches, never chain
 ## npm Publishing (JS)
 
 `publish-js.yml` downloads native libs from S3 into
-`libs/{linux-x86_64,linux-aarch64,macos-aarch64,windows-x86_64}/`, asserts every lib is in a throwaway
-`npm pack` tarball via `tar -tzf` (format-independent; npm roots entries under `package/`), then
+`libs/{linux-x86_64,linux-aarch64,macos-aarch64,windows-x86_64}/` (the download fails on any missing
+file), asserts every downloaded file is in a throwaway `npm pack` tarball via `tar -tzf`
+(format-independent; npm roots entries under `package/`) — the workflow keeps no list of its own, so
+`native_s3.sh`'s `files_for` is the only one — then
 publishes with **`npm publish --loglevel verbose` via `actions/setup-node@v6`** using **npm
 Trusted Publishing (OIDC)** — `permissions: id-token: write`, no stored token; npm packs inline
 so the published artifact carries the deterministic, asserted file set. setup-node uses
