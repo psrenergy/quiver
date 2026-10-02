@@ -4,15 +4,15 @@ milestone: v0.12.9
 milestone_name: milestone
 current_phase: 1
 current_phase_name: Behaviour Pins
-status: planning
+status: executing
 stopped_at: Phase 1 context gathered
-last_updated: "2026-10-02T19:20:53.817Z"
+last_updated: "2026-10-02T20:04:08.715Z"
 last_activity: 2026-10-02
 last_activity_desc: Roadmap revised after checker feedback (5 phases, 40/40 v1 requirements mapped)
 progress:
   total_phases: 1
   completed_phases: 0
-  total_plans: 0
+  total_plans: 2
   completed_plans: 0
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-10-02)
 
 Phase: 1 of 5 (Behaviour Pins)
 Plan: 0 of TBD in current phase
-Status: Ready to plan
+Status: Ready to execute
 Last activity: 2026-10-02 — Roadmap revised after checker feedback (5 phases, 40/40 v1 requirements mapped)
 
 Progress: [░░░░░░░░░░] 0%
