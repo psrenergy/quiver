@@ -38,6 +38,7 @@ add_executable(quiver_tests
     test_lua_runner_describe.cpp
     test_lua_runner_errors.cpp
     test_lua_runner_fk.cpp
+    test_lua_runner_lifecycle.cpp
     test_lua_runner_migrations.cpp
     test_lua_runner_query.cpp
     test_lua_runner_read.cpp
