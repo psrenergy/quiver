@@ -21,6 +21,7 @@ jobs:
         version:
           - '1.11'
           - '1.12'
+          - '1.13'
         os:
           - ubuntu-latest
           - ubuntu-24.04-arm
