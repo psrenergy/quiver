@@ -71,6 +71,8 @@ The publish workflows read the version by inlining `python3 scripts/assert_versi
 `bump-version.yml` writes it with `scripts/assert_version.py bump <part>`. Only `main()` in that
 script prints to stdout, so both the no-arg and the `bump` form emit the bare version and nothing
 else — everything the callers `$( )` depend on.
+The child publish workflows take no `version` input: each resolves it from its checkout via
+`scripts/assert_version.py`; `ref` is their only override.
 
 ## Release Pipeline
 

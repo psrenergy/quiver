@@ -61,9 +61,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           DISPATCH_REF: ${{ github.ref_name }}
-          VERSION: ${{ needs.version.outputs.version }}
           SHA: ${{ needs.version.outputs.sha }}
-        run: bash scripts/ci/dispatch_workflow.sh publish-s3.yml "$DISPATCH_REF" "version=$VERSION" "ref=$SHA"
+        run: bash scripts/ci/dispatch_workflow.sh publish-s3.yml "$DISPATCH_REF" "ref=$SHA"
 
   release:
     name: Tag and GitHub release
@@ -98,7 +97,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           VERSION: ${{ needs.version.outputs.version }}
-        run: bash scripts/ci/dispatch_workflow.sh publish-julia.yml "v$VERSION" "version=$VERSION"
+        run: bash scripts/ci/dispatch_workflow.sh publish-julia.yml "v$VERSION"
 
   publish-python:
     name: Publish Python
@@ -136,4 +135,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           VERSION: ${{ needs.version.outputs.version }}
-        run: bash scripts/ci/dispatch_workflow.sh publish-js.yml "v$VERSION" "version=$VERSION"
+        run: bash scripts/ci/dispatch_workflow.sh publish-js.yml "v$VERSION"
