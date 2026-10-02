@@ -46,12 +46,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. Every new test passes under both the `dev` (Debug) and `release` presets. None of them exercises a Release-UB path: no non-table argument (C1), no non-string key at the four C2 map-key sites, and no wrong-type optional (C5). The numeric-key cap pins in criterion 1 are defined behaviour and stay. The phase diff touches only `tests/`, `bindings/js/test/` and the AGENTS.md files nearest them (`tests/AGENTS.md`, `bindings/js/AGENTS.md`).
   5. All six suites are green (`scripts/test-all.bat`). The resulting Lua gtest count (`--gtest_filter=Lua*`: 428 at `bdf9087` across 11 suites, plus the new pins) and the C API count (27) are recorded as the baseline that Phases 2 and 3 must reproduce exactly.
 
-**Plans**: 1/2 plans executed
+**Plans**: 2/2 plans executed
 
 Plans:
 
 - [x] 01-01-PLAN.md — C++ behaviour pins: lifecycle move tests, check-order pins, write_csv cap and closed-writer pins
-- [ ] 01-02-PLAN.md — JS sync-test guards, AGENTS.md updates and the phase gate (baseline in STATE.md)
+- [x] 01-02-PLAN.md — JS sync-test guards, AGENTS.md updates and the phase gate (baseline in STATE.md)
 
 ### Phase 2: Mechanical Split
 
@@ -139,7 +139,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Behaviour Pins | 1/2 | In Progress|  |
+| 1. Behaviour Pins | 2/2 | In Progress|  |
 | 2. Mechanical Split | 0/TBD | Not started | - |
 | 3. Dedupe | 0/TBD | Not started | - |
 | 4. Fixes and Release Type Safety | 0/TBD | Not started | - |

@@ -4,16 +4,16 @@ milestone: v0.12.9
 milestone_name: milestone
 current_phase: 01
 current_phase_name: behaviour-pins
-status: executing
-stopped_at: Completed 01-01-PLAN.md
-last_updated: "2026-10-02T22:19:19.097Z"
+status: verifying
+stopped_at: Completed 01-02-PLAN.md
+last_updated: "2026-10-02T23:51:02.936Z"
 last_activity: 2026-10-02
 last_activity_desc: Roadmap revised after checker feedback (5 phases, 40/40 v1 requirements mapped)
 progress:
   total_phases: 1
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State
@@ -29,10 +29,10 @@ See: .planning/PROJECT.md (updated 2026-10-02)
 
 Phase: 01 (behaviour-pins) — EXECUTING
 Plan: 2 of 2
-Status: Executing
+Status: Phase complete — ready for verification
 Last activity: 2026-10-02 — Completed 01-01-PLAN.md (verified by mutation testing)
 
-Progress: [█████░░░░░] 50%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -59,6 +59,7 @@ Progress: [█████░░░░░] 50%
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | Phase 01 P01 | 134min | 3 tasks | 7 files |
+| Phase 01 P02 | 35 min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -77,6 +78,7 @@ Recent decisions affecting current work:
 - Roadmap: Phase 5 renames the binding source/test files and headers with the class; Python's module path becomes `quiverdb.sandbox`.
 - Roadmap: the CHANGELOG `[0.13.0] — unreleased` section and its compare link are opened in Phase 4 (C1/C5/C7/`load` BREAKING, the Release dot-call and raw sol2 self-check text, C2/C4/C6/C8 Fixed) and completed in Phase 5 (rename). No version bump.
 - [Phase 01]: Move pins pair a kept-alive source with a freed source, plus static_assert(sizeof(LuaRunner)==sizeof(void*)) so run state held outside Impl fails in Release too
+- [Phase 01]: Phase 1 gtest baseline: Lua* = 444 tests / 12 suites, LuaRunnerCApiTest = 27 (at 570c2c1)
 
 ### Pending Todos
 
@@ -99,6 +101,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-10-02T22:19:19.079Z
-Stopped at: Completed 01-01-PLAN.md
+Last session: 2026-10-02T23:51:02.905Z
+Stopped at: Completed 01-02-PLAN.md
 Resume file: None
