@@ -16,3 +16,6 @@ bun.lock
 # OS
 .DS_Store
 Thumbs.db
+
+# Coverage
+coverage/
