@@ -3,10 +3,6 @@ name: Publish S3
 on:
   workflow_dispatch:
     inputs:
-      version:
-        description: "Override the version"
-        required: false
-        default: ""
       ref:
         description: "Override ref or sha"
         required: false
@@ -31,10 +27,7 @@ jobs:
           ref: ${{ inputs.ref || github.sha }}
       - id: v
         run: |
-          v="${{ inputs.version }}"
-          if [ -z "$v" ]; then
-            v="$(python3 scripts/assert_version.py)"
-          fi
+          v="$(python3 scripts/assert_version.py)"
           echo "version=$v" >> "$GITHUB_OUTPUT"
 
   build:
