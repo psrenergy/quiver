@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.26.0)
 
 project(quiver
-    VERSION 0.12.9
+    VERSION 0.13.0
     DESCRIPTION "Quiver library"
     LANGUAGES CXX C
 )
