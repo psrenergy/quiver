@@ -37,7 +37,7 @@ TEST(DatabaseCApiQuery, QueryStringReturnsValue) {
     EXPECT_EQ(has_value, 1);
     EXPECT_STREQ(value, "hello world");
 
-    delete[] value;
+    quiver_database_free_string(value);
     quiver_database_close(db);
 }
 
@@ -295,7 +295,7 @@ TEST(DatabaseCApiQuery, QueryStringWithParams) {
     EXPECT_EQ(has_value, 1);
     EXPECT_STREQ(value, "hello world");
 
-    delete[] value;
+    quiver_database_free_string(value);
     quiver_database_close(db);
 }
 

@@ -93,6 +93,9 @@ no errors file) plus `test_c_api_element.cpp`, `test_c_api_lua_runner.cpp`,
 C API time-series set additionally has `test_c_api_database_time_series_nulls.cpp` (per-cell
 NULL-mask round-trips), which the C++ core lacks.
 
+Free C API strings with `quiver_database_free_string`, never `delete[]`. Inside an open-for-write
+binary span use `EXPECT`, not `ASSERT`, so the writer is always closed.
+
 ## Binding suites
 
 `bindings/julia/test/`, `bindings/dart/test/`, `bindings/python/tests/`, and

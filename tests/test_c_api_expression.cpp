@@ -85,7 +85,7 @@ protected:
                 int64_t dim_values[] = {r, c};
                 double data[] = {fill(static_cast<int>(r), static_cast<int>(c), 0),
                                  fill(static_cast<int>(r), static_cast<int>(c), 1)};
-                ASSERT_EQ(quiver_binary_file_write(f, dim_names, dim_values, 2, data, 2), QUIVER_OK);
+                EXPECT_EQ(quiver_binary_file_write(f, dim_names, dim_values, 2, data, 2), QUIVER_OK);
             }
         }
         ASSERT_EQ(quiver_binary_file_close(f), QUIVER_OK);
@@ -164,7 +164,7 @@ protected:
                                const std::vector<double>& cell) {
         quiver_binary_file_t* f = nullptr;
         ASSERT_EQ(quiver_binary_file_open_file(path.c_str(), 'w', md, &f), QUIVER_OK);
-        ASSERT_EQ(quiver_binary_file_write(
+        EXPECT_EQ(quiver_binary_file_write(
                       f, dim_names.data(), dim_values.data(), dim_names.size(), cell.data(), cell.size()),
                   QUIVER_OK);
         ASSERT_EQ(quiver_binary_file_close(f), QUIVER_OK);
@@ -186,7 +186,7 @@ protected:
         while (true) {
             for (size_t k = 0; k < row.size(); ++k)
                 row[k] = fill(dims, k);
-            ASSERT_EQ(quiver_binary_file_write(f, dim_names.data(), dims.data(), dims.size(), row.data(), row.size()),
+            EXPECT_EQ(quiver_binary_file_write(f, dim_names.data(), dims.data(), dims.size(), row.data(), row.size()),
                       QUIVER_OK);
 
             int i = static_cast<int>(dims.size()) - 1;
@@ -1029,8 +1029,8 @@ TEST_F(ExpressionCApiFixture, SaveFailsWhenInputIsOpenForWriting) {
 
     // Expression construction only loads metadata; the read-handle open is deferred to save().
     quiver_expression_t* expr = nullptr;
-    ASSERT_EQ(quiver_expression_from_file(writer, &expr), QUIVER_OK);
-    ASSERT_NE(expr, nullptr);
+    EXPECT_EQ(quiver_expression_from_file(writer, &expr), QUIVER_OK);
+    EXPECT_NE(expr, nullptr);
 
     EXPECT_EQ(quiver_expression_save(expr, path_out.c_str()), QUIVER_ERROR);
     EXPECT_NE(std::string(quiver_get_last_error()).find("Cannot open_file: file is already open for writing"),
@@ -1136,11 +1136,11 @@ TEST_F(ExpressionCApiFixture, AggregateSumOverInnermostTimeDimFromMidPeriodStart
     const double one[] = {1.0};
     for (int64_t day = 15; day <= 31; ++day) {
         int64_t dim_values[] = {1, 3, day};
-        ASSERT_EQ(quiver_binary_file_write(f, dim_names, dim_values, 3, one, 1), QUIVER_OK);
+        EXPECT_EQ(quiver_binary_file_write(f, dim_names, dim_values, 3, one, 1), QUIVER_OK);
     }
     for (int64_t day = 1; day <= 31; ++day) {
         int64_t dim_values[] = {2, 3, day};
-        ASSERT_EQ(quiver_binary_file_write(f, dim_names, dim_values, 3, one, 1), QUIVER_OK);
+        EXPECT_EQ(quiver_binary_file_write(f, dim_names, dim_values, 3, one, 1), QUIVER_OK);
     }
     ASSERT_EQ(quiver_binary_file_close(f), QUIVER_OK);
 
@@ -1289,7 +1289,7 @@ TEST_F(ExpressionCApiFixture, AggregateOutermostTimeDimFromMidYearStart) {
         for (int64_t month = (year == 1 ? 3 : 1); month <= 12; ++month) {
             int64_t dim_values[] = {year, month};
             const double data[] = {static_cast<double>(100 * year + month)};
-            ASSERT_EQ(quiver_binary_file_write(f, dim_names, dim_values, 2, data, 1), QUIVER_OK);
+            EXPECT_EQ(quiver_binary_file_write(f, dim_names, dim_values, 2, data, 1), QUIVER_OK);
         }
     }
     ASSERT_EQ(quiver_binary_file_close(f), QUIVER_OK);
@@ -1602,7 +1602,7 @@ TEST_F(ExpressionCApiFixture, ApplyTernaryShapeMismatch) {
         for (int64_t c = 1; c <= 2; ++c) {
             int64_t dvs[] = {r, c};
             double data[] = {3.0, 3.0};
-            ASSERT_EQ(quiver_binary_file_write(f, dim_names, dvs, 2, data, 2), QUIVER_OK);
+            EXPECT_EQ(quiver_binary_file_write(f, dim_names, dvs, 2, data, 2), QUIVER_OK);
         }
     }
     ASSERT_EQ(quiver_binary_file_close(f), QUIVER_OK);

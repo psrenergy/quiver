@@ -403,7 +403,7 @@ TEST(DatabaseCApi, ReadScalarStringById) {
     EXPECT_EQ(has_value, 1);
     EXPECT_STREQ(value, "hello");
 
-    delete[] value;
+    quiver_database_free_string(value);
     quiver_database_close(db);
 }
 
@@ -984,6 +984,6 @@ TEST(DatabaseCApi, DateTimeReadScalarString) {
     EXPECT_EQ(has_value, 1);
     EXPECT_STREQ(value, "2024-03-17T09:30:00");
 
-    delete[] value;
+    quiver_database_free_string(value);
     quiver_database_close(db);
 }

@@ -402,9 +402,7 @@ TEST_F(TempFileFixture, ReadElementIdsValid) {
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(count, 3);
 
-    if (ids != nullptr) {
-        quiver_database_free_integer_array(ids);
-    }
+    quiver_database_free_integer_array(ids);
 
     quiver_database_close(db);
 }
@@ -466,9 +464,7 @@ TEST_F(TempFileFixture, DeleteElementValid) {
     quiver_database_read_element_ids(db, "Collection", &ids, &count);
     EXPECT_EQ(count, 0);
 
-    if (ids != nullptr) {
-        quiver_database_free_integer_array(ids);
-    }
+    quiver_database_free_integer_array(ids);
 
     quiver_database_close(db);
 }

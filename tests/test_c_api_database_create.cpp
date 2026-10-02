@@ -309,7 +309,7 @@ TEST(DatabaseCApi, CreateElementTrimsWhitespaceFromStrings) {
     ASSERT_EQ(quiver_database_read_scalar_string_by_id(db, "Collection", "label", id, &label, &has_label), QUIVER_OK);
     EXPECT_EQ(has_label, 1);
     EXPECT_STREQ(label, "Item 1");
-    delete[] label;
+    quiver_database_free_string(label);
 
     // Verify set strings were trimmed
     char** read_tags = nullptr;
