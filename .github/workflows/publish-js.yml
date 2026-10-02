@@ -26,7 +26,7 @@ jobs:
         with:
           node-version: 24
           registry-url: "https://registry.npmjs.org"
-          # No package-lock.json in bindings/js (Bun project) — v6 caching would fail.
+          # No package-lock.json in bindings/js (Bun project) — setup-node's default caching would fail.
           package-manager-cache: false
 
       - name: Ensure npm supports Trusted Publishing

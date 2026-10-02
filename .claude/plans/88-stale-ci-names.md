@@ -48,7 +48,7 @@ None.
 
 ## Acceptance criteria
 
-- [ ] No `release.yml` references remain, the setup-node prose is version-neutral, and the table row
+- [x] No `release.yml` references remain, the setup-node prose is version-neutral, and the table row
       is accurate.
 
 ## Pitfalls
@@ -58,3 +58,28 @@ None.
 ## Out of scope
 
 - Workflow logic changes (plans 80, 81, 83).
+
+## Implementation notes
+
+- **Done as planned:** `release.yml` → `publish.yml` in `dispatch_workflow.sh` (L4, L10) and
+  `publish-python.yml` (L91). On L10 only the filename changed: `publish.yml`'s concurrency group
+  really is named `release`. The `publish-s3.yml` table row now reads "... and stages them on S3
+  (via `scripts/ci/native_s3.sh upload`)", and "via `actions/setup-node`" has no version.
+- **Drift fixed:**
+  - The table row also lists `linux-aarch64`, which the plan's quote omitted. Kept.
+  - The npm paragraph is at ~L153-158, after plan 81 added two lines above it.
+  - It held a **second** pin, "(v6 caches by default; ...)". That now reads "(it caches by default; ...)".
+  - `publish-js.yml`'s setup-node comment said "— v6 caching would fail.". The plan's
+    `grep "@v6"` misses it (there is no `@`). It now reads "— setup-node's default caching would fail.".
+- **Verification:** `grep -rn "release\.yml" scripts .github`, `grep -n "setup-node@v" .github/AGENTS.md`
+  and `grep -n "v6" .github/AGENTS.md .github/workflows/publish-js.yml` print nothing. Both edited
+  workflows parse with PyYAML. `bash -n` passes on `dispatch_workflow.sh`.
+- **Line endings:** this checkout has `core.autocrlf=true`, so the working tree is CRLF. `git ls-files --eol`
+  shows `i/lf` for all four files, so the stored blobs stay LF.
+- **`scripts/format.bat`:** biome "fixed" 43 JS files, but the only change was CRLF→LF in the working
+  tree. There was no content diff against the index, so they were restored and not committed.
+  Every other formatter reported no change.
+- **For later plans (not fixed, out of scope):** `.github/AGENTS.md` ~L35 explains `docker run`
+  over `container:` by "the runner's Node20 actions (`checkout`, `upload-artifact`)". Those
+  actions are now `@v7` in `publish-s3.yml`, so the runtime name may be stale. The reasoning
+  (no Node runtime inside a glibc-2.17 image) still holds.
