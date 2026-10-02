@@ -56,7 +56,13 @@ describe("lua-api reference stays in sync with src/lua_runner.cpp", () => {
     // passing vacuously forever on an empty match set.
     expect(dbMethods.size).toBeGreaterThan(40);
     expect(quiverFns.size).toBeGreaterThan(10);
-    expect(usertypeMethods.get("Expression")?.size).toBeGreaterThan(0);
+    // A usertype that parses to nothing would let the :<name>( check below pass vacuously.
+    const unparsed = ["BinaryFile", "BinaryMetadata", "Expression", "CsvWriter"].filter(
+      (type) => !usertypeMethods.get(type)?.size,
+    );
+    expect(unparsed).toEqual([]);
+    // The stdlib check below reads only the first call; a second one would go unchecked.
+    expect(CPP.match(/open_libraries\(/g)?.length ?? 0).toBe(1);
   });
 
   test("every db: method appears as the literal token db:<name>", () => {
