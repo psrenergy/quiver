@@ -22,7 +22,7 @@ Evidence for each item (line numbers at `bdf9087`) is in `.planning/research/LUA
 - [ ] **SPLIT-03**: Instance state lives in a `RunHandles` (writer registry, binary-file registry, `path_has_open_writer`, close-at-exit). It is held by the heap-allocated `Impl` and declared before `lua`. The three `[this]` captures become `[&handles]` / `[&db]`. `GcGuard` is still declared before `result`, with close then exactly one `collect_garbage()`.
 - [ ] **SPLIT-04**: The JS sync test reads every source file under `src/sandbox/` in sorted order, parses each one separately (resetting `current` at each file boundary), and extracts the same method set as before the split.
 - [ ] **SPLIT-05**: `/bigobj` (MSVC) and `-Wa,-mbig-obj` (MinGW) apply to the whole target. All sol2 TUs are in the `quiver` target with identical PRIVATE defines, listed explicitly (no glob). Each file has its own NOLINT pair, and `scripts/tidy.bat` and clang-format 22.1.8 are clean on the new files.
-- [ ] **SPLIT-06**: No test expectation changes. All 428 C++ Lua tests, all 27 C API tests, and the Julia, Dart, Python and JS suites pass unmodified.
+- [ ] **SPLIT-06**: No test expectation changes. All C++ Lua tests (428 at `bdf9087` plus the Phase 1 pins), all 27 C API tests, and the Julia, Dart, Python and JS suites pass unmodified.
 - [ ] **SPLIT-07**: Every citation of `src/lua_runner.cpp` is updated to the new paths: the AGENTS.md files, `src/csv/*` comments, `cmake/Platform.cmake`, `bindings/dart/hook/build.dart`, the tests, and the `lua-api.ts` maintainer header. Re-derive the list with `git grep`.
 
 ### Dedupe (zero behaviour change)
@@ -54,10 +54,10 @@ Evidence for each item (line numbers at `bdf9087`) is in `.planning/research/LUA
 
 - [ ] **REN-01**: The C++ class is `quiver::Sandbox`, declared in `include/quiver/sandbox.h`. There is no `LuaRunner` alias.
 - [ ] **REN-02**: The C API is `quiver_sandbox_t` with `quiver_sandbox_new/free/run/free_string`, in `include/quiver/c/sandbox.h` and `src/c/sandbox.cpp`.
-- [ ] **REN-03**: Every binding exposes `Sandbox`. Julia regenerates `c_api.jl`. Dart hand-edits `bindings.dart` (6 entries plus their uses), adds `SandboxException`, and updates the `ffigen.yaml` and `pubspec.yaml` header lists. Python updates `_c_api.py` cdefs and `generator.py`. JS updates the `loader.ts` symbols and `index.ts`. `quiver_cli` uses `Sandbox`. No `quiver_lua_runner` name remains anywhere.
+- [ ] **REN-03**: Every binding exposes `Sandbox`. Julia regenerates `c_api.jl`. Dart hand-edits `bindings.dart` (6 entries plus their uses), adds `SandboxException`, and updates the `ffigen.yaml` and `pubspec.yaml` header lists. Python updates `_c_api.py` cdefs and `generator.py`. JS updates the `loader.ts` symbols and `index.ts`. `quiver_cli` uses `Sandbox`. The binding source and test files and the C++/C headers are renamed to match (`sandbox.jl`, `sandbox.dart`, `quiverdb/sandbox.py` so the module path becomes `quiverdb.sandbox`, `sandbox.ts`, `include/quiver/sandbox.h`, `include/quiver/c/sandbox.h`, `tests/test_sandbox.h`). No `quiver_lua_runner` name and no `lua_runner`/`lua-runner` file name remains anywhere.
 - [ ] **REN-04**: The closed, disposed and not-closed messages in Python, Dart and JS say "Sandbox", with tests updated or added.
 - [ ] **REN-05**: `resolve_sandboxed_path` becomes `resolve_contained_path`. The file rule is called "directory containment" in AGENTS.md and `lua-api.ts`. The Lua reference states what the sandbox does not limit: instructions, memory, wall time, and globals persisting across `run()`.
-- [ ] **REN-06**: All Lua suites share one `Sandbox*` gtest prefix: the filter matches all 428, and the 27 C API tests keep running. `LuaSandboxTest` becomes `SandboxFileTest`, the test files are renamed `test_sandbox_*`, and test-local variables stay `lua`.
+- [ ] **REN-06**: All Lua suites share one `Sandbox*` gtest prefix: the filter matches every Lua-layer test (428 at `bdf9087` plus those Phases 1 and 4 add), and the C API tests (27 at `bdf9087`) keep running. `LuaSandboxTest` becomes `SandboxFileTest`, the test files are renamed `test_sandbox_*`, and test-local variables stay `lua`.
 - [ ] **REN-07**: `tests/sandbox` becomes `tests/scratch` / `quiver_scratch`, and the AGENTS.md Do-Not-Fix entry follows it.
 
 ### Tests
@@ -67,7 +67,7 @@ Evidence for each item (line numbers at `bdf9087`) is in `.planning/research/LUA
 ### Docs
 
 - [ ] **DOC-01**: Planning-ID comments (`D-xx`, `LUA-xx`, `WRITE-xx`, `FMT-xx`, `TEST-xx`, and references to deleted `.planning` files) are replaced repo-wide with their one-line reason or the test that pins them.
-- [ ] **DOC-02**: The root, `src/`, `src/c/`, `tests/` and four binding AGENTS.md files describe the new layout, names and changed decisions: the C7 rule, text-only `load`, the `SOL_SAFE_FUNCTION` claim removed, the safety flags, and `tests/scratch`.
+- [ ] **DOC-02**: The root, `src/`, `src/c/`, `tests/` and four binding AGENTS.md files describe the new layout, names and changed decisions: the C7 rule, text-only `load`, the safety flags, and `tests/scratch`. (Deleting the `SOL_SAFE_FUNCTION` claim is owned by SAFE-06.)
 - [ ] **DOC-03**: CHANGELOG gets a `## [0.13.0] — unreleased` section. BREAKING entries cover the rename (per layer, with what a caller must change), wrong-type arguments now throwing (C1/C5), the empty-array change (C7) and text-only `load`. `### Fixed` entries cover C2, C4, C6 and C8.
 - [ ] **DOC-04**: The shipped `LUA_DB_API_REFERENCE` text matches the code: the empty-array rule, the three meanings of "sandbox", and no `LuaRunner` mentions. The sync test stays green.
 
@@ -108,13 +108,60 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (filled by roadmapper) | | |
+| PIN-01 | Phase 1 | Pending |
+| PIN-02 | Phase 1 | Pending |
+| PIN-03 | Phase 1 | Pending |
+| PIN-04 | Phase 1 | Pending |
+| PIN-05 | Phase 1 | Pending |
+| SPLIT-01 | Phase 2 | Pending |
+| SPLIT-02 | Phase 2 | Pending |
+| SPLIT-03 | Phase 2 | Pending |
+| SPLIT-04 | Phase 2 | Pending |
+| SPLIT-05 | Phase 2 | Pending |
+| SPLIT-06 | Phase 2 | Pending |
+| SPLIT-07 | Phase 2 | Pending |
+| DEDUP-01 | Phase 3 | Pending |
+| DEDUP-02 | Phase 3 | Pending |
+| DEDUP-03 | Phase 3 | Pending |
+| DEDUP-04 | Phase 3 | Pending |
+| DEDUP-05 | Phase 3 | Pending |
+| DEDUP-06 | Phase 3 | Pending |
+| SAFE-01 | Phase 4 | Pending |
+| SAFE-02 | Phase 4 | Pending |
+| SAFE-03 | Phase 4 | Pending |
+| SAFE-04 | Phase 4 | Pending |
+| SAFE-05 | Phase 4 | Pending |
+| SAFE-06 | Phase 4 | Pending |
+| SAFE-07 | Phase 4 | Pending |
+| FIX-01 | Phase 4 | Pending |
+| FIX-02 | Phase 4 | Pending |
+| FIX-03 | Phase 4 | Pending |
+| REN-01 | Phase 5 | Pending |
+| REN-02 | Phase 5 | Pending |
+| REN-03 | Phase 5 | Pending |
+| REN-04 | Phase 5 | Pending |
+| REN-05 | Phase 5 | Pending |
+| REN-06 | Phase 5 | Pending |
+| REN-07 | Phase 5 | Pending |
+| TEST-01 | Phase 5 | Pending |
+| DOC-01 | Phase 5 | Pending |
+| DOC-02 | Phase 5 | Pending |
+| DOC-03 | Phase 5 | Pending |
+| DOC-04 | Phase 5 | Pending |
+
+Partial deliveries (each requirement is still owned by the one phase above; earlier phases only advance it):
+
+- DEDUP-02: the M2 half (the 17 variadic `Database` pairs become `bind.set_function`) is forced by Phase 2's per-domain binders and lands there. Phase 3 adds the member-pointer forwarders (M3) and confirms no variadic pair came back.
+- DOC-01: Phase 2 clears the `src/lua_runner.cpp` share (49 lines) as the code moves, and Phases 1-4 add no new planning IDs. Phase 5 clears the rest and gates repo-wide.
+- DOC-02: every phase updates the AGENTS.md nearest its change (Phase 2 the folder layout, Phase 4 the C7 rule, text-only `load` and the safety flags). Phase 5 does the rename sweep and the final check.
+- DOC-03: Phase 4 opens `[0.13.0] — unreleased` with its compare link and every entry except the rename. Phase 5 adds the rename entry.
+- DOC-04: Phase 4 rewrites the empty-array text with FIX-02. Phase 5 adds the "sandbox" meanings and the scope statement, and removes `LuaRunner`.
 
 **Coverage:**
 - v1 requirements: 40 total
-- Mapped to phases: 0
-- Unmapped: 40 ⚠️
+- Mapped to phases: 40
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-10-02*
-*Last updated: 2026-10-02 after initial definition*
+*Last updated: 2026-10-02 after roadmap revision (partial deliveries noted; SPLIT-06/REN-03/REN-06/DOC-02 clarified)*

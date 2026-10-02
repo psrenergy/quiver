@@ -32,16 +32,17 @@ fixes listed below.
 
 ### Active
 
-- [ ] Untested behaviour that the refactor could break is pinned by tests before any code moves (the 1,000,000 key-width cap; non-string keys and non-table payloads on every table-taking `db:` method).
+- [ ] Untested behaviour that the refactor could break is pinned by tests before any code moves (the 1,000,000 key-width cap, the check orders that pick which error a call reports, the sync test's usertype guards, a runner move). Only behaviour defined in both Debug and Release is pinned; non-string keys and non-table payloads are Release UB today, so their tests are written red-then-green with the fixes.
 - [ ] `src/lua_runner.cpp` is split into `src/sandbox/` per-domain translation units, each of which both registers and implements its slice of the surface. No file is over ~450 lines and behaviour does not change.
 - [ ] The sync test reads every source file in the new folder and guards all usertypes; `/bigobj` applies to every sol2 TU; the NOLINT blocks move with their code.
 - [ ] Repeated boilerplate is collapsed into shared helpers: the transaction/dry-run body, bulk-read adapters, member-pointer forwarders, one registration style, the metadata wrappers, option decoders, and `CsvWriter` behaviour as members. No behaviour change.
 - [ ] Release builds type-check table and `self` arguments: an explicit `require_table` gives a Pattern 1 error at every table parameter, and `SOL_ALL_SAFETIES_ON` is turned on as a backstop. The performance cost is measured.
 - [ ] Map keys are type-checked before they become column, dimension or attribute names (Pattern 1 instead of a wrong name or a raw panic).
 - [ ] An optional argument with the wrong type raises an error instead of being treated as absent. `db:transaction`/`db:dry_run` reject a non-function with Pattern 1. A failed COMMIT in `db:transaction` rolls back.
+- [ ] Lua `load` accepts text chunks only; a bytecode chunk raises an error, and string-form `load` keeps working.
 - [ ] An empty array in Lua `create_element`/`update_element` is passed to the core the way C++/Python/JS pass it, instead of being dropped by the Lua converter. `update_element` with `{col = {}}` then clears that group. `create_element` still skips it, because the core does, and the reference text is updated to match.
 - [ ] Error messages from the expression helpers name the public operation; dead branches are removed.
-- [ ] `LuaRunner` becomes `quiver::Sandbox` in every layer: C++ (`include/quiver/sandbox.h`), C API `quiver_sandbox_*`, and `Sandbox` in Julia/Dart/Python/JS and the CLI. The closed/disposed messages and Dart's `SandboxException` follow it, the file rule is renamed "directory containment" (`resolve_contained_path`), and all Lua suites share one `Sandbox*` gtest prefix (`LuaSandboxTest` becomes `SandboxFileTest`).
+- [ ] `LuaRunner` becomes `quiver::Sandbox` in every layer: C++ (`include/quiver/sandbox.h`), C API `quiver_sandbox_*`, and `Sandbox` in Julia/Dart/Python/JS and the CLI. The closed/disposed messages and Dart's `SandboxException` follow it, the file rule is renamed "directory containment" (`resolve_contained_path`), and all Lua suites share one `Sandbox*` gtest prefix (`LuaSandboxTest` becomes `SandboxFileTest`). Source, test and header files are renamed to match (Python's module path becomes `quiverdb.sandbox`).
 - [ ] The scratch target `tests/sandbox` → `tests/scratch` / `quiver_scratch` (still kept on purpose).
 - [ ] Planning IDs in comments (`D-xx`, `LUA-xx`, `WRITE-xx`, `FMT-xx`, `TEST-xx`, references to deleted `.planning` files) are replaced repo-wide with their one-line reason or the test that pins them.
 - [ ] Every AGENTS.md, the shipped Lua reference text and the CHANGELOG (`[0.13.0]`, BREAKING entry with caller migration) match the new layout and names.
@@ -69,7 +70,7 @@ fixes listed below.
 
 - **Behaviour**: zero behaviour change in the split and dedupe phases. Each behaviour fix lands with its own test and CHANGELOG line, because the shipped Lua reference and four binding suites depend on exact semantics.
 - **Design decisions**: the AGENTS.md "Design Decisions" and "Do Not Fix" items stay as they are, except the empty-array rule (C7), which the user explicitly changed. They are settled, not up for re-litigation.
-- **sol2 build**: `SOL_SAFE_NUMERICS`/`SOL_SAFE_FUNCTION`/`SOL_NO_NIL` stay PRIVATE on the `quiver` target, and every new TU stays in it. Write `sol::lua_nil`, never `sol::nil`. csv-parser headers must never be included from `src/sandbox/`.
+- **sol2 build**: `SOL_SAFE_NUMERICS`/`SOL_NO_NIL` stay PRIVATE on the `quiver` target, and every new TU stays in it. Phase 4 adds `SOL_ALL_SAFETIES_ON=1`/`SOL_PRINT_ERRORS=0` there and deletes the no-op `SOL_SAFE_FUNCTION=1` (see Key Decisions). Write `sol::lua_nil`, never `sol::nil`. csv-parser headers must never be included from `src/sandbox/`.
 - **Order-sensitive code**: in the ctor, `open_libraries` → nil `dofile`/`loadfile` → create the `quiver` table → binders → `lua["db"]`. `GcGuard` is declared before `result`, with `close_open_writers` then exactly one `collect_garbage()`. Check orders that pick which error a call reports (e.g. `open_file` validates `mode` before the path) stay byte-for-byte.
 - **Cross-layer rules**: names map mechanically across layers, tests exist at every layer, error messages are defined only in C++/C API, and every AGENTS.md nearest a change is updated (Self-Updating).
 - **FFI declarations**: only Julia's `bindings/julia/src/c_api.jl` is regenerated (its own `generator.bat`; review every hunk). Dart's `bindings.dart` is **hand-edited** in its existing style. Regenerating it with the pinned ffigen rewrites the whole file into breaking enums (`bindings/dart/AGENTS.md`), so never run `scripts/generator.bat`. Python's `_c_api.py` cdefs (plus `generator.py`'s header list) and the JS `loader.ts` symbol table are hand-maintained.
@@ -89,6 +90,9 @@ fixes listed below.
 | Planning-ID comments replaced repo-wide | They point at deleted `.planning` files; Human-Centric principle | — Pending |
 | One PR per phase into master, each green on its own | Reviewable and bisectable; split and dedupe stay provably behaviour-neutral | — Pending |
 | Tests that pin behaviour first, then split, dedupe, fixes, rename | The split is only safe once the existing behaviour is pinned | — Pending |
+| Delete the `SOL_SAFE_FUNCTION=1` define and its AGENTS.md claim (SAFE-06) | sol2 v3.5.0 never reads it (only `SOL_SAFE_FUNCTIONS`, `SOL_SAFE_FUNCTION_OBJECTS`, `SOL_SAFE_FUNCTION_CALLS`), so it is dead; `SOL_ALL_SAFETIES_ON` covers what it claimed. Chosen in REQUIREMENTS over the research default of keeping it with a corrected comment | — Pending |
+| Lua `load` accepts text chunks only (SAFE-07) | A bytecode chunk is a crash vector for an untrusted script; string-form `load` stays, so the root sandbox decision only gains "text chunks only". Adopted in REQUIREMENTS although research listed it as v2 | — Pending |
+| Binding source, test and header files are renamed with the class (`quiverdb.sandbox` module path) | No-alias policy, and a `lua_runner` file name would keep the old meaning alive | — Pending |
 
 ## Evolution
 
@@ -108,4 +112,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-02 after initialization*
+*Last updated: 2026-10-02 after roadmap revision (SOL_SAFE_FUNCTION, text-only `load` and file-rename decisions recorded)*
