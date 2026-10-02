@@ -115,7 +115,17 @@ TEST_F(LuaRunnerTest, CurrentVersion) {
 
     lua.run(R"(
         local version = db:current_version()
-        assert(type(version) == "number", "Expected version to be a number")
+        assert(version == 0, "Expected version 0 for a schema database, got " .. tostring(version))
+    )");
+}
+
+TEST_F(LuaRunnerTest, CurrentVersionAfterMigrations) {
+    auto db = quiver::Database::from_migrations(":memory:", SCHEMA_PATH("schemas/migrations"));
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(
+        local version = db:current_version()
+        assert(version == 3, "Expected version 3 after three migrations, got " .. tostring(version))
     )");
 }
 

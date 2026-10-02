@@ -31,8 +31,10 @@ def test_from_schema_rejects_set_table_without_parent_fk(schemas_path: Path, tmp
 
 def test_from_migrations_creates_database(migrations_path: Path, tmp_path: Path) -> None:
     db = Database.from_migrations(str(tmp_path / "test.db"), str(migrations_path))
-    assert db is not None
-    db.close()
+    try:
+        assert db.current_version() == 3
+    finally:
+        db.close()
 
 
 def test_validate_migrations_succeeds(migrations_path: Path) -> None:
@@ -85,10 +87,8 @@ def test_path_returns_string(db: Database) -> None:
     assert "test.db" in result
 
 
-def test_current_version_returns_int(db: Database) -> None:
-    result = db.current_version()
-    assert isinstance(result, int)
-    assert result >= 0
+def test_current_version_is_zero_for_a_schema_database(db: Database) -> None:
+    assert db.current_version() == 0
 
 
 def test_is_healthy_returns_true(db: Database) -> None:
