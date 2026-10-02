@@ -64,26 +64,30 @@ std::vector<T> read_toml_array(const toml::table& tbl, const std::string& key) {
 
 // The one body behind from_element and from_toml_content, which differ only in how they read the
 // eight fields. `operation` is the public factory the caller used, for the Pattern 1 messages.
-BinaryMetadata build_metadata(const std::string& operation,
-                              const std::vector<std::string>& dimensions,
-                              const std::vector<int64_t>& dimension_sizes,
-                              const std::vector<std::string>& time_dimensions,
-                              const std::vector<std::string>& frequencies,
-                              const std::string& initial_datetime_str,
-                              const std::string& unit,
-                              const std::vector<std::string>& labels,
-                              const std::string& version) {
+BinaryMetadata build_metadata(
+    const std::string& operation,
+    const std::vector<std::string>& dimensions,
+    const std::vector<int64_t>& dimension_sizes,
+    const std::vector<std::string>& time_dimensions,
+    const std::vector<std::string>& frequencies,
+    const std::string& initial_datetime_str,
+    const std::string& unit,
+    const std::vector<std::string>& labels,
+    const std::string& version
+) {
     // The dimension loop reads dimension_sizes and frequencies in parallel with dimensions and
     // time_dimensions, so their lengths must agree before anything is indexed.
     if (dimension_sizes.size() != dimensions.size()) {
-        throw std::runtime_error("Cannot " + operation + ": dimension_sizes count (" +
-                                 std::to_string(dimension_sizes.size()) + ") does not match dimensions count (" +
-                                 std::to_string(dimensions.size()) + ")");
+        throw std::runtime_error(
+            "Cannot " + operation + ": dimension_sizes count (" + std::to_string(dimension_sizes.size()) +
+            ") does not match dimensions count (" + std::to_string(dimensions.size()) + ")"
+        );
     }
     if (frequencies.size() != time_dimensions.size()) {
-        throw std::runtime_error("Cannot " + operation + ": frequencies count (" + std::to_string(frequencies.size()) +
-                                 ") does not match time_dimensions count (" + std::to_string(time_dimensions.size()) +
-                                 ")");
+        throw std::runtime_error(
+            "Cannot " + operation + ": frequencies count (" + std::to_string(frequencies.size()) +
+            ") does not match time_dimensions count (" + std::to_string(time_dimensions.size()) + ")"
+        );
     }
 
     // Validate time_dimensions are a subset of dimensions
@@ -98,8 +102,9 @@ BinaryMetadata build_metadata(const std::string& operation,
     for (const auto& td : time_dimensions) {
         auto it = std::find(dimensions.begin() + last_pos, dimensions.end(), td);
         if (it == dimensions.end()) {
-            throw std::runtime_error("Cannot " + operation +
-                                     ": time dimensions must appear in the same order as dimensions");
+            throw std::runtime_error(
+                "Cannot " + operation + ": time dimensions must appear in the same order as dimensions"
+            );
         }
         last_pos = static_cast<size_t>(std::distance(dimensions.begin(), it)) + 1;
     }
@@ -241,15 +246,17 @@ BinaryMetadata BinaryMetadata::from_element(const Element& element) {
     std::vector<std::string> labels = get_string_array("labels");
     std::string version = get_string("version");
 
-    return build_metadata("from_element",
-                          dimensions,
-                          dimension_sizes,
-                          time_dimensions,
-                          frequencies,
-                          initial_datetime_str,
-                          unit,
-                          labels,
-                          version);
+    return build_metadata(
+        "from_element",
+        dimensions,
+        dimension_sizes,
+        time_dimensions,
+        frequencies,
+        initial_datetime_str,
+        unit,
+        labels,
+        version
+    );
 }
 
 BinaryMetadata BinaryMetadata::from_toml_file(const std::string& file_path) {
@@ -274,15 +281,17 @@ BinaryMetadata BinaryMetadata::from_toml_content(const std::string& content) {
     std::vector<std::string> labels = read_toml_array<std::string>(tbl, "labels");
     std::string version = read_toml_string(tbl, "version");
 
-    return build_metadata("from_toml_content",
-                          dimensions,
-                          dimension_sizes,
-                          time_dimensions,
-                          frequencies,
-                          initial_datetime_str,
-                          unit,
-                          labels,
-                          version);
+    return build_metadata(
+        "from_toml_content",
+        dimensions,
+        dimension_sizes,
+        time_dimensions,
+        frequencies,
+        initial_datetime_str,
+        unit,
+        labels,
+        version
+    );
 }
 
 std::string BinaryMetadata::to_toml() const {
@@ -328,8 +337,9 @@ std::string BinaryMetadata::to_toml() const {
 void BinaryMetadata::validate() const {
     // Version check
     if (version != QUIVER_FILE_VERSION) {
-        throw std::runtime_error("Incompatible file version: expected " + std::string(QUIVER_FILE_VERSION) + ", got " +
-                                 version);
+        throw std::runtime_error(
+            "Incompatible file version: expected " + std::string(QUIVER_FILE_VERSION) + ", got " + version
+        );
     }
 
     // Dimension count
@@ -345,8 +355,10 @@ void BinaryMetadata::validate() const {
     // Dimension sizes must be positive
     for (size_t i = 0; i < dimensions.size(); ++i) {
         if (dimensions[i].size <= 0) {
-            throw std::runtime_error("Dimension size at index " + std::to_string(i) + " must be positive, got " +
-                                     std::to_string(dimensions[i].size));
+            throw std::runtime_error(
+                "Dimension size at index " + std::to_string(i) + " must be positive, got " +
+                std::to_string(dimensions[i].size)
+            );
         }
     }
 
@@ -387,8 +399,10 @@ void BinaryMetadata::validate_time_dimension_metadata() const {
     for (size_t i = 0; i < time_dims.size(); ++i) {
         for (size_t j = i + 1; j < time_dims.size(); ++j) {
             if (time_dims[i]->time->frequency == time_dims[j]->time->frequency) {
-                throw std::runtime_error("Time dimension frequencies must be unique. Duplicate: " +
-                                         frequency_to_string(time_dims[i]->time->frequency));
+                throw std::runtime_error(
+                    "Time dimension frequencies must be unique. Duplicate: " +
+                    frequency_to_string(time_dims[i]->time->frequency)
+                );
             }
         }
     }
@@ -495,15 +509,19 @@ void BinaryMetadata::validate_time_dimension_sizes() const {
         }
 
         if (!found) {
-            throw std::runtime_error("Invalid parent/child frequency combination: " + frequency_to_string(freq) +
-                                     " inside " + frequency_to_string(parent_freq));
+            throw std::runtime_error(
+                "Invalid parent/child frequency combination: " + frequency_to_string(freq) + " inside " +
+                frequency_to_string(parent_freq)
+            );
         }
 
         if (size < min_size || size > max_size) {
-            throw std::runtime_error("Time dimension '" + dim.name + "' with frequency '" + frequency_to_string(freq) +
-                                     "' has size " + std::to_string(size) + " which is out of bounds [" +
-                                     std::to_string(min_size) + ", " + std::to_string(max_size) +
-                                     "] based on the next lower frequency: '" + frequency_to_string(parent_freq) + "'");
+            throw std::runtime_error(
+                "Time dimension '" + dim.name + "' with frequency '" + frequency_to_string(freq) + "' has size " +
+                std::to_string(size) + " which is out of bounds [" + std::to_string(min_size) + ", " +
+                std::to_string(max_size) + "] based on the next lower frequency: '" + frequency_to_string(parent_freq) +
+                "'"
+            );
         }
     }
 }

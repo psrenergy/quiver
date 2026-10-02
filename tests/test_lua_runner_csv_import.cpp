@@ -89,8 +89,9 @@ TEST_F(LuaRunner_ImportCSV, EnumResolution) {
     auto db = quiver::Database::from_schema(db_path(), csv_schema);
     quiver::LuaRunner lua(db);
 
-    write_lua_csv_file((sandbox / "enum.csv").string(),
-                       "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,Active,,,\n");
+    write_lua_csv_file(
+        (sandbox / "enum.csv").string(), "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,Active,,,\n"
+    );
 
     lua.run(R"(
         db:import_csv("Items", "", "enum.csv", {
@@ -111,8 +112,10 @@ TEST_F(LuaRunner_ImportCSV, DateTimeFormat) {
     auto db = quiver::Database::from_schema(db_path(), csv_schema);
     quiver::LuaRunner lua(db);
 
-    write_lua_csv_file((sandbox / "datetime.csv").string(),
-                       "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,,,2024/01/15,\n");
+    write_lua_csv_file(
+        (sandbox / "datetime.csv").string(),
+        "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,,,2024/01/15,\n"
+    );
 
     lua.run(R"(
         db:import_csv("Items", "", "datetime.csv", {
@@ -133,22 +136,30 @@ TEST_F(LuaRunner_ImportCSV, OptionsAreStrict) {
     auto db = quiver::Database::from_schema(db_path(), csv_schema);
     quiver::LuaRunner lua(db);
 
-    write_lua_csv_file((sandbox / "enum.csv").string(),
-                       "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,1,,,\n");
+    write_lua_csv_file(
+        (sandbox / "enum.csv").string(), "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,1,,,\n"
+    );
 
-    expect_lua_error(lua,
-                     R"(db:import_csv("Items", "", "enum.csv", { enum_labels = 5 }))",
-                     "Cannot import_csv: option 'enum_labels' must be a table");
-    expect_lua_error(lua,
-                     R"(db:import_csv("Items", "", "enum.csv", { enum_labels = { status = 1 } }))",
-                     "Cannot import_csv: option 'enum_labels['status']' must be a table");
+    expect_lua_error(
+        lua,
+        R"(db:import_csv("Items", "", "enum.csv", { enum_labels = 5 }))",
+        "Cannot import_csv: option 'enum_labels' must be a table"
+    );
+    expect_lua_error(
+        lua,
+        R"(db:import_csv("Items", "", "enum.csv", { enum_labels = { status = 1 } }))",
+        "Cannot import_csv: option 'enum_labels['status']' must be a table"
+    );
     expect_lua_error(
         lua,
         R"(db:import_csv("Items", "", "enum.csv", { enum_labels = { status = { en = { active = "one" } } } }))",
-        "Cannot import_csv: code for label 'active' has unsupported Lua type");
-    expect_lua_error(lua,
-                     R"(db:import_csv("Items", "", "enum.csv", { enum_labels = { status = { en = { [1] = 1 } } } }))",
-                     "Cannot import_csv: keys of option 'enum_labels['status']['en']' must be strings");
+        "Cannot import_csv: code for label 'active' has unsupported Lua type"
+    );
+    expect_lua_error(
+        lua,
+        R"(db:import_csv("Items", "", "enum.csv", { enum_labels = { status = { en = { [1] = 1 } } } }))",
+        "Cannot import_csv: keys of option 'enum_labels['status']['en']' must be strings"
+    );
 
     EXPECT_EQ(db.read_element_ids("Items").size(), 0u);
 }
@@ -158,10 +169,12 @@ TEST_F(LuaRunner_ImportCSV, ScalarTrailingEmptyColumns) {
     auto db = quiver::Database::from_schema(db_path(), csv_schema);
     quiver::LuaRunner lua(db);
 
-    write_lua_csv_file((sandbox / "trailing.csv").string(),
-                       "sep=,\n"
-                       "label,name,status,price,date_created,notes,,,,\n"
-                       "Item1,Alpha,1,9.99,2024-01-15T10:30:00,first,,,,\n");
+    write_lua_csv_file(
+        (sandbox / "trailing.csv").string(),
+        "sep=,\n"
+        "label,name,status,price,date_created,notes,,,,\n"
+        "Item1,Alpha,1,9.99,2024-01-15T10:30:00,first,,,,\n"
+    );
 
     lua.run(R"(db:import_csv("Items", "", "trailing.csv"))");
 
@@ -181,11 +194,13 @@ TEST_F(LuaRunner_ImportCSV, VectorTrailingEmptyColumns) {
         db:create_element("Items", { label = "Item1", name = "Alpha" })
     )");
 
-    write_lua_csv_file((sandbox / "vectrailing.csv").string(),
-                       "sep=,\n"
-                       "id,vector_index,measurement,,,\n"
-                       "Item1,1,1.1,,,\n"
-                       "Item1,2,2.2,,,\n");
+    write_lua_csv_file(
+        (sandbox / "vectrailing.csv").string(),
+        "sep=,\n"
+        "id,vector_index,measurement,,,\n"
+        "Item1,1,1.1,,,\n"
+        "Item1,2,2.2,,,\n"
+    );
 
     lua.run(R"(db:import_csv("Items", "measurements", "vectrailing.csv"))");
 
@@ -203,8 +218,9 @@ TEST_F(LuaRunner_ImportCSV, OmittedElementDeletesItsGroupRows) {
         db:create_element("Items", { label = "Kept", name = "Beta", measurement = {9.5} })
     )");
 
-    write_lua_csv_file((sandbox / "subset.csv").string(),
-                       "sep=,\nlabel,name,status,price,date_created,notes\nKept,Beta,,,,\n");
+    write_lua_csv_file(
+        (sandbox / "subset.csv").string(), "sep=,\nlabel,name,status,price,date_created,notes\nKept,Beta,,,,\n"
+    );
 
     lua.run(R"LUA(
         db:import_csv("Items", "", "subset.csv")
@@ -223,8 +239,9 @@ TEST_F(LuaRunner_ImportCSV, InsideTransactionThrows) {
     auto db = quiver::Database::from_schema(db_path(), csv_schema);
     quiver::LuaRunner lua(db);
 
-    write_lua_csv_file((sandbox / "intx.csv").string(),
-                       "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,,,,\n");
+    write_lua_csv_file(
+        (sandbox / "intx.csv").string(), "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,,,,\n"
+    );
 
     lua.run("db:begin_transaction()");
     expect_lua_error(lua, R"(db:import_csv("Items", "", "intx.csv"))", "Cannot import_csv: transaction already active");
@@ -241,9 +258,11 @@ TEST_F(LuaRunner_ImportCSV, EscapeThrows) {
     auto db = quiver::Database::from_schema(db_path(), csv_schema);
     quiver::LuaRunner lua(db);
 
-    expect_lua_error(lua,
-                     R"(db:import_csv("Items", "", "../x.csv"))",
-                     "Cannot import_csv: path '../x.csv' escapes the database directory");
+    expect_lua_error(
+        lua,
+        R"(db:import_csv("Items", "", "../x.csv"))",
+        "Cannot import_csv: path '../x.csv' escapes the database directory"
+    );
 }
 
 TEST_F(LuaRunner_ImportCSV, InMemoryThrows) {

@@ -136,21 +136,25 @@ TEST_F(LuaRunner_ReadCsv, DirtyFileParsesEveryParserRequirement) {
     // followed by an alphanumeric INSIDE THE SAME literal would have the hex escape swallow that
     // character too (\xBF followed by 'a', a valid hex digit, would parse as \xBFa).
     const std::string bom = "\xEF\xBB\xBF";
-    write_lua_csv_file(sandbox / "dirty.csv",
-                       bom + "a,b,c\r\n"
-                             "\"May 1, 2014\",33,x\r\n"
-                             "\"say \"\"hi\"\"\",2,y\r\n"
-                             "\"line1\nline2\",3,z\r\n"
-                             "short\r\n");
+    write_lua_csv_file(
+        sandbox / "dirty.csv",
+        bom + "a,b,c\r\n"
+              "\"May 1, 2014\",33,x\r\n"
+              "\"say \"\"hi\"\"\",2,y\r\n"
+              "\"line1\nline2\",3,z\r\n"
+              "short\r\n"
+    );
 
     // One EXPECT_EQ pins all six properties at once (ExactJsonRoundTrip's style).
     auto json = lua.run(R"(return db:read_csv("dirty.csv"))");
-    EXPECT_EQ(json,
-              R"({"header":["a","b","c"],)"
-              R"("rows":[["May 1, 2014","33","x"],)"
-              R"(["say \"hi\"","2","y"],)"
-              R"(["line1\nline2","3","z"],)"
-              R"(["short"]]})");
+    EXPECT_EQ(
+        json,
+        R"({"header":["a","b","c"],)"
+        R"("rows":[["May 1, 2014","33","x"],)"
+        R"(["say \"hi\"","2","y"],)"
+        R"(["line1\nline2","3","z"],)"
+        R"(["short"]]})"
+    );
 
     // Per-requirement asserts so a failure names which property broke, not just a JSON diff.
     lua.run(R"(
@@ -172,18 +176,22 @@ TEST_F(LuaRunner_ReadCsv, LfAndCrlfEndingsParseIdentically) {
     // Same content as DirtyFileParsesEveryParserRequirement, LF instead of CRLF line endings.
     // PARSE-06's second half: both must parse, and no cell may carry a trailing \r either way.
     const std::string bom = "\xEF\xBB\xBF";
-    write_lua_csv_file(sandbox / "dirty_crlf.csv",
-                       bom + "a,b,c\r\n"
-                             "\"May 1, 2014\",33,x\r\n"
-                             "\"say \"\"hi\"\"\",2,y\r\n"
-                             "\"line1\nline2\",3,z\r\n"
-                             "short\r\n");
-    write_lua_csv_file(sandbox / "dirty_lf.csv",
-                       bom + "a,b,c\n"
-                             "\"May 1, 2014\",33,x\n"
-                             "\"say \"\"hi\"\"\",2,y\n"
-                             "\"line1\nline2\",3,z\n"
-                             "short\n");
+    write_lua_csv_file(
+        sandbox / "dirty_crlf.csv",
+        bom + "a,b,c\r\n"
+              "\"May 1, 2014\",33,x\r\n"
+              "\"say \"\"hi\"\"\",2,y\r\n"
+              "\"line1\nline2\",3,z\r\n"
+              "short\r\n"
+    );
+    write_lua_csv_file(
+        sandbox / "dirty_lf.csv",
+        bom + "a,b,c\n"
+              "\"May 1, 2014\",33,x\n"
+              "\"say \"\"hi\"\"\",2,y\n"
+              "\"line1\nline2\",3,z\n"
+              "short\n"
+    );
 
     auto crlf_json = lua.run(R"(return db:read_csv("dirty_crlf.csv"))");
     auto lf_json = lua.run(R"(return db:read_csv("dirty_lf.csv"))");
@@ -203,12 +211,15 @@ TEST_F(LuaRunner_ReadCsv, StrayQuotesTokenizeAsTheImportPrePassAssumes) {
     quiver::LuaRunner lua(db);
 
     write_lua_csv_file(sandbox / "literal_quotes.csv", "a, \"x,y\"\nab\"c,\"d\"\r\n\"e\",f\n");
-    EXPECT_EQ(lua.run(R"(return db:read_csv("literal_quotes.csv", { header_row = 0 }).rows)"),
-              R"([["a"," \"x","y\""],["ab\"c","d"],["e","f"]])");
+    EXPECT_EQ(
+        lua.run(R"(return db:read_csv("literal_quotes.csv", { header_row = 0 }).rows)"),
+        R"([["a"," \"x","y\""],["ab\"c","d"],["e","f"]])"
+    );
 
     write_lua_csv_file(sandbox / "text_after_close.csv", "\"a\" ,b\n\"c\",d\n");
-    EXPECT_EQ(lua.run(R"(return db:read_csv("text_after_close.csv", { header_row = 0 }).rows)"),
-              R"([["a\" ,b\n\"c","d"]])");
+    EXPECT_EQ(
+        lua.run(R"(return db:read_csv("text_after_close.csv", { header_row = 0 }).rows)"), R"([["a\" ,b\n\"c","d"]])"
+    );
 }
 
 TEST_F(LuaRunner_ReadCsv, BomStrippedUnderExplicitHeaderRowAndNoHeader) {
@@ -340,9 +351,11 @@ TEST_F(LuaRunner_ReadCsv, HeaderRowPastEndOfFileThrowsExactMessage) {
 
     // Asserted in full: csv-parser's actual past-EOF behavior is a SUCCESSFUL read with an empty
     // header and zero rows, which "looks like" a valid empty result under a loose substring check.
-    expect_lua_error(lua,
-                     R"(db:read_csv("three.csv", { header_row = 99 }))",
-                     "Cannot read_csv: header row 99 not found in file 'three.csv'");
+    expect_lua_error(
+        lua,
+        R"(db:read_csv("three.csv", { header_row = 99 }))",
+        "Cannot read_csv: header row 99 not found in file 'three.csv'"
+    );
 }
 
 // Pins that an enormous header_row produces the ordinary past-EOF error rather than anything
@@ -365,12 +378,16 @@ TEST_F(LuaRunner_ReadCsv, HeaderRowAtAndBeyondIntMaxClampsToPastEndOfFile) {
 
     // 2147483647 == INT_MAX; 9007199254740992 == 2^53, the largest integer a Lua number holds
     // exactly, so the literal reaching the decoder is the one written here.
-    expect_lua_error(lua,
-                     R"(db:read_csv("clamp.csv", { header_row = 2147483647 }))",
-                     "Cannot read_csv: header row 2147483647 not found in file 'clamp.csv'");
-    expect_lua_error(lua,
-                     R"(db:read_csv("clamp.csv", { header_row = 9007199254740992 }))",
-                     "Cannot read_csv: header row 9007199254740992 not found in file 'clamp.csv'");
+    expect_lua_error(
+        lua,
+        R"(db:read_csv("clamp.csv", { header_row = 2147483647 }))",
+        "Cannot read_csv: header row 2147483647 not found in file 'clamp.csv'"
+    );
+    expect_lua_error(
+        lua,
+        R"(db:read_csv("clamp.csv", { header_row = 9007199254740992 }))",
+        "Cannot read_csv: header row 9007199254740992 not found in file 'clamp.csv'"
+    );
 
     // The blank-line guarantee (D-13) under the no-header path, which IS the case the call-order
     // fix in make_format() protects: header mode is set before variable_columns(KEEP_NON_EMPTY),
@@ -389,9 +406,11 @@ TEST_F(LuaRunner_ReadCsv, StreamHeaderRowPastEndOfFileNamesTheStreamEntryPoint) 
 
     write_lua_csv_file(sandbox / "three.csv", "a,b\n1,2\n3,4\n");
 
-    expect_lua_error(lua,
-                     R"(db:read_csv_stream("three.csv", function() end, { header_row = 99 }))",
-                     "Cannot read_csv_stream: header row 99 not found in file 'three.csv'");
+    expect_lua_error(
+        lua,
+        R"(db:read_csv_stream("three.csv", function() end, { header_row = 99 }))",
+        "Cannot read_csv_stream: header row 99 not found in file 'three.csv'"
+    );
 }
 
 TEST_F(LuaRunner_ReadCsv, HeaderRowOnLastLineSucceedsWithEmptyRows) {
@@ -540,9 +559,11 @@ TEST_F(LuaRunner_ReadCsv, RepeatedAndBlankHeaderNamesAllReachable) {
     // The real Maranhao Energia header (D-21): two ANO columns, two Residencial columns (one
     // space-padded), and five blank names. 11 fields (10 separators) -- counted from this exact
     // line, not the "twelve" an earlier planning draft said before 02-CONTEXT.md corrected it.
-    write_lua_csv_file(sandbox / "dupheader.csv",
-                       "ANO,Residencial,,ANO,MÊS, Residencial ,,,,,\n"
-                       "v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11\n");
+    write_lua_csv_file(
+        sandbox / "dupheader.csv",
+        "ANO,Residencial,,ANO,MÊS, Residencial ,,,,,\n"
+        "v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11\n"
+    );
 
     lua.run(R"(
         local csv = db:read_csv("dupheader.csv")
@@ -580,8 +601,9 @@ TEST_F(LuaRunner_ReadCsv, EnergiaRegressionJunkRowAboveUnitsRowBelowHeader) {
 
     // Binary copy: db:read_csv's BOM/CRLF handling is exactly what this test exercises, so the
     // fixture's bytes must reach the sandbox unmodified.
-    std::filesystem::copy_file(quiver::test::path_from(__FILE__, "fixtures/ma_energia_residencial.csv"),
-                               sandbox / "ma_energia_residencial.csv");
+    std::filesystem::copy_file(
+        quiver::test::path_from(__FILE__, "fixtures/ma_energia_residencial.csv"), sandbox / "ma_energia_residencial.csv"
+    );
 
     // Custom delimiter (matches test_lua_runner_describe.cpp/test_lua_runner_errors.cpp): the
     // date-pattern literal below ends in ")" -- with the default R"(...)" delimiter that exact
@@ -619,8 +641,9 @@ TEST_F(LuaRunner_ReadCsv, GdRegressionQuotedCommaAndEnglishMonthNames) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::LuaRunner lua(db);
 
-    std::filesystem::copy_file(quiver::test::path_from(__FILE__, "fixtures/ma_gd_data.csv"),
-                               sandbox / "ma_gd_data.csv");
+    std::filesystem::copy_file(
+        quiver::test::path_from(__FILE__, "fixtures/ma_gd_data.csv"), sandbox / "ma_gd_data.csv"
+    );
 
     // Custom delimiter: the month/day/year pattern literal below ends in ")".
     lua.run(R"LUA(
@@ -737,7 +760,8 @@ TEST_F(LuaRunner_ReadCsv, StreamCallbackErrorPropagatesAndClosesFile) {
     write_lua_csv_file(csv_path, "a,b\n1,2\n3,4\n");
 
     expect_lua_error(
-        lua, R"(db:read_csv_stream("erroring.csv", function(row, index, header) error("boom") end))", "boom");
+        lua, R"(db:read_csv_stream("erroring.csv", function(row, index, header) error("boom") end))", "boom"
+    );
 
     // On Windows an open reader (a lingering CSVReader from a sol::function/longjmp regression)
     // would block the delete -- this assertion is what fails if that regression is reintroduced.
@@ -901,7 +925,8 @@ TEST_F(LuaRunner_ReadCsv, ValidKeyDoesNotExcuseAnInvalidSibling) {
     quiver::LuaRunner lua(db);
 
     expect_lua_error(
-        lua, R"(db:read_csv("f.csv", { separator = ";", delim = ";" }))", "Cannot read_csv: unknown option 'delim'");
+        lua, R"(db:read_csv("f.csv", { separator = ";", delim = ";" }))", "Cannot read_csv: unknown option 'delim'"
+    );
 }
 
 TEST_F(LuaRunner_ReadCsv, SeparatorAsNumberThrowsMustBeAString) {
@@ -910,7 +935,8 @@ TEST_F(LuaRunner_ReadCsv, SeparatorAsNumberThrowsMustBeAString) {
     quiver::LuaRunner lua(db);
 
     expect_lua_error(
-        lua, R"(db:read_csv("f.csv", { separator = 59 }))", "Cannot read_csv: option 'separator' must be a string");
+        lua, R"(db:read_csv("f.csv", { separator = 59 }))", "Cannot read_csv: option 'separator' must be a string"
+    );
 }
 
 TEST_F(LuaRunner_ReadCsv, SeparatorAsBooleanThrowsMustBeAString) {
@@ -919,7 +945,8 @@ TEST_F(LuaRunner_ReadCsv, SeparatorAsBooleanThrowsMustBeAString) {
     quiver::LuaRunner lua(db);
 
     expect_lua_error(
-        lua, R"(db:read_csv("f.csv", { separator = true }))", "Cannot read_csv: option 'separator' must be a string");
+        lua, R"(db:read_csv("f.csv", { separator = true }))", "Cannot read_csv: option 'separator' must be a string"
+    );
 }
 
 TEST_F(LuaRunner_ReadCsv, EmptySeparatorThrowsMustBeASingleCharacter) {
@@ -927,9 +954,11 @@ TEST_F(LuaRunner_ReadCsv, EmptySeparatorThrowsMustBeASingleCharacter) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::LuaRunner lua(db);
 
-    expect_lua_error(lua,
-                     R"(db:read_csv("f.csv", { separator = "" }))",
-                     "Cannot read_csv: option 'separator' must be a single character");
+    expect_lua_error(
+        lua,
+        R"(db:read_csv("f.csv", { separator = "" }))",
+        "Cannot read_csv: option 'separator' must be a single character"
+    );
 }
 
 TEST_F(LuaRunner_ReadCsv, TwoCharacterSeparatorThrowsMustBeASingleCharacter) {
@@ -937,9 +966,11 @@ TEST_F(LuaRunner_ReadCsv, TwoCharacterSeparatorThrowsMustBeASingleCharacter) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::LuaRunner lua(db);
 
-    expect_lua_error(lua,
-                     R"(db:read_csv("f.csv", { separator = ";;" }))",
-                     "Cannot read_csv: option 'separator' must be a single character");
+    expect_lua_error(
+        lua,
+        R"(db:read_csv("f.csv", { separator = ";;" }))",
+        "Cannot read_csv: option 'separator' must be a single character"
+    );
 }
 
 // --- options table: header_row negatives (TEST-04) -- every one a throw, none a fallback ---
@@ -954,9 +985,9 @@ TEST_F(LuaRunner_ReadCsv, HeaderRowAsStringThrowsMustBeAnInteger) {
     quiver::LuaRunner lua(db);
 
     // A quoted "2" must not silently coerce via Lua's own string->number rules.
-    expect_lua_error(lua,
-                     R"(db:read_csv("f.csv", { header_row = "2" }))",
-                     "Cannot read_csv: option 'header_row' must be an integer");
+    expect_lua_error(
+        lua, R"(db:read_csv("f.csv", { header_row = "2" }))", "Cannot read_csv: option 'header_row' must be an integer"
+    );
 }
 
 TEST_F(LuaRunner_ReadCsv, HeaderRowAsFractionThrowsMustBeAnInteger) {
@@ -965,9 +996,9 @@ TEST_F(LuaRunner_ReadCsv, HeaderRowAsFractionThrowsMustBeAnInteger) {
     quiver::LuaRunner lua(db);
 
     // A number, but not a whole one -- same message as the wrong-type case above.
-    expect_lua_error(lua,
-                     R"(db:read_csv("f.csv", { header_row = 2.5 }))",
-                     "Cannot read_csv: option 'header_row' must be an integer");
+    expect_lua_error(
+        lua, R"(db:read_csv("f.csv", { header_row = 2.5 }))", "Cannot read_csv: option 'header_row' must be an integer"
+    );
 }
 
 TEST_F(LuaRunner_ReadCsv, NegativeHeaderRowThrowsMustNotBeNegative) {
@@ -977,9 +1008,9 @@ TEST_F(LuaRunner_ReadCsv, NegativeHeaderRowThrowsMustNotBeNegative) {
 
     // A genuine integer that's merely out of range gets its own message -- "-1" IS an integer,
     // so the wrong-type message above would be a lie.
-    expect_lua_error(lua,
-                     R"(db:read_csv("f.csv", { header_row = -1 }))",
-                     "Cannot read_csv: option 'header_row' must not be negative");
+    expect_lua_error(
+        lua, R"(db:read_csv("f.csv", { header_row = -1 }))", "Cannot read_csv: option 'header_row' must not be negative"
+    );
 }
 
 TEST_F(LuaRunner_ReadCsv, StreamNegativeHeaderRowNamesTheStreamEntryPoint) {
@@ -989,9 +1020,11 @@ TEST_F(LuaRunner_ReadCsv, StreamNegativeHeaderRowNamesTheStreamEntryPoint) {
 
     // Same bad value, but through db:read_csv_stream -- the shared decoder must not regress into
     // naming a single hardcoded operation (D-19).
-    expect_lua_error(lua,
-                     R"(db:read_csv_stream("f.csv", function() end, { header_row = -1 }))",
-                     "Cannot read_csv_stream: option 'header_row' must not be negative");
+    expect_lua_error(
+        lua,
+        R"(db:read_csv_stream("f.csv", function() end, { header_row = -1 }))",
+        "Cannot read_csv_stream: option 'header_row' must not be negative"
+    );
 }
 
 // The fourth requirement-named negative -- a header row past the end of the file -- is raised by
@@ -1006,9 +1039,11 @@ TEST_F(LuaRunner_ReadCsv, StreamUnknownOptionKeyNamesTheStreamEntryPoint) {
 
     // Same bad table, but through db:read_csv_stream -- the operation name must follow the entry
     // point the script actually called (D-19), not a single shared literal.
-    expect_lua_error(lua,
-                     R"(db:read_csv_stream("f.csv", function() end, { delim = ";" }))",
-                     "Cannot read_csv_stream: unknown option 'delim'");
+    expect_lua_error(
+        lua,
+        R"(db:read_csv_stream("f.csv", function() end, { delim = ";" }))",
+        "Cannot read_csv_stream: unknown option 'delim'"
+    );
 }
 
 TEST_F(LuaRunner_ReadCsv, StreamPositionalSeparatorStringThrowsOptionsMustBeATable) {
@@ -1017,7 +1052,8 @@ TEST_F(LuaRunner_ReadCsv, StreamPositionalSeparatorStringThrowsOptionsMustBeATab
     quiver::LuaRunner lua(db);
 
     expect_lua_error(
-        lua, R"(db:read_csv_stream("f.csv", function() end, ";"))", "Cannot read_csv_stream: options must be a table");
+        lua, R"(db:read_csv_stream("f.csv", function() end, ";"))", "Cannot read_csv_stream: options must be a table"
+    );
 }
 
 TEST_F(LuaRunner_ReadCsv, BothFormsAgreeOnAValidTableAndNeitherLeavesTheFileOpen) {
@@ -1059,15 +1095,15 @@ TEST_F(LuaRunner_ReadCsv, EscapingPathThrowsForReadCsv) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::LuaRunner lua(db);
 
-    expect_lua_error(lua,
-                     R"(db:read_csv("../outside.csv"))",
-                     "Cannot read_csv: path '../outside.csv' escapes the database directory");
+    expect_lua_error(
+        lua, R"(db:read_csv("../outside.csv"))", "Cannot read_csv: path '../outside.csv' escapes the database directory"
+    );
 
     const std::string outside =
         lp((std::filesystem::temp_directory_path() / "quiver_lua_read_csv_outside" / "x.csv").string());
-    expect_lua_error(lua,
-                     "db:read_csv('" + outside + "')",
-                     "Cannot read_csv: path '" + outside + "' escapes the database directory");
+    expect_lua_error(
+        lua, "db:read_csv('" + outside + "')", "Cannot read_csv: path '" + outside + "' escapes the database directory"
+    );
 }
 
 TEST_F(LuaRunner_ReadCsv, EscapingPathThrowsForReadCsvStream) {
@@ -1075,15 +1111,19 @@ TEST_F(LuaRunner_ReadCsv, EscapingPathThrowsForReadCsvStream) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::LuaRunner lua(db);
 
-    expect_lua_error(lua,
-                     R"(db:read_csv_stream("../outside.csv", function() end))",
-                     "Cannot read_csv_stream: path '../outside.csv' escapes the database directory");
+    expect_lua_error(
+        lua,
+        R"(db:read_csv_stream("../outside.csv", function() end))",
+        "Cannot read_csv_stream: path '../outside.csv' escapes the database directory"
+    );
 
     const std::string outside =
         lp((std::filesystem::temp_directory_path() / "quiver_lua_read_csv_outside" / "x.csv").string());
-    expect_lua_error(lua,
-                     "db:read_csv_stream('" + outside + "', function() end)",
-                     "Cannot read_csv_stream: path '" + outside + "' escapes the database directory");
+    expect_lua_error(
+        lua,
+        "db:read_csv_stream('" + outside + "', function() end)",
+        "Cannot read_csv_stream: path '" + outside + "' escapes the database directory"
+    );
 }
 
 TEST_F(LuaRunner_ReadCsv, InMemoryDatabaseThrowsForReadCsv) {
@@ -1093,9 +1133,9 @@ TEST_F(LuaRunner_ReadCsv, InMemoryDatabaseThrowsForReadCsv) {
     auto db = quiver::Database::from_schema(":memory:", schema);
     quiver::LuaRunner lua(db);
 
-    expect_lua_error(lua,
-                     R"(db:read_csv("anything.csv"))",
-                     "Cannot read_csv: database is in-memory, file operations are unavailable");
+    expect_lua_error(
+        lua, R"(db:read_csv("anything.csv"))", "Cannot read_csv: database is in-memory, file operations are unavailable"
+    );
 }
 
 TEST_F(LuaRunner_ReadCsv, InMemoryDatabaseThrowsForReadCsvStream) {
@@ -1103,9 +1143,11 @@ TEST_F(LuaRunner_ReadCsv, InMemoryDatabaseThrowsForReadCsvStream) {
     auto db = quiver::Database::from_schema(":memory:", schema);
     quiver::LuaRunner lua(db);
 
-    expect_lua_error(lua,
-                     R"(db:read_csv_stream("anything.csv", function() end))",
-                     "Cannot read_csv_stream: database is in-memory, file operations are unavailable");
+    expect_lua_error(
+        lua,
+        R"(db:read_csv_stream("anything.csv", function() end))",
+        "Cannot read_csv_stream: database is in-memory, file operations are unavailable"
+    );
 }
 
 TEST_F(LuaRunner_ReadCsv, MissingFileThrowsForReadCsv) {
@@ -1123,9 +1165,11 @@ TEST_F(LuaRunner_ReadCsv, MissingFileThrowsForReadCsvStream) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::LuaRunner lua(db);
 
-    expect_lua_error(lua,
-                     R"(db:read_csv_stream("missing.csv", function() end))",
-                     "Cannot read_csv_stream: file not found: missing.csv");
+    expect_lua_error(
+        lua,
+        R"(db:read_csv_stream("missing.csv", function() end))",
+        "Cannot read_csv_stream: file not found: missing.csv"
+    );
 }
 
 TEST_F(LuaRunner_ReadCsv, DirectoryAsPathThrowsForReadCsv) {
@@ -1145,7 +1189,8 @@ TEST_F(LuaRunner_ReadCsv, DirectoryAsPathThrowsForReadCsvStream) {
 
     std::filesystem::create_directories(sandbox / "adir");
     expect_lua_error(
-        lua, R"(db:read_csv_stream("adir", function() end))", "Cannot read_csv_stream: path is a directory: adir");
+        lua, R"(db:read_csv_stream("adir", function() end))", "Cannot read_csv_stream: path is a directory: adir"
+    );
     EXPECT_TRUE(std::filesystem::remove(sandbox / "adir"));
 }
 
@@ -1186,9 +1231,11 @@ TEST_F(LuaRunner_ReadCsv, EmptyFileThrowsForReadCsvStream) {
 
     write_lua_csv_file(sandbox / "empty_stream.csv", "");
 
-    expect_lua_error(lua,
-                     R"(db:read_csv_stream("empty_stream.csv", function() end))",
-                     "Cannot read_csv_stream: file 'empty_stream.csv' is empty");
+    expect_lua_error(
+        lua,
+        R"(db:read_csv_stream("empty_stream.csv", function() end))",
+        "Cannot read_csv_stream: file 'empty_stream.csv' is empty"
+    );
     EXPECT_TRUE(std::filesystem::remove(sandbox / "empty_stream.csv"));
 }
 
@@ -1230,9 +1277,11 @@ TEST_F(LuaRunner_ReadCsv, UnreadableFileReportsParserFailure) {
     EXPECT_GT(std::filesystem::file_size(target, ec), 0U) << ec.message();
 
     expect_lua_error(lua, R"(db:read_csv("unreadable.csv"))", "Cannot read_csv: cannot read file 'unreadable.csv': ");
-    expect_lua_error(lua,
-                     R"(db:read_csv_stream("unreadable.csv", function() end))",
-                     "Cannot read_csv_stream: cannot read file 'unreadable.csv': ");
+    expect_lua_error(
+        lua,
+        R"(db:read_csv_stream("unreadable.csv", function() end))",
+        "Cannot read_csv_stream: cannot read file 'unreadable.csv': "
+    );
 
 #ifdef _WIN32
     CloseHandle(lock);
@@ -1272,7 +1321,8 @@ TEST_F(LuaRunner_ReadCsv, InMemoryDatabaseReportsBeforeBadOptions) {
     quiver::LuaRunner lua(db);
 
     expect_lua_error(
-        lua, R"(db:read_csv("x.csv", ";"))", "Cannot read_csv: database is in-memory, file operations are unavailable");
+        lua, R"(db:read_csv("x.csv", ";"))", "Cannot read_csv: database is in-memory, file operations are unavailable"
+    );
 }
 
 TEST_F(LuaRunner_ReadCsv, EscapingPathReportsBeforeMissingFile) {
@@ -1282,9 +1332,11 @@ TEST_F(LuaRunner_ReadCsv, EscapingPathReportsBeforeMissingFile) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::LuaRunner lua(db);
 
-    expect_lua_error(lua,
-                     R"(db:read_csv("../does_not_exist.csv"))",
-                     "Cannot read_csv: path '../does_not_exist.csv' escapes the database directory");
+    expect_lua_error(
+        lua,
+        R"(db:read_csv("../does_not_exist.csv"))",
+        "Cannot read_csv: path '../does_not_exist.csv' escapes the database directory"
+    );
 }
 
 TEST_F(LuaRunner_ReadCsv, UnknownKeyReportsBeforeBadSeparatorValue) {
@@ -1296,7 +1348,8 @@ TEST_F(LuaRunner_ReadCsv, UnknownKeyReportsBeforeBadSeparatorValue) {
     quiver::LuaRunner lua(db);
 
     expect_lua_error(
-        lua, R"(db:read_csv("f.csv", { delim = ";", separator = 59 }))", "Cannot read_csv: unknown option 'delim'");
+        lua, R"(db:read_csv("f.csv", { delim = ";", separator = 59 }))", "Cannot read_csv: unknown option 'delim'"
+    );
 }
 
 // --- the blanket rule: no unwrapped csv-parser / std::filesystem / sol2 message reaches Lua ---

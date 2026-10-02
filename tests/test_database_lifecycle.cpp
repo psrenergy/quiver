@@ -90,8 +90,10 @@ TEST_F(TempFileFixture, CurrentVersion) {
 TEST_F(TempFileFixture, FromSchemaFileNotFound) {
     EXPECT_THROW(
         quiver::Database::from_schema(
-            ":memory:", "nonexistent/path/schema.sql", {.read_only = false, .console_level = quiver::LogLevel::Off}),
-        std::runtime_error);
+            ":memory:", "nonexistent/path/schema.sql", {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ),
+        std::runtime_error
+    );
 }
 
 TEST_F(TempFileFixture, FromSchemaEmptyFile) {
@@ -100,7 +102,8 @@ TEST_F(TempFileFixture, FromSchemaEmptyFile) {
 
     try {
         quiver::Database::from_schema(
-            ":memory:", schema_path, {.read_only = false, .console_level = quiver::LogLevel::Off});
+            ":memory:", schema_path, {.read_only = false, .console_level = quiver::LogLevel::Off}
+        );
         ADD_FAILURE() << "Expected from_schema to throw";
     } catch (const std::runtime_error& error) {
         EXPECT_EQ(std::string(error.what()), "Cannot from_schema: schema file is empty: " + schema_path);
@@ -111,14 +114,17 @@ TEST_F(TempFileFixture, FromSchemaEmptyFile) {
 TEST_F(TempFileFixture, FromSchemaInvalidPath) {
     EXPECT_THROW(
         quiver::Database::from_schema(":memory:", "", {.read_only = false, .console_level = quiver::LogLevel::Off}),
-        std::runtime_error);
+        std::runtime_error
+    );
 }
 
 TEST_F(TempFileFixture, FromMigrationsInvalidPath) {
     EXPECT_THROW(
         quiver::Database::from_migrations(
-            ":memory:", "nonexistent/migrations/", {.read_only = false, .console_level = quiver::LogLevel::Off}),
-        std::runtime_error);
+            ":memory:", "nonexistent/migrations/", {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ),
+        std::runtime_error
+    );
 }
 
 // ============================================================================
@@ -397,10 +403,12 @@ TEST_F(MigrationFixture, FromMigrationsLoadsSchemaWhenAlreadyUpToDate) {
 TEST_F(TempFileFixture, OpenExistingDatabaseLoadsSchemaOnFirstUse) {
     {
         auto created = quiver::Database::from_schema(
-            path, VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+            path, VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        );
         created.create_element("Configuration", quiver::Element().set("label", std::string("Config")));
-        created.create_element("Collection",
-                               quiver::Element().set("label", std::string("Item 1")).set("some_integer", int64_t{42}));
+        created.create_element(
+            "Collection", quiver::Element().set("label", std::string("Item 1")).set("some_integer", int64_t{42})
+        );
     }
 
     quiver::Database db(path, {.read_only = false, .console_level = quiver::LogLevel::Off});
@@ -414,14 +422,16 @@ TEST_F(TempFileFixture, OpenExistingDatabaseLoadsSchemaOnFirstUse) {
 TEST_F(TempFileFixture, OpenReadOnlyLoadsSchemaOnFirstUse) {
     {
         auto created = quiver::Database::from_schema(
-            path, VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+            path, VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        );
         created.create_element("Configuration", quiver::Element().set("label", std::string("Config")));
     }
 
     quiver::Database db(path, {.read_only = true, .console_level = quiver::LogLevel::Off});
     EXPECT_EQ(db.list_scalar_attributes("Configuration").size(), 2u);
-    EXPECT_THROW(db.create_element("Configuration", quiver::Element().set("label", std::string("Nope"))),
-                 std::runtime_error);
+    EXPECT_THROW(
+        db.create_element("Configuration", quiver::Element().set("label", std::string("Nope"))), std::runtime_error
+    );
 }
 
 // A directory with no versioned subdirectories is not an error: Migrations() reports empty and
@@ -432,7 +442,8 @@ TEST_F(TempFileFixture, FromMigrationsWithNoVersionsReturnsHandle) {
     fs::create_directories(empty_dir);
 
     auto db = quiver::Database::from_migrations(
-        path, empty_dir.string(), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        path, empty_dir.string(), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
     EXPECT_TRUE(db.is_healthy());
     EXPECT_EQ(db.current_version(), 0);
 

@@ -11,8 +11,9 @@ namespace quiver {
 static bool is_safe_identifier(const std::string& name) {
     if (name.empty())
         return false;
-    return std::all_of(
-        name.begin(), name.end(), [](char c) { return std::isalnum(static_cast<unsigned char>(c)) || c == '_'; });
+    return std::all_of(name.begin(), name.end(), [](char c) {
+        return std::isalnum(static_cast<unsigned char>(c)) || c == '_';
+    });
 }
 
 // TableDefinition methods
@@ -219,8 +220,8 @@ std::vector<std::string> Schema::group_names(const std::string& collection, Grou
     return result;
 }
 
-std::vector<Schema::TableMatch> Schema::find_all_tables_for_column(const std::string& collection,
-                                                                   const std::string& column) const {
+std::vector<Schema::TableMatch>
+Schema::find_all_tables_for_column(const std::string& collection, const std::string& column) const {
     std::vector<TableMatch> matches;
 
     // Check vector: direct name match first
@@ -248,8 +249,8 @@ std::vector<Schema::TableMatch> Schema::find_all_tables_for_column(const std::st
     return matches;
 }
 
-std::optional<Schema::TableMatch> Schema::find_group_table(const std::string& collection,
-                                                           const std::string& group) const {
+std::optional<Schema::TableMatch>
+Schema::find_group_table(const std::string& collection, const std::string& group) const {
     for (const auto type : {GroupTableType::Vector, GroupTableType::Set, GroupTableType::TimeSeries}) {
         const auto name = group_table_name(collection, group, type);
         if (has_table(name)) {
@@ -342,8 +343,10 @@ std::vector<ColumnDefinition> Schema::query_columns(sqlite3* db, const std::stri
         const auto data_type = data_type_from_string(type_str);
         if (!data_type) {
             sqlite3_finalize(stmt);
-            throw std::runtime_error("Failed to validate schema: column '" + col.name + "' in table '" + table +
-                                     "' has unsupported type '" + (type_str.empty() ? "(none)" : type_str) + "'");
+            throw std::runtime_error(
+                "Failed to validate schema: column '" + col.name + "' in table '" + table + "' has unsupported type '" +
+                (type_str.empty() ? "(none)" : type_str) + "'"
+            );
         }
         col.type = *data_type;
         col.not_null = sqlite3_column_int(stmt, 3) != 0;

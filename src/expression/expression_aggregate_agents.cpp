@@ -12,9 +12,11 @@
 
 namespace quiver {
 
-ExpressionAggregateAgents::ExpressionAggregateAgents(Operation operation,
-                                                     std::shared_ptr<ExpressionNode> operand,
-                                                     std::optional<double> parameter)
+ExpressionAggregateAgents::ExpressionAggregateAgents(
+    Operation operation,
+    std::shared_ptr<ExpressionNode> operand,
+    std::optional<double> parameter
+)
     : operation_(operation), operand_(std::move(operand)), parameter_(parameter) {
     validate_aggregation_param(operation_, parameter_, "aggregate_agents");
 

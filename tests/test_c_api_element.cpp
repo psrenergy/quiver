@@ -44,11 +44,13 @@ TEST(ElementCApi, SetInt) {
     ASSERT_NE(element, nullptr);
 
     EXPECT_EQ(quiver_element_set_integer(element, "count", 42), QUIVER_OK);
-    EXPECT_EQ(element_string(element),
-              "Element {\n"
-              "  scalars:\n"
-              "    count: 42\n"
-              "}");
+    EXPECT_EQ(
+        element_string(element),
+        "Element {\n"
+        "  scalars:\n"
+        "    count: 42\n"
+        "}"
+    );
 
     EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
 }
@@ -59,11 +61,13 @@ TEST(ElementCApi, SetFloat) {
     ASSERT_NE(element, nullptr);
 
     EXPECT_EQ(quiver_element_set_float(element, "value", 3.14), QUIVER_OK);
-    EXPECT_EQ(element_string(element),
-              "Element {\n"
-              "  scalars:\n"
-              "    value: 3.140000\n"
-              "}");
+    EXPECT_EQ(
+        element_string(element),
+        "Element {\n"
+        "  scalars:\n"
+        "    value: 3.140000\n"
+        "}"
+    );
 
     EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
 }
@@ -74,11 +78,13 @@ TEST(ElementCApi, SetString) {
     ASSERT_NE(element, nullptr);
 
     EXPECT_EQ(quiver_element_set_string(element, "label", "Plant 1"), QUIVER_OK);
-    EXPECT_EQ(element_string(element),
-              "Element {\n"
-              "  scalars:\n"
-              "    label: \"Plant 1\"\n"
-              "}");
+    EXPECT_EQ(
+        element_string(element),
+        "Element {\n"
+        "  scalars:\n"
+        "    label: \"Plant 1\"\n"
+        "}"
+    );
 
     EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
 }
@@ -89,11 +95,13 @@ TEST(ElementCApi, SetNull) {
     ASSERT_NE(element, nullptr);
 
     EXPECT_EQ(quiver_element_set_null(element, "empty"), QUIVER_OK);
-    EXPECT_EQ(element_string(element),
-              "Element {\n"
-              "  scalars:\n"
-              "    empty: null\n"
-              "}");
+    EXPECT_EQ(
+        element_string(element),
+        "Element {\n"
+        "  scalars:\n"
+        "    empty: null\n"
+        "}"
+    );
 
     EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
 }
@@ -105,11 +113,13 @@ TEST(ElementCApi, SetArrayInt) {
 
     int64_t values[] = {10, 20, 30};
     EXPECT_EQ(quiver_element_set_array_integer(element, "counts", values, 3, nullptr), QUIVER_OK);
-    EXPECT_EQ(element_string(element),
-              "Element {\n"
-              "  arrays:\n"
-              "    counts: [10, 20, 30]\n"
-              "}");
+    EXPECT_EQ(
+        element_string(element),
+        "Element {\n"
+        "  arrays:\n"
+        "    counts: [10, 20, 30]\n"
+        "}"
+    );
 
     EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
 }
@@ -121,11 +131,13 @@ TEST(ElementCApi, SetArrayFloat) {
 
     double values[] = {1.5, 2.5, 3.5};
     EXPECT_EQ(quiver_element_set_array_float(element, "costs", values, 3, nullptr), QUIVER_OK);
-    EXPECT_EQ(element_string(element),
-              "Element {\n"
-              "  arrays:\n"
-              "    costs: [1.500000, 2.500000, 3.500000]\n"
-              "}");
+    EXPECT_EQ(
+        element_string(element),
+        "Element {\n"
+        "  arrays:\n"
+        "    costs: [1.500000, 2.500000, 3.500000]\n"
+        "}"
+    );
 
     EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
 }
@@ -137,11 +149,13 @@ TEST(ElementCApi, SetArrayString) {
 
     const char* values[] = {"important", "urgent", "review"};
     EXPECT_EQ(quiver_element_set_array_string(element, "tags", values, 3, nullptr), QUIVER_OK);
-    EXPECT_EQ(element_string(element),
-              "Element {\n"
-              "  arrays:\n"
-              "    tags: [\"important\", \"urgent\", \"review\"]\n"
-              "}");
+    EXPECT_EQ(
+        element_string(element),
+        "Element {\n"
+        "  arrays:\n"
+        "    tags: [\"important\", \"urgent\", \"review\"]\n"
+        "}"
+    );
 
     EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
 }
@@ -173,13 +187,15 @@ TEST(ElementCApi, Clear) {
     double values[] = {1.0, 2.0};
     quiver_element_set_array_float(element, "data", values, 2, nullptr);
 
-    EXPECT_EQ(element_string(element),
-              "Element {\n"
-              "  scalars:\n"
-              "    id: 1\n"
-              "  arrays:\n"
-              "    data: [1.000000, 2.000000]\n"
-              "}");
+    EXPECT_EQ(
+        element_string(element),
+        "Element {\n"
+        "  scalars:\n"
+        "    id: 1\n"
+        "  arrays:\n"
+        "    data: [1.000000, 2.000000]\n"
+        "}"
+    );
 
     EXPECT_EQ(quiver_element_clear(element), QUIVER_OK);
 
@@ -221,13 +237,15 @@ TEST(ElementCApi, MultipleScalars) {
     quiver_element_set_float(element, "capacity", 50.0);
     quiver_element_set_integer(element, "id", 1);
 
-    EXPECT_EQ(element_string(element),
-              "Element {\n"
-              "  scalars:\n"
-              "    capacity: 50.000000\n"
-              "    id: 1\n"
-              "    label: \"Plant 1\"\n"
-              "}");
+    EXPECT_EQ(
+        element_string(element),
+        "Element {\n"
+        "  scalars:\n"
+        "    capacity: 50.000000\n"
+        "    id: 1\n"
+        "    label: \"Plant 1\"\n"
+        "}"
+    );
 
     EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
 }

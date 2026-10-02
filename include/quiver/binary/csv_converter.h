@@ -37,8 +37,10 @@ private:
     CSVRow read_line(size_t line_number);
 
     // Validations
-    void validate_dimensions(const std::vector<std::string>& dimension_values,
-                             const std::vector<int64_t>& current_dimensions);
+    void validate_dimensions(
+        const std::vector<std::string>& dimension_values,
+        const std::vector<int64_t>& current_dimensions
+    );
     void validate_header();
 
     // Time-dimension predicates

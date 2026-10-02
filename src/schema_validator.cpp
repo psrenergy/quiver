@@ -112,8 +112,9 @@ void SchemaValidator::validate_group_parent(const std::string& name, const std::
     for (const auto& fk : schema_.get_table(name)->foreign_keys) {
         if (fk.from_column == "id" && fk.to_table == parent) {
             if (fk.on_delete != "CASCADE" || fk.on_update != "CASCADE") {
-                validation_error(kind + " table '" + name +
-                                 "' FK to parent must use ON DELETE CASCADE ON UPDATE CASCADE");
+                validation_error(
+                    kind + " table '" + name + "' FK to parent must use ON DELETE CASCADE ON UPDATE CASCADE"
+                );
             }
             return;
         }
@@ -139,8 +140,9 @@ void SchemaValidator::validate_vector_table(const std::string& name) {
             }
         }
         if (pk_count == 1) {
-            validation_error("Vector table '" + name +
-                             "' must have composite primary key (id, vector_index), not just 'id'");
+            validation_error(
+                "Vector table '" + name + "' must have composite primary key (id, vector_index), not just 'id'"
+            );
         }
     }
 
@@ -205,8 +207,9 @@ void SchemaValidator::validate_time_series_files_table(const std::string& name) 
     // All columns should be TEXT type (for file paths)
     for (const auto& [col_name, col] : table->columns) {
         if (col.type != DataType::Text) {
-            validation_error("Time series files table '" + name + "' column '" + col_name +
-                             "' must be TEXT type (for file paths)");
+            validation_error(
+                "Time series files table '" + name + "' column '" + col_name + "' must be TEXT type (for file paths)"
+            );
         }
     }
 }
@@ -266,8 +269,10 @@ void SchemaValidator::validate_no_duplicate_attributes() {
                 }
 
                 if (attributes.count(col_name) > 0) {
-                    validation_error("Duplicate attribute '" + col_name + "' found in table '" + table_name +
-                                     "' (already defined in collection '" + collection + "')");
+                    validation_error(
+                        "Duplicate attribute '" + col_name + "' found in table '" + table_name +
+                        "' (already defined in collection '" + collection + "')"
+                    );
                 }
                 attributes.insert(col_name);
             }
@@ -288,19 +293,24 @@ void SchemaValidator::validate_foreign_keys() {
 
             // Rule: FK columns with ON DELETE SET NULL cannot have NOT NULL constraint
             if (fk.on_delete == "SET NULL" && col->not_null) {
-                validation_error("Foreign key column '" + fk.from_column + "' in table '" + table_name +
-                                 "' has ON DELETE SET NULL but NOT NULL constraint");
+                validation_error(
+                    "Foreign key column '" + fk.from_column + "' in table '" + table_name +
+                    "' has ON DELETE SET NULL but NOT NULL constraint"
+                );
             }
 
             // Rule: every FK uses ON UPDATE CASCADE and ON DELETE SET NULL or CASCADE. A group table's
             // parent FK is held to ON DELETE CASCADE by validate_group_parent, which runs first.
             if (fk.on_update != "CASCADE") {
-                validation_error("Foreign key '" + fk.from_column + "' in table '" + table_name +
-                                 "' must use ON UPDATE CASCADE");
+                validation_error(
+                    "Foreign key '" + fk.from_column + "' in table '" + table_name + "' must use ON UPDATE CASCADE"
+                );
             }
             if (fk.on_delete != "SET NULL" && fk.on_delete != "CASCADE") {
-                validation_error("Foreign key '" + fk.from_column + "' in table '" + table_name +
-                                 "' must use ON DELETE SET NULL or ON DELETE CASCADE");
+                validation_error(
+                    "Foreign key '" + fk.from_column + "' in table '" + table_name +
+                    "' must use ON DELETE SET NULL or ON DELETE CASCADE"
+                );
             }
 
             // Rule: FK column names should follow pattern <collection>_id or <collection>_<relation>
@@ -320,8 +330,10 @@ void SchemaValidator::validate_foreign_keys() {
                                       (col_lower.find("_id") != std::string::npos);
 
                     if (!valid_name) {
-                        validation_error("Foreign key column '" + fk.from_column + "' in table '" + table_name +
-                                         "' should follow naming pattern '<collection>_id'");
+                        validation_error(
+                            "Foreign key column '" + fk.from_column + "' in table '" + table_name +
+                            "' should follow naming pattern '<collection>_id'"
+                        );
                     }
                 }
             }

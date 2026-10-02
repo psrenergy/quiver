@@ -15,8 +15,9 @@
 TEST(DatabaseCApi, HasTimeSeriesFiles) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     int result = 0;
@@ -34,8 +35,9 @@ TEST(DatabaseCApi, HasTimeSeriesFiles) {
 TEST(DatabaseCApi, ListTimeSeriesFilesColumns) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     char** columns = nullptr;
@@ -63,8 +65,9 @@ TEST(DatabaseCApi, ListTimeSeriesFilesColumns) {
 TEST(DatabaseCApi, ReadTimeSeriesFilesEmpty) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     char** columns = nullptr;
@@ -86,8 +89,9 @@ TEST(DatabaseCApi, ReadTimeSeriesFilesEmpty) {
 TEST(DatabaseCApi, UpdateAndReadTimeSeriesFiles) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     const char* columns[] = {"data_file", "metadata_file"};
@@ -119,8 +123,9 @@ TEST(DatabaseCApi, UpdateAndReadTimeSeriesFiles) {
 TEST(DatabaseCApi, UpdateTimeSeriesFilesWithNulls) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     const char* columns[] = {"data_file", "metadata_file"};
@@ -152,8 +157,9 @@ TEST(DatabaseCApi, UpdateTimeSeriesFilesWithNulls) {
 TEST(DatabaseCApi, UpdateTimeSeriesFilesReplace) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     // First update
@@ -190,8 +196,9 @@ TEST(DatabaseCApi, UpdateTimeSeriesFilesReplace) {
 TEST(DatabaseCApi, TimeSeriesFilesNotFound) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     char** columns = nullptr;
@@ -211,8 +218,9 @@ TEST(DatabaseCApi, TimeSeriesFilesNotFound) {
 TEST(DatabaseCApi, TimeSeriesFilesNullArguments) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     int result = 0;
@@ -250,8 +258,9 @@ TEST(DatabaseCApi, TimeSeriesFilesNullArguments) {
 TEST(DatabaseCApi, UpdateTimeSeriesFilesEmptyMapValidatesCollection) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     EXPECT_EQ(quiver_database_update_time_series_files(db, "NoSuchCollection", nullptr, nullptr, 0), QUIVER_ERROR);

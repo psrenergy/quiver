@@ -31,10 +31,12 @@ inline std::optional<std::string> get_row_value(const Row& row, size_t index, st
 // The LEFT JOIN read_grouped_values_all parses, by position: column 0 the collection's id (never
 // NULL), column 1 the group's join key (the presence column), column 2 the value. `order_column`
 // orders an element's cells: vector_index for a vector group, rowid for a set group.
-inline std::string grouped_values_sql(const std::string& collection,
-                                      const std::string& table,
-                                      const std::string& attribute,
-                                      const std::string& order_column) {
+inline std::string grouped_values_sql(
+    const std::string& collection,
+    const std::string& table,
+    const std::string& attribute,
+    const std::string& order_column
+) {
     return "SELECT c.id, g.id, g." + attribute + " FROM " + collection + " c LEFT JOIN " + table +
            " g ON g.id = c.id ORDER BY c.rowid, g." + order_column;
 }
@@ -156,7 +158,8 @@ inline bool value_matches_type(const Value& v, DataType expected) {
             else
                 return expected == DataType::Text || expected == DataType::DateTime;
         },
-        v);
+        v
+    );
 }
 
 // Human-readable name of the type currently held in a Value (for error messages).
@@ -174,7 +177,8 @@ inline const char* value_type_name(const Value& v) {
             else
                 return "NULL";
         },
-        v);
+        v
+    );
 }
 
 // Convert a ColumnDefinition to ScalarMetadata

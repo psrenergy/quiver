@@ -63,11 +63,12 @@ TEST(TimeFrequencyConversion, FrequencyFromStringCaseSensitive) {
 }
 
 TEST(TimeFrequencyConversion, RoundTrip) {
-    for (auto freq : {TimeFrequency::Yearly,
-                      TimeFrequency::Monthly,
-                      TimeFrequency::Weekly,
-                      TimeFrequency::Daily,
-                      TimeFrequency::Hourly}) {
+    for (auto freq :
+         {TimeFrequency::Yearly,
+          TimeFrequency::Monthly,
+          TimeFrequency::Weekly,
+          TimeFrequency::Daily,
+          TimeFrequency::Hourly}) {
         EXPECT_EQ(frequency_from_string(frequency_to_string(freq)), freq);
     }
 }

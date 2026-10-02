@@ -162,7 +162,8 @@ TEST(Result, MixedValueTypes) {
 
 TEST(RowResult, ReadScalarWithNullValues) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     // Create required Configuration
     quiver::Element config;
@@ -188,7 +189,8 @@ TEST(RowResult, ReadScalarWithNullValues) {
 
 TEST(RowResult, ReadScalarByIdWithNull) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     // Create element with minimal required fields
     quiver::Element e;
@@ -203,7 +205,8 @@ TEST(RowResult, ReadScalarByIdWithNull) {
 
 TEST(RowResult, EmptyResultFromQuery) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     // No elements created - should return empty vectors
     auto labels = db.read_scalar_strings("Configuration", "label");

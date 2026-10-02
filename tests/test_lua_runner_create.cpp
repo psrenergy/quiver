@@ -131,9 +131,11 @@ TEST_F(LuaRunnerTest, CreateElementInvalidCollection) {
 
     quiver::LuaRunner lua(db);
 
-    expect_lua_error(lua,
-                     R"(db:create_element("NonexistentCollection", { label = "Test" }))",
-                     "Cannot create_element: collection not found");
+    expect_lua_error(
+        lua,
+        R"(db:create_element("NonexistentCollection", { label = "Test" }))",
+        "Cannot create_element: collection not found"
+    );
 }
 
 TEST_F(LuaRunnerTest, CreateElementUnsupportedAttributeTypeThrows) {
@@ -195,8 +197,9 @@ TEST_F(LuaRunnerTest, CreateElementBooleanArrayStoresIntegers) {
     lua.run(R"(db:create_element("Collection", { label = "Item", value_int = { true, false, true } }))");
 
     auto id = db.read_element_ids("Collection")[0];
-    EXPECT_EQ(db.read_vector_integers_by_id("Collection", "value_int", id),
-              (std::vector<std::optional<int64_t>>{1, 0, 1}));
+    EXPECT_EQ(
+        db.read_vector_integers_by_id("Collection", "value_int", id), (std::vector<std::optional<int64_t>>{1, 0, 1})
+    );
 }
 
 TEST_F(LuaRunnerTest, CreateElementMixedIntegerAndBooleanArray) {
@@ -210,8 +213,9 @@ TEST_F(LuaRunnerTest, CreateElementMixedIntegerAndBooleanArray) {
     lua.run(R"(db:create_element("Collection", { label = "Item", value_int = { 7, true, false } }))");
 
     auto id = db.read_element_ids("Collection")[0];
-    EXPECT_EQ(db.read_vector_integers_by_id("Collection", "value_int", id),
-              (std::vector<std::optional<int64_t>>{7, 1, 0}));
+    EXPECT_EQ(
+        db.read_vector_integers_by_id("Collection", "value_int", id), (std::vector<std::optional<int64_t>>{7, 1, 0})
+    );
 }
 
 TEST_F(LuaRunnerTest, UpdateElementBooleanAttributeStoresInteger) {
@@ -238,8 +242,9 @@ TEST_F(LuaRunnerTest, UpdateVectorGroupBooleanCellsStoreIntegers) {
     )");
 
     auto id = db.read_element_ids("Collection")[0];
-    EXPECT_EQ(db.read_vector_integers_by_id("Collection", "value_int", id),
-              (std::vector<std::optional<int64_t>>{1, 0}));
+    EXPECT_EQ(
+        db.read_vector_integers_by_id("Collection", "value_int", id), (std::vector<std::optional<int64_t>>{1, 0})
+    );
 }
 
 TEST_F(LuaRunnerTest, UpsertTimeSeriesRowBooleanStoresInteger) {
@@ -269,8 +274,10 @@ TEST_F(LuaRunnerTest, CreateElementMixedFloatAndBooleanArray) {
     lua.run(R"(db:create_element("Collection", { label = "Item", value_float = { 1.5, true, false } }))");
 
     auto id = db.read_element_ids("Collection")[0];
-    EXPECT_EQ(db.read_vector_floats_by_id("Collection", "value_float", id),
-              (std::vector<std::optional<double>>{1.5, 1.0, 0.0}));
+    EXPECT_EQ(
+        db.read_vector_floats_by_id("Collection", "value_float", id),
+        (std::vector<std::optional<double>>{1.5, 1.0, 0.0})
+    );
 }
 
 TEST_F(LuaRunnerTest, CreateElementArrayCellTypeMismatchThrows) {
@@ -281,9 +288,10 @@ TEST_F(LuaRunnerTest, CreateElementArrayCellTypeMismatchThrows) {
     // A cell that fits no element type is a Pattern 1 rejection naming the array and the cell —
     // not a raw sol2 message, and never a silent placeholder (the unchecked sol2 getters are only
     // checked while SOL_SAFE_GETTER is on, i.e. debug builds).
-    for (const char* script : {R"(db:create_element("Collection", { label = "I", tag = { "a", true } }))",
-                               R"(db:create_element("Collection", { label = "I", tag = { "a", 1 } }))",
-                               R"(db:create_element("Collection", { label = "I", value_int = { 1, "zz" } }))"}) {
+    for (const char* script :
+         {R"(db:create_element("Collection", { label = "I", tag = { "a", true } }))",
+          R"(db:create_element("Collection", { label = "I", tag = { "a", 1 } }))",
+          R"(db:create_element("Collection", { label = "I", value_int = { 1, "zz" } }))"}) {
         try {
             lua.run(script);
             FAIL() << "expected a mismatched array cell to throw: " << script;

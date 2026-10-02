@@ -74,10 +74,12 @@ struct Database::Impl {
 
     // The one lookup behind every group-addressed operation: the collection must exist, then the
     // {collection}_{vector|set|time_series}_{group} table. One Pattern 2 message per kind.
-    const TableDefinition& require_group_table(const std::string& collection,
-                                               const std::string& group,
-                                               GroupTableType type,
-                                               const char* operation) const {
+    const TableDefinition& require_group_table(
+        const std::string& collection,
+        const std::string& group,
+        GroupTableType type,
+        const char* operation
+    ) const {
         require_collection(collection, operation);
         if (const auto* table_def = schema->get_table(Schema::group_table_name(collection, group, type))) {
             return *table_def;
@@ -85,16 +87,18 @@ struct Database::Impl {
         const char* kind = type == GroupTableType::Vector ? "Vector"
                            : type == GroupTableType::Set  ? "Set"
                                                           : "Time series";
-        throw std::runtime_error(std::string(kind) + " group not found: '" + group + "' in collection '" + collection +
-                                 "'");
+        throw std::runtime_error(
+            std::string(kind) + " group not found: '" + group + "' in collection '" + collection + "'"
+        );
     }
 
     // A missing id is Pattern 2 everywhere (root design decision), so every id-scoped write
     // resolves it through here rather than letting SQLite report a foreign-key failure.
     void require_element(const std::string& collection, int64_t id) const {
         if (execute("SELECT 1 FROM " + collection + " WHERE id = ?", {id}).empty()) {
-            throw std::runtime_error("Element not found: " + std::to_string(id) + " in collection '" + collection +
-                                     "'");
+            throw std::runtime_error(
+                "Element not found: " + std::to_string(id) + " in collection '" + collection + "'"
+            );
         }
     }
 
@@ -127,15 +131,18 @@ struct Database::Impl {
             throw std::runtime_error(std::string("Cannot ") + operation + ": table not found: " + table);
         }
         if (!table_def->has_column(column)) {
-            throw std::runtime_error(std::string("Cannot ") + operation + ": column '" + column +
-                                     "' not found in table '" + table + "'");
+            throw std::runtime_error(
+                std::string("Cannot ") + operation + ": column '" + column + "' not found in table '" + table + "'"
+            );
         }
     }
 
-    Value resolve_fk_label(const char* caller,
-                           const TableDefinition& table_def,
-                           const std::string& column,
-                           const Value& value) const {
+    Value resolve_fk_label(
+        const char* caller,
+        const TableDefinition& table_def,
+        const std::string& column,
+        const Value& value
+    ) const {
         if (!std::holds_alternative<std::string>(value)) {
             return value;
         }
@@ -144,8 +151,9 @@ struct Database::Impl {
         if (const auto* fk = table_def.get_foreign_key(column)) {
             auto id = lookup_id_by_label(fk->to_table, label);
             if (!id) {
-                throw std::runtime_error("Failed to resolve label '" + label + "' to ID in table '" + fk->to_table +
-                                         "'");
+                throw std::runtime_error(
+                    "Failed to resolve label '" + label + "' to ID in table '" + fk->to_table + "'"
+                );
             }
             return *id;
         }
@@ -154,17 +162,21 @@ struct Database::Impl {
         // validate_value's scalar wording (`type mismatch for column '<c>'`). An array
         // cell is reported by column too, not by index.
         if (const auto type = table_def.get_data_type(column); type && *type == DataType::Integer) {
-            throw std::runtime_error(std::string("Cannot ") + caller + ": type mismatch for column '" + column +
-                                     "': expected INTEGER, got TEXT");
+            throw std::runtime_error(
+                std::string("Cannot ") + caller + ": type mismatch for column '" + column +
+                "': expected INTEGER, got TEXT"
+            );
         }
         return value;
     }
 
     // Resolve FK labels among an element's scalars against the collection table. Arrays are
     // resolved by prepare_group_data, against each group table they are written to.
-    std::map<std::string, Value> resolve_scalar_fk_labels(const char* caller,
-                                                          const std::string& collection,
-                                                          const std::map<std::string, Value>& scalars) const {
+    std::map<std::string, Value> resolve_scalar_fk_labels(
+        const char* caller,
+        const std::string& collection,
+        const std::map<std::string, Value>& scalars
+    ) const {
         const auto& collection_def = *schema->get_table(collection);
         std::map<std::string, Value> resolved;
         for (const auto& [name, value] : scalars) {
@@ -182,20 +194,23 @@ struct Database::Impl {
         case GroupTableType::TimeSeries:
             return "time series";
         default:
-            throw std::runtime_error("Cannot group_table_noun: unknown group table type " +
-                                     std::to_string(static_cast<int>(type)));
+            throw std::runtime_error(
+                "Cannot group_table_noun: unknown group table type " + std::to_string(static_cast<int>(type))
+            );
         }
     }
 
     // Shared body of update_vector_group / update_set_group (defined in database_update.cpp):
     // resolves (collection, group) to exactly one table, validates and FK-resolves the rows,
     // then replaces the element's rows in that table.
-    void update_group_rows(const char* caller,
-                           const std::string& collection,
-                           const std::string& group,
-                           GroupTableType type,
-                           int64_t id,
-                           const std::vector<std::map<std::string, Value>>& rows);
+    void update_group_rows(
+        const char* caller,
+        const std::string& collection,
+        const std::string& group,
+        GroupTableType type,
+        int64_t id,
+        const std::vector<std::map<std::string, Value>>& rows
+    );
 
     // Types and equal lengths of the columns bound for one group table. Both callers
     // (prepare_group_data, update_group_rows) run it for every table they will touch *before*
@@ -204,18 +219,22 @@ struct Database::Impl {
     // num_rows is seeded from the first column rather than the first non-empty one: `columns` is
     // name-sorted, so an empty alphabetically-first column used to leave it at 0 for a later column
     // to set, skipping the check and indexing the empty vector on insert.
-    void validate_group_columns(const char* caller,
-                                const std::string& table_name,
-                                GroupTableType type,
-                                const std::map<std::string, std::vector<Value>>& columns) const {
+    void validate_group_columns(
+        const char* caller,
+        const std::string& table_name,
+        GroupTableType type,
+        const std::map<std::string, std::vector<Value>>& columns
+    ) const {
         const size_t num_rows = columns.empty() ? 0 : columns.begin()->second.size();
         for (const auto& [col_name, values] : columns) {
             if (!values.empty()) {
                 validate_array(caller, *schema, table_name, col_name, values);
             }
             if (values.size() != num_rows) {
-                throw std::runtime_error(std::string("Cannot ") + caller + ": " + group_table_noun(type) +
-                                         " columns in table '" + table_name + "' must have the same length");
+                throw std::runtime_error(
+                    std::string("Cannot ") + caller + ": " + group_table_noun(type) + " columns in table '" +
+                    table_name + "' must have the same length"
+                );
             }
         }
     }
@@ -225,11 +244,13 @@ struct Database::Impl {
     // length. What can still throw here is only what SQLite checks (UNIQUE, NOT NULL, CHECK,
     // foreign keys), after this call's earlier writes - a documented limit inside a caller-owned
     // transaction (root AGENTS.md design decisions).
-    void insert_rows_into_group_table(const std::string& table_name,
-                                      GroupTableType type,
-                                      const std::map<std::string, std::vector<Value>>& columns,
-                                      int64_t element_id,
-                                      bool delete_existing) {
+    void insert_rows_into_group_table(
+        const std::string& table_name,
+        GroupTableType type,
+        const std::map<std::string, std::vector<Value>>& columns,
+        int64_t element_id,
+        bool delete_existing
+    ) {
         if (delete_existing) {
             execute("DELETE FROM " + table_name + " WHERE id = ?", {element_id});
         }
@@ -262,10 +283,12 @@ struct Database::Impl {
     // table(s) holding its column, FK-resolve it against each of them, and validate every table.
     // Callers run it before their scalar INSERT/UPDATE (validate_group_columns says why) and hand
     // the result to insert_group_data.
-    std::map<std::string, GroupColumns> prepare_group_data(const char* caller,
-                                                           const std::string& collection,
-                                                           const std::map<std::string, std::vector<Value>>& arrays,
-                                                           bool delete_existing) {
+    std::map<std::string, GroupColumns> prepare_group_data(
+        const char* caller,
+        const std::string& collection,
+        const std::map<std::string, std::vector<Value>>& arrays,
+        bool delete_existing
+    ) {
         std::map<std::string, GroupColumns> tables;
 
         for (const auto& [array_name, values] : arrays) {
@@ -276,9 +299,10 @@ struct Database::Impl {
 
             auto matches = schema->find_all_tables_for_column(collection, array_name);
             if (matches.empty()) {
-                throw std::runtime_error(std::string("Cannot ") + caller + ": array '" + array_name +
-                                         "' does not match any vector, set, or time series table in collection '" +
-                                         collection + "'");
+                throw std::runtime_error(
+                    std::string("Cannot ") + caller + ": array '" + array_name +
+                    "' does not match any vector, set, or time series table in collection '" + collection + "'"
+                );
             }
 
             // A column name shared by several group tables (legal for FK columns, which
@@ -291,12 +315,14 @@ struct Database::Impl {
                 for (const auto& match : matches) {
                     table_list += (table_list.empty() ? "" : ", ") + match.table_name;
                 }
-                logger->warn("{}: array '{}' matches {} group tables ({}) and will be written to all of "
-                             "them; use update_vector_group/update_set_group to target one group",
-                             caller,
-                             array_name,
-                             matches.size(),
-                             table_list);
+                logger->warn(
+                    "{}: array '{}' matches {} group tables ({}) and will be written to all of "
+                    "them; use update_vector_group/update_set_group to target one group",
+                    caller,
+                    array_name,
+                    matches.size(),
+                    table_list
+                );
             }
 
             // Resolved per table: a shared FK column name may point at a different target in each

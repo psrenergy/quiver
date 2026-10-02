@@ -222,20 +222,28 @@ TEST_F(TempFileFixture, FromSchemaInvalidPath) {
 TEST_F(TempFileFixture, FromSchemaRejectsSetTableWithoutParentFk) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    EXPECT_EQ(quiver_database_from_schema(":memory:", INVALID_SCHEMA("set_no_parent_fk.sql").c_str(), &options, &db),
-              QUIVER_ERROR);
-    EXPECT_STREQ(quiver_get_last_error(),
-                 "Failed to validate schema: Set table 'Collection_set_tags' must have foreign key to parent "
-                 "collection 'Collection'");
+    EXPECT_EQ(
+        quiver_database_from_schema(":memory:", INVALID_SCHEMA("set_no_parent_fk.sql").c_str(), &options, &db),
+        QUIVER_ERROR
+    );
+    EXPECT_STREQ(
+        quiver_get_last_error(),
+        "Failed to validate schema: Set table 'Collection_set_tags' must have foreign key to parent "
+        "collection 'Collection'"
+    );
 }
 
 TEST_F(TempFileFixture, FromSchemaRejectsUnsupportedColumnType) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    EXPECT_EQ(quiver_database_from_schema(":memory:", INVALID_SCHEMA("unsupported_type.sql").c_str(), &options, &db),
-              QUIVER_ERROR);
-    EXPECT_STREQ(quiver_get_last_error(),
-                 "Failed to validate schema: column 'payload' in table 'Items' has unsupported type 'BLOB'");
+    EXPECT_EQ(
+        quiver_database_from_schema(":memory:", INVALID_SCHEMA("unsupported_type.sql").c_str(), &options, &db),
+        QUIVER_ERROR
+    );
+    EXPECT_STREQ(
+        quiver_get_last_error(),
+        "Failed to validate schema: column 'payload' in table 'Items' has unsupported type 'BLOB'"
+    );
 }
 
 // ============================================================================
@@ -264,9 +272,9 @@ TEST_F(TempFileFixture, FromMigrationsInvalidPath) {
 TEST_F(TempFileFixture, FromMigrationsSetsCurrentVersion) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_migrations(":memory:", SCHEMA_PATH("schemas/migrations").c_str(), &options, &db),
-              QUIVER_OK)
-        << quiver_get_last_error();
+    ASSERT_EQ(
+        quiver_database_from_migrations(":memory:", SCHEMA_PATH("schemas/migrations").c_str(), &options, &db), QUIVER_OK
+    ) << quiver_get_last_error();
     ASSERT_NE(db, nullptr);
 
     int64_t version = -1;
@@ -286,8 +294,9 @@ TEST_F(TempFileFixture, ValidateMigrationsSucceeds) {
 
 TEST_F(TempFileFixture, ValidateMigrationsPropagatesFailure) {
     EXPECT_EQ(quiver_database_validate_migrations("nonexistent/migrations"), QUIVER_ERROR);
-    EXPECT_STREQ(quiver_get_last_error(),
-                 "Cannot validate_migrations: migrations path not found: nonexistent/migrations");
+    EXPECT_STREQ(
+        quiver_get_last_error(), "Cannot validate_migrations: migrations path not found: nonexistent/migrations"
+    );
 }
 
 TEST_F(TempFileFixture, ValidateMigrationsRejectsNullPath) {

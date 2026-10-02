@@ -39,28 +39,32 @@ TEST_F(LuaRunnerFkTest, CreateElementMissingFkTarget) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
     quiver::LuaRunner lua(db);
 
-    expect_lua_error(lua,
-                     R"(
+    expect_lua_error(
+        lua,
+        R"(
         db:create_element("Child", {
             label = "Child 1",
             mentor_id = {"Nonexistent Parent"}
         })
     )",
-                     "Failed to resolve label 'Nonexistent Parent'");
+        "Failed to resolve label 'Nonexistent Parent'"
+    );
 }
 
 TEST_F(LuaRunnerFkTest, CreateElementStringForNonFkInteger) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
     quiver::LuaRunner lua(db);
 
-    expect_lua_error(lua,
-                     R"(
+    expect_lua_error(
+        lua,
+        R"(
         db:create_element("Child", {
             label = "Child 1",
             score = {"not_a_label"}
         })
     )",
-                     "Cannot create_element: type mismatch for column 'score': expected INTEGER, got TEXT");
+        "Cannot create_element: type mismatch for column 'score': expected INTEGER, got TEXT"
+    );
 }
 
 TEST_F(LuaRunnerFkTest, CreateElementScalarFkLabel) {
@@ -204,14 +208,16 @@ TEST_F(LuaRunnerFkTest, CreateElementFkResolutionNoPartialWrites) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
     quiver::LuaRunner lua(db);
 
-    expect_lua_error(lua,
-                     R"(
+    expect_lua_error(
+        lua,
+        R"(
         db:create_element("Child", {
             label = "Orphan Child",
             parent_id = "Nonexistent"
         })
     )",
-                     "Failed to resolve label 'Nonexistent'");
+        "Failed to resolve label 'Nonexistent'"
+    );
 
     // Verify: no child was created (zero partial writes)
     auto labels = db.read_scalar_strings("Child", "label");
@@ -334,11 +340,13 @@ TEST_F(LuaRunnerFkTest, UpdateElementFkFailurePreservesExisting) {
     })
 )");
 
-    expect_lua_error(lua,
-                     R"(
+    expect_lua_error(
+        lua,
+        R"(
         db:update_element("Child", 1, { parent_id = "Nonexistent" })
     )",
-                     "Failed to resolve label 'Nonexistent'");
+        "Failed to resolve label 'Nonexistent'"
+    );
 
     // Verify: original value preserved
     auto parent_ids = db.read_scalar_integers("Child", "parent_id");

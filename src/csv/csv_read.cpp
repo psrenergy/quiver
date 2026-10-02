@@ -82,8 +82,9 @@ Reader::Reader(std::string resolved_path, std::string original_path, std::string
 
     const bool exists = fs::exists(resolved_path, ec);
     if (ec) {
-        throw std::runtime_error("Cannot " + operation + ": cannot access file '" + original_path +
-                                 "': " + ec.message());
+        throw std::runtime_error(
+            "Cannot " + operation + ": cannot access file '" + original_path + "': " + ec.message()
+        );
     }
     if (!exists) {
         throw std::runtime_error("Cannot " + operation + ": file not found: " + original_path);
@@ -91,8 +92,9 @@ Reader::Reader(std::string resolved_path, std::string original_path, std::string
 
     const bool is_directory = fs::is_directory(resolved_path, ec);
     if (ec) {
-        throw std::runtime_error("Cannot " + operation + ": cannot access file '" + original_path +
-                                 "': " + ec.message());
+        throw std::runtime_error(
+            "Cannot " + operation + ": cannot access file '" + original_path + "': " + ec.message()
+        );
     }
     if (is_directory) {
         throw std::runtime_error("Cannot " + operation + ": path is a directory: " + original_path);
@@ -100,8 +102,9 @@ Reader::Reader(std::string resolved_path, std::string original_path, std::string
 
     const auto size = fs::file_size(resolved_path, ec);
     if (ec) {
-        throw std::runtime_error("Cannot " + operation + ": cannot access file '" + original_path +
-                                 "': " + ec.message());
+        throw std::runtime_error(
+            "Cannot " + operation + ": cannot access file '" + original_path + "': " + ec.message()
+        );
     }
     if (size == 0) {
         throw std::runtime_error("Cannot " + operation + ": file '" + original_path + "' is empty");
@@ -127,8 +130,10 @@ Reader::Reader(std::string resolved_path, std::string original_path, std::string
     // alone: header_row = 0 ("no header", D-20) also produces an empty header by design, and that
     // is not an error. This is the tenth entry in this constructor's Pattern 1 catalogue (D-22).
     if (options.header_row != 0 && header.empty()) {
-        throw std::runtime_error("Cannot " + operation + ": header row " + std::to_string(options.header_row) +
-                                 " not found in file '" + original_path + "'");
+        throw std::runtime_error(
+            "Cannot " + operation + ": header row " + std::to_string(options.header_row) + " not found in file '" +
+            original_path + "'"
+        );
     }
 
     impl_ = std::make_unique<Impl>(operation, original_path, std::move(header), std::move(reader));
@@ -149,8 +154,9 @@ int64_t Reader::for_each_row(const RowSink& sink) {
     try {
         it = impl_->reader.begin();
     } catch (const std::exception& e) {
-        throw std::runtime_error("Cannot " + impl_->operation + ": cannot read file '" + impl_->original_path +
-                                 "': " + e.what());
+        throw std::runtime_error(
+            "Cannot " + impl_->operation + ": cannot read file '" + impl_->original_path + "': " + e.what()
+        );
     }
     const auto end = impl_->reader.end();
 
@@ -178,8 +184,9 @@ int64_t Reader::for_each_row(const RowSink& sink) {
                 ++it;
             }
         } catch (const std::exception& e) {
-            throw std::runtime_error("Cannot " + impl_->operation + ": cannot read file '" + impl_->original_path +
-                                     "': " + e.what());
+            throw std::runtime_error(
+                "Cannot " + impl_->operation + ": cannot read file '" + impl_->original_path + "': " + e.what()
+            );
         }
 
         if (at_end) {

@@ -10,7 +10,8 @@
 
 TEST(DatabaseQuery, QueryStringReturnsValue) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element e;
     e.set("label", std::string("Test Label")).set("string_attribute", std::string("hello world"));
@@ -23,7 +24,8 @@ TEST(DatabaseQuery, QueryStringReturnsValue) {
 
 TEST(DatabaseQuery, QueryStringReturnsNulloptWhenEmpty) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     auto result = db.query_string("SELECT string_attribute FROM Configuration WHERE 1 = 0");
     EXPECT_FALSE(result.has_value());
@@ -31,7 +33,8 @@ TEST(DatabaseQuery, QueryStringReturnsNulloptWhenEmpty) {
 
 TEST(DatabaseQuery, QueryStringReturnsFirstRow) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element e1;
     e1.set("label", std::string("First")).set("string_attribute", std::string("first value"));
@@ -52,7 +55,8 @@ TEST(DatabaseQuery, QueryStringReturnsFirstRow) {
 
 TEST(DatabaseQuery, QueryIntegerReturnsValue) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element e;
     e.set("label", std::string("Test")).set("integer_attribute", int64_t{42});
@@ -65,7 +69,8 @@ TEST(DatabaseQuery, QueryIntegerReturnsValue) {
 
 TEST(DatabaseQuery, QueryIntegerReturnsNulloptWhenEmpty) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     auto result = db.query_integer("SELECT integer_attribute FROM Configuration WHERE 1 = 0");
     EXPECT_FALSE(result.has_value());
@@ -73,7 +78,8 @@ TEST(DatabaseQuery, QueryIntegerReturnsNulloptWhenEmpty) {
 
 TEST(DatabaseQuery, QueryIntegerReturnsFirstRow) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element e1;
     e1.set("label", std::string("A")).set("integer_attribute", int64_t{100});
@@ -90,7 +96,8 @@ TEST(DatabaseQuery, QueryIntegerReturnsFirstRow) {
 
 TEST(DatabaseQuery, QueryIntegerCount) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element e1;
     e1.set("label", std::string("A"));
@@ -111,7 +118,8 @@ TEST(DatabaseQuery, QueryIntegerCount) {
 
 TEST(DatabaseQuery, QueryFloatReturnsValue) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element e;
     e.set("label", std::string("Test")).set("float_attribute", 3.14159);
@@ -124,7 +132,8 @@ TEST(DatabaseQuery, QueryFloatReturnsValue) {
 
 TEST(DatabaseQuery, QueryFloatReturnsNulloptWhenEmpty) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     auto result = db.query_float("SELECT float_attribute FROM Configuration WHERE 1 = 0");
     EXPECT_FALSE(result.has_value());
@@ -132,7 +141,8 @@ TEST(DatabaseQuery, QueryFloatReturnsNulloptWhenEmpty) {
 
 TEST(DatabaseQuery, QueryFloatReturnsFirstRow) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element e1;
     e1.set("label", std::string("A")).set("float_attribute", 1.5);
@@ -149,7 +159,8 @@ TEST(DatabaseQuery, QueryFloatReturnsFirstRow) {
 
 TEST(DatabaseQuery, QueryFloatAverage) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element e1;
     e1.set("label", std::string("A")).set("float_attribute", 10.0);
@@ -170,7 +181,8 @@ TEST(DatabaseQuery, QueryFloatAverage) {
 
 TEST(DatabaseQuery, QueryStringWithParams) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element e;
     e.set("label", std::string("Test Label")).set("string_attribute", std::string("hello world"));
@@ -184,7 +196,8 @@ TEST(DatabaseQuery, QueryStringWithParams) {
 
 TEST(DatabaseQuery, QueryStringWithParamsNoMatch) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element e;
     e.set("label", std::string("Test")).set("string_attribute", std::string("hello"));
@@ -197,7 +210,8 @@ TEST(DatabaseQuery, QueryStringWithParamsNoMatch) {
 
 TEST(DatabaseQuery, QueryIntegerWithParams) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element e;
     e.set("label", std::string("Test")).set("integer_attribute", int64_t{42});
@@ -211,7 +225,8 @@ TEST(DatabaseQuery, QueryIntegerWithParams) {
 
 TEST(DatabaseQuery, QueryFloatWithParams) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element e;
     e.set("label", std::string("Test")).set("float_attribute", 3.14);
@@ -224,7 +239,8 @@ TEST(DatabaseQuery, QueryFloatWithParams) {
 
 TEST(DatabaseQuery, QueryIntegerWithMultipleParams) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element e1;
     e1.set("label", std::string("A")).set("integer_attribute", int64_t{10});
@@ -234,16 +250,18 @@ TEST(DatabaseQuery, QueryIntegerWithMultipleParams) {
     e2.set("label", std::string("B")).set("integer_attribute", int64_t{20});
     db.create_element("Configuration", e2);
 
-    auto result =
-        db.query_integer("SELECT integer_attribute FROM Configuration WHERE label = ? AND integer_attribute > ?",
-                         {std::string("B"), int64_t{5}});
+    auto result = db.query_integer(
+        "SELECT integer_attribute FROM Configuration WHERE label = ? AND integer_attribute > ?",
+        {std::string("B"), int64_t{5}}
+    );
     ASSERT_TRUE(result.has_value());
     EXPECT_EQ(*result, 20);
 }
 
 TEST(DatabaseQuery, QueryWithNullParam) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element e;
     e.set("label", std::string("Test"));
@@ -256,7 +274,8 @@ TEST(DatabaseQuery, QueryWithNullParam) {
 
 TEST(DatabaseQuery, QueryParameterCountMismatch) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element e;
     e.set("label", std::string("Test")).set("integer_attribute", int64_t{1});
@@ -266,8 +285,9 @@ TEST(DatabaseQuery, QueryParameterCountMismatch) {
     EXPECT_THROW(db.query_string("SELECT label FROM Configuration WHERE id = ?", {}), std::runtime_error);
 
     // Too many parameters for the single placeholder
-    EXPECT_THROW(db.query_string("SELECT label FROM Configuration WHERE id = ?", {int64_t{1}, int64_t{2}}),
-                 std::runtime_error);
+    EXPECT_THROW(
+        db.query_string("SELECT label FROM Configuration WHERE id = ?", {int64_t{1}, int64_t{2}}), std::runtime_error
+    );
 
     // Exactly one parameter succeeds
     auto ok = db.query_string("SELECT label FROM Configuration WHERE id = ?", {int64_t{1}});
@@ -277,7 +297,8 @@ TEST(DatabaseQuery, QueryParameterCountMismatch) {
 
 TEST(Database, QueryFloatWidensIntegerResults) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     db.create_element("Configuration", quiver::Element().set("label", std::string("Config 1")));
     db.create_element("Configuration", quiver::Element().set("label", std::string("Config 2")));
@@ -300,14 +321,17 @@ TEST(Database, QueryFloatWidensIntegerResults) {
 // column stays INTEGER in SQLite, and these used to report "no value" for it.
 TEST(Database, ReadFloatsWidenIntegerValuesInRealColumns) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     db.create_element("Configuration", quiver::Element().set("label", std::string("Config")));
-    auto id = db.create_element("Collection",
-                                quiver::Element()
-                                    .set("label", std::string("Item 1"))
-                                    .set("some_float", int64_t{7})
-                                    .set("value_float", std::vector<int64_t>{1, 2}));
+    auto id = db.create_element(
+        "Collection",
+        quiver::Element()
+            .set("label", std::string("Item 1"))
+            .set("some_float", int64_t{7})
+            .set("value_float", std::vector<int64_t>{1, 2})
+    );
 
     EXPECT_EQ(db.read_scalar_floats("Collection", "some_float"), (std::vector<std::optional<double>>{7.0}));
 
@@ -315,6 +339,7 @@ TEST(Database, ReadFloatsWidenIntegerValuesInRealColumns) {
     ASSERT_TRUE(by_id.has_value());
     EXPECT_DOUBLE_EQ(*by_id, 7.0);
 
-    EXPECT_EQ(db.read_vector_floats_by_id("Collection", "value_float", id),
-              (std::vector<std::optional<double>>{1.0, 2.0}));
+    EXPECT_EQ(
+        db.read_vector_floats_by_id("Collection", "value_float", id), (std::vector<std::optional<double>>{1.0, 2.0})
+    );
 }

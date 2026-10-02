@@ -4,10 +4,12 @@
 
 extern "C" {
 
-QUIVER_C_API quiver_error_t quiver_database_create_element(quiver_database_t* db,
-                                                           const char* collection,
-                                                           quiver_element_t* element,
-                                                           int64_t* out_id) {
+QUIVER_C_API quiver_error_t quiver_database_create_element(
+    quiver_database_t* db,
+    const char* collection,
+    quiver_element_t* element,
+    int64_t* out_id
+) {
     QUIVER_REQUIRE(db, collection, element, out_id);
 
     try {

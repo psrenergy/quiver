@@ -48,9 +48,11 @@ std::string join_fields(const std::vector<std::string>& fields, std::string_view
 
 }  // namespace
 
-CSVConverter::CSVConverter(const BinaryMetadata& metadata,
-                           std::unique_ptr<std::iostream> io,
-                           bool aggregate_time_dimensions)
+CSVConverter::CSVConverter(
+    const BinaryMetadata& metadata,
+    std::unique_ptr<std::iostream> io,
+    bool aggregate_time_dimensions
+)
     : metadata_(metadata), io_(std::move(io)), aggregate_time_dimensions_(aggregate_time_dimensions) {
     // The one definition of the CSV columns. write_header emits it, and validate_header, read_line
     // and validate_dimensions check against it, so a file bin_to_csv writes is exactly what
@@ -160,8 +162,10 @@ CSVConverter::CSVRow CSVConverter::read_line(size_t line_number) {
     // (a long row would index past the last label).
     std::vector<std::string> fields = split_fields(line);
     if (fields.size() != header_.size()) {
-        throw std::runtime_error("Cannot csv_to_bin: line " + std::to_string(line_number) + " has " +
-                                 std::to_string(fields.size()) + " fields, expected " + std::to_string(header_.size()));
+        throw std::runtime_error(
+            "Cannot csv_to_bin: line " + std::to_string(line_number) + " has " + std::to_string(fields.size()) +
+            " fields, expected " + std::to_string(header_.size())
+        );
     }
 
     // The leading fields are dimension cells (strings), the rest are data values (doubles), one per label.
@@ -179,8 +183,10 @@ CSVConverter::CSVRow CSVConverter::read_line(size_t line_number) {
             } else if (auto value = utils::parse_float(field)) {
                 row.data.push_back(*value);
             } else {
-                throw std::runtime_error("Cannot csv_to_bin: invalid float value '" + field + "' for label '" +
-                                         metadata_.labels[row.data.size()] + "'");
+                throw std::runtime_error(
+                    "Cannot csv_to_bin: invalid float value '" + field + "' for label '" +
+                    metadata_.labels[row.data.size()] + "'"
+                );
             }
         }
     }
@@ -203,7 +209,8 @@ std::string CSVConverter::build_line(const std::vector<double>& data, const std:
 }
 
 std::string CSVConverter::build_datetime_string_from_time_dimension_values(
-    const std::vector<int64_t>& time_dimension_values) const {
+    const std::vector<int64_t>& time_dimension_values
+) const {
     const auto& dimensions = metadata_.dimensions;
 
     auto datetime = metadata_.initial_datetime;
@@ -250,19 +257,24 @@ void CSVConverter::validate_header() {
     std::getline(*io_, header_line);
 
     if (split_fields(header_line) != header_) {
-        throw std::runtime_error("Unexpected header in CSV file: '" + header_line +
-                                 "'. Expected columns are: " + join_fields(header_, ", "));
+        throw std::runtime_error(
+            "Unexpected header in CSV file: '" + header_line + "'. Expected columns are: " + join_fields(header_, ", ")
+        );
     }
 }
 
-void CSVConverter::validate_dimensions(const std::vector<std::string>& csv_dimension_values,
-                                       const std::vector<int64_t>& current_bin_dimension_values) {
+void CSVConverter::validate_dimensions(
+    const std::vector<std::string>& csv_dimension_values,
+    const std::vector<int64_t>& current_bin_dimension_values
+) {
     // read_line's width check guarantees csv_dimension_values has one cell per dimension column.
     const std::vector<std::string> expected_values = dimension_cells(current_bin_dimension_values);
     for (size_t i = 0; i < expected_values.size(); ++i) {
         if (csv_dimension_values[i] != expected_values[i]) {
-            throw std::runtime_error("CSV dimension '" + header_[i] + "' has value '" + csv_dimension_values[i] +
-                                     "', expected '" + expected_values[i] + "'");
+            throw std::runtime_error(
+                "CSV dimension '" + header_[i] + "' has value '" + csv_dimension_values[i] + "', expected '" +
+                expected_values[i] + "'"
+            );
         }
     }
 }

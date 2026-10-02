@@ -10,7 +10,8 @@
 
 TEST(Database, HasTimeSeriesFiles) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     EXPECT_TRUE(db.has_time_series_files("Collection"));
     EXPECT_FALSE(db.has_time_series_files("Configuration"));
@@ -18,7 +19,8 @@ TEST(Database, HasTimeSeriesFiles) {
 
 TEST(Database, ListTimeSeriesFilesColumns) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     auto columns = db.list_time_series_files_columns("Collection");
     EXPECT_EQ(columns.size(), 2);
@@ -28,7 +30,8 @@ TEST(Database, ListTimeSeriesFilesColumns) {
 
 TEST(Database, ReadTimeSeriesFilesEmpty) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     auto paths = db.read_time_series_files("Collection");
     EXPECT_EQ(paths.size(), 2);
@@ -38,7 +41,8 @@ TEST(Database, ReadTimeSeriesFilesEmpty) {
 
 TEST(Database, UpdateAndReadTimeSeriesFiles) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     std::map<std::string, std::optional<std::string>> paths;
     paths["data_file"] = "/path/to/data.csv";
@@ -56,7 +60,8 @@ TEST(Database, UpdateAndReadTimeSeriesFiles) {
 
 TEST(Database, UpdateTimeSeriesFilesWithNulls) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     std::map<std::string, std::optional<std::string>> paths;
     paths["data_file"] = "/path/to/data.csv";
@@ -72,7 +77,8 @@ TEST(Database, UpdateTimeSeriesFilesWithNulls) {
 
 TEST(Database, UpdateTimeSeriesFilesReplace) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     // First update
     std::map<std::string, std::optional<std::string>> paths1;
@@ -93,7 +99,8 @@ TEST(Database, UpdateTimeSeriesFilesReplace) {
 
 TEST(Database, TimeSeriesFilesNotFound) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     EXPECT_THROW(db.read_time_series_files("Configuration"), std::runtime_error);
     EXPECT_THROW(db.list_time_series_files_columns("Configuration"), std::runtime_error);
@@ -104,7 +111,8 @@ TEST(Database, TimeSeriesFilesNotFound) {
 // the call fail the same way in every layer.
 TEST(Database, UpdateTimeSeriesFilesEmptyMapValidatesCollection) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     std::map<std::string, std::optional<std::string>> empty;
 

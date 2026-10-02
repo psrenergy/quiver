@@ -15,8 +15,9 @@
 TEST(DatabaseCApi, GetTimeSeriesMetadata) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     quiver_group_metadata_t metadata;
@@ -36,8 +37,9 @@ TEST(DatabaseCApi, GetTimeSeriesMetadata) {
 TEST(DatabaseCApi, ListTimeSeriesGroups) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     quiver_group_metadata_t* metadata = nullptr;
@@ -76,7 +78,8 @@ TEST(DatabaseCApi, GetTimeSeriesMetadataDateValueColumnIsNotTheDimension) {
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
         quiver_database_from_schema(":memory:", VALID_SCHEMA("time_series_date_columns.sql").c_str(), &options, &db),
-        QUIVER_OK);
+        QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     quiver_group_metadata_t metadata;

@@ -6,10 +6,12 @@ extern "C" {
 
 // Metadata get functions
 
-QUIVER_C_API quiver_error_t quiver_database_get_scalar_metadata(quiver_database_t* db,
-                                                                const char* collection,
-                                                                const char* attribute,
-                                                                quiver_scalar_metadata_t* out_metadata) {
+QUIVER_C_API quiver_error_t quiver_database_get_scalar_metadata(
+    quiver_database_t* db,
+    const char* collection,
+    const char* attribute,
+    quiver_scalar_metadata_t* out_metadata
+) {
     QUIVER_REQUIRE(db, collection, attribute, out_metadata);
 
     try {
@@ -21,10 +23,12 @@ QUIVER_C_API quiver_error_t quiver_database_get_scalar_metadata(quiver_database_
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_database_get_vector_metadata(quiver_database_t* db,
-                                                                const char* collection,
-                                                                const char* group_name,
-                                                                quiver_group_metadata_t* out_metadata) {
+QUIVER_C_API quiver_error_t quiver_database_get_vector_metadata(
+    quiver_database_t* db,
+    const char* collection,
+    const char* group_name,
+    quiver_group_metadata_t* out_metadata
+) {
     QUIVER_REQUIRE(db, collection, group_name, out_metadata);
 
     try {
@@ -36,10 +40,12 @@ QUIVER_C_API quiver_error_t quiver_database_get_vector_metadata(quiver_database_
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_database_get_set_metadata(quiver_database_t* db,
-                                                             const char* collection,
-                                                             const char* group_name,
-                                                             quiver_group_metadata_t* out_metadata) {
+QUIVER_C_API quiver_error_t quiver_database_get_set_metadata(
+    quiver_database_t* db,
+    const char* collection,
+    const char* group_name,
+    quiver_group_metadata_t* out_metadata
+) {
     QUIVER_REQUIRE(db, collection, group_name, out_metadata);
 
     try {
@@ -77,10 +83,12 @@ QUIVER_C_API quiver_error_t quiver_database_free_group_metadata(quiver_group_met
 
 // Metadata list functions
 
-QUIVER_C_API quiver_error_t quiver_database_list_scalar_attributes(quiver_database_t* db,
-                                                                   const char* collection,
-                                                                   quiver_scalar_metadata_t** out_metadata,
-                                                                   size_t* out_count) {
+QUIVER_C_API quiver_error_t quiver_database_list_scalar_attributes(
+    quiver_database_t* db,
+    const char* collection,
+    quiver_scalar_metadata_t** out_metadata,
+    size_t* out_count
+) {
     QUIVER_REQUIRE(db, collection, out_metadata, out_count);
 
     try {
@@ -101,10 +109,12 @@ QUIVER_C_API quiver_error_t quiver_database_list_scalar_attributes(quiver_databa
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_database_list_vector_groups(quiver_database_t* db,
-                                                               const char* collection,
-                                                               quiver_group_metadata_t** out_metadata,
-                                                               size_t* out_count) {
+QUIVER_C_API quiver_error_t quiver_database_list_vector_groups(
+    quiver_database_t* db,
+    const char* collection,
+    quiver_group_metadata_t** out_metadata,
+    size_t* out_count
+) {
     QUIVER_REQUIRE(db, collection, out_metadata, out_count);
 
     try {
@@ -125,10 +135,12 @@ QUIVER_C_API quiver_error_t quiver_database_list_vector_groups(quiver_database_t
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_database_list_set_groups(quiver_database_t* db,
-                                                            const char* collection,
-                                                            quiver_group_metadata_t** out_metadata,
-                                                            size_t* out_count) {
+QUIVER_C_API quiver_error_t quiver_database_list_set_groups(
+    quiver_database_t* db,
+    const char* collection,
+    quiver_group_metadata_t** out_metadata,
+    size_t* out_count
+) {
     QUIVER_REQUIRE(db, collection, out_metadata, out_count);
 
     try {
@@ -151,8 +163,8 @@ QUIVER_C_API quiver_error_t quiver_database_list_set_groups(quiver_database_t* d
 
 // Metadata array free functions (co-located with list)
 
-QUIVER_C_API quiver_error_t quiver_database_free_scalar_metadata_array(quiver_scalar_metadata_t* metadata,
-                                                                       size_t count) {
+QUIVER_C_API quiver_error_t
+quiver_database_free_scalar_metadata_array(quiver_scalar_metadata_t* metadata, size_t count) {
     QUIVER_REQUIRE(metadata);
 
     for (size_t i = 0; i < count; ++i) {

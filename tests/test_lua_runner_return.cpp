@@ -7,7 +7,8 @@ namespace {
 // Every case here is schema-independent, so one in-memory database serves them all.
 quiver::Database return_database() {
     return quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 }
 
 }  // namespace
@@ -131,14 +132,16 @@ TEST_F(LuaRunnerTest, ReturnDuplicateStringifiedKeyThrows) {
 
     // Two distinct Lua keys, one JSON key -- refuse rather than silently drop whichever `pairs`
     // happened to yield first.
-    expect_lua_error(lua,
-                     R"(
+    expect_lua_error(
+        lua,
+        R"(
         local t = {}
         t[1] = 'integer-key'
         t['1'] = 'string-key'
         return t
     )",
-                     "Cannot run: script returned a table with duplicate key '1'");
+        "Cannot run: script returned a table with duplicate key '1'"
+    );
 }
 
 TEST_F(LuaRunnerTest, ReturnNonUtf8StringThrows) {
@@ -148,7 +151,8 @@ TEST_F(LuaRunnerTest, ReturnNonUtf8StringThrows) {
     // JSON must be UTF-8 (RFC 8259) but a Lua string is an arbitrary byte array. Rejected here
     // because downstream Python/Dart raise opaque decode errors and JS corrupts silently.
     expect_lua_error(
-        lua, "return string.char(200)", "Cannot run: script return value contains a string that is not valid UTF-8");
+        lua, "return string.char(200)", "Cannot run: script return value contains a string that is not valid UTF-8"
+    );
     // A truncated multi-byte sequence is rejected too.
     expect_lua_error(lua, "return string.char(0xC3)", "not valid UTF-8");
     // So are an overlong encoding and a UTF-16 surrogate, which a strict decoder also rejects.
@@ -166,13 +170,15 @@ TEST_F(LuaRunnerTest, ReturnTooLargeThrows) {
 
     // The depth cap does not bound the output: sharing sub-tables gives 2^20 nodes at only 21
     // levels of nesting, so the size cap is what stops an untrusted script from hanging the host.
-    expect_lua_error(lua,
-                     R"(
+    expect_lua_error(
+        lua,
+        R"(
         local t = {string.rep('x', 4096)}
         for _ = 1, 20 do t = {t, t} end
         return t
     )",
-                     "Cannot run: script return value exceeds");
+        "Cannot run: script return value exceeds"
+    );
 }
 
 TEST_F(LuaRunnerTest, ReturnTooDeeplyNestedThrows) {
@@ -180,17 +186,20 @@ TEST_F(LuaRunnerTest, ReturnTooDeeplyNestedThrows) {
     quiver::LuaRunner lua(db);
 
     // The depth cap is what stops a self-referencing table from blowing the stack.
-    expect_lua_error(lua,
-                     R"(
+    expect_lua_error(
+        lua,
+        R"(
         local t = {}
         t[1] = t
         return t
     )",
-                     "nests deeper than 32 levels");
+        "nests deeper than 32 levels"
+    );
 
     // A merely deep (acyclic) table trips the same cap.
-    expect_lua_error(lua,
-                     R"(
+    expect_lua_error(
+        lua,
+        R"(
         local root = {}
         local node = root
         for _ = 1, 40 do
@@ -199,7 +208,8 @@ TEST_F(LuaRunnerTest, ReturnTooDeeplyNestedThrows) {
         end
         return root
     )",
-                     "nests deeper than 32 levels");
+        "nests deeper than 32 levels"
+    );
 }
 
 TEST_F(LuaRunnerTest, ReturnAtTheDepthLimitSucceeds) {

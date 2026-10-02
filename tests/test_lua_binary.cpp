@@ -168,12 +168,14 @@ TEST_F(LuaBinaryTest, ReadRejectsNonIntegerDimension) {
     // An unchecked dimension getter silently rounded in a release build and panicked on a raw
     // sol2 error in a debug one, so a bad dimension returned the wrong slice instead of failing.
     // (A boolean is not tested here: it coerces to 1 like every other numeric slot.)
-    expect_lua_error(lua,
-                     R"(
+    expect_lua_error(
+        lua,
+        R"(
         local r = db:open_file('bin_a', 'r')
         r:read({row=1.5})
     )",
-                     "dimension 'row' has unsupported Lua type");
+        "dimension 'row' has unsupported Lua type"
+    );
 }
 
 TEST_F(LuaBinaryTest, TimeDimensionWriteRead) {
@@ -278,18 +280,24 @@ TEST_F(LuaBinaryTest, MetadataCountMismatchThrows) {
     auto db = quiver::Database::from_schema(":memory:", schema);
     quiver::LuaRunner lua(db);
     // A script is untrusted input; each of these used to index past dimension_sizes / frequencies.
-    expect_lua_error(lua,
-                     "quiver.metadata{ initial_datetime='2025-01-01T00:00:00', unit='MW', labels={'v'},"
-                     " dimensions={'stage', 'block'}, dimension_sizes={12} }\n",
-                     "dimension_sizes count (1) does not match dimensions count (2)");
-    expect_lua_error(lua,
-                     "quiver.metadata{ initial_datetime='2025-01-01T00:00:00', unit='MW', labels={'v'},"
-                     " dimensions={'stage', 'block'} }\n",
-                     "dimension_sizes count (0) does not match dimensions count (2)");
-    expect_lua_error(lua,
-                     "quiver.metadata{ initial_datetime='2025-01-01T00:00:00', unit='MW', labels={'v'},"
-                     " dimensions={'stage'}, dimension_sizes={12}, time_dimensions={'stage'} }\n",
-                     "frequencies count (0) does not match time_dimensions count (1)");
+    expect_lua_error(
+        lua,
+        "quiver.metadata{ initial_datetime='2025-01-01T00:00:00', unit='MW', labels={'v'},"
+        " dimensions={'stage', 'block'}, dimension_sizes={12} }\n",
+        "dimension_sizes count (1) does not match dimensions count (2)"
+    );
+    expect_lua_error(
+        lua,
+        "quiver.metadata{ initial_datetime='2025-01-01T00:00:00', unit='MW', labels={'v'},"
+        " dimensions={'stage', 'block'} }\n",
+        "dimension_sizes count (0) does not match dimensions count (2)"
+    );
+    expect_lua_error(
+        lua,
+        "quiver.metadata{ initial_datetime='2025-01-01T00:00:00', unit='MW', labels={'v'},"
+        " dimensions={'stage'}, dimension_sizes={12}, time_dimensions={'stage'} }\n",
+        "frequencies count (0) does not match time_dimensions count (1)"
+    );
 }
 
 // An unknown key, or a known key of the wrong type, used to be ignored and replaced by its default.
@@ -297,15 +305,20 @@ TEST_F(LuaBinaryTest, MetadataIsStrict) {
     auto db = quiver::Database::from_schema(":memory:", schema);
     quiver::LuaRunner lua(db);
     expect_lua_error(
-        lua, "quiver.metadata{ dimension_size = {3} }\n", "Cannot metadata: unknown option 'dimension_size'");
-    expect_lua_error(lua,
-                     "quiver.metadata{ initial_datetime='2025-01-01T00:00:00', unit=5, labels={'v'},"
-                     " dimensions={'row'}, dimension_sizes={3} }\n",
-                     "Cannot metadata: field 'unit' has unsupported Lua type");
-    expect_lua_error(lua,
-                     "quiver.metadata{ initial_datetime='2025-01-01T00:00:00', unit='MW', labels='v1',"
-                     " dimensions={'row'}, dimension_sizes={3} }\n",
-                     "Cannot metadata: field 'labels' must be a table");
+        lua, "quiver.metadata{ dimension_size = {3} }\n", "Cannot metadata: unknown option 'dimension_size'"
+    );
+    expect_lua_error(
+        lua,
+        "quiver.metadata{ initial_datetime='2025-01-01T00:00:00', unit=5, labels={'v'},"
+        " dimensions={'row'}, dimension_sizes={3} }\n",
+        "Cannot metadata: field 'unit' has unsupported Lua type"
+    );
+    expect_lua_error(
+        lua,
+        "quiver.metadata{ initial_datetime='2025-01-01T00:00:00', unit='MW', labels='v1',"
+        " dimensions={'row'}, dimension_sizes={3} }\n",
+        "Cannot metadata: field 'labels' must be a table"
+    );
     // A non-table argument reached lua_next unchecked in Release (sol2 skips argument checks there).
     expect_lua_error(lua, "quiver.metadata(5)\n", "Cannot metadata: options must be a table");
     expect_lua_error(lua, "quiver.metadata()\n", "Cannot metadata: options must be a table");
@@ -314,8 +327,9 @@ TEST_F(LuaBinaryTest, MetadataIsStrict) {
 TEST_F(LuaBinaryTest, MetadataFromTomlRejectsWrongTypedEntry) {
     auto db = quiver::Database::from_schema(":memory:", schema);
     quiver::LuaRunner lua(db);
-    expect_lua_error(lua,
-                     R"lua(
+    expect_lua_error(
+        lua,
+        R"lua(
         quiver.metadata_from_toml([[
 version = "1"
 dimensions = ["row", 2]
@@ -325,7 +339,8 @@ unit = "MW"
 labels = ["val"]
 ]])
     )lua",
-                     "array 'dimensions' must contain strings");
+        "array 'dimensions' must contain strings"
+    );
 }
 
 TEST_F(LuaBinaryTest, OpenFileInvalidModeThrows) {
@@ -363,9 +378,11 @@ TEST_F(LuaBinaryTest, AbsoluteInsideAccepted) {
 TEST_F(LuaBinaryTest, DotDotEscapeThrows) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::LuaRunner lua(db);
-    expect_lua_error(lua,
-                     md1() + "db:open_file('../escape', 'w', md)\n",
-                     "Cannot open_file: path '../escape' escapes the database directory");
+    expect_lua_error(
+        lua,
+        md1() + "db:open_file('../escape', 'w', md)\n",
+        "Cannot open_file: path '../escape' escapes the database directory"
+    );
 }
 
 TEST_F(LuaBinaryTest, AbsoluteOutsideThrows) {

@@ -11,8 +11,9 @@
 TEST(DatabaseCApiMetadata, GetVectorMetadata) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     quiver_group_metadata_t metadata = {};
@@ -29,8 +30,9 @@ TEST(DatabaseCApiMetadata, GetVectorMetadata) {
 TEST(DatabaseCApiMetadata, GetSetMetadata) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     quiver_group_metadata_t metadata = {};
@@ -47,8 +49,9 @@ TEST(DatabaseCApiMetadata, GetSetMetadata) {
 TEST(DatabaseCApiMetadata, GetTimeSeriesMetadata) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     quiver_group_metadata_t metadata = {};
@@ -88,8 +91,9 @@ TEST(DatabaseCApiMetadata, GetVectorMetadataForeignKey) {
 TEST(DatabaseCApiMetadata, ListVectorGroups) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     quiver_group_metadata_t* groups = nullptr;
@@ -105,8 +109,9 @@ TEST(DatabaseCApiMetadata, ListVectorGroups) {
 TEST(DatabaseCApiMetadata, ListSetGroups) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     quiver_group_metadata_t* groups = nullptr;
@@ -122,8 +127,9 @@ TEST(DatabaseCApiMetadata, ListSetGroups) {
 TEST(DatabaseCApiMetadata, ListTimeSeriesGroups) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     quiver_group_metadata_t* groups = nullptr;
@@ -139,8 +145,9 @@ TEST(DatabaseCApiMetadata, ListTimeSeriesGroups) {
 TEST(DatabaseCApiMetadata, ListScalarAttributes) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     quiver_scalar_metadata_t* attrs = nullptr;
@@ -161,8 +168,9 @@ namespace {
 quiver_database_t* open_collections() {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    EXPECT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    EXPECT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+    );
     EXPECT_NE(db, nullptr);
     return db;
 }

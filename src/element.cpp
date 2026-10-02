@@ -23,7 +23,8 @@ std::string value_to_string(const Value& value) {
                 return "<unknown>";
             }
         },
-        value);
+        value
+    );
 }
 
 }  // namespace

@@ -23,8 +23,10 @@ convert_params(const char* caller, const int* param_types, const void* const* pa
             break;
         case QUIVER_DATA_TYPE_STRING:
             if (!param_values[i]) {
-                throw std::runtime_error(std::string("Cannot ") + caller + ": parameter at index " + std::to_string(i) +
-                                         " has null string value");
+                throw std::runtime_error(
+                    std::string("Cannot ") + caller + ": parameter at index " + std::to_string(i) +
+                    " has null string value"
+                );
             }
             parameters.emplace_back(std::string(static_cast<const char*>(param_values[i])));
             break;
@@ -32,8 +34,9 @@ convert_params(const char* caller, const int* param_types, const void* const* pa
             parameters.emplace_back(nullptr);
             break;
         default:
-            throw std::runtime_error(std::string("Cannot ") + caller + ": unknown parameter type " +
-                                     std::to_string(param_types[i]));
+            throw std::runtime_error(
+                std::string("Cannot ") + caller + ": unknown parameter type " + std::to_string(param_types[i])
+            );
         }
     }
     return parameters;
@@ -41,13 +44,15 @@ convert_params(const char* caller, const int* param_types, const void* const* pa
 
 extern "C" {
 
-QUIVER_C_API quiver_error_t quiver_database_query_string(quiver_database_t* db,
-                                                         const char* sql,
-                                                         const int* param_types,
-                                                         const void* const* param_values,
-                                                         size_t param_count,
-                                                         char** out_value,
-                                                         int* out_has_value) {
+QUIVER_C_API quiver_error_t quiver_database_query_string(
+    quiver_database_t* db,
+    const char* sql,
+    const int* param_types,
+    const void* const* param_values,
+    size_t param_count,
+    char** out_value,
+    int* out_has_value
+) {
     QUIVER_REQUIRE(db, sql, out_value, out_has_value);
     if (param_count > 0) {
         QUIVER_REQUIRE(param_types, param_values);
@@ -70,13 +75,15 @@ QUIVER_C_API quiver_error_t quiver_database_query_string(quiver_database_t* db,
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_database_query_integer(quiver_database_t* db,
-                                                          const char* sql,
-                                                          const int* param_types,
-                                                          const void* const* param_values,
-                                                          size_t param_count,
-                                                          int64_t* out_value,
-                                                          int* out_has_value) {
+QUIVER_C_API quiver_error_t quiver_database_query_integer(
+    quiver_database_t* db,
+    const char* sql,
+    const int* param_types,
+    const void* const* param_values,
+    size_t param_count,
+    int64_t* out_value,
+    int* out_has_value
+) {
     QUIVER_REQUIRE(db, sql, out_value, out_has_value);
     if (param_count > 0) {
         QUIVER_REQUIRE(param_types, param_values);
@@ -98,13 +105,15 @@ QUIVER_C_API quiver_error_t quiver_database_query_integer(quiver_database_t* db,
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_database_query_float(quiver_database_t* db,
-                                                        const char* sql,
-                                                        const int* param_types,
-                                                        const void* const* param_values,
-                                                        size_t param_count,
-                                                        double* out_value,
-                                                        int* out_has_value) {
+QUIVER_C_API quiver_error_t quiver_database_query_float(
+    quiver_database_t* db,
+    const char* sql,
+    const int* param_types,
+    const void* const* param_values,
+    size_t param_count,
+    double* out_value,
+    int* out_has_value
+) {
     QUIVER_REQUIRE(db, sql, out_value, out_has_value);
     if (param_count > 0) {
         QUIVER_REQUIRE(param_types, param_values);
