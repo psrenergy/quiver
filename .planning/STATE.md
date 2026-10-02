@@ -86,7 +86,7 @@ None yet.
 
 - Phase 4 needs research: the perf measurement protocol (the threshold and fallback are set), roughly 20 `require_table` placements that must keep the existing check order, and the C7 fan-out wording.
 - Phase 5 needs research: FFI mechanics differ per binding. Dart is hand-edited (never run `scripts/generator.bat`), Python resolves symbols lazily, JS loads eagerly, and the Dart hook cache must be cleared. The blast radius is about 50 files; re-derive it with `git grep`. TEST-01 also needs a link strategy: `quiver` is shared with hidden visibility, so `resolve_contained_path` must be header-inline, exported, or `path_policy.cpp` compiled into `quiver_tests`.
-- Gtest counts: 428 Lua / 27 C API as of `bdf9087`. Phase 1 records the baseline Phases 2 and 3 must reproduce; Phase 4 records the counts Phase 5's `Sandbox*` filter and C API run must reproduce.
+- Phase 1 gtest baseline (observed 2026-10-02 at `570c2c1`): `quiver_tests --gtest_filter=Lua*` = 444 tests across 12 suites (identical in Debug and Release, and in `build/`), and C API `LuaRunnerCApiTest` = 27. Phases 2 and 3 must reproduce both exactly; Phase 4 records the counts Phase 5's `Lua*` and C API runs must reproduce. (444, not the planned 441: plan 01 added two freed-source move pins and `LuaRunner_WriteCsv.NonTableOptionsThrows`. The old `Sandbox*` filter no longer applies: the rename was dropped and the filter stays `Lua*`.)
 - Backfilling the missing CHANGELOG `[0.12.9]` section is the maintainer's call and outside this milestone. The memory note pointing at `[0.12.9]` is stale.
 
 ## Deferred Items
