@@ -9,9 +9,8 @@
 
 extern "C" {
 
-QUIVER_C_API quiver_error_t quiver_database_open(const char* path,
-                                                 const quiver_database_options_t* options,
-                                                 quiver_database_t** out_db) {
+QUIVER_C_API quiver_error_t
+quiver_database_open(const char* path, const quiver_database_options_t* options, quiver_database_t** out_db) {
     QUIVER_REQUIRE(path, out_db);
 
     try {
@@ -49,10 +48,12 @@ QUIVER_C_API quiver_error_t quiver_database_path(quiver_database_t* db, const ch
     return QUIVER_OK;
 }
 
-QUIVER_C_API quiver_error_t quiver_database_from_migrations(const char* db_path,
-                                                            const char* migrations_path,
-                                                            const quiver_database_options_t* options,
-                                                            quiver_database_t** out_db) {
+QUIVER_C_API quiver_error_t quiver_database_from_migrations(
+    const char* db_path,
+    const char* migrations_path,
+    const quiver_database_options_t* options,
+    quiver_database_t** out_db
+) {
     QUIVER_REQUIRE(db_path, migrations_path, out_db);
 
     try {
@@ -100,10 +101,12 @@ QUIVER_C_API quiver_error_t quiver_database_current_version(quiver_database_t* d
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_database_from_schema(const char* db_path,
-                                                        const char* schema_path,
-                                                        const quiver_database_options_t* options,
-                                                        quiver_database_t** out_db) {
+QUIVER_C_API quiver_error_t quiver_database_from_schema(
+    const char* db_path,
+    const char* schema_path,
+    const quiver_database_options_t* options,
+    quiver_database_t** out_db
+) {
     QUIVER_REQUIRE(db_path, schema_path, out_db);
 
     try {
@@ -138,9 +141,8 @@ QUIVER_C_API quiver_error_t quiver_database_describe(quiver_database_t* db, char
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_database_describe_collection(quiver_database_t* db,
-                                                                const char* collection,
-                                                                char** out_report) {
+QUIVER_C_API quiver_error_t
+quiver_database_describe_collection(quiver_database_t* db, const char* collection, char** out_report) {
     QUIVER_REQUIRE(db, collection, out_report);
 
     try {
@@ -152,9 +154,8 @@ QUIVER_C_API quiver_error_t quiver_database_describe_collection(quiver_database_
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_database_summarize_collection(quiver_database_t* db,
-                                                                 const char* collection,
-                                                                 char** out_report) {
+QUIVER_C_API quiver_error_t
+quiver_database_summarize_collection(quiver_database_t* db, const char* collection, char** out_report) {
     QUIVER_REQUIRE(db, collection, out_report);
 
     try {

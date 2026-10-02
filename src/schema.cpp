@@ -11,8 +11,9 @@ namespace quiver {
 static bool is_safe_identifier(const std::string& name) {
     if (name.empty())
         return false;
-    return std::all_of(
-        name.begin(), name.end(), [](char c) { return std::isalnum(static_cast<unsigned char>(c)) || c == '_'; });
+    return std::all_of(name.begin(), name.end(), [](char c) {
+        return std::isalnum(static_cast<unsigned char>(c)) || c == '_';
+    });
 }
 
 // TableDefinition methods
@@ -262,8 +263,8 @@ std::vector<std::string> Schema::group_names(const std::string& collection, Grou
     return result;
 }
 
-std::vector<Schema::TableMatch> Schema::find_all_tables_for_column(const std::string& collection,
-                                                                   const std::string& column) const {
+std::vector<Schema::TableMatch>
+Schema::find_all_tables_for_column(const std::string& collection, const std::string& column) const {
     std::vector<TableMatch> matches;
 
     // Check vector: direct name match first

@@ -34,8 +34,8 @@ TEST_F(LuaRunnerTest, UpdateElementMultipleScalars) {
 
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     db.create_element(
-        "Collection",
-        quiver::Element().set("label", "Item 1").set("some_integer", int64_t{100}).set("some_float", 1.5));
+        "Collection", quiver::Element().set("label", "Item 1").set("some_integer", int64_t{100}).set("some_float", 1.5)
+    );
 
     quiver::LuaRunner lua(db);
 
@@ -94,11 +94,13 @@ TEST_F(LuaRunnerTest, UpdateElementWithArrays) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
-    db.create_element("Collection",
-                      quiver::Element()
-                          .set("label", "Item 1")
-                          .set("some_integer", int64_t{10})
-                          .set("value_int", std::vector<int64_t>{1, 2, 3}));
+    db.create_element(
+        "Collection",
+        quiver::Element()
+            .set("label", "Item 1")
+            .set("some_integer", int64_t{10})
+            .set("value_int", std::vector<int64_t>{1, 2, 3})
+    );
 
     quiver::LuaRunner lua(db);
 
@@ -119,8 +121,9 @@ TEST_F(LuaRunnerTest, UpdateElementWithArrays) {
 TEST_F(LuaRunnerTest, UpdateVectorIntegers) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
-    db.create_element("Collection",
-                      quiver::Element().set("label", "Item 1").set("value_int", std::vector<int64_t>{1, 2, 3}));
+    db.create_element(
+        "Collection", quiver::Element().set("label", "Item 1").set("value_int", std::vector<int64_t>{1, 2, 3})
+    );
 
     quiver::LuaRunner lua(db);
 
@@ -135,8 +138,9 @@ TEST_F(LuaRunnerTest, UpdateVectorIntegers) {
 TEST_F(LuaRunnerTest, UpdateVectorFloats) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
-    db.create_element("Collection",
-                      quiver::Element().set("label", "Item 1").set("value_float", std::vector<double>{1.0, 2.0}));
+    db.create_element(
+        "Collection", quiver::Element().set("label", "Item 1").set("value_float", std::vector<double>{1.0, 2.0})
+    );
 
     quiver::LuaRunner lua(db);
 
@@ -152,8 +156,9 @@ TEST_F(LuaRunnerTest, UpdateScalarStringTrimsWhitespace) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     db.create_element("Configuration", quiver::Element().set("label", "Test Config"));
-    db.create_element("Collection",
-                      quiver::Element().set("label", "Item 1").set("tag", std::vector<std::string>{"old"}));
+    db.create_element(
+        "Collection", quiver::Element().set("label", "Item 1").set("tag", std::vector<std::string>{"old"})
+    );
 
     quiver::LuaRunner lua(db);
 
@@ -169,11 +174,13 @@ TEST_F(LuaRunnerTest, UpdateScalarStringTrimsWhitespace) {
 TEST_F(LuaRunnerTest, UpdateVectorStrings) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
-    db.create_element("Collection",
-                      quiver::Element()
-                          .set("label", "Item 1")
-                          .set("value_int", std::vector<int64_t>{1})
-                          .set("value_float", std::vector<double>{1.0}));
+    db.create_element(
+        "Collection",
+        quiver::Element()
+            .set("label", "Item 1")
+            .set("value_int", std::vector<int64_t>{1})
+            .set("value_float", std::vector<double>{1.0})
+    );
 
     quiver::LuaRunner lua(db);
 
@@ -187,8 +194,9 @@ TEST_F(LuaRunnerTest, UpdateVectorStrings) {
 TEST_F(LuaRunnerTest, UpdateSetStrings) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
-    db.create_element("Collection",
-                      quiver::Element().set("label", "Item 1").set("tag", std::vector<std::string>{"alpha", "beta"}));
+    db.create_element(
+        "Collection", quiver::Element().set("label", "Item 1").set("tag", std::vector<std::string>{"alpha", "beta"})
+    );
 
     quiver::LuaRunner lua(db);
 
@@ -247,7 +255,8 @@ TEST_F(LuaRunnerTest, UpdateElementByLabelNonExistent) {
 
     // Updating a non-existent label throws "Element not found"
     expect_lua_error(
-        lua, R"(db:update_element_by_label("Collection", "Nope", { some_integer = 5 }))", "Element not found");
+        lua, R"(db:update_element_by_label("Collection", "Nope", { some_integer = 5 }))", "Element not found"
+    );
 
     // Nothing was written.
     auto value = db.read_scalar_integer_by_id("Collection", "some_integer", 1);
@@ -329,21 +338,27 @@ TEST_F(LuaRunnerTest, UpdateGroupErrors) {
     lua.run(R"(db:update_vector_group("Child", "refs", 1, { parent_ref = { 1 } }))");
 
     expect_lua_error(
-        lua, R"(db:update_vector_group("Child", "nope", 1, { parent_ref = { 1 } }))", "Vector group not found");
+        lua, R"(db:update_vector_group("Child", "nope", 1, { parent_ref = { 1 } }))", "Vector group not found"
+    );
     expect_lua_error(lua, R"(db:update_set_group("Child", "nope", 1, { parent_ref = { 1 } }))", "Set group not found");
     expect_lua_error(
-        lua, R"(db:update_vector_group("Child", "refs", 1, { not_a_column = { 1 } }))", "not found in group");
-    expect_lua_error(lua,
-                     R"(db:update_vector_group("Child", "refs", 1, { parent_ref = { 1 }, vector_index = { 7 } }))",
-                     "managed by the group table");
+        lua, R"(db:update_vector_group("Child", "refs", 1, { not_a_column = { 1 } }))", "not found in group"
+    );
     expect_lua_error(
-        lua, R"(db:update_vector_group("Child", "refs", 999, { parent_ref = { 1 } }))", "Element not found");
+        lua,
+        R"(db:update_vector_group("Child", "refs", 1, { parent_ref = { 1 }, vector_index = { 7 } }))",
+        "managed by the group table"
+    );
+    expect_lua_error(
+        lua, R"(db:update_vector_group("Child", "refs", 999, { parent_ref = { 1 } }))", "Element not found"
+    );
     // The clear path used to succeed silently: the DELETE simply matched nothing.
     expect_lua_error(lua, R"(db:update_set_group("Child", "parents", 999, {}))", "Element not found");
     // A named column with no cells is a caller mistake, not a clear -- {} clears.
     expect_lua_error(lua, R"(db:update_vector_group("Child", "refs", 1, { parent_ref = {} }))", "contain no rows");
     expect_lua_error(
-        lua, R"(db:update_set_group("Child", "parents", 1, { parent_ref = 5 }))", "must be an array of values");
+        lua, R"(db:update_set_group("Child", "parents", 1, { parent_ref = 5 }))", "must be an array of values"
+    );
 
     // Every rejected call left the existing row alone.
     EXPECT_EQ(db.read_vector_integers_by_id("Child", "parent_ref", 1), (std::vector<int64_t>{1}));
@@ -370,12 +385,13 @@ TEST_F(LuaRunnerTest, UpdateVectorGroupByLabelErrors) {
     quiver::LuaRunner lua(db);
     lua.run(R"(db:update_vector_group_by_label("Child", "refs", "Child 1", { parent_ref = { 1 } }))");
 
-    expect_lua_error(lua,
-                     R"(db:update_vector_group_by_label("Child", "refs", "Nope", { parent_ref = { 1 } }))",
-                     "Element not found");
+    expect_lua_error(
+        lua, R"(db:update_vector_group_by_label("Child", "refs", "Nope", { parent_ref = { 1 } }))", "Element not found"
+    );
     // The named-but-empty column trap fires before the label is even resolved.
     expect_lua_error(
-        lua, R"(db:update_vector_group_by_label("Child", "refs", "Nope", { parent_ref = {} }))", "contain no rows");
+        lua, R"(db:update_vector_group_by_label("Child", "refs", "Nope", { parent_ref = {} }))", "contain no rows"
+    );
 
     EXPECT_EQ(db.read_vector_integers_by_id("Child", "parent_ref", 1), (std::vector<int64_t>{1}));
 }
@@ -401,12 +417,13 @@ TEST_F(LuaRunnerTest, UpdateSetGroupByLabelErrors) {
     quiver::LuaRunner lua(db);
     lua.run(R"(db:update_set_group_by_label("Child", "parents", "Child 1", { parent_ref = { 1 } }))");
 
-    expect_lua_error(lua,
-                     R"(db:update_set_group_by_label("Child", "parents", "Nope", { parent_ref = { 1 } }))",
-                     "Element not found");
+    expect_lua_error(
+        lua, R"(db:update_set_group_by_label("Child", "parents", "Nope", { parent_ref = { 1 } }))", "Element not found"
+    );
     // The named-but-empty column trap fires before the label is even resolved.
     expect_lua_error(
-        lua, R"(db:update_set_group_by_label("Child", "parents", "Nope", { parent_ref = {} }))", "contain no rows");
+        lua, R"(db:update_set_group_by_label("Child", "parents", "Nope", { parent_ref = {} }))", "contain no rows"
+    );
 
     EXPECT_EQ(db.read_set_integers_by_id("Child", "parent_ref", 1), (std::vector<int64_t>{1}));
 }
@@ -434,20 +451,27 @@ TEST_F(LuaRunnerTest, UpdateRelationErrors) {
     auto db = relations_db_with_child();
     quiver::LuaRunner lua(db);
 
-    expect_lua_error(lua,
-                     R"(db:update_relation("Child", "Parent", "owner", 1, "Parent A"))",
-                     "relation column 'parent_owner' not found in collection 'Child'");
     expect_lua_error(
-        lua, R"(db:update_relation_by_label("Child", "Parent", "id", "Nope", "Parent A"))", "Element not found");
+        lua,
+        R"(db:update_relation("Child", "Parent", "owner", 1, "Parent A"))",
+        "relation column 'parent_owner' not found in collection 'Child'"
+    );
+    expect_lua_error(
+        lua, R"(db:update_relation_by_label("Child", "Parent", "id", "Nope", "Parent A"))", "Element not found"
+    );
 
     // A non-string target_label must throw, not clear: silently treating it as nil would let a
     // stray boolean/number wipe the relation.
     lua.run(R"(db:update_relation("Child", "Parent", "id", 1, "Parent A"))");
-    expect_lua_error(lua,
-                     R"(db:update_relation("Child", "Parent", "id", 1, false))",
-                     "Cannot update_relation: target_label has unsupported Lua type");
-    expect_lua_error(lua,
-                     R"(db:update_relation_by_label("Child", "Parent", "id", "Child 1", 42))",
-                     "Cannot update_relation_by_label: target_label has unsupported Lua type");
+    expect_lua_error(
+        lua,
+        R"(db:update_relation("Child", "Parent", "id", 1, false))",
+        "Cannot update_relation: target_label has unsupported Lua type"
+    );
+    expect_lua_error(
+        lua,
+        R"(db:update_relation_by_label("Child", "Parent", "id", "Child 1", 42))",
+        "Cannot update_relation_by_label: target_label has unsupported Lua type"
+    );
     EXPECT_EQ(db.read_scalar_integer_by_id("Child", "parent_id", 1), 1);
 }

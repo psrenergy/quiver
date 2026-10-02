@@ -46,7 +46,8 @@ TEST_F(LuaRunnerTest, TransactionDoubleBeginError) {
                 db:begin_transaction()
             )");
         },
-        std::runtime_error);
+        std::runtime_error
+    );
 }
 
 TEST_F(LuaRunnerTest, TransactionCommitWithoutBeginError) {
@@ -116,7 +117,8 @@ TEST_F(LuaRunnerTest, TransactionBlockRollbackOnError) {
                 end)
             )");
         },
-        std::runtime_error);
+        std::runtime_error
+    );
 
     auto labels = db.read_scalar_strings("Collection", "label");
     EXPECT_EQ(labels.size(), 0);
@@ -202,14 +204,16 @@ TEST_F(LuaRunnerTest, DryRunBlockRollsBackOnError) {
 
     quiver::LuaRunner lua(db);
 
-    expect_lua_error(lua,
-                     R"(
+    expect_lua_error(
+        lua,
+        R"(
         db:dry_run(function(db)
             db:create_element("Collection", { label = "Item 1", some_integer = 10 })
             error("boom")
         end)
     )",
-                     "boom");
+        "boom"
+    );
 
     EXPECT_TRUE(db.read_scalar_strings("Collection", "label").empty());
     EXPECT_FALSE(db.in_dry_run());

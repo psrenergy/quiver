@@ -163,9 +163,11 @@ TEST_F(LuaRunner_ExportCSV, EscapeThrows) {
     auto db = quiver::Database::from_schema(db_path(), csv_schema);
     quiver::LuaRunner lua(db);
 
-    expect_lua_error(lua,
-                     R"(db:export_csv("Items", "", "../x.csv"))",
-                     "Cannot export_csv: path '../x.csv' escapes the database directory");
+    expect_lua_error(
+        lua,
+        R"(db:export_csv("Items", "", "../x.csv"))",
+        "Cannot export_csv: path '../x.csv' escapes the database directory"
+    );
 }
 
 TEST_F(LuaRunner_ExportCSV, InMemoryThrows) {

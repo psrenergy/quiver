@@ -104,12 +104,14 @@ Writer::Writer(std::string resolved_path, std::string original_path, std::string
     if (!parent.empty()) {
         const bool exists = fs::exists(parent, ec);
         if (ec) {
-            throw std::runtime_error("Cannot " + operation + ": cannot access directory for '" + original_path_ +
-                                     "': " + ec.message());
+            throw std::runtime_error(
+                "Cannot " + operation + ": cannot access directory for '" + original_path_ + "': " + ec.message()
+            );
         }
         if (!exists) {
-            throw std::runtime_error("Cannot " + operation + ": parent directory does not exist for '" +
-                                     original_path_ + "'");
+            throw std::runtime_error(
+                "Cannot " + operation + ": parent directory does not exist for '" + original_path_ + "'"
+            );
         }
     }
 

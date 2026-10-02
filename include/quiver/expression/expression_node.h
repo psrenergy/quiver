@@ -111,10 +111,12 @@ class QUIVER_API ExpressionTernary final : public ExpressionNode {
 public:
     enum class Operation { IfElse };
 
-    ExpressionTernary(Operation operation,
-                      std::shared_ptr<ExpressionNode> condition,
-                      std::shared_ptr<ExpressionNode> then_value,
-                      std::shared_ptr<ExpressionNode> else_value);
+    ExpressionTernary(
+        Operation operation,
+        std::shared_ptr<ExpressionNode> condition,
+        std::shared_ptr<ExpressionNode> then_value,
+        std::shared_ptr<ExpressionNode> else_value
+    );
 
     const BinaryMetadata& metadata() const override;
     void compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const override;
@@ -137,10 +139,12 @@ class QUIVER_API ExpressionAggregate final : public ExpressionNode {
 public:
     enum class Operation { Sum, Mean, Min, Max, Percentile };
 
-    ExpressionAggregate(Operation operation,
-                        std::shared_ptr<ExpressionNode> operand,
-                        std::string dimension_name,
-                        std::optional<double> parameter = std::nullopt);
+    ExpressionAggregate(
+        Operation operation,
+        std::shared_ptr<ExpressionNode> operand,
+        std::string dimension_name,
+        std::optional<double> parameter = std::nullopt
+    );
 
     const BinaryMetadata& metadata() const override;
     void compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const override;
@@ -164,9 +168,11 @@ class QUIVER_API ExpressionAggregateAgents final : public ExpressionNode {
 public:
     enum class Operation { Sum, Mean, Min, Max, Percentile };
 
-    ExpressionAggregateAgents(Operation operation,
-                              std::shared_ptr<ExpressionNode> operand,
-                              std::optional<double> parameter = std::nullopt);
+    ExpressionAggregateAgents(
+        Operation operation,
+        std::shared_ptr<ExpressionNode> operand,
+        std::optional<double> parameter = std::nullopt
+    );
 
     const BinaryMetadata& metadata() const override;
     void compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const override;
@@ -198,8 +204,10 @@ private:
 
 class QUIVER_API ExpressionRenameAgents final : public ExpressionNode {
 public:
-    ExpressionRenameAgents(std::shared_ptr<ExpressionNode> operand,
-                           std::vector<std::pair<std::string, std::string>> mapping);
+    ExpressionRenameAgents(
+        std::shared_ptr<ExpressionNode> operand,
+        std::vector<std::pair<std::string, std::string>> mapping
+    );
 
     const BinaryMetadata& metadata() const override;
     void compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const override;

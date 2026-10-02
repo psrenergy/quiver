@@ -22,10 +22,12 @@ double ExpressionTernary::apply(Operation operation, double condition, double th
     throw std::runtime_error("Cannot apply: unhandled ExpressionTernary::Operation variant");
 }
 
-ExpressionTernary::ExpressionTernary(Operation operation,
-                                     std::shared_ptr<ExpressionNode> condition,
-                                     std::shared_ptr<ExpressionNode> then_value,
-                                     std::shared_ptr<ExpressionNode> else_value)
+ExpressionTernary::ExpressionTernary(
+    Operation operation,
+    std::shared_ptr<ExpressionNode> condition,
+    std::shared_ptr<ExpressionNode> then_value,
+    std::shared_ptr<ExpressionNode> else_value
+)
     : operation_(operation), condition_(std::move(condition)), then_value_(std::move(then_value)),
       else_value_(std::move(else_value)) {
     const auto& condition_meta = condition_->metadata();
@@ -61,10 +63,12 @@ void ExpressionTernary::compute_row(const std::vector<int64_t>& dims, std::vecto
     compute_broadcast_operand_row(else_op_, *else_value_, dims);
 
     for (size_t k = 0; k < out_label_count; ++k) {
-        out[k] = apply(operation_,
-                       condition_op_.row_buf[broadcast_label_index(condition_op_, k)],
-                       then_op_.row_buf[broadcast_label_index(then_op_, k)],
-                       else_op_.row_buf[broadcast_label_index(else_op_, k)]);
+        out[k] = apply(
+            operation_,
+            condition_op_.row_buf[broadcast_label_index(condition_op_, k)],
+            then_op_.row_buf[broadcast_label_index(then_op_, k)],
+            else_op_.row_buf[broadcast_label_index(else_op_, k)]
+        );
     }
 }
 

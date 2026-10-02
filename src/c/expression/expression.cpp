@@ -60,10 +60,12 @@ quiver::Expression dispatch_unary(quiver_expression_unary_operation_t operation,
     throw std::runtime_error("Cannot apply: unknown expression unary operation");
 }
 
-quiver::Expression dispatch_ternary(quiver_expression_ternary_operation_t operation,
-                                    const quiver::Expression& condition,
-                                    const quiver::Expression& then_value,
-                                    const quiver::Expression& else_value) {
+quiver::Expression dispatch_ternary(
+    quiver_expression_ternary_operation_t operation,
+    const quiver::Expression& condition,
+    const quiver::Expression& then_value,
+    const quiver::Expression& else_value
+) {
     switch (operation) {
     case QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE:
         return quiver::ifelse(condition, then_value, else_value);
@@ -133,10 +135,12 @@ QUIVER_C_API quiver_error_t quiver_expression_close(quiver_expression_t* express
 
 // Operations
 
-QUIVER_C_API quiver_error_t quiver_expression_apply(quiver_expression_operation_t operation,
-                                                    quiver_expression_t* lhs,
-                                                    quiver_expression_t* rhs,
-                                                    quiver_expression_t** out) {
+QUIVER_C_API quiver_error_t quiver_expression_apply(
+    quiver_expression_operation_t operation,
+    quiver_expression_t* lhs,
+    quiver_expression_t* rhs,
+    quiver_expression_t** out
+) {
     QUIVER_REQUIRE(lhs, rhs, out);
 
     try {
@@ -151,10 +155,12 @@ QUIVER_C_API quiver_error_t quiver_expression_apply(quiver_expression_operation_
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_expression_apply_scalar_right(quiver_expression_operation_t operation,
-                                                                 quiver_expression_t* lhs,
-                                                                 double rhs,
-                                                                 quiver_expression_t** out) {
+QUIVER_C_API quiver_error_t quiver_expression_apply_scalar_right(
+    quiver_expression_operation_t operation,
+    quiver_expression_t* lhs,
+    double rhs,
+    quiver_expression_t** out
+) {
     QUIVER_REQUIRE(lhs, out);
 
     try {
@@ -169,10 +175,12 @@ QUIVER_C_API quiver_error_t quiver_expression_apply_scalar_right(quiver_expressi
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_expression_apply_scalar_left(quiver_expression_operation_t operation,
-                                                                double lhs,
-                                                                quiver_expression_t* rhs,
-                                                                quiver_expression_t** out) {
+QUIVER_C_API quiver_error_t quiver_expression_apply_scalar_left(
+    quiver_expression_operation_t operation,
+    double lhs,
+    quiver_expression_t* rhs,
+    quiver_expression_t** out
+) {
     QUIVER_REQUIRE(rhs, out);
 
     try {
@@ -187,9 +195,11 @@ QUIVER_C_API quiver_error_t quiver_expression_apply_scalar_left(quiver_expressio
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_expression_apply_unary(quiver_expression_unary_operation_t operation,
-                                                          quiver_expression_t* operand,
-                                                          quiver_expression_t** out) {
+QUIVER_C_API quiver_error_t quiver_expression_apply_unary(
+    quiver_expression_unary_operation_t operation,
+    quiver_expression_t* operand,
+    quiver_expression_t** out
+) {
     QUIVER_REQUIRE(operand, out);
 
     try {
@@ -204,16 +214,19 @@ QUIVER_C_API quiver_error_t quiver_expression_apply_unary(quiver_expression_unar
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_expression_apply_ternary(quiver_expression_ternary_operation_t operation,
-                                                            quiver_expression_t* condition,
-                                                            quiver_expression_t* then_value,
-                                                            quiver_expression_t* else_value,
-                                                            quiver_expression_t** out) {
+QUIVER_C_API quiver_error_t quiver_expression_apply_ternary(
+    quiver_expression_ternary_operation_t operation,
+    quiver_expression_t* condition,
+    quiver_expression_t* then_value,
+    quiver_expression_t* else_value,
+    quiver_expression_t** out
+) {
     QUIVER_REQUIRE(condition, then_value, else_value, out);
 
     try {
         *out = new quiver_expression(
-            dispatch_ternary(operation, condition->expression, then_value->expression, else_value->expression));
+            dispatch_ternary(operation, condition->expression, then_value->expression, else_value->expression)
+        );
         return QUIVER_OK;
     } catch (const std::bad_alloc&) {
         quiver_set_last_error("Memory allocation failed");
@@ -240,8 +253,8 @@ QUIVER_C_API quiver_error_t quiver_expression_save(quiver_expression_t* expressi
 
 // Metadata
 
-QUIVER_C_API quiver_error_t quiver_expression_get_metadata(quiver_expression_t* expression,
-                                                           quiver_binary_metadata_t** out) {
+QUIVER_C_API quiver_error_t
+quiver_expression_get_metadata(quiver_expression_t* expression, quiver_binary_metadata_t** out) {
     QUIVER_REQUIRE(expression, out);
 
     try {
@@ -255,11 +268,13 @@ QUIVER_C_API quiver_error_t quiver_expression_get_metadata(quiver_expression_t* 
 
 // Aggregation
 
-QUIVER_C_API quiver_error_t quiver_expression_aggregate(quiver_expression_t* expression,
-                                                        const char* dimension,
-                                                        quiver_expression_aggregate_operation_t operation,
-                                                        const double* parameter,
-                                                        quiver_expression_t** out) {
+QUIVER_C_API quiver_error_t quiver_expression_aggregate(
+    quiver_expression_t* expression,
+    const char* dimension,
+    quiver_expression_aggregate_operation_t operation,
+    const double* parameter,
+    quiver_expression_t** out
+) {
     QUIVER_REQUIRE(expression, dimension, out);
 
     try {
@@ -275,10 +290,12 @@ QUIVER_C_API quiver_error_t quiver_expression_aggregate(quiver_expression_t* exp
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_expression_aggregate_agents(quiver_expression_t* expression,
-                                                               quiver_expression_aggregate_agents_operation_t operation,
-                                                               const double* parameter,
-                                                               quiver_expression_t** out) {
+QUIVER_C_API quiver_error_t quiver_expression_aggregate_agents(
+    quiver_expression_t* expression,
+    quiver_expression_aggregate_agents_operation_t operation,
+    const double* parameter,
+    quiver_expression_t** out
+) {
     QUIVER_REQUIRE(expression, out);
 
     try {
@@ -294,10 +311,12 @@ QUIVER_C_API quiver_error_t quiver_expression_aggregate_agents(quiver_expression
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_expression_select_agents(quiver_expression_t* expression,
-                                                            const char* const* labels,
-                                                            size_t label_count,
-                                                            quiver_expression_t** out) {
+QUIVER_C_API quiver_error_t quiver_expression_select_agents(
+    quiver_expression_t* expression,
+    const char* const* labels,
+    size_t label_count,
+    quiver_expression_t** out
+) {
     QUIVER_REQUIRE(expression, labels, out);
 
     try {
@@ -317,11 +336,13 @@ QUIVER_C_API quiver_error_t quiver_expression_select_agents(quiver_expression_t*
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_expression_rename_agents(quiver_expression_t* expression,
-                                                            const char* const* old_labels,
-                                                            const char* const* new_labels,
-                                                            size_t mapping_count,
-                                                            quiver_expression_t** out) {
+QUIVER_C_API quiver_error_t quiver_expression_rename_agents(
+    quiver_expression_t* expression,
+    const char* const* old_labels,
+    const char* const* new_labels,
+    size_t mapping_count,
+    quiver_expression_t** out
+) {
     QUIVER_REQUIRE(expression, old_labels, new_labels, out);
 
     try {

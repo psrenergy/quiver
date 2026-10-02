@@ -45,13 +45,17 @@ int64_t TimeProperties::datetime_to_int(std::chrono::system_clock::time_point da
     auto ymd = std::chrono::year_month_day{date};
     switch (this->frequency) {
     case TimeFrequency::Yearly:
-        throw std::invalid_argument("YEARLY frequency extraction not implemented. This function should only be used "
-                                    "for inner time dimensions.");
+        throw std::invalid_argument(
+            "YEARLY frequency extraction not implemented. This function should only be used "
+            "for inner time dimensions."
+        );
     case TimeFrequency::Monthly:
         return static_cast<unsigned>(ymd.month());  // 1-12
     case TimeFrequency::Weekly:
-        throw std::invalid_argument("WEEKLY frequency extraction not implemented. This function should only be used "
-                                    "for inner time dimensions.");
+        throw std::invalid_argument(
+            "WEEKLY frequency extraction not implemented. This function should only be used "
+            "for inner time dimensions."
+        );
     case TimeFrequency::Daily:
         return static_cast<unsigned>(ymd.day());  // 1-31
     case TimeFrequency::Hourly:

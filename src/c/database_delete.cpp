@@ -15,9 +15,8 @@ QUIVER_C_API quiver_error_t quiver_database_delete_element(quiver_database_t* db
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_database_delete_element_by_label(quiver_database_t* db,
-                                                                    const char* collection,
-                                                                    const char* label) {
+QUIVER_C_API quiver_error_t
+quiver_database_delete_element_by_label(quiver_database_t* db, const char* collection, const char* label) {
     QUIVER_REQUIRE(db, collection, label);
 
     try {

@@ -8,11 +8,13 @@
 
 extern "C" {
 
-QUIVER_C_API quiver_error_t quiver_database_export_csv(quiver_database_t* db,
-                                                       const char* collection,
-                                                       const char* group,
-                                                       const char* path,
-                                                       const quiver_csv_options_t* options) {
+QUIVER_C_API quiver_error_t quiver_database_export_csv(
+    quiver_database_t* db,
+    const char* collection,
+    const char* group,
+    const char* path,
+    const quiver_csv_options_t* options
+) {
     QUIVER_REQUIRE(db, collection, group, path);
 
     try {

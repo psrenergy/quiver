@@ -23,54 +23,66 @@ TEST_F(SchemaValidatorFixture, ValidSchemaRelations) {
 
 // Invalid schemas
 TEST_F(SchemaValidatorFixture, InvalidNoConfiguration) {
-    EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("no_configuration.sql"), options),
-                 std::runtime_error);
+    EXPECT_THROW(
+        quiver::Database::from_schema(":memory:", INVALID_SCHEMA("no_configuration.sql"), options), std::runtime_error
+    );
 }
 
 TEST_F(SchemaValidatorFixture, InvalidLabelNotNull) {
-    EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("label_not_null.sql"), options),
-                 std::runtime_error);
+    EXPECT_THROW(
+        quiver::Database::from_schema(":memory:", INVALID_SCHEMA("label_not_null.sql"), options), std::runtime_error
+    );
 }
 
 TEST_F(SchemaValidatorFixture, InvalidLabelNotUnique) {
-    EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("label_not_unique.sql"), options),
-                 std::runtime_error);
+    EXPECT_THROW(
+        quiver::Database::from_schema(":memory:", INVALID_SCHEMA("label_not_unique.sql"), options), std::runtime_error
+    );
 }
 
 TEST_F(SchemaValidatorFixture, InvalidLabelWrongType) {
-    EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("label_wrong_type.sql"), options),
-                 std::runtime_error);
+    EXPECT_THROW(
+        quiver::Database::from_schema(":memory:", INVALID_SCHEMA("label_wrong_type.sql"), options), std::runtime_error
+    );
 }
 
 TEST_F(SchemaValidatorFixture, InvalidDuplicateAttribute) {
-    EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("duplicate_attribute_vector.sql"), options),
-                 std::runtime_error);
+    EXPECT_THROW(
+        quiver::Database::from_schema(":memory:", INVALID_SCHEMA("duplicate_attribute_vector.sql"), options),
+        std::runtime_error
+    );
 }
 
 TEST_F(SchemaValidatorFixture, InvalidDuplicateAttributeTimeSeries) {
     EXPECT_THROW(
         quiver::Database::from_schema(":memory:", INVALID_SCHEMA("duplicate_attribute_time_series.sql"), options),
-        std::runtime_error);
+        std::runtime_error
+    );
 }
 
 TEST_F(SchemaValidatorFixture, InvalidVectorNoIndex) {
-    EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("vector_no_index.sql"), options),
-                 std::runtime_error);
+    EXPECT_THROW(
+        quiver::Database::from_schema(":memory:", INVALID_SCHEMA("vector_no_index.sql"), options), std::runtime_error
+    );
 }
 
 TEST_F(SchemaValidatorFixture, InvalidSetNoUnique) {
-    EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("set_no_unique.sql"), options),
-                 std::runtime_error);
+    EXPECT_THROW(
+        quiver::Database::from_schema(":memory:", INVALID_SCHEMA("set_no_unique.sql"), options), std::runtime_error
+    );
 }
 
 TEST_F(SchemaValidatorFixture, InvalidFkNotNullSetNull) {
-    EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("fk_not_null_set_null.sql"), options),
-                 std::runtime_error);
+    EXPECT_THROW(
+        quiver::Database::from_schema(":memory:", INVALID_SCHEMA("fk_not_null_set_null.sql"), options),
+        std::runtime_error
+    );
 }
 
 TEST_F(SchemaValidatorFixture, InvalidFkActions) {
-    EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("fk_actions.sql"), options),
-                 std::runtime_error);
+    EXPECT_THROW(
+        quiver::Database::from_schema(":memory:", INVALID_SCHEMA("fk_actions.sql"), options), std::runtime_error
+    );
 }
 
 // ============================================================================

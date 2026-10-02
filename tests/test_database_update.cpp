@@ -11,7 +11,8 @@
 
 TEST(Database, UpdateVectorIntegers) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -31,7 +32,8 @@ TEST(Database, UpdateVectorIntegers) {
 
 TEST(Database, UpdateVectorFloats) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -51,7 +53,8 @@ TEST(Database, UpdateVectorFloats) {
 
 TEST(Database, UpdateVectorToEmpty) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -71,7 +74,8 @@ TEST(Database, UpdateVectorToEmpty) {
 
 TEST(Database, UpdateVectorMultipleElements) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -105,7 +109,8 @@ TEST(Database, UpdateVectorMultipleElements) {
 
 TEST(Database, UpdateSetStrings) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -126,7 +131,8 @@ TEST(Database, UpdateSetStrings) {
 
 TEST(Database, UpdateSetToEmpty) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -146,7 +152,8 @@ TEST(Database, UpdateSetToEmpty) {
 
 TEST(Database, UpdateSetMultipleElements) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -181,7 +188,8 @@ TEST(Database, UpdateSetMultipleElements) {
 
 TEST(Database, UpdateVectorStringsBasic) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("all_types.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("all_types.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -201,7 +209,8 @@ TEST(Database, UpdateVectorStringsBasic) {
 
 TEST(Database, UpdateSetIntegersBasic) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("all_types.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("all_types.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -222,7 +231,8 @@ TEST(Database, UpdateSetIntegersBasic) {
 
 TEST(Database, UpdateSetFloatsBasic) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("all_types.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("all_types.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -249,7 +259,8 @@ TEST(Database, UpdateSetFloatsBasic) {
 
 TEST(Database, UpdateElementSingleScalar) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element e;
     e.set("label", std::string("Config 1")).set("integer_attribute", int64_t{42});
@@ -272,7 +283,8 @@ TEST(Database, UpdateElementSingleScalar) {
 
 TEST(Database, UpdateElementMultipleScalars) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element e;
     e.set("label", std::string("Config 1"))
@@ -308,7 +320,8 @@ TEST(Database, UpdateElementMultipleScalars) {
 
 TEST(Database, UpdateElementOtherElementsUnchanged) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element e1;
     e1.set("label", std::string("Config 1")).set("integer_attribute", int64_t{42});
@@ -336,7 +349,8 @@ TEST(Database, UpdateElementOtherElementsUnchanged) {
 
 TEST(Database, UpdateElementWithArrays) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -363,7 +377,8 @@ TEST(Database, UpdateElementWithArrays) {
 
 TEST(Database, UpdateElementWithSetOnly) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -391,7 +406,8 @@ TEST(Database, UpdateElementWithSetOnly) {
 
 TEST(Database, UpdateElementWithVectorAndSet) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -421,7 +437,8 @@ TEST(Database, UpdateElementWithVectorAndSet) {
 
 TEST(Database, UpdateElementWithTimeSeries) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -458,7 +475,8 @@ TEST(Database, UpdateElementWithTimeSeries) {
 
 TEST(Database, UpdateElementInvalidArrayAttribute) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -481,7 +499,8 @@ TEST(Database, UpdateElementInvalidArrayAttribute) {
 
 TEST(Database, UpdateVectorSingleElement) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -502,7 +521,8 @@ TEST(Database, UpdateVectorSingleElement) {
 
 TEST(Database, UpdateSetSingleElement) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -523,7 +543,8 @@ TEST(Database, UpdateSetSingleElement) {
 
 TEST(Database, UpdateVectorInvalidCollection) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -536,7 +557,8 @@ TEST(Database, UpdateVectorInvalidCollection) {
 
 TEST(Database, UpdateSetInvalidCollection) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -549,7 +571,8 @@ TEST(Database, UpdateSetInvalidCollection) {
 
 TEST(Database, UpdateVectorFromEmptyToNonEmpty) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -575,7 +598,8 @@ TEST(Database, UpdateVectorFromEmptyToNonEmpty) {
 
 TEST(Database, UpdateSetFromEmptyToNonEmpty) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -606,7 +630,8 @@ TEST(Database, UpdateSetFromEmptyToNonEmpty) {
 
 TEST(Database, UpdateDateTimeScalar) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element e;
     e.set("label", std::string("Config 1"));
@@ -627,7 +652,8 @@ TEST(Database, UpdateDateTimeScalar) {
 
 TEST(Database, UpdateVectorIntegersInvalidColumnThrows) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -643,12 +669,14 @@ TEST(Database, UpdateVectorIntegersInvalidColumnThrows) {
             update.set("nonexistent_column", std::vector<int64_t>{1, 2, 3});
             db.update_element("Collection", id, update);
         },
-        std::runtime_error);
+        std::runtime_error
+    );
 }
 
 TEST(Database, UpdateScalarStringTrimsWhitespace) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element e;
     e.set("label", std::string("Config 1")).set("string_attribute", std::string("hello"));
@@ -665,7 +693,8 @@ TEST(Database, UpdateScalarStringTrimsWhitespace) {
 
 TEST(Database, UpdateSetStringsTrimsWhitespace) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -690,7 +719,8 @@ TEST(Database, UpdateSetStringsTrimsWhitespace) {
 
 TEST(Database, UpdateElementScalarFkLabel) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     // Create two parents
     quiver::Element p1, p2;
@@ -718,7 +748,8 @@ TEST(Database, UpdateElementScalarFkLabel) {
 
 TEST(Database, UpdateElementScalarFkInteger) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     // Create two parents
     quiver::Element p1, p2;
@@ -746,7 +777,8 @@ TEST(Database, UpdateElementScalarFkInteger) {
 
 TEST(Database, UpdateElementVectorFkLabels) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     // Create two parents
     quiver::Element p1, p2;
@@ -775,7 +807,8 @@ TEST(Database, UpdateElementVectorFkLabels) {
 
 TEST(Database, UpdateElementSetFkLabels) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     // Create two parents
     quiver::Element p1, p2;
@@ -804,7 +837,8 @@ TEST(Database, UpdateElementSetFkLabels) {
 
 TEST(Database, UpdateElementTimeSeriesFkLabels) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     // Create two parents
     quiver::Element p1, p2;
@@ -835,7 +869,8 @@ TEST(Database, UpdateElementTimeSeriesFkLabels) {
 
 TEST(Database, UpdateElementAllFkTypesInOneCall) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     // Create two parents
     quiver::Element p1, p2;
@@ -887,7 +922,8 @@ TEST(Database, UpdateElementAllFkTypesInOneCall) {
 
 TEST(Database, UpdateElementNoFkColumnsUnchanged) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     // Create element in non-FK schema
     quiver::Element e;
@@ -924,7 +960,8 @@ TEST(Database, UpdateElementNoFkColumnsUnchanged) {
 
 TEST(Database, UpdateElementTypeMismatchIntegerVectorWithStrings) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -945,7 +982,8 @@ TEST(Database, UpdateElementTypeMismatchIntegerVectorWithStrings) {
 
 TEST(Database, UpdateElementTypeMismatchTextSetWithIntegers) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -974,7 +1012,8 @@ TEST(Database, UpdateElementTypeMismatchTextSetWithIntegers) {
 // grammar is covered once, in test_database_create.cpp.
 TEST(Database, UpdateElementInvalidDateTimeScalar) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element element;
     element.set("label", std::string("Config 1")).set("date_attribute", std::string("2024-01-15T10:30:00"));
@@ -987,9 +1026,10 @@ TEST(Database, UpdateElementInvalidDateTimeScalar) {
         FAIL() << "Expected std::runtime_error for an invalid DATE_TIME value";
     } catch (const std::runtime_error& e) {
         std::string msg = e.what();
-        EXPECT_TRUE(msg.find("Cannot update_element: invalid DATE_TIME value for column 'date_attribute'") !=
-                    std::string::npos)
-            << "Expected an invalid DATE_TIME error, got: " << msg;
+        EXPECT_TRUE(
+            msg.find("Cannot update_element: invalid DATE_TIME value for column 'date_attribute'") != std::string::npos
+        ) << "Expected an invalid DATE_TIME error, got: "
+          << msg;
     }
 
     // The rejected write left the stored value alone.
@@ -1000,7 +1040,8 @@ TEST(Database, UpdateElementInvalidDateTimeScalar) {
 
 TEST(Database, UpdateElementInvalidDateTimeArray) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element element;
     element.set("label", std::string("Item 1"));
@@ -1016,9 +1057,11 @@ TEST(Database, UpdateElementInvalidDateTimeArray) {
         FAIL() << "Expected std::runtime_error for an invalid DATE_TIME value";
     } catch (const std::runtime_error& e) {
         std::string msg = e.what();
-        EXPECT_TRUE(msg.find("Cannot update_element: invalid DATE_TIME value for array 'date_time' index 1") !=
-                    std::string::npos)
-            << "Expected an invalid DATE_TIME error naming the index, got: " << msg;
+        EXPECT_TRUE(
+            msg.find("Cannot update_element: invalid DATE_TIME value for array 'date_time' index 1") !=
+            std::string::npos
+        ) << "Expected an invalid DATE_TIME error naming the index, got: "
+          << msg;
     }
 }
 
@@ -1028,7 +1071,8 @@ TEST(Database, UpdateElementInvalidDateTimeArray) {
 
 TEST(Database, UpdateElementEmptyArrayClearsRows) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -1054,7 +1098,8 @@ TEST(Database, UpdateElementEmptyArrayClearsRows) {
 
 TEST(Database, UpdateElementFkResolutionFailurePreservesExisting) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     // Create parent and child with parent_id pointing to Parent 1
     quiver::Element parent;
@@ -1079,7 +1124,8 @@ TEST(Database, UpdateElementFkResolutionFailurePreservesExisting) {
 
 TEST(Database, UpdateElementByIdNonExistent) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     db.create_element("Configuration", quiver::Element().set("label", std::string("Config 1")));
 
@@ -1091,13 +1137,15 @@ TEST(Database, UpdateElementByIdNonExistent) {
 
 TEST(Database, UpdateScalarTypeCoercionPolicy) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     int64_t id = db.create_element("Configuration", quiver::Element().set("label", std::string("Config 1")));
 
     // A float (even a whole-valued one) is rejected for an INTEGER column.
-    EXPECT_THROW(db.update_element("Configuration", id, quiver::Element().set("integer_attribute", 42.0)),
-                 std::runtime_error);
+    EXPECT_THROW(
+        db.update_element("Configuration", id, quiver::Element().set("integer_attribute", 42.0)), std::runtime_error
+    );
 
     // An integer is accepted for a REAL column (coerced to real on insert).
     db.update_element("Configuration", id, quiver::Element().set("float_attribute", int64_t{7}));
@@ -1122,9 +1170,11 @@ struct SharedFkFixture {
     int64_t child;
 
     SharedFkFixture()
-        : db(quiver::Database::from_schema(":memory:",
-                                           VALID_SCHEMA("relations.sql"),
-                                           {.read_only = false, .console_level = quiver::LogLevel::Off})) {
+        : db(quiver::Database::from_schema(
+              ":memory:",
+              VALID_SCHEMA("relations.sql"),
+              {.read_only = false, .console_level = quiver::LogLevel::Off}
+          )) {
         db.create_element("Configuration", quiver::Element().set("label", std::string("Config")));
         parent_a = db.create_element("Parent", quiver::Element().set("label", std::string("Parent A")));
         parent_b = db.create_element("Parent", quiver::Element().set("label", std::string("Parent B")));
@@ -1138,8 +1188,9 @@ TEST(Database, UpdateVectorGroupReplacesRows) {
     SharedFkFixture f;
 
     f.db.update_vector_group("Child", "refs", f.child, {{{"parent_ref", f.parent_a}}, {{"parent_ref", f.parent_b}}});
-    EXPECT_EQ(f.db.read_vector_integers_by_id("Child", "parent_ref", f.child),
-              (std::vector<int64_t>{f.parent_a, f.parent_b}));
+    EXPECT_EQ(
+        f.db.read_vector_integers_by_id("Child", "parent_ref", f.child), (std::vector<int64_t>{f.parent_a, f.parent_b})
+    );
 
     // A second call replaces rather than appends.
     f.db.update_vector_group("Child", "refs", f.child, {{{"parent_ref", f.parent_b}}});
@@ -1158,8 +1209,9 @@ TEST(Database, UpdateSetGroupReplacesRows) {
     SharedFkFixture f;
 
     f.db.update_set_group("Child", "parents", f.child, {{{"parent_ref", f.parent_a}}, {{"parent_ref", f.parent_b}}});
-    EXPECT_EQ(f.db.read_set_integers_by_id("Child", "parent_ref", f.child),
-              (std::vector<int64_t>{f.parent_a, f.parent_b}));
+    EXPECT_EQ(
+        f.db.read_set_integers_by_id("Child", "parent_ref", f.child), (std::vector<int64_t>{f.parent_a, f.parent_b})
+    );
 
     f.db.update_set_group("Child", "parents", f.child, {});
     EXPECT_TRUE(f.db.read_set_integers_by_id("Child", "parent_ref", f.child).empty());
@@ -1191,8 +1243,10 @@ TEST(Database, UpdateGroupFkResolutionFailurePreservesExistingRows) {
     SharedFkFixture f;
 
     f.db.update_vector_group("Child", "refs", f.child, {{{"parent_ref", f.parent_a}}});
-    EXPECT_THROW(f.db.update_vector_group("Child", "refs", f.child, {{{"parent_ref", std::string("No Such Parent")}}}),
-                 std::runtime_error);
+    EXPECT_THROW(
+        f.db.update_vector_group("Child", "refs", f.child, {{{"parent_ref", std::string("No Such Parent")}}}),
+        std::runtime_error
+    );
 
     // The failed lookup happens before the DELETE, so the group is untouched.
     EXPECT_EQ(f.db.read_vector_integers_by_id("Child", "parent_ref", f.child), (std::vector<int64_t>{f.parent_a}));
@@ -1201,25 +1255,29 @@ TEST(Database, UpdateGroupFkResolutionFailurePreservesExistingRows) {
 TEST(Database, UpdateGroupUnknownGroupThrows) {
     SharedFkFixture f;
 
-    EXPECT_THROW(f.db.update_vector_group("Child", "nope", f.child, {{{"parent_ref", f.parent_a}}}),
-                 std::runtime_error);
+    EXPECT_THROW(
+        f.db.update_vector_group("Child", "nope", f.child, {{{"parent_ref", f.parent_a}}}), std::runtime_error
+    );
     EXPECT_THROW(f.db.update_set_group("Child", "nope", f.child, {{{"parent_ref", f.parent_a}}}), std::runtime_error);
 }
 
 TEST(Database, UpdateGroupUnknownColumnThrows) {
     SharedFkFixture f;
 
-    EXPECT_THROW(f.db.update_vector_group("Child", "refs", f.child, {{{"not_a_column", int64_t{1}}}}),
-                 std::runtime_error);
+    EXPECT_THROW(
+        f.db.update_vector_group("Child", "refs", f.child, {{{"not_a_column", int64_t{1}}}}), std::runtime_error
+    );
 }
 
 TEST(Database, UpdateGroupPreservesNullCells) {
     SharedFkFixture f;
 
-    f.db.update_vector_group("Child",
-                             "refs",
-                             f.child,
-                             {{{"parent_ref", f.parent_a}}, {{"parent_ref", nullptr}}, {{"parent_ref", f.parent_b}}});
+    f.db.update_vector_group(
+        "Child",
+        "refs",
+        f.child,
+        {{{"parent_ref", f.parent_a}}, {{"parent_ref", nullptr}}, {{"parent_ref", f.parent_b}}}
+    );
 
     // read_vector_group_by_id keeps NULL cells positionally (the dense per-column reader drops them).
     auto rows = f.db.read_vector_group_by_id("Child", "refs", f.child);
@@ -1257,9 +1315,11 @@ struct MultiColumnGroupFixture {
     int64_t item;
 
     MultiColumnGroupFixture()
-        : db(quiver::Database::from_schema(":memory:",
-                                           VALID_SCHEMA("multi_column_groups.sql"),
-                                           {.read_only = false, .console_level = quiver::LogLevel::Off})) {
+        : db(quiver::Database::from_schema(
+              ":memory:",
+              VALID_SCHEMA("multi_column_groups.sql"),
+              {.read_only = false, .console_level = quiver::LogLevel::Off}
+          )) {
         db.create_element("Configuration", quiver::Element().set("label", std::string("Config")));
         item = db.create_element("Items", quiver::Element().set("label", std::string("Item 1")));
     }
@@ -1289,7 +1349,8 @@ TEST(Database, UpdateGroupMultiColumnRoundTrips) {
     MultiColumnGroupFixture f;
 
     f.db.update_vector_group(
-        "Items", "readings", f.item, {{{"amount", 1.5}, {"score", 10.0}}, {{"amount", 2.5}, {"score", 20.0}}});
+        "Items", "readings", f.item, {{{"amount", 1.5}, {"score", 10.0}}, {{"amount", 2.5}, {"score", 20.0}}}
+    );
 
     auto rows = f.db.read_vector_group_by_id("Items", "readings", f.item);
     ASSERT_EQ(rows.size(), 2u);
@@ -1314,8 +1375,10 @@ TEST(Database, UpdateGroupKeepsColumnPresentOnlyInALaterRow) {
 TEST(Database, UpdateGroupUnknownColumnInALaterRowThrows) {
     MultiColumnGroupFixture f;
 
-    EXPECT_THROW(f.db.update_vector_group("Items", "readings", f.item, {{{"amount", 1.5}}, {{"not_a_column", 2.5}}}),
-                 std::runtime_error);
+    EXPECT_THROW(
+        f.db.update_vector_group("Items", "readings", f.item, {{{"amount", 1.5}}, {{"not_a_column", 2.5}}}),
+        std::runtime_error
+    );
     // Nothing was written: validation runs before the DELETE and before any insert.
     EXPECT_TRUE(f.db.read_vector_group_by_id("Items", "readings", f.item).empty());
 }
@@ -1328,11 +1391,16 @@ TEST(Database, UpdateGroupRejectsStructuralColumns) {
 
     EXPECT_THROW(
         f.db.update_vector_group("Items", "readings", f.item, {{{"amount", 1.5}, {"vector_index", int64_t{7}}}}),
-        std::runtime_error);
-    EXPECT_THROW(f.db.update_vector_group("Items", "readings", f.item, {{{"amount", 1.5}, {"id", int64_t{2}}}}),
-                 std::runtime_error);
-    EXPECT_THROW(f.db.update_set_group("Items", "codes", f.item, {{{"code", std::string("a")}, {"id", int64_t{2}}}}),
-                 std::runtime_error);
+        std::runtime_error
+    );
+    EXPECT_THROW(
+        f.db.update_vector_group("Items", "readings", f.item, {{{"amount", 1.5}, {"id", int64_t{2}}}}),
+        std::runtime_error
+    );
+    EXPECT_THROW(
+        f.db.update_set_group("Items", "codes", f.item, {{{"code", std::string("a")}, {"id", int64_t{2}}}}),
+        std::runtime_error
+    );
 }
 
 TEST(Database, UpdateGroupMissingElementThrowsNotFound) {
@@ -1390,7 +1458,8 @@ TEST(Database, UpdateGroupTypeErrorInsideDryRunKeepsExistingRows) {
 
 TEST(Database, UpdateElementByLabel) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -1438,7 +1507,8 @@ TEST(Database, UpdateElementByLabel) {
 // new one - after which only the new label resolves.
 TEST(Database, UpdateElementByLabelRenames) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -1473,7 +1543,8 @@ TEST(Database, UpdateElementByLabelRenames) {
 
 TEST(Database, UpdateElementByLabelNonExistent) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -1512,7 +1583,8 @@ TEST(Database, UpdateElementByLabelNonExistent) {
 // "no such column: label" prepare error -- and the message must name the public method called.
 TEST(Database, UpdateElementByLabelOnTableWithoutLabelColumn) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -1525,8 +1597,9 @@ TEST(Database, UpdateElementByLabelOnTableWithoutLabelColumn) {
         db.update_element_by_label("Collection_set_tags", "anything", update);
         FAIL() << "expected a throw";
     } catch (const std::runtime_error& e) {
-        EXPECT_STREQ(e.what(),
-                     "Cannot update_element_by_label: column 'label' not found in table 'Collection_set_tags'");
+        EXPECT_STREQ(
+            e.what(), "Cannot update_element_by_label: column 'label' not found in table 'Collection_set_tags'"
+        );
     }
 }
 
@@ -1534,7 +1607,8 @@ TEST(Database, UpdateElementByLabelOnTableWithoutLabelColumn) {
 // validation reports "Cannot update_element" - the operation that validated.
 TEST(Database, UpdateElementByLabelValidationNamesTheIdForm) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -1571,9 +1645,11 @@ TEST(Database, UpdateVectorGroupByLabel) {
     f.db.update_vector_group("Child", "refs", other, {{{"parent_ref", f.parent_a}}});
 
     f.db.update_vector_group_by_label(
-        "Child", "refs", "Child 1", {{{"parent_ref", f.parent_a}}, {{"parent_ref", f.parent_b}}});
-    EXPECT_EQ(f.db.read_vector_integers_by_id("Child", "parent_ref", f.child),
-              (std::vector<int64_t>{f.parent_a, f.parent_b}));
+        "Child", "refs", "Child 1", {{{"parent_ref", f.parent_a}}, {{"parent_ref", f.parent_b}}}
+    );
+    EXPECT_EQ(
+        f.db.read_vector_integers_by_id("Child", "parent_ref", f.child), (std::vector<int64_t>{f.parent_a, f.parent_b})
+    );
     EXPECT_EQ(f.db.read_vector_integers_by_id("Child", "parent_ref", other), (std::vector<int64_t>{f.parent_a}));
 
     // A second call replaces rather than appends, and an empty row list clears.
@@ -1620,8 +1696,9 @@ TEST(Database, UpdateVectorGroupByLabelOnTableWithoutLabelColumn) {
         f.db.update_vector_group_by_label("Child_vector_refs", "refs", "anything", {});
         FAIL() << "expected a throw";
     } catch (const std::runtime_error& e) {
-        EXPECT_STREQ(e.what(),
-                     "Cannot update_vector_group_by_label: column 'label' not found in table 'Child_vector_refs'");
+        EXPECT_STREQ(
+            e.what(), "Cannot update_vector_group_by_label: column 'label' not found in table 'Child_vector_refs'"
+        );
     }
 }
 
@@ -1648,9 +1725,11 @@ TEST(Database, UpdateSetGroupByLabel) {
     f.db.update_set_group("Child", "parents", other, {{{"parent_ref", f.parent_a}}});
 
     f.db.update_set_group_by_label(
-        "Child", "parents", "Child 1", {{{"parent_ref", f.parent_a}}, {{"parent_ref", f.parent_b}}});
-    EXPECT_EQ(f.db.read_set_integers_by_id("Child", "parent_ref", f.child),
-              (std::vector<int64_t>{f.parent_a, f.parent_b}));
+        "Child", "parents", "Child 1", {{{"parent_ref", f.parent_a}}, {{"parent_ref", f.parent_b}}}
+    );
+    EXPECT_EQ(
+        f.db.read_set_integers_by_id("Child", "parent_ref", f.child), (std::vector<int64_t>{f.parent_a, f.parent_b})
+    );
     EXPECT_EQ(f.db.read_set_integers_by_id("Child", "parent_ref", other), (std::vector<int64_t>{f.parent_a}));
 
     // A second call replaces rather than appends, and an empty row list clears.
@@ -1697,8 +1776,9 @@ TEST(Database, UpdateSetGroupByLabelOnTableWithoutLabelColumn) {
         f.db.update_set_group_by_label("Child_set_parents", "parents", "anything", {});
         FAIL() << "expected a throw";
     } catch (const std::runtime_error& e) {
-        EXPECT_STREQ(e.what(),
-                     "Cannot update_set_group_by_label: column 'label' not found in table 'Child_set_parents'");
+        EXPECT_STREQ(
+            e.what(), "Cannot update_set_group_by_label: column 'label' not found in table 'Child_set_parents'"
+        );
     }
 }
 
@@ -1752,8 +1832,9 @@ TEST(Database, UpdateRelationRejectsUnknownDerivedColumn) {
         f.db.update_relation("Child", "Parent", "owner", f.child, std::string("Parent A"));
         FAIL() << "expected a throw";
     } catch (const std::runtime_error& e) {
-        EXPECT_STREQ(e.what(),
-                     "Cannot update_relation: relation column 'parent_owner' not found in collection 'Child'");
+        EXPECT_STREQ(
+            e.what(), "Cannot update_relation: relation column 'parent_owner' not found in collection 'Child'"
+        );
     }
 }
 
@@ -1762,16 +1843,19 @@ TEST(Database, UpdateRelationRejectsUnknownDerivedColumn) {
 // the existing column "some_integer", which is not a foreign key.
 TEST(Database, UpdateRelationRejectsNonForeignKeyColumn) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("all_types.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("all_types.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
     auto id = db.create_element("AllTypes", quiver::Element().set("label", std::string("Item 1")));
 
     try {
         db.update_relation("AllTypes", "Some", "integer", id, std::string("whatever"));
         FAIL() << "expected a throw";
     } catch (const std::runtime_error& e) {
-        EXPECT_STREQ(e.what(),
-                     "Cannot update_relation: relation column 'some_integer' in collection 'AllTypes' is not a "
-                     "foreign key");
+        EXPECT_STREQ(
+            e.what(),
+            "Cannot update_relation: relation column 'some_integer' in collection 'AllTypes' is not a "
+            "foreign key"
+        );
     }
 }
 
@@ -1783,17 +1867,20 @@ TEST(Database, UpdateRelationRejectsForeignKeyTargetingWrongCollection) {
         f.db.update_relation("Child", "Sibling", "id", f.child, std::string("Child 2"));
         FAIL() << "expected a throw";
     } catch (const std::runtime_error& e) {
-        EXPECT_STREQ(e.what(),
-                     "Cannot update_relation: relation column 'sibling_id' in collection 'Child' is a foreign key to "
-                     "collection 'Child', not to 'Sibling'");
+        EXPECT_STREQ(
+            e.what(),
+            "Cannot update_relation: relation column 'sibling_id' in collection 'Child' is a foreign key to "
+            "collection 'Child', not to 'Sibling'"
+        );
     }
 }
 
 TEST(Database, UpdateRelationRejectsUnknownCollection) {
     SharedFkFixture f;
 
-    EXPECT_THROW(f.db.update_relation("NoSuchCollection", "Parent", "id", f.child, std::string("Parent A")),
-                 std::runtime_error);
+    EXPECT_THROW(
+        f.db.update_relation("NoSuchCollection", "Parent", "id", f.child, std::string("Parent A")), std::runtime_error
+    );
 }
 
 // Everything past the derivation is update_element's: the target label is resolved by
@@ -1801,8 +1888,9 @@ TEST(Database, UpdateRelationRejectsUnknownCollection) {
 TEST(Database, UpdateRelationDelegatesValidationToUpdateElement) {
     SharedFkFixture f;
 
-    EXPECT_THROW(f.db.update_relation("Child", "Parent", "id", f.child, std::string("No Such Parent")),
-                 std::runtime_error);
+    EXPECT_THROW(
+        f.db.update_relation("Child", "Parent", "id", f.child, std::string("No Such Parent")), std::runtime_error
+    );
     EXPECT_THROW(f.db.update_relation("Child", "Parent", "id", 999, std::string("Parent A")), std::runtime_error);
 }
 

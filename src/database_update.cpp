@@ -57,17 +57,21 @@ void Database::update_element(const std::string& collection, int64_t id, const E
     impl_->logger->info("Updated element {} in {}", id, collection);
 }
 
-void Database::update_element_by_label(const std::string& collection,
-                                       const std::string& label,
-                                       const Element& element) {
+void Database::update_element_by_label(
+    const std::string& collection,
+    const std::string& label,
+    const Element& element
+) {
     update_element(collection, impl_->resolve_label(collection, label, "update_element_by_label", *this), element);
 }
 
-void Database::update_relation(const std::string& collection_from,
-                               const std::string& collection_to,
-                               const std::string& relation_type,
-                               int64_t id,
-                               const std::optional<std::string>& target_label) {
+void Database::update_relation(
+    const std::string& collection_from,
+    const std::string& collection_to,
+    const std::string& relation_type,
+    int64_t id,
+    const std::optional<std::string>& target_label
+) {
     impl_->logger->debug("Updating relation {}.{} ({}) for id {}", collection_from, collection_to, relation_type, id);
     impl_->require_collection(collection_from, "update_relation");
 
@@ -79,19 +83,23 @@ void Database::update_relation(const std::string& collection_from,
 
     const auto* table = impl_->schema->get_table(collection_from);
     if (!table->has_column(column)) {
-        throw std::runtime_error("Cannot update_relation: relation column '" + column + "' not found in collection '" +
-                                 collection_from + "'");
+        throw std::runtime_error(
+            "Cannot update_relation: relation column '" + column + "' not found in collection '" + collection_from + "'"
+        );
     }
 
     const auto* relation = table->get_foreign_key(column);
     if (relation == nullptr) {
-        throw std::runtime_error("Cannot update_relation: relation column '" + column + "' in collection '" +
-                                 collection_from + "' is not a foreign key");
+        throw std::runtime_error(
+            "Cannot update_relation: relation column '" + column + "' in collection '" + collection_from +
+            "' is not a foreign key"
+        );
     }
     if (relation->to_table != collection_to) {
-        throw std::runtime_error("Cannot update_relation: relation column '" + column + "' in collection '" +
-                                 collection_from + "' is a foreign key to collection '" + relation->to_table +
-                                 "', not to '" + collection_to + "'");
+        throw std::runtime_error(
+            "Cannot update_relation: relation column '" + column + "' in collection '" + collection_from +
+            "' is a foreign key to collection '" + relation->to_table + "', not to '" + collection_to + "'"
+        );
     }
 
     // update_element resolves a string bound to an INTEGER foreign key as the target's label.
@@ -105,16 +113,20 @@ void Database::update_relation(const std::string& collection_from,
     impl_->logger->info("Updated relation {}.{} for id {}", collection_from, column, id);
 }
 
-void Database::update_relation_by_label(const std::string& collection_from,
-                                        const std::string& collection_to,
-                                        const std::string& relation_type,
-                                        const std::string& label,
-                                        const std::optional<std::string>& target_label) {
-    update_relation(collection_from,
-                    collection_to,
-                    relation_type,
-                    impl_->resolve_label(collection_from, label, "update_relation_by_label", *this),
-                    target_label);
+void Database::update_relation_by_label(
+    const std::string& collection_from,
+    const std::string& collection_to,
+    const std::string& relation_type,
+    const std::string& label,
+    const std::optional<std::string>& target_label
+) {
+    update_relation(
+        collection_from,
+        collection_to,
+        relation_type,
+        impl_->resolve_label(collection_from, label, "update_relation_by_label", *this),
+        target_label
+    );
 }
 
 namespace {
@@ -123,8 +135,8 @@ namespace {
 // expects. `names` is the union of every row's keys (already validated), so a column that appears
 // only in a later row is still written; a cell missing from a row becomes SQL NULL, which keeps
 // every column the same length.
-std::map<std::string, std::vector<Value>> transpose_group_rows(const std::vector<std::map<std::string, Value>>& rows,
-                                                               const std::set<std::string>& names) {
+std::map<std::string, std::vector<Value>>
+transpose_group_rows(const std::vector<std::map<std::string, Value>>& rows, const std::set<std::string>& names) {
     std::map<std::string, std::vector<Value>> columns;
 
     for (const auto& col_name : names) {
@@ -140,13 +152,15 @@ std::map<std::string, std::vector<Value>> transpose_group_rows(const std::vector
 
 }  // namespace
 
-void Database::Impl::update_group_rows(const char* caller,
-                                       const std::string& collection,
-                                       const std::string& group,
-                                       GroupTableType type,
-                                       int64_t id,
-                                       const std::vector<std::map<std::string, Value>>& rows,
-                                       Database& db) {
+void Database::Impl::update_group_rows(
+    const char* caller,
+    const std::string& collection,
+    const std::string& group,
+    GroupTableType type,
+    int64_t id,
+    const std::vector<std::map<std::string, Value>>& rows,
+    Database& db
+) {
     require_collection(collection, caller);
 
     const auto is_vector = type == GroupTableType::Vector;
@@ -155,8 +169,10 @@ void Database::Impl::update_group_rows(const char* caller,
     const auto* table_def = schema->get_table(table_name);
     if (!table_def) {
         // Same wording as get_vector_metadata / get_set_metadata for the same condition (Pattern 2).
-        throw std::runtime_error(std::string(is_vector ? "Vector" : "Set") + " group not found: '" + group +
-                                 "' in collection '" + collection + "'");
+        throw std::runtime_error(
+            std::string(is_vector ? "Vector" : "Set") + " group not found: '" + group + "' in collection '" +
+            collection + "'"
+        );
     }
     require_element(collection, id, db);
 
@@ -176,12 +192,16 @@ void Database::Impl::update_group_rows(const char* caller,
             // Both are derived (the element id and the row's position), and emitting one here
             // would duplicate it in the INSERT column list - SQLite keeps the first occurrence,
             // so the caller's value would vanish silently.
-            throw std::runtime_error(std::string("Cannot ") + caller + ": column '" + col_name +
-                                     "' is managed by the group table, not a value column");
+            throw std::runtime_error(
+                std::string("Cannot ") + caller + ": column '" + col_name +
+                "' is managed by the group table, not a value column"
+            );
         }
         if (!table_def->has_column(col_name)) {
-            throw std::runtime_error(std::string("Cannot ") + caller + ": column '" + col_name +
-                                     "' not found in group '" + group + "' for collection '" + collection + "'");
+            throw std::runtime_error(
+                std::string("Cannot ") + caller + ": column '" + col_name + "' not found in group '" + group +
+                "' for collection '" + collection + "'"
+            );
         }
     }
 
@@ -203,38 +223,48 @@ void Database::Impl::update_group_rows(const char* caller,
     txn.commit();
 }
 
-void Database::update_vector_group(const std::string& collection,
-                                   const std::string& group,
-                                   int64_t id,
-                                   const std::vector<std::map<std::string, Value>>& rows) {
+void Database::update_vector_group(
+    const std::string& collection,
+    const std::string& group,
+    int64_t id,
+    const std::vector<std::map<std::string, Value>>& rows
+) {
     impl_->logger->debug("Updating vector {}.{} for id {} with {} rows", collection, group, id, rows.size());
     impl_->update_group_rows("update_vector_group", collection, group, GroupTableType::Vector, id, rows, *this);
     impl_->logger->info("Updated vector {}.{} for id {} with {} rows", collection, group, id, rows.size());
 }
 
-void Database::update_vector_group_by_label(const std::string& collection,
-                                            const std::string& group,
-                                            const std::string& label,
-                                            const std::vector<std::map<std::string, Value>>& rows) {
+void Database::update_vector_group_by_label(
+    const std::string& collection,
+    const std::string& group,
+    const std::string& label,
+    const std::vector<std::map<std::string, Value>>& rows
+) {
     update_vector_group(
-        collection, group, impl_->resolve_label(collection, label, "update_vector_group_by_label", *this), rows);
+        collection, group, impl_->resolve_label(collection, label, "update_vector_group_by_label", *this), rows
+    );
 }
 
-void Database::update_set_group(const std::string& collection,
-                                const std::string& group,
-                                int64_t id,
-                                const std::vector<std::map<std::string, Value>>& rows) {
+void Database::update_set_group(
+    const std::string& collection,
+    const std::string& group,
+    int64_t id,
+    const std::vector<std::map<std::string, Value>>& rows
+) {
     impl_->logger->debug("Updating set {}.{} for id {} with {} rows", collection, group, id, rows.size());
     impl_->update_group_rows("update_set_group", collection, group, GroupTableType::Set, id, rows, *this);
     impl_->logger->info("Updated set {}.{} for id {} with {} rows", collection, group, id, rows.size());
 }
 
-void Database::update_set_group_by_label(const std::string& collection,
-                                         const std::string& group,
-                                         const std::string& label,
-                                         const std::vector<std::map<std::string, Value>>& rows) {
+void Database::update_set_group_by_label(
+    const std::string& collection,
+    const std::string& group,
+    const std::string& label,
+    const std::vector<std::map<std::string, Value>>& rows
+) {
     update_set_group(
-        collection, group, impl_->resolve_label(collection, label, "update_set_group_by_label", *this), rows);
+        collection, group, impl_->resolve_label(collection, label, "update_set_group_by_label", *this), rows
+    );
 }
 
 }  // namespace quiver

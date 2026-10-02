@@ -7,7 +7,8 @@ class LuaRunner_Migrations : public LuaSandboxTest {};
 
 TEST_F(LuaRunner_Migrations, AppliesAndRevertsSharedFixture) {
     std::filesystem::copy(
-        SCHEMA_PATH("schemas/migrations"), sandbox / "migrations", std::filesystem::copy_options::recursive);
+        SCHEMA_PATH("schemas/migrations"), sandbox / "migrations", std::filesystem::copy_options::recursive
+    );
 
     auto db = quiver::Database::from_schema(db_path(), VALID_SCHEMA("collections.sql"));
     quiver::LuaRunner lua(db);
@@ -20,7 +21,8 @@ TEST_F(LuaRunner_Migrations, PathNotFoundThrows) {
     quiver::LuaRunner lua(db);
 
     expect_lua_error(
-        lua, R"(db:validate_migrations("missing"))", "Cannot validate_migrations: migrations path not found:");
+        lua, R"(db:validate_migrations("missing"))", "Cannot validate_migrations: migrations path not found:"
+    );
 }
 
 TEST_F(LuaRunner_Migrations, EscapeThrows) {
@@ -34,7 +36,9 @@ TEST_F(LuaRunner_Migrations, InMemoryThrows) {
     auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"));
     quiver::LuaRunner lua(db);
 
-    expect_lua_error(lua,
-                     R"(db:validate_migrations("migrations"))",
-                     "Cannot validate_migrations: database is in-memory, file operations are unavailable");
+    expect_lua_error(
+        lua,
+        R"(db:validate_migrations("migrations"))",
+        "Cannot validate_migrations: database is in-memory, file operations are unavailable"
+    );
 }

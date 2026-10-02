@@ -7,8 +7,9 @@
 TEST(DatabaseCApi, TransactionBeginMultipleWritesCommit) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     // Create Configuration first
@@ -55,8 +56,9 @@ TEST(DatabaseCApi, TransactionBeginMultipleWritesCommit) {
 TEST(DatabaseCApi, TransactionRollbackDiscardsWrites) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     // Create Configuration first

@@ -133,12 +133,14 @@ TEST_F(LuaBinaryTest, ReadRejectsNonIntegerDimension) {
     // An unchecked dimension getter silently rounded in a release build and panicked on a raw
     // sol2 error in a debug one, so a bad dimension returned the wrong slice instead of failing.
     // (A boolean is not tested here: it coerces to 1 like every other numeric slot.)
-    expect_lua_error(lua,
-                     R"(
+    expect_lua_error(
+        lua,
+        R"(
         local r = db:open_file('bin_a', 'r')
         r:read({row=1.5})
     )",
-                     "dimension 'row' has unsupported Lua type");
+        "dimension 'row' has unsupported Lua type"
+    );
 }
 
 TEST_F(LuaBinaryTest, TimeDimensionWriteRead) {
@@ -231,9 +233,11 @@ TEST_F(LuaBinaryTest, AbsoluteInsideAccepted) {
 TEST_F(LuaBinaryTest, DotDotEscapeThrows) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::LuaRunner lua(db);
-    expect_lua_error(lua,
-                     md1() + "db:open_file('../escape', 'w', md)\n",
-                     "Cannot open_file: path '../escape' escapes the database directory");
+    expect_lua_error(
+        lua,
+        md1() + "db:open_file('../escape', 'w', md)\n",
+        "Cannot open_file: path '../escape' escapes the database directory"
+    );
 }
 
 TEST_F(LuaBinaryTest, AbsoluteOutsideThrows) {

@@ -188,12 +188,14 @@ void write_ui_clauses(std::ostream& out, const UiAttribute* meta, const std::str
 }
 
 // Write one collection's structural section (scalars + vector/set/time-series groups).
-void write_collection_section(std::ostream& out,
-                              const Schema& schema,
-                              const std::string& collection,
-                              int64_t count,
-                              const UiMetadata& ui,
-                              bool with_tooltip) {
+void write_collection_section(
+    std::ostream& out,
+    const Schema& schema,
+    const std::string& collection,
+    int64_t count,
+    const UiMetadata& ui,
+    bool with_tooltip
+) {
     out << "Collection: " << collection << " (" << count << " element" << plural(count) << ")\n";
 
     const auto* table_def = schema.get_table(collection);
@@ -243,7 +245,8 @@ std::string Database::describe() const {
     for (const auto& collection : impl_->schema->collection_names()) {
         out << "\n";
         write_collection_section(
-            out, *impl_->schema, collection, number_of_elements(collection), impl_->ui_metadata, false);
+            out, *impl_->schema, collection, number_of_elements(collection), impl_->ui_metadata, false
+        );
     }
 
     return out.str();
@@ -270,9 +273,10 @@ std::string Database::summarize_collection(const std::string& collection) const 
     for (const auto& scalar : list_scalar_attributes(collection)) {
         const std::string quoted_col = "\"" + scalar.name + "\"";
 
-        auto counts = query_int_rows(impl_->db,
-                                     "SELECT COUNT(*) - COUNT(" + quoted_col + "), COUNT(" + quoted_col + ") FROM " +
-                                         quoted_collection);
+        auto counts = query_int_rows(
+            impl_->db,
+            "SELECT COUNT(*) - COUNT(" + quoted_col + "), COUNT(" + quoted_col + ") FROM " + quoted_collection
+        );
         const int64_t null_count = counts[0][0];
         const int64_t non_null_count = counts[0][1];
         out << "    - " << scalar.name << ": " << non_null_count << " non-null, " << null_count << " null";
@@ -281,15 +285,18 @@ std::string Database::summarize_collection(const std::string& collection) const 
         // cardinality is bounded. The LIMIT-based pre-check keeps high-cardinality columns
         // (ids, large FKs) from materializing a huge list.
         if (scalar.data_type == DataType::Integer && !scalar.primary_key) {
-            auto distinct = query_int_rows(impl_->db,
-                                           "SELECT COUNT(*) FROM (SELECT DISTINCT " + quoted_col + " FROM " +
-                                               quoted_collection + " WHERE " + quoted_col + " IS NOT NULL LIMIT ?)",
-                                           {kMaxDistributionCardinality + 1});
+            auto distinct = query_int_rows(
+                impl_->db,
+                "SELECT COUNT(*) FROM (SELECT DISTINCT " + quoted_col + " FROM " + quoted_collection + " WHERE " +
+                    quoted_col + " IS NOT NULL LIMIT ?)",
+                {kMaxDistributionCardinality + 1}
+            );
             if (distinct[0][0] > 0 && distinct[0][0] <= kMaxDistributionCardinality) {
-                auto rows =
-                    query_int_rows(impl_->db,
-                                   "SELECT " + quoted_col + ", COUNT(*) FROM " + quoted_collection + " WHERE " +
-                                       quoted_col + " IS NOT NULL GROUP BY " + quoted_col + " ORDER BY " + quoted_col);
+                auto rows = query_int_rows(
+                    impl_->db,
+                    "SELECT " + quoted_col + ", COUNT(*) FROM " + quoted_collection + " WHERE " + quoted_col +
+                        " IS NOT NULL GROUP BY " + quoted_col + " ORDER BY " + quoted_col
+                );
                 // D2-12: the lookup sits here, not at the top of the per-scalar loop, so a
                 // collection of TEXT/REAL/PK scalars pays zero two-level map lookups.
                 const auto* meta = impl_->ui_metadata.find(collection, scalar.name);

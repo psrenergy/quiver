@@ -16,9 +16,11 @@
 
 namespace quiver {
 
-CSVConverter::CSVConverter(const BinaryMetadata& metadata,
-                           std::unique_ptr<std::iostream> io,
-                           bool aggregate_time_dimensions)
+CSVConverter::CSVConverter(
+    const BinaryMetadata& metadata,
+    std::unique_ptr<std::iostream> io,
+    bool aggregate_time_dimensions
+)
     : metadata_(metadata), io_(std::move(io)), aggregate_time_dimensions_(aggregate_time_dimensions) {}
 
 bool CSVConverter::aggregates_time_dimensions() const {
@@ -180,7 +182,8 @@ std::string CSVConverter::build_line(const std::vector<double>& data, const std:
 }
 
 std::string CSVConverter::build_datetime_string_from_time_dimension_values(
-    const std::vector<int64_t>& time_dimension_values) const {
+    const std::vector<int64_t>& time_dimension_values
+) const {
     const auto& dimensions = metadata_.dimensions;
 
     auto datetime = metadata_.initial_datetime;
@@ -279,8 +282,9 @@ void CSVConverter::validate_header() {
                     expected_str += ", ";
                 expected_str += expected[i];
             }
-            throw std::runtime_error("Unexpected header in CSV file: '" + header_line +
-                                     "'. Expected columns are: " + expected_str);
+            throw std::runtime_error(
+                "Unexpected header in CSV file: '" + header_line + "'. Expected columns are: " + expected_str
+            );
         }
 
         field_index++;
@@ -293,13 +297,16 @@ void CSVConverter::validate_header() {
     }
 
     if (field_index != expected.size()) {
-        throw std::runtime_error("CSV header has " + std::to_string(field_index) + " columns, expected " +
-                                 std::to_string(expected.size()));
+        throw std::runtime_error(
+            "CSV header has " + std::to_string(field_index) + " columns, expected " + std::to_string(expected.size())
+        );
     }
 }
 
-void CSVConverter::validate_dimensions(const std::vector<std::string>& csv_dimension_values,
-                                       const std::vector<int64_t>& current_bin_dimension_values) {
+void CSVConverter::validate_dimensions(
+    const std::vector<std::string>& csv_dimension_values,
+    const std::vector<int64_t>& current_bin_dimension_values
+) {
     const auto& dimensions = metadata_.dimensions;
 
     std::vector<std::string> expected_names = expected_dimension_names();
@@ -324,8 +331,10 @@ void CSVConverter::validate_dimensions(const std::vector<std::string>& csv_dimen
     // Compare CSV dimension values against expected values
     for (size_t i = 0; i < expected_names.size(); ++i) {
         if (csv_dimension_values[i] != expected_values[i]) {
-            throw std::runtime_error("CSV dimension '" + expected_names[i] + "' has value '" + csv_dimension_values[i] +
-                                     "', expected '" + expected_values[i] + "'");
+            throw std::runtime_error(
+                "CSV dimension '" + expected_names[i] + "' has value '" + csv_dimension_values[i] + "', expected '" +
+                expected_values[i] + "'"
+            );
         }
     }
 }

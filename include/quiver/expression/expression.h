@@ -24,12 +24,16 @@ public:
 
     void save(const std::string& path) const;
 
-    Expression aggregate(const std::string& dimension,
-                         ExpressionAggregate::Operation operation,
-                         std::optional<double> parameter = std::nullopt) const;
+    Expression aggregate(
+        const std::string& dimension,
+        ExpressionAggregate::Operation operation,
+        std::optional<double> parameter = std::nullopt
+    ) const;
 
-    Expression aggregate_agents(ExpressionAggregateAgents::Operation operation,
-                                std::optional<double> parameter = std::nullopt) const;
+    Expression aggregate_agents(
+        ExpressionAggregateAgents::Operation operation,
+        std::optional<double> parameter = std::nullopt
+    ) const;
 
     Expression select_agents(const std::vector<std::string>& labels) const;
 

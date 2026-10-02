@@ -120,16 +120,11 @@ struct quiver_expression {
 
 #define QUIVER_EXPAND(x) x
 #define QUIVER_REQUIRE_N(_1, _2, _3, _4, _5, _6, _7, _8, _9, N, ...) N
-#define QUIVER_REQUIRE(...)                                                                                            \
-    QUIVER_EXPAND(QUIVER_REQUIRE_N(__VA_ARGS__,                                                                        \
-                                   QUIVER_REQUIRE_9,                                                                   \
-                                   QUIVER_REQUIRE_8,                                                                   \
-                                   QUIVER_REQUIRE_7,                                                                   \
-                                   QUIVER_REQUIRE_6,                                                                   \
-                                   QUIVER_REQUIRE_5,                                                                   \
-                                   QUIVER_REQUIRE_4,                                                                   \
-                                   QUIVER_REQUIRE_3,                                                                   \
-                                   QUIVER_REQUIRE_2,                                                                   \
-                                   QUIVER_REQUIRE_1)(__VA_ARGS__))
+#define QUIVER_REQUIRE(...)                                                                                                                                                                              \
+    QUIVER_EXPAND(                                                                                                                                                                                       \
+        QUIVER_REQUIRE_N(__VA_ARGS__, QUIVER_REQUIRE_9, QUIVER_REQUIRE_8, QUIVER_REQUIRE_7, QUIVER_REQUIRE_6, QUIVER_REQUIRE_5, QUIVER_REQUIRE_4, QUIVER_REQUIRE_3, QUIVER_REQUIRE_2, QUIVER_REQUIRE_1)( \
+            __VA_ARGS__                                                                                                                                                                                  \
+        )                                                                                                                                                                                                \
+    )
 
 #endif  // QUIVER_C_API_INTERNAL_H

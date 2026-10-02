@@ -154,11 +154,13 @@ TEST_F(LuaRunnerTest, QueryParameterCountMismatch) {
 
     // Too few parameters for the single placeholder
     expect_lua_error(
-        lua, R"(db:query_string("SELECT label FROM Collection WHERE some_integer = ?", {}))", "expected 1 bound");
+        lua, R"(db:query_string("SELECT label FROM Collection WHERE some_integer = ?", {}))", "expected 1 bound"
+    );
 
     // Too many parameters for the single placeholder
     expect_lua_error(
-        lua, R"(db:query_string("SELECT label FROM Collection WHERE some_integer = ?", {42, 43}))", "expected 1 bound");
+        lua, R"(db:query_string("SELECT label FROM Collection WHERE some_integer = ?", {42, 43}))", "expected 1 bound"
+    );
 
     // Exactly one parameter succeeds
     lua.run(R"(

@@ -26,11 +26,13 @@ using FkLabelMaps = std::unordered_map<std::string, const IdLabelMap*>;
 // NULL -> empty string, foreign keys resolve to the referenced label, other integers check
 // enum_labels, floats round-trip exactly, strings apply DateTime formatting.
 // Quoting is csv_write::append_record's job, not this function's.
-static std::string value_to_csv_string(const Value& value,
-                                       const std::string& column_name,
-                                       DataType data_type,
-                                       const CSVOptions& options,
-                                       const FkLabelMaps& fk_labels) {
+static std::string value_to_csv_string(
+    const Value& value,
+    const std::string& column_name,
+    DataType data_type,
+    const CSVOptions& options,
+    const FkLabelMaps& fk_labels
+) {
     // NULL -> empty field
     if (std::holds_alternative<std::nullptr_t>(value)) {
         return "";
@@ -85,12 +87,14 @@ static std::string value_to_csv_string(const Value& value,
 // Binary mode keeps the LF record terminators from becoming CRLF on Windows, and the file is
 // opened only once the whole text is built, so a throw while rendering never truncates it.
 // Column types are resolved once from type_map (invariant across rows).
-static void write_csv(const Result& data_result,
-                      const std::vector<std::string>& csv_columns,
-                      const std::unordered_map<std::string, DataType>& type_map,
-                      const CSVOptions& options,
-                      const FkLabelMaps& fk_labels,
-                      const std::string& path) {
+static void write_csv(
+    const Result& data_result,
+    const std::vector<std::string>& csv_columns,
+    const std::unordered_map<std::string, DataType>& type_map,
+    const CSVOptions& options,
+    const FkLabelMaps& fk_labels,
+    const std::string& path
+) {
     std::vector<DataType> col_types(csv_columns.size(), DataType::Text);
     for (size_t i = 0; i < csv_columns.size(); ++i) {
         if (auto it = type_map.find(csv_columns[i]); it != type_map.end()) {
@@ -119,10 +123,12 @@ static void write_csv(const Result& data_result,
     }
 }
 
-void Database::export_csv(const std::string& collection,
-                          const std::string& group,
-                          const std::string& path,
-                          const CSVOptions& options) {
+void Database::export_csv(
+    const std::string& collection,
+    const std::string& group,
+    const std::string& path,
+    const CSVOptions& options
+) {
     namespace fs = std::filesystem;
 
     // Create parent directories (mkdir -p)
@@ -218,8 +224,9 @@ void Database::export_csv(const std::string& collection,
             table_name = ts_table;
             group_type = GroupTableType::TimeSeries;
         } else {
-            throw std::runtime_error("Cannot export_csv: group not found: '" + group + "' in collection '" +
-                                     collection + "'");
+            throw std::runtime_error(
+                "Cannot export_csv: group not found: '" + group + "' in collection '" + collection + "'"
+            );
         }
 
         // Get group table columns in schema definition order

@@ -230,8 +230,9 @@ TEST_F(BinaryCApiCSVFixture, RoundTripAllPositions) {
                 int64_t dim_values[] = {r, c};
                 double* out_data = nullptr;
                 size_t out_count = 0;
-                EXPECT_EQ(quiver_binary_file_read(binary_file, dim_names, dim_values, 2, 0, &out_data, &out_count),
-                          QUIVER_OK);
+                EXPECT_EQ(
+                    quiver_binary_file_read(binary_file, dim_names, dim_values, 2, 0, &out_data, &out_count), QUIVER_OK
+                );
                 ASSERT_EQ(out_count, 2u);
                 EXPECT_DOUBLE_EQ(out_data[0], r * 100.0 + c);
                 EXPECT_DOUBLE_EQ(out_data[1], r * 100.0 + c + 0.5);

@@ -36,8 +36,10 @@ private:
 
     // Validations
     std::vector<std::string> expected_dimension_names() const;
-    void validate_dimensions(const std::vector<std::string>& dimension_values,
-                             const std::vector<int64_t>& current_dimensions);
+    void validate_dimensions(
+        const std::vector<std::string>& dimension_values,
+        const std::vector<int64_t>& current_dimensions
+    );
     void validate_header();
 
     // Time-dimension predicates

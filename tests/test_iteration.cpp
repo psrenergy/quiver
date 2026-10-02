@@ -8,25 +8,29 @@ using namespace quiver;
 namespace {
 
 BinaryMetadata make_simple_metadata() {
-    return BinaryMetadata::from_element(Element()
-                                            .set("version", "1")
-                                            .set("initial_datetime", "2025-01-01T00:00:00")
-                                            .set("unit", "MW")
-                                            .set("dimensions", {"row", "col"})
-                                            .set("dimension_sizes", {3, 2})
-                                            .set("labels", {"val1", "val2"}));
+    return BinaryMetadata::from_element(
+        Element()
+            .set("version", "1")
+            .set("initial_datetime", "2025-01-01T00:00:00")
+            .set("unit", "MW")
+            .set("dimensions", {"row", "col"})
+            .set("dimension_sizes", {3, 2})
+            .set("labels", {"val1", "val2"})
+    );
 }
 
 BinaryMetadata make_time_metadata() {
-    return BinaryMetadata::from_element(Element()
-                                            .set("version", "1")
-                                            .set("initial_datetime", "2025-01-01T00:00:00")
-                                            .set("unit", "MW")
-                                            .set("dimensions", {"stage", "block"})
-                                            .set("dimension_sizes", {4, 31})
-                                            .set("time_dimensions", {"stage", "block"})
-                                            .set("frequencies", {"monthly", "daily"})
-                                            .set("labels", {"plant_1", "plant_2"}));
+    return BinaryMetadata::from_element(
+        Element()
+            .set("version", "1")
+            .set("initial_datetime", "2025-01-01T00:00:00")
+            .set("unit", "MW")
+            .set("dimensions", {"stage", "block"})
+            .set("dimension_sizes", {4, 31})
+            .set("time_dimensions", {"stage", "block"})
+            .set("frequencies", {"monthly", "daily"})
+            .set("labels", {"plant_1", "plant_2"})
+    );
 }
 
 }  // namespace

@@ -252,8 +252,9 @@ TEST_F(TempFileFixture, ValidateMigrationsSucceeds) {
 
 TEST_F(TempFileFixture, ValidateMigrationsPropagatesFailure) {
     EXPECT_EQ(quiver_database_validate_migrations("nonexistent/migrations"), QUIVER_ERROR);
-    EXPECT_STREQ(quiver_get_last_error(),
-                 "Cannot validate_migrations: migrations path not found: nonexistent/migrations");
+    EXPECT_STREQ(
+        quiver_get_last_error(), "Cannot validate_migrations: migrations path not found: nonexistent/migrations"
+    );
 }
 
 TEST_F(TempFileFixture, ValidateMigrationsRejectsNullPath) {
@@ -321,8 +322,9 @@ TEST_F(TempFileFixture, ReadElementIdsNullDb) {
 TEST_F(TempFileFixture, ReadElementIdsNullCollection) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     int64_t* ids = nullptr;
@@ -336,8 +338,9 @@ TEST_F(TempFileFixture, ReadElementIdsNullCollection) {
 TEST_F(TempFileFixture, ReadElementIdsNullOutput) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     size_t count = 0;
@@ -354,8 +357,9 @@ TEST_F(TempFileFixture, ReadElementIdsNullOutput) {
 TEST_F(TempFileFixture, ReadElementIdsValid) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     // Create Configuration first
@@ -402,8 +406,9 @@ TEST_F(TempFileFixture, DeleteElementNullDb) {
 TEST_F(TempFileFixture, DeleteElementNullCollection) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     auto err = quiver_database_delete_element(db, nullptr, 1);
@@ -415,8 +420,9 @@ TEST_F(TempFileFixture, DeleteElementNullCollection) {
 TEST_F(TempFileFixture, DeleteElementValid) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     // Create Configuration first
@@ -472,8 +478,9 @@ TEST_F(TempFileFixture, UpdateElementNullDb) {
 TEST_F(TempFileFixture, UpdateElementNullCollection) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     quiver_element_t* element = nullptr;
@@ -490,8 +497,9 @@ TEST_F(TempFileFixture, UpdateElementNullCollection) {
 TEST_F(TempFileFixture, UpdateElementNullElement) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     auto err = quiver_database_update_element(db, "Collection", 1, nullptr);

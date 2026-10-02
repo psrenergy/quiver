@@ -454,8 +454,9 @@ TEST_F(BinaryCApiFixture, ReadUnwrittenPositionFails) {
         int64_t dim_values[] = {2, 1};
         double* out_data = nullptr;
         size_t out_count = 0;
-        EXPECT_EQ(quiver_binary_file_read(binary_file, dim_names, dim_values, 2, 0, &out_data, &out_count),
-                  QUIVER_ERROR);
+        EXPECT_EQ(
+            quiver_binary_file_read(binary_file, dim_names, dim_values, 2, 0, &out_data, &out_count), QUIVER_ERROR
+        );
         std::string err = quiver_get_last_error();
         EXPECT_NE(err.find("null values"), std::string::npos);
 

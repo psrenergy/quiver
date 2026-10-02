@@ -141,7 +141,8 @@ inline bool value_matches_type(const Value& v, DataType expected) {
             else
                 return expected == DataType::Text || expected == DataType::DateTime;
         },
-        v);
+        v
+    );
 }
 
 // Human-readable name of the type currently held in a Value (for error messages).
@@ -159,7 +160,8 @@ inline const char* value_type_name(const Value& v) {
             else
                 return "NULL";
         },
-        v);
+        v
+    );
 }
 
 // Convert a ColumnDefinition to ScalarMetadata

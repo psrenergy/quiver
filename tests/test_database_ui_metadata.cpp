@@ -79,9 +79,11 @@ protected:
     }
 
     quiver::Database open_tree() {
-        return quiver::Database::from_migrations((fs::path(root) / "study.db").string(),
-                                                 migrations_dir(),
-                                                 {.read_only = false, .console_level = quiver::LogLevel::Off});
+        return quiver::Database::from_migrations(
+            (fs::path(root) / "study.db").string(),
+            migrations_dir(),
+            {.read_only = false, .console_level = quiver::LogLevel::Off}
+        );
     }
 
     // A sibling of `root`, never a subdirectory of it -- copying `root` into its own subdirectory
@@ -104,9 +106,11 @@ protected:
         if (fs::exists(mirror_ui)) {
             fs::remove_all(mirror_ui);
         }
-        return quiver::Database::from_migrations((mirror / "mirror_study.db").string(),
-                                                 mirror_migrations.string(),
-                                                 {.read_only = false, .console_level = quiver::LogLevel::Off});
+        return quiver::Database::from_migrations(
+            (mirror / "mirror_study.db").string(),
+            mirror_migrations.string(),
+            {.read_only = false, .console_level = quiver::LogLevel::Off}
+        );
     }
 
     std::string root;
@@ -185,8 +189,10 @@ std::string extract_collection_section(const std::string& describe_output, const
 // output is byte-identical between `db` (some sidecar tree, possibly malformed or undescribed) and
 // `mirror_db` (the same migrations tree with no ui/ sidecar at all).
 void expect_reports_match(quiver::Database& db, quiver::Database& mirror_db, const std::string& collection) {
-    EXPECT_EQ(extract_collection_section(db.describe(), collection),
-              extract_collection_section(mirror_db.describe(), collection));
+    EXPECT_EQ(
+        extract_collection_section(db.describe(), collection),
+        extract_collection_section(mirror_db.describe(), collection)
+    );
     EXPECT_EQ(db.describe_collection(collection), mirror_db.describe_collection(collection));
     EXPECT_EQ(db.summarize_collection(collection), mirror_db.summarize_collection(collection));
 }
@@ -786,13 +792,16 @@ id = "hm3_initial"
 label.en = "Initial Storage"
 )");
 
-    auto db_no_slash = quiver::Database::from_migrations((fs::path(root) / "study_no_slash.db").string(),
-                                                         migrations_dir(),
-                                                         {.read_only = false, .console_level = quiver::LogLevel::Off});
-    auto db_trailing_slash =
-        quiver::Database::from_migrations((fs::path(root) / "study_trailing_slash.db").string(),
-                                          migrations_dir() + "/",
-                                          {.read_only = false, .console_level = quiver::LogLevel::Off});
+    auto db_no_slash = quiver::Database::from_migrations(
+        (fs::path(root) / "study_no_slash.db").string(),
+        migrations_dir(),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
+    auto db_trailing_slash = quiver::Database::from_migrations(
+        (fs::path(root) / "study_trailing_slash.db").string(),
+        migrations_dir() + "/",
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     auto report_no_slash = db_no_slash.describe_collection("HydroPlant");
     auto report_trailing_slash = db_trailing_slash.describe_collection("HydroPlant");
@@ -826,7 +835,8 @@ label.en = "Initial Storage"
     fs::current_path(root);
 
     auto db = quiver::Database::from_migrations(
-        "relative_study.db", "migrations", {.read_only = false, .console_level = quiver::LogLevel::Off});
+        "relative_study.db", "migrations", {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
     auto actual = db.describe_collection("HydroPlant");
 
     EXPECT_EQ(actual, expected);
@@ -1082,15 +1092,17 @@ attribute = "not_an_array"
 // D-09: two collection files, one unparseable -- the good collection's clauses still render, and
 // nothing throws. This is what the inner per-file catch buys over a single outer catch.
 TEST_F(UiMetadataTest, MalformedOneFileKeepsOtherCollections) {
-    write_migration(1,
-                    reservoir_schema() + R"(
+    write_migration(
+        1,
+        reservoir_schema() + R"(
 CREATE TABLE ThermalPlant (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     label TEXT UNIQUE NOT NULL,
     capacity_mw REAL
 ) STRICT;
 )",
-                    "DROP TABLE ThermalPlant; DROP TABLE HydroPlant; DROP TABLE Configuration;");
+        "DROP TABLE ThermalPlant; DROP TABLE HydroPlant; DROP TABLE Configuration;"
+    );
 
     write_ui_file("hydro_plant.toml", "this is not valid toml {{{");
     write_ui_file("thermal_plant.toml", R"TOML(
@@ -1139,13 +1151,16 @@ enum = "initial_volume_type"
     auto db = open_tree();
     db.create_element(
         "HydroPlant",
-        quiver::Element().set("label", std::string("a")).set("initial_volume_type", static_cast<int64_t>(0)));
+        quiver::Element().set("label", std::string("a")).set("initial_volume_type", static_cast<int64_t>(0))
+    );
     db.create_element(
         "HydroPlant",
-        quiver::Element().set("label", std::string("b")).set("initial_volume_type", static_cast<int64_t>(0)));
+        quiver::Element().set("label", std::string("b")).set("initial_volume_type", static_cast<int64_t>(0))
+    );
     db.create_element(
         "HydroPlant",
-        quiver::Element().set("label", std::string("c")).set("initial_volume_type", static_cast<int64_t>(1)));
+        quiver::Element().set("label", std::string("c")).set("initial_volume_type", static_cast<int64_t>(1))
+    );
 
     auto report = db.summarize_collection("HydroPlant");
 
@@ -1174,7 +1189,8 @@ enum = "initial_volume_type"
     auto db = open_tree();
     db.create_element(
         "HydroPlant",
-        quiver::Element().set("label", std::string("a")).set("initial_volume_type", static_cast<int64_t>(0)));
+        quiver::Element().set("label", std::string("a")).set("initial_volume_type", static_cast<int64_t>(0))
+    );
 
     auto report = db.summarize_collection("HydroPlant");
 

@@ -17,9 +17,10 @@ namespace {
 
 constexpr std::string_view QUIVER_FILE_VERSION = "1";
 
-std::vector<int64_t>
-compute_time_dimension_initial_values(const std::vector<quiver::Dimension>& dimensions,
-                                      const std::chrono::system_clock::time_point& initial_datetime) {
+std::vector<int64_t> compute_time_dimension_initial_values(
+    const std::vector<quiver::Dimension>& dimensions,
+    const std::chrono::system_clock::time_point& initial_datetime
+) {
     std::vector<int64_t> initial_values;
     initial_values.push_back(1);  // The largest time dimension always starts at 1
 
@@ -36,7 +37,8 @@ compute_time_dimension_initial_values(const std::vector<quiver::Dimension>& dime
             switch (current_frequency) {
             case quiver::TimeFrequency::Yearly:
                 throw std::logic_error(
-                    "YEARLY frequency not implemented. This function should only be used for inner time dimensions.");
+                    "YEARLY frequency not implemented. This function should only be used for inner time dimensions."
+                );
             case quiver::TimeFrequency::Monthly: {
                 int64_t month = static_cast<unsigned>(ymd.month());
                 initial_values.push_back(month);
@@ -44,7 +46,8 @@ compute_time_dimension_initial_values(const std::vector<quiver::Dimension>& dime
             }
             case quiver::TimeFrequency::Weekly:
                 throw std::logic_error(
-                    "WEEKLY frequency not implemented. This function should only be used for inner time dimensions.");
+                    "WEEKLY frequency not implemented. This function should only be used for inner time dimensions."
+                );
             case quiver::TimeFrequency::Daily: {
                 int64_t day;
                 switch (parent_frequency) {
@@ -61,8 +64,9 @@ compute_time_dimension_initial_values(const std::vector<quiver::Dimension>& dime
                     break;
                 }
                 default:
-                    throw std::logic_error("Invalid parent frequency " + frequency_to_string(parent_frequency) +
-                                           " for DAILY dimension.");
+                    throw std::logic_error(
+                        "Invalid parent frequency " + frequency_to_string(parent_frequency) + " for DAILY dimension."
+                    );
                 }
                 initial_values.push_back(day);
                 break;
@@ -83,15 +87,18 @@ compute_time_dimension_initial_values(const std::vector<quiver::Dimension>& dime
                     hour += (quiver::day_of_year(initial_datetime) - 1) * quiver::time::MAX_HOURS_IN_DAY;
                     break;
                 default:
-                    throw std::logic_error("Invalid parent frequency " + frequency_to_string(parent_frequency) +
-                                           " for HOURLY dimension.");
+                    throw std::logic_error(
+                        "Invalid parent frequency " + frequency_to_string(parent_frequency) + " for HOURLY dimension."
+                    );
                 }
                 initial_values.push_back(hour);
                 break;
             }
             default:
-                throw std::logic_error("Unhandled frequency " + frequency_to_string(current_frequency) +
-                                       " in compute_time_dimension_initial_values.");
+                throw std::logic_error(
+                    "Unhandled frequency " + frequency_to_string(current_frequency) +
+                    " in compute_time_dimension_initial_values."
+                );
             }
         }
     }
@@ -284,8 +291,9 @@ BinaryMetadata BinaryMetadata::from_toml_content(const std::string& content) {
     // Validate time_dimensions are a subset of dimensions
     for (const auto& td : time_dimensions) {
         if (std::find(dimensions.begin(), dimensions.end(), td) == dimensions.end()) {
-            throw std::runtime_error("Error building metadata from toml: time dimension '" + td +
-                                     "' is not in dimensions");
+            throw std::runtime_error(
+                "Error building metadata from toml: time dimension '" + td + "' is not in dimensions"
+            );
         }
     }
 
@@ -295,7 +303,8 @@ BinaryMetadata BinaryMetadata::from_toml_content(const std::string& content) {
         auto it = std::find(dimensions.begin() + last_pos, dimensions.end(), td);
         if (it == dimensions.end()) {
             throw std::runtime_error(
-                "Error building metadata from toml: time dimensions must appear in the same order as dimensions");
+                "Error building metadata from toml: time dimensions must appear in the same order as dimensions"
+            );
         }
         last_pos = static_cast<size_t>(std::distance(dimensions.begin(), it)) + 1;
     }
@@ -388,8 +397,9 @@ std::string BinaryMetadata::to_toml() const {
 void BinaryMetadata::validate() const {
     // Version check
     if (version != QUIVER_FILE_VERSION) {
-        throw std::runtime_error("Incompatible file version: expected " + std::string(QUIVER_FILE_VERSION) + ", got " +
-                                 version);
+        throw std::runtime_error(
+            "Incompatible file version: expected " + std::string(QUIVER_FILE_VERSION) + ", got " + version
+        );
     }
 
     // Dimension count
@@ -405,8 +415,10 @@ void BinaryMetadata::validate() const {
     // Dimension sizes must be positive
     for (size_t i = 0; i < dimensions.size(); ++i) {
         if (dimensions[i].size <= 0) {
-            throw std::runtime_error("Dimension size at index " + std::to_string(i) + " must be positive, got " +
-                                     std::to_string(dimensions[i].size));
+            throw std::runtime_error(
+                "Dimension size at index " + std::to_string(i) + " must be positive, got " +
+                std::to_string(dimensions[i].size)
+            );
         }
     }
 
@@ -447,8 +459,10 @@ void BinaryMetadata::validate_time_dimension_metadata() const {
     for (size_t i = 0; i < time_dims.size(); ++i) {
         for (size_t j = i + 1; j < time_dims.size(); ++j) {
             if (time_dims[i]->time->frequency == time_dims[j]->time->frequency) {
-                throw std::runtime_error("Time dimension frequencies must be unique. Duplicate: " +
-                                         frequency_to_string(time_dims[i]->time->frequency));
+                throw std::runtime_error(
+                    "Time dimension frequencies must be unique. Duplicate: " +
+                    frequency_to_string(time_dims[i]->time->frequency)
+                );
             }
         }
     }
@@ -555,15 +569,19 @@ void BinaryMetadata::validate_time_dimension_sizes() const {
         }
 
         if (!found) {
-            throw std::runtime_error("Invalid parent/child frequency combination: " + frequency_to_string(freq) +
-                                     " inside " + frequency_to_string(parent_freq));
+            throw std::runtime_error(
+                "Invalid parent/child frequency combination: " + frequency_to_string(freq) + " inside " +
+                frequency_to_string(parent_freq)
+            );
         }
 
         if (size < min_size || size > max_size) {
-            throw std::runtime_error("Time dimension '" + dim.name + "' with frequency '" + frequency_to_string(freq) +
-                                     "' has size " + std::to_string(size) + " which is out of bounds [" +
-                                     std::to_string(min_size) + ", " + std::to_string(max_size) +
-                                     "] based on the next lower frequency: '" + frequency_to_string(parent_freq) + "'");
+            throw std::runtime_error(
+                "Time dimension '" + dim.name + "' with frequency '" + frequency_to_string(freq) + "' has size " +
+                std::to_string(size) + " which is out of bounds [" + std::to_string(min_size) + ", " +
+                std::to_string(max_size) + "] based on the next lower frequency: '" + frequency_to_string(parent_freq) +
+                "'"
+            );
         }
     }
 }

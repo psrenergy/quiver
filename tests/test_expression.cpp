@@ -44,18 +44,22 @@ protected:
     std::string path_a, path_b, path_c, path_out, path_out2;
 
     static BinaryMetadata make_simple_metadata() {
-        return BinaryMetadata::from_element(Element()
-                                                .set("version", "1")
-                                                .set("initial_datetime", "2025-01-01T00:00:00")
-                                                .set("unit", "MW")
-                                                .set("dimensions", {"row", "col"})
-                                                .set("dimension_sizes", {3, 2})
-                                                .set("labels", {"val1", "val2"}));
+        return BinaryMetadata::from_element(
+            Element()
+                .set("version", "1")
+                .set("initial_datetime", "2025-01-01T00:00:00")
+                .set("unit", "MW")
+                .set("dimensions", {"row", "col"})
+                .set("dimension_sizes", {3, 2})
+                .set("labels", {"val1", "val2"})
+        );
     }
 
-    static void write_qvr(const std::string& path,
-                          const BinaryMetadata& meta,
-                          std::function<double(const std::vector<int64_t>& dims, size_t label_idx)> fill) {
+    static void write_qvr(
+        const std::string& path,
+        const BinaryMetadata& meta,
+        std::function<double(const std::vector<int64_t>& dims, size_t label_idx)> fill
+    ) {
         auto writer = BinaryFile::open_file(path, 'w', meta);
         std::vector<int64_t> dims = first_dimensions(meta);
         std::vector<double> row(meta.labels.size());
@@ -272,20 +276,24 @@ TEST_F(ExpressionFixture, SamePathTwice) {
 }
 
 TEST_F(ExpressionFixture, MismatchedShapesThrows) {
-    auto md_a = BinaryMetadata::from_element(Element()
-                                                 .set("version", "1")
-                                                 .set("initial_datetime", "2025-01-01T00:00:00")
-                                                 .set("unit", "MW")
-                                                 .set("dimensions", {"row", "col"})
-                                                 .set("dimension_sizes", {3, 2})
-                                                 .set("labels", {"val1", "val2"}));
-    auto md_b = BinaryMetadata::from_element(Element()
-                                                 .set("version", "1")
-                                                 .set("initial_datetime", "2025-01-01T00:00:00")
-                                                 .set("unit", "MW")
-                                                 .set("dimensions", {"row", "col"})
-                                                 .set("dimension_sizes", {4, 2})
-                                                 .set("labels", {"val1", "val2"}));
+    auto md_a = BinaryMetadata::from_element(
+        Element()
+            .set("version", "1")
+            .set("initial_datetime", "2025-01-01T00:00:00")
+            .set("unit", "MW")
+            .set("dimensions", {"row", "col"})
+            .set("dimension_sizes", {3, 2})
+            .set("labels", {"val1", "val2"})
+    );
+    auto md_b = BinaryMetadata::from_element(
+        Element()
+            .set("version", "1")
+            .set("initial_datetime", "2025-01-01T00:00:00")
+            .set("unit", "MW")
+            .set("dimensions", {"row", "col"})
+            .set("dimension_sizes", {4, 2})
+            .set("labels", {"val1", "val2"})
+    );
     write_qvr(path_a, md_a, [](const std::vector<int64_t>&, size_t) { return 1.0; });
     write_qvr(path_b, md_b, [](const std::vector<int64_t>&, size_t) { return 1.0; });
     auto a = BinaryFile::open_file(path_a, 'r');
@@ -294,20 +302,24 @@ TEST_F(ExpressionFixture, MismatchedShapesThrows) {
 }
 
 TEST_F(ExpressionFixture, UnitMismatchThrows) {
-    auto md_a = BinaryMetadata::from_element(Element()
-                                                 .set("version", "1")
-                                                 .set("initial_datetime", "2025-01-01T00:00:00")
-                                                 .set("unit", "MW")
-                                                 .set("dimensions", {"row", "col"})
-                                                 .set("dimension_sizes", {3, 2})
-                                                 .set("labels", {"val1", "val2"}));
-    auto md_b = BinaryMetadata::from_element(Element()
-                                                 .set("version", "1")
-                                                 .set("initial_datetime", "2025-01-01T00:00:00")
-                                                 .set("unit", "GWh")
-                                                 .set("dimensions", {"row", "col"})
-                                                 .set("dimension_sizes", {3, 2})
-                                                 .set("labels", {"val1", "val2"}));
+    auto md_a = BinaryMetadata::from_element(
+        Element()
+            .set("version", "1")
+            .set("initial_datetime", "2025-01-01T00:00:00")
+            .set("unit", "MW")
+            .set("dimensions", {"row", "col"})
+            .set("dimension_sizes", {3, 2})
+            .set("labels", {"val1", "val2"})
+    );
+    auto md_b = BinaryMetadata::from_element(
+        Element()
+            .set("version", "1")
+            .set("initial_datetime", "2025-01-01T00:00:00")
+            .set("unit", "GWh")
+            .set("dimensions", {"row", "col"})
+            .set("dimension_sizes", {3, 2})
+            .set("labels", {"val1", "val2"})
+    );
     write_qvr(path_a, md_a, [](const std::vector<int64_t>&, size_t) { return 1.0; });
     write_qvr(path_b, md_b, [](const std::vector<int64_t>&, size_t) { return 1.0; });
     auto a = BinaryFile::open_file(path_a, 'r');
@@ -321,22 +333,26 @@ TEST_F(ExpressionFixture, TimePropertiesMismatchThrows) {
     // "is a time dimension on lhs but not on rhs" branch — a controlled mismatch
     // we can express via from_element without running into engine constraints on
     // mixed inner-time-dim frequencies (e.g., weekly inside monthly is unsupported).
-    auto md_a = BinaryMetadata::from_element(Element()
-                                                 .set("version", "1")
-                                                 .set("initial_datetime", "2025-01-01T00:00:00")
-                                                 .set("unit", "MW")
-                                                 .set("dimensions", {"scenario", "block"})
-                                                 .set("dimension_sizes", {3, 12})
-                                                 .set("time_dimensions", {"block"})
-                                                 .set("frequencies", {"monthly"})
-                                                 .set("labels", {"v1", "v2"}));
-    auto md_b = BinaryMetadata::from_element(Element()
-                                                 .set("version", "1")
-                                                 .set("initial_datetime", "2025-01-01T00:00:00")
-                                                 .set("unit", "MW")
-                                                 .set("dimensions", {"scenario", "block"})  // no time_dimensions
-                                                 .set("dimension_sizes", {3, 12})
-                                                 .set("labels", {"v1", "v2"}));
+    auto md_a = BinaryMetadata::from_element(
+        Element()
+            .set("version", "1")
+            .set("initial_datetime", "2025-01-01T00:00:00")
+            .set("unit", "MW")
+            .set("dimensions", {"scenario", "block"})
+            .set("dimension_sizes", {3, 12})
+            .set("time_dimensions", {"block"})
+            .set("frequencies", {"monthly"})
+            .set("labels", {"v1", "v2"})
+    );
+    auto md_b = BinaryMetadata::from_element(
+        Element()
+            .set("version", "1")
+            .set("initial_datetime", "2025-01-01T00:00:00")
+            .set("unit", "MW")
+            .set("dimensions", {"scenario", "block"})  // no time_dimensions
+            .set("dimension_sizes", {3, 12})
+            .set("labels", {"v1", "v2"})
+    );
     write_qvr(path_a, md_a, [](const std::vector<int64_t>&, size_t) { return 1.0; });
     write_qvr(path_b, md_b, [](const std::vector<int64_t>&, size_t) { return 1.0; });
     auto a = BinaryFile::open_file(path_a, 'r');
@@ -345,24 +361,28 @@ TEST_F(ExpressionFixture, TimePropertiesMismatchThrows) {
 }
 
 TEST_F(ExpressionFixture, InitialDatetimeMismatchThrows) {
-    auto md_a = BinaryMetadata::from_element(Element()
-                                                 .set("version", "1")
-                                                 .set("initial_datetime", "2025-01-01T00:00:00")
-                                                 .set("unit", "MW")
-                                                 .set("dimensions", {"month", "block"})
-                                                 .set("dimension_sizes", {4, 31})
-                                                 .set("time_dimensions", {"month", "block"})
-                                                 .set("frequencies", {"monthly", "daily"})
-                                                 .set("labels", {"v1", "v2"}));
-    auto md_b = BinaryMetadata::from_element(Element()
-                                                 .set("version", "1")
-                                                 .set("initial_datetime", "2025-02-01T00:00:00")  // ← differs
-                                                 .set("unit", "MW")
-                                                 .set("dimensions", {"month", "block"})
-                                                 .set("dimension_sizes", {4, 31})
-                                                 .set("time_dimensions", {"month", "block"})
-                                                 .set("frequencies", {"monthly", "daily"})
-                                                 .set("labels", {"v1", "v2"}));
+    auto md_a = BinaryMetadata::from_element(
+        Element()
+            .set("version", "1")
+            .set("initial_datetime", "2025-01-01T00:00:00")
+            .set("unit", "MW")
+            .set("dimensions", {"month", "block"})
+            .set("dimension_sizes", {4, 31})
+            .set("time_dimensions", {"month", "block"})
+            .set("frequencies", {"monthly", "daily"})
+            .set("labels", {"v1", "v2"})
+    );
+    auto md_b = BinaryMetadata::from_element(
+        Element()
+            .set("version", "1")
+            .set("initial_datetime", "2025-02-01T00:00:00")  // ← differs
+            .set("unit", "MW")
+            .set("dimensions", {"month", "block"})
+            .set("dimension_sizes", {4, 31})
+            .set("time_dimensions", {"month", "block"})
+            .set("frequencies", {"monthly", "daily"})
+            .set("labels", {"v1", "v2"})
+    );
     write_qvr(path_a, md_a, [](const std::vector<int64_t>&, size_t) { return 1.0; });
     write_qvr(path_b, md_b, [](const std::vector<int64_t>&, size_t) { return 1.0; });
     auto a = BinaryFile::open_file(path_a, 'r');
@@ -371,20 +391,24 @@ TEST_F(ExpressionFixture, InitialDatetimeMismatchThrows) {
 }
 
 TEST_F(ExpressionFixture, LabelMismatchThrows) {
-    auto md_a = BinaryMetadata::from_element(Element()
-                                                 .set("version", "1")
-                                                 .set("initial_datetime", "2025-01-01T00:00:00")
-                                                 .set("unit", "MW")
-                                                 .set("dimensions", {"row", "col"})
-                                                 .set("dimension_sizes", {3, 2})
-                                                 .set("labels", {"v1", "v2"}));
-    auto md_b = BinaryMetadata::from_element(Element()
-                                                 .set("version", "1")
-                                                 .set("initial_datetime", "2025-01-01T00:00:00")
-                                                 .set("unit", "MW")
-                                                 .set("dimensions", {"row", "col"})
-                                                 .set("dimension_sizes", {3, 2})
-                                                 .set("labels", {"v1", "v3"}));  // ← differs
+    auto md_a = BinaryMetadata::from_element(
+        Element()
+            .set("version", "1")
+            .set("initial_datetime", "2025-01-01T00:00:00")
+            .set("unit", "MW")
+            .set("dimensions", {"row", "col"})
+            .set("dimension_sizes", {3, 2})
+            .set("labels", {"v1", "v2"})
+    );
+    auto md_b = BinaryMetadata::from_element(
+        Element()
+            .set("version", "1")
+            .set("initial_datetime", "2025-01-01T00:00:00")
+            .set("unit", "MW")
+            .set("dimensions", {"row", "col"})
+            .set("dimension_sizes", {3, 2})
+            .set("labels", {"v1", "v3"})
+    );  // ← differs
     write_qvr(path_a, md_a, [](const std::vector<int64_t>&, size_t) { return 1.0; });
     write_qvr(path_b, md_b, [](const std::vector<int64_t>&, size_t) { return 1.0; });
     auto a = BinaryFile::open_file(path_a, 'r');
@@ -394,22 +418,26 @@ TEST_F(ExpressionFixture, LabelMismatchThrows) {
 
 TEST_F(ExpressionFixture, MirrorTimeNonTimeMismatchAThrows) {
     // md_a: block as NON-time. md_b: block as monthly time. Symmetric reject.
-    auto md_a = BinaryMetadata::from_element(Element()
-                                                 .set("version", "1")
-                                                 .set("initial_datetime", "2025-01-01T00:00:00")
-                                                 .set("unit", "MW")
-                                                 .set("dimensions", {"scenario", "block"})
-                                                 .set("dimension_sizes", {3, 12})
-                                                 .set("labels", {"v1", "v2"}));
-    auto md_b = BinaryMetadata::from_element(Element()
-                                                 .set("version", "1")
-                                                 .set("initial_datetime", "2025-01-01T00:00:00")
-                                                 .set("unit", "MW")
-                                                 .set("dimensions", {"scenario", "block"})
-                                                 .set("dimension_sizes", {3, 12})
-                                                 .set("time_dimensions", {"block"})
-                                                 .set("frequencies", {"monthly"})
-                                                 .set("labels", {"v1", "v2"}));
+    auto md_a = BinaryMetadata::from_element(
+        Element()
+            .set("version", "1")
+            .set("initial_datetime", "2025-01-01T00:00:00")
+            .set("unit", "MW")
+            .set("dimensions", {"scenario", "block"})
+            .set("dimension_sizes", {3, 12})
+            .set("labels", {"v1", "v2"})
+    );
+    auto md_b = BinaryMetadata::from_element(
+        Element()
+            .set("version", "1")
+            .set("initial_datetime", "2025-01-01T00:00:00")
+            .set("unit", "MW")
+            .set("dimensions", {"scenario", "block"})
+            .set("dimension_sizes", {3, 12})
+            .set("time_dimensions", {"block"})
+            .set("frequencies", {"monthly"})
+            .set("labels", {"v1", "v2"})
+    );
     write_qvr(path_a, md_a, [](const std::vector<int64_t>&, size_t) { return 1.0; });
     write_qvr(path_b, md_b, [](const std::vector<int64_t>&, size_t) { return 1.0; });
     auto a = BinaryFile::open_file(path_a, 'r');
@@ -419,22 +447,26 @@ TEST_F(ExpressionFixture, MirrorTimeNonTimeMismatchAThrows) {
 
 TEST_F(ExpressionFixture, MirrorTimeNonTimeMismatchBThrows) {
     // md_a: block as monthly time. md_b: block as NON-time. Pre-existing direction.
-    auto md_a = BinaryMetadata::from_element(Element()
-                                                 .set("version", "1")
-                                                 .set("initial_datetime", "2025-01-01T00:00:00")
-                                                 .set("unit", "MW")
-                                                 .set("dimensions", {"scenario", "block"})
-                                                 .set("dimension_sizes", {3, 12})
-                                                 .set("time_dimensions", {"block"})
-                                                 .set("frequencies", {"monthly"})
-                                                 .set("labels", {"v1", "v2"}));
-    auto md_b = BinaryMetadata::from_element(Element()
-                                                 .set("version", "1")
-                                                 .set("initial_datetime", "2025-01-01T00:00:00")
-                                                 .set("unit", "MW")
-                                                 .set("dimensions", {"scenario", "block"})
-                                                 .set("dimension_sizes", {3, 12})
-                                                 .set("labels", {"v1", "v2"}));
+    auto md_a = BinaryMetadata::from_element(
+        Element()
+            .set("version", "1")
+            .set("initial_datetime", "2025-01-01T00:00:00")
+            .set("unit", "MW")
+            .set("dimensions", {"scenario", "block"})
+            .set("dimension_sizes", {3, 12})
+            .set("time_dimensions", {"block"})
+            .set("frequencies", {"monthly"})
+            .set("labels", {"v1", "v2"})
+    );
+    auto md_b = BinaryMetadata::from_element(
+        Element()
+            .set("version", "1")
+            .set("initial_datetime", "2025-01-01T00:00:00")
+            .set("unit", "MW")
+            .set("dimensions", {"scenario", "block"})
+            .set("dimension_sizes", {3, 12})
+            .set("labels", {"v1", "v2"})
+    );
     write_qvr(path_a, md_a, [](const std::vector<int64_t>&, size_t) { return 1.0; });
     write_qvr(path_b, md_b, [](const std::vector<int64_t>&, size_t) { return 1.0; });
     auto a = BinaryFile::open_file(path_a, 'r');
@@ -445,24 +477,28 @@ TEST_F(ExpressionFixture, MirrorTimeNonTimeMismatchBThrows) {
 TEST_F(ExpressionFixture, ParentDimMatchByNameAcceptsCrossPosition) {
     // md_a: parent of `day` is `month` at index 0. md_b: parent of `day` is `month` at index 1.
     // Same parent NAME, different operand indices. Must accept.
-    auto md_a = BinaryMetadata::from_element(Element()
-                                                 .set("version", "1")
-                                                 .set("initial_datetime", "2025-01-01T00:00:00")
-                                                 .set("unit", "MW")
-                                                 .set("dimensions", {"month", "extra", "day"})
-                                                 .set("dimension_sizes", {2, 3, 31})
-                                                 .set("time_dimensions", {"month", "day"})
-                                                 .set("frequencies", {"monthly", "daily"})
-                                                 .set("labels", {"v1", "v2"}));
-    auto md_b = BinaryMetadata::from_element(Element()
-                                                 .set("version", "1")
-                                                 .set("initial_datetime", "2025-01-01T00:00:00")
-                                                 .set("unit", "MW")
-                                                 .set("dimensions", {"extra", "month", "day"})
-                                                 .set("dimension_sizes", {3, 2, 31})
-                                                 .set("time_dimensions", {"month", "day"})
-                                                 .set("frequencies", {"monthly", "daily"})
-                                                 .set("labels", {"v1", "v2"}));
+    auto md_a = BinaryMetadata::from_element(
+        Element()
+            .set("version", "1")
+            .set("initial_datetime", "2025-01-01T00:00:00")
+            .set("unit", "MW")
+            .set("dimensions", {"month", "extra", "day"})
+            .set("dimension_sizes", {2, 3, 31})
+            .set("time_dimensions", {"month", "day"})
+            .set("frequencies", {"monthly", "daily"})
+            .set("labels", {"v1", "v2"})
+    );
+    auto md_b = BinaryMetadata::from_element(
+        Element()
+            .set("version", "1")
+            .set("initial_datetime", "2025-01-01T00:00:00")
+            .set("unit", "MW")
+            .set("dimensions", {"extra", "month", "day"})
+            .set("dimension_sizes", {3, 2, 31})
+            .set("time_dimensions", {"month", "day"})
+            .set("frequencies", {"monthly", "daily"})
+            .set("labels", {"v1", "v2"})
+    );
     write_qvr(path_a, md_a, [](const std::vector<int64_t>&, size_t) { return 1.0; });
     write_qvr(path_b, md_b, [](const std::vector<int64_t>&, size_t) { return 1.0; });
     auto a = BinaryFile::open_file(path_a, 'r');
@@ -479,24 +515,28 @@ TEST_F(ExpressionFixture, ParentDimNameMismatchThrows) {
     // Different parent NAMES. Must throw because parent names differ even though
     // `block` exists on both. Both metadata use monthly+daily so the per-row write-time
     // validation succeeds — only the cross-operand parent-name check distinguishes them.
-    auto md_a = BinaryMetadata::from_element(Element()
-                                                 .set("version", "1")
-                                                 .set("initial_datetime", "2025-01-01T00:00:00")
-                                                 .set("unit", "MW")
-                                                 .set("dimensions", {"month", "block"})
-                                                 .set("dimension_sizes", {2, 31})
-                                                 .set("time_dimensions", {"month", "block"})
-                                                 .set("frequencies", {"monthly", "daily"})
-                                                 .set("labels", {"v1", "v2"}));
-    auto md_b = BinaryMetadata::from_element(Element()
-                                                 .set("version", "1")
-                                                 .set("initial_datetime", "2025-01-01T00:00:00")
-                                                 .set("unit", "MW")
-                                                 .set("dimensions", {"stage", "block"})
-                                                 .set("dimension_sizes", {2, 31})
-                                                 .set("time_dimensions", {"stage", "block"})
-                                                 .set("frequencies", {"monthly", "daily"})
-                                                 .set("labels", {"v1", "v2"}));
+    auto md_a = BinaryMetadata::from_element(
+        Element()
+            .set("version", "1")
+            .set("initial_datetime", "2025-01-01T00:00:00")
+            .set("unit", "MW")
+            .set("dimensions", {"month", "block"})
+            .set("dimension_sizes", {2, 31})
+            .set("time_dimensions", {"month", "block"})
+            .set("frequencies", {"monthly", "daily"})
+            .set("labels", {"v1", "v2"})
+    );
+    auto md_b = BinaryMetadata::from_element(
+        Element()
+            .set("version", "1")
+            .set("initial_datetime", "2025-01-01T00:00:00")
+            .set("unit", "MW")
+            .set("dimensions", {"stage", "block"})
+            .set("dimension_sizes", {2, 31})
+            .set("time_dimensions", {"stage", "block"})
+            .set("frequencies", {"monthly", "daily"})
+            .set("labels", {"v1", "v2"})
+    );
     write_qvr(path_a, md_a, [](const std::vector<int64_t>&, size_t) { return 1.0; });
     write_qvr(path_b, md_b, [](const std::vector<int64_t>&, size_t) { return 1.0; });
     auto a = BinaryFile::open_file(path_a, 'r');
@@ -680,20 +720,24 @@ TEST_F(ExpressionFixture, ScalarBroadcastDivideLeft) {
 }
 
 TEST_F(ExpressionFixture, BroadcastSizeOneDim) {
-    auto md_a = BinaryMetadata::from_element(Element()
-                                                 .set("version", "1")
-                                                 .set("initial_datetime", "2025-01-01T00:00:00")
-                                                 .set("unit", "MW")
-                                                 .set("dimensions", {"row", "col"})
-                                                 .set("dimension_sizes", {3, 2})
-                                                 .set("labels", {"v1", "v2"}));
-    auto md_b = BinaryMetadata::from_element(Element()
-                                                 .set("version", "1")
-                                                 .set("initial_datetime", "2025-01-01T00:00:00")
-                                                 .set("unit", "MW")
-                                                 .set("dimensions", {"row", "col"})
-                                                 .set("dimension_sizes", {1, 2})  // size-1 broadcast on row
-                                                 .set("labels", {"v1", "v2"}));
+    auto md_a = BinaryMetadata::from_element(
+        Element()
+            .set("version", "1")
+            .set("initial_datetime", "2025-01-01T00:00:00")
+            .set("unit", "MW")
+            .set("dimensions", {"row", "col"})
+            .set("dimension_sizes", {3, 2})
+            .set("labels", {"v1", "v2"})
+    );
+    auto md_b = BinaryMetadata::from_element(
+        Element()
+            .set("version", "1")
+            .set("initial_datetime", "2025-01-01T00:00:00")
+            .set("unit", "MW")
+            .set("dimensions", {"row", "col"})
+            .set("dimension_sizes", {1, 2})  // size-1 broadcast on row
+            .set("labels", {"v1", "v2"})
+    );
     // a: a[r,c,k] = r*100 + c*10 + k
     write_qvr(path_a, md_a, [](const std::vector<int64_t>& dims, size_t k) {
         return static_cast<double>(dims[0] * 100 + dims[1] * 10 + static_cast<int64_t>(k));
@@ -725,20 +769,24 @@ TEST_F(ExpressionFixture, BroadcastSizeOneDim) {
 }
 
 TEST_F(ExpressionFixture, BroadcastLabelsAxis) {
-    auto md_a = BinaryMetadata::from_element(Element()
-                                                 .set("version", "1")
-                                                 .set("initial_datetime", "2025-01-01T00:00:00")
-                                                 .set("unit", "MW")
-                                                 .set("dimensions", {"row", "col"})
-                                                 .set("dimension_sizes", {2, 2})
-                                                 .set("labels", {"single"}));  // 1 label
-    auto md_b = BinaryMetadata::from_element(Element()
-                                                 .set("version", "1")
-                                                 .set("initial_datetime", "2025-01-01T00:00:00")
-                                                 .set("unit", "MW")
-                                                 .set("dimensions", {"row", "col"})
-                                                 .set("dimension_sizes", {2, 2})
-                                                 .set("labels", {"l1", "l2", "l3"}));  // 3 labels
+    auto md_a = BinaryMetadata::from_element(
+        Element()
+            .set("version", "1")
+            .set("initial_datetime", "2025-01-01T00:00:00")
+            .set("unit", "MW")
+            .set("dimensions", {"row", "col"})
+            .set("dimension_sizes", {2, 2})
+            .set("labels", {"single"})
+    );  // 1 label
+    auto md_b = BinaryMetadata::from_element(
+        Element()
+            .set("version", "1")
+            .set("initial_datetime", "2025-01-01T00:00:00")
+            .set("unit", "MW")
+            .set("dimensions", {"row", "col"})
+            .set("dimension_sizes", {2, 2})
+            .set("labels", {"l1", "l2", "l3"})
+    );  // 3 labels
     // a: a[r,c,0] = r*10 + c (only one label)
     write_qvr(path_a, md_a, [](const std::vector<int64_t>& dims, size_t /*k*/) {
         return static_cast<double>(dims[0] * 10 + dims[1]);
@@ -772,25 +820,29 @@ TEST_F(ExpressionFixture, BroadcastLabelsAxis) {
 
 TEST_F(ExpressionFixture, UnionDimsAcrossOperands) {
     // lhs: [scenario=2, time=4 monthly]
-    auto md_a = BinaryMetadata::from_element(Element()
-                                                 .set("version", "1")
-                                                 .set("initial_datetime", "2025-01-01T00:00:00")
-                                                 .set("unit", "MW")
-                                                 .set("dimensions", {"scenario", "time"})
-                                                 .set("dimension_sizes", {2, 4})
-                                                 .set("time_dimensions", {"time"})
-                                                 .set("frequencies", {"monthly"})
-                                                 .set("labels", {"v1"}));
+    auto md_a = BinaryMetadata::from_element(
+        Element()
+            .set("version", "1")
+            .set("initial_datetime", "2025-01-01T00:00:00")
+            .set("unit", "MW")
+            .set("dimensions", {"scenario", "time"})
+            .set("dimension_sizes", {2, 4})
+            .set("time_dimensions", {"time"})
+            .set("frequencies", {"monthly"})
+            .set("labels", {"v1"})
+    );
     // rhs: [time=4 monthly, stage=3]
-    auto md_b = BinaryMetadata::from_element(Element()
-                                                 .set("version", "1")
-                                                 .set("initial_datetime", "2025-01-01T00:00:00")
-                                                 .set("unit", "MW")
-                                                 .set("dimensions", {"time", "stage"})
-                                                 .set("dimension_sizes", {4, 3})
-                                                 .set("time_dimensions", {"time"})
-                                                 .set("frequencies", {"monthly"})
-                                                 .set("labels", {"v1"}));
+    auto md_b = BinaryMetadata::from_element(
+        Element()
+            .set("version", "1")
+            .set("initial_datetime", "2025-01-01T00:00:00")
+            .set("unit", "MW")
+            .set("dimensions", {"time", "stage"})
+            .set("dimension_sizes", {4, 3})
+            .set("time_dimensions", {"time"})
+            .set("frequencies", {"monthly"})
+            .set("labels", {"v1"})
+    );
     write_qvr(path_a, md_a, [](const std::vector<int64_t>& dims, size_t /*k*/) {
         // a[scenario, time] = scenario*10 + time
         return static_cast<double>(dims[0] * 10 + dims[1]);
@@ -833,20 +885,24 @@ TEST_F(ExpressionFixture, OperandDimsInDifferentOrder) {
     // scramble values without any other test catching it
     // (UnionDimsAcrossOperands has partially-overlapping sets, not
     // same-set-swapped order).
-    auto md_a = BinaryMetadata::from_element(Element()
-                                                 .set("version", "1")
-                                                 .set("initial_datetime", "2025-01-01T00:00:00")
-                                                 .set("unit", "MW")
-                                                 .set("dimensions", {"scenario", "time"})
-                                                 .set("dimension_sizes", {2, 4})
-                                                 .set("labels", {"v1"}));
-    auto md_b = BinaryMetadata::from_element(Element()
-                                                 .set("version", "1")
-                                                 .set("initial_datetime", "2025-01-01T00:00:00")
-                                                 .set("unit", "MW")
-                                                 .set("dimensions", {"time", "scenario"})  // swapped order
-                                                 .set("dimension_sizes", {4, 2})
-                                                 .set("labels", {"v1"}));
+    auto md_a = BinaryMetadata::from_element(
+        Element()
+            .set("version", "1")
+            .set("initial_datetime", "2025-01-01T00:00:00")
+            .set("unit", "MW")
+            .set("dimensions", {"scenario", "time"})
+            .set("dimension_sizes", {2, 4})
+            .set("labels", {"v1"})
+    );
+    auto md_b = BinaryMetadata::from_element(
+        Element()
+            .set("version", "1")
+            .set("initial_datetime", "2025-01-01T00:00:00")
+            .set("unit", "MW")
+            .set("dimensions", {"time", "scenario"})  // swapped order
+            .set("dimension_sizes", {4, 2})
+            .set("labels", {"v1"})
+    );
     // a[scenario, time] = scenario*10 + time
     write_qvr(path_a, md_a, [](const std::vector<int64_t>& dims, size_t /*k*/) {
         return static_cast<double>(dims[0] * 10 + dims[1]);
@@ -890,13 +946,15 @@ TEST_F(ExpressionFixture, LargeGridCompletes) {
     // 50x20 grid with 4 labels = 16,000 doubles per file. Smaller than the
     // research-suggested 100x100x5 to keep CI runtimes friendly; still large
     // enough that any per-row allocation regression would manifest.
-    auto md = BinaryMetadata::from_element(Element()
-                                               .set("version", "1")
-                                               .set("initial_datetime", "2025-01-01T00:00:00")
-                                               .set("unit", "MW")
-                                               .set("dimensions", {"row", "col"})
-                                               .set("dimension_sizes", {50, 20})
-                                               .set("labels", {"l1", "l2", "l3", "l4"}));
+    auto md = BinaryMetadata::from_element(
+        Element()
+            .set("version", "1")
+            .set("initial_datetime", "2025-01-01T00:00:00")
+            .set("unit", "MW")
+            .set("dimensions", {"row", "col"})
+            .set("dimension_sizes", {50, 20})
+            .set("labels", {"l1", "l2", "l3", "l4"})
+    );
     write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {
         return static_cast<double>(dims[0] * 1000 + dims[1] * 10 + static_cast<int64_t>(k));
     });
@@ -942,12 +1000,15 @@ TEST_F(ExpressionFixture, SaveFailsWhenInputIsOpenForWriting) {
             try {
                 e.save(path_out);
             } catch (const std::runtime_error& err) {
-                EXPECT_NE(std::string(err.what()).find("Cannot open_file: file is already open for writing"),
-                          std::string::npos);
+                EXPECT_NE(
+                    std::string(err.what()).find("Cannot open_file: file is already open for writing"),
+                    std::string::npos
+                );
                 throw;
             }
         },
-        std::runtime_error);
+        std::runtime_error
+    );
 }
 
 TEST_F(ExpressionFixture, ImplicitConversionFromBinaryFile) {
@@ -1074,15 +1135,17 @@ TEST_F(ExpressionFixture, AggregatePercentileOverNonTimeDim) {
 }
 
 TEST_F(ExpressionFixture, AggregateSumOverTimeDimSimple) {
-    auto md = BinaryMetadata::from_element(Element()
-                                               .set("version", "1")
-                                               .set("initial_datetime", "2025-01-01T00:00:00")
-                                               .set("unit", "MW")
-                                               .set("dimensions", {"year", "scenario"})
-                                               .set("dimension_sizes", {3, 2})
-                                               .set("time_dimensions", {"year"})
-                                               .set("frequencies", {"yearly"})
-                                               .set("labels", {"v1"}));
+    auto md = BinaryMetadata::from_element(
+        Element()
+            .set("version", "1")
+            .set("initial_datetime", "2025-01-01T00:00:00")
+            .set("unit", "MW")
+            .set("dimensions", {"year", "scenario"})
+            .set("dimension_sizes", {3, 2})
+            .set("time_dimensions", {"year"})
+            .set("frequencies", {"yearly"})
+            .set("labels", {"v1"})
+    );
     write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t) { return static_cast<double>(dims[0]); });
     auto a = BinaryFile::open_file(path_a, 'r');
     Expression(a).aggregate("year", ExpressionAggregate::Operation::Sum).save(path_out);
@@ -1097,15 +1160,17 @@ TEST_F(ExpressionFixture, AggregateSumOverTimeDimSimple) {
 TEST_F(ExpressionFixture, AggregateSumOverTimeDimVariable) {
     // Reduce "block" (day, parent=month) so the iteration must respect 28-day Feb,
     // 31-day Jan/Mar, 30-day Apr.
-    auto md = BinaryMetadata::from_element(Element()
-                                               .set("version", "1")
-                                               .set("initial_datetime", "2025-01-01T00:00:00")
-                                               .set("unit", "MW")
-                                               .set("dimensions", {"month", "block"})
-                                               .set("dimension_sizes", {4, 31})
-                                               .set("time_dimensions", {"month", "block"})
-                                               .set("frequencies", {"monthly", "daily"})
-                                               .set("labels", {"v1"}));
+    auto md = BinaryMetadata::from_element(
+        Element()
+            .set("version", "1")
+            .set("initial_datetime", "2025-01-01T00:00:00")
+            .set("unit", "MW")
+            .set("dimensions", {"month", "block"})
+            .set("dimension_sizes", {4, 31})
+            .set("time_dimensions", {"month", "block"})
+            .set("frequencies", {"monthly", "daily"})
+            .set("labels", {"v1"})
+    );
     // Fill every cell with 1.0 → sum over block at each month equals the number of days.
     write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t) { return 1.0; });
     auto a = BinaryFile::open_file(path_a, 'r');
@@ -1158,15 +1223,17 @@ TEST_F(ExpressionFixture, AggregateTimeDimRewireParents) {
     // dims=[scenario(3), month(12), block(28)] — reducing scenario (non-time, index 0)
     // shifts month → output index 0, block → output index 1. block's parent in input
     // is 1 (month), should remap to 0 in output.
-    auto md = BinaryMetadata::from_element(Element()
-                                               .set("version", "1")
-                                               .set("initial_datetime", "2025-02-01T00:00:00")
-                                               .set("unit", "MW")
-                                               .set("dimensions", {"scenario", "month", "block"})
-                                               .set("dimension_sizes", {3, 1, 28})
-                                               .set("time_dimensions", {"month", "block"})
-                                               .set("frequencies", {"monthly", "daily"})
-                                               .set("labels", {"v1"}));
+    auto md = BinaryMetadata::from_element(
+        Element()
+            .set("version", "1")
+            .set("initial_datetime", "2025-02-01T00:00:00")
+            .set("unit", "MW")
+            .set("dimensions", {"scenario", "month", "block"})
+            .set("dimension_sizes", {3, 1, 28})
+            .set("time_dimensions", {"month", "block"})
+            .set("frequencies", {"monthly", "daily"})
+            .set("labels", {"v1"})
+    );
     write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t) { return 1.0; });
     auto a = BinaryFile::open_file(path_a, 'r');
     auto out = Expression(a).aggregate("scenario", ExpressionAggregate::Operation::Sum);
@@ -1182,15 +1249,17 @@ TEST_F(ExpressionFixture, AggregateTimeDimRewireParents) {
 TEST_F(ExpressionFixture, AggregateReduceOutermostTimeDimWithChildren) {
     // dims=[year(2), month(12)] both time. Reduce year (outermost). Month's parent
     // was 0 (year). After reduction, month becomes orphan (parent=-1).
-    auto md = BinaryMetadata::from_element(Element()
-                                               .set("version", "1")
-                                               .set("initial_datetime", "2025-01-01T00:00:00")
-                                               .set("unit", "MW")
-                                               .set("dimensions", {"year", "month"})
-                                               .set("dimension_sizes", {2, 12})
-                                               .set("time_dimensions", {"year", "month"})
-                                               .set("frequencies", {"yearly", "monthly"})
-                                               .set("labels", {"v1"}));
+    auto md = BinaryMetadata::from_element(
+        Element()
+            .set("version", "1")
+            .set("initial_datetime", "2025-01-01T00:00:00")
+            .set("unit", "MW")
+            .set("dimensions", {"year", "month"})
+            .set("dimension_sizes", {2, 12})
+            .set("time_dimensions", {"year", "month"})
+            .set("frequencies", {"yearly", "monthly"})
+            .set("labels", {"v1"})
+    );
     write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t) { return 1.0; });
     auto a = BinaryFile::open_file(path_a, 'r');
     auto out = Expression(a).aggregate("year", ExpressionAggregate::Operation::Sum);
@@ -1235,13 +1304,15 @@ TEST_F(ExpressionFixture, AggregatePercentileOutOfRangeThrows) {
 TEST_F(ExpressionFixture, AggregateChained) {
     // Start with 3 dims so chaining two reductions still leaves at least one dim
     // (BinaryMetadata::validate() requires dimensions.size() >= 1).
-    auto md = BinaryMetadata::from_element(Element()
-                                               .set("version", "1")
-                                               .set("initial_datetime", "2025-01-01T00:00:00")
-                                               .set("unit", "MW")
-                                               .set("dimensions", {"row", "col", "depth"})
-                                               .set("dimension_sizes", {3, 2, 2})
-                                               .set("labels", {"v1"}));
+    auto md = BinaryMetadata::from_element(
+        Element()
+            .set("version", "1")
+            .set("initial_datetime", "2025-01-01T00:00:00")
+            .set("unit", "MW")
+            .set("dimensions", {"row", "col", "depth"})
+            .set("dimension_sizes", {3, 2, 2})
+            .set("labels", {"v1"})
+    );
     write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t) { return 2.0; });
     auto a = BinaryFile::open_file(path_a, 'r');
     Expression(a)
@@ -1404,15 +1475,17 @@ TEST_F(ExpressionFixture, AgentAllNaNProducesNaN) {
 }
 
 TEST_F(ExpressionFixture, AgentPreservesDimensions) {
-    auto md = BinaryMetadata::from_element(Element()
-                                               .set("version", "1")
-                                               .set("initial_datetime", "2025-01-01T00:00:00")
-                                               .set("unit", "MW")
-                                               .set("dimensions", {"year", "scenario"})
-                                               .set("dimension_sizes", {2, 3})
-                                               .set("time_dimensions", {"year"})
-                                               .set("frequencies", {"yearly"})
-                                               .set("labels", {"v1", "v2", "v3"}));
+    auto md = BinaryMetadata::from_element(
+        Element()
+            .set("version", "1")
+            .set("initial_datetime", "2025-01-01T00:00:00")
+            .set("unit", "MW")
+            .set("dimensions", {"year", "scenario"})
+            .set("dimension_sizes", {2, 3})
+            .set("time_dimensions", {"year"})
+            .set("frequencies", {"yearly"})
+            .set("labels", {"v1", "v2", "v3"})
+    );
     write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t) { return 1.0; });
     auto a = BinaryFile::open_file(path_a, 'r');
     auto out = Expression(a).aggregate_agents(ExpressionAggregateAgents::Operation::Mean);
@@ -1441,10 +1514,12 @@ TEST_F(ExpressionFixture, AgentPercentileOutOfRangeThrows) {
     auto md = make_simple_metadata();
     write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t) { return 1.0; });
     auto a = BinaryFile::open_file(path_a, 'r');
-    EXPECT_THROW(Expression(a).aggregate_agents(ExpressionAggregateAgents::Operation::Percentile, 1.5),
-                 std::runtime_error);
-    EXPECT_THROW(Expression(a).aggregate_agents(ExpressionAggregateAgents::Operation::Percentile, -0.1),
-                 std::runtime_error);
+    EXPECT_THROW(
+        Expression(a).aggregate_agents(ExpressionAggregateAgents::Operation::Percentile, 1.5), std::runtime_error
+    );
+    EXPECT_THROW(
+        Expression(a).aggregate_agents(ExpressionAggregateAgents::Operation::Percentile, -0.1), std::runtime_error
+    );
 }
 
 TEST_F(ExpressionFixture, AgentChainedAfterAggregate) {
@@ -1778,17 +1853,20 @@ TEST_F(ExpressionFixture, IfElseUnselectedBranchNaNDoesNotPropagate) {
 }
 
 TEST_F(ExpressionFixture, IfElseBroadcastsConditionSizeOneDim) {
-    auto md_cond = BinaryMetadata::from_element(Element()
-                                                    .set("version", "1")
-                                                    .set("initial_datetime", "2025-01-01T00:00:00")
-                                                    .set("unit", "flag")
-                                                    .set("dimensions", {"row", "col"})
-                                                    .set("dimension_sizes", {1, 2})  // broadcast row
-                                                    .set("labels", {"val1", "val2"}));
+    auto md_cond = BinaryMetadata::from_element(
+        Element()
+            .set("version", "1")
+            .set("initial_datetime", "2025-01-01T00:00:00")
+            .set("unit", "flag")
+            .set("dimensions", {"row", "col"})
+            .set("dimension_sizes", {1, 2})  // broadcast row
+            .set("labels", {"val1", "val2"})
+    );
     auto md_full = make_simple_metadata();
     // cond at row=1 is [1, 0] for col=1, col=2 respectively (per-column mask)
-    write_qvr(
-        path_a, md_cond, [](const std::vector<int64_t>& dims, size_t /*k*/) { return (dims[1] == 1) ? 1.0 : 0.0; });
+    write_qvr(path_a, md_cond, [](const std::vector<int64_t>& dims, size_t /*k*/) {
+        return (dims[1] == 1) ? 1.0 : 0.0;
+    });
     write_qvr(path_b, md_full, [](const std::vector<int64_t>&, size_t) { return 100.0; });
     write_qvr(path_c, md_full, [](const std::vector<int64_t>&, size_t) { return -100.0; });
 
@@ -1811,16 +1889,19 @@ TEST_F(ExpressionFixture, IfElseBroadcastsConditionSizeOneDim) {
 }
 
 TEST_F(ExpressionFixture, IfElseBroadcastsLabels) {
-    auto md_single = BinaryMetadata::from_element(Element()
-                                                      .set("version", "1")
-                                                      .set("initial_datetime", "2025-01-01T00:00:00")
-                                                      .set("unit", "flag")
-                                                      .set("dimensions", {"row", "col"})
-                                                      .set("dimension_sizes", {3, 2})
-                                                      .set("labels", {"only"}));  // 1 label
-    auto md_full = make_simple_metadata();                                        // 2 labels
-    write_qvr(
-        path_a, md_single, [](const std::vector<int64_t>& dims, size_t /*k*/) { return (dims[0] == 1) ? 1.0 : 0.0; });
+    auto md_single = BinaryMetadata::from_element(
+        Element()
+            .set("version", "1")
+            .set("initial_datetime", "2025-01-01T00:00:00")
+            .set("unit", "flag")
+            .set("dimensions", {"row", "col"})
+            .set("dimension_sizes", {3, 2})
+            .set("labels", {"only"})
+    );                                      // 1 label
+    auto md_full = make_simple_metadata();  // 2 labels
+    write_qvr(path_a, md_single, [](const std::vector<int64_t>& dims, size_t /*k*/) {
+        return (dims[0] == 1) ? 1.0 : 0.0;
+    });
     write_qvr(path_b, md_full, [](const std::vector<int64_t>& dims, size_t k) {
         return static_cast<double>(dims[0] * 10 + dims[1] + static_cast<int64_t>(k));
     });
@@ -1847,13 +1928,15 @@ TEST_F(ExpressionFixture, IfElseBroadcastsLabels) {
 
 TEST_F(ExpressionFixture, IfElseUnitMismatchThenElseThrows) {
     auto md_t = make_simple_metadata();  // unit "MW"
-    auto md_f = BinaryMetadata::from_element(Element()
-                                                 .set("version", "1")
-                                                 .set("initial_datetime", "2025-01-01T00:00:00")
-                                                 .set("unit", "kWh")
-                                                 .set("dimensions", {"row", "col"})
-                                                 .set("dimension_sizes", {3, 2})
-                                                 .set("labels", {"val1", "val2"}));
+    auto md_f = BinaryMetadata::from_element(
+        Element()
+            .set("version", "1")
+            .set("initial_datetime", "2025-01-01T00:00:00")
+            .set("unit", "kWh")
+            .set("dimensions", {"row", "col"})
+            .set("dimension_sizes", {3, 2})
+            .set("labels", {"val1", "val2"})
+    );
     write_qvr(path_a, md_t, [](const std::vector<int64_t>&, size_t) { return 1.0; });
     write_qvr(path_b, md_t, [](const std::vector<int64_t>&, size_t) { return 2.0; });
     write_qvr(path_c, md_f, [](const std::vector<int64_t>&, size_t) { return 3.0; });
@@ -1866,13 +1949,15 @@ TEST_F(ExpressionFixture, IfElseUnitMismatchThenElseThrows) {
 
 TEST_F(ExpressionFixture, IfElseConditionUnitIgnored) {
     // cond has a different unit than then/else; should succeed.
-    auto md_cond = BinaryMetadata::from_element(Element()
-                                                    .set("version", "1")
-                                                    .set("initial_datetime", "2025-01-01T00:00:00")
-                                                    .set("unit", "flag")
-                                                    .set("dimensions", {"row", "col"})
-                                                    .set("dimension_sizes", {3, 2})
-                                                    .set("labels", {"val1", "val2"}));
+    auto md_cond = BinaryMetadata::from_element(
+        Element()
+            .set("version", "1")
+            .set("initial_datetime", "2025-01-01T00:00:00")
+            .set("unit", "flag")
+            .set("dimensions", {"row", "col"})
+            .set("dimension_sizes", {3, 2})
+            .set("labels", {"val1", "val2"})
+    );
     auto md_branch = make_simple_metadata();  // "MW"
     write_qvr(path_a, md_cond, [](const std::vector<int64_t>&, size_t) { return 1.0; });
     write_qvr(path_b, md_branch, [](const std::vector<int64_t>&, size_t) { return 10.0; });
@@ -1894,13 +1979,15 @@ TEST_F(ExpressionFixture, IfElseConditionUnitIgnored) {
 
 TEST_F(ExpressionFixture, IfElseShapeMismatchThrows) {
     auto md_t = make_simple_metadata();  // 3x2
-    auto md_f = BinaryMetadata::from_element(Element()
-                                                 .set("version", "1")
-                                                 .set("initial_datetime", "2025-01-01T00:00:00")
-                                                 .set("unit", "MW")
-                                                 .set("dimensions", {"row", "col"})
-                                                 .set("dimension_sizes", {4, 2})  // size 4 vs 3
-                                                 .set("labels", {"val1", "val2"}));
+    auto md_f = BinaryMetadata::from_element(
+        Element()
+            .set("version", "1")
+            .set("initial_datetime", "2025-01-01T00:00:00")
+            .set("unit", "MW")
+            .set("dimensions", {"row", "col"})
+            .set("dimension_sizes", {4, 2})  // size 4 vs 3
+            .set("labels", {"val1", "val2"})
+    );
     write_qvr(path_a, md_t, [](const std::vector<int64_t>&, size_t) { return 1.0; });
     write_qvr(path_b, md_t, [](const std::vector<int64_t>&, size_t) { return 2.0; });
     write_qvr(path_c, md_f, [](const std::vector<int64_t>&, size_t) { return 3.0; });
@@ -2222,20 +2309,24 @@ TEST_F(ExpressionFixture, ComparisonDrivesIfElse) {
 }
 
 TEST_F(ExpressionFixture, ComparisonUnitMismatchThrows) {
-    auto md_a = BinaryMetadata::from_element(Element()
-                                                 .set("version", "1")
-                                                 .set("initial_datetime", "2025-01-01T00:00:00")
-                                                 .set("unit", "MW")
-                                                 .set("dimensions", {"row"})
-                                                 .set("dimension_sizes", {2})
-                                                 .set("labels", {"v"}));
-    auto md_b = BinaryMetadata::from_element(Element()
-                                                 .set("version", "1")
-                                                 .set("initial_datetime", "2025-01-01T00:00:00")
-                                                 .set("unit", "GWh")
-                                                 .set("dimensions", {"row"})
-                                                 .set("dimension_sizes", {2})
-                                                 .set("labels", {"v"}));
+    auto md_a = BinaryMetadata::from_element(
+        Element()
+            .set("version", "1")
+            .set("initial_datetime", "2025-01-01T00:00:00")
+            .set("unit", "MW")
+            .set("dimensions", {"row"})
+            .set("dimension_sizes", {2})
+            .set("labels", {"v"})
+    );
+    auto md_b = BinaryMetadata::from_element(
+        Element()
+            .set("version", "1")
+            .set("initial_datetime", "2025-01-01T00:00:00")
+            .set("unit", "GWh")
+            .set("dimensions", {"row"})
+            .set("dimension_sizes", {2})
+            .set("labels", {"v"})
+    );
     write_qvr(path_a, md_a, [](const std::vector<int64_t>&, size_t) { return 1.0; });
     write_qvr(path_b, md_b, [](const std::vector<int64_t>&, size_t) { return 1.0; });
     auto a = BinaryFile::open_file(path_a, 'r');
@@ -2319,17 +2410,21 @@ TEST_F(ExpressionFixture, LogicalIsUnitlessAcrossUnits) {
     // Two comparisons whose source files have different units: && must NOT throw, and the result
     // is unitless. (Comparisons keep their source unit; logical ops are unit-agnostic.)
     auto md_mw = make_simple_metadata();  // unit MW
-    auto md_gwh = BinaryMetadata::from_element(Element()
-                                                   .set("version", "1")
-                                                   .set("initial_datetime", "2025-01-01T00:00:00")
-                                                   .set("unit", "GWh")
-                                                   .set("dimensions", {"row", "col"})
-                                                   .set("dimension_sizes", {3, 2})
-                                                   .set("labels", {"val1", "val2"}));
-    write_qvr(
-        path_a, md_mw, [](const std::vector<int64_t>& dims, size_t /*k*/) { return static_cast<double>(dims[0]); });
-    write_qvr(
-        path_b, md_gwh, [](const std::vector<int64_t>& dims, size_t /*k*/) { return static_cast<double>(dims[1]); });
+    auto md_gwh = BinaryMetadata::from_element(
+        Element()
+            .set("version", "1")
+            .set("initial_datetime", "2025-01-01T00:00:00")
+            .set("unit", "GWh")
+            .set("dimensions", {"row", "col"})
+            .set("dimension_sizes", {3, 2})
+            .set("labels", {"val1", "val2"})
+    );
+    write_qvr(path_a, md_mw, [](const std::vector<int64_t>& dims, size_t /*k*/) {
+        return static_cast<double>(dims[0]);
+    });
+    write_qvr(path_b, md_gwh, [](const std::vector<int64_t>& dims, size_t /*k*/) {
+        return static_cast<double>(dims[1]);
+    });
     auto a = BinaryFile::open_file(path_a, 'r');
     auto b = BinaryFile::open_file(path_b, 'r');
     // (a > 1.0) is MW-tagged, (b > 0.0) is GWh-tagged; && combines them without a unit error.

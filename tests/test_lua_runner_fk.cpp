@@ -48,7 +48,8 @@ TEST_F(LuaRunnerFkTest, CreateElementMissingFkTarget) {
         })
     )");
         },
-        std::runtime_error);
+        std::runtime_error
+    );
 }
 
 TEST_F(LuaRunnerFkTest, CreateElementStringForNonFkInteger) {
@@ -64,7 +65,8 @@ TEST_F(LuaRunnerFkTest, CreateElementStringForNonFkInteger) {
         })
     )");
         },
-        std::runtime_error);
+        std::runtime_error
+    );
 }
 
 TEST_F(LuaRunnerFkTest, CreateElementScalarFkLabel) {
@@ -217,7 +219,8 @@ TEST_F(LuaRunnerFkTest, CreateElementFkResolutionNoPartialWrites) {
         })
     )");
         },
-        std::runtime_error);
+        std::runtime_error
+    );
 
     // Verify: no child was created (zero partial writes)
     auto labels = db.read_scalar_strings("Child", "label");
@@ -346,7 +349,8 @@ TEST_F(LuaRunnerFkTest, UpdateElementFkFailurePreservesExisting) {
         db:update_element("Child", 1, { parent_id = "Nonexistent" })
     )");
         },
-        std::runtime_error);
+        std::runtime_error
+    );
 
     // Verify: original value preserved
     auto parent_ids = db.read_scalar_integers("Child", "parent_id");

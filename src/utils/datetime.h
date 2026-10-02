@@ -15,9 +15,11 @@ namespace quiver::datetime {
 // Build the C++20 calendar date a std::tm denotes. Shared by tm_to_time_point and by
 // parse_iso8601's validity check.
 inline std::chrono::year_month_day tm_to_year_month_day(const std::tm& tm) {
-    return std::chrono::year_month_day{std::chrono::year{tm.tm_year + 1900},
-                                       std::chrono::month{static_cast<unsigned>(tm.tm_mon + 1)},
-                                       std::chrono::day{static_cast<unsigned>(tm.tm_mday)}};
+    return std::chrono::year_month_day{
+        std::chrono::year{tm.tm_year + 1900},
+        std::chrono::month{static_cast<unsigned>(tm.tm_mon + 1)},
+        std::chrono::day{static_cast<unsigned>(tm.tm_mday)}
+    };
 }
 
 // Convert a std::tm (interpreted as UTC) to a system_clock::time_point.
@@ -101,15 +103,17 @@ inline std::string format_utc(const std::chrono::system_clock::time_point& tp) {
     std::chrono::hh_mm_ss<std::chrono::seconds> hms{std::chrono::duration_cast<std::chrono::seconds>(tp - days)};
 
     char buffer[32];
-    std::snprintf(buffer,
-                  sizeof(buffer),
-                  "%04d-%02u-%02uT%02d:%02d:%02d",
-                  static_cast<int>(ymd.year()),
-                  static_cast<unsigned>(ymd.month()),
-                  static_cast<unsigned>(ymd.day()),
-                  static_cast<int>(hms.hours().count()),
-                  static_cast<int>(hms.minutes().count()),
-                  static_cast<int>(hms.seconds().count()));
+    std::snprintf(
+        buffer,
+        sizeof(buffer),
+        "%04d-%02u-%02uT%02d:%02d:%02d",
+        static_cast<int>(ymd.year()),
+        static_cast<unsigned>(ymd.month()),
+        static_cast<unsigned>(ymd.day()),
+        static_cast<int>(hms.hours().count()),
+        static_cast<int>(hms.minutes().count()),
+        static_cast<int>(hms.seconds().count())
+    );
     return std::string(buffer);
 }
 

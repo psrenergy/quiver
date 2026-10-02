@@ -99,8 +99,9 @@ struct Database::Impl {
     // resolves it through here rather than letting SQLite report a foreign-key failure.
     void require_element(const std::string& collection, int64_t id, Database& db) const {
         if (db.execute("SELECT 1 FROM " + collection + " WHERE id = ?", {id}).empty()) {
-            throw std::runtime_error("Element not found: " + std::to_string(id) + " in collection '" + collection +
-                                     "'");
+            throw std::runtime_error(
+                "Element not found: " + std::to_string(id) + " in collection '" + collection + "'"
+            );
         }
     }
 
@@ -134,8 +135,9 @@ struct Database::Impl {
             throw std::runtime_error(std::string("Cannot ") + operation + ": table not found: " + table);
         }
         if (!table_def->has_column(column)) {
-            throw std::runtime_error(std::string("Cannot ") + operation + ": column '" + column +
-                                     "' not found in table '" + table + "'");
+            throw std::runtime_error(
+                std::string("Cannot ") + operation + ": column '" + column + "' not found in table '" + table + "'"
+            );
         }
     }
 
@@ -152,8 +154,9 @@ struct Database::Impl {
             if (fk.from_column == column) {
                 auto id = lookup_id_by_label(fk.to_table, str_val, db);
                 if (!id) {
-                    throw std::runtime_error("Failed to resolve label '" + str_val + "' to ID in table '" +
-                                             fk.to_table + "'");
+                    throw std::runtime_error(
+                        "Failed to resolve label '" + str_val + "' to ID in table '" + fk.to_table + "'"
+                    );
                 }
                 return *id;
             }
@@ -162,8 +165,10 @@ struct Database::Impl {
         // String value on a non-FK INTEGER column is an error
         auto col_type = table_def.get_data_type(column);
         if (col_type && *col_type == DataType::Integer) {
-            throw std::runtime_error("Cannot resolve attribute: '" + column + "' is INTEGER but received string '" +
-                                     str_val + "' (not a foreign key)");
+            throw std::runtime_error(
+                "Cannot resolve attribute: '" + column + "' is INTEGER but received string '" + str_val +
+                "' (not a foreign key)"
+            );
         }
 
         // String value for TEXT/DATETIME column: pass through
@@ -219,29 +224,34 @@ struct Database::Impl {
         case GroupTableType::TimeSeries:
             return "time series";
         default:
-            throw std::runtime_error("Cannot group_table_noun: unknown group table type " +
-                                     std::to_string(static_cast<int>(type)));
+            throw std::runtime_error(
+                "Cannot group_table_noun: unknown group table type " + std::to_string(static_cast<int>(type))
+            );
         }
     }
 
     // Shared body of update_vector_group / update_set_group (defined in database_update.cpp):
     // resolves (collection, group) to exactly one table, validates and FK-resolves the rows,
     // then replaces the element's rows in that table.
-    void update_group_rows(const char* caller,
-                           const std::string& collection,
-                           const std::string& group,
-                           GroupTableType type,
-                           int64_t id,
-                           const std::vector<std::map<std::string, Value>>& rows,
-                           Database& db);
+    void update_group_rows(
+        const char* caller,
+        const std::string& collection,
+        const std::string& group,
+        GroupTableType type,
+        int64_t id,
+        const std::vector<std::map<std::string, Value>>& rows,
+        Database& db
+    );
 
-    void insert_rows_into_group_table(const char* caller,
-                                      const std::string& table_name,
-                                      GroupTableType type,
-                                      const std::map<std::string, const std::vector<Value>*>& columns,
-                                      int64_t element_id,
-                                      bool delete_existing,
-                                      Database& db) {
+    void insert_rows_into_group_table(
+        const char* caller,
+        const std::string& table_name,
+        GroupTableType type,
+        const std::map<std::string, const std::vector<Value>*>& columns,
+        int64_t element_id,
+        bool delete_existing,
+        Database& db
+    ) {
         const char* noun = group_table_noun(type);
 
         // Validate types and verify same-length arrays *before* the DELETE: TransactionGuard
@@ -256,8 +266,10 @@ struct Database::Impl {
                 type_validator->validate_array(caller, table_name, col_name, *values_ptr);
             }
             if (values_ptr->size() != num_rows) {
-                throw std::runtime_error(std::string("Cannot ") + caller + ": " + noun + " columns in table '" +
-                                         table_name + "' must have the same length");
+                throw std::runtime_error(
+                    std::string("Cannot ") + caller + ": " + noun + " columns in table '" + table_name +
+                    "' must have the same length"
+                );
             }
         }
 
@@ -289,12 +301,14 @@ struct Database::Impl {
         logger->debug("Inserted {} {} rows into {}", num_rows, noun, table_name);
     }
 
-    void insert_group_data(const char* caller,
-                           const std::string& collection,
-                           int64_t element_id,
-                           const std::map<std::string, std::vector<Value>>& arrays,
-                           bool delete_existing,
-                           Database& db) {
+    void insert_group_data(
+        const char* caller,
+        const std::string& collection,
+        int64_t element_id,
+        const std::map<std::string, std::vector<Value>>& arrays,
+        bool delete_existing,
+        Database& db
+    ) {
         // Route arrays to their target tables
         struct TableColumns {
             GroupTableType type;
@@ -310,9 +324,10 @@ struct Database::Impl {
 
             auto matches = schema->find_all_tables_for_column(collection, array_name);
             if (matches.empty()) {
-                throw std::runtime_error(std::string("Cannot ") + caller + ": array '" + array_name +
-                                         "' does not match any vector, set, or time series table in collection '" +
-                                         collection + "'");
+                throw std::runtime_error(
+                    std::string("Cannot ") + caller + ": array '" + array_name +
+                    "' does not match any vector, set, or time series table in collection '" + collection + "'"
+                );
             }
 
             // A column name shared by several group tables (legal for FK columns, which
@@ -325,12 +340,14 @@ struct Database::Impl {
                 for (const auto& match : matches) {
                     table_list += (table_list.empty() ? "" : ", ") + match.table_name;
                 }
-                logger->warn("{}: array '{}' matches {} group tables ({}) and will be written to all of "
-                             "them; use update_vector_group/update_set_group to target one group",
-                             caller,
-                             array_name,
-                             matches.size(),
-                             table_list);
+                logger->warn(
+                    "{}: array '{}' matches {} group tables ({}) and will be written to all of "
+                    "them; use update_vector_group/update_set_group to target one group",
+                    caller,
+                    array_name,
+                    matches.size(),
+                    table_list
+                );
             }
 
             for (const auto& match : matches) {
@@ -342,7 +359,8 @@ struct Database::Impl {
 
         for (const auto& [table_name, entry] : table_columns) {
             insert_rows_into_group_table(
-                caller, table_name, entry.type, entry.columns, element_id, delete_existing, db);
+                caller, table_name, entry.type, entry.columns, element_id, delete_existing, db
+            );
         }
     }
 

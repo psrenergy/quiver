@@ -3,7 +3,8 @@
 namespace {
 quiver::Database open_collections() {
     return quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 }
 }  // namespace
 
@@ -34,11 +35,13 @@ TEST_F(LuaRunnerTest, DescribeCollection) {
 
 TEST_F(LuaRunnerTest, SummarizeCollection) {
     auto db = open_collections();
-    db.create_element("Collection",
-                      quiver::Element()
-                          .set("label", "a")
-                          .set("some_integer", static_cast<int64_t>(1))
-                          .set("value_int", std::vector<int64_t>{10, 20}));
+    db.create_element(
+        "Collection",
+        quiver::Element()
+            .set("label", "a")
+            .set("some_integer", static_cast<int64_t>(1))
+            .set("value_int", std::vector<int64_t>{10, 20})
+    );
     db.create_element("Collection", quiver::Element().set("label", "b").set("some_integer", static_cast<int64_t>(1)));
     db.create_element("Collection", quiver::Element().set("label", "c").set("some_integer", static_cast<int64_t>(5)));
 

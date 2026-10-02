@@ -9,7 +9,8 @@
 
 TEST(Database, GetVectorMetadataForeignKey) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     auto metadata = db.get_vector_metadata("Child", "refs");
     ASSERT_EQ(metadata.value_columns.size(), 1);
@@ -21,7 +22,8 @@ TEST(Database, GetVectorMetadataForeignKey) {
 
 TEST(Database, GetSetMetadataForeignKey) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     auto metadata = db.get_set_metadata("Child", "parents");
     ASSERT_EQ(metadata.value_columns.size(), 1);
@@ -33,7 +35,8 @@ TEST(Database, GetSetMetadataForeignKey) {
 
 TEST(Database, GetSetMetadataNonForeignKeyColumn) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     auto metadata = db.get_set_metadata("Child", "scores");
     ASSERT_EQ(metadata.value_columns.size(), 1);

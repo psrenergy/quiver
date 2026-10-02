@@ -143,10 +143,12 @@ TEST_F(LuaRunnerTest, ReadVectorIntegers) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
-    db.create_element("Collection",
-                      quiver::Element().set("label", "Item 1").set("value_int", std::vector<int64_t>{1, 2, 3}));
-    db.create_element("Collection",
-                      quiver::Element().set("label", "Item 2").set("value_int", std::vector<int64_t>{10, 20}));
+    db.create_element(
+        "Collection", quiver::Element().set("label", "Item 1").set("value_int", std::vector<int64_t>{1, 2, 3})
+    );
+    db.create_element(
+        "Collection", quiver::Element().set("label", "Item 2").set("value_int", std::vector<int64_t>{10, 20})
+    );
 
     quiver::LuaRunner lua(db);
 
@@ -171,8 +173,9 @@ TEST_F(LuaRunnerTest, ReadVectorFloats) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
-    db.create_element("Collection",
-                      quiver::Element().set("label", "Item 1").set("value_float", std::vector<double>{1.1, 2.2, 3.3}));
+    db.create_element(
+        "Collection", quiver::Element().set("label", "Item 1").set("value_float", std::vector<double>{1.1, 2.2, 3.3})
+    );
 
     quiver::LuaRunner lua(db);
 
@@ -243,8 +246,9 @@ TEST_F(LuaRunnerTest, ReadVectorIntegersEmpty) {
 TEST_F(LuaRunnerTest, ReadVectorBulkAlignsWithElementIdsAcrossEmptyElement) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
-    db.create_element("Collection",
-                      quiver::Element().set("label", "Item 1").set("value_int", std::vector<int64_t>{1, 2}));
+    db.create_element(
+        "Collection", quiver::Element().set("label", "Item 1").set("value_int", std::vector<int64_t>{1, 2})
+    );
     db.create_element("Collection", quiver::Element().set("label", "Item 2"));  // no vector rows
     db.create_element("Collection", quiver::Element().set("label", "Item 3").set("value_int", std::vector<int64_t>{7}));
 
@@ -267,10 +271,12 @@ TEST_F(LuaRunnerTest, ReadVectorBulkAlignsWithElementIdsAcrossEmptyElement) {
 TEST_F(LuaRunnerTest, ReadSetStringsAll) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
-    db.create_element("Collection",
-                      quiver::Element().set("label", "Item 1").set("tag", std::vector<std::string>{"a", "b"}));
-    db.create_element("Collection",
-                      quiver::Element().set("label", "Item 2").set("tag", std::vector<std::string>{"c", "d", "e"}));
+    db.create_element(
+        "Collection", quiver::Element().set("label", "Item 1").set("tag", std::vector<std::string>{"a", "b"})
+    );
+    db.create_element(
+        "Collection", quiver::Element().set("label", "Item 2").set("tag", std::vector<std::string>{"c", "d", "e"})
+    );
 
     quiver::LuaRunner lua(db);
 
@@ -320,11 +326,12 @@ TEST_F(LuaRunnerTest, ReadElementIdsEmpty) {
 
 TEST_F(LuaRunnerTest, ReadScalarsById) {
     auto db = quiver::Database::from_schema(
-        ":memory:", collections_schema, {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", collections_schema, {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element(
-        "Collection",
-        quiver::Element().set("label", "Item 1").set("some_integer", int64_t{42}).set("some_float", 3.14));
+        "Collection", quiver::Element().set("label", "Item 1").set("some_integer", int64_t{42}).set("some_float", 3.14)
+    );
 
     quiver::LuaRunner lua(db);
 
@@ -352,7 +359,8 @@ TEST_F(LuaRunnerTest, ReadVectorsById) {
     // and returns an empty table. Note: collections.sql has multi-column vector groups
     // where group_name != column_name, which is a known limitation of the composite helper.
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
     int64_t id = db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
     quiver::LuaRunner lua(db);
@@ -377,7 +385,8 @@ TEST_F(LuaRunnerTest, ReadSetsById) {
     // and returns an empty table. Note: collections.sql has set groups where
     // group_name != column_name, which is a known limitation of the composite helper.
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
     int64_t id = db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
     quiver::LuaRunner lua(db);
@@ -398,15 +407,17 @@ TEST_F(LuaRunnerTest, ReadSetsById) {
 }
 
 TEST_F(LuaRunnerTest, ReadVectorsByIdWithData) {
-    auto db = quiver::Database::from_schema(":memory:",
-                                            VALID_SCHEMA("composite_helpers.sql"),
-                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
-    int64_t id = db.create_element("Items",
-                                   quiver::Element()
-                                       .set("label", "Item 1")
-                                       .set("amount", std::vector<int64_t>{10, 20, 30})
-                                       .set("score", std::vector<double>{1.1, 2.2})
-                                       .set("note", std::vector<std::string>{"hello", "world"}));
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("composite_helpers.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
+    int64_t id = db.create_element(
+        "Items",
+        quiver::Element()
+            .set("label", "Item 1")
+            .set("amount", std::vector<int64_t>{10, 20, 30})
+            .set("score", std::vector<double>{1.1, 2.2})
+            .set("note", std::vector<std::string>{"hello", "world"})
+    );
 
     quiver::LuaRunner lua(db);
 
@@ -444,15 +455,17 @@ TEST_F(LuaRunnerTest, ReadVectorsByIdWithData) {
 }
 
 TEST_F(LuaRunnerTest, ReadSetsByIdWithData) {
-    auto db = quiver::Database::from_schema(":memory:",
-                                            VALID_SCHEMA("composite_helpers.sql"),
-                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
-    int64_t id = db.create_element("Items",
-                                   quiver::Element()
-                                       .set("label", "Item 1")
-                                       .set("code", std::vector<int64_t>{10, 20, 30})
-                                       .set("weight", std::vector<double>{1.1, 2.2})
-                                       .set("tag", std::vector<std::string>{"alpha", "beta"}));
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("composite_helpers.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
+    int64_t id = db.create_element(
+        "Items",
+        quiver::Element()
+            .set("label", "Item 1")
+            .set("code", std::vector<int64_t>{10, 20, 30})
+            .set("weight", std::vector<double>{1.1, 2.2})
+            .set("tag", std::vector<std::string>{"alpha", "beta"})
+    );
 
     quiver::LuaRunner lua(db);
 
@@ -481,18 +494,20 @@ TEST_F(LuaRunnerTest, ReadSetsByIdWithData) {
 }
 
 TEST_F(LuaRunnerTest, ReadElementById) {
-    auto db = quiver::Database::from_schema(":memory:",
-                                            VALID_SCHEMA("composite_helpers.sql"),
-                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
-    int64_t id = db.create_element("Items",
-                                   quiver::Element()
-                                       .set("label", "Item 1")
-                                       .set("amount", std::vector<int64_t>{10, 20, 30})
-                                       .set("score", std::vector<double>{1.1, 2.2})
-                                       .set("note", std::vector<std::string>{"hello", "world"})
-                                       .set("code", std::vector<int64_t>{5, 6})
-                                       .set("weight", std::vector<double>{9.9})
-                                       .set("tag", std::vector<std::string>{"alpha", "beta"}));
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("composite_helpers.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
+    int64_t id = db.create_element(
+        "Items",
+        quiver::Element()
+            .set("label", "Item 1")
+            .set("amount", std::vector<int64_t>{10, 20, 30})
+            .set("score", std::vector<double>{1.1, 2.2})
+            .set("note", std::vector<std::string>{"hello", "world"})
+            .set("code", std::vector<int64_t>{5, 6})
+            .set("weight", std::vector<double>{9.9})
+            .set("tag", std::vector<std::string>{"alpha", "beta"})
+    );
 
     quiver::LuaRunner lua(db);
 

@@ -275,9 +275,10 @@ TEST_F(LuaRunnerTest, CreateElementArrayCellTypeMismatchThrows) {
     // A cell that fits no element type is a Pattern 1 rejection naming the array and the cell —
     // not a raw sol2 message, and never a silent placeholder (the unchecked sol2 getters are only
     // checked while SOL_SAFE_GETTER is on, i.e. debug builds).
-    for (const char* script : {R"(db:create_element("Collection", { label = "I", tag = { "a", true } }))",
-                               R"(db:create_element("Collection", { label = "I", tag = { "a", 1 } }))",
-                               R"(db:create_element("Collection", { label = "I", value_int = { 1, "zz" } }))"}) {
+    for (const char* script :
+         {R"(db:create_element("Collection", { label = "I", tag = { "a", true } }))",
+          R"(db:create_element("Collection", { label = "I", tag = { "a", 1 } }))",
+          R"(db:create_element("Collection", { label = "I", value_int = { 1, "zz" } }))"}) {
         try {
             lua.run(script);
             FAIL() << "expected a mismatched array cell to throw: " << script;

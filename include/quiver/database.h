@@ -28,9 +28,11 @@ public:
     Database(Database&& other) noexcept;
     Database& operator=(Database&& other) noexcept;
 
-    static Database from_migrations(const std::string& db_path,
-                                    const std::string& migrations_path,
-                                    const DatabaseOptions& options = {});
+    static Database from_migrations(
+        const std::string& db_path,
+        const std::string& migrations_path,
+        const DatabaseOptions& options = {}
+    );
 
     static Database
     from_schema(const std::string& db_path, const std::string& schema_path, const DatabaseOptions& options = {});
@@ -54,26 +56,30 @@ public:
     // lowercase(collection_to) + "_" + relation_type and must be a foreign key from
     // collection_from to collection_to; std::nullopt clears it. A group relation is a list of
     // targets, so it is written by the group writer that owns the group.
-    void update_relation(const std::string& collection_from,
-                         const std::string& collection_to,
-                         const std::string& relation_type,
-                         int64_t id,
-                         const std::optional<std::string>& target_label);
+    void update_relation(
+        const std::string& collection_from,
+        const std::string& collection_to,
+        const std::string& relation_type,
+        int64_t id,
+        const std::optional<std::string>& target_label
+    );
     // Resolves the label within `collection_from` (unique per collection, not per database), then
     // delegates to update_relation.
-    void update_relation_by_label(const std::string& collection_from,
-                                  const std::string& collection_to,
-                                  const std::string& relation_type,
-                                  const std::string& label,
-                                  const std::optional<std::string>& target_label);
+    void update_relation_by_label(
+        const std::string& collection_from,
+        const std::string& collection_to,
+        const std::string& relation_type,
+        const std::string& label,
+        const std::optional<std::string>& target_label
+    );
 
     // Read scalar attributes (all elements). One entry per element, aligned with read_element_ids;
     // a SQL NULL is std::nullopt (positional — never dropped).
-    std::vector<std::optional<int64_t>> read_scalar_integers(const std::string& collection,
-                                                             const std::string& attribute);
+    std::vector<std::optional<int64_t>>
+    read_scalar_integers(const std::string& collection, const std::string& attribute);
     std::vector<std::optional<double>> read_scalar_floats(const std::string& collection, const std::string& attribute);
-    std::vector<std::optional<std::string>> read_scalar_strings(const std::string& collection,
-                                                                const std::string& attribute);
+    std::vector<std::optional<std::string>>
+    read_scalar_strings(const std::string& collection, const std::string& attribute);
 
     // Read scalar attributes (by element ID)
     std::optional<int64_t>
@@ -87,8 +93,8 @@ public:
     // Values are dense — NULL cells are dropped.
     std::vector<std::vector<int64_t>> read_vector_integers(const std::string& collection, const std::string& attribute);
     std::vector<std::vector<double>> read_vector_floats(const std::string& collection, const std::string& attribute);
-    std::vector<std::vector<std::string>> read_vector_strings(const std::string& collection,
-                                                              const std::string& attribute);
+    std::vector<std::vector<std::string>>
+    read_vector_strings(const std::string& collection, const std::string& attribute);
 
     // Read vector attributes (by element ID)
     std::vector<int64_t>
@@ -126,24 +132,32 @@ public:
     // cell missing from a row is SQL NULL. Throws if the element does not exist ("Element not
     // found"), if a column is unknown, or if a column is "id"/"vector_index" - both are derived
     // (the element and the row's position), so accepting one would silently discard the value.
-    void update_vector_group(const std::string& collection,
-                             const std::string& group,
-                             int64_t id,
-                             const std::vector<std::map<std::string, Value>>& rows);
-    void update_set_group(const std::string& collection,
-                          const std::string& group,
-                          int64_t id,
-                          const std::vector<std::map<std::string, Value>>& rows);
+    void update_vector_group(
+        const std::string& collection,
+        const std::string& group,
+        int64_t id,
+        const std::vector<std::map<std::string, Value>>& rows
+    );
+    void update_set_group(
+        const std::string& collection,
+        const std::string& group,
+        int64_t id,
+        const std::vector<std::map<std::string, Value>>& rows
+    );
     // Resolve the label within `collection` (unique per collection, not per database), then
     // delegate to the id form above.
-    void update_vector_group_by_label(const std::string& collection,
-                                      const std::string& group,
-                                      const std::string& label,
-                                      const std::vector<std::map<std::string, Value>>& rows);
-    void update_set_group_by_label(const std::string& collection,
-                                   const std::string& group,
-                                   const std::string& label,
-                                   const std::vector<std::map<std::string, Value>>& rows);
+    void update_vector_group_by_label(
+        const std::string& collection,
+        const std::string& group,
+        const std::string& label,
+        const std::vector<std::map<std::string, Value>>& rows
+    );
+    void update_set_group_by_label(
+        const std::string& collection,
+        const std::string& group,
+        const std::string& label,
+        const std::vector<std::map<std::string, Value>>& rows
+    );
 
     // Read element Ids
     std::vector<int64_t> read_element_ids(const std::string& collection);
@@ -172,23 +186,29 @@ public:
     // Read time series row - returns one value per element for a specific attribute at a given date_time
     // Uses "last non-null value at or before date_time" lookup semantics
     // Returns nullptr Value for elements with no matching data
-    std::vector<Value> read_time_series_row(const std::string& collection,
-                                            const std::string& group,
-                                            const std::string& attribute,
-                                            const std::string& date_time);
+    std::vector<Value> read_time_series_row(
+        const std::string& collection,
+        const std::string& group,
+        const std::string& attribute,
+        const std::string& date_time
+    );
 
     // Update time series group - replaces all rows for element
-    void update_time_series_group(const std::string& collection,
-                                  const std::string& group,
-                                  int64_t id,
-                                  const std::vector<std::map<std::string, Value>>& rows);
+    void update_time_series_group(
+        const std::string& collection,
+        const std::string& group,
+        int64_t id,
+        const std::vector<std::map<std::string, Value>>& rows
+    );
 
     // Resolve the label within `collection` (unique per collection, not per database), then
     // delegate to the id form above.
-    void update_time_series_group_by_label(const std::string& collection,
-                                           const std::string& group,
-                                           const std::string& label,
-                                           const std::vector<std::map<std::string, Value>>& rows);
+    void update_time_series_group_by_label(
+        const std::string& collection,
+        const std::string& group,
+        const std::string& label,
+        const std::vector<std::map<std::string, Value>>& rows
+    );
 
     // Add (or upsert) a single time series row. Inserts a new row identified by id +
     // every dimension column from the schema PK; if a row with the same PK already
@@ -196,24 +216,30 @@ public:
     // every dimension column must be present, unknown columns or type mismatches throw
     // "Cannot upsert_time_series_row: ..." (canonical Pattern 1). Participates in the
     // existing nest-aware TransactionGuard.
-    void upsert_time_series_row(const std::string& collection,
-                                const std::string& group,
-                                int64_t id,
-                                const std::map<std::string, Value>& row);
+    void upsert_time_series_row(
+        const std::string& collection,
+        const std::string& group,
+        int64_t id,
+        const std::map<std::string, Value>& row
+    );
 
     // Resolve the label within `collection` (unique per collection, not per database), then
     // delegate to the id form above.
-    void upsert_time_series_row_by_label(const std::string& collection,
-                                         const std::string& group,
-                                         const std::string& label,
-                                         const std::map<std::string, Value>& row);
+    void upsert_time_series_row_by_label(
+        const std::string& collection,
+        const std::string& group,
+        const std::string& label,
+        const std::map<std::string, Value>& row
+    );
 
     // Time series files - singleton table storing file paths for external time series data
     bool has_time_series_files(const std::string& collection) const;
     std::vector<std::string> list_time_series_files_columns(const std::string& collection) const;
     std::map<std::string, std::optional<std::string>> read_time_series_files(const std::string& collection);
-    void update_time_series_files(const std::string& collection,
-                                  const std::map<std::string, std::optional<std::string>>& paths);
+    void update_time_series_files(
+        const std::string& collection,
+        const std::map<std::string, std::optional<std::string>>& paths
+    );
 
     const std::string& path() const;
 
@@ -227,14 +253,18 @@ public:
     std::string summarize_collection(const std::string& collection) const;
 
     // CSV operations
-    void export_csv(const std::string& collection,
-                    const std::string& group,
-                    const std::string& path,
-                    const CSVOptions& options = default_csv_options());
-    void import_csv(const std::string& collection,
-                    const std::string& group,
-                    const std::string& path,
-                    const CSVOptions& options = default_csv_options());
+    void export_csv(
+        const std::string& collection,
+        const std::string& group,
+        const std::string& path,
+        const CSVOptions& options = default_csv_options()
+    );
+    void import_csv(
+        const std::string& collection,
+        const std::string& group,
+        const std::string& path,
+        const CSVOptions& options = default_csv_options()
+    );
 
     // Query methods - execute SQL and return first row's first column
     std::optional<std::string> query_string(const std::string& sql, const std::vector<Value>& parameters = {});

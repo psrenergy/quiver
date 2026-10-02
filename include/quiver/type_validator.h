@@ -17,16 +17,20 @@ public:
 
     // Validate a scalar value against a column in a table.
     // Throws std::runtime_error on mismatch; `caller` names the operation for Pattern-1 messages.
-    void validate_scalar(const std::string& caller,
-                         const std::string& table,
-                         const std::string& column,
-                         const Value& value) const;
+    void validate_scalar(
+        const std::string& caller,
+        const std::string& table,
+        const std::string& column,
+        const Value& value
+    ) const;
 
     // Validate an array value against a column in a table
-    void validate_array(const std::string& caller,
-                        const std::string& table,
-                        const std::string& column,
-                        const std::vector<Value>& values) const;
+    void validate_array(
+        const std::string& caller,
+        const std::string& table,
+        const std::string& column,
+        const std::vector<Value>& values
+    ) const;
 
     // Low-level: validate value against explicit type
     static void

@@ -169,13 +169,15 @@ TEST_F(LuaExpressionTest, AggregateDimensionPercentile) {
 TEST_F(LuaExpressionTest, AggregateUnknownOpThrows) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::LuaRunner lua(db);
-    expect_lua_error(lua,
-                     prelude() + R"(
+    expect_lua_error(
+        lua,
+        prelude() + R"(
         fill_by_row('expr_a')
         local fa = db:open_file('expr_a', 'r')
         quiver.expression(fa):aggregate('row', 'bogus')
     )",
-                     "Cannot aggregate: unknown operation 'bogus'");
+        "Cannot aggregate: unknown operation 'bogus'"
+    );
 }
 
 TEST_F(LuaExpressionTest, AggregateAgentsMean) {
@@ -218,14 +220,16 @@ TEST_F(LuaExpressionTest, SelectAndRenameAgents) {
 TEST_F(LuaExpressionTest, SaveOutputCollisionThrows) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::LuaRunner lua(db);
-    expect_lua_error(lua,
-                     prelude() + R"(
+    expect_lua_error(
+        lua,
+        prelude() + R"(
         fill('expr_a', 1.0, 1.0)
         local fa = db:open_file('expr_a', 'r')
         local expr = quiver.expression(fa) * 2.0
         expr:save('expr_a')
     )",
-                     "Cannot save: output path collides with input file");
+        "Cannot save: output path collides with input file"
+    );
 }
 
 // --- db-directory sandbox ---
@@ -246,14 +250,16 @@ TEST_F(LuaExpressionTest, SaveRelativeResolvesAgainstDbDir) {
 TEST_F(LuaExpressionTest, SaveEscapeThrows) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::LuaRunner lua(db);
-    expect_lua_error(lua,
-                     prelude() + R"(
+    expect_lua_error(
+        lua,
+        prelude() + R"(
         fill('expr_a', 1.0, 1.0)
         local fa = db:open_file('expr_a', 'r')
         local expr = quiver.expression(fa) * 2.0
         expr:save('../out')
     )",
-                     "Cannot save: path '../out' escapes the database directory");
+        "Cannot save: path '../out' escapes the database directory"
+    );
 }
 
 TEST_F(LuaExpressionTest, ComparisonFreeFunctions) {

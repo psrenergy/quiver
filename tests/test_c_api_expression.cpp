@@ -73,9 +73,11 @@ protected:
 
     // Writes a fixture with caller-provided metadata. Caller still owns md.
     // Assumes a 2D dimensional schema named (row, col) with 2 labels per cell.
-    static void write_fixture_with_metadata(const std::string& path,
-                                            quiver_binary_metadata_t* md,
-                                            std::function<double(int, int, int)> fill) {
+    static void write_fixture_with_metadata(
+        const std::string& path,
+        quiver_binary_metadata_t* md,
+        std::function<double(int, int, int)> fill
+    ) {
         quiver_binary_file_t* f = nullptr;
         ASSERT_EQ(quiver_binary_file_open_file(path.c_str(), 'w', md, &f), QUIVER_OK);
 
@@ -83,8 +85,9 @@ protected:
         for (int64_t r = 1; r <= 3; ++r) {
             for (int64_t c = 1; c <= 2; ++c) {
                 int64_t dim_values[] = {r, c};
-                double data[] = {fill(static_cast<int>(r), static_cast<int>(c), 0),
-                                 fill(static_cast<int>(r), static_cast<int>(c), 1)};
+                double data[] = {
+                    fill(static_cast<int>(r), static_cast<int>(c), 0), fill(static_cast<int>(r), static_cast<int>(c), 1)
+                };
                 ASSERT_EQ(quiver_binary_file_write(f, dim_names, dim_values, 2, data, 2), QUIVER_OK);
             }
         }
@@ -103,8 +106,9 @@ protected:
                 int64_t dim_values[] = {r, c};
                 double* data = nullptr;
                 size_t count = 0;
-                EXPECT_EQ(quiver_binary_file_read(f, dim_names, dim_values, 2, /*allow_nulls=*/0, &data, &count),
-                          QUIVER_OK);
+                EXPECT_EQ(
+                    quiver_binary_file_read(f, dim_names, dim_values, 2, /*allow_nulls=*/0, &data, &count), QUIVER_OK
+                );
                 for (size_t i = 0; i < count; ++i)
                     out.push_back(data[i]);
                 quiver_binary_file_free_float_array(data);
@@ -125,28 +129,34 @@ protected:
     }
 
     // Generic metadata builder. Pass empty time_dimensions for non-time data.
-    static quiver_binary_metadata_t* make_metadata_v(const std::vector<const char*>& dim_names,
-                                                     const std::vector<int64_t>& dim_sizes,
-                                                     const std::vector<const char*>& labels,
-                                                     const char* unit = "MW",
-                                                     const char* initial_datetime = "2025-01-01T00:00:00",
-                                                     const std::vector<const char*>& time_dimensions = {},
-                                                     const std::vector<const char*>& frequencies = {}) {
+    static quiver_binary_metadata_t* make_metadata_v(
+        const std::vector<const char*>& dim_names,
+        const std::vector<int64_t>& dim_sizes,
+        const std::vector<const char*>& labels,
+        const char* unit = "MW",
+        const char* initial_datetime = "2025-01-01T00:00:00",
+        const std::vector<const char*>& time_dimensions = {},
+        const std::vector<const char*>& frequencies = {}
+    ) {
         quiver_element_t* el = nullptr;
         quiver_element_create(&el);
         quiver_element_set_string(el, "version", "1");
         quiver_element_set_string(el, "initial_datetime", initial_datetime);
         quiver_element_set_string(el, "unit", unit);
         quiver_element_set_array_string(
-            el, "dimensions", dim_names.data(), static_cast<int32_t>(dim_names.size()), nullptr);
+            el, "dimensions", dim_names.data(), static_cast<int32_t>(dim_names.size()), nullptr
+        );
         quiver_element_set_array_integer(
-            el, "dimension_sizes", dim_sizes.data(), static_cast<int32_t>(dim_sizes.size()), nullptr);
+            el, "dimension_sizes", dim_sizes.data(), static_cast<int32_t>(dim_sizes.size()), nullptr
+        );
         quiver_element_set_array_string(el, "labels", labels.data(), static_cast<int32_t>(labels.size()), nullptr);
         if (!time_dimensions.empty()) {
             quiver_element_set_array_string(
-                el, "time_dimensions", time_dimensions.data(), static_cast<int32_t>(time_dimensions.size()), nullptr);
+                el, "time_dimensions", time_dimensions.data(), static_cast<int32_t>(time_dimensions.size()), nullptr
+            );
             quiver_element_set_array_string(
-                el, "frequencies", frequencies.data(), static_cast<int32_t>(frequencies.size()), nullptr);
+                el, "frequencies", frequencies.data(), static_cast<int32_t>(frequencies.size()), nullptr
+            );
         }
 
         quiver_binary_metadata_t* md = nullptr;
@@ -157,27 +167,34 @@ protected:
 
     // Writes a single cell at the given dim positions; rest of the file stays NaN.
     // Sufficient for throws-tests that only need a valid file structure to exist.
-    static void write_one_cell(const std::string& path,
-                               quiver_binary_metadata_t* md,
-                               const std::vector<const char*>& dim_names,
-                               const std::vector<int64_t>& dim_values,
-                               const std::vector<double>& cell) {
+    static void write_one_cell(
+        const std::string& path,
+        quiver_binary_metadata_t* md,
+        const std::vector<const char*>& dim_names,
+        const std::vector<int64_t>& dim_values,
+        const std::vector<double>& cell
+    ) {
         quiver_binary_file_t* f = nullptr;
         ASSERT_EQ(quiver_binary_file_open_file(path.c_str(), 'w', md, &f), QUIVER_OK);
-        ASSERT_EQ(quiver_binary_file_write(
-                      f, dim_names.data(), dim_values.data(), dim_names.size(), cell.data(), cell.size()),
-                  QUIVER_OK);
+        ASSERT_EQ(
+            quiver_binary_file_write(
+                f, dim_names.data(), dim_values.data(), dim_names.size(), cell.data(), cell.size()
+            ),
+            QUIVER_OK
+        );
         ASSERT_EQ(quiver_binary_file_close(f), QUIVER_OK);
     }
 
     // Writes every cell with row-major iteration (rightmost dim varies fastest).
     // Caller must ensure no nested time dimensions (sizes are constant across the grid).
-    static void write_dense(const std::string& path,
-                            quiver_binary_metadata_t* md,
-                            const std::vector<const char*>& dim_names,
-                            const std::vector<int64_t>& dim_sizes,
-                            int64_t label_count,
-                            std::function<double(const std::vector<int64_t>&, size_t)> fill) {
+    static void write_dense(
+        const std::string& path,
+        quiver_binary_metadata_t* md,
+        const std::vector<const char*>& dim_names,
+        const std::vector<int64_t>& dim_sizes,
+        int64_t label_count,
+        std::function<double(const std::vector<int64_t>&, size_t)> fill
+    ) {
         quiver_binary_file_t* f = nullptr;
         ASSERT_EQ(quiver_binary_file_open_file(path.c_str(), 'w', md, &f), QUIVER_OK);
 
@@ -186,8 +203,10 @@ protected:
         while (true) {
             for (size_t k = 0; k < row.size(); ++k)
                 row[k] = fill(dims, k);
-            ASSERT_EQ(quiver_binary_file_write(f, dim_names.data(), dims.data(), dims.size(), row.data(), row.size()),
-                      QUIVER_OK);
+            ASSERT_EQ(
+                quiver_binary_file_write(f, dim_names.data(), dims.data(), dims.size(), row.data(), row.size()),
+                QUIVER_OK
+            );
 
             int i = static_cast<int>(dims.size()) - 1;
             while (i >= 0) {
@@ -205,21 +224,27 @@ protected:
     }
 
     // Reads one cell. Caller frees the returned vector through normal RAII.
-    static std::vector<double> read_one_cell(const std::string& path,
-                                             const std::vector<const char*>& dim_names,
-                                             const std::vector<int64_t>& dim_values) {
+    static std::vector<double> read_one_cell(
+        const std::string& path,
+        const std::vector<const char*>& dim_names,
+        const std::vector<int64_t>& dim_values
+    ) {
         quiver_binary_file_t* f = nullptr;
         EXPECT_EQ(quiver_binary_file_open_file(path.c_str(), 'r', nullptr, &f), QUIVER_OK);
         double* data = nullptr;
         size_t count = 0;
-        EXPECT_EQ(quiver_binary_file_read(f,
-                                          dim_names.data(),
-                                          dim_values.data(),
-                                          dim_names.size(),
-                                          /*allow_nulls=*/1,
-                                          &data,
-                                          &count),
-                  QUIVER_OK);
+        EXPECT_EQ(
+            quiver_binary_file_read(
+                f,
+                dim_names.data(),
+                dim_values.data(),
+                dim_names.size(),
+                /*allow_nulls=*/1,
+                &data,
+                &count
+            ),
+            QUIVER_OK
+        );
         std::vector<double> out(data, data + count);
         quiver_binary_file_free_float_array(data);
         quiver_binary_file_close(f);
@@ -869,7 +894,8 @@ TEST_F(ExpressionCApiFixture, OperandDimsInDifferentOrder) {
 TEST_F(ExpressionCApiFixture, TimePropertiesMismatchReturnsError) {
     // md_a: block as monthly time. md_b: block as non-time. Same shape.
     auto* md_a = make_metadata_v(
-        {"scenario", "block"}, {3, 12}, {"v1", "v2"}, "MW", "2025-01-01T00:00:00", {"block"}, {"monthly"});
+        {"scenario", "block"}, {3, 12}, {"v1", "v2"}, "MW", "2025-01-01T00:00:00", {"block"}, {"monthly"}
+    );
     auto* md_b = make_metadata_v({"scenario", "block"}, {3, 12}, {"v1", "v2"});
 
     write_one_cell(path_a, md_a, {"scenario", "block"}, {1, 1}, {1.0, 1.0});
@@ -888,20 +914,12 @@ TEST_F(ExpressionCApiFixture, TimePropertiesMismatchReturnsError) {
 }
 
 TEST_F(ExpressionCApiFixture, InitialDatetimeMismatchReturnsError) {
-    auto* md_a = make_metadata_v({"month", "block"},
-                                 {4, 31},
-                                 {"v1", "v2"},
-                                 "MW",
-                                 "2025-01-01T00:00:00",
-                                 {"month", "block"},
-                                 {"monthly", "daily"});
-    auto* md_b = make_metadata_v({"month", "block"},
-                                 {4, 31},
-                                 {"v1", "v2"},
-                                 "MW",
-                                 "2025-02-01T00:00:00",
-                                 {"month", "block"},
-                                 {"monthly", "daily"});
+    auto* md_a = make_metadata_v(
+        {"month", "block"}, {4, 31}, {"v1", "v2"}, "MW", "2025-01-01T00:00:00", {"month", "block"}, {"monthly", "daily"}
+    );
+    auto* md_b = make_metadata_v(
+        {"month", "block"}, {4, 31}, {"v1", "v2"}, "MW", "2025-02-01T00:00:00", {"month", "block"}, {"monthly", "daily"}
+    );
 
     // Single cell at (month=1, block=1) is always valid for either Jan-start or Feb-start.
     write_one_cell(path_a, md_a, {"month", "block"}, {1, 1}, {1.0, 1.0});
@@ -920,20 +938,12 @@ TEST_F(ExpressionCApiFixture, InitialDatetimeMismatchReturnsError) {
 
 TEST_F(ExpressionCApiFixture, ParentDimNameMismatchReturnsError) {
     // Both files have a daily `block` dim, but lhs's parent is `month` and rhs's parent is `stage`.
-    auto* md_a = make_metadata_v({"month", "block"},
-                                 {2, 31},
-                                 {"v1", "v2"},
-                                 "MW",
-                                 "2025-01-01T00:00:00",
-                                 {"month", "block"},
-                                 {"monthly", "daily"});
-    auto* md_b = make_metadata_v({"stage", "block"},
-                                 {2, 31},
-                                 {"v1", "v2"},
-                                 "MW",
-                                 "2025-01-01T00:00:00",
-                                 {"stage", "block"},
-                                 {"monthly", "daily"});
+    auto* md_a = make_metadata_v(
+        {"month", "block"}, {2, 31}, {"v1", "v2"}, "MW", "2025-01-01T00:00:00", {"month", "block"}, {"monthly", "daily"}
+    );
+    auto* md_b = make_metadata_v(
+        {"stage", "block"}, {2, 31}, {"v1", "v2"}, "MW", "2025-01-01T00:00:00", {"stage", "block"}, {"monthly", "daily"}
+    );
 
     write_one_cell(path_a, md_a, {"month", "block"}, {1, 1}, {1.0, 1.0});
     write_one_cell(path_b, md_b, {"stage", "block"}, {1, 1}, {1.0, 1.0});
@@ -951,20 +961,24 @@ TEST_F(ExpressionCApiFixture, ParentDimNameMismatchReturnsError) {
 
 TEST_F(ExpressionCApiFixture, ParentDimMatchByNameAcceptsCrossPosition) {
     // Same parent dim NAME (`month`) but at different positions: lhs index 0, rhs index 1.
-    auto* md_a = make_metadata_v({"month", "extra", "day"},
-                                 {2, 3, 31},
-                                 {"v1", "v2"},
-                                 "MW",
-                                 "2025-01-01T00:00:00",
-                                 {"month", "day"},
-                                 {"monthly", "daily"});
-    auto* md_b = make_metadata_v({"extra", "month", "day"},
-                                 {3, 2, 31},
-                                 {"v1", "v2"},
-                                 "MW",
-                                 "2025-01-01T00:00:00",
-                                 {"month", "day"},
-                                 {"monthly", "daily"});
+    auto* md_a = make_metadata_v(
+        {"month", "extra", "day"},
+        {2, 3, 31},
+        {"v1", "v2"},
+        "MW",
+        "2025-01-01T00:00:00",
+        {"month", "day"},
+        {"monthly", "daily"}
+    );
+    auto* md_b = make_metadata_v(
+        {"extra", "month", "day"},
+        {3, 2, 31},
+        {"v1", "v2"},
+        "MW",
+        "2025-01-01T00:00:00",
+        {"month", "day"},
+        {"monthly", "daily"}
+    );
 
     write_one_cell(path_a, md_a, {"month", "extra", "day"}, {1, 1, 1}, {1.0, 1.0});
     write_one_cell(path_b, md_b, {"extra", "month", "day"}, {1, 1, 1}, {1.0, 1.0});
@@ -997,8 +1011,10 @@ TEST_F(ExpressionCApiFixture, SaveFailsWhenInputIsOpenForWriting) {
     ASSERT_NE(expr, nullptr);
 
     EXPECT_EQ(quiver_expression_save(expr, path_out.c_str()), QUIVER_ERROR);
-    EXPECT_NE(std::string(quiver_get_last_error()).find("Cannot open_file: file is already open for writing"),
-              std::string::npos);
+    EXPECT_NE(
+        std::string(quiver_get_last_error()).find("Cannot open_file: file is already open for writing"),
+        std::string::npos
+    );
 
     quiver_expression_close(expr);
     quiver_binary_file_close(writer);
@@ -1013,8 +1029,9 @@ TEST_F(ExpressionCApiFixture, AggregateSumOverDim) {
 
     auto* a = expr_from_file(path_a);
     quiver_expression_t* agg = nullptr;
-    ASSERT_EQ(quiver_expression_aggregate(a, "row", QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM, nullptr, &agg),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_expression_aggregate(a, "row", QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM, nullptr, &agg), QUIVER_OK
+    );
     ASSERT_EQ(quiver_expression_save(agg, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(agg);
@@ -1037,8 +1054,9 @@ TEST_F(ExpressionCApiFixture, AggregatePercentileWithParam) {
     auto* a = expr_from_file(path_a);
     const double p = 0.5;
     quiver_expression_t* agg = nullptr;
-    ASSERT_EQ(quiver_expression_aggregate(a, "row", QUIVER_EXPRESSION_AGGREGATE_OPERATION_PERCENTILE, &p, &agg),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_expression_aggregate(a, "row", QUIVER_EXPRESSION_AGGREGATE_OPERATION_PERCENTILE, &p, &agg), QUIVER_OK
+    );
     ASSERT_EQ(quiver_expression_save(agg, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(agg);
@@ -1065,8 +1083,10 @@ TEST_F(ExpressionCApiFixture, AggregatePercentileMissingParamReturnsError) {
     write_fixture(path_a, [](int, int, int) { return 1.0; });
     auto* a = expr_from_file(path_a);
     quiver_expression_t* agg = nullptr;
-    EXPECT_EQ(quiver_expression_aggregate(a, "row", QUIVER_EXPRESSION_AGGREGATE_OPERATION_PERCENTILE, nullptr, &agg),
-              QUIVER_ERROR);
+    EXPECT_EQ(
+        quiver_expression_aggregate(a, "row", QUIVER_EXPRESSION_AGGREGATE_OPERATION_PERCENTILE, nullptr, &agg),
+        QUIVER_ERROR
+    );
     EXPECT_EQ(agg, nullptr);
     EXPECT_NE(std::string(quiver_get_last_error()).find("requires a parameter"), std::string::npos);
     quiver_expression_close(a);
@@ -1076,8 +1096,10 @@ TEST_F(ExpressionCApiFixture, AggregateDimensionNotFoundReturnsError) {
     write_fixture(path_a, [](int, int, int) { return 1.0; });
     auto* a = expr_from_file(path_a);
     quiver_expression_t* agg = nullptr;
-    EXPECT_EQ(quiver_expression_aggregate(a, "nonexistent", QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM, nullptr, &agg),
-              QUIVER_ERROR);
+    EXPECT_EQ(
+        quiver_expression_aggregate(a, "nonexistent", QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM, nullptr, &agg),
+        QUIVER_ERROR
+    );
     EXPECT_EQ(agg, nullptr);
     EXPECT_NE(std::string(quiver_get_last_error()).find("Dimension not found"), std::string::npos);
     quiver_expression_close(a);
@@ -1088,8 +1110,10 @@ TEST_F(ExpressionCApiFixture, AggregateAgentsSumReducesLabels) {
 
     auto* a = expr_from_file(path_a);
     quiver_expression_t* agg = nullptr;
-    ASSERT_EQ(quiver_expression_aggregate_agents(a, QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_SUM, nullptr, &agg),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_expression_aggregate_agents(a, QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_SUM, nullptr, &agg),
+        QUIVER_OK
+    );
 
     // Verify output metadata: single label "sum", dims unchanged.
     quiver_binary_metadata_t* out_md = nullptr;
@@ -1120,8 +1144,10 @@ TEST_F(ExpressionCApiFixture, AggregateAgentsPercentileWithParam) {
     auto* a = expr_from_file(path_a);
     const double p = 0.5;
     quiver_expression_t* agg = nullptr;
-    ASSERT_EQ(quiver_expression_aggregate_agents(a, QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_PERCENTILE, &p, &agg),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_expression_aggregate_agents(a, QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_PERCENTILE, &p, &agg),
+        QUIVER_OK
+    );
     ASSERT_EQ(quiver_expression_save(agg, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(agg);
@@ -1136,12 +1162,16 @@ TEST_F(ExpressionCApiFixture, AggregateNullArguments) {
     auto* a = expr_from_file(path_a);
     quiver_expression_t* agg = nullptr;
 
-    EXPECT_EQ(quiver_expression_aggregate(nullptr, "row", QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM, nullptr, &agg),
-              QUIVER_ERROR);
-    EXPECT_EQ(quiver_expression_aggregate(a, nullptr, QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM, nullptr, &agg),
-              QUIVER_ERROR);
-    EXPECT_EQ(quiver_expression_aggregate(a, "row", QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM, nullptr, nullptr),
-              QUIVER_ERROR);
+    EXPECT_EQ(
+        quiver_expression_aggregate(nullptr, "row", QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM, nullptr, &agg),
+        QUIVER_ERROR
+    );
+    EXPECT_EQ(
+        quiver_expression_aggregate(a, nullptr, QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM, nullptr, &agg), QUIVER_ERROR
+    );
+    EXPECT_EQ(
+        quiver_expression_aggregate(a, "row", QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM, nullptr, nullptr), QUIVER_ERROR
+    );
 
     quiver_expression_close(a);
 }
@@ -1153,9 +1183,12 @@ TEST_F(ExpressionCApiFixture, AggregateAgentsNullArguments) {
 
     EXPECT_EQ(
         quiver_expression_aggregate_agents(nullptr, QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_SUM, nullptr, &agg),
-        QUIVER_ERROR);
-    EXPECT_EQ(quiver_expression_aggregate_agents(a, QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_SUM, nullptr, nullptr),
-              QUIVER_ERROR);
+        QUIVER_ERROR
+    );
+    EXPECT_EQ(
+        quiver_expression_aggregate_agents(a, QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_SUM, nullptr, nullptr),
+        QUIVER_ERROR
+    );
 
     quiver_expression_close(a);
 }
@@ -1169,8 +1202,9 @@ TEST_F(ExpressionCApiFixture, AggregateChainedWithBinary) {
     quiver_expression_t* sum = nullptr;
     ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_ADD, a, b, &sum), QUIVER_OK);
     quiver_expression_t* agg = nullptr;
-    ASSERT_EQ(quiver_expression_aggregate(sum, "row", QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM, nullptr, &agg),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_expression_aggregate(sum, "row", QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM, nullptr, &agg), QUIVER_OK
+    );
     ASSERT_EQ(quiver_expression_save(agg, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(b);
@@ -1278,8 +1312,9 @@ TEST_F(ExpressionCApiFixture, UnarySqrtPropagatesNaNOnNegative) {
             int64_t dim_values[] = {r, c};
             double* data = nullptr;
             size_t count = 0;
-            ASSERT_EQ(quiver_binary_file_read(f, dim_names, dim_values, 2, /*allow_nulls=*/1, &data, &count),
-                      QUIVER_OK);
+            ASSERT_EQ(
+                quiver_binary_file_read(f, dim_names, dim_values, 2, /*allow_nulls=*/1, &data, &count), QUIVER_OK
+            );
             for (size_t i = 0; i < count; ++i)
                 EXPECT_TRUE(std::isnan(data[i]));
             quiver_binary_file_free_float_array(data);
@@ -1348,7 +1383,8 @@ TEST_F(ExpressionCApiFixture, ApplyTernaryIfElse) {
     quiver_expression_t* result = nullptr;
     ASSERT_EQ(
         quiver_expression_apply_ternary(QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE, cond, then_v, else_v, &result),
-        QUIVER_OK);
+        QUIVER_OK
+    );
     ASSERT_EQ(quiver_expression_save(result, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(cond);
     quiver_expression_close(then_v);
@@ -1376,7 +1412,8 @@ TEST_F(ExpressionCApiFixture, ApplyTernaryIfElsePropagatesNaN) {
     quiver_expression_t* result = nullptr;
     ASSERT_EQ(
         quiver_expression_apply_ternary(QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE, cond, then_v, else_v, &result),
-        QUIVER_OK);
+        QUIVER_OK
+    );
     ASSERT_EQ(quiver_expression_save(result, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(cond);
     quiver_expression_close(then_v);
@@ -1414,14 +1451,20 @@ TEST_F(ExpressionCApiFixture, ApplyTernaryNullArguments) {
     quiver_expression_t* out = nullptr;
     EXPECT_EQ(
         quiver_expression_apply_ternary(QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE, nullptr, then_v, else_v, &out),
-        QUIVER_ERROR);
-    EXPECT_EQ(quiver_expression_apply_ternary(QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE, cond, nullptr, else_v, &out),
-              QUIVER_ERROR);
-    EXPECT_EQ(quiver_expression_apply_ternary(QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE, cond, then_v, nullptr, &out),
-              QUIVER_ERROR);
+        QUIVER_ERROR
+    );
+    EXPECT_EQ(
+        quiver_expression_apply_ternary(QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE, cond, nullptr, else_v, &out),
+        QUIVER_ERROR
+    );
+    EXPECT_EQ(
+        quiver_expression_apply_ternary(QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE, cond, then_v, nullptr, &out),
+        QUIVER_ERROR
+    );
     EXPECT_EQ(
         quiver_expression_apply_ternary(QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE, cond, then_v, else_v, nullptr),
-        QUIVER_ERROR);
+        QUIVER_ERROR
+    );
 
     quiver_expression_close(cond);
     quiver_expression_close(then_v);
@@ -1441,8 +1484,10 @@ TEST_F(ExpressionCApiFixture, ApplyTernaryUnitMismatch) {
     auto* then_v = expr_from_file(path_b);
     auto* else_v = expr_from_file(path_c);
     quiver_expression_t* out = nullptr;
-    EXPECT_EQ(quiver_expression_apply_ternary(QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE, cond, then_v, else_v, &out),
-              QUIVER_ERROR);
+    EXPECT_EQ(
+        quiver_expression_apply_ternary(QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE, cond, then_v, else_v, &out),
+        QUIVER_ERROR
+    );
     const char* msg = quiver_get_last_error();
     ASSERT_NE(msg, nullptr);
     EXPECT_NE(std::string(msg).find("units differ"), std::string::npos);
@@ -1476,8 +1521,10 @@ TEST_F(ExpressionCApiFixture, ApplyTernaryShapeMismatch) {
     auto* then_v = expr_from_file(path_b);
     auto* else_v = expr_from_file(path_c);
     quiver_expression_t* out = nullptr;
-    EXPECT_EQ(quiver_expression_apply_ternary(QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE, cond, then_v, else_v, &out),
-              QUIVER_ERROR);
+    EXPECT_EQ(
+        quiver_expression_apply_ternary(QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE, cond, then_v, else_v, &out),
+        QUIVER_ERROR
+    );
 
     quiver_expression_close(cond);
     quiver_expression_close(then_v);
