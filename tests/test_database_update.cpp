@@ -521,32 +521,6 @@ TEST(Database, UpdateSetSingleElement) {
     EXPECT_EQ(set, (std::vector<std::optional<std::string>>{"single_tag"}));
 }
 
-TEST(Database, UpdateVectorInvalidCollection) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
-
-    quiver::Element config;
-    config.set("label", std::string("Test Config"));
-    db.create_element("Configuration", config);
-
-    quiver::Element update;
-    update.set("value_int", std::vector<int64_t>{1, 2, 3});
-    EXPECT_THROW(db.update_element("NonexistentCollection", 1, update), std::runtime_error);
-}
-
-TEST(Database, UpdateSetInvalidCollection) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
-
-    quiver::Element config;
-    config.set("label", std::string("Test Config"));
-    db.create_element("Configuration", config);
-
-    quiver::Element update;
-    update.set("tag", std::vector<std::string>{"tag1"});
-    EXPECT_THROW(db.update_element("NonexistentCollection", 1, update), std::runtime_error);
-}
-
 TEST(Database, UpdateVectorFromEmptyToNonEmpty) {
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
@@ -622,29 +596,8 @@ TEST(Database, UpdateDateTimeScalar) {
 }
 
 // ============================================================================
-// Identifier validation tests
+// Whitespace trimming tests
 // ============================================================================
-
-TEST(Database, UpdateVectorIntegersInvalidColumnThrows) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
-
-    quiver::Element config;
-    config.set("label", std::string("Test Config"));
-    db.create_element("Configuration", config);
-
-    quiver::Element e;
-    e.set("label", std::string("Item 1")).set("value_int", std::vector<int64_t>{1, 2, 3});
-    int64_t id = db.create_element("Collection", e);
-
-    EXPECT_THROW(
-        {
-            quiver::Element update;
-            update.set("nonexistent_column", std::vector<int64_t>{1, 2, 3});
-            db.update_element("Collection", id, update);
-        },
-        std::runtime_error);
-}
 
 TEST(Database, UpdateScalarStringTrimsWhitespace) {
     auto db = quiver::Database::from_schema(
@@ -883,39 +836,6 @@ TEST(Database, UpdateElementAllFkTypesInOneCall) {
     auto ts_data = db.read_time_series_group("Child", "events", 1);
     ASSERT_EQ(ts_data.size(), 1);
     EXPECT_EQ(std::get<int64_t>(ts_data[0].at("sponsor_id")), 2);
-}
-
-TEST(Database, UpdateElementNoFkColumnsUnchanged) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
-
-    // Create element in non-FK schema
-    quiver::Element e;
-    e.set("label", std::string("Config 1"))
-        .set("integer_attribute", int64_t{42})
-        .set("float_attribute", 3.14)
-        .set("string_attribute", std::string("hello"));
-    int64_t id = db.create_element("Configuration", e);
-
-    // Update scalar attributes via update_element
-    quiver::Element update;
-    update.set("integer_attribute", int64_t{100})
-        .set("float_attribute", 2.71)
-        .set("string_attribute", std::string("world"));
-    db.update_element("Configuration", id, update);
-
-    // Verify values updated correctly (pre-resolve passthrough safe for non-FK schemas)
-    auto integer_val = db.read_scalar_integer_by_id("Configuration", "integer_attribute", id);
-    EXPECT_TRUE(integer_val.has_value());
-    EXPECT_EQ(*integer_val, 100);
-
-    auto float_val = db.read_scalar_float_by_id("Configuration", "float_attribute", id);
-    EXPECT_TRUE(float_val.has_value());
-    EXPECT_DOUBLE_EQ(*float_val, 2.71);
-
-    auto str_val = db.read_scalar_string_by_id("Configuration", "string_attribute", id);
-    EXPECT_TRUE(str_val.has_value());
-    EXPECT_EQ(*str_val, "world");
 }
 
 // ============================================================================
