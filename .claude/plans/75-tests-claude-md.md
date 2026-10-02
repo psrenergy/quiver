@@ -62,7 +62,8 @@ This plan is the docs change. No CHANGELOG entry.
 
 ## Acceptance criteria
 
-- [ ] The four corrections are made, and the file lists match `ls tests`.
+- [x] The four corrections are made, and the file lists match `ls tests`. Claim 1 was already fixed
+  by `61e6236`; this plan made corrections 2-4.
 
 ## Pitfalls
 
@@ -71,3 +72,47 @@ This plan is the docs change. No CHANGELOG entry.
 ## Out of scope
 
 - Restructuring `tests/AGENTS.md`.
+
+## Implementation notes
+
+- **Branch base:** merging `origin/master` fast-forwarded `rs/plan75` to plan 74 (`3447a34`). That
+  merge did not touch `tests/AGENTS.md`.
+- **Drift: claim 1 was already fixed.** Commit `61e6236` ("fix: preserve NULL cells in vector and
+  set reads") rewrote the "omission of elements without group rows" sentence before this plan ran.
+  The paragraph (now ~L150-164, "The native-DateTime bindings ...") says the vector/set readers
+  cover elements without group rows, and that the C++ core and C ABI pin the no-rows / NULL-only-row
+  pair. That is correct, so change 1 was skipped. `grep -n "omission of elements" tests/AGENTS.md`
+  prints nothing.
+- **What changed (only `tests/AGENTS.md`):**
+  - **Database list:** added `test_database_metadata.cpp` (group-metadata FK flags,
+    `list_{vector,set}_groups`) after `test_database_describe.cpp`. The parenthetical reflects the
+    file's actual tests: `GetVectorMetadataForeignKey`, `GetSetMetadataForeignKey`,
+    `GetSetMetadataNonForeignKeyColumn`, `ListVectorAndSetGroups`, `ListGroupsCollectionNotFound`.
+    The rest of the bullet was reflowed to ~100 columns; the line was 119 before.
+  - **Lua per-area list:** added `_describe` after `_query`. The file holds `DescribeReport`,
+    `DescribeCollection` and `SummarizeCollection`.
+  - **C API section:** the parenthetical now reads "the C API has no `describe`, `errors` or
+    `ui_metadata` file (its describe/describe_collection/summarize_collection coverage lives in
+    `test_c_api_database_metadata.cpp`)". The `_nulls` sentence is unchanged.
+- **Stale sweep: nothing else to fix.** Every checked item exists and matches:
+  - Every `test_*.cpp`/`.h` named in the file exists, with brace lists expanded. Every on-disk
+    `test_*.cpp` is named literally, through a brace list, through the `test_c_api_database_*.cpp`
+    glob, or through the Lua `_suffix` list.
+  - The `valid/` and `invalid/` schema lists, `migrations/1-3`, `issues/issue52,issue70` and the
+    two `fixtures/` CSVs match disk.
+  - Every cited test, fixture and helper name exists.
+  - The binding file names are accurate, and neither JS nor Python has a time-series `metadata`
+    file.
+- **`test_utils.h` is the one `tests/` file the doc never mentions.** It is the shared
+  `path_from` / `quiet_options` / `VALID_SCHEMA` header. It was left out, because this plan's check
+  covers `test_*.cpp` and adding a description would restructure the doc.
+- **Verification:**
+  - `scripts/format.bat` exited 0.
+  - Biome's CRLF→LF rewrite of 31 JS files was confirmed EOL-only
+    (`git diff --ignore-cr-at-eol` is empty) and restored with `git checkout -- bindings/js`.
+  - No build or test run: nothing outside docs changed.
+- **For later plans:**
+  - Plan 82 (the build-all sentence near the end) and plan 85 (the release-preset paragraph in
+    "Binding suites") edit other hunks of `tests/AGENTS.md`.
+  - The Database bullet is two lines longer and the C API paragraph gains one line, so their
+    `~L` hints shift by +3. Their quoted excerpts are untouched.
