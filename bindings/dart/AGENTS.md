@@ -71,7 +71,11 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   Linux-only `posix_fallocate` on Darwin; since v3.53.4 the fork uses `check_symbol_exists`, and
   every remaining probe reads a real header. The fork also dropped its strerror_r `try_run`, the
   only `try_run` in the dependency tree, so the hook no longer seeds try_run results.
-  Note **no CI job runs this hook on any OS** — Dart is built and published by hand.
+  The Linux **Dart Coverage** CI job runs this hook through `dart test` (wrapped by
+  `coverage:test_with_coverage`) on every push to master and every PR against it, so
+  `QUIVER_UNVERSIONED_SHARED=ON` and the asset-count check are exercised on Linux. The
+  macOS/Windows paths, including the other two macOS workarounds and `appleArgs`, remain
+  unexercised in CI. Dart is published by hand.
 - **Stale native cache**: when C API struct layouts change, clear `.dart_tool/hooks_runner/` and
   `.dart_tool/lib/` to force a fresh DLL rebuild — otherwise tests run against the old layout and
   fail in confusing ways. Clear it after a **build-configuration** change too, not just an ABI
