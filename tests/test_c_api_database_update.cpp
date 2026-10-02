@@ -23,13 +23,14 @@ TEST(DatabaseCApi, UpdateScalarInteger) {
     quiver_element_set_string(e, "label", "Config 1");
     quiver_element_set_integer(e, "integer_attribute", 42);
     int64_t id = 0;
-    quiver_database_create_element(db, "Configuration", e, &id);
+    ASSERT_EQ(quiver_database_create_element(db, "Configuration", e, &id), QUIVER_OK) << quiver_get_last_error();
     EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
 
     quiver_element_t* update = nullptr;
     ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
     quiver_element_set_integer(update, "integer_attribute", 100);
     auto err = quiver_database_update_element(db, "Configuration", id, update);
+    EXPECT_EQ(quiver_element_destroy(update), QUIVER_OK);
     EXPECT_EQ(err, QUIVER_OK);
 
     int64_t value;
@@ -53,13 +54,14 @@ TEST(DatabaseCApi, UpdateScalarFloat) {
     quiver_element_set_string(e, "label", "Config 1");
     quiver_element_set_float(e, "float_attribute", 3.14);
     int64_t id = 0;
-    quiver_database_create_element(db, "Configuration", e, &id);
+    ASSERT_EQ(quiver_database_create_element(db, "Configuration", e, &id), QUIVER_OK) << quiver_get_last_error();
     EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
 
     quiver_element_t* update = nullptr;
     ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
     quiver_element_set_float(update, "float_attribute", 2.71);
     auto err = quiver_database_update_element(db, "Configuration", id, update);
+    EXPECT_EQ(quiver_element_destroy(update), QUIVER_OK);
     EXPECT_EQ(err, QUIVER_OK);
 
     double value;
@@ -83,13 +85,14 @@ TEST(DatabaseCApi, UpdateScalarString) {
     quiver_element_set_string(e, "label", "Config 1");
     quiver_element_set_string(e, "string_attribute", "hello");
     int64_t id = 0;
-    quiver_database_create_element(db, "Configuration", e, &id);
+    ASSERT_EQ(quiver_database_create_element(db, "Configuration", e, &id), QUIVER_OK) << quiver_get_last_error();
     EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
 
     quiver_element_t* update = nullptr;
     ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
     quiver_element_set_string(update, "string_attribute", "world");
     auto err = quiver_database_update_element(db, "Configuration", id, update);
+    EXPECT_EQ(quiver_element_destroy(update), QUIVER_OK);
     EXPECT_EQ(err, QUIVER_OK);
 
     char* value = nullptr;
@@ -99,7 +102,7 @@ TEST(DatabaseCApi, UpdateScalarString) {
     EXPECT_EQ(has_value, 1);
     EXPECT_STREQ(value, "world");
 
-    delete[] value;
+    quiver_database_free_string(value);
     quiver_database_close(db);
 }
 
@@ -377,7 +380,7 @@ TEST(DatabaseCApi, UpdateElementSingleScalar) {
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_STREQ(label, "Config 1");
-    delete[] label;
+    quiver_database_free_string(label);
 
     quiver_database_close(db);
 }
@@ -427,7 +430,7 @@ TEST(DatabaseCApi, UpdateElementMultipleScalars) {
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_STREQ(str_value, "world");
-    delete[] str_value;
+    quiver_database_free_string(str_value);
 
     // Verify label unchanged
     char* label = nullptr;
@@ -435,7 +438,7 @@ TEST(DatabaseCApi, UpdateElementMultipleScalars) {
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_STREQ(label, "Config 1");
-    delete[] label;
+    quiver_database_free_string(label);
 
     quiver_database_close(db);
 }
@@ -814,13 +817,14 @@ TEST(DatabaseCApi, UpdateScalarStringTrimsWhitespace) {
     quiver_element_set_string(e, "label", "Config 1");
     quiver_element_set_string(e, "string_attribute", "hello");
     int64_t id = 0;
-    quiver_database_create_element(db, "Configuration", e, &id);
+    ASSERT_EQ(quiver_database_create_element(db, "Configuration", e, &id), QUIVER_OK) << quiver_get_last_error();
     EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
 
     quiver_element_t* update = nullptr;
     ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
     quiver_element_set_string(update, "string_attribute", "  world  ");
     auto err = quiver_database_update_element(db, "Configuration", id, update);
+    EXPECT_EQ(quiver_element_destroy(update), QUIVER_OK);
     EXPECT_EQ(err, QUIVER_OK);
 
     char* value = nullptr;
@@ -830,7 +834,7 @@ TEST(DatabaseCApi, UpdateScalarStringTrimsWhitespace) {
     EXPECT_EQ(has_value, 1);
     EXPECT_STREQ(value, "world");
 
-    delete[] value;
+    quiver_database_free_string(value);
     quiver_database_close(db);
 }
 
@@ -900,7 +904,7 @@ TEST(DatabaseCApi, UpdateDateTimeScalar) {
     quiver_element_set_string(e, "label", "Config 1");
     quiver_element_set_string(e, "date_attribute", "2024-01-01T00:00:00");
     int64_t id = 0;
-    quiver_database_create_element(db, "Configuration", e, &id);
+    ASSERT_EQ(quiver_database_create_element(db, "Configuration", e, &id), QUIVER_OK) << quiver_get_last_error();
     EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
     EXPECT_GT(id, 0);
 
@@ -909,6 +913,7 @@ TEST(DatabaseCApi, UpdateDateTimeScalar) {
     ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
     quiver_element_set_string(update, "date_attribute", "2025-12-31T23:59:59");
     auto err = quiver_database_update_element(db, "Configuration", id, update);
+    EXPECT_EQ(quiver_element_destroy(update), QUIVER_OK);
     EXPECT_EQ(err, QUIVER_OK);
 
     // Verify the update
@@ -919,7 +924,7 @@ TEST(DatabaseCApi, UpdateDateTimeScalar) {
     EXPECT_EQ(has_value, 1);
     EXPECT_STREQ(value, "2025-12-31T23:59:59");
 
-    delete[] value;
+    quiver_database_free_string(value);
     quiver_database_close(db);
 }
 
@@ -1422,7 +1427,7 @@ TEST(DatabaseCApi, UpdateElementNoFkColumnsUnchanged) {
         QUIVER_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_STREQ(str_val, "world");
-    delete[] str_val;
+    quiver_database_free_string(str_val);
 
     quiver_database_close(db);
 }

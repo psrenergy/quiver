@@ -87,11 +87,11 @@ fail; after it only the tests that use that fixture's data fail. Revert the expe
 
 ## Acceptance criteria
 
-- [ ] The five update tests destroy their update element.
-- [ ] There is no `ASSERT` between a binary writer's open and close in `test_c_api_expression.cpp`.
-- [ ] There are no `delete[]` frees of C-API-returned strings, and no `if (ids != nullptr)` guards
+- [x] The five update tests destroy their update element.
+- [x] There is no `ASSERT` between a binary writer's open and close in `test_c_api_expression.cpp`.
+- [x] There are no `delete[]` frees of C-API-returned strings, and no `if (ids != nullptr)` guards
       around free calls.
-- [ ] The C API suite is green.
+- [x] The C API suite is green.
 
 ## Pitfalls
 
@@ -103,3 +103,57 @@ fail; after it only the tests that use that fixture's data fail. Revert the expe
 
 - A RAII handle layer for the C API tests (explicitly rejected).
 - Deleting the per-type update leftovers (plan 71).
+
+## Implementation notes
+
+- **Branch state.** `rs/plan69` already matched `master` (f16b6b6), so the merge did nothing.
+  Plan 69 depends on nothing.
+- **Drift fixed.**
+  - **Line numbers.** Every site has moved. For example, the update `delete[]` sites now sit at
+    ~105/383/433/441/837/927/1430 and the lifecycle guards at ~405/469. All 12 `delete[]` sites
+    free a single `char*` from `read_scalar_string_by_id` / `query_string`, never a `char**`, so
+    each one is now `quiver_database_free_string(var)`.
+  - **More `ASSERT`s inside a writer span than the plan lists.** The acceptance criterion forbids
+    any `ASSERT` between a writer's open and its close in `test_c_api_expression.cpp`, so I fixed
+    every site:
+    - the plan's four, `write_fixture_with_metadata`, `write_one_cell`, `write_dense` and
+      `ApplyTernaryShapeMismatch` (now at ~L1605, not ~L1468);
+    - the writes in `AggregateSumOverInnermostTimeDimFromMidPeriodStart` (two loops) and
+      `AggregateOutermostTimeDimFromMidYearStart`;
+    - `SaveFailsWhenInputIsOpenForWriting`, which keeps its writer open on purpose for the whole
+      test. Its `ASSERT_EQ(quiver_expression_from_file(writer, …))` / `ASSERT_NE(expr, nullptr)`
+      are now `EXPECT`. Both later calls accept null: `quiver_expression_save` checks its
+      arguments with `QUIVER_REQUIRE`, and `quiver_expression_close` is a plain `delete`.
+
+    The `ASSERT` on `open_file(..., 'w')` and the trailing `ASSERT_EQ(quiver_binary_file_close(f), …)`
+    (always the last statement) stay as they were. No `break` was added. Every loop is bounded and
+    the `write_dense` grids hold at most 12 cells.
+- **Regression evidence (the cascade).** As a temporary experiment, I broke the write in
+  `TimePropertiesMismatchReturnsError` (`write_one_cell` dims `{1, 1}` → `{99, 1}`) and ran
+  `--gtest_filter=ExpressionCApiFixture.*`. Before the fix, **42 of 73 failed**: that test and
+  every fixture test after it, because the writer stayed registered on `path_a`. After the
+  `ASSERT`→`EXPECT` change, **1 of 73 failed**: only the broken test. I then reverted the
+  experiment.
+- **Verification.**
+  - Full `quiver_c_tests`: 572/572 passed.
+  - `grep -n "delete\[\]" tests/test_c_api_*.cpp` and `grep -n "ids != nullptr" tests/test_c_api_*.cpp`
+    both print nothing.
+  - No leak checker is available on this Windows/MinGW machine, so the optional Dr. Memory step
+    was skipped.
+  - Two adversarial reviewers, one checking completeness against the acceptance criteria and one
+    hunting for new early returns, null use or a wrong free, found no problems.
+- **Left alone, deliberately (out of scope, and neither can leak a writer):**
+  - `test_c_api_binary_file.cpp` `OpenWriteAndClose`: `ASSERT_NE(binary_file, nullptr)` right
+    after a successful open.
+  - `test_c_api_csv_converter.cpp` `CsvToBinShortRowReportsLine`: `ASSERT_EQ(opened, QUIVER_OK)`.
+    This checks the open itself, moved down one line so `metadata_free` runs first.
+
+  Both technically break the letter of the new `tests/AGENTS.md` line. Switching them to `EXPECT`
+  would be a two-word follow-up if anyone wants it.
+- **For later plans.**
+  - Plan 71 deletes `UpdateScalarInteger/Float/String`, three of the five tests fixed here.
+  - Plan 70 edits `test_c_api_database_update.cpp` too. Re-anchor by test name.
+  - `scripts/format.bat` again rewrote 43 untouched CRLF JS files to LF, all line endings only.
+    I reverted them with `git checkout -- bindings/js`. Its Python step runs `uv sync`, which
+    rebuilds the editable wheel, a full C++ build. That took over 10 minutes with several
+    parallel sessions doing the same.
