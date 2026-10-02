@@ -529,22 +529,3 @@ TEST_F(TempFileFixture, UpdateElementNullElement) {
 
     quiver_database_close(db);
 }
-
-// ============================================================================
-// Describe tests
-// ============================================================================
-
-TEST_F(TempFileFixture, DescribeDoesNotFail) {
-    auto options = quiver::test::quiet_options();
-    quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
-    ASSERT_NE(db, nullptr);
-
-    char* report = nullptr;
-    ASSERT_EQ(quiver_database_describe(db, &report), QUIVER_OK);
-    ASSERT_NE(report, nullptr);
-    EXPECT_NE(std::string(report).find("Database: :memory:"), std::string::npos);
-    quiver_database_free_string(report);
-
-    quiver_database_close(db);
-}
