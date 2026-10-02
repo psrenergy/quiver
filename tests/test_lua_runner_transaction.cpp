@@ -39,14 +39,12 @@ TEST_F(LuaRunnerTest, TransactionDoubleBeginError) {
 
     quiver::LuaRunner lua(db);
 
-    EXPECT_THROW(
-        {
-            lua.run(R"(
+    expect_lua_error(lua,
+                     R"(
                 db:begin_transaction()
                 db:begin_transaction()
-            )");
-        },
-        std::runtime_error);
+            )",
+                     "Cannot begin_transaction: transaction already active");
 }
 
 TEST_F(LuaRunnerTest, TransactionCommitWithoutBeginError) {
@@ -55,7 +53,7 @@ TEST_F(LuaRunnerTest, TransactionCommitWithoutBeginError) {
 
     quiver::LuaRunner lua(db);
 
-    EXPECT_THROW({ lua.run(R"(db:commit())"); }, std::runtime_error);
+    expect_lua_error(lua, R"(db:commit())", "Cannot commit: no active transaction");
 }
 
 TEST_F(LuaRunnerTest, TransactionRollbackWithoutBeginError) {
@@ -64,7 +62,7 @@ TEST_F(LuaRunnerTest, TransactionRollbackWithoutBeginError) {
 
     quiver::LuaRunner lua(db);
 
-    EXPECT_THROW({ lua.run(R"(db:rollback())"); }, std::runtime_error);
+    expect_lua_error(lua, R"(db:rollback())", "Cannot rollback: no active transaction");
 }
 
 TEST_F(LuaRunnerTest, TransactionInTransaction) {
@@ -107,16 +105,14 @@ TEST_F(LuaRunnerTest, TransactionBlockRollbackOnError) {
 
     quiver::LuaRunner lua(db);
 
-    EXPECT_THROW(
-        {
-            lua.run(R"(
+    expect_lua_error(lua,
+                     R"(
                 db:transaction(function(db)
                     db:create_element("Collection", { label = "Item 1", some_integer = 10 })
                     error("intentional error")
                 end)
-            )");
-        },
-        std::runtime_error);
+            )",
+                     "intentional error");
 
     auto labels = db.read_scalar_strings("Collection", "label");
     EXPECT_EQ(labels.size(), 0);

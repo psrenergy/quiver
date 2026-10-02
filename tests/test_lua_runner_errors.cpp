@@ -153,8 +153,9 @@ TEST_F(LuaRunnerTest, ReadFromNonExistentCollection) {
 
     quiver::LuaRunner lua(db);
 
-    EXPECT_THROW(
-        { lua.run(R"(local x = db:read_scalar_strings("NonexistentCollection", "label"))"); }, std::runtime_error);
+    expect_lua_error(lua,
+                     R"(local x = db:read_scalar_strings("NonexistentCollection", "label"))",
+                     "Cannot read_scalar_strings: collection not found");
 }
 
 TEST_F(LuaRunnerTest, ReadNonExistentAttribute) {
@@ -164,7 +165,9 @@ TEST_F(LuaRunnerTest, ReadNonExistentAttribute) {
 
     quiver::LuaRunner lua(db);
 
-    EXPECT_THROW({ lua.run(R"(local x = db:read_scalar_strings("Collection", "nonexistent"))"); }, std::runtime_error);
+    expect_lua_error(lua,
+                     R"(local x = db:read_scalar_strings("Collection", "nonexistent"))",
+                     "Cannot read_scalar_strings: column 'nonexistent' not found");
 }
 
 TEST_F(LuaRunnerTest, UpdateElementNonExistentCollection) {
@@ -173,8 +176,9 @@ TEST_F(LuaRunnerTest, UpdateElementNonExistentCollection) {
 
     quiver::LuaRunner lua(db);
 
-    EXPECT_THROW(
-        { lua.run(R"(db:update_element("NonexistentCollection", 1, { label = "Test" }))"); }, std::runtime_error);
+    expect_lua_error(lua,
+                     R"(db:update_element("NonexistentCollection", 1, { label = "Test" }))",
+                     "Cannot update_element: collection not found");
 }
 
 TEST_F(LuaRunnerTest, DeleteFromNonExistentCollection) {
@@ -183,7 +187,8 @@ TEST_F(LuaRunnerTest, DeleteFromNonExistentCollection) {
 
     quiver::LuaRunner lua(db);
 
-    EXPECT_THROW({ lua.run(R"(db:delete_element("NonexistentCollection", 1))"); }, std::runtime_error);
+    expect_lua_error(
+        lua, R"(db:delete_element("NonexistentCollection", 1))", "Cannot delete_element: collection not found");
 }
 
 TEST_F(LuaRunnerTest, MultipleOperationsPartialFailure) {
@@ -193,14 +198,12 @@ TEST_F(LuaRunnerTest, MultipleOperationsPartialFailure) {
     quiver::LuaRunner lua(db);
 
     // First operation succeeds, second should fail
-    EXPECT_THROW(
-        {
-            lua.run(R"(
+    expect_lua_error(lua,
+                     R"(
             db:create_element("Collection", { label = "Item 1" })
             db:create_element("NonexistentCollection", { label = "Bad" })
-        )");
-        },
-        std::runtime_error);
+        )",
+                     "Cannot create_element: collection not found");
 
     // Verify first element was created before failure
     auto labels = db.read_scalar_strings("Collection", "label");
@@ -241,7 +244,9 @@ TEST_F(LuaRunnerTest, ReadElementIdsFromNonExistentCollection) {
 
     quiver::LuaRunner lua(db);
 
-    EXPECT_THROW({ lua.run(R"(local ids = db:read_element_ids("NonexistentCollection"))"); }, std::runtime_error);
+    expect_lua_error(lua,
+                     R"(local ids = db:read_element_ids("NonexistentCollection"))",
+                     "Cannot read_element_ids: collection not found");
 }
 
 TEST_F(LuaRunnerTest, LuaScriptWithUnicodeCharacters) {

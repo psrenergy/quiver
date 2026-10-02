@@ -85,7 +85,7 @@ TEST_F(LuaRunnerTest, CreateElementMissingLabel) {
     quiver::LuaRunner lua(db);
 
     // Attempting to create element without required label should fail
-    EXPECT_THROW({ lua.run(R"(db:create_element("Collection", { some_integer = 42 }))"); }, std::runtime_error);
+    expect_lua_error(lua, R"(db:create_element("Collection", { some_integer = 42 }))", "NOT NULL constraint failed");
 }
 
 TEST_F(LuaRunnerTest, CreateElementTrimsWhitespace) {
@@ -131,7 +131,9 @@ TEST_F(LuaRunnerTest, CreateElementInvalidCollection) {
 
     quiver::LuaRunner lua(db);
 
-    EXPECT_THROW({ lua.run(R"(db:create_element("NonexistentCollection", { label = "Test" }))"); }, std::runtime_error);
+    expect_lua_error(lua,
+                     R"(db:create_element("NonexistentCollection", { label = "Test" }))",
+                     "Cannot create_element: collection not found");
 }
 
 TEST_F(LuaRunnerTest, CreateElementUnsupportedAttributeTypeThrows) {

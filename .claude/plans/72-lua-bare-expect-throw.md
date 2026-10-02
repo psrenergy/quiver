@@ -82,9 +82,9 @@ None. The tests/AGENTS.md rule already exists.
 
 ## Acceptance criteria
 
-- [ ] The 17 sites use `expect_lua_error` with a meaningful substring.
-- [ ] The generic Lua error tests keep their bare `EXPECT_THROW`.
-- [ ] The Lua suites are green.
+- [x] The 17 sites use `expect_lua_error` with a meaningful substring.
+- [x] The generic Lua error tests keep their bare `EXPECT_THROW`.
+- [x] The Lua suites are green.
 
 ## Pitfalls
 
@@ -94,3 +94,32 @@ None. The tests/AGENTS.md rule already exists.
 ## Out of scope
 
 - The non-binding Lua syntax/runtime tests.
+
+## Implementation notes
+
+- **Master integration:** `rs/plan72` was already at `origin/master` (`f16b6b6`, v0.12.9), so
+  there was nothing to merge. 47 (`d3be812`), 56 (`53300d9`), 57 (`21ccb91`) and 63 (`6237daf`)
+  had all landed, so every substring below is the final message.
+- **All 17 converted** to `expect_lua_error`, with each script byte-identical. The follow-up
+  assertions stay after the call (errors.cpp `MultipleOperationsPartialFailure` labels, fk.cpp
+  `CreateElementFkResolutionNoPartialWrites` and `UpdateElementFkFailurePreservesExisting`,
+  transaction.cpp `TransactionBlockRollbackOnError`). Every substring the plan predicted matched
+  at HEAD with no change. fk.cpp:58 now pins the post-56 wording,
+  `Cannot create_element: type mismatch for column 'score': expected INTEGER, got TEXT`.
+- **Drift fixed:** the time-series site was at L661, not ~L490 (`UpsertTimeSeriesRowMissingDimErrors`,
+  which builds `script` in a variable, so the variable is passed). Every other line and test name
+  matched.
+- **Left alone, as planned:** the six generic syntax/runtime tests in
+  `test_lua_runner_errors.cpp` (L9–104). Also `test_lua_runner_write_csv.cpp`
+  `ScriptErrorMidWriteStillLeavesEarlierRowsReadable` (~L1437): it expects the script's own
+  `error("boom")` and then checks the file it wrote, so a missing `db:write_csv` would fail the
+  follow-up checks. It isn't vacuous.
+- **Non-vacuity proof:** I temporarily changed the helper's check to
+  `find(substring + "__NONSENSE__")`, rebuilt, and all 17 named tests failed. Then I reverted it.
+- **Verification step 3 skipped:** this checkout has no `build-release` tree. The messages
+  involved all come from the core (or from the script's own `error`), not from sol2, so
+  `SOL_SAFE_*` should not affect them.
+- **For later plans:** these 17 tests now pin core messages (`require_collection`,
+  `require_column`, `resolve_fk_label`, the transaction preconditions, the time-series
+  missing-dimension check, and SQLite's `NOT NULL constraint failed`). If you reword one of those
+  messages, update the substring here. Don't loosen it.

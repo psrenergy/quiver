@@ -658,7 +658,7 @@ TEST_F(LuaRunnerTest, UpsertTimeSeriesRowMissingDimErrors) {
         db:upsert_time_series_row("Collection", "data", )" +
                          std::to_string(id) + R"(, { value = 10.0 })
     )";
-    EXPECT_THROW({ lua.run(script); }, std::runtime_error);
+    expect_lua_error(lua, script, "Cannot upsert_time_series_row: row missing required 'date_time'");
 }
 
 TEST_F(LuaRunnerTest, UpsertTimeSeriesRowUnsupportedValueTypeThrows) {
