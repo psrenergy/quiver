@@ -251,8 +251,6 @@ never copy them into a binding.
 4. Dart tests
 5. JavaScript tests
 6. Python tests
-7. CLI smoke test — positive run (`--schema` + example Lua script → exit 0) and negative run
-   (`--schema` and `--migrations` together → exit 2)
 
-`scripts/build-all.bat` is also seven steps, but its step 1 is the build itself followed by the
-six suites — it does not run the CLI smoke test.
+`scripts/build-all.bat` is seven steps: step 1 is the build itself, followed by the same six
+suites.

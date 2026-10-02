@@ -21,7 +21,6 @@ scripts/                  # build-all/test-all/clean-all.bat, format.bat, tidy.b
                           # assert_version.py (check + bump), validate_wheel*.py + test-wheel*.bat,
                           # ci/{dispatch_workflow.sh, native_s3.sh}, julia/generate_artifacts.jl
 cmake/                    # CompilerOptions.cmake, Dependencies.cmake, Platform.cmake, quiverConfig.cmake.in
-example/                  # example1.lua + example1.bat — quiver_cli/Lua CRUD demo
 docs/                     # User-facing docs: introduction, rules, attributes, migrations, time_series
 assets/                   # logo.svg
 ```
@@ -400,8 +399,8 @@ scripts/build-all.bat            # Build everything + run all tests (Debug)
 scripts/build-all.bat --release  # Build in Release mode
 scripts/test-all.bat             # Run all tests (assumes already built)
 ```
-`test-all.bat` runs the six suites below plus a `quiver_cli` smoke test; `build-all.bat` builds
-and then runs the six suites (breakdown in `tests/AGENTS.md`).
+`test-all.bat` runs the six suites below; `build-all.bat` builds and then runs the same six
+suites (breakdown in `tests/AGENTS.md`).
 
 ### Individual Tests
 ```bash
@@ -415,7 +414,7 @@ bindings/python/tests/test.bat    # Python tests
 
 ### Other Executables
 ```bash
-./build/bin/quiver_cli.exe        # CLI entry point (see example/)
+./build/bin/quiver_cli.exe        # CLI entry point: runs a Lua script against a database (--help)
 ./build/bin/quiver_benchmark.exe  # Transaction benchmark - run manually, never in CI
 ```
 
