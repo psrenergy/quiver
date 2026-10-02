@@ -8,11 +8,13 @@ C++ core and C API suites live here; binding suites live in each binding's `test
 - Database: `test_database_lifecycle.cpp` (open/close/move/options), `test_database_create.cpp`,
   `test_database_read_{scalar,vector,set}.cpp` (read split by attribute type; element-level reads
   `read_element_ids`/`read_element_by_id`/`number_of_elements` live in the `_scalar` file),
-  `test_database_update.cpp`, `test_database_delete.cpp`, `test_database_describe.cpp`, `test_database_query.cpp`,
-  `test_database_time_series_{metadata,group,row,files}.cpp` (time series split by sub-concern:
-  `group` = group read/update + validation, `row` = `upsert_time_series_row`/`read_time_series_row`;
-  the C++ core has no `_nulls` file), `test_database_transaction.cpp`,
-  `test_database_csv_export.cpp`, `test_database_csv_import.cpp`, `test_database_errors.cpp`
+  `test_database_update.cpp`, `test_database_delete.cpp`, `test_database_describe.cpp`,
+  `test_database_metadata.cpp` (group-metadata FK flags, `list_{vector,set}_groups`),
+  `test_database_query.cpp`, `test_database_time_series_{metadata,group,row,files}.cpp` (time
+  series split by sub-concern: `group` = group read/update + validation, `row` =
+  `upsert_time_series_row`/`read_time_series_row`; the C++ core has no `_nulls` file),
+  `test_database_transaction.cpp`, `test_database_csv_export.cpp`, `test_database_csv_import.cpp`,
+  `test_database_errors.cpp`
 - `test_database_ui_metadata.cpp` covers the `ui/` TOML sidecar reader (`src/ui_metadata.{h,cpp}`)
   and its render into `describe`/`describe_collection`/`summarize_collection` — the one suite in
   this list that drives `from_migrations` describe output (every other describe assertion in the
@@ -31,8 +33,8 @@ C++ core and C API suites live here; binding suites live in each binding's `test
 - Supporting types: `test_element.cpp`, `test_row_result.cpp`, `test_migrations.cpp`,
   `test_schema_validator.cpp`
 - Lua: `test_lua_runner_*.cpp` — per-area split mirroring the database files (`_create`, `_read`,
-  `_update`, `_delete`, `_query`, `_return`, `_time_series`, `_transaction`, `_errors`,
-  `_csv_export`, `_csv_import`, `_all_types`, `_fk`, `_migrations`). `_return` covers the JSON
+  `_update`, `_delete`, `_query`, `_describe`, `_return`, `_time_series`, `_transaction`,
+  `_errors`, `_csv_export`, `_csv_import`, `_all_types`, `_fk`, `_migrations`). `_return` covers the JSON
   encoding of a script's return value; `_transaction` covers `db:dry_run` (the core-level dry run
   lives in `test_database_transaction.cpp`); `_migrations` covers `db:validate_migrations` (sandboxed
   like the other file-touching Lua operations). The shared `LuaRunnerTest` and `LuaSandboxTest` fixtures,
@@ -85,8 +87,9 @@ C++ core and C API suites live here; binding suites live in each binding's `test
 ## C API tests
 
 Mirror the same areas with the `test_c_api_*` prefix (`test_c_api_database_*.cpp` per database
-area — the file sets diverge slightly: the C API adds `test_c_api_database_metadata.cpp` and has
-no errors file) plus `test_c_api_element.cpp`, `test_c_api_lua_runner.cpp`,
+area — the file sets diverge slightly: the C API has no `describe`, `errors` or `ui_metadata` file
+(its describe/describe_collection/summarize_collection coverage lives in
+`test_c_api_database_metadata.cpp`)) plus `test_c_api_element.cpp`, `test_c_api_lua_runner.cpp`,
 `test_c_api_expression.cpp`, and the binary trio `test_c_api_binary_file.cpp` /
 `test_c_api_binary_metadata.cpp` / `test_c_api_csv_converter.cpp`. The same `read` →
 `{scalar,vector,set}` and `time_series` → `{metadata,group,row,files,nulls}` split applies; the
