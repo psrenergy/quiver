@@ -36,23 +36,6 @@ TEST(DatabaseErrors, CreateElementEmptyElement) {
     EXPECT_THROW(db.create_element("Configuration", element), std::runtime_error);
 }
 
-TEST(DatabaseErrors, CreateElementEmptyArraySkipsSilently) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
-
-    // Create required Configuration first
-    quiver::Element config;
-    config.set("label", std::string("Test Config"));
-    db.create_element("Configuration", config);
-
-    // Create element with empty array -- should succeed (empty arrays are skipped silently)
-    quiver::Element element;
-    element.set("label", std::string("Item 1")).set("value_int", std::vector<int64_t>{});
-
-    int64_t id = db.create_element("Collection", element);
-    EXPECT_GT(id, 0);
-}
-
 // ============================================================================
 // Update error tests
 // ============================================================================
@@ -115,7 +98,7 @@ TEST(DatabaseErrors, DeleteElementCollectionNotFound) {
 TEST(DatabaseErrors, ReadScalarIntegersNoSchema) {
     quiver::Database db(":memory:", {.read_only = false, .console_level = quiver::LogLevel::Off});
 
-    // Without schema, executing SQL directly will fail due to missing table
+    // The lazy schema load rejects a database with no quiver schema (no Configuration table)
     EXPECT_THROW(db.read_scalar_integers("Configuration", "integer_attribute"), std::runtime_error);
 }
 
@@ -133,9 +116,6 @@ TEST(DatabaseErrors, ReadScalarStringsNoSchema) {
 
 // ============================================================================
 // Read vector error tests
-// Note: read_vector_* methods without schema cause segfault (null pointer dereference)
-// because impl_->schema->find_vector_table() is called without null check.
-// These tests are skipped until the library adds proper null checks.
 // ============================================================================
 
 TEST(DatabaseErrors, ReadVectorIntegersCollectionNotFound) {
@@ -163,9 +143,6 @@ TEST(DatabaseErrors, ReadVectorFloatsCollectionNotFound) {
 
 // ============================================================================
 // Read set error tests
-// Note: read_set_* methods without schema cause segfault (null pointer dereference)
-// because impl_->schema->find_set_table() is called without null check.
-// These tests are skipped until the library adds proper null checks.
 // ============================================================================
 
 TEST(DatabaseErrors, ReadSetStringsCollectionNotFound) {
@@ -181,9 +158,6 @@ TEST(DatabaseErrors, ReadSetStringsCollectionNotFound) {
 
 // ============================================================================
 // Update vector error tests
-// Note: update_vector_* methods without schema cause segfault (null pointer dereference)
-// because impl_->schema->find_vector_table() is called without null check.
-// These tests use a loaded schema and test collection-not-found instead.
 // ============================================================================
 
 TEST(DatabaseErrors, UpdateVectorIntegersCollectionNotFound) {
@@ -214,9 +188,6 @@ TEST(DatabaseErrors, UpdateVectorFloatsCollectionNotFound) {
 
 // ============================================================================
 // Update set error tests
-// Note: update_element method with non-existent collection throws std::exception
-// because impl_->schema->find_set_table() is called.
-// These tests use a loaded schema and test collection-not-found instead.
 // ============================================================================
 
 TEST(DatabaseErrors, UpdateSetStringsCollectionNotFound) {
@@ -244,7 +215,7 @@ TEST(DatabaseErrors, ReadScalarIntegersAttributeNotFound) {
     e.set("label", std::string("Test"));
     db.create_element("Configuration", e);
 
-    // Reading non-existent column throws because SQL is invalid
+    // require_column rejects the unknown attribute before any SQL runs
     EXPECT_THROW(db.read_scalar_integers("Configuration", "nonexistent_attribute"), std::runtime_error);
 }
 
@@ -357,6 +328,6 @@ TEST(DatabaseErrors, ApplySchemaFileNotFound) {
 TEST(DatabaseErrors, ReadElementIdsNoSchema) {
     quiver::Database db(":memory:", {.read_only = false, .console_level = quiver::LogLevel::Off});
 
-    // Without schema, executing SQL will fail due to missing table
+    // The lazy schema load rejects a database with no quiver schema (no Configuration table)
     EXPECT_THROW(db.read_element_ids("Configuration"), std::runtime_error);
 }

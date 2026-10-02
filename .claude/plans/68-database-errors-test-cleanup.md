@@ -60,8 +60,8 @@ None.
 
 ## Acceptance criteria
 
-- [ ] No stale segfault or null-check notes remain. The three comments are accurate.
-- [ ] The duplicate test is gone and the suite is green.
+- [x] No stale segfault or null-check notes remain. The three comments are accurate.
+- [x] The duplicate test is gone and the suite is green.
 
 ## Pitfalls
 
@@ -70,3 +70,38 @@ None.
 ## Out of scope
 
 - Adding vector/set no-schema tests.
+
+## Implementation notes
+
+Implemented on `rs/plan68` at base HEAD `f16b6b6` (the 0.12.9 bump), which already matched
+`origin/master`, so the merge was a no-op. Tests only: `tests/test_database_errors.cpp`.
+
+**Drift:** none. Every quoted excerpt, line number and test name matched. The claims hold in the
+code: `Impl::require_collection` calls `require_schema()`, which calls `load_schema_metadata()`
+(`src/database_impl.h`), and `SchemaValidator` throws `Schema must have a 'Configuration' table`.
+`read_scalar_*` call `require_column` right after `require_collection` (`src/database_read.cpp`),
+and `read_element_ids` goes through `require_collection`.
+
+**Done as written:**
+- Deleted all four notes: the three segfault notes and the `find_set_table()` one. Plan 71 had not
+  landed, so all four were still there. The two "These tests use a loaded schema and test
+  collection-not-found instead." lines belonged to those notes and went with them. Every banner
+  title is kept.
+- Reworded the three comments (L118, L247, L360) with the plan's text rather than deleting them.
+  The test names say "NoSchema" / "AttributeNotFound" but not *where* the throw comes from, and
+  the stale comments got exactly that wrong.
+- Deleted `DatabaseErrors.CreateElementEmptyArraySkipsSilently`. It used the same schema and
+  element as `Database.CreateElementWithEmptyArraySkipsSilently` (`value_int`, a real column), so
+  neither covers the "empty array whose name matches nothing" case that plan 05's notes mention
+  in passing. Nothing outside `.claude/plans` referenced it.
+
+**Results:** `--gtest_filter=DatabaseErrors*:Database.CreateElementWithEmptyArraySkipsSilently`
+went from 30 to 29 tests, all passing (`DatabaseErrors*` alone: 28). The full `quiver_tests.exe`
+run passed 1401/1401. The Verification step 3 grep prints nothing. `scripts/format.bat` exited
+0, and clang-format left the file unchanged. Biome did rewrite all 43 JS files from CRLF to LF in
+the working copy. That was line endings only, with no content diff, so I restored them with
+`git checkout -- bindings/js`. Later plans that run `format.bat` should expect the same.
+
+**For plan 71:** the notes under the `// Update vector error tests` and `// Update set error tests`
+banners are gone. Delete the three `Update{Vector,Set}*CollectionNotFound` tests and those two
+banners. There is no comment left to trim.
