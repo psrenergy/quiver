@@ -84,9 +84,9 @@ Run it for real. That run is the test.
 
 ## Acceptance criteria
 
-- [ ] `tidy.bat` lints the `src/` sources (except `src/binary`) in any checkout directory.
-- [ ] No hardcoded LLVM path. The header filter lives only in `.clang-tidy` and excludes `_deps`.
-- [ ] The CMake `tidy` target is gone, and root AGENTS.md is updated.
+- [x] `tidy.bat` lints the `src/` sources (except `src/binary`) in any checkout directory.
+- [x] No hardcoded LLVM path. The header filter lives only in `.clang-tidy` and excludes `_deps`.
+- [x] The CMake `tidy` target is gone, and root AGENTS.md is updated.
 
 ## Pitfalls
 

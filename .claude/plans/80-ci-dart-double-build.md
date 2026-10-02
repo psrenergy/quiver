@@ -80,9 +80,9 @@ produces coverage.
 
 ## Acceptance criteria
 
-- [ ] `dart-coverage` has no `build-cpp` or copy step.
-- [ ] The three doc statements match reality.
-- [ ] CI is green.
+- [x] `dart-coverage` has no `build-cpp` or copy step.
+- [x] The three doc statements match reality.
+- [x] CI is green.
 
 ## Pitfalls
 
@@ -91,3 +91,22 @@ produces coverage.
 ## Out of scope
 
 - sccache key changes and `build_tests` defaults.
+
+## Implementation notes
+
+Backfilled after the batch-7 audit. The implementing session committed the work (`7a88691`, merged
+in PR #400 / `7ed38c9`) but never appended these notes.
+
+- `ci.yml`: deleted `build-cpp` and "Copy shared libraries" from `dart-coverage`. `dart test` (via
+  `coverage:test_with_coverage`) runs the native-assets hook, which builds and registers its own
+  unversioned libraries, so the copied `.so` files were never loaded.
+- `coverage.sh`: deleted the dead `build/lib` `LD_LIBRARY_PATH` line. **Scope extension:** also deleted
+  the `build\bin` PATH lines from `coverage.bat`, for the same reason (a stale build there could mask
+  a broken hook).
+- Docs: the Linux Dart Coverage job *does* run the hook, so the "no CI job runs this hook" claims were
+  fixed in `bindings/dart/AGENTS.md`, root `AGENTS.md` (`QUIVER_UNVERSIONED_SHARED`), and the hook's
+  `appleArgs` comment in `bindings/dart/hook/build.dart` ("no macOS CI job"). `.github/AGENTS.md`
+  notes that `dart-coverage` skips `build-cpp` on purpose.
+- Merge `4bad45d` (origin/master into rs/plan80) had a root `AGENTS.md` conflict with plan 83. The
+  resolution kept 83's `publish-js.yml` edit and 80's Dart Coverage sentence.
+- CI: run 36966014760 on `7ed38c9` is green, including `dart-coverage`.

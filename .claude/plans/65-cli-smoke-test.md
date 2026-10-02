@@ -74,8 +74,8 @@ From the repo root:
 
 ## Acceptance criteria
 
-- [ ] `tests/cli/smoke.lua` exists, and step 7 of `test-all.bat` passes.
-- [ ] No remaining reference to `example/` in AGENTS.md files or scripts:
+- [x] ~~`tests/cli/smoke.lua` exists, and step 7 of `test-all.bat` passes.~~ Void: maintainer chose docs-only (see Implementation notes).
+- [x] No remaining reference to `example/` in AGENTS.md files or scripts:
       `grep -rn "example1\|example/" AGENTS.md tests/AGENTS.md scripts/`.
 
 ## Pitfalls

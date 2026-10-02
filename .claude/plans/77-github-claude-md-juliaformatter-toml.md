@@ -38,7 +38,7 @@ None.
 
 ## Acceptance criteria
 
-- [ ] The stale file name is removed. No other edit.
+- [x] The stale file name is removed. No other edit.
 
 ## Pitfalls
 

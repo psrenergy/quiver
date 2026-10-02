@@ -67,9 +67,9 @@ None locally. The next npm publish run exercises the step.
 
 ## Acceptance criteria
 
-- [ ] `publish-js.yml` no longer spells out the seven natives.
-- [ ] The tarball check covers every downloaded file and fails on an empty download.
-- [ ] Both comments are updated.
+- [x] `publish-js.yml` no longer spells out the seven natives.
+- [x] The tarball check covers every downloaded file and fails on an empty download.
+- [x] Both comments are updated.
 
 ## Pitfalls
 

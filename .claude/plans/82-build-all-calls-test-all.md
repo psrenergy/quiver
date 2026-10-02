@@ -72,9 +72,9 @@ Run the script. That run is the test.
 
 ## Acceptance criteria
 
-- [ ] build-all contains no copy of the suite commands.
-- [ ] build-all's exit code is test-all's.
-- [ ] Both AGENTS.md sentences are updated.
+- [x] build-all contains no copy of the suite commands.
+- [x] build-all's exit code is test-all's.
+- [x] Both AGENTS.md sentences are updated.
 
 ## Pitfalls
 

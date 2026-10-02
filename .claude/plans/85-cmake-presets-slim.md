@@ -102,8 +102,8 @@ Configure and build with both presets once.
 
 ## Acceptance criteria
 
-- [ ] Two configure presets, both Ninja with tests ON. `cmakeMinimumRequired` is 3.26.
-- [ ] The root AGENTS.md and tests/AGENTS.md match.
+- [x] Two configure presets, both Ninja with tests ON. `cmakeMinimumRequired` is 3.26.
+- [x] The root AGENTS.md and tests/AGENTS.md match.
 
 ## Pitfalls
 
