@@ -79,3 +79,32 @@ None locally. The next npm publish run exercises the step.
 ## Out of scope
 
 - The download or upload logic in `native_s3.sh`.
+
+## Implementation notes
+
+- **Premise held**: `native_s3.sh` runs under `set -euo pipefail`, and `cmd_download` does
+  `curl -fSL ... || { echo ::error::...; exit 1; }` for every file of `files_for`. The verify step was
+  deleted (step 1), not kept as the fallback.
+- **Drift fixed**: the plan says seven natives on three platforms. The code ships **ten**:
+  `linux-aarch64` was added after the plan was written, and it had to be added to all three lists,
+  which is the duplication this plan removes. The quoted loop excerpt was missing the
+  `linux-aarch64` line. Real anchors were verify step L51-77, pack step L79-101,
+  `CMakeLists.txt` L21-22, and root `AGENTS.md` L442-443 (not ~L382).
+- **Guard placement**: it sits directly before the loop, after `npm pack`, as the plan says. `find`
+  on a missing `libs/` prints an error and yields nothing, so the guard covers "no `libs/`" as well
+  as "empty `libs/`".
+- **Extra doc edit**: `.github/AGENTS.md` "npm Publishing (JS)" now says the step asserts every
+  *downloaded* file, that the download fails on any missing file, and that `files_for` is the only
+  list. Its stale `actions/setup-node@v6` was deliberately left for plan 88.
+- No CHANGELOG entry: the change is CI-only.
+- **Verification**: YAML parses. actionlint 1.7.9 (the CI version, `-shellcheck=`) is clean on
+  `publish-js.yml` and on all workflows. A local dry run of the extracted step under
+  `bash -eo pipefail` covered four cases: a packed file passes; a file added after `npm pack` fails
+  with `::error::tarball quiverdb-0.12.9.tgz is MISSING libs/linux-x86_64/libquiver_c.so`; an empty
+  `libs/` and a missing `libs/` both fail with `::error::no native libraries downloaded`.
+- **For 81 / 88**: the "Verify native libraries are present" step no longer exists, so
+  `publish-js.yml` is shorter by 28 lines and every line after the download step moved up. Re-anchor
+  by step name. 81's version-resolution step (`Resolve version`) is untouched.
+- `scripts/format.bat` on Windows reports biome "Fixed 43 files" in `bindings/js`. That is only
+  CRLF to LF in the `core.autocrlf=true` working copy, with a zero-line `git diff`. It was reverted
+  with `git checkout -- bindings/js` and is not part of this change.
