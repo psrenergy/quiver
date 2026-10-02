@@ -34,10 +34,14 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   `test_schema_validator.cpp`
 - Lua: `test_lua_runner_*.cpp` — per-area split mirroring the database files (`_create`, `_read`,
   `_update`, `_delete`, `_query`, `_describe`, `_return`, `_time_series`, `_transaction`,
-  `_errors`, `_csv_export`, `_csv_import`, `_all_types`, `_fk`, `_migrations`). `_return` covers the JSON
+  `_errors`, `_csv_export`, `_csv_import`, `_all_types`, `_fk`, `_lifecycle`, `_migrations`). `_return` covers the JSON
   encoding of a script's return value; `_transaction` covers `db:dry_run` (the core-level dry run
   lives in `test_database_transaction.cpp`); `_migrations` covers `db:validate_migrations` (sandboxed
-  like the other file-touching Lua operations). The shared `LuaRunnerTest` and `LuaSandboxTest` fixtures,
+  like the other file-touching Lua operations); `_lifecycle` covers moving a runner (move-construct and
+  move-assign): handles a script opens after the move still close at that `run()`'s exit, both while the
+  moved-from runner is alive and after it has been destroyed, and a file-scope `static_assert` that
+  `LuaRunner` is pointer-sized keeps run state inside its `Impl` in Release too, where the freed-source
+  pins alone do not reliably fail. The shared `LuaRunnerTest` and `LuaSandboxTest` fixtures,
   the `expect_lua_error` helper (throw + message-substring assert — plain `EXPECT_THROW` passes
   vacuously when a removed function raises "attempt to call a nil value"), and the common include
   prelude live in `test_lua_runner.h`; the single-use `LuaRunnerAllTypesTest` / `LuaRunnerFkTest`
@@ -140,7 +144,7 @@ things to keep in mind when touching these:
   default in Debug — so a Debug-only run cannot prove the fix. Build Release with tests via the
   preset when touching `lua_table_to_vector`:
   `cmake --preset release && cmake --build --preset release`, then run
-  `build/release/bin/quiver_tests.exe --gtest_filter='LuaRunner*'`. Phase 2's `header_row` decoder
+  `build/release/bin/quiver_tests.exe --gtest_filter='Lua*'`. Phase 2's `header_row` decoder
   (a new `sol::object` type check) was verified this way (TEST-05): 291/291 `LuaRunner*` tests
   passed in both Debug and Release, with no divergence.
 
@@ -171,7 +175,10 @@ non-Database files (`composites.test.ts`, `introspection.test.ts`, `lua-runner.t
 
 `bindings/js/test/lua-api-sync.test.ts` is the only JS test file that needs neither a database nor
 the native library: it parses `src/lua_runner.cpp` and asserts `bindings/js/src/lua-api.ts` documents
-every bound `db:`/`quiver.*` name and the exact `open_libraries` list. It imports the constant from
+every bound `db:`/`quiver.*` name and the exact `open_libraries` list. It also fails if any of the
+`BinaryFile`, `BinaryMetadata`, `Expression` or `CsvWriter` usertypes parses to zero methods, or if
+`open_libraries(` does not appear exactly once, so a missed file or usertype cannot pass vacuously.
+It imports the constant from
 `../src/lua-api.ts` directly rather than `../src/index.ts` specifically to avoid the FFI loader, so
 it still passes on a checkout with no `build/`.
 
