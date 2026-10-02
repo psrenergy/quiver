@@ -19,7 +19,8 @@ Checks: >
 
 WarningsAsErrors: ''
 
-HeaderFilterRegex: '(include/quiver/|src/)'
+HeaderFilterRegex: '(include[\\/]quiver[\\/]|[\\/]src[\\/])'
+ExcludeHeaderFilterRegex: '_deps'
 
 CheckOptions:
   - key: readability-identifier-naming.ClassCase

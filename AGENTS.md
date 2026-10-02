@@ -491,7 +491,8 @@ release ritual for that file is not settled. Release flow: `.github/AGENTS.md`.
 - `scripts/format.bat` — C++ via the CMake `format` target (clang-format), then each binding's
   own `format.bat` (JuliaFormatter, dart format, ruff, biome).
 - `scripts/tidy.bat` — `run-clang-tidy` over `build/compile_commands.json` (strips the MinGW-only
-  `-fno-keep-inline-dllexport` flag first; skips `src/binary`).
+  `-fno-keep-inline-dllexport` flag first; skips `src/binary`; finds `run-clang-tidy` on PATH, and
+  the header filter lives in `.clang-tidy`).
 - `.pre-commit-config.yaml` — trailing-whitespace, end-of-file, yaml/json checks, merge-conflict
   markers, large files (>1 MB), LF line endings, clang-format, cppcheck, cmake-format.
 - `.gitattributes` enforces LF for `.cpp/.h/.dart/.jl/.py`, and marks `tests/fixtures/*.csv`
