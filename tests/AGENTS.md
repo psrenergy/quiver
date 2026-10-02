@@ -137,15 +137,12 @@ things to keep in mind when touching these:
   `CreateElementMixedIntegerAndBooleanArray`, `CreateElementMixedFloatAndBooleanArray` and
   `CreateElementArrayCellTypeMismatchThrows` cover bugs that only manifested with
   `SOL_SAFE_GETTER` off (silent 0 / 0.0 / `""` instead of a throw), and `SOL_SAFE_GETTER` is on by
-  default in Debug — so a Debug-only run cannot prove the fix. Build Release and run
-  `--gtest_filter='LuaRunner*'` when touching `lua_table_to_vector`. **Do not use the plain
-  `release` CMake preset for this** — it sets `QUIVER_BUILD_TESTS=OFF`, so it produces a Release
-  tree with no test binary at all and would report success while testing nothing. Configure a
-  separate tree explicitly: `cmake -S . -B build-release -G Ninja -DCMAKE_BUILD_TYPE=Release
-  -DQUIVER_BUILD_TESTS=ON -DQUIVER_BUILD_C_API=ON`, build it, then run the filter against
-  `build-release/bin/quiver_tests.exe`. Phase 2's `header_row` decoder (a new `sol::object` type
-  check) was verified this way (TEST-05): 291/291 `LuaRunner*` tests passed in both Debug and
-  Release, with no divergence.
+  default in Debug — so a Debug-only run cannot prove the fix. Build Release with tests via the
+  preset when touching `lua_table_to_vector`:
+  `cmake --preset release && cmake --build --preset release`, then run
+  `build/release/bin/quiver_tests.exe --gtest_filter='LuaRunner*'`. Phase 2's `header_row` decoder
+  (a new `sol::object` type check) was verified this way (TEST-05): 291/291 `LuaRunner*` tests
+  passed in both Debug and Release, with no divergence.
 
 The native-DateTime bindings (Julia, Dart, and Python) cover bulk scalar, vector, and set
 convenience readers in the corresponding `read` test files, NULL cells included: the set wrappers

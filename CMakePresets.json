@@ -1,24 +1,12 @@
 {
   "version": 6,
-  "cmakeMinimumRequired": {
-    "major": 3,
-    "minor": 21,
-    "patch": 0
-  },
+  "cmakeMinimumRequired": { "major": 3, "minor": 26, "patch": 0 },
   "configurePresets": [
     {
-      "name": "base",
-      "hidden": true,
-      "binaryDir": "${sourceDir}/build/${presetName}",
-      "cacheVariables": {
-        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
-      }
-    },
-    {
       "name": "dev",
-      "displayName": "Development",
-      "description": "Development build with tests",
-      "inherits": "base",
+      "displayName": "Development (Debug, tests + C API)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "QUIVER_BUILD_TESTS": "ON",
@@ -27,42 +15,9 @@
     },
     {
       "name": "release",
-      "displayName": "Release",
-      "description": "Release build",
-      "inherits": "base",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "QUIVER_BUILD_TESTS": "OFF"
-      }
-    },
-    {
-      "name": "windows-release",
-      "displayName": "Windows Release",
-      "description": "Release build for Windows",
-      "inherits": "base",
-      "generator": "Visual Studio 17 2022",
-      "condition": {
-        "type": "equals",
-        "lhs": "${hostSystemName}",
-        "rhs": "Windows"
-      },
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "QUIVER_BUILD_TESTS": "ON",
-        "QUIVER_BUILD_C_API": "ON"
-      }
-    },
-    {
-      "name": "linux-release",
-      "displayName": "Linux Release",
-      "description": "Release build for Linux",
-      "inherits": "base",
-      "generator": "Unix Makefiles",
-      "condition": {
-        "type": "equals",
-        "lhs": "${hostSystemName}",
-        "rhs": "Linux"
-      },
+      "displayName": "Release (tests + C API)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "QUIVER_BUILD_TESTS": "ON",
@@ -71,53 +26,11 @@
     }
   ],
   "buildPresets": [
-    {
-      "name": "dev",
-      "displayName": "Development Build",
-      "configurePreset": "dev"
-    },
-    {
-      "name": "release",
-      "displayName": "Release Build",
-      "configurePreset": "release"
-    },
-    {
-      "name": "windows-release",
-      "displayName": "Windows Release Build",
-      "configurePreset": "windows-release",
-      "configuration": "Release"
-    },
-    {
-      "name": "linux-release",
-      "displayName": "Linux Release Build",
-      "configurePreset": "linux-release"
-    }
+    { "name": "dev", "configurePreset": "dev" },
+    { "name": "release", "configurePreset": "release" }
   ],
   "testPresets": [
-    {
-      "name": "dev",
-      "displayName": "Development Tests",
-      "configurePreset": "dev",
-      "output": {
-        "outputOnFailure": true
-      }
-    },
-    {
-      "name": "windows-release",
-      "displayName": "Windows Release Tests",
-      "configurePreset": "windows-release",
-      "configuration": "Release",
-      "output": {
-        "outputOnFailure": true
-      }
-    },
-    {
-      "name": "linux-release",
-      "displayName": "Linux Release Tests",
-      "configurePreset": "linux-release",
-      "output": {
-        "outputOnFailure": true
-      }
-    }
+    { "name": "dev", "configurePreset": "dev", "output": { "outputOnFailure": true } },
+    { "name": "release", "configurePreset": "release", "output": { "outputOnFailure": true } }
   ]
 }

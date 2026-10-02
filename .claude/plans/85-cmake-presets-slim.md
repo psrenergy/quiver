@@ -112,3 +112,39 @@ Configure and build with both presets once.
 ## Out of scope
 
 - Using presets in scripts or CI.
+
+## Implementation notes
+
+- **Done as planned.** `CMakePresets.json` is the plan's JSON verbatim. The root AGENTS.md
+  Presets bullet is the plan's text. The tests/AGENTS.md trap note is replaced. Before editing, the
+  branch integrated master at `a0a5432` (plans 79 and 81) as a fast-forward. Neither plan touches
+  the presets or the two AGENTS.md hunks.
+- **Drift fixed:**
+  - `CMAKE_EXPORT_COMPILE_COMMANDS ON` is set in `cmake/CompilerOptions.cmake`, not the root
+    `CMakeLists.txt` that the plan's grep names. CompilerOptions is included from the root file, so
+    dropping the hidden `base` preset's cache variable is still safe. Both preset trees produce
+    `compile_commands.json` without it.
+  - The tests/AGENTS.md trap note had moved from ~L127-132 to ~L141-146 (plan 75 added lines).
+    I found it by its text.
+  - The plan's replacement sentence would have followed "Build Release and run
+    `--gtest_filter='LuaRunner*'` when touching `lua_table_to_vector`." I merged the two into one
+    sentence instead of stacking two "Build Release" sentences. The "Phase 2 ... verified this way
+    (TEST-05)" sentence after it stays.
+- **Verification (real runs, Ninja + MSVC 19.51 from the VS 18 bundle):**
+  - `cmake --list-presets=all` lists exactly `dev` and `release` for configure, build and test.
+  - `cmake --preset dev && cmake --build --preset dev && ctest --preset dev` gives
+    `100% tests passed, 0 tests failed out of 1937` (462 s, serial).
+  - `cmake --preset release && cmake --build --preset release &&
+    build/release/bin/quiver_tests.exe --gtest_filter=LuaRunner*` gives `378 tests from 9 test
+    suites ... PASSED 378`.
+  - Both caches show `CMAKE_GENERATOR=Ninja`, the right `CMAKE_BUILD_TYPE`, and
+    `QUIVER_BUILD_TESTS=ON` / `QUIVER_BUILD_C_API=ON`.
+  - `scripts/format.bat` exited 0 with no content diff. Biome again rewrote 31 JS files from CRLF to
+    LF only, and `git checkout -- bindings/js` restored them.
+- **No CHANGELOG entry.** This is dev tooling, and the plan specifies none. For reference, `v0.12.8`
+  is tagged and the manifests are at 0.12.9 with no `[0.12.9]` section yet.
+- **Left alone:** `.gitignore`'s `build-release/` line. No doc recommends that tree anymore, but
+  removing the line is outside this plan's scope and harmless to keep.
+- **For later plans:** a Release test run can now use `build/release` through the preset, and both
+  preset trees exist locally. Plan 86 edits only the root `CMakeLists.txt`, which no preset
+  depends on.

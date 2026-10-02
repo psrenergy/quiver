@@ -452,10 +452,10 @@ JS has no generator — update the hand-written symbol table in `bindings/js/src
   Julia/JS/S3 natives ended up requiring whatever macOS the CI runner image was. The Dart hook
   passes its own `DEPLOYMENT_TARGET` as well, because native_toolchain_cmake's iOS toolchain
   file force-derives `CMAKE_OSX_DEPLOYMENT_TARGET` from it before `Platform.cmake` is read.
-- **Presets** (`CMakePresets.json`): configure `dev` (Debug, tests+C API), `release`,
-  `windows-release` (VS 17 2022), `linux-release`; build presets for
-  dev/release/windows-release/linux-release; test presets for dev/windows-release/linux-release.
-  Presets build into `build/<presetName>/`; the plain `build/` dir is the manual configure above.
+- **Presets** (`CMakePresets.json`): `dev` (Debug) and `release` (Release), both Ninja with tests
+  and the C API ON, each with a matching build and test preset. They build into
+  `build/<presetName>/`; the plain `build/` directory is the manual configure above. No script or
+  CI job uses them — they are for IDEs and ad-hoc Release test runs.
 - **Dependencies** via FetchContent (`cmake/Dependencies.cmake`): sqlite3 v3.53.4
   (psrenergy/sqlite3-cmake, PSR's fork of the archived sjinks wrapper; built thread-safe,
   serialized — `sqlite3_ENABLE_THREADSAFE` is FORCEd ON so a stale cache cannot keep it at 0),
