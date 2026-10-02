@@ -11,7 +11,9 @@
 
 TEST(Database, ReadScalarIntegers) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element e1;
@@ -30,7 +32,9 @@ TEST(Database, ReadScalarIntegers) {
 
 TEST(Database, ReadScalarFloats) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element e1;
@@ -49,7 +53,9 @@ TEST(Database, ReadScalarFloats) {
 
 TEST(Database, ReadScalarStrings) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element e1;
@@ -68,7 +74,9 @@ TEST(Database, ReadScalarStrings) {
 
 TEST(Database, ReadScalarEmpty) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -91,19 +99,24 @@ TEST(Database, ReadScalarEmpty) {
 
 TEST(Database, ReadScalarFloatsPreservesNull) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     // float_attribute has no default, so an unset value is SQL NULL.
     db.create_element(
-        "Configuration", quiver::Element().set("label", std::string("Config 1")).set("float_attribute", 10.0)
+        "Configuration",
+        quiver::Element().set("label", std::string("Config 1")).set("float_attribute", 10.0)
     );
     db.create_element("Configuration", quiver::Element().set("label", std::string("Config 2")));  // NULL float
     db.create_element(
-        "Configuration", quiver::Element().set("label", std::string("Config 3")).set("float_attribute", 30.0)
+        "Configuration",
+        quiver::Element().set("label", std::string("Config 3")).set("float_attribute", 30.0)
     );
     db.create_element(
-        "Configuration", quiver::Element().set("label", std::string("Config 4")).set("float_attribute", 40.0)
+        "Configuration",
+        quiver::Element().set("label", std::string("Config 4")).set("float_attribute", 40.0)
     );
 
     auto values = db.read_scalar_floats("Configuration", "float_attribute");
@@ -120,7 +133,9 @@ TEST(Database, ReadScalarFloatsPreservesNull) {
 
 TEST(Database, ReadScalarIntegersPreservesNull) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("all_types.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("all_types.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     // AllTypes.some_integer has no default, so an unset value is SQL NULL.
@@ -139,7 +154,9 @@ TEST(Database, ReadScalarIntegersPreservesNull) {
 
 TEST(Database, ReadScalarStringsPreservesNull) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     db.create_element(
@@ -170,7 +187,9 @@ TEST(Database, ReadScalarStringsPreservesNull) {
 
 TEST(Database, ReadScalarFloatsAllNull) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     db.create_element("Configuration", quiver::Element().set("label", std::string("Config 1")));
@@ -189,7 +208,9 @@ TEST(Database, ReadScalarFloatsAllNull) {
 
 TEST(Database, ReadScalarIntegerById) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element e1;
@@ -211,7 +232,9 @@ TEST(Database, ReadScalarIntegerById) {
 
 TEST(Database, ReadScalarFloatById) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element e1;
@@ -233,7 +256,9 @@ TEST(Database, ReadScalarFloatById) {
 
 TEST(Database, ReadScalarStringById) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element e1;
@@ -255,7 +280,9 @@ TEST(Database, ReadScalarStringById) {
 
 TEST(Database, ReadScalarByIdNotFound) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element e;
@@ -273,7 +300,9 @@ TEST(Database, ReadScalarByIdNotFound) {
 
 TEST(Database, ReadElementIds) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element e1;
@@ -297,7 +326,9 @@ TEST(Database, ReadElementIds) {
 
 TEST(Database, ReadElementIdsEmpty) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -411,7 +442,9 @@ TEST(Database, NumberOfElementsNotFound) {
 
 TEST(Database, ReadScalarIntegersInvalidCollection) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     EXPECT_THROW(db.read_scalar_integers("NonexistentCollection", "integer_attribute"), std::runtime_error);
@@ -419,7 +452,9 @@ TEST(Database, ReadScalarIntegersInvalidCollection) {
 
 TEST(Database, ReadScalarIntegersInvalidAttribute) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     EXPECT_THROW(db.read_scalar_integers("Configuration", "nonexistent_attribute"), std::runtime_error);
@@ -427,7 +462,9 @@ TEST(Database, ReadScalarIntegersInvalidAttribute) {
 
 TEST(Database, ReadScalarFloatsInvalidCollection) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     EXPECT_THROW(db.read_scalar_floats("NonexistentCollection", "float_attribute"), std::runtime_error);
@@ -435,7 +472,9 @@ TEST(Database, ReadScalarFloatsInvalidCollection) {
 
 TEST(Database, ReadScalarStringsInvalidCollection) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     EXPECT_THROW(db.read_scalar_strings("NonexistentCollection", "string_attribute"), std::runtime_error);
@@ -443,7 +482,9 @@ TEST(Database, ReadScalarStringsInvalidCollection) {
 
 TEST(Database, ReadElementIdsInvalidCollection) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     EXPECT_THROW(db.read_element_ids("NonexistentCollection"), std::runtime_error);
@@ -451,7 +492,9 @@ TEST(Database, ReadElementIdsInvalidCollection) {
 
 TEST(Database, ReadScalarIntegerByIdInvalidCollection) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     EXPECT_THROW(db.read_scalar_integer_by_id("NonexistentCollection", "integer_attribute", 1), std::runtime_error);
@@ -466,14 +509,15 @@ TEST(Database, ReadScalarOrderFollowsInsertionOrder) {
     // If ORDER BY is not specified in the read queries, we may get results in insertion order, but this is not
     // guaranteed. There should always be an ORDER BY clause in the read queries to ensure consistent ordering.
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     // Insert 10 elements with labels in reverse alphabetical order (z -> a)
     // Expected: reads return values in insertion (ID) order
-    std::vector<std::string> labels = {
-        "zebra", "yak", "wolf", "viper", "urchin", "tiger", "snake", "rabbit", "quail", "penguin"
-    };
+    std::vector<std::string> labels =
+        {"zebra", "yak", "wolf", "viper", "urchin", "tiger", "snake", "rabbit", "quail", "penguin"};
     std::vector<int64_t> expected_integers;
     std::vector<double> expected_floats;
 
@@ -524,7 +568,9 @@ TEST(Database, ReadScalarOrderFollowsInsertionOrder) {
 
 TEST(Database, DateTimeAttributeMetadata) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     auto metadata = db.get_scalar_metadata("Configuration", "date_attribute");
@@ -535,7 +581,9 @@ TEST(Database, DateTimeAttributeMetadata) {
 
 TEST(Database, IntegerPrimaryKeyReportsNotNull) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     // An INTEGER PRIMARY KEY is a rowid alias and is never NULL, so the public metadata reports
@@ -547,7 +595,9 @@ TEST(Database, IntegerPrimaryKeyReportsNotNull) {
 
 TEST(Database, DateTimeReadScalarString) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element element;
@@ -561,7 +611,9 @@ TEST(Database, DateTimeReadScalarString) {
 
 TEST(Database, DateTimeReadScalarStringById) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element element;
@@ -575,7 +627,9 @@ TEST(Database, DateTimeReadScalarStringById) {
 
 TEST(Database, DateTimeNullable) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element element;
@@ -588,7 +642,9 @@ TEST(Database, DateTimeNullable) {
 
 TEST(Database, DatetimeMetadataType) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     auto metadata = db.get_scalar_metadata("Configuration", "date_attribute");
@@ -601,7 +657,9 @@ TEST(Database, DatetimeMetadataType) {
 
 TEST(Database, ReadScalarIntegersInvalidColumnThrows) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     EXPECT_THROW(

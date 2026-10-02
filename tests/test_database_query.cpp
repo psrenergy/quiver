@@ -10,7 +10,9 @@
 
 TEST(DatabaseQuery, QueryStringReturnsValue) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element e;
@@ -24,7 +26,9 @@ TEST(DatabaseQuery, QueryStringReturnsValue) {
 
 TEST(DatabaseQuery, QueryStringReturnsNulloptWhenEmpty) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     auto result = db.query_string("SELECT string_attribute FROM Configuration WHERE 1 = 0");
@@ -33,7 +37,9 @@ TEST(DatabaseQuery, QueryStringReturnsNulloptWhenEmpty) {
 
 TEST(DatabaseQuery, QueryStringReturnsFirstRow) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element e1;
@@ -55,7 +61,9 @@ TEST(DatabaseQuery, QueryStringReturnsFirstRow) {
 
 TEST(DatabaseQuery, QueryIntegerReturnsValue) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element e;
@@ -69,7 +77,9 @@ TEST(DatabaseQuery, QueryIntegerReturnsValue) {
 
 TEST(DatabaseQuery, QueryIntegerReturnsNulloptWhenEmpty) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     auto result = db.query_integer("SELECT integer_attribute FROM Configuration WHERE 1 = 0");
@@ -78,7 +88,9 @@ TEST(DatabaseQuery, QueryIntegerReturnsNulloptWhenEmpty) {
 
 TEST(DatabaseQuery, QueryIntegerReturnsFirstRow) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element e1;
@@ -96,7 +108,9 @@ TEST(DatabaseQuery, QueryIntegerReturnsFirstRow) {
 
 TEST(DatabaseQuery, QueryIntegerCount) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element e1;
@@ -118,7 +132,9 @@ TEST(DatabaseQuery, QueryIntegerCount) {
 
 TEST(DatabaseQuery, QueryFloatReturnsValue) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element e;
@@ -132,7 +148,9 @@ TEST(DatabaseQuery, QueryFloatReturnsValue) {
 
 TEST(DatabaseQuery, QueryFloatReturnsNulloptWhenEmpty) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     auto result = db.query_float("SELECT float_attribute FROM Configuration WHERE 1 = 0");
@@ -141,7 +159,9 @@ TEST(DatabaseQuery, QueryFloatReturnsNulloptWhenEmpty) {
 
 TEST(DatabaseQuery, QueryFloatReturnsFirstRow) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element e1;
@@ -159,7 +179,9 @@ TEST(DatabaseQuery, QueryFloatReturnsFirstRow) {
 
 TEST(DatabaseQuery, QueryFloatAverage) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element e1;
@@ -181,7 +203,9 @@ TEST(DatabaseQuery, QueryFloatAverage) {
 
 TEST(DatabaseQuery, QueryStringWithParams) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element e;
@@ -196,7 +220,9 @@ TEST(DatabaseQuery, QueryStringWithParams) {
 
 TEST(DatabaseQuery, QueryStringWithParamsNoMatch) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element e;
@@ -210,7 +236,9 @@ TEST(DatabaseQuery, QueryStringWithParamsNoMatch) {
 
 TEST(DatabaseQuery, QueryIntegerWithParams) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element e;
@@ -225,7 +253,9 @@ TEST(DatabaseQuery, QueryIntegerWithParams) {
 
 TEST(DatabaseQuery, QueryFloatWithParams) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element e;
@@ -239,7 +269,9 @@ TEST(DatabaseQuery, QueryFloatWithParams) {
 
 TEST(DatabaseQuery, QueryIntegerWithMultipleParams) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element e1;
@@ -260,7 +292,9 @@ TEST(DatabaseQuery, QueryIntegerWithMultipleParams) {
 
 TEST(DatabaseQuery, QueryWithNullParam) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element e;
@@ -274,7 +308,9 @@ TEST(DatabaseQuery, QueryWithNullParam) {
 
 TEST(DatabaseQuery, QueryParameterCountMismatch) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element e;
@@ -286,7 +322,8 @@ TEST(DatabaseQuery, QueryParameterCountMismatch) {
 
     // Too many parameters for the single placeholder
     EXPECT_THROW(
-        db.query_string("SELECT label FROM Configuration WHERE id = ?", {int64_t{1}, int64_t{2}}), std::runtime_error
+        db.query_string("SELECT label FROM Configuration WHERE id = ?", {int64_t{1}, int64_t{2}}),
+        std::runtime_error
     );
 
     // Exactly one parameter succeeds
@@ -297,7 +334,9 @@ TEST(DatabaseQuery, QueryParameterCountMismatch) {
 
 TEST(Database, QueryFloatWidensIntegerResults) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     db.create_element("Configuration", quiver::Element().set("label", std::string("Config 1")));
@@ -321,7 +360,9 @@ TEST(Database, QueryFloatWidensIntegerResults) {
 // column stays INTEGER in SQLite, and these used to report "no value" for it.
 TEST(Database, ReadFloatsWidenIntegerValuesInRealColumns) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     db.create_element("Configuration", quiver::Element().set("label", std::string("Config")));
@@ -340,6 +381,7 @@ TEST(Database, ReadFloatsWidenIntegerValuesInRealColumns) {
     EXPECT_DOUBLE_EQ(*by_id, 7.0);
 
     EXPECT_EQ(
-        db.read_vector_floats_by_id("Collection", "value_float", id), (std::vector<std::optional<double>>{1.0, 2.0})
+        db.read_vector_floats_by_id("Collection", "value_float", id),
+        (std::vector<std::optional<double>>{1.0, 2.0})
     );
 }

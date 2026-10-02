@@ -149,14 +149,15 @@ inline bool value_matches_type(const Value& v, DataType expected) {
     return std::visit(
         [expected](const auto& x) {
             using T = std::decay_t<decltype(x)>;
-            if constexpr (std::is_same_v<T, std::nullptr_t>)
+            if constexpr (std::is_same_v<T, std::nullptr_t>) {
                 return true;
-            else if constexpr (std::is_same_v<T, int64_t>)
+            } else if constexpr (std::is_same_v<T, int64_t>) {
                 return expected == DataType::Integer || expected == DataType::Real;
-            else if constexpr (std::is_same_v<T, double>)
+            } else if constexpr (std::is_same_v<T, double>) {
                 return expected == DataType::Real;
-            else
+            } else {
                 return expected == DataType::Text || expected == DataType::DateTime;
+            }
         },
         v
     );
@@ -168,14 +169,15 @@ inline const char* value_type_name(const Value& v) {
     return std::visit(
         [](const auto& x) -> const char* {
             using T = std::decay_t<decltype(x)>;
-            if constexpr (std::is_same_v<T, int64_t>)
+            if constexpr (std::is_same_v<T, int64_t>) {
                 return "INTEGER";
-            else if constexpr (std::is_same_v<T, double>)
+            } else if constexpr (std::is_same_v<T, double>) {
                 return "REAL";
-            else if constexpr (std::is_same_v<T, std::string>)
+            } else if constexpr (std::is_same_v<T, std::string>) {
                 return "TEXT";
-            else
+            } else {
                 return "NULL";
+            }
         },
         v
     );

@@ -1,11 +1,12 @@
 #include "test_utils.h"
 
-#include <filesystem>
-#include <fstream>
 #include <gtest/gtest.h>
 #include <quiver/database.h>
 #include <quiver/migration.h>
 #include <quiver/migrations.h>
+
+#include <filesystem>
+#include <fstream>
 
 namespace fs = std::filesystem;
 
@@ -201,7 +202,9 @@ TEST_F(MigrationsTestFixture, DatabaseMigrationWithEmptyUpSql) {
     // Empty up.sql should cause migration to fail
     try {
         quiver::Database::from_migrations(
-            ":memory:", temp_dir, {.read_only = false, .console_level = quiver::LogLevel::Off}
+            ":memory:",
+            temp_dir,
+            {.read_only = false, .console_level = quiver::LogLevel::Off}
         );
         FAIL() << "Expected from_migrations to throw";
     } catch (const std::runtime_error& error) {
@@ -218,7 +221,9 @@ TEST_F(MigrationsTestFixture, DatabaseMigrationWithInvalidSQL) {
 
     try {
         quiver::Database::from_migrations(
-            ":memory:", temp_dir, {.read_only = false, .console_level = quiver::LogLevel::Off}
+            ":memory:",
+            temp_dir,
+            {.read_only = false, .console_level = quiver::LogLevel::Off}
         );
         FAIL() << "Expected from_migrations to throw";
     } catch (const std::runtime_error& error) {
@@ -297,7 +302,8 @@ TEST_F(MigrationsTestFixture, ValidateMigrationsRejectsLeftoverTables) {
         FAIL() << "Expected validate_migrations to throw";
     } catch (const std::runtime_error& error) {
         EXPECT_STREQ(
-            error.what(), "Failed to validate_migrations: down migrations left tables behind: Configuration, Extra"
+            error.what(),
+            "Failed to validate_migrations: down migrations left tables behind: Configuration, Extra"
         );
     }
 }
@@ -323,7 +329,8 @@ TEST_F(MigrationsTestFixture, ValidateMigrationsValidatesPath) {
         FAIL() << "Expected validate_migrations to throw";
     } catch (const std::runtime_error& error) {
         EXPECT_EQ(
-            std::string(error.what()), "Cannot validate_migrations: migrations path not found: " + nonexistent_path
+            std::string(error.what()),
+            "Cannot validate_migrations: migrations path not found: " + nonexistent_path
         );
     }
 
@@ -335,7 +342,8 @@ TEST_F(MigrationsTestFixture, ValidateMigrationsValidatesPath) {
         FAIL() << "Expected validate_migrations to throw";
     } catch (const std::runtime_error& error) {
         EXPECT_EQ(
-            std::string(error.what()), "Cannot validate_migrations: path is not a directory: " + file_path.string()
+            std::string(error.what()),
+            "Cannot validate_migrations: path is not a directory: " + file_path.string()
         );
     }
 }

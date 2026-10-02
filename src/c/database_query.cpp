@@ -9,8 +9,12 @@
 // Converts the C parameter arrays to std::vector<Value>. `caller` is the C++ method the C function
 // forwards to, so a Pattern 1 error names the operation the user called (the same convention as
 // unmarshal_group_columns_to_rows).
-static std::vector<quiver::Value>
-convert_params(const char* caller, const int* param_types, const void* const* param_values, size_t param_count) {
+static std::vector<quiver::Value> convert_params(
+    const char* caller,
+    const int* param_types,
+    const void* const* param_values,
+    size_t param_count
+) {
     std::vector<quiver::Value> parameters;
     parameters.reserve(param_count);
     for (size_t i = 0; i < param_count; ++i) {

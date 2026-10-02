@@ -77,8 +77,9 @@ Element& Element::set(const std::string& name, const std::vector<std::string>& v
 Element& Element::set(const std::string& name, std::initializer_list<const char*> values) {
     std::vector<Value> vec;
     vec.reserve(values.size());
-    for (const char* v : values)
+    for (const char* v : values) {
         vec.emplace_back(std::string(v));
+    }
     arrays_[name] = std::move(vec);
     return *this;
 }
@@ -117,8 +118,9 @@ std::string Element::to_string() const {
         for (const auto& [name, values] : arrays_) {
             oss << "    " << name << ": [";
             for (size_t i = 0; i < values.size(); ++i) {
-                if (i > 0)
+                if (i > 0) {
                     oss << ", ";
+                }
                 oss << value_to_string(values[i]);
             }
             oss << "]\n";

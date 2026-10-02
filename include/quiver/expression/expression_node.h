@@ -34,7 +34,9 @@ public:
     void compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const override;
     void collect_input_files(std::vector<BinaryFile*>& out) const override;
 
-    const std::string& path() const { return file_.get_file_path(); }
+    const std::string& path() const {
+        return file_.get_file_path();
+    }
 
 private:
     BinaryMetadata meta_;

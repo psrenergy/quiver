@@ -28,8 +28,11 @@ public:
     BinaryFile& operator=(BinaryFile&& other) noexcept;
 
     // File handling
-    static BinaryFile
-    open_file(const std::string& file_path, char mode, const std::optional<BinaryMetadata>& metadata = {});
+    static BinaryFile open_file(
+        const std::string& file_path,
+        char mode,
+        const std::optional<BinaryMetadata>& metadata = {}
+    );
     void open(char mode, const std::optional<BinaryMetadata>& metadata = {});
     void close();
     bool is_open() const;

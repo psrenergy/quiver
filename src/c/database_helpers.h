@@ -142,8 +142,11 @@ inline quiver_error_t copy_strings_to_c(const std::vector<std::string>& values, 
 
 // Overload for nullable scalar strings: a SQL NULL becomes a nullptr entry in the array
 // (no mask needed — a NULL char* is unambiguous). free_string_array tolerates nullptr slots.
-inline quiver_error_t
-copy_strings_to_c(const std::vector<std::optional<std::string>>& values, char*** out_values, size_t* out_count) {
+inline quiver_error_t copy_strings_to_c(
+    const std::vector<std::optional<std::string>>& values,
+    char*** out_values,
+    size_t* out_count
+) {
     *out_count = values.size();
     if (values.empty()) {
         *out_values = nullptr;
@@ -393,7 +396,12 @@ inline void marshal_group_rows_to_c(
     } catch (...) {
         // Clean up partially allocated results
         quiver_database_free_time_series_data(
-            *out_column_names, *out_column_types, *out_column_data, *out_column_has_value, col_count, row_count
+            *out_column_names,
+            *out_column_types,
+            *out_column_data,
+            *out_column_has_value,
+            col_count,
+            row_count
         );
         *out_column_names = nullptr;
         *out_column_types = nullptr;

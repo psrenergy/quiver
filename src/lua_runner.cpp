@@ -14,6 +14,8 @@
 #include "utils/datetime.h"
 #include "utils/number.h"
 
+#include <sol/sol.hpp>
+
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -22,7 +24,6 @@
 #include <map>
 #include <memory>
 #include <optional>
-#include <sol/sol.hpp>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -240,7 +241,12 @@ struct LuaRunner::Impl {
 
     explicit Impl(Database& database) : db(database) {
         lua.open_libraries(
-            sol::lib::base, sol::lib::string, sol::lib::table, sol::lib::math, sol::lib::coroutine, sol::lib::utf8
+            sol::lib::base,
+            sol::lib::string,
+            sol::lib::table,
+            sol::lib::math,
+            sol::lib::coroutine,
+            sol::lib::utf8
         );
         // Scripts may not load Lua source from disk; string-form load() stays available.
         lua["dofile"] = sol::lua_nil;
@@ -339,8 +345,11 @@ struct LuaRunner::Impl {
     // the key rule and the width cap. Shared by csv_row_cells_from_lua and csv_header_from_lua so
     // all three live in one place; `what` names the offending container in the messages ("row",
     // "option 'header'").
-    static std::int64_t
-    csv_max_integer_key(const sol::table& t, const std::string& operation, const std::string& what) {
+    static std::int64_t csv_max_integer_key(
+        const sol::table& t,
+        const std::string& operation,
+        const std::string& what
+    ) {
         std::int64_t max_index = 0;
         for (auto& pair : t) {
             if (!pair.first.is<std::int64_t>() || pair.first.as<std::int64_t>() < 1) {
@@ -368,8 +377,11 @@ struct LuaRunner::Impl {
     // collapse the row. A missing key reads back as Lua nil, which csv_cell_to_string below turns
     // into an empty cell -- so an interior nil and an absent key are structurally identical (D-40),
     // exactly as they are in Lua itself.
-    static std::vector<std::string>
-    csv_row_cells_from_lua(const sol::table& row, const std::string& operation, std::int64_t row_index) {
+    static std::vector<std::string> csv_row_cells_from_lua(
+        const sol::table& row,
+        const std::string& operation,
+        std::int64_t row_index
+    ) {
         const std::int64_t max_index = csv_max_integer_key(row, operation, "row");
 
         std::vector<std::string> cells(static_cast<std::size_t>(max_index));
@@ -497,8 +509,11 @@ struct LuaRunner::Impl {
 
     // Collect a nested option table's entries before any is checked (the same LUA-09 rule), after
     // checking the value really is a table.
-    static std::vector<std::pair<sol::object, sol::object>>
-    table_entries(const sol::object& value, const std::string& operation, const std::string& what) {
+    static std::vector<std::pair<sol::object, sol::object>> table_entries(
+        const sol::object& value,
+        const std::string& operation,
+        const std::string& what
+    ) {
         if (value.get_type() != sol::type::table) {
             throw std::runtime_error("Cannot " + operation + ": option '" + what + "' must be a table");
         }
@@ -744,7 +759,10 @@ struct LuaRunner::Impl {
         bind.set_function(
             "open_file",
             [this](
-                Database& self, const std::string& path, const std::string& mode, sol::optional<BinaryMetadata> metadata
+                Database& self,
+                const std::string& path,
+                const std::string& mode,
+                sol::optional<BinaryMetadata> metadata
             ) -> std::shared_ptr<BinaryFile> {
                 if (mode.size() != 1 || (mode[0] != 'r' && mode[0] != 'w')) {
                     throw std::runtime_error("Cannot open_file: mode must be \"r\" or \"w\"");
@@ -1081,8 +1099,10 @@ struct LuaRunner::Impl {
     // Conversion helpers
     // ========================================================================
 
-    static std::unordered_map<std::string, int64_t>
-    lua_table_to_dim_map(const sol::table& t, const std::string& caller) {
+    static std::unordered_map<std::string, int64_t> lua_table_to_dim_map(
+        const sol::table& t,
+        const std::string& caller
+    ) {
         std::unordered_map<std::string, int64_t> dims;
         for (auto& pair : t) {
             auto key = pair.first.as<std::string>();
@@ -1092,8 +1112,11 @@ struct LuaRunner::Impl {
     }
 
     // One quiver.metadata{...} field, as csv_options_entries returned it (absent = disengaged).
-    static std::string
-    metadata_string(const std::optional<sol::object>& value, const char* key, const std::string& fallback) {
+    static std::string metadata_string(
+        const std::optional<sol::object>& value,
+        const char* key,
+        const std::string& fallback
+    ) {
         return value ? lua_cell_as<std::string>(*value, "metadata", std::string("field '") + key + "'") : fallback;
     }
 
@@ -1160,7 +1183,9 @@ struct LuaRunner::Impl {
 
     enum class BinOp { Add, Subtract, Multiply, Divide, Gt, Lt, Gte, Lte, Eq, Neq, And, Or };
 
-    static bool is_number(const sol::object& o) { return o.get_type() == sol::type::number; }
+    static bool is_number(const sol::object& o) {
+        return o.get_type() == sol::type::number;
+    }
 
     // A Lua operand in arithmetic is either an Expression, a BinaryFile (auto-wrapped), or a number
     // (handled by the scalar operator overloads). Numbers are rejected here on purpose.
@@ -1252,24 +1277,32 @@ struct LuaRunner::Impl {
 
     // `caller` is the public method ("aggregate" / "aggregate_agents") named in the Pattern 1 message.
     static ExpressionAggregate::Operation parse_aggregate_op(const std::string& op, const std::string& caller) {
-        if (op == "sum")
+        if (op == "sum") {
             return ExpressionAggregate::Operation::Sum;
-        if (op == "mean")
+        }
+        if (op == "mean") {
             return ExpressionAggregate::Operation::Mean;
-        if (op == "min")
+        }
+        if (op == "min") {
             return ExpressionAggregate::Operation::Min;
-        if (op == "max")
+        }
+        if (op == "max") {
             return ExpressionAggregate::Operation::Max;
-        if (op == "percentile")
+        }
+        if (op == "percentile") {
             return ExpressionAggregate::Operation::Percentile;
+        }
         throw std::runtime_error("Cannot " + caller + ": unknown operation '" + op + "'");
     }
 
     // Resolves a script-supplied path against the database file's directory and enforces that the
     // result stays strictly inside it (subdirectories allowed). Returns the resolved absolute path.
     // `operation` is the public method name the user called (threaded into Pattern 1 messages).
-    static std::string
-    resolve_sandboxed_path(const Database& db, const std::string& operation, const std::string& path) {
+    static std::string resolve_sandboxed_path(
+        const Database& db,
+        const std::string& operation,
+        const std::string& path
+    ) {
         namespace fs = std::filesystem;
 
         const std::string& db_path = db.path();
@@ -1451,7 +1484,9 @@ struct LuaRunner::Impl {
     // place rather than in a comment repeated at each site. The Value mapping itself lives in
     // lua_to_value (scalars, row upserts, query parameters, group cells) and lua_cell_as (the typed
     // paths, e.g. arrays).
-    static bool is_lua_boolean(const sol::object& v) { return v.get_type() == sol::type::boolean; }
+    static bool is_lua_boolean(const sol::object& v) {
+        return v.get_type() == sol::type::boolean;
+    }
 
     // The checked Lua-value→T conversion for the typed paths (arrays, dimensions, file paths,
     // quiver.metadata fields, rename_agents names, enum_labels codes); lua_to_value below is its
@@ -1621,8 +1656,10 @@ struct LuaRunner::Impl {
     }
 
     // nil/missing clears; sol::object (not sol::optional) so a wrong type still throws.
-    static std::optional<std::string>
-    relation_target_from_lua(const sol::object& target_label, const std::string& caller) {
+    static std::optional<std::string> relation_target_from_lua(
+        const sol::object& target_label,
+        const std::string& caller
+    ) {
         if (!target_label.valid() || target_label.get_type() == sol::type::lua_nil) {
             return std::nullopt;
         }
@@ -1641,7 +1678,11 @@ struct LuaRunner::Impl {
         const sol::object& target_label
     ) {
         db.update_relation(
-            collection_from, collection_to, relation_type, id, relation_target_from_lua(target_label, "update_relation")
+            collection_from,
+            collection_to,
+            relation_type,
+            id,
+            relation_target_from_lua(target_label, "update_relation")
         );
     }
 
@@ -1849,8 +1890,12 @@ struct LuaRunner::Impl {
         return values;
     }
 
-    static sol::object
-    query_string_lua(Database& db, const std::string& sql, sol::optional<sol::table> parameters, sol::this_state s) {
+    static sol::object query_string_lua(
+        Database& db,
+        const std::string& sql,
+        sol::optional<sol::table> parameters,
+        sol::this_state s
+    ) {
         sol::state_view lua(s);
         auto values = parameters ? lua_table_to_values("query_string", *parameters) : std::vector<Value>{};
         auto result = db.query_string(sql, values);
@@ -1860,8 +1905,12 @@ struct LuaRunner::Impl {
         return sol::make_object(lua, sol::lua_nil);
     }
 
-    static sol::object
-    query_integer_lua(Database& db, const std::string& sql, sol::optional<sol::table> parameters, sol::this_state s) {
+    static sol::object query_integer_lua(
+        Database& db,
+        const std::string& sql,
+        sol::optional<sol::table> parameters,
+        sol::this_state s
+    ) {
         sol::state_view lua(s);
         auto values = parameters ? lua_table_to_values("query_integer", *parameters) : std::vector<Value>{};
         auto result = db.query_integer(sql, values);
@@ -1871,8 +1920,12 @@ struct LuaRunner::Impl {
         return sol::make_object(lua, sol::lua_nil);
     }
 
-    static sol::object
-    query_float_lua(Database& db, const std::string& sql, sol::optional<sol::table> parameters, sol::this_state s) {
+    static sol::object query_float_lua(
+        Database& db,
+        const std::string& sql,
+        sol::optional<sol::table> parameters,
+        sol::this_state s
+    ) {
         sol::state_view lua(s);
         auto values = parameters ? lua_table_to_values("query_float", *parameters) : std::vector<Value>{};
         auto result = db.query_float(sql, values);
@@ -1882,8 +1935,12 @@ struct LuaRunner::Impl {
         return sol::make_object(lua, sol::lua_nil);
     }
 
-    static sol::table
-    read_scalars_by_id_lua(Database& db, const std::string& collection, int64_t id, sol::this_state s) {
+    static sol::table read_scalars_by_id_lua(
+        Database& db,
+        const std::string& collection,
+        int64_t id,
+        sol::this_state s
+    ) {
         sol::state_view lua(s);
         auto result = lua.create_table();
 
@@ -1915,8 +1972,12 @@ struct LuaRunner::Impl {
         return result;
     }
 
-    static sol::table
-    read_vectors_by_id_lua(Database& db, const std::string& collection, int64_t id, sol::this_state s) {
+    static sol::table read_vectors_by_id_lua(
+        Database& db,
+        const std::string& collection,
+        int64_t id,
+        sol::this_state s
+    ) {
         sol::state_view lua(s);
         auto result = lua.create_table();
 
@@ -1971,8 +2032,12 @@ struct LuaRunner::Impl {
         return result;
     }
 
-    static sol::table
-    read_element_by_id_lua(Database& db, const std::string& collection, int64_t id, sol::this_state s) {
+    static sol::table read_element_by_id_lua(
+        Database& db,
+        const std::string& collection,
+        int64_t id,
+        sol::this_state s
+    ) {
         auto scalars = read_scalars_by_id_lua(db, collection, id, s);
         auto vectors = read_vectors_by_id_lua(db, collection, id, s);
         auto sets = read_sets_by_id_lua(db, collection, id, s);
@@ -2001,14 +2066,22 @@ struct LuaRunner::Impl {
         return to_lua_table(lua, db.read_set_integers(collection, attribute));
     }
 
-    static sol::table
-    read_set_floats_lua(Database& db, const std::string& collection, const std::string& attribute, sol::this_state s) {
+    static sol::table read_set_floats_lua(
+        Database& db,
+        const std::string& collection,
+        const std::string& attribute,
+        sol::this_state s
+    ) {
         sol::state_view lua(s);
         return to_lua_table(lua, db.read_set_floats(collection, attribute));
     }
 
-    static sol::table
-    read_set_strings_lua(Database& db, const std::string& collection, const std::string& attribute, sol::this_state s) {
+    static sol::table read_set_strings_lua(
+        Database& db,
+        const std::string& collection,
+        const std::string& attribute,
+        sol::this_state s
+    ) {
         sol::state_view lua(s);
         return to_lua_table(lua, db.read_set_strings(collection, attribute));
     }
@@ -2129,8 +2202,11 @@ struct LuaRunner::Impl {
     // round-trip). The NULL pre-fill is what makes an all-nil column such as `flag = {}` reach the
     // core at all: it is validated (an unknown name still throws) and written as NULL rather than
     // left to the column DEFAULT.
-    static std::vector<std::map<std::string, Value>>
-    columns_to_cpp_rows(const std::string& caller, const std::vector<GroupColumn>& lua_columns, size_t row_count) {
+    static std::vector<std::map<std::string, Value>> columns_to_cpp_rows(
+        const std::string& caller,
+        const std::vector<GroupColumn>& lua_columns,
+        size_t row_count
+    ) {
         std::vector<std::map<std::string, Value>> cpp_rows(row_count);
         for (const auto& column : lua_columns) {
             for (auto& row : cpp_rows) {
@@ -2158,8 +2234,10 @@ struct LuaRunner::Impl {
     // column reaches; shorter or sparse columns write NULL in the gaps, mirroring the time series
     // writer's treatment of value columns. Named columns that reach no index at all throw instead
     // of silently clearing the group; an empty table {} clears.
-    static std::vector<std::map<std::string, Value>>
-    group_rows_from_lua(const std::string& caller, const sol::table& columns) {
+    static std::vector<std::map<std::string, Value>> group_rows_from_lua(
+        const std::string& caller,
+        const sol::table& columns
+    ) {
         auto lua_columns = collect_group_columns(caller, columns);
         if (lua_columns.empty()) {
             return {};
@@ -2196,7 +2274,10 @@ struct LuaRunner::Impl {
         sol::table columns
     ) {
         db.update_vector_group_by_label(
-            collection, group, label, group_rows_from_lua("update_vector_group_by_label", columns)
+            collection,
+            group,
+            label,
+            group_rows_from_lua("update_vector_group_by_label", columns)
         );
     }
 
@@ -2218,7 +2299,10 @@ struct LuaRunner::Impl {
         sol::table columns
     ) {
         db.update_set_group_by_label(
-            collection, group, label, group_rows_from_lua("update_set_group_by_label", columns)
+            collection,
+            group,
+            label,
+            group_rows_from_lua("update_set_group_by_label", columns)
         );
     }
 
@@ -2317,7 +2401,10 @@ struct LuaRunner::Impl {
         sol::table columns
     ) {
         db.update_time_series_group(
-            collection, group, id, time_series_rows_from_lua(db, "update_time_series_group", collection, group, columns)
+            collection,
+            group,
+            id,
+            time_series_rows_from_lua(db, "update_time_series_group", collection, group, columns)
         );
     }
 
@@ -2354,7 +2441,10 @@ struct LuaRunner::Impl {
         sol::table row
     ) {
         db.upsert_time_series_row_by_label(
-            collection, group, label, lua_table_to_value_map("upsert_time_series_row_by_label", row)
+            collection,
+            group,
+            label,
+            lua_table_to_value_map("upsert_time_series_row_by_label", row)
         );
     }
 
@@ -2362,8 +2452,11 @@ struct LuaRunner::Impl {
     // Time series files
     // ========================================================================
 
-    static sol::table
-    list_time_series_files_columns_lua(Database& db, const std::string& collection, sol::this_state s) {
+    static sol::table list_time_series_files_columns_lua(
+        Database& db,
+        const std::string& collection,
+        sol::this_state s
+    ) {
         sol::state_view lua(s);
         return to_lua_table(lua, db.list_time_series_files_columns(collection));
     }

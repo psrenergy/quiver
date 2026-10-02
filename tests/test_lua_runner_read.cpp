@@ -144,10 +144,12 @@ TEST_F(LuaRunnerTest, ReadVectorIntegers) {
 
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     db.create_element(
-        "Collection", quiver::Element().set("label", "Item 1").set("value_int", std::vector<int64_t>{1, 2, 3})
+        "Collection",
+        quiver::Element().set("label", "Item 1").set("value_int", std::vector<int64_t>{1, 2, 3})
     );
     db.create_element(
-        "Collection", quiver::Element().set("label", "Item 2").set("value_int", std::vector<int64_t>{10, 20})
+        "Collection",
+        quiver::Element().set("label", "Item 2").set("value_int", std::vector<int64_t>{10, 20})
     );
 
     quiver::LuaRunner lua(db);
@@ -174,7 +176,8 @@ TEST_F(LuaRunnerTest, ReadVectorFloats) {
 
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     db.create_element(
-        "Collection", quiver::Element().set("label", "Item 1").set("value_float", std::vector<double>{1.1, 2.2, 3.3})
+        "Collection",
+        quiver::Element().set("label", "Item 1").set("value_float", std::vector<double>{1.1, 2.2, 3.3})
     );
 
     quiver::LuaRunner lua(db);
@@ -247,7 +250,8 @@ TEST_F(LuaRunnerTest, ReadVectorBulkAlignsWithElementIdsAcrossEmptyElement) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     db.create_element(
-        "Collection", quiver::Element().set("label", "Item 1").set("value_int", std::vector<int64_t>{1, 2})
+        "Collection",
+        quiver::Element().set("label", "Item 1").set("value_int", std::vector<int64_t>{1, 2})
     );
     db.create_element("Collection", quiver::Element().set("label", "Item 2"));  // no vector rows
     db.create_element("Collection", quiver::Element().set("label", "Item 3").set("value_int", std::vector<int64_t>{7}));
@@ -273,10 +277,12 @@ TEST_F(LuaRunnerTest, ReadSetStringsAll) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     db.create_element(
-        "Collection", quiver::Element().set("label", "Item 1").set("tag", std::vector<std::string>{"a", "b"})
+        "Collection",
+        quiver::Element().set("label", "Item 1").set("tag", std::vector<std::string>{"a", "b"})
     );
     db.create_element(
-        "Collection", quiver::Element().set("label", "Item 2").set("tag", std::vector<std::string>{"c", "d", "e"})
+        "Collection",
+        quiver::Element().set("label", "Item 2").set("tag", std::vector<std::string>{"c", "d", "e"})
     );
 
     quiver::LuaRunner lua(db);
@@ -327,11 +333,14 @@ TEST_F(LuaRunnerTest, ReadElementIdsEmpty) {
 
 TEST_F(LuaRunnerTest, ReadScalarsById) {
     auto db = quiver::Database::from_schema(
-        ":memory:", collections_schema, {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        collections_schema,
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element(
-        "Collection", quiver::Element().set("label", "Item 1").set("some_integer", int64_t{42}).set("some_float", 3.14)
+        "Collection",
+        quiver::Element().set("label", "Item 1").set("some_integer", int64_t{42}).set("some_float", 3.14)
     );
 
     quiver::LuaRunner lua(db);
@@ -360,7 +369,9 @@ TEST_F(LuaRunnerTest, ReadVectorsById) {
     // and returns an empty table. Note: collections.sql has multi-column vector groups
     // where group_name != column_name, which is a known limitation of the composite helper.
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
     int64_t id = db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -386,7 +397,9 @@ TEST_F(LuaRunnerTest, ReadSetsById) {
     // and returns an empty table. Note: collections.sql has set groups where
     // group_name != column_name, which is a known limitation of the composite helper.
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
     int64_t id = db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -409,7 +422,9 @@ TEST_F(LuaRunnerTest, ReadSetsById) {
 
 TEST_F(LuaRunnerTest, ReadVectorsByIdWithData) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("composite_helpers.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("composite_helpers.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
     int64_t id = db.create_element(
         "Items",
@@ -474,7 +489,9 @@ TEST_F(LuaRunnerTest, ReadVectorsByIdEmptyGroupIsEmptyTable) {
 
 TEST_F(LuaRunnerTest, ReadSetsByIdWithData) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("composite_helpers.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("composite_helpers.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
     int64_t id = db.create_element(
         "Items",
@@ -513,7 +530,9 @@ TEST_F(LuaRunnerTest, ReadSetsByIdWithData) {
 
 TEST_F(LuaRunnerTest, ReadElementById) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("composite_helpers.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("composite_helpers.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
     int64_t id = db.create_element(
         "Items",
@@ -590,12 +609,16 @@ TEST_F(LuaRunnerTest, ListGroupsUnknownCollection) {
     expect_lua_error(lua, R"(db:list_vector_groups("Nope"))", "Cannot list_vector_groups: collection not found: Nope");
     expect_lua_error(lua, R"(db:list_set_groups("Nope"))", "Cannot list_set_groups: collection not found: Nope");
     expect_lua_error(
-        lua, R"(db:list_time_series_groups("Nope"))", "Cannot list_time_series_groups: collection not found: Nope"
+        lua,
+        R"(db:list_time_series_groups("Nope"))",
+        "Cannot list_time_series_groups: collection not found: Nope"
     );
 
     // The composites inherit the throw instead of returning an empty table.
     expect_lua_error(
-        lua, R"(db:read_vectors_by_id("Nope", 1))", "Cannot list_vector_groups: collection not found: Nope"
+        lua,
+        R"(db:read_vectors_by_id("Nope", 1))",
+        "Cannot list_vector_groups: collection not found: Nope"
     );
     expect_lua_error(lua, R"(db:read_sets_by_id("Nope", 1))", "Cannot list_set_groups: collection not found: Nope");
 }
@@ -612,7 +635,8 @@ TEST_F(LuaRunnerTest, ReadVectorPreservesNullCellsAsNilHoles) {
     );
     db.create_element("Collection", quiver::Element().set("label", "Item 2"));  // no vector rows
     db.create_element(
-        "Collection", quiver::Element().set("label", "Item 3").set("value_int", std::vector<quiver::Value>{nullptr})
+        "Collection",
+        quiver::Element().set("label", "Item 3").set("value_int", std::vector<quiver::Value>{nullptr})
     );  // one NULL-only row
 
     quiver::LuaRunner lua(db);

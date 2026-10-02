@@ -1,10 +1,11 @@
 #include "test_utils.h"
 
-#include <algorithm>
-#include <cmath>
 #include <gtest/gtest.h>
 #include <quiver/c/database.h>
 #include <quiver/c/element.h>
+
+#include <algorithm>
+#include <cmath>
 #include <string>
 #include <vector>
 
@@ -85,7 +86,12 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupNullString) {
     EXPECT_EQ(status[0], nullptr);
 
     quiver_database_free_time_series_data(
-        out_col_names, out_col_types, out_col_data, out_col_has_value, col_count, row_count
+        out_col_names,
+        out_col_types,
+        out_col_data,
+        out_col_has_value,
+        col_count,
+        row_count
     );
     quiver_database_close(db);
 }
@@ -96,6 +102,7 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupNullString) {
 // ============================================================================
 
 namespace {
+
 // Opens an in-memory nullable_time_series.sql database with one Configuration
 // and one Sensor element; returns the db and the sensor's id.
 quiver_database_t* open_nullable_ts_db(int64_t* out_sensor_id) {
@@ -118,6 +125,7 @@ quiver_database_t* open_nullable_ts_db(int64_t* out_sensor_id) {
     quiver_element_destroy(sensor);
     return db;
 }
+
 }  // namespace
 
 TEST(DatabaseCApi, ReadTimeSeriesGroupNullNumerics) {
@@ -132,7 +140,8 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupNullNumerics) {
         double temps[] = {20.0};
         const void* data[] = {dts, temps};
         ASSERT_EQ(
-            quiver_database_upsert_time_series_row(db, "Sensor", "readings", id, names, types, data, 2), QUIVER_OK
+            quiver_database_upsert_time_series_row(db, "Sensor", "readings", id, names, types, data, 2),
+            QUIVER_OK
         );
     }
     {
@@ -142,7 +151,8 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupNullNumerics) {
         int64_t counters[] = {5};
         const void* data[] = {dts, counters};
         ASSERT_EQ(
-            quiver_database_upsert_time_series_row(db, "Sensor", "readings", id, names, types, data, 2), QUIVER_OK
+            quiver_database_upsert_time_series_row(db, "Sensor", "readings", id, names, types, data, 2),
+            QUIVER_OK
         );
     }
 
@@ -191,7 +201,12 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupNullNumerics) {
     EXPECT_EQ(out_col_has_value[3][1], 0);
 
     quiver_database_free_time_series_data(
-        out_col_names, out_col_types, out_col_data, out_col_has_value, col_count, row_count
+        out_col_names,
+        out_col_types,
+        out_col_data,
+        out_col_has_value,
+        col_count,
+        row_count
     );
     quiver_database_close(db);
 }
@@ -206,7 +221,8 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupAllNullStringColumn) {
         const char* dts[] = {dt};
         const void* data[] = {dts};
         ASSERT_EQ(
-            quiver_database_upsert_time_series_row(db, "Sensor", "readings", id, names, types, data, 1), QUIVER_OK
+            quiver_database_upsert_time_series_row(db, "Sensor", "readings", id, names, types, data, 1),
+            QUIVER_OK
         );
     }
 
@@ -242,7 +258,12 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupAllNullStringColumn) {
     EXPECT_EQ(status[1], nullptr);
 
     quiver_database_free_time_series_data(
-        out_col_names, out_col_types, out_col_data, out_col_has_value, col_count, row_count
+        out_col_names,
+        out_col_types,
+        out_col_data,
+        out_col_has_value,
+        col_count,
+        row_count
     );
     quiver_database_close(db);
 }
@@ -309,7 +330,12 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupNullCellsRoundTrip) {
     EXPECT_EQ(out_status[1], nullptr);
 
     quiver_database_free_time_series_data(
-        out_col_names, out_col_types, out_col_data, out_col_has_value, col_count, row_count
+        out_col_names,
+        out_col_types,
+        out_col_data,
+        out_col_has_value,
+        col_count,
+        row_count
     );
     quiver_database_close(db);
 }
@@ -362,7 +388,12 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupNullMaskIsDense) {
     EXPECT_DOUBLE_EQ(out_temps[1], 2.5);
 
     quiver_database_free_time_series_data(
-        out_col_names, out_col_types, out_col_data, out_col_has_value, col_count, row_count
+        out_col_names,
+        out_col_types,
+        out_col_data,
+        out_col_has_value,
+        col_count,
+        row_count
     );
     quiver_database_close(db);
 }
@@ -422,7 +453,12 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupPerColumnNullMask) {
     EXPECT_STREQ(out_status[1], "b");
 
     quiver_database_free_time_series_data(
-        out_col_names, out_col_types, out_col_data, out_col_has_value, col_count, row_count
+        out_col_names,
+        out_col_types,
+        out_col_data,
+        out_col_has_value,
+        col_count,
+        row_count
     );
     quiver_database_close(db);
 }
@@ -496,7 +532,12 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupAllNullColumnFloatTag) {
     EXPECT_EQ(out_col_has_value[3][0], 0);
 
     quiver_database_free_time_series_data(
-        out_col_names, out_col_types, out_col_data, out_col_has_value, col_count, row_count
+        out_col_names,
+        out_col_types,
+        out_col_data,
+        out_col_has_value,
+        col_count,
+        row_count
     );
     quiver_database_close(db);
 }
@@ -543,7 +584,12 @@ TEST(DatabaseCApi, UpsertTimeSeriesRowNullStringCell) {
     EXPECT_EQ(static_cast<char**>(out_col_data[3])[0], nullptr);
 
     quiver_database_free_time_series_data(
-        out_col_names, out_col_types, out_col_data, out_col_has_value, col_count, row_count
+        out_col_names,
+        out_col_types,
+        out_col_data,
+        out_col_has_value,
+        col_count,
+        row_count
     );
     quiver_database_close(db);
 }

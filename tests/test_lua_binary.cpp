@@ -1,11 +1,12 @@
 #include "test_lua_runner.h"
 
-#include <algorithm>
-#include <filesystem>
-#include <fstream>
 #include <gtest/gtest.h>
 #include <quiver/database.h>
 #include <quiver/lua_runner.h>
+
+#include <algorithm>
+#include <filesystem>
+#include <fstream>
 #include <string>
 
 namespace fs = std::filesystem;
@@ -305,7 +306,9 @@ TEST_F(LuaBinaryTest, MetadataIsStrict) {
     auto db = quiver::Database::from_schema(":memory:", schema);
     quiver::LuaRunner lua(db);
     expect_lua_error(
-        lua, "quiver.metadata{ dimension_size = {3} }\n", "Cannot metadata: unknown option 'dimension_size'"
+        lua,
+        "quiver.metadata{ dimension_size = {3} }\n",
+        "Cannot metadata: unknown option 'dimension_size'"
     );
     expect_lua_error(
         lua,

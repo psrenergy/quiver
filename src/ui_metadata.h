@@ -9,9 +9,10 @@
 // structured getter. tomlplusplus is linked PRIVATE on the `quiver` target (src/CMakeLists.txt),
 // so no `toml::` symbol may appear in this header -- the parser is confined to ui_metadata.cpp.
 
+#include <spdlog/spdlog.h>
+
 #include <cstdint>
 #include <map>
-#include <spdlog/spdlog.h>
 #include <string>
 
 namespace quiver {

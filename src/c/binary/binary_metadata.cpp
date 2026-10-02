@@ -121,16 +121,21 @@ QUIVER_C_API quiver_error_t quiver_binary_metadata_get_initial_datetime(quiver_b
     }
 }
 
-QUIVER_C_API quiver_error_t
-quiver_binary_metadata_get_number_of_time_dimensions(quiver_binary_metadata_t* md, int64_t* out) {
+QUIVER_C_API quiver_error_t quiver_binary_metadata_get_number_of_time_dimensions(
+    quiver_binary_metadata_t* md,
+    int64_t* out
+) {
     QUIVER_REQUIRE(md, out);
 
     *out = md->metadata.number_of_time_dimensions();
     return QUIVER_OK;
 }
 
-QUIVER_C_API quiver_error_t
-quiver_binary_metadata_get_labels(quiver_binary_metadata_t* md, char*** out, size_t* out_count) {
+QUIVER_C_API quiver_error_t quiver_binary_metadata_get_labels(
+    quiver_binary_metadata_t* md,
+    char*** out,
+    size_t* out_count
+) {
     QUIVER_REQUIRE(md, out, out_count);
 
     return copy_strings_to_c(md->metadata.labels, out, out_count);
@@ -143,8 +148,11 @@ QUIVER_C_API quiver_error_t quiver_binary_metadata_get_dimension_count(quiver_bi
     return QUIVER_OK;
 }
 
-QUIVER_C_API quiver_error_t
-quiver_binary_metadata_get_dimension(quiver_binary_metadata_t* md, size_t index, quiver_dimension_t* out) {
+QUIVER_C_API quiver_error_t quiver_binary_metadata_get_dimension(
+    quiver_binary_metadata_t* md,
+    size_t index,
+    quiver_dimension_t* out
+) {
     QUIVER_REQUIRE(md, out);
 
     if (index >= md->metadata.dimensions.size()) {
@@ -164,8 +172,9 @@ QUIVER_C_API quiver_error_t quiver_binary_metadata_free_string(char* str) {
 }
 
 QUIVER_C_API quiver_error_t quiver_binary_metadata_free_string_array(char** strs, size_t count) {
-    if (!strs)
+    if (!strs) {
         return QUIVER_OK;
+    }
 
     for (size_t i = 0; i < count; ++i) {
         delete[] strs[i];

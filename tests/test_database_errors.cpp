@@ -19,7 +19,9 @@ TEST(DatabaseErrors, CreateElementNoSchema) {
 
 TEST(DatabaseErrors, CreateElementCollectionNotFound) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element element;
@@ -30,7 +32,9 @@ TEST(DatabaseErrors, CreateElementCollectionNotFound) {
 
 TEST(DatabaseErrors, CreateElementEmptyElement) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element element;  // Empty element with no scalars
@@ -53,7 +57,9 @@ TEST(DatabaseErrors, UpdateElementNoSchema) {
 
 TEST(DatabaseErrors, UpdateElementCollectionNotFound) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element element;
@@ -64,7 +70,9 @@ TEST(DatabaseErrors, UpdateElementCollectionNotFound) {
 
 TEST(DatabaseErrors, UpdateElementEmptyElement) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     // Create an element first
@@ -90,7 +98,9 @@ TEST(DatabaseErrors, DeleteElementNoSchema) {
 
 TEST(DatabaseErrors, DeleteElementCollectionNotFound) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     EXPECT_THROW(db.delete_element("NonexistentCollection", 1), std::runtime_error);
@@ -125,7 +135,9 @@ TEST(DatabaseErrors, ReadScalarStringsNoSchema) {
 
 TEST(DatabaseErrors, ReadVectorIntegersCollectionNotFound) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     // Create required Configuration
@@ -138,7 +150,9 @@ TEST(DatabaseErrors, ReadVectorIntegersCollectionNotFound) {
 
 TEST(DatabaseErrors, ReadVectorFloatsCollectionNotFound) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -154,7 +168,9 @@ TEST(DatabaseErrors, ReadVectorFloatsCollectionNotFound) {
 
 TEST(DatabaseErrors, ReadSetStringsCollectionNotFound) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -170,7 +186,9 @@ TEST(DatabaseErrors, ReadSetStringsCollectionNotFound) {
 
 TEST(DatabaseErrors, ReadScalarIntegersAttributeNotFound) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element e;
@@ -183,7 +201,9 @@ TEST(DatabaseErrors, ReadScalarIntegersAttributeNotFound) {
 
 TEST(DatabaseErrors, ReadScalarFloatsAttributeNotFound) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element e;
@@ -195,7 +215,9 @@ TEST(DatabaseErrors, ReadScalarFloatsAttributeNotFound) {
 
 TEST(DatabaseErrors, ReadScalarStringsAttributeNotFound) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element e;
@@ -211,7 +233,9 @@ TEST(DatabaseErrors, ReadScalarStringsAttributeNotFound) {
 
 TEST(DatabaseErrors, ReadVectorIntegersAttributeNotFound) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -223,7 +247,9 @@ TEST(DatabaseErrors, ReadVectorIntegersAttributeNotFound) {
 
 TEST(DatabaseErrors, ReadVectorFloatsAttributeNotFound) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -235,7 +261,9 @@ TEST(DatabaseErrors, ReadVectorFloatsAttributeNotFound) {
 
 TEST(DatabaseErrors, ReadVectorStringsAttributeNotFound) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -251,7 +279,9 @@ TEST(DatabaseErrors, ReadVectorStringsAttributeNotFound) {
 
 TEST(DatabaseErrors, ReadSetIntegersAttributeNotFound) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -263,7 +293,9 @@ TEST(DatabaseErrors, ReadSetIntegersAttributeNotFound) {
 
 TEST(DatabaseErrors, ReadSetFloatsAttributeNotFound) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -287,7 +319,9 @@ TEST(DatabaseErrors, ApplySchemaEmptyPath) {
 TEST(DatabaseErrors, ApplySchemaFileNotFound) {
     EXPECT_THROW(
         quiver::Database::from_schema(
-            ":memory:", "nonexistent/path/schema.sql", {.read_only = false, .console_level = quiver::LogLevel::Off}
+            ":memory:",
+            "nonexistent/path/schema.sql",
+            {.read_only = false, .console_level = quiver::LogLevel::Off}
         ),
         std::runtime_error
     );

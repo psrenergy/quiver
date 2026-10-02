@@ -6,12 +6,13 @@
 #include "quiver/binary/time_properties.h"
 #include "utils/datetime.h"
 
+#include <toml++/toml.hpp>
+
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
-#include <toml++/toml.hpp>
 #include <type_traits>
 
 namespace {
@@ -384,8 +385,9 @@ void BinaryMetadata::validate() const {
 }
 
 void BinaryMetadata::validate_time_dimension_metadata() const {
-    if (number_of_time_dimensions() == 0)
+    if (number_of_time_dimensions() == 0) {
         return;
+    }
 
     // Collect time dimensions in order
     std::vector<const Dimension*> time_dims;
@@ -429,8 +431,9 @@ void BinaryMetadata::validate_time_dimension_sizes() const {
 
     // Skip the outermost time dimension (parent_dimension_index == -1) — its size is unconstrained
     for (const auto& dim : dimensions) {
-        if (!dim.is_time_dimension() || dim.time->parent_dimension_index == -1)
+        if (!dim.is_time_dimension() || dim.time->parent_dimension_index == -1) {
             continue;
+        }
         const Dimension& parent = dimensions[dim.time->parent_dimension_index];
         TimeFrequency freq = dim.time->frequency;
         TimeFrequency parent_freq = parent.time->frequency;

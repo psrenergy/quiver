@@ -6,7 +6,9 @@
 
 TEST(DatabaseTransaction, BeginMultipleWritesCommit) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     // Configuration required first
@@ -40,7 +42,9 @@ TEST(DatabaseTransaction, BeginMultipleWritesCommit) {
 
 TEST(DatabaseTransaction, BeginMultipleWritesRollback) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     // Configuration required first
@@ -69,7 +73,9 @@ TEST(DatabaseTransaction, BeginMultipleWritesRollback) {
 
 TEST(DatabaseTransaction, WriteMethodsInsideTransaction) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     // Configuration required first
@@ -122,7 +128,9 @@ TEST(DatabaseTransaction, WriteMethodsInsideTransaction) {
 
 TEST(DatabaseTransaction, RollbackUndoesMixedWrites) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     // Configuration required first
@@ -163,7 +171,9 @@ TEST(DatabaseTransaction, RollbackUndoesMixedWrites) {
 
 TEST(DatabaseTransaction, DoubleBeginThrows) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     db.begin_transaction();
@@ -181,7 +191,9 @@ TEST(DatabaseTransaction, DoubleBeginThrows) {
 
 TEST(DatabaseTransaction, CommitWithoutBeginThrows) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     try {
@@ -194,7 +206,9 @@ TEST(DatabaseTransaction, CommitWithoutBeginThrows) {
 
 TEST(DatabaseTransaction, RollbackWithoutBeginThrows) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     try {
@@ -207,7 +221,9 @@ TEST(DatabaseTransaction, RollbackWithoutBeginThrows) {
 
 TEST(DatabaseTransaction, InTransactionReflectsState) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     // Initially false
@@ -238,7 +254,9 @@ namespace {
 
 quiver::Database dry_run_database() {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -345,7 +363,9 @@ TEST(DatabaseDryRun, RejectsEndWithoutStart) {
 
 TEST(DatabaseDryRun, ImportCsvStillRefusesToNest) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("csv_export.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("csv_export.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     db.begin_dry_run();

@@ -365,8 +365,9 @@ QUIVER_C_API quiver_error_t quiver_database_free_time_series_data(
         // Free column data based on column_types
         if (column_data && column_types) {
             for (size_t i = 0; i < column_count; ++i) {
-                if (!column_data[i])
+                if (!column_data[i]) {
                     continue;
+                }
                 switch (column_types[i]) {
                 case QUIVER_DATA_TYPE_INTEGER:
                     delete[] static_cast<int64_t*>(column_data[i]);
@@ -404,8 +405,11 @@ QUIVER_C_API quiver_error_t quiver_database_free_time_series_data(
 
 // Time series files operations
 
-QUIVER_C_API quiver_error_t
-quiver_database_has_time_series_files(quiver_database_t* db, const char* collection, int* out_result) {
+QUIVER_C_API quiver_error_t quiver_database_has_time_series_files(
+    quiver_database_t* db,
+    const char* collection,
+    int* out_result
+) {
     QUIVER_REQUIRE(db, collection, out_result);
 
     try {

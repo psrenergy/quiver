@@ -1,11 +1,12 @@
 #include "test_utils.h"
 
-#include <filesystem>
-#include <fstream>
 #include <gtest/gtest.h>
 #include <quiver/c/database.h>
 #include <quiver/c/element.h>
 #include <quiver/c/options.h>
+
+#include <filesystem>
+#include <fstream>
 #include <sstream>
 
 namespace fs = std::filesystem;
@@ -31,7 +32,8 @@ TEST(DatabaseCApiCSV, ExportCSV_ScalarExport_HeaderAndData) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
 
@@ -82,7 +84,8 @@ TEST(DatabaseCApiCSV, ExportCSV_VectorGroupExport) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
 
@@ -119,7 +122,8 @@ TEST(DatabaseCApiCSV, ExportCSV_VectorGroupExport) {
     auto csv_path = temp_csv("VectorExport");
     auto csv_options = quiver_csv_options_default();
     ASSERT_EQ(
-        quiver_database_export_csv(db, "Items", "measurements", csv_path.string().c_str(), &csv_options), QUIVER_OK
+        quiver_database_export_csv(db, "Items", "measurements", csv_path.string().c_str(), &csv_options),
+        QUIVER_OK
     );
 
     auto content = read_file(csv_path.string());
@@ -142,7 +146,8 @@ TEST(DatabaseCApiCSV, ExportCSV_SetGroupExport) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
 
@@ -183,7 +188,8 @@ TEST(DatabaseCApiCSV, ExportCSV_TimeSeriesGroupExport) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
 
@@ -204,7 +210,16 @@ TEST(DatabaseCApiCSV, ExportCSV_TimeSeriesGroupExport) {
     const void* col_data[] = {date_times, temperatures, humidities};
     ASSERT_EQ(
         quiver_database_update_time_series_group(
-            db, "Items", "readings", id1, col_names, col_types, col_data, nullptr, 3, 2
+            db,
+            "Items",
+            "readings",
+            id1,
+            col_names,
+            col_types,
+            col_data,
+            nullptr,
+            3,
+            2
         ),
         QUIVER_OK
     );
@@ -230,14 +245,16 @@ TEST(DatabaseCApiCSV, ExportCSV_InvalidGroup_ReturnsError) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
 
     auto csv_path = temp_csv("InvalidGroup");
     auto csv_options = quiver_csv_options_default();
     EXPECT_EQ(
-        quiver_database_export_csv(db, "Items", "nonexistent", csv_path.string().c_str(), &csv_options), QUIVER_ERROR
+        quiver_database_export_csv(db, "Items", "nonexistent", csv_path.string().c_str(), &csv_options),
+        QUIVER_ERROR
     );
 
     std::string err = quiver_get_last_error();
@@ -255,7 +272,8 @@ TEST(DatabaseCApiCSV, ExportCSV_RFC4180_CommaEscaping) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
 
@@ -285,7 +303,8 @@ TEST(DatabaseCApiCSV, ExportCSV_RFC4180_QuoteEscaping) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
 
@@ -315,7 +334,8 @@ TEST(DatabaseCApiCSV, ExportCSV_RFC4180_NewlineEscaping) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
 
@@ -345,7 +365,8 @@ TEST(DatabaseCApiCSV, ExportCSV_LFLineEndings) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
 
@@ -381,7 +402,8 @@ TEST(DatabaseCApiCSV, ExportCSV_EmptyCollection_HeaderOnly) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
 
@@ -406,7 +428,8 @@ TEST(DatabaseCApiCSV, ExportCSV_NullValues_EmptyFields) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
 
@@ -441,7 +464,8 @@ TEST(DatabaseCApiCSV, ExportCSV_DefaultOptions_RawValues) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
 
@@ -480,7 +504,8 @@ TEST(DatabaseCApiCSV, ExportCSV_EnumLabels_ReplacesIntegers) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
 
@@ -539,7 +564,8 @@ TEST(DatabaseCApiCSV, ExportCSV_EnumLabels_UnmappedFallback) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
 
@@ -599,7 +625,8 @@ TEST(DatabaseCApiCSV, ExportCSV_DateTimeFormat_FormatsDateColumns) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
 
@@ -640,7 +667,8 @@ TEST(DatabaseCApiCSV, ExportCSV_DateTimeFormat_NonDateColumnsUnaffected) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
 
@@ -714,7 +742,8 @@ TEST(DatabaseCApiCSV, ExportCSV_CreatesParentDirectories) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
 
@@ -746,7 +775,8 @@ TEST(DatabaseCApiCSV, ExportCSV_OverwritesExistingFile) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
 
@@ -784,7 +814,8 @@ TEST(DatabaseCApiCSV, ExportCSV_CannotOpenFile_ReturnsError) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
 

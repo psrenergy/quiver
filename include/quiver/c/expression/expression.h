@@ -96,8 +96,10 @@ QUIVER_C_API quiver_error_t quiver_expression_apply_ternary(
 QUIVER_C_API quiver_error_t quiver_expression_save(quiver_expression_t* expression, const char* path);
 
 // Metadata access
-QUIVER_C_API quiver_error_t
-quiver_expression_get_metadata(quiver_expression_t* expression, quiver_binary_metadata_t** out);
+QUIVER_C_API quiver_error_t quiver_expression_get_metadata(
+    quiver_expression_t* expression,
+    quiver_binary_metadata_t** out
+);
 
 // Aggregation. parameter == NULL means "no parameter" (required for sum/mean/min/max).
 // Non-null pointer supplies the value (required for percentile, in [0, 1]).

@@ -11,7 +11,9 @@
 
 TEST(Database, ReadSetStrings) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -39,7 +41,9 @@ TEST(Database, ReadSetStrings) {
 
 TEST(Database, ReadSetEmpty) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -53,7 +57,9 @@ TEST(Database, ReadSetEmpty) {
 
 TEST(Database, ReadSetIncludesElementsWithNoRows) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -143,7 +149,9 @@ TEST(Database, ReadSetByIdOrderMatchesGroupReader) {
 
 TEST(Database, ReadSetIntegersByIdOrderMatchesGroupReader) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("all_types.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("all_types.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -172,7 +180,9 @@ TEST(Database, ReadSetIntegersByIdOrderMatchesGroupReader) {
 
 TEST(Database, ReadSetStringById) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -198,7 +208,9 @@ TEST(Database, ReadSetStringById) {
 
 TEST(Database, ReadSetByIdEmpty) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -215,7 +227,9 @@ TEST(Database, ReadSetByIdEmpty) {
 
 TEST(Database, ReadSetStringsInvalidCollection) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -227,7 +241,9 @@ TEST(Database, ReadSetStringsInvalidCollection) {
 
 TEST(Database, ReadSetStringsInvalidAttribute) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -244,7 +260,9 @@ TEST(Database, ReadSetStringsInvalidAttribute) {
 
 TEST(Database, ReadSetStringsByIdInvalidCollection) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -260,7 +278,9 @@ TEST(Database, ReadSetStringsByIdInvalidCollection) {
 
 TEST(Database, ReadSetIntegersBulk) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("all_types.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("all_types.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -293,7 +313,9 @@ TEST(Database, ReadSetIntegersBulk) {
 
 TEST(Database, ReadSetIntegersByIdBasic) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("all_types.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("all_types.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -314,7 +336,9 @@ TEST(Database, ReadSetIntegersByIdBasic) {
 
 TEST(Database, ReadSetFloatsBulk) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("all_types.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("all_types.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -352,7 +376,9 @@ TEST(Database, ReadSetFloatsBulk) {
 
 TEST(Database, ReadSetFloatsByIdBasic) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("all_types.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("all_types.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -379,7 +405,9 @@ TEST(Database, ReadSetFloatsByIdBasic) {
 
 TEST(Database, ReadSetPreservesNullCells) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     db.create_element("Configuration", quiver::Element().set("label", std::string("Test Config")));
@@ -401,7 +429,9 @@ TEST(Database, ReadSetPreservesNullCells) {
 
 TEST(Database, ReadSetDistinguishesNoRowsFromNullOnlyRow) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     db.create_element("Configuration", quiver::Element().set("label", std::string("Test Config")));

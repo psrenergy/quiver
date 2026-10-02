@@ -33,8 +33,11 @@ public:
         const DatabaseOptions& options = {}
     );
 
-    static Database
-    from_schema(const std::string& db_path, const std::string& schema_path, const DatabaseOptions& options = {});
+    static Database from_schema(
+        const std::string& db_path,
+        const std::string& schema_path,
+        const DatabaseOptions& options = {}
+    );
     static void validate_migrations(const std::string& migrations_path);
     bool is_healthy() const;
 
@@ -74,59 +77,108 @@ public:
 
     // Read scalar attributes (all elements). One entry per element, aligned with read_element_ids;
     // a SQL NULL is std::nullopt (positional — never dropped).
-    std::vector<std::optional<int64_t>>
-    read_scalar_integers(const std::string& collection, const std::string& attribute);
+    std::vector<std::optional<int64_t>> read_scalar_integers(
+        const std::string& collection,
+        const std::string& attribute
+    );
     std::vector<std::optional<double>> read_scalar_floats(const std::string& collection, const std::string& attribute);
-    std::vector<std::optional<std::string>>
-    read_scalar_strings(const std::string& collection, const std::string& attribute);
+    std::vector<std::optional<std::string>> read_scalar_strings(
+        const std::string& collection,
+        const std::string& attribute
+    );
 
     // Read scalar attributes (by element ID)
-    std::optional<int64_t>
-    read_scalar_integer_by_id(const std::string& collection, const std::string& attribute, int64_t id);
-    std::optional<double>
-    read_scalar_float_by_id(const std::string& collection, const std::string& attribute, int64_t id);
-    std::optional<std::string>
-    read_scalar_string_by_id(const std::string& collection, const std::string& attribute, int64_t id);
+    std::optional<int64_t> read_scalar_integer_by_id(
+        const std::string& collection,
+        const std::string& attribute,
+        int64_t id
+    );
+    std::optional<double> read_scalar_float_by_id(
+        const std::string& collection,
+        const std::string& attribute,
+        int64_t id
+    );
+    std::optional<std::string> read_scalar_string_by_id(
+        const std::string& collection,
+        const std::string& attribute,
+        int64_t id
+    );
 
     // Read vector attributes (all elements). One entry per element, aligned with read_element_ids;
     // within each entry a SQL NULL cell is std::nullopt (positional — never dropped).
-    std::vector<std::vector<std::optional<int64_t>>>
-    read_vector_integers(const std::string& collection, const std::string& attribute);
-    std::vector<std::vector<std::optional<double>>>
-    read_vector_floats(const std::string& collection, const std::string& attribute);
-    std::vector<std::vector<std::optional<std::string>>>
-    read_vector_strings(const std::string& collection, const std::string& attribute);
+    std::vector<std::vector<std::optional<int64_t>>> read_vector_integers(
+        const std::string& collection,
+        const std::string& attribute
+    );
+    std::vector<std::vector<std::optional<double>>> read_vector_floats(
+        const std::string& collection,
+        const std::string& attribute
+    );
+    std::vector<std::vector<std::optional<std::string>>> read_vector_strings(
+        const std::string& collection,
+        const std::string& attribute
+    );
 
     // Read vector attributes (by element ID). A SQL NULL cell is std::nullopt.
-    std::vector<std::optional<int64_t>>
-    read_vector_integers_by_id(const std::string& collection, const std::string& attribute, int64_t id);
-    std::vector<std::optional<double>>
-    read_vector_floats_by_id(const std::string& collection, const std::string& attribute, int64_t id);
-    std::vector<std::optional<std::string>>
-    read_vector_strings_by_id(const std::string& collection, const std::string& attribute, int64_t id);
+    std::vector<std::optional<int64_t>> read_vector_integers_by_id(
+        const std::string& collection,
+        const std::string& attribute,
+        int64_t id
+    );
+    std::vector<std::optional<double>> read_vector_floats_by_id(
+        const std::string& collection,
+        const std::string& attribute,
+        int64_t id
+    );
+    std::vector<std::optional<std::string>> read_vector_strings_by_id(
+        const std::string& collection,
+        const std::string& attribute,
+        int64_t id
+    );
 
     // Read set attributes (all elements). Same contract as the vector readers above.
-    std::vector<std::vector<std::optional<int64_t>>>
-    read_set_integers(const std::string& collection, const std::string& attribute);
-    std::vector<std::vector<std::optional<double>>>
-    read_set_floats(const std::string& collection, const std::string& attribute);
-    std::vector<std::vector<std::optional<std::string>>>
-    read_set_strings(const std::string& collection, const std::string& attribute);
+    std::vector<std::vector<std::optional<int64_t>>> read_set_integers(
+        const std::string& collection,
+        const std::string& attribute
+    );
+    std::vector<std::vector<std::optional<double>>> read_set_floats(
+        const std::string& collection,
+        const std::string& attribute
+    );
+    std::vector<std::vector<std::optional<std::string>>> read_set_strings(
+        const std::string& collection,
+        const std::string& attribute
+    );
 
     // Read set attributes (by element ID). Same contract as the vector readers above.
-    std::vector<std::optional<int64_t>>
-    read_set_integers_by_id(const std::string& collection, const std::string& attribute, int64_t id);
-    std::vector<std::optional<double>>
-    read_set_floats_by_id(const std::string& collection, const std::string& attribute, int64_t id);
-    std::vector<std::optional<std::string>>
-    read_set_strings_by_id(const std::string& collection, const std::string& attribute, int64_t id);
+    std::vector<std::optional<int64_t>> read_set_integers_by_id(
+        const std::string& collection,
+        const std::string& attribute,
+        int64_t id
+    );
+    std::vector<std::optional<double>> read_set_floats_by_id(
+        const std::string& collection,
+        const std::string& attribute,
+        int64_t id
+    );
+    std::vector<std::optional<std::string>> read_set_strings_by_id(
+        const std::string& collection,
+        const std::string& attribute,
+        int64_t id
+    );
 
     // Read a whole vector/set group (by element ID) - returns rows keyed by value column,
     // positionally aligned with SQL NULL cells preserved as nullptr Values
-    std::vector<std::map<std::string, Value>>
-    read_vector_group_by_id(const std::string& collection, const std::string& group, int64_t id);
-    std::vector<std::map<std::string, Value>>
-    read_set_group_by_id(const std::string& collection, const std::string& group, int64_t id);
+    std::vector<std::map<std::string, Value>> read_vector_group_by_id(
+        const std::string& collection,
+        const std::string& group,
+        int64_t id
+    );
+    std::vector<std::map<std::string, Value>> read_set_group_by_id(
+        const std::string& collection,
+        const std::string& group,
+        int64_t id
+    );
 
     // Update a whole vector/set group (by element ID) - replaces all rows for the element.
     // The write counterpart of read_vector_group_by_id / read_set_group_by_id, and the
@@ -185,8 +237,11 @@ public:
     GroupMetadata get_time_series_metadata(const std::string& collection, const std::string& group_name) const;
 
     // Read time series group - returns rows with date_time and value columns
-    std::vector<std::map<std::string, Value>>
-    read_time_series_group(const std::string& collection, const std::string& group, int64_t id);
+    std::vector<std::map<std::string, Value>> read_time_series_group(
+        const std::string& collection,
+        const std::string& group,
+        int64_t id
+    );
 
     // Read time series row - returns one value per element for a specific attribute at a given date_time
     // Uses "last non-null value at or before date_time" lookup semantics

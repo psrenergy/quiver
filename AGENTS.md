@@ -491,6 +491,10 @@ release ritual for that file is not settled. Release flow: `.github/AGENTS.md`.
 
 - `scripts/format.bat` — C++ via the CMake `format` target (clang-format), then each binding's
   own `format.bat` (JuliaFormatter, dart format, ruff, biome).
+- **clang-format is pinned to 22.1.8**: CI runs the PyPI wheel through `uvx`, pre-commit uses
+  `mirrors-clang-format` at the same rev, and the CMake `format` target prefers `clang-format-22`.
+  `.clang-format` uses 22-only keys (the `BreakAfterOpenBracket*`/`BreakBeforeCloseBracket*`
+  spelling of BlockIndent), which clang-format 21 rejects as a config error, so bump all three together.
 - `scripts/tidy.bat` — `run-clang-tidy` over `build/compile_commands.json` (strips the MinGW-only
   `-fno-keep-inline-dllexport` flag first; skips `src/binary`; finds `run-clang-tidy` on PATH, and
   the header filter lives in `.clang-tidy`).

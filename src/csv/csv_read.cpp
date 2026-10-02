@@ -1,7 +1,8 @@
 #include "csv_read.h"
 
-#include <filesystem>
 #include <internal/csv_reader.hpp>
+
+#include <filesystem>
 #include <limits>
 #include <optional>
 #include <stdexcept>

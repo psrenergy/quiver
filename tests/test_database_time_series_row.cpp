@@ -10,7 +10,9 @@
 
 TEST(Database, ReadTimeSeriesRow) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -59,7 +61,9 @@ TEST(Database, ReadTimeSeriesRow) {
 
 TEST(Database, ReadTimeSeriesRowWithMissingElements) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -108,7 +112,9 @@ TEST(Database, ReadTimeSeriesRowWithMissingElements) {
 
 TEST(Database, ReadTimeSeriesRowBeforeAllData) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -120,7 +126,10 @@ TEST(Database, ReadTimeSeriesRowBeforeAllData) {
     auto id1 = db.create_element("Collection", e1);
 
     db.update_time_series_group(
-        "Collection", "data", id1, {{{"date_time", std::string("2024-01-02")}, {"value", 1.0}}}
+        "Collection",
+        "data",
+        id1,
+        {{{"date_time", std::string("2024-01-02")}, {"value", 1.0}}}
     );
 
     // Query before any data exists: should return nullptr for the element
@@ -131,7 +140,9 @@ TEST(Database, ReadTimeSeriesRowBeforeAllData) {
 
 TEST(Database, ReadTimeSeriesRowEmptyCollection) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -145,7 +156,9 @@ TEST(Database, ReadTimeSeriesRowEmptyCollection) {
 
 TEST(Database, ReadTimeSeriesRowMixedElements) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -161,7 +174,10 @@ TEST(Database, ReadTimeSeriesRowMixedElements) {
     db.create_element("Collection", e2);  // no time series data
 
     db.update_time_series_group(
-        "Collection", "data", id1, {{{"date_time", std::string("2024-01-01")}, {"value", 5.0}}}
+        "Collection",
+        "data",
+        id1,
+        {{{"date_time", std::string("2024-01-01")}, {"value", 5.0}}}
     );
 
     // Item 1 has data, Item 2 doesn't
@@ -173,7 +189,9 @@ TEST(Database, ReadTimeSeriesRowMixedElements) {
 
 TEST(Database, ReadTimeSeriesRowAttributeNotFound) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     EXPECT_THROW(db.read_time_series_row("Collection", "data", "nonexistent", "2024-01-01"), std::runtime_error);
@@ -181,7 +199,9 @@ TEST(Database, ReadTimeSeriesRowAttributeNotFound) {
 
 TEST(Database, ReadTimeSeriesRowGroupNotFound) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     EXPECT_THROW(db.read_time_series_row("Collection", "nonexistent", "value", "2024-01-01"), std::runtime_error);
@@ -189,7 +209,9 @@ TEST(Database, ReadTimeSeriesRowGroupNotFound) {
 
 TEST(Database, ReadTimeSeriesRowMultiColumn) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("mixed_time_series.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("mixed_time_series.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -232,7 +254,9 @@ TEST(Database, ReadTimeSeriesRowMultiColumn) {
 
 TEST(Database, ReadTimeSeriesRowSkipsNullValues) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -286,10 +310,16 @@ TEST(Database, ReadTimeSeriesRowRejectsMultiDimensionGroup) {
 
     // Two blocks at one date, block 2's load NULL: the read used to return NULL here although block 1 holds 10.0.
     db.upsert_time_series_row(
-        "Resource", "load", id, {{"date_time", std::string("2024-01-01")}, {"block", int64_t{1}}, {"load", 10.0}}
+        "Resource",
+        "load",
+        id,
+        {{"date_time", std::string("2024-01-01")}, {"block", int64_t{1}}, {"load", 10.0}}
     );
     db.upsert_time_series_row(
-        "Resource", "load", id, {{"date_time", std::string("2024-01-01")}, {"block", int64_t{2}}, {"flag", int64_t{5}}}
+        "Resource",
+        "load",
+        id,
+        {{"date_time", std::string("2024-01-01")}, {"block", int64_t{2}}, {"flag", int64_t{5}}}
     );
 
     try {
@@ -324,7 +354,9 @@ static std::string capture_add_row_error(
 
 TEST(Database, UpsertTimeSeriesRowInsert) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -336,7 +368,10 @@ TEST(Database, UpsertTimeSeriesRowInsert) {
     auto id = db.create_element("Collection", item);
 
     db.upsert_time_series_row(
-        "Collection", "data", id, {{"date_time", std::string("2024-01-01T10:00:00")}, {"value", 1.5}}
+        "Collection",
+        "data",
+        id,
+        {{"date_time", std::string("2024-01-01T10:00:00")}, {"value", 1.5}}
     );
 
     auto rows = db.read_time_series_group("Collection", "data", id);
@@ -351,7 +386,9 @@ TEST(Database, UpsertTimeSeriesRowInsert) {
 
 TEST(Database, UpsertTimeSeriesRowSamePK) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -363,10 +400,16 @@ TEST(Database, UpsertTimeSeriesRowSamePK) {
     auto id = db.create_element("Collection", item);
 
     db.upsert_time_series_row(
-        "Collection", "data", id, {{"date_time", std::string("2024-01-01T10:00:00")}, {"value", 1.0}}
+        "Collection",
+        "data",
+        id,
+        {{"date_time", std::string("2024-01-01T10:00:00")}, {"value", 1.0}}
     );
     db.upsert_time_series_row(
-        "Collection", "data", id, {{"date_time", std::string("2024-01-01T10:00:00")}, {"value", 99.0}}
+        "Collection",
+        "data",
+        id,
+        {{"date_time", std::string("2024-01-01T10:00:00")}, {"value", 99.0}}
     );
 
     auto rows = db.read_time_series_group("Collection", "data", id);
@@ -377,7 +420,9 @@ TEST(Database, UpsertTimeSeriesRowSamePK) {
 
 TEST(Database, UpsertTimeSeriesRowMixedInsertAndUpsert) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -389,14 +434,23 @@ TEST(Database, UpsertTimeSeriesRowMixedInsertAndUpsert) {
     auto id = db.create_element("Collection", item);
 
     db.upsert_time_series_row(
-        "Collection", "data", id, {{"date_time", std::string("2024-01-01T10:00:00")}, {"value", 1.0}}
+        "Collection",
+        "data",
+        id,
+        {{"date_time", std::string("2024-01-01T10:00:00")}, {"value", 1.0}}
     );
     db.upsert_time_series_row(
-        "Collection", "data", id, {{"date_time", std::string("2024-01-02T10:00:00")}, {"value", 2.0}}
+        "Collection",
+        "data",
+        id,
+        {{"date_time", std::string("2024-01-02T10:00:00")}, {"value", 2.0}}
     );
     // Upsert on t1 — must replace only the t1 row, leaving t2 untouched.
     db.upsert_time_series_row(
-        "Collection", "data", id, {{"date_time", std::string("2024-01-01T10:00:00")}, {"value", 10.0}}
+        "Collection",
+        "data",
+        id,
+        {{"date_time", std::string("2024-01-01T10:00:00")}, {"value", 10.0}}
     );
 
     auto rows = db.read_time_series_group("Collection", "data", id);
@@ -456,8 +510,9 @@ TEST(Database, UpsertTimeSeriesRowMultiDimSchemaInsert) {
     std::sort(rows.begin(), rows.end(), [](const auto& a, const auto& b) {
         const auto& da = std::get<std::string>(a.at("date_time"));
         const auto& db_ = std::get<std::string>(b.at("date_time"));
-        if (da != db_)
+        if (da != db_) {
             return da < db_;
+        }
         return std::get<int64_t>(a.at("block")) < std::get<int64_t>(b.at("block"));
     });
 
@@ -554,12 +609,18 @@ TEST(Database, UpsertTimeSeriesRowPartialValueColumns) {
 
     // Row 1: supply (date_time, block, load) — omit `flag`.
     db.upsert_time_series_row(
-        "Resource", "load", id, {{"date_time", std::string("2024-01-01")}, {"block", int64_t{1}}, {"load", 10.0}}
+        "Resource",
+        "load",
+        id,
+        {{"date_time", std::string("2024-01-01")}, {"block", int64_t{1}}, {"load", 10.0}}
     );
 
     // Row 2: supply (date_time, block, flag) — omit `load`.
     db.upsert_time_series_row(
-        "Resource", "load", id, {{"date_time", std::string("2024-01-01")}, {"block", int64_t{2}}, {"flag", int64_t{5}}}
+        "Resource",
+        "load",
+        id,
+        {{"date_time", std::string("2024-01-01")}, {"block", int64_t{2}}, {"flag", int64_t{5}}}
     );
 
     auto rows = db.read_time_series_group("Resource", "load", id);
@@ -598,7 +659,11 @@ TEST(Database, UpsertTimeSeriesRowErrors) {
     // a. Missing dimension column ('block' omitted, date_time present).
     {
         auto msg = capture_add_row_error(
-            db, "Resource", "load", id, {{"date_time", std::string("2024-01-01")}, {"load", 1.0}}
+            db,
+            "Resource",
+            "load",
+            id,
+            {{"date_time", std::string("2024-01-01")}, {"load", 1.0}}
         );
         EXPECT_NE(msg.find("Cannot upsert_time_series_row: row missing required 'block' column"), std::string::npos)
             << "Actual: " << msg;
@@ -621,7 +686,8 @@ TEST(Database, UpsertTimeSeriesRowErrors) {
             {{"date_time", std::string("2024-01-01")}, {"block", int64_t{1}}, {"load", 1.0}, {"pressure", 1013.25}}
         );
         EXPECT_NE(
-            msg.find("Cannot upsert_time_series_row: column 'pressure' not found in group 'load'"), std::string::npos
+            msg.find("Cannot upsert_time_series_row: column 'pressure' not found in group 'load'"),
+            std::string::npos
         ) << "Actual: "
           << msg;
     }
@@ -643,7 +709,11 @@ TEST(Database, UpsertTimeSeriesRowErrors) {
     // e. Type mismatch: REAL passed for INTEGER column 'block'.
     {
         auto msg = capture_add_row_error(
-            db, "Resource", "load", id, {{"date_time", std::string("2024-01-01")}, {"block", 1.5}, {"load", 1.0}}
+            db,
+            "Resource",
+            "load",
+            id,
+            {{"date_time", std::string("2024-01-01")}, {"block", 1.5}, {"load", 1.0}}
         );
         EXPECT_NE(
             msg.find("Cannot upsert_time_series_row: column 'block' has type INTEGER but received REAL"),
@@ -655,7 +725,11 @@ TEST(Database, UpsertTimeSeriesRowErrors) {
     // f. Unparseable dimension value: the right shape (TEXT), the wrong content.
     {
         auto msg = capture_add_row_error(
-            db, "Resource", "load", id, {{"date_time", std::string("2005-01")}, {"block", int64_t{1}}, {"load", 1.0}}
+            db,
+            "Resource",
+            "load",
+            id,
+            {{"date_time", std::string("2005-01")}, {"block", int64_t{1}}, {"load", 1.0}}
         );
         EXPECT_NE(
             msg.find("Cannot upsert_time_series_row: invalid DATE_TIME value for column 'date_time': '2005-01'"),
@@ -667,7 +741,9 @@ TEST(Database, UpsertTimeSeriesRowErrors) {
 
 TEST(Database, UpsertTimeSeriesRowTransactionRollback) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -691,7 +767,9 @@ TEST(Database, UpsertTimeSeriesRowTransactionRollback) {
 
 TEST(Database, UpsertTimeSeriesRowTransactionCommitAndStandalone) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -728,7 +806,9 @@ TEST(Database, UpsertTimeSeriesRowTransactionCommitAndStandalone) {
 
 TEST(Database, UpsertTimeSeriesRowByLabel) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -745,11 +825,17 @@ TEST(Database, UpsertTimeSeriesRowByLabel) {
     e2.set("label", std::string("Item 2"));
     auto item2 = db.create_element("Collection", e2);
     db.upsert_time_series_row(
-        "Collection", "data", item2, {{"date_time", std::string("2024-01-01T10:00:00")}, {"value", 99.0}}
+        "Collection",
+        "data",
+        item2,
+        {{"date_time", std::string("2024-01-01T10:00:00")}, {"value", 99.0}}
     );
 
     db.upsert_time_series_row_by_label(
-        "Collection", "data", "Item 1", {{"date_time", std::string("2024-01-01T10:00:00")}, {"value", 1.5}}
+        "Collection",
+        "data",
+        "Item 1",
+        {{"date_time", std::string("2024-01-01T10:00:00")}, {"value", 1.5}}
     );
 
     auto rows = db.read_time_series_group("Collection", "data", item1);
@@ -759,7 +845,10 @@ TEST(Database, UpsertTimeSeriesRowByLabel) {
 
     // Same dimension PK - overwrites the value column rather than appending a row.
     db.upsert_time_series_row_by_label(
-        "Collection", "data", "Item 1", {{"date_time", std::string("2024-01-01T10:00:00")}, {"value", 9.5}}
+        "Collection",
+        "data",
+        "Item 1",
+        {{"date_time", std::string("2024-01-01T10:00:00")}, {"value", 9.5}}
     );
     rows = db.read_time_series_group("Collection", "data", item1);
     ASSERT_EQ(rows.size(), 1);
@@ -773,7 +862,9 @@ TEST(Database, UpsertTimeSeriesRowByLabel) {
 
 TEST(Database, UpsertTimeSeriesRowByLabelNonExistent) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -785,12 +876,18 @@ TEST(Database, UpsertTimeSeriesRowByLabelNonExistent) {
     auto id = db.create_element("Collection", e1);
 
     db.upsert_time_series_row_by_label(
-        "Collection", "data", "Item 1", {{"date_time", std::string("2024-01-01T10:00:00")}, {"value", 1.0}}
+        "Collection",
+        "data",
+        "Item 1",
+        {{"date_time", std::string("2024-01-01T10:00:00")}, {"value", 1.0}}
     );
 
     try {
         db.upsert_time_series_row_by_label(
-            "Collection", "data", "No Such Item", {{"date_time", std::string("2024-05-01T10:00:00")}, {"value", 5.0}}
+            "Collection",
+            "data",
+            "No Such Item",
+            {{"date_time", std::string("2024-05-01T10:00:00")}, {"value", 5.0}}
         );
         FAIL() << "expected a throw";
     } catch (const std::runtime_error& e) {
@@ -806,7 +903,10 @@ TEST(Database, UpsertTimeSeriesRowByLabelNonExistent) {
     // collection must not resolve here.
     try {
         db.upsert_time_series_row_by_label(
-            "Collection", "data", "Test Config", {{"date_time", std::string("2024-05-01T10:00:00")}, {"value", 5.0}}
+            "Collection",
+            "data",
+            "Test Config",
+            {{"date_time", std::string("2024-05-01T10:00:00")}, {"value", 5.0}}
         );
         FAIL() << "expected a throw";
     } catch (const std::runtime_error& e) {
@@ -819,7 +919,9 @@ TEST(Database, UpsertTimeSeriesRowByLabelNonExistent) {
 // "no such column: label" prepare error -- and the message must name the public method called.
 TEST(Database, UpsertTimeSeriesRowByLabelOnTableWithoutLabelColumn) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     try {
@@ -843,7 +945,9 @@ TEST(Database, UpsertTimeSeriesRowByLabelOnTableWithoutLabelColumn) {
 // validation reports "Cannot upsert_time_series_row" - the operation that validated.
 TEST(Database, UpsertTimeSeriesRowByLabelValidationNamesTheIdForm) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -856,7 +960,10 @@ TEST(Database, UpsertTimeSeriesRowByLabelValidationNamesTheIdForm) {
 
     try {
         db.upsert_time_series_row_by_label(
-            "Collection", "data", "Item 1", {{"date_time", std::string("2024-01-01T10:00:00")}, {"nope", 1.0}}
+            "Collection",
+            "data",
+            "Item 1",
+            {{"date_time", std::string("2024-01-01T10:00:00")}, {"nope", 1.0}}
         );
         FAIL() << "expected a throw";
     } catch (const std::runtime_error& e) {

@@ -1,9 +1,10 @@
 #include "test_utils.h"
 
-#include <functional>
 #include <gtest/gtest.h>
 #include <quiver/database.h>
 #include <quiver/element.h>
+
+#include <functional>
 
 // ============================================================================
 // Time series read tests
@@ -11,7 +12,9 @@
 
 TEST(Database, ReadTimeSeriesGroupById) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -47,7 +50,9 @@ TEST(Database, ReadTimeSeriesGroupById) {
 
 TEST(Database, ReadTimeSeriesGroupByIdEmpty) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -65,7 +70,9 @@ TEST(Database, ReadTimeSeriesGroupByIdEmpty) {
 
 TEST(Database, ReadTimeSeriesGroupByIdNonexistent) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -83,7 +90,9 @@ TEST(Database, ReadTimeSeriesGroupByIdNonexistent) {
 
 TEST(Database, UpdateTimeSeriesGroup) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -118,7 +127,9 @@ TEST(Database, UpdateTimeSeriesGroup) {
 
 TEST(Database, UpdateTimeSeriesGroupEmpty) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -178,7 +189,9 @@ TEST(Database, UpdateTimeSeriesGroupKeepsColumnPresentOnlyInALaterRow) {
 
 TEST(Database, TimeSeriesOrdering) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -211,7 +224,9 @@ TEST(Database, TimeSeriesOrdering) {
 
 TEST(Database, TimeSeriesGroupNotFound) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     EXPECT_THROW(db.get_time_series_metadata("Collection", "nonexistent"), std::runtime_error);
@@ -221,7 +236,9 @@ TEST(Database, TimeSeriesGroupNotFound) {
 
 TEST(Database, TimeSeriesOpsReportMissingGroupAsPattern2) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     auto id = db.create_element("Collection", quiver::Element().set("label", "A"));
@@ -244,7 +261,9 @@ TEST(Database, TimeSeriesOpsReportMissingGroupAsPattern2) {
 
 TEST(Database, TimeSeriesCollectionNotFound) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     try {
@@ -272,7 +291,9 @@ static std::string capture_update_error(
 
 TEST(Database, TimeSeriesMissingDateTime) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -290,7 +311,9 @@ TEST(Database, TimeSeriesMissingDateTime) {
 
 TEST(Database, TimeSeriesUnknownColumn) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -310,7 +333,9 @@ TEST(Database, TimeSeriesUnknownColumn) {
 
 TEST(Database, TimeSeriesIntegerAcceptedForRealColumn) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -334,7 +359,9 @@ TEST(Database, TimeSeriesIntegerAcceptedForRealColumn) {
 
 TEST(Database, TimeSeriesTypeMismatchRealToInteger) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("mixed_time_series.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("mixed_time_series.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -357,7 +384,9 @@ TEST(Database, TimeSeriesTypeMismatchRealToInteger) {
 
 TEST(Database, TimeSeriesTypeMismatchStringToReal) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("mixed_time_series.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("mixed_time_series.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -380,7 +409,9 @@ TEST(Database, TimeSeriesTypeMismatchStringToReal) {
 
 TEST(Database, TimeSeriesInvalidDateTimeDimension) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -416,7 +447,9 @@ TEST(Database, TimeSeriesInvalidDateTimeDimension) {
 
 TEST(Database, TimeSeriesNullValue) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -546,7 +579,9 @@ TEST(Database, UpdateTimeSeriesGroupMissingBlockInLaterRow) {
 
 TEST(Database, UpdateTimeSeriesGroupByLabel) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -563,7 +598,10 @@ TEST(Database, UpdateTimeSeriesGroupByLabel) {
     e2.set("label", std::string("Item 2"));
     auto item2 = db.create_element("Collection", e2);
     db.update_time_series_group(
-        "Collection", "data", item2, {{{"date_time", std::string("2024-01-01T10:00:00")}, {"value", 99.0}}}
+        "Collection",
+        "data",
+        item2,
+        {{{"date_time", std::string("2024-01-01T10:00:00")}, {"value", 99.0}}}
     );
 
     db.update_time_series_group_by_label(
@@ -581,7 +619,10 @@ TEST(Database, UpdateTimeSeriesGroupByLabel) {
 
     // A second call replaces rather than appends.
     db.update_time_series_group_by_label(
-        "Collection", "data", "Item 1", {{{"date_time", std::string("2024-03-01T10:00:00")}, {"value", 30.0}}}
+        "Collection",
+        "data",
+        "Item 1",
+        {{{"date_time", std::string("2024-03-01T10:00:00")}, {"value", 30.0}}}
     );
     rows = db.read_time_series_group("Collection", "data", item1);
     ASSERT_EQ(rows.size(), 1);
@@ -599,7 +640,9 @@ TEST(Database, UpdateTimeSeriesGroupByLabel) {
 
 TEST(Database, UpdateTimeSeriesGroupByLabelNonExistent) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -611,12 +654,18 @@ TEST(Database, UpdateTimeSeriesGroupByLabelNonExistent) {
     auto id = db.create_element("Collection", e1);
 
     db.update_time_series_group_by_label(
-        "Collection", "data", "Item 1", {{{"date_time", std::string("2024-02-01T10:00:00")}, {"value", 10.0}}}
+        "Collection",
+        "data",
+        "Item 1",
+        {{{"date_time", std::string("2024-02-01T10:00:00")}, {"value", 10.0}}}
     );
 
     try {
         db.update_time_series_group_by_label(
-            "Collection", "data", "No Such Item", {{{"date_time", std::string("2024-05-01T10:00:00")}, {"value", 1.0}}}
+            "Collection",
+            "data",
+            "No Such Item",
+            {{{"date_time", std::string("2024-05-01T10:00:00")}, {"value", 1.0}}}
         );
         FAIL() << "expected a throw";
     } catch (const std::runtime_error& e) {
@@ -643,7 +692,9 @@ TEST(Database, UpdateTimeSeriesGroupByLabelNonExistent) {
 // "no such column: label" prepare error -- and the message must name the public method called.
 TEST(Database, UpdateTimeSeriesGroupByLabelOnTableWithoutLabelColumn) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     try {
@@ -662,7 +713,9 @@ TEST(Database, UpdateTimeSeriesGroupByLabelOnTableWithoutLabelColumn) {
 // validation reports "Cannot update_time_series_group" - the operation that validated.
 TEST(Database, UpdateTimeSeriesGroupByLabelValidationNamesTheIdForm) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -675,7 +728,10 @@ TEST(Database, UpdateTimeSeriesGroupByLabelValidationNamesTheIdForm) {
 
     try {
         db.update_time_series_group_by_label(
-            "Collection", "data", "Item 1", {{{"date_time", std::string("2024-02-01T10:00:00")}, {"nope", 1.0}}}
+            "Collection",
+            "data",
+            "Item 1",
+            {{{"date_time", std::string("2024-02-01T10:00:00")}, {"nope", 1.0}}}
         );
         FAIL() << "expected a throw";
     } catch (const std::runtime_error& e) {

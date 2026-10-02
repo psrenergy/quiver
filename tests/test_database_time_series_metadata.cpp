@@ -10,7 +10,9 @@
 
 TEST(Database, GetTimeSeriesMetadata) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     auto metadata = db.get_time_series_metadata("Collection", "data");
@@ -23,7 +25,9 @@ TEST(Database, GetTimeSeriesMetadata) {
 
 TEST(Database, GetTimeSeriesMetadataForeignKey) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("relations.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     auto metadata = db.get_time_series_metadata("Child", "events");
@@ -37,7 +41,9 @@ TEST(Database, GetTimeSeriesMetadataForeignKey) {
 
 TEST(Database, ListTimeSeriesGroups) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     auto groups = db.list_time_series_groups("Collection");
@@ -50,7 +56,9 @@ TEST(Database, ListTimeSeriesGroups) {
 
 TEST(Database, ListTimeSeriesGroupsEmpty) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     // Configuration has no time series tables

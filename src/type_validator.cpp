@@ -10,8 +10,12 @@ namespace quiver {
 namespace {
 
 // Same wording as Impl::require_column, so one condition has one message.
-DataType
-column_type(const Schema& schema, const std::string& caller, const std::string& table, const std::string& column) {
+DataType column_type(
+    const Schema& schema,
+    const std::string& caller,
+    const std::string& table,
+    const std::string& column
+) {
     const auto* table_def = schema.get_table(table);
     const auto type = table_def ? table_def->get_data_type(column) : std::nullopt;
     if (!type) {

@@ -1,16 +1,18 @@
 #include "schema.h"
 
+#include <sqlite3.h>
+
 #include <algorithm>
 #include <cctype>
-#include <sqlite3.h>
 #include <stdexcept>
 #include <string_view>
 
 namespace quiver {
 
 static bool is_safe_identifier(const std::string& name) {
-    if (name.empty())
+    if (name.empty()) {
         return false;
+    }
     return std::all_of(name.begin(), name.end(), [](char c) {
         return std::isalnum(static_cast<unsigned char>(c)) || c == '_';
     });
@@ -152,10 +154,12 @@ std::string Schema::find_vector_table(const std::string& collection, const std::
 
     // Second try: search all vector tables for the collection
     for (const auto& table_name : table_names()) {
-        if (!is_vector_table(table_name))
+        if (!is_vector_table(table_name)) {
             continue;
-        if (get_parent_collection(table_name) != collection)
+        }
+        if (get_parent_collection(table_name) != collection) {
             continue;
+        }
 
         const auto* table_def = get_table(table_name);
         if (table_def && table_def->has_column(attribute)) {
@@ -175,10 +179,12 @@ std::string Schema::find_set_table(const std::string& collection, const std::str
 
     // Second try: search all set tables for the collection
     for (const auto& table_name : table_names()) {
-        if (!is_set_table(table_name))
+        if (!is_set_table(table_name)) {
             continue;
-        if (get_parent_collection(table_name) != collection)
+        }
+        if (get_parent_collection(table_name) != collection) {
             continue;
+        }
 
         const auto* table_def = get_table(table_name);
         if (table_def && table_def->has_column(attribute)) {
@@ -209,10 +215,12 @@ std::vector<std::string> Schema::group_names(const std::string& collection, Grou
 
     std::vector<std::string> result;
     for (const auto& table_name : table_names()) {
-        if (!is_group_table(table_name, type))
+        if (!is_group_table(table_name, type)) {
             continue;
-        if (get_parent_collection(table_name) != collection)
+        }
+        if (get_parent_collection(table_name) != collection) {
             continue;
+        }
         if (table_name.starts_with(prefix)) {
             result.push_back(table_name.substr(prefix.size()));
         }
@@ -220,8 +228,10 @@ std::vector<std::string> Schema::group_names(const std::string& collection, Grou
     return result;
 }
 
-std::vector<Schema::TableMatch>
-Schema::find_all_tables_for_column(const std::string& collection, const std::string& column) const {
+std::vector<Schema::TableMatch> Schema::find_all_tables_for_column(
+    const std::string& collection,
+    const std::string& column
+) const {
     std::vector<TableMatch> matches;
 
     // Check vector: direct name match first
@@ -231,12 +241,15 @@ Schema::find_all_tables_for_column(const std::string& collection, const std::str
     }
 
     for (const auto& [name, table] : tables_) {
-        if (get_parent_collection(name) != collection)
+        if (get_parent_collection(name) != collection) {
             continue;
-        if (!table.has_column(column))
+        }
+        if (!table.has_column(column)) {
             continue;
-        if (name == vt)
+        }
+        if (name == vt) {
             continue;  // already added above
+        }
 
         if (is_vector_table(name)) {
             matches.push_back({.table_name = name, .type = GroupTableType::Vector});
@@ -249,8 +262,10 @@ Schema::find_all_tables_for_column(const std::string& collection, const std::str
     return matches;
 }
 
-std::optional<Schema::TableMatch>
-Schema::find_group_table(const std::string& collection, const std::string& group) const {
+std::optional<Schema::TableMatch> Schema::find_group_table(
+    const std::string& collection,
+    const std::string& group
+) const {
     for (const auto type : {GroupTableType::Vector, GroupTableType::Set, GroupTableType::TimeSeries}) {
         const auto name = group_table_name(collection, group, type);
         if (has_table(name)) {
@@ -411,8 +426,9 @@ std::vector<Index> Schema::query_indexes(sqlite3* db, const std::string& table) 
         idx.unique = sqlite3_column_int(stmt, 2) != 0;
 
         // Get columns for this index
-        if (!is_safe_identifier(idx.name))
+        if (!is_safe_identifier(idx.name)) {
             continue;
+        }
         auto idx_sql = "PRAGMA index_info(" + idx.name + ")";
         sqlite3_stmt* idx_stmt = nullptr;
         if (sqlite3_prepare_v2(db, idx_sql.c_str(), -1, &idx_stmt, nullptr) == SQLITE_OK) {

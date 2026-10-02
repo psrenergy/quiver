@@ -13,8 +13,10 @@
 
 namespace quiver {
 
-std::vector<int64_t>
-dimension_sizes_at_values(const BinaryMetadata& metadata, const std::vector<int64_t>& dimension_values) {
+std::vector<int64_t> dimension_sizes_at_values(
+    const BinaryMetadata& metadata,
+    const std::vector<int64_t>& dimension_values
+) {
     using namespace quiver::time;
     const auto& dimensions = metadata.dimensions;
 
@@ -26,8 +28,9 @@ dimension_sizes_at_values(const BinaryMetadata& metadata, const std::vector<int6
 
     auto datetime = metadata.initial_datetime;
     for (size_t i = 0; i < dimensions.size(); ++i) {
-        if (!dimensions[i].is_time_dimension())
+        if (!dimensions[i].is_time_dimension()) {
             continue;
+        }
         datetime = dimensions[i].time->add_offset_from_int(datetime, dimension_values[i]);
     }
     const auto date = std::chrono::floor<std::chrono::days>(datetime);
@@ -35,8 +38,9 @@ dimension_sizes_at_values(const BinaryMetadata& metadata, const std::vector<int6
 
     for (size_t i = 0; i < dimensions.size(); ++i) {
         const auto& dim = dimensions[i];
-        if (!dim.is_time_dimension() || dim.time->parent_dimension_index == -1)
+        if (!dim.is_time_dimension() || dim.time->parent_dimension_index == -1) {
             continue;
+        }
 
         const auto& parent = dimensions[dim.time->parent_dimension_index];
         auto freq = dim.time->frequency;
@@ -84,20 +88,27 @@ dimension_sizes_at_values(const BinaryMetadata& metadata, const std::vector<int6
     return sizes;
 }
 
-int64_t
-dimension_start_at_values(const BinaryMetadata& meta, const std::vector<int64_t>& dimension_values, size_t index) {
+int64_t dimension_start_at_values(
+    const BinaryMetadata& meta,
+    const std::vector<int64_t>& dimension_values,
+    size_t index
+) {
     const auto& dim = meta.dimensions[index];
-    if (!dim.is_time_dimension())
+    if (!dim.is_time_dimension()) {
         return 1;
+    }
 
     // Only the period the file starts in begins at initial_value (day 15 of March 2025 for a
     // 2025-03-15 start), and a coordinate is in that period exactly when every time ancestor, up
     // the parent_dimension_index chain, is at its own initial_value. Checking the parent alone
     // restarted every later March at day 15 as well.
-    for (auto ancestor = dim.time->parent_dimension_index; ancestor != -1;
-         ancestor = meta.dimensions[ancestor].time->parent_dimension_index) {
-        if (dimension_values[ancestor] != meta.dimensions[ancestor].time->initial_value)
+    for (
+        auto ancestor = dim.time->parent_dimension_index; ancestor != -1;
+        ancestor = meta.dimensions[ancestor].time->parent_dimension_index
+    ) {
+        if (dimension_values[ancestor] != meta.dimensions[ancestor].time->initial_value) {
             return 1;
+        }
     }
     return dim.time->initial_value;
 }
@@ -127,8 +138,9 @@ std::optional<std::vector<int64_t>> next_dimensions(const BinaryMetadata& meta, 
         }
     }
 
-    if (!incremented)
+    if (!incremented) {
         return std::nullopt;
+    }
 
     // The cascade resets every wrapped dimension to 1, but a file that starts mid-period
     // (2025-03-15 -> month 3, day 15) must resume at initial_value wherever the walk re-enters

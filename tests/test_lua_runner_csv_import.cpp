@@ -90,7 +90,8 @@ TEST_F(LuaRunner_ImportCSV, EnumResolution) {
     quiver::LuaRunner lua(db);
 
     write_lua_csv_file(
-        (sandbox / "enum.csv").string(), "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,Active,,,\n"
+        (sandbox / "enum.csv").string(),
+        "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,Active,,,\n"
     );
 
     lua.run(R"(
@@ -137,7 +138,8 @@ TEST_F(LuaRunner_ImportCSV, OptionsAreStrict) {
     quiver::LuaRunner lua(db);
 
     write_lua_csv_file(
-        (sandbox / "enum.csv").string(), "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,1,,,\n"
+        (sandbox / "enum.csv").string(),
+        "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,1,,,\n"
     );
 
     expect_lua_error(
@@ -219,7 +221,8 @@ TEST_F(LuaRunner_ImportCSV, OmittedElementDeletesItsGroupRows) {
     )");
 
     write_lua_csv_file(
-        (sandbox / "subset.csv").string(), "sep=,\nlabel,name,status,price,date_created,notes\nKept,Beta,,,,\n"
+        (sandbox / "subset.csv").string(),
+        "sep=,\nlabel,name,status,price,date_created,notes\nKept,Beta,,,,\n"
     );
 
     lua.run(R"LUA(
@@ -240,7 +243,8 @@ TEST_F(LuaRunner_ImportCSV, InsideTransactionThrows) {
     quiver::LuaRunner lua(db);
 
     write_lua_csv_file(
-        (sandbox / "intx.csv").string(), "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,,,,\n"
+        (sandbox / "intx.csv").string(),
+        "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,,,,\n"
     );
 
     lua.run("db:begin_transaction()");

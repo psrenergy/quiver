@@ -7,7 +7,9 @@ namespace {
 // Every case here is schema-independent, so one in-memory database serves them all.
 quiver::Database return_database() {
     return quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 }
 
@@ -151,7 +153,9 @@ TEST_F(LuaRunnerTest, ReturnNonUtf8StringThrows) {
     // JSON must be UTF-8 (RFC 8259) but a Lua string is an arbitrary byte array. Rejected here
     // because downstream Python/Dart raise opaque decode errors and JS corrupts silently.
     expect_lua_error(
-        lua, "return string.char(200)", "Cannot run: script return value contains a string that is not valid UTF-8"
+        lua,
+        "return string.char(200)",
+        "Cannot run: script return value contains a string that is not valid UTF-8"
     );
     // A truncated multi-byte sequence is rejected too.
     expect_lua_error(lua, "return string.char(0xC3)", "not valid UTF-8");

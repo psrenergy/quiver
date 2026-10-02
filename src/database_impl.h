@@ -8,11 +8,12 @@
 #include "type_validator.h"
 #include "ui_metadata.h"
 
+#include <spdlog/spdlog.h>
+#include <sqlite3.h>
+
 #include <map>
 #include <memory>
 #include <optional>
-#include <spdlog/spdlog.h>
-#include <sqlite3.h>
 #include <string>
 #include <vector>
 
@@ -346,8 +347,11 @@ struct Database::Impl {
     }
 
     // The write half: add (create) or replace (update) the element's rows in every prepared table.
-    void
-    insert_group_data(const std::map<std::string, GroupColumns>& tables, int64_t element_id, bool delete_existing) {
+    void insert_group_data(
+        const std::map<std::string, GroupColumns>& tables,
+        int64_t element_id,
+        bool delete_existing
+    ) {
         for (const auto& [table_name, entry] : tables) {
             insert_rows_into_group_table(table_name, entry.type, entry.columns, element_id, delete_existing);
         }

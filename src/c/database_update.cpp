@@ -113,7 +113,13 @@ QUIVER_C_API quiver_error_t quiver_database_update_vector_group(
 
     try {
         auto rows = unmarshal_group_columns_to_rows(
-            "update_vector_group", column_names, column_types, column_data, column_has_value, column_count, row_count
+            "update_vector_group",
+            column_names,
+            column_types,
+            column_data,
+            column_has_value,
+            column_count,
+            row_count
         );
         db->db.update_vector_group(collection, group, id, rows);
         return QUIVER_OK;
@@ -177,7 +183,13 @@ QUIVER_C_API quiver_error_t quiver_database_update_set_group(
 
     try {
         auto rows = unmarshal_group_columns_to_rows(
-            "update_set_group", column_names, column_types, column_data, column_has_value, column_count, row_count
+            "update_set_group",
+            column_names,
+            column_types,
+            column_data,
+            column_has_value,
+            column_count,
+            row_count
         );
         db->db.update_set_group(collection, group, id, rows);
         return QUIVER_OK;

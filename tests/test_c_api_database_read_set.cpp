@@ -1,10 +1,11 @@
 #include "test_utils.h"
 
-#include <algorithm>
 #include <gtest/gtest.h>
-#include <optional>
 #include <quiver/c/database.h>
 #include <quiver/c/element.h>
+
+#include <algorithm>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -16,7 +17,8 @@ TEST(DatabaseCApi, ReadSetStrings) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
 
@@ -74,7 +76,8 @@ TEST(DatabaseCApi, ReadSetEmpty) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
 
@@ -102,7 +105,8 @@ TEST(DatabaseCApi, ReadSetIncludesElementsWithNoRows) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
 
@@ -168,7 +172,8 @@ TEST(DatabaseCApi, ReadSetStringById) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
 
@@ -225,7 +230,8 @@ TEST(DatabaseCApi, ReadSetByIdEmpty) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
 
@@ -332,7 +338,12 @@ TEST(DatabaseCApi, ReadSetGroupByIdPreservesNullCells) {
     EXPECT_EQ(column_has_value[1][beta], 0);  // the NULL weight; its data slot is a placeholder
 
     quiver_database_free_time_series_data(
-        column_names, column_types, column_data, column_has_value, column_count, row_count
+        column_names,
+        column_types,
+        column_data,
+        column_has_value,
+        column_count,
+        row_count
     );
 
     // No rows: every out-array is NULL and both counts are 0. The counts are seeded non-zero so
@@ -385,7 +396,8 @@ TEST(DatabaseCApi, ReadSetIntegersNullCollection) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
 
@@ -403,7 +415,8 @@ TEST(DatabaseCApi, ReadSetIntegersNullOutput) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
 
@@ -447,7 +460,8 @@ TEST(DatabaseCApi, ReadSetStringsNullCollection) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
 
@@ -464,7 +478,8 @@ TEST(DatabaseCApi, ReadSetStringsNullOutput) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
 
@@ -514,7 +529,8 @@ TEST(DatabaseCApi, ReadSetStringsByIdNullCollection) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
 
@@ -530,7 +546,8 @@ TEST(DatabaseCApi, ReadSetStringsByIdNullOutput) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
 
@@ -743,7 +760,8 @@ TEST(DatabaseCApi, ReadSetStringsPreservesNullCells) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
 
@@ -845,7 +863,8 @@ TEST(DatabaseCApi, ReadSetIntegersPreservesNullCells) {
     uint8_t* by_id_mask = nullptr;
     size_t by_id_count = 0;
     ASSERT_EQ(
-        quiver_database_read_set_integers_by_id(db, "Child", "score", id, &by_id, &by_id_mask, &by_id_count), QUIVER_OK
+        quiver_database_read_set_integers_by_id(db, "Child", "score", id, &by_id, &by_id_mask, &by_id_count),
+        QUIVER_OK
     );
     ASSERT_EQ(by_id_count, 2);
     EXPECT_EQ(by_id_mask[0] + by_id_mask[1], 1);
@@ -899,7 +918,8 @@ TEST(DatabaseCApi, ReadSetFloatsPreservesNullCells) {
     uint8_t* by_id_mask = nullptr;
     size_t by_id_count = 0;
     ASSERT_EQ(
-        quiver_database_read_set_floats_by_id(db, "Items", "weight", id, &by_id, &by_id_mask, &by_id_count), QUIVER_OK
+        quiver_database_read_set_floats_by_id(db, "Items", "weight", id, &by_id, &by_id_mask, &by_id_count),
+        QUIVER_OK
     );
     ASSERT_EQ(by_id_count, 2);
     EXPECT_EQ(by_id_mask[0] + by_id_mask[1], 1);

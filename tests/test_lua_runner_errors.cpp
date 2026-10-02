@@ -194,7 +194,9 @@ TEST_F(LuaRunnerTest, DeleteFromNonExistentCollection) {
     quiver::LuaRunner lua(db);
 
     expect_lua_error(
-        lua, R"(db:delete_element("NonexistentCollection", 1))", "Cannot delete_element: collection not found"
+        lua,
+        R"(db:delete_element("NonexistentCollection", 1))",
+        "Cannot delete_element: collection not found"
     );
 }
 

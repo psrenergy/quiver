@@ -7,7 +7,9 @@
 
 class LuaRunnerCApiTest : public ::testing::Test {
 protected:
-    void SetUp() override { collections_schema = VALID_SCHEMA("collections.sql"); }
+    void SetUp() override {
+        collections_schema = VALID_SCHEMA("collections.sql");
+    }
     std::string collections_schema;
 };
 

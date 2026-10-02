@@ -13,8 +13,12 @@ extern "C" {
 
 // Open/close
 
-QUIVER_C_API quiver_error_t
-quiver_binary_file_open_file(const char* path, char mode, quiver_binary_metadata_t* md, quiver_binary_file_t** out) {
+QUIVER_C_API quiver_error_t quiver_binary_file_open_file(
+    const char* path,
+    char mode,
+    quiver_binary_metadata_t* md,
+    quiver_binary_file_t** out
+) {
     QUIVER_REQUIRE(path, out);
 
     try {
@@ -49,8 +53,11 @@ QUIVER_C_API quiver_error_t quiver_binary_file_create(const char* path, quiver_b
     }
 }
 
-QUIVER_C_API quiver_error_t
-quiver_binary_file_open(quiver_binary_file_t* binary_file, char mode, quiver_binary_metadata_t* md) {
+QUIVER_C_API quiver_error_t quiver_binary_file_open(
+    quiver_binary_file_t* binary_file,
+    char mode,
+    quiver_binary_metadata_t* md
+) {
     QUIVER_REQUIRE(binary_file);
 
     try {
@@ -138,8 +145,10 @@ QUIVER_C_API quiver_error_t quiver_binary_file_write(
 
 // Getters
 
-QUIVER_C_API quiver_error_t
-quiver_binary_file_get_metadata(quiver_binary_file_t* binary_file, quiver_binary_metadata_t** out) {
+QUIVER_C_API quiver_error_t quiver_binary_file_get_metadata(
+    quiver_binary_file_t* binary_file,
+    quiver_binary_metadata_t** out
+) {
     QUIVER_REQUIRE(binary_file, out);
 
     try {

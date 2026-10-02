@@ -28,7 +28,9 @@ ExpressionTernary::ExpressionTernary(
     std::shared_ptr<ExpressionNode> then_value,
     std::shared_ptr<ExpressionNode> else_value
 )
-    : operation_(operation), condition_(std::move(condition)), then_value_(std::move(then_value)),
+    : operation_(operation),
+      condition_(std::move(condition)),
+      then_value_(std::move(then_value)),
       else_value_(std::move(else_value)) {
     const auto& condition_meta = condition_->metadata();
     const auto& then_meta = then_value_->metadata();

@@ -1,9 +1,10 @@
 #include <argparse/argparse.hpp>
+#include <quiver/database.h>
+#include <quiver/lua_runner.h>
+
 #include <filesystem>
 #include <fstream>
 #include <iostream>
-#include <quiver/database.h>
-#include <quiver/lua_runner.h>
 #include <string>
 
 static std::string read_script_file(const std::string& path) {
@@ -23,16 +24,21 @@ static std::string read_script_file(const std::string& path) {
 }
 
 static quiver::LogLevel parse_log_level(const std::string& level) {
-    if (level == "debug")
+    if (level == "debug") {
         return quiver::LogLevel::Debug;
-    if (level == "info")
+    }
+    if (level == "info") {
         return quiver::LogLevel::Info;
-    if (level == "warn")
+    }
+    if (level == "warn") {
         return quiver::LogLevel::Warn;
-    if (level == "error")
+    }
+    if (level == "error") {
         return quiver::LogLevel::Error;
-    if (level == "off")
+    }
+    if (level == "off") {
         return quiver::LogLevel::Off;
+    }
     throw std::runtime_error("Unknown log level: " + level);
 }
 

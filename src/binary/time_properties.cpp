@@ -20,21 +20,28 @@ std::string frequency_to_string(TimeFrequency frequency) {
 }
 
 TimeFrequency frequency_from_string(const std::string& str) {
-    if (str == "yearly")
+    if (str == "yearly") {
         return TimeFrequency::Yearly;
-    if (str == "monthly")
+    }
+    if (str == "monthly") {
         return TimeFrequency::Monthly;
-    if (str == "weekly")
+    }
+    if (str == "weekly") {
         return TimeFrequency::Weekly;
-    if (str == "daily")
+    }
+    if (str == "daily") {
         return TimeFrequency::Daily;
-    if (str == "hourly")
+    }
+    if (str == "hourly") {
         return TimeFrequency::Hourly;
+    }
     throw std::invalid_argument("Unknown frequency: " + str);
 }
 
-std::chrono::system_clock::time_point
-TimeProperties::add_offset_from_int(std::chrono::system_clock::time_point base_datetime, int64_t value) const {
+std::chrono::system_clock::time_point TimeProperties::add_offset_from_int(
+    std::chrono::system_clock::time_point base_datetime,
+    int64_t value
+) const {
     // Flooring first is what keeps calendar steps exact: an inner dimension's base is already the start of
     // its parent's period (a 1st at midnight), so January 31 + one month can never become March 3.
     auto date = std::chrono::floor<std::chrono::days>(base_datetime);

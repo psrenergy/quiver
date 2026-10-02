@@ -1,11 +1,12 @@
 #include "test_utils.h"
 
-#include <filesystem>
-#include <fstream>
 #include <gtest/gtest.h>
 #include <quiver/c/database.h>
 #include <quiver/c/element.h>
 #include <quiver/c/options.h>
+
+#include <filesystem>
+#include <fstream>
 #include <set>
 #include <sstream>
 
@@ -30,7 +31,8 @@ TEST(DatabaseCApiCSV, ImportCSV_Scalar_RoundTrip) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
 
     // Create elements
@@ -66,7 +68,8 @@ TEST(DatabaseCApiCSV, ImportCSV_Scalar_RoundTrip) {
     // Import into fresh DB
     quiver_database_t* db2 = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db2), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db2),
+        QUIVER_OK
     );
 
     auto import_options = quiver_csv_options_default();
@@ -90,7 +93,8 @@ TEST(DatabaseCApiCSV, ImportCSV_Scalar_LabelOnThirdColumn) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
 
     auto csv_path = temp_csv("ImportScalarLabelCol3");
@@ -127,7 +131,8 @@ TEST(DatabaseCApiCSV, ImportCSV_Scalar_LabelOnThirdColumn) {
     uint8_t* status_mask = nullptr;
     size_t status_count = 0;
     ASSERT_EQ(
-        quiver_database_read_scalar_integers(db, "Items", "status", &statuses, &status_mask, &status_count), QUIVER_OK
+        quiver_database_read_scalar_integers(db, "Items", "status", &statuses, &status_mask, &status_count),
+        QUIVER_OK
     );
     ASSERT_EQ(status_count, 2u);
     EXPECT_EQ(statuses[0], 1);
@@ -154,7 +159,8 @@ TEST(DatabaseCApiCSV, ImportCSV_Vector_RoundTrip) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
 
     quiver_element_t* e1 = nullptr;
@@ -176,7 +182,8 @@ TEST(DatabaseCApiCSV, ImportCSV_Vector_RoundTrip) {
     auto csv_path = temp_csv("ImportVectorRT");
     auto csv_options = quiver_csv_options_default();
     ASSERT_EQ(
-        quiver_database_export_csv(db, "Items", "measurements", csv_path.string().c_str(), &csv_options), QUIVER_OK
+        quiver_database_export_csv(db, "Items", "measurements", csv_path.string().c_str(), &csv_options),
+        QUIVER_OK
     );
 
     // Clear vector data and re-import (parent element must exist for group import)
@@ -188,7 +195,8 @@ TEST(DatabaseCApiCSV, ImportCSV_Vector_RoundTrip) {
 
     auto import_options = quiver_csv_options_default();
     ASSERT_EQ(
-        quiver_database_import_csv(db, "Items", "measurements", csv_path.string().c_str(), &import_options), QUIVER_OK
+        quiver_database_import_csv(db, "Items", "measurements", csv_path.string().c_str(), &import_options),
+        QUIVER_OK
     );
 
     // Verify
@@ -214,7 +222,8 @@ TEST(DatabaseCApiCSV, ImportCSV_Set_RoundTrip) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
 
     quiver_element_t* e1 = nullptr;
@@ -271,7 +280,8 @@ TEST(DatabaseCApiCSV, ImportCSV_TimeSeries_RoundTrip) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
 
     quiver_element_t* e1 = nullptr;
@@ -290,7 +300,16 @@ TEST(DatabaseCApiCSV, ImportCSV_TimeSeries_RoundTrip) {
     const void* col_data[] = {date_times, temperatures, humidities};
     ASSERT_EQ(
         quiver_database_update_time_series_group(
-            db, "Items", "readings", id1, col_names, col_types, col_data, nullptr, 3, 2
+            db,
+            "Items",
+            "readings",
+            id1,
+            col_names,
+            col_types,
+            col_data,
+            nullptr,
+            3,
+            2
         ),
         QUIVER_OK
     );
@@ -303,14 +322,24 @@ TEST(DatabaseCApiCSV, ImportCSV_TimeSeries_RoundTrip) {
     // Clear and re-import
     ASSERT_EQ(
         quiver_database_update_time_series_group(
-            db, "Items", "readings", id1, nullptr, nullptr, nullptr, nullptr, 0, 0
+            db,
+            "Items",
+            "readings",
+            id1,
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            0,
+            0
         ),
         QUIVER_OK
     );
 
     auto import_options = quiver_csv_options_default();
     ASSERT_EQ(
-        quiver_database_import_csv(db, "Items", "readings", csv_path.string().c_str(), &import_options), QUIVER_OK
+        quiver_database_import_csv(db, "Items", "readings", csv_path.string().c_str(), &import_options),
+        QUIVER_OK
     );
 
     // Verify via read
@@ -337,7 +366,12 @@ TEST(DatabaseCApiCSV, ImportCSV_TimeSeries_RoundTrip) {
     );
     EXPECT_EQ(out_row_count, 2u);
     quiver_database_free_time_series_data(
-        out_col_names, out_col_types, out_col_data, out_col_has_value, out_col_count, out_row_count
+        out_col_names,
+        out_col_types,
+        out_col_data,
+        out_col_has_value,
+        out_col_count,
+        out_row_count
     );
 
     fs::remove(csv_path);
@@ -348,7 +382,8 @@ TEST(DatabaseCApiCSV, ImportCSV_Scalar_HeaderOnly_ClearsTable) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
 
     // Populate
@@ -386,7 +421,8 @@ TEST(DatabaseCApiCSV, ImportCSV_SemicolonSepHeader_RoundTrip) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
 
     auto csv_path = temp_csv("ImportSemicolonSep");
@@ -410,7 +446,8 @@ TEST(DatabaseCApiCSV, ImportCSV_SemicolonAutoDetect_RoundTrip) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
 
     auto csv_path = temp_csv("ImportSemicolonAuto");
@@ -438,7 +475,8 @@ TEST(DatabaseCApiCSV, ImportCSV_CannotOpenFile_ReturnsError) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
 
     auto import_options = quiver_csv_options_default();
@@ -458,7 +496,8 @@ TEST(DatabaseCApiCSV, ImportCSV_Scalar_BadCustomDateTimeFormat_ReturnsError) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
 
     auto csv_path = temp_csv("ImportBadCustomDateTime");
@@ -491,12 +530,14 @@ TEST(DatabaseCApiCSV, ImportCSV_RowColumnCountMismatch_ReturnsError) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
 
     auto csv_path = temp_csv("ImportRowColMismatch");
     write_csv_file(
-        csv_path.string(), "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,1,9.99,,note,EXTRA\n"
+        csv_path.string(),
+        "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,1,9.99,,note,EXTRA\n"
     );
 
     auto import_options = quiver_csv_options_default();
@@ -539,7 +580,8 @@ TEST(DatabaseCApiCSV, ImportCSV_Scalar_SelfFK_InvalidLabel_ReturnsError) {
 
     std::string err = quiver_get_last_error();
     EXPECT_NE(
-        err.find("Could not find an existing element from collection Child with label NonExistent"), std::string::npos
+        err.find("Could not find an existing element from collection Child with label NonExistent"),
+        std::string::npos
     );
 
     fs::remove(csv_path);
@@ -713,12 +755,14 @@ TEST(DatabaseCApiCSV, ImportCSV_Vector_FK_InvalidLabel_ReturnsError) {
 
     auto import_options = quiver_csv_options_default();
     EXPECT_EQ(
-        quiver_database_import_csv(db, "Child", "refs", csv_path.string().c_str(), &import_options), QUIVER_ERROR
+        quiver_database_import_csv(db, "Child", "refs", csv_path.string().c_str(), &import_options),
+        QUIVER_ERROR
     );
 
     std::string err = quiver_get_last_error();
     EXPECT_NE(
-        err.find("Could not find an existing element from collection Parent with label NonExistent"), std::string::npos
+        err.find("Could not find an existing element from collection Parent with label NonExistent"),
+        std::string::npos
     );
     EXPECT_NE(err.find("Create the element before referencing it"), std::string::npos);
 
@@ -734,7 +778,8 @@ TEST(DatabaseCApiCSV, ImportCSV_Group_NotNull_ReturnsError) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
 
     quiver_element_t* e1 = nullptr;
@@ -750,7 +795,8 @@ TEST(DatabaseCApiCSV, ImportCSV_Group_NotNull_ReturnsError) {
 
     auto import_options = quiver_csv_options_default();
     EXPECT_EQ(
-        quiver_database_import_csv(db, "Items", "tags", csv_path.string().c_str(), &import_options), QUIVER_ERROR
+        quiver_database_import_csv(db, "Items", "tags", csv_path.string().c_str(), &import_options),
+        QUIVER_ERROR
     );
 
     std::string err = quiver_get_last_error();
@@ -768,7 +814,8 @@ TEST(DatabaseCApiCSV, ImportCSV_TimeSeries_EnumInGroup_RoundTrip) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
 
     quiver_element_t* e1 = nullptr;
@@ -844,7 +891,12 @@ TEST(DatabaseCApiCSV, ImportCSV_TimeSeries_EnumInGroup_RoundTrip) {
     EXPECT_EQ(humidity_data[1], 90);
 
     quiver_database_free_time_series_data(
-        out_col_names, out_col_types, out_col_data, out_col_has_value, out_col_count, out_row_count
+        out_col_names,
+        out_col_types,
+        out_col_data,
+        out_col_has_value,
+        out_col_count,
+        out_row_count
     );
 
     fs::remove(csv_path);
@@ -859,7 +911,8 @@ TEST(DatabaseCApiCSV, ImportCSV_Group_InvalidEnum_ReturnsError) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
 
     quiver_element_t* e1 = nullptr;
@@ -893,7 +946,8 @@ TEST(DatabaseCApiCSV, ImportCSV_Group_InvalidEnum_ReturnsError) {
     csv_options.enum_group_count = 1;
 
     EXPECT_EQ(
-        quiver_database_import_csv(db, "Items", "readings", csv_path.string().c_str(), &csv_options), QUIVER_ERROR
+        quiver_database_import_csv(db, "Items", "readings", csv_path.string().c_str(), &csv_options),
+        QUIVER_ERROR
     );
 
     std::string err = quiver_get_last_error();
@@ -911,7 +965,8 @@ TEST(DatabaseCApiCSV, ImportCSV_Group_DuplicateEntries_ReturnsError) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
 
     quiver_element_t* e1 = nullptr;
@@ -927,7 +982,8 @@ TEST(DatabaseCApiCSV, ImportCSV_Group_DuplicateEntries_ReturnsError) {
 
     auto import_options = quiver_csv_options_default();
     EXPECT_EQ(
-        quiver_database_import_csv(db, "Items", "tags", csv_path.string().c_str(), &import_options), QUIVER_ERROR
+        quiver_database_import_csv(db, "Items", "tags", csv_path.string().c_str(), &import_options),
+        QUIVER_ERROR
     );
 
     std::string err = quiver_get_last_error();
@@ -945,7 +1001,8 @@ TEST(DatabaseCApiCSV, ImportCSV_Vector_NonNumericIndex_ReturnsError) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
 
     quiver_element_t* e1 = nullptr;
@@ -980,7 +1037,8 @@ TEST(DatabaseCApiCSV, ImportCSV_Scalar_TrailingEmptyColumns) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
 
     auto csv_path = temp_csv("ImportScalarTrailing");
@@ -1011,7 +1069,8 @@ TEST(DatabaseCApiCSV, ImportCSV_Vector_TrailingEmptyColumns) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
 
     quiver_element_t* e1 = nullptr;
@@ -1033,7 +1092,8 @@ TEST(DatabaseCApiCSV, ImportCSV_Vector_TrailingEmptyColumns) {
 
     auto import_options = quiver_csv_options_default();
     ASSERT_EQ(
-        quiver_database_import_csv(db, "Items", "measurements", csv_path.string().c_str(), &import_options), QUIVER_OK
+        quiver_database_import_csv(db, "Items", "measurements", csv_path.string().c_str(), &import_options),
+        QUIVER_OK
     );
 
     double* vals = nullptr;
@@ -1057,7 +1117,8 @@ TEST(DatabaseCApiCSV, ImportCSV_InsideTransactionFails) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
 
     auto csv_path = temp_csv("ImportInTransaction");
@@ -1086,7 +1147,8 @@ TEST(DatabaseCApiCSV, ImportCSV_Scalar_OmittedElement_DeletesItsGroupRows) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
 
     quiver_element_t* dropped = nullptr;
@@ -1131,9 +1193,11 @@ TEST(DatabaseCApiCSV, ImportCSV_Scalar_OmittedElement_DeletesItsGroupRows) {
     quiver_database_free_mask(mask);
 
     // The dropped element's group rows went with it.
-    for (const char* sql :
-         {"SELECT COUNT(*) FROM Items_vector_measurements WHERE id NOT IN (SELECT id FROM Items)",
-          "SELECT COUNT(*) FROM Items_set_tags WHERE id NOT IN (SELECT id FROM Items)"}) {
+    for (
+        const char* sql :
+        {"SELECT COUNT(*) FROM Items_vector_measurements WHERE id NOT IN (SELECT id FROM Items)",
+         "SELECT COUNT(*) FROM Items_set_tags WHERE id NOT IN (SELECT id FROM Items)"}
+    ) {
         int64_t orphans = -1;
         int has_value = 0;
         ASSERT_EQ(quiver_database_query_integer(db, sql, nullptr, nullptr, 0, &orphans, &has_value), QUIVER_OK);
@@ -1177,7 +1241,8 @@ TEST(DatabaseCApiCSV, ImportCSV_Scalar_OmittedParent_ClearsRelation) {
     int64_t parent_id = -1;
     int has_value = 1;
     ASSERT_EQ(
-        quiver_database_read_scalar_integer_by_id(db, "Child", "parent_id", child_id, &parent_id, &has_value), QUIVER_OK
+        quiver_database_read_scalar_integer_by_id(db, "Child", "parent_id", child_id, &parent_id, &has_value),
+        QUIVER_OK
     );
     EXPECT_EQ(has_value, 0);
 
@@ -1188,7 +1253,8 @@ TEST(DatabaseCApiCSV, ImportCSV_Scalar_RepeatedExistingLabel_ReturnsError) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
 
     quiver_element_t* e1 = nullptr;
@@ -1201,7 +1267,8 @@ TEST(DatabaseCApiCSV, ImportCSV_Scalar_RepeatedExistingLabel_ReturnsError) {
 
     auto csv_path = temp_csv("ImportRepeatedExistingLabel");
     write_csv_file(
-        csv_path.string(), "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Beta,,,,\nItem1,Gamma,,,,\n"
+        csv_path.string(),
+        "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Beta,,,,\nItem1,Gamma,,,,\n"
     );
     auto import_options = quiver_csv_options_default();
     EXPECT_EQ(quiver_database_import_csv(db, "Items", "", csv_path.string().c_str(), &import_options), QUIVER_ERROR);

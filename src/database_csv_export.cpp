@@ -47,8 +47,9 @@ static std::string value_to_csv_string(
         if (auto attr_it = options.enum_labels.find(column_name); attr_it != options.enum_labels.end()) {
             for (const auto& [locale, labels] : attr_it->second) {
                 for (const auto& [label, val] : labels) {
-                    if (val == int_val)
+                    if (val == int_val) {
                         return label;
+                    }
                 }
             }
         }
@@ -182,8 +183,9 @@ void Database::export_csv(
         // Build SELECT query with columns in schema order
         std::string select_cols;
         for (size_t i = 0; i < csv_columns.size(); ++i) {
-            if (i > 0)
+            if (i > 0) {
                 select_cols += ", ";
+            }
             select_cols += csv_columns[i];
         }
 
@@ -230,8 +232,9 @@ void Database::export_csv(
         // Build SELECT query: C.label + group data columns with JOIN
         std::string select_cols = "C.label";
         for (const auto& col : csv_columns) {
-            if (col == "id")
+            if (col == "id") {
                 continue;
+            }
             select_cols += ", G." + col;
         }
 

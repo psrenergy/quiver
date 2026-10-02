@@ -12,14 +12,15 @@ enum class DataType { Integer, Real, Text, DateTime };
 // nullopt for a declared type Quiver does not support (e.g. BLOB, NUMERIC, or no type at all);
 // Schema::query_columns turns that into an error naming the table and column.
 inline std::optional<DataType> data_type_from_string(const std::string& type_str) {
-    if (type_str == "INTEGER")
+    if (type_str == "INTEGER") {
         return DataType::Integer;
-    else if (type_str == "REAL")
+    } else if (type_str == "REAL") {
         return DataType::Real;
-    else if (type_str == "TEXT")
+    } else if (type_str == "TEXT") {
         return DataType::Text;
-    else if (type_str == "DATE_TIME")
+    } else if (type_str == "DATE_TIME") {
         return DataType::DateTime;
+    }
     return std::nullopt;
 }
 

@@ -49,8 +49,11 @@ BinaryFile::~BinaryFile() = default;
 BinaryFile::BinaryFile(BinaryFile&& other) noexcept = default;
 BinaryFile& BinaryFile::operator=(BinaryFile&& other) noexcept = default;
 
-BinaryFile
-BinaryFile::open_file(const std::string& file_path, char mode, const std::optional<BinaryMetadata>& metadata) {
+BinaryFile BinaryFile::open_file(
+    const std::string& file_path,
+    char mode,
+    const std::optional<BinaryMetadata>& metadata
+) {
     BinaryFile binary_file(file_path);
     binary_file.open(mode, metadata);
     return binary_file;
@@ -141,8 +144,9 @@ std::vector<double> BinaryFile::read(const std::unordered_map<std::string, int64
             if (std::isnan(data[i])) {
                 std::string dim_str;
                 for (const auto& [name, value] : dims) {
-                    if (!dim_str.empty())
+                    if (!dim_str.empty()) {
                         dim_str += ", ";
+                    }
                     dim_str += name + "=" + std::to_string(value);
                 }
                 throw std::runtime_error("Cannot read: data at {" + dim_str + "} contains null values");
@@ -246,8 +250,9 @@ void BinaryFile::validate_dimension_values(const std::unordered_map<std::string,
         // spills into the next period, where its position is no longer the value given
         for (size_t i = 0; i < dimensions.size(); ++i) {
             const auto& dim = dimensions[i];
-            if (!dim.is_time_dimension() || dim.time->parent_dimension_index == -1)
+            if (!dim.is_time_dimension() || dim.time->parent_dimension_index == -1) {
                 continue;
+            }
 
             int64_t expected_value = dims.at(dim.name);
             int64_t resulting_value = position_in_parent(metadata, i, datetime);
@@ -285,7 +290,8 @@ void BinaryFile::fill_file_with_nulls() {
     // Write NaN-filled buffer in chunks to avoid excessive memory usage
     constexpr int64_t CHUNK_DOUBLES = 1024 * 1024;  // ~8 MB per chunk
     std::vector<double> buffer(
-        static_cast<size_t>(std::min(total_doubles, CHUNK_DOUBLES)), std::numeric_limits<double>::quiet_NaN()
+        static_cast<size_t>(std::min(total_doubles, CHUNK_DOUBLES)),
+        std::numeric_limits<double>::quiet_NaN()
     );
 
     impl_->io->seekp(0);

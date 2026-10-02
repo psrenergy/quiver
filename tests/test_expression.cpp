@@ -1,15 +1,16 @@
-#include <chrono>
-#include <cmath>
-#include <cstdio>
-#include <filesystem>
-#include <fstream>
-#include <functional>
 #include <gtest/gtest.h>
 #include <quiver/binary/binary_file.h>
 #include <quiver/binary/binary_metadata.h>
 #include <quiver/binary/iteration.h>
 #include <quiver/element.h>
 #include <quiver/expression/expression.h>
+
+#include <chrono>
+#include <cmath>
+#include <cstdio>
+#include <filesystem>
+#include <fstream>
+#include <functional>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -29,14 +30,17 @@ protected:
         cleanup();
     }
 
-    void TearDown() override { cleanup(); }
+    void TearDown() override {
+        cleanup();
+    }
 
     void cleanup() {
         for (const auto& p : {path_a, path_b, path_c, path_out, path_out2}) {
             for (auto ext : {".qvr", ".toml"}) {
                 auto full = p + ext;
-                if (fs::exists(full))
+                if (fs::exists(full)) {
                     fs::remove(full);
+                }
             }
         }
     }
@@ -77,16 +81,18 @@ protected:
         std::vector<int64_t> dims = first_dimensions(meta);
         std::vector<double> row(meta.labels.size());
         for (;;) {
-            for (size_t k = 0; k < row.size(); ++k)
+            for (size_t k = 0; k < row.size(); ++k) {
                 row[k] = fill(dims, k);
+            }
             std::unordered_map<std::string, int64_t> dim_map;
             for (size_t i = 0; i < meta.dimensions.size(); ++i) {
                 dim_map[meta.dimensions[i].name] = dims[i];
             }
             writer.write(row, dim_map);
             auto nxt = next_dimensions(meta, dims);
-            if (!nxt)
+            if (!nxt) {
                 break;
+            }
             dims = std::move(*nxt);
         }
     }
@@ -104,8 +110,9 @@ protected:
             auto cell = reader.read(dim_map, true);
             out.insert(out.end(), cell.begin(), cell.end());
             auto nxt = next_dimensions(meta, dims);
-            if (!nxt)
+            if (!nxt) {
                 break;
+            }
             dims = std::move(*nxt);
         }
         return out;
@@ -125,8 +132,9 @@ TEST_F(ExpressionFixture, IdentityFile) {
     auto orig = read_all_cells(path_a);
     auto copy = read_all_cells(path_out);
     ASSERT_EQ(orig.size(), copy.size());
-    for (size_t i = 0; i < orig.size(); ++i)
+    for (size_t i = 0; i < orig.size(); ++i) {
         EXPECT_DOUBLE_EQ(orig[i], copy[i]);
+    }
 }
 
 TEST_F(ExpressionFixture, SaveProducesReadableFile) {
@@ -160,8 +168,9 @@ TEST_F(ExpressionFixture, SaveOpenedTwiceProducesSameOutput) {
     auto v1 = read_all_cells(path_out);
     auto v2 = read_all_cells(path_out2);
     ASSERT_EQ(v1.size(), v2.size());
-    for (size_t i = 0; i < v1.size(); ++i)
+    for (size_t i = 0; i < v1.size(); ++i) {
         EXPECT_DOUBLE_EQ(v1[i], v2[i]);
+    }
 }
 
 TEST_F(ExpressionFixture, SelfSaveCollisionThrows) {
@@ -224,8 +233,9 @@ TEST_F(ExpressionFixture, AddTwoFiles) {
     auto vb = read_all_cells(path_b);
     auto vo = read_all_cells(path_out);
     ASSERT_EQ(va.size(), vo.size());
-    for (size_t i = 0; i < va.size(); ++i)
+    for (size_t i = 0; i < va.size(); ++i) {
         EXPECT_DOUBLE_EQ(vo[i], va[i] + vb[i]);
+    }
 }
 
 TEST_F(ExpressionFixture, Chained) {
@@ -267,8 +277,9 @@ TEST_F(ExpressionFixture, ScalarBroadcastAddRight) {
     auto va = read_all_cells(path_a);
     auto vo = read_all_cells(path_out);
     ASSERT_EQ(va.size(), vo.size());
-    for (size_t i = 0; i < va.size(); ++i)
+    for (size_t i = 0; i < va.size(); ++i) {
         EXPECT_DOUBLE_EQ(vo[i], va[i] + 2.0);
+    }
 }
 
 TEST_F(ExpressionFixture, SamePathTwice) {
@@ -284,8 +295,9 @@ TEST_F(ExpressionFixture, SamePathTwice) {
     auto va = read_all_cells(path_a);
     auto vo = read_all_cells(path_out);
     ASSERT_EQ(va.size(), vo.size());
-    for (size_t i = 0; i < va.size(); ++i)
+    for (size_t i = 0; i < va.size(); ++i) {
         EXPECT_DOUBLE_EQ(vo[i], 2.0 * va[i]);
+    }
 }
 
 TEST_F(ExpressionFixture, MismatchedShapesThrows) {
@@ -477,8 +489,9 @@ TEST_F(ExpressionFixture, SingleLabelOperandsWithDifferentNamesBroadcast) {
     auto va = read_all_cells(path_a);
     auto vo = read_all_cells(path_out);
     ASSERT_EQ(vo.size(), va.size());
-    for (size_t i = 0; i < vo.size(); ++i)
+    for (size_t i = 0; i < vo.size(); ++i) {
         EXPECT_DOUBLE_EQ(vo[i], va[i] - 1.0) << " at index " << i;
+    }
 }
 
 TEST_F(ExpressionFixture, LogicalOnSingleLabelOperandsWithDifferentNames) {
@@ -502,8 +515,9 @@ TEST_F(ExpressionFixture, LogicalOnSingleLabelOperandsWithDifferentNames) {
     auto vb = read_all_cells(path_b);
     auto vo = read_all_cells(path_out);
     ASSERT_EQ(vo.size(), va.size());
-    for (size_t i = 0; i < vo.size(); ++i)
+    for (size_t i = 0; i < vo.size(); ++i) {
         EXPECT_DOUBLE_EQ(vo[i], (va[i] > 1.0 && vb[i] < 2.0) ? 1.0 : 0.0) << " at index " << i;
+    }
 }
 
 TEST_F(ExpressionFixture, MirrorTimeNonTimeMismatchAThrows) {
@@ -651,8 +665,9 @@ TEST_F(ExpressionFixture, SubtractTwoFiles) {
     auto vb = read_all_cells(path_b);
     auto vo = read_all_cells(path_out);
     ASSERT_EQ(va.size(), vo.size());
-    for (size_t i = 0; i < va.size(); ++i)
+    for (size_t i = 0; i < va.size(); ++i) {
         EXPECT_DOUBLE_EQ(vo[i], va[i] - vb[i]);
+    }
 }
 
 TEST_F(ExpressionFixture, MultiplyTwoFiles) {
@@ -672,8 +687,9 @@ TEST_F(ExpressionFixture, MultiplyTwoFiles) {
     auto vb = read_all_cells(path_b);
     auto vo = read_all_cells(path_out);
     ASSERT_EQ(va.size(), vo.size());
-    for (size_t i = 0; i < va.size(); ++i)
+    for (size_t i = 0; i < va.size(); ++i) {
         EXPECT_DOUBLE_EQ(vo[i], va[i] * vb[i]);
+    }
 }
 
 TEST_F(ExpressionFixture, DivideTwoFiles) {
@@ -693,8 +709,9 @@ TEST_F(ExpressionFixture, DivideTwoFiles) {
     auto vb = read_all_cells(path_b);
     auto vo = read_all_cells(path_out);
     ASSERT_EQ(va.size(), vo.size());
-    for (size_t i = 0; i < va.size(); ++i)
+    for (size_t i = 0; i < va.size(); ++i) {
         EXPECT_DOUBLE_EQ(vo[i], va[i] / vb[i]);
+    }
 }
 
 TEST_F(ExpressionFixture, ScalarBroadcastAddLeft) {
@@ -709,8 +726,9 @@ TEST_F(ExpressionFixture, ScalarBroadcastAddLeft) {
     auto va = read_all_cells(path_a);
     auto vo = read_all_cells(path_out);
     ASSERT_EQ(va.size(), vo.size());
-    for (size_t i = 0; i < va.size(); ++i)
+    for (size_t i = 0; i < va.size(); ++i) {
         EXPECT_DOUBLE_EQ(vo[i], 2.0 + va[i]);
+    }
 }
 
 TEST_F(ExpressionFixture, ScalarBroadcastSubtractRight) {
@@ -725,8 +743,9 @@ TEST_F(ExpressionFixture, ScalarBroadcastSubtractRight) {
     auto va = read_all_cells(path_a);
     auto vo = read_all_cells(path_out);
     ASSERT_EQ(va.size(), vo.size());
-    for (size_t i = 0; i < va.size(); ++i)
+    for (size_t i = 0; i < va.size(); ++i) {
         EXPECT_DOUBLE_EQ(vo[i], va[i] - 5.0);
+    }
 }
 
 TEST_F(ExpressionFixture, ScalarBroadcastSubtractLeft) {
@@ -741,8 +760,9 @@ TEST_F(ExpressionFixture, ScalarBroadcastSubtractLeft) {
     auto va = read_all_cells(path_a);
     auto vo = read_all_cells(path_out);
     ASSERT_EQ(va.size(), vo.size());
-    for (size_t i = 0; i < va.size(); ++i)
+    for (size_t i = 0; i < va.size(); ++i) {
         EXPECT_DOUBLE_EQ(vo[i], 100.0 - va[i]);
+    }
 }
 
 TEST_F(ExpressionFixture, ScalarBroadcastMultiplyRight) {
@@ -757,8 +777,9 @@ TEST_F(ExpressionFixture, ScalarBroadcastMultiplyRight) {
     auto va = read_all_cells(path_a);
     auto vo = read_all_cells(path_out);
     ASSERT_EQ(va.size(), vo.size());
-    for (size_t i = 0; i < va.size(); ++i)
+    for (size_t i = 0; i < va.size(); ++i) {
         EXPECT_DOUBLE_EQ(vo[i], va[i] * 3.0);
+    }
 }
 
 TEST_F(ExpressionFixture, ScalarBroadcastMultiplyLeft) {
@@ -773,8 +794,9 @@ TEST_F(ExpressionFixture, ScalarBroadcastMultiplyLeft) {
     auto va = read_all_cells(path_a);
     auto vo = read_all_cells(path_out);
     ASSERT_EQ(va.size(), vo.size());
-    for (size_t i = 0; i < va.size(); ++i)
+    for (size_t i = 0; i < va.size(); ++i) {
         EXPECT_DOUBLE_EQ(vo[i], 4.0 * va[i]);
+    }
 }
 
 TEST_F(ExpressionFixture, ScalarBroadcastDivideRight) {
@@ -789,8 +811,9 @@ TEST_F(ExpressionFixture, ScalarBroadcastDivideRight) {
     auto va = read_all_cells(path_a);
     auto vo = read_all_cells(path_out);
     ASSERT_EQ(va.size(), vo.size());
-    for (size_t i = 0; i < va.size(); ++i)
+    for (size_t i = 0; i < va.size(); ++i) {
         EXPECT_DOUBLE_EQ(vo[i], va[i] / 4.0);
+    }
 }
 
 TEST_F(ExpressionFixture, ScalarBroadcastDivideLeft) {
@@ -805,8 +828,9 @@ TEST_F(ExpressionFixture, ScalarBroadcastDivideLeft) {
     auto va = read_all_cells(path_a);
     auto vo = read_all_cells(path_out);
     ASSERT_EQ(va.size(), vo.size());
-    for (size_t i = 0; i < va.size(); ++i)
+    for (size_t i = 0; i < va.size(); ++i) {
         EXPECT_DOUBLE_EQ(vo[i], 100.0 / va[i]);
+    }
 }
 
 TEST_F(ExpressionFixture, BroadcastSizeOneDim) {
@@ -1119,8 +1143,9 @@ TEST_F(ExpressionFixture, ImplicitConversionFromBinaryFile) {
     auto vb = read_all_cells(path_b);
     auto vo = read_all_cells(path_out);
     ASSERT_EQ(va.size(), vo.size());
-    for (size_t i = 0; i < va.size(); ++i)
+    for (size_t i = 0; i < va.size(); ++i) {
         EXPECT_DOUBLE_EQ(vo[i], va[i] + vb[i]);
+    }
 }
 
 // =============================================================================
@@ -1305,8 +1330,9 @@ TEST_F(ExpressionFixture, AggregateSumSkipsNaNs) {
     const double kNan = std::numeric_limits<double>::quiet_NaN();
     write_qvr(path_a, md, [kNan](const std::vector<int64_t>& dims, size_t k) {
         // Mark row=2 as NaN. Sum across row should skip it.
-        if (dims[0] == 2)
+        if (dims[0] == 2) {
             return kNan;
+        }
         return static_cast<double>(dims[0] * 10 + dims[1] + static_cast<int64_t>(k));
     });
     auto a = BinaryFile::open_file(path_a, 'r');
@@ -1677,8 +1703,9 @@ TEST_F(ExpressionFixture, AgentSkipsNaNs) {
     auto md = make_simple_metadata();
     const double kNan = std::numeric_limits<double>::quiet_NaN();
     write_qvr(path_a, md, [kNan](const std::vector<int64_t>& dims, size_t k) {
-        if (k == 0)
+        if (k == 0) {
             return kNan;
+        }
         return static_cast<double>(dims[0] * 10 + dims[1] + static_cast<int64_t>(k));
     });
     auto a = BinaryFile::open_file(path_a, 'r');
@@ -1744,10 +1771,12 @@ TEST_F(ExpressionFixture, AgentPercentileOutOfRangeThrows) {
     write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t) { return 1.0; });
     auto a = BinaryFile::open_file(path_a, 'r');
     EXPECT_THROW(
-        Expression(a).aggregate_agents(ExpressionAggregateAgents::Operation::Percentile, 1.5), std::runtime_error
+        Expression(a).aggregate_agents(ExpressionAggregateAgents::Operation::Percentile, 1.5),
+        std::runtime_error
     );
     EXPECT_THROW(
-        Expression(a).aggregate_agents(ExpressionAggregateAgents::Operation::Percentile, -0.1), std::runtime_error
+        Expression(a).aggregate_agents(ExpressionAggregateAgents::Operation::Percentile, -0.1),
+        std::runtime_error
     );
 }
 
@@ -1868,8 +1897,9 @@ TEST_F(ExpressionFixture, UnaryNegate) {
     auto va = read_all_cells(path_a);
     auto vo = read_all_cells(path_out);
     ASSERT_EQ(va.size(), vo.size());
-    for (size_t i = 0; i < va.size(); ++i)
+    for (size_t i = 0; i < va.size(); ++i) {
         EXPECT_DOUBLE_EQ(vo[i], -va[i]);
+    }
 }
 
 TEST_F(ExpressionFixture, UnaryAbs) {
@@ -1886,8 +1916,9 @@ TEST_F(ExpressionFixture, UnaryAbs) {
     auto va = read_all_cells(path_a);
     auto vo = read_all_cells(path_out);
     ASSERT_EQ(va.size(), vo.size());
-    for (size_t i = 0; i < va.size(); ++i)
+    for (size_t i = 0; i < va.size(); ++i) {
         EXPECT_DOUBLE_EQ(vo[i], std::abs(va[i]));
+    }
 }
 
 TEST_F(ExpressionFixture, UnarySqrt) {
@@ -1902,8 +1933,9 @@ TEST_F(ExpressionFixture, UnarySqrt) {
     auto va = read_all_cells(path_a);
     auto vo = read_all_cells(path_out);
     ASSERT_EQ(va.size(), vo.size());
-    for (size_t i = 0; i < va.size(); ++i)
+    for (size_t i = 0; i < va.size(); ++i) {
         EXPECT_DOUBLE_EQ(vo[i], std::sqrt(va[i]));
+    }
 }
 
 TEST_F(ExpressionFixture, UnarySqrtPropagatesNaNOnNegative) {
@@ -1914,8 +1946,9 @@ TEST_F(ExpressionFixture, UnarySqrtPropagatesNaNOnNegative) {
     e.save(path_out);
 
     auto vo = read_all_cells(path_out);
-    for (size_t i = 0; i < vo.size(); ++i)
+    for (size_t i = 0; i < vo.size(); ++i) {
         EXPECT_TRUE(std::isnan(vo[i]));
+    }
 }
 
 TEST_F(ExpressionFixture, UnaryLog) {
@@ -1930,8 +1963,9 @@ TEST_F(ExpressionFixture, UnaryLog) {
     auto va = read_all_cells(path_a);
     auto vo = read_all_cells(path_out);
     ASSERT_EQ(va.size(), vo.size());
-    for (size_t i = 0; i < va.size(); ++i)
+    for (size_t i = 0; i < va.size(); ++i) {
         EXPECT_DOUBLE_EQ(vo[i], std::log(va[i]));
+    }
 }
 
 TEST_F(ExpressionFixture, UnaryExp) {
@@ -1947,8 +1981,9 @@ TEST_F(ExpressionFixture, UnaryExp) {
     auto va = read_all_cells(path_a);
     auto vo = read_all_cells(path_out);
     ASSERT_EQ(va.size(), vo.size());
-    for (size_t i = 0; i < va.size(); ++i)
+    for (size_t i = 0; i < va.size(); ++i) {
         EXPECT_DOUBLE_EQ(vo[i], std::exp(va[i]));
+    }
 }
 
 TEST_F(ExpressionFixture, UnaryMetadataPreserved) {
@@ -1981,8 +2016,9 @@ TEST_F(ExpressionFixture, UnaryComposes) {
     auto va = read_all_cells(path_a);
     auto vo = read_all_cells(path_out);
     ASSERT_EQ(va.size(), vo.size());
-    for (size_t i = 0; i < va.size(); ++i)
+    for (size_t i = 0; i < va.size(); ++i) {
         EXPECT_DOUBLE_EQ(vo[i], std::abs(va[i]));
+    }
 }
 
 TEST_F(ExpressionFixture, UnaryComposesWithBinary) {
@@ -2003,8 +2039,9 @@ TEST_F(ExpressionFixture, UnaryComposesWithBinary) {
     auto vb = read_all_cells(path_b);
     auto vo = read_all_cells(path_out);
     ASSERT_EQ(va.size(), vo.size());
-    for (size_t i = 0; i < va.size(); ++i)
+    for (size_t i = 0; i < va.size(); ++i) {
         EXPECT_DOUBLE_EQ(vo[i], -(va[i] + vb[i]));
+    }
 }
 
 TEST_F(ExpressionFixture, IfElseSelectsByCondition) {
@@ -2174,8 +2211,9 @@ TEST_F(ExpressionFixture, IfElseSingleLabelOperandsTakeThenLabels) {
     auto vc = read_all_cells(path_a);
     auto vo = read_all_cells(path_out);
     ASSERT_EQ(vo.size(), vc.size());
-    for (size_t i = 0; i < vo.size(); ++i)
+    for (size_t i = 0; i < vo.size(); ++i) {
         EXPECT_DOUBLE_EQ(vo[i], (vc[i] != 0.0) ? 10.0 : 20.0) << " at index " << i;
+    }
 }
 
 TEST_F(ExpressionFixture, IfElseDimensionsFollowConditionAndDatetimeFollowsThen) {
@@ -2400,8 +2438,9 @@ TEST_F(ExpressionFixture, SelectAgentsAfterBinary) {
     auto vo = read_all_cells(path_out);
     ASSERT_EQ(vo.size(), 6u);
     // val1 (k=0): 10 + 20 = 30 in every cell.
-    for (double v : vo)
+    for (double v : vo) {
         EXPECT_DOUBLE_EQ(v, 30.0);
+    }
 }
 
 // =============================================================================
@@ -2425,8 +2464,9 @@ TEST_F(ExpressionFixture, RenameAgentsPartial) {
     auto orig = read_all_cells(path_a);
     auto renamed = read_all_cells(path_out);
     ASSERT_EQ(orig.size(), renamed.size());
-    for (size_t i = 0; i < orig.size(); ++i)
+    for (size_t i = 0; i < orig.size(); ++i) {
         EXPECT_DOUBLE_EQ(orig[i], renamed[i]);
+    }
 }
 
 TEST_F(ExpressionFixture, RenameAgentsAll) {
@@ -2535,8 +2575,9 @@ TEST_F(ExpressionFixture, ComparisonAllOpsTwoFiles) {
         // Clear only the output between ops; inputs stay written (readers above still hold them).
         for (auto ext : {".qvr", ".toml"}) {
             auto full = path_out + ext;
-            if (fs::exists(full))
+            if (fs::exists(full)) {
                 fs::remove(full);
+            }
         }
     }
 }
@@ -2553,8 +2594,9 @@ TEST_F(ExpressionFixture, ComparisonScalarBothSides) {
         (Expression(a) > 100.0).save(path_out);
         auto vo = read_all_cells(path_out);
         ASSERT_EQ(vo.size(), va.size());
-        for (size_t i = 0; i < vo.size(); ++i)
+        for (size_t i = 0; i < vo.size(); ++i) {
             EXPECT_DOUBLE_EQ(vo[i], (va[i] > 100.0) ? 1.0 : 0.0);
+        }
     }
     cleanup();
     write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {
@@ -2566,8 +2608,9 @@ TEST_F(ExpressionFixture, ComparisonScalarBothSides) {
         (100.0 < Expression(a)).save(path_out2);
         auto vo = read_all_cells(path_out2);
         ASSERT_EQ(vo.size(), va.size());
-        for (size_t i = 0; i < vo.size(); ++i)
+        for (size_t i = 0; i < vo.size(); ++i) {
             EXPECT_DOUBLE_EQ(vo[i], (100.0 < va[i]) ? 1.0 : 0.0);
+        }
     }
 }
 
@@ -2609,8 +2652,9 @@ TEST_F(ExpressionFixture, ComparisonDrivesIfElse) {
     auto va = read_all_cells(path_a);
     auto vo = read_all_cells(path_out);
     ASSERT_EQ(vo.size(), va.size());
-    for (size_t i = 0; i < vo.size(); ++i)
+    for (size_t i = 0; i < vo.size(); ++i) {
         EXPECT_DOUBLE_EQ(vo[i], (va[i] > 1.5) ? 100.0 : -100.0) << " at index " << i;
+    }
 }
 
 TEST_F(ExpressionFixture, ComparisonUnitMismatchThrows) {
@@ -2658,13 +2702,15 @@ TEST_F(ExpressionFixture, LogicalAndOrTruthiness) {
         (Expression(a) && Expression(b)).save(path_out);
         auto vo = read_all_cells(path_out);
         ASSERT_EQ(vo.size(), va.size());
-        for (size_t i = 0; i < vo.size(); ++i)
+        for (size_t i = 0; i < vo.size(); ++i) {
             EXPECT_DOUBLE_EQ(vo[i], (va[i] != 0.0 && vb[i] != 0.0) ? 1.0 : 0.0) << " at index " << i;
+        }
     }
     for (auto ext : {".qvr", ".toml"}) {
         auto f = path_out + ext;
-        if (fs::exists(f))
+        if (fs::exists(f)) {
             fs::remove(f);
+        }
     }
     {
         auto a = BinaryFile::open_file(path_a, 'r');
@@ -2672,8 +2718,9 @@ TEST_F(ExpressionFixture, LogicalAndOrTruthiness) {
         (Expression(a) || Expression(b)).save(path_out);
         auto vo = read_all_cells(path_out);
         ASSERT_EQ(vo.size(), va.size());
-        for (size_t i = 0; i < vo.size(); ++i)
+        for (size_t i = 0; i < vo.size(); ++i) {
             EXPECT_DOUBLE_EQ(vo[i], (va[i] != 0.0 || vb[i] != 0.0) ? 1.0 : 0.0) << " at index " << i;
+        }
     }
 }
 
@@ -2685,8 +2732,9 @@ TEST_F(ExpressionFixture, LogicalNotInverts) {
     auto va = read_all_cells(path_a);
     auto vo = read_all_cells(path_out);
     ASSERT_EQ(vo.size(), va.size());
-    for (size_t i = 0; i < vo.size(); ++i)
+    for (size_t i = 0; i < vo.size(); ++i) {
         EXPECT_DOUBLE_EQ(vo[i], (va[i] == 0.0) ? 1.0 : 0.0) << " at index " << i;
+    }
 }
 
 TEST_F(ExpressionFixture, LogicalPropagatesNaN) {
@@ -2754,6 +2802,7 @@ TEST_F(ExpressionFixture, LogicalDrivesIfElse) {
     auto va = read_all_cells(path_a);
     auto vo = read_all_cells(path_out);
     ASSERT_EQ(vo.size(), va.size());
-    for (size_t i = 0; i < vo.size(); ++i)
+    for (size_t i = 0; i < vo.size(); ++i) {
         EXPECT_DOUBLE_EQ(vo[i], (va[i] > 1.0 && va[i] < 3.0) ? 100.0 : -100.0) << " at index " << i;
+    }
 }

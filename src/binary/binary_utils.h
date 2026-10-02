@@ -29,8 +29,11 @@ inline int64_t day_of_year(chrono::system_clock::time_point datetime) {
 // Weekly, and Hourly under any of the four. A week is seven days counted from the day of
 // metadata.initial_datetime, not from January 1: that is the grid add_offset_from_int walks, so it never restarts
 // at a year boundary, and every cell starts on or after that day.
-inline int64_t
-position_in_parent(const BinaryMetadata& metadata, size_t index, chrono::system_clock::time_point datetime) {
+inline int64_t position_in_parent(
+    const BinaryMetadata& metadata,
+    size_t index,
+    chrono::system_clock::time_point datetime
+) {
     const auto& time_properties = *metadata.dimensions[index].time;
     const auto parent_frequency = metadata.dimensions[time_properties.parent_dimension_index].time->frequency;
     const auto date = chrono::floor<chrono::days>(datetime);

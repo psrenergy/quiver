@@ -1,18 +1,22 @@
 #include "test_utils.h"
 
-#include <filesystem>
 #include <gtest/gtest.h>
 #include <quiver/c/database.h>
 #include <quiver/c/element.h>
+
+#include <filesystem>
 
 namespace fs = std::filesystem;
 
 class TempFileFixture : public ::testing::Test {
 protected:
-    void SetUp() override { path = (fs::temp_directory_path() / "quiver_test.db").string(); }
+    void SetUp() override {
+        path = (fs::temp_directory_path() / "quiver_test.db").string();
+    }
     void TearDown() override {
-        if (fs::exists(path))
+        if (fs::exists(path)) {
             fs::remove(path);
+        }
     }
     std::string path;
 };
@@ -273,7 +277,8 @@ TEST_F(TempFileFixture, FromMigrationsSetsCurrentVersion) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_migrations(":memory:", SCHEMA_PATH("schemas/migrations").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_migrations(":memory:", SCHEMA_PATH("schemas/migrations").c_str(), &options, &db),
+        QUIVER_OK
     ) << quiver_get_last_error();
     ASSERT_NE(db, nullptr);
 
@@ -295,7 +300,8 @@ TEST_F(TempFileFixture, ValidateMigrationsSucceeds) {
 TEST_F(TempFileFixture, ValidateMigrationsPropagatesFailure) {
     EXPECT_EQ(quiver_database_validate_migrations("nonexistent/migrations"), QUIVER_ERROR);
     EXPECT_STREQ(
-        quiver_get_last_error(), "Cannot validate_migrations: migrations path not found: nonexistent/migrations"
+        quiver_get_last_error(),
+        "Cannot validate_migrations: migrations path not found: nonexistent/migrations"
     );
 }
 

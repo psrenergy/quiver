@@ -238,8 +238,10 @@ QUIVER_C_API quiver_error_t quiver_expression_save(quiver_expression_t* expressi
 
 // Metadata
 
-QUIVER_C_API quiver_error_t
-quiver_expression_get_metadata(quiver_expression_t* expression, quiver_binary_metadata_t** out) {
+QUIVER_C_API quiver_error_t quiver_expression_get_metadata(
+    quiver_expression_t* expression,
+    quiver_binary_metadata_t** out
+) {
     QUIVER_REQUIRE(expression, out);
 
     try {

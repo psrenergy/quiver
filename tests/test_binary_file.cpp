@@ -1,13 +1,14 @@
-#include <chrono>
-#include <cmath>
-#include <filesystem>
 #include <gtest/gtest.h>
-#include <limits>
-#include <optional>
 #include <quiver/binary/binary_file.h>
 #include <quiver/binary/binary_metadata.h>
 #include <quiver/binary/iteration.h>
 #include <quiver/element.h>
+
+#include <chrono>
+#include <cmath>
+#include <filesystem>
+#include <limits>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -21,13 +22,16 @@ namespace fs = std::filesystem;
 
 class BinaryTempFileFixture : public ::testing::Test {
 protected:
-    void SetUp() override { path = (fs::temp_directory_path() / "quiver_binary_test").string(); }
+    void SetUp() override {
+        path = (fs::temp_directory_path() / "quiver_binary_test").string();
+    }
 
     void TearDown() override {
         for (auto ext : {".qvr", ".toml", ".csv"}) {
             auto full = path + ext;
-            if (fs::exists(full))
+            if (fs::exists(full)) {
                 fs::remove(full);
+            }
         }
     }
 
@@ -231,7 +235,8 @@ TEST_F(BinaryTempFileFixture, WriteReadAllPositions) {
         for (int64_t r = 1; r <= 3; ++r) {
             for (int64_t c = 1; c <= 2; ++c) {
                 binary_file.write(
-                    {static_cast<double>(counter), static_cast<double>(counter + 1)}, {{"row", r}, {"col", c}}
+                    {static_cast<double>(counter), static_cast<double>(counter + 1)},
+                    {{"row", r}, {"col", c}}
                 );
                 counter += 2;
             }
@@ -468,8 +473,9 @@ TEST_F(BinaryTempFileFixture, MoveAssign) {
     // Clean up path2 files
     for (auto ext : {".qvr", ".toml"}) {
         auto full = path2 + ext;
-        if (fs::exists(full))
+        if (fs::exists(full)) {
             fs::remove(full);
+        }
     }
 }
 
@@ -490,8 +496,9 @@ TEST_F(BinaryTempFileFixture, MoveAssignWriterUnregistersOldPath) {
 
     for (auto ext : {".qvr", ".toml"}) {
         auto full = path2 + ext;
-        if (fs::exists(full))
+        if (fs::exists(full)) {
             fs::remove(full);
+        }
     }
 }
 

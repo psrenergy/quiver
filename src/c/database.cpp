@@ -9,8 +9,11 @@
 
 extern "C" {
 
-QUIVER_C_API quiver_error_t
-quiver_database_open(const char* path, const quiver_database_options_t* options, quiver_database_t** out_db) {
+QUIVER_C_API quiver_error_t quiver_database_open(
+    const char* path,
+    const quiver_database_options_t* options,
+    quiver_database_t** out_db
+) {
     QUIVER_REQUIRE(path, out_db);
 
     try {
@@ -141,8 +144,11 @@ QUIVER_C_API quiver_error_t quiver_database_describe(quiver_database_t* db, char
     }
 }
 
-QUIVER_C_API quiver_error_t
-quiver_database_describe_collection(quiver_database_t* db, const char* collection, char** out_report) {
+QUIVER_C_API quiver_error_t quiver_database_describe_collection(
+    quiver_database_t* db,
+    const char* collection,
+    char** out_report
+) {
     QUIVER_REQUIRE(db, collection, out_report);
 
     try {
@@ -154,8 +160,11 @@ quiver_database_describe_collection(quiver_database_t* db, const char* collectio
     }
 }
 
-QUIVER_C_API quiver_error_t
-quiver_database_summarize_collection(quiver_database_t* db, const char* collection, char** out_report) {
+QUIVER_C_API quiver_error_t quiver_database_summarize_collection(
+    quiver_database_t* db,
+    const char* collection,
+    char** out_report
+) {
     QUIVER_REQUIRE(db, collection, out_report);
 
     try {

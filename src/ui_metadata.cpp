@@ -1,5 +1,7 @@
 #include "ui_metadata.h"
 
+#include <toml++/toml.hpp>
+
 #include <filesystem>
 #include <fstream>
 #include <map>
@@ -8,7 +10,6 @@
 #include <stdexcept>
 #include <string>
 #include <system_error>
-#include <toml++/toml.hpp>
 #include <utility>
 
 namespace quiver {

@@ -1,14 +1,15 @@
 #include "../test_utils.h"
 
+#include <quiver/c/options.h>
+#include <quiver/database.h>
+#include <quiver/element.h>
+
 #include <algorithm>
 #include <chrono>
 #include <cstdio>
 #include <filesystem>
 #include <map>
 #include <numeric>
-#include <quiver/c/options.h>
-#include <quiver/database.h>
-#include <quiver/element.h>
 #include <string>
 #include <vector>
 
@@ -103,7 +104,9 @@ static double run_individual(const std::string& schema_path, int element_count) 
 
     {
         auto db = quiver::Database::from_schema(
-            db_path, schema_path, {.read_only = false, .console_level = quiver::LogLevel::Off}
+            db_path,
+            schema_path,
+            {.read_only = false, .console_level = quiver::LogLevel::Off}
         );
 
         // Configuration element (outside timed region)
@@ -135,7 +138,9 @@ static double run_batched(const std::string& schema_path, int element_count) {
 
     {
         auto db = quiver::Database::from_schema(
-            db_path, schema_path, {.read_only = false, .console_level = quiver::LogLevel::Off}
+            db_path,
+            schema_path,
+            {.read_only = false, .console_level = quiver::LogLevel::Off}
         );
 
         // Configuration element (outside timed region)

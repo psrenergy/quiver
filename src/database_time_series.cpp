@@ -11,8 +11,9 @@ namespace {
 std::map<std::string, DataType> time_series_schema_types(const TableDefinition& table_def) {
     std::map<std::string, DataType> types;
     for (const auto& [col_name, col] : table_def.columns) {
-        if (col_name == "id")
+        if (col_name == "id") {
             continue;
+        }
         types[col_name] = col.type;
     }
     return types;
@@ -93,8 +94,11 @@ GroupMetadata Database::get_time_series_metadata(const std::string& collection, 
     return metadata;
 }
 
-std::vector<std::map<std::string, Value>>
-Database::read_time_series_group(const std::string& collection, const std::string& group, int64_t id) {
+std::vector<std::map<std::string, Value>> Database::read_time_series_group(
+    const std::string& collection,
+    const std::string& group,
+    int64_t id
+) {
     const auto& table_def =
         impl_->require_group_table(collection, group, GroupTableType::TimeSeries, "read_time_series_group");
     auto dim_col = internal::find_dimension_column(table_def);
@@ -111,8 +115,9 @@ Database::read_time_series_group(const std::string& collection, const std::strin
     // Build SELECT query
     std::string sql = "SELECT ";
     for (size_t i = 0; i < columns.size(); ++i) {
-        if (i > 0)
+        if (i > 0) {
             sql += ", ";
+        }
         sql += columns[i];
     }
     sql += " FROM " + table_def.name + " WHERE id = ? ORDER BY " + dim_col;
@@ -214,7 +219,10 @@ void Database::update_time_series_group_by_label(
     const std::vector<std::map<std::string, Value>>& rows
 ) {
     update_time_series_group(
-        collection, group, impl_->resolve_label(collection, label, "update_time_series_group_by_label"), rows
+        collection,
+        group,
+        impl_->resolve_label(collection, label, "update_time_series_group_by_label"),
+        rows
     );
 }
 
@@ -232,7 +240,12 @@ void Database::upsert_time_series_row(
     auto dim_cols = internal::find_dimension_columns(table_def);
 
     validate_time_series_row(
-        "upsert_time_series_row", time_series_schema_types(table_def), dim_cols, collection, group, row
+        "upsert_time_series_row",
+        time_series_schema_types(table_def),
+        dim_cols,
+        collection,
+        group,
+        row
     );
 
     Impl::TransactionGuard txn(*impl_);
@@ -266,7 +279,10 @@ void Database::upsert_time_series_row_by_label(
     const std::map<std::string, Value>& row
 ) {
     upsert_time_series_row(
-        collection, group, impl_->resolve_label(collection, label, "upsert_time_series_row_by_label"), row
+        collection,
+        group,
+        impl_->resolve_label(collection, label, "upsert_time_series_row_by_label"),
+        row
     );
 }
 
@@ -314,8 +330,9 @@ std::vector<Value> Database::read_time_series_row(
     std::map<int64_t, Value> id_value_map;
     for (size_t i = 0; i < query_result.row_count(); ++i) {
         auto id = query_result[i].get_integer(0);
-        if (!id)
+        if (!id) {
             continue;
+        }
         id_value_map[*id] = query_result[i][1];
     }
 
@@ -370,8 +387,9 @@ std::map<std::string, std::optional<std::string>> Database::read_time_series_fil
     // Build SELECT query
     std::string sql = "SELECT ";
     for (size_t i = 0; i < columns.size(); ++i) {
-        if (i > 0)
+        if (i > 0) {
             sql += ", ";
+        }
         sql += columns[i];
     }
     sql += " FROM " + tsf + " LIMIT 1";

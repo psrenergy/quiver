@@ -23,8 +23,11 @@ typedef enum {
 typedef struct quiver_database quiver_database_t;
 
 // Database lifecycle
-QUIVER_C_API quiver_error_t
-quiver_database_open(const char* path, const quiver_database_options_t* options, quiver_database_t** out_db);
+QUIVER_C_API quiver_error_t quiver_database_open(
+    const char* path,
+    const quiver_database_options_t* options,
+    quiver_database_t** out_db
+);
 QUIVER_C_API quiver_error_t quiver_database_from_migrations(
     const char* db_path,
     const char* migrations_path,
@@ -78,8 +81,11 @@ QUIVER_C_API quiver_error_t quiver_database_update_element_by_label(
     const quiver_element_t* element
 );
 QUIVER_C_API quiver_error_t quiver_database_delete_element(quiver_database_t* db, const char* collection, int64_t id);
-QUIVER_C_API quiver_error_t
-quiver_database_delete_element_by_label(quiver_database_t* db, const char* collection, const char* label);
+QUIVER_C_API quiver_error_t quiver_database_delete_element_by_label(
+    quiver_database_t* db,
+    const char* collection,
+    const char* label
+);
 
 // Update one scalar foreign-key relation. The column is derived as
 // lowercase(collection_to) + "_" + relation_type; a NULL target_label clears it.
@@ -381,12 +387,19 @@ QUIVER_C_API quiver_error_t quiver_database_update_set_group_by_label(
 );
 
 // Read element Ids
-QUIVER_C_API quiver_error_t
-quiver_database_read_element_ids(quiver_database_t* db, const char* collection, int64_t** out_ids, size_t* out_count);
+QUIVER_C_API quiver_error_t quiver_database_read_element_ids(
+    quiver_database_t* db,
+    const char* collection,
+    int64_t** out_ids,
+    size_t* out_count
+);
 
 // Current number of elements in a collection.
-QUIVER_C_API quiver_error_t
-quiver_database_number_of_elements(quiver_database_t* db, const char* collection, int64_t* out_count);
+QUIVER_C_API quiver_error_t quiver_database_number_of_elements(
+    quiver_database_t* db,
+    const char* collection,
+    int64_t* out_count
+);
 
 // Attribute metadata types
 typedef struct {
@@ -470,8 +483,10 @@ QUIVER_C_API quiver_error_t quiver_database_list_time_series_groups(
 );
 
 // Free metadata arrays
-QUIVER_C_API quiver_error_t
-quiver_database_free_scalar_metadata_array(quiver_scalar_metadata_t* metadata, size_t count);
+QUIVER_C_API quiver_error_t quiver_database_free_scalar_metadata_array(
+    quiver_scalar_metadata_t* metadata,
+    size_t count
+);
 QUIVER_C_API quiver_error_t quiver_database_free_group_metadata_array(quiver_group_metadata_t* metadata, size_t count);
 
 // Read time series group by element ID - returns multi-column typed data
@@ -605,8 +620,11 @@ QUIVER_C_API quiver_error_t quiver_database_free_time_series_data(
 
 // Time series files - singleton table storing file paths for external time series data
 // Check if collection has a time_series_files table
-QUIVER_C_API quiver_error_t
-quiver_database_has_time_series_files(quiver_database_t* db, const char* collection, int* out_result);
+QUIVER_C_API quiver_error_t quiver_database_has_time_series_files(
+    quiver_database_t* db,
+    const char* collection,
+    int* out_result
+);
 
 // List columns in time series files table
 QUIVER_C_API quiver_error_t quiver_database_list_time_series_files_columns(
@@ -711,10 +729,16 @@ QUIVER_C_API quiver_error_t quiver_database_query_float(
 // Schema inspection — human-readable text reports. Each returns a heap string via *out_report,
 // freed with quiver_database_free_string.
 QUIVER_C_API quiver_error_t quiver_database_describe(quiver_database_t* db, char** out_report);
-QUIVER_C_API quiver_error_t
-quiver_database_describe_collection(quiver_database_t* db, const char* collection, char** out_report);
-QUIVER_C_API quiver_error_t
-quiver_database_summarize_collection(quiver_database_t* db, const char* collection, char** out_report);
+QUIVER_C_API quiver_error_t quiver_database_describe_collection(
+    quiver_database_t* db,
+    const char* collection,
+    char** out_report
+);
+QUIVER_C_API quiver_error_t quiver_database_summarize_collection(
+    quiver_database_t* db,
+    const char* collection,
+    char** out_report
+);
 
 #ifdef __cplusplus
 }

@@ -156,7 +156,9 @@ TEST_F(LuaRunner_ExportCSV, OptionsAreStrict) {
         "Cannot export_csv: unknown option 'date_format'"
     );
     expect_lua_error(
-        lua, R"(db:export_csv("Items", "", "out.csv", "x"))", "Cannot export_csv: options must be a table"
+        lua,
+        R"(db:export_csv("Items", "", "out.csv", "x"))",
+        "Cannot export_csv: options must be a table"
     );
     expect_lua_error(
         lua,

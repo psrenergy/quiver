@@ -612,8 +612,9 @@ void Database::import_csv(
                 for (const auto& col_name : self_fk_cols) {
                     for (size_t row = 0; row < row_count; ++row) {
                         const auto& cell = csv.rows[row][csv_col_index[col_name]];
-                        if (cell.empty())
+                        if (cell.empty()) {
                             continue;
+                        }
 
                         const auto& label = csv.rows[row][csv_col_index["label"]];
 

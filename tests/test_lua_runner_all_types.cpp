@@ -2,7 +2,9 @@
 
 class LuaRunnerAllTypesTest : public ::testing::Test {
 protected:
-    void SetUp() override { all_types_schema = VALID_SCHEMA("all_types.sql"); }
+    void SetUp() override {
+        all_types_schema = VALID_SCHEMA("all_types.sql");
+    }
     std::string all_types_schema;
 };
 
@@ -12,7 +14,9 @@ TEST_F(LuaRunnerAllTypesTest, ReadVectorStringsBulk) {
     db.create_element("AllTypes", quiver::Element().set("label", "Item 2"));
     db.update_element("AllTypes", 1, quiver::Element().set("label_value", std::vector<std::string>{"alpha", "beta"}));
     db.update_element(
-        "AllTypes", 2, quiver::Element().set("label_value", std::vector<std::string>{"gamma", "delta", "epsilon"})
+        "AllTypes",
+        2,
+        quiver::Element().set("label_value", std::vector<std::string>{"gamma", "delta", "epsilon"})
     );
 
     quiver::LuaRunner lua(db);

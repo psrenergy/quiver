@@ -1,10 +1,11 @@
-#include <chrono>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <quiver/binary/binary_metadata.h>
 #include <quiver/binary/dimension.h>
 #include <quiver/binary/time_properties.h>
 #include <quiver/element.h>
+
+#include <chrono>
 #include <sstream>
 #include <string>
 
@@ -287,7 +288,8 @@ TEST(BinaryMetadataFromTomlContent, InvalidFrequencyLayoutReportsTheValidatorMes
         "Time dimension frequencies must be ordered from lowest to highest frequency."
     );
     EXPECT_EQ(
-        message_of(toml_with(R"(["daily", "daily"])")), "Time dimension frequencies must be unique. Duplicate: daily"
+        message_of(toml_with(R"(["daily", "daily"])")),
+        "Time dimension frequencies must be unique. Duplicate: daily"
     );
 }
 
@@ -954,8 +956,12 @@ labels = ["val"]
 // ============================================================================
 
 // Helper: build metadata with a single parent/child time-dim pair
-static BinaryMetadata
-make_time_pair(TimeFrequency parent_freq, int64_t parent_size, TimeFrequency child_freq, int64_t child_size) {
+static BinaryMetadata make_time_pair(
+    TimeFrequency parent_freq,
+    int64_t parent_size,
+    TimeFrequency child_freq,
+    int64_t child_size
+) {
     BinaryMetadata md;
     md.version = "1";
     md.unit = "MW";
@@ -963,7 +969,8 @@ make_time_pair(TimeFrequency parent_freq, int64_t parent_size, TimeFrequency chi
     TimeProperties tp{parent_freq, 1, -1};
     TimeProperties tc{child_freq, 1, 0};
     md.dimensions = {
-        {frequency_to_string(parent_freq), parent_size, tp}, {frequency_to_string(child_freq), child_size, tc}
+        {frequency_to_string(parent_freq), parent_size, tp},
+        {frequency_to_string(child_freq), child_size, tc}
     };
     return md;
 }

@@ -9,7 +9,9 @@
 
 TEST(Database, GetVectorMetadataForeignKey) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("relations.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     auto metadata = db.get_vector_metadata("Child", "refs");
@@ -22,7 +24,9 @@ TEST(Database, GetVectorMetadataForeignKey) {
 
 TEST(Database, GetSetMetadataForeignKey) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("relations.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     auto metadata = db.get_set_metadata("Child", "parents");
@@ -35,7 +39,9 @@ TEST(Database, GetSetMetadataForeignKey) {
 
 TEST(Database, GetSetMetadataNonForeignKeyColumn) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("relations.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     auto metadata = db.get_set_metadata("Child", "scores");
@@ -51,7 +57,9 @@ TEST(Database, GetSetMetadataNonForeignKeyColumn) {
 
 TEST(Database, ListVectorAndSetGroups) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     auto vectors = db.list_vector_groups("Collection");
@@ -72,7 +80,9 @@ TEST(Database, ListVectorAndSetGroups) {
 
 TEST(Database, ListGroupsCollectionNotFound) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     try {

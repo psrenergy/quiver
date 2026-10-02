@@ -1,7 +1,8 @@
-#include <cstring>
 #include <gtest/gtest.h>
 #include <quiver/c/database.h>
 #include <quiver/c/element.h>
+
+#include <cstring>
 #include <string>
 
 namespace {

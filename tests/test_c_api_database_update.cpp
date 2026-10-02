@@ -1,10 +1,11 @@
 #include "test_utils.h"
 
-#include <algorithm>
 #include <gtest/gtest.h>
-#include <optional>
 #include <quiver/c/database.h>
 #include <quiver/c/element.h>
+
+#include <algorithm>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -16,7 +17,8 @@ TEST(DatabaseCApi, UpdateVectorIntegers) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
 
@@ -65,7 +67,8 @@ TEST(DatabaseCApi, UpdateVectorFloats) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
 
@@ -112,7 +115,8 @@ TEST(DatabaseCApi, UpdateVectorToEmpty) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
 
@@ -159,7 +163,8 @@ TEST(DatabaseCApi, UpdateSetStrings) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
 
@@ -211,7 +216,8 @@ TEST(DatabaseCApi, UpdateSetToEmpty) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
 
@@ -321,7 +327,12 @@ TEST(DatabaseCApi, UpdateElementMultipleScalars) {
     int64_t integer_value;
     int has_value;
     err = quiver_database_read_scalar_integer_by_id(
-        db, "Configuration", "integer_attribute", id, &integer_value, &has_value
+        db,
+        "Configuration",
+        "integer_attribute",
+        id,
+        &integer_value,
+        &has_value
     );
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(has_value, 1);
@@ -403,7 +414,8 @@ TEST(DatabaseCApi, UpdateElementWithTimeSeries) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
 
@@ -473,7 +485,12 @@ TEST(DatabaseCApi, UpdateElementWithTimeSeries) {
     EXPECT_DOUBLE_EQ(out_values[2], 30.0);
 
     quiver_database_free_time_series_data(
-        out_col_names, out_col_types, out_col_data, out_col_has_value, out_col_count, out_row_count
+        out_col_names,
+        out_col_types,
+        out_col_data,
+        out_col_has_value,
+        out_col_count,
+        out_row_count
     );
     quiver_database_close(db);
 }
@@ -544,7 +561,8 @@ TEST(DatabaseCApi, UpdateSetStringsTrimsWhitespace) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
 
@@ -925,7 +943,12 @@ TEST(DatabaseCApi, UpdateElementTimeSeriesFkLabels) {
     EXPECT_EQ(sponsor_ids[1], 1);
 
     quiver_database_free_time_series_data(
-        out_col_names, out_col_types, out_col_data, out_col_has_value, out_col_count, out_row_count
+        out_col_names,
+        out_col_types,
+        out_col_data,
+        out_col_has_value,
+        out_col_count,
+        out_row_count
     );
     quiver_database_close(db);
 }
@@ -1000,7 +1023,13 @@ TEST(DatabaseCApi, UpdateElementAllFkTypesInOneCall) {
     size_t mentor_count = 0;
     ASSERT_EQ(
         quiver_database_read_set_integers_by_id(
-            db, "Child", "mentor_id", child_id, &mentors, &mentors_mask, &mentor_count
+            db,
+            "Child",
+            "mentor_id",
+            child_id,
+            &mentors,
+            &mentors_mask,
+            &mentor_count
         ),
         QUIVER_OK
     );
@@ -1049,7 +1078,12 @@ TEST(DatabaseCApi, UpdateElementAllFkTypesInOneCall) {
     auto* sponsor_ids = static_cast<int64_t*>(out_col_data[1]);
     EXPECT_EQ(sponsor_ids[0], 2);
     quiver_database_free_time_series_data(
-        out_col_names, out_col_types, out_col_data, out_col_has_value, out_col_count, out_row_count
+        out_col_names,
+        out_col_types,
+        out_col_data,
+        out_col_has_value,
+        out_col_count,
+        out_row_count
     );
 
     quiver_database_close(db);
@@ -1335,7 +1369,8 @@ TEST(DatabaseCApi, UpdateVectorGroupAndSetGroupStayIndependent) {
     uint8_t* out_mask = nullptr;
     size_t count = 0;
     ASSERT_EQ(
-        quiver_database_read_set_integers_by_id(db, "Child", "parent_ref", child, &out, &out_mask, &count), QUIVER_OK
+        quiver_database_read_set_integers_by_id(db, "Child", "parent_ref", child, &out, &out_mask, &count),
+        QUIVER_OK
     );
     ASSERT_EQ(count, 1u);
     EXPECT_EQ(out[0], parent_a);
@@ -1343,7 +1378,8 @@ TEST(DatabaseCApi, UpdateVectorGroupAndSetGroupStayIndependent) {
     quiver_database_free_mask(out_mask);
 
     ASSERT_EQ(
-        quiver_database_read_vector_integers_by_id(db, "Child", "parent_ref", child, &out, &out_mask, &count), QUIVER_OK
+        quiver_database_read_vector_integers_by_id(db, "Child", "parent_ref", child, &out, &out_mask, &count),
+        QUIVER_OK
     );
     ASSERT_EQ(count, 1u);
     EXPECT_EQ(out[0], parent_b);
@@ -1356,13 +1392,15 @@ TEST(DatabaseCApi, UpdateVectorGroupAndSetGroupStayIndependent) {
         QUIVER_OK
     );
     ASSERT_EQ(
-        quiver_database_read_vector_integers_by_id(db, "Child", "parent_ref", child, &out, &out_mask, &count), QUIVER_OK
+        quiver_database_read_vector_integers_by_id(db, "Child", "parent_ref", child, &out, &out_mask, &count),
+        QUIVER_OK
     );
     EXPECT_EQ(count, 0u);
 
     // The set group survived the clear.
     ASSERT_EQ(
-        quiver_database_read_set_integers_by_id(db, "Child", "parent_ref", child, &out, &out_mask, &count), QUIVER_OK
+        quiver_database_read_set_integers_by_id(db, "Child", "parent_ref", child, &out, &out_mask, &count),
+        QUIVER_OK
     );
     ASSERT_EQ(count, 1u);
     EXPECT_EQ(out[0], parent_a);
@@ -1398,7 +1436,8 @@ TEST(DatabaseCApi, UpdateVectorGroupHonoursNullMask) {
     const void* data[] = {values};
     const uint8_t* masks[] = {mask};
     ASSERT_EQ(
-        quiver_database_update_vector_group(db, "Child", "refs", child, names, types, data, masks, 1, 3), QUIVER_OK
+        quiver_database_update_vector_group(db, "Child", "refs", child, names, types, data, masks, 1, 3),
+        QUIVER_OK
     );
 
     // The per-column reader preserves the NULL positionally: three rows in, three cells out.
@@ -1406,7 +1445,8 @@ TEST(DatabaseCApi, UpdateVectorGroupHonoursNullMask) {
     uint8_t* out_mask = nullptr;
     size_t count = 0;
     ASSERT_EQ(
-        quiver_database_read_vector_integers_by_id(db, "Child", "parent_ref", child, &out, &out_mask, &count), QUIVER_OK
+        quiver_database_read_vector_integers_by_id(db, "Child", "parent_ref", child, &out, &out_mask, &count),
+        QUIVER_OK
     );
     ASSERT_EQ(count, 3u);
     EXPECT_EQ(out_mask[0], 1);
@@ -1441,13 +1481,16 @@ TEST(DatabaseCApi, UpdateGroupNullArgumentsRejected) {
     int64_t values[] = {1};
     const void* data[] = {values};
     EXPECT_EQ(
-        quiver_database_update_vector_group(db, "Child", "refs", 1, nullptr, types, data, nullptr, 1, 1), QUIVER_ERROR
+        quiver_database_update_vector_group(db, "Child", "refs", 1, nullptr, types, data, nullptr, 1, 1),
+        QUIVER_ERROR
     );
     EXPECT_EQ(
-        quiver_database_update_vector_group(db, "Child", "refs", 1, names, nullptr, data, nullptr, 1, 1), QUIVER_ERROR
+        quiver_database_update_vector_group(db, "Child", "refs", 1, names, nullptr, data, nullptr, 1, 1),
+        QUIVER_ERROR
     );
     EXPECT_EQ(
-        quiver_database_update_vector_group(db, "Child", "refs", 1, names, types, nullptr, nullptr, 1, 1), QUIVER_ERROR
+        quiver_database_update_vector_group(db, "Child", "refs", 1, names, types, nullptr, nullptr, 1, 1),
+        QUIVER_ERROR
     );
 
     EXPECT_EQ(quiver_database_close(db), QUIVER_OK);
@@ -1479,22 +1522,26 @@ TEST(DatabaseCApi, UpdateGroupNamedColumnWithNoRowsRejected) {
     int64_t values[] = {parent_a};
     const void* data[] = {values};
     ASSERT_EQ(
-        quiver_database_update_vector_group(db, "Child", "refs", child, names, types, data, nullptr, 1, 1), QUIVER_OK
+        quiver_database_update_vector_group(db, "Child", "refs", child, names, types, data, nullptr, 1, 1),
+        QUIVER_OK
     );
 
     // row_count == 0 with a column named: rejected, and the existing row survives.
     EXPECT_EQ(
-        quiver_database_update_vector_group(db, "Child", "refs", child, names, types, data, nullptr, 1, 0), QUIVER_ERROR
+        quiver_database_update_vector_group(db, "Child", "refs", child, names, types, data, nullptr, 1, 0),
+        QUIVER_ERROR
     );
     EXPECT_EQ(
-        quiver_database_update_set_group(db, "Child", "parents", child, names, types, data, nullptr, 1, 0), QUIVER_ERROR
+        quiver_database_update_set_group(db, "Child", "parents", child, names, types, data, nullptr, 1, 0),
+        QUIVER_ERROR
     );
 
     int64_t* out = nullptr;
     uint8_t* out_mask = nullptr;
     size_t count = 0;
     ASSERT_EQ(
-        quiver_database_read_vector_integers_by_id(db, "Child", "parent_ref", child, &out, &out_mask, &count), QUIVER_OK
+        quiver_database_read_vector_integers_by_id(db, "Child", "parent_ref", child, &out, &out_mask, &count),
+        QUIVER_OK
     );
     EXPECT_EQ(count, 1u);
     quiver_database_free_integer_array(out);
@@ -1531,7 +1578,8 @@ TEST(DatabaseCApi, UpdateGroupNullStringEntryIsNull) {
     const char* strings[] = {"first", nullptr};
     const void* data[] = {strings};
     ASSERT_EQ(
-        quiver_database_update_set_group(db, "Items", "codes", item, names, types, data, nullptr, 1, 2), QUIVER_OK
+        quiver_database_update_set_group(db, "Items", "codes", item, names, types, data, nullptr, 1, 2),
+        QUIVER_OK
     );
 
     // The per-column reader preserves the NULL as a NULL entry: two rows written, two cells out.
@@ -1552,7 +1600,8 @@ TEST(DatabaseCApi, UpdateElementNullStringArrayEntryIsNull) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
 
     quiver_element_t* item = nullptr;
@@ -1573,7 +1622,13 @@ TEST(DatabaseCApi, UpdateElementNullStringArrayEntryIsNull) {
     int has_value = 0;
     ASSERT_EQ(
         quiver_database_query_integer(
-            db, "SELECT COUNT(*) FROM Collection_set_tags WHERE tag IS NULL", nullptr, nullptr, 0, &nulls, &has_value
+            db,
+            "SELECT COUNT(*) FROM Collection_set_tags WHERE tag IS NULL",
+            nullptr,
+            nullptr,
+            0,
+            &nulls,
+            &has_value
         ),
         QUIVER_OK
     );
@@ -1590,7 +1645,8 @@ TEST(DatabaseCApi, UpdateElementByLabel) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
 
@@ -1626,7 +1682,8 @@ TEST(DatabaseCApi, UpdateElementByLabel) {
     int64_t value = 0;
     int has_value = 0;
     EXPECT_EQ(
-        quiver_database_read_scalar_integer_by_id(db, "Collection", "some_integer", id, &value, &has_value), QUIVER_OK
+        quiver_database_read_scalar_integer_by_id(db, "Collection", "some_integer", id, &value, &has_value),
+        QUIVER_OK
     );
     EXPECT_EQ(has_value, 1);
     EXPECT_EQ(value, 999);
@@ -1646,7 +1703,8 @@ TEST(DatabaseCApi, UpdateElementByLabelNonExistent) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
 
@@ -1679,7 +1737,8 @@ TEST(DatabaseCApi, UpdateElementByLabelNonExistent) {
     int64_t value = 0;
     int has_value = 0;
     EXPECT_EQ(
-        quiver_database_read_scalar_integer_by_id(db, "Collection", "some_integer", id, &value, &has_value), QUIVER_OK
+        quiver_database_read_scalar_integer_by_id(db, "Collection", "some_integer", id, &value, &has_value),
+        QUIVER_OK
     );
     EXPECT_EQ(has_value, 1);
     EXPECT_EQ(value, 100);
@@ -1691,7 +1750,8 @@ TEST(DatabaseCApi, UpdateElementByLabelNullArguments) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
 
@@ -1759,7 +1819,8 @@ TEST(DatabaseCApi, UpdateVectorGroupByLabel) {
     uint8_t* out_mask = nullptr;
     size_t count = 0;
     ASSERT_EQ(
-        quiver_database_read_vector_integers_by_id(db, "Child", "parent_ref", child, &out, &out_mask, &count), QUIVER_OK
+        quiver_database_read_vector_integers_by_id(db, "Child", "parent_ref", child, &out, &out_mask, &count),
+        QUIVER_OK
     );
     ASSERT_EQ(count, 2u);
     EXPECT_EQ(out[0], parent_a);
@@ -1770,12 +1831,22 @@ TEST(DatabaseCApi, UpdateVectorGroupByLabel) {
     // Clearing takes NULL arrays with zero counts, same as the id form.
     ASSERT_EQ(
         quiver_database_update_vector_group_by_label(
-            db, "Child", "refs", "Child 1", nullptr, nullptr, nullptr, nullptr, 0, 0
+            db,
+            "Child",
+            "refs",
+            "Child 1",
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            0,
+            0
         ),
         QUIVER_OK
     );
     ASSERT_EQ(
-        quiver_database_read_vector_integers_by_id(db, "Child", "parent_ref", child, &out, &out_mask, &count), QUIVER_OK
+        quiver_database_read_vector_integers_by_id(db, "Child", "parent_ref", child, &out, &out_mask, &count),
+        QUIVER_OK
     );
     EXPECT_EQ(count, 0u);
 
@@ -1800,7 +1871,16 @@ TEST(DatabaseCApi, UpdateVectorGroupByLabelNonExistent) {
 
     EXPECT_EQ(
         quiver_database_update_vector_group_by_label(
-            db, "Child", "refs", "No Such Child", nullptr, nullptr, nullptr, nullptr, 0, 0
+            db,
+            "Child",
+            "refs",
+            "No Such Child",
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            0,
+            0
         ),
         QUIVER_ERROR
     );
@@ -1818,25 +1898,61 @@ TEST(DatabaseCApi, UpdateVectorGroupByLabelNullArguments) {
 
     EXPECT_EQ(
         quiver_database_update_vector_group_by_label(
-            nullptr, "Child", "refs", "Child 1", nullptr, nullptr, nullptr, nullptr, 0, 0
+            nullptr,
+            "Child",
+            "refs",
+            "Child 1",
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            0,
+            0
         ),
         QUIVER_ERROR
     );
     EXPECT_EQ(
         quiver_database_update_vector_group_by_label(
-            db, nullptr, "refs", "Child 1", nullptr, nullptr, nullptr, nullptr, 0, 0
+            db,
+            nullptr,
+            "refs",
+            "Child 1",
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            0,
+            0
         ),
         QUIVER_ERROR
     );
     EXPECT_EQ(
         quiver_database_update_vector_group_by_label(
-            db, "Child", nullptr, "Child 1", nullptr, nullptr, nullptr, nullptr, 0, 0
+            db,
+            "Child",
+            nullptr,
+            "Child 1",
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            0,
+            0
         ),
         QUIVER_ERROR
     );
     EXPECT_EQ(
         quiver_database_update_vector_group_by_label(
-            db, "Child", "refs", nullptr, nullptr, nullptr, nullptr, nullptr, 0, 0
+            db,
+            "Child",
+            "refs",
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            0,
+            0
         ),
         QUIVER_ERROR
     );
@@ -1911,7 +2027,8 @@ TEST(DatabaseCApi, UpdateSetGroupByLabel) {
     uint8_t* out_mask = nullptr;
     size_t count = 0;
     ASSERT_EQ(
-        quiver_database_read_set_integers_by_id(db, "Child", "parent_ref", child, &out, &out_mask, &count), QUIVER_OK
+        quiver_database_read_set_integers_by_id(db, "Child", "parent_ref", child, &out, &out_mask, &count),
+        QUIVER_OK
     );
     ASSERT_EQ(count, 2u);
     EXPECT_EQ(out[0], parent_a);
@@ -1922,12 +2039,22 @@ TEST(DatabaseCApi, UpdateSetGroupByLabel) {
     // Clearing takes NULL arrays with zero counts, same as the id form.
     ASSERT_EQ(
         quiver_database_update_set_group_by_label(
-            db, "Child", "parents", "Child 1", nullptr, nullptr, nullptr, nullptr, 0, 0
+            db,
+            "Child",
+            "parents",
+            "Child 1",
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            0,
+            0
         ),
         QUIVER_OK
     );
     ASSERT_EQ(
-        quiver_database_read_set_integers_by_id(db, "Child", "parent_ref", child, &out, &out_mask, &count), QUIVER_OK
+        quiver_database_read_set_integers_by_id(db, "Child", "parent_ref", child, &out, &out_mask, &count),
+        QUIVER_OK
     );
     EXPECT_EQ(count, 0u);
 
@@ -1952,7 +2079,16 @@ TEST(DatabaseCApi, UpdateSetGroupByLabelNonExistent) {
 
     EXPECT_EQ(
         quiver_database_update_set_group_by_label(
-            db, "Child", "parents", "No Such Child", nullptr, nullptr, nullptr, nullptr, 0, 0
+            db,
+            "Child",
+            "parents",
+            "No Such Child",
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            0,
+            0
         ),
         QUIVER_ERROR
     );
@@ -1970,25 +2106,61 @@ TEST(DatabaseCApi, UpdateSetGroupByLabelNullArguments) {
 
     EXPECT_EQ(
         quiver_database_update_set_group_by_label(
-            nullptr, "Child", "parents", "Child 1", nullptr, nullptr, nullptr, nullptr, 0, 0
+            nullptr,
+            "Child",
+            "parents",
+            "Child 1",
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            0,
+            0
         ),
         QUIVER_ERROR
     );
     EXPECT_EQ(
         quiver_database_update_set_group_by_label(
-            db, nullptr, "parents", "Child 1", nullptr, nullptr, nullptr, nullptr, 0, 0
+            db,
+            nullptr,
+            "parents",
+            "Child 1",
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            0,
+            0
         ),
         QUIVER_ERROR
     );
     EXPECT_EQ(
         quiver_database_update_set_group_by_label(
-            db, "Child", nullptr, "Child 1", nullptr, nullptr, nullptr, nullptr, 0, 0
+            db,
+            "Child",
+            nullptr,
+            "Child 1",
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            0,
+            0
         ),
         QUIVER_ERROR
     );
     EXPECT_EQ(
         quiver_database_update_set_group_by_label(
-            db, "Child", "parents", nullptr, nullptr, nullptr, nullptr, nullptr, 0, 0
+            db,
+            "Child",
+            "parents",
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            0,
+            0
         ),
         QUIVER_ERROR
     );
@@ -2050,7 +2222,8 @@ std::optional<int64_t> parent_of_child(quiver_database_t* db, int64_t child) {
     int64_t value = 0;
     int has_value = 1;
     EXPECT_EQ(
-        quiver_database_read_scalar_integer_by_id(db, "Child", "parent_id", child, &value, &has_value), QUIVER_OK
+        quiver_database_read_scalar_integer_by_id(db, "Child", "parent_id", child, &value, &has_value),
+        QUIVER_OK
     );
     return has_value != 0 ? std::optional<int64_t>(value) : std::nullopt;
 }
@@ -2121,7 +2294,8 @@ TEST(DatabaseCApi, UpdateRelationByLabelNonExistent) {
     auto* db = open_relation_db(&parent_a, &parent_b, &child);
 
     EXPECT_EQ(
-        quiver_database_update_relation_by_label(db, "Child", "Parent", "id", "No Such Child", "Parent A"), QUIVER_ERROR
+        quiver_database_update_relation_by_label(db, "Child", "Parent", "id", "No Such Child", "Parent A"),
+        QUIVER_ERROR
     );
     EXPECT_STREQ(quiver_get_last_error(), "Element not found: label 'No Such Child' in collection 'Child'");
     quiver_database_close(db);
@@ -2139,16 +2313,20 @@ TEST(DatabaseCApi, UpdateRelationNullArgumentsRejected) {
     EXPECT_EQ(quiver_database_update_relation(db, "Child", "Parent", nullptr, child, "Parent A"), QUIVER_ERROR);
 
     EXPECT_EQ(
-        quiver_database_update_relation_by_label(nullptr, "Child", "Parent", "id", "Child 1", "Parent A"), QUIVER_ERROR
+        quiver_database_update_relation_by_label(nullptr, "Child", "Parent", "id", "Child 1", "Parent A"),
+        QUIVER_ERROR
     );
     EXPECT_EQ(
-        quiver_database_update_relation_by_label(db, nullptr, "Parent", "id", "Child 1", "Parent A"), QUIVER_ERROR
+        quiver_database_update_relation_by_label(db, nullptr, "Parent", "id", "Child 1", "Parent A"),
+        QUIVER_ERROR
     );
     EXPECT_EQ(
-        quiver_database_update_relation_by_label(db, "Child", nullptr, "id", "Child 1", "Parent A"), QUIVER_ERROR
+        quiver_database_update_relation_by_label(db, "Child", nullptr, "id", "Child 1", "Parent A"),
+        QUIVER_ERROR
     );
     EXPECT_EQ(
-        quiver_database_update_relation_by_label(db, "Child", "Parent", nullptr, "Child 1", "Parent A"), QUIVER_ERROR
+        quiver_database_update_relation_by_label(db, "Child", "Parent", nullptr, "Child 1", "Parent A"),
+        QUIVER_ERROR
     );
     EXPECT_EQ(quiver_database_update_relation_by_label(db, "Child", "Parent", "id", nullptr, "Parent A"), QUIVER_ERROR);
     quiver_database_close(db);

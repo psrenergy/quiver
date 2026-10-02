@@ -3,13 +3,16 @@
 #include <gtest/gtest.h>
 #include <quiver/database.h>
 #include <quiver/element.h>
+
 #include <string>
 
 namespace {
 
 quiver::Database open(const std::string& schema) {
     return quiver::Database::from_schema(
-        ":memory:", schema, {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        schema,
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 }
 
@@ -166,7 +169,8 @@ TEST(DatabaseDescribe, SummarizeScalarsAndGroups) {
             .set("some_float", 2.5)
     );
     db.create_element(
-        "AllTypes", quiver::Element().set("label", std::string("c")).set("some_integer", static_cast<int64_t>(5))
+        "AllTypes",
+        quiver::Element().set("label", std::string("c")).set("some_integer", static_cast<int64_t>(5))
     );
 
     auto report = db.summarize_collection("AllTypes");
@@ -186,7 +190,8 @@ TEST(DatabaseDescribe, SummarizeDistributionCardinalityBoundary) {
         auto db = open(VALID_SCHEMA("all_types.sql"));
         for (int64_t i = 1; i <= 64; ++i) {
             db.create_element(
-                "AllTypes", quiver::Element().set("label", "L" + std::to_string(i)).set("some_integer", i)
+                "AllTypes",
+                quiver::Element().set("label", "L" + std::to_string(i)).set("some_integer", i)
             );
         }
         EXPECT_TRUE(contains(db.summarize_collection("AllTypes"), "values {"));  // 64 distinct -> shown
@@ -195,7 +200,8 @@ TEST(DatabaseDescribe, SummarizeDistributionCardinalityBoundary) {
         auto db = open(VALID_SCHEMA("all_types.sql"));
         for (int64_t i = 1; i <= 65; ++i) {
             db.create_element(
-                "AllTypes", quiver::Element().set("label", "L" + std::to_string(i)).set("some_integer", i)
+                "AllTypes",
+                quiver::Element().set("label", "L" + std::to_string(i)).set("some_integer", i)
             );
         }
         EXPECT_FALSE(contains(db.summarize_collection("AllTypes"), "values {"));  // 65 distinct -> omitted

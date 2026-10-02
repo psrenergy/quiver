@@ -29,8 +29,10 @@ struct QUIVER_API TimeProperties {
     // base_datetime floored to January 1, the 1st of its month, its day (Weekly and Daily) or its hour, plus
     // value - 1 periods. Folded over a file's time dimensions outermost first, starting at initial_datetime,
     // it yields the start of the cell a coordinate names. initial_value plays no part.
-    std::chrono::system_clock::time_point
-    add_offset_from_int(std::chrono::system_clock::time_point base_datetime, int64_t value) const;
+    std::chrono::system_clock::time_point add_offset_from_int(
+        std::chrono::system_clock::time_point base_datetime,
+        int64_t value
+    ) const;
 };
 
 }  // namespace quiver

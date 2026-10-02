@@ -22,4 +22,5 @@ bool Result::empty() const {
 const Row& Result::operator[](size_t index) const {
     return rows_[index];
 }
+
 }  // namespace quiver

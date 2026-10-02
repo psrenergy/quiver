@@ -709,7 +709,9 @@ TEST_F(LuaRunner_WriteCsv, MultiCharacterSeparatorThrows) {
     const auto path = lp((sandbox / "bad_sep.csv").string());
 
     expect_lua_error(
-        lua, R"(db:write_csv(")" + path + R"(", { separator = ";;" }))", "option 'separator' must be a single character"
+        lua,
+        R"(db:write_csv(")" + path + R"(", { separator = ";;" }))",
+        "option 'separator' must be a single character"
     );
 }
 
@@ -721,7 +723,9 @@ TEST_F(LuaRunner_WriteCsv, NonTableHeaderThrows) {
     const auto path = lp((sandbox / "bad_header_type.csv").string());
 
     expect_lua_error(
-        lua, R"(db:write_csv(")" + path + R"(", { header = "x" }))", "Cannot write_csv: option 'header' must be a table"
+        lua,
+        R"(db:write_csv(")" + path + R"(", { header = "x" }))",
+        "Cannot write_csv: option 'header' must be a table"
     );
 }
 
@@ -1349,7 +1353,10 @@ TEST_F(LuaRunner_WriteCsvErrors, EscapingPathIsPrefixedWriteCsvError) {
     quiver::LuaRunner lua(db);
 
     expect_prefixed_error(
-        lua, R"(db:write_csv("../escape.csv"))", "Cannot write_csv: ", "escapes the database directory"
+        lua,
+        R"(db:write_csv("../escape.csv"))",
+        "Cannot write_csv: ",
+        "escapes the database directory"
     );
 }
 

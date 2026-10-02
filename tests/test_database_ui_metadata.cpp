@@ -1,8 +1,9 @@
+#include <gtest/gtest.h>
+#include <quiver/database.h>
+
 #include <filesystem>
 #include <fstream>
-#include <gtest/gtest.h>
 #include <optional>
-#include <quiver/database.h>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -51,13 +52,17 @@ protected:
         }
     }
 
-    std::string migrations_dir() const { return (fs::path(root) / "migrations").string(); }
+    std::string migrations_dir() const {
+        return (fs::path(root) / "migrations").string();
+    }
 
     // The sibling `ui/` directory `from_migrations` resolves against the migrations path. Uses
     // weakly_canonical before parent_path, matching src/lua_runner.cpp's resolve_sandboxed_path
     // idiom -- a raw parent_path() misresolves a trailing-slash or bare-relative migrations path
     // (CONTEXT.md "Two resolution traps").
-    std::string ui_dir() const { return (fs::weakly_canonical(migrations_dir()).parent_path() / "ui").string(); }
+    std::string ui_dir() const {
+        return (fs::weakly_canonical(migrations_dir()).parent_path() / "ui").string();
+    }
 
     void write_migration(int version, const std::string& up_sql, const std::string& down_sql) {
         auto dir = fs::path(migrations_dir()) / std::to_string(version);
@@ -88,7 +93,9 @@ protected:
 
     // A sibling of `root`, never a subdirectory of it -- copying `root` into its own subdirectory
     // would recurse into itself.
-    std::string mirror_root() const { return root + "_mirror"; }
+    std::string mirror_root() const {
+        return root + "_mirror";
+    }
 
     // Copies the whole temp tree (migrations/ + ui/, if any) to a sibling directory, deletes that
     // copy's `ui/` sibling, and opens a fresh database there -- the "same tree with the sidecar
@@ -830,12 +837,16 @@ label.en = "Initial Storage"
     const fs::path saved_cwd = fs::current_path();
     struct CwdGuard {
         fs::path saved;
-        ~CwdGuard() { fs::current_path(saved); }
+        ~CwdGuard() {
+            fs::current_path(saved);
+        }
     } guard{saved_cwd};
     fs::current_path(root);
 
     auto db = quiver::Database::from_migrations(
-        "relative_study.db", "migrations", {.read_only = false, .console_level = quiver::LogLevel::Off}
+        "relative_study.db",
+        "migrations",
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
     auto actual = db.describe_collection("HydroPlant");
 

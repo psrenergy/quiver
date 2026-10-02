@@ -1,11 +1,15 @@
 #include "test_lua_runner.h"
 
 namespace {
+
 quiver::Database open_collections() {
     return quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 }
+
 }  // namespace
 
 TEST_F(LuaRunnerTest, DescribeReport) {

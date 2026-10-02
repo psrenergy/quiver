@@ -11,7 +11,9 @@
 
 TEST(Database, ReadVectorIntegers) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -34,7 +36,9 @@ TEST(Database, ReadVectorIntegers) {
 
 TEST(Database, ReadVectorFloats) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -57,7 +61,9 @@ TEST(Database, ReadVectorFloats) {
 
 TEST(Database, ReadVectorEmpty) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -74,7 +80,9 @@ TEST(Database, ReadVectorEmpty) {
 
 TEST(Database, ReadVectorIncludesElementsWithNoRows) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -113,7 +121,9 @@ TEST(Database, ReadVectorIncludesElementsWithNoRows) {
 
 TEST(Database, ReadVectorIntegerById) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -137,7 +147,9 @@ TEST(Database, ReadVectorIntegerById) {
 
 TEST(Database, ReadVectorFloatById) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -161,7 +173,9 @@ TEST(Database, ReadVectorFloatById) {
 
 TEST(Database, ReadVectorByIdEmpty) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -178,7 +192,9 @@ TEST(Database, ReadVectorByIdEmpty) {
 
 TEST(Database, ReadVectorIntegersInvalidCollection) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -190,7 +206,9 @@ TEST(Database, ReadVectorIntegersInvalidCollection) {
 
 TEST(Database, ReadVectorIntegersInvalidAttribute) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -207,7 +225,9 @@ TEST(Database, ReadVectorIntegersInvalidAttribute) {
 
 TEST(Database, ReadVectorIntegerByIdInvalidCollection) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -223,7 +243,9 @@ TEST(Database, ReadVectorIntegerByIdInvalidCollection) {
 
 TEST(Database, ReadVectorStringsBulk) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("all_types.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("all_types.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -252,7 +274,9 @@ TEST(Database, ReadVectorStringsBulk) {
 
 TEST(Database, ReadVectorStringsByIdBasic) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("all_types.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("all_types.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -272,7 +296,9 @@ TEST(Database, ReadVectorStringsByIdBasic) {
 
 TEST(Database, ReadVectorIntegersInvalidColumnThrows) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     quiver::Element config;
@@ -298,7 +324,9 @@ TEST(Database, ReadVectorIntegersInvalidColumnThrows) {
 
 TEST(Database, ReadVectorPreservesNullCells) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     db.create_element("Configuration", quiver::Element().set("label", std::string("Test Config")));
@@ -321,7 +349,9 @@ TEST(Database, ReadVectorPreservesNullCells) {
 
 TEST(Database, ReadVectorDistinguishesNoRowsFromNullOnlyRow) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     db.create_element("Configuration", quiver::Element().set("label", std::string("Test Config")));
@@ -340,7 +370,9 @@ TEST(Database, ReadVectorDistinguishesNoRowsFromNullOnlyRow) {
 
 TEST(Database, ReadVectorBulkKeepsElementWithIdMinusOne) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 
     db.create_element("Configuration", quiver::Element().set("label", std::string("Test Config")));
@@ -356,7 +388,8 @@ TEST(Database, ReadVectorBulkKeepsElementWithIdMinusOne) {
     );
     db.create_element("Collection", quiver::Element().set("label", std::string("Empty")));
     db.create_element(
-        "Collection", quiver::Element().set("label", std::string("Positive")).set("value_int", std::vector<int64_t>{7})
+        "Collection",
+        quiver::Element().set("label", std::string("Positive")).set("value_int", std::vector<int64_t>{7})
     );
 
     auto ids = db.read_element_ids("Collection");
@@ -451,7 +484,8 @@ TEST(Database, ReadGroupByIdReadsItsOwnTableWhenGroupsShareAColumn) {
         (std::vector<std::optional<int64_t>>{f.parent_a})
     );
     EXPECT_EQ(
-        f.db.read_set_integers_by_id("Child", "parent_ref", f.child), (std::vector<std::optional<int64_t>>{f.parent_a})
+        f.db.read_set_integers_by_id("Child", "parent_ref", f.child),
+        (std::vector<std::optional<int64_t>>{f.parent_a})
     );
 
     auto routes = f.db.read_vector_group_by_id("Child", "routes", f.child);

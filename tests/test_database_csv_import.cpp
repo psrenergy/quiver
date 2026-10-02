@@ -1,12 +1,13 @@
 #include "test_utils.h"
 
-#include <clocale>
-#include <filesystem>
-#include <fstream>
 #include <gtest/gtest.h>
 #include <quiver/database.h>
 #include <quiver/element.h>
 #include <quiver/options.h>
+
+#include <clocale>
+#include <filesystem>
+#include <fstream>
 #include <sstream>
 
 // ImportCSV_LockedFile_RejectedBeforeDelete holds a byte-range lock, which only Windows enforces on
@@ -24,7 +25,9 @@ namespace fs = std::filesystem;
 // Helper: create a database from the csv_export schema
 static quiver::Database make_db() {
     return quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("csv_export.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("csv_export.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 }
 
@@ -47,7 +50,9 @@ static std::string read_csv_file(const std::string& path) {
 // Helper: create a database from the relations schema (has FK)
 static quiver::Database make_relations_db() {
     return quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("relations.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
 }
 
@@ -460,7 +465,8 @@ TEST(DatabaseCSV, ImportCSV_ColumnCountMismatch_Throws) {
                 db.import_csv("Items", "", csv_path.string());
             } catch (const std::runtime_error& e) {
                 EXPECT_NE(
-                    std::string(e.what()).find("number of columns in the CSV file does not match"), std::string::npos
+                    std::string(e.what()).find("number of columns in the CSV file does not match"),
+                    std::string::npos
                 );
                 throw;
             }
@@ -732,7 +738,8 @@ TEST(DatabaseCSV, ImportCSV_Group_IdNotInCollection_Throws) {
             } catch (const std::runtime_error& e) {
                 std::string msg = e.what();
                 EXPECT_NE(
-                    msg.find("Element with id NonExistent does not exist in collection Items"), std::string::npos
+                    msg.find("Element with id NonExistent does not exist in collection Items"),
+                    std::string::npos
                 );
                 throw;
             }
@@ -795,7 +802,8 @@ TEST(DatabaseCSV, ImportCSV_InvalidFloatValue_Throws) {
     auto db = make_db();
     auto csv_path = temp_csv("ImportBadFloat");
     write_csv_file(
-        csv_path.string(), "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,,not_a_number,,\n"
+        csv_path.string(),
+        "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,,not_a_number,,\n"
     );
 
     EXPECT_THROW(
@@ -865,7 +873,8 @@ TEST(DatabaseCSV, ImportCSV_DatePrefixedIntegerColumn_ImportsByDeclaredType) {
 
     auto csv_path = temp_csv("ImportDatePrefixedInteger");
     write_csv_file(
-        csv_path.string(), "sep=,\nlabel,name,status,price,date_created,notes,date_count\nItem1,Alpha,,,,,7\n"
+        csv_path.string(),
+        "sep=,\nlabel,name,status,price,date_created,notes,date_count\nItem1,Alpha,,,,,7\n"
     );
     {
         quiver::Database db(db_path.string(), {.read_only = false, .console_level = quiver::LogLevel::Off});
@@ -882,7 +891,9 @@ TEST(DatabaseCSV, ImportCSV_DatePrefixedIntegerColumn_ImportsByDeclaredType) {
 // CSV clear the collection's file references.
 TEST(DatabaseCSV, ImportCSV_TimeSeriesFilesTable_IsNotAGroup) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
     std::map<std::string, std::optional<std::string>> paths;
     paths["data_file"] = "data.qvr";
@@ -941,7 +952,8 @@ TEST(DatabaseCSV, ImportCSV_BomBeforeSepLine_Imports) {
     auto db = make_db();
     auto csv_path = temp_csv("ImportBomSep");
     write_csv_file(
-        csv_path.string(), "\xEF\xBB\xBFsep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,1,9.99,,\n"
+        csv_path.string(),
+        "\xEF\xBB\xBFsep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,1,9.99,,\n"
     );
 
     db.import_csv("Items", "", csv_path.string());
@@ -1007,7 +1019,10 @@ TEST(DatabaseCSV, ImportCSV_Group_InvalidFloat_Throws) {
 
     // Prefixed, not the bare "invalid stod argument" the group path used to leak.
     expect_import_error(
-        db, "readings", csv_path, "Cannot import_csv: Invalid float value 'abc' for column 'temperature'."
+        db,
+        "readings",
+        csv_path,
+        "Cannot import_csv: Invalid float value 'abc' for column 'temperature'."
     );
 
     fs::remove(csv_path);
@@ -1057,7 +1072,8 @@ TEST(DatabaseCSV, ImportCSV_BlankRecordsAfterSepLine_Import) {
     // line and the header, as a blank line does.
     for (const std::string sep_line : {"sep=,\r\r\n", "sep=,\n\n", "sep=,\r\n\r\n"}) {
         write_csv_file(
-            csv_path.string(), sep_line + "label,name,status,price,date_created,notes\r\r\nItem1,Alpha,1,9.99,,\r\r\n"
+            csv_path.string(),
+            sep_line + "label,name,status,price,date_created,notes\r\r\nItem1,Alpha,1,9.99,,\r\r\n"
         );
         db.import_csv("Items", "", csv_path.string());
         auto names = db.read_scalar_strings("Items", "name");
@@ -1078,10 +1094,14 @@ TEST(DatabaseCSV, ImportCSV_Group_InvalidInteger_Throws) {
     // Same message as the scalar path, not "Invalid enum value" for an enum that was never configured.
     for (const std::string cell : {"1.5", "60abc", "99999999999999999999", "abc"}) {
         write_csv_file(
-            csv_path.string(), "sep=,\nid,date_time,temperature,humidity\nItem1,2024-01-01T10:00:00,22.5," + cell + "\n"
+            csv_path.string(),
+            "sep=,\nid,date_time,temperature,humidity\nItem1,2024-01-01T10:00:00,22.5," + cell + "\n"
         );
         expect_import_error(
-            db, "readings", csv_path, "Cannot import_csv: Invalid integer value '" + cell + "' for column 'humidity'."
+            db,
+            "readings",
+            csv_path,
+            "Cannot import_csv: Invalid integer value '" + cell + "' for column 'humidity'."
         );
     }
 
@@ -1113,7 +1133,10 @@ TEST(DatabaseCSV, ImportCSV_NonVectorGroupVectorIndexColumn_KeepsDeclaredType) {
 
     write_csv_file(csv_path.string(), "sep=,\nid,date_time,vector_index\nItem1,2024-01-01T00:00:00,1.5\n");
     expect_import_error(
-        db, "slots", csv_path, "Cannot import_csv: Invalid integer value '1.5' for column 'vector_index'."
+        db,
+        "slots",
+        csv_path,
+        "Cannot import_csv: Invalid integer value '1.5' for column 'vector_index'."
     );
 
     fs::remove(csv_path);
@@ -1157,7 +1180,9 @@ TEST(DatabaseCSV, ImportCSV_Directory_ReportsPathIsADirectory) {
 TEST(DatabaseCSV, ImportCSV_DecimalCommaLocale_ReadsExportedFloats) {
     struct RestoreNumericLocale {
         std::string saved = std::setlocale(LC_NUMERIC, nullptr);
-        ~RestoreNumericLocale() { std::setlocale(LC_NUMERIC, saved.c_str()); }
+        ~RestoreNumericLocale() {
+            std::setlocale(LC_NUMERIC, saved.c_str());
+        }
     } restore;
     bool switched = false;
     for (const char* name : {"pt-BR", "pt_BR.UTF-8", "de_DE.UTF-8"}) {
@@ -1451,7 +1476,8 @@ TEST(DatabaseCSV, ImportCSV_RowColumnCountMismatch_Throws) {
     auto csv_path = temp_csv("ImportRowColMismatch");
     // Header has 6 columns, data row has 7 (extra column)
     write_csv_file(
-        csv_path.string(), "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,1,9.99,,note,EXTRA\n"
+        csv_path.string(),
+        "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,1,9.99,,note,EXTRA\n"
     );
 
     EXPECT_THROW(
@@ -2076,7 +2102,8 @@ TEST(DatabaseCSV, ImportCSV_Scalar_OmittedParent_AppliesOnDeleteActions) {
     EXPECT_EQ(db.read_element_ids("Parent"), (std::vector<int64_t>{id_a}));
     EXPECT_FALSE(db.read_scalar_integer_by_id("Child", "parent_id", child).has_value());
     EXPECT_EQ(
-        db.query_integer("SELECT COUNT(*) FROM Child_vector_refs WHERE id = ? AND parent_ref IS NULL", {child}), 1
+        db.query_integer("SELECT COUNT(*) FROM Child_vector_refs WHERE id = ? AND parent_ref IS NULL", {child}),
+        1
     );
     EXPECT_EQ(db.read_set_integers_by_id("Child", "parent_ref", child), (std::vector<std::optional<int64_t>>{id_a}));
     EXPECT_EQ(
@@ -2150,7 +2177,8 @@ TEST(DatabaseCSV, ImportCSV_Scalar_OmittedElement_CascadeIntoKeptElement_Throws)
         {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
     auto a = db.create_element(
-        "Item", quiver::Element().set("label", std::string("A")).set("weight", std::vector<double>{1.5, 2.5})
+        "Item",
+        quiver::Element().set("label", std::string("A")).set("weight", std::vector<double>{1.5, 2.5})
     );
     auto b = db.create_element("Item", quiver::Element().set("label", std::string("B")));
     auto kept_tag = db.create_element("Tag", quiver::Element().set("label", std::string("Kept")));

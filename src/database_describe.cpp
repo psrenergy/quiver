@@ -30,11 +30,13 @@ constexpr std::pair<const char*, GroupTableType> kGroupSections[] = {
 void print_group_columns(std::ostream& out, const TableDefinition& table, GroupTableType type) {
     bool first = true;
     for (const auto& col_name : table.column_order) {
-        if (col_name == "id" || (type == GroupTableType::Vector && col_name == "vector_index"))
+        if (col_name == "id" || (type == GroupTableType::Vector && col_name == "vector_index")) {
             continue;
+        }
         const auto& col = table.columns.at(col_name);
-        if (!first)
+        if (!first) {
             out << ", ";
+        }
         if (type == GroupTableType::TimeSeries && col.primary_key) {
             out << "[" << col_name << "]";
         } else {
@@ -212,8 +214,9 @@ void write_collection_section(
 
     for (const auto& [header, type] : kGroupSections) {
         auto groups = schema.group_names(collection, type);
-        if (groups.empty())
+        if (groups.empty()) {
             continue;
+        }
         out << header << "\n";
         for (const auto& group_name : groups) {
             const auto* table = schema.get_table(Schema::group_table_name(collection, group_name, type));
@@ -235,7 +238,12 @@ std::string Database::describe() const {
     for (const auto& collection : impl_->schema->collection_names()) {
         out << "\n";
         write_collection_section(
-            out, *impl_->schema, collection, number_of_elements(collection), impl_->ui_metadata, false
+            out,
+            *impl_->schema,
+            collection,
+            number_of_elements(collection),
+            impl_->ui_metadata,
+            false
         );
     }
 
@@ -318,8 +326,9 @@ std::string Database::summarize_collection(const std::string& collection) const 
     // Per group: count elements that have at least one row in the group table.
     for (const auto& [header, type] : kGroupSections) {
         auto groups = impl_->schema->group_names(collection, type);
-        if (groups.empty())
+        if (groups.empty()) {
             continue;
+        }
         out << header << "\n";
         for (const auto& group_name : groups) {
             const auto table = Schema::group_table_name(collection, group_name, type);

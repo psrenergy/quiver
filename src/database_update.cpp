@@ -138,8 +138,10 @@ namespace {
 // expects. `names` is the union of every row's keys (already validated), so a column that appears
 // only in a later row is still written; a cell missing from a row becomes SQL NULL, which keeps
 // every column the same length.
-std::map<std::string, std::vector<Value>>
-transpose_group_rows(const std::vector<std::map<std::string, Value>>& rows, const std::set<std::string>& names) {
+std::map<std::string, std::vector<Value>> transpose_group_rows(
+    const std::vector<std::map<std::string, Value>>& rows,
+    const std::set<std::string>& names
+) {
     std::map<std::string, std::vector<Value>> columns;
 
     for (const auto& col_name : names) {
@@ -229,7 +231,10 @@ void Database::update_vector_group_by_label(
     const std::vector<std::map<std::string, Value>>& rows
 ) {
     update_vector_group(
-        collection, group, impl_->resolve_label(collection, label, "update_vector_group_by_label"), rows
+        collection,
+        group,
+        impl_->resolve_label(collection, label, "update_vector_group_by_label"),
+        rows
     );
 }
 

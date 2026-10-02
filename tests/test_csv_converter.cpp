@@ -1,14 +1,15 @@
+#include <gtest/gtest.h>
+#include <quiver/binary/binary_file.h>
+#include <quiver/binary/binary_metadata.h>
+#include <quiver/binary/csv_converter.h>
+#include <quiver/element.h>
+
 #include <chrono>
 #include <clocale>
 #include <cmath>
 #include <filesystem>
 #include <fstream>
-#include <gtest/gtest.h>
 #include <limits>
-#include <quiver/binary/binary_file.h>
-#include <quiver/binary/binary_metadata.h>
-#include <quiver/binary/csv_converter.h>
-#include <quiver/element.h>
 #include <sstream>
 #include <string>
 
@@ -21,13 +22,16 @@ namespace fs = std::filesystem;
 
 class CSVConverterFixture : public ::testing::Test {
 protected:
-    void SetUp() override { path = (fs::temp_directory_path() / "quiver_csv_converter_test").string(); }
+    void SetUp() override {
+        path = (fs::temp_directory_path() / "quiver_csv_converter_test").string();
+    }
 
     void TearDown() override {
         for (auto ext : {".qvr", ".toml", ".csv"}) {
             auto full = path + ext;
-            if (fs::exists(full))
+            if (fs::exists(full)) {
                 fs::remove(full);
+            }
         }
     }
 
@@ -94,8 +98,9 @@ protected:
         std::istringstream iss(content);
         std::string line;
         while (std::getline(iss, line)) {
-            if (!line.empty())
+            if (!line.empty()) {
                 lines.push_back(line);
+            }
         }
         return lines;
     }
@@ -669,7 +674,9 @@ TEST_F(CSVConverterFixture, RoundTripIsLossless) {
 TEST_F(CSVConverterFixture, DecimalCommaLocaleReadsWrittenFloats) {
     struct RestoreNumericLocale {
         std::string saved = std::setlocale(LC_NUMERIC, nullptr);
-        ~RestoreNumericLocale() { std::setlocale(LC_NUMERIC, saved.c_str()); }
+        ~RestoreNumericLocale() {
+            std::setlocale(LC_NUMERIC, saved.c_str());
+        }
     } restore;
     bool switched = false;
     for (const char* name : {"pt-BR", "pt_BR.UTF-8", "de_DE.UTF-8"}) {

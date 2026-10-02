@@ -72,9 +72,11 @@ double ExpressionBinary::apply(Operation operation, double lhs, double rhs) {
 }
 
 namespace {
+
 bool is_logical(ExpressionBinary::Operation op) {
     return op == ExpressionBinary::Operation::And || op == ExpressionBinary::Operation::Or;
 }
+
 }  // namespace
 
 ExpressionBinary::ExpressionBinary(

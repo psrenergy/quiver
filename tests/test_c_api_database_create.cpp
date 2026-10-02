@@ -1,9 +1,10 @@
 #include "test_utils.h"
 
-#include <algorithm>
 #include <gtest/gtest.h>
 #include <quiver/c/database.h>
 #include <quiver/c/element.h>
+
+#include <algorithm>
 
 TEST(DatabaseCApi, CreateElementWithScalars) {
     // Test: Use C API to create element with schema
@@ -32,7 +33,8 @@ TEST(DatabaseCApi, CreateElementWithVector) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
 
@@ -108,7 +110,8 @@ TEST(DatabaseCApi, CreateElementWithTimeSeries) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
 
@@ -170,7 +173,12 @@ TEST(DatabaseCApi, CreateElementWithTimeSeries) {
     EXPECT_DOUBLE_EQ(out_values[2], 3.5);
 
     quiver_database_free_time_series_data(
-        out_col_names, out_col_types, out_col_data, out_col_has_value, out_col_count, out_row_count
+        out_col_names,
+        out_col_types,
+        out_col_data,
+        out_col_has_value,
+        out_col_count,
+        out_row_count
     );
     EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
     quiver_database_close(db);
@@ -180,7 +188,8 @@ TEST(DatabaseCApi, CreateElementWithMultiTimeSeries) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("multi_time_series.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("multi_time_series.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
 
@@ -300,7 +309,8 @@ TEST(DatabaseCApi, CreateElementTrimsWhitespaceFromStrings) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
 
@@ -441,7 +451,8 @@ TEST(DatabaseCApi, ResolveFkLabelInSetCreate) {
     uint8_t* mask = nullptr;
     size_t count = 0;
     ASSERT_EQ(
-        quiver_database_read_set_integers_by_id(db, "Child", "mentor_id", child_id, &values, &mask, &count), QUIVER_OK
+        quiver_database_read_set_integers_by_id(db, "Child", "mentor_id", child_id, &values, &mask, &count),
+        QUIVER_OK
     );
     ASSERT_EQ(count, 2);
 
@@ -677,7 +688,12 @@ TEST(DatabaseCApi, CreateElementTimeSeriesFkLabels) {
     EXPECT_EQ(sponsor_ids[1], 2);
 
     quiver_database_free_time_series_data(
-        out_col_names, out_col_types, out_col_data, out_col_has_value, out_col_count, out_row_count
+        out_col_names,
+        out_col_types,
+        out_col_data,
+        out_col_has_value,
+        out_col_count,
+        out_row_count
     );
     quiver_database_close(db);
 }
@@ -743,7 +759,13 @@ TEST(DatabaseCApi, CreateElementAllFkTypesInOneCall) {
     size_t mentor_count = 0;
     ASSERT_EQ(
         quiver_database_read_set_integers_by_id(
-            db, "Child", "mentor_id", child_id, &mentor_values, &mentor_mask, &mentor_count
+            db,
+            "Child",
+            "mentor_id",
+            child_id,
+            &mentor_values,
+            &mentor_mask,
+            &mentor_count
         ),
         QUIVER_OK
     );
@@ -758,7 +780,13 @@ TEST(DatabaseCApi, CreateElementAllFkTypesInOneCall) {
     size_t vector_count = 0;
     ASSERT_EQ(
         quiver_database_read_vector_integers_by_id(
-            db, "Child", "parent_ref", child_id, &vector_values, &vector_mask, &vector_count
+            db,
+            "Child",
+            "parent_ref",
+            child_id,
+            &vector_values,
+            &vector_mask,
+            &vector_count
         ),
         QUIVER_OK
     );
@@ -794,7 +822,12 @@ TEST(DatabaseCApi, CreateElementAllFkTypesInOneCall) {
     auto* sponsor_ids = static_cast<int64_t*>(out_col_data[1]);
     EXPECT_EQ(sponsor_ids[0], 2);
     quiver_database_free_time_series_data(
-        out_col_names, out_col_types, out_col_data, out_col_has_value, out_col_count, out_row_count
+        out_col_names,
+        out_col_types,
+        out_col_data,
+        out_col_has_value,
+        out_col_count,
+        out_row_count
     );
 
     quiver_database_close(db);
@@ -830,7 +863,12 @@ TEST(DatabaseCApi, CreateElementNoFkColumnsUnchanged) {
     size_t int_count = 0;
     ASSERT_EQ(
         quiver_database_read_scalar_integers(
-            db, "Configuration", "integer_attribute", &int_values, &int_mask, &int_count
+            db,
+            "Configuration",
+            "integer_attribute",
+            &int_values,
+            &int_mask,
+            &int_count
         ),
         QUIVER_OK
     );
@@ -844,7 +882,12 @@ TEST(DatabaseCApi, CreateElementNoFkColumnsUnchanged) {
     size_t float_count = 0;
     ASSERT_EQ(
         quiver_database_read_scalar_floats(
-            db, "Configuration", "float_attribute", &float_values, &float_mask, &float_count
+            db,
+            "Configuration",
+            "float_attribute",
+            &float_values,
+            &float_mask,
+            &float_count
         ),
         QUIVER_OK
     );

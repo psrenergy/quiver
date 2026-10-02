@@ -1,9 +1,10 @@
-#include <cstring>
-#include <filesystem>
 #include <gtest/gtest.h>
 #include <quiver/c/binary/binary_metadata.h>
 #include <quiver/c/common.h>
 #include <quiver/c/element.h>
+
+#include <cstring>
+#include <filesystem>
 #include <string>
 
 // The C API builds metadata only through its two factories (from_toml / from_element); tests that
@@ -491,7 +492,8 @@ TEST(BinaryCApiMetadata, FromElementDimensionSizesCountMismatch) {
     EXPECT_EQ(quiver_binary_metadata_from_element(el, &md), QUIVER_ERROR);
     EXPECT_EQ(md, nullptr);
     EXPECT_STREQ(
-        quiver_get_last_error(), "Cannot from_element: dimension_sizes count (1) does not match dimensions count (2)"
+        quiver_get_last_error(),
+        "Cannot from_element: dimension_sizes count (1) does not match dimensions count (2)"
     );
 
     quiver_element_destroy(el);

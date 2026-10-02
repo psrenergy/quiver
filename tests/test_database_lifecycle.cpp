@@ -1,22 +1,26 @@
 #include "test_utils.h"
 
-#include <filesystem>
-#include <fstream>
 #include <gtest/gtest.h>
 #include <quiver/database.h>
 #include <quiver/element.h>
 #include <quiver/migration.h>
 #include <quiver/migrations.h>
+
+#include <filesystem>
+#include <fstream>
 #include <string>
 
 namespace fs = std::filesystem;
 
 class TempFileFixture : public ::testing::Test {
 protected:
-    void SetUp() override { path = (fs::temp_directory_path() / "quiver_test.db").string(); }
+    void SetUp() override {
+        path = (fs::temp_directory_path() / "quiver_test.db").string();
+    }
     void TearDown() override {
-        if (fs::exists(path))
+        if (fs::exists(path)) {
             fs::remove(path);
+        }
     }
     std::string path;
 };
@@ -90,7 +94,9 @@ TEST_F(TempFileFixture, CurrentVersion) {
 TEST_F(TempFileFixture, FromSchemaFileNotFound) {
     EXPECT_THROW(
         quiver::Database::from_schema(
-            ":memory:", "nonexistent/path/schema.sql", {.read_only = false, .console_level = quiver::LogLevel::Off}
+            ":memory:",
+            "nonexistent/path/schema.sql",
+            {.read_only = false, .console_level = quiver::LogLevel::Off}
         ),
         std::runtime_error
     );
@@ -102,7 +108,9 @@ TEST_F(TempFileFixture, FromSchemaEmptyFile) {
 
     try {
         quiver::Database::from_schema(
-            ":memory:", schema_path, {.read_only = false, .console_level = quiver::LogLevel::Off}
+            ":memory:",
+            schema_path,
+            {.read_only = false, .console_level = quiver::LogLevel::Off}
         );
         ADD_FAILURE() << "Expected from_schema to throw";
     } catch (const std::runtime_error& error) {
@@ -121,7 +129,9 @@ TEST_F(TempFileFixture, FromSchemaInvalidPath) {
 TEST_F(TempFileFixture, FromMigrationsInvalidPath) {
     EXPECT_THROW(
         quiver::Database::from_migrations(
-            ":memory:", "nonexistent/migrations/", {.read_only = false, .console_level = quiver::LogLevel::Off}
+            ":memory:",
+            "nonexistent/migrations/",
+            {.read_only = false, .console_level = quiver::LogLevel::Off}
         ),
         std::runtime_error
     );
@@ -138,8 +148,9 @@ protected:
         migrations_path = (fs::path(__FILE__).parent_path() / "schemas" / "migrations").string();
     }
     void TearDown() override {
-        if (fs::exists(path))
+        if (fs::exists(path)) {
             fs::remove(path);
+        }
     }
     std::string path;
     std::string migrations_path;
@@ -341,12 +352,15 @@ TEST_F(MigrationFixture, FromMigrationsLoadsSchemaMetadata) {
     // Verify expected columns exist
     bool has_id = false, has_label = false, has_name = false;
     for (const auto& attribute : attributes) {
-        if (attribute.name == "id")
+        if (attribute.name == "id") {
             has_id = true;
-        if (attribute.name == "label")
+        }
+        if (attribute.name == "label") {
             has_label = true;
-        if (attribute.name == "name")
+        }
+        if (attribute.name == "name") {
             has_name = true;
+        }
     }
     EXPECT_TRUE(has_id);
     EXPECT_TRUE(has_label);
@@ -403,11 +417,14 @@ TEST_F(MigrationFixture, FromMigrationsLoadsSchemaWhenAlreadyUpToDate) {
 TEST_F(TempFileFixture, OpenExistingDatabaseLoadsSchemaOnFirstUse) {
     {
         auto created = quiver::Database::from_schema(
-            path, VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+            path,
+            VALID_SCHEMA("collections.sql"),
+            {.read_only = false, .console_level = quiver::LogLevel::Off}
         );
         created.create_element("Configuration", quiver::Element().set("label", std::string("Config")));
         created.create_element(
-            "Collection", quiver::Element().set("label", std::string("Item 1")).set("some_integer", int64_t{42})
+            "Collection",
+            quiver::Element().set("label", std::string("Item 1")).set("some_integer", int64_t{42})
         );
     }
 
@@ -422,7 +439,9 @@ TEST_F(TempFileFixture, OpenExistingDatabaseLoadsSchemaOnFirstUse) {
 TEST_F(TempFileFixture, OpenReadOnlyLoadsSchemaOnFirstUse) {
     {
         auto created = quiver::Database::from_schema(
-            path, VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off}
+            path,
+            VALID_SCHEMA("collections.sql"),
+            {.read_only = false, .console_level = quiver::LogLevel::Off}
         );
         created.create_element("Configuration", quiver::Element().set("label", std::string("Config")));
     }
@@ -430,7 +449,8 @@ TEST_F(TempFileFixture, OpenReadOnlyLoadsSchemaOnFirstUse) {
     quiver::Database db(path, {.read_only = true, .console_level = quiver::LogLevel::Off});
     EXPECT_EQ(db.list_scalar_attributes("Configuration").size(), 2u);
     EXPECT_THROW(
-        db.create_element("Configuration", quiver::Element().set("label", std::string("Nope"))), std::runtime_error
+        db.create_element("Configuration", quiver::Element().set("label", std::string("Nope"))),
+        std::runtime_error
     );
 }
 
@@ -442,7 +462,9 @@ TEST_F(TempFileFixture, FromMigrationsWithNoVersionsReturnsHandle) {
     fs::create_directories(empty_dir);
 
     auto db = quiver::Database::from_migrations(
-        path, empty_dir.string(), {.read_only = false, .console_level = quiver::LogLevel::Off}
+        path,
+        empty_dir.string(),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
     EXPECT_TRUE(db.is_healthy());
     EXPECT_EQ(db.current_version(), 0);

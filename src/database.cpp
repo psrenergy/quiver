@@ -4,14 +4,15 @@
 #include "ui_metadata.h"
 #include "utils/string.h"
 
-#include <atomic>
-#include <filesystem>
-#include <fstream>
-#include <mutex>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 #include <sqlite3.h>
+
+#include <atomic>
+#include <filesystem>
+#include <fstream>
+#include <mutex>
 #include <sstream>
 #include <stdexcept>
 
@@ -290,8 +291,11 @@ void Database::validate_migrations(const std::string& migrations_path) {
     }
 }
 
-Database
-Database::from_schema(const std::string& db_path, const std::string& schema_path, const DatabaseOptions& options) {
+Database Database::from_schema(
+    const std::string& db_path,
+    const std::string& schema_path,
+    const DatabaseOptions& options
+) {
     namespace fs = std::filesystem;
     if (options.read_only) {
         throw std::runtime_error("Cannot from_schema: read_only mode (use Database constructor to open existing)");
@@ -399,7 +403,10 @@ void Database::migrate_up(const std::string& migrations_path, const char* operat
     }
 
     impl_->logger->info(
-        "Applying {} pending migration(s) from version {} to {}", pending.size(), current, migrations.latest_version()
+        "Applying {} pending migration(s) from version {} to {}",
+        pending.size(),
+        current,
+        migrations.latest_version()
     );
 
     for (const auto& migration : pending) {

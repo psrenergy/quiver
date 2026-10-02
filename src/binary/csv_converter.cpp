@@ -39,8 +39,9 @@ std::vector<std::string> split_fields(const std::string& line) {
 std::string join_fields(const std::vector<std::string>& fields, std::string_view separator) {
     std::string joined;
     for (size_t i = 0; i < fields.size(); ++i) {
-        if (i > 0)
+        if (i > 0) {
             joined += separator;
+        }
         joined += fields[i];
     }
     return joined;
@@ -62,8 +63,9 @@ CSVConverter::CSVConverter(
         header_.push_back(has_hourly_dimension() ? "datetime" : "date");
     }
     for (const auto& dim : metadata_.dimensions) {
-        if (aggregate_time && dim.is_time_dimension())
+        if (aggregate_time && dim.is_time_dimension()) {
             continue;
+        }
         header_.push_back(dim.name);
     }
     header_.insert(header_.end(), metadata_.labels.begin(), metadata_.labels.end());
@@ -116,8 +118,9 @@ void CSVConverter::csv_to_bin(const std::string& file_path) {
         bin_writer.write(row.data, dims);
 
         auto nxt = next_dimensions(metadata, current_dimensions);
-        if (!nxt)
+        if (!nxt) {
             break;
+        }
         current_dimensions = std::move(*nxt);
     }
 }
@@ -145,8 +148,9 @@ void CSVConverter::bin_to_csv(const std::string& file_path, bool aggregate_time_
         *csv_writer.io_ << csv_writer.build_line(data, current_dimensions);
 
         auto nxt = next_dimensions(metadata, current_dimensions);
-        if (!nxt)
+        if (!nxt) {
             break;
+        }
         current_dimensions = std::move(*nxt);
     }
 }
@@ -216,11 +220,13 @@ std::string CSVConverter::build_datetime_string_from_time_dimension_values(
     auto datetime = metadata_.initial_datetime;
     bool has_hourly = false;
     for (size_t i = 0; i < dimensions.size(); ++i) {
-        if (!dimensions[i].is_time_dimension())
+        if (!dimensions[i].is_time_dimension()) {
             continue;
+        }
         datetime = dimensions[i].time->add_offset_from_int(datetime, time_dimension_values[i]);
-        if (dimensions[i].time->frequency == TimeFrequency::Hourly)
+        if (dimensions[i].time->frequency == TimeFrequency::Hourly) {
             has_hourly = true;
+        }
     }
 
     if (has_hourly) {
@@ -241,8 +247,9 @@ std::vector<std::string> CSVConverter::dimension_cells(const std::vector<int64_t
         cells.push_back(build_datetime_string_from_time_dimension_values(current_dimensions));
     }
     for (size_t i = 0; i < dimensions.size(); ++i) {
-        if (aggregate_time && dimensions[i].is_time_dimension())
+        if (aggregate_time && dimensions[i].is_time_dimension()) {
             continue;
+        }
         cells.push_back(std::to_string(current_dimensions[i]));
     }
     return cells;

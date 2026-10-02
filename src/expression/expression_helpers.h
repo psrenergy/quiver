@@ -117,8 +117,10 @@ inline void validate_compatibility(const BinaryMetadata& lhs, const BinaryMetada
 // The one label rule for every broadcasting node: every operand with more than one label must carry
 // the same label set, and a single-label operand broadcasts its one value across it whatever that
 // label is called. When every operand has a single label, the output takes the primary operand's.
-inline std::vector<std::string>
-broadcast_labels(std::initializer_list<const BinaryMetadata*> sources, const BinaryMetadata& primary) {
+inline std::vector<std::string> broadcast_labels(
+    std::initializer_list<const BinaryMetadata*> sources,
+    const BinaryMetadata& primary
+) {
     const std::vector<std::string>* labels = nullptr;
     for (const auto* src : sources) {
         if (src->labels.size() <= 1) {
@@ -144,8 +146,10 @@ broadcast_labels(std::initializer_list<const BinaryMetadata*> sources, const Bin
 // unit come from `primary`. initial_datetime comes from the first source with a time dimension,
 // else from `primary`. The pairwise validate_shape_compatibility calls force every time-bearing
 // source to agree, so only that fallback depends on which operand is primary.
-inline BinaryMetadata
-build_broadcast_metadata(std::initializer_list<const BinaryMetadata*> sources, const BinaryMetadata& primary) {
+inline BinaryMetadata build_broadcast_metadata(
+    std::initializer_list<const BinaryMetadata*> sources,
+    const BinaryMetadata& primary
+) {
     BinaryMetadata out;
     out.version = primary.version;
     out.unit = primary.unit;
@@ -260,8 +264,10 @@ inline double compute_percentile(std::vector<double>& values, double fraction) {
 // Broadcast operand helpers (shared by ExpressionBinary / ExpressionTernary)
 // ============================================================================
 
-inline BroadcastOperand
-make_broadcast_operand(const BinaryMetadata& operand_meta, const std::vector<Dimension>& out_dims) {
+inline BroadcastOperand make_broadcast_operand(
+    const BinaryMetadata& operand_meta,
+    const std::vector<Dimension>& out_dims
+) {
     BroadcastOperand op;
     op.dim_sizes.assign(out_dims.size(), 0);
     op.to_out.assign(operand_meta.dimensions.size(), -1);

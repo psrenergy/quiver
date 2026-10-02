@@ -42,80 +42,80 @@ struct quiver_expression {
 // Validates pointer arguments are non-null. Sets descriptive error and returns QUIVER_ERROR.
 // Uses stringification to auto-generate messages like "Null argument: db", "Null argument: collection".
 // Supports 1-6 arguments: QUIVER_REQUIRE(db, collection, attribute)
-#define QUIVER_REQUIRE_1(a)                                                                                            \
-    do {                                                                                                               \
-        if (!(a)) {                                                                                                    \
-            quiver_set_last_error("Null argument: " #a);                                                               \
-            return QUIVER_ERROR;                                                                                       \
-        }                                                                                                              \
+#define QUIVER_REQUIRE_1(a)                              \
+    do {                                                 \
+        if (!(a)) {                                      \
+            quiver_set_last_error("Null argument: " #a); \
+            return QUIVER_ERROR;                         \
+        }                                                \
     } while (0)
-#define QUIVER_REQUIRE_2(a, b)                                                                                         \
-    do {                                                                                                               \
-        QUIVER_REQUIRE_1(a);                                                                                           \
-        QUIVER_REQUIRE_1(b);                                                                                           \
+#define QUIVER_REQUIRE_2(a, b) \
+    do {                       \
+        QUIVER_REQUIRE_1(a);   \
+        QUIVER_REQUIRE_1(b);   \
     } while (0)
-#define QUIVER_REQUIRE_3(a, b, c)                                                                                      \
-    do {                                                                                                               \
-        QUIVER_REQUIRE_1(a);                                                                                           \
-        QUIVER_REQUIRE_1(b);                                                                                           \
-        QUIVER_REQUIRE_1(c);                                                                                           \
+#define QUIVER_REQUIRE_3(a, b, c) \
+    do {                          \
+        QUIVER_REQUIRE_1(a);      \
+        QUIVER_REQUIRE_1(b);      \
+        QUIVER_REQUIRE_1(c);      \
     } while (0)
-#define QUIVER_REQUIRE_4(a, b, c, d)                                                                                   \
-    do {                                                                                                               \
-        QUIVER_REQUIRE_1(a);                                                                                           \
-        QUIVER_REQUIRE_1(b);                                                                                           \
-        QUIVER_REQUIRE_1(c);                                                                                           \
-        QUIVER_REQUIRE_1(d);                                                                                           \
+#define QUIVER_REQUIRE_4(a, b, c, d) \
+    do {                             \
+        QUIVER_REQUIRE_1(a);         \
+        QUIVER_REQUIRE_1(b);         \
+        QUIVER_REQUIRE_1(c);         \
+        QUIVER_REQUIRE_1(d);         \
     } while (0)
-#define QUIVER_REQUIRE_5(a, b, c, d, e)                                                                                \
-    do {                                                                                                               \
-        QUIVER_REQUIRE_1(a);                                                                                           \
-        QUIVER_REQUIRE_1(b);                                                                                           \
-        QUIVER_REQUIRE_1(c);                                                                                           \
-        QUIVER_REQUIRE_1(d);                                                                                           \
-        QUIVER_REQUIRE_1(e);                                                                                           \
+#define QUIVER_REQUIRE_5(a, b, c, d, e) \
+    do {                                \
+        QUIVER_REQUIRE_1(a);            \
+        QUIVER_REQUIRE_1(b);            \
+        QUIVER_REQUIRE_1(c);            \
+        QUIVER_REQUIRE_1(d);            \
+        QUIVER_REQUIRE_1(e);            \
     } while (0)
-#define QUIVER_REQUIRE_6(a, b, c, d, e, f)                                                                             \
-    do {                                                                                                               \
-        QUIVER_REQUIRE_1(a);                                                                                           \
-        QUIVER_REQUIRE_1(b);                                                                                           \
-        QUIVER_REQUIRE_1(c);                                                                                           \
-        QUIVER_REQUIRE_1(d);                                                                                           \
-        QUIVER_REQUIRE_1(e);                                                                                           \
-        QUIVER_REQUIRE_1(f);                                                                                           \
+#define QUIVER_REQUIRE_6(a, b, c, d, e, f) \
+    do {                                   \
+        QUIVER_REQUIRE_1(a);               \
+        QUIVER_REQUIRE_1(b);               \
+        QUIVER_REQUIRE_1(c);               \
+        QUIVER_REQUIRE_1(d);               \
+        QUIVER_REQUIRE_1(e);               \
+        QUIVER_REQUIRE_1(f);               \
     } while (0)
-#define QUIVER_REQUIRE_7(a, b, c, d, e, f, g)                                                                          \
-    do {                                                                                                               \
-        QUIVER_REQUIRE_1(a);                                                                                           \
-        QUIVER_REQUIRE_1(b);                                                                                           \
-        QUIVER_REQUIRE_1(c);                                                                                           \
-        QUIVER_REQUIRE_1(d);                                                                                           \
-        QUIVER_REQUIRE_1(e);                                                                                           \
-        QUIVER_REQUIRE_1(f);                                                                                           \
-        QUIVER_REQUIRE_1(g);                                                                                           \
+#define QUIVER_REQUIRE_7(a, b, c, d, e, f, g) \
+    do {                                      \
+        QUIVER_REQUIRE_1(a);                  \
+        QUIVER_REQUIRE_1(b);                  \
+        QUIVER_REQUIRE_1(c);                  \
+        QUIVER_REQUIRE_1(d);                  \
+        QUIVER_REQUIRE_1(e);                  \
+        QUIVER_REQUIRE_1(f);                  \
+        QUIVER_REQUIRE_1(g);                  \
     } while (0)
-#define QUIVER_REQUIRE_8(a, b, c, d, e, f, g, h)                                                                       \
-    do {                                                                                                               \
-        QUIVER_REQUIRE_1(a);                                                                                           \
-        QUIVER_REQUIRE_1(b);                                                                                           \
-        QUIVER_REQUIRE_1(c);                                                                                           \
-        QUIVER_REQUIRE_1(d);                                                                                           \
-        QUIVER_REQUIRE_1(e);                                                                                           \
-        QUIVER_REQUIRE_1(f);                                                                                           \
-        QUIVER_REQUIRE_1(g);                                                                                           \
-        QUIVER_REQUIRE_1(h);                                                                                           \
+#define QUIVER_REQUIRE_8(a, b, c, d, e, f, g, h) \
+    do {                                         \
+        QUIVER_REQUIRE_1(a);                     \
+        QUIVER_REQUIRE_1(b);                     \
+        QUIVER_REQUIRE_1(c);                     \
+        QUIVER_REQUIRE_1(d);                     \
+        QUIVER_REQUIRE_1(e);                     \
+        QUIVER_REQUIRE_1(f);                     \
+        QUIVER_REQUIRE_1(g);                     \
+        QUIVER_REQUIRE_1(h);                     \
     } while (0)
-#define QUIVER_REQUIRE_9(a, b, c, d, e, f, g, h, i)                                                                    \
-    do {                                                                                                               \
-        QUIVER_REQUIRE_1(a);                                                                                           \
-        QUIVER_REQUIRE_1(b);                                                                                           \
-        QUIVER_REQUIRE_1(c);                                                                                           \
-        QUIVER_REQUIRE_1(d);                                                                                           \
-        QUIVER_REQUIRE_1(e);                                                                                           \
-        QUIVER_REQUIRE_1(f);                                                                                           \
-        QUIVER_REQUIRE_1(g);                                                                                           \
-        QUIVER_REQUIRE_1(h);                                                                                           \
-        QUIVER_REQUIRE_1(i);                                                                                           \
+#define QUIVER_REQUIRE_9(a, b, c, d, e, f, g, h, i) \
+    do {                                            \
+        QUIVER_REQUIRE_1(a);                        \
+        QUIVER_REQUIRE_1(b);                        \
+        QUIVER_REQUIRE_1(c);                        \
+        QUIVER_REQUIRE_1(d);                        \
+        QUIVER_REQUIRE_1(e);                        \
+        QUIVER_REQUIRE_1(f);                        \
+        QUIVER_REQUIRE_1(g);                        \
+        QUIVER_REQUIRE_1(h);                        \
+        QUIVER_REQUIRE_1(i);                        \
     } while (0)
 
 #define QUIVER_EXPAND(x) x
