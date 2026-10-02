@@ -62,8 +62,9 @@ bun run example.ts
 
 ### Lifecycle
 
-- `Database.fromSchema(dbPath, schemaPath)` -- Create database from SQL schema file
-- `Database.fromMigrations(dbPath, migrationsPath)` -- Create database from migrations directory
+- `Database.fromSchema(dbPath, schemaPath, options?)` -- Create database from SQL schema file
+- `Database.fromMigrations(dbPath, migrationsPath, options?)` -- Create database from migrations directory
+- `Database.open(dbPath, options?)` -- Open an existing database file; the schema loads on first use
 - `Database.validateMigrations(migrationsPath)` -- Validate a migrations directory (every `up.sql`, then every `down.sql`, ending with no table left behind) in-memory; throws on failure
 - `close()` -- Close the database connection
 
@@ -74,6 +75,16 @@ bun run example.ts
 - `deleteElement(collection, id)` -- Delete element by ID
 - `updateElementByLabel(collection, label, data)` -- Update element by label
 - `deleteElementByLabel(collection, label)` -- Delete element by label
+- `updateRelation(collectionFrom, collectionTo, relationType, id, targetLabel)` -- Point a scalar
+  relation at the element labelled `targetLabel` (`null` clears it)
+- `updateRelationByLabel(collectionFrom, collectionTo, relationType, label, targetLabel)` -- Same,
+  addressing the element by label
+- `updateVectorGroup(collection, group, id, data)` -- Replace an element's rows in one named vector
+  group (`{}` clears it)
+- `updateVectorGroupByLabel(collection, group, label, data)` -- Same, addressing the element by label
+- `updateSetGroup(collection, group, id, data)` -- Replace an element's rows in one named set group
+  (`{}` clears it)
+- `updateSetGroupByLabel(collection, group, label, data)` -- Same, addressing the element by label
 
 ### Read (bulk)
 
@@ -127,6 +138,18 @@ bun run example.ts
 
 - `readTimeSeriesGroup(collection, group, id)` -- Read time series data for an element
 - `updateTimeSeriesGroup(collection, group, id, data)` -- Write time series data for an element
+  (`{}` clears it)
+- `updateTimeSeriesGroupByLabel(collection, group, label, data)` -- Same, addressing the element by
+  label
+- `readTimeSeriesRow(collection, group, attribute, dateTime)` -- One value per element: the last
+  non-null value at or before `dateTime`, or `null` if there is none
+- `upsertTimeSeriesRow(collection, group, id, row)` -- Insert or replace one row, keyed by its
+  dimension value
+- `upsertTimeSeriesRowByLabel(collection, group, label, row)` -- Same, addressing the element by label
+- `hasTimeSeriesFiles(collection)` -- Check whether the collection has a time series files table
+- `listTimeSeriesFilesColumns(collection)` -- List the time series files columns
+- `readTimeSeriesFiles(collection)` -- Read the file paths (`null` for an unset column)
+- `updateTimeSeriesFiles(collection, data)` -- Write the file paths
 
 ### Query
 
@@ -162,7 +185,9 @@ as an exact INTEGER, a `boolean` as the INTEGER 1 or 0).
 
 ### Introspection
 
-- `describe()` -- Print schema info to stdout
+- `describe()` -- Whole-database text report (returns a string)
+- `describeCollection(collection)` -- One collection's structure (returns a string)
+- `summarizeCollection(collection)` -- Per-attribute null/value summary (returns a string)
 - `isHealthy()` -- Check database health
 - `path()` -- Get database file path
 - `currentVersion()` -- Get current schema version
@@ -178,11 +203,13 @@ as an exact INTEGER, a `boolean` as the INTEGER 1 or 0).
 
 Exported types available for TypeScript consumers:
 
-- `ScalarValue` -- `number | bigint | string | null`
-- `ArrayValue` -- `number[] | bigint[] | string[]`
+- `ScalarValue` -- `number | bigint | boolean | string | null` (a `boolean` is stored as INTEGER 1/0)
+- `ArrayValue` -- `number[] | bigint[] | boolean[] | string[]`
 - `Value` -- `ScalarValue | ArrayValue`
 - `ElementData` -- `Record<string, Value | undefined>`
 - `QueryParam` -- `number | bigint | boolean | string | null`
+- `GroupColumns` -- `Record<string, (number | bigint | string | boolean | null)[]>`, the column-oriented
+  payload of `updateTimeSeriesGroup` / `updateVectorGroup` / `updateSetGroup` (and their `ByLabel` forms)
 - `QuiverError` -- Error class for all Quiver operations
 - `ScalarMetadata` -- Scalar attribute metadata
 - `GroupMetadata` -- Vector/set/time series group metadata
