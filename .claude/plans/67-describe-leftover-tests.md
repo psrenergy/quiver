@@ -80,9 +80,9 @@ From the repo root:
 
 ## Acceptance criteria
 
-- [ ] No "describe runs/does not throw" test remains in any lifecycle file.
-- [ ] `capture_describe` is gone, and the five content tests pass in `test_database_describe.cpp`.
-- [ ] All suites green.
+- [x] No "describe runs/does not throw" test remains in any lifecycle file.
+- [x] `capture_describe` is gone, and the five content tests pass in `test_database_describe.cpp`.
+- [x] All suites green.
 
 ## Pitfalls
 
@@ -92,3 +92,46 @@ From the repo root:
 ## Out of scope
 
 - Adding new describe assertions.
+
+## Implementation notes
+
+- **Landed as written, with small drift.** `rs/plan67` was already level with `master` (merge
+  was a no-op). Every excerpt matched, give or take a line.
+- **Python step skipped.** Plan 30 had already deleted `test_describe_runs_without_error`
+  (`636ccb9`), as the header allowed.
+- **Drift fixed.**
+  - The plan's filter `*Lifecycle*` matches no C++ lifecycle test, because they are all
+    `TempFileFixture.*`. I ran `--gtest_filter=DatabaseDescribe*:TempFileFixture*` instead.
+  - The C API `// Describe tests` banner went with `DescribeDoesNotFail`, since it would have
+    been orphaned.
+  - `#include <sstream>` had no user in `test_database_lifecycle.cpp`, so it is gone.
+- **Nothing was lost by the C API deletion.** `DescribeDoesNotFail` checked the
+  `Database: :memory:` header. That line is still pinned in the core by
+  `DatabaseDescribe.WholeDatabaseReport`, and `DatabaseCApiMetadata.DescribeReturnsText` still
+  covers the C ABI marshalling.
+- **The moved tests are unchanged.** Only the setup differs: `open(VALID_SCHEMA(...)).describe()`
+  replaces the fixture plus `capture_describe`. Renames:
+  - `DescribeVectorsHeaderPrintedOnce` → `VectorsHeaderAppearsOnce`
+  - `DescribeSetsHeaderPrintedOnce` → `SetsHeaderAppearsOnce`
+  - `DescribeTimeSeriesWithDimensionColumn` → `TimeSeriesHeaderAppearsOnceWithBracketedDimension`
+  - `DescribeColumnOrderMatchesSchema` → `ScalarOrderMatchesSchema`
+  - `DescribeNoCategoryHeaderWhenEmpty` → `NoCategoryHeaderWhenEmpty`
+- **No CHANGELOG, AGENTS.md or FFI change.** `tests/AGENTS.md` never placed describe tests in the
+  lifecycle file. Its line listing `test_database_describe.cpp` is already right.
+- **Verification.**
+  - Filtered C++ run: 30/30 passed.
+  - `scripts/test-all.bat`: all six suites PASS.
+    - C++: 1401. That is 1402 at plan 64, minus `DescribeDoesNotThrow`.
+    - C API: 571. That is 572 minus `DescribeDoesNotFail`.
+    - Julia: 1574. Dart: 444. JS: 241. Python: 350.
+  - `scripts/format.bat` exited 0.
+  - The acceptance grep prints nothing.
+- **For later plans.**
+  - Plan 66 edits the same lifecycle files, so expect a trivial merge conflict there.
+  - Biome again rewrote 42 untouched CRLF JS files to LF (no content diff). I reverted them.
+  - The Python step of `format.bat` (`uv sync`) rebuilt the wheel, which took 18 minutes while
+    other sessions ran.
+  - The first `test-all.bat` run was killed by Claude Code under memory pressure from the
+    parallel sessions. The re-run passed.
+  - `scripts/test-all.bat` now runs only the six suites, with no CLI smoke step. Plan 65's premise
+    (step 7 runs the deleted `example1.lua`) may already be stale, so check before executing it.

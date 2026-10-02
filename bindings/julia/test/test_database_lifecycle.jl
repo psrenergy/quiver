@@ -111,17 +111,6 @@ end
     @test captured_db[].ptr == C_NULL
 end
 
-@testset "Describe" begin
-    path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
-    db = Quiver.from_schema(":memory:", path_schema)
-
-    # Just verify describe runs without error
-    Quiver.describe(db)
-    @test true
-
-    Quiver.close!(db)
-end
-
 @testset "Current Version" begin
     @testset "Schema returns 0" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")

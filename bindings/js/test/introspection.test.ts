@@ -36,13 +36,4 @@ describe("introspection", () => {
       db.close();
     }
   });
-
-  test("describe runs without error", () => {
-    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
-    try {
-      db.describe();
-    } finally {
-      db.close();
-    }
-  });
 });
