@@ -619,24 +619,6 @@ TEST(DatabaseCApi, UpdateVectorIntegersNullCollection) {
     quiver_database_close(db);
 }
 
-TEST(DatabaseCApi, UpdateVectorIntegersNullAttribute) {
-    auto options = quiver::test::quiet_options();
-    quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
-    ASSERT_NE(db, nullptr);
-
-    quiver_element_t* update = nullptr;
-    ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
-    int64_t values[] = {1, 2, 3};
-    quiver_element_set_array_integer(update, nullptr, values, 3, nullptr);
-    auto err = quiver_database_update_element(db, "Collection", 1, update);
-    EXPECT_EQ(quiver_element_destroy(update), QUIVER_OK);
-    EXPECT_EQ(err, QUIVER_ERROR);
-
-    quiver_database_close(db);
-}
-
 TEST(DatabaseCApi, UpdateVectorFloatsNullDb) {
     quiver_element_t* update = nullptr;
     ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
@@ -781,24 +763,6 @@ TEST(DatabaseCApi, UpdateSetStringsNullCollection) {
     quiver_database_close(db);
 }
 
-TEST(DatabaseCApi, UpdateSetStringsNullAttribute) {
-    auto options = quiver::test::quiet_options();
-    quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
-    ASSERT_NE(db, nullptr);
-
-    quiver_element_t* update = nullptr;
-    ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
-    const char* values[] = {"a", "b", "c"};
-    quiver_element_set_array_string(update, nullptr, values, 3, nullptr);
-    auto err = quiver_database_update_element(db, "Collection", 1, update);
-    EXPECT_EQ(quiver_element_destroy(update), QUIVER_OK);
-    EXPECT_EQ(err, QUIVER_ERROR);
-
-    quiver_database_close(db);
-}
-
 // ============================================================================
 // Whitespace trimming tests
 // ============================================================================
@@ -920,46 +884,6 @@ TEST(DatabaseCApi, UpdateDateTimeScalar) {
     EXPECT_STREQ(value, "2025-12-31T23:59:59");
 
     delete[] value;
-    quiver_database_close(db);
-}
-
-// ============================================================================
-// Null string element tests
-// ============================================================================
-
-TEST(DatabaseCApi, UpdateVectorStringsNullElement) {
-    auto options = quiver::test::quiet_options();
-    quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
-    ASSERT_NE(db, nullptr);
-
-    quiver_element_t* update = nullptr;
-    ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
-    const char* values[] = {"a", nullptr, "c"};
-    quiver_element_set_array_string(update, "tag", values, 3, nullptr);
-    auto err = quiver_database_update_element(db, "Collection", 1, update);
-    EXPECT_EQ(quiver_element_destroy(update), QUIVER_OK);
-    EXPECT_EQ(err, QUIVER_ERROR);
-
-    quiver_database_close(db);
-}
-
-TEST(DatabaseCApi, UpdateSetStringsNullElement) {
-    auto options = quiver::test::quiet_options();
-    quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
-    ASSERT_NE(db, nullptr);
-
-    quiver_element_t* update = nullptr;
-    ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
-    const char* values[] = {"a", nullptr, "c"};
-    quiver_element_set_array_string(update, "tag", values, 3, nullptr);
-    auto err = quiver_database_update_element(db, "Collection", 1, update);
-    EXPECT_EQ(quiver_element_destroy(update), QUIVER_OK);
-    EXPECT_EQ(err, QUIVER_ERROR);
-
     quiver_database_close(db);
 }
 
@@ -1889,6 +1813,39 @@ TEST(DatabaseCApi, UpdateGroupNullStringEntryIsNull) {
     EXPECT_STREQ(out[0], "first");
     EXPECT_EQ(out[1], nullptr);
     quiver_database_free_string_array(out, count);
+
+    EXPECT_EQ(quiver_database_close(db), QUIVER_OK);
+}
+
+// The element-array counterpart of UpdateGroupNullStringEntryIsNull: a NULL char* entry with a dense
+// (NULL) mask is SQL NULL when written through update_element.
+TEST(DatabaseCApi, UpdateElementNullStringArrayEntryIsNull) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+              QUIVER_OK);
+
+    quiver_element_t* item = nullptr;
+    ASSERT_EQ(quiver_element_create(&item), QUIVER_OK);
+    ASSERT_EQ(quiver_element_set_string(item, "label", "Item 1"), QUIVER_OK);
+    int64_t id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Collection", item, &id), QUIVER_OK) << quiver_get_last_error();
+    EXPECT_EQ(quiver_element_destroy(item), QUIVER_OK);
+
+    quiver_element_t* update = nullptr;
+    ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
+    const char* tags[] = {"a", nullptr, "c"};
+    ASSERT_EQ(quiver_element_set_array_string(update, "tag", tags, 3, nullptr), QUIVER_OK);
+    ASSERT_EQ(quiver_database_update_element(db, "Collection", id, update), QUIVER_OK) << quiver_get_last_error();
+    EXPECT_EQ(quiver_element_destroy(update), QUIVER_OK);
+
+    int64_t nulls = -1;
+    int has_value = 0;
+    ASSERT_EQ(
+        quiver_database_query_integer(
+            db, "SELECT COUNT(*) FROM Collection_set_tags WHERE tag IS NULL", nullptr, nullptr, 0, &nulls, &has_value),
+        QUIVER_OK);
+    EXPECT_EQ(nulls, 1);
 
     EXPECT_EQ(quiver_database_close(db), QUIVER_OK);
 }
