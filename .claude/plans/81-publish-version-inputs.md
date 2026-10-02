@@ -71,9 +71,9 @@ No automated test. Validate the YAML and do a dry read.
 
 ## Acceptance criteria
 
-- [ ] No child workflow declares or reads a `version` input.
-- [ ] `publish.yml` passes no `version=` argument, and every `ref` input is kept.
-- [ ] `.github/AGENTS.md` is updated.
+- [x] No child workflow declares or reads a `version` input.
+- [x] `publish.yml` passes no `version=` argument, and every `ref` input is kept.
+- [x] `.github/AGENTS.md` is updated.
 
 ## Pitfalls
 
@@ -83,3 +83,45 @@ No automated test. Validate the YAML and do a dry read.
 ## Out of scope
 
 - Other publish-workflow changes (plan 83).
+
+## Implementation notes
+
+- **Done as planned, no drift.** Every quoted excerpt and line anchor matched exactly: s3 L6-9 and
+  L34-37, julia L6-9 and L30-33, js L6-9 and L42-45, publish.yml L66/L101/L139. Each child lost its
+  4-line `version:` input and its 4-line override block, and now reads
+  `v="$(python3 scripts/assert_version.py)"` followed by the unchanged
+  `echo "version=$v" >> "$GITHUB_OUTPUT"`.
+- **Why the assignment is kept on its own line.** Under Actions' default `bash -e` shell, a bare
+  `v="$(...)"` assignment carries the command's exit status, so a manifest mismatch still fails the
+  step. Inlining the command into `echo "version=$(...)"` would lose that status and publish an
+  empty version.
+- **`publish.yml`.** I dropped `"version=$VERSION"` from all three dispatch lines and removed the
+  now-unused `VERSION:` from the publish-s3 step's `env:`. `"ref=$SHA"` stays. The julia, python
+  and js steps keep `VERSION` for the `"v$VERSION"` tag ref.
+- **`publish-python.yml` is unchanged.** It only ever declared `ref` (plan pitfall confirmed).
+  `git grep` found no other reader of `inputs.version` and no other doc describing a child
+  `version` input.
+- **`.github/AGENTS.md`.** The plan's sentence is appended to the paragraph that describes how the
+  publish workflows read the version (~L70-75).
+- **Master:** `origin/master` (`629db2b`) was already in the branch, so `git merge origin/master`
+  reported "Already up to date".
+- **Verification:**
+  - Before the change, the plan's grep printed 6 hits. After it, the grep prints nothing (exit 1).
+  - All 7 workflows load under `yaml.safe_load`.
+  - `actionlint -shellcheck=` (the `ci.yml` flags, run via `uv run --with actionlint-py`, which
+    installed v1.7.12) exits 0 both before and after the change.
+  - The edited files keep their CRLF working-tree endings.
+  - `scripts/format.bat` exited 0. clang-format, Julia, Dart and ruff changed nothing. Biome again
+    rewrote 43 JS files from CRLF to LF, and the whitespace-insensitive diff was empty, so
+    `git checkout -- bindings/js` restored them.
+  - No test suites were run, because no code changed.
+- **No CHANGELOG entry.** This is release tooling, not a library change. `CHANGELOG.md` also has
+  no `[0.12.9] — unreleased` section yet.
+- **Merge timing.** `publish.yml` dispatches `publish-s3` on the branch name (`github.ref_name`),
+  not on the SHA. A run of the *old* orchestrator still in flight when this merges would send
+  `version=` to the *new* child, and the API would reject it with a 422. Do not merge while a
+  `publish.yml` run is in progress. Julia and JS are dispatched on the release tag, which is
+  created at the orchestrator's own SHA, so they always read matching files.
+- **For 83/88:** 83 edits other steps of `publish-js.yml`. The `Resolve version` step (`id: ver`)
+  is now 3 lines shorter, and its `steps.ver.outputs.version` consumers are unchanged. 88 renames
+  stale names in the same workflows and in `dispatch_workflow.sh`, which this plan did not touch.

@@ -10,7 +10,7 @@ five manifests) lives in the root `AGENTS.md`.
 | `ci.yml` | push/PR to master | Build matrix (ubuntu/ubuntu-arm/windows/macos × Release/Debug) + ctest + artifact upload; four coverage jobs uploading to Codecov with flags `cpp`, `julia`, `dart`, `python`; plus `clang-format` check, `actionlint`, and a `bun-test` matrix (ubuntu+ubuntu-arm+windows) |
 | `bump-version.yml` | `workflow_dispatch` (`part`: major/minor/patch) | Runs `scripts/assert_version.py bump <part>` and opens a PR with the five manifests rewritten (see below) |
 | `publish.yml` | `workflow_dispatch` | Release orchestrator (see below) |
-| `publish-s3.yml` | `workflow_dispatch` (usually from publish.yml) | Builds native libs for `linux-x86_64`, `linux-aarch64`, `macos-aarch64`, `windows-x86_64` (via `scripts/ci/native_s3.sh`) and stages them on S3 |
+| `publish-s3.yml` | `workflow_dispatch` (usually from publish.yml) | Builds native libs for `linux-x86_64`, `linux-aarch64`, `macos-aarch64`, `windows-x86_64` and stages them on S3 (via `scripts/ci/native_s3.sh upload`) |
 | `publish-julia.yml` | `workflow_dispatch` | Mirrors `bindings/julia` into psrenergy/Quiver.jl (see below) |
 | `publish-python.yml` | push/PR to master + `workflow_dispatch` | cibuildwheel on a ubuntu+ubuntu-arm+windows matrix (targets in `bindings/python/AGENTS.md`); the PyPI publish job runs only on `workflow_dispatch` (trusted publishing, `skip-existing: true`, `environment: pypi`) |
 | `publish-js.yml` | `workflow_dispatch` | npm publish with bundled native libs (see below) |
@@ -73,6 +73,8 @@ The publish workflows read the version by inlining `python3 scripts/assert_versi
 `bump-version.yml` writes it with `scripts/assert_version.py bump <part>`. Only `main()` in that
 script prints to stdout, so both the no-arg and the `bump` form emit the bare version and nothing
 else — everything the callers `$( )` depend on.
+The child publish workflows take no `version` input: each resolves it from its checkout via
+`scripts/assert_version.py`; `ref` is their only override.
 
 ## Release Pipeline
 
@@ -148,12 +150,14 @@ The order is **bump, merge, publish** — two deliberate dispatches, never chain
 ## npm Publishing (JS)
 
 `publish-js.yml` downloads native libs from S3 into
-`libs/{linux-x86_64,linux-aarch64,macos-aarch64,windows-x86_64}/`, asserts every lib is in a throwaway
-`npm pack` tarball via `tar -tzf` (format-independent; npm roots entries under `package/`), then
-publishes with **`npm publish --loglevel verbose` via `actions/setup-node@v6`** using **npm
+`libs/{linux-x86_64,linux-aarch64,macos-aarch64,windows-x86_64}/` (the download fails on any missing
+file), asserts every downloaded file is in a throwaway `npm pack` tarball via `tar -tzf`
+(format-independent; npm roots entries under `package/`) — the workflow keeps no list of its own, so
+`native_s3.sh`'s `files_for` is the only one — then
+publishes with **`npm publish --loglevel verbose` via `actions/setup-node`** using **npm
 Trusted Publishing (OIDC)** — `permissions: id-token: write`, no stored token; npm packs inline
 so the published artifact carries the deterministic, asserted file set. setup-node uses
-`package-manager-cache: false` (v6 caches by default; the Bun project has no
+`package-manager-cache: false` (it caches by default; the Bun project has no
 `package-lock.json`). Verbose logging is load-bearing: npm logs the OIDC exchange result only at
 that level — a failed exchange silently falls back to token auth (setup-node's `NODE_AUTH_TOKEN`
 placeholder) and dies with a misleading E404 on the PUT. Requires a trusted publisher configured

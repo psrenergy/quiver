@@ -399,8 +399,8 @@ scripts/build-all.bat            # Build everything + run all tests (Debug)
 scripts/build-all.bat --release  # Build in Release mode
 scripts/test-all.bat             # Run all tests (assumes already built)
 ```
-`test-all.bat` runs the six suites below; `build-all.bat` builds and then runs the same six
-suites (breakdown in `tests/AGENTS.md`).
+`test-all.bat` runs the six suites below; `build-all.bat` builds and then calls `test-all.bat`
+(breakdown in `tests/AGENTS.md`).
 
 ### Individual Tests
 ```bash
@@ -439,11 +439,11 @@ JS has no generator — update the hand-written symbol table in `bindings/js/src
   unversioned symlinks. **Only the Dart hook sets it** (`bindings/dart/hook/build.dart`), because
   `findAndAddCodeAssets` walks with `followLinks: false` and matches the unversioned name — so
   with versioning on it registers *nothing* and reports success. Leave it OFF everywhere else:
-  Julia hardcodes `libquiver.0.dylib` and `scripts/ci/native_s3.sh`, `publish-s3.yml` and
-  `publish-js.yml` ship the versioned names by name. `CMAKE_PLATFORM_NO_VERSIONED_SONAME` is not
-  a substitute — under the Xcode generator the hook uses, it drops the symlinks but keeps the
-  versioned file name. Only the Linux **Dart Coverage** CI job exercises the ON configuration
-  (through the hook); no macOS or Windows job does.
+  Julia hardcodes `libquiver.0.dylib`, and `scripts/ci/native_s3.sh` and `publish-s3.yml` ship
+  the versioned names by name. `CMAKE_PLATFORM_NO_VERSIONED_SONAME` is not a substitute — under
+  the Xcode generator the hook uses, it drops the symlinks but keeps the versioned file name. Only
+  the Linux **Dart Coverage** CI job exercises the ON configuration (through the hook); no macOS or
+  Windows job does.
 - **macOS builds are floored at deployment target 13.3** (`cmake/Platform.cmake`): libc++ marks
   the floating-point `std::to_chars` used by `database_csv_export.cpp`, `lua_runner.cpp` and
   `binary/csv_converter.cpp` (all through `utils::append_number`) unavailable below it, so that is
@@ -495,7 +495,8 @@ release ritual for that file is not settled. Release flow: `.github/AGENTS.md`.
   `-fno-keep-inline-dllexport` flag first; skips `src/binary`; finds `run-clang-tidy` on PATH, and
   the header filter lives in `.clang-tidy`).
 - `.pre-commit-config.yaml` — trailing-whitespace, end-of-file, yaml/json checks, merge-conflict
-  markers, large files (>1 MB), LF line endings, clang-format, cppcheck, cmake-format.
+  markers, large files (>1 MB), LF line endings (except `.bat`, which stay CRLF), clang-format,
+  cppcheck.
 - `.gitattributes` enforces LF for `.cpp/.h/.dart/.jl/.py`, and marks `tests/fixtures/*.csv`
   `-text` so their exact bytes (BOM, CRLF) are never normalized — `.pre-commit-config.yaml`
   excludes the same directory from `trailing-whitespace`/`end-of-file-fixer`/`mixed-line-ending`,
