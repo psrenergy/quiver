@@ -39,7 +39,7 @@ fixes listed below.
 - [ ] Release builds type-check table and `self` arguments: an explicit `require_table` gives a Pattern 1 error at every table parameter, and `SOL_ALL_SAFETIES_ON` is turned on as a backstop. The performance cost is measured.
 - [ ] Map keys are type-checked before they become column, dimension or attribute names (Pattern 1 instead of a wrong name or a raw panic).
 - [ ] An optional argument with the wrong type raises an error instead of being treated as absent. `db:transaction`/`db:dry_run` reject a non-function with Pattern 1. A failed COMMIT in `db:transaction` rolls back.
-- [ ] An empty array in Lua `create_element`/`update_element` clears the group, as it does in C++/Python/JS (reference text updated).
+- [ ] An empty array in Lua `create_element`/`update_element` is passed to the core the way C++/Python/JS pass it, instead of being dropped by the Lua converter. `update_element` with `{col = {}}` then clears that group. `create_element` still skips it, because the core does, and the reference text is updated to match.
 - [ ] Error messages from the expression helpers name the public operation; dead branches are removed.
 - [ ] `LuaRunner` becomes `quiver::Sandbox` in every layer: C++ (`include/quiver/sandbox.h`), C API `quiver_sandbox_*`, and `Sandbox` in Julia/Dart/Python/JS and the CLI. The closed/disposed messages and Dart's `SandboxException` follow it, the file rule is renamed "directory containment" (`resolve_contained_path`), and all Lua suites share one `Sandbox*` gtest prefix (`LuaSandboxTest` becomes `SandboxFileTest`).
 - [ ] The scratch target `tests/sandbox` → `tests/scratch` / `quiver_scratch` (still kept on purpose).
@@ -72,7 +72,7 @@ fixes listed below.
 - **sol2 build**: `SOL_SAFE_NUMERICS`/`SOL_SAFE_FUNCTION`/`SOL_NO_NIL` stay PRIVATE on the `quiver` target, and every new TU stays in it. Write `sol::lua_nil`, never `sol::nil`. csv-parser headers must never be included from `src/sandbox/`.
 - **Order-sensitive code**: in the ctor, `open_libraries` → nil `dofile`/`loadfile` → create the `quiver` table → binders → `lua["db"]`. `GcGuard` is declared before `result`, with `close_open_writers` then exactly one `collect_garbage()`. Check orders that pick which error a call reports (e.g. `open_file` validates `mode` before the path) stay byte-for-byte.
 - **Cross-layer rules**: names map mechanically across layers, tests exist at every layer, error messages are defined only in C++/C API, and every AGENTS.md nearest a change is updated (Self-Updating).
-- **Generated files**: `bindings/julia/src/c_api.jl` and `bindings/dart/lib/src/ffi/bindings.dart` are regenerated (`scripts/generator.bat`), never hand-edited. Python's `_c_api.py` cdefs and the JS `loader.ts` symbol table are hand-maintained.
+- **FFI declarations**: only Julia's `bindings/julia/src/c_api.jl` is regenerated (its own `generator.bat`; review every hunk). Dart's `bindings.dart` is **hand-edited** in its existing style. Regenerating it with the pinned ffigen rewrites the whole file into breaking enums (`bindings/dart/AGENTS.md`), so never run `scripts/generator.bat`. Python's `_c_api.py` cdefs (plus `generator.py`'s header list) and the JS `loader.ts` symbol table are hand-maintained.
 - **Tooling**: clang-format 22.1.8 (120 columns), and `scripts/tidy.bat` lints the new `src/sandbox/` files.
 
 ## Key Decisions
@@ -84,7 +84,7 @@ fixes listed below.
 | Per-domain layout: each `src/sandbox/*.cpp` registers and implements its own slice, ~450-line ceiling | User's pain is file size for agent editing; locality means adding a method touches one file plus the reference | — Pending |
 | Release type safety: explicit `require_table` (Pattern 1) plus `SOL_ALL_SAFETIES_ON` backstop | Release currently has UB on wrong-type arguments; explicit checks give good messages, the flag covers `self` and anything missed | — Pending |
 | No sparse-extent cap on the vector/set group writers | User choice: the host limits scripts | — Pending |
-| An empty array in Lua `create_element`/`update_element` clears the group | Consistency with C++/Python/JS; a typo'd column now throws instead of being ignored | — Pending |
+| An empty array in Lua `create_element`/`update_element` is passed through to the core (clears on update) | Consistency with C++/Python/JS. On update, a typo'd empty column now throws ("does not match any vector, set, or time series table") instead of being ignored | — Pending |
 | Rename tail: closed/disposed messages, `SandboxException`, "directory containment" wording (`resolve_contained_path`), one `Sandbox*` test prefix | So "sandbox" means only the class | — Pending |
 | Planning-ID comments replaced repo-wide | They point at deleted `.planning` files; Human-Centric principle | — Pending |
 | One PR per phase into master, each green on its own | Reviewable and bisectable; split and dedupe stay provably behaviour-neutral | — Pending |
