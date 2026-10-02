@@ -87,10 +87,11 @@ decision "One CSV parser, one CSV emitter"), and `binary/csv_converter.cpp` stay
 gets a sibling folder (`src/json/`), which is also where the `run()` JSON encoder now in
 `lua_runner.cpp`'s anonymous namespace would move.
 
-`csv/csv_read.h`/`.cpp` is the first `.cpp` in `src/` with no `include/quiver/` public
+`csv/csv_read.h`/`.cpp` was the first `.cpp` in `src/` with no `include/quiver/` public
 counterpart — the header-only internal helpers here (`utils/string.h`, `database_internal.h`,
-`binary/binary_utils.h`) have no `.cpp` at all, and `schema.cpp`, `schema_validator.cpp` and
-`type_validator.cpp` share csv_read's posture since their headers moved into `src/`. It stays
+`binary/binary_utils.h`) have no `.cpp` at all. `csv/csv_write.cpp` and `ui_metadata.cpp`
+(below) share csv_read's posture, and so do `schema.cpp`, `schema_validator.cpp` and
+`type_validator.cpp` since their headers moved into `src/`. It stays
 internal because its public surface is already bound: `import_csv`
 parses through it, and the only other caller is Lua, which needs it because `io` is deliberately
 absent (Julia/Dart/Python/JS already have native CSV libraries), so the root AGENTS.md rule "bind

@@ -47,7 +47,7 @@ None.
 
 ## Acceptance criteria
 
-- [ ] Both statements are accurate.
+- [x] Both statements are accurate.
 
 ## Pitfalls
 
@@ -56,3 +56,29 @@ None.
 ## Out of scope
 
 - Other `src/AGENTS.md` edits (owned by the plans that change the code).
+
+## Implementation notes
+
+- **Mostly superseded by 53 and 55, which had both landed** (`5b12950`, `3b35d3f`). The
+  maintainer chose to do the residual edit rather than close the plan.
+- **Step 1 was already done.** Plan 53 deleted `query_int_rows`, and `grep -rn query_int_rows src
+  include` finds nothing. The `describe*` bullet (now ~L488) already says "They run their SQL
+  through `Impl::execute`, which is const." Nothing was edited there.
+- **Step 2 was mostly done.** Plan 55 had already replaced "every other `QUIVER_SOURCES` entry
+  implements a public header" with a list of `schema.cpp`, `schema_validator.cpp` and
+  `type_validator.cpp`, so the false claim was gone. The list still left out `csv/csv_write.cpp`
+  and `ui_metadata.cpp`, and still said "is the first". The residual edit at ~L90-94 adds both
+  files and changes "is" to "was". The list is now complete: every other `QUIVER_SOURCES` entry
+  has an `include/quiver/**` header. "Was the first" holds: `csv_read.cpp`/`csv_write.cpp` arrived
+  together in `7bd1f16`, `ui_metadata.cpp` came later in `b2687a9`, and the schema/type-validator
+  `.cpp` files are older but kept public headers until plan 55.
+- **Verification:**
+  - All six files the paragraph names exist, are listed in `src/CMakeLists.txt`'s
+    `QUIVER_SOURCES`, and have no `include/quiver/` counterpart.
+  - `src/AGENTS.md` is still all CRLF (924/924).
+  - `scripts/format.bat` exited 0 and changed nothing in C++, Julia, Dart or Python.
+  - Biome rewrote 43 untouched JS files from CRLF to LF with no content change, so
+    `git checkout -- bindings/js` restored them.
+- **No CHANGELOG entry.** This is an internal docs change, not a user-visible one. No tests, per
+  the plan.
+- **Master integration:** a fast-forward to `3447a34` (plan 74), which did not touch `src/AGENTS.md`.
