@@ -399,6 +399,40 @@ TEST_F(LuaRunner_WriteCsv, SubOneIntegerRowKeyThrows) {
     );
 }
 
+// A sparse key would size the row to the key, so keys past the cap are refused before any cell is built.
+TEST_F(LuaRunner_WriteCsv, RowKeyPastMaximumWidthThrows) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    const auto path = lp((sandbox / "wide_row.csv").string());
+
+    expect_lua_error(
+        lua,
+        R"(
+        local w = db:write_csv(")" +
+            path + R"(")
+        w:write_row({ [1000001] = "x" })
+    )",
+        "Cannot write_row: row key 1000001 exceeds the maximum width of 1000000"
+    );
+}
+
+// Lua converts an integral float key to the integer, so the message reports 2000000, not 2e+06.
+TEST_F(LuaRunner_WriteCsv, HeaderKeyPastMaximumWidthThrows) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    const auto path = lp((sandbox / "wide_header.csv").string());
+
+    expect_lua_error(
+        lua,
+        R"(db:write_csv(")" + path + R"(", { header = { [2e6] = "a" } }))",
+        "Cannot write_csv: option 'header' key 2000000 exceeds the maximum width of 1000000"
+    );
+}
+
 // FMT-02 is narrow by design: a multi-column row with an empty middle field stays unquoted and its
 // neighbours are unaffected.
 TEST_F(LuaRunner_WriteCsv, MultiColumnRowWithEmptyMiddleFieldLeavesNeighborsIntact) {
@@ -1134,6 +1168,41 @@ TEST_F(LuaRunner_WriteCsv, WriteRowAfterCloseThrowsNamingWriteRow) {
     );
 }
 
+// The row's type is checked before the writer's closed state.
+TEST_F(LuaRunner_WriteCsv, NonTableRowOnClosedWriterReportsTheType) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(
+        lua,
+        R"(
+        local w = db:write_csv("closed.csv")
+        w:close()
+        w:write_row(5)
+    )",
+        "Cannot write_row: row must be a table"
+    );
+}
+
+// The closed check returns before any cell is converted; an open writer reports the unsupported cell
+// instead (FunctionCellThrowsNamingWriteRowAndCellIndex).
+TEST_F(LuaRunner_WriteCsv, UnsupportedCellOnClosedWriterReportsClosed) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(
+        lua,
+        R"(
+        local w = db:write_csv("closed.csv")
+        w:close()
+        w:write_row({ print })
+    )",
+        "Cannot write_row: writer for 'closed.csv' is already closed"
+    );
+}
+
 TEST_F(LuaRunner_WriteCsv, CloseCalledTwiceDoesNotThrow) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
@@ -1174,6 +1243,20 @@ TEST_F(LuaRunner_WriteCsv, EscapingPathTakesPrecedenceOverInvalidSeparator) {
     quiver::LuaRunner lua(db);
 
     expect_lua_error(lua, R"(db:write_csv("../escape.csv", { separator = ";;" }))", "escapes the database directory");
+}
+
+// The existing write_csv order pins put the bad value inside the options table, so they cannot catch a
+// table check moved ahead of the path; a non-table options value can.
+TEST_F(LuaRunner_WriteCsv, EscapingPathIsReportedBeforeNonTableOptions) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(
+        lua,
+        R"(db:write_csv("../escape.csv", 5))",
+        "Cannot write_csv: path '../escape.csv' escapes the database directory"
+    );
 }
 
 // WRITE-08: db:write_csv truncates an existing target at open. Two rows written and closed, then
