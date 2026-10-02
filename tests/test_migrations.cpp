@@ -1,11 +1,12 @@
 #include "test_utils.h"
 
-#include <filesystem>
-#include <fstream>
 #include <gtest/gtest.h>
 #include <quiver/database.h>
 #include <quiver/migration.h>
 #include <quiver/migrations.h>
+
+#include <filesystem>
+#include <fstream>
 
 namespace fs = std::filesystem;
 
@@ -201,7 +202,10 @@ TEST_F(MigrationsTestFixture, DatabaseMigrationWithEmptyUpSql) {
     // Empty up.sql should cause migration to fail
     try {
         quiver::Database::from_migrations(
-            ":memory:", temp_dir, {.read_only = false, .console_level = quiver::LogLevel::Off});
+            ":memory:",
+            temp_dir,
+            {.read_only = false, .console_level = quiver::LogLevel::Off}
+        );
         FAIL() << "Expected from_migrations to throw";
     } catch (const std::runtime_error& error) {
         EXPECT_STREQ(error.what(), "Cannot from_migrations: migration 1 has no up.sql file");
@@ -217,7 +221,10 @@ TEST_F(MigrationsTestFixture, DatabaseMigrationWithInvalidSQL) {
 
     try {
         quiver::Database::from_migrations(
-            ":memory:", temp_dir, {.read_only = false, .console_level = quiver::LogLevel::Off});
+            ":memory:",
+            temp_dir,
+            {.read_only = false, .console_level = quiver::LogLevel::Off}
+        );
         FAIL() << "Expected from_migrations to throw";
     } catch (const std::runtime_error& error) {
         EXPECT_NE(std::string(error.what()).find("Failed to from_migrations: up migration 1:"), std::string::npos);
@@ -294,8 +301,10 @@ TEST_F(MigrationsTestFixture, ValidateMigrationsRejectsLeftoverTables) {
         quiver::Database::validate_migrations(temp_dir);
         FAIL() << "Expected validate_migrations to throw";
     } catch (const std::runtime_error& error) {
-        EXPECT_STREQ(error.what(),
-                     "Failed to validate_migrations: down migrations left tables behind: Configuration, Extra");
+        EXPECT_STREQ(
+            error.what(),
+            "Failed to validate_migrations: down migrations left tables behind: Configuration, Extra"
+        );
     }
 }
 
@@ -319,8 +328,10 @@ TEST_F(MigrationsTestFixture, ValidateMigrationsValidatesPath) {
         quiver::Database::validate_migrations(nonexistent_path);
         FAIL() << "Expected validate_migrations to throw";
     } catch (const std::runtime_error& error) {
-        EXPECT_EQ(std::string(error.what()),
-                  "Cannot validate_migrations: migrations path not found: " + nonexistent_path);
+        EXPECT_EQ(
+            std::string(error.what()),
+            "Cannot validate_migrations: migrations path not found: " + nonexistent_path
+        );
     }
 
     fs::create_directories(temp_dir);
@@ -330,8 +341,10 @@ TEST_F(MigrationsTestFixture, ValidateMigrationsValidatesPath) {
         quiver::Database::validate_migrations(file_path.string());
         FAIL() << "Expected validate_migrations to throw";
     } catch (const std::runtime_error& error) {
-        EXPECT_EQ(std::string(error.what()),
-                  "Cannot validate_migrations: path is not a directory: " + file_path.string());
+        EXPECT_EQ(
+            std::string(error.what()),
+            "Cannot validate_migrations: path is not a directory: " + file_path.string()
+        );
     }
 }
 

@@ -19,8 +19,12 @@ public:
     const Row& operator[](size_t index) const;
 
     // Iterator support
-    auto begin() const { return rows_.begin(); }
-    auto end() const { return rows_.end(); }
+    auto begin() const {
+        return rows_.begin();
+    }
+    auto end() const {
+        return rows_.end();
+    }
 
 private:
     std::vector<std::string> columns_;

@@ -10,8 +10,10 @@
 
 namespace quiver {
 
-ExpressionRenameAgents::ExpressionRenameAgents(std::shared_ptr<ExpressionNode> operand,
-                                               std::vector<std::pair<std::string, std::string>> mapping)
+ExpressionRenameAgents::ExpressionRenameAgents(
+    std::shared_ptr<ExpressionNode> operand,
+    std::vector<std::pair<std::string, std::string>> mapping
+)
     : operand_(std::move(operand)) {
     const auto& operand_meta = operand_->metadata();
 

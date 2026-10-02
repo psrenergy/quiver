@@ -1,8 +1,9 @@
-#include <filesystem>
 #include <gtest/gtest.h>
 #include <quiver/database.h>
 #include <quiver/element.h>
 #include <quiver/options.h>
+
+#include <filesystem>
 
 namespace fs = std::filesystem;
 

@@ -1,8 +1,9 @@
 #ifndef QUIVER_TEST_UTILS_H
 #define QUIVER_TEST_UTILS_H
 
-#include <filesystem>
 #include <quiver/c/database.h>
+
+#include <filesystem>
 #include <string>
 
 namespace quiver::test {

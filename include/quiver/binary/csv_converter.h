@@ -28,8 +28,9 @@ private:
 
     // CSV Builders
     std::string build_line(const std::vector<double>& data, const std::vector<int64_t>& current_dimensions);
-    std::string
-    build_datetime_string_from_time_dimension_values(const std::vector<int64_t>& time_dimension_values) const;
+    std::string build_datetime_string_from_time_dimension_values(
+        const std::vector<int64_t>& time_dimension_values
+    ) const;
     std::vector<std::string> dimension_cells(const std::vector<int64_t>& current_dimensions) const;
     void write_header();
 
@@ -37,8 +38,10 @@ private:
     CSVRow read_line(size_t line_number);
 
     // Validations
-    void validate_dimensions(const std::vector<std::string>& dimension_values,
-                             const std::vector<int64_t>& current_dimensions);
+    void validate_dimensions(
+        const std::vector<std::string>& dimension_values,
+        const std::vector<int64_t>& current_dimensions
+    );
     void validate_header();
 
     // Time-dimension predicates

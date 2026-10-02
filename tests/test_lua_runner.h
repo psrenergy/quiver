@@ -3,16 +3,19 @@
 
 #include "test_utils.h"
 
-#include <filesystem>
 #include <gtest/gtest.h>
 #include <quiver/database.h>
 #include <quiver/element.h>
 #include <quiver/lua_runner.h>
+
+#include <filesystem>
 #include <string>
 
 class LuaRunnerTest : public ::testing::Test {
 protected:
-    void SetUp() override { collections_schema = VALID_SCHEMA("collections.sql"); }
+    void SetUp() override {
+        collections_schema = VALID_SCHEMA("collections.sql");
+    }
     std::string collections_schema;
 };
 
@@ -29,9 +32,13 @@ protected:
         std::filesystem::remove_all(sandbox);
         std::filesystem::create_directories(sandbox);
     }
-    void TearDown() override { std::filesystem::remove_all(sandbox); }
+    void TearDown() override {
+        std::filesystem::remove_all(sandbox);
+    }
 
-    std::string db_path() const { return (sandbox / "test.db").string(); }
+    std::string db_path() const {
+        return (sandbox / "test.db").string();
+    }
 
     std::filesystem::path sandbox;
 };

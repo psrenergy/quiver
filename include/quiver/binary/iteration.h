@@ -13,15 +13,21 @@ namespace quiver {
 
 QUIVER_API std::vector<int64_t> first_dimensions(const BinaryMetadata& meta);
 
-QUIVER_API std::optional<std::vector<int64_t>> next_dimensions(const BinaryMetadata& meta,
-                                                               const std::vector<int64_t>& current);
+QUIVER_API std::optional<std::vector<int64_t>> next_dimensions(
+    const BinaryMetadata& meta,
+    const std::vector<int64_t>& current
+);
 
-QUIVER_API std::vector<int64_t> dimension_sizes_at_values(const BinaryMetadata& meta,
-                                                          const std::vector<int64_t>& dimension_values);
+QUIVER_API std::vector<int64_t> dimension_sizes_at_values(
+    const BinaryMetadata& meta,
+    const std::vector<int64_t>& dimension_values
+);
 
-QUIVER_API int64_t dimension_start_at_values(const BinaryMetadata& meta,
-                                             const std::vector<int64_t>& dimension_values,
-                                             size_t index);
+QUIVER_API int64_t dimension_start_at_values(
+    const BinaryMetadata& meta,
+    const std::vector<int64_t>& dimension_values,
+    size_t index
+);
 
 }  // namespace quiver
 

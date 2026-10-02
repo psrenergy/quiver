@@ -31,10 +31,12 @@ inline std::optional<std::string> get_row_value(const Row& row, size_t index, st
 // The LEFT JOIN read_grouped_values_all parses, by position: column 0 the collection's id (never
 // NULL), column 1 the group's join key (the presence column), column 2 the value. `order_column`
 // orders an element's cells: vector_index for a vector group, rowid for a set group.
-inline std::string grouped_values_sql(const std::string& collection,
-                                      const std::string& table,
-                                      const std::string& attribute,
-                                      const std::string& order_column) {
+inline std::string grouped_values_sql(
+    const std::string& collection,
+    const std::string& table,
+    const std::string& attribute,
+    const std::string& order_column
+) {
     return "SELECT c.id, g.id, g." + attribute + " FROM " + collection + " c LEFT JOIN " + table +
            " g ON g.id = c.id ORDER BY c.rowid, g." + order_column;
 }
@@ -147,16 +149,18 @@ inline bool value_matches_type(const Value& v, DataType expected) {
     return std::visit(
         [expected](const auto& x) {
             using T = std::decay_t<decltype(x)>;
-            if constexpr (std::is_same_v<T, std::nullptr_t>)
+            if constexpr (std::is_same_v<T, std::nullptr_t>) {
                 return true;
-            else if constexpr (std::is_same_v<T, int64_t>)
+            } else if constexpr (std::is_same_v<T, int64_t>) {
                 return expected == DataType::Integer || expected == DataType::Real;
-            else if constexpr (std::is_same_v<T, double>)
+            } else if constexpr (std::is_same_v<T, double>) {
                 return expected == DataType::Real;
-            else
+            } else {
                 return expected == DataType::Text || expected == DataType::DateTime;
+            }
         },
-        v);
+        v
+    );
 }
 
 // Human-readable name of the type currently held in a Value (for error messages).
@@ -165,16 +169,18 @@ inline const char* value_type_name(const Value& v) {
     return std::visit(
         [](const auto& x) -> const char* {
             using T = std::decay_t<decltype(x)>;
-            if constexpr (std::is_same_v<T, int64_t>)
+            if constexpr (std::is_same_v<T, int64_t>) {
                 return "INTEGER";
-            else if constexpr (std::is_same_v<T, double>)
+            } else if constexpr (std::is_same_v<T, double>) {
                 return "REAL";
-            else if constexpr (std::is_same_v<T, std::string>)
+            } else if constexpr (std::is_same_v<T, std::string>) {
                 return "TEXT";
-            else
+            } else {
                 return "NULL";
+            }
         },
-        v);
+        v
+    );
 }
 
 // Convert a ColumnDefinition to ScalarMetadata

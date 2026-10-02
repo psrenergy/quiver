@@ -1,5 +1,7 @@
 #include "ui_metadata.h"
 
+#include <toml++/toml.hpp>
+
 #include <filesystem>
 #include <fstream>
 #include <map>
@@ -8,7 +10,6 @@
 #include <stdexcept>
 #include <string>
 #include <system_error>
-#include <toml++/toml.hpp>
 #include <utility>
 
 namespace quiver {
@@ -95,9 +96,10 @@ std::map<std::string, std::map<int64_t, std::string>> parse_vocabularies(const t
 // both required -- this is what excludes main.toml (no `id` key) and every theme file, with no
 // filename translated into a table name. Reads [[attribute]] only, never [[attribute_group]]
 // (D-18). A repeated attribute id resolves to the later entry.
-std::optional<std::pair<std::string, std::map<std::string, UiAttribute>>>
-parse_collection_file(const toml::table& tbl,
-                      const std::map<std::string, std::map<int64_t, std::string>>& vocabularies) {
+std::optional<std::pair<std::string, std::map<std::string, UiAttribute>>> parse_collection_file(
+    const toml::table& tbl,
+    const std::map<std::string, std::map<int64_t, std::string>>& vocabularies
+) {
     auto id = tbl["id"].value<std::string>();
     const auto* attributes = tbl["attribute"].as_array();
     if (!id || id->empty() || !attributes) {
@@ -191,9 +193,11 @@ UiMetadata load_ui_metadata(const std::string& migrations_path, spdlog::logger& 
                     // collision is now diagnosable.
                     auto [it, inserted] = metadata.collections.try_emplace(parsed->first, std::move(parsed->second));
                     if (!inserted) {
-                        logger.warn("Duplicate UI metadata for collection '{}' in '{}': replacing the earlier file",
-                                    parsed->first,
-                                    dir_entry.path().string());
+                        logger.warn(
+                            "Duplicate UI metadata for collection '{}' in '{}': replacing the earlier file",
+                            parsed->first,
+                            dir_entry.path().string()
+                        );
                         it->second = std::move(parsed->second);
                     }
                 }

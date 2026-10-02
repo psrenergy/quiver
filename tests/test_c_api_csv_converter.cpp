@@ -1,12 +1,13 @@
-#include <cmath>
-#include <filesystem>
-#include <fstream>
 #include <gtest/gtest.h>
 #include <quiver/c/binary/binary_file.h>
 #include <quiver/c/binary/binary_metadata.h>
 #include <quiver/c/binary/csv_converter.h>
 #include <quiver/c/common.h>
 #include <quiver/c/element.h>
+
+#include <cmath>
+#include <filesystem>
+#include <fstream>
 #include <string>
 
 namespace fs = std::filesystem;
@@ -17,13 +18,16 @@ namespace fs = std::filesystem;
 
 class BinaryCApiCSVFixture : public ::testing::Test {
 protected:
-    void SetUp() override { path = (fs::temp_directory_path() / "quiver_c_csv_converter_test").string(); }
+    void SetUp() override {
+        path = (fs::temp_directory_path() / "quiver_c_csv_converter_test").string();
+    }
 
     void TearDown() override {
         for (auto ext : {".qvr", ".toml", ".csv"}) {
             auto full = path + ext;
-            if (fs::exists(full))
+            if (fs::exists(full)) {
                 fs::remove(full);
+            }
         }
     }
 
@@ -231,8 +235,10 @@ TEST_F(BinaryCApiCSVFixture, RoundTripAllPositions) {
                 int64_t dim_values[] = {r, c};
                 double* out_data = nullptr;
                 size_t out_count = 0;
-                EXPECT_EQ(quiver_binary_file_read(binary_file, dim_names, dim_values, 2, 0, &out_data, &out_count),
-                          QUIVER_OK);
+                EXPECT_EQ(
+                    quiver_binary_file_read(binary_file, dim_names, dim_values, 2, 0, &out_data, &out_count),
+                    QUIVER_OK
+                );
                 ASSERT_EQ(out_count, 2u);
                 EXPECT_DOUBLE_EQ(out_data[0], r * 100.0 + c);
                 EXPECT_DOUBLE_EQ(out_data[1], r * 100.0 + c + 0.5);

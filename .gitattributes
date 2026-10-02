@@ -1,9 +1,5 @@
-* text=auto
-*.cpp text eol=lf
-*.dart text eol=lf
-*.h text eol=lf
-*.jl text eol=lf
-*.py text eol=lf
+# LF everywhere, whatever core.autocrlf says (SmartGit / Git for Windows set it to true).
+* text=auto eol=lf
 
 # These fixtures' exact bytes (BOM, CRLF) are the test -- never normalize (02-03-PLAN.md, D-24).
 tests/fixtures/*.csv -text

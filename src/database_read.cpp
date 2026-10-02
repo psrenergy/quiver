@@ -3,56 +3,73 @@
 
 namespace quiver {
 
-std::vector<std::optional<int64_t>> Database::read_scalar_integers(const std::string& collection,
-                                                                   const std::string& attribute) {
+std::vector<std::optional<int64_t>> Database::read_scalar_integers(
+    const std::string& collection,
+    const std::string& attribute
+) {
     impl_->require_collection(collection, "read_scalar_integers");
     impl_->require_column(collection, attribute, "read_scalar_integers");
     auto sql = "SELECT " + attribute + " FROM " + collection + " ORDER BY rowid";
     return internal::read_column_values_nullable<int64_t>(impl_->execute(sql));
 }
 
-std::vector<std::optional<double>> Database::read_scalar_floats(const std::string& collection,
-                                                                const std::string& attribute) {
+std::vector<std::optional<double>> Database::read_scalar_floats(
+    const std::string& collection,
+    const std::string& attribute
+) {
     impl_->require_collection(collection, "read_scalar_floats");
     impl_->require_column(collection, attribute, "read_scalar_floats");
     auto sql = "SELECT " + attribute + " FROM " + collection + " ORDER BY rowid";
     return internal::read_column_values_nullable<double>(impl_->execute(sql));
 }
 
-std::vector<std::optional<std::string>> Database::read_scalar_strings(const std::string& collection,
-                                                                      const std::string& attribute) {
+std::vector<std::optional<std::string>> Database::read_scalar_strings(
+    const std::string& collection,
+    const std::string& attribute
+) {
     impl_->require_collection(collection, "read_scalar_strings");
     impl_->require_column(collection, attribute, "read_scalar_strings");
     auto sql = "SELECT " + attribute + " FROM " + collection + " ORDER BY rowid";
     return internal::read_column_values_nullable<std::string>(impl_->execute(sql));
 }
 
-std::optional<int64_t>
-Database::read_scalar_integer_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
+std::optional<int64_t> Database::read_scalar_integer_by_id(
+    const std::string& collection,
+    const std::string& attribute,
+    int64_t id
+) {
     impl_->require_collection(collection, "read_scalar_integer_by_id");
     impl_->require_column(collection, attribute, "read_scalar_integer_by_id");
     auto sql = "SELECT " + attribute + " FROM " + collection + " WHERE id = ?";
     return internal::read_single_value<int64_t>(impl_->execute(sql, {id}));
 }
 
-std::optional<double>
-Database::read_scalar_float_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
+std::optional<double> Database::read_scalar_float_by_id(
+    const std::string& collection,
+    const std::string& attribute,
+    int64_t id
+) {
     impl_->require_collection(collection, "read_scalar_float_by_id");
     impl_->require_column(collection, attribute, "read_scalar_float_by_id");
     auto sql = "SELECT " + attribute + " FROM " + collection + " WHERE id = ?";
     return internal::read_single_value<double>(impl_->execute(sql, {id}));
 }
 
-std::optional<std::string>
-Database::read_scalar_string_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
+std::optional<std::string> Database::read_scalar_string_by_id(
+    const std::string& collection,
+    const std::string& attribute,
+    int64_t id
+) {
     impl_->require_collection(collection, "read_scalar_string_by_id");
     impl_->require_column(collection, attribute, "read_scalar_string_by_id");
     auto sql = "SELECT " + attribute + " FROM " + collection + " WHERE id = ?";
     return internal::read_single_value<std::string>(impl_->execute(sql, {id}));
 }
 
-std::vector<std::vector<std::optional<int64_t>>> Database::read_vector_integers(const std::string& collection,
-                                                                                const std::string& attribute) {
+std::vector<std::vector<std::optional<int64_t>>> Database::read_vector_integers(
+    const std::string& collection,
+    const std::string& attribute
+) {
     impl_->require_collection(collection, "read_vector_integers");
     auto vector_table = impl_->schema->find_vector_table(collection, attribute);
     impl_->require_column(vector_table, attribute, "read_vector_integers");
@@ -60,8 +77,10 @@ std::vector<std::vector<std::optional<int64_t>>> Database::read_vector_integers(
     return internal::read_grouped_values_all<int64_t>(impl_->execute(sql));
 }
 
-std::vector<std::vector<std::optional<double>>> Database::read_vector_floats(const std::string& collection,
-                                                                             const std::string& attribute) {
+std::vector<std::vector<std::optional<double>>> Database::read_vector_floats(
+    const std::string& collection,
+    const std::string& attribute
+) {
     impl_->require_collection(collection, "read_vector_floats");
     auto vector_table = impl_->schema->find_vector_table(collection, attribute);
     impl_->require_column(vector_table, attribute, "read_vector_floats");
@@ -69,8 +88,10 @@ std::vector<std::vector<std::optional<double>>> Database::read_vector_floats(con
     return internal::read_grouped_values_all<double>(impl_->execute(sql));
 }
 
-std::vector<std::vector<std::optional<std::string>>> Database::read_vector_strings(const std::string& collection,
-                                                                                   const std::string& attribute) {
+std::vector<std::vector<std::optional<std::string>>> Database::read_vector_strings(
+    const std::string& collection,
+    const std::string& attribute
+) {
     impl_->require_collection(collection, "read_vector_strings");
     auto vector_table = impl_->schema->find_vector_table(collection, attribute);
     impl_->require_column(vector_table, attribute, "read_vector_strings");
@@ -78,8 +99,11 @@ std::vector<std::vector<std::optional<std::string>>> Database::read_vector_strin
     return internal::read_grouped_values_all<std::string>(impl_->execute(sql));
 }
 
-std::vector<std::optional<int64_t>>
-Database::read_vector_integers_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
+std::vector<std::optional<int64_t>> Database::read_vector_integers_by_id(
+    const std::string& collection,
+    const std::string& attribute,
+    int64_t id
+) {
     impl_->require_collection(collection, "read_vector_integers_by_id");
     auto vector_table = impl_->schema->find_vector_table(collection, attribute);
     impl_->require_column(vector_table, attribute, "read_vector_integers_by_id");
@@ -87,8 +111,11 @@ Database::read_vector_integers_by_id(const std::string& collection, const std::s
     return internal::read_column_values_nullable<int64_t>(impl_->execute(sql, {id}));
 }
 
-std::vector<std::optional<double>>
-Database::read_vector_floats_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
+std::vector<std::optional<double>> Database::read_vector_floats_by_id(
+    const std::string& collection,
+    const std::string& attribute,
+    int64_t id
+) {
     impl_->require_collection(collection, "read_vector_floats_by_id");
     auto vector_table = impl_->schema->find_vector_table(collection, attribute);
     impl_->require_column(vector_table, attribute, "read_vector_floats_by_id");
@@ -96,8 +123,11 @@ Database::read_vector_floats_by_id(const std::string& collection, const std::str
     return internal::read_column_values_nullable<double>(impl_->execute(sql, {id}));
 }
 
-std::vector<std::optional<std::string>>
-Database::read_vector_strings_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
+std::vector<std::optional<std::string>> Database::read_vector_strings_by_id(
+    const std::string& collection,
+    const std::string& attribute,
+    int64_t id
+) {
     impl_->require_collection(collection, "read_vector_strings_by_id");
     auto vector_table = impl_->schema->find_vector_table(collection, attribute);
     impl_->require_column(vector_table, attribute, "read_vector_strings_by_id");
@@ -105,8 +135,10 @@ Database::read_vector_strings_by_id(const std::string& collection, const std::st
     return internal::read_column_values_nullable<std::string>(impl_->execute(sql, {id}));
 }
 
-std::vector<std::vector<std::optional<int64_t>>> Database::read_set_integers(const std::string& collection,
-                                                                             const std::string& attribute) {
+std::vector<std::vector<std::optional<int64_t>>> Database::read_set_integers(
+    const std::string& collection,
+    const std::string& attribute
+) {
     impl_->require_collection(collection, "read_set_integers");
     auto set_table = impl_->schema->find_set_table(collection, attribute);
     impl_->require_column(set_table, attribute, "read_set_integers");
@@ -114,8 +146,10 @@ std::vector<std::vector<std::optional<int64_t>>> Database::read_set_integers(con
     return internal::read_grouped_values_all<int64_t>(impl_->execute(sql));
 }
 
-std::vector<std::vector<std::optional<double>>> Database::read_set_floats(const std::string& collection,
-                                                                          const std::string& attribute) {
+std::vector<std::vector<std::optional<double>>> Database::read_set_floats(
+    const std::string& collection,
+    const std::string& attribute
+) {
     impl_->require_collection(collection, "read_set_floats");
     auto set_table = impl_->schema->find_set_table(collection, attribute);
     impl_->require_column(set_table, attribute, "read_set_floats");
@@ -123,8 +157,10 @@ std::vector<std::vector<std::optional<double>>> Database::read_set_floats(const 
     return internal::read_grouped_values_all<double>(impl_->execute(sql));
 }
 
-std::vector<std::vector<std::optional<std::string>>> Database::read_set_strings(const std::string& collection,
-                                                                                const std::string& attribute) {
+std::vector<std::vector<std::optional<std::string>>> Database::read_set_strings(
+    const std::string& collection,
+    const std::string& attribute
+) {
     impl_->require_collection(collection, "read_set_strings");
     auto set_table = impl_->schema->find_set_table(collection, attribute);
     impl_->require_column(set_table, attribute, "read_set_strings");
@@ -132,8 +168,11 @@ std::vector<std::vector<std::optional<std::string>>> Database::read_set_strings(
     return internal::read_grouped_values_all<std::string>(impl_->execute(sql));
 }
 
-std::vector<std::optional<int64_t>>
-Database::read_set_integers_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
+std::vector<std::optional<int64_t>> Database::read_set_integers_by_id(
+    const std::string& collection,
+    const std::string& attribute,
+    int64_t id
+) {
     impl_->require_collection(collection, "read_set_integers_by_id");
     auto set_table = impl_->schema->find_set_table(collection, attribute);
     impl_->require_column(set_table, attribute, "read_set_integers_by_id");
@@ -141,8 +180,11 @@ Database::read_set_integers_by_id(const std::string& collection, const std::stri
     return internal::read_column_values_nullable<int64_t>(impl_->execute(sql, {id}));
 }
 
-std::vector<std::optional<double>>
-Database::read_set_floats_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
+std::vector<std::optional<double>> Database::read_set_floats_by_id(
+    const std::string& collection,
+    const std::string& attribute,
+    int64_t id
+) {
     impl_->require_collection(collection, "read_set_floats_by_id");
     auto set_table = impl_->schema->find_set_table(collection, attribute);
     impl_->require_column(set_table, attribute, "read_set_floats_by_id");
@@ -150,8 +192,11 @@ Database::read_set_floats_by_id(const std::string& collection, const std::string
     return internal::read_column_values_nullable<double>(impl_->execute(sql, {id}));
 }
 
-std::vector<std::optional<std::string>>
-Database::read_set_strings_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
+std::vector<std::optional<std::string>> Database::read_set_strings_by_id(
+    const std::string& collection,
+    const std::string& attribute,
+    int64_t id
+) {
     impl_->require_collection(collection, "read_set_strings_by_id");
     auto set_table = impl_->schema->find_set_table(collection, attribute);
     impl_->require_column(set_table, attribute, "read_set_strings_by_id");
@@ -164,8 +209,9 @@ namespace {
 std::string group_select_sql(const GroupMetadata& metadata, const std::string& table, const std::string& order_by) {
     std::string sql = "SELECT ";
     for (size_t i = 0; i < metadata.value_columns.size(); ++i) {
-        if (i > 0)
+        if (i > 0) {
             sql += ", ";
+        }
         sql += metadata.value_columns[i].name;
     }
     sql += " FROM " + table + " WHERE id = ? ORDER BY " + order_by;
@@ -187,8 +233,11 @@ std::vector<std::map<std::string, Value>> group_rows_from_result(const GroupMeta
 
 }  // namespace
 
-std::vector<std::map<std::string, Value>>
-Database::read_vector_group_by_id(const std::string& collection, const std::string& group, int64_t id) {
+std::vector<std::map<std::string, Value>> Database::read_vector_group_by_id(
+    const std::string& collection,
+    const std::string& group,
+    int64_t id
+) {
     impl_->require_collection(collection, "read_vector_group_by_id");
     auto metadata = get_vector_metadata(collection, group);
     if (metadata.value_columns.empty()) {
@@ -198,8 +247,11 @@ Database::read_vector_group_by_id(const std::string& collection, const std::stri
     return group_rows_from_result(metadata, impl_->execute(sql, {id}));
 }
 
-std::vector<std::map<std::string, Value>>
-Database::read_set_group_by_id(const std::string& collection, const std::string& group, int64_t id) {
+std::vector<std::map<std::string, Value>> Database::read_set_group_by_id(
+    const std::string& collection,
+    const std::string& group,
+    int64_t id
+) {
     impl_->require_collection(collection, "read_set_group_by_id");
     auto metadata = get_set_metadata(collection, group);
     if (metadata.value_columns.empty()) {

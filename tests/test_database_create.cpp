@@ -1,13 +1,17 @@
 #include "test_utils.h"
 
-#include <algorithm>
 #include <gtest/gtest.h>
 #include <quiver/database.h>
 #include <quiver/element.h>
 
+#include <algorithm>
+
 TEST(Database, CreateElementWithScalars) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     // Create element
     quiver::Element element;
@@ -29,7 +33,10 @@ TEST(Database, CreateElementWithScalars) {
 
 TEST(Database, CreateElementWithVector) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     // Configuration required first
     quiver::Element config;
@@ -61,7 +68,10 @@ TEST(Database, CreateElementWithVector) {
 
 TEST(Database, CreateElementWithVectorGroup) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     // Configuration required first
     quiver::Element config;
@@ -89,7 +99,10 @@ TEST(Database, CreateElementWithVectorGroup) {
 
 TEST(Database, CreateElementWithSetGroup) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     // Configuration required first
     quiver::Element config;
@@ -113,7 +126,10 @@ TEST(Database, CreateElementWithSetGroup) {
 
 TEST(Database, CreateMultipleElements) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     // Create multiple Configuration elements
     quiver::Element e1;
@@ -138,7 +154,10 @@ TEST(Database, CreateMultipleElements) {
 
 TEST(Database, CreateElementSingleElementVector) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -157,7 +176,10 @@ TEST(Database, CreateElementSingleElementVector) {
 
 TEST(Database, CreateElementSingleElementSet) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -176,7 +198,10 @@ TEST(Database, CreateElementSingleElementSet) {
 
 TEST(Database, CreateElementInvalidCollection) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element element;
     element.set("label", std::string("Test"));
@@ -186,7 +211,10 @@ TEST(Database, CreateElementInvalidCollection) {
 
 TEST(Database, CreateElementLargeVector) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -213,7 +241,10 @@ TEST(Database, CreateElementLargeVector) {
 
 TEST(Database, CreateElementWithNoOptionalAttributes) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -238,7 +269,10 @@ TEST(Database, CreateElementWithNoOptionalAttributes) {
 
 TEST(Database, CreateElementWithTimeSeries) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     // Configuration required first
     quiver::Element config;
@@ -266,9 +300,11 @@ TEST(Database, CreateElementWithTimeSeries) {
 }
 
 TEST(Database, CreateElementWithMultiTimeSeries) {
-    auto db = quiver::Database::from_schema(":memory:",
-                                            VALID_SCHEMA("multi_time_series.sql"),
-                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
+    auto db = quiver::Database::from_schema(
+        ":memory:",
+        VALID_SCHEMA("multi_time_series.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     // Configuration required first
     quiver::Element config;
@@ -307,9 +343,11 @@ TEST(Database, CreateElementWithMultiTimeSeries) {
 }
 
 TEST(Database, CreateElementWithMultiTimeSeriesMismatchedLengths) {
-    auto db = quiver::Database::from_schema(":memory:",
-                                            VALID_SCHEMA("multi_time_series.sql"),
-                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
+    auto db = quiver::Database::from_schema(
+        ":memory:",
+        VALID_SCHEMA("multi_time_series.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     // Configuration required first
     quiver::Element config;
@@ -332,7 +370,10 @@ TEST(Database, CreateElementWithMultiTimeSeriesMismatchedLengths) {
 
 TEST(Database, CreateElementWithEmptyArraySkipsSilently) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -357,7 +398,10 @@ TEST(Database, CreateElementWithEmptyArraySkipsSilently) {
 
 TEST(Database, CreateElementTrimsWhitespaceFromStrings) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -386,7 +430,10 @@ TEST(Database, CreateElementTrimsWhitespaceFromStrings) {
 
 TEST(Database, CreateElementWithDatetime) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element element;
     element.set("label", std::string("Config 1")).set("date_attribute", std::string("2024-03-15T14:30:45"));
@@ -401,7 +448,10 @@ TEST(Database, CreateElementWithDatetime) {
 
 TEST(Database, CreateElementArrayWithNullCells) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("relations.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element parent;
     parent.set("label", std::string("Parent 1"));
@@ -427,7 +477,10 @@ TEST(Database, CreateElementArrayWithNullCells) {
 
 TEST(Database, ReadSetGroupByIdWithNullCells) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("relations.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element parent;
     parent.set("label", std::string("Parent 1"));
@@ -451,7 +504,10 @@ TEST(Database, ReadSetGroupByIdWithNullCells) {
 
 TEST(Database, ResolveFkLabelInSetCreate) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("relations.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     // Create 2 parents
     quiver::Element parent1;
@@ -482,7 +538,10 @@ TEST(Database, ResolveFkLabelInSetCreate) {
 
 TEST(Database, ResolveFkLabelMissingTarget) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("relations.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     // Create child with set FK referencing nonexistent parent (mentor_id is unique to set table)
     quiver::Element child;
@@ -499,7 +558,10 @@ TEST(Database, ResolveFkLabelMissingTarget) {
 
 TEST(Database, RejectStringForNonFkIntegerColumn) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("relations.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     // Create child, then try to create with string in non-FK INTEGER set column
     quiver::Element child;
@@ -517,11 +579,16 @@ TEST(Database, RejectStringForNonFkIntegerColumn) {
 // Same wording as Impl::require_column: one condition, one Pattern 1 message.
 TEST(Database, CreateElementUnknownScalarAttribute) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     try {
-        db.create_element("Configuration",
-                          quiver::Element().set("label", std::string("x")).set("no_such_column", int64_t{1}));
+        db.create_element(
+            "Configuration",
+            quiver::Element().set("label", std::string("x")).set("no_such_column", int64_t{1})
+        );
         FAIL() << "Expected std::runtime_error";
     } catch (const std::runtime_error& e) {
         EXPECT_STREQ(e.what(), "Cannot create_element: column 'no_such_column' not found in table 'Configuration'");
@@ -534,7 +601,10 @@ TEST(Database, CreateElementUnknownScalarAttribute) {
 
 TEST(Database, CreateElementScalarFkLabel) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("relations.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     // Create parent
     quiver::Element parent;
@@ -555,7 +625,10 @@ TEST(Database, CreateElementScalarFkLabel) {
 
 TEST(Database, CreateElementScalarFkInteger) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("relations.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     // Create parent
     quiver::Element parent;
@@ -576,7 +649,10 @@ TEST(Database, CreateElementScalarFkInteger) {
 
 TEST(Database, CreateElementVectorFkLabels) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("relations.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     // Create parents
     quiver::Element p1, p2;
@@ -602,7 +678,10 @@ TEST(Database, CreateElementVectorFkLabels) {
 
 TEST(Database, CreateElementTimeSeriesFkLabels) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("relations.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     // Create parents
     quiver::Element p1, p2;
@@ -631,7 +710,10 @@ TEST(Database, CreateElementTimeSeriesFkLabels) {
 
 TEST(Database, CreateElementAllFkTypesInOneCall) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("relations.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     // Create parents
     quiver::Element p1, p2;
@@ -678,7 +760,10 @@ TEST(Database, CreateElementAllFkTypesInOneCall) {
 
 TEST(Database, CreateElementNoFkColumnsUnchanged) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     // basic.sql has no FK columns -- this tests that the pre-resolve pass
     // passes all values through unchanged for schemas with no FKs
@@ -700,7 +785,10 @@ TEST(Database, CreateElementNoFkColumnsUnchanged) {
 
 TEST(Database, ScalarFkResolutionFailureCausesNoPartialWrites) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("relations.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     // Create child with scalar FK referencing nonexistent parent
     quiver::Element child;
@@ -718,18 +806,25 @@ TEST(Database, ScalarFkResolutionFailureCausesNoPartialWrites) {
 // element readable for the rest of the dry run (a Lua script that pcall'd the error saw it).
 TEST(Database, CreateElementRejectedArrayInsideDryRunLeavesNoElement) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
     db.create_element("Configuration", quiver::Element().set("label", std::string("Config")));
 
     db.begin_dry_run();
     try {
-        db.create_element("Collection",
-                          quiver::Element().set("label", std::string("X")).set("typo", std::vector<int64_t>{1}));
+        db.create_element(
+            "Collection",
+            quiver::Element().set("label", std::string("X")).set("typo", std::vector<int64_t>{1})
+        );
         FAIL() << "expected a throw";
     } catch (const std::runtime_error& e) {
-        EXPECT_STREQ(e.what(),
-                     "Cannot create_element: array 'typo' does not match any vector, set, or time series table in "
-                     "collection 'Collection'");
+        EXPECT_STREQ(
+            e.what(),
+            "Cannot create_element: array 'typo' does not match any vector, set, or time series table in "
+            "collection 'Collection'"
+        );
     }
     EXPECT_EQ(db.number_of_elements("Collection"), 0);
     db.end_dry_run();
@@ -737,7 +832,10 @@ TEST(Database, CreateElementRejectedArrayInsideDryRunLeavesNoElement) {
 
 TEST(Database, CreateScalarTypeCoercionPolicy) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     // A float (even a whole-valued one) is rejected for an INTEGER column.
     quiver::Element bad;
@@ -758,12 +856,15 @@ TEST(Database, CreateScalarTypeCoercionPolicy) {
 // rejection. A value that survives this write must be readable by every binding's date parser.
 TEST(Database, CreateScalarDateTimeGrammar) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     // The last entry is padded: Impl::execute trims every bound string, so the validator has to
     // judge the trimmed value or it would reject a write that stores perfectly well.
-    const std::vector<std::string> accepted = {
-        "2024-01-15", "2024-01-15T10:30:00", "2024-01-15 10:30:00", "  2024-02-29T23:59:59  "};
+    const std::vector<std::string> accepted =
+        {"2024-01-15", "2024-01-15T10:30:00", "2024-01-15 10:30:00", "  2024-02-29T23:59:59  "};
     for (size_t i = 0; i < accepted.size(); ++i) {
         quiver::Element element;
         element.set("label", std::string("Ok ") + std::to_string(i)).set("date_attribute", accepted[i]);
@@ -815,7 +916,8 @@ TEST(Database, CreateScalarDateTimeGrammar) {
         // Not the separators we accept.
         "20240115",
         "2024/01/15",
-        "2024-01-15\t10:30:00"};
+        "2024-01-15\t10:30:00"
+    };
     for (const auto& value : rejected) {
         quiver::Element element;
         element.set("label", std::string("Bad ") + value).set("date_attribute", value);
@@ -823,10 +925,14 @@ TEST(Database, CreateScalarDateTimeGrammar) {
             db.create_element("Configuration", element);
             ADD_FAILURE() << "should reject '" << value << "'";
         } catch (const std::runtime_error& e) {
-            EXPECT_NE(std::string(e.what()).find("Cannot create_element: invalid DATE_TIME value for column "
-                                                 "'date_attribute'"),
-                      std::string::npos)
-                << "wrong message for '" << value << "': " << e.what();
+            EXPECT_NE(
+                std::string(e.what()).find(
+                    "Cannot create_element: invalid DATE_TIME value for column "
+                    "'date_attribute'"
+                ),
+                std::string::npos
+            ) << "wrong message for '"
+              << value << "': " << e.what();
         }
     }
 }

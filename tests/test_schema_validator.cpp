@@ -24,28 +24,38 @@ TEST_F(SchemaValidatorFixture, ValidSchemaRelations) {
 
 // Invalid schemas
 TEST_F(SchemaValidatorFixture, InvalidNoConfiguration) {
-    EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("no_configuration.sql"), options),
-                 std::runtime_error);
+    EXPECT_THROW(
+        quiver::Database::from_schema(":memory:", INVALID_SCHEMA("no_configuration.sql"), options),
+        std::runtime_error
+    );
 }
 
 TEST_F(SchemaValidatorFixture, InvalidLabelNotNull) {
-    EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("label_not_null.sql"), options),
-                 std::runtime_error);
+    EXPECT_THROW(
+        quiver::Database::from_schema(":memory:", INVALID_SCHEMA("label_not_null.sql"), options),
+        std::runtime_error
+    );
 }
 
 TEST_F(SchemaValidatorFixture, InvalidLabelNotUnique) {
-    EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("label_not_unique.sql"), options),
-                 std::runtime_error);
+    EXPECT_THROW(
+        quiver::Database::from_schema(":memory:", INVALID_SCHEMA("label_not_unique.sql"), options),
+        std::runtime_error
+    );
 }
 
 TEST_F(SchemaValidatorFixture, InvalidLabelWrongType) {
-    EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("label_wrong_type.sql"), options),
-                 std::runtime_error);
+    EXPECT_THROW(
+        quiver::Database::from_schema(":memory:", INVALID_SCHEMA("label_wrong_type.sql"), options),
+        std::runtime_error
+    );
 }
 
 TEST_F(SchemaValidatorFixture, InvalidDuplicateAttribute) {
-    EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("duplicate_attribute_vector.sql"), options),
-                 std::runtime_error);
+    EXPECT_THROW(
+        quiver::Database::from_schema(":memory:", INVALID_SCHEMA("duplicate_attribute_vector.sql"), options),
+        std::runtime_error
+    );
 }
 
 TEST_F(SchemaValidatorFixture, InvalidDuplicateAttributeTimeSeries) {
@@ -54,27 +64,37 @@ TEST_F(SchemaValidatorFixture, InvalidDuplicateAttributeTimeSeries) {
             quiver::Database::from_schema(":memory:", INVALID_SCHEMA("duplicate_attribute_time_series.sql"), options);
         },
         testing::ThrowsMessage<std::runtime_error>(
-            testing::HasSubstr("Duplicate attribute 'some_vector1' found in table 'Collection_time_series_group2'")));
+            testing::HasSubstr("Duplicate attribute 'some_vector1' found in table 'Collection_time_series_group2'")
+        )
+    );
 }
 
 TEST_F(SchemaValidatorFixture, InvalidVectorNoIndex) {
-    EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("vector_no_index.sql"), options),
-                 std::runtime_error);
+    EXPECT_THROW(
+        quiver::Database::from_schema(":memory:", INVALID_SCHEMA("vector_no_index.sql"), options),
+        std::runtime_error
+    );
 }
 
 TEST_F(SchemaValidatorFixture, InvalidSetNoUnique) {
-    EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("set_no_unique.sql"), options),
-                 std::runtime_error);
+    EXPECT_THROW(
+        quiver::Database::from_schema(":memory:", INVALID_SCHEMA("set_no_unique.sql"), options),
+        std::runtime_error
+    );
 }
 
 TEST_F(SchemaValidatorFixture, InvalidFkNotNullSetNull) {
-    EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("fk_not_null_set_null.sql"), options),
-                 std::runtime_error);
+    EXPECT_THROW(
+        quiver::Database::from_schema(":memory:", INVALID_SCHEMA("fk_not_null_set_null.sql"), options),
+        std::runtime_error
+    );
 }
 
 TEST_F(SchemaValidatorFixture, InvalidFkActions) {
-    EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("fk_actions.sql"), options),
-                 std::runtime_error);
+    EXPECT_THROW(
+        quiver::Database::from_schema(":memory:", INVALID_SCHEMA("fk_actions.sql"), options),
+        std::runtime_error
+    );
 }
 
 TEST_F(SchemaValidatorFixture, InvalidSetNoParentFk) {
@@ -82,13 +102,18 @@ TEST_F(SchemaValidatorFixture, InvalidSetNoParentFk) {
         [&] { quiver::Database::from_schema(":memory:", INVALID_SCHEMA("set_no_parent_fk.sql"), options); },
         testing::ThrowsMessage<std::runtime_error>(testing::HasSubstr(
             "Failed to validate schema: Set table 'Collection_set_tags' must have foreign key to parent collection "
-            "'Collection'")));
+            "'Collection'"
+        ))
+    );
 }
 
 TEST_F(SchemaValidatorFixture, InvalidSetUnknownParent) {
-    EXPECT_THAT([&] { quiver::Database::from_schema(":memory:", INVALID_SCHEMA("set_unknown_parent.sql"), options); },
-                testing::ThrowsMessage<std::runtime_error>(
-                    testing::HasSubstr("Set table 'Ghost_set_tags' references non-existent collection 'Ghost'")));
+    EXPECT_THAT(
+        [&] { quiver::Database::from_schema(":memory:", INVALID_SCHEMA("set_unknown_parent.sql"), options); },
+        testing::ThrowsMessage<std::runtime_error>(
+            testing::HasSubstr("Set table 'Ghost_set_tags' references non-existent collection 'Ghost'")
+        )
+    );
 }
 
 TEST_F(SchemaValidatorFixture, InvalidTimeSeriesFkActions) {
@@ -96,7 +121,9 @@ TEST_F(SchemaValidatorFixture, InvalidTimeSeriesFkActions) {
         [&] { quiver::Database::from_schema(":memory:", INVALID_SCHEMA("time_series_fk_actions.sql"), options); },
         testing::ThrowsMessage<std::runtime_error>(testing::HasSubstr(
             "Time series table 'Collection_time_series_data' FK to parent must use ON DELETE CASCADE ON UPDATE "
-            "CASCADE")));
+            "CASCADE"
+        ))
+    );
 }
 
 TEST_F(SchemaValidatorFixture, InvalidTimeSeriesRelationFkActions) {
@@ -105,13 +132,18 @@ TEST_F(SchemaValidatorFixture, InvalidTimeSeriesRelationFkActions) {
             quiver::Database::from_schema(":memory:", INVALID_SCHEMA("time_series_relation_fk_actions.sql"), options);
         },
         testing::ThrowsMessage<std::runtime_error>(testing::HasSubstr(
-            "Foreign key 'parent_id' in table 'Collection_time_series_events' must use ON UPDATE CASCADE")));
+            "Foreign key 'parent_id' in table 'Collection_time_series_events' must use ON UPDATE CASCADE"
+        ))
+    );
 }
 
 TEST_F(SchemaValidatorFixture, UnsupportedColumnTypeNamesTableAndColumn) {
-    EXPECT_THAT([&] { quiver::Database::from_schema(":memory:", INVALID_SCHEMA("unsupported_type.sql"), options); },
-                testing::ThrowsMessage<std::runtime_error>(testing::StrEq(
-                    "Failed to validate schema: column 'payload' in table 'Items' has unsupported type 'BLOB'")));
+    EXPECT_THAT(
+        [&] { quiver::Database::from_schema(":memory:", INVALID_SCHEMA("unsupported_type.sql"), options); },
+        testing::ThrowsMessage<std::runtime_error>(
+            testing::StrEq("Failed to validate schema: column 'payload' in table 'Items' has unsupported type 'BLOB'")
+        )
+    );
 }
 
 // ============================================================================

@@ -60,10 +60,14 @@ TEST_F(LuaRunnerTest, DeleteElementByIdWithVectorData) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
-    db.create_element("Collection",
-                      quiver::Element().set("label", "Item 1").set("value_int", std::vector<int64_t>{1, 2, 3}));
-    db.create_element("Collection",
-                      quiver::Element().set("label", "Item 2").set("value_int", std::vector<int64_t>{4, 5, 6}));
+    db.create_element(
+        "Collection",
+        quiver::Element().set("label", "Item 1").set("value_int", std::vector<int64_t>{1, 2, 3})
+    );
+    db.create_element(
+        "Collection",
+        quiver::Element().set("label", "Item 2").set("value_int", std::vector<int64_t>{4, 5, 6})
+    );
 
     quiver::LuaRunner lua(db);
 

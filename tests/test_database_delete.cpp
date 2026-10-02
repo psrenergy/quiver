@@ -6,7 +6,10 @@
 
 TEST(Database, DeleteElementById) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element e;
     e.set("label", std::string("Config 1")).set("integer_attribute", int64_t{42});
@@ -26,7 +29,10 @@ TEST(Database, DeleteElementById) {
 
 TEST(Database, DeleteElementByIdWithVectorData) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -54,7 +60,10 @@ TEST(Database, DeleteElementByIdWithVectorData) {
 
 TEST(Database, DeleteElementByIdWithSetData) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -82,7 +91,10 @@ TEST(Database, DeleteElementByIdWithSetData) {
 
 TEST(Database, DeleteElementByIdNonExistent) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element e;
     e.set("label", std::string("Config 1")).set("integer_attribute", int64_t{42});
@@ -98,7 +110,10 @@ TEST(Database, DeleteElementByIdNonExistent) {
 
 TEST(Database, DeleteElementByIdOtherElementsUnchanged) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element e1;
     e1.set("label", std::string("Config 1")).set("integer_attribute", int64_t{42});
@@ -138,7 +153,10 @@ TEST(Database, DeleteElementByIdOtherElementsUnchanged) {
 
 TEST(Database, DeleteElementByLabel) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -177,7 +195,10 @@ TEST(Database, DeleteElementByLabel) {
 
 TEST(Database, DeleteElementByLabelNonExistent) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -204,7 +225,10 @@ TEST(Database, DeleteElementByLabelNonExistent) {
 // collection must not resolve here.
 TEST(Database, DeleteElementByLabelDoesNotResolveAcrossCollections) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -231,7 +255,10 @@ TEST(Database, DeleteElementByLabelDoesNotResolveAcrossCollections) {
 // "no such column: label" prepare error -- and the message must name the public method called.
 TEST(Database, DeleteElementByLabelOnTableWithoutLabelColumn) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -241,7 +268,9 @@ TEST(Database, DeleteElementByLabelOnTableWithoutLabelColumn) {
         db.delete_element_by_label("Collection_set_tags", "anything");
         FAIL() << "expected a throw";
     } catch (const std::runtime_error& e) {
-        EXPECT_STREQ(e.what(),
-                     "Cannot delete_element_by_label: column 'label' not found in table 'Collection_set_tags'");
+        EXPECT_STREQ(
+            e.what(),
+            "Cannot delete_element_by_label: column 'label' not found in table 'Collection_set_tags'"
+        );
     }
 }

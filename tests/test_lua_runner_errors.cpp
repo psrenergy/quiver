@@ -153,9 +153,11 @@ TEST_F(LuaRunnerTest, ReadFromNonExistentCollection) {
 
     quiver::LuaRunner lua(db);
 
-    expect_lua_error(lua,
-                     R"(local x = db:read_scalar_strings("NonexistentCollection", "label"))",
-                     "Cannot read_scalar_strings: collection not found");
+    expect_lua_error(
+        lua,
+        R"(local x = db:read_scalar_strings("NonexistentCollection", "label"))",
+        "Cannot read_scalar_strings: collection not found"
+    );
 }
 
 TEST_F(LuaRunnerTest, ReadNonExistentAttribute) {
@@ -165,9 +167,11 @@ TEST_F(LuaRunnerTest, ReadNonExistentAttribute) {
 
     quiver::LuaRunner lua(db);
 
-    expect_lua_error(lua,
-                     R"(local x = db:read_scalar_strings("Collection", "nonexistent"))",
-                     "Cannot read_scalar_strings: column 'nonexistent' not found");
+    expect_lua_error(
+        lua,
+        R"(local x = db:read_scalar_strings("Collection", "nonexistent"))",
+        "Cannot read_scalar_strings: column 'nonexistent' not found"
+    );
 }
 
 TEST_F(LuaRunnerTest, UpdateElementNonExistentCollection) {
@@ -176,9 +180,11 @@ TEST_F(LuaRunnerTest, UpdateElementNonExistentCollection) {
 
     quiver::LuaRunner lua(db);
 
-    expect_lua_error(lua,
-                     R"(db:update_element("NonexistentCollection", 1, { label = "Test" }))",
-                     "Cannot update_element: collection not found");
+    expect_lua_error(
+        lua,
+        R"(db:update_element("NonexistentCollection", 1, { label = "Test" }))",
+        "Cannot update_element: collection not found"
+    );
 }
 
 TEST_F(LuaRunnerTest, DeleteFromNonExistentCollection) {
@@ -188,7 +194,10 @@ TEST_F(LuaRunnerTest, DeleteFromNonExistentCollection) {
     quiver::LuaRunner lua(db);
 
     expect_lua_error(
-        lua, R"(db:delete_element("NonexistentCollection", 1))", "Cannot delete_element: collection not found");
+        lua,
+        R"(db:delete_element("NonexistentCollection", 1))",
+        "Cannot delete_element: collection not found"
+    );
 }
 
 TEST_F(LuaRunnerTest, MultipleOperationsPartialFailure) {
@@ -198,12 +207,14 @@ TEST_F(LuaRunnerTest, MultipleOperationsPartialFailure) {
     quiver::LuaRunner lua(db);
 
     // First operation succeeds, second should fail
-    expect_lua_error(lua,
-                     R"(
+    expect_lua_error(
+        lua,
+        R"(
             db:create_element("Collection", { label = "Item 1" })
             db:create_element("NonexistentCollection", { label = "Bad" })
         )",
-                     "Cannot create_element: collection not found");
+        "Cannot create_element: collection not found"
+    );
 
     // Verify first element was created before failure
     auto labels = db.read_scalar_strings("Collection", "label");
@@ -218,11 +229,13 @@ TEST_F(LuaRunnerTest, ScalarTypeCoercionPolicy) {
     lua.run(R"(db:create_element("Configuration", { label = "Config" }))");
 
     // A Lua float (even a whole-valued one) is rejected for an INTEGER column.
-    expect_lua_error(lua,
-                     R"(
+    expect_lua_error(
+        lua,
+        R"(
         db:create_element("Collection", { label = "Bad", some_integer = 42.0 })
     )",
-                     "got REAL");
+        "got REAL"
+    );
 
     // An integer is accepted for a REAL column (coerced to real on insert).
     lua.run(R"(
@@ -244,9 +257,11 @@ TEST_F(LuaRunnerTest, ReadElementIdsFromNonExistentCollection) {
 
     quiver::LuaRunner lua(db);
 
-    expect_lua_error(lua,
-                     R"(local ids = db:read_element_ids("NonexistentCollection"))",
-                     "Cannot read_element_ids: collection not found");
+    expect_lua_error(
+        lua,
+        R"(local ids = db:read_element_ids("NonexistentCollection"))",
+        "Cannot read_element_ids: collection not found"
+    );
 }
 
 TEST_F(LuaRunnerTest, LuaScriptWithUnicodeCharacters) {
@@ -344,5 +359,6 @@ TEST_F(LuaRunnerTest, InvalidDateTimeValueThrows) {
     expect_lua_error(
         lua,
         R"(db:update_time_series_group("Collection", "data", 1, { date_time = { "2005-01" }, value = { 1.0 } }))",
-        "Cannot update_time_series_group: invalid DATE_TIME value for column 'date_time'");
+        "Cannot update_time_series_group: invalid DATE_TIME value for column 'date_time'"
+    );
 }

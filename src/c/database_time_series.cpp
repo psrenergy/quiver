@@ -13,10 +13,12 @@ extern "C" {
 
 // Time series metadata
 
-QUIVER_C_API quiver_error_t quiver_database_get_time_series_metadata(quiver_database_t* db,
-                                                                     const char* collection,
-                                                                     const char* group_name,
-                                                                     quiver_group_metadata_t* out_metadata) {
+QUIVER_C_API quiver_error_t quiver_database_get_time_series_metadata(
+    quiver_database_t* db,
+    const char* collection,
+    const char* group_name,
+    quiver_group_metadata_t* out_metadata
+) {
     QUIVER_REQUIRE(db, collection, group_name, out_metadata);
 
     try {
@@ -28,10 +30,12 @@ QUIVER_C_API quiver_error_t quiver_database_get_time_series_metadata(quiver_data
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_database_list_time_series_groups(quiver_database_t* db,
-                                                                    const char* collection,
-                                                                    quiver_group_metadata_t** out_metadata,
-                                                                    size_t* out_count) {
+QUIVER_C_API quiver_error_t quiver_database_list_time_series_groups(
+    quiver_database_t* db,
+    const char* collection,
+    quiver_group_metadata_t** out_metadata,
+    size_t* out_count
+) {
     QUIVER_REQUIRE(db, collection, out_metadata, out_count);
 
     try {
@@ -54,15 +58,17 @@ QUIVER_C_API quiver_error_t quiver_database_list_time_series_groups(quiver_datab
 
 // Time series row read (one value per element at a specific date_time)
 
-QUIVER_C_API quiver_error_t quiver_database_read_time_series_row(quiver_database_t* db,
-                                                                 const char* collection,
-                                                                 const char* group,
-                                                                 const char* attribute,
-                                                                 const char* date_time,
-                                                                 int* out_data_type,
-                                                                 void** out_values,
-                                                                 uint8_t** out_mask,
-                                                                 size_t* out_count) {
+QUIVER_C_API quiver_error_t quiver_database_read_time_series_row(
+    quiver_database_t* db,
+    const char* collection,
+    const char* group,
+    const char* attribute,
+    const char* date_time,
+    int* out_data_type,
+    void** out_values,
+    uint8_t** out_mask,
+    size_t* out_count
+) {
     QUIVER_REQUIRE(db, collection, group, attribute, date_time, out_data_type, out_values, out_mask, out_count);
 
     try {
@@ -125,8 +131,9 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_row(quiver_database
         }
         default:
             delete[] mask;
-            throw std::runtime_error("Cannot read_time_series_row: unknown data type " +
-                                     std::to_string(*out_data_type));
+            throw std::runtime_error(
+                "Cannot read_time_series_row: unknown data type " + std::to_string(*out_data_type)
+            );
         }
         *out_mask = mask;
 
@@ -139,16 +146,18 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_row(quiver_database
 
 // Time series read/update
 
-QUIVER_C_API quiver_error_t quiver_database_read_time_series_group(quiver_database_t* db,
-                                                                   const char* collection,
-                                                                   const char* group,
-                                                                   int64_t id,
-                                                                   char*** out_column_names,
-                                                                   int** out_column_types,
-                                                                   void*** out_column_data,
-                                                                   uint8_t*** out_column_has_value,
-                                                                   size_t* out_column_count,
-                                                                   size_t* out_row_count) {
+QUIVER_C_API quiver_error_t quiver_database_read_time_series_group(
+    quiver_database_t* db,
+    const char* collection,
+    const char* group,
+    int64_t id,
+    char*** out_column_names,
+    int** out_column_types,
+    void*** out_column_data,
+    uint8_t*** out_column_has_value,
+    size_t* out_column_count,
+    size_t* out_row_count
+) {
     QUIVER_REQUIRE(db, collection, group, out_column_names, out_column_types);
     QUIVER_REQUIRE(out_column_data, out_column_has_value, out_column_count, out_row_count);
 
@@ -163,15 +172,17 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_group(quiver_databa
             columns.push_back({vc.name, to_c_data_type(vc.data_type)});
         }
 
-        marshal_group_rows_to_c("read_time_series_group",
-                                columns,
-                                rows,
-                                out_column_names,
-                                out_column_types,
-                                out_column_data,
-                                out_column_has_value,
-                                out_column_count,
-                                out_row_count);
+        marshal_group_rows_to_c(
+            "read_time_series_group",
+            columns,
+            rows,
+            out_column_names,
+            out_column_types,
+            out_column_data,
+            out_column_has_value,
+            out_column_count,
+            out_row_count
+        );
         return QUIVER_OK;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
@@ -179,29 +190,33 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_group(quiver_databa
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_database_update_time_series_group(quiver_database_t* db,
-                                                                     const char* collection,
-                                                                     const char* group,
-                                                                     int64_t id,
-                                                                     const char* const* column_names,
-                                                                     const int* column_types,
-                                                                     const void* const* column_data,
-                                                                     const uint8_t* const* column_has_value,
-                                                                     size_t column_count,
-                                                                     size_t row_count) {
+QUIVER_C_API quiver_error_t quiver_database_update_time_series_group(
+    quiver_database_t* db,
+    const char* collection,
+    const char* group,
+    int64_t id,
+    const char* const* column_names,
+    const int* column_types,
+    const void* const* column_data,
+    const uint8_t* const* column_has_value,
+    size_t column_count,
+    size_t row_count
+) {
     QUIVER_REQUIRE(db, collection, group);
     if (column_count > 0) {
         QUIVER_REQUIRE(column_names, column_types, column_data);
     }
 
     try {
-        auto rows = unmarshal_group_columns_to_rows("update_time_series_group",
-                                                    column_names,
-                                                    column_types,
-                                                    column_data,
-                                                    column_has_value,
-                                                    column_count,
-                                                    row_count);
+        auto rows = unmarshal_group_columns_to_rows(
+            "update_time_series_group",
+            column_names,
+            column_types,
+            column_data,
+            column_has_value,
+            column_count,
+            row_count
+        );
         db->db.update_time_series_group(collection, group, id, rows);
         return QUIVER_OK;
     } catch (const std::exception& e) {
@@ -210,29 +225,33 @@ QUIVER_C_API quiver_error_t quiver_database_update_time_series_group(quiver_data
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_database_update_time_series_group_by_label(quiver_database_t* db,
-                                                                              const char* collection,
-                                                                              const char* group,
-                                                                              const char* label,
-                                                                              const char* const* column_names,
-                                                                              const int* column_types,
-                                                                              const void* const* column_data,
-                                                                              const uint8_t* const* column_has_value,
-                                                                              size_t column_count,
-                                                                              size_t row_count) {
+QUIVER_C_API quiver_error_t quiver_database_update_time_series_group_by_label(
+    quiver_database_t* db,
+    const char* collection,
+    const char* group,
+    const char* label,
+    const char* const* column_names,
+    const int* column_types,
+    const void* const* column_data,
+    const uint8_t* const* column_has_value,
+    size_t column_count,
+    size_t row_count
+) {
     QUIVER_REQUIRE(db, collection, group, label);
     if (column_count > 0) {
         QUIVER_REQUIRE(column_names, column_types, column_data);
     }
 
     try {
-        auto rows = unmarshal_group_columns_to_rows("update_time_series_group_by_label",
-                                                    column_names,
-                                                    column_types,
-                                                    column_data,
-                                                    column_has_value,
-                                                    column_count,
-                                                    row_count);
+        auto rows = unmarshal_group_columns_to_rows(
+            "update_time_series_group_by_label",
+            column_names,
+            column_types,
+            column_data,
+            column_has_value,
+            column_count,
+            row_count
+        );
         db->db.update_time_series_group_by_label(collection, group, label, rows);
         return QUIVER_OK;
     } catch (const std::exception& e) {
@@ -241,14 +260,16 @@ QUIVER_C_API quiver_error_t quiver_database_update_time_series_group_by_label(qu
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_database_upsert_time_series_row(quiver_database_t* db,
-                                                                   const char* collection,
-                                                                   const char* group,
-                                                                   int64_t id,
-                                                                   const char* const* column_names,
-                                                                   const int* column_types,
-                                                                   const void* const* column_data,
-                                                                   size_t column_count) {
+QUIVER_C_API quiver_error_t quiver_database_upsert_time_series_row(
+    quiver_database_t* db,
+    const char* collection,
+    const char* group,
+    int64_t id,
+    const char* const* column_names,
+    const int* column_types,
+    const void* const* column_data,
+    size_t column_count
+) {
     QUIVER_REQUIRE(db, collection, group);
     if (column_count > 0) {
         QUIVER_REQUIRE(column_names, column_types, column_data);
@@ -256,13 +277,15 @@ QUIVER_C_API quiver_error_t quiver_database_upsert_time_series_row(quiver_databa
 
     try {
         // A single row is the group decoder's shape: row_count == 1, dense (NULL) mask.
-        auto row = unmarshal_group_columns_to_rows("upsert_time_series_row",
-                                                   column_names,
-                                                   column_types,
-                                                   column_data,
-                                                   /*column_has_value=*/nullptr,
-                                                   column_count,
-                                                   /*row_count=*/1)[0];
+        auto row = unmarshal_group_columns_to_rows(
+            "upsert_time_series_row",
+            column_names,
+            column_types,
+            column_data,
+            /*column_has_value=*/nullptr,
+            column_count,
+            /*row_count=*/1
+        )[0];
 
         db->db.upsert_time_series_row(collection, group, id, row);
         return QUIVER_OK;
@@ -272,27 +295,31 @@ QUIVER_C_API quiver_error_t quiver_database_upsert_time_series_row(quiver_databa
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_database_upsert_time_series_row_by_label(quiver_database_t* db,
-                                                                            const char* collection,
-                                                                            const char* group,
-                                                                            const char* label,
-                                                                            const char* const* column_names,
-                                                                            const int* column_types,
-                                                                            const void* const* column_data,
-                                                                            size_t column_count) {
+QUIVER_C_API quiver_error_t quiver_database_upsert_time_series_row_by_label(
+    quiver_database_t* db,
+    const char* collection,
+    const char* group,
+    const char* label,
+    const char* const* column_names,
+    const int* column_types,
+    const void* const* column_data,
+    size_t column_count
+) {
     QUIVER_REQUIRE(db, collection, group, label);
     if (column_count > 0) {
         QUIVER_REQUIRE(column_names, column_types, column_data);
     }
 
     try {
-        auto row = unmarshal_group_columns_to_rows("upsert_time_series_row_by_label",
-                                                   column_names,
-                                                   column_types,
-                                                   column_data,
-                                                   /*column_has_value=*/nullptr,
-                                                   column_count,
-                                                   /*row_count=*/1)[0];
+        auto row = unmarshal_group_columns_to_rows(
+            "upsert_time_series_row_by_label",
+            column_names,
+            column_types,
+            column_data,
+            /*column_has_value=*/nullptr,
+            column_count,
+            /*row_count=*/1
+        )[0];
 
         db->db.upsert_time_series_row_by_label(collection, group, label, row);
         return QUIVER_OK;
@@ -304,12 +331,14 @@ QUIVER_C_API quiver_error_t quiver_database_upsert_time_series_row_by_label(quiv
 
 // Time series free functions (co-located with read)
 
-QUIVER_C_API quiver_error_t quiver_database_free_time_series_data(char** column_names,
-                                                                  int* column_types,
-                                                                  void** column_data,
-                                                                  uint8_t** column_has_value,
-                                                                  size_t column_count,
-                                                                  size_t row_count) {
+QUIVER_C_API quiver_error_t quiver_database_free_time_series_data(
+    char** column_names,
+    int* column_types,
+    void** column_data,
+    uint8_t** column_has_value,
+    size_t column_count,
+    size_t row_count
+) {
     try {
         // Empty result: NULL pointers are valid (nothing to free)
         if (!column_names && !column_data && !column_has_value) {
@@ -336,8 +365,9 @@ QUIVER_C_API quiver_error_t quiver_database_free_time_series_data(char** column_
         // Free column data based on column_types
         if (column_data && column_types) {
             for (size_t i = 0; i < column_count; ++i) {
-                if (!column_data[i])
+                if (!column_data[i]) {
                     continue;
+                }
                 switch (column_types[i]) {
                 case QUIVER_DATA_TYPE_INTEGER:
                     delete[] static_cast<int64_t*>(column_data[i]);
@@ -355,8 +385,9 @@ QUIVER_C_API quiver_error_t quiver_database_free_time_series_data(char** column_
                     break;
                 }
                 default:
-                    throw std::runtime_error("Cannot free_time_series_data: unknown data type " +
-                                             std::to_string(column_types[i]));
+                    throw std::runtime_error(
+                        "Cannot free_time_series_data: unknown data type " + std::to_string(column_types[i])
+                    );
                 }
             }
             delete[] column_data;
@@ -374,9 +405,11 @@ QUIVER_C_API quiver_error_t quiver_database_free_time_series_data(char** column_
 
 // Time series files operations
 
-QUIVER_C_API quiver_error_t quiver_database_has_time_series_files(quiver_database_t* db,
-                                                                  const char* collection,
-                                                                  int* out_result) {
+QUIVER_C_API quiver_error_t quiver_database_has_time_series_files(
+    quiver_database_t* db,
+    const char* collection,
+    int* out_result
+) {
     QUIVER_REQUIRE(db, collection, out_result);
 
     try {
@@ -388,10 +421,12 @@ QUIVER_C_API quiver_error_t quiver_database_has_time_series_files(quiver_databas
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_database_list_time_series_files_columns(quiver_database_t* db,
-                                                                           const char* collection,
-                                                                           char*** out_columns,
-                                                                           size_t* out_count) {
+QUIVER_C_API quiver_error_t quiver_database_list_time_series_files_columns(
+    quiver_database_t* db,
+    const char* collection,
+    char*** out_columns,
+    size_t* out_count
+) {
     QUIVER_REQUIRE(db, collection, out_columns, out_count);
 
     try {
@@ -403,11 +438,13 @@ QUIVER_C_API quiver_error_t quiver_database_list_time_series_files_columns(quive
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_database_read_time_series_files(quiver_database_t* db,
-                                                                   const char* collection,
-                                                                   char*** out_columns,
-                                                                   char*** out_paths,
-                                                                   size_t* out_count) {
+QUIVER_C_API quiver_error_t quiver_database_read_time_series_files(
+    quiver_database_t* db,
+    const char* collection,
+    char*** out_columns,
+    char*** out_paths,
+    size_t* out_count
+) {
     QUIVER_REQUIRE(db, collection, out_columns, out_paths, out_count);
 
     try {
@@ -441,11 +478,13 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_files(quiver_databa
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_database_update_time_series_files(quiver_database_t* db,
-                                                                     const char* collection,
-                                                                     const char* const* columns,
-                                                                     const char* const* paths,
-                                                                     size_t count) {
+QUIVER_C_API quiver_error_t quiver_database_update_time_series_files(
+    quiver_database_t* db,
+    const char* collection,
+    const char* const* columns,
+    const char* const* paths,
+    size_t count
+) {
     QUIVER_REQUIRE(db, collection);
     if (count > 0) {
         QUIVER_REQUIRE(columns, paths);

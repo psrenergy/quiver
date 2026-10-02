@@ -195,16 +195,13 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Install clang-format
-        run: |
-          wget https://apt.llvm.org/llvm.sh
-          chmod +x llvm.sh
-          sudo ./llvm.sh 21
-          sudo apt-get install -y clang-format-21
+      # Pinned exactly (PyPI wheel); .clang-format uses 22-only keys. Keep in sync with
+      # .pre-commit-config.yaml.
+      - uses: astral-sh/setup-uv@v7
 
       - name: Check formatting
         run: |
-          find include src tests -name '*.cpp' -o -name '*.h' | xargs clang-format-21 --dry-run --Werror
+          find include src tests -name '*.cpp' -o -name '*.h' | xargs uvx --from clang-format==22.1.8 clang-format --dry-run --Werror
 
   actionlint:
     name: Lint Workflows

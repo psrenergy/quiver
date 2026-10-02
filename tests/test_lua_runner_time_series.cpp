@@ -669,10 +669,12 @@ TEST_F(LuaRunnerTest, UpsertTimeSeriesRowUnsupportedValueTypeThrows) {
     quiver::LuaRunner lua(db);
 
     // The message names the method the script called, not the internal converter.
-    expect_lua_error(lua,
-                     R"(db:upsert_time_series_row("Collection", "data", )" + std::to_string(id) +
-                         R"(, { date_time = "2024-01-01T00:00:00", value = print }))",
-                     "Cannot upsert_time_series_row: column 'value' has unsupported Lua type");
+    expect_lua_error(
+        lua,
+        R"(db:upsert_time_series_row("Collection", "data", )" + std::to_string(id) +
+            R"(, { date_time = "2024-01-01T00:00:00", value = print }))",
+        "Cannot upsert_time_series_row: column 'value' has unsupported Lua type"
+    );
 }
 
 TEST_F(LuaRunnerTest, UpsertTimeSeriesRowByLabel) {
@@ -711,7 +713,8 @@ TEST_F(LuaRunnerTest, UpsertTimeSeriesRowByLabelErrors) {
     expect_lua_error(
         lua,
         R"(db:upsert_time_series_row_by_label("Collection", "data", "Nope", { date_time = "2024-06-01", value = 1.0 }))",
-        "Element not found");
+        "Element not found"
+    );
 
     // Nothing was written by the failure.
     EXPECT_TRUE(db.read_time_series_group("Collection", "data", id).empty());
@@ -794,9 +797,11 @@ TEST_F(LuaRunnerTest, UpdateTimeSeriesFilesRejectsNonStringPath) {
 
     // This was the last unchecked sol2 getter on a Lua write path: a boolean stored an empty path
     // in a release build and aborted on a raw sol2 panic in a debug one.
-    expect_lua_error(lua,
-                     R"(db:update_time_series_files("Collection", { data_file = true }))",
-                     "path 'data_file' has unsupported Lua type");
+    expect_lua_error(
+        lua,
+        R"(db:update_time_series_files("Collection", { data_file = true }))",
+        "path 'data_file' has unsupported Lua type"
+    );
 
     EXPECT_FALSE(db.read_time_series_files("Collection")["data_file"].has_value());
 }
@@ -805,14 +810,19 @@ TEST_F(LuaRunnerTest, UpdateTimeSeriesFilesEmptyTableValidatesCollection) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::LuaRunner lua(db);
 
-    expect_lua_error(lua,
-                     R"(db:update_time_series_files("NoSuchCollection", {}))",
-                     "Cannot update_time_series_files: collection not found: NoSuchCollection");
+    expect_lua_error(
+        lua,
+        R"(db:update_time_series_files("NoSuchCollection", {}))",
+        "Cannot update_time_series_files: collection not found: NoSuchCollection"
+    );
 }
 
 TEST_F(LuaRunnerTest, UpdateTimeSeriesFilesReplacesTheWholeRow) {
     auto db = quiver::Database::from_schema(
-        ":memory:", collections_schema, {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        collections_schema,
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
     quiver::LuaRunner lua(db);
     lua.run(R"(
         db:update_time_series_files("Collection", { data_file = "a.bin", metadata_file = "a.toml" })
@@ -827,9 +837,11 @@ TEST_F(LuaRunnerTest, UpdateTimeSeriesFilesReplacesTheWholeRow) {
 }
 
 TEST_F(LuaRunnerTest, MultiColumnTimeSeriesUpdateAndRead) {
-    auto db = quiver::Database::from_schema(":memory:",
-                                            VALID_SCHEMA("mixed_time_series.sql"),
-                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
+    auto db = quiver::Database::from_schema(
+        ":memory:",
+        VALID_SCHEMA("mixed_time_series.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element("Sensor", quiver::Element().set("label", "Sensor 1"));
 
@@ -869,9 +881,11 @@ TEST_F(LuaRunnerTest, MultiColumnTimeSeriesUpdateAndRead) {
 }
 
 TEST_F(LuaRunnerTest, MultiColumnTimeSeriesReadEmpty) {
-    auto db = quiver::Database::from_schema(":memory:",
-                                            VALID_SCHEMA("mixed_time_series.sql"),
-                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
+    auto db = quiver::Database::from_schema(
+        ":memory:",
+        VALID_SCHEMA("mixed_time_series.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element("Sensor", quiver::Element().set("label", "Sensor 1"));
 
@@ -886,9 +900,11 @@ TEST_F(LuaRunnerTest, MultiColumnTimeSeriesReadEmpty) {
 }
 
 TEST_F(LuaRunnerTest, MultiColumnTimeSeriesReplace) {
-    auto db = quiver::Database::from_schema(":memory:",
-                                            VALID_SCHEMA("mixed_time_series.sql"),
-                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
+    auto db = quiver::Database::from_schema(
+        ":memory:",
+        VALID_SCHEMA("mixed_time_series.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element("Sensor", quiver::Element().set("label", "Sensor 1"));
 
@@ -928,9 +944,11 @@ TEST_F(LuaRunnerTest, MultiColumnTimeSeriesReplace) {
 }
 
 TEST_F(LuaRunnerTest, MultiColumnTimeSeriesClear) {
-    auto db = quiver::Database::from_schema(":memory:",
-                                            VALID_SCHEMA("mixed_time_series.sql"),
-                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
+    auto db = quiver::Database::from_schema(
+        ":memory:",
+        VALID_SCHEMA("mixed_time_series.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element("Sensor", quiver::Element().set("label", "Sensor 1"));
 
@@ -962,9 +980,11 @@ TEST_F(LuaRunnerTest, MultiColumnTimeSeriesClear) {
 }
 
 TEST_F(LuaRunnerTest, MultiColumnTimeSeriesOrdering) {
-    auto db = quiver::Database::from_schema(":memory:",
-                                            VALID_SCHEMA("mixed_time_series.sql"),
-                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
+    auto db = quiver::Database::from_schema(
+        ":memory:",
+        VALID_SCHEMA("mixed_time_series.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element("Sensor", quiver::Element().set("label", "Sensor 1"));
 
@@ -1001,9 +1021,11 @@ TEST_F(LuaRunnerTest, MultiColumnTimeSeriesOrdering) {
 }
 
 TEST_F(LuaRunnerTest, MultiColumnTimeSeriesMultiRow) {
-    auto db = quiver::Database::from_schema(":memory:",
-                                            VALID_SCHEMA("mixed_time_series.sql"),
-                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
+    auto db = quiver::Database::from_schema(
+        ":memory:",
+        VALID_SCHEMA("mixed_time_series.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element("Sensor", quiver::Element().set("label", "Sensor 1"));
 
@@ -1076,13 +1098,16 @@ TEST_F(LuaRunnerTest, ReadTimeSeriesRowRejectsMultiDimensionGroup) {
     expect_lua_error(
         lua,
         R"(db:read_time_series_row("Resource", "load", "load", "2024-01-01"))",
-        "Cannot read_time_series_row: group 'load' of collection 'Resource' has more than one dimension column");
+        "Cannot read_time_series_row: group 'load' of collection 'Resource' has more than one dimension column"
+    );
 }
 
 TEST_F(LuaRunnerTest, ReadTimeSeriesRowNoDataIsNil) {
-    auto db = quiver::Database::from_schema(":memory:",
-                                            VALID_SCHEMA("mixed_time_series.sql"),
-                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
+    auto db = quiver::Database::from_schema(
+        ":memory:",
+        VALID_SCHEMA("mixed_time_series.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
     quiver::LuaRunner lua(db);
 
     lua.run(R"(
@@ -1153,11 +1178,14 @@ TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupByLabelErrors) {
     expect_lua_error(
         lua,
         R"(db:update_time_series_group_by_label("Collection", "data", "Nope", { date_time = { "2024-06-02" } }))",
-        "Element not found");
+        "Element not found"
+    );
     // Dimension validation runs before the label is resolved, so it reports first.
-    expect_lua_error(lua,
-                     R"(db:update_time_series_group_by_label("Collection", "data", "Nope", { value = { 1.0 } }))",
-                     "missing dimension column");
+    expect_lua_error(
+        lua,
+        R"(db:update_time_series_group_by_label("Collection", "data", "Nope", { value = { 1.0 } }))",
+        "missing dimension column"
+    );
 
     // Nothing was written by any of the failures.
     EXPECT_EQ(db.read_time_series_group("Collection", "data", id).size(), 1);

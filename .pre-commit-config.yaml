@@ -14,14 +14,19 @@ repos:
       - id: check-merge-conflict
       - id: mixed-line-ending
         args: [--fix=lf]
-        exclude: (^tests/fixtures/|\.bat$)
+        exclude: ^tests/fixtures/
       - id: check-added-large-files
         args: [--maxkb=1024]
+
+  # Same clang-format version CI pins (.github/workflows/ci.yml).
+  - repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: v22.1.8
+    hooks:
+      - id: clang-format
+        files: ^(include|src|tests)/.*\.(cpp|h)$
 
   - repo: https://github.com/pocc/pre-commit-hooks
     rev: v1.3.5
     hooks:
-      - id: clang-format
-        files: ^(include|src|tests)/.*\.(cpp|h)$
       - id: cppcheck
         files: ^(include|src|tests)/.*\.(cpp|h)$

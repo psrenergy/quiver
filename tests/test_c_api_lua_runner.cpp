@@ -7,7 +7,9 @@
 
 class LuaRunnerCApiTest : public ::testing::Test {
 protected:
-    void SetUp() override { collections_schema = VALID_SCHEMA("collections.sql"); }
+    void SetUp() override {
+        collections_schema = VALID_SCHEMA("collections.sql");
+    }
     std::string collections_schema;
 };
 
@@ -574,15 +576,19 @@ TEST_F(LuaRunnerCApiTest, DryRunWrapsScript) {
 
     // The script manages its own transaction; the dry run absorbs it.
     char* result = nullptr;
-    ASSERT_EQ(quiver_lua_runner_run(lua,
-                                    R"(
+    ASSERT_EQ(
+        quiver_lua_runner_run(
+            lua,
+            R"(
         db:transaction(function(db)
             db:create_element("Collection", { label = "Item 1" })
         end)
         return db:read_element_ids("Collection")
     )",
-                                    &result),
-              QUIVER_OK);
+            &result
+        ),
+        QUIVER_OK
+    );
     EXPECT_STREQ(result, "[1]");
     quiver_lua_runner_free_string(result);
 

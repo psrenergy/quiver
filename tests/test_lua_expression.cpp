@@ -1,9 +1,10 @@
 #include "test_lua_runner.h"
 
-#include <filesystem>
 #include <gtest/gtest.h>
 #include <quiver/database.h>
 #include <quiver/lua_runner.h>
+
+#include <filesystem>
 #include <string>
 
 namespace fs = std::filesystem;
@@ -193,25 +194,29 @@ TEST_F(LuaExpressionTest, AggregateSumOverInnermostTimeDimFromMidPeriodStart) {
 TEST_F(LuaExpressionTest, AggregateUnknownOpThrows) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::LuaRunner lua(db);
-    expect_lua_error(lua,
-                     prelude() + R"(
+    expect_lua_error(
+        lua,
+        prelude() + R"(
         fill_by_row('expr_a')
         local fa = db:open_file('expr_a', 'r')
         quiver.expression(fa):aggregate('row', 'bogus')
     )",
-                     "Cannot aggregate: unknown operation 'bogus'");
+        "Cannot aggregate: unknown operation 'bogus'"
+    );
 }
 
 TEST_F(LuaExpressionTest, AggregateAgentsUnknownOpThrows) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::LuaRunner lua(db);
-    expect_lua_error(lua,
-                     prelude() + R"(
+    expect_lua_error(
+        lua,
+        prelude() + R"(
         fill_by_row('expr_a')
         local fa = db:open_file('expr_a', 'r')
         quiver.expression(fa):aggregate_agents('bogus')
     )",
-                     "Cannot aggregate_agents: unknown operation 'bogus'");
+        "Cannot aggregate_agents: unknown operation 'bogus'"
+    );
 }
 
 TEST_F(LuaExpressionTest, AggregateOutermostTimeDimFromMidYearStart) {
@@ -306,28 +311,36 @@ TEST_F(LuaExpressionTest, RenameAgentsRejectsNonStringNames) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::LuaRunner lua(db);
     lua.run(prelude() + "fill('expr_a', 1.0, 1.0)");
-    expect_lua_error(lua,
-                     "quiver.expression(db:open_file('expr_a', 'r')):rename_agents({ v1 = true })",
-                     "Cannot rename_agents: value for 'v1' has unsupported Lua type");
-    expect_lua_error(lua,
-                     "quiver.expression(db:open_file('expr_a', 'r')):rename_agents({ 'alpha' })",
-                     "Cannot rename_agents: key has unsupported Lua type");
-    expect_lua_error(lua,
-                     "quiver.expression(db:open_file('expr_a', 'r')):rename_agents(5)",
-                     "Cannot rename_agents: mapping must be a table");
+    expect_lua_error(
+        lua,
+        "quiver.expression(db:open_file('expr_a', 'r')):rename_agents({ v1 = true })",
+        "Cannot rename_agents: value for 'v1' has unsupported Lua type"
+    );
+    expect_lua_error(
+        lua,
+        "quiver.expression(db:open_file('expr_a', 'r')):rename_agents({ 'alpha' })",
+        "Cannot rename_agents: key has unsupported Lua type"
+    );
+    expect_lua_error(
+        lua,
+        "quiver.expression(db:open_file('expr_a', 'r')):rename_agents(5)",
+        "Cannot rename_agents: mapping must be a table"
+    );
 }
 
 TEST_F(LuaExpressionTest, SaveOutputCollisionThrows) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::LuaRunner lua(db);
-    expect_lua_error(lua,
-                     prelude() + R"(
+    expect_lua_error(
+        lua,
+        prelude() + R"(
         fill('expr_a', 1.0, 1.0)
         local fa = db:open_file('expr_a', 'r')
         local expr = quiver.expression(fa) * 2.0
         expr:save('expr_a')
     )",
-                     "Cannot save: output path collides with input file");
+        "Cannot save: output path collides with input file"
+    );
 }
 
 // --- db-directory sandbox ---
@@ -348,14 +361,16 @@ TEST_F(LuaExpressionTest, SaveRelativeResolvesAgainstDbDir) {
 TEST_F(LuaExpressionTest, SaveEscapeThrows) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::LuaRunner lua(db);
-    expect_lua_error(lua,
-                     prelude() + R"(
+    expect_lua_error(
+        lua,
+        prelude() + R"(
         fill('expr_a', 1.0, 1.0)
         local fa = db:open_file('expr_a', 'r')
         local expr = quiver.expression(fa) * 2.0
         expr:save('../out')
     )",
-                     "Cannot save: path '../out' escapes the database directory");
+        "Cannot save: path '../out' escapes the database directory"
+    );
 }
 
 TEST_F(LuaExpressionTest, ComparisonFreeFunctions) {

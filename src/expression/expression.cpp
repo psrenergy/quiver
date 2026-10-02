@@ -23,14 +23,18 @@ const BinaryMetadata& Expression::metadata() const {
     return node_->metadata();
 }
 
-Expression Expression::aggregate(const std::string& dimension,
-                                 ExpressionAggregate::Operation operation,
-                                 std::optional<double> parameter) const {
+Expression Expression::aggregate(
+    const std::string& dimension,
+    ExpressionAggregate::Operation operation,
+    std::optional<double> parameter
+) const {
     return Expression(std::make_shared<ExpressionAggregate>(operation, node_, dimension, parameter));
 }
 
-Expression Expression::aggregate_agents(ExpressionAggregateAgents::Operation operation,
-                                        std::optional<double> parameter) const {
+Expression Expression::aggregate_agents(
+    ExpressionAggregateAgents::Operation operation,
+    std::optional<double> parameter
+) const {
     return Expression(std::make_shared<ExpressionAggregateAgents>(operation, node_, parameter));
 }
 
@@ -156,8 +160,14 @@ Expression exp(const Expression& operand) {
 }
 
 Expression ifelse(const Expression& condition, const Expression& then_value, const Expression& else_value) {
-    return Expression(std::make_shared<ExpressionTernary>(
-        ExpressionTernary::Operation::IfElse, condition.node_, then_value.node_, else_value.node_));
+    return Expression(
+        std::make_shared<ExpressionTernary>(
+            ExpressionTernary::Operation::IfElse,
+            condition.node_,
+            then_value.node_,
+            else_value.node_
+        )
+    );
 }
 
 Expression operator>(const Expression& lhs, const Expression& rhs) {

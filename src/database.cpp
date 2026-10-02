@@ -4,14 +4,15 @@
 #include "ui_metadata.h"
 #include "utils/string.h"
 
-#include <atomic>
-#include <filesystem>
-#include <fstream>
-#include <mutex>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 #include <sqlite3.h>
+
+#include <atomic>
+#include <filesystem>
+#include <fstream>
+#include <mutex>
 #include <sstream>
 #include <stdexcept>
 
@@ -141,8 +142,10 @@ Result Database::Impl::execute(const std::string& sql, const std::vector<Value>&
     // placeholder, too many would silently ignore the extras.
     const auto expected_parameters = static_cast<size_t>(sqlite3_bind_parameter_count(stmt.get()));
     if (expected_parameters != parameters.size()) {
-        throw std::runtime_error("Failed to execute statement: expected " + std::to_string(expected_parameters) +
-                                 " bound parameter(s) but got " + std::to_string(parameters.size()));
+        throw std::runtime_error(
+            "Failed to execute statement: expected " + std::to_string(expected_parameters) +
+            " bound parameter(s) but got " + std::to_string(parameters.size())
+        );
     }
 
     // Bind parameters
@@ -161,14 +164,17 @@ Result Database::Impl::execute(const std::string& sql, const std::vector<Value>&
                     sqlite3_bind_double(stmt.get(), idx, arg);
                 } else if constexpr (std::is_same_v<T, std::string>) {
                     auto trimmed = string::trim(arg);
-                    sqlite3_bind_text(stmt.get(),
-                                      idx,
-                                      trimmed.c_str(),
-                                      static_cast<int>(trimmed.size()),
-                                      SQLITE_TRANSIENT);  // NOLINT(performance-no-int-to-ptr) SQLite macro
+                    sqlite3_bind_text(
+                        stmt.get(),
+                        idx,
+                        trimmed.c_str(),
+                        static_cast<int>(trimmed.size()),
+                        SQLITE_TRANSIENT
+                    );  // NOLINT(performance-no-int-to-ptr) SQLite macro
                 }
             },
-            parameter);
+            parameter
+        );
     }
 
     // Get column info
@@ -238,9 +244,11 @@ const std::string& Database::path() const {
     return impl_->path;
 }
 
-Database Database::from_migrations(const std::string& db_path,
-                                   const std::string& migrations_path,
-                                   const DatabaseOptions& options) {
+Database Database::from_migrations(
+    const std::string& db_path,
+    const std::string& migrations_path,
+    const DatabaseOptions& options
+) {
     namespace fs = std::filesystem;
     if (options.read_only) {
         throw std::runtime_error("Cannot from_migrations: read_only mode (use Database constructor to open existing)");
@@ -283,8 +291,11 @@ void Database::validate_migrations(const std::string& migrations_path) {
     }
 }
 
-Database
-Database::from_schema(const std::string& db_path, const std::string& schema_path, const DatabaseOptions& options) {
+Database Database::from_schema(
+    const std::string& db_path,
+    const std::string& schema_path,
+    const DatabaseOptions& options
+) {
     namespace fs = std::filesystem;
     if (options.read_only) {
         throw std::runtime_error("Cannot from_schema: read_only mode (use Database constructor to open existing)");
@@ -392,15 +403,21 @@ void Database::migrate_up(const std::string& migrations_path, const char* operat
     }
 
     impl_->logger->info(
-        "Applying {} pending migration(s) from version {} to {}", pending.size(), current, migrations.latest_version());
+        "Applying {} pending migration(s) from version {} to {}",
+        pending.size(),
+        current,
+        migrations.latest_version()
+    );
 
     for (const auto& migration : pending) {
         impl_->logger->info("Applying migration {}", migration.version());
 
         const auto up_sql = migration.up_sql();
         if (up_sql.empty()) {
-            throw std::runtime_error(std::string("Cannot ") + operation + ": migration " +
-                                     std::to_string(migration.version()) + " has no up.sql file");
+            throw std::runtime_error(
+                std::string("Cannot ") + operation + ": migration " + std::to_string(migration.version()) +
+                " has no up.sql file"
+            );
         }
 
         try {
@@ -411,8 +428,10 @@ void Database::migrate_up(const std::string& migrations_path, const char* operat
             impl_->logger->info("Migration {} applied successfully", migration.version());
         } catch (const std::exception& e) {
             impl_->logger->error("Migration {} failed: {}", migration.version(), e.what());
-            throw std::runtime_error(std::string("Failed to ") + operation + ": up migration " +
-                                     std::to_string(migration.version()) + ": " + e.what());
+            throw std::runtime_error(
+                std::string("Failed to ") + operation + ": up migration " + std::to_string(migration.version()) + ": " +
+                e.what()
+            );
         }
     }
 
@@ -435,8 +454,9 @@ void Database::migrate_down(const std::string& migrations_path) {
 
         const auto down_sql = it->down_sql();
         if (down_sql.empty()) {
-            throw std::runtime_error("Cannot validate_migrations: migration " + std::to_string(it->version()) +
-                                     " has no down.sql file");
+            throw std::runtime_error(
+                "Cannot validate_migrations: migration " + std::to_string(it->version()) + " has no down.sql file"
+            );
         }
 
         const auto preceding_version = it + 1 == all.rend() ? 0 : (it + 1)->version();
@@ -448,8 +468,9 @@ void Database::migrate_down(const std::string& migrations_path) {
             impl_->logger->info("Migration {} reverted successfully", it->version());
         } catch (const std::exception& e) {
             impl_->logger->error("Migration {} failed: {}", it->version(), e.what());
-            throw std::runtime_error("Failed to validate_migrations: down migration " + std::to_string(it->version()) +
-                                     ": " + e.what());
+            throw std::runtime_error(
+                "Failed to validate_migrations: down migration " + std::to_string(it->version()) + ": " + e.what()
+            );
         }
     }
 }

@@ -32,10 +32,12 @@ quiver_error_t read_scalars_impl(const std::vector<T>& values, T** out_values, s
 // Helper for reading nullable numeric scalars into a value array + parallel presence mask.
 // mask[i] == 0 means SQL NULL; the data slot then holds a placeholder (0 / 0.0) to be ignored.
 template <typename T>
-quiver_error_t read_scalars_masked_impl(const std::vector<std::optional<T>>& values,
-                                        T** out_values,
-                                        uint8_t** out_mask,
-                                        size_t* out_count) {
+quiver_error_t read_scalars_masked_impl(
+    const std::vector<std::optional<T>>& values,
+    T** out_values,
+    uint8_t** out_mask,
+    size_t* out_count
+) {
     *out_count = values.size();
     if (values.empty()) {
         *out_values = nullptr;
@@ -59,11 +61,13 @@ quiver_error_t read_scalars_masked_impl(const std::vector<std::optional<T>>& val
 // Helper for reading nullable numeric vectors: one value array + one parallel presence mask per
 // element. masks[i][j] == 0 means SQL NULL; the data slot then holds a placeholder to be ignored.
 template <typename T>
-quiver_error_t read_vectors_masked_impl(const std::vector<std::vector<std::optional<T>>>& vectors,
-                                        T*** out_vectors,
-                                        uint8_t*** out_masks,
-                                        size_t** out_sizes,
-                                        size_t* out_count) {
+quiver_error_t read_vectors_masked_impl(
+    const std::vector<std::vector<std::optional<T>>>& vectors,
+    T*** out_vectors,
+    uint8_t*** out_masks,
+    size_t** out_sizes,
+    size_t* out_count
+) {
     *out_count = vectors.size();
     if (vectors.empty()) {
         *out_vectors = nullptr;
@@ -95,10 +99,12 @@ void free_vectors_impl(T** vectors, size_t* sizes, size_t count) {
 
 // Helper to copy nested string vectors (vector/set reads) to C arrays. A SQL NULL cell becomes
 // a nullptr entry (no mask needed); quiver_database_free_string_vectors tolerates nullptr slots.
-inline void copy_string_vectors_to_c(const std::vector<std::vector<std::optional<std::string>>>& vectors,
-                                     char**** out_vectors,
-                                     size_t** out_sizes,
-                                     size_t* out_count) {
+inline void copy_string_vectors_to_c(
+    const std::vector<std::vector<std::optional<std::string>>>& vectors,
+    char**** out_vectors,
+    size_t** out_sizes,
+    size_t* out_count
+) {
     *out_count = vectors.size();
     if (vectors.empty()) {
         *out_vectors = nullptr;
@@ -136,8 +142,11 @@ inline quiver_error_t copy_strings_to_c(const std::vector<std::string>& values, 
 
 // Overload for nullable scalar strings: a SQL NULL becomes a nullptr entry in the array
 // (no mask needed — a NULL char* is unambiguous). free_string_array tolerates nullptr slots.
-inline quiver_error_t
-copy_strings_to_c(const std::vector<std::optional<std::string>>& values, char*** out_values, size_t* out_count) {
+inline quiver_error_t copy_strings_to_c(
+    const std::vector<std::optional<std::string>>& values,
+    char*** out_values,
+    size_t* out_count
+) {
     *out_count = values.size();
     if (values.empty()) {
         *out_values = nullptr;
@@ -217,14 +226,15 @@ inline void free_group_fields(quiver_group_metadata_t& m) {
 // and a NULL cell becomes an explicit Value{nullptr}, so every row names every column: a column
 // whose cells are all NULL is still validated by the core (an unknown name throws) and is written
 // as NULL rather than left to the column DEFAULT.
-inline std::vector<std::map<std::string, quiver::Value>>
-unmarshal_group_columns_to_rows(const char* caller,
-                                const char* const* column_names,
-                                const int* column_types,
-                                const void* const* column_data,
-                                const uint8_t* const* column_has_value,
-                                size_t column_count,
-                                size_t row_count) {
+inline std::vector<std::map<std::string, quiver::Value>> unmarshal_group_columns_to_rows(
+    const char* caller,
+    const char* const* column_names,
+    const int* column_types,
+    const void* const* column_data,
+    const uint8_t* const* column_has_value,
+    size_t column_count,
+    size_t row_count
+) {
     // Named columns with no rows are a caller mistake, and the last layer that can say so: the
     // row-shaped result below carries no column names at all, so the core would see an empty
     // update and clear the group - a typo'd column name silently destroying data. Clearing is
@@ -234,8 +244,10 @@ unmarshal_group_columns_to_rows(const char* caller,
         for (size_t c = 0; c < column_count; ++c) {
             names += (names.empty() ? "" : ", ") + std::string(column_names[c]);
         }
-        throw std::runtime_error(std::string("Cannot ") + caller + ": columns [" + names +
-                                 "] contain no rows; pass no columns to clear the group");
+        throw std::runtime_error(
+            std::string("Cannot ") + caller + ": columns [" + names +
+            "] contain no rows; pass no columns to clear the group"
+        );
     }
 
     std::vector<std::map<std::string, quiver::Value>> rows;
@@ -268,8 +280,9 @@ unmarshal_group_columns_to_rows(const char* caller,
                 break;
             }
             default:
-                throw std::runtime_error(std::string("Cannot ") + caller + ": unknown column type " +
-                                         std::to_string(column_types[c]));
+                throw std::runtime_error(
+                    std::string("Cannot ") + caller + ": unknown column type " + std::to_string(column_types[c])
+                );
             }
         }
         rows.push_back(std::move(row));
@@ -281,15 +294,17 @@ unmarshal_group_columns_to_rows(const char* caller,
 // typed-arrays + per-cell presence-mask out-params shared by the group read C
 // functions. `columns` pairs each column name with its quiver_data_type_t value.
 // Results are freed by quiver_database_free_time_series_data.
-inline void marshal_group_rows_to_c(const char* caller,
-                                    const std::vector<std::pair<std::string, int>>& columns,
-                                    const std::vector<std::map<std::string, quiver::Value>>& rows,
-                                    char*** out_column_names,
-                                    int** out_column_types,
-                                    void*** out_column_data,
-                                    uint8_t*** out_column_has_value,
-                                    size_t* out_column_count,
-                                    size_t* out_row_count) {
+inline void marshal_group_rows_to_c(
+    const char* caller,
+    const std::vector<std::pair<std::string, int>>& columns,
+    const std::vector<std::map<std::string, quiver::Value>>& rows,
+    char*** out_column_names,
+    int** out_column_types,
+    void*** out_column_data,
+    uint8_t*** out_column_has_value,
+    size_t* out_column_count,
+    size_t* out_row_count
+) {
     if (rows.empty()) {
         *out_column_names = nullptr;
         *out_column_types = nullptr;
@@ -373,14 +388,21 @@ inline void marshal_group_rows_to_c(const char* caller,
                 break;
             }
             default:
-                throw std::runtime_error(std::string("Cannot ") + caller + ": unknown data type " +
-                                         std::to_string(columns[c].second));
+                throw std::runtime_error(
+                    std::string("Cannot ") + caller + ": unknown data type " + std::to_string(columns[c].second)
+                );
             }
         }
     } catch (...) {
         // Clean up partially allocated results
         quiver_database_free_time_series_data(
-            *out_column_names, *out_column_types, *out_column_data, *out_column_has_value, col_count, row_count);
+            *out_column_names,
+            *out_column_types,
+            *out_column_data,
+            *out_column_has_value,
+            col_count,
+            row_count
+        );
         *out_column_names = nullptr;
         *out_column_types = nullptr;
         *out_column_data = nullptr;

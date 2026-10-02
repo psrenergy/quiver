@@ -9,10 +9,12 @@
 
 extern "C" {
 
-QUIVER_C_API quiver_error_t quiver_database_update_element(quiver_database_t* db,
-                                                           const char* collection,
-                                                           int64_t id,
-                                                           const quiver_element_t* element) {
+QUIVER_C_API quiver_error_t quiver_database_update_element(
+    quiver_database_t* db,
+    const char* collection,
+    int64_t id,
+    const quiver_element_t* element
+) {
     QUIVER_REQUIRE(db, collection, element);
 
     try {
@@ -24,10 +26,12 @@ QUIVER_C_API quiver_error_t quiver_database_update_element(quiver_database_t* db
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_database_update_element_by_label(quiver_database_t* db,
-                                                                    const char* collection,
-                                                                    const char* label,
-                                                                    const quiver_element_t* element) {
+QUIVER_C_API quiver_error_t quiver_database_update_element_by_label(
+    quiver_database_t* db,
+    const char* collection,
+    const char* label,
+    const quiver_element_t* element
+) {
     QUIVER_REQUIRE(db, collection, label, element);
 
     try {
@@ -40,20 +44,24 @@ QUIVER_C_API quiver_error_t quiver_database_update_element_by_label(quiver_datab
 }
 
 // A NULL target_label clears the relation (std::nullopt in the core).
-QUIVER_C_API quiver_error_t quiver_database_update_relation(quiver_database_t* db,
-                                                            const char* collection_from,
-                                                            const char* collection_to,
-                                                            const char* relation_type,
-                                                            int64_t id,
-                                                            const char* target_label) {
+QUIVER_C_API quiver_error_t quiver_database_update_relation(
+    quiver_database_t* db,
+    const char* collection_from,
+    const char* collection_to,
+    const char* relation_type,
+    int64_t id,
+    const char* target_label
+) {
     QUIVER_REQUIRE(db, collection_from, collection_to, relation_type);
 
     try {
-        db->db.update_relation(collection_from,
-                               collection_to,
-                               relation_type,
-                               id,
-                               target_label == nullptr ? std::nullopt : std::optional<std::string>(target_label));
+        db->db.update_relation(
+            collection_from,
+            collection_to,
+            relation_type,
+            id,
+            target_label == nullptr ? std::nullopt : std::optional<std::string>(target_label)
+        );
         return QUIVER_OK;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
@@ -61,21 +69,24 @@ QUIVER_C_API quiver_error_t quiver_database_update_relation(quiver_database_t* d
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_database_update_relation_by_label(quiver_database_t* db,
-                                                                     const char* collection_from,
-                                                                     const char* collection_to,
-                                                                     const char* relation_type,
-                                                                     const char* label,
-                                                                     const char* target_label) {
+QUIVER_C_API quiver_error_t quiver_database_update_relation_by_label(
+    quiver_database_t* db,
+    const char* collection_from,
+    const char* collection_to,
+    const char* relation_type,
+    const char* label,
+    const char* target_label
+) {
     QUIVER_REQUIRE(db, collection_from, collection_to, relation_type, label);
 
     try {
-        db->db.update_relation_by_label(collection_from,
-                                        collection_to,
-                                        relation_type,
-                                        label,
-                                        target_label == nullptr ? std::nullopt
-                                                                : std::optional<std::string>(target_label));
+        db->db.update_relation_by_label(
+            collection_from,
+            collection_to,
+            relation_type,
+            label,
+            target_label == nullptr ? std::nullopt : std::optional<std::string>(target_label)
+        );
         return QUIVER_OK;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
@@ -83,16 +94,18 @@ QUIVER_C_API quiver_error_t quiver_database_update_relation_by_label(quiver_data
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_database_update_vector_group(quiver_database_t* db,
-                                                                const char* collection,
-                                                                const char* group,
-                                                                int64_t id,
-                                                                const char* const* column_names,
-                                                                const int* column_types,
-                                                                const void* const* column_data,
-                                                                const uint8_t* const* column_has_value,
-                                                                size_t column_count,
-                                                                size_t row_count) {
+QUIVER_C_API quiver_error_t quiver_database_update_vector_group(
+    quiver_database_t* db,
+    const char* collection,
+    const char* group,
+    int64_t id,
+    const char* const* column_names,
+    const int* column_types,
+    const void* const* column_data,
+    const uint8_t* const* column_has_value,
+    size_t column_count,
+    size_t row_count
+) {
     QUIVER_REQUIRE(db, collection, group);
     if (column_count > 0) {
         QUIVER_REQUIRE(column_names, column_types, column_data);
@@ -100,7 +113,14 @@ QUIVER_C_API quiver_error_t quiver_database_update_vector_group(quiver_database_
 
     try {
         auto rows = unmarshal_group_columns_to_rows(
-            "update_vector_group", column_names, column_types, column_data, column_has_value, column_count, row_count);
+            "update_vector_group",
+            column_names,
+            column_types,
+            column_data,
+            column_has_value,
+            column_count,
+            row_count
+        );
         db->db.update_vector_group(collection, group, id, rows);
         return QUIVER_OK;
     } catch (const std::exception& e) {
@@ -109,29 +129,33 @@ QUIVER_C_API quiver_error_t quiver_database_update_vector_group(quiver_database_
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_database_update_vector_group_by_label(quiver_database_t* db,
-                                                                         const char* collection,
-                                                                         const char* group,
-                                                                         const char* label,
-                                                                         const char* const* column_names,
-                                                                         const int* column_types,
-                                                                         const void* const* column_data,
-                                                                         const uint8_t* const* column_has_value,
-                                                                         size_t column_count,
-                                                                         size_t row_count) {
+QUIVER_C_API quiver_error_t quiver_database_update_vector_group_by_label(
+    quiver_database_t* db,
+    const char* collection,
+    const char* group,
+    const char* label,
+    const char* const* column_names,
+    const int* column_types,
+    const void* const* column_data,
+    const uint8_t* const* column_has_value,
+    size_t column_count,
+    size_t row_count
+) {
     QUIVER_REQUIRE(db, collection, group, label);
     if (column_count > 0) {
         QUIVER_REQUIRE(column_names, column_types, column_data);
     }
 
     try {
-        auto rows = unmarshal_group_columns_to_rows("update_vector_group_by_label",
-                                                    column_names,
-                                                    column_types,
-                                                    column_data,
-                                                    column_has_value,
-                                                    column_count,
-                                                    row_count);
+        auto rows = unmarshal_group_columns_to_rows(
+            "update_vector_group_by_label",
+            column_names,
+            column_types,
+            column_data,
+            column_has_value,
+            column_count,
+            row_count
+        );
         db->db.update_vector_group_by_label(collection, group, label, rows);
         return QUIVER_OK;
     } catch (const std::exception& e) {
@@ -140,16 +164,18 @@ QUIVER_C_API quiver_error_t quiver_database_update_vector_group_by_label(quiver_
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_database_update_set_group(quiver_database_t* db,
-                                                             const char* collection,
-                                                             const char* group,
-                                                             int64_t id,
-                                                             const char* const* column_names,
-                                                             const int* column_types,
-                                                             const void* const* column_data,
-                                                             const uint8_t* const* column_has_value,
-                                                             size_t column_count,
-                                                             size_t row_count) {
+QUIVER_C_API quiver_error_t quiver_database_update_set_group(
+    quiver_database_t* db,
+    const char* collection,
+    const char* group,
+    int64_t id,
+    const char* const* column_names,
+    const int* column_types,
+    const void* const* column_data,
+    const uint8_t* const* column_has_value,
+    size_t column_count,
+    size_t row_count
+) {
     QUIVER_REQUIRE(db, collection, group);
     if (column_count > 0) {
         QUIVER_REQUIRE(column_names, column_types, column_data);
@@ -157,7 +183,14 @@ QUIVER_C_API quiver_error_t quiver_database_update_set_group(quiver_database_t* 
 
     try {
         auto rows = unmarshal_group_columns_to_rows(
-            "update_set_group", column_names, column_types, column_data, column_has_value, column_count, row_count);
+            "update_set_group",
+            column_names,
+            column_types,
+            column_data,
+            column_has_value,
+            column_count,
+            row_count
+        );
         db->db.update_set_group(collection, group, id, rows);
         return QUIVER_OK;
     } catch (const std::exception& e) {
@@ -166,29 +199,33 @@ QUIVER_C_API quiver_error_t quiver_database_update_set_group(quiver_database_t* 
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_database_update_set_group_by_label(quiver_database_t* db,
-                                                                      const char* collection,
-                                                                      const char* group,
-                                                                      const char* label,
-                                                                      const char* const* column_names,
-                                                                      const int* column_types,
-                                                                      const void* const* column_data,
-                                                                      const uint8_t* const* column_has_value,
-                                                                      size_t column_count,
-                                                                      size_t row_count) {
+QUIVER_C_API quiver_error_t quiver_database_update_set_group_by_label(
+    quiver_database_t* db,
+    const char* collection,
+    const char* group,
+    const char* label,
+    const char* const* column_names,
+    const int* column_types,
+    const void* const* column_data,
+    const uint8_t* const* column_has_value,
+    size_t column_count,
+    size_t row_count
+) {
     QUIVER_REQUIRE(db, collection, group, label);
     if (column_count > 0) {
         QUIVER_REQUIRE(column_names, column_types, column_data);
     }
 
     try {
-        auto rows = unmarshal_group_columns_to_rows("update_set_group_by_label",
-                                                    column_names,
-                                                    column_types,
-                                                    column_data,
-                                                    column_has_value,
-                                                    column_count,
-                                                    row_count);
+        auto rows = unmarshal_group_columns_to_rows(
+            "update_set_group_by_label",
+            column_names,
+            column_types,
+            column_data,
+            column_has_value,
+            column_count,
+            row_count
+        );
         db->db.update_set_group_by_label(collection, group, label, rows);
         return QUIVER_OK;
     } catch (const std::exception& e) {

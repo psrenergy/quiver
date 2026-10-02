@@ -30,11 +30,13 @@ constexpr std::pair<const char*, GroupTableType> kGroupSections[] = {
 void print_group_columns(std::ostream& out, const TableDefinition& table, GroupTableType type) {
     bool first = true;
     for (const auto& col_name : table.column_order) {
-        if (col_name == "id" || (type == GroupTableType::Vector && col_name == "vector_index"))
+        if (col_name == "id" || (type == GroupTableType::Vector && col_name == "vector_index")) {
             continue;
+        }
         const auto& col = table.columns.at(col_name);
-        if (!first)
+        if (!first) {
             out << ", ";
+        }
         if (type == GroupTableType::TimeSeries && col.primary_key) {
             out << "[" << col_name << "]";
         } else {
@@ -183,12 +185,14 @@ void write_ui_clauses(std::ostream& out, const UiAttribute* meta, const std::str
 }
 
 // Write one collection's structural section (scalars + vector/set/time-series groups).
-void write_collection_section(std::ostream& out,
-                              const Schema& schema,
-                              const std::string& collection,
-                              int64_t count,
-                              const UiMetadata& ui,
-                              bool with_tooltip) {
+void write_collection_section(
+    std::ostream& out,
+    const Schema& schema,
+    const std::string& collection,
+    int64_t count,
+    const UiMetadata& ui,
+    bool with_tooltip
+) {
     out << "Collection: " << collection << " (" << count << " element" << plural(count) << ")\n";
 
     const auto* table_def = schema.get_table(collection);
@@ -210,8 +214,9 @@ void write_collection_section(std::ostream& out,
 
     for (const auto& [header, type] : kGroupSections) {
         auto groups = schema.group_names(collection, type);
-        if (groups.empty())
+        if (groups.empty()) {
             continue;
+        }
         out << header << "\n";
         for (const auto& group_name : groups) {
             const auto* table = schema.get_table(Schema::group_table_name(collection, group_name, type));
@@ -233,7 +238,13 @@ std::string Database::describe() const {
     for (const auto& collection : impl_->schema->collection_names()) {
         out << "\n";
         write_collection_section(
-            out, *impl_->schema, collection, number_of_elements(collection), impl_->ui_metadata, false);
+            out,
+            *impl_->schema,
+            collection,
+            number_of_elements(collection),
+            impl_->ui_metadata,
+            false
+        );
     }
 
     return out.str();
@@ -260,8 +271,9 @@ std::string Database::summarize_collection(const std::string& collection) const 
     for (const auto& scalar : list_scalar_attributes(collection)) {
         const std::string quoted_col = "\"" + scalar.name + "\"";
 
-        const auto counts = impl_->execute("SELECT COUNT(*) - COUNT(" + quoted_col + "), COUNT(" + quoted_col +
-                                           ") FROM " + quoted_collection);
+        const auto counts = impl_->execute(
+            "SELECT COUNT(*) - COUNT(" + quoted_col + "), COUNT(" + quoted_col + ") FROM " + quoted_collection
+        );
         const int64_t null_count = *counts[0].get_integer(0);
         const int64_t non_null_count = *counts[0].get_integer(1);
         out << "    - " << scalar.name << ": " << non_null_count << " non-null, " << null_count << " null";
@@ -276,8 +288,10 @@ std::string Database::summarize_collection(const std::string& collection) const 
                                       quoted_collection + integer_cells + " LIMIT ?)";
             const auto distinct = *impl_->execute(distinct_sql, {kMaxDistributionCardinality + 1})[0].get_integer(0);
             if (distinct > 0 && distinct <= kMaxDistributionCardinality) {
-                const auto rows = impl_->execute("SELECT " + quoted_col + ", COUNT(*) FROM " + quoted_collection +
-                                                 integer_cells + " GROUP BY " + quoted_col + " ORDER BY " + quoted_col);
+                const auto rows = impl_->execute(
+                    "SELECT " + quoted_col + ", COUNT(*) FROM " + quoted_collection + integer_cells + " GROUP BY " +
+                    quoted_col + " ORDER BY " + quoted_col
+                );
                 // D2-12: the lookup sits here, not at the top of the per-scalar loop, so a
                 // collection of TEXT/REAL/PK scalars pays zero two-level map lookups.
                 const auto* meta = impl_->ui_metadata.find(collection, scalar.name);
@@ -312,8 +326,9 @@ std::string Database::summarize_collection(const std::string& collection) const 
     // Per group: count elements that have at least one row in the group table.
     for (const auto& [header, type] : kGroupSections) {
         auto groups = impl_->schema->group_names(collection, type);
-        if (groups.empty())
+        if (groups.empty()) {
             continue;
+        }
         out << header << "\n";
         for (const auto& group_name : groups) {
             const auto table = Schema::group_table_name(collection, group_name, type);

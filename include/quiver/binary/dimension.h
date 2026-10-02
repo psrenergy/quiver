@@ -16,7 +16,9 @@ struct Dimension {
     int64_t size;
     std::optional<TimeProperties> time;
 
-    bool is_time_dimension() const { return time.has_value(); }
+    bool is_time_dimension() const {
+        return time.has_value();
+    }
 };
 
 }  // namespace quiver

@@ -28,7 +28,8 @@ Migrations::Migrations(const std::string& path) {
                 versions_.emplace_back(migration_version, migration_path);
             }
         } catch (  // NOLINT(bugprone-empty-catch) intentionally skip non-numeric directory names
-            const std::exception&) {
+            const std::exception&
+        ) {
         }
     }
 
