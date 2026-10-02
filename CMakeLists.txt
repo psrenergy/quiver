@@ -18,8 +18,8 @@ option(QUIVER_BUILD_C_API "Build C API wrapper" OFF)
 # Omit VERSION/SOVERSION on shared libraries, so the built files carry their plain
 # names (libquiver.dylib) instead of a version infix plus unversioned symlinks.
 # Default OFF: the shipped natives are addressed by their versioned names --
-# bindings/julia/src/c_api.jl hardcodes libquiver.0.dylib, and scripts/ci/native_s3.sh,
-# publish-s3.yml and publish-js.yml ship libquiver.0.dylib / libquiver.so.0 by name.
+# bindings/julia/src/c_api.jl hardcodes libquiver.0.dylib, and scripts/ci/native_s3.sh
+# and publish-s3.yml ship libquiver.0.dylib / libquiver.so.0 by name.
 # Turned ON by the Dart hook, whose asset scanner skips symlinks and matches only the
 # unversioned name. CMAKE_PLATFORM_NO_VERSIONED_SONAME is NOT a substitute: under the Xcode
 # generator that hook selects, it drops the symlinks but keeps the versioned file name,
