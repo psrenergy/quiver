@@ -109,8 +109,8 @@ From the repo root:
 
 ## Acceptance criteria
 
-- [ ] Each of the four layers asserts `== 3` after `from_migrations` and `== 0` for a schema database.
-- [ ] All four suites green.
+- [x] Each of the four layers asserts `== 3` after `from_migrations` and `== 0` for a schema database.
+- [x] All four suites green.
 
 ## Pitfalls
 
@@ -120,3 +120,43 @@ From the repo root:
 ## Out of scope
 
 - Julia, Dart, C++ (already exact).
+
+## Implementation notes
+
+- **Landed as written, with one deviation, in Lua.** The plan rewrote `LuaRunnerTest.CurrentVersion`
+  to use `from_migrations`. That was Lua's only version test, so Lua would have lost its `== 0`
+  check, which contradicts this plan's own constraint and its first acceptance criterion. Instead,
+  `CurrentVersion` keeps its `from_schema` database and its type check became
+  `assert(version == 0, ...)`. The `== 3` check is a new test, `CurrentVersionAfterMigrations`.
+- **Every helper name the plan cited exists as written.** `SCHEMA_PATH` returns a `std::string`
+  (`tests/test_utils.h:28`) and `test_lua_runner.h` includes `test_utils.h`. The Python `db`
+  fixture is `from_schema` on `valid/basic.sql`. `MIGRATIONS_PATH` is defined in
+  `database-lifecycle.test.ts`, and `introspection.test.ts` uses `fromSchema`.
+- **Small departures from the plan's snippets.**
+  - The C API test also asserts `ASSERT_NE(db, nullptr)`, as every other success test in the file
+    does. It sits after `FromMigrationsInvalidPath`, in the "From migrations tests" section.
+  - Python closes the database in a `try`/`finally`, like `test_open_read_only_rejects_writes`.
+  - The JS test drops `expect(db !== undefined)`, which `instanceof` already implies.
+  - The introspection test is renamed to "currentVersion returns 0 for a schema database", so its
+    name matches what it now checks.
+- **No CHANGELOG or AGENTS.md change.** The change is tests only and not user-visible, and
+  `tests/AGENTS.md` does not list individual tests.
+- **Verification.**
+  - On the branch fast-forwarded to `master` (plan 69, `0a8a207`): full `quiver_tests` 1402/1402
+    passed and full `quiver_c_tests` 573/573 passed. Each suite gained one test. `quiver_tests` is
+    back at 1402 because plan 68 deleted a duplicate. Plan 69 also edits
+    `test_c_api_database_lifecycle.cpp`, and the two changes did not conflict.
+  - Python `test.bat`: 350/350 passed. JS `test.bat`: 242/242 passed.
+  - `clang-format --dry-run --Werror` and `ruff format --check` / `ruff check` are clean on the
+    changed files.
+- **For later plans.**
+  - `biome check` flags both JS test files for CRLF line endings in the working tree. The CRLF was
+    already there before this change, and apart from line endings biome's output is identical, so
+    I did not apply it.
+  - The first `cmake --build` failed in the post-build `gtest_discover_tests` step, after
+    `quiver_c_tests.exe` had linked. Both rebuilds passed. Every rebuild re-ran all ~152 steps,
+    probably because another session was building in the same `build/` tree.
+  - `uv run pytest` rebuilds the `quiverdb` package from source through scikit-build-core. With
+    four other sessions running `uv sync` at the same time, the first run took more than 10 minutes
+    and was killed for low memory before it reached the tests. Run the Python suite when no other
+    build is running.

@@ -261,6 +261,21 @@ TEST_F(TempFileFixture, FromMigrationsInvalidPath) {
     EXPECT_NE(quiver_database_from_migrations(":memory:", "nonexistent/migrations/", &options, &db), QUIVER_OK);
 }
 
+TEST_F(TempFileFixture, FromMigrationsSetsCurrentVersion) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_migrations(":memory:", SCHEMA_PATH("schemas/migrations").c_str(), &options, &db),
+              QUIVER_OK)
+        << quiver_get_last_error();
+    ASSERT_NE(db, nullptr);
+
+    int64_t version = -1;
+    EXPECT_EQ(quiver_database_current_version(db, &version), QUIVER_OK);
+    EXPECT_EQ(version, 3);
+
+    quiver_database_close(db);
+}
+
 // ============================================================================
 // Migration round-trip tests
 // ============================================================================
