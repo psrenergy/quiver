@@ -13,7 +13,7 @@ Evidence for each item (line numbers at `bdf9087`) is in `.planning/research/LUA
 - [x] **PIN-02**: Tests pin check order where it decides which error a call reports: `db:open_file` validates `mode` before the path; containment is checked before options decode; `w:write_row` checks the argument type before closed state.
 - [ ] **PIN-03**: The JS sync test asserts at least one parsed method for each of `BinaryFile`, `BinaryMetadata`, `Expression` and `CsvWriter`, and exactly one `open_libraries(` call, so a missed file or usertype fails instead of passing vacuously.
 - [x] **PIN-04**: A test moves a runner (move-construct and move-assign) after `db:write_csv`/`db:open_file` have registered handles, then runs again. This shows that captured state survives a pimpl move.
-- [x] **PIN-05**: Pins cover only behaviour that is defined in both Debug and Release. No test asserts today's Release-UB paths (C1/C2/C5); those are written red-then-green with their fixes.
+- [ ] **PIN-05**: Pins cover only behaviour that is defined in both Debug and Release. No test asserts today's Release-UB paths (C1/C2/C5); those are written red-then-green with their fixes.
 
 ### Mechanical split (zero behaviour change)
 
@@ -108,7 +108,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PIN-02 | Phase 1 | Complete |
 | PIN-03 | Phase 1 | Pending |
 | PIN-04 | Phase 1 | Complete |
-| PIN-05 | Phase 1 | Complete |
+| PIN-05 | Phase 1 | Pending |
 | SPLIT-01 | Phase 2 | Pending |
 | SPLIT-02 | Phase 2 | Pending |
 | SPLIT-03 | Phase 2 | Pending |

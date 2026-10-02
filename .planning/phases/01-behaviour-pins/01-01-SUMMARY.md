@@ -28,6 +28,7 @@ key-files:
 decisions:
   - "Move pins come in two flavours: source kept alive (kills a run() that closes through a different object than bindings register into) and source freed (kills run state held by value on LuaRunner); plus static_assert(sizeof(LuaRunner) == sizeof(void*)) so the by-value case fails in Release too"
   - "The expr:save step in the move pins is reach-only coverage; the CSV and binary close checks are the deterministic move signals"
+requirements-completed: [PIN-01, PIN-02, PIN-04, PIN-05]
 metrics:
   duration: "~134 min wall clock (incl. tracer checkpoint review)"
   completed: 2026-10-02
@@ -102,6 +103,28 @@ both builds.
 - No planning IDs in any added test line (plan's ID grep prints nothing).
 - `git diff --name-only 5b57e7c -- . ':(exclude).planning'` lists exactly the seven `files_modified`; nothing under
   src/, include/, cmake/ or bindings/.
+
+## Post-execution verification
+
+The orchestrator mutation-tested Tasks 2 and 3 and the move fix in throwaway worktrees (45 mutant runs against
+`src/lua_runner.cpp`, Debug, plus M1a in Release), then had each surviving mutant independently refuted or confirmed.
+
+- **Move fix holds.** M1a now fails to compile in Debug and Release (the `static_assert`, C2338). Without the
+  assert, both OutlivesSource pins crash under M1a in Debug; in Release only `MoveConstructorOutlivesSource` does, so
+  the `static_assert` is the only Release guard for the assignment case.
+- **Every order pin fails when its named order is reversed**, and each asserts the full Pattern 1 message, so an
+  unrelated error cannot satisfy it.
+- **Two order pins had an unpinned control.** The import_csv and write_csv escape-before-options pins raise the
+  escape error first, so they could not tell whether the "options must be a table" check still existed. A
+  non-table options value silently meaning "defaults" survived the whole suite (for import_csv that runs a real,
+  deleting import). Fixed by adding the controls the other entry points already have: an
+  `"options must be a table"` assertion in `LuaRunner_ImportCSV.OptionsAreStrict` and the new
+  `LuaRunner_WriteCsv.NonTableOptionsThrows`. `Lua*` is now **444 tests across 12 suites** in build/dev and build/release.
+- **Also fixed:** the MoveConstructor comment no longer claims a live source makes every misplaced registry fail
+  (M1a disproved it), and the five Task 2 pins now follow their files' `csv_schema` naming and blank-line habits.
+- **Refuted, no change:** `:memory:` variants of the open_file mode / read_csv_stream on_row orders (excluded by
+  CONTEXT D-04), the width cap's `>` vs `>=` boundary and a closed check moved after the key walk (orders the
+  plan does not pin), and open_file accepting a multi-character mode (validation, not order).
 
 ## Known Stubs
 

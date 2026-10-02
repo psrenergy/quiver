@@ -29,8 +29,8 @@ See: .planning/PROJECT.md (updated 2026-10-02)
 
 Phase: 01 (behaviour-pins) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
-Last activity: 2026-10-02 — Phase 01 execution started
+Status: Executing
+Last activity: 2026-10-02 — Completed 01-01-PLAN.md (verified by mutation testing)
 
 Progress: [█████░░░░░] 50%
 
