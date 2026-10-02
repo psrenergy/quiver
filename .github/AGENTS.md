@@ -23,7 +23,9 @@ Composite actions in `.github/actions/`:
   `runner.arch`: `ubuntu-latest` and `ubuntu-24.04-arm` both report `runner.os == Linux`, and a
   restored cache of the other arch's `_deps` sub-builds / sccache objects breaks the build.
   **Used by macOS/Windows only in `publish-s3.yml`** (`if: runner.os != 'Linux'`); `ci.yml` still
-  uses it for all three OSes.
+  uses it for all three OSes, in every job that loads the native library except `dart-coverage`,
+  whose `dart test` builds the library through the Dart hook (`bindings/dart/hook/build.dart`) and
+  never reads `build/`. Do not add it back.
 
 **glibc floor for the published Linux native libs (`publish-s3.yml`):** the `linux-x86_64` native
 libs are NOT built via `build-cpp` on a bare `ubuntu-latest` runner — that binds `GLIBC_2.28`..`2.34`

@@ -441,8 +441,9 @@ JS has no generator — update the hand-written symbol table in `bindings/js/src
   with versioning on it registers *nothing* and reports success. Leave it OFF everywhere else:
   Julia hardcodes `libquiver.0.dylib`, and `scripts/ci/native_s3.sh` and `publish-s3.yml` ship
   the versioned names by name. `CMAKE_PLATFORM_NO_VERSIONED_SONAME` is not a substitute — under
-  the Xcode generator the hook uses, it drops the symlinks but keeps the versioned file name. No
-  CI job exercises the ON configuration.
+  the Xcode generator the hook uses, it drops the symlinks but keeps the versioned file name. Only
+  the Linux **Dart Coverage** CI job exercises the ON configuration (through the hook); no macOS or
+  Windows job does.
 - **macOS builds are floored at deployment target 13.3** (`cmake/Platform.cmake`): libc++ marks
   the floating-point `std::to_chars` used by `database_csv_export.cpp`, `lua_runner.cpp` and
   `binary/csv_converter.cpp` (all through `utils::append_number`) unavailable below it, so that is

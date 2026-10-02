@@ -71,7 +71,7 @@ Future<void> main(List<String> args) async {
       // fix: every probe left in the dependency tree reads a real header (sqlite3-cmake moved
       // from check_function_exists, whose self-declared posix_fallocate once "passed" and broke
       // sqlite3.c on Darwin, to check_symbol_exists), so compile-only and linked answers agree.
-      // Kept because no CI job runs this hook to prove removing it safe. Passed through
+      // Kept because no macOS CI job runs this hook to prove removing it safe. Passed through
       // appleArgs rather than a raw -D: the raw form would only win because
       // native_toolchain_cmake happens to append user defines after its own, which is not part
       // of its API.
