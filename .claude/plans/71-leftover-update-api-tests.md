@@ -78,9 +78,9 @@ run the full suites.
 
 ## Acceptance criteria
 
-- [ ] The listed leftovers are gone, and every covering test still exists and passes.
-- [ ] The two NullAttribute tests remain for plan 70.
-- [ ] Both suites are green.
+- [x] The listed leftovers are gone, and every covering test still exists and passes.
+- [x] The two NullAttribute tests remain for plan 70.
+- [x] Both suites are green.
 
 ## Pitfalls
 
@@ -90,3 +90,70 @@ run the full suites.
 
 - Replacing the NullAttribute/NullElement tests (plan 70).
 - Leak fixes in tests that survive (plan 69).
+
+## Implementation notes
+
+Implemented on `rs/plan71`. Merging `origin/master` fast-forwarded from `6fb45ba` (plan 68) to
+`01948d8`, which brought in plans 65, 66, 67 and 69. Plan 70 had not landed. Tests only, in four
+files: `tests/test_c_api_database_{update,lifecycle}.cpp` and
+`tests/test_database_{update,errors}.cpp`.
+
+**Drift:**
+- Line numbers moved by about 20 to 25. I re-anchored every test by name. All the test names and
+  their bodies matched the plan.
+- Plan 69 had already fixed the leaks and `delete[]` frees in `UpdateScalarInteger/Float/String`,
+  `UpdateElementNoFkColumnsUnchanged` (C API) and the two lifecycle `if (ids != nullptr)` guards.
+  Its header expected this: "if 69 lands first, 71 deletes the fixed tests". I deleted the fixed
+  versions.
+- Plan 67 had already removed the lifecycle file's `Describe tests` section. The deleted lifecycle
+  range therefore runs from the `Element ID operations` banner to the end of the file.
+- **NULL-db / NULL-collection:** the plan says to keep one of the 12 of each kind and rename it
+  `UpdateElementNullDb` / `UpdateElementNullCollection`. That coverage already exists in
+  `DatabaseCApi.UpdateElementNullArguments`, which checks null db, null collection and null
+  element. `QUIVER_REQUIRE(db, collection, element)` is the first statement of
+  `quiver_database_update_element`, so what the element holds never matters. I deleted all 12 and
+  renamed none; a renamed copy would have duplicated `UpdateElementNullArguments`. The lifecycle
+  tests the plan deletes were already named `UpdateElementNullDb/NullCollection/NullElement`.
+- `test_database_update.cpp`: deleting `UpdateVectorIntegersInvalidColumnThrows` left the
+  `// Identifier validation tests` banner over only the two whitespace-trimming tests. I renamed
+  it `// Whitespace trimming tests`, the banner the C API file uses for the same two tests.
+
+**Deleted (33), each with the test that covers it:**
+- C API update (16):
+  - `UpdateScalarInteger/Float/String` and their banner: covered by `UpdateElementSingleScalar` /
+    `UpdateElementMultipleScalars`.
+  - The 12 `Update{Vector,Set}{Integers,Floats,Strings}Null{Db,Collection}`: covered by
+    `UpdateElementNullArguments`.
+  - `UpdateElementNoFkColumnsUnchanged`: covered by `UpdateElementMultipleScalars`.
+- C API lifecycle (10):
+  - `ReadElementIdsNullDb/NullCollection/NullOutput`: same-named tests in
+    `test_c_api_database_read_scalar.cpp`.
+  - `ReadElementIdsValid`: covered by `ReadElementIds`.
+  - `DeleteElementNullDb/NullCollection`: covered by `DeleteElementByIdNullArguments`.
+  - `DeleteElementValid`: covered by `DeleteElementById`.
+  - `UpdateElementNullDb/NullCollection/NullElement`: covered by `UpdateElementNullArguments`.
+- C++ update (4):
+  - `UpdateVectorInvalidCollection` and `UpdateSetInvalidCollection`: covered by
+    `DatabaseErrors.UpdateElementCollectionNotFound`. `Database::update_element` calls
+    `require_collection` on its first line, before it reads the element.
+  - `UpdateVectorIntegersInvalidColumnThrows`: covered by `UpdateElementInvalidArrayAttribute`.
+  - `UpdateElementNoFkColumnsUnchanged`: covered by `UpdateElementMultipleScalars`.
+- C++ errors (3): `Update{VectorIntegers,VectorFloats,SetStrings}CollectionNotFound` and the two
+  `Update vector/set error tests` banners, covered by `UpdateElementCollectionNotFound`.
+
+**Kept for plan 70:** `UpdateVectorIntegersNullAttribute` and `UpdateSetStringsNullAttribute`,
+with their `Update vector/set null pointer tests` banners. I left those banners alone so the merge
+stays small. Once plan 70 deletes the two tests, delete the two banners too, or they will be empty.
+
+**Results:**
+- `quiver_tests.exe`: 1401 → 1394 (−7), all passing.
+- `quiver_c_tests.exe`: 572 → 546 (−26), all passing.
+- The filtered runs of every covering test passed (12 C API, 3 C++).
+- A read-only adversarial pass (three agents, one per file group, each told to show that a deleted
+  test asserted something no remaining test checks) found nothing uncovered and no seam problems.
+- No other file names any deleted test, apart from the plan files. `tests/AGENTS.md` neither
+  counts tests nor describes these files' contents, so it is unchanged. No CHANGELOG entry.
+
+**For plan 70:** this branch deletes the 12 NullDb/NullCollection tests on both sides of the two
+NullAttribute tests, so the merge will conflict there. Resolve it by keeping both deletions; both
+plans want those regions gone.

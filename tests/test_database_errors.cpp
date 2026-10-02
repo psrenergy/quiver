@@ -157,53 +157,6 @@ TEST(DatabaseErrors, ReadSetStringsCollectionNotFound) {
 }
 
 // ============================================================================
-// Update vector error tests
-// ============================================================================
-
-TEST(DatabaseErrors, UpdateVectorIntegersCollectionNotFound) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
-
-    quiver::Element config;
-    config.set("label", std::string("Config"));
-    db.create_element("Configuration", config);
-
-    EXPECT_THROW(db.update_element(
-                     "NonexistentCollection", 1, quiver::Element().set("value_int", std::vector<int64_t>{1, 2, 3})),
-                 std::exception);
-}
-
-TEST(DatabaseErrors, UpdateVectorFloatsCollectionNotFound) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
-
-    quiver::Element config;
-    config.set("label", std::string("Config"));
-    db.create_element("Configuration", config);
-
-    EXPECT_THROW(db.update_element(
-                     "NonexistentCollection", 1, quiver::Element().set("value_float", std::vector<double>{1.5, 2.5})),
-                 std::exception);
-}
-
-// ============================================================================
-// Update set error tests
-// ============================================================================
-
-TEST(DatabaseErrors, UpdateSetStringsCollectionNotFound) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
-
-    quiver::Element config;
-    config.set("label", std::string("Config"));
-    db.create_element("Configuration", config);
-
-    EXPECT_THROW(
-        db.update_element("NonexistentCollection", 1, quiver::Element().set("tag", std::vector<std::string>{"a", "b"})),
-        std::exception);
-}
-
-// ============================================================================
 // Read scalar with non-existent attribute tests
 // ============================================================================
 
