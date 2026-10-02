@@ -399,8 +399,8 @@ scripts/build-all.bat            # Build everything + run all tests (Debug)
 scripts/build-all.bat --release  # Build in Release mode
 scripts/test-all.bat             # Run all tests (assumes already built)
 ```
-`test-all.bat` runs the six suites below; `build-all.bat` builds and then runs the same six
-suites (breakdown in `tests/AGENTS.md`).
+`test-all.bat` runs the six suites below; `build-all.bat` builds and then calls `test-all.bat`
+(breakdown in `tests/AGENTS.md`).
 
 ### Individual Tests
 ```bash

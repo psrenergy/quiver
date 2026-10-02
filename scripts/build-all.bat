@@ -4,13 +4,8 @@ setlocal enabledelayedexpansion
 REM ============================================================
 REM Build and Test All - Quiver
 REM ============================================================
-REM Builds C++ library, C API, and runs all tests:
-REM   - C++ unit tests
-REM   - C API tests
-REM   - Julia binding tests
-REM   - Dart binding tests
-REM   - JavaScript binding tests
-REM   - Python binding tests
+REM Configures and builds the C++ library and C API, then runs
+REM scripts\test-all.bat (all six test suites, with a summary).
 REM ============================================================
 
 SET ROOT_DIR=%~dp0..
@@ -44,9 +39,9 @@ echo ============================================================
 echo.
 
 REM ============================================================
-REM Step 1: Build C++ Library and C API
+REM Build C++ Library and C API
 REM ============================================================
-echo [1/7] Building C++ library and C API...
+echo [build] Building C++ library and C API...
 echo.
 
 cmake -S "%ROOT_DIR%" -B "%ROOT_DIR%\build" -G Ninja -DCMAKE_BUILD_TYPE=%BUILD_TYPE% -DQUIVER_BUILD_TESTS=ON -DQUIVER_BUILD_C_API=ON
@@ -64,137 +59,14 @@ if errorlevel 1 (
 )
 
 echo.
-echo [1/7] Build completed successfully
+echo [build] Build completed successfully
 echo.
 
 REM ============================================================
-REM Step 2: Run C++ Tests
+REM Tests: the one runner (all six suites, with a summary)
 REM ============================================================
-echo [2/7] Running C++ tests...
-echo.
-
-"%ROOT_DIR%\build\bin\quiver_tests.exe"
-if errorlevel 1 (
-    echo.
-    echo ERROR: C++ tests failed
-    exit /b 1
-)
-
-echo.
-echo [2/7] C++ tests passed
-echo.
-
-REM ============================================================
-REM Step 3: Run C API Tests
-REM ============================================================
-echo [3/7] Running C API tests...
-echo.
-
-"%ROOT_DIR%\build\bin\quiver_c_tests.exe"
-if errorlevel 1 (
-    echo.
-    echo ERROR: C API tests failed
-    exit /b 1
-)
-
-echo.
-echo [3/7] C API tests passed
-echo.
-
-REM ============================================================
-REM Step 4: Run Julia Tests
-REM ============================================================
-echo [4/7] Running Julia tests...
-echo.
-
-call "%ROOT_DIR%\bindings\julia\test\test.bat"
-set JULIA_EXIT=%errorlevel%
-
-if %JULIA_EXIT% neq 0 (
-    echo.
-    echo ERROR: Julia tests failed
-    exit /b 1
-)
-
-echo.
-echo [4/7] Julia tests passed
-echo.
-
-REM ============================================================
-REM Step 5: Run Dart Tests
-REM ============================================================
-echo [5/7] Running Dart tests...
-echo.
-
-call "%ROOT_DIR%\bindings\dart\test\test.bat"
-set DART_EXIT=%errorlevel%
-
-if %DART_EXIT% neq 0 (
-    echo.
-    echo ERROR: Dart tests failed
-    exit /b 1
-)
-
-echo.
-echo [5/7] Dart tests passed
-echo.
-
-REM ============================================================
-REM Step 6: Run JavaScript Tests
-REM ============================================================
-echo [6/7] Running JavaScript tests...
-echo.
-
-call "%ROOT_DIR%\bindings\js\test\test.bat"
-set JS_EXIT=%errorlevel%
-
-if %JS_EXIT% neq 0 (
-    echo.
-    echo ERROR: JavaScript tests failed
-    exit /b 1
-)
-
-echo.
-echo [6/7] JavaScript tests passed
-echo.
-
-REM ============================================================
-REM Step 7: Run Python Tests
-REM ============================================================
-echo [7/7] Running Python tests...
-echo.
-
-call "%ROOT_DIR%\bindings\python\tests\test.bat"
-set PYTHON_EXIT=%errorlevel%
-
-if %PYTHON_EXIT% neq 0 (
-    echo.
-    echo ERROR: Python tests failed
-    exit /b 1
-)
-
-echo.
-echo [7/7] Python tests passed
-echo.
-
-REM ============================================================
-REM Summary
-REM ============================================================
-echo ============================================================
-echo  All builds and tests completed successfully!
-echo ============================================================
-echo.
-echo   C++ library:      OK
-echo   C API:            OK
-echo   C++ tests:        OK
-echo   C API tests:      OK
-echo   Julia tests:      OK
-echo   Dart tests:       OK
-echo   JavaScript tests: OK
-echo   Python tests:     OK
-echo.
-
-exit /b 0
+call "%ROOT_DIR%\scripts\test-all.bat"
+exit /b %errorlevel%
 
 :show_help
 echo Usage: scripts\build-all.bat [options]

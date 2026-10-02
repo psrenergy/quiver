@@ -258,5 +258,4 @@ never copy them into a binding.
 5. JavaScript tests
 6. Python tests
 
-`scripts/build-all.bat` is seven steps: step 1 is the build itself, followed by the same six
-suites.
+`scripts/build-all.bat` configures and builds, then calls `test-all.bat`.
