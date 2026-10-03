@@ -112,7 +112,20 @@ Plans:
   4. The JS sync test still extracts the same method set, including the `CsvWriter` member-pointer lines near the 120-column limit. No `src/lua_runner/` file is over about 450 lines. csv-parser headers are not included from `src/lua_runner/`. clang-format is clean, and `scripts/tidy.bat` adds no warning beyond the Phase 2 baseline.
   5. `src/AGENTS.md` describes the shared helpers where the per-method boilerplate used to be documented.
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 03-01-PLAN.md — Tracer: golden harness + gates at the base, then member-pointer forwarders; run_in_scope, bulk-read adapters, std::optional returns, by-id template, metadata wrappers, merged group-decoder messages
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 03-02-PLAN.md — Tracer: one option walk with named slots (incl. quiver.metadata); CSV cells through lua_to_value, CsvWriter members, one header rule
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 03-03-PLAN.md — Tracer: registry prune-on-insert + close_open_handles; functor operators; shared-helpers AGENTS.md; phase gate (Release, six suites, Linux GCC/Clang) and PR notes
 
 ### Phase 4: Fixes and Release Type Safety
 
@@ -158,6 +171,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 |-------|----------------|--------|-----------|
 | 1. Behaviour Pins | 2/2 | Complete    | 2026-10-02 |
 | 2. Mechanical Split | 4/4 | Complete    | 2026-10-03 |
-| 3. Dedupe | 0/TBD | Not started | - |
+| 3. Dedupe | 0/3 | Planned | - |
 | 4. Fixes and Release Type Safety | 0/TBD | Not started | - |
 | 5. Path-Policy Test and Docs | 0/TBD | Not started | - |
