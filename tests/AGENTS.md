@@ -37,7 +37,9 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   `_errors`, `_csv_export`, `_csv_import`, `_all_types`, `_fk`, `_lifecycle`, `_migrations`). `_return` covers the JSON
   encoding of a script's return value; `_errors` also pins text-only `load`, that a caught or
   propagated script error writes nothing to stderr, and that a dot-call (`db.commit()`) throws
-  instead of crashing; `_transaction` covers `db:dry_run` (the core-level dry run
+  instead of crashing; `_update` pins the empty-array rule (`UpdateElementEmptyArrayClearsGroup`,
+  `UpdateElementEmptyArrayErrors`, `UpdateElementEmptyArrayClearsEveryGroupSharingTheColumn`) and
+  `_create` pins the skip (`CreateElementSkipsEmptyArray`); `_transaction` covers `db:dry_run` (the core-level dry run
   lives in `test_database_transaction.cpp`); `_migrations` covers `db:validate_migrations` (sandboxed
   like the other file-touching Lua operations); `_lifecycle` covers moving a runner (move-construct and
   move-assign): handles a script opens after the move still close at that `run()`'s exit, both while the

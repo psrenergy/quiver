@@ -691,7 +691,13 @@ Implementation conventions in `src/lua_runner/`:
   userdata, and it sits in the decoder that first walks the argument. `lua_string_key` is the
   one check for a key that names something (an attribute, a column, a dimension) before it is
   converted; the older guarded key checks (`option_entries`, `collect_group_columns`,
-  `string_key`) keep their own pinned texts. `optional_from_lua<T>` is the one optional-argument
+  `string_key`) keep their own pinned texts. So do the value checks that predate that shape and end
+  without the `got` suffix: `on_row must be a function` (`csv.cpp`), the `separator`, `header`
+  entry and `header_row` option checks (`csv.cpp`), `option 'date_time_format' must be a string`
+  and `keys of option '<what>' must be strings` (`db_core.cpp`), `option key must be a string` and
+  `<what> has unsupported Lua type` (`internal.h`; cells, values, and `target_label` in
+  `db_write.cpp`). Adding the suffix to any of them is a deliberate, pinned text change, not a
+  cleanup. `optional_from_lua<T>` is the one optional-argument
   decoder (see the optional-argument bullet below).
 - **Filesystem sandbox**: `resolve_sandboxed_path(db, operation, path)` is the single gate for
   every file-touching Lua operation (`db:open_file`, `db:bin_to_csv`, `db:csv_to_bin`,

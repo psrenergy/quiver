@@ -75,21 +75,19 @@ Settled questions — don't relitigate without the user; each was decided delibe
   method syntax + string aggregation operations; pure-metadata builders live under a `quiver.*`
   namespace while file I/O is db-scoped (see cross-layer table and the sandbox decision below).
   `helper_maps.jl` is a second documented Julia-only exception (see convenience methods below).
-- **Lua file operations are db-scoped and sandboxed to the database directory.** Every
-  file-touching Lua operation (`db:open_file`, `db:bin_to_csv`, `db:csv_to_bin`, `db:export_csv`,
-  `db:import_csv`, `db:validate_migrations`, `db:read_csv`, `db:read_csv_stream`, `db:write_csv`,
-  `expr:save`)
+- **Lua file operations are db-scoped and sandboxed to the database directory.** Every file-touching
+  Lua operation (`db:open_file`, `db:bin_to_csv`, `db:csv_to_bin`, `db:export_csv`, `db:import_csv`,
+  `db:validate_migrations`, `db:read_csv`, `db:read_csv_stream`, `db:write_csv`, `expr:save`)
   resolves relative paths against the directory containing the database file and rejects — reads
-  and writes alike — anything that escapes it
-  (subdirectories OK; checked via `weakly_canonical` with strict containment). In-memory databases
-  (`:memory:`) reject all file operations. `dofile`/`loadfile` are removed from the Lua environment.
-  String-form `load` stays for text chunks only: it always loads with mode `"t"`, so a precompiled
-  binary chunk is refused, because Lua does not verify bytecode. The script given to
-  `LuaRunner::run` is loaded with mode `"t"` too, so a host must pass source, not bytecode. The enabled standard libraries are
-  the pure-computation set `base`/`string`/`table`/`math`/`coroutine`/`utf8`;
-  `os`/`io`/`package`/`debug` stay unloaded.
-  Julia's standalone `open_file` is unaffected — this is LuaRunner policy (`resolve_sandboxed_path`
-  in `src/lua_runner/path_policy.cpp`), not binary-subsystem policy.
+  and writes alike — anything that escapes it (subdirectories OK; checked via `weakly_canonical`
+  with strict containment). In-memory databases (`:memory:`) reject all file operations.
+  `dofile`/`loadfile` are removed from the Lua environment. String-form `load` stays for text chunks
+  only: it always loads with mode `"t"`, so a precompiled binary chunk is refused, because Lua does
+  not verify bytecode. The script given to `LuaRunner::run` is loaded with mode `"t"` too, so a host
+  must pass source, not bytecode. The enabled standard libraries are the pure-computation set
+  `base`/`string`/`table`/`math`/`coroutine`/`utf8`; `os`/`io`/`package`/`debug` stay unloaded.
+  Julia's standalone `open_file` is unaffected — this is LuaRunner policy
+  (`resolve_sandboxed_path` in `src/lua_runner/path_policy.cpp`), not binary-subsystem policy.
 - **One scalar typing policy lives in C++**: an int64 is accepted for INTEGER and REAL columns
   (int-for-REAL coercion), a double only for REAL (a float into an INTEGER column is rejected), a
   string for TEXT / DATE_TIME, and an FK label for an INTEGER foreign key wherever
@@ -468,7 +466,10 @@ JS has no generator — update the hand-written symbol table in `bindings/js/src
   `cmake --build build` does build two binaries this project never uses; lua-cmake has **no**
   switch for them, so the `LUA_BUILD_INTERPRETER`/`LUA_BUILD_COMPILER` once set here were
   no-ops, and `EXCLUDE_FROM_ALL` is not a fix either — see the note in `cmake/Dependencies.cmake`),
-  sol2 v3.5.0, csv-parser v5.3.0 (`csv` target, the only CSV library — behind `csv_read::Reader`,
+  sol2 v3.5.0 (its safety checks are on in every build — `SOL_ALL_SAFETIES_ON`, with
+  `SOL_PRINT_ERRORS=0` so caught errors are not printed — except the checked getter and the stack
+  check, which are off for cost; details in `src/AGENTS.md`), csv-parser v5.3.0 (`csv` target, the
+  only CSV library — behind `csv_read::Reader`,
   which serves Lua `db:read_csv*` and `import_csv`; fetched
   `GIT_SHALLOW`, and `CSV_NO_SIMD`/`CSV_ENABLE_THREADS`/`CSV_BUILD_PROGRAMS`/`CSV_BUILD_TESTS` are
   all FORCEd; the `CSV_NO_SIMD` pin is load-bearing — without it a PUBLIC `/arch:AVX2` propagates
@@ -627,7 +628,11 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
 - Dry runs: `begin_dry_run()`, `end_dry_run()`, `in_dry_run()` — one transaction that is always rolled back; while active the three transaction methods above are absorbed (no-ops) so nested callers compose. See the design decision below.
 - CRUD: `create_element(collection, element)`, `update_element`, `delete_element`,
   `update_element_by_label(collection, label, element)`,
-  `delete_element_by_label(collection, label)`
+  `delete_element_by_label(collection, label)`. An empty array clears its group on
+  `update_element` / `update_element_by_label` and is skipped by `create_element` (pinned in the
+  core by `Database.UpdateElementEmptyArrayClearsRows` and
+  `Database.CreateElementWithEmptyArraySkipsSilently`); Lua passes an empty array through as well
+  since 0.13.0 (it used to skip it).
 - Label-addressed writes: each `_by_label` form resolves the label within the collection
   (`Impl::resolve_label`) and delegates to its id counterpart, so everything past the lookup —
   CASCADE, the attribute writes, the validation — is the id form's. A label is unique per

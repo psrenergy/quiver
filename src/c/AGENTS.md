@@ -38,7 +38,10 @@ src/c/
   lua_runner.cpp          # LuaRunner C API (errors via quiver_get_last_error); run returns the
                           # script's JSON result via char** out_result (NULLed before anything can
                           # fail, so a caller that frees unconditionally is safe) + its own
-                          # free_string
+                          # free_string. run passes the script through unchanged and the core
+                          # loads it as text only, so a precompiled (bytecode) chunk fails like
+                          # any script error: `Failed to run Lua script: ... attempt to load a
+                          # binary chunk (mode is 't')` through quiver_get_last_error
 src/c/binary/               # BinaryFile / CSVConverter / BinaryMetadata wrappers
 src/c/expression/           # Expression node constructors, save, free
 ```
