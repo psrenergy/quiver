@@ -14,6 +14,8 @@ set(QUIVER_SOURCES
     csv/csv_write.cpp
     database_describe.cpp
     element.cpp
+    lua_runner/binary.cpp
+    lua_runner/csv.cpp
     lua_runner/db_core.cpp
     lua_runner/db_metadata.cpp
     lua_runner/db_read.cpp
