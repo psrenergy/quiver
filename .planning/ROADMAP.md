@@ -66,7 +66,14 @@ Plans:
   4. No test expectation changes. The Lua gtest count equals the Phase 1 baseline, the 27 C API tests pass, and the Julia, Dart, Python and JS suites pass unmodified (Dart after deleting `bindings/dart/.dart_tool/hooks_runner/` and `.dart_tool/lib/`). `/bigobj` (MSVC) and `-Wa,-mbig-obj` (MinGW) are set target-wide. All `SOL_*` defines stay PRIVATE on `quiver`. `scripts/tidy.bat` and clang-format 22.1.8 are clean on `src/lua_runner/`, with one NOLINT pair per binder. The PR notes the clean-build time of the `quiver` target before and after the split (recorded, not gated).
   5. The old monolith path is gone: `git grep -n 'src/lua_runner\.cpp'` returns nothing outside `.planning/` and `CHANGELOG.md`, and every `git grep -n 'lua_runner\.cpp'` hit left there names a file under `src/lua_runner/`, the C API translation unit (`src/c/lua_runner.cpp`, the `c/lua_runner.cpp` entry in `src/CMakeLists.txt`, the `src/c/AGENTS.md` file listing) or `test_c_api_lua_runner.cpp`. The C API translation unit and its test keep their names; this milestone renames neither. The citations of the core file (including bare `lua_runner.cpp` meaning it) in the AGENTS.md files, `src/csv/*`, `cmake/Platform.cmake`, `bindings/dart/hook/build.dart`, the test comments and the `lua-api.ts` maintainer header point to the new paths. The root and `src/` AGENTS.md describe the folder layout, and the code moved into `src/lua_runner/` carries no planning-ID comments (49 lines in `src/lua_runner.cpp` at `0a32506`).
 
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+
+- [ ] 02-01-PLAN.md — Tracer: git mv into src/lua_runner/, CMake path + target-wide /bigobj, folder-reading sync test; comment-only planning-ID strip + NOLINT name fix
+- [ ] 02-02-PLAN.md — De-class Impl in place (RunHandles, seven binders, one Database usertype, 17 pairs to bind.set_function); extract internal.h, return_json.cpp, path_policy.cpp
+- [ ] 02-03-PLAN.md — Extract the per-domain binders: db_metadata, db_read, db_write, db_time_series, db_core, csv, binary
+- [ ] 02-04-PLAN.md — Re-point every citation, describe the layout in AGENTS.md, and the phase gate (Release, six suites, tidy, format, mutation, build time)
 
 ### Phase 3: Dedupe
 
@@ -140,7 +147,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Behaviour Pins | 2/2 | Complete    | 2026-10-02 |
-| 2. Mechanical Split | 0/TBD | Not started | - |
+| 2. Mechanical Split | 0/4 | Planned | - |
 | 3. Dedupe | 0/TBD | Not started | - |
 | 4. Fixes and Release Type Safety | 0/TBD | Not started | - |
 | 5. Path-Policy Test and Docs | 0/TBD | Not started | - |
