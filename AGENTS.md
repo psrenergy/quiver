@@ -153,8 +153,8 @@ Settled questions — don't relitigate without the user; each was decided delibe
   to a group whose value column the call does not name) still throws after the call's earlier
   writes, and inside a caller-owned transaction those writes stay for the commit. Autocommit calls
   are still all-or-nothing. A SAVEPOINT per nested guard would close that gap and was rejected in
-  the v0.3 research (`git show f92af8d:.planning/research/PITFALLS.md`, Pitfall 4) as the nesting
-  complexity the no-op guard exists to avoid.
+  the v0.3 research (commit `f92af8d`, "SAVEPOINT Complexity Leaking Into the Design") as the
+  nesting complexity the no-op guard exists to avoid.
 - **`LuaRunner::run` returns the script's return value as a JSON string.** One encoder in C++
   (`src/lua_runner/return_json.cpp`, anonymous namespace); every binding passes the string through without
   parsing, so no binding gains a JSON dependency (Julia would have needed one). Only the first

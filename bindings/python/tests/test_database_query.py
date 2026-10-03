@@ -8,7 +8,7 @@ import pytest
 
 from quiverdb import Database, QuiverError
 
-# -- Simple queries (QUERY-01) ------------------------------------------------
+# -- Simple queries -----------------------------------------------------------
 
 
 class TestQueryString:
@@ -53,7 +53,7 @@ class TestQueryFloat:
         assert result is None
 
 
-# -- Parameterized queries (QUERY-02) -----------------------------------------
+# -- Parameterized queries ----------------------------------------------------
 
 
 class TestQueryStringParameterized:
