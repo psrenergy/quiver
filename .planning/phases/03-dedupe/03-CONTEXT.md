@@ -21,7 +21,7 @@ Out of scope: any behaviour fix (C1–C8, `require_table`, `SOL_ALL_SAFETIES_ON`
 ### Behaviour neutrality (locked: PROJECT.md Constraints, DEDUP-06)
 - Zero behaviour change. Every check order that decides which error a call reports stays byte-for-byte. Each plan's SUMMARY states "reordered checks: none" (the phase PR repeats it).
 - No test expectation changes. Gate counts: Windows `quiver_tests --gtest_filter=Lua*` = 444 / 12 suites in Debug and Release, and C API `LuaRunnerCApiTest` = 27. Linux GCC/Clang `Lua*` = 442 (2 `_WIN32`-only tests) plus 1 root skip. The six suites (`scripts/test-all.bat`) must pass.
-- The only allowed observable text change is the Debug-only sol2 dot-call error that comes from moving forwarders to member pointers (M3). It is recorded in the SUMMARY and the PR, and no test may pin it.
+- The only allowed observable text changes are Debug-only sol2 diagnostics. These are the dot-call error, plus the C++ signature that sol2's Debug "bad argument" message prints. That signature changes for the 17 forwarders that become member pointers (M3) and for the `query_*` functions that return `std::optional` and drop `sol::this_state` (M5). The exact before/after strings (03-RESEARCH.md) go in the SUMMARY and the PR, and no test may pin them. Release builds print none of this. *Amended after research (orchestrator decision, flagged to the user): the roadmap's member-pointer allowance is extended to the same mechanism in M5.* M1 keeps two lambdas over one helper so `db:transaction(5)`'s text does not change.
 - Error message wording stays identical, including where M16 merges two throw sites into one.
 
 ### Registration shape (locked: sync-test contract)
