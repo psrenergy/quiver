@@ -305,8 +305,13 @@ Notes:
   which only the new label resolves. Because the label form delegates to the id form, failures
   that validate the *element* (an empty table, a type mismatch) report
   \`Cannot update_element: ...\`.
-- **Empty arrays are skipped.** An attribute whose value is \`{}\` writes no vector/set (the element
-  type can't be inferred from an empty array), so it is silently dropped.
+- **An empty array clears on update.** On \`update_element\` / \`update_element_by_label\`,
+  \`{ col = {} }\` clears the whole group holding \`col\` (all its columns, and every group that
+  shares the column name). An empty column beside a non-empty column of the same group throws a
+  length error, and a misspelled empty column throws
+  \`array '<name>' does not match any vector, set, or time series table ...\`. \`create_element\`
+  skips an empty array. To leave a group alone, omit its column: writing back a
+  \`read_vectors_by_id\` result clears a group whose read column came back empty or all-NULL.
 - **Arrays must be dense.** A vector/set read returns a NULL cell as a \`nil\` hole, but an element
   array cannot carry one: \`create_element\` / \`update_element\` throw \`array '<name>' has a nil
   hole ...\` rather than cut the array short at the hole. Write NULL cells with

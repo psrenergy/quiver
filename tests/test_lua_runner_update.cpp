@@ -161,6 +161,63 @@ TEST_F(LuaRunnerTest, UpdateElementRefusesArrayWithNilHole) {
     EXPECT_EQ(db.read_scalar_string_by_id("Collection", "label", 3), "Item 3");
 }
 
+// An empty array reaches the core, which clears the group holding the column on update.
+TEST_F(LuaRunnerTest, UpdateElementEmptyArrayClearsGroup) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    db.create_element(
+        "Collection",
+        quiver::Element()
+            .set("label", "Item 1")
+            .set("some_integer", int64_t{10})
+            .set("value_int", std::vector<int64_t>{1, 2, 3})
+            .set("tag", std::vector<std::string>{"a", "b"})
+    );
+    db.create_element(
+        "Collection",
+        quiver::Element().set("label", "Item 2").set("value_int", std::vector<int64_t>{4, 5})
+    );
+
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(db:update_element("Collection", 1, { value_int = {} }))");
+    EXPECT_TRUE(db.read_vector_integers_by_id("Collection", "value_int", 1).empty());
+    EXPECT_EQ(db.read_set_strings_by_id("Collection", "tag", 1), (std::vector<std::optional<std::string>>{"a", "b"}));
+
+    lua.run(R"(db:update_element("Collection", 1, { tag = {} }))");
+    EXPECT_TRUE(db.read_set_strings_by_id("Collection", "tag", 1).empty());
+    EXPECT_EQ(db.read_scalar_integer_by_id("Collection", "some_integer", 1), 10);
+
+    lua.run(R"(db:update_element_by_label("Collection", "Item 2", { value_int = {} }))");
+    EXPECT_TRUE(db.read_vector_integers_by_id("Collection", "value_int", 2).empty());
+}
+
+TEST_F(LuaRunnerTest, UpdateElementEmptyArrayErrors) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    db.create_element(
+        "Collection",
+        quiver::Element().set("label", "Item 1").set("value_int", std::vector<int64_t>{1, 2})
+    );
+
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(
+        lua,
+        R"(db:update_element("Collection", 1, { typo = {} }))",
+        "Cannot update_element: array 'typo' does not match any vector, set, or time series table in collection "
+        "'Collection'"
+    );
+    expect_lua_error(
+        lua,
+        R"(db:update_element("Collection", 1, { value_int = {}, value_float = {1.5, 2.5} }))",
+        "must have the same length"
+    );
+    EXPECT_EQ(db.read_vector_integers_by_id("Collection", "value_int", 1), (std::vector<std::optional<int64_t>>{1, 2}));
+}
+
 TEST_F(LuaRunnerTest, UpdateVectorIntegers) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));

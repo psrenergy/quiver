@@ -788,7 +788,9 @@ Implementation conventions in `src/lua_runner/`:
   `table_to_element` first calls `require_dense_array`, which throws on a hole (or a non-integer
   key) and points at the group writers (before that, a userdata attribute value is rejected as
   `attribute '<name>' must be a value or a table, got userdata`: sol2's loose table test used to
-  take it for an array); and the element type still
+  take it for an array); an empty array reaches the core as an empty `std::vector<int64_t>`, which
+  `create_element` skips and `update_element` turns into a clear of its group, the same as every
+  other binding; and the element type still
   comes from cell 1, so `{1, 2.5}` into a REAL column is rejected rather than widened (JS, Python
   and Dart type the whole column and widen it to FLOAT, and a Lua group-writer column converts each
   cell to its own `Value`, so a Lua element array is the one path that refuses it). One

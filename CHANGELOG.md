@@ -31,6 +31,15 @@ callers to change something are prefixed **BREAKING** and say what to do.
   must be <a table | a BinaryMetadata | a boolean | a number>, got <type>` for a value of the wrong
   type, where they used to fall back to the default (`db:query_integer("SELECT 1", 5)` ran with no
   parameters). Pass `nil` or omit the argument to get the default.
+- **BREAKING** **An empty array in Lua `update_element` clears the group.** `update_element` /
+  `update_element_by_label` with `{ column = {} }` now clear the group holding that column, as the
+  C++, Python and JS bindings already did; Lua used to skip the empty array. A misspelled empty
+  column now throws `Cannot update_element: array '<name>' does not match any vector, set, or time
+  series table ...` instead of being ignored. A `read_vectors_by_id` -> `update_element` round trip
+  of a column that read back empty or all-NULL now clears that group when it is the group's only
+  column in the call, and throws `... must have the same length` when another column of the group
+  is non-empty. A column name shared by several groups clears every one of them. `create_element`
+  still skips an empty array. To leave a group untouched, omit its column.
 
 ### Fixed
 

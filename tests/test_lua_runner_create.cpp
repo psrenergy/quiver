@@ -42,6 +42,20 @@ TEST_F(LuaRunnerTest, CreateElementWithArrays) {
     EXPECT_EQ(floats[0], (std::vector<std::optional<double>>{1.5, 2.5, 3.5}));
 }
 
+// On create the core skips an empty array before looking up its table, so a misspelled one passes.
+TEST_F(LuaRunnerTest, CreateElementSkipsEmptyArray) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(
+        db:create_element("Configuration", { label = "Test Config" })
+        db:create_element("Collection", { label = "x", value_int = {}, typo = {} })
+    )");
+
+    EXPECT_EQ(db.read_scalar_strings("Collection", "label"), (std::vector<std::optional<std::string>>{"x"}));
+    EXPECT_EQ(db.query_integer("SELECT COUNT(*) FROM Collection_vector_values"), 0);
+}
+
 TEST_F(LuaRunnerTest, CreateElementWithOnlyLabel) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::LuaRunner lua(db);

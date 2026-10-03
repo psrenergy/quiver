@@ -21,7 +21,7 @@ namespace {
 
 // A vector/set read hands a NULL cell back as a nil hole, and `#` over a hole is an arbitrary
 // border: lua_table_to_vector (bounded by t.size()) would silently cut such an array short, and
-// table_to_element skips it outright when the hole is cell 1. Element arrays stay dense; the
+// table_to_element would read it as empty when the hole is cell 1. Element arrays stay dense; the
 // group writers are the ones that write a hole as NULL.
 void require_dense_array(const std::string& caller, const sol::table& arr, const std::string& name) {
     size_t entries = 0;
@@ -62,7 +62,10 @@ Element table_to_element(const std::string& caller, const sol::object& values) {
         if (val.get_type() == sol::type::table) {
             auto arr = val.as<sol::table>();
             require_dense_array(caller, arr, k);
-            if (arr.size() > 0) {
+            if (arr.size() == 0) {
+                // The core decides: create_element skips an empty array, update_element clears its group.
+                element.set(k, std::vector<int64_t>{});
+            } else {
                 sol::object first = arr[1];
                 // Cell 1 only picks the element type; lua_table_to_vector checks the rest.
                 // A boolean array is an INTEGER array.
