@@ -44,6 +44,8 @@ for (const line of CPP.split("\n")) {
   if (pair && current) usertypeMethods.get(current)?.add(pair[1]);
 }
 for (const name of usertypeMethods.get("Database") ?? []) dbMethods.add(name);
+// Every other usertype the parser found is checked for doc coverage, so a new one cannot slip past.
+const usertypes = [...usertypeMethods.keys()].filter((type) => type !== "Database");
 
 // Word-boundary suffix: `db:describe` must not be satisfied by `db:describe_collection`, and
 // `quiver.gt` / `quiver.metadata` must not be satisfied by `gte` / `metadata_from_toml`.
@@ -56,11 +58,16 @@ describe("lua-api reference stays in sync with src/lua_runner.cpp", () => {
     // passing vacuously forever on an empty match set.
     expect(dbMethods.size).toBeGreaterThan(40);
     expect(quiverFns.size).toBeGreaterThan(10);
-    // A usertype that parses to nothing would let the :<name>( check below pass vacuously.
-    const unparsed = ["BinaryFile", "BinaryMetadata", "Expression", "CsvWriter"].filter(
-      (type) => !usertypeMethods.get(type)?.size,
-    );
-    expect(unparsed).toEqual([]);
+    // A usertype that parses to nothing would let the :<name>( check below pass vacuously; the four
+    // known ones are the floor, so losing a whole usertype to a parse break also fails.
+    const required = new Set([
+      "BinaryFile",
+      "BinaryMetadata",
+      "Expression",
+      "CsvWriter",
+      ...usertypes,
+    ]);
+    expect([...required].filter((type) => !usertypeMethods.get(type)?.size)).toEqual([]);
     // The stdlib check below reads only the first call; a second one would go unchecked.
     expect(CPP.match(/open_libraries\(/g)?.length ?? 0).toBe(1);
   });
@@ -73,12 +80,12 @@ describe("lua-api reference stays in sync with src/lua_runner.cpp", () => {
     expect([...quiverFns].filter((n) => !documented(`quiver\\.${n}`)).sort()).toEqual([]);
   });
 
-  test("every BinaryFile/BinaryMetadata/Expression method appears as :<name>(", () => {
+  test("every non-Database usertype method appears as :<name>(", () => {
     // ponytail: receiver-agnostic. `:name(` proves the method is shown somewhere, not that it is
     // shown on the right type — the doc uses ad-hoc receiver names (f/r/md/e), so no fixed token
     // is available. Coverage, not signature checking.
     const missing: string[] = [];
-    for (const type of ["BinaryFile", "BinaryMetadata", "Expression", "CsvWriter"]) {
+    for (const type of usertypes) {
       for (const name of usertypeMethods.get(type) ?? []) {
         if (!LUA_DB_API_REFERENCE.includes(`:${name}(`)) missing.push(`${type}:${name}`);
       }

@@ -36,6 +36,8 @@ protected:
     static std::string expect_handles_closed(const std::string& name) {
         return "local NAME = '" + name + "'\n" + R"(
             assert(not g:is_open(), 'binary handle outlived its run()')
+            local ok, err = pcall(w.write_row, w, { 'y' })
+            assert(not ok and tostring(err):find('already closed', 1, true), 'csv writer outlived its run()')
             local csv = db:read_csv(NAME .. '.csv', { header_row = 0 })
             assert(#csv.rows == 1 and csv.rows[1][1] == 'x', 'csv writer was not closed at run() exit')
             local r = db:open_file(NAME, 'r')
