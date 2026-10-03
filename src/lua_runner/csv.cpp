@@ -252,6 +252,14 @@ csv_read::Options read_csv_options_from_lua(const sol::object& options, const st
     return result;
 }
 
+// The header both read forms hand a script: nil when the file has no header (header_row = 0),
+// else the name list. Never an empty table: {} is truthy in Lua and nil is falsy, so with no
+// header `result.header` must be absent and on_row's third argument nil, or a script written as
+// `if header then ... end` would take opposite branches in the whole-file and streaming forms.
+sol::object header_object(sol::state_view& lua, const std::vector<std::string>& header) {
+    return header.empty() ? sol::object(sol::lua_nil) : sol::object(to_lua_table(lua, header));
+}
+
 }  // namespace
 
 void CsvWriter::write_row(const sol::object& row) {
@@ -328,14 +336,7 @@ void bind_csv(sol::state& state, sol::usertype<Database>& bind, RunHandles& hand
             });
 
             auto result = lua.create_table();
-            // `header` is absent (not an empty table) when the file has no header (header_row = 0):
-            // {} is truthy in Lua and nil is falsy, so a script testing `if result.header` must see
-            // nil. db:read_csv_stream passes nil to on_row for the same reason; the two forms must not
-            // diverge.
-            const auto& header = reader.header();
-            if (!header.empty()) {
-                result["header"] = to_lua_table(lua, header);
-            }
+            result["header"] = header_object(lua, reader.header());
             result["rows"] = rows;
             return result;
         }
@@ -362,16 +363,7 @@ void bind_csv(sol::state& state, sol::usertype<Database>& bind, RunHandles& hand
             // Built once, before the loop, and passed by reference into every callback
             // invocation -- reachable during the stream so a script can find a column by
             // name before processing row 1.
-            //
-            // Nil, not an empty table, when there is no header -- exactly the guard
-            // db:read_csv uses above for its `header` key. The two forms must not
-            // diverge on the same input, and here that is behavioural rather
-            // than cosmetic: `{}` is truthy in Lua and `nil` is falsy, so a script
-            // written as `if header then ... end` would take opposite branches between
-            // the whole-file and streaming forms of the same file under header_row = 0.
-            const auto& header_names = reader.header();
-            const sol::object header_table =
-                header_names.empty() ? sol::object(sol::lua_nil) : sol::object(to_lua_table(lua, header_names));
+            const sol::object header_table = header_object(lua, reader.header());
 
             return reader.for_each_row([&](std::vector<std::string>&& cells, int64_t index) -> bool {
                 const auto row_table = to_lua_table(lua, cells);
