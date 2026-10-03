@@ -37,6 +37,15 @@ void require_dense_array(const std::string& caller, const sol::table& arr, const
     }
 }
 
+// Join the column names for the empty-group rejection in columns_to_cpp_rows.
+std::string join_column_names(const std::vector<GroupColumn>& lua_columns) {
+    std::string joined;
+    for (const auto& column : lua_columns) {
+        joined += (joined.empty() ? "" : ", ") + column.name;
+    }
+    return joined;
+}
+
 }  // namespace
 
 Element table_to_element(const std::string& caller, const sol::table& values) {
@@ -117,11 +126,20 @@ std::vector<GroupColumn> collect_group_columns(const std::string& caller, const 
 // round-trip). The NULL pre-fill is what makes an all-nil column such as `flag = {}` reach the
 // core at all: it is validated (an unknown name still throws) and written as NULL rather than
 // left to the column DEFAULT.
+// It also owns the one rejection of named columns that transpose to zero rows, so neither group
+// decoder can turn such a payload into a silent clear (only an empty table {} clears). Both
+// decoders call it last, after every check of their own.
 std::vector<std::map<std::string, Value>> columns_to_cpp_rows(
     const std::string& caller,
     const std::vector<GroupColumn>& lua_columns,
     size_t row_count
 ) {
+    if (row_count == 0) {
+        throw std::runtime_error(
+            "Cannot " + caller + ": columns [" + join_column_names(lua_columns) +
+            "] contain no rows; pass an empty table {} to clear the group"
+        );
+    }
     std::vector<std::map<std::string, Value>> cpp_rows(row_count);
     for (const auto& column : lua_columns) {
         for (auto& row : cpp_rows) {
@@ -134,15 +152,6 @@ std::vector<std::map<std::string, Value>> columns_to_cpp_rows(
         }
     }
     return cpp_rows;
-}
-
-// Join the column names for the "no rows" message below.
-std::string join_column_names(const std::vector<GroupColumn>& lua_columns) {
-    std::string joined;
-    for (const auto& column : lua_columns) {
-        joined += (joined.empty() ? "" : ", ") + column.name;
-    }
-    return joined;
 }
 
 namespace {
@@ -214,8 +223,8 @@ void update_relation_by_label_lua(
 
 // Vector and set groups have no dimension column, so the row count is the largest index any
 // column reaches; shorter or sparse columns write NULL in the gaps, mirroring the time series
-// writer's treatment of value columns. Named columns that reach no index at all throw instead
-// of silently clearing the group; an empty table {} clears.
+// writer's treatment of value columns. Named columns that reach no index at all throw (in
+// columns_to_cpp_rows) instead of silently clearing the group; an empty table {} clears.
 std::vector<std::map<std::string, Value>> group_rows_from_lua(const std::string& caller, const sol::table& columns) {
     auto lua_columns = collect_group_columns(caller, columns);
     if (lua_columns.empty()) {
@@ -225,12 +234,6 @@ std::vector<std::map<std::string, Value>> group_rows_from_lua(const std::string&
     size_t row_count = 0;
     for (const auto& column : lua_columns) {
         row_count = std::max(row_count, column.extent);
-    }
-    if (row_count == 0) {
-        throw std::runtime_error(
-            "Cannot " + caller + ": columns [" + join_column_names(lua_columns) +
-            "] contain no rows; pass an empty table {} to clear the group"
-        );
     }
     return columns_to_cpp_rows(caller, lua_columns, row_count);
 }

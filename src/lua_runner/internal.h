@@ -232,7 +232,6 @@ std::vector<std::map<std::string, Value>> columns_to_cpp_rows(
     const std::vector<GroupColumn>& lua_columns,
     size_t row_count
 );
-std::string join_column_names(const std::vector<GroupColumn>& lua_columns);
 
 }  // namespace lua_internal
 

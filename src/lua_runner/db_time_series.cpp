@@ -30,6 +30,20 @@ sol::object value_to_lua_object(sol::state_view& lua, const Value& val) {
     );
 }
 
+// The one column-length message of the time-series decoder: a dimension column whose length
+// differs from the first dimension's, and a value column longer than the dimensions.
+std::runtime_error length_mismatch(
+    const std::string& caller,
+    const std::string& column,
+    size_t length,
+    size_t expected
+) {
+    return std::runtime_error(
+        "Cannot " + caller + ": column '" + column + "' has length " + std::to_string(length) + " but expected " +
+        std::to_string(expected)
+    );
+}
+
 std::map<std::string, Value> lua_table_to_value_map(const std::string& caller, const sol::table& t) {
     // Column order in the resulting map is alphabetical (std::map invariant),
     // which is fine because the C++ layer indexes by column name rather than
@@ -93,7 +107,7 @@ sol::table read_time_series_row_lua(
 // may be shorter, sparse, or empty: every cell missing at a dimension index is written as
 // NULL, which round-trips the nil holes that read_time_series_group produces. An empty
 // table (no columns) clears all rows; named columns whose dimension transposes to zero
-// rows still throw instead of silently clearing the group.
+// rows still throw (in columns_to_cpp_rows) instead of silently clearing the group.
 // Takes `db` (unlike group_rows_from_lua) because the dimension column(s) come from metadata.
 std::vector<std::map<std::string, Value>> time_series_rows_from_lua(
     Database& db,
@@ -138,10 +152,7 @@ std::vector<std::map<std::string, Value>> time_series_rows_from_lua(
     for (const auto& dim : dimension_columns) {
         const auto* column = find_column(dim);
         if (column->extent != row_count) {
-            throw std::runtime_error(
-                "Cannot " + caller + ": column '" + dim + "' has length " + std::to_string(column->extent) +
-                " but expected " + std::to_string(row_count)
-            );
+            throw length_mismatch(caller, dim, column->extent, row_count);
         }
         if (column->count != column->extent) {
             for (size_t i = 1; i <= column->extent; ++i) {
@@ -156,18 +167,8 @@ std::vector<std::map<std::string, Value>> time_series_rows_from_lua(
 
     for (const auto& column : lua_columns) {
         if (column.extent > row_count) {
-            throw std::runtime_error(
-                "Cannot " + caller + ": column '" + column.name + "' has length " + std::to_string(column.extent) +
-                " but expected " + std::to_string(row_count)
-            );
+            throw length_mismatch(caller, column.name, column.extent, row_count);
         }
-    }
-
-    if (row_count == 0) {
-        throw std::runtime_error(
-            "Cannot " + caller + ": columns [" + join_column_names(lua_columns) +
-            "] contain no rows; pass an empty table {} to clear the group"
-        );
     }
 
     return columns_to_cpp_rows(caller, lua_columns, row_count);
