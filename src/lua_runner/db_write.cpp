@@ -48,14 +48,18 @@ std::string join_column_names(const std::vector<GroupColumn>& lua_columns) {
 
 }  // namespace
 
-Element table_to_element(const std::string& caller, const sol::table& values) {
+Element table_to_element(const std::string& caller, const sol::object& values) {
     Element element;
-    for (const auto& pair : values) {
+    for (const auto& pair : require_table(values, caller, "element_table")) {
         auto key = pair.first;
         auto val = pair.second;
         auto k = key.as<std::string>();
 
-        if (val.is<sol::table>()) {
+        // A userdata is neither a value nor an array; sol2's loose table test took it for an array.
+        if (val.get_type() == sol::type::userdata) {
+            throw lua_type_error(caller, "attribute '" + k + "'", "a value or a table", val);
+        }
+        if (val.get_type() == sol::type::table) {
             auto arr = val.as<sol::table>();
             require_dense_array(caller, arr, k);
             if (arr.size() > 0) {
@@ -153,12 +157,12 @@ std::vector<std::map<std::string, Value>> columns_to_cpp_rows(
 
 namespace {
 
-int64_t create_element_lua(Database& db, const std::string& collection, const sol::table& values) {
+int64_t create_element_lua(Database& db, const std::string& collection, const sol::object& values) {
     auto element = table_to_element("create_element", values);
     return db.create_element(collection, element);
 }
 
-void update_element_lua(Database& db, const std::string& collection, int64_t id, const sol::table& values) {
+void update_element_lua(Database& db, const std::string& collection, int64_t id, const sol::object& values) {
     auto element = table_to_element("update_element", values);
     db.update_element(collection, id, element);
 }
@@ -167,7 +171,7 @@ void update_element_by_label_lua(
     Database& db,
     const std::string& collection,
     const std::string& label,
-    const sol::table& values
+    const sol::object& values
 ) {
     auto element = table_to_element("update_element_by_label", values);
     db.update_element_by_label(collection, label, element);

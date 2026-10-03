@@ -44,12 +44,12 @@ std::runtime_error length_mismatch(
     );
 }
 
-std::map<std::string, Value> lua_table_to_value_map(const std::string& caller, const sol::table& t) {
+std::map<std::string, Value> lua_table_to_value_map(const std::string& caller, const sol::object& row) {
     // Column order in the resulting map is alphabetical (std::map invariant),
     // which is fine because the C++ layer indexes by column name rather than
     // relying on positional order. Callers should not depend on insertion order.
     std::map<std::string, Value> result;
-    for (auto& pair : t) {
+    for (auto& pair : require_table(row, caller, "row")) {
         auto key = pair.first.as<std::string>();
         result[key] = lua_to_value(pair.second, caller, "column '" + key + "'");
     }
@@ -211,7 +211,7 @@ void upsert_time_series_row_lua(
     const std::string& collection,
     const std::string& group,
     int64_t id,
-    sol::table row
+    const sol::object& row
 ) {
     db.upsert_time_series_row(collection, group, id, lua_table_to_value_map("upsert_time_series_row", row));
 }
@@ -221,7 +221,7 @@ void upsert_time_series_row_by_label_lua(
     const std::string& collection,
     const std::string& group,
     const std::string& label,
-    sol::table row
+    const sol::object& row
 ) {
     db.upsert_time_series_row_by_label(
         collection,
@@ -247,9 +247,9 @@ sol::table read_time_series_files_lua(Database& db, const std::string& collectio
     return t;
 }
 
-void update_time_series_files_lua(Database& db, const std::string& collection, const sol::table& paths) {
+void update_time_series_files_lua(Database& db, const std::string& collection, const sol::object& paths) {
     std::map<std::string, std::optional<std::string>> cpp_paths;
-    for (auto& pair : paths) {
+    for (auto& pair : require_table(paths, "update_time_series_files", "paths")) {
         auto key = pair.first.as<std::string>();
         sol::object val = pair.second;
         if (val.is<sol::lua_nil_t>()) {

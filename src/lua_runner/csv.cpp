@@ -263,14 +263,10 @@ sol::object header_object(sol::state_view& lua, const std::vector<std::string>& 
 }  // namespace
 
 void CsvWriter::write_row(const sol::object& row) {
-    // sol2's table check for a `const sol::table&` parameter is a LOOSE one that also
-    // accepts userdata, and iterating a userdata yields no keys -- so w:write_row(db)
-    // silently appended an empty record instead of being rejected. Check the Lua type
-    // first; this also turns sol2's raw "stack index 2, expected table" for a
-    // string/number/nil argument into a Pattern 1 message.
-    if (row.get_type() != sol::type::table) {
-        throw std::runtime_error("Cannot write_row: row must be a table");
-    }
+    // The row is a sol::object checked by require_table, first: a userdata (which iterates as
+    // no keys, so w:write_row(db) once appended an empty record) is rejected like any other
+    // non-table, and the type error wins over the closed-writer one.
+    const auto table = require_table(row, "write_row", "row");
     // Check the closed state BEFORE formatting a single cell -- cells were
     // previously formatted as csv_write::Writer::write_row's argument, evaluated before
     // the call, so a write after close on a bad row raised the wrong error. Delegating
@@ -282,7 +278,7 @@ void CsvWriter::write_row(const sol::object& row) {
         return;
     }
     const auto row_index = next_row_index;
-    auto cells = csv_row_cells_from_lua(row.as<sol::table>(), "write_row", row_index);
+    auto cells = csv_row_cells_from_lua(table, "write_row", row_index);
     // header_width == 0 means no header was given, so no enforcement applies.
     // A row wider than the header is never truncated -- it throws, naming the 1-based
     // data-row ordinal and both counts (pinned in src/csv/csv_write.cpp's

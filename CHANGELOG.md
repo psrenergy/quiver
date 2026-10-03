@@ -9,12 +9,21 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ### Changed
 
-- **BREAKING** **The Lua group writers reject a non-table payload.** A value other than a table
-  passed as the columns of `db:update_vector_group`, `db:update_set_group`,
-  `db:update_time_series_group` or their `_by_label` forms now raises `Cannot <op>: columns must
-  be a table, got <type>`, and a non-table column inside it raises `Cannot <op>: column '<name>'
-  must be an array of values, got <type>`. Release builds used to read a userdata (such as `db`)
-  as an empty payload and clear the group. Pass a table of columns, `{ column = { values... } }`.
+- **BREAKING** **Lua table arguments are type-checked.** A value other than a table passed where
+  a Lua method takes a table now raises `Cannot <op>: <argument> must be a table, got <type>`:
+  an element table (`create_element`, `update_element`, `update_element_by_label`,
+  `quiver.metadata_from_element`), the columns of `db:update_vector_group`,
+  `db:update_set_group`, `db:update_time_series_group` and their `_by_label` forms, the row of
+  `upsert_time_series_row`, the `paths` of `update_time_series_files`, the `dims` of `file:read`,
+  the `data` and `dims` of `file:write`, the `labels` of `expr:select_agents` and every options
+  table. A non-table column inside a group writer's columns raises `Cannot <op>: column '<name>'
+  must be an array of values, got <type>`, and a userdata as an element attribute value raises
+  `Cannot <op>: attribute '<name>' must be a value or a table, got userdata`. Release builds used
+  to read a non-table there as a table: a userdata such as `db` passed as a group writer's columns
+  was read as an empty payload and cleared the group. The existing `must be a table` messages
+  (options tables, `header`, `enum_labels`, `quiver.metadata` fields, `expr:rename_agents`,
+  `w:write_row`) now end in `, got <type>` too. Pass a table, e.g. `{ column = { values... } }`
+  for the group writers.
 
 ## [0.12.8] — 2026-10-01
 

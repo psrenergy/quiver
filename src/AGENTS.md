@@ -280,12 +280,15 @@ untrusted input, in the same spirit as the JSON encoder's two caps below:
   are one byte but cannot be delimiters: csv-parser refuses a delimiter that overlaps its quote
   character, so `db:write_csv` with `separator = '"'` silently produced a file `db:read_csv`
   could not open.
-`w:write_row` also checks its argument is a table: sol2's check for a `const sol::table&`
-parameter is a loose one that accepts **userdata** too, and iterating a userdata yields no keys,
-so `w:write_row(db)` appended a spurious empty record instead of throwing. For the same reason
-`db:read_csv_stream`'s `on_row` is a `sol::object` with an explicit `sol::type::function` check
-rather than a typed `sol::protected_function` parameter — the typed one surfaced sol2's own
-"stack index 3, expected function" text.
+Every table argument of a bound function is a `sol::object` checked by `require_table`
+(`internal.h`) in the decoder that first walks it, never a typed `sol::table` parameter: sol2's
+check for one is loose (it accepts a **userdata**, which iterates as no keys, so
+`w:write_row(db)` once appended an empty record and a userdata group payload cleared the group)
+and, in Release, absent, so a number or string reached `lua_next` unchecked. The message names the
+operation, the argument and its Lua type (`Cannot write: data must be a table, got number`).
+`db:read_csv_stream`'s `on_row` stays the model for the function case: a `sol::object` with an
+explicit `sol::type::function` check rather than a typed `sol::protected_function` parameter,
+whose check surfaced sol2's own "stack index 3, expected function" text.
 
 `RunHandles::open_writers` (`src/lua_runner/internal.h`) is also the concurrency guard: it records each writer's **resolved** path, and
 `db:write_csv` refuses a path some live, unclosed writer already holds (Pattern 1, mirroring
@@ -769,7 +772,9 @@ Implementation conventions in `src/lua_runner/`:
   `collect_group_columns`, which walks `pairs` for exactly that reason. For element arrays that
   would be silent data loss, since a vector/set read hands a NULL cell back as a `nil` hole, so
   `table_to_element` first calls `require_dense_array`, which throws on a hole (or a non-integer
-  key) and points at the group writers; and the element type still
+  key) and points at the group writers (before that, a userdata attribute value is rejected as
+  `attribute '<name>' must be a value or a table, got userdata`: sol2's loose table test used to
+  take it for an array); and the element type still
   comes from cell 1, so `{1, 2.5}` into a REAL column is rejected rather than widened (JS, Python
   and Dart type the whole column and widen it to FLOAT, and a Lua group-writer column converts each
   cell to its own `Value`, so a Lua element array is the one path that refuses it). One

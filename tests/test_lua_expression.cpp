@@ -515,3 +515,19 @@ TEST_F(LuaExpressionTest, OperatorMetamethodsOnFileAndExpression) {
         fa:close()
     )");
 }
+
+TEST_F(LuaExpressionTest, SelectAndRenameAgentsRejectNonTable) {
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+    lua.run(prelude() + "fill('expr_a', 1.0, 1.0)");
+    expect_lua_error(
+        lua,
+        "quiver.expression(db:open_file('expr_a', 'r')):select_agents(5)",
+        "Cannot select_agents: labels must be a table, got number"
+    );
+    expect_lua_error(
+        lua,
+        "quiver.expression(db:open_file('expr_a', 'r')):rename_agents(5)",
+        "Cannot rename_agents: mapping must be a table, got number"
+    );
+}

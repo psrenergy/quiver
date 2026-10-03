@@ -1223,3 +1223,27 @@ TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupByLabelErrors) {
     // Nothing was written by any of the failures.
     EXPECT_EQ(db.read_time_series_group("Collection", "data", id).size(), 1);
 }
+
+TEST_F(LuaRunnerTest, RowAndFilesWritersRejectNonTable) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    int64_t id = db.create_element("Collection", quiver::Element().set("label", "Item 1"));
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(
+        lua,
+        R"(db:upsert_time_series_row("Collection", "data", )" + std::to_string(id) + R"(, 5))",
+        "Cannot upsert_time_series_row: row must be a table, got number"
+    );
+    expect_lua_error(
+        lua,
+        R"(db:upsert_time_series_row_by_label("Collection", "data", "Item 1", db))",
+        "Cannot upsert_time_series_row_by_label: row must be a table, got userdata"
+    );
+    expect_lua_error(
+        lua,
+        R"(db:update_time_series_files("Collection", 5))",
+        "Cannot update_time_series_files: paths must be a table, got number"
+    );
+    EXPECT_TRUE(db.read_time_series_group("Collection", "data", id).empty());
+}

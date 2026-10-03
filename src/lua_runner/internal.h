@@ -212,10 +212,7 @@ inline sol::table require_table(
 // A nested option value that must be a table (an options table's `header`, the levels of
 // `enum_labels`); `what` names it in the message.
 inline sol::table option_table(const sol::object& value, const std::string& operation, const std::string& what) {
-    if (value.get_type() != sol::type::table) {
-        throw std::runtime_error("Cannot " + operation + ": option '" + what + "' must be a table");
-    }
-    return value.as<sol::table>();
+    return require_table(value, operation, "option '" + what + "'");
 }
 
 // The walk every strict options decoder shares: read_csv, write_csv, export_csv/import_csv and
@@ -231,11 +228,8 @@ std::array<std::optional<sol::object>, N> option_entries(
     const std::string& operation,
     const std::string_view (&allowed)[N]
 ) {
-    if (options.get_type() != sol::type::table) {
-        throw std::runtime_error("Cannot " + operation + ": options must be a table");
-    }
     std::array<std::optional<sol::object>, N> found;
-    for (auto& entry : collect_entries(options.as<sol::table>())) {
+    for (auto& entry : collect_entries(require_table(options, operation, "options"))) {
         // Check the key's Lua type before converting it: sol2's std::string getter is
         // lua_tolstring, which answers nullptr for a boolean/table/function key -- unchecked
         // in Release (SOL_SAFE_GETTER is off there) and a raw sol2 panic in Debug, so a
@@ -277,7 +271,7 @@ void bind_binary(sol::state& state, sol::usertype<Database>& bind, sol::table& n
 std::string resolve_sandboxed_path(const Database& db, const std::string& operation, const std::string& path);
 std::string encode_return_json(const sol::object& value);
 
-Element table_to_element(const std::string& caller, const sol::table& values);
+Element table_to_element(const std::string& caller, const sol::object& values);
 std::vector<GroupColumn> collect_group_columns(const std::string& caller, const sol::object& columns);
 std::vector<std::map<std::string, Value>> columns_to_cpp_rows(
     const std::string& caller,

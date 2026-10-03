@@ -607,3 +607,23 @@ TEST_F(LuaRunnerTest, UpdateRelationErrors) {
     );
     EXPECT_EQ(db.read_scalar_integer_by_id("Child", "parent_id", 1), 1);
 }
+
+TEST_F(LuaRunnerTest, UpdateElementRejectsNonTableElement) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    const int64_t id =
+        db.create_element("Collection", quiver::Element().set("label", "Item 1").set("some_integer", int64_t{7}));
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(
+        lua,
+        R"(db:update_element("Collection", )" + std::to_string(id) + R"(, "x"))",
+        "Cannot update_element: element_table must be a table, got string"
+    );
+    expect_lua_error(
+        lua,
+        R"(db:update_element_by_label("Collection", "Item 1", true))",
+        "Cannot update_element_by_label: element_table must be a table, got boolean"
+    );
+    EXPECT_EQ(db.read_scalar_integer_by_id("Collection", "some_integer", id), 7);
+}

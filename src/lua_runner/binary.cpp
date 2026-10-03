@@ -24,9 +24,9 @@ namespace quiver::lua_internal {
 
 namespace {
 
-std::unordered_map<std::string, int64_t> lua_table_to_dim_map(const sol::table& t, const std::string& caller) {
+std::unordered_map<std::string, int64_t> lua_table_to_dim_map(const sol::object& t, const std::string& caller) {
     std::unordered_map<std::string, int64_t> dims;
-    for (auto& pair : t) {
+    for (auto& pair : require_table(t, caller, "dims")) {
         auto key = pair.first.as<std::string>();
         dims[key] = lua_cell_as<int64_t>(pair.second, caller, "dimension '" + key + "'");
     }
@@ -44,10 +44,7 @@ std::vector<T> metadata_array(const std::optional<sol::object>& value, const cha
         return {};
     }
     const auto field = std::string("field '") + key + "'";
-    if (value->get_type() != sol::type::table) {
-        throw std::runtime_error("Cannot metadata: " + field + " must be a table");
-    }
-    return lua_table_to_vector<T>(value->as<sol::table>(), "metadata: " + field);
+    return lua_table_to_vector<T>(require_table(*value, "metadata", field), "metadata: " + field);
 }
 
 // Build BinaryMetadata from a Lua kwargs table, mirroring the Julia Metadata(; ...) constructor:
@@ -237,14 +234,17 @@ void bind_binary(sol::state& state, sol::usertype<Database>& bind, sol::table& n
         "BinaryFile",
         sol::no_constructor,
         "read",
-        [](BinaryFile& self, const sol::table& dims, sol::optional<bool> allow_nulls, sol::this_state s) {
+        [](BinaryFile& self, const sol::object& dims, sol::optional<bool> allow_nulls, sol::this_state s) {
             sol::state_view lua(s);
             auto data = self.read(lua_table_to_dim_map(dims, "read"), allow_nulls.value_or(false));
             return to_lua_table(lua, data);
         },
         "write",
-        [](BinaryFile& self, const sol::table& data, const sol::table& dims) {
-            self.write(lua_table_to_vector<double>(data, "write"), lua_table_to_dim_map(dims, "write"));
+        [](BinaryFile& self, const sol::object& data, const sol::object& dims) {
+            // Decoded in argument order, so data is the one reported when both are wrong.
+            const auto values = lua_table_to_vector<double>(require_table(data, "write", "data"), "write");
+            const auto coordinates = lua_table_to_dim_map(dims, "write");
+            self.write(values, coordinates);
         },
         "close",
         [](BinaryFile& self) { self.close(); },
@@ -262,7 +262,7 @@ void bind_binary(sol::state& state, sol::usertype<Database>& bind, sol::table& n
     ns.set_function("metadata_from_toml", [](const std::string& content) {
         return BinaryMetadata::from_toml_content(content);
     });
-    ns.set_function("metadata_from_element", [](const sol::table& t) {
+    ns.set_function("metadata_from_element", [](const sol::object& t) {
         return BinaryMetadata::from_element(table_to_element("metadata_from_element", t));
     });
 
@@ -290,19 +290,18 @@ void bind_binary(sol::state& state, sol::usertype<Database>& bind, sol::table& n
             );
         },
         "select_agents",
-        [](Expression& self, const sol::table& labels) {
-            return self.select_agents(lua_table_to_vector<std::string>(labels, "select_agents"));
+        [](Expression& self, const sol::object& labels) {
+            return self.select_agents(
+                lua_table_to_vector<std::string>(require_table(labels, "select_agents", "labels"), "select_agents")
+            );
         },
         "rename_agents",
         [](Expression& self, const sol::object& mapping) {
-            // sol2 does not check a table parameter in Release, so check it here. Then collect,
-            // then check both halves: an unchecked as<std::string>() spelled a number
-            // key as text and gave "" for a boolean in Release.
-            if (mapping.get_type() != sol::type::table) {
-                throw std::runtime_error("Cannot rename_agents: mapping must be a table");
-            }
+            // The explicit table check rejects a userdata too. Then collect, then check both
+            // halves with lua_cell_as: an unchecked as<std::string>() spelled a number key as
+            // text and gave "" for a boolean in Release.
             std::vector<std::pair<std::string, std::string>> pairs;
-            for (const auto& [key, value] : collect_entries(mapping.as<sol::table>())) {
+            for (const auto& [key, value] : collect_entries(require_table(mapping, "rename_agents", "mapping"))) {
                 auto old_name = lua_cell_as<std::string>(key, "rename_agents", "key");
                 auto new_name = lua_cell_as<std::string>(value, "rename_agents", "value for '" + old_name + "'");
                 pairs.emplace_back(std::move(old_name), std::move(new_name));

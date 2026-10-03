@@ -1268,6 +1268,24 @@ TEST_F(LuaRunner_WriteCsv, NonTableOptionsThrows) {
     expect_lua_error(lua, R"(db:write_csv("ok.csv", 5))", "Cannot write_csv: options must be a table");
 }
 
+TEST_F(LuaRunner_WriteCsv, NonTableArgumentsReportTheirType) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(
+        lua,
+        R"(db:write_csv("ok.csv"):write_row(db))",
+        "Cannot write_row: row must be a table, got userdata"
+    );
+    expect_lua_error(
+        lua,
+        R"(db:write_csv("ok.csv", { header = 5 }))",
+        "Cannot write_csv: option 'header' must be a table, got number"
+    );
+    expect_lua_error(lua, R"(db:write_csv("ok.csv", "x"))", "Cannot write_csv: options must be a table, got string");
+}
+
 // WRITE-08: db:write_csv truncates an existing target at open. Two rows written and closed, then
 // the SAME path reopened and one row written, reads back as exactly one row.
 TEST_F(LuaRunner_WriteCsv, ReopeningSamePathTruncatesExistingContent) {

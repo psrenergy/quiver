@@ -306,3 +306,34 @@ TEST_F(LuaRunnerTest, CreateElementArrayCellTypeMismatchThrows) {
         }
     }
 }
+
+TEST_F(LuaRunnerTest, CreateElementRejectsNonTableElement) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(
+        lua,
+        R"(db:create_element("Collection", 5))",
+        "Cannot create_element: element_table must be a table, got number"
+    );
+    expect_lua_error(
+        lua,
+        R"(db:create_element("Collection", db))",
+        "Cannot create_element: element_table must be a table, got userdata"
+    );
+    EXPECT_TRUE(db.read_element_ids("Collection").empty());
+}
+
+// A userdata attribute value used to be walked as an array and reach the script as sol2's raw
+// usertype text.
+TEST_F(LuaRunnerTest, CreateElementRejectsUserdataAttribute) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(
+        lua,
+        R"(db:create_element("Collection", { label = "x", some_integer = db }))",
+        "Cannot create_element: attribute 'some_integer' must be a value or a table, got userdata"
+    );
+    EXPECT_TRUE(db.read_element_ids("Collection").empty());
+}
