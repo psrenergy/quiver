@@ -9,7 +9,8 @@ import { LUA_DB_API_REFERENCE } from "../src/lua-api.ts";
 
 const SRC_DIR = join(__dirname, "..", "..", "..", "src", "lua_runner");
 // Sorted, so neither the parse nor the open_libraries( count depends on directory order.
-const SOURCES = readdirSync(SRC_DIR)
+// Recursive, so a future src/lua_runner/<subdir>/ cannot drop out of the parse.
+const SOURCES = readdirSync(SRC_DIR, { recursive: true, encoding: "utf8" })
   .filter((f) => /\.(cpp|h)$/.test(f))
   .sort()
   .map((f) => readFileSync(join(SRC_DIR, f), "utf8"));
@@ -66,6 +67,10 @@ describe("lua-api reference stays in sync with src/lua_runner/", () => {
     // passing vacuously forever on an empty match set.
     expect(dbMethods.size).toBeGreaterThan(40);
     expect(quiverFns.size).toBeGreaterThan(10);
+    // Every set_function( must be one Pass 1 understood. A binder whose usertype parameter is not
+    // named `bind` (or a shared helper registering through another receiver) would otherwise drop
+    // its methods silently, and an undocumented new method would pass.
+    expect(setFns.length).toBe(CPP.match(/\.set_function\(/g)?.length ?? 0);
     // A usertype that parses to nothing would let the :<name>( check below pass vacuously; the four
     // known ones are the floor, so losing a whole usertype to a parse break also fails.
     const required = new Set([

@@ -37,7 +37,8 @@ biome.json        # Lint/format config
   `test/lua-api-sync.test.ts` derives the bound surface from every file under `src/lua_runner/` and fails if a
   `db:`/`quiver.*` name is undocumented, a documented name no longer exists, or the stdlib sentence
   disagrees with `open_libraries`, or any of the `BinaryFile`, `BinaryMetadata`, `Expression` or
-  `CsvWriter` usertypes parses to zero methods, or `open_libraries(` does not appear exactly once —
+  `CsvWriter` usertypes parses to zero methods, or a `.set_function(` call goes through any receiver
+  but `bind`/`ns` (its name would otherwise drop out unchecked), or `open_libraries(` does not appear exactly once —
   that check is why the doc must keep the literal-token convention
   and the canonical `Loaded standard libraries: ...` sentence. It cannot check arg order, arity,
   types, or return shapes; those still need a hand re-diff. The `## CSV file reading` section's

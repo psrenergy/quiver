@@ -641,7 +641,8 @@ lua.run(R"(
 Implementation conventions in `src/lua_runner/`:
 - **Layout**: `LuaRunner::Impl`'s constructor creates the only Database usertype and hands it to
   the seven binders as `bind`, with the `quiver` table as `ns`. Those parameter names are what the
-  sync test's first pass matches, and a second Database usertype would clear every method bound
+  sync test's first pass matches (it fails on a `.set_function(` through any other receiver, and
+  reads subdirectories too), and a second Database usertype would clear every method bound
   before it. The non-Database usertypes stay variadic, one bound name per line (the sync test's
   second pass). `RunHandles` is an `Impl` member declared before `lua`; closures capture `handles`
   or `db` by reference, never the `Impl` pointer, so a moved runner keeps working. `internal.h`
