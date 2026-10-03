@@ -36,9 +36,9 @@ Evidence for each item (line numbers at `bdf9087`) is in `.planning/research/LUA
 
 ### Release type safety
 
-- [ ] **SAFE-01**: Every table parameter is taken as `sol::object` and checked with `require_table` (`get_type() == sol::type::table`, never `is<sol::table>()`). Value-level sites are included (`table_to_element` cells, `collect_group_columns`). A wrong type raises a Pattern 1 error naming the operation and argument (C1).
-- [ ] **SAFE-02**: Map keys are type-checked by `lua_string_key` before they become column, dimension, attribute or files-column names: `lua_table_to_value_map`, `table_to_element`, `lua_table_to_dim_map` and `update_time_series_files` (C2).
-- [ ] **SAFE-03**: Optional arguments go through `optional_from_lua` at all 8 sites. nil or missing means absent; any other wrong type raises Pattern 1 (C5).
+- [x] **SAFE-01**: Every table parameter is taken as `sol::object` and checked with `require_table` (`get_type() == sol::type::table`, never `is<sol::table>()`). Value-level sites are included (`table_to_element` cells, `collect_group_columns`). A wrong type raises a Pattern 1 error naming the operation and argument (C1).
+- [x] **SAFE-02**: Map keys are type-checked by `lua_string_key` before they become column, dimension, attribute or files-column names: `lua_table_to_value_map`, `table_to_element`, `lua_table_to_dim_map` and `update_time_series_files` (C2).
+- [x] **SAFE-03**: Optional arguments go through `optional_from_lua` at all 8 sites. nil or missing means absent; any other wrong type raises Pattern 1 (C5).
 - [ ] **SAFE-04**: `db:transaction` / `db:dry_run` reject a non-function argument with Pattern 1 before any side effect (C6).
 - [ ] **SAFE-05**: Every type error from these checks ends with a consistent "got <lua type>" suffix.
 - [ ] **SAFE-06**: `SOL_ALL_SAFETIES_ON=1` and `SOL_PRINT_ERRORS=0` are PRIVATE on `quiver`, landing after SAFE-01..04. The no-op `SOL_SAFE_FUNCTION=1` define and its AGENTS.md claim are deleted. The Release cost is measured once by hand and reported in the PR, with no committed perf scripts.
@@ -122,9 +122,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DEDUP-04 | Phase 3 | Complete |
 | DEDUP-05 | Phase 3 | Complete |
 | DEDUP-06 | Phase 3 | Complete |
-| SAFE-01 | Phase 4 | Pending |
-| SAFE-02 | Phase 4 | Pending |
-| SAFE-03 | Phase 4 | Pending |
+| SAFE-01 | Phase 4 | Complete |
+| SAFE-02 | Phase 4 | Complete |
+| SAFE-03 | Phase 4 | Complete |
 | SAFE-04 | Phase 4 | Pending |
 | SAFE-05 | Phase 4 | Pending |
 | SAFE-06 | Phase 4 | Pending |

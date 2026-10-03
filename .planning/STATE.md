@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 4
 current_phase_name: Fixes and Release Type Safety
 status: executing
-stopped_at: Completed 03-03-PLAN.md
-last_updated: "2026-10-03T12:31:55.670Z"
+stopped_at: Completed 04-01-PLAN.md
+last_updated: "2026-10-03T13:12:21.249Z"
 last_activity: 2026-10-03
 last_activity_desc: Phase 2 complete, transitioned to Phase 3
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 13
-  completed_plans: 9
+  completed_plans: 10
 ---
 
 # Project State
@@ -27,12 +27,12 @@ See: .planning/PROJECT.md (updated 2026-10-03)
 
 ## Current Position
 
-Phase: 4 — Fixes and Release Type Safety
-Plan: Not started
+Phase: 4 (Fixes and Release Type Safety) — EXECUTING
+Plan: 2 of 4
 Status: Ready to execute
-Last activity: 2026-10-03 — Phase 3 complete, transitioned to Phase 4
+Last activity: 2026-10-03 — Phase 4 execution started
 
-Progress: [████████████░░░░░░░░] Phase 3 of 5 complete (9/9 plans so far)
+Progress: [████████░░] 77%
 
 ## Performance Metrics
 
@@ -69,6 +69,7 @@ Progress: [████████████░░░░░░░░] Phase 3
 | Phase 03 P01 | 35min | 3 tasks | 7 files |
 | Phase 03 P02 | 20min | 2 tasks | 6 files |
 | Phase 03 P03 | 22min | 3 tasks | 5 files |
+| Phase 04 P01 | 38min | 3 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -102,6 +103,9 @@ Recent decisions affecting current work:
 - [Phase 3]: 03-02: Debug-only sol2 dot-call text change accepted for w.write_row / w.close (CsvWriter members); Release unchanged
 - [Phase 3]: 03-03: run-handle registries prune only expired() entries on insert (add_writer/add_binary_file); the close-at-exit function is close_open_handles
 - [Phase 3]: 03-03: binop<Op> with transparent functors backs all twelve binary Expression operators; gt..neq stay six literal ns.set_function calls for the sync test
+- [Phase 4]: 04-01: one type-error shape (lua_type_error) and one table check (require_table, get_type) in the decoder that first walks the argument; optional args via optional_from_lua (luaL_opt semantics)
+- [Phase 4]: 04-01: file:write/bin_to_csv/file:read/aggregate* decode into ordered locals; open_file keeps mode -> containment -> metadata
+- [Phase 4]: 04-01: Lua* = 460 tests / 12 suites (Debug and Release), C API 27, tidy 14; golden baseline build/fixes-check/baseline at 30a169f
 
 ### Pending Todos
 
@@ -128,6 +132,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-10-03T07:46:14.885Z
-Stopped at: Phase 3 complete, ready to plan Phase 4
+Last session: 2026-10-03T13:12:21.228Z
+Stopped at: Completed 04-01-PLAN.md
 Resume file: None
