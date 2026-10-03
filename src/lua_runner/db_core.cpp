@@ -6,6 +6,7 @@
 #include <sol/sol.hpp>
 
 #include <cstdint>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -115,55 +116,26 @@ std::vector<Value> lua_table_to_values(const std::string& caller, const sol::tab
     return values;
 }
 
-sol::object query_string_lua(
+// NOLINTBEGIN(performance-unnecessary-value-param) sol2 lambda bindings require pass-by-value for type
+// deduction
+std::optional<std::string> query_string_lua(
     Database& db,
     const std::string& sql,
-    sol::optional<sol::table> parameters,
-    sol::this_state s
+    sol::optional<sol::table> parameters
 ) {
-    sol::state_view lua(s);
-    auto values = parameters ? lua_table_to_values("query_string", *parameters) : std::vector<Value>{};
-    auto result = db.query_string(sql, values);
-    if (result.has_value()) {
-        return sol::make_object(lua, *result);
-    }
-    return sol::make_object(lua, sol::lua_nil);
+    return db.query_string(sql, parameters ? lua_table_to_values("query_string", *parameters) : std::vector<Value>{});
 }
 
-sol::object query_integer_lua(
-    Database& db,
-    const std::string& sql,
-    sol::optional<sol::table> parameters,
-    sol::this_state s
-) {
-    sol::state_view lua(s);
-    auto values = parameters ? lua_table_to_values("query_integer", *parameters) : std::vector<Value>{};
-    auto result = db.query_integer(sql, values);
-    if (result.has_value()) {
-        return sol::make_object(lua, *result);
-    }
-    return sol::make_object(lua, sol::lua_nil);
+std::optional<int64_t> query_integer_lua(Database& db, const std::string& sql, sol::optional<sol::table> parameters) {
+    return db.query_integer(sql, parameters ? lua_table_to_values("query_integer", *parameters) : std::vector<Value>{});
 }
 
-sol::object query_float_lua(
-    Database& db,
-    const std::string& sql,
-    sol::optional<sol::table> parameters,
-    sol::this_state s
-) {
-    sol::state_view lua(s);
-    auto values = parameters ? lua_table_to_values("query_float", *parameters) : std::vector<Value>{};
-    auto result = db.query_float(sql, values);
-    if (result.has_value()) {
-        return sol::make_object(lua, *result);
-    }
-    return sol::make_object(lua, sol::lua_nil);
+std::optional<double> query_float_lua(Database& db, const std::string& sql, sol::optional<sol::table> parameters) {
+    return db.query_float(sql, parameters ? lua_table_to_values("query_float", *parameters) : std::vector<Value>{});
 }
 
 }  // namespace
 
-// NOLINTBEGIN(performance-unnecessary-value-param) sol2 lambda bindings require pass-by-value for type
-// deduction
 void bind_core(sol::usertype<Database>& bind) {
     bind.set_function("is_healthy", &Database::is_healthy);
     bind.set_function("current_version", &Database::current_version);

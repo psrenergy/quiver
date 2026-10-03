@@ -17,22 +17,16 @@ sol::table read_scalars_by_id_lua(Database& db, const std::string& collection, i
 
     for (const auto& attribute : db.list_scalar_attributes(collection)) {
         switch (attribute.data_type) {
-        case DataType::Integer: {
-            auto val = db.read_scalar_integer_by_id(collection, attribute.name, id);
-            result[attribute.name] = val.has_value() ? sol::make_object(lua, *val) : sol::lua_nil;
+        case DataType::Integer:
+            result[attribute.name] = db.read_scalar_integer_by_id(collection, attribute.name, id);
             break;
-        }
-        case DataType::Real: {
-            auto val = db.read_scalar_float_by_id(collection, attribute.name, id);
-            result[attribute.name] = val.has_value() ? sol::make_object(lua, *val) : sol::lua_nil;
+        case DataType::Real:
+            result[attribute.name] = db.read_scalar_float_by_id(collection, attribute.name, id);
             break;
-        }
         case DataType::Text:
-        case DataType::DateTime: {
-            auto val = db.read_scalar_string_by_id(collection, attribute.name, id);
-            result[attribute.name] = val.has_value() ? sol::make_object(lua, *val) : sol::lua_nil;
+        case DataType::DateTime:
+            result[attribute.name] = db.read_scalar_string_by_id(collection, attribute.name, id);
             break;
-        }
         default:
             throw std::runtime_error(
                 "Cannot read_scalars_by_id: unknown data type " + std::to_string(static_cast<int>(attribute.data_type))
