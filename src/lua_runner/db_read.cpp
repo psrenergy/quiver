@@ -36,26 +36,35 @@ sol::table read_scalars_by_id_lua(Database& db, const std::string& collection, i
     return result;
 }
 
-sol::table read_vectors_by_id_lua(Database& db, const std::string& collection, int64_t id, sol::this_state s) {
+// read_vectors_by_id / read_sets_by_id: every value column of every group of one kind, read per
+// column name through that kind's typed _by_id readers (`List` lists the groups).
+template <auto List, auto ReadIntegers, auto ReadFloats, auto ReadStrings>
+sol::table read_groups_by_id(
+    Database& db,
+    const std::string& operation,
+    const std::string& collection,
+    int64_t id,
+    sol::this_state s
+) {
     sol::state_view lua(s);
     auto result = lua.create_table();
 
-    for (const auto& group : db.list_vector_groups(collection)) {
+    for (const auto& group : (db.*List)(collection)) {
         for (const auto& col : group.value_columns) {
             switch (col.data_type) {
             case DataType::Integer:
-                result[col.name] = to_lua_table(lua, db.read_vector_integers_by_id(collection, col.name, id));
+                result[col.name] = to_lua_table(lua, (db.*ReadIntegers)(collection, col.name, id));
                 break;
             case DataType::Real:
-                result[col.name] = to_lua_table(lua, db.read_vector_floats_by_id(collection, col.name, id));
+                result[col.name] = to_lua_table(lua, (db.*ReadFloats)(collection, col.name, id));
                 break;
             case DataType::Text:
             case DataType::DateTime:
-                result[col.name] = to_lua_table(lua, db.read_vector_strings_by_id(collection, col.name, id));
+                result[col.name] = to_lua_table(lua, (db.*ReadStrings)(collection, col.name, id));
                 break;
             default:
                 throw std::runtime_error(
-                    "Cannot read_vectors_by_id: unknown data type " + std::to_string(static_cast<int>(col.data_type))
+                    "Cannot " + operation + ": unknown data type " + std::to_string(static_cast<int>(col.data_type))
                 );
             }
         }
@@ -63,31 +72,20 @@ sol::table read_vectors_by_id_lua(Database& db, const std::string& collection, i
     return result;
 }
 
-sol::table read_sets_by_id_lua(Database& db, const std::string& collection, int64_t id, sol::this_state s) {
-    sol::state_view lua(s);
-    auto result = lua.create_table();
+sol::table read_vectors_by_id_lua(Database& db, const std::string& collection, int64_t id, sol::this_state s) {
+    return read_groups_by_id<
+        &Database::list_vector_groups,
+        &Database::read_vector_integers_by_id,
+        &Database::read_vector_floats_by_id,
+        &Database::read_vector_strings_by_id>(db, "read_vectors_by_id", collection, id, s);
+}
 
-    for (const auto& group : db.list_set_groups(collection)) {
-        for (const auto& col : group.value_columns) {
-            switch (col.data_type) {
-            case DataType::Integer:
-                result[col.name] = to_lua_table(lua, db.read_set_integers_by_id(collection, col.name, id));
-                break;
-            case DataType::Real:
-                result[col.name] = to_lua_table(lua, db.read_set_floats_by_id(collection, col.name, id));
-                break;
-            case DataType::Text:
-            case DataType::DateTime:
-                result[col.name] = to_lua_table(lua, db.read_set_strings_by_id(collection, col.name, id));
-                break;
-            default:
-                throw std::runtime_error(
-                    "Cannot read_sets_by_id: unknown data type " + std::to_string(static_cast<int>(col.data_type))
-                );
-            }
-        }
-    }
-    return result;
+sol::table read_sets_by_id_lua(Database& db, const std::string& collection, int64_t id, sol::this_state s) {
+    return read_groups_by_id<
+        &Database::list_set_groups,
+        &Database::read_set_integers_by_id,
+        &Database::read_set_floats_by_id,
+        &Database::read_set_strings_by_id>(db, "read_sets_by_id", collection, id, s);
 }
 
 sol::table read_element_by_id_lua(Database& db, const std::string& collection, int64_t id, sol::this_state s) {
