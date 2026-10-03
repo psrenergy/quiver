@@ -30,11 +30,11 @@ fixes listed below.
 - ✓ Exposed in every layer: C API `quiver_lua_runner_*`, `LuaRunner` in Julia/Dart/Python/JS, used by `quiver_cli`. Existing.
 - ✓ Agent-facing Lua reference `LUA_DB_API_REFERENCE` (`bindings/js/src/lua-api.ts`), kept in sync with the source by `bindings/js/test/lua-api-sync.test.ts`. Existing.
 - ✓ Behaviour the refactor could break is pinned before any code moves: runner move survival (source kept alive and source freed, plus `static_assert(sizeof(LuaRunner) == sizeof(void*))`), the check orders of `open_file`/`read_csv`/`read_csv_stream`/`write_csv`/`export_csv`/`import_csv` with their "options must be a table" controls, the 1,000,000 key-width cap, closed-writer order, and sync-test guards (parse-derived usertype set with a four-type floor, single `open_libraries(`). All Debug/Release-defined; every pin mutation-tested. Baseline `Lua*` = 444 / 12 suites, C API 27. — Phase 1
+- ✓ `src/lua_runner.cpp` is split into `src/lua_runner/`: 11 files (`lua_runner.cpp` lifecycle shell of 144 lines, `internal.h`, `return_json.cpp`, `path_policy.cpp`, and seven per-domain binders `db_core`/`db_read`/`db_write`/`db_time_series`/`db_metadata`/`csv`/`binary`), each ≤446 lines, each registering and implementing its own slice. Pure moves: the same 71 `db:` + 15 `quiver.*` names, `Lua*` 444 / C API 27 in Debug and Release, and the same Lua* results on Linux GCC 13 and Clang 18/libc++. — Phase 2
+- ✓ The sync test reads `src/lua_runner/` recursively, fails on any `.set_function(` it cannot parse, and guards all usertypes. `/bigobj` covers the whole `quiver` target, and each NOLINT pair moved with its code. — Phase 2
 
 ### Active
 
-- [ ] `src/lua_runner.cpp` is split into `src/lua_runner/` per-domain translation units, each of which both registers and implements its slice of the surface. No file is over ~450 lines and behaviour does not change.
-- [ ] The sync test reads every source file in the new folder and guards all usertypes; `/bigobj` applies to every sol2 TU; the NOLINT blocks move with their code.
 - [ ] Repeated boilerplate is collapsed into shared helpers: the transaction/dry-run body, bulk-read adapters, member-pointer forwarders, one registration style, the metadata wrappers, option decoders, and `CsvWriter` behaviour as members. No behaviour change.
 - [ ] Release builds type-check table and `self` arguments: an explicit `require_table` gives a Pattern 1 error at every table parameter, and `SOL_ALL_SAFETIES_ON` is turned on as a backstop. The performance cost is measured.
 - [ ] Map keys are type-checked before they become column, dimension or attribute names (Pattern 1 instead of a wrong name or a raw panic).
@@ -60,7 +60,7 @@ fixes listed below.
 
 - Codebase map: `.planning/codebase/*.md`. Detailed map of the file (32 clusters with line ranges, seams, 8 bugs C1–C8, 16 dedup items M1–M16, rename blast radius of 53 files [historical: the rename is out of scope], sync-test contract), plus a critic's corrections: `.planning/research/LUA-RUNNER-MAP.md`.
 - `Impl` is a set of free functions in disguise. Instance state is only `db`, `lua`, the writer/binary-file registries (`open_writers`, `open_binary_files`, `path_has_open_writer`, `close_open_writers`) and three `[this]` captures (`open_file`, `write_csv`, `expr:save`). The split therefore needs a small `Context`/`RunHandles` held inside the heap-allocated `Impl`, so captured references survive a move. Phase 1 enforces this: `tests/test_lua_runner_lifecycle.cpp` static-asserts `sizeof(LuaRunner) == sizeof(void*)` (fails in every build if run state moves onto `LuaRunner`), and its freed-source pins crash in Debug if bindings reach state through the moved-from runner.
-- The sync test (`bindings/js/test/lua-api-sync.test.ts`) hardcodes `src/lua_runner.cpp`. Pass 1 matches `(bind|ns).set_function("name"`, so the local/parameter names `bind` and `ns` are load-bearing. Pass 2 relies on unqualified `new_usertype<X>`, one method name per line, and the 120-column limit. `current` must reset at file boundaries.
+- The sync test (`bindings/js/test/lua-api-sync.test.ts`) reads `src/lua_runner/` recursively (since Phase 2). Pass 1 matches `(bind|ns).set_function("name"`, so the local/parameter names `bind` and `ns` are load-bearing. Pass 2 relies on unqualified `new_usertype<X>`, one method name per line, and the 120-column limit. `current` must reset at file boundaries.
 - CI builds Release, where sol2 does not check `sol::table` parameters at all and Lua's API checks are off. That makes C1 undefined behaviour, not just a wrong error.
 - Version: CMake and all manifests are at 0.13.0, and the latest tag is `v0.12.9`, so the milestone's BREAKING changes land in 0.13.0 with no further bump. CHANGELOG has no `[0.12.9]` or `[0.13.0]` section yet; the newest is `[0.12.8]`.
 - Development is on Windows (Git Bash/PowerShell). Python runs via `uv run`. `scripts/test-all.bat` runs the six suites.
@@ -81,8 +81,8 @@ fixes listed below.
 |----------|-----------|---------|
 | Rename `LuaRunner` → `quiver::Sandbox` in every layer (C API `quiver_sandbox_*`) | User request; the mechanical cross-layer naming rule | Reverted 2026-10-02: user decision, dropped from this milestone to keep it simple |
 | Scratch target `tests/sandbox` → `tests/scratch` / `quiver_scratch` | Frees the name; the scratch target is still kept on purpose | Reverted 2026-10-02: user decision, dropped with the rename |
-| Per-domain layout: each `src/lua_runner/*.cpp` registers and implements its own slice, ~450-line ceiling | User's pain is file size for agent editing; locality means adding a method touches one file plus the reference | — Pending |
-| Split folder is `src/lua_runner/` (`lua_runner.cpp` plus the per-domain files), not `src/sandbox/` | Follows from dropping the rename: the folder keeps the class's name. The C API TU `src/c/lua_runner.cpp` is not renamed | — Pending |
+| Per-domain layout: each `src/lua_runner/*.cpp` registers and implements its own slice, ~450-line ceiling | User's pain is file size for agent editing; locality means adding a method touches one file plus the reference | ✓ Phase 2: largest file `csv.cpp` at 446 lines. Clean build of `quiver` went from 70 s to 46 s wall time, but total CPU time across the Lua files went from 61 s to 223 s, because each file now parses sol2 separately. Accepted (compile time is out of scope); Phase 3 should not add more sol2 TUs without reason |
+| Split folder is `src/lua_runner/` (`lua_runner.cpp` plus the per-domain files), not `src/sandbox/` | Follows from dropping the rename: the folder keeps the class's name. The C API TU `src/c/lua_runner.cpp` is not renamed | ✓ Phase 2 |
 | Release type safety: explicit `require_table` (Pattern 1) plus `SOL_ALL_SAFETIES_ON` backstop | Release currently has UB on wrong-type arguments; explicit checks give good messages, the flag covers `self` and anything missed | — Pending |
 | No sparse-extent cap on the vector/set group writers | User choice: the host limits scripts | — Pending |
 | An empty array in Lua `create_element`/`update_element` is passed through to the core (clears on update) | Consistency with C++/Python/JS. On update, a typo'd empty column now throws ("does not match any vector, set, or time series table") instead of being ignored | — Pending |
@@ -112,4 +112,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-02 after Phase 1 (behaviour pins)*
+*Last updated: 2026-10-03 after Phase 2 (mechanical split)*
