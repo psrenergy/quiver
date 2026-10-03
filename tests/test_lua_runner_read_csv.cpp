@@ -228,8 +228,8 @@ TEST_F(LuaRunner_ReadCsv, BomStrippedUnderExplicitHeaderRowAndNoHeader) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::LuaRunner lua(db);
 
-    // BOM + a junk title line above the real header, mirroring the real Maranhao file's shape
-    // shape. BOM stripping must hold under header_row = 2 (explicit header) and header_row = 0 (no
+    // BOM + a junk title line above the real header, mirroring the real Maranhao file's shape.
+    // BOM stripping must hold under header_row = 2 (explicit header) and header_row = 0 (no
     // header) alike -- csv-parser strips the BOM once on the raw byte stream, independent of
     // header-row resolution.
     const std::string bom = "\xEF\xBB\xBF";
