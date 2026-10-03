@@ -251,12 +251,7 @@ void update_time_series_files_lua(Database& db, const std::string& collection, c
     std::map<std::string, std::optional<std::string>> cpp_paths;
     for (auto& pair : require_table(paths, "update_time_series_files", "paths")) {
         auto key = lua_string_key(pair.first, "update_time_series_files", "column name");
-        sol::object val = pair.second;
-        if (val.is<sol::lua_nil_t>()) {
-            cpp_paths[key] = std::nullopt;
-        } else {
-            cpp_paths[key] = lua_cell_as<std::string>(val, "update_time_series_files", "path '" + key + "'");
-        }
+        cpp_paths[key] = lua_cell_as<std::string>(pair.second, "update_time_series_files", "path '" + key + "'");
     }
     db.update_time_series_files(collection, cpp_paths);
 }

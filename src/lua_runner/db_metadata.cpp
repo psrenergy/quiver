@@ -3,28 +3,21 @@
 
 #include <sol/sol.hpp>
 
-#include <stdexcept>
 #include <string>
 
 namespace quiver::lua_internal {
 
 namespace {
 
+// The Lua spelling is the ASCII lowercase of the core's name: INTEGER -> integer, DATE_TIME -> date_time.
 std::string lua_data_type_name(DataType type) {
-    switch (type) {
-    case DataType::Integer:
-        return "integer";
-    case DataType::Real:
-        return "real";
-    case DataType::Text:
-        return "text";
-    case DataType::DateTime:
-        return "date_time";
-    default:
-        throw std::runtime_error(
-            "Cannot lua_data_type_name: unknown data type " + std::to_string(static_cast<int>(type))
-        );
+    std::string name = data_type_to_string(type);
+    for (char& c : name) {
+        if (c >= 'A' && c <= 'Z') {
+            c = static_cast<char>(c - 'A' + 'a');
+        }
     }
+    return name;
 }
 
 sol::table metadata_to_lua(sol::state_view& lua, const ScalarMetadata& attribute) {
