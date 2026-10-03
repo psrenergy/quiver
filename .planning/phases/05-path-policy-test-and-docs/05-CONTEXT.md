@@ -35,6 +35,12 @@ Requirements: TEST-01, DOC-01, DOC-02, DOC-03, DOC-04. This is the last phase of
   - IN-01 (type errors that do not end in `got <type>`) is documented where the error-shape rule is described in `src/AGENTS.md`, not changed in code (D-04/D-16 of Phase 4).
 - **D-09:** Out of scope, by STATE.md's standing note: backfilling the missing `[0.12.9]` CHANGELOG section is the maintainer's call. The `[0.13.0]` compare link stays based on the existing `v0.12.9` tag.
 
+### Post-research resolutions (orchestrator decisions, flagged to the user)
+- **D-10:** D-05 is read as: test names and every compared expected value stay unchanged. Failure-diagnostic strings (Lua `assert` messages and `FAIL() <<` text, e.g. `"LUA-06: ..."`, `"WRITE-06 not yet implemented"`; 19 sites) may be rewritten to drop their IDs. Proof is an identical `--gtest_list_tests` diff and identical pass counts.
+- **D-11:** The sweep covers older-milestone IDs as well (`PARSE-`, `READ-`, `D2-`, `T-01-03`, `Task 1-01-01`, `plan 02-01`, `ROADMAP criterion`, `CSV-01`/`OPT-01`/`QUERY-01`/`JSCSV-01`, ...). The phase goal says no planning ID remains. The gate is the research's corrected PCRE command, not the roadmap's narrower regex. It must also not count false positives such as the Unicode "C0/C1 control" prose or `logo.svg` base64. `.gitattributes:4` is a real reference and gets fixed. The three stale `write_csv` test comments that still say `close()` is the only flush are corrected, not just stripped of their IDs.
+- **D-12:** No CHANGELOG entry for the new "what the sandbox does not limit" bullet in `LUA_DB_API_REFERENCE`, because it documents existing behaviour. The IN-03 `metadata_from_element` sentence is added (D-08).
+- TEST-01 link mechanism (D-03 resolved by research): compile `path_policy.cpp` into `quiver_tests`, with the declaration moved to a sol2-free `src/lua_runner/path_policy.h` that `internal.h` includes. Nothing new is exported, and the library's hidden copy cannot collide. The test file is `tests/test_sandboxed_path.cpp`, not `test_lua_*`, so the Phase 4 gate's `Lua*` counting stays correct.
+
 ### Claude's Discretion
 - The TEST-01 link mechanism (D-03), the exact header name, and the test fixture shape (temp directory plus a file-backed `Database`).
 - Plan granularity. The suggested split is TEST-01, then the DOC-01 sweep, then DOC-02..04 plus the phase gate. The sweep is wide (about 13 files, several hundred lines), so splitting it by area is fine.
