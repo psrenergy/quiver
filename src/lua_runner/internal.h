@@ -83,7 +83,7 @@ sol::table to_lua_table(sol::state_view& lua, const std::vector<std::vector<T>>&
     return outer;
 }
 
-// Every boolean test in this file goes through this one predicate, so the rule lives in one
+// Every boolean test in src/lua_runner/ goes through this one predicate, so the rule lives in one
 // place rather than in a comment repeated at each site. The Value mapping itself lives in
 // lua_to_value (scalars, row upserts, query parameters, group cells) and lua_cell_as (the typed
 // paths, e.g. arrays).
