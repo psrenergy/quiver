@@ -43,6 +43,13 @@ Out of scope: the `resolve_sandboxed_path` unit test (TEST-01), the repo-wide pl
 - CHANGELOG (roadmap criterion 5): `## [0.13.0] — unreleased` plus the compare link `[0.13.0]: https://github.com/psrenergy/quiver/compare/v0.12.9...v0.13.0` in the existing link block. BREAKING entries (each saying what a script author must change): wrong-type arguments now throw (C1/C5), the empty-array change (C7, with D-12), text-only `load`, and the Release dot-call going from UB to an error with sol2's raw text. `### Fixed`: C2, C4, C6, C8. Behaviour wording only, no planning IDs.
 - At the phase end, record the new `Lua*` and C API gtest counts as the baseline Phase 5 must reproduce.
 
+### Post-research resolutions (orchestrator decisions, flagged to the user)
+- **D-14:** In `table_to_element`, a userdata cell gets its own check before dispatch. The roadmap's criterion 1 explicitly names "`table_to_element` cells". The message is `Cannot <op>: attribute '<name>' must be a value or a table, got userdata`, carrying the SAFE-05 suffix. The converter messages in `lua_to_value`/`lua_cell_as` stay unchanged (D-04 holds), so this resolves the criterion-1 vs D-04 conflict the research raised.
+- **D-15:** `metadata_from_element`'s argument is named `element_table` in messages. The reference's `tbl` reads badly in an error.
+- **D-16:** The second "must be an array of values" message in `collect_group_columns` reports a bad cell key, not an argument type, so it does not gain the `got <type>` suffix.
+- **D-17:** Expression errors name Lua's event names for operators (`add`, `sub`, `mul`, `div`, `unm`, `band`, `bor`, `bnot`) and the function name for helpers (`abs`, `gt`, `ifelse`, …), following Pattern 1's `{operation}` rule.
+- **D-18:** Golden-probe outputs that change on purpose (about 40: the new suffix, the `transaction`/`dry_run` Debug text, the expression wording) are re-baselined per fix commit and listed in the plan SUMMARY. Every other probe stays byte-identical.
+
 ### Claude's Discretion
 - The exact helper signatures (`require_table(obj, operation, what)`, `lua_string_key(key, operation, what)`, `optional_from_lua<T>(obj, operation, what)` with `luaL_opt` semantics and `is<BinaryMetadata>()` for the usertype) and the argument names used in messages. Prefer the parameter names in `LUA_DB_API_REFERENCE`.
 - Plan and wave grouping by file overlap. Phase 3's single-helper layout means each fix lands in one place.
