@@ -80,8 +80,8 @@ Recent decisions affecting current work:
 - Roadmap: the CHANGELOG `[0.13.0] — unreleased` section and its compare link are opened in Phase 4 (C1/C5/C7/`load` BREAKING, the Release dot-call and raw sol2 self-check text, C2/C4/C6/C8 Fixed) and completed in Phase 5 (rename). No version bump.
 - [Phase 01]: Move pins pair a kept-alive source with a freed source, plus static_assert(sizeof(LuaRunner)==sizeof(void*)) so run state held outside Impl fails in Release too
 - [Phase 01]: Phase 1 gtest baseline: Lua* = 444 tests / 12 suites, LuaRunnerCApiTest = 27 (at 570c2c1)
-- [Phase ?]: [Phase 02]: /bigobj (-Wa,-mbig-obj) is target-wide on quiver so no new sol2 TU can miss it
-- [Phase ?]: [Phase 02]: NOLINT pairs now name performance-unnecessary-value-param (old name suppressed nothing)
+- [Phase 02]: /bigobj (-Wa,-mbig-obj) is target-wide on quiver so no new sol2 TU can miss it
+- [Phase 02]: NOLINT pairs now name performance-unnecessary-value-param (old name suppressed nothing)
 
 ### Pending Todos
 
