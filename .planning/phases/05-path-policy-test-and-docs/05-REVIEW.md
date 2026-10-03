@@ -1,6 +1,6 @@
 ---
 phase: 05-path-policy-test-and-docs
-reviewed: 2026-10-03T18:31:23Z
+reviewed: 2026-10-03T18:44:48Z
 depth: standard
 files_reviewed: 32
 files_reviewed_list:
@@ -38,63 +38,64 @@ files_reviewed_list:
   - tests/test_sandboxed_path.cpp
 findings:
   critical: 0
-  warning: 1
-  info: 4
-  total: 5
+  warning: 0
+  info: 3
+  total: 3
 status: issues_found
 ---
 
-# Phase 05: Code Review Report
+# Phase 05: Code Review Report (iteration 2)
 
-**Reviewed:** 2026-10-03T18:31:23Z
+**Reviewed:** 2026-10-03T18:44:48Z
 **Depth:** standard
-**Files Reviewed:** 32
+**Files Reviewed:** 32 (scope carried from iteration 1; only `src/csv/csv_read.cpp` and `tests/test_lua_runner_read_csv.cpp` changed since, in commits `3c313dd` and `e2eca2a`)
 **Status:** issues_found
 
 ## Summary
 
-I reviewed the changes in `737b6af..HEAD`, excluding `.planning/`.
+This is a re-review of the fixer's changes in `631a1d5..HEAD`. Those changes touch only the two files named above. Every other file is unchanged since iteration 1, so its findings carry forward as written.
 
-**TEST-01:** The work is sound. `path_policy.h` is sol2-free. `internal.h` now includes it instead of re-declaring the function. `quiver_tests` builds and links, and all 11 `SandboxedPathTest` cases pass on this MSVC Debug shared build, including the symlink case and the `_WIN32` device-name case. Every expected string matches the throw text in `path_policy.cpp` exactly. The suite name stays outside the `Lua*` filter as documented.
+**WR-01: resolved.**
+- No catalogue ordinals, `entry N` or `#N` references are left in either file. A grep for `catalog`, `entry [0-9]`, `#[0-9]`, `tenth` and `ordinal` finds nothing in `csv_read.cpp` or `test_lua_runner_read_csv.cpp`. A repo-wide grep finds no `tenth entry` or `entry 10` anywhere outside `.planning/`.
+- `csv_read.cpp:73-75` now calls the three checks "the existence, type and size preconditions". It no longer calls them a catalogue or claims the list is complete.
+- `csv_read.cpp:83-85` and `:136-137` name the pinning tests instead. All four cited tests exist:
+  - `MissingFileThrowsForReadCsv` (line 1215)
+  - `DirectoryAsPathThrowsForReadCsv` (line 1237)
+  - `EmptyFileThrows` (line 317)
+  - `HeaderRowPastEndOfFileThrowsExactMessage` (line 346)
+- Each of those tests asserts the full message text for its throw site. For example, `"Cannot read_csv: file not found: missing.csv"` matches line 96, and `"Cannot read_csv: header row 99 not found in file 'three.csv'"` matches line 139. So rewording any of the four messages fails its cited test.
+- The test-file references are now resolvable:
+  - `entry 10` became "the csv-parser wrapper's "cannot read file"".
+  - `#1/#3` and `#2/#7` became the named errors (in-memory before options, escape before not-found).
+  - The section headers no longer say "catalogue".
 
-**DOC-01:** It changes comments and test messages only. I filtered every changed non-comment line in `tests/` and `src/`. The only non-comment changes are:
-- the assert message strings in the Lua scripts;
-- the `FAIL()` text;
-- the new header and its CMake wiring.
+**IN-02: resolved.** The doubled "shape" is gone (`test_lua_runner_read_csv.cpp:231-232`).
 
-Every Lua-script edit replaces one line with one line, so no embedded script's line count changed. A repo-wide grep finds no leftover planning IDs (`D-NN`, `PARSE-NN`, `LUA-NN`, `WRITE-NN`, `FMT-NN`, `TEST-NN`, `SAFE-NN`, `READ-NN`, `T-0N-NN`, `RESEARCH.md`, `CONTEXT.md`) in any source, test or AGENTS.md file.
+**Invariants:**
+- The diff contains only C++ `//` comment lines. No string literal, test name, `R"(...)"` Lua body or assert message changed, so no embedded Lua script's line count changed. The one +1 line net is in a C++ comment at line 1337, outside any raw string.
+- No planning IDs were reintroduced.
 
-**Test names:** Every test name cited in the new comments and docs exists in the suite, 22 names checked. Among them: `EnergiaRegressionJunkRowAboveUnitsRowBelowHeader`, `GdRegressionQuotedCommaAndEnglishMonthNames`, the five `pinned by` names in `csv_write.cpp`, `NoUiDirReportsUnchanged`, the four empty-array Lua tests, `Database.UpdateElementEmptyArrayClearsRows`, `Database.CreateElementWithEmptyArraySkipsSilently`, `LuaBinaryTest.DeviceNamePathIsReportedWithPrefix` and `ReopeningSamePathTruncatesExistingContent`.
+**New problems in the changed hunks:** none. One wording point is not worth a finding: `csv_read.cpp:83` says "pinned exactly". `expect_lua_error` is a substring match, so a suffix appended to a message would not be caught. A reword of the existing text would be, which is what "do not reword them" guards against.
 
-**DOC-02/03/04:** I checked the factual claims against the code, and most by running them:
-- The CHANGELOG's `quiver.metadata_from_element` messages match what `quiver_cli` prints for each case. That covers empty labels, an empty dimension_sizes, an empty dimensions, both empty, and empty `time_dimensions`/`frequencies` being accepted.
-- The `options must be a table, got string` text in `lua-api.ts` matches what `quiver_cli` prints.
-- The sol2 flag names match `src/CMakeLists.txt`.
-- The list of messages without the `got` suffix in `src/AGENTS.md` matches `csv.cpp`, `db_core.cpp`, `internal.h` and `db_write.cpp`.
-- The section title cited for commit `f92af8d` is real.
-- `lua-api-sync.test.ts` passes (6/6).
+The three open Info findings live in files the fixer did not touch.
 
-The findings below are documentation accuracy problems and one test-coverage gap. None of them changes behaviour.
+## Resolved
 
-## Warnings
+### WR-01: The rewritten Reader comments contradicted each other about what "the catalogue" is — RESOLVED
 
-### WR-01: The rewritten Reader comments now contradict each other about what "the catalogue" is
+**File:** `src/csv/csv_read.cpp:73-85`, `src/csv/csv_read.cpp:136-137`, `tests/test_lua_runner_read_csv.cpp:1286,1337-1338,1380-1398`
+**Resolution:** Commit `3c313dd` makes these changes:
+- It drops the "tenth entry" ordinal and the "catalogue" framing.
+- It describes lines 73-75 as the existence/type/size preconditions.
+- It names the exact pinning tests at both comment sites.
+- It replaces every `entry 10` / `#N` reference in the test file with the named error.
 
-**File:** `src/csv/csv_read.cpp:73-83` and `src/csv/csv_read.cpp:134-135`
-**Issue:** The DOC-01 rewrite removed the D-22 reference without saying what the catalogue is.
-- Lines 73-75 now define "the constructor's Pattern 1 catalogue" as three checks, in order: not-found, then directory, then empty.
-- Line 83 says "the three messages below are part of that catalogue; do not reword them".
-- Lines 134-135 then call header-not-found "the tenth entry in this constructor's Pattern 1 catalogue".
+All cited test names exist.
 
-A three-entry catalogue has no tenth entry. The ordinal pointed at the old D-22 list, which also counted the options-decoder errors in `src/lua_runner/csv.cpp`, and that list is no longer written down anywhere in the source. Before this change, the read_csv test file already called a different message entry 10 (the csv-parser wrapper). With the IDs gone, nobody can check either numbering.
+### IN-02: Doubled word left by the rewrite — RESOLVED
 
-Lines 73-75 also leave out messages the constructor does raise: the `cannot access file` / OS-refused branches, the csv-parser wrapper (`cannot read file`), and header-not-found. So "the catalogue, in evaluation order" is also incomplete. A maintainer who follows "do not reword them" cannot tell which messages are pinned.
-**Fix:** Drop the ordinal and name the pinning test instead:
-```cpp
-// header by design, and that is not an error. Pinned by
-// LuaRunner_ReadCsv.HeaderRowPastEndOfFileThrowsExactMessage; do not reword it.
-```
-On lines 73-75, describe the three checks as the existence/type/size preconditions, not as "the catalogue". If the catalogue matters, list it once, as `csv_write.cpp` does.
+**File:** `tests/test_lua_runner_read_csv.cpp:231-232`
+**Resolution:** Commit `e2eca2a` fixed it. The comment now reads "...mirroring the real Maranhao file's shape. BOM stripping must hold under...".
 
 ## Info
 
@@ -107,12 +108,6 @@ On lines 73-75, describe the three checks as the existence/type/size preconditio
 
 What actually limits the test copy is that it is compiled without `quiver`'s PRIVATE compile definitions (`QUIVER_EXPORTS`, the `SOL_*` set). That is an ODR divergence hazard if `path_policy.cpp` ever depends on them. No CI job builds the static configuration (`QUIVER_BUILD_SHARED` appears in no workflow), so neither claim gets checked.
 **Fix:** Replace the reason: "Keep path_policy.cpp free of sol2 and of anything that depends on quiver's PRIVATE compile definitions: the test copy is compiled without them."
-
-### IN-02: Doubled word left by the rewrite
-
-**File:** `tests/test_lua_runner_read_csv.cpp:231-232`
-**Issue:** The comment reads "mirroring the real Maranhao file's shape / shape. BOM stripping must hold...". The rewrite removed `(D-22). PARSE-05` but kept both halves of "shape".
-**Fix:** `// BOM + a junk title line above the real header, mirroring the real Maranhao file's shape. BOM stripping must hold under ...`
 
 ### IN-03: One "pinned by" citation pins only part of its message
 
@@ -135,6 +130,6 @@ TEST_F(SandboxedPathTest, SiblingSharingTheRootPrefixIsRejected) {
 
 ---
 
-_Reviewed: 2026-10-03T18:31:23Z_
+_Reviewed: 2026-10-03T18:44:48Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
