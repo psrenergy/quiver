@@ -131,7 +131,10 @@ auto binop(const char* operation) {
         if (!lnum && rnum) {
             return Op{}(to_expression(lhs, operation), rhs.as<double>());
         }
-        return Op{}(to_expression(lhs, operation), to_expression(rhs, operation));
+        // Locals, not arguments: argument order is unspecified, and the leftmost bad operand is reported.
+        auto a = to_expression(lhs, operation);
+        auto b = to_expression(rhs, operation);
+        return Op{}(a, b);
     };
 }
 
@@ -321,7 +324,10 @@ void bind_binary(sol::state& state, sol::usertype<Database>& bind, sol::table& n
     ns.set_function("log", [](sol::object o) { return quiver::log(to_expression(o, "log")); });
     ns.set_function("exp", [](sol::object o) { return quiver::exp(to_expression(o, "exp")); });
     ns.set_function("ifelse", [](sol::object c, sol::object t, sol::object e) {
-        return quiver::ifelse(to_expression(c, "ifelse"), to_expression(t, "ifelse"), to_expression(e, "ifelse"));
+        auto cond = to_expression(c, "ifelse");
+        auto then_value = to_expression(t, "ifelse");
+        auto else_value = to_expression(e, "ifelse");
+        return quiver::ifelse(cond, then_value, else_value);
     });
     // Comparisons produce 1.0/0.0 per element (NaN operand -> NaN). Free functions because Lua
     // comparison metamethods are coerced to bool and cannot return an Expression.

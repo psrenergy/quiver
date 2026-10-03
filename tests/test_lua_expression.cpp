@@ -571,3 +571,12 @@ TEST_F(LuaExpressionTest, OperandErrorsNameTheOperation) {
     expect_lua_error(lua, e + "return quiver.ifelse(e, e, 'x')", "Cannot ifelse" + tail + "string");
     expect_lua_error(lua, "return quiver.expression(5)", "Cannot expression" + tail + "number");
 }
+
+TEST_F(LuaExpressionTest, OperandErrorsReportTheLeftmostBadOperand) {
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+    // Operands are decoded in argument order, so the reported one does not depend on the compiler.
+    const std::string tail = ": operand must be an expression or a binary file, got ";
+    expect_lua_error(lua, "return quiver.gt('a', {})", "Cannot gt" + tail + "string");
+    expect_lua_error(lua, "return quiver.ifelse(5, {}, 'x')", "Cannot ifelse" + tail + "number");
+}
