@@ -4,16 +4,16 @@ milestone: v0.12.9
 milestone_name: milestone
 current_phase: 5
 current_phase_name: Path-Policy Test and Docs
-status: executing
-stopped_at: Completed 05-03-PLAN.md
-last_updated: "2026-10-03T17:51:55.247Z"
+status: verifying
+stopped_at: Completed 05-04-PLAN.md
+last_updated: "2026-10-03T18:21:45.292Z"
 last_activity: 2026-10-03
 last_activity_desc: Phase 2 complete, transitioned to Phase 3
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 17
-  completed_plans: 16
+  completed_plans: 17
 ---
 
 # Project State
@@ -29,10 +29,10 @@ See: .planning/PROJECT.md (updated 2026-10-03)
 
 Phase: 5 (Path-Policy Test and Docs) — EXECUTING
 Plan: 4 of 4
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-10-03 — Phase 5 execution started
 
-Progress: [█████████░] 94%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -77,6 +77,7 @@ Progress: [█████████░] 94%
 | Phase 05 P01 | 40 min | 2 tasks | 8 files |
 | Phase 05 P02 | 25 min | 3 tasks | 13 files |
 | Phase 05 P03 | 15 min | 3 tasks | 6 files |
+| Phase 05 P04 | 35 min | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -125,6 +126,7 @@ Recent decisions affecting current work:
 - [Phase 05]: quiver_tests compiles its own copy of src/lua_runner/path_policy.cpp to reach the hidden resolve_sandboxed_path; nothing new exported; path_policy.cpp stays a one-function file
 - [Phase 05]: 05-02: catalogue entries name their pinning test on a 'pinned by Suite.Test' line; the collect_garbage() note cites no test because close_open_handles() runs first
 - [Phase 05]: 05-03: WRITE-06 is spelled 'the close-at-exit flush' and FMT-02 'the lone-empty-cell quoting' in test comments; DOC-01 closed (ids.sh IDS=0 FILES=0, RESIDUAL=44 = 19 diagnostic sites + 1 trailing comment)
+- [Phase 05]: 05-04: the reference's sandbox-limits bullet gets no CHANGELOG entry (documents existing behaviour); pre-shape type errors documented in src/AGENTS.md, no message changed
 
 ### Pending Todos
 
@@ -155,6 +157,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-10-03T17:51:55.222Z
-Stopped at: Completed 05-03-PLAN.md
+Last session: 2026-10-03T18:21:45.266Z
+Stopped at: Completed 05-04-PLAN.md
 Resume file: None
