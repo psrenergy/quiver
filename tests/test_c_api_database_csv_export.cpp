@@ -25,7 +25,7 @@ static fs::path temp_csv(const std::string& name) {
 }
 
 // ============================================================================
-// CSV-01: export_csv routing (scalar, vector, set, time series, invalid)
+// export_csv routing (scalar, vector, set, time series, invalid)
 // ============================================================================
 
 TEST(DatabaseCApiCSV, ExportCSV_ScalarExport_HeaderAndData) {
@@ -265,7 +265,7 @@ TEST(DatabaseCApiCSV, ExportCSV_InvalidGroup_ReturnsError) {
 }
 
 // ============================================================================
-// CSV-02: RFC 4180 compliance
+// RFC 4180 compliance
 // ============================================================================
 
 TEST(DatabaseCApiCSV, ExportCSV_RFC4180_CommaEscaping) {
@@ -395,7 +395,7 @@ TEST(DatabaseCApiCSV, ExportCSV_LFLineEndings) {
 }
 
 // ============================================================================
-// CSV-03: Empty collection
+// Empty collection
 // ============================================================================
 
 TEST(DatabaseCApiCSV, ExportCSV_EmptyCollection_HeaderOnly) {
@@ -421,7 +421,7 @@ TEST(DatabaseCApiCSV, ExportCSV_EmptyCollection_HeaderOnly) {
 }
 
 // ============================================================================
-// CSV-04: NULL values
+// NULL values
 // ============================================================================
 
 TEST(DatabaseCApiCSV, ExportCSV_NullValues_EmptyFields) {
@@ -457,7 +457,7 @@ TEST(DatabaseCApiCSV, ExportCSV_NullValues_EmptyFields) {
 }
 
 // ============================================================================
-// OPT-01: Default options (raw values)
+// Default options (raw values)
 // ============================================================================
 
 TEST(DatabaseCApiCSV, ExportCSV_DefaultOptions_RawValues) {
@@ -497,7 +497,7 @@ TEST(DatabaseCApiCSV, ExportCSV_DefaultOptions_RawValues) {
 }
 
 // ============================================================================
-// OPT-02: Enum resolution
+// Enum resolution
 // ============================================================================
 
 TEST(DatabaseCApiCSV, ExportCSV_EnumLabels_ReplacesIntegers) {
@@ -618,7 +618,7 @@ TEST(DatabaseCApiCSV, ExportCSV_EnumLabels_UnmappedFallback) {
 }
 
 // ============================================================================
-// OPT-03: Date formatting
+// Date formatting
 // ============================================================================
 
 TEST(DatabaseCApiCSV, ExportCSV_DateTimeFormat_FormatsDateColumns) {
@@ -715,7 +715,7 @@ TEST(DatabaseCApiCSV, ExportCSV_DateTimeFormat_NonDateColumnsUnaffected) {
 }
 
 // ============================================================================
-// OPT-04: Default options factory
+// Default options factory
 // ============================================================================
 
 TEST(DatabaseCApiCSV, ExportCSV_DefaultOptionsFactory) {
