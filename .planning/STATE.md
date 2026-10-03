@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 5
 current_phase_name: Path-Policy Test and Docs
 status: executing
-stopped_at: Completed 05-01-PLAN.md
-last_updated: "2026-10-03T17:14:37.738Z"
+stopped_at: Completed 05-02-PLAN.md
+last_updated: "2026-10-03T17:36:36.286Z"
 last_activity: 2026-10-03
 last_activity_desc: Phase 2 complete, transitioned to Phase 3
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 17
-  completed_plans: 14
+  completed_plans: 15
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-10-03)
 ## Current Position
 
 Phase: 5 (Path-Policy Test and Docs) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-10-03 — Phase 5 execution started
 
-Progress: [████████░░] 82%
+Progress: [█████████░] 88%
 
 ## Performance Metrics
 
@@ -75,6 +75,7 @@ Progress: [████████░░] 82%
 | Phase 04 P03 | 27min | 2 tasks | 10 files |
 | Phase 04 P04 | 41min | 2 tasks | 9 files |
 | Phase 05 P01 | 40 min | 2 tasks | 8 files |
+| Phase 05 P02 | 25 min | 3 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -121,6 +122,7 @@ Recent decisions affecting current work:
 - [Phase 4]: 04-04: the getter is now unchecked in Debug too (explicit =0 beats sol2's debug default); lua_cell_as and the key checks guard every .as<, Debug golden unchanged
 - [Phase 4]: 04-04: Lua* = 472 / 12 suites (Windows Debug and Release), Linux 470 + 1 skip, C API 27 at 7e5eccd (superseded by the post-review baseline below: 477 at e6aa5c1)
 - [Phase 05]: quiver_tests compiles its own copy of src/lua_runner/path_policy.cpp to reach the hidden resolve_sandboxed_path; nothing new exported; path_policy.cpp stays a one-function file
+- [Phase 05]: 05-02: catalogue entries name their pinning test on a 'pinned by Suite.Test' line; the collect_garbage() note cites no test because close_open_handles() runs first
 
 ### Pending Todos
 
@@ -150,6 +152,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-10-03T17:14:37.718Z
-Stopped at: Completed 05-01-PLAN.md
+Last session: 2026-10-03T17:36:36.249Z
+Stopped at: Completed 05-02-PLAN.md
 Resume file: None
