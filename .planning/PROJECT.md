@@ -38,12 +38,13 @@ fixes listed below.
 - ✓ Text-only Lua: `load` and the script given to `run()` refuse bytecode (the second was found by code review). — Phase 4
 - ✓ An empty array in `update_element` reaches the core and clears the group (BREAKING, CHANGELOG documents the shared-column and round-trip consequences); `create_element` still skips it. — Phase 4
 - ✓ Expression operand errors name the public operation, the leftmost bad operand is reported deterministically, and the dead branches are gone. `Lua*` 444 → 477 (Linux 475), C API 27. — Phase 4
+- ✓ `resolve_sandboxed_path` is unit-tested directly: `SandboxedPathTest` (11 on Windows, 10 on Linux) through the sol2-free `src/lua_runner/path_policy.h`, with `path_policy.cpp` compiled into `quiver_tests` (nothing newly exported). Outside the `Lua*` filter, which stays at 477. — Phase 5
+- ✓ No planning-ID comment remains outside `.planning/` (the repo-wide gate went 256 → 0 lines). Each removed ID was replaced by its reason or the name of the test that pins it. — Phase 5
+- ✓ Every AGENTS.md, `LUA_DB_API_REFERENCE` (the empty-array rule, plus what the sandbox does not limit: instructions, memory, wall time, globals across `run()`) and CHANGELOG `[0.13.0] — unreleased` match the finished milestone. All six suites, the sync test, Debug/Release and Linux GCC/Clang are green; the version is 0.13.0. — Phase 5
 
 ### Active
 
-- [ ] The path-containment gate `resolve_sandboxed_path` is unit-tested directly, in addition to the Lua-level tests.
-- [ ] Planning IDs in comments (`D-xx`, `LUA-xx`, `WRITE-xx`, `FMT-xx`, `TEST-xx`, references to deleted `.planning` files) are replaced repo-wide with their one-line reason or the test that pins them.
-- [ ] Every AGENTS.md, the shipped Lua reference text (including what the sandbox does not limit) and the CHANGELOG (`[0.13.0]`, BREAKING entries saying what a script author must change) match the new layout and behaviour.
+(none: every milestone requirement is validated)
 
 ### Out of Scope
 
@@ -61,7 +62,7 @@ fixes listed below.
 - `Impl` is a set of free functions in disguise. Instance state is only `db`, `lua`, the writer/binary-file registries (`open_writers`, `open_binary_files`, `path_has_open_writer`, `close_open_writers`) and three `[this]` captures (`open_file`, `write_csv`, `expr:save`). The split therefore needs a small `Context`/`RunHandles` held inside the heap-allocated `Impl`, so captured references survive a move. Phase 1 enforces this: `tests/test_lua_runner_lifecycle.cpp` static-asserts `sizeof(LuaRunner) == sizeof(void*)` (fails in every build if run state moves onto `LuaRunner`), and its freed-source pins crash in Debug if bindings reach state through the moved-from runner.
 - The sync test (`bindings/js/test/lua-api-sync.test.ts`) reads `src/lua_runner/` recursively (since Phase 2). Pass 1 matches `(bind|ns).set_function("name"`, so the local/parameter names `bind` and `ns` are load-bearing. Pass 2 relies on unqualified `new_usertype<X>`, one method name per line, and the 120-column limit. `current` must reset at file boundaries.
 - CI builds Release, where sol2 does not check `sol::table` parameters at all and Lua's API checks are off. That makes C1 undefined behaviour, not just a wrong error.
-- Version: CMake and all manifests are at 0.13.0, and the latest tag is `v0.12.9`, so the milestone's BREAKING changes land in 0.13.0 with no further bump. CHANGELOG has no `[0.12.9]` or `[0.13.0]` section yet; the newest is `[0.12.8]`.
+- Version: CMake and all manifests are at 0.13.0, and the latest tag is `v0.12.9`, so the milestone's BREAKING changes land in 0.13.0 with no further bump. CHANGELOG now has a complete `[0.13.0] — unreleased` section with its compare link; a `[0.12.9]` section is still missing (backfilling it is the maintainer's call).
 - Development is on Windows (Git Bash/PowerShell). Python runs via `uv run`. `scripts/test-all.bat` runs the six suites.
 
 ## Constraints
@@ -87,7 +88,7 @@ fixes listed below.
 | An empty array in Lua `create_element`/`update_element` is passed through to the core (clears on update) | Consistency with C++/Python/JS. On update, a typo'd empty column now throws ("does not match any vector, set, or time series table") instead of being ignored | ✓ Phase 4 (BREAKING). Also clears every group sharing the column name and, for `{ date_time = {} }`, every time-series group; tests pin each edge |
 | Rename tail: closed/disposed messages, `SandboxException`, "directory containment" wording (`resolve_contained_path`), one `Sandbox*` test prefix | So "sandbox" means only the class | Reverted 2026-10-02: user decision, dropped with the rename. The scope statement (what the sandbox does not limit) stays, in DOC-04 |
 | Debug-only sol2 diagnostic text may change in the dedupe (dot-call text, and the bound C++ signature in "bad argument" for the M3 member pointers and the M5 `std::optional` returns) | Roadmap allowed it for member pointers; research showed the same mechanism also covers M5. No test pins it, and Release prints none of it | ✓ Phase 3: 12 probes changed, all within the allowance; 13 control probes are unchanged. Orchestrator decision, flagged to the user |
-| Planning-ID comments replaced repo-wide | They point at deleted `.planning` files; Human-Centric principle | — Pending |
+| Planning-ID comments replaced repo-wide | They point at deleted `.planning` files; Human-Centric principle | ✓ Phase 5: gate at 0. Code review caught one left-behind numbering (the Reader error "catalogue" ordinals); it now names the pinning tests |
 | One PR per phase into master, each green on its own | Reviewable and bisectable; split and dedupe stay provably behaviour-neutral | — Pending |
 | Tests that pin behaviour first, then split, dedupe, fixes, and the path-policy test and docs last | The split is only safe once the existing behaviour is pinned | ✓ Phase 1 done: 16 pins + 2 controls, mutation-tested; a live-source-only move pin was shown too weak (run state reached through the moved-from runner passed), fixed with freed-source pins and a `sizeof` static_assert |
 | Delete the `SOL_SAFE_FUNCTION=1` define and its AGENTS.md claim (SAFE-06) | sol2 v3.5.0 never reads it (only `SOL_SAFE_FUNCTIONS`, `SOL_SAFE_FUNCTION_OBJECTS`, `SOL_SAFE_FUNCTION_CALLS`), so it is dead; `SOL_ALL_SAFETIES_ON` covers what it claimed. Chosen in REQUIREMENTS over the research default of keeping it with a corrected comment | ✓ Phase 4 |
@@ -112,4 +113,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-03 after Phase 4 (fixes and Release type safety)*
+*Last updated: 2026-10-03 after Phase 5 (path-policy test and docs)*
