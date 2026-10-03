@@ -281,7 +281,7 @@ csv_read::Options read_csv_options_from_lua(const sol::object& options, const st
 // NOLINTBEGIN(performance-unnecessary-value-param) sol2 lambda bindings require pass-by-value for type
 // deduction
 void bind_csv(sol::state& lua, sol::usertype<Database>& bind, RunHandles& handles) {
-    // CSV file reading/writing -- db-scoped and sandboxed like the file I/O above. The two
+    // CSV file reading/writing -- db-scoped and sandboxed like the file I/O in binary.cpp. The two
     // reading entry points below construct the same csv_read reader and drive it through
     // header()/for_each_row(), so they cannot diverge on any input. Writing
     // (db:write_csv) is streaming-only -- there is no whole-file counterpart, by decision.
