@@ -45,7 +45,7 @@ src/                      # C++ implementation
   element.cpp / row.cpp / result.cpp / migration.cpp / migrations.cpp
   lua_runner/             # LuaRunner (sol2): every Lua binding, one file per domain
     lua_runner.cpp        # LuaRunner::Impl (ctor order, the one Database usertype), RunHandles bodies, run()/GcGuard
-    internal.h            # quiver::lua_internal: RunHandles, binder decls, converters, option walk, group-decoder decls
+    internal.h            # quiver::lua_internal: RunHandles, binder decls, converters, read adapters, option walk, group-decoder decls
     return_json.cpp       # run()'s JSON encoder
     path_policy.cpp       # resolve_sandboxed_path, the single filesystem gate
     db_core.cpp           # bind_core: info, transactions, dry runs, count, describe, query, migrations, export/import_csv
@@ -654,6 +654,27 @@ Implementation conventions in `src/lua_runner/`:
   count both. Each TU with by-value sol2 parameters gets one
   `NOLINTBEGIN/END(performance-unnecessary-value-param)` pair. A file stays at about 450 lines or
   fewer.
+- **Shared helpers**: each repeated binding pattern lives in one helper, and a new method reuses
+  it rather than copying a body. The 17 plain forwarders are `&Database::` member pointers (below).
+  `bulk_read_lua` / `collection_read_lua` (`internal.h`) adapt the bulk readers and are registered
+  under the member's own name. `read_groups_by_id` (`db_read.cpp`) is behind `read_vectors_by_id`
+  and `read_sets_by_id`. The `metadata_to_lua` overloads with `list_metadata_lua` /
+  `get_metadata_lua` (`db_metadata.cpp`) are behind the four `get_*_metadata` and four `list_*`
+  group methods.
+  `query_*_lua` and `read_scalars_by_id` return `std::optional`, so a NULL is `nil` and an absent
+  key. `run_in_scope` (`db_core.cpp`) is the one scoped block behind `db:transaction` and
+  `db:dry_run`, which stay two lambdas so their Debug bad-argument text is unchanged.
+  `collect_entries` / `option_table` / `option_entries` (`internal.h`) are the one option walk:
+  `option_entries` owns the table check and returns slots that callers bind by name with a
+  structured binding, and nil handling stays with each caller. `lua_to_value` is the one write-path
+  dispatch, CSV cells included (`csv_cell_to_string`). `CsvWriter::write_row` / `close` are members
+  registered by member pointer, and `header_object` (`csv.cpp`) is the one no-header rule for both
+  read forms. `RunHandles::add_writer` / `add_binary_file` are the only way into the run-handle
+  registries (prune expired entries, then append), and `close_open_handles` empties both at
+  `run()`'s exit. `binop<Op>` (`binary.cpp`) with a transparent functor (`std::plus<>`,
+  `std::greater_equal<>`, ...) is every binary Expression operator, metamethods and
+  `quiver.gt`/`lt`/`gte`/`lte`/`eq`/`neq` alike. `columns_to_cpp_rows` owns the group decoders'
+  no-rows rejection and `length_mismatch` (`db_time_series.cpp`) their length message.
 - **Filesystem sandbox**: `resolve_sandboxed_path(db, operation, path)` is the single gate for
   every file-touching Lua operation (`db:open_file`, `db:bin_to_csv`, `db:csv_to_bin`,
   `db:export_csv`, `db:import_csv`, `db:validate_migrations`, `db:read_csv`, `db:read_csv_stream`,
