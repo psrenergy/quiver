@@ -34,7 +34,7 @@ biome.json        # Lint/format config
   no file read, and no Bun loader feature, and `bun build --compile` inlines it into a consumer's
   binary. Converting it to an imported `.md` was tried and deliberately reverted (see root
   `AGENTS.md` "Do Not Fix") — the escaped backticks are the accepted cost.
-  `test/lua-api-sync.test.ts` derives the bound surface from `src/lua_runner.cpp` and fails if a
+  `test/lua-api-sync.test.ts` derives the bound surface from every file under `src/lua_runner/` and fails if a
   `db:`/`quiver.*` name is undocumented, a documented name no longer exists, or the stdlib sentence
   disagrees with `open_libraries`, or any of the `BinaryFile`, `BinaryMetadata`, `Expression` or
   `CsvWriter` usertypes parses to zero methods, or `open_libraries(` does not appear exactly once —

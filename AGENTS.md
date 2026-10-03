@@ -71,7 +71,7 @@ Settled questions — don't relitigate without the user; each was decided delibe
   takes), and changing either side is a breaking API change, not a fix.
 - **Binary + expression subsystems are exposed in Julia and Lua only.** Dart, Python, and JS
   deliberately do not expose them (no FFI consumer); the tests-at-every-layer rule has this one
-  documented exception. Lua binds the C++ classes directly via sol2 (`src/lua_runner.cpp`) with
+  documented exception. Lua binds the C++ classes directly via sol2 (`src/lua_runner/binary.cpp`) with
   method syntax + string aggregation operations; pure-metadata builders live under a `quiver.*`
   namespace while file I/O is db-scoped (see cross-layer table and the sandbox decision below).
   `helper_maps.jl` is a second documented Julia-only exception (see convenience methods below).
@@ -86,7 +86,7 @@ Settled questions — don't relitigate without the user; each was decided delibe
   (string-form `load` stays). The enabled standard libraries are the pure-computation set
   `base`/`string`/`table`/`math`/`coroutine`/`utf8`; `os`/`io`/`package`/`debug` stay unloaded.
   Julia's standalone `open_file` is unaffected — this is LuaRunner policy (`resolve_sandboxed_path`
-  in `src/lua_runner.cpp`), not binary-subsystem policy.
+  in `src/lua_runner/path_policy.cpp`), not binary-subsystem policy.
 - **One scalar typing policy lives in C++**: an int64 is accepted for INTEGER and REAL columns
   (int-for-REAL coercion), a double only for REAL (a float into an INTEGER column is rejected), a
   string for TEXT / DATE_TIME, and an FK label for an INTEGER foreign key wherever
@@ -153,7 +153,7 @@ Settled questions — don't relitigate without the user; each was decided delibe
   the v0.3 research (`git show f92af8d:.planning/research/PITFALLS.md`, Pitfall 4) as the nesting
   complexity the no-op guard exists to avoid.
 - **`LuaRunner::run` returns the script's return value as a JSON string.** One encoder in C++
-  (`src/lua_runner.cpp`, anonymous namespace); every binding passes the string through without
+  (`src/lua_runner/return_json.cpp`, anonymous namespace); every binding passes the string through without
   parsing, so no binding gains a JSON dependency (Julia would have needed one). Only the first
   returned value is encoded; no `return` yields `""`, distinct from `return nil` → `"null"`.
   Non-finite numbers become `null`, a table keyed `1..n` is an array (`{}` → `[]`) and any other
@@ -219,7 +219,7 @@ Settled questions — don't relitigate without the user; each was decided delibe
   is no boolean setter in the C API and none is needed: each binding converts before the FFI call
   (`Element.set` in Dart, `setElementField` / `setElementArray` / `marshalParams` /
   `updateGroupColumns` / `upsertRowColumns` in JS, `lua_to_value` / `lua_cell_as` in
-  `src/lua_runner.cpp`). Julia and Python need no conversion branch because `Bool <: Integer` and
+  `src/lua_runner/internal.h`). Julia and Python need no conversion branch because `Bool <: Integer` and
   `bool` is an `int` subclass respectively, so a boolean takes each writer's integer branch. That
   is worth a test rather than an assumption: in Julia the group and row marshallers are
   branch-order-dependent (`Bool <: Real` too, so their `Integer` test must precede the `Real`
@@ -445,8 +445,8 @@ JS has no generator — update the hand-written symbol table in `bindings/js/src
   the Linux **Dart Coverage** CI job exercises the ON configuration (through the hook); no macOS or
   Windows job does.
 - **macOS builds are floored at deployment target 13.3** (`cmake/Platform.cmake`): libc++ marks
-  the floating-point `std::to_chars` used by `database_csv_export.cpp`, `lua_runner.cpp` and
-  `binary/csv_converter.cpp` (all through `utils::append_number`) unavailable below it, so that is
+  the floating-point `std::to_chars` used by `database_csv_export.cpp`, `lua_runner/return_json.cpp`,
+  `lua_runner/csv.cpp` and `binary/csv_converter.cpp` (all through `utils::append_number`) unavailable below it, so that is
   the **core's** floor, not one binding's. A higher explicit
   `CMAKE_OSX_DEPLOYMENT_TARGET` is respected; a lower one is raised. Do not remove it: with no
   floor, clang stamps the builder's own OS version into every dylib, which is how the published
@@ -732,7 +732,8 @@ broadcast, aggregation, and label projection, materialized via `save()`). Expose
 Executes Lua scripts against a database; the `db` userdata exposes the same API surface
 (see cross-layer tables below). `run(script)` returns the script's return value encoded as
 **JSON** (empty string if it returned nothing) — every binding passes that string through
-verbatim. Implementation notes: `src/AGENTS.md`.
+verbatim. The binding lives in `src/lua_runner/`, one file per domain; the layout and its rules are in
+`src/AGENTS.md`, along with the implementation notes.
 
 ## Cross-Layer Naming Conventions
 
@@ -892,5 +893,5 @@ three shapes and the divergence is not yet resolved. Julia has callback-first ov
 syntax on `Database` (`open`, `from_schema`, `from_migrations`) and `Binary.File` (`open_file`);
 Python has `with` on `Database` and `LuaRunner`; Dart and JS have neither. All of them wrap
 `open + fn + close`. Two caveats hold wherever a scoped form exists: a `LuaRunner` borrows its
-`Database` (raw `Database&` in `src/lua_runner.cpp`) and must not outlive the block, and an
+`Database` (raw `Database&` in `src/lua_runner/lua_runner.cpp`) and must not outlive the block, and an
 uncommitted transaction still open at the block's exit is rolled back by the close.

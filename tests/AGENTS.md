@@ -174,7 +174,8 @@ non-Database files (`composites.test.ts`, `introspection.test.ts`, `lua-runner.t
 `lua-api-sync.test.ts`, `package-entry.test.ts`) keep their bare names.
 
 `bindings/js/test/lua-api-sync.test.ts` is the only JS test file that needs neither a database nor
-the native library: it parses `src/lua_runner.cpp` and asserts `bindings/js/src/lua-api.ts` documents
+the native library: it parses every `.cpp`/`.h` under `src/lua_runner/` (sorted, with the open
+usertype reset at each file boundary) and asserts `bindings/js/src/lua-api.ts` documents
 every bound `db:`/`quiver.*` name and the exact `open_libraries` list. It also fails if any of the
 `BinaryFile`, `BinaryMetadata`, `Expression` or `CsvWriter` usertypes parses to zero methods, or if
 `open_libraries(` does not appear exactly once, so a missed file or usertype cannot pass vacuously.
