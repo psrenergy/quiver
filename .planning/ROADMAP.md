@@ -177,7 +177,7 @@ Plans:
   3. The root, `src/`, `src/c/`, `tests/` and four binding AGENTS.md files describe the `src/lua_runner/` layout, the C7 rule, text-only `load` and the safety flags.
   4. CHANGELOG `[0.13.0] — unreleased` is complete: it holds Phase 4's BREAKING and `### Fixed` entries and the compare link, has no rename entry (nothing is renamed), and no entry carries a planning ID. `LUA_DB_API_REFERENCE` states the empty-array rule and what the sandbox does not limit (instructions, memory, wall time, globals persisting across `run()`). The sync test and all six suites are green, and the version is still 0.13.0.
 
-**Plans**: 2/4 plans executed
+**Plans**: 3/4 plans executed
 
 Plans:
 **Wave 1**
@@ -190,7 +190,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 05-03-PLAN.md — Tracer: core and C API test files; then the read_csv and write_csv tests (approved diagnostic strings, corrected flush comments); repo-wide ID gate reaches 0 (DOC-01)
+- [x] 05-03-PLAN.md — Tracer: core and C API test files; then the read_csv and write_csv tests (approved diagnostic strings, corrected flush comments); repo-wide ID gate reaches 0 (DOC-01)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -207,4 +207,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 2. Mechanical Split | 4/4 | Complete    | 2026-10-03 |
 | 3. Dedupe | 3/3 | Complete    | 2026-10-03 |
 | 4. Fixes and Release Type Safety | 4/4 | Complete    | 2026-10-03 |
-| 5. Path-Policy Test and Docs | 2/4 | In Progress|  |
+| 5. Path-Policy Test and Docs | 3/4 | In Progress|  |

@@ -56,7 +56,7 @@ Evidence for each item (line numbers at `bdf9087`) is in `.planning/research/LUA
 
 ### Docs
 
-- [ ] **DOC-01**: Planning-ID comments (`D-xx`, `LUA-xx`, `WRITE-xx`, `FMT-xx`, `TEST-xx`, and references to deleted `.planning` files) are replaced repo-wide with their one-line reason or the test that pins them.
+- [x] **DOC-01**: Planning-ID comments (`D-xx`, `LUA-xx`, `WRITE-xx`, `FMT-xx`, `TEST-xx`, and references to deleted `.planning` files) are replaced repo-wide with their one-line reason or the test that pins them.
 - [ ] **DOC-02**: The root, `src/`, `src/c/`, `tests/` and four binding AGENTS.md files describe the new layout and changed decisions: the `src/lua_runner/` layout, the C7 rule, text-only `load`, and the safety flags. (Deleting the `SOL_SAFE_FUNCTION` claim is owned by SAFE-06.)
 - [ ] **DOC-03**: CHANGELOG gets a `## [0.13.0] — unreleased` section. BREAKING entries cover wrong-type arguments now throwing (C1/C5), the empty-array change (C7) and text-only `load`. `### Fixed` entries cover C2, C4, C6 and C8.
 - [ ] **DOC-04**: The shipped `LUA_DB_API_REFERENCE` text matches the code: the empty-array rule, and a statement of what the sandbox does not limit (instructions, memory, wall time, and globals persisting across `run()`). The sync test stays green.
@@ -133,7 +133,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FIX-02 | Phase 4 | Complete |
 | FIX-03 | Phase 4 | Complete |
 | TEST-01 | Phase 5 | Complete |
-| DOC-01 | Phase 5 | Pending |
+| DOC-01 | Phase 5 | Complete |
 | DOC-02 | Phase 5 | Pending |
 | DOC-03 | Phase 5 | Pending |
 | DOC-04 | Phase 5 | Pending |
