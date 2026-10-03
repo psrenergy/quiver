@@ -14,7 +14,10 @@ set(QUIVER_SOURCES
     csv/csv_write.cpp
     database_describe.cpp
     element.cpp
+    lua_runner/internal.h
     lua_runner/lua_runner.cpp
+    lua_runner/path_policy.cpp
+    lua_runner/return_json.cpp
     migration.cpp
     migrations.cpp
     result.cpp
