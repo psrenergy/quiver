@@ -2,10 +2,9 @@
 gsd_state_version: 1.0
 milestone: v0.12.9
 milestone_name: milestone
-current_phase: 5
-status: completed
-stopped_at: Completed 05-04-PLAN.md
-last_updated: "2026-10-03T18:50:25.320Z"
+status: Awaiting next milestone
+stopped_at: Phase 5 complete (verified 9/9 after review-fix gap closure); all 5 phases done, milestone ready to close
+last_updated: "2026-10-03T19:13:44.635Z"
 last_activity: 2026-10-03
 last_activity_desc: Phase 2 complete, transitioned to Phase 3
 progress:
@@ -13,6 +12,7 @@ progress:
   completed_phases: 5
   total_plans: 17
   completed_plans: 17
+current_phase: 5
 current_phase_name: Path-Policy Test and Docs
 ---
 
@@ -27,12 +27,10 @@ See: .planning/PROJECT.md (updated 2026-10-03)
 
 ## Current Position
 
-Phase: 5
-Plan: Not started
-Status: All phases complete
-Last activity: 2026-10-03 — Phase 5 complete
-
-Progress: [██████████] 100%
+Phase: Milestone v0.12.9 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-10-03 — Milestone v0.12.9 completed and archived
 
 ## Performance Metrics
 
@@ -162,3 +160,7 @@ Items acknowledged and carried forward from previous milestone close:
 Last session: 2026-10-03
 Stopped at: Phase 5 complete (verified 9/9 after review-fix gap closure); all 5 phases done, milestone ready to close
 Resume file: None
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone
