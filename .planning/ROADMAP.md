@@ -27,7 +27,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Behaviour Pins** - Tests pin every behaviour the split could break, before any code moves (completed 2026-10-02)
 - [x] **Phase 2: Mechanical Split** - `src/lua_runner.cpp` becomes `src/lua_runner/` per-domain files with zero behaviour change (completed 2026-10-03)
-- [ ] **Phase 3: Dedupe** - Repeated boilerplate (M1, M3-M5, M7-M16) collapses into shared helpers with zero behaviour change
+- [x] **Phase 3: Dedupe** - Repeated boilerplate (M1, M3-M5, M7-M16) collapses into shared helpers with zero behaviour change (completed 2026-10-03)
 - [ ] **Phase 4: Fixes and Release Type Safety** - Wrong-type script arguments raise Pattern 1 errors in Release, and C1-C8 are fixed (backstop flag last)
 - [ ] **Phase 5: Path-Policy Test and Docs** - The path-policy unit test, the repo-wide planning-ID sweep, and the finished docs for 0.13.0
 
@@ -171,6 +171,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 |-------|----------------|--------|-----------|
 | 1. Behaviour Pins | 2/2 | Complete    | 2026-10-02 |
 | 2. Mechanical Split | 4/4 | Complete    | 2026-10-03 |
-| 3. Dedupe | 3/3 | In Progress|  |
+| 3. Dedupe | 3/3 | Complete    | 2026-10-03 |
 | 4. Fixes and Release Type Safety | 0/TBD | Not started | - |
 | 5. Path-Policy Test and Docs | 0/TBD | Not started | - |
