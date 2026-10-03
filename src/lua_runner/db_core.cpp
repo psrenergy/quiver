@@ -78,6 +78,34 @@ CSVOptions parse_csv_options(const sol::object& options, const std::string& oper
     return result;
 }
 
+// The single place the db:transaction / db:dry_run sequencing lives: open the scope, run the
+// callback with the database, and on a Lua error undo the scope (any failure of the undo itself is
+// swallowed so the script sees the callback's error) before rethrowing; on success close the scope
+// and hand back the callback's first return value, or nil when it returned nothing.
+sol::object run_in_scope(
+    Database& self,
+    const sol::protected_function& fn,
+    void (Database::*begin)(),
+    void (Database::*finish)(),
+    void (Database::*abort)()
+) {
+    (self.*begin)();
+    auto result = fn(std::ref(self));
+    if (!result.valid()) {
+        sol::error err = result;
+        try {
+            (self.*abort)();
+        } catch (...) {
+        }
+        throw std::runtime_error(err.what());
+    }
+    (self.*finish)();
+    if (result.return_count() > 0) {
+        return result.get<sol::object>(0);
+    }
+    return sol::make_object(result.lua_state(), sol::lua_nil);
+}
+
 std::vector<Value> lua_table_to_values(const std::string& caller, const sol::table& parameters) {
     std::vector<Value> values;
     for (size_t i = 1; i <= parameters.size(); ++i) {
@@ -145,41 +173,13 @@ void bind_core(sol::usertype<Database>& bind) {
     bind.set_function("rollback", &Database::rollback);
     bind.set_function("in_transaction", &Database::in_transaction);
     bind.set_function("transaction", [](Database& self, sol::protected_function fn) -> sol::object {
-        self.begin_transaction();
-        auto result = fn(std::ref(self));
-        if (!result.valid()) {
-            sol::error err = result;
-            try {
-                self.rollback();
-            } catch (...) {
-            }
-            throw std::runtime_error(err.what());
-        }
-        self.commit();
-        if (result.return_count() > 0) {
-            return result.get<sol::object>(0);
-        }
-        return sol::make_object(result.lua_state(), sol::lua_nil);
+        return run_in_scope(self, fn, &Database::begin_transaction, &Database::commit, &Database::rollback);
     });
     bind.set_function("begin_dry_run", &Database::begin_dry_run);
     bind.set_function("end_dry_run", &Database::end_dry_run);
     bind.set_function("in_dry_run", &Database::in_dry_run);
     bind.set_function("dry_run", [](Database& self, sol::protected_function fn) -> sol::object {
-        self.begin_dry_run();
-        auto result = fn(std::ref(self));
-        if (!result.valid()) {
-            sol::error err = result;
-            try {
-                self.end_dry_run();
-            } catch (...) {
-            }
-            throw std::runtime_error(err.what());
-        }
-        self.end_dry_run();
-        if (result.return_count() > 0) {
-            return result.get<sol::object>(0);
-        }
-        return sol::make_object(result.lua_state(), sol::lua_nil);
+        return run_in_scope(self, fn, &Database::begin_dry_run, &Database::end_dry_run, &Database::end_dry_run);
     });
     bind.set_function(
         "export_csv",
