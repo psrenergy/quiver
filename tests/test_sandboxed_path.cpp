@@ -81,7 +81,7 @@ TEST_F(SandboxedPathTest, AbsolutePathOutsideIsRejected) {
 TEST_F(SandboxedPathTest, RootItselfIsRejected) {
     // The binary subsystem appends ".qvr" by concatenation, so the root would write "<root>.qvr" outside.
     quiver::Database db(db_path(), quiet());
-    for (const std::string path : {std::string("."), std::string("sub/.."), sandbox.string()}) {
+    for (const std::string& path : {std::string("."), std::string("sub/.."), sandbox.string()}) {
         EXPECT_EQ(error_of(db, "open_file", path), escapes("open_file", path));
     }
 }
@@ -115,7 +115,7 @@ TEST_F(SandboxedPathTest, InMemoryDatabaseIsRejectedBeforeContainment) {
 // A device name makes weakly_canonical throw; the OS reason after the prefix is localized.
 TEST_F(SandboxedPathTest, DeviceNameIsReportedWithPrefix) {
     quiver::Database db(db_path(), quiet());
-    for (const std::string device : {std::string("NUL"), std::string("nul")}) {
+    for (const std::string& device : {std::string("NUL"), std::string("nul")}) {
         const auto prefix = "Cannot open_file: cannot resolve path '" + device + "': ";
         const auto message = error_of(db, "open_file", device);
         EXPECT_EQ(message.rfind(prefix, 0), 0U) << message;
