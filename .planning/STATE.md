@@ -4,16 +4,16 @@ milestone: v0.12.9
 milestone_name: milestone
 current_phase: 3
 current_phase_name: Dedupe
-status: executing
-stopped_at: Completed 03-02-PLAN.md
-last_updated: "2026-10-03T06:54:09.966Z"
+status: verifying
+stopped_at: Completed 03-03-PLAN.md
+last_updated: "2026-10-03T07:23:27.348Z"
 last_activity: 2026-10-03
 last_activity_desc: Phase 2 complete, transitioned to Phase 3
 progress:
   total_phases: 3
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 9
-  completed_plans: 8
+  completed_plans: 9
 ---
 
 # Project State
@@ -29,10 +29,10 @@ See: .planning/PROJECT.md (updated 2026-10-03)
 
 Phase: 3 (Dedupe) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-10-03 — Phase 3 execution started
 
-Progress: [█████████░] 89%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -67,6 +67,7 @@ Progress: [█████████░] 89%
 | Phase 02 P04 | 45min | 3 tasks | 15 files |
 | Phase 03 P01 | 35min | 3 tasks | 7 files |
 | Phase 03 P02 | 20min | 2 tasks | 6 files |
+| Phase 03 P03 | 22min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -98,6 +99,8 @@ Recent decisions affecting current work:
 - [Phase 3]: 03-01: query_*_lua stay three named functions so Phase 4 optional_from_lua lands at three sites
 - [Phase 3]: 03-02: option_entries owns the options-must-be-a-table check; nil handling stays per caller (CSV decoders return defaults, quiver.metadata lets nil reach the check)
 - [Phase 3]: 03-02: Debug-only sol2 dot-call text change accepted for w.write_row / w.close (CsvWriter members); Release unchanged
+- [Phase 3]: 03-03: run-handle registries prune only expired() entries on insert (add_writer/add_binary_file); the close-at-exit function is close_open_handles
+- [Phase 3]: 03-03: binop<Op> with transparent functors backs all twelve binary Expression operators; gt..neq stay six literal ns.set_function calls for the sync test
 
 ### Pending Todos
 
@@ -123,6 +126,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-10-03T06:54:09.948Z
-Stopped at: Completed 03-02-PLAN.md
+Last session: 2026-10-03T07:23:27.332Z
+Stopped at: Completed 03-03-PLAN.md
 Resume file: None
