@@ -337,3 +337,21 @@ TEST_F(LuaRunnerTest, CreateElementRejectsUserdataAttribute) {
     );
     EXPECT_TRUE(db.read_element_ids("Collection").empty());
 }
+
+// A number key used to be spelled as text in Release, and a boolean key had no text at all.
+TEST_F(LuaRunnerTest, CreateElementRejectsNonStringAttributeName) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(
+        lua,
+        R"(db:create_element("Collection", { "x" }))",
+        "Cannot create_element: attribute name must be a string, got number"
+    );
+    expect_lua_error(
+        lua,
+        R"(db:create_element("Collection", { label = "y", [true] = 1 }))",
+        "Cannot create_element: attribute name must be a string, got boolean"
+    );
+    EXPECT_TRUE(db.read_element_ids("Collection").empty());
+}

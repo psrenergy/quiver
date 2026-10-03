@@ -53,7 +53,7 @@ Element table_to_element(const std::string& caller, const sol::object& values) {
     for (const auto& pair : require_table(values, caller, "element_table")) {
         auto key = pair.first;
         auto val = pair.second;
-        auto k = key.as<std::string>();
+        auto k = lua_string_key(key, caller, "attribute name");
 
         // A userdata is neither a value nor an array; sol2's loose table test took it for an array.
         if (val.get_type() == sol::type::userdata) {

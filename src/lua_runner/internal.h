@@ -209,6 +209,15 @@ inline sol::table require_table(
     return o.as<sol::table>();
 }
 
+// A map key that names something (an attribute, a column, a dimension). Checked before it is
+// converted: sol2's string getter spells a number key as text and has no text for a boolean.
+inline std::string lua_string_key(const sol::object& key, const std::string& operation, const std::string& what) {
+    if (key.get_type() != sol::type::string) {
+        throw lua_type_error(operation, what, "a string", key);
+    }
+    return key.as<std::string>();
+}
+
 // A nested option value that must be a table (an options table's `header`, the levels of
 // `enum_labels`); `what` names it in the message.
 inline sol::table option_table(const sol::object& value, const std::string& operation, const std::string& what) {

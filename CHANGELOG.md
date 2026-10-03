@@ -25,6 +25,14 @@ callers to change something are prefixed **BREAKING** and say what to do.
   `w:write_row`) now end in `, got <type>` too. Pass a table, e.g. `{ column = { values... } }`
   for the group writers.
 
+### Fixed
+
+- **A non-string key in a Lua table argument is a Pattern 1 error.** A number or boolean key in an
+  element table, a time-series row, a `file:read`/`file:write` `dims` table or the `paths` of
+  `update_time_series_files` now raises `Cannot <op>: <attribute|column|dimension> name must be a
+  string, got <type>`. Release builds used to spell a number key as text (`column '1' not
+  found ...`) and could crash on a boolean key.
+
 ## [0.12.8] — 2026-10-01
 
 ### Changed

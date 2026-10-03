@@ -1247,3 +1247,22 @@ TEST_F(LuaRunnerTest, RowAndFilesWritersRejectNonTable) {
     );
     EXPECT_TRUE(db.read_time_series_group("Collection", "data", id).empty());
 }
+
+TEST_F(LuaRunnerTest, RowAndFilesWritersRejectNonStringKeys) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    int64_t id = db.create_element("Collection", quiver::Element().set("label", "Item 1"));
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(
+        lua,
+        R"(db:upsert_time_series_row("Collection", "data", )" + std::to_string(id) + R"(, { "2024-01-01T00:00:00" }))",
+        "Cannot upsert_time_series_row: column name must be a string, got number"
+    );
+    expect_lua_error(
+        lua,
+        R"(db:update_time_series_files("Collection", { "a.bin" }))",
+        "Cannot update_time_series_files: column name must be a string, got number"
+    );
+    EXPECT_TRUE(db.read_time_series_group("Collection", "data", id).empty());
+}

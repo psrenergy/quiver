@@ -50,7 +50,7 @@ std::map<std::string, Value> lua_table_to_value_map(const std::string& caller, c
     // relying on positional order. Callers should not depend on insertion order.
     std::map<std::string, Value> result;
     for (auto& pair : require_table(row, caller, "row")) {
-        auto key = pair.first.as<std::string>();
+        auto key = lua_string_key(pair.first, caller, "column name");
         result[key] = lua_to_value(pair.second, caller, "column '" + key + "'");
     }
     return result;
@@ -250,7 +250,7 @@ sol::table read_time_series_files_lua(Database& db, const std::string& collectio
 void update_time_series_files_lua(Database& db, const std::string& collection, const sol::object& paths) {
     std::map<std::string, std::optional<std::string>> cpp_paths;
     for (auto& pair : require_table(paths, "update_time_series_files", "paths")) {
-        auto key = pair.first.as<std::string>();
+        auto key = lua_string_key(pair.first, "update_time_series_files", "column name");
         sol::object val = pair.second;
         if (val.is<sol::lua_nil_t>()) {
             cpp_paths[key] = std::nullopt;

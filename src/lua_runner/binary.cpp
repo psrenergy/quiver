@@ -27,7 +27,7 @@ namespace {
 std::unordered_map<std::string, int64_t> lua_table_to_dim_map(const sol::object& t, const std::string& caller) {
     std::unordered_map<std::string, int64_t> dims;
     for (auto& pair : require_table(t, caller, "dims")) {
-        auto key = pair.first.as<std::string>();
+        auto key = lua_string_key(pair.first, caller, "dimension name");
         dims[key] = lua_cell_as<int64_t>(pair.second, caller, "dimension '" + key + "'");
     }
     return dims;

@@ -485,3 +485,18 @@ TEST_F(LuaBinaryTest, MetadataRejectsNonTableArguments) {
         "Cannot metadata_from_element: element_table must be a table, got number"
     );
 }
+
+TEST_F(LuaBinaryTest, ReadRejectsNonStringDimensionName) {
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+    lua.run(md1() + R"(
+        local f = db:open_file('bin_a', 'w', md)
+        f:write({42.0}, {row=1})
+        f:close()
+    )");
+    expect_lua_error(
+        lua,
+        "db:open_file('bin_a', 'r'):read({ 1 })\n",
+        "Cannot read: dimension name must be a string, got number"
+    );
+}
