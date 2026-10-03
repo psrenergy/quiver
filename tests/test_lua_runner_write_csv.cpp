@@ -68,7 +68,7 @@ std::string extract_lua_example(const std::string& file_contents, const std::str
     return unescaped;
 }
 
-// TEST-12: adapted from test_lua_runner_read_csv.cpp's own expect_prefixed_error. Strips the
+// Adapted from test_lua_runner_read_csv.cpp's own expect_prefixed_error. Strips the
 // root Pattern 3 "Failed to run Lua script: " envelope, then asserts the Pattern 1 PREFIX and a
 // reason substring SEPARATELY -- never one bare substring check, so a write_csv message can never
 // satisfy a write_row assertion (or vice versa) and a matching prefix with the wrong reason still
@@ -125,7 +125,7 @@ TEST_F(LuaRunner_WriteCsv, WriteRowThenReadCsvRoundTripsPlainStrings) {
     );
 }
 
-// FMT-04 / TEST-07: an int64 reaches append_number's std::int64_t overload directly, never routed
+// An int64 reaches append_number's std::int64_t overload directly, never routed
 // through double first, so a value past double's 53-bit mantissa survives exactly. This is the
 // single value that distinguishes the integer path from the double path: 9007199254740993 is the
 // first odd integer that cannot be represented as a double, so a regression that routes it through
@@ -152,7 +152,7 @@ TEST_F(LuaRunner_WriteCsv, IntegerCellRoundTripsExactDigitString) {
     );
 }
 
-// TEST-07: INT64_MIN/INT64_MAX -- the buffer-size boundary for append_number's 32-byte array --
+// INT64_MIN/INT64_MAX -- the buffer-size boundary for append_number's 32-byte array --
 // spelled via math.mininteger/math.maxinteger, the robust way to reach them from Lua source (a
 // bare -9223372036854775808 literal is unary minus applied to a positive literal that itself
 // overflows int64, which Lua would instead read as a float).
@@ -180,7 +180,7 @@ TEST_F(LuaRunner_WriteCsv, MinIntegerAndMaxIntegerRoundTripExactDecimalText) {
     );
 }
 
-// TEST-07: a float re-write identity check. Write a float, read the cell back as a string, write
+// A float re-write identity check. Write a float, read the cell back as a string, write
 // THAT string as a second file's cell, read it back, and assert the two read-back strings are
 // identical. This catches a 5-decimal truncation or a 6-significant-digit cut without the test
 // needing to know append_number's exact output text -- that contract belongs to
@@ -223,7 +223,7 @@ TEST_F(LuaRunner_WriteCsv, FloatReWriteIdentityRoundTripsForManySignificantDigit
     );
 }
 
-// D-34: a whole float writes as append_number's to_chars gives it -- no synthetic ".0" -- so a
+// A whole float writes as append_number's to_chars gives it -- no synthetic ".0" -- so a
 // float 2014.0 and the integer 2014 are indistinguishable text after the round trip.
 TEST_F(LuaRunner_WriteCsv, WholeFloatAndEqualIntegerProduceSameCellText) {
     auto schema = VALID_SCHEMA("basic.sql");
@@ -249,7 +249,7 @@ TEST_F(LuaRunner_WriteCsv, WholeFloatAndEqualIntegerProduceSameCellText) {
     );
 }
 
-// FMT-06: a boolean writes as the one-character text 1 or 0, the project-wide boolean-is-INTEGER
+// A boolean writes as the one-character text 1 or 0, the project-wide boolean-is-INTEGER
 // write policy.
 TEST_F(LuaRunner_WriteCsv, BooleanCellWritesOneOrZero) {
     auto schema = VALID_SCHEMA("basic.sql");
@@ -273,7 +273,7 @@ TEST_F(LuaRunner_WriteCsv, BooleanCellWritesOneOrZero) {
     );
 }
 
-// FMT-06: a table or function cell is a Pattern 1 error naming write_row and the 1-based cell
+// A table or function cell is a Pattern 1 error naming write_row and the 1-based cell
 // index -- never silently dropped or stringified.
 TEST_F(LuaRunner_WriteCsv, TableCellThrowsNamingWriteRowAndCellIndex) {
     auto schema = VALID_SCHEMA("basic.sql");
@@ -311,7 +311,7 @@ TEST_F(LuaRunner_WriteCsv, FunctionCellThrowsNamingWriteRowAndCellIndex) {
     );
 }
 
-// FMT-08: row width is the MAXIMUM integer key, not the count of present keys -- an interior hole
+// Row width is the MAXIMUM integer key, not the count of present keys -- an interior hole
 // (key 2 absent, key 3 present) writes an empty middle cell rather than collapsing the row.
 TEST_F(LuaRunner_WriteCsv, RowWidthComesFromMaxIntegerKeyNotKeyCount) {
     auto schema = VALID_SCHEMA("basic.sql");
@@ -336,9 +336,9 @@ TEST_F(LuaRunner_WriteCsv, RowWidthComesFromMaxIntegerKeyNotKeyCount) {
     );
 }
 
-// FMT-02 extended to the degenerate zero-cell case: a row with zero integer keys still writes one
-// quoted empty cell, so the record survives db:read_csv's KEEP_NON_EMPTY policy instead of being
-// discarded as a blank line.
+// The lone-empty-cell quoting, extended to the degenerate zero-cell case: a row with zero integer
+// keys still writes one quoted empty cell, so the record survives db:read_csv's KEEP_NON_EMPTY
+// policy instead of being discarded as a blank line.
 TEST_F(LuaRunner_WriteCsv, RowWithZeroIntegerKeysWritesOneQuotedEmptyCell) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
@@ -361,7 +361,7 @@ TEST_F(LuaRunner_WriteCsv, RowWithZeroIntegerKeysWritesOneQuotedEmptyCell) {
     );
 }
 
-// FMT-08: a non-integer row key, or an integer key below 1, is a Pattern 1 error naming write_row
+// A non-integer row key, or an integer key below 1, is a Pattern 1 error naming write_row
 // -- never silently ignored.
 TEST_F(LuaRunner_WriteCsv, NonIntegerRowKeyThrows) {
     auto schema = VALID_SCHEMA("basic.sql");
@@ -433,8 +433,8 @@ TEST_F(LuaRunner_WriteCsv, HeaderKeyPastMaximumWidthThrows) {
     );
 }
 
-// FMT-02 is narrow by design: a multi-column row with an empty middle field stays unquoted and its
-// neighbours are unaffected.
+// The lone-empty-cell quoting is narrow by design: a multi-column row with an empty middle field
+// stays unquoted and its neighbours are unaffected.
 TEST_F(LuaRunner_WriteCsv, MultiColumnRowWithEmptyMiddleFieldLeavesNeighborsIntact) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
@@ -458,9 +458,9 @@ TEST_F(LuaRunner_WriteCsv, MultiColumnRowWithEmptyMiddleFieldLeavesNeighborsInta
     );
 }
 
-// TEST-09 / FMT-02: a single-column file with an empty cell in the first, a middle, and the last
+// A single-column file with an empty cell in the first, a middle, and the last
 // row round-trips with every row present -- none deleted as a blank line -- and a nil cell and an
-// empty-string cell produce byte-identical records (D-40): rows[1] (nil) and rows[2] ("") compare
+// empty-string cell produce byte-identical records: rows[1] (nil) and rows[2] ("") compare
 // equal.
 TEST_F(LuaRunner_WriteCsv, SingleColumnFileWithNilAndEmptyCellsRoundTripsEveryRow) {
     auto schema = VALID_SCHEMA("basic.sql");
@@ -489,7 +489,7 @@ TEST_F(LuaRunner_WriteCsv, SingleColumnFileWithNilAndEmptyCellsRoundTripsEveryRo
     );
 }
 
-// TEST-06 dirty-cell suite. Every fixture below writes with db:write_csv/w:write_row/w:close, then
+// Dirty-cell suite. Every fixture below writes with db:write_csv/w:write_row/w:close, then
 // reads the SAME path back with db:read_csv in the same script and compares cells positionally --
 // never by opening the file with an ifstream or searching it for a quote character, which would
 // prove the emitter emitted, not that the file is readable (this project's third encounter with
@@ -546,7 +546,7 @@ TEST_F(LuaRunner_WriteCsv, CellWithSeparatorQuoteCrAndLfTogetherRoundTripsWithSe
     );
 }
 
-// TEST-08: a field that is exactly one quote character serializes to four quote characters and
+// A field that is exactly one quote character serializes to four quote characters and
 // round-trips as a one-character string.
 TEST_F(LuaRunner_WriteCsv, LoneQuoteCharacterCellRoundTripsAsLengthOne) {
     auto schema = VALID_SCHEMA("basic.sql");
@@ -570,7 +570,7 @@ TEST_F(LuaRunner_WriteCsv, LoneQuoteCharacterCellRoundTripsAsLengthOne) {
     );
 }
 
-// TEST-08: a field that is exactly two quote characters serializes to six quote characters and
+// A field that is exactly two quote characters serializes to six quote characters and
 // round-trips as a two-character string.
 TEST_F(LuaRunner_WriteCsv, TwoQuoteCharacterCellRoundTripsAsLengthTwo) {
     auto schema = VALID_SCHEMA("basic.sql");
@@ -654,9 +654,9 @@ TEST_F(LuaRunner_WriteCsv, CrThenLfCellRoundTripsAsTwoByteSequenceWithoutSplitti
     );
 }
 
-// FMT-02's narrowness: an empty cell sitting next to a cell that DOES need quoting (because it
-// contains the separator) still round-trips as empty and does not disturb its neighbours --
-// asserting the presence AND the boundary, not merely that SOME empty cell survives somewhere.
+// The lone-empty-cell quoting's narrowness: an empty cell sitting next to a cell that DOES need
+// quoting (because it contains the separator) still round-trips as empty and does not disturb its
+// neighbours -- asserting the presence AND the boundary, not merely that SOME empty cell survives somewhere.
 TEST_F(LuaRunner_WriteCsv, EmptyCellAdjacentToAQuotedCellRoundTripsWithNeighborsIntact) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
@@ -710,7 +710,7 @@ TEST_F(LuaRunner_WriteCsv, MultiByteUtf8CellWithNoQuoteByteRoundTripsUnmodified)
     );
 }
 
-// LUA-09: separator and header are the only accepted option keys.
+// Separator and header are the only accepted option keys.
 TEST_F(LuaRunner_WriteCsv, UnknownOptionKeyThrows) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
@@ -777,7 +777,7 @@ TEST_F(LuaRunner_WriteCsv, NonStringHeaderEntryThrows) {
     );
 }
 
-// D-14/D-20-style defaults: an absent options argument, an explicit nil, an empty table, and
+// Defaults: an absent options argument, an explicit nil, an empty table, and
 // header set to an empty table all mean comma separator and no header row.
 TEST_F(LuaRunner_WriteCsv, AbsentNilAndEmptyOptionsAllMeanDefaults) {
     auto schema = VALID_SCHEMA("basic.sql");
@@ -809,7 +809,7 @@ TEST_F(LuaRunner_WriteCsv, AbsentNilAndEmptyOptionsAllMeanDefaults) {
     );
 }
 
-// WRITE-03: header is WRITTEN (not merely decoded), in order, ahead of the first data row; one
+// The header is WRITTEN (not merely decoded), in order, ahead of the first data row; one
 // header name contains the configured separator and comes back intact, proving the header is
 // quoted by the same record emitter a data row uses.
 TEST_F(LuaRunner_WriteCsv, HeaderIsWrittenAheadOfDataAndQuotedLikeARow) {
@@ -837,7 +837,7 @@ TEST_F(LuaRunner_WriteCsv, HeaderIsWrittenAheadOfDataAndQuotedLikeARow) {
     );
 }
 
-// FMT-07 / ROADMAP criterion 1: a row shorter than a 3-name header pads with empty cells before
+// A row shorter than a 3-name header pads with empty cells before
 // Writer::write_row ever sees it, so the file round-trips through db:read_csv (header_row = 1, so
 // csv.header names the columns) with 3 fields per row, the script's two values under the columns
 // it meant and the third an empty string.
@@ -868,7 +868,7 @@ TEST_F(LuaRunner_WriteCsv, ShortRowPadsToHeaderWidthAndRoundTripsAligned) {
     );
 }
 
-// FMT-07 / ROADMAP criterion 2: a row wider than the header throws a Pattern 1 error naming the
+// A row wider than the header throws a Pattern 1 error naming the
 // 1-based data-row ordinal and both counts. Two good rows precede the bad one, so the ordinal is 3.
 TEST_F(LuaRunner_WriteCsv, RowLongerThanHeaderThrowsNamingOrdinalAndCounts) {
     auto schema = VALID_SCHEMA("basic.sql");
@@ -891,7 +891,7 @@ TEST_F(LuaRunner_WriteCsv, RowLongerThanHeaderThrowsNamingOrdinalAndCounts) {
     );
 }
 
-// FMT-07 / ROADMAP criterion 2's second clause: the rows written before the rejected long row are
+// The rows written before the rejected long row are
 // still on disk and readable through db:read_csv -- the throw does not truncate or corrupt what
 // was already flushed. Same pcall + w:close() shape as RejectedNonFiniteRowLeavesFileIntact... below.
 TEST_F(LuaRunner_WriteCsv, RejectedLongRowLeavesEarlierRowsOnDisk) {
@@ -921,7 +921,7 @@ TEST_F(LuaRunner_WriteCsv, RejectedLongRowLeavesEarlierRowsOnDisk) {
     );
 }
 
-// TEST-10 boundary: against one N=3 header, N-1 pads (covered above), N passes through
+// Width boundary: against one N=3 header, N-1 pads (covered above), N passes through
 // byte-identical, N+1 throws (covered above) -- this test is the exact-width middle case.
 TEST_F(LuaRunner_WriteCsv, ExactWidthRowPassesThroughUnchanged) {
     auto schema = VALID_SCHEMA("basic.sql");
@@ -946,8 +946,8 @@ TEST_F(LuaRunner_WriteCsv, ExactWidthRowPassesThroughUnchanged) {
     );
 }
 
-// D-44 / EDGE FMT-07/empty: w:write_row{} under a 3-name header pads to 3 empty cells, emitted as
-// 2 bare separators -- a legitimate 3-field row, NOT FMT-02's quoted empty-string spelling -- and
+// Empty-row edge case: w:write_row{} under a 3-name header pads to 3 empty cells, emitted as
+// 2 bare separators -- a legitimate 3-field row, NOT the lone-empty-cell quoted spelling -- and
 // db:read_csv returns 3 empty cells for it.
 TEST_F(LuaRunner_WriteCsv, EmptyRowPadsToMultiColumnHeaderWidth) {
     auto schema = VALID_SCHEMA("basic.sql");
@@ -973,9 +973,9 @@ TEST_F(LuaRunner_WriteCsv, EmptyRowPadsToMultiColumnHeaderWidth) {
     );
 }
 
-// D-44 / EDGE FMT-07/empty, the 1-column half: the same w:write_row{} call under a 1-name header
-// pads to exactly 1 empty cell -- still the TEST-09 shape (FMT-02's blank-line defence still
-// applies) -- and still round-trips as one present row, not zero.
+// Empty-row edge case, the 1-column half: the same w:write_row{} call under a 1-name header
+// pads to exactly 1 empty cell -- still the single-column empty-cell shape (the quoted-empty
+// blank-line defence still applies) -- and still round-trips as one present row, not zero.
 TEST_F(LuaRunner_WriteCsv, EmptyRowUnderSingleColumnHeaderStillRoundTrips) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
@@ -998,7 +998,7 @@ TEST_F(LuaRunner_WriteCsv, EmptyRowUnderSingleColumnHeaderStillRoundTrips) {
     );
 }
 
-// ROADMAP criterion 3 / D-42: with no header given -- option omitted entirely, and separately
+// With no header given -- option omitted entirely, and separately
 // header = {} -- rows of differing widths (1, 2, 3 cells) are written as-is and no width error is
 // raised (header_width == 0 means no enforcement).
 TEST_F(LuaRunner_WriteCsv, NoHeaderMeansNoWidthCheck) {
@@ -1033,7 +1033,7 @@ TEST_F(LuaRunner_WriteCsv, NoHeaderMeansNoWidthCheck) {
     );
 }
 
-// EDGE FMT-07/encoding: the width comparison counts CELLS, never characters or bytes -- a 3-name
+// Encoding edge case: the width comparison counts CELLS, never characters or bytes -- a 3-name
 // header whose names and whose row values are multi-byte UTF-8 still pads a 2-cell row to 3 and
 // still rejects a 4-cell row, with the reported counts unchanged by the encoding.
 TEST_F(LuaRunner_WriteCsv, MultiByteUtf8CellsDoNotChangeCellCounts) {
@@ -1073,7 +1073,7 @@ TEST_F(LuaRunner_WriteCsv, MultiByteUtf8CellsDoNotChangeCellCounts) {
     );
 }
 
-// FMT-05: a non-finite number cell (NaN or +/-infinity) is a Pattern 1 error naming write_row,
+// A non-finite number cell (NaN or +/-infinity) is a Pattern 1 error naming write_row,
 // the 1-based data-row ordinal, and the 1-based cell index -- never a platform-specific token
 // (MSVC's "-nan(ind)"/"nan"/"inf" vs. glibc's "nan"/"inf") reaching the file.
 TEST_F(LuaRunner_WriteCsv, NonFiniteNumberCellThrowsNamingWriteRowAndRowOrdinal) {
@@ -1116,11 +1116,12 @@ TEST_F(LuaRunner_WriteCsv, NonFiniteNumberCellThrowsNamingWriteRowAndRowOrdinal)
     }
 }
 
-// FMT-05 + the file-intact guarantee: the record is assembled into a buffer first, so a rejected
-// row leaves the file exactly as it was before the failing w:write_row call. The explicit
-// w:close() after the pcall is load-bearing -- close() is this phase's only flush (WRITE-06 is
-// Phase 5's), so an abandoned writer's data would still be sitting in the ofstream buffer and the
-// read-back would hit the reader's empty-file error instead of returning 2 rows.
+// The file-intact guarantee for a non-finite cell: the record is assembled into a buffer first,
+// so a rejected row leaves the file exactly as it was before the failing w:write_row call. The
+// explicit w:close() after the pcall is load-bearing: the close-at-exit flush runs when run()
+// returns, which is after the db:read_csv below reads the file back in this same script, so
+// without the close the read-back would hit the reader's empty-file error instead of returning
+// 2 rows.
 TEST_F(LuaRunner_WriteCsv, RejectedNonFiniteRowLeavesFileIntactAfterPcallAndClose) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
@@ -1148,7 +1149,7 @@ TEST_F(LuaRunner_WriteCsv, RejectedNonFiniteRowLeavesFileIntactAfterPcallAndClos
     );
 }
 
-// WRITE-05: write_row after close is a Pattern 1 error naming write_row; close is idempotent.
+// write_row after close is a Pattern 1 error naming write_row; close is idempotent.
 TEST_F(LuaRunner_WriteCsv, WriteRowAfterCloseThrowsNamingWriteRow) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
@@ -1221,7 +1222,7 @@ TEST_F(LuaRunner_WriteCsv, CloseCalledTwiceDoesNotThrow) {
     );
 }
 
-// WRITE-07: a missing parent directory fails the open with a Pattern 1 error naming write_csv and
+// A missing parent directory fails the open with a Pattern 1 error naming write_csv and
 // the caller's own path spelling; the directory is not created.
 TEST_F(LuaRunner_WriteCsv, MissingParentDirectoryThrowsAndDoesNotCreateIt) {
     auto schema = VALID_SCHEMA("basic.sql");
@@ -1235,7 +1236,7 @@ TEST_F(LuaRunner_WriteCsv, MissingParentDirectoryThrowsAndDoesNotCreateIt) {
     ASSERT_FALSE(std::filesystem::exists(missing_dir)) << "constructor must not create the missing directory";
 }
 
-// LUA-10: a path escaping the database directory takes precedence over an invalid separator --
+// A path escaping the database directory takes precedence over an invalid separator --
 // the sandbox resolves before the options table is decoded, so the path error is the one raised.
 TEST_F(LuaRunner_WriteCsv, EscapingPathTakesPrecedenceOverInvalidSeparator) {
     auto schema = VALID_SCHEMA("basic.sql");
@@ -1286,7 +1287,7 @@ TEST_F(LuaRunner_WriteCsv, NonTableArgumentsReportTheirType) {
     expect_lua_error(lua, R"(db:write_csv("ok.csv", "x"))", "Cannot write_csv: options must be a table, got string");
 }
 
-// WRITE-08: db:write_csv truncates an existing target at open. Two rows written and closed, then
+// db:write_csv truncates an existing target at open. Two rows written and closed, then
 // the SAME path reopened and one row written, reads back as exactly one row.
 TEST_F(LuaRunner_WriteCsv, ReopeningSamePathTruncatesExistingContent) {
     auto schema = VALID_SCHEMA("basic.sql");
@@ -1316,15 +1317,15 @@ TEST_F(LuaRunner_WriteCsv, ReopeningSamePathTruncatesExistingContent) {
     );
 }
 
-// D-39/DOC-05: the worked example shipped in bindings/js/src/lua-api.ts's "## CSV file writing"
+// The worked example shipped in bindings/js/src/lua-api.ts's "## CSV file writing"
 // section is EXTRACTED FROM THE REFERENCE FILE AT TEST TIME and executed, never transcribed into
 // this test -- a pasted copy is a second copy that drifts, exactly what lua-api-sync.test.ts
 // exists to prevent on the binding side. The example itself supplies no `path` variable (it is
 // meant to be read as prose over a caller-supplied path), so this test defines one before running
 // the extracted body. Assertions below are positional against the example's OWN data table
-// (Alpha/first/true/42, Beta/nil/false/3.5): the Beta row's nil is INTERIOR (04-01 task 3 pins
-// this), so it must round-trip as an empty cell at FULL row width, not a shortened row -- a future
-// edit that moves the nil to the end must make this assertion fail (FMT-08), not be accommodated.
+// (Alpha/first/true/42, Beta/nil/false/3.5): the Beta row's nil is INTERIOR by design,
+// so it must round-trip as an empty cell at FULL row width, not a shortened row -- a future
+// edit that moves the nil to the end must make this assertion fail, not be accommodated.
 TEST_F(LuaRunner_WriteCsv, ReferenceWorkedExampleRunsAndRoundTripsItsOwnData) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
@@ -1358,7 +1359,7 @@ TEST_F(LuaRunner_WriteCsv, ReferenceWorkedExampleRunsAndRoundTripsItsOwnData) {
         assert(csv.rows[2][4] == "42", "expected 42, got " .. tostring(csv.rows[2][4]))
 
         -- record 3: { "Beta", nil, false, 3.5 } -- the INTERIOR nil at position 2 must produce an
-        -- empty cell at FULL row width (4 cells), not a row shortened to 3 (FMT-08).
+        -- empty cell at FULL row width (4 cells), not a row shortened to 3.
         assert(#csv.rows[3] == 4, "expected the Beta row at full width (4 cells), got " .. #csv.rows[3])
         assert(csv.rows[3][1] == "Beta", "expected Beta, got " .. tostring(csv.rows[3][1]))
         assert(csv.rows[3][2] == "", "expected the interior nil to round-trip as an empty cell, got " ..
@@ -1369,7 +1370,7 @@ TEST_F(LuaRunner_WriteCsv, ReferenceWorkedExampleRunsAndRoundTripsItsOwnData) {
     lua.run(script);
 }
 
-// TEST-12: the catalogue suite. Every assertion below checks a Pattern 1 PREFIX and a reason
+// The catalogue suite. Every assertion below checks a Pattern 1 PREFIX and a reason
 // substring separately (expect_prefixed_error above) -- never a bare substring -- so a write_csv
 // message can never satisfy a write_row assertion and vice versa.
 class LuaRunner_WriteCsvErrors : public LuaSandboxTest {};
@@ -1435,8 +1436,8 @@ TEST_F(LuaRunner_WriteCsvErrors, WriteAfterCloseIsPrefixedWriteRowError) {
 // Two writers open on one path each open with ios::trunc and write from offset 0, so the second
 // silently discarded everything the first had buffered (proven: only the second writer's row
 // survived). Refused now, the way db:open_file's write registry already refuses it. Reopening a
-// path whose previous writer was CLOSED stays legal -- that is WRITE-08, pinned by
-// ReopeningSamePathTruncatesExistingContent, which is why this guard checks is_closed().
+// path whose previous writer was CLOSED stays legal -- that is the truncate-at-open
+// behaviour, pinned by ReopeningSamePathTruncatesExistingContent, which is why this guard checks is_closed().
 TEST_F(LuaRunner_WriteCsvErrors, SecondWriterOnAnAlreadyOpenPathIsRefused) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
@@ -1507,7 +1508,7 @@ TEST_F(LuaRunner_WriteCsvErrors, DoubleCloseIsIdempotentNotAnError) {
     ));
 }
 
-// LUA-10: a call passing BOTH an escaping path and an invalid separator receives the path error,
+// A call passing BOTH an escaping path and an invalid separator receives the path error,
 // not the separator error, because the sandbox resolves before the options table is decoded. Both
 // bad inputs are present on purpose -- do not "simplify" this fixture down to one bad input, or
 // the ordering guarantee this test exists to pin silently stops being checked.
@@ -1524,17 +1525,16 @@ TEST_F(LuaRunner_WriteCsvErrors, EscapingPathBeatsInvalidSeparator) {
     );
 }
 
-// FMT-05 + the file-intact guarantee, asserted as a single script (not merely a row count, which
-// would pass even if the write had never thrown): two good rows, a pcall-caught non-finite third
-// row asserting BOTH the failed pcall and its "Cannot write_row:" prefix, then w:close() and a
+// The file-intact guarantee for a non-finite cell, asserted as a single script (not merely a row
+// count, which would pass even if the write had never thrown): two good rows, a pcall-caught
+// non-finite third row asserting BOTH the failed pcall and its "Cannot write_row:" prefix, then w:close() and a
 // db:read_csv read-back asserting exactly 2 rows.
 //
-// w:close() here is load-bearing, not ceremony: close() is this phase's only flush (the
-// sol::state on LuaRunner::Impl persists across run() calls and nothing calls lua_close), so a
-// writer abandoned by an uncaught throw is never finalized and a second-run() read-back would hit
-// the reader's empty-file error instead of returning 2 rows. The flush at run()'s return is Phase
-// 5's WRITE-06 -- do not delete this w:close() as "redundant" or the test starts failing for a
-// reason that has nothing to do with the writer.
+// w:close() here is load-bearing, not ceremony: the close-at-exit flush runs when run() returns,
+// which is after the db:read_csv below reads the file back in this same script, so without the
+// close the read-back would hit the reader's empty-file error instead of returning 2 rows. Do not
+// delete this w:close() as "redundant" or the test starts failing for a reason that has nothing
+// to do with the writer.
 TEST_F(LuaRunner_WriteCsvErrors, RejectedRowLeavesFileIntactProvenBothHalves) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
@@ -1551,7 +1551,7 @@ TEST_F(LuaRunner_WriteCsvErrors, RejectedRowLeavesFileIntactProvenBothHalves) {
         local ok, err = pcall(function() w:write_row({ 0 / 0 }) end)
         assert(ok == false, "expected the third write_row to fail")
         assert(err:find("Cannot write_row:", 1, true) ~= nil, "expected Cannot write_row: prefix, got " .. tostring(err))
-        w:close()  -- load-bearing: this phase's only flush (WRITE-06 is Phase 5's), see comment above
+        w:close()  -- load-bearing: the run-exit flush comes after the read-back below
 
         local csv = db:read_csv(")" +
         path + R"(", { header_row = 0 })
@@ -1562,15 +1562,14 @@ TEST_F(LuaRunner_WriteCsvErrors, RejectedRowLeavesFileIntactProvenBothHalves) {
     );
 }
 
-// WRITE-06 / TEST-11 (ROADMAP criterion 4): a script that returns without calling w:close() still
-// leaves a complete, re-readable file. This is the two-separate-lua.run()-calls shape RESEARCH.md
-// Q4 confirms has no precedent in this suite -- the second run() proves the flush happened BETWEEN
-// script executions, with the LuaRunner never destroyed, moved from, or reset in between (the
-// ROADMAP criterion 4 trap). The fixture is deliberately tiny (one column, one short row) per
-// Pitfall 2: a payload large enough to spill std::filebuf's own buffer would put bytes on disk
-// without the fix and make the RED accidental. The byte count below is diagnostic evidence
-// attached to the FAIL() message only (D-49) -- the pass/fail decision is always the db:read_csv
-// round trip in the second run(), never a raw-byte assertion.
+// The close-at-exit flush: a script that returns without calling w:close() still leaves a
+// complete, re-readable file. Two separate lua.run() calls -- the second run() proves the flush
+// happened BETWEEN script executions, with the LuaRunner never destroyed, moved from, or reset in
+// between. The fixture is deliberately tiny (one column, one short row): a payload large enough to
+// spill std::filebuf's own buffer would put bytes on disk without the flush and let the test pass
+// by accident. The byte count below is diagnostic evidence attached to the FAIL() message only --
+// the pass/fail decision is always the db:read_csv round trip in the second run(), never a
+// raw-byte assertion.
 TEST_F(LuaRunner_WriteCsv, UnclosedWriterIsFlushedWhenRunReturns) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
@@ -1583,11 +1582,11 @@ TEST_F(LuaRunner_WriteCsv, UnclosedWriterIsFlushedWhenRunReturns) {
         local w = db:write_csv(")" +
         path + R"(", { header = { "a" } })
         w:write_row({ "x" })
-        -- deliberately no w:close() -- WRITE-06 must flush this when run() returns
+        -- deliberately no w:close() -- the close-at-exit flush must write this when run() returns
     )"
     );
 
-    // Diagnostic only (D-49): the actual observed byte count, not the ROADMAP's unverified "zero
+    // Diagnostic only: the actual observed byte count, not an assumed "zero
     // bytes" claim. Streamed into the failure message below; never the assertion itself.
     const auto observed_bytes =
         std::filesystem::exists(path) ? std::filesystem::file_size(path) : static_cast<std::uintmax_t>(0);
@@ -1602,19 +1601,19 @@ TEST_F(LuaRunner_WriteCsv, UnclosedWriterIsFlushedWhenRunReturns) {
         )"
         );
     } catch (const std::exception& e) {
-        FAIL() << "unclosed writer was not readable back through db:read_csv (WRITE-06 not yet "
-                  "implemented): "
+        FAIL() << "unclosed writer was not readable back through db:read_csv (the close-at-exit flush did "
+                  "not reach disk): "
                << e.what() << " -- observed on-disk file size after the first run() returned: " << observed_bytes
                << " bytes";
     }
 }
 
-// WRITE-06, the reachable-writer half: the same two-run() shape as above, but the script assigns
-// the writer to a GLOBAL (`w = ...`, with no `local` -- Lua's default spelling and the most common
-// slip). A global is a GC root, so a flush that relies on collect_garbage() finalizing an
-// unreachable object cannot fire here and the file stays at 0 bytes; only an explicit close of
-// every writer run() handed out covers it. Deliberately the same tiny payload as the `local` case,
-// so the buffer never spills on its own.
+// The close-at-exit flush, the reachable-writer half: the same two-run() shape as above, but the
+// script assigns the writer to a GLOBAL (`w = ...`, with no `local` -- Lua's default spelling and
+// the most common slip). A global is a GC root, so a flush that relies on collect_garbage()
+// finalizing an unreachable object cannot fire here and the file stays at 0 bytes; only an
+// explicit close of every writer run() handed out covers it. Deliberately the same tiny payload as
+// the `local` case, so the buffer never spills on its own.
 TEST_F(LuaRunner_WriteCsv, UnclosedWriterHeldInAGlobalIsAlsoFlushedWhenRunReturns) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
@@ -1649,7 +1648,7 @@ TEST_F(LuaRunner_WriteCsv, UnclosedWriterHeldInAGlobalIsAlsoFlushedWhenRunReturn
     }
 }
 
-// WRITE-06 / TEST-11, the error-path half (D-47): a script that raises mid-write, with the writer
+// The close-at-exit flush, the error-path half: a script that raises mid-write, with the writer
 // still open, still leaves the rows written before the error on disk and readable -- the flush
 // must fire during stack unwinding too, not only on a normal return. Same tiny-fixture and
 // diagnostic-byte-count discipline as the case above.
@@ -1667,7 +1666,7 @@ TEST_F(LuaRunner_WriteCsv, ScriptErrorMidWriteStillLeavesEarlierRowsReadable) {
             path + R"(", { header = { "a" } })
         w:write_row({ "x" })
         error("boom")
-        -- deliberately no w:close() -- WRITE-06's flush must fire during unwinding too (D-47)
+        -- deliberately no w:close() -- the close-at-exit flush must fire during unwinding too
     )"
         ),
         std::exception
@@ -1686,8 +1685,8 @@ TEST_F(LuaRunner_WriteCsv, ScriptErrorMidWriteStillLeavesEarlierRowsReadable) {
         )"
         );
     } catch (const std::exception& e) {
-        FAIL() << "pre-error row was not readable back through db:read_csv (WRITE-06 not yet "
-                  "implemented for the throw path): "
+        FAIL() << "pre-error row was not readable back through db:read_csv (the close-at-exit flush did "
+                  "not reach disk on the throw path): "
                << e.what() << " -- observed on-disk file size after the throwing run() unwound: " << observed_bytes
                << " bytes";
     }
