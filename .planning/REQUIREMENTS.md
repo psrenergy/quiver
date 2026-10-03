@@ -40,15 +40,15 @@ Evidence for each item (line numbers at `bdf9087`) is in `.planning/research/LUA
 - [x] **SAFE-02**: Map keys are type-checked by `lua_string_key` before they become column, dimension, attribute or files-column names: `lua_table_to_value_map`, `table_to_element`, `lua_table_to_dim_map` and `update_time_series_files` (C2).
 - [x] **SAFE-03**: Optional arguments go through `optional_from_lua` at all 8 sites. nil or missing means absent; any other wrong type raises Pattern 1 (C5).
 - [x] **SAFE-04**: `db:transaction` / `db:dry_run` reject a non-function argument with Pattern 1 before any side effect (C6).
-- [ ] **SAFE-05**: Every type error from these checks ends with a consistent "got <lua type>" suffix.
+- [x] **SAFE-05**: Every type error from these checks ends with a consistent "got <lua type>" suffix.
 - [ ] **SAFE-06**: `SOL_ALL_SAFETIES_ON=1` and `SOL_PRINT_ERRORS=0` are PRIVATE on `quiver`, landing after SAFE-01..04. The no-op `SOL_SAFE_FUNCTION=1` define and its AGENTS.md claim are deleted. The Release cost is measured once by hand and reported in the PR, with no committed perf scripts.
-- [ ] **SAFE-07**: Lua `load` accepts text chunks only. A binary (bytecode) chunk raises an error, string-form `load` keeps working, and both cases are tested.
+- [x] **SAFE-07**: Lua `load` accepts text chunks only. A binary (bytecode) chunk raises an error, string-form `load` keeps working, and both cases are tested.
 
 ### Behaviour fixes
 
 - [x] **FIX-01**: If COMMIT fails inside `db:transaction`, it does a best-effort rollback and rethrows, matching Julia, Python and Dart (C4).
 - [x] **FIX-02**: An empty array in Lua `create_element`/`update_element` reaches the core as it does in C++/Python/JS. `update_element` with `{col = {}}` clears the group, and a misspelled empty column throws there. `create_element` still skips it. Tests and the `lua-api.ts` text are updated (C7).
-- [ ] **FIX-03**: The expression helper errors name the public operation that was called (C8). Unreachable branches are removed: the nil branch in `update_time_series_files` (D1), `lua_data_type_name`'s `default:`, and `apply_binop`'s throw.
+- [x] **FIX-03**: The expression helper errors name the public operation that was called (C8). Unreachable branches are removed: the nil branch in `update_time_series_files` (D1), `lua_data_type_name`'s `default:`, and `apply_binop`'s throw.
 
 ### Tests
 
@@ -126,12 +126,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SAFE-02 | Phase 4 | Complete |
 | SAFE-03 | Phase 4 | Complete |
 | SAFE-04 | Phase 4 | Complete |
-| SAFE-05 | Phase 4 | Pending |
+| SAFE-05 | Phase 4 | Complete |
 | SAFE-06 | Phase 4 | Pending |
-| SAFE-07 | Phase 4 | Pending |
+| SAFE-07 | Phase 4 | Complete |
 | FIX-01 | Phase 4 | Complete |
 | FIX-02 | Phase 4 | Complete |
-| FIX-03 | Phase 4 | Pending |
+| FIX-03 | Phase 4 | Complete |
 | TEST-01 | Phase 5 | Pending |
 | DOC-01 | Phase 5 | Pending |
 | DOC-02 | Phase 5 | Pending |

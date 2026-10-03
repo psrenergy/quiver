@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 4
 current_phase_name: Fixes and Release Type Safety
 status: executing
-stopped_at: Completed 04-02-PLAN.md
-last_updated: "2026-10-03T13:33:17.218Z"
+stopped_at: Completed 04-03-PLAN.md
+last_updated: "2026-10-03T13:59:39.135Z"
 last_activity: 2026-10-03
 last_activity_desc: Phase 2 complete, transitioned to Phase 3
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 13
-  completed_plans: 11
+  completed_plans: 12
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-10-03)
 ## Current Position
 
 Phase: 4 (Fixes and Release Type Safety) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-10-03 — Phase 4 execution started
 
-Progress: [█████████░] 85%
+Progress: [█████████░] 92%
 
 ## Performance Metrics
 
@@ -71,6 +71,7 @@ Progress: [█████████░] 85%
 | Phase 03 P03 | 22min | 3 tasks | 5 files |
 | Phase 04 P01 | 38min | 3 tasks | 15 files |
 | Phase 04 P02 | 18min | 3 tasks | 8 files |
+| Phase 04 P03 | 27min | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -110,6 +111,9 @@ Recent decisions affecting current work:
 - [Phase 4]: 04-02: db:transaction / db:dry_run check fn before begin; a callable table is refused (same rule as on_row)
 - [Phase 4]: 04-02: A failed COMMIT at the end of db:transaction rolls back best-effort and rethrows; finish errors inside either block still surface
 - [Phase 4]: 04-02: An empty Lua element array reaches the core: create_element skips it, update_element clears its group (BREAKING)
+- [Phase 4]: 04-03: load is wrapped to always pass mode "t" (installed by lua.safe_script in the LuaRunner constructor); string.dump stays
+- [Phase 4]: 04-03: Expression operand errors name Lua's metamethod event name or the quiver.* function name via binop<Op>(name) and to_expression(o, operation)
+- [Phase 4]: 04-03: Lua* = 470 tests / 12 suites (Debug and Release), C API 27, tidy 14; golden baseline build/fixes-check/baseline at d81e2d8
 
 ### Pending Todos
 
@@ -136,6 +140,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-10-03T13:33:17.196Z
-Stopped at: Completed 04-02-PLAN.md
+Last session: 2026-10-03T13:59:39.110Z
+Stopped at: Completed 04-03-PLAN.md
 Resume file: None
