@@ -14,7 +14,7 @@ set(QUIVER_SOURCES
     csv/csv_write.cpp
     database_describe.cpp
     element.cpp
-    lua_runner.cpp
+    lua_runner/lua_runner.cpp
     migration.cpp
     migrations.cpp
     result.cpp
@@ -65,12 +65,12 @@ target_compile_definitions(quiver PRIVATE
     SOL_NO_NIL=1
 )
 
-# MSVC needs /bigobj for sol2 heavy template instantiations
-# Other Windows compilers need -Wa,-mbig-obj for the same reason
+# sol2's template depth needs /bigobj (MSVC) or -Wa,-mbig-obj (other Windows compilers) in every
+# src/lua_runner/ TU; set for the whole target so a new file cannot miss it.
 if(MSVC)
-    set_source_files_properties(lua_runner.cpp PROPERTIES COMPILE_OPTIONS "/bigobj")
+    target_compile_options(quiver PRIVATE /bigobj)
 elseif(WIN32)
-    set_source_files_properties(lua_runner.cpp PROPERTIES COMPILE_OPTIONS "-Wa,-mbig-obj")
+    target_compile_options(quiver PRIVATE -Wa,-mbig-obj)
 endif()
 
 # Link dependencies

@@ -2,19 +2,24 @@ import { describe, expect, test } from "bun:test";
 
 const __dirname = import.meta.dir;
 
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 // Import the constant directly, NOT via src/index.ts — this test must not drag in the FFI loader.
 import { LUA_DB_API_REFERENCE } from "../src/lua-api.ts";
 
-const CPP_PATH = join(__dirname, "..", "..", "..", "src", "lua_runner.cpp");
-const CPP = readFileSync(CPP_PATH, "utf8");
+const SRC_DIR = join(__dirname, "..", "..", "..", "src", "lua_runner");
+// Sorted, so neither the parse nor the open_libraries( count depends on directory order.
+const SOURCES = readdirSync(SRC_DIR)
+  .filter((f) => /\.(cpp|h)$/.test(f))
+  .sort()
+  .map((f) => readFileSync(join(SRC_DIR, f), "utf8"));
+const CPP = SOURCES.join("\n"); // Pass 1, the open_libraries( count and the stdlib list read every file
 
 // Markup- and wrap-insensitive view, so re-wrapping a paragraph can't fail the stdlib assert.
 const DOC_FLAT = LUA_DB_API_REFERENCE.replaceAll("`", "").replace(/\s+/g, " ");
 
 // Pass 1: `bind.set_function("x", ...)` -> db:x ; `ns.set_function("x", ...)` -> quiver.x
-// (`ns` is `sol::table ns = lua["quiver"]` in bind_binary/bind_expression.) Multiline so the
+// (`ns` is the `quiver` table the binary binder receives.) Multiline so the
 // clang-format-wrapped call (`bind.set_function(\n    "open_file",`) is still caught.
 const setFns = [...CPP.matchAll(/\b(bind|ns)\.set_function\(\s*"([a-z_][a-z0-9_]*)"/g)];
 const dbMethods = new Set(setFns.filter((m) => m[1] === "bind").map((m) => m[2]));
@@ -27,21 +32,24 @@ const quiverFns = new Set(setFns.filter((m) => m[1] === "ns").map((m) => m[2]));
 // bound name alone on its own line as a bare lowercase string. Leading-lowercase drops the
 // usertype names themselves ("Database", "BinaryFile", ...).
 const usertypeMethods = new Map<string, Set<string>>();
-let current = "";
-for (const line of CPP.split("\n")) {
-  const open = /new_usertype<(\w+)>/.exec(line);
-  if (open) {
-    current = open[1];
-    usertypeMethods.set(current, new Set());
-    continue;
+for (const source of SOURCES) {
+  // Reset per file: Pass 2 never closes a usertype at `);`, so an open one would bleed into the next file.
+  let current = "";
+  for (const line of source.split("\n")) {
+    const open = /new_usertype<(\w+)>/.exec(line);
+    if (open) {
+      current = open[1];
+      usertypeMethods.set(current, new Set());
+      continue;
+    }
+    // Load-bearing: a wrapped `set_function(` name must not be attributed to the open usertype.
+    if (line.includes(".set_function(")) {
+      current = "";
+      continue;
+    }
+    const pair = /^\s*"([a-z_][a-z0-9_]*)",\s*$/.exec(line);
+    if (pair && current) usertypeMethods.get(current)?.add(pair[1]);
   }
-  // Load-bearing: a wrapped `set_function(` name must not be attributed to the open usertype.
-  if (line.includes(".set_function(")) {
-    current = "";
-    continue;
-  }
-  const pair = /^\s*"([a-z_][a-z0-9_]*)",\s*$/.exec(line);
-  if (pair && current) usertypeMethods.get(current)?.add(pair[1]);
 }
 for (const name of usertypeMethods.get("Database") ?? []) dbMethods.add(name);
 // Every other usertype the parser found is checked for doc coverage, so a new one cannot slip past.
@@ -52,9 +60,9 @@ const usertypes = [...usertypeMethods.keys()].filter((type) => type !== "Databas
 const documented = (token: string) =>
   new RegExp(`${token}(?![a-z0-9_])`).test(LUA_DB_API_REFERENCE);
 
-describe("lua-api reference stays in sync with src/lua_runner.cpp", () => {
+describe("lua-api reference stays in sync with src/lua_runner/", () => {
   test("parse found the binding surface", () => {
-    // Meta-guard: if a reformat of lua_runner.cpp breaks the regexes above, fail loudly instead of
+    // Meta-guard: if a reformat of src/lua_runner/ breaks the regexes above, fail loudly instead of
     // passing vacuously forever on an empty match set.
     expect(dbMethods.size).toBeGreaterThan(40);
     expect(quiverFns.size).toBeGreaterThan(10);
