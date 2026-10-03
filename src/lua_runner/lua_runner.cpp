@@ -154,7 +154,10 @@ std::string LuaRunner::run(const std::string& script) {
         }
     } gc_guard{*impl_};
 
-    auto result = impl_->lua.safe_script(script, sol::script_pass_on_error);
+    // Text only, like load(): a precompiled chunk passed as the script would skip the same check.
+    auto& lua = impl_->lua;
+    auto result =
+        lua.safe_script(script, sol::script_pass_on_error, sol::detail::default_chunk_name(), sol::load_mode::text);
     if (!result.valid()) {
         sol::error err = result;
         throw std::runtime_error(std::string("Failed to run Lua script: ") + err.what());

@@ -720,8 +720,9 @@ Implementation conventions in `src/lua_runner/`:
   `load` is replaced by a wrapper that forces mode `"t"` whatever the caller passed, installed by a
   `lua.safe_script` in the constructor next to that nil-out (not through `set_function`, which the
   sync test would reject). The wrapper forwards `env` through `...`, so a missing env still means
-  the global environment and an explicit `nil` stays `nil`. `string.dump` stays: its output is
-  inert once `load` refuses binary chunks.
+  the global environment and an explicit `nil` stays `nil`. `LuaRunner::run` loads the script
+  itself with `sol::load_mode::text` as well. `string.dump` stays: its output is inert once both
+  refuse binary chunks.
 - **The agent-facing Lua reference lives in `bindings/js/src/lua-api.ts`** (shipped on npm as
   `LUA_DB_API_REFERENCE` and interpolated into an LLM system prompt downstream). Adding or removing
   a `db:`/`quiver.*` binding, or changing the `open_libraries` list, requires updating it —

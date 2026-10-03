@@ -340,6 +340,32 @@ TEST_F(LuaRunnerTest, LoadStillAcceptsTextChunks) {
     )");
 }
 
+TEST_F(LuaRunnerTest, RunRefusesBinaryChunks) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    quiver::LuaRunner lua(db);
+
+    // A JSON result must be UTF-8, so the bytecode comes back hex-encoded.
+    auto hex = lua.run(R"(
+        return (string.dump(function() return 1 end):gsub(".", function(c) return string.format("%02x", c:byte()) end))
+    )");
+    ASSERT_GE(hex.size(), 2u);
+    hex = hex.substr(1, hex.size() - 2);
+    std::string bytecode;
+    for (size_t i = 0; i + 1 < hex.size(); i += 2) {
+        bytecode.push_back(static_cast<char>(std::stoi(hex.substr(i, 2), nullptr, 16)));
+    }
+    ASSERT_EQ(bytecode.substr(0, 4), "\x1bLua");
+
+    // The script itself is held to the same rule as load: text chunks only.
+    try {
+        lua.run(bytecode);
+        FAIL() << "a binary chunk should not run";
+    } catch (const std::runtime_error& e) {
+        EXPECT_NE(std::string(e.what()).find("attempt to load a binary chunk (mode is 't')"), std::string::npos)
+            << e.what();
+    }
+}
+
 TEST_F(LuaRunnerTest, CaughtScriptErrorsWriteNothingToStderr) {
     auto db = quiver::Database::from_schema(
         ":memory:",
