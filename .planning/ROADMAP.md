@@ -112,12 +112,12 @@ Plans:
   4. The JS sync test still extracts the same method set, including the `CsvWriter` member-pointer lines near the 120-column limit. No `src/lua_runner/` file is over about 450 lines. csv-parser headers are not included from `src/lua_runner/`. clang-format is clean, and `scripts/tidy.bat` adds no warning beyond the Phase 2 baseline.
   5. `src/AGENTS.md` describes the shared helpers where the per-method boilerplate used to be documented.
 
-**Plans**: 3 plans
+**Plans**: 1/3 plans executed
 
 Plans:
 **Wave 1**
 
-- [ ] 03-01-PLAN.md — Tracer: golden harness + gates at the base, then member-pointer forwarders; run_in_scope, bulk-read adapters, std::optional returns, by-id template, metadata wrappers, merged group-decoder messages
+- [x] 03-01-PLAN.md — Tracer: golden harness + gates at the base, then member-pointer forwarders; run_in_scope, bulk-read adapters, std::optional returns, by-id template, metadata wrappers, merged group-decoder messages
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -171,6 +171,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 |-------|----------------|--------|-----------|
 | 1. Behaviour Pins | 2/2 | Complete    | 2026-10-02 |
 | 2. Mechanical Split | 4/4 | Complete    | 2026-10-03 |
-| 3. Dedupe | 0/3 | Planned | - |
+| 3. Dedupe | 1/3 | In Progress|  |
 | 4. Fixes and Release Type Safety | 0/TBD | Not started | - |
 | 5. Path-Policy Test and Docs | 0/TBD | Not started | - |

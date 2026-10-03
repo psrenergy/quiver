@@ -27,9 +27,9 @@ Evidence for each item (line numbers at `bdf9087`) is in `.planning/research/LUA
 
 ### Dedupe (zero behaviour change)
 
-- [ ] **DEDUP-01**: `db:transaction` and `db:dry_run` share one helper (M1).
+- [x] **DEDUP-01**: `db:transaction` and `db:dry_run` share one helper (M1).
 - [ ] **DEDUP-02**: Every `db:` method is registered with `bind.set_function`, and plain forwarders become member pointers (M2/M3). The Debug-only dot-call error text change is noted in the PR.
-- [ ] **DEDUP-03**: The bulk readers go through two adapter templates (M4). `query_*` and the by-id composites return `std::optional` directly (M5). `read_vectors_by_id` and `read_sets_by_id` become one template (M7).
+- [x] **DEDUP-03**: The bulk readers go through two adapter templates (M4). `query_*` and the by-id composites return `std::optional` directly (M5). `read_vectors_by_id` and `read_sets_by_id` become one template (M7).
 - [ ] **DEDUP-04**: The metadata wrappers collapse into one helper (M8). The option decoders are consolidated, with nil handling kept per caller (M9). `csv_cell_to_string` routes through `lua_to_value` (M10). `CsvWriter` behaviour becomes members (M11). `read_csv` and `read_csv_stream` share one header rule (M12).
 - [ ] **DEDUP-05**: Expired entries are pruned on insert and the close-at-exit function is renamed to cover binary files (M13). `BinOp`/`apply_binop` are replaced by functors (M14). `build_metadata_from_lua` uses named option slots (M15). Duplicate messages are merged (M16).
 - [ ] **DEDUP-06**: Each dedupe PR states "reordered checks: none", and every suite passes with no expectation changes.
@@ -116,9 +116,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SPLIT-05 | Phase 2 | Complete |
 | SPLIT-06 | Phase 2 | Complete |
 | SPLIT-07 | Phase 2 | Complete |
-| DEDUP-01 | Phase 3 | Pending |
+| DEDUP-01 | Phase 3 | Complete |
 | DEDUP-02 | Phase 3 | Pending |
-| DEDUP-03 | Phase 3 | Pending |
+| DEDUP-03 | Phase 3 | Complete |
 | DEDUP-04 | Phase 3 | Pending |
 | DEDUP-05 | Phase 3 | Pending |
 | DEDUP-06 | Phase 3 | Pending |

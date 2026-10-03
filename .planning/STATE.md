@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 3
 current_phase_name: Dedupe
 status: executing
-stopped_at: Completed 02-04-PLAN.md
-last_updated: "2026-10-03T05:52:31.655Z"
+stopped_at: Completed 03-01-PLAN.md
+last_updated: "2026-10-03T06:31:32.170Z"
 last_activity: 2026-10-03
 last_activity_desc: Phase 2 complete, transitioned to Phase 3
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 9
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 # Project State
@@ -27,12 +27,12 @@ See: .planning/PROJECT.md (updated 2026-10-03)
 
 ## Current Position
 
-Phase: 3 — Dedupe
-Plan: Not started
+Phase: 3 (Dedupe) — EXECUTING
+Plan: 2 of 3
 Status: Ready to execute
-Last activity: 2026-10-03 — Phase 2 complete, transitioned to Phase 3
+Last activity: 2026-10-03 — Phase 3 execution started
 
-Progress: [████████░░░░░░░░░░░░] Phase 2 of 5 complete (6/6 plans so far)
+Progress: [████████░░] 78%
 
 ## Performance Metrics
 
@@ -65,6 +65,7 @@ Progress: [████████░░░░░░░░░░░░] Phase 2
 | Phase 02 P02 | 20min | 2 tasks | 5 files |
 | Phase 02 P03 | 10min | 3 tasks | 9 files |
 | Phase 02 P04 | 45min | 3 tasks | 15 files |
+| Phase 03 P01 | 35min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -91,6 +92,9 @@ Recent decisions affecting current work:
 - [Phase 02]: csv.cpp is 446 lines, so the line-budget fallback was not applied and CsvWriter stays in csv.cpp
 - [Phase 02]: C2 citation check keeps one hit by construction (src/AGENTS.md file-map root TU line under lua_runner/); every hit names a src/lua_runner/ file or the C API TU
 - [Phase 02]: tidy baseline on src/lua_runner/ is the 15 pre-existing warnings; header warnings from include/quiver and src/utils/datetime.h are pre-existing, reproduced from untouched TUs
+- [Phase 3]: 03-01: db:transaction/db:dry_run stay two lambdas over run_in_scope so Debug bad-argument text is unchanged
+- [Phase 3]: 03-01: Debug-only sol2 text changes accepted for the 17 member-pointer forwarders and the three query_* methods; Release unchanged
+- [Phase 3]: 03-01: query_*_lua stay three named functions so Phase 4 optional_from_lua lands at three sites
 
 ### Pending Todos
 
@@ -116,6 +120,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-10-03T04:44:07.011Z
-Stopped at: Phase 2 complete, ready to plan Phase 3
+Last session: 2026-10-03T06:31:32.149Z
+Stopped at: Completed 03-01-PLAN.md
 Resume file: None
