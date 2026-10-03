@@ -63,17 +63,23 @@ CSVOptions parse_csv_options(const sol::object& options, const std::string& oper
     return result;
 }
 
-// The single place the db:transaction / db:dry_run sequencing lives: open the scope, run the
-// callback with the database, and on a Lua error undo the scope (any failure of the undo itself is
-// swallowed so the script sees the callback's error) before rethrowing; on success close the scope
-// and hand back the callback's first return value, or nil when it returned nothing.
+// The single place the db:transaction / db:dry_run sequencing lives: check the argument is a
+// function before the scope opens (a callable table is refused, as for on_row), open the scope, run
+// the callback with the database, and on a Lua error undo the scope (any failure of the undo itself
+// is swallowed so the script sees the callback's error) before rethrowing; on success close the
+// scope and hand back the callback's first return value, or nil when it returned nothing.
 sol::object run_in_scope(
     Database& self,
-    const sol::protected_function& fn,
+    const char* operation,
+    const sol::object& fn_arg,
     void (Database::*begin)(),
     void (Database::*finish)(),
     void (Database::*abort)()
 ) {
+    if (fn_arg.get_type() != sol::type::function) {
+        throw lua_type_error(operation, "fn", "a function", fn_arg);
+    }
+    const auto fn = fn_arg.as<sol::protected_function>();
     (self.*begin)();
     auto result = fn(std::ref(self));
     if (!result.valid()) {
@@ -127,14 +133,28 @@ void bind_core(sol::usertype<Database>& bind) {
     bind.set_function("commit", &Database::commit);
     bind.set_function("rollback", &Database::rollback);
     bind.set_function("in_transaction", &Database::in_transaction);
-    bind.set_function("transaction", [](Database& self, sol::protected_function fn) -> sol::object {
-        return run_in_scope(self, fn, &Database::begin_transaction, &Database::commit, &Database::rollback);
+    bind.set_function("transaction", [](Database& self, const sol::object& fn) -> sol::object {
+        return run_in_scope(
+            self,
+            "transaction",
+            fn,
+            &Database::begin_transaction,
+            &Database::commit,
+            &Database::rollback
+        );
     });
     bind.set_function("begin_dry_run", &Database::begin_dry_run);
     bind.set_function("end_dry_run", &Database::end_dry_run);
     bind.set_function("in_dry_run", &Database::in_dry_run);
-    bind.set_function("dry_run", [](Database& self, sol::protected_function fn) -> sol::object {
-        return run_in_scope(self, fn, &Database::begin_dry_run, &Database::end_dry_run, &Database::end_dry_run);
+    bind.set_function("dry_run", [](Database& self, const sol::object& fn) -> sol::object {
+        return run_in_scope(
+            self,
+            "dry_run",
+            fn,
+            &Database::begin_dry_run,
+            &Database::end_dry_run,
+            &Database::end_dry_run
+        );
     });
     bind.set_function(
         "export_csv",

@@ -666,7 +666,8 @@ Implementation conventions in `src/lua_runner/`:
   group methods.
   `query_*_lua` return `std::optional` and `read_scalars_by_id` assigns `std::optional` values, so a
   NULL is `nil` and an absent key. `run_in_scope` (`db_core.cpp`) is the one scoped block behind `db:transaction` and
-  `db:dry_run`, which stay two lambdas so their Debug bad-argument text is unchanged.
+  `db:dry_run`: the two lambdas pass their operation name, and `run_in_scope` checks the argument is
+  a function before opening the scope.
   `collect_entries` / `option_table` / `option_entries` (`internal.h`) are the one option walk:
   `option_entries` owns the table check and returns slots that callers bind by name with a
   structured binding, and nil handling stays with each caller. `lua_to_value` is the one

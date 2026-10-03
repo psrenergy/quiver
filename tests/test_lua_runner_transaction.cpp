@@ -179,6 +179,35 @@ TEST_F(LuaRunnerTest, TransactionBlockMultiOps) {
     EXPECT_TRUE(found20);
 }
 
+// The argument is checked before the transaction opens, so a bad one neither leaves a transaction
+// behind nor collides with one the script already opened.
+TEST_F(LuaRunnerTest, TransactionBlockRejectsNonFunction) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(lua, "db:transaction(5)", "Cannot transaction: fn must be a function, got number");
+    EXPECT_FALSE(db.in_transaction());
+
+    expect_lua_error(
+        lua,
+        R"(
+            db:begin_transaction()
+            db:transaction("x")
+        )",
+        "Cannot transaction: fn must be a function, got string"
+    );
+    EXPECT_TRUE(db.in_transaction());
+    db.rollback();
+
+    expect_lua_error(
+        lua,
+        "db:transaction(setmetatable({}, { __call = function() end }))",
+        "Cannot transaction: fn must be a function, got table"
+    );
+    EXPECT_FALSE(db.in_transaction());
+}
+
 // ============================================================================
 // Dry runs
 // ============================================================================
@@ -260,6 +289,16 @@ TEST_F(LuaRunnerTest, DryRunExplicitBeginEnd) {
 
     EXPECT_EQ(result, R"({"active":true,"after":false})");
     EXPECT_TRUE(db.read_scalar_strings("Collection", "label").empty());
+}
+
+TEST_F(LuaRunnerTest, DryRunBlockRejectsNonFunction) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(lua, "db:dry_run(5)", "Cannot dry_run: fn must be a function, got number");
+    EXPECT_FALSE(db.in_dry_run());
+    EXPECT_FALSE(db.in_transaction());
 }
 
 TEST_F(LuaRunnerTest, HostDryRunWrapsWholeScript) {

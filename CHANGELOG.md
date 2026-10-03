@@ -39,6 +39,12 @@ callers to change something are prefixed **BREAKING** and say what to do.
   `update_time_series_files` now raises `Cannot <op>: <attribute|column|dimension> name must be a
   string, got <type>`. Release builds used to spell a number key as text (`column '1' not
   found ...`) and could crash on a boolean key.
+- **`db:transaction` / `db:dry_run` check their argument before opening anything.** A value other
+  than a function now raises `Cannot transaction: fn must be a function, got <type>` (or `Cannot
+  dry_run: ...`) before a transaction or dry run is opened. Release builds used to open the scope
+  first and then fail to call the value (inside an already-open transaction they reported `Cannot
+  begin_transaction: transaction already active` instead); Debug builds reported sol2's raw
+  argument text. A table with a `__call` metamethod is no longer accepted: pass a function.
 
 ## [0.12.8] — 2026-10-01
 
