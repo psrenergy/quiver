@@ -97,9 +97,16 @@ struct LuaRunner::Impl {
             sol::lib::coroutine,
             sol::lib::utf8
         );
-        // Scripts may not load Lua source from disk; string-form load() stays available.
+        // Scripts may not load Lua source from disk, and load() takes text chunks only: Lua does not
+        // verify bytecode, so a crafted binary chunk could read and write host memory. The wrapper
+        // forces mode "t" whatever the caller passed; `...` forwards env only when one was given,
+        // because stock load tells a missing env (global environment) from an explicit nil.
         lua["dofile"] = sol::lua_nil;
         lua["loadfile"] = sol::lua_nil;
+        lua.safe_script(R"lua(
+            local load = load
+            _G.load = function(chunk, chunkname, _, ...) return load(chunk, chunkname, "t", ...) end
+        )lua");
         sol::table ns = lua.create_named_table("quiver");
         // The only Database usertype: registering it again would clear every method bound before.
         auto bind = lua.new_usertype<Database>("Database");

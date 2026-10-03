@@ -82,9 +82,11 @@ Settled questions — don't relitigate without the user; each was decided delibe
   resolves relative paths against the directory containing the database file and rejects — reads
   and writes alike — anything that escapes it
   (subdirectories OK; checked via `weakly_canonical` with strict containment). In-memory databases
-  (`:memory:`) reject all file operations. `dofile`/`loadfile` are removed from the Lua environment
-  (string-form `load` stays). The enabled standard libraries are the pure-computation set
-  `base`/`string`/`table`/`math`/`coroutine`/`utf8`; `os`/`io`/`package`/`debug` stay unloaded.
+  (`:memory:`) reject all file operations. `dofile`/`loadfile` are removed from the Lua environment.
+  String-form `load` stays for text chunks only: it always loads with mode `"t"`, so a precompiled
+  binary chunk is refused, because Lua does not verify bytecode. The enabled standard libraries are
+  the pure-computation set `base`/`string`/`table`/`math`/`coroutine`/`utf8`;
+  `os`/`io`/`package`/`debug` stay unloaded.
   Julia's standalone `open_file` is unaffected — this is LuaRunner policy (`resolve_sandboxed_path`
   in `src/lua_runner/path_policy.cpp`), not binary-subsystem policy.
 - **One scalar typing policy lives in C++**: an int64 is accepted for INTEGER and REAL columns

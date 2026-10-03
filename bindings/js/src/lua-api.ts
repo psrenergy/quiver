@@ -102,8 +102,9 @@ midnight.
   and do not \`pcall\` inside it: a caught error lets the block commit whatever ran.
 - **Standard library.** Loaded standard libraries: base, string, table, math, coroutine, utf8.
   That is the pure-computation set — there is no \`os\`, \`io\`, \`debug\`, or \`package\`/\`require\`,
-  and \`dofile\`/\`loadfile\` are removed (string-form \`load\` stays available). Integer division is
-  the Lua 5.4 \`//\` operator — a language operator, unrelated to \`math\`. No \`io\` does **not** mean
+  and \`dofile\`/\`loadfile\` are removed (string-form \`load\` stays for source text; a precompiled
+  binary chunk is refused). Integer division is the Lua 5.4 \`//\` operator — a language operator,
+  unrelated to \`math\`. No \`io\` does **not** mean
   a data file on disk is out of reach: read it with \`db:read_csv\` / \`db:read_csv_stream\` (see
   the CSV file reading section below). Never copy, paste, or re-type a data file's contents into
   the script as literals — read the file.

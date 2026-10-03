@@ -40,6 +40,10 @@ callers to change something are prefixed **BREAKING** and say what to do.
   column in the call, and throws `... must have the same length` when another column of the group
   is non-empty. A column name shared by several groups clears every one of them. `create_element`
   still skips an empty array. To leave a group untouched, omit its column.
+- **BREAKING** **Lua `load` accepts text chunks only.** A precompiled chunk (for example
+  `string.dump` output, given as a string or through a reader function) makes `load` return `nil`
+  and `attempt to load a binary chunk (mode is 't')`, whatever mode is passed. Load the source text
+  instead.
 
 ### Fixed
 
