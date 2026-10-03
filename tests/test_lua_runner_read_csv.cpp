@@ -1283,7 +1283,7 @@ TEST_F(LuaRunner_ReadCsv, SubdirectoryPathReadsSuccessfullyForBothEntryPoints) {
     )");
 }
 
-// --- the remaining Reader catalogue entries: empty file (extended to the stream form) and the
+// --- the remaining Reader messages: empty file (extended to the stream form) and the
 // csv-parser wrapper ---
 
 TEST_F(LuaRunner_ReadCsv, EmptyFileThrowsForReadCsvStream) {
@@ -1334,7 +1334,8 @@ TEST_F(LuaRunner_ReadCsv, UnreadableFileReportsParserFailure) {
 #endif
 
     // Guard against a false positive: the preconditions must genuinely still pass, or this test
-    // would be asserting one of the three earlier catalogue messages instead of entry 10.
+    // would be asserting the not-found, directory or empty message instead of the csv-parser
+    // wrapper's "cannot read file".
     std::error_code ec;
     EXPECT_TRUE(std::filesystem::exists(target, ec)) << ec.message();
     EXPECT_FALSE(std::filesystem::is_directory(target, ec)) << ec.message();
@@ -1376,11 +1377,11 @@ TEST_F(LuaRunner_ReadCsv, DeviceNamePathIsReportedWithPrefix) {
 }
 #endif
 
-// --- catalogue ordering + adjacency ---
+// --- error ordering + adjacency ---
 
 TEST_F(LuaRunner_ReadCsv, InMemoryDatabaseReportsBeforeBadOptions) {
-    // Two conditions trip at once (in-memory db, a positionally-passed separator): the earlier
-    // catalogue entry (in-memory, #1) must be the one reported, not the options error (#3).
+    // Two conditions trip at once (in-memory db, a positionally-passed separator): the in-memory
+    // error must be the one reported, not the options error.
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(":memory:", schema);
     quiver::LuaRunner lua(db);
@@ -1393,8 +1394,8 @@ TEST_F(LuaRunner_ReadCsv, InMemoryDatabaseReportsBeforeBadOptions) {
 }
 
 TEST_F(LuaRunner_ReadCsv, EscapingPathReportsBeforeMissingFile) {
-    // The path both escapes the sandbox AND does not exist: the escape error (#2) must win over
-    // file-not-found (#7).
+    // The path both escapes the sandbox AND does not exist: the escape error must win over
+    // file-not-found.
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::LuaRunner lua(db);

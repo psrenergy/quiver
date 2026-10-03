@@ -70,9 +70,9 @@ csv::CSVFormat make_format(const Options& options) {
 }  // namespace
 
 Reader::Reader(std::string resolved_path, std::string original_path, std::string operation, Options options) {
-    // Validation order matters -- this is the constructor's Pattern 1 catalogue, in evaluation
-    // order: not-found, then directory, then empty -- all before the parser is ever constructed,
-    // and all quoting the caller's own path spelling, not the resolved one.
+    // Validation order matters -- the existence, type and size preconditions run in that order:
+    // not-found, then directory, then empty -- all before the parser is ever constructed, and all
+    // quoting the caller's own path spelling, not the resolved one.
     // resolve_sandboxed_path's weakly_canonical does not require the path to exist, so these three
     // checks cannot be skipped.
     // Non-throwing overloads throughout: the throwing ones raise std::filesystem_error on any OS
@@ -80,7 +80,9 @@ Reader::Reader(std::string resolved_path, std::string original_path, std::string
     // and these three calls sit outside the try below -- so such an error would reach Lua with no
     // Pattern 1 prefix at all, and no csv-parser or standard-library message may reach Lua without
     // one. An error_code lets "not found" and "the OS refused the query" be told apart and reported
-    // separately. The three messages below are part of that catalogue; do not reword them.
+    // separately. The not-found, directory and empty messages are pinned exactly by
+    // LuaRunner_ReadCsv.MissingFileThrowsForReadCsv, .DirectoryAsPathThrowsForReadCsv and
+    // .EmptyFileThrows; do not reword them.
     std::error_code ec;
 
     const bool exists = fs::exists(resolved_path, ec);
@@ -131,8 +133,8 @@ Reader::Reader(std::string resolved_path, std::string original_path, std::string
     // (build/_deps/csv_parser-src/include/internal/csv_reader.cpp:74-83, trim_header). Gate on the
     // caller's ORIGINAL request (options.header_row, pre-translation) rather than header emptiness
     // alone: header_row = 0 ("no header"; the option is 1-based, default 1) also produces an empty
-    // header by design, and that is not an error. This is the tenth entry in this constructor's
-    // Pattern 1 catalogue.
+    // header by design, and that is not an error. Pinned by
+    // LuaRunner_ReadCsv.HeaderRowPastEndOfFileThrowsExactMessage; do not reword it.
     if (options.header_row != 0 && header.empty()) {
         throw std::runtime_error(
             "Cannot " + operation + ": header row " + std::to_string(options.header_row) + " not found in file '" +
