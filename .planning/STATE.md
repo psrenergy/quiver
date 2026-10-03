@@ -23,7 +23,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-03)
 
 **Core value:** Every file in the Lua scripting layer is small and single-purpose enough for an agent to change safely, and every existing script behaves exactly as before, apart from the deliberate, test-pinned fixes.
-**Current focus:** Phase 4 — Fixes and Release Type Safety
+**Current focus:** Phase 5 — Path-Policy Test and Docs
 
 ## Current Position
 
@@ -32,7 +32,7 @@ Plan: Not started
 Status: Ready to plan
 Last activity: 2026-10-03 — Phase 4 complete, transitioned to Phase 5
 
-Progress: [██████████] 100%
+Progress: [████████████████░░░░] Phase 4 of 5 complete (13/13 plans so far)
 
 ## Performance Metrics
 
@@ -148,6 +148,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-10-03T14:43:00.368Z
-Stopped at: Completed 04-04-PLAN.md
+Last session: 2026-10-03T15:37:55.721Z
+Stopped at: Phase 4 complete, ready to plan Phase 5
 Resume file: None
