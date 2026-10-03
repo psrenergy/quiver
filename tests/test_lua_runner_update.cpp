@@ -218,6 +218,72 @@ TEST_F(LuaRunnerTest, UpdateElementEmptyArrayErrors) {
     EXPECT_EQ(db.read_vector_integers_by_id("Collection", "value_int", 1), (std::vector<std::optional<int64_t>>{1, 2}));
 }
 
+TEST_F(LuaRunnerTest, UpdateElementEmptyArrayClearsEveryGroupSharingTheColumn) {
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"));
+    quiver::LuaRunner lua(db);
+
+    // parent_ref names a column of both Child_vector_refs and Child_set_parents.
+    lua.run(R"(
+        db:create_element("Configuration", { label = "Config" })
+        db:create_element("Parent", { label = "Parent 1" })
+        db:create_element("Child", { label = "Child 1", mentor_id = { "Parent 1" }, score = { 7 } })
+        db:update_vector_group("Child", "refs", 1, { parent_ref = { 1, 1 } })
+        db:update_set_group("Child", "parents", 1, { parent_ref = { 1 } })
+        db:update_element("Child", 1, { parent_ref = {} })
+    )");
+
+    EXPECT_TRUE(db.read_vector_group_by_id("Child", "refs", 1).empty());
+    EXPECT_TRUE(db.read_set_group_by_id("Child", "parents", 1).empty());
+    EXPECT_EQ(db.read_set_integers_by_id("Child", "mentor_id", 1), (std::vector<std::optional<int64_t>>{1}));
+    EXPECT_EQ(db.read_set_integers_by_id("Child", "score", 1), (std::vector<std::optional<int64_t>>{7}));
+}
+
+TEST_F(LuaRunnerTest, UpdateElementEmptyDateTimeClearsEveryTimeSeriesGroup) {
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("multi_time_series.sql"));
+    quiver::LuaRunner lua(db);
+
+    // Every time-series group of a collection shares date_time.
+    lua.run(R"(
+        db:create_element("Configuration", { label = "Config" })
+        db:create_element("Sensor", {
+            label = "Sensor 1",
+            date_time = { "2024-01-01T10:00:00", "2024-01-02T10:00:00" },
+            temperature = { 20.0, 21.5 },
+            humidity = { 45.0, 50.0 },
+        })
+        db:update_element("Sensor", 1, { date_time = {} })
+    )");
+
+    EXPECT_TRUE(db.read_time_series_group("Sensor", "temperature", 1).empty());
+    EXPECT_TRUE(db.read_time_series_group("Sensor", "humidity", 1).empty());
+}
+
+TEST_F(LuaRunnerTest, UpdateElementRoundTripOfReadVectorsById) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    // value_float reads back all-NULL, so as an empty Lua list.
+    db.create_element(
+        "Collection",
+        quiver::Element().set("label", "Item 1").set("value_int", std::vector<int64_t>{1, 2})
+    );
+    // Both columns read back all-NULL.
+    db.create_element(
+        "Collection",
+        quiver::Element().set("label", "Item 2").set("value_int", std::vector<quiver::Value>{nullptr, nullptr})
+    );
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(
+        lua,
+        R"(db:update_element("Collection", 1, db:read_vectors_by_id("Collection", 1)))",
+        "must have the same length"
+    );
+    EXPECT_EQ(db.read_vector_integers_by_id("Collection", "value_int", 1), (std::vector<std::optional<int64_t>>{1, 2}));
+
+    lua.run(R"(db:update_element("Collection", 2, db:read_vectors_by_id("Collection", 2)))");
+    EXPECT_TRUE(db.read_vector_group_by_id("Collection", "values", 2).empty());
+}
+
 TEST_F(LuaRunnerTest, UpdateVectorIntegers) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));

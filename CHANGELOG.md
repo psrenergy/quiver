@@ -36,10 +36,12 @@ callers to change something are prefixed **BREAKING** and say what to do.
   C++, Python and JS bindings already did; Lua used to skip the empty array. A misspelled empty
   column now throws `Cannot update_element: array '<name>' does not match any vector, set, or time
   series table ...` instead of being ignored. A `read_vectors_by_id` -> `update_element` round trip
-  of a column that read back empty or all-NULL now clears that group when it is the group's only
-  column in the call, and throws `... must have the same length` when another column of the group
-  is non-empty. A column name shared by several groups clears every one of them. `create_element`
-  still skips an empty array. To leave a group untouched, omit its column.
+  of a column that read back empty or all-NULL now clears that group when no other column of the
+  group in the call is non-empty (so rows whose cells are all NULL are deleted), and throws `... must
+  have the same length` when another column of the group is non-empty. A column name shared by
+  several groups clears every one of them; every time-series group of a collection shares
+  `date_time`, so `{ date_time = {} }` clears them all. `create_element` still skips an empty array.
+  To leave a group untouched, omit its column.
 - **BREAKING** **Lua `load` and the script given to `LuaRunner::run` accept text chunks only.** A
   precompiled chunk (for example `string.dump` or `luac` output, given as a string or through a
   reader function) makes `load` return `nil` and `attempt to load a binary chunk (mode is 't')`,
