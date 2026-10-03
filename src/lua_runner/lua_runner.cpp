@@ -258,7 +258,7 @@ struct LuaRunner::Impl {
         lua["db"] = &db;
     }
 
-    // Lua-visible handle behind db:write_csv (LUA-11, D-35). Wraps the internal writer; sol2 owns
+    // Lua-visible handle behind db:write_csv. Wraps the internal writer; sol2 owns
     // it via std::unique_ptr, registered with sol::no_constructor and no explicit finalizer.
     // db:open_file's BinaryFile is sol2-owned through a std::shared_ptr instead, for the same reason
     // `writer` below is one: Impl keeps a weak_ptr to it (open_binary_files).
@@ -268,15 +268,15 @@ struct LuaRunner::Impl {
         // (collect_garbage() alone only finalizes unreachable ones -- see close_open_writers).
         // It also means the Writer is constructed in place and never moved.
         std::shared_ptr<quiver::csv_write::Writer> writer;
-        // 1-based ordinal of the NEXT data row to attempt, so the FMT-05 non-finite-number error
+        // 1-based ordinal of the NEXT data row to attempt, so the non-finite-number error
         // can name which w:write_row call failed (a row of forty cells with one bad value is
         // otherwise unfindable). Incremented only after a row is accepted -- a rejected row keeps
         // the ordinal unchanged, so a script that retries the same logical row after a pcall sees
         // the same number.
         std::int64_t next_row_index = 1;
-        // FMT-07: width of the header this writer was opened with (write_csv's decoded
+        // Width of the header this writer was opened with (write_csv's decoded
         // csv_options.header.size()); 0 means no header was given and therefore no width
-        // enforcement (D-42) -- header = {} already means "no header row", so 0 is unambiguous.
+        // enforcement -- header = {} already means "no header row", so 0 is unambiguous.
         // Stored once at construction; the header vector itself is never read again.
         std::size_t header_width = 0;
 
@@ -299,7 +299,7 @@ struct LuaRunner::Impl {
     // writers on one path each open with ios::trunc and write from offset 0, so the second one
     // silently discards everything the first buffered -- the same hazard db:open_file's
     // process-global write registry (src/binary/binary_file.cpp) already refuses. Reopening a path
-    // whose previous writer was closed stays legal (it truncates, WRITE-08).
+    // whose previous writer was closed stays legal (it truncates).
     bool path_has_open_writer(const std::string& resolved_path) const {
         for (const auto& [path, weak] : open_writers) {
             if (path != resolved_path) {
@@ -312,7 +312,7 @@ struct LuaRunner::Impl {
         return false;
     }
 
-    // WRITE-06's actual mechanism, for every writer and binary file handle. A CsvWriter the script
+    // The run-exit flush mechanism, for every writer and binary file handle. A CsvWriter the script
     // left reachable -- `w = db:write_csv(...)` without `local`, the Lua default -- is a GC root, so
     // collect_garbage() never finalizes it and its buffered rows never reach disk. Closing through
     // this registry instead makes the flush independent of reachability, which is what the documented
@@ -341,7 +341,7 @@ struct LuaRunner::Impl {
         open_binary_files.clear();
     }
 
-    // The MAXIMUM integer key of a Lua table, never sol::table::size()/lua_rawlen (FMT-08), plus
+    // The MAXIMUM integer key of a Lua table, never sol::table::size()/lua_rawlen, plus
     // the key rule and the width cap. Shared by csv_row_cells_from_lua and csv_header_from_lua so
     // all three live in one place; `what` names the offending container in the messages ("row",
     // "option 'header'").
@@ -359,7 +359,7 @@ struct LuaRunner::Impl {
         }
         // Both callers materialize a dense vector up to max_index, so a single stray large key
         // ({ [1e9] = "x" }) would allocate that whole range -- tens of gigabytes, or a raw
-        // std::bad_alloc/std::length_error reaching the script with no Pattern 1 prefix (LUA-08).
+        // std::bad_alloc/std::length_error reaching the script with no Pattern 1 prefix.
         // No real CSV record is this wide; reject it as a precondition failure instead.
         constexpr std::int64_t kMaxWidth = 1'000'000;
         if (max_index > kMaxWidth) {
@@ -372,10 +372,10 @@ struct LuaRunner::Impl {
     }
 
     // Converts one Lua row table to the ordered std::vector<std::string> quiver::csv_write::Writer
-    // takes. Row width is the table's maximum integer key (FMT-08): an interior hole is exactly the
+    // takes. Row width is the table's maximum integer key: an interior hole is exactly the
     // shape a nullable db:read_csv result produces, and must become an empty cell rather than
     // collapse the row. A missing key reads back as Lua nil, which csv_cell_to_string below turns
-    // into an empty cell -- so an interior nil and an absent key are structurally identical (D-40),
+    // into an empty cell -- so an interior nil and an absent key are structurally identical,
     // exactly as they are in Lua itself.
     static std::vector<std::string> csv_row_cells_from_lua(
         const sol::table& row,
@@ -392,7 +392,7 @@ struct LuaRunner::Impl {
     }
 
     // One sol::object cell -> the std::string quiver::csv_write::Writer takes. Dispatch order is
-    // nil first (D-40: a hole from csv_row_cells_from_lua above is an empty cell), then the same
+    // nil first (a hole from csv_row_cells_from_lua above is an empty cell), then the same
     // order lua_to_value uses -- boolean, int64, double, string -- else a Pattern 1 rejection
     // naming write_row and the 1-based cell index.
     //
@@ -401,7 +401,7 @@ struct LuaRunner::Impl {
     // is<std::int64_t>()/is<double>() and falls through to the string branch, written verbatim --
     // it does NOT apply Lua's own string<->number coercion the way the as<>() family would.
     // Verified by compiling and running this exact dispatch against this repo's own sol2/Lua
-    // build (04-SOL2-DISPATCH-PROBE.md); do not add a get_type() guard here and do not reorder it.
+    // build; do not add a get_type() guard here and do not reorder it.
     static std::string csv_cell_to_string(
         const sol::object& cell,
         const std::string& operation,
@@ -412,22 +412,22 @@ struct LuaRunner::Impl {
             return {};
         }
         if (is_lua_boolean(cell)) {
-            // FMT-06 / the project-wide boolean-is-INTEGER-1/0 write policy: text "1" or "0", not
+            // The project-wide boolean-is-INTEGER-1/0 write policy: text "1" or "0", not
             // "true"/"false".
             return cell.as<bool>() ? "1" : "0";
         }
         if (cell.is<std::int64_t>()) {
-            // FMT-04: the int64_t overload directly, never routed through double first, so a Lua
-            // integer past double's 53-bit mantissa survives exactly (TEST-07).
+            // The int64_t overload directly, never routed through double first, so a Lua
+            // integer past double's 53-bit mantissa survives exactly.
             std::string out;
             quiver::utils::append_number(cell.as<std::int64_t>(), out);
             return out;
         }
         if (cell.is<double>()) {
             const double value = cell.as<double>();
-            // FMT-05: reject BEFORE append_number/to_chars is reached, so no platform-specific
+            // Reject BEFORE append_number/to_chars is reached, so no platform-specific
             // non-finite spelling (MSVC's "-nan(ind)"/"nan"/"inf" vs. glibc's "nan"/"inf" --
-            // 04-02-SUMMARY.md's spot-check) can ever reach a cell. Both the row and the cell are
+            // both seen in practice) can ever reach a cell. Both the row and the cell are
             // named: a row of many cells with one bad value is otherwise unfindable.
             if (!std::isfinite(value)) {
                 throw std::runtime_error(
@@ -435,7 +435,7 @@ struct LuaRunner::Impl {
                     " is not a finite number"
                 );
             }
-            // D-34: to_chars' shortest round-trip form, with no synthetic decimal point -- a whole
+            // to_chars' shortest round-trip form, with no synthetic decimal point -- a whole
             // float and the equal integer produce identical text.
             std::string out;
             quiver::utils::append_number(value, out);
@@ -450,7 +450,7 @@ struct LuaRunner::Impl {
     }
 
     // Converts a `header` option table to an ordered list of column names, through the same
-    // csv_max_integer_key walk csv_row_cells_from_lua uses (FMT-08). Every present entry must be a
+    // csv_max_integer_key walk csv_row_cells_from_lua uses. Every present entry must be a
     // string; an empty table (zero integer keys) yields an empty result, which csv_write::Options
     // treats as no header row.
     // A bad KEY gets csv_max_integer_key's own message ("option 'header' key must be a positive
@@ -470,7 +470,7 @@ struct LuaRunner::Impl {
         return names;
     }
 
-    // The collect-then-validate walk every strict options decoder shares (LUA-09/D-17): read_csv,
+    // The collect-then-validate walk every strict options decoder shares: read_csv,
     // write_csv, export_csv/import_csv and quiver.metadata. Every entry is collected before any of
     // them is validated, so a mid-traversal throw cannot abandon sol2's traversal state. `allowed`
     // is the option names this caller accepts, in precedence order; an unknown key is the first
@@ -493,7 +493,7 @@ struct LuaRunner::Impl {
             // lua_tolstring, which answers nullptr for a boolean/table/function key -- unchecked
             // in Release (SOL_SAFE_GETTER is off there) and a raw sol2 panic in Debug, so a
             // `{ [true] = 1 }` options table would reach the script as a bare Lua value rather
-            // than a Pattern 1 message (LUA-08).
+            // than a Pattern 1 message.
             if (entry.first.get_type() != sol::type::string) {
                 throw std::runtime_error("Cannot " + operation + ": option key must be a string");
             }
@@ -507,7 +507,7 @@ struct LuaRunner::Impl {
         return found;
     }
 
-    // Collect a nested option table's entries before any is checked (the same LUA-09 rule), after
+    // Collect a nested option table's entries before any is checked (the same collect-then-validate rule), after
     // checking the value really is a table.
     static std::vector<std::pair<sol::object, sol::object>> table_entries(
         const sol::object& value,
@@ -536,7 +536,7 @@ struct LuaRunner::Impl {
     static char csv_separator_from_lua(const sol::object& value, const std::string& operation) {
         // Check the Lua type explicitly rather than routing through the checked-conversion
         // helper every other converter uses: that helper surfaces sol2's own stack-index
-        // message, which is neither Pattern 1 nor stable across build types (LUA-08).
+        // message, which is neither Pattern 1 nor stable across build types.
         if (value.get_type() != sol::type::string) {
             throw std::runtime_error("Cannot " + operation + ": option 'separator' must be a string");
         }
@@ -562,7 +562,7 @@ struct LuaRunner::Impl {
     static csv_write::Options write_csv_options_from_lua(const sol::object& options, const std::string& operation) {
         csv_write::Options result;
         if (!options.valid() || options.get_type() == sol::type::lua_nil) {
-            // Missing parameter or explicit nil -- same as an empty table, both valid (D-14).
+            // Missing parameter or explicit nil -- same as an empty table, both valid.
             return result;
         }
         if (options.get_type() != sol::type::table) {
@@ -588,7 +588,7 @@ struct LuaRunner::Impl {
     }
 
     void bind_database() {
-        // NOLINTBEGIN(performance-unnecessary-value-parameter) sol2 lambda bindings require pass-by-value for type
+        // NOLINTBEGIN(performance-unnecessary-value-param) sol2 lambda bindings require pass-by-value for type
         // deduction
         auto bind = lua.new_usertype<Database>(
             "Database",
@@ -598,17 +598,14 @@ struct LuaRunner::Impl {
             [](Database& self, const std::string& collection, const std::string& label) {
                 self.delete_element_by_label(collection, label);
             },
-            // Group 1: Database info
             "is_healthy",
             [](Database& self) { return self.is_healthy(); },
             "current_version",
             [](Database& self) { return self.current_version(); },
             "path",
             [](Database& self) -> const std::string& { return self.path(); },
-            // Group 9: Time series files
             "has_time_series_files",
             [](Database& self, const std::string& collection) { return self.has_time_series_files(collection); },
-            // Group 10: Transactions
             "begin_transaction",
             [](Database& self) { self.begin_transaction(); },
             "commit",
@@ -635,7 +632,6 @@ struct LuaRunner::Impl {
                 }
                 return sol::make_object(result.lua_state(), sol::lua_nil);
             },
-            // Group 10b: Dry runs
             "begin_dry_run",
             [](Database& self) { self.begin_dry_run(); },
             "end_dry_run",
@@ -660,18 +656,16 @@ struct LuaRunner::Impl {
                 }
                 return sol::make_object(result.lua_state(), sol::lua_nil);
             },
-            // Group 11: CSV export
             "export_csv",
             [](Database& self,
                const std::string& collection,
                const std::string& group,
                const std::string& path,
                const sol::object& options) {
-                // Sandbox checks before the options table, as in db:write_csv (D-22).
+                // Sandbox checks before the options table, as in db:write_csv.
                 const auto resolved = resolve_sandboxed_path(self, "export_csv", path);
                 self.export_csv(collection, group, resolved, parse_csv_options(options, "export_csv"));
             },
-            // Group 12: CSV import
             "import_csv",
             [](Database& self,
                const std::string& collection,
@@ -682,7 +676,7 @@ struct LuaRunner::Impl {
                 self.import_csv(collection, group, resolved, parse_csv_options(options, "import_csv"));
             }
         );
-        // NOLINTEND(performance-unnecessary-value-parameter)
+        // NOLINTEND(performance-unnecessary-value-param)
 
         bind.set_function("create_element", &create_element_lua);
 
@@ -783,13 +777,13 @@ struct LuaRunner::Impl {
 
         // CSV file reading/writing -- db-scoped and sandboxed like the file I/O above. The two
         // reading entry points below construct the same csv_read reader and drive it through
-        // header()/for_each_row(), so they cannot diverge on any input (LUA-03). Writing
+        // header()/for_each_row(), so they cannot diverge on any input. Writing
         // (db:write_csv) is streaming-only -- there is no whole-file counterpart, by decision.
         bind.set_function(
             "read_csv",
             [](Database& self, const std::string& path, sol::object options, sol::this_state s) -> sol::table {
                 sol::state_view lua(s);
-                // D-22 evaluation order: sandbox checks (in-memory db, path escape) before the
+                // Evaluation order: sandbox checks (in-memory db, path escape) before the
                 // options table, so a bad separator never masks an escaping path.
                 const auto resolved = resolve_sandboxed_path(self, "read_csv", path);
                 auto csv_options = read_csv_options_from_lua(options, "read_csv");
@@ -806,10 +800,10 @@ struct LuaRunner::Impl {
                 });
 
                 auto result = lua.create_table();
-                // `header` is absent (not an empty table) when the file has no header -- Phase 2's
-                // "no header" declaration reuses this same falsy sentinel, so the two must not
-                // collide (D-01). header_row(0) always designates a header for a non-empty file
-                // today; the guard is forward-looking.
+                // `header` is absent (not an empty table) when the file has no header (header_row = 0):
+                // {} is truthy in Lua and nil is falsy, so a script testing `if result.header` must see
+                // nil. db:read_csv_stream passes nil to on_row for the same reason; the two forms must not
+                // diverge.
                 const auto& header = reader.header();
                 if (!header.empty()) {
                     result["header"] = to_lua_table(lua, header);
@@ -826,24 +820,24 @@ struct LuaRunner::Impl {
                 // sol::object plus an explicit type check, not a typed
                 // sol::protected_function parameter: a typed one surfaces sol2's own
                 // "stack index 3, expected function" text, which is neither Pattern 1
-                // nor stable across build types (LUA-08) -- the same reason `options`
+                // nor stable across build types -- the same reason `options`
                 // is decoded by hand.
                 if (on_row_arg.get_type() != sol::type::function) {
                     throw std::runtime_error("Cannot read_csv_stream: on_row must be a function");
                 }
                 const sol::protected_function on_row = on_row_arg.as<sol::protected_function>();
-                // D-22 evaluation order: sandbox checks before the options table.
+                // Evaluation order: sandbox checks before the options table.
                 const auto resolved = resolve_sandboxed_path(self, "read_csv_stream", path);
                 auto csv_options = read_csv_options_from_lua(options, "read_csv_stream");
                 csv_read::Reader reader(resolved, path, "read_csv_stream", csv_options);
 
                 // Built once, before the loop, and passed by reference into every callback
                 // invocation -- reachable during the stream so a script can find a column by
-                // name before processing row 1 (D-05).
+                // name before processing row 1.
                 //
                 // Nil, not an empty table, when there is no header -- exactly the guard
-                // db:read_csv uses above for its `header` key (D-01). The two forms must not
-                // diverge on the same input (LUA-03), and here that is behavioural rather
+                // db:read_csv uses above for its `header` key. The two forms must not
+                // diverge on the same input, and here that is behavioural rather
                 // than cosmetic: `{}` is truthy in Lua and `nil` is falsy, so a script
                 // written as `if header then ... end` would take opposite branches between
                 // the whole-file and streaming forms of the same file under header_row = 0.
@@ -855,14 +849,14 @@ struct LuaRunner::Impl {
                     const auto row_table = to_lua_table(lua, cells);
                     auto result = on_row(row_table, index, header_table);
                     if (!result.valid()) {
-                        // Propagate the Lua error verbatim and unwrapped (D-08): the reader is a
+                        // Propagate the Lua error verbatim and unwrapped: the reader is a
                         // stack local and ~CSVReader() joins its scheduler during normal C++
                         // unwinding, so no manual cleanup is needed here.
                         sol::error err = result;
                         throw std::runtime_error(err.what());
                     }
                     // sol::optional<bool> is a strict LUA_TBOOLEAN check, Debug/Release-identical.
-                    // Only an exact `false` stops the read (D-06) -- get<bool>() would be
+                    // Only an exact `false` stops the read -- get<bool>() would be
                     // lua_toboolean truthiness and misread a no-return callback's nil as "stop".
                     if (result.return_count() > 0 && result.get<sol::optional<bool>>(0) == false) {
                         return false;
@@ -874,7 +868,7 @@ struct LuaRunner::Impl {
         bind.set_function(
             "write_csv",
             [this](Database& self, const std::string& path, sol::object options) -> std::unique_ptr<CsvWriter> {
-                // D-22/LUA-10 evaluation order: sandbox checks (in-memory db, path escape) before
+                // Evaluation order: sandbox checks (in-memory db, path escape) before
                 // the options table, so a bad separator never masks an escaping path.
                 const auto resolved = resolve_sandboxed_path(self, "write_csv", path);
                 auto csv_options = write_csv_options_from_lua(options, "write_csv");
@@ -883,14 +877,14 @@ struct LuaRunner::Impl {
                 }
                 const auto header_width = csv_options.header.size();
                 auto writer = std::make_shared<quiver::csv_write::Writer>(resolved, path, "write_csv", csv_options);
-                // WRITE-06: registered so close_open_writers() can flush it at run()'s exit even
+                // Registered so close_open_writers() can flush it at run()'s exit even
                 // when the script leaves it reachable (a global), which the GC cannot.
                 open_writers.emplace_back(resolved, writer);
                 return std::make_unique<CsvWriter>(std::move(writer), header_width);
             }
         );
 
-        // LUA-11: sol::no_constructor + std::unique_ptr return (above), no explicit finalizer.
+        // sol::no_constructor + std::unique_ptr return (above), no explicit finalizer.
         // BinaryFile below is the same except for its holder, a std::shared_ptr (see db:open_file).
         lua.new_usertype<CsvWriter>(
             "CsvWriter",
@@ -905,7 +899,7 @@ struct LuaRunner::Impl {
                 if (row.get_type() != sol::type::table) {
                     throw std::runtime_error("Cannot write_row: row must be a table");
                 }
-                // WRITE-05: check the closed state BEFORE formatting a single cell -- cells were
+                // Check the closed state BEFORE formatting a single cell -- cells were
                 // previously formatted as csv_write::Writer::write_row's argument, evaluated before
                 // the call, so a write after close on a bad row raised the wrong error. Delegating
                 // to Writer with an empty vector reuses its own closed-writer message verbatim
@@ -917,12 +911,12 @@ struct LuaRunner::Impl {
                 }
                 const auto row_index = self.next_row_index;
                 auto cells = csv_row_cells_from_lua(row.as<sol::table>(), "write_row", row_index);
-                // FMT-07: header_width == 0 means no header was given, so no enforcement applies.
+                // header_width == 0 means no header was given, so no enforcement applies.
                 // A row wider than the header is never truncated -- it throws, naming the 1-based
-                // data-row ordinal and both counts (D-43, D-45; pinned in src/csv/csv_write.cpp's
-                // TEST-12 catalogue comment -- reword both together). A short row is padded BEFORE
+                // data-row ordinal and both counts (pinned in src/csv/csv_write.cpp's
+                // message catalogue comment -- reword both together). A short row is padded BEFORE
                 // Writer::write_row ever sees it -- append_record is a pure function of the vector
-                // it receives, so padding after the call would be too late (Pitfall 3).
+                // it receives, so padding after the call would be too late.
                 if (self.header_width != 0) {
                     if (cells.size() > self.header_width) {
                         throw std::runtime_error(
@@ -950,7 +944,7 @@ struct LuaRunner::Impl {
     void bind_binary() {
         sol::table ns = lua["quiver"];
 
-        // NOLINTBEGIN(performance-unnecessary-value-parameter) sol2 lambda bindings require pass-by-value for type
+        // NOLINTBEGIN(performance-unnecessary-value-param) sol2 lambda bindings require pass-by-value for type
         // deduction
         lua.new_usertype<BinaryMetadata>(
             "BinaryMetadata",
@@ -1013,7 +1007,7 @@ struct LuaRunner::Impl {
         ns.set_function("metadata_from_element", [](const sol::table& t) {
             return BinaryMetadata::from_element(table_to_element("metadata_from_element", t));
         });
-        // NOLINTEND(performance-unnecessary-value-parameter)
+        // NOLINTEND(performance-unnecessary-value-param)
     }
 
     // ========================================================================
@@ -1023,7 +1017,7 @@ struct LuaRunner::Impl {
     void bind_expression() {
         sol::table ns = lua["quiver"];
 
-        // NOLINTBEGIN(performance-unnecessary-value-parameter) sol2 lambda bindings require pass-by-value for type
+        // NOLINTBEGIN(performance-unnecessary-value-param) sol2 lambda bindings require pass-by-value for type
         // deduction
         auto expression_type = lua.new_usertype<Expression>(
             "Expression",
@@ -1054,7 +1048,7 @@ struct LuaRunner::Impl {
             "rename_agents",
             [](Expression& self, const sol::object& mapping) {
                 // sol2 does not check a table parameter in Release, so check it here. Then collect,
-                // then check both halves (LUA-09): an unchecked as<std::string>() spelled a number
+                // then check both halves: an unchecked as<std::string>() spelled a number
                 // key as text and gave "" for a boolean in Release.
                 if (mapping.get_type() != sol::type::table) {
                     throw std::runtime_error("Cannot rename_agents: mapping must be a table");
@@ -1092,7 +1086,7 @@ struct LuaRunner::Impl {
         ns.set_function("neq", [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Neq, a, b); });
         // Logical ops on boolean-valued expressions are the `&` / `|` / `~` metamethods bound on the
         // Expression and BinaryFile usertypes (`and`/`or`/`not` are Lua keywords, so no free functions).
-        // NOLINTEND(performance-unnecessary-value-parameter)
+        // NOLINTEND(performance-unnecessary-value-param)
     }
 
     // ========================================================================
@@ -1245,7 +1239,7 @@ struct LuaRunner::Impl {
         return apply_binop(op, to_expression(lhs), to_expression(rhs));
     }
 
-    // NOLINTBEGIN(performance-unnecessary-value-parameter) sol2 lambda bindings require pass-by-value for type
+    // NOLINTBEGIN(performance-unnecessary-value-param) sol2 lambda bindings require pass-by-value for type
     // deduction
     // The arithmetic, unary-minus and logical metamethods shared by every usertype that behaves like an
     // expression (BinaryFile auto-wraps to Expression). One table, so a new operator is added once.
@@ -1273,7 +1267,7 @@ struct LuaRunner::Impl {
         };
         type[sol::meta_function::bitwise_not] = [](sol::object a, sol::object) { return !to_expression(a); };
     }
-    // NOLINTEND(performance-unnecessary-value-parameter)
+    // NOLINTEND(performance-unnecessary-value-param)
 
     // `caller` is the public method ("aggregate" / "aggregate_agents") named in the Pattern 1 message.
     static ExpressionAggregate::Operation parse_aggregate_op(const std::string& op, const std::string& caller) {
@@ -1316,7 +1310,7 @@ struct LuaRunner::Impl {
         // that is not "does not exist" -- a Windows device name ("NUL", "nul") makes
         // weakly_canonical throw outright, and a permission or I/O error can do the same. Left
         // unwrapped, that std::filesystem_error reaches the script verbatim
-        // ("weakly_canonical: The parameter is incorrect.: ..."), violating LUA-08's rule that no
+        // ("weakly_canonical: The parameter is incorrect.: ..."), violating the rule that no
         // standard-library message may surface unprefixed. This is the one choke point every
         // file-touching Lua operation routes through, so wrapping it here covers all of them.
         fs::path root;
@@ -1396,17 +1390,17 @@ struct LuaRunner::Impl {
     }
 
     // Shared strict decoder for db:read_csv / db:read_csv_stream's trailing options table
-    // (D-14/D-15/D-16/D-17, LUA-03 -- one decoder so the two entry points cannot diverge on any
+    // (one decoder so the two entry points cannot diverge on any
     // option). `options` is `sol::object`, not `sol::optional<sol::table>`: sol2's optional checker
     // never raises on a type mismatch on its own (see relation_target_from_lua below, the pattern
     // this copies), so a wrong type would otherwise silently fall through to defaults instead of
     // throwing. `operation` is the
     // caller's own method name ("read_csv" / "read_csv_stream"), so the same bad table reports
-    // whichever entry point the script actually called (D-19).
+    // whichever entry point the script actually called.
     static csv_read::Options read_csv_options_from_lua(const sol::object& options, const std::string& operation) {
         csv_read::Options result;
         if (!options.valid() || options.get_type() == sol::type::lua_nil) {
-            // Missing parameter or explicit nil -- same as an empty table, both valid (D-14).
+            // Missing parameter or explicit nil -- same as an empty table, both valid.
             return result;
         }
         if (options.get_type() != sol::type::table) {
@@ -1423,7 +1417,7 @@ struct LuaRunner::Impl {
 
         if (header_row_value) {
             // Same rationale as separator above: explicit get_type() rather than lua_cell_as
-            // (LUA-08). This also rules out a quoted "2", which Lua's own string->number
+            // (stable Pattern 1 text). This also rules out a quoted "2", which Lua's own string->number
             // coercion would otherwise let through.
             if (header_row_value->get_type() != sol::type::number) {
                 throw std::runtime_error("Cannot " + operation + ": option 'header_row' must be an integer");
@@ -2497,17 +2491,17 @@ LuaRunner::LuaRunner(LuaRunner&&) noexcept = default;
 LuaRunner& LuaRunner::operator=(LuaRunner&&) noexcept = default;
 
 std::string LuaRunner::run(const std::string& script) {
-    // WRITE-06: a writer (or any other unique_ptr + sol::no_constructor usertype, e.g. CsvWriter)
+    // A writer (or any other unique_ptr + sol::no_constructor usertype, e.g. CsvWriter)
     // the script leaves unreachable at run()'s return is never collected on its own -- sol::state
     // is a long-lived member of Impl, so nothing forces a GC cycle between script executions.
     // GcGuard's destructor runs one full collection, unconditionally, on every exit path (normal
     // return, the empty-return, and exception unwinding alike), which synchronously finalizes any
-    // such object and therefore flushes/closes its underlying resource (D-46/D-48; RESEARCH.md Q1
-    // executed this exact one-call-suffices claim against this repo's own vendored sol2/Lua build).
+    // such object and therefore flushes/closes its underlying resource (a probe
+    // ran this exact one-call-suffices check against this repo's own vendored sol2/Lua build).
     // Declared BEFORE `result`: C++ destroys stack locals in reverse declaration order, so this
     // guard (declared first) is destroyed AFTER `result` (declared second) -- releasing
     // `result`'s Lua stack reference before the collection below runs. Declaring the guard after
-    // `result` would collect while a live stack reference still anchors the script's userdata (D-46).
+    // `result` would collect while a live stack reference still anchors the script's userdata.
     // close_open_writers() runs first and does NOT depend on reachability: it closes CSV writers and
     // binary files. A writer the script assigned to a global (`w = db:write_csv(...)`, the Lua
     // default spelling) is a GC root, so collect_garbage() alone would leave its rows in the ofstream
