@@ -285,15 +285,8 @@ void update_set_group_by_label_lua(
 }  // namespace
 
 void bind_write(sol::usertype<Database>& bind) {
-    bind.set_function("delete_element", [](Database& self, const std::string& collection, int64_t id) {
-        self.delete_element(collection, id);
-    });
-    bind.set_function(
-        "delete_element_by_label",
-        [](Database& self, const std::string& collection, const std::string& label) {
-            self.delete_element_by_label(collection, label);
-        }
-    );
+    bind.set_function("delete_element", &Database::delete_element);
+    bind.set_function("delete_element_by_label", &Database::delete_element_by_label);
 
     bind.set_function("create_element", &create_element_lua);
 

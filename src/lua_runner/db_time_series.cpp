@@ -268,9 +268,7 @@ void update_time_series_files_lua(Database& db, const std::string& collection, c
 }  // namespace
 
 void bind_time_series(sol::usertype<Database>& bind) {
-    bind.set_function("has_time_series_files", [](Database& self, const std::string& collection) {
-        return self.has_time_series_files(collection);
-    });
+    bind.set_function("has_time_series_files", &Database::has_time_series_files);
 
     bind.set_function("read_time_series_group", &read_time_series_group_lua);
     bind.set_function("read_time_series_row", &read_time_series_row_lua);

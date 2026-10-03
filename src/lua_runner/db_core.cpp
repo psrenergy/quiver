@@ -137,13 +137,13 @@ sol::object query_float_lua(
 // NOLINTBEGIN(performance-unnecessary-value-param) sol2 lambda bindings require pass-by-value for type
 // deduction
 void bind_core(sol::usertype<Database>& bind) {
-    bind.set_function("is_healthy", [](Database& self) { return self.is_healthy(); });
-    bind.set_function("current_version", [](Database& self) { return self.current_version(); });
-    bind.set_function("path", [](Database& self) -> const std::string& { return self.path(); });
-    bind.set_function("begin_transaction", [](Database& self) { self.begin_transaction(); });
-    bind.set_function("commit", [](Database& self) { self.commit(); });
-    bind.set_function("rollback", [](Database& self) { self.rollback(); });
-    bind.set_function("in_transaction", [](Database& self) { return self.in_transaction(); });
+    bind.set_function("is_healthy", &Database::is_healthy);
+    bind.set_function("current_version", &Database::current_version);
+    bind.set_function("path", &Database::path);
+    bind.set_function("begin_transaction", &Database::begin_transaction);
+    bind.set_function("commit", &Database::commit);
+    bind.set_function("rollback", &Database::rollback);
+    bind.set_function("in_transaction", &Database::in_transaction);
     bind.set_function("transaction", [](Database& self, sol::protected_function fn) -> sol::object {
         self.begin_transaction();
         auto result = fn(std::ref(self));
@@ -161,9 +161,9 @@ void bind_core(sol::usertype<Database>& bind) {
         }
         return sol::make_object(result.lua_state(), sol::lua_nil);
     });
-    bind.set_function("begin_dry_run", [](Database& self) { self.begin_dry_run(); });
-    bind.set_function("end_dry_run", [](Database& self) { self.end_dry_run(); });
-    bind.set_function("in_dry_run", [](Database& self) { return self.in_dry_run(); });
+    bind.set_function("begin_dry_run", &Database::begin_dry_run);
+    bind.set_function("end_dry_run", &Database::end_dry_run);
+    bind.set_function("in_dry_run", &Database::in_dry_run);
     bind.set_function("dry_run", [](Database& self, sol::protected_function fn) -> sol::object {
         self.begin_dry_run();
         auto result = fn(std::ref(self));
@@ -205,17 +205,11 @@ void bind_core(sol::usertype<Database>& bind) {
         }
     );
 
-    bind.set_function("number_of_elements", [](Database& self, const std::string& collection) {
-        return self.number_of_elements(collection);
-    });
+    bind.set_function("number_of_elements", &Database::number_of_elements);
 
-    bind.set_function("describe", [](Database& self) { return self.describe(); });
-    bind.set_function("describe_collection", [](Database& self, const std::string& collection) {
-        return self.describe_collection(collection);
-    });
-    bind.set_function("summarize_collection", [](Database& self, const std::string& collection) {
-        return self.summarize_collection(collection);
-    });
+    bind.set_function("describe", &Database::describe);
+    bind.set_function("describe_collection", &Database::describe_collection);
+    bind.set_function("summarize_collection", &Database::summarize_collection);
 
     bind.set_function("query_string", &query_string_lua);
     bind.set_function("query_integer", &query_integer_lua);

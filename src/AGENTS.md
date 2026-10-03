@@ -699,8 +699,12 @@ Implementation conventions in `src/lua_runner/`:
   `read_csv`/`write_csv` decoders. `quiver.metadata{...}` and `expr:rename_agents` are decoded
   the same strict way.
 - `to_lua_table<T>` overloads (flat + nested) are the only vector→table marshalers.
-- `describe` / `describe_collection` / `summarize_collection` are bound as plain lambdas returning
-  the C++ `std::string` text report (`db:describe()` returns a string — it does not print).
+- The plain forwarders — `is_healthy`, `current_version`, `path`, the transaction and dry-run
+  methods (`begin_transaction`, `commit`, `rollback`, `in_transaction`, `begin_dry_run`,
+  `end_dry_run`, `in_dry_run`), `number_of_elements`, `describe` / `describe_collection` /
+  `summarize_collection`, `delete_element` / `delete_element_by_label` and `has_time_series_files`
+  — are bound as `&Database::` member pointers, not lambdas. `db:describe()` and its siblings still
+  return the C++ `std::string` text report — they do not print.
 - Lua→C++ converters **throw on unsupported value types** (functions, nested tables, ...) — never
   skip silently; a skipped positional query parameter would shift the rest and bind NULL to the
   trailing placeholder.
