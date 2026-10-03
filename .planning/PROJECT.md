@@ -29,10 +29,10 @@ fixes listed below.
 - ✓ Write-side typing policy: a Lua boolean is INTEGER 1/0 on every write path; converters throw on unsupported types and never skip; NULL is a `nil` hole on reads. Existing.
 - ✓ Exposed in every layer: C API `quiver_lua_runner_*`, `LuaRunner` in Julia/Dart/Python/JS, used by `quiver_cli`. Existing.
 - ✓ Agent-facing Lua reference `LUA_DB_API_REFERENCE` (`bindings/js/src/lua-api.ts`), kept in sync with the source by `bindings/js/test/lua-api-sync.test.ts`. Existing.
+- ✓ Behaviour the refactor could break is pinned before any code moves: runner move survival (source kept alive and source freed, plus `static_assert(sizeof(LuaRunner) == sizeof(void*))`), the check orders of `open_file`/`read_csv`/`read_csv_stream`/`write_csv`/`export_csv`/`import_csv` with their "options must be a table" controls, the 1,000,000 key-width cap, closed-writer order, and sync-test guards (parse-derived usertype set with a four-type floor, single `open_libraries(`). All Debug/Release-defined; every pin mutation-tested. Baseline `Lua*` = 444 / 12 suites, C API 27. — Phase 1
 
 ### Active
 
-- [ ] Untested behaviour that the refactor could break is pinned by tests before any code moves (the 1,000,000 key-width cap, the check orders that pick which error a call reports, the sync test's usertype guards, a runner move). Only behaviour defined in both Debug and Release is pinned; non-string keys and non-table payloads are Release UB today, so their tests are written red-then-green with the fixes.
 - [ ] `src/lua_runner.cpp` is split into `src/lua_runner/` per-domain translation units, each of which both registers and implements its slice of the surface. No file is over ~450 lines and behaviour does not change.
 - [ ] The sync test reads every source file in the new folder and guards all usertypes; `/bigobj` applies to every sol2 TU; the NOLINT blocks move with their code.
 - [ ] Repeated boilerplate is collapsed into shared helpers: the transaction/dry-run body, bulk-read adapters, member-pointer forwarders, one registration style, the metadata wrappers, option decoders, and `CsvWriter` behaviour as members. No behaviour change.
@@ -59,7 +59,7 @@ fixes listed below.
 ## Context
 
 - Codebase map: `.planning/codebase/*.md`. Detailed map of the file (32 clusters with line ranges, seams, 8 bugs C1–C8, 16 dedup items M1–M16, rename blast radius of 53 files [historical: the rename is out of scope], sync-test contract), plus a critic's corrections: `.planning/research/LUA-RUNNER-MAP.md`.
-- `Impl` is a set of free functions in disguise. Instance state is only `db`, `lua`, the writer/binary-file registries (`open_writers`, `open_binary_files`, `path_has_open_writer`, `close_open_writers`) and three `[this]` captures (`open_file`, `write_csv`, `expr:save`). The split therefore needs a small `Context`/`RunHandles` held inside the heap-allocated `Impl`, so captured references survive a move.
+- `Impl` is a set of free functions in disguise. Instance state is only `db`, `lua`, the writer/binary-file registries (`open_writers`, `open_binary_files`, `path_has_open_writer`, `close_open_writers`) and three `[this]` captures (`open_file`, `write_csv`, `expr:save`). The split therefore needs a small `Context`/`RunHandles` held inside the heap-allocated `Impl`, so captured references survive a move. Phase 1 enforces this: `tests/test_lua_runner_lifecycle.cpp` static-asserts `sizeof(LuaRunner) == sizeof(void*)` (fails in every build if run state moves onto `LuaRunner`), and its freed-source pins crash in Debug if bindings reach state through the moved-from runner.
 - The sync test (`bindings/js/test/lua-api-sync.test.ts`) hardcodes `src/lua_runner.cpp`. Pass 1 matches `(bind|ns).set_function("name"`, so the local/parameter names `bind` and `ns` are load-bearing. Pass 2 relies on unqualified `new_usertype<X>`, one method name per line, and the 120-column limit. `current` must reset at file boundaries.
 - CI builds Release, where sol2 does not check `sol::table` parameters at all and Lua's API checks are off. That makes C1 undefined behaviour, not just a wrong error.
 - Version: CMake and all manifests are at 0.13.0, and the latest tag is `v0.12.9`, so the milestone's BREAKING changes land in 0.13.0 with no further bump. CHANGELOG has no `[0.12.9]` or `[0.13.0]` section yet; the newest is `[0.12.8]`.
@@ -89,7 +89,7 @@ fixes listed below.
 | Rename tail: closed/disposed messages, `SandboxException`, "directory containment" wording (`resolve_contained_path`), one `Sandbox*` test prefix | So "sandbox" means only the class | Reverted 2026-10-02: user decision, dropped with the rename. The scope statement (what the sandbox does not limit) stays, in DOC-04 |
 | Planning-ID comments replaced repo-wide | They point at deleted `.planning` files; Human-Centric principle | — Pending |
 | One PR per phase into master, each green on its own | Reviewable and bisectable; split and dedupe stay provably behaviour-neutral | — Pending |
-| Tests that pin behaviour first, then split, dedupe, fixes, and the path-policy test and docs last | The split is only safe once the existing behaviour is pinned | — Pending |
+| Tests that pin behaviour first, then split, dedupe, fixes, and the path-policy test and docs last | The split is only safe once the existing behaviour is pinned | ✓ Phase 1 done: 16 pins + 2 controls, mutation-tested; a live-source-only move pin was shown too weak (run state reached through the moved-from runner passed), fixed with freed-source pins and a `sizeof` static_assert |
 | Delete the `SOL_SAFE_FUNCTION=1` define and its AGENTS.md claim (SAFE-06) | sol2 v3.5.0 never reads it (only `SOL_SAFE_FUNCTIONS`, `SOL_SAFE_FUNCTION_OBJECTS`, `SOL_SAFE_FUNCTION_CALLS`), so it is dead; `SOL_ALL_SAFETIES_ON` covers what it claimed. Chosen in REQUIREMENTS over the research default of keeping it with a corrected comment | — Pending |
 | Lua `load` accepts text chunks only (SAFE-07) | A bytecode chunk is a crash vector for an untrusted script; string-form `load` stays, so the root sandbox decision only gains "text chunks only". Adopted in REQUIREMENTS although research listed it as v2 | — Pending |
 | Binding source, test and header files are renamed with the class (`quiverdb.sandbox` module path) | No-alias policy, and a `lua_runner` file name would keep the old meaning alive | Reverted 2026-10-02: user decision, dropped with the rename |
@@ -112,4 +112,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-02 after scope change (LuaRunner rename dropped by user decision; split folder is `src/lua_runner/`)*
+*Last updated: 2026-10-02 after Phase 1 (behaviour pins)*
