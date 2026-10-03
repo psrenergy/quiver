@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 5
 current_phase_name: Path-Policy Test and Docs
 status: executing
-stopped_at: Completed 04-04-PLAN.md
-last_updated: "2026-10-03T16:32:08.426Z"
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-10-03T17:14:37.738Z"
 last_activity: 2026-10-03
 last_activity_desc: Phase 2 complete, transitioned to Phase 3
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 17
-  completed_plans: 13
+  completed_plans: 14
 ---
 
 # Project State
@@ -27,12 +27,12 @@ See: .planning/PROJECT.md (updated 2026-10-03)
 
 ## Current Position
 
-Phase: 5 — Path-Policy Test and Docs
-Plan: Not started
+Phase: 5 (Path-Policy Test and Docs) — EXECUTING
+Plan: 2 of 4
 Status: Ready to execute
-Last activity: 2026-10-03 — Phase 4 complete, transitioned to Phase 5
+Last activity: 2026-10-03 — Phase 5 execution started
 
-Progress: [████████████████░░░░] Phase 4 of 5 complete (13/13 plans so far)
+Progress: [████████░░] 82%
 
 ## Performance Metrics
 
@@ -74,6 +74,7 @@ Progress: [████████████████░░░░] Phase 4
 | Phase 04 P02 | 18min | 3 tasks | 8 files |
 | Phase 04 P03 | 27min | 2 tasks | 10 files |
 | Phase 04 P04 | 41min | 2 tasks | 9 files |
+| Phase 05 P01 | 40 min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -119,6 +120,7 @@ Recent decisions affecting current work:
 - [Phase 4]: 04-04: SOL_ALL_SAFETIES_ON + SOL_PRINT_ERRORS=0 landed with the perf fallback SOL_SAFE_GETTER=0 / SOL_SAFE_STACK_CHECK=0 (full flags cost +16.4% on a 100k read_scalar_floats read; fallback -1.9% / file:read +0.5%)
 - [Phase 4]: 04-04: the getter is now unchecked in Debug too (explicit =0 beats sol2's debug default); lua_cell_as and the key checks guard every .as<, Debug golden unchanged
 - [Phase 4]: 04-04: Lua* = 472 / 12 suites (Windows Debug and Release), Linux 470 + 1 skip, C API 27 at 7e5eccd (superseded by the post-review baseline below: 477 at e6aa5c1)
+- [Phase 05]: quiver_tests compiles its own copy of src/lua_runner/path_policy.cpp to reach the hidden resolve_sandboxed_path; nothing new exported; path_policy.cpp stays a one-function file
 
 ### Pending Todos
 
@@ -148,6 +150,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-10-03T15:37:55.721Z
-Stopped at: Phase 4 complete, ready to plan Phase 5
+Last session: 2026-10-03T17:14:37.718Z
+Stopped at: Completed 05-01-PLAN.md
 Resume file: None

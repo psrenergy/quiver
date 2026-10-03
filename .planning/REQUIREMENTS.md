@@ -52,7 +52,7 @@ Evidence for each item (line numbers at `bdf9087`) is in `.planning/research/LUA
 
 ### Tests
 
-- [ ] **TEST-01**: `resolve_sandboxed_path` is unit-tested directly through a sol2-free header, covering containment, escape rejection, the root itself, `:memory:`, and the device-name prefix. These tests are in addition to the existing Lua-level tests, and their suite name sits outside the `Lua*` gtest filter.
+- [x] **TEST-01**: `resolve_sandboxed_path` is unit-tested directly through a sol2-free header, covering containment, escape rejection, the root itself, `:memory:`, and the device-name prefix. These tests are in addition to the existing Lua-level tests, and their suite name sits outside the `Lua*` gtest filter.
 
 ### Docs
 
@@ -132,7 +132,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FIX-01 | Phase 4 | Complete |
 | FIX-02 | Phase 4 | Complete |
 | FIX-03 | Phase 4 | Complete |
-| TEST-01 | Phase 5 | Pending |
+| TEST-01 | Phase 5 | Complete |
 | DOC-01 | Phase 5 | Pending |
 | DOC-02 | Phase 5 | Pending |
 | DOC-03 | Phase 5 | Pending |
