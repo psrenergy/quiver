@@ -41,7 +41,13 @@ callers to change something are prefixed **BREAKING** and say what to do.
   have the same length` when another column of the group is non-empty. A column name shared by
   several groups clears every one of them; every time-series group of a collection shares
   `date_time`, so `{ date_time = {} }` clears them all. `create_element` still skips an empty array.
-  To leave a group untouched, omit its column.
+  To leave a group untouched, omit its column. `quiver.metadata_from_element` decodes its table the
+  same way, so an empty `dimensions`, `dimension_sizes` or `labels` array no longer reports `Cannot
+  from_element: missing array '<name>'`: it reaches validation and reports what is wrong (`Number
+  of labels must be positive, got 0`; `Cannot from_element: dimension_sizes count (0) does not
+  match dimensions count (1)` or the reverse for one empty side; `Number of dimensions must be
+  positive, got 0` for both). An empty `time_dimensions` or `frequencies` array still means the same
+  as leaving it out.
 - **BREAKING** **Lua `load` and the script given to `LuaRunner::run` accept text chunks only.** A
   precompiled chunk (for example `string.dump` or `luac` output, given as a string or through a
   reader function) makes `load` return `nil` and `attempt to load a binary chunk (mode is 't')`,

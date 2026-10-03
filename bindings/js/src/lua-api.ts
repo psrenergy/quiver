@@ -12,9 +12,8 @@
 // and whether the prose is semantically true.
 //
 // NOTE: the binary/expression subsystems are bound in the native binding and documented below.
-// File-touching operations (db:open_file, db:bin_to_csv, db:csv_to_bin, db:validate_migrations,
-// expr:save) are sandboxed to the database file's directory; the pure-metadata builders stay under
-// the quiver.* global.
+// File-touching operations are sandboxed to the database file's directory (the "Filesystem
+// sandbox" bullet lists all of them); the pure-metadata builders stay under the quiver.* global.
 //
 // FORMAT CONVENTION: every db: method appears at least once as the literal token
 // `db:<snake_case_name>`, and every quiver.* function as `quiver.<name>`, so coverage is greppable
@@ -115,6 +114,12 @@ midnight.
   (subdirectories are fine; \`..\` escapes and outside absolute paths throw \`Cannot <op>: path '...' escapes the
   database directory ...\`). On an in-memory database these operations throw
   \`Cannot <op>: database is in-memory, file operations are unavailable\`.
+- **What the sandbox does not limit.** The sandbox controls which files a script can touch and
+  which standard libraries exist. It does not bound how much work a script does: there is no
+  instruction-count limit, no memory cap and no wall-clock timeout (\`while true do end\` runs
+  until the host stops it). Globals persist across \`run()\` calls on the same runner, so a global
+  one script sets is visible to the next; use \`local\`. A host that runs untrusted scripts has to
+  impose those limits outside the library.
 - **Output.** A script can \`return\` one value and the host receives it as JSON — prefer this over
   \`print()\` when you need structured data back (\`print()\` still works and is captured). Only the
   **first** returned value is encoded. Arrays are 1-indexed. Iterate with \`ipairs\` only where no
@@ -720,8 +725,8 @@ no header at all, so \`csv.header\` is absent (\`nil\`, not an empty table) and 
 file's first line — useful for a file with a junk title row and/or a units row around the real
 header (skip them by naming the header row and slicing \`csv.rows\` in the script). A \`header_row\`
 past the end of the file throws. Passing the separator positionally (\`db:read_csv(path, ";")\`)
-throws \`Cannot read_csv: options must be a table\` instead of silently parsing with a comma; an
-unknown key, a separator that isn't a single character (or is a quote, CR, LF or NUL — none of
+throws \`Cannot read_csv: options must be a table, got string\` instead of silently parsing with
+a comma; an unknown key, a separator that isn't a single character (or is a quote, CR, LF or NUL — none of
 those can be a delimiter), a non-string option key, or a \`header_row\` that isn't a
 non-negative integer also throws.
 
