@@ -116,7 +116,7 @@ depth). Three `csv::CSVFormat` settings are pinned in exactly one place (`make_f
 count differs from the header), the header row (with no header pinned, csv-parser guesses one and
 pops every record up to the guessed index — silently eating a one-cell title line above the real
 header; driven by `Options.header_row`, 1-based at the Lua boundary, `0` = `no_header()`, default
-`1` — Phase 2's `header_row` option, D-20), and never calling `chunk_size(...)` (with
+`1`), and never calling `chunk_size(...)` (with
 `CSV_ENABLE_THREADS` forced off, the read window is csv-parser's own fixed default, unmultiplied by
 worker count). **Call order in `make_format` is load-bearing**: the header mode must be set before
 `variable_columns()`, because `CSVFormat::header_row(row < 0)` (i.e. `no_header()`) overwrites
@@ -131,7 +131,7 @@ import's `require_well_formed_quotes` (`database_csv_import.cpp`) hand-copies th
 DELETE; `LuaRunner_ReadCsv.StrayQuotesTokenizeAsTheImportPrePassAssumes` pins the parser side, so
 re-check both on any csv-parser `GIT_TAG` bump.
 
-`csv/csv_write.h`/`.cpp` is `csv_read`'s deliberate non-Pimpl counterpart (D-37): it depends
+`csv/csv_write.h`/`.cpp` is `csv_read`'s deliberate non-Pimpl counterpart: it depends
 on nothing that must be kept out of the sol2 translation unit (no csv-parser, no third-party
 headers), so hiding its `std::ofstream` member behind a Pimpl the way `Reader` hides csv-parser
 would be cargo cult. `Writer` backs `db:write_csv`; the free `append_record` it emits through is
@@ -139,9 +139,9 @@ also `export_csv`'s emitter (`database_csv_export.cpp` builds the whole file wit
 it in one shot, so `Writer`'s truncate-at-open and its `Cannot write_csv` messages stay out of
 export). Same no-`include/quiver/`-header, no-`QUIVER_API`, no-C-API posture as `csv_read`. Numeric cell formatting reuses
 `quiver::utils::append_number` (`src/utils/number.h`) via `std::to_chars`'s shortest round-trip
-form with no synthetic decimal point, so a whole float and the equal integer write identical text
-(D-34); a `nil` cell and an empty-string cell are structurally indistinguishable after a CSV round
-trip and that is stated, not fixed — CSV has no null (D-40). FMT-07's row-width enforcement (a
+form with no synthetic decimal point, so a whole float and the equal integer write identical text;
+a `nil` cell and an empty-string cell are structurally indistinguishable after a CSV round
+trip and that is stated, not fixed — CSV has no null. The row-width enforcement (a
 short `write_row` pads to the header's length, a long one throws) lives entirely in the Lua-layer
 `CsvWriter::write_row` in `src/lua_runner/csv.cpp`, not here: this file's `Writer` gained no header-width
 state and no signature change for it, and padding happens before the cell vector ever reaches
@@ -149,7 +149,7 @@ state and no signature change for it, and padding happens before the cell vector
 already-padded cell count.
 
 `ui_metadata.h`/`ui_metadata.cpp` is the `ui/` TOML sidecar reader behind `describe()` and
-`describe_collection()` (Phase 1 of the "UI Metadata in describe" milestone): same
+`describe_collection()`: same
 no-`include/quiver/`-header, no-`QUIVER_API`, no-C-API-symbol, no-FFI-binding posture as
 `csv_read` — `describe*` already return a plain `std::string` through the C API, so there is no
 FFI consumer for a structured getter, and toml++ is linked PRIVATE on `quiver`
@@ -219,9 +219,9 @@ byte outside `a-z0-9`, so a symbol-only (`"%"`, `"(-)"`) or non-Latin (`"Нач�
 squashes to `""` and used to compare equal to an *absent* label's `""` — silently deleting a
 tooltip that restates nothing. That is the one direction in which squash's "drop non-ASCII" bias
 suppresses rather than prints, and it is the reason the predicate exists rather than three
-open-coded `squash(a) == squash(b)` tests. The raw-vs-normalized distinction D-05 once drew is
-unobservable and is not spelled: `normalize_ui_text` only rewrites bytes `squash` discards anyway,
-so `squash(normalize(x)) == squash(x)`. `normalize_ui_text` maps every
+open-coded `squash(a) == squash(b)` tests. The raw-vs-normalized distinction the tooltip
+suppression rule once drew is unobservable and is not spelled: `normalize_ui_text` only rewrites
+bytes `squash` discards anyway, so `squash(normalize(x)) == squash(x)`. `normalize_ui_text` maps every
 byte below `0x20` and `0x7F` to a space before collapsing runs and trimming (via
 `quiver::string::trim`) — **and** the two-byte UTF-8 encoding of the C1 block,
 `0xC2 0x80`-`0xC2 0x9F`. The C1 half is not optional: U+009B is CSI and U+009D is OSC, the 8-bit
@@ -237,9 +237,9 @@ policy.
 `kMaxDistributionCardinality`-bounded branch) also annotates each *observed* code with its enum
 label: `values {0 "Per Unit": 2, 1: 1}`. The `ui_metadata.find(collection, scalar.name)` lookup
 sits immediately before `"; values {"` is written, not at the top of the per-scalar loop, so a
-collection of TEXT/REAL/PK scalars pays zero two-level map lookups. **D-09 (deliberate divergence
-from D-06):** here a label that normalizes to empty drops only the *annotation* and keeps the
-*entry* — unlike the `enum {}` clause above, where the entry IS the vocabulary and an
+collection of TEXT/REAL/PK scalars pays zero two-level map lookups. **Deliberate divergence
+from the `enum {}` clause:** here a label that normalizes to empty drops only the *annotation*
+and keeps the *entry* — unlike the `enum {}` clause above, where the entry IS the vocabulary and an
 empty-normalizing label drops the whole thing. In the histogram the entry is an observed row
 count, and dropping it would destroy data. Three known limits, recorded rather than fixed: (1)
 `ui_metadata` is populated only by `from_migrations` (see the early-return trap above), so
@@ -297,7 +297,7 @@ whose check surfaced sol2's own "stack index 3, expected function" text.
 `db:open_file`'s process-global write registry in `src/binary/binary_file.cpp`). Two writers on one
 path each open with `ios::trunc` and write from offset 0, so the second silently discarded
 everything the first had buffered. Reopening a path whose previous writer was **closed** is still
-the documented truncate (WRITE-08) — the guard checks `is_closed()`, which is what keeps
+the documented truncate — the guard checks `is_closed()`, which is what keeps
 `ReopeningSamePathTruncatesExistingContent` green.
 
 ## Pimpl vs Value Types
@@ -708,8 +708,9 @@ Implementation conventions in `src/lua_runner/`:
   `std::filesystem_error` for any OS failure that is not a plain "does not exist", and a Windows
   device name (`NUL`, `nul`, any case, any directory) is exactly such a case. Unwrapped, the raw
   `weakly_canonical: The parameter is incorrect.: ...` reached the script with no Pattern 1 prefix
-  at all, breaking LUA-08 for **every** operation in the list above, not just the one it was found
-  through. Because this is the single gate they all share, the guard belongs here and nowhere else;
+  at all, breaking the rule that no standard-library, csv-parser or sol2 message reaches a script
+  without a Pattern 1 prefix, for **every** operation in the list above, not just the one it was
+  found through. Because this is the single gate they all share, the guard belongs here and nowhere else;
   the deliberate `:memory:` and containment throws stay outside the `try` so they are not
   double-wrapped. Covered by `LuaRunner_ReadCsv.DeviceNamePathIsReportedWithPrefix` and
   `LuaBinaryTest.DeviceNamePathIsReportedWithPrefix` (the latter spanning `open_file`/`bin_to_csv`/
@@ -855,8 +856,8 @@ Implementation conventions in `src/lua_runner/`:
   so read → modify → write round-trips; `#ts.<dimension>` is the trustworthy row count.
 - **`run` returns the script's return value as JSON**, built by the anonymous-namespace
   `append_json` / `append_json_string` / `append_json_double` / `append_json_table` at the top of
-  `return_json.cpp`, plus `quiver::utils::append_number` (`src/utils/number.h` — moved out of the Lua binding,
-  D-38; `db:write_csv`'s cell formatter and `bin_to_csv` are its other callers). The table check uses `get_type()` rather than
+  `return_json.cpp`, plus `quiver::utils::append_number` (`src/utils/number.h` — moved out of the Lua binding;
+  `db:write_csv`'s cell formatter and `bin_to_csv` are its other callers). The table check uses `get_type()` rather than
   `is<T>()` on purpose: sol2's `is<sol::table>()` also accepts **userdata**, so `return db` would
   quietly encode as `{}`. The boolean check spells `get_type()` for consistency with
   `is_lua_boolean` in `internal.h`, not out of necessity — sol2's `check<bool>` *is* `lua_isboolean`
@@ -912,9 +913,9 @@ Implementation conventions in `src/lua_runner/`:
   left in a global would otherwise hold its path in the process-wide write registry until the
   `LuaRunner` is destroyed (pinned by `LuaBinaryTest.WriterHeldInAGlobalIsClosedWhenRunReturns`
   and `HandleFromAnEarlierRunIsClosed`). The `collect_garbage()` call
-  stays for every other sol2-owned resource; one call was proven sufficient by an executed probe
-  against this repo's own vendored sol2/Lua build (RESEARCH.md Q1) — it must not be "hardened"
-  into a loop.
+  stays for every other sol2-owned resource; one call was proven sufficient by a one-off executed
+  probe against this repo's own vendored sol2/Lua build (no standing test guards it: the writer
+  tests pass through `close_open_handles()` first) — it must not be "hardened" into a loop.
 
 ## Binary Subsystem
 

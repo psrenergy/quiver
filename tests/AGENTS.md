@@ -23,8 +23,8 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   `UiMetadataTest` (path resolution, shape selection, localized-value reading including the C0/C1
   control-byte collapse, and the `enum.toml` join) and `DatabaseUiMetadataTest`
   (label/tooltip/enum clause rendering, the redundancy-suppression rules, the undescribed cases,
-  the malformed/degrade cases, the `summarize_collection` histogram annotation, and the SAFE-01
-  no-`ui/` baseline). Its `UiTempTreeFixture` base builds a
+  the malformed/degrade cases, the `summarize_collection` histogram annotation, and the
+  no-`ui/` baseline, `NoUiDirReportsUnchanged`). Its `UiTempTreeFixture` base builds a
   per-test temp-dir `migrations/` tree plus sibling `ui/` tree from caller-supplied file contents
   (extending the `MigrationsTestFixture` idiom in `test_migrations.cpp`) — **nothing may be
   committed under `tests/schemas/ui/`**, because such a directory would become a live sibling of
@@ -75,12 +75,12 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   this suite has no sibling elsewhere. Most of its CSV fixtures are still written at runtime into
   the `LuaSandboxTest` sandbox, since they exist only to be read back once. **`tests/fixtures/`**
   is the one exception: `ma_energia_residencial.csv` and `ma_gd_data.csv` are two real Maranhão
-  utility files committed byte-exact (Phase 2, TEST-02), copied into the sandbox by the tests that
+  utility files committed byte-exact, copied into the sandbox by the tests that
   read them rather than generated inline. They are committed rather than hand-written because
   their exact bytes are themselves what two of the parser requirements assert — a leading UTF-8
   BOM and CRLF line endings on the Energia file, neither on the GD file — and a fixture built by a
   test-writer's editor cannot be trusted to reproduce that. `.gitattributes` marks both `-text` so
-  git's line-ending normalization never touches them (D-24); like `tests/schemas/`, the directory
+  git's line-ending normalization never touches them; like `tests/schemas/`, the directory
   needs no CMake registration since both tests locate it from the compiled-in source path.
   Two of its negatives need an OS-level lever rather than a fixture, and the two platforms
   disagree about which one works. `UnreadableFileReportsParserFailure` needs a file that passes
@@ -95,7 +95,7 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   fix stays in the shared `resolve_sandboxed_path` gate instead of regressing to a per-caller patch.
 - `test_lua_runner_write_csv.cpp` covers the Lua-only `db:write_csv`/`w:write_row`/`w:close`
   binding (cell-type dispatch, the `separator`/`header` options, the max-integer-key row walk, and
-  the WRITE-08 truncate-at-open behaviour) — same no-other-layer-counterpart situation as
+  the truncate-at-open behaviour) — same no-other-layer-counterpart situation as
   `test_lua_runner_read_csv.cpp` above. Every correctness assertion in it round-trips the written
   file back through `db:read_csv` rather than reading the raw bytes, for the same reason
   `export_csv`'s export-only string-search tests were a trap this project hit twice already.
@@ -152,14 +152,14 @@ things to keep in mind when touching these:
 - **The three mixed-array tests guard the unchecked getter.**
   `CreateElementMixedIntegerAndBooleanArray`, `CreateElementMixedFloatAndBooleanArray` and
   `CreateElementArrayCellTypeMismatchThrows` cover bugs that only manifest with
-  `SOL_SAFE_GETTER` off (silent 0 / 0.0 / `""` instead of a throw). `src/CMakeLists.txt` now sets it
-  off in every build, so Debug sees them too; every other sol2 safety is on in both builds, and a
-  Release run is still the check that no build-specific behaviour crept in. Build Release with tests via the
-  preset when touching `lua_table_to_vector`:
-  `cmake --preset release && cmake --build --preset release`, then run
-  `build/release/bin/quiver_tests.exe --gtest_filter='Lua*'`. Phase 2's `header_row` decoder
-  (a new `sol::object` type check) was verified this way (TEST-05): 291/291 `LuaRunner*` tests
-  passed in both Debug and Release, with no divergence.
+  `SOL_SAFE_GETTER` off (silent 0 / 0.0 / `""` instead of a throw). `src/CMakeLists.txt` sets the
+  getter **and the stack check** (`SOL_SAFE_STACK_CHECK=0`) off in every build, so Debug sees them
+  too; every other sol2 safety is on in both builds. After touching `lua_table_to_vector` or adding
+  another `sol::object` type check, build Release with tests via the preset
+  (`cmake --preset release && cmake --build --preset release`), run
+  `build/release/bin/quiver_tests.exe --gtest_filter='Lua*'` and the same filter on the Debug
+  build, and expect identical results — the Release run is the check that no build-specific
+  behaviour crept in.
 
 The native-DateTime bindings (Julia, Dart, and Python) cover bulk scalar, vector, and set
 convenience readers in the corresponding `read` test files, NULL cells included: the set wrappers
