@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 2
 current_phase_name: Mechanical Split
 status: executing
-stopped_at: Phase 1 complete, ready to plan Phase 2
-last_updated: "2026-10-03T02:53:22.440Z"
+stopped_at: Completed 02-01-PLAN.md
+last_updated: "2026-10-03T03:12:38.339Z"
 last_activity: 2026-10-02
 last_activity_desc: Roadmap revised after checker feedback (5 phases, 40/40 v1 requirements mapped)
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 6
-  completed_plans: 2
+  completed_plans: 3
 ---
 
 # Project State
@@ -23,16 +23,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-02)
 
 **Core value:** Every file in the Lua scripting layer is small and single-purpose enough for an agent to change safely, and every existing script behaves exactly as before, apart from the deliberate, test-pinned fixes.
-**Current focus:** Phase 2 — mechanical-split
+**Current focus:** Phase 2 — Mechanical Split
 
 ## Current Position
 
-Phase: 2 — Mechanical Split
-Plan: Not started
+Phase: 2 (Mechanical Split) — EXECUTING
+Plan: 2 of 4
 Status: Ready to execute
-Last activity: 2026-10-02 — Phase 01 complete, transitioned to Phase 2
+Last activity: 2026-10-02 — Phase 2 execution started
 
-Progress: [████░░░░░░░░░░░░░░░░] Phase 1 of 5 complete (2/2 plans)
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
@@ -60,6 +60,7 @@ Progress: [████░░░░░░░░░░░░░░░░] Phase 1
 |------|----------|-------|-------|
 | Phase 01 P01 | 134min | 3 tasks | 7 files |
 | Phase 01 P02 | 35 min | 3 tasks | 4 files |
+| Phase 02 P01 | 20min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -79,6 +80,8 @@ Recent decisions affecting current work:
 - Roadmap: the CHANGELOG `[0.13.0] — unreleased` section and its compare link are opened in Phase 4 (C1/C5/C7/`load` BREAKING, the Release dot-call and raw sol2 self-check text, C2/C4/C6/C8 Fixed) and completed in Phase 5 (rename). No version bump.
 - [Phase 01]: Move pins pair a kept-alive source with a freed source, plus static_assert(sizeof(LuaRunner)==sizeof(void*)) so run state held outside Impl fails in Release too
 - [Phase 01]: Phase 1 gtest baseline: Lua* = 444 tests / 12 suites, LuaRunnerCApiTest = 27 (at 570c2c1)
+- [Phase ?]: [Phase 02]: /bigobj (-Wa,-mbig-obj) is target-wide on quiver so no new sol2 TU can miss it
+- [Phase ?]: [Phase 02]: NOLINT pairs now name performance-unnecessary-value-param (old name suppressed nothing)
 
 ### Pending Todos
 
@@ -101,6 +104,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-10-03T01:35:00Z
-Stopped at: Phase 1 complete, ready to plan Phase 2
+Last session: 2026-10-03T03:12:38.314Z
+Stopped at: Completed 02-01-PLAN.md
 Resume file: None
