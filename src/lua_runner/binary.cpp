@@ -49,8 +49,8 @@ std::vector<T> metadata_array(const std::optional<sol::object>& value, const cha
 
 // Build BinaryMetadata from a Lua kwargs table, mirroring the Julia Metadata(; ...) constructor:
 // assemble an Element and delegate to from_element (which computes time-dimension initial values).
-// Strict: a table (option_entries checks it, nil included, since sol2 does not check a table
-// parameter in Release) with only these eight keys, each of the right type. This function stays
+// Strict: a table (option_entries checks it, nil included, so the error is a Pattern 1 message)
+// with only these eight keys, each of the right type. This function stays
 // above bind_binary: the sync test reads a bare quoted name on its own line below a usertype as
 // one of that usertype's methods, and the wrapped key list here is such lines.
 BinaryMetadata build_metadata_from_lua(const sol::object& t) {
@@ -303,7 +303,7 @@ void bind_binary(sol::state& state, sol::usertype<Database>& bind, sol::table& n
         [](Expression& self, const sol::object& mapping) {
             // The explicit table check rejects a userdata too. Then collect, then check both
             // halves with lua_cell_as: an unchecked as<std::string>() spelled a number key as
-            // text and gave "" for a boolean in Release.
+            // text and gave "" for a boolean, since sol2's getter is unchecked.
             std::vector<std::pair<std::string, std::string>> pairs;
             for (const auto& [key, value] : collect_entries(require_table(mapping, "rename_agents", "mapping"))) {
                 auto old_name = lua_cell_as<std::string>(key, "rename_agents", "key");

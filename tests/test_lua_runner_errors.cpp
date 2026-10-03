@@ -340,6 +340,39 @@ TEST_F(LuaRunnerTest, LoadStillAcceptsTextChunks) {
     )");
 }
 
+TEST_F(LuaRunnerTest, CaughtScriptErrorsWriteNothingToStderr) {
+    auto db = quiver::Database::from_schema(
+        ":memory:",
+        collections_schema,
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
+    quiver::LuaRunner lua(db);
+
+    // A C++ exception crossing a binding, caught by the script.
+    testing::internal::CaptureStderr();
+    lua.run("pcall(function() db:commit() end)");
+    EXPECT_EQ(testing::internal::GetCapturedStderr(), "");
+
+    // The same exception left to propagate out of run().
+    testing::internal::CaptureStderr();
+    bool threw = false;
+    try {
+        lua.run("db:commit()");
+    } catch (const std::exception&) {
+        threw = true;
+    }
+    EXPECT_EQ(testing::internal::GetCapturedStderr(), "");
+    EXPECT_TRUE(threw);
+}
+
+TEST_F(LuaRunnerTest, DotCallThrowsInsteadOfCrashing) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(lua, "db.commit()", "received nil for 'self' argument");
+    EXPECT_THROW(lua.run("db.create_element('Collection', { label = 'x' })"), std::runtime_error);
+}
+
 TEST_F(LuaRunnerTest, StandardLibrariesEnabled) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::LuaRunner lua(db);

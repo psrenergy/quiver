@@ -271,11 +271,11 @@ untrusted input, in the same spirit as the JSON encoder's two caps below:
 - `option_entries` (which also owns the options-must-be-a-table check; what nil means stays with
   each caller) and `collect_group_columns` check each key's Lua *type* before converting it.
   sol2's `std::string` getter is `lua_tolstring`, which answers `nullptr` for a
-  boolean/table/function key and spells a number key as text: unchecked in Release
-  (`SOL_SAFE_GETTER` is off there) and a raw sol2 panic in Debug, so `{ [true] = 1 }` reached the
-  script as a bare Lua value rather than a message. For the six group writers the check makes an
-  array of row tables (`{ { date_time = ... } }`) throw one Pattern 1 message in every build,
-  where Release used to report a misleading `column '1' must be an array of values`.
+  boolean/table/function key and spells a number key as text, and the getter is unchecked in
+  every build (`SOL_SAFE_GETTER=0`), so without the check `{ [true] = 1 }` would reach the script
+  as a bare Lua value rather than a message. For the six group writers the check makes an array of
+  row tables (`{ { date_time = ... } }`) throw one Pattern 1 message instead of a misleading
+  `column '1' must be an array of values`.
 - `csv_separator_from_lua` rejects `"`, CR, LF and NUL in addition to the multi-byte check. They
   are one byte but cannot be delimiters: csv-parser refuses a delimiter that overlaps its quote
   character, so `db:write_csv` with `separator = '"'` silently produced a file `db:read_csv`
@@ -284,7 +284,8 @@ Every table argument of a bound function is a `sol::object` checked by `require_
 (`internal.h`) in the decoder that first walks it, never a typed `sol::table` parameter: sol2's
 check for one is loose (it accepts a **userdata**, which iterates as no keys, so
 `w:write_row(db)` once appended an empty record and a userdata group payload cleared the group)
-and, in Release, absent, so a number or string reached `lua_next` unchecked. The message names the
+and, before every sol2 safety was turned on, absent in Release, so a number or string reached
+`lua_next` unchecked. The message names the
 operation, the argument and its Lua type (`Cannot write: data must be a table, got number`).
 `db:read_csv_stream`'s `on_row` stays the model for the function case: a `sol::object` with an
 explicit `sol::type::function` check rather than a typed `sol::protected_function` parameter,
@@ -781,11 +782,10 @@ Implementation conventions in `src/lua_runner/`:
 - **`lua_table_to_vector<T>(table, caller)` is the only table→vector converter**, and it converts
   and checks **every cell**, not just the one the caller dispatched on. Both halves are
   load-bearing. `table_to_element` picks an array's element type from cell 1 alone, and sol2's
-  plain `get<T>` is unchecked whenever `SOL_SAFE_GETTER` is off — which is every **release** build:
-  `src/CMakeLists.txt` sets `SOL_SAFE_NUMERICS=1` and `SOL_SAFE_FUNCTION=1`, but `SOL_SAFE_GETTER`
-  is left at sol2's default (on in debug, off in release). So a mixed `{1, true}` used to store 0
-  and `{"a", true}` an empty string, silently, in release only — a class of bug Debug CI cannot
-  see. The converter now coerces a boolean cell to 1/0 for a numeric `T` and raises a Pattern 1
+  plain `get<T>` is unchecked in **every** build: `src/CMakeLists.txt` sets `SOL_SAFE_GETTER=0`
+  (see the safety-flags bullet below). So a mixed `{1, true}` used to store 0 and `{"a", true}` an
+  empty string, silently — in Release only while Debug still checked the getter, and in every build
+  now that it does not. The converter now coerces a boolean cell to 1/0 for a numeric `T` and raises a Pattern 1
   `"Cannot <caller>: cell #N has unsupported Lua type"` for anything that does not fit, so both the
   int and the float/string paths are covered. Two known limits, both pre-existing: the loop is
   bounded by `t.size()` (`lua_rawlen`), so a table with `nil` holes truncates — unlike
@@ -809,6 +809,18 @@ Implementation conventions in `src/lua_runner/`:
   Without it that check degrades to "is a number" in release, and the folder-wide
   `is<int64_t>()`-before-`is<double>()` ordering would route every float into the integer branch
   and store `llround(x)`. Do not drop or move those definitions.
+- **`SOL_ALL_SAFETIES_ON=1` and `SOL_PRINT_ERRORS=0` (`src/CMakeLists.txt`) are the backstop behind
+  the explicit checks**, which own every Pattern 1 message. Release now checks string, number and
+  `self` arguments the way Debug always did, so a dot-call such as `db.commit()` raises sol2's
+  `received nil for 'self' argument` text instead of dereferencing null, and a lambda-bound
+  dot-call (`db.create_element(...)`) raises `stack index 1, expected userdata`. `SOL_PRINT_ERRORS=0`
+  keeps sol2 from printing `[sol2] An exception occurred: ...` to the host's stderr for every
+  exception that crosses a binding, caught or not. `SOL_SAFE_GETTER=0` and `SOL_SAFE_STACK_CHECK=0`
+  are the measured exception: with them on, a Release 100k-element `read_scalar_floats` read cost
+  16% more (median of 5 interleaved runs, 633 -> 737 ms); with them off it is within noise
+  (638 -> 626 ms; a 1M-cell `file:read` loop 422 -> 424 ms). The getter is therefore unchecked in
+  every build, Debug included, which is why `lua_cell_as` and the key checks exist. Never disable
+  `SOL_SAFE_FUNCTION_CALLS` or `SOL_SAFE_USERTYPE`: they are the argument and `self` checks.
 - **`SOL_NO_NIL=1` (`src/CMakeLists.txt`) is a portability guard, not a preference.** sol2 does not
   define `sol::nil` on Apple platforms at all: `version.hpp` turns `SOL_NIL` off whenever
   `__MAC_OS_X_VERSION_MAX_ALLOWED`, `__OBJC__` or a `nil` macro is visible, because Objective-C

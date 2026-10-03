@@ -44,6 +44,13 @@ callers to change something are prefixed **BREAKING** and say what to do.
   `string.dump` output, given as a string or through a reader function) makes `load` return `nil`
   and `attempt to load a binary chunk (mode is 't')`, whatever mode is passed. Load the source text
   instead.
+- **BREAKING** **Release builds check every Lua argument the way Debug builds already did.** A
+  dot-call such as `db.commit()` now raises sol2's error `sol: received nil for 'self' argument
+  (use ':' for accessing member functions, ...)` instead of crashing the host process, and a
+  wrong-typed string or number argument raises sol2's `stack index N, expected ...` text instead
+  of undefined behaviour. Debug builds no longer print `[sol2] An exception occurred: ...` to the
+  host's stderr for an error a script raises through a binding. Call methods with `:` and pass the
+  documented types.
 
 ### Fixed
 

@@ -112,12 +112,12 @@ inline bool is_lua_boolean(const sol::object& v) {
 // The checked Lua-value→T conversion for the typed paths (arrays, dimensions, file paths,
 // quiver.metadata fields, rename_agents names, enum_labels codes); lua_to_value below is its
 // Value-typed sibling. Load-bearing:
-// sol2's plain `get<T>` is unchecked whenever SOL_SAFE_GETTER is off — which is every release
-// build (`src/CMakeLists.txt` sets SOL_SAFE_NUMERICS and SOL_SAFE_FUNCTION, not
-// SOL_SAFE_GETTER), where a mismatched value silently yields 0 / 0.0 / "" while a Debug build
-// aborts on a sol2 panic, so the two disagree on the same script. A boolean is INTEGER 1/0 for
-// a numeric `T`, matching the scalar policy; anything that does not fit `T` is a Pattern 1
-// rejection. `what` names the offending slot ("cell #3", "dimension 'stage'").
+// sol2's plain `get<T>` is unchecked in every build (`src/CMakeLists.txt` sets SOL_SAFE_GETTER=0
+// to keep the bulk readers inside their cost budget), so a mismatched value silently yields
+// 0 / 0.0 / ""; and a checked getter would only raise sol2's raw text through a luaL_error
+// longjmp, never a Pattern 1 message. A boolean is INTEGER 1/0 for a numeric `T`, matching the
+// scalar policy; anything that does not fit `T` is a Pattern 1 rejection. `what` names the
+// offending slot ("cell #3", "dimension 'stage'").
 template <typename T>
 T lua_cell_as(const sol::object& cell, const std::string& caller, const std::string& what) {
     if constexpr (std::is_arithmetic_v<T>) {
@@ -263,10 +263,9 @@ std::array<std::optional<sol::object>, N> option_entries(
     std::array<std::optional<sol::object>, N> found;
     for (auto& entry : collect_entries(require_table(options, operation, "options"))) {
         // Check the key's Lua type before converting it: sol2's std::string getter is
-        // lua_tolstring, which answers nullptr for a boolean/table/function key -- unchecked
-        // in Release (SOL_SAFE_GETTER is off there) and a raw sol2 panic in Debug, so a
-        // `{ [true] = 1 }` options table would reach the script as a bare Lua value rather
-        // than a Pattern 1 message.
+        // lua_tolstring, which answers nullptr for a boolean/table/function key and is
+        // unchecked in every build (SOL_SAFE_GETTER=0), so a `{ [true] = 1 }` options table
+        // would reach the script as a bare Lua value rather than a Pattern 1 message.
         if (entry.first.get_type() != sol::type::string) {
             throw std::runtime_error("Cannot " + operation + ": option key must be a string");
         }

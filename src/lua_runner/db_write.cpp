@@ -101,9 +101,9 @@ Element table_to_element(const std::string& caller, const sol::object& values) {
 std::vector<GroupColumn> collect_group_columns(const std::string& caller, const sol::object& columns) {
     std::vector<GroupColumn> result;
     for (auto& pair : require_table(columns, caller, "columns")) {
-        // Check the key's type before converting it. sol2's string getter is unchecked in
-        // Release (SOL_SAFE_GETTER off): key 1 became column "1" and a boolean key column "",
-        // so an array of row tables got a misleading error there and a raw sol2 panic in Debug.
+        // Check the key's type before converting it. sol2's string getter is unchecked in every
+        // build (SOL_SAFE_GETTER=0): key 1 would become column "1" and a boolean key column "",
+        // so an array of row tables would get a misleading error instead of this one.
         if (pair.first.get_type() != sol::type::string) {
             throw std::runtime_error(
                 "Cannot " + caller +

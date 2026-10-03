@@ -68,11 +68,19 @@ target_include_directories(quiver
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-# sol2 safety settings
+# sol2 safety settings: sol2's safeties are on in every build, as the backstop behind the explicit
+# Pattern 1 checks in src/lua_runner/. sol2 never prints a caught error to the host's stderr.
+# SOL_SAFE_NUMERICS is implied by SOL_ALL_SAFETIES_ON but stays explicit because the code depends on it.
+# The checked getter and the stack check are off in every build: with them on, a Release bulk read
+# cost 16% more. lua_cell_as and the key checks cover the getter. Never turn off
+# SOL_SAFE_FUNCTION_CALLS or SOL_SAFE_USERTYPE (the argument and `self` checks).
 target_compile_definitions(quiver PRIVATE
+    SOL_ALL_SAFETIES_ON=1
+    SOL_PRINT_ERRORS=0
     SOL_SAFE_NUMERICS=1
-    SOL_SAFE_FUNCTION=1
     SOL_NO_NIL=1
+    SOL_SAFE_GETTER=0
+    SOL_SAFE_STACK_CHECK=0
 )
 
 # sol2's template depth needs /bigobj (MSVC) or -Wa,-mbig-obj (other Windows compilers) in every
