@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 2
 current_phase_name: Mechanical Split
 status: executing
-stopped_at: Completed 02-01-PLAN.md
-last_updated: "2026-10-03T03:12:38.339Z"
+stopped_at: Completed 02-02-PLAN.md
+last_updated: "2026-10-03T03:31:30.702Z"
 last_activity: 2026-10-02
 last_activity_desc: Roadmap revised after checker feedback (5 phases, 40/40 v1 requirements mapped)
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 6
-  completed_plans: 3
+  completed_plans: 4
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-10-02)
 ## Current Position
 
 Phase: 2 (Mechanical Split) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-10-02 — Phase 2 execution started
 
-Progress: [█████░░░░░] 50%
+Progress: [███████░░░] 67%
 
 ## Performance Metrics
 
@@ -61,6 +61,7 @@ Progress: [█████░░░░░] 50%
 | Phase 01 P01 | 134min | 3 tasks | 7 files |
 | Phase 01 P02 | 35 min | 3 tasks | 4 files |
 | Phase 02 P01 | 20min | 2 tasks | 4 files |
+| Phase 02 P02 | 20min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -82,6 +83,7 @@ Recent decisions affecting current work:
 - [Phase 01]: Phase 1 gtest baseline: Lua* = 444 tests / 12 suites, LuaRunnerCApiTest = 27 (at 570c2c1)
 - [Phase 02]: /bigobj (-Wa,-mbig-obj) is target-wide on quiver so no new sol2 TU can miss it
 - [Phase 02]: NOLINT pairs now name performance-unnecessary-value-param (old name suppressed nothing)
+- [Phase ?]: [Phase 02]: lua_runner.cpp was de-classed into quiver::lua_internal and laid out as the future files end to end (return_json, shared, path_policy, db_metadata, db_read, db_write, db_time_series, db_core, binary, csv, root), so plan 03's extractions are pure range cuts
 
 ### Pending Todos
 
@@ -104,6 +106,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-10-03T03:12:38.314Z
-Stopped at: Completed 02-01-PLAN.md
+Last session: 2026-10-03T03:31:30.677Z
+Stopped at: Completed 02-02-PLAN.md
 Resume file: None
