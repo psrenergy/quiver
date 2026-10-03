@@ -208,6 +208,40 @@ TEST_F(LuaRunnerTest, TransactionBlockRejectsNonFunction) {
     EXPECT_FALSE(db.in_transaction());
 }
 
+// A deferred foreign key fails only at COMMIT, after the callback returned: the block must still be
+// rolled back, not left open for the host to commit.
+TEST_F(LuaRunnerTest, TransactionBlockCommitFailureRollsBack) {
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"));
+
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(
+        lua,
+        R"lua(
+            db:transaction(function(d)
+                d:query_string("PRAGMA defer_foreign_keys = ON")
+                d:query_string("INSERT INTO Child (label, parent_id) VALUES ('orphan', 999)")
+            end)
+        )lua",
+        "Failed to commit transaction: FOREIGN KEY constraint failed"
+    );
+    EXPECT_FALSE(db.in_transaction());
+    EXPECT_EQ(db.query_integer("SELECT COUNT(*) FROM Child"), 0);
+}
+
+// Errors raised by the closing call itself still reach the script with their own text.
+TEST_F(LuaRunnerTest, ScopedBlockFinishErrorsStillSurface) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(lua, "db:transaction(function(d) d:commit() end)", "Cannot commit: no active transaction");
+    EXPECT_FALSE(db.in_transaction());
+
+    expect_lua_error(lua, "db:dry_run(function(d) d:end_dry_run() end)", "Cannot end_dry_run: no active dry run");
+    EXPECT_FALSE(db.in_dry_run());
+}
+
 // ============================================================================
 // Dry runs
 // ============================================================================

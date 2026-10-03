@@ -195,7 +195,7 @@ db:begin_transaction()   -- start an explicit transaction
 db:commit()              -- commit it
 db:rollback()            -- roll it back
 db:in_transaction()      -- boolean: is a transaction currently open?
-db:transaction(fn)       -- run fn(db) inside begin/commit; rollback + rethrow if fn errors
+db:transaction(fn)       -- run fn(db) inside begin/commit; rollback + rethrow if fn errors or the commit fails
 \`\`\`
 
 To make a group of writes atomic, prefer the \`db:transaction\` wrapper:

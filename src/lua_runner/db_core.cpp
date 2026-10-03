@@ -65,9 +65,10 @@ CSVOptions parse_csv_options(const sol::object& options, const std::string& oper
 
 // The single place the db:transaction / db:dry_run sequencing lives: check the argument is a
 // function before the scope opens (a callable table is refused, as for on_row), open the scope, run
-// the callback with the database, and on a Lua error undo the scope (any failure of the undo itself
-// is swallowed so the script sees the callback's error) before rethrowing; on success close the
-// scope and hand back the callback's first return value, or nil when it returned nothing.
+// the callback with the database, then close the scope. A Lua error or a failed close (a COMMIT
+// that fails on a deferred foreign key) undoes the scope best-effort (any failure of the undo
+// itself is swallowed so the script sees the original error) and rethrows. On success it hands
+// back the callback's first return value, or nil when it returned nothing.
 sol::object run_in_scope(
     Database& self,
     const char* operation,
@@ -82,15 +83,19 @@ sol::object run_in_scope(
     const auto fn = fn_arg.as<sol::protected_function>();
     (self.*begin)();
     auto result = fn(std::ref(self));
-    if (!result.valid()) {
-        sol::error err = result;
+    try {
+        if (!result.valid()) {
+            sol::error err = result;
+            throw std::runtime_error(err.what());
+        }
+        (self.*finish)();
+    } catch (...) {
         try {
             (self.*abort)();
         } catch (...) {
         }
-        throw std::runtime_error(err.what());
+        throw;
     }
-    (self.*finish)();
     if (result.return_count() > 0) {
         return result.get<sol::object>(0);
     }

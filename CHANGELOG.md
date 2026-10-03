@@ -45,6 +45,10 @@ callers to change something are prefixed **BREAKING** and say what to do.
   first and then fail to call the value (inside an already-open transaction they reported `Cannot
   begin_transaction: transaction already active` instead); Debug builds reported sol2's raw
   argument text. A table with a `__call` metamethod is no longer accepted: pass a function.
+- **`db:transaction` rolls back when its commit fails.** If the COMMIT at the end of the block
+  fails (for example on a deferred foreign key), the block is now rolled back and the commit error
+  is rethrown. The transaction used to be left open, so a host that committed afterwards wrote the
+  failed block.
 
 ## [0.12.8] — 2026-10-01
 
