@@ -52,6 +52,16 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   in a dedicated per-test temp dir, with scripts passing relative paths. The Lua binary/expression
   subsystem bindings (and the sandbox itself) are covered by `test_lua_binary.cpp` and
   `test_lua_expression.cpp`.
+- `test_sandboxed_path.cpp` (`SandboxedPathTest`) unit-tests `resolve_sandboxed_path`, the gate
+  every file-touching Lua operation shares, without Lua: containment, `..` and absolute escapes, a
+  symlink pointing outside, the root itself, `:memory:`, and (`_WIN32` only) the device-name prefix.
+  It is the only test that includes a `src/` header and compiles a `src/` TU: the function is hidden
+  in the shared library, so `tests/CMakeLists.txt` adds `src/lua_runner/path_policy.cpp` to
+  `quiver_tests` along with the `src/` include dir. Keep `path_policy.cpp` a one-function file, or a
+  static (`QUIVER_BUILD_SHARED=OFF`) link defines a symbol twice. The suite name stays outside the
+  `Lua*` filter so the Lua-layer count is unaffected. Expectations build the root from
+  `weakly_canonical(sandbox)`, which is what the gate prints (macOS `/private/var`, Windows 8.3
+  names), and the symlink case skips where a directory symlink cannot be created.
 - Binary subsystem: `test_binary_file.cpp`, `test_binary_metadata.cpp`,
   `test_binary_time_properties.cpp`, `test_csv_converter.cpp`, `test_iteration.cpp`
 - Expression subsystem: `test_expression.cpp`

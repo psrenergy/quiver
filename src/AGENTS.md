@@ -47,6 +47,7 @@ src/                      # C++ implementation
     lua_runner.cpp        # LuaRunner::Impl (ctor order, the one Database usertype), RunHandles bodies, run()/GcGuard
     internal.h            # quiver::lua_internal: RunHandles, binder decls, converters, read adapters, option walk, group-decoder decls
     return_json.cpp       # run()'s JSON encoder
+    path_policy.h         # resolve_sandboxed_path's declaration; no sol2, included by internal.h and SandboxedPathTest
     path_policy.cpp       # resolve_sandboxed_path, the single filesystem gate
     db_core.cpp           # bind_core: info, transactions, dry runs, count, describe, query, migrations, export/import_csv
     db_read.cpp           # bind_read: bulk + by-id readers
@@ -712,7 +713,9 @@ Implementation conventions in `src/lua_runner/`:
   the deliberate `:memory:` and containment throws stay outside the `try` so they are not
   double-wrapped. Covered by `LuaRunner_ReadCsv.DeviceNamePathIsReportedWithPrefix` and
   `LuaBinaryTest.DeviceNamePathIsReportedWithPrefix` (the latter spanning `open_file`/`bin_to_csv`/
-  `csv_to_bin`, so the shared fix cannot regress to a per-caller patch).
+  `csv_to_bin`, so the shared fix cannot regress to a per-caller patch). `SandboxedPathTest`
+  (`tests/test_sandboxed_path.cpp`) calls the gate directly, without Lua, through the sol2-free
+  `path_policy.h`: containment, escapes, the root itself, `:memory:` and the device-name prefix.
 - **Enabled standard libraries**: `base`, `string`, `table`, `math`, `coroutine`, and `utf8`
   (pure computation only). `os`, `io`, `package`/`require`, and `debug` stay unloaded — scripts
   cannot reach the shell, the process, the environment, or the filesystem outside the db sandbox.

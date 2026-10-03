@@ -24,6 +24,7 @@ set(QUIVER_SOURCES
     lua_runner/internal.h
     lua_runner/lua_runner.cpp
     lua_runner/path_policy.cpp
+    lua_runner/path_policy.h
     lua_runner/return_json.cpp
     migration.cpp
     migrations.cpp
