@@ -11,6 +11,7 @@
 #include <sol/sol.hpp>
 
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -98,8 +99,6 @@ sol::table dimension_to_lua(sol::state_view& lua, const Dimension& dim) {
 // Expression operator dispatch (shared by Expression and BinaryFile metamethods)
 // ------------------------------------------------------------------------
 
-enum class BinOp { Add, Subtract, Multiply, Divide, Gt, Lt, Gte, Lte, Eq, Neq, And, Or };
-
 bool is_number(const sol::object& o) {
     return o.get_type() == sol::type::number;
 }
@@ -116,50 +115,22 @@ Expression to_expression(const sol::object& o) {
     throw std::runtime_error("Cannot build expression: operand must be an expression or a binary file");
 }
 
-// One body for all three operand combos (expr/expr, expr/double, double/expr); overload
-// resolution on l/r picks the matching Expression operator per instantiation. double/double
-// is never instantiated (binop_dispatch routes numbers through to_expression, which throws).
-template <typename L, typename R>
-Expression apply_binop(BinOp op, const L& l, const R& r) {
-    switch (op) {
-    case BinOp::Add:
-        return l + r;
-    case BinOp::Subtract:
-        return l - r;
-    case BinOp::Multiply:
-        return l * r;
-    case BinOp::Divide:
-        return l / r;
-    case BinOp::Gt:
-        return l > r;
-    case BinOp::Lt:
-        return l < r;
-    case BinOp::Gte:
-        return l >= r;
-    case BinOp::Lte:
-        return l <= r;
-    case BinOp::Eq:
-        return l == r;
-    case BinOp::Neq:
-        return l != r;
-    case BinOp::And:
-        return l && r;
-    case BinOp::Or:
-        return l || r;
-    }
-    throw std::runtime_error("Cannot apply operator: unknown operation");
-}
-
-Expression binop_dispatch(BinOp op, const sol::object& lhs, const sol::object& rhs) {
-    bool lnum = is_number(lhs);
-    bool rnum = is_number(rhs);
+// One body for every binary Expression operator. Op is a transparent functor (std::plus<>,
+// std::greater_equal<>, ...), so overload resolution on its arguments picks the matching
+// Expression operator for each operand combination (expr/expr, expr/double, double/expr).
+// std::logical_and<> / std::logical_or<> call the overloaded && / ||, which, unlike the built-in
+// ones, evaluate both operands. number/number reaches to_expression, which throws.
+template <typename Op>
+Expression binop(const sol::object& lhs, const sol::object& rhs) {
+    const bool lnum = is_number(lhs);
+    const bool rnum = is_number(rhs);
     if (lnum && !rnum) {
-        return apply_binop(op, lhs.as<double>(), to_expression(rhs));
+        return Op{}(lhs.as<double>(), to_expression(rhs));
     }
     if (!lnum && rnum) {
-        return apply_binop(op, to_expression(lhs), rhs.as<double>());
+        return Op{}(to_expression(lhs), rhs.as<double>());
     }
-    return apply_binop(op, to_expression(lhs), to_expression(rhs));
+    return Op{}(to_expression(lhs), to_expression(rhs));
 }
 
 // `caller` is the public method ("aggregate" / "aggregate_agents") named in the Pattern 1 message.
@@ -188,22 +159,14 @@ ExpressionAggregate::Operation parse_aggregate_op(const std::string& op, const s
 // expression (BinaryFile auto-wraps to Expression). One table, so a new operator is added once.
 template <typename T>
 void bind_expression_operators(sol::usertype<T>& type) {
-    type[sol::meta_function::addition] = [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Add, a, b); };
-    type[sol::meta_function::subtraction] = [](sol::object a, sol::object b) {
-        return binop_dispatch(BinOp::Subtract, a, b);
-    };
-    type[sol::meta_function::multiplication] = [](sol::object a, sol::object b) {
-        return binop_dispatch(BinOp::Multiply, a, b);
-    };
-    type[sol::meta_function::division] = [](sol::object a, sol::object b) {
-        return binop_dispatch(BinOp::Divide, a, b);
-    };
+    type[sol::meta_function::addition] = &binop<std::plus<>>;
+    type[sol::meta_function::subtraction] = &binop<std::minus<>>;
+    type[sol::meta_function::multiplication] = &binop<std::multiplies<>>;
+    type[sol::meta_function::division] = &binop<std::divides<>>;
     type[sol::meta_function::unary_minus] = [](sol::object a, sol::object) { return -to_expression(a); };
     // Logical ops (nonzero = true, NaN propagates, unitless): `&` / `|` / `~`.
-    type[sol::meta_function::bitwise_and] = [](sol::object a, sol::object b) {
-        return binop_dispatch(BinOp::And, a, b);
-    };
-    type[sol::meta_function::bitwise_or] = [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Or, a, b); };
+    type[sol::meta_function::bitwise_and] = &binop<std::logical_and<>>;
+    type[sol::meta_function::bitwise_or] = &binop<std::logical_or<>>;
     type[sol::meta_function::bitwise_not] = [](sol::object a, sol::object) { return !to_expression(a); };
 }
 
@@ -213,7 +176,7 @@ void bind_expression_operators(sol::usertype<T>& type) {
 // Binary subsystem bindings (mirrors the Julia Binary.* surface)
 // ========================================================================
 
-void bind_binary(sol::state& lua, sol::usertype<Database>& bind, sol::table& ns, Database& db, RunHandles& handles) {
+void bind_binary(sol::state& state, sol::usertype<Database>& bind, sol::table& ns, Database& db, RunHandles& handles) {
     // Binary subsystem file I/O — db-scoped and sandboxed: paths resolve against the directory
     // containing the database file and must stay inside it.
     bind.set_function(
@@ -241,7 +204,7 @@ void bind_binary(sol::state& lua, sol::usertype<Database>& bind, sol::table& ns,
         CSVConverter::csv_to_bin(resolve_sandboxed_path(self, "csv_to_bin", path));
     });
 
-    lua.new_usertype<BinaryMetadata>(
+    state.new_usertype<BinaryMetadata>(
         "BinaryMetadata",
         sol::no_constructor,
         "get_unit",
@@ -270,7 +233,7 @@ void bind_binary(sol::state& lua, sol::usertype<Database>& bind, sol::table& ns,
         [](BinaryMetadata& self) -> std::string { return self.to_toml(); }
     );
 
-    auto binary_file_type = lua.new_usertype<BinaryFile>(
+    auto binary_file_type = state.new_usertype<BinaryFile>(
         "BinaryFile",
         sol::no_constructor,
         "read",
@@ -304,7 +267,7 @@ void bind_binary(sol::state& lua, sol::usertype<Database>& bind, sol::table& ns,
     });
 
     // Expression subsystem bindings (mirrors the Julia Expression surface)
-    auto expression_type = lua.new_usertype<Expression>(
+    auto expression_type = state.new_usertype<Expression>(
         "Expression",
         sol::no_constructor,
         "save",
@@ -359,12 +322,12 @@ void bind_binary(sol::state& lua, sol::usertype<Database>& bind, sol::table& ns,
     });
     // Comparisons produce 1.0/0.0 per element (NaN operand -> NaN). Free functions because Lua
     // comparison metamethods are coerced to bool and cannot return an Expression.
-    ns.set_function("gt", [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Gt, a, b); });
-    ns.set_function("lt", [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Lt, a, b); });
-    ns.set_function("gte", [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Gte, a, b); });
-    ns.set_function("lte", [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Lte, a, b); });
-    ns.set_function("eq", [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Eq, a, b); });
-    ns.set_function("neq", [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Neq, a, b); });
+    ns.set_function("gt", &binop<std::greater<>>);
+    ns.set_function("lt", &binop<std::less<>>);
+    ns.set_function("gte", &binop<std::greater_equal<>>);
+    ns.set_function("lte", &binop<std::less_equal<>>);
+    ns.set_function("eq", &binop<std::equal_to<>>);
+    ns.set_function("neq", &binop<std::not_equal_to<>>);
     // Logical ops on boolean-valued expressions are the `&` / `|` / `~` metamethods bound on the
     // Expression and BinaryFile usertypes (`and`/`or`/`not` are Lua keywords, so no free functions).
 }
