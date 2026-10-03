@@ -17,8 +17,8 @@ Evidence for each item (line numbers at `bdf9087`) is in `.planning/research/LUA
 
 ### Mechanical split (zero behaviour change)
 
-- [ ] **SPLIT-01**: `src/lua_runner.cpp` is replaced by `src/lua_runner/`: `lua_runner.cpp`, `internal.h`, `return_json.cpp`, `path_policy.cpp`, `db_core.cpp`, `db_read.cpp`, `db_write.cpp`, `db_metadata.cpp`, `db_time_series.cpp`, `csv.cpp`, `binary.cpp`. Each binder registers and implements its own slice, and no file is over ~450 lines.
-- [ ] **SPLIT-02**: There is exactly one `new_usertype<Database>` in the folder (grep count is 1). Binders receive `sol::usertype<Database>& bind` and the `quiver` table as `ns`. The ctor order is preserved: `open_libraries` → nil `dofile`/`loadfile` → `quiver` table → binders → `lua["db"] = &db`.
+- [x] **SPLIT-01**: `src/lua_runner.cpp` is replaced by `src/lua_runner/`: `lua_runner.cpp`, `internal.h`, `return_json.cpp`, `path_policy.cpp`, `db_core.cpp`, `db_read.cpp`, `db_write.cpp`, `db_metadata.cpp`, `db_time_series.cpp`, `csv.cpp`, `binary.cpp`. Each binder registers and implements its own slice, and no file is over ~450 lines.
+- [x] **SPLIT-02**: There is exactly one `new_usertype<Database>` in the folder (grep count is 1). Binders receive `sol::usertype<Database>& bind` and the `quiver` table as `ns`. The ctor order is preserved: `open_libraries` → nil `dofile`/`loadfile` → `quiver` table → binders → `lua["db"] = &db`.
 - [x] **SPLIT-03**: Instance state lives in a `RunHandles` (writer registry, binary-file registry, `path_has_open_writer`, close-at-exit). It is held by the heap-allocated `Impl` and declared before `lua`. The three `[this]` captures become `[&handles]` / `[&db]`. `GcGuard` is still declared before `result`, with close then exactly one `collect_garbage()`.
 - [x] **SPLIT-04**: The JS sync test reads every source file under `src/lua_runner/` in sorted order, parses each one separately (resetting `current` at each file boundary), and extracts the same method set as before the split.
 - [ ] **SPLIT-05**: `/bigobj` (MSVC) and `-Wa,-mbig-obj` (MinGW) apply to the whole target. All sol2 TUs are in the `quiver` target with identical PRIVATE defines, listed explicitly (no glob). Each file whose functions take sol2 arguments by value has its own NOLINT pair (check name `performance-unnecessary-value-param`). clang-format 22.1.8 is clean on the new files, and `scripts/tidy.bat` reports nothing beyond the 15 pre-existing warnings recorded as the baseline.
@@ -109,8 +109,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PIN-03 | Phase 1 | Complete |
 | PIN-04 | Phase 1 | Complete |
 | PIN-05 | Phase 1 | Complete |
-| SPLIT-01 | Phase 2 | Pending |
-| SPLIT-02 | Phase 2 | Pending |
+| SPLIT-01 | Phase 2 | Complete |
+| SPLIT-02 | Phase 2 | Complete |
 | SPLIT-03 | Phase 2 | Complete |
 | SPLIT-04 | Phase 2 | Complete |
 | SPLIT-05 | Phase 2 | Pending |
