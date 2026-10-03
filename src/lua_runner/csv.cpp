@@ -202,23 +202,15 @@ csv_write::Options write_csv_options_from_lua(const sol::object& options, const 
         // Missing parameter or explicit nil -- same as an empty table, both valid.
         return result;
     }
-    if (options.get_type() != sol::type::table) {
-        throw std::runtime_error("Cannot " + operation + ": options must be a table");
+
+    const auto& [separator, header] = option_entries(options, operation, {"separator", "header"});
+
+    if (separator) {
+        result.separator = csv_separator_from_lua(*separator, operation);
     }
 
-    const auto found = csv_options_entries(options, operation, {"separator", "header"});
-    const auto& separator_value = found[0];
-    const auto& header_value = found[1];
-
-    if (separator_value) {
-        result.separator = csv_separator_from_lua(*separator_value, operation);
-    }
-
-    if (header_value) {
-        if (header_value->get_type() != sol::type::table) {
-            throw std::runtime_error("Cannot " + operation + ": option 'header' must be a table");
-        }
-        result.header = csv_header_from_lua(header_value->as<sol::table>(), operation);
+    if (header) {
+        result.header = csv_header_from_lua(option_table(*header, operation, "header"), operation);
     }
 
     return result;
@@ -238,29 +230,18 @@ csv_read::Options read_csv_options_from_lua(const sol::object& options, const st
         // Missing parameter or explicit nil -- same as an empty table, both valid.
         return result;
     }
-    if (options.get_type() != sol::type::table) {
-        throw std::runtime_error("Cannot " + operation + ": options must be a table");
-    }
 
-    const auto found = csv_options_entries(options, operation, {"separator", "header_row"});
-    const auto& separator_value = found[0];
-    const auto& header_row_value = found[1];
+    const auto& [separator, header_row_value] = option_entries(options, operation, {"separator", "header_row"});
 
-    if (separator_value) {
-        result.separator = csv_separator_from_lua(*separator_value, operation);
+    if (separator) {
+        result.separator = csv_separator_from_lua(*separator, operation);
     }
 
     if (header_row_value) {
-        // Same rationale as separator above: explicit get_type() rather than lua_cell_as
-        // (stable Pattern 1 text). This also rules out a quoted "2", which Lua's own string->number
-        // coercion would otherwise let through.
-        if (header_row_value->get_type() != sol::type::number) {
-            throw std::runtime_error("Cannot " + operation + ": option 'header_row' must be an integer");
-        }
-        // .is<int64_t>() rejects a fractional number (e.g. 2.5) -- the house idiom already
-        // used for group-column indices (see collect_group_columns' cell.first.is<int64_t>()
-        // check). SOL_SAFE_NUMERICS=1 is set unconditionally in src/CMakeLists.txt (not gated
-        // on build type), so this precision check holds in Release too.
+        // One test, not lua_cell_as (whose text is not this stable Pattern 1 one): is<int64_t>() is
+        // lua_isinteger under SOL_SAFE_NUMERICS=1 (set unconditionally in src/CMakeLists.txt, so
+        // Release too), false for a string -- even a quoted "2", which Lua's own string->number
+        // coercion would let through --, a boolean, and a fractional or whole float (2.5, 2.0).
         if (!header_row_value->is<int64_t>()) {
             throw std::runtime_error("Cannot " + operation + ": option 'header_row' must be an integer");
         }

@@ -8,9 +8,9 @@
 #include <sol/sol.hpp>
 
 #include <algorithm>
+#include <array>
 #include <cstddef>
 #include <cstdint>
-#include <initializer_list>
 #include <iterator>
 #include <map>
 #include <memory>
@@ -165,25 +165,41 @@ std::vector<T> lua_table_to_vector(const sol::table& t, const std::string& calle
     return result;
 }
 
-// The collect-then-validate walk every strict options decoder shares: read_csv,
-// write_csv, export_csv/import_csv and quiver.metadata. Every entry is collected before any of
-// them is validated, so a mid-traversal throw cannot abandon sol2's traversal state. `allowed`
-// is the option names this caller accepts, in precedence order; an unknown key is the first
-// thing rejected, and the returned vector is parallel to `allowed` (an absent option is a
-// disengaged optional).
-inline std::vector<std::optional<sol::object>> csv_options_entries(
+// Every entry of `t`, collected before any of them is validated, so a mid-traversal throw cannot
+// abandon sol2's traversal state. The one place a decoder walks a Lua table it then checks.
+inline std::vector<std::pair<sol::object, sol::object>> collect_entries(const sol::table& t) {
+    std::vector<std::pair<sol::object, sol::object>> entries;
+    t.for_each([&](sol::object key, sol::object value) { entries.emplace_back(std::move(key), std::move(value)); });
+    return entries;
+}
+
+// A nested option value that must be a table (an options table's `header`, the levels of
+// `enum_labels`); `what` names it in the message.
+inline sol::table option_table(const sol::object& value, const std::string& operation, const std::string& what) {
+    if (value.get_type() != sol::type::table) {
+        throw std::runtime_error("Cannot " + operation + ": option '" + what + "' must be a table");
+    }
+    return value.as<sol::table>();
+}
+
+// The walk every strict options decoder shares: read_csv, write_csv, export_csv/import_csv and
+// quiver.metadata. It owns the table check; what nil means stays with each caller (the CSV
+// decoders return defaults before calling it, quiver.metadata lets nil reach the check). Then
+// every entry is collected (collect_entries) before any is validated. `allowed` is the option
+// names this caller accepts, in precedence order; an unknown key is the first thing rejected,
+// and the result is parallel to `allowed` (an absent option is a disengaged optional), so a
+// caller binds it by name: `const auto& [a, b] = option_entries(options, op, {"a", "b"});`.
+template <std::size_t N>
+std::array<std::optional<sol::object>, N> option_entries(
     const sol::object& options,
     const std::string& operation,
-    std::initializer_list<std::string_view> allowed
+    const std::string_view (&allowed)[N]
 ) {
-    std::vector<std::optional<sol::object>> found(allowed.size());
-
-    std::vector<std::pair<sol::object, sol::object>> entries;
-    options.as<sol::table>().for_each([&](sol::object key, sol::object value) {
-        entries.emplace_back(std::move(key), std::move(value));
-    });
-
-    for (auto& entry : entries) {
+    if (options.get_type() != sol::type::table) {
+        throw std::runtime_error("Cannot " + operation + ": options must be a table");
+    }
+    std::array<std::optional<sol::object>, N> found;
+    for (auto& entry : collect_entries(options.as<sol::table>())) {
         // Check the key's Lua type before converting it: sol2's std::string getter is
         // lua_tolstring, which answers nullptr for a boolean/table/function key -- unchecked
         // in Release (SOL_SAFE_GETTER is off there) and a raw sol2 panic in Debug, so a
@@ -193,11 +209,11 @@ inline std::vector<std::optional<sol::object>> csv_options_entries(
             throw std::runtime_error("Cannot " + operation + ": option key must be a string");
         }
         const auto name = entry.first.as<std::string>();
-        const auto it = std::find(allowed.begin(), allowed.end(), name);
-        if (it == allowed.end()) {
+        const auto it = std::find(std::begin(allowed), std::end(allowed), name);
+        if (it == std::end(allowed)) {
             throw std::runtime_error("Cannot " + operation + ": unknown option '" + name + "'");
         }
-        found[static_cast<std::size_t>(std::distance(allowed.begin(), it))] = entry.second;
+        found[static_cast<std::size_t>(std::distance(std::begin(allowed), it))] = entry.second;
     }
     return found;
 }

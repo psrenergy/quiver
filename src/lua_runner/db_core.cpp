@@ -16,23 +16,6 @@ namespace quiver::lua_internal {
 
 namespace {
 
-// Collect a nested option table's entries before any is checked (the same collect-then-validate rule), after
-// checking the value really is a table.
-std::vector<std::pair<sol::object, sol::object>> table_entries(
-    const sol::object& value,
-    const std::string& operation,
-    const std::string& what
-) {
-    if (value.get_type() != sol::type::table) {
-        throw std::runtime_error("Cannot " + operation + ": option '" + what + "' must be a table");
-    }
-    std::vector<std::pair<sol::object, sol::object>> entries;
-    value.as<sol::table>().for_each([&](sol::object key, sol::object entry) {
-        entries.emplace_back(std::move(key), std::move(entry));
-    });
-    return entries;
-}
-
 std::string string_key(const sol::object& key, const std::string& operation, const std::string& what) {
     if (key.get_type() != sol::type::string) {
         throw std::runtime_error("Cannot " + operation + ": keys of option '" + what + "' must be strings");
@@ -40,36 +23,37 @@ std::string string_key(const sol::object& key, const std::string& operation, con
     return key.as<std::string>();
 }
 
-// Strict decoder for db:export_csv / db:import_csv options, the same collect-then-validate walk
-// as the read_csv/write_csv decoders: nil/missing means defaults; anything else must be a table
+// Strict decoder for db:export_csv / db:import_csv options, on the same option_entries walk as
+// the read_csv/write_csv decoders: nil/missing means defaults; anything else must be a table
 // with only known keys of the right types.
 CSVOptions parse_csv_options(const sol::object& options, const std::string& operation) {
     CSVOptions result;
     if (!options.valid() || options.get_type() == sol::type::lua_nil) {
         return result;
     }
-    if (options.get_type() != sol::type::table) {
-        throw std::runtime_error("Cannot " + operation + ": options must be a table");
-    }
-    const auto found = csv_options_entries(options, operation, {"date_time_format", "enum_labels"});
+    const auto& [date_time_format, enum_labels] =
+        option_entries(options, operation, {"date_time_format", "enum_labels"});
 
-    if (const auto& format = found[0]) {
-        if (format->get_type() != sol::type::string) {
+    if (date_time_format) {
+        if (date_time_format->get_type() != sol::type::string) {
             throw std::runtime_error("Cannot " + operation + ": option 'date_time_format' must be a string");
         }
-        result.date_time_format = format->as<std::string>();
+        result.date_time_format = date_time_format->as<std::string>();
     }
-    if (const auto& enums = found[1]) {
+    if (enum_labels) {
         // attribute -> locale -> { label = code }: every level collected before it is checked.
-        for (const auto& [attr_key, attr_value] : table_entries(*enums, operation, "enum_labels")) {
+        const auto attributes = option_table(*enum_labels, operation, "enum_labels");
+        for (const auto& [attr_key, attr_value] : collect_entries(attributes)) {
             const auto attr = string_key(attr_key, operation, "enum_labels");
             const auto attr_where = "enum_labels['" + attr + "']";
             auto& locales = result.enum_labels[attr];
-            for (const auto& [locale_key, locale_value] : table_entries(attr_value, operation, attr_where)) {
+            const auto locale_tables = option_table(attr_value, operation, attr_where);
+            for (const auto& [locale_key, locale_value] : collect_entries(locale_tables)) {
                 const auto locale = string_key(locale_key, operation, attr_where);
                 const auto where = attr_where + "['" + locale + "']";
                 auto& labels = locales[locale];
-                for (const auto& [label_key, code] : table_entries(locale_value, operation, where)) {
+                const auto codes = option_table(locale_value, operation, where);
+                for (const auto& [label_key, code] : collect_entries(codes)) {
                     const auto label = string_key(label_key, operation, where);
                     labels[label] = lua_cell_as<int64_t>(code, operation, "code for label '" + label + "'");
                 }

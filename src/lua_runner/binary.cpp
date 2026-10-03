@@ -32,7 +32,7 @@ std::unordered_map<std::string, int64_t> lua_table_to_dim_map(const sol::table& 
     return dims;
 }
 
-// One quiver.metadata{...} field, as csv_options_entries returned it (absent = disengaged).
+// One quiver.metadata{...} field, as option_entries returned it (absent = disengaged).
 std::string metadata_string(const std::optional<sol::object>& value, const char* key, const std::string& fallback) {
     return value ? lua_cell_as<std::string>(*value, "metadata", std::string("field '") + key + "'") : fallback;
 }
@@ -51,33 +51,33 @@ std::vector<T> metadata_array(const std::optional<sol::object>& value, const cha
 
 // Build BinaryMetadata from a Lua kwargs table, mirroring the Julia Metadata(; ...) constructor:
 // assemble an Element and delegate to from_element (which computes time-dimension initial values).
-// Strict: a table (checked here, since sol2 does not check a table parameter in Release) with
-// only these eight keys, each of the right type.
+// Strict: a table (option_entries checks it, nil included, since sol2 does not check a table
+// parameter in Release) with only these eight keys, each of the right type. This function stays
+// above bind_binary: the sync test reads a bare quoted name on its own line below a usertype as
+// one of that usertype's methods, and the wrapped key list here is such lines.
 BinaryMetadata build_metadata_from_lua(const sol::object& t) {
-    if (t.get_type() != sol::type::table) {
-        throw std::runtime_error("Cannot metadata: options must be a table");
-    }
-    const auto found = csv_options_entries(
-        t,
-        "metadata",
-        {"version",
-         "initial_datetime",
-         "unit",
-         "labels",
-         "dimensions",
-         "dimension_sizes",
-         "time_dimensions",
-         "frequencies"}
-    );
+    const auto& [version, initial_datetime, unit, labels, dimensions, dimension_sizes, time_dimensions, frequencies] =
+        option_entries(
+            t,
+            "metadata",
+            {"version",
+             "initial_datetime",
+             "unit",
+             "labels",
+             "dimensions",
+             "dimension_sizes",
+             "time_dimensions",
+             "frequencies"}
+        );
     Element el;
-    el.set("version", metadata_string(found[0], "version", "1"));
-    el.set("initial_datetime", metadata_string(found[1], "initial_datetime", ""));
-    el.set("unit", metadata_string(found[2], "unit", ""));
-    el.set("labels", metadata_array<std::string>(found[3], "labels"));
-    el.set("dimensions", metadata_array<std::string>(found[4], "dimensions"));
-    el.set("dimension_sizes", metadata_array<int64_t>(found[5], "dimension_sizes"));
-    el.set("time_dimensions", metadata_array<std::string>(found[6], "time_dimensions"));
-    el.set("frequencies", metadata_array<std::string>(found[7], "frequencies"));
+    el.set("version", metadata_string(version, "version", "1"));
+    el.set("initial_datetime", metadata_string(initial_datetime, "initial_datetime", ""));
+    el.set("unit", metadata_string(unit, "unit", ""));
+    el.set("labels", metadata_array<std::string>(labels, "labels"));
+    el.set("dimensions", metadata_array<std::string>(dimensions, "dimensions"));
+    el.set("dimension_sizes", metadata_array<int64_t>(dimension_sizes, "dimension_sizes"));
+    el.set("time_dimensions", metadata_array<std::string>(time_dimensions, "time_dimensions"));
+    el.set("frequencies", metadata_array<std::string>(frequencies, "frequencies"));
     return BinaryMetadata::from_element(el);
 }
 
@@ -338,12 +338,8 @@ void bind_binary(sol::state& lua, sol::usertype<Database>& bind, sol::table& ns,
             if (mapping.get_type() != sol::type::table) {
                 throw std::runtime_error("Cannot rename_agents: mapping must be a table");
             }
-            std::vector<std::pair<sol::object, sol::object>> entries;
-            mapping.as<sol::table>().for_each([&](sol::object key, sol::object value) {
-                entries.emplace_back(std::move(key), std::move(value));
-            });
             std::vector<std::pair<std::string, std::string>> pairs;
-            for (const auto& [key, value] : entries) {
+            for (const auto& [key, value] : collect_entries(mapping.as<sol::table>())) {
                 auto old_name = lua_cell_as<std::string>(key, "rename_agents", "key");
                 auto new_name = lua_cell_as<std::string>(value, "rename_agents", "value for '" + old_name + "'");
                 pairs.emplace_back(std::move(old_name), std::move(new_name));

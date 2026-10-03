@@ -268,8 +268,9 @@ untrusted input, in the same spirit as the JSON encoder's two caps below:
   1,000,000. Both callers materialize a **dense** vector up to that key, so `{[1e9] = "x"}` — the
   same sparseness hazard the encoder note below names — allocated tens of gigabytes, or reached
   the script as a raw `std::bad_alloc` with no Pattern 1 prefix.
-- `csv_options_entries` and `collect_group_columns` check each key's Lua *type* before converting
-  it. sol2's `std::string` getter is `lua_tolstring`, which answers `nullptr` for a
+- `option_entries` (which also owns the options-must-be-a-table check; what nil means stays with
+  each caller) and `collect_group_columns` check each key's Lua *type* before converting it.
+  sol2's `std::string` getter is `lua_tolstring`, which answers `nullptr` for a
   boolean/table/function key and spells a number key as text: unchecked in Release
   (`SOL_SAFE_GETTER` is off there) and a raw sol2 panic in Debug, so `{ [true] = 1 }` reached the
   script as a bare Lua value rather than a message. For the six group writers the check makes an
@@ -695,8 +696,8 @@ Implementation conventions in `src/lua_runner/`:
   Lua-only (the FFI bindings all require the parameter and take their language's null).
 - `parse_csv_options(options, operation)` is the single strict CSVOptions decoder for
   `export_csv`/`import_csv`: `nil` means defaults, any other non-table and any unknown or
-  wrong-typed key throws, with the same collect-then-validate walk (`csv_options_entries`) as the
-  `read_csv`/`write_csv` decoders. `quiver.metadata{...}` and `expr:rename_agents` are decoded
+  wrong-typed key throws, with the same collect-then-validate walk (`option_entries`, which owns the
+  table check while each caller keeps its own nil handling) as the `read_csv`/`write_csv` decoders. `quiver.metadata{...}` and `expr:rename_agents` are decoded
   the same strict way.
 - `to_lua_table<T>` overloads (flat + nested) are the only vector→table marshalers.
 - The plain forwarders — `is_healthy`, `current_version`, `path`, the transaction and dry-run
