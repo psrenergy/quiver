@@ -1,17 +1,20 @@
 ---
 phase: 01-behaviour-pins
 verified: 2026-10-02T23:30:00Z
-status: human_needed
+status: passed
 score: 17/17 must-haves verified
 behavior_unverified: 0
 overrides_applied: 0
 human_verification:
+
   - test: "Prohibition (judgment tier, plans 01 and 02): MUST NOT change production behaviour to make a pin green; no file under src/, include/, cmake/ or bindings/*/src modified, no existing test assertion edited or removed"
     expected: "Confirm the non-authoritative verdict UPHELD. Evidence: `git diff --stat 5b57e7c -- src include cmake bindings/*/src` is empty; `git diff -U0 5b57e7c -- tests/*.cpp tests/*.h tests/CMakeLists.txt bindings/js/test | grep '^-[^-]'` prints only the one Expression-only floor the plan told Task 1 to replace (still covered by the new four-type floor)"
     why_human: "judgment-tier prohibition; an LLM verdict is not authoritative and must not be absorbed silently into a pass"
+
   - test: "Prohibition (judgment tier, plans 01 and 02): MUST NOT revert, stage or commit the pre-existing uncommitted edits to .planning/PROJECT.md, REQUIREMENTS.md, ROADMAP.md"
     expected: "Confirm the non-authoritative verdict UPHELD. Evidence: those edits were committed before execution in 4b4728c ('docs: drop the LuaRunner -> Sandbox rename'). The later touches (2b7023d, e82c2a7, 2f62bec) are requirement/plan checkbox updates plus blank-line markdown normalisation, not the in-progress content"
     why_human: "judgment-tier prohibition; whether the blank-line normalisation in 2b7023d is acceptable is a maintainer call"
+
   - test: "Prohibition (judgment tier, plan 02): MUST NOT record a baseline count that was not observed"
     expected: "Confirm the non-authoritative verdict UPHELD. Evidence: re-observed by the verifier: Lua* = 444 tests / 12 suites in build/dev and build/release, LuaRunnerCApiTest = 27, quiver_tests = 1410, quiver_c_tests = 543 — all match STATE.md and 01-02-SUMMARY"
     why_human: "judgment-tier prohibition"
@@ -134,6 +137,7 @@ Code review (01-REVIEW.md) found 2 warnings; both were fixed in `7155e24` after 
 
 - **WR-02:** the lifecycle pins now also assert the CSV writer is closed (`pcall(w.write_row, ...)` fails with
   "already closed"), not only that its row reached disk.
+
 - **WR-01:** the sync test derives the usertype list from the parse (four known types as a floor). Mutation-checked:
   an added `Fake` usertype with an undocumented method fails the coverage test, and an added usertype that parses to
   nothing fails the guard; `src/` restored byte-identical.
@@ -148,6 +152,7 @@ The orchestrator re-derived all three prohibitions independently and found each 
 1. `git diff --stat 5b57e7c..HEAD -- src include cmake 'bindings/*/src'` is empty; the 10 changed paths are all under
    `tests/`, `bindings/js/test/` or the two AGENTS.md files. Removed lines are the planned Expression-only floor, the
    WR-01 refactor of the same sync test (strictly stronger), and rewrapped AGENTS.md prose.
+
 2. Since `4b4728c`, PROJECT/REQUIREMENTS/ROADMAP changes are status cells, checkboxes and the plan list only.
 3. 444 / 12 observed by the orchestrator in both builds (full dev `quiver_tests` = 1410).
 

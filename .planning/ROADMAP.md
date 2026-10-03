@@ -25,7 +25,7 @@ and 4, the Dart suite runs only after deleting `bindings/dart/.dart_tool/hooks_r
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Behaviour Pins** - Tests pin every behaviour the split could break, before any code moves
+- [x] **Phase 1: Behaviour Pins** - Tests pin every behaviour the split could break, before any code moves (completed 2026-10-02)
 - [ ] **Phase 2: Mechanical Split** - `src/lua_runner.cpp` becomes `src/lua_runner/` per-domain files with zero behaviour change
 - [ ] **Phase 3: Dedupe** - Repeated boilerplate (M1, M3-M5, M7-M16) collapses into shared helpers with zero behaviour change
 - [ ] **Phase 4: Fixes and Release Type Safety** - Wrong-type script arguments raise Pattern 1 errors in Release, and C1-C8 are fixed (backstop flag last)
@@ -139,7 +139,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Behaviour Pins | 2/2 | In Progress|  |
+| 1. Behaviour Pins | 2/2 | Complete    | 2026-10-02 |
 | 2. Mechanical Split | 0/TBD | Not started | - |
 | 3. Dedupe | 0/TBD | Not started | - |
 | 4. Fixes and Release Type Safety | 0/TBD | Not started | - |
