@@ -142,7 +142,7 @@ form with no synthetic decimal point, so a whole float and the equal integer wri
 (D-34); a `nil` cell and an empty-string cell are structurally indistinguishable after a CSV round
 trip and that is stated, not fixed — CSV has no null (D-40). FMT-07's row-width enforcement (a
 short `write_row` pads to the header's length, a long one throws) lives entirely in the Lua-layer
-`CsvWriter` wrapper in `src/lua_runner/csv.cpp`, not here: this file's `Writer` gained no header-width
+`CsvWriter::write_row` in `src/lua_runner/csv.cpp`, not here: this file's `Writer` gained no header-width
 state and no signature change for it, and padding happens before the cell vector ever reaches
 `write_row`/`append_record`, so `append_record`'s `lone_empty_cell` predicate sees the final,
 already-padded cell count.

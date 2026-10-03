@@ -43,6 +43,10 @@ struct CsvWriter {
 
     CsvWriter(std::shared_ptr<quiver::csv_write::Writer> w, std::size_t header_width_)
         : writer(std::move(w)), header_width(header_width_) {}
+
+    // w:write_row(row) and w:close(), bound as member pointers (defined below the decoders they use).
+    void write_row(const sol::object& row);
+    void close();
 };
 
 namespace {
@@ -250,9 +254,55 @@ csv_read::Options read_csv_options_from_lua(const sol::object& options, const st
 
 }  // namespace
 
+void CsvWriter::write_row(const sol::object& row) {
+    // sol2's table check for a `const sol::table&` parameter is a LOOSE one that also
+    // accepts userdata, and iterating a userdata yields no keys -- so w:write_row(db)
+    // silently appended an empty record instead of being rejected. Check the Lua type
+    // first; this also turns sol2's raw "stack index 2, expected table" for a
+    // string/number/nil argument into a Pattern 1 message.
+    if (row.get_type() != sol::type::table) {
+        throw std::runtime_error("Cannot write_row: row must be a table");
+    }
+    // Check the closed state BEFORE formatting a single cell -- cells were
+    // previously formatted as csv_write::Writer::write_row's argument, evaluated before
+    // the call, so a write after close on a bad row raised the wrong error. Delegating
+    // to Writer with an empty vector reuses its own closed-writer message verbatim
+    // (never reached: Writer checks closed_ before touching cells) instead of
+    // duplicating the text here.
+    if (writer->is_closed()) {
+        writer->write_row({}, "write_row");
+        return;
+    }
+    const auto row_index = next_row_index;
+    auto cells = csv_row_cells_from_lua(row.as<sol::table>(), "write_row", row_index);
+    // header_width == 0 means no header was given, so no enforcement applies.
+    // A row wider than the header is never truncated -- it throws, naming the 1-based
+    // data-row ordinal and both counts (pinned in src/csv/csv_write.cpp's
+    // message catalogue comment -- reword both together). A short row is padded BEFORE
+    // Writer::write_row ever sees it -- append_record is a pure function of the vector
+    // it receives, so padding after the call would be too late.
+    if (header_width != 0) {
+        if (cells.size() > header_width) {
+            throw std::runtime_error(
+                "Cannot write_row: row " + std::to_string(row_index) + " has " + std::to_string(cells.size()) +
+                " cells but header declares " + std::to_string(header_width)
+            );
+        }
+        if (cells.size() < header_width) {
+            cells.resize(header_width);
+        }
+    }
+    writer->write_row(cells, "write_row");
+    ++next_row_index;
+}
+
+void CsvWriter::close() {
+    writer->close("close");
+}
+
 // NOLINTBEGIN(performance-unnecessary-value-param) sol2 lambda bindings require pass-by-value for type
 // deduction
-void bind_csv(sol::state& lua, sol::usertype<Database>& bind, RunHandles& handles) {
+void bind_csv(sol::state& state, sol::usertype<Database>& bind, RunHandles& handles) {
     // CSV file reading/writing -- db-scoped and sandboxed like the file I/O in binary.cpp. The two
     // reading entry points below construct the same csv_read reader and drive it through
     // header()/for_each_row(), so they cannot diverge on any input. Writing
@@ -364,53 +414,13 @@ void bind_csv(sol::state& lua, sol::usertype<Database>& bind, RunHandles& handle
 
     // sol::no_constructor + std::unique_ptr return (above), no explicit finalizer.
     // BinaryFile is the same except for its holder, a std::shared_ptr (see db:open_file).
-    lua.new_usertype<CsvWriter>(
+    state.new_usertype<CsvWriter>(
         "CsvWriter",
         sol::no_constructor,
         "write_row",
-        [](CsvWriter& self, const sol::object& row) {
-            // sol2's table check for a `const sol::table&` parameter is a LOOSE one that also
-            // accepts userdata, and iterating a userdata yields no keys -- so w:write_row(db)
-            // silently appended an empty record instead of being rejected. Check the Lua type
-            // first; this also turns sol2's raw "stack index 2, expected table" for a
-            // string/number/nil argument into a Pattern 1 message.
-            if (row.get_type() != sol::type::table) {
-                throw std::runtime_error("Cannot write_row: row must be a table");
-            }
-            // Check the closed state BEFORE formatting a single cell -- cells were
-            // previously formatted as csv_write::Writer::write_row's argument, evaluated before
-            // the call, so a write after close on a bad row raised the wrong error. Delegating
-            // to Writer with an empty vector reuses its own closed-writer message verbatim
-            // (never reached: Writer checks closed_ before touching cells) instead of
-            // duplicating the text here.
-            if (self.writer->is_closed()) {
-                self.writer->write_row({}, "write_row");
-                return;
-            }
-            const auto row_index = self.next_row_index;
-            auto cells = csv_row_cells_from_lua(row.as<sol::table>(), "write_row", row_index);
-            // header_width == 0 means no header was given, so no enforcement applies.
-            // A row wider than the header is never truncated -- it throws, naming the 1-based
-            // data-row ordinal and both counts (pinned in src/csv/csv_write.cpp's
-            // message catalogue comment -- reword both together). A short row is padded BEFORE
-            // Writer::write_row ever sees it -- append_record is a pure function of the vector
-            // it receives, so padding after the call would be too late.
-            if (self.header_width != 0) {
-                if (cells.size() > self.header_width) {
-                    throw std::runtime_error(
-                        "Cannot write_row: row " + std::to_string(row_index) + " has " + std::to_string(cells.size()) +
-                        " cells but header declares " + std::to_string(self.header_width)
-                    );
-                }
-                if (cells.size() < self.header_width) {
-                    cells.resize(self.header_width);
-                }
-            }
-            self.writer->write_row(cells, "write_row");
-            ++self.next_row_index;
-        },
+        &CsvWriter::write_row,
         "close",
-        [](CsvWriter& self) { self.writer->close("close"); }
+        &CsvWriter::close
     );
 }
 // NOLINTEND(performance-unnecessary-value-param)

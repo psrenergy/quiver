@@ -235,7 +235,7 @@ void bind_read(sol::usertype<Database>& bind);
 void bind_write(sol::usertype<Database>& bind);
 void bind_metadata(sol::usertype<Database>& bind);
 void bind_time_series(sol::usertype<Database>& bind);
-void bind_csv(sol::state& lua, sol::usertype<Database>& bind, RunHandles& handles);
+void bind_csv(sol::state& state, sol::usertype<Database>& bind, RunHandles& handles);
 void bind_binary(sol::state& lua, sol::usertype<Database>& bind, sol::table& ns, Database& db, RunHandles& handles);
 
 std::string resolve_sandboxed_path(const Database& db, const std::string& operation, const std::string& path);
