@@ -128,3 +128,12 @@ use double quotes.
 _Reviewed: 2026-10-02T23:56:23Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
+
+## Resolution
+
+- **WR-01:** fixed in `7155e24` (usertype list derived from the parse, four known types as a floor; mutation-checked).
+- **WR-02:** fixed in `7155e24` (lifecycle pins assert "already closed" on a further `write_row`).
+- **IN-01:** no change. A comment mentioning `open_libraries(` makes the count fail loudly, not pass vacuously, and
+  clang-format never emits `open_libraries (`.
+- **IN-02:** no change. `--gtest_filter='Lua*'` is correct in bash and PowerShell, the shells the repo docs use; the
+  quoting predates this phase (only the filter value changed).
