@@ -23,7 +23,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-03)
 
 **Core value:** Every file in the Lua scripting layer is small and single-purpose enough for an agent to change safely, and every existing script behaves exactly as before, apart from the deliberate, test-pinned fixes.
-**Current focus:** Phase 3 — Dedupe
+**Current focus:** Phase 4 — Fixes and Release Type Safety
 
 ## Current Position
 
@@ -32,7 +32,7 @@ Plan: Not started
 Status: Ready to plan
 Last activity: 2026-10-03 — Phase 3 complete, transitioned to Phase 4
 
-Progress: [██████████] 100%
+Progress: [████████████░░░░░░░░] Phase 3 of 5 complete (9/9 plans so far)
 
 ## Performance Metrics
 
@@ -115,6 +115,7 @@ None yet.
 - [Phase 2] Linux baseline (GCC 13 and Clang 18/libc++, Docker, at `8fbb066`): `Lua*` = 442 run, 441 pass + 1 skip (the chmod-000 test as root); the 2 fewer than Windows are `DeviceNamePathIsReportedWithPrefix` in `LuaRunner_ReadCsv` and `LuaBinaryTest`, `#ifdef _WIN32` by design. Apple Clang and off-Windows binding suites are still only proven by PR CI.
 - [Phase 2] sol2 is now parsed once per TU: CPU time across the Lua files rose from 61 s to 223 s (wall time fell from 70 s to 46 s). Phase 3 dedupe should not add new sol2 TUs without reason.
 - [Phase 2] Review info items carried to later phases: IN-01 (`db_core.cpp` NOLINT region starts below the `query_*_lua` helpers), IN-02 (lambdas in `bind_csv`/`bind_binary` shadow the `lua` parameter), IN-03 (four decoders convert table keys without a type check; Phase 4 SAFE work). See `02-REVIEW.md`.
+- [Phase 3] Carried to Phase 4: a dot-call such as `db.commit()` still crashes the process in Release (exit 139; pre-existing UB, 03-REVIEW IN-06); `lua_table_to_dim_map` converts keys without a type check (IN-07). Two messages still have two throw sites each, so Phase 4's "got <lua type>" rewording must edit both sites: "has unsupported Lua type" (`lua_cell_as` and `lua_to_value`) and "must be an array of values" (`collect_group_columns`). The `apply_binop` dead branch (FIX-03) is already gone. The `build/dedupe-check/` golden harness (gitignored) is reusable for Phase 4's red-then-green work.
 - Backfilling the missing CHANGELOG `[0.12.9]` section is the maintainer's call and outside this milestone. The memory note pointing at `[0.12.9]` is stale.
 
 ## Deferred Items
@@ -127,6 +128,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-10-03T07:23:27.332Z
-Stopped at: Completed 03-03-PLAN.md
+Last session: 2026-10-03T07:46:14.885Z
+Stopped at: Phase 3 complete, ready to plan Phase 4
 Resume file: None

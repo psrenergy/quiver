@@ -32,10 +32,10 @@ fixes listed below.
 - ✓ Behaviour the refactor could break is pinned before any code moves: runner move survival (source kept alive and source freed, plus `static_assert(sizeof(LuaRunner) == sizeof(void*))`), the check orders of `open_file`/`read_csv`/`read_csv_stream`/`write_csv`/`export_csv`/`import_csv` with their "options must be a table" controls, the 1,000,000 key-width cap, closed-writer order, and sync-test guards (parse-derived usertype set with a four-type floor, single `open_libraries(`). All Debug/Release-defined; every pin mutation-tested. Baseline `Lua*` = 444 / 12 suites, C API 27. — Phase 1
 - ✓ `src/lua_runner.cpp` is split into `src/lua_runner/`: 11 files (`lua_runner.cpp` lifecycle shell of 144 lines, `internal.h`, `return_json.cpp`, `path_policy.cpp`, and seven per-domain binders `db_core`/`db_read`/`db_write`/`db_time_series`/`db_metadata`/`csv`/`binary`), each ≤446 lines, each registering and implementing its own slice. Pure moves: the same 71 `db:` + 15 `quiver.*` names, `Lua*` 444 / C API 27 in Debug and Release, and the same Lua* results on Linux GCC 13 and Clang 18/libc++. — Phase 2
 - ✓ The sync test reads `src/lua_runner/` recursively, fails on any `.set_function(` it cannot parse, and guards all usertypes. `/bigobj` covers the whole `quiver` target, and each NOLINT pair moved with its code. — Phase 2
+- ✓ Every repeated pattern in `src/lua_runner/` exists once (M1, M3–M5, M7–M16): `run_in_scope`, 36 member-pointer registrations (17 forwarders, `bulk_read_lua`/`collection_read_lua`, `metadata_to_lua`), `std::optional` returns, `read_groups_by_id`, `option_entries`/`collect_entries`/`option_table` with named slots, CSV cells through `lua_to_value`, `CsvWriter` members, `header_object`, prune-on-insert `RunHandles::add_*` plus `close_open_handles`, and `binop<Op>` functors. `src/lua_runner/` went from 2,711 to 2,465 lines. Release golden output is byte-identical; `Lua*` 444 / C API 27; tidy 15 → 14. — Phase 3
 
 ### Active
 
-- [ ] Repeated boilerplate is collapsed into shared helpers: the transaction/dry-run body, bulk-read adapters, member-pointer forwarders, one registration style, the metadata wrappers, option decoders, and `CsvWriter` behaviour as members. No behaviour change.
 - [ ] Release builds type-check table and `self` arguments: an explicit `require_table` gives a Pattern 1 error at every table parameter, and `SOL_ALL_SAFETIES_ON` is turned on as a backstop. The performance cost is measured.
 - [ ] Map keys are type-checked before they become column, dimension or attribute names (Pattern 1 instead of a wrong name or a raw panic).
 - [ ] An optional argument with the wrong type raises an error instead of being treated as absent. `db:transaction`/`db:dry_run` reject a non-function with Pattern 1. A failed COMMIT in `db:transaction` rolls back.
@@ -87,6 +87,7 @@ fixes listed below.
 | No sparse-extent cap on the vector/set group writers | User choice: the host limits scripts | — Pending |
 | An empty array in Lua `create_element`/`update_element` is passed through to the core (clears on update) | Consistency with C++/Python/JS. On update, a typo'd empty column now throws ("does not match any vector, set, or time series table") instead of being ignored | — Pending |
 | Rename tail: closed/disposed messages, `SandboxException`, "directory containment" wording (`resolve_contained_path`), one `Sandbox*` test prefix | So "sandbox" means only the class | Reverted 2026-10-02: user decision, dropped with the rename. The scope statement (what the sandbox does not limit) stays, in DOC-04 |
+| Debug-only sol2 diagnostic text may change in the dedupe (dot-call text, and the bound C++ signature in "bad argument" for the M3 member pointers and the M5 `std::optional` returns) | Roadmap allowed it for member pointers; research showed the same mechanism also covers M5. No test pins it, and Release prints none of it | ✓ Phase 3: 12 probes changed, all within the allowance; 13 control probes are unchanged. Orchestrator decision, flagged to the user |
 | Planning-ID comments replaced repo-wide | They point at deleted `.planning` files; Human-Centric principle | — Pending |
 | One PR per phase into master, each green on its own | Reviewable and bisectable; split and dedupe stay provably behaviour-neutral | — Pending |
 | Tests that pin behaviour first, then split, dedupe, fixes, and the path-policy test and docs last | The split is only safe once the existing behaviour is pinned | ✓ Phase 1 done: 16 pins + 2 controls, mutation-tested; a live-source-only move pin was shown too weak (run state reached through the moved-from runner passed), fixed with freed-source pins and a `sizeof` static_assert |
@@ -112,4 +113,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-03 after Phase 2 (mechanical split)*
+*Last updated: 2026-10-03 after Phase 3 (dedupe)*
