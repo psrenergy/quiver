@@ -23,15 +23,17 @@
 // Raised here, in Writer::close (operation is always "close"):
 //   "Cannot close: failed to flush file '<original_path>'"
 //
-// Raised in src/lua_runner.cpp's cell formatter and row/option decoders (operation is always the
-// Lua method that received the bad value -- "write_row" for a cell/row problem, "write_csv" for
-// an options-table problem):
+// Raised by src/lua_runner/csv.cpp's cell formatter and row/option decoders and by the
+// src/lua_runner/internal.h helpers they call (lua_to_value, option_entries, option_table), with
+// operation always the Lua method that received the bad value -- "write_row" for a cell/row
+// problem, "write_csv" for an options-table problem:
 //   "Cannot write_row: row must be a table"                (sol2's table check also lets userdata in)
 //   "Cannot write_row: row <N> cell #<M> is not a finite number"                               (FMT-05)
 //   "Cannot write_row: cell #<M> has unsupported Lua type"                    (table/function/userdata)
 //   "Cannot write_row: row key must be a positive integer"
 //   "Cannot write_row: row key <N> exceeds the maximum width of 1000000"
 //   "Cannot write_row: row <N> has <M> cells but header declares <W>"                            (FMT-07)
+//   "Cannot write_csv: file is already open for writing: <original_path>"  (two live writers, one path)
 //   "Cannot write_csv: unknown option '<name>'"
 //   "Cannot write_csv: option key must be a string"
 //   "Cannot write_csv: options must be a table"
@@ -45,7 +47,7 @@
 //
 // The sandbox (in-memory database, an escaping path) raises through the shared
 // resolve_sandboxed_path choke point, unchanged by this feature -- see its own messages in
-// src/lua_runner.cpp; write_csv is simply one more caller of it, always evaluated before the
+// src/lua_runner/path_policy.cpp; write_csv is simply one more caller of it, always evaluated before the
 // options table (LUA-10).
 
 namespace quiver::csv_write {

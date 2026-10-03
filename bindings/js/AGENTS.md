@@ -36,9 +36,12 @@ bunfig.toml       # coverageSkipTestFiles = true (Bun 1.3 reports test/ otherwis
   no file read, and no Bun loader feature, and `bun build --compile` inlines it into a consumer's
   binary. Converting it to an imported `.md` was tried and deliberately reverted (see root
   `AGENTS.md` "Do Not Fix") — the escaped backticks are the accepted cost.
-  `test/lua-api-sync.test.ts` derives the bound surface from `src/lua_runner.cpp` and fails if a
+  `test/lua-api-sync.test.ts` derives the bound surface from every file under `src/lua_runner/` and fails if a
   `db:`/`quiver.*` name is undocumented, a documented name no longer exists, or the stdlib sentence
-  disagrees with `open_libraries` — that check is why the doc must keep the literal-token convention
+  disagrees with `open_libraries`, or any of the `BinaryFile`, `BinaryMetadata`, `Expression` or
+  `CsvWriter` usertypes parses to zero methods, or a `.set_function(` call goes through any receiver
+  but `bind`/`ns` (its name would otherwise drop out unchecked), or `open_libraries(` does not appear exactly once —
+  that check is why the doc must keep the literal-token convention
   and the canonical `Loaded standard libraries: ...` sentence. It cannot check arg order, arity,
   types, or return shapes; those still need a hand re-diff. The `## CSV file reading` section's
   worked example is exactly this uncheckable half: its Lua is real, lifted verbatim from

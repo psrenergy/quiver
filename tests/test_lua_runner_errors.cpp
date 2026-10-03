@@ -292,6 +292,113 @@ TEST_F(LuaRunnerTest, DofileAndLoadfileRemoved) {
     )");
 }
 
+TEST_F(LuaRunnerTest, LoadRefusesBinaryChunks) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    quiver::LuaRunner lua(db);
+
+    // Lua does not verify bytecode, so load takes text chunks only, whatever mode the script passes.
+    lua.run(R"lua(
+        local dump = string.dump(function() return 1 end)
+        local function refused(how, f, err)
+            assert(f == nil, how .. ": a binary chunk should not load")
+            assert(type(err) == "string" and err:find("attempt to load a binary chunk (mode is 't')", 1, true),
+                how .. ": unexpected message " .. tostring(err))
+        end
+        refused("no mode", load(dump))
+        refused("mode b", load(dump, "c", "b"))
+        refused("mode bt", load(dump, "c", "bt"))
+        local given = false
+        local function reader()
+            if given then return nil end
+            given = true
+            return dump
+        end
+        refused("reader", load(reader, "c", "bt"))
+    )lua");
+}
+
+TEST_F(LuaRunnerTest, LoadStillAcceptsTextChunks) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(
+        assert(load("return 1 + 1")() == 2, "no mode")
+        assert(load("return x", "c", "t", { x = 9 })() == 9, "explicit mode and env")
+        assert(load("return x", "c", nil, { x = 7 })() == 7, "nil mode and env")
+        x = 5
+        assert(load("return x")() == 5, "no env uses the global environment")
+        local f = load("return x", "c", "t", nil)
+        assert(type(f) == "function", "an explicit nil env still loads")
+        assert(not pcall(f), "an explicit nil env has no globals")
+        local pieces = { "return ", "4", " * 2" }
+        local i = 0
+        local function reader()
+            i = i + 1
+            return pieces[i]
+        end
+        assert(load(reader)() == 8, "a reader yielding text pieces")
+    )");
+}
+
+TEST_F(LuaRunnerTest, RunRefusesBinaryChunks) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    quiver::LuaRunner lua(db);
+
+    // A JSON result must be UTF-8, so the bytecode comes back hex-encoded.
+    auto hex = lua.run(R"(
+        return (string.dump(function() return 1 end):gsub(".", function(c) return string.format("%02x", c:byte()) end))
+    )");
+    ASSERT_GE(hex.size(), 2u);
+    hex = hex.substr(1, hex.size() - 2);
+    std::string bytecode;
+    for (size_t i = 0; i + 1 < hex.size(); i += 2) {
+        bytecode.push_back(static_cast<char>(std::stoi(hex.substr(i, 2), nullptr, 16)));
+    }
+    ASSERT_EQ(bytecode.substr(0, 4), "\x1bLua");
+
+    // The script itself is held to the same rule as load: text chunks only.
+    try {
+        lua.run(bytecode);
+        FAIL() << "a binary chunk should not run";
+    } catch (const std::runtime_error& e) {
+        EXPECT_NE(std::string(e.what()).find("attempt to load a binary chunk (mode is 't')"), std::string::npos)
+            << e.what();
+    }
+}
+
+TEST_F(LuaRunnerTest, CaughtScriptErrorsWriteNothingToStderr) {
+    auto db = quiver::Database::from_schema(
+        ":memory:",
+        collections_schema,
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
+    quiver::LuaRunner lua(db);
+
+    // A C++ exception crossing a binding, caught by the script.
+    testing::internal::CaptureStderr();
+    lua.run("pcall(function() db:commit() end)");
+    EXPECT_EQ(testing::internal::GetCapturedStderr(), "");
+
+    // The same exception left to propagate out of run().
+    testing::internal::CaptureStderr();
+    bool threw = false;
+    try {
+        lua.run("db:commit()");
+    } catch (const std::exception&) {
+        threw = true;
+    }
+    EXPECT_EQ(testing::internal::GetCapturedStderr(), "");
+    EXPECT_TRUE(threw);
+}
+
+TEST_F(LuaRunnerTest, DotCallThrowsInsteadOfCrashing) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(lua, "db.commit()", "received nil for 'self' argument");
+    EXPECT_THROW(lua.run("db.create_element('Collection', { label = 'x' })"), std::runtime_error);
+}
+
 TEST_F(LuaRunnerTest, StandardLibrariesEnabled) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::LuaRunner lua(db);

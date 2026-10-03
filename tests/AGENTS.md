@@ -34,10 +34,16 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   `test_schema_validator.cpp`
 - Lua: `test_lua_runner_*.cpp` — per-area split mirroring the database files (`_create`, `_read`,
   `_update`, `_delete`, `_query`, `_describe`, `_return`, `_time_series`, `_transaction`,
-  `_errors`, `_csv_export`, `_csv_import`, `_all_types`, `_fk`, `_migrations`). `_return` covers the JSON
-  encoding of a script's return value; `_transaction` covers `db:dry_run` (the core-level dry run
+  `_errors`, `_csv_export`, `_csv_import`, `_all_types`, `_fk`, `_lifecycle`, `_migrations`). `_return` covers the JSON
+  encoding of a script's return value; `_errors` also pins text-only `load`, that a caught or
+  propagated script error writes nothing to stderr, and that a dot-call (`db.commit()`) throws
+  instead of crashing; `_transaction` covers `db:dry_run` (the core-level dry run
   lives in `test_database_transaction.cpp`); `_migrations` covers `db:validate_migrations` (sandboxed
-  like the other file-touching Lua operations). The shared `LuaRunnerTest` and `LuaSandboxTest` fixtures,
+  like the other file-touching Lua operations); `_lifecycle` covers moving a runner (move-construct and
+  move-assign): handles a script opens after the move still close at that `run()`'s exit, both while the
+  moved-from runner is alive and after it has been destroyed, and a file-scope `static_assert` that
+  `LuaRunner` is pointer-sized keeps run state inside its `Impl` in Release too, where the freed-source
+  pins alone do not reliably fail. The shared `LuaRunnerTest` and `LuaSandboxTest` fixtures,
   the `expect_lua_error` helper (throw + message-substring assert — plain `EXPECT_THROW` passes
   vacuously when a removed function raises "attempt to call a nil value"), and the common include
   prelude live in `test_lua_runner.h`; the single-use `LuaRunnerAllTypesTest` / `LuaRunnerFkTest`
@@ -46,6 +52,16 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   in a dedicated per-test temp dir, with scripts passing relative paths. The Lua binary/expression
   subsystem bindings (and the sandbox itself) are covered by `test_lua_binary.cpp` and
   `test_lua_expression.cpp`.
+- `test_sandboxed_path.cpp` (`SandboxedPathTest`) unit-tests `resolve_sandboxed_path`, the gate
+  every file-touching Lua operation shares, without Lua: containment, `..` and absolute escapes, a
+  symlink pointing outside, the root itself, `:memory:`, and (`_WIN32` only) the device-name prefix.
+  It is the only test that includes a `src/` header and compiles a `src/` TU: the function is hidden
+  in the shared library, so `tests/CMakeLists.txt` adds `src/lua_runner/path_policy.cpp` to
+  `quiver_tests` along with the `src/` include dir. Keep `path_policy.cpp` a one-function file, or a
+  static (`QUIVER_BUILD_SHARED=OFF`) link defines a symbol twice. The suite name stays outside the
+  `Lua*` filter so the Lua-layer count is unaffected. Expectations build the root from
+  `weakly_canonical(sandbox)`, which is what the gate prints (macOS `/private/var`, Windows 8.3
+  names), and the symlink case skips where a directory symlink cannot be created.
 - Binary subsystem: `test_binary_file.cpp`, `test_binary_metadata.cpp`,
   `test_binary_time_properties.cpp`, `test_csv_converter.cpp`, `test_iteration.cpp`
 - Expression subsystem: `test_expression.cpp`
@@ -133,14 +149,15 @@ things to keep in mind when touching these:
   asserted a boolean rejection before booleans were accepted; a function is the value that still
   has no SQL counterpart. `test_lua_runner_update.cpp` keeps its boolean rejection for
   `db:update_relation`, where only `nil` may clear a relation.
-- **The three mixed-array tests are release-sensitive.**
+- **The three mixed-array tests guard the unchecked getter.**
   `CreateElementMixedIntegerAndBooleanArray`, `CreateElementMixedFloatAndBooleanArray` and
-  `CreateElementArrayCellTypeMismatchThrows` cover bugs that only manifested with
-  `SOL_SAFE_GETTER` off (silent 0 / 0.0 / `""` instead of a throw), and `SOL_SAFE_GETTER` is on by
-  default in Debug — so a Debug-only run cannot prove the fix. Build Release with tests via the
+  `CreateElementArrayCellTypeMismatchThrows` cover bugs that only manifest with
+  `SOL_SAFE_GETTER` off (silent 0 / 0.0 / `""` instead of a throw). `src/CMakeLists.txt` now sets it
+  off in every build, so Debug sees them too; every other sol2 safety is on in both builds, and a
+  Release run is still the check that no build-specific behaviour crept in. Build Release with tests via the
   preset when touching `lua_table_to_vector`:
   `cmake --preset release && cmake --build --preset release`, then run
-  `build/release/bin/quiver_tests.exe --gtest_filter='LuaRunner*'`. Phase 2's `header_row` decoder
+  `build/release/bin/quiver_tests.exe --gtest_filter='Lua*'`. Phase 2's `header_row` decoder
   (a new `sol::object` type check) was verified this way (TEST-05): 291/291 `LuaRunner*` tests
   passed in both Debug and Release, with no divergence.
 
@@ -170,8 +187,12 @@ non-Database files (`composites.test.ts`, `introspection.test.ts`, `lua-runner.t
 `lua-api-sync.test.ts`, `package-entry.test.ts`) keep their bare names.
 
 `bindings/js/test/lua-api-sync.test.ts` is the only JS test file that needs neither a database nor
-the native library: it parses `src/lua_runner.cpp` and asserts `bindings/js/src/lua-api.ts` documents
-every bound `db:`/`quiver.*` name and the exact `open_libraries` list. It imports the constant from
+the native library: it parses every `.cpp`/`.h` under `src/lua_runner/` (sorted, with the open
+usertype reset at each file boundary) and asserts `bindings/js/src/lua-api.ts` documents
+every bound `db:`/`quiver.*` name and the exact `open_libraries` list. It also fails if any of the
+`BinaryFile`, `BinaryMetadata`, `Expression` or `CsvWriter` usertypes parses to zero methods, or if
+`open_libraries(` does not appear exactly once, so a missed file or usertype cannot pass vacuously.
+It imports the constant from
 `../src/lua-api.ts` directly rather than `../src/index.ts` specifically to avoid the FFI loader, so
 it still passes on a checkout with no `build/`.
 

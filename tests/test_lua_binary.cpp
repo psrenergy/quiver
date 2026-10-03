@@ -352,6 +352,13 @@ TEST_F(LuaBinaryTest, OpenFileInvalidModeThrows) {
     expect_lua_error(lua, "db:open_file('bin_a', 'x')\n", "Cannot open_file: mode must be");
 }
 
+// The mode is validated before the path is resolved, so an escaping path cannot mask a bad mode.
+TEST_F(LuaBinaryTest, OpenFileReportsInvalidModeBeforeEscapingPath) {
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+    expect_lua_error(lua, "db:open_file('../escape', 'z')", R"(Cannot open_file: mode must be "r" or "w")");
+}
+
 // --- db-directory sandbox ---
 
 TEST_F(LuaBinaryTest, RelativePathResolvesAgainstDbDir) {
@@ -432,4 +439,102 @@ TEST_F(LuaBinaryTest, InMemoryThrows) {
     expect_lua_error(lua, md1() + "db:open_file('bin_a', 'w', md)\n", "Cannot open_file: database is in-memory");
     expect_lua_error(lua, "db:bin_to_csv('bin_a')\n", "Cannot bin_to_csv: database is in-memory");
     expect_lua_error(lua, "db:csv_to_bin('bin_a')\n", "Cannot csv_to_bin: database is in-memory");
+}
+
+TEST_F(LuaBinaryTest, ReadWriteRejectNonTableArguments) {
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+    lua.run(md1() + R"(
+        local f = db:open_file('bin_a', 'w', md)
+        f:write({42.0}, {row=1})
+        f:close()
+    )");
+
+    expect_lua_error(lua, "db:open_file('bin_a', 'r'):read(5)\n", "Cannot read: dims must be a table, got number");
+    expect_lua_error(
+        lua,
+        md1() + "db:open_file('bin_b', 'w', md):write(5, {row=1})\n",
+        "Cannot write: data must be a table, got number"
+    );
+    expect_lua_error(
+        lua,
+        md1() + "db:open_file('bin_b', 'w', md):write({1.0}, 'x')\n",
+        "Cannot write: dims must be a table, got string"
+    );
+    // Both arguments are wrong: data is decoded first, so it is the one reported.
+    expect_lua_error(
+        lua,
+        md1() + "db:open_file('bin_b', 'w', md):write(5, 'x')\n",
+        "Cannot write: data must be a table, got number"
+    );
+}
+
+TEST_F(LuaBinaryTest, MetadataRejectsNonTableArguments) {
+    auto db = quiver::Database::from_schema(":memory:", schema);
+    quiver::LuaRunner lua(db);
+    expect_lua_error(lua, "quiver.metadata()\n", "Cannot metadata: options must be a table, got nil");
+    expect_lua_error(lua, "quiver.metadata(5)\n", "Cannot metadata: options must be a table, got number");
+    expect_lua_error(
+        lua,
+        "quiver.metadata{ labels = 5 }\n",
+        "Cannot metadata: field 'labels' must be a table, got number"
+    );
+    expect_lua_error(
+        lua,
+        "quiver.metadata_from_element(5)\n",
+        "Cannot metadata_from_element: element_table must be a table, got number"
+    );
+}
+
+TEST_F(LuaBinaryTest, ReadRejectsNonStringDimensionName) {
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+    lua.run(md1() + R"(
+        local f = db:open_file('bin_a', 'w', md)
+        f:write({42.0}, {row=1})
+        f:close()
+    )");
+    expect_lua_error(
+        lua,
+        "db:open_file('bin_a', 'r'):read({ 1 })\n",
+        "Cannot read: dimension name must be a string, got number"
+    );
+}
+
+// A wrong-typed optional argument used to be treated as absent. nil or a missing argument still is.
+TEST_F(LuaBinaryTest, OptionalArgumentsRejectWrongTypes) {
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(
+        lua,
+        "db:open_file('bin_a', 'w', {})\n",
+        "Cannot open_file: metadata must be a BinaryMetadata, got table"
+    );
+    expect_lua_error(
+        lua,
+        "db:open_file('bin_a', 'w', db)\n",
+        "Cannot open_file: metadata must be a BinaryMetadata, got userdata"
+    );
+    // The mode is checked first, then containment, then the metadata.
+    expect_lua_error(
+        lua,
+        "db:open_file('../x', 'w', {})\n",
+        "Cannot open_file: path '../x' escapes the database directory"
+    );
+    expect_lua_error(lua, "db:open_file('x', 'q', {})\n", R"(Cannot open_file: mode must be "r" or "w")");
+
+    expect_lua_error(lua, "db:bin_to_csv('x', 1)\n", "Cannot bin_to_csv: aggregate must be a boolean, got number");
+
+    lua.run(md1() + R"(
+        local f = db:open_file('bin_a', 'w', md)
+        f:write({42.0}, {row=1})
+        f:close()
+    )");
+    expect_lua_error(
+        lua,
+        "db:open_file('bin_a', 'r'):read({row=1}, 'yes')\n",
+        "Cannot read: allow_nulls must be a boolean, got string"
+    );
+    EXPECT_EQ(lua.run("return db:open_file('bin_a', 'r'):read({row=1}, nil)[1]"), "42");
 }

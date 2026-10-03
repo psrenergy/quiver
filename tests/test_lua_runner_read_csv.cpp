@@ -1149,6 +1149,45 @@ TEST_F(LuaRunner_ReadCsv, EscapingPathThrowsForReadCsvStream) {
     );
 }
 
+// The path is resolved before the options are decoded, so a non-table options argument cannot mask an escaping path.
+TEST_F(LuaRunner_ReadCsv, EscapingPathIsReportedBeforeNonTableOptions) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(
+        lua,
+        R"(db:read_csv("../escape.csv", 5))",
+        "Cannot read_csv: path '../escape.csv' escapes the database directory"
+    );
+}
+
+// on_row is type-checked before the path is resolved.
+TEST_F(LuaRunner_ReadCsv, StreamReportsNonFunctionOnRowBeforeEscapingPath) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(
+        lua,
+        R"(db:read_csv_stream("../escape.csv", 5))",
+        "Cannot read_csv_stream: on_row must be a function"
+    );
+}
+
+// The path is resolved before the options are decoded, so a non-table options argument cannot mask an escaping path.
+TEST_F(LuaRunner_ReadCsv, StreamReportsEscapingPathBeforeNonTableOptions) {
+    auto schema = VALID_SCHEMA("basic.sql");
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(
+        lua,
+        R"(db:read_csv_stream("../escape.csv", function() end, 5))",
+        "Cannot read_csv_stream: path '../escape.csv' escapes the database directory"
+    );
+}
+
 TEST_F(LuaRunner_ReadCsv, InMemoryDatabaseThrowsForReadCsv) {
     // A separate in-memory Database + LuaRunner -- cannot share the sandbox fixture's file-backed
     // database, since an in-memory db has no directory to sandbox against.

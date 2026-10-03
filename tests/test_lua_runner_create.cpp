@@ -42,6 +42,20 @@ TEST_F(LuaRunnerTest, CreateElementWithArrays) {
     EXPECT_EQ(floats[0], (std::vector<std::optional<double>>{1.5, 2.5, 3.5}));
 }
 
+// On create the core skips an empty array before looking up its table, so a misspelled one passes.
+TEST_F(LuaRunnerTest, CreateElementSkipsEmptyArray) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(
+        db:create_element("Configuration", { label = "Test Config" })
+        db:create_element("Collection", { label = "x", value_int = {}, typo = {} })
+    )");
+
+    EXPECT_EQ(db.read_scalar_strings("Collection", "label"), (std::vector<std::optional<std::string>>{"x"}));
+    EXPECT_EQ(db.query_integer("SELECT COUNT(*) FROM Collection_vector_values"), 0);
+}
+
 TEST_F(LuaRunnerTest, CreateElementWithOnlyLabel) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::LuaRunner lua(db);
@@ -305,4 +319,53 @@ TEST_F(LuaRunnerTest, CreateElementArrayCellTypeMismatchThrows) {
             EXPECT_NE(std::string(e.what()).find("cell #2 has unsupported Lua type"), std::string::npos) << e.what();
         }
     }
+}
+
+TEST_F(LuaRunnerTest, CreateElementRejectsNonTableElement) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(
+        lua,
+        R"(db:create_element("Collection", 5))",
+        "Cannot create_element: element_table must be a table, got number"
+    );
+    expect_lua_error(
+        lua,
+        R"(db:create_element("Collection", db))",
+        "Cannot create_element: element_table must be a table, got userdata"
+    );
+    EXPECT_TRUE(db.read_element_ids("Collection").empty());
+}
+
+// A userdata attribute value used to be walked as an array and reach the script as sol2's raw
+// usertype text.
+TEST_F(LuaRunnerTest, CreateElementRejectsUserdataAttribute) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(
+        lua,
+        R"(db:create_element("Collection", { label = "x", some_integer = db }))",
+        "Cannot create_element: attribute 'some_integer' must be a value or a table, got userdata"
+    );
+    EXPECT_TRUE(db.read_element_ids("Collection").empty());
+}
+
+// A number key used to be spelled as text in Release, and a boolean key had no text at all.
+TEST_F(LuaRunnerTest, CreateElementRejectsNonStringAttributeName) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(
+        lua,
+        R"(db:create_element("Collection", { "x" }))",
+        "Cannot create_element: attribute name must be a string, got number"
+    );
+    expect_lua_error(
+        lua,
+        R"(db:create_element("Collection", { label = "y", [true] = 1 }))",
+        "Cannot create_element: attribute name must be a string, got boolean"
+    );
+    EXPECT_TRUE(db.read_element_ids("Collection").empty());
 }

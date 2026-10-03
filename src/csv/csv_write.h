@@ -1,7 +1,7 @@
 #ifndef QUIVER_SRC_CSV_CSV_WRITE_H
 #define QUIVER_SRC_CSV_CSV_WRITE_H
 
-// Internal CSV writer behind the Lua-only db:write_csv binding (src/lua_runner.cpp). No public
+// Internal CSV writer behind the Lua-only db:write_csv binding (src/lua_runner/csv.cpp). No public
 // include/quiver/ counterpart, no QUIVER_API, no C API, no FFI binding, for the same reason
 // csv_read has none: Julia/Dart/Python/JS already have native CSV libraries, and Lua needs this
 // specifically because `io` is deliberately absent from its sandbox (root AGENTS.md design
@@ -9,17 +9,17 @@
 // (src/database_csv_export.cpp), so export_csv and db:write_csv share one CSV quoting rule.
 //
 // Unlike csv_read::Reader, this class is deliberately NOT Pimpl'd (D-37): Reader hides
-// csv-parser's headers from src/lua_runner.cpp (which already needs /bigobj on MSVC for sol2's
+// csv-parser's headers from every src/lua_runner/ TU (/bigobj is target-wide for sol2's
 // template depth); this writer is hand-rolled with no dependency to hide, so a Pimpl here would
 // be cargo cult.
 //
 // write_row takes std::vector<std::string>, not an optional or variant cell type: a nil cell and
 // an empty-string cell are the same empty cell (D-40), so all Lua type dispatch (string / integer
-// / float / boolean / nil / rejected) happens in src/lua_runner.cpp and this class never sees a
+// / float / boolean / nil / rejected) happens in src/lua_runner/csv.cpp and this class never sees a
 // sol2 type.
 //
 // The full Pattern 1 message catalogue for this feature (this header/cpp plus the write_row cell
-// formatter it feeds from src/lua_runner.cpp) is pinned as a comment block at the top of
+// formatter it feeds from src/lua_runner/csv.cpp) is pinned as a comment block at the top of
 // src/csv/csv_write.cpp -- TEST-12 matches on those exact strings; do not reword any of them without
 // updating that comment and the tests together.
 
@@ -52,8 +52,8 @@ public:
     Writer(std::string resolved_path, std::string original_path, std::string operation, Options options = {});
     ~Writer();
 
-    // Non-movable as well as non-copyable: the sole Writer owner (LuaRunner::Impl::CsvWriter) holds a
-    // shared_ptr and constructs in place, so nothing moves a Writer. A defaulted move would have
+    // Non-movable as well as non-copyable: the sole Writer owner (lua_internal::CsvWriter in src/lua_runner/csv.cpp)
+    // holds a shared_ptr and constructs in place, so nothing moves a Writer. A defaulted move would have
     // to claim `noexcept` over std::ofstream's move (which is not noexcept, so a throw would
     // terminate) and would leave the moved-from source with closed_ == false.
     Writer(const Writer&) = delete;
