@@ -1,4 +1,5 @@
-#include "lua_runner/internal.h"
+#include "lua_runner/path_policy.h"
+
 #include "quiver/database.h"
 
 #include <filesystem>

@@ -1,6 +1,7 @@
 #ifndef QUIVER_SRC_LUA_RUNNER_INTERNAL_H
 #define QUIVER_SRC_LUA_RUNNER_INTERNAL_H
 
+#include "lua_runner/path_policy.h"
 #include "quiver/database.h"
 #include "quiver/element.h"
 #include "quiver/value.h"
@@ -299,7 +300,6 @@ void bind_time_series(sol::usertype<Database>& bind);
 void bind_csv(sol::state& state, sol::usertype<Database>& bind, RunHandles& handles);
 void bind_binary(sol::state& state, sol::usertype<Database>& bind, sol::table& ns, Database& db, RunHandles& handles);
 
-std::string resolve_sandboxed_path(const Database& db, const std::string& operation, const std::string& path);
 std::string encode_return_json(const sol::object& value);
 
 Element table_to_element(const std::string& caller, const sol::object& values);
