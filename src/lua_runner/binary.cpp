@@ -230,7 +230,7 @@ void bind_binary(sol::state& lua, sol::usertype<Database>& bind, sol::table& ns,
             const auto resolved = resolve_sandboxed_path(self, "open_file", path);
             std::optional<BinaryMetadata> md = metadata ? std::optional<BinaryMetadata>(*metadata) : std::nullopt;
             auto file = std::make_shared<BinaryFile>(BinaryFile::open_file(resolved, mode[0], md));
-            handles.open_binary_files.push_back(file);
+            handles.add_binary_file(file);
             return file;
         }
     );

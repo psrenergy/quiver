@@ -26,7 +26,7 @@ namespace quiver::lua_internal {
 struct CsvWriter {
     // shared_ptr, not a value: RunHandles keeps a weak_ptr to every writer it hands out so run()
     // can close the ones the script never closed, whether or not Lua can still reach them
-    // (collect_garbage() alone only finalizes unreachable ones -- see close_open_writers).
+    // (collect_garbage() alone only finalizes unreachable ones -- see close_open_handles).
     // It also means the Writer is constructed in place and never moved.
     std::shared_ptr<quiver::csv_write::Writer> writer;
     // 1-based ordinal of the NEXT data row to attempt, so the non-finite-number error
@@ -397,9 +397,9 @@ void bind_csv(sol::state& state, sol::usertype<Database>& bind, RunHandles& hand
             }
             const auto header_width = csv_options.header.size();
             auto writer = std::make_shared<quiver::csv_write::Writer>(resolved, path, "write_csv", csv_options);
-            // Registered so close_open_writers() can flush it at run()'s exit even
+            // Registered so close_open_handles() can flush it at run()'s exit even
             // when the script leaves it reachable (a global), which the GC cannot.
-            handles.open_writers.emplace_back(resolved, writer);
+            handles.add_writer(resolved, writer);
             return std::make_unique<CsvWriter>(std::move(writer), header_width);
         }
     );

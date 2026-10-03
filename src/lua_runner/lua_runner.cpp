@@ -10,6 +10,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace quiver::lua_internal {
 
@@ -30,12 +31,29 @@ bool RunHandles::path_has_open_writer(const std::string& resolved_path) const {
     return false;
 }
 
+// Only expired entries go: a closed-but-alive writer stays, and erase_if keeps the survivors'
+// order, so the close order at run()'s exit is unchanged. Without the prune, a long script that
+// opens and drops many writers grows the list until run() returns.
+void RunHandles::add_writer(
+    const std::string& resolved_path,
+    const std::shared_ptr<quiver::csv_write::Writer>& writer
+) {
+    std::erase_if(open_writers, [](const auto& entry) { return entry.second.expired(); });
+    open_writers.emplace_back(resolved_path, writer);
+}
+
+// Same rule as add_writer.
+void RunHandles::add_binary_file(const std::shared_ptr<BinaryFile>& file) {
+    std::erase_if(open_binary_files, [](const auto& weak) { return weak.expired(); });
+    open_binary_files.push_back(file);
+}
+
 // The run-exit flush mechanism, for every writer and binary file handle. A CsvWriter the script
 // left reachable -- `w = db:write_csv(...)` without `local`, the Lua default -- is a GC root, so
 // collect_garbage() never finalizes it and its buffered rows never reach disk. Closing through
 // this registry instead makes the flush independent of reachability, which is what the documented
 // guarantee ("the file is complete and re-readable even without w:close()") actually promises.
-void RunHandles::close_open_writers() {
+void RunHandles::close_open_handles() {
     for (const auto& [path, weak] : open_writers) {
         if (const auto writer = weak.lock()) {
             try {
@@ -115,7 +133,7 @@ std::string LuaRunner::run(const std::string& script) {
     // guard (declared first) is destroyed AFTER `result` (declared second) -- releasing
     // `result`'s Lua stack reference before the collection below runs. Declaring the guard after
     // `result` would collect while a live stack reference still anchors the script's userdata.
-    // close_open_writers() runs first and does NOT depend on reachability: it closes CSV writers and
+    // close_open_handles() runs first and does NOT depend on reachability: it closes CSV writers and
     // binary files. A writer the script assigned to a global (`w = db:write_csv(...)`, the Lua
     // default spelling) is a GC root, so collect_garbage() alone would leave its rows in the ofstream
     // buffer and the file at 0 bytes -- and a db:open_file writer's path in the write registry.
@@ -123,7 +141,7 @@ std::string LuaRunner::run(const std::string& script) {
     struct GcGuard {
         Impl& impl;
         ~GcGuard() {
-            impl.handles.close_open_writers();
+            impl.handles.close_open_handles();
             impl.lua.collect_garbage();
         }
     } gc_guard{*impl_};

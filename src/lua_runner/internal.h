@@ -36,18 +36,20 @@ namespace lua_internal {
 
 struct RunHandles {
     // Every writer db:write_csv has handed out during the current run(), by resolved path. Weak,
-    // so a writer the script did drop (and the GC did collect) simply expires; cleared at each
-    // run()'s exit.
+    // so a writer the script did drop (and the GC did collect) simply expires; expired entries are
+    // pruned on every insert, and the list is cleared at run()'s exit.
     std::vector<std::pair<std::string, std::weak_ptr<quiver::csv_write::Writer>>> open_writers;
 
     // Every BinaryFile db:open_file handed out during the current run(), readers and writers
-    // alike, so close_open_writers() can close it at run()'s exit even when the script keeps it in
+    // alike, so close_open_handles() can close it at run()'s exit even when the script keeps it in
     // a global (a GC root). A writer left open would otherwise keep its path in the process-wide
-    // write registry until the LuaRunner is destroyed.
+    // write registry until the LuaRunner is destroyed. Pruned and cleared like open_writers.
     std::vector<std::weak_ptr<BinaryFile>> open_binary_files;
 
     bool path_has_open_writer(const std::string& resolved_path) const;
-    void close_open_writers();
+    void add_writer(const std::string& resolved_path, const std::shared_ptr<quiver::csv_write::Writer>& writer);
+    void add_binary_file(const std::shared_ptr<BinaryFile>& file);
+    void close_open_handles();
 };
 
 template <typename T>

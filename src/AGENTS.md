@@ -821,7 +821,7 @@ Implementation conventions in `src/lua_runner/`:
   **not** wrapped in that prefix — they happen after the script already succeeded.
 - **A writer left open when the script returns is still flushed.** `LuaRunner::run` declares one
   function-local RAII guard (`GcGuard`) before calling `safe_script`, whose destructor runs
-  `RunHandles::close_open_writers()` and then `impl_->lua.collect_garbage()` exactly once at `run()`'s
+  `RunHandles::close_open_handles()` and then `impl_->lua.collect_garbage()` exactly once at `run()`'s
   scope exit — covering the normal-return, empty-return, and throw-unwinding paths alike. The
   guard is declared *before* `result`, so C++'s reverse-declaration-order destruction runs both
   *after* `result`'s Lua stack reference is released.
@@ -831,11 +831,14 @@ Implementation conventions in `src/lua_runner/`:
   flushed: the file stayed at 0 bytes, which
   `LuaRunner_WriteCsv.UnclosedWriterHeldInAGlobalIsAlsoFlushedWhenRunReturns` pins. `db:write_csv`
   therefore hands out a `std::shared_ptr<csv_write::Writer>` and records a `weak_ptr` in
-  `RunHandles::open_writers` (declared in `src/lua_runner/internal.h`, bodies in `src/lua_runner/lua_runner.cpp`); `close_open_writers()` locks each one still alive, closes it (swallowing a
+  `RunHandles::open_writers` (declared in `src/lua_runner/internal.h`, bodies in `src/lua_runner/lua_runner.cpp`); `close_open_handles()` locks each one still alive, closes it (swallowing a
   flush failure — a scope-exit guard has no caller to report to, exactly as `~Writer` did), and
   clears the list. A writer therefore does not outlive its `run()`. `db:open_file` handles,
   readers and writers, are recorded the same way (a `weak_ptr` in `RunHandles::open_binary_files`) and
-  closed by `close_open_writers()`, so no binary file handle outlives its `run()` either. A writer
+  closed by `close_open_handles()`, so no binary file handle outlives its `run()` either. Both lists
+  are appended only through `RunHandles::add_writer` / `add_binary_file`, which first prune the
+  entries whose handle was collected (`expired()`), never a closed-but-alive one, so a long script
+  that opens and drops many handles does not grow the registry until `run()` returns. A writer
   left in a global would otherwise hold its path in the process-wide write registry until the
   `LuaRunner` is destroyed (pinned by `LuaBinaryTest.WriterHeldInAGlobalIsClosedWhenRunReturns`
   and `HandleFromAnEarlierRunIsClosed`). The `collect_garbage()` call
