@@ -31,7 +31,7 @@ std::string lp(const std::string& p) {
 }
 
 // Runs `script` and asserts it throws with a message starting with either entry point's own
-// Pattern 1 prefix -- the blanket rule behind LUA-08/D-20: no csv-parser, std::filesystem or sol2
+// Pattern 1 prefix -- the blanket rule: no csv-parser, std::filesystem or sol2
 // message may reach a script unwrapped.
 void expect_prefixed_error(quiver::LuaRunner& lua, const std::string& script) {
     try {
@@ -120,17 +120,17 @@ TEST_F(LuaRunner_ReadCsv, PreambleLineNotEaten) {
     )");
 }
 
-// --- the dirty-file matrix: PARSE-02 through PARSE-07, through the Lua boundary (TEST-01) ---
+// --- the dirty-file matrix: every parser requirement, through the Lua boundary ---
 //
-// PARSE-02..07 already pass against the Phase 1 reader with zero production code (verified
-// empirically before this phase was scoped, 02-CONTEXT.md); these are fixtures, not features.
+// The reader passed all of these before they were written down, with no production change;
+// these are fixtures, not features.
 
 TEST_F(LuaRunner_ReadCsv, DirtyFileParsesEveryParserRequirement) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::LuaRunner lua(db);
 
-    // The composite fixture from 02-CONTEXT.md's verified probe: a UTF-8 BOM, CRLF endings, a
+    // The composite fixture: a UTF-8 BOM, CRLF endings, a
     // quoted comma, a doubled quote, an embedded newline, and a short final row -- all six
     // properties in one file. The BOM is built as its own std::string: "\xEF\xBB\xBF" immediately
     // followed by an alphanumeric INSIDE THE SAME literal would have the hex escape swallow that
@@ -159,12 +159,12 @@ TEST_F(LuaRunner_ReadCsv, DirtyFileParsesEveryParserRequirement) {
     // Per-requirement asserts so a failure names which property broke, not just a JSON diff.
     lua.run(R"(
         local csv = db:read_csv("dirty.csv")
-        assert(csv.header[1] == "a", "PARSE-05: BOM leaked into header[1], got " .. tostring(csv.header[1]))
-        assert(csv.rows[1][1] == "May 1, 2014", "PARSE-02: quoted separator split the field")
-        assert(csv.rows[2][1] == "say \"hi\"", "PARSE-04: doubled quote did not unescape to one quote")
-        assert(csv.rows[3][1] == "line1\nline2", "PARSE-03: embedded newline split the record")
-        assert(not csv.rows[1][1]:find("\r"), "PARSE-06: cell retained a trailing carriage return")
-        assert(#csv.rows[4] == 1 and csv.rows[4][1] == "short", "PARSE-07: ragged short row was padded or dropped")
+        assert(csv.header[1] == "a", "BOM leaked into header[1], got " .. tostring(csv.header[1]))
+        assert(csv.rows[1][1] == "May 1, 2014", "quoted separator split the field")
+        assert(csv.rows[2][1] == "say \"hi\"", "doubled quote did not unescape to one quote")
+        assert(csv.rows[3][1] == "line1\nline2", "embedded newline split the record")
+        assert(not csv.rows[1][1]:find("\r"), "cell retained a trailing carriage return")
+        assert(#csv.rows[4] == 1 and csv.rows[4][1] == "short", "ragged short row was padded or dropped")
     )");
 }
 
@@ -174,7 +174,7 @@ TEST_F(LuaRunner_ReadCsv, LfAndCrlfEndingsParseIdentically) {
     quiver::LuaRunner lua(db);
 
     // Same content as DirtyFileParsesEveryParserRequirement, LF instead of CRLF line endings.
-    // PARSE-06's second half: both must parse, and no cell may carry a trailing \r either way.
+    // Second half of the trailing-\r check: both must parse, and neither may leave a \r in a cell.
     const std::string bom = "\xEF\xBB\xBF";
     write_lua_csv_file(
         sandbox / "dirty_crlf.csv",
@@ -195,7 +195,7 @@ TEST_F(LuaRunner_ReadCsv, LfAndCrlfEndingsParseIdentically) {
 
     auto crlf_json = lua.run(R"(return db:read_csv("dirty_crlf.csv"))");
     auto lf_json = lua.run(R"(return db:read_csv("dirty_lf.csv"))");
-    EXPECT_EQ(crlf_json, lf_json) << "PARSE-06: CRLF and LF variants of the same content must parse identically";
+    EXPECT_EQ(crlf_json, lf_json) << "CRLF and LF variants of the same content must parse identically";
 }
 
 // require_well_formed_quotes (src/database_csv_import.cpp) re-implements csv-parser's quote rules
@@ -229,28 +229,28 @@ TEST_F(LuaRunner_ReadCsv, BomStrippedUnderExplicitHeaderRowAndNoHeader) {
     quiver::LuaRunner lua(db);
 
     // BOM + a junk title line above the real header, mirroring the real Maranhao file's shape
-    // (D-22). PARSE-05 must hold under header_row = 2 (explicit header) and header_row = 0 (no
+    // shape. BOM stripping must hold under header_row = 2 (explicit header) and header_row = 0 (no
     // header) alike -- csv-parser strips the BOM once on the raw byte stream, independent of
-    // header-row resolution (02-RESEARCH.md Finding 4).
+    // header-row resolution.
     const std::string bom = "\xEF\xBB\xBF";
     write_lua_csv_file(sandbox / "bom_junk.csv", bom + "junk\na,b,c\n1,2,3\n");
 
     lua.run(R"(
         local csv = db:read_csv("bom_junk.csv", { header_row = 2 })
-        assert(csv.header[1] == "a", "PARSE-05: expected clean 'a', got " .. tostring(csv.header[1]))
+        assert(csv.header[1] == "a", "expected clean 'a', got " .. tostring(csv.header[1]))
         -- Asserted by length too, so an invisible 3-byte BOM prefix cannot pass a visual-only check.
-        assert(#csv.header[1] == 1, "PARSE-05: header[1] carried extra bytes (BOM?), length " .. #csv.header[1])
+        assert(#csv.header[1] == 1, "header[1] carried extra bytes (BOM?), length " .. #csv.header[1])
     )");
 
     lua.run(R"(
         local csv = db:read_csv("bom_junk.csv", { header_row = 0 })
         assert(csv.header == nil, "expected no header key under header_row = 0")
-        assert(csv.rows[1][1] == "junk", "PARSE-05: expected clean 'junk', got " .. tostring(csv.rows[1][1]))
-        assert(#csv.rows[1][1] == 4, "PARSE-05: rows[1][1] carried extra bytes (BOM?), length " .. #csv.rows[1][1])
+        assert(csv.rows[1][1] == "junk", "expected clean 'junk', got " .. tostring(csv.rows[1][1]))
+        assert(#csv.rows[1][1] == 4, "rows[1][1] carried extra bytes (BOM?), length " .. #csv.rows[1][1])
     )");
 }
 
-// --- header_row option (LUA-05, D-20) ---
+// --- header_row option ---
 
 TEST_F(LuaRunner_ReadCsv, HeaderRowSelectsNamedLineOverJunkAndUnits) {
     auto schema = VALID_SCHEMA("basic.sql");
@@ -258,7 +258,7 @@ TEST_F(LuaRunner_ReadCsv, HeaderRowSelectsNamedLineOverJunkAndUnits) {
     quiver::LuaRunner lua(db);
 
     // Line 1: junk above the header. Line 2: the real header. Line 3: a units row, below the
-    // header. Lines 4+: data. Mirrors the real Maranhao Energia file's shape (D-22).
+    // header. Lines 4+: data. Mirrors the real Maranhao Energia file's shape.
     write_lua_csv_file(sandbox / "junk_header_units.csv", "Title Only\nname,value\nunit,unit\nAlpha,1\nBeta,2\n");
 
     auto json = lua.run(R"(return db:read_csv("junk_header_units.csv", { header_row = 2 }))");
@@ -273,7 +273,7 @@ TEST_F(LuaRunner_ReadCsv, HeaderRowOneMatchesNoOptionsDefault) {
 
     write_lua_csv_file(sandbox / "junk_header_units.csv", "Title Only\nname,value\nunit,unit\nAlpha,1\nBeta,2\n");
 
-    // Default is header_row = 1 (D-20) -- explicitly asking for it must be byte-identical to
+    // Default is header_row = 1 -- explicitly asking for it must be byte-identical to
     // omitting the option entirely (the junk line becomes the header, same as PreambleLineNotEaten).
     auto explicit_json = lua.run(R"(return db:read_csv("junk_header_units.csv", { header_row = 1 }))");
     auto implicit_json = lua.run(R"(return db:read_csv("junk_header_units.csv"))");
@@ -341,7 +341,7 @@ TEST_F(LuaRunner_ReadCsv, HeaderOnlyFileYieldsEmptyRows) {
     EXPECT_EQ(json, "[]");
 }
 
-// --- header_row past the end of the file (LUA-08) ---
+// --- header_row past the end of the file ---
 
 TEST_F(LuaRunner_ReadCsv, HeaderRowPastEndOfFileThrowsExactMessage) {
     auto schema = VALID_SCHEMA("basic.sql");
@@ -390,9 +390,10 @@ TEST_F(LuaRunner_ReadCsv, HeaderRowAtAndBeyondIntMaxClampsToPastEndOfFile) {
         "Cannot read_csv: header row 9007199254740992 not found in file 'clamp.csv'"
     );
 
-    // The blank-line guarantee (D-13) under the no-header path, which IS the case the call-order
-    // fix in make_format() protects: header mode is set before variable_columns(KEEP_NON_EMPTY),
-    // so no_header()'s policy reset cannot win. Reorder those two lines and this assertion fails.
+    // The blank-line guarantee (a blank line is never a row) under the no-header path, which IS
+    // the case the call-order fix in make_format() protects: header mode is set before
+    // variable_columns(KEEP_NON_EMPTY), so no_header()'s policy reset cannot win. Reorder those
+    // two lines and this assertion fails.
     write_lua_csv_file(sandbox / "clamp_blank.csv", "1,2\n\n3,4\n");
     lua.run(R"LUA(
         local csv = db:read_csv("clamp_blank.csv", { header_row = 0 })
@@ -420,10 +421,9 @@ TEST_F(LuaRunner_ReadCsv, HeaderRowOnLastLineSucceedsWithEmptyRows) {
     quiver::LuaRunner lua(db);
 
     // The header row is found (non-empty) with zero data rows following it -- a legitimate
-    // header-only file, distinct from Finding 1's genuinely-not-found case (LUA-08 research).
-    // This is also 02-02-PLAN.md Task 2's "header on the last line" case (the boundary between
-    // "header found, no data after it" and "header not found") -- already covered here verbatim,
-    // so that plan does not duplicate it.
+    // header-only file, distinct from the genuinely-not-found case of
+    // HeaderRowPastEndOfFileThrowsExactMessage. This is the "header on the last line" boundary
+    // between "header found, no data after it" and "header not found".
     write_lua_csv_file(sandbox / "headerlast.csv", "1,2\n3,4\na,b\n");
 
     lua.run(R"(
@@ -434,7 +434,7 @@ TEST_F(LuaRunner_ReadCsv, HeaderRowOnLastLineSucceedsWithEmptyRows) {
     )");
 }
 
-// --- header_row = 0: no header at all (D-20) ---
+// --- header_row = 0: no header at all ---
 
 TEST_F(LuaRunner_ReadCsv, HeaderRowZeroYieldsNoHeaderAndAllLinesAsRows) {
     auto schema = VALID_SCHEMA("basic.sql");
@@ -444,7 +444,7 @@ TEST_F(LuaRunner_ReadCsv, HeaderRowZeroYieldsNoHeaderAndAllLinesAsRows) {
     write_lua_csv_file(sandbox / "noheader.csv", "a,b\n1,2\n");
 
     // Pins header's absence (nil, not {}) at the JSON encoder level too, matching header_row(0)'s
-    // existing "no header" sentinel (D-01).
+    // existing "no header" sentinel.
     auto json = lua.run(R"(return db:read_csv("noheader.csv", { header_row = 0 }))");
     EXPECT_EQ(json, R"({"rows":[["a","b"],["1","2"]]})");
 }
@@ -454,11 +454,10 @@ TEST_F(LuaRunner_ReadCsv, HeaderRowZeroBlankLineMidFileIsNotAPhantomRow) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::LuaRunner lua(db);
 
-    // Permanent guard on make_format()'s call order (Finding 2): CSVFormat::header_row(-1) (what
+    // Permanent guard on make_format()'s call order: CSVFormat::header_row(-1) (what
     // no_header() calls) resets variable_column_policy to plain KEEP unless variable_columns() is
     // called AFTER it. Under KEEP a blank line becomes a phantom zero-length row; under the pinned
-    // KEEP_NON_EMPTY it is discarded (Phase 1 D-13). No prior test in this file exercises a blank
-    // line under header_row = 0, since the option did not exist before this plan.
+    // KEEP_NON_EMPTY it is discarded.
     write_lua_csv_file(sandbox / "blankmid.csv", "a,b\n\n1,2\n");
 
     lua.run(R"(
@@ -470,8 +469,8 @@ TEST_F(LuaRunner_ReadCsv, HeaderRowZeroBlankLineMidFileIsNotAPhantomRow) {
     )");
 }
 
-// LUA-03: the two forms must not diverge on the same input, and the header argument is the one
-// place they could. `db:read_csv` omits its `header` key when there is none (D-01), so the stream's
+// The two forms must not diverge on the same input, and the header argument is the one
+// place they could. `db:read_csv` omits its `header` key when there is none, so the stream's
 // third callback argument has to be nil there too -- not an empty table. The difference is
 // behavioural, not cosmetic: `{}` is truthy in Lua and `nil` is falsy, so a script written as
 // `if header then ... end` would take opposite branches between the two forms reading the same
@@ -518,7 +517,7 @@ TEST_F(LuaRunner_ReadCsv, StreamHeaderRowZeroBlankLineAgreesWithWholeFileRead) {
     write_lua_csv_file(sandbox / "blankmid.csv", "a,b\n\n1,2\n");
 
     // Same fixture, same option, through the streaming entry point -- both must agree on the row
-    // count so the ordering fix cannot regress just one of the two (LUA-03).
+    // count so the ordering fix cannot regress just one of the two.
     lua.run(R"(
         local n = db:read_csv_stream("blankmid.csv", function(row, index, header) return true end, { header_row = 0 })
         assert(n == 2, "expected stream row count 2, got " .. tostring(n))
@@ -545,9 +544,9 @@ TEST_F(LuaRunner_ReadCsv, TwoConsecutiveReadsReturnIdenticalContents) {
     )");
 }
 
-// --- LUA-06: repeated and blank header names remain fully reachable (D-21) ---
+// --- repeated and blank header names remain fully reachable ---
 //
-// No code discharges this requirement -- Phase 1's positional header/rows shape (D-01) already
+// No code discharges this requirement -- the positional header/rows shape already
 // has nothing for a duplicate name to shadow and a blank name is just an empty string at its
 // index. This test states that property against the real adversarial header rather than a
 // synthetic one.
@@ -557,9 +556,8 @@ TEST_F(LuaRunner_ReadCsv, RepeatedAndBlankHeaderNamesAllReachable) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::LuaRunner lua(db);
 
-    // The real Maranhao Energia header (D-21): two ANO columns, two Residencial columns (one
-    // space-padded), and five blank names. 11 fields (10 separators) -- counted from this exact
-    // line, not the "twelve" an earlier planning draft said before 02-CONTEXT.md corrected it.
+    // The real Maranhao Energia header: two ANO columns, two Residencial columns (one
+    // space-padded), and five blank names. 11 fields (10 separators), counted from this exact line.
     write_lua_csv_file(
         sandbox / "dupheader.csv",
         "ANO,Residencial,,ANO,MÊS, Residencial ,,,,,\n"
@@ -568,31 +566,31 @@ TEST_F(LuaRunner_ReadCsv, RepeatedAndBlankHeaderNamesAllReachable) {
 
     lua.run(R"(
         local csv = db:read_csv("dupheader.csv")
-        assert(#csv.header == 11, "LUA-06: expected 11 header columns, got " .. #csv.header)
+        assert(#csv.header == 11, "expected 11 header columns, got " .. #csv.header)
         assert(csv.header[1] == "ANO" and csv.header[4] == "ANO",
-            "LUA-06: both ANO positions must hold their verbatim name")
-        assert(csv.header[2] == "Residencial", "LUA-06: header[2] must be verbatim 'Residencial'")
+            "both ANO positions must hold their verbatim name")
+        assert(csv.header[2] == "Residencial", "header[2] must be verbatim 'Residencial'")
         assert(csv.header[5] == "MÊS", "unexpected header[5], got " .. tostring(csv.header[5]))
         assert(csv.header[6] == " Residencial ",
-            "LUA-06: header[6] must keep its surrounding spaces verbatim, got '" .. tostring(csv.header[6]) .. "'")
+            "header[6] must keep its surrounding spaces verbatim, got '" .. tostring(csv.header[6]) .. "'")
         for _, i in ipairs({3, 7, 8, 9, 10, 11}) do
             assert(csv.header[i] == "",
-                "LUA-06: header[" .. i .. "] must be an empty string, not absent, got " .. tostring(csv.header[i]))
+                "header[" .. i .. "] must be an empty string, not absent, got " .. tostring(csv.header[i]))
         end
         -- No value may be reachable only once, and no index may be missing: every data column
         -- readable at its own index, regardless of what its header name is or shares.
         for i = 1, 11 do
-            assert(csv.rows[1][i] == "v" .. i, "LUA-06: column " .. i .. " must be reachable at its own index")
+            assert(csv.rows[1][i] == "v" .. i, "column " .. i .. " must be reachable at its own index")
         end
     )");
 }
 
-// --- TEST-02: the real Maranhao files replace the transcribed script (D-23) ---
+// --- the real Maranhao files replace the transcribed script ---
 //
 // The committed fixtures are copied into the LuaSandboxTest sandbox first: db:read_csv resolves
-// a relative path against the database directory, not the source tree (02-RESEARCH.md). The
+// a relative path against the database directory, not the source tree. The
 // scripts below transform each row exactly as script.lua (the file being replaced) did, and
-// assert its hard-coded final values -- not raw bytes -- because the phase's claim is that the
+// assert its hard-coded final values -- not raw bytes -- because the claim is that the
 // file can replace the transcription, not merely that the reader is faithful to it.
 
 TEST_F(LuaRunner_ReadCsv, EnergiaRegressionJunkRowAboveUnitsRowBelowHeader) {
@@ -619,7 +617,7 @@ TEST_F(LuaRunner_ReadCsv, EnergiaRegressionJunkRowAboveUnitsRowBelowHeader) {
         assert(csv.header[1] == "ANO", "header did not come from line 2, got header[1]=" .. tostring(csv.header[1]))
         assert(csv.header[2] == "Residencial", "unexpected header[2], got " .. tostring(csv.header[2]))
 
-        -- rows[1] is the units row (line 3), skipped -- not a reader concern, D-22.
+        -- rows[1] is the units row (line 3), skipped -- not a reader concern.
         local results = {}
         for i = 2, #csv.rows do
             local row = csv.rows[i]
@@ -627,7 +625,7 @@ TEST_F(LuaRunner_ReadCsv, EnergiaRegressionJunkRowAboveUnitsRowBelowHeader) {
             local date_key = yyyy .. "-" .. mm
             -- gsub returns TWO values (string, count), so passing its result straight to tonumber
             -- would hand over the replacement count as tonumber's base argument and silently
-            -- return nil -- D-23's documented trap. The extra parens truncate it to one value.
+            -- return nil -- a documented trap. The extra parens truncate it to one value.
             local n = tonumber((row[6]:gsub("['%s]", "")))
             assert(dd == "01", "every date in this file has day '01', got " .. tostring(dd))
             results[i] = date_key .. " " .. tostring(n)
@@ -651,20 +649,20 @@ TEST_F(LuaRunner_ReadCsv, GdRegressionQuotedCommaAndEnglishMonthNames) {
     // Custom delimiter: the month/day/year pattern literal below ends in ")".
     lua.run(R"LUA(
         -- The Lua sandbox has os unloaded (root design decision), so an English month name has no
-        -- date library to lean on -- this table is script-side work by design (LUA-07).
+        -- date library to lean on -- this table is script-side work by design.
         local MONTHS = {
           January = 1, February = 2, March = 3, April = 4, May = 5, June = 6,
           July = 7, August = 8, September = 9, October = 10, November = 11, December = 12,
         }
 
-        -- No header_row option: this file's header is line 1, D-20's default, so this also
-        -- proves the default survived plan 02-01's change.
+        -- No header_row option: this file's header is line 1, the default, so this also
+        -- proves the default still holds.
         local csv = db:read_csv("ma_gd_data.csv")
 
         local results = {}
         for i = 1, #csv.rows do
             local row = csv.rows[i]
-            -- PARSE-02 in production form: the quoted date contains a comma. If quoting were
+            -- Quoted separators in production form: the quoted date contains a comma. If quoting were
             -- mishandled, the date would split into two fields and shift the value column.
             assert(#row == 2, "row " .. i .. " has " .. #row .. " fields, expected 2 (quoted comma mishandled)")
             local month_name, _, year = row[1]:match("(%a+) (%d+), (%d+)")
@@ -795,7 +793,7 @@ TEST_F(LuaRunner_ReadCsv, StreamAndWholeFileReadYieldSameRows) {
     )");
 }
 
-// --- options table: separator (D-14 through D-18) ---
+// --- options table: separator ---
 
 TEST_F(LuaRunner_ReadCsv, SemicolonSeparatorReadsCorrectly) {
     auto schema = VALID_SCHEMA("basic.sql");
@@ -873,10 +871,10 @@ TEST_F(LuaRunner_ReadCsv, TabSeparatorProvesOptionIsNotSpecialCased) {
     )");
 }
 
-// --- options table: the rejection matrix (D-22 entries 3 through 6) ---
+// --- options table: the rejection matrix ---
 //
 // Every case here asserts the call throws. `f.csv` deliberately does not exist on disk in most
-// of these -- options are decoded before the file is ever opened (D-22 evaluation order), so a
+// of these -- options are decoded before the file is ever opened, so a
 // bad options table throws before a missing-file check could otherwise mask the real failure.
 
 TEST_F(LuaRunner_ReadCsv, PositionalSeparatorStringThrowsOptionsMustBeATable) {
@@ -918,7 +916,7 @@ TEST_F(LuaRunner_ReadCsv, FutureHeaderKeyIsAnUnknownOptionToday) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::LuaRunner lua(db);
 
-    // Phase 2 legitimately added `header_row`, not `header` -- this key stays unknown forever.
+    // The reader takes `header_row`, not `header` -- this key stays unknown forever.
     // Kept as its own test rather than folded into the sibling below so a future reader isn't
     // misled into thinking `header_row`'s arrival would make it obsolete.
     expect_lua_error(lua, R"(db:read_csv("f.csv", { header = false }))", "Cannot read_csv: unknown option 'header'");
@@ -984,7 +982,7 @@ TEST_F(LuaRunner_ReadCsv, TwoCharacterSeparatorThrowsMustBeASingleCharacter) {
     );
 }
 
-// --- options table: header_row negatives (TEST-04) -- every one a throw, none a fallback ---
+// --- options table: header_row negatives -- every one a throw, none a fallback ---
 //
 // A header_row that quietly reverted to a default would still return a well-formed
 // {header=, rows=} table, which a loose assertion would accept as success -- so every case here
@@ -1036,7 +1034,7 @@ TEST_F(LuaRunner_ReadCsv, StreamNegativeHeaderRowNamesTheStreamEntryPoint) {
     quiver::LuaRunner lua(db);
 
     // Same bad value, but through db:read_csv_stream -- the shared decoder must not regress into
-    // naming a single hardcoded operation (D-19).
+    // naming a single hardcoded operation.
     expect_lua_error(
         lua,
         R"(db:read_csv_stream("f.csv", function() end, { header_row = -1 }))",
@@ -1046,8 +1044,8 @@ TEST_F(LuaRunner_ReadCsv, StreamNegativeHeaderRowNamesTheStreamEntryPoint) {
 
 // The fourth requirement-named negative -- a header row past the end of the file -- is raised by
 // the Reader itself, not this decoder; it's covered by HeaderRowPastEndOfFileThrowsExactMessage
-// and StreamHeaderRowPastEndOfFileNamesTheStreamEntryPoint above (added in plan 02-01), so the
-// four-negative TEST-04 set reads as complete from either location.
+// and StreamHeaderRowPastEndOfFileNamesTheStreamEntryPoint above, so the
+// four-negative header_row set reads as complete from either location.
 
 TEST_F(LuaRunner_ReadCsv, StreamUnknownOptionKeyNamesTheStreamEntryPoint) {
     auto schema = VALID_SCHEMA("basic.sql");
@@ -1055,7 +1053,7 @@ TEST_F(LuaRunner_ReadCsv, StreamUnknownOptionKeyNamesTheStreamEntryPoint) {
     quiver::LuaRunner lua(db);
 
     // Same bad table, but through db:read_csv_stream -- the operation name must follow the entry
-    // point the script actually called (D-19), not a single shared literal.
+    // point the script actually called, not a single shared literal.
     expect_lua_error(
         lua,
         R"(db:read_csv_stream("f.csv", function() end, { delim = ";" }))",
@@ -1100,14 +1098,14 @@ TEST_F(LuaRunner_ReadCsv, BothFormsAgreeOnAValidTableAndNeitherLeavesTheFileOpen
     EXPECT_TRUE(std::filesystem::remove(csv_path));
 }
 
-// --- TEST-03: the five sandbox negatives, for both entry points, plus the subdirectory positive
+// --- the five sandbox negatives, for both entry points, plus the subdirectory positive
 // control. Every negative pins the full `Cannot <op>: ...` prefix plus the distinguishing text --
-// never a lone keyword -- per the TEST-03 prohibition: a test that only asserts "it threw" goes
+// never a lone keyword -- because a test that only asserts "it threw" goes
 // green when the call fails for an unrelated reason and certifies containment it never exercised.
 //
 // LuaSandboxTest's per-test temp directory (named after the current suite + test name) is what
 // keeps these negatives from colliding with each other or with the other CSV suites when the
-// binary is re-run (TEST-03/concurrency) -- see test_lua_runner.h.
+// binary is re-run -- see test_lua_runner.h.
 
 TEST_F(LuaRunner_ReadCsv, EscapingPathThrowsForReadCsv) {
     auto schema = VALID_SCHEMA("basic.sql");
@@ -1285,7 +1283,7 @@ TEST_F(LuaRunner_ReadCsv, SubdirectoryPathReadsSuccessfullyForBothEntryPoints) {
     )");
 }
 
-// --- the remaining D-22 catalogue entries: empty file (extended to the stream form) and the
+// --- the remaining Reader catalogue entries: empty file (extended to the stream form) and the
 // csv-parser wrapper ---
 
 TEST_F(LuaRunner_ReadCsv, EmptyFileThrowsForReadCsvStream) {
@@ -1305,7 +1303,7 @@ TEST_F(LuaRunner_ReadCsv, EmptyFileThrowsForReadCsvStream) {
     EXPECT_TRUE(std::filesystem::remove(sandbox / "empty_stream.csv"));
 }
 
-// D-22 entry 10 (the csv-parser wrapper: "cannot read file '<p>': <reason>") fires when a file
+// The csv-parser wrapper entry ("cannot read file '<p>': <reason>") fires when a file
 // passes all three preconditions -- it exists, is not a directory, is non-empty -- but still cannot
 // be opened. An exclusive lock produces exactly that: the metadata queries below are answered from
 // the directory entry and succeed, while opening the file for reading fails. No elevation and no
@@ -1361,7 +1359,8 @@ TEST_F(LuaRunner_ReadCsv, UnreadableFileReportsParserFailure) {
 // path, and weakly_canonical throws std::filesystem_error on it rather than reporting a missing
 // file. That call lives in resolve_sandboxed_path -- the choke point every file-touching Lua
 // operation shares -- so before it was wrapped, a script got the raw
-// "weakly_canonical: The parameter is incorrect.: ..." with no Pattern 1 prefix, breaking LUA-08.
+// "weakly_canonical: The parameter is incorrect.: ..." with no Pattern 1 prefix, breaking the
+// rule that no standard-library message reaches a script unprefixed.
 // Guarded to _WIN32 because no POSIX path is reserved this way.
 TEST_F(LuaRunner_ReadCsv, DeviceNamePathIsReportedWithPrefix) {
     auto schema = VALID_SCHEMA("basic.sql");
@@ -1409,7 +1408,7 @@ TEST_F(LuaRunner_ReadCsv, EscapingPathReportsBeforeMissingFile) {
 
 TEST_F(LuaRunner_ReadCsv, UnknownKeyReportsBeforeBadSeparatorValue) {
     // Both problems present at once: an unknown key and a non-string separator. Unknown-key
-    // (D-22 #4) must be reported ahead of separator-type (D-22 #5), regardless of the table's
+    // must be reported ahead of separator-type, regardless of the table's
     // iteration order.
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
