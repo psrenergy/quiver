@@ -101,33 +101,38 @@ bool is_number(const sol::object& o) {
 }
 
 // A Lua operand in arithmetic is either an Expression, a BinaryFile (auto-wrapped), or a number
-// (handled by the scalar operator overloads). Numbers are rejected here on purpose.
-Expression to_expression(const sol::object& o) {
+// (handled by the scalar operator overloads). Numbers are rejected here on purpose. `operation` is
+// what the script called: Lua's event name for a metamethod ("add", "unm", ...), the function name
+// for quiver.* ("gt", "abs", ...).
+Expression to_expression(const sol::object& o, const char* operation) {
     if (o.is<Expression>()) {
         return o.as<Expression>();
     }
     if (o.is<BinaryFile>()) {
         return Expression(o.as<BinaryFile&>());
     }
-    throw std::runtime_error("Cannot build expression: operand must be an expression or a binary file");
+    throw lua_type_error(operation, "operand", "an expression or a binary file", o);
 }
 
 // One body for every binary Expression operator. Op is a transparent functor (std::plus<>,
 // std::greater_equal<>, ...), so overload resolution on its arguments picks the matching
 // Expression operator for each operand combination (expr/expr, expr/double, double/expr).
 // std::logical_and<> / std::logical_or<> call the overloaded && / ||, which, unlike the built-in
-// ones, evaluate both operands. number/number reaches to_expression, which throws.
+// ones, evaluate both operands. number/number reaches to_expression, which throws. binop builds
+// the callable for one operation, so the operand error names it (`operation`, as in to_expression).
 template <typename Op>
-Expression binop(const sol::object& lhs, const sol::object& rhs) {
-    const bool lnum = is_number(lhs);
-    const bool rnum = is_number(rhs);
-    if (lnum && !rnum) {
-        return Op{}(lhs.as<double>(), to_expression(rhs));
-    }
-    if (!lnum && rnum) {
-        return Op{}(to_expression(lhs), rhs.as<double>());
-    }
-    return Op{}(to_expression(lhs), to_expression(rhs));
+auto binop(const char* operation) {
+    return [operation](const sol::object& lhs, const sol::object& rhs) -> Expression {
+        const bool lnum = is_number(lhs);
+        const bool rnum = is_number(rhs);
+        if (lnum && !rnum) {
+            return Op{}(lhs.as<double>(), to_expression(rhs, operation));
+        }
+        if (!lnum && rnum) {
+            return Op{}(to_expression(lhs, operation), rhs.as<double>());
+        }
+        return Op{}(to_expression(lhs, operation), to_expression(rhs, operation));
+    };
 }
 
 // `caller` is the public method ("aggregate" / "aggregate_agents") named in the Pattern 1 message.
@@ -156,15 +161,15 @@ ExpressionAggregate::Operation parse_aggregate_op(const std::string& op, const s
 // expression (BinaryFile auto-wraps to Expression). One table, so a new operator is added once.
 template <typename T>
 void bind_expression_operators(sol::usertype<T>& type) {
-    type[sol::meta_function::addition] = &binop<std::plus<>>;
-    type[sol::meta_function::subtraction] = &binop<std::minus<>>;
-    type[sol::meta_function::multiplication] = &binop<std::multiplies<>>;
-    type[sol::meta_function::division] = &binop<std::divides<>>;
-    type[sol::meta_function::unary_minus] = [](sol::object a, sol::object) { return -to_expression(a); };
+    type[sol::meta_function::addition] = binop<std::plus<>>("add");
+    type[sol::meta_function::subtraction] = binop<std::minus<>>("sub");
+    type[sol::meta_function::multiplication] = binop<std::multiplies<>>("mul");
+    type[sol::meta_function::division] = binop<std::divides<>>("div");
+    type[sol::meta_function::unary_minus] = [](sol::object a, sol::object) { return -to_expression(a, "unm"); };
     // Logical ops (nonzero = true, NaN propagates, unitless): `&` / `|` / `~`.
-    type[sol::meta_function::bitwise_and] = &binop<std::logical_and<>>;
-    type[sol::meta_function::bitwise_or] = &binop<std::logical_or<>>;
-    type[sol::meta_function::bitwise_not] = [](sol::object a, sol::object) { return !to_expression(a); };
+    type[sol::meta_function::bitwise_and] = binop<std::logical_and<>>("band");
+    type[sol::meta_function::bitwise_or] = binop<std::logical_or<>>("bor");
+    type[sol::meta_function::bitwise_not] = [](sol::object a, sol::object) { return !to_expression(a, "bnot"); };
 }
 
 }  // namespace
@@ -310,22 +315,22 @@ void bind_binary(sol::state& state, sol::usertype<Database>& bind, sol::table& n
     );
     bind_expression_operators(expression_type);
 
-    ns.set_function("expression", [](sol::object o) { return to_expression(o); });
-    ns.set_function("abs", [](sol::object o) { return quiver::abs(to_expression(o)); });
-    ns.set_function("sqrt", [](sol::object o) { return quiver::sqrt(to_expression(o)); });
-    ns.set_function("log", [](sol::object o) { return quiver::log(to_expression(o)); });
-    ns.set_function("exp", [](sol::object o) { return quiver::exp(to_expression(o)); });
+    ns.set_function("expression", [](sol::object o) { return to_expression(o, "expression"); });
+    ns.set_function("abs", [](sol::object o) { return quiver::abs(to_expression(o, "abs")); });
+    ns.set_function("sqrt", [](sol::object o) { return quiver::sqrt(to_expression(o, "sqrt")); });
+    ns.set_function("log", [](sol::object o) { return quiver::log(to_expression(o, "log")); });
+    ns.set_function("exp", [](sol::object o) { return quiver::exp(to_expression(o, "exp")); });
     ns.set_function("ifelse", [](sol::object c, sol::object t, sol::object e) {
-        return quiver::ifelse(to_expression(c), to_expression(t), to_expression(e));
+        return quiver::ifelse(to_expression(c, "ifelse"), to_expression(t, "ifelse"), to_expression(e, "ifelse"));
     });
     // Comparisons produce 1.0/0.0 per element (NaN operand -> NaN). Free functions because Lua
     // comparison metamethods are coerced to bool and cannot return an Expression.
-    ns.set_function("gt", &binop<std::greater<>>);
-    ns.set_function("lt", &binop<std::less<>>);
-    ns.set_function("gte", &binop<std::greater_equal<>>);
-    ns.set_function("lte", &binop<std::less_equal<>>);
-    ns.set_function("eq", &binop<std::equal_to<>>);
-    ns.set_function("neq", &binop<std::not_equal_to<>>);
+    ns.set_function("gt", binop<std::greater<>>("gt"));
+    ns.set_function("lt", binop<std::less<>>("lt"));
+    ns.set_function("gte", binop<std::greater_equal<>>("gte"));
+    ns.set_function("lte", binop<std::less_equal<>>("lte"));
+    ns.set_function("eq", binop<std::equal_to<>>("eq"));
+    ns.set_function("neq", binop<std::not_equal_to<>>("neq"));
     // Logical ops on boolean-valued expressions are the `&` / `|` / `~` metamethods bound on the
     // Expression and BinaryFile usertypes (`and`/`or`/`not` are Lua keywords, so no free functions).
 }

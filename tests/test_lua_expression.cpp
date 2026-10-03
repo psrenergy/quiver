@@ -552,3 +552,22 @@ TEST_F(LuaExpressionTest, AggregateParameterRejectsWrongType) {
     )");
     EXPECT_TRUE(fs::exists(sandbox / "expr_out.qvr"));
 }
+
+TEST_F(LuaExpressionTest, OperandErrorsNameTheOperation) {
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+    lua.run(prelude() + "fill('expr_a', 1.0, 1.0)");
+    const std::string e = "local e = quiver.expression(db:open_file('expr_a', 'r')) ";
+    const std::string tail = ": operand must be an expression or a binary file, got ";
+    expect_lua_error(lua, e + "return e + 'x'", "Cannot add" + tail + "string");
+    expect_lua_error(lua, e + "return e - 'x'", "Cannot sub" + tail + "string");
+    expect_lua_error(lua, e + "return e * {}", "Cannot mul" + tail + "table");
+    expect_lua_error(lua, e + "return e / 'x'", "Cannot div" + tail + "string");
+    expect_lua_error(lua, e + "return e & 'x'", "Cannot band" + tail + "string");
+    expect_lua_error(lua, e + "return e | 'x'", "Cannot bor" + tail + "string");
+    expect_lua_error(lua, "return quiver.gt(1, 2)", "Cannot gt" + tail + "number");
+    expect_lua_error(lua, e + "return quiver.eq(e, 'x')", "Cannot eq" + tail + "string");
+    expect_lua_error(lua, "return quiver.abs('x')", "Cannot abs" + tail + "string");
+    expect_lua_error(lua, e + "return quiver.ifelse(e, e, 'x')", "Cannot ifelse" + tail + "string");
+    expect_lua_error(lua, "return quiver.expression(5)", "Cannot expression" + tail + "number");
+}

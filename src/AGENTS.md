@@ -677,9 +677,11 @@ Implementation conventions in `src/lua_runner/`:
   registered by member pointer, and `header_object` (`csv.cpp`) is the one no-header rule for both
   read forms. `RunHandles::add_writer` / `add_binary_file` are the only appenders to the run-handle
   registries by convention (the vectors stay public; prune expired entries, then append), and `close_open_handles` empties both at
-  `run()`'s exit. `binop<Op>` (`binary.cpp`) with a transparent functor (`std::plus<>`,
-  `std::greater_equal<>`, ...) is every binary Expression operator, metamethods and
-  `quiver.gt`/`lt`/`gte`/`lte`/`eq`/`neq` alike. `columns_to_cpp_rows` owns the group decoders'
+  `run()`'s exit. `binop<Op>(name)` (`binary.cpp`) with a transparent functor (`std::plus<>`,
+  `std::greater_equal<>`, ...) builds every binary Expression operator's callable, metamethods and
+  `quiver.gt`/`lt`/`gte`/`lte`/`eq`/`neq` alike, and `to_expression(o, operation)` names the
+  operation in the operand error: Lua's event name for a metamethod (`add`, `unm`, `band`, ...),
+  the function name for `quiver.*` (`gt`, `abs`, `ifelse`, `expression`, ...). `columns_to_cpp_rows` owns the group decoders'
   no-rows rejection, and `length_mismatch` (`db_time_series.cpp`) is the time-series decoder's one
   length message. `lua_type_error` / `require_table` (`internal.h`) are the one argument
   type-error shape (`Cannot <op>: <what> must be <expected>, got <lua type>`) and the one table

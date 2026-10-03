@@ -62,6 +62,10 @@ callers to change something are prefixed **BREAKING** and say what to do.
   fails (for example on a deferred foreign key), the block is now rolled back and the commit error
   is rethrown. The transaction used to be left open, so a host that committed afterwards wrote the
   failed block.
+- **Expression operator and helper errors name the operation.** An invalid operand to an
+  Expression operator or a `quiver.*` expression helper now raises, for example, `Cannot add:
+  operand must be an expression or a binary file, got string` (or `Cannot gt: ...`, `Cannot abs:
+  ...`), where every one used to say `Cannot build expression: ...`.
 
 ## [0.12.8] — 2026-10-01
 
