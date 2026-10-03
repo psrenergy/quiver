@@ -4,16 +4,16 @@ milestone: v0.12.9
 milestone_name: milestone
 current_phase: 2
 current_phase_name: Mechanical Split
-status: executing
-stopped_at: Completed 02-03-PLAN.md
-last_updated: "2026-10-03T03:42:38.045Z"
+status: verifying
+stopped_at: Completed 02-04-PLAN.md
+last_updated: "2026-10-03T04:08:01.177Z"
 last_activity: 2026-10-02
 last_activity_desc: Roadmap revised after checker feedback (5 phases, 40/40 v1 requirements mapped)
 progress:
   total_phases: 2
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 6
-  completed_plans: 5
+  completed_plans: 6
 ---
 
 # Project State
@@ -29,10 +29,10 @@ See: .planning/PROJECT.md (updated 2026-10-02)
 
 Phase: 2 (Mechanical Split) — EXECUTING
 Plan: 4 of 4
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-10-02 — Phase 2 execution started
 
-Progress: [████████░░] 83%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -63,6 +63,7 @@ Progress: [████████░░] 83%
 | Phase 02 P01 | 20min | 2 tasks | 4 files |
 | Phase 02 P02 | 20min | 2 tasks | 5 files |
 | Phase 02 P03 | 10min | 3 tasks | 9 files |
+| Phase 02 P04 | 45min | 3 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -87,6 +88,8 @@ Recent decisions affecting current work:
 - [Phase 02]: lua_runner.cpp was de-classed into quiver::lua_internal and laid out as the future files end to end (return_json, shared, path_policy, db_metadata, db_read, db_write, db_time_series, db_core, binary, csv, root), so plan 03's extractions are pure range cuts
 - [Phase 02]: Each lua_runner/ TU includes only the headers it uses; lua_runner.cpp trimmed to lua_runner.h, csv_write.h, internal.h, binary_file.h, database.h, sol, memory/stdexcept/string
 - [Phase 02]: csv.cpp is 446 lines, so the line-budget fallback was not applied and CsvWriter stays in csv.cpp
+- [Phase 02]: C2 citation check keeps one hit by construction (src/AGENTS.md file-map root TU line under lua_runner/); every hit names a src/lua_runner/ file or the C API TU
+- [Phase 02]: tidy baseline on src/lua_runner/ is the 15 pre-existing warnings; header warnings from include/quiver and src/utils/datetime.h are pre-existing, reproduced from untouched TUs
 
 ### Pending Todos
 
@@ -109,6 +112,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-10-03T03:42:38.029Z
-Stopped at: Completed 02-03-PLAN.md
+Last session: 2026-10-03T04:08:01.161Z
+Stopped at: Completed 02-04-PLAN.md
 Resume file: None

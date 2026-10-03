@@ -21,9 +21,9 @@ Evidence for each item (line numbers at `bdf9087`) is in `.planning/research/LUA
 - [x] **SPLIT-02**: There is exactly one `new_usertype<Database>` in the folder (grep count is 1). Binders receive `sol::usertype<Database>& bind` and the `quiver` table as `ns`. The ctor order is preserved: `open_libraries` → nil `dofile`/`loadfile` → `quiver` table → binders → `lua["db"] = &db`.
 - [x] **SPLIT-03**: Instance state lives in a `RunHandles` (writer registry, binary-file registry, `path_has_open_writer`, close-at-exit). It is held by the heap-allocated `Impl` and declared before `lua`. The three `[this]` captures become `[&handles]` / `[&db]`. `GcGuard` is still declared before `result`, with close then exactly one `collect_garbage()`.
 - [x] **SPLIT-04**: The JS sync test reads every source file under `src/lua_runner/` in sorted order, parses each one separately (resetting `current` at each file boundary), and extracts the same method set as before the split.
-- [ ] **SPLIT-05**: `/bigobj` (MSVC) and `-Wa,-mbig-obj` (MinGW) apply to the whole target. All sol2 TUs are in the `quiver` target with identical PRIVATE defines, listed explicitly (no glob). Each file whose functions take sol2 arguments by value has its own NOLINT pair (check name `performance-unnecessary-value-param`). clang-format 22.1.8 is clean on the new files, and `scripts/tidy.bat` reports nothing beyond the 15 pre-existing warnings recorded as the baseline.
-- [ ] **SPLIT-06**: No test expectation changes. All C++ Lua tests (`--gtest_filter=Lua*`: 428 at `bdf9087` plus the Phase 1 pins), all 27 C API tests, and the Julia, Dart, Python and JS suites pass unmodified.
-- [ ] **SPLIT-07**: Every citation of `src/lua_runner.cpp` is updated to the new paths: the AGENTS.md files, `src/csv/*` comments, `cmake/Platform.cmake`, `bindings/dart/hook/build.dart`, the tests, and the `lua-api.ts` maintainer header. Re-derive the list with `git grep`. The C API translation unit `src/c/lua_runner.cpp` and `test_c_api_lua_runner.cpp` keep their names.
+- [x] **SPLIT-05**: `/bigobj` (MSVC) and `-Wa,-mbig-obj` (MinGW) apply to the whole target. All sol2 TUs are in the `quiver` target with identical PRIVATE defines, listed explicitly (no glob). Each file whose functions take sol2 arguments by value has its own NOLINT pair (check name `performance-unnecessary-value-param`). clang-format 22.1.8 is clean on the new files, and `scripts/tidy.bat` reports nothing beyond the 15 pre-existing warnings recorded as the baseline.
+- [x] **SPLIT-06**: No test expectation changes. All C++ Lua tests (`--gtest_filter=Lua*`: 428 at `bdf9087` plus the Phase 1 pins), all 27 C API tests, and the Julia, Dart, Python and JS suites pass unmodified.
+- [x] **SPLIT-07**: Every citation of `src/lua_runner.cpp` is updated to the new paths: the AGENTS.md files, `src/csv/*` comments, `cmake/Platform.cmake`, `bindings/dart/hook/build.dart`, the tests, and the `lua-api.ts` maintainer header. Re-derive the list with `git grep`. The C API translation unit `src/c/lua_runner.cpp` and `test_c_api_lua_runner.cpp` keep their names.
 
 ### Dedupe (zero behaviour change)
 
@@ -113,9 +113,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SPLIT-02 | Phase 2 | Complete |
 | SPLIT-03 | Phase 2 | Complete |
 | SPLIT-04 | Phase 2 | Complete |
-| SPLIT-05 | Phase 2 | Pending |
-| SPLIT-06 | Phase 2 | Pending |
-| SPLIT-07 | Phase 2 | Pending |
+| SPLIT-05 | Phase 2 | Complete |
+| SPLIT-06 | Phase 2 | Complete |
+| SPLIT-07 | Phase 2 | Complete |
 | DEDUP-01 | Phase 3 | Pending |
 | DEDUP-02 | Phase 3 | Pending |
 | DEDUP-03 | Phase 3 | Pending |
