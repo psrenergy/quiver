@@ -114,7 +114,7 @@ std::vector<std::map<std::string, Value>> time_series_rows_from_lua(
     const std::string& caller,
     const std::string& collection,
     const std::string& group,
-    const sol::table& columns
+    const sol::object& columns
 ) {
     auto lua_columns = collect_group_columns(caller, columns);
     if (lua_columns.empty()) {
@@ -181,7 +181,7 @@ void update_time_series_group_lua(
     const std::string& collection,
     const std::string& group,
     int64_t id,
-    sol::table columns
+    const sol::object& columns
 ) {
     db.update_time_series_group(
         collection,
@@ -196,7 +196,7 @@ void update_time_series_group_by_label_lua(
     const std::string& collection,
     const std::string& group,
     const std::string& label,
-    sol::table columns
+    const sol::object& columns
 ) {
     db.update_time_series_group_by_label(
         collection,

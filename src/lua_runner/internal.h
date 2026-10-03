@@ -175,6 +175,40 @@ inline std::vector<std::pair<sol::object, sol::object>> collect_entries(const so
     return entries;
 }
 
+// Lua's own type() name for a value; a missing argument reads as nil, as in Lua itself. A usertype
+// is "userdata".
+inline std::string lua_type_name(const sol::object& o) {
+    const auto t = o.get_type();
+    return t == sol::type::none ? "nil" : sol::type_name(o.lua_state(), t);
+}
+
+// The one shape of an argument type error: "Cannot <op>: <what> must be <expected>, got <type>".
+inline std::runtime_error lua_type_error(
+    const std::string& operation,
+    const std::string& what,
+    const char* expected,
+    const sol::object& got
+) {
+    return std::runtime_error(
+        "Cannot " + operation + ": " + what + " must be " + expected + ", got " + lua_type_name(got)
+    );
+}
+
+// The one table check. It tests get_type(), never is<sol::table>(): sol2's table check is loose
+// and accepts a userdata, which lua_next would then walk. Called by the decoder that first walks
+// the argument, so the check fires where sol2's own up-front check used to.
+inline sol::table require_table(
+    const sol::object& o,
+    const std::string& operation,
+    const std::string& what,
+    const char* expected = "a table"
+) {
+    if (o.get_type() != sol::type::table) {
+        throw lua_type_error(operation, what, expected, o);
+    }
+    return o.as<sol::table>();
+}
+
 // A nested option value that must be a table (an options table's `header`, the levels of
 // `enum_labels`); `what` names it in the message.
 inline sol::table option_table(const sol::object& value, const std::string& operation, const std::string& what) {
@@ -244,7 +278,7 @@ std::string resolve_sandboxed_path(const Database& db, const std::string& operat
 std::string encode_return_json(const sol::object& value);
 
 Element table_to_element(const std::string& caller, const sol::table& values);
-std::vector<GroupColumn> collect_group_columns(const std::string& caller, const sol::table& columns);
+std::vector<GroupColumn> collect_group_columns(const std::string& caller, const sol::object& columns);
 std::vector<std::map<std::string, Value>> columns_to_cpp_rows(
     const std::string& caller,
     const std::vector<GroupColumn>& lua_columns,

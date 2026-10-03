@@ -5,6 +5,17 @@ All notable changes to Quiver are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entries that require
 callers to change something are prefixed **BREAKING** and say what to do.
 
+## [0.13.0] — unreleased
+
+### Changed
+
+- **BREAKING** **The Lua group writers reject a non-table payload.** A value other than a table
+  passed as the columns of `db:update_vector_group`, `db:update_set_group`,
+  `db:update_time_series_group` or their `_by_label` forms now raises `Cannot <op>: columns must
+  be a table, got <type>`, and a non-table column inside it raises `Cannot <op>: column '<name>'
+  must be an array of values, got <type>`. Release builds used to read a userdata (such as `db`)
+  as an empty payload and clear the group. Pass a table of columns, `{ column = { values... } }`.
+
 ## [0.12.8] — 2026-10-01
 
 ### Changed
@@ -1294,6 +1305,7 @@ are functionally identical to 0.10.0.
   `read_time_series_group` emits for a NULL STRING cell — so feeding a read result back with the
   mask stripped was UB. A NULL entry, or a NULL per-column data pointer, is now SQL NULL.
 
+[0.13.0]: https://github.com/psrenergy/quiver/compare/v0.12.9...v0.13.0
 [0.12.8]: https://github.com/psrenergy/quiver/compare/v0.12.7...v0.12.8
 [0.12.7]: https://github.com/psrenergy/quiver/compare/v0.12.6...v0.12.7
 [0.12.6]: https://github.com/psrenergy/quiver/compare/v0.12.5...v0.12.6

@@ -91,9 +91,9 @@ Element table_to_element(const std::string& caller, const sol::table& values) {
     return element;
 }
 
-std::vector<GroupColumn> collect_group_columns(const std::string& caller, const sol::table& columns) {
+std::vector<GroupColumn> collect_group_columns(const std::string& caller, const sol::object& columns) {
     std::vector<GroupColumn> result;
-    for (auto& pair : columns) {
+    for (auto& pair : require_table(columns, caller, "columns")) {
         // Check the key's type before converting it. sol2's string getter is unchecked in
         // Release (SOL_SAFE_GETTER off): key 1 became column "1" and a boolean key column "",
         // so an array of row tables got a misleading error there and a raw sol2 panic in Debug.
@@ -105,10 +105,7 @@ std::vector<GroupColumn> collect_group_columns(const std::string& caller, const 
             );
         }
         auto name = pair.first.as<std::string>();
-        if (!pair.second.is<sol::table>()) {
-            throw std::runtime_error("Cannot " + caller + ": column '" + name + "' must be an array of values");
-        }
-        GroupColumn column{name, pair.second.as<sol::table>()};
+        GroupColumn column{name, require_table(pair.second, caller, "column '" + name + "'", "an array of values")};
         for (auto& cell : column.values) {
             if (!cell.first.is<int64_t>() || cell.first.as<int64_t>() < 1) {
                 throw std::runtime_error("Cannot " + caller + ": column '" + name + "' must be an array of values");
@@ -225,7 +222,7 @@ void update_relation_by_label_lua(
 // column reaches; shorter or sparse columns write NULL in the gaps, mirroring the time series
 // writer's treatment of value columns. Named columns that reach no index at all throw (in
 // columns_to_cpp_rows) instead of silently clearing the group; an empty table {} clears.
-std::vector<std::map<std::string, Value>> group_rows_from_lua(const std::string& caller, const sol::table& columns) {
+std::vector<std::map<std::string, Value>> group_rows_from_lua(const std::string& caller, const sol::object& columns) {
     auto lua_columns = collect_group_columns(caller, columns);
     if (lua_columns.empty()) {
         return {};
@@ -245,7 +242,7 @@ void update_vector_group_lua(
     const std::string& collection,
     const std::string& group,
     int64_t id,
-    sol::table columns
+    const sol::object& columns
 ) {
     db.update_vector_group(collection, group, id, group_rows_from_lua("update_vector_group", columns));
 }
@@ -255,7 +252,7 @@ void update_vector_group_by_label_lua(
     const std::string& collection,
     const std::string& group,
     const std::string& label,
-    sol::table columns
+    const sol::object& columns
 ) {
     db.update_vector_group_by_label(
         collection,
@@ -270,7 +267,7 @@ void update_set_group_lua(
     const std::string& collection,
     const std::string& group,
     int64_t id,
-    sol::table columns
+    const sol::object& columns
 ) {
     db.update_set_group(collection, group, id, group_rows_from_lua("update_set_group", columns));
 }
@@ -280,7 +277,7 @@ void update_set_group_by_label_lua(
     const std::string& collection,
     const std::string& group,
     const std::string& label,
-    sol::table columns
+    const sol::object& columns
 ) {
     db.update_set_group_by_label(collection, group, label, group_rows_from_lua("update_set_group_by_label", columns));
 }

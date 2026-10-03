@@ -443,6 +443,49 @@ TEST_F(LuaRunnerTest, UpdateGroupErrors) {
     EXPECT_EQ(db.read_vector_integers_by_id("Child", "parent_ref", 1), (std::vector<std::optional<int64_t>>{1}));
 }
 
+// A non-table payload is a Pattern 1 error naming its Lua type. A userdata used to be walked as an
+// empty table in Release, which cleared the group.
+TEST_F(LuaRunnerTest, GroupWritersRejectNonTableColumns) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    const int64_t id = db.create_element(
+        "Collection",
+        quiver::Element()
+            .set("label", "Item 1")
+            .set("value_int", std::vector<int64_t>{1, 2, 3})
+            .set("tag", std::vector<std::string>{"a", "b"})
+    );
+    quiver::LuaRunner lua(db);
+    const std::string sid = std::to_string(id);
+
+    const std::vector<std::pair<std::string, std::string>> calls = {
+        {"update_vector_group", R"(db:update_vector_group("Collection", "values", )" + sid},
+        {"update_vector_group_by_label", R"(db:update_vector_group_by_label("Collection", "values", "Item 1")"},
+        {"update_set_group", R"(db:update_set_group("Collection", "tags", )" + sid},
+        {"update_set_group_by_label", R"(db:update_set_group_by_label("Collection", "tags", "Item 1")"},
+    };
+    for (const auto& [op, prefix] : calls) {
+        expect_lua_error(lua, prefix + ", 5)", "Cannot " + op + ": columns must be a table, got number");
+        expect_lua_error(lua, prefix + ", db)", "Cannot " + op + ": columns must be a table, got userdata");
+    }
+    expect_lua_error(
+        lua,
+        R"(db:update_vector_group("Collection", "values", )" + sid + R"(, { value_int = db }))",
+        "Cannot update_vector_group: column 'value_int' must be an array of values, got userdata"
+    );
+    expect_lua_error(
+        lua,
+        R"(db:update_vector_group("Collection", "values", )" + sid + R"(, { value_int = 5 }))",
+        "Cannot update_vector_group: column 'value_int' must be an array of values, got number"
+    );
+
+    EXPECT_EQ(
+        db.read_vector_integers_by_id("Collection", "value_int", id),
+        (std::vector<std::optional<int64_t>>{1, 2, 3})
+    );
+    EXPECT_EQ(db.read_set_strings_by_id("Collection", "tag", id), (std::vector<std::optional<std::string>>{"a", "b"}));
+}
+
 TEST_F(LuaRunnerTest, UpdateVectorGroupByLabel) {
     auto db = relations_db_with_child();
     db.create_element("Child", quiver::Element().set("label", "Child 2"));

@@ -676,7 +676,10 @@ Implementation conventions in `src/lua_runner/`:
   `std::greater_equal<>`, ...) is every binary Expression operator, metamethods and
   `quiver.gt`/`lt`/`gte`/`lte`/`eq`/`neq` alike. `columns_to_cpp_rows` owns the group decoders'
   no-rows rejection, and `length_mismatch` (`db_time_series.cpp`) is the time-series decoder's one
-  length message.
+  length message. `lua_type_error` / `require_table` (`internal.h`) are the one argument
+  type-error shape (`Cannot <op>: <what> must be <expected>, got <lua type>`) and the one table
+  check: `require_table` tests `get_type()`, never the loose `is<sol::table>()` that accepts a
+  userdata, and it sits in the decoder that first walks the argument.
 - **Filesystem sandbox**: `resolve_sandboxed_path(db, operation, path)` is the single gate for
   every file-touching Lua operation (`db:open_file`, `db:bin_to_csv`, `db:csv_to_bin`,
   `db:export_csv`, `db:import_csv`, `db:validate_migrations`, `db:read_csv`, `db:read_csv_stream`,
