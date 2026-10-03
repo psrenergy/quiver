@@ -706,16 +706,16 @@ bind.set_function("transaction", [](Database& self, sol::protected_function fn) 
 | A5 | SC4's "one NOLINT pair per binder" is satisfied by one pair per TU that has something to suppress (5 TUs), not a no-op pair in `db_read`/`db_metadata` | Pitfall 1 | Verifier dispute only [ASSUMED] |
 | A6 | Correcting the NOLINT check name and accepting the 15 residual pre-existing warnings is what "tidy clean on the new files" means | Pitfall 1 | If the user wants zero warnings, those 15 need explicit suppressions or code edits outside "mechanical" [ASSUMED] |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **May commit 2 correct the NOLINT check name?**
+1. **May commit 2 correct the NOLINT check name?** — RESOLVED: yes, comment-only (plan 02-01)
    - What we know: the pairs are no-ops; the fix is a comment edit with no behaviour change; without it, tidy reports 50 extra warnings on the new files.
    - Recommendation: yes, and say so in the PR body.
-2. **What does "tidy clean" mean for the 15 pre-existing non-value-param warnings?**
+2. **What does "tidy clean" mean for the 15 pre-existing non-value-param warnings?** — RESOLVED: no new warnings beyond the 15 baseline; user-confirmed 2026-10-02 (plan 02-04)
    - Recommendation: record them as accepted baseline in the SUMMARY (list above). The gate is "no tidy warning on `src/lua_runner/` that is not in the baseline list". Renaming `kMaxReturnDepth` and the like would also churn AGENTS.md text that cites those names.
-3. **List `internal.h` in `QUIVER_SOURCES`?**
+3. **List `internal.h` in `QUIVER_SOURCES`?** — RESOLVED: yes (plan 02-02)
    - Recommendation: yes, to satisfy SC1 literally. It is harmless (CMake does not compile `.h`) and shows up in IDEs.
-4. **One NOLINT pair "per binder" or "per TU that needs one"?**
+4. **One NOLINT pair "per binder" or "per TU that needs one"?** — RESOLVED: per TU that needs one (5); user-confirmed 2026-10-02 (plans 02-02, 02-03)
    - Recommendation: per TU that needs one (5), so that no no-op markers are added.
 
 ## Environment Availability

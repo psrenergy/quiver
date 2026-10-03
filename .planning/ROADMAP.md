@@ -63,16 +63,26 @@ Plans:
   1. `src/lua_runner.cpp` no longer exists. `src/lua_runner/` holds `lua_runner.cpp`, `internal.h`, `return_json.cpp`, `path_policy.cpp`, `db_core.cpp`, `db_read.cpp`, `db_write.cpp`, `db_metadata.cpp`, `db_time_series.cpp`, `csv.cpp` and `binary.cpp`, each listed explicitly in the `quiver` target's sources with no GLOB. `wc -l` shows no file over about 450 lines.
   2. `new_usertype<Database>` appears exactly once across `src/lua_runner/`, and so does `open_libraries(`. The ctor runs `open_libraries`, then nils `dofile`/`loadfile`, creates the `quiver` table, calls the binders (`bind`/`ns`), and sets `lua["db"] = &db` last. The 17 variadic name/function pairs on the `Database` usertype become `bind.set_function` calls here, because per-domain binders cannot share one variadic call (behaviour-neutral per the sol2 source). The four non-`Database` usertypes stay variadic, one name per line. `RunHandles` is declared before `lua` in the heap-allocated `Impl`. No `[this]` capture remains. `GcGuard` is still declared before `result` and closes writers before exactly one `collect_garbage()`.
   3. The JS sync test reads every file under `src/lua_runner/` in sorted order and resets `current` at each file boundary. It extracts exactly the same method set as before the split (the before/after set diff is empty), and deleting one `bind.set_function` line makes it fail.
-  4. No test expectation changes. The Lua gtest count equals the Phase 1 baseline, the 27 C API tests pass, and the Julia, Dart, Python and JS suites pass unmodified (Dart after deleting `bindings/dart/.dart_tool/hooks_runner/` and `.dart_tool/lib/`). `/bigobj` (MSVC) and `-Wa,-mbig-obj` (MinGW) are set target-wide. All `SOL_*` defines stay PRIVATE on `quiver`. `scripts/tidy.bat` and clang-format 22.1.8 are clean on `src/lua_runner/`, with one NOLINT pair per binder. The PR notes the clean-build time of the `quiver` target before and after the split (recorded, not gated).
-  5. The old monolith path is gone: `git grep -n 'src/lua_runner\.cpp'` returns nothing outside `.planning/` and `CHANGELOG.md`, and every `git grep -n 'lua_runner\.cpp'` hit left there names a file under `src/lua_runner/`, the C API translation unit (`src/c/lua_runner.cpp`, the `c/lua_runner.cpp` entry in `src/CMakeLists.txt`, the `src/c/AGENTS.md` file listing) or `test_c_api_lua_runner.cpp`. The C API translation unit and its test keep their names; this milestone renames neither. The citations of the core file (including bare `lua_runner.cpp` meaning it) in the AGENTS.md files, `src/csv/*`, `cmake/Platform.cmake`, `bindings/dart/hook/build.dart`, the test comments and the `lua-api.ts` maintainer header point to the new paths. The root and `src/` AGENTS.md describe the folder layout, and the code moved into `src/lua_runner/` carries no planning-ID comments (49 lines in `src/lua_runner.cpp` at `0a32506`).
+  4. No test expectation changes. The Lua gtest count equals the Phase 1 baseline, the 27 C API tests pass, and the Julia, Dart, Python and JS suites pass unmodified (Dart after deleting `bindings/dart/.dart_tool/hooks_runner/` and `.dart_tool/lib/`). `/bigobj` (MSVC) and `-Wa,-mbig-obj` (MinGW) are set target-wide. All `SOL_*` defines stay PRIVATE on `quiver`. clang-format 22.1.8 is clean on `src/lua_runner/`, and `scripts/tidy.bat` reports no warning there beyond the 15 pre-existing ones recorded as the baseline (none of them `performance-unnecessary-value-param`). Each TU whose functions take sol2 arguments by value has its own NOLINT pair, with the check name corrected to `performance-unnecessary-value-param`. The PR notes the clean-build time of the `quiver` target before and after the split (recorded, not gated).
+  5. The old monolith path is gone: `git grep -n 'src/lua_runner\.cpp'` returns nothing outside `.planning/` and `CHANGELOG.md`, and every `git grep -n 'lua_runner\.cpp'` hit left there names a file under `src/lua_runner/`, the C API translation unit (`src/c/lua_runner.cpp`, the `c/lua_runner.cpp` entry in `src/CMakeLists.txt`, the `src/c/AGENTS.md` file listing) or `test_c_api_lua_runner.cpp`. The C API translation unit and its test keep their names; this milestone renames neither. The citations of the core file (including bare `lua_runner.cpp` meaning it) in the AGENTS.md files, `src/csv/*`, `cmake/Platform.cmake`, `bindings/dart/hook/build.dart`, the test comments and the `lua-api.ts` maintainer header point to the new paths. The root and `src/` AGENTS.md describe the folder layout, and the code moved into `src/lua_runner/` carries no planning-ID comments (59 lines in `src/lua_runner.cpp` at `bab557e`).
 
 **Plans**: 4 plans
 
 Plans:
+**Wave 1**
 
 - [ ] 02-01-PLAN.md — Tracer: git mv into src/lua_runner/, CMake path + target-wide /bigobj, folder-reading sync test; comment-only planning-ID strip + NOLINT name fix
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 02-02-PLAN.md — De-class Impl in place (RunHandles, seven binders, one Database usertype, 17 pairs to bind.set_function); extract internal.h, return_json.cpp, path_policy.cpp
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 02-03-PLAN.md — Extract the per-domain binders: db_metadata, db_read, db_write, db_time_series, db_core, csv, binary
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 02-04-PLAN.md — Re-point every citation, describe the layout in AGENTS.md, and the phase gate (Release, six suites, tidy, format, mutation, build time)
 
 ### Phase 3: Dedupe
@@ -99,7 +109,7 @@ Plans:
      Expired registry entries are pruned on insert, and the close-at-exit function's name covers binary files.
 
   3. Each dedupe PR states "reordered checks: none". The six suites pass with zero test-expectation changes, and the Lua gtest count equals the Phase 1 baseline. The one known text change, the Debug-only dot-call error from the move to member pointers, is noted in the PR.
-  4. The JS sync test still extracts the same method set, including the `CsvWriter` member-pointer lines near the 120-column limit. No `src/lua_runner/` file is over about 450 lines. csv-parser headers are not included from `src/lua_runner/`. `scripts/tidy.bat` and clang-format are clean.
+  4. The JS sync test still extracts the same method set, including the `CsvWriter` member-pointer lines near the 120-column limit. No `src/lua_runner/` file is over about 450 lines. csv-parser headers are not included from `src/lua_runner/`. clang-format is clean, and `scripts/tidy.bat` adds no warning beyond the Phase 2 baseline.
   5. `src/AGENTS.md` describes the shared helpers where the per-method boilerplate used to be documented.
 
 **Plans**: TBD
