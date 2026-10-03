@@ -23,9 +23,10 @@
 // Raised here, in Writer::close (operation is always "close"):
 //   "Cannot close: failed to flush file '<original_path>'"
 //
-// Raised in src/lua_runner/csv.cpp's cell formatter and row/option decoders (operation is always the
-// Lua method that received the bad value -- "write_row" for a cell/row problem, "write_csv" for
-// an options-table problem):
+// Raised by src/lua_runner/csv.cpp's cell formatter and row/option decoders and by the
+// src/lua_runner/internal.h helpers they call (lua_to_value, option_entries, option_table), with
+// operation always the Lua method that received the bad value -- "write_row" for a cell/row
+// problem, "write_csv" for an options-table problem:
 //   "Cannot write_row: row must be a table"                (sol2's table check also lets userdata in)
 //   "Cannot write_row: row <N> cell #<M> is not a finite number"                               (FMT-05)
 //   "Cannot write_row: cell #<M> has unsupported Lua type"                    (table/function/userdata)

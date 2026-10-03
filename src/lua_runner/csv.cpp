@@ -12,7 +12,9 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <utility>
+#include <variant>
 #include <vector>
 
 namespace quiver::lua_internal {
@@ -71,60 +73,49 @@ std::int64_t csv_max_integer_key(const sol::table& t, const std::string& operati
     return max_index;
 }
 
-// One sol::object cell -> the std::string quiver::csv_write::Writer takes. Dispatch order is
-// nil first (a hole from csv_row_cells_from_lua below is an empty cell), then the same
-// order lua_to_value uses -- boolean, int64, double, string -- else a Pattern 1 rejection
-// naming write_row and the 1-based cell index.
-//
-// This project compiles with SOL_SAFE_NUMERICS=1 (src/CMakeLists.txt), which is what makes
-// is<>() safe here: under it a numeric-looking Lua STRING (e.g. "0012") answers false to
-// is<std::int64_t>()/is<double>() and falls through to the string branch, written verbatim --
-// it does NOT apply Lua's own string<->number coercion the way the as<>() family would.
-// Verified by compiling and running this exact dispatch against this repo's own sol2/Lua
-// build; do not add a get_type() guard here and do not reorder it.
+// One sol::object cell -> the std::string quiver::csv_write::Writer takes, through lua_to_value:
+// nil (a hole from csv_row_cells_from_lua below) is an empty cell, a boolean is INTEGER 1/0 and so
+// writes the text "1"/"0", and anything else that is not an int64, double or string is
+// lua_to_value's own Pattern 1 rejection naming the 1-based cell. The dispatch order lives there
+// (do not reorder it or add a get_type() guard to it): under SOL_SAFE_NUMERICS=1
+// (src/CMakeLists.txt) a numeric-looking Lua STRING such as "0012" answers false to
+// is<std::int64_t>()/is<double>() and stays a string, written verbatim.
 std::string csv_cell_to_string(
     const sol::object& cell,
     const std::string& operation,
     std::int64_t index,
     std::int64_t row_index
 ) {
-    if (!cell.valid() || cell.is<sol::lua_nil_t>()) {
-        return {};
-    }
-    if (is_lua_boolean(cell)) {
-        // The project-wide boolean-is-INTEGER-1/0 write policy: text "1" or "0", not
-        // "true"/"false".
-        return cell.as<bool>() ? "1" : "0";
-    }
-    if (cell.is<std::int64_t>()) {
-        // The int64_t overload directly, never routed through double first, so a Lua
-        // integer past double's 53-bit mantissa survives exactly.
-        std::string out;
-        quiver::utils::append_number(cell.as<std::int64_t>(), out);
-        return out;
-    }
-    if (cell.is<double>()) {
-        const double value = cell.as<double>();
-        // Reject BEFORE append_number/to_chars is reached, so no platform-specific
-        // non-finite spelling (MSVC's "-nan(ind)"/"nan"/"inf" vs. glibc's "nan"/"inf" --
-        // both seen in practice) can ever reach a cell. Both the row and the cell are
-        // named: a row of many cells with one bad value is otherwise unfindable.
-        if (!std::isfinite(value)) {
-            throw std::runtime_error(
-                "Cannot " + operation + ": row " + std::to_string(row_index) + " cell #" + std::to_string(index) +
-                " is not a finite number"
-            );
-        }
-        // to_chars' shortest round-trip form, with no synthetic decimal point -- a whole
-        // float and the equal integer produce identical text.
-        std::string out;
-        quiver::utils::append_number(value, out);
-        return out;
-    }
-    if (cell.is<std::string>()) {
-        return cell.as<std::string>();
-    }
-    throw std::runtime_error("Cannot " + operation + ": cell #" + std::to_string(index) + " has unsupported Lua type");
+    return std::visit(
+        [&](const auto& value) -> std::string {
+            using T = std::decay_t<decltype(value)>;
+            if constexpr (std::is_same_v<T, std::nullptr_t>) {
+                return {};
+            } else if constexpr (std::is_same_v<T, std::string>) {
+                return value;
+            } else {
+                // Reject a non-finite double BEFORE append_number/to_chars is reached, so no
+                // platform-specific spelling (MSVC's "-nan(ind)"/"nan"/"inf" vs. glibc's
+                // "nan"/"inf") can reach a cell. Both the row and the cell are named: a row of
+                // many cells with one bad value is otherwise unfindable.
+                if constexpr (std::is_same_v<T, double>) {
+                    if (!std::isfinite(value)) {
+                        throw std::runtime_error(
+                            "Cannot " + operation + ": row " + std::to_string(row_index) + " cell #" +
+                            std::to_string(index) + " is not a finite number"
+                        );
+                    }
+                }
+                // An int64 goes to its own overload, never through double, so an integer past
+                // double's 53-bit mantissa survives exactly; a double gets to_chars' shortest
+                // round-trip form with no synthetic decimal point.
+                std::string out;
+                quiver::utils::append_number(value, out);
+                return out;
+            }
+        },
+        lua_to_value(cell, operation, "cell #" + std::to_string(index))
+    );
 }
 
 // Converts one Lua row table to the ordered std::vector<std::string> quiver::csv_write::Writer

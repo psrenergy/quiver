@@ -713,10 +713,10 @@ Implementation conventions in `src/lua_runner/`:
   `AGENTS.md`. Every boolean test goes through the one predicate `is_lua_boolean`, and the 1/0
   mapping lives in two converters: `lua_to_value` (the `Value`-typed one, behind
   `table_to_element`'s scalars, `lua_table_to_value_map` (row upsert), `lua_table_to_values` (query
-  parameters) and `columns_to_cpp_rows` (group cells)) and `lua_cell_as<T>` (typed arrays via
+  parameters), `columns_to_cpp_rows` (group cells) and `csv_cell_to_string` (CSV cells, which is
+  why `w:write_row` writes a boolean as the text `1`/`0`)) and `lua_cell_as<T>` (typed arrays via
   `lua_table_to_vector`). `table_to_element`'s array dispatch also tests cell 1 with it to pick the
-  element type, and `csv_cell_to_string` writes a boolean as the text `1`/`0`.
-  `relation_target_from_lua` is the deliberate exception:
+  element type. `relation_target_from_lua` is the deliberate exception:
   only `nil` may clear a relation, so a boolean still throws there. Lua has no boolean *readers*
   (root design decision), so this is a write-side-only asymmetry.
 - **`lua_cell_as<T>(object, caller, what)` is the checked Lua-value→T conversion for the typed
