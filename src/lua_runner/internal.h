@@ -103,8 +103,8 @@ sol::table collection_read_lua(Database& db, const std::string& collection, sol:
 
 // Every boolean test in src/lua_runner/ goes through this one predicate, so the rule lives in one
 // place rather than in a comment repeated at each site. The Value mapping itself lives in
-// lua_to_value (scalars, row upserts, query parameters, group cells) and lua_cell_as (the typed
-// paths, e.g. arrays).
+// lua_to_value (scalars, row upserts, query parameters, group cells, CSV cells) and lua_cell_as
+// (the typed paths, e.g. arrays).
 inline bool is_lua_boolean(const sol::object& v) {
     return v.get_type() == sol::type::boolean;
 }

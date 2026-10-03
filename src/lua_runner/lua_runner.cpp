@@ -32,8 +32,9 @@ bool RunHandles::path_has_open_writer(const std::string& resolved_path) const {
 }
 
 // Only expired entries go: a closed-but-alive writer stays, and erase_if keeps the survivors'
-// order, so the close order at run()'s exit is unchanged. Without the prune, a long script that
-// opens and drops many writers grows the list until run() returns.
+// order, so the close order at run()'s exit is unchanged. Without the prune, every writer a long
+// script ever opened would stay listed until run() returns; with it, only live ones and any dropped
+// since the last GC collection do.
 void RunHandles::add_writer(
     const std::string& resolved_path,
     const std::shared_ptr<quiver::csv_write::Writer>& writer

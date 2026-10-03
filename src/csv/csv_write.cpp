@@ -33,6 +33,7 @@
 //   "Cannot write_row: row key must be a positive integer"
 //   "Cannot write_row: row key <N> exceeds the maximum width of 1000000"
 //   "Cannot write_row: row <N> has <M> cells but header declares <W>"                            (FMT-07)
+//   "Cannot write_csv: file is already open for writing: <original_path>"  (two live writers, one path)
 //   "Cannot write_csv: unknown option '<name>'"
 //   "Cannot write_csv: option key must be a string"
 //   "Cannot write_csv: options must be a table"

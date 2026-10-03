@@ -661,20 +661,22 @@ Implementation conventions in `src/lua_runner/`:
   and `read_sets_by_id`. The `metadata_to_lua` overloads with `list_metadata_lua` /
   `get_metadata_lua` (`db_metadata.cpp`) are behind the four `get_*_metadata` and four `list_*`
   group methods.
-  `query_*_lua` and `read_scalars_by_id` return `std::optional`, so a NULL is `nil` and an absent
-  key. `run_in_scope` (`db_core.cpp`) is the one scoped block behind `db:transaction` and
+  `query_*_lua` return `std::optional` and `read_scalars_by_id` assigns `std::optional` values, so a
+  NULL is `nil` and an absent key. `run_in_scope` (`db_core.cpp`) is the one scoped block behind `db:transaction` and
   `db:dry_run`, which stay two lambdas so their Debug bad-argument text is unchanged.
   `collect_entries` / `option_table` / `option_entries` (`internal.h`) are the one option walk:
   `option_entries` owns the table check and returns slots that callers bind by name with a
-  structured binding, and nil handling stays with each caller. `lua_to_value` is the one write-path
-  dispatch, CSV cells included (`csv_cell_to_string`). `CsvWriter::write_row` / `close` are members
+  structured binding, and nil handling stays with each caller. `lua_to_value` is the one
+  `Value`-typed write dispatch, CSV cells included (`csv_cell_to_string`); `lua_cell_as<T>` is the
+  typed-array one (see the boolean bullet). `CsvWriter::write_row` / `close` are members
   registered by member pointer, and `header_object` (`csv.cpp`) is the one no-header rule for both
-  read forms. `RunHandles::add_writer` / `add_binary_file` are the only way into the run-handle
-  registries (prune expired entries, then append), and `close_open_handles` empties both at
+  read forms. `RunHandles::add_writer` / `add_binary_file` are the only appenders to the run-handle
+  registries by convention (the vectors stay public; prune expired entries, then append), and `close_open_handles` empties both at
   `run()`'s exit. `binop<Op>` (`binary.cpp`) with a transparent functor (`std::plus<>`,
   `std::greater_equal<>`, ...) is every binary Expression operator, metamethods and
   `quiver.gt`/`lt`/`gte`/`lte`/`eq`/`neq` alike. `columns_to_cpp_rows` owns the group decoders'
-  no-rows rejection and `length_mismatch` (`db_time_series.cpp`) their length message.
+  no-rows rejection, and `length_mismatch` (`db_time_series.cpp`) is the time-series decoder's one
+  length message.
 - **Filesystem sandbox**: `resolve_sandboxed_path(db, operation, path)` is the single gate for
   every file-touching Lua operation (`db:open_file`, `db:bin_to_csv`, `db:csv_to_bin`,
   `db:export_csv`, `db:import_csv`, `db:validate_migrations`, `db:read_csv`, `db:read_csv_stream`,
@@ -858,8 +860,9 @@ Implementation conventions in `src/lua_runner/`:
   readers and writers, are recorded the same way (a `weak_ptr` in `RunHandles::open_binary_files`) and
   closed by `close_open_handles()`, so no binary file handle outlives its `run()` either. Both lists
   are appended only through `RunHandles::add_writer` / `add_binary_file`, which first prune the
-  entries whose handle was collected (`expired()`), never a closed-but-alive one, so a long script
-  that opens and drops many handles does not grow the registry until `run()` returns. A writer
+  entries whose handle the GC has already collected (`expired()`), never a closed-but-alive one, so
+  the registry holds only live handles plus any dropped since the last collection, not every handle
+  the run ever opened. A writer
   left in a global would otherwise hold its path in the process-wide write registry until the
   `LuaRunner` is destroyed (pinned by `LuaBinaryTest.WriterHeldInAGlobalIsClosedWhenRunReturns`
   and `HandleFromAnEarlierRunIsClosed`). The `collect_garbage()` call
