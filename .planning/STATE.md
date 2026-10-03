@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v0.12.9
 milestone_name: milestone
 status: Awaiting next milestone
-stopped_at: Phase 5 complete (verified 9/9 after review-fix gap closure); all 5 phases done, milestone ready to close
+stopped_at: Milestone v0.12.9 completed and archived
 last_updated: "2026-10-03T19:13:44.635Z"
 last_activity: 2026-10-03
-last_activity_desc: Phase 2 complete, transitioned to Phase 3
+last_activity_desc: Milestone v0.12.9 completed and archived
 progress:
   total_phases: 5
   completed_phases: 5
@@ -23,7 +23,7 @@ current_phase_name: Path-Policy Test and Docs
 See: .planning/PROJECT.md (updated 2026-10-03)
 
 **Core value:** Every file in the Lua scripting layer is small and single-purpose enough for an agent to change safely, and every existing script behaves exactly as before, apart from the deliberate, test-pinned fixes.
-**Current focus:** Milestone complete — ready for audit / complete-milestone
+**Current focus:** Planning next milestone (run /gsd-new-milestone)
 
 ## Current Position
 
@@ -133,19 +133,13 @@ None yet.
 
 ### Blockers/Concerns
 
-- ~~Phase 4 needs research: the perf measurement protocol, roughly 20 `require_table` placements, and the C7 fan-out wording.~~ Resolved in Phase 4 (04-01..04-04).
-- ~~Phase 5 needs research: TEST-01 also needs a link strategy: `quiver` is shared with hidden visibility, so `resolve_sandboxed_path` must be header-inline, exported, or `path_policy.cpp` compiled into `quiver_tests`.~~ Resolved in 05-01: `path_policy.cpp` is compiled into `quiver_tests`; nothing new is exported.
-- Phase 1 gtest baseline (observed 2026-10-02 at `570c2c1`): `quiver_tests --gtest_filter=Lua*` = 444 tests across 12 suites (identical in Debug and Release, and in `build/`), and C API `LuaRunnerCApiTest` = 27. Phases 2 and 3 must reproduce both exactly; Phase 4 records the counts Phase 5's `Lua*` and C API runs must reproduce. (444, not the planned 441: plan 01 added two freed-source move pins and `LuaRunner_WriteCsv.NonTableOptionsThrows`. The old `Sandbox*` filter no longer applies: the rename was dropped and the filter stays `Lua*`.)
-- [Phase 2] Linux baseline (GCC 13 and Clang 18/libc++, Docker, at `8fbb066`): `Lua*` = 442 run, 441 pass + 1 skip (the chmod-000 test as root); the 2 fewer than Windows are `DeviceNamePathIsReportedWithPrefix` in `LuaRunner_ReadCsv` and `LuaBinaryTest`, `#ifdef _WIN32` by design. Apple Clang and off-Windows binding suites are still only proven by PR CI.
-- [Phase 2] sol2 is now parsed once per TU: CPU time across the Lua files rose from 61 s to 223 s (wall time fell from 70 s to 46 s). Phase 3 dedupe should not add new sol2 TUs without reason.
-- [Phase 2] Review info items carried to later phases: IN-01 (`db_core.cpp` NOLINT region starts below the `query_*_lua` helpers), IN-02 (lambdas in `bind_csv`/`bind_binary` shadow the `lua` parameter), IN-03 (four decoders convert table keys without a type check; Phase 4 SAFE work). See `02-REVIEW.md`.
-- [Phase 3] Carried to Phase 4: a dot-call such as `db.commit()` still crashes the process in Release (exit 139; pre-existing UB, 03-REVIEW IN-06); `lua_table_to_dim_map` converts keys without a type check (IN-07). Two messages still have two throw sites each, so Phase 4's "got <lua type>" rewording must edit both sites: "has unsupported Lua type" (`lua_cell_as` and `lua_to_value`) and "must be an array of values" (`collect_group_columns`). The `apply_binop` dead branch (FIX-03) is already gone. The `build/dedupe-check/` golden harness (gitignored) is reusable for Phase 4's red-then-green work.
-- [Phase 4] Phase 5 baseline: (observed 2026-10-03 at `e6aa5c1`, after the three code-review fixes, which added 5 tests to the flag commit's 472) `quiver_tests --gtest_filter=Lua*` = 477 tests in 12 suites (Windows Debug and Release), Linux (GCC 13 and Clang 18/libc++, Docker, re-run at `e6aa5c1`) 475 run with 1 skip (474 pass; the 2 fewer are the `_WIN32`-only `DeviceNamePathIsReportedWithPrefix` tests), and C API `LuaRunnerCApiTest` = 27 in every build. Phase 5 must reproduce these exactly, plus whatever its own tests add (TEST-01's `SandboxedPathTest` sits outside the `Lua*` filter). sol2 defines: `SOL_ALL_SAFETIES_ON=1`, `SOL_PRINT_ERRORS=0`, `SOL_SAFE_NUMERICS=1`, `SOL_NO_NIL=1`, plus the perf fallback `SOL_SAFE_GETTER=0` / `SOL_SAFE_STACK_CHECK=0`.
-- [Phase 4] PR notes (copy into the phase/milestone PR): (1) SAFE-06 perf, Release, median of 5 interleaved runs. `read_scalar_floats` 100k: 633 ms before, 737 ms (+16.4%) with all safeties, 626 vs 638 ms (-1.9%) with the fallback `SOL_SAFE_GETTER=0` + `SOL_SAFE_STACK_CHECK=0`. `file:read` 1M cells: 496 / 477 (-3.8%) / 424 vs 422 ms (+0.5%). (2) `SOL_SAFE_GETTER=0` also applies in Debug (sol2 honours the explicit define), so Debug CI no longer checks unguarded `.as<T>()`. All current sites are guarded (04-04 SUMMARY list, verifier audit), but new code must guard its own. (3) The Debug-only sol2 text changes from Phase 3 (12 probes) are listed in 03-03-SUMMARY.
-- ~~[Phase 4] Doc nits carried to Phase 5 (DOC-02/03)~~ Resolved in 05-04: `tests/AGENTS.md:146` says every other sol2 safety is on, but the stack check is off too; the CHANGELOG has no entry for `quiver.metadata_from_element`'s empty-array error text change (04-REVIEW IN-03); `AGENTS.md:88` runs past the wrap width; 04-REVIEW IN-01 (type errors without the `got <type>` suffix: `on_row`, the `separator`/`date_time_format`/`header_row` options, option key) was left by D-04/D-16 and is a candidate for DOC-level mention only.
-- [Phase 5] Milestone final counts (observed 2026-10-03 at `a3d57e4`, the 05-04 phase gate): `quiver_tests --gtest_filter=Lua*` = 477 tests in 12 suites (Windows Debug and Release); `SandboxedPathTest` = 11 on Windows (Debug and Release, no skips) and 10 on Linux GCC 13 and Clang 18/libc++ (the `_WIN32`-only device-name case is absent there); Linux `Lua*` 475 run, 474 pass + 1 skip (the chmod-000 test as root); C API `LuaRunnerCApiTest` = 27 in every build; full `quiver_tests` = 1454 and `quiver_c_tests` = 543 (Windows Debug); six suites green (both Dart hook caches deleted first); golden debug and release OK; tidy 14 on `src/lua_runner/`; planning-ID gate `IDS=0 FILES=0`; version 0.13.0 in all five manifests.
-- [Phase 5] Open review info items (05-REVIEW.md, judged non-gaps by the verifier; candidates for a follow-up): IN-01 the stated reason for keeping `path_policy.cpp` one function (a static-link duplicate symbol) cannot happen, the real limit is that the test copy misses `quiver`'s private compile flags; IN-03 `csv_write.cpp`'s non-finite entry needs a "(partial)" note; IN-04 no symlink-free `SandboxedPathTest` for a sibling directory sharing the sandbox prefix (`<sandbox>_evil/x.csv`). Also: two pre-existing compiler warnings in the Linux logs (`src/binary/time_properties.cpp` GCC, `tests/test_migrations.cpp` Clang), untouched this milestone.
-- Backfilling the missing CHANGELOG `[0.12.9]` section is the maintainer's call and outside this milestone. The memory note pointing at `[0.12.9]` is stale.
+Resolved concerns from v0.12.9 were cleared at milestone close (history: `milestones/v0.12.9-phases/`, `milestones/v0.12.9-MILESTONE-AUDIT.md`). Open items carried forward:
+
+- [v0.12.9] PR notes, to copy into the PR body: (1) SAFE-06 perf, Release, median of 5 interleaved runs. `read_scalar_floats` 100k: 633 ms before, 737 ms (+16.4%) with all safeties, 626 vs 638 ms (−1.9%) with the fallback `SOL_SAFE_GETTER=0` + `SOL_SAFE_STACK_CHECK=0`. `file:read` 1M cells: 496 / 477 (−3.8%) / 424 vs 422 ms (+0.5%). (2) `SOL_SAFE_GETTER=0` also applies in Debug, so Debug CI no longer checks unguarded `.as<T>()`. Every current site is guarded, but new code must guard its own. (3) The Debug-only sol2 text changes from Phase 3 (12 probes) are in `milestones/v0.12.9-phases/03-dedupe/03-03-SUMMARY.md`. (4) Apple Clang and the off-Windows binding suites are proven only by PR CI.
+- [v0.12.9] Final baseline: `quiver_tests` 1454 (`Lua*` 477 in 12 suites, `SandboxedPathTest` 11), `quiver_c_tests` 543 (`LuaRunnerCApiTest` 27). Linux GCC 13 and Clang 18/libc++: `Lua*` 475 (474 + 1 skip), sandbox 10.
+- [v0.12.9] Tech debt (audit): positional string/number argument type errors still use sol2's raw text, not Pattern 1; `{}` skips on create but clears on update; 05-REVIEW IN-01 / IN-03 / IN-04; two pre-existing compiler warnings in the Linux logs.
+- Backfilling the missing CHANGELOG `[0.12.9]` section is the maintainer's call. The memory note pointing at `[0.12.9]` is stale.
+- The milestone was not git-tagged: the GSD id `v0.12.9` collides with the existing release tag `v0.12.9`. Give the next milestone an id that cannot collide.
 
 ## Deferred Items
 
@@ -158,7 +152,7 @@ Items acknowledged and carried forward from previous milestone close:
 ## Session Continuity
 
 Last session: 2026-10-03
-Stopped at: Phase 5 complete (verified 9/9 after review-fix gap closure); all 5 phases done, milestone ready to close
+Stopped at: Milestone v0.12.9 completed and archived; next: /gsd-cleanup, then /gsd-new-milestone
 Resume file: None
 
 ## Operator Next Steps
