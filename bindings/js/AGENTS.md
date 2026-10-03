@@ -115,6 +115,8 @@ biome.json        # Lint/format config
   JSON string must be freed with `quiver_lua_runner_free_string` — *not* `quiver_database_free_string`
   (both are in `loader.ts`, hand-maintained). `decodeStringFromBuf` returns `""` for a NULL pointer,
   which is also what the C API leaves there on failure, and `check()` throws before the decode.
+  The script must be Lua source text: the core loads it in text mode, so a precompiled (bytecode)
+  chunk is rejected with `Failed to run Lua script: ...` and surfaces like any other script error.
 - **Time-series NULL cells** (`TimeSeriesData = Record<string, (number | string | null)[]>`): a
   `null` value marshals to a per-column `uint8_t` mask (0 = NULL) with a placeholder in the data
   array; an all-`null` column is tagged FLOAT with a zeroed placeholder (the C API ignores the tag
