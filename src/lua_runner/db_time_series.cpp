@@ -234,11 +234,6 @@ void upsert_time_series_row_by_label_lua(
 // Time series files
 // ========================================================================
 
-sol::table list_time_series_files_columns_lua(Database& db, const std::string& collection, sol::this_state s) {
-    sol::state_view lua(s);
-    return to_lua_table(lua, db.list_time_series_files_columns(collection));
-}
-
 sol::table read_time_series_files_lua(Database& db, const std::string& collection, sol::this_state s) {
     sol::state_view lua(s);
     auto files = db.read_time_series_files(collection);
@@ -280,7 +275,10 @@ void bind_time_series(sol::usertype<Database>& bind) {
     bind.set_function("upsert_time_series_row_by_label", &upsert_time_series_row_by_label_lua);
     bind.set_function("update_time_series_files", &update_time_series_files_lua);
 
-    bind.set_function("list_time_series_files_columns", &list_time_series_files_columns_lua);
+    bind.set_function(
+        "list_time_series_files_columns",
+        &collection_read_lua<&Database::list_time_series_files_columns>
+    );
 }
 // NOLINTEND(performance-unnecessary-value-param)
 

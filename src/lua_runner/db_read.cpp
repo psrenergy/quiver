@@ -11,71 +11,6 @@ namespace quiver::lua_internal {
 
 namespace {
 
-sol::table read_scalar_strings_lua(
-    Database& db,
-    const std::string& collection,
-    const std::string& attribute,
-    sol::this_state s
-) {
-    sol::state_view lua(s);
-    return to_lua_table(lua, db.read_scalar_strings(collection, attribute));
-}
-
-sol::table read_scalar_integers_lua(
-    Database& db,
-    const std::string& collection,
-    const std::string& attribute,
-    sol::this_state s
-) {
-    sol::state_view lua(s);
-    return to_lua_table(lua, db.read_scalar_integers(collection, attribute));
-}
-
-sol::table read_scalar_floats_lua(
-    Database& db,
-    const std::string& collection,
-    const std::string& attribute,
-    sol::this_state s
-) {
-    sol::state_view lua(s);
-    return to_lua_table(lua, db.read_scalar_floats(collection, attribute));
-}
-
-sol::table read_vector_integers_lua(
-    Database& db,
-    const std::string& collection,
-    const std::string& attribute,
-    sol::this_state s
-) {
-    sol::state_view lua(s);
-    return to_lua_table(lua, db.read_vector_integers(collection, attribute));
-}
-
-sol::table read_vector_floats_lua(
-    Database& db,
-    const std::string& collection,
-    const std::string& attribute,
-    sol::this_state s
-) {
-    sol::state_view lua(s);
-    return to_lua_table(lua, db.read_vector_floats(collection, attribute));
-}
-
-sol::table read_vector_strings_lua(
-    Database& db,
-    const std::string& collection,
-    const std::string& attribute,
-    sol::this_state s
-) {
-    sol::state_view lua(s);
-    return to_lua_table(lua, db.read_vector_strings(collection, attribute));
-}
-
-sol::table read_element_ids_lua(Database& db, const std::string& collection, sol::this_state s) {
-    sol::state_view lua(s);
-    return to_lua_table(lua, db.read_element_ids(collection));
-}
-
 sol::table read_scalars_by_id_lua(Database& db, const std::string& collection, int64_t id, sol::this_state s) {
     sol::state_view lua(s);
     auto result = lua.create_table();
@@ -176,56 +111,22 @@ sol::table read_element_by_id_lua(Database& db, const std::string& collection, i
     return scalars;
 }
 
-// ========================================================================
-// Bulk set reads (same pattern as read_vector_*_lua)
-// ========================================================================
-
-sol::table read_set_integers_lua(
-    Database& db,
-    const std::string& collection,
-    const std::string& attribute,
-    sol::this_state s
-) {
-    sol::state_view lua(s);
-    return to_lua_table(lua, db.read_set_integers(collection, attribute));
-}
-
-sol::table read_set_floats_lua(
-    Database& db,
-    const std::string& collection,
-    const std::string& attribute,
-    sol::this_state s
-) {
-    sol::state_view lua(s);
-    return to_lua_table(lua, db.read_set_floats(collection, attribute));
-}
-
-sol::table read_set_strings_lua(
-    Database& db,
-    const std::string& collection,
-    const std::string& attribute,
-    sol::this_state s
-) {
-    sol::state_view lua(s);
-    return to_lua_table(lua, db.read_set_strings(collection, attribute));
-}
-
 }  // namespace
 
 void bind_read(sol::usertype<Database>& bind) {
-    bind.set_function("read_element_ids", &read_element_ids_lua);
+    bind.set_function("read_element_ids", &collection_read_lua<&Database::read_element_ids>);
 
-    bind.set_function("read_scalar_strings", &read_scalar_strings_lua);
-    bind.set_function("read_scalar_integers", &read_scalar_integers_lua);
-    bind.set_function("read_scalar_floats", &read_scalar_floats_lua);
+    bind.set_function("read_scalar_strings", &bulk_read_lua<&Database::read_scalar_strings>);
+    bind.set_function("read_scalar_integers", &bulk_read_lua<&Database::read_scalar_integers>);
+    bind.set_function("read_scalar_floats", &bulk_read_lua<&Database::read_scalar_floats>);
 
-    bind.set_function("read_vector_integers", &read_vector_integers_lua);
-    bind.set_function("read_vector_floats", &read_vector_floats_lua);
-    bind.set_function("read_vector_strings", &read_vector_strings_lua);
+    bind.set_function("read_vector_integers", &bulk_read_lua<&Database::read_vector_integers>);
+    bind.set_function("read_vector_floats", &bulk_read_lua<&Database::read_vector_floats>);
+    bind.set_function("read_vector_strings", &bulk_read_lua<&Database::read_vector_strings>);
 
-    bind.set_function("read_set_integers", &read_set_integers_lua);
-    bind.set_function("read_set_floats", &read_set_floats_lua);
-    bind.set_function("read_set_strings", &read_set_strings_lua);
+    bind.set_function("read_set_integers", &bulk_read_lua<&Database::read_set_integers>);
+    bind.set_function("read_set_floats", &bulk_read_lua<&Database::read_set_floats>);
+    bind.set_function("read_set_strings", &bulk_read_lua<&Database::read_set_strings>);
 
     bind.set_function("read_scalars_by_id", &read_scalars_by_id_lua);
     bind.set_function("read_vectors_by_id", &read_vectors_by_id_lua);

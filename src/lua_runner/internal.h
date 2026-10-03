@@ -83,6 +83,22 @@ sol::table to_lua_table(sol::state_view& lua, const std::vector<std::vector<T>>&
     return outer;
 }
 
+// The bulk readers, bound straight to the Database member they read: `Read` is the member pointer
+// (read_{scalar,vector,set}_{integers,floats,strings} for bulk_read_lua; read_element_ids and
+// list_time_series_files_columns for collection_read_lua). The parameter lists are the ones sol2
+// sees, so each registration keeps its argument checks.
+template <auto Read>
+sol::table bulk_read_lua(Database& db, const std::string& collection, const std::string& attribute, sol::this_state s) {
+    sol::state_view lua(s);
+    return to_lua_table(lua, (db.*Read)(collection, attribute));
+}
+
+template <auto Read>
+sol::table collection_read_lua(Database& db, const std::string& collection, sol::this_state s) {
+    sol::state_view lua(s);
+    return to_lua_table(lua, (db.*Read)(collection));
+}
+
 // Every boolean test in src/lua_runner/ goes through this one predicate, so the rule lives in one
 // place rather than in a comment repeated at each site. The Value mapping itself lives in
 // lua_to_value (scalars, row upserts, query parameters, group cells) and lua_cell_as (the typed
