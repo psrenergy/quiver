@@ -41,7 +41,7 @@ Evidence for each item (line numbers at `bdf9087`) is in `.planning/research/LUA
 - [x] **SAFE-03**: Optional arguments go through `optional_from_lua` at all 8 sites. nil or missing means absent; any other wrong type raises Pattern 1 (C5).
 - [x] **SAFE-04**: `db:transaction` / `db:dry_run` reject a non-function argument with Pattern 1 before any side effect (C6).
 - [x] **SAFE-05**: Every type error from these checks ends with a consistent "got <lua type>" suffix.
-- [ ] **SAFE-06**: `SOL_ALL_SAFETIES_ON=1` and `SOL_PRINT_ERRORS=0` are PRIVATE on `quiver`, landing after SAFE-01..04. The no-op `SOL_SAFE_FUNCTION=1` define and its AGENTS.md claim are deleted. The Release cost is measured once by hand and reported in the PR, with no committed perf scripts.
+- [x] **SAFE-06**: `SOL_ALL_SAFETIES_ON=1` and `SOL_PRINT_ERRORS=0` are PRIVATE on `quiver`, landing after SAFE-01..04. The no-op `SOL_SAFE_FUNCTION=1` define and its AGENTS.md claim are deleted. The Release cost is measured once by hand and reported in the PR, with no committed perf scripts.
 - [x] **SAFE-07**: Lua `load` accepts text chunks only. A binary (bytecode) chunk raises an error, string-form `load` keeps working, and both cases are tested.
 
 ### Behaviour fixes
@@ -127,7 +127,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SAFE-03 | Phase 4 | Complete |
 | SAFE-04 | Phase 4 | Complete |
 | SAFE-05 | Phase 4 | Complete |
-| SAFE-06 | Phase 4 | Pending |
+| SAFE-06 | Phase 4 | Complete |
 | SAFE-07 | Phase 4 | Complete |
 | FIX-01 | Phase 4 | Complete |
 | FIX-02 | Phase 4 | Complete |

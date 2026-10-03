@@ -146,7 +146,7 @@ Plans:
   4. The phase's last commit sets `SOL_ALL_SAFETIES_ON=1` and `SOL_PRINT_ERRORS=0` PRIVATE on `quiver`, and deletes the no-op `SOL_SAFE_FUNCTION=1` define and its AGENTS.md claim (decision recorded in PROJECT.md). A test shows that a caught script error writes nothing to stderr. The Release cost of the flag is measured once by hand, before and after, on a bulk read and on `file:read`, and reported in the PR; no perf script is committed. The budget is 5%. If it is exceeded, add `SOL_SAFE_GETTER=0` and `SOL_SAFE_STACK_CHECK=0` and re-measure; `SOL_SAFE_FUNCTION_CALLS` and `SOL_SAFE_USERTYPE` are never disabled.
   5. `CHANGELOG.md` has `## [0.13.0] — unreleased` and its compare link in the existing link block (`[0.13.0]: https://github.com/psrenergy/quiver/compare/v0.12.9...v0.13.0`). BREAKING entries, each saying what a script author must change, cover wrong-type arguments now throwing (C1/C5), the empty-array change (C7) and text-only `load`. Entries also record that a Release dot-call (`db.method()`) goes from undefined behaviour to an error, with the backstop's raw sol2 text (`sol: received nil for 'self' argument…`). `### Fixed` entries cover C2, C4, C6 and C8. Entries describe behaviour and carry no planning IDs, and all manifests stay at 0.13.0. The AGENTS.md nearest each change is updated, including the root sandbox decision, which now says `load` accepts text chunks only. All six suites are green (Dart, the only local Release run, after deleting `bindings/dart/.dart_tool/hooks_runner/` and `.dart_tool/lib/`), and the resulting Lua gtest count (`--gtest_filter=Lua*`) and C API count are recorded as the baseline that Phase 5's runs must reproduce.
 
-**Plans**: 3/4 plans executed
+**Plans**: 4/4 plans executed
 
 Plans:
 **Wave 1**
@@ -163,7 +163,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 04-04-PLAN.md — Tracer: `SOL_ALL_SAFETIES_ON`/`SOL_PRINT_ERRORS=0` as the last commit, measured against 5%; stderr and dot-call tests; phase gate and the Phase 5 baseline
+- [x] 04-04-PLAN.md — Tracer: `SOL_ALL_SAFETIES_ON`/`SOL_PRINT_ERRORS=0` as the last commit, measured against 5%; stderr and dot-call tests; phase gate and the Phase 5 baseline
 
 ### Phase 5: Path-Policy Test and Docs
 
@@ -189,5 +189,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 1. Behaviour Pins | 2/2 | Complete    | 2026-10-02 |
 | 2. Mechanical Split | 4/4 | Complete    | 2026-10-03 |
 | 3. Dedupe | 3/3 | Complete    | 2026-10-03 |
-| 4. Fixes and Release Type Safety | 3/4 | In Progress|  |
+| 4. Fixes and Release Type Safety | 4/4 | In Progress|  |
 | 5. Path-Policy Test and Docs | 0/TBD | Not started | - |
