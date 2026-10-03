@@ -178,24 +178,24 @@ void bind_binary(sol::state& state, sol::usertype<Database>& bind, sol::table& n
     // containing the database file and must stay inside it.
     bind.set_function(
         "open_file",
-        [&handles](
-            Database& self,
-            const std::string& path,
-            const std::string& mode,
-            sol::optional<BinaryMetadata> metadata
-        ) -> std::shared_ptr<BinaryFile> {
+        [&handles](Database& self, const std::string& path, const std::string& mode, const sol::object& metadata)
+            -> std::shared_ptr<BinaryFile> {
             if (mode.size() != 1 || (mode[0] != 'r' && mode[0] != 'w')) {
                 throw std::runtime_error("Cannot open_file: mode must be \"r\" or \"w\"");
             }
             const auto resolved = resolve_sandboxed_path(self, "open_file", path);
-            std::optional<BinaryMetadata> md = metadata ? std::optional<BinaryMetadata>(*metadata) : std::nullopt;
+            // After containment, so the order stays mode, then path, then metadata.
+            const auto md = optional_from_lua<BinaryMetadata>(metadata, "open_file", "metadata", "a BinaryMetadata");
             auto file = std::make_shared<BinaryFile>(BinaryFile::open_file(resolved, mode[0], md));
             handles.add_binary_file(file);
             return file;
         }
     );
-    bind.set_function("bin_to_csv", [](Database& self, const std::string& path, sol::optional<bool> aggregate) {
-        CSVConverter::bin_to_csv(resolve_sandboxed_path(self, "bin_to_csv", path), aggregate.value_or(true));
+    bind.set_function("bin_to_csv", [](Database& self, const std::string& path, const sol::object& aggregate) {
+        // Containment first, as in every file operation, then the flag.
+        const auto resolved = resolve_sandboxed_path(self, "bin_to_csv", path);
+        const bool by_agent = optional_from_lua<bool>(aggregate, "bin_to_csv", "aggregate", "a boolean").value_or(true);
+        CSVConverter::bin_to_csv(resolved, by_agent);
     });
     bind.set_function("csv_to_bin", [](Database& self, const std::string& path) {
         CSVConverter::csv_to_bin(resolve_sandboxed_path(self, "csv_to_bin", path));
@@ -234,9 +234,11 @@ void bind_binary(sol::state& state, sol::usertype<Database>& bind, sol::table& n
         "BinaryFile",
         sol::no_constructor,
         "read",
-        [](BinaryFile& self, const sol::object& dims, sol::optional<bool> allow_nulls, sol::this_state s) {
+        [](BinaryFile& self, const sol::object& dims, const sol::object& allow_nulls, sol::this_state s) {
             sol::state_view lua(s);
-            auto data = self.read(lua_table_to_dim_map(dims, "read"), allow_nulls.value_or(false));
+            const auto coordinates = lua_table_to_dim_map(dims, "read");
+            const bool nulls = optional_from_lua<bool>(allow_nulls, "read", "allow_nulls", "a boolean").value_or(false);
+            auto data = self.read(coordinates, nulls);
             return to_lua_table(lua, data);
         },
         "write",
@@ -275,19 +277,16 @@ void bind_binary(sol::state& state, sol::usertype<Database>& bind, sol::table& n
         "metadata",
         [](Expression& self) -> BinaryMetadata { return self.metadata(); },
         "aggregate",
-        [](Expression& self, const std::string& dimension, const std::string& op, sol::optional<double> parameter) {
-            return self.aggregate(
-                dimension,
-                parse_aggregate_op(op, "aggregate"),
-                parameter ? std::optional<double>(*parameter) : std::nullopt
-            );
+        [](Expression& self, const std::string& dimension, const std::string& op, const sol::object& parameter) {
+            const auto operation = parse_aggregate_op(op, "aggregate");
+            const auto value = optional_from_lua<double>(parameter, "aggregate", "parameter", "a number");
+            return self.aggregate(dimension, operation, value);
         },
         "aggregate_agents",
-        [](Expression& self, const std::string& op, sol::optional<double> parameter) {
-            return self.aggregate_agents(
-                parse_aggregate_op(op, "aggregate_agents"),
-                parameter ? std::optional<double>(*parameter) : std::nullopt
-            );
+        [](Expression& self, const std::string& op, const sol::object& parameter) {
+            const auto operation = parse_aggregate_op(op, "aggregate_agents");
+            const auto value = optional_from_lua<double>(parameter, "aggregate_agents", "parameter", "a number");
+            return self.aggregate_agents(operation, value);
         },
         "select_agents",
         [](Expression& self, const sol::object& labels) {

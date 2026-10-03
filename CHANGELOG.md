@@ -24,6 +24,13 @@ callers to change something are prefixed **BREAKING** and say what to do.
   (options tables, `header`, `enum_labels`, `quiver.metadata` fields, `expr:rename_agents`,
   `w:write_row`) now end in `, got <type>` too. Pass a table, e.g. `{ column = { values... } }`
   for the group writers.
+- **BREAKING** **A wrong-typed optional Lua argument throws instead of being ignored.** The
+  `params` of `db:query_string` / `query_integer` / `query_float`, the metadata of
+  `db:open_file`, the `aggregate` flag of `db:bin_to_csv`, the `allow_nulls` flag of `file:read`
+  and the parameter of `expr:aggregate` / `expr:aggregate_agents` now raise `Cannot <op>: <argument>
+  must be <a table | a BinaryMetadata | a boolean | a number>, got <type>` for a value of the wrong
+  type, where they used to fall back to the default (`db:query_integer("SELECT 1", 5)` ran with no
+  parameters). Pass `nil` or omit the argument to get the default.
 
 ### Fixed
 

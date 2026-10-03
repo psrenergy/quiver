@@ -685,7 +685,8 @@ Implementation conventions in `src/lua_runner/`:
   userdata, and it sits in the decoder that first walks the argument. `lua_string_key` is the
   one check for a key that names something (an attribute, a column, a dimension) before it is
   converted; the older guarded key checks (`option_entries`, `collect_group_columns`,
-  `string_key`) keep their own pinned texts.
+  `string_key`) keep their own pinned texts. `optional_from_lua<T>` is the one optional-argument
+  decoder (see the optional-argument bullet below).
 - **Filesystem sandbox**: `resolve_sandboxed_path(db, operation, path)` is the single gate for
   every file-touching Lua operation (`db:open_file`, `db:bin_to_csv`, `db:csv_to_bin`,
   `db:export_csv`, `db:import_csv`, `db:validate_migrations`, `db:read_csv`, `db:read_csv_stream`,
@@ -719,11 +720,19 @@ Implementation conventions in `src/lua_runner/`:
   exists because the doc went stale two days after it was written: it said only
   `base`/`string`/`table` were loaded and "there is NO `math`", and #210 added
   `math`/`coroutine`/`utf8` here without touching it.
-- **A nullable argument whose absence *means* something takes `sol::object`, not
-  `sol::optional<T>`**: `sol::optional<T>` yields `nullopt` for a wrong type just as it does for
-  `nil`, so `db:update_relation(..., false)` silently cleared the relation.
-  `relation_target_from_lua(object, caller)` distinguishes the two — nil/missing clears,
-  a non-string throws `Cannot <caller>: target_label has unsupported Lua type`. Both
+- **Every optional argument takes `sol::object`, not `sol::optional<T>`, and goes through
+  `optional_from_lua<T>(object, operation, what, expected)`** (`internal.h`): `sol::optional<T>`
+  yields `nullopt` for a wrong type just as it does for `nil`, so a wrong-typed `aggregate` flag
+  or `params` table was silently ignored. `optional_from_lua` has `luaL_opt` semantics: nil or a
+  missing argument is absent, anything else must be a `T` or throws `Cannot <op>: <what> must be
+  <expected>, got <lua type>`. It backs the `query_*` params, `db:open_file`'s metadata (decoded
+  after `resolve_sandboxed_path`, so the order stays mode, path, metadata), `db:bin_to_csv`'s
+  aggregate, `file:read`'s allow_nulls and the `aggregate` / `aggregate_agents` parameter. Where
+  the decode sat inside one call's argument list, it is hoisted into locals in argument order, so
+  which bad argument wins no longer depends on the compiler. `relation_target_from_lua(object,
+  caller)` is the relation-specific case, with its own text: `db:update_relation(..., false)`
+  used to clear the relation silently; now nil/missing clears and a non-string throws
+  `Cannot <caller>: target_label has unsupported Lua type`. Both
   `db:update_relation(..., nil)` and omitting the argument clear; that affordance is sol2's and
   Lua-only (the FFI bindings all require the parameter and take their language's null).
 - `parse_csv_options(options, operation)` is the single strict CSVOptions decoder for

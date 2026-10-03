@@ -500,3 +500,41 @@ TEST_F(LuaBinaryTest, ReadRejectsNonStringDimensionName) {
         "Cannot read: dimension name must be a string, got number"
     );
 }
+
+// A wrong-typed optional argument used to be treated as absent. nil or a missing argument still is.
+TEST_F(LuaBinaryTest, OptionalArgumentsRejectWrongTypes) {
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(
+        lua,
+        "db:open_file('bin_a', 'w', {})\n",
+        "Cannot open_file: metadata must be a BinaryMetadata, got table"
+    );
+    expect_lua_error(
+        lua,
+        "db:open_file('bin_a', 'w', db)\n",
+        "Cannot open_file: metadata must be a BinaryMetadata, got userdata"
+    );
+    // The mode is checked first, then containment, then the metadata.
+    expect_lua_error(
+        lua,
+        "db:open_file('../x', 'w', {})\n",
+        "Cannot open_file: path '../x' escapes the database directory"
+    );
+    expect_lua_error(lua, "db:open_file('x', 'q', {})\n", R"(Cannot open_file: mode must be "r" or "w")");
+
+    expect_lua_error(lua, "db:bin_to_csv('x', 1)\n", "Cannot bin_to_csv: aggregate must be a boolean, got number");
+
+    lua.run(md1() + R"(
+        local f = db:open_file('bin_a', 'w', md)
+        f:write({42.0}, {row=1})
+        f:close()
+    )");
+    expect_lua_error(
+        lua,
+        "db:open_file('bin_a', 'r'):read({row=1}, 'yes')\n",
+        "Cannot read: allow_nulls must be a boolean, got string"
+    );
+    EXPECT_EQ(lua.run("return db:open_file('bin_a', 'r'):read({row=1}, nil)[1]"), "42");
+}

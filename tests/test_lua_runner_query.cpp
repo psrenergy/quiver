@@ -201,3 +201,20 @@ TEST_F(LuaRunnerTest, QueryTrailingNilParamIsACountMismatch) {
 
     expect_lua_error(lua, R"(db:query_integer("SELECT ? + ?", { 5, nil }))", "expected 2 bound parameter(s) but got 1");
 }
+
+// A wrong-typed params argument used to be ignored, so the query ran with no parameters.
+TEST_F(LuaRunnerTest, QueryRejectsWrongTypedParams) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    quiver::LuaRunner lua(db);
+
+    for (const std::string op : {"query_string", "query_integer", "query_float"}) {
+        expect_lua_error(lua, "db:" + op + "('SELECT 1', 5)", "Cannot " + op + ": params must be a table, got number");
+        expect_lua_error(
+            lua,
+            "db:" + op + "('SELECT 1', db)",
+            "Cannot " + op + ": params must be a table, got userdata"
+        );
+    }
+    EXPECT_EQ(lua.run("return db:query_integer('SELECT 1', nil)"), "1");
+    EXPECT_EQ(lua.run("return db:query_integer('SELECT ?', { 7 })"), "7");
+}

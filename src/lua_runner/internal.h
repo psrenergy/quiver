@@ -218,6 +218,29 @@ inline std::string lua_string_key(const sol::object& key, const std::string& ope
     return key.as<std::string>();
 }
 
+// An optional argument, with luaL_opt semantics: nil or a missing argument is absent, and any
+// other value must be a T (checked strictly: a boolean, a number, a BinaryMetadata, or a table
+// through require_table) or it is a type error naming `what`.
+template <typename T>
+std::optional<T> optional_from_lua(
+    const sol::object& o,
+    const std::string& operation,
+    const std::string& what,
+    const char* expected
+) {
+    if (!o.valid() || o.get_type() == sol::type::lua_nil) {
+        return std::nullopt;
+    }
+    if constexpr (std::is_same_v<T, sol::table>) {
+        return require_table(o, operation, what, expected);
+    } else {
+        if (auto value = o.as<sol::optional<T>>()) {
+            return std::move(*value);
+        }
+        throw lua_type_error(operation, what, expected, o);
+    }
+}
+
 // A nested option value that must be a table (an options table's `header`, the levels of
 // `enum_labels`); `what` names it in the message.
 inline sol::table option_table(const sol::object& value, const std::string& operation, const std::string& what) {

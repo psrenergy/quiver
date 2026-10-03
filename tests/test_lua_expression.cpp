@@ -531,3 +531,24 @@ TEST_F(LuaExpressionTest, SelectAndRenameAgentsRejectNonTable) {
         "Cannot rename_agents: mapping must be a table, got number"
     );
 }
+
+TEST_F(LuaExpressionTest, AggregateParameterRejectsWrongType) {
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+    lua.run(prelude() + "fill_by_row('expr_a')");
+    expect_lua_error(
+        lua,
+        "quiver.expression(db:open_file('expr_a', 'r')):aggregate('row', 'percentile', '0.5')",
+        "Cannot aggregate: parameter must be a number, got string"
+    );
+    expect_lua_error(
+        lua,
+        "quiver.expression(db:open_file('expr_a', 'r')):aggregate_agents('percentile', true)",
+        "Cannot aggregate_agents: parameter must be a number, got boolean"
+    );
+    lua.run(R"(
+        local agg = quiver.expression(db:open_file('expr_a', 'r')):aggregate_agents('mean', nil)
+        agg:save('expr_out')
+    )");
+    EXPECT_TRUE(fs::exists(sandbox / "expr_out.qvr"));
+}

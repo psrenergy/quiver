@@ -102,20 +102,19 @@ std::vector<Value> lua_table_to_values(const std::string& caller, const sol::tab
 
 // NOLINTBEGIN(performance-unnecessary-value-param) sol2 lambda bindings require pass-by-value for type
 // deduction
-std::optional<std::string> query_string_lua(
-    Database& db,
-    const std::string& sql,
-    sol::optional<sol::table> parameters
-) {
-    return db.query_string(sql, parameters ? lua_table_to_values("query_string", *parameters) : std::vector<Value>{});
+std::optional<std::string> query_string_lua(Database& db, const std::string& sql, const sol::object& parameters) {
+    const auto params = optional_from_lua<sol::table>(parameters, "query_string", "params", "a table");
+    return db.query_string(sql, params ? lua_table_to_values("query_string", *params) : std::vector<Value>{});
 }
 
-std::optional<int64_t> query_integer_lua(Database& db, const std::string& sql, sol::optional<sol::table> parameters) {
-    return db.query_integer(sql, parameters ? lua_table_to_values("query_integer", *parameters) : std::vector<Value>{});
+std::optional<int64_t> query_integer_lua(Database& db, const std::string& sql, const sol::object& parameters) {
+    const auto params = optional_from_lua<sol::table>(parameters, "query_integer", "params", "a table");
+    return db.query_integer(sql, params ? lua_table_to_values("query_integer", *params) : std::vector<Value>{});
 }
 
-std::optional<double> query_float_lua(Database& db, const std::string& sql, sol::optional<sol::table> parameters) {
-    return db.query_float(sql, parameters ? lua_table_to_values("query_float", *parameters) : std::vector<Value>{});
+std::optional<double> query_float_lua(Database& db, const std::string& sql, const sol::object& parameters) {
+    const auto params = optional_from_lua<sol::table>(parameters, "query_float", "params", "a table");
+    return db.query_float(sql, params ? lua_table_to_values("query_float", *params) : std::vector<Value>{});
 }
 
 }  // namespace
