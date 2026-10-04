@@ -10,6 +10,34 @@ folder of small per-domain files, each registering and implementing its own slic
 and its names in every layer stayed as they were, and the duplication and bugs the mapping found were
 fixed along the way, each with its own test and CHANGELOG line.
 
+## Current Milestone: lua-2 Abstract Expressions and Quiver File Layout
+
+**Goal:** A `BinaryFile` *is* an expression. Every expression operation takes one abstract expression type,
+which sol2 type-checks in Lua, and `src/lua_runner/` follows the quiver file pattern used by `src/` and `src/c/`.
+
+**Target features:**
+- C++: a new `quiver::AbstractExpression` (abstract; one pure virtual `node()`; the expression methods are
+  non-virtual members built on it). `Expression` (the concrete lazy-DAG value every operation returns) and
+  `BinaryFile` both derive from it. Every operator and free function takes `const AbstractExpression&` (plus
+  the `double` overloads); the friend block goes; `explicit Expression(const AbstractExpression&)` replaces
+  the implicit `Expression(const BinaryFile&)`. A file's `node()` is today's path-based leaf, so an expression
+  never touches the caller's handle.
+- One metadata accessor, `get_metadata`, on the abstract type (BREAKING: `Expression::metadata()` and Lua
+  `e:metadata()` are renamed).
+- Lua: typed `const AbstractExpression&` parameters checked by sol2 through bases (the zero-cost trait form if
+  the `f:read` benchmark shows the runtime `bases` tag costs too much); the 13 pinned Pattern 1 operand
+  messages are kept through sol2's documented fallback overload, which also reports
+  `Cannot <op>: too many arguments (expected N, got M)`; `to_expression`, `is_number` and the `sol::object`
+  operator plumbing are deleted; a file gains `aggregate`, `aggregate_agents`, `select_agents`,
+  `rename_agents` and `save`.
+- Julia: `abstract type AbstractExpression` with `Binary.File` and `Expression` as subtypes; the 97
+  forwarding methods collapse onto one conversion through the existing `quiver_expression_from_file`. No C API
+  source change.
+- Layout: `src/lua_runner/` mirrors the core. `database.cpp` (lifecycle, transactions, dry runs) plus
+  `database_{create,read,update,delete,describe,metadata,query,time_series,csv_export,csv_import}.cpp`, with
+  `csv.cpp` (mirrors `src/csv/`) and `binary.cpp` + `expression.cpp` (mirror `src/binary/` and
+  `src/expression/`). A pure move: no Lua name or error text changes.
+
 ## Core Value
 
 Every file in the Lua scripting layer is small and single-purpose enough for an agent to change
@@ -45,7 +73,11 @@ fixes listed below.
 
 ### Active
 
-(none: every milestone requirement is validated)
+- [ ] `AbstractExpression` is the one parameter type of every expression operation in C++, and `BinaryFile` and `Expression` derive from it.
+- [ ] In Lua, sol2 type-checks every expression operation's operands as `AbstractExpression`, the Pattern 1 operand messages stay byte-identical, and a file accepts every expression method.
+- [ ] The metadata accessor is `get_metadata` for files and expressions in every layer.
+- [ ] Julia's `Binary.File` and `Expression` are subtypes of one `AbstractExpression`, without the 97 forwarding methods.
+- [ ] `src/lua_runner/` file names and their split mirror the core's `database_*.cpp` pattern.
 
 ### Out of Scope
 
@@ -54,7 +86,10 @@ fixes listed below.
 - Moving the sol2-free half of the JSON encoder to `src/json/`: it waits for a second JSON consumer.
 - Lua whole-group readers, Lua boolean readers, and the binary/expression subsystems in Dart/Python/JS: these are documented design decisions.
 - Relocating `LUA_DB_API_REFERENCE` out of `lua-api.ts`: on the Do-Not-Fix list. Only its text changes.
-- New Lua features or new `db:` methods: this milestone restructures and fixes, it does not extend.
+- New `db:` methods: lua-2 adds none. (The v0.12.9 milestone added no Lua features at all; lua-2's only additions are the expression methods a file gains by becoming an expression.)
+- A C API change for the abstract type (a borrowed "file as expression" handle, or file-taking variants of each `quiver_expression_*`): C has no inheritance, a borrowed view would make `quiver_expression_t*` owned-or-borrowed by type, and Julia does not need it. `quiver_expression_from_file` stays the bridge.
+- Fixing Lua `==`/`<` between expressions always returning true (sol2's automatic `__eq`/`__lt` on the Expression-returning C++ operators): pre-existing and unchanged by lua-2; a separate decision (`sol::is_automagical` = false).
+- Renaming `Expression` to make it the abstract type: `AbstractExpression` + concrete `Expression` follows the Julia `AbstractArray`/`Array` convention and keeps every `Expression e = a + b;` call site.
 - Renaming `LuaRunner` to `quiver::Sandbox` in any layer: the class and header, the C API `quiver_lua_runner_*`, every binding's `LuaRunner` and file names, Dart's `LuaException`, `LuaSandboxTest` and the gtest suite names, `resolve_sandboxed_path` and the "sandboxed" wording, `tests/sandbox` / `quiver_sandbox`, and the closed/disposed/not-closed messages. The rename was dropped from this milestone by user decision (keep it simple) on 2026-10-02; see D-01 in `.planning/phases/01-behaviour-pins/01-CONTEXT.md`.
 
 ## Context
@@ -104,6 +139,10 @@ fixes listed below.
 | Delete the `SOL_SAFE_FUNCTION=1` define and its AGENTS.md claim (SAFE-06) | sol2 v3.5.0 never reads it (only `SOL_SAFE_FUNCTIONS`, `SOL_SAFE_FUNCTION_OBJECTS`, `SOL_SAFE_FUNCTION_CALLS`), so it is dead; `SOL_ALL_SAFETIES_ON` covers what it claimed. Chosen in REQUIREMENTS over the research default of keeping it with a corrected comment | ✓ Phase 4 |
 | Lua `load` accepts text chunks only (SAFE-07) | A bytecode chunk is a crash vector for an untrusted script; string-form `load` stays, so the root sandbox decision only gains "text chunks only". Adopted in REQUIREMENTS although research listed it as v2 | ✓ Phase 4. Extended to `run()`'s own script after code review found it still accepted bytecode |
 | Binding source, test and header files are renamed with the class (`quiverdb.sandbox` module path) | No-alias policy, and a `lua_runner` file name would keep the old meaning alive | Reverted 2026-10-02: user decision, dropped with the rename |
+| `AbstractExpression` (abstract parameter type) + `Expression` (concrete result) + `BinaryFile` (file leaf), not a Lua-only conversion | User directive (lua-2): "the only parameter of a binary op, unary op, etc should be an abstract type of an expression". An operation must return a value, so the input type is wider than the output type (Julia's AbstractArray/Array) | — Pending (lua-2) |
+| Pattern 1 operand errors kept under typed sol2 parameters via sol2's fallback overload | User choice (lua-2): sol2 does the type check; the fallback runs only after every typed candidate fails, so the 13 pinned messages and the root error-message rule hold | — Pending (lua-2) |
+| One metadata accessor `get_metadata` on files and expressions | User choice (lua-2): matches Julia and the C API; BREAKING rename of `Expression::metadata()` / `e:metadata()` | — Pending (lua-2) |
+| `src/lua_runner/` mirrors the core's `database_*.cpp` split (+ `csv`, `binary`, `expression`) | User request (lua-2): follow the quiver name pattern; the v0.12.9 `db_*` domain names cut across the core's create/read/update/delete/describe split | — Pending (lua-2) |
 
 ## Evolution
 
@@ -123,4 +162,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-03 after v0.12.9 milestone*
+*Last updated: 2026-10-04 at the start of milestone lua-2*

@@ -1,19 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.12.9
-milestone_name: milestone
-status: Awaiting next milestone
-stopped_at: Milestone v0.12.9 completed and archived
-last_updated: "2026-10-03T19:13:44.635Z"
-last_activity: 2026-10-03
-last_activity_desc: Milestone v0.12.9 completed and archived
+milestone: lua-2
+milestone_name: Abstract Expressions and Quiver File Layout
+status: planning
+last_updated: "2026-10-04T11:40:36.792Z"
+last_activity: 2026-10-04
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 17
-  completed_plans: 17
-current_phase: 5
-current_phase_name: Path-Policy Test and Docs
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -27,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-10-03)
 
 ## Current Position
 
-Phase: Milestone v0.12.9 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-10-03 — Milestone v0.12.9 completed and archived
+Status: Defining requirements
+Last activity: 2026-10-04 — Milestone lua-2 started
 
 ## Performance Metrics
 
