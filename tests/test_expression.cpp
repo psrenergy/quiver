@@ -11,7 +11,10 @@
 #include <filesystem>
 #include <fstream>
 #include <functional>
+#include <memory>
+#include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <vector>
 
@@ -118,6 +121,45 @@ protected:
         return out;
     }
 };
+
+namespace {
+
+// Wraps an Expression and records every node() call, to pin how often and in which order the
+// operators and methods evaluate their operands.
+class CountingExpression final : public AbstractExpression {
+public:
+    CountingExpression(Expression inner, std::string name, std::vector<std::string>& calls)
+        : inner_(std::move(inner)), name_(std::move(name)), calls_(calls) {}
+
+    std::shared_ptr<ExpressionNode> node() const override {
+        calls_.push_back(name_);
+        return inner_.node();
+    }
+
+private:
+    Expression inner_;
+    std::string name_;
+    std::vector<std::string>& calls_;
+};
+
+void expect_cells(const std::vector<double>& got, const std::vector<double>& want) {
+    ASSERT_EQ(got.size(), want.size());
+    for (size_t i = 0; i < got.size(); ++i) {
+        EXPECT_DOUBLE_EQ(got[i], want[i]) << " at index " << i;
+    }
+}
+
+void expect_save_collision(const std::function<void()>& save) {
+    try {
+        save();
+        FAIL() << "expected a collision error";
+    } catch (const std::runtime_error& e) {
+        EXPECT_NE(std::string(e.what()).find("Cannot save: output path collides with input file"), std::string::npos)
+            << e.what();
+    }
+}
+
+}  // namespace
 
 TEST_F(ExpressionFixture, IdentityFile) {
     auto md = make_simple_metadata();
@@ -2847,4 +2889,212 @@ TEST_F(ExpressionFixture, FileOperandsNeedNoWrapper) {
     for (size_t i = 0; i < copy.size(); ++i) {
         EXPECT_DOUBLE_EQ(copy[i], va[i]) << " at index " << i;
     }
+}
+
+TEST_F(ExpressionFixture, AbstractExpressionShape) {
+    static_assert(std::is_abstract_v<AbstractExpression>);
+    static_assert(std::has_virtual_destructor_v<AbstractExpression>);
+    static_assert(!std::is_copy_assignable_v<AbstractExpression>);
+    static_assert(!std::is_move_assignable_v<AbstractExpression>);
+    static_assert(std::is_base_of_v<AbstractExpression, BinaryFile>);
+    static_assert(std::is_base_of_v<AbstractExpression, Expression>);
+    static_assert(std::is_final_v<Expression>);
+    static_assert(std::is_constructible_v<Expression, const BinaryFile&>);
+    static_assert(!std::is_convertible_v<const BinaryFile&, Expression>);
+    static_assert(std::is_same_v<ExpressionAggregate::Operation, AggregateOperation>);
+    static_assert(std::is_same_v<ExpressionAggregateAgents::Operation, AggregateOperation>);
+}
+
+TEST_F(ExpressionFixture, FileMethodsNeedNoWrapper) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] + dims[1] - 2) + 0.5 * static_cast<double>(k);
+    });
+    // val1 equals a's val1; val2 never does.
+    write_qvr(path_b, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return k == 0 ? static_cast<double>(dims[0] + dims[1] - 2) : static_cast<double>(100 + dims[0] * 10 + dims[1]);
+    });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto b = BinaryFile::open_file(path_b, 'r');
+    auto va = read_all_cells(path_a);
+    auto vb = read_all_cells(path_b);
+
+    a.aggregate("col", AggregateOperation::Sum).save(path_out);
+    Expression(a).aggregate("col", AggregateOperation::Sum).save(path_out2);
+    expect_cells(read_all_cells(path_out), read_all_cells(path_out2));
+
+    a.aggregate_agents(AggregateOperation::Max).save(path_out);
+    Expression(a).aggregate_agents(AggregateOperation::Max).save(path_out2);
+    expect_cells(read_all_cells(path_out), read_all_cells(path_out2));
+
+    EXPECT_EQ(a.select_agents({"val1"}).get_metadata().labels, std::vector<std::string>({"val1"}));
+    EXPECT_EQ(a.rename_agents({{"val1", "x"}}).get_metadata().labels, std::vector<std::string>({"x", "val2"}));
+
+    (a - a).save(path_out);
+    expect_cells(read_all_cells(path_out), std::vector<double>(va.size(), 0.0));
+    (a == a).save(path_out);
+    expect_cells(read_all_cells(path_out), std::vector<double>(va.size(), 1.0));
+
+    (a == b).save(path_out);
+    std::vector<double> mask(va.size());
+    for (size_t i = 0; i < va.size(); ++i) {
+        mask[i] = va[i] == vb[i] ? 1.0 : 0.0;
+    }
+    expect_cells(read_all_cells(path_out), mask);
+
+    EXPECT_NO_THROW({ auto e = a - b; });
+    EXPECT_NO_THROW({ auto e = a * b; });
+    EXPECT_NO_THROW({ auto e = a / 2.0; });
+    EXPECT_NO_THROW({ auto e = a >= b; });
+    EXPECT_NO_THROW({ auto e = a <= 2.0; });
+    EXPECT_NO_THROW({ auto e = 2.0 < a; });
+    EXPECT_NO_THROW({ auto e = a != Expression(b); });
+    EXPECT_NO_THROW({ auto e = 2.0 == a; });
+    EXPECT_NO_THROW({ auto e = -a; });
+    EXPECT_NO_THROW({ auto e = !a; });
+    EXPECT_NO_THROW({ auto e = abs(a); });
+    EXPECT_NO_THROW({ auto e = sqrt(a); });
+    EXPECT_NO_THROW({ auto e = log(a); });
+    EXPECT_NO_THROW({ auto e = exp(a); });
+    EXPECT_NO_THROW({ auto e = a && b; });
+    EXPECT_NO_THROW({ auto e = a || 0.0; });
+}
+
+TEST_F(ExpressionFixture, FileStaysOpenAndReadableAfterSave) {
+    write_qvr(path_a, make_simple_metadata(), [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] * 10 + dims[1]) + static_cast<double>(k);
+    });
+    auto source = read_all_cells(path_a);
+    auto a = BinaryFile::open_file(path_a, 'r');
+    const std::unordered_map<std::string, int64_t> cell{{"row", 1}, {"col", 1}};
+    auto before = a.read(cell);
+
+    a.save(path_out);
+    EXPECT_TRUE(a.is_open());
+    EXPECT_EQ(a.read(cell), before);
+    a.save(path_out2);
+    EXPECT_TRUE(a.is_open());
+    EXPECT_EQ(a.read(cell), before);
+    expect_cells(read_all_cells(path_out), source);
+    expect_cells(read_all_cells(path_out2), source);
+
+    (a * 2.0).save(path_out);
+    EXPECT_TRUE(a.is_open());
+    EXPECT_EQ(a.read(cell), before);
+    std::vector<double> doubled(source.size());
+    for (size_t i = 0; i < source.size(); ++i) {
+        doubled[i] = 2.0 * source[i];
+    }
+    expect_cells(read_all_cells(path_out), doubled);
+
+    // Nothing is cached on the handle: every node() call builds a new leaf.
+    auto n1 = a.node();
+    auto n2 = a.node();
+    EXPECT_NE(n1.get(), n2.get());
+}
+
+TEST_F(ExpressionFixture, FailedSaveLeavesFileOpen) {
+    write_qvr(path_a, make_simple_metadata(), [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] * 10 + dims[1]) + static_cast<double>(k);
+    });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    const std::unordered_map<std::string, int64_t> cell{{"row", 1}, {"col", 1}};
+    auto before = a.read(cell);
+
+    expect_save_collision([&] { a.save(path_a); });
+    expect_save_collision([&] { (a + 1.0).save(path_a); });
+
+    EXPECT_TRUE(a.is_open());
+    EXPECT_EQ(a.read(cell), before);
+}
+
+TEST_F(ExpressionFixture, ExpressionOutlivesItsFile) {
+    write_qvr(path_a, make_simple_metadata(), [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] * 10 + dims[1]) + static_cast<double>(k);
+    });
+    Expression e = [&] {
+        auto a = BinaryFile::open_file(path_a, 'r');
+        Expression built(a);
+        a.close();
+        return built;
+    }();
+
+    e.save(path_out);
+    e.save(path_out2);
+    auto source = read_all_cells(path_a);
+    expect_cells(read_all_cells(path_out), source);
+    expect_cells(read_all_cells(path_out2), source);
+}
+
+TEST_F(ExpressionFixture, UnopenedFileIsAnOperand) {
+    write_qvr(path_a, make_simple_metadata(), [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] * 10 + dims[1]) + static_cast<double>(k);
+    });
+    BinaryFile f(path_a);
+
+    (f * 2.0).save(path_out);
+    auto source = read_all_cells(path_a);
+    std::vector<double> doubled(source.size());
+    for (size_t i = 0; i < source.size(); ++i) {
+        doubled[i] = 2.0 * source[i];
+    }
+    expect_cells(read_all_cells(path_out), doubled);
+    EXPECT_FALSE(f.is_open());
+    EXPECT_TRUE(f.get_metadata().labels.empty());
+}
+
+TEST_F(ExpressionFixture, GetMetadataReturnsHandleOrNodeMetadata) {
+    write_qvr(path_a, make_simple_metadata(), [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    const std::vector<std::string> labels{"val1", "val2"};
+
+    BinaryFile f(path_a);
+    const AbstractExpression& fe = f;
+    EXPECT_EQ(&fe.get_metadata(), &f.get_metadata());
+    EXPECT_TRUE(fe.get_metadata().labels.empty());
+    EXPECT_EQ(Expression(f).get_metadata().labels, labels);
+
+    auto a = BinaryFile::open_file(path_a, 'r');
+    const AbstractExpression& ae = a;
+    EXPECT_EQ(&ae.get_metadata(), &a.get_metadata());
+    EXPECT_EQ(ae.get_metadata().labels, labels);
+
+    Expression e(a);
+    EXPECT_EQ(&e.get_metadata(), &e.node()->metadata());
+}
+
+TEST_F(ExpressionFixture, NodeCalledOncePerOperandLeftToRight) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    write_qvr(path_b, md, [](const std::vector<int64_t>&, size_t) { return 2.0; });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto b = BinaryFile::open_file(path_b, 'r');
+
+    std::vector<std::string> calls;
+    CountingExpression x{Expression(a), "x", calls};
+    CountingExpression y{Expression(b), "y", calls};
+    CountingExpression c{Expression(a), "c", calls};
+    CountingExpression t{Expression(a), "t", calls};
+    CountingExpression e{Expression(a), "e", calls};
+    const std::vector<std::string> just_x{"x"};
+
+    auto expect_calls = [&](const std::function<void()>& action, const std::vector<std::string>& want) {
+        calls.clear();
+        action();
+        EXPECT_EQ(calls, want);
+    };
+
+    expect_calls([&] { (void)(x + 2.0); }, just_x);
+    expect_calls([&] { (void)(2.0 + x); }, just_x);
+    expect_calls([&] { (void)abs(x); }, just_x);
+    expect_calls([&] { (void)-x; }, just_x);
+    expect_calls([&] { (void)!x; }, just_x);
+    expect_calls([&] { x.save(path_out); }, just_x);
+    expect_calls([&] { (void)x.aggregate("col", AggregateOperation::Sum); }, just_x);
+    expect_calls([&] { (void)Expression(x); }, just_x);
+    expect_calls([&] { (void)x.get_metadata(); }, just_x);
+    expect_calls([&] { (void)(x + y); }, {"x", "y"});
+    expect_calls([&] { (void)(x == y); }, {"x", "y"});
+    expect_calls([&] { (void)(2.0 == x); }, just_x);
+    expect_calls([&] { (void)(x + x); }, {"x", "x"});
+    expect_calls([&] { (void)ifelse(c, t, e); }, {"c", "t", "e"});
 }
