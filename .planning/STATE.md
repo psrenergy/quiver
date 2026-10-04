@@ -5,15 +5,15 @@ milestone_name: Abstract Expressions and Quiver File Layout
 current_phase: 06
 current_phase_name: quiver-file-layout
 status: executing
-stopped_at: Completed 06-01-PLAN.md
-last_updated: "2026-10-04T16:15:07.167Z"
+stopped_at: Completed 06-02-PLAN.md
+last_updated: "2026-10-04T16:27:58.392Z"
 last_activity: 2026-10-04
 last_activity_desc: Roadmap created (Phases 6-9, 25/25 requirements mapped)
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -29,11 +29,11 @@ See: .planning/PROJECT.md (updated 2026-10-04)
 ## Current Position
 
 Phase: 06 (quiver-file-layout) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-10-04 — Phase 06 execution started
 
-Progress: [███░░░░░░░] 33%
+Progress: [███████░░░] 67%
 
 ## Performance Metrics
 
@@ -81,6 +81,7 @@ Progress: [███░░░░░░░] 33%
 | Phase 05 P03 | 15 min | 3 tasks | 6 files |
 | Phase 05 P04 | 35 min | 3 tasks | 11 files |
 | Phase 06 P01 | 20min | 3 tasks | 8 files |
+| Phase 06 P02 | 11min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -139,6 +140,7 @@ v0.12.9 decisions (history; phase artifacts in `milestones/v0.12.9-phases/`):
 - [Phase 05]: 05-04: the reference's sandbox-limits bullet gets no CHANGELOG entry (documents existing behaviour); pre-shape type errors documented in src/AGENTS.md, no message changed
 - [Phase 06]: 06-01: layout-check gate frozen at BASE 21ba6f8 (Lua* 477/12, sandbox 11, C API 27, names 86, surface 107, tidy pairs 14); tidy file regex is 'src.lua_runner.' (the bracketed one matches 0 files through uv)
 - [Phase 06]: 06-01: list_metadata_lua/get_metadata_lua live in internal.h after the metadata_to_lua declarations (GCC 14 clean); the overloads are named lua_internal functions in database_metadata.cpp
+- [Phase 06]: 06-02: carved files take no NOLINT pair; database_update.cpp keeps its moved pair; parse_csv_options is named in lua_internal, defined in database_csv_export.cpp
 
 ### Pending Todos
 
@@ -172,8 +174,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-10-04T16:15:07.131Z
-Stopped at: Completed 06-01-PLAN.md
+Last session: 2026-10-04T16:27:58.355Z
+Stopped at: Completed 06-02-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
