@@ -53,7 +53,7 @@ which sol2 type-checks in Lua, and `src/lua_runner/` follows the quiver file pat
 
 - [x] **Phase 6: Quiver File Layout** - `src/lua_runner/` binders mirror the core's `database_*.cpp` files plus `csv`, `binary` and `expression`, with zero behaviour change (completed 2026-10-04)
 - [x] **Phase 7: AbstractExpression in C++** - `AbstractExpression` is the one parameter type of every C++ expression operation; `Expression` and `BinaryFile` derive from it (completed 2026-10-04)
-- [ ] **Phase 8: Typed Expression Parameters in Lua** - sol2 type-checks every expression operand as `AbstractExpression`, the Pattern 1 texts hold, and files take every expression method
+- [x] **Phase 8: Typed Expression Parameters in Lua** - sol2 type-checks every expression operand as `AbstractExpression`, the Pattern 1 texts hold, and files take every expression method (completed 2026-10-04)
 - [ ] **Phase 9: Julia AbstractExpression and Docs** - Julia's `Binary.File` and `Expression` share one abstract type without the 97 forwarders; AGENTS.md and the CHANGELOG are finished
 
 ## Phase Details
@@ -166,5 +166,5 @@ Phases execute in numeric order: 6 → 7 → 8 → 9
 | 5. Path-Policy Test and Docs | v0.12.9 | 4/4 | Complete | 2026-10-03 |
 | 6. Quiver File Layout | lua-2 | 3/3 | Complete    | 2026-10-04 |
 | 7. AbstractExpression in C++ | lua-2 | 2/2 | Complete    | 2026-10-04 |
-| 8. Typed Expression Parameters in Lua | lua-2 | 2/2 | In Progress|  |
+| 8. Typed Expression Parameters in Lua | lua-2 | 2/2 | Complete    | 2026-10-04 |
 | 9. Julia AbstractExpression and Docs | lua-2 | 0/? | Not started | - |
