@@ -36,7 +36,7 @@ evidence, the layout mapping table, the judged designs and the compiled spike). 
 - [x] **LUA-03**: Extra arguments to a `quiver.*` expression function or binary operator raise `Cannot <op>: too many arguments (expected N, got M)`. BREAKING (they were silently ignored), tested, and in the CHANGELOG.
 - [x] **LUA-04**: A `BinaryFile` accepts `f:aggregate`, `f:aggregate_agents`, `f:select_agents`, `f:rename_agents`, `f:save` and `f:get_metadata` without `quiver.expression`. `f:save` keeps the sandbox, output-collision and write-registry guards, and the file stays open afterwards. Each method is tested on a raw file.
 - [x] **LUA-05**: `e:metadata()` becomes `e:get_metadata()` (BREAKING, CHANGELOG). `quiver.expression(x)` stays and returns a concrete `Expression`.
-- [ ] **LUA-06**: The base registration does not slow the binary hot path. A Release benchmark of 1M `f:read` and `f:write` calls (median of interleaved runs) is taken before and after; the compile-time traits form (`SOL_BASE_CLASSES`/`SOL_DERIVED_CLASSES`, in one shared `src/lua_runner/` header included by every TU that binds these types) is used if the runtime `sol::base_classes` tag costs measurably. The result is recorded.
+- [x] **LUA-06**: The base registration does not slow the binary hot path. A Release benchmark of 1M `f:read` and `f:write` calls (median of interleaved runs) is taken before and after; the compile-time traits form (`SOL_BASE_CLASSES`/`SOL_DERIVED_CLASSES`, in one shared `src/lua_runner/` header included by every TU that binds these types) is used if the runtime `sol::base_classes` tag costs measurably. The result is recorded.
 - [x] **LUA-07**: Release builds report no new compiler warnings from `src/lua_runner/` (the fallback's C4702 "unreachable code" is suppressed or avoided).
 - [x] **LUA-08**: `LUA_DB_API_REFERENCE` (`bindings/js/src/lua-api.ts`) documents files as expressions, the expression methods on files, `get_metadata`, and the arity rule. The lua-api sync test passes.
 
@@ -91,7 +91,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LUA-03 | Phase 8 | Complete |
 | LUA-04 | Phase 8 | Complete |
 | LUA-05 | Phase 8 | Complete |
-| LUA-06 | Phase 8 | Pending |
+| LUA-06 | Phase 8 | Complete |
 | LUA-07 | Phase 8 | Complete |
 | LUA-08 | Phase 8 | Complete |
 | JUL-01 | Phase 9 | Pending |

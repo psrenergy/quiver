@@ -125,7 +125,7 @@ Plans:
   4. A Release benchmark of 1M `f:read` and 1M `f:write` calls (median of interleaved runs) is taken at the end of Phase 7 and again after the change. The numbers and the form that landed (the runtime `sol::base_classes` tag, or the compile-time `SOL_BASE_CLASSES`/`SOL_DERIVED_CLASSES` traits in one shared `src/lua_runner/` header included by every TU that binds these types, used if the tag costs measurably) are recorded in the phase summary and the STATE.md PR notes. The Release build log for `src/lua_runner/` shows no `C4702` and no warning that the Phase 7 Release log did not have.
   5. `LUA_DB_API_REFERENCE` documents files as expressions, the expression methods on files, `get_metadata` and the arity rule, and `grep -n ':metadata()' bindings/js/src/lua-api.ts` returns nothing. The lua-api sync test passes. The new `Lua*` count (477 plus this phase's tests, equal in Debug and Release) and `LuaRunnerCApiTest` 27 are recorded, and all six suites are green.
 
-**Plans**: 1/2 plans executed (sequential, waves 1-2)
+**Plans**: 2/2 plans executed (sequential, waves 1-2)
 
 Plans:
 **Wave 1**
@@ -134,7 +134,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 08-02-PLAN.md — Release phase gate (Debug counts in Release, golden, no new warning or C4702 with the guard proven load-bearing, tidy), the interleaved benchmark of the runtime tag vs the traits vs the Phase 7 binaries, LUA-06's rule applied as written (traits stay only if the tag costs measurably, else swap to the tag and re-gate) with the numbers and form recorded, then Linux GCC/Clang (when Docker is up), the six suites and the final counts
+- [x] 08-02-PLAN.md — Release phase gate (Debug counts in Release, golden, no new warning or C4702 with the guard proven load-bearing, tidy), the interleaved benchmark of the runtime tag vs the traits vs the Phase 7 binaries, LUA-06's rule applied as written (traits stay only if the tag costs measurably, else swap to the tag and re-gate) with the numbers and form recorded, then Linux GCC/Clang (when Docker is up), the six suites and the final counts
 
 ### Phase 9: Julia AbstractExpression and Docs
 
@@ -166,5 +166,5 @@ Phases execute in numeric order: 6 → 7 → 8 → 9
 | 5. Path-Policy Test and Docs | v0.12.9 | 4/4 | Complete | 2026-10-03 |
 | 6. Quiver File Layout | lua-2 | 3/3 | Complete    | 2026-10-04 |
 | 7. AbstractExpression in C++ | lua-2 | 2/2 | Complete    | 2026-10-04 |
-| 8. Typed Expression Parameters in Lua | lua-2 | 1/2 | In Progress|  |
+| 8. Typed Expression Parameters in Lua | lua-2 | 2/2 | In Progress|  |
 | 9. Julia AbstractExpression and Docs | lua-2 | 0/? | Not started | - |
