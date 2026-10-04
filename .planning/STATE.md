@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: lua-2
 milestone_name: Abstract Expressions and Quiver File Layout
-current_phase: 8
-current_phase_name: Typed Expression Parameters in Lua
+current_phase: 08
+current_phase_name: typed-expression-parameters-in-lua
 status: executing
-stopped_at: Completed 07-02-PLAN.md
-last_updated: "2026-10-04T22:33:33.474Z"
+stopped_at: Completed 08-01-PLAN.md
+last_updated: "2026-10-04T22:56:28.366Z"
 last_activity: 2026-10-04
 last_activity_desc: Roadmap created (Phases 6-9, 25/25 requirements mapped)
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 7
-  completed_plans: 5
+  completed_plans: 6
   percent: 50
 ---
 
@@ -24,16 +24,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-04)
 
 **Core value:** Every file in the Lua scripting layer is small and single-purpose enough for an agent to change safely, and every existing script behaves exactly as before, apart from the deliberate, test-pinned fixes.
-**Current focus:** Phase 07 — AbstractExpression in C++
+**Current focus:** Phase 08 — typed-expression-parameters-in-lua
 
 ## Current Position
 
-Phase: 8 — Typed Expression Parameters in Lua
-Plan: Not started
+Phase: 08 (typed-expression-parameters-in-lua) — EXECUTING
+Plan: 2 of 2
 Status: Ready to execute
-Last activity: 2026-10-04 — Phase 07 complete, transitioned to Phase 8
+Last activity: 2026-10-04 — Phase 08 execution started
 
-Progress: [██████████] 100%
+Progress: [█████████░] 86%
 
 ## Performance Metrics
 
@@ -87,6 +87,7 @@ Progress: [██████████] 100%
 | Phase 06 P03 | 35min | 3 tasks | 9 files |
 | Phase 07 P01 | 35min | 3 tasks | 12 files |
 | Phase 07 P02 | 75min | 3 tasks | 1 files |
+| Phase 08 P01 | 17min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -152,6 +153,9 @@ v0.12.9 decisions (history; phase artifacts in `milestones/v0.12.9-phases/`):
 - [Phase 07]: 07-01: ROADMAP criterion 3 tested as ifelse(a > 1.0, a, b); no ifelse double overload added in any layer
 - [Phase 07]: 07-01: MSVC Debug accepts the base-parameter ==/!= overloads (no C2666); Windows Debug ExpressionFixture 125, quiver_tests 1463, Lua* 477, C API 543 at 8eb2897
 - [Phase ?]: Phase 8 baselines: f:write 1M 2174 ms, f:read 1M 2082 ms, 0 Release warnings in src/lua_runner (binaries in build/perf-phase7 at f2769c3)
+- [Phase 08]: 08-01: sol2 base via compile-time traits (SOL_BASE_CLASSES/SOL_DERIVED_CLASSES in internal.h); __index stays a table; 08-02 benchmarks the runtime tag against it
+- [Phase 08]: 08-01: operands typed const AbstractExpression& in sol::overload sets; one variadic operand_error fallback words operand / too-many-arguments; methods keep ignoring extra args
+- [Phase 08]: 08-01: Windows Debug LuaExpressionTest 41, Lua* 490/12, quiver_tests 1476, C API 543 at 9d250f2; golden baseline recaptured (surface delta only)
 
 ### Pending Todos
 
@@ -186,8 +190,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-10-04T20:48:58.909Z
-Stopped at: Completed 07-02-PLAN.md
+Last session: 2026-10-04T22:56:28.345Z
+Stopped at: Completed 08-01-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

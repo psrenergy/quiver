@@ -125,12 +125,12 @@ Plans:
   4. A Release benchmark of 1M `f:read` and 1M `f:write` calls (median of interleaved runs) is taken at the end of Phase 7 and again after the change. The numbers and the form that landed (the runtime `sol::base_classes` tag, or the compile-time `SOL_BASE_CLASSES`/`SOL_DERIVED_CLASSES` traits in one shared `src/lua_runner/` header included by every TU that binds these types, used if the tag costs measurably) are recorded in the phase summary and the STATE.md PR notes. The Release build log for `src/lua_runner/` shows no `C4702` and no warning that the Phase 7 Release log did not have.
   5. `LUA_DB_API_REFERENCE` documents files as expressions, the expression methods on files, `get_metadata` and the arity rule, and `grep -n ':metadata()' bindings/js/src/lua-api.ts` returns nothing. The lua-api sync test passes. The new `Lua*` count (477 plus this phase's tests, equal in Debug and Release) and `LuaRunnerCApiTest` 27 are recorded, and all six suites are green.
 
-**Plans**: 2 plans (sequential, waves 1-2)
+**Plans**: 1/2 plans executed (sequential, waves 1-2)
 
 Plans:
 **Wave 1**
 
-- [ ] 08-01-PLAN.md — Tracer: `build/typed-check` harness, then the compile-time base traits in `internal.h`, typed `sol::overload` operands with one `operand_error` fallback, and the six shared methods on files and expressions in one commit, proven by the 13 pinned texts, a raw-file method test and the golden surface delta; then 12 tests (every method on a raw file, save guards, arity, operand edges, table `__index`) with two mutation checks; CHANGELOG, `LUA_DB_API_REFERENCE` and the AGENTS.md lines made false
+- [x] 08-01-PLAN.md — Tracer: `build/typed-check` harness, then the compile-time base traits in `internal.h`, typed `sol::overload` operands with one `operand_error` fallback, and the six shared methods on files and expressions in one commit, proven by the 13 pinned texts, a raw-file method test and the golden surface delta; then 12 tests (every method on a raw file, save guards, arity, operand edges, table `__index`) with two mutation checks; CHANGELOG, `LUA_DB_API_REFERENCE` and the AGENTS.md lines made false
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -166,5 +166,5 @@ Phases execute in numeric order: 6 → 7 → 8 → 9
 | 5. Path-Policy Test and Docs | v0.12.9 | 4/4 | Complete | 2026-10-03 |
 | 6. Quiver File Layout | lua-2 | 3/3 | Complete    | 2026-10-04 |
 | 7. AbstractExpression in C++ | lua-2 | 2/2 | Complete    | 2026-10-04 |
-| 8. Typed Expression Parameters in Lua | lua-2 | 0/? | Not started | - |
+| 8. Typed Expression Parameters in Lua | lua-2 | 1/2 | In Progress|  |
 | 9. Julia AbstractExpression and Docs | lua-2 | 0/? | Not started | - |

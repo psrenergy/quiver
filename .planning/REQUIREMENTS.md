@@ -31,14 +31,14 @@ evidence, the layout mapping table, the judged designs and the compiled spike). 
 
 ### Typed AbstractExpression parameters in Lua
 
-- [ ] **LUA-01**: The `BinaryFile` and `Expression` usertypes register `AbstractExpression` as their base; `AbstractExpression` is not itself a registered usertype. Every `quiver.*` expression function (`expression`, `abs`, `sqrt`, `log`, `exp`, `ifelse`, `gt`, `lt`, `gte`, `lte`, `eq`, `neq`), every operator metamethod and every expression method takes `const AbstractExpression&`, so sol2 does the type check. `to_expression`, `is_number` and the `sol::object` `binop` are deleted.
-- [ ] **LUA-02**: A wrong-type operand raises byte-identical Pattern 1 text (`Cannot <op>: operand must be an expression or a binary file, got <lua type>`), produced by sol2's documented fallback overload, which runs only after every typed candidate fails. The 13 pinned expectations (`LuaExpressionTest.OperandErrorsNameTheOperation`, `OperandErrorsReportTheLeftmostBadOperand`) pass unmodified.
-- [ ] **LUA-03**: Extra arguments to a `quiver.*` expression function or binary operator raise `Cannot <op>: too many arguments (expected N, got M)`. BREAKING (they were silently ignored), tested, and in the CHANGELOG.
-- [ ] **LUA-04**: A `BinaryFile` accepts `f:aggregate`, `f:aggregate_agents`, `f:select_agents`, `f:rename_agents`, `f:save` and `f:get_metadata` without `quiver.expression`. `f:save` keeps the sandbox, output-collision and write-registry guards, and the file stays open afterwards. Each method is tested on a raw file.
-- [ ] **LUA-05**: `e:metadata()` becomes `e:get_metadata()` (BREAKING, CHANGELOG). `quiver.expression(x)` stays and returns a concrete `Expression`.
+- [x] **LUA-01**: The `BinaryFile` and `Expression` usertypes register `AbstractExpression` as their base; `AbstractExpression` is not itself a registered usertype. Every `quiver.*` expression function (`expression`, `abs`, `sqrt`, `log`, `exp`, `ifelse`, `gt`, `lt`, `gte`, `lte`, `eq`, `neq`), every operator metamethod and every expression method takes `const AbstractExpression&`, so sol2 does the type check. `to_expression`, `is_number` and the `sol::object` `binop` are deleted.
+- [x] **LUA-02**: A wrong-type operand raises byte-identical Pattern 1 text (`Cannot <op>: operand must be an expression or a binary file, got <lua type>`), produced by sol2's documented fallback overload, which runs only after every typed candidate fails. The 13 pinned expectations (`LuaExpressionTest.OperandErrorsNameTheOperation`, `OperandErrorsReportTheLeftmostBadOperand`) pass unmodified.
+- [x] **LUA-03**: Extra arguments to a `quiver.*` expression function or binary operator raise `Cannot <op>: too many arguments (expected N, got M)`. BREAKING (they were silently ignored), tested, and in the CHANGELOG.
+- [x] **LUA-04**: A `BinaryFile` accepts `f:aggregate`, `f:aggregate_agents`, `f:select_agents`, `f:rename_agents`, `f:save` and `f:get_metadata` without `quiver.expression`. `f:save` keeps the sandbox, output-collision and write-registry guards, and the file stays open afterwards. Each method is tested on a raw file.
+- [x] **LUA-05**: `e:metadata()` becomes `e:get_metadata()` (BREAKING, CHANGELOG). `quiver.expression(x)` stays and returns a concrete `Expression`.
 - [ ] **LUA-06**: The base registration does not slow the binary hot path. A Release benchmark of 1M `f:read` and `f:write` calls (median of interleaved runs) is taken before and after; the compile-time traits form (`SOL_BASE_CLASSES`/`SOL_DERIVED_CLASSES`, in one shared `src/lua_runner/` header included by every TU that binds these types) is used if the runtime `sol::base_classes` tag costs measurably. The result is recorded.
-- [ ] **LUA-07**: Release builds report no new compiler warnings from `src/lua_runner/` (the fallback's C4702 "unreachable code" is suppressed or avoided).
-- [ ] **LUA-08**: `LUA_DB_API_REFERENCE` (`bindings/js/src/lua-api.ts`) documents files as expressions, the expression methods on files, `get_metadata`, and the arity rule. The lua-api sync test passes.
+- [x] **LUA-07**: Release builds report no new compiler warnings from `src/lua_runner/` (the fallback's C4702 "unreachable code" is suppressed or avoided).
+- [x] **LUA-08**: `LUA_DB_API_REFERENCE` (`bindings/js/src/lua-api.ts`) documents files as expressions, the expression methods on files, `get_metadata`, and the arity rule. The lua-api sync test passes.
 
 ### Julia
 
@@ -86,14 +86,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EXPR-05 | Phase 7 | Complete |
 | EXPR-06 | Phase 7 | Complete |
 | EXPR-07 | Phase 7 | Complete |
-| LUA-01 | Phase 8 | Pending |
-| LUA-02 | Phase 8 | Pending |
-| LUA-03 | Phase 8 | Pending |
-| LUA-04 | Phase 8 | Pending |
-| LUA-05 | Phase 8 | Pending |
+| LUA-01 | Phase 8 | Complete |
+| LUA-02 | Phase 8 | Complete |
+| LUA-03 | Phase 8 | Complete |
+| LUA-04 | Phase 8 | Complete |
+| LUA-05 | Phase 8 | Complete |
 | LUA-06 | Phase 8 | Pending |
-| LUA-07 | Phase 8 | Pending |
-| LUA-08 | Phase 8 | Pending |
+| LUA-07 | Phase 8 | Complete |
+| LUA-08 | Phase 8 | Complete |
 | JUL-01 | Phase 9 | Pending |
 | JUL-02 | Phase 9 | Pending |
 | JUL-03 | Phase 9 | Pending |
