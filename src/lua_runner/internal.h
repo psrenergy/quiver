@@ -102,6 +102,28 @@ sol::table collection_read_lua(Database& db, const std::string& collection, sol:
     return to_lua_table(lua, (db.*Read)(collection));
 }
 
+sol::table metadata_to_lua(sol::state_view& lua, const ScalarMetadata& attribute);
+sol::table metadata_to_lua(sol::state_view& lua, const GroupMetadata& metadata);
+
+// list_scalar_attributes / list_{vector,set,time_series}_groups: one metadata table per entry.
+template <auto List>
+sol::table list_metadata_lua(Database& db, const std::string& collection, sol::this_state s) {
+    sol::state_view lua(s);
+    auto t = lua.create_table();
+    const auto items = (db.*List)(collection);
+    for (size_t i = 0; i < items.size(); ++i) {
+        t[i + 1] = metadata_to_lua(lua, items[i]);
+    }
+    return t;
+}
+
+// get_{scalar,vector,set,time_series}_metadata: the one named attribute or group.
+template <auto Get>
+sol::table get_metadata_lua(Database& db, const std::string& collection, const std::string& name, sol::this_state s) {
+    sol::state_view lua(s);
+    return metadata_to_lua(lua, (db.*Get)(collection, name));
+}
+
 // Every boolean test in src/lua_runner/ goes through this one predicate, so the rule lives in one
 // place rather than in a comment repeated at each site. The Value mapping itself lives in
 // lua_to_value (scalars, row upserts, query parameters, group cells, CSV cells) and lua_cell_as
