@@ -71,10 +71,10 @@ fixes listed below.
 - ✓ No planning-ID comment remains outside `.planning/` (the repo-wide gate went 256 → 0 lines). Each removed ID was replaced by its reason or the name of the test that pins it. — Phase 5 (v0.12.9)
 - ✓ Every AGENTS.md, `LUA_DB_API_REFERENCE` (the empty-array rule, plus what the sandbox does not limit: instructions, memory, wall time, globals across `run()`) and CHANGELOG `[0.13.0] — unreleased` match the finished milestone. All six suites, the sync test, Debug/Release and Linux GCC/Clang are green; the version is 0.13.0. — Phase 5 (v0.12.9)
 - ✓ `src/lua_runner/` file names and their split mirror the core: 19 files (`database.cpp`, the ten `database_*.cpp`, `csv.cpp`, `binary.cpp`, `expression.cpp`, plus the shell/helpers), 14 binders `bind_database` … `bind_expression` called in LAYOUT-02 order, every Lua name registered in the file named after the core file that implements it. A pure move: the same 86 names, golden output byte-identical in Debug and Release, `Lua*` 477 / C API 27, all six suites green, tidy at the 14-warning baseline, `git log --follow` intact for the renamed files. — Phase 6 (lua-2)
+- ✓ `AbstractExpression` (one pure virtual `node()`, non-virtual `save`/`aggregate*`/`select_agents`/`rename_agents`) is the one parameter type of every C++ expression operator and free function; `Expression final` and `BinaryFile` derive from it, a file's `node()` is a fresh path-based leaf so an expression never touches the caller's handle, `Expression(const AbstractExpression&)` is explicit and `metadata()` is `get_metadata()` in C++ (both BREAKING, CHANGELOG). No C API change. `quiver_tests` 1463, `ExpressionFixture` 125, `Lua*` 477 unchanged, C API 543; Windows Debug/Release and Linux GCC 13 / Clang 18 green. Phase 8 baselines: Release `src/lua_runner` warnings 0, 1M `f:write`/`f:read` medians 2174/2082 ms. — Phase 7 (lua-2)
 
 ### Active
 
-- [ ] `AbstractExpression` is the one parameter type of every expression operation in C++, and `BinaryFile` and `Expression` derive from it.
 - [ ] In Lua, sol2 type-checks every expression operation's operands as `AbstractExpression`, the Pattern 1 operand messages stay byte-identical, and a file accepts every expression method.
 - [ ] The metadata accessor is `get_metadata` for files and expressions in every layer.
 - [ ] Julia's `Binary.File` and `Expression` are subtypes of one `AbstractExpression`, without the 97 forwarding methods.
@@ -162,4 +162,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-04 after Phase 6 (Quiver File Layout) of milestone lua-2*
+*Last updated: 2026-10-04 after Phase 7 (AbstractExpression in C++) of milestone lua-2*
