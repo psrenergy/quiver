@@ -320,6 +320,8 @@ void bind_write(sol::usertype<Database>& bind);
 void bind_describe(sol::usertype<Database>& bind);
 void bind_metadata(sol::usertype<Database>& bind);
 void bind_time_series(sol::usertype<Database>& bind);
+void bind_csv_export(sol::usertype<Database>& bind);
+void bind_csv_import(sol::usertype<Database>& bind);
 void bind_csv(sol::state& state, sol::usertype<Database>& bind, RunHandles& handles);
 void bind_binary(sol::state& state, sol::usertype<Database>& bind, sol::table& ns, Database& db, RunHandles& handles);
 
@@ -332,6 +334,7 @@ std::vector<std::map<std::string, Value>> columns_to_cpp_rows(
     const std::vector<GroupColumn>& lua_columns,
     size_t row_count
 );
+CSVOptions parse_csv_options(const sol::object& options, const std::string& operation);
 
 }  // namespace lua_internal
 

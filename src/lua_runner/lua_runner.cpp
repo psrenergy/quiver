@@ -116,6 +116,8 @@ struct LuaRunner::Impl {
         lua_internal::bind_describe(bind);
         lua_internal::bind_metadata(bind);
         lua_internal::bind_time_series(bind);
+        lua_internal::bind_csv_export(bind);
+        lua_internal::bind_csv_import(bind);
         lua_internal::bind_csv(lua, bind, handles);
         lua_internal::bind_binary(lua, bind, ns, db, handles);
         lua["db"] = &db;
