@@ -21,12 +21,12 @@ evidence, the layout mapping table, the judged designs and the compiled spike). 
 
 ### AbstractExpression in C++
 
-- [ ] **EXPR-01**: `include/quiver/expression/abstract_expression.h` declares `class QUIVER_API AbstractExpression` with a public virtual destructor, protected copy and move operations (no slicing or assignment through a base reference), exactly one pure virtual `std::shared_ptr<ExpressionNode> node() const`, and non-virtual `save`, `aggregate`, `aggregate_agents`, `select_agents` and `rename_agents` built on `node()`. It can never be constructed on its own.
-- [ ] **EXPR-02**: `class Expression final : public AbstractExpression` keeps its `node_`; `class BinaryFile : public AbstractExpression` returns a fresh path-based `ExpressionFile` leaf from `node()` (today's `Expression(const BinaryFile&)` semantics), so an expression never opens, closes or references the caller's handle. `AbstractExpression::save` holds the root node in a local while it runs. Tests pin that a file stays open and readable after `save` from it, and that an expression survives closing and destroying its source file.
-- [ ] **EXPR-03**: Every operator (`+ - * /`, `> < >= <= == !=`, `&& || !`, unary `-`) and free function (`abs`, `sqrt`, `log`, `exp`, `ifelse`) takes `const AbstractExpression&` for every expression operand; the `double` overloads stay. The friend block in `expression.h` is deleted, and each operator calls `node()` once per operand.
-- [ ] **EXPR-04**: `explicit Expression(const AbstractExpression&)` replaces the implicit `Expression(const BinaryFile&)`. Copy-initialization `Expression e = file;` no longer compiles (BREAKING, CHANGELOG); direct-initialization call sites (C API, tests) compile unchanged.
-- [ ] **EXPR-05**: `get_metadata()` is the one metadata accessor on `AbstractExpression`. `Expression::metadata()` is renamed (BREAKING, CHANGELOG). A `BinaryFile`'s `get_metadata()` keeps returning the handle's in-memory metadata; an `Expression`'s returns its node's metadata.
-- [ ] **EXPR-06**: `ExpressionAggregate::Operation` moves to namespace scope as `quiver::AggregateOperation`, with `using Operation = AggregateOperation;` kept, so there is no header cycle. No C API header or signature changes and `bindings/julia/src/c_api.jl` is untouched; the only `src/c/` edit is the renamed `get_metadata()` call inside `quiver_expression_get_metadata` (follows from EXPR-05). The C++ and C API suites pass, and their new counts are recorded.
+- [x] **EXPR-01**: `include/quiver/expression/abstract_expression.h` declares `class QUIVER_API AbstractExpression` with a public virtual destructor, protected copy and move operations (no slicing or assignment through a base reference), exactly one pure virtual `std::shared_ptr<ExpressionNode> node() const`, and non-virtual `save`, `aggregate`, `aggregate_agents`, `select_agents` and `rename_agents` built on `node()`. It can never be constructed on its own.
+- [x] **EXPR-02**: `class Expression final : public AbstractExpression` keeps its `node_`; `class BinaryFile : public AbstractExpression` returns a fresh path-based `ExpressionFile` leaf from `node()` (today's `Expression(const BinaryFile&)` semantics), so an expression never opens, closes or references the caller's handle. `AbstractExpression::save` holds the root node in a local while it runs. Tests pin that a file stays open and readable after `save` from it, and that an expression survives closing and destroying its source file.
+- [x] **EXPR-03**: Every operator (`+ - * /`, `> < >= <= == !=`, `&& || !`, unary `-`) and free function (`abs`, `sqrt`, `log`, `exp`, `ifelse`) takes `const AbstractExpression&` for every expression operand; the `double` overloads stay. The friend block in `expression.h` is deleted, and each operator calls `node()` once per operand.
+- [x] **EXPR-04**: `explicit Expression(const AbstractExpression&)` replaces the implicit `Expression(const BinaryFile&)`. Copy-initialization `Expression e = file;` no longer compiles (BREAKING, CHANGELOG); direct-initialization call sites (C API, tests) compile unchanged.
+- [x] **EXPR-05**: `get_metadata()` is the one metadata accessor on `AbstractExpression`. `Expression::metadata()` is renamed (BREAKING, CHANGELOG). A `BinaryFile`'s `get_metadata()` keeps returning the handle's in-memory metadata; an `Expression`'s returns its node's metadata.
+- [x] **EXPR-06**: `ExpressionAggregate::Operation` moves to namespace scope as `quiver::AggregateOperation`, with `using Operation = AggregateOperation;` kept, so there is no header cycle. No C API header or signature changes and `bindings/julia/src/c_api.jl` is untouched; the only `src/c/` edit is the renamed `get_metadata()` call inside `quiver_expression_get_metadata` (follows from EXPR-05). The C++ and C API suites pass, and their new counts are recorded.
 - [ ] **EXPR-07**: Linux GCC 13 and Clang 18/libc++ (Docker) build and pass the C++, C API and Lua suites, including C++20 rewritten `==`/`!=` candidates with base-class parameters and the exported polymorphic base.
 
 ### Typed AbstractExpression parameters in Lua
@@ -79,12 +79,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LAYOUT-03 | Phase 6 | Complete |
 | LAYOUT-04 | Phase 6 | Complete |
 | LAYOUT-05 | Phase 6 | Complete |
-| EXPR-01 | Phase 7 | Pending |
-| EXPR-02 | Phase 7 | Pending |
-| EXPR-03 | Phase 7 | Pending |
-| EXPR-04 | Phase 7 | Pending |
-| EXPR-05 | Phase 7 | Pending |
-| EXPR-06 | Phase 7 | Pending |
+| EXPR-01 | Phase 7 | Complete |
+| EXPR-02 | Phase 7 | Complete |
+| EXPR-03 | Phase 7 | Complete |
+| EXPR-04 | Phase 7 | Complete |
+| EXPR-05 | Phase 7 | Complete |
+| EXPR-06 | Phase 7 | Complete |
 | EXPR-07 | Phase 7 | Pending |
 | LUA-01 | Phase 8 | Pending |
 | LUA-02 | Phase 8 | Pending |

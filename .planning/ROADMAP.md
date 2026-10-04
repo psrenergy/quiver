@@ -99,12 +99,12 @@ Plans:
   4. `git grep -n 'Expression::metadata' -- include src` returns nothing. Tests show `get_metadata()` on a `BinaryFile` returns the handle's in-memory metadata (the same value through a `const AbstractExpression&`), and on an `Expression` returns its node's metadata. `quiver::AggregateOperation` is at namespace scope, and `ExpressionAggregate` keeps `using Operation = AggregateOperation;`. No C API header or signature changes and `bindings/julia/src/c_api.jl` is untouched; the only `src/c/` edit is the renamed accessor call at `src/c/expression/expression.cpp:248`. CHANGELOG `[0.13.0] — unreleased` gains BREAKING lines for copy-initialization from a file (write `Expression e(file);`) and the rename (call `get_metadata()`).
   5. `ExpressionFixture` (116 plus the new tests), `ExpressionCApiFixture` 73 and full `quiver_c_tests` 543 pass, and the new `quiver_tests` count is recorded. `Lua*` stays 477 with no Lua expectation changed (Lua keeps `e:metadata()` until Phase 8). Windows Debug and Release pass, and the Linux GCC 13 and Clang 18/libc++ Docker builds compile and pass the C++, C API and Lua suites (`Lua*` 475 = 474 + 1 skip), including the C++20 rewritten `==`/`!=` candidates with base-class parameters and the exported polymorphic base (no missing vtable or typeinfo at link time).
 
-**Plans**: 2 plans (sequential, waves 1-2)
+**Plans**: 1/2 plans executed (sequential, waves 1-2)
 
 Plans:
 **Wave 1**
 
-- [ ] 07-01-PLAN.md — Tracer: `build/abstract-check` harness + `AbstractExpression` base with `Expression`/`BinaryFile` derived and base-parameter operators in one commit, proven by a no-wrapper test; then the shape/ownership/metadata/operand-order tests; CHANGELOG BREAKING lines and the `src/AGENTS.md` lines made false
+- [x] 07-01-PLAN.md — Tracer: `build/abstract-check` harness + `AbstractExpression` base with `Expression`/`BinaryFile` derived and base-parameter operators in one commit, proven by a no-wrapper test; then the shape/ownership/metadata/operand-order tests; CHANGELOG BREAKING lines and the `src/AGENTS.md` lines made false
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -156,6 +156,6 @@ Phases execute in numeric order: 6 → 7 → 8 → 9
 | 4. Fixes and Release Type Safety | v0.12.9 | 4/4 | Complete | 2026-10-03 |
 | 5. Path-Policy Test and Docs | v0.12.9 | 4/4 | Complete | 2026-10-03 |
 | 6. Quiver File Layout | lua-2 | 3/3 | Complete    | 2026-10-04 |
-| 7. AbstractExpression in C++ | lua-2 | 0/2 | Planned | - |
+| 7. AbstractExpression in C++ | lua-2 | 1/2 | In Progress|  |
 | 8. Typed Expression Parameters in Lua | lua-2 | 0/? | Not started | - |
 | 9. Julia AbstractExpression and Docs | lua-2 | 0/? | Not started | - |

@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: lua-2
 milestone_name: Abstract Expressions and Quiver File Layout
-current_phase: 7
+current_phase: 07
 current_phase_name: AbstractExpression in C++
 status: executing
-stopped_at: Completed 06-03-PLAN.md
-last_updated: "2026-10-04T18:58:34.792Z"
+stopped_at: Completed 07-01-PLAN.md
+last_updated: "2026-10-04T20:17:46.944Z"
 last_activity: 2026-10-04
 last_activity_desc: Roadmap created (Phases 6-9, 25/25 requirements mapped)
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 5
-  completed_plans: 3
+  completed_plans: 4
   percent: 25
 ---
 
@@ -24,16 +24,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-04)
 
 **Core value:** Every file in the Lua scripting layer is small and single-purpose enough for an agent to change safely, and every existing script behaves exactly as before, apart from the deliberate, test-pinned fixes.
-**Current focus:** Phase 06 — quiver-file-layout
+**Current focus:** Phase 07 — AbstractExpression in C++
 
 ## Current Position
 
-Phase: 7 — AbstractExpression in C++
-Plan: Not started
+Phase: 07 (AbstractExpression in C++) — EXECUTING
+Plan: 2 of 2
 Status: Ready to execute
-Last activity: 2026-10-04 — Phase 06 complete, transitioned to Phase 7
+Last activity: 2026-10-04 — Phase 07 execution started
 
-Progress: [██████████] 100%
+Progress: [████████░░] 80%
 
 ## Performance Metrics
 
@@ -84,6 +84,7 @@ Progress: [██████████] 100%
 | Phase 06 P01 | 20min | 3 tasks | 8 files |
 | Phase 06 P02 | 11min | 3 tasks | 10 files |
 | Phase 06 P03 | 35min | 3 tasks | 9 files |
+| Phase 07 P01 | 35min | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -145,6 +146,9 @@ v0.12.9 decisions (history; phase artifacts in `milestones/v0.12.9-phases/`):
 - [Phase 06]: 06-02: carved files take no NOLINT pair; database_update.cpp keeps its moved pair; parse_csv_options is named in lua_internal, defined in database_csv_export.cpp
 - [Phase 06]: 06-03: bind_binary returns the BinaryFile usertype for bind_expression; binary.cpp keeps expression.h (sol2 derives BinaryFile __lt/__le/__eq from the Expression operators)
 - [Phase 06]: 06-03: no CHANGELOG entry for the layout phase (golden, surface and all six suites unchanged)
+- [Phase 07]: 07-01: get_metadata() is virtual, not pure, on AbstractExpression (base body node()->metadata(), BinaryFile override returns the handle's copy); node() is the one pure virtual
+- [Phase 07]: 07-01: ROADMAP criterion 3 tested as ifelse(a > 1.0, a, b); no ifelse double overload added in any layer
+- [Phase 07]: 07-01: MSVC Debug accepts the base-parameter ==/!= overloads (no C2666); Windows Debug ExpressionFixture 125, quiver_tests 1463, Lua* 477, C API 543 at 8eb2897
 
 ### Pending Todos
 
@@ -178,8 +182,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-10-04T17:11:13.884Z
-Stopped at: Completed 06-03-PLAN.md
+Last session: 2026-10-04T20:17:46.927Z
+Stopped at: Completed 07-01-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
