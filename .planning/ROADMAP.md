@@ -71,7 +71,12 @@ which sol2 type-checks in Lua, and `src/lua_runner/` follows the quiver file pat
   4. Every new file whose functions take sol2 arguments by value has its own `NOLINTBEGIN/END(performance-unnecessary-value-param)` pair. clang-format 22.1.8 is clean on `src/lua_runner/`, and `scripts/tidy.bat` reports nothing beyond the 14-warning baseline. The files that keep most of their content (`db_read` → `database_read`, `db_metadata` → `database_metadata`, `db_time_series` → `database_time_series`) are moved with `git mv`, so `git log --follow` reaches their history.
   5. `git grep -nE 'db_core|db_read|db_write|db_metadata|db_time_series|bind_core|bind_write' -- ':!.planning'` goes from 24 lines at `da6f67b` to 0. The root and `src/` AGENTS.md list the new files, and the `lua-api.ts` maintainer header names `bind_database` through `bind_expression`.
 
-**Plans**: TBD
+**Plans**: 3 plans (sequential, waves 1-3)
+
+Plans:
+- [ ] 06-01-PLAN.md — Tracer: `build/layout-check` harness + base baselines, then `database_describe.cpp` end to end; rename-only `git mv` commit (read, metadata, time series); `number_of_elements` and the time-series metadata pair moved
+- [ ] 06-02-PLAN.md — Carve the core binder into `database.cpp`, `database_query.cpp`, `database_csv_export.cpp`, `database_csv_import.cpp`, and the write binder into `database_create.cpp`, `database_update.cpp` (git mv), `database_delete.cpp`
+- [ ] 06-03-PLAN.md — Split `binary.cpp` into `binary.cpp` + `expression.cpp` (`bind_binary` returns the BinaryFile usertype), update every citation (24 → 0), phase gate and six suites
 
 ### Phase 7: AbstractExpression in C++
 
@@ -132,7 +137,7 @@ Phases execute in numeric order: 6 → 7 → 8 → 9
 | 3. Dedupe | v0.12.9 | 3/3 | Complete | 2026-10-03 |
 | 4. Fixes and Release Type Safety | v0.12.9 | 4/4 | Complete | 2026-10-03 |
 | 5. Path-Policy Test and Docs | v0.12.9 | 4/4 | Complete | 2026-10-03 |
-| 6. Quiver File Layout | lua-2 | 0/? | Not started | - |
+| 6. Quiver File Layout | lua-2 | 0/3 | Planned | - |
 | 7. AbstractExpression in C++ | lua-2 | 0/? | Not started | - |
 | 8. Typed Expression Parameters in Lua | lua-2 | 0/? | Not started | - |
 | 9. Julia AbstractExpression and Docs | lua-2 | 0/? | Not started | - |
