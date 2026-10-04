@@ -27,7 +27,7 @@ evidence, the layout mapping table, the judged designs and the compiled spike). 
 - [x] **EXPR-04**: `explicit Expression(const AbstractExpression&)` replaces the implicit `Expression(const BinaryFile&)`. Copy-initialization `Expression e = file;` no longer compiles (BREAKING, CHANGELOG); direct-initialization call sites (C API, tests) compile unchanged.
 - [x] **EXPR-05**: `get_metadata()` is the one metadata accessor on `AbstractExpression`. `Expression::metadata()` is renamed (BREAKING, CHANGELOG). A `BinaryFile`'s `get_metadata()` keeps returning the handle's in-memory metadata; an `Expression`'s returns its node's metadata.
 - [x] **EXPR-06**: `ExpressionAggregate::Operation` moves to namespace scope as `quiver::AggregateOperation`, with `using Operation = AggregateOperation;` kept, so there is no header cycle. No C API header or signature changes and `bindings/julia/src/c_api.jl` is untouched; the only `src/c/` edit is the renamed `get_metadata()` call inside `quiver_expression_get_metadata` (follows from EXPR-05). The C++ and C API suites pass, and their new counts are recorded.
-- [ ] **EXPR-07**: Linux GCC 13 and Clang 18/libc++ (Docker) build and pass the C++, C API and Lua suites, including C++20 rewritten `==`/`!=` candidates with base-class parameters and the exported polymorphic base.
+- [x] **EXPR-07**: Linux GCC 13 and Clang 18/libc++ (Docker) build and pass the C++, C API and Lua suites, including C++20 rewritten `==`/`!=` candidates with base-class parameters and the exported polymorphic base.
 
 ### Typed AbstractExpression parameters in Lua
 
@@ -85,7 +85,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EXPR-04 | Phase 7 | Complete |
 | EXPR-05 | Phase 7 | Complete |
 | EXPR-06 | Phase 7 | Complete |
-| EXPR-07 | Phase 7 | Pending |
+| EXPR-07 | Phase 7 | Complete |
 | LUA-01 | Phase 8 | Pending |
 | LUA-02 | Phase 8 | Pending |
 | LUA-03 | Phase 8 | Pending |
