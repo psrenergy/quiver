@@ -326,7 +326,13 @@ void bind_time_series(sol::usertype<Database>& bind);
 void bind_csv_export(sol::usertype<Database>& bind);
 void bind_csv_import(sol::usertype<Database>& bind);
 void bind_csv(sol::state& state, sol::usertype<Database>& bind, RunHandles& handles);
-void bind_binary(sol::state& state, sol::usertype<Database>& bind, sol::table& ns, Database& db, RunHandles& handles);
+sol::usertype<BinaryFile> bind_binary(
+    sol::state& state,
+    sol::usertype<Database>& bind,
+    sol::table& ns,
+    RunHandles& handles
+);
+void bind_expression(sol::state& state, sol::table& ns, sol::usertype<BinaryFile>& binary_file_type, Database& db);
 
 std::string encode_return_json(const sol::object& value);
 

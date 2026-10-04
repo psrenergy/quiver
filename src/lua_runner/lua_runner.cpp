@@ -122,7 +122,8 @@ struct LuaRunner::Impl {
         lua_internal::bind_csv_export(bind);
         lua_internal::bind_csv_import(bind);
         lua_internal::bind_csv(lua, bind, handles);
-        lua_internal::bind_binary(lua, bind, ns, db, handles);
+        auto binary_file_type = lua_internal::bind_binary(lua, bind, ns, handles);
+        lua_internal::bind_expression(lua, ns, binary_file_type, db);
         lua["db"] = &db;
     }
 };

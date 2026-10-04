@@ -27,6 +27,7 @@ set(QUIVER_SOURCES
     lua_runner/database_read.cpp
     lua_runner/database_time_series.cpp
     lua_runner/database_update.cpp
+    lua_runner/expression.cpp
     lua_runner/internal.h
     lua_runner/lua_runner.cpp
     lua_runner/path_policy.cpp
