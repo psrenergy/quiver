@@ -2,13 +2,17 @@
 gsd_state_version: 1.0
 milestone: lua-2
 milestone_name: Abstract Expressions and Quiver File Layout
-status: planning
-last_updated: "2026-10-04T11:40:36.792Z"
+current_phase: 6
+current_phase_name: Quiver File Layout
+status: executing
+stopped_at: lua-2 roadmap created (Phases 6-9); awaiting approval
+last_updated: "2026-10-04T14:14:13.329Z"
 last_activity: 2026-10-04
+last_activity_desc: Roadmap created (Phases 6-9, 25/25 requirements mapped)
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 0
+  total_plans: 3
   completed_plans: 0
   percent: 0
 ---
@@ -26,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-04)
 
 Phase: 6 (Quiver File Layout), first of 4 in milestone lua-2 (Phases 6-9)
 Plan: — (not planned yet)
-Status: Ready to plan
+Status: Ready to execute
 Last activity: 2026-10-04 — Roadmap created (Phases 6-9, 25/25 requirements mapped)
 
 Progress: [░░░░░░░░░░] 0%
@@ -90,7 +94,6 @@ Recent decisions affecting current work:
 - [lua-2] Roadmap: Phase 7 keeps the Lua surface unchanged (`Lua*` 477, `e:metadata()` still bound); Phase 8 takes the `f:read`/`f:write` benchmark baseline at the end of Phase 7.
 
 v0.12.9 decisions (history; phase artifacts in `milestones/v0.12.9-phases/`):
-
 
 - Roadmap: strict order pins -> split -> dedupe -> fixes + Release type safety -> docs/path-policy test. One PR per phase into master, each green on its own. (The rename was dropped 2026-10-02.)
 - Roadmap: `SOL_ALL_SAFETIES_ON` + `SOL_PRINT_ERRORS=0` is the last commit of Phase 4, after the explicit `require_table`/`lua_string_key`/`optional_from_lua` checks. Perf budget 5% on a bulk read and `file:read`; if over, add `SOL_SAFE_GETTER=0`/`SOL_SAFE_STACK_CHECK=0`, never disable `SOL_SAFE_FUNCTION_CALLS`/`SOL_SAFE_USERTYPE`.

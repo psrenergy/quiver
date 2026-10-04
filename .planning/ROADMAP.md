@@ -74,8 +74,16 @@ which sol2 type-checks in Lua, and `src/lua_runner/` follows the quiver file pat
 **Plans**: 3 plans (sequential, waves 1-3)
 
 Plans:
+**Wave 1**
+
 - [ ] 06-01-PLAN.md — Tracer: `build/layout-check` harness + base baselines, then `database_describe.cpp` end to end; rename-only `git mv` commit (read, metadata, time series); `number_of_elements` and the time-series metadata pair moved
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 06-02-PLAN.md — Carve the core binder into `database.cpp`, `database_query.cpp`, `database_csv_export.cpp`, `database_csv_import.cpp`, and the write binder into `database_create.cpp`, `database_update.cpp` (git mv), `database_delete.cpp`
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 06-03-PLAN.md — Split `binary.cpp` into `binary.cpp` + `expression.cpp` (`bind_binary` returns the BinaryFile usertype), update every citation (24 → 0), phase gate and six suites
 
 ### Phase 7: AbstractExpression in C++
