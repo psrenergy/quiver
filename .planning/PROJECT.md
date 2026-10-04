@@ -72,11 +72,10 @@ fixes listed below.
 - ✓ Every AGENTS.md, `LUA_DB_API_REFERENCE` (the empty-array rule, plus what the sandbox does not limit: instructions, memory, wall time, globals across `run()`) and CHANGELOG `[0.13.0] — unreleased` match the finished milestone. All six suites, the sync test, Debug/Release and Linux GCC/Clang are green; the version is 0.13.0. — Phase 5 (v0.12.9)
 - ✓ `src/lua_runner/` file names and their split mirror the core: 19 files (`database.cpp`, the ten `database_*.cpp`, `csv.cpp`, `binary.cpp`, `expression.cpp`, plus the shell/helpers), 14 binders `bind_database` … `bind_expression` called in LAYOUT-02 order, every Lua name registered in the file named after the core file that implements it. A pure move: the same 86 names, golden output byte-identical in Debug and Release, `Lua*` 477 / C API 27, all six suites green, tidy at the 14-warning baseline, `git log --follow` intact for the renamed files. — Phase 6 (lua-2)
 - ✓ `AbstractExpression` (one pure virtual `node()`, non-virtual `save`/`aggregate*`/`select_agents`/`rename_agents`) is the one parameter type of every C++ expression operator and free function; `Expression final` and `BinaryFile` derive from it, a file's `node()` is a fresh path-based leaf so an expression never touches the caller's handle, `Expression(const AbstractExpression&)` is explicit and `metadata()` is `get_metadata()` in C++ (both BREAKING, CHANGELOG). No C API change. `quiver_tests` 1463, `ExpressionFixture` 125, `Lua*` 477 unchanged, C API 543; Windows Debug/Release and Linux GCC 13 / Clang 18 green. Phase 8 baselines: Release `src/lua_runner` warnings 0, 1M `f:write`/`f:read` medians 2174/2082 ms. — Phase 7 (lua-2)
+- ✓ In Lua a binary file is an expression: `BinaryFile` and `Expression` register `AbstractExpression` as their sol2 base through three compile-time traits in `src/lua_runner/internal.h`, every `quiver.*` function, operator metamethod and expression method takes `const AbstractExpression&`, and `to_expression`/`is_number` are gone. A trailing `sol::variadic_args` candidate keeps the 13 pinned Pattern 1 texts byte-identical and adds `Cannot <op>: too many arguments (expected N, got M)` (BREAKING). A file takes `aggregate`, `aggregate_agents`, `select_agents`, `rename_agents`, `save` and `get_metadata`; Lua `e:metadata()` is `get_metadata()` (BREAKING). Traits kept over the runtime `bases` tag by the pre-set benchmark rule (tag +2.3% on `f:read`, within run-to-run noise). `Lua*` 490, `LuaExpressionTest` 41, `quiver_tests` 1476, C API 543; Release C4702 0; Linux GCC 13 / Clang 18 and all six suites green. — Phase 8 (lua-2)
 
 ### Active
 
-- [ ] In Lua, sol2 type-checks every expression operation's operands as `AbstractExpression`, the Pattern 1 operand messages stay byte-identical, and a file accepts every expression method.
-- [ ] The metadata accessor is `get_metadata` for files and expressions in every layer.
 - [ ] Julia's `Binary.File` and `Expression` are subtypes of one `AbstractExpression`, without the 97 forwarding methods.
 
 ### Out of Scope
@@ -140,8 +139,8 @@ fixes listed below.
 | Lua `load` accepts text chunks only (SAFE-07) | A bytecode chunk is a crash vector for an untrusted script; string-form `load` stays, so the root sandbox decision only gains "text chunks only". Adopted in REQUIREMENTS although research listed it as v2 | ✓ Phase 4. Extended to `run()`'s own script after code review found it still accepted bytecode |
 | Binding source, test and header files are renamed with the class (`quiverdb.sandbox` module path) | No-alias policy, and a `lua_runner` file name would keep the old meaning alive | Reverted 2026-10-02: user decision, dropped with the rename |
 | `AbstractExpression` (abstract parameter type) + `Expression` (concrete result) + `BinaryFile` (file leaf), not a Lua-only conversion | User directive (lua-2): "the only parameter of a binary op, unary op, etc should be an abstract type of an expression". An operation must return a value, so the input type is wider than the output type (Julia's AbstractArray/Array) | — Pending (lua-2) |
-| Pattern 1 operand errors kept under typed sol2 parameters via sol2's fallback overload | User choice (lua-2): sol2 does the type check; the fallback runs only after every typed candidate fails, so the 13 pinned messages and the root error-message rule hold | — Pending (lua-2) |
-| One metadata accessor `get_metadata` on files and expressions | User choice (lua-2): matches Julia and the C API; BREAKING rename of `Expression::metadata()` / `e:metadata()` | — Pending (lua-2) |
+| Pattern 1 operand errors kept under typed sol2 parameters via sol2's fallback overload | User choice (lua-2): sol2 does the type check; the fallback runs only after every typed candidate fails, so the 13 pinned messages and the root error-message rule hold | ✓ Phase 8: pinned test bodies byte-identical to base; the fallback also owns the too-many-arguments text. Base registered by compile-time traits (runtime tag measured +2.3% on `f:read`) |
+| One metadata accessor `get_metadata` on files and expressions | User choice (lua-2): matches Julia and the C API; BREAKING rename of `Expression::metadata()` / `e:metadata()` | ✓ Phase 7 (C++) + Phase 8 (Lua; no alias kept) |
 | `src/lua_runner/` mirrors the core's `database_*.cpp` split (+ `csv`, `binary`, `expression`) | User request (lua-2): follow the quiver name pattern; the v0.12.9 `db_*` domain names cut across the core's create/read/update/delete/describe split | — Pending (lua-2) |
 
 ## Evolution
@@ -162,4 +161,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-04 after Phase 7 (AbstractExpression in C++) of milestone lua-2*
+*Last updated: 2026-10-04 after Phase 8 (Typed Expression Parameters in Lua) of milestone lua-2*
