@@ -6,7 +6,7 @@
 #include "quiver/database.h"
 #include "quiver/element.h"
 // Kept although nothing here names Expression: sol2 derives BinaryFile's automatic __lt/__le/__eq from the
-// Expression operators (through the implicit Expression(const BinaryFile&)) when the usertype is created.
+// expression operators, which take const AbstractExpression& (a base of BinaryFile), when the usertype is created.
 #include "quiver/expression/expression.h"
 #include "utils/datetime.h"
 

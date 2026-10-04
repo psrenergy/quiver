@@ -4,6 +4,7 @@
 #include "../binary/binary_file.h"
 #include "../binary/binary_metadata.h"
 #include "../export.h"
+#include "abstract_expression.h"
 
 #include <cstdint>
 #include <memory>
@@ -139,7 +140,7 @@ private:
 
 class QUIVER_API ExpressionAggregate final : public ExpressionNode {
 public:
-    enum class Operation { Sum, Mean, Min, Max, Percentile };
+    using Operation = AggregateOperation;
 
     ExpressionAggregate(
         Operation operation,

@@ -114,7 +114,7 @@ void bind_expression(sol::state& state, sol::table& ns, sol::usertype<BinaryFile
         "save",
         [&db](Expression& self, const std::string& path) { self.save(resolve_sandboxed_path(db, "save", path)); },
         "metadata",
-        [](Expression& self) -> BinaryMetadata { return self.metadata(); },
+        [](Expression& self) -> BinaryMetadata { return self.get_metadata(); },
         "aggregate",
         [](Expression& self, const std::string& dimension, const std::string& op, const sol::object& parameter) {
             const auto operation = parse_aggregate_op(op, "aggregate");
