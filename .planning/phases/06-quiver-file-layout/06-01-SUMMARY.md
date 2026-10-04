@@ -110,7 +110,7 @@ Novel lines (informational; added lines matching no removed line) at e0b4b1d: 10
 **2. Tracer feedback gate self-verified instead of returning a checkpoint**
 - auto_advance is false, but `human_verify_mode` is `end-of-phase`, the tracer's verify is fully automated, and the user's standing instruction is to self-verify gates. The tracer verify (gate.sh + golden release) was green on the exact committed tree before expansion.
 
-**3. Requirements left Pending.** `requirements.mark-complete` was run and reverted: LAYOUT-01..04 span all three plans (8 of 14 binder files, docs and the phase gate are still to come), so they are marked when 06-03 closes the phase.
+**3. Requirements left Pending.** `requirements.mark-complete` was run and reverted: LAYOUT-01..04 span all three plans (9 of the 14 binder files, the docs and the phase gate are still to come), so they are marked when 06-03 closes the phase.
 
 No source deviation: every move is verbatim, no test, baseline or pinned count changed, no GOLDEN_CHANGE/DEBUG_TEXT_CHANGE run.
 
