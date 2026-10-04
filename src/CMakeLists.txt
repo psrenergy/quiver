@@ -16,13 +16,14 @@ set(QUIVER_SOURCES
     element.cpp
     lua_runner/binary.cpp
     lua_runner/csv.cpp
+    lua_runner/database.cpp
     lua_runner/database_csv_export.cpp
     lua_runner/database_csv_import.cpp
     lua_runner/database_describe.cpp
     lua_runner/database_metadata.cpp
+    lua_runner/database_query.cpp
     lua_runner/database_read.cpp
     lua_runner/database_time_series.cpp
-    lua_runner/db_core.cpp
     lua_runner/db_write.cpp
     lua_runner/internal.h
     lua_runner/lua_runner.cpp

@@ -1,15 +1,12 @@
-#include "lua_runner/internal.h"
 #include "quiver/database.h"
-#include "quiver/value.h"
+
+#include "lua_runner/internal.h"
 
 #include <sol/sol.hpp>
 
-#include <cstdint>
-#include <optional>
 #include <stdexcept>
 #include <string>
 #include <utility>
-#include <vector>
 
 namespace quiver::lua_internal {
 
@@ -54,35 +51,9 @@ sol::object run_in_scope(
     return sol::make_object(result.lua_state(), sol::lua_nil);
 }
 
-std::vector<Value> lua_table_to_values(const std::string& caller, const sol::table& parameters) {
-    std::vector<Value> values;
-    for (size_t i = 1; i <= parameters.size(); ++i) {
-        // A skipped parameter would shift every later placeholder, so anything unsupported throws.
-        values.push_back(lua_to_value(parameters.get<sol::object>(i), caller, "parameter #" + std::to_string(i)));
-    }
-    return values;
-}
-
-// NOLINTBEGIN(performance-unnecessary-value-param) sol2 lambda bindings require pass-by-value for type
-// deduction
-std::optional<std::string> query_string_lua(Database& db, const std::string& sql, const sol::object& parameters) {
-    const auto params = optional_from_lua<sol::table>(parameters, "query_string", "params", "a table");
-    return db.query_string(sql, params ? lua_table_to_values("query_string", *params) : std::vector<Value>{});
-}
-
-std::optional<int64_t> query_integer_lua(Database& db, const std::string& sql, const sol::object& parameters) {
-    const auto params = optional_from_lua<sol::table>(parameters, "query_integer", "params", "a table");
-    return db.query_integer(sql, params ? lua_table_to_values("query_integer", *params) : std::vector<Value>{});
-}
-
-std::optional<double> query_float_lua(Database& db, const std::string& sql, const sol::object& parameters) {
-    const auto params = optional_from_lua<sol::table>(parameters, "query_float", "params", "a table");
-    return db.query_float(sql, params ? lua_table_to_values("query_float", *params) : std::vector<Value>{});
-}
-
 }  // namespace
 
-void bind_core(sol::usertype<Database>& bind) {
+void bind_database(sol::usertype<Database>& bind) {
     bind.set_function("is_healthy", &Database::is_healthy);
     bind.set_function("current_version", &Database::current_version);
     bind.set_function("path", &Database::path);
@@ -113,15 +84,11 @@ void bind_core(sol::usertype<Database>& bind) {
             &Database::end_dry_run
         );
     });
-    bind.set_function("query_string", &query_string_lua);
-    bind.set_function("query_integer", &query_integer_lua);
-    bind.set_function("query_float", &query_float_lua);
 
     // Migration round-trip validation — db-scoped and sandboxed like the file I/O in binary.cpp.
     bind.set_function("validate_migrations", [](Database& self, const std::string& path) {
         Database::validate_migrations(resolve_sandboxed_path(self, "validate_migrations", path));
     });
 }
-// NOLINTEND(performance-unnecessary-value-param)
 
 }  // namespace quiver::lua_internal
