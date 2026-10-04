@@ -134,7 +134,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 08-02-PLAN.md — Release phase gate (Debug counts in Release, golden, no new warning or C4702 with the guard proven load-bearing, tidy), the interleaved benchmark of the runtime tag vs the landed traits vs the Phase 7 binaries with the numbers recorded, then Linux GCC/Clang (when Docker is up), the six suites and the final counts
+- [ ] 08-02-PLAN.md — Release phase gate (Debug counts in Release, golden, no new warning or C4702 with the guard proven load-bearing, tidy), the interleaved benchmark of the runtime tag vs the traits vs the Phase 7 binaries, LUA-06's rule applied as written (traits stay only if the tag costs measurably, else swap to the tag and re-gate) with the numbers and form recorded, then Linux GCC/Clang (when Docker is up), the six suites and the final counts
 
 ### Phase 9: Julia AbstractExpression and Docs
 
