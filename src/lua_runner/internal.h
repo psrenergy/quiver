@@ -295,6 +295,7 @@ struct GroupColumn {
 void bind_core(sol::usertype<Database>& bind);
 void bind_read(sol::usertype<Database>& bind);
 void bind_write(sol::usertype<Database>& bind);
+void bind_describe(sol::usertype<Database>& bind);
 void bind_metadata(sol::usertype<Database>& bind);
 void bind_time_series(sol::usertype<Database>& bind);
 void bind_csv(sol::state& state, sol::usertype<Database>& bind, RunHandles& handles);

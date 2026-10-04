@@ -187,10 +187,6 @@ void bind_core(sol::usertype<Database>& bind) {
 
     bind.set_function("number_of_elements", &Database::number_of_elements);
 
-    bind.set_function("describe", &Database::describe);
-    bind.set_function("describe_collection", &Database::describe_collection);
-    bind.set_function("summarize_collection", &Database::summarize_collection);
-
     bind.set_function("query_string", &query_string_lua);
     bind.set_function("query_integer", &query_integer_lua);
     bind.set_function("query_float", &query_float_lua);

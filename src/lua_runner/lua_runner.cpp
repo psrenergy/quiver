@@ -113,6 +113,7 @@ struct LuaRunner::Impl {
         lua_internal::bind_core(bind);
         lua_internal::bind_read(bind);
         lua_internal::bind_write(bind);
+        lua_internal::bind_describe(bind);
         lua_internal::bind_metadata(bind);
         lua_internal::bind_time_series(bind);
         lua_internal::bind_csv(lua, bind, handles);
