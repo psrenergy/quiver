@@ -13,11 +13,11 @@ evidence, the layout mapping table, the judged designs and the compiled spike). 
 
 ### Quiver file layout (pure move)
 
-- [ ] **LAYOUT-01**: The binder files in `src/lua_runner/` are `database.cpp` + `database_{create,read,update,delete,describe,metadata,query,time_series,csv_export,csv_import}.cpp`, `csv.cpp`, `binary.cpp` and `expression.cpp`. Each Lua name lives in the file named after the core file that implements its C++ method (e.g. `number_of_elements` in `database_read.cpp`, `describe`/`describe_collection`/`summarize_collection` in `database_describe.cpp`, `get_time_series_metadata`/`list_time_series_groups` in `database_time_series.cpp`; lifecycle, transactions, dry runs and `validate_migrations` in `database.cpp`). `lua_runner.cpp`, `internal.h`, `return_json.cpp` and `path_policy.{h,cpp}` are unchanged. No file exceeds ~450 lines.
-- [ ] **LAYOUT-02**: Binder entry points are named after their files (`bind_database`, `bind_create`, `bind_read`, `bind_update`, `bind_delete`, `bind_describe`, `bind_metadata`, `bind_query`, `bind_time_series`, `bind_csv_export`, `bind_csv_import`, `bind_csv`, `bind_binary`, `bind_expression`) and are called in core order. `bind_binary` returns the `BinaryFile` usertype, which is passed to `bind_expression`. The constructor-order invariants hold (`open_libraries` → nil `dofile`/`loadfile` → text-only `load` wrapper → `quiver` table → one `new_usertype<Database>` → binders → `lua["db"] = &db`), and there is exactly one `new_usertype<Database>` in the folder.
-- [ ] **LAYOUT-03**: The move is behaviour-neutral: no Lua name, usertype name or error text changes. `Lua*` 477, `SandboxedPathTest` 11, `LuaRunnerCApiTest` 27, full `quiver_tests` 1454 and `quiver_c_tests` 543 pass, as do the Julia, Dart, Python and JS suites and the lua-api sync test. Debug and Release golden output is byte-identical to the base.
-- [ ] **LAYOUT-04**: New files are listed explicitly in `QUIVER_SOURCES` (same PRIVATE sol2 defines and target-wide `/bigobj`). Every file whose functions take sol2 arguments by value has its own `NOLINTBEGIN/END(performance-unnecessary-value-param)` pair. clang-format 22.1.8 is clean, and `scripts/tidy.bat` reports nothing beyond the 14-warning baseline. Rename-only files use `git mv`.
-- [ ] **LAYOUT-05**: Every citation of the old file and binder names is updated (root and `src/` AGENTS.md, the `lua-api.ts` maintainer header, test comments, cmake, the Dart hook comment if any), re-derived with `git grep`. `git grep -nE 'db_core|db_read|db_write|db_metadata|db_time_series|bind_core|bind_write'` outside `.planning/` returns nothing.
+- [x] **LAYOUT-01**: The binder files in `src/lua_runner/` are `database.cpp` + `database_{create,read,update,delete,describe,metadata,query,time_series,csv_export,csv_import}.cpp`, `csv.cpp`, `binary.cpp` and `expression.cpp`. Each Lua name lives in the file named after the core file that implements its C++ method (e.g. `number_of_elements` in `database_read.cpp`, `describe`/`describe_collection`/`summarize_collection` in `database_describe.cpp`, `get_time_series_metadata`/`list_time_series_groups` in `database_time_series.cpp`; lifecycle, transactions, dry runs and `validate_migrations` in `database.cpp`). `lua_runner.cpp`, `internal.h`, `return_json.cpp` and `path_policy.{h,cpp}` are unchanged. No file exceeds ~450 lines.
+- [x] **LAYOUT-02**: Binder entry points are named after their files (`bind_database`, `bind_create`, `bind_read`, `bind_update`, `bind_delete`, `bind_describe`, `bind_metadata`, `bind_query`, `bind_time_series`, `bind_csv_export`, `bind_csv_import`, `bind_csv`, `bind_binary`, `bind_expression`) and are called in core order. `bind_binary` returns the `BinaryFile` usertype, which is passed to `bind_expression`. The constructor-order invariants hold (`open_libraries` → nil `dofile`/`loadfile` → text-only `load` wrapper → `quiver` table → one `new_usertype<Database>` → binders → `lua["db"] = &db`), and there is exactly one `new_usertype<Database>` in the folder.
+- [x] **LAYOUT-03**: The move is behaviour-neutral: no Lua name, usertype name or error text changes. `Lua*` 477, `SandboxedPathTest` 11, `LuaRunnerCApiTest` 27, full `quiver_tests` 1454 and `quiver_c_tests` 543 pass, as do the Julia, Dart, Python and JS suites and the lua-api sync test. Debug and Release golden output is byte-identical to the base.
+- [x] **LAYOUT-04**: New files are listed explicitly in `QUIVER_SOURCES` (same PRIVATE sol2 defines and target-wide `/bigobj`). Every file whose functions take sol2 arguments by value has its own `NOLINTBEGIN/END(performance-unnecessary-value-param)` pair. clang-format 22.1.8 is clean, and `scripts/tidy.bat` reports nothing beyond the 14-warning baseline. Rename-only files use `git mv`.
+- [x] **LAYOUT-05**: Every citation of the old file and binder names is updated (root and `src/` AGENTS.md, the `lua-api.ts` maintainer header, test comments, cmake, the Dart hook comment if any), re-derived with `git grep`. `git grep -nE 'db_core|db_read|db_write|db_metadata|db_time_series|bind_core|bind_write'` outside `.planning/` returns nothing.
 
 ### AbstractExpression in C++
 
@@ -74,11 +74,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LAYOUT-01 | Phase 6 | Pending |
-| LAYOUT-02 | Phase 6 | Pending |
-| LAYOUT-03 | Phase 6 | Pending |
-| LAYOUT-04 | Phase 6 | Pending |
-| LAYOUT-05 | Phase 6 | Pending |
+| LAYOUT-01 | Phase 6 | Complete |
+| LAYOUT-02 | Phase 6 | Complete |
+| LAYOUT-03 | Phase 6 | Complete |
+| LAYOUT-04 | Phase 6 | Complete |
+| LAYOUT-05 | Phase 6 | Complete |
 | EXPR-01 | Phase 7 | Pending |
 | EXPR-02 | Phase 7 | Pending |
 | EXPR-03 | Phase 7 | Pending |
@@ -101,6 +101,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DOC-02 | Phase 9 | Pending |
 
 **Coverage:**
+
 - v1 requirements: 25 total
 - Mapped to phases: 25
 - Unmapped: 0 ✓
