@@ -874,7 +874,11 @@ Implementation conventions in `src/lua_runner/`:
   every call). `expression.cpp` wraps its includes in an MSVC-only `#pragma warning(push)` /
   `disable : 4702` / `pop`: the always-throwing fallback candidates make MSVC Release report C4702
   inside sol2, and the warning state at each template's definition decides; do not mark
-  `operand_error` as never-returning, which brings the warnings back.
+  `operand_error` as never-returning, which brings the warnings back. Measured in Release MSVC
+  (medians of five interleaved runs of 1M calls each, against the code before this change):
+  `f:write` 2490 ms before, 2538 ms with the runtime tag (+1.9%), 2525 ms with the traits (+1.4%);
+  `f:read` 2390 / 2446 (+2.3%) / 2168 ms (-9.3%). The tag cost +2% or more on one workload, so the
+  traits stay, though single runs spread far wider (1838-3497 ms) than either margin.
 - **`SOL_NO_NIL=1` (`src/CMakeLists.txt`) is a portability guard, not a preference.** sol2 does not
   define `sol::nil` on Apple platforms at all: `version.hpp` turns `SOL_NIL` off whenever
   `__MAC_OS_X_VERSION_MAX_ALLOWED`, `__OBJC__` or a `nil` macro is visible, because Objective-C
