@@ -60,6 +60,15 @@ callers to change something are prefixed **BREAKING** and say what to do.
   of undefined behaviour. Debug builds no longer print `[sol2] An exception occurred: ...` to the
   host's stderr for an error a script raises through a binding. Call methods with `:` and pass the
   documented types.
+- **BREAKING** **C++: `Expression` is no longer implicitly constructed from a `BinaryFile`.** A
+  `BinaryFile` is now an expression itself (both derive from `quiver::AbstractExpression`), so every
+  operator, `abs`/`sqrt`/`log`/`exp`, `ifelse`, `save`, `aggregate`, `aggregate_agents`,
+  `select_agents` and `rename_agents` take a file directly: `file_a + file_b`, `2.0 * file` and
+  `file.save(path)` need no wrapper. `aggregate` and `aggregate_agents` take
+  `quiver::AggregateOperation`; `ExpressionAggregate::Operation` remains an alias of it.
+  `Expression e = file;` no longer compiles; write `Expression e(file);`.
+- **BREAKING** **C++: `Expression::metadata()` is renamed `get_metadata()`**, the name `BinaryFile`
+  and the C API already use. Call `get_metadata()`.
 
 ### Fixed
 
