@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: lua-2
 milestone_name: Abstract Expressions and Quiver File Layout
-current_phase: 6
-current_phase_name: Quiver File Layout
+current_phase: 06
+current_phase_name: quiver-file-layout
 status: executing
-stopped_at: lua-2 roadmap created (Phases 6-9); awaiting approval
-last_updated: "2026-10-04T14:14:13.329Z"
+stopped_at: Completed 06-01-PLAN.md
+last_updated: "2026-10-04T16:15:07.167Z"
 last_activity: 2026-10-04
 last_activity_desc: Roadmap created (Phases 6-9, 25/25 requirements mapped)
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 3
-  completed_plans: 0
+  completed_plans: 1
   percent: 0
 ---
 
@@ -24,16 +24,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-04)
 
 **Core value:** Every file in the Lua scripting layer is small and single-purpose enough for an agent to change safely, and every existing script behaves exactly as before, apart from the deliberate, test-pinned fixes.
-**Current focus:** Phase 6 — Quiver File Layout (milestone lua-2, Phases 6-9)
+**Current focus:** Phase 06 — quiver-file-layout
 
 ## Current Position
 
-Phase: 6 (Quiver File Layout), first of 4 in milestone lua-2 (Phases 6-9)
-Plan: — (not planned yet)
+Phase: 06 (quiver-file-layout) — EXECUTING
+Plan: 2 of 3
 Status: Ready to execute
-Last activity: 2026-10-04 — Roadmap created (Phases 6-9, 25/25 requirements mapped)
+Last activity: 2026-10-04 — Phase 06 execution started
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [███░░░░░░░] 33%
 
 ## Performance Metrics
 
@@ -80,6 +80,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 05 P02 | 25 min | 3 tasks | 13 files |
 | Phase 05 P03 | 15 min | 3 tasks | 6 files |
 | Phase 05 P04 | 35 min | 3 tasks | 11 files |
+| Phase 06 P01 | 20min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -136,6 +137,8 @@ v0.12.9 decisions (history; phase artifacts in `milestones/v0.12.9-phases/`):
 - [Phase 05]: 05-02: catalogue entries name their pinning test on a 'pinned by Suite.Test' line; the collect_garbage() note cites no test because close_open_handles() runs first
 - [Phase 05]: 05-03: WRITE-06 is spelled 'the close-at-exit flush' and FMT-02 'the lone-empty-cell quoting' in test comments; DOC-01 closed (ids.sh IDS=0 FILES=0, RESIDUAL=44 = 19 diagnostic sites + 1 trailing comment)
 - [Phase 05]: 05-04: the reference's sandbox-limits bullet gets no CHANGELOG entry (documents existing behaviour); pre-shape type errors documented in src/AGENTS.md, no message changed
+- [Phase 06]: 06-01: layout-check gate frozen at BASE 21ba6f8 (Lua* 477/12, sandbox 11, C API 27, names 86, surface 107, tidy pairs 14); tidy file regex is 'src.lua_runner.' (the bracketed one matches 0 files through uv)
+- [Phase 06]: 06-01: list_metadata_lua/get_metadata_lua live in internal.h after the metadata_to_lua declarations (GCC 14 clean); the overloads are named lua_internal functions in database_metadata.cpp
 
 ### Pending Todos
 
@@ -169,8 +172,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-10-04
-Stopped at: lua-2 roadmap created (Phases 6-9); awaiting approval
+Last session: 2026-10-04T16:15:07.131Z
+Stopped at: Completed 06-01-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
