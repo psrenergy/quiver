@@ -161,6 +161,7 @@ Open for lua-2 (settle before or during the named phase's planning):
 - [Phase 7] Resolved: EXPR-06 now reads "no C API header, signature or `c_api.jl` change; the renamed `get_metadata()` call inside `quiver_expression_get_metadata` is the only `src/c/` edit" (follows from EXPR-05).
 - [Phase 7] Resolved: no `==` flip. `f == g` between two files is already true today (quiver_cli at `da6f67b`, Debug and Release), via the implicit conversion and sol2's automatic `__eq`; the design keeps it; EQ-01 covers files and expressions.
 - [Phase 9] Julia generic placement: `Binary.get_metadata(::File)` vs a shared `Quiver.get_metadata`.
+- [lua-2] PR notes, Phase 8 baselines (end of Phase 7, `f2769c3`, Release MSVC 14.51.36231): `f:write` 1M median 2174 ms and `f:read` 1M median 2082 ms (five interleaved runs after one warm-up, `build/abstract-check/perf/runs.txt`, binaries in `build/perf-phase7/` with `SHA256SUMS`; rerun with `bench.sh phase7=build/perf-phase7/quiver_cli.exe phase8=build/release/bin/quiver_cli.exe`); Release warnings while compiling the `src/lua_runner` TUs: 0 (C4702: 0), list in `build/abstract-check/release-warnings.txt`, rerun with `release_warnings.sh` and diff.
 
 Carried from v0.12.9:
 
