@@ -111,8 +111,10 @@ struct LuaRunner::Impl {
         // The only Database usertype: registering it again would clear every method bound before.
         auto bind = lua.new_usertype<Database>("Database");
         lua_internal::bind_database(bind);
+        lua_internal::bind_create(bind);
         lua_internal::bind_read(bind);
-        lua_internal::bind_write(bind);
+        lua_internal::bind_update(bind);
+        lua_internal::bind_delete(bind);
         lua_internal::bind_describe(bind);
         lua_internal::bind_metadata(bind);
         lua_internal::bind_query(bind);

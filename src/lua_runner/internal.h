@@ -315,8 +315,10 @@ struct GroupColumn {
 };
 
 void bind_database(sol::usertype<Database>& bind);
+void bind_create(sol::usertype<Database>& bind);
 void bind_read(sol::usertype<Database>& bind);
-void bind_write(sol::usertype<Database>& bind);
+void bind_update(sol::usertype<Database>& bind);
+void bind_delete(sol::usertype<Database>& bind);
 void bind_describe(sol::usertype<Database>& bind);
 void bind_metadata(sol::usertype<Database>& bind);
 void bind_query(sol::usertype<Database>& bind);
