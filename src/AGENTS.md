@@ -63,7 +63,7 @@ src/                      # C++ implementation
     database_csv_import.cpp  # bind_csv_import: import_csv
     csv.cpp               # bind_csv: read_csv, read_csv_stream, write_csv, CsvWriter
     binary.cpp            # bind_binary: open_file/bin_to_csv/csv_to_bin, BinaryMetadata, BinaryFile, quiver.metadata*
-    expression.cpp        # bind_expression: Expression, operators on Expression and BinaryFile, quiver.* expression functions
+    expression.cpp        # bind_expression: Expression, the operators and expression methods on Expression and BinaryFile, quiver.* expression functions
   ui_metadata.h / ui_metadata.cpp  # Internal ui/ TOML sidecar reader behind describe/describe_collection
                                 # -- same no-include/quiver/-counterpart posture as csv_read
   cli/main.cpp            # quiver_cli CLI entry point
@@ -665,7 +665,10 @@ Implementation conventions in `src/lua_runner/`:
   namespace nested in `quiver::lua_internal`. A type registered as a usertype stays in the named
   namespace, because sol2 keys usertypes by demangled name and that drops anonymous namespaces.
   `bind_binary` returns the `BinaryFile` usertype and the constructor hands it to `bind_expression`,
-  which registers the expression operators on it. `binary.cpp` keeps its
+  which registers the expression operators and the six expression methods on it, through the
+  usertype indexer rather than `set_function`; the method names are listed once, in the
+  `Expression` usertype, which is where the sync test's second pass reads them (a comment naming
+  that usertype call reopens it for the parser and empties its method list). `binary.cpp` keeps its
   `quiver/expression/expression.h` include although it names no `Expression`, because sol2 derives
   BinaryFile's automatic `__lt`/`__le`/`__eq` from the expression operators, which take
   `const AbstractExpression&` (a base of BinaryFile), when the usertype is created, so removing it changes `f < g` and `f == g` in scripts while every test stays green.
@@ -694,11 +697,22 @@ Implementation conventions in `src/lua_runner/`:
   registered by member pointer, and `header_object` (`csv.cpp`) is the one no-header rule for both
   read forms. `RunHandles::add_writer` / `add_binary_file` are the only appenders to the run-handle
   registries by convention (the vectors stay public; prune expired entries, then append), and `close_open_handles` empties both at
-  `run()`'s exit. `binop<Op>(name)` (`expression.cpp`) with a transparent functor (`std::plus<>`,
-  `std::greater_equal<>`, ...) builds every binary Expression operator's callable, metamethods and
-  `quiver.gt`/`lt`/`gte`/`lte`/`eq`/`neq` alike, and `to_expression(o, operation)` names the
-  operation in the operand error: Lua's event name for a metamethod (`add`, `unm`, `band`, ...),
-  the function name for `quiver.*` (`gt`, `abs`, `ifelse`, `expression`, ...). `columns_to_cpp_rows` owns the group decoders'
+  `run()`'s exit. Every expression operand is a typed `const AbstractExpression&` candidate of a
+  `sol::overload` set (`expression.cpp`): `binop<Op>(name)` with a transparent functor
+  (`std::plus<>`, `std::greater_equal<>`, ...) for the four arithmetic, two logical and six
+  comparison operations, `unary_metamethod` for `__unm`/`__bnot` (Lua calls them with the operand
+  twice), `unary_function` for `quiver.expression`/`abs`/`sqrt`/`log`/`exp`, and the three-operand
+  `ifelse` set. So sol2 does the type check. The last candidate of each set takes
+  `sol::variadic_args` and calls `operand_error(operation, arity, numbers, args)`, which sol2
+  reaches only after every typed candidate failed and which only words the error: the leftmost
+  operand that is neither an expression nor, for the binary operations when not every operand is a
+  number, a number gets `Cannot <op>: operand must be an expression or a binary file, got <type>`,
+  otherwise `Cannot <op>: too many arguments (expected N, got M)`. `operation` is Lua's event name
+  for a metamethod (`add`, `unm`, `band`, ...) and the function name for `quiver.*` (`gt`, `abs`,
+  `ifelse`, `expression`, ...). The six expression methods (`save`, `get_metadata`, `aggregate`,
+  `aggregate_agents`, `select_agents`, `rename_agents`) are one lambda each on
+  `const AbstractExpression&`, shared by both usertypes, and ignore extra arguments like every other
+  method. `columns_to_cpp_rows` owns the group decoders'
   no-rows rejection, and `length_mismatch` (`lua_runner/database_time_series.cpp`) is the time-series decoder's one
   length message. `lua_type_error` / `require_table` (`internal.h`) are the one argument
   type-error shape (`Cannot <op>: <what> must be <expected>, got <lua type>`) and the one table
@@ -717,7 +731,7 @@ Implementation conventions in `src/lua_runner/`:
 - **Filesystem sandbox**: `resolve_sandboxed_path(db, operation, path)` is the single gate for
   every file-touching Lua operation (`db:open_file`, `db:bin_to_csv`, `db:csv_to_bin`,
   `db:export_csv`, `db:import_csv`, `db:validate_migrations`, `db:read_csv`, `db:read_csv_stream`,
-  `db:write_csv`, `expr:save`). It rejects `:memory:`
+  `db:write_csv`, `save` on an expression or a binary file). It rejects `:memory:`
   databases, resolves relative paths against the database file's directory (bare-filename db paths fall back to the
   CWD at call time, mirroring `create_database_logger`), canonicalizes via `weakly_canonical`,
   and requires strict containment (candidate == root is rejected — the binary subsystem appends
@@ -848,6 +862,19 @@ Implementation conventions in `src/lua_runner/`:
   (638 -> 626 ms; a 1M-cell `file:read` loop 422 -> 424 ms). The getter is therefore unchecked in
   every build, Debug included, which is why `lua_cell_as` and the key checks exist. Never disable
   `SOL_SAFE_FUNCTION_CALLS` or `SOL_SAFE_USERTYPE`: they are the argument and `self` checks.
+- **`BinaryFile` and `Expression` register `AbstractExpression` as their sol2 base through
+  compile-time traits in `internal.h`** (`SOL_BASE_CLASSES` for each, `SOL_DERIVED_CLASSES` for the
+  base), not the runtime base-classes tag, which replaces each derived metatable's `__index` table
+  with a C closure that every method lookup pays, `f:read`/`f:write` included; the traits keep
+  `__index` a table (pinned by `LuaExpressionTest.FileAndExpressionKeepTableIndex`). They are
+  explicit specializations, so every TU that uses sol2 with these types must see them, which holds
+  because every `src/lua_runner/` file that includes sol2 includes `internal.h` first.
+  `AbstractExpression` is never a registered usertype, and `f:read`/`f:write` keep
+  `BinaryFile& self` (a base-typed `self` pays failed metatable lookups and a `class_check` on
+  every call). `expression.cpp` wraps its includes in an MSVC-only `#pragma warning(push)` /
+  `disable : 4702` / `pop`: the always-throwing fallback candidates make MSVC Release report C4702
+  inside sol2, and the warning state at each template's definition decides; do not mark
+  `operand_error` as never-returning, which brings the warnings back.
 - **`SOL_NO_NIL=1` (`src/CMakeLists.txt`) is a portability guard, not a preference.** sol2 does not
   define `sol::nil` on Apple platforms at all: `version.hpp` turns `SOL_NIL` off whenever
   `__MAC_OS_X_VERSION_MAX_ALLOWED`, `__OBJC__` or a `nil` macro is visible, because Objective-C

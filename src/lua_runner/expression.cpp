@@ -189,7 +189,7 @@ void bind_expression(sol::state& state, sol::table& ns, sol::usertype<BinaryFile
 
     // A BinaryFile is an expression: the same operators and methods (file_a + file_b, -file, file * 2.0,
     // f:aggregate(...), f:save(...)). Through the indexer, not set_function: the sync test reads
-    // set_function only on bind / ns, and lists these methods once, from new_usertype<Expression>.
+    // set_function only on bind / ns, and lists these methods once, from the Expression usertype above.
     bind_expression_operators(binary_file_type);
     binary_file_type["save"] = save;
     binary_file_type["get_metadata"] = get_metadata;

@@ -69,6 +69,22 @@ callers to change something are prefixed **BREAKING** and say what to do.
   `Expression e = file;` no longer compiles; write `Expression e(file);`.
 - **BREAKING** **C++: `Expression::metadata()` is renamed `get_metadata()`**, the name `BinaryFile`
   and the C API already use. Call `get_metadata()`.
+- **BREAKING** **Lua: `e:metadata()` is renamed `e:get_metadata()`**, the name a binary file
+  already used; a file and an expression now share it. Call `get_metadata()`.
+- **BREAKING** **Lua: extra arguments to an expression function or operator throw.** The twelve
+  `quiver.*` expression functions (`expression`, `abs`, `sqrt`, `log`, `exp`, `ifelse`, `gt`, `lt`,
+  `gte`, `lte`, `eq`, `neq`) and an operator metamethod called directly
+  (`getmetatable(e).__add(...)`) used to ignore arguments past their operands; they now raise
+  `Cannot <op>: too many arguments (expected N, got M)`. A wrong operand still raises `Cannot <op>:
+  operand must be an expression or a binary file, got <type>`. Drop the extra argument.
+
+### Added
+
+- **Lua: a binary file is an expression.** A file from `db:open_file` takes `aggregate`,
+  `aggregate_agents`, `select_agents`, `rename_agents` and `save` directly, `get_metadata` works on
+  files and expressions alike, and `quiver.expression(f)` is no longer needed (it still converts a
+  file to an expression). `f:save` is sandboxed like `expr:save`, refuses an output path that is
+  the file itself and a file open for writing, reads the file by path and leaves the handle open.
 
 ### Fixed
 

@@ -828,7 +828,7 @@ via the `&` / `|` / `~` operators (bitwise metamethods, since `and`/`or`/`not` a
 nonzero is true, unitless result, NaN propagates), `quiver.ifelse(cond, then, else)`, and the
 methods `expr:aggregate(dim, op[, p])` /
 `expr:aggregate_agents(op[, p])` / `expr:select_agents(labels)` / `expr:rename_agents({old=new})` /
-`expr:save(path)` / `expr:metadata()`. Aggregation `op` is a **string**
+`expr:save(path)` / `expr:get_metadata()`. Aggregation `op` is a **string**
 (`"sum"/"mean"/"min"/"max"/"percentile"`) — Lua has no enums, mirroring JS's string-based surface.
 Lua file I/O is db-scoped (`db:open_file`, `db:bin_to_csv`, `db:csv_to_bin`) and `expr:save` paths
 are sandboxed to the database directory (see Design Decisions).
