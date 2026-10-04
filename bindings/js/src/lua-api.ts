@@ -1,7 +1,7 @@
 // Agent-facing reference for the Lua `db` API available inside run_lua scripts.
 //
-// Authority: the binders under `src/lua_runner/` (`bind_core` through `bind_binary`, this repo) —
-// extracted by hand, NOT imported.
+// Authority: the binders under `src/lua_runner/` (`bind_database` through `bind_expression`,
+// this repo) — extracted by hand, NOT imported.
 // The shipped quiverdb native binding is the runtime truth; this is docs.
 //
 // SYNC: `test/lua-api-sync.test.ts` derives the bound surface from every `.cpp`/`.h` under

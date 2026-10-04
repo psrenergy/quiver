@@ -43,19 +43,26 @@ src/                      # C++ implementation
   type_validator.h / type_validator.cpp      # Scalar/array type validation (free functions,
                                              # caller-threaded Pattern 1 messages)
   element.cpp / row.cpp / result.cpp / migration.cpp / migrations.cpp
-  lua_runner/             # LuaRunner (sol2): every Lua binding, one file per domain
+  lua_runner/             # LuaRunner (sol2): one file per core file it binds (database*.cpp), plus csv, binary, expression
     lua_runner.cpp        # LuaRunner::Impl (ctor order, the one Database usertype), RunHandles bodies, run()/GcGuard
-    internal.h            # quiver::lua_internal: RunHandles, binder decls, converters, read adapters, option walk, group-decoder decls
+    internal.h            # quiver::lua_internal: RunHandles, binder decls, converters, read adapters, option walk, group-decoder decls, metadata templates, parse_csv_options decl
     return_json.cpp       # run()'s JSON encoder
     path_policy.h         # resolve_sandboxed_path's declaration; no sol2, included by internal.h and SandboxedPathTest
     path_policy.cpp       # resolve_sandboxed_path, the single filesystem gate
-    db_core.cpp           # bind_core: info, transactions, dry runs, count, describe, query, migrations, export/import_csv
-    db_read.cpp           # bind_read: bulk + by-id readers
-    db_write.cpp          # bind_write: element CRUD, relations, vector/set group writers; table_to_element, group decoder
-    db_metadata.cpp       # bind_metadata: get_*_metadata, list_* groups
-    db_time_series.cpp    # bind_time_series: time-series read/write/upsert, time-series files
+    database.cpp          # bind_database: info, transactions, dry runs (run_in_scope), validate_migrations
+    database_create.cpp   # bind_create: create_element; table_to_element
+    database_read.cpp     # bind_read: bulk + by-id readers, number_of_elements
+    database_update.cpp   # bind_update: update_element, relations, vector/set group writers; group decoder
+    database_delete.cpp   # bind_delete: delete_element(_by_label)
+    database_describe.cpp # bind_describe: describe, describe_collection, summarize_collection
+    database_metadata.cpp # bind_metadata: get_{scalar,vector,set}_metadata, list_*; metadata_to_lua
+    database_query.cpp    # bind_query: query_string/integer/float
+    database_time_series.cpp # bind_time_series: time-series read/write/upsert/files, its metadata + list
+    database_csv_export.cpp  # bind_csv_export: export_csv; parse_csv_options
+    database_csv_import.cpp  # bind_csv_import: import_csv
     csv.cpp               # bind_csv: read_csv, read_csv_stream, write_csv, CsvWriter
-    binary.cpp            # bind_binary: BinaryMetadata/BinaryFile/Expression, quiver.*, open_file/bin_to_csv/csv_to_bin
+    binary.cpp            # bind_binary: open_file/bin_to_csv/csv_to_bin, BinaryMetadata, BinaryFile, quiver.metadata*
+    expression.cpp        # bind_expression: Expression, operators on Expression and BinaryFile, quiver.* expression functions
   ui_metadata.h / ui_metadata.cpp  # Internal ui/ TOML sidecar reader behind describe/describe_collection
                                 # -- same no-include/quiver/-counterpart posture as csv_read
   cli/main.cpp            # quiver_cli CLI entry point
@@ -262,7 +269,7 @@ substring immunity, and `summarize_collection` additionally emits `  Vectors:` /
 database would be breakable by a label containing that text. The remedy, if it ever bites, is
 asserting on report structure (line prefix + indentation), never a substring blocklist.
 
-Three guards in the Lua layer's decoders (`src/lua_runner/`: `csv.cpp`, `internal.h`, `db_write.cpp`) exist because a script is
+Three guards in the Lua layer's decoders (`src/lua_runner/`: `csv.cpp`, `internal.h`, `database_update.cpp`) exist because a script is
 untrusted input, in the same spirit as the JSON encoder's two caps below:
 - `csv_max_integer_key` is the single max-integer-key walk behind both `csv_row_cells_from_lua`
   and `csv_header_from_lua` (so the key rule and its message live once), and it caps the result at
@@ -646,7 +653,8 @@ lua.run(R"(
 
 Implementation conventions in `src/lua_runner/`:
 - **Layout**: `LuaRunner::Impl`'s constructor creates the only Database usertype and hands it to
-  the seven binders as `bind`, with the `quiver` table as `ns`. Those parameter names are what the
+  the fourteen binders, called in the order of the core files they mirror (`bind_database` through
+  `bind_expression`), as `bind`, with the `quiver` table as `ns`. Those parameter names are what the
   sync test's first pass matches (it fails on a `.set_function(` through any other receiver, and
   reads subdirectories too), and a second Database usertype would clear every method bound
   before it. The non-Database usertypes stay variadic, one bound name per line (the sync test's
@@ -655,6 +663,11 @@ Implementation conventions in `src/lua_runner/`:
   holds only templates, `inline` functions and declarations; every other helper is in an anonymous
   namespace nested in `quiver::lua_internal`. A type registered as a usertype stays in the named
   namespace, because sol2 keys usertypes by demangled name and that drops anonymous namespaces.
+  `bind_binary` returns the `BinaryFile` usertype and the constructor hands it to `bind_expression`,
+  which registers the expression operators on it. `binary.cpp` keeps its
+  `quiver/expression/expression.h` include although it names no `Expression`, because sol2 derives
+  BinaryFile's automatic `__lt`/`__le`/`__eq` from the Expression operators when the usertype is
+  created, so removing it changes `f < g` and `f == g` in scripts while every test stays green.
   Comments must not spell the Database usertype call or the stdlib-opening call, because greps
   count both. Each TU with by-value sol2 parameters gets one
   `NOLINTBEGIN/END(performance-unnecessary-value-param)` pair. A file stays at about 450 lines or
@@ -662,12 +675,13 @@ Implementation conventions in `src/lua_runner/`:
 - **Shared helpers**: each repeated binding pattern lives in one helper, and a new method reuses
   it rather than copying a body. The 17 plain forwarders are `&Database::` member pointers (below).
   `bulk_read_lua` / `collection_read_lua` (`internal.h`) adapt the bulk readers and are registered
-  under the member's own name. `read_groups_by_id` (`db_read.cpp`) is behind `read_vectors_by_id`
-  and `read_sets_by_id`. The `metadata_to_lua` overloads with `list_metadata_lua` /
-  `get_metadata_lua` (`db_metadata.cpp`) are behind the four `get_*_metadata` and four `list_*`
-  group methods.
+  under the member's own name. `read_groups_by_id` (`lua_runner/database_read.cpp`) is behind `read_vectors_by_id`
+  and `read_sets_by_id`. The `metadata_to_lua` overloads (defined in `lua_runner/database_metadata.cpp`)
+  with the `list_metadata_lua` / `get_metadata_lua` templates (`internal.h`) are behind the four
+  `get_*_metadata` and four `list_*` group methods, registered in `lua_runner/database_metadata.cpp`
+  and (the time-series pair) `lua_runner/database_time_series.cpp`.
   `query_*_lua` return `std::optional` and `read_scalars_by_id` assigns `std::optional` values, so a
-  NULL is `nil` and an absent key. `run_in_scope` (`db_core.cpp`) is the one scoped block behind `db:transaction` and
+  NULL is `nil` and an absent key. `run_in_scope` (`lua_runner/database.cpp`) is the one scoped block behind `db:transaction` and
   `db:dry_run`: the two lambdas pass their operation name, and `run_in_scope` checks the argument is
   a function before opening the scope. The callback's error and the closing call (`commit` /
   `end_dry_run`) sit in one `try`, so either one undoes the scope best-effort and is rethrown.
@@ -679,12 +693,12 @@ Implementation conventions in `src/lua_runner/`:
   registered by member pointer, and `header_object` (`csv.cpp`) is the one no-header rule for both
   read forms. `RunHandles::add_writer` / `add_binary_file` are the only appenders to the run-handle
   registries by convention (the vectors stay public; prune expired entries, then append), and `close_open_handles` empties both at
-  `run()`'s exit. `binop<Op>(name)` (`binary.cpp`) with a transparent functor (`std::plus<>`,
+  `run()`'s exit. `binop<Op>(name)` (`expression.cpp`) with a transparent functor (`std::plus<>`,
   `std::greater_equal<>`, ...) builds every binary Expression operator's callable, metamethods and
   `quiver.gt`/`lt`/`gte`/`lte`/`eq`/`neq` alike, and `to_expression(o, operation)` names the
   operation in the operand error: Lua's event name for a metamethod (`add`, `unm`, `band`, ...),
   the function name for `quiver.*` (`gt`, `abs`, `ifelse`, `expression`, ...). `columns_to_cpp_rows` owns the group decoders'
-  no-rows rejection, and `length_mismatch` (`db_time_series.cpp`) is the time-series decoder's one
+  no-rows rejection, and `length_mismatch` (`lua_runner/database_time_series.cpp`) is the time-series decoder's one
   length message. `lua_type_error` / `require_table` (`internal.h`) are the one argument
   type-error shape (`Cannot <op>: <what> must be <expected>, got <lua type>`) and the one table
   check: `require_table` tests `get_type()`, never the loose `is<sol::table>()` that accepts a
@@ -694,9 +708,9 @@ Implementation conventions in `src/lua_runner/`:
   `string_key`) keep their own pinned texts. So do the value checks that predate that shape and end
   without the `got` suffix: `on_row must be a function` (`csv.cpp`), the `separator`, `header`
   entry and `header_row` option checks (`csv.cpp`), `option 'date_time_format' must be a string`
-  and `keys of option '<what>' must be strings` (`db_core.cpp`), `option key must be a string` and
+  and `keys of option '<what>' must be strings` (`lua_runner/database_csv_export.cpp`), `option key must be a string` and
   `<what> has unsupported Lua type` (`internal.h`; cells, values, and `target_label` in
-  `db_write.cpp`). Adding the suffix to any of them is a deliberate, pinned text change, not a
+  `lua_runner/database_update.cpp`). Adding the suffix to any of them is a deliberate, pinned text change, not a
   cleanup. `optional_from_lua<T>` is the one optional-argument
   decoder (see the optional-argument bullet below).
 - **Filesystem sandbox**: `resolve_sandboxed_path(db, operation, path)` is the single gate for
@@ -755,7 +769,8 @@ Implementation conventions in `src/lua_runner/`:
   `Cannot <caller>: target_label has unsupported Lua type`. Both
   `db:update_relation(..., nil)` and omitting the argument clear; that affordance is sol2's and
   Lua-only (the FFI bindings all require the parameter and take their language's null).
-- `parse_csv_options(options, operation)` is the single strict CSVOptions decoder for
+- `parse_csv_options(options, operation)` (defined in `lua_runner/database_csv_export.cpp`, declared
+  in `internal.h` for `lua_runner/database_csv_import.cpp`) is the single strict CSVOptions decoder for
   `export_csv`/`import_csv`: `nil` means defaults, any other non-table and any unknown or
   wrong-typed key throws, with the same collect-then-validate walk (`option_entries`, which owns the
   table check while each caller keeps its own nil handling) as the `read_csv`/`write_csv` decoders. `quiver.metadata{...}` and `expr:rename_agents` are decoded
@@ -996,7 +1011,7 @@ Profiled with 480×500×31 dimensions (~7.3M read/write calls). Main hot-path co
 
 ## Expression Subsystem
 
-Lazy expressions over `.qvr` binary files. Build a DAG using `+ - * /` operator overloads (binary and unary minus) and unary math free functions, materialize via `save()`. Bound in **Julia and Lua** (root design decision); Lua binds these C++ classes directly via sol2 in `src/lua_runner/binary.cpp` (`quiver.*` namespace + method syntax + string aggregation ops; `expr:save` paths are sandboxed to the database directory).
+Lazy expressions over `.qvr` binary files. Build a DAG using `+ - * /` operator overloads (binary and unary minus) and unary math free functions, materialize via `save()`. Bound in **Julia and Lua** (root design decision); Lua binds these C++ classes directly via sol2 in `src/lua_runner/expression.cpp` (`quiver.*` namespace + method syntax + string aggregation ops; `expr:save` paths are sandboxed to the database directory).
 
 ```cpp
 auto a = BinaryFile::open_file("a", 'r');

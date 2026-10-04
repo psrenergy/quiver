@@ -20,7 +20,7 @@ const CPP = SOURCES.join("\n"); // Pass 1, the open_libraries( count and the std
 const DOC_FLAT = LUA_DB_API_REFERENCE.replaceAll("`", "").replace(/\s+/g, " ");
 
 // Pass 1: `bind.set_function("x", ...)` -> db:x ; `ns.set_function("x", ...)` -> quiver.x
-// (`ns` is the `quiver` table the binary binder receives.) Multiline so the
+// (`ns` is the `quiver` table the binary and expression binders receive.) Multiline so the
 // clang-format-wrapped call (`bind.set_function(\n    "open_file",`) is still caught.
 const setFns = [...CPP.matchAll(/\b(bind|ns)\.set_function\(\s*"([a-z_][a-z0-9_]*)"/g)];
 const dbMethods = new Set(setFns.filter((m) => m[1] === "bind").map((m) => m[2]));

@@ -71,8 +71,8 @@ Settled questions — don't relitigate without the user; each was decided delibe
   takes), and changing either side is a breaking API change, not a fix.
 - **Binary + expression subsystems are exposed in Julia and Lua only.** Dart, Python, and JS
   deliberately do not expose them (no FFI consumer); the tests-at-every-layer rule has this one
-  documented exception. Lua binds the C++ classes directly via sol2 (`src/lua_runner/binary.cpp`) with
-  method syntax + string aggregation operations; pure-metadata builders live under a `quiver.*`
+  documented exception. Lua binds the C++ classes directly via sol2 (`src/lua_runner/binary.cpp` and
+  `src/lua_runner/expression.cpp`) with method syntax + string aggregation operations; pure-metadata builders live under a `quiver.*`
   namespace while file I/O is db-scoped (see cross-layer table and the sandbox decision below).
   `helper_maps.jl` is a second documented Julia-only exception (see convenience methods below).
 - **Lua file operations are db-scoped and sandboxed to the database directory.** Every file-touching
@@ -740,8 +740,9 @@ broadcast, aggregation, and label projection, materialized via `save()`). Expose
 Executes Lua scripts against a database; the `db` userdata exposes the same API surface
 (see cross-layer tables below). `run(script)` returns the script's return value encoded as
 **JSON** (empty string if it returned nothing) — every binding passes that string through
-verbatim. The binding lives in `src/lua_runner/`, one file per domain; the layout and its rules are in
-`src/AGENTS.md`, along with the implementation notes.
+verbatim. The binding lives in `src/lua_runner/`, one file per core file it binds (`database.cpp` and
+`database_*.cpp`, named after `src/database*.cpp`), plus `csv.cpp`, `binary.cpp` and `expression.cpp`;
+the layout and its rules are in `src/AGENTS.md`, along with the implementation notes.
 
 ## Cross-Layer Naming Conventions
 
