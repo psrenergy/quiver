@@ -6,7 +6,7 @@ status: planning
 last_updated: "2026-10-04T11:40:36.792Z"
 last_activity: 2026-10-04
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,17 +17,19 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-10-03)
+See: .planning/PROJECT.md (updated 2026-10-04)
 
 **Core value:** Every file in the Lua scripting layer is small and single-purpose enough for an agent to change safely, and every existing script behaves exactly as before, apart from the deliberate, test-pinned fixes.
-**Current focus:** Planning next milestone (run /gsd-new-milestone)
+**Current focus:** Phase 6 — Quiver File Layout (milestone lua-2, Phases 6-9)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-10-04 — Milestone lua-2 started
+Phase: 6 (Quiver File Layout), first of 4 in milestone lua-2 (Phases 6-9)
+Plan: — (not planned yet)
+Status: Ready to plan
+Last activity: 2026-10-04 — Roadmap created (Phases 6-9, 25/25 requirements mapped)
+
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
@@ -82,6 +84,14 @@ Last activity: 2026-10-04 — Milestone lua-2 started
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [lua-2] Roadmap: strict order layout (pure move) -> C++ AbstractExpression -> typed Lua parameters -> Julia + docs. Phase 6 is a pure move so the expression work lands once in `src/lua_runner/expression.cpp`.
+- [lua-2] Roadmap: LAYOUT-01's literal file list wins over the research proposal: `database_describe.cpp` is its own file, and `get_time_series_metadata`/`list_time_series_groups` move to `database_time_series.cpp` (their metadata helpers become shared through `internal.h`).
+- [lua-2] Roadmap: each BREAKING change gets its CHANGELOG `[0.13.0]` line in the phase that makes it (Phase 7: copy-init, `Expression::metadata()` rename; Phase 8: Lua `e:metadata()` rename, arity). DOC-02 maps to Phase 9, which checks completeness.
+- [lua-2] Roadmap: Phase 7 keeps the Lua surface unchanged (`Lua*` 477, `e:metadata()` still bound); Phase 8 takes the `f:read`/`f:write` benchmark baseline at the end of Phase 7.
+
+v0.12.9 decisions (history; phase artifacts in `milestones/v0.12.9-phases/`):
+
+
 - Roadmap: strict order pins -> split -> dedupe -> fixes + Release type safety -> docs/path-policy test. One PR per phase into master, each green on its own. (The rename was dropped 2026-10-02.)
 - Roadmap: `SOL_ALL_SAFETIES_ON` + `SOL_PRINT_ERRORS=0` is the last commit of Phase 4, after the explicit `require_table`/`lua_string_key`/`optional_from_lua` checks. Perf budget 5% on a bulk read and `file:read`; if over, add `SOL_SAFE_GETTER=0`/`SOL_SAFE_STACK_CHECK=0`, never disable `SOL_SAFE_FUNCTION_CALLS`/`SOL_SAFE_USERTYPE`.
 - Roadmap: the no-op `SOL_SAFE_FUNCTION=1` is deleted in Phase 4 (SAFE-06); PROJECT.md Constraints and Key Decisions now record it.
@@ -130,6 +140,14 @@ None yet.
 
 ### Blockers/Concerns
 
+Open for lua-2 (settle before or during the named phase's planning):
+
+- [Phase 7] Resolved: EXPR-06 now reads "no C API header, signature or `c_api.jl` change; the renamed `get_metadata()` call inside `quiver_expression_get_metadata` is the only `src/c/` edit" (follows from EXPR-05).
+- [Phase 7] Resolved: no `==` flip. `f == g` between two files is already true today (quiver_cli at `da6f67b`, Debug and Release), via the implicit conversion and sol2's automatic `__eq`; the design keeps it; EQ-01 covers files and expressions.
+- [Phase 9] Julia generic placement: `Binary.get_metadata(::File)` vs a shared `Quiver.get_metadata`.
+
+Carried from v0.12.9:
+
 Resolved concerns from v0.12.9 were cleared at milestone close (history: `milestones/v0.12.9-phases/`, `milestones/v0.12.9-MILESTONE-AUDIT.md`). Open items carried forward:
 
 - [v0.12.9] PR notes, to copy into the PR body: (1) SAFE-06 perf, Release, median of 5 interleaved runs. `read_scalar_floats` 100k: 633 ms before, 737 ms (+16.4%) with all safeties, 626 vs 638 ms (−1.9%) with the fallback `SOL_SAFE_GETTER=0` + `SOL_SAFE_STACK_CHECK=0`. `file:read` 1M cells: 496 / 477 (−3.8%) / 424 vs 422 ms (+0.5%). (2) `SOL_SAFE_GETTER=0` also applies in Debug, so Debug CI no longer checks unguarded `.as<T>()`. Every current site is guarded, but new code must guard its own. (3) The Debug-only sol2 text changes from Phase 3 (12 probes) are in `milestones/v0.12.9-phases/03-dedupe/03-03-SUMMARY.md`. (4) Apple Clang and the off-Windows binding suites are proven only by PR CI.
@@ -148,10 +166,10 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-10-03
-Stopped at: Milestone v0.12.9 completed and archived; next: /gsd-cleanup, then /gsd-new-milestone
+Last session: 2026-10-04
+Stopped at: lua-2 roadmap created (Phases 6-9); awaiting approval
 Resume file: None
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Plan Phase 6 with /gsd-plan-phase 6 (or /gsd-discuss-phase 6 first)

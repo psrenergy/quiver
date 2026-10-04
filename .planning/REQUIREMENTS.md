@@ -26,7 +26,7 @@ evidence, the layout mapping table, the judged designs and the compiled spike). 
 - [ ] **EXPR-03**: Every operator (`+ - * /`, `> < >= <= == !=`, `&& || !`, unary `-`) and free function (`abs`, `sqrt`, `log`, `exp`, `ifelse`) takes `const AbstractExpression&` for every expression operand; the `double` overloads stay. The friend block in `expression.h` is deleted, and each operator calls `node()` once per operand.
 - [ ] **EXPR-04**: `explicit Expression(const AbstractExpression&)` replaces the implicit `Expression(const BinaryFile&)`. Copy-initialization `Expression e = file;` no longer compiles (BREAKING, CHANGELOG); direct-initialization call sites (C API, tests) compile unchanged.
 - [ ] **EXPR-05**: `get_metadata()` is the one metadata accessor on `AbstractExpression`. `Expression::metadata()` is renamed (BREAKING, CHANGELOG). A `BinaryFile`'s `get_metadata()` keeps returning the handle's in-memory metadata; an `Expression`'s returns its node's metadata.
-- [ ] **EXPR-06**: `ExpressionAggregate::Operation` moves to namespace scope as `quiver::AggregateOperation`, with `using Operation = AggregateOperation;` kept, so there is no header cycle. The C API compiles with no source change. The C++ and C API suites pass, and their new counts are recorded.
+- [ ] **EXPR-06**: `ExpressionAggregate::Operation` moves to namespace scope as `quiver::AggregateOperation`, with `using Operation = AggregateOperation;` kept, so there is no header cycle. No C API header or signature changes and `bindings/julia/src/c_api.jl` is untouched; the only `src/c/` edit is the renamed `get_metadata()` call inside `quiver_expression_get_metadata` (follows from EXPR-05). The C++ and C API suites pass, and their new counts are recorded.
 - [ ] **EXPR-07**: Linux GCC 13 and Clang 18/libc++ (Docker) build and pass the C++, C API and Lua suites, including C++20 rewritten `==`/`!=` candidates with base-class parameters and the exported polymorphic base.
 
 ### Typed AbstractExpression parameters in Lua
@@ -55,7 +55,7 @@ evidence, the layout mapping table, the judged designs and the compiled spike). 
 
 Deferred. Tracked, not in the current roadmap.
 
-- **EQ-01**: Lua `==`/`<` between expressions stop silently returning true (sol2's automatic `__eq`/`__lt` on the Expression-returning C++ operators; `sol::is_automagical` = false).
+- **EQ-01**: Lua `==`/`<` between expressions and between files stop silently returning true (sol2's automatic `__eq`/`__lt` on the Expression-returning C++ operators; `sol::is_automagical` = false). Today `f == g` (two different files), `e == e2` and `f < g` are all true in Debug and Release (checked with quiver_cli at `da6f67b`); lua-2 leaves this unchanged.
 - **META-01**: `save` detects metadata that went stale between building an expression and saving it.
 
 ## Out of Scope
@@ -74,12 +74,39 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
+| LAYOUT-01 | Phase 6 | Pending |
+| LAYOUT-02 | Phase 6 | Pending |
+| LAYOUT-03 | Phase 6 | Pending |
+| LAYOUT-04 | Phase 6 | Pending |
+| LAYOUT-05 | Phase 6 | Pending |
+| EXPR-01 | Phase 7 | Pending |
+| EXPR-02 | Phase 7 | Pending |
+| EXPR-03 | Phase 7 | Pending |
+| EXPR-04 | Phase 7 | Pending |
+| EXPR-05 | Phase 7 | Pending |
+| EXPR-06 | Phase 7 | Pending |
+| EXPR-07 | Phase 7 | Pending |
+| LUA-01 | Phase 8 | Pending |
+| LUA-02 | Phase 8 | Pending |
+| LUA-03 | Phase 8 | Pending |
+| LUA-04 | Phase 8 | Pending |
+| LUA-05 | Phase 8 | Pending |
+| LUA-06 | Phase 8 | Pending |
+| LUA-07 | Phase 8 | Pending |
+| LUA-08 | Phase 8 | Pending |
+| JUL-01 | Phase 9 | Pending |
+| JUL-02 | Phase 9 | Pending |
+| JUL-03 | Phase 9 | Pending |
+| DOC-01 | Phase 9 | Pending |
+| DOC-02 | Phase 9 | Pending |
 
 **Coverage:**
 - v1 requirements: 25 total
-- Mapped to phases: 0
-- Unmapped: 25 ⚠️
+- Mapped to phases: 25
+- Unmapped: 0 ✓
+
+DOC-02 is checked in Phase 9; Phases 7 and 8 each add the CHANGELOG lines for the BREAKING changes they make.
 
 ---
 *Requirements defined: 2026-10-04*
-*Last updated: 2026-10-04 after initial definition*
+*Last updated: 2026-10-04 after roadmap creation (Phases 6-9)*
