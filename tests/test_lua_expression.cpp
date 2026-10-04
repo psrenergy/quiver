@@ -235,9 +235,9 @@ TEST_F(LuaExpressionTest, AggregateOutermostTimeDimFromMidYearStart) {
         f:close()
         local fa = db:open_file('expr_a', 'r')
         local agg = quiver.expression(fa):aggregate('year', 'sum')
-        local start = agg:metadata():get_initial_datetime()
+        local start = agg:get_metadata():get_initial_datetime()
         assert(start == '2025-01-01T00:00:00', 'output starts at the first reduced period, got ' .. start)
-        assert(agg:metadata():get_dimensions()[1].initial_value == 1, 'month starts at 1')
+        assert(agg:get_metadata():get_dimensions()[1].initial_value == 1, 'month starts at 1')
         agg:save('expr_out')
         fa:close()
         local r = db:open_file('expr_out', 'r')
@@ -299,7 +299,7 @@ TEST_F(LuaExpressionTest, SelectAndRenameAgents) {
         assert(r:read({row=1, col=1})[1] == 20.0, 'selected value')
         r:close()
         local ren = quiver.expression(fa):rename_agents({v1 = 'alpha'})
-        local rlabels = ren:metadata():get_labels()
+        local rlabels = ren:get_metadata():get_labels()
         assert(#rlabels == 2 and rlabels[1] == 'alpha' and rlabels[2] == 'v2', 'renamed labels')
         fa:close()
     )");
@@ -579,4 +579,22 @@ TEST_F(LuaExpressionTest, OperandErrorsReportTheLeftmostBadOperand) {
     const std::string tail = ": operand must be an expression or a binary file, got ";
     expect_lua_error(lua, "return quiver.gt('a', {})", "Cannot gt" + tail + "string");
     expect_lua_error(lua, "return quiver.ifelse(5, {}, 'x')", "Cannot ifelse" + tail + "number");
+}
+
+TEST_F(LuaExpressionTest, FileAggregateAgents) {
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+    lua.run(prelude() + R"(
+        fill('expr_a', 10.0, 20.0)
+        local fa = db:open_file('expr_a', 'r')
+        local agg = fa:aggregate_agents('mean')
+        agg:save('expr_out')
+        assert(fa:is_open(), 'saving from a file leaves it open')
+        fa:close()
+        local r = db:open_file('expr_out', 'r')
+        local labels = r:get_metadata():get_labels()
+        assert(#labels == 1 and labels[1] == 'mean', 'collapsed to single mean label')
+        assert(r:read({row=1, col=1})[1] == 15.0, 'mean value')
+        r:close()
+    )");
 }

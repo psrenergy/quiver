@@ -25,7 +25,21 @@
 
 namespace quiver {
 
+class AbstractExpression;
 class BinaryFile;
+class Expression;
+
+}  // namespace quiver
+
+// sol2 inheritance as compile-time traits, not the runtime base-classes tag: the tag swaps each derived
+// metatable's __index table for a C closure that every f:read / f:write pays. They are explicit
+// specializations, so every TU that uses sol2 with these types must see them: every src/lua_runner TU that
+// includes sol2 includes this header first.
+SOL_BASE_CLASSES(quiver::BinaryFile, quiver::AbstractExpression);
+SOL_BASE_CLASSES(quiver::Expression, quiver::AbstractExpression);
+SOL_DERIVED_CLASSES(quiver::AbstractExpression, quiver::BinaryFile, quiver::Expression);
+
+namespace quiver {
 
 namespace csv_write {
 

@@ -183,8 +183,6 @@ sol::usertype<BinaryFile> bind_binary(
         [](BinaryFile& self) { self.close(); },
         "is_open",
         [](BinaryFile& self) { return self.is_open(); },
-        "get_metadata",
-        [](BinaryFile& self) -> BinaryMetadata { return self.get_metadata(); },
         "get_file_path",
         [](BinaryFile& self) -> std::string { return self.get_file_path(); }
     );
