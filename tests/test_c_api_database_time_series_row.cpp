@@ -10,7 +10,7 @@
 #include <vector>
 
 // ============================================================================
-// upsert_time_series_row tests (CAPI-11..13)
+// upsert_time_series_row tests
 // ============================================================================
 
 TEST(DatabaseCApi, UpsertTimeSeriesRowInsert) {

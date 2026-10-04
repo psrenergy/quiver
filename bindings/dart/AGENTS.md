@@ -62,7 +62,7 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   `CMAKE_MACOSX_BUNDLE=OFF` (the toolchain's `if(NOT DEFINED ...) set(... YES)` inherits into
   FetchContent, and lua-cmake's `lua_bin` bundle + RUNTIME-only `install()` then aborts
   configure); and `DEPLOYMENT_TARGET` floored at 13.3 (libc++ marks the floating-point
-  `std::to_chars` used by `database_csv_export.cpp` / `lua_runner.cpp` /
+  `std::to_chars` used by `database_csv_export.cpp` / `lua_runner/return_json.cpp` / `lua_runner/csv.cpp` /
   `binary/csv_converter.cpp` unavailable below it —
   `cmake/Platform.cmake` carries the same floor for every other macOS build). Do not "simplify"
   these. `appleArgs: AppleBuilderArgs(enableStrictTryCompile: true)` is kept as hygiene rather
@@ -122,7 +122,9 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   string is C-heap allocated, so the `Arena` cannot own it — it is freed with
   `quiver_lua_runner_free_string` (*not* `quiver_database_free_string`) in its own nested `finally`,
   so a `toDartString` failure cannot leak it. The columnar group decoders (`_decodeGroupRows`,
-  `readTimeSeriesGroup`) free the C result in their own `finally` for the same reason.
+  `readTimeSeriesGroup`) free the C result in their own `finally` for the same reason. The script
+  must be Lua source text: the core loads it in text mode, so a precompiled (bytecode) chunk is
+  rejected with `Failed to run Lua script: ...` and surfaces like any other script error.
 - **Time-series group NULLs**: `readTimeSeriesGroup`/`updateTimeSeriesGroup` use
   `Map<String, List<Object?>>` — a `null` cell is a SQL NULL. `_marshalGroupColumn` returns a
   `({int type, Pointer<Void> data, Pointer<Uint8> hasValue})` record (the per-cell mask;

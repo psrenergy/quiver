@@ -149,6 +149,11 @@ TEST_F(LuaRunner_ImportCSV, OptionsAreStrict) {
     );
     expect_lua_error(
         lua,
+        R"(db:import_csv("Items", "", "enum.csv", "x"))",
+        "Cannot import_csv: options must be a table"
+    );
+    expect_lua_error(
+        lua,
         R"(db:import_csv("Items", "", "enum.csv", { enum_labels = { status = 1 } }))",
         "Cannot import_csv: option 'enum_labels['status']' must be a table"
     );
@@ -265,6 +270,19 @@ TEST_F(LuaRunner_ImportCSV, EscapeThrows) {
     expect_lua_error(
         lua,
         R"(db:import_csv("Items", "", "../x.csv"))",
+        "Cannot import_csv: path '../x.csv' escapes the database directory"
+    );
+}
+
+// The path is resolved before the options are decoded, so a non-table options argument cannot mask an escaping path.
+TEST_F(LuaRunner_ImportCSV, EscapeIsReportedBeforeNonTableOptions) {
+    auto csv_schema = VALID_SCHEMA("csv_export.sql");
+    auto db = quiver::Database::from_schema(db_path(), csv_schema);
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(
+        lua,
+        R"(db:import_csv("Items", "", "../x.csv", 5))",
         "Cannot import_csv: path '../x.csv' escapes the database directory"
     );
 }

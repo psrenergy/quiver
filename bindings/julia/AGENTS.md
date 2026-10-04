@@ -87,7 +87,9 @@ Project.toml      # Deps: Artifacts, CEnum, Dates, Libdl; julia 1.11 compat
 - **`run!` owns its result**: `quiver_lua_runner_run` takes an `out_result::Ptr{Ptr{Cchar}}` and the
   JSON string must be freed with `quiver_lua_runner_free_string` — *not*
   `quiver_database_free_string`. `check` throws before the `unsafe_string`, and the C API leaves
-  `out_result` NULL on failure.
+  `out_result` NULL on failure. The script must be Lua source text: the core loads it in text mode,
+  so a precompiled (bytecode) chunk is rejected with `Failed to run Lua script: ...` and surfaces
+  like any other script error.
 - **Time-series group NULLs**: `read_time_series_group` returns value columns as
   `Vector{Union{T, Nothing}}` **always** (type-stable, like `read_time_series_row`) — a NULL cell
   is `nothing`; the dimension column stays a dense `Vector{DateTime}`. `update_time_series_group!` accepts `nothing` cells, dispatching on
@@ -155,7 +157,7 @@ Project.toml      # Deps: Artifacts, CEnum, Dates, Libdl; julia 1.11 compat
   factory *runs* before the `MethodError`, and `from_schema` starts with `fs::remove(db_path)`
   while a plain `open` creates the file. The overloads forward `kwargs...` rather than restating
   the base method's keywords, so a keyword added later reaches the `do` form too. Two caveats a
-  caller has to know: a `LuaRunner` borrows a raw `Database&` (`src/lua_runner.cpp`), so one built
+  caller has to know: a `LuaRunner` borrows a raw `Database&` (`src/lua_runner/lua_runner.cpp`), so one built
   inside the block dangles after it (`.ptr` stays non-NULL — no error, just freed memory; the real
   guard belongs in the C API, since Python's `with` has the same hole), and an uncommitted
   transaction open at the block's exit is rolled back by the close — nest

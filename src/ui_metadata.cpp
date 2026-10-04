@@ -38,10 +38,11 @@ toml::table parse_toml_file(const fs::path& path) {
     return toml::parse(buffer.str());
 }
 
-// Serves label, tooltip and each enum.toml entry's own label (READ-04): a plain string is used
+// Serves label, tooltip and each enum.toml entry's own label: a plain string is used
 // as-is; a table is read at its "en" sub-key. Anything else (missing key, wrong shape, no "en")
-// degrades to nullopt rather than throwing -- there is no in-repo precedent for this exact
-// string-or-table branch (RESEARCH.md Pattern 3), so every read here stays optional-checked.
+// degrades to nullopt rather than throwing -- a value is either a string or a table with an "en"
+// key, and there is no in-repo precedent for this exact branch, so every read stays
+// optional-checked.
 std::optional<std::string> read_localized(const toml::node* node) {
     if (!node) {
         return std::nullopt;
@@ -59,8 +60,8 @@ std::optional<std::string> read_localized(const toml::node* node) {
 
 // enum.toml has no wrapper key: each top-level key IS itself a vocabulary name ([[bool]],
 // [[initial_volume_type]], ...) and its value is an array of {id, label} tables. Discovered by
-// iterating the whole top-level table rather than reading one fixed array key (RESEARCH.md
-// Pattern 4, which corrects CONTEXT.md's "[[vocab]]" shorthand). A duplicated id inside one
+// iterating the whole top-level table rather than reading one fixed array key: there is no
+// "[[vocab]]" wrapper to read. A duplicated id inside one
 // vocabulary resolves to the later entry (map assignment in file order); an entry with no id, a
 // non-integer id, or no readable label is dropped.
 std::map<std::string, std::map<int64_t, std::string>> parse_vocabularies(const toml::table& tbl) {
@@ -92,10 +93,10 @@ std::map<std::string, std::map<int64_t, std::string>> parse_vocabularies(const t
 }
 
 // One ui/*.toml collection file. Returns nullopt when the file's shape does not self-select as a
-// collection file (READ-02/D-17): a non-empty top-level string `id` and an `attribute` array are
+// collection file: a non-empty top-level string `id` and an `attribute` array are
 // both required -- this is what excludes main.toml (no `id` key) and every theme file, with no
-// filename translated into a table name. Reads [[attribute]] only, never [[attribute_group]]
-// (D-18). A repeated attribute id resolves to the later entry.
+// filename translated into a table name. Reads [[attribute]] only, never [[attribute_group]].
+// A repeated attribute id resolves to the later entry.
 std::optional<std::pair<std::string, std::map<std::string, UiAttribute>>> parse_collection_file(
     const toml::table& tbl,
     const std::map<std::string, std::map<int64_t, std::string>>& vocabularies
@@ -124,7 +125,7 @@ std::optional<std::pair<std::string, std::map<std::string, UiAttribute>>> parse_
         if (auto tooltip = read_localized(attr_tbl->get("tooltip"))) {
             meta.tooltip = *tooltip;
         }
-        // Join key is the attribute's own `enum` value, never its `id` (D-19) -- 46 corpus
+        // Join key is the attribute's own `enum` value, never its `id` -- 46 corpus
         // attributes share the `bool` vocabulary, so joining by attribute id would give each of
         // them a different, wrong vocabulary or none. An `enum` value naming nothing leaves the
         // map default-constructed (empty).
@@ -146,7 +147,8 @@ UiMetadata load_ui_metadata(const std::string& migrations_path, spdlog::logger& 
     try {
         const fs::path ui_dir = fs::weakly_canonical(fs::path(migrations_path)).parent_path() / "ui";
         if (!fs::is_directory(ui_dir)) {
-            // An absent sidecar is the normal case (SAFE-01), not a degradation -- no warning.
+            // An absent sidecar is the normal case (the no-sidecar baseline), not a
+            // degradation -- no warning.
             return metadata;
         }
 

@@ -258,6 +258,39 @@ TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupRejectsArrayOfRowTables) {
     expect_lua_error(lua, script, "Cannot update_time_series_group: column names must be strings");
 }
 
+TEST_F(LuaRunnerTest, TimeSeriesGroupWritersRejectNonTableColumns) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    int64_t id = db.create_element("Collection", quiver::Element().set("label", "Item 1"));
+    db.update_time_series_group(
+        "Collection",
+        "data",
+        id,
+        {{{"date_time", std::string("2024-01-01T00:00:00")}, {"value", 1.0}}}
+    );
+
+    quiver::LuaRunner lua(db);
+    const std::string sid = std::to_string(id);
+
+    expect_lua_error(
+        lua,
+        R"(db:update_time_series_group("Collection", "data", )" + sid + R"(, "x"))",
+        "Cannot update_time_series_group: columns must be a table, got string"
+    );
+    expect_lua_error(
+        lua,
+        R"(db:update_time_series_group_by_label("Collection", "data", "Item 1", db))",
+        "Cannot update_time_series_group_by_label: columns must be a table, got userdata"
+    );
+    expect_lua_error(
+        lua,
+        R"(db:update_time_series_group("Collection", "data", )" + sid + R"(, { date_time = "2024-01-01T00:00:00" }))",
+        "Cannot update_time_series_group: column 'date_time' must be an array of values, got string"
+    );
+
+    EXPECT_EQ(db.read_time_series_group("Collection", "data", id).size(), 1);
+}
+
 TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupAllEmptyColumnsThrows) {
     // Negative path: named columns that transpose to zero rows are a caller
     // mistake (only an empty table {} clears the group), so this must throw
@@ -1189,4 +1222,47 @@ TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupByLabelErrors) {
 
     // Nothing was written by any of the failures.
     EXPECT_EQ(db.read_time_series_group("Collection", "data", id).size(), 1);
+}
+
+TEST_F(LuaRunnerTest, RowAndFilesWritersRejectNonTable) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    int64_t id = db.create_element("Collection", quiver::Element().set("label", "Item 1"));
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(
+        lua,
+        R"(db:upsert_time_series_row("Collection", "data", )" + std::to_string(id) + R"(, 5))",
+        "Cannot upsert_time_series_row: row must be a table, got number"
+    );
+    expect_lua_error(
+        lua,
+        R"(db:upsert_time_series_row_by_label("Collection", "data", "Item 1", db))",
+        "Cannot upsert_time_series_row_by_label: row must be a table, got userdata"
+    );
+    expect_lua_error(
+        lua,
+        R"(db:update_time_series_files("Collection", 5))",
+        "Cannot update_time_series_files: paths must be a table, got number"
+    );
+    EXPECT_TRUE(db.read_time_series_group("Collection", "data", id).empty());
+}
+
+TEST_F(LuaRunnerTest, RowAndFilesWritersRejectNonStringKeys) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    int64_t id = db.create_element("Collection", quiver::Element().set("label", "Item 1"));
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(
+        lua,
+        R"(db:upsert_time_series_row("Collection", "data", )" + std::to_string(id) + R"(, { "2024-01-01T00:00:00" }))",
+        "Cannot upsert_time_series_row: column name must be a string, got number"
+    );
+    expect_lua_error(
+        lua,
+        R"(db:update_time_series_files("Collection", { "a.bin" }))",
+        "Cannot update_time_series_files: column name must be a string, got number"
+    );
+    EXPECT_TRUE(db.read_time_series_group("Collection", "data", id).empty());
 }

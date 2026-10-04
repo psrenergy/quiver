@@ -14,7 +14,18 @@ set(QUIVER_SOURCES
     csv/csv_write.cpp
     database_describe.cpp
     element.cpp
-    lua_runner.cpp
+    lua_runner/binary.cpp
+    lua_runner/csv.cpp
+    lua_runner/db_core.cpp
+    lua_runner/db_metadata.cpp
+    lua_runner/db_read.cpp
+    lua_runner/db_time_series.cpp
+    lua_runner/db_write.cpp
+    lua_runner/internal.h
+    lua_runner/lua_runner.cpp
+    lua_runner/path_policy.cpp
+    lua_runner/path_policy.h
+    lua_runner/return_json.cpp
     migration.cpp
     migrations.cpp
     result.cpp
@@ -58,19 +69,27 @@ target_include_directories(quiver
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-# sol2 safety settings
+# sol2 safety settings: sol2's safeties are on in every build, as the backstop behind the explicit
+# Pattern 1 checks in src/lua_runner/. sol2 never prints a caught error to the host's stderr.
+# SOL_SAFE_NUMERICS is implied by SOL_ALL_SAFETIES_ON but stays explicit because the code depends on it.
+# The checked getter and the stack check are off in every build: with them on, a Release bulk read
+# cost 16% more. lua_cell_as and the key checks cover the getter. Never turn off
+# SOL_SAFE_FUNCTION_CALLS or SOL_SAFE_USERTYPE (the argument and `self` checks).
 target_compile_definitions(quiver PRIVATE
+    SOL_ALL_SAFETIES_ON=1
+    SOL_PRINT_ERRORS=0
     SOL_SAFE_NUMERICS=1
-    SOL_SAFE_FUNCTION=1
     SOL_NO_NIL=1
+    SOL_SAFE_GETTER=0
+    SOL_SAFE_STACK_CHECK=0
 )
 
-# MSVC needs /bigobj for sol2 heavy template instantiations
-# Other Windows compilers need -Wa,-mbig-obj for the same reason
+# sol2's template depth needs /bigobj (MSVC) or -Wa,-mbig-obj (other Windows compilers) in every
+# src/lua_runner/ TU; set for the whole target so a new file cannot miss it.
 if(MSVC)
-    set_source_files_properties(lua_runner.cpp PROPERTIES COMPILE_OPTIONS "/bigobj")
+    target_compile_options(quiver PRIVATE /bigobj)
 elseif(WIN32)
-    set_source_files_properties(lua_runner.cpp PROPERTIES COMPILE_OPTIONS "-Wa,-mbig-obj")
+    target_compile_options(quiver PRIVATE -Wa,-mbig-obj)
 endif()
 
 # Link dependencies

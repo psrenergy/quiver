@@ -5,6 +5,84 @@ All notable changes to Quiver are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entries that require
 callers to change something are prefixed **BREAKING** and say what to do.
 
+## [0.13.0] — unreleased
+
+### Changed
+
+- **BREAKING** **Lua table arguments are type-checked.** A value other than a table passed where
+  a Lua method takes a table now raises `Cannot <op>: <argument> must be a table, got <type>`:
+  an element table (`create_element`, `update_element`, `update_element_by_label`,
+  `quiver.metadata_from_element`), the columns of `db:update_vector_group`,
+  `db:update_set_group`, `db:update_time_series_group` and their `_by_label` forms, the row of
+  `upsert_time_series_row`, the `paths` of `update_time_series_files`, the `dims` of `file:read`,
+  the `data` and `dims` of `file:write`, the `labels` of `expr:select_agents` and every options
+  table. A non-table column inside a group writer's columns raises `Cannot <op>: column '<name>'
+  must be an array of values, got <type>`, and a userdata as an element attribute value raises
+  `Cannot <op>: attribute '<name>' must be a value or a table, got userdata`. Release builds used
+  to read a non-table there as a table: a userdata such as `db` passed as a group writer's columns
+  was read as an empty payload and cleared the group. The existing `must be a table` messages
+  (options tables, `header`, `enum_labels`, `quiver.metadata` fields, `expr:rename_agents`,
+  `w:write_row`) now end in `, got <type>` too. Pass a table, e.g. `{ column = { values... } }`
+  for the group writers.
+- **BREAKING** **A wrong-typed optional Lua argument throws instead of being ignored.** The
+  `params` of `db:query_string` / `query_integer` / `query_float`, the metadata of
+  `db:open_file`, the `aggregate` flag of `db:bin_to_csv`, the `allow_nulls` flag of `file:read`
+  and the parameter of `expr:aggregate` / `expr:aggregate_agents` now raise `Cannot <op>: <argument>
+  must be <a table | a BinaryMetadata | a boolean | a number>, got <type>` for a value of the wrong
+  type, where they used to fall back to the default (`db:query_integer("SELECT 1", 5)` ran with no
+  parameters). Pass `nil` or omit the argument to get the default.
+- **BREAKING** **An empty array in Lua `update_element` clears the group.** `update_element` /
+  `update_element_by_label` with `{ column = {} }` now clear the group holding that column, as the
+  C++, Python and JS bindings already did; Lua used to skip the empty array. A misspelled empty
+  column now throws `Cannot update_element: array '<name>' does not match any vector, set, or time
+  series table ...` instead of being ignored. A `read_vectors_by_id` -> `update_element` round trip
+  of a column that read back empty or all-NULL now clears that group when no other column of the
+  group in the call is non-empty (so rows whose cells are all NULL are deleted), and throws `... must
+  have the same length` when another column of the group is non-empty. A column name shared by
+  several groups clears every one of them; every time-series group of a collection shares
+  `date_time`, so `{ date_time = {} }` clears them all. `create_element` still skips an empty array.
+  To leave a group untouched, omit its column. `quiver.metadata_from_element` decodes its table the
+  same way, so an empty `dimensions`, `dimension_sizes` or `labels` array no longer reports `Cannot
+  from_element: missing array '<name>'`: it reaches validation and reports what is wrong (`Number
+  of labels must be positive, got 0`; `Cannot from_element: dimension_sizes count (0) does not
+  match dimensions count (1)` or the reverse for one empty side; `Number of dimensions must be
+  positive, got 0` for both). An empty `time_dimensions` or `frequencies` array still means the same
+  as leaving it out.
+- **BREAKING** **Lua `load` and the script given to `LuaRunner::run` accept text chunks only.** A
+  precompiled chunk (for example `string.dump` or `luac` output, given as a string or through a
+  reader function) makes `load` return `nil` and `attempt to load a binary chunk (mode is 't')`,
+  whatever mode is passed, and `run()` (so `quiver_cli` too) throws `Failed to run Lua script:`
+  with the same message. Ship and load the Lua source, not bytecode.
+- **BREAKING** **Release builds check every Lua argument the way Debug builds already did.** A
+  dot-call such as `db.commit()` now raises sol2's error `sol: received nil for 'self' argument
+  (use ':' for accessing member functions, ...)` instead of crashing the host process, and a
+  wrong-typed string or number argument raises sol2's `stack index N, expected ...` text instead
+  of undefined behaviour. Debug builds no longer print `[sol2] An exception occurred: ...` to the
+  host's stderr for an error a script raises through a binding. Call methods with `:` and pass the
+  documented types.
+
+### Fixed
+
+- **A non-string key in a Lua table argument is a Pattern 1 error.** A number or boolean key in an
+  element table, a time-series row, a `file:read`/`file:write` `dims` table or the `paths` of
+  `update_time_series_files` now raises `Cannot <op>: <attribute|column|dimension> name must be a
+  string, got <type>`. Release builds used to spell a number key as text (`column '1' not
+  found ...`) and could crash on a boolean key.
+- **`db:transaction` / `db:dry_run` check their argument before opening anything.** A value other
+  than a function now raises `Cannot transaction: fn must be a function, got <type>` (or `Cannot
+  dry_run: ...`) before a transaction or dry run is opened. Release builds used to open the scope
+  first and then fail to call the value (inside an already-open transaction they reported `Cannot
+  begin_transaction: transaction already active` instead); Debug builds reported sol2's raw
+  argument text. A table with a `__call` metamethod is no longer accepted: pass a function.
+- **`db:transaction` rolls back when its commit fails.** If the COMMIT at the end of the block
+  fails (for example on a deferred foreign key), the block is now rolled back and the commit error
+  is rethrown. The transaction used to be left open, so a host that committed afterwards wrote the
+  failed block.
+- **Expression operator and helper errors name the operation.** An invalid operand to an
+  Expression operator or a `quiver.*` expression helper now raises, for example, `Cannot add:
+  operand must be an expression or a binary file, got string` (or `Cannot gt: ...`, `Cannot abs:
+  ...`), where every one used to say `Cannot build expression: ...`.
+
 ## [0.12.8] — 2026-10-01
 
 ### Changed
@@ -1294,6 +1372,7 @@ are functionally identical to 0.10.0.
   `read_time_series_group` emits for a NULL STRING cell — so feeding a read result back with the
   mask stripped was UB. A NULL entry, or a NULL per-column data pointer, is now SQL NULL.
 
+[0.13.0]: https://github.com/psrenergy/quiver/compare/v0.12.9...v0.13.0
 [0.12.8]: https://github.com/psrenergy/quiver/compare/v0.12.7...v0.12.8
 [0.12.7]: https://github.com/psrenergy/quiver/compare/v0.12.6...v0.12.7
 [0.12.6]: https://github.com/psrenergy/quiver/compare/v0.12.5...v0.12.6

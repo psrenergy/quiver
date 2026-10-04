@@ -25,26 +25,27 @@ struct Reader::Impl {
 
 namespace {
 
-// Built in exactly one place (this function), pinning exactly three things -- per D-12:
+// Built in exactly one place (this function), pinning exactly three things:
 //   - delimiter: from the caller's Options.
 //   - variable_columns: the library default is IGNORE_ROW, which silently discards any row whose
 //     field count differs from the header. KEEP_NON_EMPTY keeps a ragged row instead (never
 //     padded, never dropped) while still not firing on a fully blank line.
 //   - header_row: with no header row pinned, csv-parser guesses one via a heuristic and pops
 //     every record up to the guessed index -- silently eating a one-cell title line above the
-//     real header, which is exactly the shape of file this milestone exists for.
+//     real header, which is exactly the shape of file db:read_csv exists for (a junk row above
+//     the header, a units row below it).
 // Never call guess_csv() (would reinterpret a comma file as ;/|/tab/^) and never call
 // chunk_size(...): with CSV_ENABLE_THREADS forced OFF (cmake/Dependencies.cmake), the read
-// window is csv-parser's own fixed default, unmultiplied by worker count -- exactly what
-// PARSE-09 requires, and no caller (Lua or C++) can move it. If CSV_ENABLE_THREADS is ever
-// turned back on, add format.threading(false) here to preserve that guarantee.
+// window is csv-parser's own fixed default, unmultiplied by worker count -- so it is bounded and
+// memory does not grow with the file, and no caller (Lua or C++) can move it. If
+// CSV_ENABLE_THREADS is ever turned back on, add format.threading(false) here to preserve that.
 //
 // Call order below is not cosmetic: CSVFormat::header_row(int row), when row < 0 (which
 // no_header() -- header_row's no-header path -- always passes), overwrites variable_column_policy
 // to plain KEEP as a side effect (build/_deps/csv_parser-src/include/internal/csv_format.cpp:44).
 // Header mode MUST therefore be set FIRST and variable_columns(KEEP_NON_EMPTY) LAST, so the
 // explicit pin always wins regardless of which header mode was requested -- reordering these two
-// silently reintroduces phantom blank-line rows for every no-header read (D-13's guarantee).
+// silently reintroduces phantom blank-line rows for every no-header read.
 csv::CSVFormat make_format(const Options& options) {
     csv::CSVFormat format;
     format.delimiter(options.separator);
@@ -69,16 +70,19 @@ csv::CSVFormat make_format(const Options& options) {
 }  // namespace
 
 Reader::Reader(std::string resolved_path, std::string original_path, std::string operation, Options options) {
-    // Validation order matters (D-22): not-found, then directory, then empty -- all before the
-    // parser is ever constructed, and all quoting the caller's own path spelling, not the
-    // resolved one. resolve_sandboxed_path's weakly_canonical does not require the path to
-    // exist, so these three checks cannot be skipped.
+    // Validation order matters -- the existence, type and size preconditions run in that order:
+    // not-found, then directory, then empty -- all before the parser is ever constructed, and all
+    // quoting the caller's own path spelling, not the resolved one.
+    // resolve_sandboxed_path's weakly_canonical does not require the path to exist, so these three
+    // checks cannot be skipped.
     // Non-throwing overloads throughout: the throwing ones raise std::filesystem_error on any OS
     // failure that is not a plain "does not exist" (a permission or I/O error, a malformed path),
     // and these three calls sit outside the try below -- so such an error would reach Lua with no
-    // Pattern 1 prefix at all, breaking LUA-08. An error_code lets "not found" and "the OS refused
-    // the query" be told apart and reported separately. The three messages below are pinned by the
-    // D-22 catalogue; do not reword them.
+    // Pattern 1 prefix at all, and no csv-parser or standard-library message may reach Lua without
+    // one. An error_code lets "not found" and "the OS refused the query" be told apart and reported
+    // separately. The not-found, directory and empty messages are pinned exactly by
+    // LuaRunner_ReadCsv.MissingFileThrowsForReadCsv, .DirectoryAsPathThrowsForReadCsv and
+    // .EmptyFileThrows; do not reword them.
     std::error_code ec;
 
     const bool exists = fs::exists(resolved_path, ec);
@@ -118,7 +122,7 @@ Reader::Reader(std::string resolved_path, std::string original_path, std::string
     try {
         reader_opt.emplace(resolved_path, make_format(options));
     } catch (const std::exception& e) {
-        // No csv-parser or standard-library message may reach Lua unwrapped (LUA-08).
+        // No csv-parser or standard-library message may reach Lua without a Pattern 1 prefix.
         throw std::runtime_error("Cannot " + operation + ": cannot read file '" + original_path + "': " + e.what());
     }
     csv::CSVReader& reader = *reader_opt;
@@ -128,8 +132,9 @@ Reader::Reader(std::string resolved_path, std::string original_path, std::string
     // itself a fully blank line) -- it silently returns with an empty header and zero data rows
     // (build/_deps/csv_parser-src/include/internal/csv_reader.cpp:74-83, trim_header). Gate on the
     // caller's ORIGINAL request (options.header_row, pre-translation) rather than header emptiness
-    // alone: header_row = 0 ("no header", D-20) also produces an empty header by design, and that
-    // is not an error. This is the tenth entry in this constructor's Pattern 1 catalogue (D-22).
+    // alone: header_row = 0 ("no header"; the option is 1-based, default 1) also produces an empty
+    // header by design, and that is not an error. Pinned by
+    // LuaRunner_ReadCsv.HeaderRowPastEndOfFileThrowsExactMessage; do not reword it.
     if (options.header_row != 0 && header.empty()) {
         throw std::runtime_error(
             "Cannot " + operation + ": header row " + std::to_string(options.header_row) + " not found in file '" +
@@ -150,7 +155,7 @@ int64_t Reader::for_each_row(const RowSink& sink) {
     int64_t index = 0;
     // begin() itself parses -- it calls read_row(), which can raise the same csv-parser failures
     // ++it can -- so it is wrapped exactly like the loop body below; unwrapped, a first-chunk
-    // parse/IO failure reached Lua with no Pattern 1 prefix (LUA-08).
+    // parse/IO failure reached Lua with no Pattern 1 prefix, which no csv-parser message may do.
     csv::CSVReader::iterator it;
     try {
         it = impl_->reader.begin();
@@ -165,8 +170,8 @@ int64_t Reader::for_each_row(const RowSink& sink) {
         // Only the csv-parser-facing work (dereferencing/advancing the iterator, copying fields)
         // is wrapped in try/catch. The sink invocation below deliberately sits outside this try:
         // db:read_csv_stream's sink runs untrusted Lua and may itself throw a std::runtime_error
-        // (a Lua error re-thrown verbatim, per D-08) that must propagate unwrapped, not get
-        // relabeled as a parser failure.
+        // (a Lua error raised inside the callback, re-thrown verbatim) that must propagate
+        // unwrapped, not get relabeled as a parser failure.
         std::vector<std::string> cells;
         bool at_end = false;
         try {

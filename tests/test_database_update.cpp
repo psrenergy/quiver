@@ -932,7 +932,7 @@ TEST(Database, UpdateElementAllFkTypesInOneCall) {
 }
 
 // ============================================================================
-// Type validation regression tests (BUG-01)
+// Type validation regression tests
 // ============================================================================
 
 TEST(Database, UpdateElementTypeMismatchIntegerVectorWithStrings) {

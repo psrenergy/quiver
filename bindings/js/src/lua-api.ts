@@ -1,18 +1,19 @@
 // Agent-facing reference for the Lua `db` API available inside run_lua scripts.
 //
-// Authority: `src/lua_runner.cpp` `bind_database()` (this repo) — extracted by hand, NOT imported.
+// Authority: the binders under `src/lua_runner/` (`bind_core` through `bind_binary`, this repo) —
+// extracted by hand, NOT imported.
 // The shipped quiverdb native binding is the runtime truth; this is docs.
 //
-// SYNC: `test/lua-api-sync.test.ts` derives the bound surface from `src/lua_runner.cpp` and checks
+// SYNC: `test/lua-api-sync.test.ts` derives the bound surface from every `.cpp`/`.h` under
+// `src/lua_runner/` and checks
 // it AUTOMATICALLY — every `db:`/`quiver.*` name is documented, no documented name has been
 // removed, and the stdlib sentence matches `open_libraries` exactly. What it CANNOT check, and you
 // must still re-diff by hand when the binding changes: arg order, arity, arg types, return shapes,
 // and whether the prose is semantically true.
 //
 // NOTE: the binary/expression subsystems are bound in the native binding and documented below.
-// File-touching operations (db:open_file, db:bin_to_csv, db:csv_to_bin, db:validate_migrations,
-// expr:save) are sandboxed to the database file's directory; the pure-metadata builders stay under
-// the quiver.* global.
+// File-touching operations are sandboxed to the database file's directory (the "Filesystem
+// sandbox" bullet lists all of them); the pure-metadata builders stay under the quiver.* global.
 //
 // FORMAT CONVENTION: every db: method appears at least once as the literal token
 // `db:<snake_case_name>`, and every quiver.* function as `quiver.<name>`, so coverage is greppable
@@ -100,8 +101,9 @@ midnight.
   and do not \`pcall\` inside it: a caught error lets the block commit whatever ran.
 - **Standard library.** Loaded standard libraries: base, string, table, math, coroutine, utf8.
   That is the pure-computation set — there is no \`os\`, \`io\`, \`debug\`, or \`package\`/\`require\`,
-  and \`dofile\`/\`loadfile\` are removed (string-form \`load\` stays available). Integer division is
-  the Lua 5.4 \`//\` operator — a language operator, unrelated to \`math\`. No \`io\` does **not** mean
+  and \`dofile\`/\`loadfile\` are removed (string-form \`load\` stays for source text; a precompiled
+  binary chunk is refused). Integer division is the Lua 5.4 \`//\` operator — a language operator,
+  unrelated to \`math\`. No \`io\` does **not** mean
   a data file on disk is out of reach: read it with \`db:read_csv\` / \`db:read_csv_stream\` (see
   the CSV file reading section below). Never copy, paste, or re-type a data file's contents into
   the script as literals — read the file.
@@ -112,6 +114,12 @@ midnight.
   (subdirectories are fine; \`..\` escapes and outside absolute paths throw \`Cannot <op>: path '...' escapes the
   database directory ...\`). On an in-memory database these operations throw
   \`Cannot <op>: database is in-memory, file operations are unavailable\`.
+- **What the sandbox does not limit.** The sandbox controls which files a script can touch and
+  which standard libraries exist. It does not bound how much work a script does: there is no
+  instruction-count limit, no memory cap and no wall-clock timeout (\`while true do end\` runs
+  until the host stops it). Globals persist across \`run()\` calls on the same runner, so a global
+  one script sets is visible to the next; use \`local\`. A host that runs untrusted scripts has to
+  impose those limits outside the library.
 - **Output.** A script can \`return\` one value and the host receives it as JSON — prefer this over
   \`print()\` when you need structured data back (\`print()\` still works and is captured). Only the
   **first** returned value is encoded. Arrays are 1-indexed. Iterate with \`ipairs\` only where no
@@ -193,7 +201,7 @@ db:begin_transaction()   -- start an explicit transaction
 db:commit()              -- commit it
 db:rollback()            -- roll it back
 db:in_transaction()      -- boolean: is a transaction currently open?
-db:transaction(fn)       -- run fn(db) inside begin/commit; rollback + rethrow if fn errors
+db:transaction(fn)       -- run fn(db) inside begin/commit; rollback + rethrow if fn errors or the commit fails
 \`\`\`
 
 To make a group of writes atomic, prefer the \`db:transaction\` wrapper:
@@ -303,8 +311,13 @@ Notes:
   which only the new label resolves. Because the label form delegates to the id form, failures
   that validate the *element* (an empty table, a type mismatch) report
   \`Cannot update_element: ...\`.
-- **Empty arrays are skipped.** An attribute whose value is \`{}\` writes no vector/set (the element
-  type can't be inferred from an empty array), so it is silently dropped.
+- **An empty array clears on update.** On \`update_element\` / \`update_element_by_label\`,
+  \`{ col = {} }\` clears the whole group holding \`col\` (all its columns, and every group that
+  shares the column name). An empty column beside a non-empty column of the same group throws a
+  length error, and a misspelled empty column throws
+  \`array '<name>' does not match any vector, set, or time series table ...\`. \`create_element\`
+  skips an empty array. To leave a group alone, omit its column: writing back a
+  \`read_vectors_by_id\` result clears a group whose read column came back empty or all-NULL.
 - **Arrays must be dense.** A vector/set read returns a NULL cell as a \`nil\` hole, but an element
   array cannot carry one: \`create_element\` / \`update_element\` throw \`array '<name>' has a nil
   hole ...\` rather than cut the array short at the hole. Write NULL cells with
@@ -712,8 +725,8 @@ no header at all, so \`csv.header\` is absent (\`nil\`, not an empty table) and 
 file's first line — useful for a file with a junk title row and/or a units row around the real
 header (skip them by naming the header row and slicing \`csv.rows\` in the script). A \`header_row\`
 past the end of the file throws. Passing the separator positionally (\`db:read_csv(path, ";")\`)
-throws \`Cannot read_csv: options must be a table\` instead of silently parsing with a comma; an
-unknown key, a separator that isn't a single character (or is a quote, CR, LF or NUL — none of
+throws \`Cannot read_csv: options must be a table, got string\` instead of silently parsing with
+a comma; an unknown key, a separator that isn't a single character (or is a quote, CR, LF or NUL — none of
 those can be a delimiter), a non-string option key, or a \`header_row\` that isn't a
 non-negative integer also throws.
 

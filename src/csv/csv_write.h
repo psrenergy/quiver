@@ -1,27 +1,27 @@
 #ifndef QUIVER_SRC_CSV_CSV_WRITE_H
 #define QUIVER_SRC_CSV_CSV_WRITE_H
 
-// Internal CSV writer behind the Lua-only db:write_csv binding (src/lua_runner.cpp). No public
+// Internal CSV writer behind the Lua-only db:write_csv binding (src/lua_runner/csv.cpp). No public
 // include/quiver/ counterpart, no QUIVER_API, no C API, no FFI binding, for the same reason
 // csv_read has none: Julia/Dart/Python/JS already have native CSV libraries, and Lua needs this
 // specifically because `io` is deliberately absent from its sandbox (root AGENTS.md design
 // decisions). append_record is also Database::export_csv's record emitter
 // (src/database_csv_export.cpp), so export_csv and db:write_csv share one CSV quoting rule.
 //
-// Unlike csv_read::Reader, this class is deliberately NOT Pimpl'd (D-37): Reader hides
-// csv-parser's headers from src/lua_runner.cpp (which already needs /bigobj on MSVC for sol2's
+// Unlike csv_read::Reader, this class is deliberately NOT Pimpl'd: Reader hides
+// csv-parser's headers from every src/lua_runner/ TU (/bigobj is target-wide for sol2's
 // template depth); this writer is hand-rolled with no dependency to hide, so a Pimpl here would
 // be cargo cult.
 //
 // write_row takes std::vector<std::string>, not an optional or variant cell type: a nil cell and
-// an empty-string cell are the same empty cell (D-40), so all Lua type dispatch (string / integer
-// / float / boolean / nil / rejected) happens in src/lua_runner.cpp and this class never sees a
+// an empty-string cell are the same empty cell, so all Lua type dispatch (string / integer
+// / float / boolean / nil / rejected) happens in src/lua_runner/csv.cpp and this class never sees a
 // sol2 type.
 //
 // The full Pattern 1 message catalogue for this feature (this header/cpp plus the write_row cell
-// formatter it feeds from src/lua_runner.cpp) is pinned as a comment block at the top of
-// src/csv/csv_write.cpp -- TEST-12 matches on those exact strings; do not reword any of them without
-// updating that comment and the tests together.
+// formatter it feeds from src/lua_runner/csv.cpp) is pinned as a comment block at the top of
+// src/csv/csv_write.cpp -- tests/test_lua_runner_write_csv.cpp matches on those exact strings; do
+// not reword any of them without updating that comment and the tests together.
 
 #include <fstream>
 #include <string>
@@ -36,8 +36,8 @@ struct Options {
 };
 
 // Appends one LF-terminated record to `out`. A cell is quoted iff it contains `separator`, '"', CR
-// or LF (FMT-01), with an internal quote doubled; a record whose only cell is empty (or that has no
-// cells) is written as `""`, so a reader does not take it for a blank line and drop it (FMT-02).
+// or LF, with an internal quote doubled; a record whose only cell is empty (or that has no cells)
+// is written as `""`, so a reader does not take it for a blank line and drop it.
 void append_record(const std::vector<std::string>& cells, char separator, std::string& out);
 
 class Writer {
@@ -46,14 +46,14 @@ public:
     // `original_path` is the caller's own spelling, quoted verbatim in every error message this
     // constructor raises -- never the resolved path. `operation` is the public Lua method name
     // that constructed this instance ("write_csv"), threaded into every Pattern 1 message the
-    // same way csv_read::Reader does. Truncates the target at open (WRITE-08) -- no overwrite
-    // guard exists, by decision (threat T-04-02, accepted). Writes the header record (if any) as
-    // the first record, through the same emitter every data row uses, before returning.
+    // same way csv_read::Reader does. Truncates the target at open -- no overwrite guard exists,
+    // by decision. Writes the header record (if any) as the first record, through the same
+    // emitter every data row uses, before returning.
     Writer(std::string resolved_path, std::string original_path, std::string operation, Options options = {});
     ~Writer();
 
-    // Non-movable as well as non-copyable: the sole Writer owner (LuaRunner::Impl::CsvWriter) holds a
-    // shared_ptr and constructs in place, so nothing moves a Writer. A defaulted move would have
+    // Non-movable as well as non-copyable: the sole Writer owner (lua_internal::CsvWriter in src/lua_runner/csv.cpp)
+    // holds a shared_ptr and constructs in place, so nothing moves a Writer. A defaulted move would have
     // to claim `noexcept` over std::ofstream's move (which is not noexcept, so a throw would
     // terminate) and would leave the moved-from source with closed_ == false.
     Writer(const Writer&) = delete;
@@ -61,8 +61,8 @@ public:
     Writer(Writer&&) = delete;
     Writer& operator=(Writer&&) = delete;
 
-    // Writes one record. `operation` is the calling Lua method's own name ("write_row"), per
-    // D-36: each Writer method threads its own operation string rather than one baked in at
+    // Writes one record. `operation` is the calling Lua method's own name ("write_row"):
+    // each Writer method threads its own operation string rather than one baked in at
     // construction, so a write_row failure says "Cannot write_row: ..." even though the writer
     // was opened by write_csv. Builds the whole record into a local buffer before writing it, so
     // a throw partway through can never leave a partial line on disk.

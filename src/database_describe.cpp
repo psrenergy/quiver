@@ -51,10 +51,11 @@ const char* plural(int64_t n) {
     return n == 1 ? "" : "s";
 }
 
-// Whitespace/control-byte normalization for UI sidecar text (D-03, and the T-01-03 mitigation):
-// maps every byte below 0x20 or equal to 0x7F to a space -- a deliberate superset of D-03's named
-// \r/\n/\t that also neutralizes ESC (0x1B) and every other C0 control -- **and** the two-byte
-// UTF-8 encoding of the C1 block (U+0080-U+009F, `0xC2 0x80`-`0xC2 0x9F`). The C1 half is not
+// Whitespace/control-byte normalization for UI sidecar text, and the mitigation against terminal
+// escape sequences smuggled in through sidecar text: maps every byte below 0x20 or equal to 0x7F
+// to a space -- a deliberate superset of the named \r/\n/\t that also neutralizes ESC (0x1B) and
+// every other C0 control -- **and** the two-byte UTF-8 encoding of the C1 block (U+0080-U+009F,
+// `0xC2 0x80`-`0xC2 0x9F`). The C1 half is not
 // optional: U+009B is CSI and U+009D is OSC, the 8-bit forms of `ESC [` and `ESC ]` that xterm and
 // the Linux console honour by default, so dropping only C0 left a sidecar string able to colour a
 // terminal or retitle its window. Every *other* byte at 0x80 or above is a UTF-8 continuation or
@@ -91,7 +92,7 @@ std::string normalize_ui_text(const std::string& raw) {
 }
 
 // Wraps text in ASCII double quotes with backslash doubled and double quote escaped, and no other
-// escaping (D-02). This is what makes every separator unambiguous: arbitrary user text only ever
+// escaping. This is what makes every separator unambiguous: arbitrary user text only ever
 // appears between an unescaped opening and closing quote.
 std::string quote_ui_text(const std::string& text) {
     std::string quoted = "\"";
@@ -106,7 +107,7 @@ std::string quote_ui_text(const std::string& text) {
     return quoted;
 }
 
-// ASCII-lowercase, then keep only a-z/0-9 (D-04). Spelled as an explicit ASCII test rather than
+// ASCII-lowercase, then keep only a-z/0-9. Spelled as an explicit ASCII test rather than
 // std::tolower(char): passing a negative char to std::tolower is undefined behavior, and a
 // meaningful fraction of corpus strings are non-ASCII UTF-8. squash() therefore drops non-ASCII
 // bytes, which biases toward *printing* a label rather than suppressing it -- that is the safe
@@ -133,11 +134,11 @@ bool is_redundant(const std::string& squashed_text, const std::string& squashed_
     return !squashed_text.empty() && squashed_text == squashed_against;
 }
 
-// Appends zero to three "; keyword body" clauses for one scalar attribute (D-01), in the fixed
+// Appends zero to three "; keyword body" clauses for one scalar attribute, in the fixed
 // order label, enum, tooltip. Each clause carries its own leading "; " so eliding one leaves no
 // dangling separator. Only the tooltip clause is conditional on with_tooltip -- label and enum
 // are unconditional -- which is what makes describe()'s line a strict prefix of
-// describe_collection()'s line by construction (D-07/D-08).
+// describe_collection()'s line by construction.
 void write_ui_clauses(std::ostream& out, const UiAttribute* meta, const std::string& name, bool with_tooltip) {
     if (!meta) {
         return;
@@ -150,7 +151,7 @@ void write_ui_clauses(std::ostream& out, const UiAttribute* meta, const std::str
         out << "; label " << quote_ui_text(normalized_label);
     }
 
-    // Enum clause (D-06): never suppressed for redundancy -- it is the one field that cannot be
+    // Enum clause: never suppressed for redundancy -- it is the one field that cannot be
     // re-derived from the column name. std::map<int64_t, std::string> already iterates in
     // ascending key order, so there is no sort. An entry whose label normalizes to empty is
     // dropped; when no entry survives, the whole clause is omitted (never an empty brace pair).
@@ -172,8 +173,8 @@ void write_ui_clauses(std::ostream& out, const UiAttribute* meta, const std::str
     if (with_tooltip) {
         const std::string normalized_tooltip = normalize_ui_text(meta->tooltip);
         if (!normalized_tooltip.empty()) {
-            // Compared against the sidecar label per D-05, even when the label clause itself was
-            // suppressed by D-04. `label_key` above is that comparand: normalize_ui_text only
+            // Compared against the sidecar label too, even when the label clause itself was
+            // suppressed as redundant. `label_key` above is that comparand: normalize_ui_text only
             // rewrites bytes squash() discards anyway, so squash(normalize(x)) == squash(x) and
             // the raw-vs-normalized distinction is unobservable.
             const std::string tooltip_key = squash(normalized_tooltip);
@@ -292,7 +293,7 @@ std::string Database::summarize_collection(const std::string& collection) const 
                     "SELECT " + quoted_col + ", COUNT(*) FROM " + quoted_collection + integer_cells + " GROUP BY " +
                     quoted_col + " ORDER BY " + quoted_col
                 );
-                // D2-12: the lookup sits here, not at the top of the per-scalar loop, so a
+                // The lookup sits here, not at the top of the per-scalar loop, so a
                 // collection of TEXT/REAL/PK scalars pays zero two-level map lookups.
                 const auto* meta = impl_->ui_metadata.find(collection, scalar.name);
                 out << "; values {";
@@ -302,10 +303,10 @@ std::string Database::summarize_collection(const std::string& collection) const 
                     }
                     const int64_t code = *rows[i].get_integer(0);
                     out << code;
-                    // D2-06 / project decision D-09: deliberate divergence from D-06's enum
-                    // clause. There the entry IS the vocabulary, so an empty-normalizing label
-                    // drops the whole entry; here the entry is an observed row count, so an
-                    // empty-normalizing label drops only the annotation and keeps the entry.
+                    // Deliberate divergence from the enum clause in write_ui_clauses. There the
+                    // entry IS the vocabulary, so an empty-normalizing label drops the whole entry;
+                    // here the entry is an observed row count, so an empty-normalizing label drops
+                    // only the annotation and keeps the entry.
                     if (meta) {
                         auto label_it = meta->enum_labels.find(code);
                         if (label_it != meta->enum_labels.end()) {

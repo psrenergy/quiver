@@ -334,7 +334,7 @@ TEST(Database, ReadTimeSeriesRowRejectsMultiDimensionGroup) {
 }
 
 // ============================================================================
-// upsert_time_series_row tests (CORE-11..14)
+// upsert_time_series_row tests
 // ============================================================================
 
 static std::string capture_add_row_error(

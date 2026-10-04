@@ -515,3 +515,68 @@ TEST_F(LuaExpressionTest, OperatorMetamethodsOnFileAndExpression) {
         fa:close()
     )");
 }
+
+TEST_F(LuaExpressionTest, SelectAndRenameAgentsRejectNonTable) {
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+    lua.run(prelude() + "fill('expr_a', 1.0, 1.0)");
+    expect_lua_error(
+        lua,
+        "quiver.expression(db:open_file('expr_a', 'r')):select_agents(5)",
+        "Cannot select_agents: labels must be a table, got number"
+    );
+    expect_lua_error(
+        lua,
+        "quiver.expression(db:open_file('expr_a', 'r')):rename_agents(5)",
+        "Cannot rename_agents: mapping must be a table, got number"
+    );
+}
+
+TEST_F(LuaExpressionTest, AggregateParameterRejectsWrongType) {
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+    lua.run(prelude() + "fill_by_row('expr_a')");
+    expect_lua_error(
+        lua,
+        "quiver.expression(db:open_file('expr_a', 'r')):aggregate('row', 'percentile', '0.5')",
+        "Cannot aggregate: parameter must be a number, got string"
+    );
+    expect_lua_error(
+        lua,
+        "quiver.expression(db:open_file('expr_a', 'r')):aggregate_agents('percentile', true)",
+        "Cannot aggregate_agents: parameter must be a number, got boolean"
+    );
+    lua.run(R"(
+        local agg = quiver.expression(db:open_file('expr_a', 'r')):aggregate_agents('mean', nil)
+        agg:save('expr_out')
+    )");
+    EXPECT_TRUE(fs::exists(sandbox / "expr_out.qvr"));
+}
+
+TEST_F(LuaExpressionTest, OperandErrorsNameTheOperation) {
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+    lua.run(prelude() + "fill('expr_a', 1.0, 1.0)");
+    const std::string e = "local e = quiver.expression(db:open_file('expr_a', 'r')) ";
+    const std::string tail = ": operand must be an expression or a binary file, got ";
+    expect_lua_error(lua, e + "return e + 'x'", "Cannot add" + tail + "string");
+    expect_lua_error(lua, e + "return e - 'x'", "Cannot sub" + tail + "string");
+    expect_lua_error(lua, e + "return e * {}", "Cannot mul" + tail + "table");
+    expect_lua_error(lua, e + "return e / 'x'", "Cannot div" + tail + "string");
+    expect_lua_error(lua, e + "return e & 'x'", "Cannot band" + tail + "string");
+    expect_lua_error(lua, e + "return e | 'x'", "Cannot bor" + tail + "string");
+    expect_lua_error(lua, "return quiver.gt(1, 2)", "Cannot gt" + tail + "number");
+    expect_lua_error(lua, e + "return quiver.eq(e, 'x')", "Cannot eq" + tail + "string");
+    expect_lua_error(lua, "return quiver.abs('x')", "Cannot abs" + tail + "string");
+    expect_lua_error(lua, e + "return quiver.ifelse(e, e, 'x')", "Cannot ifelse" + tail + "string");
+    expect_lua_error(lua, "return quiver.expression(5)", "Cannot expression" + tail + "number");
+}
+
+TEST_F(LuaExpressionTest, OperandErrorsReportTheLeftmostBadOperand) {
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+    // Operands are decoded in argument order, so the reported one does not depend on the compiler.
+    const std::string tail = ": operand must be an expression or a binary file, got ";
+    expect_lua_error(lua, "return quiver.gt('a', {})", "Cannot gt" + tail + "string");
+    expect_lua_error(lua, "return quiver.ifelse(5, {}, 'x')", "Cannot ifelse" + tail + "number");
+}

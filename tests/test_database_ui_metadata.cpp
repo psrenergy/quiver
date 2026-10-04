@@ -12,9 +12,8 @@ namespace fs = std::filesystem;
 
 namespace {
 
-// Clause openers the ui-config feature (plan 01/02 of this phase) introduces per scalar
-// attribute. Named here as `const char*` constants so later plans reuse the exact spelling
-// instead of re-deriving it.
+// Clause openers the ui-config feature renders per scalar attribute. Named here as `const char*`
+// constants so every test below uses the exact spelling instead of re-deriving it.
 const char* kLabelClauseOpener = "; label";
 const char* kEnumClauseOpener = "; enum";
 const char* kTooltipClauseOpener = "; tooltip";
@@ -24,7 +23,7 @@ const char* kTooltipClauseOpener = "; tooltip";
 // Base fixture: builds a per-test temp dir holding a `migrations/` tree and a sibling `ui/` tree
 // from caller-supplied file contents, so no fixture is ever committed under tests/schemas/ui/.
 // Copied from MigrationsTestFixture (tests/test_migrations.cpp) and extended with the ui-tree
-// helpers per 01-PATTERNS.md's "Temp-dir fixture idiom".
+// helpers: a per-test temp directory created in SetUp and removed in TearDown.
 class UiTempTreeFixture : public ::testing::Test {
 protected:
     void SetUp() override {
@@ -57,9 +56,8 @@ protected:
     }
 
     // The sibling `ui/` directory `from_migrations` resolves against the migrations path. Uses
-    // weakly_canonical before parent_path, matching src/lua_runner.cpp's resolve_sandboxed_path
-    // idiom -- a raw parent_path() misresolves a trailing-slash or bare-relative migrations path
-    // (CONTEXT.md "Two resolution traps").
+    // weakly_canonical before parent_path, matching src/lua_runner/path_policy.cpp's resolve_sandboxed_path
+    // idiom -- a raw parent_path() misresolves a trailing-slash or bare-relative migrations path.
     std::string ui_dir() const {
         return (fs::weakly_canonical(migrations_dir()).parent_path() / "ui").string();
     }
@@ -128,14 +126,14 @@ protected:
 class UiMetadataTest : public UiTempTreeFixture {};
 
 // Render-facing gtest suite name -- describe / describe_collection / summarize_collection
-// assertions, the undescribed and malformed-degradation cases, and the SAFE-01 baseline below.
+// assertions, the undescribed and malformed-degradation cases, and the no-sidecar baseline below.
 class DatabaseUiMetadataTest : public UiTempTreeFixture {};
 
 namespace {
 
 // The mandatory Configuration table plus a HydroPlant collection carrying the columns every
-// later test's sidecar describes. Keep the names exactly as written so plan 01 and plan 02 can
-// assert against them without re-reading this file.
+// later test's sidecar describes. Keep the names exactly as written: the tests below assert
+// against them without re-reading the schema.
 std::string reservoir_schema() {
     return R"(
 CREATE TABLE Configuration (
@@ -155,7 +153,7 @@ CREATE TABLE HydroPlant (
 }
 
 // Lines beginning with the pinned four-space-dash scalar prefix, in order -- used by the
-// prefix-invariant test (D-07) to compare describe()'s per-scalar line against
+// prefix-invariant test to compare describe()'s per-scalar line against
 // describe_collection()'s correspondingly-indexed line. Collection only inside the `  Scalars:`
 // section: write_collection_section emits the *same* `    - ` prefix for vector/set/time-series
 // entries, so an unfiltered scan would start comparing group lines against group lines the day
@@ -182,7 +180,7 @@ std::vector<std::string> extract_scalar_lines(const std::string& text) {
 // line and the next one (or end of string). describe()'s first two lines ("Database: <path>" /
 // "Version: N") carry the db's own path, which legitimately differs between a main tree and its
 // ui-free mirror (different temp directories) -- comparing only the collection section is what
-// makes the SAFE-02 byte-identity assertions meaningful rather than failing on an irrelevant path.
+// makes the malformed-sidecar byte-identity assertions meaningful rather than failing on an irrelevant path.
 std::string extract_collection_section(const std::string& describe_output, const std::string& collection) {
     auto pos = describe_output.find("Collection: " + collection);
     if (pos == std::string::npos) {
@@ -192,7 +190,7 @@ std::string extract_collection_section(const std::string& describe_output, const
     return end == std::string::npos ? describe_output.substr(pos) : describe_output.substr(pos, end - pos);
 }
 
-// Shared SAFE-02 assertion: a collection's describe()/describe_collection()/summarize_collection()
+// Shared malformed-sidecar assertion: a collection's describe()/describe_collection()/summarize_collection()
 // output is byte-identical between `db` (some sidecar tree, possibly malformed or undescribed) and
 // `mirror_db` (the same migrations tree with no ui/ sidecar at all).
 void expect_reports_match(quiver::Database& db, quiver::Database& mirror_db, const std::string& collection) {
@@ -206,12 +204,12 @@ void expect_reports_match(quiver::Database& db, quiver::Database& mirror_db, con
 
 }  // namespace
 
-// SAFE-01 baseline: with no `ui/` sibling, a from_migrations tree renders describe(),
+// No-sidecar baseline: with no `ui/` sibling, a from_migrations tree renders describe(),
 // describe_collection() and summarize_collection() exactly as it does today -- no "; label",
 // "; enum" or "; tooltip" clause anywhere, and write_collection_section's existing scalar line
 // (shared by describe()/describe_collection()) is untouched. This test is green against today's
 // build with zero production changes, and stays green after the feature lands -- it is the
-// SAFE-01 anchor, not a scaffold placeholder.
+// no-sidecar anchor, not a scaffold placeholder.
 TEST_F(DatabaseUiMetadataTest, NoUiDirReportsUnchanged) {
     write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
 
@@ -240,10 +238,10 @@ TEST_F(DatabaseUiMetadataTest, NoUiDirReportsUnchanged) {
 }
 
 // ============================================================================
-// Task 1-01-01: label + tooltip render, one path through every layer
+// Label + tooltip render, one path through every layer
 // ============================================================================
 
-// D-01/D-08 worked example: a label renders in both reports, a tooltip renders only in
+// Worked example: a label renders in both reports, a tooltip renders only in
 // describe_collection() and sits after the label clause.
 TEST_F(DatabaseUiMetadataTest, RenderLabelAndTooltipClauses) {
     write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
@@ -270,7 +268,7 @@ tooltip.en = "Reservoir volume at the start of the study."
     EXPECT_NE(describe_collection.find(expected_describe_collection_line), std::string::npos) << describe_collection;
 }
 
-// D-04: a label whose squash equals the attribute name's squash emits no label clause.
+// A label whose squash equals the attribute name's squash emits no label clause.
 TEST_F(DatabaseUiMetadataTest, RenderSuppressesRedundantLabel) {
     write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
     write_ui_file("hydro_plant.toml", R"(
@@ -289,7 +287,7 @@ label.en = "Initial Volume Type"
     EXPECT_EQ(describe_collection.find(kLabelClauseOpener), std::string::npos) << describe_collection;
 }
 
-// D-05: a tooltip whose squash equals the raw sidecar label's squash is suppressed, even though
+// A tooltip whose squash equals the raw sidecar label's squash is suppressed, even though
 // the label itself (not redundant against the name) is still rendered.
 TEST_F(DatabaseUiMetadataTest, RenderSuppressesRedundantTooltip) {
     write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
@@ -309,7 +307,7 @@ tooltip.en = "Storage Volume"
     EXPECT_EQ(describe_collection.find(kTooltipClauseOpener), std::string::npos) << describe_collection;
 }
 
-// D-05 regression: a tooltip that squashes to nothing (symbols only, or a non-Latin script) is
+// Regression: a tooltip that squashes to nothing (symbols only, or a non-Latin script) is
 // NOT redundant with an absent label. Both squashes used to be "", so the equality fired and the
 // tooltip vanished -- the one direction in which squash()'s "drop non-ASCII" bias suppresses
 // rather than prints.
@@ -334,7 +332,7 @@ tooltip.en = "Начальный объём"
     EXPECT_NE(describe_collection.find("; tooltip \"Начальный объём\""), std::string::npos) << describe_collection;
 }
 
-// D-02: a label containing a double quote and a backslash arrives escaped, and nothing else is
+// A label containing a double quote and a backslash arrives escaped, and nothing else is
 // escaped. A TOML literal (single-quoted) string keeps the source bytes exactly as written.
 TEST_F(DatabaseUiMetadataTest, RenderEscapesQuotesAndBackslashes) {
     write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
@@ -353,7 +351,7 @@ label = 'Say "Hi" and a backslash \ here'
         << describe_collection;
 }
 
-// D-08: describe() never renders a tooltip clause, even when one is present in the sidecar.
+// describe() never renders a tooltip clause, even when one is present in the sidecar.
 TEST_F(DatabaseUiMetadataTest, RenderDescribeOmitsTooltip) {
     write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
     write_ui_file("hydro_plant.toml", R"(
@@ -372,7 +370,7 @@ tooltip.en = "Annual discount rate applied to future operating costs, in %."
     EXPECT_NE(describe_collection.find(kTooltipClauseOpener), std::string::npos) << describe_collection;
 }
 
-// D-07: for every scalar, describe()'s line is a strict character-for-character prefix of
+// For every scalar, describe()'s line is a strict character-for-character prefix of
 // describe_collection()'s line. The cheapest possible anti-drift guarantee -- write it first.
 TEST_F(DatabaseUiMetadataTest, PrefixInvariantDescribeIsPrefixOfDescribeCollection) {
     write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
@@ -427,10 +425,10 @@ tooltip.en = "Operating mode of the plant."
 }
 
 // ============================================================================
-// UiMetadataTest: loader-facing behavior, driven through the public Database API only (D-12)
+// UiMetadataTest: loader-facing behavior, driven through the public Database API only
 // ============================================================================
 
-// READ-03: keyed by the file's own top-level id and each [[attribute]]'s own id -- never the
+// Keyed by the file's own top-level id and each [[attribute]]'s own id -- never the
 // filename. The file below is named differently from both the collection and the attribute.
 TEST_F(UiMetadataTest, LabelTooltipKeyedByFileIdAndAttributeId) {
     write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
@@ -449,7 +447,7 @@ label.en = "Reservoir Kind"
         << describe_collection;
 }
 
-// READ-04: a localizable value is read either as a bare string or from a table's `en` sub-key.
+// A localizable value is read either as a bare string or from a table's `en` sub-key.
 TEST_F(UiMetadataTest, LocalizedStringOrTableEn) {
     write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
     write_ui_file("hydro_plant.toml", R"(
@@ -471,7 +469,7 @@ label.en = "Table En Label"
     EXPECT_NE(describe_collection.find("; label \"Table En Label\""), std::string::npos) << describe_collection;
 }
 
-// READ-04: embedded newlines collapse to a single space so the rendered line stays one line.
+// Embedded newlines collapse to a single space so the rendered line stays one line.
 TEST_F(UiMetadataTest, LocalizedNewlineCollapse) {
     write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
     write_ui_file("hydro_plant.toml", R"(
@@ -488,8 +486,8 @@ label.en = "Mean\nProduction\nFactor"
     EXPECT_NE(describe_collection.find("; label \"Mean Production Factor\""), std::string::npos) << describe_collection;
 }
 
-// READ-04/D-03: every C0 control byte (tab, CR, ESC, ...) is normalized to a space, not just the
-// \r/\n/\t named in D-03's prose -- a deliberate superset that also neutralizes ESC.
+// Every C0 control byte (tab, CR, ESC, ...) is normalized to a space, not just \r/\n/\t -- a
+// deliberate superset that also neutralizes ESC.
 TEST_F(UiMetadataTest, LocalizedControlCharacterCollapse) {
     write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
     write_ui_file("hydro_plant.toml", R"(
@@ -506,7 +504,7 @@ label.en = "A\tB\rC\u001bD"
     EXPECT_NE(describe_collection.find("; label \"A B C D\""), std::string::npos) << describe_collection;
 }
 
-// T-01-03 regression: the C1 block is neutralized too. U+009B is CSI and U+009D is OSC -- the
+// Terminal-escape regression: the C1 block is neutralized too. U+009B is CSI and U+009D is OSC -- the
 // 8-bit forms of `ESC [` and `ESC ]` that xterm and the Linux console honour by default -- and
 // they encode as `0xC2 0x9B` / `0xC2 0x9D`, both bytes above 0x7F, so the C0-only test let them
 // straight through to a terminal rendering the report.
@@ -534,7 +532,7 @@ label.en = "Vazão µm"
     EXPECT_NE(describe_collection.find("; label \"Vazão µm\""), std::string::npos) << describe_collection;
 }
 
-// READ-04/D-02: non-ASCII UTF-8 passes through byte-for-byte -- squash() may drop it for
+// Non-ASCII UTF-8 passes through byte-for-byte -- squash() may drop it for
 // redundancy comparisons, but the rendered text itself is never transcoded.
 TEST_F(UiMetadataTest, LocalizedUtf8Passthrough) {
     write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
@@ -558,10 +556,10 @@ tooltip.en = "Measured in °C"
 }
 
 // ============================================================================
-// Task 1-01-02: enum.toml vocabularies and the enum clause (TDD)
+// enum.toml vocabularies and the enum clause
 // ============================================================================
 
-// D-06/D-19: a gapped vocabulary ([0, 2]) renders its real codes verbatim, joined by the
+// A gapped vocabulary ([0, 2]) renders its real codes verbatim, joined by the
 // attribute's own `enum` value.
 TEST_F(UiMetadataTest, EnumGappedCodesRenderVerbatim) {
     write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
@@ -589,7 +587,7 @@ enum = "initial_volume_type"
         << describe_collection;
 }
 
-// D-06: a 1-based vocabulary renders with no positional renumbering.
+// A 1-based vocabulary renders with no positional renumbering.
 TEST_F(UiMetadataTest, EnumOneBasedCodesRenderVerbatim) {
     write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
     write_ui_file("enum.toml", R"(
@@ -616,7 +614,7 @@ enum = "reservoir_type"
         << describe_collection;
 }
 
-// D-19: two attributes with different ids sharing one vocabulary name each render that
+// Two attributes with different ids sharing one vocabulary name each render that
 // vocabulary -- the join key is the attribute's `enum` value, never its `id`.
 TEST_F(UiMetadataTest, EnumJoinedByEnumValueNotAttributeId) {
     write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
@@ -719,7 +717,7 @@ enum = "reservoir_type"
     EXPECT_NE(describe_collection.find(R"(; enum {2: "Valid Entry"})"), std::string::npos) << describe_collection;
 }
 
-// D-06: entries render in ascending code order regardless of file order.
+// Entries render in ascending code order regardless of file order.
 TEST_F(UiMetadataTest, EnumEntriesRenderInAscendingCodeOrder) {
     write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
     write_ui_file("enum.toml", R"(
@@ -784,7 +782,7 @@ enum = "reservoir_type"
 }
 
 // ============================================================================
-// Task 1-02-01: path resolution (READ-01)
+// Path resolution
 // ============================================================================
 
 // A trailing separator on the migrations path resolves to the same ui/ sibling as the same path
@@ -832,7 +830,7 @@ label.en = "Initial Storage"
 
     auto expected = open_tree().describe_collection("HydroPlant");
 
-    // Scope guard restores the process-wide CWD even if an assertion below fails (T-01-07): this
+    // Scope guard restores the process-wide CWD even if an assertion below fails: this
     // mutates global state every other test in the binary shares.
     const fs::path saved_cwd = fs::current_path();
     struct CwdGuard {
@@ -886,7 +884,7 @@ label.en = "Decoy Label"
 }
 
 // ============================================================================
-// Task 1-02-01: shape selection (READ-02)
+// Shape selection
 // ============================================================================
 
 // main.toml (flat keys, no top-level id), a theme-shaped file (id but no attribute array), a plain
@@ -945,7 +943,7 @@ label.en = "Initial Storage"
 }
 
 // ============================================================================
-// Task 1-02-01: undescribed cases (RENDER-03)
+// Undescribed cases
 // ============================================================================
 
 // A collection named by no ui/*.toml file at all (while ui/ itself exists and describes something
@@ -1015,7 +1013,7 @@ label.en = "Ghost Column"
     EXPECT_EQ(report, mirror_report);
 }
 
-// D-20: an attribute carrying hide = true still renders its clauses -- describe describes the
+// An attribute carrying hide = true still renders its clauses -- describe describes the
 // schema, not the UI.
 TEST_F(DatabaseUiMetadataTest, HiddenAttributeStillRenders) {
     write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
@@ -1035,7 +1033,7 @@ hide = true
 }
 
 // ============================================================================
-// Task 1-02-01: malformed-sidecar degradation (SAFE-02)
+// Malformed-sidecar degradation
 // ============================================================================
 
 // An empty ui/ directory (present, but holding no files at all) opens successfully and renders
@@ -1100,7 +1098,7 @@ attribute = "not_an_array"
     expect_reports_match(*db, mirror_db, "HydroPlant");
 }
 
-// D-09: two collection files, one unparseable -- the good collection's clauses still render, and
+// Two collection files, one unparseable -- the good collection's clauses still render, and
 // nothing throws. This is what the inner per-file catch buys over a single outer catch.
 TEST_F(UiMetadataTest, MalformedOneFileKeepsOtherCollections) {
     write_migration(
@@ -1135,10 +1133,10 @@ label.en = "Installed Capacity (MW)"
 }
 
 // ============================================================================
-// Plan 02-01: summarize_collection's histogram annotates observed codes with enum labels
+// summarize_collection's histogram annotates observed codes with enum labels
 // ============================================================================
 
-// D2-01/D2-02/D2-03/D2-04/D2-05/D2-07: the label rides on the key (`code SP "Label": count`), an
+// The label rides on the key (`code SP "Label": count`), an
 // uncovered code (1) stays bare, and an unobserved vocabulary code (2) never appears at all.
 TEST_F(DatabaseUiMetadataTest, SummarizeHistogramAnnotatesCodesWithEnumLabels) {
     write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
@@ -1179,8 +1177,8 @@ enum = "initial_volume_type"
     EXPECT_FALSE(report.find("\"Volume\"") != std::string::npos) << report;
 }
 
-// D-09: a label that normalizes to empty (here, all-whitespace) drops only the annotation and
-// keeps the histogram entry -- deliberate divergence from D-06's `enum {}` clause, where an
+// A label that normalizes to empty (here, all-whitespace) drops only the annotation and
+// keeps the histogram entry -- deliberate divergence from the `enum {}` clause, where an
 // empty-normalizing label drops the whole vocabulary entry.
 TEST_F(DatabaseUiMetadataTest, SummarizeHistogramKeepsEntryWhenLabelNormalizesToEmpty) {
     write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");

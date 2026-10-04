@@ -6,32 +6,40 @@
 #include <system_error>
 #include <utility>
 
-// TEST-12 message catalogue (D-36: {operation} is always the public Lua method the script called).
+// Message catalogue, asserted by the tests in tests/test_lua_runner_write_csv.cpp
+// ({operation} is always the public Lua method the script called). An entry followed by a
+// "pinned by" line names one test that asserts it.
 // Every throw the db:write_csv / w:write_row / w:close feature can raise, wherever it lives -- do
 // NOT reword any of these without updating tests/test_lua_runner_write_csv.cpp in the same change.
 //
 // Raised here, in Writer's constructor (operation is always "write_csv"):
 //   "Cannot write_csv: cannot access directory for '<original_path>': <os reason>"
-//   "Cannot write_csv: parent directory does not exist for '<original_path>'"                (WRITE-07)
+//   "Cannot write_csv: parent directory does not exist for '<original_path>'"
+//       pinned (prefix only) by LuaRunner_WriteCsv.MissingParentDirectoryThrowsAndDoesNotCreateIt
 //   "Cannot write_csv: failed to open file '<original_path>'"
 //   "Cannot write_csv: failed to write to file '<original_path>'"      (header record write failure)
 //
 // Raised here, in Writer::write_row (operation is always "write_row"):
-//   "Cannot write_row: writer for '<original_path>' is already closed"                        (WRITE-05)
+//   "Cannot write_row: writer for '<original_path>' is already closed"
+//       pinned by LuaRunner_WriteCsv.UnsupportedCellOnClosedWriterReportsClosed
 //   "Cannot write_row: failed to write to file '<original_path>'"          (data record write failure)
 //
 // Raised here, in Writer::close (operation is always "close"):
 //   "Cannot close: failed to flush file '<original_path>'"
 //
-// Raised in src/lua_runner.cpp's cell formatter and row/option decoders (operation is always the
-// Lua method that received the bad value -- "write_row" for a cell/row problem, "write_csv" for
-// an options-table problem):
+// Raised by src/lua_runner/csv.cpp's cell formatter and row/option decoders and by the
+// src/lua_runner/internal.h helpers they call (lua_to_value, option_entries, option_table), with
+// operation always the Lua method that received the bad value -- "write_row" for a cell/row
+// problem, "write_csv" for an options-table problem:
 //   "Cannot write_row: row must be a table"                (sol2's table check also lets userdata in)
-//   "Cannot write_row: row <N> cell #<M> is not a finite number"                               (FMT-05)
+//   "Cannot write_row: row <N> cell #<M> is not a finite number"
+//       pinned by LuaRunner_WriteCsvErrors.NonFiniteNumberCellIsPrefixedWriteRowError
 //   "Cannot write_row: cell #<M> has unsupported Lua type"                    (table/function/userdata)
 //   "Cannot write_row: row key must be a positive integer"
 //   "Cannot write_row: row key <N> exceeds the maximum width of 1000000"
-//   "Cannot write_row: row <N> has <M> cells but header declares <W>"                            (FMT-07)
+//   "Cannot write_row: row <N> has <M> cells but header declares <W>"
+//       pinned by LuaRunner_WriteCsv.RowLongerThanHeaderThrowsNamingOrdinalAndCounts
+//   "Cannot write_csv: file is already open for writing: <original_path>"  (two live writers, one path)
 //   "Cannot write_csv: unknown option '<name>'"
 //   "Cannot write_csv: option key must be a string"
 //   "Cannot write_csv: options must be a table"
@@ -45,18 +53,18 @@
 //
 // The sandbox (in-memory database, an escaping path) raises through the shared
 // resolve_sandboxed_path choke point, unchanged by this feature -- see its own messages in
-// src/lua_runner.cpp; write_csv is simply one more caller of it, always evaluated before the
-// options table (LUA-10).
+// src/lua_runner/path_policy.cpp; write_csv is simply one more caller of it, always evaluated before the
+// options table (pinned by LuaRunner_WriteCsv.EscapingPathTakesPrecedenceOverInvalidSeparator).
 
 namespace quiver::csv_write {
 
 namespace fs = std::filesystem;
 
 // A record of exactly one empty cell -- and a record of zero cells -- is emitted as a single quoted
-// empty cell (FMT-02, extended to the degenerate zero-cell case): an unquoted record of either
+// empty cell (the degenerate zero-cell case included): an unquoted record of either
 // shape is a blank line, and this project's own reader (csv_read::Reader, KEEP_NON_EMPTY) discards
 // it. A multi-column record with an empty field stays unquoted -- the rule is deliberately narrow.
-// Every record -- including the last -- is terminated with a single LF (FMT-03); callers write it
+// Every record -- including the last -- is terminated with a single LF; callers write it
 // through a std::ios::binary stream so that LF is never translated to CRLF on Windows.
 void append_record(const std::vector<std::string>& cells, char separator, std::string& out) {
     const bool lone_empty_cell = cells.size() <= 1 && (cells.empty() || cells.front().empty());
@@ -96,7 +104,7 @@ Writer::Writer(std::string resolved_path, std::string original_path, std::string
     : separator_(options.separator), original_path_(std::move(original_path)) {
     // Check the parent directory the same way csv_read.cpp checks its target: non-throwing
     // std::filesystem overloads plus an explicit std::error_code, quoting original_path_ (the
-    // caller's own spelling) and never the resolved path (WRITE-07). resolve_sandboxed_path's
+    // caller's own spelling) and never the resolved path. resolve_sandboxed_path's
     // weakly_canonical is existence-agnostic, so the target itself need not exist yet -- only its
     // parent directory must.
     std::error_code ec;
@@ -115,8 +123,8 @@ Writer::Writer(std::string resolved_path, std::string original_path, std::string
         }
     }
 
-    // Default (truncating) mode -- do NOT pass std::ios::app and no overwrite guard is added
-    // (WRITE-08, threat T-04-02, accepted): opening over an existing file truncates it.
+    // Default (truncating) mode -- do NOT pass std::ios::app. Opening over an existing file
+    // truncates it; there is no overwrite guard, by decision.
     out_.open(resolved_path, std::ios::binary | std::ios::trunc | std::ios::out);
     if (out_.fail()) {
         throw std::runtime_error("Cannot " + operation + ": failed to open file '" + original_path_ + "'");
