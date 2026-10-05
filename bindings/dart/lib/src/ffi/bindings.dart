@@ -3361,10 +3361,10 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_sandbox_freePtr =
-      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<quiver_sandbox_t>)>>('quiver_sandbox_free');
-  late final _quiver_sandbox_free = _quiver_sandbox_freePtr
-      .asFunction<int Function(ffi.Pointer<quiver_sandbox_t>)>();
+  late final _quiver_sandbox_freePtr = _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<quiver_sandbox_t>)>>(
+    'quiver_sandbox_free',
+  );
+  late final _quiver_sandbox_free = _quiver_sandbox_freePtr.asFunction<int Function(ffi.Pointer<quiver_sandbox_t>)>();
 
   int quiver_sandbox_run(
     ffi.Pointer<quiver_sandbox_t> sandbox,

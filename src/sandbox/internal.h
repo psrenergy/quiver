@@ -1,10 +1,10 @@
 #ifndef QUIVER_SRC_LUA_RUNNER_INTERNAL_H
 #define QUIVER_SRC_LUA_RUNNER_INTERNAL_H
 
-#include "sandbox/path_policy.h"
 #include "quiver/database.h"
 #include "quiver/element.h"
 #include "quiver/value.h"
+#include "sandbox/path_policy.h"
 
 #include <sol/sol.hpp>
 
