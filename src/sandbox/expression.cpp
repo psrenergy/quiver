@@ -134,7 +134,7 @@ void bind_expression(sol::state& state, sol::table& ns, sol::usertype<BinaryFile
     // The expression methods, one body each for every usertype that is an expression. Saving from a
     // file reads it by path and leaves the handle open.
     auto save = [&db](const AbstractExpression& self, const std::string& path) {
-        self.save(resolve_sandboxed_path(db, "save", path));
+        self.save(resolve_sandbox_path(db, "save", path));
     };
     auto get_metadata = [](const AbstractExpression& self) -> BinaryMetadata { return self.get_metadata(); };
     auto aggregate = [](const AbstractExpression& self,

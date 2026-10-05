@@ -85,9 +85,9 @@ void bind_database(sol::usertype<Database>& bind) {
         );
     });
 
-    // Migration round-trip validation — db-scoped and sandboxed like the file I/O in binary.cpp.
+    // Migration round-trip validation — db-scoped and sandbox like the file I/O in binary.cpp.
     bind.set_function("validate_migrations", [](Database& self, const std::string& path) {
-        Database::validate_migrations(resolve_sandboxed_path(self, "validate_migrations", path));
+        Database::validate_migrations(resolve_sandbox_path(self, "validate_migrations", path));
     });
 }
 

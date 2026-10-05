@@ -70,7 +70,7 @@ void bind_csv_export(sol::usertype<Database>& bind) {
            const std::string& path,
            const sol::object& options) {
             // Sandbox checks before the options table, as in db:write_csv.
-            const auto resolved = resolve_sandboxed_path(self, "export_csv", path);
+            const auto resolved = resolve_sandbox_path(self, "export_csv", path);
             self.export_csv(collection, group, resolved, parse_csv_options(options, "export_csv"));
         }
     );

@@ -15,7 +15,7 @@ void bind_csv_import(sol::usertype<Database>& bind) {
            const std::string& group,
            const std::string& path,
            const sol::object& options) {
-            const auto resolved = resolve_sandboxed_path(self, "import_csv", path);
+            const auto resolved = resolve_sandbox_path(self, "import_csv", path);
             self.import_csv(collection, group, resolved, parse_csv_options(options, "import_csv"));
         }
     );

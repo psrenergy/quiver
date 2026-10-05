@@ -307,7 +307,7 @@ void CsvWriter::close() {
 // NOLINTBEGIN(performance-unnecessary-value-param) sol2 lambda bindings require pass-by-value for type
 // deduction
 void bind_csv(sol::state& state, sol::usertype<Database>& bind, RunHandles& handles) {
-    // CSV file reading/writing -- db-scoped and sandboxed like the file I/O in binary.cpp. The two
+    // CSV file reading/writing -- db-scoped and sandbox like the file I/O in binary.cpp. The two
     // reading entry points below construct the same csv_read reader and drive it through
     // header()/for_each_row(), so they cannot diverge on any input. Writing
     // (db:write_csv) is streaming-only -- there is no whole-file counterpart, by decision.
@@ -317,7 +317,7 @@ void bind_csv(sol::state& state, sol::usertype<Database>& bind, RunHandles& hand
             sol::state_view lua(s);
             // Evaluation order: sandbox checks (in-memory db, path escape) before the
             // options table, so a bad separator never masks an escaping path.
-            const auto resolved = resolve_sandboxed_path(self, "read_csv", path);
+            const auto resolved = resolve_sandbox_path(self, "read_csv", path);
             auto csv_options = read_csv_options_from_lua(options, "read_csv");
             csv_read::Reader reader(resolved, path, "read_csv", csv_options);
 
@@ -352,7 +352,7 @@ void bind_csv(sol::state& state, sol::usertype<Database>& bind, RunHandles& hand
             }
             const sol::protected_function on_row = on_row_arg.as<sol::protected_function>();
             // Evaluation order: sandbox checks before the options table.
-            const auto resolved = resolve_sandboxed_path(self, "read_csv_stream", path);
+            const auto resolved = resolve_sandbox_path(self, "read_csv_stream", path);
             auto csv_options = read_csv_options_from_lua(options, "read_csv_stream");
             csv_read::Reader reader(resolved, path, "read_csv_stream", csv_options);
 
@@ -386,7 +386,7 @@ void bind_csv(sol::state& state, sol::usertype<Database>& bind, RunHandles& hand
         [&handles](Database& self, const std::string& path, sol::object options) -> std::unique_ptr<CsvWriter> {
             // Evaluation order: sandbox checks (in-memory db, path escape) before
             // the options table, so a bad separator never masks an escaping path.
-            const auto resolved = resolve_sandboxed_path(self, "write_csv", path);
+            const auto resolved = resolve_sandbox_path(self, "write_csv", path);
             auto csv_options = write_csv_options_from_lua(options, "write_csv");
             if (handles.path_has_open_writer(resolved)) {
                 throw std::runtime_error("Cannot write_csv: file is already open for writing: " + path);

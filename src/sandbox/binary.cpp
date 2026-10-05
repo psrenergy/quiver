@@ -105,7 +105,7 @@ sol::usertype<BinaryFile> bind_binary(
     sol::table& ns,
     RunHandles& handles
 ) {
-    // Binary subsystem file I/O — db-scoped and sandboxed: paths resolve against the directory
+    // Binary subsystem file I/O — db-scoped and sandbox: paths resolve against the directory
     // containing the database file and must stay inside it.
     bind.set_function(
         "open_file",
@@ -114,7 +114,7 @@ sol::usertype<BinaryFile> bind_binary(
             if (mode.size() != 1 || (mode[0] != 'r' && mode[0] != 'w')) {
                 throw std::runtime_error("Cannot open_file: mode must be \"r\" or \"w\"");
             }
-            const auto resolved = resolve_sandboxed_path(self, "open_file", path);
+            const auto resolved = resolve_sandbox_path(self, "open_file", path);
             // After containment, so the order stays mode, then path, then metadata.
             const auto md = optional_from_lua<BinaryMetadata>(metadata, "open_file", "metadata", "a BinaryMetadata");
             auto file = std::make_shared<BinaryFile>(BinaryFile::open_file(resolved, mode[0], md));
@@ -124,12 +124,12 @@ sol::usertype<BinaryFile> bind_binary(
     );
     bind.set_function("bin_to_csv", [](Database& self, const std::string& path, const sol::object& aggregate) {
         // Containment first, as in every file operation, then the flag.
-        const auto resolved = resolve_sandboxed_path(self, "bin_to_csv", path);
+        const auto resolved = resolve_sandbox_path(self, "bin_to_csv", path);
         const bool by_agent = optional_from_lua<bool>(aggregate, "bin_to_csv", "aggregate", "a boolean").value_or(true);
         CSVConverter::bin_to_csv(resolved, by_agent);
     });
     bind.set_function("csv_to_bin", [](Database& self, const std::string& path) {
-        CSVConverter::csv_to_bin(resolve_sandboxed_path(self, "csv_to_bin", path));
+        CSVConverter::csv_to_bin(resolve_sandbox_path(self, "csv_to_bin", path));
     });
 
     state.new_usertype<BinaryMetadata>(
