@@ -2240,7 +2240,8 @@ end
                     (x, y) -> ifelse(x > 12.0, x, y),
                     (x, y) -> Quiver.aggregate(x, "row", Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM),
                     (x, y) -> Quiver.aggregate_agents(x, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_MEAN),
-                    (x, y) -> Quiver.aggregate_agents(x, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_PERCENTILE, 0.5),
+                    (x, y) ->
+                        Quiver.aggregate_agents(x, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_PERCENTILE, 0.5),
                     (x, y) -> Quiver.select_agents(x, ["val1"]),
                     (x, y) -> Quiver.rename_agents(x, Dict("val1" => "alpha")),
                 ]
