@@ -18,7 +18,7 @@ describe("package entry (mod.ts)", () => {
     expect(typeof quiver.Database).toEqual("function");
     expect(typeof quiver.Sandbox).toEqual("function");
     expect(typeof quiver.QuiverError).toEqual("function");
-    expect(typeof quiver.LUA_DB_API_REFERENCE).toEqual("string");
+    expect(typeof quiver.SANDBOX_API_REFERENCE).toEqual("string");
   });
 
   test("exports the log-level constants", () => {

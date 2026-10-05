@@ -186,16 +186,16 @@ Dart `database_read_scalar_test.dart`, JS `database-read-scalar.test.ts`, Python
 has no `nulls` file. JS Database-operation test files carry a `database-` prefix
 (`database-create.test.ts`, `database-lifecycle.test.ts`, …) to match the other bindings; the
 non-Database files (`composites.test.ts`, `introspection.test.ts`, `sandbox.test.ts`,
-`lua-api-sync.test.ts`, `package-entry.test.ts`) keep their bare names.
+`sandbox-api-sync.test.ts`, `package-entry.test.ts`) keep their bare names.
 
-`bindings/js/test/lua-api-sync.test.ts` is the only JS test file that needs neither a database nor
+`bindings/js/test/sandbox-api-sync.test.ts` is the only JS test file that needs neither a database nor
 the native library: it parses every `.cpp`/`.h` under `src/sandbox/` (sorted, with the open
-usertype reset at each file boundary) and asserts `bindings/js/src/lua-api.ts` documents
+usertype reset at each file boundary) and asserts `bindings/js/src/sandbox-api.ts` documents
 every bound `db:`/`quiver.*` name and the exact `open_libraries` list. It also fails if any of the
 `BinaryFile`, `BinaryMetadata`, `Expression` or `CsvWriter` usertypes parses to zero methods, or if
 `open_libraries(` does not appear exactly once, so a missed file or usertype cannot pass vacuously.
 It imports the constant from
-`../src/lua-api.ts` directly rather than `../src/index.ts` specifically to avoid the FFI loader, so
+`../src/sandbox-api.ts` directly rather than `../src/index.ts` specifically to avoid the FFI loader, so
 it still passes on a checkout with no `build/`.
 
 ## Schemas (`tests/schemas/`)

@@ -12,7 +12,7 @@ mod.ts            # Package entry point (re-exports src/index.ts)
 src/              # Module per C API category: database.ts, create.ts, read.ts, metadata.ts,
                   # query.ts, time-series.ts, transaction.ts, csv.ts, introspection.ts,
                   # composites.ts, sandbox.ts (index.ts re-exports the public surface)
-src/lua-api.ts    # LUA_DB_API_REFERENCE — agent-facing Lua `db:` API reference, as a string const
+src/sandbox-api.ts    # SANDBOX_API_REFERENCE — agent-facing Lua `db:` API reference, as a string const
 src/group-columns.ts # Shared columnar marshaller (group writers) and decoder (group readers),
                      # plus numericCells, the per-cell numeric check setElementArray shares
 src/loader.ts     # HAND-WRITTEN FFI symbol table + 3-tier library loader
@@ -30,13 +30,13 @@ bunfig.toml       # coverageSkipTestFiles = true (Bun 1.3 reports test/ otherwis
 
 ## Rules and gotchas
 
-- **`LUA_DB_API_REFERENCE` (`src/lua-api.ts`) is shipped prompt payload, not just docs.** The
+- **`SANDBOX_API_REFERENCE` (`src/sandbox-api.ts`) is shipped prompt payload, not just docs.** The
   downstream consumer (`claw`) imports it from the package root and interpolates it verbatim into an
   LLM system prompt, which is why it stays a plain `export const`: a string constant costs no FFI,
   no file read, and no Bun loader feature, and `bun build --compile` inlines it into a consumer's
   binary. Converting it to an imported `.md` was tried and deliberately reverted (see root
   `AGENTS.md` "Do Not Fix") — the escaped backticks are the accepted cost.
-  `test/lua-api-sync.test.ts` derives the bound surface from every file under `src/sandbox/` and fails if a
+  `test/sandbox-api-sync.test.ts` derives the bound surface from every file under `src/sandbox/` and fails if a
   `db:`/`quiver.*` name is undocumented, a documented name no longer exists, or the stdlib sentence
   disagrees with `open_libraries`, or any of the `BinaryFile`, `BinaryMetadata`, `Expression` or
   `CsvWriter` usertypes parses to zero methods, or a `.set_function(` call goes through any receiver

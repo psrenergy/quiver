@@ -17,10 +17,10 @@ std::string lp(const std::string& p) {
     return r;
 }
 
-// Reads bindings/js/src/lua-api.ts (via quiver::test::path_from) and extracts the fenced ```lua
+// Reads bindings/js/src/sandbox-api.ts (via quiver::test::path_from) and extracts the fenced ```lua
 // block that follows a given `## heading` -- the same drift-proof technique
-// bindings/js/test/lua-api-sync.test.ts uses on src/sandbox/, applied here in the other
-// direction (parsing the reference instead of parsing the binding). LUA_DB_API_REFERENCE is a
+// bindings/js/test/sandbox-api-sync.test.ts uses on src/sandbox/, applied here in the other
+// direction (parsing the reference instead of parsing the binding). SANDBOX_API_REFERENCE is a
 // TypeScript template literal, so every backtick in it is backslash-escaped in the source (the
 // fence markers included) to keep it from terminating the surrounding `...` literal; this function
 // un-escapes that before returning. Throws -- loudly, naming the heading -- if the heading, the
@@ -1317,9 +1317,9 @@ TEST_F(Sandbox_WriteCsv, ReopeningSamePathTruncatesExistingContent) {
     );
 }
 
-// The worked example shipped in bindings/js/src/lua-api.ts's "## CSV file writing"
+// The worked example shipped in bindings/js/src/sandbox-api.ts's "## CSV file writing"
 // section is EXTRACTED FROM THE REFERENCE FILE AT TEST TIME and executed, never transcribed into
-// this test -- a pasted copy is a second copy that drifts, exactly what lua-api-sync.test.ts
+// this test -- a pasted copy is a second copy that drifts, exactly what sandbox-api-sync.test.ts
 // exists to prevent on the binding side. The example itself supplies no `path` variable (it is
 // meant to be read as prose over a caller-supplied path), so this test defines one before running
 // the extracted body. Assertions below are positional against the example's OWN data table
@@ -1331,7 +1331,7 @@ TEST_F(Sandbox_WriteCsv, ReferenceWorkedExampleRunsAndRoundTripsItsOwnData) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const std::string reference_path = quiver::test::path_from(__FILE__, "../bindings/js/src/lua-api.ts");
+    const std::string reference_path = quiver::test::path_from(__FILE__, "../bindings/js/src/sandbox-api.ts");
     std::ifstream reference_file(reference_path, std::ios::binary);
     ASSERT_TRUE(reference_file.is_open()) << "could not open reference file: " << reference_path;
     std::ostringstream buffer;

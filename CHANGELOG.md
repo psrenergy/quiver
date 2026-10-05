@@ -205,7 +205,7 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ### Fixed
 
-- **JS: the agent-facing Lua reference (`LUA_DB_API_REFERENCE`) no longer promises a rollback.**
+- **JS: the agent-facing Lua reference (`SANDBOX_API_REFERENCE`) no longer promises a rollback.**
   A failed script keeps every write that finished before the error; only `db:transaction` /
   `db:dry_run` undo their block. The CSV section now says that `import_csv` replaces the target
   table (and that `group = ""` is the scalar table), and that `upsert_time_series_row` and
@@ -887,7 +887,7 @@ callers to change something are prefixed **BREAKING** and say what to do.
 ### Changed
 
 - **The agent-facing Lua API reference now redirects a model to the file, instead of only telling
-  it what it lacks.** `LUA_DB_API_REFERENCE`'s `Standard library` bullet used to state only that
+  it what it lacks.** `SANDBOX_API_REFERENCE`'s `Standard library` bullet used to state only that
   the Lua sandbox has no `io`, which correctly told a model it cannot open a file — and then led it
   to conclude it must paste the file's contents into the script as literals. The correction sits at
   that exact sentence: no `io`, but data files are read with `db:read_csv` / `db:read_csv_stream`.
