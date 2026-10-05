@@ -45,9 +45,9 @@ protected:
 
 // Asserts that the script throws and that the error message carries the expected substring —
 // EXPECT_THROW alone passes vacuously when a removed function raises "attempt to call a nil value".
-inline void expect_lua_error(quiver::Sandbox& lua, const std::string& script, const std::string& substring) {
+inline void expect_sandbox_error(quiver::Sandbox& sandbox, const std::string& script, const std::string& substring) {
     try {
-        lua.run(script);
+        sandbox.run(script);
         FAIL() << "expected script to throw: " << script;
     } catch (const std::exception& e) {
         EXPECT_NE(std::string(e.what()).find(substring), std::string::npos) << e.what();

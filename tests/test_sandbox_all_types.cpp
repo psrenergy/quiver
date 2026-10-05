@@ -19,9 +19,9 @@ TEST_F(SandboxAllTypesTest, ReadVectorStringsBulk) {
         quiver::Element().set("label_value", std::vector<std::string>{"gamma", "delta", "epsilon"})
     );
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
         local vectors = db:read_vector_strings("AllTypes", "label_value")
         assert(#vectors == 2, "Expected 2 vectors, got " .. #vectors)
         assert(#vectors[1] == 2, "First vector should have 2 elements")
@@ -39,9 +39,9 @@ TEST_F(SandboxAllTypesTest, ReadSetIntegersBulk) {
     db.update_element("AllTypes", 1, quiver::Element().set("code", std::vector<int64_t>{10, 20}));
     db.update_element("AllTypes", 2, quiver::Element().set("code", std::vector<int64_t>{30, 40, 50}));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
         local sets = db:read_set_integers("AllTypes", "code")
         assert(#sets == 2, "Expected 2 sets, got " .. #sets)
         assert(#sets[1] == 2, "First set should have 2 values")
@@ -56,9 +56,9 @@ TEST_F(SandboxAllTypesTest, ReadSetFloatsBulk) {
     db.update_element("AllTypes", 1, quiver::Element().set("weight", std::vector<double>{1.1, 2.2}));
     db.update_element("AllTypes", 2, quiver::Element().set("weight", std::vector<double>{3.3}));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
         local sets = db:read_set_floats("AllTypes", "weight")
         assert(#sets == 2, "Expected 2 sets, got " .. #sets)
         assert(#sets[1] == 2, "First set should have 2 values")
@@ -70,13 +70,13 @@ TEST_F(SandboxAllTypesTest, UpdateSetIntegers) {
     auto db = quiver::Database::from_schema(":memory:", all_types_schema);
     int64_t id1 = db.create_element("AllTypes", quiver::Element().set("label", "Item 1"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
     std::string script = R"(
         db:update_element("AllTypes", )" +
                          std::to_string(id1) + R"(, { code = {10, 20, 30} })
     )";
-    lua.run(script);
+    sandbox.run(script);
 
     auto result = db.read_set_integers_by_id("AllTypes", "code", id1);
     EXPECT_EQ(result.size(), 3);
@@ -86,13 +86,13 @@ TEST_F(SandboxAllTypesTest, UpdateSetFloats) {
     auto db = quiver::Database::from_schema(":memory:", all_types_schema);
     int64_t id1 = db.create_element("AllTypes", quiver::Element().set("label", "Item 1"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
     std::string script = R"(
         db:update_element("AllTypes", )" +
                          std::to_string(id1) + R"(, { weight = {1.1, 2.2} })
     )";
-    lua.run(script);
+    sandbox.run(script);
 
     auto result = db.read_set_floats_by_id("AllTypes", "weight", id1);
     EXPECT_EQ(result.size(), 2);

@@ -121,8 +121,8 @@ int main(int argc, char* argv[]) {
             db.begin_dry_run();
         }
 
-        quiver::Sandbox lua(db);
-        auto result = lua.run(script);
+        quiver::Sandbox sandbox(db);
+        auto result = sandbox.run(script);
 
         if (db.in_dry_run()) {
             db.end_dry_run();

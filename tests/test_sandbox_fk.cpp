@@ -14,9 +14,9 @@ protected:
 
 TEST_F(SandboxFkTest, CreateElementSetFkLabels) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
     db:create_element("Parent", { label = "Parent 1" })
     db:create_element("Parent", { label = "Parent 2" })
     db:create_element("Child", {
@@ -37,10 +37,10 @@ TEST_F(SandboxFkTest, CreateElementSetFkLabels) {
 
 TEST_F(SandboxFkTest, CreateElementMissingFkTarget) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    expect_lua_error(
-        lua,
+    expect_sandbox_error(
+        sandbox,
         R"(
         db:create_element("Child", {
             label = "Child 1",
@@ -53,10 +53,10 @@ TEST_F(SandboxFkTest, CreateElementMissingFkTarget) {
 
 TEST_F(SandboxFkTest, CreateElementStringForNonFkInteger) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    expect_lua_error(
-        lua,
+    expect_sandbox_error(
+        sandbox,
         R"(
         db:create_element("Child", {
             label = "Child 1",
@@ -69,9 +69,9 @@ TEST_F(SandboxFkTest, CreateElementStringForNonFkInteger) {
 
 TEST_F(SandboxFkTest, CreateElementScalarFkLabel) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
     db:create_element("Parent", { label = "Parent 1" })
     db:create_element("Child", {
         label = "Child 1",
@@ -86,9 +86,9 @@ TEST_F(SandboxFkTest, CreateElementScalarFkLabel) {
 
 TEST_F(SandboxFkTest, CreateElementScalarFkInteger) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
     db:create_element("Parent", { label = "Parent 1" })
     db:create_element("Child", {
         label = "Child 1",
@@ -103,9 +103,9 @@ TEST_F(SandboxFkTest, CreateElementScalarFkInteger) {
 
 TEST_F(SandboxFkTest, CreateElementVectorFkLabels) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
     db:create_element("Parent", { label = "Parent 1" })
     db:create_element("Parent", { label = "Parent 2" })
     db:create_element("Child", {
@@ -122,9 +122,9 @@ TEST_F(SandboxFkTest, CreateElementVectorFkLabels) {
 
 TEST_F(SandboxFkTest, CreateElementTimeSeriesFkLabels) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
     db:create_element("Parent", { label = "Parent 1" })
     db:create_element("Parent", { label = "Parent 2" })
     db:create_element("Child", {
@@ -142,9 +142,9 @@ TEST_F(SandboxFkTest, CreateElementTimeSeriesFkLabels) {
 
 TEST_F(SandboxFkTest, CreateElementAllFkTypes) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
     db:create_element("Parent", { label = "Parent 1" })
     db:create_element("Parent", { label = "Parent 2" })
     db:create_element("Child", {
@@ -181,9 +181,9 @@ TEST_F(SandboxFkTest, CreateElementAllFkTypes) {
 
 TEST_F(SandboxFkTest, CreateElementNoFkUnchanged) {
     auto db = quiver::Database::from_schema(":memory:", basic_schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
     db:create_element("Configuration", {
         label = "Config 1",
         integer_attribute = 42,
@@ -206,10 +206,10 @@ TEST_F(SandboxFkTest, CreateElementNoFkUnchanged) {
 
 TEST_F(SandboxFkTest, CreateElementFkResolutionNoPartialWrites) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    expect_lua_error(
-        lua,
+    expect_sandbox_error(
+        sandbox,
         R"(
         db:create_element("Child", {
             label = "Orphan Child",
@@ -226,9 +226,9 @@ TEST_F(SandboxFkTest, CreateElementFkResolutionNoPartialWrites) {
 
 TEST_F(SandboxFkTest, UpdateElementScalarFkLabel) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
     db:create_element("Parent", { label = "Parent 1" })
     db:create_element("Parent", { label = "Parent 2" })
     db:create_element("Child", {
@@ -245,9 +245,9 @@ TEST_F(SandboxFkTest, UpdateElementScalarFkLabel) {
 
 TEST_F(SandboxFkTest, UpdateElementScalarFkInteger) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
     db:create_element("Parent", { label = "Parent 1" })
     db:create_element("Parent", { label = "Parent 2" })
     db:create_element("Child", {
@@ -264,9 +264,9 @@ TEST_F(SandboxFkTest, UpdateElementScalarFkInteger) {
 
 TEST_F(SandboxFkTest, UpdateElementSetFkLabels) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
     db:create_element("Parent", { label = "Parent 1" })
     db:create_element("Parent", { label = "Parent 2" })
     db:create_element("Child", {
@@ -284,9 +284,9 @@ TEST_F(SandboxFkTest, UpdateElementSetFkLabels) {
 
 TEST_F(SandboxFkTest, UpdateElementAllFkTypes) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
     db:create_element("Parent", { label = "Parent 1" })
     db:create_element("Parent", { label = "Parent 2" })
     db:create_element("Child", {
@@ -330,9 +330,9 @@ TEST_F(SandboxFkTest, UpdateElementAllFkTypes) {
 
 TEST_F(SandboxFkTest, UpdateElementFkFailurePreservesExisting) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
     db:create_element("Parent", { label = "Parent 1" })
     db:create_element("Child", {
         label = "Child 1",
@@ -340,8 +340,8 @@ TEST_F(SandboxFkTest, UpdateElementFkFailurePreservesExisting) {
     })
 )");
 
-    expect_lua_error(
-        lua,
+    expect_sandbox_error(
+        sandbox,
         R"(
         db:update_element("Child", 1, { parent_id = "Nonexistent" })
     )",
@@ -356,9 +356,9 @@ TEST_F(SandboxFkTest, UpdateElementFkFailurePreservesExisting) {
 
 TEST_F(SandboxFkTest, UpdateElementNoFkUnchanged) {
     auto db = quiver::Database::from_schema(":memory:", basic_schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
     db:create_element("Configuration", {
         label = "Config 1",
         integer_attribute = 42,
@@ -387,9 +387,9 @@ TEST_F(SandboxFkTest, UpdateElementNoFkUnchanged) {
 
 TEST_F(SandboxFkTest, UpdateVectorFkViaTypedMethod) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
     db:create_element("Parent", { label = "Parent 1" })
     db:create_element("Parent", { label = "Parent 2" })
     db:create_element("Child", {
@@ -407,9 +407,9 @@ TEST_F(SandboxFkTest, UpdateVectorFkViaTypedMethod) {
 
 TEST_F(SandboxFkTest, UpdateTimeSeriesFkViaTypedMethod) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
     db:create_element("Parent", { label = "Parent 1" })
     db:create_element("Parent", { label = "Parent 2" })
     db:create_element("Child", {

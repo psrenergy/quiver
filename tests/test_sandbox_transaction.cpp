@@ -4,9 +4,9 @@ TEST_F(SandboxTest, TransactionCommit) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
         db:begin_transaction()
         db:create_element("Collection", { label = "Item 1", some_integer = 10 })
         db:commit()
@@ -21,9 +21,9 @@ TEST_F(SandboxTest, TransactionRollback) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
         db:begin_transaction()
         db:create_element("Collection", { label = "Item 1", some_integer = 10 })
         db:rollback()
@@ -37,10 +37,10 @@ TEST_F(SandboxTest, TransactionDoubleBeginError) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    expect_lua_error(
-        lua,
+    expect_sandbox_error(
+        sandbox,
         R"(
                 db:begin_transaction()
                 db:begin_transaction()
@@ -53,27 +53,27 @@ TEST_F(SandboxTest, TransactionCommitWithoutBeginError) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    expect_lua_error(lua, R"(db:commit())", "Cannot commit: no active transaction");
+    expect_sandbox_error(sandbox, R"(db:commit())", "Cannot commit: no active transaction");
 }
 
 TEST_F(SandboxTest, TransactionRollbackWithoutBeginError) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    expect_lua_error(lua, R"(db:rollback())", "Cannot rollback: no active transaction");
+    expect_sandbox_error(sandbox, R"(db:rollback())", "Cannot rollback: no active transaction");
 }
 
 TEST_F(SandboxTest, TransactionInTransaction) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
         assert(db:in_transaction() == false, "Expected false before begin")
         db:begin_transaction()
         assert(db:in_transaction() == true, "Expected true after begin")
@@ -86,9 +86,9 @@ TEST_F(SandboxTest, TransactionBlockAutoCommit) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
         local result = db:transaction(function(db)
             db:create_element("Collection", { label = "Item 1", some_integer = 42 })
             return 42
@@ -105,10 +105,10 @@ TEST_F(SandboxTest, TransactionBlockRollbackOnError) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    expect_lua_error(
-        lua,
+    expect_sandbox_error(
+        sandbox,
         R"(
                 db:transaction(function(db)
                     db:create_element("Collection", { label = "Item 1", some_integer = 10 })
@@ -130,8 +130,8 @@ TEST_F(SandboxTest, TransactionBlockCaughtRejectedUpdateWritesNothing) {
     auto id = db.create_element("Collection", quiver::Element().set("label", "Item 1").set("some_integer", int64_t{1}));
     ASSERT_EQ(id, 1);
 
-    quiver::Sandbox lua(db);
-    lua.run(R"(
+    quiver::Sandbox sandbox(db);
+    sandbox.run(R"(
         db:transaction(function(db)
             local ok, err = pcall(function()
                 db:update_element("Collection", 1, { some_integer = 2, tag = { 1.5 } })
@@ -150,9 +150,9 @@ TEST_F(SandboxTest, TransactionBlockMultiOps) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
         db:transaction(function(db)
             db:create_element("Collection", { label = "Item 1", some_integer = 10 })
             db:create_element("Collection", { label = "Item 2", some_integer = 20 })
@@ -184,13 +184,13 @@ TEST_F(SandboxTest, TransactionBlockMultiOps) {
 TEST_F(SandboxTest, TransactionBlockRejectsNonFunction) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    expect_lua_error(lua, "db:transaction(5)", "Cannot transaction: fn must be a function, got number");
+    expect_sandbox_error(sandbox, "db:transaction(5)", "Cannot transaction: fn must be a function, got number");
     EXPECT_FALSE(db.in_transaction());
 
-    expect_lua_error(
-        lua,
+    expect_sandbox_error(
+        sandbox,
         R"(
             db:begin_transaction()
             db:transaction("x")
@@ -200,8 +200,8 @@ TEST_F(SandboxTest, TransactionBlockRejectsNonFunction) {
     EXPECT_TRUE(db.in_transaction());
     db.rollback();
 
-    expect_lua_error(
-        lua,
+    expect_sandbox_error(
+        sandbox,
         "db:transaction(setmetatable({}, { __call = function() end }))",
         "Cannot transaction: fn must be a function, got table"
     );
@@ -213,10 +213,10 @@ TEST_F(SandboxTest, TransactionBlockRejectsNonFunction) {
 TEST_F(SandboxTest, TransactionBlockCommitFailureRollsBack) {
     auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    expect_lua_error(
-        lua,
+    expect_sandbox_error(
+        sandbox,
         R"lua(
             db:transaction(function(d)
                 d:query_string("PRAGMA defer_foreign_keys = ON")
@@ -233,12 +233,12 @@ TEST_F(SandboxTest, TransactionBlockCommitFailureRollsBack) {
 TEST_F(SandboxTest, ScopedBlockFinishErrorsStillSurface) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    expect_lua_error(lua, "db:transaction(function(d) d:commit() end)", "Cannot commit: no active transaction");
+    expect_sandbox_error(sandbox, "db:transaction(function(d) d:commit() end)", "Cannot commit: no active transaction");
     EXPECT_FALSE(db.in_transaction());
 
-    expect_lua_error(lua, "db:dry_run(function(d) d:end_dry_run() end)", "Cannot end_dry_run: no active dry run");
+    expect_sandbox_error(sandbox, "db:dry_run(function(d) d:end_dry_run() end)", "Cannot end_dry_run: no active dry run");
     EXPECT_FALSE(db.in_dry_run());
 }
 
@@ -250,9 +250,9 @@ TEST_F(SandboxTest, DryRunBlockRollsBack) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    auto result = lua.run(R"(
+    auto result = sandbox.run(R"(
         local inside = db:dry_run(function(db)
             db:create_element("Collection", { label = "Item 1", some_integer = 10 })
             return #db:read_element_ids("Collection")
@@ -269,10 +269,10 @@ TEST_F(SandboxTest, DryRunAbsorbsNestedTransaction) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
     // db:transaction is the pattern the Lua reference recommends; a dry run must not break it.
-    auto result = lua.run(R"(
+    auto result = sandbox.run(R"(
         return db:dry_run(function(db)
             db:transaction(function(db)
                 db:create_element("Collection", { label = "Item 1", some_integer = 10 })
@@ -289,10 +289,10 @@ TEST_F(SandboxTest, DryRunBlockRollsBackOnError) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    expect_lua_error(
-        lua,
+    expect_sandbox_error(
+        sandbox,
         R"(
         db:dry_run(function(db)
             db:create_element("Collection", { label = "Item 1", some_integer = 10 })
@@ -311,9 +311,9 @@ TEST_F(SandboxTest, DryRunExplicitBeginEnd) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    auto result = lua.run(R"(
+    auto result = sandbox.run(R"(
         db:begin_dry_run()
         db:create_element("Collection", { label = "Item 1", some_integer = 10 })
         local active = db:in_dry_run()
@@ -328,9 +328,9 @@ TEST_F(SandboxTest, DryRunExplicitBeginEnd) {
 TEST_F(SandboxTest, DryRunBlockRejectsNonFunction) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    expect_lua_error(lua, "db:dry_run(5)", "Cannot dry_run: fn must be a function, got number");
+    expect_sandbox_error(sandbox, "db:dry_run(5)", "Cannot dry_run: fn must be a function, got number");
     EXPECT_FALSE(db.in_dry_run());
     EXPECT_FALSE(db.in_transaction());
 }
@@ -339,11 +339,11 @@ TEST_F(SandboxTest, HostDryRunWrapsWholeScript) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
     // This is how a host previews a script it did not write.
     db.begin_dry_run();
-    auto result = lua.run(R"(
+    auto result = sandbox.run(R"(
         db:transaction(function(db)
             db:create_element("Collection", { label = "Item 1", some_integer = 10 })
         end)

@@ -17,8 +17,8 @@ TEST_F(SandboxTest, DescribeReport) {
     db.create_element("Collection", quiver::Element().set("label", "a"));
     db.create_element("Collection", quiver::Element().set("label", "b"));
 
-    quiver::Sandbox lua(db);
-    lua.run(R"LUA(
+    quiver::Sandbox sandbox(db);
+    sandbox.run(R"LUA(
         local report = db:describe()
         assert(type(report) == "string", "describe should return a string")
         assert(report:find("Collection: Configuration"), "missing Configuration")
@@ -28,8 +28,8 @@ TEST_F(SandboxTest, DescribeReport) {
 
 TEST_F(SandboxTest, DescribeCollection) {
     auto db = open_collections();
-    quiver::Sandbox lua(db);
-    lua.run(R"LUA(
+    quiver::Sandbox sandbox(db);
+    sandbox.run(R"LUA(
         local report = db:describe_collection("Collection")
         assert(type(report) == "string", "describe_collection should return a string")
         assert(report:find("Collection: Collection"), "missing header")
@@ -49,8 +49,8 @@ TEST_F(SandboxTest, SummarizeCollection) {
     db.create_element("Collection", quiver::Element().set("label", "b").set("some_integer", static_cast<int64_t>(1)));
     db.create_element("Collection", quiver::Element().set("label", "c").set("some_integer", static_cast<int64_t>(5)));
 
-    quiver::Sandbox lua(db);
-    lua.run(R"LUA(
+    quiver::Sandbox sandbox(db);
+    sandbox.run(R"LUA(
         local report = db:summarize_collection("Collection")
         assert(type(report) == "string", "summarize_collection should return a string")
         assert(report:find("some_integer: 3 non%-null, 0 null; values {1: 2, 5: 1}"), "bad some_integer stats")

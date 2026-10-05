@@ -99,7 +99,7 @@ TEST_F(SandboxTest, CreateElementMissingLabel) {
     quiver::Sandbox lua(db);
 
     // Attempting to create element without required label should fail
-    expect_lua_error(lua, R"(db:create_element("Collection", { some_integer = 42 }))", "NOT NULL constraint failed");
+    expect_sandbox_error(lua, R"(db:create_element("Collection", { some_integer = 42 }))", "NOT NULL constraint failed");
 }
 
 TEST_F(SandboxTest, CreateElementTrimsWhitespace) {
@@ -145,7 +145,7 @@ TEST_F(SandboxTest, CreateElementInvalidCollection) {
 
     quiver::Sandbox lua(db);
 
-    expect_lua_error(
+    expect_sandbox_error(
         lua,
         R"(db:create_element("NonexistentCollection", { label = "Test" }))",
         "Cannot create_element: collection not found"
@@ -325,12 +325,12 @@ TEST_F(SandboxTest, CreateElementRejectsNonTableElement) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::Sandbox lua(db);
 
-    expect_lua_error(
+    expect_sandbox_error(
         lua,
         R"(db:create_element("Collection", 5))",
         "Cannot create_element: element_table must be a table, got number"
     );
-    expect_lua_error(
+    expect_sandbox_error(
         lua,
         R"(db:create_element("Collection", db))",
         "Cannot create_element: element_table must be a table, got userdata"
@@ -344,7 +344,7 @@ TEST_F(SandboxTest, CreateElementRejectsUserdataAttribute) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::Sandbox lua(db);
 
-    expect_lua_error(
+    expect_sandbox_error(
         lua,
         R"(db:create_element("Collection", { label = "x", some_integer = db }))",
         "Cannot create_element: attribute 'some_integer' must be a value or a table, got userdata"
@@ -357,12 +357,12 @@ TEST_F(SandboxTest, CreateElementRejectsNonStringAttributeName) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::Sandbox lua(db);
 
-    expect_lua_error(
+    expect_sandbox_error(
         lua,
         R"(db:create_element("Collection", { "x" }))",
         "Cannot create_element: attribute name must be a string, got number"
     );
-    expect_lua_error(
+    expect_sandbox_error(
         lua,
         R"(db:create_element("Collection", { label = "y", [true] = 1 }))",
         "Cannot create_element: attribute name must be a string, got boolean"

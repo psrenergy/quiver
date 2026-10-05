@@ -7,10 +7,10 @@ TEST_F(SandboxTest, ReadScalarStrings) {
     db.create_element("Collection", quiver::Element().set("label", "Item 1"));
     db.create_element("Collection", quiver::Element().set("label", "Item 2"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
     // Read from Lua and verify count
-    lua.run(R"(
+    sandbox.run(R"(
         local labels = db:read_scalar_strings("Collection", "label")
         assert(#labels == 2, "Expected 2 labels")
         assert(labels[1] == "Item 1", "First label mismatch")
@@ -26,9 +26,9 @@ TEST_F(SandboxTest, ReadScalarIntegers) {
     db.create_element("Collection", quiver::Element().set("label", "Item 2").set("some_integer", int64_t{20}));
     db.create_element("Collection", quiver::Element().set("label", "Item 3").set("some_integer", int64_t{30}));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
         local integers = db:read_scalar_integers("Collection", "some_integer")
         assert(#integers == 3, "Expected 3 integers, got " .. #integers)
         assert(integers[1] == 10, "First integer should be 10")
@@ -51,9 +51,9 @@ TEST_F(SandboxTest, ReadScalarFloats) {
     db.create_element("Collection", quiver::Element().set("label", "Item 1").set("some_float", 1.5));
     db.create_element("Collection", quiver::Element().set("label", "Item 2").set("some_float", 2.5));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
         local floats = db:read_scalar_floats("Collection", "some_float")
         assert(#floats == 2, "Expected 2 floats")
         assert(floats[1] == 1.5, "First float should be 1.5")
@@ -70,11 +70,11 @@ TEST_F(SandboxTest, ReadScalarFloatsPreservesNulls) {
     db.create_element("Collection", quiver::Element().set("label", "Item 2"));  // NULL float
     db.create_element("Collection", quiver::Element().set("label", "Item 3").set("some_float", 3.5));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
     // One entry per element; the NULL must occupy a slot (nil), not be dropped.
     // (# is unreliable on a table with nil holes, so assert by explicit index.)
-    lua.run(R"(
+    sandbox.run(R"(
         local floats = db:read_scalar_floats("Collection", "some_float")
         assert(floats[1] == 1.5, "floats[1] should be 1.5")
         assert(floats[2] == nil, "floats[2] should be nil for the NULL element")
@@ -90,9 +90,9 @@ TEST_F(SandboxTest, ReadScalarIntegersPreservesNulls) {
     db.create_element("Collection", quiver::Element().set("label", "Item 2"));  // NULL integer
     db.create_element("Collection", quiver::Element().set("label", "Item 3").set("some_integer", int64_t{30}));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
         local ints = db:read_scalar_integers("Collection", "some_integer")
         assert(ints[1] == 10, "ints[1] should be 10")
         assert(ints[2] == nil, "ints[2] should be nil for the NULL element")
@@ -108,9 +108,9 @@ TEST_F(SandboxTest, ReadScalarStringsPreservesNulls) {
     db.create_element("AllTypes", quiver::Element().set("label", "c").set("some_text", "world"));
     db.create_element("AllTypes", quiver::Element().set("label", "d").set("some_text", ""));  // empty, not NULL
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
         local texts = db:read_scalar_strings("AllTypes", "some_text")
         assert(texts[1] == "hello", "texts[1] should be hello")
         assert(texts[2] == nil, "texts[2] should be nil for the NULL element")
@@ -126,11 +126,11 @@ TEST_F(SandboxTest, ReadScalarFloatsAllNull) {
     db.create_element("Collection", quiver::Element().set("label", "Item 1"));
     db.create_element("Collection", quiver::Element().set("label", "Item 2"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
     // All-NULL column: every slot is nil. read_element_ids is the count authority
     // (# is unreliable over an all-nil table).
-    lua.run(R"(
+    sandbox.run(R"(
         local ids = db:read_element_ids("Collection")
         assert(#ids == 2, "expected 2 element ids")
         local floats = db:read_scalar_floats("Collection", "some_float")
@@ -152,9 +152,9 @@ TEST_F(SandboxTest, ReadVectorIntegers) {
         quiver::Element().set("label", "Item 2").set("value_int", std::vector<int64_t>{10, 20})
     );
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
         local vectors = db:read_vector_integers("Collection", "value_int")
         assert(#vectors == 2, "Expected 2 vectors")
 
@@ -180,9 +180,9 @@ TEST_F(SandboxTest, ReadVectorFloats) {
         quiver::Element().set("label", "Item 1").set("value_float", std::vector<double>{1.1, 2.2, 3.3})
     );
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
         local vectors = db:read_vector_floats("Collection", "value_float")
         assert(#vectors == 1, "Expected 1 vector")
         assert(#vectors[1] == 3, "Vector should have 3 elements")
@@ -199,10 +199,10 @@ TEST_F(SandboxTest, ReadEmptyVector) {
     // Create element without vector data
     db.create_element("Collection", quiver::Element().set("label", "Item 1"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
     // One entry per element: an element without vector data reads back as an empty table
-    lua.run(R"(
+    sandbox.run(R"(
         local vectors = db:read_vector_integers("Collection", "value_int")
         assert(#vectors == 1, "Expected 1 entry, got " .. #vectors)
         assert(#vectors[1] == 0, "Element without vector data should be an empty table")
@@ -213,10 +213,10 @@ TEST_F(SandboxTest, ReadScalarStringsEmpty) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
     // No Collection elements created, should return empty table
-    lua.run(R"(
+    sandbox.run(R"(
         local labels = db:read_scalar_strings("Collection", "label")
         assert(#labels == 0, "Expected empty table, got " .. #labels .. " items")
     )");
@@ -226,9 +226,9 @@ TEST_F(SandboxTest, ReadScalarIntegersEmpty) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
         local integers = db:read_scalar_integers("Collection", "some_integer")
         assert(#integers == 0, "Expected empty table, got " .. #integers .. " items")
     )");
@@ -238,9 +238,9 @@ TEST_F(SandboxTest, ReadVectorIntegersEmpty) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
         local vectors = db:read_vector_integers("Collection", "value_int")
         assert(#vectors == 0, "Expected empty table, got " .. #vectors .. " items")
     )");
@@ -256,12 +256,12 @@ TEST_F(SandboxTest, ReadVectorBulkAlignsWithElementIdsAcrossEmptyElement) {
     db.create_element("Collection", quiver::Element().set("label", "Item 2"));  // no vector rows
     db.create_element("Collection", quiver::Element().set("label", "Item 3").set("value_int", std::vector<int64_t>{7}));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
     // The empty element is an empty table, not a nil hole, so #vectors (the outer list) stays
     // reliable and the positions line up with read_element_ids. An inner list is only reliable
     // under # when its column has no NULL cells - value_int has none here.
-    lua.run(R"(
+    sandbox.run(R"(
         local ids = db:read_element_ids("Collection")
         local vectors = db:read_vector_integers("Collection", "value_int")
         assert(#ids == 3, "Expected 3 ids, got " .. #ids)
@@ -285,9 +285,9 @@ TEST_F(SandboxTest, ReadSetStringsAll) {
         quiver::Element().set("label", "Item 2").set("tag", std::vector<std::string>{"c", "d", "e"})
     );
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
         local sets = db:read_set_strings("Collection", "tag")
         assert(#sets == 2, "Expected 2 outer elements, got " .. #sets)
         assert(#sets[1] == 2, "First set should have 2 tags, got " .. #sets[1])
@@ -303,7 +303,7 @@ TEST_F(SandboxTest, ReadElementIds) {
     int64_t id2 = db.create_element("Collection", quiver::Element().set("label", "Item 2"));
     int64_t id3 = db.create_element("Collection", quiver::Element().set("label", "Item 3"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
     std::string script = R"(
         local ids = db:read_element_ids("Collection")
@@ -315,7 +315,7 @@ TEST_F(SandboxTest, ReadElementIds) {
         assert(ids[3] == )" +
                          std::to_string(id3) + R"(, "Third Id mismatch")
     )";
-    lua.run(script);
+    sandbox.run(script);
 }
 
 TEST_F(SandboxTest, ReadElementIdsEmpty) {
@@ -323,9 +323,9 @@ TEST_F(SandboxTest, ReadElementIdsEmpty) {
 
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
         local ids = db:read_element_ids("Collection")
         assert(#ids == 0, "Expected 0 Ids for empty collection, got " .. #ids)
     )");
@@ -343,7 +343,7 @@ TEST_F(SandboxTest, ReadScalarsById) {
         quiver::Element().set("label", "Item 1").set("some_integer", int64_t{42}).set("some_float", 3.14)
     );
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
     std::string script = R"(
         local scalars = db:read_scalars_by_id("Collection", )" +
@@ -361,7 +361,7 @@ TEST_F(SandboxTest, ReadScalarsById) {
         assert(scalars.some_float == 3.14, "Expected some_float 3.14, got " .. tostring(scalars.some_float))
         assert(type(scalars.some_float) == "number", "some_float should be number type")
     )";
-    lua.run(script);
+    sandbox.run(script);
 }
 
 TEST_F(SandboxTest, ReadVectorsById) {
@@ -375,7 +375,7 @@ TEST_F(SandboxTest, ReadVectorsById) {
     );
     int64_t id = db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
     std::string script = R"(
         local vectors = db:read_vectors_by_id("Configuration", )" +
@@ -389,7 +389,7 @@ TEST_F(SandboxTest, ReadVectorsById) {
         for _ in pairs(vectors) do count = count + 1 end
         assert(count == 0, "Expected empty table for schema with no vector groups, got " .. count .. " entries")
     )";
-    lua.run(script);
+    sandbox.run(script);
 }
 
 TEST_F(SandboxTest, ReadSetsById) {
@@ -403,7 +403,7 @@ TEST_F(SandboxTest, ReadSetsById) {
     );
     int64_t id = db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
     std::string script = R"(
         local sets = db:read_sets_by_id("Configuration", )" +
@@ -417,7 +417,7 @@ TEST_F(SandboxTest, ReadSetsById) {
         for _ in pairs(sets) do count = count + 1 end
         assert(count == 0, "Expected empty table for schema with no set groups, got " .. count .. " entries")
     )";
-    lua.run(script);
+    sandbox.run(script);
 }
 
 TEST_F(SandboxTest, ReadVectorsByIdWithData) {
@@ -435,7 +435,7 @@ TEST_F(SandboxTest, ReadVectorsByIdWithData) {
             .set("note", std::vector<std::string>{"hello", "world"})
     );
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
     std::string script = R"(
         local vectors = db:read_vectors_by_id("Items", )" +
@@ -467,7 +467,7 @@ TEST_F(SandboxTest, ReadVectorsByIdWithData) {
         assert(vectors.note[1] == "hello", "note[1] expected 'hello', got " .. tostring(vectors.note[1]))
         assert(vectors.note[2] == "world", "note[2] expected 'world', got " .. tostring(vectors.note[2]))
     )";
-    lua.run(script);
+    sandbox.run(script);
 }
 
 TEST_F(SandboxTest, ReadVectorsByIdEmptyGroupIsEmptyTable) {
@@ -475,9 +475,9 @@ TEST_F(SandboxTest, ReadVectorsByIdEmptyGroupIsEmptyTable) {
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element("Collection", quiver::Element().set("label", "Item 1"));  // no vector rows
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(
+    sandbox.run(
         R"(
         local v = db:read_vectors_by_id("Collection", )" +
         std::to_string(id) + R"()
@@ -502,7 +502,7 @@ TEST_F(SandboxTest, ReadSetsByIdWithData) {
             .set("tag", std::vector<std::string>{"alpha", "beta"})
     );
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
     std::string script = R"(
         local sets = db:read_sets_by_id("Items", )" +
@@ -525,7 +525,7 @@ TEST_F(SandboxTest, ReadSetsByIdWithData) {
         assert(sets.tag ~= nil, "Missing 'tag' set group")
         assert(#sets.tag == 2, "Expected 2 tag values, got " .. #sets.tag)
     )";
-    lua.run(script);
+    sandbox.run(script);
 }
 
 TEST_F(SandboxTest, ReadElementById) {
@@ -546,7 +546,7 @@ TEST_F(SandboxTest, ReadElementById) {
             .set("tag", std::vector<std::string>{"alpha", "beta"})
     );
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
     std::string script = R"(
         local elem = db:read_element_by_id("Items", )" +
@@ -569,15 +569,15 @@ TEST_F(SandboxTest, ReadElementById) {
         for _ in pairs(elem) do count = count + 1 end
         assert(count >= 7, "Expected at least 7 keys, got " .. count)
     )";
-    lua.run(script);
+    sandbox.run(script);
 }
 
 TEST_F(SandboxTest, NumberOfElements) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
         local empty = db:number_of_elements("Collection")
         assert(type(empty) == "number", "Expected a number, got " .. type(empty))
         assert(empty == 0, "Expected 0 for an empty collection, got " .. empty)
@@ -596,31 +596,31 @@ TEST_F(SandboxTest, NumberOfElements) {
 TEST_F(SandboxTest, NumberOfElementsUnknownCollection) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    expect_lua_error(lua, R"(db:number_of_elements("Nope"))", "Cannot number_of_elements: collection not found: Nope");
+    expect_sandbox_error(sandbox, R"(db:number_of_elements("Nope"))", "Cannot number_of_elements: collection not found: Nope");
 }
 
 TEST_F(SandboxTest, ListGroupsUnknownCollection) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    expect_lua_error(lua, R"(db:list_vector_groups("Nope"))", "Cannot list_vector_groups: collection not found: Nope");
-    expect_lua_error(lua, R"(db:list_set_groups("Nope"))", "Cannot list_set_groups: collection not found: Nope");
-    expect_lua_error(
-        lua,
+    expect_sandbox_error(sandbox, R"(db:list_vector_groups("Nope"))", "Cannot list_vector_groups: collection not found: Nope");
+    expect_sandbox_error(sandbox, R"(db:list_set_groups("Nope"))", "Cannot list_set_groups: collection not found: Nope");
+    expect_sandbox_error(
+        sandbox,
         R"(db:list_time_series_groups("Nope"))",
         "Cannot list_time_series_groups: collection not found: Nope"
     );
 
     // The composites inherit the throw instead of returning an empty table.
-    expect_lua_error(
-        lua,
+    expect_sandbox_error(
+        sandbox,
         R"(db:read_vectors_by_id("Nope", 1))",
         "Cannot list_vector_groups: collection not found: Nope"
     );
-    expect_lua_error(lua, R"(db:read_sets_by_id("Nope", 1))", "Cannot list_set_groups: collection not found: Nope");
+    expect_sandbox_error(sandbox, R"(db:read_sets_by_id("Nope", 1))", "Cannot list_set_groups: collection not found: Nope");
 }
 
 TEST_F(SandboxTest, ReadVectorPreservesNullCellsAsNilHoles) {
@@ -639,11 +639,11 @@ TEST_F(SandboxTest, ReadVectorPreservesNullCellsAsNilHoles) {
         quiver::Element().set("label", "Item 3").set("value_int", std::vector<quiver::Value>{nullptr})
     );  // one NULL-only row
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
     // The outer list still has one entry per element, but an inner list of a nullable column can
     // now carry nil holes, so # is unreliable *inside* it - assert by explicit index.
-    lua.run(R"(
+    sandbox.run(R"(
         local vectors = db:read_vector_integers("Collection", "value_int")
         assert(#vectors == 3, "Expected 3 entries, got " .. #vectors)
         assert(vectors[1][1] == 10, "vectors[1][1] should be 10")
@@ -672,13 +672,13 @@ TEST_F(SandboxTest, ReadSetPreservesNullCellsAsNilHoles) {
             .set("tag", std::vector<quiver::Value>{std::string("a"), nullptr, std::string("c")})
     );
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
     // Set order is unspecified, so count the cells over indices 1..3 rather than pinning a slot. A
     // dropped NULL would also leave one nil in 1..3 (a trailing one), so also require a value at
     // index 3: that relies on rowid order only to the extent that the NULL, written in the middle,
     // is not the last row - a Lua inner list has no count authority to say more (design decision).
-    lua.run(R"(
+    sandbox.run(R"(
         local function tally(t)
             local nils, found = 0, {}
             for i = 1, 3 do

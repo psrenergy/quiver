@@ -4,18 +4,18 @@ TEST_F(SandboxTest, LuaScriptError) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Test Config"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    EXPECT_THROW({ lua.run("invalid lua syntax !!!"); }, std::runtime_error);
+    EXPECT_THROW({ sandbox.run("invalid lua syntax !!!"); }, std::runtime_error);
 }
 
 TEST_F(SandboxTest, ReuseRunner) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(db:create_element("Configuration", { label = "Test Config" }))");
-    lua.run(R"(db:create_element("Collection", { label = "Item 1" }))");
-    lua.run(R"(db:create_element("Collection", { label = "Item 2" }))");
+    sandbox.run(R"(db:create_element("Configuration", { label = "Test Config" }))");
+    sandbox.run(R"(db:create_element("Collection", { label = "Item 1" }))");
+    sandbox.run(R"(db:create_element("Collection", { label = "Item 2" }))");
 
     auto labels = db.read_scalar_strings("Collection", "label");
     EXPECT_EQ(labels.size(), 2);
@@ -25,27 +25,27 @@ TEST_F(SandboxTest, LuaRuntimeError) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
     // Test runtime error (not syntax error)
-    EXPECT_THROW({ lua.run("error('This is a runtime error')"); }, std::runtime_error);
+    EXPECT_THROW({ sandbox.run("error('This is a runtime error')"); }, std::runtime_error);
 }
 
 TEST_F(SandboxTest, LuaAssertionFailure) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    EXPECT_THROW({ lua.run("assert(false, 'Assertion failed!')"); }, std::runtime_error);
+    EXPECT_THROW({ sandbox.run("assert(false, 'Assertion failed!')"); }, std::runtime_error);
 }
 
 TEST_F(SandboxTest, ComplexLuaScript) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
     // A more complex script that uses multiple operations
-    lua.run(R"lua(
+    sandbox.run(R"lua(
         -- Create configuration
         db:create_element("Configuration", { label = "Main Config" })
 
@@ -81,37 +81,37 @@ TEST_F(SandboxTest, UndefinedVariableError) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    EXPECT_THROW({ lua.run("local x = undefined_variable + 1"); }, std::runtime_error);
+    EXPECT_THROW({ sandbox.run("local x = undefined_variable + 1"); }, std::runtime_error);
 }
 
 TEST_F(SandboxTest, NilFunctionCallError) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    EXPECT_THROW({ lua.run("local f = nil; f()"); }, std::runtime_error);
+    EXPECT_THROW({ sandbox.run("local f = nil; f()"); }, std::runtime_error);
 }
 
 TEST_F(SandboxTest, TableIndexError) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    EXPECT_THROW({ lua.run("local t = nil; local x = t.field"); }, std::runtime_error);
+    EXPECT_THROW({ sandbox.run("local t = nil; local x = t.field"); }, std::runtime_error);
 }
 
 TEST_F(SandboxTest, MultipleScriptExecutions) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(db:create_element("Configuration", { label = "Config" }))");
-    lua.run(R"(db:create_element("Collection", { label = "Item 1" }))");
-    lua.run(R"(db:create_element("Collection", { label = "Item 2" }))");
-    lua.run(R"(db:create_element("Collection", { label = "Item 3" }))");
+    sandbox.run(R"(db:create_element("Configuration", { label = "Config" }))");
+    sandbox.run(R"(db:create_element("Collection", { label = "Item 1" }))");
+    sandbox.run(R"(db:create_element("Collection", { label = "Item 2" }))");
+    sandbox.run(R"(db:create_element("Collection", { label = "Item 3" }))");
 
     auto labels = db.read_scalar_strings("Collection", "label");
     EXPECT_EQ(labels.size(), 3);
@@ -121,40 +121,40 @@ TEST_F(SandboxTest, EmptyScriptSucceeds) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
     // Empty script should succeed
-    lua.run("");
+    sandbox.run("");
 }
 
 TEST_F(SandboxTest, WhitespaceOnlyScriptSucceeds) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
     // Whitespace only script should succeed
-    lua.run("   \n\t\n   ");
+    sandbox.run("   \n\t\n   ");
 }
 
 TEST_F(SandboxTest, CommentOnlyScriptSucceeds) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
     // Comment only script should succeed
-    lua.run("-- this is a comment\n-- another comment");
+    sandbox.run("-- this is a comment\n-- another comment");
 }
 
 TEST_F(SandboxTest, ReadFromNonExistentCollection) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    expect_lua_error(
-        lua,
+    expect_sandbox_error(
+        sandbox,
         R"(local x = db:read_scalar_strings("NonexistentCollection", "label"))",
         "Cannot read_scalar_strings: collection not found"
     );
@@ -165,10 +165,10 @@ TEST_F(SandboxTest, ReadNonExistentAttribute) {
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     db.create_element("Collection", quiver::Element().set("label", "Item 1"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    expect_lua_error(
-        lua,
+    expect_sandbox_error(
+        sandbox,
         R"(local x = db:read_scalar_strings("Collection", "nonexistent"))",
         "Cannot read_scalar_strings: column 'nonexistent' not found"
     );
@@ -178,10 +178,10 @@ TEST_F(SandboxTest, UpdateElementNonExistentCollection) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    expect_lua_error(
-        lua,
+    expect_sandbox_error(
+        sandbox,
         R"(db:update_element("NonexistentCollection", 1, { label = "Test" }))",
         "Cannot update_element: collection not found"
     );
@@ -191,10 +191,10 @@ TEST_F(SandboxTest, DeleteFromNonExistentCollection) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    expect_lua_error(
-        lua,
+    expect_sandbox_error(
+        sandbox,
         R"(db:delete_element("NonexistentCollection", 1))",
         "Cannot delete_element: collection not found"
     );
@@ -204,11 +204,11 @@ TEST_F(SandboxTest, MultipleOperationsPartialFailure) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
     // First operation succeeds, second should fail
-    expect_lua_error(
-        lua,
+    expect_sandbox_error(
+        sandbox,
         R"(
             db:create_element("Collection", { label = "Item 1" })
             db:create_element("NonexistentCollection", { label = "Bad" })
@@ -224,13 +224,13 @@ TEST_F(SandboxTest, MultipleOperationsPartialFailure) {
 
 TEST_F(SandboxTest, ScalarTypeCoercionPolicy) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(db:create_element("Configuration", { label = "Config" }))");
+    sandbox.run(R"(db:create_element("Configuration", { label = "Config" }))");
 
     // A Lua float (even a whole-valued one) is rejected for an INTEGER column.
-    expect_lua_error(
-        lua,
+    expect_sandbox_error(
+        sandbox,
         R"(
         db:create_element("Collection", { label = "Bad", some_integer = 42.0 })
     )",
@@ -238,7 +238,7 @@ TEST_F(SandboxTest, ScalarTypeCoercionPolicy) {
     );
 
     // An integer is accepted for a REAL column (coerced to real on insert).
-    lua.run(R"(
+    sandbox.run(R"(
         db:create_element("Collection", { label = "Item 1", some_integer = 42, some_float = 7 })
     )");
 
@@ -255,10 +255,10 @@ TEST_F(SandboxTest, ReadElementIdsFromNonExistentCollection) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    expect_lua_error(
-        lua,
+    expect_sandbox_error(
+        sandbox,
         R"(local ids = db:read_element_ids("NonexistentCollection"))",
         "Cannot read_element_ids: collection not found"
     );
@@ -266,9 +266,9 @@ TEST_F(SandboxTest, ReadElementIdsFromNonExistentCollection) {
 
 TEST_F(SandboxTest, LuaScriptWithUnicodeCharacters) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
         db:create_element("Configuration", { label = "配置" })
         db:create_element("Collection", { label = "项目 αβγ 🎉" })
     )");
@@ -282,10 +282,10 @@ TEST_F(SandboxTest, LuaScriptWithUnicodeCharacters) {
 
 TEST_F(SandboxTest, DofileAndLoadfileRemoved) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
     // Scripts may not load Lua source from disk; string-form load() stays available.
-    lua.run(R"(
+    sandbox.run(R"(
         assert(dofile == nil, "dofile should be removed")
         assert(loadfile == nil, "loadfile should be removed")
         assert(load("return 1 + 1")() == 2, "string-form load should work")
@@ -294,10 +294,10 @@ TEST_F(SandboxTest, DofileAndLoadfileRemoved) {
 
 TEST_F(SandboxTest, LoadRefusesBinaryChunks) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
     // Lua does not verify bytecode, so load takes text chunks only, whatever mode the script passes.
-    lua.run(R"lua(
+    sandbox.run(R"lua(
         local dump = string.dump(function() return 1 end)
         local function refused(how, f, err)
             assert(f == nil, how .. ": a binary chunk should not load")
@@ -319,9 +319,9 @@ TEST_F(SandboxTest, LoadRefusesBinaryChunks) {
 
 TEST_F(SandboxTest, LoadStillAcceptsTextChunks) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
         assert(load("return 1 + 1")() == 2, "no mode")
         assert(load("return x", "c", "t", { x = 9 })() == 9, "explicit mode and env")
         assert(load("return x", "c", nil, { x = 7 })() == 7, "nil mode and env")
@@ -342,10 +342,10 @@ TEST_F(SandboxTest, LoadStillAcceptsTextChunks) {
 
 TEST_F(SandboxTest, RunRefusesBinaryChunks) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
     // A JSON result must be UTF-8, so the bytecode comes back hex-encoded.
-    auto hex = lua.run(R"(
+    auto hex = sandbox.run(R"(
         return (string.dump(function() return 1 end):gsub(".", function(c) return string.format("%02x", c:byte()) end))
     )");
     ASSERT_GE(hex.size(), 2u);
@@ -358,7 +358,7 @@ TEST_F(SandboxTest, RunRefusesBinaryChunks) {
 
     // The script itself is held to the same rule as load: text chunks only.
     try {
-        lua.run(bytecode);
+        sandbox.run(bytecode);
         FAIL() << "a binary chunk should not run";
     } catch (const std::runtime_error& e) {
         EXPECT_NE(std::string(e.what()).find("attempt to load a binary chunk (mode is 't')"), std::string::npos)
@@ -372,18 +372,18 @@ TEST_F(SandboxTest, CaughtScriptErrorsWriteNothingToStderr) {
         collections_schema,
         {.read_only = false, .console_level = quiver::LogLevel::Off}
     );
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
     // A C++ exception crossing a binding, caught by the script.
     testing::internal::CaptureStderr();
-    lua.run("pcall(function() db:commit() end)");
+    sandbox.run("pcall(function() db:commit() end)");
     EXPECT_EQ(testing::internal::GetCapturedStderr(), "");
 
     // The same exception left to propagate out of run().
     testing::internal::CaptureStderr();
     bool threw = false;
     try {
-        lua.run("db:commit()");
+        sandbox.run("db:commit()");
     } catch (const std::exception&) {
         threw = true;
     }
@@ -393,18 +393,18 @@ TEST_F(SandboxTest, CaughtScriptErrorsWriteNothingToStderr) {
 
 TEST_F(SandboxTest, DotCallThrowsInsteadOfCrashing) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    expect_lua_error(lua, "db.commit()", "received nil for 'self' argument");
-    EXPECT_THROW(lua.run("db.create_element('Collection', { label = 'x' })"), std::runtime_error);
+    expect_sandbox_error(sandbox, "db.commit()", "received nil for 'self' argument");
+    EXPECT_THROW(sandbox.run("db.create_element('Collection', { label = 'x' })"), std::runtime_error);
 }
 
 TEST_F(SandboxTest, StandardLibrariesEnabled) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
     // The pure-computation libraries (math/coroutine/utf8) are available.
-    lua.run(R"(
+    sandbox.run(R"(
         assert(math.floor(3.7) == 3, "math should be available")
         assert(type(coroutine.create) == "function", "coroutine should be available")
         assert(utf8.len("abc") == 3, "utf8 should be available")
@@ -413,10 +413,10 @@ TEST_F(SandboxTest, StandardLibrariesEnabled) {
 
 TEST_F(SandboxTest, UnsafeLibrariesNotLoaded) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
     // os/io/package/debug are never opened: no shell, process, env, filesystem, or module access.
-    lua.run(R"(
+    sandbox.run(R"(
         assert(os == nil, "os should not be loaded")
         assert(io == nil, "io should not be loaded")
         assert(package == nil, "package should not be loaded")
@@ -429,13 +429,13 @@ TEST_F(SandboxTest, QueryParameterUnsupportedTypeThrows) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
     // A silently dropped parameter would shift the remaining ones and return wrong results.
     // A boolean is no longer the unsupported case — it binds as INTEGER 1/0 (see
     // QueryParameterBooleanBindsInteger below); a function still has no SQL counterpart.
     try {
-        lua.run(R"(db:query_integer("SELECT id FROM Configuration WHERE label = ?", { print }))");
+        sandbox.run(R"(db:query_integer("SELECT id FROM Configuration WHERE label = ?", { print }))");
         FAIL() << "expected unsupported query parameter type to throw";
     } catch (const std::runtime_error& e) {
         EXPECT_NE(std::string(e.what()).find("Cannot query_integer: parameter #1"), std::string::npos) << e.what();
@@ -445,9 +445,9 @@ TEST_F(SandboxTest, QueryParameterUnsupportedTypeThrows) {
 TEST_F(SandboxTest, QueryParameterBooleanBindsInteger) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    auto json = lua.run(R"(
+    auto json = sandbox.run(R"(
         db:create_element("Collection", { label = "Flagged", some_integer = 1 })
         return db:query_integer("SELECT COUNT(*) FROM Collection WHERE some_integer = ?", { true })
     )");
@@ -459,12 +459,12 @@ TEST_F(SandboxTest, InvalidDateTimeValueThrows) {
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     db.create_element("Collection", quiver::Element().set("label", "Item 1"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
     // The core validates DATE_TIME content on write; Lua has no datetime type, so a bad string is
     // the only way in. Full grammar is covered in test_database_create.cpp.
-    expect_lua_error(
-        lua,
+    expect_sandbox_error(
+        sandbox,
         R"(db:update_time_series_group("Collection", "data", 1, { date_time = { "2005-01" }, value = { 1.0 } }))",
         "Cannot update_time_series_group: invalid DATE_TIME value for column 'date_time'"
     );
