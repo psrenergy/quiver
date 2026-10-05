@@ -9,6 +9,9 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ### Changed
 
+- **BREAKING** **Renamed Lua Runner to Sandbox.** The `LuaRunner` type and its methods are now `Sandbox`, `run()` and `close()`. The
+  `LUA_DB_API_REFERENCE` constant is unchanged. Call `Sandbox(db)` instead of `LuaRunner(db)`, and
+  `sandbox.run(script)` instead of `runner.run(script)`.
 - **BREAKING** **Lua table arguments are type-checked.** A value other than a table passed where
   a Lua method takes a table now raises `Cannot <op>: <argument> must be a table, got <type>`:
   an element table (`create_element`, `update_element`, `update_element_by_label`,
@@ -48,7 +51,7 @@ callers to change something are prefixed **BREAKING** and say what to do.
   match dimensions count (1)` or the reverse for one empty side; `Number of dimensions must be
   positive, got 0` for both). An empty `time_dimensions` or `frequencies` array still means the same
   as leaving it out.
-- **BREAKING** **Lua `load` and the script given to `LuaRunner::run` accept text chunks only.** A
+- **BREAKING** **Lua `load` and the script given to `Sandbox::run` accept text chunks only.** A
   precompiled chunk (for example `string.dump` or `luac` output, given as a string or through a
   reader function) makes `load` return `nil` and `attempt to load a binary chunk (mode is 't')`,
   whatever mode is passed, and `run()` (so `quiver_cli` too) throws `Failed to run Lua script:`
@@ -94,6 +97,9 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ### Fixed
 
+- Dart FFI generation finds the existing Visual Studio 18 Community LLVM installation on Windows
+  and preserves integer enum constants with ffigen 20.1.1. The element wrapper uses the canonical
+  typedef so regeneration's duplicate-alias naming no longer breaks compilation.
 - **A non-string key in a Lua table argument is a Pattern 1 error.** A number or boolean key in an
   element table, a time-series row, a `file:read`/`file:write` `dims` table or the `paths` of
   `update_time_series_files` now raises `Cannot <op>: <attribute|column|dimension> name must be a
@@ -305,10 +311,10 @@ callers to change something are prefixed **BREAKING** and say what to do.
   back as `10:00Z`, three hours off, and `read_time_series_row` looked up the wrong instant the
   same way. An aware value is now converted to UTC (`07:00`); a naive one is written as given.
   Rows written earlier from an aware non-UTC value keep the wall-clock time they were stored with.
-- **Python: a `LuaRunner` whose construction fails is silent when it is garbage-collected.**
-  `LuaRunner(db)` on a closed `Database` raised `QuiverError: Null argument: db` as it should, but
-  the half-built object's `__del__` then emitted a spurious `ResourceWarning: LuaRunner was not
-  closed explicitly` and printed `Exception ignored in … AttributeError: 'LuaRunner' object has no
+- **Python: a `Sandbox` whose construction fails is silent when it is garbage-collected.**
+  `Sandbox(db)` on a closed `Database` raised `QuiverError: Null argument: db` as it should, but
+  the half-built object's `__del__` then emitted a spurious `ResourceWarning: Sandbox was not
+  closed explicitly` and printed `Exception ignored in … AttributeError: 'Sandbox' object has no
   attribute '_ptr'`. A runner now counts as closed until its native handle exists.
 - **Julia: `scalar_relation_map` / `set_relation_map` read in bulk.** They issued one query per
   element and a linear search per relation; they now make two bulk reads and a dictionary lookup,
@@ -611,7 +617,7 @@ callers to change something are prefixed **BREAKING** and say what to do.
   metadata from toml: ...`, even from `from_element`.
 - **`csv_to_bin` reads numbers the same way in every host locale and on every platform.** Under a
   decimal-comma C locale (e.g. Python's `locale.setlocale(locale.LC_ALL, "")` on a pt-BR machine,
-  then `db:csv_to_bin` through a `LuaRunner`) a data cell `1.5` was read as `1`, and on Linux and
+  then `db:csv_to_bin` through a `Sandbox`) a data cell `1.5` was read as `1`, and on Linux and
   macOS a subnormal value such as `1e-310`, which `bin_to_csv` writes, was rejected. It now uses
   the same number parser as `import_csv()`.
 - **`csv_to_bin()` checks every data row's width against the header.** A row missing a dimension
@@ -925,7 +931,7 @@ callers to change something are prefixed **BREAKING** and say what to do.
   a forced garbage collection, which only finalizes objects the script made *unreachable*.
   `w = db:write_csv(path)` without `local` — Lua's default spelling — is a GC root, so its rows
   stayed in the stream buffer and the file was empty (or truncated mid-record) for the host and
-  for any later `run()`. `LuaRunner::run` now closes every writer the run handed out, explicitly
+  for any later `run()`. `Sandbox::run` now closes every writer the run handed out, explicitly
   and regardless of reachability. A writer does not outlive its `run()`: reusing the handle from a
   later script reports `Cannot write_row: writer for '...' is already closed`.
 - **Lua: `w:close()` left the writer un-closeable after a flush failure.** It threw before marking
@@ -1002,7 +1008,7 @@ callers to change something are prefixed **BREAKING** and say what to do.
 - **The Dart binding's native build now works on macOS.** `quiverdb`'s native-assets hook
   previously could not configure, compile, or register its libraries there.
 - **macOS builds now target macOS 13.3 as their minimum, deterministically.** libc++ marks the
-  floating-point `std::to_chars` (used by `database_csv_export.cpp` and `lua_runner.cpp`)
+  floating-point `std::to_chars` (used by `database_csv_export.cpp` and `sandbox.cpp`)
   unavailable below 13.3, so that is the core's real floor and `cmake/Platform.cmake` now sets
   it for every macOS build. Previously no build path set one, so clang stamped the *builder's*
   OS version into the shipped dylibs and the published Julia/JS/S3 natives silently required
@@ -1167,7 +1173,7 @@ callers to change something are prefixed **BREAKING** and say what to do.
   `Binary.open_file` take a callback-first argument, so Julia `do` syntax releases the handle at the
   block's `end` on both the normal and the exceptional exit, and returns the callback's result. The
   finalizer already released eventually — what is new is *prompt, deterministic* release, which is
-  what frees an OS file handle on Windows. Caveat: a `LuaRunner` built inside the block must not
+  what frees an OS file handle on Windows. Caveat: a `Sandbox` built inside the block must not
   outlive it (it borrows the database), and an uncommitted transaction still open at the block's
   `end` is rolled back — use `transaction(db) do db ... end` inside.
 

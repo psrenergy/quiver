@@ -8,7 +8,7 @@ This repo uses **nested AGENTS.md files**: this root file holds everything cross
 area's internals live in the AGENTS.md next to it (loaded automatically when working there).
 
 ```
-include/quiver/ + src/    # C++ core, Lua runner, binary + expression subsystems -> src/AGENTS.md
+include/quiver/ + src/    # C++ core, Sandbox, binary + expression subsystems -> src/AGENTS.md
 include/quiver/c/ + src/c/ # C API for FFI                                       -> src/c/AGENTS.md
 bindings/julia/           # Quiver.jl (canonical; published repo is a mirror)    -> bindings/julia/AGENTS.md
 bindings/dart/            # quiverdb on pub (ffigen + native-assets hook)        -> bindings/dart/AGENTS.md
@@ -71,8 +71,8 @@ Settled questions — don't relitigate without the user; each was decided delibe
   takes), and changing either side is a breaking API change, not a fix.
 - **Binary + expression subsystems are exposed in Julia and Lua only.** Dart, Python, and JS
   deliberately do not expose them (no FFI consumer); the tests-at-every-layer rule has this one
-  documented exception. Lua binds the C++ classes directly via sol2 (`src/lua_runner/binary.cpp` and
-  `src/lua_runner/expression.cpp`) with method syntax + string aggregation operations; pure-metadata builders live under a `quiver.*`
+  documented exception. Lua binds the C++ classes directly via sol2 (`src/sandbox/binary.cpp` and
+  `src/sandbox/expression.cpp`) with method syntax + string aggregation operations; pure-metadata builders live under a `quiver.*`
   namespace while file I/O is db-scoped (see cross-layer table and the sandbox decision below).
   `helper_maps.jl` is a second documented Julia-only exception (see convenience methods below).
 - **A binary file is an expression.** In C++, `BinaryFile` and `Expression` (`final`) derive from
@@ -88,7 +88,7 @@ Settled questions — don't relitigate without the user; each was decided delibe
   caller closed it. A file's `get_metadata()` is the one override: its handle's in-memory metadata.
   **Lua**: sol2 checks every operand as `const AbstractExpression&`. The base is registered through
   compile-time traits (`SOL_BASE_CLASSES` for each derived type, `SOL_DERIVED_CLASSES` for the base,
-  in `src/lua_runner/internal.h`), because the runtime base-classes tag measured +2.3% on 1M
+  in `src/sandbox/internal.h`), because the runtime base-classes tag measured +2.3% on 1M
   `f:read` calls; `AbstractExpression` is never a registered usertype. The last candidate of each
   overload set keeps the Pattern 1 operand text and raises the too-many-arguments error, and a file
   takes the six expression methods directly. **Julia**: `abstract type AbstractExpression end` in
@@ -111,11 +111,11 @@ Settled questions — don't relitigate without the user; each was decided delibe
   with strict containment). In-memory databases (`:memory:`) reject all file operations.
   `dofile`/`loadfile` are removed from the Lua environment. String-form `load` stays for text chunks
   only: it always loads with mode `"t"`, so a precompiled binary chunk is refused, because Lua does
-  not verify bytecode. The script given to `LuaRunner::run` is loaded with mode `"t"` too, so a host
+  not verify bytecode. The script given to `Sandbox::run` is loaded with mode `"t"` too, so a host
   must pass source, not bytecode. The enabled standard libraries are the pure-computation set
   `base`/`string`/`table`/`math`/`coroutine`/`utf8`; `os`/`io`/`package`/`debug` stay unloaded.
-  Julia's standalone `open_file` is unaffected — this is LuaRunner policy
-  (`resolve_sandboxed_path` in `src/lua_runner/path_policy.cpp`), not binary-subsystem policy.
+  Julia's standalone `open_file` is unaffected — this is Sandbox policy
+  (`resolve_sandboxed_path` in `src/sandbox/path_policy.cpp`), not binary-subsystem policy.
 - **One scalar typing policy lives in C++**: an int64 is accepted for INTEGER and REAL columns
   (int-for-REAL coercion), a double only for REAL (a float into an INTEGER column is rejected), a
   string for TEXT / DATE_TIME, and an FK label for an INTEGER foreign key wherever
@@ -153,11 +153,11 @@ Settled questions — don't relitigate without the user; each was decided delibe
 - **`query_*` validate parameter count**: `execute` rejects a mismatch between bound parameters and
   `?` placeholders (too few or too many) instead of binding NULL / ignoring extras.
 - **Migration `down_sql` is a required feature** — do not remove the down path.
-- **Dry runs live on `Database`, not on `LuaRunner`.** `begin_dry_run`/`end_dry_run`/`in_dry_run`
+- **Dry runs live on `Database`, not on `Sandbox`.** `begin_dry_run`/`end_dry_run`/`in_dry_run`
   hold one transaction and always roll it back; while active, the public
   `begin_transaction`/`commit`/`rollback` are absorbed (no-ops). Absorbing is the whole point —
   without it a script using `db:transaction(fn)` (the pattern the Lua reference recommends) dies on
-  a nested `BEGIN`. A `dry_run(bool)` parameter on `LuaRunner::run` was implemented first and
+  a nested `BEGIN`. A `dry_run(bool)` parameter on `Sandbox::run` was implemented first and
   rejected: it duplicated transaction semantics inside the Lua *binding* layer and gated the
   feature behind Lua for no reason. Consequences, all documented rather than fixed: a nested
   rollback is **not** partial (everything is undone at the end regardless); `in_transaction()`
@@ -181,8 +181,8 @@ Settled questions — don't relitigate without the user; each was decided delibe
   are still all-or-nothing. A SAVEPOINT per nested guard would close that gap and was rejected in
   the v0.3 research (commit `f92af8d`, "SAVEPOINT Complexity Leaking Into the Design") as the
   nesting complexity the no-op guard exists to avoid.
-- **`LuaRunner::run` returns the script's return value as a JSON string.** One encoder in C++
-  (`src/lua_runner/return_json.cpp`, anonymous namespace); every binding passes the string through without
+- **`Sandbox::run` returns the script's return value as a JSON string.** One encoder in C++
+  (`src/sandbox/return_json.cpp`, anonymous namespace); every binding passes the string through without
   parsing, so no binding gains a JSON dependency (Julia would have needed one). Only the first
   returned value is encoded; no `return` yields `""`, distinct from `return nil` → `"null"`.
   Non-finite numbers become `null`, a table keyed `1..n` is an array (`{}` → `[]`) and any other
@@ -210,7 +210,7 @@ Settled questions — don't relitigate without the user; each was decided delibe
   days counted from `initial_datetime`'s day, never from January 1.
   One function, `position_in_parent` (`src/binary/binary_utils.h`), yields both the initial values and the
   read/write check. Details in `src/AGENTS.md` ("Time Coordinates").
-- **One C API error channel**: everything (LuaRunner included) reports via
+- **One C API error channel**: everything (Sandbox included) reports via
   `quiver_get_last_error`; no per-handle error channels.
 - **Python's `Element` is internal**; users pass `**kwargs` to create/update.
 - **JS keeps a string-based datetime surface** — no DateTime wrappers.
@@ -248,7 +248,7 @@ Settled questions — don't relitigate without the user; each was decided delibe
   is no boolean setter in the C API and none is needed: each binding converts before the FFI call
   (`Element.set` in Dart, `setElementField` / `setElementArray` / `marshalParams` /
   `updateGroupColumns` / `upsertRowColumns` in JS, `lua_to_value` / `lua_cell_as` in
-  `src/lua_runner/internal.h`). Julia and Python need no conversion branch because `Bool <: Integer` and
+  `src/sandbox/internal.h`). Julia and Python need no conversion branch because `Bool <: Integer` and
   `bool` is an `int` subclass respectively, so a boolean takes each writer's integer branch. That
   is worth a test rather than an assumption: in Julia the group and row marshallers are
   branch-order-dependent (`Bool <: Real` too, so their `Integer` test must precede the `Real`
@@ -355,7 +355,7 @@ Settled questions — don't relitigate without the user; each was decided delibe
   trip, since CSV has no null. With a `header`, its length is the row width: `write_row` pads a
   shorter row with empty cells and throws a Pattern 1 error naming the row ordinal and both counts
   for a longer one; omitting `header` disables the check entirely. A writer still open when the
-  calling `LuaRunner::run` returns is closed at `run()`'s scope exit — covering the throw path too
+  calling `Sandbox::run` returns is closed at `run()`'s scope exit — covering the throw path too
   — so the file is complete and re-readable even if the script never called `w:close()`, with no
   warning emitted. That close goes through a `weak_ptr` registry of every writer the run handed
   out, **not** through the GC: `collect_garbage()` alone only finalizes writers the script made
@@ -474,8 +474,8 @@ JS has no generator — update the hand-written symbol table in `bindings/js/src
   the Linux **Dart Coverage** CI job exercises the ON configuration (through the hook); no macOS or
   Windows job does.
 - **macOS builds are floored at deployment target 13.3** (`cmake/Platform.cmake`): libc++ marks
-  the floating-point `std::to_chars` used by `database_csv_export.cpp`, `lua_runner/return_json.cpp`,
-  `lua_runner/csv.cpp` and `binary/csv_converter.cpp` (all through `utils::append_number`) unavailable below it, so that is
+  the floating-point `std::to_chars` used by `database_csv_export.cpp`, `sandbox/return_json.cpp`,
+  `sandbox/csv.cpp` and `binary/csv_converter.cpp` (all through `utils::append_number`) unavailable below it, so that is
   the **core's** floor, not one binding's. A higher explicit
   `CMAKE_OSX_DEPLOYMENT_TARGET` is respected; a lower one is raised. Do not remove it: with no
   floor, clang stamps the builder's own OS version into every dylib, which is how the published
@@ -766,11 +766,11 @@ broadcast, aggregation, and label projection, materialized via `save()`). Expose
 takes every expression operation and method in C++, Lua and Julia; the C API converts a file with
 `quiver_expression_from_file()`. Full reference: `src/AGENTS.md`.
 
-### LuaRunner Class
+### Sandbox Class
 Executes Lua scripts against a database; the `db` userdata exposes the same API surface
 (see cross-layer tables below). `run(script)` returns the script's return value encoded as
 **JSON** (empty string if it returned nothing) — every binding passes that string through
-verbatim. The binding lives in `src/lua_runner/`, one file per core file it binds (`database.cpp` and
+verbatim. The binding lives in `src/sandbox/`, one file per core file it binds (`database.cpp` and
 `database_*.cpp`, named after `src/database*.cpp`), plus `csv.cpp`, `binary.cpp` and `expression.cpp`;
 the layout and its rules are in `src/AGENTS.md`, along with the implementation notes.
 
@@ -783,7 +783,7 @@ the layout and its rules are in `src/AGENTS.md`, along with the implementation n
 - **C++ to Dart:** Convert `snake_case` to `camelCase`. Factory methods use named constructors: `from_schema` -> `Database.fromSchema()`
 - **C++ to Python:** Same `snake_case` name. Factory methods are `@staticmethod`. Properties are regular methods (not `@property`). Create/update use `**kwargs`: `create_element("Collection", label="x")`.
 - **C++ to JS:** Same camelCase rule as Dart, with `Csv` cased as `exportCsv`/`importCsv`.
-- **C++ to Lua:** Same name exactly (1:1 match). Lua has no lifecycle methods (open/close) -- database is provided as `db` userdata by LuaRunner.
+- **C++ to Lua:** Same name exactly (1:1 match). Lua has no lifecycle methods (open/close) -- database is provided as `db` userdata by Sandbox.
 
 The rules are mechanical: given any C++ method name, you can derive the equivalent in any layer.
 
@@ -942,7 +942,7 @@ because only Julia consumers use it.
 **Scoped resource factories (Julia and Python — no Dart/JS equivalent):** the four bindings sit in
 three shapes and the divergence is not yet resolved. Julia has callback-first overloads for `do`
 syntax on `Database` (`open`, `from_schema`, `from_migrations`) and `Binary.File` (`open_file`);
-Python has `with` on `Database` and `LuaRunner`; Dart and JS have neither. All of them wrap
-`open + fn + close`. Two caveats hold wherever a scoped form exists: a `LuaRunner` borrows its
-`Database` (raw `Database&` in `src/lua_runner/lua_runner.cpp`) and must not outlive the block, and an
+Python has `with` on `Database` and `Sandbox`; Dart and JS have neither. All of them wrap
+`open + fn + close`. Two caveats hold wherever a scoped form exists: a `Sandbox` borrows its
+`Database` (raw `Database&` in `src/sandbox/sandbox.cpp`) and must not outlive the block, and an
 uncommitted transaction still open at the block's exit is rolled back by the close.

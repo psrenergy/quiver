@@ -1,7 +1,7 @@
 # Platform-specific configuration
 
 # macOS deployment floor. libc++ marks the floating-point std::to_chars used by
-# database_csv_export.cpp, lua_runner/return_json.cpp, lua_runner/csv.cpp and binary/csv_converter.cpp
+# database_csv_export.cpp, sandbox/return_json.cpp, sandbox/csv.cpp and binary/csv_converter.cpp
 # unavailable before macOS 13.3, so the floor belongs to the core, not to one binding. Without it clang stamps
 # the *builder's* OS version into every
 # dylib, so the published Julia/JS/S3 natives silently required whatever the CI runner image

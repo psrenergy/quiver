@@ -14,25 +14,25 @@ set(QUIVER_SOURCES
     csv/csv_write.cpp
     database_describe.cpp
     element.cpp
-    lua_runner/binary.cpp
-    lua_runner/csv.cpp
-    lua_runner/database.cpp
-    lua_runner/database_create.cpp
-    lua_runner/database_csv_export.cpp
-    lua_runner/database_csv_import.cpp
-    lua_runner/database_delete.cpp
-    lua_runner/database_describe.cpp
-    lua_runner/database_metadata.cpp
-    lua_runner/database_query.cpp
-    lua_runner/database_read.cpp
-    lua_runner/database_time_series.cpp
-    lua_runner/database_update.cpp
-    lua_runner/expression.cpp
-    lua_runner/internal.h
-    lua_runner/lua_runner.cpp
-    lua_runner/path_policy.cpp
-    lua_runner/path_policy.h
-    lua_runner/return_json.cpp
+    sandbox/binary.cpp
+    sandbox/csv.cpp
+    sandbox/database.cpp
+    sandbox/database_create.cpp
+    sandbox/database_csv_export.cpp
+    sandbox/database_csv_import.cpp
+    sandbox/database_delete.cpp
+    sandbox/database_describe.cpp
+    sandbox/database_metadata.cpp
+    sandbox/database_query.cpp
+    sandbox/database_read.cpp
+    sandbox/database_time_series.cpp
+    sandbox/database_update.cpp
+    sandbox/expression.cpp
+    sandbox/internal.h
+    sandbox/sandbox.cpp
+    sandbox/path_policy.cpp
+    sandbox/path_policy.h
+    sandbox/return_json.cpp
     migration.cpp
     migrations.cpp
     result.cpp
@@ -77,7 +77,7 @@ target_include_directories(quiver
 )
 
 # sol2 safety settings: sol2's safeties are on in every build, as the backstop behind the explicit
-# Pattern 1 checks in src/lua_runner/. sol2 never prints a caught error to the host's stderr.
+# Pattern 1 checks in src/sandbox/. sol2 never prints a caught error to the host's stderr.
 # SOL_SAFE_NUMERICS is implied by SOL_ALL_SAFETIES_ON but stays explicit because the code depends on it.
 # The checked getter and the stack check are off in every build: with them on, a Release bulk read
 # cost 16% more. lua_cell_as and the key checks cover the getter. Never turn off
@@ -92,7 +92,7 @@ target_compile_definitions(quiver PRIVATE
 )
 
 # sol2's template depth needs /bigobj (MSVC) or -Wa,-mbig-obj (other Windows compilers) in every
-# src/lua_runner/ TU; set for the whole target so a new file cannot miss it.
+# src/sandbox/ TU; set for the whole target so a new file cannot miss it.
 if(MSVC)
     target_compile_options(quiver PRIVATE /bigobj)
 elseif(WIN32)
@@ -154,7 +154,7 @@ if(QUIVER_BUILD_C_API)
         c/database_time_series.cpp
         c/database_transaction.cpp
         c/element.cpp
-        c/lua_runner.cpp
+        c/sandbox.cpp
         c/binary/binary_file.cpp
         c/binary/csv_converter.cpp
         c/binary/binary_metadata.cpp

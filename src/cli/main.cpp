@@ -1,6 +1,6 @@
 #include <argparse/argparse.hpp>
 #include <quiver/database.h>
-#include <quiver/lua_runner.h>
+#include <quiver/sandbox.h>
 
 #include <filesystem>
 #include <fstream>
@@ -121,7 +121,7 @@ int main(int argc, char* argv[]) {
             db.begin_dry_run();
         }
 
-        quiver::LuaRunner lua(db);
+        quiver::Sandbox lua(db);
         auto result = lua.run(script);
 
         if (db.in_dry_run()) {

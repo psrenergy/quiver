@@ -194,10 +194,10 @@ as an exact INTEGER, a `boolean` as the INTEGER 1 or 0).
 
 ### Lua
 
-- `LuaRunner(db)` -- Create Lua script runner with database access
+- `Sandbox(db)` -- Create Lua script runner with database access
 - `run(script)` -- Execute a Lua script; returns its return value as a JSON string, or `""` if it
   returned nothing
-- `close()` -- Close the Lua runner
+- `close()` -- Close the Sandbox
 
 ## Types
 

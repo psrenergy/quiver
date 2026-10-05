@@ -7,7 +7,7 @@ convenience-method parity tables live in the root `AGENTS.md`.
 
 ```
 lib/src/          # Hand-written wrappers: database.dart + part files per area, element.dart,
-                  # lua_runner.dart, metadata.dart, exceptions.dart, date_time.dart,
+                  # sandbox.dart, metadata.dart, exceptions.dart, date_time.dart,
                   # database_options.dart
 lib/src/ffi/      # bindings.dart (GENERATED ffigen output — do not hand-edit) +
                   # library_loader.dart (hand-written native library resolution)
@@ -24,23 +24,17 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   **pubspec.yaml** (plain `dart run ffigen` reads only that); the sibling `ffigen.yaml` is an
   unused duplicate consulted only via an explicit `--config` flag — editing it alone changes
   nothing.
-- **The checked-in `bindings.dart` predates the pinned ffigen (20.1.1).** Regenerating today
-  rewrites the whole file and turns `quiver_data_type_t` / `quiver_error_t` / `quiver_log_level_t`
-  from `abstract class` int constants into real Dart `enum`s (and the native return type from
-  `Int32` to `UnsignedInt`). That is a breaking change for every downstream `== quiver_data_type_t.X`
-  comparison — notably hub's `lib/models/database.dart`. The `update_vector_group` /
-  `update_set_group` entries were therefore hand-added in the file's existing style, and
-  `quiver_database_number_of_elements` likewise (hand-added right after
-  `quiver_database_read_element_ids`, matching the C API's declaration order), as were
-  `quiver_database_update_element_by_label`, the three group writers' `_by_label` forms,
-  `quiver_database_upsert_time_series_row` plus its `_by_label` form,
-  `quiver_database_update_relation` plus its `_by_label` form, and the `out_mask` parameter of
-  `quiver_database_read_time_series_row`. The query entry points were collapsed the same way:
-  the three plain `quiver_database_query_{string,integer,float}` blocks were deleted and the
-  parameterized blocks renamed onto those names. Removals are hand-deleted the same way
-  (`quiver_clear_last_error` and the four `quiver_element_*` has/count accessors).
-  Take the generator upgrade as its own deliberate change (regenerate, then fix the enum call
-  sites here and in hub) rather than as a side effect of adding a C function.
+- **LLVM for ffigen**: `pubspec.yaml` points `llvm-path` at Visual Studio 18 Community's
+  `VC/Tools/Llvm/x64` directory, which contains `bin/libclang.dll`. ffigen 20.1.1 does not
+  search that installation by default; adjust the path for a different Visual Studio install.
+  If it is absent, ffigen falls back to its default LLVM locations on the current platform.
+- **Keep C enums as integer constants**: `enums.as-int.include` lists `quiver_error_t`,
+  `quiver_log_level_t` and `quiver_data_type_t`. Without it, ffigen 20.1.1 generates Dart
+  enums and breaks the wrappers' and downstream callers' integer comparisons. Regenerate
+  `bindings.dart` after C API changes rather than hand-adding declarations.
+- **Use the canonical `quiver_element_t` alias** in wrappers. The C headers declare it twice,
+  so ffigen also emits a duplicate whose generated suffix can change between versions
+  (`quiver_element_t1` in the old output, `quiver_element_t$1` in 20.1.1).
 - **Native library resolution** (`lib/src/ffi/library_loader.dart`), three tiers in order:
   (1) the native-assets build output (`.dart_tool/hooks_runner/shared/quiverdb/build`) — on
   Windows it pre-loads `libquiver.dll` from there so `libquiver_c.dll`'s dependency resolves;
@@ -62,7 +56,7 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   `CMAKE_MACOSX_BUNDLE=OFF` (the toolchain's `if(NOT DEFINED ...) set(... YES)` inherits into
   FetchContent, and lua-cmake's `lua_bin` bundle + RUNTIME-only `install()` then aborts
   configure); and `DEPLOYMENT_TARGET` floored at 13.3 (libc++ marks the floating-point
-  `std::to_chars` used by `database_csv_export.cpp` / `lua_runner/return_json.cpp` / `lua_runner/csv.cpp` /
+  `std::to_chars` used by `database_csv_export.cpp` / `sandbox/return_json.cpp` / `sandbox/csv.cpp` /
   `binary/csv_converter.cpp` unavailable below it —
   `cmake/Platform.cmake` carries the same floor for every other macOS build). Do not "simplify"
   these. `appleArgs: AppleBuilderArgs(enableStrictTryCompile: true)` is kept as hygiene rather
@@ -118,9 +112,9 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   (regenerate via ffigen; clear `.dart_tool` caches on C-API changes). `readTimeSeriesRow` decodes
   the same kind of mask, which the C API returns for every column type (mask 0 = no data at or
   before the date → `null`; the string branch never `toDartString`s a masked-out pointer).
-- **`LuaRunner.run` owns its result**: `quiver_lua_runner_run` takes a `char** out_result` whose JSON
+- **`Sandbox.run` owns its result**: `quiver_sandbox_run` takes a `char** out_result` whose JSON
   string is C-heap allocated, so the `Arena` cannot own it — it is freed with
-  `quiver_lua_runner_free_string` (*not* `quiver_database_free_string`) in its own nested `finally`,
+  `quiver_sandbox_free_string` (*not* `quiver_database_free_string`) in its own nested `finally`,
   so a `toDartString` failure cannot leak it. The columnar group decoders (`_decodeGroupRows`,
   `readTimeSeriesGroup`) free the C result in their own `finally` for the same reason. The script
   must be Lua source text: the core loads it in text mode, so a precompiled (bytecode) chunk is

@@ -2,6 +2,6 @@
 * text=auto eol=lf
 
 # These fixtures' exact bytes (BOM, CRLF) are the test -- never normalize (read byte for byte by
-# LuaRunner_ReadCsv.EnergiaRegressionJunkRowAboveUnitsRowBelowHeader and
+# Sandbox_ReadCsv.EnergiaRegressionJunkRowAboveUnitsRowBelowHeader and
 # GdRegressionQuotedCommaAndEnglishMonthNames).
 tests/fixtures/*.csv -text

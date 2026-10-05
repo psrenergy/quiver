@@ -549,24 +549,24 @@ function quiver_element_to_string(element, out_string)
     @ccall libquiver_c.quiver_element_to_string(element::Ptr{quiver_element_t}, out_string::Ptr{Ptr{Cchar}})::quiver_error_t
 end
 
-mutable struct quiver_lua_runner end
+mutable struct quiver_sandbox end
 
-const quiver_lua_runner_t = quiver_lua_runner
+const quiver_sandbox_t = quiver_sandbox
 
-function quiver_lua_runner_new(db, out_runner)
-    @ccall libquiver_c.quiver_lua_runner_new(db::Ptr{quiver_database_t}, out_runner::Ptr{Ptr{quiver_lua_runner_t}})::quiver_error_t
+function quiver_sandbox_new(db, out_sandbox)
+    @ccall libquiver_c.quiver_sandbox_new(db::Ptr{quiver_database_t}, out_sandbox::Ptr{Ptr{quiver_sandbox_t}})::quiver_error_t
 end
 
-function quiver_lua_runner_free(runner)
-    @ccall libquiver_c.quiver_lua_runner_free(runner::Ptr{quiver_lua_runner_t})::quiver_error_t
+function quiver_sandbox_free(sandbox)
+    @ccall libquiver_c.quiver_sandbox_free(sandbox::Ptr{quiver_sandbox_t})::quiver_error_t
 end
 
-function quiver_lua_runner_run(runner, script, out_result)
-    @ccall libquiver_c.quiver_lua_runner_run(runner::Ptr{quiver_lua_runner_t}, script::Ptr{Cchar}, out_result::Ptr{Ptr{Cchar}})::quiver_error_t
+function quiver_sandbox_run(sandbox, script, out_result)
+    @ccall libquiver_c.quiver_sandbox_run(sandbox::Ptr{quiver_sandbox_t}, script::Ptr{Cchar}, out_result::Ptr{Ptr{Cchar}})::quiver_error_t
 end
 
-function quiver_lua_runner_free_string(str)
-    @ccall libquiver_c.quiver_lua_runner_free_string(str::Ptr{Cchar})::quiver_error_t
+function quiver_sandbox_free_string(str)
+    @ccall libquiver_c.quiver_sandbox_free_string(str::Ptr{Cchar})::quiver_error_t
 end
 
 @cenum quiver_time_frequency_t::UInt32 begin

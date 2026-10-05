@@ -6,39 +6,39 @@
 #include <system_error>
 #include <utility>
 
-// Message catalogue, asserted by the tests in tests/test_lua_runner_write_csv.cpp
+// Message catalogue, asserted by the tests in tests/test_sandbox_write_csv.cpp
 // ({operation} is always the public Lua method the script called). An entry followed by a
 // "pinned by" line names one test that asserts it.
 // Every throw the db:write_csv / w:write_row / w:close feature can raise, wherever it lives -- do
-// NOT reword any of these without updating tests/test_lua_runner_write_csv.cpp in the same change.
+// NOT reword any of these without updating tests/test_sandbox_write_csv.cpp in the same change.
 //
 // Raised here, in Writer's constructor (operation is always "write_csv"):
 //   "Cannot write_csv: cannot access directory for '<original_path>': <os reason>"
 //   "Cannot write_csv: parent directory does not exist for '<original_path>'"
-//       pinned (prefix only) by LuaRunner_WriteCsv.MissingParentDirectoryThrowsAndDoesNotCreateIt
+//       pinned (prefix only) by Sandbox_WriteCsv.MissingParentDirectoryThrowsAndDoesNotCreateIt
 //   "Cannot write_csv: failed to open file '<original_path>'"
 //   "Cannot write_csv: failed to write to file '<original_path>'"      (header record write failure)
 //
 // Raised here, in Writer::write_row (operation is always "write_row"):
 //   "Cannot write_row: writer for '<original_path>' is already closed"
-//       pinned by LuaRunner_WriteCsv.UnsupportedCellOnClosedWriterReportsClosed
+//       pinned by Sandbox_WriteCsv.UnsupportedCellOnClosedWriterReportsClosed
 //   "Cannot write_row: failed to write to file '<original_path>'"          (data record write failure)
 //
 // Raised here, in Writer::close (operation is always "close"):
 //   "Cannot close: failed to flush file '<original_path>'"
 //
-// Raised by src/lua_runner/csv.cpp's cell formatter and row/option decoders and by the
-// src/lua_runner/internal.h helpers they call (lua_to_value, option_entries, option_table), with
+// Raised by src/sandbox/csv.cpp's cell formatter and row/option decoders and by the
+// src/sandbox/internal.h helpers they call (lua_to_value, option_entries, option_table), with
 // operation always the Lua method that received the bad value -- "write_row" for a cell/row
 // problem, "write_csv" for an options-table problem:
 //   "Cannot write_row: row must be a table"                (sol2's table check also lets userdata in)
 //   "Cannot write_row: row <N> cell #<M> is not a finite number"
-//       pinned by LuaRunner_WriteCsvErrors.NonFiniteNumberCellIsPrefixedWriteRowError
+//       pinned by Sandbox_WriteCsvErrors.NonFiniteNumberCellIsPrefixedWriteRowError
 //   "Cannot write_row: cell #<M> has unsupported Lua type"                    (table/function/userdata)
 //   "Cannot write_row: row key must be a positive integer"
 //   "Cannot write_row: row key <N> exceeds the maximum width of 1000000"
 //   "Cannot write_row: row <N> has <M> cells but header declares <W>"
-//       pinned by LuaRunner_WriteCsv.RowLongerThanHeaderThrowsNamingOrdinalAndCounts
+//       pinned by Sandbox_WriteCsv.RowLongerThanHeaderThrowsNamingOrdinalAndCounts
 //   "Cannot write_csv: file is already open for writing: <original_path>"  (two live writers, one path)
 //   "Cannot write_csv: unknown option '<name>'"
 //   "Cannot write_csv: option key must be a string"
@@ -53,8 +53,8 @@
 //
 // The sandbox (in-memory database, an escaping path) raises through the shared
 // resolve_sandboxed_path choke point, unchanged by this feature -- see its own messages in
-// src/lua_runner/path_policy.cpp; write_csv is simply one more caller of it, always evaluated before the
-// options table (pinned by LuaRunner_WriteCsv.EscapingPathTakesPrecedenceOverInvalidSeparator).
+// src/sandbox/path_policy.cpp; write_csv is simply one more caller of it, always evaluated before the
+// options table (pinned by Sandbox_WriteCsv.EscapingPathTakesPrecedenceOverInvalidSeparator).
 
 namespace quiver::csv_write {
 

@@ -18,4 +18,4 @@ export 'src/exceptions.dart';
 export 'src/metadata.dart' show ScalarMetadata, GroupMetadata;
 // quiver_log_level_t supplies the `consoleLevel` values the factory constructors document.
 export 'src/ffi/bindings.dart' show quiver_data_type_t, quiver_log_level_t;
-export 'src/lua_runner.dart' show LuaRunner;
+export 'src/sandbox.dart' show Sandbox;

@@ -12,7 +12,7 @@ import 'exceptions.dart';
 /// Elements are used to insert data into collections.
 /// After use, call [dispose] to free native memory.
 class Element {
-  final Pointer<quiver_element_t1> _ptr;
+  final Pointer<quiver_element_t> _ptr;
   bool _isDisposed = false;
 
   Element._(this._ptr);
@@ -21,7 +21,7 @@ class Element {
   factory Element() {
     final arena = Arena();
     try {
-      final outElementPtr = arena<Pointer<quiver_element_t1>>();
+      final outElementPtr = arena<Pointer<quiver_element_t>>();
       check(bindings.quiver_element_create(outElementPtr));
       return Element._(outElementPtr.value);
     } finally {
@@ -30,7 +30,7 @@ class Element {
   }
 
   /// Internal pointer for FFI calls.
-  Pointer<quiver_element_t1> get ptr {
+  Pointer<quiver_element_t> get ptr {
     _ensureNotDisposed();
     return _ptr;
   }

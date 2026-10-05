@@ -27,7 +27,7 @@ const char* kTooltipClauseOpener = "; tooltip";
 class UiTempTreeFixture : public ::testing::Test {
 protected:
     void SetUp() override {
-        // Per-test directory name, the LuaSandboxTest idiom (tests/test_lua_runner.h): a single
+        // Per-test directory name, the LuaSandboxTest idiom (tests/test_sandbox.h): a single
         // fixed name is shared by every test in the file *and* by any concurrent run of the
         // binary, so one test's SetUp can remove_all another's live migrations tree mid-run.
         const auto* info = ::testing::UnitTest::GetInstance()->current_test_info();
@@ -56,7 +56,7 @@ protected:
     }
 
     // The sibling `ui/` directory `from_migrations` resolves against the migrations path. Uses
-    // weakly_canonical before parent_path, matching src/lua_runner/path_policy.cpp's resolve_sandboxed_path
+    // weakly_canonical before parent_path, matching src/sandbox/path_policy.cpp's resolve_sandboxed_path
     // idiom -- a raw parent_path() misresolves a trailing-slash or bare-relative migrations path.
     std::string ui_dir() const {
         return (fs::weakly_canonical(migrations_dir()).parent_path() / "ui").string();

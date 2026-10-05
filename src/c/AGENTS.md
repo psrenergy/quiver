@@ -10,7 +10,7 @@ Cross-layer naming rules live in the root `AGENTS.md`; C++ internals in `src/AGE
 include/quiver/c/         # C API headers (for FFI)
   common.h                # quiver_error_t, quiver_get_last_error, quiver_version
   options.h               # All option types and defaults: LogLevel, DatabaseOptions, CSVOptions
-  database.h / element.h / lua_runner.h
+  database.h / element.h / sandbox.h
 include/quiver/c/binary/    # Binary C API headers
   binary_file.h               # quiver_binary_file_t opaque handle, open/close/read/write
   csv_converter.h             # bin_to_csv, csv_to_bin functions
@@ -35,14 +35,14 @@ src/c/
                            # dry runs (begin_dry_run, end_dry_run, in_dry_run)
   database_csv_export.cpp / database_csv_import.cpp
   element.cpp             # Element builder C API
-  lua_runner.cpp          # LuaRunner C API (errors via quiver_get_last_error); run returns the
+  sandbox.cpp          # Sandbox C API (errors via quiver_get_last_error); run returns the
                           # script's JSON result via char** out_result (NULLed before anything can
                           # fail, so a caller that frees unconditionally is safe) + its own
                           # free_string. run passes the script through unchanged and the core
                           # loads it as text only, so a precompiled (bytecode) chunk fails like
                           # any script error: `Failed to run Lua script: ... attempt to load a
                           # binary chunk (mode is 't')` through quiver_get_last_error. The sol2
-                          # binders it runs live in src/lua_runner/ (one file per core file they
+                          # binders it runs live in src/sandbox/ (one file per core file they
                           # bind; see src/AGENTS.md)
 src/c/binary/               # BinaryFile / CSVConverter / BinaryMetadata wrappers
 src/c/expression/           # Expression node constructors, from_file bridge, save, free
@@ -81,7 +81,7 @@ quiver_error_t quiver_some_function(quiver_database_t* db) {
 Every entry point that executes C++ logic wears the try/catch: nothing may throw across the FFI
 boundary. Trivial functions that cannot throw (plain `delete[]` frees, pointer-read getters like
 `is_healthy`/`in_transaction`) skip the wrapper; `quiver_database_free_time_series_data` keeps it
-because its typed-dispatch deallocation can. All components (LuaRunner included) report through
+because its typed-dispatch deallocation can. All components (Sandbox included) report through
 the single `quiver_get_last_error` channel; there are no per-handle error channels. Nothing resets
 that message: a successful call leaves the previous failure's text in place, so it is read only
 after a call returns `QUIVER_ERROR` (every binding's `check` does exactly that).
@@ -120,8 +120,8 @@ quiver_database_free_string_array(char**, size_t)
 // Single string cleanup (strings returned by query/read-by-id/element operations)
 quiver_database_free_string(char*)
 
-// Lua script result (JSON returned by quiver_lua_runner_run)
-quiver_lua_runner_free_string(char*)
+// Lua script result (JSON returned by quiver_sandbox_run)
+quiver_sandbox_free_string(char*)
 
 // Binary metadata lifecycle (no incremental builder: from_toml / from_element build a handle,
 // quiver_binary_file_get_metadata / quiver_expression_get_metadata return a copy; free releases each)
