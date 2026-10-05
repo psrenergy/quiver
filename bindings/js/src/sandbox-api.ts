@@ -39,7 +39,7 @@ If a script raises an error (including any error thrown by a \`db:\` call), it s
 as:
 
 \`\`\`
-Failed to run script: <message>
+Failed to run Lua script: <message>
 \`\`\`
 
 ## Value type mapping
