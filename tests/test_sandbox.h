@@ -28,7 +28,7 @@ protected:
     void SetUp() override {
         const auto* info = ::testing::UnitTest::GetInstance()->current_test_info();
         sandbox = std::filesystem::temp_directory_path() /
-                  (std::string("quiver_lua_") + info->test_suite_name() + "_" + info->name());
+                  (std::string("quiver_sandbox_") + info->test_suite_name() + "_" + info->name());
         std::filesystem::remove_all(sandbox);
         std::filesystem::create_directories(sandbox);
     }

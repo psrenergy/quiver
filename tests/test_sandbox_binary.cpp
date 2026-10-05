@@ -398,7 +398,7 @@ TEST_F(SandboxBinaryTest, DotDotEscapeThrows) {
 TEST_F(SandboxBinaryTest, AbsoluteOutsideThrows) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
-    const std::string outside = lp((fs::temp_directory_path() / "quiver_lua_outside").string());
+    const std::string outside = lp((fs::temp_directory_path() / "quiver_sandbox_outside").string());
     expect_sandbox_error(sandbox, md1() + "db:open_file('" + outside + "', 'w', md)\n", "escapes the database directory");
 }
 

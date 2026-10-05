@@ -23,7 +23,7 @@ void write_sandbox_csv_file(const std::filesystem::path& path, const std::string
 }
 
 // std::fstream accepts forward slashes on Windows; using them avoids escaping backslashes inside
-// embedded Lua string literals (mirrors LuaBinaryTest::lp in test_lua_binary.cpp).
+// embedded Lua string literals (mirrors LuaBinaryTest::lp in test_sandbox_binary.cpp).
 std::string lp(const std::string& p) {
     std::string r = p;
     std::replace(r.begin(), r.end(), '\\', '/');
@@ -1119,7 +1119,7 @@ TEST_F(Sandbox_ReadCsv, EscapingPathThrowsForReadCsv) {
     );
 
     const std::string outside =
-        lp((std::filesystem::temp_directory_path() / "quiver_lua_read_csv_outside" / "x.csv").string());
+        lp((std::filesystem::temp_directory_path() / "quiver_sandbox_read_csv_outside" / "x.csv").string());
     expect_sandbox_error(
         sandbox,
         "db:read_csv('" + outside + "')",
@@ -1139,7 +1139,7 @@ TEST_F(Sandbox_ReadCsv, EscapingPathThrowsForReadCsvStream) {
     );
 
     const std::string outside =
-        lp((std::filesystem::temp_directory_path() / "quiver_lua_read_csv_outside" / "x.csv").string());
+        lp((std::filesystem::temp_directory_path() / "quiver_sandbox_read_csv_outside" / "x.csv").string());
     expect_sandbox_error(
         sandbox,
         "db:read_csv_stream('" + outside + "', function() end)",

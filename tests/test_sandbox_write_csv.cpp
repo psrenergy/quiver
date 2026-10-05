@@ -26,10 +26,10 @@ std::string lp(const std::string& p) {
 // un-escapes that before returning. Throws -- loudly, naming the heading -- if the heading, the
 // opening fence, the closing fence, or a non-empty block cannot be found, so a reformat of the
 // reference cannot make the caller's test pass vacuously.
-std::string extract_lua_example(const std::string& file_contents, const std::string& heading) {
+std::string extract_sandbox_example(const std::string& file_contents, const std::string& heading) {
     const auto heading_pos = file_contents.find(heading);
     if (heading_pos == std::string::npos) {
-        throw std::runtime_error("extract_lua_example: heading not found: " + heading);
+        throw std::runtime_error("extract_sandbox_example: heading not found: " + heading);
     }
 
     // The literal bytes in the .ts source are backslash + backtick, repeated three times, then
@@ -37,19 +37,19 @@ std::string extract_lua_example(const std::string& file_contents, const std::str
     const std::string open_fence = "\\`\\`\\`lua";
     const auto fence_start = file_contents.find(open_fence, heading_pos);
     if (fence_start == std::string::npos) {
-        throw std::runtime_error("extract_lua_example: opening ```lua fence not found after heading: " + heading);
+        throw std::runtime_error("extract_sandbox_example: opening ```lua fence not found after heading: " + heading);
     }
 
     const auto block_start = fence_start + open_fence.size();
     const std::string close_fence = "\\`\\`\\`";
     const auto block_end = file_contents.find(close_fence, block_start);
     if (block_end == std::string::npos) {
-        throw std::runtime_error("extract_lua_example: closing ``` fence not found for heading: " + heading);
+        throw std::runtime_error("extract_sandbox_example: closing ``` fence not found for heading: " + heading);
     }
 
     const std::string block = file_contents.substr(block_start, block_end - block_start);
     if (block.find_first_not_of(" \t\r\n") == std::string::npos) {
-        throw std::runtime_error("extract_lua_example: extracted block is empty for heading: " + heading);
+        throw std::runtime_error("extract_sandbox_example: extracted block is empty for heading: " + heading);
     }
 
     // Undo the template-literal escaping: every "\`" becomes "`". No other escape sequence (e.g.
@@ -1338,7 +1338,7 @@ TEST_F(Sandbox_WriteCsv, ReferenceWorkedExampleRunsAndRoundTripsItsOwnData) {
     buffer << reference_file.rdbuf();
     const std::string reference_contents = buffer.str();
 
-    const std::string example = extract_lua_example(reference_contents, "## CSV file writing");
+    const std::string example = extract_sandbox_example(reference_contents, "## CSV file writing");
 
     const auto path = lp((sandbox / "reference_example.csv").string());
     const std::string script = "local path = \"" + path + "\"\n" + example + R"(

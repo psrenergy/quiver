@@ -46,14 +46,14 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   moved-from runner is alive and after it has been destroyed, and a file-scope `static_assert` that
   `Sandbox` is pointer-sized keeps run state inside its `Impl` in Release too, where the freed-source
   pins alone do not reliably fail. The shared `SandboxTest` and `SandboxTest` fixtures,
-  the `expect_lua_error` helper (throw + message-substring assert — plain `EXPECT_THROW` passes
+  the `expect_sandbox_error` helper (throw + message-substring assert — plain `EXPECT_THROW` passes
   vacuously when a removed function raises "attempt to call a nil value"), and the common include
   prelude live in `test_sandbox.h`; the single-use `SandboxAllTypesTest` / `SandboxFkTest`
   fixtures stay local to their files. Lua file operations are sandboxed to the database directory
   (root design decision), so every file-touching Lua test uses `SandboxTest`: a file-backed db
   in a dedicated per-test temp dir, with scripts passing relative paths. The Lua binary/expression
-  subsystem bindings (and the sandbox itself) are covered by `test_lua_binary.cpp` and
-  `test_lua_expression.cpp`.
+  subsystem bindings (and the sandbox itself) are covered by `test_sandbox_binary.cpp` and
+  `test_sandbox_expression.cpp`.
 - `test_sandboxed_path.cpp` (`SandboxedPathTest`) unit-tests `resolve_sandboxed_path`, the gate
   every file-touching Lua operation shares, without Lua: containment, `..` and absolute escapes, a
   symlink pointing outside, the root itself, `:memory:`, and (`_WIN32` only) the device-name prefix.
@@ -92,8 +92,8 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   access), POSIX uses `chmod 000` (which blocks the open while `stat` still succeeds) and skips
   under root. It asserts the three preconditions still pass before reading, so it cannot silently
   degrade into re-testing an earlier catalogue message. `DeviceNamePathIsReportedWithPrefix` (here
-  and in `test_lua_binary.cpp`) is `_WIN32`-only because no POSIX path is reserved the way `NUL`
-  is; the `test_lua_binary.cpp` copy spans `open_file`/`bin_to_csv`/`csv_to_bin` on purpose, so the
+  and in `test_sandbox_binary.cpp`) is `_WIN32`-only because no POSIX path is reserved the way `NUL`
+  is; the `test_sandbox_binary.cpp` copy spans `open_file`/`bin_to_csv`/`csv_to_bin` on purpose, so the
   fix stays in the shared `resolve_sandboxed_path` gate instead of regressing to a per-caller patch.
 - `test_sandbox_write_csv.cpp` covers the Lua-only `db:write_csv`/`w:write_row`/`w:close`
   binding (cell-type dispatch, the `separator`/`header` options, the max-integer-key row walk, and
