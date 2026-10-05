@@ -85,6 +85,12 @@ callers to change something are prefixed **BREAKING** and say what to do.
   files and expressions alike, and `quiver.expression(f)` is no longer needed (it still converts a
   file to an expression). `f:save` is sandboxed like `expr:save`, refuses an output path that is
   the file itself and a file open for writing, reads the file by path and leaves the handle open.
+- **Julia: a binary file is an expression.** `Quiver.Binary.File` and `Quiver.Expression` are
+  subtypes of `Quiver.AbstractExpression`, and every expression operation is defined once on it, so
+  a file takes every operator, `abs`/`sqrt`/`log`/`exp`, `ifelse`, `aggregate`, `aggregate_agents`,
+  `select_agents` and `rename_agents`, and now also `Quiver.save(file, path)`, which reads the file
+  by path and leaves the handle open. `Quiver.get_metadata` and `Quiver.Binary.get_metadata` are
+  now one function: either name works on a file (its handle's metadata) or an expression.
 
 ### Fixed
 
