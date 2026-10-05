@@ -12,7 +12,7 @@ namespace fs = std::filesystem;
 // Lua bindings for the expression subsystem (operators, unary math, ifelse, aggregate*,
 // select/rename_agents, save). Mirrors bindings/julia/test/test_expression.jl. Files live in the
 // db-directory sandbox (relative paths resolve against the database directory).
-class LuaExpressionTest : public LuaSandboxTest {
+class SandboxExpressionTest : public LuaSandboxTest {
 protected:
     void SetUp() override {
         LuaSandboxTest::SetUp();
@@ -45,7 +45,7 @@ protected:
     std::string schema;
 };
 
-TEST_F(LuaExpressionTest, ArithmeticAndSave) {
+TEST_F(SandboxExpressionTest, ArithmeticAndSave) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox lua(db);
     lua.run(prelude() + R"(
@@ -65,7 +65,7 @@ TEST_F(LuaExpressionTest, ArithmeticAndSave) {
     )");  // (3+4)*2 = 14
 }
 
-TEST_F(LuaExpressionTest, ScalarOnEitherSide) {
+TEST_F(SandboxExpressionTest, ScalarOnEitherSide) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox lua(db);
     lua.run(prelude() + R"(
@@ -80,7 +80,7 @@ TEST_F(LuaExpressionTest, ScalarOnEitherSide) {
     )");  // 2*5 - 1 = 9
 }
 
-TEST_F(LuaExpressionTest, FilePlusFile) {
+TEST_F(SandboxExpressionTest, FilePlusFile) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox lua(db);
     lua.run(prelude() + R"(
@@ -97,7 +97,7 @@ TEST_F(LuaExpressionTest, FilePlusFile) {
     )");  // BinaryFile + BinaryFile metamethod
 }
 
-TEST_F(LuaExpressionTest, UnaryMath) {
+TEST_F(SandboxExpressionTest, UnaryMath) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox lua(db);
     lua.run(prelude() + R"(
@@ -113,7 +113,7 @@ TEST_F(LuaExpressionTest, UnaryMath) {
     )");  // sqrt(4)=2, sqrt(9)=3
 }
 
-TEST_F(LuaExpressionTest, IfElse) {
+TEST_F(SandboxExpressionTest, IfElse) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox lua(db);
     lua.run(prelude() + R"(
@@ -134,7 +134,7 @@ TEST_F(LuaExpressionTest, IfElse) {
     )");  // condition: v1 true, v2 false
 }
 
-TEST_F(LuaExpressionTest, AggregateDimensionSum) {
+TEST_F(SandboxExpressionTest, AggregateDimensionSum) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox lua(db);
     lua.run(prelude() + R"(
@@ -152,7 +152,7 @@ TEST_F(LuaExpressionTest, AggregateDimensionSum) {
     )");  // value == row, so 1+2+3 = 6
 }
 
-TEST_F(LuaExpressionTest, AggregateDimensionPercentile) {
+TEST_F(SandboxExpressionTest, AggregateDimensionPercentile) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox lua(db);
     lua.run(prelude() + R"(
@@ -167,7 +167,7 @@ TEST_F(LuaExpressionTest, AggregateDimensionPercentile) {
     )");  // median{1,2,3} = 2
 }
 
-TEST_F(LuaExpressionTest, AggregateSumOverInnermostTimeDimFromMidPeriodStart) {
+TEST_F(SandboxExpressionTest, AggregateSumOverInnermostTimeDimFromMidPeriodStart) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox lua(db);
     // year x month x day from 2025-03-15: only March 2025 starts on the 15th, so March 2026 sums
@@ -191,7 +191,7 @@ TEST_F(LuaExpressionTest, AggregateSumOverInnermostTimeDimFromMidPeriodStart) {
     )");
 }
 
-TEST_F(LuaExpressionTest, AggregateUnknownOpThrows) {
+TEST_F(SandboxExpressionTest, AggregateUnknownOpThrows) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox lua(db);
     expect_lua_error(
@@ -205,7 +205,7 @@ TEST_F(LuaExpressionTest, AggregateUnknownOpThrows) {
     );
 }
 
-TEST_F(LuaExpressionTest, AggregateAgentsUnknownOpThrows) {
+TEST_F(SandboxExpressionTest, AggregateAgentsUnknownOpThrows) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox lua(db);
     expect_lua_error(
@@ -219,7 +219,7 @@ TEST_F(LuaExpressionTest, AggregateAgentsUnknownOpThrows) {
     );
 }
 
-TEST_F(LuaExpressionTest, AggregateOutermostTimeDimFromMidYearStart) {
+TEST_F(SandboxExpressionTest, AggregateOutermostTimeDimFromMidYearStart) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox lua(db);
     // year x month from 2025-03-01 holds 2025-03..2026-12. Reducing 'year' makes month outermost;
@@ -249,7 +249,7 @@ TEST_F(LuaExpressionTest, AggregateOutermostTimeDimFromMidYearStart) {
     )");
 }
 
-TEST_F(LuaExpressionTest, AggregateAgentsMean) {
+TEST_F(SandboxExpressionTest, AggregateAgentsMean) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox lua(db);
     lua.run(prelude() + R"(
@@ -266,7 +266,7 @@ TEST_F(LuaExpressionTest, AggregateAgentsMean) {
     )");  // mean(10,20) = 15
 }
 
-TEST_F(LuaExpressionTest, AggregateAgentsMaxMinusMin) {
+TEST_F(SandboxExpressionTest, AggregateAgentsMaxMinusMin) {
     // aggregate_agents names its one label after the operation, so this subtracts a {'min'} operand
     // from a {'max'} one. Single labels broadcast whatever they are called; the lhs label is kept.
     auto db = quiver::Database::from_schema(db_path(), schema);
@@ -285,7 +285,7 @@ TEST_F(LuaExpressionTest, AggregateAgentsMaxMinusMin) {
     )");  // max(10, 25) - min(10, 25) = 15
 }
 
-TEST_F(LuaExpressionTest, SelectAndRenameAgents) {
+TEST_F(SandboxExpressionTest, SelectAndRenameAgents) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox lua(db);
     lua.run(prelude() + R"(
@@ -307,7 +307,7 @@ TEST_F(LuaExpressionTest, SelectAndRenameAgents) {
 
 // Both halves of each mapping entry used to go through unchecked as<std::string>(): in Release a
 // boolean target became "" (the rename succeeded) and a number key became the text "1".
-TEST_F(LuaExpressionTest, RenameAgentsRejectsNonStringNames) {
+TEST_F(SandboxExpressionTest, RenameAgentsRejectsNonStringNames) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox lua(db);
     lua.run(prelude() + "fill('expr_a', 1.0, 1.0)");
@@ -328,7 +328,7 @@ TEST_F(LuaExpressionTest, RenameAgentsRejectsNonStringNames) {
     );
 }
 
-TEST_F(LuaExpressionTest, SaveOutputCollisionThrows) {
+TEST_F(SandboxExpressionTest, SaveOutputCollisionThrows) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox lua(db);
     expect_lua_error(
@@ -345,7 +345,7 @@ TEST_F(LuaExpressionTest, SaveOutputCollisionThrows) {
 
 // --- db-directory sandbox ---
 
-TEST_F(LuaExpressionTest, SaveRelativeResolvesAgainstDbDir) {
+TEST_F(SandboxExpressionTest, SaveRelativeResolvesAgainstDbDir) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox lua(db);
     lua.run(prelude() + R"(
@@ -358,7 +358,7 @@ TEST_F(LuaExpressionTest, SaveRelativeResolvesAgainstDbDir) {
     EXPECT_TRUE(fs::exists(sandbox / "out_rel.qvr"));
 }
 
-TEST_F(LuaExpressionTest, SaveEscapeThrows) {
+TEST_F(SandboxExpressionTest, SaveEscapeThrows) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox lua(db);
     expect_lua_error(
@@ -373,7 +373,7 @@ TEST_F(LuaExpressionTest, SaveEscapeThrows) {
     );
 }
 
-TEST_F(LuaExpressionTest, ComparisonFreeFunctions) {
+TEST_F(SandboxExpressionTest, ComparisonFreeFunctions) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox lua(db);
     lua.run(prelude() + R"(
@@ -397,7 +397,7 @@ TEST_F(LuaExpressionTest, ComparisonFreeFunctions) {
     )");
 }
 
-TEST_F(LuaExpressionTest, ComparisonDrivesIfElse) {
+TEST_F(SandboxExpressionTest, ComparisonDrivesIfElse) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox lua(db);
     lua.run(prelude() + R"(
@@ -418,7 +418,7 @@ TEST_F(LuaExpressionTest, ComparisonDrivesIfElse) {
     )");
 }
 
-TEST_F(LuaExpressionTest, ComparisonPropagatesNaN) {
+TEST_F(SandboxExpressionTest, ComparisonPropagatesNaN) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox lua(db);
     lua.run(prelude() + R"(
@@ -437,7 +437,7 @@ TEST_F(LuaExpressionTest, ComparisonPropagatesNaN) {
     )");
 }
 
-TEST_F(LuaExpressionTest, LogicalOperators) {
+TEST_F(SandboxExpressionTest, LogicalOperators) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox lua(db);
     lua.run(prelude() + R"(
@@ -462,7 +462,7 @@ TEST_F(LuaExpressionTest, LogicalOperators) {
     )");
 }
 
-TEST_F(LuaExpressionTest, LogicalComposesIfElse) {
+TEST_F(SandboxExpressionTest, LogicalComposesIfElse) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox lua(db);
     lua.run(prelude() + R"(
@@ -486,7 +486,7 @@ TEST_F(LuaExpressionTest, LogicalComposesIfElse) {
 
 // Every operator metamethod on both usertypes. Each usertype is the left operand against a number,
 // so Lua (which tries the left operand's metamethod first) cannot fall back to the other one's.
-TEST_F(LuaExpressionTest, OperatorMetamethodsOnFileAndExpression) {
+TEST_F(SandboxExpressionTest, OperatorMetamethodsOnFileAndExpression) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox lua(db);
     lua.run(prelude() + R"(
@@ -516,7 +516,7 @@ TEST_F(LuaExpressionTest, OperatorMetamethodsOnFileAndExpression) {
     )");
 }
 
-TEST_F(LuaExpressionTest, SelectAndRenameAgentsRejectNonTable) {
+TEST_F(SandboxExpressionTest, SelectAndRenameAgentsRejectNonTable) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox lua(db);
     lua.run(prelude() + "fill('expr_a', 1.0, 1.0)");
@@ -532,7 +532,7 @@ TEST_F(LuaExpressionTest, SelectAndRenameAgentsRejectNonTable) {
     );
 }
 
-TEST_F(LuaExpressionTest, AggregateParameterRejectsWrongType) {
+TEST_F(SandboxExpressionTest, AggregateParameterRejectsWrongType) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox lua(db);
     lua.run(prelude() + "fill_by_row('expr_a')");
@@ -553,7 +553,7 @@ TEST_F(LuaExpressionTest, AggregateParameterRejectsWrongType) {
     EXPECT_TRUE(fs::exists(sandbox / "expr_out.qvr"));
 }
 
-TEST_F(LuaExpressionTest, OperandErrorsNameTheOperation) {
+TEST_F(SandboxExpressionTest, OperandErrorsNameTheOperation) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox lua(db);
     lua.run(prelude() + "fill('expr_a', 1.0, 1.0)");
@@ -572,7 +572,7 @@ TEST_F(LuaExpressionTest, OperandErrorsNameTheOperation) {
     expect_lua_error(lua, "return quiver.expression(5)", "Cannot expression" + tail + "number");
 }
 
-TEST_F(LuaExpressionTest, OperandErrorsReportTheLeftmostBadOperand) {
+TEST_F(SandboxExpressionTest, OperandErrorsReportTheLeftmostBadOperand) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox lua(db);
     // Operands are decoded in argument order, so the reported one does not depend on the compiler.
@@ -581,7 +581,7 @@ TEST_F(LuaExpressionTest, OperandErrorsReportTheLeftmostBadOperand) {
     expect_lua_error(lua, "return quiver.ifelse(5, {}, 'x')", "Cannot ifelse" + tail + "number");
 }
 
-TEST_F(LuaExpressionTest, FileAggregateAgents) {
+TEST_F(SandboxExpressionTest, FileAggregateAgents) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox lua(db);
     lua.run(prelude() + R"(
@@ -599,7 +599,7 @@ TEST_F(LuaExpressionTest, FileAggregateAgents) {
     )");
 }
 
-TEST_F(LuaExpressionTest, ExtraArgumentsThrow) {
+TEST_F(SandboxExpressionTest, ExtraArgumentsThrow) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox lua(db);
     lua.run(prelude() + "fill('expr_a', 1.0, 1.0) fill('expr_b', 2.0, 2.0)");
@@ -636,7 +636,7 @@ TEST_F(LuaExpressionTest, ExtraArgumentsThrow) {
     );
 }
 
-TEST_F(LuaExpressionTest, OperandErrorsForMissingAndMixedOperands) {
+TEST_F(SandboxExpressionTest, OperandErrorsForMissingAndMixedOperands) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox lua(db);
     lua.run(prelude() + "fill('expr_a', 1.0, 1.0)");
@@ -665,7 +665,7 @@ TEST_F(LuaExpressionTest, OperandErrorsForMissingAndMixedOperands) {
     )");
 }
 
-TEST_F(LuaExpressionTest, SameFileOnBothSides) {
+TEST_F(SandboxExpressionTest, SameFileOnBothSides) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox lua(db);
     lua.run(prelude() + R"(
@@ -687,7 +687,7 @@ TEST_F(LuaExpressionTest, SameFileOnBothSides) {
     )");
 }
 
-TEST_F(LuaExpressionTest, FileAggregate) {
+TEST_F(SandboxExpressionTest, FileAggregate) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox lua(db);
     lua.run(prelude() + R"(
@@ -703,7 +703,7 @@ TEST_F(LuaExpressionTest, FileAggregate) {
     )");  // value == row, so 1+2+3 = 6
 }
 
-TEST_F(LuaExpressionTest, FileSelectAgents) {
+TEST_F(SandboxExpressionTest, FileSelectAgents) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox lua(db);
     lua.run(prelude() + R"(
@@ -720,7 +720,7 @@ TEST_F(LuaExpressionTest, FileSelectAgents) {
     )");
 }
 
-TEST_F(LuaExpressionTest, FileRenameAgents) {
+TEST_F(SandboxExpressionTest, FileRenameAgents) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox lua(db);
     lua.run(prelude() + R"(
@@ -737,7 +737,7 @@ TEST_F(LuaExpressionTest, FileRenameAgents) {
     );
 }
 
-TEST_F(LuaExpressionTest, FileSaveKeepsFileOpen) {
+TEST_F(SandboxExpressionTest, FileSaveKeepsFileOpen) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox lua(db);
     lua.run(prelude() + R"(
@@ -765,7 +765,7 @@ TEST_F(LuaExpressionTest, FileSaveKeepsFileOpen) {
     )");
 }
 
-TEST_F(LuaExpressionTest, FileSaveGuards) {
+TEST_F(SandboxExpressionTest, FileSaveGuards) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox lua(db);
     const std::string fa = prelude() + "fill('expr_a', 1.0, 2.0) local fa = db:open_file('expr_a', 'r') ";
@@ -795,7 +795,7 @@ TEST_F(LuaExpressionTest, FileSaveGuards) {
     EXPECT_FALSE(fs::exists(sandbox / "expr_out.qvr"));
 }
 
-TEST_F(LuaExpressionTest, FileGetMetadata) {
+TEST_F(SandboxExpressionTest, FileGetMetadata) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox lua(db);
     lua.run(prelude() + R"(
@@ -815,7 +815,7 @@ TEST_F(LuaExpressionTest, FileGetMetadata) {
     )");
 }
 
-TEST_F(LuaExpressionTest, ExpressionGetMetadata) {
+TEST_F(SandboxExpressionTest, ExpressionGetMetadata) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox lua(db);
     lua.run(prelude() + R"(
@@ -832,7 +832,7 @@ TEST_F(LuaExpressionTest, ExpressionGetMetadata) {
     );
 }
 
-TEST_F(LuaExpressionTest, ExpressionOfFileIsAnExpression) {
+TEST_F(SandboxExpressionTest, ExpressionOfFileIsAnExpression) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox lua(db);
     lua.run(prelude() + R"(
@@ -849,7 +849,7 @@ TEST_F(LuaExpressionTest, ExpressionOfFileIsAnExpression) {
 
 // A table __index is what keeps a method lookup on a file (f:read, f:write) a plain table read; the
 // runtime base-classes tag would replace it with a closure.
-TEST_F(LuaExpressionTest, FileAndExpressionKeepTableIndex) {
+TEST_F(SandboxExpressionTest, FileAndExpressionKeepTableIndex) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox lua(db);
     lua.run(prelude() + R"(
