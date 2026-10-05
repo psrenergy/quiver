@@ -16,7 +16,7 @@ export class Sandbox {
   }
 
   /**
-   * Runs a Lua script and returns its return value encoded as JSON, or "" if it returned nothing.
+   * Runs a script and returns its return value encoded as JSON, or "" if it returned nothing.
    *
    * To execute a script without keeping its writes, wrap the call in
    * `db.beginDryRun()` / `db.endDryRun()`.

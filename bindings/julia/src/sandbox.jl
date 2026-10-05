@@ -16,7 +16,7 @@ end
 """
     run!(sandbox::Sandbox, script::String)
 
-Execute a Lua script against the database.
+Execute a script against the database.
 
 Returns the script's return value encoded as JSON, or `""` if it returned nothing.
 

@@ -8,20 +8,20 @@ import { Database, Sandbox, QuiverError } from "../src/index.ts";
 const SCHEMA_PATH = join(__dirname, "..", "..", "..", "tests", "schemas", "valid", "all_types.sql");
 
 describe("Sandbox", () => {
-  test("create element from Lua and verify via JS", () => {
+  test("create element from sandbox and verify via JS", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     const sandbox = new Sandbox(db);
     try {
-      sandbox.run('db:create_element("AllTypes", { label = "FromLua" })');
+      sandbox.run('db:create_element("AllTypes", { label = "FromSandbox" })');
       const labels = db.readScalarStrings("AllTypes", "label");
-      expect(labels.includes("FromLua")).toBeTruthy();
+      expect(labels.includes("FromSandbox")).toBeTruthy();
     } finally {
       sandbox.close();
       db.close();
     }
   });
 
-  test("Lua syntax error throws QuiverError", () => {
+  test("script syntax error throws QuiverError", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     const sandbox = new Sandbox(db);
     try {
@@ -32,7 +32,7 @@ describe("Sandbox", () => {
     }
   });
 
-  test("Lua runtime error throws QuiverError", () => {
+  test("script runtime error throws QuiverError", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     const sandbox = new Sandbox(db);
     try {

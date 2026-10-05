@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 
 class Sandbox:
-    """Execute Lua scripts against a Quiver database.
+    """Execute scripts against a Quiver database.
 
     Wraps the C API quiver_sandbox_new/run/free functions.
     Holds a reference to the Database to prevent GC while the runner is alive.
@@ -43,7 +43,7 @@ class Sandbox:
             raise QuiverError("Sandbox is closed")
 
     def run(self, script: str) -> str:
-        """Execute a Lua script against the database.
+        """Execute a script against the database.
 
         Returns the script's return value encoded as JSON, or "" if it returned nothing.
 

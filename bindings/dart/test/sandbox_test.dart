@@ -9,7 +9,7 @@ void main() {
   final testsPath = path.join(path.current, '..', '..', 'tests');
 
   group('Sandbox Create Element', () {
-    test('creates element from Lua script', () {
+    test('creates element from sandbox', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
@@ -38,8 +38,8 @@ void main() {
     });
   });
 
-  group('Sandbox Read from Lua', () {
-    test('reads scalar strings in Lua script', () {
+  group('Sandbox Read from sandbox', () {
+    test('reads scalar strings in sandbox', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
@@ -209,7 +209,7 @@ void main() {
   });
 
   group('Sandbox Read Integers', () {
-    test('reads scalar integers in Lua script', () {
+    test('reads scalar integers in sandbox', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
@@ -243,7 +243,7 @@ void main() {
   });
 
   group('Sandbox Read Floats', () {
-    test('reads scalar floats in Lua script', () {
+    test('reads scalar floats in sandbox', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
@@ -271,7 +271,7 @@ void main() {
   });
 
   group('Sandbox Read Vectors', () {
-    test('reads vector integers in Lua script', () {
+    test('reads vector integers in sandbox', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
@@ -303,7 +303,7 @@ void main() {
   });
 
   group('Sandbox Create With Vector', () {
-    test('creates element with vector in Lua script', () {
+    test('creates element with vector in sandbox', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),

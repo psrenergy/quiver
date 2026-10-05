@@ -7,9 +7,9 @@ import 'ffi/library_loader.dart';
 import 'database.dart';
 import 'exceptions.dart';
 
-/// A Lua script runner for executing Lua scripts with access to a Quiver.
+/// A sandbox runner for executing scripts with access to a Quiver.
 ///
-/// Use [Sandbox] to execute Lua scripts that can interact with the database
+/// Use [Sandbox] to execute scripts that can interact with the database
 /// via the `db` global object exposed to the script.
 ///
 /// Example:
@@ -44,7 +44,7 @@ class Sandbox {
     }
   }
 
-  /// Runs a Lua script.
+  /// Runs a script.
   ///
   /// The script has access to the database via the global `db` object.
   /// Available methods:
