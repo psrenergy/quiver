@@ -34,7 +34,9 @@ tech_debt:
   - phase: milestone-wide
     items:
       - "No plan SUMMARY.md in phases 6-9 carries requirements-completed frontmatter; the 3-source cross-check fell back to VERIFICATION.md evidence + PLAN requirements + REQUIREMENTS.md checkboxes"
-      - "workflow.security_enforcement is on but no phase has a SECURITY.md (/gsd-secure-phase was never run for phases 6-9)"
+security:
+  status: closed
+  note: "/gsd-secure-phase run for phases 6-9 after the first audit pass: 39 threats, 39 closed (32 mitigated, 7 accepted), threats_open 0 in every phase (06/07/08/09-SECURITY.md)"
 nyquist:
   skipped: "validate-phase capability inactive (workflow.nyquist_validation: false)"
 ---
@@ -114,8 +116,8 @@ which was kept on purpose and is now pinned in Lua and Julia. IN-01/IN-02 are mi
 **Phase 9:** `src/AGENTS.md:1030,1040` still say `Expression::save`. `src/c/AGENTS.md` describes the
 bridge but doesn't name `AbstractExpression`.
 
-**Milestone-wide:** none of the summaries has `requirements-completed` frontmatter, and security
-enforcement is on but `/gsd-secure-phase` was never run (no SECURITY.md in phases 6-9).
+**Milestone-wide:** none of the summaries has `requirements-completed` frontmatter. (The security
+gap from the first pass is closed: `/gsd-secure-phase` ran for phases 6-9, 39 threats, 0 open.)
 
-Total: 9 items across 4 phases plus 2 milestone-wide. Two are open decisions (EQ-01, which appears in
+Total: 9 items across 4 phases plus 1 milestone-wide. Two are open decisions (EQ-01, which appears in
 both phases 6 and 8, and WR-02); the rest are doc wording, info notes and workflow gaps.
