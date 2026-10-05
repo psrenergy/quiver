@@ -536,7 +536,7 @@ Skipped (`workflow.nyquist_validation: false` in `.planning/config.json`). Comma
 | A1 | Exact Julia error wording when `import` follows a local definition | Planning Flag | None: either way it fails loudly at load |
 | A2 | The GC race without `GC.@preserve` is real but rare | Pattern 4 | None: the preserve is cheap and rule-mandated |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 None blocking. One judgment call: whether `src/AGENTS.md:330` / `:335` ("plain value type" wording for `Expression`)
 should mention the base. Recommend a one-clause edit for accuracy.
