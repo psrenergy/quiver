@@ -48,8 +48,8 @@ evidence, the layout mapping table, the judged designs and the compiled spike). 
 
 ### Docs
 
-- [ ] **DOC-01**: The root, `src/`, `src/c/` and `bindings/julia/` AGENTS.md files describe the abstract expression type and the new `src/lua_runner/` layout: a root Design Decision for `AbstractExpression`, updated cross-layer table rows, and a fix for the inaccurate "ExpressionFile caches an open BinaryFile" line in `src/AGENTS.md`.
-- [ ] **DOC-02**: Each BREAKING change gets its CHANGELOG `[0.13.0] — unreleased` line in the phase that makes it, saying what a caller must change; the last phase checks the section is complete. All six suites are green, and the version stays 0.13.0.
+- [x] **DOC-01**: The root, `src/`, `src/c/` and `bindings/julia/` AGENTS.md files describe the abstract expression type and the new `src/lua_runner/` layout: a root Design Decision for `AbstractExpression`, updated cross-layer table rows, and a fix for the inaccurate "ExpressionFile caches an open BinaryFile" line in `src/AGENTS.md`.
+- [x] **DOC-02**: Each BREAKING change gets its CHANGELOG `[0.13.0] — unreleased` line in the phase that makes it, saying what a caller must change; the last phase checks the section is complete. All six suites are green, and the version stays 0.13.0.
 
 ## v2 Requirements
 
@@ -97,8 +97,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | JUL-01 | Phase 9 | Complete |
 | JUL-02 | Phase 9 | Complete |
 | JUL-03 | Phase 9 | Complete |
-| DOC-01 | Phase 9 | Pending |
-| DOC-02 | Phase 9 | Pending |
+| DOC-01 | Phase 9 | Complete |
+| DOC-02 | Phase 9 | Complete |
 
 **Coverage:**
 
