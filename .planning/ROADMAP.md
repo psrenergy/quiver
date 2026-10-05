@@ -149,8 +149,17 @@ Plans:
   4. The root AGENTS.md has an `AbstractExpression` Design Decision and updated binary cross-layer rows (`get_metadata` on files and expressions, the expression methods on files in Lua and Julia). `src/AGENTS.md`, `src/c/AGENTS.md` (`quiver_expression_from_file` stays the bridge) and `bindings/julia/AGENTS.md` describe the type and the new `src/lua_runner/` layout, and `grep -n 'caches an open BinaryFile' src/AGENTS.md` returns nothing.
   5. CHANGELOG `[0.13.0] — unreleased` holds a line for every BREAKING change of the milestone, each saying what a caller must change: copy-initialization from a file and `Expression::metadata()` → `get_metadata()` (Phase 7), Lua `e:metadata()` → `e:get_metadata()` and the strict arity of `quiver.*` expression functions (Phase 8). It also has entries for the expression methods files gained in Lua and Julia, and no entry carries a planning ID. `uv run python scripts/assert_version.py` reports 0.13.0 in all five manifests, and all six suites (`scripts/test-all.bat`) and the lua-api sync test are green.
 
-**Plans**: TBD
-**Planning flag**: settle where the Julia generic lives, `Binary.get_metadata(::File)` or a shared `Quiver.get_metadata` (SUMMARY.md, Gaps to Address).
+**Plans**: 2 plans (sequential, waves 1-2)
+**Planning flag (settled)**: `get_metadata` is one generic owned by `Binary`; `Quiver.jl` imports it before `include("expression.jl")`, so `Quiver.get_metadata === Quiver.Binary.get_metadata` and a file answers with its handle's metadata (09-RESEARCH, Planning Flag).
+
+Plans:
+**Wave 1**
+
+- [ ] 09-01-PLAN.md — Tracer: `build/julia-check` harness, then `AbstractExpression` across `Quiver.jl`, `Binary.jl`, `file.jl` and `expression.jl`, proven by `Quiver.save`/`Quiver.get_metadata` on a raw file; a parity testset over every operation committed green against the old forwarders, then every operation retyped once on `AbstractExpression` (97 forwarders deleted, `GC.@preserve` on converted handles) with the edge cases pinned; `bindings/julia/AGENTS.md`, the CHANGELOG Julia entry and the full Julia suite
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 09-02-PLAN.md — Root `AbstractExpression` Design Decision and binary cross-layer rows, the `src/AGENTS.md` ExpressionFile line, the `src/c/AGENTS.md` bridge note; CHANGELOG `[0.13.0]` completeness check, version check, six suites, lua-api sync test and the final counts
 
 ## Progress
 
@@ -167,4 +176,4 @@ Phases execute in numeric order: 6 → 7 → 8 → 9
 | 6. Quiver File Layout | lua-2 | 3/3 | Complete    | 2026-10-04 |
 | 7. AbstractExpression in C++ | lua-2 | 2/2 | Complete    | 2026-10-04 |
 | 8. Typed Expression Parameters in Lua | lua-2 | 2/2 | Complete    | 2026-10-04 |
-| 9. Julia AbstractExpression and Docs | lua-2 | 0/? | Not started | - |
+| 9. Julia AbstractExpression and Docs | lua-2 | 0/2 | Planned | - |
