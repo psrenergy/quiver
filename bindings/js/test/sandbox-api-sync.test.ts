@@ -5,7 +5,7 @@ const __dirname = import.meta.dir;
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 // Import the constant directly, NOT via src/index.ts — this test must not drag in the FFI loader.
-import { LUA_DB_API_REFERENCE } from "../src/lua-api.ts";
+import { SANDBOX_API_REFERENCE } from "../src/sandbox-api.ts";
 
 const SRC_DIR = join(__dirname, "..", "..", "..", "src", "sandbox");
 // Sorted, so neither the parse nor the open_libraries( count depends on directory order.
@@ -17,7 +17,7 @@ const SOURCES = readdirSync(SRC_DIR, { recursive: true, encoding: "utf8" })
 const CPP = SOURCES.join("\n"); // Pass 1, the open_libraries( count and the stdlib list read every file
 
 // Markup- and wrap-insensitive view, so re-wrapping a paragraph can't fail the stdlib assert.
-const DOC_FLAT = LUA_DB_API_REFERENCE.replaceAll("`", "").replace(/\s+/g, " ");
+const DOC_FLAT = SANDBOX_API_REFERENCE.replaceAll("`", "").replace(/\s+/g, " ");
 
 // Pass 1: `bind.set_function("x", ...)` -> db:x ; `ns.set_function("x", ...)` -> quiver.x
 // (`ns` is the `quiver` table the binary and expression binders receive.) Multiline so the
@@ -59,9 +59,9 @@ const usertypes = [...usertypeMethods.keys()].filter((type) => type !== "Databas
 // Word-boundary suffix: `db:describe` must not be satisfied by `db:describe_collection`, and
 // `quiver.gt` / `quiver.metadata` must not be satisfied by `gte` / `metadata_from_toml`.
 const documented = (token: string) =>
-  new RegExp(`${token}(?![a-z0-9_])`).test(LUA_DB_API_REFERENCE);
+  new RegExp(`${token}(?![a-z0-9_])`).test(SANDBOX_API_REFERENCE);
 
-describe("lua-api reference stays in sync with src/sandbox/", () => {
+describe("sandbox-api reference stays in sync with src/sandbox/", () => {
   test("parse found the binding surface", () => {
     // Meta-guard: if a reformat of src/sandbox/ breaks the regexes above, fail loudly instead of
     // passing vacuously forever on an empty match set.
@@ -100,7 +100,7 @@ describe("lua-api reference stays in sync with src/sandbox/", () => {
     const missing: string[] = [];
     for (const type of usertypes) {
       for (const name of usertypeMethods.get(type) ?? []) {
-        if (!LUA_DB_API_REFERENCE.includes(`:${name}(`)) missing.push(`${type}:${name}`);
+        if (!SANDBOX_API_REFERENCE.includes(`:${name}(`)) missing.push(`${type}:${name}`);
       }
     }
     expect(missing.sort()).toEqual([]);
@@ -108,10 +108,10 @@ describe("lua-api reference stays in sync with src/sandbox/", () => {
 
   test("no documented db:/quiver. name has been removed from the binding", () => {
     const stale = [
-      ...[...LUA_DB_API_REFERENCE.matchAll(/\bdb:([a-z_][a-z0-9_]*)/g)]
+      ...[...SANDBOX_API_REFERENCE.matchAll(/\bdb:([a-z_][a-z0-9_]*)/g)]
         .filter((m) => !dbMethods.has(m[1]))
         .map((m) => `db:${m[1]}`),
-      ...[...LUA_DB_API_REFERENCE.matchAll(/\bquiver\.([a-z_][a-z0-9_]*)/g)]
+      ...[...SANDBOX_API_REFERENCE.matchAll(/\bquiver\.([a-z_][a-z0-9_]*)/g)]
         .filter((m) => !quiverFns.has(m[1]))
         .map((m) => `quiver.${m[1]}`),
     ];

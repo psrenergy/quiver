@@ -4,9 +4,9 @@
 
 TEST_F(SandboxTest, CreateElement) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
         db:create_element("Configuration", { label = "Test Config" })
         db:create_element("Collection", { label = "Item 1", some_integer = 42, some_float = 3.14 })
     )");
@@ -21,10 +21,10 @@ TEST_F(SandboxTest, CreateElement) {
 
 TEST_F(SandboxTest, CreateElementWithArrays) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
     // Note: vector columns in the same table must have the same length
-    lua.run(R"(
+    sandbox.run(R"(
         db:create_element("Configuration", { label = "Test Config" })
         db:create_element("Collection", {
             label = "Item 1",
@@ -45,9 +45,9 @@ TEST_F(SandboxTest, CreateElementWithArrays) {
 // On create the core skips an empty array before looking up its table, so a misspelled one passes.
 TEST_F(SandboxTest, CreateElementSkipsEmptyArray) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
         db:create_element("Configuration", { label = "Test Config" })
         db:create_element("Collection", { label = "x", value_int = {}, typo = {} })
     )");
@@ -58,9 +58,9 @@ TEST_F(SandboxTest, CreateElementSkipsEmptyArray) {
 
 TEST_F(SandboxTest, CreateElementWithOnlyLabel) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
         db:create_element("Configuration", { label = "Test Config" })
         db:create_element("Collection", { label = "Item 1" })
     )");
@@ -72,9 +72,9 @@ TEST_F(SandboxTest, CreateElementWithOnlyLabel) {
 
 TEST_F(SandboxTest, CreateElementMixedTypes) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
         db:create_element("Configuration", { label = "Test Config" })
         db:create_element("Collection", {
             label = "Item 1",
@@ -96,17 +96,21 @@ TEST_F(SandboxTest, CreateElementMissingLabel) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
     // Attempting to create element without required label should fail
-    expect_lua_error(lua, R"(db:create_element("Collection", { some_integer = 42 }))", "NOT NULL constraint failed");
+    expect_sandbox_error(
+        sandbox,
+        R"(db:create_element("Collection", { some_integer = 42 }))",
+        "NOT NULL constraint failed"
+    );
 }
 
 TEST_F(SandboxTest, CreateElementTrimsWhitespace) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
         db:create_element("Configuration", { label = "Test Config" })
         db:create_element("Collection", {
             label = "  Item 1  ",
@@ -127,9 +131,9 @@ TEST_F(SandboxTest, CreateElementTrimsWhitespace) {
 
 TEST_F(SandboxTest, CreateElementWithSpecialCharactersInLabel) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
         db:create_element("Configuration", { label = "Config" })
         db:create_element("Collection", { label = "Test's \"special\" chars: <>&" })
     )");
@@ -143,10 +147,10 @@ TEST_F(SandboxTest, CreateElementInvalidCollection) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    expect_lua_error(
-        lua,
+    expect_sandbox_error(
+        sandbox,
         R"(db:create_element("NonexistentCollection", { label = "Test" }))",
         "Cannot create_element: collection not found"
     );
@@ -155,12 +159,12 @@ TEST_F(SandboxTest, CreateElementInvalidCollection) {
 TEST_F(SandboxTest, CreateElementUnsupportedAttributeTypeThrows) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
     // A function, not a boolean: a boolean is INTEGER 1/0 on every write path now (see the boolean
     // tests below). What must still throw is a value with no SQL counterpart at all.
     try {
-        lua.run(R"(db:create_element("Configuration", { label = "Item", enabled = print }))");
+        sandbox.run(R"(db:create_element("Configuration", { label = "Item", enabled = print }))");
         FAIL() << "expected unsupported attribute type to throw";
     } catch (const std::runtime_error& e) {
         EXPECT_NE(std::string(e.what()).find("Cannot create_element: attribute 'enabled'"), std::string::npos)
@@ -171,10 +175,10 @@ TEST_F(SandboxTest, CreateElementUnsupportedAttributeTypeThrows) {
 TEST_F(SandboxTest, CreateElementUnsupportedArrayElementTypeThrows) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
     try {
-        lua.run(R"(db:create_element("Configuration", { label = "Item", tags = { print, print } }))");
+        sandbox.run(R"(db:create_element("Configuration", { label = "Item", tags = { print, print } }))");
         FAIL() << "expected unsupported array element type to throw";
     } catch (const std::runtime_error& e) {
         EXPECT_NE(std::string(e.what()).find("Cannot create_element: array 'tags'"), std::string::npos) << e.what();
@@ -190,9 +194,9 @@ TEST_F(SandboxTest, CreateElementUnsupportedArrayElementTypeThrows) {
 TEST_F(SandboxTest, CreateElementBooleanAttributeStoresInteger) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
         db:create_element("Collection", { label = "True", some_integer = true })
         db:create_element("Collection", { label = "False", some_integer = false })
     )");
@@ -206,9 +210,9 @@ TEST_F(SandboxTest, CreateElementBooleanAttributeStoresInteger) {
 TEST_F(SandboxTest, CreateElementBooleanArrayStoresIntegers) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(db:create_element("Collection", { label = "Item", value_int = { true, false, true } }))");
+    sandbox.run(R"(db:create_element("Collection", { label = "Item", value_int = { true, false, true } }))");
 
     auto id = db.read_element_ids("Collection")[0];
     EXPECT_EQ(
@@ -220,12 +224,12 @@ TEST_F(SandboxTest, CreateElementBooleanArrayStoresIntegers) {
 TEST_F(SandboxTest, CreateElementMixedIntegerAndBooleanArray) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
     // Dispatch picks the integer helper from cell 1; every later boolean cell must still coerce.
     // Before lua_cell_to_int64 this silently stored 0 for the boolean in release builds, where
     // SOL_SAFE_GETTER is off and the unchecked get<int64_t> returned 0 instead of throwing.
-    lua.run(R"(db:create_element("Collection", { label = "Item", value_int = { 7, true, false } }))");
+    sandbox.run(R"(db:create_element("Collection", { label = "Item", value_int = { 7, true, false } }))");
 
     auto id = db.read_element_ids("Collection")[0];
     EXPECT_EQ(
@@ -237,9 +241,9 @@ TEST_F(SandboxTest, CreateElementMixedIntegerAndBooleanArray) {
 TEST_F(SandboxTest, UpdateElementBooleanAttributeStoresInteger) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
         local id = db:create_element("Collection", { label = "Item", some_integer = 42 })
         db:update_element("Collection", id, { some_integer = true })
     )");
@@ -250,9 +254,9 @@ TEST_F(SandboxTest, UpdateElementBooleanAttributeStoresInteger) {
 TEST_F(SandboxTest, UpdateVectorGroupBooleanCellsStoreIntegers) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
         local id = db:create_element("Collection", { label = "Item" })
         db:update_vector_group("Collection", "values", id, { value_int = { true, false } })
     )");
@@ -267,10 +271,10 @@ TEST_F(SandboxTest, UpdateVectorGroupBooleanCellsStoreIntegers) {
 TEST_F(SandboxTest, UpsertTimeSeriesRowBooleanStoresInteger) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
     // An int64 is accepted for a REAL column (int-for-REAL coercion), so a boolean is too.
-    lua.run(R"(
+    sandbox.run(R"(
         local id = db:create_element("Collection", { label = "Item" })
         db:upsert_time_series_row("Collection", "data", id, { date_time = "2024-01-01T00:00:00", value = true })
     )");
@@ -284,11 +288,11 @@ TEST_F(SandboxTest, UpsertTimeSeriesRowBooleanStoresInteger) {
 TEST_F(SandboxTest, CreateElementMixedFloatAndBooleanArray) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
     // The float sibling of CreateElementMixedIntegerAndBooleanArray: dispatch picks the double
     // helper from cell 1, and every later boolean cell must still coerce (int-for-REAL coercion).
-    lua.run(R"(db:create_element("Collection", { label = "Item", value_float = { 1.5, true, false } }))");
+    sandbox.run(R"(db:create_element("Collection", { label = "Item", value_float = { 1.5, true, false } }))");
 
     auto id = db.read_element_ids("Collection")[0];
     EXPECT_EQ(
@@ -300,7 +304,7 @@ TEST_F(SandboxTest, CreateElementMixedFloatAndBooleanArray) {
 TEST_F(SandboxTest, CreateElementArrayCellTypeMismatchThrows) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
     // A cell that fits no element type is a Pattern 1 rejection naming the array and the cell —
     // not a raw sol2 message, and never a silent placeholder (the unchecked sol2 getters are only
@@ -312,7 +316,7 @@ TEST_F(SandboxTest, CreateElementArrayCellTypeMismatchThrows) {
          R"(db:create_element("Collection", { label = "I", value_int = { 1, "zz" } }))"}
     ) {
         try {
-            lua.run(script);
+            sandbox.run(script);
             FAIL() << "expected a mismatched array cell to throw: " << script;
         } catch (const std::runtime_error& e) {
             EXPECT_NE(std::string(e.what()).find("Cannot create_element: array '"), std::string::npos) << e.what();
@@ -323,15 +327,15 @@ TEST_F(SandboxTest, CreateElementArrayCellTypeMismatchThrows) {
 
 TEST_F(SandboxTest, CreateElementRejectsNonTableElement) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    expect_lua_error(
-        lua,
+    expect_sandbox_error(
+        sandbox,
         R"(db:create_element("Collection", 5))",
         "Cannot create_element: element_table must be a table, got number"
     );
-    expect_lua_error(
-        lua,
+    expect_sandbox_error(
+        sandbox,
         R"(db:create_element("Collection", db))",
         "Cannot create_element: element_table must be a table, got userdata"
     );
@@ -342,10 +346,10 @@ TEST_F(SandboxTest, CreateElementRejectsNonTableElement) {
 // usertype text.
 TEST_F(SandboxTest, CreateElementRejectsUserdataAttribute) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    expect_lua_error(
-        lua,
+    expect_sandbox_error(
+        sandbox,
         R"(db:create_element("Collection", { label = "x", some_integer = db }))",
         "Cannot create_element: attribute 'some_integer' must be a value or a table, got userdata"
     );
@@ -355,15 +359,15 @@ TEST_F(SandboxTest, CreateElementRejectsUserdataAttribute) {
 // A number key used to be spelled as text in Release, and a boolean key had no text at all.
 TEST_F(SandboxTest, CreateElementRejectsNonStringAttributeName) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    expect_lua_error(
-        lua,
+    expect_sandbox_error(
+        sandbox,
         R"(db:create_element("Collection", { "x" }))",
         "Cannot create_element: attribute name must be a string, got number"
     );
-    expect_lua_error(
-        lua,
+    expect_sandbox_error(
+        sandbox,
         R"(db:create_element("Collection", { label = "y", [true] = 1 }))",
         "Cannot create_element: attribute name must be a string, got boolean"
     );

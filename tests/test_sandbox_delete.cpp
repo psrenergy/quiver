@@ -10,9 +10,9 @@ TEST_F(SandboxTest, DeleteElementById) {
     db.create_element("Collection", quiver::Element().set("label", "Item 2"));
     db.create_element("Collection", quiver::Element().set("label", "Item 3"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
         local ids = db:read_element_ids("Collection")
         assert(#ids == 3, "Expected 3 elements before delete")
 
@@ -37,9 +37,9 @@ TEST_F(SandboxTest, DeleteElementByLabel) {
     db.create_element("Collection", quiver::Element().set("label", "Item 2"));
     db.create_element("Collection", quiver::Element().set("label", "Item 3"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
         local ids = db:read_element_ids("Collection")
         assert(#ids == 3, "Expected 3 elements before delete")
 
@@ -69,9 +69,9 @@ TEST_F(SandboxTest, DeleteElementByIdWithVectorData) {
         quiver::Element().set("label", "Item 2").set("value_int", std::vector<int64_t>{4, 5, 6})
     );
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
         db:delete_element("Collection", 1)
 
         local ids = db:read_element_ids("Collection")
@@ -91,13 +91,13 @@ TEST_F(SandboxTest, DeleteElementByIdNonExistent) {
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     db.create_element("Collection", quiver::Element().set("label", "Item 1"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
     // Deleting a non-existent element throws "Element not found"
-    expect_lua_error(lua, R"(db:delete_element("Collection", 999))", "Element not found");
+    expect_sandbox_error(sandbox, R"(db:delete_element("Collection", 999))", "Element not found");
 
     // Original element is untouched
-    lua.run(R"(
+    sandbox.run(R"(
         local ids = db:read_element_ids("Collection")
         assert(#ids == 1, "Original element should still exist")
     )");
@@ -109,13 +109,13 @@ TEST_F(SandboxTest, DeleteElementByLabelNonExistent) {
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     db.create_element("Collection", quiver::Element().set("label", "Item 1"));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
     // Deleting a non-existent label throws "Element not found"
-    expect_lua_error(lua, R"(db:delete_element_by_label("Collection", "Nope"))", "Element not found");
+    expect_sandbox_error(sandbox, R"(db:delete_element_by_label("Collection", "Nope"))", "Element not found");
 
     // Original element is untouched
-    lua.run(R"(
+    sandbox.run(R"(
         local ids = db:read_element_ids("Collection")
         assert(#ids == 1, "Original element should still exist")
     )");
@@ -129,9 +129,9 @@ TEST_F(SandboxTest, DeleteElementByIdOtherElementsUnchanged) {
     db.create_element("Collection", quiver::Element().set("label", "Item 2").set("some_integer", int64_t{200}));
     db.create_element("Collection", quiver::Element().set("label", "Item 3").set("some_integer", int64_t{300}));
 
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
-    lua.run(R"(
+    sandbox.run(R"(
         db:delete_element("Collection", 2)
 
         local labels = db:read_scalar_strings("Collection", "label")

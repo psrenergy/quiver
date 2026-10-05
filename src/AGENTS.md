@@ -762,10 +762,10 @@ Implementation conventions in `src/sandbox/`:
   the global environment and an explicit `nil` stays `nil`. `Sandbox::run` loads the script
   itself with `sol::load_mode::text` as well. `string.dump` stays: its output is inert once both
   refuse binary chunks.
-- **The agent-facing Lua reference lives in `bindings/js/src/lua-api.ts`** (shipped on npm as
-  `LUA_DB_API_REFERENCE` and interpolated into an LLM system prompt downstream). Adding or removing
+- **The agent-facing Lua reference lives in `bindings/js/src/sandbox-api.ts`** (shipped on npm as
+  `SANDBOX_API_REFERENCE` and interpolated into an LLM system prompt downstream). Adding or removing
   a `db:`/`quiver.*` binding, or changing the `open_libraries` list, requires updating it —
-  `bindings/js/test/lua-api-sync.test.ts` parses every `.cpp`/`.h` under `src/sandbox/` and fails otherwise. That check
+  `bindings/js/test/sandbox-api-sync.test.ts` parses every `.cpp`/`.h` under `src/sandbox/` and fails otherwise. That check
   exists because the doc went stale two days after it was written: it said only
   `base`/`string`/`table` were loaded and "there is NO `math`", and #210 added
   `math`/`coroutine`/`utf8` here without touching it.

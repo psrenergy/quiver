@@ -4,7 +4,7 @@
 // this repo) — extracted by hand, NOT imported.
 // The shipped quiverdb native binding is the runtime truth; this is docs.
 //
-// SYNC: `test/lua-api-sync.test.ts` derives the bound surface from every `.cpp`/`.h` under
+// SYNC: `test/sandbox-api-sync.test.ts` derives the bound surface from every `.cpp`/`.h` under
 // `src/sandbox/` and checks
 // it AUTOMATICALLY — every `db:`/`quiver.*` name is documented, no documented name has been
 // removed, and the stdlib sentence matches `open_libraries` exactly. What it CANNOT check, and you
@@ -18,12 +18,11 @@
 // FORMAT CONVENTION: every db: method appears at least once as the literal token
 // `db:<snake_case_name>`, and every quiver.* function as `quiver.<name>`, so coverage is greppable
 // (the sync test relies on this).
-export const LUA_DB_API_REFERENCE = `
-# Quiver Lua API Reference
+export const SANDBOX_API_REFERENCE = `
+# Quiver Sandbox API Reference
 
-Quiver embeds a Lua scripting layer (via \`Sandbox\`) that exposes the same database API as the
-other language bindings. This document is a complete reference of every method available to a Lua
-script.
+Quiver embeds a Lua sandbox scripting layer that exposes the same database API as the other language
+bindings. This document is a complete reference of every method available to a Lua script.
 
 ## Running scripts
 

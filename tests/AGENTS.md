@@ -46,14 +46,17 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   moved-from runner is alive and after it has been destroyed, and a file-scope `static_assert` that
   `Sandbox` is pointer-sized keeps run state inside its `Impl` in Release too, where the freed-source
   pins alone do not reliably fail. The shared `SandboxTest` and `LuaSandboxTest` fixtures,
-  the `expect_lua_error` helper (throw + message-substring assert — plain `EXPECT_THROW` passes
+  the `expect_sandbox_error` helper (throw + message-substring assert — plain `EXPECT_THROW` passes
   vacuously when a removed function raises "attempt to call a nil value"), and the common include
   prelude live in `test_sandbox.h`; the single-use `SandboxAllTypesTest` / `SandboxFkTest`
   fixtures stay local to their files. Lua file operations are sandboxed to the database directory
   (root design decision), so every file-touching Lua test uses `LuaSandboxTest`: a file-backed db
-  in a dedicated per-test temp dir, with scripts passing relative paths. The Lua binary/expression
-  subsystem bindings (and the sandbox itself) are covered by `test_lua_binary.cpp` and
-  `test_lua_expression.cpp`.
+  in a dedicated per-test temp dir, with scripts passing relative paths. Its directory member is
+  `sandbox_path`, distinct from local `quiver::Sandbox sandbox` runners. The binary, expression,
+  and CSV reader suites inherit this file-backed fixture, not the in-memory `SandboxTest`.
+  The Lua binary/expression subsystem bindings (and the sandbox itself) are covered by
+  `test_sandbox_binary.cpp` and
+  `test_sandbox_expression.cpp`.
 - `test_sandboxed_path.cpp` (`SandboxedPathTest`) unit-tests `resolve_sandboxed_path`, the gate
   every file-touching Lua operation shares, without Lua: containment, `..` and absolute escapes, a
   symlink pointing outside, the root itself, `:memory:`, and (`_WIN32` only) the device-name prefix.
@@ -62,7 +65,7 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   `quiver_tests` along with the `src/` include dir. Keep `path_policy.cpp` a one-function file, or a
   static (`QUIVER_BUILD_SHARED=OFF`) link defines a symbol twice. The suite name stays outside the
   `Lua*` filter so the Lua-layer count is unaffected. Expectations build the root from
-  `weakly_canonical(sandbox)`, which is what the gate prints (macOS `/private/var`, Windows 8.3
+  `weakly_canonical(sandbox_path)`, which is what the gate prints (macOS `/private/var`, Windows 8.3
   names), and the symlink case skips where a directory symlink cannot be created.
 - Binary subsystem: `test_binary_file.cpp`, `test_binary_metadata.cpp`,
   `test_binary_time_properties.cpp`, `test_csv_converter.cpp`, `test_iteration.cpp`
@@ -92,8 +95,8 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   access), POSIX uses `chmod 000` (which blocks the open while `stat` still succeeds) and skips
   under root. It asserts the three preconditions still pass before reading, so it cannot silently
   degrade into re-testing an earlier catalogue message. `DeviceNamePathIsReportedWithPrefix` (here
-  and in `test_lua_binary.cpp`) is `_WIN32`-only because no POSIX path is reserved the way `NUL`
-  is; the `test_lua_binary.cpp` copy spans `open_file`/`bin_to_csv`/`csv_to_bin` on purpose, so the
+  and in `test_sandbox_binary.cpp`) is `_WIN32`-only because no POSIX path is reserved the way `NUL`
+  is; the `test_sandbox_binary.cpp` copy spans `open_file`/`bin_to_csv`/`csv_to_bin` on purpose, so the
   fix stays in the shared `resolve_sandboxed_path` gate instead of regressing to a per-caller patch.
 - `test_sandbox_write_csv.cpp` covers the Lua-only `db:write_csv`/`w:write_row`/`w:close`
   binding (cell-type dispatch, the `separator`/`header` options, the max-integer-key row walk, and
@@ -186,16 +189,16 @@ Dart `database_read_scalar_test.dart`, JS `database-read-scalar.test.ts`, Python
 has no `nulls` file. JS Database-operation test files carry a `database-` prefix
 (`database-create.test.ts`, `database-lifecycle.test.ts`, …) to match the other bindings; the
 non-Database files (`composites.test.ts`, `introspection.test.ts`, `sandbox.test.ts`,
-`lua-api-sync.test.ts`, `package-entry.test.ts`) keep their bare names.
+`sandbox-api-sync.test.ts`, `package-entry.test.ts`) keep their bare names.
 
-`bindings/js/test/lua-api-sync.test.ts` is the only JS test file that needs neither a database nor
+`bindings/js/test/sandbox-api-sync.test.ts` is the only JS test file that needs neither a database nor
 the native library: it parses every `.cpp`/`.h` under `src/sandbox/` (sorted, with the open
-usertype reset at each file boundary) and asserts `bindings/js/src/lua-api.ts` documents
+usertype reset at each file boundary) and asserts `bindings/js/src/sandbox-api.ts` documents
 every bound `db:`/`quiver.*` name and the exact `open_libraries` list. It also fails if any of the
 `BinaryFile`, `BinaryMetadata`, `Expression` or `CsvWriter` usertypes parses to zero methods, or if
 `open_libraries(` does not appear exactly once, so a missed file or usertype cannot pass vacuously.
 It imports the constant from
-`../src/lua-api.ts` directly rather than `../src/index.ts` specifically to avoid the FFI loader, so
+`../src/sandbox-api.ts` directly rather than `../src/index.ts` specifically to avoid the FFI loader, so
 it still passes on a checkout with no `build/`.
 
 ## Schemas (`tests/schemas/`)

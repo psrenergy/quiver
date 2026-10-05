@@ -63,7 +63,7 @@ TEST_F(Sandbox_Lifecycle, MoveConstructor) {
     moved.run("assert(origin == 'first', 'moved-to runner lost the source Lua state')");
     moved.run(open_handles("second"));
     moved.run(expect_handles_closed("second"));
-    EXPECT_TRUE(std::filesystem::exists(sandbox / "second_doubled.qvr"));
+    EXPECT_TRUE(std::filesystem::exists(sandbox_path / "second_doubled.qvr"));
 }
 
 TEST_F(Sandbox_Lifecycle, MoveAssignment) {
@@ -77,7 +77,7 @@ TEST_F(Sandbox_Lifecycle, MoveAssignment) {
     target.run("assert(origin == 'first', 'moved-to runner lost the source Lua state')");
     target.run(open_handles("second"));
     target.run(expect_handles_closed("second"));
-    EXPECT_TRUE(std::filesystem::exists(sandbox / "second_doubled.qvr"));
+    EXPECT_TRUE(std::filesystem::exists(sandbox_path / "second_doubled.qvr"));
 }
 
 // The source is freed before the moved-to runner runs again, so run state still reached through the
@@ -92,7 +92,7 @@ TEST_F(Sandbox_Lifecycle, MoveConstructorOutlivesSource) {
     moved.run("assert(origin == 'first', 'moved-to runner lost the source Lua state')");
     moved.run(open_handles("second"));
     moved.run(expect_handles_closed("second"));
-    EXPECT_TRUE(std::filesystem::exists(sandbox / "second_doubled.qvr"));
+    EXPECT_TRUE(std::filesystem::exists(sandbox_path / "second_doubled.qvr"));
 }
 
 TEST_F(Sandbox_Lifecycle, MoveAssignmentOutlivesSource) {
@@ -107,5 +107,5 @@ TEST_F(Sandbox_Lifecycle, MoveAssignmentOutlivesSource) {
     target.run("assert(origin == 'first', 'moved-to runner lost the source Lua state')");
     target.run(open_handles("second"));
     target.run(expect_handles_closed("second"));
-    EXPECT_TRUE(std::filesystem::exists(sandbox / "second_doubled.qvr"));
+    EXPECT_TRUE(std::filesystem::exists(sandbox_path / "second_doubled.qvr"));
 }

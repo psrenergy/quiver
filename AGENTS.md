@@ -225,7 +225,7 @@ Settled questions — don't relitigate without the user; each was decided delibe
   fixed: a sentinel would break the "`nil` is NULL" rule the time-series and scalar readers share,
   and a script that needs exact row shape does that read in the host binding. Pinned by
   `ReadVectorPreservesNullCellsAsNilHoles`; recorded in the agent-facing Lua reference
-  (`bindings/js/src/lua-api.ts`).
+  (`bindings/js/src/sandbox-api.ts`).
 - **Boolean wrappers are Julia/Dart/Python/JS only; Lua is deliberately excluded.** SQLite has no
   boolean type, so a boolean lives in an INTEGER column as 0/1 and the wrappers are a
   strict-conversion convenience with no C++ or C API counterpart (the fourth documented per-binding
@@ -394,7 +394,7 @@ Reviewed adversarially and rejected — these are not improvements:
 - "Simplifying" the documented Bun FFI workarounds (`bindings/js/AGENTS.md`) or the binary
   hot-path decisions (`src/AGENTS.md`) — load-bearing.
 - Drive-by fixing pre-existing lint debt in untouched JS files.
-- Relocating the agent-facing Lua reference (`bindings/js/src/lua-api.ts`, `LUA_DB_API_REFERENCE`).
+- Relocating the agent-facing Lua reference (`bindings/js/src/sandbox-api.ts`, `SANDBOX_API_REFERENCE`).
   Moving it into the C++ layer would turn a build-time constant into a runtime FFI call just to
   assemble a system prompt, and would make a one-sentence docs fix a native republish across npm
   libs, PyPI wheels, Julia artifacts, and S3 natives. Moving it to an imported `.md` was implemented,
