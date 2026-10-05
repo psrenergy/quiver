@@ -1,4 +1,4 @@
-#include "lua_runner/path_policy.h"
+#include "sandbox/path_policy.h"
 
 #include "quiver/database.h"
 

@@ -1,7 +1,7 @@
-#include "quiver/lua_runner.h"
+#include "quiver/sandbox.h"
 
 #include "csv/csv_write.h"
-#include "lua_runner/internal.h"
+#include "sandbox/internal.h"
 #include "quiver/binary/binary_file.h"
 #include "quiver/database.h"
 

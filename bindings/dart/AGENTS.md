@@ -7,7 +7,7 @@ convenience-method parity tables live in the root `AGENTS.md`.
 
 ```
 lib/src/          # Hand-written wrappers: database.dart + part files per area, element.dart,
-                  # lua_runner.dart, metadata.dart, exceptions.dart, date_time.dart,
+                  # sandbox.dart, metadata.dart, exceptions.dart, date_time.dart,
                   # database_options.dart
 lib/src/ffi/      # bindings.dart (GENERATED ffigen output — do not hand-edit) +
                   # library_loader.dart (hand-written native library resolution)
@@ -62,7 +62,7 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   `CMAKE_MACOSX_BUNDLE=OFF` (the toolchain's `if(NOT DEFINED ...) set(... YES)` inherits into
   FetchContent, and lua-cmake's `lua_bin` bundle + RUNTIME-only `install()` then aborts
   configure); and `DEPLOYMENT_TARGET` floored at 13.3 (libc++ marks the floating-point
-  `std::to_chars` used by `database_csv_export.cpp` / `lua_runner/return_json.cpp` / `lua_runner/csv.cpp` /
+  `std::to_chars` used by `database_csv_export.cpp` / `sandbox/return_json.cpp` / `sandbox/csv.cpp` /
   `binary/csv_converter.cpp` unavailable below it —
   `cmake/Platform.cmake` carries the same floor for every other macOS build). Do not "simplify"
   these. `appleArgs: AppleBuilderArgs(enableStrictTryCompile: true)` is kept as hygiene rather

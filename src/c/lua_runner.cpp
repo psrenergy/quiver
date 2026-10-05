@@ -1,7 +1,7 @@
-#include "quiver/c/lua_runner.h"
+#include "quiver/c/sandbox.h"
 
 #include "internal.h"
-#include "quiver/lua_runner.h"
+#include "quiver/sandbox.h"
 #include "utils/string.h"
 
 #include <new>

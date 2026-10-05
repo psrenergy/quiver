@@ -1,6 +1,6 @@
 #include "quiver/database.h"
 
-#include "lua_runner/internal.h"
+#include "sandbox/internal.h"
 
 #include <sol/sol.hpp>
 

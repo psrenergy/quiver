@@ -7,9 +7,9 @@ import { join } from "node:path";
 // Import the constant directly, NOT via src/index.ts — this test must not drag in the FFI loader.
 import { LUA_DB_API_REFERENCE } from "../src/lua-api.ts";
 
-const SRC_DIR = join(__dirname, "..", "..", "..", "src", "lua_runner");
+const SRC_DIR = join(__dirname, "..", "..", "..", "src", "sandbox");
 // Sorted, so neither the parse nor the open_libraries( count depends on directory order.
-// Recursive, so a future src/lua_runner/<subdir>/ cannot drop out of the parse.
+// Recursive, so a future src/sandbox/<subdir>/ cannot drop out of the parse.
 const SOURCES = readdirSync(SRC_DIR, { recursive: true, encoding: "utf8" })
   .filter((f) => /\.(cpp|h)$/.test(f))
   .sort()
@@ -61,9 +61,9 @@ const usertypes = [...usertypeMethods.keys()].filter((type) => type !== "Databas
 const documented = (token: string) =>
   new RegExp(`${token}(?![a-z0-9_])`).test(LUA_DB_API_REFERENCE);
 
-describe("lua-api reference stays in sync with src/lua_runner/", () => {
+describe("lua-api reference stays in sync with src/sandbox/", () => {
   test("parse found the binding surface", () => {
-    // Meta-guard: if a reformat of src/lua_runner/ breaks the regexes above, fail loudly instead of
+    // Meta-guard: if a reformat of src/sandbox/ breaks the regexes above, fail loudly instead of
     // passing vacuously forever on an empty match set.
     expect(dbMethods.size).toBeGreaterThan(40);
     expect(quiverFns.size).toBeGreaterThan(10);

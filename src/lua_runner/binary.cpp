@@ -1,4 +1,4 @@
-#include "lua_runner/internal.h"
+#include "sandbox/internal.h"
 #include "quiver/binary/binary_file.h"
 #include "quiver/binary/binary_metadata.h"
 #include "quiver/binary/csv_converter.h"

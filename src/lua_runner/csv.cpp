@@ -1,6 +1,6 @@
 #include "csv/csv_read.h"
 #include "csv/csv_write.h"
-#include "lua_runner/internal.h"
+#include "sandbox/internal.h"
 #include "quiver/database.h"
 #include "utils/number.h"
 

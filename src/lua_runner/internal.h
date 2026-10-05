@@ -1,7 +1,7 @@
 #ifndef QUIVER_SRC_LUA_RUNNER_INTERNAL_H
 #define QUIVER_SRC_LUA_RUNNER_INTERNAL_H
 
-#include "lua_runner/path_policy.h"
+#include "sandbox/path_policy.h"
 #include "quiver/database.h"
 #include "quiver/element.h"
 #include "quiver/value.h"
@@ -33,7 +33,7 @@ class Expression;
 
 // sol2 inheritance as compile-time traits, not the runtime base-classes tag: the tag swaps each derived
 // metatable's __index table for a C closure that every f:read / f:write pays. They are explicit
-// specializations, so every TU that uses sol2 with these types must see them: every src/lua_runner TU that
+// specializations, so every TU that uses sol2 with these types must see them: every src/sandbox TU that
 // includes sol2 includes this header first.
 SOL_BASE_CLASSES(quiver::BinaryFile, quiver::AbstractExpression);
 SOL_BASE_CLASSES(quiver::Expression, quiver::AbstractExpression);
@@ -138,7 +138,7 @@ sol::table get_metadata_lua(Database& db, const std::string& collection, const s
     return metadata_to_lua(lua, (db.*Get)(collection, name));
 }
 
-// Every boolean test in src/lua_runner/ goes through this one predicate, so the rule lives in one
+// Every boolean test in src/sandbox/ goes through this one predicate, so the rule lives in one
 // place rather than in a comment repeated at each site. The Value mapping itself lives in
 // lua_to_value (scalars, row upserts, query parameters, group cells, CSV cells) and lua_cell_as
 // (the typed paths, e.g. arrays).

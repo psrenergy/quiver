@@ -1,11 +1,11 @@
 // Agent-facing reference for the Lua `db` API available inside run_lua scripts.
 //
-// Authority: the binders under `src/lua_runner/` (`bind_database` through `bind_expression`,
+// Authority: the binders under `src/sandbox/` (`bind_database` through `bind_expression`,
 // this repo) — extracted by hand, NOT imported.
 // The shipped quiverdb native binding is the runtime truth; this is docs.
 //
 // SYNC: `test/lua-api-sync.test.ts` derives the bound surface from every `.cpp`/`.h` under
-// `src/lua_runner/` and checks
+// `src/sandbox/` and checks
 // it AUTOMATICALLY — every `db:`/`quiver.*` name is documented, no documented name has been
 // removed, and the stdlib sentence matches `open_libraries` exactly. What it CANNOT check, and you
 // must still re-diff by hand when the binding changes: arg order, arity, arg types, return shapes,

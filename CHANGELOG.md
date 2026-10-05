@@ -1002,7 +1002,7 @@ callers to change something are prefixed **BREAKING** and say what to do.
 - **The Dart binding's native build now works on macOS.** `quiverdb`'s native-assets hook
   previously could not configure, compile, or register its libraries there.
 - **macOS builds now target macOS 13.3 as their minimum, deterministically.** libc++ marks the
-  floating-point `std::to_chars` (used by `database_csv_export.cpp` and `lua_runner.cpp`)
+  floating-point `std::to_chars` (used by `database_csv_export.cpp` and `sandbox.cpp`)
   unavailable below 13.3, so that is the core's real floor and `cmake/Platform.cmake` now sets
   it for every macOS build. Previously no build path set one, so clang stamped the *builder's*
   OS version into the shipped dylibs and the published Julia/JS/S3 natives silently required

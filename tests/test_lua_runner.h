@@ -6,7 +6,7 @@
 #include <gtest/gtest.h>
 #include <quiver/database.h>
 #include <quiver/element.h>
-#include <quiver/lua_runner.h>
+#include <quiver/sandbox.h>
 
 #include <filesystem>
 #include <string>

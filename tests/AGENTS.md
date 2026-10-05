@@ -58,7 +58,7 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   every file-touching Lua operation shares, without Lua: containment, `..` and absolute escapes, a
   symlink pointing outside, the root itself, `:memory:`, and (`_WIN32` only) the device-name prefix.
   It is the only test that includes a `src/` header and compiles a `src/` TU: the function is hidden
-  in the shared library, so `tests/CMakeLists.txt` adds `src/lua_runner/path_policy.cpp` to
+  in the shared library, so `tests/CMakeLists.txt` adds `src/sandbox/path_policy.cpp` to
   `quiver_tests` along with the `src/` include dir. Keep `path_policy.cpp` a one-function file, or a
   static (`QUIVER_BUILD_SHARED=OFF`) link defines a symbol twice. The suite name stays outside the
   `Lua*` filter so the Lua-layer count is unaffected. Expectations build the root from
@@ -189,7 +189,7 @@ non-Database files (`composites.test.ts`, `introspection.test.ts`, `lua-runner.t
 `lua-api-sync.test.ts`, `package-entry.test.ts`) keep their bare names.
 
 `bindings/js/test/lua-api-sync.test.ts` is the only JS test file that needs neither a database nor
-the native library: it parses every `.cpp`/`.h` under `src/lua_runner/` (sorted, with the open
+the native library: it parses every `.cpp`/`.h` under `src/sandbox/` (sorted, with the open
 usertype reset at each file boundary) and asserts `bindings/js/src/lua-api.ts` documents
 every bound `db:`/`quiver.*` name and the exact `open_libraries` list. It also fails if any of the
 `BinaryFile`, `BinaryMetadata`, `Expression` or `CsvWriter` usertypes parses to zero methods, or if

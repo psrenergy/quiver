@@ -1,6 +1,6 @@
 from quiverdb.database import Database
 from quiverdb.exceptions import QuiverError
-from quiverdb.lua_runner import LuaRunner
+from quiverdb.sandbox import LuaRunner
 from quiverdb.metadata import (
     CSVOptions,
     DataType,

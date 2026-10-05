@@ -2,14 +2,14 @@
 #define QUIVER_SRC_CSV_CSV_READ_H
 
 // Internal CSV reader wrapping vincentlaucsb/csv-parser -- the repo's only CSV library -- for the
-// Lua-only db:read_csv / db:read_csv_stream bindings (src/lua_runner/csv.cpp) and for
+// Lua-only db:read_csv / db:read_csv_stream bindings (src/sandbox/csv.cpp) and for
 // Database::import_csv (src/database_csv_import.cpp). No public include/quiver/ counterpart, no
 // QUIVER_API, no C API, no FFI binding: import_csv is already the bound public surface,
 // Julia/Dart/Python/JS already have native CSV libraries, and Lua needs this specifically because
 // `io` is deliberately absent from its sandbox (root AGENTS.md design decisions). This is the
 // first internal .cpp in src/ with no public header -- every other internal helper
 // (utils/string.h, database_internal.h, binary/binary_utils.h) is header-only inline; Reader is
-// Pimpl'd specifically so csv-parser's headers never have to be included by any src/lua_runner/ TU,
+// Pimpl'd specifically so csv-parser's headers never have to be included by any src/sandbox/ TU,
 // all of which need /bigobj on MSVC for sol2's template depth.
 
 #include <cstdint>

@@ -395,7 +395,7 @@ ffi.cdef("""
         const char* collection, const char* group, const char* path,
         const quiver_csv_options_t* options);
 
-    // lua_runner.h
+    // sandbox.h
     typedef struct quiver_lua_runner quiver_lua_runner_t;
 
     quiver_error_t quiver_lua_runner_new(quiver_database_t* db, quiver_lua_runner_t** out_runner);

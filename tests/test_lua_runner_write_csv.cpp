@@ -19,7 +19,7 @@ std::string lp(const std::string& p) {
 
 // Reads bindings/js/src/lua-api.ts (via quiver::test::path_from) and extracts the fenced ```lua
 // block that follows a given `## heading` -- the same drift-proof technique
-// bindings/js/test/lua-api-sync.test.ts uses on src/lua_runner/, applied here in the other
+// bindings/js/test/lua-api-sync.test.ts uses on src/sandbox/, applied here in the other
 // direction (parsing the reference instead of parsing the binding). LUA_DB_API_REFERENCE is a
 // TypeScript template literal, so every backtick in it is backslash-escaped in the source (the
 // fence markers included) to keep it from terminating the surrounding `...` literal; this function

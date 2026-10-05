@@ -13,7 +13,7 @@ src/quiverdb/
   database.py     # Database class (inherits the CSV mixins below)
   database_csv_export.py / database_csv_import.py  # export_csv / import_csv mixins
   database_options.py  # CSVOptions-to-C marshaling
-  lua_runner.py   # LuaRunner class
+  sandbox.py   # LuaRunner class
   metadata.py     # DataType/LogLevel (IntEnums), CSVOptions, ScalarMetadata, GroupMetadata
   element.py      # Element builder - INTERNAL ONLY (users pass **kwargs)
   exceptions.py   # QuiverError

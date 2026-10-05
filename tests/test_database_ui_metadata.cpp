@@ -56,7 +56,7 @@ protected:
     }
 
     // The sibling `ui/` directory `from_migrations` resolves against the migrations path. Uses
-    // weakly_canonical before parent_path, matching src/lua_runner/path_policy.cpp's resolve_sandboxed_path
+    // weakly_canonical before parent_path, matching src/sandbox/path_policy.cpp's resolve_sandboxed_path
     // idiom -- a raw parent_path() misresolves a trailing-slash or bare-relative migrations path.
     std::string ui_dir() const {
         return (fs::weakly_canonical(migrations_dir()).parent_path() / "ui").string();

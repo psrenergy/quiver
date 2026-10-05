@@ -13,7 +13,7 @@ include/quiver/           # C++ public headers
   attribute_metadata.h    # ScalarMetadata, GroupMetadata types
   options.h               # DatabaseOptions, CSVOptions types and factories
   element.h               # Element builder for create operations
-  lua_runner.h            # Lua scripting support
+  sandbox.h            # Lua scripting support
   value.h                 # Value variant (nullptr/int64/double/string)
   data_type.h             # DataType enum, data_type_to_string, is_date_time_column
   row.h / result.h        # Row and Result query-result types
@@ -44,8 +44,8 @@ src/                      # C++ implementation
   type_validator.h / type_validator.cpp      # Scalar/array type validation (free functions,
                                              # caller-threaded Pattern 1 messages)
   element.cpp / row.cpp / result.cpp / migration.cpp / migrations.cpp
-  lua_runner/             # LuaRunner (sol2): one file per core file it binds (database*.cpp), plus csv, binary, expression
-    lua_runner.cpp        # LuaRunner::Impl (ctor order, the one Database usertype), RunHandles bodies, run()/GcGuard
+  sandbox/             # LuaRunner (sol2): one file per core file it binds (database*.cpp), plus csv, binary, expression
+    sandbox.cpp        # LuaRunner::Impl (ctor order, the one Database usertype), RunHandles bodies, run()/GcGuard
     internal.h            # quiver::lua_internal: RunHandles, binder decls, converters, read adapters, option walk, group-decoder decls, metadata templates, parse_csv_options decl
     return_json.cpp       # run()'s JSON encoder
     path_policy.h         # resolve_sandboxed_path's declaration; no sol2, included by internal.h and SandboxedPathTest
@@ -103,7 +103,7 @@ standalone reader/writer — `database_csv_{import,export}.cpp` stay with the `d
 parsing through `csv_read::Reader` and emitting through `csv_write::append_record` (root design
 decision "One CSV parser, one CSV emitter"), and `binary/csv_converter.cpp` stays with `binary/`. A future format helper (e.g. a Lua JSON reader)
 gets a sibling folder (`src/json/`). The `run()` JSON encoder now lives in
-`src/lua_runner/return_json.cpp`.
+`src/sandbox/return_json.cpp`.
 
 `csv/csv_read.h`/`.cpp` was the first `.cpp` in `src/` with no `include/quiver/` public
 counterpart — the header-only internal helpers here (`utils/string.h`, `database_internal.h`,
@@ -117,7 +117,7 @@ every public method down to every binding" never fires — no documented excepti
 passes its one unsandboxed path as both `resolved_path` and `original_path`, with `"import_csv"` as
 the operation (from Lua it arrives already sandbox-resolved, so those errors quote the absolute
 path). `Reader` is Pimpl'd specifically so csv-parser's headers never have
-to be included by any `src/lua_runner/` TU (all are sol2 TUs; `/bigobj` is target-wide for sol2's template
+to be included by any `src/sandbox/` TU (all are sol2 TUs; `/bigobj` is target-wide for sol2's template
 depth). Three `csv::CSVFormat` settings are pinned in exactly one place (`make_format`, in
 `csv_read.cpp`) because every one of the library defaults is wrong for this reader:
 `variable_columns(KEEP_NON_EMPTY)` (the default `IGNORE_ROW` silently discards any row whose field
@@ -151,7 +151,7 @@ form with no synthetic decimal point, so a whole float and the equal integer wri
 a `nil` cell and an empty-string cell are structurally indistinguishable after a CSV round
 trip and that is stated, not fixed — CSV has no null. The row-width enforcement (a
 short `write_row` pads to the header's length, a long one throws) lives entirely in the Lua-layer
-`CsvWriter::write_row` in `src/lua_runner/csv.cpp`, not here: this file's `Writer` gained no header-width
+`CsvWriter::write_row` in `src/sandbox/csv.cpp`, not here: this file's `Writer` gained no header-width
 state and no signature change for it, and padding happens before the cell vector ever reaches
 `write_row`/`append_record`, so `append_record`'s `lone_empty_cell` predicate sees the final,
 already-padded cell count.
@@ -174,7 +174,7 @@ The sibling directory is `fs::weakly_canonical(migrations_path).parent_path() / 
 path yields `<migrations>/ui`, which never exists, and a bare relative migrations path yields
 `./ui` against whatever the process CWD happens to be at call time, not the sibling directory a
 caller means. `fs::weakly_canonical` normalizes both away before `parent_path()` ever runs (the
-same idiom `src/lua_runner/path_policy.cpp`'s `resolve_sandboxed_path` already uses).
+same idiom `src/sandbox/path_policy.cpp`'s `resolve_sandboxed_path` already uses).
 
 A `ui/*.toml` collection file self-selects by shape, never by filename: a top-level string `id`
 plus an `attribute` array are both required, which is what excludes `main.toml` (no `id`), every
@@ -270,7 +270,7 @@ substring immunity, and `summarize_collection` additionally emits `  Vectors:` /
 database would be breakable by a label containing that text. The remedy, if it ever bites, is
 asserting on report structure (line prefix + indentation), never a substring blocklist.
 
-Three guards in the Lua layer's decoders (`src/lua_runner/`: `csv.cpp`, `internal.h`, `database_update.cpp`) exist because a script is
+Three guards in the Lua layer's decoders (`src/sandbox/`: `csv.cpp`, `internal.h`, `database_update.cpp`) exist because a script is
 untrusted input, in the same spirit as the JSON encoder's two caps below:
 - `csv_max_integer_key` is the single max-integer-key walk behind both `csv_row_cells_from_lua`
   and `csv_header_from_lua` (so the key rule and its message live once), and it caps the result at
@@ -300,7 +300,7 @@ operation, the argument and its Lua type (`Cannot write: data must be a table, g
 explicit `sol::type::function` check rather than a typed `sol::protected_function` parameter,
 whose check surfaced sol2's own "stack index 3, expected function" text.
 
-`RunHandles::open_writers` (`src/lua_runner/internal.h`) is also the concurrency guard: it records each writer's **resolved** path, and
+`RunHandles::open_writers` (`src/sandbox/internal.h`) is also the concurrency guard: it records each writer's **resolved** path, and
 `db:write_csv` refuses a path some live, unclosed writer already holds (Pattern 1, mirroring
 `db:open_file`'s process-global write registry in `src/binary/binary_file.cpp`). Two writers on one
 path each open with `ios::trunc` and write from offset 0, so the second silently discarded
@@ -652,7 +652,7 @@ lua.run(R"(
 )");
 ```
 
-Implementation conventions in `src/lua_runner/`:
+Implementation conventions in `src/sandbox/`:
 - **Layout**: `LuaRunner::Impl`'s constructor creates the only Database usertype and hands it to
   the fourteen binders, called in the order of the core files they mirror (`bind_database` through
   `bind_expression`), as `bind`, with the `quiver` table as `ns`. Those parameter names are what the
@@ -679,13 +679,13 @@ Implementation conventions in `src/lua_runner/`:
 - **Shared helpers**: each repeated binding pattern lives in one helper, and a new method reuses
   it rather than copying a body. The 17 plain forwarders are `&Database::` member pointers (below).
   `bulk_read_lua` / `collection_read_lua` (`internal.h`) adapt the bulk readers and are registered
-  under the member's own name. `read_groups_by_id` (`lua_runner/database_read.cpp`) is behind `read_vectors_by_id`
-  and `read_sets_by_id`. The `metadata_to_lua` overloads (defined in `lua_runner/database_metadata.cpp`)
+  under the member's own name. `read_groups_by_id` (`sandbox/database_read.cpp`) is behind `read_vectors_by_id`
+  and `read_sets_by_id`. The `metadata_to_lua` overloads (defined in `sandbox/database_metadata.cpp`)
   with the `list_metadata_lua` / `get_metadata_lua` templates (`internal.h`) are behind the four
-  `get_*_metadata` and four `list_*` group methods, registered in `lua_runner/database_metadata.cpp`
-  and (the time-series pair) `lua_runner/database_time_series.cpp`.
+  `get_*_metadata` and four `list_*` group methods, registered in `sandbox/database_metadata.cpp`
+  and (the time-series pair) `sandbox/database_time_series.cpp`.
   `query_*_lua` return `std::optional` and `read_scalars_by_id` assigns `std::optional` values, so a
-  NULL is `nil` and an absent key. `run_in_scope` (`lua_runner/database.cpp`) is the one scoped block behind `db:transaction` and
+  NULL is `nil` and an absent key. `run_in_scope` (`sandbox/database.cpp`) is the one scoped block behind `db:transaction` and
   `db:dry_run`: the two lambdas pass their operation name, and `run_in_scope` checks the argument is
   a function before opening the scope. The callback's error and the closing call (`commit` /
   `end_dry_run`) sit in one `try`, so either one undoes the scope best-effort and is rethrown.
@@ -713,7 +713,7 @@ Implementation conventions in `src/lua_runner/`:
   `aggregate_agents`, `select_agents`, `rename_agents`) are one lambda each on
   `const AbstractExpression&`, shared by both usertypes, and ignore extra arguments like every other
   method. `columns_to_cpp_rows` owns the group decoders'
-  no-rows rejection, and `length_mismatch` (`lua_runner/database_time_series.cpp`) is the time-series decoder's one
+  no-rows rejection, and `length_mismatch` (`sandbox/database_time_series.cpp`) is the time-series decoder's one
   length message. `lua_type_error` / `require_table` (`internal.h`) are the one argument
   type-error shape (`Cannot <op>: <what> must be <expected>, got <lua type>`) and the one table
   check: `require_table` tests `get_type()`, never the loose `is<sol::table>()` that accepts a
@@ -723,9 +723,9 @@ Implementation conventions in `src/lua_runner/`:
   `string_key`) keep their own pinned texts. So do the value checks that predate that shape and end
   without the `got` suffix: `on_row must be a function` (`csv.cpp`), the `separator`, `header`
   entry and `header_row` option checks (`csv.cpp`), `option 'date_time_format' must be a string`
-  and `keys of option '<what>' must be strings` (`lua_runner/database_csv_export.cpp`), `option key must be a string` and
+  and `keys of option '<what>' must be strings` (`sandbox/database_csv_export.cpp`), `option key must be a string` and
   `<what> has unsupported Lua type` (`internal.h`; cells, values, and `target_label` in
-  `lua_runner/database_update.cpp`). Adding the suffix to any of them is a deliberate, pinned text change, not a
+  `sandbox/database_update.cpp`). Adding the suffix to any of them is a deliberate, pinned text change, not a
   cleanup. `optional_from_lua<T>` is the one optional-argument
   decoder (see the optional-argument bullet below).
 - **Filesystem sandbox**: `resolve_sandboxed_path(db, operation, path)` is the single gate for
@@ -765,7 +765,7 @@ Implementation conventions in `src/lua_runner/`:
 - **The agent-facing Lua reference lives in `bindings/js/src/lua-api.ts`** (shipped on npm as
   `LUA_DB_API_REFERENCE` and interpolated into an LLM system prompt downstream). Adding or removing
   a `db:`/`quiver.*` binding, or changing the `open_libraries` list, requires updating it —
-  `bindings/js/test/lua-api-sync.test.ts` parses every `.cpp`/`.h` under `src/lua_runner/` and fails otherwise. That check
+  `bindings/js/test/lua-api-sync.test.ts` parses every `.cpp`/`.h` under `src/sandbox/` and fails otherwise. That check
   exists because the doc went stale two days after it was written: it said only
   `base`/`string`/`table` were loaded and "there is NO `math`", and #210 added
   `math`/`coroutine`/`utf8` here without touching it.
@@ -784,8 +784,8 @@ Implementation conventions in `src/lua_runner/`:
   `Cannot <caller>: target_label has unsupported Lua type`. Both
   `db:update_relation(..., nil)` and omitting the argument clear; that affordance is sol2's and
   Lua-only (the FFI bindings all require the parameter and take their language's null).
-- `parse_csv_options(options, operation)` (defined in `lua_runner/database_csv_export.cpp`, declared
-  in `internal.h` for `lua_runner/database_csv_import.cpp`) is the single strict CSVOptions decoder for
+- `parse_csv_options(options, operation)` (defined in `sandbox/database_csv_export.cpp`, declared
+  in `internal.h` for `sandbox/database_csv_import.cpp`) is the single strict CSVOptions decoder for
   `export_csv`/`import_csv`: `nil` means defaults, any other non-table and any unknown or
   wrong-typed key throws, with the same collect-then-validate walk (`option_entries`, which owns the
   table check while each caller keeps its own nil handling) as the `read_csv`/`write_csv` decoders. `quiver.metadata{...}` and `expr:rename_agents` are decoded
@@ -845,7 +845,7 @@ Implementation conventions in `src/lua_runner/`:
   `metadata_array<int64_t>`), so `quiver.metadata{dimension_sizes = {true}}` coerces to a size-1
   dimension rather than erroring. That is consistent with the cross-layer boolean policy, and
   `BinaryMetadata::validate()` still rejects a non-positive size, so `{false}` throws.
-- **`SOL_SAFE_NUMERICS=1` (`src/CMakeLists.txt`) is load-bearing for every `src/lua_runner/` TU.** It turns on
+- **`SOL_SAFE_NUMERICS=1` (`src/CMakeLists.txt`) is load-bearing for every `src/sandbox/` TU.** It turns on
   sol2's `SOL_NUMBER_PRECISION_CHECKS`, which is what makes `is<int64_t>()` false for a Lua float.
   Without it that check degrades to "is a number" in release, and the folder-wide
   `is<int64_t>()`-before-`is<double>()` ordering would route every float into the integer branch
@@ -868,7 +868,7 @@ Implementation conventions in `src/lua_runner/`:
   with a C closure that every method lookup pays, `f:read`/`f:write` included; the traits keep
   `__index` a table (pinned by `LuaExpressionTest.FileAndExpressionKeepTableIndex`). They are
   explicit specializations, so every TU that uses sol2 with these types must see them, which holds
-  because every `src/lua_runner/` file that includes sol2 includes `internal.h` first.
+  because every `src/sandbox/` file that includes sol2 includes `internal.h` first.
   `AbstractExpression` is never a registered usertype, and `f:read`/`f:write` keep
   `BinaryFile& self` (a base-typed `self` pays failed metatable lookups and a `class_check` on
   every call). `expression.cpp` wraps its includes in an MSVC-only `#pragma warning(push)` /
@@ -889,7 +889,7 @@ Implementation conventions in `src/lua_runner/`:
   which is exactly how one `sol::nil` in `db:read_csv_stream`'s header argument reddened both macOS
   jobs for three runs while every other platform stayed green. Setting it makes the portable
   spelling the only one that compiles anywhere, so the mistake fails on the developer's own
-  machine. `PRIVATE` on `quiver` is full coverage: the `src/lua_runner/` TUs are the only ones in
+  machine. `PRIVATE` on `quiver` is full coverage: the `src/sandbox/` TUs are the only ones in
   the repo that include sol2, and all of them are in the `quiver` target (no test includes `<sol/sol.hpp>`). Use `sol::lua_nil` and
   `sol::type::lua_nil`, never `sol::nil` / `sol::type::nil`.
 - `time_series_rows_from_lua` transpose, shared by `update_time_series_group_lua` and
@@ -954,7 +954,7 @@ Implementation conventions in `src/lua_runner/`:
   flushed: the file stayed at 0 bytes, which
   `LuaRunner_WriteCsv.UnclosedWriterHeldInAGlobalIsAlsoFlushedWhenRunReturns` pins. `db:write_csv`
   therefore hands out a `std::shared_ptr<csv_write::Writer>` and records a `weak_ptr` in
-  `RunHandles::open_writers` (declared in `src/lua_runner/internal.h`, bodies in `src/lua_runner/lua_runner.cpp`); `close_open_handles()` locks each one still alive, closes it (swallowing a
+  `RunHandles::open_writers` (declared in `src/sandbox/internal.h`, bodies in `src/sandbox/sandbox.cpp`); `close_open_handles()` locks each one still alive, closes it (swallowing a
   flush failure — a scope-exit guard has no caller to report to, exactly as `~Writer` did), and
   clears the list. A writer therefore does not outlive its `run()`. `db:open_file` handles,
   readers and writers, are recorded the same way (a `weak_ptr` in `RunHandles::open_binary_files`) and
@@ -973,7 +973,7 @@ Implementation conventions in `src/lua_runner/`:
 ## Binary Subsystem
 
 Standalone binary file I/O layer for `.qvr` files with `.toml` metadata sidecars.
-Bound in **Julia and Lua** (root design decision); Lua binds these C++ classes directly via sol2 in `src/lua_runner/binary.cpp` (file I/O is db-scoped and sandboxed — `db:open_file`/`db:bin_to_csv`/`db:csv_to_bin`; metadata builders under `quiver.*`; method syntax + string aggregation ops).
+Bound in **Julia and Lua** (root design decision); Lua binds these C++ classes directly via sol2 in `src/sandbox/binary.cpp` (file I/O is db-scoped and sandboxed — `db:open_file`/`db:bin_to_csv`/`db:csv_to_bin`; metadata builders under `quiver.*`; method syntax + string aggregation ops).
 
 - `BinaryFile` class (Pimpl): `open_file(path, mode, metadata?)`, `read(dims, allow_nulls = false)`, `write(data, dims)`, `get_metadata()`, `get_file_path()`
 - `CSVConverter` class (composition, no Pimpl): `bin_to_csv(path, aggregate)`, `csv_to_bin(path)` — the only
@@ -1043,7 +1043,7 @@ Profiled with 480×500×31 dimensions (~7.3M read/write calls). Main hot-path co
 
 ## Expression Subsystem
 
-Lazy expressions over `.qvr` binary files. Build a DAG using `+ - * /` operator overloads (binary and unary minus) and unary math free functions, materialize via `save()`. Bound in **Julia and Lua** (root design decision); Lua binds these C++ classes directly via sol2 in `src/lua_runner/expression.cpp` (`quiver.*` namespace + method syntax + string aggregation ops; `save` on a file or an expression is sandboxed to the database directory).
+Lazy expressions over `.qvr` binary files. Build a DAG using `+ - * /` operator overloads (binary and unary minus) and unary math free functions, materialize via `save()`. Bound in **Julia and Lua** (root design decision); Lua binds these C++ classes directly via sol2 in `src/sandbox/expression.cpp` (`quiver.*` namespace + method syntax + string aggregation ops; `save` on a file or an expression is sandboxed to the database directory).
 
 ```cpp
 auto a = BinaryFile::open_file("a", 'r');

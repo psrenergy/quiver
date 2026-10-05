@@ -27,8 +27,8 @@
 // Raised here, in Writer::close (operation is always "close"):
 //   "Cannot close: failed to flush file '<original_path>'"
 //
-// Raised by src/lua_runner/csv.cpp's cell formatter and row/option decoders and by the
-// src/lua_runner/internal.h helpers they call (lua_to_value, option_entries, option_table), with
+// Raised by src/sandbox/csv.cpp's cell formatter and row/option decoders and by the
+// src/sandbox/internal.h helpers they call (lua_to_value, option_entries, option_table), with
 // operation always the Lua method that received the bad value -- "write_row" for a cell/row
 // problem, "write_csv" for an options-table problem:
 //   "Cannot write_row: row must be a table"                (sol2's table check also lets userdata in)
@@ -53,7 +53,7 @@
 //
 // The sandbox (in-memory database, an escaping path) raises through the shared
 // resolve_sandboxed_path choke point, unchanged by this feature -- see its own messages in
-// src/lua_runner/path_policy.cpp; write_csv is simply one more caller of it, always evaluated before the
+// src/sandbox/path_policy.cpp; write_csv is simply one more caller of it, always evaluated before the
 // options table (pinned by LuaRunner_WriteCsv.EscapingPathTakesPrecedenceOverInvalidSeparator).
 
 namespace quiver::csv_write {

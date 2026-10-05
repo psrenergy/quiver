@@ -1,4 +1,4 @@
-#include "lua_runner/internal.h"
+#include "sandbox/internal.h"
 #include "utils/number.h"
 
 #include <sol/sol.hpp>
