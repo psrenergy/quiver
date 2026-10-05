@@ -2165,6 +2165,32 @@ end
             cleanup(path_a, path_b, path_c, path_out)
         end
     end
+
+    @testset "Binary.File is an AbstractExpression" begin
+        @test Quiver.Binary.File <: Quiver.AbstractExpression
+        @test Quiver.Expression <: Quiver.AbstractExpression
+        @test isabstracttype(Quiver.AbstractExpression)
+        @test Quiver.get_metadata === Quiver.Binary.get_metadata
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r + c + k)
+            fa = Quiver.Binary.open_file(path_a; mode = 'r')
+            try
+                Quiver.save(fa, path_out)
+                # the file is still open and readable after saving from it
+                @test Quiver.Binary.read(fa; row = 1, col = 1) == [3.0, 4.0]
+                md = Quiver.get_metadata(fa)
+                @test Quiver.Binary.get_labels(md) == ["val1", "val2"]
+                @test Quiver.Binary.get_unit(md) == "MW"
+                @test_throws MethodError Quiver.Expression(Quiver.Expression(fa))
+            finally
+                Quiver.Binary.close!(fa)
+            end
+            @test read_all_cells(path_out) == read_all_cells(path_a)
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
 end
 
 end

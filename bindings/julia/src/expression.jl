@@ -1,4 +1,4 @@
-mutable struct Expression
+mutable struct Expression <: AbstractExpression
     ptr::Ptr{C.quiver_expression}
 
     function Expression(ptr::Ptr{C.quiver_expression})
@@ -10,7 +10,7 @@ end
 
 function Expression(file::Binary.File)
     out = Ref{Ptr{C.quiver_expression}}(C_NULL)
-    check(C.quiver_expression_from_file(file.ptr, out))
+    GC.@preserve file check(C.quiver_expression_from_file(file.ptr, out))
     return Expression(out[])
 end
 
@@ -21,6 +21,11 @@ function close!(e::Expression)
     end
     return nothing
 end
+
+# Operations convert their operands here. Private on purpose: a public identity constructor would
+# hand back the caller's own handle, so closing the result would close the argument.
+_expression(e::Expression) = e
+_expression(a::AbstractExpression) = Expression(a)
 
 function _binop(operation, lhs::Expression, rhs::Expression)
     out = Ref{Ptr{C.quiver_expression}}(C_NULL)
@@ -175,14 +180,16 @@ Base.ifelse(condition::Binary.File, then_value::Expression, else_value::Binary.F
 Base.ifelse(condition::Expression, then_value::Binary.File, else_value::Binary.File) =
     ifelse(condition, Expression(then_value), Expression(else_value))
 
-function save(e::Expression, path::String)
-    check(C.quiver_expression_save(e.ptr, path))
+function save(a::AbstractExpression, path::String)
+    e = _expression(a)
+    GC.@preserve e check(C.quiver_expression_save(e.ptr, path))
     return nothing
 end
 
+# A file uses Binary.get_metadata(::File), its handle's metadata, never the conversion.
 function get_metadata(e::Expression)
     out = Ref{Ptr{C.quiver_binary_metadata}}(C_NULL)
-    check(C.quiver_expression_get_metadata(e.ptr, out))
+    GC.@preserve e check(C.quiver_expression_get_metadata(e.ptr, out))
     return Binary.Metadata(out[])
 end
 
