@@ -2,11 +2,9 @@ include(GoogleTest)
 
 add_executable(quiver_tests
     test_binary_file.cpp
-    test_csv_converter.cpp
     test_binary_metadata.cpp
-    test_iteration.cpp
     test_binary_time_properties.cpp
-    test_expression.cpp
+    test_csv_converter.cpp
     test_database_create.cpp
     test_database_csv_export.cpp
     test_database_csv_import.cpp
@@ -27,29 +25,31 @@ add_executable(quiver_tests
     test_database_ui_metadata.cpp
     test_database_update.cpp
     test_element.cpp
+    test_expression.cpp
     test_issues.cpp
-    test_lua_binary.cpp
-    test_lua_expression.cpp
+    test_iteration.cpp
+    test_migrations.cpp
+    test_row_result.cpp
     test_sandbox_all_types.cpp
+    test_sandbox_binary.cpp
     test_sandbox_create.cpp
     test_sandbox_csv_export.cpp
     test_sandbox_csv_import.cpp
     test_sandbox_delete.cpp
     test_sandbox_describe.cpp
     test_sandbox_errors.cpp
+    test_sandbox_expression.cpp
     test_sandbox_fk.cpp
     test_sandbox_lifecycle.cpp
     test_sandbox_migrations.cpp
     test_sandbox_query.cpp
-    test_sandbox_read.cpp
     test_sandbox_read_csv.cpp
-    test_sandbox_write_csv.cpp
+    test_sandbox_read.cpp
     test_sandbox_return.cpp
     test_sandbox_time_series.cpp
     test_sandbox_transaction.cpp
     test_sandbox_update.cpp
-    test_migrations.cpp
-    test_row_result.cpp
+    test_sandbox_write_csv.cpp
     test_sandboxed_path.cpp
     test_schema_validator.cpp
     # resolve_sandboxed_path is internal to quiver (hidden, not exported), so SandboxedPathTest
