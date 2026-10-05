@@ -99,7 +99,11 @@ TEST_F(SandboxTest, CreateElementMissingLabel) {
     quiver::Sandbox sandbox(db);
 
     // Attempting to create element without required label should fail
-    expect_sandbox_error(sandbox, R"(db:create_element("Collection", { some_integer = 42 }))", "NOT NULL constraint failed");
+    expect_sandbox_error(
+        sandbox,
+        R"(db:create_element("Collection", { some_integer = 42 }))",
+        "NOT NULL constraint failed"
+    );
 }
 
 TEST_F(SandboxTest, CreateElementTrimsWhitespace) {

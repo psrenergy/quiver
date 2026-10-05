@@ -15,7 +15,7 @@ protected:
     // What the gate prints: on macOS the temp dir sits behind the /var symlink, on Windows it can
     // be an 8.3 short name.
     fs::path root() const {
-        return fs::weakly_canonical(sandbox);
+        return fs::weakly_canonical(sandbox_path);
     }
 
     std::string escapes(const std::string& operation, const std::string& path) const {
@@ -52,7 +52,7 @@ TEST_F(SandboxPathTest, SubdirectoryIsAllowed) {
 
 TEST_F(SandboxPathTest, AbsolutePathInsideIsAllowed) {
     quiver::Database db(db_path(), quiet());
-    const auto inside = (sandbox / "abs.csv").string();  // not canonical on purpose
+    const auto inside = (sandbox_path / "abs.csv").string();  // not canonical on purpose
     EXPECT_EQ(resolve_sandbox_path(db, "open_file", inside), (root() / "abs.csv").string());
 }
 
@@ -74,25 +74,25 @@ TEST_F(SandboxPathTest, NormalisedEscapeIsRejected) {
 
 TEST_F(SandboxPathTest, AbsolutePathOutsideIsRejected) {
     quiver::Database db(db_path(), quiet());
-    const auto outside = (sandbox.parent_path() / "quiver_sandbox_path_outside.csv").string();
+    const auto outside = (sandbox_path.parent_path() / "quiver_sandbox_path_outside.csv").string();
     EXPECT_EQ(error_of(db, "import_csv", outside), escapes("import_csv", outside));
 }
 
 TEST_F(SandboxPathTest, RootItselfIsRejected) {
     // The binary subsystem appends ".qvr" by concatenation, so the root would write "<root>.qvr" outside.
     quiver::Database db(db_path(), quiet());
-    for (const std::string& path : {std::string("."), std::string("sub/.."), sandbox.string()}) {
+    for (const std::string& path : {std::string("."), std::string("sub/.."), sandbox_path.string()}) {
         EXPECT_EQ(error_of(db, "open_file", path), escapes("open_file", path));
     }
 }
 
 TEST_F(SandboxPathTest, SymlinkPointingOutsideIsRejected) {
-    // The target is a sibling of the sandbox, so TearDown's remove_all(sandbox) only removes the link.
-    const fs::path outside(sandbox.string() + "_outside");
+    // The target is a sibling of the sandbox, so TearDown's remove_all(sandbox_path) only removes the link.
+    const fs::path outside(sandbox_path.string() + "_outside");
     fs::remove_all(outside);
     fs::create_directories(outside);
     std::error_code ec;
-    fs::create_directory_symlink(outside, sandbox / "link", ec);
+    fs::create_directory_symlink(outside, sandbox_path / "link", ec);
     if (ec) {
         fs::remove_all(outside);
         GTEST_SKIP() << "cannot create a directory symlink here: " << ec.message();

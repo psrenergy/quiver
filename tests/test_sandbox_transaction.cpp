@@ -238,7 +238,11 @@ TEST_F(SandboxTest, ScopedBlockFinishErrorsStillSurface) {
     expect_sandbox_error(sandbox, "db:transaction(function(d) d:commit() end)", "Cannot commit: no active transaction");
     EXPECT_FALSE(db.in_transaction());
 
-    expect_sandbox_error(sandbox, "db:dry_run(function(d) d:end_dry_run() end)", "Cannot end_dry_run: no active dry run");
+    expect_sandbox_error(
+        sandbox,
+        "db:dry_run(function(d) d:end_dry_run() end)",
+        "Cannot end_dry_run: no active dry run"
+    );
     EXPECT_FALSE(db.in_dry_run());
 }
 

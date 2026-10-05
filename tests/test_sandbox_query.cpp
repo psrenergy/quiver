@@ -199,7 +199,11 @@ TEST_F(SandboxTest, QueryTrailingNilParamIsACountMismatch) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::Sandbox sandbox(db);
 
-    expect_sandbox_error(sandbox, R"(db:query_integer("SELECT ? + ?", { 5, nil }))", "expected 2 bound parameter(s) but got 1");
+    expect_sandbox_error(
+        sandbox,
+        R"(db:query_integer("SELECT ? + ?", { 5, nil }))",
+        "expected 2 bound parameter(s) but got 1"
+    );
 }
 
 // A wrong-typed params argument used to be ignored, so the query ran with no parameters.
@@ -208,7 +212,11 @@ TEST_F(SandboxTest, QueryRejectsWrongTypedParams) {
     quiver::Sandbox sandbox(db);
 
     for (const std::string op : {"query_string", "query_integer", "query_float"}) {
-        expect_sandbox_error(sandbox, "db:" + op + "('SELECT 1', 5)", "Cannot " + op + ": params must be a table, got number");
+        expect_sandbox_error(
+            sandbox,
+            "db:" + op + "('SELECT 1', 5)",
+            "Cannot " + op + ": params must be a table, got number"
+        );
         expect_sandbox_error(
             sandbox,
             "db:" + op + "('SELECT 1', db)",

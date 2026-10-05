@@ -12,10 +12,10 @@ namespace fs = std::filesystem;
 // Lua bindings for the expression subsystem (operators, unary math, ifelse, aggregate*,
 // select/rename_agents, save). Mirrors bindings/julia/test/test_expression.jl. Files live in the
 // db-directory sandbox (relative paths resolve against the database directory).
-class SandboxExpressionTest : public SandboxTest {
+class SandboxExpressionTest : public LuaSandboxTest {
 protected:
     void SetUp() override {
-        SandboxTest::SetUp();
+        LuaSandboxTest::SetUp();
         schema = VALID_SCHEMA("collections.sql");
     }
 
@@ -355,7 +355,7 @@ TEST_F(SandboxExpressionTest, SaveRelativeResolvesAgainstDbDir) {
         expr:save('out_rel')
         fa:close()
     )");
-    EXPECT_TRUE(fs::exists(sandbox / "out_rel.qvr"));
+    EXPECT_TRUE(fs::exists(sandbox_path / "out_rel.qvr"));
 }
 
 TEST_F(SandboxExpressionTest, SaveEscapeThrows) {
@@ -550,7 +550,7 @@ TEST_F(SandboxExpressionTest, AggregateParameterRejectsWrongType) {
         local agg = quiver.expression(db:open_file('expr_a', 'r')):aggregate_agents('mean', nil)
         agg:save('expr_out')
     )");
-    EXPECT_TRUE(fs::exists(sandbox / "expr_out.qvr"));
+    EXPECT_TRUE(fs::exists(sandbox_path / "expr_out.qvr"));
 }
 
 TEST_F(SandboxExpressionTest, OperandErrorsNameTheOperation) {
@@ -769,7 +769,11 @@ TEST_F(SandboxExpressionTest, FileSaveGuards) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
     const std::string fa = prelude() + "fill('expr_a', 1.0, 2.0) local fa = db:open_file('expr_a', 'r') ";
-    expect_sandbox_error(sandbox, fa + "fa:save('../out')", "Cannot save: path '../out' escapes the database directory");
+    expect_sandbox_error(
+        sandbox,
+        fa + "fa:save('../out')",
+        "Cannot save: path '../out' escapes the database directory"
+    );
     expect_sandbox_error(sandbox, fa + "fa:save('expr_a')", "Cannot save: output path collides with input file");
     expect_sandbox_error(sandbox, fa + "fa:save('./expr_a')", "Cannot save: output path collides with input file");
     expect_sandbox_error(
@@ -792,7 +796,7 @@ TEST_F(SandboxExpressionTest, FileSaveGuards) {
         w:write({5.0, 6.0}, {row=1, col=1})
         w:close()
     )");
-    EXPECT_FALSE(fs::exists(sandbox / "expr_out.qvr"));
+    EXPECT_FALSE(fs::exists(sandbox_path / "expr_out.qvr"));
 }
 
 TEST_F(SandboxExpressionTest, FileGetMetadata) {

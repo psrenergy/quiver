@@ -529,7 +529,11 @@ TEST_F(SandboxTest, UpdateGroupErrors) {
         R"(db:update_vector_group("Child", "nope", 1, { parent_ref = { 1 } }))",
         "Vector group not found"
     );
-    expect_sandbox_error(sandbox, R"(db:update_set_group("Child", "nope", 1, { parent_ref = { 1 } }))", "Set group not found");
+    expect_sandbox_error(
+        sandbox,
+        R"(db:update_set_group("Child", "nope", 1, { parent_ref = { 1 } }))",
+        "Set group not found"
+    );
     expect_sandbox_error(
         sandbox,
         R"(db:update_vector_group("Child", "refs", 1, { not_a_column = { 1 } }))",
@@ -548,7 +552,11 @@ TEST_F(SandboxTest, UpdateGroupErrors) {
     // The clear path used to succeed silently: the DELETE simply matched nothing.
     expect_sandbox_error(sandbox, R"(db:update_set_group("Child", "parents", 999, {}))", "Element not found");
     // A named column with no cells is a caller mistake, not a clear -- {} clears.
-    expect_sandbox_error(sandbox, R"(db:update_vector_group("Child", "refs", 1, { parent_ref = {} }))", "contain no rows");
+    expect_sandbox_error(
+        sandbox,
+        R"(db:update_vector_group("Child", "refs", 1, { parent_ref = {} }))",
+        "contain no rows"
+    );
     expect_sandbox_error(
         sandbox,
         R"(db:update_set_group("Child", "parents", 1, { parent_ref = 5 }))",

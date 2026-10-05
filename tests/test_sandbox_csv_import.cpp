@@ -74,7 +74,10 @@ TEST_F(Sandbox_ImportCSV, ScalarHeaderOnlyClearsTable) {
     )");
 
     // Write header-only CSV
-    write_sandbox_csv_file((sandbox / "headeronly.csv").string(), "sep=,\nlabel,name,status,price,date_created,notes\n");
+    write_sandbox_csv_file(
+        (sandbox_path / "headeronly.csv").string(),
+        "sep=,\nlabel,name,status,price,date_created,notes\n"
+    );
 
     sandbox.run(R"(db:import_csv("Items", "", "headeronly.csv"))");
 
@@ -90,7 +93,7 @@ TEST_F(Sandbox_ImportCSV, EnumResolution) {
     quiver::Sandbox sandbox(db);
 
     write_sandbox_csv_file(
-        (sandbox / "enum.csv").string(),
+        (sandbox_path / "enum.csv").string(),
         "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,Active,,,\n"
     );
 
@@ -114,7 +117,7 @@ TEST_F(Sandbox_ImportCSV, DateTimeFormat) {
     quiver::Sandbox sandbox(db);
 
     write_sandbox_csv_file(
-        (sandbox / "datetime.csv").string(),
+        (sandbox_path / "datetime.csv").string(),
         "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,,,2024/01/15,\n"
     );
 
@@ -138,7 +141,7 @@ TEST_F(Sandbox_ImportCSV, OptionsAreStrict) {
     quiver::Sandbox sandbox(db);
 
     write_sandbox_csv_file(
-        (sandbox / "enum.csv").string(),
+        (sandbox_path / "enum.csv").string(),
         "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,1,,,\n"
     );
 
@@ -177,7 +180,7 @@ TEST_F(Sandbox_ImportCSV, ScalarTrailingEmptyColumns) {
     quiver::Sandbox sandbox(db);
 
     write_sandbox_csv_file(
-        (sandbox / "trailing.csv").string(),
+        (sandbox_path / "trailing.csv").string(),
         "sep=,\n"
         "label,name,status,price,date_created,notes,,,,\n"
         "Item1,Alpha,1,9.99,2024-01-15T10:30:00,first,,,,\n"
@@ -202,7 +205,7 @@ TEST_F(Sandbox_ImportCSV, VectorTrailingEmptyColumns) {
     )");
 
     write_sandbox_csv_file(
-        (sandbox / "vectrailing.csv").string(),
+        (sandbox_path / "vectrailing.csv").string(),
         "sep=,\n"
         "id,vector_index,measurement,,,\n"
         "Item1,1,1.1,,,\n"
@@ -226,7 +229,7 @@ TEST_F(Sandbox_ImportCSV, OmittedElementDeletesItsGroupRows) {
     )");
 
     write_sandbox_csv_file(
-        (sandbox / "subset.csv").string(),
+        (sandbox_path / "subset.csv").string(),
         "sep=,\nlabel,name,status,price,date_created,notes\nKept,Beta,,,,\n"
     );
 
@@ -248,12 +251,16 @@ TEST_F(Sandbox_ImportCSV, InsideTransactionThrows) {
     quiver::Sandbox sandbox(db);
 
     write_sandbox_csv_file(
-        (sandbox / "intx.csv").string(),
+        (sandbox_path / "intx.csv").string(),
         "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,,,,\n"
     );
 
     sandbox.run("db:begin_transaction()");
-    expect_sandbox_error(sandbox, R"(db:import_csv("Items", "", "intx.csv"))", "Cannot import_csv: transaction already active");
+    expect_sandbox_error(
+        sandbox,
+        R"(db:import_csv("Items", "", "intx.csv"))",
+        "Cannot import_csv: transaction already active"
+    );
 
     // The caller's transaction must survive intact
     sandbox.run(R"(assert(db:in_transaction(), "expected transaction to survive import_csv failure"))");

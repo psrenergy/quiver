@@ -95,6 +95,7 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ### Fixed
 
+- JS: the Sandbox API reference documents the core's `Failed to run Lua script:` error prefix.
 - Linux native-library portability checks consume all `objdump` output, preventing SIGPIPE from
   falsely reporting missing dynamic `libstdc++` linkage or `$ORIGIN` rpath after a successful build.
 - Dart FFI generation finds the existing Visual Studio 18 Community LLVM installation on Windows

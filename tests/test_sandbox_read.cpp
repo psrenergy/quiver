@@ -598,7 +598,11 @@ TEST_F(SandboxTest, NumberOfElementsUnknownCollection) {
 
     quiver::Sandbox sandbox(db);
 
-    expect_sandbox_error(sandbox, R"(db:number_of_elements("Nope"))", "Cannot number_of_elements: collection not found: Nope");
+    expect_sandbox_error(
+        sandbox,
+        R"(db:number_of_elements("Nope"))",
+        "Cannot number_of_elements: collection not found: Nope"
+    );
 }
 
 TEST_F(SandboxTest, ListGroupsUnknownCollection) {
@@ -606,8 +610,16 @@ TEST_F(SandboxTest, ListGroupsUnknownCollection) {
 
     quiver::Sandbox sandbox(db);
 
-    expect_sandbox_error(sandbox, R"(db:list_vector_groups("Nope"))", "Cannot list_vector_groups: collection not found: Nope");
-    expect_sandbox_error(sandbox, R"(db:list_set_groups("Nope"))", "Cannot list_set_groups: collection not found: Nope");
+    expect_sandbox_error(
+        sandbox,
+        R"(db:list_vector_groups("Nope"))",
+        "Cannot list_vector_groups: collection not found: Nope"
+    );
+    expect_sandbox_error(
+        sandbox,
+        R"(db:list_set_groups("Nope"))",
+        "Cannot list_set_groups: collection not found: Nope"
+    );
     expect_sandbox_error(
         sandbox,
         R"(db:list_time_series_groups("Nope"))",
@@ -620,7 +632,11 @@ TEST_F(SandboxTest, ListGroupsUnknownCollection) {
         R"(db:read_vectors_by_id("Nope", 1))",
         "Cannot list_vector_groups: collection not found: Nope"
     );
-    expect_sandbox_error(sandbox, R"(db:read_sets_by_id("Nope", 1))", "Cannot list_set_groups: collection not found: Nope");
+    expect_sandbox_error(
+        sandbox,
+        R"(db:read_sets_by_id("Nope", 1))",
+        "Cannot list_set_groups: collection not found: Nope"
+    );
 }
 
 TEST_F(SandboxTest, ReadVectorPreservesNullCellsAsNilHoles) {

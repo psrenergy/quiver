@@ -51,8 +51,11 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   prelude live in `test_sandbox.h`; the single-use `SandboxAllTypesTest` / `SandboxFkTest`
   fixtures stay local to their files. Lua file operations are sandboxed to the database directory
   (root design decision), so every file-touching Lua test uses `LuaSandboxTest`: a file-backed db
-  in a dedicated per-test temp dir, with scripts passing relative paths. The Lua binary/expression
-  subsystem bindings (and the sandbox itself) are covered by `test_sandbox_binary.cpp` and
+  in a dedicated per-test temp dir, with scripts passing relative paths. Its directory member is
+  `sandbox_path`, distinct from local `quiver::Sandbox sandbox` runners. The binary, expression,
+  and CSV reader suites inherit this file-backed fixture, not the in-memory `SandboxTest`.
+  The Lua binary/expression subsystem bindings (and the sandbox itself) are covered by
+  `test_sandbox_binary.cpp` and
   `test_sandbox_expression.cpp`.
 - `test_sandboxed_path.cpp` (`SandboxedPathTest`) unit-tests `resolve_sandboxed_path`, the gate
   every file-touching Lua operation shares, without Lua: containment, `..` and absolute escapes, a
@@ -62,7 +65,7 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   `quiver_tests` along with the `src/` include dir. Keep `path_policy.cpp` a one-function file, or a
   static (`QUIVER_BUILD_SHARED=OFF`) link defines a symbol twice. The suite name stays outside the
   `Lua*` filter so the Lua-layer count is unaffected. Expectations build the root from
-  `weakly_canonical(sandbox)`, which is what the gate prints (macOS `/private/var`, Windows 8.3
+  `weakly_canonical(sandbox_path)`, which is what the gate prints (macOS `/private/var`, Windows 8.3
   names), and the symlink case skips where a directory symlink cannot be created.
 - Binary subsystem: `test_binary_file.cpp`, `test_binary_metadata.cpp`,
   `test_binary_time_properties.cpp`, `test_csv_converter.cpp`, `test_iteration.cpp`

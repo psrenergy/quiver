@@ -125,7 +125,11 @@ TEST_F(SandboxTest, ReturnUnsupportedTableKeyThrows) {
     auto db = return_database();
     quiver::Sandbox sandbox(db);
 
-    expect_sandbox_error(sandbox, "return {[1.5] = 'x'}", "Cannot run: script returned a table with an unsupported key type");
+    expect_sandbox_error(
+        sandbox,
+        "return {[1.5] = 'x'}",
+        "Cannot run: script returned a table with an unsupported key type"
+    );
 }
 
 TEST_F(SandboxTest, ReturnDuplicateStringifiedKeyThrows) {

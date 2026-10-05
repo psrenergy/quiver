@@ -54,14 +54,14 @@ void expect_prefixed_error(quiver::Sandbox& sandbox, const std::string& script) 
 
 // db:read_csv / db:read_csv_stream paths are sandboxed: relative paths resolve against the
 // database directory, same as every other file-touching Lua operation.
-class Sandbox_ReadCsv : public SandboxTest {};
+class Sandbox_ReadCsv : public LuaSandboxTest {};
 
 TEST_F(Sandbox_ReadCsv, CleanFileReturnsHeaderAndRows) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    write_sandbox_csv_file(sandbox / "two_col.csv", "name,value\nAlpha,1\nBeta,2\n");
+    write_sandbox_csv_file(sandbox_path / "two_col.csv", "name,value\nAlpha,1\nBeta,2\n");
 
     sandbox.run(R"(
         local csv = db:read_csv("two_col.csv")
@@ -80,7 +80,7 @@ TEST_F(Sandbox_ReadCsv, ExactJsonRoundTrip) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    write_sandbox_csv_file(sandbox / "small.csv", "a,b\n1,2\n");
+    write_sandbox_csv_file(sandbox_path / "small.csv", "a,b\n1,2\n");
 
     auto json = sandbox.run(R"(return db:read_csv("small.csv"))");
     EXPECT_EQ(json, R"({"header":["a","b"],"rows":[["1","2"]]})");
@@ -92,7 +92,7 @@ TEST_F(Sandbox_ReadCsv, RaggedRowsSurviveShort) {
     quiver::Sandbox sandbox(db);
 
     // 3-column header; one 2-column row (short) and one 4-column row (long).
-    write_sandbox_csv_file(sandbox / "ragged.csv", "a,b,c\n1,2\n1,2,3,4\n1,2,3\n");
+    write_sandbox_csv_file(sandbox_path / "ragged.csv", "a,b,c\n1,2\n1,2,3,4\n1,2,3\n");
 
     sandbox.run(R"(
         local csv = db:read_csv("ragged.csv")
@@ -108,7 +108,7 @@ TEST_F(Sandbox_ReadCsv, PreambleLineNotEaten) {
     quiver::Sandbox sandbox(db);
 
     // A one-cell title line above the real header.
-    write_sandbox_csv_file(sandbox / "preamble.csv", "Title Only\na,b\n1,2\n3,4\n");
+    write_sandbox_csv_file(sandbox_path / "preamble.csv", "Title Only\na,b\n1,2\n3,4\n");
 
     sandbox.run(R"(
         local csv = db:read_csv("preamble.csv")
@@ -137,7 +137,7 @@ TEST_F(Sandbox_ReadCsv, DirtyFileParsesEveryParserRequirement) {
     // character too (\xBF followed by 'a', a valid hex digit, would parse as \xBFa).
     const std::string bom = "\xEF\xBB\xBF";
     write_sandbox_csv_file(
-        sandbox / "dirty.csv",
+        sandbox_path / "dirty.csv",
         bom + "a,b,c\r\n"
               "\"May 1, 2014\",33,x\r\n"
               "\"say \"\"hi\"\"\",2,y\r\n"
@@ -177,7 +177,7 @@ TEST_F(Sandbox_ReadCsv, LfAndCrlfEndingsParseIdentically) {
     // Second half of the trailing-\r check: both must parse, and neither may leave a \r in a cell.
     const std::string bom = "\xEF\xBB\xBF";
     write_sandbox_csv_file(
-        sandbox / "dirty_crlf.csv",
+        sandbox_path / "dirty_crlf.csv",
         bom + "a,b,c\r\n"
               "\"May 1, 2014\",33,x\r\n"
               "\"say \"\"hi\"\"\",2,y\r\n"
@@ -185,7 +185,7 @@ TEST_F(Sandbox_ReadCsv, LfAndCrlfEndingsParseIdentically) {
               "short\r\n"
     );
     write_sandbox_csv_file(
-        sandbox / "dirty_lf.csv",
+        sandbox_path / "dirty_lf.csv",
         bom + "a,b,c\n"
               "\"May 1, 2014\",33,x\n"
               "\"say \"\"hi\"\"\",2,y\n"
@@ -210,13 +210,13 @@ TEST_F(Sandbox_ReadCsv, StrayQuotesTokenizeAsTheImportPrePassAssumes) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    write_sandbox_csv_file(sandbox / "literal_quotes.csv", "a, \"x,y\"\nab\"c,\"d\"\r\n\"e\",f\n");
+    write_sandbox_csv_file(sandbox_path / "literal_quotes.csv", "a, \"x,y\"\nab\"c,\"d\"\r\n\"e\",f\n");
     EXPECT_EQ(
         sandbox.run(R"(return db:read_csv("literal_quotes.csv", { header_row = 0 }).rows)"),
         R"([["a"," \"x","y\""],["ab\"c","d"],["e","f"]])"
     );
 
-    write_sandbox_csv_file(sandbox / "text_after_close.csv", "\"a\" ,b\n\"c\",d\n");
+    write_sandbox_csv_file(sandbox_path / "text_after_close.csv", "\"a\" ,b\n\"c\",d\n");
     EXPECT_EQ(
         sandbox.run(R"(return db:read_csv("text_after_close.csv", { header_row = 0 }).rows)"),
         R"([["a\" ,b\n\"c","d"]])"
@@ -233,7 +233,7 @@ TEST_F(Sandbox_ReadCsv, BomStrippedUnderExplicitHeaderRowAndNoHeader) {
     // header) alike -- csv-parser strips the BOM once on the raw byte stream, independent of
     // header-row resolution.
     const std::string bom = "\xEF\xBB\xBF";
-    write_sandbox_csv_file(sandbox / "bom_junk.csv", bom + "junk\na,b,c\n1,2,3\n");
+    write_sandbox_csv_file(sandbox_path / "bom_junk.csv", bom + "junk\na,b,c\n1,2,3\n");
 
     sandbox.run(R"(
         local csv = db:read_csv("bom_junk.csv", { header_row = 2 })
@@ -259,7 +259,10 @@ TEST_F(Sandbox_ReadCsv, HeaderRowSelectsNamedLineOverJunkAndUnits) {
 
     // Line 1: junk above the header. Line 2: the real header. Line 3: a units row, below the
     // header. Lines 4+: data. Mirrors the real Maranhao Energia file's shape.
-    write_sandbox_csv_file(sandbox / "junk_header_units.csv", "Title Only\nname,value\nunit,unit\nAlpha,1\nBeta,2\n");
+    write_sandbox_csv_file(
+        sandbox_path / "junk_header_units.csv",
+        "Title Only\nname,value\nunit,unit\nAlpha,1\nBeta,2\n"
+    );
 
     auto json = sandbox.run(R"(return db:read_csv("junk_header_units.csv", { header_row = 2 }))");
     EXPECT_EQ(json, R"({"header":["name","value"],"rows":[["unit","unit"],["Alpha","1"],["Beta","2"]]})")
@@ -271,7 +274,10 @@ TEST_F(Sandbox_ReadCsv, HeaderRowOneMatchesNoOptionsDefault) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    write_sandbox_csv_file(sandbox / "junk_header_units.csv", "Title Only\nname,value\nunit,unit\nAlpha,1\nBeta,2\n");
+    write_sandbox_csv_file(
+        sandbox_path / "junk_header_units.csv",
+        "Title Only\nname,value\nunit,unit\nAlpha,1\nBeta,2\n"
+    );
 
     // Default is header_row = 1 -- explicitly asking for it must be byte-identical to
     // omitting the option entirely (the junk line becomes the header, same as PreambleLineNotEaten).
@@ -285,7 +291,7 @@ TEST_F(Sandbox_ReadCsv, StringCellsNoInference) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    write_sandbox_csv_file(sandbox / "strings.csv", "code,date\n0012,2024-01-15\n");
+    write_sandbox_csv_file(sandbox_path / "strings.csv", "code,date\n0012,2024-01-15\n");
 
     sandbox.run(R"(
         local csv = db:read_csv("strings.csv")
@@ -303,7 +309,7 @@ TEST_F(Sandbox_ReadCsv, WhitespaceAndEmptyCellsDistinctFromNil) {
 
     // Row 1 has 3 fields (whitespace-only, empty, non-empty); row 2 is short (1 field), so field
     // 2 is genuinely absent (nil), not an empty string.
-    write_sandbox_csv_file(sandbox / "whitespace.csv", "a,b,c\n\" \",,x\nonly\n");
+    write_sandbox_csv_file(sandbox_path / "whitespace.csv", "a,b,c\n\" \",,x\nonly\n");
 
     sandbox.run(R"(
         local csv = db:read_csv("whitespace.csv")
@@ -319,7 +325,7 @@ TEST_F(Sandbox_ReadCsv, EmptyFileThrows) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    write_sandbox_csv_file(sandbox / "empty.csv", "");
+    write_sandbox_csv_file(sandbox_path / "empty.csv", "");
 
     expect_sandbox_error(sandbox, R"(db:read_csv("empty.csv"))", "Cannot read_csv: file 'empty.csv' is empty");
 }
@@ -329,7 +335,7 @@ TEST_F(Sandbox_ReadCsv, HeaderOnlyFileYieldsEmptyRows) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    write_sandbox_csv_file(sandbox / "headeronly.csv", "a,b,c\n");
+    write_sandbox_csv_file(sandbox_path / "headeronly.csv", "a,b,c\n");
 
     sandbox.run(R"(
         local csv = db:read_csv("headeronly.csv")
@@ -348,7 +354,7 @@ TEST_F(Sandbox_ReadCsv, HeaderRowPastEndOfFileThrowsExactMessage) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    write_sandbox_csv_file(sandbox / "three.csv", "a,b\n1,2\n3,4\n");
+    write_sandbox_csv_file(sandbox_path / "three.csv", "a,b\n1,2\n3,4\n");
 
     // Asserted in full: csv-parser's actual past-EOF behavior is a SUCCESSFUL read with an empty
     // header and zero rows, which "looks like" a valid empty result under a loose substring check.
@@ -375,7 +381,7 @@ TEST_F(Sandbox_ReadCsv, HeaderRowAtAndBeyondIntMaxClampsToPastEndOfFile) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    write_sandbox_csv_file(sandbox / "clamp.csv", "a,b\n1,2\n");
+    write_sandbox_csv_file(sandbox_path / "clamp.csv", "a,b\n1,2\n");
 
     // 2147483647 == INT_MAX; 9007199254740992 == 2^53, the largest integer a Lua number holds
     // exactly, so the literal reaching the decoder is the one written here.
@@ -394,7 +400,7 @@ TEST_F(Sandbox_ReadCsv, HeaderRowAtAndBeyondIntMaxClampsToPastEndOfFile) {
     // the case the call-order fix in make_format() protects: header mode is set before
     // variable_columns(KEEP_NON_EMPTY), so no_header()'s policy reset cannot win. Reorder those
     // two lines and this assertion fails.
-    write_sandbox_csv_file(sandbox / "clamp_blank.csv", "1,2\n\n3,4\n");
+    write_sandbox_csv_file(sandbox_path / "clamp_blank.csv", "1,2\n\n3,4\n");
     sandbox.run(R"LUA(
         local csv = db:read_csv("clamp_blank.csv", { header_row = 0 })
         assert(#csv.rows == 2, "blank line must not become a row, got " .. #csv.rows)
@@ -406,7 +412,7 @@ TEST_F(Sandbox_ReadCsv, StreamHeaderRowPastEndOfFileNamesTheStreamEntryPoint) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    write_sandbox_csv_file(sandbox / "three.csv", "a,b\n1,2\n3,4\n");
+    write_sandbox_csv_file(sandbox_path / "three.csv", "a,b\n1,2\n3,4\n");
 
     expect_sandbox_error(
         sandbox,
@@ -424,7 +430,7 @@ TEST_F(Sandbox_ReadCsv, HeaderRowOnLastLineSucceedsWithEmptyRows) {
     // header-only file, distinct from the genuinely-not-found case of
     // HeaderRowPastEndOfFileThrowsExactMessage. This is the "header on the last line" boundary
     // between "header found, no data after it" and "header not found".
-    write_sandbox_csv_file(sandbox / "headerlast.csv", "1,2\n3,4\na,b\n");
+    write_sandbox_csv_file(sandbox_path / "headerlast.csv", "1,2\n3,4\na,b\n");
 
     sandbox.run(R"(
         local csv = db:read_csv("headerlast.csv", { header_row = 3 })
@@ -441,7 +447,7 @@ TEST_F(Sandbox_ReadCsv, HeaderRowZeroYieldsNoHeaderAndAllLinesAsRows) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    write_sandbox_csv_file(sandbox / "noheader.csv", "a,b\n1,2\n");
+    write_sandbox_csv_file(sandbox_path / "noheader.csv", "a,b\n1,2\n");
 
     // Pins header's absence (nil, not {}) at the JSON encoder level too, matching header_row(0)'s
     // existing "no header" sentinel.
@@ -458,7 +464,7 @@ TEST_F(Sandbox_ReadCsv, HeaderRowZeroBlankLineMidFileIsNotAPhantomRow) {
     // no_header() calls) resets variable_column_policy to plain KEEP unless variable_columns() is
     // called AFTER it. Under KEEP a blank line becomes a phantom zero-length row; under the pinned
     // KEEP_NON_EMPTY it is discarded.
-    write_sandbox_csv_file(sandbox / "blankmid.csv", "a,b\n\n1,2\n");
+    write_sandbox_csv_file(sandbox_path / "blankmid.csv", "a,b\n\n1,2\n");
 
     sandbox.run(R"(
         local csv = db:read_csv("blankmid.csv", { header_row = 0 })
@@ -480,7 +486,7 @@ TEST_F(Sandbox_ReadCsv, StreamHeaderIsNilWhenWholeFileHeaderIsAbsent) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    write_sandbox_csv_file(sandbox / "parity.csv", "1,2\n3,4\n");
+    write_sandbox_csv_file(sandbox_path / "parity.csv", "1,2\n3,4\n");
 
     sandbox.run(R"LUA(
         local whole = db:read_csv("parity.csv", { header_row = 0 })
@@ -499,7 +505,7 @@ TEST_F(Sandbox_ReadCsv, StreamHeaderIsNilWhenWholeFileHeaderIsAbsent) {
     )LUA");
 
     // And the positive control: with a real header, both forms still deliver one.
-    write_sandbox_csv_file(sandbox / "withhdr.csv", "a,b\n1,2\n");
+    write_sandbox_csv_file(sandbox_path / "withhdr.csv", "a,b\n1,2\n");
     sandbox.run(R"LUA(
         local whole = db:read_csv("withhdr.csv")
         assert(whole.header[1] == "a", "whole-file header missing")
@@ -514,7 +520,7 @@ TEST_F(Sandbox_ReadCsv, StreamHeaderRowZeroBlankLineAgreesWithWholeFileRead) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    write_sandbox_csv_file(sandbox / "blankmid.csv", "a,b\n\n1,2\n");
+    write_sandbox_csv_file(sandbox_path / "blankmid.csv", "a,b\n\n1,2\n");
 
     // Same fixture, same option, through the streaming entry point -- both must agree on the row
     // count so the ordering fix cannot regress just one of the two.
@@ -529,7 +535,7 @@ TEST_F(Sandbox_ReadCsv, TwoConsecutiveReadsReturnIdenticalContents) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    write_sandbox_csv_file(sandbox / "repeat.csv", "a,b\n1,2\n3,4\n");
+    write_sandbox_csv_file(sandbox_path / "repeat.csv", "a,b\n1,2\n3,4\n");
 
     sandbox.run(R"(
         local first = db:read_csv("repeat.csv")
@@ -559,7 +565,7 @@ TEST_F(Sandbox_ReadCsv, RepeatedAndBlankHeaderNamesAllReachable) {
     // The real Maranhao Energia header: two ANO columns, two Residencial columns (one
     // space-padded), and five blank names. 11 fields (10 separators), counted from this exact line.
     write_sandbox_csv_file(
-        sandbox / "dupheader.csv",
+        sandbox_path / "dupheader.csv",
         "ANO,Residencial,,ANO,MÊS, Residencial ,,,,,\n"
         "v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11\n"
     );
@@ -587,7 +593,7 @@ TEST_F(Sandbox_ReadCsv, RepeatedAndBlankHeaderNamesAllReachable) {
 
 // --- the real Maranhao files replace the transcribed script ---
 //
-// The committed fixtures are copied into the SandboxTest sandbox first: db:read_csv resolves
+// The committed fixtures are copied into the LuaSandboxTest sandbox first: db:read_csv resolves
 // a relative path against the database directory, not the source tree. The
 // scripts below transform each row exactly as script.lua (the file being replaced) did, and
 // assert its hard-coded final values -- not raw bytes -- because the claim is that the
@@ -602,7 +608,7 @@ TEST_F(Sandbox_ReadCsv, EnergiaRegressionJunkRowAboveUnitsRowBelowHeader) {
     // fixture's bytes must reach the sandbox unmodified.
     std::filesystem::copy_file(
         quiver::test::path_from(__FILE__, "fixtures/ma_energia_residencial.csv"),
-        sandbox / "ma_energia_residencial.csv"
+        sandbox_path / "ma_energia_residencial.csv"
     );
 
     // Custom delimiter (matches test_sandbox_describe.cpp/test_sandbox_errors.cpp): the
@@ -643,7 +649,7 @@ TEST_F(Sandbox_ReadCsv, GdRegressionQuotedCommaAndEnglishMonthNames) {
 
     std::filesystem::copy_file(
         quiver::test::path_from(__FILE__, "fixtures/ma_gd_data.csv"),
-        sandbox / "ma_gd_data.csv"
+        sandbox_path / "ma_gd_data.csv"
     );
 
     // Custom delimiter: the month/day/year pattern literal below ends in ")".
@@ -683,7 +689,7 @@ TEST_F(Sandbox_ReadCsv, StreamFiresOncePerRowWithIndexAndHeader) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    write_sandbox_csv_file(sandbox / "three_rows.csv", "a,b\n1,2\n3,4\n5,6\n");
+    write_sandbox_csv_file(sandbox_path / "three_rows.csv", "a,b\n1,2\n3,4\n5,6\n");
 
     auto json = sandbox.run(R"(
         local seen = {}
@@ -703,7 +709,7 @@ TEST_F(Sandbox_ReadCsv, StreamEarlyStopReturnsPartialCount) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    write_sandbox_csv_file(sandbox / "three_rows.csv", "a,b\n1,2\n3,4\n5,6\n");
+    write_sandbox_csv_file(sandbox_path / "three_rows.csv", "a,b\n1,2\n3,4\n5,6\n");
 
     sandbox.run(R"(
         local seen = 0
@@ -723,7 +729,7 @@ TEST_F(Sandbox_ReadCsv, StreamCallbackReturningNothingRunsToCompletion) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    write_sandbox_csv_file(sandbox / "three_rows.csv", "a,b\n1,2\n3,4\n5,6\n");
+    write_sandbox_csv_file(sandbox_path / "three_rows.csv", "a,b\n1,2\n3,4\n5,6\n");
 
     sandbox.run(R"(
         local n = db:read_csv_stream("three_rows.csv", function(row, index, header)
@@ -740,7 +746,7 @@ TEST_F(Sandbox_ReadCsv, StreamComparisonAsLastStatementTruncates) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    write_sandbox_csv_file(sandbox / "three_rows.csv", "a,b\n1,2\n3,4\n5,6\n");
+    write_sandbox_csv_file(sandbox_path / "three_rows.csv", "a,b\n1,2\n3,4\n5,6\n");
 
     // The documented hazard: a callback whose last statement is a plain comparison that
     // evaluates false truncates the stream, exactly as `return false` would.
@@ -757,7 +763,7 @@ TEST_F(Sandbox_ReadCsv, StreamCallbackErrorPropagatesAndClosesFile) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    auto csv_path = sandbox / "erroring.csv";
+    auto csv_path = sandbox_path / "erroring.csv";
     write_sandbox_csv_file(csv_path, "a,b\n1,2\n3,4\n");
 
     expect_sandbox_error(
@@ -776,7 +782,7 @@ TEST_F(Sandbox_ReadCsv, StreamAndWholeFileReadYieldSameRows) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    write_sandbox_csv_file(sandbox / "compare.csv", "a,b\n1,2\n3,4\n5,6\n");
+    write_sandbox_csv_file(sandbox_path / "compare.csv", "a,b\n1,2\n3,4\n5,6\n");
 
     sandbox.run(R"(
         local whole = db:read_csv("compare.csv")
@@ -800,7 +806,7 @@ TEST_F(Sandbox_ReadCsv, SemicolonSeparatorReadsCorrectly) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    write_sandbox_csv_file(sandbox / "semi.csv", "a;b\n1;2\n");
+    write_sandbox_csv_file(sandbox_path / "semi.csv", "a;b\n1;2\n");
 
     sandbox.run(R"(
         local csv = db:read_csv("semi.csv", { separator = ";" })
@@ -817,7 +823,7 @@ TEST_F(Sandbox_ReadCsv, StreamSemicolonSeparatorYieldsSameRowsAsWholeFileRead) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    write_sandbox_csv_file(sandbox / "semi.csv", "a;b\n1;2\n3;4\n");
+    write_sandbox_csv_file(sandbox_path / "semi.csv", "a;b\n1;2\n3;4\n");
 
     sandbox.run(R"(
         local whole = db:read_csv("semi.csv", { separator = ";" })
@@ -839,7 +845,7 @@ TEST_F(Sandbox_ReadCsv, DefaultSeparatorMatchesEmptyOptionsTable) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    write_sandbox_csv_file(sandbox / "comma.csv", "a,b\n1,2\n3,4\n");
+    write_sandbox_csv_file(sandbox_path / "comma.csv", "a,b\n1,2\n3,4\n");
 
     sandbox.run(R"(
         local no_opts = db:read_csv("comma.csv")
@@ -860,7 +866,7 @@ TEST_F(Sandbox_ReadCsv, TabSeparatorProvesOptionIsNotSpecialCased) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    write_sandbox_csv_file(sandbox / "tab.csv", "a\tb\n1\t2\n");
+    write_sandbox_csv_file(sandbox_path / "tab.csv", "a\tb\n1\t2\n");
 
     sandbox.run(R"(
         local csv = db:read_csv("tab.csv", { separator = "\t" })
@@ -908,7 +914,11 @@ TEST_F(Sandbox_ReadCsv, UnknownOptionKeyThrowsNamingTheKey) {
     quiver::Sandbox sandbox(db);
 
     // The plausible abbreviation a script might try instead of `separator`.
-    expect_sandbox_error(sandbox, R"(db:read_csv("f.csv", { delim = ";" }))", "Cannot read_csv: unknown option 'delim'");
+    expect_sandbox_error(
+        sandbox,
+        R"(db:read_csv("f.csv", { delim = ";" }))",
+        "Cannot read_csv: unknown option 'delim'"
+    );
 }
 
 TEST_F(Sandbox_ReadCsv, FutureHeaderKeyIsAnUnknownOptionToday) {
@@ -919,7 +929,11 @@ TEST_F(Sandbox_ReadCsv, FutureHeaderKeyIsAnUnknownOptionToday) {
     // The reader takes `header_row`, not `header` -- this key stays unknown forever.
     // Kept as its own test rather than folded into the sibling below so a future reader isn't
     // misled into thinking `header_row`'s arrival would make it obsolete.
-    expect_sandbox_error(sandbox, R"(db:read_csv("f.csv", { header = false }))", "Cannot read_csv: unknown option 'header'");
+    expect_sandbox_error(
+        sandbox,
+        R"(db:read_csv("f.csv", { header = false }))",
+        "Cannot read_csv: unknown option 'header'"
+    );
 }
 
 TEST_F(Sandbox_ReadCsv, ValidKeyDoesNotExcuseAnInvalidSibling) {
@@ -1078,7 +1092,7 @@ TEST_F(Sandbox_ReadCsv, BothFormsAgreeOnAValidTableAndNeitherLeavesTheFileOpen) 
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    auto csv_path = sandbox / "agree.csv";
+    auto csv_path = sandbox_path / "agree.csv";
     write_sandbox_csv_file(csv_path, "a;b\n1;2\n3;4\n");
 
     sandbox.run(R"(
@@ -1103,7 +1117,7 @@ TEST_F(Sandbox_ReadCsv, BothFormsAgreeOnAValidTableAndNeitherLeavesTheFileOpen) 
 // never a lone keyword -- because a test that only asserts "it threw" goes
 // green when the call fails for an unrelated reason and certifies containment it never exercised.
 //
-// SandboxTest's per-test temp directory (named after the current suite + test name) is what
+// LuaSandboxTest's per-test temp directory (named after the current suite + test name) is what
 // keeps these negatives from colliding with each other or with the other CSV suites when the
 // binary is re-run -- see test_sandbox.h.
 
@@ -1239,9 +1253,9 @@ TEST_F(Sandbox_ReadCsv, DirectoryAsPathThrowsForReadCsv) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    std::filesystem::create_directories(sandbox / "adir");
+    std::filesystem::create_directories(sandbox_path / "adir");
     expect_sandbox_error(sandbox, R"(db:read_csv("adir"))", "Cannot read_csv: path is a directory: adir");
-    EXPECT_TRUE(std::filesystem::remove(sandbox / "adir"));
+    EXPECT_TRUE(std::filesystem::remove(sandbox_path / "adir"));
 }
 
 TEST_F(Sandbox_ReadCsv, DirectoryAsPathThrowsForReadCsvStream) {
@@ -1249,13 +1263,13 @@ TEST_F(Sandbox_ReadCsv, DirectoryAsPathThrowsForReadCsvStream) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    std::filesystem::create_directories(sandbox / "adir");
+    std::filesystem::create_directories(sandbox_path / "adir");
     expect_sandbox_error(
         sandbox,
         R"(db:read_csv_stream("adir", function() end))",
         "Cannot read_csv_stream: path is a directory: adir"
     );
-    EXPECT_TRUE(std::filesystem::remove(sandbox / "adir"));
+    EXPECT_TRUE(std::filesystem::remove(sandbox_path / "adir"));
 }
 
 TEST_F(Sandbox_ReadCsv, SubdirectoryPathReadsSuccessfullyForBothEntryPoints) {
@@ -1265,8 +1279,8 @@ TEST_F(Sandbox_ReadCsv, SubdirectoryPathReadsSuccessfullyForBothEntryPoints) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    std::filesystem::create_directories(sandbox / "sub");
-    write_sandbox_csv_file(sandbox / "sub" / "data.csv", "a,b\n1,2\n");
+    std::filesystem::create_directories(sandbox_path / "sub");
+    write_sandbox_csv_file(sandbox_path / "sub" / "data.csv", "a,b\n1,2\n");
 
     sandbox.run(R"(
         local whole = db:read_csv("sub/data.csv")
@@ -1293,14 +1307,14 @@ TEST_F(Sandbox_ReadCsv, EmptyFileThrowsForReadCsvStream) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    write_sandbox_csv_file(sandbox / "empty_stream.csv", "");
+    write_sandbox_csv_file(sandbox_path / "empty_stream.csv", "");
 
     expect_sandbox_error(
         sandbox,
         R"(db:read_csv_stream("empty_stream.csv", function() end))",
         "Cannot read_csv_stream: file 'empty_stream.csv' is empty"
     );
-    EXPECT_TRUE(std::filesystem::remove(sandbox / "empty_stream.csv"));
+    EXPECT_TRUE(std::filesystem::remove(sandbox_path / "empty_stream.csv"));
 }
 
 // The csv-parser wrapper entry ("cannot read file '<p>': <reason>") fires when a file
@@ -1318,7 +1332,7 @@ TEST_F(Sandbox_ReadCsv, UnreadableFileReportsParserFailure) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto target = sandbox / "unreadable.csv";
+    const auto target = sandbox_path / "unreadable.csv";
     write_sandbox_csv_file(target, "a,b\n1,2\n");
 
 #ifdef _WIN32
@@ -1341,7 +1355,11 @@ TEST_F(Sandbox_ReadCsv, UnreadableFileReportsParserFailure) {
     EXPECT_FALSE(std::filesystem::is_directory(target, ec)) << ec.message();
     EXPECT_GT(std::filesystem::file_size(target, ec), 0U) << ec.message();
 
-    expect_sandbox_error(sandbox, R"(db:read_csv("unreadable.csv"))", "Cannot read_csv: cannot read file 'unreadable.csv': ");
+    expect_sandbox_error(
+        sandbox,
+        R"(db:read_csv("unreadable.csv"))",
+        "Cannot read_csv: cannot read file 'unreadable.csv': "
+    );
     expect_sandbox_error(
         sandbox,
         R"(db:read_csv_stream("unreadable.csv", function() end))",
@@ -1429,8 +1447,8 @@ TEST_F(Sandbox_ReadCsv, EveryNegativeCaseStartsWithItsOwnEntryPointPrefix) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    std::filesystem::create_directories(sandbox / "adir");
-    write_sandbox_csv_file(sandbox / "blank.csv", "");
+    std::filesystem::create_directories(sandbox_path / "adir");
+    write_sandbox_csv_file(sandbox_path / "blank.csv", "");
 
     const std::vector<std::string> negatives = {
         R"(db:read_csv("../outside.csv"))",
@@ -1475,6 +1493,6 @@ TEST_F(Sandbox_ReadCsv, EveryNegativeCaseStartsWithItsOwnEntryPointPrefix) {
     expect_prefixed_error(mem_lua, R"(db:read_csv("x.csv"))");
     expect_prefixed_error(mem_lua, R"(db:read_csv_stream("x.csv", function() end))");
 
-    EXPECT_TRUE(std::filesystem::remove_all(sandbox / "adir"));
-    EXPECT_TRUE(std::filesystem::remove(sandbox / "blank.csv"));
+    EXPECT_TRUE(std::filesystem::remove_all(sandbox_path / "adir"));
+    EXPECT_TRUE(std::filesystem::remove(sandbox_path / "blank.csv"));
 }

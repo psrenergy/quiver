@@ -14,10 +14,10 @@ namespace fs = std::filesystem;
 // Lua bindings for the binary subsystem (quiver.metadata / db:open_file / db:bin_to_csv) and the
 // db-directory sandbox on every file-touching operation.
 // Mirrors the Julia coverage in bindings/julia/test/test_binary_file.jl + test_binary_metadata.jl.
-class SandboxBinaryTest : public SandboxTest {
+class SandboxBinaryTest : public LuaSandboxTest {
 protected:
     void SetUp() override {
-        SandboxTest::SetUp();
+        LuaSandboxTest::SetUp();
         schema = VALID_SCHEMA("collections.sql");
     }
 
@@ -96,7 +96,7 @@ TEST_F(SandboxBinaryTest, WriteReadRoundTrip) {
         assert(md2:get_unit() == 'MW', 'roundtrip unit')
         r:close()
     )");
-    EXPECT_TRUE(fs::exists(sandbox / "bin_a.qvr"));
+    EXPECT_TRUE(fs::exists(sandbox_path / "bin_a.qvr"));
 }
 
 TEST_F(SandboxBinaryTest, AllowNullsReadsNaN) {
@@ -235,7 +235,7 @@ TEST_F(SandboxBinaryTest, CsvRoundTrip) {
         end end
         r:close()
     )");
-    EXPECT_TRUE(fs::exists(sandbox / "bin_a.csv"));
+    EXPECT_TRUE(fs::exists(sandbox_path / "bin_a.csv"));
 }
 
 TEST_F(SandboxBinaryTest, CsvToBinRejectsTrailingGarbage) {
@@ -243,10 +243,14 @@ TEST_F(SandboxBinaryTest, CsvToBinRejectsTrailingGarbage) {
     quiver::Sandbox sandbox(db);
     sandbox.run(md1() + "local f = db:open_file('bin_a', 'w', md)\nf:close()\n");  // writes bin_a.toml
     {
-        std::ofstream csv(sandbox / "bin_a.csv");
+        std::ofstream csv(sandbox_path / "bin_a.csv");
         csv << "row,v\n1,9.99abc\n2,1\n3,1\n";
     }
-    expect_sandbox_error(sandbox, "db:csv_to_bin('bin_a')\n", "Cannot csv_to_bin: invalid float value '9.99abc' for label 'v'");
+    expect_sandbox_error(
+        sandbox,
+        "db:csv_to_bin('bin_a')\n",
+        "Cannot csv_to_bin: invalid float value '9.99abc' for label 'v'"
+    );
 }
 
 TEST_F(SandboxBinaryTest, CsvToBinShortRowReportsLine) {
@@ -255,7 +259,7 @@ TEST_F(SandboxBinaryTest, CsvToBinShortRowReportsLine) {
     // Opening a writer leaves the .toml sidecar csv_to_bin reads. Lua has no io, so the CSV is written here.
     sandbox.run(md1() + "db:open_file('bin_a', 'w', md):close()\n");
     {
-        std::ofstream csv(sandbox / "bin_a.csv");
+        std::ofstream csv(sandbox_path / "bin_a.csv");
         csv << "row,v\n1\n";
     }
     expect_sandbox_error(sandbox, "db:csv_to_bin('bin_a')\n", "Cannot csv_to_bin: line 2 has 1 fields, expected 2");
@@ -365,24 +369,24 @@ TEST_F(SandboxBinaryTest, RelativePathResolvesAgainstDbDir) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
     sandbox.run(md1() + "local f = db:open_file('bin_rel', 'w', md)\nf:write({1.0}, {row=1})\nf:close()\n");
-    EXPECT_TRUE(fs::exists(sandbox / "bin_rel.qvr"));
+    EXPECT_TRUE(fs::exists(sandbox_path / "bin_rel.qvr"));
     EXPECT_FALSE(fs::exists(fs::current_path() / "bin_rel.qvr"));
 }
 
 TEST_F(SandboxBinaryTest, SubdirectoryAllowed) {
-    fs::create_directories(sandbox / "sub");  // BinaryFile does not create parent directories
+    fs::create_directories(sandbox_path / "sub");  // BinaryFile does not create parent directories
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
     sandbox.run(md1() + "local f = db:open_file('sub/bin', 'w', md)\nf:write({1.0}, {row=1})\nf:close()\n");
-    EXPECT_TRUE(fs::exists(sandbox / "sub" / "bin.qvr"));
+    EXPECT_TRUE(fs::exists(sandbox_path / "sub" / "bin.qvr"));
 }
 
 TEST_F(SandboxBinaryTest, AbsoluteInsideAccepted) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
-    const std::string abs_inside = lp((sandbox / "abs_inside").string());
+    const std::string abs_inside = lp((sandbox_path / "abs_inside").string());
     sandbox.run(md1() + "local f = db:open_file('" + abs_inside + "', 'w', md)\nf:write({1.0}, {row=1})\nf:close()\n");
-    EXPECT_TRUE(fs::exists(sandbox / "abs_inside.qvr"));
+    EXPECT_TRUE(fs::exists(sandbox_path / "abs_inside.qvr"));
 }
 
 TEST_F(SandboxBinaryTest, DotDotEscapeThrows) {
@@ -399,7 +403,11 @@ TEST_F(SandboxBinaryTest, AbsoluteOutsideThrows) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
     const std::string outside = lp((fs::temp_directory_path() / "quiver_sandbox_outside").string());
-    expect_sandbox_error(sandbox, md1() + "db:open_file('" + outside + "', 'w', md)\n", "escapes the database directory");
+    expect_sandbox_error(
+        sandbox,
+        md1() + "db:open_file('" + outside + "', 'w', md)\n",
+        "escapes the database directory"
+    );
 }
 
 TEST_F(SandboxBinaryTest, RootItselfRejected) {
@@ -420,7 +428,11 @@ TEST_F(SandboxBinaryTest, RootItselfRejected) {
 TEST_F(SandboxBinaryTest, DeviceNamePathIsReportedWithPrefix) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
-    expect_sandbox_error(sandbox, md1() + "db:open_file('NUL', 'w', md)\n", "Cannot open_file: cannot resolve path 'NUL': ");
+    expect_sandbox_error(
+        sandbox,
+        md1() + "db:open_file('NUL', 'w', md)\n",
+        "Cannot open_file: cannot resolve path 'NUL': "
+    );
     expect_sandbox_error(sandbox, "db:bin_to_csv('NUL')\n", "Cannot bin_to_csv: cannot resolve path 'NUL': ");
     expect_sandbox_error(sandbox, "db:csv_to_bin('NUL')\n", "Cannot csv_to_bin: cannot resolve path 'NUL': ");
 }
@@ -429,14 +441,26 @@ TEST_F(SandboxBinaryTest, DeviceNamePathIsReportedWithPrefix) {
 TEST_F(SandboxBinaryTest, ConverterEscapeThrows) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
-    expect_sandbox_error(sandbox, "db:bin_to_csv('../x')\n", "Cannot bin_to_csv: path '../x' escapes the database directory");
-    expect_sandbox_error(sandbox, "db:csv_to_bin('../x')\n", "Cannot csv_to_bin: path '../x' escapes the database directory");
+    expect_sandbox_error(
+        sandbox,
+        "db:bin_to_csv('../x')\n",
+        "Cannot bin_to_csv: path '../x' escapes the database directory"
+    );
+    expect_sandbox_error(
+        sandbox,
+        "db:csv_to_bin('../x')\n",
+        "Cannot csv_to_bin: path '../x' escapes the database directory"
+    );
 }
 
 TEST_F(SandboxBinaryTest, InMemoryThrows) {
     auto db = quiver::Database::from_schema(":memory:", schema);
     quiver::Sandbox sandbox(db);
-    expect_sandbox_error(sandbox, md1() + "db:open_file('bin_a', 'w', md)\n", "Cannot open_file: database is in-memory");
+    expect_sandbox_error(
+        sandbox,
+        md1() + "db:open_file('bin_a', 'w', md)\n",
+        "Cannot open_file: database is in-memory"
+    );
     expect_sandbox_error(sandbox, "db:bin_to_csv('bin_a')\n", "Cannot bin_to_csv: database is in-memory");
     expect_sandbox_error(sandbox, "db:csv_to_bin('bin_a')\n", "Cannot csv_to_bin: database is in-memory");
 }
@@ -450,7 +474,11 @@ TEST_F(SandboxBinaryTest, ReadWriteRejectNonTableArguments) {
         f:close()
     )");
 
-    expect_sandbox_error(sandbox, "db:open_file('bin_a', 'r'):read(5)\n", "Cannot read: dims must be a table, got number");
+    expect_sandbox_error(
+        sandbox,
+        "db:open_file('bin_a', 'r'):read(5)\n",
+        "Cannot read: dims must be a table, got number"
+    );
     expect_sandbox_error(
         sandbox,
         md1() + "db:open_file('bin_b', 'w', md):write(5, {row=1})\n",
@@ -524,7 +552,11 @@ TEST_F(SandboxBinaryTest, OptionalArgumentsRejectWrongTypes) {
     );
     expect_sandbox_error(sandbox, "db:open_file('x', 'q', {})\n", R"(Cannot open_file: mode must be "r" or "w")");
 
-    expect_sandbox_error(sandbox, "db:bin_to_csv('x', 1)\n", "Cannot bin_to_csv: aggregate must be a boolean, got number");
+    expect_sandbox_error(
+        sandbox,
+        "db:bin_to_csv('x', 1)\n",
+        "Cannot bin_to_csv: aggregate must be a boolean, got number"
+    );
 
     sandbox.run(md1() + R"(
         local f = db:open_file('bin_a', 'w', md)

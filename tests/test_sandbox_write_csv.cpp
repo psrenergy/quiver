@@ -107,7 +107,7 @@ TEST_F(Sandbox_WriteCsv, WriteRowThenReadCsvRoundTripsPlainStrings) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "out.csv").string());
+    const auto path = lp((sandbox_path / "out.csv").string());
 
     sandbox.run(
         R"(
@@ -136,7 +136,7 @@ TEST_F(Sandbox_WriteCsv, IntegerCellRoundTripsExactDigitString) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "int.csv").string());
+    const auto path = lp((sandbox_path / "int.csv").string());
 
     sandbox.run(
         R"(
@@ -161,7 +161,7 @@ TEST_F(Sandbox_WriteCsv, MinIntegerAndMaxIntegerRoundTripExactDecimalText) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "int_bounds.csv").string());
+    const auto path = lp((sandbox_path / "int_bounds.csv").string());
 
     sandbox.run(
         R"(
@@ -190,8 +190,8 @@ TEST_F(Sandbox_WriteCsv, FloatReWriteIdentityRoundTripsForManySignificantDigitVa
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path1 = lp((sandbox / "float_identity_1.csv").string());
-    const auto path2 = lp((sandbox / "float_identity_2.csv").string());
+    const auto path1 = lp((sandbox_path / "float_identity_1.csv").string());
+    const auto path2 = lp((sandbox_path / "float_identity_2.csv").string());
 
     sandbox.run(
         R"(
@@ -230,7 +230,7 @@ TEST_F(Sandbox_WriteCsv, WholeFloatAndEqualIntegerProduceSameCellText) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "float.csv").string());
+    const auto path = lp((sandbox_path / "float.csv").string());
 
     sandbox.run(
         R"(
@@ -256,7 +256,7 @@ TEST_F(Sandbox_WriteCsv, BooleanCellWritesOneOrZero) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "bool.csv").string());
+    const auto path = lp((sandbox_path / "bool.csv").string());
 
     sandbox.run(
         R"(
@@ -280,7 +280,7 @@ TEST_F(Sandbox_WriteCsv, TableCellThrowsNamingWriteRowAndCellIndex) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "bad_cell.csv").string());
+    const auto path = lp((sandbox_path / "bad_cell.csv").string());
 
     expect_sandbox_error(
         sandbox,
@@ -298,7 +298,7 @@ TEST_F(Sandbox_WriteCsv, FunctionCellThrowsNamingWriteRowAndCellIndex) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "bad_cell_fn.csv").string());
+    const auto path = lp((sandbox_path / "bad_cell_fn.csv").string());
 
     expect_sandbox_error(
         sandbox,
@@ -318,7 +318,7 @@ TEST_F(Sandbox_WriteCsv, RowWidthComesFromMaxIntegerKeyNotKeyCount) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "hole.csv").string());
+    const auto path = lp((sandbox_path / "hole.csv").string());
 
     sandbox.run(
         R"(
@@ -344,7 +344,7 @@ TEST_F(Sandbox_WriteCsv, RowWithZeroIntegerKeysWritesOneQuotedEmptyCell) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "empty_row.csv").string());
+    const auto path = lp((sandbox_path / "empty_row.csv").string());
 
     sandbox.run(
         R"(
@@ -368,7 +368,7 @@ TEST_F(Sandbox_WriteCsv, NonIntegerRowKeyThrows) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "bad_key.csv").string());
+    const auto path = lp((sandbox_path / "bad_key.csv").string());
 
     expect_sandbox_error(
         sandbox,
@@ -386,7 +386,7 @@ TEST_F(Sandbox_WriteCsv, SubOneIntegerRowKeyThrows) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "bad_key_zero.csv").string());
+    const auto path = lp((sandbox_path / "bad_key_zero.csv").string());
 
     expect_sandbox_error(
         sandbox,
@@ -405,7 +405,7 @@ TEST_F(Sandbox_WriteCsv, RowKeyPastMaximumWidthThrows) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "wide_row.csv").string());
+    const auto path = lp((sandbox_path / "wide_row.csv").string());
 
     expect_sandbox_error(
         sandbox,
@@ -424,7 +424,7 @@ TEST_F(Sandbox_WriteCsv, HeaderKeyPastMaximumWidthThrows) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "wide_header.csv").string());
+    const auto path = lp((sandbox_path / "wide_header.csv").string());
 
     expect_sandbox_error(
         sandbox,
@@ -440,7 +440,7 @@ TEST_F(Sandbox_WriteCsv, MultiColumnRowWithEmptyMiddleFieldLeavesNeighborsIntact
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "empty_middle.csv").string());
+    const auto path = lp((sandbox_path / "empty_middle.csv").string());
 
     sandbox.run(
         R"(
@@ -467,7 +467,7 @@ TEST_F(Sandbox_WriteCsv, SingleColumnFileWithNilAndEmptyCellsRoundTripsEveryRow)
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "single_column.csv").string());
+    const auto path = lp((sandbox_path / "single_column.csv").string());
 
     sandbox.run(
         R"(
@@ -503,7 +503,7 @@ TEST_F(Sandbox_WriteCsv, CellWithSeparatorQuoteCrAndLfTogetherRoundTrips) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "dirty_cell.csv").string());
+    const auto path = lp((sandbox_path / "dirty_cell.csv").string());
 
     sandbox.run(
         R"(
@@ -528,7 +528,7 @@ TEST_F(Sandbox_WriteCsv, CellWithSeparatorQuoteCrAndLfTogetherRoundTripsWithSemi
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "dirty_cell_semicolon.csv").string());
+    const auto path = lp((sandbox_path / "dirty_cell_semicolon.csv").string());
 
     sandbox.run(
         R"(
@@ -553,7 +553,7 @@ TEST_F(Sandbox_WriteCsv, LoneQuoteCharacterCellRoundTripsAsLengthOne) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "lone_quote.csv").string());
+    const auto path = lp((sandbox_path / "lone_quote.csv").string());
 
     sandbox.run(
         R"(
@@ -577,7 +577,7 @@ TEST_F(Sandbox_WriteCsv, TwoQuoteCharacterCellRoundTripsAsLengthTwo) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "two_quotes.csv").string());
+    const auto path = lp((sandbox_path / "two_quotes.csv").string());
 
     sandbox.run(
         R"(
@@ -602,7 +602,7 @@ TEST_F(Sandbox_WriteCsv, LeadingTrailingAndSeparatorOnlyCellsRoundTripPositional
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "separator_positions.csv").string());
+    const auto path = lp((sandbox_path / "separator_positions.csv").string());
 
     sandbox.run(
         R"(
@@ -632,7 +632,7 @@ TEST_F(Sandbox_WriteCsv, CrThenLfCellRoundTripsAsTwoByteSequenceWithoutSplitting
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "cr_then_lf.csv").string());
+    const auto path = lp((sandbox_path / "cr_then_lf.csv").string());
 
     sandbox.run(
         R"(
@@ -662,7 +662,7 @@ TEST_F(Sandbox_WriteCsv, EmptyCellAdjacentToAQuotedCellRoundTripsWithNeighborsIn
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "empty_next_to_quoted.csv").string());
+    const auto path = lp((sandbox_path / "empty_next_to_quoted.csv").string());
 
     sandbox.run(
         R"(
@@ -689,7 +689,7 @@ TEST_F(Sandbox_WriteCsv, MultiByteUtf8CellWithNoQuoteByteRoundTripsUnmodified) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "utf8_cell.csv").string());
+    const auto path = lp((sandbox_path / "utf8_cell.csv").string());
 
     sandbox.run(
         R"(
@@ -716,9 +716,13 @@ TEST_F(Sandbox_WriteCsv, UnknownOptionKeyThrows) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "unknown_opt.csv").string());
+    const auto path = lp((sandbox_path / "unknown_opt.csv").string());
 
-    expect_sandbox_error(sandbox, R"(db:write_csv(")" + path + R"(", { foo = 1 }))", "Cannot write_csv: unknown option");
+    expect_sandbox_error(
+        sandbox,
+        R"(db:write_csv(")" + path + R"(", { foo = 1 }))",
+        "Cannot write_csv: unknown option"
+    );
 }
 
 TEST_F(Sandbox_WriteCsv, NonStringSeparatorThrows) {
@@ -726,7 +730,7 @@ TEST_F(Sandbox_WriteCsv, NonStringSeparatorThrows) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "bad_sep_type.csv").string());
+    const auto path = lp((sandbox_path / "bad_sep_type.csv").string());
 
     expect_sandbox_error(
         sandbox,
@@ -740,7 +744,7 @@ TEST_F(Sandbox_WriteCsv, MultiCharacterSeparatorThrows) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "bad_sep.csv").string());
+    const auto path = lp((sandbox_path / "bad_sep.csv").string());
 
     expect_sandbox_error(
         sandbox,
@@ -754,7 +758,7 @@ TEST_F(Sandbox_WriteCsv, NonTableHeaderThrows) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "bad_header_type.csv").string());
+    const auto path = lp((sandbox_path / "bad_header_type.csv").string());
 
     expect_sandbox_error(
         sandbox,
@@ -768,7 +772,7 @@ TEST_F(Sandbox_WriteCsv, NonStringHeaderEntryThrows) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "bad_header_entry.csv").string());
+    const auto path = lp((sandbox_path / "bad_header_entry.csv").string());
 
     expect_sandbox_error(
         sandbox,
@@ -784,7 +788,7 @@ TEST_F(Sandbox_WriteCsv, AbsentNilAndEmptyOptionsAllMeanDefaults) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "defaults.csv").string());
+    const auto path = lp((sandbox_path / "defaults.csv").string());
 
     sandbox.run(
         R"(
@@ -817,7 +821,7 @@ TEST_F(Sandbox_WriteCsv, HeaderIsWrittenAheadOfDataAndQuotedLikeARow) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "header.csv").string());
+    const auto path = lp((sandbox_path / "header.csv").string());
 
     sandbox.run(
         R"(
@@ -846,7 +850,7 @@ TEST_F(Sandbox_WriteCsv, ShortRowPadsToHeaderWidthAndRoundTripsAligned) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "short_row.csv").string());
+    const auto path = lp((sandbox_path / "short_row.csv").string());
 
     sandbox.run(
         R"(
@@ -875,7 +879,7 @@ TEST_F(Sandbox_WriteCsv, RowLongerThanHeaderThrowsNamingOrdinalAndCounts) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "too_long.csv").string());
+    const auto path = lp((sandbox_path / "too_long.csv").string());
 
     expect_prefixed_error(
         sandbox,
@@ -899,7 +903,7 @@ TEST_F(Sandbox_WriteCsv, RejectedLongRowLeavesEarlierRowsOnDisk) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "too_long_intact.csv").string());
+    const auto path = lp((sandbox_path / "too_long_intact.csv").string());
 
     sandbox.run(
         R"(
@@ -928,7 +932,7 @@ TEST_F(Sandbox_WriteCsv, ExactWidthRowPassesThroughUnchanged) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "exact_width.csv").string());
+    const auto path = lp((sandbox_path / "exact_width.csv").string());
 
     sandbox.run(
         R"(
@@ -954,7 +958,7 @@ TEST_F(Sandbox_WriteCsv, EmptyRowPadsToMultiColumnHeaderWidth) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "empty_multi.csv").string());
+    const auto path = lp((sandbox_path / "empty_multi.csv").string());
 
     sandbox.run(
         R"(
@@ -981,7 +985,7 @@ TEST_F(Sandbox_WriteCsv, EmptyRowUnderSingleColumnHeaderStillRoundTrips) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "empty_single.csv").string());
+    const auto path = lp((sandbox_path / "empty_single.csv").string());
 
     sandbox.run(
         R"(
@@ -1006,8 +1010,8 @@ TEST_F(Sandbox_WriteCsv, NoHeaderMeansNoWidthCheck) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path1 = lp((sandbox / "no_header_omitted.csv").string());
-    const auto path2 = lp((sandbox / "no_header_empty_table.csv").string());
+    const auto path1 = lp((sandbox_path / "no_header_omitted.csv").string());
+    const auto path2 = lp((sandbox_path / "no_header_empty_table.csv").string());
 
     sandbox.run(
         R"(
@@ -1041,7 +1045,7 @@ TEST_F(Sandbox_WriteCsv, MultiByteUtf8CellsDoNotChangeCellCounts) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto pad_path = lp((sandbox / "utf8_pad.csv").string());
+    const auto pad_path = lp((sandbox_path / "utf8_pad.csv").string());
 
     sandbox.run(
         R"(
@@ -1060,7 +1064,7 @@ TEST_F(Sandbox_WriteCsv, MultiByteUtf8CellsDoNotChangeCellCounts) {
     )"
     );
 
-    const auto reject_path = lp((sandbox / "utf8_reject.csv").string());
+    const auto reject_path = lp((sandbox_path / "utf8_reject.csv").string());
     expect_prefixed_error(
         sandbox,
         R"(
@@ -1081,7 +1085,7 @@ TEST_F(Sandbox_WriteCsv, NonFiniteNumberCellThrowsNamingWriteRowAndRowOrdinal) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "nan_row.csv").string());
+    const auto path = lp((sandbox_path / "nan_row.csv").string());
 
     expect_sandbox_error(
         sandbox,
@@ -1097,7 +1101,7 @@ TEST_F(Sandbox_WriteCsv, NonFiniteNumberCellThrowsNamingWriteRowAndRowOrdinal) {
 
     // Re-run in a fresh script so the row-ordinal/cell-index assertion is isolated from the
     // pcall/file-intact proof below.
-    const auto path2 = lp((sandbox / "inf_row.csv").string());
+    const auto path2 = lp((sandbox_path / "inf_row.csv").string());
     try {
         sandbox.run(
             R"(
@@ -1127,7 +1131,7 @@ TEST_F(Sandbox_WriteCsv, RejectedNonFiniteRowLeavesFileIntactAfterPcallAndClose)
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "intact.csv").string());
+    const auto path = lp((sandbox_path / "intact.csv").string());
 
     sandbox.run(
         R"(
@@ -1155,7 +1159,7 @@ TEST_F(Sandbox_WriteCsv, WriteRowAfterCloseThrowsNamingWriteRow) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "after_close.csv").string());
+    const auto path = lp((sandbox_path / "after_close.csv").string());
 
     expect_sandbox_error(
         sandbox,
@@ -1209,7 +1213,7 @@ TEST_F(Sandbox_WriteCsv, CloseCalledTwiceDoesNotThrow) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "double_close.csv").string());
+    const auto path = lp((sandbox_path / "double_close.csv").string());
 
     sandbox.run(
         R"(
@@ -1229,7 +1233,7 @@ TEST_F(Sandbox_WriteCsv, MissingParentDirectoryThrowsAndDoesNotCreateIt) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto missing_dir = sandbox / "does_not_exist";
+    const auto missing_dir = sandbox_path / "does_not_exist";
     const auto path = lp((missing_dir / "nested.csv").string());
 
     expect_sandbox_error(sandbox, R"(db:write_csv(")" + path + R"("))", "Cannot write_csv:");
@@ -1243,7 +1247,11 @@ TEST_F(Sandbox_WriteCsv, EscapingPathTakesPrecedenceOverInvalidSeparator) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    expect_sandbox_error(sandbox, R"(db:write_csv("../escape.csv", { separator = ";;" }))", "escapes the database directory");
+    expect_sandbox_error(
+        sandbox,
+        R"(db:write_csv("../escape.csv", { separator = ";;" }))",
+        "escapes the database directory"
+    );
 }
 
 // The existing write_csv order pins put the bad value inside the options table, so they cannot catch a
@@ -1284,7 +1292,11 @@ TEST_F(Sandbox_WriteCsv, NonTableArgumentsReportTheirType) {
         R"(db:write_csv("ok.csv", { header = 5 }))",
         "Cannot write_csv: option 'header' must be a table, got number"
     );
-    expect_sandbox_error(sandbox, R"(db:write_csv("ok.csv", "x"))", "Cannot write_csv: options must be a table, got string");
+    expect_sandbox_error(
+        sandbox,
+        R"(db:write_csv("ok.csv", "x"))",
+        "Cannot write_csv: options must be a table, got string"
+    );
 }
 
 // db:write_csv truncates an existing target at open. Two rows written and closed, then
@@ -1294,7 +1306,7 @@ TEST_F(Sandbox_WriteCsv, ReopeningSamePathTruncatesExistingContent) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "truncate.csv").string());
+    const auto path = lp((sandbox_path / "truncate.csv").string());
 
     sandbox.run(
         R"(
@@ -1340,7 +1352,7 @@ TEST_F(Sandbox_WriteCsv, ReferenceWorkedExampleRunsAndRoundTripsItsOwnData) {
 
     const std::string example = extract_sandbox_example(reference_contents, "## CSV file writing");
 
-    const auto path = lp((sandbox / "reference_example.csv").string());
+    const auto path = lp((sandbox_path / "reference_example.csv").string());
     const std::string script = "local path = \"" + path + "\"\n" + example + R"(
         local csv = db:read_csv(path, { header_row = 0 })
         assert(#csv.rows == 3, "expected a header record plus 2 data rows, got " .. #csv.rows)
@@ -1380,7 +1392,7 @@ TEST_F(Sandbox_WriteCsvErrors, NonFiniteNumberCellIsPrefixedWriteRowError) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "catalogue_nan.csv").string());
+    const auto path = lp((sandbox_path / "catalogue_nan.csv").string());
 
     expect_prefixed_error(
         sandbox,
@@ -1399,7 +1411,7 @@ TEST_F(Sandbox_WriteCsvErrors, TableCellIsPrefixedWriteRowError) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "catalogue_table.csv").string());
+    const auto path = lp((sandbox_path / "catalogue_table.csv").string());
 
     expect_prefixed_error(
         sandbox,
@@ -1418,7 +1430,7 @@ TEST_F(Sandbox_WriteCsvErrors, WriteAfterCloseIsPrefixedWriteRowError) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "catalogue_after_close.csv").string());
+    const auto path = lp((sandbox_path / "catalogue_after_close.csv").string());
 
     expect_prefixed_error(
         sandbox,
@@ -1443,7 +1455,7 @@ TEST_F(Sandbox_WriteCsvErrors, SecondWriterOnAnAlreadyOpenPathIsRefused) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "concurrent.csv").string());
+    const auto path = lp((sandbox_path / "concurrent.csv").string());
 
     expect_prefixed_error(
         sandbox,
@@ -1472,7 +1484,7 @@ TEST_F(Sandbox_WriteCsvErrors, EscapingPathIsPrefixedWriteCsvError) {
 }
 
 TEST_F(Sandbox_WriteCsvErrors, InMemoryDatabaseIsPrefixedWriteCsvError) {
-    // A separate in-memory Database + Sandbox -- an in-memory db has no directory to sandbox
+    // A separate in-memory Database + Sandbox -- an in-memory db has no directory to sandbox_path
     // against, so this cannot share the fixture's file-backed database (mirrors
     // test_sandbox_read_csv.cpp's InMemoryDatabaseThrowsForReadCsv).
     auto schema = VALID_SCHEMA("basic.sql");
@@ -1495,7 +1507,7 @@ TEST_F(Sandbox_WriteCsvErrors, DoubleCloseIsIdempotentNotAnError) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "catalogue_double_close.csv").string());
+    const auto path = lp((sandbox_path / "catalogue_double_close.csv").string());
 
     EXPECT_NO_THROW(sandbox.run(
         R"(
@@ -1540,7 +1552,7 @@ TEST_F(Sandbox_WriteCsvErrors, RejectedRowLeavesFileIntactProvenBothHalves) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "catalogue_intact.csv").string());
+    const auto path = lp((sandbox_path / "catalogue_intact.csv").string());
 
     sandbox.run(
         R"(
@@ -1575,7 +1587,7 @@ TEST_F(Sandbox_WriteCsv, UnclosedWriterIsFlushedWhenRunReturns) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "unclosed.csv").string());
+    const auto path = lp((sandbox_path / "unclosed.csv").string());
 
     sandbox.run(
         R"(
@@ -1619,7 +1631,7 @@ TEST_F(Sandbox_WriteCsv, UnclosedWriterHeldInAGlobalIsAlsoFlushedWhenRunReturns)
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "unclosed_global.csv").string());
+    const auto path = lp((sandbox_path / "unclosed_global.csv").string());
 
     sandbox.run(
         R"(
@@ -1657,7 +1669,7 @@ TEST_F(Sandbox_WriteCsv, ScriptErrorMidWriteStillLeavesEarlierRowsReadable) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox sandbox(db);
 
-    const auto path = lp((sandbox / "error_mid_write.csv").string());
+    const auto path = lp((sandbox_path / "error_mid_write.csv").string());
 
     EXPECT_THROW(
         sandbox.run(

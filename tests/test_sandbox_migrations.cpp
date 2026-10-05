@@ -8,7 +8,7 @@ class Sandbox_Migrations : public LuaSandboxTest {};
 TEST_F(Sandbox_Migrations, AppliesAndRevertsSharedFixture) {
     std::filesystem::copy(
         SCHEMA_PATH("schemas/migrations"),
-        sandbox / "migrations",
+        sandbox_path / "migrations",
         std::filesystem::copy_options::recursive
     );
 
