@@ -75,9 +75,37 @@ Settled questions — don't relitigate without the user; each was decided delibe
   `src/lua_runner/expression.cpp`) with method syntax + string aggregation operations; pure-metadata builders live under a `quiver.*`
   namespace while file I/O is db-scoped (see cross-layer table and the sandbox decision below).
   `helper_maps.jl` is a second documented Julia-only exception (see convenience methods below).
+- **A binary file is an expression.** In C++, `BinaryFile` and `Expression` (`final`) derive from
+  `AbstractExpression` (`include/quiver/expression/abstract_expression.h`), which has one pure
+  virtual `node()` and a virtual `get_metadata()`; `save`, `aggregate`, `aggregate_agents`,
+  `select_agents` and `rename_agents` are non-virtual members built on `node()`. Copy and move are
+  protected, so nothing slices or assigns through a base reference. Every operator and
+  `abs`/`sqrt`/`log`/`exp`/`ifelse` takes `const AbstractExpression&` per expression operand, the
+  `double` overloads stay (`ifelse` has none in any layer), and `Expression(const
+  AbstractExpression&)` is `explicit`. `BinaryFile::node()` returns a fresh path-based
+  `ExpressionFile`, never the caller's handle: `save()` opens and closes its inputs, so a node
+  holding the caller's handle would close the caller's reader or writer, and would dangle once the
+  caller closed it. A file's `get_metadata()` is the one override: its handle's in-memory metadata.
+  **Lua**: sol2 checks every operand as `const AbstractExpression&`. The base is registered through
+  compile-time traits (`SOL_BASE_CLASSES` for each derived type, `SOL_DERIVED_CLASSES` for the base,
+  in `src/lua_runner/internal.h`), because the runtime base-classes tag measured +2.3% on 1M
+  `f:read` calls; `AbstractExpression` is never a registered usertype. The last candidate of each
+  overload set keeps the Pattern 1 operand text and raises the too-many-arguments error, and a file
+  takes the six expression methods directly. **Julia**: `abstract type AbstractExpression end` in
+  `Quiver.jl`, with `Binary.File <: AbstractExpression` and `Expression <: AbstractExpression`;
+  every operation is defined once on it and converts a file through `quiver_expression_from_file`,
+  and `get_metadata` is one generic owned by `Binary`. **C API**: no abstract or borrowed expression
+  handle, because a `quiver_expression_t*` that is owned or borrowed depending on where it came from
+  breaks the ownership rule; `quiver_expression_from_file` (it copies the path) stays the bridge.
+  Rejected: making `Expression` the abstract type and renaming the concrete one (operations must
+  return a concrete value, Julia's `AbstractArray`/`Array` is the naming model, and every
+  `Expression e = a + b;` keeps compiling); a node reusing the caller's open handle (above);
+  file-taking variants of every `quiver_expression_*`. An open decision: in Lua, `==` and `<`
+  between two files, and `==` between two expressions, are always true (sol2's automatic
+  `__eq`/`__lt` over the expression-returning C++ operators); this design leaves that unchanged.
 - **Lua file operations are db-scoped and sandboxed to the database directory.** Every file-touching
   Lua operation (`db:open_file`, `db:bin_to_csv`, `db:csv_to_bin`, `db:export_csv`, `db:import_csv`,
-  `db:validate_migrations`, `db:read_csv`, `db:read_csv_stream`, `db:write_csv`, `expr:save`)
+  `db:validate_migrations`, `db:read_csv`, `db:read_csv_stream`, `db:write_csv`, `save` on a file or an expression)
   resolves relative paths against the directory containing the database file and rejects — reads
   and writes alike — anything that escapes it (subdirectories OK; checked via `weakly_canonical`
   with strict containment). In-memory databases (`:memory:`) reject all file operations.
@@ -734,7 +762,9 @@ Element().set("label", "Item 1").set("value", 42).set("tags", {"a", "b"})
 `.qvr` binary file I/O with `.toml` metadata sidecars (`BinaryFile`, `CSVConverter`,
 `BinaryMetadata`) and lazy arithmetic expressions over them (`Expression` DAGs with
 broadcast, aggregation, and label projection, materialized via `save()`). Exposed in Julia
-(FFI) and Lua (sol2). Full reference: `src/AGENTS.md`.
+(FFI) and Lua (sol2). `BinaryFile` and `Expression` share the `AbstractExpression` base, so a file
+takes every expression operation and method in C++, Lua and Julia; the C API converts a file with
+`quiver_expression_from_file()`. Full reference: `src/AGENTS.md`.
 
 ### LuaRunner Class
 Executes Lua scripts against a database; the `db` userdata exposes the same API surface
@@ -811,7 +841,11 @@ The rules are mechanical: given any C++ method name, you can derive the equivale
 | Close | (destructor) | `quiver_binary_file_close()` | `close!(file)` | `file:close()` |
 | Read | `binary_file.read(dims)` | `quiver_binary_file_read()` | `read(file; dims...)` | `file:read(dims, allow_nulls?)` |
 | Write | `binary_file.write(data, dims)` | `quiver_binary_file_write()` | `write!(file; data=data, dims...)` | `file:write(data, dims)` |
-| Get metadata | `binary_file.get_metadata()` | `quiver_binary_file_get_metadata()` | `get_metadata(file)` | `file:get_metadata()` |
+| Get metadata | `x.get_metadata()` | `quiver_binary_file_get_metadata()` / `quiver_expression_get_metadata()` | `get_metadata(x)` | `x:get_metadata()` |
+| Is an expression | `class BinaryFile : public AbstractExpression` | `quiver_expression_from_file()` (copies the path) | `Binary.File <: AbstractExpression` | every operator, `quiver.*` expression function and method takes a file |
+| Save | `x.save(path)` | `quiver_expression_save()` | `save(x, path)` | `x:save(path)` |
+| Aggregate | `x.aggregate(dim, op, p?)`, `x.aggregate_agents(op, p?)` | `quiver_expression_aggregate()`, `quiver_expression_aggregate_agents()` | `aggregate(x, dim, op, p?)`, `aggregate_agents(x, op, p?)` | `x:aggregate(dim, op, p?)`, `x:aggregate_agents(op, p?)` |
+| Select / rename agents | `x.select_agents(labels)`, `x.rename_agents(mapping)` | `quiver_expression_select_agents()`, `quiver_expression_rename_agents()` | `select_agents(x, labels)`, `rename_agents(x, mapping)` | `x:select_agents(labels)`, `x:rename_agents({old=new})` |
 | Get file path | `binary_file.get_file_path()` | `quiver_binary_file_get_file_path()` | `get_file_path(file)` | `file:get_file_path()` |
 | Bin to CSV | `CSVConverter::bin_to_csv()` | `quiver_csv_converter_bin_to_csv()` | `bin_to_csv()` | `db:bin_to_csv(path, aggregate?)` |
 | CSV to bin | `CSVConverter::csv_to_bin()` | `quiver_csv_converter_csv_to_bin()` | `csv_to_bin()` | `db:csv_to_bin(path)` |
@@ -819,19 +853,27 @@ The rules are mechanical: given any C++ method name, you can derive the equivale
 | Metadata from TOML | `BinaryMetadata::from_toml_content()` | `quiver_binary_metadata_from_toml()` | `from_toml_content()` | `quiver.metadata_from_toml()` |
 | Metadata from Element | `BinaryMetadata::from_element()` | `quiver_binary_metadata_from_element()` | `from_element()` | `quiver.metadata_from_element()` |
 
-The Lua **expression** surface mirrors Julia's: build from a file with `quiver.expression(file)` (or
-operate on files directly), compose with the `+ - * /` operators and unary `-` (metamethods, with
+`x` is a file or an expression; the C API's expression functions take a `quiver_expression_t*`, so
+a file goes through `quiver_expression_from_file()` first.
+
+The Lua **expression** surface mirrors Julia's: a binary file is an expression, so a file handle
+takes every operator, `quiver.*` expression function and method directly, and
+`quiver.expression(f)` still converts one explicitly. Compose with the `+ - * /` operators and unary `-` (metamethods, with
 scalar-on-either-side and `file_a + file_b` both supported), unary math via `quiver.abs/sqrt/log/exp`,
 element-wise comparisons via `quiver.gt/lt/gte/lte/eq/neq` (free functions — Lua comparison
 metamethods can't return an `Expression`; produce `1.0`/`0.0`, NaN operand → NaN), boolean logic
 via the `&` / `|` / `~` operators (bitwise metamethods, since `and`/`or`/`not` are Lua keywords;
 nonzero is true, unitless result, NaN propagates), `quiver.ifelse(cond, then, else)`, and the
-methods `expr:aggregate(dim, op[, p])` /
-`expr:aggregate_agents(op[, p])` / `expr:select_agents(labels)` / `expr:rename_agents({old=new})` /
-`expr:save(path)` / `expr:get_metadata()`. Aggregation `op` is a **string**
+methods, on `x` a file or an expression: `x:aggregate(dim, op[, p])` /
+`x:aggregate_agents(op[, p])` / `x:select_agents(labels)` / `x:rename_agents({old=new})` /
+`x:save(path)` / `x:get_metadata()` (a file's is its handle's metadata; saving from a file reads it
+by path and leaves the handle open). A wrong operand raises `Cannot <op>: operand must be an
+expression or a binary file, got <type>`; extra arguments to a `quiver.*` expression function or a
+directly called operator metamethod raise `Cannot <op>: too many arguments (expected N, got M)`,
+and the methods ignore extra arguments like every other method. Aggregation `op` is a **string**
 (`"sum"/"mean"/"min"/"max"/"percentile"`) — Lua has no enums, mirroring JS's string-based surface.
-Lua file I/O is db-scoped (`db:open_file`, `db:bin_to_csv`, `db:csv_to_bin`) and `expr:save` paths
-are sandboxed to the database directory (see Design Decisions).
+Lua file I/O is db-scoped (`db:open_file`, `db:bin_to_csv`, `db:csv_to_bin`) and `save` paths, on
+a file or an expression, are sandboxed to the database directory (see Design Decisions).
 
 ### Binding-Only Convenience Methods
 
