@@ -74,9 +74,11 @@ fixes listed below.
 - ✓ `AbstractExpression` (one pure virtual `node()`, non-virtual `save`/`aggregate*`/`select_agents`/`rename_agents`) is the one parameter type of every C++ expression operator and free function; `Expression final` and `BinaryFile` derive from it, a file's `node()` is a fresh path-based leaf so an expression never touches the caller's handle, `Expression(const AbstractExpression&)` is explicit and `metadata()` is `get_metadata()` in C++ (both BREAKING, CHANGELOG). No C API change. `quiver_tests` 1463, `ExpressionFixture` 125, `Lua*` 477 unchanged, C API 543; Windows Debug/Release and Linux GCC 13 / Clang 18 green. Phase 8 baselines: Release `src/lua_runner` warnings 0, 1M `f:write`/`f:read` medians 2174/2082 ms. — Phase 7 (lua-2)
 - ✓ In Lua a binary file is an expression: `BinaryFile` and `Expression` register `AbstractExpression` as their sol2 base through three compile-time traits in `src/lua_runner/internal.h`, every `quiver.*` function, operator metamethod and expression method takes `const AbstractExpression&`, and `to_expression`/`is_number` are gone. A trailing `sol::variadic_args` candidate keeps the 13 pinned Pattern 1 texts byte-identical and adds `Cannot <op>: too many arguments (expected N, got M)` (BREAKING). A file takes `aggregate`, `aggregate_agents`, `select_agents`, `rename_agents`, `save` and `get_metadata`; Lua `e:metadata()` is `get_metadata()` (BREAKING). Traits kept over the runtime `bases` tag by the pre-set benchmark rule (tag +2.3% on `f:read`, within run-to-run noise). `Lua*` 490, `LuaExpressionTest` 41, `quiver_tests` 1476, C API 543; Release C4702 0; Linux GCC 13 / Clang 18 and all six suites green. — Phase 8 (lua-2)
 
+- ✓ In Julia a binary file is an expression: `abstract type AbstractExpression` is declared in `Quiver.jl` before the Binary include, `Binary.File` and `Expression` subtype it, and every operation is defined once on it, converting through a private `_expression` (the existing `quiver_expression_from_file`); the 97 forwarders are gone (`Binary.File` lines in `expression.jl` 54 → 1), every ccall holds its converted handle in `GC.@preserve` (14 sites), and a file gains `Quiver.save` and `Quiver.get_metadata` (now one generic owned by `Binary`). No C API, `c_api.jl` or other-binding change; no ambiguities. Expression tests 186 → 287 (byte-identical parity of every operation on raw files vs expressions), Julia 1675. Root/`src`/`src/c`/Julia AGENTS.md and CHANGELOG `[0.13.0]` describe the finished milestone; all six suites and the lua-api sync test green. — Phase 9 (lua-2)
+
 ### Active
 
-- [ ] Julia's `Binary.File` and `Expression` are subtypes of one `AbstractExpression`, without the 97 forwarding methods.
+(none — milestone lua-2 complete)
 
 ### Out of Scope
 
@@ -138,10 +140,10 @@ fixes listed below.
 | Delete the `SOL_SAFE_FUNCTION=1` define and its AGENTS.md claim (SAFE-06) | sol2 v3.5.0 never reads it (only `SOL_SAFE_FUNCTIONS`, `SOL_SAFE_FUNCTION_OBJECTS`, `SOL_SAFE_FUNCTION_CALLS`), so it is dead; `SOL_ALL_SAFETIES_ON` covers what it claimed. Chosen in REQUIREMENTS over the research default of keeping it with a corrected comment | ✓ Phase 4 |
 | Lua `load` accepts text chunks only (SAFE-07) | A bytecode chunk is a crash vector for an untrusted script; string-form `load` stays, so the root sandbox decision only gains "text chunks only". Adopted in REQUIREMENTS although research listed it as v2 | ✓ Phase 4. Extended to `run()`'s own script after code review found it still accepted bytecode |
 | Binding source, test and header files are renamed with the class (`quiverdb.sandbox` module path) | No-alias policy, and a `lua_runner` file name would keep the old meaning alive | Reverted 2026-10-02: user decision, dropped with the rename |
-| `AbstractExpression` (abstract parameter type) + `Expression` (concrete result) + `BinaryFile` (file leaf), not a Lua-only conversion | User directive (lua-2): "the only parameter of a binary op, unary op, etc should be an abstract type of an expression". An operation must return a value, so the input type is wider than the output type (Julia's AbstractArray/Array) | — Pending (lua-2) |
+| `AbstractExpression` (abstract parameter type) + `Expression` (concrete result) + `BinaryFile` (file leaf), not a Lua-only conversion | User directive (lua-2): "the only parameter of a binary op, unary op, etc should be an abstract type of an expression". An operation must return a value, so the input type is wider than the output type (Julia's AbstractArray/Array) | ✓ Phase 7 (C++), Phase 8 (Lua), Phase 9 (Julia; C API unchanged, `quiver_expression_from_file` is the bridge) |
 | Pattern 1 operand errors kept under typed sol2 parameters via sol2's fallback overload | User choice (lua-2): sol2 does the type check; the fallback runs only after every typed candidate fails, so the 13 pinned messages and the root error-message rule hold | ✓ Phase 8: pinned test bodies byte-identical to base; the fallback also owns the too-many-arguments text. Base registered by compile-time traits (runtime tag measured +2.3% on `f:read`) |
 | One metadata accessor `get_metadata` on files and expressions | User choice (lua-2): matches Julia and the C API; BREAKING rename of `Expression::metadata()` / `e:metadata()` | ✓ Phase 7 (C++) + Phase 8 (Lua; no alias kept) |
-| `src/lua_runner/` mirrors the core's `database_*.cpp` split (+ `csv`, `binary`, `expression`) | User request (lua-2): follow the quiver name pattern; the v0.12.9 `db_*` domain names cut across the core's create/read/update/delete/describe split | — Pending (lua-2) |
+| `src/lua_runner/` mirrors the core's `database_*.cpp` split (+ `csv`, `binary`, `expression`) | User request (lua-2): follow the quiver name pattern; the v0.12.9 `db_*` domain names cut across the core's create/read/update/delete/describe split | ✓ Phase 6 |
 
 ## Evolution
 
@@ -161,4 +163,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-04 after Phase 8 (Typed Expression Parameters in Lua) of milestone lua-2*
+*Last updated: 2026-10-04 after Phase 9 (Julia AbstractExpression and Docs) of milestone lua-2 — milestone complete*
