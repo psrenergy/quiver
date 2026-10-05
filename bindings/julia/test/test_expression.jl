@@ -2279,6 +2279,15 @@ end
                 w = Quiver.Binary.open_file(path_w; mode = 'w', metadata = make_simple_metadata())
                 try
                     @test_throws Quiver.DatabaseException Quiver.save(w, path_out)
+                    err = try
+                        Quiver.save(w, path_out)
+                        nothing
+                    catch e
+                        e
+                    end
+                    @test err isa Quiver.DatabaseException && occursin("already open for writing", err.msg)
+                    @test !isfile(path_out * ".qvr")
+                    @test !isfile(path_out * ".toml")
                     @test Quiver.Binary.get_labels(Quiver.get_metadata(w)) == ["val1", "val2"]
                     Quiver.Binary.write!(w; data = [1.0, 2.0], row = 1, col = 1)
                 finally
