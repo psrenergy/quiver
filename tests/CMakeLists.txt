@@ -42,6 +42,7 @@ add_executable(quiver_tests
     test_sandbox_fk.cpp
     test_sandbox_lifecycle.cpp
     test_sandbox_migrations.cpp
+    test_sandbox_path.cpp
     test_sandbox_query.cpp
     test_sandbox_read_csv.cpp
     test_sandbox_read.cpp
@@ -50,9 +51,8 @@ add_executable(quiver_tests
     test_sandbox_transaction.cpp
     test_sandbox_update.cpp
     test_sandbox_write_csv.cpp
-    test_sandboxed_path.cpp
     test_schema_validator.cpp
-    # resolve_sandboxed_path is internal to quiver (hidden, not exported), so SandboxedPathTest
+    # resolve_sandbox_path is internal to quiver (hidden, not exported), so SandboxPathTest
     # compiles its own copy. Keep path_policy.cpp to that one function: anything else the library
     # also uses would be defined twice in a static (QUIVER_BUILD_SHARED=OFF) link.
     ${CMAKE_SOURCE_DIR}/src/sandbox/path_policy.cpp

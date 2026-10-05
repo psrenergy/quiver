@@ -11,7 +11,7 @@ namespace quiver::lua_internal {
 // Resolves a script-supplied path against the database file's directory and enforces that the
 // result stays strictly inside it (subdirectories allowed). Returns the resolved absolute path.
 // `operation` is the public method name the user called (threaded into Pattern 1 messages).
-std::string resolve_sandboxed_path(const Database& db, const std::string& operation, const std::string& path) {
+std::string resolve_sandbox_path(const Database& db, const std::string& operation, const std::string& path) {
     namespace fs = std::filesystem;
 
     const std::string& db_path = db.path();

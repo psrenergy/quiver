@@ -7,10 +7,10 @@
 #include <system_error>
 
 namespace fs = std::filesystem;
-using quiver::lua_internal::resolve_sandboxed_path;
+using quiver::lua_internal::resolve_sandbox_path;
 
 // Calls the gate directly, without Lua. The suite name stays outside the Lua* filter.
-class SandboxedPathTest : public LuaSandboxTest {
+class SandboxPathTest : public LuaSandboxTest {
 protected:
     // What the gate prints: on macOS the temp dir sits behind the /var symlink, on Windows it can
     // be an 8.3 short name.
@@ -31,7 +31,7 @@ quiver::DatabaseOptions quiet() {
 
 std::string error_of(const quiver::Database& db, const std::string& operation, const std::string& path) {
     try {
-        resolve_sandboxed_path(db, operation, path);
+        resolve_sandbox_path(db, operation, path);
     } catch (const std::runtime_error& e) {
         return e.what();
     }
@@ -40,45 +40,45 @@ std::string error_of(const quiver::Database& db, const std::string& operation, c
 
 }  // namespace
 
-TEST_F(SandboxedPathTest, RelativePathResolvesInsideTheDatabaseDirectory) {
+TEST_F(SandboxPathTest, RelativePathResolvesInsideTheDatabaseDirectory) {
     quiver::Database db(db_path(), quiet());
-    EXPECT_EQ(resolve_sandboxed_path(db, "read_csv", "data.csv"), (root() / "data.csv").string());
+    EXPECT_EQ(resolve_sandbox_path(db, "read_csv", "data.csv"), (root() / "data.csv").string());
 }
 
-TEST_F(SandboxedPathTest, SubdirectoryIsAllowed) {
+TEST_F(SandboxPathTest, SubdirectoryIsAllowed) {
     quiver::Database db(db_path(), quiet());
-    EXPECT_EQ(resolve_sandboxed_path(db, "write_csv", "sub/data.csv"), (root() / "sub" / "data.csv").string());
+    EXPECT_EQ(resolve_sandbox_path(db, "write_csv", "sub/data.csv"), (root() / "sub" / "data.csv").string());
 }
 
-TEST_F(SandboxedPathTest, AbsolutePathInsideIsAllowed) {
+TEST_F(SandboxPathTest, AbsolutePathInsideIsAllowed) {
     quiver::Database db(db_path(), quiet());
     const auto inside = (sandbox / "abs.csv").string();  // not canonical on purpose
-    EXPECT_EQ(resolve_sandboxed_path(db, "open_file", inside), (root() / "abs.csv").string());
+    EXPECT_EQ(resolve_sandbox_path(db, "open_file", inside), (root() / "abs.csv").string());
 }
 
-TEST_F(SandboxedPathTest, DotDotThatStaysInsideIsAllowed) {
+TEST_F(SandboxPathTest, DotDotThatStaysInsideIsAllowed) {
     quiver::Database db(db_path(), quiet());
-    EXPECT_EQ(resolve_sandboxed_path(db, "read_csv", "sub/../data.csv"), (root() / "data.csv").string());
+    EXPECT_EQ(resolve_sandbox_path(db, "read_csv", "sub/../data.csv"), (root() / "data.csv").string());
 }
 
-TEST_F(SandboxedPathTest, DotDotEscapeIsRejected) {
+TEST_F(SandboxPathTest, DotDotEscapeIsRejected) {
     quiver::Database db(db_path(), quiet());
     EXPECT_EQ(error_of(db, "read_csv", "../outside.csv"), escapes("read_csv", "../outside.csv"));
 }
 
-TEST_F(SandboxedPathTest, NormalisedEscapeIsRejected) {
+TEST_F(SandboxPathTest, NormalisedEscapeIsRejected) {
     // "sub" does not exist; weakly_canonical still normalises the ".." lexically.
     quiver::Database db(db_path(), quiet());
     EXPECT_EQ(error_of(db, "export_csv", "sub/../../outside.csv"), escapes("export_csv", "sub/../../outside.csv"));
 }
 
-TEST_F(SandboxedPathTest, AbsolutePathOutsideIsRejected) {
+TEST_F(SandboxPathTest, AbsolutePathOutsideIsRejected) {
     quiver::Database db(db_path(), quiet());
-    const auto outside = (sandbox.parent_path() / "quiver_sandboxed_path_outside.csv").string();
+    const auto outside = (sandbox.parent_path() / "quiver_sandbox_path_outside.csv").string();
     EXPECT_EQ(error_of(db, "import_csv", outside), escapes("import_csv", outside));
 }
 
-TEST_F(SandboxedPathTest, RootItselfIsRejected) {
+TEST_F(SandboxPathTest, RootItselfIsRejected) {
     // The binary subsystem appends ".qvr" by concatenation, so the root would write "<root>.qvr" outside.
     quiver::Database db(db_path(), quiet());
     for (const std::string& path : {std::string("."), std::string("sub/.."), sandbox.string()}) {
@@ -86,7 +86,7 @@ TEST_F(SandboxedPathTest, RootItselfIsRejected) {
     }
 }
 
-TEST_F(SandboxedPathTest, SymlinkPointingOutsideIsRejected) {
+TEST_F(SandboxPathTest, SymlinkPointingOutsideIsRejected) {
     // The target is a sibling of the sandbox, so TearDown's remove_all(sandbox) only removes the link.
     const fs::path outside(sandbox.string() + "_outside");
     fs::remove_all(outside);
@@ -104,7 +104,7 @@ TEST_F(SandboxedPathTest, SymlinkPointingOutsideIsRejected) {
     fs::remove_all(outside);
 }
 
-TEST_F(SandboxedPathTest, InMemoryDatabaseIsRejectedBeforeContainment) {
+TEST_F(SandboxPathTest, InMemoryDatabaseIsRejectedBeforeContainment) {
     quiver::Database db(":memory:", quiet());
     const std::string in_memory = "Cannot save: database is in-memory, file operations are unavailable";
     EXPECT_EQ(error_of(db, "save", "out"), in_memory);
@@ -113,7 +113,7 @@ TEST_F(SandboxedPathTest, InMemoryDatabaseIsRejectedBeforeContainment) {
 
 #ifdef _WIN32
 // A device name makes weakly_canonical throw; the OS reason after the prefix is localized.
-TEST_F(SandboxedPathTest, DeviceNameIsReportedWithPrefix) {
+TEST_F(SandboxPathTest, DeviceNameIsReportedWithPrefix) {
     quiver::Database db(db_path(), quiet());
     for (const std::string& device : {std::string("NUL"), std::string("nul")}) {
         const auto prefix = "Cannot open_file: cannot resolve path '" + device + "': ";

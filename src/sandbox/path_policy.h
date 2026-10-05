@@ -11,7 +11,7 @@ namespace quiver::lua_internal {
 // script-supplied path against the database file's directory and requires the result to stay
 // strictly inside it; returns the resolved absolute path. No sol2 here: SandboxedPathTest
 // includes this header and compiles path_policy.cpp into quiver_tests.
-std::string resolve_sandboxed_path(const Database& db, const std::string& operation, const std::string& path);
+std::string resolve_sandbox_path(const Database& db, const std::string& operation, const std::string& path);
 
 }  // namespace quiver::lua_internal
 
