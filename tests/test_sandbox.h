@@ -27,20 +27,20 @@ class LuaSandboxTest : public ::testing::Test {
 protected:
     void SetUp() override {
         const auto* info = ::testing::UnitTest::GetInstance()->current_test_info();
-        sandbox = std::filesystem::temp_directory_path() /
+        sandbox_path = std::filesystem::temp_directory_path() /
                   (std::string("quiver_sandbox_") + info->test_suite_name() + "_" + info->name());
-        std::filesystem::remove_all(sandbox);
-        std::filesystem::create_directories(sandbox);
+        std::filesystem::remove_all(sandbox_path);
+        std::filesystem::create_directories(sandbox_path);
     }
     void TearDown() override {
-        std::filesystem::remove_all(sandbox);
+        std::filesystem::remove_all(sandbox_path);
     }
 
     std::string db_path() const {
-        return (sandbox / "test.db").string();
+        return (sandbox_path / "test.db").string();
     }
 
-    std::filesystem::path sandbox;
+    std::filesystem::path sandbox_path;
 };
 
 // Asserts that the script throws and that the error message carries the expected substring —
