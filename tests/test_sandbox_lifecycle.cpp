@@ -12,10 +12,10 @@ static_assert(
 
 // A move hands the heap Impl over whole, so the moved-to runner's bindings still reach the registries
 // that close every CSV writer and binary file at run() exit.
-class Sandbox_Lifecycle : public LuaSandboxTest {
+class Sandbox_Lifecycle : public SandboxTest {
 protected:
     void SetUp() override {
-        LuaSandboxTest::SetUp();
+        SandboxTest::SetUp();
         schema = VALID_SCHEMA("collections.sql");
     }
 

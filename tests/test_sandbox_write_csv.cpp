@@ -10,7 +10,7 @@
 namespace {
 
 // std::fstream accepts forward slashes on Windows; using them avoids escaping backslashes inside
-// embedded Lua string literals (mirrors LuaBinaryTest::lp / test_sandbox_read_csv.cpp's lp()).
+// embedded Lua string literals (mirrors SandboxBinaryTest::lp / test_sandbox_read_csv.cpp's lp()).
 std::string lp(const std::string& p) {
     std::string r = p;
     std::replace(r.begin(), r.end(), '\\', '/');
@@ -100,7 +100,7 @@ void expect_prefixed_error(
 // db:write_csv paths are sandboxed: relative paths resolve against the database directory, same
 // as every other file-touching Lua operation. Every correctness assertion in this suite reads the
 // emitted file back through db:read_csv and compares cells -- never by reading the raw file.
-class Sandbox_WriteCsv : public LuaSandboxTest {};
+class Sandbox_WriteCsv : public SandboxTest {};
 
 TEST_F(Sandbox_WriteCsv, WriteRowThenReadCsvRoundTripsPlainStrings) {
     auto schema = VALID_SCHEMA("basic.sql");
@@ -1373,7 +1373,7 @@ TEST_F(Sandbox_WriteCsv, ReferenceWorkedExampleRunsAndRoundTripsItsOwnData) {
 // The catalogue suite. Every assertion below checks a Pattern 1 PREFIX and a reason
 // substring separately (expect_prefixed_error above) -- never a bare substring -- so a write_csv
 // message can never satisfy a write_row assertion and vice versa.
-class Sandbox_WriteCsvErrors : public LuaSandboxTest {};
+class Sandbox_WriteCsvErrors : public SandboxTest {};
 
 TEST_F(Sandbox_WriteCsvErrors, NonFiniteNumberCellIsPrefixedWriteRowError) {
     auto schema = VALID_SCHEMA("basic.sql");

@@ -3,13 +3,13 @@
 #include <filesystem>
 #include <fstream>
 
-static void write_lua_csv_file(const std::string& path, const std::string& content) {
+static void write_sandbox_csv_file(const std::string& path, const std::string& content) {
     std::ofstream f(path, std::ios::binary);
     f << content;
 }
 
 // db:import_csv paths are sandboxed: relative paths resolve against the database directory.
-class Sandbox_ImportCSV : public LuaSandboxTest {};
+class Sandbox_ImportCSV : public SandboxTest {};
 
 TEST_F(Sandbox_ImportCSV, ScalarRoundTrip) {
     auto csv_schema = VALID_SCHEMA("csv_export.sql");
@@ -74,7 +74,7 @@ TEST_F(Sandbox_ImportCSV, ScalarHeaderOnlyClearsTable) {
     )");
 
     // Write header-only CSV
-    write_lua_csv_file((sandbox / "headeronly.csv").string(), "sep=,\nlabel,name,status,price,date_created,notes\n");
+    write_sandbox_csv_file((sandbox / "headeronly.csv").string(), "sep=,\nlabel,name,status,price,date_created,notes\n");
 
     sandbox.run(R"(db:import_csv("Items", "", "headeronly.csv"))");
 
@@ -89,7 +89,7 @@ TEST_F(Sandbox_ImportCSV, EnumResolution) {
     auto db = quiver::Database::from_schema(db_path(), csv_schema);
     quiver::Sandbox sandbox(db);
 
-    write_lua_csv_file(
+    write_sandbox_csv_file(
         (sandbox / "enum.csv").string(),
         "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,Active,,,\n"
     );
@@ -113,7 +113,7 @@ TEST_F(Sandbox_ImportCSV, DateTimeFormat) {
     auto db = quiver::Database::from_schema(db_path(), csv_schema);
     quiver::Sandbox sandbox(db);
 
-    write_lua_csv_file(
+    write_sandbox_csv_file(
         (sandbox / "datetime.csv").string(),
         "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,,,2024/01/15,\n"
     );
@@ -137,7 +137,7 @@ TEST_F(Sandbox_ImportCSV, OptionsAreStrict) {
     auto db = quiver::Database::from_schema(db_path(), csv_schema);
     quiver::Sandbox sandbox(db);
 
-    write_lua_csv_file(
+    write_sandbox_csv_file(
         (sandbox / "enum.csv").string(),
         "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,1,,,\n"
     );
@@ -176,7 +176,7 @@ TEST_F(Sandbox_ImportCSV, ScalarTrailingEmptyColumns) {
     auto db = quiver::Database::from_schema(db_path(), csv_schema);
     quiver::Sandbox sandbox(db);
 
-    write_lua_csv_file(
+    write_sandbox_csv_file(
         (sandbox / "trailing.csv").string(),
         "sep=,\n"
         "label,name,status,price,date_created,notes,,,,\n"
@@ -201,7 +201,7 @@ TEST_F(Sandbox_ImportCSV, VectorTrailingEmptyColumns) {
         db:create_element("Items", { label = "Item1", name = "Alpha" })
     )");
 
-    write_lua_csv_file(
+    write_sandbox_csv_file(
         (sandbox / "vectrailing.csv").string(),
         "sep=,\n"
         "id,vector_index,measurement,,,\n"
@@ -225,7 +225,7 @@ TEST_F(Sandbox_ImportCSV, OmittedElementDeletesItsGroupRows) {
         db:create_element("Items", { label = "Kept", name = "Beta", measurement = {9.5} })
     )");
 
-    write_lua_csv_file(
+    write_sandbox_csv_file(
         (sandbox / "subset.csv").string(),
         "sep=,\nlabel,name,status,price,date_created,notes\nKept,Beta,,,,\n"
     );
@@ -247,7 +247,7 @@ TEST_F(Sandbox_ImportCSV, InsideTransactionThrows) {
     auto db = quiver::Database::from_schema(db_path(), csv_schema);
     quiver::Sandbox sandbox(db);
 
-    write_lua_csv_file(
+    write_sandbox_csv_file(
         (sandbox / "intx.csv").string(),
         "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,,,,\n"
     );

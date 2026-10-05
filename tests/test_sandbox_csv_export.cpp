@@ -12,7 +12,7 @@ static std::string read_csv_file(const std::string& path) {
 }
 
 // db:export_csv paths are sandboxed: relative paths resolve against the database directory.
-class Sandbox_ExportCSV : public LuaSandboxTest {};
+class Sandbox_ExportCSV : public SandboxTest {};
 
 TEST_F(Sandbox_ExportCSV, ScalarDefaults) {
     auto csv_schema = VALID_SCHEMA("csv_export.sql");

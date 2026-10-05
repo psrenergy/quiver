@@ -12,10 +12,10 @@ namespace fs = std::filesystem;
 // Lua bindings for the expression subsystem (operators, unary math, ifelse, aggregate*,
 // select/rename_agents, save). Mirrors bindings/julia/test/test_expression.jl. Files live in the
 // db-directory sandbox (relative paths resolve against the database directory).
-class SandboxExpressionTest : public LuaSandboxTest {
+class SandboxExpressionTest : public SandboxTest {
 protected:
     void SetUp() override {
-        LuaSandboxTest::SetUp();
+        SandboxTest::SetUp();
         schema = VALID_SCHEMA("collections.sql");
     }
 

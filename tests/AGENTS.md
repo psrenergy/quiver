@@ -45,12 +45,12 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   move-assign): handles a script opens after the move still close at that `run()`'s exit, both while the
   moved-from runner is alive and after it has been destroyed, and a file-scope `static_assert` that
   `Sandbox` is pointer-sized keeps run state inside its `Impl` in Release too, where the freed-source
-  pins alone do not reliably fail. The shared `SandboxTest` and `LuaSandboxTest` fixtures,
+  pins alone do not reliably fail. The shared `SandboxTest` and `SandboxTest` fixtures,
   the `expect_lua_error` helper (throw + message-substring assert — plain `EXPECT_THROW` passes
   vacuously when a removed function raises "attempt to call a nil value"), and the common include
   prelude live in `test_sandbox.h`; the single-use `SandboxAllTypesTest` / `SandboxFkTest`
   fixtures stay local to their files. Lua file operations are sandboxed to the database directory
-  (root design decision), so every file-touching Lua test uses `LuaSandboxTest`: a file-backed db
+  (root design decision), so every file-touching Lua test uses `SandboxTest`: a file-backed db
   in a dedicated per-test temp dir, with scripts passing relative paths. The Lua binary/expression
   subsystem bindings (and the sandbox itself) are covered by `test_lua_binary.cpp` and
   `test_lua_expression.cpp`.
@@ -75,7 +75,7 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   (parsing, the `separator`/`header_row` options, and the sandbox/error-catalogue negatives) —
   there is no C++ core, C API, or other-binding counterpart to mirror (root design decision), so
   this suite has no sibling elsewhere. Most of its CSV fixtures are still written at runtime into
-  the `LuaSandboxTest` sandbox, since they exist only to be read back once. **`tests/fixtures/`**
+  the `SandboxTest` sandbox, since they exist only to be read back once. **`tests/fixtures/`**
   is the one exception: `ma_energia_residencial.csv` and `ma_gd_data.csv` are two real Maranhão
   utility files committed byte-exact, copied into the sandbox by the tests that
   read them rather than generated inline. They are committed rather than hand-written because

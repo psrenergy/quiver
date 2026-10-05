@@ -3,7 +3,7 @@
 #include <filesystem>
 
 // db:validate_migrations paths are sandboxed: relative paths resolve against the database directory.
-class Sandbox_Migrations : public LuaSandboxTest {};
+class Sandbox_Migrations : public SandboxTest {};
 
 TEST_F(Sandbox_Migrations, AppliesAndRevertsSharedFixture) {
     std::filesystem::copy(

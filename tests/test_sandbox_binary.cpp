@@ -14,10 +14,10 @@ namespace fs = std::filesystem;
 // Lua bindings for the binary subsystem (quiver.metadata / db:open_file / db:bin_to_csv) and the
 // db-directory sandbox on every file-touching operation.
 // Mirrors the Julia coverage in bindings/julia/test/test_binary_file.jl + test_binary_metadata.jl.
-class SandboxBinaryTest : public LuaSandboxTest {
+class SandboxBinaryTest : public SandboxTest {
 protected:
     void SetUp() override {
-        LuaSandboxTest::SetUp();
+        SandboxTest::SetUp();
         schema = VALID_SCHEMA("collections.sql");
     }
 
