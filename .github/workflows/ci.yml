@@ -74,7 +74,6 @@ jobs:
           files: coverage.info
           flags: cpp
           fail_ci_if_error: true
-          use_pypi: true
           disable_search: true
           # The CLI's gcov plugin would re-run gcov over build/ and upload tests/ and _deps/.
           plugins: noop
@@ -119,7 +118,6 @@ jobs:
           files: lcov.info
           flags: julia
           fail_ci_if_error: true
-          use_pypi: true
           disable_search: true
           token: ${{ secrets.CODECOV_TOKEN }}
 
@@ -159,7 +157,6 @@ jobs:
           files: bindings/dart/coverage/lcov.info
           flags: dart
           fail_ci_if_error: true
-          use_pypi: true
           disable_search: true
           token: ${{ secrets.CODECOV_TOKEN }}
 
@@ -194,7 +191,6 @@ jobs:
           files: bindings/python/coverage.xml
           flags: python
           fail_ci_if_error: true
-          use_pypi: true
           disable_search: true
           token: ${{ secrets.CODECOV_TOKEN }}
 
@@ -276,6 +272,5 @@ jobs:
           files: bindings/js/coverage/lcov.info
           flags: js
           fail_ci_if_error: true
-          use_pypi: true
           disable_search: true
           token: ${{ secrets.CODECOV_TOKEN }}

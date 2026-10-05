@@ -69,11 +69,8 @@ target_link_libraries(quiver_tests
 # path_policy.cpp and the test include "lua_runner/path_policy.h".
 target_include_directories(quiver_tests PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
-# Discovery runs the freshly linked test binary to list its tests; on a slow Windows CI runner that
-# has exceeded CMake's default 5 s timeout and failed the build.
 gtest_discover_tests(quiver_tests
     WORKING_DIRECTORY $<TARGET_FILE_DIR:quiver_tests>
-    DISCOVERY_TIMEOUT 60
 )
 
 # C API tests
