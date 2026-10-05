@@ -36,7 +36,7 @@ tech_debt:
       - "No plan SUMMARY.md in phases 6-9 carries requirements-completed frontmatter; the 3-source cross-check fell back to VERIFICATION.md evidence + PLAN requirements + REQUIREMENTS.md checkboxes"
 security:
   status: closed
-  note: "/gsd-secure-phase run for phases 6-9 after the first audit pass: 39 threats, 39 closed (32 mitigated, 7 accepted), threats_open 0 in every phase (06/07/08/09-SECURITY.md)"
+  note: "/gsd-secure-phase run for phases 6-9 after the first audit pass: 39 threats, 39 closed (33 mitigated, 6 accepted), threats_open 0 in every phase (06/07/08/09-SECURITY.md)"
 nyquist:
   skipped: "validate-phase capability inactive (workflow.nyquist_validation: false)"
 ---
