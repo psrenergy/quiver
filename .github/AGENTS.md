@@ -25,6 +25,13 @@ compiles to a regex that needs a subdirectory and never matches `dir`'s own file
 reports test files in coverage despite its docs, so `bindings/js/bunfig.toml` sets
 `coverageSkipTestFiles` explicitly.
 
+**Codecov uploads install the CLI from PyPI** (`use_pypi: true` on every step). By default the
+action downloads the binary from `cli.codecov.io`. When that host started failing TLS handshakes
+(October 2026), every coverage job went red even though all its tests passed. `use_pypi` makes the
+action `pip install codecov-cli` and skip the GPG check of the downloaded binary, so integrity now
+rests on PyPI's TLS. No setup step is needed: GitHub's Ubuntu 24.04 image sets
+`break-system-packages = true` in `/etc/pip.conf`.
+
 Composite actions in `.github/actions/`:
 - `build-cpp` — configure/build the core + C API with a FetchContent source cache. The cache key
   includes a **toolchain fingerprint** (default CMake generator): FetchContent subbuilds pin the
