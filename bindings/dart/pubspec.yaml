@@ -23,6 +23,14 @@ ffigen:
   name: QuiverDatabaseBindings
   description: FFI bindings for Quiver C API
   output: 'lib/src/ffi/bindings.dart'
+  llvm-path:
+    - 'C:\Program Files\Microsoft Visual Studio\18\Community\VC\Tools\Llvm\x64'
+  enums:
+    as-int:
+      include:
+        - quiver_error_t
+        - quiver_log_level_t
+        - quiver_data_type_t
   headers:
     entry-points:
       - '../../include/quiver/c/common.h'

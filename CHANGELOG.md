@@ -97,6 +97,9 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ### Fixed
 
+- Dart FFI generation finds the existing Visual Studio 18 Community LLVM installation on Windows
+  and preserves integer enum constants with ffigen 20.1.1. The element wrapper uses the canonical
+  typedef so regeneration's duplicate-alias naming no longer breaks compilation.
 - **A non-string key in a Lua table argument is a Pattern 1 error.** A number or boolean key in an
   element table, a time-series row, a `file:read`/`file:write` `dims` table or the `paths` of
   `update_time_series_files` now raises `Cannot <op>: <attribute|column|dimension> name must be a

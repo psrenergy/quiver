@@ -24,23 +24,17 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   **pubspec.yaml** (plain `dart run ffigen` reads only that); the sibling `ffigen.yaml` is an
   unused duplicate consulted only via an explicit `--config` flag — editing it alone changes
   nothing.
-- **The checked-in `bindings.dart` predates the pinned ffigen (20.1.1).** Regenerating today
-  rewrites the whole file and turns `quiver_data_type_t` / `quiver_error_t` / `quiver_log_level_t`
-  from `abstract class` int constants into real Dart `enum`s (and the native return type from
-  `Int32` to `UnsignedInt`). That is a breaking change for every downstream `== quiver_data_type_t.X`
-  comparison — notably hub's `lib/models/database.dart`. The `update_vector_group` /
-  `update_set_group` entries were therefore hand-added in the file's existing style, and
-  `quiver_database_number_of_elements` likewise (hand-added right after
-  `quiver_database_read_element_ids`, matching the C API's declaration order), as were
-  `quiver_database_update_element_by_label`, the three group writers' `_by_label` forms,
-  `quiver_database_upsert_time_series_row` plus its `_by_label` form,
-  `quiver_database_update_relation` plus its `_by_label` form, and the `out_mask` parameter of
-  `quiver_database_read_time_series_row`. The query entry points were collapsed the same way:
-  the three plain `quiver_database_query_{string,integer,float}` blocks were deleted and the
-  parameterized blocks renamed onto those names. Removals are hand-deleted the same way
-  (`quiver_clear_last_error` and the four `quiver_element_*` has/count accessors).
-  Take the generator upgrade as its own deliberate change (regenerate, then fix the enum call
-  sites here and in hub) rather than as a side effect of adding a C function.
+- **LLVM for ffigen**: `pubspec.yaml` points `llvm-path` at Visual Studio 18 Community's
+  `VC/Tools/Llvm/x64` directory, which contains `bin/libclang.dll`. ffigen 20.1.1 does not
+  search that installation by default; adjust the path for a different Visual Studio install.
+  If it is absent, ffigen falls back to its default LLVM locations on the current platform.
+- **Keep C enums as integer constants**: `enums.as-int.include` lists `quiver_error_t`,
+  `quiver_log_level_t` and `quiver_data_type_t`. Without it, ffigen 20.1.1 generates Dart
+  enums and breaks the wrappers' and downstream callers' integer comparisons. Regenerate
+  `bindings.dart` after C API changes rather than hand-adding declarations.
+- **Use the canonical `quiver_element_t` alias** in wrappers. The C headers declare it twice,
+  so ffigen also emits a duplicate whose generated suffix can change between versions
+  (`quiver_element_t1` in the old output, `quiver_element_t$1` in 20.1.1).
 - **Native library resolution** (`lib/src/ffi/library_loader.dart`), three tiers in order:
   (1) the native-assets build output (`.dart_tool/hooks_runner/shared/quiverdb/build`) — on
   Windows it pre-loads `libquiver.dll` from there so `libquiver_c.dll`'s dependency resolves;
