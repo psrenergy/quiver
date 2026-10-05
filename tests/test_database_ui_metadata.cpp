@@ -27,7 +27,7 @@ const char* kTooltipClauseOpener = "; tooltip";
 class UiTempTreeFixture : public ::testing::Test {
 protected:
     void SetUp() override {
-        // Per-test directory name, the SandboxTest idiom (tests/test_sandbox.h): a single
+        // Per-test directory name, the LuaSandboxTest idiom (tests/test_sandbox.h): a single
         // fixed name is shared by every test in the file *and* by any concurrent run of the
         // binary, so one test's SetUp can remove_all another's live migrations tree mid-run.
         const auto* info = ::testing::UnitTest::GetInstance()->current_test_info();

@@ -10,7 +10,7 @@ namespace fs = std::filesystem;
 using quiver::lua_internal::resolve_sandbox_path;
 
 // Calls the gate directly, without Lua. The suite name stays outside the Lua* filter.
-class SandboxPathTest : public SandboxTest {
+class SandboxPathTest : public LuaSandboxTest {
 protected:
     // What the gate prints: on macOS the temp dir sits behind the /var symlink, on Windows it can
     // be an 8.3 short name.

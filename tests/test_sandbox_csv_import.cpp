@@ -9,7 +9,7 @@ static void write_sandbox_csv_file(const std::string& path, const std::string& c
 }
 
 // db:import_csv paths are sandboxed: relative paths resolve against the database directory.
-class Sandbox_ImportCSV : public SandboxTest {};
+class Sandbox_ImportCSV : public LuaSandboxTest {};
 
 TEST_F(Sandbox_ImportCSV, ScalarRoundTrip) {
     auto csv_schema = VALID_SCHEMA("csv_export.sql");
