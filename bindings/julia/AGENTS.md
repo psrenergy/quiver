@@ -158,9 +158,11 @@ Project.toml      # Deps: Artifacts, CEnum, Dates, Libdl; julia 1.11 compat
   outlives a later `close!` of its file — but a closed `Binary.File` is itself not an operand:
   `close!` frees the C handle, so it raises `Null argument` (unlike Lua, where a closed file is
   still read by path). The file is passed to `GC.@preserve` across `quiver_expression_from_file`,
-  and every converted handle across its operation's ccall. `get_metadata` is one generic owned by `Binary` and imported into `Quiver`
-  before `include("expression.jl")` (an import after the definition is a load error), so a file
-  answers with its handle's metadata, never through the conversion. There is no public
+  and every converted handle across its operation's ccall. `get_metadata` is one generic owned by
+  `Binary` and imported into `Quiver` before `include("expression.jl")` (an import after the
+  definition is a load error), so a file answers with its handle's metadata, never through the
+  conversion: an unopened `Binary.File(path)` reports its handle's empty metadata, while an
+  expression built from it reads the file's metadata from disk. There is no public
   `Expression(::Expression)`: closing the result would close the argument. Do not re-add
   per-type methods for the file type — that was 97 forwarders.
 - **Scoped resource factories**: `open`, `from_schema`, `from_migrations`, and
