@@ -185,7 +185,7 @@ Dart `database_read_scalar_test.dart`, JS `database-read-scalar.test.ts`, Python
 `test_database_read_scalar.py`). JS and Python have no `metadata` time-series file; the C++ core
 has no `nulls` file. JS Database-operation test files carry a `database-` prefix
 (`database-create.test.ts`, `database-lifecycle.test.ts`, …) to match the other bindings; the
-non-Database files (`composites.test.ts`, `introspection.test.ts`, `lua-runner.test.ts`,
+non-Database files (`composites.test.ts`, `introspection.test.ts`, `sandbox.test.ts`,
 `lua-api-sync.test.ts`, `package-entry.test.ts`) keep their bare names.
 
 `bindings/js/test/lua-api-sync.test.ts` is the only JS test file that needs neither a database nor

@@ -11,7 +11,7 @@ in `.github/AGENTS.md`.
 mod.ts            # Package entry point (re-exports src/index.ts)
 src/              # Module per C API category: database.ts, create.ts, read.ts, metadata.ts,
                   # query.ts, time-series.ts, transaction.ts, csv.ts, introspection.ts,
-                  # composites.ts, lua-runner.ts (index.ts re-exports the public surface)
+                  # composites.ts, sandbox.ts (index.ts re-exports the public surface)
 src/lua-api.ts    # LUA_DB_API_REFERENCE — agent-facing Lua `db:` API reference, as a string const
 src/group-columns.ts # Shared columnar marshaller (group writers) and decoder (group readers),
                      # plus numericCells, the per-cell numeric check setElementArray shares

@@ -10,72 +10,72 @@ const SCHEMA_PATH = join(__dirname, "..", "..", "..", "tests", "schemas", "valid
 describe("Sandbox", () => {
   test("create element from Lua and verify via JS", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
-    const runner = new Sandbox(db);
+    const sandbox = new Sandbox(db);
     try {
-      runner.run('db:create_element("AllTypes", { label = "FromLua" })');
+      sandbox.run('db:create_element("AllTypes", { label = "FromLua" })');
       const labels = db.readScalarStrings("AllTypes", "label");
       expect(labels.includes("FromLua")).toBeTruthy();
     } finally {
-      runner.close();
+      sandbox.close();
       db.close();
     }
   });
 
   test("Lua syntax error throws QuiverError", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
-    const runner = new Sandbox(db);
+    const sandbox = new Sandbox(db);
     try {
-      expect(() => runner.run("if then")).toThrow(QuiverError);
+      expect(() => sandbox.run("if then")).toThrow(QuiverError);
     } finally {
-      runner.close();
+      sandbox.close();
       db.close();
     }
   });
 
   test("Lua runtime error throws QuiverError", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
-    const runner = new Sandbox(db);
+    const sandbox = new Sandbox(db);
     try {
-      expect(() => runner.run("local x = nil; x.field = 1")).toThrow(QuiverError);
+      expect(() => sandbox.run("local x = nil; x.field = 1")).toThrow(QuiverError);
     } finally {
-      runner.close();
+      sandbox.close();
       db.close();
     }
   });
 
-  test("multiple run calls on same runner succeed", () => {
+  test("multiple run calls on same sandbox succeed", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
-    const runner = new Sandbox(db);
+    const sandbox = new Sandbox(db);
     try {
-      runner.run('db:create_element("AllTypes", { label = "First" })');
-      runner.run('db:create_element("AllTypes", { label = "Second" })');
+      sandbox.run('db:create_element("AllTypes", { label = "First" })');
+      sandbox.run('db:create_element("AllTypes", { label = "Second" })');
       const labels = db.readScalarStrings("AllTypes", "label");
       expect(labels.length).toEqual(2);
     } finally {
-      runner.close();
+      sandbox.close();
       db.close();
     }
   });
 
   test("empty script succeeds", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
-    const runner = new Sandbox(db);
+    const sandbox = new Sandbox(db);
     try {
       // If this throws, the test fails automatically
-      runner.run("");
+      sandbox.run("");
     } finally {
-      runner.close();
+      sandbox.close();
       db.close();
     }
   });
 
   test("close is idempotent", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
-    const runner = new Sandbox(db);
+    const sandbox = new Sandbox(db);
     try {
-      runner.close();
+      sandbox.close();
       // Second close should not throw
-      runner.close();
+      sandbox.close();
     } finally {
       db.close();
     }
@@ -83,10 +83,10 @@ describe("Sandbox", () => {
 
   test("run after close throws QuiverError", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
-    const runner = new Sandbox(db);
+    const sandbox = new Sandbox(db);
     try {
-      runner.close();
-      expect(() => runner.run("print('hello')")).toThrow(QuiverError);
+      sandbox.close();
+      expect(() => sandbox.run("print('hello')")).toThrow(QuiverError);
     } finally {
       db.close();
     }
@@ -96,23 +96,23 @@ describe("Sandbox", () => {
 describe("Sandbox return values", () => {
   test("returns the script's value as JSON", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
-    const runner = new Sandbox(db);
+    const sandbox = new Sandbox(db);
     try {
-      expect(runner.run("return { a = 1, b = { 2, 3 } }")).toBe('{"a":1,"b":[2,3]}');
-      expect(JSON.parse(runner.run("return db:read_element_ids('AllTypes')"))).toEqual([]);
+      expect(sandbox.run("return { a = 1, b = { 2, 3 } }")).toBe('{"a":1,"b":[2,3]}');
+      expect(JSON.parse(sandbox.run("return db:read_element_ids('AllTypes')"))).toEqual([]);
     } finally {
-      runner.close();
+      sandbox.close();
       db.close();
     }
   });
 
   test("returns an empty string when the script returns nothing", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
-    const runner = new Sandbox(db);
+    const sandbox = new Sandbox(db);
     try {
-      expect(runner.run("local x = 1")).toBe("");
+      expect(sandbox.run("local x = 1")).toBe("");
     } finally {
-      runner.close();
+      sandbox.close();
       db.close();
     }
   });
@@ -121,14 +121,14 @@ describe("Sandbox return values", () => {
 describe("Database dry run", () => {
   test("rolls back a script's writes", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
-    const runner = new Sandbox(db);
+    const sandbox = new Sandbox(db);
     try {
       expect(db.inDryRun()).toBe(false);
       db.beginDryRun();
       expect(db.inDryRun()).toBe(true);
 
       // db:transaction composes: the dry run absorbs the nested BEGIN/COMMIT.
-      const result = runner.run(`
+      const result = sandbox.run(`
         db:transaction(function(db)
           db:create_element("AllTypes", { label = "Preview" })
         end)
@@ -140,7 +140,7 @@ describe("Database dry run", () => {
       expect(db.inDryRun()).toBe(false);
       expect(db.readScalarStrings("AllTypes", "label")).toEqual([]);
     } finally {
-      runner.close();
+      sandbox.close();
       db.close();
     }
   });

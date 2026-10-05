@@ -1,5 +1,5 @@
-#ifndef QUIVER_TEST_LUA_RUNNER_H
-#define QUIVER_TEST_LUA_RUNNER_H
+#ifndef QUIVER_TEST_SANDBOX_H
+#define QUIVER_TEST_SANDBOX_H
 
 #include "test_utils.h"
 
@@ -54,4 +54,4 @@ inline void expect_lua_error(quiver::Sandbox& lua, const std::string& script, co
     }
 }
 
-#endif  // QUIVER_TEST_LUA_RUNNER_H
+#endif  // QUIVER_TEST_SANDBOX_H

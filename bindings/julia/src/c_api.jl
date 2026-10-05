@@ -553,16 +553,16 @@ mutable struct quiver_sandbox end
 
 const quiver_sandbox_t = quiver_sandbox
 
-function quiver_sandbox_new(db, out_runner)
-    @ccall libquiver_c.quiver_sandbox_new(db::Ptr{quiver_database_t}, out_runner::Ptr{Ptr{quiver_sandbox_t}})::quiver_error_t
+function quiver_sandbox_new(db, out_sandbox)
+    @ccall libquiver_c.quiver_sandbox_new(db::Ptr{quiver_database_t}, out_sandbox::Ptr{Ptr{quiver_sandbox_t}})::quiver_error_t
 end
 
-function quiver_sandbox_free(runner)
-    @ccall libquiver_c.quiver_sandbox_free(runner::Ptr{quiver_sandbox_t})::quiver_error_t
+function quiver_sandbox_free(sandbox)
+    @ccall libquiver_c.quiver_sandbox_free(sandbox::Ptr{quiver_sandbox_t})::quiver_error_t
 end
 
-function quiver_sandbox_run(runner, script, out_result)
-    @ccall libquiver_c.quiver_sandbox_run(runner::Ptr{quiver_sandbox_t}, script::Ptr{Cchar}, out_result::Ptr{Ptr{Cchar}})::quiver_error_t
+function quiver_sandbox_run(sandbox, script, out_result)
+    @ccall libquiver_c.quiver_sandbox_run(sandbox::Ptr{quiver_sandbox_t}, script::Ptr{Cchar}, out_result::Ptr{Ptr{Cchar}})::quiver_error_t
 end
 
 function quiver_sandbox_free_string(str)

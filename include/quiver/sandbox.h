@@ -1,5 +1,5 @@
-#ifndef QUIVER_LUA_RUNNER_H
-#define QUIVER_LUA_RUNNER_H
+#ifndef QUIVER_SANDBOX_H
+#define QUIVER_SANDBOX_H
 
 #include "export.h"
 
@@ -39,4 +39,4 @@ private:
 
 }  // namespace quiver
 
-#endif  // QUIVER_LUA_RUNNER_H
+#endif  // QUIVER_SANDBOX_H

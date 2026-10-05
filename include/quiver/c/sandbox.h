@@ -1,5 +1,5 @@
-#ifndef QUIVER_C_LUA_RUNNER_H
-#define QUIVER_C_LUA_RUNNER_H
+#ifndef QUIVER_C_SANDBOX_H
+#define QUIVER_C_SANDBOX_H
 
 #include "common.h"
 #include "database.h"
@@ -12,10 +12,10 @@ extern "C" {
 typedef struct quiver_sandbox quiver_sandbox_t;
 
 // Create a new Sandbox for the given database
-QUIVER_C_API quiver_error_t quiver_sandbox_new(quiver_database_t* db, quiver_sandbox_t** out_runner);
+QUIVER_C_API quiver_error_t quiver_sandbox_new(quiver_database_t* db, quiver_sandbox_t** out_sandbox);
 
 // Destroy a Sandbox
-QUIVER_C_API quiver_error_t quiver_sandbox_free(quiver_sandbox_t* runner);
+QUIVER_C_API quiver_error_t quiver_sandbox_free(quiver_sandbox_t* sandbox);
 
 // Run a Lua script
 // out_result receives the script's return value encoded as JSON, or an empty string if the script
@@ -25,7 +25,7 @@ QUIVER_C_API quiver_error_t quiver_sandbox_free(quiver_sandbox_t* runner);
 // quiver_database_begin_dry_run / quiver_database_end_dry_run.
 // Returns QUIVER_OK on success, or an error code on failure.
 // On failure the error message is available via quiver_get_last_error().
-QUIVER_C_API quiver_error_t quiver_sandbox_run(quiver_sandbox_t* runner, const char* script, char** out_result);
+QUIVER_C_API quiver_error_t quiver_sandbox_run(quiver_sandbox_t* sandbox, const char* script, char** out_result);
 
 // Free a string returned by quiver_sandbox_run. NULL-tolerant.
 QUIVER_C_API quiver_error_t quiver_sandbox_free_string(char* str);
@@ -34,4 +34,4 @@ QUIVER_C_API quiver_error_t quiver_sandbox_free_string(char* str);
 }
 #endif
 
-#endif  // QUIVER_C_LUA_RUNNER_H
+#endif  // QUIVER_C_SANDBOX_H

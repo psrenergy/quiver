@@ -3336,11 +3336,11 @@ class QuiverDatabaseBindings {
 
   int quiver_sandbox_new(
     ffi.Pointer<quiver_database_t> db,
-    ffi.Pointer<ffi.Pointer<quiver_sandbox_t>> out_runner,
+    ffi.Pointer<ffi.Pointer<quiver_sandbox_t>> out_sandbox,
   ) {
     return _quiver_sandbox_new(
       db,
-      out_runner,
+      out_sandbox,
     );
   }
 
@@ -3354,10 +3354,10 @@ class QuiverDatabaseBindings {
       .asFunction<int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Pointer<quiver_sandbox_t>>)>();
 
   int quiver_sandbox_free(
-    ffi.Pointer<quiver_sandbox_t> runner,
+    ffi.Pointer<quiver_sandbox_t> sandbox,
   ) {
     return _quiver_sandbox_free(
-      runner,
+      sandbox,
     );
   }
 
@@ -3367,12 +3367,12 @@ class QuiverDatabaseBindings {
       .asFunction<int Function(ffi.Pointer<quiver_sandbox_t>)>();
 
   int quiver_sandbox_run(
-    ffi.Pointer<quiver_sandbox_t> runner,
+    ffi.Pointer<quiver_sandbox_t> sandbox,
     ffi.Pointer<ffi.Char> script,
     ffi.Pointer<ffi.Pointer<ffi.Char>> out_result,
   ) {
     return _quiver_sandbox_run(
-      runner,
+      sandbox,
       script,
       out_result,
     );
