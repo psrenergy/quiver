@@ -10,10 +10,10 @@ include("fixture.jl")
         path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
         db = Quiver.from_schema(":memory:", path_schema)
 
-        lua = Quiver.Sandbox(db)
+        sandbox = Quiver.Sandbox(db)
 
         Quiver.run!(
-            lua,
+            sandbox,
             """
         db:create_element("Configuration", { label = "Test Config" })
         db:create_element("Collection", { label = "Item 1", some_integer = 42 })
@@ -28,11 +28,11 @@ include("fixture.jl")
         @test length(integers) == 1
         @test integers[1] == 42
 
-        Quiver.close!(lua)
+        Quiver.close!(sandbox)
         Quiver.close!(db)
     end
 
-    @testset "Read from Lua" begin
+    @testset "Read from Sandbox" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
         db = Quiver.from_schema(":memory:", path_schema)
 
@@ -40,10 +40,10 @@ include("fixture.jl")
         Quiver.create_element!(db, "Collection"; label = "Item 1", some_integer = 10)
         Quiver.create_element!(db, "Collection"; label = "Item 2", some_integer = 20)
 
-        lua = Quiver.Sandbox(db)
+        sandbox = Quiver.Sandbox(db)
 
         Quiver.run!(
-            lua,
+            sandbox,
             """
         local labels = db:read_scalar_strings("Collection", "label")
         assert(#labels == 2, "Expected 2 labels")
@@ -52,7 +52,7 @@ include("fixture.jl")
     """,
         )
 
-        Quiver.close!(lua)
+        Quiver.close!(sandbox)
         Quiver.close!(db)
     end
 
@@ -60,11 +60,11 @@ include("fixture.jl")
         path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
         db = Quiver.from_schema(":memory:", path_schema)
 
-        lua = Quiver.Sandbox(db)
+        sandbox = Quiver.Sandbox(db)
 
-        @test_throws Quiver.DatabaseException Quiver.run!(lua, "invalid syntax !!!")
+        @test_throws Quiver.DatabaseException Quiver.run!(sandbox, "invalid syntax !!!")
 
-        Quiver.close!(lua)
+        Quiver.close!(sandbox)
         Quiver.close!(db)
     end
 
@@ -72,18 +72,18 @@ include("fixture.jl")
         path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
         db = Quiver.from_schema(":memory:", path_schema)
 
-        lua = Quiver.Sandbox(db)
+        sandbox = Quiver.Sandbox(db)
 
-        Quiver.run!(lua, """db:create_element("Configuration", { label = "Config" })""")
-        Quiver.run!(lua, """db:create_element("Collection", { label = "Item 1" })""")
-        Quiver.run!(lua, """db:create_element("Collection", { label = "Item 2" })""")
+        Quiver.run!(sandbox, """db:create_element("Configuration", { label = "Config" })""")
+        Quiver.run!(sandbox, """db:create_element("Collection", { label = "Item 1" })""")
+        Quiver.run!(sandbox, """db:create_element("Collection", { label = "Item 2" })""")
 
         labels = Quiver.read_scalar_strings(db, "Collection", "label")
         @test length(labels) == 2
         @test labels[1] == "Item 1"
         @test labels[2] == "Item 2"
 
-        Quiver.close!(lua)
+        Quiver.close!(sandbox)
         Quiver.close!(db)
     end
 
@@ -93,12 +93,12 @@ include("fixture.jl")
         path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
         db = Quiver.from_schema(":memory:", path_schema)
 
-        lua = Quiver.Sandbox(db)
+        sandbox = Quiver.Sandbox(db)
 
         # Script that references undefined variable
-        @test_throws Quiver.DatabaseException Quiver.run!(lua, "print(undefined_variable.field)")
+        @test_throws Quiver.DatabaseException Quiver.run!(sandbox, "print(undefined_variable.field)")
 
-        Quiver.close!(lua)
+        Quiver.close!(sandbox)
         Quiver.close!(db)
     end
 
@@ -106,17 +106,17 @@ include("fixture.jl")
         path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
         db = Quiver.from_schema(":memory:", path_schema)
 
-        lua = Quiver.Sandbox(db)
+        sandbox = Quiver.Sandbox(db)
 
-        Quiver.run!(lua, """db:create_element("Configuration", { label = "Test Config" })""")
+        Quiver.run!(sandbox, """db:create_element("Configuration", { label = "Test Config" })""")
 
         # Script that creates element in nonexistent collection
         @test_throws Quiver.DatabaseException Quiver.run!(
-            lua,
+            sandbox,
             """db:create_element("NonexistentCollection", { label = "Item" })""",
         )
 
-        Quiver.close!(lua)
+        Quiver.close!(sandbox)
         Quiver.close!(db)
     end
 
@@ -124,13 +124,13 @@ include("fixture.jl")
         path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
         db = Quiver.from_schema(":memory:", path_schema)
 
-        lua = Quiver.Sandbox(db)
+        sandbox = Quiver.Sandbox(db)
 
         # Empty script should succeed without error
-        Quiver.run!(lua, "")
+        Quiver.run!(sandbox, "")
         @test true  # If we get here, the empty script ran without error
 
-        Quiver.close!(lua)
+        Quiver.close!(sandbox)
         Quiver.close!(db)
     end
 
@@ -138,13 +138,13 @@ include("fixture.jl")
         path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
         db = Quiver.from_schema(":memory:", path_schema)
 
-        lua = Quiver.Sandbox(db)
+        sandbox = Quiver.Sandbox(db)
 
         # Comment-only script should succeed
-        Quiver.run!(lua, "-- this is just a comment")
+        Quiver.run!(sandbox, "-- this is just a comment")
         @test true
 
-        Quiver.close!(lua)
+        Quiver.close!(sandbox)
         Quiver.close!(db)
     end
 
@@ -156,10 +156,10 @@ include("fixture.jl")
         Quiver.create_element!(db, "Collection"; label = "Item 1", some_integer = 100)
         Quiver.create_element!(db, "Collection"; label = "Item 2", some_integer = 200)
 
-        lua = Quiver.Sandbox(db)
+        sandbox = Quiver.Sandbox(db)
 
         Quiver.run!(
-            lua,
+            sandbox,
             """
         local ints = db:read_scalar_integers("Collection", "some_integer")
         assert(#ints == 2, "Expected 2 integers")
@@ -168,7 +168,7 @@ include("fixture.jl")
     """,
         )
 
-        Quiver.close!(lua)
+        Quiver.close!(sandbox)
         Quiver.close!(db)
     end
 
@@ -180,10 +180,10 @@ include("fixture.jl")
         Quiver.create_element!(db, "Collection"; label = "Item 1", some_float = 1.5)
         Quiver.create_element!(db, "Collection"; label = "Item 2", some_float = 2.5)
 
-        lua = Quiver.Sandbox(db)
+        sandbox = Quiver.Sandbox(db)
 
         Quiver.run!(
-            lua,
+            sandbox,
             """
         local floats = db:read_scalar_floats("Collection", "some_float")
         assert(#floats == 2, "Expected 2 floats")
@@ -192,7 +192,7 @@ include("fixture.jl")
     """,
         )
 
-        Quiver.close!(lua)
+        Quiver.close!(sandbox)
         Quiver.close!(db)
     end
 
@@ -203,10 +203,10 @@ include("fixture.jl")
         Quiver.create_element!(db, "Configuration"; label = "Config")
         Quiver.create_element!(db, "Collection"; label = "Item 1", value_int = [1, 2, 3])
 
-        lua = Quiver.Sandbox(db)
+        sandbox = Quiver.Sandbox(db)
 
         Quiver.run!(
-            lua,
+            sandbox,
             """
         local vectors = db:read_vector_integers("Collection", "value_int")
         assert(#vectors == 1, "Expected 1 vector")
@@ -217,7 +217,7 @@ include("fixture.jl")
     """,
         )
 
-        Quiver.close!(lua)
+        Quiver.close!(sandbox)
         Quiver.close!(db)
     end
 
@@ -225,10 +225,10 @@ include("fixture.jl")
         path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
         db = Quiver.from_schema(":memory:", path_schema)
 
-        lua = Quiver.Sandbox(db)
+        sandbox = Quiver.Sandbox(db)
 
         Quiver.run!(
-            lua,
+            sandbox,
             """
         db:create_element("Configuration", { label = "Config" })
         db:create_element("Collection", { label = "Item 1", value_int = {10, 20, 30} })
@@ -239,7 +239,7 @@ include("fixture.jl")
         @test length(result) == 1
         @test result[1] == [10, 20, 30]
 
-        Quiver.close!(lua)
+        Quiver.close!(sandbox)
         Quiver.close!(db)
     end
 
@@ -247,16 +247,16 @@ include("fixture.jl")
         path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
         db = Quiver.from_schema(":memory:", path_schema)
 
-        lua = Quiver.Sandbox(db)
+        sandbox = Quiver.Sandbox(db)
 
         # A script hands one value back as JSON.
-        @test Quiver.run!(lua, "return { a = 1, b = { 2, 3 } }") == """{"a":1,"b":[2,3]}"""
-        @test Quiver.run!(lua, """return db:read_element_ids("Collection")""") == "[]"
+        @test Quiver.run!(sandbox, "return { a = 1, b = { 2, 3 } }") == """{"a":1,"b":[2,3]}"""
+        @test Quiver.run!(sandbox, """return db:read_element_ids("Collection")""") == "[]"
         # Returning nothing is an empty string, distinct from returning nil.
-        @test Quiver.run!(lua, "local x = 1") == ""
-        @test Quiver.run!(lua, "return nil") == "null"
+        @test Quiver.run!(sandbox, "local x = 1") == ""
+        @test Quiver.run!(sandbox, "return nil") == "null"
 
-        Quiver.close!(lua)
+        Quiver.close!(sandbox)
         Quiver.close!(db)
     end
 
@@ -264,15 +264,15 @@ include("fixture.jl")
         path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
         db = Quiver.from_schema(":memory:", path_schema)
 
-        lua = Quiver.Sandbox(db)
-        Quiver.run!(lua, """db:create_element("Configuration", { label = "Config" })""")
+        sandbox = Quiver.Sandbox(db)
+        Quiver.run!(sandbox, """db:create_element("Configuration", { label = "Config" })""")
 
         @test Quiver.in_dry_run(db) == false
         result = Quiver.dry_run(db) do db
             @test Quiver.in_dry_run(db) == true
             # db:transaction composes: the dry run absorbs the nested BEGIN/COMMIT.
             Quiver.run!(
-                lua,
+                sandbox,
                 """
             db:transaction(function(db)
                 db:create_element("Collection", { label = "Preview" })
@@ -289,7 +289,7 @@ include("fixture.jl")
         # Ending one that was never started is an error.
         @test_throws Quiver.DatabaseException Quiver.end_dry_run!(db)
 
-        Quiver.close!(lua)
+        Quiver.close!(sandbox)
         Quiver.close!(db)
     end
 end
