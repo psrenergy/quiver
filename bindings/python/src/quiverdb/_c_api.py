@@ -396,12 +396,12 @@ ffi.cdef("""
         const quiver_csv_options_t* options);
 
     // sandbox.h
-    typedef struct quiver_lua_runner quiver_lua_runner_t;
+    typedef struct quiver_sandbox quiver_sandbox_t;
 
-    quiver_error_t quiver_lua_runner_new(quiver_database_t* db, quiver_lua_runner_t** out_runner);
-    quiver_error_t quiver_lua_runner_free(quiver_lua_runner_t* runner);
-    quiver_error_t quiver_lua_runner_run(quiver_lua_runner_t* runner, const char* script, char** out_result);
-    quiver_error_t quiver_lua_runner_free_string(char* str);
+    quiver_error_t quiver_sandbox_new(quiver_database_t* db, quiver_sandbox_t** out_runner);
+    quiver_error_t quiver_sandbox_free(quiver_sandbox_t* runner);
+    quiver_error_t quiver_sandbox_run(quiver_sandbox_t* runner, const char* script, char** out_result);
+    quiver_error_t quiver_sandbox_free_string(char* str);
 """)
 
 _lib = None

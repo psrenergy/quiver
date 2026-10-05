@@ -32,7 +32,7 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   recursive-copy Lua migrations test.
 - Supporting types: `test_element.cpp`, `test_row_result.cpp`, `test_migrations.cpp`,
   `test_schema_validator.cpp`
-- Lua: `test_lua_runner_*.cpp` — per-area split mirroring the database files (`_create`, `_read`,
+- Lua: `test_sandbox_*.cpp` — per-area split mirroring the database files (`_create`, `_read`,
   `_update`, `_delete`, `_query`, `_describe`, `_return`, `_time_series`, `_transaction`,
   `_errors`, `_csv_export`, `_csv_import`, `_all_types`, `_fk`, `_lifecycle`, `_migrations`). `_return` covers the JSON
   encoding of a script's return value; `_errors` also pins text-only `load`, that a caught or
@@ -45,10 +45,10 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   move-assign): handles a script opens after the move still close at that `run()`'s exit, both while the
   moved-from runner is alive and after it has been destroyed, and a file-scope `static_assert` that
   `Sandbox` is pointer-sized keeps run state inside its `Impl` in Release too, where the freed-source
-  pins alone do not reliably fail. The shared `LuaRunnerTest` and `LuaSandboxTest` fixtures,
+  pins alone do not reliably fail. The shared `SandboxTest` and `LuaSandboxTest` fixtures,
   the `expect_lua_error` helper (throw + message-substring assert — plain `EXPECT_THROW` passes
   vacuously when a removed function raises "attempt to call a nil value"), and the common include
-  prelude live in `test_lua_runner.h`; the single-use `LuaRunnerAllTypesTest` / `LuaRunnerFkTest`
+  prelude live in `test_sandbox.h`; the single-use `SandboxAllTypesTest` / `SandboxFkTest`
   fixtures stay local to their files. Lua file operations are sandboxed to the database directory
   (root design decision), so every file-touching Lua test uses `LuaSandboxTest`: a file-backed db
   in a dedicated per-test temp dir, with scripts passing relative paths. The Lua binary/expression
@@ -70,8 +70,8 @@ C++ core and C API suites live here; binding suites live in each binding's `test
 - `test_issues.cpp` - issue-numbered regression tests
 - `test_migrations.cpp` also covers the in-memory `validate_migrations` up-then-down round trip;
   `test_c_api_database_lifecycle.cpp` covers its C API success and error propagation;
-  `test_lua_runner_migrations.cpp` covers the sandboxed `db:validate_migrations` Lua binding.
-- `test_lua_runner_read_csv.cpp` covers the Lua-only `db:read_csv`/`db:read_csv_stream` bindings
+  `test_sandbox_migrations.cpp` covers the sandboxed `db:validate_migrations` Lua binding.
+- `test_sandbox_read_csv.cpp` covers the Lua-only `db:read_csv`/`db:read_csv_stream` bindings
   (parsing, the `separator`/`header_row` options, and the sandbox/error-catalogue negatives) —
   there is no C++ core, C API, or other-binding counterpart to mirror (root design decision), so
   this suite has no sibling elsewhere. Most of its CSV fixtures are still written at runtime into
@@ -95,10 +95,10 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   and in `test_lua_binary.cpp`) is `_WIN32`-only because no POSIX path is reserved the way `NUL`
   is; the `test_lua_binary.cpp` copy spans `open_file`/`bin_to_csv`/`csv_to_bin` on purpose, so the
   fix stays in the shared `resolve_sandboxed_path` gate instead of regressing to a per-caller patch.
-- `test_lua_runner_write_csv.cpp` covers the Lua-only `db:write_csv`/`w:write_row`/`w:close`
+- `test_sandbox_write_csv.cpp` covers the Lua-only `db:write_csv`/`w:write_row`/`w:close`
   binding (cell-type dispatch, the `separator`/`header` options, the max-integer-key row walk, and
   the truncate-at-open behaviour) — same no-other-layer-counterpart situation as
-  `test_lua_runner_read_csv.cpp` above. Every correctness assertion in it round-trips the written
+  `test_sandbox_read_csv.cpp` above. Every correctness assertion in it round-trips the written
   file back through `db:read_csv` rather than reading the raw bytes, for the same reason
   `export_csv`'s export-only string-search tests were a trap this project hit twice already.
 
@@ -107,7 +107,7 @@ C++ core and C API suites live here; binding suites live in each binding's `test
 Mirror the same areas with the `test_c_api_*` prefix (`test_c_api_database_*.cpp` per database
 area — the file sets diverge slightly: the C API has no `describe`, `errors` or `ui_metadata` file
 (its describe/describe_collection/summarize_collection coverage lives in
-`test_c_api_database_metadata.cpp`)) plus `test_c_api_element.cpp`, `test_c_api_lua_runner.cpp`,
+`test_c_api_database_metadata.cpp`)) plus `test_c_api_element.cpp`, `test_c_api_sandbox.cpp`,
 `test_c_api_expression.cpp`, and the binary trio `test_c_api_binary_file.cpp` /
 `test_c_api_binary_metadata.cpp` / `test_c_api_csv_converter.cpp`. The same `read` →
 `{scalar,vector,set}` and `time_series` → `{metadata,group,row,files,nulls}` split applies; the
@@ -139,17 +139,17 @@ Boolean **input** is a different matter: a native boolean is INTEGER 1/0 on ever
 that is tested in the Lua layer and in all four bindings. There is no C++-core or C API test,
 because there is no such write path to test — `Element::set` has `int64_t`/`double` overloads and
 no `bool` one, and the C API has no boolean setter (root design decision); each binding converts
-before the FFI call. The Lua side lives in `test_lua_runner_create.cpp` (scalar, array, mixed
+before the FFI call. The Lua side lives in `test_sandbox_create.cpp` (scalar, array, mixed
 integer/boolean array, mixed float/boolean array, cell-type mismatch, update, group writer, row
-upsert) with the query parameter in `test_lua_runner_errors.cpp`, over `valid/collections.sql`;
+upsert) with the query parameter in `test_sandbox_errors.cpp`, over `valid/collections.sql`;
 the four bindings extend their own boolean files (Python's `test_boolean_input` also opens
 `valid/mixed_time_series.sql` for the row upsert, since `AllTypes` has no time-series group). Two
 things to keep in mind when touching these:
 
 - **The unsupported-type tests use a function (`print`), not a boolean** — in
-  `test_lua_runner_create.cpp`, `test_lua_runner_errors.cpp` and `test_c_api_lua_runner.cpp`. They
+  `test_sandbox_create.cpp`, `test_sandbox_errors.cpp` and `test_c_api_sandbox.cpp`. They
   asserted a boolean rejection before booleans were accepted; a function is the value that still
-  has no SQL counterpart. `test_lua_runner_update.cpp` keeps its boolean rejection for
+  has no SQL counterpart. `test_sandbox_update.cpp` keeps its boolean rejection for
   `db:update_relation`, where only `nil` may clear a relation.
 - **The three mixed-array tests guard the unchecked getter.**
   `CreateElementMixedIntegerAndBooleanArray`, `CreateElementMixedFloatAndBooleanArray` and

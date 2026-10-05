@@ -1,8 +1,8 @@
-#include "test_lua_runner.h"
+#include "test_sandbox.h"
 
 #include <algorithm>
 
-class LuaRunnerFkTest : public ::testing::Test {
+class SandboxFkTest : public ::testing::Test {
 protected:
     void SetUp() override {
         relations_schema = VALID_SCHEMA("relations.sql");
@@ -12,7 +12,7 @@ protected:
     std::string basic_schema;
 };
 
-TEST_F(LuaRunnerFkTest, CreateElementSetFkLabels) {
+TEST_F(SandboxFkTest, CreateElementSetFkLabels) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
     quiver::Sandbox lua(db);
 
@@ -35,7 +35,7 @@ TEST_F(LuaRunnerFkTest, CreateElementSetFkLabels) {
     EXPECT_EQ(sorted_ids[1], 2);
 }
 
-TEST_F(LuaRunnerFkTest, CreateElementMissingFkTarget) {
+TEST_F(SandboxFkTest, CreateElementMissingFkTarget) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
     quiver::Sandbox lua(db);
 
@@ -51,7 +51,7 @@ TEST_F(LuaRunnerFkTest, CreateElementMissingFkTarget) {
     );
 }
 
-TEST_F(LuaRunnerFkTest, CreateElementStringForNonFkInteger) {
+TEST_F(SandboxFkTest, CreateElementStringForNonFkInteger) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
     quiver::Sandbox lua(db);
 
@@ -67,7 +67,7 @@ TEST_F(LuaRunnerFkTest, CreateElementStringForNonFkInteger) {
     );
 }
 
-TEST_F(LuaRunnerFkTest, CreateElementScalarFkLabel) {
+TEST_F(SandboxFkTest, CreateElementScalarFkLabel) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
     quiver::Sandbox lua(db);
 
@@ -84,7 +84,7 @@ TEST_F(LuaRunnerFkTest, CreateElementScalarFkLabel) {
     EXPECT_EQ(parent_ids[0], 1);
 }
 
-TEST_F(LuaRunnerFkTest, CreateElementScalarFkInteger) {
+TEST_F(SandboxFkTest, CreateElementScalarFkInteger) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
     quiver::Sandbox lua(db);
 
@@ -101,7 +101,7 @@ TEST_F(LuaRunnerFkTest, CreateElementScalarFkInteger) {
     EXPECT_EQ(parent_ids[0], 1);
 }
 
-TEST_F(LuaRunnerFkTest, CreateElementVectorFkLabels) {
+TEST_F(SandboxFkTest, CreateElementVectorFkLabels) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
     quiver::Sandbox lua(db);
 
@@ -120,7 +120,7 @@ TEST_F(LuaRunnerFkTest, CreateElementVectorFkLabels) {
     EXPECT_EQ(refs[1], 2);
 }
 
-TEST_F(LuaRunnerFkTest, CreateElementTimeSeriesFkLabels) {
+TEST_F(SandboxFkTest, CreateElementTimeSeriesFkLabels) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
     quiver::Sandbox lua(db);
 
@@ -140,7 +140,7 @@ TEST_F(LuaRunnerFkTest, CreateElementTimeSeriesFkLabels) {
     EXPECT_EQ(std::get<int64_t>(ts_data[1].at("sponsor_id")), 2);
 }
 
-TEST_F(LuaRunnerFkTest, CreateElementAllFkTypes) {
+TEST_F(SandboxFkTest, CreateElementAllFkTypes) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
     quiver::Sandbox lua(db);
 
@@ -179,7 +179,7 @@ TEST_F(LuaRunnerFkTest, CreateElementAllFkTypes) {
     EXPECT_EQ(std::get<int64_t>(ts_data[0].at("sponsor_id")), 2);
 }
 
-TEST_F(LuaRunnerFkTest, CreateElementNoFkUnchanged) {
+TEST_F(SandboxFkTest, CreateElementNoFkUnchanged) {
     auto db = quiver::Database::from_schema(":memory:", basic_schema);
     quiver::Sandbox lua(db);
 
@@ -204,7 +204,7 @@ TEST_F(LuaRunnerFkTest, CreateElementNoFkUnchanged) {
     EXPECT_DOUBLE_EQ(*floats[0], 3.14);
 }
 
-TEST_F(LuaRunnerFkTest, CreateElementFkResolutionNoPartialWrites) {
+TEST_F(SandboxFkTest, CreateElementFkResolutionNoPartialWrites) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
     quiver::Sandbox lua(db);
 
@@ -224,7 +224,7 @@ TEST_F(LuaRunnerFkTest, CreateElementFkResolutionNoPartialWrites) {
     EXPECT_EQ(labels.size(), 0);
 }
 
-TEST_F(LuaRunnerFkTest, UpdateElementScalarFkLabel) {
+TEST_F(SandboxFkTest, UpdateElementScalarFkLabel) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
     quiver::Sandbox lua(db);
 
@@ -243,7 +243,7 @@ TEST_F(LuaRunnerFkTest, UpdateElementScalarFkLabel) {
     EXPECT_EQ(parent_ids[0], 2);
 }
 
-TEST_F(LuaRunnerFkTest, UpdateElementScalarFkInteger) {
+TEST_F(SandboxFkTest, UpdateElementScalarFkInteger) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
     quiver::Sandbox lua(db);
 
@@ -262,7 +262,7 @@ TEST_F(LuaRunnerFkTest, UpdateElementScalarFkInteger) {
     EXPECT_EQ(parent_ids[0], 2);
 }
 
-TEST_F(LuaRunnerFkTest, UpdateElementSetFkLabels) {
+TEST_F(SandboxFkTest, UpdateElementSetFkLabels) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
     quiver::Sandbox lua(db);
 
@@ -282,7 +282,7 @@ TEST_F(LuaRunnerFkTest, UpdateElementSetFkLabels) {
     EXPECT_EQ(mentors[0][0], 2);
 }
 
-TEST_F(LuaRunnerFkTest, UpdateElementAllFkTypes) {
+TEST_F(SandboxFkTest, UpdateElementAllFkTypes) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
     quiver::Sandbox lua(db);
 
@@ -328,7 +328,7 @@ TEST_F(LuaRunnerFkTest, UpdateElementAllFkTypes) {
     EXPECT_EQ(std::get<int64_t>(ts_data[0].at("sponsor_id")), 2);
 }
 
-TEST_F(LuaRunnerFkTest, UpdateElementFkFailurePreservesExisting) {
+TEST_F(SandboxFkTest, UpdateElementFkFailurePreservesExisting) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
     quiver::Sandbox lua(db);
 
@@ -354,7 +354,7 @@ TEST_F(LuaRunnerFkTest, UpdateElementFkFailurePreservesExisting) {
     EXPECT_EQ(parent_ids[0], 1);
 }
 
-TEST_F(LuaRunnerFkTest, UpdateElementNoFkUnchanged) {
+TEST_F(SandboxFkTest, UpdateElementNoFkUnchanged) {
     auto db = quiver::Database::from_schema(":memory:", basic_schema);
     quiver::Sandbox lua(db);
 
@@ -385,7 +385,7 @@ TEST_F(LuaRunnerFkTest, UpdateElementNoFkUnchanged) {
     EXPECT_EQ(*str_val, "world");
 }
 
-TEST_F(LuaRunnerFkTest, UpdateVectorFkViaTypedMethod) {
+TEST_F(SandboxFkTest, UpdateVectorFkViaTypedMethod) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
     quiver::Sandbox lua(db);
 
@@ -405,7 +405,7 @@ TEST_F(LuaRunnerFkTest, UpdateVectorFkViaTypedMethod) {
     EXPECT_EQ(refs[1], 1);
 }
 
-TEST_F(LuaRunnerFkTest, UpdateTimeSeriesFkViaTypedMethod) {
+TEST_F(SandboxFkTest, UpdateTimeSeriesFkViaTypedMethod) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
     quiver::Sandbox lua(db);
 

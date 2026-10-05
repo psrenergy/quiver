@@ -1,8 +1,8 @@
-#include "test_lua_runner.h"
+#include "test_sandbox.h"
 
 #include <algorithm>
 
-TEST_F(LuaRunnerTest, UpdateElementSingleScalar) {
+TEST_F(SandboxTest, UpdateElementSingleScalar) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
@@ -29,7 +29,7 @@ TEST_F(LuaRunnerTest, UpdateElementSingleScalar) {
     EXPECT_EQ(*label, "Item 1");
 }
 
-TEST_F(LuaRunnerTest, UpdateElementMultipleScalars) {
+TEST_F(SandboxTest, UpdateElementMultipleScalars) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
@@ -59,7 +59,7 @@ TEST_F(LuaRunnerTest, UpdateElementMultipleScalars) {
     EXPECT_DOUBLE_EQ(*float_value, 9.9);
 }
 
-TEST_F(LuaRunnerTest, UpdateElementOtherElementsUnchanged) {
+TEST_F(SandboxTest, UpdateElementOtherElementsUnchanged) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
@@ -91,7 +91,7 @@ TEST_F(LuaRunnerTest, UpdateElementOtherElementsUnchanged) {
     EXPECT_EQ(*db.read_scalar_integer_by_id("Collection", "some_integer", 3), 300);
 }
 
-TEST_F(LuaRunnerTest, UpdateElementWithArrays) {
+TEST_F(SandboxTest, UpdateElementWithArrays) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
@@ -119,7 +119,7 @@ TEST_F(LuaRunnerTest, UpdateElementWithArrays) {
     EXPECT_EQ(vec_values, (std::vector<std::optional<int64_t>>{7, 8, 9}));
 }
 
-TEST_F(LuaRunnerTest, UpdateElementRefusesArrayWithNilHole) {
+TEST_F(SandboxTest, UpdateElementRefusesArrayWithNilHole) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
@@ -162,7 +162,7 @@ TEST_F(LuaRunnerTest, UpdateElementRefusesArrayWithNilHole) {
 }
 
 // An empty array reaches the core, which clears the group holding the column on update.
-TEST_F(LuaRunnerTest, UpdateElementEmptyArrayClearsGroup) {
+TEST_F(SandboxTest, UpdateElementEmptyArrayClearsGroup) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
@@ -193,7 +193,7 @@ TEST_F(LuaRunnerTest, UpdateElementEmptyArrayClearsGroup) {
     EXPECT_TRUE(db.read_vector_integers_by_id("Collection", "value_int", 2).empty());
 }
 
-TEST_F(LuaRunnerTest, UpdateElementEmptyArrayErrors) {
+TEST_F(SandboxTest, UpdateElementEmptyArrayErrors) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
@@ -218,7 +218,7 @@ TEST_F(LuaRunnerTest, UpdateElementEmptyArrayErrors) {
     EXPECT_EQ(db.read_vector_integers_by_id("Collection", "value_int", 1), (std::vector<std::optional<int64_t>>{1, 2}));
 }
 
-TEST_F(LuaRunnerTest, UpdateElementEmptyArrayClearsEveryGroupSharingTheColumn) {
+TEST_F(SandboxTest, UpdateElementEmptyArrayClearsEveryGroupSharingTheColumn) {
     auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"));
     quiver::Sandbox lua(db);
 
@@ -238,7 +238,7 @@ TEST_F(LuaRunnerTest, UpdateElementEmptyArrayClearsEveryGroupSharingTheColumn) {
     EXPECT_EQ(db.read_set_integers_by_id("Child", "score", 1), (std::vector<std::optional<int64_t>>{7}));
 }
 
-TEST_F(LuaRunnerTest, UpdateElementEmptyDateTimeClearsEveryTimeSeriesGroup) {
+TEST_F(SandboxTest, UpdateElementEmptyDateTimeClearsEveryTimeSeriesGroup) {
     auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("multi_time_series.sql"));
     quiver::Sandbox lua(db);
 
@@ -258,7 +258,7 @@ TEST_F(LuaRunnerTest, UpdateElementEmptyDateTimeClearsEveryTimeSeriesGroup) {
     EXPECT_TRUE(db.read_time_series_group("Sensor", "humidity", 1).empty());
 }
 
-TEST_F(LuaRunnerTest, UpdateElementRoundTripOfReadVectorsById) {
+TEST_F(SandboxTest, UpdateElementRoundTripOfReadVectorsById) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     // value_float reads back all-NULL, so as an empty Lua list.
@@ -284,7 +284,7 @@ TEST_F(LuaRunnerTest, UpdateElementRoundTripOfReadVectorsById) {
     EXPECT_TRUE(db.read_vector_group_by_id("Collection", "values", 2).empty());
 }
 
-TEST_F(LuaRunnerTest, UpdateVectorIntegers) {
+TEST_F(SandboxTest, UpdateVectorIntegers) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     db.create_element(
@@ -302,7 +302,7 @@ TEST_F(LuaRunnerTest, UpdateVectorIntegers) {
     EXPECT_EQ(vec, (std::vector<std::optional<int64_t>>{10, 20, 30, 40}));
 }
 
-TEST_F(LuaRunnerTest, UpdateVectorFloats) {
+TEST_F(SandboxTest, UpdateVectorFloats) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     db.create_element(
@@ -320,7 +320,7 @@ TEST_F(LuaRunnerTest, UpdateVectorFloats) {
     EXPECT_EQ(vec, (std::vector<std::optional<double>>{5.5, 6.6, 7.7}));
 }
 
-TEST_F(LuaRunnerTest, UpdateScalarStringTrimsWhitespace) {
+TEST_F(SandboxTest, UpdateScalarStringTrimsWhitespace) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     db.create_element("Configuration", quiver::Element().set("label", "Test Config"));
@@ -340,7 +340,7 @@ TEST_F(LuaRunnerTest, UpdateScalarStringTrimsWhitespace) {
     EXPECT_EQ(set_vals, (std::vector<std::optional<std::string>>{"alpha", "beta", "gamma"}));
 }
 
-TEST_F(LuaRunnerTest, UpdateVectorStrings) {
+TEST_F(SandboxTest, UpdateVectorStrings) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     db.create_element(
@@ -360,7 +360,7 @@ TEST_F(LuaRunnerTest, UpdateVectorStrings) {
     EXPECT_EQ(vec.size(), 1);
 }
 
-TEST_F(LuaRunnerTest, UpdateSetStrings) {
+TEST_F(SandboxTest, UpdateSetStrings) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     db.create_element(
@@ -378,7 +378,7 @@ TEST_F(LuaRunnerTest, UpdateSetStrings) {
     EXPECT_EQ(tags.size(), 3);
 }
 
-TEST_F(LuaRunnerTest, UpdateElementByIdNonExistent) {
+TEST_F(SandboxTest, UpdateElementByIdNonExistent) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     db.create_element("Collection", quiver::Element().set("label", "Item 1"));
@@ -389,7 +389,7 @@ TEST_F(LuaRunnerTest, UpdateElementByIdNonExistent) {
     expect_lua_error(lua, R"(db:update_element("Collection", 999, { some_integer = 5 }))", "Element not found");
 }
 
-TEST_F(LuaRunnerTest, UpdateElementUnsupportedAttributeTypeThrows) {
+TEST_F(SandboxTest, UpdateElementUnsupportedAttributeTypeThrows) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     db.create_element("Collection", quiver::Element().set("label", "Item 1"));
@@ -404,7 +404,7 @@ TEST_F(LuaRunnerTest, UpdateElementUnsupportedAttributeTypeThrows) {
     );
 }
 
-TEST_F(LuaRunnerTest, UpdateElementByLabel) {
+TEST_F(SandboxTest, UpdateElementByLabel) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
@@ -431,7 +431,7 @@ TEST_F(LuaRunnerTest, UpdateElementByLabel) {
     EXPECT_EQ(*other, 200);
 }
 
-TEST_F(LuaRunnerTest, UpdateElementByLabelNonExistent) {
+TEST_F(SandboxTest, UpdateElementByLabelNonExistent) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     db.create_element("Collection", quiver::Element().set("label", "Item 1").set("some_integer", int64_t{100}));
@@ -470,7 +470,7 @@ quiver::Database relations_db_with_child() {
 
 }  // namespace
 
-TEST_F(LuaRunnerTest, UpdateVectorGroupReplacesAndClears) {
+TEST_F(SandboxTest, UpdateVectorGroupReplacesAndClears) {
     auto db = relations_db_with_child();
     quiver::Sandbox lua(db);
 
@@ -481,7 +481,7 @@ TEST_F(LuaRunnerTest, UpdateVectorGroupReplacesAndClears) {
     EXPECT_TRUE(db.read_vector_integers_by_id("Child", "parent_ref", 1).empty());
 }
 
-TEST_F(LuaRunnerTest, UpdateSetGroupLeavesSiblingSharingColumnNameUntouched) {
+TEST_F(SandboxTest, UpdateSetGroupLeavesSiblingSharingColumnNameUntouched) {
     auto db = relations_db_with_child();
     quiver::Sandbox lua(db);
 
@@ -495,7 +495,7 @@ TEST_F(LuaRunnerTest, UpdateSetGroupLeavesSiblingSharingColumnNameUntouched) {
     EXPECT_EQ(db.read_set_integers_by_id("Child", "parent_ref", 1), (std::vector<std::optional<int64_t>>{1}));
 }
 
-TEST_F(LuaRunnerTest, UpdateGroupResolvesForeignKeyLabels) {
+TEST_F(SandboxTest, UpdateGroupResolvesForeignKeyLabels) {
     auto db = relations_db_with_child();
     quiver::Sandbox lua(db);
 
@@ -505,7 +505,7 @@ TEST_F(LuaRunnerTest, UpdateGroupResolvesForeignKeyLabels) {
 
 // No dimension column here, so the row count is the largest index any column reaches; a nil hole
 // writes SQL NULL, which is how a read's nil holes round-trip.
-TEST_F(LuaRunnerTest, UpdateGroupSparseColumnWritesNulls) {
+TEST_F(SandboxTest, UpdateGroupSparseColumnWritesNulls) {
     auto db = relations_db_with_child();
     quiver::Sandbox lua(db);
 
@@ -519,7 +519,7 @@ TEST_F(LuaRunnerTest, UpdateGroupSparseColumnWritesNulls) {
     EXPECT_EQ(result, R"({"nulls":1,"rows":3})");
 }
 
-TEST_F(LuaRunnerTest, UpdateGroupErrors) {
+TEST_F(SandboxTest, UpdateGroupErrors) {
     auto db = relations_db_with_child();
     quiver::Sandbox lua(db);
     lua.run(R"(db:update_vector_group("Child", "refs", 1, { parent_ref = { 1 } }))");
@@ -568,7 +568,7 @@ TEST_F(LuaRunnerTest, UpdateGroupErrors) {
 
 // A non-table payload is a Pattern 1 error naming its Lua type. A userdata used to be walked as an
 // empty table in Release, which cleared the group.
-TEST_F(LuaRunnerTest, GroupWritersRejectNonTableColumns) {
+TEST_F(SandboxTest, GroupWritersRejectNonTableColumns) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     const int64_t id = db.create_element(
@@ -609,7 +609,7 @@ TEST_F(LuaRunnerTest, GroupWritersRejectNonTableColumns) {
     EXPECT_EQ(db.read_set_strings_by_id("Collection", "tag", id), (std::vector<std::optional<std::string>>{"a", "b"}));
 }
 
-TEST_F(LuaRunnerTest, UpdateVectorGroupByLabel) {
+TEST_F(SandboxTest, UpdateVectorGroupByLabel) {
     auto db = relations_db_with_child();
     db.create_element("Child", quiver::Element().set("label", "Child 2"));
     quiver::Sandbox lua(db);
@@ -625,7 +625,7 @@ TEST_F(LuaRunnerTest, UpdateVectorGroupByLabel) {
     EXPECT_EQ(db.read_vector_integers_by_id("Child", "parent_ref", 2), (std::vector<std::optional<int64_t>>{1}));
 }
 
-TEST_F(LuaRunnerTest, UpdateVectorGroupByLabelErrors) {
+TEST_F(SandboxTest, UpdateVectorGroupByLabelErrors) {
     auto db = relations_db_with_child();
     quiver::Sandbox lua(db);
     lua.run(R"(db:update_vector_group_by_label("Child", "refs", "Child 1", { parent_ref = { 1 } }))");
@@ -645,7 +645,7 @@ TEST_F(LuaRunnerTest, UpdateVectorGroupByLabelErrors) {
     EXPECT_EQ(db.read_vector_integers_by_id("Child", "parent_ref", 1), (std::vector<std::optional<int64_t>>{1}));
 }
 
-TEST_F(LuaRunnerTest, UpdateSetGroupByLabel) {
+TEST_F(SandboxTest, UpdateSetGroupByLabel) {
     auto db = relations_db_with_child();
     db.create_element("Child", quiver::Element().set("label", "Child 2"));
     quiver::Sandbox lua(db);
@@ -661,7 +661,7 @@ TEST_F(LuaRunnerTest, UpdateSetGroupByLabel) {
     EXPECT_EQ(db.read_set_integers_by_id("Child", "parent_ref", 2), (std::vector<std::optional<int64_t>>{1}));
 }
 
-TEST_F(LuaRunnerTest, UpdateSetGroupByLabelErrors) {
+TEST_F(SandboxTest, UpdateSetGroupByLabelErrors) {
     auto db = relations_db_with_child();
     quiver::Sandbox lua(db);
     lua.run(R"(db:update_set_group_by_label("Child", "parents", "Child 1", { parent_ref = { 1 } }))");
@@ -681,7 +681,7 @@ TEST_F(LuaRunnerTest, UpdateSetGroupByLabelErrors) {
     EXPECT_EQ(db.read_set_integers_by_id("Child", "parent_ref", 1), (std::vector<std::optional<int64_t>>{1}));
 }
 
-TEST_F(LuaRunnerTest, UpdateRelationSetsAndClears) {
+TEST_F(SandboxTest, UpdateRelationSetsAndClears) {
     auto db = relations_db_with_child();
     quiver::Sandbox lua(db);
 
@@ -700,7 +700,7 @@ TEST_F(LuaRunnerTest, UpdateRelationSetsAndClears) {
     EXPECT_FALSE(db.read_scalar_integer_by_id("Child", "parent_id", 1).has_value());
 }
 
-TEST_F(LuaRunnerTest, UpdateRelationErrors) {
+TEST_F(SandboxTest, UpdateRelationErrors) {
     auto db = relations_db_with_child();
     quiver::Sandbox lua(db);
 
@@ -731,7 +731,7 @@ TEST_F(LuaRunnerTest, UpdateRelationErrors) {
     EXPECT_EQ(db.read_scalar_integer_by_id("Child", "parent_id", 1), 1);
 }
 
-TEST_F(LuaRunnerTest, UpdateElementRejectsNonTableElement) {
+TEST_F(SandboxTest, UpdateElementRejectsNonTableElement) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     const int64_t id =

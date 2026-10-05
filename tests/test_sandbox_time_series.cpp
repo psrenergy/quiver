@@ -1,6 +1,6 @@
-#include "test_lua_runner.h"
+#include "test_sandbox.h"
 
-TEST_F(LuaRunnerTest, GetTimeSeriesMetadata) {
+TEST_F(SandboxTest, GetTimeSeriesMetadata) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -15,7 +15,7 @@ TEST_F(LuaRunnerTest, GetTimeSeriesMetadata) {
     )");
 }
 
-TEST_F(LuaRunnerTest, ListTimeSeriesGroups) {
+TEST_F(SandboxTest, ListTimeSeriesGroups) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -36,7 +36,7 @@ TEST_F(LuaRunnerTest, ListTimeSeriesGroups) {
 }
 
 // Only time-series group metadata carries a dimension_column key; vector and set tables must not.
-TEST_F(LuaRunnerTest, GroupMetadataDimensionColumnOnlyForTimeSeries) {
+TEST_F(SandboxTest, GroupMetadataDimensionColumnOnlyForTimeSeries) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     quiver::Sandbox lua(db);
@@ -60,7 +60,7 @@ TEST_F(LuaRunnerTest, GroupMetadataDimensionColumnOnlyForTimeSeries) {
 // --- Metadata getters: scalar, vector and set tables (the time-series ones are above). Every nil
 // check sits next to a positive check on the same table, so a wrong table cannot pass vacuously ---
 
-TEST_F(LuaRunnerTest, GetScalarMetadataForeignKey) {
+TEST_F(SandboxTest, GetScalarMetadataForeignKey) {
     auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"));
     quiver::Sandbox lua(db);
     lua.run(R"(
@@ -81,7 +81,7 @@ TEST_F(LuaRunnerTest, GetScalarMetadataForeignKey) {
     )");
 }
 
-TEST_F(LuaRunnerTest, GetScalarMetadataDefaultValue) {
+TEST_F(SandboxTest, GetScalarMetadataDefaultValue) {
     auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"));
     quiver::Sandbox lua(db);
     lua.run(R"(
@@ -97,7 +97,7 @@ TEST_F(LuaRunnerTest, GetScalarMetadataDefaultValue) {
     )");
 }
 
-TEST_F(LuaRunnerTest, GetVectorAndSetMetadata) {
+TEST_F(SandboxTest, GetVectorAndSetMetadata) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::Sandbox lua(db);
     lua.run(R"(
@@ -114,7 +114,7 @@ TEST_F(LuaRunnerTest, GetVectorAndSetMetadata) {
     )");
 }
 
-TEST_F(LuaRunnerTest, ListScalarAttributesAndGroups) {
+TEST_F(SandboxTest, ListScalarAttributesAndGroups) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::Sandbox lua(db);
     lua.run(R"(
@@ -137,7 +137,7 @@ TEST_F(LuaRunnerTest, ListScalarAttributesAndGroups) {
     )");
 }
 
-TEST_F(LuaRunnerTest, ReadTimeSeriesGroupById) {
+TEST_F(SandboxTest, ReadTimeSeriesGroupById) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element("Collection", quiver::Element().set("label", "Item 1"));
@@ -163,7 +163,7 @@ TEST_F(LuaRunnerTest, ReadTimeSeriesGroupById) {
     lua.run(script);
 }
 
-TEST_F(LuaRunnerTest, CreateElementWithMultiTimeSeries) {
+TEST_F(SandboxTest, CreateElementWithMultiTimeSeries) {
     auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("multi_time_series.sql"));
     quiver::Sandbox lua(db);
 
@@ -198,7 +198,7 @@ TEST_F(LuaRunnerTest, CreateElementWithMultiTimeSeries) {
     EXPECT_DOUBLE_EQ(std::get<double>(hum_rows[2].at("humidity")), 55.0);
 }
 
-TEST_F(LuaRunnerTest, UpdateTimeSeriesGroup) {
+TEST_F(SandboxTest, UpdateTimeSeriesGroup) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element("Collection", quiver::Element().set("label", "Item 1"));
@@ -222,7 +222,7 @@ TEST_F(LuaRunnerTest, UpdateTimeSeriesGroup) {
     EXPECT_DOUBLE_EQ(std::get<double>(rows[2].at("value")), 30.0);
 }
 
-TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupScalarColumnThrows) {
+TEST_F(SandboxTest, UpdateTimeSeriesGroupScalarColumnThrows) {
     // Negative path: passing scalars (the upsert_time_series_row shape) where the
     // column-oriented update expects arrays must throw instead of silently
     // transposing to zero rows and committing a no-op clear.
@@ -239,7 +239,7 @@ TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupScalarColumnThrows) {
     expect_lua_error(lua, script, "must be an array of values");
 }
 
-TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupRejectsArrayOfRowTables) {
+TEST_F(SandboxTest, UpdateTimeSeriesGroupRejectsArrayOfRowTables) {
     // Negative path: an array of row tables (the upsert_time_series_row shape) has integer keys.
     // It must throw one Pattern 1 message in every build, not sol2's Debug-only panic or
     // Release's misleading "column '1' must be an array of values".
@@ -258,7 +258,7 @@ TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupRejectsArrayOfRowTables) {
     expect_lua_error(lua, script, "Cannot update_time_series_group: column names must be strings");
 }
 
-TEST_F(LuaRunnerTest, TimeSeriesGroupWritersRejectNonTableColumns) {
+TEST_F(SandboxTest, TimeSeriesGroupWritersRejectNonTableColumns) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element("Collection", quiver::Element().set("label", "Item 1"));
@@ -291,7 +291,7 @@ TEST_F(LuaRunnerTest, TimeSeriesGroupWritersRejectNonTableColumns) {
     EXPECT_EQ(db.read_time_series_group("Collection", "data", id).size(), 1);
 }
 
-TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupAllEmptyColumnsThrows) {
+TEST_F(SandboxTest, UpdateTimeSeriesGroupAllEmptyColumnsThrows) {
     // Negative path: named columns that transpose to zero rows are a caller
     // mistake (only an empty table {} clears the group), so this must throw
     // rather than silently delete the element's existing rows.
@@ -311,7 +311,7 @@ TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupAllEmptyColumnsThrows) {
 // --- NULL round-trip: dimension column is the row-count authority; value columns
 // may be shorter, sparse, or empty, with missing cells written as SQL NULL ---
 
-TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupNilHoleWritesNull) {
+TEST_F(SandboxTest, UpdateTimeSeriesGroupNilHoleWritesNull) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element("Collection", quiver::Element().set("label", "Item 1"));
@@ -334,7 +334,7 @@ TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupNilHoleWritesNull) {
     EXPECT_DOUBLE_EQ(std::get<double>(rows[2].at("value")), 30.0);
 }
 
-TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupShortColumnPadsNull) {
+TEST_F(SandboxTest, UpdateTimeSeriesGroupShortColumnPadsNull) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element("Collection", quiver::Element().set("label", "Item 1"));
@@ -357,7 +357,7 @@ TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupShortColumnPadsNull) {
     EXPECT_TRUE(std::holds_alternative<std::nullptr_t>(rows[2].at("value")));
 }
 
-TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupValueColumnLongerThrows) {
+TEST_F(SandboxTest, UpdateTimeSeriesGroupValueColumnLongerThrows) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element("Collection", quiver::Element().set("label", "Item 1"));
@@ -374,7 +374,7 @@ TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupValueColumnLongerThrows) {
     expect_lua_error(lua, script, "has length 4 but expected 3");
 }
 
-TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupMissingDimensionThrows) {
+TEST_F(SandboxTest, UpdateTimeSeriesGroupMissingDimensionThrows) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element("Collection", quiver::Element().set("label", "Item 1"));
@@ -388,7 +388,7 @@ TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupMissingDimensionThrows) {
     expect_lua_error(lua, script, "missing dimension column 'date_time'");
 }
 
-TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupDimensionNilThrows) {
+TEST_F(SandboxTest, UpdateTimeSeriesGroupDimensionNilThrows) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element("Collection", quiver::Element().set("label", "Item 1"));
@@ -407,7 +407,7 @@ TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupDimensionNilThrows) {
 
 // A date_ value column outside the primary key is a value column, so it may hold nil like any other;
 // only the key's date column (date_time) is the dense row-count authority.
-TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupSparseDateValueColumn) {
+TEST_F(SandboxTest, UpdateTimeSeriesGroupSparseDateValueColumn) {
     auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("time_series_date_columns.sql"));
     int64_t id = db.create_element("Plant", quiver::Element().set("label", "Plant 1"));
 
@@ -434,7 +434,7 @@ TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupSparseDateValueColumn) {
     lua.run(script);
 }
 
-TEST_F(LuaRunnerTest, ReadTimeSeriesGroupNullIsNilHole) {
+TEST_F(SandboxTest, ReadTimeSeriesGroupNullIsNilHole) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element("Collection", quiver::Element().set("label", "Item 1"));
@@ -461,7 +461,7 @@ TEST_F(LuaRunnerTest, ReadTimeSeriesGroupNullIsNilHole) {
     lua.run(script);
 }
 
-TEST_F(LuaRunnerTest, TimeSeriesGroupNilRoundTrip) {
+TEST_F(SandboxTest, TimeSeriesGroupNilRoundTrip) {
     // The reported scenario: read a group with a NULL cell, modify another cell,
     // and write the whole group back. The nil hole must survive the round-trip.
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
@@ -493,7 +493,7 @@ TEST_F(LuaRunnerTest, TimeSeriesGroupNilRoundTrip) {
     EXPECT_DOUBLE_EQ(std::get<double>(result[2].at("value")), 3.5);
 }
 
-TEST_F(LuaRunnerTest, TimeSeriesGroupAllNullColumnRoundTrip) {
+TEST_F(SandboxTest, TimeSeriesGroupAllNullColumnRoundTrip) {
     // An all-NULL value column reads back as an empty table (with the key present)
     // and round-trips as all-NULL under the dimension-authority transpose.
     auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("nullable_time_series.sql"));
@@ -525,7 +525,7 @@ TEST_F(LuaRunnerTest, TimeSeriesGroupAllNullColumnRoundTrip) {
     EXPECT_TRUE(std::holds_alternative<std::nullptr_t>(result[1].at("status")));
 }
 
-TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupMultiDimNulls) {
+TEST_F(SandboxTest, UpdateTimeSeriesGroupMultiDimNulls) {
     // Multi-dimension group (date_time + block are both PK): both dimension
     // columns must be dense and equal-length; value columns may be short/empty.
     auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("multi_dim_time_series.sql"));
@@ -555,7 +555,7 @@ TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupMultiDimNulls) {
     EXPECT_TRUE(std::holds_alternative<std::nullptr_t>(rows[2].at("flag")));
 }
 
-TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupMultiDimBlockLengthMismatchThrows) {
+TEST_F(SandboxTest, UpdateTimeSeriesGroupMultiDimBlockLengthMismatchThrows) {
     auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("multi_dim_time_series.sql"));
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element("Resource", quiver::Element().set("label", "Resource 1"));
@@ -573,7 +573,7 @@ TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupMultiDimBlockLengthMismatchThrows) {
     expect_lua_error(lua, script, "column 'block' has length 2 but expected 3");
 }
 
-TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupMultiDimMissingBlockThrows) {
+TEST_F(SandboxTest, UpdateTimeSeriesGroupMultiDimMissingBlockThrows) {
     auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("multi_dim_time_series.sql"));
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element("Resource", quiver::Element().set("label", "Resource 1"));
@@ -590,7 +590,7 @@ TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupMultiDimMissingBlockThrows) {
     expect_lua_error(lua, script, "missing dimension column 'block'");
 }
 
-TEST_F(LuaRunnerTest, UpsertTimeSeriesRowInsert) {
+TEST_F(SandboxTest, UpsertTimeSeriesRowInsert) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element("Collection", quiver::Element().set("label", "Item 1"));
@@ -609,7 +609,7 @@ TEST_F(LuaRunnerTest, UpsertTimeSeriesRowInsert) {
     EXPECT_DOUBLE_EQ(std::get<double>(rows[0].at("value")), 10.0);
 }
 
-TEST_F(LuaRunnerTest, UpsertTimeSeriesRowSamePK) {
+TEST_F(SandboxTest, UpsertTimeSeriesRowSamePK) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element("Collection", quiver::Element().set("label", "Item 1"));
@@ -634,7 +634,7 @@ TEST_F(LuaRunnerTest, UpsertTimeSeriesRowSamePK) {
     EXPECT_DOUBLE_EQ(std::get<double>(rows[0].at("value")), 99.0);
 }
 
-TEST_F(LuaRunnerTest, UpsertTimeSeriesRowMultiDim) {
+TEST_F(SandboxTest, UpsertTimeSeriesRowMultiDim) {
     auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("multi_dim_time_series.sql"));
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element("Resource", quiver::Element().set("label", "Resource 1"));
@@ -655,7 +655,7 @@ TEST_F(LuaRunnerTest, UpsertTimeSeriesRowMultiDim) {
     EXPECT_EQ(std::get<int64_t>(rows[0].at("flag")), 1);
 }
 
-TEST_F(LuaRunnerTest, UpsertTimeSeriesRowReplacesTheWholeRow) {
+TEST_F(SandboxTest, UpsertTimeSeriesRowReplacesTheWholeRow) {
     auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("multi_dim_time_series.sql"));
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element("Resource", quiver::Element().set("label", "Resource 1"));
@@ -676,7 +676,7 @@ TEST_F(LuaRunnerTest, UpsertTimeSeriesRowReplacesTheWholeRow) {
     EXPECT_TRUE(std::holds_alternative<std::nullptr_t>(rows[0].at("flag")));  // left out -> cleared
 }
 
-TEST_F(LuaRunnerTest, UpsertTimeSeriesRowMissingDimErrors) {
+TEST_F(SandboxTest, UpsertTimeSeriesRowMissingDimErrors) {
     // Negative path: omitting the required date_time dimension column must
     // surface the C++ "Cannot upsert_time_series_row: row missing required ..."
     // error through sol2 -> Sandbox::run -> std::runtime_error. Mirrors the
@@ -694,7 +694,7 @@ TEST_F(LuaRunnerTest, UpsertTimeSeriesRowMissingDimErrors) {
     expect_lua_error(lua, script, "Cannot upsert_time_series_row: row missing required 'date_time'");
 }
 
-TEST_F(LuaRunnerTest, UpsertTimeSeriesRowUnsupportedValueTypeThrows) {
+TEST_F(SandboxTest, UpsertTimeSeriesRowUnsupportedValueTypeThrows) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element("Collection", quiver::Element().set("label", "Item 1"));
@@ -710,7 +710,7 @@ TEST_F(LuaRunnerTest, UpsertTimeSeriesRowUnsupportedValueTypeThrows) {
     );
 }
 
-TEST_F(LuaRunnerTest, UpsertTimeSeriesRowByLabel) {
+TEST_F(SandboxTest, UpsertTimeSeriesRowByLabel) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id1 = db.create_element("Collection", quiver::Element().set("label", "Item 1"));
@@ -736,7 +736,7 @@ TEST_F(LuaRunnerTest, UpsertTimeSeriesRowByLabel) {
     EXPECT_DOUBLE_EQ(std::get<double>(other[0].at("value")), 99.0);
 }
 
-TEST_F(LuaRunnerTest, UpsertTimeSeriesRowByLabelErrors) {
+TEST_F(SandboxTest, UpsertTimeSeriesRowByLabelErrors) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element("Collection", quiver::Element().set("label", "Item 1"));
@@ -753,7 +753,7 @@ TEST_F(LuaRunnerTest, UpsertTimeSeriesRowByLabelErrors) {
     EXPECT_TRUE(db.read_time_series_group("Collection", "data", id).empty());
 }
 
-TEST_F(LuaRunnerTest, HasTimeSeriesFiles) {
+TEST_F(SandboxTest, HasTimeSeriesFiles) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -765,7 +765,7 @@ TEST_F(LuaRunnerTest, HasTimeSeriesFiles) {
     )");
 }
 
-TEST_F(LuaRunnerTest, ListTimeSeriesFilesColumns) {
+TEST_F(SandboxTest, ListTimeSeriesFilesColumns) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -786,7 +786,7 @@ TEST_F(LuaRunnerTest, ListTimeSeriesFilesColumns) {
     )");
 }
 
-TEST_F(LuaRunnerTest, ReadTimeSeriesFiles) {
+TEST_F(SandboxTest, ReadTimeSeriesFiles) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -799,7 +799,7 @@ TEST_F(LuaRunnerTest, ReadTimeSeriesFiles) {
     )");
 }
 
-TEST_F(LuaRunnerTest, UpdateTimeSeriesFiles) {
+TEST_F(SandboxTest, UpdateTimeSeriesFiles) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -822,7 +822,7 @@ TEST_F(LuaRunnerTest, UpdateTimeSeriesFiles) {
     EXPECT_EQ(files["metadata_file"].value(), "/path/to/meta.json");
 }
 
-TEST_F(LuaRunnerTest, UpdateTimeSeriesFilesRejectsNonStringPath) {
+TEST_F(SandboxTest, UpdateTimeSeriesFilesRejectsNonStringPath) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -839,7 +839,7 @@ TEST_F(LuaRunnerTest, UpdateTimeSeriesFilesRejectsNonStringPath) {
     EXPECT_FALSE(db.read_time_series_files("Collection")["data_file"].has_value());
 }
 
-TEST_F(LuaRunnerTest, UpdateTimeSeriesFilesEmptyTableValidatesCollection) {
+TEST_F(SandboxTest, UpdateTimeSeriesFilesEmptyTableValidatesCollection) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::Sandbox lua(db);
 
@@ -850,7 +850,7 @@ TEST_F(LuaRunnerTest, UpdateTimeSeriesFilesEmptyTableValidatesCollection) {
     );
 }
 
-TEST_F(LuaRunnerTest, UpdateTimeSeriesFilesReplacesTheWholeRow) {
+TEST_F(SandboxTest, UpdateTimeSeriesFilesReplacesTheWholeRow) {
     auto db = quiver::Database::from_schema(
         ":memory:",
         collections_schema,
@@ -869,7 +869,7 @@ TEST_F(LuaRunnerTest, UpdateTimeSeriesFilesReplacesTheWholeRow) {
     )");
 }
 
-TEST_F(LuaRunnerTest, MultiColumnTimeSeriesUpdateAndRead) {
+TEST_F(SandboxTest, MultiColumnTimeSeriesUpdateAndRead) {
     auto db = quiver::Database::from_schema(
         ":memory:",
         VALID_SCHEMA("mixed_time_series.sql"),
@@ -913,7 +913,7 @@ TEST_F(LuaRunnerTest, MultiColumnTimeSeriesUpdateAndRead) {
     lua.run(script);
 }
 
-TEST_F(LuaRunnerTest, MultiColumnTimeSeriesReadEmpty) {
+TEST_F(SandboxTest, MultiColumnTimeSeriesReadEmpty) {
     auto db = quiver::Database::from_schema(
         ":memory:",
         VALID_SCHEMA("mixed_time_series.sql"),
@@ -932,7 +932,7 @@ TEST_F(LuaRunnerTest, MultiColumnTimeSeriesReadEmpty) {
     lua.run(script);
 }
 
-TEST_F(LuaRunnerTest, MultiColumnTimeSeriesReplace) {
+TEST_F(SandboxTest, MultiColumnTimeSeriesReplace) {
     auto db = quiver::Database::from_schema(
         ":memory:",
         VALID_SCHEMA("mixed_time_series.sql"),
@@ -976,7 +976,7 @@ TEST_F(LuaRunnerTest, MultiColumnTimeSeriesReplace) {
     lua.run(script);
 }
 
-TEST_F(LuaRunnerTest, MultiColumnTimeSeriesClear) {
+TEST_F(SandboxTest, MultiColumnTimeSeriesClear) {
     auto db = quiver::Database::from_schema(
         ":memory:",
         VALID_SCHEMA("mixed_time_series.sql"),
@@ -1012,7 +1012,7 @@ TEST_F(LuaRunnerTest, MultiColumnTimeSeriesClear) {
     lua.run(script);
 }
 
-TEST_F(LuaRunnerTest, MultiColumnTimeSeriesOrdering) {
+TEST_F(SandboxTest, MultiColumnTimeSeriesOrdering) {
     auto db = quiver::Database::from_schema(
         ":memory:",
         VALID_SCHEMA("mixed_time_series.sql"),
@@ -1053,7 +1053,7 @@ TEST_F(LuaRunnerTest, MultiColumnTimeSeriesOrdering) {
     lua.run(script);
 }
 
-TEST_F(LuaRunnerTest, MultiColumnTimeSeriesMultiRow) {
+TEST_F(SandboxTest, MultiColumnTimeSeriesMultiRow) {
     auto db = quiver::Database::from_schema(
         ":memory:",
         VALID_SCHEMA("mixed_time_series.sql"),
@@ -1100,7 +1100,7 @@ TEST_F(LuaRunnerTest, MultiColumnTimeSeriesMultiRow) {
     lua.run(script);
 }
 
-TEST_F(LuaRunnerTest, ReadTimeSeriesRow) {
+TEST_F(SandboxTest, ReadTimeSeriesRow) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::Sandbox lua(db);
 
@@ -1124,7 +1124,7 @@ TEST_F(LuaRunnerTest, ReadTimeSeriesRow) {
     )");
 }
 
-TEST_F(LuaRunnerTest, ReadTimeSeriesRowRejectsMultiDimensionGroup) {
+TEST_F(SandboxTest, ReadTimeSeriesRowRejectsMultiDimensionGroup) {
     auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("multi_dim_time_series.sql"));
     quiver::Sandbox lua(db);
 
@@ -1135,7 +1135,7 @@ TEST_F(LuaRunnerTest, ReadTimeSeriesRowRejectsMultiDimensionGroup) {
     );
 }
 
-TEST_F(LuaRunnerTest, ReadTimeSeriesRowNoDataIsNil) {
+TEST_F(SandboxTest, ReadTimeSeriesRowNoDataIsNil) {
     auto db = quiver::Database::from_schema(
         ":memory:",
         VALID_SCHEMA("mixed_time_series.sql"),
@@ -1164,7 +1164,7 @@ TEST_F(LuaRunnerTest, ReadTimeSeriesRowNoDataIsNil) {
     )");
 }
 
-TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupByLabel) {
+TEST_F(SandboxTest, UpdateTimeSeriesGroupByLabel) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id1 = db.create_element("Collection", quiver::Element().set("label", "Item 1"));
@@ -1195,7 +1195,7 @@ TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupByLabel) {
     EXPECT_EQ(db.read_time_series_group("Collection", "data", id2).size(), 1);
 }
 
-TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupByLabelErrors) {
+TEST_F(SandboxTest, UpdateTimeSeriesGroupByLabelErrors) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element("Collection", quiver::Element().set("label", "Item 1"));
@@ -1224,7 +1224,7 @@ TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupByLabelErrors) {
     EXPECT_EQ(db.read_time_series_group("Collection", "data", id).size(), 1);
 }
 
-TEST_F(LuaRunnerTest, RowAndFilesWritersRejectNonTable) {
+TEST_F(SandboxTest, RowAndFilesWritersRejectNonTable) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element("Collection", quiver::Element().set("label", "Item 1"));
@@ -1248,7 +1248,7 @@ TEST_F(LuaRunnerTest, RowAndFilesWritersRejectNonTable) {
     EXPECT_TRUE(db.read_time_series_group("Collection", "data", id).empty());
 }
 
-TEST_F(LuaRunnerTest, RowAndFilesWritersRejectNonStringKeys) {
+TEST_F(SandboxTest, RowAndFilesWritersRejectNonStringKeys) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element("Collection", quiver::Element().set("label", "Item 1"));

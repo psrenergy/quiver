@@ -8,7 +8,7 @@ This repo uses **nested AGENTS.md files**: this root file holds everything cross
 area's internals live in the AGENTS.md next to it (loaded automatically when working there).
 
 ```
-include/quiver/ + src/    # C++ core, Lua runner, binary + expression subsystems -> src/AGENTS.md
+include/quiver/ + src/    # C++ core, Sandbox, binary + expression subsystems -> src/AGENTS.md
 include/quiver/c/ + src/c/ # C API for FFI                                       -> src/c/AGENTS.md
 bindings/julia/           # Quiver.jl (canonical; published repo is a mirror)    -> bindings/julia/AGENTS.md
 bindings/dart/            # quiverdb on pub (ffigen + native-assets hook)        -> bindings/dart/AGENTS.md

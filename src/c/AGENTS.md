@@ -120,8 +120,8 @@ quiver_database_free_string_array(char**, size_t)
 // Single string cleanup (strings returned by query/read-by-id/element operations)
 quiver_database_free_string(char*)
 
-// Lua script result (JSON returned by quiver_lua_runner_run)
-quiver_lua_runner_free_string(char*)
+// Lua script result (JSON returned by quiver_sandbox_run)
+quiver_sandbox_free_string(char*)
 
 // Binary metadata lifecycle (no incremental builder: from_toml / from_element build a handle,
 // quiver_binary_file_get_metadata / quiver_expression_get_metadata return a copy; free releases each)

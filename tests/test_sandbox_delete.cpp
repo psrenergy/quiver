@@ -1,8 +1,8 @@
-#include "test_lua_runner.h"
+#include "test_sandbox.h"
 
 #include <algorithm>
 
-TEST_F(LuaRunnerTest, DeleteElementById) {
+TEST_F(SandboxTest, DeleteElementById) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
@@ -29,7 +29,7 @@ TEST_F(LuaRunnerTest, DeleteElementById) {
     EXPECT_EQ(ids[1], 3);
 }
 
-TEST_F(LuaRunnerTest, DeleteElementByLabel) {
+TEST_F(SandboxTest, DeleteElementByLabel) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
@@ -56,7 +56,7 @@ TEST_F(LuaRunnerTest, DeleteElementByLabel) {
     EXPECT_EQ(ids[1], 3);
 }
 
-TEST_F(LuaRunnerTest, DeleteElementByIdWithVectorData) {
+TEST_F(SandboxTest, DeleteElementByIdWithVectorData) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
@@ -85,7 +85,7 @@ TEST_F(LuaRunnerTest, DeleteElementByIdWithVectorData) {
     EXPECT_EQ(vectors[0], (std::vector<std::optional<int64_t>>{4, 5, 6}));
 }
 
-TEST_F(LuaRunnerTest, DeleteElementByIdNonExistent) {
+TEST_F(SandboxTest, DeleteElementByIdNonExistent) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
@@ -103,7 +103,7 @@ TEST_F(LuaRunnerTest, DeleteElementByIdNonExistent) {
     )");
 }
 
-TEST_F(LuaRunnerTest, DeleteElementByLabelNonExistent) {
+TEST_F(SandboxTest, DeleteElementByLabelNonExistent) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
@@ -121,7 +121,7 @@ TEST_F(LuaRunnerTest, DeleteElementByLabelNonExistent) {
     )");
 }
 
-TEST_F(LuaRunnerTest, DeleteElementByIdOtherElementsUnchanged) {
+TEST_F(SandboxTest, DeleteElementByIdOtherElementsUnchanged) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     db.create_element("Configuration", quiver::Element().set("label", "Config"));

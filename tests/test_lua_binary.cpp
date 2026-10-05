@@ -1,4 +1,4 @@
-#include "test_lua_runner.h"
+#include "test_sandbox.h"
 
 #include <gtest/gtest.h>
 #include <quiver/database.h>
@@ -413,7 +413,7 @@ TEST_F(LuaBinaryTest, RootItselfRejected) {
 #ifdef _WIN32
 // resolve_sandboxed_path is the single gate every file-touching Lua operation shares, so the
 // Pattern 1 guarantee it makes has to hold for all of them, not just the one where the hole was
-// found (db:read_csv -- see LuaRunner_ReadCsv.DeviceNamePathIsReportedWithPrefix). A Windows
+// found (db:read_csv -- see Sandbox_ReadCsv.DeviceNamePathIsReportedWithPrefix). A Windows
 // device name makes weakly_canonical throw rather than report a missing file; unwrapped, the raw
 // "weakly_canonical: The parameter is incorrect.: ..." reached the script. Guarded to _WIN32
 // because no POSIX path is reserved this way.

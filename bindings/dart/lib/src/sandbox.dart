@@ -23,15 +23,15 @@ import 'exceptions.dart';
 /// db.close();
 /// ```
 class Sandbox {
-  Pointer<quiver_lua_runner_t> _ptr;
+  Pointer<quiver_sandbox_t> _ptr;
   bool _isDisposed = false;
 
   /// Creates a new Sandbox for the given database.
   Sandbox(Database db) : _ptr = nullptr {
     final arena = Arena();
     try {
-      final outRunnerPtr = arena<Pointer<quiver_lua_runner_t>>();
-      check(bindings.quiver_lua_runner_new(db.ptr, outRunnerPtr));
+      final outRunnerPtr = arena<Pointer<quiver_sandbox_t>>();
+      check(bindings.quiver_sandbox_new(db.ptr, outRunnerPtr));
       _ptr = outRunnerPtr.value;
     } finally {
       arena.releaseAll();
@@ -61,7 +61,7 @@ class Sandbox {
     final arena = Arena();
     try {
       final outResult = arena<Pointer<Char>>();
-      final err = bindings.quiver_lua_runner_run(
+      final err = bindings.quiver_sandbox_run(
         _ptr,
         script.toNativeUtf8(allocator: arena).cast(),
         outResult,
@@ -78,7 +78,7 @@ class Sandbox {
       try {
         return resultPtr.cast<Utf8>().toDartString();
       } finally {
-        bindings.quiver_lua_runner_free_string(resultPtr);
+        bindings.quiver_sandbox_free_string(resultPtr);
       }
     } finally {
       arena.releaseAll();
@@ -88,7 +88,7 @@ class Sandbox {
   /// Disposes the Sandbox and frees native resources.
   void dispose() {
     if (_isDisposed) return;
-    bindings.quiver_lua_runner_free(_ptr);
+    bindings.quiver_sandbox_free(_ptr);
     _isDisposed = true;
   }
 }

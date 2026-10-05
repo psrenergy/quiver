@@ -1,6 +1,6 @@
-#include "test_lua_runner.h"
+#include "test_sandbox.h"
 
-TEST_F(LuaRunnerTest, QueryString) {
+TEST_F(SandboxTest, QueryString) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     db.create_element("Collection", quiver::Element().set("label", "Item 1").set("some_integer", int64_t{42}));
@@ -13,7 +13,7 @@ TEST_F(LuaRunnerTest, QueryString) {
     )");
 }
 
-TEST_F(LuaRunnerTest, QueryStringNoParams) {
+TEST_F(SandboxTest, QueryStringNoParams) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     db.create_element("Collection", quiver::Element().set("label", "Item 1"));
@@ -26,7 +26,7 @@ TEST_F(LuaRunnerTest, QueryStringNoParams) {
     )");
 }
 
-TEST_F(LuaRunnerTest, QueryStringReturnsNil) {
+TEST_F(SandboxTest, QueryStringReturnsNil) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -38,7 +38,7 @@ TEST_F(LuaRunnerTest, QueryStringReturnsNil) {
     )");
 }
 
-TEST_F(LuaRunnerTest, QueryInteger) {
+TEST_F(SandboxTest, QueryInteger) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     db.create_element("Collection", quiver::Element().set("label", "Item 1").set("some_integer", int64_t{42}));
@@ -51,7 +51,7 @@ TEST_F(LuaRunnerTest, QueryInteger) {
     )");
 }
 
-TEST_F(LuaRunnerTest, QueryIntegerCount) {
+TEST_F(SandboxTest, QueryIntegerCount) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     db.create_element("Collection", quiver::Element().set("label", "Item 1"));
@@ -65,7 +65,7 @@ TEST_F(LuaRunnerTest, QueryIntegerCount) {
     )");
 }
 
-TEST_F(LuaRunnerTest, QueryFloat) {
+TEST_F(SandboxTest, QueryFloat) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     db.create_element("Collection", quiver::Element().set("label", "Item 1").set("some_float", 3.14));
@@ -78,7 +78,7 @@ TEST_F(LuaRunnerTest, QueryFloat) {
     )");
 }
 
-TEST_F(LuaRunnerTest, QueryWithMultipleParams) {
+TEST_F(SandboxTest, QueryWithMultipleParams) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     db.create_element("Collection", quiver::Element().set("label", "Item 1").set("some_integer", int64_t{10}));
@@ -95,7 +95,7 @@ TEST_F(LuaRunnerTest, QueryWithMultipleParams) {
     )");
 }
 
-TEST_F(LuaRunnerTest, IsHealthy) {
+TEST_F(SandboxTest, IsHealthy) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -107,7 +107,7 @@ TEST_F(LuaRunnerTest, IsHealthy) {
     )");
 }
 
-TEST_F(LuaRunnerTest, CurrentVersion) {
+TEST_F(SandboxTest, CurrentVersion) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -119,7 +119,7 @@ TEST_F(LuaRunnerTest, CurrentVersion) {
     )");
 }
 
-TEST_F(LuaRunnerTest, CurrentVersionAfterMigrations) {
+TEST_F(SandboxTest, CurrentVersionAfterMigrations) {
     auto db = quiver::Database::from_migrations(":memory:", SCHEMA_PATH("schemas/migrations"));
     quiver::Sandbox lua(db);
 
@@ -129,7 +129,7 @@ TEST_F(LuaRunnerTest, CurrentVersionAfterMigrations) {
     )");
 }
 
-TEST_F(LuaRunnerTest, Path) {
+TEST_F(SandboxTest, Path) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -142,7 +142,7 @@ TEST_F(LuaRunnerTest, Path) {
     )");
 }
 
-TEST_F(LuaRunnerTest, Describe) {
+TEST_F(SandboxTest, Describe) {
     auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"));
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -155,7 +155,7 @@ TEST_F(LuaRunnerTest, Describe) {
     )");
 }
 
-TEST_F(LuaRunnerTest, QueryParameterCountMismatch) {
+TEST_F(SandboxTest, QueryParameterCountMismatch) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     db.create_element("Collection", quiver::Element().set("label", "Item 1").set("some_integer", int64_t{42}));
@@ -185,7 +185,7 @@ TEST_F(LuaRunnerTest, QueryParameterCountMismatch) {
 
 // Lua stores no key for a nil, so a query parameter table's length is the `#` border: an interior
 // nil in a constructor ({ nil, 5 }) is counted and binds NULL, a trailing one ({ 5, nil }) is not.
-TEST_F(LuaRunnerTest, QueryInteriorNilParamBindsNull) {
+TEST_F(SandboxTest, QueryInteriorNilParamBindsNull) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::Sandbox lua(db);
 
@@ -195,7 +195,7 @@ TEST_F(LuaRunnerTest, QueryInteriorNilParamBindsNull) {
     )");
 }
 
-TEST_F(LuaRunnerTest, QueryTrailingNilParamIsACountMismatch) {
+TEST_F(SandboxTest, QueryTrailingNilParamIsACountMismatch) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::Sandbox lua(db);
 
@@ -203,7 +203,7 @@ TEST_F(LuaRunnerTest, QueryTrailingNilParamIsACountMismatch) {
 }
 
 // A wrong-typed params argument used to be ignored, so the query ran with no parameters.
-TEST_F(LuaRunnerTest, QueryRejectsWrongTypedParams) {
+TEST_F(SandboxTest, QueryRejectsWrongTypedParams) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::Sandbox lua(db);
 

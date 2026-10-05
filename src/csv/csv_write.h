@@ -20,7 +20,7 @@
 //
 // The full Pattern 1 message catalogue for this feature (this header/cpp plus the write_row cell
 // formatter it feeds from src/sandbox/csv.cpp) is pinned as a comment block at the top of
-// src/csv/csv_write.cpp -- tests/test_lua_runner_write_csv.cpp matches on those exact strings; do
+// src/csv/csv_write.cpp -- tests/test_sandbox_write_csv.cpp matches on those exact strings; do
 // not reword any of them without updating that comment and the tests together.
 
 #include <fstream>

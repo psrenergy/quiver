@@ -1,4 +1,4 @@
-#include "test_lua_runner.h"
+#include "test_sandbox.h"
 
 #include <filesystem>
 #include <fstream>
@@ -9,9 +9,9 @@ static void write_lua_csv_file(const std::string& path, const std::string& conte
 }
 
 // db:import_csv paths are sandboxed: relative paths resolve against the database directory.
-class LuaRunner_ImportCSV : public LuaSandboxTest {};
+class Sandbox_ImportCSV : public LuaSandboxTest {};
 
-TEST_F(LuaRunner_ImportCSV, ScalarRoundTrip) {
+TEST_F(Sandbox_ImportCSV, ScalarRoundTrip) {
     auto csv_schema = VALID_SCHEMA("csv_export.sql");
     auto db = quiver::Database::from_schema(db_path(), csv_schema);
     quiver::Sandbox lua(db);
@@ -46,7 +46,7 @@ TEST_F(LuaRunner_ImportCSV, ScalarRoundTrip) {
     )");
 }
 
-TEST_F(LuaRunner_ImportCSV, VectorGroupRoundTrip) {
+TEST_F(Sandbox_ImportCSV, VectorGroupRoundTrip) {
     auto csv_schema = VALID_SCHEMA("csv_export.sql");
     auto db = quiver::Database::from_schema(db_path(), csv_schema);
     quiver::Sandbox lua(db);
@@ -64,7 +64,7 @@ TEST_F(LuaRunner_ImportCSV, VectorGroupRoundTrip) {
     EXPECT_EQ(vals.size(), 3);
 }
 
-TEST_F(LuaRunner_ImportCSV, ScalarHeaderOnlyClearsTable) {
+TEST_F(Sandbox_ImportCSV, ScalarHeaderOnlyClearsTable) {
     auto csv_schema = VALID_SCHEMA("csv_export.sql");
     auto db = quiver::Database::from_schema(db_path(), csv_schema);
     quiver::Sandbox lua(db);
@@ -84,7 +84,7 @@ TEST_F(LuaRunner_ImportCSV, ScalarHeaderOnlyClearsTable) {
     )");
 }
 
-TEST_F(LuaRunner_ImportCSV, EnumResolution) {
+TEST_F(Sandbox_ImportCSV, EnumResolution) {
     auto csv_schema = VALID_SCHEMA("csv_export.sql");
     auto db = quiver::Database::from_schema(db_path(), csv_schema);
     quiver::Sandbox lua(db);
@@ -108,7 +108,7 @@ TEST_F(LuaRunner_ImportCSV, EnumResolution) {
     )");
 }
 
-TEST_F(LuaRunner_ImportCSV, DateTimeFormat) {
+TEST_F(Sandbox_ImportCSV, DateTimeFormat) {
     auto csv_schema = VALID_SCHEMA("csv_export.sql");
     auto db = quiver::Database::from_schema(db_path(), csv_schema);
     quiver::Sandbox lua(db);
@@ -132,7 +132,7 @@ TEST_F(LuaRunner_ImportCSV, DateTimeFormat) {
 
 // Every level of enum_labels is type-checked, after it is collected: a non-table level or a
 // non-integer code used to become a silent 0 in Release and a raw sol2 panic in Debug.
-TEST_F(LuaRunner_ImportCSV, OptionsAreStrict) {
+TEST_F(Sandbox_ImportCSV, OptionsAreStrict) {
     auto csv_schema = VALID_SCHEMA("csv_export.sql");
     auto db = quiver::Database::from_schema(db_path(), csv_schema);
     quiver::Sandbox lua(db);
@@ -171,7 +171,7 @@ TEST_F(LuaRunner_ImportCSV, OptionsAreStrict) {
     EXPECT_EQ(db.read_element_ids("Items").size(), 0u);
 }
 
-TEST_F(LuaRunner_ImportCSV, ScalarTrailingEmptyColumns) {
+TEST_F(Sandbox_ImportCSV, ScalarTrailingEmptyColumns) {
     auto csv_schema = VALID_SCHEMA("csv_export.sql");
     auto db = quiver::Database::from_schema(db_path(), csv_schema);
     quiver::Sandbox lua(db);
@@ -192,7 +192,7 @@ TEST_F(LuaRunner_ImportCSV, ScalarTrailingEmptyColumns) {
     )");
 }
 
-TEST_F(LuaRunner_ImportCSV, VectorTrailingEmptyColumns) {
+TEST_F(Sandbox_ImportCSV, VectorTrailingEmptyColumns) {
     auto csv_schema = VALID_SCHEMA("csv_export.sql");
     auto db = quiver::Database::from_schema(db_path(), csv_schema);
     quiver::Sandbox lua(db);
@@ -215,7 +215,7 @@ TEST_F(LuaRunner_ImportCSV, VectorTrailingEmptyColumns) {
     EXPECT_EQ(vals.size(), 2);
 }
 
-TEST_F(LuaRunner_ImportCSV, OmittedElementDeletesItsGroupRows) {
+TEST_F(Sandbox_ImportCSV, OmittedElementDeletesItsGroupRows) {
     auto csv_schema = VALID_SCHEMA("csv_export.sql");
     auto db = quiver::Database::from_schema(db_path(), csv_schema);
     quiver::Sandbox lua(db);
@@ -242,7 +242,7 @@ TEST_F(LuaRunner_ImportCSV, OmittedElementDeletesItsGroupRows) {
     EXPECT_EQ(db.read_vector_floats_by_id("Items", "measurement", 2), (std::vector<std::optional<double>>{9.5}));
 }
 
-TEST_F(LuaRunner_ImportCSV, InsideTransactionThrows) {
+TEST_F(Sandbox_ImportCSV, InsideTransactionThrows) {
     auto csv_schema = VALID_SCHEMA("csv_export.sql");
     auto db = quiver::Database::from_schema(db_path(), csv_schema);
     quiver::Sandbox lua(db);
@@ -262,7 +262,7 @@ TEST_F(LuaRunner_ImportCSV, InsideTransactionThrows) {
 
 // --- db-directory sandbox ---
 
-TEST_F(LuaRunner_ImportCSV, EscapeThrows) {
+TEST_F(Sandbox_ImportCSV, EscapeThrows) {
     auto csv_schema = VALID_SCHEMA("csv_export.sql");
     auto db = quiver::Database::from_schema(db_path(), csv_schema);
     quiver::Sandbox lua(db);
@@ -275,7 +275,7 @@ TEST_F(LuaRunner_ImportCSV, EscapeThrows) {
 }
 
 // The path is resolved before the options are decoded, so a non-table options argument cannot mask an escaping path.
-TEST_F(LuaRunner_ImportCSV, EscapeIsReportedBeforeNonTableOptions) {
+TEST_F(Sandbox_ImportCSV, EscapeIsReportedBeforeNonTableOptions) {
     auto csv_schema = VALID_SCHEMA("csv_export.sql");
     auto db = quiver::Database::from_schema(db_path(), csv_schema);
     quiver::Sandbox lua(db);
@@ -287,7 +287,7 @@ TEST_F(LuaRunner_ImportCSV, EscapeIsReportedBeforeNonTableOptions) {
     );
 }
 
-TEST_F(LuaRunner_ImportCSV, InMemoryThrows) {
+TEST_F(Sandbox_ImportCSV, InMemoryThrows) {
     auto csv_schema = VALID_SCHEMA("csv_export.sql");
     auto db = quiver::Database::from_schema(":memory:", csv_schema);
     quiver::Sandbox lua(db);

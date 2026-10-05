@@ -1,4 +1,4 @@
-#include "test_lua_runner.h"
+#include "test_sandbox.h"
 
 #include <filesystem>
 #include <memory>
@@ -12,7 +12,7 @@ static_assert(
 
 // A move hands the heap Impl over whole, so the moved-to runner's bindings still reach the registries
 // that close every CSV writer and binary file at run() exit.
-class LuaRunner_Lifecycle : public LuaSandboxTest {
+class Sandbox_Lifecycle : public LuaSandboxTest {
 protected:
     void SetUp() override {
         LuaSandboxTest::SetUp();
@@ -51,7 +51,7 @@ protected:
     std::string schema;
 };
 
-TEST_F(LuaRunner_Lifecycle, MoveConstructor) {
+TEST_F(Sandbox_Lifecycle, MoveConstructor) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox source(db);
     source.run(open_handles("first"));
@@ -66,7 +66,7 @@ TEST_F(LuaRunner_Lifecycle, MoveConstructor) {
     EXPECT_TRUE(std::filesystem::exists(sandbox / "second_doubled.qvr"));
 }
 
-TEST_F(LuaRunner_Lifecycle, MoveAssignment) {
+TEST_F(Sandbox_Lifecycle, MoveAssignment) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::Sandbox source(db);
     source.run(open_handles("first"));
@@ -82,7 +82,7 @@ TEST_F(LuaRunner_Lifecycle, MoveAssignment) {
 
 // The source is freed before the moved-to runner runs again, so run state still reached through the
 // moved-from runner dangles instead of silently working.
-TEST_F(LuaRunner_Lifecycle, MoveConstructorOutlivesSource) {
+TEST_F(Sandbox_Lifecycle, MoveConstructorOutlivesSource) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     auto source = std::make_unique<quiver::Sandbox>(db);
     source->run(open_handles("first"));
@@ -95,7 +95,7 @@ TEST_F(LuaRunner_Lifecycle, MoveConstructorOutlivesSource) {
     EXPECT_TRUE(std::filesystem::exists(sandbox / "second_doubled.qvr"));
 }
 
-TEST_F(LuaRunner_Lifecycle, MoveAssignmentOutlivesSource) {
+TEST_F(Sandbox_Lifecycle, MoveAssignmentOutlivesSource) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     auto source = std::make_unique<quiver::Sandbox>(db);
     source->run(open_handles("first"));

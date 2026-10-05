@@ -1,4 +1,4 @@
-#include "test_lua_runner.h"
+#include "test_sandbox.h"
 
 #include <filesystem>
 #include <fstream>
@@ -12,9 +12,9 @@ static std::string read_csv_file(const std::string& path) {
 }
 
 // db:export_csv paths are sandboxed: relative paths resolve against the database directory.
-class LuaRunner_ExportCSV : public LuaSandboxTest {};
+class Sandbox_ExportCSV : public LuaSandboxTest {};
 
-TEST_F(LuaRunner_ExportCSV, ScalarDefaults) {
+TEST_F(Sandbox_ExportCSV, ScalarDefaults) {
     auto csv_schema = VALID_SCHEMA("csv_export.sql");
     auto db = quiver::Database::from_schema(db_path(), csv_schema);
     quiver::Sandbox lua(db);
@@ -38,7 +38,7 @@ TEST_F(LuaRunner_ExportCSV, ScalarDefaults) {
     EXPECT_NE(content.find("Item2,Beta,2,19.5,2024-02-20T08:00:00,second\n"), std::string::npos);
 }
 
-TEST_F(LuaRunner_ExportCSV, GroupExport) {
+TEST_F(Sandbox_ExportCSV, GroupExport) {
     auto csv_schema = VALID_SCHEMA("csv_export.sql");
     auto db = quiver::Database::from_schema(db_path(), csv_schema);
     quiver::Sandbox lua(db);
@@ -61,7 +61,7 @@ TEST_F(LuaRunner_ExportCSV, GroupExport) {
     EXPECT_NE(content.find("Item2,2,5.5\n"), std::string::npos);
 }
 
-TEST_F(LuaRunner_ExportCSV, EnumLabels) {
+TEST_F(Sandbox_ExportCSV, EnumLabels) {
     auto csv_schema = VALID_SCHEMA("csv_export.sql");
     auto db = quiver::Database::from_schema(db_path(), csv_schema);
     quiver::Sandbox lua(db);
@@ -90,7 +90,7 @@ TEST_F(LuaRunner_ExportCSV, EnumLabels) {
     EXPECT_NE(content.find("Item2,Beta,Inactive,19.5,2024-02-20T08:00:00,second\n"), std::string::npos);
 }
 
-TEST_F(LuaRunner_ExportCSV, DateTimeFormat) {
+TEST_F(Sandbox_ExportCSV, DateTimeFormat) {
     auto csv_schema = VALID_SCHEMA("csv_export.sql");
     auto db = quiver::Database::from_schema(db_path(), csv_schema);
     quiver::Sandbox lua(db);
@@ -112,7 +112,7 @@ TEST_F(LuaRunner_ExportCSV, DateTimeFormat) {
     EXPECT_NE(content.find("Item1,Alpha,1,9.99,2024/01/15,first\n"), std::string::npos);
 }
 
-TEST_F(LuaRunner_ExportCSV, CombinedOptions) {
+TEST_F(Sandbox_ExportCSV, CombinedOptions) {
     auto csv_schema = VALID_SCHEMA("csv_export.sql");
     auto db = quiver::Database::from_schema(db_path(), csv_schema);
     quiver::Sandbox lua(db);
@@ -145,7 +145,7 @@ TEST_F(LuaRunner_ExportCSV, CombinedOptions) {
 }
 
 // A misspelled key, a wrong-typed value and a non-table options argument used to be ignored.
-TEST_F(LuaRunner_ExportCSV, OptionsAreStrict) {
+TEST_F(Sandbox_ExportCSV, OptionsAreStrict) {
     auto csv_schema = VALID_SCHEMA("csv_export.sql");
     auto db = quiver::Database::from_schema(db_path(), csv_schema);
     quiver::Sandbox lua(db);
@@ -169,7 +169,7 @@ TEST_F(LuaRunner_ExportCSV, OptionsAreStrict) {
 
 // --- db-directory sandbox ---
 
-TEST_F(LuaRunner_ExportCSV, RelativeResolvesAgainstDbDir) {
+TEST_F(Sandbox_ExportCSV, RelativeResolvesAgainstDbDir) {
     auto csv_schema = VALID_SCHEMA("csv_export.sql");
     auto db = quiver::Database::from_schema(db_path(), csv_schema);
     quiver::Sandbox lua(db);
@@ -181,7 +181,7 @@ TEST_F(LuaRunner_ExportCSV, RelativeResolvesAgainstDbDir) {
     EXPECT_FALSE(std::filesystem::exists(std::filesystem::current_path() / "out.csv"));
 }
 
-TEST_F(LuaRunner_ExportCSV, EscapeThrows) {
+TEST_F(Sandbox_ExportCSV, EscapeThrows) {
     auto csv_schema = VALID_SCHEMA("csv_export.sql");
     auto db = quiver::Database::from_schema(db_path(), csv_schema);
     quiver::Sandbox lua(db);
@@ -194,7 +194,7 @@ TEST_F(LuaRunner_ExportCSV, EscapeThrows) {
 }
 
 // The path is resolved before the options are decoded, so a non-table options argument cannot mask an escaping path.
-TEST_F(LuaRunner_ExportCSV, EscapeIsReportedBeforeNonTableOptions) {
+TEST_F(Sandbox_ExportCSV, EscapeIsReportedBeforeNonTableOptions) {
     auto csv_schema = VALID_SCHEMA("csv_export.sql");
     auto db = quiver::Database::from_schema(db_path(), csv_schema);
     quiver::Sandbox lua(db);
@@ -206,7 +206,7 @@ TEST_F(LuaRunner_ExportCSV, EscapeIsReportedBeforeNonTableOptions) {
     );
 }
 
-TEST_F(LuaRunner_ExportCSV, InMemoryThrows) {
+TEST_F(Sandbox_ExportCSV, InMemoryThrows) {
     auto csv_schema = VALID_SCHEMA("csv_export.sql");
     auto db = quiver::Database::from_schema(":memory:", csv_schema);
     quiver::Sandbox lua(db);

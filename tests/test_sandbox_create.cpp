@@ -1,8 +1,8 @@
-#include "test_lua_runner.h"
+#include "test_sandbox.h"
 
 #include <algorithm>
 
-TEST_F(LuaRunnerTest, CreateElement) {
+TEST_F(SandboxTest, CreateElement) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::Sandbox lua(db);
 
@@ -19,7 +19,7 @@ TEST_F(LuaRunnerTest, CreateElement) {
     EXPECT_EQ(integers[0], 42);
 }
 
-TEST_F(LuaRunnerTest, CreateElementWithArrays) {
+TEST_F(SandboxTest, CreateElementWithArrays) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::Sandbox lua(db);
 
@@ -43,7 +43,7 @@ TEST_F(LuaRunnerTest, CreateElementWithArrays) {
 }
 
 // On create the core skips an empty array before looking up its table, so a misspelled one passes.
-TEST_F(LuaRunnerTest, CreateElementSkipsEmptyArray) {
+TEST_F(SandboxTest, CreateElementSkipsEmptyArray) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::Sandbox lua(db);
 
@@ -56,7 +56,7 @@ TEST_F(LuaRunnerTest, CreateElementSkipsEmptyArray) {
     EXPECT_EQ(db.query_integer("SELECT COUNT(*) FROM Collection_vector_values"), 0);
 }
 
-TEST_F(LuaRunnerTest, CreateElementWithOnlyLabel) {
+TEST_F(SandboxTest, CreateElementWithOnlyLabel) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::Sandbox lua(db);
 
@@ -70,7 +70,7 @@ TEST_F(LuaRunnerTest, CreateElementWithOnlyLabel) {
     EXPECT_EQ(labels[0], "Item 1");
 }
 
-TEST_F(LuaRunnerTest, CreateElementMixedTypes) {
+TEST_F(SandboxTest, CreateElementMixedTypes) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::Sandbox lua(db);
 
@@ -92,7 +92,7 @@ TEST_F(LuaRunnerTest, CreateElementMixedTypes) {
     EXPECT_DOUBLE_EQ(*floats[0], 3.14);
 }
 
-TEST_F(LuaRunnerTest, CreateElementMissingLabel) {
+TEST_F(SandboxTest, CreateElementMissingLabel) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -102,7 +102,7 @@ TEST_F(LuaRunnerTest, CreateElementMissingLabel) {
     expect_lua_error(lua, R"(db:create_element("Collection", { some_integer = 42 }))", "NOT NULL constraint failed");
 }
 
-TEST_F(LuaRunnerTest, CreateElementTrimsWhitespace) {
+TEST_F(SandboxTest, CreateElementTrimsWhitespace) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::Sandbox lua(db);
 
@@ -125,7 +125,7 @@ TEST_F(LuaRunnerTest, CreateElementTrimsWhitespace) {
     EXPECT_EQ(tags, (std::vector<std::optional<std::string>>{"important", "review", "urgent"}));
 }
 
-TEST_F(LuaRunnerTest, CreateElementWithSpecialCharactersInLabel) {
+TEST_F(SandboxTest, CreateElementWithSpecialCharactersInLabel) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::Sandbox lua(db);
 
@@ -139,7 +139,7 @@ TEST_F(LuaRunnerTest, CreateElementWithSpecialCharactersInLabel) {
     EXPECT_EQ(labels[0], "Test's \"special\" chars: <>&");
 }
 
-TEST_F(LuaRunnerTest, CreateElementInvalidCollection) {
+TEST_F(SandboxTest, CreateElementInvalidCollection) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -152,7 +152,7 @@ TEST_F(LuaRunnerTest, CreateElementInvalidCollection) {
     );
 }
 
-TEST_F(LuaRunnerTest, CreateElementUnsupportedAttributeTypeThrows) {
+TEST_F(SandboxTest, CreateElementUnsupportedAttributeTypeThrows) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     quiver::Sandbox lua(db);
@@ -168,7 +168,7 @@ TEST_F(LuaRunnerTest, CreateElementUnsupportedAttributeTypeThrows) {
     }
 }
 
-TEST_F(LuaRunnerTest, CreateElementUnsupportedArrayElementTypeThrows) {
+TEST_F(SandboxTest, CreateElementUnsupportedArrayElementTypeThrows) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     quiver::Sandbox lua(db);
@@ -187,7 +187,7 @@ TEST_F(LuaRunnerTest, CreateElementUnsupportedArrayElementTypeThrows) {
 // through the integer readers.
 // ============================================================================
 
-TEST_F(LuaRunnerTest, CreateElementBooleanAttributeStoresInteger) {
+TEST_F(SandboxTest, CreateElementBooleanAttributeStoresInteger) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     quiver::Sandbox lua(db);
@@ -203,7 +203,7 @@ TEST_F(LuaRunnerTest, CreateElementBooleanAttributeStoresInteger) {
     EXPECT_EQ(integers[1], 0);
 }
 
-TEST_F(LuaRunnerTest, CreateElementBooleanArrayStoresIntegers) {
+TEST_F(SandboxTest, CreateElementBooleanArrayStoresIntegers) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     quiver::Sandbox lua(db);
@@ -217,7 +217,7 @@ TEST_F(LuaRunnerTest, CreateElementBooleanArrayStoresIntegers) {
     );
 }
 
-TEST_F(LuaRunnerTest, CreateElementMixedIntegerAndBooleanArray) {
+TEST_F(SandboxTest, CreateElementMixedIntegerAndBooleanArray) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     quiver::Sandbox lua(db);
@@ -234,7 +234,7 @@ TEST_F(LuaRunnerTest, CreateElementMixedIntegerAndBooleanArray) {
     );
 }
 
-TEST_F(LuaRunnerTest, UpdateElementBooleanAttributeStoresInteger) {
+TEST_F(SandboxTest, UpdateElementBooleanAttributeStoresInteger) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     quiver::Sandbox lua(db);
@@ -247,7 +247,7 @@ TEST_F(LuaRunnerTest, UpdateElementBooleanAttributeStoresInteger) {
     EXPECT_EQ(db.read_scalar_integers("Collection", "some_integer")[0], 1);
 }
 
-TEST_F(LuaRunnerTest, UpdateVectorGroupBooleanCellsStoreIntegers) {
+TEST_F(SandboxTest, UpdateVectorGroupBooleanCellsStoreIntegers) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     quiver::Sandbox lua(db);
@@ -264,7 +264,7 @@ TEST_F(LuaRunnerTest, UpdateVectorGroupBooleanCellsStoreIntegers) {
     );
 }
 
-TEST_F(LuaRunnerTest, UpsertTimeSeriesRowBooleanStoresInteger) {
+TEST_F(SandboxTest, UpsertTimeSeriesRowBooleanStoresInteger) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     quiver::Sandbox lua(db);
@@ -281,7 +281,7 @@ TEST_F(LuaRunnerTest, UpsertTimeSeriesRowBooleanStoresInteger) {
     EXPECT_EQ(std::get<double>(rows[0].at("value")), 1.0);
 }
 
-TEST_F(LuaRunnerTest, CreateElementMixedFloatAndBooleanArray) {
+TEST_F(SandboxTest, CreateElementMixedFloatAndBooleanArray) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     quiver::Sandbox lua(db);
@@ -297,7 +297,7 @@ TEST_F(LuaRunnerTest, CreateElementMixedFloatAndBooleanArray) {
     );
 }
 
-TEST_F(LuaRunnerTest, CreateElementArrayCellTypeMismatchThrows) {
+TEST_F(SandboxTest, CreateElementArrayCellTypeMismatchThrows) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     quiver::Sandbox lua(db);
@@ -321,7 +321,7 @@ TEST_F(LuaRunnerTest, CreateElementArrayCellTypeMismatchThrows) {
     }
 }
 
-TEST_F(LuaRunnerTest, CreateElementRejectsNonTableElement) {
+TEST_F(SandboxTest, CreateElementRejectsNonTableElement) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::Sandbox lua(db);
 
@@ -340,7 +340,7 @@ TEST_F(LuaRunnerTest, CreateElementRejectsNonTableElement) {
 
 // A userdata attribute value used to be walked as an array and reach the script as sol2's raw
 // usertype text.
-TEST_F(LuaRunnerTest, CreateElementRejectsUserdataAttribute) {
+TEST_F(SandboxTest, CreateElementRejectsUserdataAttribute) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::Sandbox lua(db);
 
@@ -353,7 +353,7 @@ TEST_F(LuaRunnerTest, CreateElementRejectsUserdataAttribute) {
 }
 
 // A number key used to be spelled as text in Release, and a boolean key had no text at all.
-TEST_F(LuaRunnerTest, CreateElementRejectsNonStringAttributeName) {
+TEST_F(SandboxTest, CreateElementRejectsNonStringAttributeName) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::Sandbox lua(db);
 

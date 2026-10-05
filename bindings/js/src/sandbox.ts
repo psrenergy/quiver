@@ -11,7 +11,7 @@ export class Sandbox {
   constructor(db: Database) {
     const lib = getSymbols();
     const outRunner = allocPtrOut();
-    check(lib.quiver_lua_runner_new(db._handle, outRunner.buf));
+    check(lib.quiver_sandbox_new(db._handle, outRunner.buf));
     this._ptr = readPtrOut(outRunner);
   }
 
@@ -26,16 +26,16 @@ export class Sandbox {
     const lib = getSymbols();
     const scriptBuf = toCString(script);
     const outResult = allocPtrOut();
-    check(lib.quiver_lua_runner_run(this._ptr, scriptBuf.buf, outResult.buf));
+    check(lib.quiver_sandbox_run(this._ptr, scriptBuf.buf, outResult.buf));
     const result = decodeStringFromBuf(outResult);
-    lib.quiver_lua_runner_free_string(readPtrOut(outResult));
+    lib.quiver_sandbox_free_string(readPtrOut(outResult));
     return result;
   }
 
   close(): void {
     if (this._closed) return;
     const lib = getSymbols();
-    check(lib.quiver_lua_runner_free(this._ptr));
+    check(lib.quiver_sandbox_free(this._ptr));
     this._closed = true;
   }
 

@@ -81,7 +81,7 @@ Reader::Reader(std::string resolved_path, std::string original_path, std::string
     // Pattern 1 prefix at all, and no csv-parser or standard-library message may reach Lua without
     // one. An error_code lets "not found" and "the OS refused the query" be told apart and reported
     // separately. The not-found, directory and empty messages are pinned exactly by
-    // LuaRunner_ReadCsv.MissingFileThrowsForReadCsv, .DirectoryAsPathThrowsForReadCsv and
+    // Sandbox_ReadCsv.MissingFileThrowsForReadCsv, .DirectoryAsPathThrowsForReadCsv and
     // .EmptyFileThrows; do not reword them.
     std::error_code ec;
 
@@ -134,7 +134,7 @@ Reader::Reader(std::string resolved_path, std::string original_path, std::string
     // caller's ORIGINAL request (options.header_row, pre-translation) rather than header emptiness
     // alone: header_row = 0 ("no header"; the option is 1-based, default 1) also produces an empty
     // header by design, and that is not an error. Pinned by
-    // LuaRunner_ReadCsv.HeaderRowPastEndOfFileThrowsExactMessage; do not reword it.
+    // Sandbox_ReadCsv.HeaderRowPastEndOfFileThrowsExactMessage; do not reword it.
     if (options.header_row != 0 && header.empty()) {
         throw std::runtime_error(
             "Cannot " + operation + ": header row " + std::to_string(options.header_row) + " not found in file '" +

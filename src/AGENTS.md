@@ -136,7 +136,7 @@ returns an empty header with zero rows in total silence, so the check is gated o
 original request (`header_row != 0`) rather than header emptiness alone, since `header_row = 0`
 also yields an empty header by design. csv-parser's quote rules are not configurable at all, yet
 import's `require_well_formed_quotes` (`database_csv_import.cpp`) hand-copies them to guard its
-DELETE; `LuaRunner_ReadCsv.StrayQuotesTokenizeAsTheImportPrePassAssumes` pins the parser side, so
+DELETE; `Sandbox_ReadCsv.StrayQuotesTokenizeAsTheImportPrePassAssumes` pins the parser side, so
 re-check both on any csv-parser `GIT_TAG` bump.
 
 `csv/csv_write.h`/`.cpp` is `csv_read`'s deliberate non-Pimpl counterpart: it depends
@@ -747,7 +747,7 @@ Implementation conventions in `src/sandbox/`:
   without a Pattern 1 prefix, for **every** operation in the list above, not just the one it was
   found through. Because this is the single gate they all share, the guard belongs here and nowhere else;
   the deliberate `:memory:` and containment throws stay outside the `try` so they are not
-  double-wrapped. Covered by `LuaRunner_ReadCsv.DeviceNamePathIsReportedWithPrefix` and
+  double-wrapped. Covered by `Sandbox_ReadCsv.DeviceNamePathIsReportedWithPrefix` and
   `LuaBinaryTest.DeviceNamePathIsReportedWithPrefix` (the latter spanning `open_file`/`bin_to_csv`/
   `csv_to_bin`, so the shared fix cannot regress to a per-caller patch). `SandboxedPathTest`
   (`tests/test_sandboxed_path.cpp`) calls the gate directly, without Lua, through the sol2-free
@@ -952,7 +952,7 @@ Implementation conventions in `src/sandbox/`:
   finalizes *unreachable* objects, so a writer the script assigned to a global
   (`w = db:write_csv(...)` — no `local`, Lua's default spelling) is a GC root and was never
   flushed: the file stayed at 0 bytes, which
-  `LuaRunner_WriteCsv.UnclosedWriterHeldInAGlobalIsAlsoFlushedWhenRunReturns` pins. `db:write_csv`
+  `Sandbox_WriteCsv.UnclosedWriterHeldInAGlobalIsAlsoFlushedWhenRunReturns` pins. `db:write_csv`
   therefore hands out a `std::shared_ptr<csv_write::Writer>` and records a `weak_ptr` in
   `RunHandles::open_writers` (declared in `src/sandbox/internal.h`, bodies in `src/sandbox/sandbox.cpp`); `close_open_handles()` locks each one still alive, closes it (swallowing a
   flush failure — a scope-exit guard has no caller to report to, exactly as `~Writer` did), and

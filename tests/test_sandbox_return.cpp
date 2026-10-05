@@ -1,4 +1,4 @@
-#include "test_lua_runner.h"
+#include "test_sandbox.h"
 
 // Scripts hand a value back to the host as JSON. Only the first returned value is encoded.
 
@@ -15,14 +15,14 @@ quiver::Database return_database() {
 
 }  // namespace
 
-TEST_F(LuaRunnerTest, ReturnNothingYieldsEmptyString) {
+TEST_F(SandboxTest, ReturnNothingYieldsEmptyString) {
     auto db = return_database();
     quiver::Sandbox lua(db);
 
     EXPECT_EQ(lua.run("local x = 1"), "");
 }
 
-TEST_F(LuaRunnerTest, ReturnNilYieldsNull) {
+TEST_F(SandboxTest, ReturnNilYieldsNull) {
     auto db = return_database();
     quiver::Sandbox lua(db);
 
@@ -30,7 +30,7 @@ TEST_F(LuaRunnerTest, ReturnNilYieldsNull) {
     EXPECT_EQ(lua.run("return nil"), "null");
 }
 
-TEST_F(LuaRunnerTest, ReturnScalars) {
+TEST_F(SandboxTest, ReturnScalars) {
     auto db = return_database();
     quiver::Sandbox lua(db);
 
@@ -46,14 +46,14 @@ TEST_F(LuaRunnerTest, ReturnScalars) {
     EXPECT_EQ(lua.run("return 9007199254740993"), "9007199254740993");
 }
 
-TEST_F(LuaRunnerTest, ReturnOnlyFirstValue) {
+TEST_F(SandboxTest, ReturnOnlyFirstValue) {
     auto db = return_database();
     quiver::Sandbox lua(db);
 
     EXPECT_EQ(lua.run("return 1, 2, 3"), "1");
 }
 
-TEST_F(LuaRunnerTest, ReturnNonFiniteNumbersBecomeNull) {
+TEST_F(SandboxTest, ReturnNonFiniteNumbersBecomeNull) {
     auto db = return_database();
     quiver::Sandbox lua(db);
 
@@ -63,7 +63,7 @@ TEST_F(LuaRunnerTest, ReturnNonFiniteNumbersBecomeNull) {
     EXPECT_EQ(lua.run("return -math.huge"), "null");
 }
 
-TEST_F(LuaRunnerTest, ReturnStringsAreEscaped) {
+TEST_F(SandboxTest, ReturnStringsAreEscaped) {
     auto db = return_database();
     quiver::Sandbox lua(db);
 
@@ -73,7 +73,7 @@ TEST_F(LuaRunnerTest, ReturnStringsAreEscaped) {
     EXPECT_EQ(lua.run("return string.char(1)"), "\"\\u0001\"");
 }
 
-TEST_F(LuaRunnerTest, ReturnArrays) {
+TEST_F(SandboxTest, ReturnArrays) {
     auto db = return_database();
     quiver::Sandbox lua(db);
 
@@ -84,7 +84,7 @@ TEST_F(LuaRunnerTest, ReturnArrays) {
     EXPECT_EQ(lua.run("return {}"), "[]");
 }
 
-TEST_F(LuaRunnerTest, ReturnObjectsWithSortedKeys) {
+TEST_F(SandboxTest, ReturnObjectsWithSortedKeys) {
     auto db = return_database();
     quiver::Sandbox lua(db);
 
@@ -97,7 +97,7 @@ TEST_F(LuaRunnerTest, ReturnObjectsWithSortedKeys) {
     EXPECT_EQ(lua.run("return {[1] = 'a', name = 'x'}"), R"({"1":"a","name":"x"})");
 }
 
-TEST_F(LuaRunnerTest, ReturnDatabaseReads) {
+TEST_F(SandboxTest, ReturnDatabaseReads) {
     auto db = return_database();
     quiver::Sandbox lua(db);
 
@@ -111,7 +111,7 @@ TEST_F(LuaRunnerTest, ReturnDatabaseReads) {
     EXPECT_EQ(lua.run(R"(return { ids = db:read_element_ids("Collection") })"), R"({"ids":[1,2]})");
 }
 
-TEST_F(LuaRunnerTest, ReturnUnsupportedTypeThrows) {
+TEST_F(SandboxTest, ReturnUnsupportedTypeThrows) {
     auto db = return_database();
     quiver::Sandbox lua(db);
 
@@ -121,14 +121,14 @@ TEST_F(LuaRunnerTest, ReturnUnsupportedTypeThrows) {
     expect_lua_error(lua, "return db", "unsupported Lua type");
 }
 
-TEST_F(LuaRunnerTest, ReturnUnsupportedTableKeyThrows) {
+TEST_F(SandboxTest, ReturnUnsupportedTableKeyThrows) {
     auto db = return_database();
     quiver::Sandbox lua(db);
 
     expect_lua_error(lua, "return {[1.5] = 'x'}", "Cannot run: script returned a table with an unsupported key type");
 }
 
-TEST_F(LuaRunnerTest, ReturnDuplicateStringifiedKeyThrows) {
+TEST_F(SandboxTest, ReturnDuplicateStringifiedKeyThrows) {
     auto db = return_database();
     quiver::Sandbox lua(db);
 
@@ -146,7 +146,7 @@ TEST_F(LuaRunnerTest, ReturnDuplicateStringifiedKeyThrows) {
     );
 }
 
-TEST_F(LuaRunnerTest, ReturnNonUtf8StringThrows) {
+TEST_F(SandboxTest, ReturnNonUtf8StringThrows) {
     auto db = return_database();
     quiver::Sandbox lua(db);
 
@@ -168,7 +168,7 @@ TEST_F(LuaRunnerTest, ReturnNonUtf8StringThrows) {
     EXPECT_EQ(lua.run("return string.char(0xF0, 0x9F, 0x8E, 0xAF)"), "\"\xF0\x9F\x8E\xAF\"");
 }
 
-TEST_F(LuaRunnerTest, ReturnTooLargeThrows) {
+TEST_F(SandboxTest, ReturnTooLargeThrows) {
     auto db = return_database();
     quiver::Sandbox lua(db);
 
@@ -185,7 +185,7 @@ TEST_F(LuaRunnerTest, ReturnTooLargeThrows) {
     );
 }
 
-TEST_F(LuaRunnerTest, ReturnTooDeeplyNestedThrows) {
+TEST_F(SandboxTest, ReturnTooDeeplyNestedThrows) {
     auto db = return_database();
     quiver::Sandbox lua(db);
 
@@ -216,7 +216,7 @@ TEST_F(LuaRunnerTest, ReturnTooDeeplyNestedThrows) {
     );
 }
 
-TEST_F(LuaRunnerTest, ReturnAtTheDepthLimitSucceeds) {
+TEST_F(SandboxTest, ReturnAtTheDepthLimitSucceeds) {
     auto db = return_database();
     quiver::Sandbox lua(db);
 

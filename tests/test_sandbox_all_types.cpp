@@ -1,6 +1,6 @@
-#include "test_lua_runner.h"
+#include "test_sandbox.h"
 
-class LuaRunnerAllTypesTest : public ::testing::Test {
+class SandboxAllTypesTest : public ::testing::Test {
 protected:
     void SetUp() override {
         all_types_schema = VALID_SCHEMA("all_types.sql");
@@ -8,7 +8,7 @@ protected:
     std::string all_types_schema;
 };
 
-TEST_F(LuaRunnerAllTypesTest, ReadVectorStringsBulk) {
+TEST_F(SandboxAllTypesTest, ReadVectorStringsBulk) {
     auto db = quiver::Database::from_schema(":memory:", all_types_schema);
     db.create_element("AllTypes", quiver::Element().set("label", "Item 1"));
     db.create_element("AllTypes", quiver::Element().set("label", "Item 2"));
@@ -32,7 +32,7 @@ TEST_F(LuaRunnerAllTypesTest, ReadVectorStringsBulk) {
     )");
 }
 
-TEST_F(LuaRunnerAllTypesTest, ReadSetIntegersBulk) {
+TEST_F(SandboxAllTypesTest, ReadSetIntegersBulk) {
     auto db = quiver::Database::from_schema(":memory:", all_types_schema);
     db.create_element("AllTypes", quiver::Element().set("label", "Item 1"));
     db.create_element("AllTypes", quiver::Element().set("label", "Item 2"));
@@ -49,7 +49,7 @@ TEST_F(LuaRunnerAllTypesTest, ReadSetIntegersBulk) {
     )");
 }
 
-TEST_F(LuaRunnerAllTypesTest, ReadSetFloatsBulk) {
+TEST_F(SandboxAllTypesTest, ReadSetFloatsBulk) {
     auto db = quiver::Database::from_schema(":memory:", all_types_schema);
     db.create_element("AllTypes", quiver::Element().set("label", "Item 1"));
     db.create_element("AllTypes", quiver::Element().set("label", "Item 2"));
@@ -66,7 +66,7 @@ TEST_F(LuaRunnerAllTypesTest, ReadSetFloatsBulk) {
     )");
 }
 
-TEST_F(LuaRunnerAllTypesTest, UpdateSetIntegers) {
+TEST_F(SandboxAllTypesTest, UpdateSetIntegers) {
     auto db = quiver::Database::from_schema(":memory:", all_types_schema);
     int64_t id1 = db.create_element("AllTypes", quiver::Element().set("label", "Item 1"));
 
@@ -82,7 +82,7 @@ TEST_F(LuaRunnerAllTypesTest, UpdateSetIntegers) {
     EXPECT_EQ(result.size(), 3);
 }
 
-TEST_F(LuaRunnerAllTypesTest, UpdateSetFloats) {
+TEST_F(SandboxAllTypesTest, UpdateSetFloats) {
     auto db = quiver::Database::from_schema(":memory:", all_types_schema);
     int64_t id1 = db.create_element("AllTypes", quiver::Element().set("label", "Item 1"));
 

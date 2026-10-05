@@ -3334,81 +3334,81 @@ class QuiverDatabaseBindings {
   late final _quiver_element_to_string = _quiver_element_to_stringPtr
       .asFunction<int Function(ffi.Pointer<quiver_element_t1>, ffi.Pointer<ffi.Pointer<ffi.Char>>)>();
 
-  int quiver_lua_runner_new(
+  int quiver_sandbox_new(
     ffi.Pointer<quiver_database_t> db,
-    ffi.Pointer<ffi.Pointer<quiver_lua_runner_t>> out_runner,
+    ffi.Pointer<ffi.Pointer<quiver_sandbox_t>> out_runner,
   ) {
-    return _quiver_lua_runner_new(
+    return _quiver_sandbox_new(
       db,
       out_runner,
     );
   }
 
-  late final _quiver_lua_runner_newPtr =
+  late final _quiver_sandbox_newPtr =
       _lookup<
         ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Pointer<quiver_lua_runner_t>>)
+          ffi.Int32 Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Pointer<quiver_sandbox_t>>)
         >
-      >('quiver_lua_runner_new');
-  late final _quiver_lua_runner_new = _quiver_lua_runner_newPtr
-      .asFunction<int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Pointer<quiver_lua_runner_t>>)>();
+      >('quiver_sandbox_new');
+  late final _quiver_sandbox_new = _quiver_sandbox_newPtr
+      .asFunction<int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Pointer<quiver_sandbox_t>>)>();
 
-  int quiver_lua_runner_free(
-    ffi.Pointer<quiver_lua_runner_t> runner,
+  int quiver_sandbox_free(
+    ffi.Pointer<quiver_sandbox_t> runner,
   ) {
-    return _quiver_lua_runner_free(
+    return _quiver_sandbox_free(
       runner,
     );
   }
 
-  late final _quiver_lua_runner_freePtr =
-      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<quiver_lua_runner_t>)>>('quiver_lua_runner_free');
-  late final _quiver_lua_runner_free = _quiver_lua_runner_freePtr
-      .asFunction<int Function(ffi.Pointer<quiver_lua_runner_t>)>();
+  late final _quiver_sandbox_freePtr =
+      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<quiver_sandbox_t>)>>('quiver_sandbox_free');
+  late final _quiver_sandbox_free = _quiver_sandbox_freePtr
+      .asFunction<int Function(ffi.Pointer<quiver_sandbox_t>)>();
 
-  int quiver_lua_runner_run(
-    ffi.Pointer<quiver_lua_runner_t> runner,
+  int quiver_sandbox_run(
+    ffi.Pointer<quiver_sandbox_t> runner,
     ffi.Pointer<ffi.Char> script,
     ffi.Pointer<ffi.Pointer<ffi.Char>> out_result,
   ) {
-    return _quiver_lua_runner_run(
+    return _quiver_sandbox_run(
       runner,
       script,
       out_result,
     );
   }
 
-  late final _quiver_lua_runner_runPtr =
+  late final _quiver_sandbox_runPtr =
       _lookup<
         ffi.NativeFunction<
           ffi.Int32 Function(
-            ffi.Pointer<quiver_lua_runner_t>,
+            ffi.Pointer<quiver_sandbox_t>,
             ffi.Pointer<ffi.Char>,
             ffi.Pointer<ffi.Pointer<ffi.Char>>,
           )
         >
-      >('quiver_lua_runner_run');
-  late final _quiver_lua_runner_run = _quiver_lua_runner_runPtr
+      >('quiver_sandbox_run');
+  late final _quiver_sandbox_run = _quiver_sandbox_runPtr
       .asFunction<
         int Function(
-          ffi.Pointer<quiver_lua_runner_t>,
+          ffi.Pointer<quiver_sandbox_t>,
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Pointer<ffi.Char>>,
         )
       >();
 
-  int quiver_lua_runner_free_string(
+  int quiver_sandbox_free_string(
     ffi.Pointer<ffi.Char> str,
   ) {
-    return _quiver_lua_runner_free_string(
+    return _quiver_sandbox_free_string(
       str,
     );
   }
 
-  late final _quiver_lua_runner_free_stringPtr = _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<ffi.Char>)>>(
-    'quiver_lua_runner_free_string',
+  late final _quiver_sandbox_free_stringPtr = _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<ffi.Char>)>>(
+    'quiver_sandbox_free_string',
   );
-  late final _quiver_lua_runner_free_string = _quiver_lua_runner_free_stringPtr
+  late final _quiver_sandbox_free_string = _quiver_sandbox_free_stringPtr
       .asFunction<int Function(ffi.Pointer<ffi.Char>)>();
 }
 
@@ -3501,6 +3501,6 @@ final class quiver_group_metadata_t extends ffi.Struct {
 
 typedef quiver_element_t1 = quiver_element;
 
-final class quiver_lua_runner extends ffi.Opaque {}
+final class quiver_sandbox extends ffi.Opaque {}
 
-typedef quiver_lua_runner_t = quiver_lua_runner;
+typedef quiver_sandbox_t = quiver_sandbox;

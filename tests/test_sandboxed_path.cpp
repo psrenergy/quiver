@@ -1,5 +1,5 @@
 #include "sandbox/path_policy.h"
-#include "test_lua_runner.h"
+#include "test_sandbox.h"
 
 #include <filesystem>
 #include <stdexcept>

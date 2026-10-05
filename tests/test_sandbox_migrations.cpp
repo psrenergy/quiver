@@ -1,11 +1,11 @@
-#include "test_lua_runner.h"
+#include "test_sandbox.h"
 
 #include <filesystem>
 
 // db:validate_migrations paths are sandboxed: relative paths resolve against the database directory.
-class LuaRunner_Migrations : public LuaSandboxTest {};
+class Sandbox_Migrations : public LuaSandboxTest {};
 
-TEST_F(LuaRunner_Migrations, AppliesAndRevertsSharedFixture) {
+TEST_F(Sandbox_Migrations, AppliesAndRevertsSharedFixture) {
     std::filesystem::copy(
         SCHEMA_PATH("schemas/migrations"),
         sandbox / "migrations",
@@ -18,7 +18,7 @@ TEST_F(LuaRunner_Migrations, AppliesAndRevertsSharedFixture) {
     EXPECT_NO_THROW(lua.run(R"(db:validate_migrations("migrations"))"));
 }
 
-TEST_F(LuaRunner_Migrations, PathNotFoundThrows) {
+TEST_F(Sandbox_Migrations, PathNotFoundThrows) {
     auto db = quiver::Database::from_schema(db_path(), VALID_SCHEMA("collections.sql"));
     quiver::Sandbox lua(db);
 
@@ -29,14 +29,14 @@ TEST_F(LuaRunner_Migrations, PathNotFoundThrows) {
     );
 }
 
-TEST_F(LuaRunner_Migrations, EscapeThrows) {
+TEST_F(Sandbox_Migrations, EscapeThrows) {
     auto db = quiver::Database::from_schema(db_path(), VALID_SCHEMA("collections.sql"));
     quiver::Sandbox lua(db);
 
     expect_lua_error(lua, R"(db:validate_migrations("../outside"))", "escapes the database directory");
 }
 
-TEST_F(LuaRunner_Migrations, InMemoryThrows) {
+TEST_F(Sandbox_Migrations, InMemoryThrows) {
     auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"));
     quiver::Sandbox lua(db);
 

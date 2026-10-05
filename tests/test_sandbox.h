@@ -11,7 +11,7 @@
 #include <filesystem>
 #include <string>
 
-class LuaRunnerTest : public ::testing::Test {
+class SandboxTest : public ::testing::Test {
 protected:
     void SetUp() override {
         collections_schema = VALID_SCHEMA("collections.sql");

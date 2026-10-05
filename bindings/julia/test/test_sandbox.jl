@@ -1,4 +1,4 @@
-module TestLuaRunner
+module TestSandbox
 
 using Quiver
 using Test

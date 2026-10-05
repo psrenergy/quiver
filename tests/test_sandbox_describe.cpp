@@ -1,4 +1,4 @@
-#include "test_lua_runner.h"
+#include "test_sandbox.h"
 
 namespace {
 
@@ -12,7 +12,7 @@ quiver::Database open_collections() {
 
 }  // namespace
 
-TEST_F(LuaRunnerTest, DescribeReport) {
+TEST_F(SandboxTest, DescribeReport) {
     auto db = open_collections();
     db.create_element("Collection", quiver::Element().set("label", "a"));
     db.create_element("Collection", quiver::Element().set("label", "b"));
@@ -26,7 +26,7 @@ TEST_F(LuaRunnerTest, DescribeReport) {
     )LUA");
 }
 
-TEST_F(LuaRunnerTest, DescribeCollection) {
+TEST_F(SandboxTest, DescribeCollection) {
     auto db = open_collections();
     quiver::Sandbox lua(db);
     lua.run(R"LUA(
@@ -37,7 +37,7 @@ TEST_F(LuaRunnerTest, DescribeCollection) {
     )LUA");
 }
 
-TEST_F(LuaRunnerTest, SummarizeCollection) {
+TEST_F(SandboxTest, SummarizeCollection) {
     auto db = open_collections();
     db.create_element(
         "Collection",

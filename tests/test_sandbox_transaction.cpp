@@ -1,6 +1,6 @@
-#include "test_lua_runner.h"
+#include "test_sandbox.h"
 
-TEST_F(LuaRunnerTest, TransactionCommit) {
+TEST_F(SandboxTest, TransactionCommit) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -17,7 +17,7 @@ TEST_F(LuaRunnerTest, TransactionCommit) {
     EXPECT_EQ(labels[0], "Item 1");
 }
 
-TEST_F(LuaRunnerTest, TransactionRollback) {
+TEST_F(SandboxTest, TransactionRollback) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -33,7 +33,7 @@ TEST_F(LuaRunnerTest, TransactionRollback) {
     EXPECT_EQ(labels.size(), 0);
 }
 
-TEST_F(LuaRunnerTest, TransactionDoubleBeginError) {
+TEST_F(SandboxTest, TransactionDoubleBeginError) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -49,7 +49,7 @@ TEST_F(LuaRunnerTest, TransactionDoubleBeginError) {
     );
 }
 
-TEST_F(LuaRunnerTest, TransactionCommitWithoutBeginError) {
+TEST_F(SandboxTest, TransactionCommitWithoutBeginError) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -58,7 +58,7 @@ TEST_F(LuaRunnerTest, TransactionCommitWithoutBeginError) {
     expect_lua_error(lua, R"(db:commit())", "Cannot commit: no active transaction");
 }
 
-TEST_F(LuaRunnerTest, TransactionRollbackWithoutBeginError) {
+TEST_F(SandboxTest, TransactionRollbackWithoutBeginError) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -67,7 +67,7 @@ TEST_F(LuaRunnerTest, TransactionRollbackWithoutBeginError) {
     expect_lua_error(lua, R"(db:rollback())", "Cannot rollback: no active transaction");
 }
 
-TEST_F(LuaRunnerTest, TransactionInTransaction) {
+TEST_F(SandboxTest, TransactionInTransaction) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -82,7 +82,7 @@ TEST_F(LuaRunnerTest, TransactionInTransaction) {
     )");
 }
 
-TEST_F(LuaRunnerTest, TransactionBlockAutoCommit) {
+TEST_F(SandboxTest, TransactionBlockAutoCommit) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -101,7 +101,7 @@ TEST_F(LuaRunnerTest, TransactionBlockAutoCommit) {
     EXPECT_EQ(labels[0], "Item 1");
 }
 
-TEST_F(LuaRunnerTest, TransactionBlockRollbackOnError) {
+TEST_F(SandboxTest, TransactionBlockRollbackOnError) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -124,7 +124,7 @@ TEST_F(LuaRunnerTest, TransactionBlockRollbackOnError) {
 
 // A script that catches an error inside db:transaction commits whatever the failed call left
 // behind, so a rejected update_element must leave nothing.
-TEST_F(LuaRunnerTest, TransactionBlockCaughtRejectedUpdateWritesNothing) {
+TEST_F(SandboxTest, TransactionBlockCaughtRejectedUpdateWritesNothing) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     auto id = db.create_element("Collection", quiver::Element().set("label", "Item 1").set("some_integer", int64_t{1}));
@@ -146,7 +146,7 @@ TEST_F(LuaRunnerTest, TransactionBlockCaughtRejectedUpdateWritesNothing) {
     EXPECT_EQ(*value, 1);
 }
 
-TEST_F(LuaRunnerTest, TransactionBlockMultiOps) {
+TEST_F(SandboxTest, TransactionBlockMultiOps) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -181,7 +181,7 @@ TEST_F(LuaRunnerTest, TransactionBlockMultiOps) {
 
 // The argument is checked before the transaction opens, so a bad one neither leaves a transaction
 // behind nor collides with one the script already opened.
-TEST_F(LuaRunnerTest, TransactionBlockRejectsNonFunction) {
+TEST_F(SandboxTest, TransactionBlockRejectsNonFunction) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     quiver::Sandbox lua(db);
@@ -210,7 +210,7 @@ TEST_F(LuaRunnerTest, TransactionBlockRejectsNonFunction) {
 
 // A deferred foreign key fails only at COMMIT, after the callback returned: the block must still be
 // rolled back, not left open for the host to commit.
-TEST_F(LuaRunnerTest, TransactionBlockCommitFailureRollsBack) {
+TEST_F(SandboxTest, TransactionBlockCommitFailureRollsBack) {
     auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"));
 
     quiver::Sandbox lua(db);
@@ -230,7 +230,7 @@ TEST_F(LuaRunnerTest, TransactionBlockCommitFailureRollsBack) {
 }
 
 // Errors raised by the closing call itself still reach the script with their own text.
-TEST_F(LuaRunnerTest, ScopedBlockFinishErrorsStillSurface) {
+TEST_F(SandboxTest, ScopedBlockFinishErrorsStillSurface) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     quiver::Sandbox lua(db);
@@ -246,7 +246,7 @@ TEST_F(LuaRunnerTest, ScopedBlockFinishErrorsStillSurface) {
 // Dry runs
 // ============================================================================
 
-TEST_F(LuaRunnerTest, DryRunBlockRollsBack) {
+TEST_F(SandboxTest, DryRunBlockRollsBack) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -265,7 +265,7 @@ TEST_F(LuaRunnerTest, DryRunBlockRollsBack) {
     EXPECT_TRUE(db.read_scalar_strings("Collection", "label").empty());
 }
 
-TEST_F(LuaRunnerTest, DryRunAbsorbsNestedTransaction) {
+TEST_F(SandboxTest, DryRunAbsorbsNestedTransaction) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -285,7 +285,7 @@ TEST_F(LuaRunnerTest, DryRunAbsorbsNestedTransaction) {
     EXPECT_TRUE(db.read_scalar_strings("Collection", "label").empty());
 }
 
-TEST_F(LuaRunnerTest, DryRunBlockRollsBackOnError) {
+TEST_F(SandboxTest, DryRunBlockRollsBackOnError) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -307,7 +307,7 @@ TEST_F(LuaRunnerTest, DryRunBlockRollsBackOnError) {
     EXPECT_FALSE(db.in_transaction());
 }
 
-TEST_F(LuaRunnerTest, DryRunExplicitBeginEnd) {
+TEST_F(SandboxTest, DryRunExplicitBeginEnd) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -325,7 +325,7 @@ TEST_F(LuaRunnerTest, DryRunExplicitBeginEnd) {
     EXPECT_TRUE(db.read_scalar_strings("Collection", "label").empty());
 }
 
-TEST_F(LuaRunnerTest, DryRunBlockRejectsNonFunction) {
+TEST_F(SandboxTest, DryRunBlockRejectsNonFunction) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     quiver::Sandbox lua(db);
@@ -335,7 +335,7 @@ TEST_F(LuaRunnerTest, DryRunBlockRejectsNonFunction) {
     EXPECT_FALSE(db.in_transaction());
 }
 
-TEST_F(LuaRunnerTest, HostDryRunWrapsWholeScript) {
+TEST_F(SandboxTest, HostDryRunWrapsWholeScript) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 

@@ -10,7 +10,7 @@ import pytest
 from quiverdb import Database, Sandbox, QuiverError
 
 
-class TestLuaRunnerCreateRead:
+class TestSandboxCreateRead:
     """Tests for Lua scripts that create and read elements."""
 
     def test_create_element_from_lua(self, collections_db: Database) -> None:
@@ -37,7 +37,7 @@ class TestLuaRunnerCreateRead:
         lua.close()
 
 
-class TestLuaRunnerErrors:
+class TestSandboxErrors:
     """Tests for Lua script error handling."""
 
     def test_syntax_error_raises_quiver_error(self, collections_db: Database) -> None:
@@ -63,7 +63,7 @@ class TestLuaRunnerErrors:
         lua.close()
 
 
-class TestLuaRunnerLifecycle:
+class TestSandboxLifecycle:
     """Tests for Sandbox lifecycle management."""
 
     def test_multiple_run_calls(self, collections_db: Database) -> None:
@@ -125,7 +125,7 @@ class TestLuaRunnerLifecycle:
         lua.close()
 
 
-class TestLuaRunnerReturnValues:
+class TestSandboxReturnValues:
     """A script hands one value back to the caller as JSON."""
 
     def test_returns_json(self, collections_db: Database) -> None:

@@ -5,7 +5,7 @@
 #include <quiver/c/element.h>
 #include <quiver/c/sandbox.h>
 
-class LuaRunnerCApiTest : public ::testing::Test {
+class SandboxCApiTest : public ::testing::Test {
 protected:
     void SetUp() override {
         collections_schema = VALID_SCHEMA("collections.sql");
@@ -16,86 +16,86 @@ protected:
 namespace {
 
 // Most cases here care only about the return code, so the JSON result is freed on the spot.
-// The tests that assert on the result call quiver_lua_runner_run directly.
-quiver_error_t run_script(quiver_lua_runner_t* lua, const char* script) {
+// The tests that assert on the result call quiver_sandbox_run directly.
+quiver_error_t run_script(quiver_sandbox_t* lua, const char* script) {
     char* result = nullptr;
-    const auto err = quiver_lua_runner_run(lua, script, &result);
-    quiver_lua_runner_free_string(result);
+    const auto err = quiver_sandbox_run(lua, script, &result);
+    quiver_sandbox_free_string(result);
     return err;
 }
 
 }  // namespace
 
-TEST_F(LuaRunnerCApiTest, CreateAndDestroy) {
+TEST_F(SandboxCApiTest, CreateAndDestroy) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    quiver_lua_runner_t* lua = nullptr;
-    ASSERT_EQ(quiver_lua_runner_new(db, &lua), QUIVER_OK);
+    quiver_sandbox_t* lua = nullptr;
+    ASSERT_EQ(quiver_sandbox_new(db, &lua), QUIVER_OK);
     ASSERT_NE(lua, nullptr);
 
-    quiver_lua_runner_free(lua);
+    quiver_sandbox_free(lua);
     quiver_database_close(db);
 }
 
-TEST_F(LuaRunnerCApiTest, FreeNull) {
-    EXPECT_EQ(quiver_lua_runner_free(nullptr), QUIVER_OK);
+TEST_F(SandboxCApiTest, FreeNull) {
+    EXPECT_EQ(quiver_sandbox_free(nullptr), QUIVER_OK);
 }
 
-TEST_F(LuaRunnerCApiTest, CreateWithNullDb) {
-    quiver_lua_runner_t* lua = nullptr;
-    EXPECT_EQ(quiver_lua_runner_new(nullptr, &lua), QUIVER_ERROR);
+TEST_F(SandboxCApiTest, CreateWithNullDb) {
+    quiver_sandbox_t* lua = nullptr;
+    EXPECT_EQ(quiver_sandbox_new(nullptr, &lua), QUIVER_ERROR);
 }
 
-TEST_F(LuaRunnerCApiTest, RunSimpleScript) {
+TEST_F(SandboxCApiTest, RunSimpleScript) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    quiver_lua_runner_t* lua = nullptr;
-    ASSERT_EQ(quiver_lua_runner_new(db, &lua), QUIVER_OK);
+    quiver_sandbox_t* lua = nullptr;
+    ASSERT_EQ(quiver_sandbox_new(db, &lua), QUIVER_OK);
     ASSERT_NE(lua, nullptr);
 
     auto result = run_script(lua, "local x = 1 + 1");
     EXPECT_EQ(result, QUIVER_OK);
 
-    quiver_lua_runner_free(lua);
+    quiver_sandbox_free(lua);
     quiver_database_close(db);
 }
 
-TEST_F(LuaRunnerCApiTest, RunNullScript) {
+TEST_F(SandboxCApiTest, RunNullScript) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    quiver_lua_runner_t* lua = nullptr;
-    ASSERT_EQ(quiver_lua_runner_new(db, &lua), QUIVER_OK);
+    quiver_sandbox_t* lua = nullptr;
+    ASSERT_EQ(quiver_sandbox_new(db, &lua), QUIVER_OK);
     ASSERT_NE(lua, nullptr);
 
     auto result = run_script(lua, nullptr);
     EXPECT_EQ(result, QUIVER_ERROR);
 
-    quiver_lua_runner_free(lua);
+    quiver_sandbox_free(lua);
     quiver_database_close(db);
 }
 
-TEST_F(LuaRunnerCApiTest, RunWithNullRunner) {
+TEST_F(SandboxCApiTest, RunWithNullRunner) {
     auto result = run_script(nullptr, "local x = 1");
     EXPECT_EQ(result, QUIVER_ERROR);
 }
 
-TEST_F(LuaRunnerCApiTest, CreateElement) {
+TEST_F(SandboxCApiTest, CreateElement) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    quiver_lua_runner_t* lua = nullptr;
-    ASSERT_EQ(quiver_lua_runner_new(db, &lua), QUIVER_OK);
+    quiver_sandbox_t* lua = nullptr;
+    ASSERT_EQ(quiver_sandbox_new(db, &lua), QUIVER_OK);
     ASSERT_NE(lua, nullptr);
 
     auto result = run_script(lua, R"(
@@ -115,18 +115,18 @@ TEST_F(LuaRunnerCApiTest, CreateElement) {
     quiver_database_free_integer_array(values);
     quiver_database_free_mask(mask);
 
-    quiver_lua_runner_free(lua);
+    quiver_sandbox_free(lua);
     quiver_database_close(db);
 }
 
-TEST_F(LuaRunnerCApiTest, SyntaxError) {
+TEST_F(SandboxCApiTest, SyntaxError) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    quiver_lua_runner_t* lua = nullptr;
-    ASSERT_EQ(quiver_lua_runner_new(db, &lua), QUIVER_OK);
+    quiver_sandbox_t* lua = nullptr;
+    ASSERT_EQ(quiver_sandbox_new(db, &lua), QUIVER_OK);
     ASSERT_NE(lua, nullptr);
 
     auto result = run_script(lua, "invalid lua syntax !!!");
@@ -135,18 +135,18 @@ TEST_F(LuaRunnerCApiTest, SyntaxError) {
     const char* error = quiver_get_last_error();
     EXPECT_NE(error, nullptr);
 
-    quiver_lua_runner_free(lua);
+    quiver_sandbox_free(lua);
     quiver_database_close(db);
 }
 
-TEST_F(LuaRunnerCApiTest, RuntimeError) {
+TEST_F(SandboxCApiTest, RuntimeError) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    quiver_lua_runner_t* lua = nullptr;
-    ASSERT_EQ(quiver_lua_runner_new(db, &lua), QUIVER_OK);
+    quiver_sandbox_t* lua = nullptr;
+    ASSERT_EQ(quiver_sandbox_new(db, &lua), QUIVER_OK);
     ASSERT_NE(lua, nullptr);
 
     auto result = run_script(lua, "error('This is a runtime error')");
@@ -155,18 +155,18 @@ TEST_F(LuaRunnerCApiTest, RuntimeError) {
     const char* error = quiver_get_last_error();
     EXPECT_NE(error, nullptr);
 
-    quiver_lua_runner_free(lua);
+    quiver_sandbox_free(lua);
     quiver_database_close(db);
 }
 
-TEST_F(LuaRunnerCApiTest, SandboxViolationError) {
+TEST_F(SandboxCApiTest, SandboxViolationError) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    quiver_lua_runner_t* lua = nullptr;
-    ASSERT_EQ(quiver_lua_runner_new(db, &lua), QUIVER_OK);
+    quiver_sandbox_t* lua = nullptr;
+    ASSERT_EQ(quiver_sandbox_new(db, &lua), QUIVER_OK);
     ASSERT_NE(lua, nullptr);
 
     // File operations are db-scoped and sandboxed; the violation surfaces through the single
@@ -179,18 +179,18 @@ TEST_F(LuaRunnerCApiTest, SandboxViolationError) {
     EXPECT_NE(std::string(error).find("Failed to run Lua script:"), std::string::npos) << error;
     EXPECT_NE(std::string(error).find("Cannot open_file: database is in-memory"), std::string::npos) << error;
 
-    quiver_lua_runner_free(lua);
+    quiver_sandbox_free(lua);
     quiver_database_close(db);
 }
 
-TEST_F(LuaRunnerCApiTest, ReuseRunner) {
+TEST_F(SandboxCApiTest, ReuseRunner) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    quiver_lua_runner_t* lua = nullptr;
-    ASSERT_EQ(quiver_lua_runner_new(db, &lua), QUIVER_OK);
+    quiver_sandbox_t* lua = nullptr;
+    ASSERT_EQ(quiver_sandbox_new(db, &lua), QUIVER_OK);
     ASSERT_NE(lua, nullptr);
 
     // Run multiple scripts
@@ -206,11 +206,11 @@ TEST_F(LuaRunnerCApiTest, ReuseRunner) {
     EXPECT_EQ(count, 2);
     quiver_database_free_string_array(labels, count);
 
-    quiver_lua_runner_free(lua);
+    quiver_sandbox_free(lua);
     quiver_database_close(db);
 }
 
-TEST_F(LuaRunnerCApiTest, ReadScalarIntegers) {
+TEST_F(SandboxCApiTest, ReadScalarIntegers) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
@@ -232,8 +232,8 @@ TEST_F(LuaRunnerCApiTest, ReadScalarIntegers) {
     quiver_database_create_element(db, "Collection", elem, &tmp_id2);
     EXPECT_EQ(quiver_element_destroy(elem), QUIVER_OK);
 
-    quiver_lua_runner_t* lua = nullptr;
-    ASSERT_EQ(quiver_lua_runner_new(db, &lua), QUIVER_OK);
+    quiver_sandbox_t* lua = nullptr;
+    ASSERT_EQ(quiver_sandbox_new(db, &lua), QUIVER_OK);
     ASSERT_NE(lua, nullptr);
 
     // Read and verify from Lua
@@ -244,18 +244,18 @@ TEST_F(LuaRunnerCApiTest, ReadScalarIntegers) {
     )");
     EXPECT_EQ(result, QUIVER_OK);
 
-    quiver_lua_runner_free(lua);
+    quiver_sandbox_free(lua);
     quiver_database_close(db);
 }
 
-TEST_F(LuaRunnerCApiTest, CreateElementWithVectors) {
+TEST_F(SandboxCApiTest, CreateElementWithVectors) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    quiver_lua_runner_t* lua = nullptr;
-    ASSERT_EQ(quiver_lua_runner_new(db, &lua), QUIVER_OK);
+    quiver_sandbox_t* lua = nullptr;
+    ASSERT_EQ(quiver_sandbox_new(db, &lua), QUIVER_OK);
     ASSERT_NE(lua, nullptr);
 
     auto result = run_script(lua, R"(
@@ -284,18 +284,18 @@ TEST_F(LuaRunnerCApiTest, CreateElementWithVectors) {
     quiver_database_free_integer_vectors(vectors, sizes, count);
     quiver_database_free_masks(masks, count);
 
-    quiver_lua_runner_free(lua);
+    quiver_sandbox_free(lua);
     quiver_database_close(db);
 }
 
-TEST_F(LuaRunnerCApiTest, DeleteElement) {
+TEST_F(SandboxCApiTest, DeleteElement) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    quiver_lua_runner_t* lua = nullptr;
-    ASSERT_EQ(quiver_lua_runner_new(db, &lua), QUIVER_OK);
+    quiver_sandbox_t* lua = nullptr;
+    ASSERT_EQ(quiver_sandbox_new(db, &lua), QUIVER_OK);
     ASSERT_NE(lua, nullptr);
 
     // Create and delete elements
@@ -314,18 +314,18 @@ TEST_F(LuaRunnerCApiTest, DeleteElement) {
     )");
     EXPECT_EQ(result, QUIVER_OK);
 
-    quiver_lua_runner_free(lua);
+    quiver_sandbox_free(lua);
     quiver_database_close(db);
 }
 
-TEST_F(LuaRunnerCApiTest, UpdateElement) {
+TEST_F(SandboxCApiTest, UpdateElement) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    quiver_lua_runner_t* lua = nullptr;
-    ASSERT_EQ(quiver_lua_runner_new(db, &lua), QUIVER_OK);
+    quiver_sandbox_t* lua = nullptr;
+    ASSERT_EQ(quiver_sandbox_new(db, &lua), QUIVER_OK);
     ASSERT_NE(lua, nullptr);
 
     auto result = run_script(lua, R"(
@@ -348,7 +348,7 @@ TEST_F(LuaRunnerCApiTest, UpdateElement) {
     EXPECT_EQ(has_value, 1);
     EXPECT_EQ(value, 999);
 
-    quiver_lua_runner_free(lua);
+    quiver_sandbox_free(lua);
     quiver_database_close(db);
 }
 
@@ -356,48 +356,48 @@ TEST_F(LuaRunnerCApiTest, UpdateElement) {
 // Additional C API Sandbox error tests
 // ============================================================================
 
-TEST_F(LuaRunnerCApiTest, EmptyScript) {
+TEST_F(SandboxCApiTest, EmptyScript) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    quiver_lua_runner_t* lua = nullptr;
-    ASSERT_EQ(quiver_lua_runner_new(db, &lua), QUIVER_OK);
+    quiver_sandbox_t* lua = nullptr;
+    ASSERT_EQ(quiver_sandbox_new(db, &lua), QUIVER_OK);
     ASSERT_NE(lua, nullptr);
 
     auto result = run_script(lua, "");
     EXPECT_EQ(result, QUIVER_OK);
 
-    quiver_lua_runner_free(lua);
+    quiver_sandbox_free(lua);
     quiver_database_close(db);
 }
 
-TEST_F(LuaRunnerCApiTest, CommentOnlyScript) {
+TEST_F(SandboxCApiTest, CommentOnlyScript) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    quiver_lua_runner_t* lua = nullptr;
-    ASSERT_EQ(quiver_lua_runner_new(db, &lua), QUIVER_OK);
+    quiver_sandbox_t* lua = nullptr;
+    ASSERT_EQ(quiver_sandbox_new(db, &lua), QUIVER_OK);
     ASSERT_NE(lua, nullptr);
 
     auto result = run_script(lua, "-- this is a comment\n-- another comment");
     EXPECT_EQ(result, QUIVER_OK);
 
-    quiver_lua_runner_free(lua);
+    quiver_sandbox_free(lua);
     quiver_database_close(db);
 }
 
-TEST_F(LuaRunnerCApiTest, AssertionFailure) {
+TEST_F(SandboxCApiTest, AssertionFailure) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    quiver_lua_runner_t* lua = nullptr;
-    ASSERT_EQ(quiver_lua_runner_new(db, &lua), QUIVER_OK);
+    quiver_sandbox_t* lua = nullptr;
+    ASSERT_EQ(quiver_sandbox_new(db, &lua), QUIVER_OK);
     ASSERT_NE(lua, nullptr);
 
     auto result = run_script(lua, "assert(false, 'Test assertion failure')");
@@ -407,18 +407,18 @@ TEST_F(LuaRunnerCApiTest, AssertionFailure) {
     EXPECT_NE(error, nullptr);
     EXPECT_NE(std::string(error).find("assertion"), std::string::npos);
 
-    quiver_lua_runner_free(lua);
+    quiver_sandbox_free(lua);
     quiver_database_close(db);
 }
 
-TEST_F(LuaRunnerCApiTest, UndefinedVariableError) {
+TEST_F(SandboxCApiTest, UndefinedVariableError) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    quiver_lua_runner_t* lua = nullptr;
-    ASSERT_EQ(quiver_lua_runner_new(db, &lua), QUIVER_OK);
+    quiver_sandbox_t* lua = nullptr;
+    ASSERT_EQ(quiver_sandbox_new(db, &lua), QUIVER_OK);
     ASSERT_NE(lua, nullptr);
 
     auto result = run_script(lua, "local x = undefined_variable + 1");
@@ -427,18 +427,18 @@ TEST_F(LuaRunnerCApiTest, UndefinedVariableError) {
     const char* error = quiver_get_last_error();
     EXPECT_NE(error, nullptr);
 
-    quiver_lua_runner_free(lua);
+    quiver_sandbox_free(lua);
     quiver_database_close(db);
 }
 
-TEST_F(LuaRunnerCApiTest, ErrorClearedAfterSuccessfulRun) {
+TEST_F(SandboxCApiTest, ErrorClearedAfterSuccessfulRun) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    quiver_lua_runner_t* lua = nullptr;
-    ASSERT_EQ(quiver_lua_runner_new(db, &lua), QUIVER_OK);
+    quiver_sandbox_t* lua = nullptr;
+    ASSERT_EQ(quiver_sandbox_new(db, &lua), QUIVER_OK);
     ASSERT_NE(lua, nullptr);
 
     // First, run a failing script
@@ -451,18 +451,18 @@ TEST_F(LuaRunnerCApiTest, ErrorClearedAfterSuccessfulRun) {
     result = run_script(lua, "local x = 1 + 1");
     EXPECT_EQ(result, QUIVER_OK);
 
-    quiver_lua_runner_free(lua);
+    quiver_sandbox_free(lua);
     quiver_database_close(db);
 }
 
-TEST_F(LuaRunnerCApiTest, ReadVectorIntegers) {
+TEST_F(SandboxCApiTest, ReadVectorIntegers) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    quiver_lua_runner_t* lua = nullptr;
-    ASSERT_EQ(quiver_lua_runner_new(db, &lua), QUIVER_OK);
+    quiver_sandbox_t* lua = nullptr;
+    ASSERT_EQ(quiver_sandbox_new(db, &lua), QUIVER_OK);
     ASSERT_NE(lua, nullptr);
 
     auto result = run_script(lua, R"(
@@ -479,18 +479,18 @@ TEST_F(LuaRunnerCApiTest, ReadVectorIntegers) {
     )");
     EXPECT_EQ(result, QUIVER_OK);
 
-    quiver_lua_runner_free(lua);
+    quiver_sandbox_free(lua);
     quiver_database_close(db);
 }
 
-TEST_F(LuaRunnerCApiTest, RunScriptUnsupportedAttributeTypeFails) {
+TEST_F(SandboxCApiTest, RunScriptUnsupportedAttributeTypeFails) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    quiver_lua_runner_t* lua = nullptr;
-    ASSERT_EQ(quiver_lua_runner_new(db, &lua), QUIVER_OK);
+    quiver_sandbox_t* lua = nullptr;
+    ASSERT_EQ(quiver_sandbox_new(db, &lua), QUIVER_OK);
     ASSERT_NE(lua, nullptr);
 
     // A function, not a boolean: a boolean is INTEGER 1/0 on every write path now.
@@ -501,7 +501,7 @@ TEST_F(LuaRunnerCApiTest, RunScriptUnsupportedAttributeTypeFails) {
     ASSERT_NE(error, nullptr);
     EXPECT_NE(std::string(error).find("Cannot create_element: attribute 'enabled'"), std::string::npos) << error;
 
-    quiver_lua_runner_free(lua);
+    quiver_sandbox_free(lua);
     quiver_database_close(db);
 }
 
@@ -509,60 +509,60 @@ TEST_F(LuaRunnerCApiTest, RunScriptUnsupportedAttributeTypeFails) {
 // Return values
 // ============================================================================
 
-TEST_F(LuaRunnerCApiTest, RunReturnsJson) {
+TEST_F(SandboxCApiTest, RunReturnsJson) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
 
-    quiver_lua_runner_t* lua = nullptr;
-    ASSERT_EQ(quiver_lua_runner_new(db, &lua), QUIVER_OK);
+    quiver_sandbox_t* lua = nullptr;
+    ASSERT_EQ(quiver_sandbox_new(db, &lua), QUIVER_OK);
 
     char* result = nullptr;
-    ASSERT_EQ(quiver_lua_runner_run(lua, "return { a = 1, b = {2, 3} }", &result), QUIVER_OK);
+    ASSERT_EQ(quiver_sandbox_run(lua, "return { a = 1, b = {2, 3} }", &result), QUIVER_OK);
     ASSERT_NE(result, nullptr);
     EXPECT_STREQ(result, R"({"a":1,"b":[2,3]})");
-    quiver_lua_runner_free_string(result);
+    quiver_sandbox_free_string(result);
 
     // A script that returns nothing yields an empty string, not NULL.
     result = nullptr;
-    ASSERT_EQ(quiver_lua_runner_run(lua, "local x = 1", &result), QUIVER_OK);
+    ASSERT_EQ(quiver_sandbox_run(lua, "local x = 1", &result), QUIVER_OK);
     ASSERT_NE(result, nullptr);
     EXPECT_STREQ(result, "");
-    quiver_lua_runner_free_string(result);
+    quiver_sandbox_free_string(result);
 
-    quiver_lua_runner_free(lua);
+    quiver_sandbox_free(lua);
     quiver_database_close(db);
 }
 
-TEST_F(LuaRunnerCApiTest, RunWithNullOutResult) {
+TEST_F(SandboxCApiTest, RunWithNullOutResult) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
 
-    quiver_lua_runner_t* lua = nullptr;
-    ASSERT_EQ(quiver_lua_runner_new(db, &lua), QUIVER_OK);
+    quiver_sandbox_t* lua = nullptr;
+    ASSERT_EQ(quiver_sandbox_new(db, &lua), QUIVER_OK);
 
-    EXPECT_EQ(quiver_lua_runner_run(lua, "return 1", nullptr), QUIVER_ERROR);
+    EXPECT_EQ(quiver_sandbox_run(lua, "return 1", nullptr), QUIVER_ERROR);
 
-    quiver_lua_runner_free(lua);
+    quiver_sandbox_free(lua);
     quiver_database_close(db);
 }
 
-TEST_F(LuaRunnerCApiTest, FreeStringNull) {
-    EXPECT_EQ(quiver_lua_runner_free_string(nullptr), QUIVER_OK);
+TEST_F(SandboxCApiTest, FreeStringNull) {
+    EXPECT_EQ(quiver_sandbox_free_string(nullptr), QUIVER_OK);
 }
 
 // ============================================================================
 // Dry runs (host-side, wrapping a whole script)
 // ============================================================================
 
-TEST_F(LuaRunnerCApiTest, DryRunWrapsScript) {
+TEST_F(SandboxCApiTest, DryRunWrapsScript) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
 
-    quiver_lua_runner_t* lua = nullptr;
-    ASSERT_EQ(quiver_lua_runner_new(db, &lua), QUIVER_OK);
+    quiver_sandbox_t* lua = nullptr;
+    ASSERT_EQ(quiver_sandbox_new(db, &lua), QUIVER_OK);
 
     ASSERT_EQ(run_script(lua, R"(db:create_element("Configuration", { label = "Config" }))"), QUIVER_OK);
 
@@ -577,7 +577,7 @@ TEST_F(LuaRunnerCApiTest, DryRunWrapsScript) {
     // The script manages its own transaction; the dry run absorbs it.
     char* result = nullptr;
     ASSERT_EQ(
-        quiver_lua_runner_run(
+        quiver_sandbox_run(
             lua,
             R"(
         db:transaction(function(db)
@@ -590,7 +590,7 @@ TEST_F(LuaRunnerCApiTest, DryRunWrapsScript) {
         QUIVER_OK
     );
     EXPECT_STREQ(result, "[1]");
-    quiver_lua_runner_free_string(result);
+    quiver_sandbox_free_string(result);
 
     ASSERT_EQ(quiver_database_end_dry_run(db), QUIVER_OK);
 
@@ -600,11 +600,11 @@ TEST_F(LuaRunnerCApiTest, DryRunWrapsScript) {
     EXPECT_EQ(count, 0);
     quiver_database_free_string_array(labels, count);
 
-    quiver_lua_runner_free(lua);
+    quiver_sandbox_free(lua);
     quiver_database_close(db);
 }
 
-TEST_F(LuaRunnerCApiTest, DryRunErrorsSurfaceThroughTheErrorChannel) {
+TEST_F(SandboxCApiTest, DryRunErrorsSurfaceThroughTheErrorChannel) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);

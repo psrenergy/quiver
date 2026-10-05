@@ -1,15 +1,15 @@
 mutable struct Sandbox
-    ptr::Ptr{C.quiver_lua_runner}
+    ptr::Ptr{C.quiver_sandbox}
     # Keeps the Database from being GC'd. Does NOT protect against an explicit `close!` -- the
     # C++ runner borrows a raw `Database&`, so a runner must not outlive its database.
     db::Database
 end
 
 function Sandbox(db::Database)
-    out_runner = Ref{Ptr{C.quiver_lua_runner}}(C_NULL)
-    check(C.quiver_lua_runner_new(db.ptr, out_runner))
+    out_runner = Ref{Ptr{C.quiver_sandbox}}(C_NULL)
+    check(C.quiver_sandbox_new(db.ptr, out_runner))
     runner = Sandbox(out_runner[], db)
-    finalizer(r -> r.ptr != C_NULL && C.quiver_lua_runner_free(r.ptr), runner)
+    finalizer(r -> r.ptr != C_NULL && C.quiver_sandbox_free(r.ptr), runner)
     return runner
 end
 
@@ -24,15 +24,15 @@ To execute a script without keeping its writes, wrap the call in [`dry_run`](@re
 """
 function run!(runner::Sandbox, script::String)
     out_result = Ref{Ptr{Cchar}}(C_NULL)
-    check(C.quiver_lua_runner_run(runner.ptr, script, out_result))
+    check(C.quiver_sandbox_run(runner.ptr, script, out_result))
     result = unsafe_string(out_result[])
-    C.quiver_lua_runner_free_string(out_result[])
+    C.quiver_sandbox_free_string(out_result[])
     return result
 end
 
 function close!(runner::Sandbox)
     if runner.ptr != C_NULL
-        C.quiver_lua_runner_free(runner.ptr)
+        C.quiver_sandbox_free(runner.ptr)
         runner.ptr = C_NULL
     end
     return nothing

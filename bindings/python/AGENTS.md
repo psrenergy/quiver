@@ -106,8 +106,8 @@ ruff.toml         # Lint/format config; lint is isort only (select = ["I"])
   cffi (`an integer is required`) or on `str.encode`, naming nothing. NULL cells are written with
   `update_vector_group` / `update_set_group` / `update_time_series_group` (the element surface stays
   non-null).
-- **`Sandbox.run` owns its result**: `quiver_lua_runner_run` takes a `char** out_result` and the
-  JSON string must be freed with `quiver_lua_runner_free_string` — *not*
+- **`Sandbox.run` owns its result**: `quiver_sandbox_run` takes a `char** out_result` and the
+  JSON string must be freed with `quiver_sandbox_free_string` — *not*
   `quiver_database_free_string` (both are hand-declared in `_c_api.py`). The free sits in a
   `finally` so a `decode_string` failure (the JSON is rejected as non-UTF-8 in C++, but be safe)
   cannot leak the native buffer. The script must be Lua source text: the core loads it in text mode,

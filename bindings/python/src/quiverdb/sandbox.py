@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 class Sandbox:
     """Execute Lua scripts against a Quiver database.
 
-    Wraps the C API quiver_lua_runner_new/run/free functions.
+    Wraps the C API quiver_sandbox_new/run/free functions.
     Holds a reference to the Database to prevent GC while the runner is alive.
     """
 
@@ -24,8 +24,8 @@ class Sandbox:
         self._closed = True
         self._db = db
         lib = get_lib()
-        out_runner = ffi.new("quiver_lua_runner_t**")
-        check(lib.quiver_lua_runner_new(db._ptr, out_runner))
+        out_runner = ffi.new("quiver_sandbox_t**")
+        check(lib.quiver_sandbox_new(db._ptr, out_runner))
         self._ptr = out_runner[0]
         self._closed = False
 
@@ -34,7 +34,7 @@ class Sandbox:
         if self._closed:
             return
         lib = get_lib()
-        lib.quiver_lua_runner_free(self._ptr)
+        lib.quiver_sandbox_free(self._ptr)
         self._ptr = ffi.NULL
         self._closed = True
 
@@ -54,12 +54,12 @@ class Sandbox:
         self._ensure_open()
         lib = get_lib()
         out_result = ffi.new("char**")
-        check(lib.quiver_lua_runner_run(self._ptr, script.encode("utf-8"), out_result))
+        check(lib.quiver_sandbox_run(self._ptr, script.encode("utf-8"), out_result))
         try:
             return decode_string(out_result[0])
         finally:
             # In a finally so a decode failure cannot leak the native JSON buffer.
-            lib.quiver_lua_runner_free_string(out_result[0])
+            lib.quiver_sandbox_free_string(out_result[0])
 
     def __enter__(self) -> Sandbox:
         return self

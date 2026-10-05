@@ -30,24 +30,24 @@ add_executable(quiver_tests
     test_issues.cpp
     test_lua_binary.cpp
     test_lua_expression.cpp
-    test_lua_runner_all_types.cpp
-    test_lua_runner_create.cpp
-    test_lua_runner_csv_export.cpp
-    test_lua_runner_csv_import.cpp
-    test_lua_runner_delete.cpp
-    test_lua_runner_describe.cpp
-    test_lua_runner_errors.cpp
-    test_lua_runner_fk.cpp
-    test_lua_runner_lifecycle.cpp
-    test_lua_runner_migrations.cpp
-    test_lua_runner_query.cpp
-    test_lua_runner_read.cpp
-    test_lua_runner_read_csv.cpp
-    test_lua_runner_write_csv.cpp
-    test_lua_runner_return.cpp
-    test_lua_runner_time_series.cpp
-    test_lua_runner_transaction.cpp
-    test_lua_runner_update.cpp
+    test_sandbox_all_types.cpp
+    test_sandbox_create.cpp
+    test_sandbox_csv_export.cpp
+    test_sandbox_csv_import.cpp
+    test_sandbox_delete.cpp
+    test_sandbox_describe.cpp
+    test_sandbox_errors.cpp
+    test_sandbox_fk.cpp
+    test_sandbox_lifecycle.cpp
+    test_sandbox_migrations.cpp
+    test_sandbox_query.cpp
+    test_sandbox_read.cpp
+    test_sandbox_read_csv.cpp
+    test_sandbox_write_csv.cpp
+    test_sandbox_return.cpp
+    test_sandbox_time_series.cpp
+    test_sandbox_transaction.cpp
+    test_sandbox_update.cpp
     test_migrations.cpp
     test_row_result.cpp
     test_sandboxed_path.cpp
@@ -98,7 +98,7 @@ if(QUIVER_BUILD_C_API)
         test_c_api_database_transaction.cpp
         test_c_api_database_update.cpp
         test_c_api_element.cpp
-        test_c_api_lua_runner.cpp
+        test_c_api_sandbox.cpp
     )
 
     target_link_libraries(quiver_c_tests

@@ -1,6 +1,6 @@
-#include "test_lua_runner.h"
+#include "test_sandbox.h"
 
-TEST_F(LuaRunnerTest, LuaScriptError) {
+TEST_F(SandboxTest, LuaScriptError) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Test Config"));
 
@@ -9,7 +9,7 @@ TEST_F(LuaRunnerTest, LuaScriptError) {
     EXPECT_THROW({ lua.run("invalid lua syntax !!!"); }, std::runtime_error);
 }
 
-TEST_F(LuaRunnerTest, ReuseRunner) {
+TEST_F(SandboxTest, ReuseRunner) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::Sandbox lua(db);
 
@@ -21,7 +21,7 @@ TEST_F(LuaRunnerTest, ReuseRunner) {
     EXPECT_EQ(labels.size(), 2);
 }
 
-TEST_F(LuaRunnerTest, LuaRuntimeError) {
+TEST_F(SandboxTest, LuaRuntimeError) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -31,7 +31,7 @@ TEST_F(LuaRunnerTest, LuaRuntimeError) {
     EXPECT_THROW({ lua.run("error('This is a runtime error')"); }, std::runtime_error);
 }
 
-TEST_F(LuaRunnerTest, LuaAssertionFailure) {
+TEST_F(SandboxTest, LuaAssertionFailure) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -40,7 +40,7 @@ TEST_F(LuaRunnerTest, LuaAssertionFailure) {
     EXPECT_THROW({ lua.run("assert(false, 'Assertion failed!')"); }, std::runtime_error);
 }
 
-TEST_F(LuaRunnerTest, ComplexLuaScript) {
+TEST_F(SandboxTest, ComplexLuaScript) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::Sandbox lua(db);
 
@@ -77,7 +77,7 @@ TEST_F(LuaRunnerTest, ComplexLuaScript) {
     EXPECT_EQ(labels[4], "Item 5");
 }
 
-TEST_F(LuaRunnerTest, UndefinedVariableError) {
+TEST_F(SandboxTest, UndefinedVariableError) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -86,7 +86,7 @@ TEST_F(LuaRunnerTest, UndefinedVariableError) {
     EXPECT_THROW({ lua.run("local x = undefined_variable + 1"); }, std::runtime_error);
 }
 
-TEST_F(LuaRunnerTest, NilFunctionCallError) {
+TEST_F(SandboxTest, NilFunctionCallError) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -95,7 +95,7 @@ TEST_F(LuaRunnerTest, NilFunctionCallError) {
     EXPECT_THROW({ lua.run("local f = nil; f()"); }, std::runtime_error);
 }
 
-TEST_F(LuaRunnerTest, TableIndexError) {
+TEST_F(SandboxTest, TableIndexError) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -104,7 +104,7 @@ TEST_F(LuaRunnerTest, TableIndexError) {
     EXPECT_THROW({ lua.run("local t = nil; local x = t.field"); }, std::runtime_error);
 }
 
-TEST_F(LuaRunnerTest, MultipleScriptExecutions) {
+TEST_F(SandboxTest, MultipleScriptExecutions) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::Sandbox lua(db);
 
@@ -117,7 +117,7 @@ TEST_F(LuaRunnerTest, MultipleScriptExecutions) {
     EXPECT_EQ(labels.size(), 3);
 }
 
-TEST_F(LuaRunnerTest, EmptyScriptSucceeds) {
+TEST_F(SandboxTest, EmptyScriptSucceeds) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -127,7 +127,7 @@ TEST_F(LuaRunnerTest, EmptyScriptSucceeds) {
     lua.run("");
 }
 
-TEST_F(LuaRunnerTest, WhitespaceOnlyScriptSucceeds) {
+TEST_F(SandboxTest, WhitespaceOnlyScriptSucceeds) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -137,7 +137,7 @@ TEST_F(LuaRunnerTest, WhitespaceOnlyScriptSucceeds) {
     lua.run("   \n\t\n   ");
 }
 
-TEST_F(LuaRunnerTest, CommentOnlyScriptSucceeds) {
+TEST_F(SandboxTest, CommentOnlyScriptSucceeds) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -147,7 +147,7 @@ TEST_F(LuaRunnerTest, CommentOnlyScriptSucceeds) {
     lua.run("-- this is a comment\n-- another comment");
 }
 
-TEST_F(LuaRunnerTest, ReadFromNonExistentCollection) {
+TEST_F(SandboxTest, ReadFromNonExistentCollection) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -160,7 +160,7 @@ TEST_F(LuaRunnerTest, ReadFromNonExistentCollection) {
     );
 }
 
-TEST_F(LuaRunnerTest, ReadNonExistentAttribute) {
+TEST_F(SandboxTest, ReadNonExistentAttribute) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     db.create_element("Collection", quiver::Element().set("label", "Item 1"));
@@ -174,7 +174,7 @@ TEST_F(LuaRunnerTest, ReadNonExistentAttribute) {
     );
 }
 
-TEST_F(LuaRunnerTest, UpdateElementNonExistentCollection) {
+TEST_F(SandboxTest, UpdateElementNonExistentCollection) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -187,7 +187,7 @@ TEST_F(LuaRunnerTest, UpdateElementNonExistentCollection) {
     );
 }
 
-TEST_F(LuaRunnerTest, DeleteFromNonExistentCollection) {
+TEST_F(SandboxTest, DeleteFromNonExistentCollection) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -200,7 +200,7 @@ TEST_F(LuaRunnerTest, DeleteFromNonExistentCollection) {
     );
 }
 
-TEST_F(LuaRunnerTest, MultipleOperationsPartialFailure) {
+TEST_F(SandboxTest, MultipleOperationsPartialFailure) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -222,7 +222,7 @@ TEST_F(LuaRunnerTest, MultipleOperationsPartialFailure) {
     EXPECT_EQ(labels[0], "Item 1");
 }
 
-TEST_F(LuaRunnerTest, ScalarTypeCoercionPolicy) {
+TEST_F(SandboxTest, ScalarTypeCoercionPolicy) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::Sandbox lua(db);
 
@@ -251,7 +251,7 @@ TEST_F(LuaRunnerTest, ScalarTypeCoercionPolicy) {
     EXPECT_DOUBLE_EQ(*floats[0], 7.0);
 }
 
-TEST_F(LuaRunnerTest, ReadElementIdsFromNonExistentCollection) {
+TEST_F(SandboxTest, ReadElementIdsFromNonExistentCollection) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -264,7 +264,7 @@ TEST_F(LuaRunnerTest, ReadElementIdsFromNonExistentCollection) {
     );
 }
 
-TEST_F(LuaRunnerTest, LuaScriptWithUnicodeCharacters) {
+TEST_F(SandboxTest, LuaScriptWithUnicodeCharacters) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::Sandbox lua(db);
 
@@ -280,7 +280,7 @@ TEST_F(LuaRunnerTest, LuaScriptWithUnicodeCharacters) {
     EXPECT_EQ(collection_labels.size(), 1);
 }
 
-TEST_F(LuaRunnerTest, DofileAndLoadfileRemoved) {
+TEST_F(SandboxTest, DofileAndLoadfileRemoved) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::Sandbox lua(db);
 
@@ -292,7 +292,7 @@ TEST_F(LuaRunnerTest, DofileAndLoadfileRemoved) {
     )");
 }
 
-TEST_F(LuaRunnerTest, LoadRefusesBinaryChunks) {
+TEST_F(SandboxTest, LoadRefusesBinaryChunks) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::Sandbox lua(db);
 
@@ -317,7 +317,7 @@ TEST_F(LuaRunnerTest, LoadRefusesBinaryChunks) {
     )lua");
 }
 
-TEST_F(LuaRunnerTest, LoadStillAcceptsTextChunks) {
+TEST_F(SandboxTest, LoadStillAcceptsTextChunks) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::Sandbox lua(db);
 
@@ -340,7 +340,7 @@ TEST_F(LuaRunnerTest, LoadStillAcceptsTextChunks) {
     )");
 }
 
-TEST_F(LuaRunnerTest, RunRefusesBinaryChunks) {
+TEST_F(SandboxTest, RunRefusesBinaryChunks) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::Sandbox lua(db);
 
@@ -366,7 +366,7 @@ TEST_F(LuaRunnerTest, RunRefusesBinaryChunks) {
     }
 }
 
-TEST_F(LuaRunnerTest, CaughtScriptErrorsWriteNothingToStderr) {
+TEST_F(SandboxTest, CaughtScriptErrorsWriteNothingToStderr) {
     auto db = quiver::Database::from_schema(
         ":memory:",
         collections_schema,
@@ -391,7 +391,7 @@ TEST_F(LuaRunnerTest, CaughtScriptErrorsWriteNothingToStderr) {
     EXPECT_TRUE(threw);
 }
 
-TEST_F(LuaRunnerTest, DotCallThrowsInsteadOfCrashing) {
+TEST_F(SandboxTest, DotCallThrowsInsteadOfCrashing) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::Sandbox lua(db);
 
@@ -399,7 +399,7 @@ TEST_F(LuaRunnerTest, DotCallThrowsInsteadOfCrashing) {
     EXPECT_THROW(lua.run("db.create_element('Collection', { label = 'x' })"), std::runtime_error);
 }
 
-TEST_F(LuaRunnerTest, StandardLibrariesEnabled) {
+TEST_F(SandboxTest, StandardLibrariesEnabled) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::Sandbox lua(db);
 
@@ -411,7 +411,7 @@ TEST_F(LuaRunnerTest, StandardLibrariesEnabled) {
     )");
 }
 
-TEST_F(LuaRunnerTest, UnsafeLibrariesNotLoaded) {
+TEST_F(SandboxTest, UnsafeLibrariesNotLoaded) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::Sandbox lua(db);
 
@@ -425,7 +425,7 @@ TEST_F(LuaRunnerTest, UnsafeLibrariesNotLoaded) {
     )");
 }
 
-TEST_F(LuaRunnerTest, QueryParameterUnsupportedTypeThrows) {
+TEST_F(SandboxTest, QueryParameterUnsupportedTypeThrows) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -442,7 +442,7 @@ TEST_F(LuaRunnerTest, QueryParameterUnsupportedTypeThrows) {
     }
 }
 
-TEST_F(LuaRunnerTest, QueryParameterBooleanBindsInteger) {
+TEST_F(SandboxTest, QueryParameterBooleanBindsInteger) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     quiver::Sandbox lua(db);
@@ -454,7 +454,7 @@ TEST_F(LuaRunnerTest, QueryParameterBooleanBindsInteger) {
     EXPECT_EQ(json, "1");
 }
 
-TEST_F(LuaRunnerTest, InvalidDateTimeValueThrows) {
+TEST_F(SandboxTest, InvalidDateTimeValueThrows) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     db.create_element("Collection", quiver::Element().set("label", "Item 1"));

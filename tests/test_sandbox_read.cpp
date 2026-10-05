@@ -1,6 +1,6 @@
-#include "test_lua_runner.h"
+#include "test_sandbox.h"
 
-TEST_F(LuaRunnerTest, ReadScalarStrings) {
+TEST_F(SandboxTest, ReadScalarStrings) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     db.create_element("Configuration", quiver::Element().set("label", "Test Config"));
@@ -18,7 +18,7 @@ TEST_F(LuaRunnerTest, ReadScalarStrings) {
     )");
 }
 
-TEST_F(LuaRunnerTest, ReadScalarIntegers) {
+TEST_F(SandboxTest, ReadScalarIntegers) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
@@ -44,7 +44,7 @@ TEST_F(LuaRunnerTest, ReadScalarIntegers) {
     )");
 }
 
-TEST_F(LuaRunnerTest, ReadScalarFloats) {
+TEST_F(SandboxTest, ReadScalarFloats) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
@@ -61,7 +61,7 @@ TEST_F(LuaRunnerTest, ReadScalarFloats) {
     )");
 }
 
-TEST_F(LuaRunnerTest, ReadScalarFloatsPreservesNulls) {
+TEST_F(SandboxTest, ReadScalarFloatsPreservesNulls) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     // some_float has no default, so an unset value is SQL NULL.
@@ -82,7 +82,7 @@ TEST_F(LuaRunnerTest, ReadScalarFloatsPreservesNulls) {
     )");
 }
 
-TEST_F(LuaRunnerTest, ReadScalarIntegersPreservesNulls) {
+TEST_F(SandboxTest, ReadScalarIntegersPreservesNulls) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
@@ -100,7 +100,7 @@ TEST_F(LuaRunnerTest, ReadScalarIntegersPreservesNulls) {
     )");
 }
 
-TEST_F(LuaRunnerTest, ReadScalarStringsPreservesNulls) {
+TEST_F(SandboxTest, ReadScalarStringsPreservesNulls) {
     auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("all_types.sql"));
 
     db.create_element("AllTypes", quiver::Element().set("label", "a").set("some_text", "hello"));
@@ -119,7 +119,7 @@ TEST_F(LuaRunnerTest, ReadScalarStringsPreservesNulls) {
     )");
 }
 
-TEST_F(LuaRunnerTest, ReadScalarFloatsAllNull) {
+TEST_F(SandboxTest, ReadScalarFloatsAllNull) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
@@ -139,7 +139,7 @@ TEST_F(LuaRunnerTest, ReadScalarFloatsAllNull) {
     )");
 }
 
-TEST_F(LuaRunnerTest, ReadVectorIntegers) {
+TEST_F(SandboxTest, ReadVectorIntegers) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
@@ -171,7 +171,7 @@ TEST_F(LuaRunnerTest, ReadVectorIntegers) {
     )");
 }
 
-TEST_F(LuaRunnerTest, ReadVectorFloats) {
+TEST_F(SandboxTest, ReadVectorFloats) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
@@ -192,7 +192,7 @@ TEST_F(LuaRunnerTest, ReadVectorFloats) {
     )");
 }
 
-TEST_F(LuaRunnerTest, ReadEmptyVector) {
+TEST_F(SandboxTest, ReadEmptyVector) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
@@ -209,7 +209,7 @@ TEST_F(LuaRunnerTest, ReadEmptyVector) {
     )");
 }
 
-TEST_F(LuaRunnerTest, ReadScalarStringsEmpty) {
+TEST_F(SandboxTest, ReadScalarStringsEmpty) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -222,7 +222,7 @@ TEST_F(LuaRunnerTest, ReadScalarStringsEmpty) {
     )");
 }
 
-TEST_F(LuaRunnerTest, ReadScalarIntegersEmpty) {
+TEST_F(SandboxTest, ReadScalarIntegersEmpty) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -234,7 +234,7 @@ TEST_F(LuaRunnerTest, ReadScalarIntegersEmpty) {
     )");
 }
 
-TEST_F(LuaRunnerTest, ReadVectorIntegersEmpty) {
+TEST_F(SandboxTest, ReadVectorIntegersEmpty) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
@@ -246,7 +246,7 @@ TEST_F(LuaRunnerTest, ReadVectorIntegersEmpty) {
     )");
 }
 
-TEST_F(LuaRunnerTest, ReadVectorBulkAlignsWithElementIdsAcrossEmptyElement) {
+TEST_F(SandboxTest, ReadVectorBulkAlignsWithElementIdsAcrossEmptyElement) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     db.create_element(
@@ -273,7 +273,7 @@ TEST_F(LuaRunnerTest, ReadVectorBulkAlignsWithElementIdsAcrossEmptyElement) {
     )");
 }
 
-TEST_F(LuaRunnerTest, ReadSetStringsAll) {
+TEST_F(SandboxTest, ReadSetStringsAll) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     db.create_element(
@@ -295,7 +295,7 @@ TEST_F(LuaRunnerTest, ReadSetStringsAll) {
     )");
 }
 
-TEST_F(LuaRunnerTest, ReadElementIds) {
+TEST_F(SandboxTest, ReadElementIds) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
@@ -318,7 +318,7 @@ TEST_F(LuaRunnerTest, ReadElementIds) {
     lua.run(script);
 }
 
-TEST_F(LuaRunnerTest, ReadElementIdsEmpty) {
+TEST_F(SandboxTest, ReadElementIdsEmpty) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
@@ -331,7 +331,7 @@ TEST_F(LuaRunnerTest, ReadElementIdsEmpty) {
     )");
 }
 
-TEST_F(LuaRunnerTest, ReadScalarsById) {
+TEST_F(SandboxTest, ReadScalarsById) {
     auto db = quiver::Database::from_schema(
         ":memory:",
         collections_schema,
@@ -364,7 +364,7 @@ TEST_F(LuaRunnerTest, ReadScalarsById) {
     lua.run(script);
 }
 
-TEST_F(LuaRunnerTest, ReadVectorsById) {
+TEST_F(SandboxTest, ReadVectorsById) {
     // Use basic.sql which has no vector groups -- verifies the binding is callable
     // and returns an empty table. Note: collections.sql has multi-column vector groups
     // where group_name != column_name, which is a known limitation of the composite helper.
@@ -392,7 +392,7 @@ TEST_F(LuaRunnerTest, ReadVectorsById) {
     lua.run(script);
 }
 
-TEST_F(LuaRunnerTest, ReadSetsById) {
+TEST_F(SandboxTest, ReadSetsById) {
     // Use basic.sql which has no set groups -- verifies the binding is callable
     // and returns an empty table. Note: collections.sql has set groups where
     // group_name != column_name, which is a known limitation of the composite helper.
@@ -420,7 +420,7 @@ TEST_F(LuaRunnerTest, ReadSetsById) {
     lua.run(script);
 }
 
-TEST_F(LuaRunnerTest, ReadVectorsByIdWithData) {
+TEST_F(SandboxTest, ReadVectorsByIdWithData) {
     auto db = quiver::Database::from_schema(
         ":memory:",
         VALID_SCHEMA("composite_helpers.sql"),
@@ -470,7 +470,7 @@ TEST_F(LuaRunnerTest, ReadVectorsByIdWithData) {
     lua.run(script);
 }
 
-TEST_F(LuaRunnerTest, ReadVectorsByIdEmptyGroupIsEmptyTable) {
+TEST_F(SandboxTest, ReadVectorsByIdEmptyGroupIsEmptyTable) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element("Collection", quiver::Element().set("label", "Item 1"));  // no vector rows
@@ -487,7 +487,7 @@ TEST_F(LuaRunnerTest, ReadVectorsByIdEmptyGroupIsEmptyTable) {
     );
 }
 
-TEST_F(LuaRunnerTest, ReadSetsByIdWithData) {
+TEST_F(SandboxTest, ReadSetsByIdWithData) {
     auto db = quiver::Database::from_schema(
         ":memory:",
         VALID_SCHEMA("composite_helpers.sql"),
@@ -528,7 +528,7 @@ TEST_F(LuaRunnerTest, ReadSetsByIdWithData) {
     lua.run(script);
 }
 
-TEST_F(LuaRunnerTest, ReadElementById) {
+TEST_F(SandboxTest, ReadElementById) {
     auto db = quiver::Database::from_schema(
         ":memory:",
         VALID_SCHEMA("composite_helpers.sql"),
@@ -572,7 +572,7 @@ TEST_F(LuaRunnerTest, ReadElementById) {
     lua.run(script);
 }
 
-TEST_F(LuaRunnerTest, NumberOfElements) {
+TEST_F(SandboxTest, NumberOfElements) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     quiver::Sandbox lua(db);
@@ -593,7 +593,7 @@ TEST_F(LuaRunnerTest, NumberOfElements) {
     )");
 }
 
-TEST_F(LuaRunnerTest, NumberOfElementsUnknownCollection) {
+TEST_F(SandboxTest, NumberOfElementsUnknownCollection) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     quiver::Sandbox lua(db);
@@ -601,7 +601,7 @@ TEST_F(LuaRunnerTest, NumberOfElementsUnknownCollection) {
     expect_lua_error(lua, R"(db:number_of_elements("Nope"))", "Cannot number_of_elements: collection not found: Nope");
 }
 
-TEST_F(LuaRunnerTest, ListGroupsUnknownCollection) {
+TEST_F(SandboxTest, ListGroupsUnknownCollection) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     quiver::Sandbox lua(db);
@@ -623,7 +623,7 @@ TEST_F(LuaRunnerTest, ListGroupsUnknownCollection) {
     expect_lua_error(lua, R"(db:read_sets_by_id("Nope", 1))", "Cannot list_set_groups: collection not found: Nope");
 }
 
-TEST_F(LuaRunnerTest, ReadVectorPreservesNullCellsAsNilHoles) {
+TEST_F(SandboxTest, ReadVectorPreservesNullCellsAsNilHoles) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
@@ -661,7 +661,7 @@ TEST_F(LuaRunnerTest, ReadVectorPreservesNullCellsAsNilHoles) {
     )");
 }
 
-TEST_F(LuaRunnerTest, ReadSetPreservesNullCellsAsNilHoles) {
+TEST_F(SandboxTest, ReadSetPreservesNullCellsAsNilHoles) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
