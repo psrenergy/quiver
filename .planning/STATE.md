@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: lua-2
 milestone_name: Abstract Expressions and Quiver File Layout
-current_phase: 9
-current_phase_name: Julia AbstractExpression and Docs
+current_phase: 09
+current_phase_name: julia-abstractexpression-and-docs
 status: executing
-stopped_at: Completed 08-02-PLAN.md
-last_updated: "2026-10-05T00:44:15.029Z"
+stopped_at: Completed 09-01-PLAN.md
+last_updated: "2026-10-05T01:12:30.951Z"
 last_activity: 2026-10-04
 last_activity_desc: Roadmap created (Phases 6-9, 25/25 requirements mapped)
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 9
-  completed_plans: 7
+  completed_plans: 8
   percent: 75
 ---
 
@@ -24,16 +24,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-04)
 
 **Core value:** Every file in the Lua scripting layer is small and single-purpose enough for an agent to change safely, and every existing script behaves exactly as before, apart from the deliberate, test-pinned fixes.
-**Current focus:** Phase 08 — typed-expression-parameters-in-lua
+**Current focus:** Phase 09 — julia-abstractexpression-and-docs
 
 ## Current Position
 
-Phase: 9 — Julia AbstractExpression and Docs
-Plan: Not started
+Phase: 09 (julia-abstractexpression-and-docs) — EXECUTING
+Plan: 2 of 2
 Status: Ready to execute
-Last activity: 2026-10-04 — Phase 08 complete, transitioned to Phase 9
+Last activity: 2026-10-04 — Phase 09 execution started
 
-Progress: [██████████] 100%
+Progress: [█████████░] 89%
 
 ## Performance Metrics
 
@@ -90,6 +90,7 @@ Progress: [██████████] 100%
 | Phase 07 P02 | 75min | 3 tasks | 1 files |
 | Phase 08 P01 | 17min | 3 tasks | 8 files |
 | Phase 08 P02 | 75min | 3 tasks | 2 files |
+| Phase 09 P01 | 18 min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -159,6 +160,8 @@ v0.12.9 decisions (history; phase artifacts in `milestones/v0.12.9-phases/`):
 - [Phase 08]: 08-01: operands typed const AbstractExpression& in sol::overload sets; one variadic operand_error fallback words operand / too-many-arguments; methods keep ignoring extra args
 - [Phase 08]: 08-01: Windows Debug LuaExpressionTest 41, Lua* 490/12, quiver_tests 1476, C API 543 at 9d250f2; golden baseline recaptured (surface delta only)
 - [Phase ?]: Phase 8: compile-time sol2 traits stay; runtime tag cost +2.3% on f:read (LUA-06 rule: +2% on either workload)
+- [Phase ?]: Julia get_metadata is one generic owned by Binary, imported into Quiver before expression.jl; a file answers with its handle's metadata
+- [Phase ?]: Julia expression operands convert through a private _expression helper; no public Expression(::Expression) identity
 
 ### Pending Todos
 
@@ -195,8 +198,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-10-04T23:30:55.076Z
-Stopped at: Completed 08-02-PLAN.md
+Last session: 2026-10-05T01:12:30.919Z
+Stopped at: Completed 09-01-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

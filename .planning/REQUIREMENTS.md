@@ -42,9 +42,9 @@ evidence, the layout mapping table, the judged designs and the compiled spike). 
 
 ### Julia
 
-- [ ] **JUL-01**: `abstract type AbstractExpression end` is declared in Quiver.jl before the Binary module is included; `Binary.File <: AbstractExpression` and `Expression <: AbstractExpression`.
-- [ ] **JUL-02**: Expression operations are defined once on `AbstractExpression`, converting a `Binary.File` through the existing `quiver_expression_from_file`. The 97 `Binary.File` forwarding methods in `expression.jl` are deleted. No C API change, and the Julia suite passes.
-- [ ] **JUL-03**: Every expression operation works on a `Binary.File` in Julia, including `save` and `get_metadata`, with tests (parity with Lua).
+- [x] **JUL-01**: `abstract type AbstractExpression end` is declared in Quiver.jl before the Binary module is included; `Binary.File <: AbstractExpression` and `Expression <: AbstractExpression`.
+- [x] **JUL-02**: Expression operations are defined once on `AbstractExpression`, converting a `Binary.File` through the existing `quiver_expression_from_file`. The 97 `Binary.File` forwarding methods in `expression.jl` are deleted. No C API change, and the Julia suite passes.
+- [x] **JUL-03**: Every expression operation works on a `Binary.File` in Julia, including `save` and `get_metadata`, with tests (parity with Lua).
 
 ### Docs
 
@@ -94,9 +94,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LUA-06 | Phase 8 | Complete |
 | LUA-07 | Phase 8 | Complete |
 | LUA-08 | Phase 8 | Complete |
-| JUL-01 | Phase 9 | Pending |
-| JUL-02 | Phase 9 | Pending |
-| JUL-03 | Phase 9 | Pending |
+| JUL-01 | Phase 9 | Complete |
+| JUL-02 | Phase 9 | Complete |
+| JUL-03 | Phase 9 | Complete |
 | DOC-01 | Phase 9 | Pending |
 | DOC-02 | Phase 9 | Pending |
 
