@@ -17,7 +17,7 @@ class LuaRunner_ExportCSV : public LuaSandboxTest {};
 TEST_F(LuaRunner_ExportCSV, ScalarDefaults) {
     auto csv_schema = VALID_SCHEMA("csv_export.sql");
     auto db = quiver::Database::from_schema(db_path(), csv_schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
         db:create_element("Items", {
@@ -41,7 +41,7 @@ TEST_F(LuaRunner_ExportCSV, ScalarDefaults) {
 TEST_F(LuaRunner_ExportCSV, GroupExport) {
     auto csv_schema = VALID_SCHEMA("csv_export.sql");
     auto db = quiver::Database::from_schema(db_path(), csv_schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
         local id1 = db:create_element("Items", { label = "Item1", name = "Alpha" })
@@ -64,7 +64,7 @@ TEST_F(LuaRunner_ExportCSV, GroupExport) {
 TEST_F(LuaRunner_ExportCSV, EnumLabels) {
     auto csv_schema = VALID_SCHEMA("csv_export.sql");
     auto db = quiver::Database::from_schema(db_path(), csv_schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
         db:create_element("Items", {
@@ -93,7 +93,7 @@ TEST_F(LuaRunner_ExportCSV, EnumLabels) {
 TEST_F(LuaRunner_ExportCSV, DateTimeFormat) {
     auto csv_schema = VALID_SCHEMA("csv_export.sql");
     auto db = quiver::Database::from_schema(db_path(), csv_schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
         db:create_element("Items", {
@@ -115,7 +115,7 @@ TEST_F(LuaRunner_ExportCSV, DateTimeFormat) {
 TEST_F(LuaRunner_ExportCSV, CombinedOptions) {
     auto csv_schema = VALID_SCHEMA("csv_export.sql");
     auto db = quiver::Database::from_schema(db_path(), csv_schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
         db:create_element("Items", {
@@ -148,7 +148,7 @@ TEST_F(LuaRunner_ExportCSV, CombinedOptions) {
 TEST_F(LuaRunner_ExportCSV, OptionsAreStrict) {
     auto csv_schema = VALID_SCHEMA("csv_export.sql");
     auto db = quiver::Database::from_schema(db_path(), csv_schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     expect_lua_error(
         lua,
@@ -172,7 +172,7 @@ TEST_F(LuaRunner_ExportCSV, OptionsAreStrict) {
 TEST_F(LuaRunner_ExportCSV, RelativeResolvesAgainstDbDir) {
     auto csv_schema = VALID_SCHEMA("csv_export.sql");
     auto db = quiver::Database::from_schema(db_path(), csv_schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(db:create_element("Items", { label = "Item1", name = "Alpha" }))");
     lua.run(R"(db:export_csv("Items", "", "out.csv"))");
@@ -184,7 +184,7 @@ TEST_F(LuaRunner_ExportCSV, RelativeResolvesAgainstDbDir) {
 TEST_F(LuaRunner_ExportCSV, EscapeThrows) {
     auto csv_schema = VALID_SCHEMA("csv_export.sql");
     auto db = quiver::Database::from_schema(db_path(), csv_schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     expect_lua_error(
         lua,
@@ -197,7 +197,7 @@ TEST_F(LuaRunner_ExportCSV, EscapeThrows) {
 TEST_F(LuaRunner_ExportCSV, EscapeIsReportedBeforeNonTableOptions) {
     auto csv_schema = VALID_SCHEMA("csv_export.sql");
     auto db = quiver::Database::from_schema(db_path(), csv_schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     expect_lua_error(
         lua,
@@ -209,7 +209,7 @@ TEST_F(LuaRunner_ExportCSV, EscapeIsReportedBeforeNonTableOptions) {
 TEST_F(LuaRunner_ExportCSV, InMemoryThrows) {
     auto csv_schema = VALID_SCHEMA("csv_export.sql");
     auto db = quiver::Database::from_schema(":memory:", csv_schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     expect_lua_error(lua, R"(db:export_csv("Items", "", "out.csv"))", "Cannot export_csv: database is in-memory");
 }

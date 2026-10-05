@@ -9,25 +9,25 @@ import 'exceptions.dart';
 
 /// A Lua script runner for executing Lua scripts with access to a Quiver.
 ///
-/// Use [LuaRunner] to execute Lua scripts that can interact with the database
+/// Use [Sandbox] to execute Lua scripts that can interact with the database
 /// via the `db` global object exposed to the script.
 ///
 /// Example:
 /// ```dart
 /// final db = Database.fromSchema(':memory:', 'schema.sql');
-/// final lua = LuaRunner(db);
+/// final lua = Sandbox(db);
 /// lua.run('''
 ///   db:create_element("Collection", { label = "Item 1" })
 /// ''');
 /// lua.dispose();
 /// db.close();
 /// ```
-class LuaRunner {
+class Sandbox {
   Pointer<quiver_lua_runner_t> _ptr;
   bool _isDisposed = false;
 
-  /// Creates a new LuaRunner for the given database.
-  LuaRunner(Database db) : _ptr = nullptr {
+  /// Creates a new Sandbox for the given database.
+  Sandbox(Database db) : _ptr = nullptr {
     final arena = Arena();
     try {
       final outRunnerPtr = arena<Pointer<quiver_lua_runner_t>>();
@@ -40,7 +40,7 @@ class LuaRunner {
 
   void _ensureNotDisposed() {
     if (_isDisposed) {
-      throw StateError('LuaRunner has been disposed');
+      throw StateError('Sandbox has been disposed');
     }
   }
 
@@ -85,7 +85,7 @@ class LuaRunner {
     }
   }
 
-  /// Disposes the LuaRunner and frees native resources.
+  /// Disposes the Sandbox and frees native resources.
   void dispose() {
     if (_isDisposed) return;
     bindings.quiver_lua_runner_free(_ptr);

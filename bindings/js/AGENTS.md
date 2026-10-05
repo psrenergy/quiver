@@ -113,7 +113,7 @@ bunfig.toml       # coverageSkipTestFiles = true (Bun 1.3 reports test/ otherwis
   `quiver_database_read_time_series_row`, plus both free functions (hand-maintained, no
   generator). `readTimeSeriesRow` gates every column type on its mask the same way (mask 0 = no
   data at or before the date → `null`) and builds a `CString` only for an unmasked slot.
-- **`LuaRunner.run` owns its result**: `quiver_lua_runner_run` takes a `char** out_result` and the
+- **`Sandbox.run` owns its result**: `quiver_lua_runner_run` takes a `char** out_result` and the
   JSON string must be freed with `quiver_lua_runner_free_string` — *not* `quiver_database_free_string`
   (both are in `loader.ts`, hand-maintained). `decodeStringFromBuf` returns `""` for a NULL pointer,
   which is also what the C API leaves there on failure, and `check()` throws before the decode.

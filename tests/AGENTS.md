@@ -44,7 +44,7 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   like the other file-touching Lua operations); `_lifecycle` covers moving a runner (move-construct and
   move-assign): handles a script opens after the move still close at that `run()`'s exit, both while the
   moved-from runner is alive and after it has been destroyed, and a file-scope `static_assert` that
-  `LuaRunner` is pointer-sized keeps run state inside its `Impl` in Release too, where the freed-source
+  `Sandbox` is pointer-sized keeps run state inside its `Impl` in Release too, where the freed-source
   pins alone do not reliably fail. The shared `LuaRunnerTest` and `LuaSandboxTest` fixtures,
   the `expect_lua_error` helper (throw + message-substring assert — plain `EXPECT_THROW` passes
   vacuously when a removed function raises "attempt to call a nil value"), and the common include

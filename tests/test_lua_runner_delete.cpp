@@ -10,7 +10,7 @@ TEST_F(LuaRunnerTest, DeleteElementById) {
     db.create_element("Collection", quiver::Element().set("label", "Item 2"));
     db.create_element("Collection", quiver::Element().set("label", "Item 3"));
 
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
         local ids = db:read_element_ids("Collection")
@@ -37,7 +37,7 @@ TEST_F(LuaRunnerTest, DeleteElementByLabel) {
     db.create_element("Collection", quiver::Element().set("label", "Item 2"));
     db.create_element("Collection", quiver::Element().set("label", "Item 3"));
 
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
         local ids = db:read_element_ids("Collection")
@@ -69,7 +69,7 @@ TEST_F(LuaRunnerTest, DeleteElementByIdWithVectorData) {
         quiver::Element().set("label", "Item 2").set("value_int", std::vector<int64_t>{4, 5, 6})
     );
 
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
         db:delete_element("Collection", 1)
@@ -91,7 +91,7 @@ TEST_F(LuaRunnerTest, DeleteElementByIdNonExistent) {
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     db.create_element("Collection", quiver::Element().set("label", "Item 1"));
 
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     // Deleting a non-existent element throws "Element not found"
     expect_lua_error(lua, R"(db:delete_element("Collection", 999))", "Element not found");
@@ -109,7 +109,7 @@ TEST_F(LuaRunnerTest, DeleteElementByLabelNonExistent) {
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     db.create_element("Collection", quiver::Element().set("label", "Item 1"));
 
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     // Deleting a non-existent label throws "Element not found"
     expect_lua_error(lua, R"(db:delete_element_by_label("Collection", "Nope"))", "Element not found");
@@ -129,7 +129,7 @@ TEST_F(LuaRunnerTest, DeleteElementByIdOtherElementsUnchanged) {
     db.create_element("Collection", quiver::Element().set("label", "Item 2").set("some_integer", int64_t{200}));
     db.create_element("Collection", quiver::Element().set("label", "Item 3").set("some_integer", int64_t{300}));
 
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
         db:delete_element("Collection", 2)

@@ -74,7 +74,7 @@ std::string extract_lua_example(const std::string& file_contents, const std::str
 // satisfy a write_row assertion (or vice versa) and a matching prefix with the wrong reason still
 // fails.
 void expect_prefixed_error(
-    quiver::LuaRunner& lua,
+    quiver::Sandbox& lua,
     const std::string& script,
     const std::string& expected_prefix,
     const std::string& reason_substring
@@ -105,7 +105,7 @@ class LuaRunner_WriteCsv : public LuaSandboxTest {};
 TEST_F(LuaRunner_WriteCsv, WriteRowThenReadCsvRoundTripsPlainStrings) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "out.csv").string());
 
@@ -134,7 +134,7 @@ TEST_F(LuaRunner_WriteCsv, WriteRowThenReadCsvRoundTripsPlainStrings) {
 TEST_F(LuaRunner_WriteCsv, IntegerCellRoundTripsExactDigitString) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "int.csv").string());
 
@@ -159,7 +159,7 @@ TEST_F(LuaRunner_WriteCsv, IntegerCellRoundTripsExactDigitString) {
 TEST_F(LuaRunner_WriteCsv, MinIntegerAndMaxIntegerRoundTripExactDecimalText) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "int_bounds.csv").string());
 
@@ -188,7 +188,7 @@ TEST_F(LuaRunner_WriteCsv, MinIntegerAndMaxIntegerRoundTripExactDecimalText) {
 TEST_F(LuaRunner_WriteCsv, FloatReWriteIdentityRoundTripsForManySignificantDigitValues) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path1 = lp((sandbox / "float_identity_1.csv").string());
     const auto path2 = lp((sandbox / "float_identity_2.csv").string());
@@ -228,7 +228,7 @@ TEST_F(LuaRunner_WriteCsv, FloatReWriteIdentityRoundTripsForManySignificantDigit
 TEST_F(LuaRunner_WriteCsv, WholeFloatAndEqualIntegerProduceSameCellText) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "float.csv").string());
 
@@ -254,7 +254,7 @@ TEST_F(LuaRunner_WriteCsv, WholeFloatAndEqualIntegerProduceSameCellText) {
 TEST_F(LuaRunner_WriteCsv, BooleanCellWritesOneOrZero) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "bool.csv").string());
 
@@ -278,7 +278,7 @@ TEST_F(LuaRunner_WriteCsv, BooleanCellWritesOneOrZero) {
 TEST_F(LuaRunner_WriteCsv, TableCellThrowsNamingWriteRowAndCellIndex) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "bad_cell.csv").string());
 
@@ -296,7 +296,7 @@ TEST_F(LuaRunner_WriteCsv, TableCellThrowsNamingWriteRowAndCellIndex) {
 TEST_F(LuaRunner_WriteCsv, FunctionCellThrowsNamingWriteRowAndCellIndex) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "bad_cell_fn.csv").string());
 
@@ -316,7 +316,7 @@ TEST_F(LuaRunner_WriteCsv, FunctionCellThrowsNamingWriteRowAndCellIndex) {
 TEST_F(LuaRunner_WriteCsv, RowWidthComesFromMaxIntegerKeyNotKeyCount) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "hole.csv").string());
 
@@ -342,7 +342,7 @@ TEST_F(LuaRunner_WriteCsv, RowWidthComesFromMaxIntegerKeyNotKeyCount) {
 TEST_F(LuaRunner_WriteCsv, RowWithZeroIntegerKeysWritesOneQuotedEmptyCell) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "empty_row.csv").string());
 
@@ -366,7 +366,7 @@ TEST_F(LuaRunner_WriteCsv, RowWithZeroIntegerKeysWritesOneQuotedEmptyCell) {
 TEST_F(LuaRunner_WriteCsv, NonIntegerRowKeyThrows) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "bad_key.csv").string());
 
@@ -384,7 +384,7 @@ TEST_F(LuaRunner_WriteCsv, NonIntegerRowKeyThrows) {
 TEST_F(LuaRunner_WriteCsv, SubOneIntegerRowKeyThrows) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "bad_key_zero.csv").string());
 
@@ -403,7 +403,7 @@ TEST_F(LuaRunner_WriteCsv, SubOneIntegerRowKeyThrows) {
 TEST_F(LuaRunner_WriteCsv, RowKeyPastMaximumWidthThrows) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "wide_row.csv").string());
 
@@ -422,7 +422,7 @@ TEST_F(LuaRunner_WriteCsv, RowKeyPastMaximumWidthThrows) {
 TEST_F(LuaRunner_WriteCsv, HeaderKeyPastMaximumWidthThrows) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "wide_header.csv").string());
 
@@ -438,7 +438,7 @@ TEST_F(LuaRunner_WriteCsv, HeaderKeyPastMaximumWidthThrows) {
 TEST_F(LuaRunner_WriteCsv, MultiColumnRowWithEmptyMiddleFieldLeavesNeighborsIntact) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "empty_middle.csv").string());
 
@@ -465,7 +465,7 @@ TEST_F(LuaRunner_WriteCsv, MultiColumnRowWithEmptyMiddleFieldLeavesNeighborsInta
 TEST_F(LuaRunner_WriteCsv, SingleColumnFileWithNilAndEmptyCellsRoundTripsEveryRow) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "single_column.csv").string());
 
@@ -501,7 +501,7 @@ TEST_F(LuaRunner_WriteCsv, SingleColumnFileWithNilAndEmptyCellsRoundTripsEveryRo
 TEST_F(LuaRunner_WriteCsv, CellWithSeparatorQuoteCrAndLfTogetherRoundTrips) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "dirty_cell.csv").string());
 
@@ -526,7 +526,7 @@ TEST_F(LuaRunner_WriteCsv, CellWithSeparatorQuoteCrAndLfTogetherRoundTrips) {
 TEST_F(LuaRunner_WriteCsv, CellWithSeparatorQuoteCrAndLfTogetherRoundTripsWithSemicolonSeparator) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "dirty_cell_semicolon.csv").string());
 
@@ -551,7 +551,7 @@ TEST_F(LuaRunner_WriteCsv, CellWithSeparatorQuoteCrAndLfTogetherRoundTripsWithSe
 TEST_F(LuaRunner_WriteCsv, LoneQuoteCharacterCellRoundTripsAsLengthOne) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "lone_quote.csv").string());
 
@@ -575,7 +575,7 @@ TEST_F(LuaRunner_WriteCsv, LoneQuoteCharacterCellRoundTripsAsLengthOne) {
 TEST_F(LuaRunner_WriteCsv, TwoQuoteCharacterCellRoundTripsAsLengthTwo) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "two_quotes.csv").string());
 
@@ -600,7 +600,7 @@ TEST_F(LuaRunner_WriteCsv, TwoQuoteCharacterCellRoundTripsAsLengthTwo) {
 TEST_F(LuaRunner_WriteCsv, LeadingTrailingAndSeparatorOnlyCellsRoundTripPositionally) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "separator_positions.csv").string());
 
@@ -630,7 +630,7 @@ TEST_F(LuaRunner_WriteCsv, LeadingTrailingAndSeparatorOnlyCellsRoundTripPosition
 TEST_F(LuaRunner_WriteCsv, CrThenLfCellRoundTripsAsTwoByteSequenceWithoutSplittingRows) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "cr_then_lf.csv").string());
 
@@ -660,7 +660,7 @@ TEST_F(LuaRunner_WriteCsv, CrThenLfCellRoundTripsAsTwoByteSequenceWithoutSplitti
 TEST_F(LuaRunner_WriteCsv, EmptyCellAdjacentToAQuotedCellRoundTripsWithNeighborsIntact) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "empty_next_to_quoted.csv").string());
 
@@ -687,7 +687,7 @@ TEST_F(LuaRunner_WriteCsv, EmptyCellAdjacentToAQuotedCellRoundTripsWithNeighbors
 TEST_F(LuaRunner_WriteCsv, MultiByteUtf8CellWithNoQuoteByteRoundTripsUnmodified) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "utf8_cell.csv").string());
 
@@ -714,7 +714,7 @@ TEST_F(LuaRunner_WriteCsv, MultiByteUtf8CellWithNoQuoteByteRoundTripsUnmodified)
 TEST_F(LuaRunner_WriteCsv, UnknownOptionKeyThrows) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "unknown_opt.csv").string());
 
@@ -724,7 +724,7 @@ TEST_F(LuaRunner_WriteCsv, UnknownOptionKeyThrows) {
 TEST_F(LuaRunner_WriteCsv, NonStringSeparatorThrows) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "bad_sep_type.csv").string());
 
@@ -738,7 +738,7 @@ TEST_F(LuaRunner_WriteCsv, NonStringSeparatorThrows) {
 TEST_F(LuaRunner_WriteCsv, MultiCharacterSeparatorThrows) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "bad_sep.csv").string());
 
@@ -752,7 +752,7 @@ TEST_F(LuaRunner_WriteCsv, MultiCharacterSeparatorThrows) {
 TEST_F(LuaRunner_WriteCsv, NonTableHeaderThrows) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "bad_header_type.csv").string());
 
@@ -766,7 +766,7 @@ TEST_F(LuaRunner_WriteCsv, NonTableHeaderThrows) {
 TEST_F(LuaRunner_WriteCsv, NonStringHeaderEntryThrows) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "bad_header_entry.csv").string());
 
@@ -782,7 +782,7 @@ TEST_F(LuaRunner_WriteCsv, NonStringHeaderEntryThrows) {
 TEST_F(LuaRunner_WriteCsv, AbsentNilAndEmptyOptionsAllMeanDefaults) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "defaults.csv").string());
 
@@ -815,7 +815,7 @@ TEST_F(LuaRunner_WriteCsv, AbsentNilAndEmptyOptionsAllMeanDefaults) {
 TEST_F(LuaRunner_WriteCsv, HeaderIsWrittenAheadOfDataAndQuotedLikeARow) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "header.csv").string());
 
@@ -844,7 +844,7 @@ TEST_F(LuaRunner_WriteCsv, HeaderIsWrittenAheadOfDataAndQuotedLikeARow) {
 TEST_F(LuaRunner_WriteCsv, ShortRowPadsToHeaderWidthAndRoundTripsAligned) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "short_row.csv").string());
 
@@ -873,7 +873,7 @@ TEST_F(LuaRunner_WriteCsv, ShortRowPadsToHeaderWidthAndRoundTripsAligned) {
 TEST_F(LuaRunner_WriteCsv, RowLongerThanHeaderThrowsNamingOrdinalAndCounts) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "too_long.csv").string());
 
@@ -897,7 +897,7 @@ TEST_F(LuaRunner_WriteCsv, RowLongerThanHeaderThrowsNamingOrdinalAndCounts) {
 TEST_F(LuaRunner_WriteCsv, RejectedLongRowLeavesEarlierRowsOnDisk) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "too_long_intact.csv").string());
 
@@ -926,7 +926,7 @@ TEST_F(LuaRunner_WriteCsv, RejectedLongRowLeavesEarlierRowsOnDisk) {
 TEST_F(LuaRunner_WriteCsv, ExactWidthRowPassesThroughUnchanged) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "exact_width.csv").string());
 
@@ -952,7 +952,7 @@ TEST_F(LuaRunner_WriteCsv, ExactWidthRowPassesThroughUnchanged) {
 TEST_F(LuaRunner_WriteCsv, EmptyRowPadsToMultiColumnHeaderWidth) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "empty_multi.csv").string());
 
@@ -979,7 +979,7 @@ TEST_F(LuaRunner_WriteCsv, EmptyRowPadsToMultiColumnHeaderWidth) {
 TEST_F(LuaRunner_WriteCsv, EmptyRowUnderSingleColumnHeaderStillRoundTrips) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "empty_single.csv").string());
 
@@ -1004,7 +1004,7 @@ TEST_F(LuaRunner_WriteCsv, EmptyRowUnderSingleColumnHeaderStillRoundTrips) {
 TEST_F(LuaRunner_WriteCsv, NoHeaderMeansNoWidthCheck) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path1 = lp((sandbox / "no_header_omitted.csv").string());
     const auto path2 = lp((sandbox / "no_header_empty_table.csv").string());
@@ -1039,7 +1039,7 @@ TEST_F(LuaRunner_WriteCsv, NoHeaderMeansNoWidthCheck) {
 TEST_F(LuaRunner_WriteCsv, MultiByteUtf8CellsDoNotChangeCellCounts) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto pad_path = lp((sandbox / "utf8_pad.csv").string());
 
@@ -1079,7 +1079,7 @@ TEST_F(LuaRunner_WriteCsv, MultiByteUtf8CellsDoNotChangeCellCounts) {
 TEST_F(LuaRunner_WriteCsv, NonFiniteNumberCellThrowsNamingWriteRowAndRowOrdinal) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "nan_row.csv").string());
 
@@ -1125,7 +1125,7 @@ TEST_F(LuaRunner_WriteCsv, NonFiniteNumberCellThrowsNamingWriteRowAndRowOrdinal)
 TEST_F(LuaRunner_WriteCsv, RejectedNonFiniteRowLeavesFileIntactAfterPcallAndClose) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "intact.csv").string());
 
@@ -1153,7 +1153,7 @@ TEST_F(LuaRunner_WriteCsv, RejectedNonFiniteRowLeavesFileIntactAfterPcallAndClos
 TEST_F(LuaRunner_WriteCsv, WriteRowAfterCloseThrowsNamingWriteRow) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "after_close.csv").string());
 
@@ -1173,7 +1173,7 @@ TEST_F(LuaRunner_WriteCsv, WriteRowAfterCloseThrowsNamingWriteRow) {
 TEST_F(LuaRunner_WriteCsv, NonTableRowOnClosedWriterReportsTheType) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     expect_lua_error(
         lua,
@@ -1191,7 +1191,7 @@ TEST_F(LuaRunner_WriteCsv, NonTableRowOnClosedWriterReportsTheType) {
 TEST_F(LuaRunner_WriteCsv, UnsupportedCellOnClosedWriterReportsClosed) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     expect_lua_error(
         lua,
@@ -1207,7 +1207,7 @@ TEST_F(LuaRunner_WriteCsv, UnsupportedCellOnClosedWriterReportsClosed) {
 TEST_F(LuaRunner_WriteCsv, CloseCalledTwiceDoesNotThrow) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "double_close.csv").string());
 
@@ -1227,7 +1227,7 @@ TEST_F(LuaRunner_WriteCsv, CloseCalledTwiceDoesNotThrow) {
 TEST_F(LuaRunner_WriteCsv, MissingParentDirectoryThrowsAndDoesNotCreateIt) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto missing_dir = sandbox / "does_not_exist";
     const auto path = lp((missing_dir / "nested.csv").string());
@@ -1241,7 +1241,7 @@ TEST_F(LuaRunner_WriteCsv, MissingParentDirectoryThrowsAndDoesNotCreateIt) {
 TEST_F(LuaRunner_WriteCsv, EscapingPathTakesPrecedenceOverInvalidSeparator) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     expect_lua_error(lua, R"(db:write_csv("../escape.csv", { separator = ";;" }))", "escapes the database directory");
 }
@@ -1251,7 +1251,7 @@ TEST_F(LuaRunner_WriteCsv, EscapingPathTakesPrecedenceOverInvalidSeparator) {
 TEST_F(LuaRunner_WriteCsv, EscapingPathIsReportedBeforeNonTableOptions) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     expect_lua_error(
         lua,
@@ -1264,7 +1264,7 @@ TEST_F(LuaRunner_WriteCsv, EscapingPathIsReportedBeforeNonTableOptions) {
 TEST_F(LuaRunner_WriteCsv, NonTableOptionsThrows) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     expect_lua_error(lua, R"(db:write_csv("ok.csv", 5))", "Cannot write_csv: options must be a table");
 }
@@ -1272,7 +1272,7 @@ TEST_F(LuaRunner_WriteCsv, NonTableOptionsThrows) {
 TEST_F(LuaRunner_WriteCsv, NonTableArgumentsReportTheirType) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     expect_lua_error(
         lua,
@@ -1292,7 +1292,7 @@ TEST_F(LuaRunner_WriteCsv, NonTableArgumentsReportTheirType) {
 TEST_F(LuaRunner_WriteCsv, ReopeningSamePathTruncatesExistingContent) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "truncate.csv").string());
 
@@ -1329,7 +1329,7 @@ TEST_F(LuaRunner_WriteCsv, ReopeningSamePathTruncatesExistingContent) {
 TEST_F(LuaRunner_WriteCsv, ReferenceWorkedExampleRunsAndRoundTripsItsOwnData) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const std::string reference_path = quiver::test::path_from(__FILE__, "../bindings/js/src/lua-api.ts");
     std::ifstream reference_file(reference_path, std::ios::binary);
@@ -1378,7 +1378,7 @@ class LuaRunner_WriteCsvErrors : public LuaSandboxTest {};
 TEST_F(LuaRunner_WriteCsvErrors, NonFiniteNumberCellIsPrefixedWriteRowError) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "catalogue_nan.csv").string());
 
@@ -1397,7 +1397,7 @@ TEST_F(LuaRunner_WriteCsvErrors, NonFiniteNumberCellIsPrefixedWriteRowError) {
 TEST_F(LuaRunner_WriteCsvErrors, TableCellIsPrefixedWriteRowError) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "catalogue_table.csv").string());
 
@@ -1416,7 +1416,7 @@ TEST_F(LuaRunner_WriteCsvErrors, TableCellIsPrefixedWriteRowError) {
 TEST_F(LuaRunner_WriteCsvErrors, WriteAfterCloseIsPrefixedWriteRowError) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "catalogue_after_close.csv").string());
 
@@ -1441,7 +1441,7 @@ TEST_F(LuaRunner_WriteCsvErrors, WriteAfterCloseIsPrefixedWriteRowError) {
 TEST_F(LuaRunner_WriteCsvErrors, SecondWriterOnAnAlreadyOpenPathIsRefused) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "concurrent.csv").string());
 
@@ -1461,7 +1461,7 @@ TEST_F(LuaRunner_WriteCsvErrors, SecondWriterOnAnAlreadyOpenPathIsRefused) {
 TEST_F(LuaRunner_WriteCsvErrors, EscapingPathIsPrefixedWriteCsvError) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     expect_prefixed_error(
         lua,
@@ -1472,12 +1472,12 @@ TEST_F(LuaRunner_WriteCsvErrors, EscapingPathIsPrefixedWriteCsvError) {
 }
 
 TEST_F(LuaRunner_WriteCsvErrors, InMemoryDatabaseIsPrefixedWriteCsvError) {
-    // A separate in-memory Database + LuaRunner -- an in-memory db has no directory to sandbox
+    // A separate in-memory Database + Sandbox -- an in-memory db has no directory to sandbox
     // against, so this cannot share the fixture's file-backed database (mirrors
     // test_lua_runner_read_csv.cpp's InMemoryDatabaseThrowsForReadCsv).
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(":memory:", schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     expect_prefixed_error(
         lua,
@@ -1493,7 +1493,7 @@ TEST_F(LuaRunner_WriteCsvErrors, DoubleCloseIsIdempotentNotAnError) {
     // tests at once: this one asserts NO throw, not merely the absence of one particular message.
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "catalogue_double_close.csv").string());
 
@@ -1515,7 +1515,7 @@ TEST_F(LuaRunner_WriteCsvErrors, DoubleCloseIsIdempotentNotAnError) {
 TEST_F(LuaRunner_WriteCsvErrors, EscapingPathBeatsInvalidSeparator) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     expect_prefixed_error(
         lua,
@@ -1538,7 +1538,7 @@ TEST_F(LuaRunner_WriteCsvErrors, EscapingPathBeatsInvalidSeparator) {
 TEST_F(LuaRunner_WriteCsvErrors, RejectedRowLeavesFileIntactProvenBothHalves) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "catalogue_intact.csv").string());
 
@@ -1564,7 +1564,7 @@ TEST_F(LuaRunner_WriteCsvErrors, RejectedRowLeavesFileIntactProvenBothHalves) {
 
 // The close-at-exit flush: a script that returns without calling w:close() still leaves a
 // complete, re-readable file. Two separate lua.run() calls -- the second run() proves the flush
-// happened BETWEEN script executions, with the LuaRunner never destroyed, moved from, or reset in
+// happened BETWEEN script executions, with the Sandbox never destroyed, moved from, or reset in
 // between. The fixture is deliberately tiny (one column, one short row): a payload large enough to
 // spill std::filebuf's own buffer would put bytes on disk without the flush and let the test pass
 // by accident. The byte count below is diagnostic evidence attached to the FAIL() message only --
@@ -1573,7 +1573,7 @@ TEST_F(LuaRunner_WriteCsvErrors, RejectedRowLeavesFileIntactProvenBothHalves) {
 TEST_F(LuaRunner_WriteCsv, UnclosedWriterIsFlushedWhenRunReturns) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "unclosed.csv").string());
 
@@ -1617,7 +1617,7 @@ TEST_F(LuaRunner_WriteCsv, UnclosedWriterIsFlushedWhenRunReturns) {
 TEST_F(LuaRunner_WriteCsv, UnclosedWriterHeldInAGlobalIsAlsoFlushedWhenRunReturns) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "unclosed_global.csv").string());
 
@@ -1655,7 +1655,7 @@ TEST_F(LuaRunner_WriteCsv, UnclosedWriterHeldInAGlobalIsAlsoFlushedWhenRunReturn
 TEST_F(LuaRunner_WriteCsv, ScriptErrorMidWriteStillLeavesEarlierRowsReadable) {
     auto schema = VALID_SCHEMA("basic.sql");
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     const auto path = lp((sandbox / "error_mid_write.csv").string());
 

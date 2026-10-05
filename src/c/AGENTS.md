@@ -35,7 +35,7 @@ src/c/
                            # dry runs (begin_dry_run, end_dry_run, in_dry_run)
   database_csv_export.cpp / database_csv_import.cpp
   element.cpp             # Element builder C API
-  sandbox.cpp          # LuaRunner C API (errors via quiver_get_last_error); run returns the
+  sandbox.cpp          # Sandbox C API (errors via quiver_get_last_error); run returns the
                           # script's JSON result via char** out_result (NULLed before anything can
                           # fail, so a caller that frees unconditionally is safe) + its own
                           # free_string. run passes the script through unchanged and the core
@@ -81,7 +81,7 @@ quiver_error_t quiver_some_function(quiver_database_t* db) {
 Every entry point that executes C++ logic wears the try/catch: nothing may throw across the FFI
 boundary. Trivial functions that cannot throw (plain `delete[]` frees, pointer-read getters like
 `is_healthy`/`in_transaction`) skip the wrapper; `quiver_database_free_time_series_data` keeps it
-because its typed-dispatch deallocation can. All components (LuaRunner included) report through
+because its typed-dispatch deallocation can. All components (Sandbox included) report through
 the single `quiver_get_last_error` channel; there are no per-handle error channels. Nothing resets
 that message: a successful call leaves the previous failure's text in place, so it is read only
 after a call returns `QUIVER_ERROR` (every binding's `check` does exactly that).

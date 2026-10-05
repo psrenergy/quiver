@@ -14,7 +14,7 @@ protected:
 
 TEST_F(LuaRunnerFkTest, CreateElementSetFkLabels) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
     db:create_element("Parent", { label = "Parent 1" })
@@ -37,7 +37,7 @@ TEST_F(LuaRunnerFkTest, CreateElementSetFkLabels) {
 
 TEST_F(LuaRunnerFkTest, CreateElementMissingFkTarget) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     expect_lua_error(
         lua,
@@ -53,7 +53,7 @@ TEST_F(LuaRunnerFkTest, CreateElementMissingFkTarget) {
 
 TEST_F(LuaRunnerFkTest, CreateElementStringForNonFkInteger) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     expect_lua_error(
         lua,
@@ -69,7 +69,7 @@ TEST_F(LuaRunnerFkTest, CreateElementStringForNonFkInteger) {
 
 TEST_F(LuaRunnerFkTest, CreateElementScalarFkLabel) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
     db:create_element("Parent", { label = "Parent 1" })
@@ -86,7 +86,7 @@ TEST_F(LuaRunnerFkTest, CreateElementScalarFkLabel) {
 
 TEST_F(LuaRunnerFkTest, CreateElementScalarFkInteger) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
     db:create_element("Parent", { label = "Parent 1" })
@@ -103,7 +103,7 @@ TEST_F(LuaRunnerFkTest, CreateElementScalarFkInteger) {
 
 TEST_F(LuaRunnerFkTest, CreateElementVectorFkLabels) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
     db:create_element("Parent", { label = "Parent 1" })
@@ -122,7 +122,7 @@ TEST_F(LuaRunnerFkTest, CreateElementVectorFkLabels) {
 
 TEST_F(LuaRunnerFkTest, CreateElementTimeSeriesFkLabels) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
     db:create_element("Parent", { label = "Parent 1" })
@@ -142,7 +142,7 @@ TEST_F(LuaRunnerFkTest, CreateElementTimeSeriesFkLabels) {
 
 TEST_F(LuaRunnerFkTest, CreateElementAllFkTypes) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
     db:create_element("Parent", { label = "Parent 1" })
@@ -181,7 +181,7 @@ TEST_F(LuaRunnerFkTest, CreateElementAllFkTypes) {
 
 TEST_F(LuaRunnerFkTest, CreateElementNoFkUnchanged) {
     auto db = quiver::Database::from_schema(":memory:", basic_schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
     db:create_element("Configuration", {
@@ -206,7 +206,7 @@ TEST_F(LuaRunnerFkTest, CreateElementNoFkUnchanged) {
 
 TEST_F(LuaRunnerFkTest, CreateElementFkResolutionNoPartialWrites) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     expect_lua_error(
         lua,
@@ -226,7 +226,7 @@ TEST_F(LuaRunnerFkTest, CreateElementFkResolutionNoPartialWrites) {
 
 TEST_F(LuaRunnerFkTest, UpdateElementScalarFkLabel) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
     db:create_element("Parent", { label = "Parent 1" })
@@ -245,7 +245,7 @@ TEST_F(LuaRunnerFkTest, UpdateElementScalarFkLabel) {
 
 TEST_F(LuaRunnerFkTest, UpdateElementScalarFkInteger) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
     db:create_element("Parent", { label = "Parent 1" })
@@ -264,7 +264,7 @@ TEST_F(LuaRunnerFkTest, UpdateElementScalarFkInteger) {
 
 TEST_F(LuaRunnerFkTest, UpdateElementSetFkLabels) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
     db:create_element("Parent", { label = "Parent 1" })
@@ -284,7 +284,7 @@ TEST_F(LuaRunnerFkTest, UpdateElementSetFkLabels) {
 
 TEST_F(LuaRunnerFkTest, UpdateElementAllFkTypes) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
     db:create_element("Parent", { label = "Parent 1" })
@@ -330,7 +330,7 @@ TEST_F(LuaRunnerFkTest, UpdateElementAllFkTypes) {
 
 TEST_F(LuaRunnerFkTest, UpdateElementFkFailurePreservesExisting) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
     db:create_element("Parent", { label = "Parent 1" })
@@ -356,7 +356,7 @@ TEST_F(LuaRunnerFkTest, UpdateElementFkFailurePreservesExisting) {
 
 TEST_F(LuaRunnerFkTest, UpdateElementNoFkUnchanged) {
     auto db = quiver::Database::from_schema(":memory:", basic_schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
     db:create_element("Configuration", {
@@ -387,7 +387,7 @@ TEST_F(LuaRunnerFkTest, UpdateElementNoFkUnchanged) {
 
 TEST_F(LuaRunnerFkTest, UpdateVectorFkViaTypedMethod) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
     db:create_element("Parent", { label = "Parent 1" })
@@ -407,7 +407,7 @@ TEST_F(LuaRunnerFkTest, UpdateVectorFkViaTypedMethod) {
 
 TEST_F(LuaRunnerFkTest, UpdateTimeSeriesFkViaTypedMethod) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
     db:create_element("Parent", { label = "Parent 1" })

@@ -16,7 +16,7 @@ const SCHEMA_PATH = join(
 describe("package entry (mod.ts)", () => {
   test("exports the public classes", () => {
     expect(typeof quiver.Database).toEqual("function");
-    expect(typeof quiver.LuaRunner).toEqual("function");
+    expect(typeof quiver.Sandbox).toEqual("function");
     expect(typeof quiver.QuiverError).toEqual("function");
     expect(typeof quiver.LUA_DB_API_REFERENCE).toEqual("string");
   });

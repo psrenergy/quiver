@@ -8,14 +8,14 @@ void main() {
   // Path to central tests folder
   final testsPath = path.join(path.current, '..', '..', 'tests');
 
-  group('LuaRunner Create Element', () {
+  group('Sandbox Create Element', () {
     test('creates element from Lua script', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       try {
-        final lua = LuaRunner(db);
+        final lua = Sandbox(db);
         try {
           lua.run('''
             db:create_element("Configuration", { label = "Test Config" })
@@ -38,7 +38,7 @@ void main() {
     });
   });
 
-  group('LuaRunner Read from Lua', () {
+  group('Sandbox Read from Lua', () {
     test('reads scalar strings in Lua script', () {
       final db = Database.fromSchema(
         ':memory:',
@@ -49,7 +49,7 @@ void main() {
         db.createElement('Collection', {'label': 'Item 1', 'some_integer': 10});
         db.createElement('Collection', {'label': 'Item 2', 'some_integer': 20});
 
-        final lua = LuaRunner(db);
+        final lua = Sandbox(db);
         try {
           lua.run('''
             local labels = db:read_scalar_strings("Collection", "label")
@@ -66,14 +66,14 @@ void main() {
     });
   });
 
-  group('LuaRunner Script Error', () {
+  group('Sandbox Script Error', () {
     test('throws LuaException for syntax error', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       try {
-        final lua = LuaRunner(db);
+        final lua = Sandbox(db);
         try {
           expect(
             () => lua.run('invalid syntax !!!'),
@@ -88,14 +88,14 @@ void main() {
     });
   });
 
-  group('LuaRunner Reuse Runner', () {
+  group('Sandbox Reuse Runner', () {
     test('runs multiple scripts with same runner', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       try {
-        final lua = LuaRunner(db);
+        final lua = Sandbox(db);
         try {
           lua.run('db:create_element("Configuration", { label = "Config" })');
           lua.run('db:create_element("Collection", { label = "Item 1" })');
@@ -116,14 +116,14 @@ void main() {
 
   // Error handling tests
 
-  group('LuaRunner Undefined Variable', () {
+  group('Sandbox Undefined Variable', () {
     test('throws on undefined variable access', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       try {
-        final lua = LuaRunner(db);
+        final lua = Sandbox(db);
         try {
           expect(
             () => lua.run('print(undefined_variable.field)'),
@@ -138,14 +138,14 @@ void main() {
     });
   });
 
-  group('LuaRunner Create Invalid Collection', () {
+  group('Sandbox Create Invalid Collection', () {
     test('throws on nonexistent collection in script', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       try {
-        final lua = LuaRunner(db);
+        final lua = Sandbox(db);
         try {
           lua.run(
             'db:create_element("Configuration", { label = "Test Config" })',
@@ -165,14 +165,14 @@ void main() {
     });
   });
 
-  group('LuaRunner Empty Script', () {
+  group('Sandbox Empty Script', () {
     test('runs empty script successfully', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       try {
-        final lua = LuaRunner(db);
+        final lua = Sandbox(db);
         try {
           // Empty script should succeed without error
           lua.run('');
@@ -187,14 +187,14 @@ void main() {
     });
   });
 
-  group('LuaRunner Comment Only Script', () {
+  group('Sandbox Comment Only Script', () {
     test('runs comment-only script successfully', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       try {
-        final lua = LuaRunner(db);
+        final lua = Sandbox(db);
         try {
           // Comment-only script should succeed
           lua.run('-- this is just a comment');
@@ -208,7 +208,7 @@ void main() {
     });
   });
 
-  group('LuaRunner Read Integers', () {
+  group('Sandbox Read Integers', () {
     test('reads scalar integers in Lua script', () {
       final db = Database.fromSchema(
         ':memory:',
@@ -225,7 +225,7 @@ void main() {
           'some_integer': 200,
         });
 
-        final lua = LuaRunner(db);
+        final lua = Sandbox(db);
         try {
           lua.run('''
             local ints = db:read_scalar_integers("Collection", "some_integer")
@@ -242,7 +242,7 @@ void main() {
     });
   });
 
-  group('LuaRunner Read Floats', () {
+  group('Sandbox Read Floats', () {
     test('reads scalar floats in Lua script', () {
       final db = Database.fromSchema(
         ':memory:',
@@ -253,7 +253,7 @@ void main() {
         db.createElement('Collection', {'label': 'Item 1', 'some_float': 1.5});
         db.createElement('Collection', {'label': 'Item 2', 'some_float': 2.5});
 
-        final lua = LuaRunner(db);
+        final lua = Sandbox(db);
         try {
           lua.run('''
             local floats = db:read_scalar_floats("Collection", "some_float")
@@ -270,7 +270,7 @@ void main() {
     });
   });
 
-  group('LuaRunner Read Vectors', () {
+  group('Sandbox Read Vectors', () {
     test('reads vector integers in Lua script', () {
       final db = Database.fromSchema(
         ':memory:',
@@ -283,7 +283,7 @@ void main() {
           'value_int': [1, 2, 3],
         });
 
-        final lua = LuaRunner(db);
+        final lua = Sandbox(db);
         try {
           lua.run('''
             local vectors = db:read_vector_integers("Collection", "value_int")
@@ -302,14 +302,14 @@ void main() {
     });
   });
 
-  group('LuaRunner Create With Vector', () {
+  group('Sandbox Create With Vector', () {
     test('creates element with vector in Lua script', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       try {
-        final lua = LuaRunner(db);
+        final lua = Sandbox(db);
         try {
           lua.run('''
             db:create_element("Configuration", { label = "Config" })
@@ -328,14 +328,14 @@ void main() {
     });
   });
 
-  group('LuaRunner return values', () {
+  group('Sandbox return values', () {
     test('returns the script value as JSON', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       try {
-        final lua = LuaRunner(db);
+        final lua = Sandbox(db);
         try {
           expect(lua.run('return { a = 1, b = { 2, 3 } }'), equals('{"a":1,"b":[2,3]}'));
           expect(jsonDecode(lua.run('return db:read_element_ids("Collection")')), equals([]));
@@ -358,7 +358,7 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       try {
-        final lua = LuaRunner(db);
+        final lua = Sandbox(db);
         try {
           lua.run('db:create_element("Configuration", { label = "Config" })');
 

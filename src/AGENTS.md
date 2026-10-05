@@ -44,8 +44,8 @@ src/                      # C++ implementation
   type_validator.h / type_validator.cpp      # Scalar/array type validation (free functions,
                                              # caller-threaded Pattern 1 messages)
   element.cpp / row.cpp / result.cpp / migration.cpp / migrations.cpp
-  sandbox/             # LuaRunner (sol2): one file per core file it binds (database*.cpp), plus csv, binary, expression
-    sandbox.cpp        # LuaRunner::Impl (ctor order, the one Database usertype), RunHandles bodies, run()/GcGuard
+  sandbox/             # Sandbox (sol2): one file per core file it binds (database*.cpp), plus csv, binary, expression
+    sandbox.cpp        # Sandbox::Impl (ctor order, the one Database usertype), RunHandles bodies, run()/GcGuard
     internal.h            # quiver::lua_internal: RunHandles, binder decls, converters, read adapters, option walk, group-decoder decls, metadata templates, parse_csv_options decl
     return_json.cpp       # run()'s JSON encoder
     path_policy.h         # resolve_sandboxed_path's declaration; no sol2, included by internal.h and SandboxedPathTest
@@ -310,7 +310,7 @@ the documented truncate — the guard checks `is_closed()`, which is what keeps
 
 ## Pimpl vs Value Types
 
-Pimpl is used only for classes that hide private dependencies (e.g., `Database`, `LuaRunner` hide sqlite3/lua headers):
+Pimpl is used only for classes that hide private dependencies (e.g., `Database`, `Sandbox` hide sqlite3/lua headers):
 ```cpp
 // database.h (public)
 class Database {
@@ -640,12 +640,12 @@ impl_->logger->debug("Opening database: {}", path);
   use `is_date_time_column` (`data_type.h`) for `date_`-prefix checks (one legacy hand-rolled
   `starts_with("date_")` remains in `schema_validator.cpp`).
 
-## LuaRunner
+## Sandbox
 
 Executes Lua scripts with database access (sol2). The `db` userdata exposes the same API as the
 other bindings (root cross-layer tables):
 ```cpp
-LuaRunner lua(db);
+Sandbox lua(db);
 lua.run(R"(
     db:create_element("Collection", { label = "Item", value = 42 })
     local values = db:read_scalar_integers("Collection", "value")
@@ -653,7 +653,7 @@ lua.run(R"(
 ```
 
 Implementation conventions in `src/sandbox/`:
-- **Layout**: `LuaRunner::Impl`'s constructor creates the only Database usertype and hands it to
+- **Layout**: `Sandbox::Impl`'s constructor creates the only Database usertype and hands it to
   the fourteen binders, called in the order of the core files they mirror (`bind_database` through
   `bind_expression`), as `bind`, with the `quiver` table as `ns`. Those parameter names are what the
   sync test's first pass matches (it fails on a `.set_function(` through any other receiver, and
@@ -737,7 +737,7 @@ Implementation conventions in `src/sandbox/`:
   and requires strict containment (candidate == root is rejected — the binary subsystem appends
   `.qvr`/`.toml` by string concatenation). The resolved absolute path is what's forwarded
   downstream, so the process CWD is irrelevant to Lua file I/O. Pattern 1 messages thread the
-  public operation name. This is LuaRunner policy only — the C++/Julia surfaces stay unsandboxed.
+  public operation name. This is Sandbox policy only — the C++/Julia surfaces stay unsandboxed.
   **The `current_path`/`weakly_canonical` block is wrapped in a `try`/`catch` that re-throws as
   `"Cannot <op>: cannot resolve path '<p>': <os reason>"`** — those throwing overloads raise
   `std::filesystem_error` for any OS failure that is not a plain "does not exist", and a Windows
@@ -759,7 +759,7 @@ Implementation conventions in `src/sandbox/`:
   `load` is replaced by a wrapper that forces mode `"t"` whatever the caller passed, installed by a
   `lua.safe_script` in the constructor next to that nil-out (not through `set_function`, which the
   sync test would reject). The wrapper forwards `env` through `...`, so a missing env still means
-  the global environment and an explicit `nil` stays `nil`. `LuaRunner::run` loads the script
+  the global environment and an explicit `nil` stays `nil`. `Sandbox::run` loads the script
   itself with `sol::load_mode::text` as well. `string.dump` stays: its output is inert once both
   refuse binary chunks.
 - **The agent-facing Lua reference lives in `bindings/js/src/lua-api.ts`** (shipped on npm as
@@ -942,7 +942,7 @@ Implementation conventions in `src/sandbox/`:
 - Script errors surface as `"Failed to run Lua script: ..."` (root Pattern 3). Encoder failures
   (unsupported type, unsupported table key, too deep) are Pattern 1 `"Cannot run: ..."` and are
   **not** wrapped in that prefix — they happen after the script already succeeded.
-- **A writer left open when the script returns is still flushed.** `LuaRunner::run` declares one
+- **A writer left open when the script returns is still flushed.** `Sandbox::run` declares one
   function-local RAII guard (`GcGuard`) before calling `safe_script`, whose destructor runs
   `RunHandles::close_open_handles()` and then `impl_->lua.collect_garbage()` exactly once at `run()`'s
   scope exit — covering the normal-return, empty-return, and throw-unwinding paths alike. The
@@ -964,7 +964,7 @@ Implementation conventions in `src/sandbox/`:
   the registry holds only live handles plus any dropped since the last collection, not every handle
   the run ever opened. A writer
   left in a global would otherwise hold its path in the process-wide write registry until the
-  `LuaRunner` is destroyed (pinned by `LuaBinaryTest.WriterHeldInAGlobalIsClosedWhenRunReturns`
+  `Sandbox` is destroyed (pinned by `LuaBinaryTest.WriterHeldInAGlobalIsClosedWhenRunReturns`
   and `HandleFromAnEarlierRunIsClosed`). The `collect_garbage()` call
   stays for every other sol2-owned resource; one call was proven sufficient by a one-off executed
   probe against this repo's own vendored sol2/Lua build (no standing test guards it: the writer

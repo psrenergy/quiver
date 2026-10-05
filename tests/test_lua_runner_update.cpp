@@ -9,7 +9,7 @@ TEST_F(LuaRunnerTest, UpdateElementSingleScalar) {
     db.create_element("Collection", quiver::Element().set("label", "Item 1").set("some_integer", int64_t{100}));
     db.create_element("Collection", quiver::Element().set("label", "Item 2").set("some_integer", int64_t{200}));
 
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
         db:update_element("Collection", 1, { some_integer = 999 })
@@ -38,7 +38,7 @@ TEST_F(LuaRunnerTest, UpdateElementMultipleScalars) {
         quiver::Element().set("label", "Item 1").set("some_integer", int64_t{100}).set("some_float", 1.5)
     );
 
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
         db:update_element("Collection", 1, { some_integer = 500, some_float = 9.9 })
@@ -67,7 +67,7 @@ TEST_F(LuaRunnerTest, UpdateElementOtherElementsUnchanged) {
     db.create_element("Collection", quiver::Element().set("label", "Item 2").set("some_integer", int64_t{200}));
     db.create_element("Collection", quiver::Element().set("label", "Item 3").set("some_integer", int64_t{300}));
 
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
         -- Update only element 2
@@ -103,7 +103,7 @@ TEST_F(LuaRunnerTest, UpdateElementWithArrays) {
             .set("value_int", std::vector<int64_t>{1, 2, 3})
     );
 
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     // Update with both scalar and array values - both should be updated
     lua.run(R"(
@@ -138,7 +138,7 @@ TEST_F(LuaRunnerTest, UpdateElementRefusesArrayWithNilHole) {
         quiver::Element().set("label", "Item 3").set("value_int", std::vector<int64_t>{7, 8, 9})
     );
 
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     // A read hands each NULL cell back as a nil hole. Written back through an element array it
     // used to keep only the cells before the hole, or with a leading hole skip the array, silently.
@@ -179,7 +179,7 @@ TEST_F(LuaRunnerTest, UpdateElementEmptyArrayClearsGroup) {
         quiver::Element().set("label", "Item 2").set("value_int", std::vector<int64_t>{4, 5})
     );
 
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(db:update_element("Collection", 1, { value_int = {} }))");
     EXPECT_TRUE(db.read_vector_integers_by_id("Collection", "value_int", 1).empty());
@@ -202,7 +202,7 @@ TEST_F(LuaRunnerTest, UpdateElementEmptyArrayErrors) {
         quiver::Element().set("label", "Item 1").set("value_int", std::vector<int64_t>{1, 2})
     );
 
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     expect_lua_error(
         lua,
@@ -220,7 +220,7 @@ TEST_F(LuaRunnerTest, UpdateElementEmptyArrayErrors) {
 
 TEST_F(LuaRunnerTest, UpdateElementEmptyArrayClearsEveryGroupSharingTheColumn) {
     auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"));
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     // parent_ref names a column of both Child_vector_refs and Child_set_parents.
     lua.run(R"(
@@ -240,7 +240,7 @@ TEST_F(LuaRunnerTest, UpdateElementEmptyArrayClearsEveryGroupSharingTheColumn) {
 
 TEST_F(LuaRunnerTest, UpdateElementEmptyDateTimeClearsEveryTimeSeriesGroup) {
     auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("multi_time_series.sql"));
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     // Every time-series group of a collection shares date_time.
     lua.run(R"(
@@ -271,7 +271,7 @@ TEST_F(LuaRunnerTest, UpdateElementRoundTripOfReadVectorsById) {
         "Collection",
         quiver::Element().set("label", "Item 2").set("value_int", std::vector<quiver::Value>{nullptr, nullptr})
     );
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     expect_lua_error(
         lua,
@@ -292,7 +292,7 @@ TEST_F(LuaRunnerTest, UpdateVectorIntegers) {
         quiver::Element().set("label", "Item 1").set("value_int", std::vector<int64_t>{1, 2, 3})
     );
 
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
         db:update_element("Collection", 1, { value_int = {10, 20, 30, 40} })
@@ -310,7 +310,7 @@ TEST_F(LuaRunnerTest, UpdateVectorFloats) {
         quiver::Element().set("label", "Item 1").set("value_float", std::vector<double>{1.0, 2.0})
     );
 
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
         db:update_element("Collection", 1, { value_float = {5.5, 6.6, 7.7} })
@@ -329,7 +329,7 @@ TEST_F(LuaRunnerTest, UpdateScalarStringTrimsWhitespace) {
         quiver::Element().set("label", "Item 1").set("tag", std::vector<std::string>{"old"})
     );
 
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
         db:update_element("Collection", 1, { tag = {"  alpha  ", "	beta\n", " gamma "} })
@@ -351,7 +351,7 @@ TEST_F(LuaRunnerTest, UpdateVectorStrings) {
             .set("value_float", std::vector<double>{1.0})
     );
 
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     // The collections.sql schema has value_int and value_float vectors but no string vector.
     // We test that update_vector_strings compiles and runs; actual schema support depends on schema.
@@ -368,7 +368,7 @@ TEST_F(LuaRunnerTest, UpdateSetStrings) {
         quiver::Element().set("label", "Item 1").set("tag", std::vector<std::string>{"alpha", "beta"})
     );
 
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
         db:update_element("Collection", 1, { tag = {"x", "y", "z"} })
@@ -383,7 +383,7 @@ TEST_F(LuaRunnerTest, UpdateElementByIdNonExistent) {
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     db.create_element("Collection", quiver::Element().set("label", "Item 1"));
 
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     // Updating a non-existent element throws "Element not found"
     expect_lua_error(lua, R"(db:update_element("Collection", 999, { some_integer = 5 }))", "Element not found");
@@ -394,7 +394,7 @@ TEST_F(LuaRunnerTest, UpdateElementUnsupportedAttributeTypeThrows) {
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     db.create_element("Collection", quiver::Element().set("label", "Item 1"));
 
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     // The message names the method the script called, not the internal converter.
     expect_lua_error(
@@ -411,7 +411,7 @@ TEST_F(LuaRunnerTest, UpdateElementByLabel) {
     db.create_element("Collection", quiver::Element().set("label", "Item 1").set("some_integer", int64_t{100}));
     db.create_element("Collection", quiver::Element().set("label", "Item 2").set("some_integer", int64_t{200}));
 
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
         db:update_element_by_label("Collection", "Item 1", { some_integer = 999 })
@@ -436,7 +436,7 @@ TEST_F(LuaRunnerTest, UpdateElementByLabelNonExistent) {
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     db.create_element("Collection", quiver::Element().set("label", "Item 1").set("some_integer", int64_t{100}));
 
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     // Updating a non-existent label throws "Element not found"
     expect_lua_error(
@@ -472,7 +472,7 @@ quiver::Database relations_db_with_child() {
 
 TEST_F(LuaRunnerTest, UpdateVectorGroupReplacesAndClears) {
     auto db = relations_db_with_child();
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(db:update_vector_group("Child", "refs", 1, { parent_ref = { 1, 2 } }))");
     EXPECT_EQ(db.read_vector_integers_by_id("Child", "parent_ref", 1), (std::vector<std::optional<int64_t>>{1, 2}));
@@ -483,7 +483,7 @@ TEST_F(LuaRunnerTest, UpdateVectorGroupReplacesAndClears) {
 
 TEST_F(LuaRunnerTest, UpdateSetGroupLeavesSiblingSharingColumnNameUntouched) {
     auto db = relations_db_with_child();
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
         db:update_set_group("Child", "parents", 1, { parent_ref = { 1 } })
@@ -497,7 +497,7 @@ TEST_F(LuaRunnerTest, UpdateSetGroupLeavesSiblingSharingColumnNameUntouched) {
 
 TEST_F(LuaRunnerTest, UpdateGroupResolvesForeignKeyLabels) {
     auto db = relations_db_with_child();
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(db:update_vector_group("Child", "refs", 1, { parent_ref = { "Parent B" } }))");
     EXPECT_EQ(db.read_vector_integers_by_id("Child", "parent_ref", 1), (std::vector<std::optional<int64_t>>{2}));
@@ -507,7 +507,7 @@ TEST_F(LuaRunnerTest, UpdateGroupResolvesForeignKeyLabels) {
 // writes SQL NULL, which is how a read's nil holes round-trip.
 TEST_F(LuaRunnerTest, UpdateGroupSparseColumnWritesNulls) {
     auto db = relations_db_with_child();
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     auto result = lua.run(R"(
         db:update_vector_group("Child", "refs", 1, { parent_ref = { 1, nil, 2 } })
@@ -521,7 +521,7 @@ TEST_F(LuaRunnerTest, UpdateGroupSparseColumnWritesNulls) {
 
 TEST_F(LuaRunnerTest, UpdateGroupErrors) {
     auto db = relations_db_with_child();
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
     lua.run(R"(db:update_vector_group("Child", "refs", 1, { parent_ref = { 1 } }))");
 
     expect_lua_error(
@@ -578,7 +578,7 @@ TEST_F(LuaRunnerTest, GroupWritersRejectNonTableColumns) {
             .set("value_int", std::vector<int64_t>{1, 2, 3})
             .set("tag", std::vector<std::string>{"a", "b"})
     );
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
     const std::string sid = std::to_string(id);
 
     const std::vector<std::pair<std::string, std::string>> calls = {
@@ -612,7 +612,7 @@ TEST_F(LuaRunnerTest, GroupWritersRejectNonTableColumns) {
 TEST_F(LuaRunnerTest, UpdateVectorGroupByLabel) {
     auto db = relations_db_with_child();
     db.create_element("Child", quiver::Element().set("label", "Child 2"));
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
         db:update_vector_group_by_label("Child", "refs", "Child 2", { parent_ref = { 1 } })
@@ -627,7 +627,7 @@ TEST_F(LuaRunnerTest, UpdateVectorGroupByLabel) {
 
 TEST_F(LuaRunnerTest, UpdateVectorGroupByLabelErrors) {
     auto db = relations_db_with_child();
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
     lua.run(R"(db:update_vector_group_by_label("Child", "refs", "Child 1", { parent_ref = { 1 } }))");
 
     expect_lua_error(
@@ -648,7 +648,7 @@ TEST_F(LuaRunnerTest, UpdateVectorGroupByLabelErrors) {
 TEST_F(LuaRunnerTest, UpdateSetGroupByLabel) {
     auto db = relations_db_with_child();
     db.create_element("Child", quiver::Element().set("label", "Child 2"));
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
         db:update_set_group_by_label("Child", "parents", "Child 2", { parent_ref = { 1 } })
@@ -663,7 +663,7 @@ TEST_F(LuaRunnerTest, UpdateSetGroupByLabel) {
 
 TEST_F(LuaRunnerTest, UpdateSetGroupByLabelErrors) {
     auto db = relations_db_with_child();
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
     lua.run(R"(db:update_set_group_by_label("Child", "parents", "Child 1", { parent_ref = { 1 } }))");
 
     expect_lua_error(
@@ -683,7 +683,7 @@ TEST_F(LuaRunnerTest, UpdateSetGroupByLabelErrors) {
 
 TEST_F(LuaRunnerTest, UpdateRelationSetsAndClears) {
     auto db = relations_db_with_child();
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(db:update_relation("Child", "Parent", "id", 1, "Parent A"))");
     EXPECT_EQ(db.read_scalar_integer_by_id("Child", "parent_id", 1), 1);
@@ -702,7 +702,7 @@ TEST_F(LuaRunnerTest, UpdateRelationSetsAndClears) {
 
 TEST_F(LuaRunnerTest, UpdateRelationErrors) {
     auto db = relations_db_with_child();
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     expect_lua_error(
         lua,
@@ -736,7 +736,7 @@ TEST_F(LuaRunnerTest, UpdateElementRejectsNonTableElement) {
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     const int64_t id =
         db.create_element("Collection", quiver::Element().set("label", "Item 1").set("some_integer", int64_t{7}));
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     expect_lua_error(
         lua,

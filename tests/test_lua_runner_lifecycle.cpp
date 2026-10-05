@@ -6,8 +6,8 @@
 #include <utility>
 
 static_assert(
-    sizeof(quiver::LuaRunner) == sizeof(void*),
-    "LuaRunner must hold only its heap Impl: run state outside Impl dangles after a move"
+    sizeof(quiver::Sandbox) == sizeof(void*),
+    "Sandbox must hold only its heap Impl: run state outside Impl dangles after a move"
 );
 
 // A move hands the heap Impl over whole, so the moved-to runner's bindings still reach the registries
@@ -53,13 +53,13 @@ protected:
 
 TEST_F(LuaRunner_Lifecycle, MoveConstructor) {
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner source(db);
+    quiver::Sandbox source(db);
     source.run(open_handles("first"));
 
     // `source` stays alive to the end, so a run() that closes through a different object than the bindings
     // register into fails the checks below instead of dangling. State reached only through the moved-from
     // runner still works while `source` lives; the OutlivesSource pins and the static_assert catch that.
-    quiver::LuaRunner moved = std::move(source);
+    quiver::Sandbox moved = std::move(source);
     moved.run("assert(origin == 'first', 'moved-to runner lost the source Lua state')");
     moved.run(open_handles("second"));
     moved.run(expect_handles_closed("second"));
@@ -68,9 +68,9 @@ TEST_F(LuaRunner_Lifecycle, MoveConstructor) {
 
 TEST_F(LuaRunner_Lifecycle, MoveAssignment) {
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::LuaRunner source(db);
+    quiver::Sandbox source(db);
     source.run(open_handles("first"));
-    quiver::LuaRunner target(db);
+    quiver::Sandbox target(db);
     target.run(open_handles("target"));  // destroyed with live globals by the assignment below
 
     target = std::move(source);
@@ -84,10 +84,10 @@ TEST_F(LuaRunner_Lifecycle, MoveAssignment) {
 // moved-from runner dangles instead of silently working.
 TEST_F(LuaRunner_Lifecycle, MoveConstructorOutlivesSource) {
     auto db = quiver::Database::from_schema(db_path(), schema);
-    auto source = std::make_unique<quiver::LuaRunner>(db);
+    auto source = std::make_unique<quiver::Sandbox>(db);
     source->run(open_handles("first"));
 
-    quiver::LuaRunner moved = std::move(*source);
+    quiver::Sandbox moved = std::move(*source);
     source.reset();
     moved.run("assert(origin == 'first', 'moved-to runner lost the source Lua state')");
     moved.run(open_handles("second"));
@@ -97,9 +97,9 @@ TEST_F(LuaRunner_Lifecycle, MoveConstructorOutlivesSource) {
 
 TEST_F(LuaRunner_Lifecycle, MoveAssignmentOutlivesSource) {
     auto db = quiver::Database::from_schema(db_path(), schema);
-    auto source = std::make_unique<quiver::LuaRunner>(db);
+    auto source = std::make_unique<quiver::Sandbox>(db);
     source->run(open_handles("first"));
-    quiver::LuaRunner target(db);
+    quiver::Sandbox target(db);
     target.run(open_handles("target"));
 
     target = std::move(*source);

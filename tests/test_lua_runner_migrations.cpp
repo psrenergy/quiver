@@ -13,14 +13,14 @@ TEST_F(LuaRunner_Migrations, AppliesAndRevertsSharedFixture) {
     );
 
     auto db = quiver::Database::from_schema(db_path(), VALID_SCHEMA("collections.sql"));
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     EXPECT_NO_THROW(lua.run(R"(db:validate_migrations("migrations"))"));
 }
 
 TEST_F(LuaRunner_Migrations, PathNotFoundThrows) {
     auto db = quiver::Database::from_schema(db_path(), VALID_SCHEMA("collections.sql"));
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     expect_lua_error(
         lua,
@@ -31,14 +31,14 @@ TEST_F(LuaRunner_Migrations, PathNotFoundThrows) {
 
 TEST_F(LuaRunner_Migrations, EscapeThrows) {
     auto db = quiver::Database::from_schema(db_path(), VALID_SCHEMA("collections.sql"));
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     expect_lua_error(lua, R"(db:validate_migrations("../outside"))", "escapes the database directory");
 }
 
 TEST_F(LuaRunner_Migrations, InMemoryThrows) {
     auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"));
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     expect_lua_error(
         lua,

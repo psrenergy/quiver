@@ -7,7 +7,7 @@
 #include <new>
 
 struct quiver_lua_runner {
-    quiver::LuaRunner runner;
+    quiver::Sandbox runner;
 
     explicit quiver_lua_runner(quiver::Database& db) : runner(db) {}
 };

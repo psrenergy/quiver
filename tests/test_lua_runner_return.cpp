@@ -17,14 +17,14 @@ quiver::Database return_database() {
 
 TEST_F(LuaRunnerTest, ReturnNothingYieldsEmptyString) {
     auto db = return_database();
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     EXPECT_EQ(lua.run("local x = 1"), "");
 }
 
 TEST_F(LuaRunnerTest, ReturnNilYieldsNull) {
     auto db = return_database();
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     // Distinct from returning nothing at all.
     EXPECT_EQ(lua.run("return nil"), "null");
@@ -32,7 +32,7 @@ TEST_F(LuaRunnerTest, ReturnNilYieldsNull) {
 
 TEST_F(LuaRunnerTest, ReturnScalars) {
     auto db = return_database();
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     EXPECT_EQ(lua.run("return 42"), "42");
     EXPECT_EQ(lua.run("return -7"), "-7");
@@ -48,14 +48,14 @@ TEST_F(LuaRunnerTest, ReturnScalars) {
 
 TEST_F(LuaRunnerTest, ReturnOnlyFirstValue) {
     auto db = return_database();
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     EXPECT_EQ(lua.run("return 1, 2, 3"), "1");
 }
 
 TEST_F(LuaRunnerTest, ReturnNonFiniteNumbersBecomeNull) {
     auto db = return_database();
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     // JSON has no NaN/Infinity literals.
     EXPECT_EQ(lua.run("return 0/0"), "null");
@@ -65,7 +65,7 @@ TEST_F(LuaRunnerTest, ReturnNonFiniteNumbersBecomeNull) {
 
 TEST_F(LuaRunnerTest, ReturnStringsAreEscaped) {
     auto db = return_database();
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     EXPECT_EQ(lua.run(R"(return 'a"b\\c')"), R"("a\"b\\c")");
     EXPECT_EQ(lua.run("return 'line\\nbreak\\ttab'"), "\"line\\nbreak\\ttab\"");
@@ -75,7 +75,7 @@ TEST_F(LuaRunnerTest, ReturnStringsAreEscaped) {
 
 TEST_F(LuaRunnerTest, ReturnArrays) {
     auto db = return_database();
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     EXPECT_EQ(lua.run("return {1, 2, 3}"), "[1,2,3]");
     EXPECT_EQ(lua.run("return {'a', 'b'}"), "[\"a\",\"b\"]");
@@ -86,7 +86,7 @@ TEST_F(LuaRunnerTest, ReturnArrays) {
 
 TEST_F(LuaRunnerTest, ReturnObjectsWithSortedKeys) {
     auto db = return_database();
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     // Lua's pairs order is unspecified, so keys are sorted to keep the output deterministic.
     EXPECT_EQ(lua.run("return {b = 2, a = 1, c = 3}"), R"({"a":1,"b":2,"c":3})");
@@ -99,7 +99,7 @@ TEST_F(LuaRunnerTest, ReturnObjectsWithSortedKeys) {
 
 TEST_F(LuaRunnerTest, ReturnDatabaseReads) {
     auto db = return_database();
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
         db:create_element("Configuration", { label = "Config" })
@@ -113,7 +113,7 @@ TEST_F(LuaRunnerTest, ReturnDatabaseReads) {
 
 TEST_F(LuaRunnerTest, ReturnUnsupportedTypeThrows) {
     auto db = return_database();
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     expect_lua_error(lua, "return function() end", "Cannot run: script returned an unsupported Lua type");
     expect_lua_error(lua, "return coroutine.create(function() end)", "unsupported Lua type");
@@ -123,14 +123,14 @@ TEST_F(LuaRunnerTest, ReturnUnsupportedTypeThrows) {
 
 TEST_F(LuaRunnerTest, ReturnUnsupportedTableKeyThrows) {
     auto db = return_database();
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     expect_lua_error(lua, "return {[1.5] = 'x'}", "Cannot run: script returned a table with an unsupported key type");
 }
 
 TEST_F(LuaRunnerTest, ReturnDuplicateStringifiedKeyThrows) {
     auto db = return_database();
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     // Two distinct Lua keys, one JSON key -- refuse rather than silently drop whichever `pairs`
     // happened to yield first.
@@ -148,7 +148,7 @@ TEST_F(LuaRunnerTest, ReturnDuplicateStringifiedKeyThrows) {
 
 TEST_F(LuaRunnerTest, ReturnNonUtf8StringThrows) {
     auto db = return_database();
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     // JSON must be UTF-8 (RFC 8259) but a Lua string is an arbitrary byte array. Rejected here
     // because downstream Python/Dart raise opaque decode errors and JS corrupts silently.
@@ -170,7 +170,7 @@ TEST_F(LuaRunnerTest, ReturnNonUtf8StringThrows) {
 
 TEST_F(LuaRunnerTest, ReturnTooLargeThrows) {
     auto db = return_database();
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     // The depth cap does not bound the output: sharing sub-tables gives 2^20 nodes at only 21
     // levels of nesting, so the size cap is what stops an untrusted script from hanging the host.
@@ -187,7 +187,7 @@ TEST_F(LuaRunnerTest, ReturnTooLargeThrows) {
 
 TEST_F(LuaRunnerTest, ReturnTooDeeplyNestedThrows) {
     auto db = return_database();
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     // The depth cap is what stops a self-referencing table from blowing the stack.
     expect_lua_error(
@@ -218,7 +218,7 @@ TEST_F(LuaRunnerTest, ReturnTooDeeplyNestedThrows) {
 
 TEST_F(LuaRunnerTest, ReturnAtTheDepthLimitSucceeds) {
     auto db = return_database();
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     // 31 nested tables plus the scalar leaf sits just inside the cap.
     auto result = lua.run(R"(

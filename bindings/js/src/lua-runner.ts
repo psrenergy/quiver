@@ -4,7 +4,7 @@ import { allocPtrOut, decodeStringFromBuf, readPtrOut, toCString } from "./ffi-h
 import type { NativePointer } from "./loader.ts";
 import { getSymbols } from "./loader.ts";
 
-export class LuaRunner {
+export class Sandbox {
   private _ptr: NativePointer;
   private _closed = false;
 
@@ -41,7 +41,7 @@ export class LuaRunner {
 
   private ensureOpen(): void {
     if (this._closed) {
-      throw new QuiverError("LuaRunner is closed");
+      throw new QuiverError("Sandbox is closed");
     }
   }
 }

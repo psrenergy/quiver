@@ -1,6 +1,6 @@
 from quiverdb.database import Database
 from quiverdb.exceptions import QuiverError
-from quiverdb.sandbox import LuaRunner
+from quiverdb.sandbox import Sandbox
 from quiverdb.metadata import (
     CSVOptions,
     DataType,
@@ -15,7 +15,7 @@ __all__ = [
     "Database",
     "GroupMetadata",
     "LogLevel",
-    "LuaRunner",
+    "Sandbox",
     "QuiverError",
     "ScalarMetadata",
     "version",

@@ -82,7 +82,7 @@ void RunHandles::close_open_handles() {
 
 namespace quiver {
 
-struct LuaRunner::Impl {
+struct Sandbox::Impl {
     Database& db;
     // Declared before `lua`: the state, and every closure that captured `handles`, is torn down first.
     lua_internal::RunHandles handles;
@@ -128,15 +128,15 @@ struct LuaRunner::Impl {
     }
 };
 
-LuaRunner::LuaRunner(Database& db) : impl_(std::make_unique<Impl>(db)) {}
+Sandbox::Sandbox(Database& db) : impl_(std::make_unique<Impl>(db)) {}
 
-LuaRunner::~LuaRunner() = default;
+Sandbox::~Sandbox() = default;
 
-LuaRunner::LuaRunner(LuaRunner&&) noexcept = default;
+Sandbox::Sandbox(Sandbox&&) noexcept = default;
 
-LuaRunner& LuaRunner::operator=(LuaRunner&&) noexcept = default;
+Sandbox& Sandbox::operator=(Sandbox&&) noexcept = default;
 
-std::string LuaRunner::run(const std::string& script) {
+std::string Sandbox::run(const std::string& script) {
     // A writer (or any other unique_ptr + sol::no_constructor usertype, e.g. CsvWriter)
     // the script leaves unreachable at run()'s return is never collected on its own -- sol::state
     // is a long-lived member of Impl, so nothing forces a GC cycle between script executions.

@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from quiverdb.database import Database
 
 
-class LuaRunner:
+class Sandbox:
     """Execute Lua scripts against a Quiver database.
 
     Wraps the C API quiver_lua_runner_new/run/free functions.
@@ -30,7 +30,7 @@ class LuaRunner:
         self._closed = False
 
     def close(self) -> None:
-        """Free the LuaRunner handle. Idempotent."""
+        """Free the Sandbox handle. Idempotent."""
         if self._closed:
             return
         lib = get_lib()
@@ -40,7 +40,7 @@ class LuaRunner:
 
     def _ensure_open(self) -> None:
         if self._closed:
-            raise QuiverError("LuaRunner is closed")
+            raise QuiverError("Sandbox is closed")
 
     def run(self, script: str) -> str:
         """Execute a Lua script against the database.
@@ -61,7 +61,7 @@ class LuaRunner:
             # In a finally so a decode failure cannot leak the native JSON buffer.
             lib.quiver_lua_runner_free_string(out_result[0])
 
-    def __enter__(self) -> LuaRunner:
+    def __enter__(self) -> Sandbox:
         return self
 
     def __exit__(self, *args: object) -> None:
@@ -69,5 +69,5 @@ class LuaRunner:
 
     def __del__(self) -> None:
         if not self._closed:
-            warnings.warn("LuaRunner was not closed explicitly", ResourceWarning, stacklevel=2)
+            warnings.warn("Sandbox was not closed explicitly", ResourceWarning, stacklevel=2)
             self.close()

@@ -118,7 +118,7 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   (regenerate via ffigen; clear `.dart_tool` caches on C-API changes). `readTimeSeriesRow` decodes
   the same kind of mask, which the C API returns for every column type (mask 0 = no data at or
   before the date → `null`; the string branch never `toDartString`s a masked-out pointer).
-- **`LuaRunner.run` owns its result**: `quiver_lua_runner_run` takes a `char** out_result` whose JSON
+- **`Sandbox.run` owns its result**: `quiver_lua_runner_run` takes a `char** out_result` whose JSON
   string is C-heap allocated, so the `Arena` cannot own it — it is freed with
   `quiver_lua_runner_free_string` (*not* `quiver_database_free_string`) in its own nested `finally`,
   so a `toDartString` failure cannot leak it. The columnar group decoders (`_decodeGroupRows`,

@@ -5,7 +5,7 @@ TEST_F(LuaRunnerTest, QueryString) {
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     db.create_element("Collection", quiver::Element().set("label", "Item 1").set("some_integer", int64_t{42}));
 
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
         local label = db:query_string("SELECT label FROM Collection WHERE label = ?", {"Item 1"})
@@ -18,7 +18,7 @@ TEST_F(LuaRunnerTest, QueryStringNoParams) {
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     db.create_element("Collection", quiver::Element().set("label", "Item 1"));
 
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
         local label = db:query_string("SELECT label FROM Collection")
@@ -30,7 +30,7 @@ TEST_F(LuaRunnerTest, QueryStringReturnsNil) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
         local result = db:query_string("SELECT label FROM Collection WHERE 1 = 0")
@@ -43,7 +43,7 @@ TEST_F(LuaRunnerTest, QueryInteger) {
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     db.create_element("Collection", quiver::Element().set("label", "Item 1").set("some_integer", int64_t{42}));
 
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
         local val = db:query_integer("SELECT some_integer FROM Collection WHERE label = ?", {"Item 1"})
@@ -57,7 +57,7 @@ TEST_F(LuaRunnerTest, QueryIntegerCount) {
     db.create_element("Collection", quiver::Element().set("label", "Item 1"));
     db.create_element("Collection", quiver::Element().set("label", "Item 2"));
 
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
         local count = db:query_integer("SELECT COUNT(*) FROM Collection")
@@ -70,7 +70,7 @@ TEST_F(LuaRunnerTest, QueryFloat) {
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     db.create_element("Collection", quiver::Element().set("label", "Item 1").set("some_float", 3.14));
 
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
         local val = db:query_float("SELECT some_float FROM Collection WHERE label = ?", {"Item 1"})
@@ -84,7 +84,7 @@ TEST_F(LuaRunnerTest, QueryWithMultipleParams) {
     db.create_element("Collection", quiver::Element().set("label", "Item 1").set("some_integer", int64_t{10}));
     db.create_element("Collection", quiver::Element().set("label", "Item 2").set("some_integer", int64_t{20}));
 
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
         local val = db:query_integer(
@@ -99,7 +99,7 @@ TEST_F(LuaRunnerTest, IsHealthy) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
         local healthy = db:is_healthy()
@@ -111,7 +111,7 @@ TEST_F(LuaRunnerTest, CurrentVersion) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
         local version = db:current_version()
@@ -121,7 +121,7 @@ TEST_F(LuaRunnerTest, CurrentVersion) {
 
 TEST_F(LuaRunnerTest, CurrentVersionAfterMigrations) {
     auto db = quiver::Database::from_migrations(":memory:", SCHEMA_PATH("schemas/migrations"));
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
         local version = db:current_version()
@@ -133,7 +133,7 @@ TEST_F(LuaRunnerTest, Path) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
         local p = db:path()
@@ -146,7 +146,7 @@ TEST_F(LuaRunnerTest, Describe) {
     auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"));
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     // describe() returns a human-readable report string
     lua.run(R"(
@@ -160,7 +160,7 @@ TEST_F(LuaRunnerTest, QueryParameterCountMismatch) {
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     db.create_element("Collection", quiver::Element().set("label", "Item 1").set("some_integer", int64_t{42}));
 
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     // Too few parameters for the single placeholder
     expect_lua_error(
@@ -187,7 +187,7 @@ TEST_F(LuaRunnerTest, QueryParameterCountMismatch) {
 // nil in a constructor ({ nil, 5 }) is counted and binds NULL, a trailing one ({ 5, nil }) is not.
 TEST_F(LuaRunnerTest, QueryInteriorNilParamBindsNull) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     lua.run(R"(
         local r = db:query_integer("SELECT CASE WHEN ? IS NULL THEN ? ELSE -1 END", { nil, 5 })
@@ -197,7 +197,7 @@ TEST_F(LuaRunnerTest, QueryInteriorNilParamBindsNull) {
 
 TEST_F(LuaRunnerTest, QueryTrailingNilParamIsACountMismatch) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     expect_lua_error(lua, R"(db:query_integer("SELECT ? + ?", { 5, nil }))", "expected 2 bound parameter(s) but got 1");
 }
@@ -205,7 +205,7 @@ TEST_F(LuaRunnerTest, QueryTrailingNilParamIsACountMismatch) {
 // A wrong-typed params argument used to be ignored, so the query ran with no parameters.
 TEST_F(LuaRunnerTest, QueryRejectsWrongTypedParams) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
 
     for (const std::string op : {"query_string", "query_integer", "query_float"}) {
         expect_lua_error(lua, "db:" + op + "('SELECT 1', 5)", "Cannot " + op + ": params must be a table, got number");

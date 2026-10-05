@@ -13,7 +13,7 @@ export { Database } from "./database.ts";
 export { QuiverError } from "./errors.ts";
 export type { GroupColumns, TimeSeriesData } from "./group-columns.ts";
 export { LUA_DB_API_REFERENCE } from "./lua-api.ts";
-export { LuaRunner } from "./lua-runner.ts";
+export { Sandbox } from "./lua-runner.ts";
 export type { GroupMetadata, ScalarMetadata } from "./metadata.ts";
 export type {
   ArrayValue,

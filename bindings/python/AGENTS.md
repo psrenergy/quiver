@@ -8,12 +8,12 @@ through `uv` (see root Build & Test).
 
 ```
 src/quiverdb/
-  __init__.py     # Public exports: Database, QuiverError, LuaRunner, CSVOptions, DataType,
+  __init__.py     # Public exports: Database, QuiverError, Sandbox, CSVOptions, DataType,
                   # LogLevel, ScalarMetadata, GroupMetadata, version()
   database.py     # Database class (inherits the CSV mixins below)
   database_csv_export.py / database_csv_import.py  # export_csv / import_csv mixins
   database_options.py  # CSVOptions-to-C marshaling
-  sandbox.py   # LuaRunner class
+  sandbox.py   # Sandbox class
   metadata.py     # DataType/LogLevel (IntEnums), CSVOptions, ScalarMetadata, GroupMetadata
   element.py      # Element builder - INTERNAL ONLY (users pass **kwargs)
   exceptions.py   # QuiverError
@@ -106,16 +106,16 @@ ruff.toml         # Lint/format config; lint is isort only (select = ["I"])
   cffi (`an integer is required`) or on `str.encode`, naming nothing. NULL cells are written with
   `update_vector_group` / `update_set_group` / `update_time_series_group` (the element surface stays
   non-null).
-- **`LuaRunner.run` owns its result**: `quiver_lua_runner_run` takes a `char** out_result` and the
+- **`Sandbox.run` owns its result**: `quiver_lua_runner_run` takes a `char** out_result` and the
   JSON string must be freed with `quiver_lua_runner_free_string` — *not*
   `quiver_database_free_string` (both are hand-declared in `_c_api.py`). The free sits in a
   `finally` so a `decode_string` failure (the JSON is rejected as non-UTF-8 in C++, but be safe)
   cannot leak the native buffer. The script must be Lua source text: the core loads it in text mode,
   so a precompiled (bytecode) chunk is rejected with `Failed to run Lua script: ...` and surfaces
   like any other script error.
-- **`LuaRunner.__init__` starts with `_closed = True` and sets it to `False` only after `_ptr` is
+- **`Sandbox.__init__` starts with `_closed = True` and sets it to `False` only after `_ptr` is
   assigned.** Python runs `__del__` even when `__init__` raised, so a runner whose construction
-  failed (e.g. `LuaRunner(closed_db)`, which the C API rejects with `Null argument: db`) must
+  failed (e.g. `Sandbox(closed_db)`, which the C API rejects with `Null argument: db`) must
   already look closed. Otherwise `__del__` emits a spurious `ResourceWarning` and then fails on the
   missing `_ptr`. Only moving `_closed = False` below `_ptr` is not enough: `__del__` then fails on
   the missing `_closed` instead. Pinned by `test_failed_construction_is_silent_when_collected`.

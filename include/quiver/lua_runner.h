@@ -10,18 +10,18 @@ namespace quiver {
 
 class Database;
 
-class QUIVER_API LuaRunner {
+class QUIVER_API Sandbox {
 public:
-    explicit LuaRunner(Database& db);
-    ~LuaRunner();
+    explicit Sandbox(Database& db);
+    ~Sandbox();
 
     // Non-copyable
-    LuaRunner(const LuaRunner&) = delete;
-    LuaRunner& operator=(const LuaRunner&) = delete;
+    Sandbox(const Sandbox&) = delete;
+    Sandbox& operator=(const Sandbox&) = delete;
 
     // Movable
-    LuaRunner(LuaRunner&&) noexcept;
-    LuaRunner& operator=(LuaRunner&&) noexcept;
+    Sandbox(Sandbox&&) noexcept;
+    Sandbox& operator=(Sandbox&&) noexcept;
 
     /// Runs a Lua script with access to the database as 'db'.
     ///

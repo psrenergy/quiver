@@ -353,7 +353,7 @@ TEST_F(LuaRunnerCApiTest, UpdateElement) {
 }
 
 // ============================================================================
-// Additional C API LuaRunner error tests
+// Additional C API Sandbox error tests
 // ============================================================================
 
 TEST_F(LuaRunnerCApiTest, EmptyScript) {

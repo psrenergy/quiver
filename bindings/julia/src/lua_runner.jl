@@ -1,20 +1,20 @@
-mutable struct LuaRunner
+mutable struct Sandbox
     ptr::Ptr{C.quiver_lua_runner}
     # Keeps the Database from being GC'd. Does NOT protect against an explicit `close!` -- the
     # C++ runner borrows a raw `Database&`, so a runner must not outlive its database.
     db::Database
 end
 
-function LuaRunner(db::Database)
+function Sandbox(db::Database)
     out_runner = Ref{Ptr{C.quiver_lua_runner}}(C_NULL)
     check(C.quiver_lua_runner_new(db.ptr, out_runner))
-    runner = LuaRunner(out_runner[], db)
+    runner = Sandbox(out_runner[], db)
     finalizer(r -> r.ptr != C_NULL && C.quiver_lua_runner_free(r.ptr), runner)
     return runner
 end
 
 """
-    run!(runner::LuaRunner, script::String)
+    run!(runner::Sandbox, script::String)
 
 Execute a Lua script against the database.
 
@@ -22,7 +22,7 @@ Returns the script's return value encoded as JSON, or `""` if it returned nothin
 
 To execute a script without keeping its writes, wrap the call in [`dry_run`](@ref).
 """
-function run!(runner::LuaRunner, script::String)
+function run!(runner::Sandbox, script::String)
     out_result = Ref{Ptr{Cchar}}(C_NULL)
     check(C.quiver_lua_runner_run(runner.ptr, script, out_result))
     result = unsafe_string(out_result[])
@@ -30,7 +30,7 @@ function run!(runner::LuaRunner, script::String)
     return result
 end
 
-function close!(runner::LuaRunner)
+function close!(runner::Sandbox)
     if runner.ptr != C_NULL
         C.quiver_lua_runner_free(runner.ptr)
         runner.ptr = C_NULL

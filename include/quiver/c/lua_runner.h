@@ -11,10 +11,10 @@ extern "C" {
 // Opaque handle type
 typedef struct quiver_lua_runner quiver_lua_runner_t;
 
-// Create a new LuaRunner for the given database
+// Create a new Sandbox for the given database
 QUIVER_C_API quiver_error_t quiver_lua_runner_new(quiver_database_t* db, quiver_lua_runner_t** out_runner);
 
-// Destroy a LuaRunner
+// Destroy a Sandbox
 QUIVER_C_API quiver_error_t quiver_lua_runner_free(quiver_lua_runner_t* runner);
 
 // Run a Lua script

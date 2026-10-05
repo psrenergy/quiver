@@ -58,7 +58,7 @@ struct RunHandles {
     // Every BinaryFile db:open_file handed out during the current run(), readers and writers
     // alike, so close_open_handles() can close it at run()'s exit even when the script keeps it in
     // a global (a GC root). A writer left open would otherwise keep its path in the process-wide
-    // write registry until the LuaRunner is destroyed. Pruned and cleared like open_writers.
+    // write registry until the Sandbox is destroyed. Pruned and cleared like open_writers.
     std::vector<std::weak_ptr<BinaryFile>> open_binary_files;
 
     bool path_has_open_writer(const std::string& resolved_path) const;

@@ -173,7 +173,7 @@ Project.toml      # Deps: Artifacts, CEnum, Dates, Libdl; julia 1.11 compat
   factory *runs* before the `MethodError`, and `from_schema` starts with `fs::remove(db_path)`
   while a plain `open` creates the file. The overloads forward `kwargs...` rather than restating
   the base method's keywords, so a keyword added later reaches the `do` form too. Two caveats a
-  caller has to know: a `LuaRunner` borrows a raw `Database&` (`src/sandbox/sandbox.cpp`), so one built
+  caller has to know: a `Sandbox` borrows a raw `Database&` (`src/sandbox/sandbox.cpp`), so one built
   inside the block dangles after it (`.ptr` stays non-NULL — no error, just freed memory; the real
   guard belongs in the C API, since Python's `with` has the same hole), and an uncommitted
   transaction open at the block's exit is rolled back by the close — nest

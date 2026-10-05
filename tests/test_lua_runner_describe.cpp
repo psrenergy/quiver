@@ -17,7 +17,7 @@ TEST_F(LuaRunnerTest, DescribeReport) {
     db.create_element("Collection", quiver::Element().set("label", "a"));
     db.create_element("Collection", quiver::Element().set("label", "b"));
 
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
     lua.run(R"LUA(
         local report = db:describe()
         assert(type(report) == "string", "describe should return a string")
@@ -28,7 +28,7 @@ TEST_F(LuaRunnerTest, DescribeReport) {
 
 TEST_F(LuaRunnerTest, DescribeCollection) {
     auto db = open_collections();
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
     lua.run(R"LUA(
         local report = db:describe_collection("Collection")
         assert(type(report) == "string", "describe_collection should return a string")
@@ -49,7 +49,7 @@ TEST_F(LuaRunnerTest, SummarizeCollection) {
     db.create_element("Collection", quiver::Element().set("label", "b").set("some_integer", static_cast<int64_t>(1)));
     db.create_element("Collection", quiver::Element().set("label", "c").set("some_integer", static_cast<int64_t>(5)));
 
-    quiver::LuaRunner lua(db);
+    quiver::Sandbox lua(db);
     lua.run(R"LUA(
         local report = db:summarize_collection("Collection")
         assert(type(report) == "string", "summarize_collection should return a string")

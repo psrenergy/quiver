@@ -21,14 +21,14 @@
 export const LUA_DB_API_REFERENCE = `
 # Quiver Lua API Reference
 
-Quiver embeds a Lua scripting layer (via \`LuaRunner\`) that exposes the same database API as the
+Quiver embeds a Lua scripting layer (via \`Sandbox\`) that exposes the same database API as the
 other language bindings. This document is a complete reference of every method available to a Lua
 script.
 
 ## Running scripts
 
 The database is provided to your script as a global userdata named \`db\`. There are **no
-open/close lifecycle methods in Lua** — the \`LuaRunner\` opens the database and hands you \`db\`
+open/close lifecycle methods in Lua** — the \`Sandbox\` opens the database and hands you \`db\`
 already connected. All methods are called with the colon syntax:
 
 \`\`\`lua
