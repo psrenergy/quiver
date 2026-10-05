@@ -70,6 +70,10 @@ the downstream `upload-s3` job + `scripts/ci/native_s3.sh` expect. Feeds both th
 native libs (shared S3 staging). macOS/Windows still use `build-cpp` (gated `if: runner.os !=
 'Linux'`) — only Linux needs the old-glibc image.
 
+**Portability checks consume all `objdump` output.** Use `grep ... >/dev/null`, not `grep -q`:
+the script enables `pipefail`, and an early-exiting grep can give `objdump` SIGPIPE (exit 141),
+falsely reporting a missing dependency or rpath. Keep `pipefail` so real producer errors still fail.
+
 **`linux-aarch64` (e.g. DGX Spark) has a glibc 2.28 floor, not 2.17:** `bash
 scripts/build_native_linux.sh aarch64` runs on the `ubuntu-24.04-arm` hosted runner inside
 **manylinux_2_28_aarch64** (AlmaLinux 8, also pinned by digest). manylinux2014 cannot serve it: CentOS 7's

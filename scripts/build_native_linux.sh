@@ -76,9 +76,10 @@ bad_glibc="$(printf '%s\n' "$syms" | grep -oE 'GLIBC_[0-9]+\.[0-9]+(\.[0-9]+)?' 
 [ -z "$bad_glibc" ] || { echo "ERROR: glibc symbols above 2.$GLIBC_MINOR: $bad_glibc"; exit 1; }
 bad_cxx="$(printf '%s\n' "$syms" | grep -oE 'GLIBCXX_[0-9]+\.[0-9]+(\.[0-9]+)?' | sed 's/GLIBCXX_//' | sort -uV | awk -F. '$1>3 || ($1==3 && ($2>4 || ($2==4 && $3>30)))')"
 [ -z "$bad_cxx" ] || { echo "ERROR: GLIBCXX symbols above 3.4.30: $bad_cxx"; exit 1; }
+# Consume all output: grep -q can give objdump SIGPIPE and fail the check under pipefail.
 for l in "${libs[@]}"; do
-  objdump -p "$l" | grep -q 'NEEDED.*libstdc++\.so\.6' || { echo "ERROR: $l is not dynamically linked to libstdc++"; exit 1; }
+  objdump -p "$l" | grep 'NEEDED.*libstdc++\.so\.6' >/dev/null || { echo "ERROR: $l is not dynamically linked to libstdc++"; exit 1; }
 done
-objdump -p "$OUT/lib/libquiver_c.so" | grep -Eq 'R(UN)?PATH.*\$ORIGIN' || { echo "ERROR: libquiver_c.so missing \$ORIGIN rpath"; exit 1; }
+objdump -p "$OUT/lib/libquiver_c.so" | grep -E 'R(UN)?PATH.*\$ORIGIN' >/dev/null || { echo "ERROR: libquiver_c.so missing \$ORIGIN rpath"; exit 1; }
 echo "OK: glibc<=2.$GLIBC_MINOR, GLIBCXX<=3.4.30, libstdc++ dynamic, \$ORIGIN rpath set"
 INNER

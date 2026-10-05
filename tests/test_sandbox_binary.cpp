@@ -40,8 +40,8 @@ protected:
 
 TEST_F(SandboxBinaryTest, MetadataBuilderAndAccessors) {
     auto db = quiver::Database::from_schema(":memory:", schema);
-    quiver::Sandbox lua(db);
-    lua.run(R"(
+    quiver::Sandbox sandbox(db);
+    sandbox.run(R"(
         local md = quiver.metadata{
             version = "1",
             initial_datetime = "2025-01-01T00:00:00",
@@ -77,8 +77,8 @@ TEST_F(SandboxBinaryTest, MetadataBuilderAndAccessors) {
 
 TEST_F(SandboxBinaryTest, WriteReadRoundTrip) {
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::Sandbox lua(db);
-    lua.run(R"(
+    quiver::Sandbox sandbox(db);
+    sandbox.run(R"(
         local md = quiver.metadata{ initial_datetime='2025-01-01T00:00:00', unit='MW',
             labels={'v1','v2'}, dimensions={'row','col'}, dimension_sizes={3,2} }
         local f = db:open_file('bin_a', 'w', md)
@@ -101,8 +101,8 @@ TEST_F(SandboxBinaryTest, WriteReadRoundTrip) {
 
 TEST_F(SandboxBinaryTest, AllowNullsReadsNaN) {
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::Sandbox lua(db);
-    lua.run(md1() + R"(
+    quiver::Sandbox sandbox(db);
+    sandbox.run(md1() + R"(
         local f = db:open_file('bin_a', 'w', md)
         f:write({42.0}, {row=1})
         f:close()
@@ -116,20 +116,20 @@ TEST_F(SandboxBinaryTest, AllowNullsReadsNaN) {
 
 TEST_F(SandboxBinaryTest, ReadNullWithoutAllowThrows) {
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::Sandbox lua(db);
-    lua.run(md1() + R"(
+    quiver::Sandbox sandbox(db);
+    sandbox.run(md1() + R"(
         local f = db:open_file('bin_a', 'w', md)
         f:write({42.0}, {row=1})
         f:close()
     )");
-    EXPECT_THROW(lua.run("local r = db:open_file('bin_a', 'r')\nr:read({row=2})\n"), std::exception);
+    EXPECT_THROW(sandbox.run("local r = db:open_file('bin_a', 'r')\nr:read({row=2})\n"), std::exception);
 }
 
 TEST_F(SandboxBinaryTest, WriterHeldInAGlobalIsClosedWhenRunReturns) {
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
     // No `local`, no f:close(): f is a GC root when run() returns.
-    lua.run(R"(
+    sandbox.run(R"(
         local md = quiver.metadata{ initial_datetime='2025-01-01T00:00:00', unit='MW',
             labels={'v1'}, dimensions={'row'}, dimension_sizes={2} }
         f = db:open_file('bin_global', 'w', md)
@@ -138,7 +138,7 @@ TEST_F(SandboxBinaryTest, WriterHeldInAGlobalIsClosedWhenRunReturns) {
     )");
     // A second run can open it for reading: the path is no longer in the write registry, and
     // the data was flushed.
-    lua.run(R"(
+    sandbox.run(R"(
         local r = db:open_file('bin_global', 'r')
         assert(r:read({row=1})[1] == 42.0, 'row 1')
         assert(r:read({row=2})[1] == 43.0, 'row 2')
@@ -148,20 +148,20 @@ TEST_F(SandboxBinaryTest, WriterHeldInAGlobalIsClosedWhenRunReturns) {
 
 TEST_F(SandboxBinaryTest, HandleFromAnEarlierRunIsClosed) {
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::Sandbox lua(db);
-    lua.run(R"(
+    quiver::Sandbox sandbox(db);
+    sandbox.run(R"(
         local md = quiver.metadata{ initial_datetime='2025-01-01T00:00:00', unit='MW',
             labels={'v1'}, dimensions={'row'}, dimension_sizes={1} }
         local w = db:open_file('bin_reuse', 'w', md); w:write({1.0}, {row=1}); w:close()
         g = db:open_file('bin_reuse', 'r')
     )");
-    lua.run(R"(assert(not g:is_open(), 'a handle must not outlive its run()'))");
+    sandbox.run(R"(assert(not g:is_open(), 'a handle must not outlive its run()'))");
 }
 
 TEST_F(SandboxBinaryTest, ReadRejectsNonIntegerDimension) {
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::Sandbox lua(db);
-    lua.run(md1() + R"(
+    quiver::Sandbox sandbox(db);
+    sandbox.run(md1() + R"(
         local f = db:open_file('bin_a', 'w', md)
         f:write({42.0}, {row=1})
         f:close()
@@ -170,7 +170,7 @@ TEST_F(SandboxBinaryTest, ReadRejectsNonIntegerDimension) {
     // sol2 error in a debug one, so a bad dimension returned the wrong slice instead of failing.
     // (A boolean is not tested here: it coerces to 1 like every other numeric slot.)
     expect_lua_error(
-        lua,
+        sandbox,
         R"(
         local r = db:open_file('bin_a', 'r')
         r:read({row=1.5})
@@ -181,9 +181,9 @@ TEST_F(SandboxBinaryTest, ReadRejectsNonIntegerDimension) {
 
 TEST_F(SandboxBinaryTest, TimeDimensionWriteRead) {
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
     // 2 monthly stages x 28 daily blocks (Feb has 28 days from 2025-02-01); one label.
-    lua.run(R"(
+    sandbox.run(R"(
         local md = quiver.metadata{ initial_datetime='2025-02-01T00:00:00', unit='MW',
             labels={'v'}, dimensions={'stage','block'}, dimension_sizes={2,28},
             time_dimensions={'stage','block'}, frequencies={'monthly','daily'} }
@@ -199,9 +199,9 @@ TEST_F(SandboxBinaryTest, TimeDimensionWriteRead) {
 
 TEST_F(SandboxBinaryTest, WeeklyDailyCountsDaysFromInitialDatetimeAcrossYearEnd) {
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
     // 60 weeks from Saturday 2025-03-15: a week is seven days from that day, so week 42 day 6 is 2026-01-01
-    lua.run(R"(
+    sandbox.run(R"(
         local md = quiver.metadata{ initial_datetime='2025-03-15T00:00:00', unit='MW',
             labels={'v'}, dimensions={'week','day'}, dimension_sizes={60,7},
             time_dimensions={'week','day'}, frequencies={'weekly','daily'} }
@@ -219,8 +219,8 @@ TEST_F(SandboxBinaryTest, WeeklyDailyCountsDaysFromInitialDatetimeAcrossYearEnd)
 
 TEST_F(SandboxBinaryTest, CsvRoundTrip) {
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::Sandbox lua(db);
-    lua.run(R"(
+    quiver::Sandbox sandbox(db);
+    sandbox.run(R"(
         local md = quiver.metadata{ initial_datetime='2025-01-01T00:00:00', unit='MW',
             labels={'v1','v2'}, dimensions={'row','col'}, dimension_sizes={3,2} }
         local f = db:open_file('bin_a', 'w', md)
@@ -240,31 +240,31 @@ TEST_F(SandboxBinaryTest, CsvRoundTrip) {
 
 TEST_F(SandboxBinaryTest, CsvToBinRejectsTrailingGarbage) {
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::Sandbox lua(db);
-    lua.run(md1() + "local f = db:open_file('bin_a', 'w', md)\nf:close()\n");  // writes bin_a.toml
+    quiver::Sandbox sandbox(db);
+    sandbox.run(md1() + "local f = db:open_file('bin_a', 'w', md)\nf:close()\n");  // writes bin_a.toml
     {
         std::ofstream csv(sandbox / "bin_a.csv");
         csv << "row,v\n1,9.99abc\n2,1\n3,1\n";
     }
-    expect_lua_error(lua, "db:csv_to_bin('bin_a')\n", "Cannot csv_to_bin: invalid float value '9.99abc' for label 'v'");
+    expect_lua_error(sandbox, "db:csv_to_bin('bin_a')\n", "Cannot csv_to_bin: invalid float value '9.99abc' for label 'v'");
 }
 
 TEST_F(SandboxBinaryTest, CsvToBinShortRowReportsLine) {
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
     // Opening a writer leaves the .toml sidecar csv_to_bin reads. Lua has no io, so the CSV is written here.
-    lua.run(md1() + "db:open_file('bin_a', 'w', md):close()\n");
+    sandbox.run(md1() + "db:open_file('bin_a', 'w', md):close()\n");
     {
         std::ofstream csv(sandbox / "bin_a.csv");
         csv << "row,v\n1\n";
     }
-    expect_lua_error(lua, "db:csv_to_bin('bin_a')\n", "Cannot csv_to_bin: line 2 has 1 fields, expected 2");
+    expect_lua_error(sandbox, "db:csv_to_bin('bin_a')\n", "Cannot csv_to_bin: line 2 has 1 fields, expected 2");
 }
 
 TEST_F(SandboxBinaryTest, MetadataFromToml) {
     auto db = quiver::Database::from_schema(":memory:", schema);
-    quiver::Sandbox lua(db);
-    lua.run(R"(
+    quiver::Sandbox sandbox(db);
+    sandbox.run(R"(
         local md = quiver.metadata{
             initial_datetime = "2025-01-01T00:00:00", unit = "GWh",
             labels = {"a", "b"}, dimensions = {"row"}, dimension_sizes = {5},
@@ -279,22 +279,22 @@ TEST_F(SandboxBinaryTest, MetadataFromToml) {
 
 TEST_F(SandboxBinaryTest, MetadataCountMismatchThrows) {
     auto db = quiver::Database::from_schema(":memory:", schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
     // A script is untrusted input; each of these used to index past dimension_sizes / frequencies.
     expect_lua_error(
-        lua,
+        sandbox,
         "quiver.metadata{ initial_datetime='2025-01-01T00:00:00', unit='MW', labels={'v'},"
         " dimensions={'stage', 'block'}, dimension_sizes={12} }\n",
         "dimension_sizes count (1) does not match dimensions count (2)"
     );
     expect_lua_error(
-        lua,
+        sandbox,
         "quiver.metadata{ initial_datetime='2025-01-01T00:00:00', unit='MW', labels={'v'},"
         " dimensions={'stage', 'block'} }\n",
         "dimension_sizes count (0) does not match dimensions count (2)"
     );
     expect_lua_error(
-        lua,
+        sandbox,
         "quiver.metadata{ initial_datetime='2025-01-01T00:00:00', unit='MW', labels={'v'},"
         " dimensions={'stage'}, dimension_sizes={12}, time_dimensions={'stage'} }\n",
         "frequencies count (0) does not match time_dimensions count (1)"
@@ -304,35 +304,35 @@ TEST_F(SandboxBinaryTest, MetadataCountMismatchThrows) {
 // An unknown key, or a known key of the wrong type, used to be ignored and replaced by its default.
 TEST_F(SandboxBinaryTest, MetadataIsStrict) {
     auto db = quiver::Database::from_schema(":memory:", schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
     expect_lua_error(
-        lua,
+        sandbox,
         "quiver.metadata{ dimension_size = {3} }\n",
         "Cannot metadata: unknown option 'dimension_size'"
     );
     expect_lua_error(
-        lua,
+        sandbox,
         "quiver.metadata{ initial_datetime='2025-01-01T00:00:00', unit=5, labels={'v'},"
         " dimensions={'row'}, dimension_sizes={3} }\n",
         "Cannot metadata: field 'unit' has unsupported Lua type"
     );
     expect_lua_error(
-        lua,
+        sandbox,
         "quiver.metadata{ initial_datetime='2025-01-01T00:00:00', unit='MW', labels='v1',"
         " dimensions={'row'}, dimension_sizes={3} }\n",
         "Cannot metadata: field 'labels' must be a table"
     );
     // A non-table argument reached lua_next unchecked in Release (sol2 skips argument checks there).
-    expect_lua_error(lua, "quiver.metadata(5)\n", "Cannot metadata: options must be a table");
-    expect_lua_error(lua, "quiver.metadata()\n", "Cannot metadata: options must be a table");
+    expect_lua_error(sandbox, "quiver.metadata(5)\n", "Cannot metadata: options must be a table");
+    expect_lua_error(sandbox, "quiver.metadata()\n", "Cannot metadata: options must be a table");
 }
 
 TEST_F(SandboxBinaryTest, MetadataFromTomlRejectsWrongTypedEntry) {
     auto db = quiver::Database::from_schema(":memory:", schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
     expect_lua_error(
-        lua,
-        R"lua(
+        sandbox,
+        R"sandbox(
         quiver.metadata_from_toml([[
 version = "1"
 dimensions = ["row", 2]
@@ -348,23 +348,23 @@ labels = ["val"]
 
 TEST_F(SandboxBinaryTest, OpenFileInvalidModeThrows) {
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::Sandbox lua(db);
-    expect_lua_error(lua, "db:open_file('bin_a', 'x')\n", "Cannot open_file: mode must be");
+    quiver::Sandbox sandbox(db);
+    expect_lua_error(sandbox, "db:open_file('bin_a', 'x')\n", "Cannot open_file: mode must be");
 }
 
 // The mode is validated before the path is resolved, so an escaping path cannot mask a bad mode.
 TEST_F(SandboxBinaryTest, OpenFileReportsInvalidModeBeforeEscapingPath) {
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::Sandbox lua(db);
-    expect_lua_error(lua, "db:open_file('../escape', 'z')", R"(Cannot open_file: mode must be "r" or "w")");
+    quiver::Sandbox sandbox(db);
+    expect_lua_error(sandbox, "db:open_file('../escape', 'z')", R"(Cannot open_file: mode must be "r" or "w")");
 }
 
 // --- db-directory sandbox ---
 
 TEST_F(SandboxBinaryTest, RelativePathResolvesAgainstDbDir) {
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::Sandbox lua(db);
-    lua.run(md1() + "local f = db:open_file('bin_rel', 'w', md)\nf:write({1.0}, {row=1})\nf:close()\n");
+    quiver::Sandbox sandbox(db);
+    sandbox.run(md1() + "local f = db:open_file('bin_rel', 'w', md)\nf:write({1.0}, {row=1})\nf:close()\n");
     EXPECT_TRUE(fs::exists(sandbox / "bin_rel.qvr"));
     EXPECT_FALSE(fs::exists(fs::current_path() / "bin_rel.qvr"));
 }
@@ -372,24 +372,24 @@ TEST_F(SandboxBinaryTest, RelativePathResolvesAgainstDbDir) {
 TEST_F(SandboxBinaryTest, SubdirectoryAllowed) {
     fs::create_directories(sandbox / "sub");  // BinaryFile does not create parent directories
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::Sandbox lua(db);
-    lua.run(md1() + "local f = db:open_file('sub/bin', 'w', md)\nf:write({1.0}, {row=1})\nf:close()\n");
+    quiver::Sandbox sandbox(db);
+    sandbox.run(md1() + "local f = db:open_file('sub/bin', 'w', md)\nf:write({1.0}, {row=1})\nf:close()\n");
     EXPECT_TRUE(fs::exists(sandbox / "sub" / "bin.qvr"));
 }
 
 TEST_F(SandboxBinaryTest, AbsoluteInsideAccepted) {
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
     const std::string abs_inside = lp((sandbox / "abs_inside").string());
-    lua.run(md1() + "local f = db:open_file('" + abs_inside + "', 'w', md)\nf:write({1.0}, {row=1})\nf:close()\n");
+    sandbox.run(md1() + "local f = db:open_file('" + abs_inside + "', 'w', md)\nf:write({1.0}, {row=1})\nf:close()\n");
     EXPECT_TRUE(fs::exists(sandbox / "abs_inside.qvr"));
 }
 
 TEST_F(SandboxBinaryTest, DotDotEscapeThrows) {
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
     expect_lua_error(
-        lua,
+        sandbox,
         md1() + "db:open_file('../escape', 'w', md)\n",
         "Cannot open_file: path '../escape' escapes the database directory"
     );
@@ -397,17 +397,17 @@ TEST_F(SandboxBinaryTest, DotDotEscapeThrows) {
 
 TEST_F(SandboxBinaryTest, AbsoluteOutsideThrows) {
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
     const std::string outside = lp((fs::temp_directory_path() / "quiver_lua_outside").string());
-    expect_lua_error(lua, md1() + "db:open_file('" + outside + "', 'w', md)\n", "escapes the database directory");
+    expect_lua_error(sandbox, md1() + "db:open_file('" + outside + "', 'w', md)\n", "escapes the database directory");
 }
 
 TEST_F(SandboxBinaryTest, RootItselfRejected) {
     // The root directory itself must be rejected: the subsystem appends ".qvr" by string
     // concatenation, so the root would produce "<root>.qvr" outside the sandbox.
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::Sandbox lua(db);
-    expect_lua_error(lua, md1() + "db:open_file('.', 'w', md)\n", "escapes the database directory");
+    quiver::Sandbox sandbox(db);
+    expect_lua_error(sandbox, md1() + "db:open_file('.', 'w', md)\n", "escapes the database directory");
 }
 
 #ifdef _WIN32
@@ -419,51 +419,51 @@ TEST_F(SandboxBinaryTest, RootItselfRejected) {
 // because no POSIX path is reserved this way.
 TEST_F(SandboxBinaryTest, DeviceNamePathIsReportedWithPrefix) {
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::Sandbox lua(db);
-    expect_lua_error(lua, md1() + "db:open_file('NUL', 'w', md)\n", "Cannot open_file: cannot resolve path 'NUL': ");
-    expect_lua_error(lua, "db:bin_to_csv('NUL')\n", "Cannot bin_to_csv: cannot resolve path 'NUL': ");
-    expect_lua_error(lua, "db:csv_to_bin('NUL')\n", "Cannot csv_to_bin: cannot resolve path 'NUL': ");
+    quiver::Sandbox sandbox(db);
+    expect_lua_error(sandbox, md1() + "db:open_file('NUL', 'w', md)\n", "Cannot open_file: cannot resolve path 'NUL': ");
+    expect_lua_error(sandbox, "db:bin_to_csv('NUL')\n", "Cannot bin_to_csv: cannot resolve path 'NUL': ");
+    expect_lua_error(sandbox, "db:csv_to_bin('NUL')\n", "Cannot csv_to_bin: cannot resolve path 'NUL': ");
 }
 #endif
 
 TEST_F(SandboxBinaryTest, ConverterEscapeThrows) {
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::Sandbox lua(db);
-    expect_lua_error(lua, "db:bin_to_csv('../x')\n", "Cannot bin_to_csv: path '../x' escapes the database directory");
-    expect_lua_error(lua, "db:csv_to_bin('../x')\n", "Cannot csv_to_bin: path '../x' escapes the database directory");
+    quiver::Sandbox sandbox(db);
+    expect_lua_error(sandbox, "db:bin_to_csv('../x')\n", "Cannot bin_to_csv: path '../x' escapes the database directory");
+    expect_lua_error(sandbox, "db:csv_to_bin('../x')\n", "Cannot csv_to_bin: path '../x' escapes the database directory");
 }
 
 TEST_F(SandboxBinaryTest, InMemoryThrows) {
     auto db = quiver::Database::from_schema(":memory:", schema);
-    quiver::Sandbox lua(db);
-    expect_lua_error(lua, md1() + "db:open_file('bin_a', 'w', md)\n", "Cannot open_file: database is in-memory");
-    expect_lua_error(lua, "db:bin_to_csv('bin_a')\n", "Cannot bin_to_csv: database is in-memory");
-    expect_lua_error(lua, "db:csv_to_bin('bin_a')\n", "Cannot csv_to_bin: database is in-memory");
+    quiver::Sandbox sandbox(db);
+    expect_lua_error(sandbox, md1() + "db:open_file('bin_a', 'w', md)\n", "Cannot open_file: database is in-memory");
+    expect_lua_error(sandbox, "db:bin_to_csv('bin_a')\n", "Cannot bin_to_csv: database is in-memory");
+    expect_lua_error(sandbox, "db:csv_to_bin('bin_a')\n", "Cannot csv_to_bin: database is in-memory");
 }
 
 TEST_F(SandboxBinaryTest, ReadWriteRejectNonTableArguments) {
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::Sandbox lua(db);
-    lua.run(md1() + R"(
+    quiver::Sandbox sandbox(db);
+    sandbox.run(md1() + R"(
         local f = db:open_file('bin_a', 'w', md)
         f:write({42.0}, {row=1})
         f:close()
     )");
 
-    expect_lua_error(lua, "db:open_file('bin_a', 'r'):read(5)\n", "Cannot read: dims must be a table, got number");
+    expect_lua_error(sandbox, "db:open_file('bin_a', 'r'):read(5)\n", "Cannot read: dims must be a table, got number");
     expect_lua_error(
-        lua,
+        sandbox,
         md1() + "db:open_file('bin_b', 'w', md):write(5, {row=1})\n",
         "Cannot write: data must be a table, got number"
     );
     expect_lua_error(
-        lua,
+        sandbox,
         md1() + "db:open_file('bin_b', 'w', md):write({1.0}, 'x')\n",
         "Cannot write: dims must be a table, got string"
     );
     // Both arguments are wrong: data is decoded first, so it is the one reported.
     expect_lua_error(
-        lua,
+        sandbox,
         md1() + "db:open_file('bin_b', 'w', md):write(5, 'x')\n",
         "Cannot write: data must be a table, got number"
     );
@@ -471,16 +471,16 @@ TEST_F(SandboxBinaryTest, ReadWriteRejectNonTableArguments) {
 
 TEST_F(SandboxBinaryTest, MetadataRejectsNonTableArguments) {
     auto db = quiver::Database::from_schema(":memory:", schema);
-    quiver::Sandbox lua(db);
-    expect_lua_error(lua, "quiver.metadata()\n", "Cannot metadata: options must be a table, got nil");
-    expect_lua_error(lua, "quiver.metadata(5)\n", "Cannot metadata: options must be a table, got number");
+    quiver::Sandbox sandbox(db);
+    expect_lua_error(sandbox, "quiver.metadata()\n", "Cannot metadata: options must be a table, got nil");
+    expect_lua_error(sandbox, "quiver.metadata(5)\n", "Cannot metadata: options must be a table, got number");
     expect_lua_error(
-        lua,
+        sandbox,
         "quiver.metadata{ labels = 5 }\n",
         "Cannot metadata: field 'labels' must be a table, got number"
     );
     expect_lua_error(
-        lua,
+        sandbox,
         "quiver.metadata_from_element(5)\n",
         "Cannot metadata_from_element: element_table must be a table, got number"
     );
@@ -488,14 +488,14 @@ TEST_F(SandboxBinaryTest, MetadataRejectsNonTableArguments) {
 
 TEST_F(SandboxBinaryTest, ReadRejectsNonStringDimensionName) {
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::Sandbox lua(db);
-    lua.run(md1() + R"(
+    quiver::Sandbox sandbox(db);
+    sandbox.run(md1() + R"(
         local f = db:open_file('bin_a', 'w', md)
         f:write({42.0}, {row=1})
         f:close()
     )");
     expect_lua_error(
-        lua,
+        sandbox,
         "db:open_file('bin_a', 'r'):read({ 1 })\n",
         "Cannot read: dimension name must be a string, got number"
     );
@@ -504,37 +504,37 @@ TEST_F(SandboxBinaryTest, ReadRejectsNonStringDimensionName) {
 // A wrong-typed optional argument used to be treated as absent. nil or a missing argument still is.
 TEST_F(SandboxBinaryTest, OptionalArgumentsRejectWrongTypes) {
     auto db = quiver::Database::from_schema(db_path(), schema);
-    quiver::Sandbox lua(db);
+    quiver::Sandbox sandbox(db);
 
     expect_lua_error(
-        lua,
+        sandbox,
         "db:open_file('bin_a', 'w', {})\n",
         "Cannot open_file: metadata must be a BinaryMetadata, got table"
     );
     expect_lua_error(
-        lua,
+        sandbox,
         "db:open_file('bin_a', 'w', db)\n",
         "Cannot open_file: metadata must be a BinaryMetadata, got userdata"
     );
     // The mode is checked first, then containment, then the metadata.
     expect_lua_error(
-        lua,
+        sandbox,
         "db:open_file('../x', 'w', {})\n",
         "Cannot open_file: path '../x' escapes the database directory"
     );
-    expect_lua_error(lua, "db:open_file('x', 'q', {})\n", R"(Cannot open_file: mode must be "r" or "w")");
+    expect_lua_error(sandbox, "db:open_file('x', 'q', {})\n", R"(Cannot open_file: mode must be "r" or "w")");
 
-    expect_lua_error(lua, "db:bin_to_csv('x', 1)\n", "Cannot bin_to_csv: aggregate must be a boolean, got number");
+    expect_lua_error(sandbox, "db:bin_to_csv('x', 1)\n", "Cannot bin_to_csv: aggregate must be a boolean, got number");
 
-    lua.run(md1() + R"(
+    sandbox.run(md1() + R"(
         local f = db:open_file('bin_a', 'w', md)
         f:write({42.0}, {row=1})
         f:close()
     )");
     expect_lua_error(
-        lua,
+        sandbox,
         "db:open_file('bin_a', 'r'):read({row=1}, 'yes')\n",
         "Cannot read: allow_nulls must be a boolean, got string"
     );
-    EXPECT_EQ(lua.run("return db:open_file('bin_a', 'r'):read({row=1}, nil)[1]"), "42");
+    EXPECT_EQ(sandbox.run("return db:open_file('bin_a', 'r'):read({row=1}, nil)[1]"), "42");
 }
