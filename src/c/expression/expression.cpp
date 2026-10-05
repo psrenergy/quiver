@@ -245,7 +245,7 @@ QUIVER_C_API quiver_error_t quiver_expression_get_metadata(
     QUIVER_REQUIRE(expression, out);
 
     try {
-        *out = new quiver_binary_metadata{expression->expression.metadata()};
+        *out = new quiver_binary_metadata{expression->expression.get_metadata()};
         return QUIVER_OK;
     } catch (const std::bad_alloc&) {
         quiver_set_last_error("Memory allocation failed");

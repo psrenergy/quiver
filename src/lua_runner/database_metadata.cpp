@@ -20,6 +20,8 @@ std::string lua_data_type_name(DataType type) {
     return name;
 }
 
+}  // namespace
+
 sol::table metadata_to_lua(sol::state_view& lua, const ScalarMetadata& attribute) {
     auto t = lua.create_table();
     t["name"] = attribute.name;
@@ -55,37 +57,14 @@ sol::table metadata_to_lua(sol::state_view& lua, const GroupMetadata& metadata) 
     return t;
 }
 
-// list_scalar_attributes / list_{vector,set,time_series}_groups: one metadata table per entry.
-template <auto List>
-sol::table list_metadata_lua(Database& db, const std::string& collection, sol::this_state s) {
-    sol::state_view lua(s);
-    auto t = lua.create_table();
-    const auto items = (db.*List)(collection);
-    for (size_t i = 0; i < items.size(); ++i) {
-        t[i + 1] = metadata_to_lua(lua, items[i]);
-    }
-    return t;
-}
-
-// get_{scalar,vector,set,time_series}_metadata: the one named attribute or group.
-template <auto Get>
-sol::table get_metadata_lua(Database& db, const std::string& collection, const std::string& name, sol::this_state s) {
-    sol::state_view lua(s);
-    return metadata_to_lua(lua, (db.*Get)(collection, name));
-}
-
-}  // namespace
-
 void bind_metadata(sol::usertype<Database>& bind) {
     bind.set_function("get_scalar_metadata", &get_metadata_lua<&Database::get_scalar_metadata>);
     bind.set_function("get_vector_metadata", &get_metadata_lua<&Database::get_vector_metadata>);
     bind.set_function("get_set_metadata", &get_metadata_lua<&Database::get_set_metadata>);
-    bind.set_function("get_time_series_metadata", &get_metadata_lua<&Database::get_time_series_metadata>);
 
     bind.set_function("list_scalar_attributes", &list_metadata_lua<&Database::list_scalar_attributes>);
     bind.set_function("list_vector_groups", &list_metadata_lua<&Database::list_vector_groups>);
     bind.set_function("list_set_groups", &list_metadata_lua<&Database::list_set_groups>);
-    bind.set_function("list_time_series_groups", &list_metadata_lua<&Database::list_time_series_groups>);
 }
 
 }  // namespace quiver::lua_internal

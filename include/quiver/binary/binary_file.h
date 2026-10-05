@@ -2,6 +2,7 @@
 #define QUIVER_BINARY_FILE_H
 
 #include "../export.h"
+#include "../expression/abstract_expression.h"
 #include "binary_metadata.h"
 
 #include <cstdint>
@@ -14,10 +15,10 @@
 
 namespace quiver {
 
-class QUIVER_API BinaryFile {
+class QUIVER_API BinaryFile : public AbstractExpression {
 public:
     explicit BinaryFile(const std::string& file_path);
-    ~BinaryFile();
+    ~BinaryFile() override;
 
     // Non-copyable
     BinaryFile(const BinaryFile&) = delete;
@@ -42,8 +43,12 @@ public:
     void write(const std::vector<double>& data, const std::unordered_map<std::string, int64_t>& dims);
 
     // Getters
-    const BinaryMetadata& get_metadata() const;
+    const BinaryMetadata& get_metadata() const override;
     const std::string& get_file_path() const;
+
+    // Defined in src/expression/expression_file.cpp. Returns a new ExpressionFile leaf built from the
+    // path, so an expression never opens, closes or reads through this handle.
+    std::shared_ptr<ExpressionNode> node() const override;
 
 private:
     struct Impl;

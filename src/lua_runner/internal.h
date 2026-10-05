@@ -25,7 +25,21 @@
 
 namespace quiver {
 
+class AbstractExpression;
 class BinaryFile;
+class Expression;
+
+}  // namespace quiver
+
+// sol2 inheritance as compile-time traits, not the runtime base-classes tag: the tag swaps each derived
+// metatable's __index table for a C closure that every f:read / f:write pays. They are explicit
+// specializations, so every TU that uses sol2 with these types must see them: every src/lua_runner TU that
+// includes sol2 includes this header first.
+SOL_BASE_CLASSES(quiver::BinaryFile, quiver::AbstractExpression);
+SOL_BASE_CLASSES(quiver::Expression, quiver::AbstractExpression);
+SOL_DERIVED_CLASSES(quiver::AbstractExpression, quiver::BinaryFile, quiver::Expression);
+
+namespace quiver {
 
 namespace csv_write {
 
@@ -100,6 +114,28 @@ template <auto Read>
 sol::table collection_read_lua(Database& db, const std::string& collection, sol::this_state s) {
     sol::state_view lua(s);
     return to_lua_table(lua, (db.*Read)(collection));
+}
+
+sol::table metadata_to_lua(sol::state_view& lua, const ScalarMetadata& attribute);
+sol::table metadata_to_lua(sol::state_view& lua, const GroupMetadata& metadata);
+
+// list_scalar_attributes / list_{vector,set,time_series}_groups: one metadata table per entry.
+template <auto List>
+sol::table list_metadata_lua(Database& db, const std::string& collection, sol::this_state s) {
+    sol::state_view lua(s);
+    auto t = lua.create_table();
+    const auto items = (db.*List)(collection);
+    for (size_t i = 0; i < items.size(); ++i) {
+        t[i + 1] = metadata_to_lua(lua, items[i]);
+    }
+    return t;
+}
+
+// get_{scalar,vector,set,time_series}_metadata: the one named attribute or group.
+template <auto Get>
+sol::table get_metadata_lua(Database& db, const std::string& collection, const std::string& name, sol::this_state s) {
+    sol::state_view lua(s);
+    return metadata_to_lua(lua, (db.*Get)(collection, name));
 }
 
 // Every boolean test in src/lua_runner/ goes through this one predicate, so the rule lives in one
@@ -292,13 +328,25 @@ struct GroupColumn {
     size_t count = 0;
 };
 
-void bind_core(sol::usertype<Database>& bind);
+void bind_database(sol::usertype<Database>& bind);
+void bind_create(sol::usertype<Database>& bind);
 void bind_read(sol::usertype<Database>& bind);
-void bind_write(sol::usertype<Database>& bind);
+void bind_update(sol::usertype<Database>& bind);
+void bind_delete(sol::usertype<Database>& bind);
+void bind_describe(sol::usertype<Database>& bind);
 void bind_metadata(sol::usertype<Database>& bind);
+void bind_query(sol::usertype<Database>& bind);
 void bind_time_series(sol::usertype<Database>& bind);
+void bind_csv_export(sol::usertype<Database>& bind);
+void bind_csv_import(sol::usertype<Database>& bind);
 void bind_csv(sol::state& state, sol::usertype<Database>& bind, RunHandles& handles);
-void bind_binary(sol::state& state, sol::usertype<Database>& bind, sol::table& ns, Database& db, RunHandles& handles);
+sol::usertype<BinaryFile> bind_binary(
+    sol::state& state,
+    sol::usertype<Database>& bind,
+    sol::table& ns,
+    RunHandles& handles
+);
+void bind_expression(sol::state& state, sol::table& ns, sol::usertype<BinaryFile>& binary_file_type, Database& db);
 
 std::string encode_return_json(const sol::object& value);
 
@@ -309,6 +357,7 @@ std::vector<std::map<std::string, Value>> columns_to_cpp_rows(
     const std::vector<GroupColumn>& lua_columns,
     size_t row_count
 );
+CSVOptions parse_csv_options(const sol::object& options, const std::string& operation);
 
 }  // namespace lua_internal
 

@@ -2165,6 +2165,266 @@ end
             cleanup(path_a, path_b, path_c, path_out)
         end
     end
+
+    @testset "Binary.File is an AbstractExpression" begin
+        @test Quiver.Binary.File <: Quiver.AbstractExpression
+        @test Quiver.Expression <: Quiver.AbstractExpression
+        @test isabstracttype(Quiver.AbstractExpression)
+        @test Quiver.get_metadata === Quiver.Binary.get_metadata
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r + c + k)
+            fa = Quiver.Binary.open_file(path_a; mode = 'r')
+            try
+                Quiver.save(fa, path_out)
+                # the file is still open and readable after saving from it
+                @test Quiver.Binary.read(fa; row = 1, col = 1) == [3.0, 4.0]
+                md = Quiver.get_metadata(fa)
+                @test Quiver.Binary.get_labels(md) == ["val1", "val2"]
+                @test Quiver.Binary.get_unit(md) == "MW"
+                @test_throws MethodError Quiver.Expression(Quiver.Expression(fa))
+            finally
+                Quiver.Binary.close!(fa)
+            end
+            @test read_all_cells(path_out) == read_all_cells(path_a)
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
+    @testset "Every expression operation on a raw Binary.File" begin
+        path_a, path_b = make_path("a"), make_path("b")
+        out1, out2 = make_path("out1"), make_path("out2")
+        try
+            write_fixture(path_a, (r, c, k) -> r + c + k)
+            write_fixture(path_b, (r, c, k) -> r * 10 + c + k)
+            fa = Quiver.Binary.open_file(path_a; mode = 'r')
+            fb = Quiver.Binary.open_file(path_b; mode = 'r')
+            try
+                ea, eb = Quiver.Expression(fa), Quiver.Expression(fb)
+                # saves both results and compares the bytes (NaN-safe and shape-agnostic)
+                function same_output(from_files, from_expressions)
+                    Quiver.save(from_files, out1)
+                    Quiver.save(from_expressions, out2)
+                    @test read(out1 * ".qvr") == read(out2 * ".qvr")
+                    @test read(out1 * ".toml", String) == read(out2 * ".toml", String)
+                end
+                ops = [
+                    (x, y) -> x + y,
+                    (x, y) -> x - y,
+                    (x, y) -> x * y,
+                    (x, y) -> x / y,
+                    (x, y) -> x + 2.0,
+                    (x, y) -> 2.0 - x,
+                    (x, y) -> 3.0 * x,
+                    (x, y) -> x / 4.0,
+                    (x, y) -> 60.0 / x,
+                    (x, y) -> x > y,
+                    (x, y) -> x < 12.0,
+                    (x, y) -> 12.0 >= x,
+                    (x, y) -> x <= y,
+                    (x, y) -> Quiver.gt(x, y),
+                    (x, y) -> Quiver.lt(x, y),
+                    (x, y) -> Quiver.gte(x, y),
+                    (x, y) -> Quiver.lte(x, y),
+                    (x, y) -> Quiver.eq(x, y),
+                    (x, y) -> Quiver.neq(1.0, x),
+                    (x, y) -> x & y,
+                    (x, y) -> x | y,
+                    (x, y) -> !x,
+                    (x, y) -> -x,
+                    (x, y) -> abs(x),
+                    (x, y) -> sqrt(x),
+                    (x, y) -> log(x),
+                    (x, y) -> exp(x),
+                    (x, y) -> ifelse(x > 12.0, x, y),
+                    (x, y) -> Quiver.aggregate(x, "row", Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM),
+                    (x, y) -> Quiver.aggregate_agents(x, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_MEAN),
+                    (x, y) ->
+                        Quiver.aggregate_agents(x, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_PERCENTILE, 0.5),
+                    (x, y) -> Quiver.select_agents(x, ["val1"]),
+                    (x, y) -> Quiver.rename_agents(x, Dict("val1" => "alpha")),
+                ]
+                for op in ops
+                    same_output(op(fa, fb), op(ea, eb))
+                end
+                # mixed file and expression operands
+                same_output(fa + eb, ea + eb)
+                same_output(eb - fa, eb - ea)
+                same_output(ifelse(fa > 12.0, eb, fa), ifelse(ea > 12.0, eb, ea))
+                Quiver.close!(ea)
+                Quiver.close!(eb)
+            finally
+                Quiver.Binary.close!(fa)
+                Quiver.Binary.close!(fb)
+            end
+        finally
+            cleanup(path_a, path_b, out1, out2)
+        end
+    end
+
+    @testset "Save guards on a raw Binary.File" begin
+        path_a, path_w, path_out = make_path("a"), make_path("w"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r + c + k)
+            fa = Quiver.Binary.open_file(path_a; mode = 'r')
+            try
+                err = try
+                    Quiver.save(fa, path_a)
+                    nothing
+                catch e
+                    e
+                end
+                @test err isa Quiver.DatabaseException && occursin("collides with input file", err.msg)
+                w = Quiver.Binary.open_file(path_w; mode = 'w', metadata = make_simple_metadata())
+                try
+                    @test_throws Quiver.DatabaseException Quiver.save(w, path_out)
+                    err = try
+                        Quiver.save(w, path_out)
+                        nothing
+                    catch e
+                        e
+                    end
+                    @test err isa Quiver.DatabaseException && occursin("already open for writing", err.msg)
+                    @test !isfile(path_out * ".qvr")
+                    @test !isfile(path_out * ".toml")
+                    @test Quiver.Binary.get_labels(Quiver.get_metadata(w)) == ["val1", "val2"]
+                    Quiver.Binary.write!(w; data = [1.0, 2.0], row = 1, col = 1)
+                finally
+                    Quiver.Binary.close!(w)
+                end
+                @test Quiver.Binary.read(fa; row = 1, col = 1) == [3.0, 4.0]
+            finally
+                Quiver.Binary.close!(fa)
+            end
+        finally
+            cleanup(path_a, path_w, path_out)
+        end
+    end
+
+    @testset "Same raw Binary.File on both sides" begin
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r + c + k)
+            fa = Quiver.Binary.open_file(path_a; mode = 'r')
+            try
+                Quiver.save(fa - fa, path_out)
+                @test all(==(0.0), read_all_cells(path_out))
+                Quiver.save(Quiver.eq(fa, fa), path_out)
+                @test all(==(1.0), read_all_cells(path_out))
+            finally
+                Quiver.Binary.close!(fa)
+            end
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
+    @testset "Closed Binary.File is not an operand" begin
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r + c + k)
+            fc = Quiver.Binary.open_file(path_a; mode = 'r')
+            Quiver.Binary.close!(fc)
+            err = try
+                fc + 1.0
+                nothing
+            catch e
+                e
+            end
+            @test err isa Quiver.DatabaseException && occursin("Null argument", err.msg)
+            err = try
+                Quiver.save(fc, path_out)
+                nothing
+            catch e
+                e
+            end
+            @test err isa Quiver.DatabaseException && occursin("Null argument", err.msg)
+            @test !isfile(path_out * ".qvr")
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
+    @testset "Label order on a raw Binary.File" begin
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r + c + k)
+            fa = Quiver.Binary.open_file(path_a; mode = 'r')
+            try
+                e = Quiver.select_agents(fa, ["val2", "val1"])
+                @test Quiver.Binary.get_labels(Quiver.get_metadata(e)) == ["val2", "val1"]
+                Quiver.save(e, path_out)
+                Quiver.close!(e)
+                @test read_all_cells(path_out)[1:2] == [4.0, 3.0]
+                renamed = Quiver.rename_agents(fa, Dict("val1" => "alpha"))
+                @test Quiver.Binary.get_labels(Quiver.get_metadata(renamed)) == ["alpha", "val2"]
+                Quiver.close!(renamed)
+                Quiver.save(Quiver.select_agents(fa, ["val1"]), path_out)
+                single = Quiver.Binary.open_file(path_out; mode = 'r')
+                try
+                    @test Quiver.Binary.get_labels(Quiver.Binary.get_metadata(single)) == ["val1"]
+                finally
+                    Quiver.Binary.close!(single)
+                end
+            finally
+                Quiver.Binary.close!(fa)
+            end
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
+    @testset "Saving a raw Binary.File twice" begin
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r + c + k)
+            fa = Quiver.Binary.open_file(path_a; mode = 'r')
+            try
+                Quiver.save(fa, path_out)
+                @test Quiver.Binary.read(fa; row = 1, col = 1) == [3.0, 4.0]
+                Quiver.save(fa, path_out)
+                @test Quiver.Binary.read(fa; row = 1, col = 1) == [3.0, 4.0]
+                md1, md2 = Quiver.get_metadata(fa), Quiver.get_metadata(fa)
+                @test Quiver.Binary.get_labels(md1) == Quiver.Binary.get_labels(md2)
+                @test Quiver.Binary.get_unit(md1) == Quiver.Binary.get_unit(md2)
+            finally
+                Quiver.Binary.close!(fa)
+            end
+            @test read_all_cells(path_out) == read_all_cells(path_a)
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
+    @testset "Expression from a raw Binary.File outlives it" begin
+        path_a, path_b, path_out = make_path("a"), make_path("b"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r + c + k)
+            write_fixture(path_b, (r, c, k) -> r * 10 + c + k)
+            fa = Quiver.Binary.open_file(path_a; mode = 'r')
+            e = fa * 2.0
+            Quiver.Binary.close!(fa)
+            GC.gc()
+            Quiver.save(e, path_out)
+            Quiver.close!(e)
+            @test read_all_cells(path_out) == 2.0 .* read_all_cells(path_a)
+            fb = Quiver.Binary.open_file(path_b; mode = 'r')
+            try
+                for _ in 1:3
+                    t = fb + 1.0
+                    t = nothing
+                    GC.gc()
+                end
+                # temporaries never close the source file
+                @test Quiver.Binary.read(fb; row = 1, col = 1) == [12.0, 13.0]
+            finally
+                Quiver.Binary.close!(fb)
+            end
+        finally
+            cleanup(path_a, path_b, path_out)
+        end
+    end
 end
 
 end

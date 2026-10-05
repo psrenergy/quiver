@@ -107,6 +107,7 @@ sol::table read_element_by_id_lua(Database& db, const std::string& collection, i
 
 void bind_read(sol::usertype<Database>& bind) {
     bind.set_function("read_element_ids", &collection_read_lua<&Database::read_element_ids>);
+    bind.set_function("number_of_elements", &Database::number_of_elements);
 
     bind.set_function("read_scalar_strings", &bulk_read_lua<&Database::read_scalar_strings>);
     bind.set_function("read_scalar_integers", &bulk_read_lua<&Database::read_scalar_integers>);

@@ -110,13 +110,20 @@ struct LuaRunner::Impl {
         sol::table ns = lua.create_named_table("quiver");
         // The only Database usertype: registering it again would clear every method bound before.
         auto bind = lua.new_usertype<Database>("Database");
-        lua_internal::bind_core(bind);
+        lua_internal::bind_database(bind);
+        lua_internal::bind_create(bind);
         lua_internal::bind_read(bind);
-        lua_internal::bind_write(bind);
+        lua_internal::bind_update(bind);
+        lua_internal::bind_delete(bind);
+        lua_internal::bind_describe(bind);
         lua_internal::bind_metadata(bind);
+        lua_internal::bind_query(bind);
         lua_internal::bind_time_series(bind);
+        lua_internal::bind_csv_export(bind);
+        lua_internal::bind_csv_import(bind);
         lua_internal::bind_csv(lua, bind, handles);
-        lua_internal::bind_binary(lua, bind, ns, db, handles);
+        auto binary_file_type = lua_internal::bind_binary(lua, bind, ns, handles);
+        lua_internal::bind_expression(lua, ns, binary_file_type, db);
         lua["db"] = &db;
     }
 };

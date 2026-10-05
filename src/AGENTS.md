@@ -28,6 +28,7 @@ include/quiver/binary/      # Binary subsystem headers (binary file I/O)
   time_properties.h           # TimeFrequency enum, TimeProperties struct
   time_constants.h            # Time dimension size constraints
 include/quiver/expression/  # Expression subsystem headers (lazy expressions on .qvr files)
+  abstract_expression.h       # AbstractExpression base (node, get_metadata, save, aggregate, *_agents) + AggregateOperation
   expression.h                # Expression value type, + - * / operator overloads, save engine
   expression_node.h           # ExpressionNode base + concrete node classes + BroadcastOperand
 src/                      # C++ implementation
@@ -43,19 +44,26 @@ src/                      # C++ implementation
   type_validator.h / type_validator.cpp      # Scalar/array type validation (free functions,
                                              # caller-threaded Pattern 1 messages)
   element.cpp / row.cpp / result.cpp / migration.cpp / migrations.cpp
-  lua_runner/             # LuaRunner (sol2): every Lua binding, one file per domain
+  lua_runner/             # LuaRunner (sol2): one file per core file it binds (database*.cpp), plus csv, binary, expression
     lua_runner.cpp        # LuaRunner::Impl (ctor order, the one Database usertype), RunHandles bodies, run()/GcGuard
-    internal.h            # quiver::lua_internal: RunHandles, binder decls, converters, read adapters, option walk, group-decoder decls
+    internal.h            # quiver::lua_internal: RunHandles, binder decls, converters, read adapters, option walk, group-decoder decls, metadata templates, parse_csv_options decl
     return_json.cpp       # run()'s JSON encoder
     path_policy.h         # resolve_sandboxed_path's declaration; no sol2, included by internal.h and SandboxedPathTest
     path_policy.cpp       # resolve_sandboxed_path, the single filesystem gate
-    db_core.cpp           # bind_core: info, transactions, dry runs, count, describe, query, migrations, export/import_csv
-    db_read.cpp           # bind_read: bulk + by-id readers
-    db_write.cpp          # bind_write: element CRUD, relations, vector/set group writers; table_to_element, group decoder
-    db_metadata.cpp       # bind_metadata: get_*_metadata, list_* groups
-    db_time_series.cpp    # bind_time_series: time-series read/write/upsert, time-series files
+    database.cpp          # bind_database: info, transactions, dry runs (run_in_scope), validate_migrations
+    database_create.cpp   # bind_create: create_element; table_to_element
+    database_read.cpp     # bind_read: bulk + by-id readers, number_of_elements
+    database_update.cpp   # bind_update: update_element, relations, vector/set group writers; group decoder
+    database_delete.cpp   # bind_delete: delete_element(_by_label)
+    database_describe.cpp # bind_describe: describe, describe_collection, summarize_collection
+    database_metadata.cpp # bind_metadata: get_{scalar,vector,set}_metadata, list_*; metadata_to_lua
+    database_query.cpp    # bind_query: query_string/integer/float
+    database_time_series.cpp # bind_time_series: time-series read/write/upsert/files, its metadata + list
+    database_csv_export.cpp  # bind_csv_export: export_csv; parse_csv_options
+    database_csv_import.cpp  # bind_csv_import: import_csv
     csv.cpp               # bind_csv: read_csv, read_csv_stream, write_csv, CsvWriter
-    binary.cpp            # bind_binary: BinaryMetadata/BinaryFile/Expression, quiver.*, open_file/bin_to_csv/csv_to_bin
+    binary.cpp            # bind_binary: open_file/bin_to_csv/csv_to_bin, BinaryMetadata, BinaryFile, quiver.metadata*
+    expression.cpp        # bind_expression: Expression, the operators and expression methods on Expression and BinaryFile, quiver.* expression functions
   ui_metadata.h / ui_metadata.cpp  # Internal ui/ TOML sidecar reader behind describe/describe_collection
                                 # -- same no-include/quiver/-counterpart posture as csv_read
   cli/main.cpp            # quiver_cli CLI entry point
@@ -262,7 +270,7 @@ substring immunity, and `summarize_collection` additionally emits `  Vectors:` /
 database would be breakable by a label containing that text. The remedy, if it ever bites, is
 asserting on report structure (line prefix + indentation), never a substring blocklist.
 
-Three guards in the Lua layer's decoders (`src/lua_runner/`: `csv.cpp`, `internal.h`, `db_write.cpp`) exist because a script is
+Three guards in the Lua layer's decoders (`src/lua_runner/`: `csv.cpp`, `internal.h`, `database_update.cpp`) exist because a script is
 untrusted input, in the same spirit as the JSON encoder's two caps below:
 - `csv_max_integer_key` is the single max-integer-key walk behind both `csv_row_cells_from_lua`
   and `csv_header_from_lua` (so the key rule and its message live once), and it caps the result at
@@ -319,7 +327,7 @@ struct Database::Impl {
 
 Binary subsystem: `BinaryFile` uses Pimpl (hides file I/O dependencies). `CSVConverter` is a plain class composing a `BinaryMetadata` and the CSV `iostream` (no Pimpl, no inheritance). `BinaryMetadata`, `Dimension`, `TimeProperties` are plain value types.
 
-Expression subsystem: `Expression` is a plain value type wrapping `shared_ptr<ExpressionNode>` — no Pimpl. `ExpressionNode` is an abstract base with virtual `metadata()` / `compute_row()`; concrete subclasses are exposed via `QUIVER_API` and use Rule of Zero. Polymorphism is justified by the recursive tree shape (operand-owning nodes hold child `shared_ptr<ExpressionNode>`).
+Expression subsystem: `Expression` is `final` and derives, as `BinaryFile` (Pimpl) does, from the stateless polymorphic `AbstractExpression` (virtual destructor, protected copy and move, so nothing slices through a base reference). It is a plain value type wrapping `shared_ptr<ExpressionNode>` — no Pimpl. `ExpressionNode` is an abstract base with virtual `metadata()` / `compute_row()`; concrete subclasses are exposed via `QUIVER_API` and use Rule of Zero. Polymorphism is justified by the recursive tree shape (operand-owning nodes hold child `shared_ptr<ExpressionNode>`).
 
 Classes with no private dependencies (`Element`, `Row`, `Migration`, `Migrations`, `GroupMetadata`, `ScalarMetadata`, `CSVOptions`, `Dimension`, `TimeProperties`, `Expression`) are plain value types — direct members, no Pimpl, Rule of Zero (compiler-generated copy/move/destructor). `BinaryMetadata` is the one deviation: it user-declares its default constructor and destructor (defaulted out-of-line), which suppresses compiler-generated moves — moves silently fall back to copies.
 
@@ -646,7 +654,8 @@ lua.run(R"(
 
 Implementation conventions in `src/lua_runner/`:
 - **Layout**: `LuaRunner::Impl`'s constructor creates the only Database usertype and hands it to
-  the seven binders as `bind`, with the `quiver` table as `ns`. Those parameter names are what the
+  the fourteen binders, called in the order of the core files they mirror (`bind_database` through
+  `bind_expression`), as `bind`, with the `quiver` table as `ns`. Those parameter names are what the
   sync test's first pass matches (it fails on a `.set_function(` through any other receiver, and
   reads subdirectories too), and a second Database usertype would clear every method bound
   before it. The non-Database usertypes stay variadic, one bound name per line (the sync test's
@@ -655,6 +664,14 @@ Implementation conventions in `src/lua_runner/`:
   holds only templates, `inline` functions and declarations; every other helper is in an anonymous
   namespace nested in `quiver::lua_internal`. A type registered as a usertype stays in the named
   namespace, because sol2 keys usertypes by demangled name and that drops anonymous namespaces.
+  `bind_binary` returns the `BinaryFile` usertype and the constructor hands it to `bind_expression`,
+  which registers the expression operators and the six expression methods on it, through the
+  usertype indexer rather than `set_function`; the method names are listed once, in the
+  `Expression` usertype, which is where the sync test's second pass reads them (a comment naming
+  that usertype call reopens it for the parser and empties its method list). `binary.cpp` keeps its
+  `quiver/expression/expression.h` include although it names no `Expression`, because sol2 derives
+  BinaryFile's automatic `__lt`/`__le`/`__eq` from the expression operators, which take
+  `const AbstractExpression&` (a base of BinaryFile), when the usertype is created, so removing it changes `f < g` and `f == g` in scripts while every test stays green.
   Comments must not spell the Database usertype call or the stdlib-opening call, because greps
   count both. Each TU with by-value sol2 parameters gets one
   `NOLINTBEGIN/END(performance-unnecessary-value-param)` pair. A file stays at about 450 lines or
@@ -662,12 +679,13 @@ Implementation conventions in `src/lua_runner/`:
 - **Shared helpers**: each repeated binding pattern lives in one helper, and a new method reuses
   it rather than copying a body. The 17 plain forwarders are `&Database::` member pointers (below).
   `bulk_read_lua` / `collection_read_lua` (`internal.h`) adapt the bulk readers and are registered
-  under the member's own name. `read_groups_by_id` (`db_read.cpp`) is behind `read_vectors_by_id`
-  and `read_sets_by_id`. The `metadata_to_lua` overloads with `list_metadata_lua` /
-  `get_metadata_lua` (`db_metadata.cpp`) are behind the four `get_*_metadata` and four `list_*`
-  group methods.
+  under the member's own name. `read_groups_by_id` (`lua_runner/database_read.cpp`) is behind `read_vectors_by_id`
+  and `read_sets_by_id`. The `metadata_to_lua` overloads (defined in `lua_runner/database_metadata.cpp`)
+  with the `list_metadata_lua` / `get_metadata_lua` templates (`internal.h`) are behind the four
+  `get_*_metadata` and four `list_*` group methods, registered in `lua_runner/database_metadata.cpp`
+  and (the time-series pair) `lua_runner/database_time_series.cpp`.
   `query_*_lua` return `std::optional` and `read_scalars_by_id` assigns `std::optional` values, so a
-  NULL is `nil` and an absent key. `run_in_scope` (`db_core.cpp`) is the one scoped block behind `db:transaction` and
+  NULL is `nil` and an absent key. `run_in_scope` (`lua_runner/database.cpp`) is the one scoped block behind `db:transaction` and
   `db:dry_run`: the two lambdas pass their operation name, and `run_in_scope` checks the argument is
   a function before opening the scope. The callback's error and the closing call (`commit` /
   `end_dry_run`) sit in one `try`, so either one undoes the scope best-effort and is rethrown.
@@ -679,12 +697,23 @@ Implementation conventions in `src/lua_runner/`:
   registered by member pointer, and `header_object` (`csv.cpp`) is the one no-header rule for both
   read forms. `RunHandles::add_writer` / `add_binary_file` are the only appenders to the run-handle
   registries by convention (the vectors stay public; prune expired entries, then append), and `close_open_handles` empties both at
-  `run()`'s exit. `binop<Op>(name)` (`binary.cpp`) with a transparent functor (`std::plus<>`,
-  `std::greater_equal<>`, ...) builds every binary Expression operator's callable, metamethods and
-  `quiver.gt`/`lt`/`gte`/`lte`/`eq`/`neq` alike, and `to_expression(o, operation)` names the
-  operation in the operand error: Lua's event name for a metamethod (`add`, `unm`, `band`, ...),
-  the function name for `quiver.*` (`gt`, `abs`, `ifelse`, `expression`, ...). `columns_to_cpp_rows` owns the group decoders'
-  no-rows rejection, and `length_mismatch` (`db_time_series.cpp`) is the time-series decoder's one
+  `run()`'s exit. Every expression operand is a typed `const AbstractExpression&` candidate of a
+  `sol::overload` set (`expression.cpp`): `binop<Op>(name)` with a transparent functor
+  (`std::plus<>`, `std::greater_equal<>`, ...) for the four arithmetic, two logical and six
+  comparison operations, `unary_metamethod` for `__unm`/`__bnot` (Lua calls them with the operand
+  twice), `unary_function` for `quiver.expression`/`abs`/`sqrt`/`log`/`exp`, and the three-operand
+  `ifelse` set. So sol2 does the type check. The last candidate of each set takes
+  `sol::variadic_args` and calls `operand_error(operation, arity, numbers, args)`, which sol2
+  reaches only after every typed candidate failed and which only words the error: the leftmost
+  operand that is neither an expression nor, for the binary operations when not every operand is a
+  number, a number gets `Cannot <op>: operand must be an expression or a binary file, got <type>`,
+  otherwise `Cannot <op>: too many arguments (expected N, got M)`. `operation` is Lua's event name
+  for a metamethod (`add`, `unm`, `band`, ...) and the function name for `quiver.*` (`gt`, `abs`,
+  `ifelse`, `expression`, ...). The six expression methods (`save`, `get_metadata`, `aggregate`,
+  `aggregate_agents`, `select_agents`, `rename_agents`) are one lambda each on
+  `const AbstractExpression&`, shared by both usertypes, and ignore extra arguments like every other
+  method. `columns_to_cpp_rows` owns the group decoders'
+  no-rows rejection, and `length_mismatch` (`lua_runner/database_time_series.cpp`) is the time-series decoder's one
   length message. `lua_type_error` / `require_table` (`internal.h`) are the one argument
   type-error shape (`Cannot <op>: <what> must be <expected>, got <lua type>`) and the one table
   check: `require_table` tests `get_type()`, never the loose `is<sol::table>()` that accepts a
@@ -694,15 +723,15 @@ Implementation conventions in `src/lua_runner/`:
   `string_key`) keep their own pinned texts. So do the value checks that predate that shape and end
   without the `got` suffix: `on_row must be a function` (`csv.cpp`), the `separator`, `header`
   entry and `header_row` option checks (`csv.cpp`), `option 'date_time_format' must be a string`
-  and `keys of option '<what>' must be strings` (`db_core.cpp`), `option key must be a string` and
+  and `keys of option '<what>' must be strings` (`lua_runner/database_csv_export.cpp`), `option key must be a string` and
   `<what> has unsupported Lua type` (`internal.h`; cells, values, and `target_label` in
-  `db_write.cpp`). Adding the suffix to any of them is a deliberate, pinned text change, not a
+  `lua_runner/database_update.cpp`). Adding the suffix to any of them is a deliberate, pinned text change, not a
   cleanup. `optional_from_lua<T>` is the one optional-argument
   decoder (see the optional-argument bullet below).
 - **Filesystem sandbox**: `resolve_sandboxed_path(db, operation, path)` is the single gate for
   every file-touching Lua operation (`db:open_file`, `db:bin_to_csv`, `db:csv_to_bin`,
   `db:export_csv`, `db:import_csv`, `db:validate_migrations`, `db:read_csv`, `db:read_csv_stream`,
-  `db:write_csv`, `expr:save`). It rejects `:memory:`
+  `db:write_csv`, `save` on an expression or a binary file). It rejects `:memory:`
   databases, resolves relative paths against the database file's directory (bare-filename db paths fall back to the
   CWD at call time, mirroring `create_database_logger`), canonicalizes via `weakly_canonical`,
   and requires strict containment (candidate == root is rejected — the binary subsystem appends
@@ -755,7 +784,8 @@ Implementation conventions in `src/lua_runner/`:
   `Cannot <caller>: target_label has unsupported Lua type`. Both
   `db:update_relation(..., nil)` and omitting the argument clear; that affordance is sol2's and
   Lua-only (the FFI bindings all require the parameter and take their language's null).
-- `parse_csv_options(options, operation)` is the single strict CSVOptions decoder for
+- `parse_csv_options(options, operation)` (defined in `lua_runner/database_csv_export.cpp`, declared
+  in `internal.h` for `lua_runner/database_csv_import.cpp`) is the single strict CSVOptions decoder for
   `export_csv`/`import_csv`: `nil` means defaults, any other non-table and any unknown or
   wrong-typed key throws, with the same collect-then-validate walk (`option_entries`, which owns the
   table check while each caller keeps its own nil handling) as the `read_csv`/`write_csv` decoders. `quiver.metadata{...}` and `expr:rename_agents` are decoded
@@ -832,6 +862,23 @@ Implementation conventions in `src/lua_runner/`:
   (638 -> 626 ms; a 1M-cell `file:read` loop 422 -> 424 ms). The getter is therefore unchecked in
   every build, Debug included, which is why `lua_cell_as` and the key checks exist. Never disable
   `SOL_SAFE_FUNCTION_CALLS` or `SOL_SAFE_USERTYPE`: they are the argument and `self` checks.
+- **`BinaryFile` and `Expression` register `AbstractExpression` as their sol2 base through
+  compile-time traits in `internal.h`** (`SOL_BASE_CLASSES` for each, `SOL_DERIVED_CLASSES` for the
+  base), not the runtime base-classes tag, which replaces each derived metatable's `__index` table
+  with a C closure that every method lookup pays, `f:read`/`f:write` included; the traits keep
+  `__index` a table (pinned by `LuaExpressionTest.FileAndExpressionKeepTableIndex`). They are
+  explicit specializations, so every TU that uses sol2 with these types must see them, which holds
+  because every `src/lua_runner/` file that includes sol2 includes `internal.h` first.
+  `AbstractExpression` is never a registered usertype, and `f:read`/`f:write` keep
+  `BinaryFile& self` (a base-typed `self` pays failed metatable lookups and a `class_check` on
+  every call). `expression.cpp` wraps its includes in an MSVC-only `#pragma warning(push)` /
+  `disable : 4702` / `pop`: the always-throwing fallback candidates make MSVC Release report C4702
+  inside sol2, and the warning state at each template's definition decides; do not mark
+  `operand_error` as never-returning, which brings the warnings back. Measured in Release MSVC
+  (medians of five interleaved runs of 1M calls each, against the code before this change):
+  `f:write` 2490 ms before, 2538 ms with the runtime tag (+1.9%), 2525 ms with the traits (+1.4%);
+  `f:read` 2390 / 2446 (+2.3%) / 2168 ms (-9.3%). The tag cost +2% or more on one workload, so the
+  traits stay, though single runs spread far wider (1838-3497 ms) than either margin.
 - **`SOL_NO_NIL=1` (`src/CMakeLists.txt`) is a portability guard, not a preference.** sol2 does not
   define `sol::nil` on Apple platforms at all: `version.hpp` turns `SOL_NIL` off whenever
   `__MAC_OS_X_VERSION_MAX_ALLOWED`, `__OBJC__` or a `nil` macro is visible, because Objective-C
@@ -996,7 +1043,7 @@ Profiled with 480×500×31 dimensions (~7.3M read/write calls). Main hot-path co
 
 ## Expression Subsystem
 
-Lazy expressions over `.qvr` binary files. Build a DAG using `+ - * /` operator overloads (binary and unary minus) and unary math free functions, materialize via `save()`. Bound in **Julia and Lua** (root design decision); Lua binds these C++ classes directly via sol2 in `src/lua_runner/binary.cpp` (`quiver.*` namespace + method syntax + string aggregation ops; `expr:save` paths are sandboxed to the database directory).
+Lazy expressions over `.qvr` binary files. Build a DAG using `+ - * /` operator overloads (binary and unary minus) and unary math free functions, materialize via `save()`. Bound in **Julia and Lua** (root design decision); Lua binds these C++ classes directly via sol2 in `src/lua_runner/expression.cpp` (`quiver.*` namespace + method syntax + string aggregation ops; `save` on a file or an expression is sandboxed to the database directory).
 
 ```cpp
 auto a = BinaryFile::open_file("a", 'r');
@@ -1005,28 +1052,29 @@ Expression result = abs((a + b) * 2.0 - sqrt(Expression(a)));
 result.save("output");  // writes output.qvr + output.toml
 ```
 
-- `Expression` value type (header `quiver/expression/expression.h`):
-  - Constructors: `Expression(const BinaryFile&)` (implicit, enables `bf_a + bf_b`), `Expression(shared_ptr<ExpressionNode>)`
-  - Accessors: `metadata()`
+- `AbstractExpression` base and `Expression` value type (headers `quiver/expression/abstract_expression.h`, `quiver/expression/expression.h`):
+  - `AbstractExpression` has one pure virtual, `node()` (the root node). `Expression` (final) returns its `node_`; `BinaryFile::node()` returns a fresh path-based `ExpressionFile` leaf on every call, so an expression never opens, closes or reads through the caller's handle. `save`, `aggregate`, `aggregate_agents`, `select_agents` and `rename_agents` are non-virtual members of `AbstractExpression`, so a `BinaryFile` has them; `save` holds the root node in a local while it runs (a file's leaf is a temporary).
+  - Constructors: `explicit Expression(const AbstractExpression&)` (a BinaryFile or another expression; copy-initialization from a file does not compile), `explicit Expression(shared_ptr<ExpressionNode>)`
+  - Accessor: `get_metadata()`, virtual on `AbstractExpression`, whose base body returns the node's metadata; `BinaryFile` overrides it to return the handle's in-memory metadata.
   - Materialize: `save(path)` — iterates via `first_dimensions`/`next_dimensions`, calls `compute_row()` per cell, writes to a new `.qvr`. Throws if `path` collides (after `weakly_canonical`) with any input file in the DAG.
-  - Aggregation: `aggregate(dimension, op, [parameter])` collapses a dimension; `aggregate_agents(op, [parameter])` collapses the label axis. `op` is `ExpressionAggregate::Operation` (`Sum / Mean / Min / Max / Percentile`) for both; `ExpressionAggregateAgents::Operation` is an alias of it, not a second enum. `Percentile` requires a `parameter` fraction in `[0, 1]`; nullary ops reject `parameter`.
+  - Aggregation: `aggregate(dimension, op, [parameter])` collapses a dimension; `aggregate_agents(op, [parameter])` collapses the label axis. `op` is `quiver::AggregateOperation` (`Sum / Mean / Min / Max / Percentile`) for both; `ExpressionAggregate::Operation` and `ExpressionAggregateAgents::Operation` are aliases of it, not second enums. `Percentile` requires a `parameter` fraction in `[0, 1]`; nullary ops reject `parameter`.
   - Label-axis projection: `select_agents(labels)` keeps (and may reorder) a chosen subset of operand labels; `rename_agents(mapping)` rewrites labels in place via a partial `{old: new}` map. Both validate eagerly: `select_agents` throws if any requested label is absent; `rename_agents` throws on duplicate keys or unknown keys, and `BinaryMetadata::validate()` rejects renames that produce duplicate output labels.
 - Operator overloads (12 binary + 1 unary): `+ - * /` × {expr+expr, expr+double, double+expr}, plus unary `-expr`.
 - Free functions in `quiver::` for unary math: `abs(expr)`, `sqrt(expr)`, `log(expr)`, `exp(expr)`.
-- Comparison operators in `quiver::` (C++): `> < >= <= == !=`, each defined for all three combos {expr,expr | expr,double | double,expr} (explicit — the compiler does not synthesize C++20 reversed candidates for these non-bool-returning operators). `==`/`!=` return an elementwise mask `Expression`, not `bool` (Eigen-style). Produce `1.0`/`0.0` per element; **a NaN operand propagates as NaN** (so `ifelse(cmp, …)` yields NaN). They reuse `ExpressionBinary`, inheriting unit-match + shape validation and carrying the broadcast unit. **Per-language surface**: C++ uses the operators; Julia overloads `> < >= <=` and keeps `eq`/`neq` named (`==`/`!=` would break `Dict`/`Set`); Lua keeps `quiver.gt/lt/gte/lte/eq/neq` free functions (comparison metamethods coerce to bool).
+- Comparison operators in `quiver::` (C++): `> < >= <= == !=`, each defined for all three combos over `const AbstractExpression&` (an Expression or a BinaryFile) {expr,expr | expr,double | double,expr} (every `==`/`!=` overload has a partner with the same parameters, so C++20 forms no rewritten candidate). `==`/`!=` return an elementwise mask `Expression`, not `bool` (Eigen-style). Produce `1.0`/`0.0` per element; **a NaN operand propagates as NaN** (so `ifelse(cmp, …)` yields NaN). They reuse `ExpressionBinary`, inheriting unit-match + shape validation and carrying the broadcast unit. **Per-language surface**: C++ uses the operators; Julia overloads `> < >= <=` and keeps `eq`/`neq` named (`==`/`!=` would break `Dict`/`Set`); Lua keeps `quiver.gt/lt/gte/lte/eq/neq` free functions (comparison metamethods coerce to bool).
 - Logical operators in `quiver::` (C++) on nonzero-is-true operands: `operator&&` / `operator||` (binary, three combos each) and `operator!` (unary). Produce `1.0`/`0.0`, **NaN propagates**, result is **unitless** — `&&`/`||` skip unit-match validation (only shapes must broadcast) so conditions on different-unit variables compose; `!` emits a unitless result too. Overloading `&&`/`||` drops short-circuit, which is irrelevant for a lazy DAG. **Per-language surface**: C++ `&& || !`; Julia `& | !` (`&&`/`||` are non-overloadable short-circuit syntax, so `&`/`|`; `!` is a real function); Lua `& | ~` (`and`/`or`/`not` are keywords → `__band`/`__bor`/`__bnot` metamethods on the Expression and BinaryFile usertypes).
 - Free function `ifelse(cond, then_value, else_value)` selects per-element: NaN cond → NaN; `cond != 0` → `then_value`; else → `else_value`. `then` and `else` units must match; `cond`'s unit is ignored.
 - `ExpressionNode` hierarchy (header `quiver/expression/expression_node.h`):
   - `ExpressionNode` (abstract): `metadata()`, `compute_row(dims, out)`, `collect_input_files(out)` (used by `save()` for the output-path collision check and input open/close lifecycle)
-  - `ExpressionFile`: lazy reads from a `.qvr`. Caches an open `BinaryFile` and a reusable `unordered_map` across calls (mutable members; not thread-safe per instance).
+  - `ExpressionFile`: the leaf for a `.qvr`, built from a path (`BinaryFile::node()` makes a fresh one per call). It reads the `.toml` once at construction and owns a private, unopened `BinaryFile` that `save()` opens read-only and closes on exit (`collect_input_files` hands it to `save`), never the caller's handle; `compute_row` reuses a mutable dimension map across calls, so an instance is not thread-safe.
   - `ExpressionScalar`: broadcasts a constant across the operand's label space.
   - `ExpressionBinary`: combines two operands with `ExpressionBinary::Operation::{Add,Subtract,Multiply,Divide,Gt,Lt,Gte,Lte,Eq,Neq,And,Or}` (nested enum). Arithmetic ops compute `lhs op rhs`; the six comparisons and the two logical ops (`And`/`Or`, nonzero-is-true) return `1.0`/`0.0` and propagate a NaN operand as NaN. Logical ops skip unit-match validation and emit a unitless result (a small `is_logical(op)` branch in the constructor); comparisons/arithmetic keep the full unit-match check. Constructor pre-computes broadcast metadata (`build_broadcast_metadata({&lhs, &rhs}, lhs)`, see the broadcast-metadata bullet below) and one `BroadcastOperand` per operand (index translation tables + reusable buffers, built by `make_broadcast_operand` and driven per row by `compute_broadcast_operand_row` — both shared with `ExpressionTernary` via `expression_helpers.h`). The `apply(Operation, double, double)` operation-dispatch is a private static member.
   - `ExpressionUnary`: applies a single-operand function with `ExpressionUnary::Operation::{Negate,Abs,Sqrt,Log,Exp,Not}` (nested enum). For the math ops `metadata()` returns the operand's metadata unchanged (no dimensional analysis — `sqrt(MW)` stays as `MW`); `Not` is logical negation (nonzero→0, 0→1, NaN propagates) and returns a **unitless** boolean via a dedicated `output_meta_` member. Constructor pre-allocates a reusable `operand_row_buf_`. Lets IEEE-754 NaN/inf propagate naturally (`sqrt(-1) → NaN`, `log(0) → -inf`); no NaN special-casing. The `apply(Operation, double)` operation-dispatch is a private static member.
   - `ExpressionTernary`: selects per-element across three operands. `Operation::{IfElse}` (nested enum). For `IfElse`: NaN in `condition` → NaN; `condition != 0` → `then_value`; else `else_value`. Constructor eagerly validates (`then` and `else` units must match; `condition`'s unit is ignored; shapes broadcast across all three pairs), pre-builds broadcast metadata via the same `build_broadcast_metadata({&cond, &then, &else}, then)` and one `BroadcastOperand` per operand (same shared machinery as `ExpressionBinary`). The `apply(Operation, double, double, double)` operation-dispatch is a private static member.
   - `ExpressionAggregate`: collapses a named dimension. `Operation::{Sum,Mean,Min,Max,Percentile}` (nested enum). Constructor eagerly removes the dim from output metadata, rewires child time-dim `parent_dimension_index` transitively (a time dim whose parent was removed re-points to the removed dim's grandparent, or `-1`), and pre-allocates index translation + reusable buffers. When the removed dim is the **outermost time dimension** and a time dim remains, the constructor also floors `initial_datetime` to the start of the removed dim's period holding it (`reduced_dim.time->add_offset_from_int(initial_datetime, 1)`: `year × month` from 2025-03-01 gives 2025-01-01, `day × hour` from 06:00 gives 00:00), then calls `derive_initial_values()`, which gives every remaining time dim 1. `compute_row` forwards the promoted child's coordinate to the operand unchanged, so output month *m* must still mean calendar month *m*. Without the rebase, the in-memory output kept month's start at 3 while the saved file re-read it as 1, shifting the data by two months. The rebase runs before `derive_initial_values()`, which reads the rebased `initial_datetime`. Skips NaN inputs during accumulation; all-NaN range yields NaN.
-  - `ExpressionAggregateAgents`: collapses the label axis to a single entry named after the operation (e.g., `"sum"`, `"mean"`, `"percentile"`). Dimensions, `initial_datetime`, `unit` unchanged. Same NaN policy as `ExpressionAggregate`. Shares `ExpressionAggregate`'s operation enum (`using Operation = ExpressionAggregate::Operation;`) and the accumulation helpers in `expression_helpers.h`.
+  - `ExpressionAggregateAgents`: collapses the label axis to a single entry named after the operation (e.g., `"sum"`, `"mean"`, `"percentile"`). Dimensions, `initial_datetime`, `unit` unchanged. Same NaN policy as `ExpressionAggregate`. Shares the one aggregation enum, `quiver::AggregateOperation` (its alias stays `using Operation = ExpressionAggregate::Operation;`), and the accumulation helpers in `expression_helpers.h`.
   - `ExpressionSelectAgents`: projects the operand onto a caller-supplied label list. Constructor pre-computes a `selected_indices_` table from operand-label → output-position, copies operand metadata with `labels` replaced, and calls `output_meta_.validate()` (which rejects duplicate output labels). Missing labels throw `"Cannot select_agents: label not found: '<name>'"`. `compute_row` reads the operand row into a reusable buffer and gathers selected columns into `out`.
   - `ExpressionRenameAgents`: rewrites operand labels via a partial `{old: new}` mapping. Constructor builds a rename map (duplicate keys throw), walks operand labels swapping matched names, verifies every key was used (unmatched keys throw), and calls `output_meta_.validate()` (rejects collisions like `val1→val2` when `val2` already exists). `compute_row` forwards directly to the operand — count and order are unchanged so no per-row reshuffle is needed.
 - Validation is **eager** at construction for `ExpressionBinary`, `ExpressionTernary`, `ExpressionAggregate`, `ExpressionAggregateAgents`, `ExpressionSelectAgents`, `ExpressionRenameAgents` (units/dim sizes/time-dim properties/label sets/initial datetimes for binary and ternary; dim existence + op/parameter consistency + output metadata validity for aggregations; label existence + uniqueness for label-axis projections). `ExpressionUnary` has no inputs to cross-validate so its constructor just sizes the row buffer. Computation is **lazy**: no I/O until `save()`.
 - **One broadcast-metadata builder for every arity**: `build_broadcast_metadata(sources, primary)` (`expression_helpers.h`) builds the output metadata of `ExpressionBinary` (`{lhs, rhs}`, primary `lhs`) and `ExpressionTernary` (`{cond, then, else}`, primary `then`). Source order sets the output dimension order: the union of dimension names, first occurrence first, each sized as the max over the sources that have it, with time properties and parent link from the first source that has it (so `ifelse` output dimensions are condition-first). `version` and `unit` come from the primary (a logical op then clears the unit); `initial_datetime` comes from the first source with a time dimension, else from the primary — the pairwise `validate_shape_compatibility` calls already force every time-bearing source to agree, so only that no-time fallback depends on which operand is primary. The same pairwise checks force a shared time dimension to agree on frequency, `initial_value` and parent name, so each copied `initial_value` already equals what `derive_initial_values()` would compute and the builder does not call it. Labels follow one rule, `broadcast_labels`: every operand with more than one label must carry the same label set, a single-label operand broadcasts whatever its label is called, and when every operand has a single label the output takes the primary's (`{"max"} - {"min"}` is `{"max"}`; `ifelse({"c"}, {"t"}, {"e"})` is `{"t"}`). A mismatch throws `Cannot apply: labels are incompatible across operands (non-singleton label sets must match)`. There used to be a separate two-operand builder whose stricter rule rejected two differently named single labels (so `aggregate_agents("max") - aggregate_agents("min")` threw while `ifelse` over the same operands worked) — don't reintroduce a per-arity copy.
-- All operation enums are nested in their owning class: `ExpressionBinary::Operation`, `ExpressionUnary::Operation`, `ExpressionTernary::Operation`, `ExpressionAggregate::Operation`. There is **one** aggregation enum (`Sum / Mean / Min / Max / Percentile`): `ExpressionAggregateAgents::Operation` is `using Operation = ExpressionAggregate::Operation;`, so `aggregate` and `aggregate_agents` take the same type and `aggregation_operation_label` / `validate_aggregation_param` / `aggregation_accumulate` / `aggregation_finalize` (`expression_helpers.h`) are plain functions on it. It used to be two parallel enums with identical values, which doubled the C enum, the C `from_c` switch, the Lua string parser and the Julia constants; do not re-split it. Label-axis projection nodes (`ExpressionSelectAgents`, `ExpressionRenameAgents`) have no operation enum — their behavior is fully specified by the label list / rename map. The C API mirrors this with four enums: `quiver_expression_operation_t` (now `ADD..DIVIDE`, the comparisons `GT/LT/GTE/LTE/EQ/NEQ`, and the logical `AND/OR`), `quiver_expression_unary_operation_t` (math ops plus `NOT`), `quiver_expression_ternary_operation_t`, and `quiver_expression_aggregate_operation_t`, which both `quiver_expression_aggregate` and `quiver_expression_aggregate_agents` take. The one C `from_c` and the one Lua `parse_aggregate_op` take the calling operation's name, so their Pattern 1 messages still read `Cannot aggregate: ...` or `Cannot aggregate_agents: ...`. Comparisons and logical ops reuse the `quiver_expression_apply*` / `quiver_expression_apply_unary` entry points (no new C functions); the Julia FFI enum (`src/c_api.jl`) must carry the same values.
+- All operation enums are nested in their owning class (`ExpressionBinary::Operation`, `ExpressionUnary::Operation`, `ExpressionTernary::Operation`) except the aggregation enum, `quiver::AggregateOperation`, which sits at namespace scope in `abstract_expression.h` because that header cannot include `expression_node.h`, with `ExpressionAggregate::Operation` an alias of it. There is **one** aggregation enum (`Sum / Mean / Min / Max / Percentile`): `ExpressionAggregateAgents::Operation` is `using Operation = ExpressionAggregate::Operation;`, so `aggregate` and `aggregate_agents` take the same type and `aggregation_operation_label` / `validate_aggregation_param` / `aggregation_accumulate` / `aggregation_finalize` (`expression_helpers.h`) are plain functions on it. It used to be two parallel enums with identical values, which doubled the C enum, the C `from_c` switch, the Lua string parser and the Julia constants; do not re-split it. Label-axis projection nodes (`ExpressionSelectAgents`, `ExpressionRenameAgents`) have no operation enum — their behavior is fully specified by the label list / rename map. The C API mirrors this with four enums: `quiver_expression_operation_t` (now `ADD..DIVIDE`, the comparisons `GT/LT/GTE/LTE/EQ/NEQ`, and the logical `AND/OR`), `quiver_expression_unary_operation_t` (math ops plus `NOT`), `quiver_expression_ternary_operation_t`, and `quiver_expression_aggregate_operation_t`, which both `quiver_expression_aggregate` and `quiver_expression_aggregate_agents` take. The one C `from_c` and the one Lua `parse_aggregate_op` take the calling operation's name, so their Pattern 1 messages still read `Cannot aggregate: ...` or `Cannot aggregate_agents: ...`. Comparisons and logical ops reuse the `quiver_expression_apply*` / `quiver_expression_apply_unary` entry points (no new C functions); the Julia FFI enum (`src/c_api.jl`) must carry the same values.

@@ -111,6 +111,7 @@ if(QUIVER_BUILD_C_API)
 
     gtest_discover_tests(quiver_c_tests
         WORKING_DIRECTORY $<TARGET_FILE_DIR:quiver_c_tests>
+        DISCOVERY_TIMEOUT 60
     )
 endif()
 

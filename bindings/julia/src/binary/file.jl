@@ -1,4 +1,4 @@
-mutable struct File
+mutable struct File <: AbstractExpression
     ptr::Ptr{C.quiver_binary_file}
 
     function File(ptr::Ptr{C.quiver_binary_file})

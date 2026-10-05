@@ -275,6 +275,9 @@ void bind_time_series(sol::usertype<Database>& bind) {
         "list_time_series_files_columns",
         &collection_read_lua<&Database::list_time_series_files_columns>
     );
+
+    bind.set_function("get_time_series_metadata", &get_metadata_lua<&Database::get_time_series_metadata>);
+    bind.set_function("list_time_series_groups", &list_metadata_lua<&Database::list_time_series_groups>);
 }
 // NOLINTEND(performance-unnecessary-value-param)
 

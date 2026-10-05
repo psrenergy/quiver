@@ -149,6 +149,22 @@ Project.toml      # Deps: Artifacts, CEnum, Dates, Libdl; julia 1.11 compat
   FK column derived from the naming convention, mapping each element to the positional index of
   its related element) exist only in this binding — documented exceptions in the root design
   decisions.
+- **AbstractExpression**: `abstract type AbstractExpression end` is declared in `src/Quiver.jl`
+  before the Binary include, and `Binary.jl` subtypes it through `using ..Quiver: AbstractExpression`
+  (subtyping needs no import; extending a function does). `Binary.File` and `Expression` are its
+  subtypes, and every expression operation is defined once on it: each converts its operands with
+  the private `_expression` (identity for an `Expression`, `Expression(file)` through
+  `quiver_expression_from_file` for a file). The C expression copies the file's path, so it
+  outlives a later `close!` of its file — but a closed `Binary.File` is itself not an operand:
+  `close!` frees the C handle, so it raises `Null argument` (unlike Lua, where a closed file is
+  still read by path). The file is passed to `GC.@preserve` across `quiver_expression_from_file`,
+  and every converted handle across its operation's ccall. `get_metadata` is one generic owned by
+  `Binary` and imported into `Quiver` before `include("expression.jl")` (an import after the
+  definition is a load error), so a file answers with its handle's metadata, never through the
+  conversion: an unopened `Binary.File(path)` reports its handle's empty metadata, while an
+  expression built from it reads the file's metadata from disk. There is no public
+  `Expression(::Expression)`: closing the result would close the argument. Do not re-add
+  per-type methods for the file type — that was 97 forwarders.
 - **Scoped resource factories**: `open`, `from_schema`, `from_migrations`, and
   `Binary.open_file` have callback-first overloads for Julia `do` syntax. They return the
   callback result and call the existing idempotent `close!` from `finally`, so both normal and

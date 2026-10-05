@@ -1,7 +1,7 @@
 // Agent-facing reference for the Lua `db` API available inside run_lua scripts.
 //
-// Authority: the binders under `src/lua_runner/` (`bind_core` through `bind_binary`, this repo) —
-// extracted by hand, NOT imported.
+// Authority: the binders under `src/lua_runner/` (`bind_database` through `bind_expression`,
+// this repo) — extracted by hand, NOT imported.
 // The shipped quiverdb native binding is the runtime truth; this is docs.
 //
 // SYNC: `test/lua-api-sync.test.ts` derives the bound surface from every `.cpp`/`.h` under
@@ -109,7 +109,7 @@ midnight.
   the script as literals — read the file.
 - **Filesystem sandbox.** Every file-touching operation (\`db:export_csv\`, \`db:import_csv\`,
   \`db:open_file\`, \`db:bin_to_csv\`, \`db:csv_to_bin\`, \`db:validate_migrations\`, \`db:read_csv\`,
-  \`db:read_csv_stream\`, \`db:write_csv\`, \`expr:save\`) resolves
+  \`db:read_csv_stream\`, \`db:write_csv\`, \`save\` on a file or an expression) resolves
   relative paths against the directory containing the database file and rejects anything outside it
   (subdirectories are fine; \`..\` escapes and outside absolute paths throw \`Cannot <op>: path '...' escapes the
   database directory ...\`). On an in-memory database these operations throw
@@ -883,9 +883,16 @@ File I/O is db-scoped (\`db:open_file\` / \`db:bin_to_csv\` / \`db:csv_to_bin\`)
 base paths, sandboxed to the database directory (see Critical rules), and \`get_file_path()\` returns
 the resolved absolute path. The pure-metadata builders and expression constructors live under the
 global \`quiver\` table. Mirrors the Julia surface; aggregation ops are strings (Lua has no enums);
-operators are \`+ - * /\` and unary \`-\`, with scalars allowed on either side. A file handle does not
-outlive the \`run()\` that opened it: any handle still open when the script returns is closed (and a
-writer flushed), so reopen the file in each script.
+operators are \`+ - * /\` and unary \`-\`, with scalars allowed on either side. A binary file **is** an
+expression: every operator, every \`quiver.*\` expression function and every expression method
+(\`aggregate\`, \`aggregate_agents\`, \`select_agents\`, \`rename_agents\`, \`save\`, \`get_metadata\`) takes
+a file handle directly; \`quiver.expression(f)\` stays as an explicit conversion, and saving from a
+file reads it by path and leaves the handle open. A wrong operand raises \`Cannot <op>: operand must
+be an expression or a binary file, got <type>\`, and extra arguments to a \`quiver.*\` expression
+function (or to an operator metamethod called directly) raise
+\`Cannot <op>: too many arguments (expected N, got M)\`; expression methods ignore extra arguments,
+like every other method. A file handle does not outlive the \`run()\` that opened it: any handle still open when the script returns
+is closed (and a writer flushed), so reopen the file in each script.
 
 \`\`\`lua
 local md = quiver.metadata{
@@ -905,7 +912,9 @@ quiver.metadata_from_toml(text); quiver.metadata_from_element(tbl)
 db:bin_to_csv(path)                                  -- aggregate=true by default; pass false to keep time dims as columns
 db:csv_to_bin(path)
 
-local e = (quiver.expression(r) + 10.0) * 2.0        -- files auto-wrap; scalars either side
+local e = (r + 10.0) * 2.0                           -- a file is an expression; scalars either side
+local per_stage = r:aggregate("stage", "sum")        -- every expression method works on a file too
+r:save(copy_path)                                    -- reads the file by path; r stays open
 e = quiver.abs(e); e = quiver.sqrt(e)                -- also quiver.log / quiver.exp
 local cond_e = quiver.gt(e, 3.0)                     -- also quiver.lt/quiver.gte/quiver.lte/quiver.eq/quiver.neq
                                                      -- all -> 1.0/0.0 per element (NaN operand -> NaN)
@@ -915,7 +924,7 @@ e = e:aggregate("stage", "sum")                      -- sum/mean/min/max/percent
 e = e:aggregate("stage", "percentile", 0.9)          -- percentile needs the fraction
 e = e:aggregate_agents("mean")                       -- collapse the label axis
 e = e:select_agents({"v2"}); e = e:rename_agents({v1 = "alpha"})
-e:save(out_path); e:metadata()                       -- save path is sandboxed like db:open_file
+e:save(out_path); e:get_metadata()                   -- save path is sandboxed like db:open_file
 \`\`\`
 
 **\`quiver.metadata{...}\` kwargs and defaults:** \`version\` defaults to \`"1"\`; \`initial_datetime\`

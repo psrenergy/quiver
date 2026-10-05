@@ -41,10 +41,20 @@ src/c/
                           # free_string. run passes the script through unchanged and the core
                           # loads it as text only, so a precompiled (bytecode) chunk fails like
                           # any script error: `Failed to run Lua script: ... attempt to load a
-                          # binary chunk (mode is 't')` through quiver_get_last_error
+                          # binary chunk (mode is 't')` through quiver_get_last_error. The sol2
+                          # binders it runs live in src/lua_runner/ (one file per core file they
+                          # bind; see src/AGENTS.md)
 src/c/binary/               # BinaryFile / CSVConverter / BinaryMetadata wrappers
-src/c/expression/           # Expression node constructors, save, free
+src/c/expression/           # Expression node constructors, from_file bridge, save, free
 ```
+
+**File to expression.** `quiver_expression_from_file` is the only conversion from a
+`quiver_binary_file_t*` to a `quiver_expression_t*`. It builds the C++ `Expression` from the
+file's path (`BinaryFile::node()`), so the file handle may be closed or freed right after. There is
+no abstract or borrowed expression handle over a file: a `quiver_expression_t*` that is owned or
+borrowed depending on its source would break the ownership rule, so every `quiver_expression_*`
+function takes an owned expression, and Julia converts every file operand through
+`quiver_expression_from_file`.
 
 ## Return Codes
 
