@@ -9,6 +9,9 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ### Changed
 
+- **BREAKING** **Renamed Lua Runner to Sandbox.** The `LuaRunner` type and its methods are now `Sandbox`, `run()` and `close()`. The
+  `LUA_DB_API_REFERENCE` constant is unchanged. Call `Sandbox(db)` instead of `LuaRunner(db)`, and
+  `sandbox.run(script)` instead of `runner.run(script)`.
 - **BREAKING** **Lua table arguments are type-checked.** A value other than a table passed where
   a Lua method takes a table now raises `Cannot <op>: <argument> must be a table, got <type>`:
   an element table (`create_element`, `update_element`, `update_element_by_label`,
