@@ -1,6 +1,5 @@
 from quiverdb.database import Database
 from quiverdb.exceptions import QuiverError
-from quiverdb.sandbox import Sandbox
 from quiverdb.metadata import (
     CSVOptions,
     DataType,
@@ -8,6 +7,7 @@ from quiverdb.metadata import (
     LogLevel,
     ScalarMetadata,
 )
+from quiverdb.sandbox import Sandbox
 
 __all__ = [
     "CSVOptions",

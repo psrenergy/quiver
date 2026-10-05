@@ -15,9 +15,9 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       try {
-        final lua = Sandbox(db);
+        final sandbox = Sandbox(db);
         try {
-          lua.run('''
+          sandbox.run('''
             db:create_element("Configuration", { label = "Test Config" })
             db:create_element("Collection", { label = "Item 1", some_integer = 42 })
           ''');
@@ -30,7 +30,7 @@ void main() {
           expect(integers.length, equals(1));
           expect(integers[0], equals(42));
         } finally {
-          lua.dispose();
+          sandbox.dispose();
         }
       } finally {
         db.close();
@@ -49,16 +49,16 @@ void main() {
         db.createElement('Collection', {'label': 'Item 1', 'some_integer': 10});
         db.createElement('Collection', {'label': 'Item 2', 'some_integer': 20});
 
-        final lua = Sandbox(db);
+        final sandbox = Sandbox(db);
         try {
-          lua.run('''
+          sandbox.run('''
             local labels = db:read_scalar_strings("Collection", "label")
             assert(#labels == 2, "Expected 2 labels")
             assert(labels[1] == "Item 1", "First label mismatch")
             assert(labels[2] == "Item 2", "Second label mismatch")
           ''');
         } finally {
-          lua.dispose();
+          sandbox.dispose();
         }
       } finally {
         db.close();
@@ -67,20 +67,20 @@ void main() {
   });
 
   group('Sandbox Script Error', () {
-    test('throws LuaException for syntax error', () {
+    test('throws SandboxException for syntax error', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       try {
-        final lua = Sandbox(db);
+        final sandbox = Sandbox(db);
         try {
           expect(
-            () => lua.run('invalid syntax !!!'),
-            throwsA(isA<LuaException>()),
+            () => sandbox.run('invalid syntax !!!'),
+            throwsA(isA<SandboxException>()),
           );
         } finally {
-          lua.dispose();
+          sandbox.dispose();
         }
       } finally {
         db.close();
@@ -95,18 +95,18 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       try {
-        final lua = Sandbox(db);
+        final sandbox = Sandbox(db);
         try {
-          lua.run('db:create_element("Configuration", { label = "Config" })');
-          lua.run('db:create_element("Collection", { label = "Item 1" })');
-          lua.run('db:create_element("Collection", { label = "Item 2" })');
+          sandbox.run('db:create_element("Configuration", { label = "Config" })');
+          sandbox.run('db:create_element("Collection", { label = "Item 1" })');
+          sandbox.run('db:create_element("Collection", { label = "Item 2" })');
 
           final labels = db.readScalarStrings('Collection', 'label');
           expect(labels.length, equals(2));
           expect(labels[0], equals('Item 1'));
           expect(labels[1], equals('Item 2'));
         } finally {
-          lua.dispose();
+          sandbox.dispose();
         }
       } finally {
         db.close();
@@ -123,14 +123,14 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       try {
-        final lua = Sandbox(db);
+        final sandbox = Sandbox(db);
         try {
           expect(
-            () => lua.run('print(undefined_variable.field)'),
-            throwsA(isA<LuaException>()),
+            () => sandbox.run('print(undefined_variable.field)'),
+            throwsA(isA<SandboxException>()),
           );
         } finally {
-          lua.dispose();
+          sandbox.dispose();
         }
       } finally {
         db.close();
@@ -145,19 +145,19 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       try {
-        final lua = Sandbox(db);
+        final sandbox = Sandbox(db);
         try {
-          lua.run(
+          sandbox.run(
             'db:create_element("Configuration", { label = "Test Config" })',
           );
           expect(
-            () => lua.run(
+            () => sandbox.run(
               'db:create_element("NonexistentCollection", { label = "Item" })',
             ),
-            throwsA(isA<LuaException>()),
+            throwsA(isA<SandboxException>()),
           );
         } finally {
-          lua.dispose();
+          sandbox.dispose();
         }
       } finally {
         db.close();
@@ -172,14 +172,14 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       try {
-        final lua = Sandbox(db);
+        final sandbox = Sandbox(db);
         try {
           // Empty script should succeed without error
-          lua.run('');
+          sandbox.run('');
           // If we get here, the test passed
           expect(true, isTrue);
         } finally {
-          lua.dispose();
+          sandbox.dispose();
         }
       } finally {
         db.close();
@@ -194,13 +194,13 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       try {
-        final lua = Sandbox(db);
+        final sandbox = Sandbox(db);
         try {
           // Comment-only script should succeed
-          lua.run('-- this is just a comment');
+          sandbox.run('-- this is just a comment');
           expect(true, isTrue);
         } finally {
-          lua.dispose();
+          sandbox.dispose();
         }
       } finally {
         db.close();
@@ -225,16 +225,16 @@ void main() {
           'some_integer': 200,
         });
 
-        final lua = Sandbox(db);
+        final sandbox = Sandbox(db);
         try {
-          lua.run('''
+          sandbox.run('''
             local ints = db:read_scalar_integers("Collection", "some_integer")
             assert(#ints == 2, "Expected 2 integers")
             assert(ints[1] == 100, "First integer mismatch")
             assert(ints[2] == 200, "Second integer mismatch")
           ''');
         } finally {
-          lua.dispose();
+          sandbox.dispose();
         }
       } finally {
         db.close();
@@ -253,16 +253,16 @@ void main() {
         db.createElement('Collection', {'label': 'Item 1', 'some_float': 1.5});
         db.createElement('Collection', {'label': 'Item 2', 'some_float': 2.5});
 
-        final lua = Sandbox(db);
+        final sandbox = Sandbox(db);
         try {
-          lua.run('''
+          sandbox.run('''
             local floats = db:read_scalar_floats("Collection", "some_float")
             assert(#floats == 2, "Expected 2 floats")
             assert(floats[1] == 1.5, "First float mismatch")
             assert(floats[2] == 2.5, "Second float mismatch")
           ''');
         } finally {
-          lua.dispose();
+          sandbox.dispose();
         }
       } finally {
         db.close();
@@ -283,9 +283,9 @@ void main() {
           'value_int': [1, 2, 3],
         });
 
-        final lua = Sandbox(db);
+        final sandbox = Sandbox(db);
         try {
-          lua.run('''
+          sandbox.run('''
             local vectors = db:read_vector_integers("Collection", "value_int")
             assert(#vectors == 1, "Expected 1 vector")
             assert(#vectors[1] == 3, "Expected 3 elements in vector")
@@ -294,7 +294,7 @@ void main() {
             assert(vectors[1][3] == 3, "Third element mismatch")
           ''');
         } finally {
-          lua.dispose();
+          sandbox.dispose();
         }
       } finally {
         db.close();
@@ -309,9 +309,9 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       try {
-        final lua = Sandbox(db);
+        final sandbox = Sandbox(db);
         try {
-          lua.run('''
+          sandbox.run('''
             db:create_element("Configuration", { label = "Config" })
             db:create_element("Collection", { label = "Item 1", value_int = {10, 20, 30} })
           ''');
@@ -320,7 +320,7 @@ void main() {
           expect(result.length, equals(1));
           expect(result[0], equals([10, 20, 30]));
         } finally {
-          lua.dispose();
+          sandbox.dispose();
         }
       } finally {
         db.close();
@@ -335,15 +335,15 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       try {
-        final lua = Sandbox(db);
+        final sandbox = Sandbox(db);
         try {
-          expect(lua.run('return { a = 1, b = { 2, 3 } }'), equals('{"a":1,"b":[2,3]}'));
-          expect(jsonDecode(lua.run('return db:read_element_ids("Collection")')), equals([]));
+          expect(sandbox.run('return { a = 1, b = { 2, 3 } }'), equals('{"a":1,"b":[2,3]}'));
+          expect(jsonDecode(sandbox.run('return db:read_element_ids("Collection")')), equals([]));
           // Returning nothing is an empty string, distinct from returning nil.
-          expect(lua.run('local x = 1'), equals(''));
-          expect(lua.run('return nil'), equals('null'));
+          expect(sandbox.run('local x = 1'), equals(''));
+          expect(sandbox.run('return nil'), equals('null'));
         } finally {
-          lua.dispose();
+          sandbox.dispose();
         }
       } finally {
         db.close();
@@ -358,15 +358,15 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       try {
-        final lua = Sandbox(db);
+        final sandbox = Sandbox(db);
         try {
-          lua.run('db:create_element("Configuration", { label = "Config" })');
+          sandbox.run('db:create_element("Configuration", { label = "Config" })');
 
           expect(db.inDryRun(), isFalse);
           final preview = db.dryRun((db) {
             expect(db.inDryRun(), isTrue);
             // db:transaction composes: the dry run absorbs the nested BEGIN/COMMIT.
-            return lua.run('''
+            return sandbox.run('''
               db:transaction(function(db)
                 db:create_element("Collection", { label = "Preview" })
               end)
@@ -378,7 +378,7 @@ void main() {
           expect(db.inDryRun(), isFalse);
           expect(db.readScalarStrings('Collection', 'label'), isEmpty);
         } finally {
-          lua.dispose();
+          sandbox.dispose();
         }
       } finally {
         db.close();

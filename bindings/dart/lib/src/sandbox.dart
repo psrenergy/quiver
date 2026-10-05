@@ -15,11 +15,11 @@ import 'exceptions.dart';
 /// Example:
 /// ```dart
 /// final db = Database.fromSchema(':memory:', 'schema.sql');
-/// final lua = Sandbox(db);
-/// lua.run('''
+/// final sandbox = Sandbox(db);
+/// sandbox.run('''
 ///   db:create_element("Collection", { label = "Item 1" })
 /// ''');
-/// lua.dispose();
+/// sandbox.dispose();
 /// db.close();
 /// ```
 class Sandbox {
@@ -54,7 +54,7 @@ class Sandbox {
   /// Returns the script's return value encoded as JSON, or `''` if it returned nothing.
   /// To execute a script without keeping its writes, wrap the call in [Database.dryRun].
   ///
-  /// Throws [LuaException] if the script fails to execute.
+  /// Throws [SandboxException] if the script fails to execute.
   String run(String script) {
     _ensureNotDisposed();
 
@@ -69,7 +69,7 @@ class Sandbox {
 
       if (err != quiver_error_t.QUIVER_OK) {
         final detail = bindings.quiver_get_last_error().cast<Utf8>().toDartString();
-        throw LuaException(detail);
+        throw SandboxException(detail);
       }
 
       // The result is C-heap allocated, so the Arena cannot own it: free it in its own finally so
