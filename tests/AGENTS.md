@@ -105,6 +105,15 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   file back through `db:read_csv` rather than reading the raw bytes, for the same reason
   `export_csv`'s export-only string-search tests were a trap this project hit twice already.
 
+`test_sandbox_read_xlsx.cpp` tests the Lua-only XLSX methods: shared/inline/rich strings, raw
+numbers and dates, cached/missing formula results, sparse cells and blank rows, worksheet
+selection excluding chart sheets, physical headers, callback equivalence and early stop, strict
+options, malformed archives/XML, path policy, unchanged input bytes and handle cleanup. Fixtures
+`tests/fixtures/xlsx_*.xlsx` are deterministic ZIPs generated independently of OpenXLSX with
+`tests/fixtures/generate_xlsx.py` (Python stdlib only); they are committed, marked `-text`, and
+require no Python at test runtime. Regenerate them when editing their data. No additional C API
+or host-binding reader suite is needed: the methods exist only in Sandbox.
+
 ## C API tests
 
 Mirror the same areas with the `test_c_api_*` prefix (`test_c_api_database_*.cpp` per database

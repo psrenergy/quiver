@@ -5,7 +5,23 @@ All notable changes to Quiver are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entries that require
 callers to change something are prefixed **BREAKING** and say what to do.
 
-## [0.13.0] — unreleased
+## [0.13.1] — unreleased
+
+### Changed
+
+### Added
+
+- **Lua: XLSX worksheet reading.** `db:read_xlsx(path, options)` returns a header and rows;
+  `db:read_xlsx_stream(path, on_row, options)` delivers rows to a callback. Select a sheet by
+  name or 1-based index and a physical `header_row` (default 1; 0 disables headers). Cells are
+  strings, dates retain their stored serials, and formulas use saved cached results. Blank rows
+  are skipped and blank cells preserve column positions. Both methods enforce the database
+  directory sandbox and close workbook handles on errors and early stopping. Callback reads
+  avoid a full Lua result table but retain worksheet XML and shared strings in memory.
+
+### Fixed
+
+## [0.13.0] — 2026-10-05
 
 ### Changed
 
@@ -1410,7 +1426,9 @@ are functionally identical to 0.10.0.
   `read_time_series_group` emits for a NULL STRING cell — so feeding a read result back with the
   mask stripped was UB. A NULL entry, or a NULL per-column data pointer, is now SQL NULL.
 
+[0.13.1]: https://github.com/psrenergy/quiver/compare/v0.13.0...v0.13.1
 [0.13.0]: https://github.com/psrenergy/quiver/compare/v0.12.9...v0.13.0
+[0.12.9]: https://github.com/psrenergy/quiver/compare/v0.12.8...v0.12.9
 [0.12.8]: https://github.com/psrenergy/quiver/compare/v0.12.7...v0.12.8
 [0.12.7]: https://github.com/psrenergy/quiver/compare/v0.12.6...v0.12.7
 [0.12.6]: https://github.com/psrenergy/quiver/compare/v0.12.5...v0.12.6
