@@ -1,7 +1,3 @@
-"""
-Marshal a Julia Vector of parameters into C arrays of types and value pointers.
-Returns (param_types, param_values, refs) where refs must be kept alive during the call.
-"""
 function marshal_params(parameters::Vector)
     n = length(parameters)
     param_types = Vector{Cint}(undef, n)
@@ -38,13 +34,6 @@ function marshal_params(parameters::Vector)
     return param_types, param_values, refs
 end
 
-"""
-    query_string(db::Database, sql::String, parameters::Vector = []) -> Optional{String}
-
-Execute a SQL query and return the first column of the first row as a String.
-`parameters` bind positionally to `?` placeholders.
-Returns `nothing` if the query returns no rows.
-"""
 function query_string(db::Database, sql::String, parameters::Vector = [])
     param_types, param_values, refs = marshal_params(parameters)
     out_value = Ref{Ptr{Cchar}}(C_NULL)
@@ -70,13 +59,6 @@ function query_string(db::Database, sql::String, parameters::Vector = [])
     return result
 end
 
-"""
-    query_integer(db::Database, sql::String, parameters::Vector = []) -> Optional{Int64}
-
-Execute a SQL query and return the first column of the first row as an Int64.
-`parameters` bind positionally to `?` placeholders.
-Returns `nothing` if the query returns no rows.
-"""
 function query_integer(db::Database, sql::String, parameters::Vector = [])
     param_types, param_values, refs = marshal_params(parameters)
     out_value = Ref{Int64}(0)
@@ -100,24 +82,10 @@ function query_integer(db::Database, sql::String, parameters::Vector = [])
     return out_value[]
 end
 
-"""
-    query_boolean(db::Database, sql::String, parameters::Vector = []) -> Optional{Bool}
-
-Execute a SQL query and return the first column of the first row as a Bool.
-`parameters` bind positionally to `?` placeholders.
-Returns `nothing` if the query returns no rows.
-"""
 function query_boolean(db::Database, sql::String, parameters::Vector = [])
     return _integer_to_boolean(query_integer(db, sql, parameters))
 end
 
-"""
-    query_float(db::Database, sql::String, parameters::Vector = []) -> Optional{Float64}
-
-Execute a SQL query and return the first column of the first row as a Float64.
-`parameters` bind positionally to `?` placeholders.
-Returns `nothing` if the query returns no rows.
-"""
 function query_float(db::Database, sql::String, parameters::Vector = [])
     param_types, param_values, refs = marshal_params(parameters)
     out_value = Ref{Float64}(0.0)
@@ -141,13 +109,6 @@ function query_float(db::Database, sql::String, parameters::Vector = [])
     return out_value[]
 end
 
-"""
-    query_date_time(db::Database, sql::String, parameters::Vector = []) -> Optional{DateTime}
-
-Execute a SQL query and return the first column of the first row as a DateTime.
-`parameters` bind positionally to `?` placeholders.
-Returns `nothing` if the query returns no rows.
-"""
 function query_date_time(db::Database, sql::String, parameters::Vector = [])
     return string_to_date_time(query_string(db, sql, parameters))
 end

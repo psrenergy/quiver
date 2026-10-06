@@ -13,15 +13,6 @@ function Sandbox(db::Database)
     return sandbox
 end
 
-"""
-    run!(sandbox::Sandbox, script::String)
-
-Execute a script against the database.
-
-Returns the script's return value encoded as JSON, or `""` if it returned nothing.
-
-To execute a script without keeping its writes, wrap the call in [`dry_run`](@ref).
-"""
 function run!(sandbox::Sandbox, script::String)
     out_result = Ref{Ptr{Cchar}}(C_NULL)
     check(C.quiver_sandbox_run(sandbox.ptr, script, out_result))

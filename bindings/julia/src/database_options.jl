@@ -1,15 +1,3 @@
-"""
-    build_quiver_csv_options(; date_time_format::Optional{String}=nothing, enum_labels::Optional{Dict{String, Dict{String, Dict{String, Int}}}}=nothing) -> (Ref{quiver_csv_options_t}, Vector{Any})
-
-Build a C API `quiver_csv_options_t` from keyword arguments.
-Returns `(options_ref, temps)` where `temps` holds all temporary objects that must
-stay alive during the C call (use inside `GC.@preserve`).
-
-Supported kwargs:
-
-  - `date_time_format::String` — strftime format for DateTime columns
-  - `enum_labels::Dict{String, Dict{String, Dict{String, Int}}}` — attribute → locale → (label → value)
-"""
 function build_quiver_csv_options(;
     date_time_format::Optional{String} = nothing,
     enum_labels::Optional{Dict{String, Dict{String, Dict{String, Int}}}} = nothing,
