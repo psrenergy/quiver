@@ -5,3 +5,4 @@
 # Sandbox_ReadCsv.EnergiaRegressionJunkRowAboveUnitsRowBelowHeader and
 # GdRegressionQuotedCommaAndEnglishMonthNames).
 tests/fixtures/*.csv -text
+tests/fixtures/*.xlsx -text

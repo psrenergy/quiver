@@ -12,10 +12,12 @@ set(QUIVER_SOURCES
     database_csv_import.cpp
     csv/csv_read.cpp
     csv/csv_write.cpp
+    xlsx/xlsx_read.cpp
     database_describe.cpp
     element.cpp
     sandbox/binary.cpp
     sandbox/csv.cpp
+    sandbox/xlsx.cpp
     sandbox/database.cpp
     sandbox/database_create.cpp
     sandbox/database_csv_export.cpp
@@ -110,6 +112,10 @@ target_link_libraries(quiver
         lua_library
         sol2
         csv
+        OpenXLSX::OpenXLSX
+        # OpenXLSX already carries pugixml for installed static consumers. This
+        # direct edge supplies the internal DOM header without ambiguous exports.
+        $<BUILD_INTERFACE:pugixml::static>
 )
 
 # Set library properties

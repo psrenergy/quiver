@@ -252,14 +252,6 @@ csv_read::Options read_csv_options_from_lua(const sol::object& options, const st
     return result;
 }
 
-// The header both read forms hand a script: nil when the file has no header (header_row = 0),
-// else the name list. Never an empty table: {} is truthy in Lua and nil is falsy, so with no
-// header `result.header` must be absent and on_row's third argument nil, or a script written as
-// `if header then ... end` would take opposite branches in the whole-file and streaming forms.
-sol::object header_object(sol::state_view& lua, const std::vector<std::string>& header) {
-    return header.empty() ? sol::object(sol::lua_nil) : sol::object(to_lua_table(lua, header));
-}
-
 }  // namespace
 
 void CsvWriter::write_row(const sol::object& row) {
@@ -332,7 +324,7 @@ void bind_csv(sol::state& state, sol::usertype<Database>& bind, RunHandles& hand
             });
 
             auto result = lua.create_table();
-            result["header"] = header_object(lua, reader.header());
+            result["header"] = row_header_to_lua(lua, reader.header());
             result["rows"] = rows;
             return result;
         }
@@ -359,25 +351,10 @@ void bind_csv(sol::state& state, sol::usertype<Database>& bind, RunHandles& hand
             // Built once, before the loop, and passed by reference into every callback
             // invocation -- reachable during the stream so a script can find a column by
             // name before processing row 1.
-            const sol::object header_table = header_object(lua, reader.header());
+            const sol::object header_table = row_header_to_lua(lua, reader.header());
 
             return reader.for_each_row([&](std::vector<std::string>&& cells, int64_t index) -> bool {
-                const auto row_table = to_lua_table(lua, cells);
-                auto result = on_row(row_table, index, header_table);
-                if (!result.valid()) {
-                    // Propagate the Lua error verbatim and unwrapped: the reader is a
-                    // stack local and ~CSVReader() joins its scheduler during normal C++
-                    // unwinding, so no manual cleanup is needed here.
-                    sol::error err = result;
-                    throw std::runtime_error(err.what());
-                }
-                // sol::optional<bool> is a strict LUA_TBOOLEAN check, Debug/Release-identical.
-                // Only an exact `false` stops the read -- get<bool>() would be
-                // lua_toboolean truthiness and misread a no-return callback's nil as "stop".
-                if (result.return_count() > 0 && result.get<sol::optional<bool>>(0) == false) {
-                    return false;
-                }
-                return true;
+                return call_row_callback(on_row, to_lua_table(lua, cells), index, header_table);
             });
         }
     );
