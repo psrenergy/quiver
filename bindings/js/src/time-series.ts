@@ -149,11 +149,11 @@ Database.prototype.updateTimeSeriesGroupByLabel = function (
  * (quiver_database_upsert_time_series_row and its _by_label form). `key` is an id for the by-id
  * form, a NUL-terminated label otherwise.
  */
-type UpsertRowFn = (
+type UpsertRowFn<Key extends number | string> = (
   db: NativePointer,
   collection: Uint8Array,
   group: Uint8Array,
-  key: bigint | Uint8Array,
+  key: Key extends string ? Uint8Array : bigint,
   names: Uint8Array | null,
   types: Uint8Array | null,
   data: Uint8Array | null,
@@ -165,18 +165,20 @@ type UpsertRowFn = (
  * C functions. Shared by upsertTimeSeriesRow / upsertTimeSeriesRowByLabel: they differ only in
  * which C entry point they call and whether `key` is an id or a label.
  */
-function upsertRowColumns(
+function upsertRowColumns<Key extends number | string>(
   handle: NativePointer,
   caller: string,
-  upsert: UpsertRowFn,
+  upsert: UpsertRowFn<Key>,
   collection: string,
   group: string,
-  key: number | string,
+  key: Key,
   row: Record<string, number | bigint | string | boolean>,
 ): void {
   const collBuf = toCString(collection);
   const grpBuf = toCString(group);
-  const keyArg = typeof key === "string" ? toCString(key).buf : BigInt(key);
+  const keyArg = (typeof key === "string" ? toCString(key).buf : BigInt(key)) as Key extends string
+    ? Uint8Array
+    : bigint;
   const entries = Object.entries(row);
   const columnCount = entries.length;
   const keepalive: Allocation[] = [];

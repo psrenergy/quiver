@@ -24,6 +24,9 @@ callers to change something are prefixed **BREAKING** and say what to do.
 - **Lua element arrays preserve each cell's type.** Integers, floats, and booleans can be mixed
   in REAL arrays in either order on create and update. C++ validation rejects incompatible
   cells instead of the Lua binding choosing the whole array's type from its first cell.
+- **JS: strict callback typing for group and time-series row writes.** Shared marshallers
+  correlate numeric ids and string labels with their native callback arguments. Runtime
+  marshalling is unchanged; CI now checks the actual source with strict TypeScript.
 
 ## [0.13.0] — 2026-10-05
 

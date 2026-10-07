@@ -87,6 +87,9 @@ bunfig.toml       # coverageSkipTestFiles = true (Bun 1.3 reports test/ otherwis
   `updateVectorGroup`, `updateSetGroup` and their `ByLabel` forms. They differ only in which C
   entry point they pass to `updateGroupColumns(handle, caller, cFn, ...)` and whether `key` is a
   `number` id (a `bigint`) or a `string` label (a `Uint8Array`), so don't re-inline it per method.
+  `ColumnUpdateFn<Key>` correlates that public key with its native argument; `UpsertRowFn<Key>`
+  does the same for row writes. Keep the conversion assertion inside each shared helper, not
+  at call sites, so strict source checking catches incompatible native callbacks.
   It validates before marshalling: jagged columns and named-but-empty columns (`rowCount === 0`)
   throw a `QuiverError` naming the column. Load-bearing — an empty column would otherwise marshal a
   `null` data pointer that the C API dereferences against the first column's `row_count`. Pass `{}`
