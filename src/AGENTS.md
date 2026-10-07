@@ -44,7 +44,7 @@ src/                      # C++ implementation
   type_validator.h / type_validator.cpp      # Scalar/array type validation (free functions,
                                              # caller-threaded Pattern 1 messages)
   element.cpp / row.cpp / result.cpp / migration.cpp / migrations.cpp
-  sandbox/             # Sandbox (sol2): one file per core file it binds (database*.cpp), plus csv, binary, expression
+  sandbox/             # Sandbox (sol2): database*.cpp bindings, plus csv, xlsx, binary, expression
     sandbox.cpp        # Sandbox::Impl (ctor order, the one Database usertype), RunHandles bodies, run()/GcGuard
     internal.h            # quiver::lua_internal: RunHandles, binder decls, converters, read adapters, option walk, group-decoder decls, metadata templates, parse_csv_options decl
     return_json.cpp       # run()'s JSON encoder
@@ -62,6 +62,7 @@ src/                      # C++ implementation
     database_csv_export.cpp  # bind_csv_export: export_csv; parse_csv_options
     database_csv_import.cpp  # bind_csv_import: import_csv
     csv.cpp               # bind_csv: read_csv, read_csv_stream, write_csv, CsvWriter
+    xlsx.cpp              # bind_xlsx: read_xlsx/read_xlsx_stream; shared strict options decoder
     binary.cpp            # bind_binary: open_file/bin_to_csv/csv_to_bin, BinaryMetadata, BinaryFile, quiver.metadata*
     expression.cpp        # bind_expression: Expression, the operators and expression methods on Expression and BinaryFile, quiver.* expression functions
   ui_metadata.h / ui_metadata.cpp  # Internal ui/ TOML sidecar reader behind describe/describe_collection
@@ -76,6 +77,8 @@ src/csv/                    # Standalone CSV file reader/writer (see below)
                               # db:read_csv_stream and import_csv -- no include/quiver/ counterpart
   csv_write.h / csv_write.cpp # Internal CSV writer (hand-rolled, NOT Pimpl'd) behind db:write_csv;
                               # its append_record also emits export_csv -- same posture as csv_read
+src/xlsx/                   # Internal OpenXLSX reader; XLSX parsing stays out of the sol2 TU
+  xlsx_read.h / xlsx_read.cpp # Internal Pimpl reader behind db:read_xlsx/read_xlsx_stream
 src/binary/                 # Binary C++ implementation
   binary_file.cpp             # BinaryFile class (Pimpl impl) + write registry
   binary_utils.h              # Shared file-extension constants, day_of_year, position_in_parent
@@ -654,7 +657,7 @@ lua.run(R"(
 
 Implementation conventions in `src/sandbox/`:
 - **Layout**: `Sandbox::Impl`'s constructor creates the only Database usertype and hands it to
-  the fourteen binders, called in the order of the core files they mirror (`bind_database` through
+  the fifteen binders, called in the order of the core files they mirror (`bind_database` through
   `bind_expression`), as `bind`, with the `quiver` table as `ns`. Those parameter names are what the
   sync test's first pass matches (it fails on a `.set_function(` through any other receiver, and
   reads subdirectories too), and a second Database usertype would clear every method bound
@@ -694,8 +697,9 @@ Implementation conventions in `src/sandbox/`:
   structured binding, and nil handling stays with each caller. `lua_to_value` is the one
   `Value`-typed write dispatch, CSV cells included (`csv_cell_to_string`); `lua_cell_as<T>` is the
   typed-array one (see the boolean bullet). `CsvWriter::write_row` / `close` are members
-  registered by member pointer, and `header_object` (`csv.cpp`) is the one no-header rule for both
-  read forms. `RunHandles::add_writer` / `add_binary_file` are the only appenders to the run-handle
+  registered by member pointer. `row_header_to_lua` / `call_row_callback` (`internal.h`) share
+  CSV/XLSX's absent-header rule and exact-false stop/error propagation. `RunHandles::add_writer` /
+  `add_binary_file` are the only appenders to the run-handle
   registries by convention (the vectors stay public; prune expired entries, then append), and `close_open_handles` empties both at
   `run()`'s exit. Every expression operand is a typed `const AbstractExpression&` candidate of a
   `sol::overload` set (`expression.cpp`): `binop<Op>(name)` with a transparent functor
@@ -969,6 +973,16 @@ Implementation conventions in `src/sandbox/`:
   stays for every other sol2-owned resource; one call was proven sufficient by a one-off executed
   probe against this repo's own vendored sol2/Lua build (no standing test guards it: the writer
   tests pass through `close_open_handles()` first) — it must not be "hardened" into a loop.
+
+The Lua-only XLSX reader is `xlsx/xlsx_read.h`/`.cpp`, bound by `sandbox/xlsx.cpp` through
+`bind_xlsx`. It privately wraps OpenXLSX v0.5.1 in a Pimpl. `WorksheetXml` exposes the existing
+`XLXmlFile` DOM (the worksheet itself is final) to iterate only stored rows/cells, detect missing
+formula caches, preserve numeric text exactly and flatten inline rich text. Never iterate a
+rectangular `worksheet.rows()` range: formatting at XFD1048576 must not allocate an Excel grid.
+Width is derived from value/formula cells; rows are padded and completely blank data rows skipped.
+`CheckedArchive` checks pugixml's parse result before OpenXLSX consumes XML (upstream ignores it).
+Resources stay stack/RAII owned, reads never save, and callback errors sit outside parser catches.
+The callback does not provide bounded XML memory; see the root design decision and Lua reference.
 
 ## Binary Subsystem
 

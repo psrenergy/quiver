@@ -9,6 +9,7 @@ area's internals live in the AGENTS.md next to it (loaded automatically when wor
 
 ```
 include/quiver/ + src/    # C++ core, Sandbox, binary + expression subsystems -> src/AGENTS.md
+src/xlsx/                # Internal XLSX reader, Lua-only (OpenXLSX)
 include/quiver/c/ + src/c/ # C API for FFI                                       -> src/c/AGENTS.md
 bindings/julia/           # Quiver.jl (canonical; published repo is a mirror)    -> bindings/julia/AGENTS.md
 bindings/dart/            # quiverdb on pub (ffigen + native-assets hook)        -> bindings/dart/AGENTS.md
@@ -105,7 +106,8 @@ Settled questions — don't relitigate without the user; each was decided delibe
   `__eq`/`__lt` over the expression-returning C++ operators); this design leaves that unchanged.
 - **Lua file operations are db-scoped and sandboxed to the database directory.** Every file-touching
   Lua operation (`db:open_file`, `db:bin_to_csv`, `db:csv_to_bin`, `db:export_csv`, `db:import_csv`,
-  `db:validate_migrations`, `db:read_csv`, `db:read_csv_stream`, `db:write_csv`, `save` on a file or an expression)
+  `db:validate_migrations`, `db:read_csv`, `db:read_csv_stream`, `db:write_csv`,
+  `db:read_xlsx`, `db:read_xlsx_stream`, `save` on a file or an expression)
   resolves relative paths against the directory containing the database file and rejects — reads
   and writes alike — anything that escapes it (subdirectories OK; checked via `weakly_canonical`
   with strict containment). In-memory databases (`:memory:`) reject all file operations.
@@ -384,6 +386,19 @@ Settled questions — don't relitigate without the user; each was decided delibe
   is rejected rather than judged empty (a byte-range lock fails `ReadFile` but not csv-parser's
   mapped reads). `db:read_csv` is read-only and deliberately stays lenient.
 
+- **XLSX reads are Lua-only**, like CSV reads: `db:read_xlsx(path, opts)` and
+  `db:read_xlsx_stream(path, on_row, opts)` share `xlsx_read::Reader` (internal Pimpl,
+  `src/xlsx/xlsx_read.h`/`.cpp`). No public C++ header, C API or host-binding reader. Options
+  are `sheet` (exact name or 1-based worksheet index, default 1, chart sheets excluded) and
+  `header_row` (physical row, default 1, 0 means no header). Cells are strings; numeric/date
+  serials stay their stored text, booleans are "1"/"0", blanks are "", rich text is flattened,
+  Excel errors stay text and formulas require saved caches (no evaluation). Blank data rows
+  are skipped; width is the last column containing a value/formula, ignoring formatting-only
+  extents. The callback uses CSV's exact-false stop and delivered-row count. OpenXLSX v0.5.1
+  loads worksheet XML/shared strings in memory; the callback avoids the full Lua rows table,
+  not the XML DOM. `CheckedArchive` validates XML before OpenXLSX can silently ignore a parse
+  failure. Neither reader saves, extracts ZIP entries to disk or follows external links.
+
 ## Do Not "Fix"
 
 Reviewed adversarially and rejected — these are not improvements:
@@ -502,7 +517,9 @@ JS has no generator — update the hand-written symbol table in `bindings/js/src
   `GIT_SHALLOW`, and `CSV_NO_SIMD`/`CSV_ENABLE_THREADS`/`CSV_BUILD_PROGRAMS`/`CSV_BUILD_TESTS` are
   all FORCEd; the `CSV_NO_SIMD` pin is load-bearing — without it a PUBLIC `/arch:AVX2` propagates
   into `quiver` and SIGILLs on pre-AVX2 x86 for every shipped wheel/native), argparse v3.2,
-  googletest v1.17.0 (tests only).
+  googletest v1.17.0 (tests only). OpenXLSX v0.5.1 is private and static (miniz 3.0.2,
+  pugixml 1.15, nowide 11.3.1 on Windows); its CMake policy-floor override is scoped to the
+  dependency for CMake 4. Documentation/examples/tests/benchmarks/LTO are disabled.
 - **Targets**: `quiver` (core, alias `quiver::database`), `quiver_c` (alias
   `quiver::database_c`), `quiver_cli`, `quiver_tests`, `quiver_c_tests`, `quiver_benchmark`,
   `quiver_sandbox`. Outputs: executables/DLLs → `build/bin/`, libs → `build/lib/`.
@@ -831,6 +848,7 @@ The rules are mechanical: given any C++ method name, you can derive the equivale
 | Describe collection | `describe_collection()` | `quiver_database_describe_collection()` | `describe_collection()` | `describeCollection()` | `describe_collection()` |
 | Summarize collection | `summarize_collection()` | `quiver_database_summarize_collection()` | `summarize_collection()` | `summarizeCollection()` | `summarize_collection()` |
 | CSV file read | N/A | N/A | N/A | N/A | `db:read_csv()` / `db:read_csv_stream()` |
+| XLSX file read | N/A | N/A | N/A | N/A | `db:read_xlsx()` / `db:read_xlsx_stream()` |
 | CSV file write | N/A | N/A | N/A | N/A | `db:write_csv()` / `w:write_row()` / `w:close()` |
 
 **Binary cross-layer examples (Julia + Lua subsystem):**

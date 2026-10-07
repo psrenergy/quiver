@@ -103,12 +103,14 @@ midnight.
   and \`dofile\`/\`loadfile\` are removed (string-form \`load\` stays for source text; a precompiled
   binary chunk is refused). Integer division is the Lua 5.4 \`//\` operator — a language operator,
   unrelated to \`math\`. No \`io\` does **not** mean
-  a data file on disk is out of reach: read it with \`db:read_csv\` / \`db:read_csv_stream\` (see
-  the CSV file reading section below). Never copy, paste, or re-type a data file's contents into
+  a data file on disk is out of reach: use \`db:read_csv\` / \`db:read_csv_stream\` for CSV or
+  \`db:read_xlsx\` / \`db:read_xlsx_stream\` for XLSX (see the file reading sections below).
+  Never copy, paste, or re-type a data file's contents into
   the script as literals — read the file.
 - **Filesystem sandbox.** Every file-touching operation (\`db:export_csv\`, \`db:import_csv\`,
   \`db:open_file\`, \`db:bin_to_csv\`, \`db:csv_to_bin\`, \`db:validate_migrations\`, \`db:read_csv\`,
-  \`db:read_csv_stream\`, \`db:write_csv\`, \`save\` on a file or an expression) resolves
+  \`db:read_csv_stream\`, \`db:write_csv\`, \`db:read_xlsx\`, \`db:read_xlsx_stream\`,
+  \`save\` on a file or an expression) resolves
   relative paths against the directory containing the database file and rejects anything outside it
   (subdirectories are fine; \`..\` escapes and outside absolute paths throw \`Cannot <op>: path '...' escapes the
   database directory ...\`). On an in-memory database these operations throw
@@ -703,7 +705,7 @@ own) — it throws \`Cannot import_csv: transaction already active\`. Call it ou
 
 ## CSV file reading
 
-Read a CSV file from disk directly into Lua — the only way to get file data into a script, since
+Read a CSV file from disk directly into Lua, since
 \`io\` is deliberately absent from the sandbox. \`path\` is sandboxed the same way as every other
 file-touching operation (see Critical rules).
 
@@ -788,6 +790,47 @@ end
 \`\`\`
 
 ---
+
+## XLSX file reading
+
+Read one worksheet of an XLSX workbook through the same filesystem sandbox as CSV. XLSX only:
+legacy XLS and encrypted workbooks are unsupported. These methods read cells; they do not write
+the workbook or import rows into the database.
+
+\`\`\`lua
+local data = db:read_xlsx("input.xlsx", { sheet = "Data", header_row = 1 })
+-- data.header: array of strings; data.rows: array of arrays of strings
+local count = db:read_xlsx_stream("input.xlsx", function(row, index, header)
+    -- header is available even on the first callback; index counts emitted data rows.
+    -- Only an explicit false stops. No return, nil, 0 and strings all continue.
+end, { sheet = 2 })
+\`\`\`
+
+The optional options table accepts exactly \`sheet\` and \`header_row\`. \`sheet\` is an exact
+worksheet name or a positive 1-based integer, default \`1\`. Chart sheets do not count; hidden
+worksheets do. Missing worksheets throw. \`header_row\` is the physical worksheet row number,
+default \`1\`; rows above it are skipped. A missing or completely blank header throws.
+\`header_row = 0\` reads all data rows with no header (\`data.header\` and the callback header are
+\`nil\`). Omit options, pass \`nil\`, or pass \`{}\` to use defaults; unknown keys and wrong
+types throw \`Cannot <operation>: ...\`.
+
+Every cell is a string. Text, including leading zeros, Unicode, whitespace and rich-text content,
+is preserved. Numbers keep their stored locale-independent text, booleans are \`"1"\`/\`"0"\`,
+blank cells are \`""\`, and Excel errors such as \`#DIV/0!\` stay text. Formatting is ignored:
+an Excel date stored as \`45292.5\` remains \`"45292.5"\`, and an explicit date stored as text
+stays text. Formulas return their saved cached value, never the expression or a recalculated value.
+A formula with no cache throws, naming the sheet and cell; recalculate and save it in Excel first.
+
+Completely blank data rows are skipped. Rows and headers are padded with \`""\` to the worksheet's
+last column containing a value or formula, so column positions stay aligned; formatting-only
+cells do not expand that width. Merged cells contribute only their stored values (normally the
+top-left cell); values are not copied across the merged area. Header-only sheets return no data
+rows; an empty sheet is readable with \`header_row = 0\`.
+
+Both forms use the same reader. The callback form returns the number of rows delivered, including
+the row that returned false; callback errors propagate unchanged and handles close on every exit.
+Unlike CSV streaming, XLSX callbacks avoid the full Lua rows table but still load worksheet XML
+and shared strings into memory. For very large files, use CSV streaming instead.
 
 ## CSV file writing
 

@@ -45,6 +45,7 @@ add_executable(quiver_tests
     test_sandbox_path.cpp
     test_sandbox_query.cpp
     test_sandbox_read_csv.cpp
+    test_sandbox_read_xlsx.cpp
     test_sandbox_read.cpp
     test_sandbox_return.cpp
     test_sandbox_time_series.cpp

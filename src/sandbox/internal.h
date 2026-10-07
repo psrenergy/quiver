@@ -100,6 +100,25 @@ sol::table to_lua_table(sol::state_view& lua, const std::vector<std::vector<T>>&
     return outer;
 }
 
+// CSV and XLSX agree on absent headers and the callback's exact-false stop signal.
+inline sol::object row_header_to_lua(sol::state_view& lua, const std::vector<std::string>& header) {
+    return header.empty() ? sol::object(sol::lua_nil) : sol::object(to_lua_table(lua, header));
+}
+
+inline bool call_row_callback(
+    const sol::protected_function& on_row,
+    const sol::table& row,
+    int64_t index,
+    const sol::object& header
+) {
+    auto result = on_row(row, index, header);
+    if (!result.valid()) {
+        sol::error error = result;
+        throw std::runtime_error(error.what());
+    }
+    return !(result.return_count() > 0 && result.get<sol::optional<bool>>(0) == false);
+}
+
 // The bulk readers, bound straight to the Database member they read: `Read` is the member pointer
 // (read_{scalar,vector,set}_{integers,floats,strings} for bulk_read_lua; read_element_ids and
 // list_time_series_files_columns for collection_read_lua). The parameter lists are the ones sol2
@@ -340,6 +359,7 @@ void bind_time_series(sol::usertype<Database>& bind);
 void bind_csv_export(sol::usertype<Database>& bind);
 void bind_csv_import(sol::usertype<Database>& bind);
 void bind_csv(sol::state& state, sol::usertype<Database>& bind, RunHandles& handles);
+void bind_xlsx(sol::usertype<Database>& bind);
 sol::usertype<BinaryFile> bind_binary(
     sol::state& state,
     sol::usertype<Database>& bind,

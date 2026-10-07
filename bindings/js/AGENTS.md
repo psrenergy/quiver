@@ -51,6 +51,9 @@ bunfig.toml       # coverageSkipTestFiles = true (Bun 1.3 reports test/ otherwis
   ma_energia_residencial.csv` / `ma_gd_data.csv` through `quiver_cli` before it shipped — but
   **nothing in CI re-runs it**, so an edit to that example has to be re-verified by hand the same
   way (a throwaway file-backed database plus the fixtures, driven through `quiver_cli`).
+- **XLSX reading is Lua-only.** The reference documents `db:read_xlsx` / `db:read_xlsx_stream`,
+  their sheet/header options, all-string cells, cached formulas and DOM memory limit. No JS
+  XLSX wrapper or new FFI symbols; correctness lives in `tests/test_sandbox_read_xlsx.cpp`.
 - **No generator** — when the C API changes, add the symbol to `src/loader.ts` by hand as
   `{ name: { args, returns } }`. This is the drift-prone spot: check it whenever a new C function
   exists in other bindings but not here.
