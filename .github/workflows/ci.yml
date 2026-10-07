@@ -250,6 +250,10 @@ jobs:
         working-directory: bindings/js
         run: bun install
 
+      - name: Typecheck JS bindings
+        working-directory: bindings/js
+        run: bun run typecheck
+
       - name: Run Bun tests (Linux)
         if: runner.os == 'Linux'
         working-directory: bindings/js

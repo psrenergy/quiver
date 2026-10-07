@@ -5,6 +5,9 @@ five manifests) lives in the root `AGENTS.md`.
 
 ## Workflow Inventory
 
+The `bun-test` matrix runs `bun run typecheck` unconditionally after dependency installation,
+before either platform's native tests. The strict check compiles the actual JS binding source.
+
 | Workflow | Trigger | Purpose |
 |---|---|---|
 | `ci.yml` | push/PR to master | Build matrix (ubuntu/ubuntu-arm/windows/macos × Release/Debug) + ctest + artifact upload; four coverage jobs uploading to Codecov with flags `cpp`, `julia`, `dart`, `python`; plus `clang-format` check (22.1.8 wheel via `uvx`), `actionlint`, and a `bun-test` matrix (ubuntu+ubuntu-arm+windows) whose `ubuntu-latest` leg uploads flag `js` |

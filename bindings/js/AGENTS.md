@@ -22,7 +22,8 @@ src/ffi-helpers.ts # Alloc helpers, makeDefaultOptions()
 src/boolean.ts    # integerToBoolean — strict 0/1 conversion for the boolean convenience readers
 src/errors.ts     # QuiverError (always thrown; message from quiver_get_last_error)
 test/             # bun:test suite (*.test.ts per area) + test.bat
-package.json      # Version must match CMakeLists.txt; scripts: test/lint/format (biome)
+package.json      # Version must match CMakeLists.txt; scripts: test/typecheck/lint/format
+tsconfig.json     # Strict noEmit check of mod.ts and actual src imports; Bun types, bundler resolution
 biome.json        # Lint/format config
 bunfig.toml       # coverageSkipTestFiles = true (Bun 1.3 reports test/ otherwise; CI uploads
                   # `bun test test --coverage --coverage-reporter=lcov` as Codecov flag `js`)
@@ -167,7 +168,8 @@ bunfig.toml       # coverageSkipTestFiles = true (Bun 1.3 reports test/ otherwis
   only the former admits `bigint` and `boolean`, since no group reader produces either and its
   return type should not claim them. The four `updateTimeSeriesGroup*`/group writers therefore
   take `GroupColumns`.
-- **Test/lint/format**: `bun test test`, `bun run lint`, `bun run format` (biome, project-pinned
+- **Typecheck/test/lint/format**: `bun run typecheck`, `bun test test`, `bun run lint`,
+  `bun run format` (biome, project-pinned
   version). No permission flags needed (Bun has none — don't carry over Deno habits). There is
   pre-existing lint debt in untouched files — fix only what your change orphans, don't drive-by
   reformat.
