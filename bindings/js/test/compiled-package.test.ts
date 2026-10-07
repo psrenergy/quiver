@@ -26,7 +26,7 @@ test("compiled Database and Sandbox load native siblings from an unrelated cwd",
     join(repoDir, "build", "bin", "Debug"),
     join(repoDir, "build", "bin", "Release"),
   ].find((dir) => existsSync(join(dir, library)));
-  expect(nativeDir).toBeDefined();
+  if (!nativeDir) throw new Error("Build or install the native Quiver libraries before testing");
 
   const root = mkdtempSync(join(tmpdir(), "quiver-compiled-"));
   try {
@@ -34,9 +34,9 @@ test("compiled Database and Sandbox load native siblings from an unrelated cwd",
     const cwd = join(root, "empty-cwd");
     mkdirSync(bin);
     mkdirSync(cwd);
-    for (const file of readdirSync(nativeDir!)) {
+    for (const file of readdirSync(nativeDir)) {
       if (/^libquiver.*\.(dll|dylib|so)(\.\d+)*$/.test(file)) {
-        copyFileSync(join(nativeDir!, file), join(bin, file));
+        copyFileSync(join(nativeDir, file), join(bin, file));
       }
     }
     const schema = join(root, "schema.sql");
