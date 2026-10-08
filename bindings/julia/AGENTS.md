@@ -22,6 +22,9 @@ Project.toml      # Deps: Artifacts, CEnum, Dates, Libdl; julia 1.11 compat
 
 ## Rules and gotchas
 
+- **Parquet export**: `Binary.bin_to_parquet(path)` forwards directly to
+  `quiver_bin_to_parquet`; writers must be closed first. No Arrow dependency is added to Julia.
+
 - **Sandbox array types are handled in C++.** `test/test_sandbox.jl` checks mixed Lua REAL
   arrays on create/update; Julia passes the script through without converting its cells.
 - **Regenerate after C API changes**: `generator/generator.bat` rewrites `src/c_api.jl`

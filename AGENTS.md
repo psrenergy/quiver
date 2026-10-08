@@ -48,6 +48,12 @@ Top-level configs: `CMakePresets.json`, `.clang-format`, `.clang-tidy`, `.clangd
 
 ## Design Decisions
 
+- **Parquet is an explicit binary snapshot.** `bin_to_parquet` lives in C++ with thin C,
+  Julia and db-scoped Lua calls; Dart/Python/JS use it only through Sandbox. The working
+  `.qvr`/`.toml` pair is retained. Wide exports preserve raw coordinates and agent columns,
+  add a UTC calendar-cell timestamp when applicable, map NaN to NULL, and embed TOML metadata.
+  There is no importer or automatic conversion. See `docs/parquet.md` for the file contract.
+
 Settled questions — don't relitigate without the user; each was decided deliberately:
 
 - **Time-series group data is column-oriented** (`{column: [values]}`) in every binding — the

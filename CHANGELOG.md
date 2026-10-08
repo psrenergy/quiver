@@ -11,6 +11,12 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ### Added
 
+- **Parquet snapshots.** C++ `bin_to_parquet`, C `quiver_bin_to_parquet`, Julia
+  `Binary.bin_to_parquet` and Lua `db:bin_to_parquet` export a closed `.qvr`/`.toml` pair
+  to `.parquet`, retaining the binary files. Exports contain dimension coordinates, UTC
+  calendar timestamps, nullable agent columns and embedded Quiver metadata. Failed exports
+  preserve the previous snapshot; Lua checks the actual source and destination paths.
+
 - **Lua: XLSX worksheet reading.** `db:read_xlsx(path, options)` returns a header and rows;
   `db:read_xlsx_stream(path, on_row, options)` delivers rows to a callback. Select a sheet by
   name or 1-based index and a physical `header_row` (default 1; 0 disables headers). Cells are
@@ -20,6 +26,9 @@ callers to change something are prefixed **BREAKING** and say what to do.
   avoid a full Lua result table but retain worksheet XML and shared strings in memory.
 
 ### Fixed
+
+- Binary readers report failed opens and short reads instead of returning fabricated values.
+  Installed CMake packages resolve their link dependencies, including static consumers.
 
 - **Lua element arrays preserve each cell's type.** Integers, floats, and booleans can be mixed
   in REAL arrays in either order on create and update. C++ validation rejects incompatible

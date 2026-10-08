@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:quiverdb/quiverdb.dart';
 import 'package:test/test.dart';
@@ -7,6 +8,31 @@ import 'package:path/path.dart' as path;
 void main() {
   // Path to central tests folder
   final testsPath = path.join(path.current, '..', '..', 'tests');
+
+  test('exports a Parquet snapshot through Lua', () {
+    final directory = Directory.systemTemp.createTempSync('quiver-parquet-');
+    final db = Database.fromSchema(
+      path.join(directory.path, 'test.db'),
+      path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+    );
+    final sandbox = Sandbox(db);
+    try {
+      sandbox.run('''
+        local md = quiver.metadata{initial_datetime='2024-01-01T00:00:00', unit='MW',
+          dimensions={'row'}, dimension_sizes={2}, labels={'value'}}
+        local f = db:open_file('snapshot', 'w', md)
+        f:write({1.5}, {row=2})
+        f:close()
+        db:bin_to_parquet('snapshot')
+      ''');
+      final bytes = File(path.join(directory.path, 'snapshot.parquet')).readAsBytesSync();
+      expect(ascii.decode(bytes.sublist(0, 4)), 'PAR1');
+    } finally {
+      sandbox.dispose();
+      db.close();
+      directory.deleteSync(recursive: true);
+    }
+  });
 
   group('Sandbox Create Element', () {
     test('element REAL arrays preserve each Lua cell type', () {

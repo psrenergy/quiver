@@ -6,6 +6,9 @@ Cross-layer naming rules live in the root `AGENTS.md`; C++ internals in `src/AGE
 
 ## File Map
 
+`binary/parquet.cpp` exposes `quiver_bin_to_parquet(path)` as a thin call to the C++ exporter,
+using the same `QUIVER_REQUIRE`, status codes and shared last-error channel as CSV conversion.
+
 ```
 include/quiver/c/         # C API headers (for FFI)
   common.h                # quiver_error_t, quiver_get_last_error, quiver_version

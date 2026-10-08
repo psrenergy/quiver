@@ -46,6 +46,7 @@ set(QUIVER_SOURCES
     binary/binary_file.cpp
     binary/iteration.cpp
     binary/csv_converter.cpp
+    binary/parquet.cpp
     binary/binary_metadata.cpp
     binary/time_properties.cpp
     expression/expression.cpp
@@ -106,17 +107,24 @@ target_link_libraries(quiver
     PUBLIC
         SQLite::SQLite3
     PRIVATE
-        quiver_compiler_options
-        tomlplusplus::tomlplusplus
-        spdlog::spdlog
-        lua_library
-        sol2
+        $<BUILD_INTERFACE:quiver_compiler_options>
+        $<BUILD_INTERFACE:tomlplusplus::tomlplusplus>
+        $<BUILD_INTERFACE:spdlog::spdlog>
+        $<INSTALL_INTERFACE:spdlog::spdlog>
+        $<BUILD_INTERFACE:lua_library>
+        $<INSTALL_INTERFACE:lua_library>
+        $<BUILD_INTERFACE:sol2>
         csv
         OpenXLSX::OpenXLSX
+        $<BUILD_INTERFACE:parquet_static>
+        $<INSTALL_INTERFACE:Parquet::parquet_static>
         # OpenXLSX already carries pugixml for installed static consumers. This
         # direct edge supplies the internal DOM header without ambiguous exports.
         $<BUILD_INTERFACE:pugixml::static>
 )
+
+# Bundled dependencies list system libraries that need not become runtime dependencies.
+target_link_options(quiver PRIVATE "$<$<PLATFORM_ID:Linux>:LINKER:--as-needed>")
 
 # Set library properties
 # QUIVER_LIB_VERSION is VERSION/SOVERSION, or empty when QUIVER_UNVERSIONED_SHARED is on
@@ -163,6 +171,7 @@ if(QUIVER_BUILD_C_API)
         c/sandbox.cpp
         c/binary/binary_file.cpp
         c/binary/csv_converter.cpp
+        c/binary/parquet.cpp
         c/binary/binary_metadata.cpp
         c/expression/expression.cpp
     )

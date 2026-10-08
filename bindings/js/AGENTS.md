@@ -31,6 +31,9 @@ bunfig.toml       # coverageSkipTestFiles = true (Bun 1.3 reports test/ otherwis
 
 ## Rules and gotchas
 
+- **Parquet export stays Lua-only here.** The shipped sandbox reference documents
+  `db:bin_to_parquet`; its test calls through Sandbox, without adding direct binary APIs to JS.
+
 - **`SANDBOX_API_REFERENCE` (`src/sandbox-api.ts`) is shipped prompt payload, not just docs.** The
   downstream consumer (`claw`) imports it from the package root and interpolates it verbatim into an
   LLM system prompt, which is why it stays a plain `export const`: a string constant costs no FFI,
