@@ -6,6 +6,28 @@ using Test
 include("fixture.jl")
 
 @testset "Sandbox" begin
+    @testset "Element REAL Arrays Preserve Lua Cell Types" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+        sandbox = Quiver.Sandbox(db)
+        try
+            Quiver.run!(
+                sandbox,
+                """db:create_element("Collection", { label = "Mixed", value_float = {1, 2.5, true} })""",
+            )
+            @test Quiver.read_vector_floats(db, "Collection", "value_float") == [[1, 2.5, 1]]
+
+            Quiver.run!(
+                sandbox,
+                """db:update_element_by_label("Collection", "Mixed", { value_float = {false, 3.5, 2} })""",
+            )
+            @test Quiver.read_vector_floats(db, "Collection", "value_float") == [[0, 3.5, 2]]
+        finally
+            Quiver.close!(sandbox)
+            Quiver.close!(db)
+        end
+    end
+
     @testset "Create Element" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
         db = Quiver.from_schema(":memory:", path_schema)

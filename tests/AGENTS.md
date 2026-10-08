@@ -163,15 +163,19 @@ things to keep in mind when touching these:
   asserted a boolean rejection before booleans were accepted; a function is the value that still
   has no SQL counterpart. `test_sandbox_update.cpp` keeps its boolean rejection for
   `db:update_relation`, where only `nil` may clear a relation.
-- **The three mixed-array tests guard the unchecked getter.**
+- **Mixed-array tests guard per-cell conversion and core type validation.**
   `CreateElementMixedIntegerAndBooleanArray`, `CreateElementMixedFloatAndBooleanArray` and
-  `CreateElementArrayCellTypeMismatchThrows` cover bugs that only manifest with
-  `SOL_SAFE_GETTER` off (silent 0 / 0.0 / `""` instead of a throw). `src/CMakeLists.txt` sets the
+  `CreateElementArrayCellTypeMismatchThrows` cover unchecked-getter bugs (silent 0 / 0.0 / `""`
+  instead of a throw). `CreateElementRealArraysPreserveCellTypes` and
+  `UpdateElementRealArraysPreserveCellTypes` check both numeric orders and boolean/float
+  mixtures through create, update and update-by-label; floats in INTEGER arrays still fail
+  with the core's column/index error. Each C API and host-binding Sandbox suite also creates
+  and updates a mixed REAL array. `src/CMakeLists.txt` sets the
   getter **and the stack check** (`SOL_SAFE_STACK_CHECK=0`) off in every build, so Debug sees them
   too; every other sol2 safety is on in both builds. After touching `lua_table_to_vector` or adding
   another `sol::object` type check, build Release with tests via the preset
   (`cmake --preset release && cmake --build --preset release`), run
-  `build/release/bin/quiver_tests.exe --gtest_filter='Lua*'` and the same filter on the Debug
+  `build/release/bin/quiver_tests.exe --gtest_filter='Sandbox*:Lua*'` and the same filter on the Debug
   build, and expect identical results — the Release run is the check that no build-specific
   behaviour crept in.
 

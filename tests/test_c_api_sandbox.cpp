@@ -288,6 +288,34 @@ TEST_F(SandboxCApiTest, CreateElementWithVectors) {
     quiver_database_close(db);
 }
 
+TEST_F(SandboxCApiTest, ElementRealArraysPreserveCellTypes) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
+
+    quiver_sandbox_t* sandbox = nullptr;
+    ASSERT_EQ(quiver_sandbox_new(db, &sandbox), QUIVER_OK);
+
+    char* result = nullptr;
+    EXPECT_EQ(
+        quiver_sandbox_run(
+            sandbox,
+            R"(
+                local id = db:create_element("Collection", { label = "Mixed", value_float = {1, 2.5, true} })
+                db:update_element("Collection", id, { value_float = {false, 3.5, 2} })
+                return db:read_vectors_by_id("Collection", id).value_float
+            )",
+            &result
+        ),
+        QUIVER_OK
+    ) << quiver_get_last_error();
+    EXPECT_STREQ(result, "[0,3.5,2]");
+    quiver_sandbox_free_string(result);
+
+    quiver_sandbox_free(sandbox);
+    quiver_database_close(db);
+}
+
 TEST_F(SandboxCApiTest, DeleteElement) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;

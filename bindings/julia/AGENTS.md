@@ -22,6 +22,8 @@ Project.toml      # Deps: Artifacts, CEnum, Dates, Libdl; julia 1.11 compat
 
 ## Rules and gotchas
 
+- **Sandbox array types are handled in C++.** `test/test_sandbox.jl` checks mixed Lua REAL
+  arrays on create/update; Julia passes the script through without converting its cells.
 - **Regenerate after C API changes**: `generator/generator.bat` rewrites `src/c_api.jl`
   (`prologue.jl`/`epilogue.jl` are spliced around the generated body).
 - **Always `GC.@preserve`**: refs produced by `marshal_params` (and any `Ref`s passed as pointers)

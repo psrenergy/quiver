@@ -13,6 +13,14 @@ from quiverdb import Database, QuiverError, Sandbox
 class TestSandboxCreateRead:
     """Tests for scripts that create and read elements."""
 
+    def test_element_real_arrays_preserve_lua_cell_types(self, collections_db: Database) -> None:
+        with Sandbox(collections_db) as sandbox:
+            sandbox.run('db:create_element("Collection", { label = "Mixed", value_float = {1, 2.5, true} })')
+            assert collections_db.read_vector_floats("Collection", "value_float") == [[1, 2.5, 1]]
+
+            sandbox.run('db:update_element_by_label("Collection", "Mixed", { value_float = {false, 3.5, 2} })')
+            assert collections_db.read_vector_floats("Collection", "value_float") == [[0, 3.5, 2]]
+
     def test_create_element_from_sandbox(self, collections_db: Database) -> None:
         sandbox = Sandbox(collections_db)
         sandbox.run("""

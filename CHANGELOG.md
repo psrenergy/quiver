@@ -21,6 +21,10 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ### Fixed
 
+- **Lua element arrays preserve each cell's type.** Integers, floats, and booleans can be mixed
+  in REAL arrays in either order on create and update. C++ validation rejects incompatible
+  cells instead of the Lua binding choosing the whole array's type from its first cell.
+
 ## [0.13.0] — 2026-10-05
 
 ### Changed

@@ -3,11 +3,40 @@ import { describe, expect, test } from "bun:test";
 const __dirname = import.meta.dir;
 
 import { join } from "node:path";
-import { Database, Sandbox, QuiverError } from "../src/index.ts";
+import { Database, QuiverError, Sandbox } from "../src/index.ts";
 
 const SCHEMA_PATH = join(__dirname, "..", "..", "..", "tests", "schemas", "valid", "all_types.sql");
 
 describe("Sandbox", () => {
+  test("element REAL arrays preserve each Lua cell type", () => {
+    const schema = join(
+      __dirname,
+      "..",
+      "..",
+      "..",
+      "tests",
+      "schemas",
+      "valid",
+      "collections.sql",
+    );
+    const db = Database.fromSchema(":memory:", schema);
+    const sandbox = new Sandbox(db);
+    try {
+      sandbox.run(
+        'db:create_element("Collection", { label = "Mixed", value_float = {1, 2.5, true} })',
+      );
+      expect(db.readVectorFloats("Collection", "value_float")).toEqual([[1, 2.5, 1]]);
+
+      sandbox.run(
+        'db:update_element_by_label("Collection", "Mixed", { value_float = {false, 3.5, 2} })',
+      );
+      expect(db.readVectorFloats("Collection", "value_float")).toEqual([[0, 3.5, 2]]);
+    } finally {
+      sandbox.close();
+      db.close();
+    }
+  });
+
   test("create element from sandbox and verify via JS", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     const sandbox = new Sandbox(db);

@@ -9,6 +9,37 @@ void main() {
   final testsPath = path.join(path.current, '..', '..', 'tests');
 
   group('Sandbox Create Element', () {
+    test('element REAL arrays preserve each Lua cell type', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        final sandbox = Sandbox(db);
+        try {
+          sandbox.run('db:create_element("Collection", { label = "Mixed", value_float = {1, 2.5, true} })');
+          expect(
+            db.readVectorFloats('Collection', 'value_float'),
+            equals([
+              [1, 2.5, 1],
+            ]),
+          );
+
+          sandbox.run('db:update_element_by_label("Collection", "Mixed", { value_float = {false, 3.5, 2} })');
+          expect(
+            db.readVectorFloats('Collection', 'value_float'),
+            equals([
+              [0, 3.5, 2],
+            ]),
+          );
+        } finally {
+          sandbox.dispose();
+        }
+      } finally {
+        db.close();
+      }
+    });
+
     test('creates element from sandbox', () {
       final db = Database.fromSchema(
         ':memory:',
