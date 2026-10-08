@@ -953,6 +953,7 @@ md:get_labels(); md:get_dimensions(); md:get_number_of_time_dimensions(); md:to_
 quiver.metadata_from_toml(text); quiver.metadata_from_element(tbl)
 db:bin_to_csv(path)                                  -- aggregate=true by default; pass false to keep time dims as columns
 db:csv_to_bin(path)
+db:bin_to_parquet(path)                              -- closed .qvr/.toml -> complete .parquet snapshot; keeps inputs
 
 local e = (r + 10.0) * 2.0                           -- a file is an expression; scalars either side
 local per_stage = r:aggregate("stage", "sum")        -- every expression method works on a file too

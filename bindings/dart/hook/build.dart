@@ -40,6 +40,12 @@ Future<void> main(List<String> args) async {
         // version infix and the unversioned names are symlinks, so NOTHING registers and
         // the hook silently reports zero assets. Drop the versioning for this build.
         'QUIVER_UNVERSIONED_SHARED': 'ON',
+        // The Windows builder sets CMAKE_SYSTEM_NAME explicitly, so CMake leaves the
+        // processor empty. Arrow needs the target architecture even with SIMD disabled.
+        if (targetOS == OS.windows)
+          'CMAKE_SYSTEM_PROCESSOR': input.config.code.targetArchitecture == Architecture.ia32
+              ? 'x86'
+              : input.config.code.targetArchitecture.name,
         // native_toolchain_cmake drives macOS through its *iOS* toolchain file, which is wrong
         // for a host-native macOS build. It does
         // `if (NOT DEFINED CMAKE_MACOSX_BUNDLE) set(CMAKE_MACOSX_BUNDLE YES)` as a plain

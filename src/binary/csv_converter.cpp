@@ -215,21 +215,8 @@ std::string CSVConverter::build_line(const std::vector<double>& data, const std:
 std::string CSVConverter::build_datetime_string_from_time_dimension_values(
     const std::vector<int64_t>& time_dimension_values
 ) const {
-    const auto& dimensions = metadata_.dimensions;
-
-    auto datetime = metadata_.initial_datetime;
-    bool has_hourly = false;
-    for (size_t i = 0; i < dimensions.size(); ++i) {
-        if (!dimensions[i].is_time_dimension()) {
-            continue;
-        }
-        datetime = dimensions[i].time->add_offset_from_int(datetime, time_dimension_values[i]);
-        if (dimensions[i].time->frequency == TimeFrequency::Hourly) {
-            has_hourly = true;
-        }
-    }
-
-    if (has_hourly) {
+    const auto datetime = calendar_cell_start(metadata_, time_dimension_values);
+    if (has_hourly_dimension()) {
         return quiver::datetime::format_utc(datetime);
     }
     // Date-only: truncate the full UTC string to YYYY-MM-DD

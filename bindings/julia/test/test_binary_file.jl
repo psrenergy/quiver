@@ -540,6 +540,8 @@ end
         try
             md = make_simple_metadata()
             file = Quiver.Binary.open_file(path; mode = 'w', metadata = md)
+            Quiver.Binary.close!(file)
+            file = Quiver.Binary.open_file(path; mode = 'r')
             data = Quiver.Binary.read(file; row = 1, col = 1, allow_nulls = true)
             @test length(data) == 2
             Quiver.Binary.close!(file)
@@ -553,6 +555,8 @@ end
         try
             md = make_simple_metadata()
             file = Quiver.Binary.open_file(path; mode = 'w', metadata = md)
+            Quiver.Binary.close!(file)
+            file = Quiver.Binary.open_file(path; mode = 'r')
             data = Quiver.Binary.read(file; row = 3, col = 2, allow_nulls = true)
             @test length(data) == 2
             Quiver.Binary.close!(file)

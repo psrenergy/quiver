@@ -5,6 +5,9 @@ five manifests) lives in the root `AGENTS.md`.
 
 ## Workflow Inventory
 
+The portable x86_64 native build installs `devtoolset-11-libatomic-devel` alongside GCC 11:
+Arrow's bundled Thrift link requires `-latomic` in the manylinux2014 toolchain.
+
 | Workflow | Trigger | Purpose |
 |---|---|---|
 | `ci.yml` | push/PR to master | Build matrix (ubuntu/ubuntu-arm/windows/macos × Release/Debug) + ctest + artifact upload; four coverage jobs uploading to Codecov with flags `cpp`, `julia`, `dart`, `python`; plus `clang-format` check (22.1.8 wheel via `uvx`), `actionlint`, and a `bun-test` matrix (ubuntu+ubuntu-arm+windows) whose `ubuntu-latest` leg uploads flag `js` |
