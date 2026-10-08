@@ -131,6 +131,10 @@ Settled questions — don't relitigate without the user; each was decided delibe
   `9.99abc` / `1,5` are not REALs — in the "C" locale's number format whatever locale the host
   process set, since export always writes `.`. `csv_to_bin` reads its data cells through the same
   `utils::parse_float`.
+- **Lua element arrays preserve each cell's type.** `table_to_element` converts every dense
+  cell through `lua_to_value` into `std::vector<Value>`; C++ validates it against the schema.
+  A REAL array accepts mixed integers, floats and booleans in either order. Empty arrays keep
+  the core's skip-on-create / clear-on-update semantics; nil holes still require group writers.
 - **A DATE_TIME string is validated on write, and stored verbatim.** The accepted grammar is
   `YYYY-MM-DD`, optionally followed by `THH:MM:SS` or ` HH:MM:SS`, every field fixed-width and
   zero-padded, year `0001`-`9999`, the calendar day must exist, no leap second; anything else

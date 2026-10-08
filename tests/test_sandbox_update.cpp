@@ -2,6 +2,26 @@
 
 #include <algorithm>
 
+TEST_F(SandboxTest, UpdateElementRealArraysPreserveCellTypes) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    quiver::Sandbox sandbox(db);
+
+    sandbox.run(R"(
+        local id = db:create_element("Collection", { label = "Item", value_float = {0.5} })
+        db:update_element("Collection", id, { value_float = {1, 2.5} })
+    )");
+    EXPECT_EQ(
+        db.read_vector_floats("Collection", "value_float"),
+        (std::vector<std::vector<std::optional<double>>>{{1.0, 2.5}})
+    );
+
+    sandbox.run(R"(db:update_element_by_label("Collection", "Item", { value_float = {true, 3.5, false} }))");
+    EXPECT_EQ(
+        db.read_vector_floats("Collection", "value_float"),
+        (std::vector<std::vector<std::optional<double>>>{{1.0, 3.5, 0.0}})
+    );
+}
+
 TEST_F(SandboxTest, UpdateElementSingleScalar) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 

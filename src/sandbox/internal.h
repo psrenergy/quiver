@@ -160,7 +160,7 @@ sol::table get_metadata_lua(Database& db, const std::string& collection, const s
 // Every boolean test in src/sandbox/ goes through this one predicate, so the rule lives in one
 // place rather than in a comment repeated at each site. The Value mapping itself lives in
 // lua_to_value (scalars, row upserts, query parameters, group cells, CSV cells) and lua_cell_as
-// (the typed paths, e.g. arrays).
+// (the typed paths, e.g. metadata arrays).
 inline bool is_lua_boolean(const sol::object& v) {
     return v.get_type() == sol::type::boolean;
 }
@@ -210,8 +210,8 @@ inline Value lua_to_value(const sol::object& v, const std::string& caller, const
     throw std::runtime_error("Cannot " + caller + ": " + what + " has unsupported Lua type");
 }
 
-// The only table→vector converter. Every cell goes through `lua_cell_as`, which
-// `table_to_element`'s array dispatch depends on: it picks the element type from cell 1 alone.
+// The typed table→vector converter. Every cell goes through `lua_cell_as`;
+// element arrays preserve each cell's Value type through `lua_to_value` instead.
 template <typename T>
 std::vector<T> lua_table_to_vector(const sol::table& t, const std::string& caller) {
     const size_t count = t.size();

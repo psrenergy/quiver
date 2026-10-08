@@ -807,11 +807,11 @@ Implementation conventions in `src/sandbox/`:
 - **A Lua boolean is INTEGER 1/0 on every write path**, matching the cross-layer policy in the root
   `AGENTS.md`. Every boolean test goes through the one predicate `is_lua_boolean`, and the 1/0
   mapping lives in two converters: `lua_to_value` (the `Value`-typed one, behind
-  `table_to_element`'s scalars, `lua_table_to_value_map` (row upsert), `lua_table_to_values` (query
-  parameters), `columns_to_cpp_rows` (group cells) and `csv_cell_to_string` (CSV cells, which is
+  `table_to_element`'s scalars and array cells, `lua_table_to_value_map` (row upsert),
+  `lua_table_to_values` (query parameters), `columns_to_cpp_rows` (group cells) and
+  `csv_cell_to_string` (CSV cells, which is
   why `w:write_row` writes a boolean as the text `1`/`0`)) and `lua_cell_as<T>` (typed arrays via
-  `lua_table_to_vector`). `table_to_element`'s array dispatch also tests cell 1 with it to pick the
-  element type. `relation_target_from_lua` is the deliberate exception:
+  `lua_table_to_vector`). `relation_target_from_lua` is the deliberate exception:
   only `nil` may clear a relation, so a boolean still throws there. Lua has no boolean *readers*
   (root design decision), so this is a write-side-only asymmetry.
 - **`lua_cell_as<T>(object, caller, what)` is the checked Lua-value→T conversion for the typed
@@ -824,28 +824,17 @@ Implementation conventions in `src/sandbox/`:
   and one message shape cover them all. Because it maps a boolean to 1/0 for a numeric `T`, an
   `enum_labels` code of `true` is code 1, the same policy as `dimension_sizes = {true}` below. Its
   `Value`-typed sibling is `lua_to_value(object, caller, what)`, with the same message shape.
-- **`lua_table_to_vector<T>(table, caller)` is the only table→vector converter**, and it converts
-  and checks **every cell**, not just the one the caller dispatched on. Both halves are
-  load-bearing. `table_to_element` picks an array's element type from cell 1 alone, and sol2's
-  plain `get<T>` is unchecked in **every** build: `src/CMakeLists.txt` sets `SOL_SAFE_GETTER=0`
-  (see the safety-flags bullet below). So a mixed `{1, true}` used to store 0 and `{"a", true}` an
-  empty string, silently — in Release only while Debug still checked the getter, and in every build
-  now that it does not. The converter now coerces a boolean cell to 1/0 for a numeric `T` and raises a Pattern 1
-  `"Cannot <caller>: cell #N has unsupported Lua type"` for anything that does not fit, so both the
-  int and the float/string paths are covered. Two known limits, both pre-existing: the loop is
-  bounded by `t.size()` (`lua_rawlen`), so a table with `nil` holes truncates — unlike
-  `collect_group_columns`, which walks `pairs` for exactly that reason. For element arrays that
-  would be silent data loss, since a vector/set read hands a NULL cell back as a `nil` hole, so
-  `table_to_element` first calls `require_dense_array`, which throws on a hole (or a non-integer
-  key) and points at the group writers (before that, a userdata attribute value is rejected as
-  `attribute '<name>' must be a value or a table, got userdata`: sol2's loose table test used to
-  take it for an array); an empty array reaches the core as an empty `std::vector<int64_t>`, which
-  `create_element` skips and `update_element` turns into a clear of its group, the same as every
-  other binding; and the element type still
-  comes from cell 1, so `{1, 2.5}` into a REAL column is rejected rather than widened (JS, Python
-  and Dart type the whole column and widen it to FLOAT, and a Lua group-writer column converts each
-  cell to its own `Value`, so a Lua element array is the one path that refuses it). One
-  consequence worth knowing: `quiver.metadata`'s `dimension_sizes` routes through it too (via
+- **Element arrays use `lua_to_value` per cell**, stored as `std::vector<Value>`, so C++ owns
+  schema/type validation. Mixed integers, floats and booleans work in REAL arrays in either
+  order; floats still fail INTEGER validation. `table_to_element` first calls
+  `require_dense_array`, rejecting nil holes or non-integer keys and pointing at the group
+  writers. Userdata attribute values are rejected before the array check. Empty arrays reach
+  the core unchanged: create skips them, update clears their groups. The same decoder serves
+  create, update, update-by-label and `quiver.metadata_from_element`.
+- **`lua_table_to_vector<T>(table, caller)` converts typed arrays**, checking every cell through
+  `lua_cell_as<T>` because sol2's plain `get<T>` is unchecked in every build. Its loop is bounded
+  by `t.size()` (`lua_rawlen`); callers needing sparse cells use `collect_group_columns` instead.
+  `quiver.metadata`'s `dimension_sizes` routes through it (via
   `metadata_array<int64_t>`), so `quiver.metadata{dimension_sizes = {true}}` coerces to a size-1
   dimension rather than erroring. That is consistent with the cross-layer boolean policy, and
   `BinaryMetadata::validate()` still rejects a non-positive size, so `{false}` throws.

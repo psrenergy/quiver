@@ -1,6 +1,7 @@
 #include "test_sandbox.h"
 
 #include <algorithm>
+#include <utility>
 
 TEST_F(SandboxTest, CreateElement) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
@@ -40,6 +41,40 @@ TEST_F(SandboxTest, CreateElementWithArrays) {
     auto floats = db.read_vector_floats("Collection", "value_float");
     EXPECT_EQ(floats.size(), 1);
     EXPECT_EQ(floats[0], (std::vector<std::optional<double>>{1.5, 2.5, 3.5}));
+}
+
+TEST_F(SandboxTest, CreateElementRealArraysPreserveCellTypes) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    quiver::Sandbox sandbox(db);
+
+    sandbox.run(R"(
+        db:create_element("Collection", { label = "Integer first", value_float = {1, 2.5} })
+        db:create_element("Collection", { label = "Float first", value_float = {2.5, 1} })
+        db:create_element("Collection", { label = "Boolean first", value_float = {true, 2.5, false} })
+        db:create_element("Collection", { label = "Float and boolean", value_float = {2.5, true, false} })
+    )");
+
+    EXPECT_EQ(
+        db.read_vector_floats("Collection", "value_float"),
+        (std::vector<std::vector<std::optional<double>>>{{1.0, 2.5}, {2.5, 1.0}, {1.0, 2.5, 0.0}, {2.5, 1.0, 0.0}})
+    );
+}
+
+TEST_F(SandboxTest, CreateElementRejectsArrayHoleMaskedByExtraKey) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    quiver::Sandbox sandbox(db);
+
+    expect_sandbox_error(
+        sandbox,
+        R"(
+            local values = {1, 2, 3, 4, 5, 6, 7, 8}
+            values[2] = nil
+            values.extra = 3
+            db:create_element("Collection", { label = "Item", value_float = values })
+        )",
+        "Cannot create_element: array 'value_float' has a nil hole or a non-integer key"
+    );
+    EXPECT_EQ(db.number_of_elements("Collection"), 0);
 }
 
 // On create the core skips an empty array before looking up its table, so a misspelled one passes.
@@ -226,9 +261,7 @@ TEST_F(SandboxTest, CreateElementMixedIntegerAndBooleanArray) {
 
     quiver::Sandbox sandbox(db);
 
-    // Dispatch picks the integer helper from cell 1; every later boolean cell must still coerce.
-    // Before lua_cell_to_int64 this silently stored 0 for the boolean in release builds, where
-    // SOL_SAFE_GETTER is off and the unchecked get<int64_t> returned 0 instead of throwing.
+    // Every boolean cell maps to INTEGER 1/0 alongside the existing integer cells.
     sandbox.run(R"(db:create_element("Collection", { label = "Item", value_int = { 7, true, false } }))");
 
     auto id = db.read_element_ids("Collection")[0];
@@ -290,8 +323,7 @@ TEST_F(SandboxTest, CreateElementMixedFloatAndBooleanArray) {
 
     quiver::Sandbox sandbox(db);
 
-    // The float sibling of CreateElementMixedIntegerAndBooleanArray: dispatch picks the double
-    // helper from cell 1, and every later boolean cell must still coerce (int-for-REAL coercion).
+    // Booleans reach the core as INTEGER 1/0, accepted through int-for-REAL coercion.
     sandbox.run(R"(db:create_element("Collection", { label = "Item", value_float = { 1.5, true, false } }))");
 
     auto id = db.read_element_ids("Collection")[0];
@@ -306,23 +338,23 @@ TEST_F(SandboxTest, CreateElementArrayCellTypeMismatchThrows) {
 
     quiver::Sandbox sandbox(db);
 
-    // A cell that fits no element type is a Pattern 1 rejection naming the array and the cell —
-    // not a raw sol2 message, and never a silent placeholder (the unchecked sol2 getters are only
-    // checked while SOL_SAFE_GETTER is on, i.e. debug builds).
-    for (
-        const char* script :
+    // Supported Lua values keep their types; C++ supplies the schema/type errors.
+    const std::pair<const char*, const char*> cases[] = {
         {R"(db:create_element("Collection", { label = "I", tag = { "a", true } }))",
-         R"(db:create_element("Collection", { label = "I", tag = { "a", 1 } }))",
-         R"(db:create_element("Collection", { label = "I", value_int = { 1, "zz" } }))"}
-    ) {
-        try {
-            sandbox.run(script);
-            FAIL() << "expected a mismatched array cell to throw: " << script;
-        } catch (const std::runtime_error& e) {
-            EXPECT_NE(std::string(e.what()).find("Cannot create_element: array '"), std::string::npos) << e.what();
-            EXPECT_NE(std::string(e.what()).find("cell #2 has unsupported Lua type"), std::string::npos) << e.what();
-        }
+         "Cannot create_element: type mismatch for array 'tag' index 1: expected TEXT, got INTEGER"},
+        {R"(db:create_element("Collection", { label = "I", tag = { "a", 1 } }))",
+         "Cannot create_element: type mismatch for array 'tag' index 1: expected TEXT, got INTEGER"},
+        {R"(db:create_element("Collection", { label = "I", value_int = { 1, "zz" } }))",
+         "Cannot create_element: type mismatch for column 'value_int': expected INTEGER, got TEXT"},
+        {R"(db:create_element("Collection", { label = "I", value_int = { 1, 2.5 } }))",
+         "Cannot create_element: type mismatch for array 'value_int' index 1: expected INTEGER, got REAL"},
+        {R"(db:create_element("Collection", { label = "I", value_int = { 2.5, 1 } }))",
+         "Cannot create_element: type mismatch for array 'value_int' index 0: expected INTEGER, got REAL"},
+    };
+    for (const auto& [script, message] : cases) {
+        expect_sandbox_error(sandbox, script, message);
     }
+    EXPECT_EQ(db.number_of_elements("Collection"), 0);
 }
 
 TEST_F(SandboxTest, CreateElementRejectsNonTableElement) {

@@ -113,6 +113,8 @@ ruff.toml         # Lint/format config; lint is isort only (select = ["I"])
   cannot leak the native buffer. The script must be Lua source text: the core loads it in text mode,
   so a precompiled (bytecode) chunk is rejected with `Failed to run Lua script: ...` and surfaces
   like any other script error.
+  `tests/test_sandbox.py` checks mixed Lua REAL arrays on create/update; cell conversion and
+  schema validation stay in C++.
 - **`Sandbox.__init__` starts with `_closed = True` and sets it to `False` only after `_ptr` is
   assigned.** Python runs `__del__` even when `__init__` raised, so a runner whose construction
   failed (e.g. `Sandbox(closed_db)`, which the C API rejects with `Null argument: db`) must
