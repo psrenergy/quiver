@@ -5,8 +5,8 @@ five manifests) lives in the root `AGENTS.md`.
 
 ## Workflow Inventory
 
-The portable x86_64 native build installs `devtoolset-11-libatomic-devel` alongside GCC 11:
-Arrow's bundled Thrift link requires `-latomic` in the manylinux2014 toolchain.
+The `bun-test` matrix runs `bun run typecheck` unconditionally after dependency installation,
+before either platform's native tests. The strict check compiles the actual JS binding source.
 
 | Workflow | Trigger | Purpose |
 |---|---|---|

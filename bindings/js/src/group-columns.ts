@@ -42,11 +42,11 @@ export type TimeSeriesData = Record<string, (number | string | null)[]>;
  * (quiver_database_update_{time_series,vector,set}_group and their _by_label forms). The 4th
  * argument addresses the element: an id for the by-id forms, a NUL-terminated label otherwise.
  */
-type ColumnUpdateFn = (
+type ColumnUpdateFn<Key extends number | string> = (
   db: NativePointer,
   collection: Uint8Array,
   group: Uint8Array,
-  key: bigint | Uint8Array,
+  key: Key extends string ? Uint8Array : bigint,
   names: Uint8Array | null,
   types: Uint8Array | null,
   data: Uint8Array | null,
@@ -90,18 +90,20 @@ export function numericCells(
  *
  * Pass `{}` (no columns) to clear the group.
  */
-export function updateGroupColumns(
+export function updateGroupColumns<Key extends number | string>(
   handle: NativePointer,
   caller: string,
-  update: ColumnUpdateFn,
+  update: ColumnUpdateFn<Key>,
   collection: string,
   group: string,
-  key: number | string,
+  key: Key,
   data: GroupColumns,
 ): void {
   const collBuf = toCString(collection);
   const grpBuf = toCString(group);
-  const keyArg = typeof key === "string" ? toCString(key).buf : BigInt(key);
+  const keyArg = (typeof key === "string" ? toCString(key).buf : BigInt(key)) as Key extends string
+    ? Uint8Array
+    : bigint;
   const entries = Object.entries(data);
 
   if (entries.length === 0) {

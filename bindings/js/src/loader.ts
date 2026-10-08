@@ -288,7 +288,17 @@ function initLibrary(): QuiverLib {
     }
   }
 
-  // Tier 2: Dev mode -- walk up directories looking for build/bin/.
+  // Tier 2: Standalone Bun executables ship native siblings beside the executable.
+  const executableDir = dirname(process.execPath);
+  if (existsSync(join(executableDir, C_API_LIB))) {
+    try {
+      return openLibrary(executableDir);
+    } catch (e) {
+      lastError = e;
+    }
+  }
+
+  // Tier 3: Dev mode -- walk up directories looking for build/bin/.
   for (const dir of getSearchPaths()) {
     try {
       return openLibrary(dir);
@@ -297,7 +307,7 @@ function initLibrary(): QuiverLib {
     }
   }
 
-  // Tier 3: System PATH fallback -- the core lib is expected to be discoverable
+  // Tier 4: System PATH fallback -- the core lib is expected to be discoverable
   // on PATH alongside the C API lib.
   try {
     return dlopen(C_API_LIB, allSymbols);
@@ -307,6 +317,7 @@ function initLibrary(): QuiverLib {
 
   const searched = [
     join(__dirname, "..", "libs", platformKey),
+    executableDir,
     ...getSearchPaths(),
     "system PATH",
   ].join(", ");

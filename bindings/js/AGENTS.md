@@ -15,14 +15,15 @@ src/              # Module per C API category: database.ts, create.ts, read.ts, 
 src/sandbox-api.ts    # SANDBOX_API_REFERENCE — agent-facing Lua `db:` API reference, as a string const
 src/group-columns.ts # Shared columnar marshaller (group writers) and decoder (group readers),
                      # plus numericCells, the per-cell numeric check setElementArray shares
-src/loader.ts     # HAND-WRITTEN FFI symbol table + 3-tier library loader
+src/loader.ts     # HAND-WRITTEN FFI symbol table + 4-tier library loader
 src/types.ts      # Central DATA_TYPE_* / LOG_LEVEL_* constants and DatabaseOptions type —
                   # all re-exported from the package root
 src/ffi-helpers.ts # Alloc helpers, makeDefaultOptions()
 src/boolean.ts    # integerToBoolean — strict 0/1 conversion for the boolean convenience readers
 src/errors.ts     # QuiverError (always thrown; message from quiver_get_last_error)
 test/             # bun:test suite (*.test.ts per area) + test.bat
-package.json      # Version must match CMakeLists.txt; scripts: test/lint/format (biome)
+package.json      # Version must match CMakeLists.txt; scripts: test/typecheck/lint/format
+tsconfig.json     # Strict noEmit check of mod.ts and actual src imports; Bun types, bundler resolution
 biome.json        # Lint/format config
 bunfig.toml       # coverageSkipTestFiles = true (Bun 1.3 reports test/ otherwise; CI uploads
                   # `bun test test --coverage --coverage-reporter=lcov` as Codecov flag `js`)
@@ -61,8 +62,11 @@ bunfig.toml       # coverageSkipTestFiles = true (Bun 1.3 reports test/ otherwis
   `{ name: { args, returns } }`. This is the drift-prone spot: check it whenever a new C function
   exists in other bindings but not here.
 - **Library loader**: lazy `getSymbols()` (init on first use — eager init would hit a
-  `QuiverError` TDZ during the loader↔errors import cycle). Three tiers: bundled
-  `libs/{os}-{arch}/` (shipped in the npm package) → dev `build/bin` walk-up → system PATH. On
+  `QuiverError` TDZ during the loader↔errors import cycle). Four tiers: bundled
+  `libs/{os}-{arch}/` (shipped in the npm package) → `dirname(process.execPath)` for compiled
+  executable siblings → dev `build/bin` walk-up → system PATH. Never search the invocation cwd.
+  `test/compiled-package.test.ts` compiles a Database/Sandbox mutation/readback probe, stages
+  native siblings, and runs it from an unrelated empty cwd with loader overrides removed. On
   Windows, `ensureCoreOnPath` prepends the lib dir to `process.env.PATH` so the OS loader finds
   the sibling `libquiver.dll` (Bun's `dlopen` cannot preload the core lib — it rejects an empty
   symbol map).
@@ -89,6 +93,9 @@ bunfig.toml       # coverageSkipTestFiles = true (Bun 1.3 reports test/ otherwis
   `updateVectorGroup`, `updateSetGroup` and their `ByLabel` forms. They differ only in which C
   entry point they pass to `updateGroupColumns(handle, caller, cFn, ...)` and whether `key` is a
   `number` id (a `bigint`) or a `string` label (a `Uint8Array`), so don't re-inline it per method.
+  `ColumnUpdateFn<Key>` correlates that public key with its native argument; `UpsertRowFn<Key>`
+  does the same for row writes. Keep the conversion assertion inside each shared helper, not
+  at call sites, so strict source checking catches incompatible native callbacks.
   It validates before marshalling: jagged columns and named-but-empty columns (`rowCount === 0`)
   throw a `QuiverError` naming the column. Load-bearing — an empty column would otherwise marshal a
   `null` data pointer that the C API dereferences against the first column's `row_count`. Pass `{}`
@@ -170,7 +177,8 @@ bunfig.toml       # coverageSkipTestFiles = true (Bun 1.3 reports test/ otherwis
   only the former admits `bigint` and `boolean`, since no group reader produces either and its
   return type should not claim them. The four `updateTimeSeriesGroup*`/group writers therefore
   take `GroupColumns`.
-- **Test/lint/format**: `bun test test`, `bun run lint`, `bun run format` (biome, project-pinned
+- **Typecheck/test/lint/format**: `bun run typecheck`, `bun test test`, `bun run lint`,
+  `bun run format` (biome, project-pinned
   version). No permission flags needed (Bun has none — don't carry over Deno habits). There is
   pre-existing lint debt in untouched files — fix only what your change orphans, don't drive-by
   reformat.
