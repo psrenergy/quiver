@@ -17,17 +17,26 @@ namespace {
 // (and float/text/primary-key columns) report coverage counts only.
 constexpr int64_t kMaxDistributionCardinality = 64;
 
+// The group kinds every report lists, in order, under these section headers.
+constexpr std::pair<const char*, GroupTableType> kGroupSections[] = {
+    {"  Vectors:", GroupTableType::Vector},
+    {"  Sets:", GroupTableType::Set},
+    {"  Time Series:", GroupTableType::TimeSeries},
+};
+
 // Print a group's value columns in declaration order; a time series' dimension
 // columns (its primary key minus id -- the set find_dimension_columns returns) are
 // bracketed, vector tables hide their structural vector_index.
 void print_group_columns(std::ostream& out, const TableDefinition& table, GroupTableType type) {
     bool first = true;
     for (const auto& col_name : table.column_order) {
-        if (col_name == "id" || (type == GroupTableType::Vector && col_name == "vector_index"))
+        if (col_name == "id" || (type == GroupTableType::Vector && col_name == "vector_index")) {
             continue;
+        }
         const auto& col = table.columns.at(col_name);
-        if (!first)
+        if (!first) {
             out << ", ";
+        }
         if (type == GroupTableType::TimeSeries && col.primary_key) {
             out << "[" << col_name << "]";
         } else {
@@ -38,27 +47,15 @@ void print_group_columns(std::ostream& out, const TableDefinition& table, GroupT
     out << "\n";
 }
 
-std::string group_table_name(const std::string& collection, const std::string& group, GroupTableType type) {
-    switch (type) {
-    case GroupTableType::Vector:
-        return Schema::vector_table_name(collection, group);
-    case GroupTableType::Set:
-        return Schema::set_table_name(collection, group);
-    case GroupTableType::TimeSeries:
-        return Schema::time_series_table_name(collection, group);
-    default:
-        return "";
-    }
-}
-
 const char* plural(int64_t n) {
     return n == 1 ? "" : "s";
 }
 
-// Whitespace/control-byte normalization for UI sidecar text (D-03, and the T-01-03 mitigation):
-// maps every byte below 0x20 or equal to 0x7F to a space -- a deliberate superset of D-03's named
-// \r/\n/\t that also neutralizes ESC (0x1B) and every other C0 control -- **and** the two-byte
-// UTF-8 encoding of the C1 block (U+0080-U+009F, `0xC2 0x80`-`0xC2 0x9F`). The C1 half is not
+// Whitespace/control-byte normalization for UI sidecar text, and the mitigation against terminal
+// escape sequences smuggled in through sidecar text: maps every byte below 0x20 or equal to 0x7F
+// to a space -- a deliberate superset of the named \r/\n/\t that also neutralizes ESC (0x1B) and
+// every other C0 control -- **and** the two-byte UTF-8 encoding of the C1 block (U+0080-U+009F,
+// `0xC2 0x80`-`0xC2 0x9F`). The C1 half is not
 // optional: U+009B is CSI and U+009D is OSC, the 8-bit forms of `ESC [` and `ESC ]` that xterm and
 // the Linux console honour by default, so dropping only C0 left a sidecar string able to colour a
 // terminal or retitle its window. Every *other* byte at 0x80 or above is a UTF-8 continuation or
@@ -95,7 +92,7 @@ std::string normalize_ui_text(const std::string& raw) {
 }
 
 // Wraps text in ASCII double quotes with backslash doubled and double quote escaped, and no other
-// escaping (D-02). This is what makes every separator unambiguous: arbitrary user text only ever
+// escaping. This is what makes every separator unambiguous: arbitrary user text only ever
 // appears between an unescaped opening and closing quote.
 std::string quote_ui_text(const std::string& text) {
     std::string quoted = "\"";
@@ -110,7 +107,7 @@ std::string quote_ui_text(const std::string& text) {
     return quoted;
 }
 
-// ASCII-lowercase, then keep only a-z/0-9 (D-04). Spelled as an explicit ASCII test rather than
+// ASCII-lowercase, then keep only a-z/0-9. Spelled as an explicit ASCII test rather than
 // std::tolower(char): passing a negative char to std::tolower is undefined behavior, and a
 // meaningful fraction of corpus strings are non-ASCII UTF-8. squash() therefore drops non-ASCII
 // bytes, which biases toward *printing* a label rather than suppressing it -- that is the safe
@@ -137,11 +134,11 @@ bool is_redundant(const std::string& squashed_text, const std::string& squashed_
     return !squashed_text.empty() && squashed_text == squashed_against;
 }
 
-// Appends zero to three "; keyword body" clauses for one scalar attribute (D-01), in the fixed
+// Appends zero to three "; keyword body" clauses for one scalar attribute, in the fixed
 // order label, enum, tooltip. Each clause carries its own leading "; " so eliding one leaves no
 // dangling separator. Only the tooltip clause is conditional on with_tooltip -- label and enum
 // are unconditional -- which is what makes describe()'s line a strict prefix of
-// describe_collection()'s line by construction (D-07/D-08).
+// describe_collection()'s line by construction.
 void write_ui_clauses(std::ostream& out, const UiAttribute* meta, const std::string& name, bool with_tooltip) {
     if (!meta) {
         return;
@@ -154,7 +151,7 @@ void write_ui_clauses(std::ostream& out, const UiAttribute* meta, const std::str
         out << "; label " << quote_ui_text(normalized_label);
     }
 
-    // Enum clause (D-06): never suppressed for redundancy -- it is the one field that cannot be
+    // Enum clause: never suppressed for redundancy -- it is the one field that cannot be
     // re-derived from the column name. std::map<int64_t, std::string> already iterates in
     // ascending key order, so there is no sort. An entry whose label normalizes to empty is
     // dropped; when no entry survives, the whole clause is omitted (never an empty brace pair).
@@ -176,8 +173,8 @@ void write_ui_clauses(std::ostream& out, const UiAttribute* meta, const std::str
     if (with_tooltip) {
         const std::string normalized_tooltip = normalize_ui_text(meta->tooltip);
         if (!normalized_tooltip.empty()) {
-            // Compared against the sidecar label per D-05, even when the label clause itself was
-            // suppressed by D-04. `label_key` above is that comparand: normalize_ui_text only
+            // Compared against the sidecar label too, even when the label clause itself was
+            // suppressed as redundant. `label_key` above is that comparand: normalize_ui_text only
             // rewrites bytes squash() discards anyway, so squash(normalize(x)) == squash(x) and
             // the raw-vs-normalized distinction is unobservable.
             const std::string tooltip_key = squash(normalized_tooltip);
@@ -189,12 +186,14 @@ void write_ui_clauses(std::ostream& out, const UiAttribute* meta, const std::str
 }
 
 // Write one collection's structural section (scalars + vector/set/time-series groups).
-void write_collection_section(std::ostream& out,
-                              const Schema& schema,
-                              const std::string& collection,
-                              int64_t count,
-                              const UiMetadata& ui,
-                              bool with_tooltip) {
+void write_collection_section(
+    std::ostream& out,
+    const Schema& schema,
+    const std::string& collection,
+    int64_t count,
+    const UiMetadata& ui,
+    bool with_tooltip
+) {
     out << "Collection: " << collection << " (" << count << " element" << plural(count) << ")\n";
 
     const auto* table_def = schema.get_table(collection);
@@ -214,18 +213,14 @@ void write_collection_section(std::ostream& out,
         }
     }
 
-    const std::pair<const char*, GroupTableType> sections[] = {
-        {"  Vectors:", GroupTableType::Vector},
-        {"  Sets:", GroupTableType::Set},
-        {"  Time Series:", GroupTableType::TimeSeries},
-    };
-    for (const auto& [header, type] : sections) {
+    for (const auto& [header, type] : kGroupSections) {
         auto groups = schema.group_names(collection, type);
-        if (groups.empty())
+        if (groups.empty()) {
             continue;
+        }
         out << header << "\n";
         for (const auto& group_name : groups) {
-            const auto* table = schema.get_table(group_table_name(collection, group_name, type));
+            const auto* table = schema.get_table(Schema::group_table_name(collection, group_name, type));
             out << "    - " << group_name << ": ";
             print_group_columns(out, *table, type);
         }
@@ -244,7 +239,13 @@ std::string Database::describe() const {
     for (const auto& collection : impl_->schema->collection_names()) {
         out << "\n";
         write_collection_section(
-            out, *impl_->schema, collection, number_of_elements(collection), impl_->ui_metadata, false);
+            out,
+            *impl_->schema,
+            collection,
+            number_of_elements(collection),
+            impl_->ui_metadata,
+            false
+        );
     }
 
     return out.str();
@@ -271,41 +272,43 @@ std::string Database::summarize_collection(const std::string& collection) const 
     for (const auto& scalar : list_scalar_attributes(collection)) {
         const std::string quoted_col = "\"" + scalar.name + "\"";
 
-        auto counts = query_int_rows(impl_->db,
-                                     "SELECT COUNT(*) - COUNT(" + quoted_col + "), COUNT(" + quoted_col + ") FROM " +
-                                         quoted_collection);
-        const int64_t null_count = counts[0][0];
-        const int64_t non_null_count = counts[0][1];
+        const auto counts = impl_->execute(
+            "SELECT COUNT(*) - COUNT(" + quoted_col + "), COUNT(" + quoted_col + ") FROM " + quoted_collection
+        );
+        const int64_t null_count = *counts[0].get_integer(0);
+        const int64_t non_null_count = *counts[0].get_integer(1);
         out << "    - " << scalar.name << ": " << non_null_count << " non-null, " << null_count << " null";
 
         // Integer value distribution: only for non-primary-key INTEGER columns whose distinct
         // cardinality is bounded. The LIMIT-based pre-check keeps high-cardinality columns
-        // (ids, large FKs) from materializing a huge list.
+        // (ids, large FKs) from materializing a huge list. Both queries count integer cells only:
+        // a non-STRICT INTEGER column can also hold TEXT/REAL cells, which are not codes.
         if (scalar.data_type == DataType::Integer && !scalar.primary_key) {
-            auto distinct = query_int_rows(impl_->db,
-                                           "SELECT COUNT(*) FROM (SELECT DISTINCT " + quoted_col + " FROM " +
-                                               quoted_collection + " WHERE " + quoted_col + " IS NOT NULL LIMIT ?)",
-                                           {kMaxDistributionCardinality + 1});
-            if (distinct[0][0] > 0 && distinct[0][0] <= kMaxDistributionCardinality) {
-                auto rows =
-                    query_int_rows(impl_->db,
-                                   "SELECT " + quoted_col + ", COUNT(*) FROM " + quoted_collection + " WHERE " +
-                                       quoted_col + " IS NOT NULL GROUP BY " + quoted_col + " ORDER BY " + quoted_col);
-                // D2-12: the lookup sits here, not at the top of the per-scalar loop, so a
+            const auto integer_cells = " WHERE typeof(" + quoted_col + ") = 'integer'";
+            const auto distinct_sql = "SELECT COUNT(*) FROM (SELECT DISTINCT " + quoted_col + " FROM " +
+                                      quoted_collection + integer_cells + " LIMIT ?)";
+            const auto distinct = *impl_->execute(distinct_sql, {kMaxDistributionCardinality + 1})[0].get_integer(0);
+            if (distinct > 0 && distinct <= kMaxDistributionCardinality) {
+                const auto rows = impl_->execute(
+                    "SELECT " + quoted_col + ", COUNT(*) FROM " + quoted_collection + integer_cells + " GROUP BY " +
+                    quoted_col + " ORDER BY " + quoted_col
+                );
+                // The lookup sits here, not at the top of the per-scalar loop, so a
                 // collection of TEXT/REAL/PK scalars pays zero two-level map lookups.
                 const auto* meta = impl_->ui_metadata.find(collection, scalar.name);
                 out << "; values {";
-                for (size_t i = 0; i < rows.size(); ++i) {
+                for (size_t i = 0; i < rows.row_count(); ++i) {
                     if (i != 0) {
                         out << ", ";
                     }
-                    out << rows[i][0];
-                    // D2-06 / project decision D-09: deliberate divergence from D-06's enum
-                    // clause. There the entry IS the vocabulary, so an empty-normalizing label
-                    // drops the whole entry; here the entry is an observed row count, so an
-                    // empty-normalizing label drops only the annotation and keeps the entry.
+                    const int64_t code = *rows[i].get_integer(0);
+                    out << code;
+                    // Deliberate divergence from the enum clause in write_ui_clauses. There the
+                    // entry IS the vocabulary, so an empty-normalizing label drops the whole entry;
+                    // here the entry is an observed row count, so an empty-normalizing label drops
+                    // only the annotation and keeps the entry.
                     if (meta) {
-                        auto label_it = meta->enum_labels.find(rows[i][0]);
+                        auto label_it = meta->enum_labels.find(code);
                         if (label_it != meta->enum_labels.end()) {
                             const std::string normalized_label = normalize_ui_text(label_it->second);
                             if (!normalized_label.empty()) {
@@ -313,7 +316,7 @@ std::string Database::summarize_collection(const std::string& collection) const 
                             }
                         }
                     }
-                    out << ": " << rows[i][1];
+                    out << ": " << *rows[i].get_integer(1);
                 }
                 out << "}";
             }
@@ -322,19 +325,16 @@ std::string Database::summarize_collection(const std::string& collection) const 
     }
 
     // Per group: count elements that have at least one row in the group table.
-    const std::pair<const char*, GroupTableType> sections[] = {
-        {"  Vectors:", GroupTableType::Vector},
-        {"  Sets:", GroupTableType::Set},
-        {"  Time Series:", GroupTableType::TimeSeries},
-    };
-    for (const auto& [header, type] : sections) {
+    for (const auto& [header, type] : kGroupSections) {
         auto groups = impl_->schema->group_names(collection, type);
-        if (groups.empty())
+        if (groups.empty()) {
             continue;
+        }
         out << header << "\n";
         for (const auto& group_name : groups) {
-            const auto table = group_table_name(collection, group_name, type);
-            const auto non_empty = query_int_rows(impl_->db, "SELECT COUNT(DISTINCT id) FROM \"" + table + "\"")[0][0];
+            const auto table = Schema::group_table_name(collection, group_name, type);
+            const auto non_empty =
+                *impl_->execute("SELECT COUNT(DISTINCT id) FROM \"" + table + "\"")[0].get_integer(0);
             out << "    - " << group_name << ": " << non_empty << "/" << element_count << " non-empty\n";
         }
     }

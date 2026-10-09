@@ -60,6 +60,38 @@ void main() {
         db.close();
       }
     });
+
+    test('malformed dimension value throws ArgumentError and the handle stays usable', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        final id = db.createElement('Collection', {'label': 'Item 1'});
+        db.updateTimeSeriesGroup('Collection', 'data', id, {
+          'date_time': ['2024-01-01T10:00:00'],
+          'value': [1.5],
+        });
+        // Bypass the DATE_TIME write gate, as a pre-gate database or another tool would.
+        db.queryString(
+          'UPDATE Collection_time_series_data SET date_time = ? WHERE id = ?',
+          ['2024-1-5', id],
+        );
+
+        expect(
+          () => db.readTimeSeriesGroup('Collection', 'data', id),
+          throwsA(isA<ArgumentError>()),
+        );
+        // A second read fails the same way: no crash, no double free.
+        expect(
+          () => db.readTimeSeriesGroup('Collection', 'data', id),
+          throwsA(isA<ArgumentError>()),
+        );
+      } finally {
+        db.close();
+      }
+    });
   });
 
   group('Time Series Update', () {
@@ -383,7 +415,13 @@ void main() {
             'humidity': [45, 50],
             'status': ['normal', 'high'],
           }),
-          throwsA(isA<ArgumentError>()),
+          throwsA(
+            isA<ArgumentError>().having(
+              (e) => e.message,
+              'message',
+              "All column lists must have the same length, got 1 for 'temperature'",
+            ),
+          ),
         );
       } finally {
         db.close();

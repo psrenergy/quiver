@@ -3,10 +3,6 @@ name: Publish Julia
 on:
   workflow_dispatch:
     inputs:
-      version:
-        description: "Override version"
-        required: false
-        default: ""
       ref:
         description: "Override ref or sha"
         required: false
@@ -27,10 +23,7 @@ jobs:
           ref: ${{ inputs.ref || github.sha }}
       - id: v
         run: |
-          v="${{ inputs.version }}"
-          if [ -z "$v" ]; then
-            v="$(python3 scripts/assert_version.py)"
-          fi
+          v="$(python3 scripts/assert_version.py)"
           echo "version=$v" >> "$GITHUB_OUTPUT"
 
   publish:
@@ -56,6 +49,7 @@ jobs:
             --version "${{ needs.version.outputs.version }}" \
             --output "$RUNNER_TEMP/Artifacts.toml" \
             --platform linux-x86_64 native/linux-x86_64 \
+            --platform linux-aarch64 native/linux-aarch64 \
             --platform macos-aarch64 native/macos-aarch64 \
             --platform windows-x86_64 native/windows-x86_64
 

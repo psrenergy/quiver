@@ -5,23 +5,47 @@ five manifests) lives in the root `AGENTS.md`.
 
 ## Workflow Inventory
 
+The `bun-test` matrix runs `bun run typecheck` unconditionally after dependency installation,
+before either platform's native tests. The strict check compiles the actual JS binding source.
+
 | Workflow | Trigger | Purpose |
 |---|---|---|
-| `ci.yml` | push/PR to master | Build matrix (ubuntu/windows/macos × Release/Debug) + ctest + artifact upload; four coverage jobs uploading to Codecov with flags `cpp`, `julia`, `dart`, `python`; plus `clang-format` check, `actionlint`, and a `bun-test` matrix (ubuntu+windows) |
+| `ci.yml` | push/PR to master | Build matrix (ubuntu/ubuntu-arm/windows/macos × Release/Debug) + ctest + artifact upload; four coverage jobs uploading to Codecov with flags `cpp`, `julia`, `dart`, `python`; plus `clang-format` check (22.1.8 wheel via `uvx`), `actionlint`, and a `bun-test` matrix (ubuntu+ubuntu-arm+windows) whose `ubuntu-latest` leg uploads flag `js` |
 | `bump-version.yml` | `workflow_dispatch` (`part`: major/minor/patch) | Runs `scripts/assert_version.py bump <part>` and opens a PR with the five manifests rewritten (see below) |
 | `publish.yml` | `workflow_dispatch` | Release orchestrator (see below) |
-| `publish-s3.yml` | `workflow_dispatch` (usually from publish.yml) | Builds native libs for `linux-x86_64`, `macos-aarch64`, `windows-x86_64` (via `scripts/ci/native_s3.sh`) and stages them on S3 |
+| `publish-s3.yml` | `workflow_dispatch` (usually from publish.yml) | Builds native libs for `linux-x86_64`, `linux-aarch64`, `macos-aarch64`, `windows-x86_64` and stages them on S3 (via `scripts/ci/native_s3.sh upload`) |
 | `publish-julia.yml` | `workflow_dispatch` | Mirrors `bindings/julia` into psrenergy/Quiver.jl (see below) |
-| `publish-python.yml` | push/PR to master + `workflow_dispatch` | cibuildwheel on a ubuntu+windows matrix (targets in `bindings/python/AGENTS.md`); the PyPI publish job runs only on `workflow_dispatch` (trusted publishing, `skip-existing: true`, `environment: pypi`) |
+| `publish-python.yml` | push/PR to master + `workflow_dispatch` | cibuildwheel on a ubuntu+ubuntu-arm+windows matrix (targets in `bindings/python/AGENTS.md`); the PyPI publish job runs only on `workflow_dispatch` (trusted publishing, `skip-existing: true`, `environment: pypi`) |
 | `publish-js.yml` | `workflow_dispatch` | npm publish with bundled native libs (see below) |
+
+**Codecov uploads send exactly the one file they name.** Every `codecov-action` step sets
+`disable_search: true`, and the C++ one also sets `plugins: noop`. With the defaults, the CLI runs
+its gcov plugin over every `.gcno` in `build/` and adds whatever else its search finds, which put
+all of `tests/*.cpp` into the report behind lcov's `--remove` filter (62% of the measured lines,
+reading 96.7% where the source was at 93.6%). Two related traps: in `codecov.yml`, `dir/**/*`
+compiles to a regex that needs a subdirectory and never matches `dir`'s own files, so write `dir/`
+(check with `curl -X POST --data-binary @codecov.yml https://codecov.io/validate`). And Bun 1.3
+reports test files in coverage despite its docs, so `bindings/js/bunfig.toml` sets
+`coverageSkipTestFiles` explicitly.
+
+**Codecov uploads install the CLI from PyPI** (`use_pypi: true` on every step). By default the
+action downloads the binary from `cli.codecov.io`. When that host started failing TLS handshakes
+(October 2026), every coverage job went red even though all its tests passed. `use_pypi` makes the
+action `pip install codecov-cli` and skip the GPG check of the downloaded binary, so integrity now
+rests on PyPI's TLS. No setup step is needed: GitHub's Ubuntu 24.04 image sets
+`break-system-packages = true` in `/etc/pip.conf`.
 
 Composite actions in `.github/actions/`:
 - `build-cpp` — configure/build the core + C API with a FetchContent source cache. The cache key
   includes a **toolchain fingerprint** (default CMake generator): FetchContent subbuilds pin the
   generator in their CMakeCache, so restoring a `_deps` cache built under a different default
-  generator (e.g. windows-latest moving VS 17 → 18) fails configure.
+  generator (e.g. windows-latest moving VS 17 → 18) fails configure. Every key also carries
+  `runner.arch`: `ubuntu-latest` and `ubuntu-24.04-arm` both report `runner.os == Linux`, and a
+  restored cache of the other arch's `_deps` sub-builds / sccache objects breaks the build.
   **Used by macOS/Windows only in `publish-s3.yml`** (`if: runner.os != 'Linux'`); `ci.yml` still
-  uses it for all three OSes.
+  uses it for all three OSes, in every job that loads the native library except `dart-coverage`,
+  whose `dart test` builds the library through the Dart hook (`bindings/dart/hook/build.dart`) and
+  never reads `build/`. Do not add it back.
 
 **glibc floor for the published Linux native libs (`publish-s3.yml`):** the `linux-x86_64` native
 libs are NOT built via `build-cpp` on a bare `ubuntu-latest` runner — that binds `GLIBC_2.28`..`2.34`
@@ -37,17 +61,28 @@ toolchain/cmake/glibc floor can't drift. **GCC 11 (devtoolset-11) is required**:
 `<chrono>` calendar types (`year_month_day`/`hh_mm_ss`/`sys_days`) that GCC 10 lacks — and CentOS 7's
 SCL caps at GCC 11, which keeps GLIBCXX ≤ the **3.4.30** ceiling Julia's bundled libstdc++ provides
 (this is a plain S3 artifact — no `CompilerSupportLibraries_jll` at load time, so libstdc++ is whatever
-Julia bundles; GCC 13 → `3.4.32` would fail to load). The script builds into `build/manylinux/`, runs `patchelf --set-rpath '$ORIGIN'`
+Julia bundles; GCC 13 → `3.4.32` would fail to load). The script builds into `build/manylinux-<arch>/`, runs `patchelf --set-rpath '$ORIGIN'`
 on `libquiver_c.so` so it finds `libquiver.so.0` as a sibling in the flat ship layout, dereferences the
 version symlinks into real files (matching the old `cp -L`), and runs the portability gate
 in-container (fails unless glibc ≤ 2.17, GLIBCXX ≤ 3.4.30, both libs dynamically linked to
 `libstdc++.so.6`, and `libquiver_c.so` carries an `$ORIGIN` rpath). libstdc++ stays **dynamic** — never
 static-link (the C API catches C++-core exceptions by type across the `libquiver.so` →
 `libquiver_c.so` boundary, and two static copies under `-fvisibility=hidden` would break that; this
-also rules out zig/libc++ static toolchains). The three files land in `build/manylinux/lib/` exactly as
+also rules out zig/libc++ static toolchains). The three files land in `build/manylinux-<arch>/lib/` exactly as
 the downstream `upload-s3` job + `scripts/ci/native_s3.sh` expect. Feeds both the Julia and JS/npm
 native libs (shared S3 staging). macOS/Windows still use `build-cpp` (gated `if: runner.os !=
 'Linux'`) — only Linux needs the old-glibc image.
+
+**Portability checks consume all `objdump` output.** Use `grep ... >/dev/null`, not `grep -q`:
+the script enables `pipefail`, and an early-exiting grep can give `objdump` SIGPIPE (exit 141),
+falsely reporting a missing dependency or rpath. Keep `pipefail` so real producer errors still fail.
+
+**`linux-aarch64` (e.g. DGX Spark) has a glibc 2.28 floor, not 2.17:** `bash
+scripts/build_native_linux.sh aarch64` runs on the `ubuntu-24.04-arm` hosted runner inside
+**manylinux_2_28_aarch64** (AlmaLinux 8, also pinned by digest). manylinux2014 cannot serve it: CentOS 7's
+aarch64 SCL stops at devtoolset-10, and GCC 10 lacks the `<chrono>` calendar. The gcc-toolset there
+links newer libstdc++ symbols statically (`libstdc++_nonshared`), so GLIBCXX stays at the system's 3.4.25
+and the same gate passes with the glibc check at 2.28 — the floor the Python wheels already ship with.
 
 > **Why not the alternatives** (settled 2026-07-24): BinaryBuilder.jl also reaches 2.17 without Docker,
 > but pulls the whole Julia + compiler-shard stack and can't run on a Windows dev box (local
@@ -62,6 +97,8 @@ The publish workflows read the version by inlining `python3 scripts/assert_versi
 `bump-version.yml` writes it with `scripts/assert_version.py bump <part>`. Only `main()` in that
 script prints to stdout, so both the no-arg and the `bump` form emit the bare version and nothing
 else — everything the callers `$( )` depend on.
+The child publish workflows take no `version` input: each resolves it from its checkout via
+`scripts/assert_version.py`; `ref` is their only override.
 
 ## Release Pipeline
 
@@ -109,7 +146,7 @@ The order is **bump, merge, publish** — two deliberate dispatches, never chain
   `Artifacts.toml`), then **wipes the mirror (keeping only its `.git/`) and copies the entire
   `bindings/julia` tree into it** — `src/`, `test/`, `.github/` (the mirror's `CI.yml`/`TagBot.yml`
   live here, dormant in the monorepo since nested workflows don't run), `README.md`, `.gitignore`,
-  `.gitattributes`, `.JuliaFormatter.toml`, `LICENSE`, and the verbatim `Project.toml` (the
+  `.gitattributes`, `LICENSE`, and the verbatim `Project.toml` (the
   binding shares Quiver.jl's UUID). It then copies the real test schemas from repo-root
   `tests/schemas/` into the mirror's `test/schemas/` (no schemas live in `bindings/julia`;
   `test/fixture.jl` resolves the schema dir at runtime), overlays the generated
@@ -130,19 +167,21 @@ The order is **bump, merge, publish** — two deliberate dispatches, never chain
   gets an `@loader_path` rpath via `install_name_tool` in `publish-s3.yml`. (2) `install_name_tool`
   invalidates the ad-hoc linker signature and arm64 macOS SIGKILLs `dlopen` of unsigned code, so
   the workflow re-signs with `codesign --force --sign -` — that step is load-bearing. (3) The
-  mirror's `CI.yml` passes no `arch` to setup-julia (runner-native: x64 on ubuntu/windows,
-  aarch64 on macos-latest); x64 Julia on an arm64 mac runs under Rosetta and would not match the
+  mirror's `CI.yml` passes no `arch` to setup-julia (runner-native: x64 on ubuntu-latest/windows,
+  aarch64 on ubuntu-24.04-arm/macos-latest); x64 Julia on an arm64 mac runs under Rosetta and would not match the
   `arch = "aarch64"` Artifacts.toml entry.
 
 ## npm Publishing (JS)
 
 `publish-js.yml` downloads native libs from S3 into
-`libs/{linux-x86_64,macos-aarch64,windows-x86_64}/`, asserts every lib is in a throwaway
-`npm pack` tarball via `tar -tzf` (format-independent; npm roots entries under `package/`), then
-publishes with **`npm publish --loglevel verbose` via `actions/setup-node@v6`** using **npm
+`libs/{linux-x86_64,linux-aarch64,macos-aarch64,windows-x86_64}/` (the download fails on any missing
+file), asserts every downloaded file is in a throwaway `npm pack` tarball via `tar -tzf`
+(format-independent; npm roots entries under `package/`) — the workflow keeps no list of its own, so
+`native_s3.sh`'s `files_for` is the only one — then
+publishes with **`npm publish --loglevel verbose` via `actions/setup-node`** using **npm
 Trusted Publishing (OIDC)** — `permissions: id-token: write`, no stored token; npm packs inline
 so the published artifact carries the deterministic, asserted file set. setup-node uses
-`package-manager-cache: false` (v6 caches by default; the Bun project has no
+`package-manager-cache: false` (it caches by default; the Bun project has no
 `package-lock.json`). Verbose logging is load-bearing: npm logs the OIDC exchange result only at
 that level — a failed exchange silently falls back to token auth (setup-node's `NODE_AUTH_TOKEN`
 placeholder) and dies with a misleading E404 on the PUT. Requires a trusted publisher configured

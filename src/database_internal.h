@@ -3,8 +3,8 @@
 
 #include "quiver/attribute_metadata.h"
 #include "quiver/result.h"
-#include "quiver/schema.h"
 #include "quiver/value.h"
+#include "schema.h"
 
 #include <optional>
 #include <stdexcept>
@@ -28,13 +28,26 @@ inline std::optional<std::string> get_row_value(const Row& row, size_t index, st
     return row.get_string(index);
 }
 
-// One output entry per element, aligned with read_element_ids. Expects the LEFT JOIN the bulk
-// readers build: column 0 the collection's id (never NULL), column 1 the value. An element with no
-// values joins to one NULL row, which the value check skips, leaving its entry empty.
+// The LEFT JOIN read_grouped_values_all parses, by position: column 0 the collection's id (never
+// NULL), column 1 the group's join key (the presence column), column 2 the value. `order_column`
+// orders an element's cells: vector_index for a vector group, rowid for a set group.
+inline std::string grouped_values_sql(
+    const std::string& collection,
+    const std::string& table,
+    const std::string& attribute,
+    const std::string& order_column
+) {
+    return "SELECT c.id, g.id, g." + attribute + " FROM " + collection + " c LEFT JOIN " + table +
+           " g ON g.id = c.id ORDER BY c.rowid, g." + order_column;
+}
+
+// One output entry per element, aligned with read_element_ids, from grouped_values_sql's result.
+// Cell NULLs are preserved positionally as std::nullopt.
 template <typename T>
-std::vector<std::vector<T>> read_grouped_values_all(const Result& result) {
-    std::vector<std::vector<T>> groups;
-    int64_t current_id = -1;
+std::vector<std::vector<std::optional<T>>> read_grouped_values_all(const Result& result) {
+    std::vector<std::vector<std::optional<T>>> groups;
+    // No sentinel id: every int64, -1 included, is a valid element id (an explicit one is accepted).
+    std::optional<int64_t> current_id;
 
     for (size_t i = 0; i < result.row_count(); ++i) {
         // Column 0 is the collection's INTEGER PRIMARY KEY, so it is never NULL.
@@ -44,17 +57,19 @@ std::vector<std::vector<T>> read_grouped_values_all(const Result& result) {
             current_id = id;
         }
 
-        auto val = get_row_value(result[i], 1, static_cast<T*>(nullptr));
-        if (val) {
-            groups.back().push_back(*val);
+        // Column 1 is the group's join key: NULL only when the LEFT JOIN found no row, i.e. an
+        // empty group. A matched row's value may itself be NULL and is kept as nullopt. Tested
+        // with is_null, not get_integer: a key stored as REAL or TEXT still matched the join.
+        if (!result[i].is_null(1)) {
+            groups.back().push_back(get_row_value(result[i], 2, static_cast<T*>(nullptr)));
         }
     }
     return groups;
 }
 
 // Template for reading column 0 values from query results.
-// Drops NULLs — used by group readers (vector/set by id) and read_element_ids,
-// where the columns are NOT NULL / PK by schema convention so no NULL ever appears.
+// Drops NULLs — used only by read_element_ids, whose column is the collection's
+// INTEGER PRIMARY KEY, so no NULL ever appears.
 template <typename T>
 std::vector<T> read_column_values(const Result& result) {
     std::vector<T> values;
@@ -69,8 +84,9 @@ std::vector<T> read_column_values(const Result& result) {
 }
 
 // Template for reading column 0 values, preserving NULLs as std::nullopt.
-// One entry per result row (positional) — used only by the scalar bulk readers,
-// where ORDER BY rowid alignment with the element list must be preserved.
+// One entry per result row (positional) — used by the scalar bulk readers, where ORDER BY
+// rowid alignment with the element list must be preserved, and by the vector/set _by_id
+// readers, where a NULL cell keeps its index within the group.
 template <typename T>
 std::vector<std::optional<T>> read_column_values_nullable(const Result& result) {
     std::vector<std::optional<T>> values;
@@ -133,16 +149,18 @@ inline bool value_matches_type(const Value& v, DataType expected) {
     return std::visit(
         [expected](const auto& x) {
             using T = std::decay_t<decltype(x)>;
-            if constexpr (std::is_same_v<T, std::nullptr_t>)
+            if constexpr (std::is_same_v<T, std::nullptr_t>) {
                 return true;
-            else if constexpr (std::is_same_v<T, int64_t>)
+            } else if constexpr (std::is_same_v<T, int64_t>) {
                 return expected == DataType::Integer || expected == DataType::Real;
-            else if constexpr (std::is_same_v<T, double>)
+            } else if constexpr (std::is_same_v<T, double>) {
                 return expected == DataType::Real;
-            else
+            } else {
                 return expected == DataType::Text || expected == DataType::DateTime;
+            }
         },
-        v);
+        v
+    );
 }
 
 // Human-readable name of the type currently held in a Value (for error messages).
@@ -151,16 +169,18 @@ inline const char* value_type_name(const Value& v) {
     return std::visit(
         [](const auto& x) -> const char* {
             using T = std::decay_t<decltype(x)>;
-            if constexpr (std::is_same_v<T, int64_t>)
+            if constexpr (std::is_same_v<T, int64_t>) {
                 return "INTEGER";
-            else if constexpr (std::is_same_v<T, double>)
+            } else if constexpr (std::is_same_v<T, double>) {
                 return "REAL";
-            else if constexpr (std::is_same_v<T, std::string>)
+            } else if constexpr (std::is_same_v<T, std::string>) {
                 return "TEXT";
-            else
+            } else {
                 return "NULL";
+            }
         },
-        v);
+        v
+    );
 }
 
 // Convert a ColumnDefinition to ScalarMetadata
@@ -180,13 +200,10 @@ inline ScalarMetadata scalar_metadata_from_column(const ColumnDefinition& col) {
 // Convert a column to ScalarMetadata, populating foreign key info from the table definition
 inline ScalarMetadata scalar_metadata_with_fk(const TableDefinition& table_def, const std::string& col_name) {
     auto meta = scalar_metadata_from_column(table_def.columns.at(col_name));
-    for (const auto& fk : table_def.foreign_keys) {
-        if (fk.from_column == col_name) {
-            meta.is_foreign_key = true;
-            meta.references_collection = fk.to_table;
-            meta.references_column = fk.to_column;
-            break;
-        }
+    if (const auto* fk = table_def.get_foreign_key(col_name)) {
+        meta.is_foreign_key = true;
+        meta.references_collection = fk->to_table;
+        meta.references_column = fk->to_column;
     }
     return meta;
 }

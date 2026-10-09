@@ -2,8 +2,9 @@ from cffi import FFI
 
 ffi = FFI()
 
-# Phase 1 CFFI declarations: lifecycle subset from C API headers.
-# Copied exactly from include/quiver/c/ headers with QUIVER_C_API stripped.
+# Hand-maintained CFFI declarations for the C API in include/quiver/c/, minus the binary/ and
+# expression/ headers (those subsystems are exposed only in Julia and Lua). Grouped by topic, not
+# by header. After a C API change, run generator/generator.bat and diff its output against this block.
 ffi.cdef("""
     // common.h
     typedef enum {
@@ -13,7 +14,6 @@ ffi.cdef("""
 
     const char* quiver_version(void);
     const char* quiver_get_last_error(void);
-    void quiver_clear_last_error(void);
 
     // options.h
     typedef enum {
@@ -84,11 +84,6 @@ ffi.cdef("""
                                                     int32_t count,
                                                     const uint8_t* has_value);
 
-    quiver_error_t quiver_element_has_scalars(quiver_element_t* element, int* out_result);
-    quiver_error_t quiver_element_has_arrays(quiver_element_t* element, int* out_result);
-    quiver_error_t quiver_element_scalar_count(quiver_element_t* element, size_t* out_count);
-    quiver_error_t quiver_element_array_count(quiver_element_t* element, size_t* out_count);
-
     quiver_error_t quiver_element_to_string(quiver_element_t* element, char** out_string);
     quiver_error_t quiver_database_free_string(char* str);
 
@@ -126,10 +121,10 @@ ffi.cdef("""
     // Read vector attributes (bulk)
     quiver_error_t quiver_database_read_vector_integers(quiver_database_t* db,
         const char* collection, const char* attribute,
-        int64_t*** out_vectors, size_t** out_sizes, size_t* out_count);
+        int64_t*** out_vectors, uint8_t*** out_masks, size_t** out_sizes, size_t* out_count);
     quiver_error_t quiver_database_read_vector_floats(quiver_database_t* db,
         const char* collection, const char* attribute,
-        double*** out_vectors, size_t** out_sizes, size_t* out_count);
+        double*** out_vectors, uint8_t*** out_masks, size_t** out_sizes, size_t* out_count);
     quiver_error_t quiver_database_read_vector_strings(quiver_database_t* db,
         const char* collection, const char* attribute,
         char**** out_vectors, size_t** out_sizes, size_t* out_count);
@@ -137,10 +132,10 @@ ffi.cdef("""
     // Read vector by ID
     quiver_error_t quiver_database_read_vector_integers_by_id(quiver_database_t* db,
         const char* collection, const char* attribute, int64_t id,
-        int64_t** out_values, size_t* out_count);
+        int64_t** out_values, uint8_t** out_mask, size_t* out_count);
     quiver_error_t quiver_database_read_vector_floats_by_id(quiver_database_t* db,
         const char* collection, const char* attribute, int64_t id,
-        double** out_values, size_t* out_count);
+        double** out_values, uint8_t** out_mask, size_t* out_count);
     quiver_error_t quiver_database_read_vector_strings_by_id(quiver_database_t* db,
         const char* collection, const char* attribute, int64_t id,
         char*** out_values, size_t* out_count);
@@ -148,10 +143,10 @@ ffi.cdef("""
     // Read set attributes (bulk)
     quiver_error_t quiver_database_read_set_integers(quiver_database_t* db,
         const char* collection, const char* attribute,
-        int64_t*** out_sets, size_t** out_sizes, size_t* out_count);
+        int64_t*** out_sets, uint8_t*** out_masks, size_t** out_sizes, size_t* out_count);
     quiver_error_t quiver_database_read_set_floats(quiver_database_t* db,
         const char* collection, const char* attribute,
-        double*** out_sets, size_t** out_sizes, size_t* out_count);
+        double*** out_sets, uint8_t*** out_masks, size_t** out_sizes, size_t* out_count);
     quiver_error_t quiver_database_read_set_strings(quiver_database_t* db,
         const char* collection, const char* attribute,
         char**** out_sets, size_t** out_sizes, size_t* out_count);
@@ -159,13 +154,26 @@ ffi.cdef("""
     // Read set by ID
     quiver_error_t quiver_database_read_set_integers_by_id(quiver_database_t* db,
         const char* collection, const char* attribute, int64_t id,
-        int64_t** out_values, size_t* out_count);
+        int64_t** out_values, uint8_t** out_mask, size_t* out_count);
     quiver_error_t quiver_database_read_set_floats_by_id(quiver_database_t* db,
         const char* collection, const char* attribute, int64_t id,
-        double** out_values, size_t* out_count);
+        double** out_values, uint8_t** out_mask, size_t* out_count);
     quiver_error_t quiver_database_read_set_strings_by_id(quiver_database_t* db,
         const char* collection, const char* attribute, int64_t id,
         char*** out_values, size_t* out_count);
+
+    // Read a whole vector/set group by ID: columnar typed arrays + per-cell mask,
+    // freed by quiver_database_free_time_series_data
+    quiver_error_t quiver_database_read_vector_group_by_id(quiver_database_t* db,
+        const char* collection, const char* group, int64_t id,
+        char*** out_column_names, int** out_column_types,
+        void*** out_column_data, uint8_t*** out_column_has_value,
+        size_t* out_column_count, size_t* out_row_count);
+    quiver_error_t quiver_database_read_set_group_by_id(quiver_database_t* db,
+        const char* collection, const char* group, int64_t id,
+        char*** out_column_names, int** out_column_types,
+        void*** out_column_data, uint8_t*** out_column_has_value,
+        size_t* out_column_count, size_t* out_row_count);
 
     // Read element Ids
     quiver_error_t quiver_database_read_element_ids(quiver_database_t* db,
@@ -179,6 +187,7 @@ ffi.cdef("""
     quiver_error_t quiver_database_free_integer_array(int64_t* values);
     quiver_error_t quiver_database_free_float_array(double* values);
     quiver_error_t quiver_database_free_mask(uint8_t* mask);
+    quiver_error_t quiver_database_free_masks(uint8_t** masks, size_t count);
     quiver_error_t quiver_database_free_string_array(char** values, size_t count);
     quiver_error_t quiver_database_free_integer_vectors(int64_t** vectors, size_t* sizes, size_t count);
     quiver_error_t quiver_database_free_float_vectors(double** vectors, size_t* sizes, size_t count);
@@ -276,22 +285,14 @@ ffi.cdef("""
     quiver_error_t quiver_database_end_dry_run(quiver_database_t* db);
     quiver_error_t quiver_database_in_dry_run(quiver_database_t* db, int* out_active);
 
-    // Query methods - simple
+    // Query methods - parameters bind to `?` placeholders; (NULL, NULL, 0) for none
     quiver_error_t quiver_database_query_string(quiver_database_t* db,
-        const char* sql, char** out_value, int* out_has_value);
-    quiver_error_t quiver_database_query_integer(quiver_database_t* db,
-        const char* sql, int64_t* out_value, int* out_has_value);
-    quiver_error_t quiver_database_query_float(quiver_database_t* db,
-        const char* sql, double* out_value, int* out_has_value);
-
-    // Query methods - parameterized
-    quiver_error_t quiver_database_query_string_params(quiver_database_t* db,
-        const char* sql, const int* param_types, void**  param_values,
+        const char* sql, const int* param_types, void** param_values,
         size_t param_count, char** out_value, int* out_has_value);
-    quiver_error_t quiver_database_query_integer_params(quiver_database_t* db,
+    quiver_error_t quiver_database_query_integer(quiver_database_t* db,
         const char* sql, const int* param_types, void** param_values,
         size_t param_count, int64_t* out_value, int* out_has_value);
-    quiver_error_t quiver_database_query_float_params(quiver_database_t* db,
+    quiver_error_t quiver_database_query_float(quiver_database_t* db,
         const char* sql, const int* param_types, void** param_values,
         size_t param_count, double* out_value, int* out_has_value);
 
@@ -304,7 +305,8 @@ ffi.cdef("""
 
     quiver_error_t quiver_database_read_time_series_row(quiver_database_t* db,
         const char* collection, const char* group, const char* attribute,
-        const char* date_time, int* out_data_type, void** out_values, size_t* out_count);
+        const char* date_time, int* out_data_type, void** out_values, uint8_t** out_mask,
+        size_t* out_count);
 
     quiver_error_t quiver_database_update_time_series_group(quiver_database_t* db,
         const char* collection, const char* group, int64_t id,
@@ -393,13 +395,13 @@ ffi.cdef("""
         const char* collection, const char* group, const char* path,
         const quiver_csv_options_t* options);
 
-    // lua_runner.h
-    typedef struct quiver_lua_runner quiver_lua_runner_t;
+    // sandbox.h
+    typedef struct quiver_sandbox quiver_sandbox_t;
 
-    quiver_error_t quiver_lua_runner_new(quiver_database_t* db, quiver_lua_runner_t** out_runner);
-    quiver_error_t quiver_lua_runner_free(quiver_lua_runner_t* runner);
-    quiver_error_t quiver_lua_runner_run(quiver_lua_runner_t* runner, const char* script, char** out_result);
-    quiver_error_t quiver_lua_runner_free_string(char* str);
+    quiver_error_t quiver_sandbox_new(quiver_database_t* db, quiver_sandbox_t** out_runner);
+    quiver_error_t quiver_sandbox_free(quiver_sandbox_t* runner);
+    quiver_error_t quiver_sandbox_run(quiver_sandbox_t* runner, const char* script, char** out_result);
+    quiver_error_t quiver_sandbox_free_string(char* str);
 """)
 
 _lib = None

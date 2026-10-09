@@ -84,10 +84,6 @@ function quiver_get_last_error()
     @ccall libquiver_c.quiver_get_last_error()::Ptr{Cchar}
 end
 
-function quiver_clear_last_error()
-    @ccall libquiver_c.quiver_clear_last_error()::Cvoid
-end
-
 @cenum quiver_log_level_t::UInt32 begin
     QUIVER_LOG_DEBUG = 0
     QUIVER_LOG_INFO = 1
@@ -235,24 +231,24 @@ function quiver_database_read_scalar_strings(db, collection, attribute, out_valu
     @ccall libquiver_c.quiver_database_read_scalar_strings(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_values::Ptr{Ptr{Ptr{Cchar}}}, out_count::Ptr{Csize_t})::quiver_error_t
 end
 
-function quiver_database_read_vector_integers(db, collection, attribute, out_vectors, out_sizes, out_count)
-    @ccall libquiver_c.quiver_database_read_vector_integers(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_vectors::Ptr{Ptr{Ptr{Int64}}}, out_sizes::Ptr{Ptr{Csize_t}}, out_count::Ptr{Csize_t})::quiver_error_t
+function quiver_database_read_vector_integers(db, collection, attribute, out_vectors, out_masks, out_sizes, out_count)
+    @ccall libquiver_c.quiver_database_read_vector_integers(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_vectors::Ptr{Ptr{Ptr{Int64}}}, out_masks::Ptr{Ptr{Ptr{UInt8}}}, out_sizes::Ptr{Ptr{Csize_t}}, out_count::Ptr{Csize_t})::quiver_error_t
 end
 
-function quiver_database_read_vector_floats(db, collection, attribute, out_vectors, out_sizes, out_count)
-    @ccall libquiver_c.quiver_database_read_vector_floats(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_vectors::Ptr{Ptr{Ptr{Cdouble}}}, out_sizes::Ptr{Ptr{Csize_t}}, out_count::Ptr{Csize_t})::quiver_error_t
+function quiver_database_read_vector_floats(db, collection, attribute, out_vectors, out_masks, out_sizes, out_count)
+    @ccall libquiver_c.quiver_database_read_vector_floats(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_vectors::Ptr{Ptr{Ptr{Cdouble}}}, out_masks::Ptr{Ptr{Ptr{UInt8}}}, out_sizes::Ptr{Ptr{Csize_t}}, out_count::Ptr{Csize_t})::quiver_error_t
 end
 
 function quiver_database_read_vector_strings(db, collection, attribute, out_vectors, out_sizes, out_count)
     @ccall libquiver_c.quiver_database_read_vector_strings(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_vectors::Ptr{Ptr{Ptr{Ptr{Cchar}}}}, out_sizes::Ptr{Ptr{Csize_t}}, out_count::Ptr{Csize_t})::quiver_error_t
 end
 
-function quiver_database_read_set_integers(db, collection, attribute, out_sets, out_sizes, out_count)
-    @ccall libquiver_c.quiver_database_read_set_integers(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_sets::Ptr{Ptr{Ptr{Int64}}}, out_sizes::Ptr{Ptr{Csize_t}}, out_count::Ptr{Csize_t})::quiver_error_t
+function quiver_database_read_set_integers(db, collection, attribute, out_sets, out_masks, out_sizes, out_count)
+    @ccall libquiver_c.quiver_database_read_set_integers(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_sets::Ptr{Ptr{Ptr{Int64}}}, out_masks::Ptr{Ptr{Ptr{UInt8}}}, out_sizes::Ptr{Ptr{Csize_t}}, out_count::Ptr{Csize_t})::quiver_error_t
 end
 
-function quiver_database_read_set_floats(db, collection, attribute, out_sets, out_sizes, out_count)
-    @ccall libquiver_c.quiver_database_read_set_floats(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_sets::Ptr{Ptr{Ptr{Cdouble}}}, out_sizes::Ptr{Ptr{Csize_t}}, out_count::Ptr{Csize_t})::quiver_error_t
+function quiver_database_read_set_floats(db, collection, attribute, out_sets, out_masks, out_sizes, out_count)
+    @ccall libquiver_c.quiver_database_read_set_floats(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_sets::Ptr{Ptr{Ptr{Cdouble}}}, out_masks::Ptr{Ptr{Ptr{UInt8}}}, out_sizes::Ptr{Ptr{Csize_t}}, out_count::Ptr{Csize_t})::quiver_error_t
 end
 
 function quiver_database_read_set_strings(db, collection, attribute, out_sets, out_sizes, out_count)
@@ -271,24 +267,24 @@ function quiver_database_read_scalar_string_by_id(db, collection, attribute, id,
     @ccall libquiver_c.quiver_database_read_scalar_string_by_id(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_value::Ptr{Ptr{Cchar}}, out_has_value::Ptr{Cint})::quiver_error_t
 end
 
-function quiver_database_read_vector_integers_by_id(db, collection, attribute, id, out_values, out_count)
-    @ccall libquiver_c.quiver_database_read_vector_integers_by_id(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_values::Ptr{Ptr{Int64}}, out_count::Ptr{Csize_t})::quiver_error_t
+function quiver_database_read_vector_integers_by_id(db, collection, attribute, id, out_values, out_mask, out_count)
+    @ccall libquiver_c.quiver_database_read_vector_integers_by_id(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_values::Ptr{Ptr{Int64}}, out_mask::Ptr{Ptr{UInt8}}, out_count::Ptr{Csize_t})::quiver_error_t
 end
 
-function quiver_database_read_vector_floats_by_id(db, collection, attribute, id, out_values, out_count)
-    @ccall libquiver_c.quiver_database_read_vector_floats_by_id(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_values::Ptr{Ptr{Cdouble}}, out_count::Ptr{Csize_t})::quiver_error_t
+function quiver_database_read_vector_floats_by_id(db, collection, attribute, id, out_values, out_mask, out_count)
+    @ccall libquiver_c.quiver_database_read_vector_floats_by_id(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_values::Ptr{Ptr{Cdouble}}, out_mask::Ptr{Ptr{UInt8}}, out_count::Ptr{Csize_t})::quiver_error_t
 end
 
 function quiver_database_read_vector_strings_by_id(db, collection, attribute, id, out_values, out_count)
     @ccall libquiver_c.quiver_database_read_vector_strings_by_id(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_values::Ptr{Ptr{Ptr{Cchar}}}, out_count::Ptr{Csize_t})::quiver_error_t
 end
 
-function quiver_database_read_set_integers_by_id(db, collection, attribute, id, out_values, out_count)
-    @ccall libquiver_c.quiver_database_read_set_integers_by_id(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_values::Ptr{Ptr{Int64}}, out_count::Ptr{Csize_t})::quiver_error_t
+function quiver_database_read_set_integers_by_id(db, collection, attribute, id, out_values, out_mask, out_count)
+    @ccall libquiver_c.quiver_database_read_set_integers_by_id(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_values::Ptr{Ptr{Int64}}, out_mask::Ptr{Ptr{UInt8}}, out_count::Ptr{Csize_t})::quiver_error_t
 end
 
-function quiver_database_read_set_floats_by_id(db, collection, attribute, id, out_values, out_count)
-    @ccall libquiver_c.quiver_database_read_set_floats_by_id(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_values::Ptr{Ptr{Cdouble}}, out_count::Ptr{Csize_t})::quiver_error_t
+function quiver_database_read_set_floats_by_id(db, collection, attribute, id, out_values, out_mask, out_count)
+    @ccall libquiver_c.quiver_database_read_set_floats_by_id(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_values::Ptr{Ptr{Cdouble}}, out_mask::Ptr{Ptr{UInt8}}, out_count::Ptr{Csize_t})::quiver_error_t
 end
 
 function quiver_database_read_set_strings_by_id(db, collection, attribute, id, out_values, out_count)
@@ -413,8 +409,8 @@ function quiver_database_upsert_time_series_row_by_label(db, collection, group, 
     @ccall libquiver_c.quiver_database_upsert_time_series_row_by_label(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, label::Ptr{Cchar}, column_names::Ptr{Ptr{Cchar}}, column_types::Ptr{Cint}, column_data::Ptr{Ptr{Cvoid}}, column_count::Csize_t)::quiver_error_t
 end
 
-function quiver_database_read_time_series_row(db, collection, group, attribute, date_time, out_data_type, out_values, out_count)
-    @ccall libquiver_c.quiver_database_read_time_series_row(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, attribute::Ptr{Cchar}, date_time::Ptr{Cchar}, out_data_type::Ptr{Cint}, out_values::Ptr{Ptr{Cvoid}}, out_count::Ptr{Csize_t})::quiver_error_t
+function quiver_database_read_time_series_row(db, collection, group, attribute, date_time, out_data_type, out_values, out_mask, out_count)
+    @ccall libquiver_c.quiver_database_read_time_series_row(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, attribute::Ptr{Cchar}, date_time::Ptr{Cchar}, out_data_type::Ptr{Cint}, out_values::Ptr{Ptr{Cvoid}}, out_mask::Ptr{Ptr{UInt8}}, out_count::Ptr{Csize_t})::quiver_error_t
 end
 
 function quiver_database_free_time_series_data(column_names, column_types, column_data, column_has_value, column_count, row_count)
@@ -457,6 +453,10 @@ function quiver_database_free_mask(mask)
     @ccall libquiver_c.quiver_database_free_mask(mask::Ptr{UInt8})::quiver_error_t
 end
 
+function quiver_database_free_masks(masks, count)
+    @ccall libquiver_c.quiver_database_free_masks(masks::Ptr{Ptr{UInt8}}, count::Csize_t)::quiver_error_t
+end
+
 function quiver_database_free_string(str)
     @ccall libquiver_c.quiver_database_free_string(str::Ptr{Cchar})::quiver_error_t
 end
@@ -481,28 +481,16 @@ function quiver_database_import_csv(db, collection, group, path, options)
     @ccall libquiver_c.quiver_database_import_csv(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, path::Ptr{Cchar}, options::Ptr{quiver_csv_options_t})::quiver_error_t
 end
 
-function quiver_database_query_string(db, sql, out_value, out_has_value)
-    @ccall libquiver_c.quiver_database_query_string(db::Ptr{quiver_database_t}, sql::Ptr{Cchar}, out_value::Ptr{Ptr{Cchar}}, out_has_value::Ptr{Cint})::quiver_error_t
+function quiver_database_query_string(db, sql, param_types, param_values, param_count, out_value, out_has_value)
+    @ccall libquiver_c.quiver_database_query_string(db::Ptr{quiver_database_t}, sql::Ptr{Cchar}, param_types::Ptr{Cint}, param_values::Ptr{Ptr{Cvoid}}, param_count::Csize_t, out_value::Ptr{Ptr{Cchar}}, out_has_value::Ptr{Cint})::quiver_error_t
 end
 
-function quiver_database_query_integer(db, sql, out_value, out_has_value)
-    @ccall libquiver_c.quiver_database_query_integer(db::Ptr{quiver_database_t}, sql::Ptr{Cchar}, out_value::Ptr{Int64}, out_has_value::Ptr{Cint})::quiver_error_t
+function quiver_database_query_integer(db, sql, param_types, param_values, param_count, out_value, out_has_value)
+    @ccall libquiver_c.quiver_database_query_integer(db::Ptr{quiver_database_t}, sql::Ptr{Cchar}, param_types::Ptr{Cint}, param_values::Ptr{Ptr{Cvoid}}, param_count::Csize_t, out_value::Ptr{Int64}, out_has_value::Ptr{Cint})::quiver_error_t
 end
 
-function quiver_database_query_float(db, sql, out_value, out_has_value)
-    @ccall libquiver_c.quiver_database_query_float(db::Ptr{quiver_database_t}, sql::Ptr{Cchar}, out_value::Ptr{Cdouble}, out_has_value::Ptr{Cint})::quiver_error_t
-end
-
-function quiver_database_query_string_params(db, sql, param_types, param_values, param_count, out_value, out_has_value)
-    @ccall libquiver_c.quiver_database_query_string_params(db::Ptr{quiver_database_t}, sql::Ptr{Cchar}, param_types::Ptr{Cint}, param_values::Ptr{Ptr{Cvoid}}, param_count::Csize_t, out_value::Ptr{Ptr{Cchar}}, out_has_value::Ptr{Cint})::quiver_error_t
-end
-
-function quiver_database_query_integer_params(db, sql, param_types, param_values, param_count, out_value, out_has_value)
-    @ccall libquiver_c.quiver_database_query_integer_params(db::Ptr{quiver_database_t}, sql::Ptr{Cchar}, param_types::Ptr{Cint}, param_values::Ptr{Ptr{Cvoid}}, param_count::Csize_t, out_value::Ptr{Int64}, out_has_value::Ptr{Cint})::quiver_error_t
-end
-
-function quiver_database_query_float_params(db, sql, param_types, param_values, param_count, out_value, out_has_value)
-    @ccall libquiver_c.quiver_database_query_float_params(db::Ptr{quiver_database_t}, sql::Ptr{Cchar}, param_types::Ptr{Cint}, param_values::Ptr{Ptr{Cvoid}}, param_count::Csize_t, out_value::Ptr{Cdouble}, out_has_value::Ptr{Cint})::quiver_error_t
+function quiver_database_query_float(db, sql, param_types, param_values, param_count, out_value, out_has_value)
+    @ccall libquiver_c.quiver_database_query_float(db::Ptr{quiver_database_t}, sql::Ptr{Cchar}, param_types::Ptr{Cint}, param_values::Ptr{Ptr{Cvoid}}, param_count::Csize_t, out_value::Ptr{Cdouble}, out_has_value::Ptr{Cint})::quiver_error_t
 end
 
 function quiver_database_describe(db, out_report)
@@ -557,44 +545,28 @@ function quiver_element_set_array_string(element, name, values, count, has_value
     @ccall libquiver_c.quiver_element_set_array_string(element::Ptr{quiver_element_t}, name::Ptr{Cchar}, values::Ptr{Ptr{Cchar}}, count::Int32, has_value::Ptr{UInt8})::quiver_error_t
 end
 
-function quiver_element_has_scalars(element, out_result)
-    @ccall libquiver_c.quiver_element_has_scalars(element::Ptr{quiver_element_t}, out_result::Ptr{Cint})::quiver_error_t
-end
-
-function quiver_element_has_arrays(element, out_result)
-    @ccall libquiver_c.quiver_element_has_arrays(element::Ptr{quiver_element_t}, out_result::Ptr{Cint})::quiver_error_t
-end
-
-function quiver_element_scalar_count(element, out_count)
-    @ccall libquiver_c.quiver_element_scalar_count(element::Ptr{quiver_element_t}, out_count::Ptr{Csize_t})::quiver_error_t
-end
-
-function quiver_element_array_count(element, out_count)
-    @ccall libquiver_c.quiver_element_array_count(element::Ptr{quiver_element_t}, out_count::Ptr{Csize_t})::quiver_error_t
-end
-
 function quiver_element_to_string(element, out_string)
     @ccall libquiver_c.quiver_element_to_string(element::Ptr{quiver_element_t}, out_string::Ptr{Ptr{Cchar}})::quiver_error_t
 end
 
-mutable struct quiver_lua_runner end
+mutable struct quiver_sandbox end
 
-const quiver_lua_runner_t = quiver_lua_runner
+const quiver_sandbox_t = quiver_sandbox
 
-function quiver_lua_runner_new(db, out_runner)
-    @ccall libquiver_c.quiver_lua_runner_new(db::Ptr{quiver_database_t}, out_runner::Ptr{Ptr{quiver_lua_runner_t}})::quiver_error_t
+function quiver_sandbox_new(db, out_sandbox)
+    @ccall libquiver_c.quiver_sandbox_new(db::Ptr{quiver_database_t}, out_sandbox::Ptr{Ptr{quiver_sandbox_t}})::quiver_error_t
 end
 
-function quiver_lua_runner_free(runner)
-    @ccall libquiver_c.quiver_lua_runner_free(runner::Ptr{quiver_lua_runner_t})::quiver_error_t
+function quiver_sandbox_free(sandbox)
+    @ccall libquiver_c.quiver_sandbox_free(sandbox::Ptr{quiver_sandbox_t})::quiver_error_t
 end
 
-function quiver_lua_runner_run(runner, script, out_result)
-    @ccall libquiver_c.quiver_lua_runner_run(runner::Ptr{quiver_lua_runner_t}, script::Ptr{Cchar}, out_result::Ptr{Ptr{Cchar}})::quiver_error_t
+function quiver_sandbox_run(sandbox, script, out_result)
+    @ccall libquiver_c.quiver_sandbox_run(sandbox::Ptr{quiver_sandbox_t}, script::Ptr{Cchar}, out_result::Ptr{Ptr{Cchar}})::quiver_error_t
 end
 
-function quiver_lua_runner_free_string(str)
-    @ccall libquiver_c.quiver_lua_runner_free_string(str::Ptr{Cchar})::quiver_error_t
+function quiver_sandbox_free_string(str)
+    @ccall libquiver_c.quiver_sandbox_free_string(str::Ptr{Cchar})::quiver_error_t
 end
 
 @cenum quiver_time_frequency_t::UInt32 begin

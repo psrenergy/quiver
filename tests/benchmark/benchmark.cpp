@@ -1,14 +1,15 @@
 #include "../test_utils.h"
 
+#include <quiver/c/options.h>
+#include <quiver/database.h>
+#include <quiver/element.h>
+
 #include <algorithm>
 #include <chrono>
 #include <cstdio>
 #include <filesystem>
 #include <map>
 #include <numeric>
-#include <quiver/c/options.h>
-#include <quiver/database.h>
-#include <quiver/element.h>
 #include <string>
 #include <vector>
 
@@ -61,7 +62,8 @@ static std::vector<std::map<std::string, quiver::Value>> make_time_series_rows(i
         char ts[32];
         std::snprintf(ts, sizeof(ts), "2024-01-01T%02d:00:00", r);
         rows.push_back(
-            {{"date_time", std::string(ts)}, {"value", static_cast<double>((element_index * 10 + r) * 0.5)}});
+            {{"date_time", std::string(ts)}, {"value", static_cast<double>((element_index * 10 + r) * 0.5)}}
+        );
     }
     return rows;
 }
@@ -83,10 +85,12 @@ static Stats compute_stats(std::vector<double>& times_ms, int element_count) {
     double median = times_ms[times_ms.size() / 2];
     double mean = std::accumulate(times_ms.begin(), times_ms.end(), 0.0) / static_cast<double>(times_ms.size());
 
-    return {.median_ms = median,
-            .mean_ms = mean,
-            .per_element_ms = median / element_count,
-            .ops_per_sec = element_count / (median / 1000.0)};
+    return {
+        .median_ms = median,
+        .mean_ms = mean,
+        .per_element_ms = median / element_count,
+        .ops_per_sec = element_count / (median / 1000.0)
+    };
 }
 
 // ---------------------------------------------------------------------------
@@ -100,7 +104,10 @@ static double run_individual(const std::string& schema_path, int element_count) 
 
     {
         auto db = quiver::Database::from_schema(
-            db_path, schema_path, {.read_only = false, .console_level = quiver::LogLevel::Off});
+            db_path,
+            schema_path,
+            {.read_only = false, .console_level = quiver::LogLevel::Off}
+        );
 
         // Configuration element (outside timed region)
         quiver::Element config;
@@ -131,7 +138,10 @@ static double run_batched(const std::string& schema_path, int element_count) {
 
     {
         auto db = quiver::Database::from_schema(
-            db_path, schema_path, {.read_only = false, .console_level = quiver::LogLevel::Off});
+            db_path,
+            schema_path,
+            {.read_only = false, .console_level = quiver::LogLevel::Off}
+        );
 
         // Configuration element (outside timed region)
         quiver::Element config;
@@ -161,12 +171,14 @@ static double run_batched(const std::string& schema_path, int element_count) {
 // Output
 // ---------------------------------------------------------------------------
 
-static void print_results(const Stats& individual,
-                          const Stats& batched,
-                          int element_count,
-                          int ts_rows,
-                          int iterations,
-                          const std::string& schema_name) {
+static void print_results(
+    const Stats& individual,
+    const Stats& batched,
+    int element_count,
+    int ts_rows,
+    int iterations,
+    const std::string& schema_name
+) {
     std::printf("\n");
     std::printf("========================================================\n");
     std::printf("  Quiver Transaction Benchmark\n");
@@ -178,31 +190,37 @@ static void print_results(const Stats& individual,
     std::printf("========================================================\n");
     std::printf("\n");
     std::printf("%-20s %12s %14s %12s %10s\n", "Variant", "Total (ms)", "Per-elem (ms)", "Ops/sec", "Speedup");
-    std::printf("%-20s %12s %14s %12s %10s\n",
-                "--------------------",
-                "------------",
-                "--------------",
-                "------------",
-                "----------");
+    std::printf(
+        "%-20s %12s %14s %12s %10s\n",
+        "--------------------",
+        "------------",
+        "--------------",
+        "------------",
+        "----------"
+    );
 
     char speedup_buf[32];
 
     std::snprintf(speedup_buf, sizeof(speedup_buf), "1.00x");
-    std::printf("%-20s %12.1f %14.3f %12.1f %10s\n",
-                "Individual",
-                individual.median_ms,
-                individual.per_element_ms,
-                individual.ops_per_sec,
-                speedup_buf);
+    std::printf(
+        "%-20s %12.1f %14.3f %12.1f %10s\n",
+        "Individual",
+        individual.median_ms,
+        individual.per_element_ms,
+        individual.ops_per_sec,
+        speedup_buf
+    );
 
     double ratio = individual.median_ms / batched.median_ms;
     std::snprintf(speedup_buf, sizeof(speedup_buf), "%.2fx", ratio);
-    std::printf("%-20s %12.1f %14.3f %12.1f %10s\n",
-                "Batched",
-                batched.median_ms,
-                batched.per_element_ms,
-                batched.ops_per_sec,
-                speedup_buf);
+    std::printf(
+        "%-20s %12.1f %14.3f %12.1f %10s\n",
+        "Batched",
+        batched.median_ms,
+        batched.per_element_ms,
+        batched.ops_per_sec,
+        speedup_buf
+    );
 
     std::printf("\n");
 }

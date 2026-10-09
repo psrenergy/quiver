@@ -1671,6 +1671,21 @@ void main() {
       }
     });
 
+    test('updateSetGroup replaces rows and clears on an empty map', () {
+      final db = openRelations();
+      try {
+        db.updateSetGroup('Child', 'parents', 1, {
+          'parent_ref': [1, 2],
+        });
+        expect(db.readSetIntegersById('Child', 'parent_ref', 1), equals([1, 2]));
+
+        db.updateSetGroup('Child', 'parents', 1, {});
+        expect(db.readSetIntegersById('Child', 'parent_ref', 1), isEmpty);
+      } finally {
+        db.close();
+      }
+    });
+
     test('leaves a sibling group sharing a column name untouched', () {
       final db = openRelations();
       try {
@@ -1714,6 +1729,10 @@ void main() {
         expect(rows[0]['parent_ref'], equals(1));
         expect(rows[1]['parent_ref'], isNull);
         expect(rows[2]['parent_ref'], equals(2));
+        expect(
+          db.readVectorIntegersById('Child', 'parent_ref', 1),
+          equals([1, null, 2]),
+        );
       } finally {
         db.close();
       }
@@ -1747,7 +1766,13 @@ void main() {
             'parent_ref': [1, 2],
             'vector_index': [1],
           }),
-          throwsA(isA<ArgumentError>()),
+          throwsA(
+            isA<ArgumentError>().having(
+              (e) => e.message,
+              'message',
+              "All column lists must have the same length, got 1 for 'vector_index'",
+            ),
+          ),
         );
       } finally {
         db.close();
@@ -1819,6 +1844,87 @@ void main() {
             'parent_ref': [1],
           }),
           throwsA(isA<DatabaseException>()),
+        );
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  // ==========================================================================
+  // Mixed numeric cells
+  // ==========================================================================
+
+  group('Mixed numeric cells', () {
+    // A numeric column (or element array) is INTEGER only while no cell is a double; one double
+    // widens it to FLOAT, so [1, 2.5] writes 1.0 and 2.5 here as in Python, JS and Julia. Choosing
+    // INTEGER from the first cell used to throw ArgumentError on the 2.5.
+    Database openAllTypes() => Database.fromSchema(
+      ':memory:',
+      path.join(testsPath, 'schemas', 'valid', 'all_types.sql'),
+    );
+
+    test('a double among ints widens a group column to FLOAT', () {
+      final db = openAllTypes();
+      try {
+        final id = db.createElement('AllTypes', {'label': 'Widened'});
+        db.updateVectorGroup('AllTypes', 'scores', id, {
+          'score': [1, 2.5, true],
+        });
+        expect(db.readVectorFloatsById('AllTypes', 'score', id), equals([1.0, 2.5, 1.0]));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('a double among ints widens an element array to FLOAT', () {
+      final db = openAllTypes();
+      try {
+        final id = db.createElement('AllTypes', {
+          'label': 'Widened',
+          'score': [1, 2.5],
+        });
+        expect(db.readVectorFloatsById('AllTypes', 'score', id), equals([1.0, 2.5]));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('an INTEGER column still rejects a widened column', () {
+      final db = openAllTypes();
+      try {
+        final id = db.createElement('AllTypes', {
+          'label': 'Counts',
+          'count_value': [7],
+        });
+        expect(
+          () => db.updateVectorGroup('AllTypes', 'counts', id, {
+            'count_value': [1, 2.5],
+          }),
+          throwsA(isA<DatabaseException>().having((e) => e.message, 'message', contains('count_value'))),
+        );
+        // Validation runs before the DELETE, so the group is intact.
+        expect(db.readVectorIntegersById('AllTypes', 'count_value', id), equals([7]));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('a String among numbers names its own cell', () {
+      final db = openAllTypes();
+      try {
+        final id = db.createElement('AllTypes', {'label': 'Bad'});
+        expect(
+          () => db.updateVectorGroup('AllTypes', 'scores', id, {
+            'score': [1, 2.5, 'x'],
+          }),
+          throwsA(
+            isA<ArgumentError>().having(
+              (e) => e.message,
+              'message',
+              allOf(contains('score'), contains('cell 2')),
+            ),
+          ),
         );
       } finally {
         db.close();

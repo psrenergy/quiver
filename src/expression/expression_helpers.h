@@ -63,9 +63,10 @@ inline void validate_shape_compatibility(const BinaryMetadata& lhs, const Binary
             continue;
         }
 
-        throw std::runtime_error("Cannot apply: dimension '" + l_dim.name + "' has incompatible sizes " +
-                                 std::to_string(l_size) + " vs " + std::to_string(r_size) +
-                                 " (broadcasting requires n x n, 1 x n, or n x 1)");
+        throw std::runtime_error(
+            "Cannot apply: dimension '" + l_dim.name + "' has incompatible sizes " + std::to_string(l_size) + " vs " +
+            std::to_string(r_size) + " (broadcasting requires n x n, 1 x n, or n x 1)"
+        );
     }
 
     for (const auto& l_dim : lhs.dimensions) {
@@ -80,8 +81,10 @@ inline void validate_shape_compatibility(const BinaryMetadata& lhs, const Binary
         if (l_time != r_time) {
             const std::string time_side = l_time ? "lhs" : "rhs";
             const std::string nontime_side = l_time ? "rhs" : "lhs";
-            throw std::runtime_error("Cannot apply: dimension '" + l_dim.name + "' is a time dimension on " +
-                                     time_side + " but not on " + nontime_side);
+            throw std::runtime_error(
+                "Cannot apply: dimension '" + l_dim.name + "' is a time dimension on " + time_side + " but not on " +
+                nontime_side
+            );
         }
 
         if (!l_time) {
@@ -93,8 +96,9 @@ inline void validate_shape_compatibility(const BinaryMetadata& lhs, const Binary
         const auto l_parent = parent_name_of(lp.parent_dimension_index, lhs);
         const auto r_parent = parent_name_of(rp.parent_dimension_index, rhs);
         if (lp.frequency != rp.frequency || lp.initial_value != rp.initial_value || l_parent != r_parent) {
-            throw std::runtime_error("Cannot apply: time dimension '" + l_dim.name +
-                                     "' has incompatible TimeProperties");
+            throw std::runtime_error(
+                "Cannot apply: time dimension '" + l_dim.name + "' has incompatible TimeProperties"
+            );
         }
     }
 
@@ -113,8 +117,10 @@ inline void validate_compatibility(const BinaryMetadata& lhs, const BinaryMetada
 // The one label rule for every broadcasting node: every operand with more than one label must carry
 // the same label set, and a single-label operand broadcasts its one value across it whatever that
 // label is called. When every operand has a single label, the output takes the primary operand's.
-inline std::vector<std::string> broadcast_labels(std::initializer_list<const BinaryMetadata*> sources,
-                                                 const BinaryMetadata& primary) {
+inline std::vector<std::string> broadcast_labels(
+    std::initializer_list<const BinaryMetadata*> sources,
+    const BinaryMetadata& primary
+) {
     const std::vector<std::string>* labels = nullptr;
     for (const auto* src : sources) {
         if (src->labels.size() <= 1) {
@@ -123,8 +129,10 @@ inline std::vector<std::string> broadcast_labels(std::initializer_list<const Bin
         if (labels == nullptr) {
             labels = &src->labels;
         } else if (src->labels != *labels) {
-            throw std::runtime_error("Cannot apply: labels are incompatible across operands "
-                                     "(non-singleton label sets must match)");
+            throw std::runtime_error(
+                "Cannot apply: labels are incompatible across operands "
+                "(non-singleton label sets must match)"
+            );
         }
     }
     return labels != nullptr ? *labels : primary.labels;
@@ -138,8 +146,10 @@ inline std::vector<std::string> broadcast_labels(std::initializer_list<const Bin
 // unit come from `primary`. initial_datetime comes from the first source with a time dimension,
 // else from `primary`. The pairwise validate_shape_compatibility calls force every time-bearing
 // source to agree, so only that fallback depends on which operand is primary.
-inline BinaryMetadata build_broadcast_metadata(std::initializer_list<const BinaryMetadata*> sources,
-                                               const BinaryMetadata& primary) {
+inline BinaryMetadata build_broadcast_metadata(
+    std::initializer_list<const BinaryMetadata*> sources,
+    const BinaryMetadata& primary
+) {
     BinaryMetadata out;
     out.version = primary.version;
     out.unit = primary.unit;
@@ -210,20 +220,24 @@ inline std::string aggregation_operation_label(ExpressionAggregate::Operation op
     throw std::runtime_error("Cannot label aggregation: unhandled Operation variant");
 }
 
-inline void validate_aggregation_param(ExpressionAggregate::Operation op,
-                                       std::optional<double> parameter,
-                                       const std::string& fn_label) {
+inline void validate_aggregation_param(
+    ExpressionAggregate::Operation op,
+    std::optional<double> parameter,
+    const std::string& fn_label
+) {
     const bool needs_param = (op == ExpressionAggregate::Operation::Percentile);
     if (needs_param && !parameter.has_value()) {
         throw std::runtime_error("Cannot " + fn_label + ": operation 'percentile' requires a parameter");
     }
     if (!needs_param && parameter.has_value()) {
-        throw std::runtime_error("Cannot " + fn_label + ": operation '" + aggregation_operation_label(op) +
-                                 "' does not accept a parameter");
+        throw std::runtime_error(
+            "Cannot " + fn_label + ": operation '" + aggregation_operation_label(op) + "' does not accept a parameter"
+        );
     }
     if (needs_param && (*parameter < 0.0 || *parameter > 1.0)) {
-        throw std::runtime_error("Cannot " + fn_label + ": percentile must be in [0, 1], got " +
-                                 std::to_string(*parameter));
+        throw std::runtime_error(
+            "Cannot " + fn_label + ": percentile must be in [0, 1], got " + std::to_string(*parameter)
+        );
     }
 }
 
@@ -250,8 +264,10 @@ inline double compute_percentile(std::vector<double>& values, double fraction) {
 // Broadcast operand helpers (shared by ExpressionBinary / ExpressionTernary)
 // ============================================================================
 
-inline BroadcastOperand make_broadcast_operand(const BinaryMetadata& operand_meta,
-                                               const std::vector<Dimension>& out_dims) {
+inline BroadcastOperand make_broadcast_operand(
+    const BinaryMetadata& operand_meta,
+    const std::vector<Dimension>& out_dims
+) {
     BroadcastOperand op;
     op.dim_sizes.assign(out_dims.size(), 0);
     op.to_out.assign(operand_meta.dimensions.size(), -1);
@@ -271,9 +287,11 @@ inline BroadcastOperand make_broadcast_operand(const BinaryMetadata& operand_met
 // Translate output coordinates into the operand's dimension space (size-1
 // dimensions broadcast by pinning their coordinate to 1) and compute the
 // operand's row into its reusable row_buf.
-inline void compute_broadcast_operand_row(const BroadcastOperand& op,
-                                          const ExpressionNode& node,
-                                          const std::vector<int64_t>& dims) {
+inline void compute_broadcast_operand_row(
+    const BroadcastOperand& op,
+    const ExpressionNode& node,
+    const std::vector<int64_t>& dims
+) {
     for (size_t i = 0; i < op.dims_buf.size(); ++i) {
         const auto out_i = op.to_out[i];
         auto coord = dims[out_i];
@@ -302,10 +320,12 @@ struct AggregationState {
 };
 
 // NaN inputs are skipped; Percentile collects into the caller's scratch buffer.
-inline void aggregation_accumulate(ExpressionAggregate::Operation op,
-                                   AggregationState& state,
-                                   std::vector<double>& percentile_scratch,
-                                   double value) {
+inline void aggregation_accumulate(
+    ExpressionAggregate::Operation op,
+    AggregationState& state,
+    std::vector<double>& percentile_scratch,
+    double value
+) {
     if (std::isnan(value)) {
         return;
     }
@@ -334,10 +354,12 @@ inline void aggregation_accumulate(ExpressionAggregate::Operation op,
 }
 
 // An all-NaN (empty) accumulation yields NaN.
-inline double aggregation_finalize(ExpressionAggregate::Operation op,
-                                   const AggregationState& state,
-                                   std::vector<double>& percentile_scratch,
-                                   const std::optional<double>& parameter) {
+inline double aggregation_finalize(
+    ExpressionAggregate::Operation op,
+    const AggregationState& state,
+    std::vector<double>& percentile_scratch,
+    const std::optional<double>& parameter
+) {
     const double nan_value = std::numeric_limits<double>::quiet_NaN();
     switch (op) {
     case ExpressionAggregate::Operation::Sum:

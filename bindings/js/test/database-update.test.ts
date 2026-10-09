@@ -201,16 +201,32 @@ describe("updateVectorGroup / updateSetGroup", () => {
     const { db, parentA, parentB, child } = openRelations();
     try {
       db.updateVectorGroup("Child", "refs", child, { parent_ref: [parentA, null, parentB] });
-      // Asserted in SQL: the per-column reader drops NULL cells.
+      // null cells become SQL NULL, and the per-column reader hands them back positionally.
+      expect(db.readVectorIntegersById("Child", "parent_ref", child)).toEqual([
+        parentA,
+        null,
+        parentB,
+      ]);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("updateVectorGroup keeps a bigint cell beyond Number.MAX_SAFE_INTEGER exact", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      const id = db.createElement("AllTypes", { label: "Item1" });
+      const big = 9007199254740993n; // 2^53 + 1
+      db.updateVectorGroup("AllTypes", "counts", id, { count_value: [big, 7n] });
       expect(
-        db.queryInteger("SELECT COUNT(*) FROM Child_vector_refs WHERE id = ?", [child]),
-      ).toEqual(3);
-      expect(
-        db.queryInteger(
-          "SELECT COUNT(*) FROM Child_vector_refs WHERE id = ? AND parent_ref IS NULL",
-          [child],
+        db.queryString(
+          "SELECT CAST(count_value AS TEXT) FROM AllTypes_vector_counts WHERE vector_index = 1",
         ),
-      ).toEqual(1);
+      ).toBe("9007199254740993");
+      expect(db.readVectorIntegersById("AllTypes", "count_value", id)).toEqual([
+        9007199254740992, // readers return number (documented), so the last digit is not exact here
+        7,
+      ]);
     } finally {
       db.close();
     }
@@ -400,6 +416,32 @@ describe("updateRelation", () => {
       expect(() => db.updateRelation("Child", "Parent", "owner", child, "Parent A")).toThrow(
         /relation column 'parent_owner' not found in collection 'Child'/,
       );
+    } finally {
+      db.close();
+    }
+  });
+});
+
+// A numeric column is typed from every cell -- one decimal widens it to FLOAT -- the rule Python
+// and Dart now share, so [1, 2.5] writes 1 and 2.5 in every binding.
+describe("group writer column typing", () => {
+  test("a decimal among integers widens the column to FLOAT", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      const id = db.createElement("AllTypes", { label: "Widened" });
+      db.updateVectorGroup("AllTypes", "scores", id, { score: [1, 2.5] });
+      expect(db.readVectorFloatsById("AllTypes", "score", id)).toEqual([1, 2.5]);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("a mixed bigint/fractional column is written as FLOAT", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      const id = db.createElement("AllTypes", { label: "Item1" });
+      db.updateVectorGroup("AllTypes", "scores", id, { score: [5n, 1.5] });
+      expect(db.readVectorFloatsById("AllTypes", "score", id)).toEqual([5, 1.5]);
     } finally {
       db.close();
     }

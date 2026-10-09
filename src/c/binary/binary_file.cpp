@@ -13,10 +13,12 @@ extern "C" {
 
 // Open/close
 
-QUIVER_C_API quiver_error_t quiver_binary_file_open_file(const char* path,
-                                                         char mode,
-                                                         quiver_binary_metadata_t* md,
-                                                         quiver_binary_file_t** out) {
+QUIVER_C_API quiver_error_t quiver_binary_file_open_file(
+    const char* path,
+    char mode,
+    quiver_binary_metadata_t* md,
+    quiver_binary_file_t** out
+) {
     QUIVER_REQUIRE(path, out);
 
     try {
@@ -51,9 +53,11 @@ QUIVER_C_API quiver_error_t quiver_binary_file_create(const char* path, quiver_b
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_binary_file_open(quiver_binary_file_t* binary_file,
-                                                    char mode,
-                                                    quiver_binary_metadata_t* md) {
+QUIVER_C_API quiver_error_t quiver_binary_file_open(
+    quiver_binary_file_t* binary_file,
+    char mode,
+    quiver_binary_metadata_t* md
+) {
     QUIVER_REQUIRE(binary_file);
 
     try {
@@ -76,13 +80,15 @@ QUIVER_C_API quiver_error_t quiver_binary_file_close(quiver_binary_file_t* binar
 
 // I/O
 
-QUIVER_C_API quiver_error_t quiver_binary_file_read(quiver_binary_file_t* binary_file,
-                                                    const char* const* dim_names,
-                                                    const int64_t* dim_values,
-                                                    size_t dim_count,
-                                                    int allow_nulls,
-                                                    double** out_data,
-                                                    size_t* out_count) {
+QUIVER_C_API quiver_error_t quiver_binary_file_read(
+    quiver_binary_file_t* binary_file,
+    const char* const* dim_names,
+    const int64_t* dim_values,
+    size_t dim_count,
+    int allow_nulls,
+    double** out_data,
+    size_t* out_count
+) {
     QUIVER_REQUIRE(binary_file, out_data, out_count);
     if (dim_count > 0) {
         QUIVER_REQUIRE(dim_names, dim_values);
@@ -109,12 +115,14 @@ QUIVER_C_API quiver_error_t quiver_binary_file_read(quiver_binary_file_t* binary
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_binary_file_write(quiver_binary_file_t* binary_file,
-                                                     const char* const* dim_names,
-                                                     const int64_t* dim_values,
-                                                     size_t dim_count,
-                                                     const double* data,
-                                                     size_t data_count) {
+QUIVER_C_API quiver_error_t quiver_binary_file_write(
+    quiver_binary_file_t* binary_file,
+    const char* const* dim_names,
+    const int64_t* dim_values,
+    size_t dim_count,
+    const double* data,
+    size_t data_count
+) {
     QUIVER_REQUIRE(binary_file, data);
     if (dim_count > 0) {
         QUIVER_REQUIRE(dim_names, dim_values);
@@ -137,8 +145,10 @@ QUIVER_C_API quiver_error_t quiver_binary_file_write(quiver_binary_file_t* binar
 
 // Getters
 
-QUIVER_C_API quiver_error_t quiver_binary_file_get_metadata(quiver_binary_file_t* binary_file,
-                                                            quiver_binary_metadata_t** out) {
+QUIVER_C_API quiver_error_t quiver_binary_file_get_metadata(
+    quiver_binary_file_t* binary_file,
+    quiver_binary_metadata_t** out
+) {
     QUIVER_REQUIRE(binary_file, out);
 
     try {

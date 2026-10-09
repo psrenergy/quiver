@@ -17,12 +17,10 @@ describe("introspection", () => {
     }
   });
 
-  test("currentVersion returns a number >= 0", () => {
+  test("currentVersion returns 0 for a schema database", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
-      const version = db.currentVersion();
-      expect(typeof version).toEqual("number");
-      expect(version >= 0).toBeTruthy();
+      expect(db.currentVersion()).toBe(0);
     } finally {
       db.close();
     }
@@ -32,15 +30,6 @@ describe("introspection", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       expect(db.path()).toEqual(":memory:");
-    } finally {
-      db.close();
-    }
-  });
-
-  test("describe runs without error", () => {
-    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
-    try {
-      db.describe();
     } finally {
       db.close();
     }

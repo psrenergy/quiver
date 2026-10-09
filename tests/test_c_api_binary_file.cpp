@@ -1,11 +1,12 @@
-#include <cmath>
-#include <filesystem>
 #include <gtest/gtest.h>
-#include <limits>
 #include <quiver/c/binary/binary_file.h>
 #include <quiver/c/binary/binary_metadata.h>
 #include <quiver/c/common.h>
 #include <quiver/c/element.h>
+
+#include <cmath>
+#include <filesystem>
+#include <limits>
 #include <string>
 
 namespace fs = std::filesystem;
@@ -16,13 +17,16 @@ namespace fs = std::filesystem;
 
 class BinaryCApiFixture : public ::testing::Test {
 protected:
-    void SetUp() override { path = (fs::temp_directory_path() / "quiver_c_binary_test").string(); }
+    void SetUp() override {
+        path = (fs::temp_directory_path() / "quiver_c_binary_test").string();
+    }
 
     void TearDown() override {
         for (auto ext : {".qvr", ".toml", ".csv"}) {
             auto full = path + ext;
-            if (fs::exists(full))
+            if (fs::exists(full)) {
                 fs::remove(full);
+            }
         }
     }
 
@@ -478,8 +482,10 @@ TEST_F(BinaryCApiFixture, ReadUnwrittenPositionFails) {
         int64_t dim_values[] = {2, 1};
         double* out_data = nullptr;
         size_t out_count = 0;
-        EXPECT_EQ(quiver_binary_file_read(binary_file, dim_names, dim_values, 2, 0, &out_data, &out_count),
-                  QUIVER_ERROR);
+        EXPECT_EQ(
+            quiver_binary_file_read(binary_file, dim_names, dim_values, 2, 0, &out_data, &out_count),
+            QUIVER_ERROR
+        );
         std::string err = quiver_get_last_error();
         EXPECT_NE(err.find("null values"), std::string::npos);
 

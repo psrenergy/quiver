@@ -12,8 +12,8 @@ coverage:
         threshold: 1%
 
 ignore:
-  - "tests/**/*"
-  - "build/**/*"
+  - "tests/"
+  - "build/"
 
 comment:
   layout: "reach,diff,flags,files"

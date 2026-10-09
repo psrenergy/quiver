@@ -25,6 +25,6 @@ class DatabaseException implements Exception {
   String toString() => 'DatabaseException: $message';
 }
 
-class LuaException extends DatabaseException {
-  const LuaException(super.message);
+class SandboxException extends DatabaseException {
+  const SandboxException(super.message);
 }

@@ -155,6 +155,33 @@ void main() {
       }
     });
 
+    test('dryRun block rolls back and ends the dry run on exception', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Config'});
+
+        expect(
+          () => db.dryRun((db) {
+            db.createElement('Collection', {'label': 'Preview'});
+            throw StateError('boom');
+          }),
+          throwsStateError,
+        );
+
+        expect(db.inDryRun(), isFalse);
+        expect(db.readScalarStrings('Collection', 'label'), isEmpty);
+
+        // The handle is usable normally afterwards: a plain write commits.
+        db.createElement('Collection', {'label': 'After'});
+        expect(db.readScalarStrings('Collection', 'label'), equals(['After']));
+      } finally {
+        db.close();
+      }
+    });
+
     test('multi-operation batch', () {
       final db = Database.fromSchema(
         ':memory:',

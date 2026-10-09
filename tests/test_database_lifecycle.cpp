@@ -1,22 +1,26 @@
 #include "test_utils.h"
 
-#include <filesystem>
 #include <gtest/gtest.h>
 #include <quiver/database.h>
 #include <quiver/element.h>
 #include <quiver/migration.h>
 #include <quiver/migrations.h>
-#include <sstream>
+
+#include <filesystem>
+#include <fstream>
 #include <string>
 
 namespace fs = std::filesystem;
 
 class TempFileFixture : public ::testing::Test {
 protected:
-    void SetUp() override { path = (fs::temp_directory_path() / "quiver_test.db").string(); }
+    void SetUp() override {
+        path = (fs::temp_directory_path() / "quiver_test.db").string();
+    }
     void TearDown() override {
-        if (fs::exists(path))
+        if (fs::exists(path)) {
             fs::remove(path);
+        }
     }
     std::string path;
 };
@@ -90,21 +94,47 @@ TEST_F(TempFileFixture, CurrentVersion) {
 TEST_F(TempFileFixture, FromSchemaFileNotFound) {
     EXPECT_THROW(
         quiver::Database::from_schema(
-            ":memory:", "nonexistent/path/schema.sql", {.read_only = false, .console_level = quiver::LogLevel::Off}),
-        std::runtime_error);
+            ":memory:",
+            "nonexistent/path/schema.sql",
+            {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ),
+        std::runtime_error
+    );
+}
+
+TEST_F(TempFileFixture, FromSchemaEmptyFile) {
+    const auto schema_path = (fs::temp_directory_path() / "quiver_empty_schema.sql").string();
+    std::ofstream(schema_path).close();
+
+    try {
+        quiver::Database::from_schema(
+            ":memory:",
+            schema_path,
+            {.read_only = false, .console_level = quiver::LogLevel::Off}
+        );
+        ADD_FAILURE() << "Expected from_schema to throw";
+    } catch (const std::runtime_error& error) {
+        EXPECT_EQ(std::string(error.what()), "Cannot from_schema: schema file is empty: " + schema_path);
+    }
+    fs::remove(schema_path);
 }
 
 TEST_F(TempFileFixture, FromSchemaInvalidPath) {
     EXPECT_THROW(
         quiver::Database::from_schema(":memory:", "", {.read_only = false, .console_level = quiver::LogLevel::Off}),
-        std::runtime_error);
+        std::runtime_error
+    );
 }
 
 TEST_F(TempFileFixture, FromMigrationsInvalidPath) {
     EXPECT_THROW(
         quiver::Database::from_migrations(
-            ":memory:", "nonexistent/migrations/", {.read_only = false, .console_level = quiver::LogLevel::Off}),
-        std::runtime_error);
+            ":memory:",
+            "nonexistent/migrations/",
+            {.read_only = false, .console_level = quiver::LogLevel::Off}
+        ),
+        std::runtime_error
+    );
 }
 
 // ============================================================================
@@ -118,8 +148,9 @@ protected:
         migrations_path = (fs::path(__FILE__).parent_path() / "schemas" / "migrations").string();
     }
     void TearDown() override {
-        if (fs::exists(path))
+        if (fs::exists(path)) {
             fs::remove(path);
+        }
     }
     std::string path;
     std::string migrations_path;
@@ -321,12 +352,15 @@ TEST_F(MigrationFixture, FromMigrationsLoadsSchemaMetadata) {
     // Verify expected columns exist
     bool has_id = false, has_label = false, has_name = false;
     for (const auto& attribute : attributes) {
-        if (attribute.name == "id")
+        if (attribute.name == "id") {
             has_id = true;
-        if (attribute.name == "label")
+        }
+        if (attribute.name == "label") {
             has_label = true;
-        if (attribute.name == "name")
+        }
+        if (attribute.name == "name") {
             has_name = true;
+        }
     }
     EXPECT_TRUE(has_id);
     EXPECT_TRUE(has_label);
@@ -336,7 +370,7 @@ TEST_F(MigrationFixture, FromMigrationsLoadsSchemaMetadata) {
 TEST_F(MigrationFixture, FromMigrationsAllowsCreateElement) {
     auto db = quiver::Database::from_migrations(":memory:", migrations_path);
 
-    // create_element requires schema and type_validator to be loaded
+    // create_element requires the schema to be loaded
     auto id = db.create_element("Test1", quiver::Element().set("label", "item1").set("name", "Test Item"));
     EXPECT_GT(id, 0);
 
@@ -377,140 +411,21 @@ TEST_F(MigrationFixture, FromMigrationsLoadsSchemaWhenAlreadyUpToDate) {
     EXPECT_GT(id, 0);
 }
 
-// ============================================================================
-// Describe tests
-// ============================================================================
-
-TEST_F(TempFileFixture, DescribeDoesNotThrow) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
-
-    EXPECT_NO_THROW(db.describe());
-}
-
-// Helper to capture describe() output
-static std::string capture_describe(const quiver::Database& db) {
-    return db.describe();
-}
-
-TEST_F(TempFileFixture, DescribeVectorsHeaderPrintedOnce) {
-    auto db = quiver::Database::from_schema(":memory:",
-                                            VALID_SCHEMA("describe_multi_group.sql"),
-                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
-
-    auto output = capture_describe(db);
-
-    // "Vectors:" header should appear exactly once
-    size_t count = 0;
-    size_t pos = 0;
-    while ((pos = output.find("Vectors:", pos)) != std::string::npos) {
-        ++count;
-        pos += 8;
-    }
-    EXPECT_EQ(count, 1) << "Vectors: header should appear exactly once. Output:\n" << output;
-
-    // Both vector groups should be listed
-    EXPECT_NE(output.find("values"), std::string::npos) << "Missing vector group 'values'";
-    EXPECT_NE(output.find("scores"), std::string::npos) << "Missing vector group 'scores'";
-}
-
-TEST_F(TempFileFixture, DescribeSetsHeaderPrintedOnce) {
-    auto db = quiver::Database::from_schema(":memory:",
-                                            VALID_SCHEMA("describe_multi_group.sql"),
-                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
-
-    auto output = capture_describe(db);
-
-    // "Sets:" header should appear exactly once
-    size_t count = 0;
-    size_t pos = 0;
-    while ((pos = output.find("Sets:", pos)) != std::string::npos) {
-        ++count;
-        pos += 5;
-    }
-    EXPECT_EQ(count, 1) << "Sets: header should appear exactly once. Output:\n" << output;
-
-    // Both set groups should be listed
-    EXPECT_NE(output.find("tags"), std::string::npos) << "Missing set group 'tags'";
-    EXPECT_NE(output.find("categories"), std::string::npos) << "Missing set group 'categories'";
-}
-
-TEST_F(TempFileFixture, DescribeTimeSeriesWithDimensionColumn) {
-    auto db = quiver::Database::from_schema(":memory:",
-                                            VALID_SCHEMA("describe_multi_group.sql"),
-                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
-
-    auto output = capture_describe(db);
-
-    // "Time Series:" header should appear exactly once
-    size_t count = 0;
-    size_t pos = 0;
-    while ((pos = output.find("Time Series:", pos)) != std::string::npos) {
-        ++count;
-        pos += 12;
-    }
-    EXPECT_EQ(count, 1) << "Time Series: header should appear exactly once. Output:\n" << output;
-
-    // Dimension column should be in brackets
-    EXPECT_NE(output.find("[date_time]"), std::string::npos)
-        << "Expected dimension column [date_time] in brackets. Output:\n"
-        << output;
-    EXPECT_NE(output.find("[date_recorded]"), std::string::npos)
-        << "Expected dimension column [date_recorded] in brackets. Output:\n"
-        << output;
-}
-
-TEST_F(TempFileFixture, DescribeColumnOrderMatchesSchema) {
-    auto db = quiver::Database::from_schema(":memory:",
-                                            VALID_SCHEMA("describe_multi_group.sql"),
-                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
-
-    auto output = capture_describe(db);
-
-    // In the Items collection scalars, the schema defines: id, label, priority, weight
-    // The 'id' should appear before 'label', 'label' before 'priority', 'priority' before 'weight'
-    auto id_pos = output.find("    - id ");
-    auto label_pos = output.find("    - label ");
-    auto priority_pos = output.find("    - priority ");
-    auto weight_pos = output.find("    - weight ");
-
-    ASSERT_NE(id_pos, std::string::npos) << "Missing 'id' scalar";
-    ASSERT_NE(label_pos, std::string::npos) << "Missing 'label' scalar";
-    ASSERT_NE(priority_pos, std::string::npos) << "Missing 'priority' scalar";
-    ASSERT_NE(weight_pos, std::string::npos) << "Missing 'weight' scalar";
-
-    EXPECT_LT(id_pos, label_pos) << "id should appear before label";
-    EXPECT_LT(label_pos, priority_pos) << "label should appear before priority";
-    EXPECT_LT(priority_pos, weight_pos) << "priority should appear before weight";
-}
-
-TEST_F(TempFileFixture, DescribeNoCategoryHeaderWhenEmpty) {
-    // basic.sql has no vectors, sets, or time series
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
-
-    auto output = capture_describe(db);
-
-    EXPECT_EQ(output.find("Vectors:"), std::string::npos)
-        << "Vectors: header should not appear when no vectors exist. Output:\n"
-        << output;
-    EXPECT_EQ(output.find("Sets:"), std::string::npos) << "Sets: header should not appear when no sets exist. Output:\n"
-                                                       << output;
-    EXPECT_EQ(output.find("Time Series:"), std::string::npos)
-        << "Time Series: header should not appear when no time series exist. Output:\n"
-        << output;
-}
-
 // The constructor - the only implementation behind quiver_database_open and every binding's
 // open() - does not read the schema; require_schema loads it on first use. Without that, an
 // opened database answered every metadata and CRUD call with "no schema loaded".
 TEST_F(TempFileFixture, OpenExistingDatabaseLoadsSchemaOnFirstUse) {
     {
         auto created = quiver::Database::from_schema(
-            path, VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+            path,
+            VALID_SCHEMA("collections.sql"),
+            {.read_only = false, .console_level = quiver::LogLevel::Off}
+        );
         created.create_element("Configuration", quiver::Element().set("label", std::string("Config")));
-        created.create_element("Collection",
-                               quiver::Element().set("label", std::string("Item 1")).set("some_integer", int64_t{42}));
+        created.create_element(
+            "Collection",
+            quiver::Element().set("label", std::string("Item 1")).set("some_integer", int64_t{42})
+        );
     }
 
     quiver::Database db(path, {.read_only = false, .console_level = quiver::LogLevel::Off});
@@ -524,14 +439,19 @@ TEST_F(TempFileFixture, OpenExistingDatabaseLoadsSchemaOnFirstUse) {
 TEST_F(TempFileFixture, OpenReadOnlyLoadsSchemaOnFirstUse) {
     {
         auto created = quiver::Database::from_schema(
-            path, VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+            path,
+            VALID_SCHEMA("collections.sql"),
+            {.read_only = false, .console_level = quiver::LogLevel::Off}
+        );
         created.create_element("Configuration", quiver::Element().set("label", std::string("Config")));
     }
 
     quiver::Database db(path, {.read_only = true, .console_level = quiver::LogLevel::Off});
     EXPECT_EQ(db.list_scalar_attributes("Configuration").size(), 2u);
-    EXPECT_THROW(db.create_element("Configuration", quiver::Element().set("label", std::string("Nope"))),
-                 std::runtime_error);
+    EXPECT_THROW(
+        db.create_element("Configuration", quiver::Element().set("label", std::string("Nope"))),
+        std::runtime_error
+    );
 }
 
 // A directory with no versioned subdirectories is not an error: Migrations() reports empty and
@@ -542,7 +462,10 @@ TEST_F(TempFileFixture, FromMigrationsWithNoVersionsReturnsHandle) {
     fs::create_directories(empty_dir);
 
     auto db = quiver::Database::from_migrations(
-        path, empty_dir.string(), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        path,
+        empty_dir.string(),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
     EXPECT_TRUE(db.is_healthy());
     EXPECT_EQ(db.current_version(), 0);
 

@@ -1,0 +1,12 @@
+PRAGMA foreign_keys = ON;
+
+CREATE TABLE Configuration (
+    id INTEGER PRIMARY KEY,
+    label TEXT UNIQUE NOT NULL
+) STRICT;
+
+CREATE TABLE Items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    label TEXT UNIQUE NOT NULL,
+    payload BLOB
+) STRICT;

@@ -246,11 +246,15 @@ void main() {
         expect(total, equals(2));
         expect(nulls, equals(1));
 
-        // Row-aligned group read preserves the null cell positionally
+        // Both the row-aligned group read and the per-column reader keep the null cell
         final rows = db.readVectorGroupById('Child', 'refs', id);
         expect(rows.length, equals(2));
         expect(rows[0]['parent_ref'], equals(1));
         expect(rows[1]['parent_ref'], isNull);
+        expect(
+          db.readVectorIntegersById('Child', 'parent_ref', id),
+          equals([1, null]),
+        );
       } finally {
         db.close();
       }

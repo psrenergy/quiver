@@ -99,6 +99,26 @@ void main() {
         element.dispose();
       }
     });
+
+    test('rejects a nested map value', () {
+      final element = Element();
+      try {
+        expect(
+          () => element.set('some_time_series', {
+            'date_time': [DateTime(1990, 1, 1)],
+          }),
+          throwsA(
+            isA<ArgumentError>().having(
+              (e) => e.message,
+              'message',
+              contains("for 'some_time_series'"),
+            ),
+          ),
+        );
+      } finally {
+        element.dispose();
+      }
+    });
   });
 
   group('Element Type-Specific Setters', () {

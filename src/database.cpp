@@ -4,14 +4,15 @@
 #include "ui_metadata.h"
 #include "utils/string.h"
 
-#include <atomic>
-#include <filesystem>
-#include <fstream>
-#include <mutex>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 #include <sqlite3.h>
+
+#include <atomic>
+#include <filesystem>
+#include <fstream>
+#include <mutex>
 #include <sstream>
 #include <stdexcept>
 
@@ -129,11 +130,11 @@ bool Database::is_healthy() const {
     return impl_ && impl_->db != nullptr;
 }
 
-Result Database::execute(const std::string& sql, const std::vector<Value>& parameters) {
+Result Database::Impl::execute(const std::string& sql, const std::vector<Value>& parameters) const {
     sqlite3_stmt* raw_stmt = nullptr;
-    auto rc = sqlite3_prepare_v2(impl_->db, sql.c_str(), -1, &raw_stmt, nullptr);
+    auto rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &raw_stmt, nullptr);
     if (rc != SQLITE_OK) {
-        throw std::runtime_error("Failed to prepare statement: " + std::string(sqlite3_errmsg(impl_->db)));
+        throw std::runtime_error("Failed to prepare statement: " + std::string(sqlite3_errmsg(db)));
     }
     StmtPtr stmt(raw_stmt, sqlite3_finalize);
 
@@ -141,8 +142,10 @@ Result Database::execute(const std::string& sql, const std::vector<Value>& param
     // placeholder, too many would silently ignore the extras.
     const auto expected_parameters = static_cast<size_t>(sqlite3_bind_parameter_count(stmt.get()));
     if (expected_parameters != parameters.size()) {
-        throw std::runtime_error("Failed to execute statement: expected " + std::to_string(expected_parameters) +
-                                 " bound parameter(s) but got " + std::to_string(parameters.size()));
+        throw std::runtime_error(
+            "Failed to execute statement: expected " + std::to_string(expected_parameters) +
+            " bound parameter(s) but got " + std::to_string(parameters.size())
+        );
     }
 
     // Bind parameters
@@ -161,14 +164,17 @@ Result Database::execute(const std::string& sql, const std::vector<Value>& param
                     sqlite3_bind_double(stmt.get(), idx, arg);
                 } else if constexpr (std::is_same_v<T, std::string>) {
                     auto trimmed = string::trim(arg);
-                    sqlite3_bind_text(stmt.get(),
-                                      idx,
-                                      trimmed.c_str(),
-                                      static_cast<int>(trimmed.size()),
-                                      SQLITE_TRANSIENT);  // NOLINT(performance-no-int-to-ptr) SQLite macro
+                    sqlite3_bind_text(
+                        stmt.get(),
+                        idx,
+                        trimmed.c_str(),
+                        static_cast<int>(trimmed.size()),
+                        SQLITE_TRANSIENT
+                    );  // NOLINT(performance-no-int-to-ptr) SQLite macro
                 }
             },
-            parameter);
+            parameter
+        );
     }
 
     // Get column info
@@ -214,35 +220,35 @@ Result Database::execute(const std::string& sql, const std::vector<Value>& param
     }
 
     if (rc != SQLITE_DONE) {
-        throw std::runtime_error("Failed to execute statement: " + std::string(sqlite3_errmsg(impl_->db)));
+        throw std::runtime_error("Failed to execute statement: " + std::string(sqlite3_errmsg(db)));
     }
 
     return {std::move(columns), std::move(rows)};
 }
 
-int64_t Database::current_version() const {
-    sqlite3_stmt* raw_stmt = nullptr;
-    const char* sql = "PRAGMA user_version;";
-    auto rc = sqlite3_prepare_v2(impl_->db, sql, -1, &raw_stmt, nullptr);
+void Database::Impl::execute_raw(const std::string& sql, const char* what) const {
+    char* err_msg = nullptr;
+    const auto rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &err_msg);
     if (rc != SQLITE_OK) {
-        throw std::runtime_error("Failed to prepare statement: " + std::string(sqlite3_errmsg(impl_->db)));
+        std::string error = err_msg ? err_msg : "Unknown error";
+        sqlite3_free(err_msg);
+        throw std::runtime_error(std::string("Failed to ") + what + ": " + error);
     }
-    StmtPtr stmt(raw_stmt, sqlite3_finalize);
+}
 
-    rc = sqlite3_step(stmt.get());
-    if (rc != SQLITE_ROW) {
-        throw std::runtime_error("Failed to read user_version: " + std::string(sqlite3_errmsg(impl_->db)));
-    }
-    return sqlite3_column_int(stmt.get(), 0);
+int64_t Database::current_version() const {
+    return *impl_->execute("PRAGMA user_version")[0].get_integer(0);
 }
 
 const std::string& Database::path() const {
     return impl_->path;
 }
 
-Database Database::from_migrations(const std::string& db_path,
-                                   const std::string& migrations_path,
-                                   const DatabaseOptions& options) {
+Database Database::from_migrations(
+    const std::string& db_path,
+    const std::string& migrations_path,
+    const DatabaseOptions& options
+) {
     namespace fs = std::filesystem;
     if (options.read_only) {
         throw std::runtime_error("Cannot from_migrations: read_only mode (use Database constructor to open existing)");
@@ -254,7 +260,7 @@ Database Database::from_migrations(const std::string& db_path,
         throw std::runtime_error("Cannot from_migrations: path is not a directory: " + migrations_path);
     }
     auto db = Database(db_path, options);
-    db.migrate_up(migrations_path);
+    db.migrate_up(migrations_path, "from_migrations");
     db.impl_->ui_metadata = load_ui_metadata(migrations_path, *db.impl_->logger);
     return db;
 }
@@ -272,7 +278,7 @@ void Database::validate_migrations(const std::string& migrations_path) {
     }
 
     Database db(":memory:", {.console_level = LogLevel::Off});
-    db.migrate_up(migrations_path);
+    db.migrate_up(migrations_path, "validate_migrations");
     db.migrate_down(migrations_path);
 
     const auto leftovers = Schema::from_database(db.impl_->db).table_names();
@@ -285,8 +291,11 @@ void Database::validate_migrations(const std::string& migrations_path) {
     }
 }
 
-Database
-Database::from_schema(const std::string& db_path, const std::string& schema_path, const DatabaseOptions& options) {
+Database Database::from_schema(
+    const std::string& db_path,
+    const std::string& schema_path,
+    const DatabaseOptions& options
+) {
     namespace fs = std::filesystem;
     if (options.read_only) {
         throw std::runtime_error("Cannot from_schema: read_only mode (use Database constructor to open existing)");
@@ -303,14 +312,7 @@ Database::from_schema(const std::string& db_path, const std::string& schema_path
 }
 
 void Database::set_version(int64_t version) {
-    const auto sql = "PRAGMA user_version = " + std::to_string(version) + ";";
-    char* err_msg = nullptr;
-    const auto rc = sqlite3_exec(impl_->db, sql.c_str(), nullptr, nullptr, &err_msg);
-    if (rc != SQLITE_OK) {
-        std::string error = err_msg ? err_msg : "Unknown error";
-        sqlite3_free(err_msg);
-        throw std::runtime_error("Failed to set user_version: " + error);
-    }
+    impl_->execute_raw("PRAGMA user_version = " + std::to_string(version) + ";", "set user_version");
     impl_->logger->debug("Set database version to {}", version);
 }
 
@@ -385,17 +387,7 @@ bool Database::in_dry_run() const {
     return impl_->dry_run;
 }
 
-void Database::execute_raw(const std::string& sql) {
-    char* err_msg = nullptr;
-    const auto rc = sqlite3_exec(impl_->db, sql.c_str(), nullptr, nullptr, &err_msg);
-    if (rc != SQLITE_OK) {
-        std::string error = err_msg ? err_msg : "Unknown error";
-        sqlite3_free(err_msg);
-        throw std::runtime_error("Failed to execute SQL: " + error);
-    }
-}
-
-void Database::migrate_up(const std::string& migrations_path) {
+void Database::migrate_up(const std::string& migrations_path, const char* operation) {
     const auto migrations = Migrations(migrations_path);
     if (migrations.empty()) {
         impl_->logger->debug("No migrations found in {}", migrations_path);
@@ -411,28 +403,35 @@ void Database::migrate_up(const std::string& migrations_path) {
     }
 
     impl_->logger->info(
-        "Applying {} pending migration(s) from version {} to {}", pending.size(), current, migrations.latest_version());
+        "Applying {} pending migration(s) from version {} to {}",
+        pending.size(),
+        current,
+        migrations.latest_version()
+    );
 
     for (const auto& migration : pending) {
         impl_->logger->info("Applying migration {}", migration.version());
 
         const auto up_sql = migration.up_sql();
         if (up_sql.empty()) {
-            throw std::runtime_error("Cannot migrate_up: migration " + std::to_string(migration.version()) +
-                                     " has no up.sql file");
+            throw std::runtime_error(
+                std::string("Cannot ") + operation + ": migration " + std::to_string(migration.version()) +
+                " has no up.sql file"
+            );
         }
 
-        impl_->begin_transaction();
         try {
-            execute_raw(up_sql);
+            Impl::TransactionGuard txn(*impl_);
+            impl_->execute_raw(up_sql);
             set_version(migration.version());
-            impl_->commit();
+            txn.commit();
             impl_->logger->info("Migration {} applied successfully", migration.version());
         } catch (const std::exception& e) {
-            impl_->rollback();
             impl_->logger->error("Migration {} failed: {}", migration.version(), e.what());
-            throw std::runtime_error("Failed to migrate_up: migration " + std::to_string(migration.version()) + ": " +
-                                     e.what());
+            throw std::runtime_error(
+                std::string("Failed to ") + operation + ": up migration " + std::to_string(migration.version()) + ": " +
+                e.what()
+            );
         }
     }
 
@@ -455,22 +454,23 @@ void Database::migrate_down(const std::string& migrations_path) {
 
         const auto down_sql = it->down_sql();
         if (down_sql.empty()) {
-            throw std::runtime_error("Cannot migrate_down: migration " + std::to_string(it->version()) +
-                                     " has no down.sql file");
+            throw std::runtime_error(
+                "Cannot validate_migrations: migration " + std::to_string(it->version()) + " has no down.sql file"
+            );
         }
 
         const auto preceding_version = it + 1 == all.rend() ? 0 : (it + 1)->version();
-        impl_->begin_transaction();
         try {
-            execute_raw(down_sql);
+            Impl::TransactionGuard txn(*impl_);
+            impl_->execute_raw(down_sql);
             set_version(preceding_version);
-            impl_->commit();
+            txn.commit();
             impl_->logger->info("Migration {} reverted successfully", it->version());
         } catch (const std::exception& e) {
-            impl_->rollback();
             impl_->logger->error("Migration {} failed: {}", it->version(), e.what());
-            throw std::runtime_error("Failed to migrate_down: migration " + std::to_string(it->version()) + ": " +
-                                     e.what());
+            throw std::runtime_error(
+                "Failed to validate_migrations: down migration " + std::to_string(it->version()) + ": " + e.what()
+            );
         }
     }
 }
@@ -478,7 +478,7 @@ void Database::migrate_down(const std::string& migrations_path) {
 void Database::apply_schema(const std::string& schema_path) {
     std::ifstream file(schema_path);
     if (!file.is_open()) {
-        throw std::runtime_error("Failed to apply_schema: could not open file: " + schema_path);
+        throw std::runtime_error("Failed to from_schema: could not open file: " + schema_path);
     }
 
     std::stringstream buffer;
@@ -486,18 +486,17 @@ void Database::apply_schema(const std::string& schema_path) {
     const auto schema_sql = buffer.str();
 
     if (schema_sql.empty()) {
-        throw std::runtime_error("Cannot apply_schema: schema file is empty: " + schema_path);
+        throw std::runtime_error("Cannot from_schema: schema file is empty: " + schema_path);
     }
 
     impl_->logger->info("Applying schema from: {}", schema_path);
 
-    impl_->begin_transaction();
     try {
-        execute_raw(schema_sql);
+        Impl::TransactionGuard txn(*impl_);
+        impl_->execute_raw(schema_sql);
         impl_->load_schema_metadata();
-        impl_->commit();
+        txn.commit();
     } catch (const std::exception& e) {
-        impl_->rollback();
         impl_->logger->error("Failed to apply schema: {}", e.what());
         throw;
     }

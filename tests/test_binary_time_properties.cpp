@@ -1,6 +1,7 @@
-#include <chrono>
 #include <gtest/gtest.h>
 #include <quiver/binary/time_properties.h>
+
+#include <chrono>
 
 using namespace quiver;
 using namespace std::chrono;
@@ -63,11 +64,14 @@ TEST(TimeFrequencyConversion, FrequencyFromStringCaseSensitive) {
 }
 
 TEST(TimeFrequencyConversion, RoundTrip) {
-    for (auto freq : {TimeFrequency::Yearly,
-                      TimeFrequency::Monthly,
-                      TimeFrequency::Weekly,
-                      TimeFrequency::Daily,
-                      TimeFrequency::Hourly}) {
+    for (
+        auto freq :
+        {TimeFrequency::Yearly,
+         TimeFrequency::Monthly,
+         TimeFrequency::Weekly,
+         TimeFrequency::Daily,
+         TimeFrequency::Hourly}
+    ) {
         EXPECT_EQ(frequency_from_string(frequency_to_string(freq)), freq);
     }
 }

@@ -8,8 +8,7 @@ import pytest
 
 from quiverdb import Database, QuiverError
 
-
-# -- Simple queries (QUERY-01) ------------------------------------------------
+# -- Simple queries -----------------------------------------------------------
 
 
 class TestQueryString:
@@ -54,7 +53,7 @@ class TestQueryFloat:
         assert result is None
 
 
-# -- Parameterized queries (QUERY-02) -----------------------------------------
+# -- Parameterized queries ----------------------------------------------------
 
 
 class TestQueryStringParameterized:
@@ -113,7 +112,7 @@ class TestQueryFloatParameterized:
 
 
 class TestQueryEmptyParams:
-    def test_query_with_empty_params_routes_to_simple(self, db: Database) -> None:
+    def test_query_with_empty_params_returns_value(self, db: Database) -> None:
         db.create_element("Configuration", label="item1", integer_attribute=7)
         result = db.query_integer(
             "SELECT integer_attribute FROM Configuration WHERE label = 'item1'",
@@ -184,5 +183,8 @@ class TestQueryParameterCount:
         # Too many parameters for the single placeholder
         with pytest.raises(QuiverError):
             db.query_string("SELECT label FROM Configuration WHERE id = ?", parameters=[1, 2])
+        # Parameters omitted entirely
+        with pytest.raises(QuiverError):
+            db.query_string("SELECT label FROM Configuration WHERE id = ?")
         # Exactly one parameter succeeds
         assert db.query_string("SELECT label FROM Configuration WHERE id = ?", parameters=[1]) == "item1"

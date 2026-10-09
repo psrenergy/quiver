@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.26.0)
 
 project(quiver
-    VERSION 0.12.4
+    VERSION 0.13.2
     DESCRIPTION "Quiver library"
     LANGUAGES CXX C
 )
@@ -18,8 +18,8 @@ option(QUIVER_BUILD_C_API "Build C API wrapper" OFF)
 # Omit VERSION/SOVERSION on shared libraries, so the built files carry their plain
 # names (libquiver.dylib) instead of a version infix plus unversioned symlinks.
 # Default OFF: the shipped natives are addressed by their versioned names --
-# bindings/julia/src/c_api.jl hardcodes libquiver.0.dylib, and scripts/ci/native_s3.sh,
-# publish-s3.yml and publish-js.yml ship libquiver.0.dylib / libquiver.so.0 by name.
+# bindings/julia/src/c_api.jl hardcodes libquiver.0.dylib, and scripts/ci/native_s3.sh
+# and publish-s3.yml ship libquiver.0.dylib / libquiver.so.0 by name.
 # Turned ON by the Dart hook, whose asset scanner skips symlinks and matches only the
 # unversioned name. CMAKE_PLATFORM_NO_VERSIONED_SONAME is NOT a substitute: under the Xcode
 # generator that hook selects, it drops the symlinks but keeps the versioned file name,
@@ -54,7 +54,6 @@ add_subdirectory(src)
 
 # Tests
 if(QUIVER_BUILD_TESTS)
-    include(CTest)
     enable_testing()
     add_subdirectory(tests)
 endif()
@@ -89,39 +88,21 @@ if(NOT DEFINED SKBUILD)
     )
 endif()
 
-# Source files for format and tidy targets
+# Source files for the format target (recursive, matching CI's clang-format check)
 file(GLOB_RECURSE ALL_SOURCE_FILES
-    ${CMAKE_SOURCE_DIR}/include/quiver/*.h
-    ${CMAKE_SOURCE_DIR}/include/quiver/c/*.h
+    ${CMAKE_SOURCE_DIR}/include/*.h
     ${CMAKE_SOURCE_DIR}/src/*.cpp
     ${CMAKE_SOURCE_DIR}/src/*.h
-    ${CMAKE_SOURCE_DIR}/src/binary/*.cpp
-    ${CMAKE_SOURCE_DIR}/src/binary/*.h
-    ${CMAKE_SOURCE_DIR}/src/c/*.cpp
-    ${CMAKE_SOURCE_DIR}/src/c/*.h
-    ${CMAKE_SOURCE_DIR}/src/cli/*.cpp
-    ${CMAKE_SOURCE_DIR}/src/utils/*.h
     ${CMAKE_SOURCE_DIR}/tests/*.cpp
     ${CMAKE_SOURCE_DIR}/tests/*.h
-    ${CMAKE_SOURCE_DIR}/tests/benchmark/*.cpp
 )
 
 # Format target
-find_program(CLANG_FORMAT NAMES clang-format-21 clang-format)
+find_program(CLANG_FORMAT NAMES clang-format-22 clang-format)
 if(CLANG_FORMAT)
     add_custom_target(format
         COMMAND ${CLANG_FORMAT} -i ${ALL_SOURCE_FILES}
         COMMENT "Formatting code with clang-format"
-    )
-endif()
-
-# Tidy target — runs clang-tidy via script to avoid command-line length limits on Windows
-find_program(CLANG_TIDY clang-tidy)
-if(CLANG_TIDY)
-    add_custom_target(tidy
-        COMMAND ${CMAKE_SOURCE_DIR}/scripts/tidy.bat
-        COMMENT "Running clang-tidy"
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     )
 endif()
 

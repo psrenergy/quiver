@@ -108,4 +108,15 @@ describe("time series files", () => {
       db.close();
     }
   });
+
+  test("updateTimeSeriesFiles with {} still validates the collection", () => {
+    const db = Database.fromSchema(":memory:", COLLECTIONS_SCHEMA);
+    try {
+      expect(() => db.updateTimeSeriesFiles("NoSuchCollection", {})).toThrow(
+        /Cannot update_time_series_files: collection not found: NoSuchCollection/,
+      );
+    } finally {
+      db.close();
+    }
+  });
 });

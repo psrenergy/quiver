@@ -1,18 +1,21 @@
 #include "test_utils.h"
 
-#include <algorithm>
-#include <cmath>
 #include <gtest/gtest.h>
 #include <quiver/c/database.h>
 #include <quiver/c/element.h>
+
+#include <algorithm>
+#include <cmath>
 #include <string>
 #include <vector>
 
 TEST(DatabaseCApi, ReadTimeSeriesGroupNullString) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("nullable_time_series.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("nullable_time_series.sql").c_str(), &options, &db),
+        QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     quiver_element_t* config = nullptr;
@@ -34,8 +37,10 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupNullString) {
     int col_types[] = {QUIVER_DATA_TYPE_STRING};
     const char* date_times[] = {"2024-01-01T10:00:00"};
     const void* col_data[] = {date_times};
-    ASSERT_EQ(quiver_database_upsert_time_series_row(db, "Sensor", "readings", id, col_names, col_types, col_data, 1),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_upsert_time_series_row(db, "Sensor", "readings", id, col_names, col_types, col_data, 1),
+        QUIVER_OK
+    );
 
     // NULL cells no longer fail the read: every column comes back with a per-cell
     // presence mask. The placeholder data for a masked-out cell must be ignored.
@@ -45,16 +50,18 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupNullString) {
     uint8_t** out_col_has_value = nullptr;
     size_t col_count = 0;
     size_t row_count = 0;
-    auto err = quiver_database_read_time_series_group(db,
-                                                      "Sensor",
-                                                      "readings",
-                                                      id,
-                                                      &out_col_names,
-                                                      &out_col_types,
-                                                      &out_col_data,
-                                                      &out_col_has_value,
-                                                      &col_count,
-                                                      &row_count);
+    auto err = quiver_database_read_time_series_group(
+        db,
+        "Sensor",
+        "readings",
+        id,
+        &out_col_names,
+        &out_col_types,
+        &out_col_data,
+        &out_col_has_value,
+        &col_count,
+        &row_count
+    );
 
     EXPECT_EQ(err, QUIVER_OK);
     ASSERT_EQ(row_count, 1);
@@ -79,7 +86,13 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupNullString) {
     EXPECT_EQ(status[0], nullptr);
 
     quiver_database_free_time_series_data(
-        out_col_names, out_col_types, out_col_data, out_col_has_value, col_count, row_count);
+        out_col_names,
+        out_col_types,
+        out_col_data,
+        out_col_has_value,
+        col_count,
+        row_count
+    );
     quiver_database_close(db);
 }
 
@@ -89,13 +102,16 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupNullString) {
 // ============================================================================
 
 namespace {
+
 // Opens an in-memory nullable_time_series.sql database with one Configuration
 // and one Sensor element; returns the db and the sensor's id.
 quiver_database_t* open_nullable_ts_db(int64_t* out_sensor_id) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    EXPECT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("nullable_time_series.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    EXPECT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("nullable_time_series.sql").c_str(), &options, &db),
+        QUIVER_OK
+    );
     quiver_element_t* config = nullptr;
     quiver_element_create(&config);
     quiver_element_set_string(config, "label", "Config");
@@ -109,6 +125,7 @@ quiver_database_t* open_nullable_ts_db(int64_t* out_sensor_id) {
     quiver_element_destroy(sensor);
     return db;
 }
+
 }  // namespace
 
 TEST(DatabaseCApi, ReadTimeSeriesGroupNullNumerics) {
@@ -122,8 +139,10 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupNullNumerics) {
         const char* dts[] = {"2024-01-01"};
         double temps[] = {20.0};
         const void* data[] = {dts, temps};
-        ASSERT_EQ(quiver_database_upsert_time_series_row(db, "Sensor", "readings", id, names, types, data, 2),
-                  QUIVER_OK);
+        ASSERT_EQ(
+            quiver_database_upsert_time_series_row(db, "Sensor", "readings", id, names, types, data, 2),
+            QUIVER_OK
+        );
     }
     {
         const char* names[] = {"date_time", "counter"};
@@ -131,8 +150,10 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupNullNumerics) {
         const char* dts[] = {"2024-01-02"};
         int64_t counters[] = {5};
         const void* data[] = {dts, counters};
-        ASSERT_EQ(quiver_database_upsert_time_series_row(db, "Sensor", "readings", id, names, types, data, 2),
-                  QUIVER_OK);
+        ASSERT_EQ(
+            quiver_database_upsert_time_series_row(db, "Sensor", "readings", id, names, types, data, 2),
+            QUIVER_OK
+        );
     }
 
     char** out_col_names = nullptr;
@@ -141,17 +162,21 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupNullNumerics) {
     uint8_t** out_col_has_value = nullptr;
     size_t col_count = 0;
     size_t row_count = 0;
-    ASSERT_EQ(quiver_database_read_time_series_group(db,
-                                                     "Sensor",
-                                                     "readings",
-                                                     id,
-                                                     &out_col_names,
-                                                     &out_col_types,
-                                                     &out_col_data,
-                                                     &out_col_has_value,
-                                                     &col_count,
-                                                     &row_count),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_read_time_series_group(
+            db,
+            "Sensor",
+            "readings",
+            id,
+            &out_col_names,
+            &out_col_types,
+            &out_col_data,
+            &out_col_has_value,
+            &col_count,
+            &row_count
+        ),
+        QUIVER_OK
+    );
     ASSERT_EQ(row_count, 2);
     ASSERT_EQ(col_count, 4);
 
@@ -176,7 +201,13 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupNullNumerics) {
     EXPECT_EQ(out_col_has_value[3][1], 0);
 
     quiver_database_free_time_series_data(
-        out_col_names, out_col_types, out_col_data, out_col_has_value, col_count, row_count);
+        out_col_names,
+        out_col_types,
+        out_col_data,
+        out_col_has_value,
+        col_count,
+        row_count
+    );
     quiver_database_close(db);
 }
 
@@ -189,8 +220,10 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupAllNullStringColumn) {
         int types[] = {QUIVER_DATA_TYPE_STRING};
         const char* dts[] = {dt};
         const void* data[] = {dts};
-        ASSERT_EQ(quiver_database_upsert_time_series_row(db, "Sensor", "readings", id, names, types, data, 1),
-                  QUIVER_OK);
+        ASSERT_EQ(
+            quiver_database_upsert_time_series_row(db, "Sensor", "readings", id, names, types, data, 1),
+            QUIVER_OK
+        );
     }
 
     char** out_col_names = nullptr;
@@ -199,17 +232,21 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupAllNullStringColumn) {
     uint8_t** out_col_has_value = nullptr;
     size_t col_count = 0;
     size_t row_count = 0;
-    ASSERT_EQ(quiver_database_read_time_series_group(db,
-                                                     "Sensor",
-                                                     "readings",
-                                                     id,
-                                                     &out_col_names,
-                                                     &out_col_types,
-                                                     &out_col_data,
-                                                     &out_col_has_value,
-                                                     &col_count,
-                                                     &row_count),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_read_time_series_group(
+            db,
+            "Sensor",
+            "readings",
+            id,
+            &out_col_names,
+            &out_col_types,
+            &out_col_data,
+            &out_col_has_value,
+            &col_count,
+            &row_count
+        ),
+        QUIVER_OK
+    );
     ASSERT_EQ(row_count, 2);
     ASSERT_EQ(col_count, 4);
 
@@ -221,7 +258,13 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupAllNullStringColumn) {
     EXPECT_EQ(status[1], nullptr);
 
     quiver_database_free_time_series_data(
-        out_col_names, out_col_types, out_col_data, out_col_has_value, col_count, row_count);
+        out_col_names,
+        out_col_types,
+        out_col_data,
+        out_col_has_value,
+        col_count,
+        row_count
+    );
     quiver_database_close(db);
 }
 
@@ -241,8 +284,10 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupNullCellsRoundTrip) {
     uint8_t m_cnt[] = {0, 1};
     uint8_t m_status[] = {1, 0};
     const uint8_t* masks[] = {m_dt, m_temp, m_cnt, m_status};
-    ASSERT_EQ(quiver_database_update_time_series_group(db, "Sensor", "readings", id, names, types, data, masks, 4, 2),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_update_time_series_group(db, "Sensor", "readings", id, names, types, data, masks, 4, 2),
+        QUIVER_OK
+    );
 
     char** out_col_names = nullptr;
     int* out_col_types = nullptr;
@@ -250,17 +295,21 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupNullCellsRoundTrip) {
     uint8_t** out_col_has_value = nullptr;
     size_t col_count = 0;
     size_t row_count = 0;
-    ASSERT_EQ(quiver_database_read_time_series_group(db,
-                                                     "Sensor",
-                                                     "readings",
-                                                     id,
-                                                     &out_col_names,
-                                                     &out_col_types,
-                                                     &out_col_data,
-                                                     &out_col_has_value,
-                                                     &col_count,
-                                                     &row_count),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_read_time_series_group(
+            db,
+            "Sensor",
+            "readings",
+            id,
+            &out_col_names,
+            &out_col_types,
+            &out_col_data,
+            &out_col_has_value,
+            &col_count,
+            &row_count
+        ),
+        QUIVER_OK
+    );
     ASSERT_EQ(row_count, 2);
 
     auto* out_temps = static_cast<double*>(out_col_data[1]);
@@ -281,7 +330,13 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupNullCellsRoundTrip) {
     EXPECT_EQ(out_status[1], nullptr);
 
     quiver_database_free_time_series_data(
-        out_col_names, out_col_types, out_col_data, out_col_has_value, col_count, row_count);
+        out_col_names,
+        out_col_types,
+        out_col_data,
+        out_col_has_value,
+        col_count,
+        row_count
+    );
     quiver_database_close(db);
 }
 
@@ -299,8 +354,10 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupNullMaskIsDense) {
     uint8_t m_dt[] = {1, 1};
     uint8_t m_temp[] = {1, 1};
     const uint8_t* masks[] = {m_dt, m_temp};
-    ASSERT_EQ(quiver_database_update_time_series_group(db, "Sensor", "readings", id, names, types, data, masks, 2, 2),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_update_time_series_group(db, "Sensor", "readings", id, names, types, data, masks, 2, 2),
+        QUIVER_OK
+    );
 
     char** out_col_names = nullptr;
     int* out_col_types = nullptr;
@@ -308,17 +365,21 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupNullMaskIsDense) {
     uint8_t** out_col_has_value = nullptr;
     size_t col_count = 0;
     size_t row_count = 0;
-    ASSERT_EQ(quiver_database_read_time_series_group(db,
-                                                     "Sensor",
-                                                     "readings",
-                                                     id,
-                                                     &out_col_names,
-                                                     &out_col_types,
-                                                     &out_col_data,
-                                                     &out_col_has_value,
-                                                     &col_count,
-                                                     &row_count),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_read_time_series_group(
+            db,
+            "Sensor",
+            "readings",
+            id,
+            &out_col_names,
+            &out_col_types,
+            &out_col_data,
+            &out_col_has_value,
+            &col_count,
+            &row_count
+        ),
+        QUIVER_OK
+    );
     ASSERT_EQ(row_count, 2);
     auto* out_temps = static_cast<double*>(out_col_data[1]);
     EXPECT_EQ(out_col_has_value[1][0], 1);
@@ -327,7 +388,13 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupNullMaskIsDense) {
     EXPECT_DOUBLE_EQ(out_temps[1], 2.5);
 
     quiver_database_free_time_series_data(
-        out_col_names, out_col_types, out_col_data, out_col_has_value, col_count, row_count);
+        out_col_names,
+        out_col_types,
+        out_col_data,
+        out_col_has_value,
+        col_count,
+        row_count
+    );
     quiver_database_close(db);
 }
 
@@ -345,8 +412,10 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupPerColumnNullMask) {
     uint8_t m_temp[] = {1, 0};
     // Only temperature carries a mask; the other columns pass nullptr (dense).
     const uint8_t* masks[] = {nullptr, m_temp, nullptr, nullptr};
-    ASSERT_EQ(quiver_database_update_time_series_group(db, "Sensor", "readings", id, names, types, data, masks, 4, 2),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_update_time_series_group(db, "Sensor", "readings", id, names, types, data, masks, 4, 2),
+        QUIVER_OK
+    );
 
     char** out_col_names = nullptr;
     int* out_col_types = nullptr;
@@ -354,17 +423,21 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupPerColumnNullMask) {
     uint8_t** out_col_has_value = nullptr;
     size_t col_count = 0;
     size_t row_count = 0;
-    ASSERT_EQ(quiver_database_read_time_series_group(db,
-                                                     "Sensor",
-                                                     "readings",
-                                                     id,
-                                                     &out_col_names,
-                                                     &out_col_types,
-                                                     &out_col_data,
-                                                     &out_col_has_value,
-                                                     &col_count,
-                                                     &row_count),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_read_time_series_group(
+            db,
+            "Sensor",
+            "readings",
+            id,
+            &out_col_names,
+            &out_col_types,
+            &out_col_data,
+            &out_col_has_value,
+            &col_count,
+            &row_count
+        ),
+        QUIVER_OK
+    );
     ASSERT_EQ(row_count, 2);
     auto* out_cnts = static_cast<int64_t*>(out_col_data[2]);
     auto** out_status = static_cast<char**>(out_col_data[3]);
@@ -380,7 +453,13 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupPerColumnNullMask) {
     EXPECT_STREQ(out_status[1], "b");
 
     quiver_database_free_time_series_data(
-        out_col_names, out_col_types, out_col_data, out_col_has_value, col_count, row_count);
+        out_col_names,
+        out_col_types,
+        out_col_data,
+        out_col_has_value,
+        col_count,
+        row_count
+    );
     quiver_database_close(db);
 }
 
@@ -396,8 +475,10 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupMaskedDimensionFails) {
     uint8_t m_dt[] = {1, 0};  // masking a dimension/PK cell -> SQL NULL into a NOT NULL PK column
     uint8_t m_temp[] = {1, 1};
     const uint8_t* masks[] = {m_dt, m_temp};
-    EXPECT_EQ(quiver_database_update_time_series_group(db, "Sensor", "readings", id, names, types, data, masks, 2, 2),
-              QUIVER_ERROR);
+    EXPECT_EQ(
+        quiver_database_update_time_series_group(db, "Sensor", "readings", id, names, types, data, masks, 2, 2),
+        QUIVER_ERROR
+    );
 
     quiver_database_close(db);
 }
@@ -418,8 +499,10 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupAllNullColumnFloatTag) {
     uint8_t m_cnt[] = {0};
     uint8_t m_status[] = {0};
     const uint8_t* masks[] = {m_dt, m_cnt, m_status};
-    ASSERT_EQ(quiver_database_update_time_series_group(db, "Sensor", "readings", id, names, types, data, masks, 3, 1),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_update_time_series_group(db, "Sensor", "readings", id, names, types, data, masks, 3, 1),
+        QUIVER_OK
+    );
 
     char** out_col_names = nullptr;
     int* out_col_types = nullptr;
@@ -427,17 +510,21 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupAllNullColumnFloatTag) {
     uint8_t** out_col_has_value = nullptr;
     size_t col_count = 0;
     size_t row_count = 0;
-    ASSERT_EQ(quiver_database_read_time_series_group(db,
-                                                     "Sensor",
-                                                     "readings",
-                                                     id,
-                                                     &out_col_names,
-                                                     &out_col_types,
-                                                     &out_col_data,
-                                                     &out_col_has_value,
-                                                     &col_count,
-                                                     &row_count),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_read_time_series_group(
+            db,
+            "Sensor",
+            "readings",
+            id,
+            &out_col_names,
+            &out_col_types,
+            &out_col_data,
+            &out_col_has_value,
+            &col_count,
+            &row_count
+        ),
+        QUIVER_OK
+    );
     ASSERT_EQ(row_count, 1);
     ASSERT_EQ(col_count, 4);
     // counter (col 2, INTEGER) and status (col 3, TEXT) are both NULL
@@ -445,7 +532,13 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupAllNullColumnFloatTag) {
     EXPECT_EQ(out_col_has_value[3][0], 0);
 
     quiver_database_free_time_series_data(
-        out_col_names, out_col_types, out_col_data, out_col_has_value, col_count, row_count);
+        out_col_names,
+        out_col_types,
+        out_col_data,
+        out_col_has_value,
+        col_count,
+        row_count
+    );
     quiver_database_close(db);
 }
 
@@ -469,17 +562,21 @@ TEST(DatabaseCApi, UpsertTimeSeriesRowNullStringCell) {
     uint8_t** out_col_has_value = nullptr;
     size_t col_count = 0;
     size_t row_count = 0;
-    ASSERT_EQ(quiver_database_read_time_series_group(db,
-                                                     "Sensor",
-                                                     "readings",
-                                                     id,
-                                                     &out_col_names,
-                                                     &out_col_types,
-                                                     &out_col_data,
-                                                     &out_col_has_value,
-                                                     &col_count,
-                                                     &row_count),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_read_time_series_group(
+            db,
+            "Sensor",
+            "readings",
+            id,
+            &out_col_names,
+            &out_col_types,
+            &out_col_data,
+            &out_col_has_value,
+            &col_count,
+            &row_count
+        ),
+        QUIVER_OK
+    );
     ASSERT_EQ(row_count, 1);
     ASSERT_EQ(col_count, 4);
     // status (col 3) round-trips as NULL
@@ -487,7 +584,13 @@ TEST(DatabaseCApi, UpsertTimeSeriesRowNullStringCell) {
     EXPECT_EQ(static_cast<char**>(out_col_data[3])[0], nullptr);
 
     quiver_database_free_time_series_data(
-        out_col_names, out_col_types, out_col_data, out_col_has_value, col_count, row_count);
+        out_col_names,
+        out_col_types,
+        out_col_data,
+        out_col_has_value,
+        col_count,
+        row_count
+    );
     quiver_database_close(db);
 }
 

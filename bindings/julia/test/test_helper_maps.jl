@@ -135,6 +135,26 @@ include("fixture.jl")
 
             Quiver.close!(db)
         end
+
+        @testset "Positions Follow Collection Order Not Ids" begin
+            path_schema = joinpath(tests_path(), "schemas", "valid", "relations.sql")
+            db = Quiver.from_schema(":memory:", path_schema)
+
+            Quiver.create_element!(db, "Configuration"; label = "Config")
+            for i in 1:5
+                Quiver.create_element!(db, "Parent"; label = "Parent $i")  # ids 1..5
+            end
+            Quiver.delete_element!(db, "Parent", Int64(1))
+            Quiver.delete_element!(db, "Parent", Int64(3))                 # remaining ids [2, 4, 5]
+
+            Quiver.create_element!(db, "Child"; label = "Child A", parent_id = 5)
+            Quiver.create_element!(db, "Child"; label = "Child B", parent_id = 2)
+            Quiver.create_element!(db, "Child"; label = "Child C")
+
+            @test Quiver.scalar_relation_map(db, "Child", "Parent", "id") == [3, 1, -1]
+
+            Quiver.close!(db)
+        end
     end
 
     @testset "set_relation_map" begin
@@ -156,6 +176,21 @@ include("fixture.jl")
 
             result = Quiver.set_relation_map(db, "Child", "Parent", "ref")
             @test result == [Int64[1, 2], Int64[2, 3], Int64[]]
+
+            Quiver.close!(db)
+        end
+
+        @testset "NULL Cell Is Not A Target" begin
+            path_schema = joinpath(tests_path(), "schemas", "valid", "relations.sql")
+            db = Quiver.from_schema(":memory:", path_schema)
+
+            Quiver.create_element!(db, "Configuration"; label = "Config")
+            Quiver.create_element!(db, "Parent"; label = "Parent 1")  # id=1
+            child = Quiver.create_element!(db, "Child"; label = "Child 1")
+            # A nullable relation column can hold an empty row; it maps to no target.
+            Quiver.update_set_group!(db, "Child", "parents", child; parent_ref = [1, nothing])
+
+            @test Quiver.set_relation_map(db, "Child", "Parent", "ref") == [Int64[1]]
 
             Quiver.close!(db)
         end

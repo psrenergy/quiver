@@ -1,13 +1,14 @@
-#include <chrono>
-#include <cmath>
-#include <filesystem>
 #include <gtest/gtest.h>
-#include <limits>
-#include <optional>
 #include <quiver/binary/binary_file.h>
 #include <quiver/binary/binary_metadata.h>
 #include <quiver/binary/iteration.h>
 #include <quiver/element.h>
+
+#include <chrono>
+#include <cmath>
+#include <filesystem>
+#include <limits>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -21,53 +22,64 @@ namespace fs = std::filesystem;
 
 class BinaryTempFileFixture : public ::testing::Test {
 protected:
-    void SetUp() override { path = (fs::temp_directory_path() / "quiver_binary_test").string(); }
+    void SetUp() override {
+        path = (fs::temp_directory_path() / "quiver_binary_test").string();
+    }
 
     void TearDown() override {
         for (auto ext : {".qvr", ".toml", ".csv"}) {
             auto full = path + ext;
-            if (fs::exists(full))
+            if (fs::exists(full)) {
                 fs::remove(full);
+            }
         }
     }
 
     std::string path;
 
     static BinaryMetadata make_simple_metadata() {
-        return BinaryMetadata::from_element(Element()
-                                                .set("version", "1")
-                                                .set("initial_datetime", "2025-01-01T00:00:00")
-                                                .set("unit", "MW")
-                                                .set("dimensions", {"row", "col"})
-                                                .set("dimension_sizes", {3, 2})
-                                                .set("labels", {"val1", "val2"}));
+        return BinaryMetadata::from_element(
+            Element()
+                .set("version", "1")
+                .set("initial_datetime", "2025-01-01T00:00:00")
+                .set("unit", "MW")
+                .set("dimensions", {"row", "col"})
+                .set("dimension_sizes", {3, 2})
+                .set("labels", {"val1", "val2"})
+        );
     }
 
     static BinaryMetadata make_time_metadata() {
-        return BinaryMetadata::from_element(Element()
-                                                .set("version", "1")
-                                                .set("initial_datetime", "2025-01-01T00:00:00")
-                                                .set("unit", "MW")
-                                                .set("dimensions", {"stage", "block"})
-                                                .set("dimension_sizes", {4, 31})
-                                                .set("time_dimensions", {"stage", "block"})
-                                                .set("frequencies", {"monthly", "daily"})
-                                                .set("labels", {"plant_1", "plant_2"}));
+        return BinaryMetadata::from_element(
+            Element()
+                .set("version", "1")
+                .set("initial_datetime", "2025-01-01T00:00:00")
+                .set("unit", "MW")
+                .set("dimensions", {"stage", "block"})
+                .set("dimension_sizes", {4, 31})
+                .set("time_dimensions", {"stage", "block"})
+                .set("frequencies", {"monthly", "daily"})
+                .set("labels", {"plant_1", "plant_2"})
+        );
     }
 
     // One-label metadata whose dimensions are all time dimensions, each named after its frequency.
-    static BinaryMetadata make_time_layout(const std::vector<std::string>& frequencies,
-                                           const std::vector<int64_t>& sizes,
-                                           const std::string& initial_datetime) {
-        return BinaryMetadata::from_element(Element()
-                                                .set("version", "1")
-                                                .set("initial_datetime", initial_datetime)
-                                                .set("unit", "MW")
-                                                .set("dimensions", frequencies)
-                                                .set("dimension_sizes", sizes)
-                                                .set("time_dimensions", frequencies)
-                                                .set("frequencies", frequencies)
-                                                .set("labels", {"val"}));
+    static BinaryMetadata make_time_layout(
+        const std::vector<std::string>& frequencies,
+        const std::vector<int64_t>& sizes,
+        const std::string& initial_datetime
+    ) {
+        return BinaryMetadata::from_element(
+            Element()
+                .set("version", "1")
+                .set("initial_datetime", initial_datetime)
+                .set("unit", "MW")
+                .set("dimensions", frequencies)
+                .set("dimension_sizes", sizes)
+                .set("time_dimensions", frequencies)
+                .set("frequencies", frequencies)
+                .set("labels", {"val"})
+        );
     }
 
     // Writes a distinct value to every cell first_dimensions/next_dimensions visits, then reopens the file and
@@ -222,8 +234,10 @@ TEST_F(BinaryTempFileFixture, WriteReadAllPositions) {
         int counter = 0;
         for (int64_t r = 1; r <= 3; ++r) {
             for (int64_t c = 1; c <= 2; ++c) {
-                binary_file.write({static_cast<double>(counter), static_cast<double>(counter + 1)},
-                                  {{"row", r}, {"col", c}});
+                binary_file.write(
+                    {static_cast<double>(counter), static_cast<double>(counter + 1)},
+                    {{"row", r}, {"col", c}}
+                );
                 counter += 2;
             }
         }
@@ -459,8 +473,9 @@ TEST_F(BinaryTempFileFixture, MoveAssign) {
     // Clean up path2 files
     for (auto ext : {".qvr", ".toml"}) {
         auto full = path2 + ext;
-        if (fs::exists(full))
+        if (fs::exists(full)) {
             fs::remove(full);
+        }
     }
 }
 
@@ -481,8 +496,9 @@ TEST_F(BinaryTempFileFixture, MoveAssignWriterUnregistersOldPath) {
 
     for (auto ext : {".qvr", ".toml"}) {
         auto full = path2 + ext;
-        if (fs::exists(full))
+        if (fs::exists(full)) {
             fs::remove(full);
+        }
     }
 }
 
@@ -508,15 +524,17 @@ TEST_F(BinaryTempFileFixture, InitialDatetimeYear1960) {
     // initial_datetime in 1960 is before the Unix epoch. The metadata's time-dimension
     // computation and the write/read round-trip must handle pre-1970 dates, asserting the exact
     // value survives serialization to the .toml sidecar and back.
-    auto md = BinaryMetadata::from_element(Element()
-                                               .set("version", "1")
-                                               .set("initial_datetime", "1960-01-01T00:00:00")
-                                               .set("unit", "MW")
-                                               .set("dimensions", {"stage", "block"})
-                                               .set("dimension_sizes", {4, 31})
-                                               .set("time_dimensions", {"stage", "block"})
-                                               .set("frequencies", {"monthly", "daily"})
-                                               .set("labels", {"plant_1", "plant_2"}));
+    auto md = BinaryMetadata::from_element(
+        Element()
+            .set("version", "1")
+            .set("initial_datetime", "1960-01-01T00:00:00")
+            .set("unit", "MW")
+            .set("dimensions", {"stage", "block"})
+            .set("dimension_sizes", {4, 31})
+            .set("time_dimensions", {"stage", "block"})
+            .set("frequencies", {"monthly", "daily"})
+            .set("labels", {"plant_1", "plant_2"})
+    );
 
     {
         auto binary_file = BinaryFile::open_file(path, 'w', md);
@@ -529,7 +547,8 @@ TEST_F(BinaryTempFileFixture, InitialDatetimeYear1960) {
     // The exact 1960 initial_datetime must round-trip — this is the assertion that catches the
     // pre-epoch corruption (the bug produced 1969-12-31T23:59:59 instead of 1960-01-01).
     auto expected = std::chrono::system_clock::time_point{
-        std::chrono::sys_days{std::chrono::year{1960} / std::chrono::January / 1}};
+        std::chrono::sys_days{std::chrono::year{1960} / std::chrono::January / 1}
+    };
     EXPECT_EQ(reader.get_metadata().initial_datetime, expected);
     // ...and the serialized sidecar must read back the same string via to_toml().
     EXPECT_NE(reader.get_metadata().to_toml().find("1960-01-01T00:00:00"), std::string::npos);
@@ -701,15 +720,17 @@ TEST_F(BinaryTempFileFixture, OpenFileWriteFailureDoesNotLeakRegistry) {
 
 TEST_F(BinaryTempFileFixture, SingleTimeDimensionSkipsConsistencyCheck) {
     // With only one time dimension, there's no inner time dim to validate
-    auto md = BinaryMetadata::from_element(Element()
-                                               .set("version", "1")
-                                               .set("initial_datetime", "2025-01-01T00:00:00")
-                                               .set("unit", "MW")
-                                               .set("dimensions", {"month", "scenario"})
-                                               .set("dimension_sizes", {12, 3})
-                                               .set("time_dimensions", {"month"})
-                                               .set("frequencies", {"monthly"})
-                                               .set("labels", {"val"}));
+    auto md = BinaryMetadata::from_element(
+        Element()
+            .set("version", "1")
+            .set("initial_datetime", "2025-01-01T00:00:00")
+            .set("unit", "MW")
+            .set("dimensions", {"month", "scenario"})
+            .set("dimension_sizes", {12, 3})
+            .set("time_dimensions", {"month"})
+            .set("frequencies", {"monthly"})
+            .set("labels", {"val"})
+    );
     auto binary_file = BinaryFile::open_file(path, 'w', md);
     EXPECT_NO_THROW(binary_file.write({1.0}, {{"month", 12}, {"scenario", 3}}));
 }

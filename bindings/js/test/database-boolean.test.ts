@@ -114,6 +114,23 @@ describe("boolean convenience methods", () => {
     }
   });
 
+  test("a mixed boolean/integer element array keeps its integer cells", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      // ArrayValue forbids a mixed array, but a plain-JS caller can pass one. createElement used
+      // to dispatch on the leading boolean and truthiness-map the whole array to [1, 1, 0, 1];
+      // it now normalizes per cell, like the group writers in the test above.
+      const id = db.createElement("AllTypes", {
+        label: "Mixed",
+        count_value: [true, 5, false, 7] as unknown as number[],
+      });
+
+      expect(db.readVectorIntegersById("AllTypes", "count_value", id)).toEqual([1, 5, 0, 7]);
+    } finally {
+      db.close();
+    }
+  });
+
   test("rejects non-binary integers", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {

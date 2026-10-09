@@ -159,6 +159,18 @@ include("fixture.jl")
 
         Quiver.close!(db)
     end
+
+    @testset "Time Series Files - empty update still validates the collection" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        exc = @test_throws Quiver.DatabaseException Quiver.update_time_series_files!(
+            db, "NoSuchCollection", Dict{String, Quiver.Optional{String}}(),
+        )
+        @test exc.value.msg == "Cannot update_time_series_files: collection not found: NoSuchCollection"
+
+        Quiver.close!(db)
+    end
 end
 
 end

@@ -11,23 +11,19 @@ import {
   allocUint64Out,
   decodeFloat64Array,
   decodeInt64Array,
-  decodePtrArray,
   decodeStringArray,
   readPtrOut,
   readUint64Out,
   toCString,
 } from "./ffi-helpers.ts";
-import { type GroupColumns, updateGroupColumns } from "./group-columns.ts";
-import { getSymbols, type NativePointer } from "./loader.ts";
 import {
-  type Allocation,
-  DATA_TYPE_DATE_TIME,
-  DATA_TYPE_FLOAT,
-  DATA_TYPE_INTEGER,
-  DATA_TYPE_STRING,
-} from "./types.ts";
-
-export type TimeSeriesData = Record<string, (number | string | null)[]>;
+  type GroupColumns,
+  readGroupColumns,
+  type TimeSeriesData,
+  updateGroupColumns,
+} from "./group-columns.ts";
+import { getSymbols, type NativePointer } from "./loader.ts";
+import { type Allocation, DATA_TYPE_FLOAT, DATA_TYPE_INTEGER, DATA_TYPE_STRING } from "./types.ts";
 
 Database.prototype.readTimeSeriesGroup = function (
   this: Database,
@@ -35,93 +31,13 @@ Database.prototype.readTimeSeriesGroup = function (
   group: string,
   id: number,
 ): TimeSeriesData {
-  const lib = getSymbols();
-  const collBuf = toCString(collection);
-  const grpBuf = toCString(group);
-  const outNames = allocPtrOut();
-  const outTypes = allocPtrOut();
-  const outData = allocPtrOut();
-  const outHasValue = allocPtrOut();
-  const outColCount = allocUint64Out();
-  const outRowCount = allocUint64Out();
-
-  check(
-    lib.quiver_database_read_time_series_group(
-      this._handle,
-      collBuf.buf,
-      grpBuf.buf,
-      BigInt(id),
-      outNames.buf,
-      outTypes.buf,
-      outData.buf,
-      outHasValue.buf,
-      outColCount.buf,
-      outRowCount.buf,
-    ),
+  return readGroupColumns(
+    this._handle,
+    getSymbols().quiver_database_read_time_series_group,
+    collection,
+    group,
+    id,
   );
-
-  const colCount = readUint64Out(outColCount);
-  const rowCount = readUint64Out(outRowCount);
-  if (colCount === 0) return {};
-
-  const namesPtr = readPtrOut(outNames);
-  const typesPtr = readPtrOut(outTypes);
-  const dataPtr = readPtrOut(outData);
-  const hasValuePtr = readPtrOut(outHasValue);
-
-  const colNames = decodeStringArray(namesPtr, colCount);
-  const typesAb = toArrayBuffer(typesPtr as Pointer, 0, colCount * 4);
-  const types = Array.from(new Int32Array(typesAb));
-  const dataPtrs = decodePtrArray(dataPtr, colCount);
-  const maskPtrs = decodePtrArray(hasValuePtr, colCount);
-
-  // Per-cell NULL mask: mask[r] === 0 means SQL NULL, surfaced as JS null. The
-  // dimension column's mask is always all 1, so it stays dense.
-  const result: TimeSeriesData = {};
-  for (let c = 0; c < colCount; c++) {
-    const colName = colNames[c];
-    const maskPtr = maskPtrs[c];
-    const mask = maskPtr ? new Uint8Array(toArrayBuffer(maskPtr as Pointer, 0, rowCount)) : null;
-    switch (types[c]) {
-      case DATA_TYPE_INTEGER: {
-        const vals = decodeInt64Array(dataPtrs[c], rowCount);
-        result[colName] = mask ? vals.map((v, r) => (mask[r] ? v : null)) : vals;
-        break;
-      }
-      case DATA_TYPE_FLOAT: {
-        const vals = decodeFloat64Array(dataPtrs[c], rowCount);
-        result[colName] = mask ? vals.map((v, r) => (mask[r] ? v : null)) : vals;
-        break;
-      }
-      case DATA_TYPE_STRING:
-      case DATA_TYPE_DATE_TIME: {
-        // Read pointer-by-pointer (not decodeStringArray): a masked-out cell is a
-        // NULL char* that CString cannot construct from.
-        const base = dataPtrs[c];
-        const col: (string | null)[] = new Array(rowCount);
-        for (let r = 0; r < rowCount; r++) {
-          if (mask && !mask[r]) {
-            col[r] = null;
-            continue;
-          }
-          const strPtr = base ? read.ptr(base as Pointer, r * 8) : 0;
-          col[r] = strPtr === 0 ? null : new CString(strPtr as Pointer).toString();
-        }
-        result[colName] = col;
-        break;
-      }
-    }
-  }
-
-  lib.quiver_database_free_time_series_data(
-    namesPtr,
-    typesPtr,
-    dataPtr,
-    hasValuePtr,
-    BigInt(colCount),
-    BigInt(rowCount),
-  );
-  return result;
 };
 
 Database.prototype.readTimeSeriesRow = function (
@@ -138,6 +54,7 @@ Database.prototype.readTimeSeriesRow = function (
   const dtBuf = toCString(dateTime);
   const outDataType = new Uint8Array(4);
   const outValues = allocPtrOut();
+  const outMask = allocPtrOut();
   const outCount = allocUint64Out();
 
   check(
@@ -149,6 +66,7 @@ Database.prototype.readTimeSeriesRow = function (
       dtBuf.buf,
       outDataType,
       outValues.buf,
+      outMask.buf,
       outCount.buf,
     ),
   );
@@ -157,26 +75,33 @@ Database.prototype.readTimeSeriesRow = function (
   const valuesPtr = readPtrOut(outValues);
   if (count === 0 || !valuesPtr) return [];
 
+  // mask[i] === 0: no data at or before dateTime; the data slot is a placeholder, never read.
+  const maskPtr = readPtrOut(outMask);
+  const mask = new Uint8Array(toArrayBuffer(maskPtr as Pointer, 0, count));
   const dataType = new DataView(outDataType.buffer).getInt32(0, true);
   switch (dataType) {
     case DATA_TYPE_INTEGER: {
-      const result = decodeInt64Array(valuesPtr, count);
+      const result = decodeInt64Array(valuesPtr, count).map((v, i) => (mask[i] ? v : null));
       lib.quiver_database_free_integer_array(valuesPtr);
+      lib.quiver_database_free_mask(maskPtr);
       return result;
     }
     case DATA_TYPE_FLOAT: {
-      const result = decodeFloat64Array(valuesPtr, count);
+      const result = decodeFloat64Array(valuesPtr, count).map((v, i) => (mask[i] ? v : null));
       lib.quiver_database_free_float_array(valuesPtr);
+      lib.quiver_database_free_mask(maskPtr);
       return result;
     }
     default: {
-      // STRING or DATE_TIME; NULL entries mark elements with no data
+      // STRING or DATE_TIME; never build a CString from a masked-out (NULL) pointer
       const result: (string | null)[] = new Array(count);
       for (let i = 0; i < count; i++) {
-        const strPtr = read.ptr(valuesPtr as Pointer, i * 8);
-        result[i] = strPtr === 0 ? null : new CString(strPtr as Pointer).toString();
+        result[i] = mask[i]
+          ? new CString(read.ptr(valuesPtr as Pointer, i * 8) as Pointer).toString()
+          : null;
       }
       lib.quiver_database_free_string_array(valuesPtr, BigInt(count));
+      lib.quiver_database_free_mask(maskPtr);
       return result;
     }
   }
@@ -224,11 +149,11 @@ Database.prototype.updateTimeSeriesGroupByLabel = function (
  * (quiver_database_upsert_time_series_row and its _by_label form). `key` is an id for the by-id
  * form, a NUL-terminated label otherwise.
  */
-type UpsertRowFn = (
+type UpsertRowFn<Key extends number | string> = (
   db: NativePointer,
   collection: Uint8Array,
   group: Uint8Array,
-  key: bigint | Uint8Array,
+  key: Key extends string ? Uint8Array : bigint,
   names: Uint8Array | null,
   types: Uint8Array | null,
   data: Uint8Array | null,
@@ -240,18 +165,20 @@ type UpsertRowFn = (
  * C functions. Shared by upsertTimeSeriesRow / upsertTimeSeriesRowByLabel: they differ only in
  * which C entry point they call and whether `key` is an id or a label.
  */
-function upsertRowColumns(
+function upsertRowColumns<Key extends number | string>(
   handle: NativePointer,
   caller: string,
-  upsert: UpsertRowFn,
+  upsert: UpsertRowFn<Key>,
   collection: string,
   group: string,
-  key: number | string,
+  key: Key,
   row: Record<string, number | bigint | string | boolean>,
 ): void {
   const collBuf = toCString(collection);
   const grpBuf = toCString(group);
-  const keyArg = typeof key === "string" ? toCString(key).buf : BigInt(key);
+  const keyArg = (typeof key === "string" ? toCString(key).buf : BigInt(key)) as Key extends string
+    ? Uint8Array
+    : bigint;
   const entries = Object.entries(row);
   const columnCount = entries.length;
   const keepalive: Allocation[] = [];
@@ -426,7 +353,12 @@ Database.prototype.updateTimeSeriesFiles = function (
   const lib = getSymbols();
   const collBuf = toCString(collection);
   const entries = Object.entries(data);
-  if (entries.length === 0) return;
+  // An empty map still reaches the core, which validates the collection and its files table
+  // before the no-op. null tables, never zero-length buffers (same as updateGroupColumns).
+  if (entries.length === 0) {
+    check(lib.quiver_database_update_time_series_files(this._handle, collBuf.buf, null, null, 0n));
+    return;
+  }
   const keepalive: Allocation[] = [];
 
   const colNames = entries.map(([name]) => name);

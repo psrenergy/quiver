@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from datetime import datetime
+
 from quiverdb._c_api import ffi, get_lib
-from quiverdb._helpers import check, decode_string
-from quiverdb.exceptions import QuiverError
+from quiverdb._helpers import check, column_data_type, decode_string, format_datetime
+from quiverdb.metadata import DataType
 
 
 class Element:
@@ -18,21 +20,20 @@ class Element:
     def set(self, name: str, value: object) -> Element:
         """Set an attribute value. Returns self for fluent chaining.
 
-        Supported types: int, float, str, None, bool (stored as int),
-        list[int], list[float], list[str].
+        Supported types: int, float, str, None, bool (stored as int), datetime (stored as a
+        DATE_TIME string, see format_datetime), and lists of int/bool, float, str or datetime --
+        a float anywhere in a numeric list makes it a float array.
         """
-        self._ensure_valid()
         if value is None:
             self._set_null(name)
-        elif isinstance(value, bool):
-            # Must check bool before int (bool is subclass of int)
-            self._set_integer(name, int(value))
-        elif isinstance(value, int):
+        elif isinstance(value, int):  # bool is an int subclass: True/False marshal as 1/0
             self._set_integer(name, value)
         elif isinstance(value, float):
             self._set_float(name, value)
         elif isinstance(value, str):
             self._set_string(name, value)
+        elif isinstance(value, datetime):
+            self._set_string(name, format_datetime(value))
         elif isinstance(value, list):
             self._set_array(name, value)
         else:
@@ -62,17 +63,25 @@ class Element:
             check(lib.quiver_element_set_array_integer(self._ptr, name.encode("utf-8"), ffi.NULL, 0, ffi.NULL))
             return
 
-        first = values[0]
-        if isinstance(first, bool):
-            self._set_array_integer(name, [int(v) for v in values])
-        elif isinstance(first, int):
+        # A vector/set/time-series read returns a NULL cell as None. The element surface is non-null
+        # (NULL cells go through the group writers), so name the column here instead of failing
+        # inside cffi or on str.encode.
+        if any(v is None for v in values):
+            raise TypeError(
+                f"Unsupported array element type NoneType for Element.set('{name}'): "
+                "write NULL cells with update_vector_group, update_set_group or update_time_series_group"
+            )
+        # Typed from every cell like a group-writer column (column_data_type).
+        array_type = column_data_type(name, values)
+        if array_type == DataType.INTEGER:
             self._set_array_integer(name, values)
-        elif isinstance(first, float):
+        elif array_type == DataType.FLOAT:
             self._set_array_float(name, values)
-        elif isinstance(first, str):
+        elif array_type == DataType.STRING:
             self._set_array_string(name, values)
         else:
-            raise TypeError(f"Unsupported array element type {type(first).__name__} for Element.set('{name}')")
+            # DataType.DATE_TIME: None was refused above, so every cell is a datetime.
+            self._set_array_string(name, [format_datetime(v) for v in values])
 
     def _set_array_integer(self, name: str, values: list[int]) -> None:
         lib = get_lib()
@@ -91,24 +100,14 @@ class Element:
         c_arr = ffi.new("const char*[]", c_strings)
         check(lib.quiver_element_set_array_string(self._ptr, name.encode("utf-8"), c_arr, len(values), ffi.NULL))
 
-    def _ensure_valid(self) -> None:
-        if self._destroyed:
-            raise QuiverError("Element has been destroyed")
-
     def destroy(self) -> None:
         """Free the underlying C element. Idempotent."""
         if self._destroyed:
             return
         lib = get_lib()
         lib.quiver_element_destroy(self._ptr)
-        self._ptr = ffi.NULL
+        self._ptr = ffi.NULL  # a later set() fails in the C API: "Null argument: element"
         self._destroyed = True
-
-    def clear(self) -> None:
-        """Clear all set attributes from this element."""
-        self._ensure_valid()
-        lib = get_lib()
-        check(lib.quiver_element_clear(self._ptr))
 
     def __repr__(self) -> str:
         if self._destroyed:

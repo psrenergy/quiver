@@ -19,7 +19,7 @@ HEADERS = [
     "include/quiver/c/options.h",
     "include/quiver/c/database.h",
     "include/quiver/c/element.h",
-    "include/quiver/c/lua_runner.h",
+    "include/quiver/c/sandbox.h",
 ]
 
 

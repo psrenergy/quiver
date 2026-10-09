@@ -1,11 +1,12 @@
 #include "test_utils.h"
 
-#include <filesystem>
-#include <fstream>
 #include <gtest/gtest.h>
 #include <quiver/database.h>
 #include <quiver/migration.h>
 #include <quiver/migrations.h>
+
+#include <filesystem>
+#include <fstream>
 
 namespace fs = std::filesystem;
 
@@ -199,9 +200,16 @@ TEST_F(MigrationsTestFixture, DatabaseMigrationWithEmptyUpSql) {
     up_file.close();
 
     // Empty up.sql should cause migration to fail
-    EXPECT_THROW(quiver::Database::from_migrations(
-                     ":memory:", temp_dir, {.read_only = false, .console_level = quiver::LogLevel::Off}),
-                 std::runtime_error);
+    try {
+        quiver::Database::from_migrations(
+            ":memory:",
+            temp_dir,
+            {.read_only = false, .console_level = quiver::LogLevel::Off}
+        );
+        FAIL() << "Expected from_migrations to throw";
+    } catch (const std::runtime_error& error) {
+        EXPECT_STREQ(error.what(), "Cannot from_migrations: migration 1 has no up.sql file");
+    }
 }
 
 TEST_F(MigrationsTestFixture, DatabaseMigrationWithInvalidSQL) {
@@ -211,9 +219,32 @@ TEST_F(MigrationsTestFixture, DatabaseMigrationWithInvalidSQL) {
     up_file << "THIS IS NOT VALID SQL AT ALL;";
     up_file.close();
 
-    EXPECT_THROW(quiver::Database::from_migrations(
-                     ":memory:", temp_dir, {.read_only = false, .console_level = quiver::LogLevel::Off}),
-                 std::runtime_error);
+    try {
+        quiver::Database::from_migrations(
+            ":memory:",
+            temp_dir,
+            {.read_only = false, .console_level = quiver::LogLevel::Off}
+        );
+        FAIL() << "Expected from_migrations to throw";
+    } catch (const std::runtime_error& error) {
+        EXPECT_NE(std::string(error.what()).find("Failed to from_migrations: up migration 1:"), std::string::npos);
+    }
+}
+
+TEST_F(MigrationsTestFixture, DatabaseMigrationFailureLeavesNoPartialSchema) {
+    // up.sql creates a table and then fails: the migration's transaction must take the table with it.
+    fs::create_directories(fs::path(temp_dir) / "1");
+    std::ofstream(fs::path(temp_dir) / "1" / "up.sql")
+        << "CREATE TABLE Configuration (id INTEGER PRIMARY KEY, label TEXT UNIQUE NOT NULL) STRICT;"
+           "THIS IS NOT VALID SQL;";
+    const auto db_path = (fs::path(temp_dir) / "study.db").string();
+    const quiver::DatabaseOptions quiet{.read_only = false, .console_level = quiver::LogLevel::Off};
+
+    EXPECT_THROW(quiver::Database::from_migrations(db_path, temp_dir, quiet), std::runtime_error);
+
+    quiver::Database db(db_path, quiet);
+    EXPECT_EQ(db.current_version(), 0);
+    EXPECT_EQ(db.query_integer("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table'"), 0);
 }
 
 // ============================================================================
@@ -234,7 +265,7 @@ TEST_F(MigrationsTestFixture, ValidateMigrationsExecutesUpSql) {
         FAIL() << "Expected validate_migrations to throw";
     } catch (const std::runtime_error& error) {
         const std::string message = error.what();
-        EXPECT_NE(message.find("Failed to migrate_up: migration 1:"), std::string::npos);
+        EXPECT_NE(message.find("Failed to validate_migrations: up migration 1:"), std::string::npos);
         EXPECT_NE(message.find("Failed to execute SQL:"), std::string::npos);
     }
 }
@@ -251,7 +282,7 @@ TEST_F(MigrationsTestFixture, ValidateMigrationsExecutesDownSql) {
         FAIL() << "Expected validate_migrations to throw";
     } catch (const std::runtime_error& error) {
         const std::string message = error.what();
-        EXPECT_NE(message.find("Failed to migrate_down: migration 1:"), std::string::npos);
+        EXPECT_NE(message.find("Failed to validate_migrations: down migration 1:"), std::string::npos);
         EXPECT_NE(message.find("Failed to execute SQL:"), std::string::npos);
     }
 }
@@ -270,8 +301,10 @@ TEST_F(MigrationsTestFixture, ValidateMigrationsRejectsLeftoverTables) {
         quiver::Database::validate_migrations(temp_dir);
         FAIL() << "Expected validate_migrations to throw";
     } catch (const std::runtime_error& error) {
-        EXPECT_STREQ(error.what(),
-                     "Failed to validate_migrations: down migrations left tables behind: Configuration, Extra");
+        EXPECT_STREQ(
+            error.what(),
+            "Failed to validate_migrations: down migrations left tables behind: Configuration, Extra"
+        );
     }
 }
 
@@ -285,7 +318,7 @@ TEST_F(MigrationsTestFixture, ValidateMigrationsRequiresDownSql) {
         quiver::Database::validate_migrations(temp_dir);
         FAIL() << "Expected validate_migrations to throw";
     } catch (const std::runtime_error& error) {
-        EXPECT_STREQ(error.what(), "Cannot migrate_down: migration 1 has no down.sql file");
+        EXPECT_STREQ(error.what(), "Cannot validate_migrations: migration 1 has no down.sql file");
     }
 }
 
@@ -295,8 +328,10 @@ TEST_F(MigrationsTestFixture, ValidateMigrationsValidatesPath) {
         quiver::Database::validate_migrations(nonexistent_path);
         FAIL() << "Expected validate_migrations to throw";
     } catch (const std::runtime_error& error) {
-        EXPECT_EQ(std::string(error.what()),
-                  "Cannot validate_migrations: migrations path not found: " + nonexistent_path);
+        EXPECT_EQ(
+            std::string(error.what()),
+            "Cannot validate_migrations: migrations path not found: " + nonexistent_path
+        );
     }
 
     fs::create_directories(temp_dir);
@@ -306,8 +341,10 @@ TEST_F(MigrationsTestFixture, ValidateMigrationsValidatesPath) {
         quiver::Database::validate_migrations(file_path.string());
         FAIL() << "Expected validate_migrations to throw";
     } catch (const std::runtime_error& error) {
-        EXPECT_EQ(std::string(error.what()),
-                  "Cannot validate_migrations: path is not a directory: " + file_path.string());
+        EXPECT_EQ(
+            std::string(error.what()),
+            "Cannot validate_migrations: path is not a directory: " + file_path.string()
+        );
     }
 }
 

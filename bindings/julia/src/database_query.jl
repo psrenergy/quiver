@@ -1,7 +1,3 @@
-"""
-Marshal a Julia Vector of parameters into C arrays of types and value pointers.
-Returns (param_types, param_values, refs) where refs must be kept alive during the call.
-"""
 function marshal_params(parameters::Vector)
     n = length(parameters)
     param_types = Vector{Cint}(undef, n)
@@ -38,85 +34,13 @@ function marshal_params(parameters::Vector)
     return param_types, param_values, refs
 end
 
-"""
-    query_string(db::Database, sql::String) -> Optional{String}
-
-Execute a SQL query and return the first column of the first row as a String.
-Returns `nothing` if the query returns no rows.
-"""
-function query_string(db::Database, sql::String)
-    out_value = Ref{Ptr{Cchar}}(C_NULL)
-    out_has_value = Ref{Cint}(0)
-
-    check(C.quiver_database_query_string(db.ptr, sql, out_value, out_has_value))
-
-    if out_has_value[] == 0 || out_value[] == C_NULL
-        return nothing
-    end
-    result = unsafe_string(out_value[])
-    C.quiver_database_free_string(out_value[])
-    return result
-end
-
-"""
-    query_integer(db::Database, sql::String) -> Optional{Int64}
-
-Execute a SQL query and return the first column of the first row as an Int64.
-Returns `nothing` if the query returns no rows.
-"""
-function query_integer(db::Database, sql::String)
-    out_value = Ref{Int64}(0)
-    out_has_value = Ref{Cint}(0)
-
-    check(C.quiver_database_query_integer(db.ptr, sql, out_value, out_has_value))
-
-    if out_has_value[] == 0
-        return nothing
-    end
-    return out_value[]
-end
-
-"""
-    query_boolean(db::Database, sql::String) -> Optional{Bool}
-
-Execute a SQL query and return the first column of the first row as a Bool.
-Returns `nothing` if the query returns no rows.
-"""
-function query_boolean(db::Database, sql::String)
-    return _integer_to_boolean(query_integer(db, sql))
-end
-
-"""
-    query_float(db::Database, sql::String) -> Optional{Float64}
-
-Execute a SQL query and return the first column of the first row as a Float64.
-Returns `nothing` if the query returns no rows.
-"""
-function query_float(db::Database, sql::String)
-    out_value = Ref{Float64}(0.0)
-    out_has_value = Ref{Cint}(0)
-
-    check(C.quiver_database_query_float(db.ptr, sql, out_value, out_has_value))
-
-    if out_has_value[] == 0
-        return nothing
-    end
-    return out_value[]
-end
-
-"""
-    query_string(db::Database, sql::String, parameters::Vector) -> Optional{String}
-
-Execute a parameterized SQL query and return the first column of the first row as a String.
-Returns `nothing` if the query returns no rows.
-"""
-function query_string(db::Database, sql::String, parameters::Vector)
+function query_string(db::Database, sql::String, parameters::Vector = [])
     param_types, param_values, refs = marshal_params(parameters)
     out_value = Ref{Ptr{Cchar}}(C_NULL)
     out_has_value = Ref{Cint}(0)
 
     GC.@preserve refs check(
-        C.quiver_database_query_string_params(
+        C.quiver_database_query_string(
             db.ptr,
             sql,
             param_types,
@@ -135,19 +59,13 @@ function query_string(db::Database, sql::String, parameters::Vector)
     return result
 end
 
-"""
-    query_integer(db::Database, sql::String, parameters::Vector) -> Optional{Int64}
-
-Execute a parameterized SQL query and return the first column of the first row as an Int64.
-Returns `nothing` if the query returns no rows.
-"""
-function query_integer(db::Database, sql::String, parameters::Vector)
+function query_integer(db::Database, sql::String, parameters::Vector = [])
     param_types, param_values, refs = marshal_params(parameters)
     out_value = Ref{Int64}(0)
     out_has_value = Ref{Cint}(0)
 
     GC.@preserve refs check(
-        C.quiver_database_query_integer_params(
+        C.quiver_database_query_integer(
             db.ptr,
             sql,
             param_types,
@@ -164,29 +82,17 @@ function query_integer(db::Database, sql::String, parameters::Vector)
     return out_value[]
 end
 
-"""
-    query_boolean(db::Database, sql::String, parameters::Vector) -> Optional{Bool}
-
-Execute a parameterized SQL query and return the first column of the first row as a Bool.
-Returns `nothing` if the query returns no rows.
-"""
-function query_boolean(db::Database, sql::String, parameters::Vector)
+function query_boolean(db::Database, sql::String, parameters::Vector = [])
     return _integer_to_boolean(query_integer(db, sql, parameters))
 end
 
-"""
-    query_float(db::Database, sql::String, parameters::Vector) -> Optional{Float64}
-
-Execute a parameterized SQL query and return the first column of the first row as a Float64.
-Returns `nothing` if the query returns no rows.
-"""
-function query_float(db::Database, sql::String, parameters::Vector)
+function query_float(db::Database, sql::String, parameters::Vector = [])
     param_types, param_values, refs = marshal_params(parameters)
     out_value = Ref{Float64}(0.0)
     out_has_value = Ref{Cint}(0)
 
     GC.@preserve refs check(
-        C.quiver_database_query_float_params(
+        C.quiver_database_query_float(
             db.ptr,
             sql,
             param_types,
@@ -203,22 +109,6 @@ function query_float(db::Database, sql::String, parameters::Vector)
     return out_value[]
 end
 
-"""
-    query_date_time(db::Database, sql::String) -> Optional{DateTime}
-
-Execute a SQL query and return the first column of the first row as a DateTime.
-Returns `nothing` if the query returns no rows.
-"""
-function query_date_time(db::Database, sql::String)
-    return string_to_date_time(query_string(db, sql))
-end
-
-"""
-    query_date_time(db::Database, sql::String, parameters::Vector) -> Optional{DateTime}
-
-Execute a parameterized SQL query and return the first column of the first row as a DateTime.
-Returns `nothing` if the query returns no rows.
-"""
-function query_date_time(db::Database, sql::String, parameters::Vector)
+function query_date_time(db::Database, sql::String, parameters::Vector = [])
     return string_to_date_time(query_string(db, sql, parameters))
 end

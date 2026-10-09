@@ -5,7 +5,7 @@ All notable changes to Quiver are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entries that require
 callers to change something are prefixed **BREAKING** and say what to do.
 
-## [0.12.4] — 2026-09-28
+## [0.13.2] — unreleased
 
 ### Changed
 
@@ -18,6 +18,470 @@ callers to change something are prefixed **BREAKING** and say what to do.
   `paths[i]` through the C API). **Lua cannot**: `{ x = nil }` is `{}`, so omission is its only
   signal and it now means *preserve* — the limitation it already had on `create_element` /
   `update_element` scalars.
+
+## [0.13.1] — 2026-10-07
+
+### Changed
+
+### Added
+
+- **Lua: XLSX worksheet reading.** `db:read_xlsx(path, options)` returns a header and rows;
+  `db:read_xlsx_stream(path, on_row, options)` delivers rows to a callback. Select a sheet by
+  name or 1-based index and a physical `header_row` (default 1; 0 disables headers). Cells are
+  strings, dates retain their stored serials, and formulas use saved cached results. Blank rows
+  are skipped and blank cells preserve column positions. Both methods enforce the database
+  directory sandbox and close workbook handles on errors and early stopping. Callback reads
+  avoid a full Lua result table but retain worksheet XML and shared strings in memory.
+
+### Fixed
+
+- **Lua element arrays preserve each cell's type.** Integers, floats, and booleans can be mixed
+  in REAL arrays in either order on create and update. C++ validation rejects incompatible
+  cells instead of the Lua binding choosing the whole array's type from its first cell.
+- **JS: compiled executable native loading on Linux.** After bundled package libraries, search
+  beside the executable before development/system fallbacks, independently of the working
+  directory. Include this location in load diagnostics; retain Windows sibling-core handling.
+- **JS: strict callback typing for group and time-series row writes.** Shared marshallers
+  correlate numeric ids and string labels with their native callback arguments. Runtime
+  marshalling is unchanged; CI now checks the actual source with strict TypeScript.
+
+## [0.13.0] — 2026-10-05
+
+### Changed
+
+- **BREAKING** **Renamed Lua Runner to Sandbox.**
+- **BREAKING** **Lua table arguments are type-checked.** A value other than a table passed where
+  a Lua method takes a table now raises `Cannot <op>: <argument> must be a table, got <type>`:
+  an element table (`create_element`, `update_element`, `update_element_by_label`,
+  `quiver.metadata_from_element`), the columns of `db:update_vector_group`,
+  `db:update_set_group`, `db:update_time_series_group` and their `_by_label` forms, the row of
+  `upsert_time_series_row`, the `paths` of `update_time_series_files`, the `dims` of `file:read`,
+  the `data` and `dims` of `file:write`, the `labels` of `expr:select_agents` and every options
+  table. A non-table column inside a group writer's columns raises `Cannot <op>: column '<name>'
+  must be an array of values, got <type>`, and a userdata as an element attribute value raises
+  `Cannot <op>: attribute '<name>' must be a value or a table, got userdata`. Release builds used
+  to read a non-table there as a table: a userdata such as `db` passed as a group writer's columns
+  was read as an empty payload and cleared the group. The existing `must be a table` messages
+  (options tables, `header`, `enum_labels`, `quiver.metadata` fields, `expr:rename_agents`,
+  `w:write_row`) now end in `, got <type>` too. Pass a table, e.g. `{ column = { values... } }`
+  for the group writers.
+- **BREAKING** **A wrong-typed optional Lua argument throws instead of being ignored.** The
+  `params` of `db:query_string` / `query_integer` / `query_float`, the metadata of
+  `db:open_file`, the `aggregate` flag of `db:bin_to_csv`, the `allow_nulls` flag of `file:read`
+  and the parameter of `expr:aggregate` / `expr:aggregate_agents` now raise `Cannot <op>: <argument>
+  must be <a table | a BinaryMetadata | a boolean | a number>, got <type>` for a value of the wrong
+  type, where they used to fall back to the default (`db:query_integer("SELECT 1", 5)` ran with no
+  parameters). Pass `nil` or omit the argument to get the default.
+- **BREAKING** **An empty array in Lua `update_element` clears the group.** `update_element` /
+  `update_element_by_label` with `{ column = {} }` now clear the group holding that column, as the
+  C++, Python and JS bindings already did; Lua used to skip the empty array. A misspelled empty
+  column now throws `Cannot update_element: array '<name>' does not match any vector, set, or time
+  series table ...` instead of being ignored. A `read_vectors_by_id` -> `update_element` round trip
+  of a column that read back empty or all-NULL now clears that group when no other column of the
+  group in the call is non-empty (so rows whose cells are all NULL are deleted), and throws `... must
+  have the same length` when another column of the group is non-empty. A column name shared by
+  several groups clears every one of them; every time-series group of a collection shares
+  `date_time`, so `{ date_time = {} }` clears them all. `create_element` still skips an empty array.
+  To leave a group untouched, omit its column. `quiver.metadata_from_element` decodes its table the
+  same way, so an empty `dimensions`, `dimension_sizes` or `labels` array no longer reports `Cannot
+  from_element: missing array '<name>'`: it reaches validation and reports what is wrong (`Number
+  of labels must be positive, got 0`; `Cannot from_element: dimension_sizes count (0) does not
+  match dimensions count (1)` or the reverse for one empty side; `Number of dimensions must be
+  positive, got 0` for both). An empty `time_dimensions` or `frequencies` array still means the same
+  as leaving it out.
+- **BREAKING** **Lua `load` and the script given to `Sandbox::run` accept text chunks only.** A
+  precompiled chunk (for example `string.dump` or `luac` output, given as a string or through a
+  reader function) makes `load` return `nil` and `attempt to load a binary chunk (mode is 't')`,
+  whatever mode is passed, and `run()` (so `quiver_cli` too) throws `Failed to run Lua script:`
+  with the same message. Ship and load the Lua source, not bytecode.
+- **BREAKING** **Release builds check every Lua argument the way Debug builds already did.** A
+  dot-call such as `db.commit()` now raises sol2's error `sol: received nil for 'self' argument
+  (use ':' for accessing member functions, ...)` instead of crashing the host process, and a
+  wrong-typed string or number argument raises sol2's `stack index N, expected ...` text instead
+  of undefined behaviour. Debug builds no longer print `[sol2] An exception occurred: ...` to the
+  host's stderr for an error a script raises through a binding. Call methods with `:` and pass the
+  documented types.
+- **BREAKING** **C++: `Expression` is no longer implicitly constructed from a `BinaryFile`.** A
+  `BinaryFile` is now an expression itself (both derive from `quiver::AbstractExpression`), so every
+  operator, `abs`/`sqrt`/`log`/`exp`, `ifelse`, `save`, `aggregate`, `aggregate_agents`,
+  `select_agents` and `rename_agents` take a file directly: `file_a + file_b`, `2.0 * file` and
+  `file.save(path)` need no wrapper. `aggregate` and `aggregate_agents` take
+  `quiver::AggregateOperation`; `ExpressionAggregate::Operation` remains an alias of it.
+  `Expression e = file;` no longer compiles; write `Expression e(file);`.
+- **BREAKING** **C++: `Expression::metadata()` is renamed `get_metadata()`**, the name `BinaryFile`
+  and the C API already use. Call `get_metadata()`.
+- **BREAKING** **Lua: `e:metadata()` is renamed `e:get_metadata()`**, the name a binary file
+  already used; a file and an expression now share it. Call `get_metadata()`.
+- **BREAKING** **Lua: extra arguments to an expression function or operator throw.** The twelve
+  `quiver.*` expression functions (`expression`, `abs`, `sqrt`, `log`, `exp`, `ifelse`, `gt`, `lt`,
+  `gte`, `lte`, `eq`, `neq`) and an operator metamethod called directly
+  (`getmetatable(e).__add(...)`) used to ignore arguments past their operands; they now raise
+  `Cannot <op>: too many arguments (expected N, got M)`. A wrong operand still raises `Cannot <op>:
+  operand must be an expression or a binary file, got <type>`. Drop the extra argument.
+
+### Added
+
+- **Lua: a binary file is an expression.** A file from `db:open_file` takes `aggregate`,
+  `aggregate_agents`, `select_agents`, `rename_agents` and `save` directly, `get_metadata` works on
+  files and expressions alike, and `quiver.expression(f)` is no longer needed (it still converts a
+  file to an expression). `f:save` is sandboxed like `expr:save`, refuses an output path that is
+  the file itself and a file open for writing, reads the file by path and leaves the handle open.
+- **Julia: a binary file is an expression.** `Quiver.Binary.File` and `Quiver.Expression` are
+  subtypes of `Quiver.AbstractExpression`, and every expression operation is defined once on it, so
+  a file takes every operator, `abs`/`sqrt`/`log`/`exp`, `ifelse`, `aggregate`, `aggregate_agents`,
+  `select_agents` and `rename_agents`, and now also `Quiver.save(file, path)`, which reads the file
+  by path and leaves the handle open. `Quiver.get_metadata` and `Quiver.Binary.get_metadata` are
+  now one function: either name works on a file (its handle's metadata) or an expression.
+
+### Fixed
+
+- JS: the Sandbox API reference documents the core's `Failed to run Lua script:` error prefix.
+- Linux native-library portability checks consume all `objdump` output, preventing SIGPIPE from
+  falsely reporting missing dynamic `libstdc++` linkage or `$ORIGIN` rpath after a successful build.
+- Dart FFI generation finds the existing Visual Studio 18 Community LLVM installation on Windows
+  and preserves integer enum constants with ffigen 20.1.1. The element wrapper uses the canonical
+  typedef so regeneration's duplicate-alias naming no longer breaks compilation.
+- **A non-string key in a Lua table argument is a Pattern 1 error.** A number or boolean key in an
+  element table, a time-series row, a `file:read`/`file:write` `dims` table or the `paths` of
+  `update_time_series_files` now raises `Cannot <op>: <attribute|column|dimension> name must be a
+  string, got <type>`. Release builds used to spell a number key as text (`column '1' not
+  found ...`) and could crash on a boolean key.
+- **`db:transaction` / `db:dry_run` check their argument before opening anything.** A value other
+  than a function now raises `Cannot transaction: fn must be a function, got <type>` (or `Cannot
+  dry_run: ...`) before a transaction or dry run is opened. Release builds used to open the scope
+  first and then fail to call the value (inside an already-open transaction they reported `Cannot
+  begin_transaction: transaction already active` instead); Debug builds reported sol2's raw
+  argument text. A table with a `__call` metamethod is no longer accepted: pass a function.
+- **`db:transaction` rolls back when its commit fails.** If the COMMIT at the end of the block
+  fails (for example on a deferred foreign key), the block is now rolled back and the commit error
+  is rethrown. The transaction used to be left open, so a host that committed afterwards wrote the
+  failed block.
+- **Expression operator and helper errors name the operation.** An invalid operand to an
+  Expression operator or a `quiver.*` expression helper now raises, for example, `Cannot add:
+  operand must be an expression or a binary file, got string` (or `Cannot gt: ...`, `Cannot abs:
+  ...`), where every one used to say `Cannot build expression: ...`.
+
+## [0.12.8] — 2026-10-01
+
+### Changed
+
+- **`create_element`/`update_element` errors name the operation.** A string written to a non-FK
+  INTEGER column now reports `Cannot create_element: type mismatch for column 'x': expected
+  INTEGER, got TEXT` (was `Cannot resolve attribute: ...`; `update_vector_group` /
+  `update_set_group` name themselves the same way), and an unknown attribute reports
+  `Cannot create_element: column 'x' not found in table 'T'` (was `Column 'x' not found in table
+  'T'`). The accepted values are unchanged.
+- **Missing-group errors use one pattern.** The time-series operations now report `Time series
+  group not found: 'g' in collection 'c'` (was `Time series group 'g' not found for collection
+  'c'`), matching `get_time_series_metadata`; a missing vector/set attribute reports `Vector
+  attribute not found: 'a' in collection 'c'` (was `Vector attribute 'a' not found for collection
+  'c'`); and `read_time_series_files` / `update_time_series_files` on a collection with no files
+  table report `Time series files table not found: c_time_series_files` (was `... not found for
+  collection 'c'`), matching `list_time_series_files_columns`.
+- **`import_csv` types each column by its declared type alone.** A `date_`-named column that is
+  not TEXT (`date_x INTEGER`, or a foreign key such as `date_id`) used to be parsed as a
+  timestamp, so every number or label in it was rejected as `Timestamp ... is not valid`. It now
+  imports like any other column of its type. A group-table cell naming a missing element now
+  reports the same `Could not find an existing element ... Create the element before referencing
+  it.` text as the scalar path; it lacked that last sentence before.
+- **Schema errors name the offending column.** A column type Quiver does not support now fails
+  with `Failed to validate schema: column 'payload' in table 'Items' has unsupported type 'BLOB'`
+  (was `Unknown data type: BLOB`), and an unsafe table name with `Failed to validate schema:
+  invalid table name '...'` (was `Cannot query columns: invalid table name: ...`).
+- **Migration and schema-file errors name the method you called.** `from_migrations`,
+  `validate_migrations` and `from_schema` now report e.g. `Failed to validate_migrations: down
+  migration 2: ...` and `Cannot from_schema: schema file is empty: ...` instead of the private
+  helper names `migrate_up` / `migrate_down` / `apply_schema`.
+- **BREAKING (C++ only) — `data_type_from_string` (`quiver/data_type.h`) returns
+  `std::optional<DataType>`.** It returns `std::nullopt` for an unsupported type instead of
+  throwing `Unknown data type: ...`. *Adapt:* check the optional before using it.
+
+### Added
+
+- **Linux ARM64 (`aarch64`, e.g. NVIDIA DGX Spark) is a published platform.** PyPI ships a
+  `manylinux_aarch64` wheel, and the Julia artifact and npm package carry `linux-aarch64` native
+  libraries. They need glibc 2.28 or newer (Linux x86_64 stays at 2.17).
+
+### Removed
+
+- **BREAKING (C++ only) — unused `Row`/`Result` members removed:** `Row::size`, `column_count`,
+  `empty`, `at`, `begin`, `end` and `Result::Result()`, `column_count`, `at`. They were reachable
+  only from the installed headers, and no binding used them. `quiver/database.h` no longer includes
+  `quiver/result.h`. *Adapt:* use `operator[]`, `is_null` and the `get_*` getters, construct an
+  empty result as `Result({}, {})`, and read the column count as `columns().size()`. Include
+  `quiver/result.h` directly if you need the type.
+- **BREAKING (C++ only) — `Schema::get_data_type(table, column)` removed.** Its only caller was
+  `TypeValidator`, which now reports an unknown column itself (see Changed). The public static
+  `TypeValidator::validate_value` also no longer accepts a string for an INTEGER column; no
+  `Database` method passes it one, since FK labels are resolved to ids first. *Adapt:* use
+  `schema.get_table(table)->get_data_type(column)`, which returns `std::optional<DataType>`.
+- **BREAKING (C++ only) — `quiver/schema.h`, `quiver/schema_validator.h` and
+  `quiver/type_validator.h` are no longer installed.** They were internal (no binding and no C
+  API used them), and `TypeValidator` is now three internal free functions. This supersedes the
+  *Adapt* of the entry above: `Schema` is no longer reachable from outside the library either.
+  *Adapt:* use `Database::get_*_metadata` / `list_*` for schema introspection.
+
+### Fixed
+
+- **`summarize_collection()`'s value distribution counts only integer cells.** In a non-STRICT
+  INTEGER column a TEXT or REAL cell used to appear as a bogus code (`'abc'` as `0`, `1.5` as `1`)
+  and count toward the 64-code cutoff.
+
+## [0.12.7] — 2026-10-01
+
+### Changed
+
+- **BREAKING — Lua: `db:open_file` handles are closed when `run()` returns.** A binary file a
+  script left open (for example in a global, without `f:close()`) used to stay open, so a writer
+  kept its path blocked for reading and writing in the whole process. Readers and writers now
+  follow the rule CSV writers already did. *Adapt:* reopen the file in each `run()` instead of
+  reusing a handle kept in a global.
+
+- **BREAKING — Lua: `db:export_csv`/`db:import_csv` options, `quiver.metadata{...}` and
+  `expr:rename_agents` reject unknown keys and wrong types.** A misspelled key (`date_format`,
+  `dimension_size`) or a wrong-typed value (`unit = 5`, `labels = "v1"`, a boolean rename target)
+  used to be ignored or silently replaced by a default, and in Release some became empty strings.
+  They now throw a `Cannot <op>: ...` error, like the `read_csv`/`write_csv` options already did.
+  *Adapt:* fix the key or value the error names.
+
+### Fixed
+
+- **JS: the agent-facing Lua reference (`SANDBOX_API_REFERENCE`) no longer promises a rollback.**
+  A failed script keeps every write that finished before the error; only `db:transaction` /
+  `db:dry_run` undo their block. The CSV section now says that `import_csv` replaces the target
+  table (and that `group = ""` is the scalar table), and that `upsert_time_series_row` and
+  `update_time_series_files` replace the whole row.
+- **Lua: an array of row tables passed to a group writer throws one clear error in every build**
+  (`Cannot <method>: column names must be strings; pass { column = { values... } }, not an array
+  of row tables`). It used to raise sol2's raw `stack index -1, expected string, received number`
+  in Debug and a misleading `column '1' must be an array of values` in Release; a boolean key
+  became column `''`. The agent-facing reference also now documents boolean cells, the real
+  transaction/dry-run error texts, that `query_*` do not convert types, the `nil` holes in bulk
+  reads and the trailing-`nil` query-parameter limit.
+- **Lua: conversion errors name the method the script called.** An unsupported value passed to
+  `db:create_element`, `db:update_element`(`_by_label`), `db:upsert_time_series_row`(`_by_label`),
+  `db:query_*` or `quiver.metadata_from_element` now reports e.g. `Cannot create_element: attribute
+  'x' has unsupported Lua type`, instead of an internal helper name (`table_to_element`,
+  `lua_table_to_value_map`, `lua_table_to_values`). The same holds for an element array with a
+  `nil` hole (`Cannot update_element: array 'x' has a nil hole ...`).
+
+## [0.12.6] — 2026-09-30
+
+### Added
+
+- **JS: `LOG_LEVEL_*`, `DATA_TYPE_*` and the `DatabaseOptions` type are exported from
+  `quiverdb`.** `mod.ts` now re-exports `src/index.ts` whole, so the package root can no longer
+  drift from it. The `consoleLevel` values `DatabaseOptions` documents were previously not
+  reachable from outside the package, and `ScalarMetadata.dataType` had no named constants.
+- **Julia: `Element` accepts `nothing` and any `AbstractString` scalar.** `update_element!(db, c,
+  id; attr = nothing)` (and the `create_element!` / `update_element_by_label!` keyword forms) now
+  write SQL NULL, as every other binding already could; previously it raised a `MethodError`. A
+  `SubString` scalar is accepted too, not only `String`.
+
+### Changed
+
+- **BREAKING — Python and Dart type a numeric group column or element array from every cell.**
+  Python took a column's type from its first non-`None` cell and ran every other cell through
+  `int()` or `float()`, so `update_vector_group(..., {"score": [1, 2.5]})` stored `[1.0, 2.0]` with
+  no error. The same happened in `update_set_group`, `update_time_series_group` and their
+  `_by_label` forms, and in `create_element`/`update_element` arrays that start with a `bool`. A
+  `str` cell among numbers was parsed (`[1, "7"]` stored `7`). A float anywhere in a numeric column
+  now makes it FLOAT, so `[1, 2.5]` stores `1.0` and `2.5`; bool/int columns stay INTEGER. A cell
+  that does not fit its column — a `str` among numbers, a number among strings, a `str` among
+  `datetime`s, any unsupported type — raises
+  `TypeError: Unsupported value type <T> in cell <i> of column '<name>'` before the call. Dart
+  applies the same whole-column rule in the group writers and `Element.set`, where `[1, 2.5]` used
+  to throw `ArgumentError`. JS and Julia already behaved this way.
+
+  *Adapt:* pass numbers, not numeric strings. A float anywhere in a list written to an INTEGER
+  column is now rejected by the core instead of being truncated, including a whole-number one
+  (`[65, 70.0]`); pass ints, or round the values yourself if you intended truncation.
+
+- **BREAKING — Python: `collection`, `id`, `group` and `label` are positional-only on every
+  `**kwargs` method.** `create_element`, `update_element`, `upsert_time_series_row` and
+  `upsert_time_series_row_by_label` now mark their leading parameters positional-only, as
+  `update_element_by_label` already did. An attribute with the same name as one of those parameters
+  now reaches the core instead of failing with `TypeError: got multiple values for argument
+  '<name>'` before the call. As a result, `db.update_element("C", eid, **db.read_scalars_by_id("C",
+  eid))` works: the dict holds `id`, and it is written back as-is.
+
+  *Adapt:* pass those parameters positionally. `update_element(collection="C", id=1, x=2)` now
+  raises `TypeError`; write `update_element("C", 1, x=2)`.
+
+- **BREAKING — JavaScript: a numeric array or group column with a non-number cell throws.** When a
+  column's first non-null cell is a number, a `bigint` or a boolean, every other non-null cell must
+  be one of those too. This applies to `createElement` / `updateElement` / `updateElementByLabel`
+  arrays and to the six group writers (`updateTimeSeriesGroup`, `updateVectorGroup`,
+  `updateSetGroup` and their `ByLabel` forms). The binding used to type the column from one cell
+  and convert the rest with no error: in a nullable REAL column, `[1.5, "abc"]` stored
+  `[1.5, NULL]` and `[1.5, "2"]` stored `[1.5, 2.0]`. It now throws
+  `Cannot <method>: numeric column '<name>' has unsupported value type string in cell 1`. String
+  columns are unchanged. `createElement` and `updateElement` now also map a boolean array cell to
+  1/0 one cell at a time, as the group writers already did, so `[true, 5, false, 7]` stores
+  `[1, 5, 0, 7]` instead of `[1, 1, 0, 1]`.
+
+  *Adapt:* make every cell of a numeric column a number (or a `bigint` or a boolean); convert
+  strings with `Number(...)` before the call.
+
+- **Dart: the group writers' jagged-column `ArgumentError` names the offending column.** The six
+  columnar writers (`updateVectorGroup`, `updateSetGroup`, `updateTimeSeriesGroup` and their
+  `ByLabel` forms) now throw `All column lists must have the same length, got <n> for '<name>'`,
+  Python's message; the error type is unchanged.
+
+- **BREAKING — Dart: `Element.set` (and so `createElement` / `updateElement` /
+  `updateElementByLabel`) no longer accepts a nested `Map` value.** It used to flatten the map and
+  ignore its key, so `{'some_group': {'date_time': [...], 'value': [...]}}` behaved exactly like
+  passing the columns flat, and a misspelled key was accepted silently. A `Map` now throws
+  `ArgumentError` ("Unsupported type ... for '<name>'"). *Adapt:* pass the columns flat, or use
+  `updateTimeSeriesGroup` / `updateVectorGroup` / `updateSetGroup` to write one named group.
+
+- **BREAKING — Julia/Python: two date-time readers are renamed to the plural form.**
+  `read_vector_date_time_by_id` → `read_vector_date_times_by_id` and `read_set_date_time_by_id` →
+  `read_set_date_times_by_id`. They return a list, and the naming rule makes a list-returning
+  reader plural (Dart already spelled them `readVectorDateTimesById` / `readSetDateTimesById`).
+  `read_scalar_date_time_by_id` is unchanged. *Adapt:* rename the calls; there is no alias.
+
+### Fixed
+
+- **Python: a `datetime` is accepted on every write path, and an aware one is stored as its UTC
+  instant.** `create_element`, `update_element` and `update_element_by_label` (scalar and list
+  attributes) and `upsert_time_series_row` / `upsert_time_series_row_by_label` raised `TypeError`
+  for a `datetime`, although every reader returns one, so a value read back could not be written
+  back. The group writers and `read_time_series_row` did take one but formatted its wall clock and
+  dropped the offset, while the readers stamp UTC: `10:00+03:00` was stored as `10:00` and read
+  back as `10:00Z`, three hours off, and `read_time_series_row` looked up the wrong instant the
+  same way. An aware value is now converted to UTC (`07:00`); a naive one is written as given.
+  Rows written earlier from an aware non-UTC value keep the wall-clock time they were stored with.
+- **Python: a `Sandbox` whose construction fails is silent when it is garbage-collected.**
+  `Sandbox(db)` on a closed `Database` raised `QuiverError: Null argument: db` as it should, but
+  the half-built object's `__del__` then emitted a spurious `ResourceWarning: Sandbox was not
+  closed explicitly` and printed `Exception ignored in … AttributeError: 'Sandbox' object has no
+  attribute '_ptr'`. A runner now counts as closed until its native handle exists.
+- **Julia: `scalar_relation_map` / `set_relation_map` read in bulk.** They issued one query per
+  element and a linear search per relation; they now make two bulk reads and a dictionary lookup,
+  so they scale linearly. Results are unchanged.
+- **JS: `bigint` is accepted by the group writers and as a query parameter.** `updateVectorGroup`,
+  `updateSetGroup`, `updateTimeSeriesGroup` (and their `ByLabel` forms) and every `query*` method
+  now take a `bigint` cell or parameter and write it as an exact int64, as `createElement` and
+  `upsertTimeSeriesRow` already did. Previously the group writers threw `unsupported value type
+  bigint` and the query methods `Unsupported query parameter type at index <i>: bigint`. A
+  numeric group column or `createElement` / `updateElement` array may mix `bigint` with numbers
+  and booleans: it is INTEGER unless a cell is fractional, which makes it FLOAT and converts a
+  `bigint` through `Number()`. An element array led by a `bigint` now gets the same per-cell check
+  as any other numeric array: `[7n, "12"]` used to store `12`, and `[7n, 1.5]` threw a raw
+  `RangeError`.
+- **Julia: `read_time_series_group` no longer leaks when decoding fails.** A dimension value that
+  is not a valid date (possible in a database written before the DATE_TIME write gate, or by raw
+  SQL) raised before the C result was freed.
+- **Dart: the group readers no longer leak when decoding fails.** `readTimeSeriesGroup`,
+  `readVectorGroupById` and `readSetGroupById` freed the C result only on success; a date value
+  outside the accepted grammar (possible in a database written before the DATE_TIME write gate,
+  or by raw SQL) leaked it on every call.
+
+## [0.12.5] — 2026-09-29
+
+### Added
+
+- **JS: `readVectorGroupById()` / `readSetGroupById()`.** The whole-group readers Julia, Dart and
+  Python already had. Each returns one record per row, `Record<string, number | string | null>[]`,
+  read from the named group's own table in one statement: a SQL NULL cell is `null` in its row,
+  and a DATE_TIME cell stays an ISO 8601 string, as in every JS reader. Prefer them to zipping
+  `readVectorFloatsById` and the other per-column readers, which resolve a column *name*: when two
+  groups of one kind share a column name (legal for a foreign key), the zip pairs another group's
+  values with this one's.
+
+### Changed
+
+- **BREAKING — `read_time_series_row()` returns null, not `0` / `NaN`, for an element with no
+  data.** The C++ core and Lua always did. The C API collapsed the missing value into a sentinel
+  (`0` for an INTEGER column, `NaN` for a REAL one), so Julia, Dart, Python and JS returned a `0`
+  that could not be told apart from a stored `0`, and a `NaN` their own docs did not mention.
+  `quiver_database_read_time_series_row` now takes a `uint8_t** out_mask` out-parameter between
+  `out_values` and `out_count`, filled for every data type (`out_mask[i] == 0` = no data at or
+  before `date_time`) and freed with `quiver_database_free_mask`. Every binding maps it to
+  `nothing` / `null` / `None`. In Julia the result is now `Vector{Union{Nothing, T}}` for every
+  column type, `T` from the attribute's type (`Int64`, `Float64` or `String`), including an empty
+  result. It used to be `Vector{Int64}` / `Vector{Float64}` for numeric columns.
+
+  *Adapt:* C callers pass `&out_mask` and free it with `quiver_database_free_mask`. Replace
+  `isnan(x)` / `x == 0` no-data checks with a null check (`x === nothing`, `x == null`,
+  `x is None`). Julia code typed on `Vector{Float64}` / `Vector{Int64}` must accept the `Union`
+  element type (`something.(v, NaN)` gives back the old `Vector{Float64}` for a REAL column).
+
+- **BREAKING — C API: one `quiver_database_query_*` function per type.** `quiver_database_query_string`,
+  `quiver_database_query_integer` and `quiver_database_query_float` now take the parameter arrays
+  (`param_types`, `param_values`, `param_count`) that the `quiver_database_query_*_params` forms
+  took, and those three `_params` functions are gone, so each C++ `query_*` method maps to exactly
+  one C function. A parameter the C API cannot convert now names the function called
+  (`Cannot query_integer: unknown parameter type 999`) instead of `Cannot query: …`. The Julia,
+  Dart, Python and JS query methods are unchanged.
+
+  *Adapt:* in direct C API calls, pass `NULL, NULL, 0` after `sql` for a query without parameters,
+  and drop the `_params` suffix from a parameterized call.
+
+### Removed
+
+- **BREAKING — `quiver_clear_last_error`, the C element accessors, and C++ `Element::has_scalars` /
+  `has_arrays`.** `quiver_clear_last_error`, `quiver_element_has_scalars`,
+  `quiver_element_has_arrays`, `quiver_element_scalar_count` and `quiver_element_array_count` are
+  removed from the C API, along with the two C++ methods behind them. Nothing called them: no binding
+  read an element back or cleared the error message. Julia's generated `Quiver.C` wrappers and the
+  internal Dart and Python declarations for them are gone too. No binding's public API changes. The
+  `quiver_get_last_error` header comment is corrected. It used to say the message is empty when no
+  error occurred, but a successful call never reset it, so after a failure every later successful
+  call still reported the old message.
+
+  *Adapt:* in C, delete calls to `quiver_clear_last_error` and read `quiver_get_last_error` only
+  after a call returns `QUIVER_ERROR`. To inspect an element, use `quiver_element_to_string`. In C++,
+  replace `element.has_scalars()` / `element.has_arrays()` with `!element.scalars().empty()` /
+  `!element.arrays().empty()`.
+
+### Fixed
+
+- **Julia and Python: `read_vector_group_by_id` / `read_set_group_by_id` read the group they are
+  given.** Both built their rows from one per-column read per column, and a per-column read
+  resolves the column *name*: when two groups of one kind share a column name (legal for a foreign
+  key), the column came from whichever group's table sorts first, so the rows paired another
+  group's values with this group's or raised `BoundsError` / `IndexError`. They now call the native
+  C reader, as Dart does: one statement over the named group's own table, so the rows no longer mix
+  separate snapshots either. A group with no such shared name reads back as before.
+- **A vector or set group named after another group's column no longer hides that column.** The
+  per-column readers (`read_{vector,set}_{integers,floats,strings}` and their `_by_id` forms, in
+  every layer) took the group named after the column even when that group did not hold it, and
+  threw `Cannot read_vector_floats_by_id: column 'cost' not found in table 'Child_vector_cost'`.
+  They now fall through to the group that holds the column.
+- **Julia: `create_element!` / `update_element!` take a nullable boolean read.**
+  `read_vector_booleans` / `read_set_booleans` (and their `_by_id` forms) on a nullable column
+  return `Vector{Union{Nothing, Bool}}` since 0.12.4, which no `Element` method accepted
+  (`MethodError`). It now round-trips like the other nullable reads, and a real `nothing` cell
+  raises the `ArgumentError` naming the column.
+- **JS: an element array refuses a `null` cell in any position.** A string array decided by its
+  first cell: `["a", null]` stored a SQL NULL while `[null, "a"]` threw, and `["a", undefined]`
+  stored the text `"undefined"`. Every array now throws on a `null` or `undefined` cell, as in
+  Python, Julia and Lua. *Adapt:* write NULL cells with `updateVectorGroup` / `updateSetGroup`.
+- The element-array null-cell error in Julia, Python and JS also names `update_time_series_group`,
+  which writes NULL cells too.
+- **Julia, Dart, Python, JS: `update_time_series_files` with an empty map validates the
+  collection.** The four bindings returned before calling the core when the map was empty, so
+  `update_time_series_files("NoSuchCollection", {})`, or the same call on a collection with no
+  `_time_series_files` table, succeeded silently where C++, the C API and Lua raised. The empty
+  map now reaches the core in every binding and raises the core's error there too:
+  `Cannot update_time_series_files: collection not found: <collection>` for an unknown
+  collection, and the files-table-not-found error for a collection without one. On a collection
+  that has the table it still changes nothing. A caller that made this call on a collection
+  without a files table should check `has_time_series_files` first.
+- **The C API group readers no longer truncate a REAL cell in an INTEGER column.**
+  `quiver_database_read_vector_group_by_id`, `quiver_database_read_set_group_by_id` and
+  `quiver_database_read_time_series_group` turned a stored `1.5` into `1` and reported it
+  present, and an out-of-range REAL such as `1e300` was undefined behaviour. The cell is now
+  absent (mask 0), the same as in the per-column integer readers, so the binding group readers
+  built on these functions (Dart, and since this release Julia, Python and JS) return null for it.
+  Only a non-STRICT table can hold such a value (e.g. written through raw SQL); STRICT schemas, as
+  the conventions use, are unaffected.
+
+## [0.12.4] — 2026-09-29
+
+### Changed
 
 - **BREAKING — a binary file's time coordinate names a calendar cell, and a week starts on the day of
   `initial_datetime`.** Each inner time value is its position inside the parent's period (day of
@@ -82,6 +546,33 @@ callers to change something are prefixed **BREAKING** and say what to do.
   *Adapt:* in C and Julia, replace `QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_<OP>` with
   `QUIVER_EXPRESSION_AGGREGATE_OPERATION_<OP>` — in Julia,
   `Quiver.aggregate_agents(e, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_MEAN)`.
+
+- **BREAKING — vector and set reads preserve NULL cells.** All twelve readers
+  (`read_{vector,set}_{integers,floats,strings}` and their `_by_id` forms, plus the C API and
+  binding equivalents) dropped SQL NULL cells, so `[0.10, NULL, 0.30]` read back as
+  `[0.10, 0.30]` and two per-column reads of one nullable group paired the wrong values together.
+  Cells are now positional: the inner element type is nullable (`std::optional<T>` in C++,
+  `nothing`/`None`/`null` in the bindings, a `nil` hole in Lua) — in Julia only for a nullable
+  column: a `NOT NULL` one keeps its concrete `Vector{Int64}`, while a nullable one now reads as
+  `Vector{Union{Nothing, Int64}}` even when it holds no NULL. The C API numeric readers gained a
+  per-cell presence mask — `uint8_t*** out_masks` on the four bulk readers (freed by the new
+  `quiver_database_free_masks`) and `uint8_t** out_mask` on the four numeric `_by_id` readers
+  (freed by `quiver_database_free_mask`); the string readers keep their signatures and mark a NULL
+  with a `nullptr` entry, which they never returned before.
+
+  *Adapt:* unwrap the inner values (`*v` / `v.value()`, `v === null` checks, `t[i] == nil` in Lua)
+  and, in C, pass and free the new mask out-parameters and NULL-check every `char*` a string reader
+  returns before using it. Inner lists that used to be short are now full length, so a length read
+  as "number of non-null values" must count the non-null cells. To write a read back through
+  `create_element` / `update_element`, mind the layer. Lua, Python and Julia element arrays refuse a
+  NULL cell (Lua: an array with a `nil` hole, or any non-integer key such as a `table.pack`
+  result's `n`, throws instead of being cut short or skipped; Python and Julia: an error naming the
+  column), and so do JS numeric and boolean arrays (a `null` throws instead of being stored as 0 /
+  `false`); write those NULL cells with `update_vector_group` / `update_set_group`. C++ (a
+  `std::vector<Value>` holding `nullptr`), the C API (the `has_value` mask) and Dart (`List<T?>`)
+  write a NULL cell as SQL NULL. Julia's `create_element!` / `update_element!` take a nullable
+  read as it is when it holds no `nothing`. In C++, map `std::nullopt` to `nullptr` into a
+  `std::vector<Value>`: `Element::set` has no `std::vector<std::optional<T>>` overload.
 
 ### Removed
 
@@ -167,7 +658,7 @@ callers to change something are prefixed **BREAKING** and say what to do.
   metadata from toml: ...`, even from `from_element`.
 - **`csv_to_bin` reads numbers the same way in every host locale and on every platform.** Under a
   decimal-comma C locale (e.g. Python's `locale.setlocale(locale.LC_ALL, "")` on a pt-BR machine,
-  then `db:csv_to_bin` through a `LuaRunner`) a data cell `1.5` was read as `1`, and on Linux and
+  then `db:csv_to_bin` through a `Sandbox`) a data cell `1.5` was read as `1`, and on Linux and
   macOS a subnormal value such as `1e-310`, which `bin_to_csv` writes, was rejected. It now uses
   the same number parser as `import_csv()`.
 - **`csv_to_bin()` checks every data row's width against the header.** A row missing a dimension
@@ -180,6 +671,11 @@ callers to change something are prefixed **BREAKING** and say what to do.
   `std::invalid_argument`. A file that ends before its last row throws `Cannot csv_to_bin: file ends before
   line N`, and a header with too few columns now reports the same `Unexpected header in CSV file:
   ...` as any other header mismatch instead of `CSV header has N columns, expected M`.
+- **Bulk vector and set reads keep an element whose id is -1.** The six bulk readers used -1 as
+  their "no element yet" marker, so when -1 was a collection's smallest id (`create_element`
+  accepts an explicit `id`) that element was left out — every later element then sat one slot off
+  `read_element_ids` — or, when it had group rows, they were appended to an empty result
+  (undefined behaviour; a Debug build aborts).
 
 ## [0.12.3] — 2026-09-28
 
@@ -432,7 +928,7 @@ callers to change something are prefixed **BREAKING** and say what to do.
 ### Changed
 
 - **The agent-facing Lua API reference now redirects a model to the file, instead of only telling
-  it what it lacks.** `LUA_DB_API_REFERENCE`'s `Standard library` bullet used to state only that
+  it what it lacks.** `SANDBOX_API_REFERENCE`'s `Standard library` bullet used to state only that
   the Lua sandbox has no `io`, which correctly told a model it cannot open a file — and then led it
   to conclude it must paste the file's contents into the script as literals. The correction sits at
   that exact sentence: no `io`, but data files are read with `db:read_csv` / `db:read_csv_stream`.
@@ -476,7 +972,7 @@ callers to change something are prefixed **BREAKING** and say what to do.
   a forced garbage collection, which only finalizes objects the script made *unreachable*.
   `w = db:write_csv(path)` without `local` — Lua's default spelling — is a GC root, so its rows
   stayed in the stream buffer and the file was empty (or truncated mid-record) for the host and
-  for any later `run()`. `LuaRunner::run` now closes every writer the run handed out, explicitly
+  for any later `run()`. `Sandbox::run` now closes every writer the run handed out, explicitly
   and regardless of reachability. A writer does not outlive its `run()`: reusing the handle from a
   later script reports `Cannot write_row: writer for '...' is already closed`.
 - **Lua: `w:close()` left the writer un-closeable after a flush failure.** It threw before marking
@@ -553,7 +1049,7 @@ callers to change something are prefixed **BREAKING** and say what to do.
 - **The Dart binding's native build now works on macOS.** `quiverdb`'s native-assets hook
   previously could not configure, compile, or register its libraries there.
 - **macOS builds now target macOS 13.3 as their minimum, deterministically.** libc++ marks the
-  floating-point `std::to_chars` (used by `database_csv_export.cpp` and `lua_runner.cpp`)
+  floating-point `std::to_chars` (used by `database_csv_export.cpp` and `sandbox.cpp`)
   unavailable below 13.3, so that is the core's real floor and `cmake/Platform.cmake` now sets
   it for every macOS build. Previously no build path set one, so clang stamped the *builder's*
   OS version into the shipped dylibs and the published Julia/JS/S3 natives silently required
@@ -718,7 +1214,7 @@ callers to change something are prefixed **BREAKING** and say what to do.
   `Binary.open_file` take a callback-first argument, so Julia `do` syntax releases the handle at the
   block's `end` on both the normal and the exceptional exit, and returns the callback's result. The
   finalizer already released eventually — what is new is *prompt, deterministic* release, which is
-  what frees an OS file handle on Windows. Caveat: a `LuaRunner` built inside the block must not
+  what frees an OS file handle on Windows. Caveat: a `Sandbox` built inside the block must not
   outlive it (it borrows the database), and an uncommitted transaction still open at the block's
   `end` is rolled back — use `transaction(db) do db ... end` inside.
 
@@ -954,7 +1450,21 @@ are functionally identical to 0.10.0.
   `read_time_series_group` emits for a NULL STRING cell — so feeding a read result back with the
   mask stripped was UB. A NULL entry, or a NULL per-column data pointer, is now SQL NULL.
 
-[0.10.9]: https://github.com/psrenergy/quiver/compare/v0.10.8...HEAD
+[0.13.2]: https://github.com/psrenergy/quiver/compare/v0.13.1...v0.13.2
+[0.13.1]: https://github.com/psrenergy/quiver/compare/v0.13.0...v0.13.1
+[0.13.0]: https://github.com/psrenergy/quiver/compare/v0.12.9...v0.13.0
+[0.12.9]: https://github.com/psrenergy/quiver/compare/v0.12.8...v0.12.9
+[0.12.8]: https://github.com/psrenergy/quiver/compare/v0.12.7...v0.12.8
+[0.12.7]: https://github.com/psrenergy/quiver/compare/v0.12.6...v0.12.7
+[0.12.6]: https://github.com/psrenergy/quiver/compare/v0.12.5...v0.12.6
+[0.12.5]: https://github.com/psrenergy/quiver/compare/v0.12.4...v0.12.5
+[0.12.4]: https://github.com/psrenergy/quiver/compare/v0.12.3...v0.12.4
+[0.12.3]: https://github.com/psrenergy/quiver/compare/v0.12.2...v0.12.3
+[0.12.2]: https://github.com/psrenergy/quiver/compare/v0.12.1...v0.12.2
+[0.12.1]: https://github.com/psrenergy/quiver/compare/v0.12.0...v0.12.1
+[0.12.0]: https://github.com/psrenergy/quiver/compare/v0.11.0...v0.12.0
+[0.11.0]: https://github.com/psrenergy/quiver/compare/v0.10.9...v0.11.0
+[0.10.9]: https://github.com/psrenergy/quiver/compare/v0.10.8...v0.10.9
 [0.10.8]: https://github.com/psrenergy/quiver/compare/v0.10.7...v0.10.8
 [0.10.7]: https://github.com/psrenergy/quiver/compare/v0.10.6...v0.10.7
 [0.10.6]: https://github.com/psrenergy/quiver/compare/v0.10.5...v0.10.6

@@ -1,10 +1,11 @@
 #include "test_utils.h"
 
-#include <algorithm>
-#include <cmath>
 #include <gtest/gtest.h>
 #include <quiver/c/database.h>
 #include <quiver/c/element.h>
+
+#include <algorithm>
+#include <cmath>
 #include <string>
 #include <vector>
 
@@ -15,8 +16,10 @@
 TEST(DatabaseCApi, HasTimeSeriesFiles) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     int result = 0;
@@ -34,8 +37,10 @@ TEST(DatabaseCApi, HasTimeSeriesFiles) {
 TEST(DatabaseCApi, ListTimeSeriesFilesColumns) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     char** columns = nullptr;
@@ -48,10 +53,12 @@ TEST(DatabaseCApi, ListTimeSeriesFilesColumns) {
     bool found_data_file = false;
     bool found_metadata_file = false;
     for (size_t i = 0; i < count; ++i) {
-        if (std::string(columns[i]) == "data_file")
+        if (std::string(columns[i]) == "data_file") {
             found_data_file = true;
-        if (std::string(columns[i]) == "metadata_file")
+        }
+        if (std::string(columns[i]) == "metadata_file") {
             found_metadata_file = true;
+        }
     }
     EXPECT_TRUE(found_data_file);
     EXPECT_TRUE(found_metadata_file);
@@ -63,8 +70,10 @@ TEST(DatabaseCApi, ListTimeSeriesFilesColumns) {
 TEST(DatabaseCApi, ReadTimeSeriesFilesEmpty) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     char** columns = nullptr;
@@ -86,8 +95,10 @@ TEST(DatabaseCApi, ReadTimeSeriesFilesEmpty) {
 TEST(DatabaseCApi, UpdateAndReadTimeSeriesFiles) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     const char* columns[] = {"data_file", "metadata_file"};
@@ -119,8 +130,10 @@ TEST(DatabaseCApi, UpdateAndReadTimeSeriesFiles) {
 TEST(DatabaseCApi, UpdateTimeSeriesFilesWithNulls) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     const char* columns[] = {"data_file", "metadata_file"};
@@ -152,8 +165,10 @@ TEST(DatabaseCApi, UpdateTimeSeriesFilesWithNulls) {
 TEST(DatabaseCApi, UpdateTimeSeriesFilesReplace) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     // First update
@@ -190,8 +205,10 @@ TEST(DatabaseCApi, UpdateTimeSeriesFilesReplace) {
 TEST(DatabaseCApi, UpdateTimeSeriesFilesPatch) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     const char* columns1[] = {"data_file", "metadata_file"};
@@ -206,8 +223,10 @@ TEST(DatabaseCApi, UpdateTimeSeriesFilesPatch) {
     char** out_columns = nullptr;
     char** out_paths = nullptr;
     size_t out_count = 0;
-    EXPECT_EQ(quiver_database_read_time_series_files(db, "Collection", &out_columns, &out_paths, &out_count),
-              QUIVER_OK);
+    EXPECT_EQ(
+        quiver_database_read_time_series_files(db, "Collection", &out_columns, &out_paths, &out_count),
+        QUIVER_OK
+    );
     ASSERT_EQ(out_count, 2u);
     for (size_t i = 0; i < out_count; ++i) {
         if (std::string(out_columns[i]) == "data_file") {
@@ -227,8 +246,10 @@ TEST(DatabaseCApi, UpdateTimeSeriesFilesPatch) {
     out_columns = nullptr;
     out_paths = nullptr;
     out_count = 0;
-    EXPECT_EQ(quiver_database_read_time_series_files(db, "Collection", &out_columns, &out_paths, &out_count),
-              QUIVER_OK);
+    EXPECT_EQ(
+        quiver_database_read_time_series_files(db, "Collection", &out_columns, &out_paths, &out_count),
+        QUIVER_OK
+    );
     ASSERT_EQ(out_count, 2u);
     for (size_t i = 0; i < out_count; ++i) {
         if (std::string(out_columns[i]) == "data_file") {
@@ -245,8 +266,10 @@ TEST(DatabaseCApi, UpdateTimeSeriesFilesPatch) {
 TEST(DatabaseCApi, TimeSeriesFilesNotFound) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     char** columns = nullptr;
@@ -266,8 +289,10 @@ TEST(DatabaseCApi, TimeSeriesFilesNotFound) {
 TEST(DatabaseCApi, TimeSeriesFilesNullArguments) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     int result = 0;
@@ -295,6 +320,29 @@ TEST(DatabaseCApi, TimeSeriesFilesNullArguments) {
     EXPECT_EQ(quiver_database_update_time_series_files(db, nullptr, in_columns, in_paths, 1), QUIVER_ERROR);
     EXPECT_EQ(quiver_database_update_time_series_files(db, "Collection", nullptr, in_paths, 1), QUIVER_ERROR);
     EXPECT_EQ(quiver_database_update_time_series_files(db, "Collection", in_columns, nullptr, 1), QUIVER_ERROR);
+
+    quiver_database_close(db);
+}
+
+// count == 0 with NULL arrays is a legal call, and the core still validates the collection and its
+// files table before treating the empty map as a no-op. This is how the Dart and JS bindings
+// forward an empty map.
+TEST(DatabaseCApi, UpdateTimeSeriesFilesEmptyMapValidatesCollection) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
+    );
+    ASSERT_NE(db, nullptr);
+
+    EXPECT_EQ(quiver_database_update_time_series_files(db, "NoSuchCollection", nullptr, nullptr, 0), QUIVER_ERROR);
+    EXPECT_STREQ(quiver_get_last_error(), "Cannot update_time_series_files: collection not found: NoSuchCollection");
+
+    // Configuration has no time series files table
+    EXPECT_EQ(quiver_database_update_time_series_files(db, "Configuration", nullptr, nullptr, 0), QUIVER_ERROR);
+
+    EXPECT_EQ(quiver_database_update_time_series_files(db, "Collection", nullptr, nullptr, 0), QUIVER_OK);
 
     quiver_database_close(db);
 }

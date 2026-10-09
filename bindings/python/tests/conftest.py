@@ -9,12 +9,6 @@ from quiverdb import Database
 
 
 @pytest.fixture
-def tests_path() -> Path:
-    """Return the tests/ directory path."""
-    return Path(__file__).resolve().parent
-
-
-@pytest.fixture
 def schemas_path() -> Path:
     """Return the shared test schemas directory."""
     return Path(__file__).resolve().parent.parent.parent.parent / "tests" / "schemas"
@@ -83,18 +77,6 @@ def csv_db(csv_export_schema_path: Path, tmp_path: Path) -> Generator[Database, 
 
 
 @pytest.fixture
-def csv_db_export(csv_db: Database) -> Database:
-    """Return csv_db typed as DatabaseCSVExport (Database inherits it)."""
-    return csv_db
-
-
-@pytest.fixture
-def csv_db_import(csv_db: Database) -> Database:
-    """Return csv_db typed as DatabaseCSVImport (Database inherits it)."""
-    return csv_db
-
-
-@pytest.fixture
 def all_types_schema_path(schemas_path: Path) -> Path:
     """Return the path to the all_types test schema."""
     return schemas_path / "valid" / "all_types.sql"
@@ -132,6 +114,20 @@ def multi_column_groups_schema_path(schemas_path: Path) -> Path:
 def multi_column_groups_db(multi_column_groups_schema_path: Path, tmp_path: Path) -> Generator[Database, None, None]:
     """Create a test database with the multi-column groups schema."""
     database = Database.from_schema(str(tmp_path / "multi_column_groups.db"), str(multi_column_groups_schema_path))
+    yield database
+    database.close()
+
+
+@pytest.fixture
+def shared_group_columns_schema_path(schemas_path: Path) -> Path:
+    """Return the path to the schema whose groups share column names."""
+    return schemas_path / "valid" / "shared_group_columns.sql"
+
+
+@pytest.fixture
+def shared_group_columns_db(shared_group_columns_schema_path: Path, tmp_path: Path) -> Generator[Database, None, None]:
+    """Create a test database with the shared_group_columns schema."""
+    database = Database.from_schema(str(tmp_path / "shared_group_columns.db"), str(shared_group_columns_schema_path))
     yield database
     database.close()
 

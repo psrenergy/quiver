@@ -3,8 +3,6 @@
 
 TEST(Element, DefaultEmpty) {
     quiver::Element element;
-    EXPECT_FALSE(element.has_scalars());
-    EXPECT_FALSE(element.has_arrays());
     EXPECT_TRUE(element.scalars().empty());
     EXPECT_TRUE(element.arrays().empty());
 }
@@ -13,7 +11,6 @@ TEST(Element, SetInt) {
     quiver::Element element;
     element.set("count", int64_t{42});
 
-    EXPECT_TRUE(element.has_scalars());
     EXPECT_EQ(element.scalars().size(), 1);
     EXPECT_EQ(std::get<int64_t>(element.scalars().at("count")), 42);
 }
@@ -22,7 +19,6 @@ TEST(Element, SetFloat) {
     quiver::Element element;
     element.set("value", 3.14);
 
-    EXPECT_TRUE(element.has_scalars());
     EXPECT_EQ(std::get<double>(element.scalars().at("value")), 3.14);
 }
 
@@ -30,7 +26,6 @@ TEST(Element, SetString) {
     quiver::Element element;
     element.set("label", std::string{"Plant 1"});
 
-    EXPECT_TRUE(element.has_scalars());
     EXPECT_EQ(std::get<std::string>(element.scalars().at("label")), "Plant 1");
 }
 
@@ -38,7 +33,6 @@ TEST(Element, SetNull) {
     quiver::Element element;
     element.set_null("empty");
 
-    EXPECT_TRUE(element.has_scalars());
     EXPECT_TRUE(std::holds_alternative<std::nullptr_t>(element.scalars().at("empty")));
 }
 
@@ -46,7 +40,6 @@ TEST(Element, SetArrayInt) {
     quiver::Element element;
     element.set("counts", std::vector<int64_t>{10, 20, 30});
 
-    EXPECT_TRUE(element.has_arrays());
     const auto& arrays = element.arrays();
     EXPECT_EQ(arrays.size(), 1);
     EXPECT_EQ(arrays.at("counts").size(), 3);
@@ -59,7 +52,6 @@ TEST(Element, SetArrayFloat) {
     quiver::Element element;
     element.set("values", std::vector<double>{1.5, 2.5, 3.5});
 
-    EXPECT_TRUE(element.has_arrays());
     const auto& arrays = element.arrays();
     EXPECT_EQ(arrays.size(), 1);
     EXPECT_EQ(arrays.at("values").size(), 3);
@@ -71,7 +63,6 @@ TEST(Element, SetArrayString) {
     quiver::Element element;
     element.set("tags", std::vector<std::string>{"important", "urgent"});
 
-    EXPECT_TRUE(element.has_arrays());
     const auto& arrays = element.arrays();
     EXPECT_EQ(arrays.size(), 1);
     EXPECT_EQ(arrays.at("tags").size(), 2);
@@ -83,7 +74,6 @@ TEST(Element, SetArrayValueWithNulls) {
     quiver::Element element;
     element.set("refs", std::vector<quiver::Value>{int64_t{1}, nullptr, int64_t{3}});
 
-    EXPECT_TRUE(element.has_arrays());
     const auto& arrays = element.arrays();
     EXPECT_EQ(arrays.at("refs").size(), 3);
     EXPECT_EQ(std::get<int64_t>(arrays.at("refs")[0]), 1);
@@ -107,13 +97,13 @@ TEST(Element, Clear) {
     quiver::Element element;
     element.set("label", std::string{"test"}).set("data", std::vector<double>{1.0});
 
-    EXPECT_TRUE(element.has_scalars());
-    EXPECT_TRUE(element.has_arrays());
+    EXPECT_EQ(element.scalars().size(), 1);
+    EXPECT_EQ(element.arrays().size(), 1);
 
     element.clear();
 
-    EXPECT_FALSE(element.has_scalars());
-    EXPECT_FALSE(element.has_arrays());
+    EXPECT_TRUE(element.scalars().empty());
+    EXPECT_TRUE(element.arrays().empty());
 }
 
 TEST(Element, OverwriteValue) {
@@ -220,19 +210,19 @@ TEST(Element, ClearAndReuse) {
     quiver::Element element;
     element.set("label", std::string("Original")).set("data", std::vector<double>{1.0, 2.0});
 
-    EXPECT_TRUE(element.has_scalars());
-    EXPECT_TRUE(element.has_arrays());
+    EXPECT_EQ(element.scalars().size(), 1);
+    EXPECT_EQ(element.arrays().size(), 1);
 
     element.clear();
 
-    EXPECT_FALSE(element.has_scalars());
-    EXPECT_FALSE(element.has_arrays());
+    EXPECT_TRUE(element.scalars().empty());
+    EXPECT_TRUE(element.arrays().empty());
 
-    // Reuse after clear
+    // Reuse after clear: only the new entries are present
     element.set("new_label", std::string("Reused")).set("new_data", std::vector<int64_t>{3, 4, 5});
 
-    EXPECT_TRUE(element.has_scalars());
-    EXPECT_TRUE(element.has_arrays());
+    EXPECT_EQ(element.scalars().size(), 1);
+    EXPECT_EQ(element.arrays().size(), 1);
     EXPECT_EQ(std::get<std::string>(element.scalars().at("new_label")), "Reused");
     EXPECT_EQ(element.arrays().at("new_data").size(), 3);
 }

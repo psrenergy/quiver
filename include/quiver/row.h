@@ -13,11 +13,6 @@ class QUIVER_API Row {
 public:
     explicit Row(std::vector<Value> values);
 
-    size_t size() const;
-    size_t column_count() const { return size(); }
-    bool empty() const;
-
-    const Value& at(size_t index) const;
     const Value& operator[](size_t index) const;
 
     // Type-specific getters (return optionals for safe access)
@@ -25,10 +20,6 @@ public:
     std::optional<int64_t> get_integer(size_t index) const;
     std::optional<double> get_float(size_t index) const;
     std::optional<std::string> get_string(size_t index) const;
-
-    // Iterator support
-    auto begin() const { return values_.begin(); }
-    auto end() const { return values_.end(); }
 
 private:
     std::vector<Value> values_;

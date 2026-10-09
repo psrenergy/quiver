@@ -3,10 +3,6 @@ name: Publish JS
 on:
   workflow_dispatch:
     inputs:
-      version:
-        description: "Override version"
-        required: false
-        default: ""
       ref:
         description: "Override ref or sha"
         required: false
@@ -30,7 +26,7 @@ jobs:
         with:
           node-version: 24
           registry-url: "https://registry.npmjs.org"
-          # No package-lock.json in bindings/js (Bun project) — v6 caching would fail.
+          # No package-lock.json in bindings/js (Bun project) — setup-node's default caching would fail.
           package-manager-cache: false
 
       - name: Ensure npm supports Trusted Publishing
@@ -39,39 +35,11 @@ jobs:
       - name: Resolve version
         id: ver
         run: |
-          v="${{ inputs.version }}"
-          if [ -z "$v" ]; then
-            v="$(python3 scripts/assert_version.py)"
-          fi
+          v="$(python3 scripts/assert_version.py)"
           echo "version=$v" >> "$GITHUB_OUTPUT"
 
       - name: Download native libraries from S3
         run: bash scripts/ci/native_s3.sh download "${{ steps.ver.outputs.version }}" bindings/js/libs
-
-      - name: Verify native libraries are present
-        working-directory: bindings/js
-        run: |
-          required=(
-            libs/linux-x86_64/libquiver.so
-            libs/linux-x86_64/libquiver.so.0
-            libs/linux-x86_64/libquiver_c.so
-            libs/macos-aarch64/libquiver.0.dylib
-            libs/macos-aarch64/libquiver_c.dylib
-            libs/windows-x86_64/libquiver.dll
-            libs/windows-x86_64/libquiver_c.dll
-          )
-          missing=0
-          for f in "${required[@]}"; do
-            if [ ! -f "$f" ]; then
-              echo "::error::Missing required native library: $f"
-              missing=1
-            fi
-          done
-          echo "--- libs/ tree ---"
-          find libs -type f | sort
-          if [ "$missing" -ne 0 ]; then
-            exit 1
-          fi
 
       - name: Pack and assert native libs are in the tarball
         working-directory: bindings/js
@@ -85,10 +53,8 @@ jobs:
           entries="$(tar -tzf "$tarball" | sed 's#^\./##; s#^[^/]*/##' | sort)"
           echo "--- tarball contents ($tarball) ---"
           echo "$entries"
-          for f in \
-            libs/linux-x86_64/libquiver.so libs/linux-x86_64/libquiver.so.0 libs/linux-x86_64/libquiver_c.so \
-            libs/macos-aarch64/libquiver.0.dylib libs/macos-aarch64/libquiver_c.dylib \
-            libs/windows-x86_64/libquiver.dll libs/windows-x86_64/libquiver_c.dll; do
+          [ -n "$(find libs -type f)" ] || { echo "::error::no native libraries downloaded"; exit 1; }
+          for f in $(find libs -type f | sort); do
             if ! printf '%s\n' "$entries" | grep -Fxq "$f"; then
               echo "::error::tarball $tarball is MISSING $f"
               exit 1

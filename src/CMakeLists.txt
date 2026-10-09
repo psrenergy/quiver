@@ -12,9 +12,29 @@ set(QUIVER_SOURCES
     database_csv_import.cpp
     csv/csv_read.cpp
     csv/csv_write.cpp
+    xlsx/xlsx_read.cpp
     database_describe.cpp
     element.cpp
-    lua_runner.cpp
+    sandbox/binary.cpp
+    sandbox/csv.cpp
+    sandbox/xlsx.cpp
+    sandbox/database.cpp
+    sandbox/database_create.cpp
+    sandbox/database_csv_export.cpp
+    sandbox/database_csv_import.cpp
+    sandbox/database_delete.cpp
+    sandbox/database_describe.cpp
+    sandbox/database_metadata.cpp
+    sandbox/database_query.cpp
+    sandbox/database_read.cpp
+    sandbox/database_time_series.cpp
+    sandbox/database_update.cpp
+    sandbox/expression.cpp
+    sandbox/internal.h
+    sandbox/sandbox.cpp
+    sandbox/path_policy.cpp
+    sandbox/path_policy.h
+    sandbox/return_json.cpp
     migration.cpp
     migrations.cpp
     result.cpp
@@ -58,19 +78,27 @@ target_include_directories(quiver
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-# sol2 safety settings
+# sol2 safety settings: sol2's safeties are on in every build, as the backstop behind the explicit
+# Pattern 1 checks in src/sandbox/. sol2 never prints a caught error to the host's stderr.
+# SOL_SAFE_NUMERICS is implied by SOL_ALL_SAFETIES_ON but stays explicit because the code depends on it.
+# The checked getter and the stack check are off in every build: with them on, a Release bulk read
+# cost 16% more. lua_cell_as and the key checks cover the getter. Never turn off
+# SOL_SAFE_FUNCTION_CALLS or SOL_SAFE_USERTYPE (the argument and `self` checks).
 target_compile_definitions(quiver PRIVATE
+    SOL_ALL_SAFETIES_ON=1
+    SOL_PRINT_ERRORS=0
     SOL_SAFE_NUMERICS=1
-    SOL_SAFE_FUNCTION=1
     SOL_NO_NIL=1
+    SOL_SAFE_GETTER=0
+    SOL_SAFE_STACK_CHECK=0
 )
 
-# MSVC needs /bigobj for sol2 heavy template instantiations
-# Other Windows compilers need -Wa,-mbig-obj for the same reason
+# sol2's template depth needs /bigobj (MSVC) or -Wa,-mbig-obj (other Windows compilers) in every
+# src/sandbox/ TU; set for the whole target so a new file cannot miss it.
 if(MSVC)
-    set_source_files_properties(lua_runner.cpp PROPERTIES COMPILE_OPTIONS "/bigobj")
+    target_compile_options(quiver PRIVATE /bigobj)
 elseif(WIN32)
-    set_source_files_properties(lua_runner.cpp PROPERTIES COMPILE_OPTIONS "-Wa,-mbig-obj")
+    target_compile_options(quiver PRIVATE -Wa,-mbig-obj)
 endif()
 
 # Link dependencies
@@ -84,6 +112,10 @@ target_link_libraries(quiver
         lua_library
         sol2
         csv
+        OpenXLSX::OpenXLSX
+        # OpenXLSX already carries pugixml for installed static consumers. This
+        # direct edge supplies the internal DOM header without ambiguous exports.
+        $<BUILD_INTERFACE:pugixml::static>
 )
 
 # Set library properties
@@ -91,7 +123,6 @@ target_link_libraries(quiver
 # (set next to the option in the root CMakeLists.txt).
 set_target_properties(quiver PROPERTIES
     ${QUIVER_LIB_VERSION}
-    OUTPUT_NAME quiver
     PREFIX "lib"
 )
 
@@ -129,7 +160,7 @@ if(QUIVER_BUILD_C_API)
         c/database_time_series.cpp
         c/database_transaction.cpp
         c/element.cpp
-        c/lua_runner.cpp
+        c/sandbox.cpp
         c/binary/binary_file.cpp
         c/binary/csv_converter.cpp
         c/binary/binary_metadata.cpp

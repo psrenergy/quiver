@@ -144,60 +144,19 @@ extension DatabaseUpdate on Database {
 
     final arena = Arena();
     try {
-      if (data.isEmpty) {
-        check(
-          bindings.quiver_database_update_vector_group(
-            _ptr,
-            collection.toNativeUtf8(allocator: arena).cast(),
-            group.toNativeUtf8(allocator: arena).cast(),
-            id,
-            nullptr,
-            nullptr,
-            nullptr,
-            nullptr,
-            0,
-            0,
-          ),
-        );
-        return;
-      }
-
-      // Validate equal lengths
-      final rowCount = data.values.first.length;
-      for (final entry in data.entries) {
-        if (entry.value.length != rowCount) {
-          throw ArgumentError('All column lists must have the same length');
-        }
-      }
-
-      final columnCount = data.length;
-      final columnNames = arena<Pointer<Char>>(columnCount);
-      final columnTypes = arena<Int>(columnCount);
-      final columnData = arena<Pointer<Void>>(columnCount);
-      final columnHasValue = arena<Pointer<Uint8>>(columnCount);
-
-      var i = 0;
-      for (final entry in data.entries) {
-        columnNames[i] = entry.key.toNativeUtf8(allocator: arena).cast();
-        final column = _marshalGroupColumn(arena, entry.key, entry.value);
-        columnTypes[i] = column.type;
-        columnData[i] = column.data;
-        columnHasValue[i] = column.hasValue;
-        i++;
-      }
-
+      final cols = _marshalGroupColumns(arena, data);
       check(
         bindings.quiver_database_update_vector_group(
           _ptr,
           collection.toNativeUtf8(allocator: arena).cast(),
           group.toNativeUtf8(allocator: arena).cast(),
           id,
-          columnNames,
-          columnTypes,
-          columnData,
-          columnHasValue,
-          columnCount,
-          rowCount,
+          cols.names,
+          cols.types,
+          cols.data,
+          cols.hasValue,
+          cols.columnCount,
+          cols.rowCount,
         ),
       );
     } finally {
@@ -216,60 +175,19 @@ extension DatabaseUpdate on Database {
 
     final arena = Arena();
     try {
-      if (data.isEmpty) {
-        check(
-          bindings.quiver_database_update_vector_group_by_label(
-            _ptr,
-            collection.toNativeUtf8(allocator: arena).cast(),
-            group.toNativeUtf8(allocator: arena).cast(),
-            label.toNativeUtf8(allocator: arena).cast(),
-            nullptr,
-            nullptr,
-            nullptr,
-            nullptr,
-            0,
-            0,
-          ),
-        );
-        return;
-      }
-
-      // Validate equal lengths
-      final rowCount = data.values.first.length;
-      for (final entry in data.entries) {
-        if (entry.value.length != rowCount) {
-          throw ArgumentError('All column lists must have the same length');
-        }
-      }
-
-      final columnCount = data.length;
-      final columnNames = arena<Pointer<Char>>(columnCount);
-      final columnTypes = arena<Int>(columnCount);
-      final columnData = arena<Pointer<Void>>(columnCount);
-      final columnHasValue = arena<Pointer<Uint8>>(columnCount);
-
-      var i = 0;
-      for (final entry in data.entries) {
-        columnNames[i] = entry.key.toNativeUtf8(allocator: arena).cast();
-        final column = _marshalGroupColumn(arena, entry.key, entry.value);
-        columnTypes[i] = column.type;
-        columnData[i] = column.data;
-        columnHasValue[i] = column.hasValue;
-        i++;
-      }
-
+      final cols = _marshalGroupColumns(arena, data);
       check(
         bindings.quiver_database_update_vector_group_by_label(
           _ptr,
           collection.toNativeUtf8(allocator: arena).cast(),
           group.toNativeUtf8(allocator: arena).cast(),
           label.toNativeUtf8(allocator: arena).cast(),
-          columnNames,
-          columnTypes,
-          columnData,
-          columnHasValue,
-          columnCount,
-          rowCount,
+          cols.names,
+          cols.types,
+          cols.data,
+          cols.hasValue,
+          cols.columnCount,
+          cols.rowCount,
         ),
       );
     } finally {
@@ -294,60 +212,19 @@ extension DatabaseUpdate on Database {
 
     final arena = Arena();
     try {
-      if (data.isEmpty) {
-        check(
-          bindings.quiver_database_update_set_group(
-            _ptr,
-            collection.toNativeUtf8(allocator: arena).cast(),
-            group.toNativeUtf8(allocator: arena).cast(),
-            id,
-            nullptr,
-            nullptr,
-            nullptr,
-            nullptr,
-            0,
-            0,
-          ),
-        );
-        return;
-      }
-
-      // Validate equal lengths
-      final rowCount = data.values.first.length;
-      for (final entry in data.entries) {
-        if (entry.value.length != rowCount) {
-          throw ArgumentError('All column lists must have the same length');
-        }
-      }
-
-      final columnCount = data.length;
-      final columnNames = arena<Pointer<Char>>(columnCount);
-      final columnTypes = arena<Int>(columnCount);
-      final columnData = arena<Pointer<Void>>(columnCount);
-      final columnHasValue = arena<Pointer<Uint8>>(columnCount);
-
-      var i = 0;
-      for (final entry in data.entries) {
-        columnNames[i] = entry.key.toNativeUtf8(allocator: arena).cast();
-        final column = _marshalGroupColumn(arena, entry.key, entry.value);
-        columnTypes[i] = column.type;
-        columnData[i] = column.data;
-        columnHasValue[i] = column.hasValue;
-        i++;
-      }
-
+      final cols = _marshalGroupColumns(arena, data);
       check(
         bindings.quiver_database_update_set_group(
           _ptr,
           collection.toNativeUtf8(allocator: arena).cast(),
           group.toNativeUtf8(allocator: arena).cast(),
           id,
-          columnNames,
-          columnTypes,
-          columnData,
-          columnHasValue,
-          columnCount,
-          rowCount,
+          cols.names,
+          cols.types,
+          cols.data,
+          cols.hasValue,
+          cols.columnCount,
+          cols.rowCount,
         ),
       );
     } finally {
@@ -366,60 +243,19 @@ extension DatabaseUpdate on Database {
 
     final arena = Arena();
     try {
-      if (data.isEmpty) {
-        check(
-          bindings.quiver_database_update_set_group_by_label(
-            _ptr,
-            collection.toNativeUtf8(allocator: arena).cast(),
-            group.toNativeUtf8(allocator: arena).cast(),
-            label.toNativeUtf8(allocator: arena).cast(),
-            nullptr,
-            nullptr,
-            nullptr,
-            nullptr,
-            0,
-            0,
-          ),
-        );
-        return;
-      }
-
-      // Validate equal lengths
-      final rowCount = data.values.first.length;
-      for (final entry in data.entries) {
-        if (entry.value.length != rowCount) {
-          throw ArgumentError('All column lists must have the same length');
-        }
-      }
-
-      final columnCount = data.length;
-      final columnNames = arena<Pointer<Char>>(columnCount);
-      final columnTypes = arena<Int>(columnCount);
-      final columnData = arena<Pointer<Void>>(columnCount);
-      final columnHasValue = arena<Pointer<Uint8>>(columnCount);
-
-      var i = 0;
-      for (final entry in data.entries) {
-        columnNames[i] = entry.key.toNativeUtf8(allocator: arena).cast();
-        final column = _marshalGroupColumn(arena, entry.key, entry.value);
-        columnTypes[i] = column.type;
-        columnData[i] = column.data;
-        columnHasValue[i] = column.hasValue;
-        i++;
-      }
-
+      final cols = _marshalGroupColumns(arena, data);
       check(
         bindings.quiver_database_update_set_group_by_label(
           _ptr,
           collection.toNativeUtf8(allocator: arena).cast(),
           group.toNativeUtf8(allocator: arena).cast(),
           label.toNativeUtf8(allocator: arena).cast(),
-          columnNames,
-          columnTypes,
-          columnData,
-          columnHasValue,
-          columnCount,
-          rowCount,
+          cols.names,
+          cols.types,
+          cols.data,
+          cols.hasValue,
+          cols.columnCount,
+          cols.rowCount,
         ),
       );
     } finally {
@@ -445,60 +281,19 @@ extension DatabaseUpdate on Database {
 
     final arena = Arena();
     try {
-      if (data.isEmpty) {
-        check(
-          bindings.quiver_database_update_time_series_group(
-            _ptr,
-            collection.toNativeUtf8(allocator: arena).cast(),
-            group.toNativeUtf8(allocator: arena).cast(),
-            id,
-            nullptr,
-            nullptr,
-            nullptr,
-            nullptr,
-            0,
-            0,
-          ),
-        );
-        return;
-      }
-
-      // Validate equal lengths
-      final rowCount = data.values.first.length;
-      for (final entry in data.entries) {
-        if (entry.value.length != rowCount) {
-          throw ArgumentError('All column lists must have the same length');
-        }
-      }
-
-      final columnCount = data.length;
-      final columnNames = arena<Pointer<Char>>(columnCount);
-      final columnTypes = arena<Int>(columnCount);
-      final columnData = arena<Pointer<Void>>(columnCount);
-      final columnHasValue = arena<Pointer<Uint8>>(columnCount);
-
-      var i = 0;
-      for (final entry in data.entries) {
-        columnNames[i] = entry.key.toNativeUtf8(allocator: arena).cast();
-        final column = _marshalGroupColumn(arena, entry.key, entry.value);
-        columnTypes[i] = column.type;
-        columnData[i] = column.data;
-        columnHasValue[i] = column.hasValue;
-        i++;
-      }
-
+      final cols = _marshalGroupColumns(arena, data);
       check(
         bindings.quiver_database_update_time_series_group(
           _ptr,
           collection.toNativeUtf8(allocator: arena).cast(),
           group.toNativeUtf8(allocator: arena).cast(),
           id,
-          columnNames,
-          columnTypes,
-          columnData,
-          columnHasValue,
-          columnCount,
-          rowCount,
+          cols.names,
+          cols.types,
+          cols.data,
+          cols.hasValue,
+          cols.columnCount,
+          cols.rowCount,
         ),
       );
     } finally {
@@ -517,60 +312,19 @@ extension DatabaseUpdate on Database {
 
     final arena = Arena();
     try {
-      if (data.isEmpty) {
-        check(
-          bindings.quiver_database_update_time_series_group_by_label(
-            _ptr,
-            collection.toNativeUtf8(allocator: arena).cast(),
-            group.toNativeUtf8(allocator: arena).cast(),
-            label.toNativeUtf8(allocator: arena).cast(),
-            nullptr,
-            nullptr,
-            nullptr,
-            nullptr,
-            0,
-            0,
-          ),
-        );
-        return;
-      }
-
-      // Validate equal lengths
-      final rowCount = data.values.first.length;
-      for (final entry in data.entries) {
-        if (entry.value.length != rowCount) {
-          throw ArgumentError('All column lists must have the same length');
-        }
-      }
-
-      final columnCount = data.length;
-      final columnNames = arena<Pointer<Char>>(columnCount);
-      final columnTypes = arena<Int>(columnCount);
-      final columnData = arena<Pointer<Void>>(columnCount);
-      final columnHasValue = arena<Pointer<Uint8>>(columnCount);
-
-      var i = 0;
-      for (final entry in data.entries) {
-        columnNames[i] = entry.key.toNativeUtf8(allocator: arena).cast();
-        final column = _marshalGroupColumn(arena, entry.key, entry.value);
-        columnTypes[i] = column.type;
-        columnData[i] = column.data;
-        columnHasValue[i] = column.hasValue;
-        i++;
-      }
-
+      final cols = _marshalGroupColumns(arena, data);
       check(
         bindings.quiver_database_update_time_series_group_by_label(
           _ptr,
           collection.toNativeUtf8(allocator: arena).cast(),
           group.toNativeUtf8(allocator: arena).cast(),
           label.toNativeUtf8(allocator: arena).cast(),
-          columnNames,
-          columnTypes,
-          columnData,
-          columnHasValue,
-          columnCount,
-          rowCount,
+          cols.names,
+          cols.types,
+          cols.data,
+          cols.hasValue,
+          cols.columnCount,
+          cols.rowCount,
         ),
       );
     } finally {
@@ -684,12 +438,11 @@ extension DatabaseUpdate on Database {
     try {
       final count = paths.length;
 
-      if (count == 0) {
-        return;
-      }
-
-      final columns = arena<Pointer<Char>>(count);
-      final pathPtrs = arena<Pointer<Char>>(count);
+      // An empty map still reaches the core, which validates the collection and its files table
+      // before treating it as a no-op. NULL arrays, not arena(0): package:ffi throws when the
+      // allocator returns NULL for a zero-byte request, which POSIX malloc/calloc may do.
+      final columns = count == 0 ? nullptr : arena<Pointer<Char>>(count);
+      final pathPtrs = count == 0 ? nullptr : arena<Pointer<Char>>(count);
 
       var i = 0;
       for (final entry in paths.entries) {
@@ -716,12 +469,72 @@ extension DatabaseUpdate on Database {
     }
   }
 
+  /// Marshals a whole column-oriented group payload into the four parallel arena-allocated arrays
+  /// the columnar C group writers take (names, type tags, data pointers, per-cell masks), plus the
+  /// column and row counts. Shared by the six group writers (vector / set / time-series, by id and
+  /// by label); each still makes its own C call. An empty map (clear the group) yields NULL arrays
+  /// and zero counts and allocates nothing. Jagged columns throw [ArgumentError] naming the column.
+  ({
+    Pointer<Pointer<Char>> names,
+    Pointer<Int> types,
+    Pointer<Pointer<Void>> data,
+    Pointer<Pointer<Uint8>> hasValue,
+    int columnCount,
+    int rowCount,
+  })
+  _marshalGroupColumns(Arena arena, Map<String, List<Object?>> data) {
+    if (data.isEmpty) {
+      return (
+        names: nullptr,
+        types: nullptr,
+        data: nullptr,
+        hasValue: nullptr,
+        columnCount: 0,
+        rowCount: 0,
+      );
+    }
+
+    final rowCount = data.values.first.length;
+    for (final entry in data.entries) {
+      if (entry.value.length != rowCount) {
+        throw ArgumentError(
+          "All column lists must have the same length, got ${entry.value.length} for '${entry.key}'",
+        );
+      }
+    }
+
+    final columnCount = data.length;
+    final names = arena<Pointer<Char>>(columnCount);
+    final types = arena<Int>(columnCount);
+    final columnData = arena<Pointer<Void>>(columnCount);
+    final hasValue = arena<Pointer<Uint8>>(columnCount);
+
+    var i = 0;
+    for (final entry in data.entries) {
+      names[i] = entry.key.toNativeUtf8(allocator: arena).cast();
+      final column = _marshalGroupColumn(arena, entry.key, entry.value);
+      types[i] = column.type;
+      columnData[i] = column.data;
+      hasValue[i] = column.hasValue;
+      i++;
+    }
+
+    return (
+      names: names,
+      types: types,
+      data: columnData,
+      hasValue: hasValue,
+      columnCount: columnCount,
+      rowCount: rowCount,
+    );
+  }
+
   /// Marshals one vector/set/time-series column into arena-allocated typed + mask arrays,
   /// returning its quiver_data_type_t tag, data pointer, and per-cell NULL mask.
   /// Supported value types: int, bool (INTEGER 1/0), double, String, DateTime; a `null` entry becomes
-  /// a SQL NULL (mask 0) with a placeholder in the data array. An all-null (or
-  /// empty) column is tagged FLOAT with a zeroed placeholder — the C API ignores
-  /// the type tag and data for masked-out cells.
+  /// a SQL NULL (mask 0) with a placeholder in the data array. A numeric column is FLOAT if any cell
+  /// is a double and INTEGER otherwise. An all-null (or empty) column is tagged FLOAT with a zeroed
+  /// placeholder — the C API ignores the type tag and data for masked-out cells.
   ({int type, Pointer<Void> data, Pointer<Uint8> hasValue}) _marshalGroupColumn(
     Arena arena,
     String column,
@@ -753,10 +566,14 @@ extension DatabaseUpdate on Database {
       );
     }
     // SQLite has no boolean type: a bool is INTEGER 1/0, the same as on Element.set and the query
-    // parameters. Folded into the int branch (checked first — a Dart bool is not an int) and
-    // converted per cell, so a mixed [true, 1] column writes 1 and 1 rather than throwing a raw
-    // TypeError that names no column. Matches Python's per-cell `int(v)` and JS's normalization.
-    if (first is bool || first is int) {
+    // parameters (a Dart bool is not an int, so it is named here). The first non-null cell picks the
+    // family and every cell picks the numeric type: one double anywhere widens the column to FLOAT,
+    // so [1, 2.5] writes 1.0 and 2.5 — the whole-column rule Python and JS apply — where choosing
+    // INTEGER from the first cell threw on the 2.5. Both branches still convert per cell, so a mixed
+    // [true, 1] column writes 1 and 1 and a stray String reports its cell and column instead of
+    // throwing a raw TypeError.
+    final isNumeric = first is bool || first is int || first is double;
+    if (isNumeric && !values.any((v) => v is double)) {
       final arr = arena<Int64>(values.length);
       for (var r = 0; r < values.length; r++) {
         final v = values[r];
@@ -777,7 +594,7 @@ extension DatabaseUpdate on Database {
     }
     // An int in a REAL column is the documented int-for-REAL coercion, and a bool reaches REAL
     // through it; converted per cell so a mixed column reports the cell rather than raw-casting.
-    if (first is double) {
+    if (isNumeric) {
       final arr = arena<Double>(values.length);
       for (var r = 0; r < values.length; r++) {
         final v = values[r];

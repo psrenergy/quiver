@@ -6,18 +6,6 @@ namespace quiver {
 
 Row::Row(std::vector<Value> values) : values_(std::move(values)) {}
 
-size_t Row::size() const {
-    return values_.size();
-}
-
-bool Row::empty() const {
-    return values_.empty();
-}
-
-const Value& Row::at(size_t index) const {
-    return values_.at(index);
-}
-
 const Value& Row::operator[](size_t index) const {
     return values_[index];
 }

@@ -6,7 +6,10 @@
 
 TEST(DatabaseTransaction, BeginMultipleWritesCommit) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     // Configuration required first
     quiver::Element config;
@@ -39,7 +42,10 @@ TEST(DatabaseTransaction, BeginMultipleWritesCommit) {
 
 TEST(DatabaseTransaction, BeginMultipleWritesRollback) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     // Configuration required first
     quiver::Element config;
@@ -67,7 +73,10 @@ TEST(DatabaseTransaction, BeginMultipleWritesRollback) {
 
 TEST(DatabaseTransaction, WriteMethodsInsideTransaction) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     // Configuration required first
     quiver::Element config;
@@ -103,11 +112,11 @@ TEST(DatabaseTransaction, WriteMethodsInsideTransaction) {
 
     // Verify all writes persisted
     auto vec = db.read_vector_integers_by_id("Collection", "value_int", id1);
-    EXPECT_EQ(vec, (std::vector<int64_t>{10, 20, 30}));
+    EXPECT_EQ(vec, (std::vector<std::optional<int64_t>>{10, 20, 30}));
 
     auto tags = db.read_set_strings_by_id("Collection", "tag", id1);
     std::sort(tags.begin(), tags.end());
-    EXPECT_EQ(tags, (std::vector<std::string>{"alpha", "beta"}));
+    EXPECT_EQ(tags, (std::vector<std::optional<std::string>>{"alpha", "beta"}));
 
     auto ts = db.read_time_series_group("Collection", "data", id1);
     EXPECT_EQ(ts.size(), 2);
@@ -119,7 +128,10 @@ TEST(DatabaseTransaction, WriteMethodsInsideTransaction) {
 
 TEST(DatabaseTransaction, RollbackUndoesMixedWrites) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     // Configuration required first
     quiver::Element config;
@@ -149,7 +161,7 @@ TEST(DatabaseTransaction, RollbackUndoesMixedWrites) {
 
     // Vector should be unchanged (original values)
     auto vec = db.read_vector_integers_by_id("Collection", "value_int", id1);
-    EXPECT_EQ(vec, (std::vector<int64_t>{1, 2, 3}));
+    EXPECT_EQ(vec, (std::vector<std::optional<int64_t>>{1, 2, 3}));
 
     // Second element should not exist
     auto labels = db.read_scalar_strings("Collection", "label");
@@ -159,7 +171,10 @@ TEST(DatabaseTransaction, RollbackUndoesMixedWrites) {
 
 TEST(DatabaseTransaction, DoubleBeginThrows) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     db.begin_transaction();
 
@@ -176,7 +191,10 @@ TEST(DatabaseTransaction, DoubleBeginThrows) {
 
 TEST(DatabaseTransaction, CommitWithoutBeginThrows) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     try {
         db.commit();
@@ -188,7 +206,10 @@ TEST(DatabaseTransaction, CommitWithoutBeginThrows) {
 
 TEST(DatabaseTransaction, RollbackWithoutBeginThrows) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     try {
         db.rollback();
@@ -200,7 +221,10 @@ TEST(DatabaseTransaction, RollbackWithoutBeginThrows) {
 
 TEST(DatabaseTransaction, InTransactionReflectsState) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     // Initially false
     EXPECT_FALSE(db.in_transaction());
@@ -230,7 +254,10 @@ namespace {
 
 quiver::Database dry_run_database() {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -336,7 +363,10 @@ TEST(DatabaseDryRun, RejectsEndWithoutStart) {
 
 TEST(DatabaseDryRun, ImportCsvStillRefusesToNest) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("csv_export.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("csv_export.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     db.begin_dry_run();
     // import_csv manages its own transaction and refuses to nest; the dry run's transaction is a

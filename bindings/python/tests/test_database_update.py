@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 import pytest
 
 from quiverdb import Database, QuiverError
@@ -40,6 +42,20 @@ class TestUpdateElement:
         float_val = collections_db.read_scalar_float_by_id("Collection", "some_float", elem_id)
         assert float_val is not None
         assert abs(float_val - 2.5) < 1e-9
+
+    def test_update_element_takes_an_id_attribute(self, collections_db: Database) -> None:
+        """read_scalars_by_id's dict holds `id`; the positional-only `id` lets it unpack into kwargs."""
+        collections_db.create_element("Configuration", label="cfg")
+        elem_id = collections_db.create_element("Collection", label="Item1", some_integer=10, some_float=2.5)
+        row = collections_db.read_scalars_by_id("Collection", elem_id)
+        row["some_integer"] = 99
+        collections_db.update_element("Collection", elem_id, **row)
+        assert collections_db.read_scalars_by_id("Collection", elem_id) == {
+            "id": elem_id,
+            "label": "Item1",
+            "some_integer": 99,
+            "some_float": 2.5,
+        }
 
 
 class TestUpdateElementByLabel:
@@ -389,18 +405,8 @@ class TestUpdateVectorSetGroup:
 
         relations_db.update_vector_group("Child", "refs", child, {"parent_ref": [1, None, 2]})
 
-        # Asserted in SQL, not through read_vector_group_by_id: Python composes that from
-        # per-column reads, which drop NULL cells (the documented null-dropping caveat - only
-        # Dart binds the NULL-preserving native reader).
-        assert (
-            relations_db.query_integer("SELECT COUNT(*) FROM Child_vector_refs WHERE id = ?", parameters=[child]) == 3
-        )
-        assert (
-            relations_db.query_integer(
-                "SELECT COUNT(*) FROM Child_vector_refs WHERE id = ? AND parent_ref IS NULL", parameters=[child]
-            )
-            == 1
-        )
+        # None cells become SQL NULL, and the per-column reader hands them back positionally.
+        assert relations_db.read_vector_integers_by_id("Child", "parent_ref", child) == [1, None, 2]
 
     def test_unknown_group_or_column_raises(self, relations_db: Database) -> None:
         child = self._seed(relations_db)
@@ -521,3 +527,56 @@ class TestUpdateRelation:
 
         with pytest.raises(QuiverError, match="relation column 'parent_owner' not found"):
             relations_db.update_relation("Child", "Parent", "owner", child, "Parent A")
+
+
+class TestColumnTyping:
+    """A group column or element array is typed from every cell, not the first one. The first-cell
+    dispatch ran the rest through int()/float(), so [1, 2.5] stored [1.0, 2.0] in a REAL column and
+    [1, "7"] stored [1, 7], with no error."""
+
+    def test_float_among_ints_widens_a_group_column(self, all_types_db: Database) -> None:
+        elem_id = all_types_db.create_element("AllTypes", label="Widened")
+        all_types_db.update_vector_group("AllTypes", "scores", elem_id, {"score": [1, 2.5, True]})
+        assert all_types_db.read_vector_floats_by_id("AllTypes", "score", elem_id) == [1.0, 2.5, 1.0]
+
+    def test_float_among_ints_widens_an_element_array(self, all_types_db: Database) -> None:
+        elem_id = all_types_db.create_element("AllTypes", label="Widened", score=[True, 2.5])
+        assert all_types_db.read_vector_floats_by_id("AllTypes", "score", elem_id) == [1.0, 2.5]
+
+    def test_widened_column_is_rejected_by_an_integer_column(self, all_types_db: Database) -> None:
+        elem_id = all_types_db.create_element("AllTypes", label="Counts", count_value=[7])
+        # The 2.5 now reaches the core, which refuses a float in an INTEGER column instead of
+        # storing the 2 the old marshaller truncated it to. Validation precedes the DELETE.
+        with pytest.raises(QuiverError, match="count_value"):
+            all_types_db.update_vector_group("AllTypes", "counts", elem_id, {"count_value": [1, 2.5]})
+        assert all_types_db.read_vector_integers_by_id("AllTypes", "count_value", elem_id) == [7]
+
+    @pytest.mark.parametrize(
+        ("cells", "message"),
+        [
+            ([1, "7"], "Unsupported value type str in cell 1 of column 'score'"),
+            ([1.5, "2"], "Unsupported value type str in cell 1 of column 'score'"),
+            (["a", 1], "Unsupported value type int in cell 1 of column 'score'"),
+            ([None, object()], "Unsupported value type object in cell 1 of column 'score'"),
+            ([datetime(2024, 1, 1), "2024-01-02"], "Unsupported value type str in cell 1 of column 'score'"),
+        ],
+    )
+    def test_group_cell_of_the_wrong_kind_raises_naming_it(
+        self, all_types_db: Database, cells: list, message: str
+    ) -> None:
+        elem_id = all_types_db.create_element("AllTypes", label="Bad")
+        with pytest.raises(TypeError, match=message):
+            all_types_db.update_vector_group("AllTypes", "scores", elem_id, {"score": cells})
+
+    @pytest.mark.parametrize(
+        ("cells", "message"),
+        [
+            ([True, "7"], "Unsupported value type str in cell 1 of column 'score'"),
+            (["a", 1], "Unsupported value type int in cell 1 of column 'score'"),
+        ],
+    )
+    def test_element_array_cell_of_the_wrong_kind_raises_naming_it(
+        self, all_types_db: Database, cells: list, message: str
+    ) -> None:
+        with pytest.raises(TypeError, match=message):
+            all_types_db.create_element("AllTypes", label="Bad", score=cells)

@@ -1,12 +1,13 @@
 #include "test_utils.h"
 
-#include <charconv>
-#include <filesystem>
-#include <fstream>
 #include <gtest/gtest.h>
 #include <quiver/database.h>
 #include <quiver/element.h>
 #include <quiver/options.h>
+
+#include <charconv>
+#include <filesystem>
+#include <fstream>
 #include <sstream>
 
 namespace fs = std::filesystem;
@@ -26,7 +27,10 @@ static std::string read_file(const std::string& path) {
 // Helper: create a database from the csv_export schema
 static quiver::Database make_db() {
     return quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("csv_export.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("csv_export.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 }
 
 // Helper: get a unique temp path for a test
@@ -147,7 +151,8 @@ TEST(DatabaseCSV, ExportCSV_TimeSeriesGroupExport) {
 
     std::vector<std::map<std::string, quiver::Value>> rows = {
         {{"date_time", std::string("2024-01-01T10:00:00")}, {"temperature", 22.5}, {"humidity", int64_t{60}}},
-        {{"date_time", std::string("2024-01-01T11:00:00")}, {"temperature", 23.0}, {"humidity", int64_t{55}}}};
+        {{"date_time", std::string("2024-01-01T11:00:00")}, {"temperature", 23.0}, {"humidity", int64_t{55}}}
+    };
     db.update_time_series_group("Items", "readings", id1, rows);
 
     auto csv_path = temp_csv("TimeSeriesExport");
@@ -178,7 +183,8 @@ TEST(DatabaseCSV, ExportCSV_InvalidGroup_Throws) {
                 throw;
             }
         },
-        std::runtime_error);
+        std::runtime_error
+    );
 
     fs::remove(csv_path);
 }
@@ -569,7 +575,8 @@ TEST(DatabaseCSV, ExportCSV_CannotOpenFile_Throws) {
                 throw;
             }
         },
-        std::runtime_error);
+        std::runtime_error
+    );
 
     fs::remove_all(dir_path);
 }
@@ -642,12 +649,17 @@ TEST(DatabaseCSV, ExportImportCSV_SubnormalFloatRoundTrips) {
 
 TEST(DatabaseCSV, ExportImportCSV_ForeignKeyColumnRoundTrips) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("relations.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     db.create_element("Configuration", quiver::Element().set("label", std::string("Config")));
     db.create_element("Parent", quiver::Element().set("label", std::string("Parent A")));
     auto child = db.create_element(
-        "Child", quiver::Element().set("label", std::string("Child 1")).set("parent_id", std::string("Parent A")));
+        "Child",
+        quiver::Element().set("label", std::string("Child 1")).set("parent_id", std::string("Parent A"))
+    );
 
     auto path = (fs::temp_directory_path() / "quiver_fk_roundtrip.csv").string();
     db.export_csv("Child", "", path);
@@ -662,12 +674,17 @@ TEST(DatabaseCSV, ExportImportCSV_ForeignKeyColumnRoundTrips) {
 // exporter's own output was unimportable for any table with a self-relation.
 TEST(DatabaseCSV, ExportImportCSV_SelfForeignKeyRoundTrips) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("relations.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     db.create_element("Configuration", quiver::Element().set("label", std::string("Config")));
     auto child1 = db.create_element("Child", quiver::Element().set("label", std::string("Child 1")));
     auto child2 = db.create_element(
-        "Child", quiver::Element().set("label", std::string("Child 2")).set("sibling_id", std::string("Child 1")));
+        "Child",
+        quiver::Element().set("label", std::string("Child 2")).set("sibling_id", std::string("Child 1"))
+    );
 
     auto path = (fs::temp_directory_path() / "quiver_self_fk_roundtrip.csv").string();
     db.export_csv("Child", "", path);
@@ -685,7 +702,10 @@ TEST(DatabaseCSV, ExportImportCSV_SelfForeignKeyRoundTrips) {
 // the JOIN already emits as C.label).
 TEST(DatabaseCSV, ExportCSV_GroupForeignKeyWritesLabel) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("relations.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     db.create_element("Configuration", quiver::Element().set("label", std::string("Config")));
     db.create_element("Parent", quiver::Element().set("label", std::string("Parent A")));
@@ -702,7 +722,7 @@ TEST(DatabaseCSV, ExportCSV_GroupForeignKeyWritesLabel) {
     db.import_csv("Child", "refs", path);
     fs::remove(path);
 
-    EXPECT_EQ(db.read_vector_integers_by_id("Child", "parent_ref", child), (std::vector<int64_t>{1}));
+    EXPECT_EQ(db.read_vector_integers_by_id("Child", "parent_ref", child), (std::vector<std::optional<int64_t>>{1}));
 }
 
 // export_csv and db:write_csv share one emitter (csv_write::append_record): a '"' or CR forces

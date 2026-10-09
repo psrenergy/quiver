@@ -49,8 +49,11 @@ BinaryFile::~BinaryFile() = default;
 BinaryFile::BinaryFile(BinaryFile&& other) noexcept = default;
 BinaryFile& BinaryFile::operator=(BinaryFile&& other) noexcept = default;
 
-BinaryFile
-BinaryFile::open_file(const std::string& file_path, char mode, const std::optional<BinaryMetadata>& metadata) {
+BinaryFile BinaryFile::open_file(
+    const std::string& file_path,
+    char mode,
+    const std::optional<BinaryMetadata>& metadata
+) {
     BinaryFile binary_file(file_path);
     binary_file.open(mode, metadata);
     return binary_file;
@@ -102,8 +105,9 @@ void BinaryFile::open(char mode, const std::optional<BinaryMetadata>& metadata) 
         return;
     }
     default:
-        throw std::invalid_argument("Invalid file mode: " + std::string(1, mode) +
-                                    ". Use 'r' for read or 'w' for write.");
+        throw std::invalid_argument(
+            "Invalid file mode: " + std::string(1, mode) + ". Use 'r' for read or 'w' for write."
+        );
     }
 }
 
@@ -140,8 +144,9 @@ std::vector<double> BinaryFile::read(const std::unordered_map<std::string, int64
             if (std::isnan(data[i])) {
                 std::string dim_str;
                 for (const auto& [name, value] : dims) {
-                    if (!dim_str.empty())
+                    if (!dim_str.empty()) {
                         dim_str += ", ";
+                    }
                     dim_str += name + "=" + std::to_string(value);
                 }
                 throw std::runtime_error("Cannot read: data at {" + dim_str + "} contains null values");
@@ -192,8 +197,9 @@ void BinaryFile::go_to_position(int64_t position, char mode) {
         impl_->io->seekp(position);
         break;
     default:
-        throw std::invalid_argument("Invalid seek mode: " + std::string(1, mode) +
-                                    ". Use 'r' for read or 'w' for write.");
+        throw std::invalid_argument(
+            "Invalid seek mode: " + std::string(1, mode) + ". Use 'r' for read or 'w' for write."
+        );
     }
     impl_->current_position = position;
 }
@@ -210,8 +216,9 @@ void BinaryFile::validate_dimension_values(const std::unordered_map<std::string,
 
     // Check count
     if (dims.size() != dimensions.size()) {
-        throw std::invalid_argument("Expected " + std::to_string(dimensions.size()) + " dimensions, got " +
-                                    std::to_string(dims.size()));
+        throw std::invalid_argument(
+            "Expected " + std::to_string(dimensions.size()) + " dimensions, got " + std::to_string(dims.size())
+        );
     }
 
     // Check all dimension names exist and values are in bounds
@@ -223,8 +230,10 @@ void BinaryFile::validate_dimension_values(const std::unordered_map<std::string,
         }
         int64_t value = it->second;
         if (value < 1 || value > dim.size) {
-            throw std::invalid_argument("Dimension '" + dim.name + "' value " + std::to_string(value) +
-                                        " is out of bounds [1, " + std::to_string(dim.size) + "]");
+            throw std::invalid_argument(
+                "Dimension '" + dim.name + "' value " + std::to_string(value) + " is out of bounds [1, " +
+                std::to_string(dim.size) + "]"
+            );
         }
     }
 
@@ -241,15 +250,18 @@ void BinaryFile::validate_dimension_values(const std::unordered_map<std::string,
         // spills into the next period, where its position is no longer the value given
         for (size_t i = 0; i < dimensions.size(); ++i) {
             const auto& dim = dimensions[i];
-            if (!dim.is_time_dimension() || dim.time->parent_dimension_index == -1)
+            if (!dim.is_time_dimension() || dim.time->parent_dimension_index == -1) {
                 continue;
+            }
 
             int64_t expected_value = dims.at(dim.name);
             int64_t resulting_value = position_in_parent(metadata, i, datetime);
             if (expected_value != resulting_value) {
-                throw std::invalid_argument("Invalid values for time dimensions: dimension '" + dim.name +
-                                            "' has value " + std::to_string(expected_value) +
-                                            " but the resulting datetime implies " + std::to_string(resulting_value));
+                throw std::invalid_argument(
+                    "Invalid values for time dimensions: dimension '" + dim.name + "' has value " +
+                    std::to_string(expected_value) + " but the resulting datetime implies " +
+                    std::to_string(resulting_value)
+                );
             }
         }
     }
@@ -257,8 +269,10 @@ void BinaryFile::validate_dimension_values(const std::unordered_map<std::string,
 
 void BinaryFile::validate_data_length(const std::vector<double>& data) {
     if (data.size() != impl_->metadata.labels.size()) {
-        throw std::invalid_argument("Data length " + std::to_string(data.size()) + " does not match expected length " +
-                                    std::to_string(impl_->metadata.labels.size()));
+        throw std::invalid_argument(
+            "Data length " + std::to_string(data.size()) + " does not match expected length " +
+            std::to_string(impl_->metadata.labels.size())
+        );
     }
 }
 
@@ -275,8 +289,10 @@ void BinaryFile::fill_file_with_nulls() {
 
     // Write NaN-filled buffer in chunks to avoid excessive memory usage
     constexpr int64_t CHUNK_DOUBLES = 1024 * 1024;  // ~8 MB per chunk
-    std::vector<double> buffer(static_cast<size_t>(std::min(total_doubles, CHUNK_DOUBLES)),
-                               std::numeric_limits<double>::quiet_NaN());
+    std::vector<double> buffer(
+        static_cast<size_t>(std::min(total_doubles, CHUNK_DOUBLES)),
+        std::numeric_limits<double>::quiet_NaN()
+    );
 
     impl_->io->seekp(0);
     impl_->current_position = 0;

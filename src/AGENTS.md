@@ -13,10 +13,7 @@ include/quiver/           # C++ public headers
   attribute_metadata.h    # ScalarMetadata, GroupMetadata types
   options.h               # DatabaseOptions, CSVOptions types and factories
   element.h               # Element builder for create operations
-  lua_runner.h            # Lua scripting support
-  schema.h                # Schema/TableDefinition introspection, group table name helpers
-  schema_validator.h      # SchemaValidator - schema convention checks
-  type_validator.h        # TypeValidator - value-vs-column type checks
+  sandbox.h            # Lua scripting support
   value.h                 # Value variant (nullptr/int64/double/string)
   data_type.h             # DataType enum, data_type_to_string, is_date_time_column
   row.h / result.h        # Row and Result query-result types
@@ -31,20 +28,43 @@ include/quiver/binary/      # Binary subsystem headers (binary file I/O)
   time_properties.h           # TimeFrequency enum, TimeProperties struct
   time_constants.h            # Time dimension size constraints
 include/quiver/expression/  # Expression subsystem headers (lazy expressions on .qvr files)
+  abstract_expression.h       # AbstractExpression base (node, get_metadata, save, aggregate, *_agents) + AggregateOperation
   expression.h                # Expression value type, + - * / operator overloads, save engine
   expression_node.h           # ExpressionNode base + concrete node classes + BroadcastOperand
 src/                      # C++ implementation
   database.cpp            # Lifecycle, factories, transactions, execute, migrate_up
-  database_impl.h         # Database::Impl - schema/type validators, label + FK resolution, group inserts, TransactionGuard
+  database_impl.h         # Database::Impl - lazy schema load, label + FK resolution, group inserts, TransactionGuard
   database_internal.h     # internal:: helpers - read templates, value_matches_type, metadata converters, time-series dimension lookup
   database_create.cpp / database_read.cpp / database_update.cpp / database_delete.cpp
   database_metadata.cpp / database_query.cpp / database_time_series.cpp / database_describe.cpp
   database_csv_export.cpp / database_csv_import.cpp
-  schema.cpp              # Schema introspection (from_database), table classification, group_names
-  schema_validator.cpp    # Schema convention validation
-  type_validator.cpp      # Scalar/array type validation (caller-threaded Pattern 1 messages)
+  schema.h / schema.cpp   # Schema/TableDefinition introspection (from_database), table classification,
+                          # group_names, group table name helpers
+  schema_validator.h / schema_validator.cpp  # SchemaValidator - schema convention checks
+  type_validator.h / type_validator.cpp      # Scalar/array type validation (free functions,
+                                             # caller-threaded Pattern 1 messages)
   element.cpp / row.cpp / result.cpp / migration.cpp / migrations.cpp
-  lua_runner.cpp          # LuaRunner (sol2) - all Lua bindings
+  sandbox/             # Sandbox (sol2): database*.cpp bindings, plus csv, xlsx, binary, expression
+    sandbox.cpp        # Sandbox::Impl (ctor order, the one Database usertype), RunHandles bodies, run()/GcGuard
+    internal.h            # quiver::lua_internal: RunHandles, binder decls, converters, read adapters, option walk, group-decoder decls, metadata templates, parse_csv_options decl
+    return_json.cpp       # run()'s JSON encoder
+    path_policy.h         # resolve_sandboxed_path's declaration; no sol2, included by internal.h and SandboxedPathTest
+    path_policy.cpp       # resolve_sandboxed_path, the single filesystem gate
+    database.cpp          # bind_database: info, transactions, dry runs (run_in_scope), validate_migrations
+    database_create.cpp   # bind_create: create_element; table_to_element
+    database_read.cpp     # bind_read: bulk + by-id readers, number_of_elements
+    database_update.cpp   # bind_update: update_element, relations, vector/set group writers; group decoder
+    database_delete.cpp   # bind_delete: delete_element(_by_label)
+    database_describe.cpp # bind_describe: describe, describe_collection, summarize_collection
+    database_metadata.cpp # bind_metadata: get_{scalar,vector,set}_metadata, list_*; metadata_to_lua
+    database_query.cpp    # bind_query: query_string/integer/float
+    database_time_series.cpp # bind_time_series: time-series read/write/upsert/files, its metadata + list
+    database_csv_export.cpp  # bind_csv_export: export_csv; parse_csv_options
+    database_csv_import.cpp  # bind_csv_import: import_csv
+    csv.cpp               # bind_csv: read_csv, read_csv_stream, write_csv, CsvWriter
+    xlsx.cpp              # bind_xlsx: read_xlsx/read_xlsx_stream; shared strict options decoder
+    binary.cpp            # bind_binary: open_file/bin_to_csv/csv_to_bin, BinaryMetadata, BinaryFile, quiver.metadata*
+    expression.cpp        # bind_expression: Expression, the operators and expression methods on Expression and BinaryFile, quiver.* expression functions
   ui_metadata.h / ui_metadata.cpp  # Internal ui/ TOML sidecar reader behind describe/describe_collection
                                 # -- same no-include/quiver/-counterpart posture as csv_read
   cli/main.cpp            # quiver_cli CLI entry point
@@ -57,6 +77,8 @@ src/csv/                    # Standalone CSV file reader/writer (see below)
                               # db:read_csv_stream and import_csv -- no include/quiver/ counterpart
   csv_write.h / csv_write.cpp # Internal CSV writer (hand-rolled, NOT Pimpl'd) behind db:write_csv;
                               # its append_record also emits export_csv -- same posture as csv_read
+src/xlsx/                   # Internal OpenXLSX reader; XLSX parsing stays out of the sol2 TU
+  xlsx_read.h / xlsx_read.cpp # Internal Pimpl reader behind db:read_xlsx/read_xlsx_stream
 src/binary/                 # Binary C++ implementation
   binary_file.cpp             # BinaryFile class (Pimpl impl) + write registry
   binary_utils.h              # Shared file-extension constants, day_of_year, position_in_parent
@@ -79,33 +101,33 @@ src/expression/             # Expression C++ implementation
 ```
 
 `src/csv/` is grouped by format, not by consumer: its classes never see a sol2 type, and their
-callers are Lua (`db:read_csv*`, `db:write_csv`) and `Database::import_csv` / `export_csv` alike
-(a `src/lua/` folder would also have to take
-`lua_runner.cpp`, whose path `bindings/js/test/lua-api-sync.test.ts` hardcodes). It holds only the
+callers are Lua (`db:read_csv*`, `db:write_csv`) and `Database::import_csv` / `export_csv` alike. It holds only the
 standalone reader/writer — `database_csv_{import,export}.cpp` stay with the `database_*` family,
 parsing through `csv_read::Reader` and emitting through `csv_write::append_record` (root design
 decision "One CSV parser, one CSV emitter"), and `binary/csv_converter.cpp` stays with `binary/`. A future format helper (e.g. a Lua JSON reader)
-gets a sibling folder (`src/json/`), which is also where the `run()` JSON encoder now in
-`lua_runner.cpp`'s anonymous namespace would move.
+gets a sibling folder (`src/json/`). The `run()` JSON encoder now lives in
+`src/sandbox/return_json.cpp`.
 
-`csv/csv_read.h`/`.cpp` is the first `.cpp` in `src/` with no `include/quiver/` public
-counterpart — every other internal helper here (`utils/string.h`, `database_internal.h`,
-`binary/binary_utils.h`) is header-only inline, and every other `QUIVER_SOURCES` entry implements
-a public header. It stays internal because its public surface is already bound: `import_csv`
+`csv/csv_read.h`/`.cpp` was the first `.cpp` in `src/` with no `include/quiver/` public
+counterpart — the header-only internal helpers here (`utils/string.h`, `database_internal.h`,
+`binary/binary_utils.h`) have no `.cpp` at all. `csv/csv_write.cpp` and `ui_metadata.cpp`
+(below) share csv_read's posture, and so do `schema.cpp`, `schema_validator.cpp` and
+`type_validator.cpp` since their headers moved into `src/`. It stays
+internal because its public surface is already bound: `import_csv`
 parses through it, and the only other caller is Lua, which needs it because `io` is deliberately
 absent (Julia/Dart/Python/JS already have native CSV libraries), so the root AGENTS.md rule "bind
 every public method down to every binding" never fires — no documented exception needed. Import
 passes its one unsandboxed path as both `resolved_path` and `original_path`, with `"import_csv"` as
 the operation (from Lua it arrives already sandbox-resolved, so those errors quote the absolute
 path). `Reader` is Pimpl'd specifically so csv-parser's headers never have
-to be included by `lua_runner.cpp`, which already needs `/bigobj` on MSVC for sol2's template
-depth. Three `csv::CSVFormat` settings are pinned in exactly one place (`make_format`, in
+to be included by any `src/sandbox/` TU (all are sol2 TUs; `/bigobj` is target-wide for sol2's template
+depth). Three `csv::CSVFormat` settings are pinned in exactly one place (`make_format`, in
 `csv_read.cpp`) because every one of the library defaults is wrong for this reader:
 `variable_columns(KEEP_NON_EMPTY)` (the default `IGNORE_ROW` silently discards any row whose field
 count differs from the header), the header row (with no header pinned, csv-parser guesses one and
 pops every record up to the guessed index — silently eating a one-cell title line above the real
 header; driven by `Options.header_row`, 1-based at the Lua boundary, `0` = `no_header()`, default
-`1` — Phase 2's `header_row` option, D-20), and never calling `chunk_size(...)` (with
+`1`), and never calling `chunk_size(...)` (with
 `CSV_ENABLE_THREADS` forced off, the read window is csv-parser's own fixed default, unmultiplied by
 worker count). **Call order in `make_format` is load-bearing**: the header mode must be set before
 `variable_columns()`, because `CSVFormat::header_row(row < 0)` (i.e. `no_header()`) overwrites
@@ -117,10 +139,10 @@ returns an empty header with zero rows in total silence, so the check is gated o
 original request (`header_row != 0`) rather than header emptiness alone, since `header_row = 0`
 also yields an empty header by design. csv-parser's quote rules are not configurable at all, yet
 import's `require_well_formed_quotes` (`database_csv_import.cpp`) hand-copies them to guard its
-DELETE; `LuaRunner_ReadCsv.StrayQuotesTokenizeAsTheImportPrePassAssumes` pins the parser side, so
+DELETE; `Sandbox_ReadCsv.StrayQuotesTokenizeAsTheImportPrePassAssumes` pins the parser side, so
 re-check both on any csv-parser `GIT_TAG` bump.
 
-`csv/csv_write.h`/`.cpp` is `csv_read`'s deliberate non-Pimpl counterpart (D-37): it depends
+`csv/csv_write.h`/`.cpp` is `csv_read`'s deliberate non-Pimpl counterpart: it depends
 on nothing that must be kept out of the sol2 translation unit (no csv-parser, no third-party
 headers), so hiding its `std::ofstream` member behind a Pimpl the way `Reader` hides csv-parser
 would be cargo cult. `Writer` backs `db:write_csv`; the free `append_record` it emits through is
@@ -128,17 +150,17 @@ also `export_csv`'s emitter (`database_csv_export.cpp` builds the whole file wit
 it in one shot, so `Writer`'s truncate-at-open and its `Cannot write_csv` messages stay out of
 export). Same no-`include/quiver/`-header, no-`QUIVER_API`, no-C-API posture as `csv_read`. Numeric cell formatting reuses
 `quiver::utils::append_number` (`src/utils/number.h`) via `std::to_chars`'s shortest round-trip
-form with no synthetic decimal point, so a whole float and the equal integer write identical text
-(D-34); a `nil` cell and an empty-string cell are structurally indistinguishable after a CSV round
-trip and that is stated, not fixed — CSV has no null (D-40). FMT-07's row-width enforcement (a
+form with no synthetic decimal point, so a whole float and the equal integer write identical text;
+a `nil` cell and an empty-string cell are structurally indistinguishable after a CSV round
+trip and that is stated, not fixed — CSV has no null. The row-width enforcement (a
 short `write_row` pads to the header's length, a long one throws) lives entirely in the Lua-layer
-`CsvWriter` wrapper in `src/lua_runner.cpp`, not here: this file's `Writer` gained no header-width
+`CsvWriter::write_row` in `src/sandbox/csv.cpp`, not here: this file's `Writer` gained no header-width
 state and no signature change for it, and padding happens before the cell vector ever reaches
 `write_row`/`append_record`, so `append_record`'s `lone_empty_cell` predicate sees the final,
 already-padded cell count.
 
 `ui_metadata.h`/`ui_metadata.cpp` is the `ui/` TOML sidecar reader behind `describe()` and
-`describe_collection()` (Phase 1 of the "UI Metadata in describe" milestone): same
+`describe_collection()`: same
 no-`include/quiver/`-header, no-`QUIVER_API`, no-C-API-symbol, no-FFI-binding posture as
 `csv_read` — `describe*` already return a plain `std::string` through the C API, so there is no
 FFI consumer for a structured getter, and toml++ is linked PRIVATE on `quiver`
@@ -155,7 +177,7 @@ The sibling directory is `fs::weakly_canonical(migrations_path).parent_path() / 
 path yields `<migrations>/ui`, which never exists, and a bare relative migrations path yields
 `./ui` against whatever the process CWD happens to be at call time, not the sibling directory a
 caller means. `fs::weakly_canonical` normalizes both away before `parent_path()` ever runs (the
-same idiom `src/lua_runner.cpp`'s `resolve_sandboxed_path` already uses).
+same idiom `src/sandbox/path_policy.cpp`'s `resolve_sandboxed_path` already uses).
 
 A `ui/*.toml` collection file self-selects by shape, never by filename: a top-level string `id`
 plus an `attribute` array are both required, which is what excludes `main.toml` (no `id`), every
@@ -208,9 +230,9 @@ byte outside `a-z0-9`, so a symbol-only (`"%"`, `"(-)"`) or non-Latin (`"Нач�
 squashes to `""` and used to compare equal to an *absent* label's `""` — silently deleting a
 tooltip that restates nothing. That is the one direction in which squash's "drop non-ASCII" bias
 suppresses rather than prints, and it is the reason the predicate exists rather than three
-open-coded `squash(a) == squash(b)` tests. The raw-vs-normalized distinction D-05 once drew is
-unobservable and is not spelled: `normalize_ui_text` only rewrites bytes `squash` discards anyway,
-so `squash(normalize(x)) == squash(x)`. `normalize_ui_text` maps every
+open-coded `squash(a) == squash(b)` tests. The raw-vs-normalized distinction the tooltip
+suppression rule once drew is unobservable and is not spelled: `normalize_ui_text` only rewrites
+bytes `squash` discards anyway, so `squash(normalize(x)) == squash(x)`. `normalize_ui_text` maps every
 byte below `0x20` and `0x7F` to a space before collapsing runs and trimming (via
 `quiver::string::trim`) — **and** the two-byte UTF-8 encoding of the C1 block,
 `0xC2 0x80`-`0xC2 0x9F`. The C1 half is not optional: U+009B is CSI and U+009D is OSC, the 8-bit
@@ -226,9 +248,9 @@ policy.
 `kMaxDistributionCardinality`-bounded branch) also annotates each *observed* code with its enum
 label: `values {0 "Per Unit": 2, 1: 1}`. The `ui_metadata.find(collection, scalar.name)` lookup
 sits immediately before `"; values {"` is written, not at the top of the per-scalar loop, so a
-collection of TEXT/REAL/PK scalars pays zero two-level map lookups. **D-09 (deliberate divergence
-from D-06):** here a label that normalizes to empty drops only the *annotation* and keeps the
-*entry* — unlike the `enum {}` clause above, where the entry IS the vocabulary and an
+collection of TEXT/REAL/PK scalars pays zero two-level map lookups. **Deliberate divergence
+from the `enum {}` clause:** here a label that normalizes to empty drops only the *annotation*
+and keeps the *entry* — unlike the `enum {}` clause above, where the entry IS the vocabulary and an
 empty-normalizing label drops the whole thing. In the histogram the entry is an observed row
 count, and dropping it would destroy data. Three known limits, recorded rather than fixed: (1)
 `ui_metadata` is populated only by `from_migrations` (see the early-return trap above), so
@@ -251,39 +273,47 @@ substring immunity, and `summarize_collection` additionally emits `  Vectors:` /
 database would be breakable by a label containing that text. The remedy, if it ever bites, is
 asserting on report structure (line prefix + indentation), never a substring blocklist.
 
-Three guards in the Lua layer's decoders (`src/lua_runner.cpp`) exist because a script is
+Three guards in the Lua layer's decoders (`src/sandbox/`: `csv.cpp`, `internal.h`, `database_update.cpp`) exist because a script is
 untrusted input, in the same spirit as the JSON encoder's two caps below:
 - `csv_max_integer_key` is the single max-integer-key walk behind both `csv_row_cells_from_lua`
   and `csv_header_from_lua` (so the key rule and its message live once), and it caps the result at
   1,000,000. Both callers materialize a **dense** vector up to that key, so `{[1e9] = "x"}` — the
   same sparseness hazard the encoder note below names — allocated tens of gigabytes, or reached
   the script as a raw `std::bad_alloc` with no Pattern 1 prefix.
-- `csv_options_entries` checks each option key's Lua *type* before converting it. sol2's
-  `std::string` getter is `lua_tolstring`, which answers `nullptr` for a boolean/table/function
-  key: unchecked in Release (`SOL_SAFE_GETTER` is off there) and a raw sol2 panic in Debug, so
-  `{ [true] = 1 }` reached the script as a bare Lua value rather than a message.
+- `option_entries` (which also owns the options-must-be-a-table check; what nil means stays with
+  each caller) and `collect_group_columns` check each key's Lua *type* before converting it.
+  sol2's `std::string` getter is `lua_tolstring`, which answers `nullptr` for a
+  boolean/table/function key and spells a number key as text, and the getter is unchecked in
+  every build (`SOL_SAFE_GETTER=0`), so without the check `{ [true] = 1 }` would reach the script
+  as a bare Lua value rather than a message. For the six group writers the check makes an array of
+  row tables (`{ { date_time = ... } }`) throw one Pattern 1 message instead of a misleading
+  `column '1' must be an array of values`.
 - `csv_separator_from_lua` rejects `"`, CR, LF and NUL in addition to the multi-byte check. They
   are one byte but cannot be delimiters: csv-parser refuses a delimiter that overlaps its quote
   character, so `db:write_csv` with `separator = '"'` silently produced a file `db:read_csv`
   could not open.
-`w:write_row` also checks its argument is a table: sol2's check for a `const sol::table&`
-parameter is a loose one that accepts **userdata** too, and iterating a userdata yields no keys,
-so `w:write_row(db)` appended a spurious empty record instead of throwing. For the same reason
-`db:read_csv_stream`'s `on_row` is a `sol::object` with an explicit `sol::type::function` check
-rather than a typed `sol::protected_function` parameter — the typed one surfaced sol2's own
-"stack index 3, expected function" text.
+Every table argument of a bound function is a `sol::object` checked by `require_table`
+(`internal.h`) in the decoder that first walks it, never a typed `sol::table` parameter: sol2's
+check for one is loose (it accepts a **userdata**, which iterates as no keys, so
+`w:write_row(db)` once appended an empty record and a userdata group payload cleared the group)
+and, before every sol2 safety was turned on, absent in Release, so a number or string reached
+`lua_next` unchecked. The message names the
+operation, the argument and its Lua type (`Cannot write: data must be a table, got number`).
+`db:read_csv_stream`'s `on_row` stays the model for the function case: a `sol::object` with an
+explicit `sol::type::function` check rather than a typed `sol::protected_function` parameter,
+whose check surfaced sol2's own "stack index 3, expected function" text.
 
-`Impl::open_writers` is also the concurrency guard: it records each writer's **resolved** path, and
+`RunHandles::open_writers` (`src/sandbox/internal.h`) is also the concurrency guard: it records each writer's **resolved** path, and
 `db:write_csv` refuses a path some live, unclosed writer already holds (Pattern 1, mirroring
 `db:open_file`'s process-global write registry in `src/binary/binary_file.cpp`). Two writers on one
 path each open with `ios::trunc` and write from offset 0, so the second silently discarded
 everything the first had buffered. Reopening a path whose previous writer was **closed** is still
-the documented truncate (WRITE-08) — the guard checks `is_closed()`, which is what keeps
+the documented truncate — the guard checks `is_closed()`, which is what keeps
 `ReopeningSamePathTruncatesExistingContent` green.
 
 ## Pimpl vs Value Types
 
-Pimpl is used only for classes that hide private dependencies (e.g., `Database`, `LuaRunner` hide sqlite3/lua headers):
+Pimpl is used only for classes that hide private dependencies (e.g., `Database`, `Sandbox` hide sqlite3/lua headers):
 ```cpp
 // database.h (public)
 class Database {
@@ -300,7 +330,7 @@ struct Database::Impl {
 
 Binary subsystem: `BinaryFile` uses Pimpl (hides file I/O dependencies). `CSVConverter` is a plain class composing a `BinaryMetadata` and the CSV `iostream` (no Pimpl, no inheritance). `BinaryMetadata`, `Dimension`, `TimeProperties` are plain value types.
 
-Expression subsystem: `Expression` is a plain value type wrapping `shared_ptr<ExpressionNode>` — no Pimpl. `ExpressionNode` is an abstract base with virtual `metadata()` / `compute_row()`; concrete subclasses are exposed via `QUIVER_API` and use Rule of Zero. Polymorphism is justified by the recursive tree shape (operand-owning nodes hold child `shared_ptr<ExpressionNode>`).
+Expression subsystem: `Expression` is `final` and derives, as `BinaryFile` (Pimpl) does, from the stateless polymorphic `AbstractExpression` (virtual destructor, protected copy and move, so nothing slices through a base reference). It is a plain value type wrapping `shared_ptr<ExpressionNode>` — no Pimpl. `ExpressionNode` is an abstract base with virtual `metadata()` / `compute_row()`; concrete subclasses are exposed via `QUIVER_API` and use Rule of Zero. Polymorphism is justified by the recursive tree shape (operand-owning nodes hold child `shared_ptr<ExpressionNode>`).
 
 Classes with no private dependencies (`Element`, `Row`, `Migration`, `Migrations`, `GroupMetadata`, `ScalarMetadata`, `CSVOptions`, `Dimension`, `TimeProperties`, `Expression`) are plain value types — direct members, no Pimpl, Rule of Zero (compiler-generated copy/move/destructor). `BinaryMetadata` is the one deviation: it user-declares its default constructor and destructor (defaulted out-of-line), which suppresses compiler-generated moves — moves silently fall back to copies.
 
@@ -325,6 +355,14 @@ Internally, `Impl::TransactionGuard` is nest-aware RAII: if an explicit transact
 }
 ```
 
+Every internal write that owns a transaction (`create_element`, `update_element`, the group and
+time-series writers, the migrations, `apply_schema`, `import_csv`) uses `Impl::TransactionGuard`.
+Where the writer has a handler (the migrations, `apply_schema`, `import_csv`), the guard is
+declared inside the `try`, so the rollback runs before the `catch`. `Impl::execute_raw(sql, what)`
+is the one `sqlite3_exec` runner (`BEGIN`, `COMMIT`, `PRAGMA user_version`, multi-statement
+scripts). Two calls keep their own: `Impl::rollback`, which logs instead of throwing, and the
+constructor's unchecked `PRAGMA foreign_keys = ON`.
+
 **Dry runs** (`begin_dry_run` / `end_dry_run` / `in_dry_run`, `Impl::dry_run` flag) sit on top of
 the same machinery: `begin_dry_run` opens a real transaction and sets the flag; `end_dry_run`
 clears the flag and calls `impl_->rollback()` **directly** — the public `rollback()` is a no-op
@@ -335,12 +373,12 @@ because the dry run holds a real transaction. `end_dry_run` guards its rollback 
 `sqlite3_get_autocommit` because a caller can end the transaction out from under it with a bare
 `COMMIT` through `query_*`. Rationale and the documented consequences: root design decisions.
 
-The one write path that cannot nest is `import_csv`: it opens its own transaction with a raw
-`impl_->begin_transaction()` (not `TransactionGuard`) and rolls back on any error, so inside a
-caller's transaction the `BEGIN` would fail and the `ROLLBACK` would discard the caller's work. It
-throws `"Cannot import_csv: transaction already active"` as a precondition instead. (It used to
-toggle `PRAGMA foreign_keys`, a no-op mid-transaction, which was the original reason; it no longer
-does. Whether it should nest instead is an open decision.)
+The one write path that cannot nest is `import_csv`: it must own its transaction, because inside a
+caller's its `TransactionGuard` would no-op, and a failure partway through would leave import's
+earlier writes (the DELETEs included) in the caller's transaction for its commit. It throws
+`"Cannot import_csv: transaction already active"` as a precondition instead. (It used to open a
+raw `BEGIN`, and before that to toggle `PRAGMA foreign_keys`, a no-op mid-transaction, which was
+the original reason. Whether it should nest instead is an open decision.)
 
 ## Move Semantics
 
@@ -364,7 +402,9 @@ static void validate_migrations(const std::string& migrations_path);
 subdirectories with `up.sql`/`down.sql`.
 `validate_migrations` validates that directory in an in-memory database by executing every up migration
 and then every down migration, and finally rejects any table left behind; the direction-specific
-execution helpers remain private.
+execution helpers remain private. Their errors name the public caller, not the helper:
+`migrate_up` takes it as `operation` (`from_migrations` or `validate_migrations`), while
+`migrate_down` and `apply_schema` write their only caller's name in directly.
 
 ## Logging
 
@@ -379,7 +419,7 @@ impl_->logger->debug("Opening database: {}", path);
 
 - **Group writes are unified, and checked before anything is written** (`database_impl.h`): one
   `validate_group_columns(caller, table, type, columns)` checks types and equal lengths, and one
-  `insert_rows_into_group_table(table, type, columns, id, delete_existing, db)` does the DELETE and
+  `insert_rows_into_group_table(table, type, columns, id, delete_existing)` does the DELETE and
   INSERTs, for vector, set and time-series tables alike. For `create_element` / `update_element`,
   `prepare_group_data` routes each array to its table(s) through a single
   `table_name -> GroupColumns` map, FK-resolves it against **each** table it is written to (a
@@ -429,13 +469,16 @@ impl_->logger->debug("Opening database: {}", path);
   away fails the import on its foreign key. Deleting before writing also frees an omitted
   element's values in any other `UNIQUE` column; handing such a value from a kept element to a row
   written before it (any swap does) still fails (row-by-row UPDATEs) and rolls the import back,
-  except in a self-FK column, which (1) cleared. A repeated label is rejected in the validation
+  except in a self-FK column, which (1) cleared. A repeated label is rejected in the conversion
   pass, since the upsert would otherwise let the last row win silently. The group path needs
   nothing special: it deletes and re-inserts one group table whose ids and FK cells are all
-  resolved to existing elements.
+  resolved to existing elements. A time-series group still needs its date dimension
+  (`find_dimension_column`, as export and the readers do), which is also what refuses group
+  `files`: that name is the `_time_series_files` table, and a header-only CSV would clear it. Both
+  paths then share one write tail, with one transaction and one catch.
 - **Label→id resolution has one query** (`database_impl.h`): `Impl::lookup_id_by_label(table,
-  label, db)` is the only `SELECT id ... WHERE label = ?`, shared by `Impl::resolve_label`
-  (Pattern 2, backs every `_by_label` form) and `Impl::resolve_fk_label` (Pattern 3) — the two
+  label)` is the only `SELECT id ... WHERE label = ?`, shared by `Impl::resolve_label`
+  (Pattern 2, backs every `_by_label` form) and `Impl::resolve_fk_label` (a miss is Pattern 3) — the two
   report a miss differently, so the throw stays with each caller. `resolve_label` calls
   `require_column(collection, "label")` because `require_collection` only checks `has_table`, so a
   group table would otherwise reach the SELECT and leak a raw `no such column: label` prepare
@@ -443,7 +486,10 @@ impl_->logger->debug("Opening database: {}", path);
   delegate's.
 - **Table classification has one source** (`schema.cpp`): `Schema::group_names(collection,
   GroupTableType)` and `is_group_table(table, type)` are the only way to enumerate/classify
-  `_vector_` / `_set_` / `_time_series_` tables (`group_names` excludes `_time_series_files`).
+  `_vector_` / `_set_` / `_time_series_` tables (`group_names` excludes `_time_series_files`),
+  and one name builder, `Schema::group_table_name(collection, group, GroupTableType)`; every
+  group-addressed operation resolves its table through `Impl::require_group_table`, which owns the
+  Pattern 2 miss (`{Vector|Set|Time series} group not found: 'g' in collection 'c'`).
   All list/metadata/describe call sites use them — never hand-roll prefix scans. `group_names` returns an empty
   list for a name that is not a table, so each `list_{vector,set,time_series}_groups` calls
   `Impl::require_collection` first (as `list_scalar_attributes` does); without it a mistyped collection is
@@ -473,35 +519,44 @@ impl_->logger->debug("Opening database: {}", path);
 - **`describe*` return text reports** (`database_describe.cpp`): `describe()` (whole-DB overview),
   `describe_collection(c)` (one collection's structure), `summarize_collection(c)` (per-scalar
   null/non-null counts + low-cardinality integer distributions [threshold `kMaxDistributionCardinality`]
-  + per-group empty/non-empty counts) all build an `std::ostringstream` and return `std::string`. These
-  const methods run their own read-only SQL via an anon-namespace `query_int_rows` helper that
-  prepares/steps directly on `impl_->db` (the `current_version() const` pattern — `execute()` is
-  non-const). All three are bound 1:1 across the C API and every binding as string getters.
-- **`TypeValidator` threads the caller's name** (`type_validator.cpp`): call sites pass
+  + per-group empty/non-empty counts) all build an `std::ostringstream` and return `std::string`. They
+  run their SQL through `Impl::execute`, which is const. The distribution counts only cells whose
+  `typeof` is `integer`, since a non-STRICT INTEGER column can also hold TEXT/REAL. All three are
+  bound 1:1 across the C API and every binding as string getters.
+- **`validate_scalar`/`validate_array` thread the caller's name** (`type_validator.cpp`): call sites pass
   `"create_element"` / `"update_element"` so messages read `"Cannot create_element: type
   mismatch for column ..."` (root Pattern 1).
 - **One scalar typing policy** shared by `value_matches_type` (`database_internal.h`, time-series
-  writes) and `TypeValidator::validate_value` (`type_validator.cpp`, scalar create/update): int64
+  writes) and `validate_value` (`type_validator.cpp`, scalar create/update): int64
   matches `INTEGER` or `REAL` (int-for-REAL coercion), double matches `REAL` only (a float into an
-  `INTEGER` column is rejected), string matches `TEXT`/`INTEGER`(FK label)/`DATE_TIME`. Keep the two
-  in sync (root design decision). `import_csv` is the third enforcer, on CSV text: its
+  `INTEGER` column is rejected), string matches `TEXT` / `DATE_TIME`. `validate_value`
+  *calls* `value_matches_type`, so the rule lives in one function. An FK label string never reaches
+  `validate_value`: `Impl::resolve_fk_label` turns it into an id first, and rejects a string on a
+  non-FK INTEGER column itself (Pattern 1, naming the caller). The time-series writers
+  (`update_time_series_group` / `upsert_time_series_row`) resolve no labels, so a label there reaches
+  `value_matches_type` and is rejected. `import_csv` is the third enforcer, on CSV text: its
   `parse_integer` (`database_csv_import.cpp`) and `utils::parse_float` (`utils/number.h`, shared
   with `csv_to_bin`) take a cell only if it parses whole, so a policy change must reach them too.
 - **DATE_TIME content is checked by both halves of that policy, through one predicate**:
-  `datetime::is_valid_iso8601` (`utils/datetime.h`). `TypeValidator::validate_value` calls it in its
-  string branch (covering scalar create/update and every vector/set array write, so it inherits the
-  check-before-first-write ordering of the "Group writes" bullet above); `validate_time_series_row`
-  (`database_time_series.cpp`) calls it in a **separate** guard next to `value_matches_type`. Do
-  not "restore symmetry" by moving the check into `value_matches_type`: that function decides the
+  `datetime::is_valid_iso8601` (`utils/datetime.h`). Both halves call it in a separate guard right
+  after the `value_matches_type` shape check: `validate_value` (covering scalar
+  create/update and every vector/set array write, so it inherits the check-before-first-write
+  ordering of the "Group writes" bullet above) and `validate_time_series_row`
+  (`database_time_series.cpp`). Do not fold the check into `value_matches_type`: that function decides the
   *variant's shape*, and TEXT into a DATE_TIME column is the correct shape — routing a content
   failure through its `bool` would emit `column 'date_time' has type DATE_TIME but received TEXT`,
   which is a lie. The two guards phrase their own messages; the rule itself lives in exactly one
   function.
   `parse_datetime_import` (`database_csv_import.cpp`) is the **third** gate and needs to exist:
-  `import_csv` writes through a raw `INSERT` and never reaches `TypeValidator`, and its
+  `import_csv` writes through a raw `INSERT` and never reaches `validate_value`, and its
   custom-`date_time_format` branch parses with the caller's `get_time` format, which cannot see an
   impossible calendar day (`"%d/%m/%Y"` on `31/02/2024`). It therefore runs `is_valid_iso8601` on
   the string it canonicalizes, so import is held to the same grammar as the other writers.
+  Import converts every cell through one `convert_cell` (`database_csv_import.cpp`) before
+  writing, so validation and the write cannot disagree. It picks a branch on the column's
+  declared type alone (`query_columns` already types a TEXT `date_` column DATE_TIME), and a
+  column the Schema does not list (`PRAGMA table_info` omits generated columns, which `SELECT *`
+  returns) converts as nullable TEXT.
 - **`update_element` / `delete_element` / the vector+set group writers verify the id exists** (via
   `Impl::require_element`) and throw Pattern 2 `"Element not found: ..."` — no silent no-op.
   The two time-series writers do not: `upsert_time_series_row` always writes one row, so a bad id
@@ -509,7 +564,7 @@ impl_->logger->debug("Opening database: {}", path);
   write, but with no rows it deletes nothing and returns silently.
   Every `_by_label` form resolves the label via `Impl::resolve_label`, and is a one-line
   delegation to its id counterpart (the root `_by_label` rule), so `update_element_by_label`'s
-  *element* validation — the empty-element throw, `TypeValidator`, `prepare_group_data`'s
+  *element* validation — the empty-element throw, `validate_scalar`, `prepare_group_data`'s
   routing/type/length checks — reports `Cannot update_element: ...` and the group/row writers'
   column validation reports `Cannot update_{vector,set,time_series}_group: ...` /
   `Cannot upsert_time_series_row: ...`, naming the operation that validated.
@@ -521,11 +576,11 @@ impl_->logger->debug("Opening database: {}", path);
   — so failures past the derivation report `Cannot update_element: ...`.
 
 - **Schema metadata loads lazily** (`Impl::require_schema`): the `Database(path, options)`
-  constructor does not read it, so the first metadata/CRUD call does. `schema` and `type_validator`
-  are `mutable` (const readers trigger the load) and `load_schema_metadata()` is `const` and
-  publishes **neither** member until `SchemaValidator::validate()` passes — assigning `schema`
-  first would leave a half-loaded state (schema set, `type_validator` null) alive after a failed
-  lazy load, crashing the next call. Rationale in the root design decisions.
+  constructor does not read it, so the first metadata/CRUD call does. `schema` is `mutable` (const
+  readers trigger the load), and `load_schema_metadata()` publishes it only after
+  `SchemaValidator::validate()` passes, so a failed lazy load leaves no half-loaded state for the
+  next call: `require_schema` loads only while `schema` is null, so a schema published early would
+  never be validated again. Rationale in the root design decisions.
 - **Every group table's parent is checked by one helper** (`schema_validator.cpp`,
   `validate_group_parent`, called from `validate()` for vector, set and time-series tables after
   their structural checks): the prefix must name an existing collection and `id` must reference
@@ -535,27 +590,42 @@ impl_->logger->debug("Opening database: {}", path);
   the action rule too, so a schema could leave orphan set rows or make `delete_element` fail on a
   time-series table with SQLite's `FOREIGN KEY constraint failed`.
 - **`Row::get_float` widens an int64** (`row.cpp`): the one place the int64-for-REAL policy is
-  implemented for reads, since `read_column_values<double>`,
-  `read_column_values_nullable<double>`, `read_single_value<double>` and `query_float` all funnel
+  implemented for reads, since `read_column_values_nullable<double>`,
+  `read_grouped_values_all<double>`, `read_single_value<double>` and `query_float` all funnel
   through it. Don't re-add a widening branch at a call site.
 - **Two column readers in `database_internal.h`**: `read_column_values<T>` drops NULLs (dense —
-  used by vector/set `_by_id` and `read_element_ids`, whose columns are NOT NULL / PK by
-  convention); `read_column_values_nullable<T>` keeps them as `std::optional<T>` and backs only the
-  three `read_scalar_*` bulk readers (one entry per element, `ORDER BY rowid`). The Lua scalar
-  readers consume the optional vector directly via a `to_lua_table(vector<optional<T>>)` overload
-  that emits `nil` holes (root scalar-NULL design decision).
-- **`read_grouped_values_all<T>`** (`database_internal.h`) backs the six bulk vector/set readers and
-  requires the LEFT JOIN their SQL builds. Don't "simplify" the SQL back to
-  `SELECT id, value FROM <group_table>` — that is the shape that skipped elements.
+  used only by `read_element_ids`, whose column is the collection's PK);
+  `read_column_values_nullable<T>` keeps them as `std::optional<T>` and backs the three
+  `read_scalar_*` bulk readers *and* the six vector/set `_by_id` readers (one entry per element or
+  per cell, `ORDER BY rowid` — except the vector `_by_id` readers, which order by `vector_index`).
+  The Lua readers consume the optional vector directly via a
+  `to_lua_table(vector<optional<T>>)` overload that emits `nil` holes (root NULL design decisions).
+  Every per-column vector/set reader finds its table by column **name** (`Schema::find_vector_table`
+  / `find_set_table`): the group named after the column only if it holds that column (a group may
+  be named after another group's column, which used to throw `column not found`), else the group
+  whose table name sorts first among those holding it. A name two groups share therefore reads one
+  of them; `read_{vector,set}_group_by_id` take the group and are the reads that cannot be misrouted.
+- **`read_grouped_values_all<T>`** (`database_internal.h`) backs the six bulk vector/set readers,
+  returns `vector<vector<optional<T>>>`, and parses by position the LEFT JOIN that its neighbour
+  `grouped_values_sql` builds for all six. That SELECT is `c.id, g.id, g.<attr>` — three columns,
+  not two: `g.id` is a **presence column** that is NULL only when the join found no row, which is
+  the one thing that keeps "element with no group rows" (empty inner vector) apart from "row whose
+  value is NULL" (`nullopt` cell). Don't "simplify" the SQL back to `SELECT id, value FROM
+  <group_table>` (that shape skipped elements) and don't drop `g.id` (that shape collapses the two
+  NULL cases back together). The presence test is `!is_null(1)`, not `get_integer(1)`: a group
+  whose `id` column is declared REAL or TEXT (the validator does not check its type) stores the id
+  as 1.0 / '1', which still matches the join. The element tracker is an `optional<int64_t>`, never
+  a sentinel id: an explicit id of -1 is accepted by `create_element`, and a `-1` sentinel dropped
+  that element (or appended to an empty result) when it was the smallest id.
 - **`scalar_metadata_from_column` reports an INTEGER PRIMARY KEY as `not_null`**
   (`database_internal.h`): a rowid-alias PK is never NULL, but SQLite's `PRAGMA table_info` leaves
   the `notnull` flag unset, so the public `ScalarMetadata.not_null` ORs in `primary_key && type ==
   Integer`. The raw `ColumnDefinition.not_null` stays the literal PRAGMA value — `csv_import`
   (empty-cell rejection) and `schema_validator` read it directly and must not see PK flip. This is
   what lets Julia's nullability-aware readers return a concrete `Vector{Int64}` for `id`.
-- **`execute` validates parameter count** (`database.cpp`): `sqlite3_bind_parameter_count` must
-  equal `parameters.size()`, else it throws — the single guard for every `query_*` and internal
-  parameterized statement.
+- **`execute` validates parameter count** (`Impl::execute`, `database.cpp`):
+  `sqlite3_bind_parameter_count` must equal `parameters.size()`, else it throws — the single guard
+  for every `query_*` and internal parameterized statement.
 - **Utilities**: `quiver::string::new_c_str` / `trim` in `src/utils/string.h`; ISO 8601
   parse/format helpers in `src/utils/datetime.h` — `parse_iso8601` accepts `YYYY-MM-DD` with an
   optional `THH:MM:SS`/` HH:MM:SS`, every field fixed-width and zero-padded, year `0001`-`9999`,
@@ -572,105 +642,240 @@ impl_->logger->debug("Opening database: {}", path);
   `2024-01-0110:30:00`.) `parse_iso8601` fills `tm_wday`/`tm_yday` too — nothing else does, and
   `format_datetime` feeds the `tm` to `strftime`, so `%a`/`%A`/`%j`/`%U`/`%W` would otherwise
   report every date as a Sunday on day 001. `is_valid_iso8601` trims before parsing, because
-  `Database::execute` trims every bound string and the gate must judge the value that is stored.
+  `Impl::execute` trims every bound string and the gate must judge the value that is stored.
   `format_utc` always writes the full `T` form;
   use `is_date_time_column` (`data_type.h`) for `date_`-prefix checks (one legacy hand-rolled
   `starts_with("date_")` remains in `schema_validator.cpp`).
 
-## LuaRunner
+## Sandbox
 
 Executes Lua scripts with database access (sol2). The `db` userdata exposes the same API as the
 other bindings (root cross-layer tables):
 ```cpp
-LuaRunner lua(db);
+Sandbox lua(db);
 lua.run(R"(
     db:create_element("Collection", { label = "Item", value = 42 })
     local values = db:read_scalar_integers("Collection", "value")
 )");
 ```
 
-Implementation conventions in `lua_runner.cpp`:
+Implementation conventions in `src/sandbox/`:
+- **Layout**: `Sandbox::Impl`'s constructor creates the only Database usertype and hands it to
+  the fifteen binders, called in the order of the core files they mirror (`bind_database` through
+  `bind_expression`), as `bind`, with the `quiver` table as `ns`. Those parameter names are what the
+  sync test's first pass matches (it fails on a `.set_function(` through any other receiver, and
+  reads subdirectories too), and a second Database usertype would clear every method bound
+  before it. The non-Database usertypes stay variadic, one bound name per line (the sync test's
+  second pass). `RunHandles` is an `Impl` member declared before `lua`; closures capture `handles`
+  or `db` by reference, never the `Impl` pointer, so a moved runner keeps working. `internal.h`
+  holds only templates, `inline` functions and declarations; every other helper is in an anonymous
+  namespace nested in `quiver::lua_internal`. A type registered as a usertype stays in the named
+  namespace, because sol2 keys usertypes by demangled name and that drops anonymous namespaces.
+  `bind_binary` returns the `BinaryFile` usertype and the constructor hands it to `bind_expression`,
+  which registers the expression operators and the six expression methods on it, through the
+  usertype indexer rather than `set_function`; the method names are listed once, in the
+  `Expression` usertype, which is where the sync test's second pass reads them (a comment naming
+  that usertype call reopens it for the parser and empties its method list). `binary.cpp` keeps its
+  `quiver/expression/expression.h` include although it names no `Expression`, because sol2 derives
+  BinaryFile's automatic `__lt`/`__le`/`__eq` from the expression operators, which take
+  `const AbstractExpression&` (a base of BinaryFile), when the usertype is created, so removing it changes `f < g` and `f == g` in scripts while every test stays green.
+  Comments must not spell the Database usertype call or the stdlib-opening call, because greps
+  count both. Each TU with by-value sol2 parameters gets one
+  `NOLINTBEGIN/END(performance-unnecessary-value-param)` pair. A file stays at about 450 lines or
+  fewer.
+- **Shared helpers**: each repeated binding pattern lives in one helper, and a new method reuses
+  it rather than copying a body. The 17 plain forwarders are `&Database::` member pointers (below).
+  `bulk_read_lua` / `collection_read_lua` (`internal.h`) adapt the bulk readers and are registered
+  under the member's own name. `read_groups_by_id` (`sandbox/database_read.cpp`) is behind `read_vectors_by_id`
+  and `read_sets_by_id`. The `metadata_to_lua` overloads (defined in `sandbox/database_metadata.cpp`)
+  with the `list_metadata_lua` / `get_metadata_lua` templates (`internal.h`) are behind the four
+  `get_*_metadata` and four `list_*` group methods, registered in `sandbox/database_metadata.cpp`
+  and (the time-series pair) `sandbox/database_time_series.cpp`.
+  `query_*_lua` return `std::optional` and `read_scalars_by_id` assigns `std::optional` values, so a
+  NULL is `nil` and an absent key. `run_in_scope` (`sandbox/database.cpp`) is the one scoped block behind `db:transaction` and
+  `db:dry_run`: the two lambdas pass their operation name, and `run_in_scope` checks the argument is
+  a function before opening the scope. The callback's error and the closing call (`commit` /
+  `end_dry_run`) sit in one `try`, so either one undoes the scope best-effort and is rethrown.
+  `collect_entries` / `option_table` / `option_entries` (`internal.h`) are the one option walk:
+  `option_entries` owns the table check and returns slots that callers bind by name with a
+  structured binding, and nil handling stays with each caller. `lua_to_value` is the one
+  `Value`-typed write dispatch, CSV cells included (`csv_cell_to_string`); `lua_cell_as<T>` is the
+  typed-array one (see the boolean bullet). `CsvWriter::write_row` / `close` are members
+  registered by member pointer. `row_header_to_lua` / `call_row_callback` (`internal.h`) share
+  CSV/XLSX's absent-header rule and exact-false stop/error propagation. `RunHandles::add_writer` /
+  `add_binary_file` are the only appenders to the run-handle
+  registries by convention (the vectors stay public; prune expired entries, then append), and `close_open_handles` empties both at
+  `run()`'s exit. Every expression operand is a typed `const AbstractExpression&` candidate of a
+  `sol::overload` set (`expression.cpp`): `binop<Op>(name)` with a transparent functor
+  (`std::plus<>`, `std::greater_equal<>`, ...) for the four arithmetic, two logical and six
+  comparison operations, `unary_metamethod` for `__unm`/`__bnot` (Lua calls them with the operand
+  twice), `unary_function` for `quiver.expression`/`abs`/`sqrt`/`log`/`exp`, and the three-operand
+  `ifelse` set. So sol2 does the type check. The last candidate of each set takes
+  `sol::variadic_args` and calls `operand_error(operation, arity, numbers, args)`, which sol2
+  reaches only after every typed candidate failed and which only words the error: the leftmost
+  operand that is neither an expression nor, for the binary operations when not every operand is a
+  number, a number gets `Cannot <op>: operand must be an expression or a binary file, got <type>`,
+  otherwise `Cannot <op>: too many arguments (expected N, got M)`. `operation` is Lua's event name
+  for a metamethod (`add`, `unm`, `band`, ...) and the function name for `quiver.*` (`gt`, `abs`,
+  `ifelse`, `expression`, ...). The six expression methods (`save`, `get_metadata`, `aggregate`,
+  `aggregate_agents`, `select_agents`, `rename_agents`) are one lambda each on
+  `const AbstractExpression&`, shared by both usertypes, and ignore extra arguments like every other
+  method. `columns_to_cpp_rows` owns the group decoders'
+  no-rows rejection, and `length_mismatch` (`sandbox/database_time_series.cpp`) is the time-series decoder's one
+  length message. `lua_type_error` / `require_table` (`internal.h`) are the one argument
+  type-error shape (`Cannot <op>: <what> must be <expected>, got <lua type>`) and the one table
+  check: `require_table` tests `get_type()`, never the loose `is<sol::table>()` that accepts a
+  userdata, and it sits in the decoder that first walks the argument. `lua_string_key` is the
+  one check for a key that names something (an attribute, a column, a dimension) before it is
+  converted; the older guarded key checks (`option_entries`, `collect_group_columns`,
+  `string_key`) keep their own pinned texts. So do the value checks that predate that shape and end
+  without the `got` suffix: `on_row must be a function` (`csv.cpp`), the `separator`, `header`
+  entry and `header_row` option checks (`csv.cpp`), `option 'date_time_format' must be a string`
+  and `keys of option '<what>' must be strings` (`sandbox/database_csv_export.cpp`), `option key must be a string` and
+  `<what> has unsupported Lua type` (`internal.h`; cells, values, and `target_label` in
+  `sandbox/database_update.cpp`). Adding the suffix to any of them is a deliberate, pinned text change, not a
+  cleanup. `optional_from_lua<T>` is the one optional-argument
+  decoder (see the optional-argument bullet below).
 - **Filesystem sandbox**: `resolve_sandboxed_path(db, operation, path)` is the single gate for
   every file-touching Lua operation (`db:open_file`, `db:bin_to_csv`, `db:csv_to_bin`,
   `db:export_csv`, `db:import_csv`, `db:validate_migrations`, `db:read_csv`, `db:read_csv_stream`,
-  `db:write_csv`, `expr:save`). It rejects `:memory:`
+  `db:write_csv`, `save` on an expression or a binary file). It rejects `:memory:`
   databases, resolves relative paths against the database file's directory (bare-filename db paths fall back to the
   CWD at call time, mirroring `create_database_logger`), canonicalizes via `weakly_canonical`,
   and requires strict containment (candidate == root is rejected — the binary subsystem appends
   `.qvr`/`.toml` by string concatenation). The resolved absolute path is what's forwarded
   downstream, so the process CWD is irrelevant to Lua file I/O. Pattern 1 messages thread the
-  public operation name. This is LuaRunner policy only — the C++/Julia surfaces stay unsandboxed.
+  public operation name. This is Sandbox policy only — the C++/Julia surfaces stay unsandboxed.
   **The `current_path`/`weakly_canonical` block is wrapped in a `try`/`catch` that re-throws as
   `"Cannot <op>: cannot resolve path '<p>': <os reason>"`** — those throwing overloads raise
   `std::filesystem_error` for any OS failure that is not a plain "does not exist", and a Windows
   device name (`NUL`, `nul`, any case, any directory) is exactly such a case. Unwrapped, the raw
   `weakly_canonical: The parameter is incorrect.: ...` reached the script with no Pattern 1 prefix
-  at all, breaking LUA-08 for **every** operation in the list above, not just the one it was found
-  through. Because this is the single gate they all share, the guard belongs here and nowhere else;
+  at all, breaking the rule that no standard-library, csv-parser or sol2 message reaches a script
+  without a Pattern 1 prefix, for **every** operation in the list above, not just the one it was
+  found through. Because this is the single gate they all share, the guard belongs here and nowhere else;
   the deliberate `:memory:` and containment throws stay outside the `try` so they are not
-  double-wrapped. Covered by `LuaRunner_ReadCsv.DeviceNamePathIsReportedWithPrefix` and
+  double-wrapped. Covered by `Sandbox_ReadCsv.DeviceNamePathIsReportedWithPrefix` and
   `LuaBinaryTest.DeviceNamePathIsReportedWithPrefix` (the latter spanning `open_file`/`bin_to_csv`/
-  `csv_to_bin`, so the shared fix cannot regress to a per-caller patch).
+  `csv_to_bin`, so the shared fix cannot regress to a per-caller patch). `SandboxedPathTest`
+  (`tests/test_sandboxed_path.cpp`) calls the gate directly, without Lua, through the sol2-free
+  `path_policy.h`: containment, escapes, the root itself, `:memory:` and the device-name prefix.
 - **Enabled standard libraries**: `base`, `string`, `table`, `math`, `coroutine`, and `utf8`
   (pure computation only). `os`, `io`, `package`/`require`, and `debug` stay unloaded — scripts
   cannot reach the shell, the process, the environment, or the filesystem outside the db sandbox.
-- `dofile` and `loadfile` are nil'd out after `open_libraries` (no loading Lua source from disk);
-  string-form `load` stays available.
-- **The agent-facing Lua reference lives in `bindings/js/src/lua-api.ts`** (shipped on npm as
-  `LUA_DB_API_REFERENCE` and interpolated into an LLM system prompt downstream). Adding or removing
+- `dofile` and `loadfile` are nil'd out after `open_libraries` (no loading Lua source from disk).
+  `load` is replaced by a wrapper that forces mode `"t"` whatever the caller passed, installed by a
+  `lua.safe_script` in the constructor next to that nil-out (not through `set_function`, which the
+  sync test would reject). The wrapper forwards `env` through `...`, so a missing env still means
+  the global environment and an explicit `nil` stays `nil`. `Sandbox::run` loads the script
+  itself with `sol::load_mode::text` as well. `string.dump` stays: its output is inert once both
+  refuse binary chunks.
+- **The agent-facing Lua reference lives in `bindings/js/src/sandbox-api.ts`** (shipped on npm as
+  `SANDBOX_API_REFERENCE` and interpolated into an LLM system prompt downstream). Adding or removing
   a `db:`/`quiver.*` binding, or changing the `open_libraries` list, requires updating it —
-  `bindings/js/test/lua-api-sync.test.ts` parses `lua_runner.cpp` and fails otherwise. That check
+  `bindings/js/test/sandbox-api-sync.test.ts` parses every `.cpp`/`.h` under `src/sandbox/` and fails otherwise. That check
   exists because the doc went stale two days after it was written: it said only
   `base`/`string`/`table` were loaded and "there is NO `math`", and #210 added
   `math`/`coroutine`/`utf8` here without touching it.
-- **A nullable argument whose absence *means* something takes `sol::object`, not
-  `sol::optional<T>`**: `sol::optional<T>` yields `nullopt` for a wrong type just as it does for
-  `nil`, so `db:update_relation(..., false)` silently cleared the relation.
-  `relation_target_from_lua(object, caller)` distinguishes the two — nil/missing clears,
-  a non-string throws `Cannot <caller>: target_label has unsupported Lua type`. Both
+- **Every optional argument takes `sol::object`, not `sol::optional<T>`, and goes through
+  `optional_from_lua<T>(object, operation, what, expected)`** (`internal.h`): `sol::optional<T>`
+  yields `nullopt` for a wrong type just as it does for `nil`, so a wrong-typed `aggregate` flag
+  or `params` table was silently ignored. `optional_from_lua` has `luaL_opt` semantics: nil or a
+  missing argument is absent, anything else must be a `T` or throws `Cannot <op>: <what> must be
+  <expected>, got <lua type>`. It backs the `query_*` params, `db:open_file`'s metadata (decoded
+  after `resolve_sandboxed_path`, so the order stays mode, path, metadata), `db:bin_to_csv`'s
+  aggregate, `file:read`'s allow_nulls and the `aggregate` / `aggregate_agents` parameter. Where
+  the decode sat inside one call's argument list, it is hoisted into locals in argument order, so
+  which bad argument wins no longer depends on the compiler. `relation_target_from_lua(object,
+  caller)` is the relation-specific case, with its own text: `db:update_relation(..., false)`
+  used to clear the relation silently; now nil/missing clears and a non-string throws
+  `Cannot <caller>: target_label has unsupported Lua type`. Both
   `db:update_relation(..., nil)` and omitting the argument clear; that affordance is sol2's and
   Lua-only (the FFI bindings all require the parameter and take their language's null).
-- `parse_csv_options(table)` is the single CSVOptions parser shared by `export_csv`/`import_csv`.
+- `parse_csv_options(options, operation)` (defined in `sandbox/database_csv_export.cpp`, declared
+  in `internal.h` for `sandbox/database_csv_import.cpp`) is the single strict CSVOptions decoder for
+  `export_csv`/`import_csv`: `nil` means defaults, any other non-table and any unknown or
+  wrong-typed key throws, with the same collect-then-validate walk (`option_entries`, which owns the
+  table check while each caller keeps its own nil handling) as the `read_csv`/`write_csv` decoders. `quiver.metadata{...}` and `expr:rename_agents` are decoded
+  the same strict way.
 - `to_lua_table<T>` overloads (flat + nested) are the only vector→table marshalers.
-- `describe` / `describe_collection` / `summarize_collection` are bound as plain lambdas returning
-  the C++ `std::string` text report (`db:describe()` returns a string — it does not print).
+- The plain forwarders — `is_healthy`, `current_version`, `path`, the transaction and dry-run
+  methods (`begin_transaction`, `commit`, `rollback`, `in_transaction`, `begin_dry_run`,
+  `end_dry_run`, `in_dry_run`), `number_of_elements`, `describe` / `describe_collection` /
+  `summarize_collection`, `delete_element` / `delete_element_by_label` and `has_time_series_files`
+  — are bound as `&Database::` member pointers, not lambdas. `db:describe()` and its siblings still
+  return the C++ `std::string` text report — they do not print.
 - Lua→C++ converters **throw on unsupported value types** (functions, nested tables, ...) — never
   skip silently; a skipped positional query parameter would shift the rest and bind NULL to the
   trailing placeholder.
 - **A Lua boolean is INTEGER 1/0 on every write path**, matching the cross-layer policy in the root
-  `AGENTS.md`. Every boolean test goes through the one predicate `is_lua_boolean`, used by
-  `table_to_element` (scalars *and* the array dispatch), `lua_table_to_value_map` (row upsert),
-  `lua_table_to_values` (query parameters), `columns_to_cpp_rows` (group cells), and
-  `lua_table_to_vector` (per array cell). `relation_target_from_lua` is the deliberate exception:
+  `AGENTS.md`. Every boolean test goes through the one predicate `is_lua_boolean`, and the 1/0
+  mapping lives in two converters: `lua_to_value` (the `Value`-typed one, behind
+  `table_to_element`'s scalars and array cells, `lua_table_to_value_map` (row upsert),
+  `lua_table_to_values` (query parameters), `columns_to_cpp_rows` (group cells) and
+  `csv_cell_to_string` (CSV cells, which is
+  why `w:write_row` writes a boolean as the text `1`/`0`)) and `lua_cell_as<T>` (typed arrays via
+  `lua_table_to_vector`). `relation_target_from_lua` is the deliberate exception:
   only `nil` may clear a relation, so a boolean still throws there. Lua has no boolean *readers*
   (root design decision), so this is a write-side-only asymmetry.
-- **`lua_cell_as<T>(object, caller, what)` is the one checked Lua-value→C++ conversion**, and
-  every converter routes through it: `lua_table_to_vector` (per array cell),
-  `lua_table_to_dim_map` (per binary dimension) and `update_time_series_files_lua` (per path).
+- **`lua_cell_as<T>(object, caller, what)` is the checked Lua-value→T conversion for the typed
+  paths**: `lua_table_to_vector` (per array cell),
+  `lua_table_to_dim_map` (per binary dimension), `update_time_series_files_lua` (per path), the
+  scalar `quiver.metadata` fields (`metadata_string`), `expr:rename_agents` (each key and value)
+  and the `export_csv`/`import_csv` `enum_labels` codes (`parse_csv_options`).
   `what` names the offending slot in the Pattern 1 message — `cell #3`, `dimension 'stage'`,
-  `path 'data_file'` — so one rule and one message shape cover all three.
-- **`lua_table_to_vector<T>(table, caller)` is the only table→vector converter**, and it converts
-  and checks **every cell**, not just the one the caller dispatched on. Both halves are
-  load-bearing. `table_to_element` picks an array's element type from cell 1 alone, and sol2's
-  plain `get<T>` is unchecked whenever `SOL_SAFE_GETTER` is off — which is every **release** build:
-  `src/CMakeLists.txt` sets `SOL_SAFE_NUMERICS=1` and `SOL_SAFE_FUNCTION=1`, but `SOL_SAFE_GETTER`
-  is left at sol2's default (on in debug, off in release). So a mixed `{1, true}` used to store 0
-  and `{"a", true}` an empty string, silently, in release only — a class of bug Debug CI cannot
-  see. The converter now coerces a boolean cell to 1/0 for a numeric `T` and raises a Pattern 1
-  `"Cannot <caller>: cell #N has unsupported Lua type"` for anything that does not fit, so both the
-  int and the float/string paths are covered. Two known limits, both pre-existing: the loop is
-  bounded by `t.size()` (`lua_rawlen`), so a table with `nil` holes truncates — unlike
-  `collect_group_columns`, which walks `pairs` for exactly that reason; and the element type still
-  comes from cell 1, so `{1, 2.5}` into a REAL column is rejected rather than widened (JS scans the
-  whole column and accepts it). One consequence worth knowing: `lua_opt_int64_vector` routes
-  through it too, so `quiver.metadata{dimension_sizes = {true}}` coerces to a size-1 dimension
-  rather than erroring. That is consistent with the cross-layer boolean policy, and
+  `path 'data_file'`, `field 'unit'`, `value for 'v1'`, `code for label 'active'` — so one rule
+  and one message shape cover them all. Because it maps a boolean to 1/0 for a numeric `T`, an
+  `enum_labels` code of `true` is code 1, the same policy as `dimension_sizes = {true}` below. Its
+  `Value`-typed sibling is `lua_to_value(object, caller, what)`, with the same message shape.
+- **Element arrays use `lua_to_value` per cell**, stored as `std::vector<Value>`, so C++ owns
+  schema/type validation. Mixed integers, floats and booleans work in REAL arrays in either
+  order; floats still fail INTEGER validation. `table_to_element` first calls
+  `require_dense_array`, rejecting nil holes or non-integer keys and pointing at the group
+  writers. Userdata attribute values are rejected before the array check. Empty arrays reach
+  the core unchanged: create skips them, update clears their groups. The same decoder serves
+  create, update, update-by-label and `quiver.metadata_from_element`.
+- **`lua_table_to_vector<T>(table, caller)` converts typed arrays**, checking every cell through
+  `lua_cell_as<T>` because sol2's plain `get<T>` is unchecked in every build. Its loop is bounded
+  by `t.size()` (`lua_rawlen`); callers needing sparse cells use `collect_group_columns` instead.
+  `quiver.metadata`'s `dimension_sizes` routes through it (via
+  `metadata_array<int64_t>`), so `quiver.metadata{dimension_sizes = {true}}` coerces to a size-1
+  dimension rather than erroring. That is consistent with the cross-layer boolean policy, and
   `BinaryMetadata::validate()` still rejects a non-positive size, so `{false}` throws.
-- **`SOL_SAFE_NUMERICS=1` (`src/CMakeLists.txt`) is load-bearing for the whole file.** It turns on
+- **`SOL_SAFE_NUMERICS=1` (`src/CMakeLists.txt`) is load-bearing for every `src/sandbox/` TU.** It turns on
   sol2's `SOL_NUMBER_PRECISION_CHECKS`, which is what makes `is<int64_t>()` false for a Lua float.
-  Without it that check degrades to "is a number" in release, and the file-wide
+  Without it that check degrades to "is a number" in release, and the folder-wide
   `is<int64_t>()`-before-`is<double>()` ordering would route every float into the integer branch
   and store `llround(x)`. Do not drop or move those definitions.
+- **`SOL_ALL_SAFETIES_ON=1` and `SOL_PRINT_ERRORS=0` (`src/CMakeLists.txt`) are the backstop behind
+  the explicit checks**, which own every Pattern 1 message. Release now checks string, number and
+  `self` arguments the way Debug always did, so a dot-call such as `db.commit()` raises sol2's
+  `received nil for 'self' argument` text instead of dereferencing null, and a lambda-bound
+  dot-call (`db.create_element(...)`) raises `stack index 1, expected userdata`. `SOL_PRINT_ERRORS=0`
+  keeps sol2 from printing `[sol2] An exception occurred: ...` to the host's stderr for every
+  exception that crosses a binding, caught or not. `SOL_SAFE_GETTER=0` and `SOL_SAFE_STACK_CHECK=0`
+  are the measured exception: with them on, a Release 100k-element `read_scalar_floats` read cost
+  16% more (median of 5 interleaved runs, 633 -> 737 ms); with them off it is within noise
+  (638 -> 626 ms; a 1M-cell `file:read` loop 422 -> 424 ms). The getter is therefore unchecked in
+  every build, Debug included, which is why `lua_cell_as` and the key checks exist. Never disable
+  `SOL_SAFE_FUNCTION_CALLS` or `SOL_SAFE_USERTYPE`: they are the argument and `self` checks.
+- **`BinaryFile` and `Expression` register `AbstractExpression` as their sol2 base through
+  compile-time traits in `internal.h`** (`SOL_BASE_CLASSES` for each, `SOL_DERIVED_CLASSES` for the
+  base), not the runtime base-classes tag, which replaces each derived metatable's `__index` table
+  with a C closure that every method lookup pays, `f:read`/`f:write` included; the traits keep
+  `__index` a table (pinned by `LuaExpressionTest.FileAndExpressionKeepTableIndex`). They are
+  explicit specializations, so every TU that uses sol2 with these types must see them, which holds
+  because every `src/sandbox/` file that includes sol2 includes `internal.h` first.
+  `AbstractExpression` is never a registered usertype, and `f:read`/`f:write` keep
+  `BinaryFile& self` (a base-typed `self` pays failed metatable lookups and a `class_check` on
+  every call). `expression.cpp` wraps its includes in an MSVC-only `#pragma warning(push)` /
+  `disable : 4702` / `pop`: the always-throwing fallback candidates make MSVC Release report C4702
+  inside sol2, and the warning state at each template's definition decides; do not mark
+  `operand_error` as never-returning, which brings the warnings back. Measured in Release MSVC
+  (medians of five interleaved runs of 1M calls each, against the code before this change):
+  `f:write` 2490 ms before, 2538 ms with the runtime tag (+1.9%), 2525 ms with the traits (+1.4%);
+  `f:read` 2390 / 2446 (+2.3%) / 2168 ms (-9.3%). The tag cost +2% or more on one workload, so the
+  traits stay, though single runs spread far wider (1838-3497 ms) than either margin.
 - **`SOL_NO_NIL=1` (`src/CMakeLists.txt`) is a portability guard, not a preference.** sol2 does not
   define `sol::nil` on Apple platforms at all: `version.hpp` turns `SOL_NIL` off whenever
   `__MAC_OS_X_VERSION_MAX_ALLOWED`, `__OBJC__` or a `nil` macro is visible, because Objective-C
@@ -681,8 +886,8 @@ Implementation conventions in `lua_runner.cpp`:
   which is exactly how one `sol::nil` in `db:read_csv_stream`'s header argument reddened both macOS
   jobs for three runs while every other platform stayed green. Setting it makes the portable
   spelling the only one that compiles anywhere, so the mistake fails on the developer's own
-  machine. `PRIVATE` on `quiver` is full coverage: `lua_runner.cpp` is the only translation unit in
-  the repo that includes sol2 (no test includes `<sol/sol.hpp>`). Use `sol::lua_nil` and
+  machine. `PRIVATE` on `quiver` is full coverage: the `src/sandbox/` TUs are the only ones in
+  the repo that include sol2, and all of them are in the `quiver` target (no test includes `<sol/sol.hpp>`). Use `sol::lua_nil` and
   `sol::type::lua_nil`, never `sol::nil` / `sol::type::nil`.
 - `time_series_rows_from_lua` transpose, shared by `update_time_series_group_lua` and
   `update_time_series_group_by_label_lua` (both one-liners over it). Mirrors `group_rows_from_lua`
@@ -701,11 +906,11 @@ Implementation conventions in `lua_runner.cpp`:
   so read → modify → write round-trips; `#ts.<dimension>` is the trustworthy row count.
 - **`run` returns the script's return value as JSON**, built by the anonymous-namespace
   `append_json` / `append_json_string` / `append_json_double` / `append_json_table` at the top of
-  the file, plus `quiver::utils::append_number` (`src/utils/number.h` — moved out of this file,
-  D-38; `db:write_csv`'s cell formatter and `bin_to_csv` are its other callers). The table check uses `get_type()` rather than
+  `return_json.cpp`, plus `quiver::utils::append_number` (`src/utils/number.h` — moved out of the Lua binding;
+  `db:write_csv`'s cell formatter and `bin_to_csv` are its other callers). The table check uses `get_type()` rather than
   `is<T>()` on purpose: sol2's `is<sol::table>()` also accepts **userdata**, so `return db` would
   quietly encode as `{}`. The boolean check spells `get_type()` for consistency with
-  `is_lua_boolean` in `Impl`, not out of necessity — sol2's `check<bool>` *is* `lua_isboolean`
+  `is_lua_boolean` in `internal.h`, not out of necessity — sol2's `check<bool>` *is* `lua_isboolean`
   (`stack_check_unqualified.hpp`), so `is<bool>()` would be equivalent here. Everything
   else reuses the house `is<int64_t>()`-then-`is<double>()` ordering. Object keys are collected into
   a `vector` and sorted so output is deterministic — Lua's `pairs` order is not, and the tests
@@ -734,9 +939,9 @@ Implementation conventions in `lua_runner.cpp`:
 - Script errors surface as `"Failed to run Lua script: ..."` (root Pattern 3). Encoder failures
   (unsupported type, unsupported table key, too deep) are Pattern 1 `"Cannot run: ..."` and are
   **not** wrapped in that prefix — they happen after the script already succeeded.
-- **A writer left open when the script returns is still flushed.** `LuaRunner::run` declares one
+- **A writer left open when the script returns is still flushed.** `Sandbox::run` declares one
   function-local RAII guard (`GcGuard`) before calling `safe_script`, whose destructor runs
-  `Impl::close_open_writers()` and then `impl_->lua.collect_garbage()` exactly once at `run()`'s
+  `RunHandles::close_open_handles()` and then `impl_->lua.collect_garbage()` exactly once at `run()`'s
   scope exit — covering the normal-return, empty-return, and throw-unwinding paths alike. The
   guard is declared *before* `result`, so C++'s reverse-declaration-order destruction runs both
   *after* `result`'s Lua stack reference is released.
@@ -744,19 +949,38 @@ Implementation conventions in `lua_runner.cpp`:
   finalizes *unreachable* objects, so a writer the script assigned to a global
   (`w = db:write_csv(...)` — no `local`, Lua's default spelling) is a GC root and was never
   flushed: the file stayed at 0 bytes, which
-  `LuaRunner_WriteCsv.UnclosedWriterHeldInAGlobalIsAlsoFlushedWhenRunReturns` pins. `db:write_csv`
+  `Sandbox_WriteCsv.UnclosedWriterHeldInAGlobalIsAlsoFlushedWhenRunReturns` pins. `db:write_csv`
   therefore hands out a `std::shared_ptr<csv_write::Writer>` and records a `weak_ptr` in
-  `Impl::open_writers`; `close_open_writers()` locks each one still alive, closes it (swallowing a
+  `RunHandles::open_writers` (declared in `src/sandbox/internal.h`, bodies in `src/sandbox/sandbox.cpp`); `close_open_handles()` locks each one still alive, closes it (swallowing a
   flush failure — a scope-exit guard has no caller to report to, exactly as `~Writer` did), and
-  clears the list. A writer therefore does not outlive its `run()`. The `collect_garbage()` call
-  stays for every other sol2-owned resource; one call was proven sufficient by an executed probe
-  against this repo's own vendored sol2/Lua build (RESEARCH.md Q1) — it must not be "hardened"
-  into a loop.
+  clears the list. A writer therefore does not outlive its `run()`. `db:open_file` handles,
+  readers and writers, are recorded the same way (a `weak_ptr` in `RunHandles::open_binary_files`) and
+  closed by `close_open_handles()`, so no binary file handle outlives its `run()` either. Both lists
+  are appended only through `RunHandles::add_writer` / `add_binary_file`, which first prune the
+  entries whose handle the GC has already collected (`expired()`), never a closed-but-alive one, so
+  the registry holds only live handles plus any dropped since the last collection, not every handle
+  the run ever opened. A writer
+  left in a global would otherwise hold its path in the process-wide write registry until the
+  `Sandbox` is destroyed (pinned by `LuaBinaryTest.WriterHeldInAGlobalIsClosedWhenRunReturns`
+  and `HandleFromAnEarlierRunIsClosed`). The `collect_garbage()` call
+  stays for every other sol2-owned resource; one call was proven sufficient by a one-off executed
+  probe against this repo's own vendored sol2/Lua build (no standing test guards it: the writer
+  tests pass through `close_open_handles()` first) — it must not be "hardened" into a loop.
+
+The Lua-only XLSX reader is `xlsx/xlsx_read.h`/`.cpp`, bound by `sandbox/xlsx.cpp` through
+`bind_xlsx`. It privately wraps OpenXLSX v0.5.1 in a Pimpl. `WorksheetXml` exposes the existing
+`XLXmlFile` DOM (the worksheet itself is final) to iterate only stored rows/cells, detect missing
+formula caches, preserve numeric text exactly and flatten inline rich text. Never iterate a
+rectangular `worksheet.rows()` range: formatting at XFD1048576 must not allocate an Excel grid.
+Width is derived from value/formula cells; rows are padded and completely blank data rows skipped.
+`CheckedArchive` checks pugixml's parse result before OpenXLSX consumes XML (upstream ignores it).
+Resources stay stack/RAII owned, reads never save, and callback errors sit outside parser catches.
+The callback does not provide bounded XML memory; see the root design decision and Lua reference.
 
 ## Binary Subsystem
 
 Standalone binary file I/O layer for `.qvr` files with `.toml` metadata sidecars.
-Bound in **Julia and Lua** (root design decision); Lua binds these C++ classes directly via sol2 in `src/lua_runner.cpp` (file I/O is db-scoped and sandboxed — `db:open_file`/`db:bin_to_csv`/`db:csv_to_bin`; metadata builders under `quiver.*`; method syntax + string aggregation ops).
+Bound in **Julia and Lua** (root design decision); Lua binds these C++ classes directly via sol2 in `src/sandbox/binary.cpp` (file I/O is db-scoped and sandboxed — `db:open_file`/`db:bin_to_csv`/`db:csv_to_bin`; metadata builders under `quiver.*`; method syntax + string aggregation ops).
 
 - `BinaryFile` class (Pimpl): `open_file(path, mode, metadata?)`, `read(dims, allow_nulls = false)`, `write(data, dims)`, `get_metadata()`, `get_file_path()`
 - `CSVConverter` class (composition, no Pimpl): `bin_to_csv(path, aggregate)`, `csv_to_bin(path)` — the only
@@ -826,7 +1050,7 @@ Profiled with 480×500×31 dimensions (~7.3M read/write calls). Main hot-path co
 
 ## Expression Subsystem
 
-Lazy expressions over `.qvr` binary files. Build a DAG using `+ - * /` operator overloads (binary and unary minus) and unary math free functions, materialize via `save()`. Bound in **Julia and Lua** (root design decision); Lua binds these C++ classes directly via sol2 in `src/lua_runner.cpp` (`quiver.*` namespace + method syntax + string aggregation ops; `expr:save` paths are sandboxed to the database directory).
+Lazy expressions over `.qvr` binary files. Build a DAG using `+ - * /` operator overloads (binary and unary minus) and unary math free functions, materialize via `save()`. Bound in **Julia and Lua** (root design decision); Lua binds these C++ classes directly via sol2 in `src/sandbox/expression.cpp` (`quiver.*` namespace + method syntax + string aggregation ops; `save` on a file or an expression is sandboxed to the database directory).
 
 ```cpp
 auto a = BinaryFile::open_file("a", 'r');
@@ -835,28 +1059,29 @@ Expression result = abs((a + b) * 2.0 - sqrt(Expression(a)));
 result.save("output");  // writes output.qvr + output.toml
 ```
 
-- `Expression` value type (header `quiver/expression/expression.h`):
-  - Constructors: `Expression(const BinaryFile&)` (implicit, enables `bf_a + bf_b`), `Expression(shared_ptr<ExpressionNode>)`
-  - Accessors: `metadata()`
+- `AbstractExpression` base and `Expression` value type (headers `quiver/expression/abstract_expression.h`, `quiver/expression/expression.h`):
+  - `AbstractExpression` has one pure virtual, `node()` (the root node). `Expression` (final) returns its `node_`; `BinaryFile::node()` returns a fresh path-based `ExpressionFile` leaf on every call, so an expression never opens, closes or reads through the caller's handle. `save`, `aggregate`, `aggregate_agents`, `select_agents` and `rename_agents` are non-virtual members of `AbstractExpression`, so a `BinaryFile` has them; `save` holds the root node in a local while it runs (a file's leaf is a temporary).
+  - Constructors: `explicit Expression(const AbstractExpression&)` (a BinaryFile or another expression; copy-initialization from a file does not compile), `explicit Expression(shared_ptr<ExpressionNode>)`
+  - Accessor: `get_metadata()`, virtual on `AbstractExpression`, whose base body returns the node's metadata; `BinaryFile` overrides it to return the handle's in-memory metadata.
   - Materialize: `save(path)` — iterates via `first_dimensions`/`next_dimensions`, calls `compute_row()` per cell, writes to a new `.qvr`. Throws if `path` collides (after `weakly_canonical`) with any input file in the DAG.
-  - Aggregation: `aggregate(dimension, op, [parameter])` collapses a dimension; `aggregate_agents(op, [parameter])` collapses the label axis. `op` is `ExpressionAggregate::Operation` (`Sum / Mean / Min / Max / Percentile`) for both; `ExpressionAggregateAgents::Operation` is an alias of it, not a second enum. `Percentile` requires a `parameter` fraction in `[0, 1]`; nullary ops reject `parameter`.
+  - Aggregation: `aggregate(dimension, op, [parameter])` collapses a dimension; `aggregate_agents(op, [parameter])` collapses the label axis. `op` is `quiver::AggregateOperation` (`Sum / Mean / Min / Max / Percentile`) for both; `ExpressionAggregate::Operation` and `ExpressionAggregateAgents::Operation` are aliases of it, not second enums. `Percentile` requires a `parameter` fraction in `[0, 1]`; nullary ops reject `parameter`.
   - Label-axis projection: `select_agents(labels)` keeps (and may reorder) a chosen subset of operand labels; `rename_agents(mapping)` rewrites labels in place via a partial `{old: new}` map. Both validate eagerly: `select_agents` throws if any requested label is absent; `rename_agents` throws on duplicate keys or unknown keys, and `BinaryMetadata::validate()` rejects renames that produce duplicate output labels.
 - Operator overloads (12 binary + 1 unary): `+ - * /` × {expr+expr, expr+double, double+expr}, plus unary `-expr`.
 - Free functions in `quiver::` for unary math: `abs(expr)`, `sqrt(expr)`, `log(expr)`, `exp(expr)`.
-- Comparison operators in `quiver::` (C++): `> < >= <= == !=`, each defined for all three combos {expr,expr | expr,double | double,expr} (explicit — the compiler does not synthesize C++20 reversed candidates for these non-bool-returning operators). `==`/`!=` return an elementwise mask `Expression`, not `bool` (Eigen-style). Produce `1.0`/`0.0` per element; **a NaN operand propagates as NaN** (so `ifelse(cmp, …)` yields NaN). They reuse `ExpressionBinary`, inheriting unit-match + shape validation and carrying the broadcast unit. **Per-language surface**: C++ uses the operators; Julia overloads `> < >= <=` and keeps `eq`/`neq` named (`==`/`!=` would break `Dict`/`Set`); Lua keeps `quiver.gt/lt/gte/lte/eq/neq` free functions (comparison metamethods coerce to bool).
+- Comparison operators in `quiver::` (C++): `> < >= <= == !=`, each defined for all three combos over `const AbstractExpression&` (an Expression or a BinaryFile) {expr,expr | expr,double | double,expr} (every `==`/`!=` overload has a partner with the same parameters, so C++20 forms no rewritten candidate). `==`/`!=` return an elementwise mask `Expression`, not `bool` (Eigen-style). Produce `1.0`/`0.0` per element; **a NaN operand propagates as NaN** (so `ifelse(cmp, …)` yields NaN). They reuse `ExpressionBinary`, inheriting unit-match + shape validation and carrying the broadcast unit. **Per-language surface**: C++ uses the operators; Julia overloads `> < >= <=` and keeps `eq`/`neq` named (`==`/`!=` would break `Dict`/`Set`); Lua keeps `quiver.gt/lt/gte/lte/eq/neq` free functions (comparison metamethods coerce to bool).
 - Logical operators in `quiver::` (C++) on nonzero-is-true operands: `operator&&` / `operator||` (binary, three combos each) and `operator!` (unary). Produce `1.0`/`0.0`, **NaN propagates**, result is **unitless** — `&&`/`||` skip unit-match validation (only shapes must broadcast) so conditions on different-unit variables compose; `!` emits a unitless result too. Overloading `&&`/`||` drops short-circuit, which is irrelevant for a lazy DAG. **Per-language surface**: C++ `&& || !`; Julia `& | !` (`&&`/`||` are non-overloadable short-circuit syntax, so `&`/`|`; `!` is a real function); Lua `& | ~` (`and`/`or`/`not` are keywords → `__band`/`__bor`/`__bnot` metamethods on the Expression and BinaryFile usertypes).
 - Free function `ifelse(cond, then_value, else_value)` selects per-element: NaN cond → NaN; `cond != 0` → `then_value`; else → `else_value`. `then` and `else` units must match; `cond`'s unit is ignored.
 - `ExpressionNode` hierarchy (header `quiver/expression/expression_node.h`):
   - `ExpressionNode` (abstract): `metadata()`, `compute_row(dims, out)`, `collect_input_files(out)` (used by `save()` for the output-path collision check and input open/close lifecycle)
-  - `ExpressionFile`: lazy reads from a `.qvr`. Caches an open `BinaryFile` and a reusable `unordered_map` across calls (mutable members; not thread-safe per instance).
+  - `ExpressionFile`: the leaf for a `.qvr`, built from a path (`BinaryFile::node()` makes a fresh one per call). It reads the `.toml` once at construction and owns a private, unopened `BinaryFile` that `save()` opens read-only and closes on exit (`collect_input_files` hands it to `save`), never the caller's handle; `compute_row` reuses a mutable dimension map across calls, so an instance is not thread-safe.
   - `ExpressionScalar`: broadcasts a constant across the operand's label space.
   - `ExpressionBinary`: combines two operands with `ExpressionBinary::Operation::{Add,Subtract,Multiply,Divide,Gt,Lt,Gte,Lte,Eq,Neq,And,Or}` (nested enum). Arithmetic ops compute `lhs op rhs`; the six comparisons and the two logical ops (`And`/`Or`, nonzero-is-true) return `1.0`/`0.0` and propagate a NaN operand as NaN. Logical ops skip unit-match validation and emit a unitless result (a small `is_logical(op)` branch in the constructor); comparisons/arithmetic keep the full unit-match check. Constructor pre-computes broadcast metadata (`build_broadcast_metadata({&lhs, &rhs}, lhs)`, see the broadcast-metadata bullet below) and one `BroadcastOperand` per operand (index translation tables + reusable buffers, built by `make_broadcast_operand` and driven per row by `compute_broadcast_operand_row` — both shared with `ExpressionTernary` via `expression_helpers.h`). The `apply(Operation, double, double)` operation-dispatch is a private static member.
   - `ExpressionUnary`: applies a single-operand function with `ExpressionUnary::Operation::{Negate,Abs,Sqrt,Log,Exp,Not}` (nested enum). For the math ops `metadata()` returns the operand's metadata unchanged (no dimensional analysis — `sqrt(MW)` stays as `MW`); `Not` is logical negation (nonzero→0, 0→1, NaN propagates) and returns a **unitless** boolean via a dedicated `output_meta_` member. Constructor pre-allocates a reusable `operand_row_buf_`. Lets IEEE-754 NaN/inf propagate naturally (`sqrt(-1) → NaN`, `log(0) → -inf`); no NaN special-casing. The `apply(Operation, double)` operation-dispatch is a private static member.
   - `ExpressionTernary`: selects per-element across three operands. `Operation::{IfElse}` (nested enum). For `IfElse`: NaN in `condition` → NaN; `condition != 0` → `then_value`; else `else_value`. Constructor eagerly validates (`then` and `else` units must match; `condition`'s unit is ignored; shapes broadcast across all three pairs), pre-builds broadcast metadata via the same `build_broadcast_metadata({&cond, &then, &else}, then)` and one `BroadcastOperand` per operand (same shared machinery as `ExpressionBinary`). The `apply(Operation, double, double, double)` operation-dispatch is a private static member.
   - `ExpressionAggregate`: collapses a named dimension. `Operation::{Sum,Mean,Min,Max,Percentile}` (nested enum). Constructor eagerly removes the dim from output metadata, rewires child time-dim `parent_dimension_index` transitively (a time dim whose parent was removed re-points to the removed dim's grandparent, or `-1`), and pre-allocates index translation + reusable buffers. When the removed dim is the **outermost time dimension** and a time dim remains, the constructor also floors `initial_datetime` to the start of the removed dim's period holding it (`reduced_dim.time->add_offset_from_int(initial_datetime, 1)`: `year × month` from 2025-03-01 gives 2025-01-01, `day × hour` from 06:00 gives 00:00), then calls `derive_initial_values()`, which gives every remaining time dim 1. `compute_row` forwards the promoted child's coordinate to the operand unchanged, so output month *m* must still mean calendar month *m*. Without the rebase, the in-memory output kept month's start at 3 while the saved file re-read it as 1, shifting the data by two months. The rebase runs before `derive_initial_values()`, which reads the rebased `initial_datetime`. Skips NaN inputs during accumulation; all-NaN range yields NaN.
-  - `ExpressionAggregateAgents`: collapses the label axis to a single entry named after the operation (e.g., `"sum"`, `"mean"`, `"percentile"`). Dimensions, `initial_datetime`, `unit` unchanged. Same NaN policy as `ExpressionAggregate`. Shares `ExpressionAggregate`'s operation enum (`using Operation = ExpressionAggregate::Operation;`) and the accumulation helpers in `expression_helpers.h`.
+  - `ExpressionAggregateAgents`: collapses the label axis to a single entry named after the operation (e.g., `"sum"`, `"mean"`, `"percentile"`). Dimensions, `initial_datetime`, `unit` unchanged. Same NaN policy as `ExpressionAggregate`. Shares the one aggregation enum, `quiver::AggregateOperation` (its alias stays `using Operation = ExpressionAggregate::Operation;`), and the accumulation helpers in `expression_helpers.h`.
   - `ExpressionSelectAgents`: projects the operand onto a caller-supplied label list. Constructor pre-computes a `selected_indices_` table from operand-label → output-position, copies operand metadata with `labels` replaced, and calls `output_meta_.validate()` (which rejects duplicate output labels). Missing labels throw `"Cannot select_agents: label not found: '<name>'"`. `compute_row` reads the operand row into a reusable buffer and gathers selected columns into `out`.
   - `ExpressionRenameAgents`: rewrites operand labels via a partial `{old: new}` mapping. Constructor builds a rename map (duplicate keys throw), walks operand labels swapping matched names, verifies every key was used (unmatched keys throw), and calls `output_meta_.validate()` (rejects collisions like `val1→val2` when `val2` already exists). `compute_row` forwards directly to the operand — count and order are unchanged so no per-row reshuffle is needed.
 - Validation is **eager** at construction for `ExpressionBinary`, `ExpressionTernary`, `ExpressionAggregate`, `ExpressionAggregateAgents`, `ExpressionSelectAgents`, `ExpressionRenameAgents` (units/dim sizes/time-dim properties/label sets/initial datetimes for binary and ternary; dim existence + op/parameter consistency + output metadata validity for aggregations; label existence + uniqueness for label-axis projections). `ExpressionUnary` has no inputs to cross-validate so its constructor just sizes the row buffer. Computation is **lazy**: no I/O until `save()`.
 - **One broadcast-metadata builder for every arity**: `build_broadcast_metadata(sources, primary)` (`expression_helpers.h`) builds the output metadata of `ExpressionBinary` (`{lhs, rhs}`, primary `lhs`) and `ExpressionTernary` (`{cond, then, else}`, primary `then`). Source order sets the output dimension order: the union of dimension names, first occurrence first, each sized as the max over the sources that have it, with time properties and parent link from the first source that has it (so `ifelse` output dimensions are condition-first). `version` and `unit` come from the primary (a logical op then clears the unit); `initial_datetime` comes from the first source with a time dimension, else from the primary — the pairwise `validate_shape_compatibility` calls already force every time-bearing source to agree, so only that no-time fallback depends on which operand is primary. The same pairwise checks force a shared time dimension to agree on frequency, `initial_value` and parent name, so each copied `initial_value` already equals what `derive_initial_values()` would compute and the builder does not call it. Labels follow one rule, `broadcast_labels`: every operand with more than one label must carry the same label set, a single-label operand broadcasts whatever its label is called, and when every operand has a single label the output takes the primary's (`{"max"} - {"min"}` is `{"max"}`; `ifelse({"c"}, {"t"}, {"e"})` is `{"t"}`). A mismatch throws `Cannot apply: labels are incompatible across operands (non-singleton label sets must match)`. There used to be a separate two-operand builder whose stricter rule rejected two differently named single labels (so `aggregate_agents("max") - aggregate_agents("min")` threw while `ifelse` over the same operands worked) — don't reintroduce a per-arity copy.
-- All operation enums are nested in their owning class: `ExpressionBinary::Operation`, `ExpressionUnary::Operation`, `ExpressionTernary::Operation`, `ExpressionAggregate::Operation`. There is **one** aggregation enum (`Sum / Mean / Min / Max / Percentile`): `ExpressionAggregateAgents::Operation` is `using Operation = ExpressionAggregate::Operation;`, so `aggregate` and `aggregate_agents` take the same type and `aggregation_operation_label` / `validate_aggregation_param` / `aggregation_accumulate` / `aggregation_finalize` (`expression_helpers.h`) are plain functions on it. It used to be two parallel enums with identical values, which doubled the C enum, the C `from_c` switch, the Lua string parser and the Julia constants; do not re-split it. Label-axis projection nodes (`ExpressionSelectAgents`, `ExpressionRenameAgents`) have no operation enum — their behavior is fully specified by the label list / rename map. The C API mirrors this with four enums: `quiver_expression_operation_t` (now `ADD..DIVIDE`, the comparisons `GT/LT/GTE/LTE/EQ/NEQ`, and the logical `AND/OR`), `quiver_expression_unary_operation_t` (math ops plus `NOT`), `quiver_expression_ternary_operation_t`, and `quiver_expression_aggregate_operation_t`, which both `quiver_expression_aggregate` and `quiver_expression_aggregate_agents` take. The one C `from_c` and the one Lua `parse_aggregate_op` take the calling operation's name, so their Pattern 1 messages still read `Cannot aggregate: ...` or `Cannot aggregate_agents: ...`. Comparisons and logical ops reuse the `quiver_expression_apply*` / `quiver_expression_apply_unary` entry points (no new C functions); the Julia FFI enum (`src/c_api.jl`) must carry the same values.
+- All operation enums are nested in their owning class (`ExpressionBinary::Operation`, `ExpressionUnary::Operation`, `ExpressionTernary::Operation`) except the aggregation enum, `quiver::AggregateOperation`, which sits at namespace scope in `abstract_expression.h` because that header cannot include `expression_node.h`, with `ExpressionAggregate::Operation` an alias of it. There is **one** aggregation enum (`Sum / Mean / Min / Max / Percentile`): `ExpressionAggregateAgents::Operation` is `using Operation = ExpressionAggregate::Operation;`, so `aggregate` and `aggregate_agents` take the same type and `aggregation_operation_label` / `validate_aggregation_param` / `aggregation_accumulate` / `aggregation_finalize` (`expression_helpers.h`) are plain functions on it. It used to be two parallel enums with identical values, which doubled the C enum, the C `from_c` switch, the Lua string parser and the Julia constants; do not re-split it. Label-axis projection nodes (`ExpressionSelectAgents`, `ExpressionRenameAgents`) have no operation enum — their behavior is fully specified by the label list / rename map. The C API mirrors this with four enums: `quiver_expression_operation_t` (now `ADD..DIVIDE`, the comparisons `GT/LT/GTE/LTE/EQ/NEQ`, and the logical `AND/OR`), `quiver_expression_unary_operation_t` (math ops plus `NOT`), `quiver_expression_ternary_operation_t`, and `quiver_expression_aggregate_operation_t`, which both `quiver_expression_aggregate` and `quiver_expression_aggregate_agents` take. The one C `from_c` and the one Lua `parse_aggregate_op` take the calling operation's name, so their Pattern 1 messages still read `Cannot aggregate: ...` or `Cannot aggregate_agents: ...`. Comparisons and logical ops reuse the `quiver_expression_apply*` / `quiver_expression_apply_unary` entry points (no new C functions); the Julia FFI enum (`src/c_api.jl`) must carry the same values.

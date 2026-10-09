@@ -1,9 +1,10 @@
 #include "test_utils.h"
 
-#include <algorithm>
 #include <gtest/gtest.h>
 #include <quiver/c/database.h>
 #include <quiver/c/element.h>
+
+#include <algorithm>
 #include <string>
 #include <vector>
 
@@ -279,8 +280,10 @@ TEST(DatabaseCApi, ReadScalarStrings) {
 TEST(DatabaseCApi, ReadScalarEmpty) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     quiver_element_t* config = nullptr;
@@ -294,7 +297,13 @@ TEST(DatabaseCApi, ReadScalarEmpty) {
     uint8_t* integer_mask = nullptr;
     size_t integer_count = 0;
     auto err = quiver_database_read_scalar_integers(
-        db, "Collection", "some_integer", &integer_values, &integer_mask, &integer_count);
+        db,
+        "Collection",
+        "some_integer",
+        &integer_values,
+        &integer_mask,
+        &integer_count
+    );
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(integer_count, 0);
     EXPECT_EQ(integer_values, nullptr);
@@ -403,7 +412,7 @@ TEST(DatabaseCApi, ReadScalarStringById) {
     EXPECT_EQ(has_value, 1);
     EXPECT_STREQ(value, "hello");
 
-    delete[] value;
+    quiver_database_free_string(value);
     quiver_database_close(db);
 }
 
@@ -483,8 +492,10 @@ TEST(DatabaseCApi, ReadElementIds) {
 TEST(DatabaseCApi, ReadElementIdsEmpty) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     quiver_element_t* config = nullptr;
@@ -513,8 +524,10 @@ TEST(DatabaseCApi, ReadElementIdsEmpty) {
 TEST(DatabaseCApi, NumberOfElementsTracksCurrentRows) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     int64_t count = -1;
@@ -544,8 +557,10 @@ TEST(DatabaseCApi, NumberOfElementsTracksCurrentRows) {
 TEST(DatabaseCApi, NumberOfElementsNotFound) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     int64_t count = -1;
@@ -562,8 +577,10 @@ TEST(DatabaseCApi, NumberOfElementsNullArguments) {
 
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     EXPECT_EQ(quiver_database_number_of_elements(db, nullptr, &count), QUIVER_ERROR);
@@ -984,6 +1001,6 @@ TEST(DatabaseCApi, DateTimeReadScalarString) {
     EXPECT_EQ(has_value, 1);
     EXPECT_STREQ(value, "2024-03-17T09:30:00");
 
-    delete[] value;
+    quiver_database_free_string(value);
     quiver_database_close(db);
 }

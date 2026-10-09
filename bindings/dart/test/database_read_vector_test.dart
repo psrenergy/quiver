@@ -393,6 +393,37 @@ void main() {
         db.close();
       }
     });
+
+    test('malformed DATE_TIME cell throws ArgumentError and the handle stays usable', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'multi_column_groups.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        final id = db.createElement('Items', {
+          'label': 'Item 1',
+          'date_event': ['2024-01-01'],
+        });
+        // Bypass the DATE_TIME write gate, as a pre-gate database or another tool would.
+        db.queryString(
+          'UPDATE Items_vector_events SET date_event = ? WHERE id = ?',
+          ['2024-1-5', id],
+        );
+
+        expect(
+          () => db.readVectorGroupById('Items', 'events', id),
+          throwsA(isA<ArgumentError>()),
+        );
+        // A second read fails the same way: no crash, no double free.
+        expect(
+          () => db.readVectorGroupById('Items', 'events', id),
+          throwsA(isA<ArgumentError>()),
+        );
+      } finally {
+        db.close();
+      }
+    });
   });
 
   group('Read Vector DateTimes Rejects A Malformed Cell', () {
@@ -421,6 +452,121 @@ void main() {
           () => db.readVectorDateTimesById('AllTypes', 'label_value', 1),
           throwsArgumentError,
         );
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  group('Read Vector NULL Cells', () {
+    test('keeps NULL cells positionally, and empty is not the same as null', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        final id = db.createElement('Collection', {
+          'label': 'Item 1',
+          'value_int': [10, null, 30],
+        });
+        db.createElement('Collection', {'label': 'Item 2'}); // no vector rows
+
+        expect(
+          db.readVectorIntegers('Collection', 'value_int'),
+          equals([
+            [10, null, 30],
+            <int?>[],
+          ]),
+        );
+        expect(
+          db.readVectorIntegersById('Collection', 'value_int', id),
+          equals([10, null, 30]),
+        );
+      } finally {
+        db.close();
+      }
+    });
+
+    test('surfaces NULL cells through the boolean wrapper', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        final id = db.createElement('Collection', {
+          'label': 'Item 1',
+          'value_int': [1, null, 0],
+        });
+
+        expect(
+          db.readVectorBooleans('Collection', 'value_int'),
+          equals([
+            [true, null, false],
+          ]),
+        );
+        expect(
+          db.readVectorBooleansById('Collection', 'value_int', id),
+          equals([true, null, false]),
+        );
+      } finally {
+        db.close();
+      }
+    });
+
+    test('keeps NULL cells through the float reader', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        final id = db.createElement('Collection', {
+          'label': 'Item 1',
+          'value_int': [1, 2],
+          'value_float': [null, 2.5],
+        });
+
+        expect(
+          db.readVectorFloats('Collection', 'value_float'),
+          equals([
+            [null, 2.5],
+          ]),
+        );
+        expect(db.readVectorFloatsById('Collection', 'value_float', id), equals([null, 2.5]));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('keeps NULL cells through the string and DateTime readers', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'multi_column_groups.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        final id = db.createElement('Items', {
+          'label': 'Item 1',
+          'date_event': ['2024-01-01', null],
+          'note': [null, 'b'],
+        });
+
+        expect(
+          db.readVectorStrings('Items', 'note'),
+          equals([
+            [null, 'b'],
+          ]),
+        );
+        expect(db.readVectorStringsById('Items', 'note', id), equals([null, 'b']));
+        expect(
+          db.readVectorDateTimes('Items', 'date_event'),
+          equals([
+            [DateTime(2024, 1, 1), null],
+          ]),
+        );
+        expect(db.readVectorDateTimesById('Items', 'date_event', id), equals([DateTime(2024, 1, 1), null]));
       } finally {
         db.close();
       }

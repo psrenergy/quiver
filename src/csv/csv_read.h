@@ -2,15 +2,15 @@
 #define QUIVER_SRC_CSV_CSV_READ_H
 
 // Internal CSV reader wrapping vincentlaucsb/csv-parser -- the repo's only CSV library -- for the
-// Lua-only db:read_csv / db:read_csv_stream bindings (src/lua_runner.cpp) and for
+// Lua-only db:read_csv / db:read_csv_stream bindings (src/sandbox/csv.cpp) and for
 // Database::import_csv (src/database_csv_import.cpp). No public include/quiver/ counterpart, no
 // QUIVER_API, no C API, no FFI binding: import_csv is already the bound public surface,
 // Julia/Dart/Python/JS already have native CSV libraries, and Lua needs this specifically because
 // `io` is deliberately absent from its sandbox (root AGENTS.md design decisions). This is the
 // first internal .cpp in src/ with no public header -- every other internal helper
 // (utils/string.h, database_internal.h, binary/binary_utils.h) is header-only inline; Reader is
-// Pimpl'd specifically so csv-parser's headers never have to be included by src/lua_runner.cpp,
-// which already needs /bigobj on MSVC for sol2's template depth.
+// Pimpl'd specifically so csv-parser's headers never have to be included by any src/sandbox/ TU,
+// all of which need /bigobj on MSVC for sol2's template depth.
 
 #include <cstdint>
 #include <functional>
@@ -22,7 +22,7 @@ namespace quiver::csv_read {
 
 struct Options {
     char separator = ',';
-    // 1-based; 0 means "this file has no header" (D-20). Default 1 matches the previous hardcoded
+    // 1-based; 0 means "this file has no header". Default 1 matches the previous hardcoded
     // header_row(0) (csv-parser is 0-based) exactly, so an unspecified option changes nothing.
     int64_t header_row = 1;
 };
@@ -33,8 +33,8 @@ struct Options {
 using RowSink = std::function<bool(std::vector<std::string>&& cells, int64_t index)>;
 
 // Wraps one csv::CSVReader. db:read_csv and db:read_csv_stream both construct a Reader and drive it
-// through header() / for_each_row(), so the two Lua forms can never diverge in how they parse a file
-// (LUA-03). import_csv tokenizes through a Reader as well, but not with the same dialect: it sniffs
+// through header() / for_each_row(), so the two Lua forms can never diverge in how they parse a file.
+// import_csv tokenizes through a Reader as well, but not with the same dialect: it sniffs
 // its own Options, rejects malformed quotes first and drops trailing empty columns after
 // (database_csv_import.cpp).
 class Reader {

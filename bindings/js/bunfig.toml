@@ -1,0 +1,3 @@
+[test]
+# Bun's docs say test files are skipped by default, but 1.3.14 still reports them; keep this explicit.
+coverageSkipTestFiles = true

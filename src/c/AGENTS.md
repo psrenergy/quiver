@@ -10,7 +10,7 @@ Cross-layer naming rules live in the root `AGENTS.md`; C++ internals in `src/AGE
 include/quiver/c/         # C API headers (for FFI)
   common.h                # quiver_error_t, quiver_get_last_error, quiver_version
   options.h               # All option types and defaults: LogLevel, DatabaseOptions, CSVOptions
-  database.h / element.h / lua_runner.h
+  database.h / element.h / sandbox.h
 include/quiver/c/binary/    # Binary C API headers
   binary_file.h               # quiver_binary_file_t opaque handle, open/close/read/write
   csv_converter.h             # bin_to_csv, csv_to_bin functions
@@ -29,24 +29,37 @@ src/c/
   database_delete.cpp     # quiver_database_delete_element, quiver_database_delete_element_by_label
   database_read.cpp       # All read operations + quiver_database_number_of_elements, + co-located free functions
   database_metadata.cpp   # Metadata get/list + co-located free functions
-  database_query.cpp      # Query operations (plain and parameterized)
+  database_query.cpp      # Query operations: one C function per C++ query_* method
   database_time_series.cpp # Time series operations + co-located free functions
   database_transaction.cpp # Transaction control (begin, commit, rollback, in_transaction) +
                            # dry runs (begin_dry_run, end_dry_run, in_dry_run)
   database_csv_export.cpp / database_csv_import.cpp
   element.cpp             # Element builder C API
-  lua_runner.cpp          # LuaRunner C API (errors via quiver_get_last_error); run returns the
+  sandbox.cpp          # Sandbox C API (errors via quiver_get_last_error); run returns the
                           # script's JSON result via char** out_result (NULLed before anything can
                           # fail, so a caller that frees unconditionally is safe) + its own
-                          # free_string
+                          # free_string. run passes the script through unchanged and the core
+                          # loads it as text only, so a precompiled (bytecode) chunk fails like
+                          # any script error: `Failed to run Lua script: ... attempt to load a
+                          # binary chunk (mode is 't')` through quiver_get_last_error. The sol2
+                          # binders it runs live in src/sandbox/ (one file per core file they
+                          # bind; see src/AGENTS.md)
 src/c/binary/               # BinaryFile / CSVConverter / BinaryMetadata wrappers
-src/c/expression/           # Expression node constructors, save, free
+src/c/expression/           # Expression node constructors, from_file bridge, save, free
 ```
+
+**File to expression.** `quiver_expression_from_file` is the only conversion from a
+`quiver_binary_file_t*` to a `quiver_expression_t*`. It builds the C++ `Expression` from the
+file's path (`BinaryFile::node()`), so the file handle may be closed or freed right after. There is
+no abstract or borrowed expression handle over a file: a `quiver_expression_t*` that is owned or
+borrowed depending on its source would break the ownership rule, so every `quiver_expression_*`
+function takes an owned expression, and Julia converts every file operand through
+`quiver_expression_from_file`.
 
 ## Return Codes
 
 All C API functions return binary `quiver_error_t` (`QUIVER_OK = 0` or `QUIVER_ERROR = 1`). Values are returned via output parameters.
-Exceptions: `quiver_get_last_error`, `quiver_version`, `quiver_clear_last_error`, `quiver_database_options_default`, `quiver_csv_options_default` (utility functions with direct return).
+Exceptions: `quiver_get_last_error`, `quiver_version`, `quiver_database_options_default`, `quiver_csv_options_default` (utility functions with direct return).
 
 ## Error Handling
 
@@ -68,8 +81,10 @@ quiver_error_t quiver_some_function(quiver_database_t* db) {
 Every entry point that executes C++ logic wears the try/catch: nothing may throw across the FFI
 boundary. Trivial functions that cannot throw (plain `delete[]` frees, pointer-read getters like
 `is_healthy`/`in_transaction`) skip the wrapper; `quiver_database_free_time_series_data` keeps it
-because its typed-dispatch deallocation can. All components (LuaRunner included) report through
-the single `quiver_get_last_error` channel; there are no per-handle error channels.
+because its typed-dispatch deallocation can. All components (Sandbox included) report through
+the single `quiver_get_last_error` channel; there are no per-handle error channels. Nothing resets
+that message: a successful call leaves the previous failure's text in place, so it is read only
+after a call returns `QUIVER_ERROR` (every binding's `check` does exactly that).
 
 ## Factory Functions
 
@@ -105,8 +120,8 @@ quiver_database_free_string_array(char**, size_t)
 // Single string cleanup (strings returned by query/read-by-id/element operations)
 quiver_database_free_string(char*)
 
-// Lua script result (JSON returned by quiver_lua_runner_run)
-quiver_lua_runner_free_string(char*)
+// Lua script result (JSON returned by quiver_sandbox_run)
+quiver_sandbox_free_string(char*)
 
 // Binary metadata lifecycle (no incremental builder: from_toml / from_element build a handle,
 // quiver_binary_file_get_metadata / quiver_expression_get_metadata return a copy; free releases each)
@@ -126,12 +141,16 @@ Conventions that keep the error paths safe:
   are zero-initialized (`new T*[n]()`) and out-parameters assigned as soon as each array is
   allocated, so error-path cleanup never sees uninitialized pointers. Single-shot allocations
   elsewhere use plain `new` (nothing can fail between alloc and return).
-- **Scalar bulk reads carry NULLs.** The numeric readers (`read_scalar_integers`/`_floats`) take a
-  parallel `uint8_t** out_mask` out-param (`mask[i] == 0` = SQL NULL, data slot is a 0/0.0
-  placeholder), allocated by `read_scalars_masked_impl` and freed by `quiver_database_free_mask`
-  (co-located in `database_read.cpp`). `read_scalar_strings` keeps its signature — a NULL is a
-  `nullptr` entry in the `char**` (via a `copy_strings_to_c(vector<optional<string>>, ...)`
-  overload), and `free_string_array` already tolerates NULL slots.
+- **Scalar bulk and vector/set reads carry NULLs.** The numeric readers take a parallel presence
+  mask out-param (`mask[i] == 0` = SQL NULL, data slot is a 0/0.0 placeholder):
+  `read_scalar_{integers,floats}` and the four `read_{vector,set}_{integers,floats}_by_id` take a
+  flat `uint8_t** out_mask` from `read_scalars_masked_impl`, freed by `quiver_database_free_mask`;
+  the four `read_{vector,set}_{integers,floats}` bulk readers take a nested `uint8_t*** out_masks`
+  (one mask per element, parallel to `out_sizes`) from `read_vectors_masked_impl`, freed by
+  `quiver_database_free_masks`. All four free functions are co-located in `database_read.cpp`. The
+  string readers keep their signatures — a NULL is a `nullptr` entry in the `char**` (via the
+  `copy_strings_to_c` / `copy_string_vectors_to_c` optional overloads), and
+  `free_string_array` / `free_string_vectors` already tolerate NULL slots.
 - **Array/string free functions are NULL-tolerant** (freeing NULL, or an array slot left NULL, is
   a no-op). Struct free functions (`free_scalar_metadata`, `free_group_metadata`,
   `free_dimension`, `free_time_series_files`) `QUIVER_REQUIRE` a non-NULL handle.
@@ -193,14 +212,24 @@ NULL **presence mask** alongside the data arrays:
   `INTEGER` -> `int64_t*`, `FLOAT` -> `double*`, `STRING`/`DATE_TIME` -> `char**`. For a NULL cell
   (`mask[r] == 0`) the data is a placeholder to ignore: `INTEGER` 0, `FLOAT` 0.0, `STRING`/`DATE_TIME`
   NULL `char*` — NULL strings no longer fail the read. The dimension column's mask is always all 1.
+  The vector/set group readers share this encoder (`marshal_group_rows_to_c`), and it follows the
+  core's read rule rather than one of its own: a cell whose stored value the column's type cannot
+  hold is reported absent (mask 0). Only a non-STRICT table can hold such a cell (e.g. `1.5`
+  written into an INTEGER column through raw SQL). A REAL is never narrowed into an INTEGER column
+  (`Row::get_integer`); the FLOAT case keeps `Row::get_float`'s int64 widening, which a
+  REAL-declared column never reaches (SQLite stores an integer there as REAL).
+  `DatabaseCApi.ReadVectorGroupByIdMasksRealCellInIntegerColumn` pins it.
 - `quiver_database_free_time_series_data()` deallocates read results; it takes the mask array
   (`column_has_value`) and frees it **before** the typed `column_data` dispatch so the unknown-type
   throw cannot leak the masks. String columns require per-element cleanup; numeric columns and the
   masks use a single `delete[]`. The masks follow the zero-initialized out-array convention.
 - `quiver_database_read_time_series_row()` returns a single `void*` array whose element type the
-  caller dispatches on via `out_data_type`. Null entries are encoded per type: `FLOAT` → NaN,
-  `STRING`/`DATE_TIME` → NULL `char*`, `INTEGER` → 0. (The row API keeps its sentinel encoding; only
-  the columnar group API uses the presence mask.)
+  caller dispatches on via `out_data_type`, plus a parallel `uint8_t** out_mask` for **every** type
+  (`mask[i] == 0` = no data at or before `date_time`; the data slot is then a placeholder: `INTEGER`
+  0, `FLOAT` 0.0, `STRING`/`DATE_TIME` NULL `char*`). Unlike `read_scalar_strings`, strings are
+  masked too, so every binding decodes one way. The data array is freed by the typed free function
+  and the mask by `quiver_database_free_mask`; both are NULL for an empty collection. The old
+  0 / NaN sentinels are gone: a stored 0 was indistinguishable from "no data".
 
 This pattern mirrors the `convert_params()` approach from `database_query.cpp` for type-safe FFI marshaling across N typed columns.
 
@@ -220,11 +249,17 @@ inherit the group decoder's NULL contract. It owns three contracts the row-shape
   column is still validated by the core (an unknown name throws) and written as NULL rather than
   left to the column DEFAULT.
 
-## Parameterized Queries
+## Queries
 
-`_params` variants use parallel arrays for typed parameters:
+One C function per C++ `query_*` method, so the names follow the prefix rule. Each takes parallel
+arrays for its positional `?` parameters. A query without parameters passes `(NULL, NULL, 0)`,
+since the arrays are only required when `param_count > 0`. There is no separate no-parameter form,
+so every binding makes the same call whether or not it has parameters:
 ```c
 // param_types[i]: QUIVER_DATA_TYPE_INTEGER(0), FLOAT(1), STRING(2), NULL(4)
 // param_values[i]: pointer to int64_t, double, const char*, or NULL
-quiver_database_query_string_params(db, sql, param_types, param_values, param_count, &out, &has);
+quiver_database_query_string(db, sql, param_types, param_values, param_count, &out, &has);
+quiver_database_query_integer(db, "SELECT COUNT(*) FROM Items", NULL, NULL, 0, &count, &has);
 ```
+`convert_params(caller, ...)` takes the C++ method name, like `unmarshal_group_columns_to_rows`,
+so its Pattern 1 errors read `Cannot query_string: unknown parameter type 999`.

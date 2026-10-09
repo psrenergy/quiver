@@ -2,6 +2,7 @@
 #include "quiver/expression/expression_node.h"
 
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -24,6 +25,10 @@ void ExpressionFile::compute_row(const std::vector<int64_t>& dims, std::vector<d
 
 void ExpressionFile::collect_input_files(std::vector<BinaryFile*>& out) const {
     out.push_back(&file_);
+}
+
+std::shared_ptr<ExpressionNode> BinaryFile::node() const {
+    return std::make_shared<ExpressionFile>(get_file_path());
 }
 
 }  // namespace quiver

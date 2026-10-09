@@ -1,6 +1,6 @@
 {
   "name": "quiverdb",
-  "version": "0.12.4",
+  "version": "0.13.2",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -20,6 +20,7 @@
   ],
   "scripts": {
     "test": "bun test test",
+    "typecheck": "tsc --noEmit",
     "lint": "biome check",
     "format": "biome format --write"
   },
@@ -29,6 +30,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.6",
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "typescript": "7.0.2"
   }
 }

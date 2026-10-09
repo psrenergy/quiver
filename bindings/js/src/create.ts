@@ -8,7 +8,7 @@ import {
   readPtrOut,
   toCString,
 } from "./ffi-helpers.ts";
-import { type GroupColumns, updateGroupColumns } from "./group-columns.ts";
+import { type GroupColumns, numericCells, updateGroupColumns } from "./group-columns.ts";
 import { getSymbols, type NativePointer } from "./loader.ts";
 import type { ElementData, Value } from "./types.ts";
 
@@ -17,6 +17,7 @@ type Symbols = ReturnType<typeof getSymbols>;
 function setElementArray(
   lib: Symbols,
   elemPtr: NativePointer,
+  caller: string,
   name: string,
   values: unknown[],
 ): void {
@@ -29,27 +30,28 @@ function setElementArray(
 
   const first = values[0];
 
-  if (typeof first === "bigint") {
-    const arr = allocNativeInt64(values as bigint[]);
-    check(lib.quiver_element_set_array_integer(elemPtr, nameBuf.buf, arr.buf, values.length, null));
-    return;
+  // A vector/set/time-series read returns a NULL cell as null. The element surface is non-null
+  // (NULL cells go through the group writers), whatever the cell's position or the array's type:
+  // the numeric setters below would store a null as 0 / false, and a string array would store an
+  // `undefined` as the text "undefined". `includes`, not `some`: it also sees a sparse array's holes.
+  if (values.includes(null) || values.includes(undefined)) {
+    throw new QuiverError(
+      `Unsupported null cell in array '${name}': write NULL cells with updateVectorGroup, updateSetGroup or updateTimeSeriesGroup`,
+    );
   }
 
-  if (typeof first === "boolean") {
-    const arr = allocNativeInt64((values as boolean[]).map((v) => (v ? 1 : 0)));
-    check(lib.quiver_element_set_array_integer(elemPtr, nameBuf.buf, arr.buf, values.length, null));
-    return;
-  }
-
-  if (typeof first === "number") {
-    const allIntegers = (values as number[]).every((v) => Number.isInteger(v));
-    if (allIntegers) {
-      const arr = allocNativeInt64(values as number[]);
+  if (typeof first === "number" || typeof first === "boolean" || typeof first === "bigint") {
+    // The null check above leaves no null cell, so the cast only narrows.
+    const cells = numericCells(caller, name, values) as (number | bigint)[];
+    if (cells.every((v) => typeof v === "bigint" || Number.isInteger(v))) {
+      const arr = allocNativeInt64(cells);
       check(
         lib.quiver_element_set_array_integer(elemPtr, nameBuf.buf, arr.buf, values.length, null),
       );
     } else {
-      const arr = allocNativeFloat64(values as number[]);
+      // A fractional cell makes the array FLOAT; a bigint cell then follows the int-for-REAL rule
+      // through Number(), exact up to 2^53 like any JS number.
+      const arr = allocNativeFloat64(cells.map(Number));
       check(lib.quiver_element_set_array_float(elemPtr, nameBuf.buf, arr.buf, values.length, null));
     }
     return;
@@ -66,7 +68,13 @@ function setElementArray(
   throw new QuiverError(`Unsupported array element type for '${name}': ${typeof first}`);
 }
 
-function setElementField(lib: Symbols, elemPtr: NativePointer, name: string, value: Value): void {
+function setElementField(
+  lib: Symbols,
+  elemPtr: NativePointer,
+  caller: string,
+  name: string,
+  value: Value,
+): void {
   const nameBuf = toCString(name);
 
   if (value === null) {
@@ -100,7 +108,7 @@ function setElementField(lib: Symbols, elemPtr: NativePointer, name: string, val
   }
 
   if (Array.isArray(value)) {
-    setElementArray(lib, elemPtr, name, value);
+    setElementArray(lib, elemPtr, caller, name, value);
     return;
   }
 
@@ -122,7 +130,7 @@ Database.prototype.createElement = function (
   try {
     for (const [key, value] of Object.entries(data)) {
       if (value === undefined) continue;
-      setElementField(lib, elemPtr, key, value);
+      setElementField(lib, elemPtr, "createElement", key, value);
     }
 
     const outIdBuf = new Uint8Array(8);
@@ -150,7 +158,7 @@ Database.prototype.updateElement = function (
   try {
     for (const [key, value] of Object.entries(data)) {
       if (value === undefined) continue;
-      setElementField(lib, elemPtr, key, value);
+      setElementField(lib, elemPtr, "updateElement", key, value);
     }
     const collBuf = toCString(collection);
     check(lib.quiver_database_update_element(handle, collBuf.buf, BigInt(id), elemPtr));
@@ -176,7 +184,7 @@ Database.prototype.updateElementByLabel = function (
   try {
     for (const [key, value] of Object.entries(data)) {
       if (value === undefined) continue;
-      setElementField(lib, elemPtr, key, value);
+      setElementField(lib, elemPtr, "updateElementByLabel", key, value);
     }
     const collBuf = toCString(collection);
     const labelBuf = toCString(label);

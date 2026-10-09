@@ -71,8 +71,8 @@ describe("Database lifecycle", () => {
   test("fromMigrations opens database and returns Database instance", () => {
     const db = Database.fromMigrations(":memory:", MIGRATIONS_PATH);
     try {
-      expect(db !== undefined).toBeTruthy();
       expect(db instanceof Database).toBeTruthy();
+      expect(db.currentVersion()).toBe(3);
     } finally {
       db.close();
     }

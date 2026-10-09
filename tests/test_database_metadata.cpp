@@ -9,7 +9,10 @@
 
 TEST(Database, GetVectorMetadataForeignKey) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("relations.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     auto metadata = db.get_vector_metadata("Child", "refs");
     ASSERT_EQ(metadata.value_columns.size(), 1);
@@ -21,7 +24,10 @@ TEST(Database, GetVectorMetadataForeignKey) {
 
 TEST(Database, GetSetMetadataForeignKey) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("relations.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     auto metadata = db.get_set_metadata("Child", "parents");
     ASSERT_EQ(metadata.value_columns.size(), 1);
@@ -33,7 +39,10 @@ TEST(Database, GetSetMetadataForeignKey) {
 
 TEST(Database, GetSetMetadataNonForeignKeyColumn) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("relations.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     auto metadata = db.get_set_metadata("Child", "scores");
     ASSERT_EQ(metadata.value_columns.size(), 1);
@@ -43,12 +52,38 @@ TEST(Database, GetSetMetadataNonForeignKeyColumn) {
 }
 
 // ============================================================================
-// List groups: unknown collection
+// List groups
 // ============================================================================
+
+TEST(Database, ListVectorAndSetGroups) {
+    auto db = quiver::Database::from_schema(
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
+
+    auto vectors = db.list_vector_groups("Collection");
+    ASSERT_EQ(vectors.size(), 1);
+    EXPECT_EQ(vectors[0].group_name, "values");
+    ASSERT_EQ(vectors[0].value_columns.size(), 2);
+    EXPECT_EQ(vectors[0].value_columns[0].name, "value_int");
+    EXPECT_EQ(vectors[0].value_columns[1].name, "value_float");
+    EXPECT_TRUE(vectors[0].dimension_column.empty());
+
+    auto sets = db.list_set_groups("Collection");
+    ASSERT_EQ(sets.size(), 1);
+    EXPECT_EQ(sets[0].group_name, "tags");
+    ASSERT_EQ(sets[0].value_columns.size(), 1);
+    EXPECT_EQ(sets[0].value_columns[0].name, "tag");
+    EXPECT_TRUE(sets[0].dimension_column.empty());
+}
 
 TEST(Database, ListGroupsCollectionNotFound) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     try {
         (void)db.list_vector_groups("Nope");

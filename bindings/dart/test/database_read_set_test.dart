@@ -375,4 +375,90 @@ void main() {
       }
     });
   });
+
+  group('Read Set NULL Cells', () {
+    test('keeps NULL cells positionally, and empty is not the same as null', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        final id = db.createElement('Collection', {
+          'label': 'Item 1',
+          'tag': ['a', null, 'c'],
+        });
+        db.createElement('Collection', {'label': 'Item 2'}); // no set rows
+
+        // Set order is unspecified: pin the agreement between the readers and the content.
+        final bulk = db.readSetStrings('Collection', 'tag');
+        final byId = db.readSetStringsById('Collection', 'tag', id);
+        expect(bulk, hasLength(2));
+        expect(bulk[0], equals(byId));
+        expect(bulk[1], isEmpty);
+        expect(byId, unorderedEquals(['a', null, 'c']));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('keeps NULL cells through the integer and boolean readers', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        final id = db.createElement('Child', {
+          'label': 'Child 1',
+          'score': [1, null, 0],
+        });
+
+        expect(db.readSetIntegers('Child', 'score')[0], unorderedEquals([1, null, 0]));
+        expect(db.readSetIntegersById('Child', 'score', id), unorderedEquals([1, null, 0]));
+        expect(db.readSetBooleans('Child', 'score')[0], unorderedEquals([true, null, false]));
+        expect(db.readSetBooleansById('Child', 'score', id), unorderedEquals([true, null, false]));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('keeps NULL cells through the float reader', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'multi_column_groups.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        final id = db.createElement('Items', {
+          'label': 'Item 1',
+          'weight': [1.5, null],
+        });
+
+        expect(db.readSetFloats('Items', 'weight')[0], unorderedEquals([1.5, null]));
+        expect(db.readSetFloatsById('Items', 'weight', id), unorderedEquals([1.5, null]));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('keeps NULL cells through the DateTime wrapper', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        final id = db.createElement('Collection', {
+          'label': 'Item 1',
+          'tag': ['2024-01-01', null],
+        });
+
+        expect(db.readSetDateTimes('Collection', 'tag')[0], unorderedEquals([DateTime(2024, 1, 1), null]));
+        expect(db.readSetDateTimesById('Collection', 'tag', id), unorderedEquals([DateTime(2024, 1, 1), null]));
+      } finally {
+        db.close();
+      }
+    });
+  });
 }

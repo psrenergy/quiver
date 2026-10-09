@@ -33,9 +33,6 @@ public:
     const std::map<std::string, Value>& scalars() const;
     const std::map<std::string, std::vector<Value>>& arrays() const;
 
-    bool has_scalars() const;
-    bool has_arrays() const;
-
     void clear();
 
     // Pretty print

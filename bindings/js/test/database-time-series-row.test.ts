@@ -86,6 +86,37 @@ describe("readTimeSeriesRow", () => {
     }
   });
 
+  test("returns null for an element with no data, in every column type", () => {
+    const db = Database.fromSchema(":memory:", MIXED_TS_SCHEMA);
+    try {
+      const id1 = db.createElement("Sensor", { label: "Sensor 1" });
+      db.createElement("Sensor", { label: "Sensor 2" }); // no rows
+
+      db.updateTimeSeriesGroup("Sensor", "readings", id1, {
+        date_time: ["2024-01-02T00:00:00"],
+        temperature: [20.5],
+        humidity: [0],
+        status: ["ok"],
+      });
+
+      // A stored 0 and "no data" are distinguishable.
+      const at = "2024-01-02T00:00:00";
+      expect(db.readTimeSeriesRow("Sensor", "readings", "humidity", at)).toEqual([0, null]);
+      expect(db.readTimeSeriesRow("Sensor", "readings", "temperature", at)).toEqual([20.5, null]);
+      expect(db.readTimeSeriesRow("Sensor", "readings", "status", at)).toEqual(["ok", null]);
+
+      // Before the first row even Sensor 1 has no data.
+      const before = "2024-01-01T00:00:00";
+      expect(db.readTimeSeriesRow("Sensor", "readings", "humidity", before)).toEqual([null, null]);
+      expect(db.readTimeSeriesRow("Sensor", "readings", "temperature", before)).toEqual([
+        null,
+        null,
+      ]);
+    } finally {
+      db.close();
+    }
+  });
+
   test("throws on a group with more than one dimension column", () => {
     const db = Database.fromSchema(":memory:", MULTI_DIM_TS_SCHEMA);
     try {

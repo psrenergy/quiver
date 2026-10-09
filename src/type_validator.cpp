@@ -1,74 +1,75 @@
-#include "quiver/type_validator.h"
+#include "type_validator.h"
 
+#include "database_internal.h"
 #include "utils/datetime.h"
 
 #include <stdexcept>
 
 namespace quiver {
 
-TypeValidator::TypeValidator(const Schema& schema) : schema_(schema) {}
+namespace {
 
-void TypeValidator::validate_scalar(const std::string& caller,
-                                    const std::string& table,
-                                    const std::string& column,
-                                    const Value& value) const {
-    auto expected = schema_.get_data_type(table, column);
-    validate_value(caller, "column '" + column + "'", expected, value);
+// Same wording as Impl::require_column, so one condition has one message.
+DataType column_type(
+    const Schema& schema,
+    const std::string& caller,
+    const std::string& table,
+    const std::string& column
+) {
+    const auto* table_def = schema.get_table(table);
+    const auto type = table_def ? table_def->get_data_type(column) : std::nullopt;
+    if (!type) {
+        throw std::runtime_error("Cannot " + caller + ": column '" + column + "' not found in table '" + table + "'");
+    }
+    return *type;
 }
 
-void TypeValidator::validate_array(const std::string& caller,
-                                   const std::string& table,
-                                   const std::string& column,
-                                   const std::vector<Value>& values) const {
-    auto expected = schema_.get_data_type(table, column);
+}  // namespace
+
+void validate_scalar(
+    const std::string& caller,
+    const Schema& schema,
+    const std::string& table,
+    const std::string& column,
+    const Value& value
+) {
+    validate_value(caller, "column '" + column + "'", column_type(schema, caller, table, column), value);
+}
+
+void validate_array(
+    const std::string& caller,
+    const Schema& schema,
+    const std::string& table,
+    const std::string& column,
+    const std::vector<Value>& values
+) {
+    const auto expected = column_type(schema, caller, table, column);
     for (size_t i = 0; i < values.size(); ++i) {
         validate_value(caller, "array '" + column + "' index " + std::to_string(i), expected, values[i]);
     }
 }
 
-void TypeValidator::validate_value(const std::string& caller,
-                                   const std::string& context,
-                                   DataType expected_type,
-                                   const Value& value) {
-    std::visit(
-        [&](auto&& arg) {
-            using T = std::decay_t<decltype(arg)>;
-
-            if constexpr (std::is_same_v<T, std::nullptr_t>) {
-                // NULL allowed for any type
-                return;
-            } else if constexpr (std::is_same_v<T, int64_t>) {
-                // Integers are accepted for INTEGER and REAL columns (SQLite STRICT converts
-                // whole numbers to real on insert) -- the single coercion policy shared with
-                // internal::value_matches_type (used by the time-series writers).
-                if (expected_type != DataType::Integer && expected_type != DataType::Real) {
-                    throw std::runtime_error("Cannot " + caller + ": type mismatch for " + context + ": expected " +
-                                             data_type_to_string(expected_type) + ", got INTEGER");
-                }
-            } else if constexpr (std::is_same_v<T, double>) {
-                // Floats only go to REAL columns -- writing a float into an INTEGER column is
-                // rejected (it would silently truncate or fail SQLite STRICT at insert time).
-                if (expected_type != DataType::Real) {
-                    throw std::runtime_error("Cannot " + caller + ": type mismatch for " + context + ": expected " +
-                                             data_type_to_string(expected_type) + ", got REAL");
-                }
-            } else if constexpr (std::is_same_v<T, std::string>) {
-                // String can go to TEXT, INTEGER (FK label resolution), or DATE_TIME (stored as TEXT)
-                if (expected_type != DataType::Text && expected_type != DataType::Integer &&
-                    expected_type != DataType::DateTime) {
-                    throw std::runtime_error("Cannot " + caller + ": type mismatch for " + context + ": expected " +
-                                             data_type_to_string(expected_type) + ", got TEXT");
-                }
-                // A DATE_TIME column is TEXT that every binding parses back into a date, so an
-                // unparseable value is rejected here rather than detonating in whichever binding
-                // reads it. Same predicate in validate_time_series_row (the time-series writers).
-                if (expected_type == DataType::DateTime && !datetime::is_valid_iso8601(arg)) {
-                    throw std::runtime_error("Cannot " + caller + ": invalid DATE_TIME value for " + context + ": '" +
-                                             arg + "' (expected YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)");
-                }
-            }
-        },
-        value);
+void validate_value(const std::string& caller, const std::string& context, DataType expected_type, const Value& value) {
+    // The shape rule is the one typing policy (internal::value_matches_type): int64 -> INTEGER or
+    // REAL, double -> REAL, string -> TEXT or DATE_TIME, NULL -> any. FK label strings never get
+    // here: Impl::resolve_fk_label turns them into ids (or rejects them) first.
+    if (!internal::value_matches_type(value, expected_type)) {
+        throw std::runtime_error(
+            "Cannot " + caller + ": type mismatch for " + context + ": expected " + data_type_to_string(expected_type) +
+            ", got " + internal::value_type_name(value)
+        );
+    }
+    // Content check, separate on purpose (see src/AGENTS.md): a DATE_TIME column is TEXT that every
+    // binding parses back into a date, so an unparseable value is rejected here rather than
+    // detonating in whichever binding reads it. Same predicate in validate_time_series_row.
+    if (expected_type == DataType::DateTime) {
+        if (const auto* s = std::get_if<std::string>(&value); s && !datetime::is_valid_iso8601(*s)) {
+            throw std::runtime_error(
+                "Cannot " + caller + ": invalid DATE_TIME value for " + context + ": '" + *s +
+                "' (expected YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)"
+            );
+        }
+    }
 }
 
 }  // namespace quiver

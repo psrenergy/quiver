@@ -1,18 +1,21 @@
-#include "quiver/schema.h"
+#include "schema.h"
+
+#include <sqlite3.h>
 
 #include <algorithm>
 #include <cctype>
-#include <sqlite3.h>
 #include <stdexcept>
 #include <string_view>
 
 namespace quiver {
 
 static bool is_safe_identifier(const std::string& name) {
-    if (name.empty())
+    if (name.empty()) {
         return false;
-    return std::all_of(
-        name.begin(), name.end(), [](char c) { return std::isalnum(static_cast<unsigned char>(c)) || c == '_'; });
+    }
+    return std::all_of(name.begin(), name.end(), [](char c) {
+        return std::isalnum(static_cast<unsigned char>(c)) || c == '_';
+    });
 }
 
 // TableDefinition methods
@@ -68,18 +71,6 @@ bool Schema::has_table(const std::string& name) const {
     return tables_.find(name) != tables_.end();
 }
 
-DataType Schema::get_data_type(const std::string& table, const std::string& column) const {
-    const auto* tbl = get_table(table);
-    if (!tbl) {
-        throw std::runtime_error("Table not found in schema: " + table);
-    }
-    auto type = tbl->get_data_type(column);
-    if (!type) {
-        throw std::runtime_error("Column '" + column + "' not found in table '" + table + "'");
-    }
-    return *type;
-}
-
 std::string Schema::vector_table_name(const std::string& collection, const std::string& group) {
     return collection + "_vector_" + group;
 }
@@ -94,6 +85,19 @@ std::string Schema::time_series_table_name(const std::string& collection, const 
 
 std::string Schema::time_series_files_table_name(const std::string& collection) {
     return collection + "_time_series_files";
+}
+
+std::string Schema::group_table_name(const std::string& collection, const std::string& group, GroupTableType type) {
+    switch (type) {
+    case GroupTableType::Vector:
+        return vector_table_name(collection, group);
+    case GroupTableType::Set:
+        return set_table_name(collection, group);
+    case GroupTableType::TimeSeries:
+        return time_series_table_name(collection, group);
+    default:
+        return "";
+    }
 }
 
 bool Schema::is_collection(const std::string& table) const {
@@ -141,18 +145,21 @@ std::string Schema::get_time_series_files_parent_collection(const std::string& t
 }
 
 std::string Schema::find_vector_table(const std::string& collection, const std::string& attribute) const {
-    // First try: Collection_vector_attribute
+    // First try: Collection_vector_attribute, when it holds the column: a group may be named after
+    // another group's column
     auto vt = vector_table_name(collection, attribute);
-    if (has_table(vt)) {
+    if (const auto* table_def = get_table(vt); table_def && table_def->has_column(attribute)) {
         return vt;
     }
 
     // Second try: search all vector tables for the collection
     for (const auto& table_name : table_names()) {
-        if (!is_vector_table(table_name))
+        if (!is_vector_table(table_name)) {
             continue;
-        if (get_parent_collection(table_name) != collection)
+        }
+        if (get_parent_collection(table_name) != collection) {
             continue;
+        }
 
         const auto* table_def = get_table(table_name);
         if (table_def && table_def->has_column(attribute)) {
@@ -160,22 +167,24 @@ std::string Schema::find_vector_table(const std::string& collection, const std::
         }
     }
 
-    throw std::runtime_error("Vector attribute '" + attribute + "' not found for collection '" + collection + "'");
+    throw std::runtime_error("Vector attribute not found: '" + attribute + "' in collection '" + collection + "'");
 }
 
 std::string Schema::find_set_table(const std::string& collection, const std::string& attribute) const {
-    // First try: Collection_set_attribute
+    // First try: Collection_set_attribute, when it holds the column (see find_vector_table)
     auto st = set_table_name(collection, attribute);
-    if (has_table(st)) {
+    if (const auto* table_def = get_table(st); table_def && table_def->has_column(attribute)) {
         return st;
     }
 
     // Second try: search all set tables for the collection
     for (const auto& table_name : table_names()) {
-        if (!is_set_table(table_name))
+        if (!is_set_table(table_name)) {
             continue;
-        if (get_parent_collection(table_name) != collection)
+        }
+        if (get_parent_collection(table_name) != collection) {
             continue;
+        }
 
         const auto* table_def = get_table(table_name);
         if (table_def && table_def->has_column(attribute)) {
@@ -183,42 +192,7 @@ std::string Schema::find_set_table(const std::string& collection, const std::str
         }
     }
 
-    throw std::runtime_error("Set attribute '" + attribute + "' not found for collection '" + collection + "'");
-}
-
-std::string Schema::find_time_series_table(const std::string& collection, const std::string& group) const {
-    // First try: Collection_time_series_group
-    auto ts = time_series_table_name(collection, group);
-    if (has_table(ts)) {
-        return ts;
-    }
-
-    // Second try: search all time series tables for the collection
-    for (const auto& table_name : table_names()) {
-        if (!is_time_series_table(table_name))
-            continue;
-        if (get_parent_collection(table_name) != collection)
-            continue;
-
-        // Extract group name from table and compare
-        auto prefix = collection + "_time_series_";
-        if (table_name.starts_with(prefix)) {
-            auto extracted_group = table_name.substr(prefix.size());
-            if (extracted_group == group) {
-                return table_name;
-            }
-        }
-    }
-
-    throw std::runtime_error("Time series group '" + group + "' not found for collection '" + collection + "'");
-}
-
-std::string Schema::find_time_series_files_table(const std::string& collection) const {
-    auto tsf = time_series_files_table_name(collection);
-    if (has_table(tsf)) {
-        return tsf;
-    }
-    throw std::runtime_error("Time series files table not found for collection '" + collection + "'");
+    throw std::runtime_error("Set attribute not found: '" + attribute + "' in collection '" + collection + "'");
 }
 
 bool Schema::is_group_table(const std::string& table, GroupTableType type) const {
@@ -235,26 +209,18 @@ bool Schema::is_group_table(const std::string& table, GroupTableType type) const
 }
 
 std::vector<std::string> Schema::group_names(const std::string& collection, GroupTableType type) const {
-    std::string infix;
-    switch (type) {
-    case GroupTableType::Vector:
-        infix = "_vector_";
-        break;
-    case GroupTableType::Set:
-        infix = "_set_";
-        break;
-    case GroupTableType::TimeSeries:
-        infix = "_time_series_";
-        break;
-    }
-    const auto prefix = collection + infix;
+    // "Items_vector_" etc. The time-series prefix also matches Items_time_series_files, which
+    // is_group_table excludes below.
+    const auto prefix = group_table_name(collection, "", type);
 
     std::vector<std::string> result;
     for (const auto& table_name : table_names()) {
-        if (!is_group_table(table_name, type))
+        if (!is_group_table(table_name, type)) {
             continue;
-        if (get_parent_collection(table_name) != collection)
+        }
+        if (get_parent_collection(table_name) != collection) {
             continue;
+        }
         if (table_name.starts_with(prefix)) {
             result.push_back(table_name.substr(prefix.size()));
         }
@@ -262,8 +228,10 @@ std::vector<std::string> Schema::group_names(const std::string& collection, Grou
     return result;
 }
 
-std::vector<Schema::TableMatch> Schema::find_all_tables_for_column(const std::string& collection,
-                                                                   const std::string& column) const {
+std::vector<Schema::TableMatch> Schema::find_all_tables_for_column(
+    const std::string& collection,
+    const std::string& column
+) const {
     std::vector<TableMatch> matches;
 
     // Check vector: direct name match first
@@ -273,12 +241,15 @@ std::vector<Schema::TableMatch> Schema::find_all_tables_for_column(const std::st
     }
 
     for (const auto& [name, table] : tables_) {
-        if (get_parent_collection(name) != collection)
+        if (get_parent_collection(name) != collection) {
             continue;
-        if (!table.has_column(column))
+        }
+        if (!table.has_column(column)) {
             continue;
-        if (name == vt)
+        }
+        if (name == vt) {
             continue;  // already added above
+        }
 
         if (is_vector_table(name)) {
             matches.push_back({.table_name = name, .type = GroupTableType::Vector});
@@ -289,6 +260,19 @@ std::vector<Schema::TableMatch> Schema::find_all_tables_for_column(const std::st
         }
     }
     return matches;
+}
+
+std::optional<Schema::TableMatch> Schema::find_group_table(
+    const std::string& collection,
+    const std::string& group
+) const {
+    for (const auto type : {GroupTableType::Vector, GroupTableType::Set, GroupTableType::TimeSeries}) {
+        const auto name = group_table_name(collection, group, type);
+        if (has_table(name)) {
+            return TableMatch{name, type};
+        }
+    }
+    return std::nullopt;
 }
 
 std::vector<std::string> Schema::table_names() const {
@@ -332,6 +316,10 @@ void Schema::load_from_database(sqlite3* db) {
 
     // Load each table's metadata
     for (const auto& name : names) {
+        // The only path into query_columns/query_foreign_keys/query_indexes, which splice the name into PRAGMA SQL
+        if (!is_safe_identifier(name)) {
+            throw std::runtime_error("Failed to validate schema: invalid table name '" + name + "'");
+        }
         TableDefinition table;
         table.name = name;
 
@@ -351,9 +339,6 @@ void Schema::load_from_database(sqlite3* db) {
 }
 
 std::vector<ColumnDefinition> Schema::query_columns(sqlite3* db, const std::string& table) {
-    if (!is_safe_identifier(table)) {
-        throw std::runtime_error("Cannot query columns: invalid table name: " + table);
-    }
     std::vector<ColumnDefinition> columns;
     auto sql = "PRAGMA table_info(" + table + ")";
 
@@ -370,7 +355,15 @@ std::vector<ColumnDefinition> Schema::query_columns(sqlite3* db, const std::stri
 
         col.name = name ? name : "";
         std::string type_str = type ? type : "";
-        col.type = data_type_from_string(type_str);
+        const auto data_type = data_type_from_string(type_str);
+        if (!data_type) {
+            sqlite3_finalize(stmt);
+            throw std::runtime_error(
+                "Failed to validate schema: column '" + col.name + "' in table '" + table + "' has unsupported type '" +
+                (type_str.empty() ? "(none)" : type_str) + "'"
+            );
+        }
+        col.type = *data_type;
         col.not_null = sqlite3_column_int(stmt, 3) != 0;
         col.primary_key = sqlite3_column_int(stmt, 5) != 0;
         if (dflt_value) {
@@ -389,9 +382,6 @@ std::vector<ColumnDefinition> Schema::query_columns(sqlite3* db, const std::stri
 }
 
 std::vector<ForeignKey> Schema::query_foreign_keys(sqlite3* db, const std::string& table) {
-    if (!is_safe_identifier(table)) {
-        throw std::runtime_error("Cannot query foreign keys: invalid table name: " + table);
-    }
     std::vector<ForeignKey> fks;
     auto sql = "PRAGMA foreign_key_list(" + table + ")";
 
@@ -421,9 +411,6 @@ std::vector<ForeignKey> Schema::query_foreign_keys(sqlite3* db, const std::strin
 }
 
 std::vector<Index> Schema::query_indexes(sqlite3* db, const std::string& table) {
-    if (!is_safe_identifier(table)) {
-        throw std::runtime_error("Cannot query indexes: invalid table name: " + table);
-    }
     std::vector<Index> indexes;
     auto sql = "PRAGMA index_list(" + table + ")";
 
@@ -439,8 +426,9 @@ std::vector<Index> Schema::query_indexes(sqlite3* db, const std::string& table) 
         idx.unique = sqlite3_column_int(stmt, 2) != 0;
 
         // Get columns for this index
-        if (!is_safe_identifier(idx.name))
+        if (!is_safe_identifier(idx.name)) {
             continue;
+        }
         auto idx_sql = "PRAGMA index_info(" + idx.name + ")";
         sqlite3_stmt* idx_stmt = nullptr;
         if (sqlite3_prepare_v2(db, idx_sql.c_str(), -1, &idx_stmt, nullptr) == SQLITE_OK) {

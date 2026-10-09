@@ -1,0 +1,111 @@
+#ifndef QUIVER_SCHEMA_H
+#define QUIVER_SCHEMA_H
+
+#include "quiver/data_type.h"
+
+#include <map>
+#include <optional>
+#include <string>
+#include <vector>
+
+struct sqlite3;
+
+namespace quiver {
+
+struct ColumnDefinition {
+    std::string name;
+    DataType type;
+    bool not_null;
+    bool primary_key;
+    std::optional<std::string> default_value;
+};
+
+struct ForeignKey {
+    std::string from_column;
+    std::string to_table;
+    std::string to_column;
+    std::string on_update;
+    std::string on_delete;
+};
+
+struct Index {
+    std::string name;
+    bool unique;
+    std::vector<std::string> columns;
+};
+
+enum class GroupTableType { Vector, Set, TimeSeries };
+
+struct TableDefinition {
+    std::string name;
+    std::map<std::string, ColumnDefinition> columns;
+    std::vector<std::string> column_order;
+    std::vector<ForeignKey> foreign_keys;
+    std::vector<Index> indexes;
+
+    std::optional<DataType> get_data_type(const std::string& column) const;
+    bool has_column(const std::string& column) const;
+    const ColumnDefinition* get_column(const std::string& column) const;
+    // The foreign key that starts at `column`, or nullptr if the column is not a foreign key.
+    const ForeignKey* get_foreign_key(const std::string& column) const;
+};
+
+class Schema {
+public:
+    // Factory: loads schema from database
+    static Schema from_database(sqlite3* db);
+
+    // Table lookup
+    const TableDefinition* get_table(const std::string& name) const;
+    bool has_table(const std::string& name) const;
+
+    // Vector/Set/TimeSeries table naming convention
+    static std::string vector_table_name(const std::string& collection, const std::string& group);
+    static std::string set_table_name(const std::string& collection, const std::string& group);
+    static std::string time_series_table_name(const std::string& collection, const std::string& group);
+    static std::string time_series_files_table_name(const std::string& collection);
+    static std::string group_table_name(const std::string& collection, const std::string& group, GroupTableType type);
+
+    // Table classification
+    bool is_collection(const std::string& table) const;
+    bool is_vector_table(const std::string& table) const;
+    bool is_set_table(const std::string& table) const;
+    bool is_time_series_table(const std::string& table) const;
+    bool is_time_series_files_table(const std::string& table) const;
+    std::string get_parent_collection(const std::string& table) const;
+    std::string get_time_series_files_parent_collection(const std::string& table) const;
+
+    // Find table for attribute (throws if not found)
+    std::string find_vector_table(const std::string& collection, const std::string& attribute) const;
+    std::string find_set_table(const std::string& collection, const std::string& attribute) const;
+
+    // Find which group tables contain a given column (for routing in create_element/update_element)
+    struct TableMatch {
+        std::string table_name;
+        GroupTableType type;
+    };
+    std::vector<TableMatch> find_all_tables_for_column(const std::string& collection, const std::string& column) const;
+    // The group table named `group` for `collection`, trying vector, then set, then time series.
+    std::optional<TableMatch> find_group_table(const std::string& collection, const std::string& group) const;
+
+    // Group names of a given type belonging to a collection (e.g. "values" for "Items_vector_values")
+    bool is_group_table(const std::string& table, GroupTableType type) const;
+    std::vector<std::string> group_names(const std::string& collection, GroupTableType type) const;
+
+    // All tables/collections
+    std::vector<std::string> table_names() const;
+    std::vector<std::string> collection_names() const;
+
+private:
+    Schema() = default;
+    std::map<std::string, TableDefinition> tables_;
+
+    void load_from_database(sqlite3* db);
+    static std::vector<ColumnDefinition> query_columns(sqlite3* db, const std::string& table);
+    static std::vector<ForeignKey> query_foreign_keys(sqlite3* db, const std::string& table);
+    static std::vector<Index> query_indexes(sqlite3* db, const std::string& table);
+};
+
+}  // namespace quiver
+
+#endif  // QUIVER_SCHEMA_H

@@ -3,10 +3,6 @@ name: Publish S3
 on:
   workflow_dispatch:
     inputs:
-      version:
-        description: "Override the version"
-        required: false
-        default: ""
       ref:
         description: "Override ref or sha"
         required: false
@@ -31,10 +27,7 @@ jobs:
           ref: ${{ inputs.ref || github.sha }}
       - id: v
         run: |
-          v="${{ inputs.version }}"
-          if [ -z "$v" ]; then
-            v="$(python3 scripts/assert_version.py)"
-          fi
+          v="$(python3 scripts/assert_version.py)"
           echo "version=$v" >> "$GITHUB_OUTPUT"
 
   build:
@@ -46,10 +39,18 @@ jobs:
         include:
           - os: ubuntu-latest
             platform_key: linux-x86_64
+            arch: x86_64
             lib_paths: |
-              build/manylinux/lib/libquiver.so
-              build/manylinux/lib/libquiver.so.0
-              build/manylinux/lib/libquiver_c.so
+              build/manylinux-x86_64/lib/libquiver.so
+              build/manylinux-x86_64/lib/libquiver.so.0
+              build/manylinux-x86_64/lib/libquiver_c.so
+          - os: ubuntu-24.04-arm
+            platform_key: linux-aarch64
+            arch: aarch64
+            lib_paths: |
+              build/manylinux-aarch64/lib/libquiver.so
+              build/manylinux-aarch64/lib/libquiver.so.0
+              build/manylinux-aarch64/lib/libquiver_c.so
           - os: macos-latest
             platform_key: macos-aarch64
             lib_paths: |
@@ -73,15 +74,15 @@ jobs:
           build_type: Release
           build_tests: "OFF"
 
-      # Linux: build the glibc-2.17 native libs inside manylinux2014 (CentOS 7) via Docker. This is the
-      # SAME script a developer runs locally (`bash scripts/build_native_linux.sh`) — it only needs
-      # Docker, which the stock ubuntu-latest runner already provides. It builds + patchelfs the
-      # $ORIGIN rpath + runs the portability gate (glibc<=2.17, GLIBCXX<=3.4.30, dynamic libstdc++)
-      # in-container. Why manylinux/Docker and not BinaryBuilder / a job-level container: / a CMake
-      # flag: see .github/AGENTS.md "glibc floor".
-      - name: Build + verify Linux libs (manylinux2014, glibc 2.17)
+      # Linux: build the native libs inside manylinux via Docker (x86_64: manylinux2014, glibc 2.17;
+      # aarch64: manylinux_2_28, glibc 2.28). This is the SAME script a developer runs locally
+      # (`bash scripts/build_native_linux.sh [aarch64]`) — it only needs Docker, which the stock
+      # ubuntu runners already provide. It builds + patchelfs the $ORIGIN rpath + runs the portability
+      # gate (glibc floor, GLIBCXX<=3.4.30, dynamic libstdc++) in-container. Why manylinux/Docker and
+      # not BinaryBuilder / a job-level container: / a CMake flag: see .github/AGENTS.md "glibc floor".
+      - name: Build + verify Linux libs (manylinux)
         if: runner.os == 'Linux'
-        run: bash scripts/build_native_linux.sh
+        run: bash scripts/build_native_linux.sh ${{ matrix.arch }}
 
       - name: Set RPATH for macOS
         if: runner.os == 'macOS'
@@ -108,6 +109,12 @@ jobs:
         with:
           name: native-linux-x86_64
           path: native/linux-x86_64
+
+      - name: Download Linux aarch64 native libraries
+        uses: actions/download-artifact@v8
+        with:
+          name: native-linux-aarch64
+          path: native/linux-aarch64
 
       - name: Download macOS aarch64 native libraries
         uses: actions/download-artifact@v8

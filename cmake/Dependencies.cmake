@@ -84,6 +84,30 @@ FetchContent_MakeAvailable(csv_parser)
 # own install() rules -- so do not delete this line by analogy with that comment.
 set_target_properties(csv_no_simd PROPERTIES EXCLUDE_FROM_ALL YES)
 
+# XLSX reads in Sandbox. Scope BUILD_SHARED_LIBS so the workbook reader and its
+# pinned miniz/pugixml/nowide dependencies add no runtime DLLs to shipped bindings.
+function(quiver_fetch_openxlsx)
+    set(BUILD_SHARED_LIBS OFF)
+    # miniz 3.0.2 declares an old policy floor; CMake 4 needs this compatibility override.
+    set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+    set(FORCE_FETCH_ALL ON)
+    set(OPENXLSX_CREATE_DOCS OFF CACHE BOOL "" FORCE)
+    set(OPENXLSX_BUILD_SAMPLES OFF CACHE BOOL "" FORCE)
+    set(OPENXLSX_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(OPENXLSX_BUILD_BENCHMARKS OFF CACHE BOOL "" FORCE)
+    set(OPENXLSX_ENABLE_LIBZIP OFF CACHE BOOL "" FORCE)
+    set(OPENXLSX_ENABLE_LIBZIP_EXAMPLE OFF CACHE BOOL "" FORCE)
+    set(OPENXLSX_ENABLE_LTO OFF CACHE BOOL "" FORCE)
+    set(OPENXLSX_LIBRARY_TYPE STATIC CACHE STRING "" FORCE)
+    FetchContent_Declare(openxlsx
+        GIT_REPOSITORY https://github.com/troldal/OpenXLSX.git
+        GIT_TAG v0.5.1
+        GIT_SHALLOW TRUE
+    )
+    FetchContent_MakeAvailable(openxlsx)
+endfunction()
+quiver_fetch_openxlsx()
+
 # argparse for CLI argument parsing (header-only)
 FetchContent_Declare(argparse
     GIT_REPOSITORY https://github.com/p-ranav/argparse.git

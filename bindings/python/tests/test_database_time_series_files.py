@@ -114,3 +114,10 @@ class TestUpdateTimeSeriesFiles:
         result = collections_db.read_time_series_files("Collection")
         assert result["data_file"] == "/new/data.csv"
         assert result["metadata_file"] is None
+
+    def test_update_time_series_files_empty_map_validates_collection(self, collections_db: Database) -> None:
+        """An empty map still reaches the core, which rejects an unknown collection."""
+        with pytest.raises(
+            QuiverError, match="Cannot update_time_series_files: collection not found: NoSuchCollection"
+        ):
+            collections_db.update_time_series_files("NoSuchCollection", {})

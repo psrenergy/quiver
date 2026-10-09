@@ -50,6 +50,17 @@ describe("queryString", () => {
       db.close();
     }
   });
+
+  test("binds a bigint parameter exactly", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      expect(db.queryString("SELECT CAST(? AS TEXT)", [9007199254740993n])).toBe(
+        "9007199254740993",
+      );
+    } finally {
+      db.close();
+    }
+  });
 });
 
 describe("queryInteger", () => {
@@ -59,6 +70,15 @@ describe("queryInteger", () => {
       db.createElement("AllTypes", { label: "Item1", some_integer: 42 });
       const result = db.queryInteger("SELECT some_integer FROM AllTypes WHERE id = 1");
       expect(result).toEqual(42);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("binds a bigint parameter", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      expect(db.queryInteger("SELECT ? + 1", [41n])).toBe(42);
     } finally {
       db.close();
     }
@@ -140,6 +160,8 @@ describe("query parameter count", () => {
       expect(() =>
         db.queryString("SELECT label FROM AllTypes WHERE some_integer = ?", [1, 2]),
       ).toThrow();
+      // Parameters omitted entirely
+      expect(() => db.queryString("SELECT label FROM AllTypes WHERE some_integer = ?")).toThrow();
       // Exactly one parameter succeeds
       expect(db.queryString("SELECT label FROM AllTypes WHERE some_integer = ?", [1])).toEqual(
         "Item1",

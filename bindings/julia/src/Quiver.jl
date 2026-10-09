@@ -22,8 +22,13 @@ include("database_update.jl")
 include("database_delete.jl")
 include("database_transaction.jl")
 include("helper_maps.jl")
-include("lua_runner.jl")
+include("sandbox.jl")
+
+abstract type AbstractExpression end
+
 include("binary/Binary.jl")
+# Binary owns get_metadata; importing it lets expression.jl add the Expression method to the same function.
+import .Binary: get_metadata
 include("expression.jl")
 
 const QUIVER_DATA_TYPE_INTEGER = C.QUIVER_DATA_TYPE_INTEGER

@@ -9,6 +9,13 @@ second metadata read, by branching on the delegate's container type: `read_scala
 the readers that were deliberately left out of that change and what (if anything) should happen to
 them.
 
+The twelve vector/set readers (bulk **and** `_by_id`) followed once the core
+started preserving NULL cells: their `Optional` is NULL-cell-only too (a missing id gives an empty
+vector, not a `nothing` element), so both halves take the concrete-vs-optional rule. They read the
+value column's `not_null` from `list_{vector,set}_groups(...)` via `_group_value_not_null`, and
+`read_{vector,set}_booleans[_by_id]` / `read_{vector,set}_date_times[_by_id]`
+recover the shape from the delegate's container type, exactly as the scalar wrappers do.
+
 ## Guiding principle
 
 Apply the concrete-vs-optional rule **only where the `Optional` would come solely from a NULL
@@ -30,17 +37,6 @@ mask-skipping pattern used in the scalar readers.
 Note the cross-binding decision (root `AGENTS.md`): time-series group data is column-oriented and
 group reads currently return `Vector{Union{T,Nothing}}` always — update that design note if this
 lands, and keep Python/Dart/JS on their static nullable surface.
-
-### `read_time_series_row` — fix the real instability (different bug)
-
-`read_time_series_row` (~line 601) is the genuinely unstable reader: it returns `Vector{Int64}`,
-`Vector{Float64}`, `Vector{Optional{String}}`, or even `Vector{Any}` depending on the runtime
-`data_type` and whether data is present. Its optional is **inherent** — semantics are "last
-non-null value at or before `date_time`; `nothing` for elements with no matching data" — so it
-can't become a concrete `Vector{T}`. The fix is *consistency*: always return a stable
-`Vector{Optional{T}}` whose `T` is keyed on the group column's data type from metadata (never
-`Vector{Any}`, never a bare concrete vector). This is about removing the eltype-by-data branch,
-not about nullability.
 
 ### `read_scalar_*_by_id` — leave optional (contract)
 

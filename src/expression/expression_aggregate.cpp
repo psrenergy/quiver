@@ -14,11 +14,15 @@
 
 namespace quiver {
 
-ExpressionAggregate::ExpressionAggregate(Operation operation,
-                                         std::shared_ptr<ExpressionNode> operand,
-                                         std::string dimension_name,
-                                         std::optional<double> parameter)
-    : operation_(operation), operand_(std::move(operand)), dimension_name_(std::move(dimension_name)),
+ExpressionAggregate::ExpressionAggregate(
+    Operation operation,
+    std::shared_ptr<ExpressionNode> operand,
+    std::string dimension_name,
+    std::optional<double> parameter
+)
+    : operation_(operation),
+      operand_(std::move(operand)),
+      dimension_name_(std::move(dimension_name)),
       parameter_(parameter) {
     validate_aggregation_param(operation_, parameter_, "aggregate");
 

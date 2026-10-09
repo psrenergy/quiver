@@ -73,29 +73,34 @@ const readSymbols = {
   quiver_database_read_scalar_integer_by_id: { args: [P, BUF, BUF, I64, P, P], returns: I32 },
   quiver_database_read_scalar_float_by_id: { args: [P, BUF, BUF, I64, P, P], returns: I32 },
   quiver_database_read_scalar_string_by_id: { args: [P, BUF, BUF, I64, P, P], returns: I32 },
-  quiver_database_read_vector_integers: { args: [P, BUF, BUF, P, P, P], returns: I32 },
-  quiver_database_read_vector_floats: { args: [P, BUF, BUF, P, P, P], returns: I32 },
+  quiver_database_read_vector_integers: { args: [P, BUF, BUF, P, P, P, P], returns: I32 },
+  quiver_database_read_vector_floats: { args: [P, BUF, BUF, P, P, P, P], returns: I32 },
   quiver_database_read_vector_strings: { args: [P, BUF, BUF, P, P, P], returns: I32 },
-  quiver_database_read_set_integers: { args: [P, BUF, BUF, P, P, P], returns: I32 },
-  quiver_database_read_set_floats: { args: [P, BUF, BUF, P, P, P], returns: I32 },
+  quiver_database_read_set_integers: { args: [P, BUF, BUF, P, P, P, P], returns: I32 },
+  quiver_database_read_set_floats: { args: [P, BUF, BUF, P, P, P, P], returns: I32 },
   quiver_database_read_set_strings: { args: [P, BUF, BUF, P, P, P], returns: I32 },
-  quiver_database_read_vector_integers_by_id: { args: [P, BUF, BUF, I64, P, P], returns: I32 },
-  quiver_database_read_vector_floats_by_id: { args: [P, BUF, BUF, I64, P, P], returns: I32 },
+  quiver_database_read_vector_integers_by_id: { args: [P, BUF, BUF, I64, P, P, P], returns: I32 },
+  quiver_database_read_vector_floats_by_id: { args: [P, BUF, BUF, I64, P, P, P], returns: I32 },
   quiver_database_read_vector_strings_by_id: { args: [P, BUF, BUF, I64, P, P], returns: I32 },
-  quiver_database_read_set_integers_by_id: { args: [P, BUF, BUF, I64, P, P], returns: I32 },
-  quiver_database_read_set_floats_by_id: { args: [P, BUF, BUF, I64, P, P], returns: I32 },
+  quiver_database_read_set_integers_by_id: { args: [P, BUF, BUF, I64, P, P, P], returns: I32 },
+  quiver_database_read_set_floats_by_id: { args: [P, BUF, BUF, I64, P, P, P], returns: I32 },
   quiver_database_read_set_strings_by_id: { args: [P, BUF, BUF, I64, P, P], returns: I32 },
+  quiver_database_read_vector_group_by_id: {
+    args: [P, BUF, BUF, I64, P, P, P, P, P, P],
+    returns: I32,
+  },
+  quiver_database_read_set_group_by_id: {
+    args: [P, BUF, BUF, I64, P, P, P, P, P, P],
+    returns: I32,
+  },
   quiver_database_read_element_ids: { args: [P, BUF, P, P], returns: I32 },
   quiver_database_number_of_elements: { args: [P, BUF, P], returns: I32 },
 } as const;
 
 const querySymbols = {
-  quiver_database_query_string: { args: [P, BUF, P, P], returns: I32 },
-  quiver_database_query_integer: { args: [P, BUF, P, P], returns: I32 },
-  quiver_database_query_float: { args: [P, BUF, P, P], returns: I32 },
-  quiver_database_query_string_params: { args: [P, BUF, P, P, USIZE, P, P], returns: I32 },
-  quiver_database_query_integer_params: { args: [P, BUF, P, P, USIZE, P, P], returns: I32 },
-  quiver_database_query_float_params: { args: [P, BUF, P, P, USIZE, P, P], returns: I32 },
+  quiver_database_query_string: { args: [P, BUF, P, P, USIZE, P, P], returns: I32 },
+  quiver_database_query_integer: { args: [P, BUF, P, P, USIZE, P, P], returns: I32 },
+  quiver_database_query_float: { args: [P, BUF, P, P, USIZE, P, P], returns: I32 },
 } as const;
 
 const transactionSymbols = {
@@ -131,7 +136,7 @@ const timeSeriesSymbols = {
     args: [P, BUF, BUF, I64, P, P, P, P, P, P],
     returns: I32,
   },
-  quiver_database_read_time_series_row: { args: [P, BUF, BUF, BUF, BUF, P, P, P], returns: I32 },
+  quiver_database_read_time_series_row: { args: [P, BUF, BUF, BUF, BUF, P, P, P, P], returns: I32 },
   quiver_database_upsert_time_series_row: {
     args: [P, BUF, BUF, I64, P, P, P, USIZE],
     returns: I32,
@@ -181,6 +186,7 @@ const freeSymbols = {
   quiver_database_free_integer_array: { args: [P], returns: I32 },
   quiver_database_free_float_array: { args: [P], returns: I32 },
   quiver_database_free_mask: { args: [P], returns: I32 },
+  quiver_database_free_masks: { args: [P, USIZE], returns: I32 },
   quiver_database_free_string_array: { args: [P, USIZE], returns: I32 },
   quiver_database_free_string: { args: [P], returns: I32 },
   quiver_database_free_integer_vectors: { args: [P, P, USIZE], returns: I32 },
@@ -190,11 +196,11 @@ const freeSymbols = {
   quiver_database_free_group_metadata_array: { args: [P, USIZE], returns: I32 },
 } as const;
 
-const luaSymbols = {
-  quiver_lua_runner_new: { args: [P, P], returns: I32 },
-  quiver_lua_runner_free: { args: [P], returns: I32 },
-  quiver_lua_runner_run: { args: [P, BUF, BUF], returns: I32 },
-  quiver_lua_runner_free_string: { args: [P], returns: I32 },
+const sandboxSymbols = {
+  quiver_sandbox_new: { args: [P, P], returns: I32 },
+  quiver_sandbox_free: { args: [P], returns: I32 },
+  quiver_sandbox_run: { args: [P, BUF, BUF], returns: I32 },
+  quiver_sandbox_free_string: { args: [P], returns: I32 },
 } as const;
 
 // Combined symbol map for dlopen.
@@ -210,7 +216,7 @@ const allSymbols = {
   ...timeSeriesSymbols,
   ...csvSymbols,
   ...freeSymbols,
-  ...luaSymbols,
+  ...sandboxSymbols,
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -282,7 +288,17 @@ function initLibrary(): QuiverLib {
     }
   }
 
-  // Tier 2: Dev mode -- walk up directories looking for build/bin/.
+  // Tier 2: Standalone Bun executables ship native siblings beside the executable.
+  const executableDir = dirname(process.execPath);
+  if (existsSync(join(executableDir, C_API_LIB))) {
+    try {
+      return openLibrary(executableDir);
+    } catch (e) {
+      lastError = e;
+    }
+  }
+
+  // Tier 3: Dev mode -- walk up directories looking for build/bin/.
   for (const dir of getSearchPaths()) {
     try {
       return openLibrary(dir);
@@ -291,7 +307,7 @@ function initLibrary(): QuiverLib {
     }
   }
 
-  // Tier 3: System PATH fallback -- the core lib is expected to be discoverable
+  // Tier 4: System PATH fallback -- the core lib is expected to be discoverable
   // on PATH alongside the C API lib.
   try {
     return dlopen(C_API_LIB, allSymbols);
@@ -301,6 +317,7 @@ function initLibrary(): QuiverLib {
 
   const searched = [
     join(__dirname, "..", "libs", platformKey),
+    executableDir,
     ...getSearchPaths(),
     "system PATH",
   ].join(", ");

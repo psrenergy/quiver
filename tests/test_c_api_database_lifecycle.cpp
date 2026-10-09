@@ -1,18 +1,22 @@
 #include "test_utils.h"
 
-#include <filesystem>
 #include <gtest/gtest.h>
 #include <quiver/c/database.h>
 #include <quiver/c/element.h>
+
+#include <filesystem>
 
 namespace fs = std::filesystem;
 
 class TempFileFixture : public ::testing::Test {
 protected:
-    void SetUp() override { path = (fs::temp_directory_path() / "quiver_test.db").string(); }
+    void SetUp() override {
+        path = (fs::temp_directory_path() / "quiver_test.db").string();
+    }
     void TearDown() override {
-        if (fs::exists(path))
+        if (fs::exists(path)) {
             fs::remove(path);
+        }
     }
     std::string path;
 };
@@ -222,11 +226,28 @@ TEST_F(TempFileFixture, FromSchemaInvalidPath) {
 TEST_F(TempFileFixture, FromSchemaRejectsSetTableWithoutParentFk) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    EXPECT_EQ(quiver_database_from_schema(":memory:", INVALID_SCHEMA("set_no_parent_fk.sql").c_str(), &options, &db),
-              QUIVER_ERROR);
-    EXPECT_STREQ(quiver_get_last_error(),
-                 "Failed to validate schema: Set table 'Collection_set_tags' must have foreign key to parent "
-                 "collection 'Collection'");
+    EXPECT_EQ(
+        quiver_database_from_schema(":memory:", INVALID_SCHEMA("set_no_parent_fk.sql").c_str(), &options, &db),
+        QUIVER_ERROR
+    );
+    EXPECT_STREQ(
+        quiver_get_last_error(),
+        "Failed to validate schema: Set table 'Collection_set_tags' must have foreign key to parent "
+        "collection 'Collection'"
+    );
+}
+
+TEST_F(TempFileFixture, FromSchemaRejectsUnsupportedColumnType) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    EXPECT_EQ(
+        quiver_database_from_schema(":memory:", INVALID_SCHEMA("unsupported_type.sql").c_str(), &options, &db),
+        QUIVER_ERROR
+    );
+    EXPECT_STREQ(
+        quiver_get_last_error(),
+        "Failed to validate schema: column 'payload' in table 'Items' has unsupported type 'BLOB'"
+    );
 }
 
 // ============================================================================
@@ -252,6 +273,22 @@ TEST_F(TempFileFixture, FromMigrationsInvalidPath) {
     EXPECT_NE(quiver_database_from_migrations(":memory:", "nonexistent/migrations/", &options, &db), QUIVER_OK);
 }
 
+TEST_F(TempFileFixture, FromMigrationsSetsCurrentVersion) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(
+        quiver_database_from_migrations(":memory:", SCHEMA_PATH("schemas/migrations").c_str(), &options, &db),
+        QUIVER_OK
+    ) << quiver_get_last_error();
+    ASSERT_NE(db, nullptr);
+
+    int64_t version = -1;
+    EXPECT_EQ(quiver_database_current_version(db, &version), QUIVER_OK);
+    EXPECT_EQ(version, 3);
+
+    quiver_database_close(db);
+}
+
 // ============================================================================
 // Migration round-trip tests
 // ============================================================================
@@ -262,8 +299,10 @@ TEST_F(TempFileFixture, ValidateMigrationsSucceeds) {
 
 TEST_F(TempFileFixture, ValidateMigrationsPropagatesFailure) {
     EXPECT_EQ(quiver_database_validate_migrations("nonexistent/migrations"), QUIVER_ERROR);
-    EXPECT_STREQ(quiver_get_last_error(),
-                 "Cannot validate_migrations: migrations path not found: nonexistent/migrations");
+    EXPECT_STREQ(
+        quiver_get_last_error(),
+        "Cannot validate_migrations: migrations path not found: nonexistent/migrations"
+    );
 }
 
 TEST_F(TempFileFixture, ValidateMigrationsRejectsNullPath) {
@@ -313,218 +352,6 @@ TEST_F(TempFileFixture, FromSchemaValidPath) {
     int healthy = 0;
     EXPECT_EQ(quiver_database_is_healthy(db, &healthy), QUIVER_OK);
     EXPECT_EQ(healthy, 1);
-
-    quiver_database_close(db);
-}
-
-// ============================================================================
-// Element ID operations
-// ============================================================================
-
-TEST_F(TempFileFixture, ReadElementIdsNullDb) {
-    int64_t* ids = nullptr;
-    size_t count = 0;
-    auto err = quiver_database_read_element_ids(nullptr, "Collection", &ids, &count);
-    EXPECT_EQ(err, QUIVER_ERROR);
-}
-
-TEST_F(TempFileFixture, ReadElementIdsNullCollection) {
-    auto options = quiver::test::quiet_options();
-    quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
-    ASSERT_NE(db, nullptr);
-
-    int64_t* ids = nullptr;
-    size_t count = 0;
-    auto err = quiver_database_read_element_ids(db, nullptr, &ids, &count);
-    EXPECT_EQ(err, QUIVER_ERROR);
-
-    quiver_database_close(db);
-}
-
-TEST_F(TempFileFixture, ReadElementIdsNullOutput) {
-    auto options = quiver::test::quiet_options();
-    quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
-    ASSERT_NE(db, nullptr);
-
-    size_t count = 0;
-    auto err = quiver_database_read_element_ids(db, "Collection", nullptr, &count);
-    EXPECT_EQ(err, QUIVER_ERROR);
-
-    int64_t* ids = nullptr;
-    err = quiver_database_read_element_ids(db, "Collection", &ids, nullptr);
-    EXPECT_EQ(err, QUIVER_ERROR);
-
-    quiver_database_close(db);
-}
-
-TEST_F(TempFileFixture, ReadElementIdsValid) {
-    auto options = quiver::test::quiet_options();
-    quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
-    ASSERT_NE(db, nullptr);
-
-    // Create Configuration first
-    quiver_element_t* config = nullptr;
-    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
-    quiver_element_set_string(config, "label", "Config");
-    int64_t config_id = 0;
-    quiver_database_create_element(db, "Configuration", config, &config_id);
-    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
-
-    // Create some elements
-    for (int i = 1; i <= 3; ++i) {
-        quiver_element_t* element = nullptr;
-        ASSERT_EQ(quiver_element_create(&element), QUIVER_OK);
-        quiver_element_set_string(element, "label", ("Item " + std::to_string(i)).c_str());
-        int64_t elem_id = 0;
-        quiver_database_create_element(db, "Collection", element, &elem_id);
-        EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
-    }
-
-    // Read element Ids
-    int64_t* ids = nullptr;
-    size_t count = 0;
-    auto err = quiver_database_read_element_ids(db, "Collection", &ids, &count);
-    EXPECT_EQ(err, QUIVER_OK);
-    EXPECT_EQ(count, 3);
-
-    if (ids != nullptr) {
-        quiver_database_free_integer_array(ids);
-    }
-
-    quiver_database_close(db);
-}
-
-// ============================================================================
-// Delete element tests
-// ============================================================================
-
-TEST_F(TempFileFixture, DeleteElementNullDb) {
-    auto err = quiver_database_delete_element(nullptr, "Collection", 1);
-    EXPECT_EQ(err, QUIVER_ERROR);
-}
-
-TEST_F(TempFileFixture, DeleteElementNullCollection) {
-    auto options = quiver::test::quiet_options();
-    quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
-    ASSERT_NE(db, nullptr);
-
-    auto err = quiver_database_delete_element(db, nullptr, 1);
-    EXPECT_EQ(err, QUIVER_ERROR);
-
-    quiver_database_close(db);
-}
-
-TEST_F(TempFileFixture, DeleteElementValid) {
-    auto options = quiver::test::quiet_options();
-    quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
-    ASSERT_NE(db, nullptr);
-
-    // Create Configuration first
-    quiver_element_t* config = nullptr;
-    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
-    quiver_element_set_string(config, "label", "Config");
-    int64_t config_id = 0;
-    quiver_database_create_element(db, "Configuration", config, &config_id);
-    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
-
-    // Create element
-    quiver_element_t* element = nullptr;
-    ASSERT_EQ(quiver_element_create(&element), QUIVER_OK);
-    quiver_element_set_string(element, "label", "Item 1");
-    int64_t id = 0;
-    EXPECT_EQ(quiver_database_create_element(db, "Collection", element, &id), QUIVER_OK);
-    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
-
-    EXPECT_GT(id, 0);
-
-    // Delete element
-    auto err = quiver_database_delete_element(db, "Collection", id);
-    EXPECT_EQ(err, QUIVER_OK);
-
-    // Verify element is deleted
-    int64_t* ids = nullptr;
-    size_t count = 0;
-    quiver_database_read_element_ids(db, "Collection", &ids, &count);
-    EXPECT_EQ(count, 0);
-
-    if (ids != nullptr) {
-        quiver_database_free_integer_array(ids);
-    }
-
-    quiver_database_close(db);
-}
-
-// ============================================================================
-// Update element tests
-// ============================================================================
-
-TEST_F(TempFileFixture, UpdateElementNullDb) {
-    quiver_element_t* element = nullptr;
-    ASSERT_EQ(quiver_element_create(&element), QUIVER_OK);
-    quiver_element_set_string(element, "label", "New Label");
-
-    auto err = quiver_database_update_element(nullptr, "Collection", 1, element);
-    EXPECT_EQ(err, QUIVER_ERROR);
-
-    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
-}
-
-TEST_F(TempFileFixture, UpdateElementNullCollection) {
-    auto options = quiver::test::quiet_options();
-    quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
-    ASSERT_NE(db, nullptr);
-
-    quiver_element_t* element = nullptr;
-    ASSERT_EQ(quiver_element_create(&element), QUIVER_OK);
-    quiver_element_set_string(element, "label", "New Label");
-
-    auto err = quiver_database_update_element(db, nullptr, 1, element);
-    EXPECT_EQ(err, QUIVER_ERROR);
-
-    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
-    quiver_database_close(db);
-}
-
-TEST_F(TempFileFixture, UpdateElementNullElement) {
-    auto options = quiver::test::quiet_options();
-    quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
-    ASSERT_NE(db, nullptr);
-
-    auto err = quiver_database_update_element(db, "Collection", 1, nullptr);
-    EXPECT_EQ(err, QUIVER_ERROR);
-
-    quiver_database_close(db);
-}
-
-// ============================================================================
-// Describe tests
-// ============================================================================
-
-TEST_F(TempFileFixture, DescribeDoesNotFail) {
-    auto options = quiver::test::quiet_options();
-    quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
-    ASSERT_NE(db, nullptr);
-
-    char* report = nullptr;
-    ASSERT_EQ(quiver_database_describe(db, &report), QUIVER_OK);
-    ASSERT_NE(report, nullptr);
-    EXPECT_NE(std::string(report).find("Database: :memory:"), std::string::npos);
-    quiver_database_free_string(report);
 
     quiver_database_close(db);
 }

@@ -1,4 +1,3 @@
-import { ptr } from "bun:ffi";
 import { integerToBoolean } from "./boolean.ts";
 import { Database } from "./database.ts";
 import { check, QuiverError } from "./errors.ts";
@@ -22,11 +21,18 @@ import {
   type QueryParam,
 } from "./types.ts";
 
-function marshalParams(parameters: QueryParam[]): {
-  types: Allocation;
-  values: Allocation;
+// Marshals query parameters into the C API's parallel type/value arrays. No parameters (omitted or
+// empty) marshal to NULL pointers with a count of 0: the C API reads neither array then, and a
+// zero-length TypedArray has no pointer in Bun (ptr() of one returns a TypeError).
+function marshalParams(parameters?: QueryParam[]): {
+  types: Uint8Array | null;
+  values: Uint8Array | null;
+  count: bigint;
   _keepalive: Allocation[];
 } {
+  if (!parameters || parameters.length === 0)
+    return { types: null, values: null, count: 0n, _keepalive: [] };
+
   const n = parameters.length;
   const typesBuf = new Uint8Array(n * 4);
   const typesDv = new DataView(typesBuf.buffer);
@@ -42,6 +48,11 @@ function marshalParams(parameters: QueryParam[]): {
     } else if (typeof p === "boolean") {
       typesDv.setInt32(i * 4, DATA_TYPE_INTEGER, true);
       const native = allocNativeInt64([p ? 1 : 0]);
+      keepalive.push(native);
+      valuesDv.setBigInt64(i * 8, nativeAddress(native.ptr), true);
+    } else if (typeof p === "bigint") {
+      typesDv.setInt32(i * 4, DATA_TYPE_INTEGER, true);
+      const native = allocNativeInt64([p]);
       keepalive.push(native);
       valuesDv.setBigInt64(i * 8, nativeAddress(native.ptr), true);
     } else if (typeof p === "number") {
@@ -66,10 +77,7 @@ function marshalParams(parameters: QueryParam[]): {
     }
   }
 
-  const types: Allocation = { ptr: ptr(typesBuf), buf: typesBuf };
-  const values: Allocation = { ptr: ptr(valuesBuf), buf: valuesBuf };
-  keepalive.push(types, values);
-  return { types, values, _keepalive: keepalive };
+  return { types: typesBuf, values: valuesBuf, count: BigInt(n), _keepalive: keepalive };
 }
 
 Database.prototype.queryString = function (
@@ -81,23 +89,19 @@ Database.prototype.queryString = function (
   const sqlBuf = toCString(sql);
   const outValue = allocPtrOut();
   const outHasValue = new Uint8Array(4);
+  const params = marshalParams(parameters);
 
-  if (parameters && parameters.length > 0) {
-    const m = marshalParams(parameters);
-    check(
-      lib.quiver_database_query_string_params(
-        this._handle,
-        sqlBuf.buf,
-        m.types.buf,
-        m.values.buf,
-        BigInt(parameters.length),
-        outValue.buf,
-        outHasValue,
-      ),
-    );
-  } else {
-    check(lib.quiver_database_query_string(this._handle, sqlBuf.buf, outValue.buf, outHasValue));
-  }
+  check(
+    lib.quiver_database_query_string(
+      this._handle,
+      sqlBuf.buf,
+      params.types,
+      params.values,
+      params.count,
+      outValue.buf,
+      outHasValue,
+    ),
+  );
 
   if (new DataView(outHasValue.buffer).getInt32(0, true) === 0) return null;
   const result = decodeStringFromBuf(outValue);
@@ -114,23 +118,19 @@ Database.prototype.queryInteger = function (
   const sqlBuf = toCString(sql);
   const outValue = new Uint8Array(8);
   const outHasValue = new Uint8Array(4);
+  const params = marshalParams(parameters);
 
-  if (parameters && parameters.length > 0) {
-    const m = marshalParams(parameters);
-    check(
-      lib.quiver_database_query_integer_params(
-        this._handle,
-        sqlBuf.buf,
-        m.types.buf,
-        m.values.buf,
-        BigInt(parameters.length),
-        outValue,
-        outHasValue,
-      ),
-    );
-  } else {
-    check(lib.quiver_database_query_integer(this._handle, sqlBuf.buf, outValue, outHasValue));
-  }
+  check(
+    lib.quiver_database_query_integer(
+      this._handle,
+      sqlBuf.buf,
+      params.types,
+      params.values,
+      params.count,
+      outValue,
+      outHasValue,
+    ),
+  );
 
   if (new DataView(outHasValue.buffer).getInt32(0, true) === 0) return null;
   return Number(new DataView(outValue.buffer).getBigInt64(0, true));
@@ -153,23 +153,19 @@ Database.prototype.queryFloat = function (
   const sqlBuf = toCString(sql);
   const outValue = new Uint8Array(8);
   const outHasValue = new Uint8Array(4);
+  const params = marshalParams(parameters);
 
-  if (parameters && parameters.length > 0) {
-    const m = marshalParams(parameters);
-    check(
-      lib.quiver_database_query_float_params(
-        this._handle,
-        sqlBuf.buf,
-        m.types.buf,
-        m.values.buf,
-        BigInt(parameters.length),
-        outValue,
-        outHasValue,
-      ),
-    );
-  } else {
-    check(lib.quiver_database_query_float(this._handle, sqlBuf.buf, outValue, outHasValue));
-  }
+  check(
+    lib.quiver_database_query_float(
+      this._handle,
+      sqlBuf.buf,
+      params.types,
+      params.values,
+      params.count,
+      outValue,
+      outHasValue,
+    ),
+  );
 
   if (new DataView(outHasValue.buffer).getInt32(0, true) === 0) return null;
   return new DataView(outValue.buffer).getFloat64(0, true);

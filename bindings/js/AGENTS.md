@@ -11,43 +11,59 @@ in `.github/AGENTS.md`.
 mod.ts            # Package entry point (re-exports src/index.ts)
 src/              # Module per C API category: database.ts, create.ts, read.ts, metadata.ts,
                   # query.ts, time-series.ts, transaction.ts, csv.ts, introspection.ts,
-                  # composites.ts, lua-runner.ts (index.ts re-exports the public surface)
-src/lua-api.ts    # LUA_DB_API_REFERENCE — agent-facing Lua `db:` API reference, as a string const
-src/group-columns.ts # Shared columnar marshaller for the group writers (by id and by label)
-src/loader.ts     # HAND-WRITTEN FFI symbol table + 3-tier library loader
-src/types.ts      # Central DATA_TYPE_* / LOG_LEVEL_* constants and DatabaseOptions type
+                  # composites.ts, sandbox.ts (index.ts re-exports the public surface)
+src/sandbox-api.ts    # SANDBOX_API_REFERENCE — agent-facing Lua `db:` API reference, as a string const
+src/group-columns.ts # Shared columnar marshaller (group writers) and decoder (group readers),
+                     # plus numericCells, the per-cell numeric check setElementArray shares
+src/loader.ts     # HAND-WRITTEN FFI symbol table + 4-tier library loader
+src/types.ts      # Central DATA_TYPE_* / LOG_LEVEL_* constants and DatabaseOptions type —
+                  # all re-exported from the package root
 src/ffi-helpers.ts # Alloc helpers, makeDefaultOptions()
 src/boolean.ts    # integerToBoolean — strict 0/1 conversion for the boolean convenience readers
 src/errors.ts     # QuiverError (always thrown; message from quiver_get_last_error)
 test/             # bun:test suite (*.test.ts per area) + test.bat
-package.json      # Version must match CMakeLists.txt; scripts: test/lint/format (biome)
+package.json      # Version must match CMakeLists.txt; scripts: test/typecheck/lint/format
+tsconfig.json     # Strict noEmit check of mod.ts and actual src imports; Bun types, bundler resolution
 biome.json        # Lint/format config
+bunfig.toml       # coverageSkipTestFiles = true (Bun 1.3 reports test/ otherwise; CI uploads
+                  # `bun test test --coverage --coverage-reporter=lcov` as Codecov flag `js`)
 ```
 
 ## Rules and gotchas
 
-- **`LUA_DB_API_REFERENCE` (`src/lua-api.ts`) is shipped prompt payload, not just docs.** The
+- **`SANDBOX_API_REFERENCE` (`src/sandbox-api.ts`) is shipped prompt payload, not just docs.** The
   downstream consumer (`claw`) imports it from the package root and interpolates it verbatim into an
   LLM system prompt, which is why it stays a plain `export const`: a string constant costs no FFI,
   no file read, and no Bun loader feature, and `bun build --compile` inlines it into a consumer's
   binary. Converting it to an imported `.md` was tried and deliberately reverted (see root
   `AGENTS.md` "Do Not Fix") — the escaped backticks are the accepted cost.
-  `test/lua-api-sync.test.ts` derives the bound surface from `src/lua_runner.cpp` and fails if a
+  `test/sandbox-api-sync.test.ts` derives the bound surface from every file under `src/sandbox/` and fails if a
   `db:`/`quiver.*` name is undocumented, a documented name no longer exists, or the stdlib sentence
-  disagrees with `open_libraries` — that check is why the doc must keep the literal-token convention
+  disagrees with `open_libraries`, or any of the `BinaryFile`, `BinaryMetadata`, `Expression` or
+  `CsvWriter` usertypes parses to zero methods, or a `.set_function(` call goes through any receiver
+  but `bind`/`ns` (its name would otherwise drop out unchecked), or `open_libraries(` does not appear exactly once —
+  that check is why the doc must keep the literal-token convention
   and the canonical `Loaded standard libraries: ...` sentence. It cannot check arg order, arity,
-  types, or return shapes; those still need a hand re-diff. The `## CSV file reading` section's
-  worked example is exactly this uncheckable half: its Lua is real, lifted verbatim from
-  `test_lua_runner_read_csv.cpp`'s regression tests and run once against `tests/fixtures/
+  types, or return shapes; those still need a hand re-diff. The script-error envelope remains
+  `Failed to run Lua script: <message>`, matching `Sandbox::run` in the core.
+  The `## CSV file reading` section's worked example is exactly this uncheckable half: its Lua
+  is real, lifted verbatim from
+  `test_sandbox_read_csv.cpp`'s regression tests and run once against `tests/fixtures/
   ma_energia_residencial.csv` / `ma_gd_data.csv` through `quiver_cli` before it shipped — but
   **nothing in CI re-runs it**, so an edit to that example has to be re-verified by hand the same
   way (a throwaway file-backed database plus the fixtures, driven through `quiver_cli`).
+- **XLSX reading is Lua-only.** The reference documents `db:read_xlsx` / `db:read_xlsx_stream`,
+  their sheet/header options, all-string cells, cached formulas and DOM memory limit. No JS
+  XLSX wrapper or new FFI symbols; correctness lives in `tests/test_sandbox_read_xlsx.cpp`.
 - **No generator** — when the C API changes, add the symbol to `src/loader.ts` by hand as
   `{ name: { args, returns } }`. This is the drift-prone spot: check it whenever a new C function
   exists in other bindings but not here.
 - **Library loader**: lazy `getSymbols()` (init on first use — eager init would hit a
-  `QuiverError` TDZ during the loader↔errors import cycle). Three tiers: bundled
-  `libs/{os}-{arch}/` (shipped in the npm package) → dev `build/bin` walk-up → system PATH. On
+  `QuiverError` TDZ during the loader↔errors import cycle). Four tiers: bundled
+  `libs/{os}-{arch}/` (shipped in the npm package) → `dirname(process.execPath)` for compiled
+  executable siblings → dev `build/bin` walk-up → system PATH. Never search the invocation cwd.
+  `test/compiled-package.test.ts` compiles a Database/Sandbox mutation/readback probe, stages
+  native siblings, and runs it from an unrelated empty cwd with loader overrides removed. On
   Windows, `ensureCoreOnPath` prepends the lib dir to `process.env.PATH` so the OS loader finds
   the sibling `libquiver.dll` (Bun's `dlopen` cannot preload the core lib — it rejects an empty
   symbol map).
@@ -63,58 +79,103 @@ biome.json        # Lint/format config
   - No struct-by-value FFI return (oven-sh/bun#6139) → `quiver_database_options_default` is
     omitted from the symbol table; `ffi-helpers.makeDefaultOptions()` builds the options struct
     in JS.
-- **int64 handling**: input params accept `number | bigint` — `allocNativeInt64` writes each
-  element with `DataView.setBigInt64`, so `bigint` inputs (scalar or array) are preserved
-  exactly, never coerced through `Number`. Read paths return `number` (converted via `Number()`
-  after the FFI call) — the deliberately simple surface.
+- **int64 handling**: input params accept `number | bigint` on every write path —
+  `createElement`/`updateElement` scalars and arrays, the group writers (`GroupColumns`),
+  `upsertTimeSeriesRow` and query parameters (`QueryParam`). `allocNativeInt64` writes each
+  element with `DataView.setBigInt64`, so a `bigint` is preserved exactly, never coerced through
+  `Number` — except in a group column or element array that also holds a fractional cell, which is
+  written FLOAT and maps the `bigint` through `Number()` (int-for-REAL). Read paths return `number`
+  (converted via `Number()` after the FFI call) — the deliberately simple surface.
 - **`src/group-columns.ts` is the one columnar marshaller** for `updateTimeSeriesGroup`,
   `updateVectorGroup`, `updateSetGroup` and their `ByLabel` forms. They differ only in which C
   entry point they pass to `updateGroupColumns(handle, caller, cFn, ...)` and whether `key` is a
   `number` id (a `bigint`) or a `string` label (a `Uint8Array`), so don't re-inline it per method.
+  `ColumnUpdateFn<Key>` correlates that public key with its native argument; `UpsertRowFn<Key>`
+  does the same for row writes. Keep the conversion assertion inside each shared helper, not
+  at call sites, so strict source checking catches incompatible native callbacks.
   It validates before marshalling: jagged columns and named-but-empty columns (`rowCount === 0`)
   throw a `QuiverError` naming the column. Load-bearing — an empty column would otherwise marshal a
   `null` data pointer that the C API dereferences against the first column's `row_count`. Pass `{}`
   (no columns) to clear the group. The C API rejects both cases too; failing here names the column.
+  Its read-side twin, `readGroupColumns(handle, readGroup, collection, group, id)`, is the one
+  decoder of the columnar + per-cell-mask read result, and frees it in a `finally`:
+  `readTimeSeriesGroup` returns its columns as they are, and `readVectorGroupById` /
+  `readSetGroupById` (`read.ts`) transpose them into `Record<string, number | string | null>[]`
+  rows — rows like the other three bindings (root design decision), with DATE_TIME left as the
+  stored string and no synthetic `vector_index`. The C-function parameter is `readGroup`, never
+  `read`, which is the `bun:ffi` import the decoder uses for `read.ptr`.
 - **A nullable scalar string argument passes literal `null`, never `""`**
   (`updateRelation`/`updateRelationByLabel`) — Bun turns `null` into a NULL pointer for a
-  `"pointer"` slot, the same way `group-columns.ts` passes `null` for the array pointers when
-  clearing. The C API reads NULL as "clear the relation" and an empty string as a label to look up.
-- **Scalar bulk NULLs**: `readScalarIntegers`/`readScalarFloats` read a parallel `uint8_t*` mask
+  `"pointer"` slot, the same way `group-columns.ts` (clearing a group) and `updateTimeSeriesFiles`
+  (an empty map) pass `null` for the array pointers instead of building zero-length tables. The
+  C API reads NULL as "clear the relation" and an empty string as a label to look up.
+- **No query parameters pass `null, null, 0n`** (`marshalParams` in `src/query.ts`), whether the
+  list is omitted, `null` or empty. The C API reads neither array at count 0, and a zero-length
+  TypedArray has no pointer in Bun (`ptr()` of one *returns* a `TypeError` object instead of
+  throwing), so a parameterless query never builds a buffer at all.
+- **Bulk and per-cell NULLs**: `readScalarIntegers`/`readScalarFloats` read a parallel `uint8_t*` mask
   (`new Uint8Array(toArrayBuffer(...))`) and gate `mask[i] ? v : null` → `(number | null)[]` — never
-  `Number()` a masked slot (would turn NULL into 0). `readScalarStrings` reads pointer-by-pointer with
-  `read.ptr` + a NULL guard → `(string | null)[]` (not `decodeStringArray`). `loader.ts` carries the
-  mask arg on the two numeric symbols + `quiver_database_free_mask` (hand-maintained, no generator).
-- **`LuaRunner.run` owns its result**: `quiver_lua_runner_run` takes a `char** out_result` and the
-  JSON string must be freed with `quiver_lua_runner_free_string` — *not* `quiver_database_free_string`
+  `Number()` a masked slot (would turn NULL into 0). The vector/set readers do the same per cell:
+  `readByIdIntegers`/`readByIdFloats` take a flat mask (`quiver_database_free_mask`), while
+  `readBulkIntegers`/`readBulkFloats` take a nested one — `decodePtrArray` over the outer pointer,
+  then a `Uint8Array` per element sized by `sizes[i]`, freed by `quiver_database_free_masks`. Every
+  string reader (scalar, `readBulkStrings`, `readByIdStrings`) reads pointer-by-pointer with
+  `decodePtrArray` + a NULL guard — **never `decodeStringArray`**, which turns a NULL `char*` into
+  `""`. `loader.ts` carries the mask args on the eight numeric vector/set symbols and on
+  `quiver_database_read_time_series_row`, plus both free functions (hand-maintained, no
+  generator). `readTimeSeriesRow` gates every column type on its mask the same way (mask 0 = no
+  data at or before the date → `null`) and builds a `CString` only for an unmasked slot.
+- **`Sandbox.run` owns its result**: `quiver_sandbox_run` takes a `char** out_result` and the
+  JSON string must be freed with `quiver_sandbox_free_string` — *not* `quiver_database_free_string`
   (both are in `loader.ts`, hand-maintained). `decodeStringFromBuf` returns `""` for a NULL pointer,
   which is also what the C API leaves there on failure, and `check()` throws before the decode.
+  The script must be Lua source text: the core loads it in text mode, so a precompiled (bytecode)
+  chunk is rejected with `Failed to run Lua script: ...` and surfaces like any other script error.
+  `test/sandbox.test.ts` checks mixed Lua REAL arrays on create/update; cell conversion and
+  schema validation stay in C++.
 - **Time-series NULL cells** (`TimeSeriesData = Record<string, (number | string | null)[]>`): a
   `null` value marshals to a per-column `uint8_t` mask (0 = NULL) with a placeholder in the data
   array; an all-`null` column is tagged FLOAT with a zeroed placeholder (the C API ignores the tag
   for masked cells). Reads decode the mask and null-out cells; string columns use the null-guarded
-  pointer loop (never `decodeStringArray`, which constructs a `CString` from a NULL pointer). Masks
+  pointer loop (never `decodeStringArray`, which turns a NULL `char*` into `""`). Masks
   are built by direct `Uint8Array` indexing — never a `DataView` — per the TypedArray house rule.
+- **`setElementArray` refuses a `null` or `undefined` cell in any array** (`QuiverError` naming
+  the column), whatever its position. A vector/set read returns a NULL cell as `null`, and without
+  the check a read written back through `createElement`/`updateElement` stored it as 0 / `false`
+  (`allocNativeFloat64`'s `setFloat64(null)` writes 0), or misrouted an integer array to the float
+  setter. String arrays used to be exempt, which made the outcome depend on the first cell
+  (`["a", null]` stored NULL, `[null, "a"]` threw) and let `["a", undefined]` store the text
+  `"undefined"`. NULL cells go through `updateVectorGroup` / `updateSetGroup` (or
+  `updateTimeSeriesGroup`), as in Python, Julia and Lua.
 - **`integerToBoolean` throws `RangeError`, not `QuiverError`** — the one exception to the
   "always `QuiverError`" rule above, and deliberate: that message comes from
   `quiver_get_last_error`, while this one is crafted here (the boolean readers are a binding-only
   convenience the core never sees). It names the offending `collection.attribute`; `queryBoolean`
-  has no column to name. On writes a `boolean` is an INTEGER 1/0 — `setElementField`,
-  `setElementArray` and `marshalParams` each carry a `typeof === "boolean"` branch, and
-  `ScalarValue`/`ArrayValue`/`QueryParam`/`GroupColumns` include it. The two group/row marshallers
-  instead **normalize per cell before the type dispatch** — `updateGroupColumns`
-  (`group-columns.ts`) and `upsertRowColumns` (`time-series.ts`) both map `boolean → 1/0` first, so
-  no boolean branch is needed at all. Both halves of that are load-bearing: *before* the dispatch,
-  because `Number.isInteger(true)` is `false` and a boolean otherwise falls through to the FLOAT
-  fallback and lands in the column as FLOAT 1.0 with no error; *per cell*, because a boolean branch
-  chosen from the first cell would truthiness-map the rest and silently rewrite a mixed
-  `[true, 5]` column to `[1, 1]`. `updateGroupColumns` skips the normalization for a string column,
-  so it cannot change what a mixed `['a', true]` column already wrote. `upsertRowColumns`'s last
+  has no column to name. On writes a `boolean` is an INTEGER 1/0 — `setElementField` and
+  `marshalParams` each carry a `typeof === "boolean"` branch, and
+  `ScalarValue`/`ArrayValue`/`QueryParam`/`GroupColumns` include it. The row and array marshallers
+  instead **normalize per cell before the INTEGER/FLOAT choice**: `upsertRowColumns`
+  (`time-series.ts`) maps its one cell, and `updateGroupColumns` (`group-columns.ts`) and
+  `setElementArray` (`create.ts`) pass every numeric column — first non-null cell a number, a
+  `bigint` or a boolean — through `numericCells` (`group-columns.ts`), so no boolean branch is
+  needed at all.
+  Both halves of that are load-bearing. *Before* the choice, because `Number.isInteger(true)` is
+  `false`, and a boolean would otherwise land in the column as FLOAT 1.0 with no error. *Per
+  cell*, because a boolean branch chosen from the first cell truthiness-maps the rest:
+  `setElementArray` had one until 0.12.6 and rewrote a mixed `[true, 5]` array to `[1, 1]`.
+  `numericCells` also **throws on any other non-null cell**, with `Cannot <caller>: numeric
+  column '<name>' has unsupported value type <typeof> in cell <r>`. Such a cell fails
+  `Number.isInteger` and tags the column FLOAT, and `setFloat64` would convert it with no error:
+  `"abc"` to NaN, which SQLite stores as NULL, and `"2"` to 2. A string column is not checked, so
+  a mixed `['a', true]` column still writes the text `"true"`. `upsertRowColumns`'s last
   branch is `typeof value === "number"`, not an untyped `else` — `Number(null)` is 0 and anything
   else is NaN, both of which used to be written with no error. **`GroupColumns` is the write type and
-  `TimeSeriesData` the read type** — they are otherwise identical, but only the former admits
-  `boolean`, since `readTimeSeriesGroup` never produces one and its return type should not claim
-  it. The four `updateTimeSeriesGroup*`/group writers therefore take `GroupColumns`.
-- **Test/lint/format**: `bun test test`, `bun run lint`, `bun run format` (biome, project-pinned
+  `TimeSeriesData` the read type** (both in `group-columns.ts`) — they are otherwise identical, but
+  only the former admits `bigint` and `boolean`, since no group reader produces either and its
+  return type should not claim them. The four `updateTimeSeriesGroup*`/group writers therefore
+  take `GroupColumns`.
+- **Typecheck/test/lint/format**: `bun run typecheck`, `bun test test`, `bun run lint`,
+  `bun run format` (biome, project-pinned
   version). No permission flags needed (Bun has none — don't carry over Deno habits). There is
   pre-existing lint debt in untouched files — fix only what your change orphans, don't drive-by
   reformat.

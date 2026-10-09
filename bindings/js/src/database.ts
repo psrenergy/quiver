@@ -1,11 +1,10 @@
 import type { CsvOptions } from "./csv.ts";
 import { check, QuiverError } from "./errors.ts";
 import { allocPtrOut, makeDefaultOptions, readPtrOut, toCString } from "./ffi-helpers.ts";
-import type { GroupColumns } from "./group-columns.ts";
+import type { GroupColumns, TimeSeriesData } from "./group-columns.ts";
 import type { NativePointer } from "./loader.ts";
 import { getSymbols } from "./loader.ts";
 import type { GroupMetadata, ScalarMetadata } from "./metadata.ts";
-import type { TimeSeriesData } from "./time-series.ts";
 import type { DatabaseOptions, ElementData, QueryParam } from "./types.ts";
 
 export class Database {
@@ -138,22 +137,64 @@ export class Database {
   ) => string | null;
   declare readElementIds: (collection: string) => number[];
   declare numberOfElements: (collection: string) => number;
-  declare readVectorIntegers: (collection: string, attribute: string) => number[][];
-  declare readVectorBooleans: (collection: string, attribute: string) => boolean[][];
-  declare readVectorFloats: (collection: string, attribute: string) => number[][];
-  declare readVectorStrings: (collection: string, attribute: string) => string[][];
-  declare readVectorIntegersById: (collection: string, attribute: string, id: number) => number[];
-  declare readVectorBooleansById: (collection: string, attribute: string, id: number) => boolean[];
-  declare readVectorFloatsById: (collection: string, attribute: string, id: number) => number[];
-  declare readVectorStringsById: (collection: string, attribute: string, id: number) => string[];
-  declare readSetIntegers: (collection: string, attribute: string) => number[][];
-  declare readSetBooleans: (collection: string, attribute: string) => boolean[][];
-  declare readSetFloats: (collection: string, attribute: string) => number[][];
-  declare readSetStrings: (collection: string, attribute: string) => string[][];
-  declare readSetIntegersById: (collection: string, attribute: string, id: number) => number[];
-  declare readSetBooleansById: (collection: string, attribute: string, id: number) => boolean[];
-  declare readSetFloatsById: (collection: string, attribute: string, id: number) => number[];
-  declare readSetStringsById: (collection: string, attribute: string, id: number) => string[];
+  declare readVectorIntegers: (collection: string, attribute: string) => (number | null)[][];
+  declare readVectorBooleans: (collection: string, attribute: string) => (boolean | null)[][];
+  declare readVectorFloats: (collection: string, attribute: string) => (number | null)[][];
+  declare readVectorStrings: (collection: string, attribute: string) => (string | null)[][];
+  declare readVectorIntegersById: (
+    collection: string,
+    attribute: string,
+    id: number,
+  ) => (number | null)[];
+  declare readVectorBooleansById: (
+    collection: string,
+    attribute: string,
+    id: number,
+  ) => (boolean | null)[];
+  declare readVectorFloatsById: (
+    collection: string,
+    attribute: string,
+    id: number,
+  ) => (number | null)[];
+  declare readVectorStringsById: (
+    collection: string,
+    attribute: string,
+    id: number,
+  ) => (string | null)[];
+  declare readSetIntegers: (collection: string, attribute: string) => (number | null)[][];
+  declare readSetBooleans: (collection: string, attribute: string) => (boolean | null)[][];
+  declare readSetFloats: (collection: string, attribute: string) => (number | null)[][];
+  declare readSetStrings: (collection: string, attribute: string) => (string | null)[][];
+  declare readSetIntegersById: (
+    collection: string,
+    attribute: string,
+    id: number,
+  ) => (number | null)[];
+  declare readSetBooleansById: (
+    collection: string,
+    attribute: string,
+    id: number,
+  ) => (boolean | null)[];
+  declare readSetFloatsById: (
+    collection: string,
+    attribute: string,
+    id: number,
+  ) => (number | null)[];
+  declare readSetStringsById: (
+    collection: string,
+    attribute: string,
+    id: number,
+  ) => (string | null)[];
+  declare readVectorGroupById: (
+    collection: string,
+    group: string,
+    id: number,
+  ) => Record<string, number | string | null>[];
+  declare readSetGroupById: (
+    collection: string,
+    group: string,
+    id: number,
+  ) => Record<string, number | string | null>[];
 
   // --- Queries (implemented in query.ts) ---
   declare queryString: (sql: string, parameters?: QueryParam[]) => string | null;
@@ -268,6 +309,12 @@ export class Database {
     collection: string,
     id: number,
   ) => Record<string, number | string | null>;
-  declare readVectorsById: (collection: string, id: number) => Record<string, number[] | string[]>;
-  declare readSetsById: (collection: string, id: number) => Record<string, number[] | string[]>;
+  declare readVectorsById: (
+    collection: string,
+    id: number,
+  ) => Record<string, (number | null)[] | (string | null)[]>;
+  declare readSetsById: (
+    collection: string,
+    id: number,
+  ) => Record<string, (number | null)[] | (string | null)[]>;
 }

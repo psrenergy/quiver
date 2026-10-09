@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from typing import overload
 
 from quiverdb._c_api import ffi, get_lib
-from quiverdb._helpers import check, decode_string, decode_string_or_none
+from quiverdb._helpers import check, column_data_type, decode_string, decode_string_or_none, format_datetime
 from quiverdb.database_csv_export import DatabaseCSVExport
 from quiverdb.database_csv_import import DatabaseCSVImport
 from quiverdb.element import Element
@@ -203,7 +203,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         finally:
             lib.quiver_database_free_string(out[0])
 
-    def create_element(self, collection: str, **kwargs: object) -> int:
+    def create_element(self, collection: str, /, **kwargs: object) -> int:
         """Create a new element. Returns the new element ID."""
         self._ensure_open()
         elem = Element()
@@ -226,8 +226,12 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
 
     # -- Write operations -------------------------------------------------------
 
-    def update_element(self, collection: str, id: int, **kwargs: object) -> None:
-        """Update an existing element's attributes."""
+    def update_element(self, collection: str, id: int, /, **kwargs: object) -> None:
+        """Update an existing element's attributes.
+
+        `collection` and `id` are positional-only so that an `id` in kwargs (e.g. the dict
+        from `read_scalars_by_id`) is written as an attribute instead of colliding with this parameter.
+        """
         self._ensure_open()
         elem = Element()
         try:
@@ -425,29 +429,19 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         lib = get_lib()
         out_value = ffi.new("char**")
         out_has = ffi.new("int*")
-
-        if parameters is not None and len(parameters) > 0:
-            keepalive, c_types, c_values = _marshal_params(parameters)
-            check(
-                lib.quiver_database_query_string_params(
-                    self._ptr,
-                    sql.encode("utf-8"),
-                    c_types,
-                    c_values,
-                    len(parameters),
-                    out_value,
-                    out_has,
-                )
+        parameters = parameters or []
+        keepalive, c_types, c_values = _marshal_params(parameters)
+        check(
+            lib.quiver_database_query_string(
+                self._ptr,
+                sql.encode("utf-8"),
+                c_types,
+                c_values,
+                len(parameters),
+                out_value,
+                out_has,
             )
-        else:
-            check(
-                lib.quiver_database_query_string(
-                    self._ptr,
-                    sql.encode("utf-8"),
-                    out_value,
-                    out_has,
-                )
-            )
+        )
 
         if out_has[0] == 0 or out_value[0] == ffi.NULL:
             return None
@@ -462,29 +456,19 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         lib = get_lib()
         out_value = ffi.new("int64_t*")
         out_has = ffi.new("int*")
-
-        if parameters is not None and len(parameters) > 0:
-            keepalive, c_types, c_values = _marshal_params(parameters)
-            check(
-                lib.quiver_database_query_integer_params(
-                    self._ptr,
-                    sql.encode("utf-8"),
-                    c_types,
-                    c_values,
-                    len(parameters),
-                    out_value,
-                    out_has,
-                )
+        parameters = parameters or []
+        keepalive, c_types, c_values = _marshal_params(parameters)
+        check(
+            lib.quiver_database_query_integer(
+                self._ptr,
+                sql.encode("utf-8"),
+                c_types,
+                c_values,
+                len(parameters),
+                out_value,
+                out_has,
             )
-        else:
-            check(
-                lib.quiver_database_query_integer(
-                    self._ptr,
-                    sql.encode("utf-8"),
-                    out_value,
-                    out_has,
-                )
-            )
+        )
 
         if out_has[0] == 0:
             return None
@@ -500,29 +484,19 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         lib = get_lib()
         out_value = ffi.new("double*")
         out_has = ffi.new("int*")
-
-        if parameters is not None and len(parameters) > 0:
-            keepalive, c_types, c_values = _marshal_params(parameters)
-            check(
-                lib.quiver_database_query_float_params(
-                    self._ptr,
-                    sql.encode("utf-8"),
-                    c_types,
-                    c_values,
-                    len(parameters),
-                    out_value,
-                    out_has,
-                )
+        parameters = parameters or []
+        keepalive, c_types, c_values = _marshal_params(parameters)
+        check(
+            lib.quiver_database_query_float(
+                self._ptr,
+                sql.encode("utf-8"),
+                c_types,
+                c_values,
+                len(parameters),
+                out_value,
+                out_has,
             )
-        else:
-            check(
-                lib.quiver_database_query_float(
-                    self._ptr,
-                    sql.encode("utf-8"),
-                    out_value,
-                    out_has,
-                )
-            )
+        )
 
         if out_has[0] == 0:
             return None
@@ -544,24 +518,24 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         """Read a datetime scalar attribute. Returns timezone-aware UTC datetime or None."""
         return _parse_datetime(self.read_scalar_string_by_id(collection, attribute, id), collection, attribute)
 
-    def read_vector_date_time_by_id(
+    def read_vector_date_times_by_id(
         self,
         collection: str,
         attribute: str,
         id: int,
-    ) -> list[datetime]:
-        """Read datetime values from a vector. Returns list of timezone-aware UTC datetimes."""
+    ) -> list[datetime | None]:
+        """Read datetime values from a vector. Timezone-aware UTC datetimes; a NULL cell is None."""
         return [
             _parse_datetime(s, collection, attribute) for s in self.read_vector_strings_by_id(collection, attribute, id)
         ]
 
-    def read_set_date_time_by_id(
+    def read_set_date_times_by_id(
         self,
         collection: str,
         attribute: str,
         id: int,
-    ) -> list[datetime]:
-        """Read datetime values from a set. Returns list of timezone-aware UTC datetimes."""
+    ) -> list[datetime | None]:
+        """Read datetime values from a set. Timezone-aware UTC datetimes; a NULL cell is None."""
         return [
             _parse_datetime(s, collection, attribute) for s in self.read_set_strings_by_id(collection, attribute, id)
         ]
@@ -788,11 +762,12 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
 
     # -- Vector reads (bulk) -----------------------------------------------------
 
-    def read_vector_integers(self, collection: str, attribute: str) -> list[list[int]]:
-        """Read integer vectors for all elements in a collection."""
+    def read_vector_integers(self, collection: str, attribute: str) -> list[list[int | None]]:
+        """Read integer vectors for all elements in a collection. A NULL cell is None."""
         self._ensure_open()
         lib = get_lib()
         out_vectors = ffi.new("int64_t***")
+        out_masks = ffi.new("uint8_t***")
         out_sizes = ffi.new("size_t**")
         out_count = ffi.new("size_t*")
         check(
@@ -801,6 +776,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
                 collection.encode("utf-8"),
                 attribute.encode("utf-8"),
                 out_vectors,
+                out_masks,
                 out_sizes,
                 out_count,
             )
@@ -809,33 +785,32 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         if count == 0 or out_vectors[0] == ffi.NULL:
             return []
         try:
-            result: list[list[int]] = []
+            result: list[list[int | None]] = []
             for i in range(count):
                 size = out_sizes[0][i]
                 if out_vectors[0][i] == ffi.NULL or size == 0:
                     result.append([])
                 else:
-                    result.append([out_vectors[0][i][j] for j in range(size)])
+                    values, mask = out_vectors[0][i], out_masks[0][i]
+                    result.append([values[j] if mask[j] else None for j in range(size)])
             return result
         finally:
             lib.quiver_database_free_integer_vectors(out_vectors[0], out_sizes[0], count)
+            lib.quiver_database_free_masks(out_masks[0], count)
 
-    def read_vector_booleans(self, collection: str, attribute: str) -> list[list[bool]]:
-        """Read boolean vectors stored as integer vectors.
-
-        NULL cells are dropped and only elements that own rows are returned, so the result is
-        not positionally aligned with read_element_ids (unlike read_scalar_booleans).
-        """
+    def read_vector_booleans(self, collection: str, attribute: str) -> list[list[bool | None]]:
+        """Read boolean vectors stored as integer vectors. A NULL cell is None."""
         return [
             [_integer_to_boolean(value, collection, attribute) for value in values]
             for values in self.read_vector_integers(collection, attribute)
         ]
 
-    def read_vector_floats(self, collection: str, attribute: str) -> list[list[float]]:
-        """Read float vectors for all elements in a collection."""
+    def read_vector_floats(self, collection: str, attribute: str) -> list[list[float | None]]:
+        """Read float vectors for all elements in a collection. A NULL cell is None."""
         self._ensure_open()
         lib = get_lib()
         out_vectors = ffi.new("double***")
+        out_masks = ffi.new("uint8_t***")
         out_sizes = ffi.new("size_t**")
         out_count = ffi.new("size_t*")
         check(
@@ -844,6 +819,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
                 collection.encode("utf-8"),
                 attribute.encode("utf-8"),
                 out_vectors,
+                out_masks,
                 out_sizes,
                 out_count,
             )
@@ -852,19 +828,21 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         if count == 0 or out_vectors[0] == ffi.NULL:
             return []
         try:
-            result: list[list[float]] = []
+            result: list[list[float | None]] = []
             for i in range(count):
                 size = out_sizes[0][i]
                 if out_vectors[0][i] == ffi.NULL or size == 0:
                     result.append([])
                 else:
-                    result.append([out_vectors[0][i][j] for j in range(size)])
+                    values, mask = out_vectors[0][i], out_masks[0][i]
+                    result.append([values[j] if mask[j] else None for j in range(size)])
             return result
         finally:
             lib.quiver_database_free_float_vectors(out_vectors[0], out_sizes[0], count)
+            lib.quiver_database_free_masks(out_masks[0], count)
 
-    def read_vector_strings(self, collection: str, attribute: str) -> list[list[str]]:
-        """Read string vectors for all elements in a collection."""
+    def read_vector_strings(self, collection: str, attribute: str) -> list[list[str | None]]:
+        """Read string vectors for all elements in a collection. A NULL cell is None."""
         self._ensure_open()
         lib = get_lib()
         out_vectors = ffi.new("char****")
@@ -884,23 +862,22 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         if count == 0 or out_vectors[0] == ffi.NULL:
             return []
         try:
-            result: list[list[str]] = []
+            result: list[list[str | None]] = []
             for i in range(count):
                 size = out_sizes[0][i]
                 if out_vectors[0][i] == ffi.NULL or size == 0:
                     result.append([])
                 else:
-                    result.append([ffi.string(out_vectors[0][i][j]).decode("utf-8") for j in range(size)])
+                    cells = out_vectors[0][i]
+                    result.append(
+                        [None if cells[j] == ffi.NULL else ffi.string(cells[j]).decode("utf-8") for j in range(size)]
+                    )
             return result
         finally:
             lib.quiver_database_free_string_vectors(out_vectors[0], out_sizes[0], count)
 
-    def read_vector_date_times(self, collection: str, attribute: str) -> list[list[datetime]]:
-        """Read datetime vectors stored as string vectors.
-
-        NULL cells are dropped and only elements that own rows are returned, so the result is
-        not positionally aligned with read_element_ids (unlike read_scalar_date_times).
-        """
+    def read_vector_date_times(self, collection: str, attribute: str) -> list[list[datetime | None]]:
+        """Read datetime vectors stored as string vectors. A NULL cell is None."""
         return [
             [_parse_datetime(value, collection, attribute) for value in values]
             for values in self.read_vector_strings(collection, attribute)
@@ -913,11 +890,12 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         collection: str,
         attribute: str,
         id: int,
-    ) -> list[int]:
-        """Read an integer vector for a single element."""
+    ) -> list[int | None]:
+        """Read an integer vector for a single element. A NULL cell is None."""
         self._ensure_open()
         lib = get_lib()
         out_values = ffi.new("int64_t**")
+        out_mask = ffi.new("uint8_t**")
         out_count = ffi.new("size_t*")
         check(
             lib.quiver_database_read_vector_integers_by_id(
@@ -926,6 +904,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
                 attribute.encode("utf-8"),
                 id,
                 out_values,
+                out_mask,
                 out_count,
             )
         )
@@ -933,17 +912,19 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         if count == 0 or out_values[0] == ffi.NULL:
             return []
         try:
-            return [out_values[0][i] for i in range(count)]
+            mask = out_mask[0]
+            return [out_values[0][i] if mask[i] else None for i in range(count)]
         finally:
             lib.quiver_database_free_integer_array(out_values[0])
+            lib.quiver_database_free_mask(out_mask[0])
 
     def read_vector_booleans_by_id(
         self,
         collection: str,
         attribute: str,
         id: int,
-    ) -> list[bool]:
-        """Read a boolean vector stored as integers for one element."""
+    ) -> list[bool | None]:
+        """Read a boolean vector stored as integers for one element. A NULL cell is None."""
         return [
             _integer_to_boolean(value, collection, attribute)
             for value in self.read_vector_integers_by_id(collection, attribute, id)
@@ -954,11 +935,12 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         collection: str,
         attribute: str,
         id: int,
-    ) -> list[float]:
-        """Read a float vector for a single element."""
+    ) -> list[float | None]:
+        """Read a float vector for a single element. A NULL cell is None."""
         self._ensure_open()
         lib = get_lib()
         out_values = ffi.new("double**")
+        out_mask = ffi.new("uint8_t**")
         out_count = ffi.new("size_t*")
         check(
             lib.quiver_database_read_vector_floats_by_id(
@@ -967,6 +949,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
                 attribute.encode("utf-8"),
                 id,
                 out_values,
+                out_mask,
                 out_count,
             )
         )
@@ -974,17 +957,19 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         if count == 0 or out_values[0] == ffi.NULL:
             return []
         try:
-            return [out_values[0][i] for i in range(count)]
+            mask = out_mask[0]
+            return [out_values[0][i] if mask[i] else None for i in range(count)]
         finally:
             lib.quiver_database_free_float_array(out_values[0])
+            lib.quiver_database_free_mask(out_mask[0])
 
     def read_vector_strings_by_id(
         self,
         collection: str,
         attribute: str,
         id: int,
-    ) -> list[str]:
-        """Read a string vector for a single element."""
+    ) -> list[str | None]:
+        """Read a string vector for a single element. A NULL cell is None."""
         self._ensure_open()
         lib = get_lib()
         out_values = ffi.new("char***")
@@ -1003,17 +988,19 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         if count == 0 or out_values[0] == ffi.NULL:
             return []
         try:
-            return [ffi.string(out_values[0][i]).decode("utf-8") for i in range(count)]
+            cells = out_values[0]
+            return [None if cells[i] == ffi.NULL else ffi.string(cells[i]).decode("utf-8") for i in range(count)]
         finally:
             lib.quiver_database_free_string_array(out_values[0], count)
 
     # -- Set reads (bulk) --------------------------------------------------------
 
-    def read_set_integers(self, collection: str, attribute: str) -> list[list[int]]:
-        """Read integer sets for all elements in a collection."""
+    def read_set_integers(self, collection: str, attribute: str) -> list[list[int | None]]:
+        """Read integer sets for all elements in a collection. A NULL cell is None."""
         self._ensure_open()
         lib = get_lib()
         out_sets = ffi.new("int64_t***")
+        out_masks = ffi.new("uint8_t***")
         out_sizes = ffi.new("size_t**")
         out_count = ffi.new("size_t*")
         check(
@@ -1022,6 +1009,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
                 collection.encode("utf-8"),
                 attribute.encode("utf-8"),
                 out_sets,
+                out_masks,
                 out_sizes,
                 out_count,
             )
@@ -1030,33 +1018,32 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         if count == 0 or out_sets[0] == ffi.NULL:
             return []
         try:
-            result: list[list[int]] = []
+            result: list[list[int | None]] = []
             for i in range(count):
                 size = out_sizes[0][i]
                 if out_sets[0][i] == ffi.NULL or size == 0:
                     result.append([])
                 else:
-                    result.append([out_sets[0][i][j] for j in range(size)])
+                    values, mask = out_sets[0][i], out_masks[0][i]
+                    result.append([values[j] if mask[j] else None for j in range(size)])
             return result
         finally:
             lib.quiver_database_free_integer_vectors(out_sets[0], out_sizes[0], count)
+            lib.quiver_database_free_masks(out_masks[0], count)
 
-    def read_set_booleans(self, collection: str, attribute: str) -> list[list[bool]]:
-        """Read boolean sets stored as integer sets.
-
-        Same alignment caveat as read_vector_booleans: NULL cells are dropped and only elements
-        that own rows are returned.
-        """
+    def read_set_booleans(self, collection: str, attribute: str) -> list[list[bool | None]]:
+        """Read boolean sets stored as integer sets. A NULL cell is None."""
         return [
             [_integer_to_boolean(value, collection, attribute) for value in values]
             for values in self.read_set_integers(collection, attribute)
         ]
 
-    def read_set_floats(self, collection: str, attribute: str) -> list[list[float]]:
-        """Read float sets for all elements in a collection."""
+    def read_set_floats(self, collection: str, attribute: str) -> list[list[float | None]]:
+        """Read float sets for all elements in a collection. A NULL cell is None."""
         self._ensure_open()
         lib = get_lib()
         out_sets = ffi.new("double***")
+        out_masks = ffi.new("uint8_t***")
         out_sizes = ffi.new("size_t**")
         out_count = ffi.new("size_t*")
         check(
@@ -1065,6 +1052,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
                 collection.encode("utf-8"),
                 attribute.encode("utf-8"),
                 out_sets,
+                out_masks,
                 out_sizes,
                 out_count,
             )
@@ -1073,19 +1061,21 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         if count == 0 or out_sets[0] == ffi.NULL:
             return []
         try:
-            result: list[list[float]] = []
+            result: list[list[float | None]] = []
             for i in range(count):
                 size = out_sizes[0][i]
                 if out_sets[0][i] == ffi.NULL or size == 0:
                     result.append([])
                 else:
-                    result.append([out_sets[0][i][j] for j in range(size)])
+                    values, mask = out_sets[0][i], out_masks[0][i]
+                    result.append([values[j] if mask[j] else None for j in range(size)])
             return result
         finally:
             lib.quiver_database_free_float_vectors(out_sets[0], out_sizes[0], count)
+            lib.quiver_database_free_masks(out_masks[0], count)
 
-    def read_set_strings(self, collection: str, attribute: str) -> list[list[str]]:
-        """Read string sets for all elements in a collection."""
+    def read_set_strings(self, collection: str, attribute: str) -> list[list[str | None]]:
+        """Read string sets for all elements in a collection. A NULL cell is None."""
         self._ensure_open()
         lib = get_lib()
         out_sets = ffi.new("char****")
@@ -1105,23 +1095,22 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         if count == 0 or out_sets[0] == ffi.NULL:
             return []
         try:
-            result: list[list[str]] = []
+            result: list[list[str | None]] = []
             for i in range(count):
                 size = out_sizes[0][i]
                 if out_sets[0][i] == ffi.NULL or size == 0:
                     result.append([])
                 else:
-                    result.append([ffi.string(out_sets[0][i][j]).decode("utf-8") for j in range(size)])
+                    cells = out_sets[0][i]
+                    result.append(
+                        [None if cells[j] == ffi.NULL else ffi.string(cells[j]).decode("utf-8") for j in range(size)]
+                    )
             return result
         finally:
             lib.quiver_database_free_string_vectors(out_sets[0], out_sizes[0], count)
 
-    def read_set_date_times(self, collection: str, attribute: str) -> list[list[datetime]]:
-        """Read datetime sets stored as string sets.
-
-        Same alignment caveat as read_vector_date_times: NULL cells are dropped and only elements
-        that own rows are returned.
-        """
+    def read_set_date_times(self, collection: str, attribute: str) -> list[list[datetime | None]]:
+        """Read datetime sets stored as string sets. A NULL cell is None."""
         return [
             [_parse_datetime(value, collection, attribute) for value in values]
             for values in self.read_set_strings(collection, attribute)
@@ -1134,11 +1123,12 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         collection: str,
         attribute: str,
         id: int,
-    ) -> list[int]:
-        """Read an integer set for a single element."""
+    ) -> list[int | None]:
+        """Read an integer set for a single element. A NULL cell is None."""
         self._ensure_open()
         lib = get_lib()
         out_values = ffi.new("int64_t**")
+        out_mask = ffi.new("uint8_t**")
         out_count = ffi.new("size_t*")
         check(
             lib.quiver_database_read_set_integers_by_id(
@@ -1147,6 +1137,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
                 attribute.encode("utf-8"),
                 id,
                 out_values,
+                out_mask,
                 out_count,
             )
         )
@@ -1154,17 +1145,19 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         if count == 0 or out_values[0] == ffi.NULL:
             return []
         try:
-            return [out_values[0][i] for i in range(count)]
+            mask = out_mask[0]
+            return [out_values[0][i] if mask[i] else None for i in range(count)]
         finally:
             lib.quiver_database_free_integer_array(out_values[0])
+            lib.quiver_database_free_mask(out_mask[0])
 
     def read_set_booleans_by_id(
         self,
         collection: str,
         attribute: str,
         id: int,
-    ) -> list[bool]:
-        """Read a boolean set stored as integers for one element."""
+    ) -> list[bool | None]:
+        """Read a boolean set stored as integers for one element. A NULL cell is None."""
         return [
             _integer_to_boolean(value, collection, attribute)
             for value in self.read_set_integers_by_id(collection, attribute, id)
@@ -1175,11 +1168,12 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         collection: str,
         attribute: str,
         id: int,
-    ) -> list[float]:
-        """Read a float set for a single element."""
+    ) -> list[float | None]:
+        """Read a float set for a single element. A NULL cell is None."""
         self._ensure_open()
         lib = get_lib()
         out_values = ffi.new("double**")
+        out_mask = ffi.new("uint8_t**")
         out_count = ffi.new("size_t*")
         check(
             lib.quiver_database_read_set_floats_by_id(
@@ -1188,6 +1182,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
                 attribute.encode("utf-8"),
                 id,
                 out_values,
+                out_mask,
                 out_count,
             )
         )
@@ -1195,17 +1190,19 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         if count == 0 or out_values[0] == ffi.NULL:
             return []
         try:
-            return [out_values[0][i] for i in range(count)]
+            mask = out_mask[0]
+            return [out_values[0][i] if mask[i] else None for i in range(count)]
         finally:
             lib.quiver_database_free_float_array(out_values[0])
+            lib.quiver_database_free_mask(out_mask[0])
 
     def read_set_strings_by_id(
         self,
         collection: str,
         attribute: str,
         id: int,
-    ) -> list[str]:
-        """Read a string set for a single element."""
+    ) -> list[str | None]:
+        """Read a string set for a single element. A NULL cell is None."""
         self._ensure_open()
         lib = get_lib()
         out_values = ffi.new("char***")
@@ -1224,7 +1221,8 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         if count == 0 or out_values[0] == ffi.NULL:
             return []
         try:
-            return [ffi.string(out_values[0][i]).decode("utf-8") for i in range(count)]
+            cells = out_values[0]
+            return [None if cells[i] == ffi.NULL else ffi.string(cells[i]).decode("utf-8") for i in range(count)]
         finally:
             lib.quiver_database_free_string_array(out_values[0], count)
 
@@ -1489,7 +1487,8 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
     ) -> list:
         """Read one value per element for a time series attribute at a given date.
 
-        Uses "last non-null value at or before date_time" lookup semantics.
+        Uses "last non-null value at or before date_time" lookup semantics. An aware
+        date_time is converted to UTC first; a naive one is taken as UTC.
         Entries are typed by the column (int, float, or str); elements with no
         matching data yield None. Raises QuiverError for a group with more than
         one dimension column; use read_time_series_group for those.
@@ -1498,6 +1497,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         lib = get_lib()
         out_data_type = ffi.new("int*")
         out_values = ffi.new("void**")
+        out_mask = ffi.new("uint8_t**")
         out_count = ffi.new("size_t*")
         check(
             lib.quiver_database_read_time_series_row(
@@ -1505,9 +1505,10 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
                 collection.encode("utf-8"),
                 group.encode("utf-8"),
                 attribute.encode("utf-8"),
-                date_time.strftime("%Y-%m-%dT%H:%M:%S").encode("utf-8"),
+                format_datetime(date_time).encode("utf-8"),
                 out_data_type,
                 out_values,
+                out_mask,
                 out_count,
             )
         )
@@ -1515,21 +1516,29 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         if count == 0 or out_values[0] == ffi.NULL:
             return []
         data_type = out_data_type[0]
+        # mask[i] falsy: no data at or before date_time; the data slot is a placeholder
+        mask = out_mask[0]
         if data_type == DataType.INTEGER:
             int_ptr = ffi.cast("int64_t*", out_values[0])
-            result: list = [int_ptr[i] for i in range(count)]
-            lib.quiver_database_free_integer_array(int_ptr)
-            return result
+            try:
+                return [int_ptr[i] if mask[i] else None for i in range(count)]
+            finally:
+                lib.quiver_database_free_integer_array(int_ptr)
+                lib.quiver_database_free_mask(mask)
         if data_type == DataType.FLOAT:
             float_ptr = ffi.cast("double*", out_values[0])
-            result = [float_ptr[i] for i in range(count)]
-            lib.quiver_database_free_float_array(float_ptr)
-            return result
-        # STRING or DATE_TIME; NULL entries mark elements with no data
+            try:
+                return [float_ptr[i] if mask[i] else None for i in range(count)]
+            finally:
+                lib.quiver_database_free_float_array(float_ptr)
+                lib.quiver_database_free_mask(mask)
+        # STRING or DATE_TIME; never ffi.string a masked-out (NULL) pointer
         str_ptr = ffi.cast("char**", out_values[0])
-        result = [None if str_ptr[i] == ffi.NULL else ffi.string(str_ptr[i]).decode("utf-8") for i in range(count)]
-        lib.quiver_database_free_string_array(str_ptr, count)
-        return result
+        try:
+            return [ffi.string(str_ptr[i]).decode("utf-8") if mask[i] else None for i in range(count)]
+        finally:
+            lib.quiver_database_free_string_array(str_ptr, count)
+            lib.quiver_database_free_mask(mask)
 
     def update_time_series_group(
         self,
@@ -1541,7 +1550,8 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         """Update time series data for an element from column lists keyed by name.
 
         Pass an empty dict to clear all rows. datetime values are formatted to
-        ISO strings; integers are accepted for REAL columns.
+        ISO strings (an aware value is converted to UTC); integers are accepted
+        for REAL columns.
         """
         self._ensure_open()
         lib = get_lib()
@@ -1783,13 +1793,15 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
             )
         )
 
-    def upsert_time_series_row(self, collection: str, group: str, id: int, **kwargs) -> None:
+    def upsert_time_series_row(self, collection: str, group: str, id: int, /, **kwargs: object) -> None:
         """Insert or upsert a single time series row for an element.
 
-        Keyword arguments map column names to values. The dimension column (e.g.
-        date_time) and all value columns must be provided. Type dispatch uses
-        isinstance: bool -> INTEGER (0/1), int -> INTEGER, float -> FLOAT, str ->
-        STRING. No Int->Float coercion (per D-03: Python strict typing).
+        Keyword arguments map column names to values. Every dimension column (e.g.
+        date_time) must be provided; a value column left out gets its column default
+        (NULL if it declares none; a NOT NULL column with no default must be provided).
+        Type dispatch uses isinstance: bool -> INTEGER (0/1), int -> INTEGER,
+        float -> FLOAT, str -> STRING, datetime -> STRING (an aware value is converted
+        to UTC); integers are accepted for REAL columns.
         Dict unpacking is supported: db.upsert_time_series_row("Col", "grp", 1, **row_dict).
         """
         self._ensure_open()
@@ -1804,7 +1816,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
             )
         )
 
-    def upsert_time_series_row_by_label(self, collection: str, group: str, label: str, **kwargs) -> None:
+    def upsert_time_series_row_by_label(self, collection: str, group: str, label: str, /, **kwargs: object) -> None:
         """Label-addressed counterpart of upsert_time_series_row."""
         self._ensure_open()
         lib = get_lib()
@@ -1888,8 +1900,6 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         self._ensure_open()
         lib = get_lib()
         count = len(data)
-        if count == 0:
-            return
 
         keepalive: list = []
         c_columns = ffi.new("const char*[]", count)
@@ -1950,7 +1960,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
                 elif dt == DataType.FLOAT:
                     result[name] = self.read_vector_floats_by_id(collection, name, id)
                 elif dt == DataType.DATE_TIME:
-                    result[name] = self.read_vector_date_time_by_id(collection, name, id)
+                    result[name] = self.read_vector_date_times_by_id(collection, name, id)
                 else:  # STRING
                     result[name] = self.read_vector_strings_by_id(collection, name, id)
         return result
@@ -1972,7 +1982,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
                 elif dt == DataType.FLOAT:
                     result[name] = self.read_set_floats_by_id(collection, name, id)
                 elif dt == DataType.DATE_TIME:
-                    result[name] = self.read_set_date_time_by_id(collection, name, id)
+                    result[name] = self.read_set_date_times_by_id(collection, name, id)
                 else:  # STRING
                     result[name] = self.read_set_strings_by_id(collection, name, id)
         return result
@@ -1993,35 +2003,39 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         group: str,
         id: int,
     ) -> list[dict]:
-        """Read a multi-column vector group as row dicts.
+        """Read a multi-column vector group as row dicts, in vector_index order.
 
-        Each row is a dict mapping column names to typed values.
-        Includes 'vector_index' (0-based) for ordering info.
-        Rows are returned in vector_index order.
-        DATE_TIME columns are parsed to datetime objects.
+        Each row maps column names to typed values and adds a synthetic 0-based 'vector_index'.
+        One native read of the named group's own table: a SQL NULL cell is None in its row, and a
+        column name another group shares still reads this group. DATE_TIME columns are parsed to
+        datetime objects.
         """
         self._ensure_open()
-        metadata = self.get_vector_metadata(collection, group)
-        columns = metadata.value_columns
-        if not columns:
-            return []
-
-        column_data = {}
-        row_count = 0
-        for col in columns:
-            name = col.name
-            if col.data_type == DataType.INTEGER:
-                values = self.read_vector_integers_by_id(collection, name, id)
-            elif col.data_type == DataType.FLOAT:
-                values = self.read_vector_floats_by_id(collection, name, id)
-            elif col.data_type == DataType.DATE_TIME:
-                values = self.read_vector_date_time_by_id(collection, name, id)
-            else:  # STRING
-                values = self.read_vector_strings_by_id(collection, name, id)
-            column_data[name] = values
-            row_count = len(values)
-
-        return [{"vector_index": i, **{name: vals[i] for name, vals in column_data.items()}} for i in range(row_count)]
+        lib = get_lib()
+        out_names = ffi.new("char***")
+        out_types = ffi.new("int**")
+        out_data = ffi.new("void***")
+        out_has_value = ffi.new("uint8_t***")
+        out_col_count = ffi.new("size_t*")
+        out_row_count = ffi.new("size_t*")
+        check(
+            lib.quiver_database_read_vector_group_by_id(
+                self._ptr,
+                collection.encode("utf-8"),
+                group.encode("utf-8"),
+                id,
+                out_names,
+                out_types,
+                out_data,
+                out_has_value,
+                out_col_count,
+                out_row_count,
+            )
+        )
+        rows = _decode_group_rows(
+            collection, out_names, out_types, out_data, out_has_value, out_col_count[0], out_row_count[0]
+        )
+        return [{"vector_index": i, **row} for i, row in enumerate(rows)]
 
     def read_set_group_by_id(
         self,
@@ -2031,31 +2045,36 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
     ) -> list[dict]:
         """Read a multi-column set group as row dicts.
 
-        Each row is a dict mapping column names to typed values.
-        DATE_TIME columns are parsed to datetime objects.
+        One native read of the named group's own table: a SQL NULL cell is None in its row, and a
+        column name another group shares still reads this group. DATE_TIME columns are parsed to
+        datetime objects. Row order is consistent across every reader of the group, otherwise
+        unspecified.
         """
         self._ensure_open()
-        metadata = self.get_set_metadata(collection, group)
-        columns = metadata.value_columns
-        if not columns:
-            return []
-
-        column_data = {}
-        row_count = 0
-        for col in columns:
-            name = col.name
-            if col.data_type == DataType.INTEGER:
-                values = self.read_set_integers_by_id(collection, name, id)
-            elif col.data_type == DataType.FLOAT:
-                values = self.read_set_floats_by_id(collection, name, id)
-            elif col.data_type == DataType.DATE_TIME:
-                values = self.read_set_date_time_by_id(collection, name, id)
-            else:  # STRING
-                values = self.read_set_strings_by_id(collection, name, id)
-            column_data[name] = values
-            row_count = len(values)
-
-        return [{name: vals[i] for name, vals in column_data.items()} for i in range(row_count)]
+        lib = get_lib()
+        out_names = ffi.new("char***")
+        out_types = ffi.new("int**")
+        out_data = ffi.new("void***")
+        out_has_value = ffi.new("uint8_t***")
+        out_col_count = ffi.new("size_t*")
+        out_row_count = ffi.new("size_t*")
+        check(
+            lib.quiver_database_read_set_group_by_id(
+                self._ptr,
+                collection.encode("utf-8"),
+                group.encode("utf-8"),
+                id,
+                out_names,
+                out_types,
+                out_data,
+                out_has_value,
+                out_col_count,
+                out_row_count,
+            )
+        )
+        return _decode_group_rows(
+            collection, out_names, out_types, out_data, out_has_value, out_col_count[0], out_row_count[0]
+        )
 
     def __repr__(self) -> str:
         if self._closed:
@@ -2168,13 +2187,52 @@ def _marshal_params(parameters: list) -> tuple:
     return keepalive, c_types, c_values
 
 
-def _marshal_group_columns(data: dict[str, list]) -> tuple:
-    """Marshal column lists into parallel C arrays for the columnar time series API.
+def _decode_group_rows(
+    collection: str, out_names, out_types, out_data, out_has_value, col_count: int, row_count: int
+) -> list[dict]:
+    """Decode a whole-group read's columnar typed arrays + per-cell mask into row dicts, then free them.
 
-    Column types are dispatched on the first non-None element: datetime/str ->
-    STRING, bool/int -> INTEGER, float -> FLOAT. The C++ layer validates against
-    the schema and accepts integers for REAL columns. A None entry becomes a
-    per-cell NULL via the mask (with a placeholder in the data array); an all-None
+    Shared by read_vector_group_by_id and read_set_group_by_id (Dart's _decodeGroupRows). A cell
+    whose mask is 0 is None and its data slot is never read (a NULL cell's char* is NULL). DATE_TIME
+    columns go through _parse_datetime. read_time_series_group keeps its own loop: it returns
+    columns and parses only the dimension column.
+    """
+    if col_count == 0 or row_count == 0:
+        return []
+    try:
+        columns: dict[str, list] = {}
+        for c in range(col_count):
+            name = ffi.string(out_names[0][c]).decode("utf-8")
+            ctype = out_types[0][c]
+            mask = out_has_value[0][c]
+            if ctype == DataType.INTEGER:
+                ints = ffi.cast("int64_t*", out_data[0][c])
+                columns[name] = [ints[r] if mask[r] else None for r in range(row_count)]
+            elif ctype == DataType.FLOAT:
+                floats = ffi.cast("double*", out_data[0][c])
+                columns[name] = [floats[r] if mask[r] else None for r in range(row_count)]
+            else:  # STRING or DATE_TIME
+                strs = ffi.cast("char**", out_data[0][c])
+                texts = [ffi.string(strs[r]).decode("utf-8") if mask[r] else None for r in range(row_count)]
+                columns[name] = (
+                    [_parse_datetime(t, collection, name) for t in texts] if ctype == DataType.DATE_TIME else texts
+                )
+        return [{name: cells[r] for name, cells in columns.items()} for r in range(row_count)]
+    finally:
+        get_lib().quiver_database_free_time_series_data(
+            out_names[0], out_types[0], out_data[0], out_has_value[0], col_count, row_count
+        )
+
+
+def _marshal_group_columns(data: dict[str, list]) -> tuple:
+    """Marshal column lists into parallel C arrays for the columnar group writers (time series, vector, set).
+
+    Each column is typed from all of its non-None cells by `column_data_type`: bool/int ->
+    INTEGER, and a float anywhere widens the column to FLOAT; str -> STRING; datetime ->
+    STRING in the core's ISO format (via format_datetime, aware values converted to UTC). A
+    cell that does not fit its column raises TypeError naming the cell and the column. The
+    C++ layer validates against the schema and accepts integers for REAL columns. A None entry
+    becomes a per-cell NULL via the mask (with a placeholder in the data array); an all-None
     column is tagged FLOAT with a zero-filled placeholder.
 
     Returns (keepalive, c_col_names, c_col_types, c_col_data, c_col_has_value,
@@ -2202,22 +2260,22 @@ def _marshal_group_columns(data: dict[str, list]) -> tuple:
         keepalive.append(mask)
         c_col_has_value[c] = mask
 
-        first = next((v for v in values if v is not None), None)
-        if first is None:
+        column_type = column_data_type(name, values)
+        if column_type is None:
             # All-null column: tag FLOAT with zeroed placeholder data; the mask is all zero.
             arr = ffi.new("double[]", [0.0] * row_count)
             keepalive.append(arr)
             c_col_types[c] = DataType.FLOAT
             c_col_data[c] = ffi.cast("void*", arr)
-        elif isinstance(first, datetime):
-            encoded = [(v.strftime("%Y-%m-%dT%H:%M:%S").encode("utf-8") if v is not None else b"") for v in values]
+        elif column_type == DataType.DATE_TIME:
+            encoded = [(format_datetime(v).encode("utf-8") if v is not None else b"") for v in values]
             c_strs = [ffi.new("char[]", e) for e in encoded]
             keepalive.extend(c_strs)
             c_arr = ffi.new("char*[]", [(s if v is not None else ffi.NULL) for s, v in zip(c_strs, values)])
             keepalive.append(c_arr)
             c_col_types[c] = DataType.STRING
             c_col_data[c] = ffi.cast("void*", c_arr)
-        elif isinstance(first, str):
+        elif column_type == DataType.STRING:
             encoded = [(v.encode("utf-8") if v is not None else b"") for v in values]
             c_strs = [ffi.new("char[]", e) for e in encoded]
             keepalive.extend(c_strs)
@@ -2225,18 +2283,18 @@ def _marshal_group_columns(data: dict[str, list]) -> tuple:
             keepalive.append(c_arr)
             c_col_types[c] = DataType.STRING
             c_col_data[c] = ffi.cast("void*", c_arr)
-        elif isinstance(first, bool) or isinstance(first, int):
-            arr = ffi.new("int64_t[]", [int(v) if v is not None else 0 for v in values])
+        elif column_type == DataType.INTEGER:
+            # Every cell is a bool or an int; cffi stores True/False as 1/0.
+            arr = ffi.new("int64_t[]", [v if v is not None else 0 for v in values])
             keepalive.append(arr)
             c_col_types[c] = DataType.INTEGER
             c_col_data[c] = ffi.cast("void*", arr)
-        elif isinstance(first, float):
-            arr = ffi.new("double[]", [float(v) if v is not None else 0.0 for v in values])
+        else:
+            # DataType.FLOAT: float cells, plus any bool/int cells, which cffi widens to double.
+            arr = ffi.new("double[]", [v if v is not None else 0.0 for v in values])
             keepalive.append(arr)
             c_col_types[c] = DataType.FLOAT
             c_col_data[c] = ffi.cast("void*", arr)
-        else:
-            raise TypeError(f"Unsupported value type for column '{name}': {type(first).__name__}")
 
     return keepalive, c_col_names, c_col_types, c_col_data, c_col_has_value, col_count, row_count
 
@@ -2244,7 +2302,8 @@ def _marshal_group_columns(data: dict[str, list]) -> tuple:
 def _marshal_row_columns(kwargs: dict) -> tuple:
     """Marshal one row of scalars into parallel C arrays for the row-oriented upsert API.
 
-    Each value is wrapped in a 1-element typed array. Not `_marshal_group_columns`: the
+    Each value is wrapped in a 1-element typed array; a datetime is formatted by
+    format_datetime and sent as a string. Not `_marshal_group_columns`: the
     row-upsert C signature carries no per-cell mask, so a None cell would be written as that
     helper's zeroed placeholder instead of NULL.
 
@@ -2263,15 +2322,10 @@ def _marshal_row_columns(kwargs: dict) -> tuple:
         keepalive.append(name_buf)
         c_col_names[i] = name_buf
 
-        # bool is a subclass of int; test it explicitly first so True/False
-        # marshal as INTEGER 1/0 rather than being rejected by the `is int`
-        # check. Mirrors `_marshal_params` policy in this same file.
-        if isinstance(v, bool):
-            arr = ffi.new("int64_t[]", [int(v)])
-            keepalive.append(arr)
-            c_col_types[i] = DataType.INTEGER
-            c_col_data[i] = ffi.cast("void*", arr)
-        elif isinstance(v, int):
+        if isinstance(v, datetime):
+            v = format_datetime(v)  # marshalled by the str branch below
+
+        if isinstance(v, int):  # bool is an int subclass: True/False marshal as 1/0
             arr = ffi.new("int64_t[]", [v])
             keepalive.append(arr)
             c_col_types[i] = DataType.INTEGER
@@ -2290,7 +2344,7 @@ def _marshal_row_columns(kwargs: dict) -> tuple:
             c_col_data[i] = ffi.cast("void*", c_str_arr)
         else:
             raise TypeError(
-                f"Column '{name}' value has unsupported type {type(v).__name__}; expected int, float, or str"
+                f"Column '{name}' value has unsupported type {type(v).__name__}; expected int, float, str, or datetime"
             )
 
     return keepalive, c_col_names, c_col_types, c_col_data, col_count

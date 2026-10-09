@@ -22,12 +22,6 @@ part 'database_update.dart';
 
 bool? _integerToBoolean(int? value, [String collection = '', String attribute = '']) {
   if (value == null) return null;
-  return _integerToBooleanNonNull(value, collection, attribute);
-}
-
-/// The non-nullable sibling, for group readers whose cells are never null.
-/// Keeping it separate avoids `_integerToBoolean(...)!` at the call sites.
-bool _integerToBooleanNonNull(int value, [String collection = '', String attribute = '']) {
   if (value == 0) return false;
   if (value == 1) return true;
   final source = collection.isEmpty ? '' : " in '$collection.$attribute'";
@@ -167,10 +161,17 @@ class Database {
     }
   }
 
-  ({Pointer<Int> types, Pointer<Pointer<Void>> values}) _marshalParams(
+  /// Marshals query parameters into the C API's parallel type/value arrays.
+  /// No parameters (omitted or empty) marshal to NULL pointers and a count of 0:
+  /// the C API reads neither array then, so nothing is allocated.
+  ({Pointer<Int> types, Pointer<Pointer<Void>> values, int count}) _marshalParams(
     Arena arena,
-    List<Object?> parameters,
+    List<Object?>? parameters,
   ) {
+    if (parameters == null || parameters.isEmpty) {
+      return (types: nullptr, values: nullptr, count: 0);
+    }
+
     final types = arena<Int>(parameters.length);
     final values = arena<Pointer<Void>>(parameters.length);
 
@@ -197,7 +198,7 @@ class Database {
       }
     }
 
-    return (types: types, values: values);
+    return (types: types, values: values, count: parameters.length);
   }
 
   /// Returns true if the database passes integrity checks.

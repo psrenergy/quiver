@@ -15,36 +15,34 @@
 
 namespace quiver {
 
-Expression::Expression(const BinaryFile& file) : node_(std::make_shared<ExpressionFile>(file.get_file_path())) {}
-
-Expression::Expression(std::shared_ptr<ExpressionNode> node) : node_(std::move(node)) {}
-
-const BinaryMetadata& Expression::metadata() const {
-    return node_->metadata();
+const BinaryMetadata& AbstractExpression::get_metadata() const {
+    return node()->metadata();
 }
 
-Expression Expression::aggregate(const std::string& dimension,
-                                 ExpressionAggregate::Operation operation,
-                                 std::optional<double> parameter) const {
-    return Expression(std::make_shared<ExpressionAggregate>(operation, node_, dimension, parameter));
+Expression AbstractExpression::aggregate(
+    const std::string& dimension,
+    AggregateOperation operation,
+    std::optional<double> parameter
+) const {
+    return Expression(std::make_shared<ExpressionAggregate>(operation, node(), dimension, parameter));
 }
 
-Expression Expression::aggregate_agents(ExpressionAggregateAgents::Operation operation,
-                                        std::optional<double> parameter) const {
-    return Expression(std::make_shared<ExpressionAggregateAgents>(operation, node_, parameter));
+Expression AbstractExpression::aggregate_agents(AggregateOperation operation, std::optional<double> parameter) const {
+    return Expression(std::make_shared<ExpressionAggregateAgents>(operation, node(), parameter));
 }
 
-Expression Expression::select_agents(const std::vector<std::string>& labels) const {
-    return Expression(std::make_shared<ExpressionSelectAgents>(node_, labels));
+Expression AbstractExpression::select_agents(const std::vector<std::string>& labels) const {
+    return Expression(std::make_shared<ExpressionSelectAgents>(node(), labels));
 }
 
-Expression Expression::rename_agents(const std::vector<std::pair<std::string, std::string>>& mapping) const {
-    return Expression(std::make_shared<ExpressionRenameAgents>(node_, mapping));
+Expression AbstractExpression::rename_agents(const std::vector<std::pair<std::string, std::string>>& mapping) const {
+    return Expression(std::make_shared<ExpressionRenameAgents>(node(), mapping));
 }
 
-void Expression::save(const std::string& path) const {
+void AbstractExpression::save(const std::string& path) const {
+    const auto root = node();
     std::vector<BinaryFile*> input_files;
-    node_->collect_input_files(input_files);
+    root->collect_input_files(input_files);
 
     const auto canonical_out = std::filesystem::weakly_canonical(path).string();
     for (const auto* f : input_files) {
@@ -68,7 +66,7 @@ void Expression::save(const std::string& path) const {
         f->open('r');
     }
 
-    const auto& meta = node_->metadata();
+    const auto& meta = root->metadata();
     auto writer = BinaryFile::open_file(path, 'w', meta);
 
     std::unordered_map<std::string, int64_t> dim_map;
@@ -77,7 +75,7 @@ void Expression::save(const std::string& path) const {
     std::vector<int64_t> dims = first_dimensions(meta);
     std::vector<double> row;
     for (;;) {
-        node_->compute_row(dims, row);
+        root->compute_row(dims, row);
         for (size_t i = 0; i < meta.dimensions.size(); ++i) {
             dim_map[meta.dimensions[i].name] = dims[i];
         }
@@ -91,173 +89,198 @@ void Expression::save(const std::string& path) const {
     }
 }
 
-Expression operator+(const Expression& lhs, const Expression& rhs) {
-    return Expression(std::make_shared<ExpressionBinary>(ExpressionBinary::Operation::Add, lhs.node_, rhs.node_));
-}
-Expression operator+(const Expression& lhs, double rhs) {
-    auto scalar = std::make_shared<ExpressionScalar>(rhs, lhs.metadata());
-    return Expression(std::make_shared<ExpressionBinary>(ExpressionBinary::Operation::Add, lhs.node_, scalar));
-}
-Expression operator+(double lhs, const Expression& rhs) {
-    auto scalar = std::make_shared<ExpressionScalar>(lhs, rhs.metadata());
-    return Expression(std::make_shared<ExpressionBinary>(ExpressionBinary::Operation::Add, scalar, rhs.node_));
+Expression::Expression(std::shared_ptr<ExpressionNode> node) : node_(std::move(node)) {}
+
+Expression::Expression(const AbstractExpression& expression) : node_(expression.node()) {}
+
+std::shared_ptr<ExpressionNode> Expression::node() const {
+    return node_;
 }
 
-Expression operator-(const Expression& lhs, const Expression& rhs) {
-    return Expression(std::make_shared<ExpressionBinary>(ExpressionBinary::Operation::Subtract, lhs.node_, rhs.node_));
-}
-Expression operator-(const Expression& lhs, double rhs) {
-    auto scalar = std::make_shared<ExpressionScalar>(rhs, lhs.metadata());
-    return Expression(std::make_shared<ExpressionBinary>(ExpressionBinary::Operation::Subtract, lhs.node_, scalar));
-}
-Expression operator-(double lhs, const Expression& rhs) {
-    auto scalar = std::make_shared<ExpressionScalar>(lhs, rhs.metadata());
-    return Expression(std::make_shared<ExpressionBinary>(ExpressionBinary::Operation::Subtract, scalar, rhs.node_));
+namespace {
+
+// One node() call per operand, into locals in declaration order: operands are evaluated left to right.
+Expression binary_op(ExpressionBinary::Operation op, const AbstractExpression& lhs, const AbstractExpression& rhs) {
+    auto l = lhs.node();
+    auto r = rhs.node();
+    return Expression(std::make_shared<ExpressionBinary>(op, std::move(l), std::move(r)));
 }
 
-Expression operator*(const Expression& lhs, const Expression& rhs) {
-    return Expression(std::make_shared<ExpressionBinary>(ExpressionBinary::Operation::Multiply, lhs.node_, rhs.node_));
-}
-Expression operator*(const Expression& lhs, double rhs) {
-    auto scalar = std::make_shared<ExpressionScalar>(rhs, lhs.metadata());
-    return Expression(std::make_shared<ExpressionBinary>(ExpressionBinary::Operation::Multiply, lhs.node_, scalar));
-}
-Expression operator*(double lhs, const Expression& rhs) {
-    auto scalar = std::make_shared<ExpressionScalar>(lhs, rhs.metadata());
-    return Expression(std::make_shared<ExpressionBinary>(ExpressionBinary::Operation::Multiply, scalar, rhs.node_));
+// The scalar takes the node's metadata, not get_metadata(): an unopened file's handle metadata is empty.
+Expression binary_op(ExpressionBinary::Operation op, const AbstractExpression& lhs, double rhs) {
+    auto l = lhs.node();
+    auto scalar = std::make_shared<ExpressionScalar>(rhs, l->metadata());
+    return Expression(std::make_shared<ExpressionBinary>(op, std::move(l), std::move(scalar)));
 }
 
-Expression operator/(const Expression& lhs, const Expression& rhs) {
-    return Expression(std::make_shared<ExpressionBinary>(ExpressionBinary::Operation::Divide, lhs.node_, rhs.node_));
-}
-Expression operator/(const Expression& lhs, double rhs) {
-    auto scalar = std::make_shared<ExpressionScalar>(rhs, lhs.metadata());
-    return Expression(std::make_shared<ExpressionBinary>(ExpressionBinary::Operation::Divide, lhs.node_, scalar));
-}
-Expression operator/(double lhs, const Expression& rhs) {
-    auto scalar = std::make_shared<ExpressionScalar>(lhs, rhs.metadata());
-    return Expression(std::make_shared<ExpressionBinary>(ExpressionBinary::Operation::Divide, scalar, rhs.node_));
+Expression binary_op(ExpressionBinary::Operation op, double lhs, const AbstractExpression& rhs) {
+    auto r = rhs.node();
+    auto scalar = std::make_shared<ExpressionScalar>(lhs, r->metadata());
+    return Expression(std::make_shared<ExpressionBinary>(op, std::move(scalar), std::move(r)));
 }
 
-Expression operator-(const Expression& operand) {
-    return Expression(std::make_shared<ExpressionUnary>(ExpressionUnary::Operation::Negate, operand.node_));
-}
-Expression abs(const Expression& operand) {
-    return Expression(std::make_shared<ExpressionUnary>(ExpressionUnary::Operation::Abs, operand.node_));
-}
-Expression sqrt(const Expression& operand) {
-    return Expression(std::make_shared<ExpressionUnary>(ExpressionUnary::Operation::Sqrt, operand.node_));
-}
-Expression log(const Expression& operand) {
-    return Expression(std::make_shared<ExpressionUnary>(ExpressionUnary::Operation::Log, operand.node_));
-}
-Expression exp(const Expression& operand) {
-    return Expression(std::make_shared<ExpressionUnary>(ExpressionUnary::Operation::Exp, operand.node_));
+Expression unary_op(ExpressionUnary::Operation op, const AbstractExpression& operand) {
+    return Expression(std::make_shared<ExpressionUnary>(op, operand.node()));
 }
 
-Expression ifelse(const Expression& condition, const Expression& then_value, const Expression& else_value) {
-    return Expression(std::make_shared<ExpressionTernary>(
-        ExpressionTernary::Operation::IfElse, condition.node_, then_value.node_, else_value.node_));
+}  // namespace
+
+Expression operator+(const AbstractExpression& lhs, const AbstractExpression& rhs) {
+    return binary_op(ExpressionBinary::Operation::Add, lhs, rhs);
+}
+Expression operator+(const AbstractExpression& lhs, double rhs) {
+    return binary_op(ExpressionBinary::Operation::Add, lhs, rhs);
+}
+Expression operator+(double lhs, const AbstractExpression& rhs) {
+    return binary_op(ExpressionBinary::Operation::Add, lhs, rhs);
 }
 
-Expression operator>(const Expression& lhs, const Expression& rhs) {
-    return Expression(std::make_shared<ExpressionBinary>(ExpressionBinary::Operation::Gt, lhs.node_, rhs.node_));
+Expression operator-(const AbstractExpression& lhs, const AbstractExpression& rhs) {
+    return binary_op(ExpressionBinary::Operation::Subtract, lhs, rhs);
 }
-Expression operator>(const Expression& lhs, double rhs) {
-    auto scalar = std::make_shared<ExpressionScalar>(rhs, lhs.metadata());
-    return Expression(std::make_shared<ExpressionBinary>(ExpressionBinary::Operation::Gt, lhs.node_, scalar));
+Expression operator-(const AbstractExpression& lhs, double rhs) {
+    return binary_op(ExpressionBinary::Operation::Subtract, lhs, rhs);
 }
-Expression operator>(double lhs, const Expression& rhs) {
-    auto scalar = std::make_shared<ExpressionScalar>(lhs, rhs.metadata());
-    return Expression(std::make_shared<ExpressionBinary>(ExpressionBinary::Operation::Gt, scalar, rhs.node_));
+Expression operator-(double lhs, const AbstractExpression& rhs) {
+    return binary_op(ExpressionBinary::Operation::Subtract, lhs, rhs);
 }
 
-Expression operator<(const Expression& lhs, const Expression& rhs) {
-    return Expression(std::make_shared<ExpressionBinary>(ExpressionBinary::Operation::Lt, lhs.node_, rhs.node_));
+Expression operator*(const AbstractExpression& lhs, const AbstractExpression& rhs) {
+    return binary_op(ExpressionBinary::Operation::Multiply, lhs, rhs);
 }
-Expression operator<(const Expression& lhs, double rhs) {
-    auto scalar = std::make_shared<ExpressionScalar>(rhs, lhs.metadata());
-    return Expression(std::make_shared<ExpressionBinary>(ExpressionBinary::Operation::Lt, lhs.node_, scalar));
+Expression operator*(const AbstractExpression& lhs, double rhs) {
+    return binary_op(ExpressionBinary::Operation::Multiply, lhs, rhs);
 }
-Expression operator<(double lhs, const Expression& rhs) {
-    auto scalar = std::make_shared<ExpressionScalar>(lhs, rhs.metadata());
-    return Expression(std::make_shared<ExpressionBinary>(ExpressionBinary::Operation::Lt, scalar, rhs.node_));
+Expression operator*(double lhs, const AbstractExpression& rhs) {
+    return binary_op(ExpressionBinary::Operation::Multiply, lhs, rhs);
 }
 
-Expression operator>=(const Expression& lhs, const Expression& rhs) {
-    return Expression(std::make_shared<ExpressionBinary>(ExpressionBinary::Operation::Gte, lhs.node_, rhs.node_));
+Expression operator/(const AbstractExpression& lhs, const AbstractExpression& rhs) {
+    return binary_op(ExpressionBinary::Operation::Divide, lhs, rhs);
 }
-Expression operator>=(const Expression& lhs, double rhs) {
-    auto scalar = std::make_shared<ExpressionScalar>(rhs, lhs.metadata());
-    return Expression(std::make_shared<ExpressionBinary>(ExpressionBinary::Operation::Gte, lhs.node_, scalar));
+Expression operator/(const AbstractExpression& lhs, double rhs) {
+    return binary_op(ExpressionBinary::Operation::Divide, lhs, rhs);
 }
-Expression operator>=(double lhs, const Expression& rhs) {
-    auto scalar = std::make_shared<ExpressionScalar>(lhs, rhs.metadata());
-    return Expression(std::make_shared<ExpressionBinary>(ExpressionBinary::Operation::Gte, scalar, rhs.node_));
+Expression operator/(double lhs, const AbstractExpression& rhs) {
+    return binary_op(ExpressionBinary::Operation::Divide, lhs, rhs);
 }
 
-Expression operator<=(const Expression& lhs, const Expression& rhs) {
-    return Expression(std::make_shared<ExpressionBinary>(ExpressionBinary::Operation::Lte, lhs.node_, rhs.node_));
+Expression operator-(const AbstractExpression& operand) {
+    return unary_op(ExpressionUnary::Operation::Negate, operand);
 }
-Expression operator<=(const Expression& lhs, double rhs) {
-    auto scalar = std::make_shared<ExpressionScalar>(rhs, lhs.metadata());
-    return Expression(std::make_shared<ExpressionBinary>(ExpressionBinary::Operation::Lte, lhs.node_, scalar));
+Expression abs(const AbstractExpression& operand) {
+    return unary_op(ExpressionUnary::Operation::Abs, operand);
 }
-Expression operator<=(double lhs, const Expression& rhs) {
-    auto scalar = std::make_shared<ExpressionScalar>(lhs, rhs.metadata());
-    return Expression(std::make_shared<ExpressionBinary>(ExpressionBinary::Operation::Lte, scalar, rhs.node_));
+Expression sqrt(const AbstractExpression& operand) {
+    return unary_op(ExpressionUnary::Operation::Sqrt, operand);
 }
-
-Expression operator==(const Expression& lhs, const Expression& rhs) {
-    return Expression(std::make_shared<ExpressionBinary>(ExpressionBinary::Operation::Eq, lhs.node_, rhs.node_));
+Expression log(const AbstractExpression& operand) {
+    return unary_op(ExpressionUnary::Operation::Log, operand);
 }
-Expression operator==(const Expression& lhs, double rhs) {
-    auto scalar = std::make_shared<ExpressionScalar>(rhs, lhs.metadata());
-    return Expression(std::make_shared<ExpressionBinary>(ExpressionBinary::Operation::Eq, lhs.node_, scalar));
-}
-Expression operator==(double lhs, const Expression& rhs) {
-    auto scalar = std::make_shared<ExpressionScalar>(lhs, rhs.metadata());
-    return Expression(std::make_shared<ExpressionBinary>(ExpressionBinary::Operation::Eq, scalar, rhs.node_));
+Expression exp(const AbstractExpression& operand) {
+    return unary_op(ExpressionUnary::Operation::Exp, operand);
 }
 
-Expression operator!=(const Expression& lhs, const Expression& rhs) {
-    return Expression(std::make_shared<ExpressionBinary>(ExpressionBinary::Operation::Neq, lhs.node_, rhs.node_));
-}
-Expression operator!=(const Expression& lhs, double rhs) {
-    auto scalar = std::make_shared<ExpressionScalar>(rhs, lhs.metadata());
-    return Expression(std::make_shared<ExpressionBinary>(ExpressionBinary::Operation::Neq, lhs.node_, scalar));
-}
-Expression operator!=(double lhs, const Expression& rhs) {
-    auto scalar = std::make_shared<ExpressionScalar>(lhs, rhs.metadata());
-    return Expression(std::make_shared<ExpressionBinary>(ExpressionBinary::Operation::Neq, scalar, rhs.node_));
-}
-
-Expression operator&&(const Expression& lhs, const Expression& rhs) {
-    return Expression(std::make_shared<ExpressionBinary>(ExpressionBinary::Operation::And, lhs.node_, rhs.node_));
-}
-Expression operator&&(const Expression& lhs, double rhs) {
-    auto scalar = std::make_shared<ExpressionScalar>(rhs, lhs.metadata());
-    return Expression(std::make_shared<ExpressionBinary>(ExpressionBinary::Operation::And, lhs.node_, scalar));
-}
-Expression operator&&(double lhs, const Expression& rhs) {
-    auto scalar = std::make_shared<ExpressionScalar>(lhs, rhs.metadata());
-    return Expression(std::make_shared<ExpressionBinary>(ExpressionBinary::Operation::And, scalar, rhs.node_));
+Expression ifelse(
+    const AbstractExpression& condition,
+    const AbstractExpression& then_value,
+    const AbstractExpression& else_value
+) {
+    auto c = condition.node();
+    auto t = then_value.node();
+    auto e = else_value.node();
+    return Expression(
+        std::make_shared<ExpressionTernary>(
+            ExpressionTernary::Operation::IfElse,
+            std::move(c),
+            std::move(t),
+            std::move(e)
+        )
+    );
 }
 
-Expression operator||(const Expression& lhs, const Expression& rhs) {
-    return Expression(std::make_shared<ExpressionBinary>(ExpressionBinary::Operation::Or, lhs.node_, rhs.node_));
+Expression operator>(const AbstractExpression& lhs, const AbstractExpression& rhs) {
+    return binary_op(ExpressionBinary::Operation::Gt, lhs, rhs);
 }
-Expression operator||(const Expression& lhs, double rhs) {
-    auto scalar = std::make_shared<ExpressionScalar>(rhs, lhs.metadata());
-    return Expression(std::make_shared<ExpressionBinary>(ExpressionBinary::Operation::Or, lhs.node_, scalar));
+Expression operator>(const AbstractExpression& lhs, double rhs) {
+    return binary_op(ExpressionBinary::Operation::Gt, lhs, rhs);
 }
-Expression operator||(double lhs, const Expression& rhs) {
-    auto scalar = std::make_shared<ExpressionScalar>(lhs, rhs.metadata());
-    return Expression(std::make_shared<ExpressionBinary>(ExpressionBinary::Operation::Or, scalar, rhs.node_));
+Expression operator>(double lhs, const AbstractExpression& rhs) {
+    return binary_op(ExpressionBinary::Operation::Gt, lhs, rhs);
 }
 
-Expression operator!(const Expression& operand) {
-    return Expression(std::make_shared<ExpressionUnary>(ExpressionUnary::Operation::Not, operand.node_));
+Expression operator<(const AbstractExpression& lhs, const AbstractExpression& rhs) {
+    return binary_op(ExpressionBinary::Operation::Lt, lhs, rhs);
+}
+Expression operator<(const AbstractExpression& lhs, double rhs) {
+    return binary_op(ExpressionBinary::Operation::Lt, lhs, rhs);
+}
+Expression operator<(double lhs, const AbstractExpression& rhs) {
+    return binary_op(ExpressionBinary::Operation::Lt, lhs, rhs);
+}
+
+Expression operator>=(const AbstractExpression& lhs, const AbstractExpression& rhs) {
+    return binary_op(ExpressionBinary::Operation::Gte, lhs, rhs);
+}
+Expression operator>=(const AbstractExpression& lhs, double rhs) {
+    return binary_op(ExpressionBinary::Operation::Gte, lhs, rhs);
+}
+Expression operator>=(double lhs, const AbstractExpression& rhs) {
+    return binary_op(ExpressionBinary::Operation::Gte, lhs, rhs);
+}
+
+Expression operator<=(const AbstractExpression& lhs, const AbstractExpression& rhs) {
+    return binary_op(ExpressionBinary::Operation::Lte, lhs, rhs);
+}
+Expression operator<=(const AbstractExpression& lhs, double rhs) {
+    return binary_op(ExpressionBinary::Operation::Lte, lhs, rhs);
+}
+Expression operator<=(double lhs, const AbstractExpression& rhs) {
+    return binary_op(ExpressionBinary::Operation::Lte, lhs, rhs);
+}
+
+Expression operator==(const AbstractExpression& lhs, const AbstractExpression& rhs) {
+    return binary_op(ExpressionBinary::Operation::Eq, lhs, rhs);
+}
+Expression operator==(const AbstractExpression& lhs, double rhs) {
+    return binary_op(ExpressionBinary::Operation::Eq, lhs, rhs);
+}
+Expression operator==(double lhs, const AbstractExpression& rhs) {
+    return binary_op(ExpressionBinary::Operation::Eq, lhs, rhs);
+}
+
+Expression operator!=(const AbstractExpression& lhs, const AbstractExpression& rhs) {
+    return binary_op(ExpressionBinary::Operation::Neq, lhs, rhs);
+}
+Expression operator!=(const AbstractExpression& lhs, double rhs) {
+    return binary_op(ExpressionBinary::Operation::Neq, lhs, rhs);
+}
+Expression operator!=(double lhs, const AbstractExpression& rhs) {
+    return binary_op(ExpressionBinary::Operation::Neq, lhs, rhs);
+}
+
+Expression operator&&(const AbstractExpression& lhs, const AbstractExpression& rhs) {
+    return binary_op(ExpressionBinary::Operation::And, lhs, rhs);
+}
+Expression operator&&(const AbstractExpression& lhs, double rhs) {
+    return binary_op(ExpressionBinary::Operation::And, lhs, rhs);
+}
+Expression operator&&(double lhs, const AbstractExpression& rhs) {
+    return binary_op(ExpressionBinary::Operation::And, lhs, rhs);
+}
+
+Expression operator||(const AbstractExpression& lhs, const AbstractExpression& rhs) {
+    return binary_op(ExpressionBinary::Operation::Or, lhs, rhs);
+}
+Expression operator||(const AbstractExpression& lhs, double rhs) {
+    return binary_op(ExpressionBinary::Operation::Or, lhs, rhs);
+}
+Expression operator||(double lhs, const AbstractExpression& rhs) {
+    return binary_op(ExpressionBinary::Operation::Or, lhs, rhs);
+}
+
+Expression operator!(const AbstractExpression& operand) {
+    return unary_op(ExpressionUnary::Operation::Not, operand);
 }
 
 }  // namespace quiver

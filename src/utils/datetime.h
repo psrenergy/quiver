@@ -15,9 +15,11 @@ namespace quiver::datetime {
 // Build the C++20 calendar date a std::tm denotes. Shared by tm_to_time_point and by
 // parse_iso8601's validity check.
 inline std::chrono::year_month_day tm_to_year_month_day(const std::tm& tm) {
-    return std::chrono::year_month_day{std::chrono::year{tm.tm_year + 1900},
-                                       std::chrono::month{static_cast<unsigned>(tm.tm_mon + 1)},
-                                       std::chrono::day{static_cast<unsigned>(tm.tm_mday)}};
+    return std::chrono::year_month_day{
+        std::chrono::year{tm.tm_year + 1900},
+        std::chrono::month{static_cast<unsigned>(tm.tm_mon + 1)},
+        std::chrono::day{static_cast<unsigned>(tm.tm_mday)}
+    };
 }
 
 // Convert a std::tm (interpreted as UTC) to a system_clock::time_point.
@@ -81,10 +83,10 @@ inline bool parse_iso8601(const std::string& datetime_str, std::tm& tm) {
 }
 
 // Write-side gate for DATE_TIME columns: the parsed fields are discarded, only validity matters.
-// Shared by TypeValidator::validate_value (scalar + array writes) and validate_time_series_row
+// Shared by validate_value (type_validator.cpp, scalar + array writes) and validate_time_series_row
 // (time-series writes) - the two halves of the one scalar typing policy.
 //
-// Trims first because Database::execute trims every bound string, so the value that reaches SQLite
+// Trims first because Impl::execute trims every bound string, so the value that reaches SQLite
 // is the trimmed one; validating the raw string would reject " 2024-01-15", which stores fine.
 inline bool is_valid_iso8601(const std::string& datetime_str) {
     std::tm tm{};
@@ -101,15 +103,17 @@ inline std::string format_utc(const std::chrono::system_clock::time_point& tp) {
     std::chrono::hh_mm_ss<std::chrono::seconds> hms{std::chrono::duration_cast<std::chrono::seconds>(tp - days)};
 
     char buffer[32];
-    std::snprintf(buffer,
-                  sizeof(buffer),
-                  "%04d-%02u-%02uT%02d:%02d:%02d",
-                  static_cast<int>(ymd.year()),
-                  static_cast<unsigned>(ymd.month()),
-                  static_cast<unsigned>(ymd.day()),
-                  static_cast<int>(hms.hours().count()),
-                  static_cast<int>(hms.minutes().count()),
-                  static_cast<int>(hms.seconds().count()));
+    std::snprintf(
+        buffer,
+        sizeof(buffer),
+        "%04d-%02u-%02uT%02d:%02d:%02d",
+        static_cast<int>(ymd.year()),
+        static_cast<unsigned>(ymd.month()),
+        static_cast<unsigned>(ymd.day()),
+        static_cast<int>(hms.hours().count()),
+        static_cast<int>(hms.minutes().count()),
+        static_cast<int>(hms.seconds().count())
+    );
     return std::string(buffer);
 }
 

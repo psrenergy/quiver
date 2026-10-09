@@ -170,7 +170,7 @@ include("fixture.jl")
 
         # Query at 2024-01-02: Item 1 -> 2.0, Item 2 -> 20.0
         result = Quiver.read_time_series_row(db, "Collection", "data", "value"; date_time = DateTime(2024, 1, 2))
-        @test result isa Vector{Float64}
+        @test result isa Vector{Quiver.Optional{Float64}}
         @test length(result) == 2
         @test result[1] == 2.0
         @test result[2] == 20.0
@@ -202,7 +202,7 @@ include("fixture.jl")
 
         # Query at 2024-01-02: Item 1 -> 2.0, Item 2 -> 10.0
         result = Quiver.read_time_series_row(db, "Collection", "data", "value"; date_time = DateTime(2024, 1, 2))
-        @test result isa Vector{Float64}
+        @test result isa Vector{Quiver.Optional{Float64}}
         @test length(result) == 2
         @test result[1] == 2.0
         @test result[2] == 10.0
@@ -227,10 +227,11 @@ include("fixture.jl")
             value = [1.0],
         )
 
-        # Query before any data: should return NaN for the float attribute
+        # Query before any data: the element has no value, so the entry is nothing
         result = Quiver.read_time_series_row(db, "Collection", "data", "value"; date_time = DateTime(2024, 1, 1))
+        @test result isa Vector{Quiver.Optional{Float64}}
         @test length(result) == 1
-        @test isnan(result[1])
+        @test result[1] === nothing
 
         Quiver.close!(db)
     end
@@ -243,7 +244,7 @@ include("fixture.jl")
 
         result = Quiver.read_time_series_row(db, "Collection", "data", "value"; date_time = DateTime(2024, 1, 1))
         @test isempty(result)
-        @test result isa Vector{Float64}
+        @test result isa Vector{Quiver.Optional{Float64}}
 
         Quiver.close!(db)
     end
@@ -261,11 +262,11 @@ include("fixture.jl")
             value = [5.0],
         )
 
-        # Item 1 has data, Item 2 doesn't (NaN sentinel)
+        # Item 1 has data, Item 2 doesn't (nothing)
         result = Quiver.read_time_series_row(db, "Collection", "data", "value"; date_time = DateTime(2024, 1, 1))
         @test length(result) == 2
         @test result[1] == 5.0
-        @test isnan(result[2])
+        @test result[2] === nothing
 
         Quiver.close!(db)
     end
@@ -286,7 +287,7 @@ include("fixture.jl")
 
         # Read humidity (INTEGER type)
         humids = Quiver.read_time_series_row(db, "Sensor", "readings", "humidity"; date_time = DateTime(2024, 1, 2))
-        @test humids isa Vector{Int64}
+        @test humids isa Vector{Quiver.Optional{Int64}}
         @test humids[1] == 70
 
         # Read status (STRING type)
@@ -296,7 +297,7 @@ include("fixture.jl")
 
         # Read temperature (FLOAT type)
         temps = Quiver.read_time_series_row(db, "Sensor", "readings", "temperature"; date_time = DateTime(2024, 1, 2))
-        @test temps isa Vector{Float64}
+        @test temps isa Vector{Quiver.Optional{Float64}}
         @test temps[1] == 21.0
 
         Quiver.close!(db)
@@ -358,6 +359,40 @@ include("fixture.jl")
         @test length(result) == 2
         @test result[1] == ""
         @test result[2] === nothing
+
+        Quiver.close!(db)
+    end
+
+    @testset "Read Time Series Row - No Data Is Nothing In Every Type" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "mixed_time_series.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+        id1 = Quiver.create_element!(db, "Sensor"; label = "Sensor 1")
+        Quiver.create_element!(db, "Sensor"; label = "Sensor 2")  # no data
+
+        Quiver.update_time_series_group!(db, "Sensor", "readings", id1;
+            date_time = ["2024-01-02T00:00:00"],
+            temperature = [20.5],
+            humidity = [0],
+            status = ["ok"],
+        )
+
+        # A stored 0 and "no data" are distinguishable.
+        humids = Quiver.read_time_series_row(db, "Sensor", "readings", "humidity"; date_time = DateTime(2024, 1, 2))
+        @test humids isa Vector{Quiver.Optional{Int64}}
+        @test humids[1] == 0
+        @test humids[2] === nothing
+
+        temps = Quiver.read_time_series_row(db, "Sensor", "readings", "temperature"; date_time = DateTime(2024, 1, 2))
+        @test temps isa Vector{Quiver.Optional{Float64}}
+        @test temps[1] == 20.5
+        @test temps[2] === nothing
+
+        # Before the first row even Sensor 1 has no data; the element type does not change.
+        before = Quiver.read_time_series_row(db, "Sensor", "readings", "humidity"; date_time = DateTime(2024, 1, 1))
+        @test before isa Vector{Quiver.Optional{Int64}}
+        @test all(isnothing, before)
 
         Quiver.close!(db)
     end

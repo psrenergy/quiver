@@ -11,7 +11,10 @@
 
 TEST(Database, ReadSetStrings) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -32,13 +35,16 @@ TEST(Database, ReadSetStrings) {
     auto set2 = sets[1];
     std::sort(set1.begin(), set1.end());
     std::sort(set2.begin(), set2.end());
-    EXPECT_EQ(set1, (std::vector<std::string>{"important", "urgent"}));
-    EXPECT_EQ(set2, (std::vector<std::string>{"review"}));
+    EXPECT_EQ(set1, (std::vector<std::optional<std::string>>{"important", "urgent"}));
+    EXPECT_EQ(set2, (std::vector<std::optional<std::string>>{"review"}));
 }
 
 TEST(Database, ReadSetEmpty) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -51,7 +57,10 @@ TEST(Database, ReadSetEmpty) {
 
 TEST(Database, ReadSetIncludesElementsWithNoRows) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -78,9 +87,10 @@ TEST(Database, ReadSetIncludesElementsWithNoRows) {
     auto sets = db.read_set_strings("Collection", "tag");
     ASSERT_EQ(ids.size(), 3);
     ASSERT_EQ(sets.size(), ids.size());
-    EXPECT_EQ(sets[0], (std::vector<std::string>{"important"}));
+    EXPECT_EQ(sets[0], (std::vector<std::optional<std::string>>{"important"}));
     EXPECT_TRUE(sets[1].empty());
-    EXPECT_EQ(sets[2], (std::vector<std::string>{"urgent", "review"}));
+    std::sort(sets[2].begin(), sets[2].end());
+    EXPECT_EQ(sets[2], (std::vector<std::optional<std::string>>{"review", "urgent"}));
 }
 
 // ============================================================================
@@ -91,9 +101,11 @@ TEST(Database, ReadSetIncludesElementsWithNoRows) {
 // them ORDER BY rowid) - otherwise pairing two per-column reads by position pairs values from
 // different rows. Assert that agreement and the content, never a literal order.
 TEST(Database, ReadSetByIdOrderMatchesGroupReader) {
-    auto db = quiver::Database::from_schema(":memory:",
-                                            VALID_SCHEMA("multi_column_groups.sql"),
-                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
+    auto db = quiver::Database::from_schema(
+        ":memory:",
+        VALID_SCHEMA("multi_column_groups.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -105,12 +117,14 @@ TEST(Database, ReadSetByIdOrderMatchesGroupReader) {
 
     // Written in an order that matches neither column's sort order, so a reader ordering by value
     // would disagree with the others
-    db.update_set_group("Items",
-                        "codes",
-                        id,
-                        {{{"code", std::string("zeta")}, {"weight", 2.5}},
-                         {{"code", std::string("alpha")}, {"weight", 3.5}},
-                         {{"code", std::string("mu")}, {"weight", 1.5}}});
+    db.update_set_group(
+        "Items",
+        "codes",
+        id,
+        {{{"code", std::string("zeta")}, {"weight", 2.5}},
+         {{"code", std::string("alpha")}, {"weight", 3.5}},
+         {{"code", std::string("mu")}, {"weight", 1.5}}}
+    );
 
     auto codes = db.read_set_strings_by_id("Items", "code", id);
     auto weights = db.read_set_floats_by_id("Items", "weight", id);
@@ -123,19 +137,22 @@ TEST(Database, ReadSetByIdOrderMatchesGroupReader) {
     // Every reader returns the group's rows in the same order, so position i is one row everywhere
     for (size_t i = 0; i < rows.size(); ++i) {
         EXPECT_EQ(codes[i], std::get<std::string>(rows[i].at("code")));
-        EXPECT_DOUBLE_EQ(weights[i], std::get<double>(rows[i].at("weight")));
+        EXPECT_DOUBLE_EQ(*weights[i], std::get<double>(rows[i].at("weight")));
     }
 
     // Content is pinned independently of order
     std::sort(codes.begin(), codes.end());
     std::sort(weights.begin(), weights.end());
-    EXPECT_EQ(codes, (std::vector<std::string>{"alpha", "mu", "zeta"}));
-    EXPECT_EQ(weights, (std::vector<double>{1.5, 2.5, 3.5}));
+    EXPECT_EQ(codes, (std::vector<std::optional<std::string>>{"alpha", "mu", "zeta"}));
+    EXPECT_EQ(weights, (std::vector<std::optional<double>>{1.5, 2.5, 3.5}));
 }
 
 TEST(Database, ReadSetIntegersByIdOrderMatchesGroupReader) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("all_types.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("all_types.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -158,12 +175,15 @@ TEST(Database, ReadSetIntegersByIdOrderMatchesGroupReader) {
     }
 
     std::sort(codes.begin(), codes.end());
-    EXPECT_EQ(codes, (std::vector<int64_t>{10, 20, 30}));
+    EXPECT_EQ(codes, (std::vector<std::optional<int64_t>>{10, 20, 30}));
 }
 
 TEST(Database, ReadSetStringById) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -182,13 +202,16 @@ TEST(Database, ReadSetStringById) {
 
     // Sets are unordered, so sort before comparison
     std::sort(set1.begin(), set1.end());
-    EXPECT_EQ(set1, (std::vector<std::string>{"important", "urgent"}));
-    EXPECT_EQ(set2, (std::vector<std::string>{"review"}));
+    EXPECT_EQ(set1, (std::vector<std::optional<std::string>>{"important", "urgent"}));
+    EXPECT_EQ(set2, (std::vector<std::optional<std::string>>{"review"}));
 }
 
 TEST(Database, ReadSetByIdEmpty) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -204,7 +227,10 @@ TEST(Database, ReadSetByIdEmpty) {
 
 TEST(Database, ReadSetStringsInvalidCollection) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -215,18 +241,29 @@ TEST(Database, ReadSetStringsInvalidCollection) {
 
 TEST(Database, ReadSetStringsInvalidAttribute) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
     db.create_element("Configuration", config);
 
-    EXPECT_THROW(db.read_set_strings("Collection", "nonexistent_attribute"), std::runtime_error);
+    try {
+        (void)db.read_set_strings("Collection", "nonexistent_attribute");
+        FAIL() << "expected a throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), "Set attribute not found: 'nonexistent_attribute' in collection 'Collection'");
+    }
 }
 
 TEST(Database, ReadSetStringsByIdInvalidCollection) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -241,7 +278,10 @@ TEST(Database, ReadSetStringsByIdInvalidCollection) {
 
 TEST(Database, ReadSetIntegersBulk) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("all_types.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("all_types.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -267,13 +307,16 @@ TEST(Database, ReadSetIntegersBulk) {
     auto set2 = sets[1];
     std::sort(set1.begin(), set1.end());
     std::sort(set2.begin(), set2.end());
-    EXPECT_EQ(set1, (std::vector<int64_t>{10, 20, 30}));
-    EXPECT_EQ(set2, (std::vector<int64_t>{40, 50}));
+    EXPECT_EQ(set1, (std::vector<std::optional<int64_t>>{10, 20, 30}));
+    EXPECT_EQ(set2, (std::vector<std::optional<int64_t>>{40, 50}));
 }
 
 TEST(Database, ReadSetIntegersByIdBasic) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("all_types.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("all_types.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -288,12 +331,15 @@ TEST(Database, ReadSetIntegersByIdBasic) {
 
     auto set = db.read_set_integers_by_id("AllTypes", "code", id);
     std::sort(set.begin(), set.end());
-    EXPECT_EQ(set, (std::vector<int64_t>{100, 200, 300}));
+    EXPECT_EQ(set, (std::vector<std::optional<int64_t>>{100, 200, 300}));
 }
 
 TEST(Database, ReadSetFloatsBulk) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("all_types.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("all_types.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -320,17 +366,20 @@ TEST(Database, ReadSetFloatsBulk) {
     std::sort(set1.begin(), set1.end());
     std::sort(set2.begin(), set2.end());
     EXPECT_EQ(set1.size(), 3);
-    EXPECT_DOUBLE_EQ(set1[0], 1.1);
-    EXPECT_DOUBLE_EQ(set1[1], 2.2);
-    EXPECT_DOUBLE_EQ(set1[2], 3.3);
+    EXPECT_DOUBLE_EQ(*set1[0], 1.1);
+    EXPECT_DOUBLE_EQ(*set1[1], 2.2);
+    EXPECT_DOUBLE_EQ(*set1[2], 3.3);
     EXPECT_EQ(set2.size(), 2);
-    EXPECT_DOUBLE_EQ(set2[0], 4.4);
-    EXPECT_DOUBLE_EQ(set2[1], 5.5);
+    EXPECT_DOUBLE_EQ(*set2[0], 4.4);
+    EXPECT_DOUBLE_EQ(*set2[1], 5.5);
 }
 
 TEST(Database, ReadSetFloatsByIdBasic) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("all_types.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+        ":memory:",
+        VALID_SCHEMA("all_types.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -346,6 +395,55 @@ TEST(Database, ReadSetFloatsByIdBasic) {
     auto set = db.read_set_floats_by_id("AllTypes", "weight", id);
     std::sort(set.begin(), set.end());
     EXPECT_EQ(set.size(), 2);
-    EXPECT_DOUBLE_EQ(set[0], 8.8);
-    EXPECT_DOUBLE_EQ(set[1], 9.9);
+    EXPECT_DOUBLE_EQ(*set[0], 8.8);
+    EXPECT_DOUBLE_EQ(*set[1], 9.9);
+}
+
+// ============================================================================
+// NULL handling in set reads
+// ============================================================================
+
+TEST(Database, ReadSetPreservesNullCells) {
+    auto db = quiver::Database::from_schema(
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
+
+    db.create_element("Configuration", quiver::Element().set("label", std::string("Test Config")));
+
+    // tag is nullable, so a null cell is stored as SQL NULL.
+    quiver::Element e;
+    e.set("label", std::string("Item 1"))
+        .set("tag", std::vector<quiver::Value>{std::string("a"), nullptr, std::string("c")});
+    int64_t id = db.create_element("Collection", e);
+
+    // Set order is unspecified: pin the agreement between readers and the content, not the order.
+    auto sets = db.read_set_strings("Collection", "tag");
+    ASSERT_EQ(sets.size(), 1u);
+    auto by_id = db.read_set_strings_by_id("Collection", "tag", id);
+    EXPECT_EQ(sets[0], by_id);
+    std::sort(by_id.begin(), by_id.end());  // nullopt sorts first
+    EXPECT_EQ(by_id, (std::vector<std::optional<std::string>>{std::nullopt, "a", "c"}));
+}
+
+TEST(Database, ReadSetDistinguishesNoRowsFromNullOnlyRow) {
+    auto db = quiver::Database::from_schema(
+        ":memory:",
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
+
+    db.create_element("Configuration", quiver::Element().set("label", std::string("Test Config")));
+
+    // Item 1 has no group rows at all; Item 2 has exactly one row whose value is NULL.
+    db.create_element("Collection", quiver::Element().set("label", std::string("Item 1")));
+    quiver::Element e2;
+    e2.set("label", std::string("Item 2")).set("tag", std::vector<quiver::Value>{nullptr});
+    db.create_element("Collection", e2);
+
+    auto sets = db.read_set_strings("Collection", "tag");
+    ASSERT_EQ(sets.size(), 2u);
+    EXPECT_TRUE(sets[0].empty());
+    EXPECT_EQ(sets[1], (std::vector<std::optional<std::string>>{std::nullopt}));
 }

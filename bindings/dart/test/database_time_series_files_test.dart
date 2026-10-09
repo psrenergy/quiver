@@ -173,5 +173,26 @@ void main() {
         }
       },
     );
+
+    test('updateTimeSeriesFiles with an empty map still validates the collection', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        expect(
+          () => db.updateTimeSeriesFiles('NoSuchCollection', {}),
+          throwsA(
+            isA<DatabaseException>().having(
+              (e) => e.message,
+              'message',
+              equals('Cannot update_time_series_files: collection not found: NoSuchCollection'),
+            ),
+          ),
+        );
+      } finally {
+        db.close();
+      }
+    });
   });
 }

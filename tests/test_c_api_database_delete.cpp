@@ -42,8 +42,10 @@ TEST(DatabaseCApi, DeleteElementById) {
 TEST(DatabaseCApi, DeleteElementByIdWithVectorData) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     quiver_element_t* config = nullptr;
@@ -64,11 +66,21 @@ TEST(DatabaseCApi, DeleteElementByIdWithVectorData) {
 
     // Verify vector data exists
     int64_t* vec_values = nullptr;
+    uint8_t* vec_mask = nullptr;
     size_t vec_count = 0;
-    auto err = quiver_database_read_vector_integers_by_id(db, "Collection", "value_int", id, &vec_values, &vec_count);
+    auto err = quiver_database_read_vector_integers_by_id(
+        db,
+        "Collection",
+        "value_int",
+        id,
+        &vec_values,
+        &vec_mask,
+        &vec_count
+    );
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(vec_count, 3);
     quiver_database_free_integer_array(vec_values);
+    quiver_database_free_mask(vec_mask);
 
     // Delete element - CASCADE should delete vector rows too
     err = quiver_database_delete_element(db, "Collection", id);
@@ -84,8 +96,9 @@ TEST(DatabaseCApi, DeleteElementByIdWithVectorData) {
 
     // Verify vector data is also gone (via CASCADE DELETE)
     int64_t** vectors = nullptr;
+    uint8_t** masks = nullptr;
     size_t* sizes = nullptr;
-    err = quiver_database_read_vector_integers(db, "Collection", "value_int", &vectors, &sizes, &count);
+    err = quiver_database_read_vector_integers(db, "Collection", "value_int", &vectors, &masks, &sizes, &count);
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(count, 0);
     EXPECT_EQ(vectors, nullptr);
@@ -97,8 +110,10 @@ TEST(DatabaseCApi, DeleteElementByIdWithVectorData) {
 TEST(DatabaseCApi, DeleteElementByIdWithSetData) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     quiver_element_t* config = nullptr;
@@ -264,8 +279,10 @@ TEST(DatabaseCApi, DeleteElementByIdNullArguments) {
 TEST(DatabaseCApi, DeleteElementByLabel) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     quiver_element_t* config = nullptr;
@@ -307,8 +324,10 @@ TEST(DatabaseCApi, DeleteElementByLabel) {
 TEST(DatabaseCApi, DeleteElementByLabelNonExistent) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     quiver_element_t* config = nullptr;
@@ -342,8 +361,10 @@ TEST(DatabaseCApi, DeleteElementByLabelNonExistent) {
 TEST(DatabaseCApi, DeleteElementByLabelNullArguments) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+        QUIVER_OK
+    );
     ASSERT_NE(db, nullptr);
 
     // Null db

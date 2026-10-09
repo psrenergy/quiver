@@ -31,6 +31,19 @@ include("fixture.jl")
         @test true
     end
 
+    @testset "Set Nothing" begin
+        el = Quiver.Element()
+        el["label"] = "Test"
+        el["value"] = nothing
+        @test occursin("value: null", string(el))
+    end
+
+    @testset "Set SubString" begin
+        el = Quiver.Element()
+        el["label"] = split("a,b", ",")[1]
+        @test occursin("label: \"a\"", string(el))
+    end
+
     @testset "Set DateTime" begin
         el = Quiver.Element()
         el["value"] = DateTime(2024, 1, 15, 10, 30, 0)

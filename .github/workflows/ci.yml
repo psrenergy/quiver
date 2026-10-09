@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, ubuntu-24.04-arm, windows-latest, macos-latest]
         build_type: [Release, Debug]
 
     steps:
@@ -74,6 +74,9 @@ jobs:
           files: coverage.info
           flags: cpp
           fail_ci_if_error: true
+          disable_search: true
+          # The CLI's gcov plugin would re-run gcov over build/ and upload tests/ and _deps/.
+          plugins: noop
           token: ${{ secrets.CODECOV_TOKEN }}
 
   julia-coverage:
@@ -83,7 +86,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: [1.11, 1.12]
+        version: [1.11, 1.12, 1.13]
 
     steps:
       - uses: actions/checkout@v7
@@ -115,6 +118,7 @@ jobs:
           files: lcov.info
           flags: julia
           fail_ci_if_error: true
+          disable_search: true
           token: ${{ secrets.CODECOV_TOKEN }}
 
   dart-coverage:
@@ -131,16 +135,9 @@ jobs:
       - name: Install lcov
         run: sudo apt-get update && sudo apt-get install -y lcov
 
-      - uses: ./.github/actions/build-cpp
-
       - name: Install Dart dependencies
         working-directory: bindings/dart
         run: dart pub get
-
-      - name: Copy shared libraries
-        run: |
-          cp build/lib/libquiver.so bindings/dart/
-          cp build/lib/libquiver_c.so bindings/dart/
 
       - name: Run tests with coverage
         working-directory: bindings/dart
@@ -160,6 +157,7 @@ jobs:
           files: bindings/dart/coverage/lcov.info
           flags: dart
           fail_ci_if_error: true
+          disable_search: true
           token: ${{ secrets.CODECOV_TOKEN }}
 
   python-coverage:
@@ -193,6 +191,7 @@ jobs:
           files: bindings/python/coverage.xml
           flags: python
           fail_ci_if_error: true
+          disable_search: true
           token: ${{ secrets.CODECOV_TOKEN }}
 
   clang-format:
@@ -202,16 +201,13 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Install clang-format
-        run: |
-          wget https://apt.llvm.org/llvm.sh
-          chmod +x llvm.sh
-          sudo ./llvm.sh 21
-          sudo apt-get install -y clang-format-21
+      # Pinned exactly (PyPI wheel); .clang-format uses 22-only keys. Keep in sync with
+      # .pre-commit-config.yaml.
+      - uses: astral-sh/setup-uv@v7
 
       - name: Check formatting
         run: |
-          find include src tests -name '*.cpp' -o -name '*.h' | xargs clang-format-21 --dry-run --Werror
+          find include src tests -name '*.cpp' -o -name '*.h' | xargs uvx --from clang-format==22.1.8 clang-format --dry-run --Werror
 
   actionlint:
     name: Lint Workflows
@@ -239,7 +235,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, ubuntu-24.04-arm, windows-latest]
 
     steps:
       - uses: actions/checkout@v7
@@ -254,12 +250,16 @@ jobs:
         working-directory: bindings/js
         run: bun install
 
+      - name: Typecheck JS bindings
+        working-directory: bindings/js
+        run: bun run typecheck
+
       - name: Run Bun tests (Linux)
         if: runner.os == 'Linux'
         working-directory: bindings/js
         env:
           LD_LIBRARY_PATH: ${{ github.workspace }}/build/lib
-        run: bun test test
+        run: bun test test --coverage --coverage-reporter=lcov
 
       - name: Run Bun tests (Windows)
         if: runner.os == 'Windows'
@@ -268,3 +268,13 @@ jobs:
         run: |
           $env:PATH = "${{ github.workspace }}\build\bin\Debug;$env:PATH"
           bun test test
+
+      - name: Upload to Codecov
+        if: matrix.os == 'ubuntu-latest'
+        uses: codecov/codecov-action@v7
+        with:
+          files: bindings/js/coverage/lcov.info
+          flags: js
+          fail_ci_if_error: true
+          disable_search: true
+          token: ${{ secrets.CODECOV_TOKEN }}
