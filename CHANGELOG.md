@@ -5,7 +5,21 @@ All notable changes to Quiver are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entries that require
 callers to change something are prefixed **BREAKING** and say what to do.
 
-## [0.13.1] — unreleased
+## [0.13.2] — unreleased
+
+### Changed
+
+- **BREAKING — `update_time_series_files()` writes only the columns you name.** It rebuilt the
+  whole singleton row (DELETE then INSERT), so an unnamed column was silently reset to NULL —
+  updating only `data_file` wiped `metadata_file`. A named column still takes the value you give
+  it, explicit NULL included; an unnamed one keeps what it has. No other writer patches.
+
+  *Adapt:* to clear a column, name it with a null value (`nothing` / `None` / `null` / a NULL
+  `paths[i]` through the C API). **Lua cannot**: `{ x = nil }` is `{}`, so omission is its only
+  signal and it now means *preserve* — the limitation it already had on `create_element` /
+  `update_element` scalars.
+
+## [0.13.1] — 2026-10-07
 
 ### Changed
 
@@ -1436,6 +1450,7 @@ are functionally identical to 0.10.0.
   `read_time_series_group` emits for a NULL STRING cell — so feeding a read result back with the
   mask stripped was UB. A NULL entry, or a NULL per-column data pointer, is now SQL NULL.
 
+[0.13.2]: https://github.com/psrenergy/quiver/compare/v0.13.1...v0.13.2
 [0.13.1]: https://github.com/psrenergy/quiver/compare/v0.13.0...v0.13.1
 [0.13.0]: https://github.com/psrenergy/quiver/compare/v0.12.9...v0.13.0
 [0.12.9]: https://github.com/psrenergy/quiver/compare/v0.12.8...v0.12.9
