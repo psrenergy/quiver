@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 #include <system_error>
 #include <vector>
 
@@ -84,6 +85,35 @@ TEST_F(Sandbox_ReadCsv, ExactJsonRoundTrip) {
 
     auto json = sandbox.run(R"(return db:read_csv("small.csv"))");
     EXPECT_EQ(json, R"({"header":["a","b"],"rows":[["1","2"]]})");
+}
+
+TEST_F(Sandbox_ReadCsv, Latin1FieldsBecomeUtf8ForBothReaders) {
+    auto db = quiver::Database::from_schema(db_path(), VALID_SCHEMA("basic.sql"));
+    quiver::Sandbox sandbox(db);
+
+    // Latin-1 headers/cells alongside valid UTF-8, including three/four-byte characters.
+    const std::string source = "c\xF4modo,regi\xE3o,ação,ascii\r\n"
+                               "\"S\xE3o, Lu\xEDs\",a\xE7\xE3o,ação € 🎯,0012\r\n";
+    const std::string expected =
+        R"({"header":["cômodo","região","ação","ascii"],"rows":[["São, Luís","ação","ação € 🎯","0012"]]})";
+    const auto path = sandbox_path / "latin1.csv";
+    write_sandbox_csv_file(path, source);
+
+    EXPECT_EQ(sandbox.run(R"(return db:read_csv("latin1.csv"))"), expected);
+    EXPECT_EQ(
+        sandbox.run(R"(
+        local result = { rows = {} }
+        db:read_csv_stream("latin1.csv", function(row, index, header)
+            result.header = header
+            result.rows[index] = row
+        end)
+        return result
+    )"),
+        expected
+    );
+
+    std::ifstream file(path, std::ios::binary);
+    EXPECT_EQ(std::string(std::istreambuf_iterator<char>(file), {}), source);
 }
 
 TEST_F(Sandbox_ReadCsv, RaggedRowsSurviveShort) {

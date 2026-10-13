@@ -1,5 +1,7 @@
 #include "csv_read.h"
 
+#include "utils/string.h"
+
 #include <internal/csv_reader.hpp>
 
 #include <filesystem>
@@ -24,6 +26,25 @@ struct Reader::Impl {
 };
 
 namespace {
+
+std::string decode_field(std::string_view field) {
+    if (quiver::string::is_valid_utf8(field)) {
+        return std::string(field);
+    }
+    // ponytail: invalid fields are assumed ISO-8859-1; add an explicit encoding option if
+    // ambiguous encodings or mixed encodings within a field become a requirement.
+    std::string out;
+    out.reserve(field.size() * 2);
+    for (unsigned char ch : field) {
+        if (ch < 0x80) {
+            out += static_cast<char>(ch);
+        } else {
+            out += static_cast<char>(0xC0U | (ch >> 6U));
+            out += static_cast<char>(0x80U | (ch & 0x3FU));
+        }
+    }
+    return out;
+}
 
 // Built in exactly one place (this function), pinning exactly three things:
 //   - delimiter: from the caller's Options.
@@ -128,6 +149,9 @@ Reader::Reader(std::string resolved_path, std::string original_path, std::string
     csv::CSVReader& reader = *reader_opt;
 
     auto header = reader.get_col_names();
+    for (auto& name : header) {
+        name = decode_field(name);
+    }
     // csv-parser does not throw when the requested header row is past the end of the file (or is
     // itself a fully blank line) -- it silently returns with an empty header and zero data rows
     // (build/_deps/csv_parser-src/include/internal/csv_reader.cpp:74-83, trim_header). Gate on the
@@ -185,7 +209,7 @@ int64_t Reader::for_each_row(const RowSink& sink) {
                 // mapped chunk via a shared_ptr<void> and silently defeats the bounded-memory
                 // guarantee.
                 for (csv::CSVField& field : row) {
-                    cells.emplace_back(field.get<std::string_view>());
+                    cells.push_back(decode_field(field.get<std::string_view>()));
                 }
                 ++it;
             }

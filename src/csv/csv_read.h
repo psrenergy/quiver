@@ -60,7 +60,8 @@ public:
     Reader(Reader&&) = delete;
     Reader& operator=(Reader&&) = delete;
 
-    // Raw column names, in file order, verbatim (duplicates/blanks/surrounding spaces preserved).
+    // UTF-8 column names, in file order (duplicates/blanks/surrounding spaces preserved).
+    // Invalid UTF-8 fields are decoded as ISO-8859-1, for both headers and data cells.
     const std::vector<std::string>& header() const;
 
     // Feeds every data row to `sink`, in file order, and returns the number of rows fed to it. A

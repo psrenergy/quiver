@@ -1,5 +1,6 @@
 #include "sandbox/internal.h"
 #include "utils/number.h"
+#include "utils/string.h"
 
 #include <sol/sol.hpp>
 
@@ -86,21 +87,11 @@ void append_json_string(std::string_view str, std::string& out) {
             // Reject invalid sequences here -- this is the only layer that can diagnose them;
             // downstream, Python raises UnicodeDecodeError, Dart raises FormatException and JS
             // silently substitutes U+FFFD.
-            // Unicode 15 table 3-7: the second byte's range narrows for four lead bytes, which is
-            // what rejects overlong encodings and UTF-16 surrogates (both of which a strict
-            // decoder such as Python's also rejects).
-            const std::size_t extra = ch >= 0xF0 ? 3 : (ch >= 0xE0 ? 2 : (ch >= 0xC2 ? 1 : 0));
-            const unsigned char lo = ch == 0xE0 ? 0xA0 : (ch == 0xF0 ? 0x90 : 0x80);
-            const unsigned char hi = ch == 0xED ? 0x9F : (ch == 0xF4 ? 0x8F : 0xBF);
-            auto valid = extra > 0 && ch <= 0xF4 && i + extra < str.size();
-            for (std::size_t k = 1; valid && k <= extra; ++k) {
-                const auto next = static_cast<unsigned char>(str[i + k]);
-                valid = k == 1 ? (next >= lo && next <= hi) : (next >= 0x80 && next <= 0xBF);
-            }
-            if (!valid) {
+            const auto length = quiver::string::utf8_sequence_length(str, i);
+            if (length == 0) {
                 throw std::runtime_error("Cannot run: script return value contains a string that is not valid UTF-8");
             }
-            i += extra;
+            i += length - 1;
         }
     }
     flush_run(str.size());

@@ -75,8 +75,10 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   `test_c_api_database_lifecycle.cpp` covers its C API success and error propagation;
   `test_sandbox_migrations.cpp` covers the sandboxed `db:validate_migrations` Lua binding.
 - `test_sandbox_read_csv.cpp` covers the Lua-only `db:read_csv`/`db:read_csv_stream` bindings
-  (parsing, the `separator`/`header_row` options, and the sandbox/error-catalogue negatives) —
-  there is no C++ core, C API, or other-binding counterpart to mirror (root design decision), so
+  (parsing, Latin-1 fallback alongside preserved UTF-8/emoji in JSON, the `separator`/`header_row`
+  options, and the sandbox/error-catalogue negatives). `test_database_csv_import.cpp` checks the
+  same decoding on import; both regressions assert the source CSV remains byte-exact. There is
+  no separate C API or host-binding CSV reader to mirror (root design decision), so
   this suite has no sibling elsewhere. Most of its CSV fixtures are still written at runtime into
   the `LuaSandboxTest` sandbox, since they exist only to be read back once. **`tests/fixtures/`**
   is the one exception: `ma_energia_residencial.csv` and `ma_gd_data.csv` are two real Maranhão

@@ -105,6 +105,22 @@ TEST(DatabaseCSV, ImportCSV_Scalar_RoundTrip) {
     fs::remove(csv_path);
 }
 
+TEST(DatabaseCSV, ImportCSV_Scalar_Latin1TextBecomesUtf8) {
+    auto db = make_db();
+    const auto path = temp_csv("ImportLatin1");
+    const std::string source = "sep=,\nlabel,name,status,price,date_created,notes\n"
+                               "S\xE3o,a\xE7\xE3o,1,9.99,2024-01-15T10:30:00,ação\n";
+    write_csv_file(path.string(), source);
+
+    db.import_csv("Items", "", path.string());
+
+    EXPECT_EQ(db.read_scalar_string_by_id("Items", "label", 1).value(), "São");
+    EXPECT_EQ(db.read_scalar_string_by_id("Items", "name", 1).value(), "ação");
+    EXPECT_EQ(db.read_scalar_string_by_id("Items", "notes", 1).value(), "ação");
+    EXPECT_EQ(read_csv_file(path.string()), source);
+    fs::remove(path);
+}
+
 TEST(DatabaseCSV, ImportCSV_Scalar_WithNulls) {
     auto db = make_db();
 
