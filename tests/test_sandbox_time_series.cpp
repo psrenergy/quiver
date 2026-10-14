@@ -850,23 +850,34 @@ TEST_F(SandboxTest, UpdateTimeSeriesFilesEmptyTableValidatesCollection) {
     );
 }
 
-TEST_F(SandboxTest, UpdateTimeSeriesFilesReplacesTheWholeRow) {
-    auto db = quiver::Database::from_schema(
-        ":memory:",
-        collections_schema,
-        {.read_only = false, .console_level = quiver::LogLevel::Off}
-    );
+TEST_F(SandboxTest, UpdateTimeSeriesFilesPatchPreservesUnnamedColumn) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+
     quiver::Sandbox sandbox(db);
+
+    // `{ metadata_file = nil }` is `{}` in Lua, so omission is the only signal Lua has - and it
+    // now means preserve. Lua cannot write an explicit NULL through this writer.
     sandbox.run(R"(
-        db:update_time_series_files("Collection", { data_file = "a.bin", metadata_file = "a.toml" })
-        db:update_time_series_files("Collection", { data_file = "b.bin" })
-        local f = db:read_time_series_files("Collection")
-        assert(f.data_file == "b.bin", "data_file")
-        assert(f.metadata_file == nil, "metadata_file must be cleared")
+        db:update_time_series_files("Collection", {
+            data_file = "/old/data.csv",
+            metadata_file = "/old/meta.json"
+        })
+
+        db:update_time_series_files("Collection", { data_file = "/new/data.csv" })
+
+        local files = db:read_time_series_files("Collection")
+        assert(files.data_file == "/new/data.csv", "Expected data_file '/new/data.csv', got " .. tostring(files.data_file))
+        assert(files.metadata_file == "/old/meta.json", "Expected metadata_file to be preserved, got " .. tostring(files.metadata_file))
+
         db:update_time_series_files("Collection", {})
         local g = db:read_time_series_files("Collection")
-        assert(g.data_file == "b.bin", "an empty table changes nothing")
+        assert(g.data_file == "/new/data.csv", "an empty table changes nothing")
     )");
+
+    auto files = db.read_time_series_files("Collection");
+    EXPECT_EQ(files["data_file"].value(), "/new/data.csv");
+    EXPECT_EQ(files["metadata_file"].value(), "/old/meta.json");
 }
 
 TEST_F(SandboxTest, MultiColumnTimeSeriesUpdateAndRead) {

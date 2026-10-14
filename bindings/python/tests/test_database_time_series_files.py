@@ -99,6 +99,22 @@ class TestUpdateTimeSeriesFiles:
         result = collections_db.read_time_series_files("Collection")
         assert result == data2
 
+    def test_update_time_series_files_patch_leaves_unnamed_alone(self, collections_db: Database) -> None:
+        """An unnamed column keeps its value; naming one with None clears it."""
+        collections_db.update_time_series_files(
+            "Collection", {"data_file": "/old/data.csv", "metadata_file": "/old/meta.json"}
+        )
+
+        collections_db.update_time_series_files("Collection", {"data_file": "/new/data.csv"})
+        result = collections_db.read_time_series_files("Collection")
+        assert result["data_file"] == "/new/data.csv"
+        assert result["metadata_file"] == "/old/meta.json"
+
+        collections_db.update_time_series_files("Collection", {"metadata_file": None})
+        result = collections_db.read_time_series_files("Collection")
+        assert result["data_file"] == "/new/data.csv"
+        assert result["metadata_file"] is None
+
     def test_update_time_series_files_empty_map_validates_collection(self, collections_db: Database) -> None:
         """An empty map still reaches the core, which rejects an unknown collection."""
         with pytest.raises(
