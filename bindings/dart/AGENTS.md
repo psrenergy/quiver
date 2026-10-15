@@ -19,6 +19,11 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
 
 ## Rules and gotchas
 
+- **Parquet export stays Lua-only here.** Sandbox tests invoke `db:bin_to_parquet`; no direct
+  binary API or Arrow types are added to Dart.
+- **Windows CMake builds set the target processor explicitly.** The native-assets builder
+  supplies `CMAKE_SYSTEM_NAME` but leaves `CMAKE_SYSTEM_PROCESSOR` empty; Arrow needs it.
+
 - **Regenerate after C API changes**: `generator/generator.bat` rewrites
   `lib/src/ffi/bindings.dart`. The live ffigen config is the `ffigen:` block in
   **pubspec.yaml** (plain `dart run ffigen` reads only that); the sibling `ffigen.yaml` is an

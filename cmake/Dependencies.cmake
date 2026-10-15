@@ -1,4 +1,38 @@
 include(FetchContent)
+include(GNUInstallDirs)
+
+# Parquet snapshots: embed Arrow/Parquet and Zstandard, with no extra runtime libraries.
+function(quiver_fetch_parquet)
+    set(ARROW_DEFINE_OPTIONS ON CACHE BOOL "" FORCE)
+    set(ARROW_BUILD_SHARED OFF CACHE BOOL "" FORCE)
+    set(ARROW_BUILD_STATIC ON CACHE BOOL "" FORCE)
+    set(ARROW_PARQUET ON CACHE BOOL "" FORCE)
+    set(ARROW_WITH_ZSTD ON CACHE BOOL "" FORCE)
+    set(ARROW_MIMALLOC OFF CACHE BOOL "" FORCE)
+    set(ARROW_FILESYSTEM OFF CACHE BOOL "" FORCE)
+    set(ARROW_DEPENDENCY_SOURCE BUNDLED CACHE STRING "" FORCE)
+    set(ARROW_SIMD_LEVEL NONE CACHE STRING "" FORCE)
+    set(ARROW_RUNTIME_SIMD_LEVEL NONE CACHE STRING "" FORCE)
+    set(ARROW_USE_STATIC_CRT OFF CACHE BOOL "" FORCE)
+    set(ARROW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(ARROW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set(ARROW_BUILD_UTILITIES OFF CACHE BOOL "" FORCE)
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+    FetchContent_Declare(arrow
+        GIT_REPOSITORY https://github.com/apache/arrow.git
+        GIT_TAG apache-arrow-25.0.1
+        GIT_SHALLOW TRUE
+        SOURCE_SUBDIR cpp
+        SYSTEM
+    )
+    FetchContent_MakeAvailable(arrow)
+    # Arrow's in-tree targets use directory includes; consumers need explicit build-tree headers.
+    target_include_directories(arrow_static SYSTEM INTERFACE
+        $<BUILD_INTERFACE:${arrow_SOURCE_DIR}/cpp/src>
+        $<BUILD_INTERFACE:${arrow_BINARY_DIR}/src>
+    )
+endfunction()
+quiver_fetch_parquet()
 
 # SQLite via FetchContent (PSR's maintained fork of the archived sjinks/sqlite3-cmake)
 # Built thread-safe (serialized). FORCEd because option() will not override a stale cache entry,
@@ -18,6 +52,7 @@ FetchContent_Declare(tomlplusplus
 FetchContent_MakeAvailable(tomlplusplus)
 
 # spdlog for logging
+set(SPDLOG_INSTALL ON CACHE BOOL "" FORCE)
 FetchContent_Declare(spdlog
     GIT_REPOSITORY https://github.com/gabime/spdlog.git
     GIT_TAG v1.17.0
@@ -78,6 +113,12 @@ set(CSV_NO_SIMD ON CACHE BOOL "" FORCE)
 set(CSV_BUILD_PROGRAMS OFF CACHE BOOL "" FORCE)
 set(CSV_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(csv_parser)
+# Static Quiver consumers need the compiled parser, but none of its headers are public API.
+set_target_properties(csv PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
+    "$<BUILD_INTERFACE:${csv_parser_SOURCE_DIR}/include/internal/..>")
+if(NOT DEFINED SKBUILD)
+    install(TARGETS csv EXPORT quiverTargets ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+endif()
 # `csv_no_simd` duplicates all nine of `csv`'s sources; nothing links it, and csv-parser declares
 # no install()/export() rules for it, so excluding it from `all` is safe here. This is NOT the
 # same situation as the lua-cmake EXCLUDE_FROM_ALL warning above -- that one is about lua-cmake's

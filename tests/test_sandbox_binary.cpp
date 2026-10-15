@@ -38,6 +38,46 @@ protected:
     std::string schema;
 };
 
+TEST_F(SandboxBinaryTest, ExportsParquetAndRejectsEscapes) {
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::Sandbox sandbox(db);
+    sandbox.run(md1() + R"(
+        local f = db:open_file('snapshot', 'w', md)
+        f:write({1.5}, {row=2})
+        f:close()
+        db:bin_to_parquet('snapshot')
+    )");
+    EXPECT_GT(fs::file_size(sandbox_path / "snapshot.parquet"), 8);
+    expect_sandbox_error(sandbox, "db:bin_to_parquet('../outside')", "escapes the database directory");
+    auto memory = quiver::Database::from_schema(":memory:", schema);
+    quiver::Sandbox in_memory(memory);
+    expect_sandbox_error(in_memory, "db:bin_to_parquet('snapshot')", "in-memory");
+}
+
+TEST_F(SandboxBinaryTest, ParquetRejectsDerivedFileSymlinksOutsideRoot) {
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::Sandbox sandbox(db);
+    const auto outside = sandbox_path.parent_path() / (sandbox_path.filename().string() + "_outside");
+    fs::create_directory(outside);
+    struct Cleanup {
+        fs::path path;
+        ~Cleanup() {
+            fs::remove_all(path);
+        }
+    } cleanup{outside};
+    for (const auto* extension : {".qvr", ".toml", ".parquet"}) {
+        std::ofstream(outside / (std::string("data") + extension)) << "outside";
+        const auto link = sandbox_path / (std::string("snapshot") + extension);
+        std::error_code error;
+        fs::create_symlink(outside / (std::string("data") + extension), link, error);
+        if (error) {
+            GTEST_SKIP() << "Symlinks unavailable: " << error.message();
+        }
+        expect_sandbox_error(sandbox, "db:bin_to_parquet('snapshot')", "escapes the database directory");
+        fs::remove(link);
+    }
+}
+
 TEST_F(SandboxBinaryTest, MetadataBuilderAndAccessors) {
     auto db = quiver::Database::from_schema(":memory:", schema);
     quiver::Sandbox sandbox(db);

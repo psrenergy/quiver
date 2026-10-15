@@ -1,6 +1,7 @@
 #include "quiver/binary/binary_file.h"
 #include "quiver/binary/binary_metadata.h"
 #include "quiver/binary/csv_converter.h"
+#include "quiver/binary/parquet.h"
 #include "quiver/binary/time_properties.h"
 #include "quiver/database.h"
 #include "quiver/element.h"
@@ -130,6 +131,13 @@ sol::usertype<BinaryFile> bind_binary(
     });
     bind.set_function("csv_to_bin", [](Database& self, const std::string& path) {
         CSVConverter::csv_to_bin(resolve_sandbox_path(self, "csv_to_bin", path));
+    });
+    bind.set_function("bin_to_parquet", [](Database& self, const std::string& path) {
+        const auto resolved = resolve_sandbox_path(self, "bin_to_parquet", path);
+        for (const auto* extension : {".qvr", ".toml", ".parquet"}) {
+            resolve_sandbox_path(self, "bin_to_parquet", resolved + extension);
+        }
+        bin_to_parquet(resolved);
     });
 
     state.new_usertype<BinaryMetadata>(

@@ -49,7 +49,7 @@ set -exo pipefail
 # devtoolset-11 is the newest CentOS 7 SCL offers (-> GLIBCXX_3.4.29, still <= the 3.4.30 ceiling).
 # manylinux_2_28's default gcc-toolset is already new enough.
 if [ "$ARCH" = x86_64 ]; then
-  if [ ! -f /opt/rh/devtoolset-11/enable ]; then yum install -y devtoolset-11-gcc-c++; fi
+  yum install -y devtoolset-11-gcc-c++ devtoolset-11-libatomic-devel
   source /opt/rh/devtoolset-11/enable
 fi
 gcc --version

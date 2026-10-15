@@ -403,12 +403,16 @@ TEST_F(BinaryTempFileFixture, ValueAboveMax) {
 TEST_F(BinaryTempFileFixture, BoundaryMinValid) {
     auto md = make_simple_metadata();
     auto binary_file = BinaryFile::open_file(path, 'w', md);
+    binary_file.close();
+    binary_file.open('r');
     EXPECT_NO_THROW(binary_file.read({{"row", 1}, {"col", 1}}, true));
 }
 
 TEST_F(BinaryTempFileFixture, BoundaryMaxValid) {
     auto md = make_simple_metadata();
     auto binary_file = BinaryFile::open_file(path, 'w', md);
+    binary_file.close();
+    binary_file.open('r');
     EXPECT_NO_THROW(binary_file.read({{"row", 3}, {"col", 2}}, true));
 }
 

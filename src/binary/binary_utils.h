@@ -17,6 +17,19 @@ constexpr std::string_view CSV_EXTENSION = ".csv";
 
 namespace chrono = std::chrono;
 
+inline chrono::system_clock::time_point calendar_cell_start(
+    const BinaryMetadata& metadata,
+    const std::vector<int64_t>& coordinates
+) {
+    auto datetime = metadata.initial_datetime;
+    for (size_t i = 0; i < metadata.dimensions.size(); ++i) {
+        if (const auto& time = metadata.dimensions[i].time) {
+            datetime = time->add_offset_from_int(datetime, coordinates[i]);
+        }
+    }
+    return datetime;
+}
+
 inline int64_t day_of_year(chrono::system_clock::time_point datetime) {
     auto day = chrono::floor<chrono::days>(datetime);
     auto ymd = chrono::year_month_day{day};

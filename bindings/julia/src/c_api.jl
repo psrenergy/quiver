@@ -702,6 +702,10 @@ function quiver_csv_converter_csv_to_bin(path)
     @ccall libquiver_c.quiver_csv_converter_csv_to_bin(path::Ptr{Cchar})::quiver_error_t
 end
 
+function quiver_bin_to_parquet(path)
+    @ccall libquiver_c.quiver_bin_to_parquet(path::Ptr{Cchar})::quiver_error_t
+end
+
 mutable struct quiver_expression end
 
 const quiver_expression_t = quiver_expression

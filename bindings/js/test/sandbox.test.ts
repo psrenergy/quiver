@@ -2,12 +2,36 @@ import { describe, expect, test } from "bun:test";
 
 const __dirname = import.meta.dir;
 
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Database, QuiverError, Sandbox } from "../src/index.ts";
 
 const SCHEMA_PATH = join(__dirname, "..", "..", "..", "tests", "schemas", "valid", "all_types.sql");
 
 describe("Sandbox", () => {
+  test("exports a Parquet snapshot through Lua", () => {
+    const directory = mkdtempSync(join(tmpdir(), "quiver-parquet-"));
+    const db = Database.fromSchema(join(directory, "test.db"), SCHEMA_PATH);
+    const sandbox = new Sandbox(db);
+    try {
+      sandbox.run(`
+        local md = quiver.metadata{initial_datetime='2024-01-01T00:00:00', unit='MW',
+          dimensions={'row'}, dimension_sizes={2}, labels={'value'}}
+        local f = db:open_file('snapshot', 'w', md)
+        f:write({1.5}, {row=2})
+        f:close()
+        db:bin_to_parquet('snapshot')
+      `);
+      expect(readFileSync(join(directory, "snapshot.parquet")).subarray(0, 4).toString()).toBe(
+        "PAR1",
+      );
+    } finally {
+      sandbox.close();
+      db.close();
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
   test("element REAL arrays preserve each Lua cell type", () => {
     const schema = join(
       __dirname,

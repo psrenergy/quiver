@@ -4,6 +4,7 @@
 #include "binary/binary_file.h"
 #include "binary/binary_metadata.h"
 #include "binary/csv_converter.h"
+#include "binary/parquet.h"
 #include "database.h"
 #include "element.h"
 #include "export.h"

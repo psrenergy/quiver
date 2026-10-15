@@ -7,6 +7,17 @@ patterns, schema conventions, design decisions) live in the root `AGENTS.md`.
 
 ## File Map
 
+Parquet snapshots are implemented in `binary/parquet.cpp`, exposed by the free C++
+`bin_to_parquet` function. Arrow/Parquet stays private and statically linked. Conversion reuses
+binary traversal and `calendar_cell_start` (also used by CSV), streams bounded batches, embeds
+canonical TOML metadata, and publishes only after checked closure. Lua validates the actual
+`.qvr`, `.toml` and `.parquet` paths before calling it. Binary readers throw on failed opens/reads.
+Linux links with `--as-needed` so unused dependency system libraries are not runtime requirements.
+
+Installed static consumers resolve Arrow/Parquet, spdlog, OpenXLSX and Lua from the installation;
+the compiled CSV parser is co-exported. Header-only and compiler-option targets stay build-only.
+The package config also resolves the existing public SQLite dependency for shared consumers.
+
 ```
 include/quiver/           # C++ public headers
   database.h              # Database class - main API

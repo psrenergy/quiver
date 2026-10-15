@@ -32,6 +32,9 @@ ruff.toml         # Lint/format config; lint is isort only (select = ["I"])
 
 ## Rules and gotchas
 
+- **Parquet export stays Lua-only here.** `test_sandbox_parquet.py` smoke-tests
+  `db:bin_to_parquet` through Sandbox using the standard library; C++ tests validate contents.
+
 - **CFFI ABI-mode** — no compiler required at install time; `_c_api.py` declarations must match
   the C headers exactly (struct layout mismatches corrupt silently). After C API changes, run
   `generator/generator.bat` and diff its output against `_c_api.py`.

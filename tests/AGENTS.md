@@ -5,6 +5,11 @@ C++ core and C API suites live here; binding suites live in each binding's `test
 
 ## C++ core tests (`tests/test_*.cpp`, one file per functional area)
 
+`test_parquet.cpp` decodes snapshots with Arrow/Parquet and checks schema, values, metadata,
+calendar traversal, batching and failure cleanup. `test_c_api_parquet.cpp` covers the C entry
+point. Sandbox tests cover direct Lua export and actual-file containment; Julia tests the direct
+API, while Dart/Python/JS exercise Lua through Sandbox with small smoke tests.
+
 - Database: `test_database_lifecycle.cpp` (open/close/move/options), `test_database_create.cpp`,
   `test_database_read_{scalar,vector,set}.cpp` (read split by attribute type; element-level reads
   `read_element_ids`/`read_element_by_id`/`number_of_elements` live in the `_scalar` file),

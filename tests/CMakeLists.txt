@@ -5,6 +5,7 @@ add_executable(quiver_tests
     test_binary_metadata.cpp
     test_binary_time_properties.cpp
     test_csv_converter.cpp
+    test_parquet.cpp
     test_database_create.cpp
     test_database_csv_export.cpp
     test_database_csv_import.cpp
@@ -65,6 +66,7 @@ target_link_libraries(quiver_tests
         quiver_compiler_options
         GTest::gtest_main
         GTest::gmock
+        parquet_static
 )
 
 # path_policy.cpp and the test include "sandbox/path_policy.h".
@@ -79,6 +81,7 @@ if(QUIVER_BUILD_C_API)
     add_executable(quiver_c_tests
         test_c_api_binary_file.cpp
         test_c_api_csv_converter.cpp
+        test_c_api_parquet.cpp
         test_c_api_binary_metadata.cpp
         test_c_api_expression.cpp
         test_c_api_database_create.cpp

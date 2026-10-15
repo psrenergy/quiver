@@ -81,6 +81,10 @@ void BinaryFile::open(char mode, const std::optional<BinaryMetadata>& metadata) 
         // Open binary data file
         impl_->io =
             std::make_unique<std::fstream>(file_path + std::string(QVR_EXTENSION), std::ios::in | std::ios::binary);
+        if (!*impl_->io) {
+            impl_->io.reset();
+            throw std::runtime_error("Cannot open_file: failed to open binary data: " + file_path);
+        }
         return;
     }
     case 'w': {
@@ -137,6 +141,9 @@ std::vector<double> BinaryFile::read(const std::unordered_map<std::string, int64
     std::vector<double> data(impl_->metadata.labels.size());
     auto bytes = static_cast<int64_t>(data.size() * sizeof(double));
     impl_->io->read(reinterpret_cast<char*>(data.data()), bytes);
+    if (!*impl_->io) {
+        throw std::runtime_error("Cannot read: failed to read binary data: " + impl_->file_path);
+    }
     impl_->current_position += bytes;
 
     if (!allow_nulls) {

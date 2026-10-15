@@ -1,5 +1,7 @@
 #include "../test_utils.h"
 
+#include <quiver/binary/binary_file.h>
+#include <quiver/binary/parquet.h>
 #include <quiver/c/options.h>
 #include <quiver/database.h>
 #include <quiver/element.h>
@@ -8,6 +10,7 @@
 #include <chrono>
 #include <cstdio>
 #include <filesystem>
+#include <limits>
 #include <map>
 #include <numeric>
 #include <string>
@@ -229,7 +232,50 @@ static void print_results(
 // main
 // ---------------------------------------------------------------------------
 
-int main() {
+int main(int argc, char** argv) {
+    if (argc == 3 && std::string(argv[1]) == "--parquet") {
+        const int64_t rows = std::stoll(argv[2]);
+        const auto path = temp_db_path("parquet");
+        std::vector<std::string> labels;
+        for (int i = 0; i < 32; ++i) {
+            labels.push_back("agent_" + std::to_string(i));
+        }
+        auto metadata = quiver::BinaryMetadata::from_element(
+            quiver::Element()
+                .set("version", "1")
+                .set("initial_datetime", "2024-01-01T00:00:00")
+                .set("unit", "MW")
+                .set("dimensions", {"row"})
+                .set("dimension_sizes", std::vector<int64_t>{rows})
+                .set("labels", labels)
+        );
+        auto writer = quiver::BinaryFile::open_file(path, 'w', metadata);
+        std::vector<double> values(32);
+        for (int64_t row = 1; row <= rows; ++row) {
+            for (size_t col = 0; col < values.size(); ++col) {
+                values[col] =
+                    (row + static_cast<int64_t>(col)) % 10 == 0
+                        ? std::numeric_limits<double>::quiet_NaN()
+                        : static_cast<double>((row * 7919 + static_cast<int64_t>(col) * 104729) % 1000003) / 100;
+            }
+            writer.write(values, {{"row", row}});
+        }
+        writer.close();
+        const auto start = std::chrono::steady_clock::now();
+        quiver::bin_to_parquet(path);
+        const double seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+        std::printf(
+            "rows=%lld agents=32 seconds=%.3f binary_bytes=%llu parquet_bytes=%llu\n",
+            static_cast<long long>(rows),
+            seconds,
+            static_cast<unsigned long long>(std::filesystem::file_size(path + ".qvr")),
+            static_cast<unsigned long long>(std::filesystem::file_size(path + ".parquet"))
+        );
+        for (const auto* extension : {".qvr", ".toml", ".parquet"}) {
+            std::filesystem::remove(path + extension);
+        }
+        return 0;
+    }
     auto schema_path = schema_file();
 
     // Extract schema filename for display
