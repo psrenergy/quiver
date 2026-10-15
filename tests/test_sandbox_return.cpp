@@ -166,6 +166,8 @@ TEST_F(SandboxTest, ReturnNonUtf8StringThrows) {
     // So are an overlong encoding and a UTF-16 surrogate, which a strict decoder also rejects.
     expect_sandbox_error(sandbox, "return string.char(0xC0, 0xAF)", "not valid UTF-8");
     expect_sandbox_error(sandbox, "return string.char(0xED, 0xA0, 0x80)", "not valid UTF-8");
+    expect_sandbox_error(sandbox, "return string.char(0xF0, 0x80, 0x80, 0x80)", "not valid UTF-8");
+    expect_sandbox_error(sandbox, "return string.char(0xF4, 0x90, 0x80, 0x80)", "not valid UTF-8");
     // Well-formed UTF-8 passes through unescaped, one, three and four bytes wide.
     EXPECT_EQ(sandbox.run("return string.char(0xC3, 0xA9)"), "\"\xC3\xA9\"");
     EXPECT_EQ(sandbox.run("return string.char(0xE2, 0x82, 0xAC)"), "\"\xE2\x82\xAC\"");

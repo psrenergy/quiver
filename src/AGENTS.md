@@ -68,7 +68,7 @@ src/                      # C++ implementation
   ui_metadata.h / ui_metadata.cpp  # Internal ui/ TOML sidecar reader behind describe/describe_collection
                                 # -- same no-include/quiver/-counterpart posture as csv_read
   cli/main.cpp            # quiver_cli CLI entry point
-  utils/string.h          # String utilities: new_c_str, trim
+  utils/string.h          # String utilities: new_c_str, trim, shared strict UTF-8 validation
   utils/datetime.h        # ISO 8601 parse/format helpers
   utils/number.h          # quiver::utils::append_number (std::to_chars shortest round-trip) and
                           # parse_float (its whole-cell, host-locale-proof reader)
@@ -121,7 +121,11 @@ passes its one unsandboxed path as both `resolved_path` and `original_path`, wit
 the operation (from Lua it arrives already sandbox-resolved, so those errors quote the absolute
 path). `Reader` is Pimpl'd specifically so csv-parser's headers never have
 to be included by any `src/sandbox/` TU (all are sol2 TUs; `/bigobj` is target-wide for sol2's template
-depth). Three `csv::CSVFormat` settings are pinned in exactly one place (`make_format`, in
+depth). Headers are decoded once and cells row by row: valid UTF-8 is preserved, otherwise the
+whole field is decoded as ISO-8859-1. The shared validator in `utils/string.h` also backs the
+JSON encoder, which still rejects invalid UTF-8 returned directly by Lua. No file is rewritten,
+and the per-field conversion preserves streaming's bounded-memory window.
+Three `csv::CSVFormat` settings are pinned in exactly one place (`make_format`, in
 `csv_read.cpp`) because every one of the library defaults is wrong for this reader:
 `variable_columns(KEEP_NON_EMPTY)` (the default `IGNORE_ROW` silently discards any row whose field
 count differs from the header), the header row (with no header pinned, csv-parser guesses one and

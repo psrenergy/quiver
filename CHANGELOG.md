@@ -7,6 +7,12 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ## [0.13.2] — unreleased
 
+### Fixed
+
+- **CSV: automatic Latin-1 fallback.** Headers and cells that are not valid UTF-8 are decoded
+  as ISO-8859-1 by `db:read_csv`, `db:read_csv_stream`, and `import_csv`. Portuguese accents
+  survive JSON serialization; valid UTF-8 text is unchanged and source files are not rewritten.
+
 ### Changed
 
 - **BREAKING — `update_time_series_files()` writes only the columns you name.** It rebuilt the

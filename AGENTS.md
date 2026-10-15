@@ -378,7 +378,10 @@ Settled questions — don't relitigate without the user; each was decided delibe
 - **One CSV parser, one CSV emitter.** csv-parser, through `csv_read::Reader`
   (`src/csv/csv_read.cpp`), parses for both `import_csv` and `db:read_csv*`; `csv_write::append_record`
   (`src/csv/csv_write.cpp`) emits for both `export_csv` and `db:write_csv`, so those four share one
-  quoting rule (quote a cell iff it holds the separator, `"`, CR or LF). The binary subsystem's
+  quoting rule (quote a cell iff it holds the separator, `"`, CR or LF). The reader preserves valid
+  UTF-8 fields and decodes invalid ones as ISO-8859-1, for headers and cells alike, without rewriting
+  input files. This per-field fallback is shared by Lua CSV reads and `import_csv`.
+  The binary subsystem's
   `CSVConverter` (`bin_to_csv`/`csv_to_bin`) is not on this path: it splits and joins on `,` and
   never quotes, so a label holding a comma does not round-trip. Its numbers do share the stack:
   data cells are written by `utils::append_number` and read by `utils::parse_float`, the same pair

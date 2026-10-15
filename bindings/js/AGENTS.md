@@ -52,6 +52,9 @@ bunfig.toml       # coverageSkipTestFiles = true (Bun 1.3 reports test/ otherwis
   ma_energia_residencial.csv` / `ma_gd_data.csv` through `quiver_cli` before it shipped — but
   **nothing in CI re-runs it**, so an edit to that example has to be re-verified by hand the same
   way (a throwaway file-backed database plus the fixtures, driven through `quiver_cli`).
+- **CSV text decoding stays in C++.** The reference documents per-field UTF-8 preservation with
+  automatic ISO-8859-1 fallback for `db:read_csv`, `db:read_csv_stream`, and `db:import_csv`.
+  The JS wrapper passes the resulting JSON through; it performs no encoding repair.
 - **XLSX reading is Lua-only.** The reference documents `db:read_xlsx` / `db:read_xlsx_stream`,
   their sheet/header options, all-string cells, cached formulas and DOM memory limit. No JS
   XLSX wrapper or new FFI symbols; correctness lives in `tests/test_sandbox_read_xlsx.cpp`.
