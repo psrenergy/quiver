@@ -15,8 +15,12 @@ before either platform's native tests. The strict check compiles the actual JS b
 | `publish.yml` | `workflow_dispatch` (`bump`: patch/minor/major; default patch) | Release orchestrator with reusable Bump Version (see below) |
 | `publish-s3.yml` | `workflow_dispatch` (usually from publish.yml) | Builds native libs for `linux-x86_64`, `linux-aarch64`, `macos-aarch64`, `windows-x86_64` and stages them on S3 (via `scripts/ci/native_s3.sh upload`) |
 | `publish-julia.yml` | `workflow_dispatch` | Mirrors `bindings/julia` into psrenergy/Quiver.jl (see below) |
-| `publish-python.yml` | push/PR to master + `workflow_dispatch` | cibuildwheel on a ubuntu+ubuntu-arm+windows matrix (targets in `bindings/python/AGENTS.md`); the PyPI publish job runs only on `workflow_dispatch` (trusted publishing, `skip-existing: true`, `environment: pypi`) |
+| `publish-python.yml` | push/PR to master + `workflow_dispatch` | cibuildwheel on a ubuntu+ubuntu-arm+windows+macos matrix (targets in `bindings/python/AGENTS.md`); validates wheel contents and tests bundled loading before pytest; the PyPI publish job runs only on `workflow_dispatch` and requires all four platform wheels (trusted publishing, `skip-existing: true`, `environment: pypi`) |
 | `publish-js.yml` | `workflow_dispatch` | npm publish with bundled native libs (see below) |
+
+The Python publish gate quotes its required glob patterns and counts matching files in an
+array under `nullglob`. Do not use `ls` to detect missing matches: an unmatched glob disappears,
+so `ls` would list the current directory and report success.
 
 **Codecov uploads send exactly the one file they name.** Every `codecov-action` step sets
 `disable_search: true`, and the C++ one also sets `plugins: noop`. With the defaults, the CLI runs

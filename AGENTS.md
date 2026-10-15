@@ -493,6 +493,8 @@ JS has no generator — update the hand-written symbol table in `bindings/js/src
   `QUIVER_BUILD_C_API` (OFF — the configure line above turns it on), `QUIVER_UNVERSIONED_SHARED`
   (OFF). When scikit-build-core drives the build (Python wheels) it defines the `SKBUILD` CMake
   variable, which forces C API ON and tests OFF.
+  Wheel installs set the C API's RPATH to `@loader_path` on macOS and `$ORIGIN` on Linux so
+  it resolves the bundled core in the same `_libs` directory.
 - **`QUIVER_UNVERSIONED_SHARED` omits VERSION/SOVERSION**, so the shared libraries are built as
   plain `libquiver.dylib` / `libquiver.so` real files instead of a versioned real file plus
   unversioned symlinks. **Only the Dart hook sets it** (`bindings/dart/hook/build.dart`), because

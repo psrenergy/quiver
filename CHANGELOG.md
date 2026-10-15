@@ -5,7 +5,19 @@ All notable changes to Quiver are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entries that require
 callers to change something are prefixed **BREAKING** and say what to do.
 
-## [0.13.2] — unreleased
+## [0.13.3] — unreleased
+
+### Added
+
+- **Python: macOS Apple Silicon wheels.** PyPI releases now include arm64 wheels for CPython
+  3.13 on macOS 13.3 or newer, with bundled native libraries.
+
+### Fixed
+
+- **Python publishing: missing-wheel checks.** Publishing now rejects a release missing any
+  required platform wheel instead of letting unmatched shell globs report success.
+
+## [0.13.2] — 2026-10-15
 
 ### Added
 
@@ -1461,6 +1473,7 @@ are functionally identical to 0.10.0.
   `read_time_series_group` emits for a NULL STRING cell — so feeding a read result back with the
   mask stripped was UB. A NULL entry, or a NULL per-column data pointer, is now SQL NULL.
 
+[0.13.3]: https://github.com/psrenergy/quiver/compare/v0.13.2...HEAD
 [0.13.2]: https://github.com/psrenergy/quiver/compare/v0.13.1...v0.13.2
 [0.13.1]: https://github.com/psrenergy/quiver/compare/v0.13.0...v0.13.1
 [0.13.0]: https://github.com/psrenergy/quiver/compare/v0.12.9...v0.13.0
