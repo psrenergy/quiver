@@ -12,11 +12,13 @@ set(QUIVER_SOURCES
     database_csv_import.cpp
     csv/csv_read.cpp
     csv/csv_write.cpp
+    json/json_read.cpp
     xlsx/xlsx_read.cpp
     database_describe.cpp
     element.cpp
     sandbox/binary.cpp
     sandbox/csv.cpp
+    sandbox/json.cpp
     sandbox/xlsx.cpp
     sandbox/database.cpp
     sandbox/database_create.cpp
@@ -108,6 +110,7 @@ target_link_libraries(quiver
     PRIVATE
         quiver_compiler_options
         tomlplusplus::tomlplusplus
+        $<BUILD_INTERFACE:nlohmann_json::nlohmann_json>
         spdlog::spdlog
         lua_library
         sol2

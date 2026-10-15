@@ -9,6 +9,9 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ### Added
 
+- **Lua: JSON file reading.** `db:read_json(path)` reads a sandboxed UTF-8 JSON document as
+  native Lua values. JSON nulls become nil holes; input is limited to 64 MiB and depth 32.
+
 - **Release workflow: version-bump dropdown.** Publish opens a patch, minor, or major bump PR
   for a future release while publishing the selected commit; patch is the default.
 

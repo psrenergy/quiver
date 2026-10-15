@@ -107,6 +107,12 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   file back through `db:read_csv` rather than reading the raw bytes, for the same reason
   `export_csv`'s export-only string-search tests were a trap this project hit twice already.
 
+`test_sandbox_read_json.cpp` tests Lua-only `db:read_json`: nested/primitive roots, exact int64
+values, finite-double conversion, booleans, UTF-8/escapes, nil holes and empty containers,
+strict parse failures, size/depth boundaries, sandbox paths, input preservation and handle cleanup.
+Fixtures are written into `LuaSandboxTest`'s file-backed sandbox at runtime. No separate C API
+or host-binding JSON reader exists to mirror.
+
 `test_sandbox_read_xlsx.cpp` tests the Lua-only XLSX methods: shared/inline/rich strings, raw
 numbers and dates, cached/missing formula results, sparse cells and blank rows, worksheet
 selection excluding chart sheets, physical headers, callback equivalence and early stop, strict
