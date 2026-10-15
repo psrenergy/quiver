@@ -327,10 +327,11 @@ Notes:
   \`{ x = nil }\` is identical to \`{}\`; an update/create table that ends up with no attributes
   **throws** (\`...must have at least one scalar attribute\` on create, \`...at least one attribute
   to update\` on update). To leave a column unchanged, omit the key — you cannot set a scalar to
-  NULL via the element table. (\`nil\` → NULL is accepted by \`update_relation\` and in query params
-  (not a trailing one), and as a cell in the group writers; \`upsert_time_series_row\` and
-  \`update_time_series_files\` replace the whole row, so a column you leave out (or set to \`nil\`,
-  the same thing) is cleared — see Time series and Time series files.)
+  NULL via the element table — nor via \`update_time_series_files\`, keyed by column name too,
+  where an omitted column keeps its current value. (\`nil\` → NULL is accepted by
+  \`update_relation\` and in query params (not a trailing one), and as a cell in the group writers;
+  \`upsert_time_series_row\` replaces the whole row, so a column you leave out (or set to \`nil\`,
+  the same thing) is cleared — see Time series.)
 - **\`update_relation\` points one scalar foreign-key relation at another element**, named by the
   target's label. The column is derived from the naming convention —
   \`lowercase(collection_to) .. "_" .. relation_type\`, so
@@ -559,15 +560,12 @@ singleton table):
 db:has_time_series_files(collection)              -- boolean
 db:list_time_series_files_columns(collection)     -- { "data_file", "metadata_file", ... }
 db:read_time_series_files(collection)             -- { data_file = "path", metadata_file = nil, ... }
-db:update_time_series_files(collection, { data_file = "path/to/data.bin" })  -- metadata_file is cleared
+db:update_time_series_files(collection, { data_file = "path/to/data.bin" })
 \`\`\`
 
-\`update_time_series_files\` **replaces the whole row**: every column you do not give a string is
-set to NULL (or to its DEFAULT, if the schema declares one), and in Lua a \`nil\` value and a
-missing key are the same thing. A table with no string values (\`{}\`, or only \`nil\` values)
-changes nothing and clears nothing. A value that is not a string throws. To change one path, read
-the row with \`db:read_time_series_files(collection)\`, change that one entry, and pass the whole
-table back.
+Only the columns you name are written, so the call above leaves \`metadata_file\` alone. A column
+cannot be cleared from Lua here: \`{ metadata_file = nil }\` is \`{}\`, which names nothing — so
+feeding a \`read_time_series_files\` result straight back in is a no-op.
 
 ---
 

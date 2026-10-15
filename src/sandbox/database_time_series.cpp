@@ -248,6 +248,8 @@ sol::table read_time_series_files_lua(Database& db, const std::string& collectio
 }
 
 void update_time_series_files_lua(Database& db, const std::string& collection, const sol::object& paths) {
+    // A table iteration never yields a nil value, so Lua cannot name a column with an explicit
+    // NULL here; omission is its only signal, and an unnamed column is preserved.
     std::map<std::string, std::optional<std::string>> cpp_paths;
     for (auto& pair : require_table(paths, "update_time_series_files", "paths")) {
         auto key = lua_string_key(pair.first, "update_time_series_files", "column name");
