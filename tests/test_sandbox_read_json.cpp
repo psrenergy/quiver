@@ -1,4 +1,5 @@
 #include "test_sandbox.h"
+#include "utils/string.h"
 
 #include <cstddef>
 #include <filesystem>
@@ -144,6 +145,21 @@ TEST_F(Sandbox_ReadJson, InvalidJsonUtf8AndOverflowReportPathAndOperation) {
     }
     write_json_file(sandbox_path / "invalid.json", "{");
     expect_sandbox_error(sandbox, R"(db:read_json("invalid.json"))", "line 1");
+}
+
+TEST_F(Sandbox_ReadJson, InvalidUtf8StillProducesUtf8ErrorTextForHostBindings) {
+    auto db = quiver::Database::from_schema(db_path(), VALID_SCHEMA("basic.sql"));
+    quiver::Sandbox sandbox(db);
+    write_json_file(sandbox_path / "invalid.json", std::string("{\"x\":\"") + '\xE9' + "\"}");
+    try {
+        sandbox.run(R"(db:read_json("invalid.json"))");
+        FAIL() << "expected invalid UTF-8 to throw";
+    } catch (const std::exception& e) {
+        const std::string message = e.what();
+        EXPECT_NE(message.find("Cannot read_json: cannot parse file 'invalid.json':"), std::string::npos);
+        EXPECT_NE(message.find("byte"), std::string::npos);
+        EXPECT_TRUE(quiver::string::is_valid_utf8(message));
+    }
 }
 
 TEST_F(Sandbox_ReadJson, NestingLimitIsCheckedBeforeLuaConversion) {

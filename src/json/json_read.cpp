@@ -1,5 +1,7 @@
 #include "json/json_read.h"
 
+#include "utils/string.h"
+
 #include <nlohmann/json.hpp>
 
 #include <array>
@@ -68,6 +70,13 @@ nlohmann::json read_file(const std::string& resolved_path, const std::string& or
             }
             return true;
         });
+    } catch (const nlohmann::json::parse_error& e) {
+        // The parser's last-token diagnostic may contain the invalid UTF-8 bytes it rejected.
+        std::string reason = e.what();
+        if (!quiver::string::is_valid_utf8(reason)) {
+            reason = "invalid JSON at byte " + std::to_string(e.byte);
+        }
+        throw std::runtime_error(prefix + "cannot parse file '" + original_path + "': " + reason);
     } catch (const nlohmann::json::exception& e) {
         throw std::runtime_error(prefix + "cannot parse file '" + original_path + "': " + e.what());
     }

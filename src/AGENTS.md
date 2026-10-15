@@ -114,6 +114,8 @@ Other format helpers live in sibling folders (`src/json/`, `src/xlsx/`). The `ru
 `json/json_read.h`/`.cpp` returns an internal nlohmann JSON value from one bounded file read.
 The helper enforces 64 MiB of input and depth 32 during parsing (root depth 0), wraps file/parser
 errors with `Cannot read_json:` and the original path, and closes its stream on every exit.
+Raw NUL bytes are rejected rather than treated as EOF. Invalid UTF-8 in a parser diagnostic
+is replaced with its byte position, so host bindings can decode the error text safely.
 `sandbox/json.cpp` resolves the path through the shared sandbox gate, checks the Lua path type,
 and converts the parsed tree to Lua: string keys, 1-based indices, native booleans/strings,
 int64 integers when representable and doubles otherwise. Unsigned integers are checked before
