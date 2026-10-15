@@ -11,8 +11,8 @@ before either platform's native tests. The strict check compiles the actual JS b
 | Workflow | Trigger | Purpose |
 |---|---|---|
 | `ci.yml` | push/PR to master | Build matrix (ubuntu/ubuntu-arm/windows/macos × Release/Debug) + ctest + artifact upload; four coverage jobs uploading to Codecov with flags `cpp`, `julia`, `dart`, `python`; plus `clang-format` check (22.1.8 wheel via `uvx`), `actionlint`, and a `bun-test` matrix (ubuntu+ubuntu-arm+windows) whose `ubuntu-latest` leg uploads flag `js` |
-| `bump-version.yml` | `workflow_dispatch` (`part`: major/minor/patch) | Runs `scripts/assert_version.py bump <part>` and opens a PR with the five manifests rewritten (see below) |
-| `publish.yml` | `workflow_dispatch` | Release orchestrator (see below) |
+| `bump-version.yml` | `workflow_dispatch` / `workflow_call` (`part`: major/minor/patch) | Runs `scripts/assert_version.py bump <part>` and opens a PR with the five manifests rewritten (see below) |
+| `publish.yml` | `workflow_dispatch` (`bump`: patch/minor/major; default patch) | Release orchestrator with reusable Bump Version (see below) |
 | `publish-s3.yml` | `workflow_dispatch` (usually from publish.yml) | Builds native libs for `linux-x86_64`, `linux-aarch64`, `macos-aarch64`, `windows-x86_64` and stages them on S3 (via `scripts/ci/native_s3.sh upload`) |
 | `publish-julia.yml` | `workflow_dispatch` | Mirrors `bindings/julia` into psrenergy/Quiver.jl (see below) |
 | `publish-python.yml` | push/PR to master + `workflow_dispatch` | cibuildwheel on a ubuntu+ubuntu-arm+windows matrix (targets in `bindings/python/AGENTS.md`); the PyPI publish job runs only on `workflow_dispatch` (trusted publishing, `skip-existing: true`, `environment: pypi`) |
@@ -102,10 +102,11 @@ The child publish workflows take no `version` input: each resolves it from its c
 
 ## Release Pipeline
 
-The order is **bump, merge, publish** — two deliberate dispatches, never chained:
+Publish releases its triggering commit while preparing a version-bump PR for a future release:
 
-- `bump-version.yml` (`workflow_dispatch`, `part` = `major`/`minor`/`patch`; patch is the hotfix
-  case) runs `python3 scripts/assert_version.py bump <part>` on master and opens a
+- `bump-version.yml` (`workflow_dispatch` or reusable `workflow_call`, `part` =
+  `major`/`minor`/`patch`; patch is the hotfix case) runs
+  `python3 scripts/assert_version.py bump <part>` on master and opens a
   `bump-version/<version>` PR via `peter-evans/create-pull-request` on the default `GITHUB_TOKEN`.
   It rewrites only the five manifests `assert_version.py` owns — `CHANGELOG.md`'s
   `## [x.y.z] — unreleased` heading and compare link stay manual. It guards on the resolved
@@ -116,13 +117,21 @@ The order is **bump, merge, publish** — two deliberate dispatches, never chain
   `GITHUB_TOKEN`-authored PR cannot trigger `ci.yml`'s `pull_request` run, so the bump PR arrives
   with no checks (fine for a five-string diff; a PAT in `token:` is the only fix if master ever
   requires status checks).
-- `publish.yml` (`workflow_dispatch` with no inputs — every checkout pins `github.sha`, and there
-  is no version input: the tag must equal what the source declares) orchestrates a full release: resolve version via
+- `publish.yml` has a `bump` dropdown (`patch`/`minor`/`major`, default `patch`). Every run calls
+  `bump-version.yml` directly as a reusable workflow with the selected `part`; it still checks
+  out `master`. The calling job grants `contents: write` and `pull-requests: write`, and the
+  reusable workflow receives `github.token` automatically. The bump job and version-resolution
+  job run independently: the PR does not change the version or commit being published, and a
+  bump failure does not block the release jobs. Merge the PR before a future Publish run to
+  release its version.
+  Every release checkout pins `github.sha`, and there is no explicit version input: the tag
+  must equal what the source declares. The release path resolves the version via
   `scripts/assert_version.py` + assert tag `v<version>` is absent or already at the release sha →
   dispatch `publish-s3.yml` and wait → create tag + GitHub release (`ncipollo/release-action`,
   `skipIfReleaseExists`) → dispatch `publish-julia.yml` / `publish-python.yml` / `publish-js.yml`
   **in parallel on the new tag** and wait for all three.
-- Children are dispatched as top-level `workflow_dispatch` runs via `scripts/ci/dispatch_workflow.sh`
+- The four child publish workflows are dispatched as top-level `workflow_dispatch` runs via
+  `scripts/ci/dispatch_workflow.sh`
   (dispatch → correlate run id by workflow+ref+created-after → poll to completion), NOT as
   `workflow_call` reusable workflows: npm and PyPI trusted publishing validate the **top-level
   workflow filename** from the OIDC claims, so `publish-js.yml`/`publish-python.yml` must stay
@@ -132,7 +141,7 @@ The order is **bump, merge, publish** — two deliberate dispatches, never chain
   a per-release concurrency group (its `cancel-in-progress: true` can't be tripped by a master
   push mid-publish). The `npm`/`pypi` environments must keep deployment branch policy
   "No restriction" (or allow `v*` tags) or tag-dispatched publishes get rejected.
-- A full re-run of a partially failed release is idempotent end-to-end: tag assert passes (same
+- The release steps are idempotent when rerunning the same commit: tag assert passes (same
   sha), S3 overwrites the same keys, release creation is skipped, the Julia PR branch is
   force-updated, PyPI uses `skip-existing: true`, npm hits the `npm view` guard.
 

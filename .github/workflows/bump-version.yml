@@ -1,6 +1,12 @@
 name: Bump Version
 
 on:
+  workflow_call:
+    inputs:
+      part:
+        description: "Version part to bump (patch = hotfix)"
+        type: string
+        required: true
   workflow_dispatch:
     inputs:
       part:
