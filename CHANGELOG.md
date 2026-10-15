@@ -7,6 +7,11 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ## [0.13.2] — unreleased
 
+### Added
+
+- **Release workflow: version-bump dropdown.** Publish opens a patch, minor, or major bump PR
+  for a future release while publishing the selected commit; patch is the default.
+
 ### Fixed
 
 - **CSV: automatic Latin-1 fallback.** Headers and cells that are not valid UTF-8 are decoded
