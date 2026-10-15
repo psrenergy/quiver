@@ -37,6 +37,8 @@ ruff.toml         # Lint/format config; lint is isort only (select = ["I"])
   `generator/generator.bat` and diff its output against `_c_api.py`.
 - **`_loader.py` pre-loads `libquiver.dll`** on Windows so the OS resolves `libquiver_c.dll`'s
   dependency chain. `tests/test.bat` prepends `build/bin/` to PATH for DLL discovery.
+  On macOS it loads `.dylib` files and pre-loads `libquiver.0.dylib`, matching the C API's
+  install name so dyld does not load a second copy of the core under an unversioned alias.
 - **API shape**: `create_element`/`update_element` accept `**kwargs` (dict unpacking works:
   `db.create_element("Collection", **my_dict)`); the `Element` class is internal — created, filled
   in a `try` and destroyed in its `finally` by each writer, with no `clear` and no binding-side
@@ -167,7 +169,11 @@ ruff.toml         # Lint/format config; lint is isort only (select = ["I"])
 - Wheels build via **scikit-build-core** (`cmake.source-dir = ../..`, Release; the root CMakeLists
   detects `SKBUILD` and forces the C API ON and tests OFF).
   `wheel.exclude` strips `bin`/`lib`/`include`/`share` from the wheel.
-- **cibuildwheel** targets `cp313-win_amd64`, `cp313-manylinux_x86_64` and `cp313-manylinux_aarch64`
-  (built natively on `ubuntu-24.04-arm`), running pytest as the wheel test. CI publish flow in `.github/AGENTS.md`.
+- **cibuildwheel** targets `cp313-win_amd64`, `cp313-manylinux_x86_64`, `cp313-manylinux_aarch64`
+  (built natively on `ubuntu-24.04-arm`) and `cp313-macosx_arm64` (native `macos-latest`, Apple
+  Silicon only). macOS sets `MACOSX_DEPLOYMENT_TARGET=13.3`, matching the core's runtime floor;
+  the wheel tag uses `macosx_13_0` because macOS tags omit minor versions after 10.x. Keep the
+  default delocate repair for library relocation and signing. Every wheel runs the bundled-load
+  validator before pytest. CI publish flow in `.github/AGENTS.md`.
 - Local wheel checks: `scripts/test-wheel.bat`, `scripts/test-wheel-install.bat`,
   `scripts/validate_wheel.py`, `scripts/validate_wheel_install.py`.

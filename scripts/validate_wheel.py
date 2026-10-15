@@ -1,7 +1,7 @@
 """Validate a quiverdb wheel contains the expected native libraries."""
 
-import sys
 import os
+import sys
 import zipfile
 
 
@@ -17,6 +17,11 @@ def validate(whl_path: str) -> bool:
             libs = [
                 "quiverdb/_libs/libquiver.dll",
                 "quiverdb/_libs/libquiver_c.dll",
+            ]
+        elif sys.platform == "darwin":
+            libs = [
+                "quiverdb/_libs/libquiver.0.dylib",
+                "quiverdb/_libs/libquiver_c.dylib",
             ]
         else:
             libs = [

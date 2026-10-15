@@ -18,6 +18,12 @@ wheel.exclude = ["bin", "lib", "include", "share"]
 dev = ["pytest>=8.4.1", "ruff>=0.12.2"]
 
 [tool.cibuildwheel]
-build = ["cp313-win_amd64", "cp313-manylinux_x86_64", "cp313-manylinux_aarch64"]
+build = ["cp313-win_amd64", "cp313-manylinux_x86_64", "cp313-manylinux_aarch64", "cp313-macosx_arm64"]
 test-requires = ["pytest"]
-test-command = "pytest {project}/bindings/python/tests"
+test-command = [
+    "python {project}/scripts/validate_wheel_install.py",
+    "pytest {project}/bindings/python/tests",
+]
+
+[tool.cibuildwheel.macos.environment]
+MACOSX_DEPLOYMENT_TARGET = "13.3"

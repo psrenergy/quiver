@@ -7,8 +7,9 @@ from cffi import FFI
 
 _PACKAGE_DIR = Path(__file__).resolve().parent
 _LIBS_DIR = _PACKAGE_DIR / "_libs"
-_EXT = ".dll" if sys.platform == "win32" else ".so"
-_LIB_CORE = f"libquiver{_EXT}"
+_EXT = {"win32": ".dll", "darwin": ".dylib"}.get(sys.platform, ".so")
+# Match the C API's install name on macOS to avoid loading a second core image.
+_LIB_CORE = "libquiver.0.dylib" if sys.platform == "darwin" else f"libquiver{_EXT}"
 _LIB_C_API = f"libquiver_c{_EXT}"
 
 # Set after successful load
@@ -44,8 +45,8 @@ def load_library(ffi: FFI):
             raise RuntimeError(f"Cannot load bundled native libraries: {e}. Searched: {_LIBS_DIR}") from None
 
     # --- Dev mode ---
-    dev_core = "libquiver" if sys.platform == "win32" else f"libquiver{_EXT}"
-    dev_c_api = "libquiver_c" if sys.platform == "win32" else f"libquiver_c{_EXT}"
+    dev_core = "libquiver" if sys.platform == "win32" else _LIB_CORE
+    dev_c_api = "libquiver_c" if sys.platform == "win32" else _LIB_C_API
     try:
         ffi.dlopen(dev_core)
     except Exception:

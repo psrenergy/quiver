@@ -112,8 +112,12 @@ if(DEFINED SKBUILD)
         LIBRARY DESTINATION quiverdb/_libs
         RUNTIME DESTINATION quiverdb/_libs
     )
-    # On Linux, set RPATH so libquiver_c.so finds libquiver.so in same directory
-    if(NOT WIN32)
+    # Resolve the core beside the C API in the wheel's _libs directory.
+    if(APPLE)
+        set_target_properties(quiver_c PROPERTIES
+            INSTALL_RPATH "@loader_path"
+        )
+    elseif(NOT WIN32)
         set_target_properties(quiver_c PROPERTIES
             INSTALL_RPATH "$ORIGIN"
         )
