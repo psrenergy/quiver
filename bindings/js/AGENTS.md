@@ -55,6 +55,10 @@ bunfig.toml       # coverageSkipTestFiles = true (Bun 1.3 reports test/ otherwis
 - **CSV text decoding stays in C++.** The reference documents per-field UTF-8 preservation with
   automatic ISO-8859-1 fallback for `db:read_csv`, `db:read_csv_stream`, and `db:import_csv`.
   The JS wrapper passes the resulting JSON through; it performs no encoding repair.
+- **JSON reading is Lua-only.** The reference documents `db:read_json(path)`, native Lua values,
+  null-to-nil holes, empty-container ambiguity and the 64 MiB/depth-32 input limits. It uses the
+  existing sandbox path policy and JSON return encoder; no JS JSON reader or FFI symbols are added.
+  Correctness lives in `tests/test_sandbox_read_json.cpp`.
 - **XLSX reading is Lua-only.** The reference documents `db:read_xlsx` / `db:read_xlsx_stream`,
   their sheet/header options, all-string cells, cached formulas and DOM memory limit. No JS
   XLSX wrapper or new FFI symbols; correctness lives in `tests/test_sandbox_read_xlsx.cpp`.

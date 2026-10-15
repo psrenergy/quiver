@@ -62,6 +62,7 @@ src/                      # C++ implementation
     database_csv_export.cpp  # bind_csv_export: export_csv; parse_csv_options
     database_csv_import.cpp  # bind_csv_import: import_csv
     csv.cpp               # bind_csv: read_csv, read_csv_stream, write_csv, CsvWriter
+    json.cpp              # bind_json: read_json; native JSON values to Lua tables/primitives
     xlsx.cpp              # bind_xlsx: read_xlsx/read_xlsx_stream; shared strict options decoder
     binary.cpp            # bind_binary: open_file/bin_to_csv/csv_to_bin, BinaryMetadata, BinaryFile, quiver.metadata*
     expression.cpp        # bind_expression: Expression, the operators and expression methods on Expression and BinaryFile, quiver.* expression functions
@@ -79,6 +80,8 @@ src/csv/                    # Standalone CSV file reader/writer (see below)
                               # its append_record also emits export_csv -- same posture as csv_read
 src/xlsx/                   # Internal OpenXLSX reader; XLSX parsing stays out of the sol2 TU
   xlsx_read.h / xlsx_read.cpp # Internal Pimpl reader behind db:read_xlsx/read_xlsx_stream
+src/json/                   # Internal nlohmann/json file reader; no public header or FFI API
+  json_read.h / json_read.cpp # Bounded UTF-8 JSON parsing behind db:read_json
 src/binary/                 # Binary C++ implementation
   binary_file.cpp             # BinaryFile class (Pimpl impl) + write registry
   binary_utils.h              # Shared file-extension constants, day_of_year, position_in_parent
@@ -104,9 +107,20 @@ src/expression/             # Expression C++ implementation
 callers are Lua (`db:read_csv*`, `db:write_csv`) and `Database::import_csv` / `export_csv` alike. It holds only the
 standalone reader/writer — `database_csv_{import,export}.cpp` stay with the `database_*` family,
 parsing through `csv_read::Reader` and emitting through `csv_write::append_record` (root design
-decision "One CSV parser, one CSV emitter"), and `binary/csv_converter.cpp` stays with `binary/`. A future format helper (e.g. a Lua JSON reader)
-gets a sibling folder (`src/json/`). The `run()` JSON encoder now lives in
+decision "One CSV parser, one CSV emitter"), and `binary/csv_converter.cpp` stays with `binary/`.
+Other format helpers live in sibling folders (`src/json/`, `src/xlsx/`). The `run()` JSON encoder lives in
 `src/sandbox/return_json.cpp`.
+
+`json/json_read.h`/`.cpp` returns an internal nlohmann JSON value from one bounded file read.
+The helper enforces 64 MiB of input and depth 32 during parsing (root depth 0), wraps file/parser
+errors with `Cannot read_json:` and the original path, and closes its stream on every exit.
+`sandbox/json.cpp` resolves the path through the shared sandbox gate, checks the Lua path type,
+and converts the parsed tree to Lua: string keys, 1-based indices, native booleans/strings,
+int64 integers when representable and doubles otherwise. Unsigned integers are checked before
+conversion to avoid wrapping. A null becomes nil without compacting array indices. Empty JSON
+objects/arrays both become empty Lua tables; the existing return encoder's shape rules apply.
+nlohmann/json v3.12.0 is a private header-only build dependency, so no parser headers or target
+are needed by installed consumers.
 
 `csv/csv_read.h`/`.cpp` was the first `.cpp` in `src/` with no `include/quiver/` public
 counterpart — the header-only internal helpers here (`utils/string.h`, `database_internal.h`,

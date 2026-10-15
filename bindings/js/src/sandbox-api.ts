@@ -104,12 +104,13 @@ midnight.
   binary chunk is refused). Integer division is the Lua 5.4 \`//\` operator — a language operator,
   unrelated to \`math\`. No \`io\` does **not** mean
   a data file on disk is out of reach: use \`db:read_csv\` / \`db:read_csv_stream\` for CSV or
-  \`db:read_xlsx\` / \`db:read_xlsx_stream\` for XLSX (see the file reading sections below).
+  \`db:read_xlsx\` / \`db:read_xlsx_stream\` for XLSX, and \`db:read_json\` for JSON
+  (see the file reading sections below).
   Never copy, paste, or re-type a data file's contents into
   the script as literals — read the file.
 - **Filesystem sandbox.** Every file-touching operation (\`db:export_csv\`, \`db:import_csv\`,
   \`db:open_file\`, \`db:bin_to_csv\`, \`db:csv_to_bin\`, \`db:validate_migrations\`, \`db:read_csv\`,
-  \`db:read_csv_stream\`, \`db:write_csv\`, \`db:read_xlsx\`, \`db:read_xlsx_stream\`,
+  \`db:read_csv_stream\`, \`db:write_csv\`, \`db:read_xlsx\`, \`db:read_xlsx_stream\`, \`db:read_json\`,
   \`save\` on a file or an expression) resolves
   relative paths against the directory containing the database file and rejects anything outside it
   (subdirectories are fine; \`..\` escapes and outside absolute paths throw \`Cannot <op>: path '...' escapes the
@@ -786,6 +787,34 @@ for i = 1, #gd.rows do
     local value = tonumber(row[2])  -- already a plain decimal string, no cleanup needed
 end
 \`\`\`
+
+---
+
+## JSON file reading
+
+Read one complete JSON document through the same filesystem sandbox as CSV/XLSX:
+
+\`\`\`lua
+local data = db:read_json("input.json")
+\`\`\`
+
+The root may be an object, array, string, number, boolean or null. Objects become tables with
+string keys; arrays use 1-based indices. Strings and booleans retain their native Lua types.
+Integers fitting signed 64-bit stay Lua integers; other finite numbers use Lua doubles, which
+can round large integers. Text must be UTF-8 (an initial UTF-8 BOM is accepted); there is no
+Latin-1 fallback. Standard strict JSON syntax applies: comments, trailing commas, extra roots,
+invalid Unicode and non-finite numbers are rejected. Duplicate object keys keep the last value.
+
+JSON null becomes \`nil\`. Null object fields disappear, and null array entries leave holes at
+their original indices; later entries are not shifted. Neither \`#\` nor \`ipairs\` supplies a
+reliable count for such arrays, and trailing null entries are invisible. Empty objects and
+arrays both become empty Lua tables. Returning these values uses the existing encoder: an
+empty table emits \`[]\`, and a sparse array emits an object such as \`{"2":10,"4":30}\`.
+
+The reader loads the whole document, with at most 64 MiB of input and nesting depth 32 (root
+depth 0). File, parse and limit failures carry \`Cannot read_json:\` and the requested path;
+parse failures include location information when available. The file is closed on success and
+failure. This reads values only; it does not import database rows or write the file.
 
 ---
 

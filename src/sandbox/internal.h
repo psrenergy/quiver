@@ -359,6 +359,7 @@ void bind_time_series(sol::usertype<Database>& bind);
 void bind_csv_export(sol::usertype<Database>& bind);
 void bind_csv_import(sol::usertype<Database>& bind);
 void bind_csv(sol::state& state, sol::usertype<Database>& bind, RunHandles& handles);
+void bind_json(sol::usertype<Database>& bind);
 void bind_xlsx(sol::usertype<Database>& bind);
 sol::usertype<BinaryFile> bind_binary(
     sol::state& state,
