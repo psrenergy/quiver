@@ -130,7 +130,7 @@ QUIVER_C_API quiver_error_t quiver_database_from_schema(
     }
 }
 
-// Schema inspection — human-readable text reports.
+// Schema inspection — text reports for agents.
 
 QUIVER_C_API quiver_error_t quiver_database_describe(quiver_database_t* db, char** out_report) {
     QUIVER_REQUIRE(db, out_report);

@@ -148,7 +148,7 @@ TEST_F(SandboxTest, Describe) {
 
     quiver::Sandbox sandbox(db);
 
-    // describe() returns a human-readable report string
+    // describe() returns a text report for agents
     sandbox.run(R"(
         local report = db:describe()
         assert(report:find("Collection: Configuration"), "describe should mention Configuration")

@@ -782,7 +782,7 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
   Otherwise `SELECT COUNT(*)` / `SUM(int_col)`, which SQLite answers as INTEGER, and an integer
   stored in a REAL column, all read back as "no value". `query_integer` does **not** narrow a REAL;
   that direction is lossy.
-- Schema inspection — human-readable **text reports** (both return `std::string`):
+- Schema inspection — **text reports for agents** (both return `std::string`):
   `describe_collection(c)` combines structure, UI metadata (including tooltips), scalar
   null/non-null counts and low-cardinality integer distributions, and per-group coverage.
   Declarations and statistics share each line, with `; label`, `; enum {code: "label"}` and

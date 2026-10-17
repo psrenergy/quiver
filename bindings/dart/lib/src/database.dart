@@ -227,7 +227,7 @@ class Database {
     }
   }
 
-  /// Returns complete reports for every collection, with the database/version header.
+  /// Returns every collection's report for agents, with the database/version header.
   String describe() {
     _ensureNotClosed();
     final arena = Arena();
@@ -242,7 +242,7 @@ class Database {
     }
   }
 
-  /// Returns one collection's structure, UI metadata and statistics as text.
+  /// Returns one collection's structure, UI metadata and statistics as text for agents.
   String describeCollection(String collection) {
     _ensureNotClosed();
     final arena = Arena();

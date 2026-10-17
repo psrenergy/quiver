@@ -184,7 +184,7 @@ Internal helpers `convert_scalar_to_c`, `convert_group_to_c`, `free_scalar_field
 ## Database Description / Statistics
 
 `quiver_database_describe` / `_describe_collection` each return a
-human-readable **text report** via a `char** out_report` out-param (freed by the existing
+**text report for agents** via a `char** out_report` out-param (freed by the existing
 `quiver_database_free_string`) — no structs. Both live in `database.cpp` as trivial
 `new_c_str(db->db.<fn>(...))` wrappers. A collection report combines structure, UI metadata
 (including tooltips), scalar statistics and group coverage. The whole-database report appends

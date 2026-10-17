@@ -187,8 +187,9 @@ db:describe_collection(collection) -- string: structure, UI metadata (including 
 db:validate_migrations(path)       -- validate a migrations dir (up then down) in-memory; no return
 \`\`\`
 
-Both \`describe*\` methods **return** a string — \`print()\` it to see it. Declarations and statistics
-share each line, with UI clauses between them. Enum meanings appear once in \`enum {...}\`;
+The \`describe*\` methods give agents the schema, attribute meanings and data coverage as text reports.
+Both **return** a string. Declarations and statistics share each line, with UI clauses between them.
+Enum meanings appear once in \`enum {...}\`;
 value histograms contain numeric codes and counts, only for non-primary-key INTEGER scalars with
 at most 64 distinct integer values. \`db:describe()\` queries statistics for every collection.
 

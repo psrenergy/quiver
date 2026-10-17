@@ -186,7 +186,7 @@ function list_time_series_files_columns(db::Database, collection::String)
 end
 
 # -----------------------------------------------------------------------------
-# Schema inspection — human-readable text reports
+# Schema inspection — text reports for agents
 # (describe / describe_collection: structure, UI metadata and statistics)
 # -----------------------------------------------------------------------------
 

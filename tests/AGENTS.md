@@ -15,8 +15,9 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   `upsert_time_series_row`/`read_time_series_row`; the C++ core has no `_nulls` file),
   `test_database_transaction.cpp`, `test_database_csv_export.cpp`, `test_database_csv_import.cpp`,
   `test_database_errors.cpp`
-- `test_database_describe.cpp` covers combined declaration/statistics lines, NULL counts,
-  coverage for all group kinds, primary-key/float/text histogram exclusion and the 64/65 boundary.
+- `test_database_describe.cpp` covers the reports for agents: combined declaration/statistics
+  lines, NULL counts, coverage for all group kinds, primary-key/float/text histogram exclusion
+  and the 64/65 boundary.
 - `test_database_ui_metadata.cpp` covers the `ui/` TOML sidecar reader (`src/ui_metadata.{h,cpp}`)
   and its render into `describe`/`describe_collection` — the one suite in
   this list that drives `from_migrations` describe output (every other describe assertion in the

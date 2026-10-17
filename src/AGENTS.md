@@ -524,9 +524,9 @@ impl_->logger->debug("Opening database: {}", path);
   `describe_collection(c)` calls it, and `describe()` delegates to that report. The
   collection-specific report intentionally retains its own validation so
   errors name the operation the caller invoked.
-- **`describe*` return complete text reports** (`database_describe.cpp`): `describe_collection(c)`
-  combines structure, UI metadata, per-scalar null/non-null counts, low-cardinality integer
-  distributions (threshold `kMaxDistributionCardinality`) and per-group coverage in one set of
+- **`describe*` return complete text reports for agents** (`database_describe.cpp`):
+  `describe_collection(c)` combines structure, UI metadata, per-scalar null/non-null counts,
+  low-cardinality integer distributions (threshold `kMaxDistributionCardinality`) and per-group coverage in one set of
   loops. It preserves declaration order, type/constraint flags and bracketed time-series keys.
   `describe()` appends the same reports for every collection after its database/version header,
   querying statistics for every collection. Both build an `std::ostringstream` and return

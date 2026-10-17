@@ -167,7 +167,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
     # -- Schema inspection ------------------------------------------------------
 
     def describe(self) -> str:
-        """Return complete collection reports with the database/version header."""
+        """Return all collection reports for agents with the database/version header."""
         self._ensure_open()
         lib = get_lib()
         out = ffi.new("char**")
@@ -178,7 +178,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
             lib.quiver_database_free_string(out[0])
 
     def describe_collection(self, collection: str) -> str:
-        """Return one collection's structure, UI metadata and statistics as text."""
+        """Return one collection's structure, UI metadata and statistics as text for agents."""
         self._ensure_open()
         lib = get_lib()
         out = ffi.new("char**")

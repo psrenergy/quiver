@@ -31,7 +31,7 @@ bunfig.toml       # coverageSkipTestFiles = true (Bun 1.3 reports test/ otherwis
 
 ## Rules and gotchas
 
-- **Collection reports**: `describeCollection` returns structure, UI metadata (including
+- **Collection reports for agents**: `describeCollection` returns structure, UI metadata (including
   tooltips), scalar statistics and group coverage. `describe` appends these same complete reports
   after its database/version header; both forward the C string without binding-side formatting.
 - **`SANDBOX_API_REFERENCE` (`src/sandbox-api.ts`) is shipped prompt payload, not just docs.** The

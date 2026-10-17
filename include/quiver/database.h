@@ -308,7 +308,7 @@ public:
 
     const std::string& path() const;
 
-    // Schema inspection — human-readable text reports.
+    // Schema inspection — text reports for agents.
     // describe(): database/version header followed by every collection's complete report.
     std::string describe() const;
     // describe_collection(): one collection's structure, UI metadata (including tooltips), scalar

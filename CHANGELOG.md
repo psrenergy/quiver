@@ -9,11 +9,11 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ### Changed
 
-- **BREAKING — collection reports are unified.** `describe_collection()` now includes structure,
-  UI metadata (including tooltips), scalar null/non-null counts and integer distributions, and
-  group coverage on the same lines. `describe()` appends these complete reports for every
-  collection after its database/version header, querying statistics for each one. Enum meanings
-  appear once in `enum {...}`; histograms contain numeric codes and counts.
+- **BREAKING — collection reports are unified.** `describe_collection()` now gives agents a text
+  report with structure, UI metadata (including tooltips), scalar null/non-null counts, integer
+  distributions and group coverage on the same lines. `describe()` appends these complete reports
+  for every collection after its database/version header, querying statistics for each one.
+  Enum meanings appear once in `enum {...}`; histograms contain numeric codes and counts.
 
   *Adapt:* replace `summarize_collection()` with `describe_collection()` in C++, Lua, Julia and
   Python, `summarizeCollection()` with `describeCollection()` in Dart/JS, and
